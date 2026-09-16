@@ -34,6 +34,8 @@ interface ModalSurfaceProps {
   position?: 'center' | 'bottomSheet';
   animationType?: 'fade' | 'slide';
   contentStyle?: StyleProp<ViewStyle>;
+  /** Fires after the native modal finish-dismiss animation (iOS). */
+  onDismiss?: () => void;
 }
 
 export function ModalSurface({
@@ -51,6 +53,7 @@ export function ModalSurface({
   position = 'center',
   animationType,
   contentStyle,
+  onDismiss,
 }: ModalSurfaceProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -129,6 +132,7 @@ export function ModalSurface({
         transparent
         animationType={animationType ?? (isBottomSheet && !reduceMotion ? 'slide' : 'fade')}
         onRequestClose={onClose}
+        onDismiss={onDismiss}
       >
         {content}
       </Modal>

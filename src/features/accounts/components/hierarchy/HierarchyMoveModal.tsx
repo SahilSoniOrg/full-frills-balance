@@ -1,20 +1,13 @@
 import { Icon, AppButton, AppIcon, AppText } from '@/src/components/core';
-import { Shape, Size, Spacing, Typography } from '@/src/constants';
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
+import { ModalSurface } from '@/src/components/overlays/ModalSurface';
+import { Size, Spacing, Typography } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { getAccountFallbackIcon, getAccountIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/ids';
-import {
-  DimensionValue,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
-  ViewStyle,
-} from 'react-native';
+import { StyleSheet, View, type ViewStyle } from 'react-native';
 
 interface HierarchyMoveModalProps {
   selectedAccountId: AccountId | null;
@@ -37,120 +30,95 @@ export function HierarchyMoveModal({
 }: HierarchyMoveModalProps) {
   const { theme } = useTheme();
   const close = () => onSelectAccount(null);
+  const maxHeightPercent = Number.parseInt(
+    String(AppConfig.layout.hierarchyModalHeightPercent),
+    10,
+  );
 
   return (
-    <Modal
+    <ModalSurface
       visible={!!selectedAccountId}
-      transparent
-      animationType="slide"
-      onRequestClose={close}
+      title={AppConfig.strings.accounts.hierarchy.modalTitle}
+      onClose={close}
       onDismiss={onDismiss}
-      statusBarTranslucent
+      position="bottomSheet"
+      maxHeightPercent={Number.isFinite(maxHeightPercent) ? maxHeightPercent : 80}
+      fixedHeight={false}
+      accessibilityCloseLabel="Close move account dialog"
+      footer={
+        <AppButton onPress={close} variant="ghost" style={styles.cancelButton}>
+          {AppConfig.strings.common.cancel}
+        </AppButton>
+      }
     >
-      <TouchableWithoutFeedback onPress={close}>
-        <View style={[styles.modalOverlay, { backgroundColor: theme.overlay } as ViewStyle]}>
-          <TouchableWithoutFeedback>
-            <View style={[styles.modalContent, { backgroundColor: theme.surface } as ViewStyle]}>
-              <View style={styles.modalHeader}>
-                <AppText variant="subheading" weight="bold">
-                  {AppConfig.strings.accounts.hierarchy.modalTitle}
-                </AppText>
-                <AppText variant="caption" color="secondary">
-                  {AppConfig.strings.accounts.hierarchy.modalDescription(
-                    selectedAccount?.name || '',
-                  )}
-                </AppText>
-              </View>
+      <AppText variant="caption" color="secondary">
+        {AppConfig.strings.accounts.hierarchy.modalDescription(selectedAccount?.name || '')}
+      </AppText>
 
-              <ScrollView style={styles.modalScroll} keyboardShouldPersistTaps="handled">
-                <View style={styles.destinationSection}>
-                  <AppText variant="caption" weight="bold" style={styles.sectionLabel}>
-                    {AppConfig.strings.accounts.hierarchy.moveParentLabel}
-                  </AppText>
-                  <TouchableOpacity
-                    disabled={isSaving}
-                    style={[
-                      styles.destinationItem,
-                      { borderBottomColor: theme.divider } as ViewStyle,
-                    ]}
-                    onPress={() =>
-                      selectedAccountId && void onAssignParent(selectedAccountId, null)
-                    }
-                  >
-                    <AppIcon name={Icon.Eject} size={Size.iconSm} color={theme.textSecondary} />
-                    <AppText variant="body" style={{ flex: 1 }}>
-                      Top level (no group)
-                    </AppText>
-                    {!selectedAccount?.parentAccountId && (
-                      <AppIcon name={Icon.Check} size={Size.iconSm} color={theme.success} />
-                    )}
-                  </TouchableOpacity>
-                  {parentCandidates.map(candidate => (
-                    <TouchableOpacity
-                      disabled={isSaving}
-                      key={candidate.id}
-                      style={[
-                        styles.destinationItem,
-                        { borderBottomColor: theme.divider } as ViewStyle,
-                      ]}
-                      onPress={() =>
-                        selectedAccountId && void onAssignParent(selectedAccountId, candidate.id)
-                      }
-                    >
-                      <AppIcon
-                        name={getAccountIcon(candidate)}
-                        fallbackIcon={getAccountFallbackIcon(candidate.accountType)}
-                        size={Size.iconSm}
-                        color={theme.textSecondary}
-                      />
-                      <AppText variant="body" style={{ flex: 1 }}>
-                        {candidate.name}
-                      </AppText>
-                      {selectedAccount?.parentAccountId === candidate.id && (
-                        <AppIcon name={Icon.Check} size={Size.iconSm} color={theme.success} />
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
-
-              <AppButton onPress={close} variant="ghost" style={styles.cancelButton}>
-                {AppConfig.strings.common.cancel}
-              </AppButton>
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
-    </Modal>
+      <View style={styles.destinationSection}>
+        <AppText variant="caption" weight="bold" style={styles.sectionLabel}>
+          {AppConfig.strings.accounts.hierarchy.moveParentLabel}
+        </AppText>
+        <PressScaleTouchable
+          disabled={isSaving}
+          accessibilityRole="button"
+          accessibilityLabel="Top level (no group)"
+          style={[styles.destinationItem, { borderBottomColor: theme.divider } as ViewStyle]}
+          surfaceStyle={styles.destinationSurface}
+          onPress={() => selectedAccountId && void onAssignParent(selectedAccountId, null)}
+        >
+          <AppIcon name={Icon.Eject} size={Size.iconSm} color={theme.textSecondary} />
+          <AppText variant="body" style={styles.destinationLabel}>
+            Top level (no group)
+          </AppText>
+          {!selectedAccount?.parentAccountId && (
+            <AppIcon name={Icon.Check} size={Size.iconSm} color={theme.success} />
+          )}
+        </PressScaleTouchable>
+        {parentCandidates.map(candidate => (
+          <PressScaleTouchable
+            disabled={isSaving}
+            key={candidate.id}
+            accessibilityRole="button"
+            accessibilityLabel={candidate.name}
+            style={[styles.destinationItem, { borderBottomColor: theme.divider } as ViewStyle]}
+            surfaceStyle={styles.destinationSurface}
+            onPress={() =>
+              selectedAccountId && void onAssignParent(selectedAccountId, candidate.id)
+            }
+          >
+            <AppIcon
+              name={getAccountIcon(candidate)}
+              fallbackIcon={getAccountFallbackIcon(candidate.accountType)}
+              size={Size.iconSm}
+              color={theme.textSecondary}
+            />
+            <AppText variant="body" style={styles.destinationLabel}>
+              {candidate.name}
+            </AppText>
+            {selectedAccount?.parentAccountId === candidate.id && (
+              <AppIcon name={Icon.Check} size={Size.iconSm} color={theme.success} />
+            )}
+          </PressScaleTouchable>
+        ))}
+      </View>
+    </ModalSurface>
   );
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    borderTopLeftRadius: Shape.radius.r2,
-    borderTopRightRadius: Shape.radius.r2,
-    padding: Spacing.lg,
-    maxHeight: AppConfig.layout.hierarchyModalHeightPercent as DimensionValue,
-  },
-  modalHeader: {
-    marginBottom: Spacing.lg,
-  },
-  modalScroll: {
-    marginBottom: Spacing.md,
-  },
   destinationItem: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  destinationSurface: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: Spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
     gap: Spacing.md,
   },
+  destinationLabel: { flex: 1 },
   destinationSection: {
-    marginTop: Spacing.lg,
+    marginTop: Spacing.sm,
   },
   sectionLabel: {
     letterSpacing: Typography.letterSpacing.wide * 2,

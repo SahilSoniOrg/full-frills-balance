@@ -11,8 +11,13 @@ import type { AccountId } from '@/src/types/ids';
 import { FlashList } from '@shopify/flash-list';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AccountManagementTreeRow } from './AccountManagementTreeRow';
+import {
+  ACCOUNT_TREE_DROP_CHIP_ENTER_MS,
+  ACCOUNT_TREE_DROP_CHIP_EXIT_MS,
+} from './accountTreeDragMotion';
 import { useAccountTreeDragController } from './useAccountTreeDragController';
 
 interface AccountManagementTreeListProps {
@@ -62,8 +67,8 @@ export function AccountManagementTreeList({
   );
   const {
     activeAccountId,
-    dragTranslation,
-    dragScrollDelta,
+    flashAccountId,
+    dragMotion,
     hover,
     dragLayout,
     listRef,
@@ -118,10 +123,10 @@ export function AccountManagementTreeList({
                 isPending={pendingAccountIds.has(account.id)}
                 pendingPreview={pendingPreviews.get(account.id)}
                 isActive={activeAccountId === account.id}
-                dragTranslation={
-                  dragTranslation + dragScrollDelta - dragLayout.activeTranslationAdjustment
-                }
+                isFlashing={flashAccountId === account.id}
+                dragMotion={dragMotion}
                 isActiveSubtree={dragLayout.activeSubtreeAccountIds.has(account.id)}
+                makeRoomOffset={dragLayout.displacements.get(account.id) ?? 0}
                 dropIntent={
                   hover?.target != null && hover.hoveredAccountId === account.id ? hover.kind : null
                 }
@@ -144,8 +149,10 @@ export function AccountManagementTreeList({
           onContentSizeChange={onContentSizeChange}
         />
         {activeAccountId && dropIntent && (
-          <View
+          <Animated.View
             pointerEvents="none"
+            entering={FadeIn.duration(ACCOUNT_TREE_DROP_CHIP_ENTER_MS)}
+            exiting={FadeOut.duration(ACCOUNT_TREE_DROP_CHIP_EXIT_MS)}
             accessibilityLiveRegion="polite"
             style={[
               styles.dropIntent,
@@ -155,7 +162,7 @@ export function AccountManagementTreeList({
             <AppText variant="caption" weight="bold" style={{ color: theme.onPrimary }}>
               {hover?.target ? dropIntent : `Can't ${dropIntent.toLowerCase()}`}
             </AppText>
-          </View>
+          </Animated.View>
         )}
       </View>
       {isDraftDirty && (

@@ -6,6 +6,13 @@ import type {
   NativeSyntheticEvent,
   View,
 } from 'react-native';
+import {
+  runOnJS,
+  useSharedValue,
+  withSpring,
+  withTiming,
+  type SharedValue,
+} from 'react-native-reanimated';
 import type { FlattenedAccountTreeRow } from '@/src/services/accounts/accountTreeProjection';
 import {
   resolveAccountTreeDropTarget,
@@ -17,19 +24,29 @@ import type { AccountId } from '@/src/types/ids';
 import { isAccountArchived } from '@/src/utils/accountArchive';
 import { triggerHaptic } from '@/src/utils/haptics';
 import {
-  getAccountTreeAutoScrollVelocity,
-  getAccountTreeDragContentYFromGeometry,
-  getAccountTreeRowGeometry,
-  projectAccountTreeDragLayout,
-  resolveAccountTreeVisualHover,
-} from './accountTreeDragLayout';
-import {
   ACCOUNT_TREE_ROW_MIN_HEIGHT,
   ACCOUNT_TREE_SECTION_HEADER_HEIGHT,
-} from './AccountManagementTreeRow';
+  getAccountTreeAutoScrollVelocity,
+  getAccountTreeDragContentYFromGeometry,
+  getAccountTreeDragDisplacements,
+  getAccountTreeDragInsertionKey,
+  getAccountTreeRowGeometry,
+  resolveAccountTreeVisualHover,
+} from './accountTreeDragLayout';
+import type { AccountTreeDragMotion } from './accountTreeDragMotion';
+import {
+  ACCOUNT_TREE_LAYOUT_EPSILON,
+  ACCOUNT_TREE_SETTLE_LIFT_CANCEL_MS,
+  ACCOUNT_TREE_SETTLE_LIFT_DROP_MS,
+} from './accountTreeDragMotion';
+
+export type { AccountTreeDragMotion };
 
 const AUTO_SCROLL_EDGE_SIZE = 72;
 const AUTO_SCROLL_MAX_SPEED = 640;
+const DRAG_LIFT_SPRING = { damping: 18, stiffness: 280, mass: 0.7 };
+const DRAG_SETTLE_SPRING = { damping: 24, stiffness: 340, mass: 0.7 };
+const DROP_FLASH_MS = 700;
 
 export interface AccountTreeHoverState {
   hoveredAccountId: AccountId;
@@ -50,6 +67,10 @@ function targetKey(target: AccountTreeDropTarget | null): string | null {
     : null;
 }
 
+function writeShared(value: SharedValue<number>, next: number) {
+  value.value = next;
+}
+
 export function useAccountTreeDragController({
   accounts,
   rows,
@@ -57,9 +78,8 @@ export function useAccountTreeDragController({
   onDrop,
 }: UseAccountTreeDragControllerOptions) {
   const [activeAccountId, setActiveAccountId] = useState<AccountId | null>(null);
-  const [dragTranslation, setDragTranslation] = useState(0);
-  const [dragScrollDelta, setDragScrollDelta] = useState(0);
   const [hover, setHover] = useState<AccountTreeHoverState | null>(null);
+  const [flashAccountId, setFlashAccountId] = useState<AccountId | null>(null);
   const [measuredRowHeights, setMeasuredRowHeights] = useState(() => new Map<AccountId, number>());
   const listRef = useRef<FlashListRef<FlattenedAccountTreeRow>>(null);
   const listViewportRef = useRef<View>(null);
@@ -71,10 +91,24 @@ export function useAccountTreeDragController({
   const dragTranslationRef = useRef(0);
   const pointerYRef = useRef<number | null>(null);
   const hoverRef = useRef<AccountTreeHoverState | null>(null);
+  const settlingRef = useRef(false);
+  const settleTranslationRef = useRef(0);
   const animationFrameRef = useRef<number | null>(null);
   const previousFrameTimeRef = useRef<number | null>(null);
+  const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const updateHoverRef = useRef<(accountId: AccountId, translationY: number) => void>(() => {});
   const runAutoScrollFrameRef = useRef<(time: number) => void>(() => {});
+  const clearDragRef = useRef<() => void>(() => {});
+
+  const translationY = useSharedValue(0);
+  const scrollDelta = useSharedValue(0);
+  const liftProgress = useSharedValue(0);
+  const [dragMotion] = useState<AccountTreeDragMotion>(() => ({
+    translationY,
+    scrollDelta,
+    liftProgress,
+  }));
+
   const accountsById = useMemo(
     () => new Map(accounts.map(account => [account.id, account] as const)),
     [accounts],
@@ -103,35 +137,66 @@ export function useAccountTreeDragController({
     },
     [balancesByAccountId],
   );
-  const dragLayout = projectAccountTreeDragLayout(rows, activeAccountId, hover, rowHeights);
+  const dragMotionLayout = getAccountTreeDragDisplacements(
+    rows,
+    activeAccountId,
+    hover,
+    rowHeights,
+  );
+
+  useEffect(() => {
+    settleTranslationRef.current = dragMotionLayout.settleTranslationY;
+  }, [dragMotionLayout.settleTranslationY]);
+
+  const resetMotionValues = useCallback(
+    (next: { translationY?: number; scrollDelta?: number; liftProgress?: number }) => {
+      if (next.translationY != null) writeShared(translationY, next.translationY);
+      if (next.scrollDelta != null) writeShared(scrollDelta, next.scrollDelta);
+      if (next.liftProgress != null) writeShared(liftProgress, next.liftProgress);
+    },
+    [liftProgress, scrollDelta, translationY],
+  );
 
   const onRowLayout = useCallback((accountId: AccountId, height: number) => {
+    if (activeAccountIdRef.current != null || settlingRef.current) return;
     setMeasuredRowHeights(previous => {
       const previousHeight = previous.get(accountId);
-      if (previousHeight != null && Math.abs(previousHeight - height) < 0.5) return previous;
+      if (previousHeight != null && Math.abs(previousHeight - height) < ACCOUNT_TREE_LAYOUT_EPSILON)
+        return previous;
       const next = new Map(previous);
       next.set(accountId, height);
       return next;
     });
   }, []);
 
-  const beginDrag = useCallback((accountId: AccountId) => {
-    activeAccountIdRef.current = accountId;
-    initialScrollOffsetRef.current = scrollOffsetRef.current;
-    dragTranslationRef.current = 0;
-    pointerYRef.current = null;
-    setActiveAccountId(accountId);
-    setDragTranslation(0);
-    setDragScrollDelta(0);
+  const clearHover = useCallback(() => {
+    if (hoverRef.current == null) return;
     hoverRef.current = null;
     setHover(null);
-    listViewportRef.current?.measureInWindow((_x, y, _width, height) => {
-      viewportRef.current = { top: y, height };
-    });
   }, []);
 
+  const beginDrag = useCallback(
+    (accountId: AccountId) => {
+      settlingRef.current = false;
+      activeAccountIdRef.current = accountId;
+      initialScrollOffsetRef.current = scrollOffsetRef.current;
+      dragTranslationRef.current = 0;
+      pointerYRef.current = null;
+      resetMotionValues({ translationY: 0, scrollDelta: 0 });
+      // eslint-disable-next-line react-hooks/immutability
+      liftProgress.value = withSpring(1, DRAG_LIFT_SPRING);
+      setActiveAccountId(accountId);
+      clearHover();
+      void triggerHaptic('medium');
+      listViewportRef.current?.measureInWindow((_x, y, _width, height) => {
+        viewportRef.current = { top: y, height };
+      });
+    },
+    [clearHover, liftProgress, resetMotionValues],
+  );
+
   const updateHover = useCallback(
-    (accountId: AccountId, translationY: number) => {
+    (accountId: AccountId, translationYValue: number) => {
       const sourceGeometry = getAccountTreeRowGeometry(rows, accountId, rowHeights);
       if (!sourceGeometry) return;
       const sourceRow = rows.find(row => row.accountId === accountId);
@@ -143,23 +208,24 @@ export function useAccountTreeDragController({
       const contentY = getAccountTreeDragContentYFromGeometry(
         sourceGeometry.top + sourceHeaderHeight,
         sourceAccountHeight,
-        translationY,
+        translationYValue,
         scrollOffsetRef.current - initialScrollOffsetRef.current,
       );
       const visualHover = resolveAccountTreeVisualHover(
-        dragLayout.rows,
+        rows,
         contentY,
         rowHeights,
         candidateId => {
           const candidate = accountsById.get(candidateId);
           return candidate ? canReceiveChildren(candidate) : false;
         },
+        {
+          skipAccountIds: dragMotionLayout.activeSubtreeAccountIds,
+          previous: hoverRef.current,
+        },
       );
-      if (!visualHover || dragLayout.activeSubtreeAccountIds.has(visualHover.hoveredAccountId)) {
-        // Crossing a section/header gap or the dragged subtree must not retain
-        // the previous target while the pointer is between valid rows.
-        hoverRef.current = null;
-        setHover(null);
+      if (!visualHover) {
+        clearHover();
         return;
       }
       const draggedAccount = accountsById.get(accountId);
@@ -169,10 +235,7 @@ export function useAccountTreeDragController({
         hoveredAccount &&
         draggedAccount.accountType !== hoveredAccount.accountType
       ) {
-        // Type sections are hard drag boundaries. Clear the projected hover so
-        // the active subtree returns to its original slot while crossing one.
-        hoverRef.current = null;
-        setHover(null);
+        clearHover();
         return;
       }
       const resolution = resolveAccountTreeDropTarget(
@@ -183,19 +246,28 @@ export function useAccountTreeDragController({
         { canReceiveChildren },
       );
       const nextHover = { ...visualHover, target: resolution.target };
-      const previousKey = targetKey(hoverRef.current?.target ?? null);
-      const nextKey = targetKey(nextHover.target);
       if (
         hoverRef.current?.hoveredAccountId === nextHover.hoveredAccountId &&
         hoverRef.current.kind === nextHover.kind &&
-        previousKey === nextKey
-      )
+        targetKey(hoverRef.current.target) === targetKey(nextHover.target)
+      ) {
         return;
-      if (nextKey && nextKey !== previousKey) void triggerHaptic('light');
+      }
+      const previousInsertion = getAccountTreeDragInsertionKey(rows, hoverRef.current);
+      const nextInsertion = getAccountTreeDragInsertionKey(rows, nextHover);
+      if (nextInsertion && nextInsertion !== previousInsertion) void triggerHaptic('light');
       hoverRef.current = nextHover;
       setHover(nextHover);
     },
-    [accounts, accountsById, canReceiveChildren, dragLayout, rowHeights, rows],
+    [
+      accounts,
+      accountsById,
+      canReceiveChildren,
+      clearHover,
+      dragMotionLayout.activeSubtreeAccountIds,
+      rowHeights,
+      rows,
+    ],
   );
 
   useEffect(() => {
@@ -210,83 +282,148 @@ export function useAccountTreeDragController({
     previousFrameTimeRef.current = null;
   }, []);
 
-  const runAutoScrollFrame = useCallback((time: number) => {
-    animationFrameRef.current = null;
-    const accountId = activeAccountIdRef.current;
-    const pointerY = pointerYRef.current;
-    if (!accountId || pointerY == null) {
-      previousFrameTimeRef.current = null;
-      return;
-    }
-    const { top, height } = viewportRef.current;
-    const velocity = getAccountTreeAutoScrollVelocity(
-      pointerY,
-      top,
-      height,
-      AUTO_SCROLL_EDGE_SIZE,
-      AUTO_SCROLL_MAX_SPEED,
-    );
-    const previousTime = previousFrameTimeRef.current ?? time;
-    previousFrameTimeRef.current = time;
-    const elapsedSeconds = Math.min(0.05, Math.max(0, time - previousTime) / 1000);
-    const maxOffset = Math.max(0, contentHeightRef.current - height);
-    const currentOffset = scrollOffsetRef.current;
-    const nextOffset = Math.max(0, Math.min(maxOffset, currentOffset + velocity * elapsedSeconds));
-    if (nextOffset !== currentOffset) {
-      scrollOffsetRef.current = nextOffset;
-      setDragScrollDelta(nextOffset - initialScrollOffsetRef.current);
-      listRef.current?.scrollToOffset({ offset: nextOffset, animated: false });
-      updateHoverRef.current(accountId, dragTranslationRef.current);
-    }
-    const canContinue =
-      velocity < 0 ? nextOffset > 0 : velocity > 0 ? nextOffset < maxOffset : false;
-    if (canContinue)
-      animationFrameRef.current = requestAnimationFrame(nextTime =>
-        runAutoScrollFrameRef.current(nextTime),
+  const runAutoScrollFrame = useCallback(
+    (time: number) => {
+      animationFrameRef.current = null;
+      const accountId = activeAccountIdRef.current;
+      const pointerY = pointerYRef.current;
+      if (!accountId || pointerY == null) {
+        previousFrameTimeRef.current = null;
+        return;
+      }
+      const { top, height } = viewportRef.current;
+      const velocity = getAccountTreeAutoScrollVelocity(
+        pointerY,
+        top,
+        height,
+        AUTO_SCROLL_EDGE_SIZE,
+        AUTO_SCROLL_MAX_SPEED,
       );
-    else previousFrameTimeRef.current = null;
-  }, []);
+      const previousTime = previousFrameTimeRef.current ?? time;
+      previousFrameTimeRef.current = time;
+      const elapsedSeconds = Math.min(0.05, Math.max(0, time - previousTime) / 1000);
+      const maxOffset = Math.max(0, contentHeightRef.current - height);
+      const currentOffset = scrollOffsetRef.current;
+      const nextOffset = Math.max(
+        0,
+        Math.min(maxOffset, currentOffset + velocity * elapsedSeconds),
+      );
+      if (nextOffset !== currentOffset) {
+        scrollOffsetRef.current = nextOffset;
+        writeShared(scrollDelta, nextOffset - initialScrollOffsetRef.current);
+        listRef.current?.scrollToOffset({ offset: nextOffset, animated: false });
+        updateHoverRef.current(accountId, dragTranslationRef.current);
+      }
+      const canContinue =
+        velocity < 0 ? nextOffset > 0 : velocity > 0 ? nextOffset < maxOffset : false;
+      if (canContinue)
+        animationFrameRef.current = requestAnimationFrame(nextTime =>
+          runAutoScrollFrameRef.current(nextTime),
+        );
+      else previousFrameTimeRef.current = null;
+    },
+    [scrollDelta],
+  );
 
   useEffect(() => {
     runAutoScrollFrameRef.current = runAutoScrollFrame;
   }, [runAutoScrollFrame]);
+
   const ensureAutoScroll = useCallback(() => {
     if (animationFrameRef.current == null)
       animationFrameRef.current = requestAnimationFrame(runAutoScrollFrame);
   }, [runAutoScrollFrame]);
+
   const updateDrag = useCallback(
-    (accountId: AccountId, translationY: number, absoluteY: number) => {
-      dragTranslationRef.current = translationY;
+    (accountId: AccountId, translationYValue: number, absoluteY: number) => {
+      if (settlingRef.current) return;
+      dragTranslationRef.current = translationYValue;
       pointerYRef.current = absoluteY;
-      setDragTranslation(translationY);
-      updateHover(accountId, translationY);
+      writeShared(translationY, translationYValue);
+      updateHover(accountId, translationYValue);
       ensureAutoScroll();
     },
-    [ensureAutoScroll, updateHover],
+    [ensureAutoScroll, translationY, updateHover],
   );
+
   const clearDrag = useCallback(() => {
+    settlingRef.current = false;
     activeAccountIdRef.current = null;
     pointerYRef.current = null;
+    dragTranslationRef.current = 0;
+    resetMotionValues({ translationY: 0, scrollDelta: 0, liftProgress: 0 });
     setActiveAccountId(null);
-    setDragTranslation(0);
-    setDragScrollDelta(0);
-    hoverRef.current = null;
-    setHover(null);
+    clearHover();
+  }, [clearHover, resetMotionValues]);
+
+  useEffect(() => {
+    clearDragRef.current = clearDrag;
+  }, [clearDrag]);
+
+  const flashDroppedAccount = useCallback((accountId: AccountId) => {
+    if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+    setFlashAccountId(accountId);
+    flashTimeoutRef.current = setTimeout(() => {
+      setFlashAccountId(null);
+      flashTimeoutRef.current = null;
+    }, DROP_FLASH_MS);
   }, []);
-  const finishDrag = useCallback(() => {
-    stopAutoScroll();
-    const target = hoverRef.current?.target;
-    if (target) {
-      onDrop(target);
-      void triggerHaptic('medium');
-    }
-    clearDrag();
-  }, [clearDrag, onDrop, stopAutoScroll]);
+
+  const settleTranslation = useCallback(
+    (toValue: number, onSettled: () => void) => {
+      settlingRef.current = true;
+      pointerYRef.current = null;
+      activeAccountIdRef.current = null;
+      writeShared(scrollDelta, 0);
+      // eslint-disable-next-line react-hooks/immutability
+      liftProgress.value = withTiming(0, {
+        duration:
+          toValue === 0 ? ACCOUNT_TREE_SETTLE_LIFT_CANCEL_MS : ACCOUNT_TREE_SETTLE_LIFT_DROP_MS,
+      });
+      // eslint-disable-next-line react-hooks/immutability
+      translationY.value = withSpring(toValue, DRAG_SETTLE_SPRING, finished => {
+        if (finished) runOnJS(onSettled)();
+      });
+    },
+    [liftProgress, scrollDelta, translationY],
+  );
+
   const cancelDrag = useCallback(() => {
     stopAutoScroll();
-    clearDrag();
-  }, [clearDrag, stopAutoScroll]);
+    if (!activeAccountIdRef.current && !settlingRef.current) {
+      clearDrag();
+      return;
+    }
+    clearHover();
+    settleTranslation(0, () => clearDragRef.current());
+  }, [clearDrag, clearHover, settleTranslation, stopAutoScroll]);
+
+  const finishDrag = useCallback(() => {
+    stopAutoScroll();
+    if (settlingRef.current) return;
+    const target = hoverRef.current?.target;
+    const droppedAccountId = activeAccountIdRef.current;
+    if (!target || !droppedAccountId) {
+      cancelDrag();
+      return;
+    }
+    const settleTo = settleTranslationRef.current;
+    void triggerHaptic('medium');
+    settleTranslation(settleTo, () => {
+      onDrop(target);
+      flashDroppedAccount(droppedAccountId);
+      clearDragRef.current();
+    });
+  }, [cancelDrag, flashDroppedAccount, onDrop, settleTranslation, stopAutoScroll]);
+
   useEffect(() => stopAutoScroll, [stopAutoScroll]);
+  useEffect(
+    () => () => {
+      if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+    },
+    [],
+  );
+
   const onListLayout = useCallback((event: LayoutChangeEvent) => {
     viewportRef.current = { ...viewportRef.current, height: event.nativeEvent.layout.height };
     listViewportRef.current?.measureInWindow((_x, y, _width, height) => {
@@ -299,10 +436,14 @@ export function useAccountTreeDragController({
 
   return {
     activeAccountId,
-    dragTranslation,
-    dragScrollDelta,
+    flashAccountId,
+    dragMotion,
     hover,
-    dragLayout,
+    dragLayout: {
+      rows,
+      activeSubtreeAccountIds: dragMotionLayout.activeSubtreeAccountIds,
+      displacements: dragMotionLayout.displacements,
+    },
     listRef,
     listViewportRef,
     beginDrag,
