@@ -48,6 +48,9 @@ export function PlannedPaymentsSection({ items, onItemPress }: PlannedPaymentsSe
         style={styles.headerContainer}
         onPress={() => setIsExpanded(!isExpanded)}
         activeOpacity={Opacity.heavy}
+        accessibilityRole="button"
+        accessibilityLabel={AppConfig.strings.journal.upcoming}
+        accessibilityState={{ expanded: isExpanded }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
           <AppText

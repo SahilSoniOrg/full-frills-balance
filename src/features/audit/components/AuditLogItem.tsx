@@ -45,8 +45,9 @@ export const AuditLogItem = ({
     <AppCard paddingSize="md" elevation="sm" radius="r2" style={styles.card}>
       <TouchableOpacity
         onPress={onToggle}
-        accessibilityLabel={AppConfig.strings.audit.viewDetails}
+        accessibilityLabel={isExpanded ? 'Hide audit details' : AppConfig.strings.audit.viewDetails}
         accessibilityRole="button"
+        accessibilityState={{ expanded: isExpanded }}
         activeOpacity={Opacity.heavy}
       >
         <Inline gap="md" align="center">
@@ -101,6 +102,8 @@ export const AuditLogItem = ({
                 onPress={() =>
                   onView(item.entityType, item.entityId, entityDisplayName || undefined)
                 }
+                accessibilityRole="button"
+                accessibilityLabel={`View ${entityDisplayName || entityLabel}`}
               >
                 <AppIcon name={Icon.Eye} size={Size.xs} color={theme.textSecondary} />
                 <AppText variant="caption" weight="semibold">
@@ -115,6 +118,8 @@ export const AuditLogItem = ({
                   { backgroundColor: withOpacity(theme.warning, Opacity.soft) },
                 ]}
                 onPress={() => onRevert(item.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`Revert ${entityDisplayName || entityLabel}`}
               >
                 <AppIcon name={Icon.Refresh} size={Size.xs} color={theme.warning} />
                 <AppText variant="caption" weight="semibold">
@@ -137,6 +142,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   actionButton: {
+    minHeight: Size.touchTarget,
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: Spacing.xs,

@@ -30,6 +30,7 @@ export function AppButton({
   disabled,
   style,
   onPress,
+  accessibilityLabel,
   ...props
 }: AppButtonProps) {
   const { theme, fonts, getVariantColors } = useTheme();
@@ -166,7 +167,8 @@ export function AppButton({
       disabled={disabled || loading}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityState={{ disabled: disabled || loading }}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
     >
       {renderChildren()}
     </PressScaleTouchable>

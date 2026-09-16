@@ -1,5 +1,5 @@
 import { Icon, AppIcon, AppText, type IconName } from '@/src/components/core';
-import { Opacity } from '@/src/constants';
+import { Opacity, Size } from '@/src/constants';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SettingsIcon } from '@/src/components/settings/SettingsIcon';
@@ -96,7 +96,8 @@ export function SettingsMenuItem({
         accessibilityLabel={title}
         accessibilityHint={description}
         testID={testID}
-        style={{ flex: 1 }}
+        hitSlop={{ top: 4, bottom: 4, left: 0, right: 0 }}
+        style={{ flex: 1, minHeight: Size.touchTarget }}
       >
         <Inline
           align="center"

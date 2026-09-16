@@ -86,8 +86,11 @@ const SelectableGridItem = React.memo(
         activeOpacity={Opacity.heavy}
         style={styles.itemPressable}
         accessibilityLabel={`${name}, ${isSelected ? 'selected' : 'not selected'}`}
-        accessibilityRole="button"
-        accessibilityState={{ selected: isSelected, disabled: isAtMax }}
+        accessibilityRole="checkbox"
+        accessibilityHint={
+          isAtMax && !isSelected ? 'Selection limit reached' : 'Double tap to select or deselect'
+        }
+        accessibilityState={{ checked: isSelected, disabled: isAtMax }}
         testID={`grid-item-${id}`}
       >
         <Box

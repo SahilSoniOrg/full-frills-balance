@@ -56,7 +56,7 @@ export function PlannedPaymentFormView({
       >
         <Box paddingTop="md">
           <FormHeroSection
-            nameLabel="Rule Name"
+            nameLabel="Payment name"
             nameValue={form.name}
             onNameChange={(val: string) => setField('name', val)}
             namePlaceholder={AppConfig.strings.plannedPayments.namePlaceholder}
@@ -185,15 +185,16 @@ export function PlannedPaymentFormView({
                 </FadeIn>
               )}
 
-              <FormField label="Auto-Record">
+              <FormField label="Automatically record entry">
                 <ListRow
                   padding="sm"
-                  title="Save Automatically"
-                  subtitle="Creates entry on the scheduled date"
+                  title="Save automatically"
+                  subtitle="Creates an entry on the scheduled date"
                   trailing={
                     <AppToggle
                       value={form.isAutoPost}
                       onValueChange={val => setField('isAutoPost', val)}
+                      accessibilityLabel="Save automatically"
                     />
                   }
                 />
