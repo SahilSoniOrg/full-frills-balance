@@ -13,7 +13,8 @@ jobs:
   detox:
     name: iOS Detox critical paths
     runs-on: macos-latest
-    timeout-minutes: 75
+    # Build + applesimutils + full e2e/specs regularly exceeds 75m on macos-latest.
+    timeout-minutes: 120
     env:
       EXPO_PUBLIC_E2E: '1'
       DETOX_IOS_DEVICE: iPhone 17
