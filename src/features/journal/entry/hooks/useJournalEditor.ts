@@ -14,6 +14,7 @@ import {
 import { deriveJournalEditorBalanceState } from '@/src/features/journal/entry/journalEditorBalancePolicy';
 import { normalizeJournalLinesForGuidedMode } from '@/src/services/journal/journalEditorHelpers';
 import { showErrorAlert } from '@/src/utils/alerts';
+import { triggerSaveOutcomeHaptic } from '@/src/utils/haptics';
 import { logger } from '@/src/utils/logger';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -196,6 +197,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
         });
 
         if (!result.success) {
+          triggerSaveOutcomeHaptic(false);
           showErrorAlert(result.error || 'Unknown error');
           return result;
         }
@@ -214,9 +216,11 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
             logger.error('Post-commit journal effect failed:', error);
           });
 
+        triggerSaveOutcomeHaptic(true);
         onSuccess?.();
         return result;
       } catch {
+        triggerSaveOutcomeHaptic(false);
         showErrorAlert('Unexpected error occurred');
         return { success: false, error: 'Unexpected error occurred' };
       } finally {
