@@ -1,9 +1,9 @@
 name: Detox (iOS)
 
+# Manual only — full iOS Detox regularly burns 60–120m on macos runners.
+# Run from Actions → Detox (iOS) → Run workflow when needed.
 on:
-  pull_request:
-  push:
-    branches: [main, master]
+  workflow_dispatch:
 
 concurrency:
   group: detox-${{ github.ref }}
@@ -13,7 +13,6 @@ jobs:
   detox:
     name: iOS Detox critical paths
     runs-on: macos-latest
-    # Build + applesimutils + full e2e/specs regularly exceeds 75m on macos-latest.
     timeout-minutes: 120
     env:
       EXPO_PUBLIC_E2E: '1'
