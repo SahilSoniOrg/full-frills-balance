@@ -24,6 +24,7 @@ import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/services/preferences';
+import { acknowledgeCurrentPrivacyPolicy } from '@/src/services/legal/privacyPolicyAcceptance';
 import { storage } from '@/src/utils/storage';
 import { setE2eSmsInboxMessages } from './e2eSmsInject';
 import { E2eSeedProfile } from './e2eConstants';
@@ -69,6 +70,9 @@ async function applyOnboardingPreferences(userName: string): Promise<void> {
   preferences.update({
     isPrivacyMode: false,
   });
+  // Seeded onboarded installs skip the privacy UI; acknowledge so LaunchCoordinator
+  // does not redirect to /privacy-notice before the dashboard.
+  acknowledgeCurrentPrivacyPolicy();
 }
 
 async function seedWorkplace(name: string): Promise<WorkplaceId> {
