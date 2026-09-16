@@ -4,16 +4,11 @@
  */
 
 import { AppIcon } from '@/src/components/core/AppIcon';
-import type { IconName } from '@/src/types/domainIcons';
-import { Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens';
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
+import { Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
-import {
-  Keyboard,
-  StyleSheet,
-  TouchableOpacity,
-  type TouchableOpacityProps,
-  type ViewStyle,
-} from 'react-native';
+import type { IconName } from '@/src/types/domainIcons';
+import { Keyboard, StyleSheet, type TouchableOpacityProps, type ViewStyle } from 'react-native';
 
 export type IconButtonVariant = 'primary' | 'surface' | 'clear' | 'error' | 'success';
 
@@ -73,21 +68,21 @@ export function IconButton({
   const finalIconColor = iconColor ?? config.iconColor;
 
   return (
-    <TouchableOpacity
+    <PressScaleTouchable
+      {...props}
       onPress={e => {
         Keyboard.dismiss();
         onPress?.(e);
       }}
-      activeOpacity={Opacity.heavy}
-      style={[styles.button, { backgroundColor: config.backgroundColor }, config.elevation, style]}
+      style={style}
+      surfaceStyle={[styles.button, { backgroundColor: config.backgroundColor }, config.elevation]}
       hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
-      {...props}
     >
       <AppIcon name={name} size={size} color={finalIconColor} />
-    </TouchableOpacity>
+    </PressScaleTouchable>
   );
 }
 

@@ -1,9 +1,11 @@
 import { AppIcon } from '@/src/components/core/AppIcon';
-import { Icon, type IconName } from '@/src/types/domainIcons';
 import { AppText } from '@/src/components/core/AppText';
-import { Opacity, Shape, Size, Spacing, ZIndex } from '@/src/constants';
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
+import { Shape, Size, Spacing, ZIndex } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import { Icon, type IconName } from '@/src/types/domainIcons';
+import { triggerHaptic } from '@/src/utils/haptics';
+import { StyleSheet, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface FABProps {
@@ -31,19 +33,22 @@ export const FloatingActionButton = ({
   const safeBottomOffset = Math.max(Spacing.xl, insets.bottom + Spacing.md);
 
   return (
-    <TouchableOpacity
+    <PressScaleTouchable
       style={[
         styles.base,
         placement === 'center' ? styles.centerPlacement : styles.endPlacement,
-        isExtended ? styles.extended : styles.fab,
-        {
-          backgroundColor: theme.primary,
-          bottom: bottomOffset ?? safeBottomOffset,
-        },
+        { bottom: bottomOffset ?? safeBottomOffset },
         style,
       ]}
-      onPress={onPress}
-      activeOpacity={Opacity.heavy}
+      surfaceStyle={[
+        styles.surface,
+        isExtended ? styles.extended : styles.fab,
+        { backgroundColor: theme.primary },
+      ]}
+      onPress={() => {
+        void triggerHaptic('light');
+        onPress();
+      }}
       testID="fab-button"
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label ?? 'Create new item'}
@@ -58,16 +63,13 @@ export const FloatingActionButton = ({
           {label}
         </AppText>
       ) : null}
-    </TouchableOpacity>
+    </PressScaleTouchable>
   );
 };
 
 const styles = StyleSheet.create({
   base: {
     position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...(Shape.elevation.lg as ViewStyle),
     zIndex: ZIndex.fab,
   },
   endPlacement: {
@@ -75,6 +77,11 @@ const styles = StyleSheet.create({
   },
   centerPlacement: {
     alignSelf: 'center',
+  },
+  surface: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...(Shape.elevation.lg as ViewStyle),
   },
   fab: {
     width: Size.fab,
