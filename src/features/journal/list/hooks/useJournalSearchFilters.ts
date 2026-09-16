@@ -56,7 +56,7 @@ export function useJournalSearchFilters(params: JournalSearchFilterParams) {
     setPeriodFilter(filter);
   }, []);
 
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTrackedQueryRef = useRef('');
 
   useEffect(() => {

@@ -16,7 +16,7 @@ export class AnalyticsService {
   private _posthog: PostHog | null = null;
   private _initialized = false;
   private sessionStartTime: number = Date.now();
-  private sessionTimeoutTimer: NodeJS.Timeout | null = null;
+  private sessionTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
 
   public get posthog(): PostHog | null {
     return this._posthog;

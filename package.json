@@ -34,6 +34,7 @@
     "e2e:test:ios": "detox test --configuration ios.sim.release e2e/specs",
     "e2e:test:ios:device": "test -n \"$DETOX_IOS_DEVICE_UDID\" || { echo 'Set DETOX_IOS_DEVICE_UDID first'; exit 1; }; detox test --configuration ios.device.release e2e/specs",
     "e2e:ci": "EXPO_PUBLIC_E2E=1 detox test --configuration ios.sim.release e2e/specs --runInBand",
+    "e2e:ci:press-haptics-video": "EXPO_PUBLIC_E2E=1 DETOX_PRESS_HAPTICS_DEMO=1 detox test --configuration ios.sim.release e2e/specs/journal/press-haptics-demo.e2e.ts --runInBand --record-videos all --take-screenshots all",
     "e2e:clean:ios": "bash scripts/e2e-clean-ios.sh",
     "e2e:build:android": "EXPO_PUBLIC_E2E=1 detox build --configuration android.emu.release",
     "e2e:test:android": "detox test --configuration android.emu.release e2e/specs",
