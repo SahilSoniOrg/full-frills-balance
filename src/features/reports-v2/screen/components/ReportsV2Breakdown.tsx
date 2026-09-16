@@ -73,7 +73,7 @@ export function ReportsV2Breakdown({
           ]}
         >
           <View style={styles.rowCopy}>
-            <AppText variant="body" weight="medium" numberOfLines={2}>
+            <AppText variant="body" weight="medium">
               {item.label}
             </AppText>
             <View style={[styles.rowTrack, { backgroundColor: theme.surfaceSecondary }]}>
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   },
   breakdownRowDisabled: { opacity: 0.6 },
   rowBorder: { borderTopWidth: 1 },
-  rowCopy: { flex: 1, gap: Spacing.sm },
+  rowCopy: { flex: 1, minWidth: 0, gap: Spacing.sm },
   rowTrack: { height: 5, borderRadius: 5, overflow: 'hidden' },
   rowFill: { height: 5, borderRadius: 5 },
   showMoreButton: { alignSelf: 'center', marginVertical: Spacing.sm },

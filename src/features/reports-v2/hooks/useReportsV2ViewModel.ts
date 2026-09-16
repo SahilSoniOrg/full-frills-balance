@@ -14,7 +14,10 @@ import type {
   ReportsV2SectionId,
   ReportsV2ViewModel,
 } from '@/src/features/reports-v2/types';
+import { AppConfig } from '@/src/constants';
+import { fetchMissingHistoricalRates } from '@/src/services/reports-v2/missingExchangeRateFetch';
 import type { ReportsV2QueryEngine } from '@/src/services/reports-v2/reportQueryEngine';
+import { confirm, toast } from '@/src/utils/alerts';
 
 const EMPTY_ACCOUNT_IDS: readonly string[] = [];
 const FILTER_SETTLE_DELAY_MS = 220;
@@ -73,6 +76,7 @@ export function useReportsV2ViewModel({
   const [state, setState] = useState<ReportsV2LoadState>('idle');
   const [result, setResult] = useState<ReportsV2Result | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  const [isFetchingMissingRates, setIsFetchingMissingRates] = useState(false);
   const runSequence = useRef(0);
   const hasLoaded = useRef(false);
   const scheduledRun = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -275,6 +279,39 @@ export function useReportsV2ViewModel({
     if (state === 'refreshing' || state === 'error') return result.sections[0] ?? null;
     return null;
   }, [activeSection, result, state]);
+  const missingRateQuotes = useMemo(
+    () =>
+      result?.warnings.find(warning => warning.code === 'MISSING_EXCHANGE_RATE')
+        ?.missingRateQuotes ?? [],
+    [result],
+  );
+  const onFetchMissingRates = useCallback(() => {
+    if (missingRateQuotes.length === 0 || isFetchingMissingRates) return;
+    const copy = AppConfig.strings.reportsV2;
+    confirm.show({
+      title: copy.fetchMissingRatesTitle,
+      message: copy.fetchMissingRatesMessage,
+      confirmText: copy.fetchMissingRatesConfirm,
+      onConfirm: () => {
+        void (async () => {
+          setIsFetchingMissingRates(true);
+          try {
+            const fetchResult = await fetchMissingHistoricalRates(missingRateQuotes);
+            if (fetchResult.attempted === 0) toast.info(copy.fetchMissingRatesNone);
+            else if (fetchResult.fetched === 0) toast.warning(copy.fetchMissingRatesUnavailable);
+            else if (fetchResult.failed > 0)
+              toast.warning(copy.fetchMissingRatesPartial(fetchResult.fetched, fetchResult.failed));
+            else toast.success(copy.fetchMissingRatesSuccess(fetchResult.fetched));
+            runImmediately('refreshing');
+          } catch {
+            toast.error(copy.fetchMissingRatesFailed);
+          } finally {
+            setIsFetchingMissingRates(false);
+          }
+        })();
+      },
+    });
+  }, [isFetchingMissingRates, missingRateQuotes, runImmediately]);
   return {
     query,
     filters,
@@ -287,6 +324,9 @@ export function useReportsV2ViewModel({
     onRefresh: () => runImmediately('refreshing'),
     onRetry: () => runImmediately('loading'),
     onDrilldown,
+    canFetchMissingRates: missingRateQuotes.length > 0,
+    isFetchingMissingRates,
+    onFetchMissingRates,
     onRequestCustomRange,
     onRequestAccountScope,
     onRequestCurrency,

@@ -16,6 +16,7 @@ import {
   selectScopedLeafAccounts,
   type ReportLedgerSnapshot,
 } from './reader/ledgerFactReader';
+import { resolveEffectiveReportPeriod, resolveFactReadWindow } from './reader/reportReadWindow';
 import { requestedReportSections, type ReportQuery, type ReportSectionId } from './types/query';
 import type { ReportWarning } from './types/result';
 
@@ -108,46 +109,50 @@ async function readBalanceInputs(
   );
   const balanceById = new Map(balances.map(balance => [balance.accountId, balance]));
   const warnings: ReportWarning[] = [];
-  const result: ReportBalanceInput[] = [];
-  for (const account of accounts) {
-    const balance = balanceById.get(account.id);
-    if (!balance) continue;
-    const valuation = resolveCurrencyValuation(DEFAULT_CURRENCY_VALUATION_POLICY, {
-      purpose: 'BALANCE',
-      sourceCurrencyCode: account.currencyCode,
-      targetCurrencyCode: query.targetCurrency,
-      periodEndpoint: asOfDate,
-    });
-    const converted = await convertAmount({
-      amount: balance.balance,
-      fromCurrency: account.currencyCode,
-      toCurrency: query.targetCurrency,
-      mode: 'historical',
-      rateDate: valuation.rateDate,
-    });
-    if (!converted.ok) {
-      warnings.push({
-        code: 'MISSING_EXCHANGE_RATE',
-        severity: 'WARNING',
-        message: 'A point-in-time balance could not be valued in the report currency.',
-        count: 1,
-        accountIds: [account.id],
+  const valued = await Promise.all(
+    accounts.map(async account => {
+      const balance = balanceById.get(account.id);
+      if (!balance) return null;
+      const valuation = resolveCurrencyValuation(DEFAULT_CURRENCY_VALUATION_POLICY, {
+        purpose: 'BALANCE',
+        sourceCurrencyCode: account.currencyCode,
+        targetCurrencyCode: query.targetCurrency,
+        periodEndpoint: asOfDate,
       });
-      continue;
-    }
-    result.push({
-      accountId: account.id,
-      accountName: account.name,
-      accountType: account.accountType,
-      accountSubtype: account.accountSubtype,
-      accountPath: account.id ? [account.id] : [],
-      isLeafAccount: true,
-      balance: balance.balance,
-      reportCurrencyBalance: converted.amount,
-      currencyCode: account.currencyCode,
-    });
-  }
-  return { balances: result, warnings };
+      const converted = await convertAmount({
+        amount: balance.balance,
+        fromCurrency: account.currencyCode,
+        toCurrency: query.targetCurrency,
+        mode: 'historical',
+        rateDate: valuation.rateDate,
+      });
+      if (!converted.ok) {
+        warnings.push({
+          code: 'MISSING_EXCHANGE_RATE',
+          severity: 'WARNING',
+          message: 'A point-in-time balance could not be valued in the report currency.',
+          count: 1,
+          accountIds: [account.id],
+        });
+        return null;
+      }
+      return {
+        accountId: account.id,
+        accountName: account.name,
+        accountType: account.accountType,
+        accountSubtype: account.accountSubtype,
+        accountPath: account.id ? [account.id] : [],
+        isLeafAccount: true,
+        balance: balance.balance,
+        reportCurrencyBalance: converted.amount,
+        currencyCode: account.currencyCode,
+      } satisfies ReportBalanceInput;
+    }),
+  );
+  return {
+    balances: valued.filter((item): item is NonNullable<typeof item> => item !== null),
+    warnings,
+  };
 }
 
 export async function readBudgets(
@@ -214,19 +219,31 @@ export async function readBudgets(
 export async function readReportInputs(query: ReportQuery): Promise<ReportInputSnapshot> {
   const sections = requestedReportSections(query);
   const needsHealth = sections.has('health');
+  const factPeriod = resolveFactReadWindow(query, query.period);
   const healthSnapshot = needsHealth
-    ? await readReportLedger({
-        ...query,
-        accountIds: undefined,
-        accountTypes: undefined,
-        includeArchivedAccounts: true,
-      })
+    ? await readReportLedger(
+        {
+          ...query,
+          accountIds: undefined,
+          accountTypes: undefined,
+          includeArchivedAccounts: true,
+        },
+        { factPeriod },
+      )
     : undefined;
   const snapshot = healthSnapshot
     ? scopeLedgerSnapshot(healthSnapshot, query)
-    : await readReportLedger(query);
-  const period = query.period;
+    : await readReportLedger(query, { factPeriod });
+  const earliestPostedDate = snapshot.actualFacts.reduce(
+    (earliest, fact) => Math.min(earliest, fact.journalDate),
+    Number.POSITIVE_INFINITY,
+  );
+  const period = resolveEffectiveReportPeriod(
+    query.period,
+    Number.isFinite(earliestPostedDate) ? earliestPostedDate : null,
+  );
   const comparisonPeriod = resolveComparisonPeriod(query, period);
+  const queryForRead = { ...query, period };
   const currentFacts = [...snapshot.actualFacts, ...snapshot.plannedFacts];
   const comparisonFacts = comparisonPeriod
     ? currentFacts.filter(
@@ -254,12 +271,15 @@ export async function readReportInputs(query: ReportQuery): Promise<ReportInputS
     'debt',
     'forecast',
   );
-  const opening = needsBalances
-    ? await readBalanceInputs(query, snapshot, Math.max(0, period.startDate - 1))
-    : { balances: [], warnings: [] };
-  const closing = needsBalances
-    ? await readBalanceInputs(query, snapshot, period.endDate)
-    : { balances: [], warnings: [] };
+  const [opening, closing] = needsBalances
+    ? await Promise.all([
+        readBalanceInputs(queryForRead, snapshot, Math.max(0, period.startDate - 1)),
+        readBalanceInputs(queryForRead, snapshot, period.endDate),
+      ])
+    : [
+        { balances: [] as ReportBalanceInput[], warnings: [] as ReportWarning[] },
+        { balances: [] as ReportBalanceInput[], warnings: [] as ReportWarning[] },
+      ];
   const cashBalances = {
     openingBalances: opening.balances.filter(balance => isCashSubtype(balance.accountSubtype)),
     closingBalances: closing.balances.filter(balance => isCashSubtype(balance.accountSubtype)),

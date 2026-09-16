@@ -1,15 +1,19 @@
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { journalListQueryRepository } from '@/src/data/repositories/journal/journalListQueryRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
+import { AppConfig } from '@/src/constants/app-config';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
-import { AccountType, JournalStatus, TransactionType } from '@/src/types/enums';
+import { AccountType, TransactionType } from '@/src/types/enums';
 import type AccountModel from '@/src/data/models/Account';
 import type Journal from '@/src/data/models/Journal';
 import type Transaction from '@/src/data/models/Transaction';
 import type { AccountId, JournalId } from '@/src/types/ids';
-import type { ReportWarning } from '../types/result';
+import { runTasksWithBoundedConcurrency } from '@/src/utils/asyncConcurrency';
+import { roundToPrecision } from '@/src/utils/money';
+import type { ReportWarning, MissingRateQuote } from '../types/result';
 import type { ReportingFact } from '../types/fact';
+import type { ReportPeriod } from '../types/period';
 import type { ReportQuery } from '../types/query';
 import { classifyJournal } from '../classification/journalClassification';
 
@@ -19,6 +23,10 @@ export interface ReportLedgerSnapshot {
   readonly actualFacts: readonly ReportingFact[];
   readonly plannedFacts: readonly ReportingFact[];
   readonly warnings: readonly ReportWarning[];
+}
+
+export interface ReadReportLedgerOptions {
+  readonly factPeriod?: ReportPeriod;
 }
 
 export function accountPathFor(
@@ -74,7 +82,11 @@ function warning(
   severity: ReportWarning['severity'],
   message: string,
   count: number,
-  ids?: { journalIds?: readonly JournalId[]; accountIds?: readonly AccountId[] },
+  ids?: {
+    journalIds?: readonly JournalId[];
+    accountIds?: readonly AccountId[];
+    missingRateQuotes?: readonly MissingRateQuote[];
+  },
 ): ReportWarning {
   return {
     code,
@@ -83,7 +95,20 @@ function warning(
     count,
     ...(ids?.journalIds ? { journalIds: ids.journalIds } : {}),
     ...(ids?.accountIds ? { accountIds: ids.accountIds } : {}),
+    ...(ids?.missingRateQuotes && ids.missingRateQuotes.length > 0
+      ? { missingRateQuotes: ids.missingRateQuotes }
+      : {}),
   };
+}
+
+function quoteKey(quote: MissingRateQuote): string {
+  return `${quote.fromCurrency}:${quote.toCurrency}:${quote.rateDate}`;
+}
+
+function uniqueQuotes(quotes: readonly MissingRateQuote[]): MissingRateQuote[] {
+  const byKey = new Map<string, MissingRateQuote>();
+  for (const quote of quotes) byKey.set(quoteKey(quote), quote);
+  return [...byKey.values()];
 }
 
 function classifyJournalForRows(
@@ -125,15 +150,67 @@ async function convertLine(
   account: AccountModel,
   journal: Journal,
   targetCurrency: string,
-) {
+): Promise<{ ok: true; amount: number } | { ok: false; fromCurrency: string }> {
+  const fromCurrency = transaction.currencyCode || account.currencyCode || journal.currencyCode;
+  if (fromCurrency === targetCurrency) {
+    return {
+      ok: true,
+      amount: roundToPrecision(transaction.amount, AppConfig.constants.precision),
+    };
+  }
   const result = await convertAmount({
     amount: transaction.amount,
-    fromCurrency: transaction.currencyCode || account.currencyCode || journal.currencyCode,
+    fromCurrency,
     toCurrency: targetCurrency,
     mode: 'historical',
     storedExchangeRate: transaction.exchangeRate,
+    rateDate: journal.journalDate,
   });
-  return result.ok ? result.amount : null;
+  return result.ok ? { ok: true, amount: result.amount } : { ok: false, fromCurrency };
+}
+
+function toReportingFact(
+  query: ReportQuery,
+  journal: Journal,
+  transaction: Transaction,
+  account: AccountModel,
+  converted: number,
+  classification: ReturnType<typeof classifyJournalForRows>,
+  parentIds: ReadonlySet<string>,
+  accountById: ReadonlyMap<string, AccountModel>,
+): ReportingFact {
+  const sign =
+    account.accountType === AccountType.ASSET || account.accountType === AccountType.EXPENSE
+      ? transaction.transactionType === TransactionType.DEBIT
+        ? 1
+        : -1
+      : transaction.transactionType === TransactionType.CREDIT
+        ? 1
+        : -1;
+  return {
+    workplaceId: query.workplaceId,
+    journalId: journal.id,
+    transactionId: transaction.id,
+    journalDate: journal.journalDate,
+    journalStatus: journal.status,
+    accountId: account.id,
+    accountName: account.name,
+    accountType: account.accountType,
+    accountSubtype: account.accountSubtype,
+    accountPath: accountPathFor(account, accountById),
+    parentAccountId: account.parentAccountId,
+    isLeafAccount: !parentIds.has(account.id),
+    transactionType: transaction.transactionType,
+    amount: transaction.amount,
+    currencyCode: transaction.currencyCode,
+    historicalBaseAmount: converted,
+    signedBalanceDelta: converted * sign,
+    journalDisplayType: classification.displayType,
+    semanticType: classification.semanticType,
+    description: journal.description,
+    notes: transaction.notes ?? journal.notes,
+    plannedPaymentId: journal.plannedPaymentId,
+  };
 }
 
 async function buildFacts(
@@ -144,6 +221,7 @@ async function buildFacts(
 ): Promise<{
   facts: ReportingFact[];
   missingRateJournalIds: JournalId[];
+  missingRateQuotes: MissingRateQuote[];
   missingAccountIds: AccountId[];
 }> {
   const accountById = new Map(accounts.map(account => [account.id, account]));
@@ -160,89 +238,123 @@ async function buildFacts(
   );
 
   const missingRateJournalIds: JournalId[] = [];
+  const missingRateQuotes: MissingRateQuote[] = [];
   const missingAccountIds: AccountId[] = [];
-  const facts: ReportingFact[] = [];
+  const orderedFacts: (ReportingFact | undefined)[] = [];
+  const conversionJobs: {
+    slot: number;
+    journal: Journal;
+    transaction: Transaction;
+    account: AccountModel;
+    classification: ReturnType<typeof classifyJournalForRows>;
+    isInSelectedPeriod: boolean;
+  }[] = [];
+
   for (const journal of journals) {
     const isInSelectedPeriod =
       journal.journalDate >= query.period.startDate && journal.journalDate <= query.period.endDate;
     const journalTransactions = txByJournal.get(journal.id) ?? [];
     const classification = classifyJournalForRows(journal, journalTransactions, accountById);
-    const journalFacts: (ReportingFact | null)[] = await Promise.all(
-      journalTransactions.map(async transaction => {
-        const account = accountById.get(transaction.accountId);
-        if (!account) {
-          if (isInSelectedPeriod) missingAccountIds.push(transaction.accountId);
-          return null;
-        }
-        if (!allowedAccountIds.has(account.id)) return null;
-        const converted = await convertLine(transaction, account, journal, query.targetCurrency);
-        if (converted === null) {
-          if (isInSelectedPeriod) missingRateJournalIds.push(journal.id);
-          return null;
-        }
-        const sign =
-          account.accountType === AccountType.ASSET || account.accountType === AccountType.EXPENSE
-            ? transaction.transactionType === TransactionType.DEBIT
-              ? 1
-              : -1
-            : transaction.transactionType === TransactionType.CREDIT
-              ? 1
-              : -1;
-        return {
-          workplaceId: query.workplaceId,
-          journalId: journal.id,
-          transactionId: transaction.id,
-          journalDate: journal.journalDate,
-          journalStatus: journal.status,
-          accountId: account.id,
-          accountName: account.name,
-          accountType: account.accountType,
-          accountSubtype: account.accountSubtype,
-          accountPath: accountPathFor(account, accountById),
-          parentAccountId: account.parentAccountId,
-          isLeafAccount: !parentIds.has(account.id),
-          transactionType: transaction.transactionType,
-          amount: transaction.amount,
-          currencyCode: transaction.currencyCode,
-          historicalBaseAmount: converted,
-          signedBalanceDelta: converted * sign,
-          journalDisplayType: classification.displayType,
-          semanticType: classification.semanticType,
-          description: journal.description,
-          notes: transaction.notes ?? journal.notes,
-          plannedPaymentId: journal.plannedPaymentId,
-        } satisfies ReportingFact;
-      }),
-    );
-    facts.push(...journalFacts.filter((fact): fact is ReportingFact => fact !== null));
+    for (const transaction of journalTransactions) {
+      const account = accountById.get(transaction.accountId);
+      if (!account) {
+        if (isInSelectedPeriod) missingAccountIds.push(transaction.accountId);
+        continue;
+      }
+      if (!allowedAccountIds.has(account.id)) continue;
+      const slot = orderedFacts.length;
+      orderedFacts.push(undefined);
+      conversionJobs.push({
+        slot,
+        journal,
+        transaction,
+        account,
+        classification,
+        isInSelectedPeriod,
+      });
+    }
   }
+  await runTasksWithBoundedConcurrency(
+    conversionJobs,
+    AppConfig.performance.maxConcurrentOperations,
+    async job => {
+      const converted = await convertLine(
+        job.transaction,
+        job.account,
+        job.journal,
+        query.targetCurrency,
+      );
+      if (!converted.ok) {
+        if (job.isInSelectedPeriod) {
+          missingRateJournalIds.push(job.journal.id);
+          if (converted.fromCurrency) {
+            missingRateQuotes.push({
+              fromCurrency: converted.fromCurrency.trim().toUpperCase(),
+              toCurrency: query.targetCurrency.trim().toUpperCase(),
+              rateDate: job.journal.journalDate,
+            });
+          }
+        }
+        return;
+      }
+      orderedFacts[job.slot] = toReportingFact(
+        query,
+        job.journal,
+        job.transaction,
+        job.account,
+        converted.amount,
+        job.classification,
+        parentIds,
+        accountById,
+      );
+    },
+  );
   return {
-    facts,
+    facts: orderedFacts.filter((fact): fact is ReportingFact => fact !== undefined),
     missingRateJournalIds: unique(missingRateJournalIds),
+    missingRateQuotes: uniqueQuotes(missingRateQuotes),
     missingAccountIds: unique(missingAccountIds),
   };
 }
 
-export async function readReportLedger(query: ReportQuery): Promise<ReportLedgerSnapshot> {
-  const [accounts, actualJournals, plannedJournals, transactions] = await Promise.all([
+export async function readReportLedger(
+  query: ReportQuery,
+  options: ReadReportLedgerOptions = {},
+): Promise<ReportLedgerSnapshot> {
+  const factPeriod = options.factPeriod ?? query.period;
+  const [accounts, actual, planned] = await Promise.all([
     accountQueryRepository.findAll(query.workplaceId),
-    journalListQueryRepository.findAll(query.workplaceId),
+    journalListQueryRepository.findPostedInDateRange(
+      query.workplaceId,
+      factPeriod.startDate,
+      factPeriod.endDate,
+    ),
     query.basis === 'ACTUAL_PLUS_PLANNED'
-      ? journalListQueryRepository.findAllPlanned(query.workplaceId)
-      : Promise.resolve([]),
-    transactionQueryRepository.findAllNonDeleted(query.workplaceId),
+      ? journalListQueryRepository.findPlannedInDateRange(
+          query.workplaceId,
+          factPeriod.startDate,
+          factPeriod.endDate,
+        )
+      : Promise.resolve([] as Journal[]),
   ]);
-  const actual = actualJournals.filter(journal => journal.status === JournalStatus.POSTED);
-  const planned = plannedJournals.filter(journal => journal.status === JournalStatus.PLANNED);
+  const journalIds = [...actual, ...planned].map(journal => journal.id);
+  const transactions = await transactionQueryRepository.findByJournals(
+    query.workplaceId,
+    journalIds,
+  );
   const actualBuilt = await buildFacts(actual, transactions, accounts, query);
   const plannedBuilt =
     query.basis === 'ACTUAL_PLUS_PLANNED'
       ? await buildFacts(planned, transactions, accounts, query)
-      : { facts: [], missingRateJournalIds: [], missingAccountIds: [] };
+      : { facts: [], missingRateJournalIds: [], missingRateQuotes: [], missingAccountIds: [] };
   const warnings: ReportWarning[] = [];
   const missingRateJournalIds = unique([
     ...actualBuilt.missingRateJournalIds,
     ...plannedBuilt.missingRateJournalIds,
+  ]);
+  const missingRateQuotes = uniqueQuotes([
+    ...actualBuilt.missingRateQuotes,
+    ...plannedBuilt.missingRateQuotes,
   ]);
   const missingAccountIds = unique([
     ...actualBuilt.missingAccountIds,
@@ -255,7 +367,7 @@ export async function readReportLedger(query: ReportQuery): Promise<ReportLedger
         'WARNING',
         'Some cross-currency activity was omitted because no historical rate was available.',
         missingRateJournalIds.length,
-        { journalIds: missingRateJournalIds },
+        { journalIds: missingRateJournalIds, missingRateQuotes },
       ),
     );
   if (missingAccountIds.length > 0)

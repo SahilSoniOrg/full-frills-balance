@@ -69,6 +69,9 @@ export interface ReportsV2ViewModel {
   onRefresh: () => void;
   onRetry: () => void;
   onDrilldown: (input: ReportsV2DrilldownInput) => void;
+  canFetchMissingRates: boolean;
+  isFetchingMissingRates: boolean;
+  onFetchMissingRates: () => void;
   onRequestCustomRange?: () => void;
   onRequestAccountScope?: () => void;
   onRequestCurrency?: () => void;

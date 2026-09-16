@@ -43,6 +43,40 @@ export class JournalListQueryRepository {
     ).fetch();
   }
 
+  private findInDateRange(
+    workplaceId: WorkplaceId,
+    startDate: number,
+    endDate: number,
+    status: JournalStatus,
+  ): Promise<Journal[]> {
+    const clauses: Q.Clause[] = [
+      Q.where('deleted_at', Q.eq(null)),
+      Q.where('status', status),
+      Q.where('workplace_id', workplaceId),
+      Q.where('journal_date', Q.lte(endDate)),
+    ];
+    if (startDate > 0) {
+      clauses.push(Q.where('journal_date', Q.gte(startDate)));
+    }
+    return this.journals.query(...clauses).fetch();
+  }
+
+  async findPostedInDateRange(
+    workplaceId: WorkplaceId,
+    startDate: number,
+    endDate: number,
+  ): Promise<Journal[]> {
+    return this.findInDateRange(workplaceId, startDate, endDate, JournalStatus.POSTED);
+  }
+
+  async findPlannedInDateRange(
+    workplaceId: WorkplaceId,
+    startDate: number,
+    endDate: number,
+  ): Promise<Journal[]> {
+    return this.findInDateRange(workplaceId, startDate, endDate, JournalStatus.PLANNED);
+  }
+
   async findAllNonDeleted(workplaceId: WorkplaceId): Promise<Journal[]> {
     return this.journals
       .query(

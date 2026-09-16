@@ -30,6 +30,15 @@ function isSilentParityRate(fromCurrency: string, toCurrency: string, rate: numb
   return fromCurrency !== toCurrency && rate === 1.0;
 }
 
+/** True when a stored rate can be used for unlike currencies without a historical lookup. */
+export function isUsableCrossCurrencyRate(
+  fromCurrency: string,
+  toCurrency: string,
+  rate: number | undefined | null,
+): rate is number {
+  return isValidRate(rate) && !isSilentParityRate(fromCurrency, toCurrency, rate);
+}
+
 /**
  * Single entry point for currency conversion (ADR-0005).
  * Never treats a missing cross-currency rate as 1.0.
@@ -56,7 +65,7 @@ export async function convertAmount(input: ConvertAmountInput): Promise<ConvertA
   let rate: number | undefined;
 
   if (mode === 'historical') {
-    if (isValidRate(storedExchangeRate)) {
+    if (isUsableCrossCurrencyRate(fromCurrency, toCurrency, storedExchangeRate)) {
       rate = storedExchangeRate;
     } else if (rateDate !== undefined) {
       try {
@@ -72,7 +81,7 @@ export async function convertAmount(input: ConvertAmountInput): Promise<ConvertA
     rate = await exchangeRateService.getRate(fromCurrency, toCurrency);
   }
 
-  if (!isValidRate(rate) || isSilentParityRate(fromCurrency, toCurrency, rate)) {
+  if (!isUsableCrossCurrencyRate(fromCurrency, toCurrency, rate)) {
     return { ok: false, reason: 'missing_rate' };
   }
 

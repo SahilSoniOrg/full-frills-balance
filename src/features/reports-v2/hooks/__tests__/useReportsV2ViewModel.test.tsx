@@ -1,6 +1,16 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { fetchMissingHistoricalRates } from '@/src/services/reports-v2/missingExchangeRateFetch';
+import { confirm, toast } from '@/src/utils/alerts';
 import { useReportsV2ViewModel } from '../useReportsV2ViewModel';
 import type { ReportsV2QueryEngine } from '@/src/services/reports-v2/reportQueryEngine';
+
+jest.mock('@/src/utils/alerts', () => ({
+  confirm: { show: jest.fn(options => options.onConfirm()) },
+  toast: { info: jest.fn(), warning: jest.fn(), success: jest.fn(), error: jest.fn() },
+}));
+jest.mock('@/src/services/reports-v2/missingExchangeRateFetch', () => ({
+  fetchMissingHistoricalRates: jest.fn(async () => ({ attempted: 1, fetched: 1, failed: 0 })),
+}));
 
 function engineMock(): jest.Mocked<ReportsV2QueryEngine> {
   return {
@@ -207,5 +217,46 @@ describe('useReportsV2ViewModel load lifecycle', () => {
       startDate: expect.any(Number),
       endDate: expect.any(Number),
     });
+  });
+
+  it('fetches missing-rate quotes from the warning then refreshes', async () => {
+    const quotes = [{ fromCurrency: 'USD', toCurrency: 'INR', rateDate: Date.UTC(2026, 8, 1) }];
+    const engine = engineMock();
+    engine.run.mockResolvedValue({
+      kind: 'OVERVIEW',
+      query: {} as never,
+      period: {} as never,
+      generatedAt: Date.now(),
+      measures: {},
+      sections: [{ id: 'health', title: 'Health' }],
+      warnings: [
+        {
+          code: 'MISSING_EXCHANGE_RATE',
+          severity: 'WARNING',
+          message: 'omitted',
+          count: 1,
+          missingRateQuotes: quotes,
+        },
+      ],
+    });
+
+    const { result } = renderHook(() =>
+      useReportsV2ViewModel({
+        engine,
+        workplaceId: 'workplace-1',
+        targetCurrency: 'INR',
+        initialSection: 'health',
+      }),
+    );
+
+    await waitFor(() => expect(result.current.canFetchMissingRates).toBe(true));
+    await act(async () => {
+      result.current.onFetchMissingRates();
+    });
+
+    expect(confirm.show).toHaveBeenCalled();
+    expect(fetchMissingHistoricalRates).toHaveBeenCalledWith(quotes);
+    expect(toast.success).toHaveBeenCalled();
+    await waitFor(() => expect(engine.run.mock.calls.length).toBeGreaterThan(1));
   });
 });

@@ -14,7 +14,7 @@ import {
   calculateOverview,
   calculateSpending,
 } from '../coreCalculators';
-import { makeBuckets } from '../coreUtils';
+import { makeBuckets, MAX_REPORT_BUCKETS } from '../coreUtils';
 import type { CalculatorInput, ReportingFact } from '../coreTypes';
 
 type FactInput = {
@@ -83,6 +83,14 @@ function input(facts: readonly ReportingFact[]): CalculatorInput {
 }
 
 describe('Reports V2 core calculators', () => {
+  it('builds a finite income series when the period has no income', () => {
+    const result = calculateIncome(input([]));
+    expect(result.netIncome).toBe(0);
+    expect(result.buckets.length).toBeGreaterThan(0);
+    expect(result.buckets.length).toBeLessThanOrEqual(MAX_REPORT_BUCKETS);
+    expect(result.buckets.every(bucket => Number.isFinite(bucket.netIncome))).toBe(true);
+  });
+
   it('buckets calendar days in the report timezone', () => {
     const period = {
       startDate: Date.UTC(2026, 0, 1, 18, 30),

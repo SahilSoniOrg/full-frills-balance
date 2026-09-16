@@ -10,6 +10,7 @@ import { Dimensions, StyleSheet, View } from 'react-native';
 import { GestureDetector, ScrollView } from 'react-native-gesture-handler';
 import Svg, { Line, Rect, Text as SvgText } from 'react-native-svg';
 import { ChartTooltip } from './ChartTooltip';
+import { clampedBarCornerRadius, finiteChartValue } from './barChartGeometry';
 
 /** Axis labels: MoneyText (RN overlay). Host under PrivacyScopeProvider. */
 export interface BarChartDataPoint {
@@ -105,12 +106,14 @@ const BarChartSvg = React.memo(function BarChartSvg({
 
         return (
           <React.Fragment key={index}>
-            {point.values.map((val, vIndex) => {
+            {point.values.map((rawValue, vIndex) => {
+              const val = finiteChartValue(rawValue);
               const x = stacked
                 ? xGroupCenter + startXOffset
                 : xGroupCenter + startXOffset + vIndex * (barWidth + barSpacing);
               const previousValue = point.values
                 .slice(0, vIndex)
+                .map(finiteChartValue)
                 .filter(value => Math.sign(value) === Math.sign(val))
                 .reduce((total, value) => total + value, 0);
               const startValue = stacked ? previousValue : 0;
@@ -133,7 +136,11 @@ const BarChartSvg = React.memo(function BarChartSvg({
                     width={barWidth}
                     height={barHeight}
                     fill={point.colors[vIndex]}
-                    rx={REPORT_CHART_LAYOUT.barChartBarCornerRadius}
+                    rx={clampedBarCornerRadius(
+                      barWidth,
+                      barHeight,
+                      REPORT_CHART_LAYOUT.barChartBarCornerRadius,
+                    )}
                     opacity={opacity}
                     onPress={() => onPress?.(index)}
                   />
@@ -199,10 +206,11 @@ export const BarChart = ({
     if (data.length === 0) return { processedData: [], domainMin: 0, domainMax: 1, domainRange: 1 };
 
     const allValues = data.flatMap(d => {
-      if (!stacked) return d.values;
+      const values = d.values.map(finiteChartValue);
+      if (!stacked) return values;
       return [
-        d.values.filter(value => value >= 0).reduce((total, value) => total + value, 0),
-        d.values.filter(value => value < 0).reduce((total, value) => total + value, 0),
+        values.filter(value => value >= 0).reduce((total, value) => total + value, 0),
+        values.filter(value => value < 0).reduce((total, value) => total + value, 0),
       ];
     });
     const min = Math.min(...allValues, 0);

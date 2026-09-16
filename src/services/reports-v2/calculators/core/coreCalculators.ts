@@ -20,7 +20,7 @@ import type {
 } from './coreTypes';
 import {
   balancePath,
-  bucketForDate,
+  bucketIndexForDate,
   comparisonMetric,
   factsInPeriod,
   granularityFor,
@@ -137,19 +137,52 @@ function groupJournalIds(facts: readonly ReportingFact[]): Map<string, Reporting
   return groups;
 }
 
+function emptyFlowBucket(bucket: ReportBucket) {
+  return {
+    ...bucket,
+    grossIncome: 0,
+    incomeReversals: 0,
+    netIncome: 0,
+    grossExpense: 0,
+    refunds: 0,
+    netExpense: 0,
+    netFlow: 0,
+    cashInflows: 0,
+    cashOutflows: 0,
+    netCashFlow: 0,
+    internalTransfers: 0,
+    borrowings: 0,
+    debtPayments: 0,
+    creditCardPayments: 0,
+    journalGroups: new Map<string, ReportingFact[]>(),
+  };
+}
+
 function flowBuckets(facts: readonly ReportingFact[], buckets: readonly ReportBucket[]) {
-  return buckets.map(bucket => {
-    const bucketFacts = facts.filter(fact => bucketForDate([bucket], fact.journalDate));
-    const income = incomeFacts(bucketFacts);
-    const expense = expenseFacts(bucketFacts);
-    const cash = bucketFacts.filter(isLiquidAssetFact);
-    const incomeGross = sum(income.map(fact => positive(signedDelta(fact))));
-    const incomeReversals = sum(income.map(fact => negativeMagnitude(signedDelta(fact))));
-    const expenseGross = sum(expense.map(fact => positive(signedDelta(fact))));
-    const refunds = sum(expense.map(fact => negativeMagnitude(signedDelta(fact))));
-    const cashInflows = sum(cash.map(fact => positive(signedDelta(fact))));
-    const cashOutflows = sum(cash.map(fact => negativeMagnitude(signedDelta(fact))));
-    const journals = [...groupJournalIds(bucketFacts).values()];
+  const rows = buckets.map(emptyFlowBucket);
+  for (const fact of facts) {
+    const index = bucketIndexForDate(buckets, fact.journalDate);
+    if (index < 0) continue;
+    const row = rows[index];
+    const delta = signedDelta(fact);
+    if (isIncomeFact(fact) && fact.isLeafAccount !== false) {
+      row.grossIncome = round(row.grossIncome + positive(delta));
+      row.incomeReversals = round(row.incomeReversals + negativeMagnitude(delta));
+    }
+    if (isExpenseFact(fact) && fact.isLeafAccount !== false) {
+      row.grossExpense = round(row.grossExpense + positive(delta));
+      row.refunds = round(row.refunds + negativeMagnitude(delta));
+    }
+    if (isLiquidAssetFact(fact)) {
+      row.cashInflows = round(row.cashInflows + positive(delta));
+      row.cashOutflows = round(row.cashOutflows + negativeMagnitude(delta));
+    }
+    const journalFacts = row.journalGroups.get(fact.journalId) ?? [];
+    journalFacts.push(fact);
+    row.journalGroups.set(fact.journalId, journalFacts);
+  }
+  return rows.map(row => {
+    const journals = [...row.journalGroups.values()];
     const internalTransferGroups = journals.filter(group => isNonEconomicFlowJournal(group));
     const borrowingGroups = journals.filter(group =>
       group.some(fact => semantic(fact) === SemanticType.BORROWING),
@@ -158,17 +191,19 @@ function flowBuckets(facts: readonly ReportingFact[], buckets: readonly ReportBu
       group.some(fact => isDebtPaymentSemantic(fact)),
     );
     return {
-      ...bucket,
-      grossIncome: incomeGross,
-      incomeReversals,
-      netIncome: round(incomeGross - incomeReversals),
-      grossExpense: expenseGross,
-      refunds,
-      netExpense: round(expenseGross - refunds),
-      netFlow: round(incomeGross - incomeReversals - expenseGross + refunds),
-      cashInflows,
-      cashOutflows,
-      netCashFlow: round(cashInflows - cashOutflows),
+      startDate: row.startDate,
+      endDate: row.endDate,
+      label: row.label,
+      grossIncome: row.grossIncome,
+      incomeReversals: row.incomeReversals,
+      netIncome: round(row.grossIncome - row.incomeReversals),
+      grossExpense: row.grossExpense,
+      refunds: row.refunds,
+      netExpense: round(row.grossExpense - row.refunds),
+      netFlow: round(row.grossIncome - row.incomeReversals - row.grossExpense + row.refunds),
+      cashInflows: row.cashInflows,
+      cashOutflows: row.cashOutflows,
+      netCashFlow: round(row.cashInflows - row.cashOutflows),
       internalTransfers: sum(
         internalTransferGroups.flatMap(group =>
           group.filter(isLiquidAssetFact).map(fact => positive(signedDelta(fact))),
@@ -518,9 +553,10 @@ function netWorthHistory(
   opening: BalanceState | null,
   facts: readonly ReportingFact[],
   period: { startDate: number; endDate: number; timeZone?: string },
+  granularity: ReturnType<typeof granularityFor>,
 ): NetWorthHistoryPoint[] {
   if (!opening) return [];
-  const buckets = makeBuckets(period, 'DAY');
+  const buckets = makeBuckets(period, granularity);
   const orderedFacts = [...facts].sort((left, right) => left.journalDate - right.journalDate);
   let factIndex = orderedFacts.findIndex(fact => fact.journalDate >= period.startDate);
   if (factIndex === -1) factIndex = orderedFacts.length;
@@ -570,7 +606,7 @@ export function calculateNetWorth(input: NetWorthCalculatorInput): NetWorthResul
       netWorth: actualChange,
     },
     netWorthChangeFromFacts: actualChange,
-    history: netWorthHistory(opening, facts, period),
+    history: netWorthHistory(opening, facts, period, granularityFor(input.query, period)),
     reconciliation: {
       actualChange,
       netIncome,

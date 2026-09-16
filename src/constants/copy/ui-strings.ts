@@ -285,6 +285,18 @@ export const UI_STRINGS = {
   },
   reportsV2: {
     title: 'Money overview',
+    fetchMissingRates: 'Fetch missing rates',
+    fetchMissingRatesTitle: 'Look up historical rates?',
+    fetchMissingRatesMessage:
+      'We will try to fetch historical rates for the omitted journals, then refresh this report. Posted amounts stay as they are.',
+    fetchMissingRatesConfirm: 'Fetch rates',
+    fetchMissingRatesNone: 'Nothing needed a rate lookup.',
+    fetchMissingRatesUnavailable: 'No historical rates were available for these journals.',
+    fetchMissingRatesPartial: (fetched: number, failed: number) =>
+      `Found ${fetched} rate${fetched === 1 ? '' : 's'}. ${failed} still unavailable.`,
+    fetchMissingRatesSuccess: (fetched: number) =>
+      `Found rates for ${fetched} currency date${fetched === 1 ? '' : 's'}. Refreshing the report.`,
+    fetchMissingRatesFailed: 'Could not fetch historical rates. Try again when you are online.',
   },
   settings: {
     title: 'Settings',

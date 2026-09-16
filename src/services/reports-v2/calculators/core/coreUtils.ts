@@ -124,7 +124,7 @@ export function isNonEconomicFlowJournal(facts: readonly ReportingFact[]): boole
 }
 
 export function resolveComparisonPeriod(
-  query: CalculatorQuery,
+  query: Pick<CalculatorQuery, 'comparison'> & { comparisonPeriod?: CalculatorPeriod | null },
   current: CalculatorPeriod,
 ): CalculatorPeriod | null {
   if (query.comparisonPeriod) return query.comparisonPeriod;
@@ -233,10 +233,11 @@ function zonedPartsWithTime(timestamp: number, timeZone: string) {
 
 function calendarStart(
   timestamp: number,
-  granularity: ReportGranularity,
+  granularity: CalendarGranularity,
   timeZone: string,
 ): number {
   const date = zonedParts(timestamp, timeZone);
+  if (granularity === 'YEAR') return zonedMidnight({ year: date.year, month: 1, day: 1 }, timeZone);
   if (granularity === 'MONTH')
     return zonedMidnight({ year: date.year, month: date.month, day: 1 }, timeZone);
   const daysFromMonday = (date.weekday + 6) % 7;
@@ -252,12 +253,13 @@ function calendarStart(
 
 function nextCalendarStart(
   startDate: number,
-  granularity: ReportGranularity,
+  granularity: CalendarGranularity,
   timeZone: string,
 ): number {
   const date = zonedParts(startDate, timeZone);
   const utcDate = new Date(Date.UTC(date.year, date.month - 1, date.day));
-  if (granularity === 'MONTH') utcDate.setUTCMonth(utcDate.getUTCMonth() + 1, 1);
+  if (granularity === 'YEAR') utcDate.setUTCFullYear(utcDate.getUTCFullYear() + 1, 0, 1);
+  else if (granularity === 'MONTH') utcDate.setUTCMonth(utcDate.getUTCMonth() + 1, 1);
   else utcDate.setUTCDate(utcDate.getUTCDate() + (granularity === 'WEEK' ? 7 : 1));
   return zonedMidnight(
     { year: utcDate.getUTCFullYear(), month: utcDate.getUTCMonth() + 1, day: utcDate.getUTCDate() },
@@ -265,27 +267,66 @@ function nextCalendarStart(
   );
 }
 
-function bucketLabel(startDate: number, granularity: ReportGranularity, timeZone: string): string {
+function bucketLabel(
+  startDate: number,
+  granularity: CalendarGranularity,
+  timeZone: string,
+): string {
   const date = zonedParts(startDate, timeZone);
   const iso = `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
-  return granularity === 'MONTH'
-    ? iso.slice(0, 7)
-    : granularity === 'WEEK'
-      ? `Week of ${iso}`
-      : iso;
+  if (granularity === 'YEAR') return String(date.year);
+  if (granularity === 'MONTH') return iso.slice(0, 7);
+  if (granularity === 'WEEK') return `Week of ${iso}`;
+  return iso;
 }
 
-export function makeBuckets(
+/** Chart and history series stay small enough for SVG layout on low-memory devices. */
+export const MAX_REPORT_BUCKETS = 48;
+
+type CalendarGranularity = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR';
+
+const COARSER_GRANULARITY: Record<CalendarGranularity, CalendarGranularity | null> = {
+  DAY: 'WEEK',
+  WEEK: 'MONTH',
+  MONTH: 'YEAR',
+  YEAR: null,
+};
+
+function asCalendarGranularity(granularity: ReportGranularity): CalendarGranularity {
+  if (granularity === 'WEEK') return 'WEEK';
+  if (granularity === 'MONTH') return 'MONTH';
+  return 'DAY';
+}
+
+function mergeAdjacentBuckets(buckets: readonly ReportBucket[], max: number): ReportBucket[] {
+  if (buckets.length <= max) return [...buckets];
+  const groupSize = Math.ceil(buckets.length / max);
+  const result: ReportBucket[] = [];
+  for (let index = 0; index < buckets.length; index += groupSize) {
+    const group = buckets.slice(index, index + groupSize);
+    const first = group[0];
+    const last = group[group.length - 1];
+    result.push({
+      startDate: first.startDate,
+      endDate: last.endDate,
+      label: first.label,
+    });
+  }
+  return result;
+}
+
+function calendarBuckets(
   period: CalculatorPeriod,
-  granularity: ReportGranularity,
+  granularity: CalendarGranularity,
+  timeZone: string,
 ): ReportBucket[] {
-  const timeZone = period.timeZone || 'UTC';
   const buckets: ReportBucket[] = [];
   let cursor = calendarStart(period.startDate, granularity, timeZone);
   const finalBucketStart = calendarStart(period.endDate, granularity, timeZone);
 
   while (cursor <= finalBucketStart) {
     const next = nextCalendarStart(cursor, granularity, timeZone);
+    if (next <= cursor) break;
     buckets.push({
       startDate: Math.max(cursor, period.startDate),
       endDate: Math.min(next - 1, period.endDate),
@@ -296,11 +337,41 @@ export function makeBuckets(
   return buckets;
 }
 
+export function makeBuckets(
+  period: CalculatorPeriod,
+  granularity: ReportGranularity,
+): ReportBucket[] {
+  const timeZone = period.timeZone || 'UTC';
+  let current = asCalendarGranularity(granularity);
+  let buckets = calendarBuckets(period, current, timeZone);
+  while (buckets.length > MAX_REPORT_BUCKETS) {
+    const next = COARSER_GRANULARITY[current];
+    if (!next) return mergeAdjacentBuckets(buckets, MAX_REPORT_BUCKETS);
+    current = next;
+    buckets = calendarBuckets(period, current, timeZone);
+  }
+  return buckets;
+}
+
 export function bucketForDate(
   buckets: readonly ReportBucket[],
   timestamp: number,
 ): ReportBucket | undefined {
-  return buckets.find(bucket => timestamp >= bucket.startDate && timestamp <= bucket.endDate);
+  const index = bucketIndexForDate(buckets, timestamp);
+  return index < 0 ? undefined : buckets[index];
+}
+
+export function bucketIndexForDate(buckets: readonly ReportBucket[], timestamp: number): number {
+  let low = 0;
+  let high = buckets.length - 1;
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    const bucket = buckets[mid];
+    if (timestamp < bucket.startDate) high = mid - 1;
+    else if (timestamp > bucket.endDate) low = mid + 1;
+    else return mid;
+  }
+  return -1;
 }
 
 export function comparisonMetric(

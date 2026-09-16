@@ -600,9 +600,10 @@ export class ReportsV2Engine implements ReportsV2QueryEngine {
       planningAccounts,
       healthAccounts,
     } = await this.inputReader(query);
+    const queryForCalculators = { ...query, period };
     const baseInput = {
       facts: currentFacts,
-      query,
+      query: queryForCalculators,
       comparisonFacts,
     };
     const budgets = budgetRead.budgets;
@@ -699,7 +700,7 @@ export class ReportsV2Engine implements ReportsV2QueryEngine {
       ...closing.warnings,
     ];
     const built = buildSections(
-      query,
+      queryForCalculators,
       overview,
       cashFlow,
       spending,
@@ -733,9 +734,15 @@ export class ReportsV2Engine implements ReportsV2QueryEngine {
   }
 
   async drillDown(input: ReportDrilldownQuery): Promise<readonly string[]> {
-    const snapshot = await this.ledgerReader(input.baseQuery);
     const start = input.startDate ?? input.baseQuery.period.startDate;
     const end = input.endDate ?? input.baseQuery.period.endDate;
+    const snapshot = await this.ledgerReader(input.baseQuery, {
+      factPeriod: {
+        startDate: start,
+        endDate: end,
+        timeZone: input.baseQuery.period.timeZone,
+      },
+    });
     const facts = [...snapshot.actualFacts, ...snapshot.plannedFacts].filter(fact => {
       if (fact.journalDate < start || fact.journalDate > end) return false;
       if (input.accountIds && !input.accountIds.includes(fact.accountId)) return false;

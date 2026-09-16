@@ -36,7 +36,14 @@ export interface ReportWarning {
   readonly count?: number;
   readonly journalIds?: readonly JournalId[];
   readonly accountIds?: readonly AccountId[];
+  readonly missingRateQuotes?: readonly MissingRateQuote[];
 }
+
+export type MissingRateQuote = {
+  readonly fromCurrency: string;
+  readonly toCurrency: string;
+  readonly rateDate: number;
+};
 
 export interface ReportComparisonDelta {
   readonly absolute?: ReportMeasure;

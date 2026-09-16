@@ -4,10 +4,12 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 jest.mock('@/src/services/exchange-rate-service', () => ({
   exchangeRateService: {
     getRate: jest.fn(),
+    getHistoricalRate: jest.fn(),
   },
 }));
 
 const getRate = exchangeRateService.getRate as jest.Mock;
+const getHistoricalRate = exchangeRateService.getHistoricalRate as jest.Mock;
 
 describe('convertAmount', () => {
   beforeEach(() => {
@@ -47,6 +49,21 @@ describe('convertAmount', () => {
     });
     expect(result).toEqual({ ok: true, amount: 100 });
     expect(getRate).toHaveBeenCalledWith('GBP', 'USD');
+  });
+
+  it('historical mode ignores a stored 1.0 and looks up the journal date', async () => {
+    getHistoricalRate.mockResolvedValue({ rate: 1.1 });
+    const result = await convertAmount({
+      amount: 50,
+      fromCurrency: 'EUR',
+      toCurrency: 'USD',
+      mode: 'historical',
+      storedExchangeRate: 1.0,
+      rateDate: Date.UTC(2024, 2, 2),
+    });
+    expect(result).toEqual({ ok: true, amount: 55 });
+    expect(getHistoricalRate).toHaveBeenCalledWith('EUR', 'USD', Date.UTC(2024, 2, 2));
+    expect(getRate).not.toHaveBeenCalled();
   });
 
   it('spot mode uses getRate', async () => {

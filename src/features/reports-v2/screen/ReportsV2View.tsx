@@ -19,6 +19,7 @@ import { ReportsV2Filters } from './components/ReportsV2Filters';
 import { ReportsV2QualityBanner } from './components/ReportsV2QualityBanner';
 import { ReportsV2SectionTabs } from './components/ReportsV2SectionTabs';
 import { ReportsV2SectionContent } from './components/ReportsV2SectionContent';
+import { ReportsV2MissingRatesAction } from './components/ReportsV2MissingRatesAction';
 import { ReportsV2StatusNotice } from './components/ReportsV2StatusNotice';
 
 interface ReportsV2ViewProps {
@@ -145,6 +146,13 @@ export function ReportsV2View({ engine, workplaceId, targetCurrency, chrome }: R
                 section={vm.renderedSection}
                 onDrilldown={vm.onDrilldown}
                 interactive={vm.state !== 'refreshing' && vm.state !== 'error'}
+              />
+            ) : null}
+            {vm.activeSection === 'health' && vm.canFetchMissingRates ? (
+              <ReportsV2MissingRatesAction
+                onPress={vm.onFetchMissingRates}
+                loading={vm.isFetchingMissingRates}
+                disabled={vm.state === 'refreshing' || vm.state === 'error'}
               />
             ) : null}
           </ScrollView>
