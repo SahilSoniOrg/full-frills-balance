@@ -178,7 +178,8 @@ describe('projectCashClarityDraft', () => {
       }),
       now,
     );
-    expect(result.projectedRoom).toBe(50000 + 300000 - 22000 - 9000);
+    expect(result.budgetReserveInWindow).toBeGreaterThan(9000);
+    expect(result.projectedRoom).toBe(50000 + 300000 - 22000 - result.budgetReserveInWindow);
     expect(result.safeToSpend).toBe(44176.47);
     expect(result.heldNow).toBe(5823.53);
     expect(result.ahead.find(beat => beat.key === 'salary')?.subtitle).toBe(

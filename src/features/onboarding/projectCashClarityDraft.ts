@@ -58,7 +58,8 @@ export interface CashClarityProjection {
   readonly liquidNow: number;
   readonly expectedIncomeInWindow: number;
   readonly plannedOutflowInWindow: number;
-  readonly budgetReserve: number;
+  /** Budget capacity materialized inside the configured projection window. */
+  readonly budgetReserveInWindow: number;
   readonly projectedRoom: number;
   readonly heldNow: number;
   readonly heldLabel: string;
@@ -210,7 +211,7 @@ export function projectCashClarityDraft(
     omitted.push(copy.noBufferIncluded);
   }
 
-  const { safeToSpend, flowSummary, projections } = simulateDraftScenario({
+  const { safeToSpend, flowSummary, budgetReserveInWindow, projections } = simulateDraftScenario({
     simulationStartMs: start.valueOf(),
     simulationDays: windowDays,
     resultCurrency: currency,
@@ -223,11 +224,8 @@ export function projectCashClarityDraft(
   });
   const expectedIncomeInWindow = flowSummary.totalFutureInflow;
   const plannedOutflowInWindow = flowSummary.totalPlannedOutflow;
-  const budgetReserve =
-    draft.budget.kind === 'set'
-      ? draft.budget.items.reduce((sum, item) => sum + item.amount, 0)
-      : 0;
-  const projectedRoom = liquidNow + expectedIncomeInWindow - plannedOutflowInWindow - budgetReserve;
+  const projectedRoom =
+    liquidNow + expectedIncomeInWindow - plannedOutflowInWindow - budgetReserveInWindow;
   const heldNow = Math.max(0, Math.round((liquidNow - safeToSpend + Number.EPSILON) * 100) / 100);
   const { heldLabel, today, ahead } = clarityBeats(draft, {
     windowDays,
@@ -253,7 +251,7 @@ export function projectCashClarityDraft(
     liquidNow,
     expectedIncomeInWindow,
     plannedOutflowInWindow,
-    budgetReserve,
+    budgetReserveInWindow,
     projectedRoom,
     heldNow,
     heldLabel,

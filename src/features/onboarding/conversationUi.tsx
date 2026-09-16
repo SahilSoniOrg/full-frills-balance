@@ -51,10 +51,13 @@ export function ConversationStep({
   readonly onSkip?: () => void;
   readonly onBack: () => void;
 }) {
+  const [footerHeight, setFooterHeight] = useState(0);
+
   return (
     <Box flex={1}>
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scroll, { paddingBottom: footerHeight + Spacing.lg }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
@@ -82,7 +85,16 @@ export function ConversationStep({
           {children}
         </Stack>
       </ScrollView>
-      <Box background="background" borderTopWidth={1} borderColor="border" paddingTop="md">
+      <Box
+        background="background"
+        borderTopWidth={1}
+        borderColor="border"
+        paddingTop="md"
+        onLayout={event => {
+          const height = event.nativeEvent.layout.height;
+          setFooterHeight(previousHeight => (previousHeight === height ? previousHeight : height));
+        }}
+      >
         <Stack space="xs">
           {onSkip ? (
             <AppButton variant="ghost" size="md" onPress={onSkip} testID="onboarding-skip">
@@ -124,23 +136,44 @@ export function ChoiceChips({
   readonly selectedId?: string;
   readonly onSelect: (id: string) => void;
 }) {
+  const { theme } = useTheme();
+  const [viewportWidth, setViewportWidth] = useState(0);
+  const [contentWidth, setContentWidth] = useState(0);
+  const [offsetX, setOffsetX] = useState(0);
+  const canScrollRight =
+    contentWidth > viewportWidth + 1 && offsetX < contentWidth - viewportWidth - 1;
+
   return (
-    <ScrollView
-      horizontal
-      nestedScrollEnabled
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.chipRow}
+    <Box
+      style={styles.chipScroller}
+      onLayout={event => setViewportWidth(event.nativeEvent.layout.width)}
     >
-      {options.map(option => (
-        <FilterChipButton
-          key={option.id}
-          label={option.label}
-          icon={option.icon}
-          isActive={selectedId === option.id}
-          onPress={() => onSelect(option.id)}
-        />
-      ))}
-    </ScrollView>
+      <ScrollView
+        testID="onboarding-choice-chips"
+        horizontal
+        nestedScrollEnabled
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chipRow}
+        onContentSizeChange={width => setContentWidth(width)}
+        onScroll={event => setOffsetX(event.nativeEvent.contentOffset.x)}
+        scrollEventThrottle={16}
+      >
+        {options.map(option => (
+          <FilterChipButton
+            key={option.id}
+            label={option.label}
+            icon={option.icon}
+            isActive={selectedId === option.id}
+            onPress={() => onSelect(option.id)}
+          />
+        ))}
+      </ScrollView>
+      {canScrollRight ? (
+        <Box pointerEvents="none" background="background" style={styles.chipCue}>
+          <AppIcon name={Icon.ChevronRight} size={Size.iconXs} color={theme.textSecondary} />
+        </Box>
+      ) : null}
+    </Box>
   );
 }
 
@@ -528,10 +561,26 @@ export function CollectStep({
 }
 
 const styles = StyleSheet.create({
+  scrollView: {
+    flex: 1,
+    minHeight: 0,
+  },
+  chipScroller: {
+    position: 'relative',
+  },
+  chipCue: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   chipRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
-    paddingRight: Spacing.sm,
+    paddingRight: Spacing.xl,
   },
   scroll: {
     flexGrow: 1,

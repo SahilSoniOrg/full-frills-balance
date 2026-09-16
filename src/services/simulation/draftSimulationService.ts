@@ -5,6 +5,7 @@ import { ProjectionComposer } from './ProjectionComposer';
 import { Simulator } from './Simulator';
 import { summarizeSimulationFlows } from './utils/simulationFlowSummary';
 import { normalizeSimulationFlows } from './utils/normalizeSimulationFlows';
+import { FlowCategory } from './types';
 import type {
   SimulationBudget,
   SimulationEngineResult,
@@ -31,6 +32,8 @@ export interface DraftSimulationScenario {
 export function simulateDraftScenario(input: DraftSimulationScenario): {
   readonly safeToSpend: number;
   readonly flowSummary: ReturnType<typeof summarizeSimulationFlows>;
+  /** Budget capacity materialized inside the configured projection window. */
+  readonly budgetReserveInWindow: number;
   readonly projections: SimulationEngineResult['projections'];
 } {
   const liquidIds = [...input.liquidAccountIds];
@@ -86,10 +89,21 @@ export function simulateDraftScenario(input: DraftSimulationScenario): {
     input.simulationStartMs,
   );
   const normalizedFlows = normalizeSimulationFlows(allFlows);
+  const budgetReserveInWindow = normalizedFlows.reduce(
+    (sum, flow) =>
+      sum +
+      (flow.timeframe === 'FUTURE' &&
+      flow.category === FlowCategory.BUDGET &&
+      flow.kind === 'OUTFLOW'
+        ? flow.amount
+        : 0),
+    0,
+  );
 
   return {
     safeToSpend: simulation.summary.safeToSpend,
     flowSummary: summarizeSimulationFlows(normalizedFlows, liquidAccountIds),
+    budgetReserveInWindow: Math.round((budgetReserveInWindow + Number.EPSILON) * 100) / 100,
     projections: simulation.projections,
   };
 }

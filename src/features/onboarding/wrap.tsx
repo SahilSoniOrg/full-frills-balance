@@ -18,6 +18,7 @@ export function ClarityScene({
   draft,
   projection,
   finishing,
+  finishError,
   onEnter,
   onBack,
 }: {
@@ -25,6 +26,7 @@ export function ClarityScene({
   readonly draft: CashClarityDraft;
   readonly projection: CashClarityProjection;
   readonly finishing: boolean;
+  readonly finishError?: string | null;
   readonly onEnter: () => void;
   readonly onBack: () => void;
 }) {
@@ -47,6 +49,11 @@ export function ClarityScene({
       onBack={onBack}
     >
       <Stack gap="lg">
+        {finishError ? (
+          <AppText variant="body" color="error" accessibilityRole="alert">
+            {finishError}
+          </AppText>
+        ) : null}
         <Stack gap="xs">
           <AppText variant="caption" color="secondary" weight="bold" style={styles.stageLabel}>
             {copy.safeToSpend}
@@ -141,7 +148,7 @@ export function ClarityScene({
                 stage={copy.stageReserve}
                 tint="warning"
                 dot={theme.warning}
-                amount={budgets.reduce((sum, item) => sum + item.amount, 0)}
+                amount={projection.budgetReserveInWindow}
                 currency={currency}
               >
                 {budgets.map(item => (
