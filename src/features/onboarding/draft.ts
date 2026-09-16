@@ -6,7 +6,7 @@ import dayjs, { type Dayjs } from 'dayjs';
 import { cashClarityWorkplaceId } from './pendingWorkplace';
 
 export type OnboardingStep =
-  'welcome' | 'you' | 'currency' | 'now' | 'next' | 'protect' | 'reserve' | 'clarity';
+  'welcome' | 'currency' | 'now' | 'next' | 'protect' | 'reserve' | 'clarity';
 
 export type AccountKind = 'bank' | 'cash' | 'savings' | 'card';
 

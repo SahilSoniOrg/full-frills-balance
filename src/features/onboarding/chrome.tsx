@@ -65,7 +65,6 @@ export function OnboardingChrome({
 
 export const ONBOARDING_STAGES: Record<OnboardingStep, OnboardingStage | null> = {
   welcome: null,
-  you: { label: copy.stageSpace, current: 1, total: 6 },
   currency: { label: copy.stageSpace, current: 1, total: 6 },
   now: { label: copy.stageNow, current: 2, total: 6 },
   next: { label: copy.stageNext, current: 3, total: 6 },

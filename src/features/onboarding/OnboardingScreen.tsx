@@ -10,8 +10,9 @@ import {
   hasAcknowledgedCurrentPrivacyPolicy,
   subscribeToPrivacyPolicyAcknowledgement,
 } from '@/src/services/legal/privacyPolicyAcceptance';
-import { toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
+import { toast } from '@/src/utils/alerts';
+import { logger } from '@/src/utils/logger';
 import { useMemo, useState, useSyncExternalStore } from 'react';
 import { OnboardingChrome, ONBOARDING_STAGES } from './chrome';
 import { commitCashClarity } from './commitCashClarity';
@@ -34,7 +35,6 @@ import {
   MoneyScene,
   ProtectScene,
   ReserveScene,
-  YouScene,
   WelcomeScene,
 } from './scenes';
 
@@ -60,6 +60,7 @@ export function OnboardingScreen() {
     createInitialDraft(defaultOnboardingCurrency(), defaultWorkplaceName()),
   );
   const [busy, setBusy] = useState(false);
+  const [finishError, setFinishError] = useState<string | null>(null);
   const [heard, setHeard] = useState<string | null>(null);
   const projection = useMemo(() => projectCashClarityDraft(draft), [draft]);
   const showSafeToSpend =
@@ -111,12 +112,14 @@ export function OnboardingScreen() {
   };
 
   const enter = async () => {
+    setFinishError(null);
     setBusy(true);
     try {
       await commitCashClarity(draft);
       AppNavigation.toDashboard();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not finish setup.');
+      logger.error('[Onboarding] Failed to finish setup', error);
+      setFinishError('We could not finish setup. Check your details and try again.');
     } finally {
       setBusy(false);
     }
@@ -141,13 +144,6 @@ export function OnboardingScreen() {
           go('currency');
         }}
         onRestore={startRestore}
-      />
-    ) : step === 'you' ? (
-      <YouScene
-        name={draft.displayName ?? ''}
-        onNameChange={displayName => setDraft(current => ({ ...current, displayName }))}
-        onContinue={heard => advance('currency', heard)}
-        onBack={back}
       />
     ) : step === 'currency' ? (
       <CurrencyScene
@@ -208,6 +204,7 @@ export function OnboardingScreen() {
         draft={draft}
         projection={projection}
         finishing={busy}
+        finishError={finishError}
         onEnter={() => void enter()}
         onBack={back}
       />
@@ -219,7 +216,6 @@ export function OnboardingScreen() {
       stage={ONBOARDING_STAGES[step]}
       keyboardAvoiding={
         step === 'welcome' ||
-        step === 'you' ||
         step === 'now' ||
         step === 'next' ||
         step === 'protect' ||
