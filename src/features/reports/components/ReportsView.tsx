@@ -26,7 +26,7 @@ export function ReportsView({ vm, chrome }: ReportsViewProps) {
   const [areFiltersExpanded, setAreFiltersExpanded] = useState(false);
 
   const { width } = useWindowDimensions();
-  const CHART_WIDTH = width - (Spacing.md * 2 + Spacing.lg * 2);
+  const CHART_WIDTH = Math.max(0, width - (Spacing.md * 2 + Spacing.lg * 2));
   const toggleFilters = useCallback(() => setAreFiltersExpanded(expanded => !expanded), []);
   const accountLabel =
     filters.accountIds.length === 0

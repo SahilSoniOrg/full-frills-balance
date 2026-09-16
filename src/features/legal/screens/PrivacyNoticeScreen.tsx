@@ -15,6 +15,7 @@ import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoti
 import { useLocalSearchParams } from 'expo-router';
 import { useSyncExternalStore } from 'react';
 import { Linking } from 'react-native';
+import { toast } from '@/src/utils/alerts';
 
 const copy = PRIVACY_NOTICE_STRINGS;
 
@@ -66,11 +67,15 @@ export default function PrivacyNoticeScreen() {
   );
 
   const contactPrivacySupport = () => {
-    void Linking.openURL(`mailto:${copy.contactEmail}`).catch(() => undefined);
+    void Linking.openURL(`mailto:${copy.contactEmail}`).catch(() => {
+      toast.error('Unable to open your email app.');
+    });
   };
 
   const openFullPrivacyPolicy = () => {
-    void Linking.openURL(AppConfig.links.privacyPolicyUrl).catch(() => undefined);
+    void Linking.openURL(AppConfig.links.privacyPolicyUrl).catch(() => {
+      toast.error('Unable to open the privacy policy.');
+    });
   };
 
   const acknowledgePrivacyPolicy = () => {

@@ -4,16 +4,17 @@ import type {
   ScreenChrome,
   ScreenFabChrome,
 } from '@/src/components/layout/screenChrome';
+import { SettingsFocusProvider } from '@/src/components/settings/SettingsFocusTarget';
+import { Size, Spacing } from '@/src/constants';
 import { Inset, Stack } from '@/src/design-system';
 import { SettingsFooter } from '@/src/features/settings/components/SettingsFooter';
-import { SettingsFocusProvider } from '@/src/components/settings/SettingsFocusTarget';
+import { Icon } from '@/src/types/domainIcons';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useRef } from 'react';
 import type { ScrollViewProps } from 'react-native';
 import type { ScrollView } from 'react-native-gesture-handler';
 import type { Edge } from 'react-native-safe-area-context';
-import { Icon } from '@/src/types/domainIcons';
 
 interface SettingsLayoutProps {
   title: string;
@@ -75,6 +76,10 @@ export function SettingsLayout({
             scrollViewProps?.onScroll?.(event);
           },
           scrollEventThrottle: scrollViewProps?.scrollEventThrottle ?? 16,
+          contentContainerStyle: [
+            fab ? { paddingBottom: Size.buttonLg + Spacing.xl } : null,
+            scrollViewProps?.contentContainerStyle,
+          ],
         }}
         scrollViewRef={scrollViewRef}
       >

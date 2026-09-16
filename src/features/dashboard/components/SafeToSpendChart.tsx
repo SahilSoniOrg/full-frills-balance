@@ -61,6 +61,7 @@ export const SafeToSpendChart = ({
       ? Math.max(...data.map(d => d.x))
       : dayjs().add(AppConfig.defaults.safeToSpendDays, 'day').valueOf();
 
+  const isCompactHeader = chartWidth > 0 && chartWidth < 360;
   const tickCount = AppConfig.defaults.chartTickCount;
   const xTicks = [];
   for (let i = 0; i < tickCount; i++) {
@@ -85,14 +86,7 @@ export const SafeToSpendChart = ({
         setChartWidth(previousWidth => (previousWidth === width ? previousWidth : width));
       }}
     >
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: Spacing.md,
-        }}
-      >
+      <View style={[styles.chartHeader, isCompactHeader ? styles.chartHeaderCompact : null]}>
         <AppText variant="body" weight="medium">
           {`Projection (${AppConfig.defaults.safeToSpendDays}-day)`}
         </AppText>
@@ -389,6 +383,16 @@ export const SafeToSpendChart = ({
 };
 
 const styles = StyleSheet.create({
+  chartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  chartHeaderCompact: {
+    alignItems: 'flex-start',
+    gap: Spacing.xs,
+  },
   safetyMetricContainer: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -156,7 +156,7 @@ export function BudgetEditView({
 
               {intervalType === 'WEEKLY' && (
                 <FadeIn fromY={5} duration={300}>
-                  <FormField label="Budget Start Day">
+                  <FormField label="Runs on">
                     <AppSegmentedControl<number>
                       scrollable
                       variant="minimal"
@@ -174,7 +174,7 @@ export function BudgetEditView({
 
               {intervalType === 'MONTHLY' && (
                 <FadeIn fromY={5} duration={300}>
-                  <FormField label="Budget Start Day">
+                  <FormField label="Runs on">
                     <AppSegmentedControl<number>
                       scrollable
                       variant="minimal"
@@ -209,7 +209,7 @@ export function BudgetEditView({
                       />
                     </FormField>
 
-                    <FormField label="Budget Start Date">
+                    <FormField label="Runs on">
                       <AppSegmentedControl<number>
                         scrollable
                         variant="minimal"

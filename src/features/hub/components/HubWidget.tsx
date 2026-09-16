@@ -233,7 +233,10 @@ export const HubWidget = ({
 
                   <View style={[styles.footer, { borderTopColor: theme.border }]}>
                     <TouchableOpacity
-                      onPress={() => handlePress(insight)}
+                      onPress={e => {
+                        e.stopPropagation();
+                        handlePress(insight);
+                      }}
                       style={[
                         styles.primaryCta,
                         { backgroundColor: withOpacity(severity.color, Opacity.hover) },
