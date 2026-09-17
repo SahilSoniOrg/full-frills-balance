@@ -1,0 +1,32 @@
+New release 🚀
+
+A new reports view is here to help you spot spending patterns over time, paired with a completely rewritten onboarding flow to get you started on the right foot.
+
+————
+
+Also in this update:
+
+New reports view: 
+- Tap the sparkle icon on the reports screen to explore more detailed, time-based patterns in your money.
+
+Fresh onboarding
+- A much smoother first-run flow that explains what to expect from the app while you set up your initial numbers.
+
+Custom exchange rates
+- Enter your own rate directly when one isn't available, backed by better historical lookups for older multi-currency entries.
+
+Responsive feel
+- Added subtle animations and feedback across the app so moving through screens and tapping buttons feels more natural.
+
+Account hierarchy
+- Dragging and organizing subaccounts on the accounts page feels noticeably smoother and lands into place cleanly.
+
+————
+
+Big difference you’ll notice:
+
+- Day-to-day interactions feel more responsive, and setting up the app for the first time actually walks you through what to expect instead of dropping you into empty screens.
+
+————
+
+Under the hood, report queries load faster by focusing only on the active date range, and internal boundaries were cleaned up for quicker navigation.
