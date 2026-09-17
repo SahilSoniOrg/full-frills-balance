@@ -2,6 +2,7 @@ import { sharingService, ShareFormat } from '../../services/SharingService';
 import {
   JournalShareProvider,
   ShareableJournalEntry,
+  shareJournalEntries,
 } from '../../services/sharing/JournalShareProvider';
 import { JournalDisplayType } from '../../types/enums';
 
@@ -193,6 +194,26 @@ describe('SharingService', () => {
     const provider2 = new JournalShareProvider(mockTransactions);
     expect(provider1.filename).toBe(provider2.filename);
     expect(provider1.filename).toBe('journal-report');
+  });
+
+  it('constructs and shares a journal provider with the requested format', async () => {
+    const share = jest.spyOn(sharingService, 'share').mockResolvedValue(undefined);
+
+    await shareJournalEntries(mockTransactions, { title: 'Shared Report' }, ShareFormat.CSV);
+
+    expect(share).toHaveBeenCalledWith(expect.any(JournalShareProvider), ShareFormat.CSV);
+    expect(share.mock.calls[0][0]).toMatchObject({ title: 'Shared Report' });
+    share.mockRestore();
+  });
+
+  it('uses the sharing service default format when none is provided', async () => {
+    const share = jest.spyOn(sharingService, 'share').mockResolvedValue(undefined);
+
+    await shareJournalEntries(mockTransactions, { title: 'Default Format' });
+
+    expect(share).toHaveBeenCalledWith(expect.any(JournalShareProvider));
+    expect(share.mock.calls[0]).toHaveLength(1);
+    share.mockRestore();
   });
 
   it('is defined', () => {

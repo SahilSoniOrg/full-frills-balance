@@ -13,8 +13,7 @@ import { usePlannedPaymentDetails } from '@/src/features/planned-payments/hooks/
 import { useSelection } from '@/src/hooks/useSelection';
 import { useTheme } from '@/src/hooks/use-theme';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
-import { JournalShareProvider } from '@/src/services/sharing/JournalShareProvider';
-import { sharingService } from '@/src/services/SharingService';
+import { shareJournalEntries } from '@/src/services/sharing/JournalShareProvider';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalDisplayType } from '@/src/types/enums';
 import { JournalId } from '@/src/types/ids';
@@ -126,7 +125,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
     if (selectedIds.size === 0 || !history) return;
     try {
       const selectedJournals = history.filter(j => selectedIds.has(j.id));
-      const provider = new JournalShareProvider(
+      await shareJournalEntries(
         selectedJournals.map(j => ({
           id: j.id,
           date: j.journalDate,
@@ -142,7 +141,6 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
           showEmojis: true,
         },
       );
-      await sharingService.share(provider);
     } catch (error) {
       logger.error('Failed to share journal entries', error);
     }

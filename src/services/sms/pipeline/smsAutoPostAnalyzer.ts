@@ -3,13 +3,13 @@ import { AppConfig } from '@/src/constants';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
 import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
-import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
+import { ParsedTransaction, toTransactionDirection } from '@/src/services/ledger/SmsParser';
 import { smsRuleEngine } from '@/src/services/sms/SmsRuleEngine';
 import { JournalStatus, TransactionType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { SmsMatchData } from '@/src/utils/sms/RuleMatcher';
-import { computeSmsFingerprint, toDirection } from './smsFingerprint';
+import { computeSmsFingerprint } from './smsFingerprint';
 import { AutoPostRuleAnalysis } from './types';
 
 export async function analyzeAutoPost(
@@ -23,7 +23,7 @@ export async function analyzeAutoPost(
     rawBody: message.body,
     parsedMerchant: parsed.merchant,
     parsedAccountSource: parsed.accountSource,
-    direction: toDirection(parsed.type),
+    direction: toTransactionDirection(parsed.type),
     parsedCurrencyCode: parsed.currencyCode,
     parsedAmount: parsed.amount,
   };

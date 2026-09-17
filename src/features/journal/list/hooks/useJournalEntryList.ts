@@ -10,8 +10,7 @@ import { useJournalListGrouping } from '@/src/hooks/useJournalListGrouping';
 import { useSelection } from '@/src/hooks/useSelection';
 import { useSharePrefs } from '@/src/hooks/useSharePrefs';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { sharingService } from '@/src/services/SharingService';
-import { JournalShareProvider } from '@/src/services/sharing/JournalShareProvider';
+import { shareJournalEntries } from '@/src/services/sharing/JournalShareProvider';
 import type { JournalTimelineRow } from '@/src/services/journal/journalTimelineRows';
 import { mapJournalToTimelineItem } from '@/src/services/journal/journalTimelinePresentation';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
@@ -175,7 +174,7 @@ export function useJournalEntryList({
 
     try {
       const selectedJournals = journals.filter(j => selectedIds.has(j.id));
-      const provider = new JournalShareProvider(
+      await shareJournalEntries(
         selectedJournals.map(j => ({
           id: j.id,
           date: j.journalDate,
@@ -190,8 +189,8 @@ export function useJournalEntryList({
           sort: 'desc',
           showEmojis: true,
         },
+        defaultShareFormat,
       );
-      await sharingService.share(provider, defaultShareFormat);
     } catch (error) {
       logger.error('Failed to share journal entries', error);
     }

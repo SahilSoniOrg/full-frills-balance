@@ -1,6 +1,7 @@
 import { JournalDisplayType } from '../../types/enums';
 import { ShareFormat } from '../../types/sharing';
 import type { ShareProvider } from '../../types/sharing';
+import { sharingService } from '../SharingService';
 import { CurrencyFormatter } from '../../utils/currencyFormatter';
 import { formatDate } from '../../utils/dateUtils';
 
@@ -217,5 +218,18 @@ export class JournalShareProvider implements ShareProvider {
     });
 
     return lines.join('\n');
+  }
+}
+
+export async function shareJournalEntries(
+  entries: ShareableJournalEntry[],
+  options: JournalShareOptions,
+  format?: ShareFormat,
+): Promise<void> {
+  const provider = new JournalShareProvider(entries, options);
+  if (format === undefined) {
+    await sharingService.share(provider);
+  } else {
+    await sharingService.share(provider, format);
   }
 }

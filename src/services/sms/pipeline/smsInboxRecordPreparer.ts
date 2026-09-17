@@ -3,13 +3,13 @@ import Journal from '@/src/data/models/Journal';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { TransactionInboxRecordWriteData } from '@/src/data/repositories/TransactionInboxRepository';
 import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
-import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
+import { ParsedTransaction, toTransactionDirection } from '@/src/services/ledger/SmsParser';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { Model } from '@nozbe/watermelondb';
-import { resolveProcessingStatus, toDirection } from './smsFingerprint';
+import { resolveProcessingStatus } from './smsFingerprint';
 import { SmsAnalysisResult } from './types';
 
 export function prepareUpsertInboxRecord(
@@ -46,7 +46,7 @@ export function prepareUpsertInboxRecord(
     referenceNumber: parsed.referenceNumber
       ? normalizeSmsReferenceNumber(parsed.referenceNumber)
       : undefined,
-    direction: toDirection(parsed.type),
+    direction: toTransactionDirection(parsed.type),
     processingStatus,
     linkedJournalId,
     duplicateJournalId: duplicate?.journalId,

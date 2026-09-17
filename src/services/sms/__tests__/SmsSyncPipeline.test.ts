@@ -2,11 +2,10 @@ import { SmsSyncPipeline } from '../pipeline';
 import { InboxParseStatus, InboxProcessingStatus, TransactionDirection } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { AppConfig } from '@/src/constants';
-import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
+import { ParsedTransaction, toTransactionDirection } from '@/src/services/ledger/SmsParser';
 import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import {
   computeSmsFingerprint,
-  toDirection,
   resolveProcessingStatus,
 } from '../pipeline/smsFingerprint';
 import { findManyDuplicateCandidates } from '../pipeline/smsDuplicateMatcher';
@@ -191,11 +190,11 @@ describe('SmsSyncPipeline', () => {
     });
   });
 
-  describe('toDirection', () => {
+  describe('toTransactionDirection', () => {
     it('maps transaction string directions to domain enum', () => {
-      expect(toDirection('debit')).toBe(TransactionDirection.DEBIT);
-      expect(toDirection('credit')).toBe(TransactionDirection.CREDIT);
-      expect(toDirection('unknown')).toBe(TransactionDirection.UNKNOWN);
+      expect(toTransactionDirection('debit')).toBe(TransactionDirection.DEBIT);
+      expect(toTransactionDirection('credit')).toBe(TransactionDirection.CREDIT);
+      expect(toTransactionDirection('unknown')).toBe(TransactionDirection.UNKNOWN);
     });
   });
 

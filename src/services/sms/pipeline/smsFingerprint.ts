@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants';
-import { ParsedTransaction, toTransactionDirection } from '@/src/services/ledger/SmsParser';
+import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { DuplicateMatch } from '@/src/services/sms/smsDuplicateDetection';
-import { InboxParseStatus, InboxProcessingStatus, TransactionDirection } from '@/src/types/enums';
+import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
 
 const SMS_CONFIG = AppConfig.input.sms;
 const DUPLICATE_CONFIG = SMS_CONFIG.duplicateDetection;
@@ -15,10 +15,6 @@ export function computeSmsFingerprint(sender: string, body: string, date: number
     .trim();
   const dateBucket = Math.floor(date / DUPLICATE_CONFIG.fingerprintDayBucketMs);
   return `${normalizedSender}::${normalizedBody.slice(0, 160)}::${dateBucket}`;
-}
-
-export function toDirection(type: 'debit' | 'credit' | 'unknown'): TransactionDirection {
-  return toTransactionDirection(type);
 }
 
 export function resolveProcessingStatus(params: {
