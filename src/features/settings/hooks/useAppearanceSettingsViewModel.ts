@@ -1,6 +1,7 @@
 import { FontId, ThemeId } from '@/src/constants/design-tokens';
 import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
 import { useDashboardPreferences } from '@/src/hooks/useDashboardPreferences';
+import { useDeviceMotionPrefs } from '@/src/hooks/useDeviceMotionPrefs';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { analytics } from '@/src/services/analytics';
@@ -23,6 +24,8 @@ export interface AppearanceSettingsViewModel {
   onToggleCompactAccountPicker: () => void;
   showSafeToSpendChart: boolean;
   onToggleSafeToSpendChart: () => void;
+  reduceMotion: boolean;
+  onToggleReduceMotion: () => void;
 }
 
 export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
@@ -36,6 +39,7 @@ export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
     setUseCompactAccountPicker,
   } = useAccountDisplayPrefs();
   const { showSafeToSpendChart, setShowSafeToSpendChart } = useDashboardPreferences();
+  const { reduceMotion, setReduceMotion } = useDeviceMotionPrefs();
 
   const handleSetThemePreference = useCallback(
     (value: 'system' | 'light' | 'dark') => {
@@ -91,6 +95,13 @@ export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
     });
   }, [setShowSafeToSpendChart, showSafeToSpendChart]);
 
+  const onToggleReduceMotion = useCallback(() => {
+    setReduceMotion(!reduceMotion);
+    analytics.trackFeatureUsage('settings', 'toggle_reduce_motion', {
+      new_state: !reduceMotion,
+    });
+  }, [setReduceMotion, reduceMotion]);
+
   const handleSetHourCyclePreference = useCallback(
     (value: HourCyclePreference) => {
       setHourCyclePreference(value);
@@ -117,5 +128,7 @@ export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
     onToggleCompactAccountPicker,
     showSafeToSpendChart,
     onToggleSafeToSpendChart,
+    reduceMotion,
+    onToggleReduceMotion,
   };
 }

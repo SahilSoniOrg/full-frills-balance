@@ -8,6 +8,8 @@ export interface DevicePreferences {
   anonymizedId?: string;
   activeWorkplaceId?: WorkplaceId;
   isSmsImportEnabled: boolean;
+  /** In-app reduce-motion for this install (ORs with system AccessibilityInfo). */
+  reduceMotion: boolean;
 }
 
 export const DEFAULT_DEVICE_PREFERENCES: DevicePreferences = {
@@ -16,6 +18,7 @@ export const DEFAULT_DEVICE_PREFERENCES: DevicePreferences = {
   anonymizedId: undefined,
   activeWorkplaceId: undefined,
   isSmsImportEnabled: false,
+  reduceMotion: false,
 };
 
 export const DEVICE_PREFERENCE_KEYS = [
@@ -24,6 +27,7 @@ export const DEVICE_PREFERENCE_KEYS = [
   'anonymizedId',
   'activeWorkplaceId',
   'isSmsImportEnabled',
+  'reduceMotion',
 ] as const;
 
 export type DevicePreferenceKey = (typeof DEVICE_PREFERENCE_KEYS)[number];

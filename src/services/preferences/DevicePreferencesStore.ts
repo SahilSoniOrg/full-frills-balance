@@ -86,6 +86,14 @@ export class DevicePreferencesStore {
     this.update({ isSmsImportEnabled: enabled });
   }
 
+  get reduceMotion(): boolean {
+    return this.preferences.reduceMotion;
+  }
+
+  setReduceMotion(reduceMotion: boolean): void {
+    this.update({ reduceMotion });
+  }
+
   clear(): void {
     this.preferences = { ...DEFAULT_DEVICE_PREFERENCES };
     this.subject.next(this.preferences);
@@ -133,6 +141,7 @@ export class DevicePreferencesStore {
       ...(typeof value.isSmsImportEnabled === 'boolean'
         ? { isSmsImportEnabled: value.isSmsImportEnabled }
         : {}),
+      ...(typeof value.reduceMotion === 'boolean' ? { reduceMotion: value.reduceMotion } : {}),
     };
   }
 

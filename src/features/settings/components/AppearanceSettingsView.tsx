@@ -47,6 +47,15 @@ export function AppearanceSettingsView({ vm }: AppearanceSettingsViewProps) {
 
         <SettingsMenu header={AppConfig.strings.settings.sections.displayOptions}>
           <SettingsToggleItem
+            searchId="reduce-motion"
+            leftIcon={Icon.Pause}
+            title={AppConfig.strings.settings.reduceMotion.title}
+            description={AppConfig.strings.settings.reduceMotion.description}
+            value={vm.reduceMotion}
+            onValueChange={vm.onToggleReduceMotion}
+            testID="settings-reduce-motion-toggle"
+          />
+          <SettingsToggleItem
             searchId="compact-account-picker"
             leftIcon={Icon.Wallet}
             title={AppConfig.strings.settings.accountPicker.title}
