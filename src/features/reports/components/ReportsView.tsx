@@ -3,17 +3,23 @@ import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { FilterDisclosure } from '@/src/components/filters/FilterDisclosure';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Inset } from '@/src/design-system';
-import { Icon } from '@/src/components/core';
+import { AppTabs, Icon, type TabOption } from '@/src/components/core';
 import { ReportFilterChrome } from '@/src/features/reports/components/ReportFilterChrome';
 import { ReportOverviewSection } from '@/src/features/reports/components/sections/ReportOverviewSection';
 import { ReportSpendingSection } from '@/src/features/reports/components/sections/ReportSpendingSection';
 import { ReportWealthSection } from '@/src/features/reports/components/sections/ReportWealthSection';
-import { ReportTabs } from '@/src/features/reports/components/ReportTabs';
+import { ReportTab } from '@/src/features/reports/hooks/reportTabTypes';
 import { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useCallback, useState } from 'react';
+
+const REPORT_TABS: readonly TabOption<ReportTab>[] = [
+  { id: 'OVERVIEW', label: AppConfig.strings.reports.tabs.overview },
+  { id: 'SPENDING', label: AppConfig.strings.reports.tabs.spending },
+  { id: 'WEALTH', label: AppConfig.strings.reports.tabs.wealth },
+];
 
 interface ReportsViewProps {
   vm: ReportsViewModel;
@@ -75,7 +81,12 @@ export function ReportsView({ vm, chrome }: ReportsViewProps) {
             ]}
             testID="reports-filters-toggle"
           />
-          <ReportTabs activeTab={activeTab} onTabChange={setActiveTab} />
+          <AppTabs
+            options={REPORT_TABS}
+            value={activeTab}
+            onChange={setActiveTab}
+            testID="report-tabs"
+          />
           {activeTab === 'OVERVIEW' && (
             <ReportOverviewSection vm={overview} chartWidth={CHART_WIDTH} />
           )}
