@@ -101,7 +101,7 @@ export function JournalEntryModeBody({
   const slide = ChromeMotion.panelSlidePx * modeTransitionDir;
 
   return (
-    <AnimatePresence exitBeforeEnter>
+    <AnimatePresence>
       <MotiView
         key={activeMode}
         from={{
@@ -110,12 +110,8 @@ export function JournalEntryModeBody({
           scale: ChromeMotion.panelFromScale,
         }}
         animate={{ opacity: 1, translateX: 0, scale: 1 }}
-        exit={{
-          opacity: 0,
-          translateX: -slide * 0.5,
-          scale: ChromeMotion.panelFromScale,
-        }}
-        transition={ChromeMotion.spring}
+        exit={{ opacity: 0 }}
+        transition={ChromeMotion.panel}
         style={styles.panel}
       >
         {panel}

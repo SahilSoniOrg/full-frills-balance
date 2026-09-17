@@ -5,7 +5,6 @@ import {
 } from '@/src/features/journal/entry/journalEntryPresentation';
 import { isSimpleModeDisabledByLines } from '@/src/services/journal/journalEditorHelpers';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
-import { useEaseInLayoutAnimation } from '@/src/hooks/useEaseInLayoutAnimation';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -31,7 +30,6 @@ export function useJournalEntryModeState(
   );
   const [modeTransitionDir, setModeTransitionDir] = useState<1 | -1>(1);
   const { isGuidedMode: editorIsGuidedMode, setIsGuidedMode, lines } = editor;
-  const prepareLayoutAnimation = useEaseInLayoutAnimation();
 
   useEffect(() => {
     setIsGuidedMode(activeMode === 'basic');
@@ -61,11 +59,11 @@ export function useJournalEntryModeState(
         return;
       }
 
+      // Moti owns the panel swap; skip LayoutAnimation so we don't stack ~easeInEaseOut + Moti.
       setModeTransitionDir(modeSlideDirection(activeMode, mode));
-      prepareLayoutAnimation();
       setActiveMode(mode);
     },
-    [activeMode, lines, prepareLayoutAnimation],
+    [activeMode, lines],
   );
 
   return {
