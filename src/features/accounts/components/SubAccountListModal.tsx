@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { Icon, AppButton, AppText, Badge, IconButton, IvyIcon } from '@/src/components/core';
-import { Opacity, Shape, Spacing } from '@/src/constants';
+import { ChromeMotion, Opacity, Shape, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { SubAccountViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
@@ -39,8 +39,7 @@ export function SubAccountListModal({
       Animated.spring(slideAnim, {
         toValue: 0,
         useNativeDriver: true,
-        tension: 50,
-        friction: 10,
+        ...ChromeMotion.rnToggle,
       }).start();
     } else {
       slideAnim.setValue(SCREEN_HEIGHT);
