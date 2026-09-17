@@ -94,9 +94,7 @@ export function JournalEntryModeBody({
     );
   }
 
-  if (reduceMotion) {
-    return <>{panel}</>;
-  }
+  if (reduceMotion) return <>{panel}</>;
 
   // Enter-only: AnimatePresence kept the exiting panel in document flow,
   // which stacked both modes and made the incoming panel load below then snap up.

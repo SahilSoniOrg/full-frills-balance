@@ -1,20 +1,9 @@
 import { AppSegmentedControl } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
+import { JOURNAL_ENTRY_MODE_OPTIONS } from '@/src/features/journal/entry/journalEntryMode';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
-
-type JournalModeOption = {
-  id: JournalEntryScreenMode;
-  label: string;
-};
-
-const JOURNAL_MODE_OPTIONS: readonly JournalModeOption[] = [
-  { id: 'basic', label: 'Simple' },
-  { id: 'allocation', label: 'Split' },
-  { id: 'expert', label: 'Advanced' },
-  { id: 'batch', label: 'Batch' },
-];
 
 export type JournalModeBarProps = {
   mode: JournalEntryScreenMode;
@@ -38,7 +27,7 @@ export function JournalModeBar({
     <View style={[styles.wrapper, isBar && styles.barWrapper]}>
       <View style={[styles.controlArea, isBar && styles.barContainer]}>
         <AppSegmentedControl
-          options={JOURNAL_MODE_OPTIONS}
+          options={JOURNAL_ENTRY_MODE_OPTIONS}
           value={mode}
           onChange={onToggleMode}
           flex

@@ -43,8 +43,8 @@ export const ChromeMotion = {
     friction: 10,
     tension: 60,
   },
-  /** Softer RN spring for toggle thumb travel. */
-  rnToggle: {
+  /** Softer RN spring for small chrome surfaces. */
+  rnSoftSpring: {
     friction: 10,
     tension: 50,
   },

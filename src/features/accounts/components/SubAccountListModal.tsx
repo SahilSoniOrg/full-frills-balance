@@ -39,7 +39,7 @@ export function SubAccountListModal({
       Animated.spring(slideAnim, {
         toValue: 0,
         useNativeDriver: true,
-        ...ChromeMotion.rnToggle,
+        ...ChromeMotion.rnSoftSpring,
       }).start();
     } else {
       slideAnim.setValue(SCREEN_HEIGHT);
@@ -47,7 +47,12 @@ export function SubAccountListModal({
   }, [visible, slideAnim, reduceMotion]);
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType={reduceMotion ? 'none' : 'fade'}
+      onRequestClose={onClose}
+    >
       <Pressable style={[styles.overlay, { backgroundColor: theme.overlay }]} onPress={onClose}>
         <Animated.View
           style={[

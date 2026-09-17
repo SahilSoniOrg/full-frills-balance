@@ -3,6 +3,7 @@ import {
   JournalEntryScreenMode,
   resolveJournalEntryScreenMode,
 } from '@/src/features/journal/entry/journalEntryPresentation';
+import { getJournalEntryModeSlideDirection } from '@/src/features/journal/entry/journalEntryMode';
 import { isSimpleModeDisabledByLines } from '@/src/services/journal/journalEditorHelpers';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { showErrorAlert } from '@/src/utils/alerts';
@@ -12,14 +13,6 @@ type JournalEditorModeState = Pick<
   ReturnType<typeof useJournalEditor>,
   'isGuidedMode' | 'setIsGuidedMode' | 'lines'
 >;
-
-const MODE_ORDER: readonly JournalEntryScreenMode[] = ['basic', 'allocation', 'expert', 'batch'];
-
-function modeSlideDirection(from: JournalEntryScreenMode, to: JournalEntryScreenMode): 1 | -1 {
-  const fromIdx = MODE_ORDER.indexOf(from);
-  const toIdx = MODE_ORDER.indexOf(to);
-  return toIdx >= fromIdx ? 1 : -1;
-}
 
 export function useJournalEntryModeState(
   editor: JournalEditorModeState,
@@ -60,7 +53,7 @@ export function useJournalEntryModeState(
       }
 
       // Moti owns the panel swap; skip LayoutAnimation so we don't stack ~easeInEaseOut + Moti.
-      setModeTransitionDir(modeSlideDirection(activeMode, mode));
+      setModeTransitionDir(getJournalEntryModeSlideDirection(activeMode, mode));
       setActiveMode(mode);
     },
     [activeMode, lines],

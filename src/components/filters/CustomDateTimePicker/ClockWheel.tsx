@@ -1,5 +1,7 @@
 import { AppText } from '@/src/components/core';
 import { ChromeMotion, Opacity, Shape, Spacing } from '@/src/constants';
+import { animateValue } from '@/src/hooks/reduced-motion-animation';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -42,6 +44,7 @@ export function ClockWheel<T extends string>({
   testID,
 }: ClockWheelProps<T>) {
   const { theme } = useTheme();
+  const reduceMotion = useReducedMotion();
   const scrollViewRef = useRef<ScrollView>(null);
   const [viewportHeight, setViewportHeight] = useState(0);
   const cycleLength = options.length;
@@ -76,13 +79,13 @@ export function ClockWheel<T extends string>({
       scrollValue.setValue(selectedIndex);
       return;
     }
-    scrollValue.stopAnimation();
-    Animated.spring(scrollValue, {
+    animateValue({
+      value: scrollValue,
       toValue: selectedIndex,
-      useNativeDriver: true,
-      ...ChromeMotion.rnIndicator,
-    }).start();
-  }, [selectedIndex, scrollValue, viewportHeight]);
+      reduceMotion,
+      config: ChromeMotion.rnIndicator,
+    });
+  }, [selectedIndex, scrollValue, viewportHeight, reduceMotion]);
 
   const offsetForIndex = useCallback(
     (index: number) => {
@@ -98,9 +101,9 @@ export function ClockWheel<T extends string>({
     if (viewportHeight <= 0) return;
     scrollViewRef.current?.scrollTo({
       y: offsetForIndex(selectedIndex),
-      animated: true,
+      animated: !reduceMotion,
     });
-  }, [offsetForIndex, selectedIndex, viewportHeight]);
+  }, [offsetForIndex, selectedIndex, viewportHeight, reduceMotion]);
 
   const indexFromOffset = useCallback(
     (y: number) => {
@@ -123,7 +126,7 @@ export function ClockWheel<T extends string>({
       if (nextIndex !== clamped) {
         scrollViewRef.current?.scrollTo({
           y: offsetForIndex(nextIndex),
-          animated: false,
+          animated: !reduceMotion,
         });
       }
       if (next.id !== value) onChange(next.id);
@@ -138,6 +141,7 @@ export function ClockWheel<T extends string>({
       onChange,
       value,
       viewportHeight,
+      reduceMotion,
     ],
   );
 

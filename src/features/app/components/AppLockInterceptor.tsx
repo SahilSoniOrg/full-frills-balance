@@ -4,6 +4,7 @@ import { Opacity, Scale, Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { useAppLock } from '@/src/contexts/app-shell/AppLockProvider';
 import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useAppLockEngine } from '@/src/features/app/hooks/useAppLockEngine';
 import { logger } from '@/src/utils/logger';
@@ -16,6 +17,7 @@ export function AppLockInterceptor({ children }: { children: React.ReactNode }) 
   const { isAppLockEnabled } = usePrivacyPrefs();
   const { hasUnlockedThisSession, isAppCurrentlyLocked } = useAppLock();
   const { theme } = useTheme();
+  const reduceMotion = useReducedMotion();
 
   // Use the extracted logic engine
   const { isAuthenticating, error, authenticate } = useAppLockEngine();
@@ -53,10 +55,11 @@ export function AppLockInterceptor({ children }: { children: React.ReactNode }) 
             opacity: isAppCurrentlyLocked ? Opacity.none : Opacity.solid,
             scale: isAppCurrentlyLocked ? Scale.press : Scale.identity,
           }}
-          transition={{
-            type: 'timing',
-            duration: AppConfig.timing.appLockFadeDurationMs,
-          }}
+          transition={
+            reduceMotion
+              ? { type: 'timing', duration: 0 }
+              : { type: 'timing', duration: AppConfig.timing.appLockFadeDurationMs }
+          }
           style={styles.contentContainer}
         >
           {children}
@@ -70,17 +73,18 @@ export function AppLockInterceptor({ children }: { children: React.ReactNode }) 
       <Modal
         visible={isAppCurrentlyLocked}
         transparent={false}
-        animationType={Platform.OS === 'ios' ? 'fade' : 'none'}
+        animationType={reduceMotion || Platform.OS !== 'ios' ? 'none' : 'fade'}
         statusBarTranslucent
       >
         <View style={[styles.root, { backgroundColor: theme.surface }]}>
           <MotiView
             from={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{
-              type: 'timing',
-              duration: AppConfig.timing.appLockFadeDurationMs,
-            }}
+            transition={
+              reduceMotion
+                ? { type: 'timing', duration: 0 }
+                : { type: 'timing', duration: AppConfig.timing.appLockFadeDurationMs }
+            }
             style={[StyleSheet.absoluteFill, { backgroundColor: theme.surface }]}
           >
             <Screen showBack={false} withPadding>
@@ -88,7 +92,11 @@ export function AppLockInterceptor({ children }: { children: React.ReactNode }) 
                 <MotiView
                   from={{ scale: Opacity.strong, opacity: Opacity.solid * 0 }}
                   animate={{ scale: Opacity.solid, opacity: Opacity.solid }}
-                  transition={{ type: 'timing', duration: 400, delay: 100 }}
+                  transition={
+                    reduceMotion
+                      ? { type: 'timing', duration: 0 }
+                      : { type: 'timing', duration: 400, delay: 100 }
+                  }
                   style={[styles.iconContainer, { backgroundColor: theme.surfaceSecondary }]}
                 >
                   <IvyIcon name={Icon.Lock} size={48} color="transparent" iconColor={theme.text} />

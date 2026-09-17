@@ -1,6 +1,8 @@
 import { ChromeMotion, Opacity, Shape, Spacing } from '@/src/constants';
 import { Box } from '@/src/design-system/Box';
 import { resolveThemeColor } from '@/src/design-system/utils';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
+import { animateValue } from '@/src/hooks/reduced-motion-animation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -154,6 +156,7 @@ export const AppSegmentedControl = <T extends string | number>({
   testID,
 }: AppSegmentedControlProps<T>) => {
   const { theme } = useTheme();
+  const reduceMotion = useReducedMotion();
   const scrollViewRef = useRef<ScrollView>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
@@ -246,13 +249,13 @@ export const AppSegmentedControl = <T extends string | number>({
       return;
     }
 
-    scrollValue.stopAnimation();
-    Animated.spring(scrollValue, {
+    animateValue({
+      value: scrollValue,
       toValue: selectedIndex,
-      useNativeDriver: true,
-      ...ChromeMotion.rnIndicator,
-    }).start();
-  }, [selectedIndex, containerSize, isVertical, scrollValue]);
+      reduceMotion,
+      config: ChromeMotion.rnIndicator,
+    });
+  }, [selectedIndex, containerSize, isVertical, scrollValue, reduceMotion]);
 
   // 4. Scroll Management
   useEffect(() => {
@@ -266,7 +269,10 @@ export const AppSegmentedControl = <T extends string | number>({
       const clampedPos = Math.min(Math.max(0, scrollPos), maxScroll);
 
       const scrollConfig = isVertical ? { y: clampedPos } : { x: clampedPos };
-      scrollViewRef.current.scrollTo({ ...scrollConfig, animated: true });
+      scrollViewRef.current.scrollTo({
+        ...scrollConfig,
+        animated: !reduceMotion,
+      });
     }
   }, [
     selectedIndex,
@@ -276,6 +282,7 @@ export const AppSegmentedControl = <T extends string | number>({
     layout.itemHeight,
     layout.contentSize,
     isVertical,
+    reduceMotion,
   ]);
 
   // 5. Handlers

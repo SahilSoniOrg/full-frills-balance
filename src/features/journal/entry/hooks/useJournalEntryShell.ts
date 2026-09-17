@@ -1,6 +1,7 @@
 import type { CreateAccountIntent } from '@/src/components/account-selection';
 import { useAccounts } from '@/src/components/account-selection';
 import { AppConfig } from '@/src/constants';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
@@ -34,7 +35,6 @@ import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { TransactionType } from '@/src/types/enums';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useLocalSearchParams } from 'expo-router';
 import { MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -102,13 +102,18 @@ export function useJournalEntryShell(): JournalEntryShell {
   const reduceMotion = useReducedMotion();
   const [saveSuccessPulse, setSaveSuccessPulse] = useState(false);
   const onSuccess = useCallback(() => {
+    if (saveLeaveTimerRef.current) clearTimeout(saveLeaveTimerRef.current);
+
     if (reduceMotion) {
+      setSaveSuccessPulse(false);
       leaveAfterSaveRef.current();
       return;
     }
+
     setSaveSuccessPulse(true);
-    if (saveLeaveTimerRef.current) clearTimeout(saveLeaveTimerRef.current);
     saveLeaveTimerRef.current = setTimeout(() => {
+      saveLeaveTimerRef.current = null;
+      setSaveSuccessPulse(false);
       leaveAfterSaveRef.current();
     }, AppConfig.timing.saveConfirmMs);
   }, [reduceMotion]);

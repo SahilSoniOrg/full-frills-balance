@@ -12,6 +12,7 @@ export type {
 
 /** Internal composer views. Legacy route names are translated at the adapter boundary below. */
 export type JournalEntryScreenMode = 'basic' | 'allocation' | 'expert' | 'batch';
+
 export type JournalEntryRouteParams = {
   mode?: JournalEntryRouteEditorMode;
   type?: JournalEntrySimpleType;

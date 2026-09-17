@@ -158,7 +158,7 @@ export function ModalSurface({
       <Modal
         visible={visible}
         transparent
-        animationType={animationType}
+        animationType={reduceMotion ? 'none' : animationType}
         onRequestClose={onClose}
         onDismiss={onDismiss}
       >

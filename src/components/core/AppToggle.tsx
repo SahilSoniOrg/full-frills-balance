@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChromeMotion, Opacity, Shape } from '@/src/constants';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Animated, StyleSheet, TouchableOpacity } from 'react-native';
 
@@ -21,15 +22,21 @@ export const AppToggle = ({
   accessibilityLabel,
 }: AppToggleProps) => {
   const { theme } = useTheme();
+  const reduceMotion = useReducedMotion();
   const [animatedValue] = useState(() => new Animated.Value(value ? 1 : 0));
 
   useEffect(() => {
+    animatedValue.stopAnimation();
+    if (reduceMotion) {
+      animatedValue.setValue(value ? 1 : 0);
+      return;
+    }
     Animated.spring(animatedValue, {
       toValue: value ? 1 : 0,
-      useNativeDriver: false, // Color and Layout animations often need false, but position can use true
-      ...ChromeMotion.rnToggle,
+      useNativeDriver: false,
+      ...ChromeMotion.rnSoftSpring,
     }).start();
-  }, [value, animatedValue]);
+  }, [value, animatedValue, reduceMotion]);
 
   const translateX = animatedValue.interpolate({
     inputRange: [0, 1],
