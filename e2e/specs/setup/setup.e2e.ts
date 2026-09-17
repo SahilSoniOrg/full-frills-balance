@@ -9,6 +9,7 @@ import {
   launchFreshApp,
   launchOnboardedApp,
   launchRestoreResumeApp,
+  relaunchPreservingData,
   openWorkplaceCreation,
   waitForDashboard,
 } from '../../actions/launch';
