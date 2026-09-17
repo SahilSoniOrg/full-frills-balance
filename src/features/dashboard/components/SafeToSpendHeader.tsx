@@ -1,8 +1,10 @@
 import { Icon, IconButton } from '@/src/components/core';
-import { AppConfig, Size } from '@/src/constants';
+import { AppConfig, ChromeMotion, Size } from '@/src/constants';
 import { Column, Row, Text } from '@/src/design-system';
 import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
+import { MotiView } from 'moti';
 
 interface SafeToSpendHeaderProps {
   isOverCommitted: boolean;
@@ -26,6 +28,22 @@ export const SafeToSpendHeader = ({
   const { theme } = useTheme();
   const strings = AppConfig.strings.dashboard;
   const formatSts = useStsMoneyFormat(loading);
+  const reduceMotion = useReducedMotion();
+
+  const amountText = (
+    <Text
+      testID="safe-to-spend-amount"
+      variant="hero"
+      color={isOverCommitted ? 'error' : isPositiveSafeToSpend ? 'success' : undefined}
+      weight="bold"
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.55}
+      ellipsizeMode="tail"
+    >
+      {formatSts(amount, currencyCode)}
+    </Text>
+  );
 
   return (
     <Column gap="xs">
@@ -51,18 +69,17 @@ export const SafeToSpendHeader = ({
         />
       </Row>
 
-      <Text
-        testID="safe-to-spend-amount"
-        variant="hero"
-        color={isOverCommitted ? 'error' : isPositiveSafeToSpend ? 'success' : undefined}
-        weight="bold"
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.55}
-        ellipsizeMode="tail"
-      >
-        {formatSts(amount, currencyCode)}
-      </Text>
+      {!reduceMotion && !loading ? (
+        <MotiView
+          from={{ opacity: 0, scale: ChromeMotion.panelFromScale }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={ChromeMotion.sheetSpring}
+        >
+          {amountText}
+        </MotiView>
+      ) : (
+        amountText
+      )}
 
       <Text
         variant="xs"
