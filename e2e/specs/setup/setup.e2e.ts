@@ -3,17 +3,15 @@
  * @dataSource e2e
  * @platform ios
  */
-import { device, element, by, waitFor } from 'detox';
+import { device } from 'detox';
 import { setupPage } from '../../pages/setup-page';
 import {
   launchFreshApp,
   launchOnboardedApp,
   launchRestoreResumeApp,
   openWorkplaceCreation,
-  relaunchPreservingData,
   waitForDashboard,
 } from '../../actions/launch';
-import { onboarding } from '../../screens';
 
 jest.setTimeout(300000);
 
@@ -26,25 +24,9 @@ describe('Setup journeys', () => {
     }
   });
 
-  it('completes first-run Device, Workplace, Appearance, and Summary slices', async () => {
+  it('completes the Cash Clarity first-run flow', async () => {
     await launchFreshApp({ disableSynchronization: true });
     await setupPage.completeFirstRun('E2E Setup User');
-    await waitForDashboard();
-  });
-
-  it('resumes from the persisted Workplace slice after termination', async () => {
-    await launchFreshApp({ disableSynchronization: true });
-    await setupPage.waitForDeviceSlice();
-    await setupPage.enterDisplayName('E2E Resume User');
-    await waitFor(element(by.id(onboarding.gridContinue)))
-      .toBeVisible()
-      .withTimeout(120000);
-
-    await relaunchPreservingData();
-    await waitFor(element(by.id(onboarding.gridContinue)))
-      .toBeVisible()
-      .withTimeout(120000);
-    await setupPage.completeFromWorkplace();
     await waitForDashboard();
   });
 
@@ -55,10 +37,10 @@ describe('Setup journeys', () => {
     await waitForDashboard();
   });
 
-  it('enters first-run Restore as a Setup journey from Device setup', async () => {
+  it('enters first-run Restore from Cash Clarity', async () => {
     await launchFreshApp({ disableSynchronization: true });
-    await setupPage.waitForDeviceSlice();
-    await setupPage.typeDisplayName('E2E Restore User');
+    await setupPage.waitForCashClarityWelcome();
+    await setupPage.enterCashClarityName('E2E Restore User');
     await setupPage.openRestoreFromDevice();
   });
 

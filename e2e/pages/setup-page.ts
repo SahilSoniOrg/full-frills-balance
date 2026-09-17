@@ -4,28 +4,6 @@ import { ONBOARDING_TIMEOUT_MS } from '../constants/timeouts';
 import { tapById, tapByLabel } from '../actions/mobile/elementActions';
 
 export class SetupPage {
-  async waitForDeviceSlice(): Promise<void> {
-    await waitFor(element(by.id(setupIds.screen)))
-      .toExist()
-      .withTimeout(ONBOARDING_TIMEOUT_MS);
-    await waitFor(element(by.id(setupIds.nameInput)))
-      .toExist()
-      .withTimeout(ONBOARDING_TIMEOUT_MS);
-  }
-
-  async enterDisplayName(name: string): Promise<void> {
-    const input = element(by.id(setupIds.nameInput));
-    await input.tap();
-    await input.replaceText(name);
-    await input.tapReturnKey();
-  }
-
-  async typeDisplayName(name: string): Promise<void> {
-    const input = element(by.id(setupIds.nameInput));
-    await input.tap();
-    await input.replaceText(name);
-  }
-
   async openRestoreFromDevice(): Promise<void> {
     await tapById(setupIds.restoreButton, ONBOARDING_TIMEOUT_MS);
     await waitFor(element(by.id(setupIds.restoreSource)))
@@ -46,13 +24,6 @@ export class SetupPage {
 
   async continueRestoreSummary(): Promise<void> {
     await tapById(setupIds.restoreSummaryContinue, ONBOARDING_TIMEOUT_MS);
-  }
-
-  async continueWorkplaceSetup(): Promise<void> {
-    // First-run workplace identity is automatic; currency, accounts, and categories remain visible.
-    for (let i = 0; i < 3; i += 1) {
-      await tapById(setupIds.gridContinue, ONBOARDING_TIMEOUT_MS);
-    }
   }
 
   async finishAppearanceAndSummary(profileName?: string): Promise<void> {

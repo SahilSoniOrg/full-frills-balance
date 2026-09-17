@@ -46,17 +46,11 @@ import { resolveWorkplaceStartCheckpoint, visibleSetupProgress } from './visible
 
 function restoreSwitchForJourney(
   journeyId: SetupJourneyId,
-  displayName: string,
   onSwitchJourney: (journeyId: SetupJourneyId, name?: string) => void,
 ): (() => void) | undefined {
   switch (journeyId) {
     case 'empty_device_workplace':
       return () => onSwitchJourney('empty_device_restore');
-    case 'first_run':
-      return () => {
-        startFirstRunRestoreFromDeviceName(displayName);
-        onSwitchJourney('first_run_restore');
-      };
     case 'create_workplace':
       return () => onSwitchJourney('picker_restore');
     default:
@@ -303,7 +297,7 @@ function SetupJourneyScreen({
                 goBack();
               }
             }}
-            onRestore={restoreSwitchForJourney(journeyId, displayName, onSwitchJourney)}
+            onRestore={restoreSwitchForJourney(journeyId, onSwitchJourney)}
           />
         );
       }
