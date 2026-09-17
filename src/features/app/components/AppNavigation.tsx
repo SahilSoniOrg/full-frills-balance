@@ -17,6 +17,21 @@ export function AppContent() {
   return <NavigationStack />;
 }
 
+/** Composer / form sheets — match journal-entry bottom-slide language. */
+const COMPOSER_SHEET = {
+  headerShown: false,
+  presentation: 'card' as const,
+  animation: 'slide_from_bottom' as const,
+  gestureEnabled: true,
+  gestureDirection: 'vertical' as const,
+};
+
+/** Detail / settings pushes — explicit horizontal slide for consistency. */
+const DETAIL_PUSH = {
+  headerShown: false,
+  animation: 'slide_from_right' as const,
+};
+
 /**
  * The main stack definition for expo-router.
  */
@@ -28,47 +43,45 @@ export function NavigationStack() {
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="journal-entry"
-        options={{
-          headerShown: false,
-          presentation: 'card',
-          animation: 'slide_from_bottom',
-          gestureEnabled: true,
-          gestureDirection: 'vertical',
-        }}
-      />
-      <Stack.Screen name="account-creation" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="onboarding"
-        options={{
-          headerShown: false,
-          presentation: 'card',
-          animation: 'slide_from_bottom',
-          gestureEnabled: true,
-          gestureDirection: 'vertical',
-        }}
-      />
-      <Stack.Screen name="_design-preview" options={{ headerShown: false }} />
-      <Stack.Screen name="account-details" options={{ headerShown: false }} />
-      <Stack.Screen name="journal-details" options={{ headerShown: false }} />
+      <Stack.Screen name="journal-entry" options={COMPOSER_SHEET} />
+      <Stack.Screen name="onboarding" options={COMPOSER_SHEET} />
+      <Stack.Screen name="account-creation" options={COMPOSER_SHEET} />
+      <Stack.Screen name="category-creation" options={COMPOSER_SHEET} />
+      <Stack.Screen name="planned-payment-form" options={COMPOSER_SHEET} />
+      <Stack.Screen name="budget-edit" options={COMPOSER_SHEET} />
+      <Stack.Screen name="sms-rule-form" options={COMPOSER_SHEET} />
+      <Stack.Screen name="import-selection" options={COMPOSER_SHEET} />
       <Stack.Screen
         name="account-management"
         options={{
-          headerShown: false,
-          presentation: 'card',
+          ...COMPOSER_SHEET,
           headerBackButtonMenuEnabled: false,
         }}
       />
-      <Stack.Screen name="import-selection" options={{ headerShown: false }} />
-      <Stack.Screen name="audit-log" options={{ headerShown: false }} />
-      <Stack.Screen name="privacy-security-settings" options={{ headerShown: false }} />
-      <Stack.Screen name="privacy-notice" options={{ headerShown: false }} />
-      <Stack.Screen name="current-workplace-settings" options={{ headerShown: false }} />
-      <Stack.Screen name="automation-settings" options={{ headerShown: false }} />
-      <Stack.Screen name="maintenance-settings" options={{ headerShown: false }} />
-      <Stack.Screen name="about-support-settings" options={{ headerShown: false }} />
-      <Stack.Screen name="appearance-settings" options={{ headerShown: false }} />
+      <Stack.Screen name="_design-preview" options={{ headerShown: false }} />
+      <Stack.Screen name="account-details" options={DETAIL_PUSH} />
+      <Stack.Screen name="journal-details" options={DETAIL_PUSH} />
+      <Stack.Screen name="planned-payment-details" options={DETAIL_PUSH} />
+      <Stack.Screen name="budget-details" options={DETAIL_PUSH} />
+      <Stack.Screen name="insight-details" options={DETAIL_PUSH} />
+      <Stack.Screen name="hub" options={DETAIL_PUSH} />
+      <Stack.Screen name="reports" options={DETAIL_PUSH} />
+      <Stack.Screen name="reports-v2" options={DETAIL_PUSH} />
+      <Stack.Screen name="journal-search" options={DETAIL_PUSH} />
+      <Stack.Screen name="sms-inbox" options={DETAIL_PUSH} />
+      <Stack.Screen name="sms-rules" options={DETAIL_PUSH} />
+      <Stack.Screen name="workplace-settings" options={DETAIL_PUSH} />
+      <Stack.Screen name="device-settings" options={DETAIL_PUSH} />
+      <Stack.Screen name="personalization-settings" options={DETAIL_PUSH} />
+      <Stack.Screen name="data-management-settings" options={DETAIL_PUSH} />
+      <Stack.Screen name="audit-log" options={DETAIL_PUSH} />
+      <Stack.Screen name="privacy-security-settings" options={DETAIL_PUSH} />
+      <Stack.Screen name="privacy-notice" options={DETAIL_PUSH} />
+      <Stack.Screen name="current-workplace-settings" options={DETAIL_PUSH} />
+      <Stack.Screen name="automation-settings" options={DETAIL_PUSH} />
+      <Stack.Screen name="maintenance-settings" options={DETAIL_PUSH} />
+      <Stack.Screen name="about-support-settings" options={DETAIL_PUSH} />
+      <Stack.Screen name="appearance-settings" options={DETAIL_PUSH} />
     </Stack>
   );
 }
