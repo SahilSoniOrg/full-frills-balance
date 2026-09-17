@@ -1,5 +1,5 @@
-import { Icon, AppCard, AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
+import { Icon, AppCard, AppText, IconButton } from '@/src/components/core';
+import { AppConfig, Shape, Spacing } from '@/src/constants';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
@@ -8,7 +8,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
   View,
   type StyleProp,
   type ViewStyle,
@@ -96,15 +95,14 @@ export function ModalSurface({
             <AppText variant="subheading" weight="bold">
               {title}
             </AppText>
-            <TouchableOpacity
+            <IconButton
+              name={Icon.Close}
+              variant="clear"
+              iconColor={theme.textSecondary}
               onPress={onClose}
-              accessibilityRole="button"
               accessibilityLabel={accessibilityCloseLabel}
-              hitSlop={Spacing.sm}
               testID={closeTestID}
-            >
-              <AppIcon name={Icon.Close} size={Size.sm} color={theme.textSecondary} />
-            </TouchableOpacity>
+            />
           </View>
 
           {scrollable ? (

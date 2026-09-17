@@ -1,11 +1,13 @@
-import { Shape, Spacing } from '@/src/constants';
+import { Shape, Size, Spacing } from '@/src/constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
+import { triggerHaptic } from '@/src/utils/haptics';
 import { memo } from 'react';
-import { Keyboard, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import { Keyboard, StyleSheet, type ViewStyle } from 'react-native';
 import { AppIcon } from './AppIcon';
 import type { IconName } from '@/src/types/domainIcons';
 import { AppText } from './AppText';
+import { PressScaleTouchable } from './PressScaleTouchable';
 
 interface FilterChipButtonProps {
   label: string;
@@ -21,31 +23,28 @@ export const FilterChipButton = memo(
     const { theme } = useTheme();
 
     return (
-      <TouchableOpacity
+      <PressScaleTouchable
         testID={testID}
         accessibilityRole="button"
         accessibilityState={{ selected: !!isActive }}
-        activeOpacity={0.7}
         onPress={() => {
           Keyboard.dismiss();
+          if (!isActive) void triggerHaptic('light');
           onPress();
         }}
-        style={[
+        style={style}
+        surfaceStyle={[
           styles.container,
           {
-            backgroundColor: resolveThemeColor(theme, theme.surface),
+            backgroundColor: resolveThemeColor(theme, isActive ? theme.primary : theme.surface),
             borderColor: resolveThemeColor(theme, isActive ? theme.primary : theme.border),
           },
-          isActive && {
-            backgroundColor: resolveThemeColor(theme, theme.primary),
-          },
-          style,
         ]}
       >
         {icon && (
           <AppIcon
             name={icon}
-            size={16}
+            size={Size.xs}
             color={
               isActive
                 ? resolveThemeColor(theme, theme.onPrimary || theme.surface)
@@ -64,7 +63,7 @@ export const FilterChipButton = memo(
         >
           {label}
         </AppText>
-      </TouchableOpacity>
+      </PressScaleTouchable>
     );
   },
 );
@@ -77,7 +76,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
     paddingHorizontal: Spacing.md,
-    paddingVertical: 8,
+    paddingVertical: Spacing.sm,
     borderRadius: Shape.radius.full,
     borderWidth: 1,
   },

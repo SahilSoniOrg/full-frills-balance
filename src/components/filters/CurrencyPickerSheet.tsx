@@ -1,4 +1,4 @@
-import { Icon, AppIcon, AppInput, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppInput, AppText, IconButton } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import type { PlainCurrency } from '@/src/types/plainDtos';
@@ -58,13 +58,13 @@ export function CurrencyPickerSheet({
         <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
           <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
             <AppText variant="heading">{title}</AppText>
-            <TouchableOpacity
+            <IconButton
+              name={Icon.Close}
+              variant="clear"
+              iconColor={theme.text}
               onPress={closeAndReset}
-              accessibilityLabel="Close"
-              accessibilityRole="button"
-            >
-              <AppIcon name={Icon.Close} size={Size.iconMd} color={theme.text} />
-            </TouchableOpacity>
+              accessibilityLabel="Close currency picker"
+            />
           </View>
 
           <View style={styles.searchContainer}>
