@@ -99,4 +99,46 @@ describe('ReactiveCacheCoordinator', () => {
 
     subscriptions.forEach(subscription => subscription.unsubscribe());
   });
+
+  it('evicts feature caches through the same workplace-scoped seam', () => {
+    const departingWorkplace = 'workplace-departing' as WorkplaceId;
+    const activeWorkplace = 'workplace-active' as WorkplaceId;
+    const departingTeardowns = [jest.fn(), jest.fn()];
+    const activeTeardown = jest.fn();
+
+    const subscriptions = [
+      reactiveCacheCoordinator.getOrCreate({
+        namespace: REACTIVE_CACHE_NAMESPACES.safeToSpend,
+        key: departingWorkplace,
+        workplaceId: departingWorkplace,
+        createSource: () => sourceWithTeardown(departingTeardowns[0]),
+      }),
+      reactiveCacheCoordinator.getOrCreate({
+        namespace: REACTIVE_CACHE_NAMESPACES.insights,
+        key: `${departingWorkplace}_false`,
+        workplaceId: departingWorkplace,
+        createSource: () => sourceWithTeardown(departingTeardowns[1]),
+      }),
+      reactiveCacheCoordinator.getOrCreate({
+        namespace: REACTIVE_CACHE_NAMESPACES.insights,
+        key: `${activeWorkplace}_false`,
+        workplaceId: activeWorkplace,
+        createSource: () => sourceWithTeardown(activeTeardown),
+      }),
+    ].map(observable => observable.subscribe());
+
+    reactiveCacheCoordinator.clearAll(departingWorkplace);
+
+    expect(departingTeardowns[0]).toHaveBeenCalledTimes(1);
+    expect(departingTeardowns[1]).toHaveBeenCalledTimes(1);
+    expect(activeTeardown).not.toHaveBeenCalled();
+    expect(
+      reactiveCacheCoordinator.has(REACTIVE_CACHE_NAMESPACES.safeToSpend, departingWorkplace),
+    ).toBe(false);
+    expect(
+      reactiveCacheCoordinator.has(REACTIVE_CACHE_NAMESPACES.insights, `${activeWorkplace}_false`),
+    ).toBe(true);
+
+    subscriptions.forEach(subscription => subscription.unsubscribe());
+  });
 });

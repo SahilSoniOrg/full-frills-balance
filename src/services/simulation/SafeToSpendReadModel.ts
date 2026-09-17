@@ -2,12 +2,16 @@ import { createEmptySafeToSpendDashboard } from '@/src/services/simulation/safeT
 import { observeSafeToSpendInputSnapshot } from '@/src/services/simulation/safeToSpendInputAcquisition';
 import { projectSafeToSpendDashboardFromSnapshot } from '@/src/services/simulation/safeToSpendProjection';
 import { persistSafeToSpendSnapshot } from '@/src/services/simulation/safeToSpendSnapshotWriter';
+import {
+  reactiveCacheCoordinator,
+  REACTIVE_CACHE_NAMESPACES,
+} from '@/src/services/reactive/ReactiveCacheCoordinator';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { Platform } from 'react-native';
-import { firstValueFrom, from, Observable, of, ReplaySubject } from 'rxjs';
-import { catchError, map, shareReplay, switchMap, take, tap, takeUntil } from 'rxjs/operators';
+import { firstValueFrom, from, Observable, of } from 'rxjs';
+import { catchError, map, switchMap, take, tap } from 'rxjs/operators';
 import type { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
 
 /** Widget / headline path — intentionally tiny. */
@@ -28,11 +32,6 @@ export interface SafeToSpendHandle {
   preWarm(): Promise<void>;
 }
 
-type WorkplaceWatchCacheEntry = {
-  observable: Observable<SafeToSpendDashboard>;
-  dispose: () => void;
-};
-
 function toHeadline(result: SafeToSpendDashboard): SafeToSpendHeadline {
   return {
     currencyCode: result.currencyCode,
@@ -44,14 +43,8 @@ function toHeadline(result: SafeToSpendDashboard): SafeToSpendHeadline {
 }
 
 export class SafeToSpendReadModel {
-  /** Single workplace-keyed cache — currency switchMaps inside the pipeline. */
-  private workplaceWatchCache = new Map<WorkplaceId, WorkplaceWatchCacheEntry>();
-
   clearCache(): void {
-    for (const entry of this.workplaceWatchCache.values()) {
-      entry.dispose();
-    }
-    this.workplaceWatchCache.clear();
+    reactiveCacheCoordinator.clearNamespace(REACTIVE_CACHE_NAMESPACES.safeToSpend);
   }
 
   /**
@@ -74,39 +67,30 @@ export class SafeToSpendReadModel {
   }
 
   private watchWorkplace(workplaceId: WorkplaceId): Observable<SafeToSpendDashboard> {
-    const cached = this.workplaceWatchCache.get(workplaceId);
-    if (cached) return cached.observable;
-
     // Cap to one active workplace so abandoned workplace pipelines are not sticky.
-    if (this.workplaceWatchCache.size > 0) {
+    if (
+      !reactiveCacheCoordinator.has(REACTIVE_CACHE_NAMESPACES.safeToSpend, workplaceId) &&
+      reactiveCacheCoordinator.hasNamespace(REACTIVE_CACHE_NAMESPACES.safeToSpend)
+    ) {
       this.clearCache();
     }
 
-    const dispose$ = new ReplaySubject<void>(1);
-    let disposed = false;
-    const obs = workplaceService.observeCurrency(workplaceId).pipe(
-      takeUntil(dispose$),
-      switchMap(currencyCode =>
-        this.buildSafeToSpendPipeline(workplaceId, currencyCode, () => !disposed),
-      ),
-      shareReplay({ bufferSize: 1, refCount: true }),
-    );
-    this.workplaceWatchCache.set(workplaceId, {
-      observable: obs,
-      dispose: () => {
-        if (disposed) return;
-        disposed = true;
-        dispose$.next();
-        dispose$.complete();
-      },
+    return reactiveCacheCoordinator.getOrCreate({
+      namespace: REACTIVE_CACHE_NAMESPACES.safeToSpend,
+      key: workplaceId,
+      workplaceId,
+      createSource: () =>
+        workplaceService
+          .observeCurrency(workplaceId)
+          .pipe(
+            switchMap(currencyCode => this.buildSafeToSpendPipeline(workplaceId, currencyCode)),
+          ),
     });
-    return obs;
   }
 
   private buildSafeToSpendPipeline(
     workplaceId: WorkplaceId,
     defaultCurrencyCode: string,
-    isActive: () => boolean,
   ): Observable<SafeToSpendDashboard> {
     return observeSafeToSpendInputSnapshot(workplaceId, defaultCurrencyCode).pipe(
       switchMap(outcome => {
@@ -116,9 +100,7 @@ export class SafeToSpendReadModel {
 
         return from(projectSafeToSpendDashboardFromSnapshot(outcome.snapshot)).pipe(
           tap(result => {
-            if (isActive()) {
-              persistSafeToSpendSnapshot(workplaceId, result);
-            }
+            persistSafeToSpendSnapshot(workplaceId, result);
           }),
         );
       }),

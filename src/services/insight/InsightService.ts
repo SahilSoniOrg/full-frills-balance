@@ -13,9 +13,12 @@ import {
   observeWorkplaceAccounts,
   observeWorkplaceJournalMeta,
 } from '@/src/services/reactive/reactiveWorkplaceObserves';
+import {
+  reactiveCacheCoordinator,
+  REACTIVE_CACHE_NAMESPACES,
+} from '@/src/services/reactive/ReactiveCacheCoordinator';
 import { calculateInsights } from './insightCalculator';
 import { Insight } from './insightTypes';
-import { createDisposableReplay, DisposableReplay } from '@/src/services/reactive/disposableReplay';
 
 export type { Insight };
 
@@ -37,20 +40,11 @@ export class InsightService {
     }
   }
 
-  private insightCache = new Map<
-    string,
-    DisposableReplay<Insight[]> & { workplaceId: WorkplaceId }
-  >();
-
   /**
    * Disposes internal pattern observations, optionally for one workplace.
    */
   clearCache(workplaceId?: WorkplaceId): void {
-    for (const [key, entry] of this.insightCache) {
-      if (workplaceId !== undefined && entry.workplaceId !== workplaceId) continue;
-      entry.dispose();
-      this.insightCache.delete(key);
-    }
+    reactiveCacheCoordinator.clearNamespace(REACTIVE_CACHE_NAMESPACES.insights, workplaceId);
   }
 
   observeDismissedPatterns(workplaceId: WorkplaceId): Observable<Insight[]> {
@@ -66,9 +60,6 @@ export class InsightService {
     onlyDismissed: boolean,
   ): Observable<Insight[]> {
     const cacheKey = `${workplaceId}_${onlyDismissed}`;
-    const cached = this.insightCache.get(cacheKey);
-    if (cached) return cached.observable;
-
     const insightsConfig = AppConfig.insights;
     const lookbackDays = insightsConfig.lookbackDays;
 
@@ -126,9 +117,12 @@ export class InsightService {
       }),
     );
 
-    const replay = createDisposableReplay(obs$);
-    this.insightCache.set(cacheKey, { ...replay, workplaceId });
-    return replay.observable;
+    return reactiveCacheCoordinator.getOrCreate({
+      namespace: REACTIVE_CACHE_NAMESPACES.insights,
+      key: cacheKey,
+      workplaceId,
+      createSource: () => obs$,
+    });
   }
 
   async dismissPattern(workplaceId: WorkplaceId, id: string): Promise<void> {

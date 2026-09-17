@@ -11,6 +11,8 @@ export const REACTIVE_CACHE_NAMESPACES = {
   workplaceAccounts: 'reactive/workplace-accounts',
   workplaceJournalMeta: 'reactive/workplace-journal-meta',
   workplaceActiveCount: 'reactive/workplace-active-count',
+  safeToSpend: 'reactive/safe-to-spend',
+  insights: 'reactive/insights',
 } as const;
 
 type ReactiveCacheNamespace =

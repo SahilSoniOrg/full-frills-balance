@@ -1,17 +1,9 @@
 import { evictWorkplaceReactiveCaches } from '@/src/services/reactive/evictWorkplaceReactiveCaches';
-import { reactiveDataService } from '@/src/services/ReactiveDataService';
-import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
-import { insightService } from '@/src/services/insight/InsightService';
+import { reactiveCacheCoordinator } from '@/src/services/reactive/ReactiveCacheCoordinator';
 import { WorkplaceId } from '@/src/types/ids';
 
-jest.mock('@/src/services/ReactiveDataService', () => ({
-  reactiveDataService: { clearCache: jest.fn() },
-}));
-jest.mock('@/src/services/simulation/SafeToSpendReadModel', () => ({
-  safeToSpendReadModel: { clearCache: jest.fn() },
-}));
-jest.mock('@/src/services/insight/InsightService', () => ({
-  insightService: { clearCache: jest.fn() },
+jest.mock('@/src/services/reactive/ReactiveCacheCoordinator', () => ({
+  reactiveCacheCoordinator: { clearAll: jest.fn() },
 }));
 
 describe('evictWorkplaceReactiveCaches', () => {
@@ -19,13 +11,11 @@ describe('evictWorkplaceReactiveCaches', () => {
     jest.clearAllMocks();
   });
 
-  it('clears dashboard, safe-to-spend, and insight caches', () => {
+  it('clears all reactive caches for the departing workplace through one owner', () => {
     const oldWorkplace = 'old-workplace' as WorkplaceId;
     const newWorkplace = 'new-workplace' as WorkplaceId;
 
     evictWorkplaceReactiveCaches({ from: oldWorkplace, to: newWorkplace });
-    expect(reactiveDataService.clearCache).toHaveBeenCalledWith(oldWorkplace);
-    expect(safeToSpendReadModel.clearCache).toHaveBeenCalled();
-    expect(insightService.clearCache).toHaveBeenCalledWith(oldWorkplace);
+    expect(reactiveCacheCoordinator.clearAll).toHaveBeenCalledWith(oldWorkplace);
   });
 });
