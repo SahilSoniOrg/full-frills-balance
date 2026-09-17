@@ -11,11 +11,13 @@ import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { resolveAccountChipColors, type AccountChipColors } from '@/src/utils/accountChipColors';
+import { ManualBaseRateField } from './ManualBaseRateField';
 
 interface BulkEntryRowProps {
   row: BulkJournalRow;
   index: number;
   accounts: AccountFields[];
+  workplaceCurrency: string;
   onUpdateField: (id: string, field: keyof BulkJournalRow, value: BulkRowFieldValue) => void;
   onRemove: (id: string) => void;
   onDatePickerRequest: (id: string) => void;
@@ -27,6 +29,7 @@ export const BulkEntryRow = React.memo(
     row,
     index,
     accounts,
+    workplaceCurrency,
     onUpdateField,
     onRemove,
     onDatePickerRequest,
@@ -63,6 +66,7 @@ export const BulkEntryRow = React.memo(
     );
 
     const sourceCurrency = sourceAccount?.currencyCode;
+    const destCurrency = destAccount?.currencyCode;
 
     const formattedDate = useMemo(() => {
       return formatDateKeepingPattern(row.journalDate, 'DD MMM', resolvedHourCycle);
@@ -282,13 +286,49 @@ export const BulkEntryRow = React.memo(
               <AppText variant="caption" color="secondary">
                 Checking rate...
               </AppText>
-            ) : row.exchangeRate ? (
-              <AppText variant="caption" color="primary" weight="semibold">
-                1 {sourceCurrency} = {parseFloat(row.exchangeRate).toFixed(4)}
-                {'  ·  '}
-                {row.convertedAmount.toFixed(2)} {destAccount?.currencyCode}
-              </AppText>
-            ) : null}
+            ) : (
+              <>
+                {row.exchangeRate && (
+                  <AppText variant="caption" color="primary" weight="semibold">
+                    1 {sourceCurrency} = {parseFloat(row.exchangeRate).toFixed(4)}
+                    {'  ·  '}
+                    {row.convertedAmount.toFixed(2)} {destCurrency}
+                  </AppText>
+                )}
+                {!row.exchangeRate && (
+                  <View style={styles.manualRatesRow}>
+                    {sourceCurrency && sourceCurrency !== workplaceCurrency && (
+                      <ManualBaseRateField
+                        currency={sourceCurrency}
+                        workplaceCurrency={workplaceCurrency}
+                        value={row.sourceBaseRate ? String(row.sourceBaseRate) : ''}
+                        onChangeText={value =>
+                          onUpdateField(
+                            row.id,
+                            'sourceBaseRate',
+                            value === '' ? 0 : Number.parseFloat(value),
+                          )
+                        }
+                      />
+                    )}
+                    {destCurrency && destCurrency !== workplaceCurrency && (
+                      <ManualBaseRateField
+                        currency={destCurrency}
+                        workplaceCurrency={workplaceCurrency}
+                        value={row.destBaseRate ? String(row.destBaseRate) : ''}
+                        onChangeText={value =>
+                          onUpdateField(
+                            row.id,
+                            'destBaseRate',
+                            value === '' ? 0 : Number.parseFloat(value),
+                          )
+                        }
+                      />
+                    )}
+                  </View>
+                )}
+              </>
+            )}
           </View>
         )}
 
@@ -449,6 +489,11 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs + 2,
     borderRadius: Shape.radius.r2,
     alignSelf: 'flex-start',
+  },
+  manualRatesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
   },
   errorBar: {
     flexDirection: 'row',

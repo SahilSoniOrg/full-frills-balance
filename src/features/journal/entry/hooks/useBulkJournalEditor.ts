@@ -8,6 +8,7 @@ import { useJournalActions } from '@/src/features/journal/hooks/useJournalAction
 import { sanitizeAmount } from '@/src/utils/validation';
 import { logger } from '@/src/utils/logger';
 import { triggerSaveOutcomeHaptic } from '@/src/utils/haptics';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { buildBulkJournalEntries, validateBulkJournalRow } from './bulkJournalHelpers';
 import type {
   BulkJournalRow,
@@ -16,6 +17,38 @@ import type {
 } from '../types/bulkJournal';
 
 const generateRowId = () => generateId();
+
+function applyManualBaseRate(
+  row: BulkJournalRow,
+  accounts: AccountFields[],
+  workplaceCurrency: string,
+): BulkJournalRow {
+  const sourceCurrency = accounts.find(account => account.id === row.sourceId)?.currencyCode;
+  const destinationCurrency = accounts.find(
+    account => account.id === row.destinationId,
+  )?.currencyCode;
+  if (!row.isCrossCurrency || !sourceCurrency || !destinationCurrency) return row;
+
+  const sourceRate = sourceCurrency === workplaceCurrency ? 1 : row.sourceBaseRate;
+  const destinationRate = destinationCurrency === workplaceCurrency ? 1 : row.destBaseRate;
+  if (
+    !Number.isFinite(sourceRate) ||
+    !Number.isFinite(destinationRate) ||
+    (sourceRate ?? 0) <= 0 ||
+    (destinationRate ?? 0) <= 0
+  ) {
+    return { ...row, exchangeRate: '', convertedAmount: 0, error: 'Rate unavailable' };
+  }
+
+  const exchangeRate = (sourceRate as number) / (destinationRate as number);
+  const amount = sanitizeAmount(row.amount) || 0;
+  return {
+    ...row,
+    exchangeRate: exchangeRate.toFixed(6),
+    convertedAmount: sanitizeAmount(amount * exchangeRate) || 0,
+    error: undefined,
+  };
+}
 
 export function useBulkJournalEditor({
   workplaceId,
@@ -159,6 +192,8 @@ export function useBulkJournalEditor({
               ...row,
               isCrossCurrency: true,
               exchangeRate: '',
+              sourceBaseRate: undefined,
+              destBaseRate: undefined,
               convertedAmount: 0,
               isLoadingRate: false,
               error: 'Rate unavailable',
@@ -203,6 +238,8 @@ export function useBulkJournalEditor({
             ...row,
             isCrossCurrency: true,
             exchangeRate: '',
+            sourceBaseRate: undefined,
+            destBaseRate: undefined,
             convertedAmount: 0,
             isLoadingRate: false,
             error: 'Rate unavailable',
@@ -220,7 +257,11 @@ export function useBulkJournalEditor({
       const nextRows = latestRowsRef.current.map(row => {
         if (row.id !== rowId) return row;
 
-        const updatedRow = { ...row, [field]: value, error: undefined };
+        let updatedRow: BulkJournalRow = { ...row, [field]: value, error: undefined };
+
+        if (field === 'sourceBaseRate' || field === 'destBaseRate') {
+          updatedRow = applyManualBaseRate(updatedRow, accounts, workplaceCurrency);
+        }
 
         // Recalculate converted amount if amount changes and rate exists
         if (field === 'amount') {
@@ -247,7 +288,7 @@ export function useBulkJournalEditor({
         }
       }
     },
-    [fetchRatesForChangedAccounts],
+    [accounts, fetchRatesForChangedAccounts, workplaceCurrency],
   );
 
   const isValid = useMemo(() => {

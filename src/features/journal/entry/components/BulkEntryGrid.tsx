@@ -23,6 +23,7 @@ interface BulkEntryGridProps {
   rows: BulkJournalRow[];
   submitError: string | null;
   accounts: AccountFields[];
+  workplaceCurrency: string;
   addRow: () => void;
   removeRow: (id: string) => void;
   clearRows: () => void;
@@ -35,6 +36,7 @@ export const BulkEntryGrid = React.memo(
     rows,
     submitError,
     accounts,
+    workplaceCurrency,
     addRow,
     removeRow,
     clearRows,
@@ -129,13 +131,21 @@ export const BulkEntryGrid = React.memo(
           row={row}
           index={index}
           accounts={accounts}
+          workplaceCurrency={workplaceCurrency}
           onUpdateField={updateRowField}
           onRemove={removeRow}
           onDatePickerRequest={handleDatePickerRequest}
           onAccountPickerRequest={handleAccountPickerRequest}
         />
       ),
-      [accounts, handleAccountPickerRequest, handleDatePickerRequest, removeRow, updateRowField],
+      [
+        accounts,
+        handleAccountPickerRequest,
+        handleDatePickerRequest,
+        removeRow,
+        updateRowField,
+        workplaceCurrency,
+      ],
     );
 
     const listHeader = (

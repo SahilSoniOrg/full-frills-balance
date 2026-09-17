@@ -251,6 +251,28 @@ describe('useCrossCurrencyRates', () => {
     });
   });
 
+  it('uses manually entered workplace-relative rates when lookup is unavailable', async () => {
+    mockFetchRate.mockResolvedValueOnce(null);
+
+    const { result } = renderHook(() =>
+      useCrossCurrencyRates({
+        sourceCurrency: 'EUR',
+        destCurrency: 'GBP',
+        workplaceCurrency: 'USD',
+        manualSourceBaseRate: '1.1',
+        manualDestBaseRate: '1.25',
+        enabled: true,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.exchangeRate).toBeCloseTo(0.88);
+      expect(result.current.sourceBaseRate).toBe(1.1);
+      expect(result.current.destBaseRate).toBe(1.25);
+      expect(result.current.rateError).toBeNull();
+    });
+  });
+
   it('clears the previous rate when a historical lookup fails after the journal date changes', async () => {
     mockFetchHistoricalRate
       .mockResolvedValueOnce({ rate: 1.1 })

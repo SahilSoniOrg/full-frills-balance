@@ -7,6 +7,8 @@ export interface UseCrossCurrencyRatesParams {
   sourceCurrency?: string;
   destCurrency?: string;
   workplaceCurrency: string;
+  manualSourceBaseRate?: string;
+  manualDestBaseRate?: string;
   journalDate?: string;
   /** When false, rates are cleared and no fetch runs. */
   enabled: boolean;
@@ -20,6 +22,32 @@ export interface CrossCurrencyRatesState {
   rateError: string | null;
 }
 
+function resolveManualRates(
+  sourceCurrency: string,
+  destCurrency: string,
+  workplaceCurrency: string,
+  manualSourceBaseRate?: string,
+  manualDestBaseRate?: string,
+) {
+  const sourceRate =
+    sourceCurrency === workplaceCurrency ? 1 : Number.parseFloat(manualSourceBaseRate ?? '');
+  const destinationRate =
+    destCurrency === workplaceCurrency ? 1 : Number.parseFloat(manualDestBaseRate ?? '');
+  if (
+    !Number.isFinite(sourceRate) ||
+    sourceRate <= 0 ||
+    !Number.isFinite(destinationRate) ||
+    destinationRate <= 0
+  ) {
+    return null;
+  }
+  return {
+    sourceBaseRate: sourceRate,
+    destBaseRate: destinationRate,
+    exchangeRate: sourceRate / destinationRate,
+  };
+}
+
 /**
  * Fetches workplace-relative FX rates for a simple/cross-currency pair.
  * Uses a request generation token so stale resolutions (after deps change or unmount) are ignored.
@@ -28,6 +56,8 @@ export function useCrossCurrencyRates({
   sourceCurrency,
   destCurrency,
   workplaceCurrency,
+  manualSourceBaseRate,
+  manualDestBaseRate,
   journalDate,
   enabled,
 }: UseCrossCurrencyRatesParams): CrossCurrencyRatesState {
@@ -78,6 +108,22 @@ export function useCrossCurrencyRates({
       setExchangeRate(null);
       setSourceBaseRate(null);
       setDestBaseRate(null);
+
+      const manualRates = resolveManualRates(
+        sourceCurrency,
+        destCurrency,
+        workplaceCurrency,
+        manualSourceBaseRate,
+        manualDestBaseRate,
+      );
+      if (manualRates) {
+        setSourceBaseRate(manualRates.sourceBaseRate);
+        setDestBaseRate(manualRates.destBaseRate);
+        setExchangeRate(manualRates.exchangeRate);
+        setRateError(null);
+        setIsLoadingRate(false);
+        return;
+      }
 
       try {
         const historicalTimestamp = journalDate
@@ -137,6 +183,8 @@ export function useCrossCurrencyRates({
     enabled,
     sourceCurrency,
     destCurrency,
+    manualSourceBaseRate,
+    manualDestBaseRate,
     fetchRequiredRate,
     fetchHistoricalRate,
     workplaceCurrency,

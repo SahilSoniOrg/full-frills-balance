@@ -15,7 +15,7 @@ import {
 import { getInferredAccountType } from '@/src/utils/accountCategory';
 import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
 import { logger } from '@/src/utils/logger';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCrossCurrencyRates } from './useCrossCurrencyRates';
 import { useJournalEditor } from './useJournalEditor';
 import { useSimpleJournalAccountSync } from './useSimpleJournalAccountSync';
@@ -71,6 +71,8 @@ export function useSimpleJournalEditor({
   const sourceLineExchangeRate = sourceLine?.exchangeRate ?? '';
   const destinationLineExchangeRate = destinationLine?.exchangeRate ?? '';
   const destinationLineAmount = destinationLine?.amount ?? '';
+  const [manualSourceBaseRate, setManualSourceBaseRate] = useState('');
+  const [manualDestBaseRate, setManualDestBaseRate] = useState('');
 
   const pinnedAccountIds = useMemo(() => {
     const selectedIds = [sourceId, destinationId].filter(
@@ -115,6 +117,8 @@ export function useSimpleJournalEditor({
       sourceCurrency,
       destCurrency,
       workplaceCurrency,
+      manualSourceBaseRate,
+      manualDestBaseRate,
       journalDate: editor.journalDate,
       enabled: needsWorkplaceRate,
     });
@@ -253,6 +257,7 @@ export function useSimpleJournalEditor({
 
   const setSourceId = useCallback(
     (id: AccountId) => {
+      setManualSourceBaseRate('');
       const line = editor.lines.find(item => item.transactionType === TransactionType.CREDIT);
       if (!line) return;
       if (!id || id === EMPTY_ACCOUNT_ID) {
@@ -277,6 +282,7 @@ export function useSimpleJournalEditor({
 
   const setDestinationId = useCallback(
     (id: AccountId) => {
+      setManualDestBaseRate('');
       const line = editor.lines.find(item => item.transactionType === TransactionType.DEBIT);
       if (!line) return;
       if (!id || id === EMPTY_ACCOUNT_ID) {
@@ -297,6 +303,20 @@ export function useSimpleJournalEditor({
       });
     },
     [accounts, editor, type],
+  );
+
+  const setManualBaseRate = useCallback(
+    (role: 'source' | 'destination', value: string) => {
+      if (role === 'source') setManualSourceBaseRate(value);
+      else setManualDestBaseRate(value);
+      const line = editor.lines.find(item =>
+        role === 'source'
+          ? item.transactionType === TransactionType.CREDIT
+          : item.transactionType === TransactionType.DEBIT,
+      );
+      if (line) editor.updateLine(line.id, { exchangeRate: value });
+    },
+    [editor],
   );
 
   const accountSections = useMemo((): SimpleFormSection[] => {
@@ -335,6 +355,9 @@ export function useSimpleJournalEditor({
 
       isSubmitting: editor.isSubmitting,
       exchangeRate,
+      sourceExchangeRate: sourceLineExchangeRate,
+      destinationExchangeRate: destinationLineExchangeRate,
+      setManualBaseRate,
       isLoadingRate,
       rateError,
       isCrossCurrency,
@@ -364,6 +387,9 @@ export function useSimpleJournalEditor({
       editor.description,
       editor.isSubmitting,
       exchangeRate,
+      sourceLineExchangeRate,
+      destinationLineExchangeRate,
+      setManualBaseRate,
       isLoadingRate,
       rateError,
       isCrossCurrency,

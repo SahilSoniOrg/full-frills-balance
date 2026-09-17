@@ -7,6 +7,7 @@ import type { AccountFields } from '@/src/types/plainDtos';
 export type BatchModePanelProps = {
   editor: ReturnType<typeof useBulkJournalEditor>;
   accounts: AccountFields[];
+  workplaceCurrency: string;
   summary: { count: number; items: SavedJournalSummary[] } | null;
   onContinue: () => void;
   onDone: () => void;
@@ -15,6 +16,7 @@ export type BatchModePanelProps = {
 export function BatchModePanel({
   editor,
   accounts,
+  workplaceCurrency,
   summary,
   onContinue,
   onDone,
@@ -25,6 +27,7 @@ export function BatchModePanel({
         rows={editor.rows}
         submitError={editor.submitError}
         accounts={accounts}
+        workplaceCurrency={workplaceCurrency}
         addRow={editor.addRow}
         removeRow={editor.removeRow}
         clearRows={editor.clearRows}

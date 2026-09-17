@@ -14,6 +14,7 @@ import { StyleSheet, View } from 'react-native';
 import { SimpleFormSection } from '../hooks/useSimpleJournalEditor';
 import { SimpleFormAccountSections } from './SimpleFormAccountSections';
 import { SimpleFormTabs } from './SimpleFormTabs';
+import { ManualBaseRateField } from './ManualBaseRateField';
 
 export interface SimpleFormProps {
   type: TabType;
@@ -28,6 +29,10 @@ export interface SimpleFormProps {
   convertedAmount: number;
   sourceCurrency?: string;
   destCurrency?: string;
+  workplaceCurrency: string;
+  sourceExchangeRate: string;
+  destinationExchangeRate: string;
+  setManualBaseRate: (role: 'source' | 'destination', value: string) => void;
   openAccountPicker: (role: AccountRole) => void;
   accountSections: SimpleFormSection[];
 }
@@ -45,6 +50,10 @@ export const SimpleForm = ({
   convertedAmount,
   sourceCurrency,
   destCurrency,
+  workplaceCurrency,
+  sourceExchangeRate,
+  destinationExchangeRate,
+  setManualBaseRate,
   openAccountPicker,
   accountSections,
 }: SimpleFormProps) => {
@@ -74,9 +83,31 @@ export const SimpleForm = ({
               {AppConfig.strings.transactionFlow.fetchingRate}
             </AppText>
           ) : rateError ? (
-            <AppText variant="caption" color="error">
-              {rateError}
-            </AppText>
+            <View style={styles.manualRateContent}>
+              <AppText variant="caption" color="error">
+                {rateError}. Enter the rate to {workplaceCurrency}.
+              </AppText>
+              {sourceCurrency && sourceCurrency !== workplaceCurrency && (
+                <View style={styles.manualRateRow}>
+                  <ManualBaseRateField
+                    currency={sourceCurrency}
+                    workplaceCurrency={workplaceCurrency}
+                    value={sourceExchangeRate}
+                    onChangeText={value => setManualBaseRate('source', value)}
+                  />
+                </View>
+              )}
+              {destCurrency && destCurrency !== workplaceCurrency && (
+                <View style={styles.manualRateRow}>
+                  <ManualBaseRateField
+                    currency={destCurrency}
+                    workplaceCurrency={workplaceCurrency}
+                    value={destinationExchangeRate}
+                    onChangeText={value => setManualBaseRate('destination', value)}
+                  />
+                </View>
+              )}
+            </View>
           ) : displayedRate ? (
             <View style={styles.fxContent}>
               <View style={styles.fxRateRow}>
@@ -116,6 +147,15 @@ const styles = StyleSheet.create({
   fxContent: {
     alignItems: 'center',
     gap: Spacing.md,
+  },
+  manualRateContent: {
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  manualRateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
   },
   fxRateRow: {
     flexDirection: 'row',

@@ -242,6 +242,37 @@ describe('useBulkJournalEditor', () => {
     expect(journalService.saveBulkJournalEntries).not.toHaveBeenCalled();
   });
 
+  it('derives a usable cross-rate from a manually entered foreign base rate', async () => {
+    mockFetchRate.mockResolvedValue(null);
+
+    const { result } = renderHook(() =>
+      useBulkJournalEditor({
+        workplaceId: 'wp1' as WorkplaceId,
+        workplaceCurrency: 'USD',
+        accounts,
+        onSaveSuccess: onSaveSuccessMock,
+      }),
+    );
+
+    await act(async () => {
+      result.current.updateRowField(result.current.rows[0].id, 'description', 'Transfer');
+      result.current.updateRowField(result.current.rows[0].id, 'amount', '100');
+      result.current.updateRowField(result.current.rows[0].id, 'sourceId', 'acc3');
+      result.current.updateRowField(result.current.rows[0].id, 'destinationId', 'acc1');
+    });
+
+    act(() => {
+      result.current.updateRowField(result.current.rows[0].id, 'sourceBaseRate', 1.2);
+    });
+
+    expect(result.current.rows[0]).toMatchObject({
+      exchangeRate: '1.200000',
+      sourceBaseRate: 1.2,
+      convertedAmount: 120,
+      error: undefined,
+    });
+  });
+
   it('performs row-level validations and prevents saving if any row is invalid', async () => {
     (journalService.saveBulkJournalEntries as jest.Mock).mockResolvedValue({
       success: true,

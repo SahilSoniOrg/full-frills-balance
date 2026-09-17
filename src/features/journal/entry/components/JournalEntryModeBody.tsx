@@ -49,6 +49,7 @@ export function JournalEntryModeBody({
       <BatchModePanel
         editor={batchEditor}
         accounts={accounts}
+        workplaceCurrency={workplaceCurrency}
         summary={batchSummary}
         onContinue={onContinueBatch}
         onDone={onDoneBatch}

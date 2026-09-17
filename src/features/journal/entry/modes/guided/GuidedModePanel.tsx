@@ -8,6 +8,7 @@ import { resolveSimpleTypeAccentColor } from '@/src/features/journal/entry/journ
 import type { AccountFields } from '@/src/types/plainDtos';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { WorkplaceId } from '@/src/types/ids';
 import { AccountRole, TabType } from '@/src/types/domainJournal';
 import { MutableRefObject, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
@@ -62,6 +63,7 @@ export function GuidedModePanel({
     editor,
     onSelectAccountRequest: requestAccountForRole,
   });
+  const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const { precision } = useCurrencyPrecision(simpleEditor.displayCurrency);
 
   const footerAmount = useMemo<GuidedFooterAmount>(
@@ -113,6 +115,10 @@ export function GuidedModePanel({
         convertedAmount={simpleEditor.convertedAmount}
         sourceCurrency={simpleEditor.sourceCurrency}
         destCurrency={simpleEditor.destCurrency}
+        workplaceCurrency={workplaceCurrency}
+        sourceExchangeRate={simpleEditor.sourceExchangeRate}
+        destinationExchangeRate={simpleEditor.destinationExchangeRate}
+        setManualBaseRate={simpleEditor.setManualBaseRate}
         openAccountPicker={simpleEditor.openAccountPicker}
         accountSections={simpleEditor.accountSections}
       />
