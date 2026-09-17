@@ -14,7 +14,7 @@ import type { AccountFields } from '@/src/types/plainDtos';
 import { WorkplaceId } from '@/src/types/ids';
 import { ChromeMotion } from '@/src/constants';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
-import { AnimatePresence, MotiView } from 'moti';
+import { MotiView } from 'moti';
 import { MutableRefObject, type ReactNode } from 'react';
 import { StyleSheet } from 'react-native';
 
@@ -98,25 +98,24 @@ export function JournalEntryModeBody({
     return <>{panel}</>;
   }
 
+  // Enter-only: AnimatePresence kept the exiting panel in document flow,
+  // which stacked both modes and made the incoming panel load below then snap up.
   const slide = ChromeMotion.panelSlidePx * modeTransitionDir;
 
   return (
-    <AnimatePresence>
-      <MotiView
-        key={activeMode}
-        from={{
-          opacity: 0,
-          translateX: slide,
-          scale: ChromeMotion.panelFromScale,
-        }}
-        animate={{ opacity: 1, translateX: 0, scale: 1 }}
-        exit={{ opacity: 0 }}
-        transition={ChromeMotion.panel}
-        style={styles.panel}
-      >
-        {panel}
-      </MotiView>
-    </AnimatePresence>
+    <MotiView
+      key={activeMode}
+      from={{
+        opacity: 0,
+        translateX: slide,
+        scale: ChromeMotion.panelFromScale,
+      }}
+      animate={{ opacity: 1, translateX: 0, scale: 1 }}
+      transition={ChromeMotion.panel}
+      style={styles.panel}
+    >
+      {panel}
+    </MotiView>
   );
 }
 
