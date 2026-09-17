@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { Icon, AppButton, AppIcon, AppText, Badge, IvyIcon } from '@/src/components/core';
-import { Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { Icon, AppButton, AppText, Badge, IconButton, IvyIcon } from '@/src/components/core';
+import { Opacity, Shape, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { SubAccountViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Animated, Dimensions, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -25,11 +26,16 @@ export function SubAccountListModal({
   isLoading,
 }: SubAccountListModalProps) {
   const { theme } = useTheme();
+  const reduceMotion = useReducedMotion();
 
   const [slideAnim] = useState(() => new Animated.Value(SCREEN_HEIGHT));
 
   useEffect(() => {
     if (visible) {
+      if (reduceMotion) {
+        slideAnim.setValue(0);
+        return;
+      }
       Animated.spring(slideAnim, {
         toValue: 0,
         useNativeDriver: true,
@@ -39,11 +45,11 @@ export function SubAccountListModal({
     } else {
       slideAnim.setValue(SCREEN_HEIGHT);
     }
-  }, [visible, slideAnim]);
+  }, [visible, slideAnim, reduceMotion]);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
+      <Pressable style={[styles.overlay, { backgroundColor: theme.overlay }]} onPress={onClose}>
         <Animated.View
           style={[
             styles.modalContent,
@@ -53,8 +59,8 @@ export function SubAccountListModal({
             },
           ]}
         >
-          <View style={styles.header}>
-            <View>
+          <View style={[styles.header, { borderBottomColor: theme.border }]}>
+            <View style={styles.headerCopy}>
               <AppText variant="subheading" weight="bold">
                 Sub-Accounts
               </AppText>
@@ -62,7 +68,13 @@ export function SubAccountListModal({
                 Details for &quot;{parentName}&quot;
               </AppText>
             </View>
-            <AppIcon name={Icon.Hierarchy} size={Size.iconSm} color={theme.textTertiary} />
+            <IconButton
+              name={Icon.Close}
+              variant="clear"
+              iconColor={theme.textSecondary}
+              onPress={onClose}
+              accessibilityLabel="Close"
+            />
           </View>
 
           <ScrollView
@@ -156,7 +168,6 @@ export function SubAccountListModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: withOpacity('#000000', Opacity.heavy),
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -171,7 +182,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: Spacing.xl,
     borderBottomWidth: 1,
-    borderBottomColor: withOpacity('#000000', Opacity.selection),
+  },
+  headerCopy: {
+    flex: 1,
+    marginRight: Spacing.md,
   },
   list: {
     paddingHorizontal: Spacing.xl,

@@ -1,10 +1,18 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { CashFlowCard } from '@/src/components/shared/CashFlowCard';
 import { NetWorthCard } from '@/src/components/shared/NetWorthCard';
-import { ErrorStateView, Icon, AppIcon, AppTabs, AppText } from '@/src/components/core';
+import {
+  EmptyStateView,
+  ErrorStateView,
+  Icon,
+  AppIcon,
+  AppTabs,
+  AppText,
+  PressScaleTouchable,
+} from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
-import { Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, BorderWidth, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { AccountsListModals } from '@/src/features/accounts/components/AccountsListModals';
@@ -14,9 +22,10 @@ import {
   AccountCardViewModel,
   AccountSectionViewModel,
 } from '@/src/features/accounts/utils/transformAccounts';
+import { useEaseInLayoutAnimation } from '@/src/hooks/useEaseInLayoutAnimation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useMemo } from 'react';
-import { ActivityIndicator, SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, SectionList, StyleSheet, View } from 'react-native';
 
 const TAB_OPTIONS = [
   { id: 'accounts' as const, label: 'Accounts' },
@@ -36,6 +45,7 @@ export function AccountsListView({
   totalSelectableAccounts,
   modals,
   onCollapseAccount,
+  onCreateAccount,
   isLoading,
   error,
   retry,
@@ -53,8 +63,17 @@ export function AccountsListView({
   chrome,
 }: AccountsListViewModel & { chrome: TabScreenChrome }) {
   const { theme } = useTheme();
+  const prepareLayoutAnimation = useEaseInLayoutAnimation();
 
   const keyExtractor = useCallback((item: AccountCardViewModel) => item.id, []);
+
+  const handleToggleSection = useCallback(
+    (title: string) => {
+      prepareLayoutAnimation();
+      onToggleSection(title);
+    },
+    [onToggleSection, prepareLayoutAnimation],
+  );
 
   const renderItem = useCallback(
     ({ item, section }: { item: AccountCardViewModel; section: AccountSectionViewModel }) => {
@@ -98,12 +117,12 @@ export function AccountsListView({
 
       return (
         <View style={[styles.sectionHeaderContainer, isStartOfGroup && { marginTop: Spacing.xl }]}>
-          <TouchableOpacity
-            onPress={() => onToggleSection(section.title)}
+          <PressScaleTouchable
+            onPress={() => handleToggleSection(section.title)}
             onLongPress={() => onToggleSectionSelect(sectionAccountIds)}
-            activeOpacity={Opacity.heavy}
             style={styles.sectionHeaderPressable}
             accessibilityLabel={`${section.title} section, ${section.count} accounts`}
+            accessibilityHint={section.isCollapsed ? 'Expand section' : 'Collapse section'}
             accessibilityRole="button"
             accessibilityState={{ expanded: !section.isCollapsed }}
           >
@@ -134,12 +153,17 @@ export function AccountsListView({
                 />
               </View>
             </View>
-          </TouchableOpacity>
+          </PressScaleTouchable>
 
           {isSelectionModeActive && sectionAccountIds.length > 0 && (
-            <TouchableOpacity
+            <PressScaleTouchable
               onPress={() => onToggleSectionSelect(sectionAccountIds)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              hitSlop={{
+                top: Spacing.sm,
+                bottom: Spacing.sm,
+                left: Spacing.sm,
+                right: Spacing.sm,
+              }}
               style={styles.sectionSelectButton}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: isAllSectionSelected }}
@@ -163,28 +187,28 @@ export function AccountsListView({
                 ]}
               >
                 {isAllSectionSelected && (
-                  <AppIcon name={Icon.Check} size={12} color={theme.onPrimary} />
+                  <AppIcon name={Icon.Check} size={Size.xxs} color={theme.onPrimary} />
                 )}
                 {isSomeSectionSelected && (
                   <View
                     style={{
-                      width: 8,
-                      height: 2,
+                      width: Spacing.sm,
+                      height: BorderWidth.medium,
                       backgroundColor: theme.primary,
-                      borderRadius: 1,
+                      borderRadius: BorderWidth.thin,
                     }}
                   />
                 )}
               </View>
-            </TouchableOpacity>
+            </PressScaleTouchable>
           )}
         </View>
       );
     },
     [
       currencyCode,
+      handleToggleSection,
       isSelectionModeActive,
-      onToggleSection,
       onToggleSectionSelect,
       selectedAccountIds,
       theme.onPrimary,
@@ -260,13 +284,25 @@ export function AccountsListView({
               {isLoading ? (
                 <ActivityIndicator size="small" color={theme.primary} />
               ) : (
-                <View style={styles.emptyStateContent}>
-                  <AppText variant="body" color="secondary">
-                    {activeTab === 'categories'
-                      ? 'No categories yet. Create your first category to get started!'
-                      : 'No accounts yet. Create your first account to get started!'}
-                  </AppText>
-                </View>
+                <EmptyStateView
+                  title={
+                    activeTab === 'categories'
+                      ? AppConfig.strings.accounts.emptyCategoriesTitle
+                      : AppConfig.strings.accounts.emptyTitle
+                  }
+                  subtitle={
+                    activeTab === 'categories'
+                      ? AppConfig.strings.accounts.emptyCategoriesSubtitle
+                      : AppConfig.strings.accounts.emptySubtitle
+                  }
+                  primaryActionLabel={
+                    activeTab === 'categories'
+                      ? AppConfig.strings.accounts.categoryForm.createCategory
+                      : AppConfig.strings.accounts.picker.createAccount
+                  }
+                  onPrimaryAction={onCreateAccount}
+                  style={styles.emptyStateContent}
+                />
               )}
             </View>
           }
@@ -336,10 +372,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sectionSelectionIndicator: {
-    width: 22,
-    height: 22,
+    width: Size.md,
+    height: Size.md,
     borderRadius: Shape.radius.full,
-    borderWidth: 2,
+    borderWidth: BorderWidth.medium,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: Spacing.sm,

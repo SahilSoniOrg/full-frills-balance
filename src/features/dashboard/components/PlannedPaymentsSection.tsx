@@ -1,14 +1,18 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { Icon, AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Opacity, Spacing } from '@/src/constants';
+import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
+import { AppConfig, Size, Spacing } from '@/src/constants';
 import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments';
+import { useEaseInLayoutAnimation } from '@/src/hooks/useEaseInLayoutAnimation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { journalDisplayTypeChrome } from '@/src/services/journal/journalTimelinePresentation';
 import { JournalDisplayType } from '@/src/types/enums';
 import { getNow } from '@/src/utils/dateUtils';
-import { useMemo, useState } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+
+/** Compact status pip — no design-token step lands on 6. */
+const OVERDUE_DOT_SIZE = 6;
 
 export interface PlannedPaymentsSectionProps {
   items: PlannedOccurrenceViewModel[];
@@ -29,6 +33,7 @@ function resolveDisplayType(displayType: string): JournalDisplayType {
 
 export function PlannedPaymentsSection({ items, onItemPress }: PlannedPaymentsSectionProps) {
   const { theme } = useTheme();
+  const prepareLayoutAnimation = useEaseInLayoutAnimation();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const sortedItems = useMemo(() => {
@@ -40,16 +45,22 @@ export function PlannedPaymentsSection({ items, onItemPress }: PlannedPaymentsSe
     return sortedItems.some(item => new Date(item.occurrenceDate).setHours(0, 0, 0, 0) < today);
   }, [sortedItems]);
 
+  const handleToggle = useCallback(() => {
+    prepareLayoutAnimation();
+    setIsExpanded(prev => !prev);
+  }, [prepareLayoutAnimation]);
+
   if (items.length === 0) return null;
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.headerContainer}
-        onPress={() => setIsExpanded(!isExpanded)}
-        activeOpacity={Opacity.heavy}
+      <PressScaleTouchable
+        style={styles.headerMargin}
+        surfaceStyle={styles.headerRow}
+        onPress={handleToggle}
         accessibilityRole="button"
         accessibilityLabel={AppConfig.strings.journal.upcoming}
+        accessibilityHint={isExpanded ? 'Collapse upcoming' : 'Expand upcoming'}
         accessibilityState={{ expanded: isExpanded }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
@@ -64,20 +75,20 @@ export function PlannedPaymentsSection({ items, onItemPress }: PlannedPaymentsSe
             <View
               style={{
                 backgroundColor: theme.error,
-                width: 6,
-                height: 6,
-                borderRadius: 3,
-                marginTop: 2,
+                width: OVERDUE_DOT_SIZE,
+                height: OVERDUE_DOT_SIZE,
+                borderRadius: OVERDUE_DOT_SIZE / 2,
+                marginTop: Spacing.xs / 2,
               }}
             />
           )}
         </View>
         <AppIcon
           name={isExpanded ? Icon.ChevronUp : Icon.ChevronDown}
-          size={20}
+          size={Size.iconSm}
           color={theme.textSecondary}
         />
-      </TouchableOpacity>
+      </PressScaleTouchable>
 
       {isExpanded && (
         <View style={styles.list}>
@@ -119,18 +130,19 @@ export function PlannedPaymentsSection({ items, onItemPress }: PlannedPaymentsSe
               !isSimulated || !!item.accounts.find(a => a.role === 'DESTINATION')?.id;
 
             return (
-              <TouchableOpacity
+              <PressScaleTouchable
                 key={item.id}
-                style={styles.row}
+                surfaceStyle={styles.row}
                 onPress={() => onItemPress?.(item)}
                 disabled={!canPress}
-                activeOpacity={Opacity.heavy}
+                accessibilityRole="button"
+                accessibilityLabel={`${item.title}, ${displayDate}`}
               >
                 <View style={styles.left}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
                     <AppIcon
                       name={isSimulated ? Icon.CreditCard : Icon.Calendar}
-                      size={14}
+                      size={Size.xxs}
                       color={typeColor || theme.textSecondary}
                     />
                     <AppText variant="body" style={{ color: dateColor, flex: 1 }} numberOfLines={1}>
@@ -147,7 +159,7 @@ export function PlannedPaymentsSection({ items, onItemPress }: PlannedPaymentsSe
                   weight="medium"
                   style={{ color: typeColor || theme.text }}
                 />
-              </TouchableOpacity>
+              </PressScaleTouchable>
             );
           })}
         </View>
@@ -160,11 +172,13 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: Spacing.xl,
   },
-  headerContainer: {
+  headerMargin: {
+    marginBottom: Spacing.sm,
+  },
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
   },
   title: {
     marginBottom: 0,

@@ -1,10 +1,9 @@
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { Icon, AppIcon, AppSurface } from '@/src/components/core';
-import { Opacity, Spacing } from '@/src/constants';
+import { Icon, AppIcon, AppSurface, PressScaleTouchable } from '@/src/components/core';
+import { Size, Spacing } from '@/src/constants';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import { presentBudgetListCard } from '@/src/features/budget/helpers/budgetCardPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
-import { TouchableOpacity } from 'react-native';
 import { BudgetItem } from '../types';
 import { BudgetUsageSummary } from './BudgetUsageSummary';
 
@@ -20,9 +19,10 @@ export function BudgetCard({ item, onPress }: BudgetCardProps) {
   const vm = presentBudgetListCard(budget, usage, previousUsage);
 
   return (
-    <TouchableOpacity
+    <PressScaleTouchable
       onPress={() => onPress(item)}
-      activeOpacity={Opacity.heavy}
+      accessibilityRole="button"
+      accessibilityLabel={vm.name}
       style={{ marginBottom: Spacing.md }}
     >
       <AppSurface
@@ -37,15 +37,15 @@ export function BudgetCard({ item, onPress }: BudgetCardProps) {
           <Row justify="space-between" align="center" gap="md">
             <Row gap="md" align="center" flex={1} style={{ minWidth: 0 }}>
               <Box
-                width={40}
-                height={40}
+                width={Size.xl}
+                height={Size.xl}
                 borderRadius="md"
                 alignItems="center"
                 justifyContent="center"
                 background={vm.statusColor}
                 backgroundOpacity="soft"
               >
-                <AppIcon name={Icon.PieChart} color={vm.statusColor} size={20} />
+                <AppIcon name={Icon.PieChart} color={vm.statusColor} size={Size.iconSm} />
               </Box>
               <Column flex={1} style={{ minWidth: 0 }}>
                 <Text variant="lg" weight="bold" numberOfLines={1}>
@@ -65,7 +65,7 @@ export function BudgetCard({ item, onPress }: BudgetCardProps) {
                 <Row align="center" gap="xs" marginTop="xs">
                   <AppIcon
                     name={vm.previousPeriodIcon}
-                    size={12}
+                    size={Size.xxs}
                     color={vm.previousPeriodColor === 'error' ? theme.error : theme.success}
                   />
                   <Text variant="xs" weight="semibold" color={vm.previousPeriodColor}>
@@ -79,6 +79,6 @@ export function BudgetCard({ item, onPress }: BudgetCardProps) {
           <BudgetUsageSummary usage={usage} currencyCode={vm.currencyCode} variant="card" />
         </Column>
       </AppSurface>
-    </TouchableOpacity>
+    </PressScaleTouchable>
   );
 }

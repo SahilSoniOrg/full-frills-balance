@@ -1,7 +1,14 @@
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { Icon, AppCard, AppIcon, IconButton, IvyIcon } from '@/src/components/core';
+import {
+  Icon,
+  AppCard,
+  AppIcon,
+  IconButton,
+  IvyIcon,
+  PressScaleTouchable,
+} from '@/src/components/core';
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
-import { Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { BorderWidth, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { ColorKey } from '@/src/constants/design-tokens';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import { AccountId } from '@/src/types/ids';
@@ -12,7 +19,7 @@ import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
 import React, { useMemo } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { withOpacity } from '@/src/utils/color-math';
 
 interface AccountCardProps {
@@ -64,10 +71,11 @@ export function AccountCardBase({
   );
 
   return (
-    <TouchableOpacity
+    <PressScaleTouchable
       onPress={() => onPress(account.id)}
       onLongPress={onLongPress ? () => onLongPress(account) : undefined}
-      activeOpacity={Opacity.heavy}
+      accessibilityRole="button"
+      accessibilityLabel={account.name}
       style={[
         styles.touchableWrapper,
         {
@@ -85,7 +93,7 @@ export function AccountCardBase({
         style={[
           styles.cardContainer,
           {
-            borderWidth: isSelected ? 2 : 0,
+            borderWidth: isSelected ? BorderWidth.medium : 0,
             borderColor: isSelected ? theme.primary : 'transparent',
           },
         ]}
@@ -160,7 +168,9 @@ export function AccountCardBase({
                       },
                     ]}
                   >
-                    {isSelected && <AppIcon name={Icon.Check} size={12} color={theme.onPrimary} />}
+                    {isSelected && (
+                      <AppIcon name={Icon.Check} size={Size.xxs} color={theme.onPrimary} />
+                    )}
                   </View>
                 )}
               </Row>
@@ -183,25 +193,21 @@ export function AccountCardBase({
           {/* Bottom right actions / hierarchy */}
           <View style={styles.bottomActionsOverlay}>
             {account.hasChildren && (
-              <TouchableOpacity
+              <IconButton
+                name={account.isExpanded ? Icon.ChevronUp : Icon.Hierarchy}
+                size={Size.iconSm}
+                variant="clear"
                 onPress={event => {
-                  event.stopPropagation();
+                  event?.stopPropagation?.();
                   onCollapse?.(account.id);
                 }}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
+                iconColor={resolvedTextColor}
                 accessibilityLabel={
                   account.isExpanded
                     ? `Collapse sub-accounts for ${account.name}`
                     : `Expand sub-accounts for ${account.name}`
                 }
-              >
-                <IvyIcon
-                  name={account.isExpanded ? Icon.ChevronUp : Icon.Hierarchy}
-                  color={resolvedTextColor}
-                  size={Size.iconSm}
-                />
-              </TouchableOpacity>
+              />
             )}
             {onActionPress && !isSelectionModeActive && (
               <IconButton
@@ -227,7 +233,7 @@ export function AccountCardBase({
                 weight="bold"
                 color="secondary"
                 opacity={0.6}
-                style={{ marginBottom: 4, letterSpacing: 0.5 }}
+                style={{ marginBottom: Spacing.xs, letterSpacing: 0.5 }}
               >
                 {stats.leftLabel}
               </Text>
@@ -236,7 +242,7 @@ export function AccountCardBase({
               </Text>
             </Column>
 
-            <Box width={1} height={24} background={dividerColor} />
+            <Box width={BorderWidth.thin} height={Size.md} background={dividerColor} />
 
             <Column align="center" flex={1}>
               <Text
@@ -244,7 +250,7 @@ export function AccountCardBase({
                 weight="bold"
                 color="secondary"
                 opacity={0.6}
-                style={{ marginBottom: 4, letterSpacing: 0.5 }}
+                style={{ marginBottom: Spacing.xs, letterSpacing: 0.5 }}
               >
                 {stats.rightLabel}
               </Text>
@@ -255,7 +261,7 @@ export function AccountCardBase({
           </Row>
         )}
       </AppCard>
-    </TouchableOpacity>
+    </PressScaleTouchable>
   );
 }
 
@@ -268,16 +274,16 @@ const styles = StyleSheet.create({
   },
   categoryIconFrame: {
     padding: Spacing.xs,
-    borderWidth: 2,
+    borderWidth: BorderWidth.medium,
     borderRadius: Shape.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
   selectionIndicator: {
-    width: 22,
-    height: 22,
+    width: Size.md,
+    height: Size.md,
     borderRadius: Shape.radius.full,
-    borderWidth: 2,
+    borderWidth: BorderWidth.medium,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: Spacing.xs,
