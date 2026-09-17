@@ -9,7 +9,6 @@ import { transactionQueryRepository } from '@/src/data/repositories/transaction'
 import { DailyDelta } from '@/src/data/repositories/TransactionTypes';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { convertAmount } from '@/src/services/currencyConversion';
-import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { effect } from '@/src/utils/accounting/BalanceEffects';
 import { logger } from '@/src/utils/logger';
 import { Money } from '@/src/utils/money';
@@ -33,6 +32,16 @@ export interface DailyNetWorth {
 }
 
 type DailyTotals = { assets: number; liabilities: number };
+
+async function resolveWealthRate(fromCurrency: string, toCurrency: string): Promise<number | null> {
+  const result = await convertAmount({
+    amount: 1,
+    fromCurrency,
+    toCurrency,
+    mode: 'spot',
+  });
+  return result.ok ? result.amount : null;
+}
 
 function addDailyDelta(
   dailyDeltas: Map<string, DailyTotals>,
@@ -157,7 +166,13 @@ export const wealthService = {
     // 2. Convert CURRENT state to target currency — collect then reduce (H-5 fix)
     const currentBalances = await Promise.all(
       relevantBalances.map(async acc => {
-        const rate = await exchangeRateService.getRate(acc.currencyCode, currency);
+        const rate = await resolveWealthRate(acc.currencyCode, currency);
+        if (rate === null) {
+          logger.warn(
+            `[WealthService] Skipping history balance for ${acc.accountId}: FX unavailable (${acc.currencyCode} -> ${currency})`,
+          );
+          return null;
+        }
         return { type: acc.accountType, amount: acc.balance * rate };
       }),
     );
@@ -166,6 +181,7 @@ export const wealthService = {
     let runningLiabilities = Money.from(0, currency);
 
     for (const r of currentBalances) {
+      if (!r) continue;
       if (r.type === AccountType.ASSET)
         runningAssets = runningAssets.add(Money.from(r.amount, currency));
       else if (r.type === AccountType.LIABILITY)
@@ -186,7 +202,8 @@ export const wealthService = {
     const rates = new Map<string, number>();
     await Promise.all(
       uniqueCurrencies.map(async c => {
-        rates.set(c, await exchangeRateService.getRate(c, currency));
+        const rate = await resolveWealthRate(c, currency);
+        if (rate !== null) rates.set(c, rate);
       }),
     );
 
@@ -208,7 +225,8 @@ export const wealthService = {
           const accountType = accountTypeById.get(tx.accountId);
           if (!accountType) return null;
 
-          const rate = rates.get(tx.currencyCode) || 1;
+          const rate = rates.get(tx.currencyCode);
+          if (rate === undefined) return null;
           const convertedAmount = tx.amount * rate;
 
           return {
@@ -228,7 +246,8 @@ export const wealthService = {
     } else {
       for (const d of deltas) {
         const dayKey = dayjs(d.dayStart).format(dateFormat);
-        const rate = rates.get(d.currencyCode) || 1;
+        const rate = rates.get(d.currencyCode);
+        if (rate === undefined) continue;
         const convertedDelta = d.delta * rate;
 
         addDailyDelta(dailyDeltas, dayKey, d.accountType, convertedDelta);

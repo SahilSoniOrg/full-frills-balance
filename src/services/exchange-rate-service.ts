@@ -17,6 +17,14 @@ import { logger } from '@/src/utils/logger';
 
 const CACHE_DURATION_MS = AppConfig.time.msPerDay; // 24 hours
 
+function isUsableRequiredRate(fromCurrency: string, toCurrency: string, rate: number): boolean {
+  return (
+    Number.isFinite(rate) &&
+    rate > 0 &&
+    (fromCurrency === toCurrency || rate !== 1)
+  );
+}
+
 export class ExchangeRateService {
   private memoryCache: Map<string, { rates: Record<string, number>; timestamp: number }> =
     new Map();
@@ -58,6 +66,29 @@ export class ExchangeRateService {
     } catch (error) {
       logger.error(`Exchange rate failure (${fromCurrency} -> ${toCurrency}):`, error);
       return 1.0; // Graceful fallback
+    }
+  }
+
+  /**
+   * Resolves a rate for journal creation without allowing the read-side parity fallback.
+   * Same-currency conversion remains an explicit identity rate.
+   */
+  async getRequiredRate(
+    fromCurrency: string,
+    toCurrency: string,
+    forceRefresh: boolean = false,
+  ): Promise<number | null> {
+    if (fromCurrency === toCurrency) return 1;
+    if (!fromCurrency || !toCurrency) return null;
+
+    try {
+      const rate = await this.getRate(fromCurrency, toCurrency, forceRefresh);
+      return isUsableRequiredRate(fromCurrency, toCurrency, rate) ? rate : null;
+    } catch (error) {
+      logger.warn(`[ExchangeRateService] Required rate unavailable (${fromCurrency} -> ${toCurrency})`, {
+        error,
+      });
+      return null;
     }
   }
 

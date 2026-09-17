@@ -9,6 +9,7 @@ const mockFetchHistoricalRate = jest.fn();
 jest.mock('@/src/hooks/useExchangeRate', () => ({
   useExchangeRate: () => ({
     fetchRate: mockFetchRate,
+    fetchRequiredRate: mockFetchRate,
     fetchHistoricalRate: mockFetchHistoricalRate,
   }),
 }));

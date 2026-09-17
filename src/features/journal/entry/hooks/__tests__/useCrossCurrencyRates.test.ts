@@ -6,6 +6,7 @@ const mockFetchHistoricalRate = jest.fn();
 jest.mock('@/src/hooks/useExchangeRate', () => ({
   useExchangeRate: () => ({
     fetchRate: mockFetchRate,
+    fetchRequiredRate: mockFetchRate,
     fetchHistoricalRate: mockFetchHistoricalRate,
   }),
 }));
@@ -228,6 +229,25 @@ describe('useCrossCurrencyRates', () => {
       expect(result.current.isLoadingRate).toBe(false);
       expect(result.current.rateError).toBe('Rate unavailable');
       expect(result.current.exchangeRate).toBeNull();
+    });
+  });
+
+  it('surfaces rateError when the required lookup reports no rate', async () => {
+    mockFetchRate.mockResolvedValueOnce(null);
+
+    const { result } = renderHook(() =>
+      useCrossCurrencyRates({
+        sourceCurrency: 'EUR',
+        destCurrency: 'USD',
+        workplaceCurrency: 'USD',
+        enabled: true,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.rateError).toBe('Rate unavailable');
+      expect(result.current.exchangeRate).toBeNull();
+      expect(result.current.isLoadingRate).toBe(false);
     });
   });
 

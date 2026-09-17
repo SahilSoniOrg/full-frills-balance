@@ -23,7 +23,7 @@ export function useBulkJournalEditor({
   accounts,
   onSaveSuccess,
 }: UseBulkJournalEditorProps) {
-  const { fetchRate } = useExchangeRate();
+  const { fetchRequiredRate } = useExchangeRate();
   const { saveBulkJournalEntries } = useJournalActions(workplaceId);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submissionInFlightRef = useRef(false);
@@ -149,13 +149,20 @@ export function useBulkJournalEditor({
           sourceCurrency,
           destCurrency,
           workplaceCurrency,
-          fetchRate,
+          fetchRequiredRate,
         );
         if (!rates) {
           const noRateRows = latestRowsRef.current.map(row => {
             if (row.id !== rowId) return row;
             if (row.sourceId !== sourceId || row.destinationId !== destinationId) return row;
-            return { ...row, isLoadingRate: false, error: 'Rate unavailable' };
+            return {
+              ...row,
+              isCrossCurrency: true,
+              exchangeRate: '',
+              convertedAmount: 0,
+              isLoadingRate: false,
+              error: 'Rate unavailable',
+            };
           });
           latestRowsRef.current = noRateRows;
           setRows(noRateRows);
@@ -194,6 +201,9 @@ export function useBulkJournalEditor({
           if (row.sourceId !== sourceId || row.destinationId !== destinationId) return row;
           return {
             ...row,
+            isCrossCurrency: true,
+            exchangeRate: '',
+            convertedAmount: 0,
             isLoadingRate: false,
             error: 'Rate unavailable',
           };
@@ -202,7 +212,7 @@ export function useBulkJournalEditor({
         setRows(errorRows);
       }
     },
-    [accounts, fetchRate, workplaceCurrency],
+    [accounts, fetchRequiredRate, workplaceCurrency],
   );
 
   const updateRowField = useCallback(

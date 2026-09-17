@@ -30,4 +30,10 @@ describe('fetchCrossCurrencyRates', () => {
     expect(fetchRate).toHaveBeenCalledTimes(1);
     expect(fetchRate).toHaveBeenCalledWith('USD', 'INR');
   });
+
+  it('returns unavailable when a required workplace-relative rate is missing', async () => {
+    const fetchRate = jest.fn(async () => null);
+
+    await expect(fetchCrossCurrencyRates('EUR', 'GBP', 'USD', fetchRate)).resolves.toBeNull();
+  });
 });

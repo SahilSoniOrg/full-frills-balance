@@ -31,7 +31,7 @@ export function useCrossCurrencyRates({
   journalDate,
   enabled,
 }: UseCrossCurrencyRatesParams): CrossCurrencyRatesState {
-  const { fetchRate, fetchHistoricalRate } = useExchangeRate();
+  const { fetchRequiredRate, fetchHistoricalRate } = useExchangeRate();
 
   const [exchangeRate, setExchangeRate] = useState<number | null>(null);
   const [sourceBaseRate, setSourceBaseRate] = useState<number | null>(null);
@@ -87,14 +87,20 @@ export function useCrossCurrencyRates({
           Number.isFinite(historicalTimestamp) && fetchHistoricalRate
             ? async (fromCurrency: string, toCurrency: string) =>
                 (await fetchHistoricalRate(fromCurrency, toCurrency, historicalTimestamp)).rate
-            : fetchRate;
+            : fetchRequiredRate;
         const resolved = await fetchCrossCurrencyRates(
           sourceCurrency,
           destCurrency,
           workplaceCurrency,
           rateFetcher,
         );
-        if (!isLatest() || !resolved) return;
+        if (!isLatest()) return;
+        if (!resolved) {
+          if (sourceCurrency !== destCurrency || sourceCurrency !== workplaceCurrency) {
+            setRateError('Rate unavailable');
+          }
+          return;
+        }
         logger.debug('[DEBUG-FX-SAVE] cross-currency rate resolved', {
           sourceCurrency,
           destCurrency,
@@ -131,7 +137,7 @@ export function useCrossCurrencyRates({
     enabled,
     sourceCurrency,
     destCurrency,
-    fetchRate,
+    fetchRequiredRate,
     fetchHistoricalRate,
     workplaceCurrency,
     journalDate,

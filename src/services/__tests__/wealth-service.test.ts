@@ -2,17 +2,17 @@ import { AccountType, TransactionType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 
 import { accountQueryRepository } from '@/src/data/repositories/account';
+import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { convertAmount } from '@/src/services/currencyConversion';
-import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { wealthService } from '@/src/services/wealth-service';
 import dayjs from 'dayjs';
 
 // Mock dependencies
 jest.mock('@/src/services/currencyConversion');
-jest.mock('@/src/services/exchange-rate-service');
 jest.mock('@/src/data/repositories/account');
+jest.mock('@/src/data/repositories/TransactionRawRepository');
 jest.mock('@/src/data/repositories/transaction');
 jest.mock('@/src/services/balance/balanceReadService');
 jest.mock('@/src/services/WorkplaceService', () => ({
@@ -35,7 +35,7 @@ describe('WealthService', () => {
       ok: true,
       amount,
     }));
-    (exchangeRateService.getRate as jest.Mock).mockResolvedValue(1);
+    (transactionRawRepository.getDailyDeltasGroupedRaw as jest.Mock).mockResolvedValue([]);
     (accountQueryRepository.findAll as jest.Mock).mockResolvedValue([]);
   });
 
@@ -118,6 +118,27 @@ describe('WealthService', () => {
   });
 
   describe('getNetWorthHistory', () => {
+    it('omits history values whose currency conversion is unavailable', async () => {
+      const mockBalances = [
+        { accountId: 'acc1', accountType: AccountType.ASSET, balance: 1000, currencyCode: 'EUR' },
+      ];
+      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue(mockBalances);
+      (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
+      (convertAmount as jest.Mock).mockResolvedValue({ ok: false, reason: 'missing_rate' });
+
+      const history = await wealthService.getNetWorthHistory(
+        'workplace-1' as WorkplaceId,
+        START_DATE,
+        END_DATE,
+      );
+
+      expect(history.at(-1)).toMatchObject({
+        totalAssets: 0,
+        totalLiabilities: 0,
+        netWorth: 0,
+      });
+    });
+
     it('should return empty array if no assets/liabilities', async () => {
       (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([]);
       const result = await wealthService.getNetWorthHistory(

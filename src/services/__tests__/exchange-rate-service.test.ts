@@ -83,6 +83,39 @@ describe('ExchangeRateService', () => {
     });
   });
 
+  describe('getRequiredRate', () => {
+    it('preserves same-currency identity', async () => {
+      await expect(service.getRequiredRate('USD', 'USD')).resolves.toBe(1);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('returns a fetched unlike-currency rate', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ rates: { EUR: 0.85 } }),
+      });
+
+      await expect(service.getRequiredRate('USD', 'EUR')).resolves.toBe(0.85);
+    });
+
+    it('returns unavailable instead of accepting the read-side parity fallback', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+      await expect(service.getRequiredRate('USD', 'EUR')).resolves.toBeNull();
+    });
+
+    it('returns unavailable when the requested pair is missing', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ rates: { GBP: 0.78 } }),
+      });
+
+      await expect(service.getRequiredRate('USD', 'EUR')).resolves.toBeNull();
+    });
+  });
+
   describe('getHistoricalRate', () => {
     it('returns 1 for the same currency without reading cache or network', async () => {
       const rate = await service.getHistoricalRate(' eur ', 'EUR', Date.UTC(2024, 2, 2));

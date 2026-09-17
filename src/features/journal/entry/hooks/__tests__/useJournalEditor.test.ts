@@ -40,6 +40,7 @@ jest.mock('@/src/hooks/useAdvancedModePrefs', () => ({
 jest.mock('@/src/hooks/useExchangeRate', () => ({
   useExchangeRate: jest.fn(() => ({
     fetchRate: jest.fn(),
+    fetchRequiredRate: jest.fn(),
   })),
 }));
 

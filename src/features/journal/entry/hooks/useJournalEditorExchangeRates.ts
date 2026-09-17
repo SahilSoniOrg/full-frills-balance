@@ -21,7 +21,7 @@ export function useJournalEditorExchangeRates({
   isSubmitting,
   updateLines,
 }: UseJournalEditorExchangeRatesProps) {
-  const { fetchRate, fetchHistoricalRate } = useExchangeRate();
+  const { fetchRequiredRate, fetchHistoricalRate } = useExchangeRate();
   const autoFetchedLines = useRef<Set<string>>(new Set());
   const previousJournalDate = useRef(journalDate);
   const previousWorkplaceCurrency = useRef(workplaceCurrency);
@@ -47,7 +47,8 @@ export function useJournalEditorExchangeRates({
                 Number.isFinite(historicalTimestamp) && fetchHistoricalRate
                   ? (await fetchHistoricalRate(currency, workplaceCurrency, historicalTimestamp))
                       .rate
-                  : await fetchRate(currency, workplaceCurrency, forceRefresh);
+                  : await fetchRequiredRate(currency, workplaceCurrency, forceRefresh);
+              if (rate === null) throw new Error('Exchange rate unavailable');
               updates[line.id] = { exchangeRate: rate.toString() };
             }
           }),
@@ -58,7 +59,14 @@ export function useJournalEditorExchangeRates({
         showErrorAlert('Failed to fetch exchange rates');
       }
     },
-    [lines, fetchRate, fetchHistoricalRate, updateLines, workplaceCurrency, journalDate],
+    [
+      lines,
+      fetchRequiredRate,
+      fetchHistoricalRate,
+      updateLines,
+      workplaceCurrency,
+      journalDate,
+    ],
   );
 
   useEffect(() => {

@@ -16,7 +16,10 @@ jest.mock('@/src/hooks/useAdvancedModePrefs', () => ({
   useAdvancedModePrefs: jest.fn(() => ({ advancedMode: false, setAdvancedMode: jest.fn() })),
 }));
 jest.mock('@/src/hooks/useExchangeRate', () => ({
-  useExchangeRate: jest.fn(() => ({ fetchRate: jest.fn() })),
+  useExchangeRate: jest.fn(() => ({
+    fetchRate: jest.fn(),
+    fetchRequiredRate: jest.fn(),
+  })),
 }));
 jest.mock('@/src/contexts/WorkplaceContext', () => ({
   useWorkplace: jest.fn(() => ({ workplaceId: 'wp-1', defaultCurrencyCode: 'USD' })),

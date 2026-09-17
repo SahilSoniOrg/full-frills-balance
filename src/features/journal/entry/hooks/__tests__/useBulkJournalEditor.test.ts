@@ -10,6 +10,7 @@ const mockFetchRate = jest.fn();
 jest.mock('@/src/hooks/useExchangeRate', () => ({
   useExchangeRate: () => ({
     fetchRate: mockFetchRate,
+    fetchRequiredRate: mockFetchRate,
   }),
 }));
 
@@ -203,6 +204,42 @@ describe('useBulkJournalEditor', () => {
     const row = result.current.rows[0];
     expect(row.isCrossCurrency).toBe(true);
     expect(row.convertedAmount).toBe(55); // 50 * 1.1
+  });
+
+  it('blocks saving when a cross-currency rate is unavailable', async () => {
+    mockFetchRate.mockResolvedValue(null);
+    (journalService.saveBulkJournalEntries as jest.Mock).mockResolvedValue({
+      success: true,
+      summaries: [],
+    });
+
+    const { result } = renderHook(() =>
+      useBulkJournalEditor({
+        workplaceId: 'wp1' as WorkplaceId,
+        workplaceCurrency: 'USD',
+        accounts,
+        onSaveSuccess: onSaveSuccessMock,
+      }),
+    );
+
+    await act(async () => {
+      result.current.updateRowField(result.current.rows[0].id, 'description', 'Transfer');
+      result.current.updateRowField(result.current.rows[0].id, 'amount', '100');
+      result.current.updateRowField(result.current.rows[0].id, 'sourceId', 'acc3');
+      result.current.updateRowField(result.current.rows[0].id, 'destinationId', 'acc1');
+    });
+
+    expect(result.current.rows[0]).toMatchObject({
+      isCrossCurrency: true,
+      exchangeRate: '',
+      error: 'Rate unavailable',
+    });
+
+    await act(async () => {
+      await result.current.saveAll();
+    });
+
+    expect(journalService.saveBulkJournalEntries).not.toHaveBeenCalled();
   });
 
   it('performs row-level validations and prevents saving if any row is invalid', async () => {

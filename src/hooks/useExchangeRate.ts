@@ -9,6 +9,13 @@ export function useExchangeRate() {
     [],
   );
 
+  const fetchRequiredRate = useCallback(
+    async (fromCurrency: string, toCurrency: string, forceRefresh: boolean = false) => {
+      return exchangeRateService.getRequiredRate(fromCurrency, toCurrency, forceRefresh);
+    },
+    [],
+  );
+
   const fetchHistoricalRate = useCallback(
     async (fromCurrency: string, toCurrency: string, transactionDate: number) => {
       return exchangeRateService.getHistoricalRate(fromCurrency, toCurrency, transactionDate);
@@ -16,5 +23,5 @@ export function useExchangeRate() {
     [],
   );
 
-  return { fetchRate, fetchHistoricalRate };
+  return { fetchRate, fetchRequiredRate, fetchHistoricalRate };
 }
