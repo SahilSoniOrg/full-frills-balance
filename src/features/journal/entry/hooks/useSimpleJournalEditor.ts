@@ -200,6 +200,9 @@ export function useSimpleJournalEditor({
     (newType: TabType) => {
       if (newType === type) return;
 
+      // Manual rates are pair-specific input, not part of a saved tab draft.
+      setManualSourceBaseRate('');
+      setManualDestBaseRate('');
       tabDraftsRef.current[type] = editor.lines.map(line => ({ ...line }));
       const savedDraft = tabDraftsRef.current[newType];
       editor.setTransactionType(newType);
