@@ -1,5 +1,5 @@
 import { Icon, AppIcon } from '@/src/components/core';
-import { Opacity, Spacing } from '@/src/constants';
+import { BorderWidth, Opacity, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { Box } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -12,24 +12,30 @@ export type SelectableJournalEntryCardProps = JournalEntryCardProps & {
   isSelectionModeActive?: boolean;
 };
 
+const SELECTION_INDICATOR_SIZE = Size.md;
+/** Selection outline sits between thin (1) and medium (2). */
+const SELECTION_CARD_BORDER_WIDTH = 1.5;
+
 const SelectionIndicator = memo(
   ({
     isSelected,
     isActive,
     color,
+    checkColor,
     border,
   }: {
     isSelected?: boolean;
     isActive?: boolean;
     color: string;
+    checkColor: string;
     border: string;
   }) => {
     if (!isSelected && !isActive) return null;
 
     return (
       <Box
-        width={24}
-        height={24}
+        width={SELECTION_INDICATOR_SIZE}
+        height={SELECTION_INDICATOR_SIZE}
         borderRadius="full"
         alignItems="center"
         justifyContent="center"
@@ -38,13 +44,13 @@ const SelectionIndicator = memo(
         style={[
           styles.selectionIndicator,
           {
-            borderWidth: isSelected ? 0 : 2,
+            borderWidth: isSelected ? 0 : BorderWidth.medium,
             borderColor: isSelected ? 'transparent' : border,
             opacity: isSelected ? Opacity.high : Opacity.medium,
           },
         ]}
       >
-        {isSelected && <AppIcon name={Icon.Check} size={12} color="white" />}
+        {isSelected && <AppIcon name={Icon.Check} size={Size.xxs} color={checkColor} />}
       </Box>
     );
   },
@@ -61,9 +67,8 @@ const SelectableJournalEntryCardComponent = ({
   return (
     <JournalEntryCard
       {...cardProps}
-      contentScale={isSelected ? 0.96 : 1}
       cardStyle={{
-        borderWidth: isSelected ? 1.5 : 0,
+        borderWidth: isSelected ? SELECTION_CARD_BORDER_WIDTH : 0,
         borderColor: isSelected ? theme.primary : 'transparent',
       }}
       overlay={
@@ -71,6 +76,7 @@ const SelectableJournalEntryCardComponent = ({
           isSelected={isSelected}
           isActive={isSelectionModeActive}
           color={theme.primary}
+          checkColor={theme.onPrimary}
           border={withOpacity(theme.textTertiary, Opacity.hover)}
         />
       }
@@ -87,7 +93,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: Spacing.md,
     top: '50%',
-    marginTop: -12,
+    marginTop: -SELECTION_INDICATOR_SIZE / 2,
     zIndex: 10,
   },
 });
