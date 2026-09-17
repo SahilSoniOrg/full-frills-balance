@@ -56,6 +56,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // Gradle build types derive dev/preview IDs from this stable production base.
     package: appVariants.production.androidApplicationId,
     permissions: ['READ_SMS'],
+    blockedPermissions: [
+      'android.permission.READ_MEDIA_IMAGES',
+      'android.permission.READ_MEDIA_VIDEO',
+      'android.permission.READ_MEDIA_VISUAL_USER_SELECTED',
+    ],
   },
   web: {
     output: 'static',
@@ -103,9 +108,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     './plugins/withGradleOptimizations',
     './plugins/withAndroidBuildVariants',
     './plugins/withAndroidNativeLibPackaging',
-    './plugins/withRemoveMediaPermissions',
     './plugins/withJournalLauncherWidget',
-    './plugins/withXcodeAmbiguousDependencies',
     [
       'expo-notifications',
       {
@@ -145,6 +148,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         },
       },
     ],
+    './plugins/withXcodeAmbiguousDependencies',
   ],
   experiments: {
     typedRoutes: true,
