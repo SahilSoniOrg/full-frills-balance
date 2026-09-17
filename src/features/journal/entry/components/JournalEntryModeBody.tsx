@@ -12,7 +12,11 @@ import type { SavedJournalSummary } from '@/src/features/journal/entry/types/bul
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { WorkplaceId } from '@/src/types/ids';
-import { MutableRefObject } from 'react';
+import { AppConfig } from '@/src/constants';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
+import { AnimatePresence, MotiView } from 'moti';
+import { MutableRefObject, type ReactNode } from 'react';
+import { StyleSheet } from 'react-native';
 
 export type JournalEntryModeBodyProps = {
   activeMode: JournalEntryScreenMode;
@@ -44,8 +48,11 @@ export function JournalEntryModeBody({
   onContinueBatch,
   onDoneBatch,
 }: JournalEntryModeBodyProps) {
+  const reduceMotion = useReducedMotion();
+
+  let panel: ReactNode;
   if (activeMode === 'batch') {
-    return (
+    panel = (
       <BatchModePanel
         editor={batchEditor}
         accounts={accounts}
@@ -55,35 +62,57 @@ export function JournalEntryModeBody({
         onDone={onDoneBatch}
       />
     );
-  }
-  if (activeMode === 'allocation') {
-    return (
+  } else if (activeMode === 'allocation') {
+    panel = (
       <SplitModePanel
         accounts={accounts}
         editor={editor}
         onSelectAccountRequest={onSelectAccountRequest}
       />
     );
-  }
-
-  if (activeMode === 'expert') {
-    return (
+  } else if (activeMode === 'expert') {
+    panel = (
       <AdvancedModePanel
         editor={editor}
         workplaceCurrency={workplaceCurrency}
         onSelectAccountRequest={onSelectAccountRequest}
       />
     );
+  } else {
+    panel = (
+      <GuidedModePanel
+        accounts={accounts}
+        editor={editor}
+        workplaceId={workplaceId}
+        onSelectAccountRequest={onSelectAccountRequest}
+        onFooterAmountChange={onGuidedFooterAmountChange}
+        voiceActionsRef={guidedVoiceActionsRef}
+      />
+    );
+  }
+
+  if (reduceMotion) {
+    return <>{panel}</>;
   }
 
   return (
-    <GuidedModePanel
-      accounts={accounts}
-      editor={editor}
-      workplaceId={workplaceId}
-      onSelectAccountRequest={onSelectAccountRequest}
-      onFooterAmountChange={onGuidedFooterAmountChange}
-      voiceActionsRef={guidedVoiceActionsRef}
-    />
+    <AnimatePresence exitBeforeEnter>
+      <MotiView
+        key={activeMode}
+        from={{ opacity: 0, translateY: 8 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        exit={{ opacity: 0, translateY: -6 }}
+        transition={{ type: 'timing', duration: AppConfig.animation.fast }}
+        style={styles.panel}
+      >
+        {panel}
+      </MotiView>
+    </AnimatePresence>
   );
 }
+
+const styles = StyleSheet.create({
+  panel: {
+    flex: 1,
+  },
+});
