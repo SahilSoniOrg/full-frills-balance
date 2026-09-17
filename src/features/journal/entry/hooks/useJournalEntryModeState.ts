@@ -5,9 +5,9 @@ import {
 } from '@/src/features/journal/entry/journalEntryPresentation';
 import { isSimpleModeDisabledByLines } from '@/src/services/journal/journalEditorHelpers';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
+import { useEaseInLayoutAnimation } from '@/src/hooks/useEaseInLayoutAnimation';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { LayoutAnimation } from 'react-native';
 
 type JournalEditorModeState = Pick<
   ReturnType<typeof useJournalEditor>,
@@ -22,6 +22,7 @@ export function useJournalEntryModeState(
     resolveJournalEntryScreenMode(routeMode),
   );
   const { isGuidedMode: editorIsGuidedMode, setIsGuidedMode, lines } = editor;
+  const prepareLayoutAnimation = useEaseInLayoutAnimation();
 
   useEffect(() => {
     setIsGuidedMode(activeMode === 'basic');
@@ -47,10 +48,10 @@ export function useJournalEntryModeState(
         return;
       }
 
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      prepareLayoutAnimation();
       setActiveMode(mode);
     },
-    [lines],
+    [lines, prepareLayoutAnimation],
   );
 
   return {

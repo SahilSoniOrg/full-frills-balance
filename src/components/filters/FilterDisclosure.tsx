@@ -8,11 +8,11 @@ import {
 } from '@/src/components/core';
 import { Shape, Spacing } from '@/src/constants';
 import { Inline, Stack } from '@/src/design-system';
-import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
+import { useEaseInLayoutAnimation } from '@/src/hooks/useEaseInLayoutAnimation';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { IconName } from '@/src/types/domainIcons';
 import { useCallback } from 'react';
-import { LayoutAnimation, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 export interface FilterChipConfig {
   label: string;
@@ -84,12 +84,12 @@ export function FilterDisclosure({
   testID,
 }: FilterDisclosureProps) {
   const { theme } = useTheme();
-  const reduceMotion = useReducedMotion();
+  const prepareLayoutAnimation = useEaseInLayoutAnimation();
 
   const handleToggle = useCallback(() => {
-    if (!reduceMotion) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    prepareLayoutAnimation();
     onToggle();
-  }, [onToggle, reduceMotion]);
+  }, [onToggle, prepareLayoutAnimation]);
 
   return (
     <AppCard variant="ghost" paddingSize="md">
