@@ -34,6 +34,8 @@ export const AppConfig = {
   // Navigation and UI timing
   timing: {
     successDelay: 1000, // Delay after success before navigation
+    /** Brief pause so save CTA pulse is perceptible before leave. */
+    saveConfirmMs: 220,
     loadingDelay: 500, // Minimum loading time
     debounceMs: 300, // Input debounce timing
     focusDelayMs: 100,

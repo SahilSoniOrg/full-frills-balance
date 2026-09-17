@@ -34,6 +34,7 @@ import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { TransactionType } from '@/src/types/enums';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { AppNavigation } from '@/src/utils/navigation';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useLocalSearchParams } from 'expo-router';
 import { MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -79,6 +80,8 @@ export interface JournalEntryShell {
   batchSummary: { count: number; items: SavedJournalSummary[] } | null;
   onContinueBatch: () => void;
   onDoneBatch: () => void;
+  /** True briefly after a successful save so the CTA can pulse before leave. */
+  saveSuccessPulse: boolean;
 }
 
 /**
@@ -93,7 +96,27 @@ export function useJournalEntryShell(): JournalEntryShell {
   const { accounts } = useAccounts(workplaceId);
 
   const leaveAfterSaveRef = useRef<() => void>(() => AppNavigation.back());
-  const onSuccess = useCallback(() => leaveAfterSaveRef.current(), []);
+  const saveLeaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reduceMotion = useReducedMotion();
+  const [saveSuccessPulse, setSaveSuccessPulse] = useState(false);
+  const onSuccess = useCallback(() => {
+    if (reduceMotion) {
+      leaveAfterSaveRef.current();
+      return;
+    }
+    setSaveSuccessPulse(true);
+    if (saveLeaveTimerRef.current) clearTimeout(saveLeaveTimerRef.current);
+    saveLeaveTimerRef.current = setTimeout(() => {
+      leaveAfterSaveRef.current();
+    }, AppConfig.timing.saveConfirmMs);
+  }, [reduceMotion]);
+
+  useEffect(
+    () => () => {
+      if (saveLeaveTimerRef.current) clearTimeout(saveLeaveTimerRef.current);
+    },
+    [],
+  );
 
   const session = useTransactionComposerSession(workplaceId, {
     accounts,
@@ -251,5 +274,6 @@ export function useJournalEntryShell(): JournalEntryShell {
     batchSummary,
     onContinueBatch,
     onDoneBatch,
+    saveSuccessPulse,
   };
 }

@@ -101,6 +101,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
           disabled={isBatchMode ? batchSubmitDisabled : isSubmitDisabled}
           label={isBatchMode ? `Post ${vm.batchEditor.rows.length} transactions` : submitLabel}
           loading={isBatchMode ? vm.batchEditor.isSubmitting : isSubmitting}
+          successPulse={vm.saveSuccessPulse}
           topSlot={
             !isBatchMode && guidedFooterAmount ? (
               <GuidedFooterAmountSlot footerAmount={guidedFooterAmount} />

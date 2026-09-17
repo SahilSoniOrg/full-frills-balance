@@ -1,6 +1,8 @@
 import { AppButton } from '@/src/components/core/AppButton';
-import { Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, Scale, Shape, Size, Spacing } from '@/src/constants';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
+import { MotiView } from 'moti';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,15 +14,27 @@ interface SubmitFooterProps {
   disabled: boolean;
   topSlot?: React.ReactNode;
   loading?: boolean;
+  /** Briefly scales the primary CTA on save success (no-op under Reduce Motion). */
+  successPulse?: boolean;
 }
 
-export const SubmitFooter = ({ onPress, label, disabled, topSlot, loading }: SubmitFooterProps) => {
+export const SubmitFooter = ({
+  onPress,
+  label,
+  disabled,
+  topSlot,
+  loading,
+  successPulse = false,
+}: SubmitFooterProps) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { isKeyboardVisible } = useKeyboard();
+  const reduceMotion = useReducedMotion();
   const bottomPadding = isKeyboardVisible
     ? Spacing.md
     : Math.max(Spacing.lg, insets.bottom + Spacing.md);
+
+  const showPulse = successPulse && !reduceMotion;
 
   return (
     <View
@@ -34,17 +48,25 @@ export const SubmitFooter = ({ onPress, label, disabled, topSlot, loading }: Sub
       ]}
     >
       {topSlot && <View style={styles.topSlot}>{topSlot}</View>}
-      <AppButton
-        variant="primary"
-        onPress={onPress}
-        disabled={disabled}
-        loading={loading}
-        style={styles.button}
-        buttonStyle={styles.button}
-        testID="submit-footer-button"
+      <MotiView
+        animate={{ scale: showPulse ? 1.04 : Scale.identity }}
+        transition={{
+          type: 'timing',
+          duration: Math.round(AppConfig.timing.saveConfirmMs / 2),
+        }}
       >
-        {label}
-      </AppButton>
+        <AppButton
+          variant="primary"
+          onPress={onPress}
+          disabled={disabled}
+          loading={loading}
+          style={styles.button}
+          buttonStyle={styles.button}
+          testID="submit-footer-button"
+        >
+          {label}
+        </AppButton>
+      </MotiView>
     </View>
   );
 };
