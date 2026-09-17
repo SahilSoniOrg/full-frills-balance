@@ -1,5 +1,5 @@
 import { Icon, AppCard, AppText, IconButton } from '@/src/components/core';
-import { AppConfig, Scale, Shape, Spacing } from '@/src/constants';
+import { AppConfig, ChromeMotion, Shape, Spacing } from '@/src/constants';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { MotiView } from 'moti';
@@ -40,8 +40,8 @@ interface ModalSurfaceProps {
 
 /**
  * Shared modal / bottom-sheet chrome.
- * Native Modal stays for deadlock-sensitive paths; Moti softens backdrop + card enter
- * (skipped under Reduce Motion). Exit still relies on the native Modal animation.
+ * Native Modal stays for deadlock-sensitive paths; Moti springs the card in
+ * (skipped under Reduce Motion). Exit still relies on the native Modal fade.
  */
 export function ModalSurface({
   visible,
@@ -64,8 +64,6 @@ export function ModalSurface({
   const insets = useSafeAreaInsets();
   const isBottomSheet = position === 'bottomSheet';
   const reduceMotion = useReducedMotion();
-  const enterMs = reduceMotion ? 0 : AppConfig.animation.fast;
-
   const resolvedAnimationType = animationType ?? 'fade';
 
   const sheet = (
@@ -73,14 +71,16 @@ export function ModalSurface({
       from={
         reduceMotion
           ? undefined
-          : {
-              opacity: 0,
-              translateY: isBottomSheet ? 28 : 10,
-              scale: isBottomSheet ? Scale.identity : Scale.press,
-            }
+          : isBottomSheet
+            ? { opacity: 0.92, translateY: ChromeMotion.sheetRisePx }
+            : {
+                opacity: 0,
+                translateY: 8,
+                scale: ChromeMotion.dialogFromScale,
+              }
       }
-      animate={{ opacity: 1, translateY: 0, scale: Scale.identity }}
-      transition={{ type: 'timing', duration: enterMs }}
+      animate={{ opacity: 1, translateY: 0, scale: 1 }}
+      transition={reduceMotion ? ChromeMotion.fade : ChromeMotion.sheetSpring}
       style={[
         isBottomSheet ? styles.modalContainerBottomSheet : styles.modalContainerCenter,
         fixedHeight ? { height: `${maxHeightPercent}%` } : { maxHeight: `${maxHeightPercent}%` },
@@ -133,7 +133,7 @@ export function ModalSurface({
     <MotiView
       from={reduceMotion ? undefined : { opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ type: 'timing', duration: enterMs }}
+      transition={ChromeMotion.fade}
       style={[
         styles.overlay,
         isBottomSheet ? styles.overlayBottomSheet : styles.overlayCenter,

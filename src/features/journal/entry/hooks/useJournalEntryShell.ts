@@ -1,6 +1,6 @@
 import type { CreateAccountIntent } from '@/src/components/account-selection';
 import { useAccounts } from '@/src/components/account-selection';
-import { AppConfig } from '@/src/constants';
+import { AppConfig, ChromeMotion } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
@@ -53,6 +53,8 @@ export interface JournalEntryShell {
   accounts: ReturnType<typeof useAccounts>['accounts'];
   activeMode: JournalEntryScreenMode;
   onToggleMode: (mode: JournalEntryScreenMode) => void;
+  /** Direction of the last mode swap for Moti panel travel (+1 forward / -1 back). */
+  modeTransitionDir: 1 | -1;
   guidedFooterAmount: GuidedFooterAmount | null;
   onGuidedFooterAmountChange: (footer: GuidedFooterAmount | null) => void;
   guidedVoiceActionsRef: MutableRefObject<GuidedVoiceActions | null>;
@@ -108,7 +110,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     if (saveLeaveTimerRef.current) clearTimeout(saveLeaveTimerRef.current);
     saveLeaveTimerRef.current = setTimeout(() => {
       leaveAfterSaveRef.current();
-    }, AppConfig.timing.saveConfirmMs);
+    }, ChromeMotion.saveConfirmMs);
   }, [reduceMotion]);
 
   useEffect(
@@ -139,10 +141,8 @@ export function useJournalEntryShell(): JournalEntryShell {
   });
   const { editor, splitState } = session;
 
-  const { activeMode, onToggleMode, isSimpleModeDisabled } = useJournalEntryModeState(
-    editor,
-    seed.editorMode,
-  );
+  const { activeMode, onToggleMode, modeTransitionDir, isSimpleModeDisabled } =
+    useJournalEntryModeState(editor, seed.editorMode);
 
   const { batchEditor, batchSummary, onContinueBatch, onDoneBatch } = useBatchJournalSession(
     workplaceId,
@@ -247,6 +247,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     accounts,
     activeMode,
     onToggleMode,
+    modeTransitionDir,
     guidedFooterAmount,
     onGuidedFooterAmountChange,
     guidedVoiceActionsRef,

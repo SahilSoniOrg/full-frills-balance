@@ -70,6 +70,7 @@ export function useJournalEntryPresentationState(vm: JournalEntryShell) {
   );
   const modeBodyProps: JournalEntryModeBodyProps = {
     activeMode: vm.activeMode,
+    modeTransitionDir: vm.modeTransitionDir,
     accounts: vm.accounts,
     editor: vm.editor,
     workplaceId: vm.workplaceId,

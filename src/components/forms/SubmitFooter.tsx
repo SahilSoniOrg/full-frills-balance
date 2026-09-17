@@ -1,5 +1,5 @@
 import { AppButton } from '@/src/components/core/AppButton';
-import { AppConfig, Scale, Shape, Size, Spacing } from '@/src/constants';
+import { ChromeMotion, Scale, Shape, Size, Spacing } from '@/src/constants';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { MotiView } from 'moti';
@@ -14,7 +14,7 @@ interface SubmitFooterProps {
   disabled: boolean;
   topSlot?: React.ReactNode;
   loading?: boolean;
-  /** Briefly scales the primary CTA on save success (no-op under Reduce Motion). */
+  /** Soft spring bloom on save success (no-op under Reduce Motion). */
   successPulse?: boolean;
 }
 
@@ -49,11 +49,8 @@ export const SubmitFooter = ({
     >
       {topSlot && <View style={styles.topSlot}>{topSlot}</View>}
       <MotiView
-        animate={{ scale: showPulse ? 1.04 : Scale.identity }}
-        transition={{
-          type: 'timing',
-          duration: Math.round(AppConfig.timing.saveConfirmMs / 2),
-        }}
+        animate={{ scale: showPulse ? 1.03 : Scale.identity }}
+        transition={ChromeMotion.spring}
       >
         <AppButton
           variant="primary"

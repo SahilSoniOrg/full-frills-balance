@@ -14,6 +14,14 @@ type JournalEditorModeState = Pick<
   'isGuidedMode' | 'setIsGuidedMode' | 'lines'
 >;
 
+const MODE_ORDER: readonly JournalEntryScreenMode[] = ['basic', 'allocation', 'expert', 'batch'];
+
+function modeSlideDirection(from: JournalEntryScreenMode, to: JournalEntryScreenMode): 1 | -1 {
+  const fromIdx = MODE_ORDER.indexOf(from);
+  const toIdx = MODE_ORDER.indexOf(to);
+  return toIdx >= fromIdx ? 1 : -1;
+}
+
 export function useJournalEntryModeState(
   editor: JournalEditorModeState,
   routeMode?: JournalEntryRouteEditorMode,
@@ -21,6 +29,7 @@ export function useJournalEntryModeState(
   const [activeMode, setActiveMode] = useState<JournalEntryScreenMode>(() =>
     resolveJournalEntryScreenMode(routeMode),
   );
+  const [modeTransitionDir, setModeTransitionDir] = useState<1 | -1>(1);
   const { isGuidedMode: editorIsGuidedMode, setIsGuidedMode, lines } = editor;
   const prepareLayoutAnimation = useEaseInLayoutAnimation();
 
@@ -33,7 +42,11 @@ export function useJournalEntryModeState(
     const wasGuided = wasEditorGuidedRef.current;
     wasEditorGuidedRef.current = editorIsGuidedMode;
     if (wasGuided && !editorIsGuidedMode) {
-      setActiveMode(current => (current === 'basic' ? 'expert' : current));
+      setActiveMode(current => {
+        if (current !== 'basic') return current;
+        return 'expert';
+      });
+      setModeTransitionDir(1);
     }
   }, [editorIsGuidedMode]);
 
@@ -48,15 +61,17 @@ export function useJournalEntryModeState(
         return;
       }
 
+      setModeTransitionDir(modeSlideDirection(activeMode, mode));
       prepareLayoutAnimation();
       setActiveMode(mode);
     },
-    [lines, prepareLayoutAnimation],
+    [activeMode, lines, prepareLayoutAnimation],
   );
 
   return {
     activeMode,
     onToggleMode,
+    modeTransitionDir,
     isSimpleModeDisabled: isSimpleModeDisabledByLines(lines),
   };
 }

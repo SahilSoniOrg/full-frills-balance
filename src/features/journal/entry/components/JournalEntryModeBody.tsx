@@ -12,7 +12,7 @@ import type { SavedJournalSummary } from '@/src/features/journal/entry/types/bul
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { WorkplaceId } from '@/src/types/ids';
-import { AppConfig } from '@/src/constants';
+import { ChromeMotion } from '@/src/constants';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { AnimatePresence, MotiView } from 'moti';
 import { MutableRefObject, type ReactNode } from 'react';
@@ -20,6 +20,8 @@ import { StyleSheet } from 'react-native';
 
 export type JournalEntryModeBodyProps = {
   activeMode: JournalEntryScreenMode;
+  /** +1 when moving toward expert/batch, -1 when moving toward basic. */
+  modeTransitionDir: 1 | -1;
   accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
   workplaceId: WorkplaceId;
@@ -36,6 +38,7 @@ export type JournalEntryModeBodyProps = {
 /** Mounts only the active view; durable drafts live in the shell. */
 export function JournalEntryModeBody({
   activeMode,
+  modeTransitionDir,
   accounts,
   editor,
   workplaceId,
@@ -95,14 +98,24 @@ export function JournalEntryModeBody({
     return <>{panel}</>;
   }
 
+  const slide = ChromeMotion.panelSlidePx * modeTransitionDir;
+
   return (
     <AnimatePresence exitBeforeEnter>
       <MotiView
         key={activeMode}
-        from={{ opacity: 0, translateY: 8 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        exit={{ opacity: 0, translateY: -6 }}
-        transition={{ type: 'timing', duration: AppConfig.animation.fast }}
+        from={{
+          opacity: 0,
+          translateX: slide,
+          scale: ChromeMotion.panelFromScale,
+        }}
+        animate={{ opacity: 1, translateX: 0, scale: 1 }}
+        exit={{
+          opacity: 0,
+          translateX: -slide * 0.5,
+          scale: ChromeMotion.panelFromScale,
+        }}
+        transition={ChromeMotion.spring}
         style={styles.panel}
       >
         {panel}
