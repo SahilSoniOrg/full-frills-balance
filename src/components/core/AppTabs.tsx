@@ -1,4 +1,4 @@
-import { BorderWidth, Opacity, Size, Spacing } from '@/src/constants';
+import { BorderWidth, ChromeMotion, Opacity, Size, Spacing } from '@/src/constants';
 import { Box, Text } from '@/src/design-system';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -66,14 +66,12 @@ function AppTabsComponent<T extends string | number>({
         Animated.spring(indicatorX, {
           toValue: selectedLayout.x,
           useNativeDriver: false,
-          friction: 10,
-          tension: 60,
+          ...ChromeMotion.rnIndicator,
         }),
         Animated.spring(indicatorWidth, {
           toValue: selectedLayout.width,
           useNativeDriver: false,
-          friction: 10,
-          tension: 60,
+          ...ChromeMotion.rnIndicator,
         }),
       ]).start();
     }

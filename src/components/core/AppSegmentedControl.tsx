@@ -1,4 +1,4 @@
-import { Opacity, Shape, Spacing } from '@/src/constants';
+import { ChromeMotion, Opacity, Shape, Spacing } from '@/src/constants';
 import { Box } from '@/src/design-system/Box';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -250,8 +250,7 @@ export const AppSegmentedControl = <T extends string | number>({
     Animated.spring(scrollValue, {
       toValue: selectedIndex,
       useNativeDriver: true,
-      friction: 10,
-      tension: 60,
+      ...ChromeMotion.rnIndicator,
     }).start();
   }, [selectedIndex, containerSize, isVertical, scrollValue]);
 

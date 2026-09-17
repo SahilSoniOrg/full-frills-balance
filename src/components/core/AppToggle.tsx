@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Opacity, Shape } from '@/src/constants';
+import { ChromeMotion, Opacity, Shape } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Animated, StyleSheet, TouchableOpacity } from 'react-native';
 
@@ -27,8 +27,7 @@ export const AppToggle = ({
     Animated.spring(animatedValue, {
       toValue: value ? 1 : 0,
       useNativeDriver: false, // Color and Layout animations often need false, but position can use true
-      friction: 10,
-      tension: 50,
+      ...ChromeMotion.rnToggle,
     }).start();
   }, [value, animatedValue]);
 

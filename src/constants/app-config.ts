@@ -33,7 +33,6 @@ export const AppConfig = {
 
   // Navigation and UI timing
   timing: {
-    successDelay: 1000, // Delay after success before navigation
     /** Brief pause so save CTA settle is perceptible before leave. */
     saveConfirmMs: 320,
     loadingDelay: 500, // Minimum loading time

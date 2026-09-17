@@ -1,9 +1,9 @@
 /**
- * Shared Moti chrome tokens for overlays and panel swaps.
- * Prefer these over one-off timing fades for enter polish.
+ * Shared chrome motion tokens.
+ * Moti params for overlays/panels; RN Animated.spring for indicator chrome.
  */
 export const ChromeMotion = {
-  /** Settling spring for sheets and confirmation blooms. */
+  /** Settling spring for sheets and confirmation blooms (Moti). */
   spring: {
     type: 'spring' as const,
     damping: 18,
@@ -35,4 +35,17 @@ export const ChromeMotion = {
   panelSlidePx: 10,
   /** Bottom sheet rise travel (px). */
   sheetRisePx: 36,
+  /**
+   * RN Animated.spring for tab / segmented / wheel indicators.
+   * Moti damping/stiffness is a different API — do not mix these numbers.
+   */
+  rnIndicator: {
+    friction: 10,
+    tension: 60,
+  },
+  /** Softer RN spring for toggle thumb travel. */
+  rnToggle: {
+    friction: 10,
+    tension: 50,
+  },
 } as const;

@@ -54,7 +54,7 @@ export function NavigationStack() {
       <Stack.Screen
         name="account-management"
         options={{
-          ...COMPOSER_SHEET,
+          ...DETAIL_PUSH,
           headerBackButtonMenuEnabled: false,
         }}
       />

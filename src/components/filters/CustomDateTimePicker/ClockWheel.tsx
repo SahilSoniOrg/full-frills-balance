@@ -1,5 +1,5 @@
 import { AppText } from '@/src/components/core';
-import { Opacity, Shape, Spacing } from '@/src/constants';
+import { ChromeMotion, Opacity, Shape, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -80,8 +80,7 @@ export function ClockWheel<T extends string>({
     Animated.spring(scrollValue, {
       toValue: selectedIndex,
       useNativeDriver: true,
-      friction: 10,
-      tension: 60,
+      ...ChromeMotion.rnIndicator,
     }).start();
   }, [selectedIndex, scrollValue, viewportHeight]);
 
