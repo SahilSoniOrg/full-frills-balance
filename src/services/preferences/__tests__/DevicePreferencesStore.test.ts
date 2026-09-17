@@ -74,6 +74,18 @@ describe('DevicePreferencesStore', () => {
       deviceRegistered: false,
       isAppLockEnabled: false,
       isSmsImportEnabled: false,
+      reduceMotion: false,
     });
+  });
+
+  it('persists reduceMotion updates', () => {
+    const store = new DevicePreferencesStore();
+    expect(store.reduceMotion).toBe(false);
+
+    store.setReduceMotion(true);
+    expect(store.reduceMotion).toBe(true);
+    expect(JSON.parse(mockMemory.get('full_frills_balance_device_preferences')!).reduceMotion).toBe(
+      true,
+    );
   });
 });

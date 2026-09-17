@@ -111,7 +111,8 @@ export type FeatureEventMap = {
     | 'change_name'
     | 'change_currency'
     | 'change_safe_to_spend_days'
-    | 'toggle_safe_to_spend_chart';
+    | 'toggle_safe_to_spend_chart'
+    | 'toggle_reduce_motion';
   onboarding: 'completed' | 'step_continue';
   ai: 'model_load_success' | 'model_load_failure' | 'inference_completed' | 'inference_failed';
 };

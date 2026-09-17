@@ -423,6 +423,10 @@ export const UI_STRINGS = {
       title: 'Safe to Spend Chart',
       description: 'Show the projection line chart on the dashboard',
     },
+    reduceMotion: {
+      title: 'Reduce motion',
+      description: 'Minimize animations on this device. System accessibility settings still apply.',
+    },
     data: {
       backupRestoreHeader: 'Backup & Restore',
       reviewHeader: 'Review',

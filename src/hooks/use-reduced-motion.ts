@@ -1,20 +1,36 @@
+import { preferences } from '@/src/services/preferences';
 import { AccessibilityInfo } from 'react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 
 /**
- * Returns true when the user has requested reduced motion via system accessibility settings.
- * Animated components should disable or simplify motion when this is true.
+ * True when the user wants reduced motion — either via system accessibility
+ * settings or the in-app Appearance toggle (device preference). Animated chrome
+ * should disable or simplify motion when this is true.
  */
 export function useReducedMotion(): boolean {
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const [systemReduceMotion, setSystemReduceMotion] = useState(false);
 
   useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    AccessibilityInfo.isReduceMotionEnabled().then(setSystemReduceMotion);
 
-    const listener = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    const listener = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      setSystemReduceMotion,
+    );
 
     return () => listener.remove();
   }, []);
 
-  return reduceMotion;
+  const deviceReduceMotion = useSyncExternalStore(
+    onStoreChange => {
+      const sub = preferences.device.observe('reduceMotion').subscribe(() => {
+        onStoreChange();
+      });
+      return () => sub.unsubscribe();
+    },
+    () => preferences.device.reduceMotion,
+    () => preferences.device.reduceMotion,
+  );
+
+  return systemReduceMotion || deviceReduceMotion;
 }
