@@ -35,8 +35,6 @@ export const ChromeMotion = {
   panelSlidePx: 10,
   /** Bottom sheet rise travel (px). */
   sheetRisePx: 36,
-  /** Soft Y travel for dashboard STS amount settle (px). */
-  settleRisePx: 6,
   /**
    * RN Animated.spring for tab / segmented / wheel indicators.
    * Moti damping/stiffness is a different API — do not mix these numbers.

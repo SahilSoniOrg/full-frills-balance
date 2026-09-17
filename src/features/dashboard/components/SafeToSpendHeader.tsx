@@ -29,7 +29,6 @@ export const SafeToSpendHeader = ({
   const strings = AppConfig.strings.dashboard;
   const formatSts = useStsMoneyFormat(loading);
   const reduceMotion = useReducedMotion();
-  const settle = !reduceMotion && !loading;
 
   const amountText = (
     <Text
@@ -70,14 +69,10 @@ export const SafeToSpendHeader = ({
         />
       </Row>
 
-      {settle ? (
+      {!reduceMotion && !loading ? (
         <MotiView
-          from={{
-            opacity: 0,
-            translateY: ChromeMotion.settleRisePx,
-            scale: ChromeMotion.panelFromScale,
-          }}
-          animate={{ opacity: 1, translateY: 0, scale: 1 }}
+          from={{ opacity: 0, scale: ChromeMotion.panelFromScale }}
+          animate={{ opacity: 1, scale: 1 }}
           transition={ChromeMotion.sheetSpring}
         >
           {amountText}
