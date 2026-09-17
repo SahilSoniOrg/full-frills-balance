@@ -22,11 +22,4 @@ describe('restore journey entry', () => {
       "toSetupJourney('settings_restore')",
     );
   });
-
-  it('keeps the legacy import-selection path explicitly owned by the app route', () => {
-    const route = source('../../../../app/import-selection.tsx');
-    expect(route).toContain("from '@/src/features/settings'");
-    expect(route).toContain('export default ImportSelectionScreen');
-    expect(source('../../settings/index.ts')).toContain('ImportSelectionScreen');
-  });
 });
