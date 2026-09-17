@@ -12,6 +12,8 @@ export interface BulkJournalRow {
   exchangeRate: string; // Cross-rate (source -> destination)
   sourceBaseRate?: number; // Rate to workplace currency
   destBaseRate?: number; // Rate to workplace currency
+  sourceBaseRateInput?: string;
+  destBaseRateInput?: string;
   isCrossCurrency: boolean;
   convertedAmount: number;
   isLoadingRate: boolean;

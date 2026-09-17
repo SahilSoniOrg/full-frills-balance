@@ -308,18 +308,13 @@ export function useSimpleJournalEditor({
     [accounts, editor, type],
   );
 
-  const setManualBaseRate = useCallback(
-    (role: 'source' | 'destination', value: string) => {
-      if (role === 'source') setManualSourceBaseRate(value);
-      else setManualDestBaseRate(value);
-      const line = editor.lines.find(item =>
-        role === 'source'
-          ? item.transactionType === TransactionType.CREDIT
-          : item.transactionType === TransactionType.DEBIT,
-      );
-      if (line) editor.updateLine(line.id, { exchangeRate: value });
-    },
-    [editor],
+  const setManualBaseRate = useCallback((role: 'source' | 'destination', value: string) => {
+    if (role === 'source') setManualSourceBaseRate(value);
+    else setManualDestBaseRate(value);
+  }, []);
+
+  const showManualRateFields = Boolean(
+    rateError || manualSourceBaseRate.trim() || manualDestBaseRate.trim(),
   );
 
   const accountSections = useMemo((): SimpleFormSection[] => {
@@ -358,8 +353,10 @@ export function useSimpleJournalEditor({
 
       isSubmitting: editor.isSubmitting,
       exchangeRate,
-      sourceExchangeRate: sourceLineExchangeRate,
-      destinationExchangeRate: destinationLineExchangeRate,
+      manualSourceBaseRate,
+      manualDestBaseRate,
+      showManualRateFields,
+      needsWorkplaceRate,
       setManualBaseRate,
       isLoadingRate,
       rateError,
@@ -390,8 +387,10 @@ export function useSimpleJournalEditor({
       editor.description,
       editor.isSubmitting,
       exchangeRate,
-      sourceLineExchangeRate,
-      destinationLineExchangeRate,
+      manualSourceBaseRate,
+      manualDestBaseRate,
+      showManualRateFields,
+      needsWorkplaceRate,
       setManualBaseRate,
       isLoadingRate,
       rateError,

@@ -5,6 +5,10 @@ import { fetchCrossCurrencyRates } from '@/src/services/currency/crossCurrencyRa
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
+import {
+  hasManualBaseRateDraft,
+  resolveManualWorkplaceRates,
+} from '@/src/features/journal/entry/manualBaseRate';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { logger } from '@/src/utils/logger';
 import { triggerSaveOutcomeHaptic } from '@/src/utils/haptics';
@@ -29,23 +33,45 @@ function applyManualBaseRate(
   )?.currencyCode;
   if (!row.isCrossCurrency || !sourceCurrency || !destinationCurrency) return row;
 
-  const sourceRate = sourceCurrency === workplaceCurrency ? 1 : row.sourceBaseRate;
-  const destinationRate = destinationCurrency === workplaceCurrency ? 1 : row.destBaseRate;
-  if (
-    !Number.isFinite(sourceRate) ||
-    !Number.isFinite(destinationRate) ||
-    (sourceRate ?? 0) <= 0 ||
-    (destinationRate ?? 0) <= 0
-  ) {
-    return { ...row, exchangeRate: '', convertedAmount: 0, error: 'Rate unavailable' };
+  const resolved = resolveManualWorkplaceRates(
+    sourceCurrency,
+    destinationCurrency,
+    workplaceCurrency,
+    row.sourceBaseRateInput,
+    row.destBaseRateInput,
+  );
+  if (!resolved) {
+    if (
+      hasManualBaseRateDraft(
+        sourceCurrency,
+        destinationCurrency,
+        workplaceCurrency,
+        row.sourceBaseRateInput,
+        row.destBaseRateInput,
+      )
+    ) {
+      return {
+        ...row,
+        error: row.exchangeRate ? undefined : 'Rate unavailable',
+      };
+    }
+    return {
+      ...row,
+      exchangeRate: '',
+      convertedAmount: 0,
+      sourceBaseRate: undefined,
+      destBaseRate: undefined,
+      error: 'Rate unavailable',
+    };
   }
 
-  const exchangeRate = (sourceRate as number) / (destinationRate as number);
   const amount = sanitizeAmount(row.amount) || 0;
   return {
     ...row,
-    exchangeRate: exchangeRate.toFixed(6),
-    convertedAmount: sanitizeAmount(amount * exchangeRate) || 0,
+    sourceBaseRate: resolved.sourceBaseRate,
+    destBaseRate: resolved.destBaseRate,
+    exchangeRate: resolved.exchangeRate.toFixed(6),
+    convertedAmount: sanitizeAmount(amount * resolved.exchangeRate) || 0,
     error: undefined,
   };
 }
@@ -76,6 +102,8 @@ export function useBulkJournalEditor({
         exchangeRate: prevRow.exchangeRate,
         sourceBaseRate: prevRow.sourceBaseRate,
         destBaseRate: prevRow.destBaseRate,
+        sourceBaseRateInput: prevRow.sourceBaseRateInput,
+        destBaseRateInput: prevRow.destBaseRateInput,
         isCrossCurrency: prevRow.isCrossCurrency,
         convertedAmount: prevRow.convertedAmount,
         isLoadingRate: false,
@@ -154,6 +182,8 @@ export function useBulkJournalEditor({
             exchangeRate: '',
             sourceBaseRate: undefined,
             destBaseRate: undefined,
+            sourceBaseRateInput: '',
+            destBaseRateInput: '',
             isCrossCurrency: false,
             convertedAmount: 0,
             isLoadingRate: false,
@@ -188,6 +218,21 @@ export function useBulkJournalEditor({
           const noRateRows = latestRowsRef.current.map(row => {
             if (row.id !== rowId) return row;
             if (row.sourceId !== sourceId || row.destinationId !== destinationId) return row;
+            if (
+              hasManualBaseRateDraft(
+                sourceCurrency,
+                destCurrency,
+                workplaceCurrency,
+                row.sourceBaseRateInput,
+                row.destBaseRateInput,
+              )
+            ) {
+              return applyManualBaseRate(
+                { ...row, isCrossCurrency: true, isLoadingRate: false },
+                accounts,
+                workplaceCurrency,
+              );
+            }
             return {
               ...row,
               isCrossCurrency: true,
@@ -210,6 +255,21 @@ export function useBulkJournalEditor({
           if (row.id !== rowId) return row;
           // Prevent race condition: if accounts have changed since fetch started, ignore stale results
           if (row.sourceId !== sourceId || row.destinationId !== destinationId) return row;
+          if (
+            hasManualBaseRateDraft(
+              sourceCurrency,
+              destCurrency,
+              workplaceCurrency,
+              row.sourceBaseRateInput,
+              row.destBaseRateInput,
+            )
+          ) {
+            return applyManualBaseRate(
+              { ...row, isCrossCurrency: true, isLoadingRate: false },
+              accounts,
+              workplaceCurrency,
+            );
+          }
           return {
             ...row,
             exchangeRate: crossRate.toFixed(6),
@@ -234,6 +294,21 @@ export function useBulkJournalEditor({
           if (row.id !== rowId) return row;
           // Prevent race condition: if accounts have changed since fetch started, ignore stale errors
           if (row.sourceId !== sourceId || row.destinationId !== destinationId) return row;
+          if (
+            hasManualBaseRateDraft(
+              sourceCurrency,
+              destCurrency,
+              workplaceCurrency,
+              row.sourceBaseRateInput,
+              row.destBaseRateInput,
+            )
+          ) {
+            return applyManualBaseRate(
+              { ...row, isCrossCurrency: true, isLoadingRate: false },
+              accounts,
+              workplaceCurrency,
+            );
+          }
           return {
             ...row,
             isCrossCurrency: true,
@@ -259,7 +334,15 @@ export function useBulkJournalEditor({
 
         let updatedRow: BulkJournalRow = { ...row, [field]: value, error: undefined };
 
-        if (field === 'sourceBaseRate' || field === 'destBaseRate') {
+        if (field === 'sourceId' || field === 'destinationId') {
+          updatedRow = {
+            ...updatedRow,
+            sourceBaseRateInput: '',
+            destBaseRateInput: '',
+          };
+        }
+
+        if (field === 'sourceBaseRateInput' || field === 'destBaseRateInput') {
           updatedRow = applyManualBaseRate(updatedRow, accounts, workplaceCurrency);
         }
 
@@ -284,6 +367,30 @@ export function useBulkJournalEditor({
       if (field === 'sourceId' || field === 'destinationId') {
         const target = nextRows.find(r => r.id === rowId);
         if (target) {
+          fetchRatesForChangedAccounts(rowId, target.sourceId, target.destinationId, target.amount);
+        }
+      }
+
+      if (field === 'sourceBaseRateInput' || field === 'destBaseRateInput') {
+        const target = nextRows.find(r => r.id === rowId);
+        if (!target?.isCrossCurrency) return;
+        const sourceCurrency = accounts.find(
+          account => account.id === target.sourceId,
+        )?.currencyCode;
+        const destCurrency = accounts.find(
+          account => account.id === target.destinationId,
+        )?.currencyCode;
+        if (
+          sourceCurrency &&
+          destCurrency &&
+          !hasManualBaseRateDraft(
+            sourceCurrency,
+            destCurrency,
+            workplaceCurrency,
+            target.sourceBaseRateInput,
+            target.destBaseRateInput,
+          )
+        ) {
           fetchRatesForChangedAccounts(rowId, target.sourceId, target.destinationId, target.amount);
         }
       }

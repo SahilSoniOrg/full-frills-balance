@@ -271,6 +271,47 @@ describe('useCrossCurrencyRates', () => {
       expect(result.current.destBaseRate).toBe(1.25);
       expect(result.current.rateError).toBeNull();
     });
+    expect(mockFetchRate).not.toHaveBeenCalled();
+  });
+
+  it('keeps a typed 1.25 draft without treating 1. as a finished rate or refetching', async () => {
+    mockFetchRate.mockResolvedValue(null);
+
+    const { result, rerender } = renderHook(
+      (props: { manualSourceBaseRate: string }) =>
+        useCrossCurrencyRates({
+          sourceCurrency: 'EUR',
+          destCurrency: 'USD',
+          workplaceCurrency: 'USD',
+          manualSourceBaseRate: props.manualSourceBaseRate,
+          enabled: true,
+        }),
+      { initialProps: { manualSourceBaseRate: '' } },
+    );
+
+    await waitFor(() => {
+      expect(result.current.rateError).toBe('Rate unavailable');
+    });
+    expect(mockFetchRate).toHaveBeenCalledTimes(1);
+
+    rerender({ manualSourceBaseRate: '1' });
+    await waitFor(() => {
+      expect(result.current.exchangeRate).toBe(1);
+      expect(result.current.rateError).toBeNull();
+    });
+
+    rerender({ manualSourceBaseRate: '1.' });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(result.current.exchangeRate).toBe(1);
+    expect(result.current.rateError).toBeNull();
+
+    rerender({ manualSourceBaseRate: '1.25' });
+    await waitFor(() => {
+      expect(result.current.exchangeRate).toBe(1.25);
+    });
+    expect(mockFetchRate).toHaveBeenCalledTimes(1);
   });
 
   it('clears the previous rate when a historical lookup fails after the journal date changes', async () => {

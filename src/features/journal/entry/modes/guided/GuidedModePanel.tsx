@@ -116,8 +116,10 @@ export function GuidedModePanel({
         sourceCurrency={simpleEditor.sourceCurrency}
         destCurrency={simpleEditor.destCurrency}
         workplaceCurrency={workplaceCurrency}
-        sourceExchangeRate={simpleEditor.sourceExchangeRate}
-        destinationExchangeRate={simpleEditor.destinationExchangeRate}
+        needsWorkplaceRate={simpleEditor.needsWorkplaceRate}
+        showManualRateFields={simpleEditor.showManualRateFields}
+        manualSourceBaseRate={simpleEditor.manualSourceBaseRate}
+        manualDestBaseRate={simpleEditor.manualDestBaseRate}
         setManualBaseRate={simpleEditor.setManualBaseRate}
         openAccountPicker={simpleEditor.openAccountPicker}
         accountSections={simpleEditor.accountSections}

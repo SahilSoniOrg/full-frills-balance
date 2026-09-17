@@ -334,4 +334,45 @@ describe('useSimpleJournalEditor', () => {
 
     expect(result.current.lines).toEqual(original);
   });
+
+  it('keeps typed 1.25 in the manual field without snapping or hiding it', async () => {
+    mockFetchHistoricalRate.mockRejectedValue(new Error('unavailable'));
+    mockFetchRate.mockResolvedValue(null);
+
+    const editor = createEditor({ crossCurrency: true });
+    editor.lines[0].accountId = 'eur-source';
+    editor.lines[1].accountId = 'usd-dest';
+    editor.lines[1].accountName = 'USD Bank';
+    editor.lines[1].accountCurrency = 'USD';
+
+    const { result } = renderHook(() =>
+      useSimpleJournalEditor({
+        accounts,
+        editor: editor as any,
+        onSelectAccountRequest: jest.fn(),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.rateError).toBe('Rate unavailable');
+      expect(result.current.showManualRateFields).toBe(true);
+    });
+    const historicalCalls = mockFetchHistoricalRate.mock.calls.length;
+
+    act(() => result.current.setManualBaseRate('source', '1'));
+    expect(result.current.manualSourceBaseRate).toBe('1');
+    expect(result.current.showManualRateFields).toBe(true);
+
+    act(() => result.current.setManualBaseRate('source', '1.'));
+    expect(result.current.manualSourceBaseRate).toBe('1.');
+    expect(result.current.showManualRateFields).toBe(true);
+
+    act(() => result.current.setManualBaseRate('source', '1.25'));
+    await waitFor(() => {
+      expect(result.current.exchangeRate).toBe(1.25);
+    });
+    expect(result.current.manualSourceBaseRate).toBe('1.25');
+    expect(result.current.showManualRateFields).toBe(true);
+    expect(mockFetchHistoricalRate).toHaveBeenCalledTimes(historicalCalls);
+  });
 });

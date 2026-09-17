@@ -262,15 +262,61 @@ describe('useBulkJournalEditor', () => {
     });
 
     act(() => {
-      result.current.updateRowField(result.current.rows[0].id, 'sourceBaseRate', 1.2);
+      result.current.updateRowField(result.current.rows[0].id, 'sourceBaseRateInput', '1.2');
     });
 
     expect(result.current.rows[0]).toMatchObject({
       exchangeRate: '1.200000',
       sourceBaseRate: 1.2,
+      sourceBaseRateInput: '1.2',
       convertedAmount: 120,
       error: undefined,
     });
+  });
+
+  it('keeps the typed 1.25 draft without snapping or hiding the input', async () => {
+    mockFetchRate.mockResolvedValue(null);
+
+    const { result } = renderHook(() =>
+      useBulkJournalEditor({
+        workplaceId: 'wp1' as WorkplaceId,
+        workplaceCurrency: 'USD',
+        accounts,
+        onSaveSuccess: onSaveSuccessMock,
+      }),
+    );
+
+    await act(async () => {
+      result.current.updateRowField(result.current.rows[0].id, 'amount', '100');
+      result.current.updateRowField(result.current.rows[0].id, 'sourceId', 'acc3');
+      result.current.updateRowField(result.current.rows[0].id, 'destinationId', 'acc1');
+    });
+
+    const fetchCountAfterLookup = mockFetchRate.mock.calls.length;
+
+    act(() => {
+      result.current.updateRowField(result.current.rows[0].id, 'sourceBaseRateInput', '1');
+    });
+    expect(result.current.rows[0].sourceBaseRateInput).toBe('1');
+    expect(result.current.rows[0].exchangeRate).toBe('1.000000');
+
+    act(() => {
+      result.current.updateRowField(result.current.rows[0].id, 'sourceBaseRateInput', '1.');
+    });
+    expect(result.current.rows[0].sourceBaseRateInput).toBe('1.');
+    expect(result.current.rows[0].exchangeRate).toBe('1.000000');
+
+    act(() => {
+      result.current.updateRowField(result.current.rows[0].id, 'sourceBaseRateInput', '1.25');
+    });
+    expect(result.current.rows[0]).toMatchObject({
+      sourceBaseRateInput: '1.25',
+      sourceBaseRate: 1.25,
+      exchangeRate: '1.250000',
+      convertedAmount: 125,
+      error: undefined,
+    });
+    expect(mockFetchRate).toHaveBeenCalledTimes(fetchCountAfterLookup);
   });
 
   it('performs row-level validations and prevents saving if any row is invalid', async () => {

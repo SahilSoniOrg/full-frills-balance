@@ -1,5 +1,9 @@
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { fetchCrossCurrencyRates } from '@/src/services/currency/crossCurrencyRates';
+import {
+  hasManualBaseRateDraft,
+  resolveManualWorkplaceRates,
+} from '@/src/features/journal/entry/manualBaseRate';
 import { logger } from '@/src/utils/logger';
 import { useEffect, useRef, useState } from 'react';
 
@@ -20,32 +24,6 @@ export interface CrossCurrencyRatesState {
   destBaseRate: number | null;
   isLoadingRate: boolean;
   rateError: string | null;
-}
-
-function resolveManualRates(
-  sourceCurrency: string,
-  destCurrency: string,
-  workplaceCurrency: string,
-  manualSourceBaseRate?: string,
-  manualDestBaseRate?: string,
-) {
-  const sourceRate =
-    sourceCurrency === workplaceCurrency ? 1 : Number.parseFloat(manualSourceBaseRate ?? '');
-  const destinationRate =
-    destCurrency === workplaceCurrency ? 1 : Number.parseFloat(manualDestBaseRate ?? '');
-  if (
-    !Number.isFinite(sourceRate) ||
-    sourceRate <= 0 ||
-    !Number.isFinite(destinationRate) ||
-    destinationRate <= 0
-  ) {
-    return null;
-  }
-  return {
-    sourceBaseRate: sourceRate,
-    destBaseRate: destinationRate,
-    exchangeRate: sourceRate / destinationRate,
-  };
 }
 
 /**
@@ -103,13 +81,7 @@ export function useCrossCurrencyRates({
       await Promise.resolve();
       if (!isLatest()) return;
 
-      setIsLoadingRate(true);
-      setRateError(null);
-      setExchangeRate(null);
-      setSourceBaseRate(null);
-      setDestBaseRate(null);
-
-      const manualRates = resolveManualRates(
+      const manualRates = resolveManualWorkplaceRates(
         sourceCurrency,
         destCurrency,
         workplaceCurrency,
@@ -124,6 +96,25 @@ export function useCrossCurrencyRates({
         setIsLoadingRate(false);
         return;
       }
+
+      if (
+        hasManualBaseRateDraft(
+          sourceCurrency,
+          destCurrency,
+          workplaceCurrency,
+          manualSourceBaseRate,
+          manualDestBaseRate,
+        )
+      ) {
+        setIsLoadingRate(false);
+        return;
+      }
+
+      setIsLoadingRate(true);
+      setRateError(null);
+      setExchangeRate(null);
+      setSourceBaseRate(null);
+      setDestBaseRate(null);
 
       try {
         const historicalTimestamp = journalDate

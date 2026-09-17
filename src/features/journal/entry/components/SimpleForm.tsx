@@ -30,8 +30,10 @@ export interface SimpleFormProps {
   sourceCurrency?: string;
   destCurrency?: string;
   workplaceCurrency: string;
-  sourceExchangeRate: string;
-  destinationExchangeRate: string;
+  needsWorkplaceRate: boolean;
+  showManualRateFields: boolean;
+  manualSourceBaseRate: string;
+  manualDestBaseRate: string;
   setManualBaseRate: (role: 'source' | 'destination', value: string) => void;
   openAccountPicker: (role: AccountRole) => void;
   accountSections: SimpleFormSection[];
@@ -51,8 +53,10 @@ export const SimpleForm = ({
   sourceCurrency,
   destCurrency,
   workplaceCurrency,
-  sourceExchangeRate,
-  destinationExchangeRate,
+  needsWorkplaceRate,
+  showManualRateFields,
+  manualSourceBaseRate,
+  manualDestBaseRate,
   setManualBaseRate,
   openAccountPicker,
   accountSections,
@@ -60,13 +64,21 @@ export const SimpleForm = ({
   const { theme } = useTheme();
 
   const activeColor = resolveSimpleTypeAccentColor(type, theme);
-  const displayedRate = exchangeRate
-    ? resolveExchangeRatePresentation({
-        sourceCurrency,
-        destinationCurrency: destCurrency,
-        exchangeRate,
-      })
-    : null;
+  const displayedRate =
+    isCrossCurrency && exchangeRate
+      ? resolveExchangeRatePresentation({
+          sourceCurrency,
+          destinationCurrency: destCurrency,
+          exchangeRate,
+        })
+      : null;
+  const showRateCard = Boolean(
+    sourceId && destinationId && (isCrossCurrency || showManualRateFields),
+  );
+  const showSourceRateField = Boolean(sourceCurrency && sourceCurrency !== workplaceCurrency);
+  const showDestRateField = Boolean(
+    destCurrency && destCurrency !== workplaceCurrency && destCurrency !== sourceCurrency,
+  );
 
   return (
     <View style={styles.container}>
@@ -74,7 +86,7 @@ export const SimpleForm = ({
 
       <SimpleFormAccountSections sections={accountSections} onSearchRequest={openAccountPicker} />
 
-      {isCrossCurrency && sourceId && destinationId && (
+      {showRateCard && (
         <View
           style={[styles.fxCard, { backgroundColor: withOpacity(theme.primary, Opacity.soft) }]}
         >
@@ -82,50 +94,60 @@ export const SimpleForm = ({
             <AppText variant="caption" color="secondary">
               {AppConfig.strings.transactionFlow.fetchingRate}
             </AppText>
-          ) : rateError ? (
+          ) : (
             <View style={styles.manualRateContent}>
-              <AppText variant="caption" color="error">
-                {rateError}. Enter the rate to {workplaceCurrency}.
-              </AppText>
-              {sourceCurrency && sourceCurrency !== workplaceCurrency && (
-                <View style={styles.manualRateRow}>
-                  <ManualBaseRateField
-                    currency={sourceCurrency}
-                    workplaceCurrency={workplaceCurrency}
-                    value={sourceExchangeRate}
-                    onChangeText={value => setManualBaseRate('source', value)}
-                  />
+              {displayedRate ? (
+                <View style={styles.fxContent}>
+                  <View style={styles.fxRateRow}>
+                    <AppIcon name={Icon.Refresh} size={Size.iconXs} color={theme.primary} />
+                    <AppText variant="body" color="primary" weight="bold">
+                      1 {displayedRate.sourceCurrency} = {displayedRate.exchangeRate.toFixed(4)}{' '}
+                      {displayedRate.destinationCurrency}
+                    </AppText>
+                  </View>
+                  {parseFloat(amount) > 0 && (
+                    <View style={[styles.fxTotalPill, { backgroundColor: theme.primary }]}>
+                      <AppText variant="caption" weight="bold" style={{ color: theme.pureInverse }}>
+                        Total: {convertedAmount.toFixed(2)} {destCurrency}
+                      </AppText>
+                    </View>
+                  )}
                 </View>
-              )}
-              {destCurrency && destCurrency !== workplaceCurrency && (
-                <View style={styles.manualRateRow}>
-                  <ManualBaseRateField
-                    currency={destCurrency}
-                    workplaceCurrency={workplaceCurrency}
-                    value={destinationExchangeRate}
-                    onChangeText={value => setManualBaseRate('destination', value)}
-                  />
-                </View>
-              )}
-            </View>
-          ) : displayedRate ? (
-            <View style={styles.fxContent}>
-              <View style={styles.fxRateRow}>
-                <AppIcon name={Icon.Refresh} size={Size.iconXs} color={theme.primary} />
-                <AppText variant="body" color="primary" weight="bold">
-                  1 {displayedRate.sourceCurrency} = {displayedRate.exchangeRate.toFixed(4)}{' '}
-                  {displayedRate.destinationCurrency}
+              ) : rateError ? (
+                <AppText variant="caption" color="error">
+                  {rateError}. Enter the rate to {workplaceCurrency}.
                 </AppText>
-              </View>
-              {parseFloat(amount) > 0 && (
-                <View style={[styles.fxTotalPill, { backgroundColor: theme.primary }]}>
-                  <AppText variant="caption" weight="bold" style={{ color: theme.pureInverse }}>
-                    Total: {convertedAmount.toFixed(2)} {destCurrency}
-                  </AppText>
-                </View>
+              ) : needsWorkplaceRate ? (
+                <AppText variant="caption" color="secondary">
+                  Enter the rate to {workplaceCurrency}.
+                </AppText>
+              ) : null}
+              {showManualRateFields && (
+                <>
+                  {showSourceRateField && sourceCurrency && (
+                    <View style={styles.manualRateRow}>
+                      <ManualBaseRateField
+                        currency={sourceCurrency}
+                        workplaceCurrency={workplaceCurrency}
+                        value={manualSourceBaseRate}
+                        onChangeText={value => setManualBaseRate('source', value)}
+                      />
+                    </View>
+                  )}
+                  {showDestRateField && destCurrency && (
+                    <View style={styles.manualRateRow}>
+                      <ManualBaseRateField
+                        currency={destCurrency}
+                        workplaceCurrency={workplaceCurrency}
+                        value={manualDestBaseRate}
+                        onChangeText={value => setManualBaseRate('destination', value)}
+                      />
+                    </View>
+                  )}
+                </>
               )}
             </View>
-          ) : null}
+          )}
         </View>
       )}
     </View>
