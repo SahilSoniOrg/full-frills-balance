@@ -1,6 +1,6 @@
 import { Icon, AppButton, AppText, IvyIcon } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
-import { Opacity, Spacing } from '@/src/constants';
+import { Opacity, Scale, Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { useAppLock } from '@/src/contexts/app-shell/AppLockProvider';
 import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
@@ -50,8 +50,8 @@ export function AppLockInterceptor({ children }: { children: React.ReactNode }) 
       {shouldRenderChildren && (
         <MotiView
           animate={{
-            opacity: isAppCurrentlyLocked ? Opacity.solid * 0 : Opacity.solid,
-            scale: isAppCurrentlyLocked ? Opacity.subtle : Opacity.solid,
+            opacity: isAppCurrentlyLocked ? Opacity.none : Opacity.solid,
+            scale: isAppCurrentlyLocked ? Scale.press : Scale.identity,
           }}
           transition={{
             type: 'timing',

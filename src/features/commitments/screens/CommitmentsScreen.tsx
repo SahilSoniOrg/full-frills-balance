@@ -18,7 +18,7 @@ const TAB_OPTIONS = [
 
 type CommitmentsTab = (typeof TAB_OPTIONS)[number]['id'];
 
-function BudgetsPanel() {
+function BudgetsPanel({ onCreate }: { onCreate: () => void }) {
   const { workplaceId } = useWorkplace();
   const { items, isLoading, error, retry, onItemPress } = useBudgetListViewModel(workplaceId);
   return (
@@ -28,11 +28,12 @@ function BudgetsPanel() {
       error={error}
       onRetry={retry}
       onItemPress={onItemPress}
+      onCreate={onCreate}
     />
   );
 }
 
-function PlannedPanel() {
+function PlannedPanel({ onCreate }: { onCreate: () => void }) {
   const { workplaceId } = useWorkplace();
   const { items, isLoading, error, retry, onItemPress } = usePlannedPayments(workplaceId);
   return (
@@ -42,6 +43,7 @@ function PlannedPanel() {
       error={error}
       onRetry={retry}
       onItemPress={onItemPress}
+      onCreate={onCreate}
     />
   );
 }
@@ -91,7 +93,11 @@ function CommitmentsScreen() {
       </Stack>
 
       <Box flex={1} marginTop="md">
-        {activeTab === 'budgets' ? <BudgetsPanel /> : <PlannedPanel />}
+        {activeTab === 'budgets' ? (
+          <BudgetsPanel onCreate={() => AppNavigation.toBudgetForm()} />
+        ) : (
+          <PlannedPanel onCreate={() => AppNavigation.toPlannedPaymentForm()} />
+        )}
       </Box>
     </ScreenWithChrome>
   );

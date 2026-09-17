@@ -1,5 +1,5 @@
-import { Icon, AppIcon, AppInput, AppText, type IconName } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { Icon, AppIcon, AppInput, AppText, IconButton, type IconName } from '@/src/components/core';
+import { AppConfig, Opacity, Shape, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -74,9 +74,13 @@ export function SelectionPickerSheet<T extends string | number>({
             <AppText variant="subheading" weight="bold">
               {title}
             </AppText>
-            <TouchableOpacity onPress={closeAndReset}>
-              <AppIcon name={Icon.Close} size={Size.iconMd} color={theme.text} />
-            </TouchableOpacity>
+            <IconButton
+              name={Icon.Close}
+              variant="clear"
+              iconColor={theme.text}
+              onPress={closeAndReset}
+              accessibilityLabel="Close selection"
+            />
           </View>
 
           {options.length > 10 && (

@@ -1,6 +1,7 @@
 import { AppButton } from '@/src/components/core/AppButton';
 import { AppIcon } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
+import { Size, Spacing } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { StyleProp, ViewStyle } from 'react-native';
 import type { IconName } from '@/src/types/domainIcons';
@@ -31,7 +32,7 @@ export function EmptyStateView({
       <Stack gap="lg" alignItems="center">
         {icon && (
           <Box marginBottom="sm">
-            <AppIcon name={icon} size={48} color="textSecondary" />
+            <AppIcon name={icon} size={Size.xxl} color="textSecondary" />
           </Box>
         )}
         <Stack gap="xs" alignItems="center">
@@ -48,7 +49,7 @@ export function EmptyStateView({
           <AppButton
             onPress={onPrimaryAction}
             accessibilityLabel={primaryActionLabel}
-            style={{ marginTop: 8 }}
+            style={{ marginTop: Spacing.sm }}
           >
             {primaryActionLabel}
           </AppButton>

@@ -626,6 +626,10 @@ export const UI_STRINGS = {
       'Simple mode covers everyday spending. Advanced mode is there whenever you need complete, multi-line flexibility.',
   },
   accounts: {
+    emptyTitle: 'No accounts yet',
+    emptySubtitle: 'Create your first account to get started.',
+    emptyCategoriesTitle: 'No categories yet',
+    emptyCategoriesSubtitle: 'Create your first category to get started.',
     types: {
       asset: 'Asset',
       liability: 'Liability',
@@ -930,6 +934,7 @@ export const UI_STRINGS = {
     emptyTitle: 'No recurring bills added',
     emptySubtitle:
       'Add rent, subscriptions, and regular bills so Safe to Spend can protect that money in advance.',
+    emptyActionLabel: 'Add bill',
     nameLabel: 'Rule Name',
     namePlaceholder: 'e.g., Monthly Rent',
     amountLabel: 'Amount',
@@ -949,6 +954,9 @@ export const UI_STRINGS = {
     everyYear: 'Yearly',
     everyN: (n: number, type: string) => `Every ${n} ${type}s`,
     statusPaused: 'Paused',
+    statusActive: 'Active',
+    statusOverdue: 'Overdue',
+    statusDueSoon: 'Due Soon',
     formTitleNew: 'New Rule',
     formTitleEdit: 'Edit Rule',
     dayOfWeek: 'Day of Week',
@@ -975,6 +983,7 @@ export const UI_STRINGS = {
     emptyTitle: 'No spending limits set',
     emptySubtitle:
       'Give categories you want to keep on a leash—like dining out—a comfortable monthly ceiling.',
+    emptyActionLabel: 'Add budget',
     loading: 'Loading budget…',
     activityTitle: 'Activity',
     activityEmptyTitle: 'No activity',

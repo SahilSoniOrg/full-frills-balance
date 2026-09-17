@@ -1,6 +1,6 @@
 import { MultiAccountPickerModal, useAccounts } from '@/src/components/account-selection';
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
-import { EmptyStateView, LoadingView, type SegmentedOption } from '@/src/components/core';
+import { AppTabs, EmptyStateView, LoadingView, type TabOption } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Spacing } from '@/src/constants/design-tokens';
@@ -17,7 +17,6 @@ import { useReportsV2ViewModel } from '../hooks/useReportsV2ViewModel';
 import type { ReportsV2SectionId } from '../types';
 import { ReportsV2Filters } from './components/ReportsV2Filters';
 import { ReportsV2QualityBanner } from './components/ReportsV2QualityBanner';
-import { ReportsV2SectionTabs } from './components/ReportsV2SectionTabs';
 import { ReportsV2SectionContent } from './components/ReportsV2SectionContent';
 import { ReportsV2MissingRatesAction } from './components/ReportsV2MissingRatesAction';
 import { ReportsV2StatusNotice } from './components/ReportsV2StatusNotice';
@@ -95,7 +94,7 @@ export function ReportsV2View({ engine, workplaceId, targetCurrency, chrome }: R
     () => vm.filters.accountIds.map(asAccountId),
     [vm.filters.accountIds],
   );
-  const sectionOptions = useMemo<readonly SegmentedOption<string>[]>(
+  const sectionOptions = useMemo<readonly TabOption<ReportsV2SectionId>[]>(
     () => REPORTS_V2_SECTIONS.map(item => ({ id: item.id, label: item.shortLabel })),
     [],
   );
@@ -119,10 +118,11 @@ export function ReportsV2View({ engine, workplaceId, targetCurrency, chrome }: R
             {vm.result && (vm.state === 'refreshing' || vm.state === 'error') ? (
               <ReportsV2StatusNotice state={vm.state} onRetry={vm.onRetry} />
             ) : null}
-            <ReportsV2SectionTabs
+            <AppTabs
               options={sectionOptions}
               value={vm.activeSection}
-              onChange={value => vm.setActiveSection(value as ReportsV2SectionId)}
+              onChange={vm.setActiveSection}
+              testID="reports-v2-section-tabs"
             />
             {vm.result ? (
               <ReportsV2QualityBanner

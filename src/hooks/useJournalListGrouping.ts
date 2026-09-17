@@ -9,6 +9,10 @@ export interface GroupingOptions<T> {
   sortByDate?: 'asc' | 'desc';
 }
 
+/**
+ * Pure day-grouping for journal lists. Layout animation belongs at the press
+ * site (JournalDayHeader), not in this data hook.
+ */
 export function useJournalListGrouping<T>({
   items,
   getDate,

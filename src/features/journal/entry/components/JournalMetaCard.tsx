@@ -1,5 +1,5 @@
 import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModal';
-import { Icon, AppIcon, AppInput, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppInput, AppText, IconButton } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
@@ -137,16 +137,15 @@ export function JournalMetaCard({
               }}
             />
             {onVoiceInputPress && (
-              <TouchableOpacity
+              <IconButton
+                name={Icon.Mic}
+                variant="clear"
+                size={Size.iconXs}
+                iconColor={theme.primary}
                 onPress={onVoiceInputPress}
-                style={{
-                  padding: Spacing.sm,
-                  marginLeft: Spacing.xs,
-                }}
-                activeOpacity={0.7}
-              >
-                <AppIcon name={Icon.Mic} size={Size.iconXs} color={theme.primary} />
-              </TouchableOpacity>
+                accessibilityLabel="Voice input"
+                style={{ marginLeft: Spacing.xs }}
+              />
             )}
           </View>
 

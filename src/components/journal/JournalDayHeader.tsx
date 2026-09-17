@@ -1,10 +1,11 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { Icon, AppIcon, AppText, Badge } from '@/src/components/core';
-import { AppConfig, Opacity, Spacing, Typography } from '@/src/constants';
+import { Icon, AppIcon, AppText, Badge, PressScaleTouchable } from '@/src/components/core';
+import { AppConfig, Opacity, Size, Spacing, Typography } from '@/src/constants';
+import { useEaseInLayoutAnimation } from '@/src/hooks/useEaseInLayoutAnimation';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDaySeparator, formatReconciledTime } from '@/src/utils/dateUtils';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 export interface JournalDayHeaderProps {
   date: number;
@@ -27,6 +28,7 @@ export function JournalDayHeader({
 }: JournalDayHeaderProps) {
   const { theme } = useTheme();
   const { resolvedHourCycle } = useHourCyclePrefs();
+  const prepareLayoutAnimation = useEaseInLayoutAnimation();
   const label = formatDaySeparator(date);
 
   const hasStats = count !== undefined && netAmount !== undefined;
@@ -34,9 +36,15 @@ export function JournalDayHeader({
   const isNegative = (netAmount || 0) < 0;
 
   return (
-    <TouchableOpacity
-      activeOpacity={Opacity.heavy}
-      onPress={onToggle}
+    <PressScaleTouchable
+      onPress={() => {
+        prepareLayoutAnimation();
+        onToggle?.();
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}${hasStats ? `, ${AppConfig.strings.journal.transactionCount(count!)}` : ''}`}
+      accessibilityHint={isCollapsed ? 'Expands this day' : 'Collapses this day'}
+      accessibilityState={{ expanded: !isCollapsed }}
       style={[styles.container, { backgroundColor: theme.background }]}
     >
       <View style={styles.content}>
@@ -85,12 +93,12 @@ export function JournalDayHeader({
           )}
           <AppIcon
             name={isCollapsed ? Icon.ChevronRight : Icon.ChevronDown}
-            size={16}
+            size={Size.xs}
             color={theme.textSecondary}
           />
         </View>
       </View>
-    </TouchableOpacity>
+    </PressScaleTouchable>
   );
 }
 
@@ -119,7 +127,7 @@ const styles = StyleSheet.create({
   statCount: {
     fontSize: Typography.sizes.xs,
     opacity: Opacity.heavy,
-    marginTop: 2,
+    marginTop: Spacing.xs / 2,
   },
   netAmount: {
     fontFamily: Typography.fonts.semibold,
@@ -128,10 +136,10 @@ const styles = StyleSheet.create({
   subLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: Spacing.xs / 2,
     gap: Spacing.sm,
   },
   reconciledBadgeWrapper: {
-    marginLeft: 2,
+    marginLeft: Spacing.xs / 2,
   },
 });

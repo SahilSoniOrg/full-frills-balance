@@ -7,7 +7,7 @@ jest.mock('react-native/Libraries/Modal/Modal', () => ({
 }));
 
 jest.mock('@/src/components/core', () => {
-  const { View, Text, TextInput } = jest.requireActual('react-native');
+  const { View, Text, TextInput, TouchableOpacity } = jest.requireActual('react-native');
   const React = jest.requireActual('react');
   const { Icon: mockIcon } = jest.requireActual('@/src/types/domainIcons');
   return {
@@ -16,6 +16,12 @@ jest.mock('@/src/components/core', () => {
     AppInput: ({ style, ...props }: any) => React.createElement(TextInput, { ...props, style }),
     AppIcon: ({ name, style, ...props }: any) =>
       React.createElement(View, { ...props, style, 'data-icon': name }),
+    IconButton: ({ name, onPress, accessibilityLabel, ...props }: any) =>
+      React.createElement(
+        TouchableOpacity,
+        { onPress, accessibilityLabel, accessibilityRole: 'button', ...props },
+        React.createElement(View, { 'data-icon': name }),
+      ),
     isValidIconName: () => false,
     Icon: mockIcon,
   };

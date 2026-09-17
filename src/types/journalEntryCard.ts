@@ -29,5 +29,4 @@ export interface JournalEntryCardProps {
   onLongPress?: () => void;
   overlay?: ReactNode;
   cardStyle?: StyleProp<ViewStyle>;
-  contentScale?: number;
 }

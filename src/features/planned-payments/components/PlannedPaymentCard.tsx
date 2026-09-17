@@ -1,13 +1,19 @@
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { Icon, AppIcon, AppSurface, Badge, type IconName } from '@/src/components/core';
-import { AppConfig, Opacity, Spacing } from '@/src/constants';
+import {
+  Icon,
+  AppIcon,
+  AppSurface,
+  Badge,
+  PressScaleTouchable,
+  type IconName,
+} from '@/src/components/core';
+import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Theme } from '@/src/constants/design-tokens';
 import { Box, Column, Row, Text } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PlainPlannedPayment } from '@/src/types/plainDtos';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { getSmartDateLabel } from '@/src/utils/dateUtils';
-import { TouchableOpacity } from 'react-native';
 
 export interface PlannedPaymentCardProps {
   item: PlainPlannedPayment;
@@ -68,7 +74,7 @@ export function presentPlannedPaymentCard(
   let statusBadge: PlannedPaymentCardViewModel['statusBadge'] = {
     variant: 'success',
     icon: Icon.Calendar,
-    text: 'Active',
+    text: AppConfig.strings.plannedPayments.statusActive,
   };
 
   if (item.status === PlannedPaymentStatus.PAUSED) {
@@ -81,13 +87,13 @@ export function presentPlannedPaymentCard(
     statusBadge = {
       variant: 'error',
       icon: Icon.Alert,
-      text: 'Overdue',
+      text: AppConfig.strings.plannedPayments.statusOverdue,
     };
   } else if (isDueSoon) {
     statusBadge = {
       variant: 'warning',
       icon: Icon.Clock,
-      text: 'Due Soon',
+      text: AppConfig.strings.plannedPayments.statusDueSoon,
     };
   }
 
@@ -111,9 +117,10 @@ function PlannedPaymentCardComponent({ item, onPress }: PlannedPaymentCardProps)
   const vm = presentPlannedPaymentCard(item, theme);
 
   return (
-    <TouchableOpacity
+    <PressScaleTouchable
       onPress={onPress}
-      activeOpacity={Opacity.heavy}
+      accessibilityRole="button"
+      accessibilityLabel={vm.name}
       style={{ marginBottom: Spacing.md }}
     >
       <AppSurface
@@ -128,15 +135,15 @@ function PlannedPaymentCardComponent({ item, onPress }: PlannedPaymentCardProps)
           <Row justify="space-between" align="center">
             <Row gap="md" align="center" flex={1}>
               <Box
-                width={40}
-                height={40}
+                width={Size.xl}
+                height={Size.xl}
                 borderRadius="md"
                 alignItems="center"
                 justifyContent="center"
                 background={vm.amountColor === 'error' ? 'error' : 'success'}
                 backgroundOpacity="soft"
               >
-                <AppIcon name={vm.iconName} color={vm.amountColor} size={20} />
+                <AppIcon name={vm.iconName} color={vm.amountColor} size={Size.iconSm} />
               </Box>
               <Column flex={1}>
                 <Text variant="base" weight="bold" numberOfLines={1}>
@@ -166,18 +173,23 @@ function PlannedPaymentCardComponent({ item, onPress }: PlannedPaymentCardProps)
             <Row align="center" gap="xs">
               <AppIcon
                 name={vm.isOverdue ? Icon.Alert : Icon.Calendar}
-                size={14}
+                size={Size.xxs}
                 color={vm.dateColor}
               />
               <Text variant="xs" weight="medium" style={{ color: vm.dateColor }}>
                 {vm.dateLabel}
               </Text>
             </Row>
-            <AppIcon name={Icon.ChevronRight} size={16} color={theme.textSecondary} opacity={0.4} />
+            <AppIcon
+              name={Icon.ChevronRight}
+              size={Size.iconXs}
+              color={theme.textSecondary}
+              opacity={0.4}
+            />
           </Row>
         </Column>
       </AppSurface>
-    </TouchableOpacity>
+    </PressScaleTouchable>
   );
 }
 

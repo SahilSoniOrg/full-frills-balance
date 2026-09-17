@@ -45,6 +45,8 @@ export { InlineSearchField } from './InlineSearchField';
 export type { InlineSearchFieldProps } from './InlineSearchField';
 export { FloatingActionButton } from './FloatingActionButton';
 export { IconButton } from './IconButton';
+export { PressScaleTouchable } from './PressScaleTouchable';
+export type { PressScaleTouchableProps } from './PressScaleTouchable';
 export { IvyIcon } from './IvyIcon';
 export { SwipeToRemove } from './SwipeToRemove';
 

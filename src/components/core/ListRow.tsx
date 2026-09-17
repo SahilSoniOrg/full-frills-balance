@@ -1,27 +1,58 @@
 import { AppText, type AppTextProps } from '@/src/components/core/AppText';
-import { Opacity, Spacing, SpacingKey } from '@/src/constants/design-tokens';
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
+import { Spacing, SpacingKey } from '@/src/constants/design-tokens';
 import { Box, type BoxViewProps } from '@/src/design-system/Box';
 import { Separator } from '@/src/design-system/Separator';
 import { extractBoxProps } from '@/src/design-system/utils';
 import React from 'react';
-import { StyleSheet, TouchableOpacity, type TouchableOpacityProps } from 'react-native';
+import {
+  StyleSheet,
+  type AccessibilityState,
+  type LayoutChangeEvent,
+  type TouchableOpacityProps,
+} from 'react-native';
 
-export type ListRowProps = TouchableOpacityProps &
-  BoxViewProps & {
-    // Content areas
+type ListRowPressProps = {
+  onPress?: TouchableOpacityProps['onPress'];
+  onLongPress?: TouchableOpacityProps['onLongPress'];
+  disabled?: boolean;
+  testID?: string;
+  accessibilityLabel?: string;
+  accessibilityRole?: TouchableOpacityProps['accessibilityRole'];
+  accessibilityHint?: string;
+  accessibilityState?: AccessibilityState;
+  hitSlop?: TouchableOpacityProps['hitSlop'];
+  delayLongPress?: number;
+  onLayout?: (event: LayoutChangeEvent) => void;
+  pointerEvents?: BoxViewProps['pointerEvents'];
+  nativeID?: string;
+  accessible?: boolean;
+};
+
+export type ListRowProps = BoxViewProps &
+  ListRowPressProps & {
     leading?: React.ReactNode;
     title: string | React.ReactNode;
     subtitle?: string | React.ReactNode;
     trailing?: React.ReactNode;
-    // Visual options
     showSeparator?: boolean;
     padding?: 'sm' | 'md' | 'lg';
     leadingWidth?: number;
-    // Text customization
     titleVariant?: AppTextProps['variant'];
     subtitleVariant?: AppTextProps['variant'];
     titleColor?: string;
   };
+
+const PADDING_HORIZONTAL_MAP: Record<NonNullable<ListRowProps['padding']>, SpacingKey> = {
+  sm: 'md',
+  md: 'lg',
+  lg: 'xl',
+};
+const PADDING_VERTICAL_MAP: Record<NonNullable<ListRowProps['padding']>, SpacingKey> = {
+  sm: 'xs',
+  md: 'sm',
+  lg: 'md',
+};
 
 export function ListRow(initialProps: ListRowProps) {
   const {
@@ -36,47 +67,42 @@ export function ListRow(initialProps: ListRowProps) {
     subtitleVariant = 'caption',
     titleColor = 'primary',
     onPress,
+    onLongPress,
+    disabled,
+    testID,
+    accessibilityLabel,
+    accessibilityRole,
+    accessibilityHint,
+    accessibilityState,
+    hitSlop,
+    delayLongPress,
+    onLayout,
+    pointerEvents,
+    nativeID,
+    accessible,
     ...passthroughProps
   } = initialProps;
 
-  const { boxProps, restProps } = extractBoxProps(passthroughProps);
-
+  const { boxProps } = extractBoxProps(passthroughProps);
   const { style, as: _as, ...rowBoxProps } = boxProps;
 
-  // Resolve semantic padding tokens
-  const PADDING_HORIZONTAL_MAP: Record<NonNullable<ListRowProps['padding']>, SpacingKey> = {
-    sm: 'md',
-    md: 'lg',
-    lg: 'xl',
-  };
-
-  const PADDING_VERTICAL_MAP: Record<NonNullable<ListRowProps['padding']>, SpacingKey> = {
-    sm: 'xs',
-    md: 'sm',
-    lg: 'md',
-  };
-
-  const paddingHorizontalToken = PADDING_HORIZONTAL_MAP[padding || 'md'];
-  const paddingVerticalToken = PADDING_VERTICAL_MAP[padding || 'md'];
-
-  const paddingH = Spacing[paddingHorizontalToken as SpacingKey];
-
+  const paddingHorizontalToken = PADDING_HORIZONTAL_MAP[padding];
+  const paddingVerticalToken = PADDING_VERTICAL_MAP[padding];
+  const paddingH = Spacing[paddingHorizontalToken];
   const leadingSlotWidth = leadingWidth ?? Spacing.xl;
   const separatorInset = paddingH + (leading ? leadingSlotWidth + Spacing.md : 0);
   const defaultLabel = `${title}${subtitle ? `, ${subtitle}` : ''}`;
-  const { accessibilityLabel, accessibilityRole, activeOpacity, ...nativeProps } =
-    restProps as TouchableOpacityProps;
-  const touchableProps = onPress
-    ? {
-        onPress,
-        activeOpacity: activeOpacity ?? Opacity.heavy,
-        accessibilityRole: accessibilityRole ?? 'button',
-        accessibilityLabel: accessibilityLabel || defaultLabel,
-      }
-    : {
-        accessibilityRole,
-        accessibilityLabel,
-      };
+  const isPressable = onPress != null || onLongPress != null;
+
+  const hostProps = {
+    testID,
+    onLayout,
+    pointerEvents,
+    nativeID,
+    accessible,
+    accessibilityHint,
+    accessibilityState,
+  };
 
   const rowContent = (
     <>
@@ -85,7 +111,6 @@ export function ListRow(initialProps: ListRowProps) {
           {leading}
         </Box>
       )}
-
       <Box flex={1} justifyContent="center">
         {typeof title === 'string' ? (
           <AppText
@@ -113,57 +138,57 @@ export function ListRow(initialProps: ListRowProps) {
             subtitle
           ))}
       </Box>
-
       {trailing && (
         <Box marginLeft="md" alignItems="flex-end">
           {trailing}
         </Box>
       )}
-
       {showSeparator && <Separator marginLeft={separatorInset} />}
     </>
   );
 
-  if (onPress) {
-    return (
-      <Box
-        as={TouchableOpacity}
-        flexDirection="row"
-        alignItems="center"
-        paddingHorizontal={paddingHorizontalToken}
-        paddingVertical={paddingVerticalToken}
-        style={style}
-        {...rowBoxProps}
-        {...nativeProps}
-        {...touchableProps}
-      >
-        {rowContent}
-      </Box>
-    );
-  }
-
-  return (
+  const row = (
     <Box
       flexDirection="row"
       alignItems="center"
       paddingHorizontal={paddingHorizontalToken}
       paddingVertical={paddingVerticalToken}
-      style={style}
+      style={isPressable ? undefined : style}
       {...rowBoxProps}
-      {...nativeProps}
-      {...touchableProps}
+      {...(!isPressable
+        ? {
+            ...hostProps,
+            accessibilityRole,
+            accessibilityLabel,
+          }
+        : null)}
     >
       {rowContent}
     </Box>
   );
+
+  if (isPressable) {
+    return (
+      <PressScaleTouchable
+        style={style}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        disabled={disabled}
+        hitSlop={hitSlop}
+        delayLongPress={delayLongPress}
+        accessibilityRole={accessibilityRole ?? 'button'}
+        accessibilityLabel={accessibilityLabel || defaultLabel}
+        {...hostProps}
+      >
+        {row}
+      </PressScaleTouchable>
+    );
+  }
+
+  return row;
 }
 
 const styles = StyleSheet.create({
-  title: {
-    flexShrink: 1,
-  },
-  subtitle: {
-    marginTop: Spacing.xs / 2,
-    flexShrink: 1,
-  },
+  title: { flexShrink: 1 },
+  subtitle: { marginTop: Spacing.xs / 2, flexShrink: 1 },
 });

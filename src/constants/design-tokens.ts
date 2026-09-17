@@ -134,7 +134,7 @@ export const Opacity = {
   heavy: 0.7, // Modal backdrops
   strong: 0.8, // Forceful but translucent surfaces
   high: 0.9, // Near-solid highlights
-  subtle: 0.98, // Decisive surfaces / tactile feedback
+  subtle: 0.98, // Near-opaque decisive surfaces
   solid: 1,
 } as const;
 
@@ -142,6 +142,14 @@ export const BorderWidth = {
   thin: 1,
   medium: 2,
   focus: 2.5,
+} as const;
+
+// === TRANSFORM SCALE ===
+// Geometric scale factors (not opacity). Keep press feel here — do not reuse Opacity.
+export const Scale = {
+  identity: 1,
+  /** Shared chrome / card press shrink. */
+  press: 0.98,
 } as const;
 
 // === SIZE SCALE ===

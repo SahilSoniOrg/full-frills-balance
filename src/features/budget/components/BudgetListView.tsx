@@ -11,6 +11,7 @@ export type BudgetListViewProps = {
   error: Error | null;
   onRetry: () => void;
   onItemPress: (item: BudgetItem) => void;
+  onCreate?: () => void;
 };
 
 export function BudgetListView({
@@ -19,6 +20,7 @@ export function BudgetListView({
   error,
   onRetry,
   onItemPress,
+  onCreate,
 }: BudgetListViewProps) {
   if (error && items.length === 0) {
     return <ErrorStateView message="We could not load budgets." onRetry={onRetry} />;
@@ -43,6 +45,8 @@ export function BudgetListView({
         <EmptyStateView
           title={AppConfig.strings.budget.emptyTitle}
           subtitle={AppConfig.strings.budget.emptySubtitle}
+          primaryActionLabel={onCreate ? AppConfig.strings.budget.emptyActionLabel : undefined}
+          onPrimaryAction={onCreate}
           style={styles.emptyState}
         />
       }

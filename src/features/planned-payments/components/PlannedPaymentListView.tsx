@@ -11,6 +11,7 @@ export type PlannedPaymentListViewProps = {
   error: Error | null;
   onRetry: () => void;
   onItemPress: (item: PlainPlannedPayment) => void;
+  onCreate?: () => void;
 };
 
 export function PlannedPaymentListView({
@@ -19,6 +20,7 @@ export function PlannedPaymentListView({
   error,
   onRetry,
   onItemPress,
+  onCreate,
 }: PlannedPaymentListViewProps) {
   if (error && items.length === 0) {
     return <ErrorStateView message="We could not load planned payments." onRetry={onRetry} />;
@@ -41,6 +43,10 @@ export function PlannedPaymentListView({
         <EmptyStateView
           title={AppConfig.strings.plannedPayments.emptyTitle}
           subtitle={AppConfig.strings.plannedPayments.emptySubtitle}
+          primaryActionLabel={
+            onCreate ? AppConfig.strings.plannedPayments.emptyActionLabel : undefined
+          }
+          onPrimaryAction={onCreate}
           style={styles.emptyState}
         />
       }
