@@ -1,6 +1,6 @@
 import type { CreateAccountIntent } from '@/src/components/account-selection';
 import { useAccounts } from '@/src/components/account-selection';
-import { AppConfig, ChromeMotion } from '@/src/constants';
+import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
@@ -110,7 +110,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     if (saveLeaveTimerRef.current) clearTimeout(saveLeaveTimerRef.current);
     saveLeaveTimerRef.current = setTimeout(() => {
       leaveAfterSaveRef.current();
-    }, ChromeMotion.saveConfirmMs);
+    }, AppConfig.timing.saveConfirmMs);
   }, [reduceMotion]);
 
   useEffect(

@@ -1,6 +1,7 @@
 import { AccountPickerModal } from '@/src/components/account-selection';
 import { SubmitFooter } from '@/src/components/forms/SubmitFooter';
 import { EmptyStateView } from '@/src/components/shared/EmptyStateView';
+import { ChromeMotion, Scale } from '@/src/constants';
 import { Page } from '@/src/design-system';
 import { JournalEntryHeader } from '@/src/features/journal/entry/components/JournalEntryHeader';
 import { JournalEntryModeBody } from '@/src/features/journal/entry/components/JournalEntryModeBody';
@@ -9,12 +10,15 @@ import { JournalModeBar } from '@/src/features/journal/entry/components/JournalM
 import { JournalEntryShell } from '@/src/features/journal/entry/hooks/useJournalEntryShell';
 import { GuidedFooterAmountSlot } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
 import { useJournalEntryPresentationState } from '@/src/features/journal/entry/hooks/useJournalEntryPresentationState';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
+import { MotiView } from 'moti';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { Icon } from '@/src/types/domainIcons';
 
 export function JournalEntryView(vm: JournalEntryShell) {
   const { theme } = useTheme();
+  const reduceMotion = useReducedMotion();
   const {
     hideSuggestions,
     isSubmitting,
@@ -76,6 +80,8 @@ export function JournalEntryView(vm: JournalEntryShell) {
     );
   }
 
+  const showSavePulse = vm.saveSuccessPulse && !reduceMotion;
+
   return (
     <Page
       testID="journal-entry-screen"
@@ -96,18 +102,22 @@ export function JournalEntryView(vm: JournalEntryShell) {
         </>
       }
       footer={
-        <SubmitFooter
-          onPress={vm.onSubmit}
-          disabled={isBatchMode ? batchSubmitDisabled : isSubmitDisabled}
-          label={isBatchMode ? `Post ${vm.batchEditor.rows.length} transactions` : submitLabel}
-          loading={isBatchMode ? vm.batchEditor.isSubmitting : isSubmitting}
-          successPulse={vm.saveSuccessPulse}
-          topSlot={
-            !isBatchMode && guidedFooterAmount ? (
-              <GuidedFooterAmountSlot footerAmount={guidedFooterAmount} />
-            ) : undefined
-          }
-        />
+        <MotiView
+          animate={{ scale: showSavePulse ? 1.03 : Scale.identity }}
+          transition={ChromeMotion.spring}
+        >
+          <SubmitFooter
+            onPress={vm.onSubmit}
+            disabled={isBatchMode ? batchSubmitDisabled : isSubmitDisabled}
+            label={isBatchMode ? `Post ${vm.batchEditor.rows.length} transactions` : submitLabel}
+            loading={isBatchMode ? vm.batchEditor.isSubmitting : isSubmitting}
+            topSlot={
+              !isBatchMode && guidedFooterAmount ? (
+                <GuidedFooterAmountSlot footerAmount={guidedFooterAmount} />
+              ) : undefined
+            }
+          />
+        </MotiView>
       }
     >
       <View style={styles.content}>

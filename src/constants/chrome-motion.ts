@@ -1,6 +1,6 @@
 /**
- * Shared chrome motion — calm springs aligned with AppTabs / AppSegmentedControl.
- * Prefer these over one-off timing fades for enter/exit polish.
+ * Shared Moti chrome tokens for overlays and panel swaps.
+ * Prefer these over one-off timing fades for enter polish.
  */
 export const ChromeMotion = {
   /** Settling spring for sheets and confirmation blooms. */
@@ -27,8 +27,6 @@ export const ChromeMotion = {
     type: 'timing' as const,
     duration: 180,
   },
-  /** How long save confirmation stays visible before leave. */
-  saveConfirmMs: 320,
   /** Subtle dialog enter scale (not press-scale). */
   dialogFromScale: 0.96,
   /** Mode panel enter scale — barely perceptible. */

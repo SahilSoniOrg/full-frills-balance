@@ -1,30 +1,28 @@
 import { preferences } from '@/src/services/preferences';
 import { useCallback, useSyncExternalStore } from 'react';
 
-export type DeviceMotionPrefsState = {
-  reduceMotion: boolean;
-  setReduceMotion: (reduceMotion: boolean) => void;
-};
+function subscribeDeviceReduceMotion(onStoreChange: () => void): () => void {
+  const sub = preferences.device.observe('reduceMotion').subscribe(() => {
+    onStoreChange();
+  });
+  return () => sub.unsubscribe();
+}
 
-/** Device-scoped motion preference for this install. */
-export function useDeviceMotionPrefs(): DeviceMotionPrefsState {
-  const reduceMotion = useSyncExternalStore(
-    onStoreChange => {
-      const sub = preferences.device.observe('reduceMotion').subscribe(() => {
-        onStoreChange();
-      });
-      return () => sub.unsubscribe();
-    },
-    () => preferences.device.reduceMotion,
-    () => preferences.device.reduceMotion,
+function getDeviceReduceMotion(): boolean {
+  return preferences.device.reduceMotion;
+}
+
+/** Device-scoped reduce-motion flag for this install (settings toggle; not system OR). */
+export function useDeviceReduceMotionPreference(): boolean {
+  return useSyncExternalStore(
+    subscribeDeviceReduceMotion,
+    getDeviceReduceMotion,
+    getDeviceReduceMotion,
   );
+}
 
-  const setReduceMotion = useCallback((next: boolean) => {
+export function useSetDeviceReduceMotion(): (reduceMotion: boolean) => void {
+  return useCallback((next: boolean) => {
     preferences.device.setReduceMotion(next);
   }, []);
-
-  return {
-    reduceMotion,
-    setReduceMotion,
-  };
 }

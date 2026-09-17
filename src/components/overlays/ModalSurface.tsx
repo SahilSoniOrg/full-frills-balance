@@ -32,6 +32,7 @@ interface ModalSurfaceProps {
    */
   useNativeModal?: boolean;
   position?: 'center' | 'bottomSheet';
+  /** Native Modal animation for overlay enter/exit. Moti owns the card spring. */
   animationType?: 'fade' | 'slide' | 'none';
   contentStyle?: StyleProp<ViewStyle>;
   /** Fires after the native modal finish-dismiss animation (iOS). */
@@ -40,8 +41,8 @@ interface ModalSurfaceProps {
 
 /**
  * Shared modal / bottom-sheet chrome.
- * Native Modal stays for deadlock-sensitive paths; Moti springs the card in
- * (skipped under Reduce Motion). Exit still relies on the native Modal fade.
+ * Moti springs the card in; overlay stays a plain View so native Modal owns
+ * overlay fade. Reduce motion → plain Views (native fade only).
  */
 export function ModalSurface({
   visible,
@@ -56,7 +57,7 @@ export function ModalSurface({
   scrollable = true,
   useNativeModal = process.env.NODE_ENV !== 'test',
   position = 'center',
-  animationType,
+  animationType = 'fade',
   contentStyle,
   onDismiss,
 }: ModalSurfaceProps) {
@@ -64,76 +65,78 @@ export function ModalSurface({
   const insets = useSafeAreaInsets();
   const isBottomSheet = position === 'bottomSheet';
   const reduceMotion = useReducedMotion();
-  const resolvedAnimationType = animationType ?? 'fade';
 
-  const sheet = (
-    <MotiView
-      from={
-        reduceMotion
-          ? undefined
-          : isBottomSheet
-            ? { opacity: 0.92, translateY: ChromeMotion.sheetRisePx }
-            : {
-                opacity: 0,
-                translateY: 8,
-                scale: ChromeMotion.dialogFromScale,
-              }
-      }
-      animate={{ opacity: 1, translateY: 0, scale: 1 }}
-      transition={reduceMotion ? ChromeMotion.fade : ChromeMotion.sheetSpring}
+  const sheetFrom = isBottomSheet
+    ? { opacity: 0.92, translateY: ChromeMotion.sheetRisePx }
+    : {
+        opacity: 0,
+        translateY: 8,
+        scale: ChromeMotion.dialogFromScale,
+      };
+
+  const sheetBody = (
+    <AppCard
+      elevation="lg"
+      paddingSize="lg"
+      radius="r2"
       style={[
-        isBottomSheet ? styles.modalContainerBottomSheet : styles.modalContainerCenter,
-        fixedHeight ? { height: `${maxHeightPercent}%` } : { maxHeight: `${maxHeightPercent}%` },
+        styles.modalCard,
+        isBottomSheet ? styles.modalCardBottomSheet : styles.modalCardCenter,
+        fixedHeight ? styles.modalCardFixed : styles.modalCardFit,
+        isBottomSheet && { paddingBottom: insets.bottom + Spacing.lg },
+        { backgroundColor: theme.surface },
       ]}
     >
-      <AppCard
-        elevation="lg"
-        paddingSize="lg"
-        radius="r2"
-        style={[
-          styles.modalCard,
-          isBottomSheet ? styles.modalCardBottomSheet : styles.modalCardCenter,
-          fixedHeight ? styles.modalCardFixed : styles.modalCardFit,
-          isBottomSheet && { paddingBottom: insets.bottom + Spacing.lg },
-          { backgroundColor: theme.surface },
-        ]}
-      >
-        <View style={styles.header}>
-          <AppText variant="subheading" weight="bold">
-            {title}
-          </AppText>
-          <IconButton
-            name={Icon.Close}
-            variant="clear"
-            iconColor={theme.textSecondary}
-            onPress={onClose}
-            accessibilityLabel={accessibilityCloseLabel}
-            testID={closeTestID}
-          />
-        </View>
+      <View style={styles.header}>
+        <AppText variant="subheading" weight="bold">
+          {title}
+        </AppText>
+        <IconButton
+          name={Icon.Close}
+          variant="clear"
+          iconColor={theme.textSecondary}
+          onPress={onClose}
+          accessibilityLabel={accessibilityCloseLabel}
+          testID={closeTestID}
+        />
+      </View>
 
-        {scrollable ? (
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            style={fixedHeight ? styles.scrollFixed : styles.scrollFit}
-            showsVerticalScrollIndicator={false}
-          >
-            {children}
-          </ScrollView>
-        ) : (
-          <View style={[styles.staticContent, contentStyle]}>{children}</View>
-        )}
+      {scrollable ? (
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          style={fixedHeight ? styles.scrollFixed : styles.scrollFit}
+          showsVerticalScrollIndicator={false}
+        >
+          {children}
+        </ScrollView>
+      ) : (
+        <View style={[styles.staticContent, contentStyle]}>{children}</View>
+      )}
 
-        {footer}
-      </AppCard>
+      {footer}
+    </AppCard>
+  );
+
+  const sheetStyle: StyleProp<ViewStyle> = [
+    isBottomSheet ? styles.modalContainerBottomSheet : styles.modalContainerCenter,
+    fixedHeight ? { height: `${maxHeightPercent}%` } : { maxHeight: `${maxHeightPercent}%` },
+  ];
+
+  const sheet = reduceMotion ? (
+    <View style={sheetStyle}>{sheetBody}</View>
+  ) : (
+    <MotiView
+      from={sheetFrom}
+      animate={{ opacity: 1, translateY: 0, scale: 1 }}
+      transition={ChromeMotion.sheetSpring}
+      style={sheetStyle}
+    >
+      {sheetBody}
     </MotiView>
   );
 
   const content = (
-    <MotiView
-      from={reduceMotion ? undefined : { opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={ChromeMotion.fade}
+    <View
       style={[
         styles.overlay,
         isBottomSheet ? styles.overlayBottomSheet : styles.overlayCenter,
@@ -147,7 +150,7 @@ export function ModalSurface({
         accessibilityLabel={accessibilityCloseLabel}
       />
       {sheet}
-    </MotiView>
+    </View>
   );
 
   if (useNativeModal) {
@@ -155,7 +158,7 @@ export function ModalSurface({
       <Modal
         visible={visible}
         transparent
-        animationType={resolvedAnimationType}
+        animationType={animationType}
         onRequestClose={onClose}
         onDismiss={onDismiss}
       >
