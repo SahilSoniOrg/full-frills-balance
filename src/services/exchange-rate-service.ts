@@ -17,12 +17,8 @@ import { logger } from '@/src/utils/logger';
 
 const CACHE_DURATION_MS = AppConfig.time.msPerDay; // 24 hours
 
-function isUsableRequiredRate(fromCurrency: string, toCurrency: string, rate: number): boolean {
-  return (
-    Number.isFinite(rate) &&
-    rate > 0 &&
-    (fromCurrency === toCurrency || rate !== 1)
-  );
+function isUsableRequiredRate(rate: number | undefined): rate is number {
+  return rate !== undefined && Number.isFinite(rate) && rate > 0;
 }
 
 export class ExchangeRateService {
@@ -82,12 +78,16 @@ export class ExchangeRateService {
     if (!fromCurrency || !toCurrency) return null;
 
     try {
-      const rate = await this.getRate(fromCurrency, toCurrency, forceRefresh);
-      return isUsableRequiredRate(fromCurrency, toCurrency, rate) ? rate : null;
+      const rates = await this.fetchRatesForBase(fromCurrency, forceRefresh);
+      const rate = rates[toCurrency];
+      return isUsableRequiredRate(rate) ? rate : null;
     } catch (error) {
-      logger.warn(`[ExchangeRateService] Required rate unavailable (${fromCurrency} -> ${toCurrency})`, {
-        error,
-      });
+      logger.warn(
+        `[ExchangeRateService] Required rate unavailable (${fromCurrency} -> ${toCurrency})`,
+        {
+          error,
+        },
+      );
       return null;
     }
   }

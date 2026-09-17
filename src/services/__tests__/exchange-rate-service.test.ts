@@ -99,6 +99,16 @@ describe('ExchangeRateService', () => {
       await expect(service.getRequiredRate('USD', 'EUR')).resolves.toBe(0.85);
     });
 
+    it('accepts a legitimate unlike-currency parity rate', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ rates: { EUR: 1 } }),
+      });
+
+      await expect(service.getRequiredRate('USD', 'EUR')).resolves.toBe(1);
+    });
+
     it('returns unavailable instead of accepting the read-side parity fallback', async () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
