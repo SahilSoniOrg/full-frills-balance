@@ -14,13 +14,13 @@
 
 Most finance apps optimize for speed of entry. **Full Frills Balance** optimizes for **correct books**: every journal balances, balances are derived from transactions, and the ledger is yours on-device.
 
-| Principle | What it means in practice |
-|-----------|---------------------------|
-| **Derived balances** | Totals come from transaction sums; `running_balance` is a reconciled cache. |
-| **Double-entry** | Debits equal credits before anything is saved. |
-| **Offline-first** | SQLite via WatermelonDB; no backend required for core flows. |
-| **Audit trail** | Mutations logged with before/after state. |
-| **Numerical honesty** | Silent money mistakes are treated as higher severity than crashes. |
+| Principle             | What it means in practice                                                   |
+| --------------------- | --------------------------------------------------------------------------- |
+| **Derived balances**  | Totals come from transaction sums; `running_balance` is a reconciled cache. |
+| **Double-entry**      | Debits equal credits before anything is saved.                              |
+| **Offline-first**     | SQLite via WatermelonDB; no backend required for core flows.                |
+| **Audit trail**       | Mutations logged with before/after state.                                   |
+| **Numerical honesty** | Silent money mistakes are treated as higher severity than crashes.          |
 
 ---
 
@@ -45,31 +45,31 @@ The projection runs a day-by-day cash-flow simulation, merges overlapping obliga
 
 ## Features
 
-| | |
-|---|---|
-| **Ledger** | Simple and advanced journal entry; income, expense, transfer, multi-line; search, void, share |
-| **Accounts** | Asset, liability, equity, income, expense; hierarchy, reorder, per-account currency |
-| **Dashboard** | Net worth, privacy mask, transaction feed, Safe to Spend |
-| **Budgets & plans** | Scoped budgets; recurring and one-off planned payments |
-| **Reports** | Net worth, income vs expense, categories; interactive charts |
-| **Multi-currency** | ExchangeRate-API with local cache |
-| **Android SMS** | Optional inbox import and rule-based auto-post (`expo-sms-inbox`) |
-| **Data** | JSON export/import (native + Ivy Wallet + Cashew plugins), audit log + restore |
-| **Trust & UX** | Biometric lock, themes, insights, widgets, workplaces |
+|                     |                                                                                               |
+| ------------------- | --------------------------------------------------------------------------------------------- |
+| **Ledger**          | Simple and advanced journal entry; income, expense, transfer, multi-line; search, void, share |
+| **Accounts**        | Asset, liability, equity, income, expense; hierarchy, reorder, per-account currency           |
+| **Dashboard**       | Net worth, privacy mask, transaction feed, Safe to Spend                                      |
+| **Budgets & plans** | Scoped budgets; recurring and one-off planned payments                                        |
+| **Reports**         | Net worth, income vs expense, categories; interactive charts                                  |
+| **Multi-currency**  | ExchangeRate-API with local cache                                                             |
+| **Android SMS**     | Optional inbox import and rule-based auto-post (`expo-sms-inbox`)                             |
+| **Data**            | JSON export/import (native + Ivy Wallet + Cashew plugins), audit log + restore                |
+| **Trust & UX**      | Biometric lock, themes, insights, widgets, workplaces                                         |
 
 ---
 
 ## Tech stack
 
-| Layer | Choice |
-|-------|--------|
-| App | **Expo SDK 57**, **React Native 0.86**, **React 19**, **TypeScript 6** (strict) |
-| Navigation | Expo Router (file-based) |
-| Data | **WatermelonDB 0.28** → SQLite (native) / LokiJS (web & tests) |
-| UI | FlashList, Reanimated, Gesture Handler, design tokens |
-| Quality | Jest, Playwright (web export), ESLint, Prettier, Husky |
-| Ship | EAS Build (dev / preview / production) |
-| Telemetry | PostHog (no session replay), Sentry (errors/traces, no session replay) |
+| Layer      | Choice                                                                          |
+| ---------- | ------------------------------------------------------------------------------- |
+| App        | **Expo SDK 57**, **React Native 0.86**, **React 19**, **TypeScript 6** (strict) |
+| Navigation | Expo Router (file-based)                                                        |
+| Data       | **WatermelonDB 0.28** → SQLite (native) / LokiJS (web & tests)                  |
+| UI         | FlashList, Reanimated, Gesture Handler, design tokens                           |
+| Quality    | Jest, Playwright (web export), ESLint, Prettier, Husky                          |
+| Ship       | EAS Build (dev / preview / production)                                          |
+| Telemetry  | PostHog (no session replay), Sentry (errors/traces, no session replay)          |
 
 ---
 
@@ -83,17 +83,52 @@ cp .env.example .env.local   # optional — app runs without secrets
 npx expo start
 ```
 
-| Command | Purpose |
-|---------|---------|
-| `bun run ios` | Native iOS dev client |
-| `bun run android` | Android dev client (`.dev`) |
-| `bun run android:preview` | Android preview build (`.preview`) |
-| `bun run android:release` | Android production release build |
-| `npx expo start --web` | Web (limited; primary target is mobile) |
+| Command                   | Purpose                                 |
+| ------------------------- | --------------------------------------- |
+| `bun run ios`             | Native iOS dev client                   |
+| `bun run android`         | Android dev client (`.dev`)             |
+| `bun run android:preview` | Android preview build (`.preview`)      |
+| `bun run android:release` | Android production release build        |
+| `npx expo start --web`    | Web (limited; primary target is mobile) |
 
 Android variants are generated by `withAndroidBuildVariants` on `expo prebuild --clean`; their IDs and display names live in [`app-variants.json`](app-variants.json). EAS profiles use the same `debug`, `preview`, and `release` Gradle build types.
 
 **Try it with data:** Settings → Data Management → **Setup Demo Workspace** (isolated sample workplace, leaves your data untouched).
+
+### Try TypeSafe transaction parsing
+
+TypeSafe is optional and disabled by default. Configure the TypeSafe API key in the backend
+environment; it is never entered into or bundled with the app.
+
+For local web development, add this to your gitignored `.env.local` and start the backend in a
+second terminal:
+
+```env
+TYPESAFE_API_KEY=ts_...
+```
+
+```bash
+bun run typesafe:proxy
+bun run web
+```
+
+The backend listens on `127.0.0.1:8787` and exposes `POST /typesafe/transaction`. It accepts the
+transcript, parser hints, and candidate account/category IDs from the app, validates and transforms
+them into the TypeSafe System One request, and adds the server-side key. The app never sends an API
+key. Set `EXPO_PUBLIC_TYPESAFE_PROXY_URL` to the deployed backend URL for production builds. Set
+`TYPESAFE_ALLOWED_ORIGINS` to the deployed app origin when the backend is hosted separately.
+
+Open Voice Input, enter or speak a transaction, and tap `TypeSafe` to force a TypeSafe pass. `Auto`
+continues to use the normal deterministic-first pipeline and only reaches TypeSafe when needed.
+
+The app sends the voice transcript, parser hints, and candidate account/category names to TypeSafe.
+TypeSafe returns only IDs from the candidates supplied by the app; the app validates those IDs before
+showing the result. The confirmation step stays enabled until confidence is calibrated against real
+examples.
+
+The backend should be authenticated and rate-limited before public deployment. Full request/response
+payload logging is enabled locally with `TYPESAFE_DEBUG_LOGS=1` and should remain disabled in
+production because transcripts and candidate names may be sensitive.
 
 ---
 

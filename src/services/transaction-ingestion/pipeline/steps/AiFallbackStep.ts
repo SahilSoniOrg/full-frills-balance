@@ -1,7 +1,6 @@
 import { AccountType } from '@/src/types/enums';
 
 import { analytics } from '@/src/services/analytics';
-import { resolveAccount } from '@/src/services/ledger/resolution';
 import { logger } from '@/src/utils/logger';
 import { AIContext, TransactionSemanticTag } from '../../types/ai-parsing';
 import { PipelineContext, PipelineStep } from '../types';
@@ -11,20 +10,20 @@ export class AiFallbackStep implements PipelineStep {
     analytics.logAiIngestion(context.forceAi ? 'ai_forced' : 'ai_fallback_triggered');
 
     const allAccounts = context.allAccounts || [];
-    const assetAccountNames = allAccounts
-      .filter(a => a.accountType === AccountType.ASSET || a.accountType === AccountType.LIABILITY)
-      .map(a => a.name);
-    const categoryAccountNames = allAccounts
-      .filter(a => a.accountType === AccountType.INCOME || a.accountType === AccountType.EXPENSE)
-      .map(a => a.name);
-
     const parsed = context.parsed!;
     const defaultCurrency = context.defaultCurrency!;
     const resolved = context.resolved!;
 
+    const assetAccounts = allAccounts
+      .filter(a => a.accountType === AccountType.ASSET || a.accountType === AccountType.LIABILITY)
+      .map(a => ({ id: a.id, name: a.name }));
+    const categoryAccounts = allAccounts
+      .filter(a => a.accountType === AccountType.INCOME || a.accountType === AccountType.EXPENSE)
+      .map(a => ({ id: a.id, name: a.name }));
+
     const aiContext: AIContext = {
-      accounts: assetAccountNames,
-      categories: categoryAccountNames,
+      accounts: assetAccounts,
+      categories: categoryAccounts,
       parserHints: {
         amount: parsed.amount,
         rawAccount: parsed.sourceAccountHint,
@@ -51,36 +50,48 @@ export class AiFallbackStep implements PipelineStep {
       } else if (aiParsed) {
         analytics.logAiIngestion('ai_success', { latency_ms: latency });
 
-        // SECOND PASS RESOLUTION
-        const resolvedTransactions = await Promise.all(
-          aiParsed.transactions.map(async tx => {
-            const aiResolved = await resolveAccount({
-              sourceHint: tx.accountNameHint,
-              destinationHint: tx.categoryNameHint,
-              direction: tx.type === 'income' ? 'credit' : 'debit',
-              workplaceId: context.workplaceId,
-              isReversal: tx.isReversal,
-              unconstrained: true,
-            });
-
-            return {
-              ...tx,
-              accountId: aiResolved.sourceAccountId,
-              categoryId: aiResolved.categoryAccountId,
-              accountNameHint: aiResolved.sourceAccountName || tx.accountNameHint,
-              categoryNameHint: aiResolved.categoryAccountName || tx.categoryNameHint,
-            };
-          }),
+        const validSourceIds = new Set<string>(assetAccounts.map(account => account.id));
+        const validCategoryIds = new Set<string>(categoryAccounts.map(account => account.id));
+        const categoryTypeById = new Map<string, AccountType>(
+          allAccounts
+            .filter(
+              a => a.accountType === AccountType.INCOME || a.accountType === AccountType.EXPENSE,
+            )
+            .map(account => [account.id, account.accountType]),
         );
+        const resolvedTransactions = aiParsed.transactions.filter(tx => {
+          if (
+            !tx.accountId ||
+            !tx.categoryId ||
+            !validSourceIds.has(tx.accountId) ||
+            !validCategoryIds.has(tx.categoryId)
+          ) {
+            return false;
+          }
 
-        context.result = {
-          ...aiParsed,
-          transactions: resolvedTransactions,
-          provider: 'ai',
-          processTimeMs: Date.now() - context.startTime,
-        };
-        context.isHalted = true;
-        return;
+          const categoryType = categoryTypeById.get(tx.categoryId);
+          return (
+            tx.type === 'transfer' ||
+            (tx.type === 'income' && categoryType === AccountType.INCOME) ||
+            (tx.type === 'expense' && categoryType === AccountType.EXPENSE)
+          );
+        });
+
+        if (resolvedTransactions.length !== aiParsed.transactions.length) {
+          analytics.logAiIngestion('ai_failure', {
+            latency_ms: latency,
+            error: 'TypeSafe returned an account outside the supplied candidate set',
+          });
+        } else {
+          context.result = {
+            ...aiParsed,
+            transactions: resolvedTransactions,
+            provider: aiParsed.provider,
+            processTimeMs: Date.now() - context.startTime,
+          };
+          context.isHalted = true;
+          return;
+        }
       } else {
         analytics.logAiIngestion('ai_failure', { latency_ms: latency });
       }

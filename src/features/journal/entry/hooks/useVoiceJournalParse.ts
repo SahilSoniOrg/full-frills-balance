@@ -1,6 +1,9 @@
 import { analytics } from '@/src/services/analytics';
 import type { ParserOutput } from '@/src/services/transaction-ingestion';
-import { transactionIngestionService } from '@/src/services/transaction-ingestion';
+import {
+  transactionIngestionService,
+  typeSafeAIProvider,
+} from '@/src/services/transaction-ingestion';
 import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
@@ -134,6 +137,11 @@ export function useVoiceJournalParse({
     [parseTranscription],
   );
 
+  const parseWithTypeSafe = useCallback(
+    (textToParse: string) => parseTranscription(textToParse, true),
+    [parseTranscription],
+  );
+
   const applyParsedResult = useCallback(() => {
     if (!parserOutput || parserOutput.transactions.length === 0) return;
     const result = parserOutput.transactions[0];
@@ -167,6 +175,8 @@ export function useVoiceJournalParse({
     startRecording,
     stopRecording,
     parseTranscription,
+    parseWithTypeSafe,
+    isTypeSafeConfigured: typeSafeAIProvider.isConfigured,
     selectTemplate,
     applyParsedResult,
   };

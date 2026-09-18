@@ -85,8 +85,8 @@ describe('PreferencesFacade import restore', () => {
   it('clears user-scoped privacy acknowledgement with the user bag', () => {
     const preferences = createPreferencesFacade();
     preferences.privacy.setPrivacyPolicyAcknowledgement({
-      version: '2026-09-07',
-      acknowledgedAt: '2026-09-07T12:34:56.000Z',
+      version: '2026-09-17',
+      acknowledgedAt: '2026-09-17T12:34:56.000Z',
     });
 
     preferences.clearPreferences();
@@ -100,8 +100,8 @@ describe('PreferencesFacade import restore', () => {
     preferences.restoreImportedPreferences(
       {
         privacyPolicyAcknowledgement: {
-          version: '2026-09-07',
-          acknowledgedAt: '2026-09-07T12:34:56.000Z',
+          version: '2026-09-17',
+          acknowledgedAt: '2026-09-17T12:34:56.000Z',
         },
       },
       'workplace-1' as WorkplaceId,

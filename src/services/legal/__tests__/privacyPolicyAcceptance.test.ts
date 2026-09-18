@@ -26,7 +26,7 @@ describe('privacy policy acknowledgement', () => {
   it('accepts only the current policy version', () => {
     preferences.privacy.setPrivacyPolicyAcknowledgement({
       version: AppConfig.legal.privacyPolicyVersion,
-      acknowledgedAt: '2026-09-07T00:00:00.000Z',
+      acknowledgedAt: '2026-09-17T00:00:00.000Z',
     });
 
     expect(hasAcknowledgedCurrentPrivacyPolicy()).toBe(true);
@@ -47,16 +47,16 @@ describe('privacy policy acknowledgement', () => {
   });
 
   it('formats the effective date from the policy version', () => {
-    expect(formatPrivacyPolicyEffectiveDate('2026-09-07')).toBe('September 7, 2026');
+    expect(formatPrivacyPolicyEffectiveDate('2026-09-17')).toBe('September 17, 2026');
     expect(formatPrivacyPolicyEffectiveDate('invalid')).toBe('invalid');
   });
 
   it('writes the current version and acknowledgement timestamp', () => {
-    acknowledgeCurrentPrivacyPolicy(new Date('2026-09-07T12:34:56.000Z'));
+    acknowledgeCurrentPrivacyPolicy(new Date('2026-09-17T12:34:56.000Z'));
 
     expect(readPrivacyPolicyAcknowledgement()).toEqual({
       version: AppConfig.legal.privacyPolicyVersion,
-      acknowledgedAt: '2026-09-07T12:34:56.000Z',
+      acknowledgedAt: '2026-09-17T12:34:56.000Z',
     });
     expect(preferences.device.getSnapshot()).not.toHaveProperty('privacyPolicyAcknowledgement');
   });
