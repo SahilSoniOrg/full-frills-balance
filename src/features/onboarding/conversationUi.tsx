@@ -11,12 +11,21 @@ import { SelectionPickerSheet } from '@/src/components/filters/SelectionPickerSh
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { Size, Spacing, Typography } from '@/src/constants';
-import { Box, Inline, Stack } from '@/src/design-system';
+import { Box, Inline, Stack, useKeyboard } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Icon, type IconName } from '@/src/types/domainIcons';
 import dayjs from 'dayjs';
-import { type ReactNode, useState } from 'react';
-import { Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity } from 'react-native';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  type FocusEvent,
+} from 'react-native';
 import Animated, { Easing, LinearTransition } from 'react-native-reanimated';
 import { parseAmount } from './draft';
 
@@ -52,76 +61,120 @@ export function ConversationStep({
   readonly onBack: () => void;
 }) {
   const [footerHeight, setFooterHeight] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const [focusedTarget, setFocusedTarget] = useState<number | null>(null);
+  const { isKeyboardVisible } = useKeyboard();
+  const scrollFocusedInput = useCallback((target: number) => {
+    requestAnimationFrame(() => {
+      scrollRef.current
+        ?.getScrollResponder()
+        ?.scrollResponderScrollNativeHandleToKeyboard(target, Spacing.md, true);
+    });
+  }, []);
+  const revealFocusedInput = useCallback(
+    (event: FocusEvent) => {
+      const target = event.nativeEvent.target;
+      setFocusedTarget(target);
+      scrollFocusedInput(target);
+    },
+    [scrollFocusedInput],
+  );
+
+  useEffect(() => {
+    if (!isKeyboardVisible || focusedTarget == null) return;
+    scrollFocusedInput(focusedTarget);
+  }, [focusedTarget, isKeyboardVisible, scrollFocusedInput]);
+
+  const scrollContent = (
+    <ScrollView
+      ref={scrollRef}
+      style={styles.scrollView}
+      contentContainerStyle={[
+        styles.scroll,
+        { paddingBottom: isKeyboardVisible ? Spacing.lg : footerHeight + Spacing.lg },
+      ]}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      onFocus={revealFocusedInput}
+      // Keep focus scrolling in one place so Android's native auto-scroll does
+      // not compete with the keyboard-aware responder below.
+      scrollsChildToFocus={false}
+      nestedScrollEnabled
+    >
+      <Stack gap="lg" paddingTop={title ? 'xl' : 'sm'}>
+        {title ? (
+          <Stack gap="sm" align="center">
+            <AppText
+              variant="title"
+              align="center"
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+              style={styles.title}
+            >
+              {title}
+            </AppText>
+            {subtitle ? (
+              <AppText variant="body" color="secondary" style={styles.subtitle}>
+                {subtitle}
+              </AppText>
+            ) : null}
+          </Stack>
+        ) : null}
+        {children}
+      </Stack>
+    </ScrollView>
+  );
 
   return (
-    <Box flex={1}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.scroll, { paddingBottom: footerHeight + Spacing.lg }]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        nestedScrollEnabled
-      >
-        <Stack gap="lg" paddingTop={title ? 'xl' : 'sm'}>
-          {title ? (
-            <Stack gap="sm" align="center">
-              <AppText
-                variant="title"
-                align="center"
-                numberOfLines={3}
-                adjustsFontSizeToFit
-                minimumFontScale={0.75}
-                style={styles.title}
+    <Box flex={1} minHeight={0}>
+      {Platform.OS === 'ios' ? (
+        <KeyboardAvoidingView behavior="padding" style={styles.keyboardContent}>
+          {scrollContent}
+        </KeyboardAvoidingView>
+      ) : (
+        scrollContent
+      )}
+      {!isKeyboardVisible ? (
+        <Box
+          background="background"
+          borderTopWidth={1}
+          borderColor="border"
+          paddingTop="md"
+          onLayout={event => {
+            const height = event.nativeEvent.layout.height;
+            setFooterHeight(previousHeight =>
+              previousHeight === height ? previousHeight : height,
+            );
+          }}
+        >
+          <Stack space="xs">
+            {onSkip ? (
+              <AppButton variant="ghost" size="md" onPress={onSkip} testID="onboarding-skip">
+                {skipLabel ?? copy.addLater}
+              </AppButton>
+            ) : null}
+            {onPrimary ? (
+              <AppButton
+                variant="primary"
+                size="lg"
+                onPress={() => {
+                  Keyboard.dismiss();
+                  onPrimary();
+                }}
+                disabled={primaryDisabled || primaryLoading}
+                loading={primaryLoading}
+                testID={primaryTestID}
+                style={{ width: '100%' }}
               >
-                {title}
-              </AppText>
-              {subtitle ? (
-                <AppText variant="body" color="secondary" style={styles.subtitle}>
-                  {subtitle}
-                </AppText>
-              ) : null}
-            </Stack>
-          ) : null}
-          {children}
-        </Stack>
-      </ScrollView>
-      <Box
-        background="background"
-        borderTopWidth={1}
-        borderColor="border"
-        paddingTop="md"
-        onLayout={event => {
-          const height = event.nativeEvent.layout.height;
-          setFooterHeight(previousHeight => (previousHeight === height ? previousHeight : height));
-        }}
-      >
-        <Stack space="xs">
-          {onSkip ? (
-            <AppButton variant="ghost" size="md" onPress={onSkip} testID="onboarding-skip">
-              {skipLabel ?? copy.addLater}
+                {primaryLabel}
+              </AppButton>
+            ) : null}
+            <AppButton variant="ghost" size="md" onPress={onBack}>
+              {copy.back}
             </AppButton>
-          ) : null}
-          {onPrimary ? (
-            <AppButton
-              variant="primary"
-              size="lg"
-              onPress={() => {
-                Keyboard.dismiss();
-                onPrimary();
-              }}
-              disabled={primaryDisabled || primaryLoading}
-              loading={primaryLoading}
-              testID={primaryTestID}
-              style={{ width: '100%' }}
-            >
-              {primaryLabel}
-            </AppButton>
-          ) : null}
-          <AppButton variant="ghost" size="md" onPress={onBack}>
-            {copy.back}
-          </AppButton>
-        </Stack>
-      </Box>
+          </Stack>
+        </Box>
+      ) : null}
     </Box>
   );
 }
@@ -293,8 +346,6 @@ function CollectedRow({
   const [pickingPayDate, setPickingPayDate] = useState(false);
   const [pickingInterval, setPickingInterval] = useState(false);
   const symbol = CURRENCY_SYMBOLS[currency] ?? currency;
-  const amountMeasure = amountText.length > 0 ? amountText : '0';
-  const payMeasure = payText.length > 0 ? payText : '0';
   const cadence = item.cadence;
   const selectedIntervalLabel =
     cadence?.intervals?.find(interval => interval.id === cadence.selectedInterval)?.label ??
@@ -338,22 +389,19 @@ function CollectedRow({
                   <AppText variant="body" color="secondary">
                     {symbol}
                   </AppText>
-                  <Box style={styles.amountWrap}>
-                    <Text style={styles.amountGhost}>{amountMeasure}</Text>
-                    <TextInput
-                      value={amountText}
-                      onChangeText={text => {
-                        setAmountText(text);
-                        onAmountChange(item.id, parseAmount(text) ?? 0);
-                      }}
-                      keyboardType="decimal-pad"
-                      placeholder="0"
-                      placeholderTextColor={tokens.input.placeholder}
-                      accessibilityLabel={copy.currentBalance}
-                      testID={`onboarding-amount-${item.id}`}
-                      style={[styles.rowInput, styles.amountInput, { color: theme.text }]}
-                    />
-                  </Box>
+                  <TextInput
+                    value={amountText}
+                    onChangeText={text => {
+                      setAmountText(text);
+                      onAmountChange(item.id, parseAmount(text) ?? 0);
+                    }}
+                    keyboardType="decimal-pad"
+                    placeholder="0"
+                    placeholderTextColor={tokens.input.placeholder}
+                    accessibilityLabel={copy.currentBalance}
+                    testID={`onboarding-amount-${item.id}`}
+                    style={[styles.rowInput, styles.amountInput, { color: theme.text }]}
+                  />
                 </Inline>
               </Box>
             </Inline>
@@ -378,27 +426,24 @@ function CollectedRow({
                   <AppText variant="caption" color="secondary">
                     {symbol}
                   </AppText>
-                  <Box style={styles.amountWrap}>
-                    <Text style={[styles.amountGhost, styles.payGhost]}>{payMeasure}</Text>
-                    <TextInput
-                      value={payText}
-                      onChangeText={text => {
-                        setPayText(text);
-                        onPaymentAmountChange(item.id, parseAmount(text) ?? 0);
-                      }}
-                      keyboardType="decimal-pad"
-                      placeholder="0"
-                      placeholderTextColor={tokens.input.placeholder}
-                      accessibilityLabel={copy.cardPaymentAmount}
-                      testID={`onboarding-card-pay-${item.id}`}
-                      style={[
-                        styles.rowInput,
-                        styles.amountInput,
-                        styles.payInput,
-                        { color: theme.text },
-                      ]}
-                    />
-                  </Box>
+                  <TextInput
+                    value={payText}
+                    onChangeText={text => {
+                      setPayText(text);
+                      onPaymentAmountChange(item.id, parseAmount(text) ?? 0);
+                    }}
+                    keyboardType="decimal-pad"
+                    placeholder="0"
+                    placeholderTextColor={tokens.input.placeholder}
+                    accessibilityLabel={copy.cardPaymentAmount}
+                    testID={`onboarding-card-pay-${item.id}`}
+                    style={[
+                      styles.rowInput,
+                      styles.amountInput,
+                      styles.payInput,
+                      { color: theme.text },
+                    ]}
+                  />
                 </Inline>
                 {onPaymentDateChange ? (
                   <FilterChipButton
@@ -565,6 +610,10 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 0,
   },
+  keyboardContent: {
+    flex: 1,
+    minHeight: 0,
+  },
   chipScroller: {
     position: 'relative',
   },
@@ -604,35 +653,24 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   amountHit: {
-    minWidth: 64,
     minHeight: 28,
     justifyContent: 'center',
     alignItems: 'flex-end',
-  },
-  amountWrap: {
-    justifyContent: 'center',
-    minWidth: 32,
-  },
-  amountGhost: {
-    fontSize: Typography.sizes.base,
-    minHeight: 28,
-    paddingVertical: 0,
-    textAlign: 'right',
-    opacity: 0,
+    flexShrink: 0,
   },
   amountInput: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
+    width: 96,
+    minWidth: 48,
+    flexShrink: 0,
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
     textAlign: 'right',
-  },
-  payGhost: {
-    fontSize: Typography.sizes.sm,
-    minHeight: 24,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   payInput: {
+    width: 72,
     fontSize: Typography.sizes.sm,
     textAlign: 'left',
   },

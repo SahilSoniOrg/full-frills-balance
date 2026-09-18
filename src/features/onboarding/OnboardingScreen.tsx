@@ -214,39 +214,62 @@ export function OnboardingScreen() {
     <OnboardingChrome
       testID="onboarding-screen"
       stage={ONBOARDING_STAGES[step]}
-      keyboardAvoiding={
-        step === 'welcome' ||
-        step === 'now' ||
-        step === 'next' ||
-        step === 'protect' ||
-        step === 'reserve'
-      }
+      renderHeader={({ isKeyboardVisible }) => (
+        <>
+          {showSafeToSpend ? (
+            isKeyboardVisible ? (
+              <Box paddingVertical="sm">
+                <Stack direction="row" align="center" justify="space-between" gap="md">
+                  <AppText variant="caption" color="secondary" weight="medium">
+                    {copy.safeToSpend}
+                  </AppText>
+                  <MoneyText
+                    amount={projection.safeToSpend}
+                    currencyCode={draft.currency}
+                    formatStyle="sts"
+                    variant="subheading"
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.7}
+                    testID="onboarding-sts"
+                  />
+                </Stack>
+              </Box>
+            ) : (
+              <Stack gap="xs" paddingTop="sm" paddingBottom="md">
+                <AppText variant="body" color="secondary" weight="medium">
+                  {copy.safeToSpend}
+                </AppText>
+                <MoneyText
+                  amount={projection.safeToSpend}
+                  currencyCode={draft.currency}
+                  formatStyle="sts"
+                  variant="hero"
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.6}
+                  testID="onboarding-sts"
+                />
+              </Stack>
+            )
+          ) : null}
+          {heard &&
+          !isKeyboardVisible &&
+          step !== 'welcome' &&
+          step !== 'currency' &&
+          step !== 'clarity' ? (
+            <Box paddingBottom="sm">
+              <AppText variant="body" color="secondary" testID="onboarding-heard">
+                {heard}
+              </AppText>
+            </Box>
+          ) : null}
+        </>
+      )}
     >
-      {showSafeToSpend ? (
-        <Stack gap="xs" paddingTop="sm" paddingBottom="md">
-          <AppText variant="body" color="secondary" weight="medium">
-            {copy.safeToSpend}
-          </AppText>
-          <MoneyText
-            amount={projection.safeToSpend}
-            currencyCode={draft.currency}
-            formatStyle="sts"
-            variant="hero"
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.6}
-            testID="onboarding-sts"
-          />
-        </Stack>
-      ) : null}
-      {heard && step !== 'welcome' && step !== 'currency' && step !== 'clarity' ? (
-        <Box paddingBottom="sm">
-          <AppText variant="body" color="secondary" testID="onboarding-heard">
-            {heard}
-          </AppText>
-        </Box>
-      ) : null}
-      <Box flex={1}>{scene}</Box>
+      <Box flex={1} minHeight={0}>
+        {scene}
+      </Box>
     </OnboardingChrome>
   );
 }

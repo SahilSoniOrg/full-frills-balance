@@ -1,9 +1,8 @@
 import { AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
-import { Box, Inline, Inset, Page } from '@/src/design-system';
+import { Box, Inline, Inset, Page, useKeyboard } from '@/src/design-system';
 import type { ReactNode } from 'react';
-import { Platform } from 'react-native';
 import type { OnboardingStep } from './draft';
 
 export type OnboardingStage = {
@@ -14,29 +13,28 @@ export type OnboardingStage = {
 
 export function OnboardingChrome({
   stage,
-  keyboardAvoiding,
+  renderHeader,
   testID,
   children,
 }: {
   readonly stage: OnboardingStage | null;
-  readonly keyboardAvoiding: boolean;
+  readonly renderHeader?: (context: { readonly isKeyboardVisible: boolean }) => ReactNode;
   readonly testID: string;
   readonly children: ReactNode;
 }) {
+  const { isKeyboardVisible } = useKeyboard();
+  const header = renderHeader?.({ isKeyboardVisible });
+
   return (
-    <Page
-      testID={testID}
-      edges={['top', 'bottom']}
-      keyboardAvoiding={keyboardAvoiding}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}
-    >
-      <Box flex={1}>
+    <Page testID={testID} edges={isKeyboardVisible ? ['top'] : ['top', 'bottom']}>
+      <Box flex={1} minHeight={0}>
         <Inset horizontal="lg" top={0} bottom="sm" flex={1}>
           <Box
             maxWidth={AppConfig.layout.maxContentWidth}
             width="100%"
             style={{ alignSelf: 'center' }}
             flex={1}
+            minHeight={0}
           >
             {stage ? (
               <Box paddingTop="lg" paddingBottom="sm" accessibilityLabel={stage.label}>
@@ -55,7 +53,10 @@ export function OnboardingChrome({
                 </Box>
               </Box>
             ) : null}
-            <Box flex={1}>{children}</Box>
+            {header ? <Box flexShrink={0}>{header}</Box> : null}
+            <Box flex={1} minHeight={0} overflow="hidden">
+              {children}
+            </Box>
           </Box>
         </Inset>
       </Box>
