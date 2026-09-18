@@ -28,6 +28,10 @@ export class ExportRepository {
     const rows = await collection.query(...clauses).fetch();
     return rows.map(row => projectOrmRow(row, columnNames));
   }
+
+  async countTable(tableName: string): Promise<number> {
+    return this.getCollection(tableName)?.query().fetchCount() ?? 0;
+  }
 }
 
 export const exportRepository = new ExportRepository();

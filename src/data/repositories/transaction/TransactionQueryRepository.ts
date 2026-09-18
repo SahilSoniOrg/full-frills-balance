@@ -1,8 +1,10 @@
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
 import { AccountId, JournalId, TransactionId, WorkplaceId } from '@/src/types/ids';
+import type { ActiveJournalStatus } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
+import { Observable, of } from 'rxjs';
 import { buildActiveClauses, deterministicSort } from './transactionActiveClauses';
 
 export class TransactionQueryRepository {
@@ -96,9 +98,44 @@ export class TransactionQueryRepository {
       .fetch();
   }
 
+  observeBudgetTransactions(
+    workplaceId: WorkplaceId,
+    accountIds: readonly AccountId[],
+    startDate: number,
+    endDate: number,
+    activeJournalStatuses: readonly ActiveJournalStatus[],
+  ): Observable<Transaction[]> {
+    if (accountIds.length === 0) return of([] as Transaction[]);
+
+    return this.transactions
+      .query(
+        Q.experimentalJoinTables(['journals']),
+        Q.where('workplace_id', workplaceId),
+        Q.where('account_id', Q.oneOf([...accountIds])),
+        Q.where('transaction_date', Q.gte(startDate)),
+        Q.where('transaction_date', Q.lte(endDate)),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.on('journals', [
+          Q.where('workplace_id', workplaceId),
+          Q.where('status', Q.oneOf([...activeJournalStatuses])),
+          Q.where('deleted_at', Q.eq(null)),
+        ]),
+      )
+      .observeWithColumns(['amount', 'transaction_type', 'currency_code', 'exchange_rate']);
+  }
+
   async findAllNonDeleted(workplaceId: WorkplaceId): Promise<Transaction[]> {
     return this.transactions
       .query(Q.where('deleted_at', Q.eq(null)), Q.where('workplace_id', workplaceId))
+      .fetch();
+  }
+
+  async findWithMissingAccountId(workplaceId: WorkplaceId): Promise<Transaction[]> {
+    return this.transactions
+      .query(
+        Q.or(Q.where('account_id', null), Q.where('account_id', '')),
+        Q.where('workplace_id', workplaceId),
+      )
       .fetch();
   }
 

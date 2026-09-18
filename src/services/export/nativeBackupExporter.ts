@@ -1,6 +1,6 @@
-import { database } from '@/src/data/database/Database';
 import { schema } from '@/src/data/database/schema';
-import Workplace from '@/src/data/models/Workplace';
+import { exportRepository } from '@/src/data/repositories/ExportRepository';
+import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { analytics } from '@/src/services/analytics';
 import {
   serializeExportPayloadFromSources,
@@ -13,18 +13,8 @@ import { WorkplaceId } from '@/src/types/ids';
 import { compression } from '@/src/utils/compression';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/services/preferences';
-import { Model } from '@nozbe/watermelondb';
-import Collection from '@nozbe/watermelondb/Collection';
 import { fetchAndTransformTable } from './exportTableTransformer';
 import { ExportSummary } from './types';
-
-function getCollection(tableName: string): Collection<Model> | undefined {
-  try {
-    return database.collections.get<Model>(tableName);
-  } catch {
-    return undefined;
-  }
-}
 
 const EXPORT_KEY_BY_TABLE: Record<string, string> = {
   accounts: 'accounts',
@@ -102,7 +92,7 @@ export async function exportToJSON(
     onProgress?.('Processing preferences...', 0.53);
     const [userPreferences, workplace] = await Promise.all([
       preferences.loadPreferences(),
-      database.collections.get<Workplace>('workplaces').find(workplaceId),
+      workplaceRepository.find(workplaceId),
     ]);
 
     const finalJson = await serializeExportPayloadFromSources(
@@ -173,7 +163,7 @@ export async function exportWorkplacesToJSON(
 ): Promise<string> {
   if (workplaceIds.length === 0) throw new Error('No workplaces selected to export');
   const userPreferences = await preferences.loadPreferences();
-  const workplaces = database.collections.get<Workplace>('workplaces');
+  const workplaces = workplaceRepository;
   const entries: MultiWorkplaceExportEntry[] = [];
 
   for (const [index, workplaceId] of workplaceIds.entries()) {
@@ -240,9 +230,7 @@ export async function exportWorkplacesToJSON(
  */
 export async function getExportSummary(): Promise<ExportSummary> {
   const getCount = async (tableName: string): Promise<number> => {
-    const collection = getCollection(tableName);
-    if (!collection?.query) return 0;
-    return collection.query().fetchCount();
+    return exportRepository.countTable(tableName);
   };
 
   const [

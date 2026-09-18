@@ -1,16 +1,12 @@
-import { database } from '@/src/data/database/Database';
 import { sharingService } from '@/src/services/SharingService';
 import { preferences } from '@/src/services/preferences';
 import { ShareFormat } from '@/src/types/sharing';
 import { asWorkplaceId } from '@/src/types/ids';
+import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { exportUpdateBackup } from '../currentWorkplaceBackupExporter';
 
 const mockExportWorkplacesToJSON = jest.fn();
-const mockGetCollection = database.collections.get as jest.Mock;
-
-jest.mock('@/src/data/database/Database', () => ({
-  database: { collections: { get: jest.fn() } },
-}));
+const mockFindAll = workplaceRepository.findAll as jest.Mock;
 
 jest.mock('@/src/services/SharingService', () => ({
   sharingService: { save: jest.fn().mockResolvedValue(undefined) },
@@ -21,6 +17,10 @@ jest.mock('@/src/services/preferences', () => ({
     loadPreferences: jest.fn().mockResolvedValue(undefined),
     device: { activeWorkplaceId: undefined },
   },
+}));
+
+jest.mock('@/src/data/repositories/WorkplaceRepository', () => ({
+  workplaceRepository: { findAll: jest.fn() },
 }));
 
 jest.mock('../nativeBackupExporter', () => ({
@@ -35,9 +35,7 @@ describe('exportUpdateBackup', () => {
     jest.clearAllMocks();
     mockExportWorkplacesToJSON.mockResolvedValue('base64-backup');
     (preferences.device as { activeWorkplaceId?: string }).activeWorkplaceId = home.id;
-    mockGetCollection.mockReturnValue({
-      query: () => ({ fetch: jest.fn().mockResolvedValue([home, work]) }),
-    });
+    mockFindAll.mockResolvedValue([home, work]);
   });
 
   it('exports every workplace by default', async () => {
@@ -83,9 +81,7 @@ describe('exportUpdateBackup', () => {
   });
 
   it('does not save when there are no workplaces to export', async () => {
-    mockGetCollection.mockReturnValue({
-      query: () => ({ fetch: jest.fn().mockResolvedValue([]) }),
-    });
+    mockFindAll.mockResolvedValue([]);
     mockExportWorkplacesToJSON.mockRejectedValueOnce(new Error('No workplaces selected to export'));
 
     await expect(exportUpdateBackup()).rejects.toThrow('No workplaces selected to export');

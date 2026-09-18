@@ -1,5 +1,4 @@
-import { database } from '@/src/data/database/Database';
-import Workplace from '@/src/data/models/Workplace';
+import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { sharingService } from '@/src/services/SharingService';
 import { preferences } from '@/src/services/preferences';
 import { ShareFormat } from '@/src/types/sharing';
@@ -15,7 +14,7 @@ export async function exportUpdateBackup(
   onProgress?: (message: string, progress: number) => void,
 ): Promise<void> {
   await preferences.loadPreferences();
-  const workplaces = await database.collections.get<Workplace>('workplaces').query().fetch();
+  const workplaces = await workplaceRepository.findAll();
   const activeId = preferences.device.activeWorkplaceId;
   const fallbackId = activeId ?? workplaces[0]?.id;
   const ids: readonly WorkplaceId[] =

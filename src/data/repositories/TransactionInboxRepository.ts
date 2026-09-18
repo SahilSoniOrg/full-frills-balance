@@ -3,7 +3,8 @@ import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
-import { Model } from '@nozbe/watermelondb';
+import { Model, Q } from '@nozbe/watermelondb';
+import { Observable } from 'rxjs';
 
 export interface TransactionInboxRecordWriteData {
   workplaceId: WorkplaceId;
@@ -49,6 +50,106 @@ export class TransactionInboxRepository {
     } catch {
       return null;
     }
+  }
+
+  async findByDeviceSourceIds(
+    workplaceId: WorkplaceId,
+    deviceSourceIds: string[],
+  ): Promise<TransactionInboxRecord[]> {
+    if (deviceSourceIds.length === 0) return [];
+    return this.inbox
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('channel', 'sms'),
+        Q.where('device_source_id', Q.oneOf(deviceSourceIds)),
+      )
+      .fetch();
+  }
+
+  async findAllByLinkedJournalId(
+    workplaceId: WorkplaceId,
+    journalId: JournalId,
+  ): Promise<TransactionInboxRecord[]> {
+    return this.inbox
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('linked_journal_id', journalId),
+        Q.where('channel', 'sms'),
+        Q.sortBy('input_date', Q.asc),
+      )
+      .fetch();
+  }
+
+  observeInbox(
+    workplaceId: WorkplaceId,
+    limit: number,
+    statuses?: InboxProcessingStatus[],
+  ): Observable<TransactionInboxRecord[]> {
+    const clauses: Q.Clause[] = [
+      Q.where('workplace_id', workplaceId),
+      Q.where('channel', 'sms'),
+      Q.sortBy('input_date', Q.desc),
+      Q.take(limit),
+    ];
+    if (statuses && statuses.length > 0) {
+      clauses.unshift(Q.where('processing_status', Q.oneOf(statuses)));
+    }
+    return this.inbox
+      .query(...clauses)
+      .observeWithColumns([
+        'processing_status',
+        'parse_status',
+        'parsed_amount',
+        'parsed_currency_code',
+        'parsed_merchant',
+        'linked_journal_id',
+        'duplicate_journal_id',
+        'duplicate_confidence',
+        'parse_confidence',
+        'parse_reason',
+        'processed_at',
+        'input_date',
+      ]);
+  }
+
+  observePendingCount(workplaceId: WorkplaceId): Observable<number> {
+    return this.inbox
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('channel', 'sms'),
+        Q.where('processing_status', InboxProcessingStatus.PENDING),
+      )
+      .observeCount();
+  }
+
+  async findRecentSms(workplaceId: WorkplaceId, limit: number): Promise<TransactionInboxRecord[]> {
+    return this.inbox
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('channel', 'sms'),
+        Q.sortBy('input_date', Q.desc),
+        Q.take(limit),
+      )
+      .fetch();
+  }
+
+  async findRecentLinkedProcessed(
+    workplaceId: WorkplaceId,
+    limit: number,
+  ): Promise<TransactionInboxRecord[]> {
+    return this.inbox
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('channel', 'sms'),
+        Q.where('linked_journal_id', Q.notEq(null)),
+        Q.where(
+          'processing_status',
+          Q.oneOf([InboxProcessingStatus.IMPORTED, InboxProcessingStatus.AUTO_POSTED]),
+        ),
+        Q.sortBy('input_date', Q.desc),
+        Q.take(limit),
+      )
+      .fetch();
   }
 
   prepareLink(

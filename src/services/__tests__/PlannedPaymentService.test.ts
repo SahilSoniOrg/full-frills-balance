@@ -3,6 +3,7 @@ import { JournalStatus, PlannedPaymentInterval, PlannedPaymentStatus } from '@/s
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { ledgerLifecycleService } from '@/src/services/ledger/ledgerLifecycleService';
 import { deletePlannedPayment } from '@/src/services/planned-payment/plannedPaymentCommands';
@@ -29,18 +30,13 @@ jest.mock('@/src/data/repositories/transaction', () => ({
 
   transactionQueryRepository: {
     findByJournal: jest.fn().mockResolvedValue([]),
+    findByJournals: jest.fn().mockResolvedValue([]),
   },
 }));
 jest.mock('@/src/data/database/Database', () => ({
   database: {
     write: jest.fn().mockImplementation(async (fn: any) => fn()),
     batch: jest.fn().mockResolvedValue(undefined),
-    collections: {
-      get: jest.fn().mockReturnValue({
-        query: jest.fn().mockReturnThis(),
-        fetch: jest.fn(),
-      }),
-    },
   },
 }));
 
@@ -518,10 +514,7 @@ describe('planned payment modules', () => {
       (journalPlannedQueries.findUnpostedByPlannedPayment as jest.Mock).mockResolvedValue([
         journal,
       ]);
-      (database.collections.get as jest.Mock).mockReturnValue({
-        query: jest.fn().mockReturnThis(),
-        fetch: jest.fn().mockResolvedValue([transaction]),
-      });
+      (transactionQueryRepository.findByJournals as jest.Mock).mockResolvedValue([transaction]);
       (journalPlannedQueries.prepareSoftDeleteUpdates as jest.Mock).mockReturnValue([
         journalOp,
         transactionOp,

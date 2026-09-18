@@ -1,15 +1,9 @@
 import { AppConfig } from '@/src/constants';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
+import { getOpeningBalancesAccountInput } from '@/src/data/repositories/account/accountSystemAccountInputs';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
-import { getOpeningBalancesAccountInput } from './accountSystemAccountInputs';
-
-export {
-  getBalanceCorrectionAccountInput,
-  getOpeningBalancesAccountInput,
-} from './accountSystemAccountInputs';
-
 export function isSystemAccount(account: { name: string }): boolean {
   const { openingBalances, balanceCorrections } = AppConfig.systemAccounts;
   const lower = account.name.trim().toLowerCase();

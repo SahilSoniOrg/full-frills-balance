@@ -94,6 +94,6 @@ export async function applyAccountArchiveChanges(
   ]);
 
   trackArchiveAnalytics(archiveTargets, unarchiveTargets);
-  invalidateAccountArchiveCaches();
+  invalidateAccountArchiveCaches(workplaceId);
   return true;
 }

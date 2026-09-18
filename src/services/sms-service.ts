@@ -1,6 +1,5 @@
 import { SmsMessage } from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
-import { database } from '@/src/data/database/Database';
 import { toPlainSmsRule } from '@/src/data/models/TransactionAutoPostRule';
 import TransactionInboxRecord, {
   toPlainInboxRecord,
@@ -16,11 +15,13 @@ import {
   SmsRuleSuggestion,
 } from '@/src/services/sms/SmsRuleEngine';
 import { smsSyncPipeline } from '@/src/services/sms/pipeline';
-import { Q } from '@nozbe/watermelondb';
 import { map, Observable } from 'rxjs';
 
+export type SmsInboxFilterStatus =
+  'pending' | 'processed' | 'auto_posted' | 'duplicates' | 'failed';
+
 export interface SmsInboxFilterOptions {
-  status?: 'pending' | 'processed' | 'auto_posted' | 'duplicates' | 'failed';
+  status?: SmsInboxFilterStatus;
 }
 
 export interface SmsSyncResult {
@@ -33,10 +34,6 @@ export interface SmsSyncResult {
  * SmsSyncPipeline / SmsParser / SmsRuleEngine — import those directly.
  */
 class SmsService {
-  private get inbox() {
-    return database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
-  }
-
   async scanRecentSmsPage(
     workplaceId: WorkplaceId,
     pageSize: number = AppConfig.pagination.smsImportScanLimit,
@@ -60,58 +57,20 @@ class SmsService {
   }
 
   observeInbox(workplaceId: WorkplaceId, limit: number, filter?: SmsInboxFilterOptions) {
-    const clauses: Q.Clause[] = [
-      Q.where('workplace_id', workplaceId),
-      Q.where('channel', 'sms'),
-      Q.sortBy('input_date', Q.desc),
-      Q.take(limit),
-    ];
-    const statuses = this.getProcessingStatusesForFilter(filter?.status);
-    if (statuses.length > 0) {
-      clauses.unshift(Q.where('processing_status', Q.oneOf(statuses)));
-    }
-
-    return this.inbox
-      .query(...clauses)
-      .observeWithColumns([
-        'processing_status',
-        'parse_status',
-        'parsed_amount',
-        'parsed_currency_code',
-        'parsed_merchant',
-        'linked_journal_id',
-        'duplicate_journal_id',
-        'duplicate_confidence',
-        'parse_confidence',
-        'parse_reason',
-        'processed_at',
-        'input_date',
-      ])
+    return transactionInboxRepository
+      .observeInbox(workplaceId, limit, this.getProcessingStatusesForFilter(filter?.status))
       .pipe(map(records => records.map(toPlainInboxRecord)));
   }
 
   observeUnprocessedCount(workplaceId: WorkplaceId): Observable<number> {
-    return this.inbox
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('channel', 'sms'),
-        Q.where('processing_status', InboxProcessingStatus.PENDING),
-      )
-      .observeCount();
+    return transactionInboxRepository.observePendingCount(workplaceId);
   }
 
   async findAllByLinkedJournalId(
     workplaceId: WorkplaceId,
-    journalId: string,
+    journalId: JournalId,
   ): Promise<TransactionInboxRecord[]> {
-    return this.inbox
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('linked_journal_id', journalId),
-        Q.where('channel', 'sms'),
-        Q.sortBy('input_date', Q.asc),
-      )
-      .fetch();
+    return transactionInboxRepository.findAllByLinkedJournalId(workplaceId, journalId);
   }
 
   async markInboxRecordStatus(
@@ -174,7 +133,9 @@ class SmsService {
     return rule ? toPlainSmsRule(rule) : null;
   }
 
-  private getProcessingStatusesForFilter(statusFilter?: string): InboxProcessingStatus[] {
+  private getProcessingStatusesForFilter(
+    statusFilter?: SmsInboxFilterStatus,
+  ): InboxProcessingStatus[] {
     switch (statusFilter) {
       case 'pending':
         return [InboxProcessingStatus.PENDING];

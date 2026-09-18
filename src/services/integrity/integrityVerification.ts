@@ -1,14 +1,12 @@
-import { database } from '@/src/data/database/Database';
-import Transaction from '@/src/data/models/Transaction';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { analytics } from '@/src/services/analytics';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { amountsAreEqual } from '@/src/utils/money';
-import { Q } from '@nozbe/watermelondb';
 import { BalanceVerificationResult } from './types';
 
 /**
@@ -16,14 +14,7 @@ import { BalanceVerificationResult } from './types';
  * Fails loudly to prevent old corrupted records from lingering invisibly.
  */
 export async function scanForNullAccountTransactions(workplaceId: WorkplaceId): Promise<void> {
-  const query = database.collections
-    .get<Transaction>('transactions')
-    .query(
-      Q.or(Q.where('account_id', null), Q.where('account_id', '')),
-      Q.where('workplace_id', workplaceId),
-    );
-
-  const nullAccountTxs = await query.fetch();
+  const nullAccountTxs = await transactionQueryRepository.findWithMissingAccountId(workplaceId);
 
   if (nullAccountTxs.length > 0) {
     const sample = nullAccountTxs[0];

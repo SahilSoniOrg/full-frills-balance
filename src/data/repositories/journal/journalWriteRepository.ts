@@ -202,7 +202,7 @@ export class JournalWriteRepository {
       : null;
 
     const start = Date.now();
-    return await database.write(async () => {
+    const updatedJournal = await database.write(async () => {
       const now = new Date();
 
       const deleteUpdates = oldTransactions.map(tx =>
@@ -271,7 +271,6 @@ export class JournalWriteRepository {
       if (extraOpCreator) batchOps.push(extraOpCreator());
 
       await database.batch(batchOps);
-      afterBatch?.();
 
       logger.info(
         `[Trace] JournalWriteRepository.updateJournalWithTransactions: ${Date.now() - start}ms`,
@@ -283,6 +282,8 @@ export class JournalWriteRepository {
 
       return existingJournal;
     });
+    afterBatch?.();
+    return updatedJournal;
   }
 
   async fetchJournalForDeletion(
@@ -429,8 +430,8 @@ export class JournalWriteRepository {
 
     await database.write(async () => {
       await database.batch([...params.reversalOps, reverseOp]);
-      params.afterBatch?.();
     });
+    params.afterBatch?.();
   }
 
   /**

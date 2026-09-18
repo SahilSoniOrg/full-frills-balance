@@ -1,10 +1,10 @@
-import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
-import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
+import { accountQueryRepository } from '@/src/data/repositories/account';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
-import { Q } from '@nozbe/watermelondb';
 
 export interface HistoryResolutionResult {
   sourceAccountId: AccountId;
@@ -19,28 +19,12 @@ export async function resolveFromHistory(
   assetAccounts: Account[],
   categoryAccounts: Account[],
 ): Promise<HistoryResolutionResult | null> {
-  const journals = await database.collections
-    .get<Journal>('journals')
-    .query(
-      Q.where('workplace_id', workplaceId),
-      Q.where('deleted_at', Q.eq(null)),
-      Q.where('description', Q.like(`%${Q.sanitizeLikeString(keyword)}%`)),
-      Q.sortBy('journal_date', Q.desc),
-      Q.take(15),
-    )
-    .fetch();
+  const journals = await journalQueryRepository.findRecentByDescription(workplaceId, keyword, 15);
 
   if (journals.length === 0) return null;
 
   const journalIds = journals.map(j => j.id);
-  const transactions = await database.collections
-    .get<Transaction>('transactions')
-    .query(
-      Q.where('workplace_id', workplaceId),
-      Q.where('journal_id', Q.oneOf(journalIds)),
-      Q.where('deleted_at', Q.eq(null)),
-    )
-    .fetch();
+  const transactions = await transactionQueryRepository.findByJournals(workplaceId, journalIds);
 
   const transactionsByJournal = new Map<string, Transaction[]>();
   transactions.forEach(tx => {
@@ -103,33 +87,17 @@ export async function resolveFromHistory(
 export async function getBayesTrainingData(
   workplaceId: WorkplaceId,
 ): Promise<{ text: string; categoryAccountId: string }[]> {
-  const journals = await database.collections
-    .get<Journal>('journals')
-    .query(
-      Q.where('workplace_id', workplaceId),
-      Q.where('deleted_at', Q.eq(null)),
-      Q.where('status', 'POSTED'),
-      Q.sortBy('journal_date', Q.desc),
-      Q.take(500),
-    )
-    .fetch();
+  const journals = await journalQueryRepository.findRecentPosted(workplaceId, 500);
 
   if (journals.length === 0) return [];
 
   const trainingSamples: { text: string; categoryAccountId: string }[] = [];
   const journalIds = journals.map(j => j.id);
 
-  const transactions = await database.collections
-    .get<Transaction>('transactions')
-    .query(
-      Q.where('workplace_id', workplaceId),
-      Q.where('journal_id', Q.oneOf(journalIds)),
-      Q.where('deleted_at', Q.eq(null)),
-    )
-    .fetch();
+  const transactions = await transactionQueryRepository.findByJournals(workplaceId, journalIds);
 
   const transactionsByJournal = new Map<string, Transaction[]>();
-  const accountIds = new Set<string>();
+  const accountIds = new Set<AccountId>();
   transactions.forEach(tx => {
     const list = transactionsByJournal.get(tx.journalId) || [];
     list.push(tx);
@@ -139,10 +107,7 @@ export async function getBayesTrainingData(
 
   if (accountIds.size === 0) return [];
 
-  const accounts = await database.collections
-    .get<Account>('accounts')
-    .query(Q.where('workplace_id', workplaceId), Q.where('id', Q.oneOf(Array.from(accountIds))))
-    .fetch();
+  const accounts = await accountQueryRepository.findAllByIds(workplaceId, Array.from(accountIds));
   const categoryAccounts = new Set(
     accounts
       .filter(

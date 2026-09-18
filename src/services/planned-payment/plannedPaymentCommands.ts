@@ -1,7 +1,6 @@
-import { database } from '@/src/data/database/Database';
 import type PlannedPayment from '@/src/data/models/PlannedPayment';
-import type Transaction from '@/src/data/models/Transaction';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
@@ -14,7 +13,6 @@ import {
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { requirePlannedPayment } from '@/src/services/planned-payment/plannedPaymentWorkplace';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
-import { Q } from '@nozbe/watermelondb';
 
 export async function createPlannedPayment(
   workplaceId: WorkplaceId,
@@ -71,14 +69,10 @@ export async function deletePlannedPayment(
 
   const transactions =
     unpostedJournals.length > 0
-      ? await database.collections
-          .get<Transaction>('transactions')
-          .query(
-            Q.where('workplace_id', workplaceId),
-            Q.where('journal_id', Q.oneOf(unpostedJournals.map(j => j.id))),
-            Q.where('deleted_at', Q.eq(null)),
-          )
-          .fetch()
+      ? await transactionQueryRepository.findByJournals(
+          workplaceId,
+          unpostedJournals.map(journal => journal.id),
+        )
       : [];
 
   await persistBatch(() => {

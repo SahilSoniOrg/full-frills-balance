@@ -2,6 +2,10 @@ export { accountObserveQueries, AccountObserveQueries } from './AccountObserveQu
 export { accountQueryRepository, AccountQueryRepository } from './AccountQueryRepository';
 export { accountWriteRepository, AccountWriteRepository } from './AccountWriteRepository';
 export { accountMergeOperations } from './AccountMergeOperations';
+export {
+  getBalanceCorrectionAccountInput,
+  getOpeningBalancesAccountInput,
+} from './accountSystemAccountInputs';
 export { accountListMetricsQueries } from './AccountListMetricsQueries';
 export {
   accountTreeTransactionCoordinator,

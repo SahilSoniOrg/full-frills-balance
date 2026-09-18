@@ -8,6 +8,7 @@ import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/services/preferences';
 import { compression } from '@/src/utils/compression';
+import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 
 jest.mock('@/src/data/database/Database', () => ({
   database: {
@@ -20,6 +21,10 @@ jest.mock('@/src/data/database/Database', () => ({
 
 jest.mock('@/src/data/database/DatabaseUtils', () => ({
   supportsRawSql: jest.fn(() => false),
+}));
+
+jest.mock('@/src/data/repositories/WorkplaceRepository', () => ({
+  workplaceRepository: { find: jest.fn() },
 }));
 
 jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
@@ -70,6 +75,7 @@ describe('ExportService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (workplaceRepository.find as jest.Mock).mockResolvedValue(undefined);
   });
 
   describe('exportToJSON', () => {
@@ -435,6 +441,13 @@ describe('ExportService', () => {
         }
         return createCollectionMock([]);
       });
+      (workplaceRepository.find as jest.Mock).mockResolvedValue({
+        id: 'wp-1',
+        name: 'Personal',
+        createdAt: FIXED_DATE,
+        updatedAt: FIXED_DATE,
+        defaultCurrencyCode: 'USD',
+      });
       (preferences.loadPreferences as jest.Mock).mockResolvedValue({});
 
       await exportService.exportToJSON('wp-1' as WorkplaceId);
@@ -451,9 +464,7 @@ describe('ExportService', () => {
     });
 
     it('should handle errors', async () => {
-      mockGet.mockImplementation(() => {
-        throw new Error('DB Fail');
-      });
+      (workplaceRepository.find as jest.Mock).mockRejectedValue(new Error('DB Fail'));
 
       await expect(exportService.exportToJSON('test-workplace' as WorkplaceId)).rejects.toThrow(
         'DB Fail',

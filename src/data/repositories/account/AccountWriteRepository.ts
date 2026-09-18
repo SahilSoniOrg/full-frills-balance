@@ -87,7 +87,7 @@ export class AccountWriteRepository {
       await this.ensureUniqueName(companion.name, companion.workplaceId);
     }
 
-    return this.db.write(async () => {
+    const account = await this.db.write(async () => {
       const payload = params.resolvePayload
         ? params.resolvePayload(await accountQueryRepository.findAll(params.payload.workplaceId))
         : params.payload;
@@ -105,9 +105,10 @@ export class AccountWriteRepository {
       if (followUp.length > 0) {
         await this.db.batch(...followUp);
       }
-      params.afterBatch?.();
       return account;
     });
+    params.afterBatch?.();
+    return account;
   }
 
   /**

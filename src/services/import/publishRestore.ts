@@ -1,6 +1,5 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { database } from '@/src/data/database/Database';
-import Account from '@/src/data/models/Account';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import type { BatchImportData, CanonicalTransactionInboxRecord } from '@/src/types/importContracts';
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { currencyInitService } from '@/src/services/currency-init-service';
@@ -108,8 +107,7 @@ async function runPostPublicationChecks(
   }
 
   try {
-    const accounts = await database.collections.get<Account>('accounts').query().fetch();
-    const workplaceAccounts = accounts.filter(account => account.workplaceId === workplaceId);
+    const workplaceAccounts = await accountQueryRepository.findAll(workplaceId);
     if (workplaceAccounts.length > 0) {
       await rebuildAllAccountBalancesAfterImport(
         workplaceId,

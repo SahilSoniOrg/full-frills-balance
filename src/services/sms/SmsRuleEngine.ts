@@ -1,5 +1,4 @@
-import { database } from '@/src/data/database/Database';
-import { AccountType, InboxProcessingStatus } from '@/src/types/enums';
+import { AccountType } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 
 import Transaction from '@/src/data/models/Transaction';
@@ -23,7 +22,8 @@ import {
 import { dispositionForRuleAccounts } from '@/src/utils/sms/ruleActionsAccountIds';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { safeParseJSON } from '@/src/utils/serialization';
-import { Q } from '@nozbe/watermelondb';
+import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 
 export interface SmsRuleSuggestion {
   senderMatch: string;
@@ -44,10 +44,6 @@ export interface SmsRulePreviewInput {
 }
 
 export class SmsRuleEngine {
-  private get inbox() {
-    return database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
-  }
-
   isMeaningfulCondition(
     condition: Partial<SmsRuleCondition> | null | undefined,
   ): condition is SmsRuleCondition {
@@ -163,14 +159,7 @@ export class SmsRuleEngine {
         ? { mode: 'regex', senderMatch: inputOrSender, bodyMatch }
         : inputOrSender;
 
-    const items = await this.inbox
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('channel', 'sms'),
-        Q.sortBy('input_date', Q.desc),
-        Q.take(50),
-      )
-      .fetch();
+    const items = await transactionInboxRepository.findRecentSms(workplaceId, 50);
     return items.filter(item => this.matchesPreviewRule(item, previewInput)).slice(0, 5);
   }
 
@@ -206,19 +195,7 @@ export class SmsRuleEngine {
 
   async getRuleSuggestions(workplaceId: WorkplaceId): Promise<SmsRuleSuggestion[]> {
     const existingRules = await transactionAutoPostRuleRepository.findAllByWorkplace(workplaceId);
-    const records = await this.inbox
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('channel', 'sms'),
-        Q.where('linked_journal_id', Q.notEq(null)),
-        Q.where(
-          'processing_status',
-          Q.oneOf([InboxProcessingStatus.IMPORTED, InboxProcessingStatus.AUTO_POSTED]),
-        ),
-        Q.sortBy('input_date', Q.desc),
-        Q.take(200),
-      )
-      .fetch();
+    const records = await transactionInboxRepository.findRecentLinkedProcessed(workplaceId, 200);
 
     const grouped = new Map<
       string,
@@ -288,14 +265,7 @@ export class SmsRuleEngine {
     const journalTransactions = new Map<JournalId, Transaction[]>();
 
     for (const journal of journals) {
-      const transactions = await database.collections
-        .get<Transaction>('transactions')
-        .query(
-          Q.where('workplace_id', workplaceId),
-          Q.where('journal_id', journal.id),
-          Q.where('deleted_at', Q.eq(null)),
-        )
-        .fetch();
+      const transactions = await transactionQueryRepository.findByJournal(workplaceId, journal.id);
       journalTransactions.set(journal.id, transactions);
       transactions.forEach((tx: Transaction) => accountIds.add(tx.accountId));
     }

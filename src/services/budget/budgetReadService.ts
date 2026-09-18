@@ -1,14 +1,12 @@
-import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/types/enums';
 import { BudgetId, WorkplaceId } from '@/src/types/ids';
 
 import { toPlainBudget } from '@/src/data/models/Budget';
 import { toPlainBudgetScope } from '@/src/data/models/BudgetScope';
-import Transaction from '@/src/data/models/Transaction';
 import { accountObserveQueries } from '@/src/data/repositories/account';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
-import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
 import { combineLatest, Observable, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
@@ -97,24 +95,14 @@ export class BudgetReadService {
               });
             }
 
-            const clauses = [
-              Q.experimentalJoinTables(['journals']),
-              Q.where('workplace_id', workplaceId),
-              Q.where('account_id', Q.oneOf(Array.from(leafExpenseIds))),
-              Q.where('transaction_date', Q.gte(startOfMonth)),
-              Q.where('transaction_date', Q.lte(endOfMonth)),
-              Q.where('deleted_at', Q.eq(null)),
-              Q.on('journals', [
-                Q.where('workplace_id', workplaceId),
-                Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-                Q.where('deleted_at', Q.eq(null)),
-              ]),
-            ];
-
-            return database.collections
-              .get<Transaction>('transactions')
-              .query(...clauses)
-              .observeWithColumns(['amount', 'transaction_type', 'currency_code', 'exchange_rate'])
+            return transactionQueryRepository
+              .observeBudgetTransactions(
+                workplaceId,
+                Array.from(leafExpenseIds),
+                startOfMonth,
+                endOfMonth,
+                ACTIVE_JOURNAL_STATUSES,
+              )
               .pipe(
                 switchMap(transactions =>
                   calculateBudgetSpendFromTransactions(

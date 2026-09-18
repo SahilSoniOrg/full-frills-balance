@@ -8,7 +8,7 @@ import { accountWriteRepository } from './account/AccountWriteRepository';
 import {
   getBalanceCorrectionAccountInput,
   getOpeningBalancesAccountInput,
-} from '@/src/services/accounts/accountSystemAccountInputs';
+} from './account/accountSystemAccountInputs';
 
 const WORKPLACE_OBSERVE_COLUMNS = ['name', 'icon', 'default_currency_code', 'updated_at'] as const;
 

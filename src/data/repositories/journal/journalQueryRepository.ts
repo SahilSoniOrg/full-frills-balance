@@ -47,6 +47,34 @@ export class JournalQueryRepository {
       .query(Q.where('id', Q.oneOf(ids)), Q.where('workplace_id', workplaceId))
       .fetch();
   }
+
+  async findRecentByDescription(
+    workplaceId: WorkplaceId,
+    keyword: string,
+    limit: number,
+  ): Promise<Journal[]> {
+    return this.journals
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.where('description', Q.like(`%${Q.sanitizeLikeString(keyword)}%`)),
+        Q.sortBy('journal_date', Q.desc),
+        Q.take(limit),
+      )
+      .fetch();
+  }
+
+  async findRecentPosted(workplaceId: WorkplaceId, limit: number): Promise<Journal[]> {
+    return this.journals
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.where('status', 'POSTED'),
+        Q.sortBy('journal_date', Q.desc),
+        Q.take(limit),
+      )
+      .fetch();
+  }
 }
 
 export const journalQueryRepository = new JournalQueryRepository();

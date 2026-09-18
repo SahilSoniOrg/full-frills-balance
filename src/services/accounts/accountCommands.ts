@@ -3,6 +3,7 @@ import { AuditAction, AccountSubtype, AccountType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { SerializedAccountMetadataPayload } from '@/src/types/plainDtos';
 import { accountWriteRepository } from '@/src/data/repositories/account';
+import { getOpeningBalancesAccountInput } from '@/src/data/repositories/account/accountSystemAccountInputs';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
@@ -15,10 +16,7 @@ import {
   resolveAccountSubtype,
   shouldPostInitialBalance,
 } from '@/src/services/accounts/accountRules';
-import {
-  findAccountByName,
-  getOpeningBalancesAccountInput,
-} from '@/src/services/accounts/accountSystemAccounts';
+import { findAccountByName } from '@/src/services/accounts/accountSystemAccounts';
 import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { workplaceService } from '@/src/services/WorkplaceService';

@@ -1,5 +1,3 @@
-import { database } from '@/src/data/database/Database';
-import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { smsJournalQueries } from '@/src/data/repositories/journal/journalSmsModule';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
@@ -16,7 +14,7 @@ import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
 import { logger } from '@/src/utils/logger';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
-import { Model, Q } from '@nozbe/watermelondb';
+import { Model } from '@nozbe/watermelondb';
 import { analyzeAutoPost } from './smsAutoPostAnalyzer';
 import { findManyDuplicateCandidates } from './smsDuplicateMatcher';
 import { computeSmsFingerprint, resolveProcessingStatus } from './smsFingerprint';
@@ -25,10 +23,6 @@ import { SmsAnalysisResult } from './types';
 
 export class SmsSyncPipeline {
   private readonly workplaceScans = new Map<WorkplaceId, Promise<void>>();
-
-  private get inbox() {
-    return database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
-  }
 
   async scanInbox(workplaceId: WorkplaceId, limit: number, signal?: AbortSignal): Promise<number> {
     if (signal?.aborted) return 0;
@@ -72,13 +66,10 @@ export class SmsSyncPipeline {
     ).sort((a, b) => smsRuleEngine.getRulePriority(b) - smsRuleEngine.getRulePriority(a));
 
     const processedIds = new Set<string>();
-    const existing = await this.inbox
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('channel', 'sms'),
-        Q.where('device_source_id', Q.oneOf(messages.map(message => message.id))),
-      )
-      .fetch();
+    const existing = await transactionInboxRepository.findByDeviceSourceIds(
+      workplaceId,
+      messages.map(message => message.id),
+    );
     const existingMap = new Map(existing.map(record => [record.deviceSourceId, record]));
 
     const parsedMessages = await Promise.all(
@@ -190,13 +181,7 @@ export class SmsSyncPipeline {
       const messageIds = analysisResults.map(result => result.message.id);
       const fingerprints = analysisResults.map(result => result.fingerprint);
       const [latestRecords, latestJournalsById, latestJournalsByFingerprint] = await Promise.all([
-        this.inbox
-          .query(
-            Q.where('workplace_id', workplaceId),
-            Q.where('channel', 'sms'),
-            Q.where('device_source_id', Q.oneOf(messageIds)),
-          )
-          .fetch(),
+        transactionInboxRepository.findByDeviceSourceIds(workplaceId, messageIds),
         smsJournalQueries.findJournalsByOriginalSmsIds(messageIds, workplaceId),
         smsJournalQueries.findJournalsBySmsFingerprints(fingerprints, workplaceId),
       ]);

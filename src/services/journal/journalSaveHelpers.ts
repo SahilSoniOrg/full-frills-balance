@@ -1,6 +1,5 @@
-import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
+import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
-import { database } from '@/src/data/database/Database';
 import { checkJournal } from '@/src/utils/accounting/BalanceEffects';
 import { validateDistinctAccounts } from '@/src/services/accounting/JournalValidation';
 import { workplaceService } from '@/src/services/WorkplaceService';
@@ -127,12 +126,8 @@ async function resolveSmsMetadataJson(
 ): Promise<string | undefined> {
   if (!smsRecordId) return undefined;
   try {
-    const inboxRecord = await database.collections
-      .get<TransactionInboxRecord>('transaction_inbox_records')
-      .find(smsRecordId);
-    if (inboxRecord.workplaceId !== workplaceId) {
-      return undefined;
-    }
+    const inboxRecord = await transactionInboxRepository.find(workplaceId, smsRecordId);
+    if (!inboxRecord) return undefined;
     return JSON.stringify({
       smsFingerprint: inboxRecord.inputFingerprint,
       parsedAmount: inboxRecord.parsedAmount ?? null,
