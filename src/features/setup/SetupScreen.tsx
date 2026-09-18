@@ -1,7 +1,6 @@
 import { AppNavigation } from '@/src/utils/navigation';
 import { confirm, toast } from '@/src/utils/alerts';
 import { AppButton, AppText, LoadingView } from '@/src/components/core';
-import { FontId, FontIds, ThemeId, ThemeIds } from '@/src/constants';
 import { ThemeOverride } from '@/src/contexts/UIContext';
 import { Box, Page, Stack } from '@/src/design-system';
 import {
@@ -18,11 +17,6 @@ import { RestoreSummarySlice } from './RestoreSummarySlice';
 import { startFirstRunRestoreFromDeviceName } from './SetupCoordinator';
 import type { SetupSliceOutputById } from './SetupCoordinator';
 import { discardUnreadableSetupDraft, loadSetupDraft, saveSetupDraft } from './SetupDraftStore';
-import {
-  getRestoreAppearancePrefill,
-  getRestoreAutoOutput,
-  getRestoreWorkplacePrefill,
-} from './restoreAutoOutput';
 import { getSetupRecipe, recipeContainsSlice } from './setupRecipes';
 import { SetupSummarySlice } from './SetupSummarySlice';
 import {
@@ -42,7 +36,7 @@ import {
 } from './setupTypes';
 import { WorkplaceSetupSlice } from './WorkplaceSetupSlice';
 import { WorkplaceSetupLayout } from '@/src/features/setup/components/workplace-setup/WorkplaceSetupLayout';
-import { resolveWorkplaceStartCheckpoint, visibleSetupProgress } from './visibleSetupProgress';
+import { useSetupJourneyViewState } from './hooks/useSetupJourneyViewState';
 
 function restoreSwitchForJourney(
   journeyId: SetupJourneyId,
@@ -184,19 +178,26 @@ function SetupJourneyScreen({
     }
   };
 
-  const [workplaceTargetStep, setWorkplaceTargetStep] = useState<WorkplaceCheckpoint>();
-  const [workplaceStep, setWorkplaceStep] = useState<WorkplaceCheckpoint>(() =>
-    resolveWorkplaceStartCheckpoint({
-      identityMode: recipe.workplaceIdentity,
-      books: isRestoreJourneyId(journeyId) ? 'imported' : 'starters',
-      initial:
-        coordinator.getDraft().workplace ?? getRestoreWorkplacePrefill(coordinator.getDraft()),
-    }),
-  );
-  const [appearancePreview, setAppearancePreview] = useState<{
-    themeId: ThemeId;
-    fontId: FontId;
-  }>();
+  const {
+    workplaceTargetStep,
+    setWorkplaceTargetStep,
+    workplaceStep,
+    setWorkplaceStep,
+    setAppearancePreview,
+    displayName,
+    workplaceInitial,
+    workplaceCheckpoint,
+    displayProgress,
+    appearanceInitial,
+    appearanceOverride,
+  } = useSetupJourneyViewState({
+    journeyId,
+    candidateName,
+    recipe,
+    draft,
+    action,
+    slice,
+  });
 
   const goTo = (target: SetupSliceId, targetStep?: WorkplaceCheckpoint) => {
     setWorkplaceTargetStep(targetStep);
@@ -223,33 +224,6 @@ function SetupJourneyScreen({
     if (recipe.atStart === 'back') AppNavigation.back();
   };
 
-  const displayName =
-    ('device' in draft ? draft.device?.displayName.value : undefined) ||
-    (draft.kind === 'restore' ? draft.restore.deviceCandidate?.value : undefined) ||
-    candidateName;
-  const workplaceInitial = draft.workplace ?? getRestoreWorkplacePrefill(draft);
-  const workplaceCheckpoint =
-    slice === 'workplace' ? (workplaceTargetStep ?? workplaceStep) : undefined;
-  const displayProgress =
-    action.kind === 'present'
-      ? visibleSetupProgress({
-          recipe,
-          draft,
-          definitions: { getAutoOutput: getRestoreAutoOutput },
-          currentSlice: action.sliceId,
-          workplaceCheckpoint,
-        })
-      : { current: 1, total: 1, completed: 0 };
-  const appearanceInitial =
-    ('appearance' in draft ? draft.appearance : undefined) ?? getRestoreAppearancePrefill(draft);
-  const appearanceOverride =
-    appearancePreview ??
-    ((slice === 'appearance' || slice === 'summary') && recipeContainsSlice(recipe, 'appearance')
-      ? {
-          themeId: appearanceInitial?.themeId.value ?? ThemeIds.DEEP_SPACE,
-          fontId: appearanceInitial?.fontId.value ?? FontIds.DEEP_SPACE,
-        }
-      : undefined);
   const renderSlice = () => {
     if (!slice || resolving) return null;
     switch (slice) {

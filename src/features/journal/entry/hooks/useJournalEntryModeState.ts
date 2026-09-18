@@ -7,7 +7,7 @@ import { getJournalEntryModeSlideDirection } from '@/src/features/journal/entry/
 import { isSimpleModeDisabledByLines } from '@/src/services/journal/journalEditorHelpers';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { showErrorAlert } from '@/src/utils/alerts';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 type JournalEditorModeState = Pick<
   ReturnType<typeof useJournalEditor>,
@@ -24,22 +24,13 @@ export function useJournalEntryModeState(
   const [modeTransitionDir, setModeTransitionDir] = useState<1 | -1>(1);
   const { isGuidedMode: editorIsGuidedMode, setIsGuidedMode, lines } = editor;
 
-  useEffect(() => {
-    setIsGuidedMode(activeMode === 'basic');
-  }, [activeMode, setIsGuidedMode]);
-
-  const wasEditorGuidedRef = useRef(editorIsGuidedMode);
-  useEffect(() => {
-    const wasGuided = wasEditorGuidedRef.current;
-    wasEditorGuidedRef.current = editorIsGuidedMode;
-    if (wasGuided && !editorIsGuidedMode) {
-      setActiveMode(current => {
-        if (current !== 'basic') return current;
-        return 'expert';
-      });
-      setModeTransitionDir(1);
-    }
-  }, [editorIsGuidedMode]);
+  // The editor owns guided/expert state. The shell owns only route-level modes
+  // (allocation and batch), so a forced expert transition cannot create a
+  // second state machine here.
+  const effectiveMode = useMemo(
+    () => (activeMode === 'basic' && !editorIsGuidedMode ? 'expert' : activeMode),
+    [activeMode, editorIsGuidedMode],
+  );
 
   const onToggleMode = useCallback(
     (mode: JournalEntryScreenMode) => {
@@ -53,14 +44,17 @@ export function useJournalEntryModeState(
       }
 
       // Moti owns the panel swap; skip LayoutAnimation so we don't stack ~easeInEaseOut + Moti.
-      setModeTransitionDir(getJournalEntryModeSlideDirection(activeMode, mode));
+      setModeTransitionDir(getJournalEntryModeSlideDirection(effectiveMode, mode));
       setActiveMode(mode);
+      if (mode === 'basic' || mode === 'expert') {
+        setIsGuidedMode(mode === 'basic');
+      }
     },
-    [activeMode, lines],
+    [effectiveMode, lines, setIsGuidedMode],
   );
 
   return {
-    activeMode,
+    activeMode: effectiveMode,
     onToggleMode,
     modeTransitionDir,
     isSimpleModeDisabled: isSimpleModeDisabledByLines(lines),

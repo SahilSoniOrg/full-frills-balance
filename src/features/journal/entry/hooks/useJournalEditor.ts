@@ -3,7 +3,6 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { TransactionType } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { AccountRole, TabType } from '@/src/types/domainJournal';
-import type { PostingPlan } from '@/src/types/domainTransaction';
 
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import {
@@ -13,13 +12,11 @@ import {
 } from '@/src/features/journal/entry/hooks/useJournalEditorLoader';
 import { deriveJournalEditorBalanceState } from '@/src/features/journal/entry/journalEditorBalancePolicy';
 import { normalizeJournalLinesForGuidedMode } from '@/src/services/journal/journalEditorHelpers';
-import { showErrorAlert } from '@/src/utils/alerts';
-import { triggerSaveOutcomeHaptic } from '@/src/utils/haptics';
-import { logger } from '@/src/utils/logger';
 import dayjs from 'dayjs';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useJournalEditorExchangeRates } from './useJournalEditorExchangeRates';
 import { useJournalEditorLineState } from './useJournalEditorLineState';
+import { useJournalEditorSubmission } from './useJournalEditorSubmission';
 
 export interface UseJournalEditorOptions {
   journalId?: JournalId;
@@ -140,8 +137,6 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   const [journalTime, setJournalTime] = useState(() =>
     initialDate ? dayjs(initialDate).format('HH:mm') : dayjs().format('HH:mm'),
   );
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const submissionInFlightRef = useRef(false);
   const hydrateEditor = useCallback(
     (snapshot: JournalEditorHydration) => {
       setDescription(snapshot.description);
@@ -169,6 +164,17 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   });
   const isLoading = loadState === 'loading';
 
+  const { isSubmitting, submitPlan } = useJournalEditorSubmission({
+    postPostingPlan,
+    journalId: isEdit ? journalId : undefined,
+    smsId,
+    smsRecordId,
+    smsSender,
+    rawSmsBody,
+    onAfterSave,
+    onSuccess,
+  });
+
   const { fetchRatesForLines } = useJournalEditorExchangeRates({
     lines,
     workplaceCurrency,
@@ -177,69 +183,6 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     isSubmitting,
     updateLines,
   });
-
-  const submitPlan = useCallback(
-    async (plan: PostingPlan, mode: 'simple' | 'advanced' | 'import') => {
-      if (submissionInFlightRef.current) {
-        return { success: false, error: 'Submission already in progress' } as const;
-      }
-      submissionInFlightRef.current = true;
-      setIsSubmitting(true);
-      try {
-        const result = await postPostingPlan({
-          plan,
-          journalId: isEdit ? journalId : undefined,
-          mode,
-          smsId,
-          smsRecordId,
-          smsSender,
-          rawSmsBody,
-        });
-
-        if (!result.success) {
-          triggerSaveOutcomeHaptic(false);
-          showErrorAlert(result.error || 'Unknown error');
-          return result;
-        }
-
-        // The journal is already durable at this point. Post-commit integrations
-        // (for example SMS inbox bookkeeping) must not delay navigation or turn a
-        // successful save into a reported failure if they are slow or unavailable.
-        void Promise.resolve()
-          .then(() =>
-            onAfterSave?.({
-              journalId: result.journalId,
-              action: result.action,
-            }),
-          )
-          .catch(error => {
-            logger.error('Post-commit journal effect failed:', error);
-          });
-
-        triggerSaveOutcomeHaptic(true);
-        onSuccess?.();
-        return result;
-      } catch {
-        triggerSaveOutcomeHaptic(false);
-        showErrorAlert('Unexpected error occurred');
-        return { success: false, error: 'Unexpected error occurred' };
-      } finally {
-        submissionInFlightRef.current = false;
-        setIsSubmitting(false);
-      }
-    },
-    [
-      isEdit,
-      journalId,
-      smsId,
-      smsRecordId,
-      smsSender,
-      rawSmsBody,
-      onAfterSave,
-      onSuccess,
-      postPostingPlan,
-    ],
-  );
 
   const getLineIdByRole = useCallback(
     (role: AccountRole): string | undefined => {
