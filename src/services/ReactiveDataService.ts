@@ -131,7 +131,7 @@ class ReactiveDataService {
     // Cap to 1 entry: currency changes are rare; evict any stale graph immediately
     // so we don't accumulate dangling combineLatest chains over the bridge.
     if (
-      !reactiveCacheCoordinator.has(REACTIVE_CACHE_NAMESPACES.dashboard, cacheKey) &&
+      !reactiveCacheCoordinator.has(REACTIVE_CACHE_NAMESPACES.dashboard, workplaceId, cacheKey) &&
       reactiveCacheCoordinator.hasNamespace(REACTIVE_CACHE_NAMESPACES.dashboard)
     ) {
       this.invalidateAccountCaches();

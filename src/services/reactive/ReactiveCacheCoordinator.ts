@@ -24,6 +24,14 @@ type ReactiveCacheEntry = {
   observable: Observable<unknown>;
 };
 
+function cacheKey(
+  namespace: ReactiveCacheNamespace,
+  workplaceId: WorkplaceId,
+  key: string,
+): string {
+  return `${namespace}:${workplaceId}:${key}`;
+}
+
 /**
  * Single owner for application-level reactive cache entries.
  *
@@ -41,13 +49,15 @@ class ReactiveCacheCoordinator {
     createSource: () => Observable<T>;
     decorate?: (observable: Observable<T>) => Observable<T>;
   }): Observable<T> {
-    const cacheKey = `${options.namespace}:${options.key}`;
-    const existing = this.entries.get(cacheKey);
-    if (existing) return existing.observable as Observable<T>;
+    const entryKey = cacheKey(options.namespace, options.workplaceId, options.key);
+    const existing = this.entries.get(entryKey);
+    if (existing) {
+      return existing.observable as Observable<T>;
+    }
 
     const replay = createDisposableReplay(options.createSource());
     const observable = options.decorate ? options.decorate(replay.observable) : replay.observable;
-    this.entries.set(cacheKey, {
+    this.entries.set(entryKey, {
       workplaceId: options.workplaceId,
       dispose: replay.dispose,
       observable,
@@ -62,8 +72,8 @@ class ReactiveCacheCoordinator {
     return false;
   }
 
-  has(namespace: ReactiveCacheNamespace, key: string): boolean {
-    return this.entries.has(`${namespace}:${key}`);
+  has(namespace: ReactiveCacheNamespace, workplaceId: WorkplaceId, key: string): boolean {
+    return this.entries.has(cacheKey(namespace, workplaceId, key));
   }
 
   clearNamespace(namespace: ReactiveCacheNamespace, workplaceId?: WorkplaceId): void {
@@ -92,15 +102,21 @@ class ReactiveCacheCoordinator {
   }
 
   /** Bust all streams whose inputs change when an account is archived/restored. */
-  invalidateAccountArchiveCaches(): void {
-    this.clearNamespaces([
-      REACTIVE_CACHE_NAMESPACES.dashboard,
-      REACTIVE_CACHE_NAMESPACES.optimizedAccountList,
-      REACTIVE_CACHE_NAMESPACES.accountDashboard,
-      REACTIVE_CACHE_NAMESPACES.aggregatedAccountBalances,
-      REACTIVE_CACHE_NAMESPACES.workplaceAccounts,
-      REACTIVE_CACHE_NAMESPACES.workplaceJournalMeta,
-    ]);
+  invalidateAccountArchiveCaches(workplaceId: WorkplaceId): void {
+    this.clearNamespaces(
+      [
+        REACTIVE_CACHE_NAMESPACES.dashboard,
+        REACTIVE_CACHE_NAMESPACES.optimizedAccountList,
+        REACTIVE_CACHE_NAMESPACES.accountDashboard,
+        REACTIVE_CACHE_NAMESPACES.aggregatedAccountBalances,
+        REACTIVE_CACHE_NAMESPACES.workplaceAccounts,
+        REACTIVE_CACHE_NAMESPACES.workplaceJournalMeta,
+        REACTIVE_CACHE_NAMESPACES.workplaceActiveCount,
+        REACTIVE_CACHE_NAMESPACES.safeToSpend,
+        REACTIVE_CACHE_NAMESPACES.insights,
+      ],
+      workplaceId,
+    );
   }
 }
 

@@ -69,7 +69,11 @@ export class SafeToSpendReadModel {
   private watchWorkplace(workplaceId: WorkplaceId): Observable<SafeToSpendDashboard> {
     // Cap to one active workplace so abandoned workplace pipelines are not sticky.
     if (
-      !reactiveCacheCoordinator.has(REACTIVE_CACHE_NAMESPACES.safeToSpend, workplaceId) &&
+      !reactiveCacheCoordinator.has(
+        REACTIVE_CACHE_NAMESPACES.safeToSpend,
+        workplaceId,
+        workplaceId,
+      ) &&
       reactiveCacheCoordinator.hasNamespace(REACTIVE_CACHE_NAMESPACES.safeToSpend)
     ) {
       this.clearCache();

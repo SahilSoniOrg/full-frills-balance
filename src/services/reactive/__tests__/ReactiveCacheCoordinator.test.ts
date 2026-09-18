@@ -65,7 +65,42 @@ describe('ReactiveCacheCoordinator', () => {
     firstSubscription.unsubscribe();
   });
 
-  it('invalidates account-dependent streams without evicting active-count streams', () => {
+  it('keeps the same key isolated across workplace scopes', () => {
+    const firstTeardown = jest.fn();
+    const secondTeardown = jest.fn();
+    const first = reactiveCacheCoordinator.getOrCreate({
+      namespace: REACTIVE_CACHE_NAMESPACES.dashboard,
+      key: 'shared-key',
+      workplaceId: 'workplace-one' as WorkplaceId,
+      createSource: () => sourceWithTeardown(firstTeardown),
+    });
+    const firstSubscription = first.subscribe();
+
+    const second = reactiveCacheCoordinator.getOrCreate({
+      namespace: REACTIVE_CACHE_NAMESPACES.dashboard,
+      key: 'shared-key',
+      workplaceId: 'workplace-two' as WorkplaceId,
+      createSource: () => sourceWithTeardown(secondTeardown),
+    });
+    const secondSubscription = second.subscribe();
+
+    expect(second).not.toBe(first);
+    expect(firstTeardown).not.toHaveBeenCalled();
+    expect(secondTeardown).not.toHaveBeenCalled();
+
+    reactiveCacheCoordinator.clearNamespace(
+      REACTIVE_CACHE_NAMESPACES.dashboard,
+      'workplace-one' as WorkplaceId,
+    );
+
+    expect(firstTeardown).toHaveBeenCalledTimes(1);
+    expect(secondTeardown).not.toHaveBeenCalled();
+
+    firstSubscription.unsubscribe();
+    secondSubscription.unsubscribe();
+  });
+
+  it('invalidates every account-dependent stream for the affected workplace', () => {
     const workplaceId = 'workplace-one' as WorkplaceId;
     const teardown = jest.fn();
     const createSource = () => sourceWithTeardown(teardown);
@@ -88,14 +123,26 @@ describe('ReactiveCacheCoordinator', () => {
         workplaceId,
         createSource,
       }),
+      reactiveCacheCoordinator.getOrCreate({
+        namespace: REACTIVE_CACHE_NAMESPACES.safeToSpend,
+        key: workplaceId,
+        workplaceId,
+        createSource,
+      }),
+      reactiveCacheCoordinator.getOrCreate({
+        namespace: REACTIVE_CACHE_NAMESPACES.insights,
+        key: `${workplaceId}_false`,
+        workplaceId,
+        createSource,
+      }),
     ].map(observable => observable.subscribe());
 
-    reactiveCacheCoordinator.invalidateAccountArchiveCaches();
+    reactiveCacheCoordinator.invalidateAccountArchiveCaches(workplaceId);
 
-    expect(teardown).toHaveBeenCalledTimes(2);
+    expect(teardown).toHaveBeenCalledTimes(5);
     expect(
       reactiveCacheCoordinator.hasNamespace(REACTIVE_CACHE_NAMESPACES.workplaceActiveCount),
-    ).toBe(true);
+    ).toBe(false);
 
     subscriptions.forEach(subscription => subscription.unsubscribe());
   });
@@ -133,10 +180,18 @@ describe('ReactiveCacheCoordinator', () => {
     expect(departingTeardowns[1]).toHaveBeenCalledTimes(1);
     expect(activeTeardown).not.toHaveBeenCalled();
     expect(
-      reactiveCacheCoordinator.has(REACTIVE_CACHE_NAMESPACES.safeToSpend, departingWorkplace),
+      reactiveCacheCoordinator.has(
+        REACTIVE_CACHE_NAMESPACES.safeToSpend,
+        departingWorkplace,
+        departingWorkplace,
+      ),
     ).toBe(false);
     expect(
-      reactiveCacheCoordinator.has(REACTIVE_CACHE_NAMESPACES.insights, `${activeWorkplace}_false`),
+      reactiveCacheCoordinator.has(
+        REACTIVE_CACHE_NAMESPACES.insights,
+        activeWorkplace,
+        `${activeWorkplace}_false`,
+      ),
     ).toBe(true);
 
     subscriptions.forEach(subscription => subscription.unsubscribe());
