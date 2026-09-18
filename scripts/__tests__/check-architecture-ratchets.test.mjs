@@ -24,6 +24,7 @@ function emptyBaseline() {
       unscoped_raw_query: {},
       presentation_model_import: {},
       direct_database_write: {},
+      service_database_collection_access: {},
       service_model_persistence_access: {},
     },
   };
@@ -36,14 +37,14 @@ test('reports each new violation with an actionable file and line', t => {
     'src/data/repositories/UnsafeQueries.ts':
       'export class UnsafeQueries {\n  async findAllRaw(ids: string[]) { return ids; }\n}\n',
     'src/services/unsafeWrite.ts':
-      "import { database as db } from '@/src/data/database/Database';\nexport const save = () => db.write(async () => {});\n",
+      "import { database as db } from '@/src/data/database/Database';\nexport const save = () => db.write(async () => {});\nexport const read = () => db.collections.get('transactions');\n",
   });
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
 
   const findings = collectArchitectureFindings(root);
   const { failures } = compareWithBaseline(findings, emptyBaseline());
 
-  assert.equal(failures.length, 3);
+  assert.equal(failures.length, 4);
   assert.ok(failures.every(failure => /^.+:\d+: \[.+\]/.test(failure)));
 });
 
@@ -73,7 +74,7 @@ test('ignores tests and approved persistence seams', t => {
     'src/features/accounts/__tests__/view.test.ts':
       "import Account from '@/src/data/models/Account';\nvoid Account;\n",
     'src/data/repositories/Allowed.ts':
-      "import { database } from '@/src/data/database/Database';\nexport const save = () => database.batch([]);\n",
+      "import { database } from '@/src/data/database/Database';\nconst { collections } = database;\nexport const save = () => database.batch([]);\nexport const read = () => collections.get('transactions');\n",
   });
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
 
@@ -119,6 +120,44 @@ test('ratchets service model preparation, update, and private raw access', t => 
       'model._raw private access is outside an approved persistence seam',
     ],
   );
+});
+
+test('rejects direct service database collection access, including aliases and bracket notation', t => {
+  const root = fixture({
+    'src/services/unsafeReads.ts': `
+      import { database as db } from '@/src/data/database/Database';
+      export const one = () => db.collections.get('transactions');
+      export const two = () => db['collections']['get']('transactions');
+      const reassigned = db;
+      export const three = () => reassigned.collections.get('transactions');
+    `,
+    'src/services/import/unsafeReads.ts': `
+      import { database } from '@/src/data/database/Database';
+      export const records = database.collections.get('transactions');
+    `,
+    'src/services/destructuredReads.ts': `
+      import { database } from '@/src/data/database/Database';
+      const { collections } = database;
+      export const records = collections.get('transactions');
+    `,
+    'src/services/namespaceDestructuredReads.ts': `
+      import * as databaseModule from '@/src/data/database/Database';
+      const { database: db } = databaseModule;
+      export const records = db.collections.get('transactions');
+    `,
+    'src/services/falsePositive.ts': `
+      const config = { database: { collections: { get: () => [] } } };
+      export const records = config.database.collections.get('transactions');
+    `,
+  });
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  const findings = collectArchitectureFindings(root).filter(
+    finding => finding.rule === 'service_database_collection_access',
+  );
+
+  assert.equal(findings.length, 6);
+  assert.ok(findings.every(finding => /database\.collections access/.test(finding.message)));
 });
 
 test('preserves import, migration, testing, and repository model seams', t => {

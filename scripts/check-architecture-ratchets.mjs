@@ -4,6 +4,7 @@
  *   - raw repository APIs / static raw SQL that omit workplace scope;
  *   - presentation and feature imports of WatermelonDB models;
  *   - direct database write/batch/action calls outside persistence seams;
+ *   - direct database collection access from service/command code;
  *   - service/command model preparation, update, and private raw access.
  *
  * The baseline is per rule and file. A new occurrence fails with file:line;
@@ -64,6 +65,7 @@ const RULES = [
   'unscoped_raw_query',
   'presentation_model_import',
   'direct_database_write',
+  'service_database_collection_access',
   'service_model_persistence_access',
 ];
 
@@ -202,13 +204,26 @@ function referencesWorkplaceTable(sql) {
   return [...normalized.matchAll(tablePattern)].some(match => WORKPLACE_TABLES.has(match[1]));
 }
 
-function isDatabaseReceiver(node, databaseIdentifiers) {
+function isDatabaseModuleNamespace(node, databaseNamespaceIdentifiers) {
+  return ts.isIdentifier(node) && databaseNamespaceIdentifiers.has(node.text);
+}
+
+function isDatabaseReceiver(node, databaseIdentifiers, databaseNamespaceIdentifiers) {
   if (!node) return false;
   if (ts.isIdentifier(node)) return databaseIdentifiers.has(node.text);
   if (ts.isPropertyAccessExpression(node)) {
-    return (
-      node.name.text === 'database' || isDatabaseReceiver(node.expression, databaseIdentifiers)
-    );
+    return node.name.text === 'database'
+      ? isDatabaseModuleNamespace(node.expression, databaseNamespaceIdentifiers)
+      : isDatabaseReceiver(node.expression, databaseIdentifiers, databaseNamespaceIdentifiers);
+  }
+  if (
+    ts.isElementAccessExpression(node) &&
+    node.argumentExpression &&
+    ts.isStringLiteral(node.argumentExpression)
+  ) {
+    return node.argumentExpression.text === 'database'
+      ? isDatabaseModuleNamespace(node.expression, databaseNamespaceIdentifiers)
+      : isDatabaseReceiver(node.expression, databaseIdentifiers, databaseNamespaceIdentifiers);
   }
   return false;
 }
@@ -238,12 +253,37 @@ function scanFile(root, file) {
   const findings = [];
   const declarations = new Map();
   const databaseIdentifiers = new Set();
+  const databaseNamespaceIdentifiers = new Set();
+  const reportedDatabaseCollectionBindings = new Set();
   const modelTypeNames = new Set();
   const modelValueIdentifiers = new Set();
   const inPresentation = PRESENTATION_ROOTS.some(prefix => file.relativePath.startsWith(prefix));
   const inPersistenceSeam = PERSISTENCE_SEAMS.some(prefix => file.relativePath.startsWith(prefix));
   const inServiceOrCommand =
     isServiceOrCommandSource(file.relativePath) && !isModelAccessSeam(file.relativePath);
+  const inServiceDatabaseAccess = isServiceOrCommandSource(file.relativePath);
+
+  const collectDatabaseImports = node => {
+    if (
+      ts.isImportDeclaration(node) &&
+      ts.isStringLiteral(node.moduleSpecifier) &&
+      /(?:^|\/)data\/database\/Database$/.test(node.moduleSpecifier.text)
+    ) {
+      const bindings = node.importClause?.namedBindings;
+      if (bindings && ts.isNamespaceImport(bindings)) {
+        databaseNamespaceIdentifiers.add(bindings.name.text);
+      }
+      if (bindings && ts.isNamedImports(bindings)) {
+        for (const element of bindings.elements) {
+          if ((element.propertyName ?? element.name).text === 'database') {
+            databaseIdentifiers.add(element.name.text);
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, collectDatabaseImports);
+  };
+  collectDatabaseImports(sourceFile);
 
   const firstPass = node => {
     if (
@@ -257,14 +297,16 @@ function scanFile(root, file) {
       declarations.set(node.name.text, staticText(node.initializer, declarations));
     }
     if (
-      ts.isImportDeclaration(node) &&
-      ts.isStringLiteral(node.moduleSpecifier) &&
-      /(?:^|\/)data\/database\/Database$/.test(node.moduleSpecifier.text)
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer &&
+      (isDatabaseReceiver(node.initializer, databaseIdentifiers, databaseNamespaceIdentifiers) ||
+        isDatabaseModuleNamespace(node.initializer, databaseNamespaceIdentifiers))
     ) {
-      for (const element of node.importClause?.namedBindings?.elements ?? []) {
-        if ((element.propertyName ?? element.name).text === 'database') {
-          databaseIdentifiers.add(element.name.text);
-        }
+      if (isDatabaseModuleNamespace(node.initializer, databaseNamespaceIdentifiers)) {
+        databaseNamespaceIdentifiers.add(node.name.text);
+      } else {
+        databaseIdentifiers.add(node.name.text);
       }
     }
     if (
@@ -294,10 +336,34 @@ function scanFile(root, file) {
       node.initializer
     ) {
       const specifier = dynamicImportSpecifier(node.initializer);
-      if (specifier && /(?:^|\/)data\/database\/Database$/.test(specifier)) {
-        for (const element of node.name.elements) {
-          if ((element.propertyName ?? element.name).getText(sourceFile) === 'database') {
-            databaseIdentifiers.add(element.name.getText(sourceFile));
+      const importsDatabaseModule =
+        specifier && /(?:^|\/)data\/database\/Database$/.test(specifier);
+      const destructuresDatabase = isDatabaseReceiver(
+        node.initializer,
+        databaseIdentifiers,
+        databaseNamespaceIdentifiers,
+      );
+      const destructuresDatabaseModule = isDatabaseModuleNamespace(
+        node.initializer,
+        databaseNamespaceIdentifiers,
+      );
+      for (const element of node.name.elements) {
+        const propertyName = (element.propertyName ?? element.name).getText(sourceFile);
+        const bindingName = element.name.getText(sourceFile);
+        if ((importsDatabaseModule || destructuresDatabaseModule) && propertyName === 'database') {
+          databaseIdentifiers.add(bindingName);
+        }
+        if (inServiceDatabaseAccess && destructuresDatabase && propertyName === 'collections') {
+          if (!reportedDatabaseCollectionBindings.has(element)) {
+            reportedDatabaseCollectionBindings.add(element);
+            addFinding(
+              findings,
+              sourceFile,
+              file,
+              element,
+              'service_database_collection_access',
+              'database.collections access is outside an approved persistence seam',
+            );
           }
         }
       }
@@ -336,6 +402,28 @@ function scanFile(root, file) {
           node,
           'service_model_persistence_access',
           'model.update() is outside an approved persistence seam',
+        );
+      }
+    }
+
+    if (
+      inServiceDatabaseAccess &&
+      (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node))
+    ) {
+      const name = propertyName(node);
+      const receiver = receiverOf(node);
+      if (
+        name === 'collections' &&
+        receiver &&
+        isDatabaseReceiver(receiver, databaseIdentifiers, databaseNamespaceIdentifiers)
+      ) {
+        addFinding(
+          findings,
+          sourceFile,
+          file,
+          node,
+          'service_database_collection_access',
+          'database.collections access is outside an approved persistence seam',
         );
       }
     }
@@ -411,7 +499,7 @@ function scanFile(root, file) {
 
       if (name && DATABASE_WRITE_NAMES.has(name) && !inPersistenceSeam) {
         const receiver = receiverOf(node.expression);
-        if (isDatabaseReceiver(receiver, databaseIdentifiers)) {
+        if (isDatabaseReceiver(receiver, databaseIdentifiers, databaseNamespaceIdentifiers)) {
           addFinding(
             findings,
             sourceFile,
