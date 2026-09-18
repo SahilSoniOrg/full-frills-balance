@@ -13,7 +13,7 @@ import {
 import { AppNavigation } from '@/src/utils/navigation';
 import { toast } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
-import { useMemo, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { OnboardingChrome, ONBOARDING_STAGES } from './chrome';
 import { commitCashClarity } from './commitCashClarity';
 import {
@@ -28,6 +28,8 @@ import {
   defaultWorkplaceName,
 } from './localeDefaults';
 import { projectCashClarityDraft } from './projectCashClarityDraft';
+import { explainDraftTransition } from './draftTransition';
+import { ONBOARDING_STEPS } from './flow';
 import {
   ClarityScene,
   CurrencyScene,
@@ -37,16 +39,6 @@ import {
   ReserveScene,
   WelcomeScene,
 } from './scenes';
-
-const FLOW: readonly OnboardingStep[] = [
-  'welcome',
-  'currency',
-  'now',
-  'next',
-  'protect',
-  'reserve',
-  'clarity',
-];
 
 export function OnboardingScreen() {
   const privacyAcknowledged = useSyncExternalStore(
@@ -62,20 +54,29 @@ export function OnboardingScreen() {
   const [busy, setBusy] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
   const [heard, setHeard] = useState<string | null>(null);
+  const [latestDraftChange, setLatestDraftChange] = useState<string | null>(null);
+  const previousDraftRef = useRef(draft);
   const projection = useMemo(() => projectCashClarityDraft(draft), [draft]);
   const showSafeToSpend =
     step === 'now' || step === 'next' || step === 'protect' || step === 'reserve';
   const spendable = hasSpendableAccount(draft.accounts);
 
+  useEffect(() => {
+    if (previousDraftRef.current === draft) return;
+    const change = explainDraftTransition(previousDraftRef.current, draft);
+    previousDraftRef.current = draft;
+    if (change) setLatestDraftChange(change);
+  }, [draft]);
+
   const go = (next: OnboardingStep) => {
-    const fromIndex = FLOW.indexOf(step);
-    const toIndex = FLOW.indexOf(next);
+    const fromIndex = ONBOARDING_STEPS.indexOf(step);
+    const toIndex = ONBOARDING_STEPS.indexOf(next);
     if (toIndex >= 0 && fromIndex > toIndex) {
       setHistory(current => {
         const cut = current.lastIndexOf(next);
         return cut >= 0
           ? current.slice(0, cut)
-          : current.filter(entry => FLOW.indexOf(entry) < toIndex);
+          : current.filter(entry => ONBOARDING_STEPS.indexOf(entry) < toIndex);
       });
       setStep(next);
       return;
@@ -253,14 +254,15 @@ export function OnboardingScreen() {
               </Stack>
             )
           ) : null}
-          {heard &&
-          !isKeyboardVisible &&
-          step !== 'welcome' &&
-          step !== 'currency' &&
-          step !== 'clarity' ? (
+          {showSafeToSpend && (latestDraftChange || heard) ? (
             <Box paddingBottom="sm">
-              <AppText variant="body" color="secondary" testID="onboarding-heard">
-                {heard}
+              <AppText
+                variant="caption"
+                color="secondary"
+                numberOfLines={2}
+                testID="onboarding-sts-change"
+              >
+                {latestDraftChange ?? heard}
               </AppText>
             </Box>
           ) : null}

@@ -1,12 +1,13 @@
 import { AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
-import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { Box, Inline, Inset, Page, useKeyboard } from '@/src/design-system';
 import type { ReactNode } from 'react';
 import type { OnboardingStep } from './draft';
+import { ONBOARDING_FLOW, ONBOARDING_PROGRESS_FLOW } from './flow';
 
 export type OnboardingStage = {
   readonly label: string;
+  readonly name: string;
   readonly current: number;
   readonly total: number;
 };
@@ -64,12 +65,13 @@ export function OnboardingChrome({
   );
 }
 
-export const ONBOARDING_STAGES: Record<OnboardingStep, OnboardingStage | null> = {
-  welcome: null,
-  currency: { label: copy.stageSpace, current: 1, total: 6 },
-  now: { label: copy.stageNow, current: 2, total: 6 },
-  next: { label: copy.stageNext, current: 3, total: 6 },
-  protect: { label: copy.stageProtect, current: 4, total: 6 },
-  reserve: { label: copy.stageReserve, current: 5, total: 6 },
-  clarity: { label: copy.stageClarity, current: 6, total: 6 },
-};
+const progressTotal = ONBOARDING_PROGRESS_FLOW.length;
+
+export const ONBOARDING_STAGES: Record<OnboardingStep, OnboardingStage | null> = Object.fromEntries(
+  ONBOARDING_FLOW.map(entry => {
+    if (!entry.progressName) return [entry.step, null];
+    const current = ONBOARDING_PROGRESS_FLOW.findIndex(item => item.step === entry.step) + 1;
+    const label = `Step ${current} of ${progressTotal} · ${entry.progressName}`;
+    return [entry.step, { label, name: entry.progressName, current, total: progressTotal }];
+  }),
+) as Record<OnboardingStep, OnboardingStage | null>;

@@ -1,4 +1,5 @@
-import { AppText, ColoredDot } from '@/src/components/core';
+import { AppText, ColoredDot, Icon, IconButton } from '@/src/components/core';
+import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { Typography } from '@/src/constants';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
@@ -6,7 +7,7 @@ import { Inline, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { ComponentVariant } from '@/src/utils/style-helpers';
 import dayjs from 'dayjs';
-import { type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { ConversationStep } from './conversationUi';
 import { ClarityChart } from './clarityChart';
@@ -31,6 +32,7 @@ export function ClarityScene({
   readonly onBack: () => void;
 }) {
   const { theme } = useTheme();
+  const [explanationVisible, setExplanationVisible] = useState(false);
   const income = draft.income.kind === 'recurring' ? draft.income.items : [];
   const payments = draft.commitment.kind === 'payment' ? draft.commitment.items : [];
   const budgets = draft.budget.kind === 'set' ? draft.budget.items : [];
@@ -54,10 +56,19 @@ export function ClarityScene({
             {finishError}
           </AppText>
         ) : null}
-        <Stack gap="xs">
-          <AppText variant="caption" color="secondary" weight="bold" style={styles.stageLabel}>
-            {copy.safeToSpend}
-          </AppText>
+        <Stack gap="sm">
+          <Inline align="center" justify="space-between" gap="md">
+            <AppText variant="caption" color="secondary" weight="bold" style={styles.stageLabel}>
+              {copy.safeToSpend}
+            </AppText>
+            <IconButton
+              name={Icon.HelpCircle}
+              variant="clear"
+              accessibilityLabel={copy.clarityExplainAction}
+              onPress={() => setExplanationVisible(true)}
+              testID="onboarding-clarity-info-button"
+            />
+          </Inline>
           <MoneyText
             amount={projection.safeToSpend}
             currencyCode={currency}
@@ -72,101 +83,179 @@ export function ClarityScene({
             {copy.overNextDays(projection.windowDays)}
           </AppText>
           <AppText variant="body" color="secondary" style={styles.proseCopy}>
-            {copy.clarityFooter}
+            {copy.clarityDefinition}
           </AppText>
+          <ClarityFormula projection={projection} currency={currency} />
         </Stack>
-
-        <ClarityChart
-          points={projection.chart}
-          safeToSpend={projection.safeToSpend}
-          currency={currency}
-        />
 
         {!(hasCash || income.length > 0 || payments.length > 0 || budgets.length > 0) ? (
           <AppText variant="body" color="secondary" style={styles.proseCopy}>
             {copy.clarityNoCashYet}
           </AppText>
-        ) : (
-          <Stack gap="lg">
-            {hasCash ? (
-              <ClarityGroup
-                stage={copy.stageNow}
-                tint="asset"
-                dot={theme.asset}
-                amount={projection.liquidNow}
-                currency={currency}
-              >
-                <ClarityFigure label={copy.cashYouHave} />
-              </ClarityGroup>
-            ) : null}
-            {income.length > 0 ? (
-              <ClarityGroup
-                stage={copy.stageNext}
-                tint="income"
-                dot={theme.success}
-                amount={income.reduce((sum, item) => sum + item.amount, 0)}
-                currency={currency}
-                sign="+"
-              >
-                {income.map(item => (
-                  <ClarityFigure
-                    key={item.id}
-                    amount={income.length > 1 ? item.amount : undefined}
-                    currency={currency}
-                    sign="+"
-                    tint="income"
-                    label={incomeItemName(item)}
-                    detail={dayjs(item.nextDate).format('D MMM')}
-                  />
-                ))}
-              </ClarityGroup>
-            ) : null}
-            {payments.length > 0 ? (
-              <ClarityGroup
-                stage={copy.stageProtect}
-                tint="expense"
-                dot={theme.error}
-                amount={payments.reduce((sum, item) => sum + item.amount, 0)}
-                currency={currency}
-                sign="-"
-              >
-                {payments.map(item => (
-                  <ClarityFigure
-                    key={item.id}
-                    amount={payments.length > 1 ? item.amount : undefined}
-                    currency={currency}
-                    sign="-"
-                    tint="expense"
-                    label={paymentItemName(item)}
-                    detail={dayjs(item.dueDate).format('D MMM')}
-                  />
-                ))}
-              </ClarityGroup>
-            ) : null}
-            {budgets.length > 0 ? (
-              <ClarityGroup
-                stage={copy.stageReserve}
-                tint="warning"
-                dot={theme.warning}
-                amount={projection.budgetReserveInWindow}
-                currency={currency}
-              >
-                {budgets.map(item => (
-                  <ClarityFigure
-                    key={item.id}
-                    amount={budgets.length > 1 ? item.amount : undefined}
-                    currency={currency}
-                    tint="warning"
-                    label={item.name}
-                    detail={copy.monthly}
-                  />
-                ))}
-              </ClarityGroup>
-            ) : null}
-          </Stack>
-        )}
+        ) : null}
       </Stack>
+      <InfoSheet
+        visible={explanationVisible}
+        title={copy.clarityExplainTitle}
+        onClose={() => setExplanationVisible(false)}
+        accessibilityCloseLabel="Close Safe to Spend explanation"
+        maxHeightPercent={90}
+        fixedHeight={false}
+      >
+        <Stack gap="lg">
+          <AppText variant="body" color="secondary" style={styles.proseCopy}>
+            {copy.clarityFooter}
+          </AppText>
+          <ClarityChart
+            points={projection.chart}
+            safeToSpend={projection.safeToSpend}
+            currency={currency}
+          />
+          {!(hasCash || income.length > 0 || payments.length > 0 || budgets.length > 0) ? null : (
+            <Stack gap="lg">
+              {hasCash ? (
+                <ClarityGroup
+                  stage={copy.stageNow}
+                  tint="asset"
+                  dot={theme.asset}
+                  amount={projection.liquidNow}
+                  currency={currency}
+                >
+                  <ClarityFigure label={copy.cashYouHave} />
+                </ClarityGroup>
+              ) : null}
+              {income.length > 0 ? (
+                <ClarityGroup
+                  stage={copy.stageNext}
+                  tint="income"
+                  dot={theme.success}
+                  amount={income.reduce((sum, item) => sum + item.amount, 0)}
+                  currency={currency}
+                  sign="+"
+                >
+                  {income.map(item => (
+                    <ClarityFigure
+                      key={item.id}
+                      amount={income.length > 1 ? item.amount : undefined}
+                      currency={currency}
+                      sign="+"
+                      tint="income"
+                      label={incomeItemName(item)}
+                      detail={dayjs(item.nextDate).format('D MMM')}
+                    />
+                  ))}
+                </ClarityGroup>
+              ) : null}
+              {payments.length > 0 ? (
+                <ClarityGroup
+                  stage={copy.stageProtect}
+                  tint="expense"
+                  dot={theme.error}
+                  amount={payments.reduce((sum, item) => sum + item.amount, 0)}
+                  currency={currency}
+                  sign="-"
+                >
+                  {payments.map(item => (
+                    <ClarityFigure
+                      key={item.id}
+                      amount={payments.length > 1 ? item.amount : undefined}
+                      currency={currency}
+                      sign="-"
+                      tint="expense"
+                      label={paymentItemName(item)}
+                      detail={dayjs(item.dueDate).format('D MMM')}
+                    />
+                  ))}
+                </ClarityGroup>
+              ) : null}
+              {budgets.length > 0 ? (
+                <ClarityGroup
+                  stage={copy.stageReserve}
+                  tint="warning"
+                  dot={theme.warning}
+                  amount={projection.budgetReserveInWindow}
+                  currency={currency}
+                >
+                  {budgets.map(item => (
+                    <ClarityFigure
+                      key={item.id}
+                      amount={budgets.length > 1 ? item.amount : undefined}
+                      currency={currency}
+                      tint="warning"
+                      label={item.name}
+                      detail={copy.monthly}
+                    />
+                  ))}
+                </ClarityGroup>
+              ) : null}
+            </Stack>
+          )}
+        </Stack>
+      </InfoSheet>
     </ConversationStep>
+  );
+}
+
+function ClarityFormula({
+  projection,
+  currency,
+}: {
+  readonly projection: CashClarityProjection;
+  readonly currency: string;
+}) {
+  return (
+    <Stack gap="xs">
+      <AppText variant="caption" color="secondary" testID="onboarding-clarity-calculation">
+        {copy.clarityCalculation}
+      </AppText>
+      <Inline justify="space-between" gap="md">
+        <AppText variant="caption" color="secondary">
+          {copy.cashYouHave}
+        </AppText>
+        <MoneyText
+          amount={projection.liquidNow}
+          currencyCode={currency}
+          formatStyle="compact"
+          variant="caption"
+        />
+      </Inline>
+      <Inline justify="space-between" gap="md">
+        <AppText variant="caption" color="secondary">
+          {copy.expectedIncome}
+        </AppText>
+        <MoneyText
+          amount={projection.expectedIncomeInWindow}
+          currencyCode={currency}
+          formatStyle="compact"
+          prefix="+"
+          variant="caption"
+        />
+      </Inline>
+      <Inline justify="space-between" gap="md">
+        <AppText variant="caption" color="secondary">
+          {copy.plannedPayment}
+        </AppText>
+        <MoneyText
+          amount={projection.plannedOutflowInWindow}
+          currencyCode={currency}
+          formatStyle="compact"
+          prefix="-"
+          variant="caption"
+        />
+      </Inline>
+      <Inline justify="space-between" gap="md">
+        <AppText variant="caption" color="secondary">
+          {copy.everydayBuffer}
+        </AppText>
+        <MoneyText
+          amount={projection.budgetReserveInWindow}
+          currencyCode={currency}
+          formatStyle="compact"
+          prefix="-"
+          variant="caption"
+        />
+      </Inline>
+    </Stack>
   );
 }
 

@@ -132,6 +132,7 @@ export function MoneyScene({
         onContinue(confirmMoney(accounts, currency));
       }}
       onSkip={accounts.length === 0 ? onSkip : undefined}
+      skipLabel={copy.skipMoney}
       onBack={onBack}
       chipLabel={copy.tapTypeToAdd}
       chips={ACCOUNT_CHIPS}
@@ -345,7 +346,7 @@ export function ProtectScene({
   return (
     <CollectStep
       title={copy.protectQuestion}
-      continueLabel={copy.protectAction}
+      continueLabel={copy.continueToPayments}
       continueDisabled={!amountsFilled(items)}
       onContinue={() => {
         if (items.length > 0 && !hasSpendable) {
@@ -362,7 +363,7 @@ export function ProtectScene({
             }
           : undefined
       }
-      skipLabel={copy.nothingYet}
+      skipLabel={copy.skipPayments}
       onBack={onBack}
       chipLabel={copy.tapTypeToAdd}
       chips={PAYMENT_CHIPS}
@@ -437,6 +438,7 @@ export function ReserveScene({
     <CollectStep
       title={copy.reserveQuestion}
       subtitle={copy.reserveHint}
+      continueLabel={copy.continueToBoundaries}
       continueDisabled={!amountsFilled(items)}
       onContinue={() => {
         if (items.length > 0 && !hasSpendable) {
@@ -453,6 +455,7 @@ export function ReserveScene({
             }
           : undefined
       }
+      skipLabel={copy.skipBudgets}
       onBack={onBack}
       chipLabel={copy.tapTypeToAdd}
       chips={BUDGET_CHIPS}
