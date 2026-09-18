@@ -99,6 +99,7 @@ export function ClarityScene({
         title={copy.clarityExplainTitle}
         onClose={() => setExplanationVisible(false)}
         accessibilityCloseLabel="Close Safe to Spend explanation"
+        position="bottomSheet"
         maxHeightPercent={90}
         fixedHeight={false}
       >

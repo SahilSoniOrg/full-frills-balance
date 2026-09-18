@@ -20,6 +20,7 @@ interface InfoSheetProps {
   maxHeightPercent?: number;
   fixedHeight?: boolean;
   scrollable?: boolean;
+  position?: 'center' | 'bottomSheet';
   primaryAction?: InfoSheetAction;
   secondaryAction?: InfoSheetAction;
   useNativeModal?: boolean;
@@ -34,6 +35,7 @@ export function InfoSheet({
   maxHeightPercent,
   fixedHeight = true,
   scrollable = true,
+  position = 'center',
   primaryAction,
   secondaryAction,
   useNativeModal = true,
@@ -74,6 +76,7 @@ export function InfoSheet({
       maxHeightPercent={maxHeightPercent}
       fixedHeight={fixedHeight}
       scrollable={scrollable}
+      position={position}
       footer={footer}
       useNativeModal={useNativeModal}
     >

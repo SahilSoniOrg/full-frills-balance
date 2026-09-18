@@ -42,15 +42,23 @@ jest.mock('@/src/components/overlays/InfoSheet', () => {
       onClose,
       children,
       accessibilityCloseLabel,
+      position,
     }: {
       visible: boolean;
       title: string;
       onClose: () => void;
       children: React.ReactNode;
       accessibilityCloseLabel: string;
+      position?: string;
     }) =>
       visible ? (
-        <NativeView testID="onboarding-clarity-sheet">
+        <NativeView
+          testID={
+            position === 'bottomSheet'
+              ? 'onboarding-clarity-sheet-bottom-sheet'
+              : 'onboarding-clarity-sheet'
+          }
+        >
           <NativeText>{title}</NativeText>
           <NativePressable accessibilityLabel={accessibilityCloseLabel} onPress={onClose} />
           {children}
@@ -137,7 +145,7 @@ describe('ClarityScene progressive explanation', () => {
 
     fireEvent.press(screen.getByTestId('onboarding-clarity-info-button'));
 
-    expect(screen.getByTestId('onboarding-clarity-sheet')).toBeTruthy();
+    expect(screen.getByTestId('onboarding-clarity-sheet-bottom-sheet')).toBeTruthy();
     expect(screen.getByText('How Safe to Spend works')).toBeTruthy();
   });
 });
