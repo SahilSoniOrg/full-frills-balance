@@ -3,7 +3,6 @@ import { AppConfig } from '@/src/constants';
 import { Box, Inset, Page } from '@/src/design-system';
 import { StepIndicator } from '@/src/features/setup/components/StepIndicator';
 import React from 'react';
-import { Platform } from 'react-native';
 
 interface WorkplaceSetupLayoutProps {
   currentStep: number;
@@ -27,12 +26,7 @@ export function WorkplaceSetupLayout({
   testID,
 }: WorkplaceSetupLayoutProps) {
   return (
-    <Page
-      testID={testID}
-      edges={edges}
-      keyboardAvoiding={keyboardAvoiding}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}
-    >
+    <Page testID={testID} edges={edges} keyboardAvoiding={keyboardAvoiding}>
       <Box flex={1}>
         <Inset horizontal="lg" top={0} bottom="sm" flex={1}>
           <Box

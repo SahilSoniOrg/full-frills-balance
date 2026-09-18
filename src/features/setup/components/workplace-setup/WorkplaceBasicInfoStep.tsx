@@ -153,7 +153,7 @@ export function WorkplaceBasicInfoStep({
 const styles = StyleSheet.create({
   title: {
     maxWidth: 350,
-    lineHeight: Typography.sizes.xl * Typography.lineHeights.tight,
+    lineHeight: Typography.sizes.xxxl * Typography.lineHeights.tight,
     textAlign: 'center',
   },
   refreshButton: {
