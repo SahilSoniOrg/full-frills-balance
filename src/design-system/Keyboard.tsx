@@ -5,13 +5,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 /**
  * Hook to track keyboard state
  */
-export const useKeyboard = () => {
+export const useKeyboard = (enabled = true) => {
   const [keyboardHeight, setKeyboardHeight] = React.useState(0);
   const [isKeyboardVisible, setKeyboardVisible] = React.useState(false);
 
   const insets = useSafeAreaInsets();
 
   React.useEffect(() => {
+    if (!enabled) return;
+
     const showSubscription = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       e => {
@@ -32,7 +34,7 @@ export const useKeyboard = () => {
       showSubscription?.remove();
       hideSubscription?.remove();
     };
-  }, [insets.bottom]);
+  }, [enabled, insets.bottom]);
 
   return {
     keyboardHeight,

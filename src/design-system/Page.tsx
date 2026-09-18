@@ -13,6 +13,7 @@ import {
 import { ScrollView } from 'react-native-gesture-handler';
 import { Edge, SafeAreaView } from 'react-native-safe-area-context';
 import { Box } from './Box';
+import { useKeyboard } from './Keyboard';
 
 export type PageProps = ViewProps & {
   children: React.ReactNode;
@@ -70,6 +71,7 @@ export const Page = ({
   ...props
 }: PageProps) => {
   const { theme, themeMode } = useTheme();
+  const { isKeyboardVisible } = useKeyboard(keyboardAvoiding);
 
   const resolvedStatusBar =
     statusBar === 'auto' ? (themeMode === 'dark' ? 'light' : 'dark') : statusBar;
@@ -116,13 +118,24 @@ export const Page = ({
     </>
   );
 
+  // Android already resizes the activity via windowSoftInputMode="adjustResize".
+  // Applying KeyboardAvoidingView's height behavior on top of that double-compensates
+  // the keyboard and lifts footers too far from the bottom edge.
+  const useKeyboardAvoidingView = keyboardAvoiding && Platform.OS === 'ios';
+  const containerEdges =
+    keyboardAvoiding && isKeyboardVisible ? edges.filter(edge => edge !== 'bottom') : edges;
+
   return (
-    <Container safeArea={safeArea} edges={edges} style={[styles.container, { backgroundColor }]}>
+    <Container
+      safeArea={safeArea}
+      edges={containerEdges}
+      style={[styles.container, { backgroundColor }]}
+    >
       <StatusBar style={resolvedStatusBar as 'light' | 'dark' | 'auto'} />
       {header}
-      {keyboardAvoiding ? (
+      {useKeyboardAvoidingView ? (
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior="padding"
           keyboardVerticalOffset={keyboardVerticalOffset}
           style={styles.keyboardContainer}
         >
