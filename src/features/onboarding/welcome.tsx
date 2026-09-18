@@ -3,9 +3,9 @@ import { PrivacyAcknowledgementSheet } from '@/src/components/legal/PrivacyAckno
 import { AppConfig, Spacing, Typography } from '@/src/constants';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoticeStrings';
-import { Box, Stack } from '@/src/design-system';
+import { Box, Stack, useKeyboard } from '@/src/design-system';
 import { useState } from 'react';
-import { Keyboard, ScrollView, StyleSheet } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
 
 export function WelcomeScene({
   name,
@@ -26,11 +26,15 @@ export function WelcomeScene({
 }) {
   const [pending, setPending] = useState<'start' | 'restore' | null>(null);
   const [prompt, setPrompt] = useState(false);
+  const [nameFocused, setNameFocused] = useState(false);
+  const { isKeyboardVisible } = useKeyboard();
   const splash = AppConfig.strings.onboarding.splash;
   const trimmed = (name ?? '').trim();
+  const inputMode = nameFocused || isKeyboardVisible;
 
   const run = (action: 'start' | 'restore') => {
     if (action === 'start' && !trimmed) return;
+    setNameFocused(false);
     Keyboard.dismiss();
     if (!privacyAcknowledged) {
       setPending(action);
@@ -44,79 +48,117 @@ export function WelcomeScene({
   return (
     <>
       <Box flex={1} testID="onboarding-welcome">
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoidingView}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <Stack gap="xxxl" flex={1} justify="center">
-            <Stack gap={Spacing.xxxxl + Spacing.xxl}>
-              <Stack gap="md" paddingTop="xl" align="center">
-                <AppText variant="caption" color="primary" weight="semibold" style={styles.eyebrow}>
-                  {splash.eyebrow}
-                </AppText>
-                <AppText variant="hero" style={styles.title}>
-                  {splash.title}
-                </AppText>
-                <AppText variant="body" color="secondary" style={styles.subtitle}>
-                  {splash.subtitle}
-                </AppText>
-              </Stack>
-
-              <Stack gap="lg" marginHorizontal="md">
-                <AppInput
-                  label={splash.inputLabel}
-                  placeholder={splash.inputPlaceholder}
-                  value={name ?? ''}
-                  onChangeText={onNameChange}
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                  accessibilityLabel={splash.inputLabel}
-                  testID="onboarding-name-input"
-                  returnKeyType="next"
-                  onSubmitEditing={() => run('start')}
-                />
-                <AppButton
-                  variant="primary"
-                  size="lg"
-                  onPress={() => run('start')}
-                  disabled={!trimmed}
-                  testID="onboarding-start"
-                >
-                  {copy.startWithMoney}
-                </AppButton>
-                <Stack gap="xs" align="center">
-                  <AppText variant="caption" color="secondary">
-                    {splash.restorePrompt}
-                  </AppText>
-                  <AppButton
-                    variant="ghost"
-                    size="md"
-                    onPress={() => run('restore')}
-                    testID="onboarding-restore-button"
+          <ScrollView
+            contentContainerStyle={[
+              styles.scrollContent,
+              inputMode ? styles.inputModeScrollContent : undefined,
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardDismissMode="on-drag"
+            keyboardShouldPersistTaps="handled"
+          >
+            <Stack
+              gap={inputMode ? 'xxl' : 'xxxl'}
+              flex={1}
+              justify={inputMode ? 'flex-start' : 'center'}
+            >
+              <Stack gap={inputMode ? 'xxl' : Spacing.xxxxl + Spacing.xxl}>
+                <Stack gap="md" paddingTop={inputMode ? 'sm' : 'xl'} align="center">
+                  <AppText
+                    testID={
+                      inputMode ? 'onboarding-welcome-input-context' : 'onboarding-welcome-hero'
+                    }
+                    variant="caption"
+                    color="primary"
+                    weight="semibold"
+                    style={styles.eyebrow}
                   >
-                    {copy.restoreBackup}
+                    {splash.eyebrow}
+                  </AppText>
+                  <AppText
+                    variant={inputMode ? 'heading' : 'hero'}
+                    style={[styles.title, inputMode ? styles.focusedTitle : undefined]}
+                  >
+                    {splash.title}
+                  </AppText>
+                  {!inputMode ? (
+                    <AppText variant="body" color="secondary" style={styles.subtitle}>
+                      {splash.subtitle}
+                    </AppText>
+                  ) : null}
+                </Stack>
+
+                <Stack gap="lg" marginHorizontal="md">
+                  <AppInput
+                    label={splash.inputLabel}
+                    placeholder={splash.inputPlaceholder}
+                    value={name ?? ''}
+                    onChangeText={onNameChange}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    accessibilityLabel={splash.inputLabel}
+                    testID="onboarding-name-input"
+                    returnKeyType="done"
+                    onFocus={() => setNameFocused(true)}
+                    onBlur={() => setNameFocused(false)}
+                    onSubmitEditing={() => run('start')}
+                  />
+                  <AppButton
+                    variant="primary"
+                    size="lg"
+                    onPress={() => run('start')}
+                    disabled={!trimmed}
+                    testID="onboarding-start"
+                  >
+                    {copy.startWithMoney}
                   </AppButton>
                 </Stack>
               </Stack>
             </Stack>
+          </ScrollView>
 
-            <Stack gap="xs" align="center" paddingHorizontal="md" paddingBottom="sm">
-              <AppText variant="caption" color="secondary" align="center">
-                {copy.privacyFootnote}
-              </AppText>
-              <AppButton
-                variant="ghost"
-                size="sm"
-                onPress={onPrivacyNotice}
-                accessibilityLabel={PRIVACY_NOTICE_STRINGS.onboardingAction}
-                testID="onboarding-privacy-notice-button"
-              >
-                {PRIVACY_NOTICE_STRINGS.onboardingAction}
-              </AppButton>
+          <Box testID="onboarding-welcome-trust-actions">
+            <Stack
+              gap="xs"
+              align="center"
+              paddingHorizontal="md"
+              paddingTop="sm"
+              paddingBottom="sm"
+            >
+              <Stack gap="xs" align="center">
+                <AppText variant="caption" color="secondary">
+                  {splash.restorePrompt}
+                </AppText>
+                <AppButton
+                  variant="ghost"
+                  size="md"
+                  onPress={() => run('restore')}
+                  testID="onboarding-restore-button"
+                >
+                  {copy.restoreBackup}
+                </AppButton>
+              </Stack>
+              <Stack gap="xs" align="center">
+                <AppText variant="caption" color="secondary" align="center">
+                  {copy.privacyFootnote}
+                </AppText>
+                <AppButton
+                  variant="ghost"
+                  size="sm"
+                  onPress={onPrivacyNotice}
+                  accessibilityLabel={PRIVACY_NOTICE_STRINGS.onboardingAction}
+                  testID="onboarding-privacy-notice-button"
+                >
+                  {PRIVACY_NOTICE_STRINGS.onboardingAction}
+                </AppButton>
+              </Stack>
             </Stack>
-          </Stack>
-        </ScrollView>
+          </Box>
+        </KeyboardAvoidingView>
       </Box>
       <PrivacyAcknowledgementSheet
         visible={prompt}
@@ -143,10 +185,16 @@ export function WelcomeScene({
 }
 
 const styles = StyleSheet.create({
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   scrollContent: {
     flexGrow: 1,
     paddingTop: Spacing.lg,
-    paddingBottom: Spacing.lg,
+    paddingBottom: Spacing.md,
+  },
+  inputModeScrollContent: {
+    paddingTop: Spacing.sm,
   },
   eyebrow: {
     letterSpacing: Typography.letterSpacing.wide,
@@ -158,6 +206,10 @@ const styles = StyleSheet.create({
     lineHeight: Typography.sizes.jumbo * 1.04,
     letterSpacing: Typography.letterSpacing.tight,
     textAlign: 'center',
+  },
+  focusedTitle: {
+    fontSize: Typography.sizes.xl,
+    lineHeight: Typography.sizes.xl * Typography.lineHeights.tight,
   },
   subtitle: {
     maxWidth: 330,
