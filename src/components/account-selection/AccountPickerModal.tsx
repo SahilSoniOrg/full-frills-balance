@@ -17,6 +17,7 @@ type AccountPickerModalBaseProps = {
   accounts: (AccountFields | PlainAccount)[];
   title?: string;
   onClose: () => void;
+  onDismiss?: () => void;
   onCreateRequest?: (intent: CreateAccountIntent) => void;
   excludeParentAccounts?: boolean;
   allowNone?: boolean;
@@ -41,6 +42,7 @@ export function AccountPickerModal({
   selectedId,
   title = 'Select Account',
   onClose,
+  onDismiss,
   onSelect,
   onCreateRequest,
   excludeParentAccounts = false,
@@ -52,7 +54,7 @@ export function AccountPickerModal({
   const { theme } = useTheme();
 
   return (
-    <BaseAccountPickerModal visible={visible} onClose={onClose} title={title}>
+    <BaseAccountPickerModal visible={visible} onClose={onClose} onDismiss={onDismiss} title={title}>
       {allowNone && onClear ? (
         <TouchableOpacity
           style={[
@@ -111,6 +113,7 @@ export function MultiAccountPickerModal({
   selectedIds,
   title = 'Select Accounts',
   onClose,
+  onDismiss,
   onSelect,
   onCreateRequest,
   excludeParentAccounts = false,
@@ -143,7 +146,7 @@ export function MultiAccountPickerModal({
   );
 
   return (
-    <BaseAccountPickerModal visible={visible} onClose={onClose} title={title}>
+    <BaseAccountPickerModal visible={visible} onClose={onClose} onDismiss={onDismiss} title={title}>
       <AccountPickerList
         accounts={accounts}
         selectedIds={draftSelected}

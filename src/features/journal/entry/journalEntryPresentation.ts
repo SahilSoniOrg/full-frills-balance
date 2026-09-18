@@ -16,6 +16,7 @@ export type JournalEntryScreenMode = 'basic' | 'allocation' | 'expert' | 'batch'
 export type JournalEntryRouteParams = {
   mode?: JournalEntryRouteEditorMode;
   type?: JournalEntrySimpleType;
+  guidedAutopilot?: boolean;
   journalId?: JournalId;
   sourceAccountId?: AccountId;
   destinationAccountId?: AccountId;
@@ -49,6 +50,10 @@ export function parseJournalEntryRouteParams(params: ExpoSearchParams): JournalE
   const type =
     typeRaw === 'expense' || typeRaw === 'income' || typeRaw === 'transfer' ? typeRaw : undefined;
 
+  const guidedAutopilotRaw = firstString(params.guidedAutopilot);
+  const guidedAutopilot =
+    guidedAutopilotRaw === 'true' || guidedAutopilotRaw === '1' ? true : undefined;
+
   const sourceAccountId =
     (firstString(params.sourceAccountId) as AccountId | undefined) ||
     (firstString(params.sourceId) as AccountId | undefined);
@@ -60,6 +65,7 @@ export function parseJournalEntryRouteParams(params: ExpoSearchParams): JournalE
   return {
     mode,
     type,
+    ...(guidedAutopilot ? { guidedAutopilot: true } : {}),
     journalId: firstString(params.journalId) as JournalId | undefined,
     sourceAccountId,
     destinationAccountId,

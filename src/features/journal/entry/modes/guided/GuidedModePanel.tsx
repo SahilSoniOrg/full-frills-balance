@@ -2,6 +2,7 @@ import { SimpleForm } from '@/src/features/journal/entry/components/SimpleForm';
 import { SimpleFormAmountInput } from '@/src/features/journal/entry/components/SimpleFormAmountInput';
 import { VoiceInputModal } from '@/src/features/journal/entry/components/VoiceInputModal';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
+import type { JournalEntryAccountPickerRequestOptions } from '@/src/features/journal/entry/hooks/useJournalEntryAccountPicker';
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import { useGuidedVoiceApplication } from '@/src/features/journal/entry/hooks/useGuidedVoiceApplication';
 import { resolveSimpleTypeAccentColor } from '@/src/features/journal/entry/journalEntryPresentation';
@@ -19,6 +20,8 @@ export type GuidedFooterAmount = {
   accentType: TabType;
   displayCurrency: string;
   precision: number;
+  autoOpenCalculator: boolean;
+  onCalculatorDone?: () => void;
 };
 
 export type GuidedVoiceActions = {
@@ -29,7 +32,11 @@ export type GuidedModePanelProps = {
   accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
   workplaceId: WorkplaceId;
-  onSelectAccountRequest: (lineId: string) => void;
+  guidedAutopilot: boolean;
+  onSelectAccountRequest: (
+    lineId: string,
+    options?: JournalEntryAccountPickerRequestOptions,
+  ) => void;
   /** Shell footer top slot — basic amount chrome. */
   onFooterAmountChange?: (footer: GuidedFooterAmount | null) => void;
   /** MetaCard mic opens Guided-owned VoiceInputModal via this ref. */
@@ -40,6 +47,7 @@ export function GuidedModePanel({
   accounts,
   editor,
   workplaceId,
+  guidedAutopilot,
   onSelectAccountRequest,
   onFooterAmountChange,
   voiceActionsRef,
@@ -49,10 +57,10 @@ export function GuidedModePanel({
   const { getLineIdByRole } = editor;
 
   const requestAccountForRole = useCallback(
-    (role: AccountRole) => {
+    (role: AccountRole, requestOptions?: JournalEntryAccountPickerRequestOptions) => {
       const lineId = getLineIdByRole(role);
       if (lineId) {
-        onSelectAccountRequest(lineId);
+        onSelectAccountRequest(lineId, requestOptions);
       }
     },
     [getLineIdByRole, onSelectAccountRequest],
@@ -73,14 +81,20 @@ export function GuidedModePanel({
       accentType: simpleEditor.type,
       displayCurrency: simpleEditor.displayCurrency,
       precision,
+      autoOpenCalculator: guidedAutopilot && !editor.isEdit && !simpleEditor.amount,
+      onCalculatorDone:
+        guidedAutopilot && !editor.isEdit && !simpleEditor.amount
+          ? () => {
+              // The first choice after an amount is the semantic target:
+              // expense category, income source, or transfer source account.
+              const firstSection = simpleEditor.accountSections[0];
+              if (firstSection) {
+                requestAccountForRole(firstSection.role, { autoAdvance: true });
+              }
+            }
+          : undefined,
     }),
-    [
-      simpleEditor.amount,
-      simpleEditor.setAmount,
-      simpleEditor.type,
-      simpleEditor.displayCurrency,
-      precision,
-    ],
+    [editor.isEdit, guidedAutopilot, precision, requestAccountForRole, simpleEditor],
   );
 
   useEffect(() => {
@@ -149,6 +163,8 @@ export function GuidedFooterAmountSlot({
       activeColor={resolveSimpleTypeAccentColor(footerAmount.accentType, theme)}
       displayCurrency={footerAmount.displayCurrency}
       precision={footerAmount.precision}
+      autoOpenCalculator={footerAmount.autoOpenCalculator}
+      onCalculatorDone={footerAmount.onCalculatorDone}
       variant="default"
     />
   );

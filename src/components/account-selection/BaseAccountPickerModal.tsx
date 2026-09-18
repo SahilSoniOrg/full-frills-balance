@@ -8,6 +8,7 @@ import { Modal, Pressable, StyleSheet, TouchableOpacity, View } from 'react-nati
 export interface BaseAccountPickerModalProps {
   visible: boolean;
   onClose: () => void;
+  onDismiss?: () => void;
   title?: string;
   children: ReactNode;
 }
@@ -15,6 +16,7 @@ export interface BaseAccountPickerModalProps {
 export function BaseAccountPickerModal({
   visible,
   onClose,
+  onDismiss,
   title,
   children,
 }: BaseAccountPickerModalProps) {
@@ -26,6 +28,7 @@ export function BaseAccountPickerModal({
       transparent
       animationType="slide"
       onRequestClose={onClose}
+      onDismiss={onDismiss}
       statusBarTranslucent
       hardwareAccelerated
     >

@@ -4,13 +4,31 @@ import { BasePage } from './base-page';
 export class JournalEntryPage extends BasePage {
   async enterAmount(amount: string) {
     const amountButton = this.page.getByTestId('amount-input');
-    await amountButton.click();
     const expression = this.page.getByRole('textbox', { name: /^Expression/ });
+    if (!(await expression.isVisible().catch(() => false))) {
+      await amountButton.click();
+    }
     await expression.fill(amount);
     await this.page.getByTestId('amount-calculator-done').click();
   }
 
   async selectType(type: 'EXPENSE' | 'INCOME' | 'TRANSFER') {
+    const fabAction = this.page.getByTestId(`journal-entry-fab-${type.toLowerCase()}`);
+    if (await fabAction.isVisible().catch(() => false)) {
+      await fabAction.click();
+      await expect(this.page.getByTestId('journal-entry-screen')).toBeVisible({
+        timeout: 30000,
+      });
+      return;
+    }
+
+    // New simple entries open the calculator immediately. Dismiss it only when
+    // a test explicitly needs to change the default expense type first.
+    const initialCalculator = this.page.getByTestId('amount-calculator-display');
+    if (await initialCalculator.isVisible().catch(() => false)) {
+      await this.page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    }
+
     const label = type === 'EXPENSE' ? 'Expense' : type === 'INCOME' ? 'Income' : 'Transfer';
     await this.page.getByRole('tab', { name: label, exact: true }).click();
   }
@@ -18,6 +36,19 @@ export class JournalEntryPage extends BasePage {
   async switchMode(
     mode: 'Basic' | 'Allocate' | 'Expert' | 'Batch' | 'Simple' | 'Split' | 'Advanced' | 'Bulk',
   ) {
+    const defaultFabAction = this.page.getByTestId('journal-entry-fab-expense');
+    if (await defaultFabAction.isVisible().catch(() => false)) {
+      await defaultFabAction.click();
+      await expect(this.page.getByTestId('journal-entry-screen')).toBeVisible({
+        timeout: 30000,
+      });
+    }
+
+    const initialCalculator = this.page.getByTestId('amount-calculator-display');
+    if (await initialCalculator.isVisible().catch(() => false)) {
+      await this.page.getByRole('button', { name: 'Cancel', exact: true }).click();
+    }
+
     const normalized =
       mode === 'Simple'
         ? 'Basic'

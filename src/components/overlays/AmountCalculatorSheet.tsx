@@ -26,6 +26,7 @@ interface AmountCalculatorSheetProps {
   precision: number;
   onClose: () => void;
   onDone: (amount: string) => void;
+  onDismiss?: () => void;
 }
 
 const rows: { label: string; value: string; type: CalculatorKey }[][] = [
@@ -89,6 +90,7 @@ export function AmountCalculatorSheet({
   precision,
   onClose,
   onDone,
+  onDismiss,
 }: AmountCalculatorSheetProps) {
   const { theme } = useTheme();
   const [expression, setExpression] = useState(initialAmount || '');
@@ -237,6 +239,7 @@ export function AmountCalculatorSheet({
       fixedHeight={false}
       scrollable={false}
       accessibilityCloseLabel="Close amount calculator"
+      onDismiss={onDismiss}
     >
       <View style={styles.display} testID="amount-calculator-display">
         <View style={[styles.expressionField, { backgroundColor: theme.surfaceSecondary }]}>

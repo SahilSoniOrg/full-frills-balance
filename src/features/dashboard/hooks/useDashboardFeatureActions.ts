@@ -1,4 +1,5 @@
 import { analytics } from '@/src/services/analytics';
+import { TabType } from '@/src/types/domainJournal';
 import { AccountId, PlannedPaymentId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -29,8 +30,11 @@ export function trackDashboardFirstPaint() {
 export function useDashboardFeatureActions() {
   const openJournalEntry = useCallback(() => {
     analytics.logEntrypointOpened('dashboard', 'bottom_action');
+  }, []);
+
+  const openJournalEntryType = useCallback((type: TabType) => {
     analytics.logEntrypointSelected('dashboard', 'bottom_action', 'journal_entry');
-    AppNavigation.toJournalEntry();
+    AppNavigation.toSimpleJournalEntry(type, { guidedAutopilot: true });
   }, []);
 
   const openAccount = useCallback(
@@ -104,6 +108,7 @@ export function useDashboardFeatureActions() {
 
   return {
     openJournalEntry,
+    openJournalEntryType,
     openAccount,
     openPlannedPayment,
     trackChartPoint,

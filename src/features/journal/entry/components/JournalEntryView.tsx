@@ -151,11 +151,12 @@ export function JournalEntryView(vm: JournalEntryShell) {
 
       <AccountPickerModal
         visible={vm.showAccountPicker}
-        title="Select Account"
+        title={vm.accountPickerTitle}
         accounts={vm.selectableAccounts}
         selectedId={vm.selectedAccountId}
         onSelect={vm.onAccountSelected}
         onClose={vm.onCloseAccountPicker}
+        onDismiss={vm.onAccountPickerDismiss}
         onCreateRequest={vm.onCreateAccountRequest}
         excludeParentAccounts={true}
       />

@@ -20,4 +20,35 @@ describe('FloatingActionButton', () => {
     expect(triggerHaptic).toHaveBeenCalledWith('light');
     expect(onPress).toHaveBeenCalledTimes(1);
   });
+
+  it('expands action choices and invokes the selected action', () => {
+    const onPress = jest.fn();
+    const onExpensePress = jest.fn();
+
+    render(
+      <FloatingActionButton
+        onPress={onPress}
+        actions={[
+          {
+            id: 'expense',
+            label: 'Expense',
+            onPress: onExpensePress,
+            testID: 'fab-expense-action',
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.press(screen.getByTestId('fab-button'));
+    expect(screen.getByTestId('fab-expense-action')).toBeTruthy();
+    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText('Close new entry options')).toBeTruthy();
+
+    fireEvent.press(screen.getByTestId('fab-dismiss-overlay'));
+    expect(screen.queryByTestId('fab-expense-action')).toBeNull();
+
+    fireEvent.press(screen.getByTestId('fab-button'));
+    fireEvent.press(screen.getByTestId('fab-expense-action'));
+    expect(onExpensePress).toHaveBeenCalledTimes(1);
+  });
 });

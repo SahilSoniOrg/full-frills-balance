@@ -10,6 +10,7 @@ import { BatchModePanel } from '@/src/features/journal/entry/modes/batch/BatchMo
 import type { useBulkJournalEditor } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import type { SavedJournalSummary } from '@/src/features/journal/entry/types/bulkJournal';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
+import type { JournalEntryAccountPickerRequestOptions } from '@/src/features/journal/entry/hooks/useJournalEntryAccountPicker';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { WorkplaceId } from '@/src/types/ids';
 import { ChromeMotion } from '@/src/constants';
@@ -20,13 +21,17 @@ import { StyleSheet } from 'react-native';
 
 export type JournalEntryModeBodyProps = {
   activeMode: JournalEntryScreenMode;
+  guidedAutopilot: boolean;
   /** +1 when moving toward expert/batch, -1 when moving toward basic. */
   modeTransitionDir: 1 | -1;
   accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
   workplaceId: WorkplaceId;
   workplaceCurrency: string;
-  onSelectAccountRequest: (lineId: string) => void;
+  onSelectAccountRequest: (
+    lineId: string,
+    options?: JournalEntryAccountPickerRequestOptions,
+  ) => void;
   onGuidedFooterAmountChange: (footer: GuidedFooterAmount | null) => void;
   guidedVoiceActionsRef: MutableRefObject<GuidedVoiceActions | null>;
   batchEditor: ReturnType<typeof useBulkJournalEditor>;
@@ -38,6 +43,7 @@ export type JournalEntryModeBodyProps = {
 /** Mounts only the active view; durable drafts live in the shell. */
 export function JournalEntryModeBody({
   activeMode,
+  guidedAutopilot,
   modeTransitionDir,
   accounts,
   editor,
@@ -87,6 +93,7 @@ export function JournalEntryModeBody({
         accounts={accounts}
         editor={editor}
         workplaceId={workplaceId}
+        guidedAutopilot={guidedAutopilot}
         onSelectAccountRequest={onSelectAccountRequest}
         onFooterAmountChange={onGuidedFooterAmountChange}
         voiceActionsRef={guidedVoiceActionsRef}

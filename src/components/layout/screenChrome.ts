@@ -10,6 +10,14 @@ export type ScreenFabChrome = {
   icon?: IconName;
   placement?: 'end' | 'center';
   accessibilityLabel?: string;
+  actions?: readonly {
+    id: string;
+    label: string;
+    icon?: IconName;
+    onPress: () => void;
+    accessibilityLabel?: string;
+    testID?: string;
+  }[];
 };
 
 type ScreenChromeShared = {

@@ -20,8 +20,8 @@ test.describe('Transaction card account badges', () => {
 
     await journalEntryPage.selectType('EXPENSE');
     await journalEntryPage.enterAmount('42.00');
-    await journalEntryPage.selectSourceAccount('Checking Badge');
     await journalEntryPage.selectDestinationAccount('Food Badge');
+    await journalEntryPage.selectSourceAccount('Checking Badge');
     await journalEntryPage.enterDescription('Badge Lunch');
     await journalEntryPage.save();
 
@@ -40,8 +40,8 @@ test.describe('Transaction card account badges', () => {
 
     await journalEntryPage.selectType('EXPENSE');
     await journalEntryPage.enterAmount('18.50');
-    await journalEntryPage.selectSourceAccount('Checking Badge');
     await journalEntryPage.selectDestinationAccount('Food Badge');
+    await journalEntryPage.selectSourceAccount('Checking Badge');
     await journalEntryPage.enterDescription('Badge Snack');
     await journalEntryPage.save();
 

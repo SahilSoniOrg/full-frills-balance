@@ -1,6 +1,8 @@
 import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
 import type { JournalEntryListRef } from '@/src/components/journal/JournalEntryListView';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
+import { AppConfig } from '@/src/constants';
+import { Icon } from '@/src/components/core';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { DashboardHeaderActions } from '@/src/features/dashboard/components/DashboardHeaderActions';
 import { DashboardScreenView } from '@/src/features/dashboard/components/DashboardScreenView';
@@ -24,7 +26,7 @@ function DashboardScreen() {
 
   useScrollToTop(listRef);
 
-  const { openJournalEntry } = useDashboardFeatureActions();
+  const { openJournalEntry, openJournalEntryType } = useDashboardFeatureActions();
 
   const chrome = useMemo<TabScreenChrome>(
     () =>
@@ -48,10 +50,33 @@ function DashboardScreen() {
             label: 'New Entry',
             placement: 'end',
             accessibilityLabel: 'Open new entry options',
+            actions: [
+              {
+                id: 'expense',
+                label: AppConfig.strings.journal.expense,
+                icon: Icon.ArrowDown,
+                testID: 'journal-entry-fab-expense',
+                onPress: () => openJournalEntryType('expense'),
+              },
+              {
+                id: 'income',
+                label: AppConfig.strings.journal.income,
+                icon: Icon.ArrowUp,
+                testID: 'journal-entry-fab-income',
+                onPress: () => openJournalEntryType('income'),
+              },
+              {
+                id: 'transfer',
+                label: AppConfig.strings.journal.transfer,
+                icon: Icon.SwapHorizontal,
+                testID: 'journal-entry-fab-transfer',
+                onPress: () => openJournalEntryType('transfer'),
+              },
+            ],
           },
         },
       ),
-    [openJournalEntry, header, vm.recentJournalEntries.isSelectionModeActive],
+    [openJournalEntry, openJournalEntryType, header, vm.recentJournalEntries.isSelectionModeActive],
   );
 
   return <DashboardScreenView {...vm} listRef={listRef} chrome={chrome} />;

@@ -18,6 +18,7 @@ test.describe('Transaction Composer performance probes', () => {
 
       const coldStart = Date.now();
       await dashboardPage.clickPlusButton();
+      await page.getByTestId('journal-entry-fab-expense').click();
       await expect(page.getByTestId('journal-entry-screen')).toBeVisible();
       coldSamples.push(Date.now() - coldStart);
 
@@ -26,6 +27,7 @@ test.describe('Transaction Composer performance probes', () => {
 
       const warmStart = Date.now();
       await dashboardPage.clickPlusButton();
+      await page.getByTestId('journal-entry-fab-expense').click();
       await expect(page.getByTestId('journal-entry-screen')).toBeVisible();
       warmSamples.push(Date.now() - warmStart);
     }

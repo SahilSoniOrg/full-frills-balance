@@ -20,8 +20,8 @@ test.describe('Transaction Management', () => {
 
     await journalEntryPage.selectType('EXPENSE');
     await journalEntryPage.enterAmount('50.00');
-    await journalEntryPage.selectSourceAccount('Checking T');
     await journalEntryPage.selectDestinationAccount('Food T');
+    await journalEntryPage.selectSourceAccount('Checking T');
     await journalEntryPage.enterDescription('Lunch');
     await journalEntryPage.save();
 
@@ -117,8 +117,8 @@ test.describe('Transaction Management', () => {
     await dashboardPage.clickPlusButton();
     await journalEntryPage.selectType('EXPENSE');
     await journalEntryPage.enterAmount('10.00');
-    await journalEntryPage.selectSourceAccount('Checking T');
     await journalEntryPage.selectDestinationAccount('Food T');
+    await journalEntryPage.selectSourceAccount('Checking T');
     await journalEntryPage.enterDescription('Coffee');
     await journalEntryPage.save();
 
@@ -142,8 +142,8 @@ test.describe('Transaction Management', () => {
     await dashboardPage.clickPlusButton();
     await journalEntryPage.selectType('EXPENSE');
     await journalEntryPage.enterAmount('100.00');
-    await journalEntryPage.selectSourceAccount('Checking T');
     await journalEntryPage.selectDestinationAccount('Food T');
+    await journalEntryPage.selectSourceAccount('Checking T');
     await journalEntryPage.enterDescription('Groceries');
     await journalEntryPage.save();
 

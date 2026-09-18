@@ -42,8 +42,8 @@ test.describe('Reports and Analytics', () => {
     await dashboardPage.clickPlusButton();
     await journalEntryPage.selectType('EXPENSE');
     await journalEntryPage.enterAmount('250');
-    await journalEntryPage.selectSourceAccount('Bank');
     await journalEntryPage.selectDestinationAccount('Food & Drink');
+    await journalEntryPage.selectSourceAccount('Bank');
     await journalEntryPage.enterDescription('Groceries');
     await journalEntryPage.save();
 

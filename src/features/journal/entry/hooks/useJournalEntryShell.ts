@@ -6,7 +6,10 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
-import { useJournalEntryAccountPicker } from '@/src/features/journal/entry/hooks/useJournalEntryAccountPicker';
+import {
+  JournalEntryAccountPickerRequestOptions,
+  useJournalEntryAccountPicker,
+} from '@/src/features/journal/entry/hooks/useJournalEntryAccountPicker';
 import { applyJournalLineAccountSelection } from '@/src/features/journal/entry/journalEntryAccountPickerPolicy';
 import {
   JournalEntryScreenMode,
@@ -44,6 +47,7 @@ import { MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } f
  */
 export interface JournalEntryShell {
   editor: ReturnType<typeof useJournalEditor>;
+  guidedAutopilot: boolean;
   splitState: ReturnType<typeof useTransactionComposerSession>['splitState'];
   transactionIntent: ReturnType<typeof useTransactionComposerSession>['intent'];
   postingPlan: ReturnType<typeof useTransactionComposerSession>['postingPlan'];
@@ -65,11 +69,16 @@ export interface JournalEntryShell {
   editBannerText: string;
   showAccountPicker: boolean;
   onCloseAccountPicker: () => void;
+  onAccountPickerDismiss: () => void;
   onClose: () => void;
-  onSelectAccountRequest: (lineId: string) => void;
+  onSelectAccountRequest: (
+    lineId: string,
+    options?: JournalEntryAccountPickerRequestOptions,
+  ) => void;
   onAccountSelected: (accountId: AccountId) => void;
   selectedAccountId?: AccountId;
   selectableAccounts: AccountFields[];
+  accountPickerTitle: string;
   isSimpleModeDisabled: boolean;
   onCreateAccountRequest: (intent: CreateAccountIntent) => void;
   suggestions: JournalAutofillSuggestion[];
@@ -214,10 +223,12 @@ export function useJournalEntryShell(): JournalEntryShell {
     showAccountPicker,
     onSelectAccountRequest,
     onCloseAccountPicker,
+    onAccountPickerDismiss,
     onAccountSelected,
     onCreateAccountRequest,
     selectableAccounts,
     selectedAccountId,
+    accountPickerTitle,
   } = useJournalEntryAccountPicker({
     accounts,
     editor,
@@ -243,6 +254,7 @@ export function useJournalEntryShell(): JournalEntryShell {
 
   return {
     editor,
+    guidedAutopilot: seed.guidedAutopilot === true,
     splitState,
     transactionIntent: session.intent,
     postingPlan: session.postingPlan,
@@ -263,11 +275,13 @@ export function useJournalEntryShell(): JournalEntryShell {
     editBannerText: AppConfig.strings.transactionFlow.banners.editing,
     showAccountPicker,
     onCloseAccountPicker,
+    onAccountPickerDismiss,
     onClose: leaveGuard.onClose,
     onSelectAccountRequest,
     onAccountSelected,
     selectedAccountId,
     selectableAccounts,
+    accountPickerTitle,
     isSimpleModeDisabled,
     onCreateAccountRequest,
     suggestions,

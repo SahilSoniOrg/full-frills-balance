@@ -127,6 +127,7 @@ export const AppNavigation = {
       destinationAccountId?: string;
       amount?: string;
       journalId?: string;
+      guidedAutopilot?: boolean;
     },
   ) => {
     AppNavigation.toJournalEntry({
@@ -135,6 +136,7 @@ export const AppNavigation = {
       params: {
         mode: 'simple',
         type,
+        ...(options?.guidedAutopilot ? { guidedAutopilot: 'true' } : {}),
         ...(options?.destinationAccountId
           ? { destinationAccountId: options.destinationAccountId }
           : {}),

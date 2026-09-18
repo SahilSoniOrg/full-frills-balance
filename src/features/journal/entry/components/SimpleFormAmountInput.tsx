@@ -7,7 +7,7 @@ import { withOpacity } from '@/src/utils/color-math';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface SimpleFormAmountInputProps {
@@ -21,6 +21,8 @@ interface SimpleFormAmountInputProps {
   onBlur?: () => void;
   precision?: number;
   variant?: 'default' | 'hero';
+  autoOpenCalculator?: boolean;
+  onCalculatorDone?: () => void;
 }
 
 export function SimpleFormAmountInput({
@@ -33,10 +35,37 @@ export function SimpleFormAmountInput({
   onBlur,
   precision = 2,
   variant = 'default',
+  autoOpenCalculator = false,
+  onCalculatorDone,
 }: SimpleFormAmountInputProps) {
   const { theme, fonts } = useTheme();
   const resolvedActiveColor = resolveThemeColor(theme, activeColor);
-  const [calculatorVisible, setCalculatorVisible] = useState(false);
+  const [calculatorVisible, setCalculatorVisible] = useState(autoOpenCalculator);
+  const calculatorDoneRef = useRef(onCalculatorDone);
+  const pendingDoneRef = useRef<(() => void) | null>(null);
+  const dismissFallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    calculatorDoneRef.current = onCalculatorDone;
+  }, [onCalculatorDone]);
+
+  useEffect(
+    () => () => {
+      if (dismissFallbackTimerRef.current) clearTimeout(dismissFallbackTimerRef.current);
+    },
+    [],
+  );
+
+  const finishCalculatorHandoff = () => {
+    const onDone = pendingDoneRef.current;
+    if (!onDone) return;
+    pendingDoneRef.current = null;
+    if (dismissFallbackTimerRef.current) {
+      clearTimeout(dismissFallbackTimerRef.current);
+      dismissFallbackTimerRef.current = null;
+    }
+    onDone();
+  };
 
   const isHero = variant === 'hero';
 
@@ -118,9 +147,16 @@ export function SimpleFormAmountInput({
           currencySymbol={CURRENCY_SYMBOLS[displayCurrency] || displayCurrency}
           precision={precision}
           onClose={() => setCalculatorVisible(false)}
+          onDismiss={finishCalculatorHandoff}
           onDone={value => {
             setAmount(value);
+            // Capture before the amount update rerenders the footer and removes
+            // the one-shot auto-flow callback.
+            pendingDoneRef.current = calculatorDoneRef.current ?? null;
             setCalculatorVisible(false);
+            // Native Modal fires onDismiss. RN Web may not, so keep a fallback
+            // after the closing animation has had time to release the layer.
+            dismissFallbackTimerRef.current = setTimeout(finishCalculatorHandoff, 300);
           }}
         />
       )}

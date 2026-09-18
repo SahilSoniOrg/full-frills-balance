@@ -66,8 +66,8 @@ export class BasePage {
     const journalFab = this.page.getByRole('button', { name: /Open new entry options/i });
     await expect(journalFab).toBeVisible({ timeout: 45000 });
     await journalFab.click({ force: true });
-    await expect(this.page.getByTestId('journal-entry-screen')).toBeVisible({
-      timeout: 30000,
+    await expect(this.page.getByTestId('journal-entry-fab-expense')).toBeVisible({
+      timeout: 10000,
     });
   }
 

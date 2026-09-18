@@ -14,6 +14,7 @@ export type TransactionIntentSeedSourceContext = {
 export type TransactionIntentSeed = {
   editorMode?: JournalEntryRouteEditorMode;
   type?: JournalEntrySimpleType;
+  guidedAutopilot?: boolean;
   journalId?: JournalId;
   sourceAccountId?: AccountId;
   destinationAccountId?: AccountId;
@@ -27,6 +28,7 @@ export type TransactionIntentSeed = {
 export type LegacyJournalEntryQueryParams = {
   mode?: JournalEntryRouteEditorMode;
   type?: JournalEntrySimpleType;
+  guidedAutopilot?: string;
   journalId?: string;
   sourceAccountId?: string;
   destinationAccountId?: string;
@@ -53,6 +55,7 @@ export function toLegacyJournalEntryQueryParams(
   return compactParams({
     mode: seed.editorMode,
     type: seed.type,
+    guidedAutopilot: seed.guidedAutopilot ? 'true' : undefined,
     journalId: seed.journalId,
     sourceAccountId: seed.sourceAccountId,
     destinationAccountId: seed.destinationAccountId,

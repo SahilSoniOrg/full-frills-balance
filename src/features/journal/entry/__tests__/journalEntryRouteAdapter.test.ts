@@ -68,6 +68,28 @@ describe('journalEntryRouteAdapter', () => {
     });
   });
 
+  it('preserves the explicit guided autopilot opt-in', () => {
+    expect(
+      parseTransactionIntentSeed({ mode: 'simple', type: 'expense', guidedAutopilot: 'true' }),
+    ).toEqual({
+      editorMode: 'simple',
+      type: 'expense',
+      guidedAutopilot: true,
+    });
+
+    expect(
+      toLegacyJournalEntryQueryParams({
+        editorMode: 'simple',
+        type: 'expense',
+        guidedAutopilot: true,
+      }),
+    ).toEqual({
+      mode: 'simple',
+      type: 'expense',
+      guidedAutopilot: 'true',
+    });
+  });
+
   it('round-trips supported route fields through the normalized parser', () => {
     const seed = toTransactionIntentSeed({
       mode: 'advanced',

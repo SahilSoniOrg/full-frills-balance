@@ -43,6 +43,7 @@ export function toTransactionIntentSeed(route: JournalEntryRouteParams): Transac
   return compactSeed({
     editorMode: route.mode,
     type: route.type,
+    guidedAutopilot: route.guidedAutopilot,
     journalId: route.journalId,
     sourceAccountId: route.sourceAccountId,
     destinationAccountId: route.destinationAccountId,

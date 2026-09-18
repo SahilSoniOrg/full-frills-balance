@@ -103,6 +103,17 @@ describe('journal-entry navigation', () => {
     expect(router.push).toHaveBeenCalledWith('/journal-entry');
   });
 
+  it('opts the FAB simple-entry flow into guided autopilot explicitly', () => {
+    AppNavigation.toSimpleJournalEntry('expense', { guidedAutopilot: true });
+    AppNavigation.toSimpleJournalEntry('income');
+
+    expect(router.push).toHaveBeenNthCalledWith(
+      1,
+      '/journal-entry?mode=simple&type=expense&guidedAutopilot=true',
+    );
+    expect(router.push).toHaveBeenNthCalledWith(2, '/journal-entry?mode=simple&type=income');
+  });
+
   it('opens Batch inside the shared journal composer', () => {
     AppNavigation.toBulkJournalEntry();
 
