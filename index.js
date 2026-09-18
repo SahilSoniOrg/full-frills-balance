@@ -10,9 +10,6 @@ import { analytics } from '@/src/services/analytics';
 import '@/src/features/app/hooks/useFonts';
 import { logger } from './src/utils/logger';
 
-// Global anchor for boot performance telemetry
-import 'expo-router/entry';
-
 if (process.env.EXPO_OS !== 'web') {
   require('react-native-quick-crypto').install();
 }
@@ -20,6 +17,10 @@ if (process.env.EXPO_OS !== 'web') {
 logger.info('[Boot] JS execution started');
 
 analytics.earlyInitializeSentry();
+
+// Keep router module side effects behind Sentry initialization so failures in
+// route/bootstrap evaluation are captured by the early error boundary.
+require('expo-router/entry');
 
 if (typeof global !== 'undefined') {
   global.__BOOT_START_TIME__ = typeof performance !== 'undefined' ? performance.now() : Date.now();
