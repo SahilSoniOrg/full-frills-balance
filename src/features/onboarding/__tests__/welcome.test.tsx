@@ -103,7 +103,7 @@ describe('WelcomeScene responsive composition', () => {
     expect(screen.getByTestId('onboarding-welcome-input-context')).toBeOnTheScreen();
     expect(screen.queryByTestId('onboarding-welcome-hero')).toBeNull();
     expect(screen.getByTestId('onboarding-start')).toBeOnTheScreen();
-    expect(screen.getByTestId('onboarding-welcome-trust-actions')).toBeOnTheScreen();
+    expect(screen.queryByTestId('onboarding-welcome-trust-actions')).toBeNull();
   });
 
   it('uses the same validated start path for keyboard submit and the primary button', () => {

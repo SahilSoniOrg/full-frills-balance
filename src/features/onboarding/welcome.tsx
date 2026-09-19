@@ -117,43 +117,45 @@ export function WelcomeScene({
             </Stack>
           </ScrollView>
 
-          <Box testID="onboarding-welcome-trust-actions">
-            <Stack
-              gap="xs"
-              align="center"
-              paddingHorizontal="md"
-              paddingTop="sm"
-              paddingBottom="sm"
-            >
-              <Stack gap="xs" align="center">
-                <AppText variant="caption" color="secondary">
-                  {splash.restorePrompt}
-                </AppText>
-                <AppButton
-                  variant="ghost"
-                  size="md"
-                  onPress={() => run('restore')}
-                  testID="onboarding-restore-button"
-                >
-                  {copy.restoreBackup}
-                </AppButton>
+          {!inputMode && (
+            <Box testID="onboarding-welcome-trust-actions">
+              <Stack
+                gap="xs"
+                align="center"
+                paddingHorizontal="md"
+                paddingTop="sm"
+                paddingBottom="sm"
+              >
+                <Stack gap="xs" align="center">
+                  <AppText variant="caption" color="secondary">
+                    {splash.restorePrompt}
+                  </AppText>
+                  <AppButton
+                    variant="ghost"
+                    size="md"
+                    onPress={() => run('restore')}
+                    testID="onboarding-restore-button"
+                  >
+                    {copy.restoreBackup}
+                  </AppButton>
+                </Stack>
+                <Stack gap="xs" align="center">
+                  <AppText variant="caption" color="secondary" align="center">
+                    {copy.privacyFootnote}
+                  </AppText>
+                  <AppButton
+                    variant="ghost"
+                    size="sm"
+                    onPress={onPrivacyNotice}
+                    accessibilityLabel={PRIVACY_NOTICE_STRINGS.onboardingAction}
+                    testID="onboarding-privacy-notice-button"
+                  >
+                    {PRIVACY_NOTICE_STRINGS.onboardingAction}
+                  </AppButton>
+                </Stack>
               </Stack>
-              <Stack gap="xs" align="center">
-                <AppText variant="caption" color="secondary" align="center">
-                  {copy.privacyFootnote}
-                </AppText>
-                <AppButton
-                  variant="ghost"
-                  size="sm"
-                  onPress={onPrivacyNotice}
-                  accessibilityLabel={PRIVACY_NOTICE_STRINGS.onboardingAction}
-                  testID="onboarding-privacy-notice-button"
-                >
-                  {PRIVACY_NOTICE_STRINGS.onboardingAction}
-                </AppButton>
-              </Stack>
-            </Stack>
-          </Box>
+            </Box>
+          )}
         </KeyboardAvoidingView>
       </Box>
       <PrivacyAcknowledgementSheet
