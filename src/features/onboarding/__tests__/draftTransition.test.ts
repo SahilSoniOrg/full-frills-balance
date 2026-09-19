@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import { createInitialDraft } from '../draft';
-import { explainDraftTransition } from '../draftTransition';
+import { explainDraftTransition } from '../draftTransitionModel';
 import { PlannedPaymentInterval } from '@/src/types/enums';
 
 describe('explainDraftTransition', () => {
@@ -125,5 +125,33 @@ describe('explainDraftTransition', () => {
     expect(explainDraftTransition(base, { ...base, commitment: { kind: 'skipped' } }, now)).toBe(
       'Safe to Spend unchanged — planned payments skipped',
     );
+  });
+
+  it('attributes projection changes caused by payment dates', () => {
+    const payment = {
+      id: 'payment-1',
+      name: 'Rent',
+      type: 'rent' as const,
+      amount: 800,
+      dueDate: now.add(40, 'day').valueOf(),
+    };
+
+    expect(
+      explainDraftTransition(
+        { ...withCash, commitment: { kind: 'payment', items: [payment] } },
+        {
+          ...withCash,
+          commitment: {
+            kind: 'payment',
+            items: [{ ...payment, dueDate: now.add(5, 'day').valueOf() }],
+          },
+        },
+        now,
+      ),
+    ).toBe('$800 held from Safe to Spend — Rent payment changed');
+  });
+
+  it('returns null for metadata-only draft updates', () => {
+    expect(explainDraftTransition(base, { ...base, workplaceName: 'Household' }, now)).toBeNull();
   });
 });

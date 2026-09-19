@@ -28,7 +28,7 @@ import {
   defaultWorkplaceName,
 } from './localeDefaults';
 import { projectCashClarityDraft } from './projectCashClarityDraft';
-import { explainDraftTransition } from './draftTransition';
+import { explainDraftTransition } from './draftTransitionModel';
 import { ONBOARDING_STEPS } from './flow';
 import {
   ClarityScene,
@@ -65,7 +65,7 @@ export function OnboardingScreen() {
     if (previousDraftRef.current === draft) return;
     const change = explainDraftTransition(previousDraftRef.current, draft);
     previousDraftRef.current = draft;
-    if (change) setLatestDraftChange(change);
+    setLatestDraftChange(change);
   }, [draft]);
 
   const go = (next: OnboardingStep) => {
