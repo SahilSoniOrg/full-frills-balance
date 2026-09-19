@@ -1,4 +1,4 @@
-import { AppText, ColoredDot, Icon, IconButton } from '@/src/components/core';
+import { AppCard, AppText, ColoredDot, Icon, IconButton } from '@/src/components/core';
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { Typography } from '@/src/constants';
@@ -12,7 +12,7 @@ import { StyleSheet } from 'react-native';
 import { ConversationStep } from './conversationUi';
 import { ClarityChart } from './clarityChart';
 import { incomeItemName, paymentItemName, type CashClarityDraft } from './draft';
-import type { CashClarityProjection } from './projectCashClarityDraft';
+import type { CashClarityProjection, ClarityBeat } from './projectCashClarityDraft';
 
 export function ClarityScene({
   currency,
@@ -40,6 +40,7 @@ export function ClarityScene({
     projection.liquidNow > 0 || draft.accounts.some(account => account.kind !== 'card');
   const stsColor: ComponentVariant =
     projection.safeToSpend > 0 ? 'primary' : projection.safeToSpend < 0 ? 'error' : 'secondary';
+  const todayBeats = projection.today.filter(beat => beat.key !== 'sts');
 
   return (
     <ConversationStep
@@ -56,37 +57,75 @@ export function ClarityScene({
             {finishError}
           </AppText>
         ) : null}
-        <Stack gap="sm">
-          <Inline align="center" justify="space-between" gap="md">
-            <AppText variant="caption" color="secondary" weight="bold" style={styles.stageLabel}>
-              {copy.safeToSpend}
-            </AppText>
-            <IconButton
-              name={Icon.HelpCircle}
-              variant="clear"
-              accessibilityLabel={copy.clarityExplainAction}
-              onPress={() => setExplanationVisible(true)}
-              testID="onboarding-clarity-info-button"
+        <AppCard
+          variant={projection.safeToSpend > 0 ? 'ghost' : 'outline'}
+          paddingSize="lg"
+          testID="onboarding-clarity-result"
+        >
+          <Stack gap="md">
+            <Inline align="center" justify="space-between" gap="md">
+              <Stack gap="xs" flex={1}>
+                <AppText
+                  variant="caption"
+                  color="secondary"
+                  weight="bold"
+                  style={styles.stageLabel}
+                >
+                  {copy.safeToSpend}
+                </AppText>
+                <AppText variant="caption" color="secondary">
+                  {copy.overNextDays(projection.windowDays)}
+                </AppText>
+              </Stack>
+              <IconButton
+                name={Icon.HelpCircle}
+                variant="clear"
+                accessibilityLabel={copy.clarityExplainAction}
+                onPress={() => setExplanationVisible(true)}
+                testID="onboarding-clarity-info-button"
+              />
+            </Inline>
+            <MoneyText
+              amount={projection.safeToSpend}
+              currencyCode={currency}
+              formatStyle="compact"
+              variant="hero"
+              color={stsColor}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              testID="onboarding-clarity-sts"
             />
-          </Inline>
-          <MoneyText
-            amount={projection.safeToSpend}
-            currencyCode={currency}
-            formatStyle="compact"
-            variant="hero"
-            color={stsColor}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            testID="onboarding-clarity-sts"
-          />
-          <AppText variant="caption" color="secondary">
-            {copy.overNextDays(projection.windowDays)}
-          </AppText>
-          <AppText variant="body" color="secondary" style={styles.proseCopy}>
-            {copy.clarityDefinition}
-          </AppText>
-          <ClarityFormula projection={projection} currency={currency} />
+            <AppText variant="body" color="secondary" style={styles.proseCopy}>
+              {copy.clarityDefinition}
+            </AppText>
+          </Stack>
+        </AppCard>
+
+        <Stack gap="sm">
+          <AppText variant="subheading">{copy.clarityExplainAction}</AppText>
+          <AppCard variant="secondary" paddingSize="md" testID="onboarding-clarity-formula">
+            <ClarityFormula projection={projection} currency={currency} />
+          </AppCard>
         </Stack>
+
+        {todayBeats.length > 0 ? (
+          <ClarityBeatCard
+            testID="onboarding-clarity-now"
+            title={copy.stageNow}
+            beats={todayBeats}
+            currency={currency}
+            stsColor={stsColor}
+          />
+        ) : null}
+        {projection.ahead.length > 0 ? (
+          <ClarityBeatCard
+            testID="onboarding-clarity-next"
+            title={copy.stageNext}
+            beats={projection.ahead}
+            currency={currency}
+            stsColor={stsColor}
+          />
+        ) : null}
 
         {!(hasCash || income.length > 0 || payments.length > 0 || budgets.length > 0) ? (
           <AppText variant="body" color="secondary" style={styles.proseCopy}>
@@ -194,6 +233,80 @@ export function ClarityScene({
         </Stack>
       </InfoSheet>
     </ConversationStep>
+  );
+}
+
+function ClarityBeatCard({
+  testID,
+  title,
+  beats,
+  currency,
+  stsColor,
+}: {
+  readonly testID: string;
+  readonly title: string;
+  readonly beats: readonly ClarityBeat[];
+  readonly currency: string;
+  readonly stsColor: ComponentVariant;
+}) {
+  return (
+    <AppCard variant="outline" paddingSize="md" testID={testID}>
+      <Stack gap="md">
+        <AppText variant="subheading">{title}</AppText>
+        <Stack gap="md">
+          {beats.map(beat => (
+            <ClarityBeatRow key={beat.key} beat={beat} currency={currency} stsColor={stsColor} />
+          ))}
+        </Stack>
+      </Stack>
+    </AppCard>
+  );
+}
+
+function ClarityBeatRow({
+  beat,
+  currency,
+  stsColor,
+}: {
+  readonly beat: ClarityBeat;
+  readonly currency: string;
+  readonly stsColor: ComponentVariant;
+}) {
+  const tint: ComponentVariant =
+    beat.key === 'room' || beat.key === 'sts'
+      ? stsColor
+      : beat.key === 'held'
+        ? 'warning'
+        : beat.sign === '+'
+          ? 'income'
+          : beat.sign === '-'
+            ? 'expense'
+            : 'primary';
+
+  return (
+    <Inline align="center" justify="space-between" gap="md">
+      <Stack gap="xs" flex={1}>
+        <AppText
+          variant={beat.emphasize ? 'subheading' : 'body'}
+          color={beat.emphasize ? tint : 'primary'}
+        >
+          {beat.label}
+        </AppText>
+        {beat.subtitle ? (
+          <AppText variant="caption" color="secondary">
+            {beat.subtitle}
+          </AppText>
+        ) : null}
+      </Stack>
+      <MoneyText
+        amount={beat.amount}
+        currencyCode={currency}
+        formatStyle="compact"
+        prefix={beat.sign}
+        variant={beat.emphasize ? 'subheading' : 'body'}
+        color={tint}
+      />
+    </Inline>
   );
 }
 

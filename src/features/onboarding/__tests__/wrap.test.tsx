@@ -9,6 +9,9 @@ jest.mock('@/src/components/core', () => {
     Pressable: NativePressable,
   } = jest.requireActual('react-native') as typeof import('react-native');
   return {
+    AppCard: ({ children, ...props }: { children?: React.ReactNode }) => (
+      <NativeView {...props}>{children}</NativeView>
+    ),
     AppText: ({ children, ...props }: { children?: React.ReactNode }) => (
       <NativeText {...props}>{children}</NativeText>
     ),
@@ -140,7 +143,9 @@ describe('ClarityScene progressive explanation', () => {
     );
 
     expect(screen.getByText(/Safe to Spend is the cash/)).toBeTruthy();
+    expect(screen.getByTestId('onboarding-clarity-result')).toBeTruthy();
     expect(screen.getByTestId('onboarding-clarity-calculation')).toBeTruthy();
+    expect(screen.getByTestId('onboarding-clarity-formula')).toBeTruthy();
     expect(screen.queryByTestId('onboarding-clarity-sheet')).toBeNull();
 
     fireEvent.press(screen.getByTestId('onboarding-clarity-info-button'));
