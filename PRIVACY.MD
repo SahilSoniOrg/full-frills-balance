@@ -1,14 +1,14 @@
 Privacy Policy for Full Frills Balance
 
-Effective Date: September 7, 2026
+Effective Date: September 17, 2026
 
-Last Updated: September 7, 2026
+Last Updated: September 17, 2026
 
 Public copy: https://full-frills-landing.vercel.app/privacy.html
 
 Welcome to Full Frills Balance. This Privacy Policy explains how Full Frills Balance handles your information and protects your privacy.
 
-Policy update (September 7, 2026): This update clarifies that the current app is local-first, does not connect to bank accounts, and does not provide online sync or cloud backup. It also documents privacy principles for a possible future encrypted sync feature. The future-sync section describes planned behavior only; it does not mean that feature is available today.
+Policy update (September 17, 2026): This update documents the opt-in TypeSafe transaction-parsing integration. The app remains local-first by default; TypeSafe is not enabled unless explicitly configured.
 
 1. Overview
 
@@ -36,7 +36,6 @@ imported transaction records
 
 rule-based tagging preferences
 
-
 We do not store this financial data on our own servers.
 
 The app may also store the version of this Privacy Policy you acknowledged and the acknowledgement time. That local record is the app's acknowledgement state and remains on your device. If product analytics is enabled, the app may send a best-effort pseudonymous acknowledgement event to PostHog with the policy version as its event-specific data, alongside the standard analytics and device context described below. This telemetry is not a signed legal record. It does not send the policy text, a signature, or your financial records.
@@ -54,7 +53,6 @@ detect whether a message is transaction-related
 extract transaction details such as amount, sender, and transaction type
 
 create transaction entries inside the app
-
 
 All SMS processing currently happens only when the user manually starts import.
 
@@ -90,7 +88,6 @@ pseudonymous analytics identifiers
 
 privacy policy acknowledgement events (policy version as event-specific data)
 
-
 We do not intentionally send:
 
 transaction or budget amounts
@@ -107,7 +104,6 @@ user-entered notes
 
 privacy policy text or signatures
 
-
 Analytics identifiers are pseudonymous and are used only to understand app usage and improve functionality.
 
 PostHog session replay is disabled. We do not record in-app screenshots or screen replays for product analytics.
@@ -122,6 +118,14 @@ retrieving currency exchange rates from ExchangeRate-API
 
 sending analytics telemetry
 
+If you explicitly use the optional TypeSafe transaction-parsing integration, the app sends the
+current voice transcript, deterministic parser hints, and active account and category names to the
+configured application backend. The backend validates this request, sends it to TypeSafe for semantic
+judgments, and keeps the TypeSafe API key server-side. This feature is disabled by default.
+
+The configured backend and TypeSafe process the submitted transcript and candidate names according to
+their own policies. Do not enable this optional integration for sensitive data unless you accept that
+external processing boundary and TypeSafe's policies.
 
 Exchange-rate requests do not include your transaction history or personal financial records.
 
@@ -145,7 +149,6 @@ phone number verification
 
 cloud account
 
-
 8. Data Sharing
 
 We do not sell personal data.
@@ -159,7 +162,6 @@ Depending on features you choose to use, the app may request:
 SMS permission for transaction import
 
 storage access for export and backup
-
 
 Permissions are optional where possible and used only for app functionality.
 
@@ -207,4 +209,5 @@ This Privacy Policy may be updated when app features or data practices change. W
 Update history:
 
 - September 7, 2026 — clarified current local-first and no-bank behavior, export files, analytics and crash reporting, and planned privacy principles for optional encrypted sync. No sync feature was enabled by this update.
+- September 17, 2026 — documented the optional TypeSafe transaction-parsing integration and its external processing boundary.
 - March 5, 2026 — initial policy published.

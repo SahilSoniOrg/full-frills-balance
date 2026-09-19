@@ -23,7 +23,6 @@ export function usePrivacySettingsViewModel(): PrivacySettingsViewModel {
     isWidgetPrivacyEnabled,
     setWidgetPrivacyEnabled,
   } = usePrivacyPrefs();
-
   const onTogglePrivacy = useCallback(() => {
     const newState = !isPrivacyMode;
     setPrivacyMode(newState);

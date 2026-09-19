@@ -48,9 +48,11 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
     isRecording,
     isParsing,
     parserOutput,
+    isTypeSafeConfigured,
     startRecording,
     stopRecording,
     parseTranscription,
+    parseWithTypeSafe,
     selectTemplate,
     applyParsedResult,
   } = useVoiceJournalParse({
@@ -153,22 +155,42 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                 />
                 <View style={styles.parseActionsGroup}>
                   {transcription.trim().length > 0 && (
-                    <TouchableOpacity
-                      onPress={() => void parseTranscription(transcription)}
-                      disabled={isParsing}
-                      style={[
-                        styles.parseTextTouch,
-                        {
-                          backgroundColor: theme.surfaceSecondary,
-                          borderColor: theme.border,
-                          borderWidth: 1,
-                        },
-                      ]}
-                    >
-                      <AppText variant="caption" weight="bold" color="primary">
-                        {isParsing ? '...' : 'Auto'}
-                      </AppText>
-                    </TouchableOpacity>
+                    <>
+                      <TouchableOpacity
+                        onPress={() => void parseTranscription(transcription)}
+                        disabled={isParsing}
+                        style={[
+                          styles.parseTextTouch,
+                          {
+                            backgroundColor: theme.surfaceSecondary,
+                            borderColor: theme.border,
+                            borderWidth: 1,
+                          },
+                        ]}
+                      >
+                        <AppText variant="caption" weight="bold" color="primary">
+                          {isParsing ? '...' : 'Auto'}
+                        </AppText>
+                      </TouchableOpacity>
+                      {isTypeSafeConfigured && (
+                        <TouchableOpacity
+                          onPress={() => void parseWithTypeSafe(transcription)}
+                          disabled={isParsing}
+                          style={[
+                            styles.parseTextTouch,
+                            {
+                              backgroundColor: theme.primary + '15',
+                              borderColor: theme.primary,
+                              borderWidth: 1,
+                            },
+                          ]}
+                        >
+                          <AppText variant="caption" weight="bold" style={{ color: theme.primary }}>
+                            {isParsing ? '...' : 'TypeSafe'}
+                          </AppText>
+                        </TouchableOpacity>
+                      )}
+                    </>
                   )}
                 </View>
               </View>
@@ -211,7 +233,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
             {isParsing && (
               <View style={styles.resolutionContainer}>
                 <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
-                  Resolving with on-device AI...
+                  Resolving transaction...
                 </AppText>
                 <ActivityIndicator
                   size="small"
@@ -238,7 +260,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                         ? 'Auto-Resolved Output'
                         : 'Suggested Resolution'}
                     </AppText>
-                    {parserOutput.provider === 'ai' && (
+                    {(parserOutput.provider === 'ai' || parserOutput.provider === 'typesafe') && (
                       <View
                         style={{
                           backgroundColor: theme.primary + '20',
@@ -248,7 +270,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                         }}
                       >
                         <AppText variant="caption" weight="bold" style={{ color: theme.primary }}>
-                          NATIVE AI
+                          {parserOutput.provider === 'typesafe' ? 'TYPESAFE' : 'NATIVE AI'}
                         </AppText>
                       </View>
                     )}

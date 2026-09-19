@@ -22,7 +22,7 @@ export interface ParserOutput {
   transactions: TransactionResult[];
   confidenceScore: number;
   isHighConfidence: boolean;
-  provider: 'deterministic' | 'ai';
+  provider: 'deterministic' | 'ai' | 'typesafe';
   processTimeMs?: number;
   debugMetrics?: {
     passTimings?: Record<string, number>;
@@ -31,8 +31,8 @@ export interface ParserOutput {
 }
 
 export interface AIContext {
-  accounts: string[];
-  categories: string[];
+  accounts: TypeSafeCandidate[];
+  categories: TypeSafeCandidate[];
   parserHints: {
     amount?: number;
     rawAccount?: string;
@@ -40,6 +40,12 @@ export interface AIContext {
     intentHint?: string;
     direction?: 'credit' | 'debit' | 'unknown';
   };
+}
+
+/** A database-backed candidate. TypeSafe may select only one of these IDs. */
+export interface TypeSafeCandidate {
+  id: string;
+  name: string;
 }
 
 export interface TransactionFallbackAIProvider {

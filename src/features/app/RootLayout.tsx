@@ -8,6 +8,7 @@ import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { database } from '@/src/data/database/Database';
 import { analytics, navigationIntegration } from '@/src/services/analytics';
+import { removeLegacyTypeSafeApiKey } from '@/src/services/typesafe/legacyTypeSafeKeyCleanup';
 import { logger } from '@/src/utils/logger';
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
@@ -115,6 +116,7 @@ function RootLayout() {
  * Stage 1: UI Readiness (Fonts, Telemetry)
  */
 function EarlyBootstrap() {
+  removeLegacyTypeSafeApiKey();
   useFonts();
   useTelemetry();
   return null;

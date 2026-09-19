@@ -1,6 +1,7 @@
 import { WorkplaceId } from '@/src/types/ids';
 import { ParserOutput, TransactionFallbackAIProvider } from './types/ai-parsing';
 import { mockAIProvider } from './TransactionFallbackAIProvider';
+import { typeSafeAIProvider } from './TypeSafeTransactionFallbackAIProvider';
 
 import { PipelineContext, PipelineStep } from './pipeline/types';
 import { ContextGatheringStep } from './pipeline/steps/ContextGatheringStep';
@@ -20,7 +21,10 @@ export class TransactionIngestionService {
   }
 
   private getEffectiveAiProvider(): TransactionFallbackAIProvider {
-    return this.customAiProvider ?? mockAIProvider;
+    return (
+      this.customAiProvider ??
+      (typeSafeAIProvider.isConfigured ? typeSafeAIProvider : mockAIProvider)
+    );
   }
 
   async ingest(
