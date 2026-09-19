@@ -43,6 +43,40 @@ export function WelcomeScene({
     else onRestore();
   };
 
+  const trustActions = (
+    <Box testID="onboarding-welcome-trust-actions">
+      <Stack gap="xs" align="center" paddingHorizontal="md" paddingTop="sm" paddingBottom="sm">
+        <Stack gap="xs" align="center">
+          <AppText variant="caption" color="secondary">
+            {splash.restorePrompt}
+          </AppText>
+          <AppButton
+            variant="ghost"
+            size="md"
+            onPress={() => run('restore')}
+            testID="onboarding-restore-button"
+          >
+            {copy.restoreBackup}
+          </AppButton>
+        </Stack>
+        <Stack gap="xs" align="center">
+          <AppText variant="caption" color="secondary" align="center">
+            {copy.privacyFootnote}
+          </AppText>
+          <AppButton
+            variant="ghost"
+            size="sm"
+            onPress={onPrivacyNotice}
+            accessibilityLabel={PRIVACY_NOTICE_STRINGS.onboardingAction}
+            testID="onboarding-privacy-notice-button"
+          >
+            {PRIVACY_NOTICE_STRINGS.onboardingAction}
+          </AppButton>
+        </Stack>
+      </Stack>
+    </Box>
+  );
+
   return (
     <>
       <Box flex={1} testID="onboarding-welcome">
@@ -60,9 +94,9 @@ export function WelcomeScene({
             keyboardShouldPersistTaps="handled"
           >
             <Stack
-              gap={inputMode ? 'xxl' : 'xxxl'}
+              gap={inputMode ? 'md' : 'xxxl'}
               flex={1}
-              justify={inputMode ? 'flex-start' : 'center'}
+              justify={inputMode ? 'flex-end' : 'center'}
             >
               <Stack gap={inputMode ? 'xxl' : Spacing.xxxxl + Spacing.xxl}>
                 <Stack gap="md" paddingTop={inputMode ? 'sm' : 'xl'} align="center">
@@ -114,48 +148,11 @@ export function WelcomeScene({
                   </AppButton>
                 </Stack>
               </Stack>
+              {inputMode ? trustActions : null}
             </Stack>
           </ScrollView>
 
-          {!inputMode && (
-            <Box testID="onboarding-welcome-trust-actions">
-              <Stack
-                gap="xs"
-                align="center"
-                paddingHorizontal="md"
-                paddingTop="sm"
-                paddingBottom="sm"
-              >
-                <Stack gap="xs" align="center">
-                  <AppText variant="caption" color="secondary">
-                    {splash.restorePrompt}
-                  </AppText>
-                  <AppButton
-                    variant="ghost"
-                    size="md"
-                    onPress={() => run('restore')}
-                    testID="onboarding-restore-button"
-                  >
-                    {copy.restoreBackup}
-                  </AppButton>
-                </Stack>
-                <Stack gap="xs" align="center">
-                  <AppText variant="caption" color="secondary" align="center">
-                    {copy.privacyFootnote}
-                  </AppText>
-                  <AppButton
-                    variant="ghost"
-                    size="sm"
-                    onPress={onPrivacyNotice}
-                    accessibilityLabel={PRIVACY_NOTICE_STRINGS.onboardingAction}
-                    testID="onboarding-privacy-notice-button"
-                  >
-                    {PRIVACY_NOTICE_STRINGS.onboardingAction}
-                  </AppButton>
-                </Stack>
-              </Stack>
-            </Box>
-          )}
+          {!inputMode ? trustActions : null}
         </KeyboardAvoidingView>
       </Box>
       <PrivacyAcknowledgementSheet
