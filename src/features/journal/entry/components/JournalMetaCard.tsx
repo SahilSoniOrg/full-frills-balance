@@ -9,8 +9,8 @@ import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
 import { TabType } from '@/src/types/domainJournal';
-import { useEffect, useRef, useState } from 'react';
-import { Keyboard, StyleProp, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { type RefObject, useEffect, useRef, useState } from 'react';
+import { Keyboard, StyleProp, TextInput, TouchableOpacity, View, ViewStyle } from 'react-native';
 
 interface JournalMetaCardProps {
   date: string;
@@ -31,6 +31,8 @@ interface JournalMetaCardProps {
   suggestionState?: 'idle' | 'loading' | 'empty' | 'error' | 'results';
   hideSuggestions?: boolean;
   onDescriptionFocus?: () => void;
+  onDescriptionSubmitEditing?: () => void;
+  descriptionInputRef?: RefObject<TextInput | null>;
   onVoiceInputPress?: () => void;
 }
 
@@ -54,6 +56,8 @@ export function JournalMetaCard({
   suggestionState = suggestions.length > 0 ? 'results' : 'idle',
   hideSuggestions = false,
   onDescriptionFocus,
+  onDescriptionSubmitEditing,
+  descriptionInputRef,
   onVoiceInputPress,
 }: JournalMetaCardProps) {
   const { theme } = useTheme();
@@ -105,8 +109,10 @@ export function JournalMetaCard({
         <View style={{ zIndex: 10, position: 'relative' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <AppInput
+              ref={descriptionInputRef}
               value={description}
               onChangeText={setDescription}
+              returnKeyType="done"
               onFocus={() => {
                 if (blurTimerRef.current) {
                   clearTimeout(blurTimerRef.current);
@@ -114,6 +120,13 @@ export function JournalMetaCard({
                 }
                 setIsDescriptionFocused(true);
                 onDescriptionFocus?.();
+              }}
+              blurOnSubmit
+              onSubmitEditing={() => {
+                descriptionInputRef?.current?.blur();
+                setIsDescriptionFocused(false);
+                Keyboard.dismiss();
+                onDescriptionSubmitEditing?.();
               }}
               onPressIn={() => {
                 onDescriptionFocus?.();
@@ -161,6 +174,8 @@ export function JournalMetaCard({
                 } else {
                   setDescription(suggestion.description);
                 }
+                descriptionInputRef?.current?.blur();
+                setIsDescriptionFocused(false);
                 Keyboard.dismiss();
               }}
             />

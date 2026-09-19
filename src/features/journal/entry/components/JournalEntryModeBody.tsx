@@ -34,6 +34,7 @@ export type JournalEntryModeBodyProps = {
   ) => void;
   onGuidedFooterAmountChange: (footer: GuidedFooterAmount | null) => void;
   guidedVoiceActionsRef: MutableRefObject<GuidedVoiceActions | null>;
+  onGuidedDescriptionFocus?: () => void;
   batchEditor: ReturnType<typeof useBulkJournalEditor>;
   batchSummary: { count: number; items: SavedJournalSummary[] } | null;
   onContinueBatch: () => void;
@@ -52,6 +53,7 @@ export function JournalEntryModeBody({
   onSelectAccountRequest,
   onGuidedFooterAmountChange,
   guidedVoiceActionsRef,
+  onGuidedDescriptionFocus,
   batchEditor,
   batchSummary,
   onContinueBatch,
@@ -97,6 +99,7 @@ export function JournalEntryModeBody({
         onSelectAccountRequest={onSelectAccountRequest}
         onFooterAmountChange={onGuidedFooterAmountChange}
         voiceActionsRef={guidedVoiceActionsRef}
+        onFocusDescription={onGuidedDescriptionFocus}
       />
     );
   }
@@ -118,6 +121,7 @@ export function JournalEntryModeBody({
       animate={{ opacity: 1, translateX: 0, scale: 1 }}
       transition={ChromeMotion.panel}
       style={styles.panel}
+      pointerEvents="box-none"
     >
       {panel}
     </MotiView>

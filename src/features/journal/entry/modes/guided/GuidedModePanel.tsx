@@ -3,15 +3,13 @@ import { SimpleFormAmountInput } from '@/src/features/journal/entry/components/S
 import { VoiceInputModal } from '@/src/features/journal/entry/components/VoiceInputModal';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import type { JournalEntryAccountPickerRequestOptions } from '@/src/features/journal/entry/hooks/useJournalEntryAccountPicker';
-import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
-import { useGuidedVoiceApplication } from '@/src/features/journal/entry/hooks/useGuidedVoiceApplication';
+import { useGuidedModeController } from '@/src/features/journal/entry/hooks/useGuidedModeController';
 import { resolveSimpleTypeAccentColor } from '@/src/features/journal/entry/journalEntryPresentation';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { WorkplaceId } from '@/src/types/ids';
-import { AccountRole, TabType } from '@/src/types/domainJournal';
+import { TabType } from '@/src/types/domainJournal';
 import { MutableRefObject, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 
 export type GuidedFooterAmount = {
@@ -41,6 +39,8 @@ export type GuidedModePanelProps = {
   onFooterAmountChange?: (footer: GuidedFooterAmount | null) => void;
   /** MetaCard mic opens Guided-owned VoiceInputModal via this ref. */
   voiceActionsRef?: MutableRefObject<GuidedVoiceActions | null>;
+  /** Focuses the description field after amount entry completes. */
+  onFocusDescription?: () => void;
 };
 
 export function GuidedModePanel({
@@ -51,28 +51,23 @@ export function GuidedModePanel({
   onSelectAccountRequest,
   onFooterAmountChange,
   voiceActionsRef,
+  onFocusDescription,
 }: GuidedModePanelProps) {
   const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
-
-  const { getLineIdByRole } = editor;
-
-  const requestAccountForRole = useCallback(
-    (role: AccountRole, requestOptions?: JournalEntryAccountPickerRequestOptions) => {
-      const lineId = getLineIdByRole(role);
-      if (lineId) {
-        onSelectAccountRequest(lineId, requestOptions);
-      }
-    },
-    [getLineIdByRole, onSelectAccountRequest],
-  );
-
-  const simpleEditor = useSimpleJournalEditor({
+  const {
+    simpleEditor,
+    precision,
+    handleApplyVoiceInput,
+    autopilotActive,
+    onAutopilotCalculatorDone,
+  } = useGuidedModeController({
     accounts,
     editor,
-    onSelectAccountRequest: requestAccountForRole,
+    guidedAutopilot,
+    onSelectAccountRequest,
+    onFocusDescription,
   });
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
-  const { precision } = useCurrencyPrecision(simpleEditor.displayCurrency);
 
   const footerAmount = useMemo<GuidedFooterAmount>(
     () => ({
@@ -81,20 +76,10 @@ export function GuidedModePanel({
       accentType: simpleEditor.type,
       displayCurrency: simpleEditor.displayCurrency,
       precision,
-      autoOpenCalculator: guidedAutopilot && !editor.isEdit && !simpleEditor.amount,
-      onCalculatorDone:
-        guidedAutopilot && !editor.isEdit && !simpleEditor.amount
-          ? () => {
-              // The first choice after an amount is the semantic target:
-              // expense category, income source, or transfer source account.
-              const firstSection = simpleEditor.accountSections[0];
-              if (firstSection) {
-                requestAccountForRole(firstSection.role, { autoAdvance: true });
-              }
-            }
-          : undefined,
+      autoOpenCalculator: autopilotActive,
+      onCalculatorDone: onAutopilotCalculatorDone,
     }),
-    [editor.isEdit, guidedAutopilot, precision, requestAccountForRole, simpleEditor],
+    [autopilotActive, onAutopilotCalculatorDone, precision, simpleEditor],
   );
 
   useEffect(() => {
@@ -111,8 +96,6 @@ export function GuidedModePanel({
       voiceActionsRef.current = null;
     };
   }, [voiceActionsRef, openVoice]);
-
-  const handleApplyVoiceInput = useGuidedVoiceApplication(editor, simpleEditor);
 
   return (
     <>

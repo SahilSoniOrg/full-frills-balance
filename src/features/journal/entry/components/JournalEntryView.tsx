@@ -13,12 +13,23 @@ import { useJournalEntryPresentationState } from '@/src/features/journal/entry/h
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { MotiView } from 'moti';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useCallback, useRef } from 'react';
+import {
+  ActivityIndicator,
+  findNodeHandle,
+  GestureResponderEvent,
+  Keyboard,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 import { Icon } from '@/src/types/domainIcons';
 
 export function JournalEntryView(vm: JournalEntryShell) {
   const { theme } = useTheme();
   const reduceMotion = useReducedMotion();
+  const descriptionInputRef = useRef<TextInput>(null);
   const {
     hideSuggestions,
     isSubmitting,
@@ -34,6 +45,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
   } = useJournalEntryPresentationState(vm);
 
   const {
+    editor,
     isLoading,
     loadState,
     headerTitle,
@@ -41,8 +53,50 @@ export function JournalEntryView(vm: JournalEntryShell) {
     editBannerText,
     activeMode,
     onToggleMode,
+    onSelectAccountRequest,
     guidedFooterAmount,
   } = vm;
+
+  const focusDescription = useCallback(() => {
+    setTimeout(() => descriptionInputRef.current?.focus(), 0);
+  }, []);
+
+  const startGuidedAccountFlow = useCallback(() => {
+    if (activeMode !== 'basic') return;
+    const sourceLineId = editor.getLineIdByRole('source');
+    if (sourceLineId) {
+      onSelectAccountRequest(sourceLineId, { autoAdvance: true });
+    }
+  }, [activeMode, editor, onSelectAccountRequest]);
+
+  const handleSelectSuggestion = useCallback(
+    (suggestion: Parameters<typeof onSelectSuggestion>[0]) => {
+      onSelectSuggestion(suggestion);
+      startGuidedAccountFlow();
+    },
+    [onSelectSuggestion, startGuidedAccountFlow],
+  );
+
+  const dismissContentInput = useCallback((event: GestureResponderEvent) => {
+    if (event.target !== event.currentTarget) return;
+    const focusedInput = TextInput.State.currentlyFocusedInput();
+    if (focusedInput) TextInput.State.blurTextInput(focusedInput);
+    Keyboard.dismiss();
+  }, []);
+
+  const dismissInputOnOutsideTouch = useCallback((event: GestureResponderEvent) => {
+    const focusedInput = TextInput.State.currentlyFocusedInput();
+    if (!focusedInput) return false;
+
+    const focusedTarget = findNodeHandle(
+      focusedInput as unknown as Parameters<typeof findNodeHandle>[0],
+    );
+    if (focusedTarget && String(event.nativeEvent.target) !== String(focusedTarget)) {
+      TextInput.State.blurTextInput(focusedInput);
+      Keyboard.dismiss();
+    }
+    return false;
+  }, []);
 
   if (isLoading) {
     return (
@@ -120,7 +174,21 @@ export function JournalEntryView(vm: JournalEntryShell) {
         </MotiView>
       }
     >
-      <View style={styles.content}>
+      <View
+        style={styles.content}
+        onStartShouldSetResponderCapture={dismissInputOnOutsideTouch}
+        onStartShouldSetResponder={event => event.target === event.currentTarget}
+        onResponderRelease={dismissContentInput}
+      >
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={() => {
+            const focusedInput = TextInput.State.currentlyFocusedInput();
+            if (focusedInput) TextInput.State.blurTextInput(focusedInput);
+            Keyboard.dismiss();
+          }}
+          accessible={false}
+        />
         {!isBatchMode && (
           <JournalMetaCard
             date={vm.editor.journalDate}
@@ -129,7 +197,7 @@ export function JournalEntryView(vm: JournalEntryShell) {
             setTime={vm.editor.setJournalTime}
             description={vm.editor.description}
             setDescription={setDescription}
-            onSelectSuggestion={onSelectSuggestion}
+            onSelectSuggestion={handleSelectSuggestion}
             activeTabType={activeMode === 'basic' ? vm.editor.transactionType : undefined}
             accounts={vm.accounts}
             notes={vm.editor.notes}
@@ -140,13 +208,15 @@ export function JournalEntryView(vm: JournalEntryShell) {
             suggestionState={vm.suggestionState}
             hideSuggestions={hideSuggestions}
             onDescriptionFocus={onDescriptionFocus}
+            onDescriptionSubmitEditing={startGuidedAccountFlow}
+            descriptionInputRef={descriptionInputRef}
             onVoiceInputPress={
               activeMode === 'basic' ? () => vm.guidedVoiceActionsRef.current?.open() : undefined
             }
           />
         )}
 
-        <JournalEntryModeBody {...modeBodyProps} />
+        <JournalEntryModeBody {...modeBodyProps} onGuidedDescriptionFocus={focusDescription} />
       </View>
 
       <AccountPickerModal
@@ -172,5 +242,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    position: 'relative',
   },
 });
