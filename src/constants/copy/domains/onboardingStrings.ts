@@ -152,16 +152,9 @@ export const ONBOARDING_STRINGS = {
   back: 'Back',
   more: 'More options',
   needAccountForPlanned: 'Add a spendable account before we can plan this money.',
-  changeAdded: (name: string) => `${name} added`,
-  changeRemoved: (name: string) => `${name} removed`,
-  changeBalanceAdded: (amount: string, name: string) => `${amount} added to ${name}`,
-  changeBalanceRemoved: (amount: string, name: string) => `${amount} removed from ${name}`,
-  changeCardPayment: (amount: string, name: string) => `${amount} reserved for ${name} payment`,
-  changeCardPaymentRemoved: (name: string) => `No card payment reserved for ${name}`,
-  changeIncome: (amount: string, name: string) => `${amount} expected from ${name}`,
-  changeIncomeSkipped: 'No income added — Safe to Spend unchanged',
-  changePayment: (amount: string, name: string) => `${amount} reserved for ${name}`,
-  changePaymentsSkipped: 'No planned payments added — Safe to Spend unchanged',
-  changeBudget: (amount: string, name: string) => `${amount} set aside monthly for ${name}`,
-  changeBudgetsSkipped: 'No budgets added — Safe to Spend unchanged',
+  changeSafeToSpendAdded: (amount: string, reason: string) =>
+    `${amount} added to Safe to Spend — ${reason}`,
+  changeSafeToSpendHeld: (amount: string, reason: string) =>
+    `${amount} held from Safe to Spend — ${reason}`,
+  changeSafeToSpendUnchanged: (reason: string) => `Safe to Spend unchanged — ${reason}`,
 } as const;

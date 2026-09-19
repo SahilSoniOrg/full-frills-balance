@@ -1,14 +1,8 @@
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
+import { projectCashClarityDraft } from './projectCashClarityDraft';
 import { formatDraftAmount } from './spokenConfirm';
-import {
-  incomeItemName,
-  paymentItemName,
-  type BudgetItem,
-  type CashClarityDraft,
-  type DraftAccount,
-  type PaymentItem,
-  type RecurringIncome,
-} from './draft';
+import { incomeItemName, paymentItemName, type CashClarityDraft, type DraftAccount } from './draft';
+import dayjs, { type Dayjs } from 'dayjs';
 
 function firstAdded<T extends { readonly id: string }>(
   previous: readonly T[],
@@ -37,16 +31,46 @@ function changedAmount<T extends { readonly id: string; readonly amount: number 
   return undefined;
 }
 
+function roundedAmount(amount: number): number {
+  return Math.round((amount + Number.EPSILON) * 100) / 100;
+}
+
+function safeToSpendEffect(
+  previous: CashClarityDraft,
+  current: CashClarityDraft,
+  currency: string,
+  reason: string,
+  now: Dayjs,
+): string {
+  const previousSafeToSpend = projectCashClarityDraft(previous, now).safeToSpend;
+  const currentSafeToSpend = projectCashClarityDraft(current, now).safeToSpend;
+  const delta = roundedAmount(currentSafeToSpend - previousSafeToSpend);
+  if (delta > 0) {
+    return copy.changeSafeToSpendAdded(formatDraftAmount(delta, currency), reason);
+  }
+  if (delta < 0) {
+    return copy.changeSafeToSpendHeld(formatDraftAmount(Math.abs(delta), currency), reason);
+  }
+  return copy.changeSafeToSpendUnchanged(reason);
+}
+
 function accountChange(
+  previousDraft: CashClarityDraft,
+  currentDraft: CashClarityDraft,
   previous: readonly DraftAccount[],
   current: readonly DraftAccount[],
   currency: string,
+  now: Dayjs,
 ): string | null {
   const added = firstAdded(previous, current);
-  if (added) return copy.changeAdded(added.name);
+  if (added) {
+    return safeToSpendEffect(previousDraft, currentDraft, currency, `${added.name} added`, now);
+  }
 
   const removed = firstRemoved(previous, current);
-  if (removed) return copy.changeRemoved(removed.name);
+  if (removed) {
+    return safeToSpendEffect(previousDraft, currentDraft, currency, `${removed.name} removed`, now);
+  }
 
   const before = current
     .map(account => ({
@@ -56,10 +80,13 @@ function accountChange(
     .find(item => item.previous && item.previous.balance !== item.current.balance);
   if (before?.previous) {
     const delta = before.current.balance - before.previous.balance;
-    const amount = formatDraftAmount(Math.abs(delta), currency);
-    return delta > 0
-      ? copy.changeBalanceAdded(amount, before.current.name)
-      : copy.changeBalanceRemoved(amount, before.current.name);
+    return safeToSpendEffect(
+      previousDraft,
+      currentDraft,
+      currency,
+      `${before.current.name} balance ${delta > 0 ? 'increased' : 'decreased'}`,
+      now,
+    );
   }
 
   const cardPayment = current
@@ -72,86 +99,171 @@ function accountChange(
     );
   if (cardPayment?.previous) {
     const amount = cardPayment.current.cardPaymentAmount ?? 0;
-    if (amount > 0) {
-      return copy.changeCardPayment(formatDraftAmount(amount, currency), cardPayment.current.name);
-    }
-    return copy.changeCardPaymentRemoved(cardPayment.current.name);
+    const reason =
+      amount > 0
+        ? `${cardPayment.current.name} card payment updated`
+        : `${cardPayment.current.name} card payment removed`;
+    return safeToSpendEffect(previousDraft, currentDraft, currency, reason, now);
   }
 
   return null;
 }
 
 function incomeChange(
+  previousDraft: CashClarityDraft,
+  currentDraft: CashClarityDraft,
   previous: CashClarityDraft['income'],
   current: CashClarityDraft['income'],
   currency: string,
+  now: Dayjs,
 ): string | null {
-  if (current.kind === 'skipped' && previous.kind !== 'skipped') return copy.changeIncomeSkipped;
+  if (current.kind === 'skipped' && previous.kind !== 'skipped') {
+    return safeToSpendEffect(previousDraft, currentDraft, currency, 'income skipped', now);
+  }
   const previousItems = previous.kind === 'recurring' ? previous.items : [];
   const currentItems = current.kind === 'recurring' ? current.items : [];
   const added = firstAdded(previousItems, currentItems);
-  if (added) return incomeSummary(added, currency);
+  if (added) {
+    return safeToSpendEffect(
+      previousDraft,
+      currentDraft,
+      currency,
+      `${incomeItemName(added)} income added`,
+      now,
+    );
+  }
+  const removed = firstRemoved(previousItems, currentItems);
+  if (removed) {
+    return safeToSpendEffect(
+      previousDraft,
+      currentDraft,
+      currency,
+      `${incomeItemName(removed)} income removed`,
+      now,
+    );
+  }
   const changed = changedAmount(previousItems, currentItems);
-  return changed ? incomeSummary(changed.current, currency) : null;
-}
-
-function incomeSummary(item: RecurringIncome, currency: string): string {
-  return copy.changeIncome(formatDraftAmount(item.amount, currency), incomeItemName(item));
+  return changed
+    ? safeToSpendEffect(
+        previousDraft,
+        currentDraft,
+        currency,
+        `${incomeItemName(changed.current)} income changed`,
+        now,
+      )
+    : null;
 }
 
 function paymentChange(
+  previousDraft: CashClarityDraft,
+  currentDraft: CashClarityDraft,
   previous: CashClarityDraft['commitment'],
   current: CashClarityDraft['commitment'],
   currency: string,
+  now: Dayjs,
 ): string | null {
-  if (current.kind === 'skipped' && previous.kind !== 'skipped') return copy.changePaymentsSkipped;
+  if (current.kind === 'skipped' && previous.kind !== 'skipped') {
+    return safeToSpendEffect(
+      previousDraft,
+      currentDraft,
+      currency,
+      'planned payments skipped',
+      now,
+    );
+  }
   const previousItems = previous.kind === 'payment' ? previous.items : [];
   const currentItems = current.kind === 'payment' ? current.items : [];
   const added = firstAdded(previousItems, currentItems);
-  if (added) return paymentSummary(added, currency);
+  if (added) {
+    return safeToSpendEffect(
+      previousDraft,
+      currentDraft,
+      currency,
+      `${paymentItemName(added)} payment added`,
+      now,
+    );
+  }
   const removed = firstRemoved(previousItems, currentItems);
-  if (removed) return copy.changeRemoved(paymentItemName(removed));
+  if (removed) {
+    return safeToSpendEffect(
+      previousDraft,
+      currentDraft,
+      currency,
+      `${paymentItemName(removed)} payment removed`,
+      now,
+    );
+  }
   const changed = changedAmount(previousItems, currentItems);
-  return changed ? paymentSummary(changed.current, currency) : null;
-}
-
-function paymentSummary(item: PaymentItem, currency: string): string {
-  return copy.changePayment(formatDraftAmount(item.amount, currency), paymentItemName(item));
+  return changed
+    ? safeToSpendEffect(
+        previousDraft,
+        currentDraft,
+        currency,
+        `${paymentItemName(changed.current)} payment changed`,
+        now,
+      )
+    : null;
 }
 
 function budgetChange(
+  previousDraft: CashClarityDraft,
+  currentDraft: CashClarityDraft,
   previous: CashClarityDraft['budget'],
   current: CashClarityDraft['budget'],
   currency: string,
+  now: Dayjs,
 ): string | null {
-  if (current.kind === 'skipped' && previous.kind !== 'skipped') return copy.changeBudgetsSkipped;
+  if (current.kind === 'skipped' && previous.kind !== 'skipped') {
+    return safeToSpendEffect(previousDraft, currentDraft, currency, 'budgets skipped', now);
+  }
   const previousItems = previous.kind === 'set' ? previous.items : [];
   const currentItems = current.kind === 'set' ? current.items : [];
   const added = firstAdded(previousItems, currentItems);
-  if (added) return budgetSummary(added, currency);
+  if (added) {
+    return safeToSpendEffect(
+      previousDraft,
+      currentDraft,
+      currency,
+      `${added.name} budget added`,
+      now,
+    );
+  }
   const removed = firstRemoved(previousItems, currentItems);
-  if (removed) return copy.changeRemoved(removed.name);
+  if (removed) {
+    return safeToSpendEffect(
+      previousDraft,
+      currentDraft,
+      currency,
+      `${removed.name} budget removed`,
+      now,
+    );
+  }
   const changed = changedAmount(previousItems, currentItems);
-  return changed ? budgetSummary(changed.current, currency) : null;
-}
-
-function budgetSummary(item: BudgetItem, currency: string): string {
-  return copy.changeBudget(formatDraftAmount(item.amount, currency), item.name);
+  return changed
+    ? safeToSpendEffect(
+        previousDraft,
+        currentDraft,
+        currency,
+        `${changed.current.name} budget changed`,
+        now,
+      )
+    : null;
 }
 
 /**
- * Describes the latest meaningful draft transition without recalculating the
- * projection. Presentation can safely show this next to the live result.
+ * Describes the latest meaningful draft transition using the same projection
+ * that supplies the live Safe-to-Spend number.
  */
 export function explainDraftTransition(
   previous: CashClarityDraft,
   current: CashClarityDraft,
+  now: Dayjs = dayjs(),
 ): string | null {
   const currency = current.currency;
   return (
-    accountChange(previous.accounts, current.accounts, currency) ??
-    incomeChange(previous.income, current.income, currency) ??
-    paymentChange(previous.commitment, current.commitment, currency) ??
-    budgetChange(previous.budget, current.budget, currency)
+    accountChange(previous, current, previous.accounts, current.accounts, currency, now) ??
+    incomeChange(previous, current, previous.income, current.income, currency, now) ??
+    paymentChange(previous, current, previous.commitment, current.commitment, currency, now) ??
+    budgetChange(previous, current, previous.budget, current.budget, currency, now)
   );
 }
