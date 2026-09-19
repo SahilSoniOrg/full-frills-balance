@@ -1,4 +1,5 @@
 import { AccountType, TransactionType } from '@/src/types/enums';
+import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
@@ -374,5 +375,41 @@ describe('useSimpleJournalEditor', () => {
     expect(result.current.manualSourceBaseRate).toBe('1.25');
     expect(result.current.showManualRateFields).toBe(true);
     expect(mockFetchHistoricalRate).toHaveBeenCalledTimes(historicalCalls);
+  });
+
+  it('allows unselecting accounts to EMPTY_ACCOUNT_ID and keeps them unselected', async () => {
+    const editor = createEditor();
+    editor.lines[0].accountId = 'source';
+    editor.lines[1].accountId = 'destination';
+
+    const { result } = renderHook(() =>
+      useSimpleJournalEditor({
+        accounts,
+        editor: editor as any,
+        onSelectAccountRequest: jest.fn(),
+      }),
+    );
+
+    const sourceSection = result.current.accountSections.find(s => s.role === 'source');
+    expect(sourceSection).toBeDefined();
+
+    // Unselect source account
+    act(() => {
+      sourceSection!.onSelect(EMPTY_ACCOUNT_ID);
+    });
+
+    expect(editor.lines[0].accountId).toBe(EMPTY_ACCOUNT_ID);
+    expect(editor.lines[0].accountName).toBe('');
+
+    const destSection = result.current.accountSections.find(s => s.role === 'destination');
+    expect(destSection).toBeDefined();
+
+    // Unselect destination account
+    act(() => {
+      destSection!.onSelect(EMPTY_ACCOUNT_ID);
+    });
+
+    expect(editor.lines[1].accountId).toBe(EMPTY_ACCOUNT_ID);
+    expect(editor.lines[1].accountName).toBe('');
   });
 });

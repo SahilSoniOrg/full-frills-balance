@@ -5,7 +5,7 @@ import { JournalEntryLine, TabType } from '@/src/types/domainJournal';
 
 import { shouldApplyLastUsedAccountDefault } from '@/src/services/journal/simpleJournalHelpers';
 import { preferences } from '@/src/services/preferences';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useJournalEditor } from './useJournalEditor';
 
 interface UseSimpleJournalAccountSyncProps {
@@ -27,9 +27,14 @@ export function useSimpleJournalAccountSync({
   transactionAccounts,
 }: UseSimpleJournalAccountSyncProps): void {
   const journalNav = preferences.journalNav;
+  const initializedTabTypesRef = useRef<Set<TabType>>(new Set());
 
   useEffect(() => {
     if (!editor.isGuidedMode || editor.isEdit) return;
+    if (transactionAccounts.length === 0) return;
+    if (initializedTabTypesRef.current.has(type)) return;
+
+    initializedTabTypesRef.current.add(type);
 
     const lastSourceId = journalNav.lastUsedSourceAccountId;
     const lastDestId = journalNav.lastUsedDestinationAccountId;
