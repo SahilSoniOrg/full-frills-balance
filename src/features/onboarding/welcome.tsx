@@ -104,7 +104,7 @@ export function WelcomeScene({
                     onSubmitEditing={() => run('start')}
                   />
                   <AppButton
-                    variant="primary"
+                    variant={trimmed ? 'primary' : 'secondary'}
                     size="lg"
                     onPress={() => run('start')}
                     disabled={!trimmed}
