@@ -80,11 +80,25 @@ describe('WelcomeScene responsive composition', () => {
     expect(screen.getByTestId('onboarding-privacy-notice-button')).toBeOnTheScreen();
   });
 
-  it('switches to a compact input composition as soon as the name field is focused', () => {
+  it('keeps the hero composition when the name field is focused without a keyboard', () => {
     render(<WelcomeScene {...makeProps()} />);
     const input = screen.getByTestId('onboarding-name-input');
 
     fireEvent(input, 'focus');
+
+    expect(screen.getByTestId('onboarding-welcome-hero')).toBeOnTheScreen();
+    expect(screen.queryByTestId('onboarding-welcome-input-context')).toBeNull();
+    expect(screen.getByTestId('onboarding-welcome-trust-actions')).toBeOnTheScreen();
+  });
+
+  it('switches to compact input composition when the keyboard is visible', () => {
+    mockedUseKeyboard.mockReturnValue({
+      keyboardHeight: 320,
+      isKeyboardVisible: true,
+      dismiss: jest.fn(),
+    });
+
+    render(<WelcomeScene {...makeProps()} />);
 
     expect(screen.getByTestId('onboarding-welcome-input-context')).toBeOnTheScreen();
     expect(screen.queryByTestId('onboarding-welcome-hero')).toBeNull();

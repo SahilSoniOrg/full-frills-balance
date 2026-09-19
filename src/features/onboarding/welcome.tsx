@@ -26,15 +26,13 @@ export function WelcomeScene({
 }) {
   const [pending, setPending] = useState<'start' | 'restore' | null>(null);
   const [prompt, setPrompt] = useState(false);
-  const [nameFocused, setNameFocused] = useState(false);
   const { isKeyboardVisible } = useKeyboard();
   const splash = AppConfig.strings.onboarding.splash;
   const trimmed = (name ?? '').trim();
-  const inputMode = nameFocused || isKeyboardVisible;
+  const inputMode = isKeyboardVisible;
 
   const run = (action: 'start' | 'restore') => {
     if (action === 'start' && !trimmed) return;
-    setNameFocused(false);
     Keyboard.dismiss();
     if (!privacyAcknowledged) {
       setPending(action);
@@ -103,8 +101,6 @@ export function WelcomeScene({
                     accessibilityLabel={splash.inputLabel}
                     testID="onboarding-name-input"
                     returnKeyType="done"
-                    onFocus={() => setNameFocused(true)}
-                    onBlur={() => setNameFocused(false)}
                     onSubmitEditing={() => run('start')}
                   />
                   <AppButton
