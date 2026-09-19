@@ -1,5 +1,4 @@
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
-import { useKeyboard } from '@/src/design-system';
 import { Keyboard } from 'react-native';
 import { WelcomeScene } from '../welcome';
 
@@ -40,11 +39,8 @@ jest.mock('@/src/design-system', () => {
   return {
     Box: passthrough,
     Stack: passthrough,
-    useKeyboard: jest.fn(),
   };
 });
-
-const mockedUseKeyboard = jest.mocked(useKeyboard);
 
 const makeProps = (overrides: Partial<React.ComponentProps<typeof WelcomeScene>> = {}) => ({
   name: '',
@@ -60,48 +56,30 @@ const makeProps = (overrides: Partial<React.ComponentProps<typeof WelcomeScene>>
 describe('WelcomeScene responsive composition', () => {
   beforeEach(() => {
     jest.spyOn(Keyboard, 'addListener').mockReturnValue({ remove: jest.fn() } as never);
-    mockedUseKeyboard.mockReturnValue({
-      keyboardHeight: 0,
-      isKeyboardVisible: false,
-      dismiss: jest.fn(),
-    });
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
-  it('keeps the hero and trust actions discoverable in the resting composition', () => {
+  it('renders the complete welcome page as one composition', () => {
     render(<WelcomeScene {...makeProps()} />);
 
     expect(screen.getByTestId('onboarding-welcome-hero')).toBeOnTheScreen();
+    expect(screen.getByTestId('onboarding-name-input')).toBeOnTheScreen();
+    expect(screen.getByTestId('onboarding-start')).toBeOnTheScreen();
     expect(screen.getByTestId('onboarding-welcome-trust-actions')).toBeOnTheScreen();
     expect(screen.getByTestId('onboarding-restore-button')).toBeOnTheScreen();
     expect(screen.getByTestId('onboarding-privacy-notice-button')).toBeOnTheScreen();
   });
 
-  it('keeps the hero composition when the name field is focused without a keyboard', () => {
+  it('keeps every page element mounted when the name field is focused', () => {
     render(<WelcomeScene {...makeProps()} />);
     const input = screen.getByTestId('onboarding-name-input');
 
     fireEvent(input, 'focus');
 
     expect(screen.getByTestId('onboarding-welcome-hero')).toBeOnTheScreen();
-    expect(screen.queryByTestId('onboarding-welcome-input-context')).toBeNull();
-    expect(screen.getByTestId('onboarding-welcome-trust-actions')).toBeOnTheScreen();
-  });
-
-  it('switches to compact input composition when the keyboard is visible', () => {
-    mockedUseKeyboard.mockReturnValue({
-      keyboardHeight: 320,
-      isKeyboardVisible: true,
-      dismiss: jest.fn(),
-    });
-
-    render(<WelcomeScene {...makeProps()} />);
-
-    expect(screen.getByTestId('onboarding-welcome-input-context')).toBeOnTheScreen();
-    expect(screen.queryByTestId('onboarding-welcome-hero')).toBeNull();
     expect(screen.getByTestId('onboarding-start')).toBeOnTheScreen();
     expect(screen.getByTestId('onboarding-welcome-trust-actions')).toBeOnTheScreen();
   });

@@ -3,7 +3,7 @@ import { PrivacyAcknowledgementSheet } from '@/src/components/legal/PrivacyAckno
 import { AppConfig, Spacing, Typography } from '@/src/constants';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoticeStrings';
-import { Box, Stack, useKeyboard } from '@/src/design-system';
+import { Box, Stack } from '@/src/design-system';
 import { useState } from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
 
@@ -26,10 +26,8 @@ export function WelcomeScene({
 }) {
   const [pending, setPending] = useState<'start' | 'restore' | null>(null);
   const [prompt, setPrompt] = useState(false);
-  const { isKeyboardVisible } = useKeyboard();
   const splash = AppConfig.strings.onboarding.splash;
   const trimmed = (name ?? '').trim();
-  const inputMode = isKeyboardVisible;
 
   const run = (action: 'start' | 'restore') => {
     if (action === 'start' && !trimmed) return;
@@ -85,25 +83,16 @@ export function WelcomeScene({
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <ScrollView
-            contentContainerStyle={[
-              styles.scrollContent,
-              inputMode ? styles.inputModeScrollContent : undefined,
-            ]}
+            contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
-            keyboardDismissMode="on-drag"
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
             keyboardShouldPersistTaps="handled"
           >
-            <Stack
-              gap={inputMode ? 'md' : 'xxxl'}
-              flex={1}
-              justify={inputMode ? 'flex-end' : 'center'}
-            >
-              <Stack gap={inputMode ? 'xxl' : Spacing.xxxxl + Spacing.xxl}>
-                <Stack gap="md" paddingTop={inputMode ? 'sm' : 'xl'} align="center">
+            <Stack flexGrow={1} justify="center" gap="xxxl" paddingVertical="md">
+              <Stack gap="xxxl" align="center">
+                <Stack gap="md" align="center" paddingHorizontal="md">
                   <AppText
-                    testID={
-                      inputMode ? 'onboarding-welcome-input-context' : 'onboarding-welcome-hero'
-                    }
+                    testID="onboarding-welcome-hero"
                     variant="caption"
                     color="primary"
                     weight="semibold"
@@ -111,20 +100,15 @@ export function WelcomeScene({
                   >
                     {splash.eyebrow}
                   </AppText>
-                  <AppText
-                    variant={inputMode ? 'heading' : 'hero'}
-                    style={[styles.title, inputMode ? styles.focusedTitle : undefined]}
-                  >
+                  <AppText variant="hero" style={styles.title}>
                     {splash.title}
                   </AppText>
-                  {!inputMode ? (
-                    <AppText variant="body" color="secondary" style={styles.subtitle}>
-                      {splash.subtitle}
-                    </AppText>
-                  ) : null}
+                  <AppText variant="body" color="secondary" style={styles.subtitle}>
+                    {splash.subtitle}
+                  </AppText>
                 </Stack>
 
-                <Stack gap="lg" marginHorizontal="md">
+                <Stack gap="lg" width="100%" paddingHorizontal="md">
                   <AppInput
                     label={splash.inputLabel}
                     placeholder={splash.inputPlaceholder}
@@ -148,11 +132,10 @@ export function WelcomeScene({
                   </AppButton>
                 </Stack>
               </Stack>
-              {inputMode ? trustActions : null}
+
+              {trustActions}
             </Stack>
           </ScrollView>
-
-          {!inputMode ? trustActions : null}
         </KeyboardAvoidingView>
       </Box>
       <PrivacyAcknowledgementSheet
@@ -188,9 +171,6 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.md,
   },
-  inputModeScrollContent: {
-    paddingTop: Spacing.sm,
-  },
   eyebrow: {
     letterSpacing: Typography.letterSpacing.wide,
     textAlign: 'center',
@@ -201,10 +181,6 @@ const styles = StyleSheet.create({
     lineHeight: Typography.sizes.jumbo * 1.04,
     letterSpacing: Typography.letterSpacing.tight,
     textAlign: 'center',
-  },
-  focusedTitle: {
-    fontSize: Typography.sizes.xl,
-    lineHeight: Typography.sizes.xl * Typography.lineHeights.tight,
   },
   subtitle: {
     maxWidth: 330,
