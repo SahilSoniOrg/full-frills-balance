@@ -1,3 +1,4 @@
+import { withArchiveVisibilityScope } from '@/src/contexts/ArchiveVisibilityScope';
 import { JournalEntryView } from '@/src/features/journal/entry/components/JournalEntryView';
 import { useJournalEntryShell } from '@/src/features/journal/entry/hooks/useJournalEntryShell';
 
@@ -6,4 +7,4 @@ function EntryScreen() {
   return <JournalEntryView {...vm} />;
 }
 
-export default EntryScreen;
+export default withArchiveVisibilityScope(EntryScreen);

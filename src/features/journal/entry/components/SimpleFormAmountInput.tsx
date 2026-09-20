@@ -1,49 +1,39 @@
-import { Icon } from '@/src/types/domainIcons';
-import { AppIcon } from '@/src/components/core/AppIcon';
-import { AppText } from '@/src/components/core/AppText';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { AmountCalculatorSheet } from '@/src/components/overlays/AmountCalculatorSheet';
-import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
-import { resolveThemeColor } from '@/src/design-system/utils';
+import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
+import { resolveSimpleAmountTypography } from '@/src/features/journal/entry/journalEntryPresentation';
+import { withOpacity } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Keyboard, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
-interface SimpleFormAmountInputProps {
+export interface SimpleFormAmountInputProps {
   amount: string;
-  setAmount?: (amount: string) => void;
-  activeColor: string;
-  displayCurrency: string;
-  sectionLabelColor?: string;
-  readOnly?: boolean;
-  onFocus?: () => void;
-  onBlur?: () => void;
+  setAmount: (val: string) => void;
+  currency: string;
+  accentColor: string;
   precision?: number;
-  variant?: 'default' | 'hero';
   autoOpenCalculator?: boolean;
   onCalculatorDone?: () => void;
 }
 
-export function SimpleFormAmountInput({
+export const SimpleFormAmountInput = React.memo(function SimpleFormAmountInput({
   amount,
   setAmount,
-  activeColor,
-  displayCurrency,
-  readOnly,
-  onFocus,
-  onBlur,
+  currency,
+  accentColor,
   precision = 2,
-  variant = 'default',
   autoOpenCalculator = false,
   onCalculatorDone,
 }: SimpleFormAmountInputProps) {
   const { theme, fonts } = useTheme();
-  const resolvedActiveColor = resolveThemeColor(theme, activeColor);
+  const inputRef = useRef<TextInput>(null);
   const [calculatorVisible, setCalculatorVisible] = useState(autoOpenCalculator);
   const calculatorDoneRef = useRef(onCalculatorDone);
   const pendingDoneRef = useRef<(() => void) | null>(null);
   const dismissFallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isFocused, setIsFocused] = useState(false);
 
   useEffect(() => {
     calculatorDoneRef.current = onCalculatorDone;
@@ -56,7 +46,7 @@ export function SimpleFormAmountInput({
     [],
   );
 
-  const finishCalculatorHandoff = () => {
+  const finishCalculatorHandoff = useCallback(() => {
     const onDone = pendingDoneRef.current;
     if (!onDone) return;
     pendingDoneRef.current = null;
@@ -65,149 +55,193 @@ export function SimpleFormAmountInput({
       dismissFallbackTimerRef.current = null;
     }
     onDone();
-  };
+  }, []);
 
-  const isHero = variant === 'hero';
+  const currencySymbol = useMemo(() => CURRENCY_SYMBOLS[currency] || currency || '$', [currency]);
+
+  const handleChangeText = useCallback(
+    (text: string) => {
+      // Accept the decimal comma used by some locales and keyboards.
+      const normalized = text.replace(/,/g, '.');
+      const sanitized = normalized.replace(/[^0-9.]/g, '');
+      const parts = sanitized.split('.');
+      if (parts.length > 2) return;
+      if (parts[1] && parts[1].length > precision) return;
+      setAmount(sanitized);
+    },
+    [precision, setAmount],
+  );
+
+  const handleClear = useCallback(() => {
+    setAmount('');
+    inputRef.current?.focus();
+  }, [setAmount]);
+
+  const handleDone = useCallback(() => {
+    Keyboard.dismiss();
+    if (amount.endsWith('.')) {
+      setAmount(amount.slice(0, -1));
+    }
+  }, [amount, setAmount]);
+
+  const handleFocus = useCallback(() => {
+    setIsFocused(true);
+  }, []);
+
+  const handleBlur = useCallback(() => {
+    setIsFocused(false);
+    handleDone();
+  }, [handleDone]);
+
+  const hasAmount = Boolean(amount && parseFloat(amount) > 0);
+  const { amountFontSize, currencyFontSize, currencyLineHeight, inputHeight } = useMemo(
+    () => resolveSimpleAmountTypography((amount || '').length),
+    [amount],
+  );
 
   return (
-    <>
-      <View
-        style={[
-          styles.amountRow,
-          isHero ? styles.heroRow : { backgroundColor: theme.surfaceSecondary },
-        ]}
+    <View style={styles.container}>
+      <TouchableOpacity
+        activeOpacity={1}
+        onPress={() => inputRef.current?.focus()}
+        style={styles.amountCanvas}
       >
-        <View style={styles.currencyWrap}>
+        <View style={styles.amountInputRow}>
+          {/* Currency Prefix */}
           <AppText
-            variant={isHero ? 'heading' : 'xl'}
+            tabular={false}
             weight="bold"
-            style={{ color: theme.textSecondary, opacity: Opacity.heavy }}
-          >
-            {CURRENCY_SYMBOLS[displayCurrency] || displayCurrency}
-          </AppText>
-        </View>
-        {readOnly ? (
-          <View style={styles.amountDisplay}>
-            <AppText
-              variant={isHero ? 'hero' : 'title'}
-              weight="bold"
-              style={[styles.calculatorValue, { color: resolvedActiveColor, textAlign: 'right' }]}
-              numberOfLines={1}
-            >
-              {amount || '0'}
-            </AppText>
-          </View>
-        ) : setAmount ? (
-          <TouchableOpacity
-            style={[styles.amountDisplay, styles.calculatorDisplay]}
-            onPress={() => setCalculatorVisible(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Open amount calculator"
-            testID="amount-input"
-          >
-            <AppText
-              variant={isHero ? 'hero' : 'title'}
-              weight="bold"
-              style={[styles.calculatorValue, { color: resolvedActiveColor, textAlign: 'right' }]}
-              numberOfLines={1}
-            >
-              {amount || '0'}
-            </AppText>
-            <AppIcon name={Icon.Calculator} size={Size.iconSm} color={resolvedActiveColor} />
-          </TouchableOpacity>
-        ) : (
-          <TextInput
             style={[
-              styles.amountInput,
+              styles.currencyPrefix,
               {
-                color: resolvedActiveColor,
-                fontFamily: fonts.heading,
-                fontSize: isHero ? Typography.sizes.jumbo : Typography.sizes.xxxl,
+                color: withOpacity(accentColor, Opacity.heavy),
+                fontSize: currencyFontSize,
+                lineHeight: currencyLineHeight,
+                fontFamily: fonts.bold,
               },
             ]}
+          >
+            {currencySymbol}
+          </AppText>
+
+          {/* Inline Editable Amount Input */}
+          <TextInput
+            ref={inputRef}
             value={amount}
-            onChangeText={setAmount}
+            onChangeText={handleChangeText}
+            placeholder={isFocused ? '' : '0'}
+            placeholderTextColor={withOpacity(accentColor, Opacity.medium)}
             keyboardType="decimal-pad"
-            autoFocus={isHero}
+            onSubmitEditing={handleDone}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            selectTextOnFocus
             numberOfLines={1}
-            placeholder="0"
-            placeholderTextColor={withOpacity(theme.textSecondary, Opacity.medium)}
-            cursorColor={resolvedActiveColor}
-            selectionColor={withOpacity(resolvedActiveColor || activeColor, Opacity.muted)}
-            testID="amount-input"
-            onFocus={onFocus}
-            onBlur={onBlur}
+            cursorColor={accentColor}
+            selectionColor={withOpacity(accentColor, Opacity.muted)}
+            style={[
+              styles.input,
+              {
+                color: accentColor,
+                fontFamily: fonts.bold,
+                fontSize: amountFontSize,
+                height: inputHeight,
+              },
+            ]}
+            testID="hero-amount-input"
           />
-        )}
-      </View>
-      {!readOnly && setAmount && (
-        <AmountCalculatorSheet
-          visible={calculatorVisible}
-          initialAmount={amount}
-          currencySymbol={CURRENCY_SYMBOLS[displayCurrency] || displayCurrency}
-          precision={precision}
-          onClose={() => setCalculatorVisible(false)}
-          onDismiss={finishCalculatorHandoff}
-          onDone={value => {
-            setAmount(value);
-            // Capture before the amount update rerenders the footer and removes
-            // the one-shot auto-flow callback.
-            pendingDoneRef.current = calculatorDoneRef.current ?? null;
-            setCalculatorVisible(false);
-            // Native Modal fires onDismiss. RN Web may not, so keep a fallback
-            // after the closing animation has had time to release the layer.
-            dismissFallbackTimerRef.current = setTimeout(finishCalculatorHandoff, 300);
-          }}
-        />
-      )}
-    </>
+
+          {/* Action Accessories */}
+          <View style={styles.actionButtons}>
+            {hasAmount && (
+              <TouchableOpacity
+                onPress={handleClear}
+                style={[styles.iconButton, { backgroundColor: theme.surfaceSecondary }]}
+                accessibilityRole="button"
+                accessibilityLabel="Clear amount"
+                hitSlop={{
+                  top: Spacing.sm,
+                  bottom: Spacing.sm,
+                  left: Spacing.sm,
+                  right: Spacing.sm,
+                }}
+              >
+                <AppIcon name={Icon.Close} size={Size.xs} color={theme.textSecondary} />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={() => setCalculatorVisible(true)}
+              style={[
+                styles.iconButton,
+                { backgroundColor: withOpacity(accentColor, Opacity.soft) },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Open math calculator"
+              testID="amount-input"
+              hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
+            >
+              <AppIcon name={Icon.Calculator} size={Size.iconXs} color={accentColor} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableOpacity>
+
+      {/* Full Expression Math Calculator Modal */}
+      <AmountCalculatorSheet
+        visible={calculatorVisible}
+        initialAmount={amount}
+        currencySymbol={currencySymbol}
+        precision={precision}
+        onClose={() => setCalculatorVisible(false)}
+        onDismiss={finishCalculatorHandoff}
+        onDone={val => {
+          setAmount(val);
+          pendingDoneRef.current = calculatorDoneRef.current ?? null;
+          setCalculatorVisible(false);
+          dismissFallbackTimerRef.current = setTimeout(finishCalculatorHandoff, 300);
+        }}
+      />
+    </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
-  amountRow: {
+  container: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+  },
+  amountCanvas: {
+    paddingVertical: Spacing.xs,
+  },
+  amountInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: Shape.radius.r3,
-    paddingHorizontal: Spacing.lg,
-    minHeight: Size.inputLg,
-    paddingVertical: Spacing.sm,
-    gap: Spacing.sm,
-    width: '100%',
-    overflow: 'hidden',
+    justifyContent: 'space-between',
+    minHeight: Size.fab,
   },
-  heroRow: {
-    backgroundColor: 'transparent',
-    paddingVertical: Spacing.xl,
-    paddingHorizontal: Spacing.xl,
-    justifyContent: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: 'transparent', // Can be used for a subtle divider
+  currencyPrefix: {
+    marginRight: Spacing.xs,
+    letterSpacing: Typography.letterSpacing.normal,
   },
-  currencyWrap: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: Size.xl,
-  },
-  amountInput: {
+  input: {
     flex: 1,
     minWidth: 0,
-    maxWidth: '100%',
-    flexShrink: 1,
-    textAlign: 'right',
-    writingDirection: 'auto',
-    includeFontPadding: false,
+    paddingVertical: Spacing.xs,
+    paddingLeft: Spacing.xs,
+    paddingRight: Spacing.xs,
+    margin: 0,
   },
-  amountDisplay: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  calculatorDisplay: {
+  actionButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.xs,
+    marginLeft: Spacing.sm,
   },
-  calculatorValue: {
-    flex: 1,
+  iconButton: {
+    width: Size.iconLg,
+    height: Size.iconLg,
+    borderRadius: Shape.radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

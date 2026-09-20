@@ -1,3 +1,4 @@
+import type { AutopilotAppliedAccount } from '@/src/features/journal/entry/components/useSimpleFormExpansion';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { analytics } from '@/src/services/analytics';
 import { TransactionType } from '@/src/types/enums';
@@ -14,7 +15,7 @@ export function useJournalSuggestionApplication(
   editor: ReturnType<typeof useJournalEditor>,
   accounts: AccountFields[],
   activeMode: JournalEntryScreenMode,
-) {
+): (suggestion: JournalAutofillSuggestion) => AutopilotAppliedAccount | undefined {
   return (suggestion: JournalAutofillSuggestion) => {
     analytics.trackFeatureUsage('journal', 'suggestion_accepted', {
       has_target_account: !!suggestion.targetAccountId,
@@ -34,6 +35,7 @@ export function useJournalSuggestionApplication(
     const account = targetAccountId && accounts.find(a => a.id === targetAccountId);
     if (!targetAccountId || !account) return;
 
+    const role = tabType === 'income' ? 'source' : 'destination';
     const line = tabType === 'income' ? sourceLine : destLine;
     if (line) {
       editor.updateLine(line.id, {
@@ -42,6 +44,7 @@ export function useJournalSuggestionApplication(
         accountType: account.accountType,
         accountCurrency: account.currencyCode,
       });
+      return { role, id: targetAccountId };
     }
   };
 }

@@ -1,61 +1,94 @@
+import { AppIcon, AppText, Icon } from '@/src/components/core';
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
-import { Icon, AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
+import type { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
-import { JournalEntryScreenMode } from '../journalEntryPresentation';
 
-interface AdvancedModeInfoModalProps {
+interface JournalEntryModeInfoModalProps {
   visible: boolean;
-  onClose: () => void;
-  /** Current entry mode (reserved for future per-mode help); advanced explanation is mode-agnostic. */
   mode: JournalEntryScreenMode;
+  isActive: boolean;
+  canUseMode: boolean;
+  onUseMode: (mode: JournalEntryScreenMode) => void;
+  onClose: () => void;
 }
 
-/**
- * Help sheet for the journal entry mode bar. Shows the full Advanced Mode walkthrough
- * (example journal lines, balance rule, and when to use multi-line entry).
- */
-export const AdvancedModeInfoModal = ({
+type JournalEntryModeHelp = {
+  title: string;
+  intro: string;
+  unlocks: string;
+  exampleTitle: string;
+  exampleScenario: string;
+  exampleItems: readonly string[];
+  whyBetterTitle: string;
+  benefits: readonly string[];
+  footer: string;
+};
+
+const MODE_HELP_BY_ID = {
+  basic: AppConfig.strings.journalEntryModesHelp.guided,
+  allocation: AppConfig.strings.journalEntryModesHelp.split,
+  expert: AppConfig.strings.advancedModeExplanation,
+  batch: AppConfig.strings.journalEntryModesHelp.bulk,
+} satisfies Record<JournalEntryScreenMode, JournalEntryModeHelp>;
+
+export function JournalEntryModeInfoModal({
   visible,
+  mode,
+  isActive,
+  canUseMode,
+  onUseMode,
   onClose,
-  mode: _mode,
-}: AdvancedModeInfoModalProps) => {
+}: JournalEntryModeInfoModalProps) {
   const { theme } = useTheme();
-  const str = AppConfig.strings.advancedModeExplanation;
+  const details = MODE_HELP_BY_ID[mode];
+  const isAdvancedMode = mode === 'expert';
 
   return (
     <InfoSheet
       visible={visible}
-      title={str.title}
+      title={details.title}
       onClose={onClose}
-      maxHeightPercent={85}
-      accessibilityCloseLabel={AppConfig.strings.transactionFlow.modesHelpAccessibility}
-      primaryAction={{ label: 'Got it!', variant: 'primary', onPress: onClose }}
+      maxHeightPercent={isAdvancedMode ? 85 : 72}
+      accessibilityCloseLabel={
+        isAdvancedMode
+          ? AppConfig.strings.transactionFlow.modesHelpAccessibility
+          : AppConfig.strings.transactionFlow.closeModeHelpAccessibility
+      }
+      primaryAction={{
+        label: isActive ? 'Done' : canUseMode ? `Use ${details.title}` : 'Advanced required',
+        variant: 'primary',
+        disabled: !isActive && !canUseMode,
+        onPress: () => {
+          if (!isActive && canUseMode) onUseMode(mode);
+          onClose();
+        },
+      }}
     >
       <View style={styles.section}>
-        <AppText variant="body">{str.intro}</AppText>
+        <AppText variant="body">{details.intro}</AppText>
       </View>
 
       <View style={[styles.highlightSection, { backgroundColor: theme.surfaceSecondary }]}>
         <AppText variant="body" weight="medium" color="primary">
-          {str.unlocks}
+          {details.unlocks}
         </AppText>
       </View>
 
       <View style={styles.section}>
         <AppText variant="heading" style={styles.sectionTitle}>
-          {str.exampleTitle}
+          {details.exampleTitle}
         </AppText>
         <AppText variant="body" style={styles.scenario}>
-          {str.exampleScenario}
+          {details.exampleScenario}
         </AppText>
 
         <View style={[styles.exampleBox, { borderColor: theme.border }]}>
-          {str.exampleItems.map((item, index) => (
+          {details.exampleItems.map((item, index) => (
             <View key={index} style={styles.exampleItem}>
               <AppIcon name={Icon.ChevronRight} size={Size.iconXs} color={theme.primary} />
-              <AppText variant="caption" weight="medium" style={{ flex: 1 }}>
+              <AppText variant="caption" weight="medium" style={styles.exampleItemText}>
                 {item}
               </AppText>
             </View>
@@ -65,9 +98,9 @@ export const AdvancedModeInfoModal = ({
 
       <View style={styles.section}>
         <AppText variant="heading" style={styles.sectionTitle}>
-          {str.whyBetterTitle}
+          {details.whyBetterTitle}
         </AppText>
-        {str.benefits.map((benefit, index) => (
+        {details.benefits.map((benefit, index) => (
           <View key={index} style={styles.benefitItem}>
             <AppText variant="body" color="secondary">
               {benefit}
@@ -82,19 +115,19 @@ export const AdvancedModeInfoModal = ({
           italic
           style={{ color: theme.textSecondary, textAlign: 'center' }}
         >
-          {str.footer}
+          {details.footer}
         </AppText>
       </View>
     </InfoSheet>
   );
-};
+}
 
 const styles = StyleSheet.create({
   section: {
     gap: Spacing.sm,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: Typography.sizes.base,
   },
   highlightSection: {
     padding: Spacing.md,
@@ -114,6 +147,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
+  },
+  exampleItemText: {
+    flex: 1,
   },
   benefitItem: {
     marginBottom: Spacing.sm,

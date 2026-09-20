@@ -1,70 +1,72 @@
 import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModal';
 import { Icon, AppIcon, AppInput, AppText, IconButton } from '@/src/components/core';
-import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
+import { EntryEditBanner } from '@/src/features/journal/entry/components/EntryEditBanner';
+import {
+  JournalSuggestionsDropdown,
+  type JournalSuggestionState,
+} from '@/src/features/journal/entry/components/JournalSuggestionsDropdown';
+import { AppConfig } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
-import { EntryEditBanner } from '@/src/features/journal/entry/components/EntryEditBanner';
-import { JournalSuggestions } from '@/src/features/journal/entry/components/JournalSuggestions';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
-import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
 import { TabType } from '@/src/types/domainJournal';
-import { type RefObject, useEffect, useRef, useState } from 'react';
-import { Keyboard, StyleProp, TextInput, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { withOpacity } from '@/src/utils/color-math';
+import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
+import React, { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { Keyboard, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
-interface JournalMetaCardProps {
+export interface JournalMetaCardProps {
+  description: string;
+  setDescription: (desc: string) => void;
   date: string;
   setDate: (date: string) => void;
   time: string;
   setTime: (time: string) => void;
-  description: string;
-  setDescription: (desc: string) => void;
+  notes?: string;
+  setNotes?: (notes: string) => void;
+  suggestions?: JournalAutofillSuggestion[];
+  suggestionState?: JournalSuggestionState;
   onSelectSuggestion?: (suggestion: JournalAutofillSuggestion) => void;
   activeTabType?: TabType;
   accounts?: AccountFields[];
-  notes?: string;
-  setNotes?: (notes: string) => void;
-  style?: StyleProp<ViewStyle>;
+  onVoiceInputPress?: () => void;
   showBanner?: boolean;
   bannerText?: string;
-  suggestions?: JournalAutofillSuggestion[];
-  suggestionState?: 'idle' | 'loading' | 'empty' | 'error' | 'results';
-  hideSuggestions?: boolean;
   onDescriptionFocus?: () => void;
+  hideSuggestions?: boolean;
   onDescriptionSubmitEditing?: () => void;
   descriptionInputRef?: RefObject<TextInput | null>;
-  onVoiceInputPress?: () => void;
 }
 
-/** Minimal, tight meta strip used by journal entry (date / description / notes). */
-export function JournalMetaCard({
+export const JournalMetaCard = React.memo(function JournalMetaCard({
+  description,
+  setDescription,
   date,
   setDate,
   time,
   setTime,
-  description,
-  setDescription,
+  notes = '',
+  setNotes,
+  suggestions = [],
+  suggestionState = 'idle',
   onSelectSuggestion,
   activeTabType,
   accounts = [],
-  notes = '',
-  setNotes,
-  style,
+  onVoiceInputPress,
   showBanner,
   bannerText,
-  suggestions = [],
-  suggestionState = suggestions.length > 0 ? 'results' : 'idle',
-  hideSuggestions = false,
   onDescriptionFocus,
+  hideSuggestions = false,
   onDescriptionSubmitEditing,
   descriptionInputRef,
-  onVoiceInputPress,
 }: JournalMetaCardProps) {
   const { theme } = useTheme();
   const { resolvedHourCycle } = useHourCyclePrefs();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showNotes, setShowNotes] = useState(!!notes);
-  const [isDescriptionFocused, setIsDescriptionFocused] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const notesRevealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -84,220 +86,285 @@ export function JournalMetaCard({
     };
   }, [notes]);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    return () => {
       if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+    };
+  }, []);
+
+  const formattedDateTime = useMemo(() => {
+    const raw = `${date}T${time}`;
+    return formatDateKeepingPattern(raw, 'DD MMM YYYY', resolvedHourCycle);
+  }, [date, time, resolvedHourCycle]);
+
+  const handleSelectSuggestion = useCallback(
+    (suggestion: JournalAutofillSuggestion) => {
+      Keyboard.dismiss();
+      setIsFocused(false);
+      if (blurTimerRef.current) {
+        clearTimeout(blurTimerRef.current);
+        blurTimerRef.current = null;
+      }
+      if (onSelectSuggestion) {
+        onSelectSuggestion(suggestion);
+      } else {
+        setDescription(suggestion.description);
+      }
     },
-    [],
+    [onSelectSuggestion, setDescription],
   );
 
   return (
-    <View
-      style={[
-        {
-          paddingHorizontal: Spacing.lg,
-          paddingBottom: Spacing.sm,
-        },
-        style,
-      ]}
-    >
-      <View style={{ gap: Spacing.sm }}>
-        {showBanner && (
-          <EntryEditBanner text={bannerText || ''} style={{ marginHorizontal: 0, marginTop: 0 }} />
-        )}
+    <View style={styles.container}>
+      {showBanner && <EntryEditBanner text={bannerText || ''} style={styles.banner} />}
 
-        <View style={{ zIndex: 10, position: 'relative' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <AppInput
-              ref={descriptionInputRef}
-              value={description}
-              onChangeText={setDescription}
-              returnKeyType="done"
-              onFocus={() => {
-                if (blurTimerRef.current) {
-                  clearTimeout(blurTimerRef.current);
-                  blurTimerRef.current = null;
-                }
-                setIsDescriptionFocused(true);
-                onDescriptionFocus?.();
-              }}
-              blurOnSubmit
-              onSubmitEditing={() => {
-                descriptionInputRef?.current?.blur();
-                setIsDescriptionFocused(false);
-                Keyboard.dismiss();
-                onDescriptionSubmitEditing?.();
-              }}
-              onPressIn={() => {
-                onDescriptionFocus?.();
-              }}
-              onBlur={() => {
-                // Small delay to allow tapping suggestions before they disappear
-                if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
-                blurTimerRef.current = setTimeout(() => {
-                  blurTimerRef.current = null;
-                  setIsDescriptionFocused(false);
-                }, 200);
-              }}
-              placeholder={AppConfig.strings.advancedEntry.descriptionPlaceholder}
-              testID="journal-description-input"
-              variant="minimal"
-              flex={1}
-              width="auto"
-              style={{
-                fontSize: 15,
-                fontWeight: '500',
-              }}
-            />
-            {onVoiceInputPress && (
-              <IconButton
-                name={Icon.Mic}
-                variant="clear"
-                size={Size.iconXs}
-                iconColor={theme.primary}
-                onPress={onVoiceInputPress}
-                accessibilityLabel="Voice input"
-                style={{ marginLeft: Spacing.xs }}
-              />
-            )}
-          </View>
+      {/* Description Input Container with Absolute Floating Dropdown */}
+      <View style={styles.inputContainer}>
+        {/* Description Input Row - Ghost with subtle focus underline */}
+        <View
+          style={[
+            styles.inputRow,
+            {
+              borderBottomColor: isFocused ? theme.primary : withOpacity(theme.border, 0.7),
+            },
+          ]}
+        >
+          <AppIcon
+            name={Icon.Document}
+            size={Size.iconXs}
+            color={isFocused ? theme.primary : theme.textTertiary}
+            style={styles.leadingIcon}
+          />
+          <AppInput
+            ref={descriptionInputRef}
+            value={description}
+            onChangeText={setDescription}
+            onFocus={() => {
+              if (blurTimerRef.current) {
+                clearTimeout(blurTimerRef.current);
+                blurTimerRef.current = null;
+              }
+              setIsFocused(true);
+              onDescriptionFocus?.();
+            }}
+            onBlur={() => {
+              if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+              blurTimerRef.current = setTimeout(() => {
+                blurTimerRef.current = null;
+                setIsFocused(false);
+              }, 250);
+            }}
+            onSubmitEditing={() => {
+              descriptionInputRef?.current?.blur();
+              onDescriptionSubmitEditing?.();
+            }}
+            placeholder={AppConfig.strings.advancedEntry.descriptionPlaceholder}
+            variant="minimal"
+            flex={1}
+            style={styles.descriptionInput}
+            testID="journal-description-input"
+          />
 
-          {isDescriptionFocused && !hideSuggestions && suggestionState !== 'idle' && (
-            <JournalSuggestions
-              suggestions={suggestions}
-              state={suggestionState}
-              accounts={accounts}
-              activeTabType={activeTabType}
-              onSelect={suggestion => {
-                if (onSelectSuggestion) {
-                  onSelectSuggestion(suggestion);
-                } else {
-                  setDescription(suggestion.description);
-                }
-                descriptionInputRef?.current?.blur();
-                setIsDescriptionFocused(false);
-                Keyboard.dismiss();
-              }}
+          {description ? (
+            <TouchableOpacity
+              onPress={() => setDescription('')}
+              style={styles.trailingAction}
+              accessibilityLabel="Clear description"
+            >
+              <AppIcon name={Icon.Close} size={Size.xs} color={theme.textTertiary} />
+            </TouchableOpacity>
+          ) : null}
+
+          {onVoiceInputPress && (
+            <IconButton
+              name={Icon.Mic}
+              variant="clear"
+              size={Size.iconXs}
+              iconColor={theme.primary}
+              onPress={onVoiceInputPress}
+              accessibilityLabel="Voice input"
+              style={styles.trailingAction}
             />
           )}
         </View>
 
-        {setNotes && showNotes && (
-          <View
-            style={{
-              backgroundColor: theme.surfaceSecondary,
-              borderRadius: Shape.radius.md,
-              padding: Spacing.sm,
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              gap: Spacing.sm,
-              marginTop: -Spacing.xs,
-              borderWidth: 1,
-              borderColor: theme.border,
-              position: 'relative',
-            }}
-          >
-            <AppIcon
-              name={Icon.Document}
-              size={Size.iconXs}
-              color={theme.textTertiary}
-              style={{ marginTop: 4 }}
-            />
-            <AppInput
-              value={notes}
-              onChangeText={setNotes}
-              placeholder="Add any extra journal details..."
-              multiline
-              variant="minimal"
-              style={{
-                flex: 1,
-                textAlignVertical: 'top',
-                fontSize: 13,
-                fontWeight: '400',
-                color: theme.textSecondary,
-                padding: 0,
-                margin: 0,
-                marginRight: Spacing.lg,
-              }}
-            />
-            <TouchableOpacity
-              onPress={() => {
-                setNotes('');
-                setShowNotes(false);
-              }}
-              style={{
-                position: 'absolute',
-                top: Spacing.xs,
-                right: Spacing.xs,
-                padding: 6,
-                zIndex: 1,
-              }}
-            >
-              <AppIcon name={Icon.X} size={14} color={theme.textTertiary} />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {setNotes && !showNotes && (
-          <TouchableOpacity
-            onPress={() => setShowNotes(true)}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: Spacing.xs,
-              alignSelf: 'flex-end',
-              marginTop: -Spacing.xs,
-            }}
-          >
-            <AppIcon name={Icon.Plus} size={14} color={theme.primary} />
-            <AppText variant="caption" color="primary" weight="medium">
-              Add Notes
-            </AppText>
-          </TouchableOpacity>
-        )}
-
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: Spacing.md,
-            marginTop: -Spacing.xs,
-          }}
-        >
-          <TouchableOpacity
-            onPress={() => {
-              Keyboard.dismiss();
-              setShowDatePicker(true);
-            }}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: Spacing.xs,
-              backgroundColor: theme.surfaceSecondary,
-              paddingHorizontal: Spacing.md,
-              paddingVertical: Spacing.xs,
-              borderRadius: Shape.radius.full,
-            }}
-          >
-            <AppIcon name={Icon.Calendar} size={Size.iconXs} color={theme.textSecondary} />
-            <AppText variant="caption" color="secondary" weight="medium">
-              {formatDateKeepingPattern(`${date}T${time}`, 'DD MMM YYYY', resolvedHourCycle)}
-            </AppText>
-            <AppIcon name={Icon.ChevronDown} size={12} color={theme.textTertiary} />
-          </TouchableOpacity>
-        </View>
-
-        <DateTimePickerModal
-          visible={showDatePicker}
-          date={date}
-          time={time}
-          onClose={() => setShowDatePicker(false)}
-          onSelect={(d, t) => {
-            setDate(d);
-            setTime(t);
-          }}
+        <JournalSuggestionsDropdown
+          visible={isFocused}
+          hideSuggestions={hideSuggestions}
+          suggestions={suggestions}
+          suggestionState={suggestionState}
+          activeTabType={activeTabType}
+          accounts={accounts}
+          onSelectSuggestion={handleSelectSuggestion}
         />
       </View>
+
+      {/* Date & Notes Pill Row (Ghost, Breathable - Does not get pushed down) */}
+      <View style={styles.metaRow}>
+        {/* Date Picker Pill */}
+        <TouchableOpacity
+          onPress={() => {
+            Keyboard.dismiss();
+            setShowDatePicker(true);
+          }}
+          style={[
+            styles.metaPill,
+            { backgroundColor: withOpacity(theme.surfaceSecondary, Opacity.strong), flexShrink: 1 },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Change date and time"
+        >
+          <AppIcon name={Icon.Calendar} size={Size.xxs} color={theme.textSecondary} />
+          <AppText
+            variant="caption"
+            color="secondary"
+            weight="medium"
+            numberOfLines={1}
+            style={styles.metaPillLabel}
+          >
+            {formattedDateTime}
+          </AppText>
+          <AppIcon name={Icon.ChevronDown} size={Size.xxs} color={theme.textTertiary} />
+        </TouchableOpacity>
+
+        {/* Notes Disclosure Toggle */}
+        {setNotes && (
+          <TouchableOpacity
+            onPress={() => setShowNotes(prev => !prev)}
+            style={[
+              styles.metaPill,
+              {
+                backgroundColor: showNotes
+                  ? withOpacity(theme.primary, Opacity.soft)
+                  : withOpacity(theme.surfaceSecondary, Opacity.strong),
+                flexShrink: 1,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={showNotes ? 'Hide notes' : 'Add notes'}
+          >
+            <AppIcon
+              name={Icon.Edit}
+              size={Size.xxs}
+              color={showNotes ? theme.primary : theme.textSecondary}
+            />
+            <AppText
+              variant="caption"
+              weight="medium"
+              numberOfLines={1}
+              style={[
+                styles.metaPillLabel,
+                { color: showNotes ? theme.primary : theme.textSecondary },
+              ]}
+            >
+              {notes ? 'Notes added' : 'Add notes'}
+            </AppText>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Expandable Notes Input */}
+      {setNotes && showNotes && (
+        <View
+          style={[
+            styles.notesContainer,
+            {
+              backgroundColor: withOpacity(theme.surfaceSecondary, Opacity.heavy),
+              borderColor: theme.border,
+            },
+          ]}
+        >
+          <AppInput
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="Add any extra journal details or tags..."
+            multiline
+            variant="minimal"
+            style={[styles.notesInput, { color: theme.textSecondary }]}
+            testID="journal-notes-input"
+          />
+        </View>
+      )}
+
+      <DateTimePickerModal
+        visible={showDatePicker}
+        date={date}
+        time={time}
+        onClose={() => setShowDatePicker(false)}
+        onSelect={(d, t) => {
+          setDate(d);
+          setTime(t);
+        }}
+      />
     </View>
   );
-}
+});
+
+const styles = StyleSheet.create({
+  container: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xs,
+    paddingBottom: Spacing.xs,
+    position: 'relative',
+    zIndex: 100,
+  },
+  banner: {
+    marginBottom: Spacing.xs,
+    borderRadius: Shape.radius.md,
+  },
+  inputContainer: {
+    position: 'relative',
+    zIndex: 100,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.xs,
+    minHeight: Size.xl,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  leadingIcon: {
+    marginRight: Spacing.sm,
+  },
+  descriptionInput: {
+    fontSize: Typography.sizes.base,
+    fontWeight: '500',
+  },
+  trailingAction: {
+    padding: Spacing.xs,
+    marginLeft: Spacing.xs,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  metaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Shape.radius.full,
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  metaPillLabel: {
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  notesContainer: {
+    marginTop: Spacing.xs,
+    padding: Spacing.sm,
+    borderRadius: Shape.radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  notesInput: {
+    fontSize: Typography.sizes.sm,
+    fontWeight: '400',
+    minHeight: Size.xl,
+    textAlignVertical: 'top',
+  },
+});

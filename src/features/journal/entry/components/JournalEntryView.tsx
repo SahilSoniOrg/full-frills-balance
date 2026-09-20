@@ -1,111 +1,107 @@
 import { AccountPickerModal } from '@/src/components/account-selection';
-import { SubmitFooter } from '@/src/components/forms/SubmitFooter';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { EmptyStateView } from '@/src/components/shared/EmptyStateView';
-import { ChromeMotion, Scale } from '@/src/constants';
+import { AppConfig } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { Page } from '@/src/design-system';
-import { JournalEntryHeader } from '@/src/features/journal/entry/components/JournalEntryHeader';
-import { JournalEntryModeBody } from '@/src/features/journal/entry/components/JournalEntryModeBody';
-import { JournalMetaCard } from '@/src/features/journal/entry/components/JournalMetaCard';
-import { JournalModeBar } from '@/src/features/journal/entry/components/JournalModeBar';
-import { JournalEntryShell } from '@/src/features/journal/entry/hooks/useJournalEntryShell';
-import { GuidedFooterAmountSlot } from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
+import { withOpacity } from '@/src/utils/color-math';
+import { JOURNAL_ENTRY_MODE_OPTIONS } from '@/src/features/journal/entry/journalEntryMode';
+import { type JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
 import { useJournalEntryPresentationState } from '@/src/features/journal/entry/hooks/useJournalEntryPresentationState';
-import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
+import { JournalEntryShell } from '@/src/features/journal/entry/hooks/useJournalEntryShell';
+import { AdvancedModePanel } from '@/src/features/journal/entry/modes/advanced/AdvancedModePanel';
+import { BatchModePanel } from '@/src/features/journal/entry/modes/batch/BatchModePanel';
+import { SimpleModePanel } from '@/src/features/journal/entry/modes/simple/SimpleModePanel';
+import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitModePanel';
 import { useTheme } from '@/src/hooks/use-theme';
-import { MotiView } from 'moti';
-import { useCallback, useRef } from 'react';
-import {
-  ActivityIndicator,
-  findNodeHandle,
-  GestureResponderEvent,
-  Keyboard,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
-import { Icon } from '@/src/types/domainIcons';
+import { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { JournalEntryModePickerModal } from './JournalEntryModePickerModal';
+import { JournalEntrySubmitBar } from './JournalEntrySubmitBar';
+import { JournalMetaCard } from './JournalMetaCard';
+import { JournalEntryModeInfoModal } from './JournalEntryModeInfoModal';
+import type { AccountFlowHandle, AutopilotAppliedAccount } from './useSimpleFormExpansion';
 
-export function JournalEntryView(vm: JournalEntryShell) {
-  const { theme } = useTheme();
-  const reduceMotion = useReducedMotion();
+export type JournalEntryViewProps = JournalEntryShell;
+
+export function JournalEntryView(props: JournalEntryViewProps) {
+  const { theme, fonts } = useTheme();
+  const [helpMode, setHelpMode] = useState<JournalEntryScreenMode | null>(null);
+  const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
+  const [isModePickerVisible, setIsModePickerVisible] = useState(false);
   const descriptionInputRef = useRef<TextInput>(null);
+  const accountFlowRef = useRef<AccountFlowHandle | null>(null);
+
+  const presentation = useJournalEntryPresentationState(props);
   const {
-    hideSuggestions,
     isSubmitting,
     isBatchMode,
     submitLabel,
     isSubmitDisabled,
+    missingRequirementHint,
     batchSubmitDisabled,
-    onScrollBeginDrag,
+    hideSuggestions,
     onDescriptionFocus,
     setDescription,
     onSelectSuggestion,
-    modeBodyProps,
-  } = useJournalEntryPresentationState(vm);
-
-  const {
-    editor,
-    isLoading,
-    loadState,
-    headerTitle,
-    showEditBanner,
-    editBannerText,
-    activeMode,
-    onToggleMode,
-    onSelectAccountRequest,
-    guidedFooterAmount,
-  } = vm;
+  } = presentation;
 
   const focusDescription = useCallback(() => {
     setTimeout(() => descriptionInputRef.current?.focus(), 0);
   }, []);
 
-  const startGuidedAccountFlow = useCallback(() => {
-    if (activeMode !== 'basic') return;
-    const sourceLineId = editor.getLineIdByRole('source');
-    if (sourceLineId) {
-      onSelectAccountRequest(sourceLineId, { autoAdvance: true });
-    }
-  }, [activeMode, editor, onSelectAccountRequest]);
+  const startGuidedAccountFlow = useCallback(
+    (applied?: AutopilotAppliedAccount) => {
+      if (props.activeMode !== 'basic') return;
+      accountFlowRef.current?.start(applied);
+    },
+    [props.activeMode],
+  );
 
   const handleSelectSuggestion = useCallback(
     (suggestion: Parameters<typeof onSelectSuggestion>[0]) => {
-      onSelectSuggestion(suggestion);
-      startGuidedAccountFlow();
+      const applied = onSelectSuggestion(suggestion);
+      startGuidedAccountFlow(applied);
     },
     [onSelectSuggestion, startGuidedAccountFlow],
   );
 
-  const dismissContentInput = useCallback((event: GestureResponderEvent) => {
-    if (event.target !== event.currentTarget) return;
-    const focusedInput = TextInput.State.currentlyFocusedInput();
-    if (focusedInput) TextInput.State.blurTextInput(focusedInput);
-    Keyboard.dismiss();
-  }, []);
+  const {
+    isLoading,
+    loadState,
+    headerTitle,
+    activeMode,
+    onToggleMode,
+    accounts,
+    editor,
+    workplaceId,
+    workplaceCurrency,
+    guidedAutopilot,
+    onSelectAccountRequest,
+    showAccountPicker,
+    accountPickerTitle,
+    selectableAccounts,
+    selectedAccountId,
+    onAccountSelected,
+    onCloseAccountPicker,
+    onAccountPickerDismiss,
+    onCreateAccountRequest,
+    onCreateAccountRequestForRole,
+    suggestions,
+    suggestionState,
+    showEditBanner,
+    editBannerText,
+    saveSuccessPulse,
+    onClose,
+  } = props;
 
-  const dismissInputOnOutsideTouch = useCallback((event: GestureResponderEvent) => {
-    const focusedInput = TextInput.State.currentlyFocusedInput();
-    if (!focusedInput) return false;
-
-    const focusedTarget = findNodeHandle(
-      focusedInput as unknown as Parameters<typeof findNodeHandle>[0],
-    );
-    if (focusedTarget && String(event.nativeEvent.target) !== String(focusedTarget)) {
-      TextInput.State.blurTextInput(focusedInput);
-      Keyboard.dismiss();
-    }
-    return false;
-  }, []);
+  const currentModeOption =
+    JOURNAL_ENTRY_MODE_OPTIONS.find(opt => opt.id === activeMode) || JOURNAL_ENTRY_MODE_OPTIONS[0];
 
   if (isLoading) {
     return (
-      <Page
-        header={
-          <JournalEntryHeader title={headerTitle} onClose={vm.onClose} mode={vm.activeMode} />
-        }
-      >
-        <View style={styles.loadingContainer}>
+      <Page>
+        <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
         </View>
       </Page>
@@ -114,134 +110,255 @@ export function JournalEntryView(vm: JournalEntryShell) {
 
   if (loadState === 'not_found' || loadState === 'error') {
     return (
-      <Page
-        header={
-          <JournalEntryHeader title={headerTitle} onClose={vm.onClose} mode={vm.activeMode} />
-        }
-      >
+      <Page>
         <EmptyStateView
           title={loadState === 'not_found' ? 'Transaction not found' : 'Unable to load transaction'}
-          subtitle={
-            loadState === 'error'
-              ? 'The transaction could not be loaded. Go back and try again.'
-              : 'This transaction may have been deleted or moved.'
-          }
+          subtitle="The transaction could not be loaded. Go back and try again."
           icon={Icon.Error}
           primaryActionLabel="Go Back"
-          onPrimaryAction={vm.onClose}
+          onPrimaryAction={onClose}
         />
       </Page>
     );
   }
 
-  const showSavePulse = vm.saveSuccessPulse && !reduceMotion;
+  const journalMetaCard = !isBatchMode ? (
+    <JournalMetaCard
+      description={editor.description}
+      setDescription={setDescription}
+      date={editor.journalDate}
+      setDate={editor.setJournalDate}
+      time={editor.journalTime}
+      setTime={editor.setJournalTime}
+      notes={editor.notes}
+      setNotes={editor.setNotes}
+      suggestions={suggestions}
+      suggestionState={suggestionState}
+      onSelectSuggestion={handleSelectSuggestion}
+      activeTabType={activeMode === 'basic' ? editor.transactionType : undefined}
+      accounts={accounts}
+      onDescriptionFocus={onDescriptionFocus}
+      hideSuggestions={hideSuggestions}
+      onVoiceInputPress={activeMode === 'basic' ? () => setIsVoiceModalVisible(true) : undefined}
+      showBanner={showEditBanner}
+      bannerText={editBannerText}
+      onDescriptionSubmitEditing={startGuidedAccountFlow}
+      descriptionInputRef={descriptionInputRef}
+    />
+  ) : null;
 
   return (
     <Page
       testID="journal-entry-screen"
       keyboardAvoiding
-      scrollable={!isBatchMode}
-      scrollViewProps={{
-        onScrollBeginDrag,
-        scrollEventThrottle: 16,
-      }}
+      scrollable={!isBatchMode && activeMode !== 'basic'}
+      scrollViewProps={
+        activeMode !== 'basic'
+          ? {
+              keyboardShouldPersistTaps: 'handled',
+              onScrollBeginDrag: presentation.onScrollBeginDrag,
+              scrollEventThrottle: 16,
+              contentContainerStyle: { paddingBottom: Spacing.xxxxl + Size.xxl },
+            }
+          : undefined
+      }
       header={
-        <>
-          <JournalEntryHeader title={headerTitle} onClose={vm.onClose} mode={activeMode} />
-          <JournalModeBar
-            mode={activeMode}
-            onToggleMode={onToggleMode}
-            isSimpleDisabled={vm.isSimpleModeDisabled}
-          />
-        </>
+        <View style={[styles.headerContainer, { backgroundColor: theme.background }]}>
+          {/* Top Bar: Close, title, and mode selector */}
+          <View style={styles.topNavRow}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.headerIconButton}
+              accessibilityLabel={AppConfig.strings.common.cancel}
+              accessibilityRole="button"
+            >
+              <AppIcon name={Icon.Close} size={Size.iconMd} color={theme.text} />
+            </TouchableOpacity>
+
+            <View style={styles.titleWrap}>
+              <AppText
+                variant="heading"
+                style={[styles.headerTitle, { fontFamily: fonts.bold }]}
+                numberOfLines={1}
+              >
+                {headerTitle}
+              </AppText>
+            </View>
+
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                onPress={() => setIsModePickerVisible(true)}
+                style={[
+                  styles.modeBadgePill,
+                  {
+                    backgroundColor: withOpacity(theme.primary, Opacity.soft),
+                    borderColor: withOpacity(theme.primary, Opacity.medium),
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Transaction mode: ${currentModeOption.label}. Tap to change mode.`}
+                testID="journal-entry-mode-selector-trigger"
+                hitSlop={{
+                  top: Spacing.sm,
+                  bottom: Spacing.sm,
+                  left: Spacing.sm,
+                  right: Spacing.sm,
+                }}
+              >
+                <AppText variant="caption" weight="bold" style={{ color: theme.primary }}>
+                  {currentModeOption.label}
+                </AppText>
+                <AppIcon name={Icon.ChevronDown} size={Size.xxs} color={theme.primary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       }
       footer={
-        <MotiView
-          animate={{ scale: showSavePulse ? 1.03 : Scale.identity }}
-          transition={ChromeMotion.spring}
-        >
-          <SubmitFooter
-            onPress={vm.onSubmit}
-            disabled={isBatchMode ? batchSubmitDisabled : isSubmitDisabled}
-            label={isBatchMode ? `Post ${vm.batchEditor.rows.length} transactions` : submitLabel}
-            loading={isBatchMode ? vm.batchEditor.isSubmitting : isSubmitting}
-            topSlot={
-              !isBatchMode && guidedFooterAmount ? (
-                <GuidedFooterAmountSlot footerAmount={guidedFooterAmount} />
-              ) : undefined
-            }
-          />
-        </MotiView>
+        <JournalEntrySubmitBar
+          onPress={props.onSubmit}
+          disabled={isBatchMode ? batchSubmitDisabled : isSubmitDisabled}
+          label={isBatchMode ? `Post ${props.batchEditor.rows.length} transactions` : submitLabel}
+          loading={isBatchMode ? props.batchEditor.isSubmitting : isSubmitting}
+          saveSuccessPulse={saveSuccessPulse}
+          missingRequirementHint={missingRequirementHint}
+        />
       }
     >
-      <View
-        style={styles.content}
-        onStartShouldSetResponderCapture={dismissInputOnOutsideTouch}
-        onStartShouldSetResponder={event => event.target === event.currentTarget}
-        onResponderRelease={dismissContentInput}
-      >
-        <Pressable
-          style={StyleSheet.absoluteFill}
-          onPress={() => {
-            const focusedInput = TextInput.State.currentlyFocusedInput();
-            if (focusedInput) TextInput.State.blurTextInput(focusedInput);
-            Keyboard.dismiss();
-          }}
-          accessible={false}
-        />
-        {!isBatchMode && (
-          <JournalMetaCard
-            date={vm.editor.journalDate}
-            setDate={vm.editor.setJournalDate}
-            time={vm.editor.journalTime}
-            setTime={vm.editor.setJournalTime}
-            description={vm.editor.description}
-            setDescription={setDescription}
-            onSelectSuggestion={handleSelectSuggestion}
-            activeTabType={activeMode === 'basic' ? vm.editor.transactionType : undefined}
-            accounts={vm.accounts}
-            notes={vm.editor.notes}
-            setNotes={vm.editor.setNotes}
-            showBanner={showEditBanner}
-            bannerText={editBannerText}
-            suggestions={vm.suggestions}
-            suggestionState={vm.suggestionState}
-            hideSuggestions={hideSuggestions}
-            onDescriptionFocus={onDescriptionFocus}
-            onDescriptionSubmitEditing={startGuidedAccountFlow}
-            descriptionInputRef={descriptionInputRef}
-            onVoiceInputPress={
-              activeMode === 'basic' ? () => vm.guidedVoiceActionsRef.current?.open() : undefined
-            }
+      <View style={styles.bodyContent}>
+        {/* Simple mode */}
+        {activeMode === 'basic' ? (
+          <SimpleModePanel
+            accounts={accounts}
+            editor={editor}
+            guidedAutopilot={guidedAutopilot}
+            onCreateAccountRequestForRole={onCreateAccountRequestForRole}
+            onSelectAccountRequest={onSelectAccountRequest}
+            workplaceCurrency={workplaceCurrency}
+            workplaceId={workplaceId}
+            voiceModalVisible={isVoiceModalVisible}
+            onVoiceModalVisibleChange={setIsVoiceModalVisible}
+            leadingContent={journalMetaCard}
+            onScrollBeginDrag={presentation.onScrollBeginDrag}
+            onCalculatorDone={focusDescription}
+            accountFlowRef={accountFlowRef}
+          />
+        ) : activeMode === 'allocation' ? (
+          <>
+            {journalMetaCard}
+            <SplitModePanel
+              accounts={accounts}
+              editor={editor}
+              onSelectAccountRequest={onSelectAccountRequest}
+            />
+          </>
+        ) : activeMode === 'expert' ? (
+          <>
+            {journalMetaCard}
+            <AdvancedModePanel
+              editor={editor}
+              workplaceCurrency={workplaceCurrency}
+              onSelectAccountRequest={onSelectAccountRequest}
+            />
+          </>
+        ) : (
+          <BatchModePanel
+            editor={props.batchEditor}
+            accounts={accounts}
+            workplaceCurrency={workplaceCurrency}
+            summary={props.batchSummary}
+            onContinue={props.onContinueBatch}
+            onDone={props.onDoneBatch}
           />
         )}
-
-        <JournalEntryModeBody {...modeBodyProps} onGuidedDescriptionFocus={focusDescription} />
       </View>
 
+      {/* Account Picker Modal */}
       <AccountPickerModal
-        visible={vm.showAccountPicker}
-        title={vm.accountPickerTitle}
-        accounts={vm.selectableAccounts}
-        selectedId={vm.selectedAccountId}
-        onSelect={vm.onAccountSelected}
-        onClose={vm.onCloseAccountPicker}
-        onDismiss={vm.onAccountPickerDismiss}
-        onCreateRequest={vm.onCreateAccountRequest}
+        visible={showAccountPicker}
+        title={accountPickerTitle}
+        accounts={selectableAccounts}
+        selectedId={selectedAccountId}
+        onSelect={onAccountSelected}
+        onClose={onCloseAccountPicker}
+        onDismiss={onAccountPickerDismiss}
+        onCreateRequest={onCreateAccountRequest}
         excludeParentAccounts={true}
       />
+
+      {/* Mode Picker Bottom Sheet */}
+      <JournalEntryModePickerModal
+        visible={isModePickerVisible}
+        activeMode={activeMode}
+        isSimpleDisabled={props.isSimpleModeDisabled}
+        onSelectMode={onToggleMode}
+        onHelpMode={mode => {
+          setIsModePickerVisible(false);
+          setHelpMode(mode);
+        }}
+        onClose={() => setIsModePickerVisible(false)}
+      />
+
+      {/* Per-mode Help */}
+      {helpMode && (
+        <JournalEntryModeInfoModal
+          visible
+          mode={helpMode}
+          isActive={helpMode === activeMode}
+          canUseMode={helpMode !== 'basic' || !props.isSimpleModeDisabled}
+          onUseMode={onToggleMode}
+          onClose={() => setHelpMode(null)}
+        />
+      )}
     </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
+  centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  content: {
+  headerContainer: {
+    paddingBottom: Spacing.xs,
+  },
+  topNavRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xs,
+  },
+  headerIconButton: {
+    padding: Spacing.xs,
+  },
+  titleWrap: {
+    flex: 1,
+    minWidth: 0,
+    marginLeft: Spacing.sm,
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    textAlign: 'left',
+  },
+  modeBadgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Shape.radius.full,
+    borderWidth: 1,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  bodyContent: {
     flex: 1,
     position: 'relative',
+    zIndex: 1,
   },
 });

@@ -7,14 +7,18 @@ import { AccountRole, JournalEntryLine, TabType } from '@/src/types/domainJourna
 import { resolveGuidedAccountsAfterTabChange } from '@/src/services/journal/guidedJournalAccountEligibility';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import {
+  formatManualBaseRate,
+  resolveWorkplaceRatesFromConvertedAmount,
+} from '@/src/features/journal/entry/manualBaseRate';
+import {
   buildSimpleCrossCurrencyLineUpdates,
   buildSimpleFormAccountSections,
   computeSimpleConvertedAmount,
   parseSimpleAmountInput,
+  resolveSimpleHeroAmount,
 } from '@/src/services/journal/simpleJournalHelpers';
 import { getInferredAccountType } from '@/src/utils/accountCategory';
 import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
-import { logger } from '@/src/utils/logger';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCrossCurrencyRates } from './useCrossCurrencyRates';
 import { useJournalEditor } from './useJournalEditor';
@@ -53,6 +57,7 @@ export function useSimpleJournalEditor({
   const tabDraftsRef = useRef<Partial<Record<TabType, JournalEntryLine[]>>>({
     [type]: editor.lines.map(line => ({ ...line })),
   });
+  const previousJournalDateRef = useRef(editor.journalDate);
 
   const sourceLine = useMemo(
     () => editor.lines.find(l => l.transactionType === TransactionType.CREDIT),
@@ -63,7 +68,7 @@ export function useSimpleJournalEditor({
     [editor.lines],
   );
 
-  const amount = sourceLine?.amount || destinationLine?.amount || '';
+  const amount = resolveSimpleHeroAmount(sourceLine?.amount, destinationLine?.amount);
   const sourceId = sourceLine?.accountId || EMPTY_ACCOUNT_ID;
   const destinationId = destinationLine?.accountId || EMPTY_ACCOUNT_ID;
   const sourceLineId = sourceLine?.id;
@@ -73,6 +78,8 @@ export function useSimpleJournalEditor({
   const destinationLineAmount = destinationLine?.amount ?? '';
   const [manualSourceBaseRate, setManualSourceBaseRate] = useState('');
   const [manualDestBaseRate, setManualDestBaseRate] = useState('');
+  const [convertedAmountLocked, setConvertedAmountLocked] = useState(false);
+  const [rateRefreshNonce, setRateRefreshNonce] = useState(0);
 
   const pinnedAccountIds = useMemo(() => {
     const selectedIds = [sourceId, destinationId].filter(
@@ -120,8 +127,17 @@ export function useSimpleJournalEditor({
       manualSourceBaseRate,
       manualDestBaseRate,
       journalDate: editor.journalDate,
+      refreshNonce: rateRefreshNonce,
       enabled: needsWorkplaceRate,
     });
+
+  useEffect(() => {
+    if (previousJournalDateRef.current === editor.journalDate) return;
+    previousJournalDateRef.current = editor.journalDate;
+    setConvertedAmountLocked(false);
+    setManualSourceBaseRate('');
+    setManualDestBaseRate('');
+  }, [editor.journalDate]);
 
   const numAmount = useMemo(() => parseSimpleAmountInput(amount), [amount]);
 
@@ -153,27 +169,6 @@ export function useSimpleJournalEditor({
       },
     });
 
-    logger.debug('[DEBUG-FX-SAVE] simple line sync', {
-      sourceCurrency,
-      destCurrency,
-      workplaceCurrency,
-      amount,
-      exchangeRate,
-      sourceBaseRate,
-      destBaseRate,
-      sourceLine: {
-        id: sourceLineId,
-        amount,
-        exchangeRate: sourceLineExchangeRate,
-      },
-      destinationLine: {
-        id: destinationLineId,
-        amount: destinationLineAmount,
-        exchangeRate: destinationLineExchangeRate,
-      },
-      updates,
-    });
-
     if (Object.keys(updates).length === 0) return;
     updateLines(updates);
   }, [
@@ -203,6 +198,7 @@ export function useSimpleJournalEditor({
       // Manual rates are pair-specific input, not part of a saved tab draft.
       setManualSourceBaseRate('');
       setManualDestBaseRate('');
+      setConvertedAmountLocked(false);
       tabDraftsRef.current[type] = editor.lines.map(line => ({ ...line }));
       const savedDraft = tabDraftsRef.current[newType];
       editor.setTransactionType(newType);
@@ -261,6 +257,8 @@ export function useSimpleJournalEditor({
   const setSourceId = useCallback(
     (id: AccountId) => {
       setManualSourceBaseRate('');
+      setManualDestBaseRate('');
+      setConvertedAmountLocked(false);
       const line = editor.lines.find(item => item.transactionType === TransactionType.CREDIT);
       if (!line) return;
       if (!id || id === EMPTY_ACCOUNT_ID) {
@@ -285,7 +283,9 @@ export function useSimpleJournalEditor({
 
   const setDestinationId = useCallback(
     (id: AccountId) => {
+      setManualSourceBaseRate('');
       setManualDestBaseRate('');
+      setConvertedAmountLocked(false);
       const line = editor.lines.find(item => item.transactionType === TransactionType.DEBIT);
       if (!line) return;
       if (!id || id === EMPTY_ACCOUNT_ID) {
@@ -308,13 +308,95 @@ export function useSimpleJournalEditor({
     [accounts, editor, type],
   );
 
+  const swapAccounts = useCallback(() => {
+    if (type !== 'transfer') return;
+
+    const currentSourceLine = editor.lines.find(
+      line => line.transactionType === TransactionType.CREDIT,
+    );
+    const currentDestinationLine = editor.lines.find(
+      line => line.transactionType === TransactionType.DEBIT,
+    );
+    if (!currentSourceLine || !currentDestinationLine) return;
+
+    const getAccountUpdates = (accountId: AccountId, side: TransactionType) => {
+      if (!accountId || accountId === EMPTY_ACCOUNT_ID) {
+        return {
+          accountId: EMPTY_ACCOUNT_ID,
+          accountName: '',
+          accountType: getInferredAccountType(type, side),
+          accountCurrency: undefined,
+        };
+      }
+
+      const account = accounts.find(item => item.id === accountId);
+      return {
+        accountId,
+        accountName: account?.name || '',
+        accountType: account?.accountType || AccountType.ASSET,
+        accountCurrency: account?.currencyCode,
+      };
+    };
+
+    updateLines({
+      [currentSourceLine.id]: getAccountUpdates(
+        currentDestinationLine.accountId,
+        TransactionType.CREDIT,
+      ),
+      [currentDestinationLine.id]: getAccountUpdates(
+        currentSourceLine.accountId,
+        TransactionType.DEBIT,
+      ),
+    });
+    setManualSourceBaseRate('');
+    setManualDestBaseRate('');
+    setConvertedAmountLocked(false);
+  }, [accounts, editor.lines, type, updateLines]);
+
   const setManualBaseRate = useCallback((role: 'source' | 'destination', value: string) => {
+    setConvertedAmountLocked(false);
     if (role === 'source') setManualSourceBaseRate(value);
     else setManualDestBaseRate(value);
   }, []);
 
+  const setConvertedAmount = useCallback(
+    (value: string) => {
+      if (!sourceCurrency || !destCurrency) return;
+      const parsedConverted = parseSimpleAmountInput(value);
+      const rates = resolveWorkplaceRatesFromConvertedAmount({
+        sourceAmount: numAmount,
+        convertedAmount: parsedConverted,
+        sourceCurrency,
+        destCurrency,
+        workplaceCurrency,
+        existingSourceBaseRate: sourceBaseRate,
+        existingDestBaseRate: destBaseRate,
+      });
+      if (!rates) return;
+
+      setConvertedAmountLocked(true);
+      setManualSourceBaseRate(
+        sourceCurrency === workplaceCurrency ? '' : formatManualBaseRate(rates.sourceBaseRate),
+      );
+      setManualDestBaseRate(
+        destCurrency === workplaceCurrency || destCurrency === sourceCurrency
+          ? ''
+          : formatManualBaseRate(rates.destBaseRate),
+      );
+    },
+    [destBaseRate, destCurrency, numAmount, sourceBaseRate, sourceCurrency, workplaceCurrency],
+  );
+
+  const resetToApiRate = useCallback(() => {
+    setConvertedAmountLocked(false);
+    setManualSourceBaseRate('');
+    setManualDestBaseRate('');
+    setRateRefreshNonce(nonce => nonce + 1);
+  }, []);
+
   const showManualRateFields = Boolean(
-    rateError || manualSourceBaseRate.trim() || manualDestBaseRate.trim(),
+    rateError ||
+    (!convertedAmountLocked && (manualSourceBaseRate.trim() || manualDestBaseRate.trim())),
   );
 
   const accountSections = useMemo((): SimpleFormSection[] => {
@@ -346,6 +428,7 @@ export function useSimpleJournalEditor({
       setSourceId,
       destinationId,
       setDestinationId,
+      swapAccounts,
       // Passthrough props for UI compatibility
       journalDate: editor.journalDate,
       journalTime: editor.journalTime,
@@ -358,6 +441,8 @@ export function useSimpleJournalEditor({
       showManualRateFields,
       needsWorkplaceRate,
       setManualBaseRate,
+      setConvertedAmount,
+      resetToApiRate,
       isLoadingRate,
       rateError,
       isCrossCurrency,
@@ -382,6 +467,7 @@ export function useSimpleJournalEditor({
       setSourceId,
       destinationId,
       setDestinationId,
+      swapAccounts,
       editor.journalDate,
       editor.journalTime,
       editor.description,
@@ -392,6 +478,8 @@ export function useSimpleJournalEditor({
       showManualRateFields,
       needsWorkplaceRate,
       setManualBaseRate,
+      setConvertedAmount,
+      resetToApiRate,
       isLoadingRate,
       rateError,
       isCrossCurrency,

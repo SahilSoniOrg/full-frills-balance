@@ -1,10 +1,9 @@
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import type { JournalEntryShell } from './useJournalEntryShell';
-import type { JournalEntryModeBodyProps } from '../components/JournalEntryModeBody';
-import { useCallback, useState, useEffect } from 'react';
-import { logger } from '@/src/utils/logger';
+import { useCallback, useState } from 'react';
 import {
   isJournalEntrySubmitDisabled,
+  resolveJournalEntryValidationHint,
   resolveJournalEntrySubmitLabel,
 } from '../journalEntryPresentation';
 
@@ -13,40 +12,26 @@ export function useJournalEntryPresentationState(vm: JournalEntryShell) {
   const { editor, loadSuggestions, onSelectSuggestion: applySuggestion } = vm;
   const isSubmitting = vm.editor.isSubmitting;
   const isBatchMode = vm.activeMode === 'batch';
-  const splitValidationError = vm.splitValidation.valid ? undefined : vm.splitValidation.error;
   const isPlanValid =
     vm.activeMode === 'allocation' ? vm.splitValidation.valid : vm.postingPlanValidation.valid;
   const submitLabel = resolveJournalEntrySubmitLabel({
     activeMode: vm.activeMode,
-    simpleSubmitting: isSubmitting,
     simpleType: vm.editor.transactionType,
     isEdit: vm.editor.isEdit,
     isSubmitting,
-    splitSubmitting: isSubmitting,
   });
   const isSubmitDisabled = isJournalEntrySubmitDisabled({
     activeMode: vm.activeMode,
-    isSimpleValid: isPlanValid,
-    isAdvancedValid: isPlanValid,
+    isPlanValid,
     isSplitValid: vm.splitValidation.valid,
   });
-
-  useEffect(() => {
-    logger.debug('[DEBUG-FX-SAVE] submit button state', {
-      activeMode: vm.activeMode,
-      isPlanValid,
-      isSubmitDisabled,
-      postingPlanIssues: vm.postingPlanValidation.issues,
-      splitIssues: vm.splitValidation.valid ? [] : [splitValidationError],
-    });
-  }, [
-    isPlanValid,
-    isSubmitDisabled,
-    vm.activeMode,
-    vm.postingPlanValidation.issues,
-    splitValidationError,
-    vm.splitValidation.valid,
-  ]);
+  const missingRequirementHint = isSubmitDisabled
+    ? resolveJournalEntryValidationHint({
+        activeMode: vm.activeMode,
+        validationIssues: vm.validationIssues,
+        splitValidation: vm.splitValidation,
+      })
+    : null;
   const batchSubmitDisabled = !vm.batchEditor.isValid || vm.batchEditor.isSubmitting;
   const onScrollBeginDrag = useCallback(() => setHideSuggestions(true), []);
   const onDescriptionFocus = useCallback(() => {
@@ -64,37 +49,21 @@ export function useJournalEntryPresentationState(vm: JournalEntryShell) {
   const onSelectSuggestion = useCallback(
     (suggestion: JournalAutofillSuggestion) => {
       setHideSuggestions(false);
-      applySuggestion(suggestion);
+      return applySuggestion(suggestion);
     },
     [applySuggestion],
   );
-  const modeBodyProps: JournalEntryModeBodyProps = {
-    activeMode: vm.activeMode,
-    guidedAutopilot: vm.guidedAutopilot,
-    modeTransitionDir: vm.modeTransitionDir,
-    accounts: vm.accounts,
-    editor: vm.editor,
-    workplaceId: vm.workplaceId,
-    workplaceCurrency: vm.workplaceCurrency,
-    onSelectAccountRequest: vm.onSelectAccountRequest,
-    onGuidedFooterAmountChange: vm.onGuidedFooterAmountChange,
-    guidedVoiceActionsRef: vm.guidedVoiceActionsRef,
-    batchEditor: vm.batchEditor,
-    batchSummary: vm.batchSummary,
-    onContinueBatch: vm.onContinueBatch,
-    onDoneBatch: vm.onDoneBatch,
-  };
   return {
     hideSuggestions,
     isSubmitting,
     isBatchMode,
     submitLabel,
     isSubmitDisabled,
+    missingRequirementHint,
     batchSubmitDisabled,
     onScrollBeginDrag,
     onDescriptionFocus,
     setDescription,
     onSelectSuggestion,
-    modeBodyProps,
   };
 }

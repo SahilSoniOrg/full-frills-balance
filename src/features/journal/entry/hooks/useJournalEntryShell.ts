@@ -1,9 +1,9 @@
-import type { CreateAccountIntent } from '@/src/components/account-selection';
-import { useAccounts } from '@/src/components/account-selection';
+import { useAccounts, type CreateAccountIntent } from '@/src/components/account-selection';
 import { AppConfig } from '@/src/constants';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { AccountFields } from '@/src/types/plainDtos';
+import type { AccountRole } from '@/src/types/domainJournal';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import {
@@ -11,15 +11,12 @@ import {
   useJournalEntryAccountPicker,
 } from '@/src/features/journal/entry/hooks/useJournalEntryAccountPicker';
 import { applyJournalLineAccountSelection } from '@/src/features/journal/entry/journalEntryAccountPickerPolicy';
+import type { AutopilotAppliedAccount } from '@/src/features/journal/entry/components/useSimpleFormExpansion';
 import {
   JournalEntryScreenMode,
   resolveJournalEntryHeaderTitle,
 } from '@/src/features/journal/entry/journalEntryPresentation';
 import { parseTransactionIntentSeed } from '@/src/features/journal/entry/journalEntryRouteAdapter';
-import {
-  GuidedFooterAmount,
-  GuidedVoiceActions,
-} from '@/src/features/journal/entry/modes/guided/GuidedModePanel';
 import { useJournalEntryModeState } from '@/src/features/journal/entry/hooks/useJournalEntryModeState';
 import {
   createJournalDraftFingerprint,
@@ -39,7 +36,7 @@ import { TransactionType } from '@/src/types/enums';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
-import { MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 /**
  * Shell-facing contract for journal entry.
@@ -49,19 +46,13 @@ export interface JournalEntryShell {
   editor: ReturnType<typeof useJournalEditor>;
   guidedAutopilot: boolean;
   splitState: ReturnType<typeof useTransactionComposerSession>['splitState'];
-  transactionIntent: ReturnType<typeof useTransactionComposerSession>['intent'];
-  postingPlan: ReturnType<typeof useTransactionComposerSession>['postingPlan'];
+  validationIssues: ReturnType<typeof useTransactionComposerSession>['validationIssues'];
   postingPlanValidation: ReturnType<typeof useTransactionComposerSession>['postingPlanValidation'];
   splitValidation: ReturnType<typeof useTransactionComposerSession>['splitValidation'];
   onSubmit: () => void;
   accounts: ReturnType<typeof useAccounts>['accounts'];
   activeMode: JournalEntryScreenMode;
   onToggleMode: (mode: JournalEntryScreenMode) => void;
-  /** Direction of the last mode swap for Moti panel travel (+1 forward / -1 back). */
-  modeTransitionDir: 1 | -1;
-  guidedFooterAmount: GuidedFooterAmount | null;
-  onGuidedFooterAmountChange: (footer: GuidedFooterAmount | null) => void;
-  guidedVoiceActionsRef: MutableRefObject<GuidedVoiceActions | null>;
   isLoading: boolean;
   loadState: ReturnType<typeof useJournalEditor>['loadState'];
   headerTitle: string;
@@ -81,9 +72,12 @@ export interface JournalEntryShell {
   accountPickerTitle: string;
   isSimpleModeDisabled: boolean;
   onCreateAccountRequest: (intent: CreateAccountIntent) => void;
+  onCreateAccountRequestForRole: (role: AccountRole, intent: CreateAccountIntent) => void;
   suggestions: JournalAutofillSuggestion[];
   suggestionState: JournalSuggestionState;
-  onSelectSuggestion: (suggestion: JournalAutofillSuggestion) => void;
+  onSelectSuggestion: (
+    suggestion: JournalAutofillSuggestion,
+  ) => AutopilotAppliedAccount | undefined;
   loadSuggestions: () => void;
   workplaceCurrency: string;
   workplaceId: WorkplaceId;
@@ -155,8 +149,10 @@ export function useJournalEntryShell(): JournalEntryShell {
   });
   const { editor, splitState } = session;
 
-  const { activeMode, onToggleMode, modeTransitionDir, isSimpleModeDisabled } =
-    useJournalEntryModeState(editor, seed.editorMode);
+  const { activeMode, onToggleMode, isSimpleModeDisabled } = useJournalEntryModeState(
+    editor,
+    seed.editorMode,
+  );
 
   const { batchEditor, batchSummary, onContinueBatch, onDoneBatch } = useBatchJournalSession(
     workplaceId,
@@ -226,6 +222,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     onAccountPickerDismiss,
     onAccountSelected,
     onCreateAccountRequest,
+    onCreateAccountRequestForRole,
     selectableAccounts,
     selectedAccountId,
     accountPickerTitle,
@@ -238,11 +235,6 @@ export function useJournalEntryShell(): JournalEntryShell {
     splitRows: splitState.splits,
   });
 
-  const [guidedFooterAmount, setGuidedFooterAmount] = useState<GuidedFooterAmount | null>(null);
-  const onGuidedFooterAmountChange = useCallback((footer: GuidedFooterAmount | null) => {
-    setGuidedFooterAmount(footer);
-  }, []);
-
   const onSelectSuggestion = useJournalSuggestionApplication(editor, accounts, activeMode);
 
   const headerTitle = useMemo(
@@ -250,24 +242,17 @@ export function useJournalEntryShell(): JournalEntryShell {
     [editor.isEdit],
   );
 
-  const guidedVoiceActionsRef = useRef<GuidedVoiceActions | null>(null);
-
   return {
     editor,
     guidedAutopilot: seed.guidedAutopilot === true,
     splitState,
-    transactionIntent: session.intent,
-    postingPlan: session.postingPlan,
+    validationIssues: session.validationIssues,
     postingPlanValidation: session.postingPlanValidation,
     splitValidation: session.splitValidation,
     onSubmit,
     accounts,
     activeMode,
     onToggleMode,
-    modeTransitionDir,
-    guidedFooterAmount,
-    onGuidedFooterAmountChange,
-    guidedVoiceActionsRef,
     isLoading: editor.isLoading,
     loadState: editor.loadState,
     headerTitle,
@@ -284,6 +269,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     accountPickerTitle,
     isSimpleModeDisabled,
     onCreateAccountRequest,
+    onCreateAccountRequestForRole,
     suggestions,
     suggestionState,
     onSelectSuggestion,

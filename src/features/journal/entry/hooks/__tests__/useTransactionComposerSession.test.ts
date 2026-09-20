@@ -82,6 +82,54 @@ describe('useTransactionComposerSession', () => {
     expect(result.current.postingPlan?.description).toBeTruthy();
   });
 
+  it('preserves unresolved intent issues when there is no posting plan yet', () => {
+    const { result } = renderHook(() =>
+      useTransactionComposerSession('wp-1' as WorkplaceId, {
+        accounts,
+        currencyCode: 'USD',
+        initialDescription: 'Coffee',
+        initialDate: '2026-08-25',
+      }),
+    );
+
+    expect(result.current.postingPlan).toBeUndefined();
+    expect(result.current.postingPlanValidation.issues).toEqual([]);
+    expect(result.current.validationIssues.map(issue => issue.code)).toEqual([
+      'missing_amount',
+      'missing_source_account',
+      'missing_destination_account',
+    ]);
+  });
+
+  it('preserves resolved posting-plan issues after intent resolution succeeds', () => {
+    const foreignAccounts = [
+      ...accounts,
+      {
+        id: asAccountId('travel'),
+        name: 'Travel',
+        accountType: AccountType.EXPENSE,
+        currencyCode: 'EUR',
+      },
+    ];
+    const { result } = renderHook(() =>
+      useTransactionComposerSession('wp-1' as WorkplaceId, {
+        accounts: foreignAccounts,
+        currencyCode: 'USD',
+        initialDescription: 'Hotel',
+        initialAmount: '12.50',
+        initialSourceId: asAccountId('cash'),
+        initialDestinationId: asAccountId('travel'),
+        initialDate: '2026-08-25',
+      }),
+    );
+
+    expect(result.current.postingPlan).toBeDefined();
+    expect(result.current.postingPlanValidation.issues).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'missing_exchange_rate' })]),
+    );
+    expect(result.current.validationIssues).toBe(result.current.postingPlanValidation.issues);
+  });
+
   it('assembles Split allocations through the session submit command', async () => {
     const { journalService } = jest.requireMock('@/src/services/journal/journalDomainService');
     journalService.postPostingPlan.mockResolvedValue({ success: true, action: 'created' });

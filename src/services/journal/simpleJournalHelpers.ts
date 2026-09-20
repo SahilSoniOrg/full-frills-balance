@@ -20,6 +20,14 @@ export function parseSimpleAmountInput(amount: string): number {
   return parseFloat(amount.replace(/[^0-9.]/g, '')) || 0;
 }
 
+/** Source amount wins even when it is an empty string; dest is only a missing-line fallback. */
+export function resolveSimpleHeroAmount(
+  sourceAmount: string | undefined,
+  destinationAmount: string | undefined,
+): string {
+  return sourceAmount ?? destinationAmount ?? '';
+}
+
 export interface SimpleCrossCurrencySyncInput {
   isCrossCurrency: boolean;
   exchangeRate: number | null;

@@ -51,8 +51,12 @@ jest.mock('@/src/contexts/WorkplaceContext', () => ({
 
 let mockWorkplaceCurrency = 'USD';
 
-function createEditor(options?: { crossCurrency?: boolean }) {
+function createEditor(options?: {
+  crossCurrency?: boolean;
+  type?: 'expense' | 'income' | 'transfer';
+}) {
   const crossCurrency = options?.crossCurrency ?? false;
+  const transactionType = options?.type ?? 'expense';
   const lines = [
     {
       id: '1',
@@ -79,7 +83,7 @@ function createEditor(options?: { crossCurrency?: boolean }) {
   ];
 
   const editor = {
-    transactionType: 'expense' as const,
+    transactionType,
     setTransactionType: jest.fn(),
     isGuidedMode: true,
     isEdit: false,
@@ -112,6 +116,12 @@ describe('useSimpleJournalEditor', () => {
     { id: 'eur-source', name: 'EUR Cash', accountType: AccountType.ASSET, currencyCode: 'EUR' },
     { id: 'gbp-dest', name: 'GBP Bank', accountType: AccountType.ASSET, currencyCode: 'GBP' },
     { id: 'usd-dest', name: 'USD Bank', accountType: AccountType.ASSET, currencyCode: 'USD' },
+    {
+      id: 'inr-dest',
+      name: 'Subscriptions',
+      accountType: AccountType.EXPENSE,
+      currencyCode: 'INR',
+    },
   ] as any;
 
   beforeEach(() => {
@@ -153,6 +163,98 @@ describe('useSimpleJournalEditor', () => {
     expect(lastBatch['1'].exchangeRate).toBe((1.1).toFixed(6));
     expect(lastBatch['2'].exchangeRate).toBe((1.25).toFixed(6));
     expect(lastBatch['2'].amount).toBe(((100 * 1.1) / 1.25).toFixed(2));
+  });
+
+  it('locks the saved rate from an edited converted amount and skips further API fetches', async () => {
+    mockWorkplaceCurrency = 'INR';
+    mockFetchRate.mockResolvedValue(95.9546);
+
+    const editor = createEditor();
+    editor.lines[0].amount = '50';
+    editor.lines[1].amount = '50';
+    editor.lines[1].accountId = 'inr-dest';
+    editor.lines[1].accountName = 'Subscriptions';
+    editor.lines[1].accountCurrency = 'INR';
+
+    const { result } = renderHook(() =>
+      useSimpleJournalEditor({
+        accounts,
+        editor: editor as any,
+        onSelectAccountRequest: jest.fn(),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.isCrossCurrency).toBe(true);
+      expect(result.current.exchangeRate).toBeCloseTo(95.9546);
+    });
+    const fetchCount = mockFetchRate.mock.calls.length;
+
+    act(() => result.current.setConvertedAmount('4800'));
+
+    await waitFor(() => {
+      expect(result.current.exchangeRate).toBeCloseTo(96);
+      expect(result.current.convertedAmount).toBeCloseTo(4800);
+    });
+    expect(mockFetchRate).toHaveBeenCalledTimes(fetchCount);
+
+    const lastBatch = (editor.updateLines as jest.Mock).mock.calls.at(-1)?.[0];
+    expect(lastBatch['1'].exchangeRate).toBe((96).toFixed(6));
+    expect(lastBatch['2'].amount).toBe('4800.00');
+
+    act(() => result.current.resetToApiRate());
+
+    await waitFor(() => {
+      expect(result.current.exchangeRate).toBeCloseTo(95.9546);
+    });
+    expect(mockFetchRate.mock.calls.length).toBeGreaterThan(fetchCount);
+  });
+
+  it('refetches the market rate when the journal date changes after a converted-amount lock', async () => {
+    mockWorkplaceCurrency = 'INR';
+    mockFetchRate.mockResolvedValue(95.9546);
+
+    const editor = createEditor();
+    editor.lines[0].amount = '50';
+    editor.lines[1].amount = '50';
+    editor.lines[1].accountId = 'inr-dest';
+    editor.lines[1].accountName = 'Subscriptions';
+    editor.lines[1].accountCurrency = 'INR';
+
+    const { result, rerender } = renderHook(
+      ({ journalDate }: { journalDate: string }) => {
+        editor.journalDate = journalDate;
+        return useSimpleJournalEditor({
+          accounts,
+          editor: editor as any,
+          onSelectAccountRequest: jest.fn(),
+        });
+      },
+      { initialProps: { journalDate: '2026-01-01' } },
+    );
+
+    await waitFor(() => {
+      expect(result.current.exchangeRate).toBeCloseTo(95.9546);
+    });
+
+    act(() => result.current.setConvertedAmount('4800'));
+    await waitFor(() => {
+      expect(result.current.exchangeRate).toBeCloseTo(96);
+    });
+
+    mockFetchRate.mockResolvedValue(90);
+    await act(async () => {
+      rerender({ journalDate: '2026-01-02' });
+    });
+
+    await waitFor(() => {
+      expect(result.current.exchangeRate).toBeCloseTo(90);
+    });
+    expect(mockFetchHistoricalRate).toHaveBeenCalledWith(
+      'USD',
+      'INR',
+      Date.parse('2026-01-02T00:00:00.000Z'),
+    );
   });
 
   it('applies one historical workplace rate to equal foreign currencies', async () => {
@@ -411,5 +513,85 @@ describe('useSimpleJournalEditor', () => {
 
     expect(editor.lines[1].accountId).toBe(EMPTY_ACCOUNT_ID);
     expect(editor.lines[1].accountName).toBe('');
+  });
+
+  it('swaps source and destination accounts for transfers', () => {
+    const editor = createEditor({ type: 'transfer' });
+    const { result } = renderHook(() =>
+      useSimpleJournalEditor({
+        accounts,
+        editor: editor as any,
+        onSelectAccountRequest: jest.fn(),
+      }),
+    );
+    editor.updateLine.mockClear();
+    editor.updateLines.mockClear();
+
+    act(() => {
+      result.current.setManualBaseRate('source', '1.1');
+      result.current.setManualBaseRate('destination', '1.25');
+    });
+
+    act(() => result.current.swapAccounts());
+
+    expect(editor.lines[0].accountId).toBe('destination');
+    expect(editor.lines[1].accountId).toBe('source');
+    expect(editor.updateLine).not.toHaveBeenCalled();
+    expect(editor.updateLines).toHaveBeenCalledTimes(1);
+    expect(editor.updateLines).toHaveBeenCalledWith({
+      '1': {
+        accountId: 'destination',
+        accountName: 'Food',
+        accountType: AccountType.EXPENSE,
+        accountCurrency: 'USD',
+      },
+      '2': {
+        accountId: 'source',
+        accountName: 'Cash',
+        accountType: AccountType.ASSET,
+        accountCurrency: 'USD',
+      },
+    });
+    expect(result.current.manualSourceBaseRate).toBe('');
+    expect(result.current.manualDestBaseRate).toBe('');
+  });
+
+  it('does not swap when either transfer line is missing', () => {
+    const editor = createEditor({ type: 'transfer' });
+    editor.lines = editor.lines.filter(line => line.transactionType === TransactionType.CREDIT);
+
+    const { result } = renderHook(() =>
+      useSimpleJournalEditor({
+        accounts,
+        editor: editor as any,
+        onSelectAccountRequest: jest.fn(),
+      }),
+    );
+    editor.updateLines.mockClear();
+
+    act(() => result.current.swapAccounts());
+
+    expect(editor.updateLines).not.toHaveBeenCalled();
+    expect(editor.lines[0].accountId).toBe('source');
+  });
+
+  it('does not swap accounts for non-transfer entries', () => {
+    const editor = createEditor({ type: 'expense' });
+    const { result } = renderHook(() =>
+      useSimpleJournalEditor({
+        accounts,
+        editor: editor as any,
+        onSelectAccountRequest: jest.fn(),
+      }),
+    );
+    editor.updateLine.mockClear();
+    editor.updateLines.mockClear();
+
+    act(() => result.current.swapAccounts());
+
+    expect(editor.lines[0].accountId).toBe('source');
+    expect(editor.lines[1].accountId).toBe('destination');
+    expect(editor.updateLine).not.toHaveBeenCalled();
+    expect(editor.updateLines).not.toHaveBeenCalled();
   });
 });

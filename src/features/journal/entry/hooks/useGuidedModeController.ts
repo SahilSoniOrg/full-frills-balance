@@ -15,7 +15,6 @@ type GuidedModeControllerOptions = {
     lineId: string,
     options?: JournalEntryAccountPickerRequestOptions,
   ) => void;
-  onFocusDescription?: () => void;
 };
 
 /** Canonical controller shared by every visual treatment of simple journal entry. */
@@ -24,7 +23,6 @@ export function useGuidedModeController({
   editor,
   guidedAutopilot,
   onSelectAccountRequest,
-  onFocusDescription,
 }: GuidedModeControllerOptions) {
   const { getLineIdByRole } = editor;
   const requestAccountForRole = useCallback(
@@ -43,29 +41,25 @@ export function useGuidedModeController({
   const { precision } = useCurrencyPrecision(simpleEditor.displayCurrency);
   const handleApplyVoiceInput = useGuidedVoiceApplication(editor, simpleEditor);
   const autopilotActive = guidedAutopilot && !editor.isEdit && !simpleEditor.amount;
-  const firstAutopilotRole = autopilotActive ? simpleEditor.accountSections[0]?.role : undefined;
-  const onAutopilotCalculatorDone = useCallback(() => {
-    onFocusDescription?.();
-  }, [onFocusDescription]);
+  const firstAutopilotRole =
+    guidedAutopilot && !editor.isEdit ? simpleEditor.accountSections[0]?.role : undefined;
 
   return useMemo(
     () => ({
       simpleEditor,
+      swapAccounts: simpleEditor.swapAccounts,
       precision,
-      requestAccountForRole,
       handleApplyVoiceInput,
       autopilotActive,
       firstAutopilotRole,
-      onAutopilotCalculatorDone,
     }),
     [
       autopilotActive,
       firstAutopilotRole,
       handleApplyVoiceInput,
-      onAutopilotCalculatorDone,
       precision,
-      requestAccountForRole,
       simpleEditor,
+      simpleEditor.swapAccounts,
     ],
   );
 }

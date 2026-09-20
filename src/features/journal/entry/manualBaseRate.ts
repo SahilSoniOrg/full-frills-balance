@@ -51,3 +51,61 @@ export function resolveManualWorkplaceRates(
     exchangeRate: sourceRate / destinationRate,
   };
 }
+
+export function formatManualBaseRate(rate: number): string {
+  return rate.toFixed(6);
+}
+
+/**
+ * Derives workplace-relative rates from a user-edited destination amount.
+ * The implied source→dest rate is what gets saved; API rates only seed the initial conversion.
+ */
+export function resolveWorkplaceRatesFromConvertedAmount(input: {
+  sourceAmount: number;
+  convertedAmount: number;
+  sourceCurrency: string;
+  destCurrency: string;
+  workplaceCurrency: string;
+  existingSourceBaseRate?: number | null;
+  existingDestBaseRate?: number | null;
+}): { sourceBaseRate: number; destBaseRate: number; exchangeRate: number } | null {
+  const { sourceAmount, convertedAmount, sourceCurrency, destCurrency, workplaceCurrency } = input;
+  if (sourceCurrency === destCurrency) return null;
+  if (!(sourceAmount > 0) || !(convertedAmount > 0)) return null;
+  if (!Number.isFinite(sourceAmount) || !Number.isFinite(convertedAmount)) return null;
+
+  const exchangeRate = convertedAmount / sourceAmount;
+  if (!Number.isFinite(exchangeRate) || exchangeRate <= 0) return null;
+
+  if (destCurrency === workplaceCurrency) {
+    return { sourceBaseRate: exchangeRate, destBaseRate: 1, exchangeRate };
+  }
+  if (sourceCurrency === workplaceCurrency) {
+    return { sourceBaseRate: 1, destBaseRate: 1 / exchangeRate, exchangeRate };
+  }
+
+  const destBase =
+    input.existingDestBaseRate != null && input.existingDestBaseRate > 0
+      ? input.existingDestBaseRate
+      : null;
+  const sourceBase =
+    input.existingSourceBaseRate != null && input.existingSourceBaseRate > 0
+      ? input.existingSourceBaseRate
+      : null;
+
+  if (destBase != null) {
+    return {
+      sourceBaseRate: destBase * exchangeRate,
+      destBaseRate: destBase,
+      exchangeRate,
+    };
+  }
+  if (sourceBase != null) {
+    return {
+      sourceBaseRate: sourceBase,
+      destBaseRate: sourceBase / exchangeRate,
+      exchangeRate,
+    };
+  }
+  return null;
+}

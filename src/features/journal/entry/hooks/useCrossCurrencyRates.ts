@@ -14,6 +14,7 @@ export interface UseCrossCurrencyRatesParams {
   manualSourceBaseRate?: string;
   manualDestBaseRate?: string;
   journalDate?: string;
+  refreshNonce?: number;
   /** When false, rates are cleared and no fetch runs. */
   enabled: boolean;
 }
@@ -37,6 +38,7 @@ export function useCrossCurrencyRates({
   manualSourceBaseRate,
   manualDestBaseRate,
   journalDate,
+  refreshNonce = 0,
   enabled,
 }: UseCrossCurrencyRatesParams): CrossCurrencyRatesState {
   const { fetchRequiredRate, fetchHistoricalRate } = useExchangeRate();
@@ -180,6 +182,7 @@ export function useCrossCurrencyRates({
     fetchHistoricalRate,
     workplaceCurrency,
     journalDate,
+    refreshNonce,
   ]);
 
   return {

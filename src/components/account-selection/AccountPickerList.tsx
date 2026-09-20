@@ -1,22 +1,30 @@
-import { Icon, AppButton, AppIcon, AppInput, AppText, ListRow } from '@/src/components/core';
-import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
-import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
-import type { AccountFields } from '@/src/types/plainDtos';
 import { getArchivedAccountPickerRowPresentation } from '@/src/components/accounts/archivedAccountDisplay';
+import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
 import { ShowArchivedButton } from '@/src/components/accounts/ShowArchivedButton';
-import { useAccountPickerList } from './useAccountPickerList';
-import { getAccountIcon } from '@/src/utils/accountIcon';
+import { AppButton, AppIcon, AppInput, AppText, Icon, ListRow } from '@/src/components/core';
+import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useAccountColors } from '@/src/hooks/useAccountColors';
 import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
-import { AccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
+import { AccountId } from '@/src/types/ids';
+import type { AccountFields } from '@/src/types/plainDtos';
 import { PlainAccount } from '@/src/types/plainDtos';
 import { isAccountArchived, pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
 import { AccountSection, getAccountVariant, getSectionColor } from '@/src/utils/accountCategory';
+import { getAccountIcon } from '@/src/utils/accountIcon';
+import { withOpacity } from '@/src/utils/color-math';
 import React, { useCallback, useMemo } from 'react';
-import { Keyboard, SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import {
+  Keyboard,
+  SectionList,
+  StyleProp,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+} from 'react-native';
+import { useAccountPickerList } from './useAccountPickerList';
 
 export type CreateAccountIntent = {
   suggestedName: string;
@@ -86,20 +94,26 @@ const AccountPickerRow = React.memo(
 
 AccountPickerRow.displayName = 'AccountPickerRow';
 
-const AccountPickerPill = React.memo(
+export interface AccountPickerPillProps {
+  item: AccountFields | PlainAccount;
+  isSelected: boolean;
+  isMultiple?: boolean;
+  isPinnedArchived?: boolean;
+  onPress: () => void;
+  testID?: string;
+  style?: StyleProp<ViewStyle>;
+}
+
+export const AccountPickerPill = React.memo(
   ({
     item,
     isSelected,
-    isMultiple,
-    isPinnedArchived,
+    isMultiple = false,
+    isPinnedArchived = false,
     onPress,
-  }: {
-    item: AccountFields | PlainAccount;
-    isSelected: boolean;
-    isMultiple: boolean;
-    isPinnedArchived: boolean;
-    onPress: () => void;
-  }) => {
+    testID,
+    style,
+  }: AccountPickerPillProps) => {
     const { theme } = useTheme();
     const archived = isAccountArchived(item);
     const { accentColor } = useAccountColors(item);
@@ -108,36 +122,55 @@ const AccountPickerPill = React.memo(
       isPinnedArchived,
     );
 
+    const nameLength = item.name.length;
+    const isLongName = nameLength > 14;
+    const isVeryLongName = nameLength > 22;
+    const contentColor = isSelected ? theme.onPrimary : accentColor;
+
+    const adaptiveFontSize = isLongName ? 11 : 12;
+    const adaptiveLineHeight = isVeryLongName ? 13 : isLongName ? 14 : 16;
+
     return (
       <TouchableOpacity
         accessibilityRole="button"
         accessibilityLabel={item.name}
         accessibilityState={{ selected: isSelected }}
-        testID={`account-picker-option-${item.id}`}
+        testID={testID ?? `account-picker-option-${item.id}`}
         onPress={onPress}
         activeOpacity={Opacity.medium}
         style={[
           styles.pill,
+          isLongName && styles.pillLongName,
           {
-            backgroundColor: withOpacity(accentColor, isSelected ? 0.22 : 0.1),
-            borderColor: isSelected ? withOpacity(accentColor, 0.55) : 'transparent',
+            backgroundColor: isSelected ? accentColor : 'transparent',
+            borderColor: isSelected ? accentColor : withOpacity(accentColor, Opacity.muted),
             opacity,
           },
+          style,
         ]}
       >
         <AppIcon
           name={getAccountIcon(item)}
-          size={Size.iconSm}
-          color={accentColor}
+          size={Size.iconXs}
+          color={contentColor}
           fallbackIcon={Icon.Wallet}
         />
         <AppText
           variant="caption"
           weight="bold"
-          color="secondary"
-          numberOfLines={1}
+          color={isSelected ? 'primary' : 'secondary'}
+          numberOfLines={isLongName ? 2 : 1}
+          adjustsFontSizeToFit={!isLongName}
+          minimumFontScale={0.8}
           ellipsizeMode="tail"
-          style={styles.pillLabel}
+          style={[
+            styles.pillLabel,
+            {
+              fontSize: adaptiveFontSize,
+              lineHeight: adaptiveLineHeight,
+              color: isSelected ? theme.onPrimary : theme.textSecondary,
+            },
+          ]}
         >
           {item.name}
         </AppText>
@@ -145,11 +178,11 @@ const AccountPickerPill = React.memo(
         {isMultiple ? (
           <AppIcon
             name={isSelected ? Icon.CheckCircle : Icon.Circle}
-            size={Size.iconSm}
-            color={isSelected ? accentColor : theme.textTertiary}
+            size={Size.iconXs}
+            color={isSelected ? theme.onPrimary : theme.textTertiary}
           />
         ) : isSelected ? (
-          <AppIcon name={Icon.Check} size={Size.iconSm} color={accentColor} />
+          <AppIcon name={Icon.Check} size={Size.xxs} color={theme.onPrimary} />
         ) : null}
       </TouchableOpacity>
     );
@@ -486,6 +519,10 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     borderWidth: 1,
     borderRadius: Shape.radius.full,
+  },
+  pillLongName: {
+    borderRadius: Shape.radius.lg,
+    paddingVertical: 5,
   },
   pillLabel: { flexShrink: 1 },
   trailing: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },

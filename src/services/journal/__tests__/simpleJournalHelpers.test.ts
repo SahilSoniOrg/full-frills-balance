@@ -3,6 +3,7 @@ import {
   buildSimpleCrossCurrencyLineUpdates,
   ensureSelectedAccountVisible,
   isSimpleTargetAccountUnset,
+  resolveSimpleHeroAmount,
   resolveTargetAccountIdForSimpleTab,
 } from '@/src/services/journal/simpleJournalHelpers';
 import { AccountType } from '@/src/types/enums';
@@ -17,6 +18,14 @@ describe('simpleJournalHelpers cross-currency', () => {
     it('multiplies by exchange rate when cross-currency', () => {
       expect(computeSimpleConvertedAmount(100, true, 0.5)).toBe(50);
       expect(computeSimpleConvertedAmount(100, true, null)).toBe(100);
+    });
+  });
+
+  describe('resolveSimpleHeroAmount', () => {
+    it('keeps an empty source amount instead of filling from the destination', () => {
+      expect(resolveSimpleHeroAmount('', '0.00')).toBe('');
+      expect(resolveSimpleHeroAmount('50', '4797.73')).toBe('50');
+      expect(resolveSimpleHeroAmount(undefined, '50')).toBe('50');
     });
   });
 

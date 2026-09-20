@@ -5,7 +5,10 @@ import {
   resolveJournalEntryHeaderTitle,
   resolveJournalEntryScreenMode,
   resolveJournalEntrySubmitLabel,
+  resolveJournalEntryValidationHint,
+  resolveSimpleAmountTypography,
 } from '../journalEntryPresentation';
+import { Typography } from '@/src/constants/design-tokens';
 import { limitQuickTileAccounts } from '@/src/features/journal/components/accountTilePolicy';
 
 describe('journalEntryPresentation', () => {
@@ -108,6 +111,13 @@ describe('journalEntryPresentation', () => {
     expect(resolveJournalEntryScreenMode(undefined)).toBe('basic');
   });
 
+  it('sizes the amount type from length using design tokens', () => {
+    expect(resolveSimpleAmountTypography(3).amountFontSize).toBe(Typography.sizes.jumbo);
+    expect(resolveSimpleAmountTypography(7).amountFontSize).toBe(Typography.sizes.xxxl);
+    expect(resolveSimpleAmountTypography(10).amountFontSize).toBe(Typography.sizes.xxl);
+    expect(resolveSimpleAmountTypography(12).amountFontSize).toBe(Typography.sizes.xl);
+  });
+
   it('resolveJournalEntryHeaderTitle uses one create title across modes', () => {
     expect(resolveJournalEntryHeaderTitle({ isEdit: false })).toBe('New entry');
     expect(resolveJournalEntryHeaderTitle({ isEdit: true })).toBe('Edit entry');
@@ -116,7 +126,6 @@ describe('journalEntryPresentation', () => {
   it('requires a valid basic plan before submit', () => {
     const label = resolveJournalEntrySubmitLabel({
       activeMode: 'basic',
-      simpleSubmitting: false,
       simpleType: 'expense',
       isEdit: false,
       isSubmitting: false,
@@ -126,10 +135,81 @@ describe('journalEntryPresentation', () => {
     expect(
       isJournalEntrySubmitDisabled({
         activeMode: 'basic',
-        isSimpleValid: false,
-        isAdvancedValid: false,
+        isPlanValid: false,
       }),
     ).toBe(true);
+  });
+
+  describe('resolveJournalEntryValidationHint', () => {
+    it('maps the first actionable unresolved intent issue', () => {
+      expect(
+        resolveJournalEntryValidationHint({
+          activeMode: 'basic',
+          validationIssues: [
+            { code: 'missing_amount', message: 'An amount greater than zero is required' },
+            { code: 'missing_source_account', message: 'A source account is required' },
+          ],
+        }),
+      ).toBe('Enter an amount greater than zero.');
+      expect(
+        resolveJournalEntryValidationHint({
+          activeMode: 'basic',
+          validationIssues: [
+            { code: 'missing_source_account', message: 'A source account is required' },
+          ],
+        }),
+      ).toBe('Choose a source account.');
+    });
+
+    it('maps resolved posting-plan issues, including exchange rates', () => {
+      expect(
+        resolveJournalEntryValidationHint({
+          activeMode: 'basic',
+          validationIssues: [
+            {
+              code: 'missing_exchange_rate',
+              message: 'A foreign-currency line needs an exchange rate',
+            },
+          ],
+        }),
+      ).toBe('Enter an exchange rate for the foreign-currency line.');
+      expect(
+        resolveJournalEntryValidationHint({
+          activeMode: 'expert',
+          validationIssues: [{ code: 'unbalanced', message: 'Posting plan is not balanced' }],
+        }),
+      ).toBe('Make sure the entry balances before saving.');
+    });
+
+    it('uses the split validation error contract for allocation mode', () => {
+      expect(
+        resolveJournalEntryValidationHint({
+          activeMode: 'allocation',
+          validationIssues: [],
+          splitValidation: { valid: false, error: 'missing_split_account' },
+        }),
+      ).toBe('Choose a category for each split.');
+      expect(
+        resolveJournalEntryValidationHint({
+          activeMode: 'allocation',
+          validationIssues: [],
+          splitValidation: { valid: false, error: 'sum_mismatch' },
+        }),
+      ).toBe('Split amounts must add up to the total.');
+      expect(
+        resolveJournalEntryValidationHint({
+          activeMode: 'allocation',
+          validationIssues: [],
+          splitValidation: { valid: true },
+        }),
+      ).toBeNull();
+      expect(
+        resolveJournalEntryValidationHint({
+          activeMode: 'batch',
+          validationIssues: [{ code: 'missing_amount', message: 'An amount is required' }],
+        }),
+      ).toBeNull();
+    });
   });
 
   describe('limitQuickTileAccounts', () => {

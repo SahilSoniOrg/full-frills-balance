@@ -11,6 +11,7 @@ import {
 import { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
 import { getInferredAccountType } from '@/src/utils/accountCategory';
 import { AppNavigation } from '@/src/utils/navigation';
+import type { AccountRole } from '@/src/types/domainJournal';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type SplitRowPick = { id: string; accountId?: AccountId };
@@ -132,12 +133,10 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
     ],
   );
 
-  const onCreateAccountRequest = useCallback(
-    (intent: CreateAccountIntent) => {
-      onCloseAccountPicker();
-
+  const navigateToAccountForm = useCallback(
+    (intent: CreateAccountIntent, lineId?: string) => {
       let inferredType: AccountType | undefined;
-      const activeLine = editor.lines.find(l => l.id === activeLineId);
+      const activeLine = editor.lines.find(l => l.id === lineId);
 
       if (activeMode === 'basic' && activeLine) {
         inferredType = getInferredAccountType(editor.transactionType, activeLine.transactionType);
@@ -148,7 +147,23 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
         type: intent.type || inferredType,
       });
     },
-    [activeLineId, activeMode, editor.lines, editor.transactionType, onCloseAccountPicker],
+    [activeMode, editor.lines, editor.transactionType],
+  );
+
+  const onCreateAccountRequest = useCallback(
+    (intent: CreateAccountIntent) => {
+      const lineId = activeLineId ?? undefined;
+      onCloseAccountPicker();
+      navigateToAccountForm(intent, lineId);
+    },
+    [activeLineId, navigateToAccountForm, onCloseAccountPicker],
+  );
+
+  const onCreateAccountRequestForRole = useCallback(
+    (role: AccountRole, intent: CreateAccountIntent) => {
+      navigateToAccountForm(intent, editor.getLineIdByRole(role));
+    },
+    [editor, navigateToAccountForm],
   );
 
   const selectableAccounts = useMemo(
@@ -194,6 +209,7 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
     onCloseAccountPicker,
     onAccountSelected,
     onCreateAccountRequest,
+    onCreateAccountRequestForRole,
     selectableAccounts,
     selectedAccountId,
     accountPickerTitle,

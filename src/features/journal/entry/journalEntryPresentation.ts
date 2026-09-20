@@ -1,6 +1,11 @@
-import { AppConfig } from '@/src/constants';
+import { AppConfig, Size, Typography } from '@/src/constants';
 import { AccountId, JournalId } from '@/src/types/ids';
 import { TabType } from '@/src/types/domainJournal';
+import type {
+  PostingPlanValidationIssue,
+  TransactionDomainIssue,
+} from '@/src/types/domainTransaction';
+import type { SplitValidationError } from '@/src/services/journal/splitJournalHelpers';
 import type {
   JournalEntryRouteEditorMode,
   JournalEntrySimpleType,
@@ -125,21 +130,21 @@ export function resolveExchangeRatePresentation(input: {
 
 export function resolveJournalEntrySubmitLabel(input: {
   activeMode: JournalEntryScreenMode;
-  simpleSubmitting: boolean;
   simpleType: string;
   isEdit: boolean;
   isSubmitting: boolean;
-  splitSubmitting?: boolean;
 }): string {
   if (input.activeMode === 'allocation') {
-    return input.splitSubmitting
+    return input.isSubmitting
       ? AppConfig.strings.transactionFlow.saving
       : AppConfig.strings.transactionFlow.splitEntry.save;
   }
   if (input.activeMode === 'basic') {
-    return input.simpleSubmitting
+    return input.isSubmitting
       ? AppConfig.strings.transactionFlow.saving
-      : AppConfig.strings.transactionFlow.save(input.simpleType);
+      : input.isEdit
+        ? AppConfig.strings.common.saveChanges
+        : AppConfig.strings.transactionFlow.save(input.simpleType);
   }
 
   if (input.isSubmitting) {
@@ -155,15 +160,132 @@ export function resolveJournalEntrySubmitLabel(input: {
 
 export function isJournalEntrySubmitDisabled(input: {
   activeMode: JournalEntryScreenMode;
-  isSimpleValid: boolean;
-  isAdvancedValid: boolean;
+  isPlanValid: boolean;
   isSplitValid?: boolean;
 }): boolean {
   if (input.activeMode === 'allocation') {
     return !input.isSplitValid;
   }
   if (input.activeMode === 'basic') {
-    return !input.isSimpleValid;
+    return !input.isPlanValid;
   }
-  return !input.isAdvancedValid;
+  return !input.isPlanValid;
+}
+
+export type JournalEntryValidationIssue = TransactionDomainIssue | PostingPlanValidationIssue;
+
+type SplitValidation = { valid: true } | { valid: false; error: SplitValidationError };
+
+function resolveValidationIssueHint(issue: JournalEntryValidationIssue): string | null {
+  const strings = AppConfig.strings.transactionFlow.validation;
+
+  switch (issue.code) {
+    case 'missing_amount':
+      return strings.missingAmount;
+    case 'invalid_amount':
+      return strings.invalidAmount;
+    case 'missing_source_account':
+      return strings.missingSourceAccount;
+    case 'missing_destination_account':
+      return strings.missingDestinationAccount;
+    case 'missing_allocation_account':
+      return strings.missingAllocationAccount;
+    case 'invalid_allocation_amount':
+      return strings.invalidAllocationAmount;
+    case 'allocation_sum_mismatch':
+      return strings.allocationSumMismatch;
+    case 'missing_description':
+      return strings.missingDescription;
+    case 'missing_date':
+    case 'invalid_date':
+      return strings.invalidDate;
+    case 'missing_currency':
+      return strings.missingCurrency;
+    case 'too_few_lines':
+      return strings.tooFewLines;
+    case 'missing_account':
+      return strings.missingAccount;
+    case 'unknown_account':
+      return strings.unknownAccount;
+    case 'duplicate_line_id':
+      return strings.duplicateLine;
+    case 'missing_debit':
+      return strings.missingDebit;
+    case 'missing_credit':
+      return strings.missingCredit;
+    case 'missing_exchange_rate':
+      return strings.missingExchangeRate;
+    case 'invalid_exchange_rate':
+      return strings.invalidExchangeRate;
+    case 'account_metadata_mismatch':
+      return strings.accountMetadataMismatch;
+    case 'unbalanced':
+      return strings.unbalanced;
+    default:
+      return null;
+  }
+}
+
+function resolveSplitValidationHint(error: SplitValidationError): string {
+  return AppConfig.strings.transactionFlow.splitEntry.validation[error];
+}
+
+/** Resolves the first actionable explanation for a disabled submit action. */
+export function resolveJournalEntryValidationHint(input: {
+  activeMode: JournalEntryScreenMode;
+  validationIssues: readonly JournalEntryValidationIssue[];
+  splitValidation?: SplitValidation;
+}): string | null {
+  if (input.activeMode === 'batch') return null;
+
+  if (input.activeMode === 'allocation') {
+    return input.splitValidation?.valid === false
+      ? resolveSplitValidationHint(input.splitValidation.error)
+      : null;
+  }
+
+  for (const issue of input.validationIssues) {
+    const hint = resolveValidationIssueHint(issue);
+    if (hint) return hint;
+  }
+
+  return null;
+}
+
+export function resolveSimpleAmountTypography(amountLength: number): {
+  amountFontSize: number;
+  currencyFontSize: number;
+  currencyLineHeight: number;
+  inputHeight: number;
+} {
+  if (amountLength > 11) {
+    return {
+      amountFontSize: Typography.sizes.xl,
+      currencyFontSize: Typography.sizes.sm,
+      currencyLineHeight: Math.round(Typography.sizes.sm * Typography.lineHeights.tight),
+      inputHeight: Size.buttonLg,
+    };
+  }
+  if (amountLength > 8) {
+    return {
+      amountFontSize: Typography.sizes.xxl,
+      currencyFontSize: Typography.sizes.base,
+      currencyLineHeight: Math.round(Typography.sizes.base * Typography.lineHeights.tight),
+      inputHeight: Size.buttonLg,
+    };
+  }
+  if (amountLength > 6) {
+    return {
+      amountFontSize: Typography.sizes.xxxl,
+      currencyFontSize: Typography.sizes.lg,
+      currencyLineHeight: Math.round(Typography.sizes.lg * Typography.lineHeights.tight),
+      inputHeight: Size.xxl,
+    };
+  }
+  return {
+    amountFontSize: Typography.sizes.jumbo,
+    currencyFontSize: Typography.sizes.xxl,
+    currencyLineHeight: Math.round(Typography.sizes.xxl * Typography.lineHeights.tight),
+    inputHeight: Size.xxl,
+  };
 }

@@ -57,6 +57,22 @@ export class JournalEntryPage extends BasePage {
           : mode === 'Advanced'
             ? 'Expert'
             : mode;
+
+    const modeTrigger = this.page.getByTestId('journal-entry-mode-selector-trigger');
+    if (await modeTrigger.isVisible().catch(() => false)) {
+      const entryMode =
+        normalized === 'Basic'
+          ? 'basic'
+          : normalized === 'Allocate'
+            ? 'allocation'
+            : normalized === 'Expert'
+              ? 'expert'
+              : 'batch';
+      await modeTrigger.click();
+      await this.page.getByTestId(`journal-entry-mode-${entryMode}`).click();
+      return;
+    }
+
     if (normalized === 'Batch' || normalized === 'Bulk') {
       await this.page.getByRole('button', { name: 'Open batch workspace' }).click();
       return;
@@ -67,57 +83,28 @@ export class JournalEntryPage extends BasePage {
   }
 
   async selectSourceAccount(accountName: string) {
-    if (await this.page.getByText('Source Account', { exact: true }).isVisible()) {
-      await this.selectAccountFromQuickPickOrBrowse(accountName, 'Source Account');
-      return;
-    }
-    if (await this.page.getByText('From Account', { exact: true }).isVisible()) {
-      await this.selectAccountFromQuickPickOrBrowse(accountName, 'From Account');
-      return;
-    }
-    await this.selectAccountFromQuickPickOrBrowse(accountName, 'From Category');
+    await this.selectRouteAccount(accountName, 'source');
   }
 
   async selectDestinationAccount(accountName: string) {
-    if (await this.page.getByText('Destination Account', { exact: true }).isVisible()) {
-      await this.selectAccountFromQuickPickOrBrowse(accountName, 'Destination Account');
-      return;
-    }
-    if (await this.page.getByText('To Category', { exact: true }).isVisible()) {
-      await this.selectAccountFromQuickPickOrBrowse(accountName, 'To Category');
-      return;
-    }
-    await this.selectAccountFromQuickPickOrBrowse(accountName, 'To Account');
+    await this.selectRouteAccount(accountName, 'destination');
   }
 
-  /**
-   * Scope picks to the named section. Transfer shows the same account names in
-   * both Source and Destination quick-picks; a global first() click would select
-   * the source tile when intending destination.
-   */
-  private async selectAccountFromQuickPickOrBrowse(accountName: string, sectionLabel: string) {
-    const section = this.page
-      .locator('div')
-      .filter({ has: this.page.getByText(sectionLabel, { exact: true }) })
-      .filter({ has: this.page.getByText('Browse all', { exact: true }) })
-      .last();
+  private async selectRouteAccount(accountName: string, side: 'source' | 'destination') {
+    const node = this.page.getByTestId(`journal-route-${side}-node`);
+    await expect(node).toBeVisible({ timeout: 15000 });
 
-    await expect(section).toBeVisible({ timeout: 15000 });
+    const dropdown = this.page.getByTestId(`journal-route-${side}-dropdown`);
+    const option = dropdown
+      .locator('[data-testid^="account-picker-option-"]')
+      .filter({ hasText: accountName })
+      .first();
 
-    const visibleAccount = this.page.getByText(accountName, { exact: true });
-    if ((await visibleAccount.count()) > 0) {
-      await visibleAccount.last().click({ force: true });
-      return;
+    if (!(await option.isVisible().catch(() => false))) {
+      await node.click();
     }
-
-    const quickPick = section.getByText(accountName, { exact: true });
-    if ((await quickPick.count()) > 0) {
-      await quickPick.first().click({ force: true });
-      return;
-    }
-
-    await section.getByText('Browse all', { exact: true }).click({ force: true });
-    await this.pickAccountFromDialog(accountName);
+    await expect(option).toBeVisible({ timeout: 15000 });
+    await option.click({ force: true });
   }
 
   /**

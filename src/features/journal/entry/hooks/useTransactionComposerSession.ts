@@ -9,13 +9,12 @@ import { EMPTY_ACCOUNT_ID, type WorkplaceId } from '@/src/types/ids';
 import { AppConfig } from '@/src/constants';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { validateSplitState } from '@/src/services/journal/splitJournalHelpers';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   resolveTransactionIntent,
   validatePostingPlan,
 } from '@/src/services/transaction/transactionComposerDomain';
 import { buildSimpleDefaultDescription } from '@/src/services/journal/simpleJournalHelpers';
-import { logger } from '@/src/utils/logger';
 import { useJournalEditor, UseJournalEditorOptions } from './useJournalEditor';
 
 export type UseTransactionComposerSessionOptions = UseJournalEditorOptions & {
@@ -125,23 +124,11 @@ export function useTransactionComposerSession(
     [accounts, postingPlan],
   );
 
-  useEffect(() => {
-    logger.debug('[DEBUG-FX-SAVE] posting-plan validation', {
-      currencyCode,
-      resolved: intentResolution.resolved,
-      resolutionIssues: intentResolution.resolved ? [] : intentResolution.issues,
-      valid: postingPlanValidation.valid,
-      validationIssues: postingPlanValidation.issues,
-      lines: editor.lines.map(line => ({
-        id: line.id,
-        accountId: line.accountId,
-        accountCurrency: line.accountCurrency,
-        amount: line.amount,
-        transactionType: line.transactionType,
-        exchangeRate: line.exchangeRate,
-      })),
-    });
-  }, [currencyCode, editor.lines, intentResolution, postingPlanValidation]);
+  // An unresolved intent has no posting plan to validate, so its resolver
+  // issues are the canonical explanation for a disabled submit action.
+  const validationIssues = intentResolution.resolved
+    ? postingPlanValidation.issues
+    : intentResolution.issues;
 
   const splitValidation = useMemo(
     () =>
@@ -172,7 +159,7 @@ export function useTransactionComposerSession(
             : `${editor.transactionType.charAt(0).toUpperCase()}${editor.transactionType.slice(1)}`);
       if (!editor.description.trim()) editor.setDescription(description);
 
-      // Expert mode is the lossless editor for arbitrary journal shapes. A merged
+      // Advanced mode is the lossless editor for arbitrary journal shapes. A merged
       // journal may contain multiple credit legs; reducing it to the guided intent
       // (one source plus debit allocations) would silently drop those legs on save.
       if (mode === 'editor' && !editor.isGuidedMode) {
@@ -211,6 +198,7 @@ export function useTransactionComposerSession(
     editor,
     splitState,
     intent,
+    validationIssues,
     postingPlan,
     postingPlanValidation,
     splitValidation,
