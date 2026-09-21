@@ -124,11 +124,7 @@ export const AccountPickerPill = React.memo(
 
     const nameLength = item.name.length;
     const isLongName = nameLength > 14;
-    const isVeryLongName = nameLength > 22;
     const contentColor = isSelected ? theme.onPrimary : accentColor;
-
-    const adaptiveFontSize = isLongName ? 11 : 12;
-    const adaptiveLineHeight = isVeryLongName ? 13 : isLongName ? 14 : 16;
 
     return (
       <TouchableOpacity
@@ -160,14 +156,10 @@ export const AccountPickerPill = React.memo(
           weight="bold"
           color={isSelected ? 'primary' : 'secondary'}
           numberOfLines={isLongName ? 2 : 1}
-          adjustsFontSizeToFit={!isLongName}
-          minimumFontScale={0.8}
           ellipsizeMode="tail"
           style={[
             styles.pillLabel,
             {
-              fontSize: adaptiveFontSize,
-              lineHeight: adaptiveLineHeight,
               color: isSelected ? theme.onPrimary : theme.textSecondary,
             },
           ]}
