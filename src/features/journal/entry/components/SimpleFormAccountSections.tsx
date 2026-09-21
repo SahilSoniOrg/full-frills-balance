@@ -11,7 +11,7 @@ import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { withOpacity } from '@/src/utils/color-math';
 import { MotiView } from 'moti';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Keyboard, StyleSheet, View } from 'react-native';
+import { Keyboard, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 import { routeAccountSelectorStyles as styles } from './SimpleFormAccountSections.styles';
@@ -55,6 +55,12 @@ export interface SimpleFormAccountSectionsProps {
   // Archive & Creation
   allAccounts?: AccountFields[];
   onCreateAccountRequest?: (role: AccountRole, intent: CreateAccountIntent) => void;
+
+  // Embedding
+  displayMode?: 'standard' | 'compact';
+  containerStyle?: StyleProp<ViewStyle>;
+  lazyDropdown?: boolean;
+  testIDPrefix?: string;
 }
 
 export const SimpleFormAccountSections = React.memo(function SimpleFormAccountSections({
@@ -74,6 +80,10 @@ export const SimpleFormAccountSections = React.memo(function SimpleFormAccountSe
   onSwapAccounts,
   allAccounts,
   onCreateAccountRequest,
+  displayMode = 'standard',
+  containerStyle,
+  lazyDropdown = false,
+  testIDPrefix = 'journal-route',
 }: SimpleFormAccountSectionsProps) {
   const { theme } = useTheme();
   const { showArchived, setShowArchived } = useArchiveVisibility();
@@ -103,6 +113,7 @@ export const SimpleFormAccountSections = React.memo(function SimpleFormAccountSe
   const visualSide = expansionPosition ?? (isRevealVisible ? activeSide : null);
   const isLeftExpanded = visualSide === 'left';
   const isRightExpanded = visualSide === 'right';
+  const showNodeLabels = displayMode === 'standard';
 
   const sourceAppearance = useMemo(
     () =>
@@ -127,7 +138,10 @@ export const SimpleFormAccountSections = React.memo(function SimpleFormAccountSe
   const activeEmptyPrompt =
     activeSide === 'left'
       ? (sourceEmptyPrompt ?? AppConfig.strings.transactionFlow.simpleEntry.chooseAccount)
-      : (destEmptyPrompt ?? (type === 'expense' ? 'Choose category' : 'Choose account'));
+      : (destEmptyPrompt ??
+        (type === 'expense'
+          ? AppConfig.strings.transactionFlow.simpleEntry.chooseCategory
+          : AppConfig.strings.transactionFlow.simpleEntry.chooseAccount));
   const activeAccountId = activeSide === 'left' ? sourceAccount?.id : destAccount?.id;
   const pinnedAccountIds = useMemo(
     () =>
@@ -192,14 +206,16 @@ export const SimpleFormAccountSections = React.memo(function SimpleFormAccountSe
         sections={sections}
         setShowArchived={setShowArchived}
         showArchived={showArchived}
-        testID={`journal-route-${activeSide === 'left' ? 'source' : 'destination'}-dropdown`}
+        testID={`${testIDPrefix}-${activeSide === 'left' ? 'source' : 'destination'}-dropdown`}
         toggleSection={toggleSection}
       />
     </View>
   );
 
   return (
-    <Animated.View style={[styles.container, isRevealVisible && styles.expandedWrapper]}>
+    <Animated.View
+      style={[styles.container, isRevealVisible && styles.expandedWrapper, containerStyle]}
+    >
       <Animated.View style={[StyleSheet.absoluteFill, animatedSvgStyle]} pointerEvents="none">
         {svgPath !== '' && (
           <Svg width={containerWidth} height={effectiveHeight} pointerEvents="none">
@@ -221,26 +237,31 @@ export const SimpleFormAccountSections = React.memo(function SimpleFormAccountSe
           }
           isExpanded={isLeftExpanded}
           label={sourceLabel}
+          showLabel={showNodeLabels}
           onLayout={onLeftTabWrapperLayout}
           onPress={() => {
             Keyboard.dismiss();
             onToggleExpansion('left');
           }}
-          testID="journal-route-source-node"
+          testID={`${testIDPrefix}-source-node`}
         />
         <RouteConnector type={type} onSwapAccounts={onSwapAccounts} />
         <RouteAccountNode
           account={destAccount}
           emptyPrompt={
-            destEmptyPrompt ?? (type === 'expense' ? 'Choose category' : 'Choose account')
+            destEmptyPrompt ??
+            (type === 'expense'
+              ? AppConfig.strings.transactionFlow.simpleEntry.chooseCategory
+              : AppConfig.strings.transactionFlow.simpleEntry.chooseAccount)
           }
           isExpanded={isRightExpanded}
           label={destLabel}
+          showLabel={showNodeLabels}
           onPress={() => {
             Keyboard.dismiss();
             onToggleExpansion('right');
           }}
-          testID="journal-route-destination-node"
+          testID={`${testIDPrefix}-destination-node`}
         />
       </View>
 
@@ -250,21 +271,22 @@ export const SimpleFormAccountSections = React.memo(function SimpleFormAccountSe
         accessibilityElementsHidden={!isExpanded}
         importantForAccessibility={isExpanded ? 'yes' : 'no-hide-descendants'}
       >
-        {reduceMotion ? (
-          dropdownBody
-        ) : (
-          <MotiView
-            key={activeSide}
-            from={{ opacity: 0, translateY: -ChromeMotion.panelSlidePx }}
-            animate={{
-              opacity: isExpanded ? 1 : 0,
-              translateY: isExpanded ? 0 : -ChromeMotion.panelSlidePx,
-            }}
-            transition={{ type: 'timing', duration: AppConfig.animation.normal }}
-          >
-            {dropdownBody}
-          </MotiView>
-        )}
+        {(!lazyDropdown || isRevealVisible) &&
+          (reduceMotion ? (
+            dropdownBody
+          ) : (
+            <MotiView
+              key={activeSide}
+              from={{ opacity: 0, translateY: -ChromeMotion.panelSlidePx }}
+              animate={{
+                opacity: isExpanded ? 1 : 0,
+                translateY: isExpanded ? 0 : -ChromeMotion.panelSlidePx,
+              }}
+              transition={{ type: 'timing', duration: AppConfig.animation.normal }}
+            >
+              {dropdownBody}
+            </MotiView>
+          ))}
       </View>
     </Animated.View>
   );

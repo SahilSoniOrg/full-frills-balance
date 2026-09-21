@@ -25,6 +25,7 @@ interface RouteAccountNodeProps {
   emptyPrompt: string;
   isExpanded: boolean;
   label: string;
+  showLabel?: boolean;
   onLayout?: (event: LayoutChangeEvent) => void;
   onPress: () => void;
   testID?: string;
@@ -35,6 +36,7 @@ export function RouteAccountNode({
   emptyPrompt,
   isExpanded,
   label,
+  showLabel = true,
   onLayout,
   onPress,
   testID,
@@ -77,9 +79,11 @@ export function RouteAccountNode({
         accessibilityLabel={`${label}: ${account?.name || 'Unset'}`}
         testID={testID}
       >
-        <AppText variant="caption" weight="bold" color="tertiary" style={styles.nodeRoleLabel}>
-          {label}
-        </AppText>
+        {showLabel && (
+          <AppText variant="caption" weight="bold" color="tertiary" style={styles.nodeRoleLabel}>
+            {label}
+          </AppText>
+        )}
         <View style={styles.nodeAccountRow}>
           {hasAccount ? (
             <>
@@ -128,31 +132,32 @@ export function RouteConnector({ onSwapAccounts, type }: RouteConnectorProps) {
   const { theme } = useTheme();
 
   return (
-    <View style={styles.connectorContainer}>
-      {type === 'transfer' && onSwapAccounts ? (
+    <View style={styles.connectorContainer} testID="route-flow-connector">
+      <View style={styles.connectorArrow} testID="route-flow-arrow">
+        <AppIcon name={Icon.ArrowRight} size={Size.xxs} color={theme.textTertiary} />
+      </View>
+      {type === 'transfer' && onSwapAccounts && (
         <TouchableOpacity
           onPress={onSwapAccounts}
-          style={[
-            styles.connectorSwapButton,
-            {
-              backgroundColor: withOpacity(theme.primary, Opacity.soft),
-              borderColor: withOpacity(theme.primary, Opacity.medium),
-            },
-          ]}
+          style={styles.connectorSwapTouchTarget}
+          hitSlop={Spacing.xs}
           accessibilityRole="button"
           accessibilityLabel="Swap send from and deposit into accounts"
+          testID="route-swap-accounts-button"
         >
-          <AppIcon name={Icon.SwapHorizontal} size={Size.xxs} color={theme.primary} />
+          <View
+            pointerEvents="none"
+            style={[
+              styles.connectorSwapVisual,
+              {
+                backgroundColor: withOpacity(theme.primary, Opacity.soft),
+                borderColor: withOpacity(theme.primary, Opacity.medium),
+              },
+            ]}
+          >
+            <AppIcon name={Icon.SwapHorizontal} size={Size.xxs} color={theme.primary} />
+          </View>
         </TouchableOpacity>
-      ) : (
-        <View
-          style={[
-            styles.connectorArrow,
-            { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
-          ]}
-        >
-          <AppIcon name={Icon.ArrowRight} size={Size.xxs} color={theme.textTertiary} />
-        </View>
       )}
     </View>
   );
