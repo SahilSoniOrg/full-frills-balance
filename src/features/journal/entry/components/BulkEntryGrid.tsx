@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlashList } from '@shopify/flash-list';
 import {
   Keyboard,
@@ -6,28 +6,35 @@ import {
   ScrollView,
   StyleSheet,
   TextInput,
-  View,
   TouchableOpacity,
+  View,
 } from 'react-native';
-import { Icon, AppButton, AppText, AppIcon } from '@/src/components/core';
+import { AppButton, AppIcon, AppText, Icon } from '@/src/components/core';
 import { AppConfig, MAX_BULK_JOURNAL_ROWS, Spacing, Shape, Size } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import type { BulkJournalRow, BulkRowFieldValue } from '../types/bulkJournal';
+import type { BulkJournalRow, BulkJournalRowActions } from '../types/bulkJournal';
 import { BulkEntryRow } from './BulkEntryRow';
-import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModal';
-import { AccountPickerModal } from '@/src/components/account-selection';
 import type { AccountFields } from '@/src/types/plainDtos';
+import type { AccountRole } from '@/src/types/domainJournal';
+import type { CreateAccountIntent } from '@/src/components/account-selection';
+import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModal';
+import { getBulkJournalRowError } from '../hooks/bulkJournalHelpers';
 import dayjs from 'dayjs';
+import type { WorkplaceId } from '@/src/types/ids';
 
 interface BulkEntryGridProps {
   rows: BulkJournalRow[];
   submitError: string | null;
   accounts: AccountFields[];
   workplaceCurrency: string;
+  workplaceId: WorkplaceId;
   addRow: () => void;
   removeRow: (id: string) => void;
   clearRows: () => void;
-  updateRowField: (rowId: string, field: keyof BulkJournalRow, value: BulkRowFieldValue) => void;
+  rowActions: BulkJournalRowActions;
+  swapRowAccounts: (rowId: string) => void;
+  refreshRowRate: (rowId: string) => void;
+  onCreateAccountRequest?: (rowId: string, role: AccountRole, intent: CreateAccountIntent) => void;
   isAtMaxRows: boolean;
 }
 
@@ -37,114 +44,119 @@ export const BulkEntryGrid = React.memo(
     submitError,
     accounts,
     workplaceCurrency,
+    workplaceId,
     addRow,
     removeRow,
     clearRows,
-    updateRowField,
+    rowActions,
+    swapRowAccounts,
+    refreshRowRate,
+    onCreateAccountRequest,
     isAtMaxRows,
   }: BulkEntryGridProps) => {
     const { theme } = useTheme();
 
-    const [activePicker, setActivePicker] = useState<{
-      type: 'date' | 'source' | 'destination';
+    const [expandedAccountPicker, setExpandedAccountPicker] = useState<{
       rowId: string;
+      side: 'left' | 'right';
     } | null>(null);
+    const [datePickerRowId, setDatePickerRowId] = useState<string | null>(null);
 
-    const activeRow = useMemo(() => {
-      if (!activePicker) return null;
-      return rows.find(r => r.id === activePicker.rowId) || null;
-    }, [rows, activePicker]);
-
-    const errorCount = useMemo(() => rows.filter(r => r.error).length, [rows]);
+    const datePickerRow = useMemo(
+      () => rows.find(row => row.id === datePickerRowId) ?? null,
+      [datePickerRowId, rows],
+    );
+    useEffect(() => {
+      setExpandedAccountPicker(null);
+      setDatePickerRowId(null);
+    }, [rows.length]);
+    // Positional labels are derived metadata. Invalidate FlashList's item
+    // renderer when order changes without making keystrokes remount rows.
+    const rowOrderKey = useMemo(() => rows.map(row => row.id).join('|'), [rows]);
+    const errorCount = useMemo(
+      () => rows.filter(row => getBulkJournalRowError(row)).length,
+      [rows],
+    );
     const allEmpty = useMemo(
-      () => rows.every(r => !r.description.trim() && !r.amount && !r.sourceId),
+      () =>
+        rows.every(
+          row =>
+            !row.description.trim() &&
+            !row.notes.trim() &&
+            !row.amount &&
+            !row.sourceId &&
+            !row.destinationId,
+        ),
       [rows],
     );
 
-    const handleDatePickerRequest = useCallback((rowId: string) => {
-      setActivePicker({ type: 'date', rowId });
-    }, []);
-
-    const handleAccountPickerRequest = useCallback(
-      (rowId: string, role: 'source' | 'destination') => {
-        setActivePicker({ type: role, rowId });
-      },
-      [],
-    );
-
-    const handleCloseModals = useCallback(() => {
-      setActivePicker(null);
+    const handleToggleAccountExpansion = useCallback((rowId: string, side: 'left' | 'right') => {
+      Keyboard.dismiss();
+      setExpandedAccountPicker(current =>
+        current?.rowId === rowId && current.side === side ? null : { rowId, side },
+      );
     }, []);
 
     const handleAddRow = useCallback(() => {
       Keyboard.dismiss();
       const focused = TextInput.State.currentlyFocusedInput();
-      if (focused) {
-        TextInput.State.blurTextInput(focused);
-      }
+      if (focused) TextInput.State.blurTextInput(focused);
       if (Platform.OS === 'web' && typeof document !== 'undefined') {
         const active = document.activeElement;
-        if (active instanceof HTMLElement) {
-          active.blur();
-        }
+        if (active instanceof HTMLElement) active.blur();
       }
+      setExpandedAccountPicker(null);
+      setDatePickerRowId(null);
       addRow();
     }, [addRow]);
 
-    const handleDateSelect = useCallback(
-      (dateStr: string, timeStr: string) => {
-        if (!activePicker || activePicker.type !== 'date') return;
-        const nextTimestamp = dayjs(`${dateStr}T${timeStr}`).valueOf();
-        updateRowField(activePicker.rowId, 'journalDate', nextTimestamp);
-        setActivePicker(null);
+    const handleRemoveRow = useCallback(
+      (rowId: string) => {
+        setExpandedAccountPicker(current => (current?.rowId === rowId ? null : current));
+        setDatePickerRowId(current => (current === rowId ? null : current));
+        removeRow(rowId);
       },
-      [activePicker, updateRowField],
+      [removeRow],
     );
 
-    const handleAccountSelect = useCallback(
-      (accountId: string) => {
-        if (!activePicker) return;
-        const field = activePicker.type === 'source' ? 'sourceId' : 'destinationId';
-        updateRowField(activePicker.rowId, field, accountId);
-        setActivePicker(null);
-      },
-      [activePicker, updateRowField],
-    );
-
-    const datePickerValues = useMemo(() => {
-      if (!activeRow) return { date: dayjs().format('YYYY-MM-DD'), time: dayjs().format('HH:mm') };
-      const d = dayjs(activeRow.journalDate);
-      return {
-        date: d.format('YYYY-MM-DD'),
-        time: d.format('HH:mm'),
-      };
-    }, [activeRow]);
-
-    const selectedAccountId = useMemo(() => {
-      if (!activeRow || !activePicker) return undefined;
-      return activePicker.type === 'source' ? activeRow.sourceId : activeRow.destinationId;
-    }, [activeRow, activePicker]);
+    const handleClearRows = useCallback(() => {
+      setExpandedAccountPicker(null);
+      setDatePickerRowId(null);
+      clearRows();
+    }, [clearRows]);
 
     const renderRow = useCallback(
       ({ item: row, index }: { item: BulkJournalRow; index: number }) => (
         <BulkEntryRow
+          key={row.id}
           row={row}
           index={index}
           accounts={accounts}
           workplaceCurrency={workplaceCurrency}
-          onUpdateField={updateRowField}
-          onRemove={removeRow}
-          onDatePickerRequest={handleDatePickerRequest}
-          onAccountPickerRequest={handleAccountPickerRequest}
+          workplaceId={workplaceId}
+          rowActions={rowActions}
+          onRemove={handleRemoveRow}
+          onDateTimePickerRequest={setDatePickerRowId}
+          accountExpansion={
+            expandedAccountPicker?.rowId === row.id ? expandedAccountPicker.side : null
+          }
+          onToggleAccountExpansion={handleToggleAccountExpansion}
+          onSwapAccounts={swapRowAccounts}
+          onRefreshRate={refreshRowRate}
+          onCreateAccountRequest={onCreateAccountRequest}
         />
       ),
       [
         accounts,
-        handleAccountPickerRequest,
-        handleDatePickerRequest,
-        removeRow,
-        updateRowField,
+        expandedAccountPicker,
+        handleRemoveRow,
+        handleToggleAccountExpansion,
+        swapRowAccounts,
+        refreshRowRate,
+        onCreateAccountRequest,
+        rowActions,
         workplaceCurrency,
+        workplaceId,
       ],
     );
 
@@ -193,8 +205,6 @@ export const BulkEntryGrid = React.memo(
       </AppButton>
     );
 
-    const webRows = rows.map((row, index) => renderRow({ item: row, index }));
-
     return (
       <View style={styles.container}>
         {/* Stats strip: row count, validation, clear all */}
@@ -220,7 +230,7 @@ export const BulkEntryGrid = React.memo(
               )}
             </View>
             <TouchableOpacity
-              onPress={clearRows}
+              onPress={handleClearRows}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <AppText variant="caption" color="primary" weight="semibold">
@@ -236,7 +246,7 @@ export const BulkEntryGrid = React.memo(
             keyboardShouldPersistTaps="handled"
           >
             {listHeader}
-            {webRows}
+            {rows.map((row, index) => renderRow({ item: row, index }))}
             {listFooter}
           </ScrollView>
         ) : (
@@ -244,6 +254,7 @@ export const BulkEntryGrid = React.memo(
             data={rows}
             renderItem={renderRow}
             keyExtractor={row => row.id}
+            extraData={rowOrderKey}
             ListHeaderComponent={listHeader}
             ListFooterComponent={listFooter}
             contentContainerStyle={styles.scrollContainer}
@@ -251,25 +262,15 @@ export const BulkEntryGrid = React.memo(
           />
         )}
 
-        {/* Date & Time Picker Modal */}
         <DateTimePickerModal
-          visible={activePicker?.type === 'date'}
-          date={datePickerValues.date}
-          time={datePickerValues.time}
-          onClose={handleCloseModals}
-          onSelect={handleDateSelect}
-        />
-
-        {/* AccountFields Picker Modal */}
-        <AccountPickerModal
-          visible={activePicker?.type === 'source' || activePicker?.type === 'destination'}
-          accounts={accounts}
-          selectedId={selectedAccountId}
-          title={
-            activePicker?.type === 'source' ? 'Select Source Account' : 'Select Destination Account'
-          }
-          onClose={handleCloseModals}
-          onSelect={handleAccountSelect}
+          visible={datePickerRow !== null}
+          date={dayjs(datePickerRow?.journalDate).format('YYYY-MM-DD')}
+          time={dayjs(datePickerRow?.journalDate).format('HH:mm')}
+          onClose={() => setDatePickerRowId(null)}
+          onSelect={(date, time) => {
+            if (!datePickerRow) return;
+            rowActions.setJournalDate(datePickerRow.id, dayjs(`${date}T${time}`).valueOf());
+          }}
         />
       </View>
     );

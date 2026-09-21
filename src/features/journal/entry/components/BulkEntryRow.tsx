@@ -1,27 +1,41 @@
-import React, { useMemo, useRef, useCallback, useEffect, useState } from 'react';
-import { StyleSheet, View, TouchableOpacity, Keyboard } from 'react-native';
-import { Icon, AppIcon, AppInput, AppText } from '@/src/components/core';
-import { Spacing, Shape, Opacity, Size, Typography } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
-import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
+import React, { useMemo } from 'react';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Icon, AppIcon, AppText } from '@/src/components/core';
+import { AppConfig, Spacing, Shape, Size } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
-import type { BulkJournalRow, BulkRowFieldValue } from '../types/bulkJournal';
+import type { BulkJournalRow, BulkJournalRowActions } from '../types/bulkJournal';
 import type { AccountFields } from '@/src/types/plainDtos';
-import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
-import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
-import { resolveAccountChipColors, type AccountChipColors } from '@/src/utils/accountChipColors';
-import { ManualBaseRateField } from './ManualBaseRateField';
+import type { AccountRole } from '@/src/types/domainJournal';
+import type { CreateAccountIntent } from '@/src/components/account-selection';
+import { EntryTransactionCard } from './EntryTransactionCard';
+import type { ExpansionPosition } from './SimpleFormAccountSections';
+import { getBulkJournalRowError } from '../hooks/bulkJournalHelpers';
+import {
+  buildSimpleFormAccountSections,
+  type SimpleFormSectionConfig,
+} from '@/src/services/journal/simpleJournalHelpers';
+import { filterToLeafAccounts } from '@/src/services/journal/guidedJournalAccountEligibility';
+import { resolveSimpleTypeAccentColor } from '../journalEntryPresentation';
+import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
+import type { WorkplaceId } from '@/src/types/ids';
+import dayjs from 'dayjs';
+
+const BATCH_SUGGESTION_MAX_HEIGHT = Size.xxl * 2 + Size.lg;
 
 interface BulkEntryRowProps {
   row: BulkJournalRow;
   index: number;
   accounts: AccountFields[];
   workplaceCurrency: string;
-  onUpdateField: (id: string, field: keyof BulkJournalRow, value: BulkRowFieldValue) => void;
+  workplaceId: WorkplaceId;
+  rowActions: BulkJournalRowActions;
   onRemove: (id: string) => void;
-  onDatePickerRequest: (id: string) => void;
-  onAccountPickerRequest: (id: string, role: 'source' | 'destination') => void;
+  onDateTimePickerRequest: (id: string) => void;
+  accountExpansion: ExpansionPosition;
+  onToggleAccountExpansion: (id: string, side: 'left' | 'right') => void;
+  onSwapAccounts: (id: string) => void;
+  onRefreshRate: (id: string) => void;
+  onCreateAccountRequest?: (rowId: string, role: AccountRole, intent: CreateAccountIntent) => void;
 }
 
 export const BulkEntryRow = React.memo(
@@ -30,32 +44,22 @@ export const BulkEntryRow = React.memo(
     index,
     accounts,
     workplaceCurrency,
-    onUpdateField,
+    workplaceId,
+    rowActions,
     onRemove,
-    onDatePickerRequest,
-    onAccountPickerRequest,
+    onDateTimePickerRequest,
+    accountExpansion,
+    onToggleAccountExpansion,
+    onSwapAccounts,
+    onRefreshRate,
+    onCreateAccountRequest,
   }: BulkEntryRowProps) => {
     const { theme } = useTheme();
-    const { resolvedHourCycle } = useHourCyclePrefs();
-    const [showNotes, setShowNotes] = useState(!!row.notes);
-    const notesRevealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    useEffect(() => {
-      if (row.notes) {
-        notesRevealTimerRef.current = setTimeout(() => {
-          notesRevealTimerRef.current = null;
-          setShowNotes(true);
-        }, 0);
-      }
-
-      return () => {
-        if (notesRevealTimerRef.current) {
-          clearTimeout(notesRevealTimerRef.current);
-          notesRevealTimerRef.current = null;
-        }
-      };
-    }, [row.notes]);
-
+    const { suggestions, suggestionState, loadSuggestions } = useJournalSuggestions(
+      workplaceId,
+      row.description,
+      row.transactionType,
+    );
     const sourceAccount = useMemo(
       () => accounts.find(a => a.id === row.sourceId),
       [accounts, row.sourceId],
@@ -64,270 +68,163 @@ export const BulkEntryRow = React.memo(
       () => accounts.find(a => a.id === row.destinationId),
       [accounts, row.destinationId],
     );
+    const leafAccounts = useMemo(() => filterToLeafAccounts(accounts), [accounts]);
+    const accountSections = useMemo(
+      () =>
+        buildSimpleFormAccountSections(row.transactionType, {
+          leafAccounts,
+          accountPool: accounts,
+          sourceId: row.sourceId,
+          destinationId: row.destinationId,
+        }),
+      [accounts, leafAccounts, row.destinationId, row.sourceId, row.transactionType],
+    );
+    const sourceSection = accountSections.find(
+      (section: SimpleFormSectionConfig) => section.role === 'source',
+    );
+    const destinationSection = accountSections.find(
+      (section: SimpleFormSectionConfig) => section.role === 'destination',
+    );
 
     const sourceCurrency = sourceAccount?.currencyCode;
     const destCurrency = destAccount?.currencyCode;
 
-    const formattedDate = useMemo(() => {
-      return formatDateKeepingPattern(row.journalDate, 'DD MMM', resolvedHourCycle);
-    }, [row.journalDate, resolvedHourCycle]);
-
-    const getAccountStyles = useCallback(
-      (account: AccountFields | undefined, hasConflictError: boolean): AccountChipColors => {
-        if (hasConflictError) {
-          return {
-            bg: 'transparent',
-            border: theme.error,
-            text: theme.textTertiary,
-            icon: theme.textTertiary,
-            marker: theme.error,
-          };
-        }
-        return resolveAccountChipColors(account, theme);
-      },
-      [theme],
-    );
-
-    const sourceStyles = useMemo(() => {
-      const hasConflict = row.sourceId === row.destinationId && !!row.sourceId;
-      return getAccountStyles(sourceAccount, hasConflict);
-    }, [sourceAccount, row.sourceId, row.destinationId, getAccountStyles]);
-
-    const destStyles = useMemo(() => {
-      const hasConflict = row.sourceId === row.destinationId && !!row.destinationId;
-      return getAccountStyles(destAccount, hasConflict);
-    }, [destAccount, row.sourceId, row.destinationId, getAccountStyles]);
+    const rowDate = useMemo(() => dayjs(row.journalDate).format('YYYY-MM-DD'), [row.journalDate]);
+    const rowTime = useMemo(() => dayjs(row.journalDate).format('HH:mm'), [row.journalDate]);
+    const rowError = getBulkJournalRowError(row);
+    const updateRowDateTime = (date: string, time: string) => {
+      rowActions.setJournalDate(row.id, dayjs(`${date}T${time}`).valueOf());
+    };
+    const destinationLabel =
+      destinationSection?.title ?? AppConfig.strings.transactionFlow.simpleEntry.toAccount;
 
     return (
-      <View style={[styles.container, { borderColor: row.error ? theme.error : theme.border }]}>
-        {/* Row 1: # | description | delete */}
-        <View style={styles.topRow}>
-          <View style={[styles.indexBadge, { backgroundColor: theme.surfaceSecondary }]}>
-            <AppText variant="caption" color="secondary" weight="bold">
-              #{index + 1}
-            </AppText>
-          </View>
-          <View style={styles.descriptionWrapper}>
-            <AppInput
-              value={row.description}
-              onChangeText={val => onUpdateField(row.id, 'description', val)}
-              placeholder="What was this for?"
-              variant="minimal"
-              style={styles.descriptionInput}
-              containerStyle={styles.inputContainer}
-              testID={`bulk-description-${row.id}`}
-            />
-          </View>
-          <TouchableOpacity
-            onPress={() => onRemove(row.id)}
-            style={styles.deleteButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <AppIcon name={Icon.Delete} size={Size.iconXs} color={theme.textSecondary} />
-          </TouchableOpacity>
-        </View>
-
-        {showNotes && (
-          <View
-            style={[
-              styles.notesBox,
-              { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
-            ]}
-          >
-            <AppIcon
-              name={Icon.Document}
-              size={Size.iconXs}
-              color={theme.textTertiary}
-              style={styles.notesIcon}
-            />
-            <AppInput
-              value={row.notes}
-              onChangeText={val => onUpdateField(row.id, 'notes', val)}
-              placeholder="Add any extra journal details..."
-              multiline
-              variant="minimal"
-              style={[styles.notesInput, { color: theme.textSecondary }]}
-              containerStyle={styles.notesInputContainer}
-              testID={`bulk-notes-${row.id}`}
-            />
-            <TouchableOpacity
-              onPress={() => {
-                onUpdateField(row.id, 'notes', '');
-                setShowNotes(false);
-              }}
-              style={styles.notesClose}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <AppIcon name={Icon.X} size={14} color={theme.textTertiary} />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {!showNotes && (
-          <TouchableOpacity
-            onPress={() => setShowNotes(true)}
-            style={styles.addNotesButton}
-            testID={`bulk-add-notes-${row.id}`}
-          >
-            <AppIcon name={Icon.Plus} size={14} color={theme.primary} />
-            <AppText variant="caption" color="primary" weight="medium">
-              Add Notes
-            </AppText>
-          </TouchableOpacity>
-        )}
-
-        {/* Row 2: date left | amount fills remaining, right-aligned */}
-        <View style={styles.metaRow}>
-          <TouchableOpacity
-            style={[
-              styles.dateCell,
-              { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
-            ]}
-            onPress={() => {
-              Keyboard.dismiss();
-              onDatePickerRequest(row.id);
-            }}
-          >
-            <AppIcon name={Icon.Calendar} size={12} color={theme.textSecondary} />
-            <AppText variant="caption" weight="semibold" style={styles.dateText}>
-              {formattedDate}
-            </AppText>
-          </TouchableOpacity>
-
-          <View
-            style={[
-              styles.amountWrapper,
-              { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
-            ]}
-          >
-            <AppText
-              variant="caption"
-              weight="bold"
-              style={[styles.currencyPrefix, { color: theme.textTertiary }]}
-            >
-              {sourceCurrency || ''}
-            </AppText>
-            <CalculatorAmountInput
-              value={row.amount}
-              onChangeText={val => onUpdateField(row.id, 'amount', val)}
-              placeholder="0.00"
-              currencySymbol={sourceCurrency || ''}
-              variant="minimal"
-              containerStyle={[styles.inputContainer, { flex: 1 }]}
-              inputStyle={styles.amountInput}
-              testID={`bulk-amount-${row.id}`}
-            />
-          </View>
-        </View>
-
-        {/* Row 3: source | arrow | destination */}
-        <View style={styles.accountsRow}>
-          <TouchableOpacity
-            style={[
-              styles.accountChip,
-              {
-                backgroundColor: sourceStyles.bg,
-                borderColor: sourceStyles.border,
-              },
-            ]}
-            onPress={() => {
-              Keyboard.dismiss();
-              onAccountPickerRequest(row.id, 'source');
-            }}
-            testID={`bulk-source-${row.id}`}
-          >
-            <AccountInlineLabel
-              account={sourceAccount}
-              placeholder="Source"
-              variant="caption"
-              weight="semibold"
-              textColor={sourceStyles.text}
-              colors={{ accentColor: sourceStyles.text, categoryColor: sourceStyles.marker }}
-            />
-            <AppIcon name={Icon.ChevronDown} size={12} color={sourceStyles.icon} />
-          </TouchableOpacity>
-
-          <View style={styles.arrowContainer}>
-            <AppIcon name={Icon.ArrowRight} size={Size.iconXs} color={theme.textTertiary} />
-          </View>
-
-          <TouchableOpacity
-            style={[
-              styles.accountChip,
-              {
-                backgroundColor: destStyles.bg,
-                borderColor: destStyles.border,
-              },
-            ]}
-            onPress={() => {
-              Keyboard.dismiss();
-              onAccountPickerRequest(row.id, 'destination');
-            }}
-            testID={`bulk-destination-${row.id}`}
-          >
-            <AccountInlineLabel
-              account={destAccount}
-              placeholder="Destination"
-              variant="caption"
-              weight="semibold"
-              textColor={destStyles.text}
-              colors={{ accentColor: destStyles.text, categoryColor: destStyles.marker }}
-            />
-            <AppIcon name={Icon.ChevronDown} size={12} color={theme.textTertiary} />
-          </TouchableOpacity>
-        </View>
-
-        {/* FX rate badge (cross-currency only) */}
-        {row.isCrossCurrency && (
-          <View
-            style={[styles.fxBadge, { backgroundColor: withOpacity(theme.primary, Opacity.soft) }]}
-          >
-            {row.isLoadingRate ? (
-              <AppText variant="caption" color="secondary">
-                Checking rate...
+      <View style={[styles.container, { borderColor: rowError ? theme.error : theme.border }]}>
+        <EntryTransactionCard
+          meta={{
+            description: row.description,
+            setDescription: value => {
+              void loadSuggestions();
+              rowActions.setDescription(row.id, value);
+            },
+            date: rowDate,
+            setDate: date => updateRowDateTime(date, rowTime),
+            time: rowTime,
+            setTime: time => updateRowDateTime(rowDate, time),
+            notes: row.notes,
+            setNotes: value => rowActions.setNotes(row.id, value),
+            suggestions,
+            suggestionState,
+            suggestionMaxHeight: BATCH_SUGGESTION_MAX_HEIGHT,
+            activeTabType: row.transactionType,
+            accounts,
+            onDescriptionFocus: () => void loadSuggestions(),
+            onSelectSuggestion: suggestion => rowActions.applySuggestion(row.id, suggestion),
+            onDateTimePickerRequest: () => onDateTimePickerRequest(row.id),
+            leadingContent: (
+              <AppText variant="caption" color="secondary" weight="bold">
+                #{index + 1}
               </AppText>
-            ) : (
-              <>
-                {row.exchangeRate ? (
-                  <AppText variant="caption" color="primary" weight="semibold">
-                    1 {sourceCurrency} = {parseFloat(row.exchangeRate).toFixed(4)}
-                    {'  ·  '}
-                    {row.convertedAmount.toFixed(2)} {destCurrency}
-                  </AppText>
-                ) : null}
-                {(row.sourceBaseRateInput || row.destBaseRateInput || !row.exchangeRate) && (
-                  <View style={styles.manualRatesRow}>
-                    {sourceCurrency && sourceCurrency !== workplaceCurrency && (
-                      <ManualBaseRateField
-                        currency={sourceCurrency}
-                        workplaceCurrency={workplaceCurrency}
-                        value={row.sourceBaseRateInput ?? ''}
-                        onChangeText={value => onUpdateField(row.id, 'sourceBaseRateInput', value)}
-                      />
-                    )}
-                    {destCurrency &&
-                      destCurrency !== workplaceCurrency &&
-                      destCurrency !== sourceCurrency && (
-                        <ManualBaseRateField
-                          currency={destCurrency}
-                          workplaceCurrency={workplaceCurrency}
-                          value={row.destBaseRateInput ?? ''}
-                          onChangeText={value => onUpdateField(row.id, 'destBaseRateInput', value)}
-                        />
-                      )}
-                  </View>
-                )}
-              </>
-            )}
-          </View>
-        )}
+            ),
+            trailingAction: (
+              <TouchableOpacity
+                onPress={() => onRemove(row.id)}
+                style={styles.deleteButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Delete entry ${index + 1}`}
+                testID={`bulk-delete-${row.id}`}
+              >
+                <AppIcon name={Icon.Delete} size={Size.iconXs} color={theme.textSecondary} />
+              </TouchableOpacity>
+            ),
+            descriptionTestID: `bulk-description-${row.id}`,
+            descriptionClearTestID: `bulk-clear-description-${row.id}`,
+          }}
+          typeSwitcher={{
+            value: row.transactionType,
+            onChange: type => rowActions.setTransactionType(row.id, type),
+            accentColor: resolveSimpleTypeAccentColor(row.transactionType, theme),
+          }}
+          amount={{
+            variant: 'compact',
+            amount: row.amount,
+            currency: sourceCurrency || '',
+            onChangeText: value => rowActions.setAmount(row.id, value),
+            testID: `bulk-amount-${row.id}`,
+          }}
+          exchangeRate={{
+            amount: row.amount,
+            destLabel: destinationLabel,
+            sourceCurrency,
+            destCurrency,
+            workplaceCurrency,
+            isCrossCurrency: row.isCrossCurrency,
+            exchangeRate: row.exchangeRate,
+            isLoadingRate: row.isLoadingRate,
+            rateError: row.rateError,
+            convertedAmount: row.convertedAmount,
+            needsWorkplaceRate: !row.exchangeRate,
+            showManualRateFields: Boolean(
+              row.sourceBaseRateInput || row.destBaseRateInput || !row.exchangeRate,
+            ),
+            manualSourceBaseRate: row.sourceBaseRateInput ?? '',
+            manualDestBaseRate: row.destBaseRateInput ?? '',
+            setManualBaseRate: (role, value) => rowActions.setManualBaseRate(row.id, role, value),
+            setConvertedAmount: value => {
+              const nextAmount = Number.parseFloat(value);
+              if (Number.isFinite(nextAmount) && nextAmount > 0) {
+                rowActions.setConvertedAmount(row.id, nextAmount);
+              }
+            },
+            resetToApiRate: () => onRefreshRate(row.id),
+            visible: row.isCrossCurrency,
+            testIDPrefix: `bulk-${row.id}`,
+          }}
+          accountSections={{
+            expansionPosition: accountExpansion,
+            onToggleExpansion: side => onToggleAccountExpansion(row.id, side),
+            sourceLabel:
+              sourceSection?.title ?? AppConfig.strings.transactionFlow.simpleEntry.fromAccount,
+            sourceAccount,
+            sourceAccounts: sourceSection?.accounts ?? [],
+            onSelectSource: id => {
+              rowActions.setSourceAccount(row.id, id);
+              onToggleAccountExpansion(row.id, 'left');
+            },
+            sourceEmptyPrompt: AppConfig.strings.transactionFlow.simpleEntry.chooseAccount,
+            destLabel:
+              destinationSection?.title ?? AppConfig.strings.transactionFlow.simpleEntry.toAccount,
+            destAccount,
+            destAccounts: destinationSection?.accounts ?? [],
+            onSelectDestination: id => {
+              rowActions.setDestinationAccount(row.id, id);
+              onToggleAccountExpansion(row.id, 'right');
+            },
+            destEmptyPrompt:
+              row.transactionType === 'expense'
+                ? AppConfig.strings.transactionFlow.simpleEntry.chooseCategory
+                : AppConfig.strings.transactionFlow.simpleEntry.chooseAccount,
+            type: row.transactionType,
+            onSwapAccounts: () => onSwapAccounts(row.id),
+            onCreateAccountRequest: onCreateAccountRequest
+              ? (role, intent) => onCreateAccountRequest(row.id, role, intent)
+              : undefined,
+            allAccounts: accounts,
+            lazyDropdown: true,
+            testIDPrefix: `bulk-route-${row.id}`,
+          }}
+          metaContainerStyle={styles.metaCardEmbedded}
+          exchangeRateContainerStyle={styles.fxCardEmbedded}
+          accountSectionsContainerStyle={styles.accountSelector}
+        />
 
         {/* Validation error — shown below all content */}
-        {row.error && (
+        {rowError && (
           <View style={[styles.errorBar, { backgroundColor: theme.error + '12' }]}>
             <AppIcon name={Icon.Error} size={Size.iconXs} color={theme.error} />
             <AppText variant="caption" color="error" weight="semibold" style={styles.errorText}>
-              {row.error}
+              {rowError}
             </AppText>
           </View>
         )}
@@ -344,18 +241,7 @@ const styles = StyleSheet.create({
     borderRadius: Shape.radius.r3,
     borderWidth: 1,
     marginBottom: Spacing.md,
-    gap: Spacing.sm,
     position: 'relative',
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  indexBadge: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: Shape.radius.full,
   },
   deleteButton: {
     width: 36,
@@ -364,132 +250,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: Shape.radius.full,
   },
-  descriptionInput: {
-    fontSize: Typography.sizes.base,
+  metaCardEmbedded: {
     paddingHorizontal: 0,
-    height: 36,
+    paddingTop: 0,
+    paddingBottom: 0,
+    marginTop: -Spacing.sm,
+    marginBottom: Spacing.sm,
   },
-  descriptionWrapper: {
-    flex: 1,
+  // The folder picker is embedded inside a row card. Give it a definite
+  // width so pill text measures against the row, not an intrinsic child width.
+  accountSelector: {
+    alignSelf: 'stretch',
+    marginHorizontal: 0,
+    width: '100%',
   },
-  notesBox: {
-    borderRadius: Shape.radius.md,
-    padding: Spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.sm,
-    borderWidth: 1,
-    position: 'relative',
-  },
-  notesIcon: {
-    marginTop: 4,
-  },
-  notesInputContainer: {
-    flex: 1,
-    minHeight: 0,
-  },
-  notesInput: {
-    flex: 1,
-    textAlignVertical: 'top',
-    fontSize: 13,
-    fontWeight: '400',
-    padding: 0,
-    margin: 0,
-    marginRight: Spacing.lg,
-  },
-  notesClose: {
-    position: 'absolute',
-    top: Spacing.xs,
-    right: Spacing.xs,
-    padding: 6,
-    zIndex: 1,
-  },
-  addNotesButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    alignSelf: 'flex-end',
-  },
-  inputContainer: {
-    minHeight: 0,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.sm,
-  },
-  dateCell: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.sm + 2,
-    height: 38,
-    borderRadius: Shape.radius.r2,
-    borderWidth: 1,
-    gap: Spacing.xs,
-  },
-  dateText: {
-    fontSize: Typography.sizes.xs,
-  },
-  amountWrapper: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 38,
-    borderRadius: Shape.radius.r2,
-    borderWidth: 1,
-    paddingLeft: Spacing.sm,
-  },
-  currencyPrefix: {
-    fontSize: Typography.sizes.xs,
-    marginRight: Spacing.xs,
-  },
-  amountInput: {
-    fontSize: Typography.sizes.base,
-    height: 36,
-    textAlign: 'right',
-    flex: 1,
-    paddingRight: Spacing.sm,
-  },
-  accountsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  accountChip: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    height: 44,
-    borderRadius: Shape.radius.r2,
-    borderWidth: 1,
-    paddingHorizontal: Spacing.md,
-    gap: Spacing.xs,
-  },
-  arrowContainer: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fxBadge: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs + 2,
-    borderRadius: Shape.radius.r2,
-    alignSelf: 'flex-start',
-    gap: Spacing.xs,
-  },
-  manualRatesRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
+  fxCardEmbedded: {
+    marginHorizontal: 0,
+    marginTop: 0,
+    alignSelf: 'stretch',
   },
   errorBar: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs + 2,
+    marginTop: Spacing.sm,
     paddingVertical: Spacing.xs + 2,
     paddingHorizontal: Spacing.sm,
     borderRadius: Shape.radius.r2,
