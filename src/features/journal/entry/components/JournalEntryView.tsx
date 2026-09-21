@@ -1,25 +1,25 @@
 import { AccountPickerModal } from '@/src/components/account-selection';
-import { Icon, AppIcon, AppText } from '@/src/components/core';
+import { AppIcon, AppText, Icon } from '@/src/components/core';
 import { EmptyStateView } from '@/src/components/shared/EmptyStateView';
 import { AppConfig } from '@/src/constants';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { Page } from '@/src/design-system';
-import { withOpacity } from '@/src/utils/color-math';
-import { JOURNAL_ENTRY_MODE_OPTIONS } from '@/src/features/journal/entry/journalEntryMode';
-import { type JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
 import { useJournalEntryPresentationState } from '@/src/features/journal/entry/hooks/useJournalEntryPresentationState';
 import { JournalEntryShell } from '@/src/features/journal/entry/hooks/useJournalEntryShell';
+import { JOURNAL_ENTRY_MODE_OPTIONS } from '@/src/features/journal/entry/journalEntryMode';
+import { type JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
 import { AdvancedModePanel } from '@/src/features/journal/entry/modes/advanced/AdvancedModePanel';
 import { BatchModePanel } from '@/src/features/journal/entry/modes/batch/BatchModePanel';
 import { SimpleModePanel } from '@/src/features/journal/entry/modes/simple/SimpleModePanel';
 import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitModePanel';
 import { useTheme } from '@/src/hooks/use-theme';
+import { withOpacity } from '@/src/utils/color-math';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { JournalEntryModeInfoModal } from './JournalEntryModeInfoModal';
 import { JournalEntryModePickerModal } from './JournalEntryModePickerModal';
 import { JournalEntrySubmitBar } from './JournalEntrySubmitBar';
-import { JournalMetaCard } from './JournalMetaCard';
-import { JournalEntryModeInfoModal } from './JournalEntryModeInfoModal';
+import { JournalMetaCard, type JournalMetaCardProps } from './JournalMetaCard';
 import type { AccountFlowHandle, AutopilotAppliedAccount } from './useSimpleFormExpansion';
 
 export type JournalEntryViewProps = JournalEntryShell;
@@ -122,30 +122,29 @@ export function JournalEntryView(props: JournalEntryViewProps) {
     );
   }
 
-  const journalMetaCard = !isBatchMode ? (
-    <JournalMetaCard
-      description={editor.description}
-      setDescription={setDescription}
-      date={editor.journalDate}
-      setDate={editor.setJournalDate}
-      time={editor.journalTime}
-      setTime={editor.setJournalTime}
-      notes={editor.notes}
-      setNotes={editor.setNotes}
-      suggestions={suggestions}
-      suggestionState={suggestionState}
-      onSelectSuggestion={handleSelectSuggestion}
-      activeTabType={activeMode === 'basic' ? editor.transactionType : undefined}
-      accounts={accounts}
-      onDescriptionFocus={onDescriptionFocus}
-      hideSuggestions={hideSuggestions}
-      onVoiceInputPress={activeMode === 'basic' ? () => setIsVoiceModalVisible(true) : undefined}
-      showBanner={showEditBanner}
-      bannerText={editBannerText}
-      onDescriptionSubmitEditing={startGuidedAccountFlow}
-      descriptionInputRef={descriptionInputRef}
-    />
-  ) : null;
+  const journalMetaProps: JournalMetaCardProps = {
+    description: editor.description,
+    setDescription,
+    date: editor.journalDate,
+    setDate: editor.setJournalDate,
+    time: editor.journalTime,
+    setTime: editor.setJournalTime,
+    notes: editor.notes,
+    setNotes: editor.setNotes,
+    suggestions,
+    suggestionState,
+    onSelectSuggestion: handleSelectSuggestion,
+    activeTabType: activeMode === 'basic' ? editor.transactionType : undefined,
+    accounts,
+    onDescriptionFocus,
+    hideSuggestions,
+    onVoiceInputPress: activeMode === 'basic' ? () => setIsVoiceModalVisible(true) : undefined,
+    showBanner: showEditBanner,
+    bannerText: editBannerText,
+    onDescriptionSubmitEditing: startGuidedAccountFlow,
+    descriptionInputRef,
+  };
+  const journalMetaCard = !isBatchMode ? <JournalMetaCard {...journalMetaProps} /> : null;
 
   return (
     <Page
@@ -236,9 +235,9 @@ export function JournalEntryView(props: JournalEntryViewProps) {
             onSelectAccountRequest={onSelectAccountRequest}
             workplaceCurrency={workplaceCurrency}
             workplaceId={workplaceId}
+            meta={journalMetaProps}
             voiceModalVisible={isVoiceModalVisible}
             onVoiceModalVisibleChange={setIsVoiceModalVisible}
-            leadingContent={journalMetaCard}
             onScrollBeginDrag={presentation.onScrollBeginDrag}
             onCalculatorDone={focusDescription}
             accountFlowRef={accountFlowRef}

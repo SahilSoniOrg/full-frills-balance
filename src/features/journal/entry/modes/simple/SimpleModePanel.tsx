@@ -1,15 +1,13 @@
-import { AppConfig } from '@/src/constants';
 import { Spacing } from '@/src/constants/design-tokens';
-import { Icon, AppSegmentedControl } from '@/src/components/core';
 import { VoiceInputModal } from '@/src/features/journal/entry/components/VoiceInputModal';
 import { SimpleForm } from '@/src/features/journal/entry/components/SimpleForm';
+import type { JournalMetaCardProps } from '@/src/features/journal/entry/components/JournalMetaCard';
 import type { AccountFlowHandle } from '@/src/features/journal/entry/components/useSimpleFormExpansion';
 import { useGuidedModeController } from '@/src/features/journal/entry/hooks/useGuidedModeController';
 import type { JournalEntryShell } from '@/src/features/journal/entry/hooks/useJournalEntryShell';
 import { resolveSimpleTypeAccentColor } from '@/src/features/journal/entry/journalEntryPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
-import type { TabType } from '@/src/types/domainJournal';
-import type { ReactNode, RefObject } from 'react';
+import type { RefObject } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 export type SimpleModePanelProps = Pick<
@@ -22,10 +20,10 @@ export type SimpleModePanelProps = Pick<
   | 'workplaceCurrency'
   | 'workplaceId'
 > & {
+  meta: JournalMetaCardProps;
   /** Controlled by the screen because JournalMetaCard owns the voice trigger. */
   voiceModalVisible: boolean;
   onVoiceModalVisibleChange: (visible: boolean) => void;
-  leadingContent: ReactNode;
   onScrollBeginDrag?: () => void;
   onCalculatorDone?: () => void;
   accountFlowRef?: RefObject<AccountFlowHandle | null>;
@@ -41,7 +39,7 @@ export function SimpleModePanel({
   workplaceId,
   voiceModalVisible,
   onVoiceModalVisibleChange,
-  leadingContent,
+  meta,
   onScrollBeginDrag,
   onCalculatorDone,
   accountFlowRef,
@@ -66,40 +64,8 @@ export function SimpleModePanel({
     <>
       <View style={styles.container}>
         <SimpleForm
-          leadingContent={
-            <>
-              {leadingContent}
-              <View style={styles.typeTabsWrapper}>
-                <AppSegmentedControl
-                  options={[
-                    {
-                      id: 'expense',
-                      label: AppConfig.strings.journal.expense,
-                      icon: Icon.ArrowDown,
-                    },
-                    {
-                      id: 'income',
-                      label: AppConfig.strings.journal.income,
-                      icon: Icon.ArrowUp,
-                    },
-                    {
-                      id: 'transfer',
-                      label: AppConfig.strings.journal.transfer,
-                      icon: Icon.SwapHorizontal,
-                    },
-                  ]}
-                  value={simpleEditor.type}
-                  onChange={next => simpleEditor.setType(next as TabType)}
-                  size="md"
-                  flex
-                  trackColor={theme.surfaceSecondary}
-                  pillColor={theme.surface}
-                  activeTextColor={activeColor}
-                  inactiveTextColor={theme.textSecondary}
-                />
-              </View>
-            </>
-          }
+          meta={meta}
+          setType={simpleEditor.setType}
           onScrollBeginDrag={onScrollBeginDrag}
           type={simpleEditor.type}
           amount={simpleEditor.amount}
@@ -149,10 +115,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     gap: Spacing.xs,
-  },
-  typeTabsWrapper: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xs,
-    paddingBottom: Spacing.xs,
   },
 });
