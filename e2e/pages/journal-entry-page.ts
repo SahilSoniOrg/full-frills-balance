@@ -9,6 +9,7 @@ export class JournalEntryPage extends BasePage {
       await amountButton.click();
     }
     await expression.fill(amount);
+    await this.page.getByTestId('amount-calculator-equals').click();
     await this.page.getByTestId('amount-calculator-done').click();
   }
 
@@ -26,7 +27,7 @@ export class JournalEntryPage extends BasePage {
     // a test explicitly needs to change the default expense type first.
     const initialCalculator = this.page.getByTestId('amount-calculator-display');
     if (await initialCalculator.isVisible().catch(() => false)) {
-      await this.page.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await this.page.getByTestId('amount-calculator-close').click();
     }
 
     const label = type === 'EXPENSE' ? 'Expense' : type === 'INCOME' ? 'Income' : 'Transfer';
@@ -46,7 +47,7 @@ export class JournalEntryPage extends BasePage {
 
     const initialCalculator = this.page.getByTestId('amount-calculator-display');
     if (await initialCalculator.isVisible().catch(() => false)) {
-      await this.page.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await this.page.getByTestId('amount-calculator-close').click();
     }
 
     const normalized =
@@ -146,6 +147,7 @@ export class JournalEntryPage extends BasePage {
       .nth(rowIndex)
       .click({ force: true });
     await this.page.getByRole('textbox', { name: /^Expression/ }).fill(opts.amount);
+    await this.page.getByTestId('amount-calculator-equals').click();
     await this.page.getByTestId('amount-calculator-done').click();
     await source.click();
     await this.pickAccountFromInlinePicker(opts.source);

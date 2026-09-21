@@ -104,6 +104,7 @@ export async function createPlannedPayment(name: string, amount: string): Promis
   for (const key of amount) {
     await tapById(`amount-calculator-key-${key}`);
   }
+  await tapById('amount-calculator-equals');
   await tapById('amount-calculator-done');
   await tapById(plannedPayments.fromAccount);
   await tapByLabel(/^Checking Account/);

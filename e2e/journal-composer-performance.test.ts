@@ -22,7 +22,7 @@ test.describe('Transaction Composer performance probes', () => {
       await expect(page.getByTestId('journal-entry-screen')).toBeVisible();
       coldSamples.push(Date.now() - coldStart);
 
-      await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await page.getByTestId('amount-calculator-close').click();
       await expect(page.getByRole('button', { name: /Open new entry options/i })).toBeVisible();
 
       const warmStart = Date.now();
