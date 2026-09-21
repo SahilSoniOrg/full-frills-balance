@@ -59,6 +59,7 @@ export interface JournalSuggestionsDropdownProps {
   activeTabType?: TabType;
   accounts?: AccountFields[];
   onSelectSuggestion: (suggestion: JournalAutofillSuggestion) => void;
+  maxHeight?: number;
 }
 
 export const JournalSuggestionsDropdown = React.memo(function JournalSuggestionsDropdown({
@@ -69,6 +70,7 @@ export const JournalSuggestionsDropdown = React.memo(function JournalSuggestions
   activeTabType,
   accounts = [],
   onSelectSuggestion,
+  maxHeight = 220,
 }: JournalSuggestionsDropdownProps) {
   const { theme } = useTheme();
   const accountsMap = useMemo(
@@ -90,6 +92,7 @@ export const JournalSuggestionsDropdown = React.memo(function JournalSuggestions
           backgroundColor: theme.surface,
           borderColor: theme.border,
           shadowColor: theme.border,
+          maxHeight,
         },
       ]}
     >
@@ -104,8 +107,12 @@ export const JournalSuggestionsDropdown = React.memo(function JournalSuggestions
       ) : (
         <ScrollView
           keyboardShouldPersistTaps="always"
+          nestedScrollEnabled
           showsVerticalScrollIndicator={false}
-          style={styles.dropdownScrollView}
+          style={[
+            styles.dropdownScrollView,
+            { maxHeight: Math.max(0, maxHeight - Spacing.sm * 2) },
+          ]}
           contentContainerStyle={styles.dropdownScrollContent}
         >
           <View style={styles.dropdownWrapContainer}>
@@ -194,7 +201,6 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
     zIndex: 1000,
     ...Shape.elevation.lg,
-    maxHeight: 220,
   },
   dropdownScrollView: {
     width: '100%',

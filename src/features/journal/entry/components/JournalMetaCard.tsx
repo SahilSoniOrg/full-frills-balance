@@ -14,8 +14,24 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { TabType } from '@/src/types/domainJournal';
 import { withOpacity } from '@/src/utils/color-math';
 import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
-import React, { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { Keyboard, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from 'react';
+import {
+  Keyboard,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  type StyleProp,
+  View,
+  type ViewStyle,
+} from 'react-native';
 
 export interface JournalMetaCardProps {
   description: string;
@@ -28,6 +44,7 @@ export interface JournalMetaCardProps {
   setNotes?: (notes: string) => void;
   suggestions?: JournalAutofillSuggestion[];
   suggestionState?: JournalSuggestionState;
+  suggestionMaxHeight?: number;
   onSelectSuggestion?: (suggestion: JournalAutofillSuggestion) => void;
   activeTabType?: TabType;
   accounts?: AccountFields[];
@@ -38,6 +55,12 @@ export interface JournalMetaCardProps {
   hideSuggestions?: boolean;
   onDescriptionSubmitEditing?: () => void;
   descriptionInputRef?: RefObject<TextInput | null>;
+  onDateTimePickerRequest?: () => void;
+  leadingContent?: ReactNode;
+  trailingAction?: ReactNode;
+  containerStyle?: StyleProp<ViewStyle>;
+  descriptionTestID?: string;
+  descriptionClearTestID?: string;
 }
 
 export const JournalMetaCard = React.memo(function JournalMetaCard({
@@ -51,6 +74,7 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
   setNotes,
   suggestions = [],
   suggestionState = 'idle',
+  suggestionMaxHeight,
   onSelectSuggestion,
   activeTabType,
   accounts = [],
@@ -61,6 +85,12 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
   hideSuggestions = false,
   onDescriptionSubmitEditing,
   descriptionInputRef,
+  onDateTimePickerRequest,
+  leadingContent,
+  trailingAction,
+  containerStyle,
+  descriptionTestID = 'journal-description-input',
+  descriptionClearTestID = 'clear-description-button',
 }: JournalMetaCardProps) {
   const { theme } = useTheme();
   const { resolvedHourCycle } = useHourCyclePrefs();
@@ -115,7 +145,7 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       {showBanner && <EntryEditBanner text={bannerText || ''} style={styles.banner} />}
 
       {/* Description Input Container with Absolute Floating Dropdown */}
@@ -129,12 +159,15 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
             },
           ]}
         >
-          <AppIcon
-            name={Icon.Document}
-            size={Size.iconXs}
-            color={isFocused ? theme.primary : theme.textTertiary}
-            style={styles.leadingIcon}
-          />
+          <View style={styles.leadingSlot}>
+            {leadingContent ?? (
+              <AppIcon
+                name={Icon.Document}
+                size={Size.iconXs}
+                color={isFocused ? theme.primary : theme.textTertiary}
+              />
+            )}
+          </View>
           <AppInput
             ref={descriptionInputRef}
             value={description}
@@ -162,7 +195,7 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
             variant="minimal"
             flex={1}
             style={styles.descriptionInput}
-            testID="journal-description-input"
+            testID={descriptionTestID}
           />
 
           {description ? (
@@ -170,22 +203,25 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
               onPress={() => setDescription('')}
               style={styles.trailingAction}
               accessibilityLabel="Clear description"
+              accessibilityRole="button"
+              testID={descriptionClearTestID}
             >
               <AppIcon name={Icon.Close} size={Size.xs} color={theme.textTertiary} />
             </TouchableOpacity>
           ) : null}
 
-          {onVoiceInputPress && (
-            <IconButton
-              name={Icon.Mic}
-              variant="clear"
-              size={Size.iconXs}
-              iconColor={theme.primary}
-              onPress={onVoiceInputPress}
-              accessibilityLabel="Voice input"
-              style={styles.trailingAction}
-            />
-          )}
+          {trailingAction ??
+            (onVoiceInputPress && (
+              <IconButton
+                name={Icon.Mic}
+                variant="clear"
+                size={Size.iconXs}
+                iconColor={theme.primary}
+                onPress={onVoiceInputPress}
+                accessibilityLabel="Voice input"
+                style={styles.trailingAction}
+              />
+            ))}
         </View>
 
         <JournalSuggestionsDropdown
@@ -196,6 +232,7 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
           activeTabType={activeTabType}
           accounts={accounts}
           onSelectSuggestion={handleSelectSuggestion}
+          maxHeight={suggestionMaxHeight}
         />
       </View>
 
@@ -205,7 +242,11 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
         <TouchableOpacity
           onPress={() => {
             Keyboard.dismiss();
-            setShowDatePicker(true);
+            if (onDateTimePickerRequest) {
+              onDateTimePickerRequest();
+            } else {
+              setShowDatePicker(true);
+            }
           }}
           style={[
             styles.metaPill,
@@ -286,16 +327,18 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
         </View>
       )}
 
-      <DateTimePickerModal
-        visible={showDatePicker}
-        date={date}
-        time={time}
-        onClose={() => setShowDatePicker(false)}
-        onSelect={(d, t) => {
-          setDate(d);
-          setTime(t);
-        }}
-      />
+      {!onDateTimePickerRequest && (
+        <DateTimePickerModal
+          visible={showDatePicker}
+          date={date}
+          time={time}
+          onClose={() => setShowDatePicker(false)}
+          onSelect={(d, t) => {
+            setDate(d);
+            setTime(t);
+          }}
+        />
+      )}
     </View>
   );
 });
@@ -323,8 +366,9 @@ const styles = StyleSheet.create({
     minHeight: Size.xl,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  leadingIcon: {
+  leadingSlot: {
     marginRight: Spacing.sm,
+    justifyContent: 'center',
   },
   descriptionInput: {
     fontSize: Typography.sizes.base,
