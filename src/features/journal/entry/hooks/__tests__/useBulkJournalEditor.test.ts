@@ -1,5 +1,5 @@
 import { AccountType } from '@/src/types/enums';
-import { WorkplaceId } from '@/src/types/ids';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 import { useBulkJournalEditor } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { journalService } from '@/src/services/journal/journalDomainService';
@@ -24,6 +24,10 @@ jest.mock('@/src/utils/haptics', () => ({
   triggerSaveOutcomeHaptic: jest.fn(),
 }));
 
+jest.mock('@/src/services/analytics', () => ({
+  analytics: { trackFeatureUsage: jest.fn() },
+}));
+
 describe('useBulkJournalEditor', () => {
   const accounts = [
     { id: 'acc1', name: 'Cash', accountType: AccountType.ASSET, currencyCode: 'USD' },
@@ -36,6 +40,10 @@ describe('useBulkJournalEditor', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockFetchRate.mockResolvedValue(1.0);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('initializes with a single empty row', () => {
@@ -58,6 +66,83 @@ describe('useBulkJournalEditor', () => {
     expect(firstRow.isCrossCurrency).toBe(false);
   });
 
+  it('waits for one second of inactivity before persisting full-row validation', () => {
+    jest.useFakeTimers();
+    const { result } = renderHook(() =>
+      useBulkJournalEditor({
+        workplaceId: 'wp1' as WorkplaceId,
+        workplaceCurrency: 'USD',
+        accounts,
+        onSaveSuccess: onSaveSuccessMock,
+      }),
+    );
+
+    const rowId = result.current.rows[0].id;
+    act(() => result.current.rowActions.setDescription(rowId, 'Coffee'));
+
+    expect(result.current.rows[0].validationError).toBeUndefined();
+
+    act(() => jest.advanceTimersByTime(999));
+    expect(result.current.rows[0].validationError).toBeUndefined();
+
+    act(() => jest.advanceTimersByTime(1));
+    expect(result.current.rows[0].validationError).toBe('Amount must be greater than 0');
+  });
+
+  it('exposes named typed row actions instead of a loose field updater', () => {
+    const { result } = renderHook(() =>
+      useBulkJournalEditor({
+        workplaceId: 'wp1' as WorkplaceId,
+        workplaceCurrency: 'USD',
+        accounts,
+        onSaveSuccess: onSaveSuccessMock,
+      }),
+    );
+
+    expect(result.current.rowActions).toEqual(
+      expect.objectContaining({
+        setDescription: expect.any(Function),
+        setNotes: expect.any(Function),
+        setAmount: expect.any(Function),
+        setJournalDate: expect.any(Function),
+        setTransactionType: expect.any(Function),
+        setSourceAccount: expect.any(Function),
+        setDestinationAccount: expect.any(Function),
+        setConvertedAmount: expect.any(Function),
+        setManualBaseRate: expect.any(Function),
+        applySuggestion: expect.any(Function),
+      }),
+    );
+  });
+
+  it('applies a description suggestion and fills its empty target account leg', () => {
+    const { result } = renderHook(() =>
+      useBulkJournalEditor({
+        workplaceId: 'wp1' as WorkplaceId,
+        workplaceCurrency: 'USD',
+        accounts,
+        onSaveSuccess: onSaveSuccessMock,
+      }),
+    );
+
+    const rowId = result.current.rows[0].id;
+    act(() => {
+      result.current.rowActions.setTransactionType(rowId, 'expense');
+      result.current.rowActions.applySuggestion(rowId, {
+        description: 'Lunch',
+        count: 3,
+        targetAccountId: 'acc2' as AccountId,
+        targetAccountName: 'Food',
+        targetAccountType: AccountType.EXPENSE,
+      });
+    });
+
+    expect(result.current.rows[0]).toMatchObject({
+      description: 'Lunch',
+      destinationId: 'acc2',
+    });
+  });
+
   it('adds a row and auto-fills fields from the previous row', () => {
     const { result } = renderHook(() =>
       useBulkJournalEditor({
@@ -69,11 +154,14 @@ describe('useBulkJournalEditor', () => {
     );
 
     act(() => {
-      result.current.updateRowField(result.current.rows[0].id, 'description', 'Lunch');
-      result.current.updateRowField(result.current.rows[0].id, 'notes', 'Office cafeteria');
-      result.current.updateRowField(result.current.rows[0].id, 'amount', '15.50');
-      result.current.updateRowField(result.current.rows[0].id, 'sourceId', 'acc1');
-      result.current.updateRowField(result.current.rows[0].id, 'destinationId', 'acc2');
+      result.current.rowActions.setDescription(result.current.rows[0].id, 'Lunch');
+      result.current.rowActions.setNotes(result.current.rows[0].id, 'Office cafeteria');
+      result.current.rowActions.setAmount(result.current.rows[0].id, '15.50');
+      result.current.rowActions.setSourceAccount(result.current.rows[0].id, 'acc1' as AccountId);
+      result.current.rowActions.setDestinationAccount(
+        result.current.rows[0].id,
+        'acc2' as AccountId,
+      );
     });
 
     act(() => {
@@ -110,6 +198,75 @@ describe('useBulkJournalEditor', () => {
     });
 
     expect(result.current.rows).toHaveLength(1);
+  });
+
+  it('swaps source and destination accounts for a batch transfer row', () => {
+    const { result } = renderHook(() =>
+      useBulkJournalEditor({
+        workplaceId: 'wp1' as WorkplaceId,
+        workplaceCurrency: 'USD',
+        accounts,
+        onSaveSuccess: onSaveSuccessMock,
+      }),
+    );
+
+    const rowId = result.current.rows[0].id;
+    act(() => {
+      result.current.rowActions.setSourceAccount(rowId, 'acc1' as AccountId);
+      result.current.rowActions.setDestinationAccount(rowId, 'acc2' as AccountId);
+    });
+
+    act(() => result.current.swapRowAccounts(rowId));
+
+    expect(result.current.rows[0]).toMatchObject({
+      sourceId: 'acc2',
+      destinationId: 'acc1',
+      sourceBaseRateInput: '',
+      destBaseRateInput: '',
+    });
+  });
+
+  it('shows the distinct-account validation as soon as both sides match', () => {
+    const { result } = renderHook(() =>
+      useBulkJournalEditor({
+        workplaceId: 'wp1' as WorkplaceId,
+        workplaceCurrency: 'USD',
+        accounts,
+        onSaveSuccess: onSaveSuccessMock,
+      }),
+    );
+
+    const rowId = result.current.rows[0].id;
+    act(() => {
+      result.current.rowActions.setSourceAccount(rowId, 'acc1' as AccountId);
+      result.current.rowActions.setDestinationAccount(rowId, 'acc1' as AccountId);
+    });
+
+    expect(result.current.rows[0].validationError).toBe(
+      'Source and destination accounts must be distinct',
+    );
+  });
+
+  it('keeps an account validation visible while an unrelated field changes', () => {
+    const { result } = renderHook(() =>
+      useBulkJournalEditor({
+        workplaceId: 'wp1' as WorkplaceId,
+        workplaceCurrency: 'USD',
+        accounts,
+        onSaveSuccess: onSaveSuccessMock,
+      }),
+    );
+
+    const rowId = result.current.rows[0].id;
+    act(() => {
+      result.current.rowActions.setSourceAccount(rowId, 'acc1' as AccountId);
+      result.current.rowActions.setDestinationAccount(rowId, 'acc1' as AccountId);
+      result.current.rowActions.setDescription(rowId, 'Still invalid');
+    });
+
+    expect(result.current.rows[0].validationError).toBe(
+      'Source and destination accounts must be distinct',
+    );
   });
 
   it('caps rows at the bridge-safe bulk limit', () => {
@@ -167,9 +324,12 @@ describe('useBulkJournalEditor', () => {
     );
 
     await act(async () => {
-      result.current.updateRowField(result.current.rows[0].id, 'amount', '100');
-      result.current.updateRowField(result.current.rows[0].id, 'sourceId', 'acc3');
-      result.current.updateRowField(result.current.rows[0].id, 'destinationId', 'acc1');
+      result.current.rowActions.setAmount(result.current.rows[0].id, '100');
+      result.current.rowActions.setSourceAccount(result.current.rows[0].id, 'acc3' as AccountId);
+      result.current.rowActions.setDestinationAccount(
+        result.current.rows[0].id,
+        'acc1' as AccountId,
+      );
     });
 
     expect(mockFetchRate).toHaveBeenCalled();
@@ -192,18 +352,50 @@ describe('useBulkJournalEditor', () => {
     );
 
     await act(async () => {
-      result.current.updateRowField(result.current.rows[0].id, 'sourceId', 'acc3');
-      result.current.updateRowField(result.current.rows[0].id, 'destinationId', 'acc1');
+      result.current.rowActions.setSourceAccount(result.current.rows[0].id, 'acc3' as AccountId);
+      result.current.rowActions.setDestinationAccount(
+        result.current.rows[0].id,
+        'acc1' as AccountId,
+      );
     });
 
     // Change amount after rate is resolved
     await act(async () => {
-      result.current.updateRowField(result.current.rows[0].id, 'amount', '50');
+      result.current.rowActions.setAmount(result.current.rows[0].id, '50');
     });
 
     const row = result.current.rows[0];
     expect(row.isCrossCurrency).toBe(true);
     expect(row.convertedAmount).toBe(55); // 50 * 1.1
+  });
+
+  it('derives a new exchange rate when the converted amount is edited', async () => {
+    mockFetchRate.mockResolvedValue(1.1);
+
+    const { result } = renderHook(() =>
+      useBulkJournalEditor({
+        workplaceId: 'wp1' as WorkplaceId,
+        workplaceCurrency: 'USD',
+        accounts,
+        onSaveSuccess: onSaveSuccessMock,
+      }),
+    );
+
+    const rowId = result.current.rows[0].id;
+    await act(async () => {
+      result.current.rowActions.setAmount(rowId, '100');
+      result.current.rowActions.setSourceAccount(rowId, 'acc3' as AccountId);
+      result.current.rowActions.setDestinationAccount(rowId, 'acc1' as AccountId);
+    });
+
+    act(() => result.current.rowActions.setConvertedAmount(rowId, 150));
+
+    expect(result.current.rows[0]).toMatchObject({
+      convertedAmount: 150,
+      exchangeRate: '1.500000',
+      sourceBaseRate: 1.5,
+      destBaseRate: 1,
+    });
   });
 
   it('blocks saving when a cross-currency rate is unavailable', async () => {
@@ -223,16 +415,19 @@ describe('useBulkJournalEditor', () => {
     );
 
     await act(async () => {
-      result.current.updateRowField(result.current.rows[0].id, 'description', 'Transfer');
-      result.current.updateRowField(result.current.rows[0].id, 'amount', '100');
-      result.current.updateRowField(result.current.rows[0].id, 'sourceId', 'acc3');
-      result.current.updateRowField(result.current.rows[0].id, 'destinationId', 'acc1');
+      result.current.rowActions.setDescription(result.current.rows[0].id, 'Transfer');
+      result.current.rowActions.setAmount(result.current.rows[0].id, '100');
+      result.current.rowActions.setSourceAccount(result.current.rows[0].id, 'acc3' as AccountId);
+      result.current.rowActions.setDestinationAccount(
+        result.current.rows[0].id,
+        'acc1' as AccountId,
+      );
     });
 
     expect(result.current.rows[0]).toMatchObject({
       isCrossCurrency: true,
       exchangeRate: '',
-      error: 'Rate unavailable',
+      rateError: 'Rate unavailable',
     });
 
     await act(async () => {
@@ -255,14 +450,17 @@ describe('useBulkJournalEditor', () => {
     );
 
     await act(async () => {
-      result.current.updateRowField(result.current.rows[0].id, 'description', 'Transfer');
-      result.current.updateRowField(result.current.rows[0].id, 'amount', '100');
-      result.current.updateRowField(result.current.rows[0].id, 'sourceId', 'acc3');
-      result.current.updateRowField(result.current.rows[0].id, 'destinationId', 'acc1');
+      result.current.rowActions.setDescription(result.current.rows[0].id, 'Transfer');
+      result.current.rowActions.setAmount(result.current.rows[0].id, '100');
+      result.current.rowActions.setSourceAccount(result.current.rows[0].id, 'acc3' as AccountId);
+      result.current.rowActions.setDestinationAccount(
+        result.current.rows[0].id,
+        'acc1' as AccountId,
+      );
     });
 
     act(() => {
-      result.current.updateRowField(result.current.rows[0].id, 'sourceBaseRateInput', '1.2');
+      result.current.rowActions.setManualBaseRate(result.current.rows[0].id, 'source', '1.2');
     });
 
     expect(result.current.rows[0]).toMatchObject({
@@ -270,7 +468,82 @@ describe('useBulkJournalEditor', () => {
       sourceBaseRate: 1.2,
       sourceBaseRateInput: '1.2',
       convertedAmount: 120,
-      error: undefined,
+      rateError: undefined,
+    });
+  });
+
+  it('clears a submitted cross-currency validation error after a valid manual rate', async () => {
+    mockFetchRate.mockResolvedValue(null);
+
+    const { result } = renderHook(() =>
+      useBulkJournalEditor({
+        workplaceId: 'wp1' as WorkplaceId,
+        workplaceCurrency: 'USD',
+        accounts,
+        onSaveSuccess: onSaveSuccessMock,
+      }),
+    );
+
+    const rowId = result.current.rows[0].id;
+    await act(async () => {
+      result.current.rowActions.setDescription(rowId, 'Transfer');
+      result.current.rowActions.setAmount(rowId, '100');
+      result.current.rowActions.setSourceAccount(rowId, 'acc3' as AccountId);
+      result.current.rowActions.setDestinationAccount(rowId, 'acc1' as AccountId);
+    });
+
+    await act(async () => {
+      await result.current.saveAll();
+    });
+
+    expect(result.current.rows[0].validationError).toBe(
+      'Exchange rate is required for cross-currency',
+    );
+
+    act(() => {
+      result.current.rowActions.setManualBaseRate(rowId, 'source', '1.2');
+    });
+
+    expect(result.current.rows[0]).toMatchObject({
+      validationError: undefined,
+      rateError: undefined,
+      exchangeRate: '1.200000',
+      convertedAmount: 120,
+    });
+  });
+
+  it('clears manual rates before resetting a row to the market rate', async () => {
+    mockFetchRate.mockResolvedValue(null);
+
+    const { result } = renderHook(() =>
+      useBulkJournalEditor({
+        workplaceId: 'wp1' as WorkplaceId,
+        workplaceCurrency: 'USD',
+        accounts,
+        onSaveSuccess: onSaveSuccessMock,
+      }),
+    );
+
+    const rowId = result.current.rows[0].id;
+    await act(async () => {
+      result.current.rowActions.setAmount(rowId, '100');
+      result.current.rowActions.setSourceAccount(rowId, 'acc3' as AccountId);
+      result.current.rowActions.setDestinationAccount(rowId, 'acc1' as AccountId);
+    });
+    act(() => result.current.rowActions.setManualBaseRate(rowId, 'source', '1.2'));
+
+    mockFetchRate.mockResolvedValue(1.1);
+    await act(async () => {
+      result.current.refreshRowRate(rowId);
+    });
+
+    expect(result.current.rows[0]).toMatchObject({
+      sourceBaseRateInput: '',
+      destBaseRateInput: '',
+      exchangeRate: '1.100000',
+      sourceBaseRate: 1.1,
+      destBaseRate: 1,
+      convertedAmount: 110,
     });
   });
 
@@ -287,34 +560,37 @@ describe('useBulkJournalEditor', () => {
     );
 
     await act(async () => {
-      result.current.updateRowField(result.current.rows[0].id, 'amount', '100');
-      result.current.updateRowField(result.current.rows[0].id, 'sourceId', 'acc3');
-      result.current.updateRowField(result.current.rows[0].id, 'destinationId', 'acc1');
+      result.current.rowActions.setAmount(result.current.rows[0].id, '100');
+      result.current.rowActions.setSourceAccount(result.current.rows[0].id, 'acc3' as AccountId);
+      result.current.rowActions.setDestinationAccount(
+        result.current.rows[0].id,
+        'acc1' as AccountId,
+      );
     });
 
     const fetchCountAfterLookup = mockFetchRate.mock.calls.length;
 
     act(() => {
-      result.current.updateRowField(result.current.rows[0].id, 'sourceBaseRateInput', '1');
+      result.current.rowActions.setManualBaseRate(result.current.rows[0].id, 'source', '1');
     });
     expect(result.current.rows[0].sourceBaseRateInput).toBe('1');
     expect(result.current.rows[0].exchangeRate).toBe('1.000000');
 
     act(() => {
-      result.current.updateRowField(result.current.rows[0].id, 'sourceBaseRateInput', '1.');
+      result.current.rowActions.setManualBaseRate(result.current.rows[0].id, 'source', '1.');
     });
     expect(result.current.rows[0].sourceBaseRateInput).toBe('1.');
     expect(result.current.rows[0].exchangeRate).toBe('1.000000');
 
     act(() => {
-      result.current.updateRowField(result.current.rows[0].id, 'sourceBaseRateInput', '1.25');
+      result.current.rowActions.setManualBaseRate(result.current.rows[0].id, 'source', '1.25');
     });
     expect(result.current.rows[0]).toMatchObject({
       sourceBaseRateInput: '1.25',
       sourceBaseRate: 1.25,
       exchangeRate: '1.250000',
       convertedAmount: 125,
-      error: undefined,
+      rateError: undefined,
     });
     expect(mockFetchRate).toHaveBeenCalledTimes(fetchCountAfterLookup);
   });
@@ -341,7 +617,7 @@ describe('useBulkJournalEditor', () => {
     });
 
     expect(journalService.saveBulkJournalEntries).not.toHaveBeenCalled();
-    expect(result.current.rows[0].error).toBeDefined();
+    expect(result.current.rows[0].validationError).toBeDefined();
     expect(result.current.submitError).toBe('Please fix validation errors before saving.');
   });
 
@@ -361,11 +637,14 @@ describe('useBulkJournalEditor', () => {
     );
 
     act(() => {
-      result.current.updateRowField(result.current.rows[0].id, 'description', 'Salary');
-      result.current.updateRowField(result.current.rows[0].id, 'notes', 'March payroll');
-      result.current.updateRowField(result.current.rows[0].id, 'amount', '500');
-      result.current.updateRowField(result.current.rows[0].id, 'sourceId', 'acc1');
-      result.current.updateRowField(result.current.rows[0].id, 'destinationId', 'acc2');
+      result.current.rowActions.setDescription(result.current.rows[0].id, 'Salary');
+      result.current.rowActions.setNotes(result.current.rows[0].id, 'March payroll');
+      result.current.rowActions.setAmount(result.current.rows[0].id, '500');
+      result.current.rowActions.setSourceAccount(result.current.rows[0].id, 'acc1' as AccountId);
+      result.current.rowActions.setDestinationAccount(
+        result.current.rows[0].id,
+        'acc2' as AccountId,
+      );
     });
 
     expect(result.current.isValid).toBe(true);
@@ -405,10 +684,10 @@ describe('useBulkJournalEditor', () => {
     );
     act(() => {
       const rowId = result.current.rows[0].id;
-      result.current.updateRowField(rowId, 'description', 'Salary');
-      result.current.updateRowField(rowId, 'amount', '500');
-      result.current.updateRowField(rowId, 'sourceId', 'acc1');
-      result.current.updateRowField(rowId, 'destinationId', 'acc2');
+      result.current.rowActions.setDescription(rowId, 'Salary');
+      result.current.rowActions.setAmount(rowId, '500');
+      result.current.rowActions.setSourceAccount(rowId, 'acc1' as AccountId);
+      result.current.rowActions.setDestinationAccount(rowId, 'acc2' as AccountId);
     });
 
     let first!: Promise<void>;
@@ -436,7 +715,7 @@ describe('useBulkJournalEditor', () => {
     // Add a row then clear
     act(() => {
       result.current.addRow();
-      result.current.updateRowField(result.current.rows[0].id, 'description', 'Test');
+      result.current.rowActions.setDescription(result.current.rows[0].id, 'Test');
     });
 
     expect(result.current.rows).toHaveLength(2);
@@ -477,9 +756,9 @@ describe('useBulkJournalEditor', () => {
 
     // 1. Trigger first account change (acc3 is EUR, acc1 is USD)
     await act(async () => {
-      result.current.updateRowField(rowId, 'amount', '100');
-      result.current.updateRowField(rowId, 'sourceId', 'acc3');
-      result.current.updateRowField(rowId, 'destinationId', 'acc1');
+      result.current.rowActions.setAmount(rowId, '100');
+      result.current.rowActions.setSourceAccount(rowId, 'acc3' as AccountId);
+      result.current.rowActions.setDestinationAccount(rowId, 'acc1' as AccountId);
     });
 
     // Verify it is loading
@@ -488,7 +767,7 @@ describe('useBulkJournalEditor', () => {
     // 2. Trigger second account change to a different pair (acc3 EUR to acc2 USD, different rate expected)
     // We clear mock resolved value to use mockReturnValueOnce
     await act(async () => {
-      result.current.updateRowField(rowId, 'destinationId', 'acc2');
+      result.current.rowActions.setDestinationAccount(rowId, 'acc2' as AccountId);
     });
 
     // 3. Resolve the second fetch (the newer one) first
@@ -532,10 +811,10 @@ describe('useBulkJournalEditor', () => {
     const rowId = result.current.rows[0].id;
 
     await act(async () => {
-      result.current.updateRowField(rowId, 'amount', '100');
-      result.current.updateRowField(rowId, 'description', 'Coffee');
-      result.current.updateRowField(rowId, 'sourceId', 'acc3');
-      result.current.updateRowField(rowId, 'destinationId', 'acc1');
+      result.current.rowActions.setAmount(rowId, '100');
+      result.current.rowActions.setDescription(rowId, 'Coffee');
+      result.current.rowActions.setSourceAccount(rowId, 'acc3' as AccountId);
+      result.current.rowActions.setDestinationAccount(rowId, 'acc1' as AccountId);
     });
 
     expect(result.current.rows[0].isLoadingRate).toBe(true);
@@ -545,7 +824,7 @@ describe('useBulkJournalEditor', () => {
       await result.current.saveAll();
     });
 
-    expect(result.current.rows[0].error).toBe('Exchange rate is loading...');
+    expect(result.current.rows[0].validationError).toBe('Exchange rate is loading...');
 
     // Resolve rate
     await act(async () => {
@@ -554,6 +833,6 @@ describe('useBulkJournalEditor', () => {
     });
 
     // Validate that it succeeded
-    expect(result.current.rows[0].error).toBeUndefined();
+    expect(result.current.rows[0].validationError).toBeUndefined();
   });
 });

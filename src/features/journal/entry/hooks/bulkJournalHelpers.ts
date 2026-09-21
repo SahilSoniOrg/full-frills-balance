@@ -7,6 +7,15 @@ import { generator as generateId } from '@/src/data/database/idGenerator';
 import { sanitizeAmount } from '@/src/utils/validation';
 import type { BulkJournalRow } from '../types/bulkJournal';
 
+export const DUPLICATE_ACCOUNT_ERROR = 'Source and destination accounts must be distinct';
+
+export function getBulkJournalDuplicateAccountError(
+  sourceId: BulkJournalRow['sourceId'],
+  destinationId: BulkJournalRow['destinationId'],
+): string | undefined {
+  return sourceId && sourceId === destinationId ? DUPLICATE_ACCOUNT_ERROR : undefined;
+}
+
 export function validateBulkJournalRow(row: BulkJournalRow): string | undefined {
   if (!row.description.trim()) return 'Description is required';
   const sanitizedVal = sanitizeAmount(row.amount);
@@ -14,12 +23,26 @@ export function validateBulkJournalRow(row: BulkJournalRow): string | undefined 
   if (!row.sourceId || row.sourceId === EMPTY_ACCOUNT_ID) return 'Source account is required';
   if (!row.destinationId || row.destinationId === EMPTY_ACCOUNT_ID)
     return 'Destination account is required';
-  if (row.sourceId === row.destinationId) return 'Source and destination accounts must be distinct';
+  if (row.sourceId === row.destinationId) return DUPLICATE_ACCOUNT_ERROR;
   if (row.isLoadingRate) return 'Exchange rate is loading...';
   if (row.isCrossCurrency && (!row.exchangeRate || parseFloat(row.exchangeRate) <= 0)) {
     return 'Exchange rate is required for cross-currency';
   }
   return undefined;
+}
+
+export function isBulkJournalRowEmpty(row: BulkJournalRow): boolean {
+  return (
+    !row.description.trim() &&
+    !row.notes.trim() &&
+    !row.amount &&
+    !row.sourceId &&
+    !row.destinationId
+  );
+}
+
+export function getBulkJournalRowError(row: BulkJournalRow): string | undefined {
+  return row.rateError ?? row.validationError;
 }
 
 export function buildBulkJournalEntries(

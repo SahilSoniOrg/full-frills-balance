@@ -1,10 +1,13 @@
 import { AccountFields } from '@/src/types/plainDtos';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
+import type { TabType } from '@/src/types/domainJournal';
+import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 
 export interface BulkJournalRow {
   id: string;
   description: string;
   notes: string;
+  transactionType: TabType;
   amount: string;
   sourceId: AccountId;
   destinationId: AccountId;
@@ -17,10 +20,22 @@ export interface BulkJournalRow {
   isCrossCurrency: boolean;
   convertedAmount: number;
   isLoadingRate: boolean;
-  error?: string;
+  validationError?: string;
+  rateError?: string;
 }
 
-export type BulkRowFieldValue = string | number | boolean;
+export interface BulkJournalRowActions {
+  setDescription: (rowId: string, value: string) => void;
+  setNotes: (rowId: string, value: string) => void;
+  setAmount: (rowId: string, value: string) => void;
+  setJournalDate: (rowId: string, value: number) => void;
+  setTransactionType: (rowId: string, value: TabType) => void;
+  setSourceAccount: (rowId: string, value: AccountId) => void;
+  setDestinationAccount: (rowId: string, value: AccountId) => void;
+  setConvertedAmount: (rowId: string, value: number) => void;
+  setManualBaseRate: (rowId: string, role: 'source' | 'destination', value: string) => void;
+  applySuggestion: (rowId: string, suggestion: JournalAutofillSuggestion) => void;
+}
 
 export interface SavedJournalSummary {
   description: string;
