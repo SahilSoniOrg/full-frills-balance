@@ -28,6 +28,7 @@ export type SegmentedOption<T extends string | number = string> = {
   id: T;
   label: string;
   icon?: IconName;
+  color?: string;
 };
 
 interface AppSegmentedControlProps<T extends string | number> {
@@ -45,6 +46,7 @@ interface AppSegmentedControlProps<T extends string | number> {
   pillColor?: string;
   activeTextColor?: string;
   inactiveTextColor?: string;
+  iconOnly?: boolean;
   orientation?: 'horizontal' | 'vertical';
   disabled?: boolean;
   disabledOptions?: T[];
@@ -63,6 +65,7 @@ interface SegmentedItemProps<T extends string | number> {
   isLarge: boolean;
   isVertical: boolean;
   flex: boolean;
+  iconOnly: boolean;
   minWidth?: number;
   disabled?: boolean;
   testID?: string;
@@ -83,6 +86,7 @@ const SegmentedItem = <T extends string | number>({
   isLarge,
   isVertical,
   flex,
+  iconOnly,
   minWidth,
   disabled,
   testID,
@@ -111,20 +115,26 @@ const SegmentedItem = <T extends string | number>({
     >
       <View style={styles.optionContent}>
         {option.icon && (
-          <AppIcon name={option.icon} size={14} color={isSelected ? activeColor : inactiveColor} />
+          <AppIcon
+            name={option.icon}
+            size={14}
+            color={isSelected ? activeColor : (option.color ?? inactiveColor)}
+          />
         )}
-        <AppText
-          variant="caption"
-          weight={isSelected ? 'bold' : 'medium'}
-          numberOfLines={1}
-          ellipsizeMode="tail"
-          style={{
-            color: isSelected ? activeColor : inactiveColor,
-            textAlign: 'center',
-          }}
-        >
-          {option.label}
-        </AppText>
+        {!iconOnly && (
+          <AppText
+            variant="caption"
+            weight={isSelected ? 'bold' : 'medium'}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            style={{
+              color: isSelected ? activeColor : inactiveColor,
+              textAlign: 'center',
+            }}
+          >
+            {option.label}
+          </AppText>
+        )}
       </View>
     </Pressable>
   );
@@ -150,6 +160,7 @@ export const AppSegmentedControl = <T extends string | number>({
   pillColor,
   activeTextColor,
   inactiveTextColor,
+  iconOnly = false,
   orientation = 'horizontal',
   disabled = false,
   disabledOptions = [],
@@ -183,7 +194,7 @@ export const AppSegmentedControl = <T extends string | number>({
   const layout = useMemo(() => {
     const pillInset = isSmall ? 2 : isLarge ? 4 : 3;
     const effectivePillInset = isMinimal ? 0 : pillInset;
-    const horizontalHeight = isSmall ? 28 : isLarge ? 48 : 40;
+    const horizontalHeight = propItemHeight || (isSmall ? 28 : isLarge ? 48 : 40);
 
     const itemWidth = isVertical
       ? flex
@@ -341,6 +352,7 @@ export const AppSegmentedControl = <T extends string | number>({
           isLarge={isLarge}
           isVertical={isVertical}
           flex={flex}
+          iconOnly={iconOnly}
           minWidth={minWidth}
           disabled={disabled || disabledSet.has(option.id)}
           testID={testID ? `${testID}-item-${option.id}` : undefined}
@@ -358,6 +370,7 @@ export const AppSegmentedControl = <T extends string | number>({
       isLarge,
       isVertical,
       flex,
+      iconOnly,
       minWidth,
       disabled,
       disabledSet,
