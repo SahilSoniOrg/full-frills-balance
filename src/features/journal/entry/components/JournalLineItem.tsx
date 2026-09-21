@@ -98,7 +98,7 @@ export const JournalLineItem = React.memo(
         </View>
 
         <View style={styles.secondaryRow}>
-          {/* DR/CR Toggle - Modern Segmented Style */}
+          {/* Debit / credit selector */}
           <View
             style={[
               styles.typeSelector,
@@ -128,7 +128,7 @@ export const JournalLineItem = React.memo(
                       : theme.textSecondary,
                 }}
               >
-                DR
+                Debit
               </AppText>
             </TouchableOpacity>
             <TouchableOpacity
@@ -154,7 +154,7 @@ export const JournalLineItem = React.memo(
                       : theme.textSecondary,
                 }}
               >
-                CR
+                Credit
               </AppText>
             </TouchableOpacity>
           </View>
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   typeSegment: {
-    width: 40,
+    width: 56,
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
