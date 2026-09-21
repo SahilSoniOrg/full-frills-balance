@@ -73,6 +73,11 @@ export interface JournalEntryShell {
   isSimpleModeDisabled: boolean;
   onCreateAccountRequest: (intent: CreateAccountIntent) => void;
   onCreateAccountRequestForRole: (role: AccountRole, intent: CreateAccountIntent) => void;
+  onCreateAccountRequestForBatchRow: (
+    rowId: string,
+    role: AccountRole,
+    intent: CreateAccountIntent,
+  ) => void;
   suggestions: JournalAutofillSuggestion[];
   suggestionState: JournalSuggestionState;
   onSelectSuggestion: (
@@ -223,6 +228,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     onAccountSelected,
     onCreateAccountRequest,
     onCreateAccountRequestForRole,
+    onCreateAccountRequestForBatchRow,
     selectableAccounts,
     selectedAccountId,
     accountPickerTitle,
@@ -233,6 +239,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     applyAccountToActiveLine,
     splitSourceAccountId: splitState.sourceAccountId,
     splitRows: splitState.splits,
+    batchEditor,
   });
 
   const onSelectSuggestion = useJournalSuggestionApplication(editor, accounts, activeMode);
@@ -270,6 +277,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     isSimpleModeDisabled,
     onCreateAccountRequest,
     onCreateAccountRequestForRole,
+    onCreateAccountRequestForBatchRow,
     suggestions,
     suggestionState,
     onSelectSuggestion,

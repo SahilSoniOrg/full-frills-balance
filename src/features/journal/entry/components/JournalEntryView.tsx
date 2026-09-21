@@ -87,6 +87,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
     onAccountPickerDismiss,
     onCreateAccountRequest,
     onCreateAccountRequestForRole,
+    onCreateAccountRequestForBatchRow,
     suggestions,
     suggestionState,
     showEditBanner,
@@ -265,9 +266,11 @@ export function JournalEntryView(props: JournalEntryViewProps) {
             editor={props.batchEditor}
             accounts={accounts}
             workplaceCurrency={workplaceCurrency}
+            workplaceId={workplaceId}
             summary={props.batchSummary}
             onContinue={props.onContinueBatch}
             onDone={props.onDoneBatch}
+            onCreateAccountRequestForRow={onCreateAccountRequestForBatchRow}
           />
         )}
       </View>

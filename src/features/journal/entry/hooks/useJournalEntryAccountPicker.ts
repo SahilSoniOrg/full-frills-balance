@@ -12,6 +12,8 @@ import { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntr
 import { getInferredAccountType } from '@/src/utils/accountCategory';
 import { AppNavigation } from '@/src/utils/navigation';
 import type { AccountRole } from '@/src/types/domainJournal';
+import type { useBulkJournalEditor } from './useBulkJournalEditor';
+import { registerAccountCreationReturn } from '@/src/utils/accountCreationReturn';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type SplitRowPick = { id: string; accountId?: AccountId };
@@ -29,6 +31,7 @@ export interface UseJournalEntryAccountPickerOptions {
   applyAccountToActiveLine: (lineId: string, accountId: AccountId) => void;
   splitSourceAccountId?: AccountId;
   splitRows?: SplitRowPick[];
+  batchEditor?: ReturnType<typeof useBulkJournalEditor>;
 }
 
 /**
@@ -43,6 +46,7 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
     applyAccountToActiveLine,
     splitSourceAccountId,
     splitRows = [],
+    batchEditor,
   } = options;
 
   const [showAccountPicker, setShowAccountPicker] = useState(false);
@@ -166,6 +170,29 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
     [editor, navigateToAccountForm],
   );
 
+  const onCreateAccountRequestForBatchRow = useCallback(
+    (rowId: string, role: AccountRole, intent: CreateAccountIntent) => {
+      const row = batchEditor?.rows.find(item => item.id === rowId);
+      if (!row || !batchEditor) return;
+
+      const returnToken = registerAccountCreationReturn(accountId => {
+        if (role === 'source') {
+          batchEditor.rowActions.setSourceAccount(rowId, accountId);
+        } else {
+          batchEditor.rowActions.setDestinationAccount(rowId, accountId);
+        }
+      });
+
+      const side = role === 'source' ? TransactionType.CREDIT : TransactionType.DEBIT;
+      AppNavigation.toAccountForm(undefined, {
+        name: intent.suggestedName,
+        type: intent.type || getInferredAccountType(row.transactionType, side),
+        returnToken,
+      });
+    },
+    [batchEditor],
+  );
+
   const selectableAccounts = useMemo(
     () =>
       resolveJournalEntrySelectableAccounts({
@@ -210,6 +237,7 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
     onAccountSelected,
     onCreateAccountRequest,
     onCreateAccountRequestForRole,
+    onCreateAccountRequestForBatchRow,
     selectableAccounts,
     selectedAccountId,
     accountPickerTitle,
