@@ -167,6 +167,9 @@ export function SplitForm({
 
   return (
     <View style={styles.container}>
+      <AppText variant="caption" color="secondary" style={styles.intro}>
+        {str.intro}
+      </AppText>
       <View style={styles.paymentSection}>
         <View style={styles.sectionHeader}>
           <AppText variant="body" weight="semibold" color="primary" style={styles.sectionTitle}>
@@ -312,6 +315,9 @@ export function SplitForm({
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: Spacing.lg,
+  },
+  intro: {
+    marginBottom: Spacing.lg,
   },
   paymentSection: {
     paddingBottom: Spacing.sm,

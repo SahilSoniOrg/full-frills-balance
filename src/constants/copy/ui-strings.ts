@@ -850,6 +850,7 @@ export const UI_STRINGS = {
     dateTime: 'Date & Time',
     description: 'Description',
     descriptionPlaceholder: 'What is this entry for?',
+    intro: 'Add every account affected. Debits and credits must match before you can save.',
     journalLines: 'Entry Lines',
     addLine: '+ Add Line',
     addLineAccessibility: 'Add line',

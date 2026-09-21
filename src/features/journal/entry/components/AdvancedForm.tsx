@@ -31,6 +31,9 @@ export const AdvancedForm = ({
   return (
     <View style={{ gap: Spacing.md, padding: Spacing.lg }}>
       <View>
+        <AppText variant="caption" color="secondary" style={{ marginBottom: Spacing.md }}>
+          {AppConfig.strings.advancedEntry.intro}
+        </AppText>
         <View
           style={{
             flexDirection: 'row',
