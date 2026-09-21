@@ -32,15 +32,15 @@ import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActio
 import { useAccountPersistence } from '@/src/features/accounts/hooks/useAccountPersistence';
 import { useAccountValidation } from '@/src/features/accounts/hooks/useAccountValidation';
 import { resolveAccountFormDefaults } from '@/src/features/accounts/services/accountFormService';
+import { discardAccountCreationReturn } from '@/src/utils/accountCreationReturn';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { BalanceChangeCounterparty } from '@/src/services/accounts/balanceChangeClassification';
 import { useAccountFormHeaderActions } from '@/src/features/accounts/hooks/useAccountFormHeaderActions';
 import type { AccountFormChromeState } from '@/src/features/accounts/hooks/useAccountFormHeaderActions';
-import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams, usePathname } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { of } from 'rxjs';
 
 export type { AccountMetadataFormModel };
@@ -116,8 +116,11 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     pType: string;
     pCurrency: string;
     pIcon: string;
+    returnToken: string;
   }>();
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+
+  useEffect(() => () => discardAccountCreationReturn(params.returnToken), [params.returnToken]);
 
   const accountId = params.accountId;
   const typeParam = params.type;
@@ -194,6 +197,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     existingAccount,
     accountId,
     accounts.length > 0,
+    params.returnToken,
   );
 
   const { deleteAccount, recoverAccount, mergeAccounts } = useAccountActions(workplaceId);
@@ -297,7 +301,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     setIsAppearancePickerVisible: pickers.setIsAppearancePickerVisible,
     initialBalance: core.initialBalance,
     onInitialBalanceChange: core.onInitialBalanceChange,
-    onBack: () => AppNavigation.back(),
+    onBack: persistence.handleCancel,
     isCreating: persistence.isCreating,
     formError,
     onSave,

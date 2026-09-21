@@ -13,6 +13,10 @@ import { ValidationError } from '@/src/utils/errors';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { sanitizeInput } from '@/src/utils/validation';
+import {
+  discardAccountCreationReturn,
+  resolveAccountCreationReturn,
+} from '@/src/utils/accountCreationReturn';
 import { useRef, useState } from 'react';
 
 export type AccountPersistenceSaveInput = {
@@ -31,12 +35,14 @@ export function useAccountPersistence(
   existingAccount: AccountFields | null | undefined,
   currentAccountId: AccountId | undefined,
   hasExistingAccounts: boolean,
+  accountCreationReturnToken?: string,
 ): PersistenceResult {
   const { createAccount, saveAccount, adjustBalance } = useAccountActions(workplaceId);
   const [isCreating, setIsCreating] = useState(false);
   const isSubmitting = useRef(false);
 
   const handleCancel = () => {
+    discardAccountCreationReturn(accountCreationReturnToken);
     AppNavigation.back();
   };
 
@@ -91,7 +97,7 @@ export function useAccountPersistence(
         AppNavigation.back();
       } else {
         logger.info(`[AccountPersistence] Creating account ${sanitizedName}...`);
-        await createAccount({
+        const createdAccount = await createAccount({
           name: sanitizedName,
           accountType: payload.accountType,
           accountSubtype: payload.accountSubtype,
@@ -102,6 +108,8 @@ export function useAccountPersistence(
           parentAccountId: payload.parentAccountId,
           metadata: payload.metadata,
         });
+
+        resolveAccountCreationReturn(accountCreationReturnToken, createdAccount.id);
 
         toast.success(`"${sanitizedName}" has been created successfully!`);
 

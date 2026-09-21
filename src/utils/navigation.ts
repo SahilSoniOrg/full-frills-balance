@@ -243,6 +243,7 @@ export const AppNavigation = {
       type?: string;
       currency?: string;
       icon?: string;
+      returnToken?: string;
     },
   ) => {
     router.push(
@@ -252,6 +253,7 @@ export const AppNavigation = {
         pType: preview?.type,
         pCurrency: preview?.currency,
         pIcon: preview?.icon,
+        returnToken: preview?.returnToken,
       }),
     );
   },
