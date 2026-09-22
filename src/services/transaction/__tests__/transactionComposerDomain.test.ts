@@ -222,6 +222,37 @@ describe('transaction composer domain', () => {
       });
     });
 
+    it('balances cross-currency allocations using converted values instead of nominal sums', () => {
+      const fxAccounts = [
+        ...accounts,
+        {
+          id: asAccountId('inr-bank'),
+          name: 'INR Bank',
+          accountType: AccountType.ASSET,
+          currencyCode: 'INR',
+        },
+      ];
+      const resolved = resolveTransactionIntent(
+        {
+          description: 'Cross-currency groceries',
+          amount: '100',
+          date: '2026-09-12',
+          type: 'expense',
+          sourceAccountId: asAccountId('inr-bank'),
+          sourceExchangeRate: '0.012',
+          allocations: [{ accountId: asAccountId('food'), amount: '1.20' }],
+        },
+        { accounts: fxAccounts, currencyCode: 'USD' },
+      );
+
+      expect(resolved.resolved).toBe(true);
+      if (!resolved.resolved) return;
+      expect(validatePostingPlan(resolved.plan, fxAccounts)).toEqual({
+        valid: true,
+        issues: [],
+      });
+    });
+
     it('accepts higher-rate foreign amounts whose conversion rounds by more than one base minor unit', () => {
       const fxAccounts = [
         ...accounts,

@@ -1,3 +1,4 @@
+import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import { checkJournal } from '@/src/utils/accounting/BalanceEffects';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { TransactionType } from '@/src/types/enums';
@@ -158,23 +159,6 @@ export function resolveTransactionIntent(
 
   if (intent.allocations && intent.allocations.length > 0) {
     const rawAllocations = intent.allocations;
-    const validAllocationTotal = allocationAmounts.every(value => value !== null)
-      ? allocationAmounts.reduce((sum, value) => sum + (value ?? 0), 0)
-      : null;
-    if (
-      amount !== null &&
-      validAllocationTotal !== null &&
-      Math.abs(validAllocationTotal - amount) > RESOLUTION_EPSILON
-    ) {
-      issues.push(
-        issue(
-          'allocation_sum_mismatch',
-          'Allocations must add up to the transaction amount',
-          'allocations',
-        ),
-      );
-    }
-
     destinations = rawAllocations
       .map((allocation, index) => {
         const account = resolveAccount(
@@ -212,6 +196,55 @@ export function resolveTransactionIntent(
           id: 'intent-destination',
         },
       ];
+    }
+  }
+
+  if (intent.allocations && intent.allocations.length > 0) {
+    const rawAllocations = intent.allocations;
+    const validAllocationTotal = allocationAmounts.every(value => value !== null)
+      ? allocationAmounts.reduce((sum, value) => sum + (value ?? 0), 0)
+      : null;
+    const allAllocationAccountsResolved = destinations.length === rawAllocations.length;
+    const amountInBaseCurrency =
+      source && amount !== null && allAllocationAccountsResolved
+        ? JournalCalculator.getLineBaseAmount(
+            {
+              amount,
+              accountCurrency: source.currencyCode,
+              exchangeRate: intent.sourceExchangeRate,
+            },
+            context.currencyCode,
+          )
+        : amount;
+    const allocationsInBaseCurrency =
+      validAllocationTotal !== null && source && allAllocationAccountsResolved
+        ? destinations.reduce(
+            (sum, destination) =>
+              sum +
+              JournalCalculator.getLineBaseAmount(
+                {
+                  amount: destination.amount,
+                  accountCurrency: destination.account.currencyCode,
+                  exchangeRate: destination.exchangeRate,
+                },
+                context.currencyCode,
+              ),
+            0,
+          )
+        : validAllocationTotal;
+
+    if (
+      amountInBaseCurrency !== null &&
+      allocationsInBaseCurrency !== null &&
+      Math.abs(allocationsInBaseCurrency - amountInBaseCurrency) > RESOLUTION_EPSILON
+    ) {
+      issues.push(
+        issue(
+          'allocation_sum_mismatch',
+          'Allocations must add up to the transaction amount',
+          'allocations',
+        ),
+      );
     }
   }
 
