@@ -80,6 +80,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
     onSelectAccountRequest,
     showAccountPicker,
     accountPickerTitle,
+    isSplitModeDisabled,
     selectableAccounts,
     selectedAccountId,
     onAccountSelected,
@@ -88,6 +89,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
     onCreateAccountRequest,
     onCreateAccountRequestForRole,
     onCreateAccountRequestForBatchRow,
+    onCreateAccountRequestForSplitRow,
     suggestions,
     suggestionState,
     showEditBanner,
@@ -248,8 +250,9 @@ export function JournalEntryView(props: JournalEntryViewProps) {
             {journalMetaCard}
             <SplitModePanel
               accounts={accounts}
+              workplaceCurrency={workplaceCurrency}
               editor={editor}
-              onSelectAccountRequest={onSelectAccountRequest}
+              onCreateAccountRequestForRow={onCreateAccountRequestForSplitRow}
             />
           </>
         ) : activeMode === 'expert' ? (
@@ -293,6 +296,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
         visible={isModePickerVisible}
         activeMode={activeMode}
         isSimpleDisabled={props.isSimpleModeDisabled}
+        isSplitDisabled={isSplitModeDisabled}
         onSelectMode={onToggleMode}
         onHelpMode={mode => {
           setIsModePickerVisible(false);
@@ -307,7 +311,13 @@ export function JournalEntryView(props: JournalEntryViewProps) {
           visible
           mode={helpMode}
           isActive={helpMode === activeMode}
-          canUseMode={helpMode !== 'basic' || !props.isSimpleModeDisabled}
+          canUseMode={
+            helpMode === 'basic'
+              ? !props.isSimpleModeDisabled
+              : helpMode === 'allocation'
+                ? !isSplitModeDisabled
+                : true
+          }
           onUseMode={onToggleMode}
           onClose={() => setHelpMode(null)}
         />

@@ -11,7 +11,10 @@ describe('useJournalEntryModeState', () => {
       isGuidedMode: true,
       setIsGuidedMode: jest.fn(),
       setTransactionType,
-      lines: [],
+      lines: [
+        { transactionType: 'CREDIT', accountId: 'source', amount: '10', notes: '' },
+        { transactionType: 'DEBIT', accountId: 'destination', amount: '10', notes: '' },
+      ],
     } as any;
     const { result } = renderHook(() => useJournalEntryModeState(editor, 'simple'));
     setTransactionType.mockClear();
@@ -20,6 +23,31 @@ describe('useJournalEntryModeState', () => {
 
     expect(setTransactionType).not.toHaveBeenCalled();
   });
+
+  it.each(['expense', 'income', 'transfer'] as const)(
+    'carries the shared %s type through Simple -> Split -> Simple projections',
+    type => {
+      const setTransactionType = jest.fn();
+      const editor = {
+        isGuidedMode: true,
+        setIsGuidedMode: jest.fn(),
+        transactionType: type,
+        setTransactionType,
+        lines: [
+          { transactionType: 'CREDIT', accountId: 'source', amount: '10', notes: '' },
+          { transactionType: 'DEBIT', accountId: 'destination', amount: '10', notes: '' },
+        ],
+      } as any;
+      const { result } = renderHook(() => useJournalEntryModeState(editor, 'simple'));
+
+      act(() => result.current.onToggleMode('allocation'));
+      expect(editor.transactionType).toBe(type);
+
+      act(() => result.current.onToggleMode('basic'));
+      expect(editor.transactionType).toBe(type);
+      expect(setTransactionType).not.toHaveBeenCalled();
+    },
+  );
 
   it('keeps the mode picker order stable', () => {
     expect(JOURNAL_ENTRY_MODE_OPTIONS.map(option => option.id)).toEqual([

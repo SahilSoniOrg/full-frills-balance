@@ -3,7 +3,10 @@ import {
   JournalEntryScreenMode,
   resolveJournalEntryScreenMode,
 } from '@/src/features/journal/entry/journalEntryPresentation';
-import { isSimpleModeDisabledByLines } from '@/src/services/journal/journalEditorHelpers';
+import {
+  isSimpleModeDisabledByLines,
+  isSplitModeDisabledByLines,
+} from '@/src/services/journal/journalEditorHelpers';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { useCallback, useMemo, useState } from 'react';
@@ -21,13 +24,19 @@ export function useJournalEntryModeState(
     resolveJournalEntryScreenMode(routeMode),
   );
   const { isGuidedMode: editorIsGuidedMode, setIsGuidedMode, lines } = editor;
+  const isSplitModeDisabled = isSplitModeDisabledByLines(lines);
 
   // The editor owns guided/expert state. The shell owns only route-level modes
   // (allocation and batch), so a forced expert transition cannot create a
   // second state machine here.
   const effectiveMode = useMemo(
-    () => (activeMode === 'basic' && !editorIsGuidedMode ? 'expert' : activeMode),
-    [activeMode, editorIsGuidedMode],
+    () =>
+      activeMode === 'allocation' && isSplitModeDisabled
+        ? 'expert'
+        : activeMode === 'basic' && !editorIsGuidedMode
+          ? 'expert'
+          : activeMode,
+    [activeMode, editorIsGuidedMode, isSplitModeDisabled],
   );
 
   const onToggleMode = useCallback(
@@ -40,18 +49,27 @@ export function useJournalEntryModeState(
         );
         return;
       }
+      if (mode === 'allocation' && isSplitModeDisabled) {
+        showErrorAlert(
+          'This entry has multiple source lines. Use Advanced mode to edit it.',
+          undefined,
+          __DEV__,
+        );
+        return;
+      }
 
       setActiveMode(mode);
       if (mode === 'basic' || mode === 'expert') {
         setIsGuidedMode(mode === 'basic');
       }
     },
-    [lines, setIsGuidedMode],
+    [isSplitModeDisabled, lines, setIsGuidedMode],
   );
 
   return {
     activeMode: effectiveMode,
     onToggleMode,
     isSimpleModeDisabled: isSimpleModeDisabledByLines(lines),
+    isSplitModeDisabled,
   };
 }

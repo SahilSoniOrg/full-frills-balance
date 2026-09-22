@@ -6,6 +6,7 @@ import {
   inferSimpleTabTypeFromTwoLegs,
   isJournalEditorEntryReady,
   isSimpleModeDisabledByLines,
+  isSplitModeDisabledByLines,
   mapEditorLinesForBalanceCheck,
   mapEnrichedLinesToEditorState,
   normalizeJournalLinesForGuidedMode,
@@ -277,6 +278,39 @@ describe('journalEditorHelpers', () => {
         isSimpleModeDisabledByLines([
           ...base,
           { ...emptyLine('rate', TransactionType.DEBIT), exchangeRate: '1.25' },
+        ]),
+      ).toBe(true);
+    });
+  });
+
+  describe('isSplitModeDisabledByLines', () => {
+    const line = (id: string, type: TransactionType): JournalEntryLine => ({
+      id: id as TransactionId,
+      accountId: 'account' as any,
+      accountName: 'Account',
+      accountType: AccountType.ASSET,
+      amount: '10',
+      transactionType: type,
+      notes: '',
+      exchangeRate: '',
+    });
+
+    it('allows one source credit with multiple debit allocations', () => {
+      expect(
+        isSplitModeDisabledByLines([
+          line('source', TransactionType.CREDIT),
+          line('split-1', TransactionType.DEBIT),
+          line('split-2', TransactionType.DEBIT),
+        ]),
+      ).toBe(false);
+    });
+
+    it('blocks split mode when the entry has multiple source credits', () => {
+      expect(
+        isSplitModeDisabledByLines([
+          line('source-1', TransactionType.CREDIT),
+          line('source-2', TransactionType.CREDIT),
+          line('split', TransactionType.DEBIT),
         ]),
       ).toBe(true);
     });

@@ -1,449 +1,409 @@
-import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
-import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
-import { Icon, AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
+import type { CreateAccountIntent } from '@/src/components/account-selection';
+import { AppIcon, AppText, Icon } from '@/src/components/core';
+import { CompactAmountInput } from '@/src/components/forms/CompactAmountInput';
+import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
-import { Theme } from '@/src/constants/design-tokens';
-import type { AccountFields } from '@/src/types/plainDtos';
-import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
-import { useTheme } from '@/src/hooks/use-theme';
-import { resolveAccountChipColors } from '@/src/utils/accountChipColors';
-import React, { useCallback } from 'react';
 import {
-  Keyboard,
-  Pressable,
-  StyleProp,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-  ViewStyle,
-} from 'react-native';
+  distributeSplitRemainder,
+  equalizeSplitAmounts,
+  SPLIT_SOURCE_LINE_ID,
+} from '@/src/services/journal/splitJournalHelpers';
+import type { AccountRole, TabType } from '@/src/types/domainJournal';
+import type { AccountId } from '@/src/types/ids';
+import { AccountPickerField } from '@/src/features/journal/entry/components/AccountPickerField';
+import { SplitAllocationRow } from '@/src/features/journal/entry/components/SplitAllocationRow';
+import { TransactionTypeSegmentedControl } from '@/src/features/journal/entry/components/TransactionTypeSegmentedControl';
+import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
+import { resolveSimpleTypeAccentColor } from '@/src/features/journal/entry/journalEntryPresentation';
+import { useTheme } from '@/src/hooks/use-theme';
+import { withOpacity } from '@/src/utils/color-math';
+import { useCallback, useState } from 'react';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
-type SplitFormProps = SplitJournalController;
+type SplitFormProps = SplitJournalController & {
+  onCreateAccountRequestForRow: (
+    rowId: string,
+    role: AccountRole,
+    intent: CreateAccountIntent,
+  ) => void;
+};
 
-const AMOUNT_COL_WIDTH = 116;
-const DELETE_COL_WIDTH = 28;
-
-interface SplitRowItemProps {
-  row: SplitJournalController['splits'][number];
-  isLast: boolean;
-  canRemove: boolean;
-  categoryAccount?: AccountFields;
-  theme: Theme;
-  str: typeof AppConfig.strings.transactionFlow.splitEntry;
-  hairlineStyle: StyleProp<ViewStyle>;
-  onOpenPicker: (id: string) => void;
-  onUpdateAmount: (id: string, amount: string) => void;
-  onRemoveRow: (id: string) => void;
-  currencySymbol: string;
+function formatAmountPlaceholder(precision: number): string {
+  return precision > 0 ? `0.${'0'.repeat(precision)}` : '0';
 }
 
-const SplitRowItem = React.memo(function SplitRowItem({
-  row,
-  isLast,
-  canRemove,
-  categoryAccount,
-  theme,
-  str,
-  hairlineStyle,
-  onOpenPicker,
-  onUpdateAmount,
-  onRemoveRow,
-  currencySymbol,
-}: SplitRowItemProps) {
-  const categoryStyles = resolveAccountChipColors(categoryAccount, theme);
+function resolveSplitTypeCopy(type: TabType) {
+  const simpleStrings = AppConfig.strings.transactionFlow.simpleEntry;
+  const splitStrings = AppConfig.strings.transactionFlow.splitEntry;
 
-  return (
-    <View style={[styles.gridRow, !isLast && hairlineStyle]}>
-      <View style={styles.categoryCellWrap}>
-        <Pressable
-          style={({ pressed }) => [styles.categoryCell, pressed && styles.categoryCellPressed]}
-          onPress={() => {
-            Keyboard.dismiss();
-            onOpenPicker(row.id);
-          }}
-          accessibilityRole="button"
-          accessibilityLabel={`${str.category}: ${categoryAccount?.name ?? 'Choose category'}`}
-        >
-          <View style={styles.categoryCellInner} pointerEvents="none">
-            <AccountInlineLabel
-              account={categoryAccount}
-              placeholder="Choose category"
-              variant="caption"
-              weight={categoryAccount ? 'semibold' : 'medium'}
-              textColor={categoryAccount ? categoryStyles.text : theme.textTertiary}
-              colors={{ accentColor: categoryStyles.text, categoryColor: categoryStyles.marker }}
-            />
-            <AppIcon
-              name={Icon.ChevronDown}
-              size={12}
-              color={categoryAccount ? categoryStyles.icon : theme.textTertiary}
-              style={styles.categoryChevron}
-            />
-          </View>
-        </Pressable>
-      </View>
+  if (type === 'income') {
+    return {
+      sourceLabel: simpleStrings.fromSource,
+      sourceEmptyPrompt: simpleStrings.chooseCategory,
+      allocationTitle: simpleStrings.toAccount,
+      allocationLabel: simpleStrings.toAccount,
+      allocationEmptyPrompt: simpleStrings.chooseAccount,
+      totalLabel: splitStrings.totalAmount,
+    };
+  }
 
-      <View style={styles.amountCell}>
-        <View style={[styles.amountInputWrap, hairlineStyle]}>
-          <CalculatorAmountInput
-            value={row.amount}
-            onChangeText={amount => onUpdateAmount(row.id, amount)}
-            placeholder={str.amountPlaceholder}
-            currencySymbol={currencySymbol}
-            variant="minimal"
-            containerStyle={styles.splitAmountContainer}
-            inputStyle={styles.splitAmountInput}
-            testID={`split-amount-input-${row.id}`}
-          />
-        </View>
-      </View>
+  if (type === 'transfer') {
+    return {
+      sourceLabel: simpleStrings.sourceAccount,
+      sourceEmptyPrompt: simpleStrings.chooseAccount,
+      allocationTitle: simpleStrings.destinationAccount,
+      allocationLabel: simpleStrings.destinationAccount,
+      allocationEmptyPrompt: simpleStrings.chooseAccount,
+      totalLabel: splitStrings.totalAmount,
+    };
+  }
 
-      <TouchableOpacity
-        onPress={() => canRemove && onRemoveRow(row.id)}
-        disabled={!canRemove}
-        accessibilityLabel={str.removeSplit}
-        accessibilityState={{ disabled: !canRemove }}
-        style={styles.deleteCol}
-        hitSlop={Spacing.sm}
-      >
-        <AppIcon
-          name={Icon.Delete}
-          size={Size.iconXs}
-          color={canRemove ? theme.textSecondary : 'transparent'}
-        />
-      </TouchableOpacity>
-    </View>
-  );
-});
+  return {
+    sourceLabel: splitStrings.fromAccount,
+    sourceEmptyPrompt: simpleStrings.chooseAccount,
+    allocationTitle: splitStrings.categoriesTitle,
+    allocationLabel: splitStrings.category,
+    allocationEmptyPrompt: splitStrings.chooseCategory,
+    totalLabel: splitStrings.totalAmount,
+  };
+}
 
 export function SplitForm({
   totalAmount,
   setTotalAmount,
+  transactionType,
+  setTransactionType,
   splits,
   addSplitRow,
   removeSplitRow,
   updateSplitRow,
+  updateSplitAmounts,
+  updateSourceExchangeRate,
   totals,
+  currencyContext,
   validationError,
-  expenseAccounts,
+  allAccounts,
+  sourceAccounts,
+  allocationAccounts,
   sourceAccount,
+  setSourceAccountId,
   displayCurrency,
-  openSourceAccountPicker,
-  openSplitAccountPicker,
+  precision,
+  journalDate,
+  onCreateAccountRequestForRow,
 }: SplitFormProps) {
   const { theme } = useTheme();
-  const str = AppConfig.strings.transactionFlow.splitEntry;
-
-  const remainingLabel =
-    totals.remaining === 0
-      ? str.remainingZero
+  const strings = AppConfig.strings.transactionFlow.splitEntry;
+  const [activePickerKey, setActivePickerKey] = useState<string | null>(null);
+  const typeCopy = resolveSplitTypeCopy(transactionType);
+  const currencyCode = displayCurrency.trim().toUpperCase() || 'USD';
+  const currencySymbol = CURRENCY_SYMBOLS[currencyCode] || currencyCode;
+  const hasTotal = totals.total > 0;
+  // Split entries require at least one allocation. The controller also
+  // enforces this invariant for non-UI callers.
+  const canRemove = splits.length > 1;
+  const isFullyAllocated = hasTotal && totals.remaining === 0;
+  const isOverAllocated = totals.remaining < 0;
+  const canDistribute = hasTotal && totals.remaining > 0;
+  const formatRemainingAmount = useCallback(
+    (amount: number) => `${currencySymbol} ${amount.toFixed(precision)}`,
+    [currencySymbol, precision],
+  );
+  const remainingLabel = !hasTotal
+    ? strings.enterTotal
+    : totals.remaining === 0
+      ? strings.remainingZero
       : totals.remaining > 0
-        ? str.remainingPositive(totals.remaining.toFixed(2))
-        : str.remainingNegative(Math.abs(totals.remaining).toFixed(2));
-
-  const remainingColor =
-    totals.remaining === 0
+        ? strings.remainingPositive(formatRemainingAmount(totals.remaining))
+        : strings.remainingNegative(formatRemainingAmount(Math.abs(totals.remaining)));
+  const remainingColor = isOverAllocated
+    ? theme.error
+    : isFullyAllocated
       ? theme.primary
-      : totals.remaining > 0
-        ? theme.textSecondary
-        : theme.error;
+      : theme.textSecondary;
+  const validationMessage = validationError ? strings.validation[validationError] : null;
 
-  const validationMessage = validationError ? str.validation[validationError] : null;
-  const sourceStyles = resolveAccountChipColors(sourceAccount, theme);
-  const hairline = { borderBottomColor: theme.border, borderBottomWidth: StyleSheet.hairlineWidth };
-  const isFullyAllocated = totals.total > 0 && totals.remaining === 0;
-  const showAllocationStatus = totals.total > 0;
-  const hasSource = !!sourceAccount;
-  const canRemove = splits.length > 2;
-  const currencySymbol = CURRENCY_SYMBOLS[displayCurrency] || displayCurrency;
-
-  const handleUpdateAmount = useCallback(
-    (id: string, amount: string) => {
-      updateSplitRow(id, { amount });
+  const applyAmounts = useCallback(
+    (nextSplits: SplitJournalController['splits']) => {
+      const updates: Record<string, string> = {};
+      nextSplits.forEach(nextRow => {
+        const currentRow = splits.find(row => row.id === nextRow.id);
+        if (currentRow && currentRow.amount !== nextRow.amount) {
+          updates[nextRow.id] = nextRow.amount;
+        }
+      });
+      if (Object.keys(updates).length > 0) updateSplitAmounts(updates);
     },
-    [updateSplitRow],
+    [splits, updateSplitAmounts],
+  );
+
+  const handleEqualSplit = useCallback(() => {
+    if (hasTotal) {
+      applyAmounts(equalizeSplitAmounts(totalAmount, splits, precision, currencyContext));
+    }
+  }, [applyAmounts, currencyContext, hasTotal, precision, splits, totalAmount]);
+
+  const handleDistribute = useCallback(() => {
+    if (canDistribute) {
+      applyAmounts(distributeSplitRemainder(totalAmount, splits, precision, currencyContext));
+    }
+  }, [applyAmounts, canDistribute, currencyContext, precision, splits, totalAmount]);
+
+  const togglePicker = useCallback((key: string) => {
+    setActivePickerKey(current => (current === key ? null : key));
+  }, []);
+
+  const handleSourceAccountSelect = useCallback(
+    (accountId: AccountId) => {
+      setSourceAccountId(accountId);
+      setActivePickerKey(null);
+    },
+    [setSourceAccountId],
+  );
+
+  const handleCreateAccountRequest = useCallback(
+    (rowId: string, role: AccountRole, intent: CreateAccountIntent) => {
+      onCreateAccountRequestForRow(rowId, role, intent);
+      setActivePickerKey(null);
+    },
+    [onCreateAccountRequestForRow],
+  );
+
+  const handleRemove = useCallback(
+    (rowId: string) => {
+      setActivePickerKey(current => (current === rowId ? null : current));
+      removeSplitRow(rowId);
+    },
+    [removeSplitRow],
   );
 
   return (
     <View style={styles.container}>
-      <AppText variant="caption" color="secondary" style={styles.intro}>
-        {str.intro}
-      </AppText>
-      <View style={styles.paymentSection}>
-        <View style={styles.sectionHeader}>
-          <AppText variant="body" weight="semibold" color="primary" style={styles.sectionTitle}>
-            {str.fromAccount}
-          </AppText>
-          <AppText
-            variant="caption"
-            color="tertiary"
-            weight="medium"
-            style={styles.amountHeaderLabel}
-          >
-            {str.totalAmount}
-          </AppText>
-          <View style={styles.deleteCol} />
-        </View>
-        <View style={styles.gridRow}>
-          <View style={styles.categoryCellWrap}>
-            <Pressable
-              style={({ pressed }) => [styles.categoryCell, pressed && styles.categoryCellPressed]}
-              onPress={() => {
-                Keyboard.dismiss();
-                openSourceAccountPicker();
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={str.fromAccount}
-            >
-              <View style={styles.categoryCellInner} pointerEvents="none">
-                <AccountInlineLabel
-                  account={sourceAccount}
-                  placeholder="Select account"
-                  variant="body"
-                  weight="semibold"
-                  textColor={hasSource ? sourceStyles.text : theme.textSecondary}
-                  colors={{ accentColor: sourceStyles.text, categoryColor: sourceStyles.marker }}
-                />
-                <AppIcon
-                  name={Icon.ChevronDown}
-                  size={12}
-                  color={sourceStyles.icon}
-                  style={styles.categoryChevron}
-                />
-              </View>
-            </Pressable>
-          </View>
-
-          <View style={styles.amountCell}>
-            <View style={[styles.amountInputWrap, hairline]}>
-              <View style={styles.amountInputInner}>
-                <AppText
-                  variant="body"
-                  weight="semibold"
-                  style={[styles.totalCurrencySymbol, { color: theme.textTertiary }]}
-                >
-                  {currencySymbol}
-                </AppText>
-                <CalculatorAmountInput
-                  value={totalAmount}
-                  onChangeText={setTotalAmount}
-                  placeholder={str.amountPlaceholder}
-                  currencySymbol={currencySymbol}
-                  variant="minimal"
-                  containerStyle={styles.totalAmountContainer}
-                  inputStyle={styles.totalAmountInput}
-                  testID="split-total-amount-input"
-                />
-              </View>
-            </View>
-          </View>
-          <View style={styles.deleteCol} />
+      <TransactionTypeSegmentedControl
+        value={transactionType}
+        onChange={setTransactionType}
+        accentColor={resolveSimpleTypeAccentColor(transactionType, theme)}
+        variant="standard"
+      />
+      <View style={styles.sourceSection}>
+        <AppText variant="body" color="primary" weight="bold" style={styles.sectionTitle}>
+          {typeCopy.sourceLabel}
+        </AppText>
+        <View style={styles.topRow}>
+          <AccountPickerField
+            account={sourceAccount}
+            accounts={sourceAccounts}
+            allAccounts={allAccounts}
+            containerStyle={styles.folderPicker}
+            displayMode="compact"
+            emptyPrompt={typeCopy.sourceEmptyPrompt}
+            isExpanded={activePickerKey === 'source'}
+            label={typeCopy.sourceLabel}
+            onCreateAccountRequest={(role, intent) =>
+              handleCreateAccountRequest(SPLIT_SOURCE_LINE_ID, role, intent)
+            }
+            onSelect={handleSourceAccountSelect}
+            onToggle={() => togglePicker('source')}
+            role="source"
+            testIDPrefix="split-source-picker"
+          />
+          <CompactAmountInput
+            value={totalAmount}
+            onChangeText={setTotalAmount}
+            currency={currencyCode}
+            currencySymbol={currencySymbol}
+            precision={precision}
+            placeholder={formatAmountPlaceholder(precision)}
+            containerStyle={styles.amountInputContainer}
+            inputStyle={[styles.amountInputText, { color: theme.text }]}
+            testID="split-total-amount-input"
+          />
         </View>
       </View>
 
-      <View style={[styles.sectionRule, { borderBottomColor: theme.border }]} />
-
-      <View style={styles.categoriesSection}>
+      <View style={styles.allocationSection}>
         <View style={styles.sectionHeader}>
-          <AppText variant="body" weight="semibold" color="primary" style={styles.sectionTitle}>
-            {str.categoriesTitle}
+          <AppText variant="body" color="primary" weight="bold">
+            {typeCopy.allocationTitle}
           </AppText>
-          {showAllocationStatus &&
-            (isFullyAllocated ? (
-              <View
-                style={styles.allocatedBadge}
-                accessibilityLabel={str.remainingZero}
-                accessibilityRole="text"
-              >
-                <AppIcon name={Icon.CheckCircle} size={Size.iconXs} color={theme.primary} />
-              </View>
-            ) : (
-              <AppText
-                variant="caption"
-                color="tertiary"
-                weight="medium"
-                numberOfLines={1}
-                style={{ color: remainingColor }}
-              >
-                {remainingLabel}
+          <View style={styles.actions}>
+            <TouchableOpacity
+              onPress={handleEqualSplit}
+              disabled={!hasTotal}
+              style={[styles.actionButton, { opacity: hasTotal ? 1 : 0.45 }]}
+              accessibilityRole="button"
+            >
+              <AppText variant="caption" color="secondary" weight="semibold">
+                {strings.equalSplit}
               </AppText>
-            ))}
-        </View>
-
-        {splits.map((row, index) => {
-          const category = expenseAccounts.find(a => a.id === row.accountId);
-          const isLast = index === splits.length - 1;
-
-          return (
-            <SplitRowItem
-              key={row.id}
-              row={row}
-              isLast={isLast}
-              canRemove={canRemove}
-              categoryAccount={category}
-              theme={theme}
-              str={str}
-              hairlineStyle={hairline}
-              onOpenPicker={openSplitAccountPicker}
-              onUpdateAmount={handleUpdateAmount}
-              onRemoveRow={removeSplitRow}
-              currencySymbol={currencySymbol}
+            </TouchableOpacity>
+            <View
+              style={[
+                styles.actionDivider,
+                { backgroundColor: withOpacity(theme.border, Opacity.active) },
+              ]}
             />
-          );
-        })}
+            <TouchableOpacity
+              onPress={handleDistribute}
+              disabled={!canDistribute}
+              style={[styles.actionButton, { opacity: canDistribute ? 1 : 0.45 }]}
+              accessibilityRole="button"
+            >
+              <AppText variant="caption" color="secondary" weight="semibold">
+                {strings.distribute}
+              </AppText>
+            </TouchableOpacity>
+          </View>
+        </View>
+        <AppText
+          variant="caption"
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={[styles.allocationStatus, { color: remainingColor }]}
+        >
+          {remainingLabel}
+        </AppText>
 
-        {validationMessage && totals.total > 0 && (
-          <View style={styles.errorRow}>
+        {splits.map(row => (
+          <SplitAllocationRow
+            key={row.id}
+            allAccounts={allAccounts}
+            allocationAccounts={allocationAccounts}
+            canRemove={canRemove}
+            currencyCode={currencyCode}
+            fallbackPrecision={precision}
+            emptyPrompt={typeCopy.allocationEmptyPrompt}
+            isExpanded={activePickerKey === row.id}
+            label={typeCopy.allocationLabel}
+            onCreateAccountRequest={(role, intent) =>
+              handleCreateAccountRequest(row.id, role, intent)
+            }
+            onRemove={() => handleRemove(row.id)}
+            onSelectAccount={accountId => {
+              updateSplitRow(row.id, { accountId });
+              setActivePickerKey(null);
+            }}
+            onToggle={() => togglePicker(row.id)}
+            onUpdateAmount={amount => updateSplitRow(row.id, { amount })}
+            onUpdateFxLine={patch => updateSplitRow(row.id, patch)}
+            onUpdateSourceExchangeRate={updateSourceExchangeRate}
+            removeLabel={strings.removeSplit}
+            row={row}
+            sourceCurrency={currencyContext.sourceCurrency}
+            sourceExchangeRate={currencyContext.sourceExchangeRate}
+            journalDate={journalDate}
+            workplaceCurrency={currencyContext.baseCurrency}
+          />
+        ))}
+
+        {validationMessage && hasTotal ? (
+          <View style={[styles.error, { backgroundColor: withOpacity(theme.error, Opacity.soft) }]}>
             <AppIcon name={Icon.Error} size={Size.iconXs} color={theme.error} />
             <AppText variant="caption" color="error" weight="semibold" style={styles.errorText}>
               {validationMessage}
             </AppText>
           </View>
-        )}
+        ) : null}
 
-        <TouchableOpacity onPress={addSplitRow} style={styles.addSplitLink} hitSlop={Spacing.sm}>
+        <TouchableOpacity
+          onPress={addSplitRow}
+          style={[styles.addButton, { borderColor: withOpacity(theme.primary, Opacity.medium) }]}
+          accessibilityRole="button"
+          testID="split-add-row"
+        >
+          <AppIcon name={Icon.Plus} size={Size.iconXs} color={theme.primary} />
           <AppText variant="caption" color="primary" weight="semibold">
-            + {str.addSplit}
+            {strings.addSplit}
           </AppText>
         </TouchableOpacity>
+        {canRemove ? (
+          <AppText variant="caption" color="tertiary" style={styles.swipeHint}>
+            {strings.swipeToRemove}
+          </AppText>
+        ) : null}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: Spacing.lg,
+  container: { paddingBottom: Spacing.xxl },
+  sourceSection: {
+    paddingTop: Spacing.md,
   },
-  intro: {
-    marginBottom: Spacing.lg,
+  sectionTitle: {
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.xs,
   },
-  paymentSection: {
-    paddingBottom: Spacing.sm,
+  topRow: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.md,
+  },
+  folderPicker: { flex: 1, minWidth: 0, marginHorizontal: 0 },
+  amountInputContainer: {
+    flex: 1,
+    minWidth: 0,
+    width: 0,
+    alignSelf: 'stretch',
+  },
+  allocationSection: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.md,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
     gap: Spacing.sm,
   },
-  sectionTitle: {
-    flex: 1,
-  },
-  amountHeaderLabel: {
-    width: AMOUNT_COL_WIDTH,
-    textAlign: 'right',
-  },
-  sectionRule: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    marginBottom: Spacing.md,
-  },
-  categoriesSection: {
+  allocationStatus: {
     marginTop: Spacing.xs,
+    marginBottom: Spacing.sm,
   },
-  allocatedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  gridRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 36,
-    paddingVertical: 2,
-  },
-  categoryCellWrap: {
-    flex: 1,
-    minWidth: 0,
-    flexShrink: 1,
-  },
-  deleteCol: {
-    width: DELETE_COL_WIDTH,
-    flexShrink: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
+  actions: { flexDirection: 'row', gap: Spacing.xs },
+  actionDivider: {
+    width: StyleSheet.hairlineWidth,
+    height: Spacing.md,
     alignSelf: 'center',
   },
-  categoryCell: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingRight: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    minHeight: 36,
-  },
-  categoryCellPressed: {
-    opacity: 0.7,
-  },
-  categoryCellInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    maxWidth: '100%',
-    minWidth: 0,
-  },
-  categoryChevron: {
-    marginLeft: Spacing.xs,
-    flexShrink: 0,
-  },
-  amountCell: {
-    width: AMOUNT_COL_WIDTH,
-    flexShrink: 0,
-    alignItems: 'flex-end',
+  actionButton: {
+    minHeight: Size.buttonSm,
+    paddingHorizontal: Spacing.xs,
     justifyContent: 'center',
   },
-  amountInputWrap: {
-    width: AMOUNT_COL_WIDTH,
-    paddingBottom: 2,
-    justifyContent: 'center',
-  },
-  amountInputInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    width: '100%',
-    gap: 2,
-  },
-  totalAmountContainer: {
-    flex: 1,
+  amountInputText: {
     minWidth: 0,
-    minHeight: 26,
-  },
-  splitAmountContainer: {
-    width: '100%',
-    minHeight: 26,
-  },
-  totalAmountInput: {
+    flexShrink: 1,
     fontSize: Typography.sizes.base,
-    fontWeight: '600',
-    height: 28,
+    fontWeight: '700',
     textAlign: 'right',
     paddingHorizontal: 0,
-    width: '100%',
   },
-  totalCurrencySymbol: {
-    fontSize: Typography.sizes.base,
-    lineHeight: 28,
-  },
-  splitAmountInput: {
-    fontSize: Typography.sizes.sm,
-    fontWeight: '500',
-    height: 28,
-    textAlign: 'right',
-    paddingHorizontal: 0,
-    width: '100%',
-  },
-  addSplitLink: {
-    alignSelf: 'flex-start',
-    marginTop: Spacing.md,
-    paddingVertical: Spacing.xs,
-  },
-  errorRow: {
+  error: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: Spacing.xs,
     marginTop: Spacing.sm,
+    padding: Spacing.sm,
+    borderRadius: Shape.radius.r2,
   },
-  errorText: {
-    flex: 1,
+  errorText: { flex: 1 },
+  addButton: {
+    alignSelf: 'center',
+    width: '42%',
+    minHeight: Size.buttonSm,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: Shape.radius.full,
+    marginTop: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+  },
+  swipeHint: {
+    marginTop: Spacing.xs,
+    textAlign: 'center',
   },
 });

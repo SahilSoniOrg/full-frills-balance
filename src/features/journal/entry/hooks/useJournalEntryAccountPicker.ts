@@ -14,6 +14,7 @@ import { AppNavigation } from '@/src/utils/navigation';
 import type { AccountRole } from '@/src/types/domainJournal';
 import type { useBulkJournalEditor } from './useBulkJournalEditor';
 import { registerAccountCreationReturn } from '@/src/utils/accountCreationReturn';
+import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type SplitRowPick = { id: string; accountId?: AccountId };
@@ -138,7 +139,7 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
   );
 
   const navigateToAccountForm = useCallback(
-    (intent: CreateAccountIntent, lineId?: string) => {
+    (intent: CreateAccountIntent, lineId?: string, returnToken?: string) => {
       let inferredType: AccountType | undefined;
       const activeLine = editor.lines.find(l => l.id === lineId);
 
@@ -149,6 +150,7 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
       AppNavigation.toAccountForm(undefined, {
         name: intent.suggestedName,
         type: intent.type || inferredType,
+        returnToken,
       });
     },
     [activeMode, editor.lines, editor.transactionType],
@@ -157,17 +159,28 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
   const onCreateAccountRequest = useCallback(
     (intent: CreateAccountIntent) => {
       const lineId = activeLineId ?? undefined;
+      const returnToken = lineId
+        ? registerAccountCreationReturn(accountId => {
+            applyAccountToActiveLine(lineId, accountId);
+          })
+        : undefined;
       onCloseAccountPicker();
-      navigateToAccountForm(intent, lineId);
+      navigateToAccountForm(intent, lineId, returnToken);
     },
-    [activeLineId, navigateToAccountForm, onCloseAccountPicker],
+    [activeLineId, applyAccountToActiveLine, navigateToAccountForm, onCloseAccountPicker],
   );
 
   const onCreateAccountRequestForRole = useCallback(
     (role: AccountRole, intent: CreateAccountIntent) => {
-      navigateToAccountForm(intent, editor.getLineIdByRole(role));
+      const lineId = editor.getLineIdByRole(role);
+      const returnToken = lineId
+        ? registerAccountCreationReturn(accountId => {
+            applyAccountToActiveLine(lineId, accountId);
+          })
+        : undefined;
+      navigateToAccountForm(intent, lineId, returnToken);
     },
-    [editor, navigateToAccountForm],
+    [applyAccountToActiveLine, editor, navigateToAccountForm],
   );
 
   const onCreateAccountRequestForBatchRow = useCallback(
@@ -191,6 +204,29 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
       });
     },
     [batchEditor],
+  );
+
+  const onCreateAccountRequestForSplitRow = useCallback(
+    (rowId: string, role: AccountRole, intent: CreateAccountIntent) => {
+      const row = splitRows.find(item => item.id === rowId);
+      // The source account belongs to the split entry, not to an allocation
+      // row. It must remain creatable even when the last allocation row was
+      // removed or an older draft loads without one.
+      if (role !== 'source' && !row) return;
+
+      const lineId = role === 'source' ? SPLIT_SOURCE_LINE_ID : rowId;
+      const side = role === 'source' ? TransactionType.CREDIT : TransactionType.DEBIT;
+      const returnToken = registerAccountCreationReturn(accountId => {
+        applyAccountToActiveLine(lineId, accountId);
+      });
+
+      AppNavigation.toAccountForm(undefined, {
+        name: intent.suggestedName,
+        type: intent.type || getInferredAccountType(editor.transactionType, side),
+        returnToken,
+      });
+    },
+    [applyAccountToActiveLine, editor.transactionType, splitRows],
   );
 
   const selectableAccounts = useMemo(
@@ -238,6 +274,7 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
     onCreateAccountRequest,
     onCreateAccountRequestForRole,
     onCreateAccountRequestForBatchRow,
+    onCreateAccountRequestForSplitRow,
     selectableAccounts,
     selectedAccountId,
     accountPickerTitle,

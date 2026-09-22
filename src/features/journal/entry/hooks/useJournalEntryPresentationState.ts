@@ -12,8 +12,11 @@ export function useJournalEntryPresentationState(vm: JournalEntryShell) {
   const { editor, loadSuggestions, onSelectSuggestion: applySuggestion } = vm;
   const isSubmitting = vm.editor.isSubmitting;
   const isBatchMode = vm.activeMode === 'batch';
+  const isAllocationPlanValid =
+    vm.validationIssues.length === 0 ||
+    vm.validationIssues.every(issue => issue.code === 'missing_description');
   const isPlanValid =
-    vm.activeMode === 'allocation' ? vm.splitValidation.valid : vm.postingPlanValidation.valid;
+    vm.activeMode === 'allocation' ? isAllocationPlanValid : vm.postingPlanValidation.valid;
   const submitLabel = resolveJournalEntrySubmitLabel({
     activeMode: vm.activeMode,
     simpleType: vm.editor.transactionType,

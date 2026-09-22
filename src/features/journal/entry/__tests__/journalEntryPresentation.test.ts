@@ -140,6 +140,16 @@ describe('journalEntryPresentation', () => {
     ).toBe(true);
   });
 
+  it('keeps Split disabled when its resolved posting plan has an issue', () => {
+    expect(
+      isJournalEntrySubmitDisabled({
+        activeMode: 'allocation',
+        isPlanValid: false,
+        isSplitValid: true,
+      }),
+    ).toBe(true);
+  });
+
   describe('resolveJournalEntryValidationHint', () => {
     it('maps the first actionable unresolved intent issue', () => {
       expect(
@@ -203,6 +213,18 @@ describe('journalEntryPresentation', () => {
           splitValidation: { valid: true },
         }),
       ).toBeNull();
+      expect(
+        resolveJournalEntryValidationHint({
+          activeMode: 'allocation',
+          validationIssues: [
+            {
+              code: 'missing_exchange_rate',
+              message: 'A foreign-currency line needs an exchange rate',
+            },
+          ],
+          splitValidation: { valid: true },
+        }),
+      ).toBe('Enter an exchange rate for the foreign-currency line.');
       expect(
         resolveJournalEntryValidationHint({
           activeMode: 'batch',

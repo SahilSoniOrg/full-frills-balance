@@ -13,6 +13,7 @@ export interface JournalEntryModePickerModalProps {
   visible: boolean;
   activeMode: JournalEntryScreenMode;
   isSimpleDisabled?: boolean;
+  isSplitDisabled?: boolean;
   onSelectMode: (mode: JournalEntryScreenMode) => void;
   onHelpMode: (mode: JournalEntryScreenMode) => void;
   onClose: () => void;
@@ -22,6 +23,7 @@ export const JournalEntryModePickerModal = React.memo(function JournalEntryModeP
   visible,
   activeMode,
   isSimpleDisabled = false,
+  isSplitDisabled = false,
   onSelectMode,
   onHelpMode,
   onClose,
@@ -46,7 +48,9 @@ export const JournalEntryModePickerModal = React.memo(function JournalEntryModeP
         </AppText>
         {JOURNAL_ENTRY_MODE_OPTIONS.map(opt => {
           const isSelected = activeMode === opt.id;
-          const isDisabled = opt.id === 'basic' && isSimpleDisabled;
+          const isDisabled =
+            (opt.id === 'basic' && isSimpleDisabled) ||
+            (opt.id === 'allocation' && isSplitDisabled);
 
           return (
             <View
@@ -142,7 +146,9 @@ export const JournalEntryModePickerModal = React.memo(function JournalEntryModeP
                     numberOfLines={2}
                   >
                     {isDisabled
-                      ? 'This entry already has more than two lines, so Advanced is required'
+                      ? opt.id === 'allocation'
+                        ? 'This entry has multiple source lines, so Advanced is required'
+                        : 'This entry already has more than two lines, so Advanced is required'
                       : opt.subtitle}
                   </AppText>
                   {!isDisabled && (

@@ -158,3 +158,8 @@ export function countSubstantiveEditorLines(lines: JournalEntryLine[]): number {
 export function isSimpleModeDisabledByLines(lines: JournalEntryLine[]): boolean {
   return countSubstantiveEditorLines(lines) > 2;
 }
+
+/** Split mode can only represent one source credit with one or more debit allocations. */
+export function isSplitModeDisabledByLines(lines: JournalEntryLine[]): boolean {
+  return lines.filter(line => line.transactionType === TransactionType.CREDIT).length !== 1;
+}

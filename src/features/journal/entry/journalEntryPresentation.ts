@@ -164,7 +164,7 @@ export function isJournalEntrySubmitDisabled(input: {
   isSplitValid?: boolean;
 }): boolean {
   if (input.activeMode === 'allocation') {
-    return !input.isSplitValid;
+    return !input.isSplitValid || !input.isPlanValid;
   }
   if (input.activeMode === 'basic') {
     return !input.isPlanValid;
@@ -239,9 +239,9 @@ export function resolveJournalEntryValidationHint(input: {
   if (input.activeMode === 'batch') return null;
 
   if (input.activeMode === 'allocation') {
-    return input.splitValidation?.valid === false
-      ? resolveSplitValidationHint(input.splitValidation.error)
-      : null;
+    if (input.splitValidation?.valid === false) {
+      return resolveSplitValidationHint(input.splitValidation.error);
+    }
   }
 
   for (const issue of input.validationIssues) {

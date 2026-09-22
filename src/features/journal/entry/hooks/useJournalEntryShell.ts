@@ -71,9 +71,15 @@ export interface JournalEntryShell {
   selectableAccounts: AccountFields[];
   accountPickerTitle: string;
   isSimpleModeDisabled: boolean;
+  isSplitModeDisabled: boolean;
   onCreateAccountRequest: (intent: CreateAccountIntent) => void;
   onCreateAccountRequestForRole: (role: AccountRole, intent: CreateAccountIntent) => void;
   onCreateAccountRequestForBatchRow: (
+    rowId: string,
+    role: AccountRole,
+    intent: CreateAccountIntent,
+  ) => void;
+  onCreateAccountRequestForSplitRow: (
     rowId: string,
     role: AccountRole,
     intent: CreateAccountIntent,
@@ -154,10 +160,8 @@ export function useJournalEntryShell(): JournalEntryShell {
   });
   const { editor, splitState } = session;
 
-  const { activeMode, onToggleMode, isSimpleModeDisabled } = useJournalEntryModeState(
-    editor,
-    seed.editorMode,
-  );
+  const { activeMode, onToggleMode, isSimpleModeDisabled, isSplitModeDisabled } =
+    useJournalEntryModeState(editor, seed.editorMode);
 
   const { batchEditor, batchSummary, onContinueBatch, onDoneBatch } = useBatchJournalSession(
     workplaceId,
@@ -229,6 +233,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     onCreateAccountRequest,
     onCreateAccountRequestForRole,
     onCreateAccountRequestForBatchRow,
+    onCreateAccountRequestForSplitRow,
     selectableAccounts,
     selectedAccountId,
     accountPickerTitle,
@@ -275,9 +280,11 @@ export function useJournalEntryShell(): JournalEntryShell {
     selectableAccounts,
     accountPickerTitle,
     isSimpleModeDisabled,
+    isSplitModeDisabled,
     onCreateAccountRequest,
     onCreateAccountRequestForRole,
     onCreateAccountRequestForBatchRow,
+    onCreateAccountRequestForSplitRow,
     suggestions,
     suggestionState,
     onSelectSuggestion,
