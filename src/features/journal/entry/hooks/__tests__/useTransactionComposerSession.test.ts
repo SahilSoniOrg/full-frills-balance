@@ -63,6 +63,14 @@ describe('useTransactionComposerSession', () => {
     expect(result.current.postingPlan!.lines).toHaveLength(2);
     expect(result.current.postingPlan!.currencyCode).toBe('USD');
     expect(result.current.postingPlanValidation).toHaveProperty('valid');
+    expect(result.current.splitState).toMatchObject({
+      sourceAccountId: asAccountId('cash'),
+      totalAmount: '12.50',
+      sourceCurrency: 'USD',
+      precision: 2,
+      totals: { total: 12.5, allocated: 12.5, remaining: 0 },
+      validation: { valid: true },
+    });
   });
 
   it('allows simple journals with an empty description by using the default name', () => {

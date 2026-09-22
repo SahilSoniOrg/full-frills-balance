@@ -4,11 +4,10 @@ import type {
   PostingPlan,
   PostingPlanValidationResult,
 } from '@/src/types/domainTransaction';
-import { TransactionType } from '@/src/types/enums';
 import { EMPTY_ACCOUNT_ID, type WorkplaceId } from '@/src/types/ids';
 import { AppConfig } from '@/src/constants';
 import { sanitizeAmount } from '@/src/utils/validation';
-import { validateSplitState } from '@/src/services/journal/splitJournalHelpers';
+import { useSplitDraftProjection } from '@/src/features/journal/entry/modes/split/splitDraftProjection';
 import { useCallback, useMemo } from 'react';
 import {
   resolveTransactionIntent,
@@ -32,29 +31,12 @@ export function useTransactionComposerSession(
 ) {
   const { accounts, currencyCode, ...editorOptions } = options;
   const editor = useJournalEditor(workplaceId, editorOptions);
-
-  // Keep the projections stable while unrelated shell state changes (for example,
-  // suggestion visibility or account-picker state). Previously `filter` allocated
-  // a new array per render and invalidated every downstream derivation.
-  const { sourceLine, destinationLines } = useMemo(
-    () => ({
-      sourceLine: editor.lines.find(line => line.transactionType === TransactionType.CREDIT),
-      destinationLines: editor.lines.filter(line => line.transactionType === TransactionType.DEBIT),
-    }),
-    [editor.lines],
-  );
-  const splitState = useMemo(
-    () => ({
-      sourceAccountId: sourceLine?.accountId ?? EMPTY_ACCOUNT_ID,
-      totalAmount: sourceLine?.amount ?? '',
-      splits: destinationLines.map(line => ({
-        id: line.id,
-        accountId: line.accountId,
-        amount: line.amount,
-      })),
-    }),
-    [destinationLines, sourceLine],
-  );
+  const splitState = useSplitDraftProjection({
+    lines: editor.lines,
+    accounts,
+    workplaceCurrency: currencyCode,
+  });
+  const { sourceLine, destinationLines } = splitState;
 
   const intent = useMemo<TransactionIntent>(() => {
     const allocationTotal = destinationLines.reduce(
@@ -130,15 +112,7 @@ export function useTransactionComposerSession(
     ? postingPlanValidation.issues
     : intentResolution.issues;
 
-  const splitValidation = useMemo(
-    () =>
-      validateSplitState({
-        sourceAccountId: splitState.sourceAccountId,
-        totalAmount: splitState.totalAmount,
-        splits: splitState.splits,
-      }),
-    [splitState],
-  );
+  const splitValidation = splitState.validation;
 
   const submit = useCallback(
     async (mode: 'editor' | 'allocation') => {
@@ -149,7 +123,13 @@ export function useTransactionComposerSession(
       const description =
         editor.description.trim() ||
         (mode === 'allocation'
-          ? AppConfig.strings.transactionFlow.splitEntry.defaultDescription
+          ? editor.transactionType === 'expense'
+            ? AppConfig.strings.transactionFlow.splitEntry.defaultDescription
+            : buildSimpleDefaultDescription(
+                editor.transactionType,
+                accounts.find(account => account.id === sourceLine?.accountId),
+                accounts.find(account => account.id === destinationLines[0]?.accountId),
+              )
           : editor.isGuidedMode
             ? buildSimpleDefaultDescription(
                 editor.transactionType,
