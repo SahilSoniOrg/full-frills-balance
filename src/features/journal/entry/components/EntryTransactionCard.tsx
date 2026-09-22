@@ -1,6 +1,5 @@
-import { AppText } from '@/src/components/core';
-import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
-import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
+import { CompactAmountInput } from '@/src/components/forms/CompactAmountInput';
+import { Spacing } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { TabType } from '@/src/types/domainJournal';
 import type { StyleProp, ViewStyle } from 'react-native';
@@ -70,7 +69,7 @@ export function EntryTransactionCard({
       {amount.variant === 'hero' ? (
         <HeroAmountInput {...amount} />
       ) : (
-        <CompactAmountInput {...amount} typeSwitcher={typeSwitcher} />
+        <CompactAmountMetaInput {...amount} typeSwitcher={typeSwitcher} />
       )}
       <ExchangeRateCard
         {...exchangeRate}
@@ -111,42 +110,23 @@ function HeroAmountInput({
   );
 }
 
-function CompactAmountInput({
+function CompactAmountMetaInput({
   amount,
   currency,
   onChangeText,
   testID,
   typeSwitcher,
 }: CompactAmountProps & { typeSwitcher?: EntryTransactionCardProps['typeSwitcher'] }) {
-  const { theme } = useTheme();
-
   return (
     <View style={styles.amountMetaRow}>
       {typeSwitcher && <TransactionTypeSegmentedControl {...typeSwitcher} variant="compact" />}
-      <View
-        style={[
-          styles.amountWrapper,
-          { backgroundColor: theme.surfaceSecondary, borderColor: theme.border },
-        ]}
-      >
-        <AppText
-          variant="caption"
-          weight="bold"
-          style={[styles.currencyPrefix, { color: theme.textTertiary }]}
-        >
-          {currency}
-        </AppText>
-        <CalculatorAmountInput
-          value={amount}
-          onChangeText={onChangeText}
-          placeholder="0.00"
-          currencySymbol={currency}
-          variant="minimal"
-          containerStyle={styles.inputContainer}
-          inputStyle={styles.amountInput}
-          testID={testID}
-        />
-      </View>
+      <CompactAmountInput
+        value={amount}
+        onChangeText={onChangeText}
+        currency={currency}
+        placeholder="0.00"
+        testID={testID}
+      />
     </View>
   );
 }
@@ -167,29 +147,5 @@ const styles = StyleSheet.create({
   },
   sectionSpacing: {
     marginBottom: Spacing.sm,
-  },
-  amountWrapper: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 38,
-    borderRadius: Shape.radius.r2,
-    borderWidth: 1,
-    paddingLeft: Spacing.sm,
-  },
-  currencyPrefix: {
-    fontSize: Typography.sizes.xs,
-    marginRight: Spacing.xs,
-  },
-  inputContainer: {
-    flex: 1,
-    minHeight: 0,
-  },
-  amountInput: {
-    fontSize: Typography.sizes.base,
-    height: 36,
-    textAlign: 'right',
-    flex: 1,
-    paddingRight: Spacing.sm,
   },
 });

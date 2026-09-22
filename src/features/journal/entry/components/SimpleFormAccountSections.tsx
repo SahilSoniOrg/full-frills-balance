@@ -10,14 +10,14 @@ import { hasArchivedAccountsInList, pinnedArchivedAccountIds } from '@/src/utils
 import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { withOpacity } from '@/src/utils/color-math';
 import { MotiView } from 'moti';
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Keyboard, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 import { routeAccountSelectorStyles as styles } from './SimpleFormAccountSections.styles';
 import {
-  RouteAccountDropdown,
-  RouteAccountNode,
+  AccountPickerDropdown,
+  AccountPickerNode,
   RouteConnector,
 } from './SimpleFormAccountSections.parts';
 import { FOLDER_STROKE_WIDTH, useFolderLayoutAnimation } from './useFolderLayoutAnimation';
@@ -51,6 +51,14 @@ export interface SimpleFormAccountSectionsProps {
   // Middle Connector / Swap
   type?: TabType;
   onSwapAccounts?: () => void;
+  showConnectorArrow?: boolean;
+  showConnectorSwap?: boolean;
+
+  // Optional replacements for either side of the route.
+  leftSlot?: ReactNode;
+  rightSlot?: ReactNode;
+  leftRole?: AccountRole;
+  rightRole?: AccountRole;
 
   // Archive & Creation
   allAccounts?: AccountFields[];
@@ -78,6 +86,12 @@ export const SimpleFormAccountSections = React.memo(function SimpleFormAccountSe
   destEmptyPrompt,
   type = 'expense',
   onSwapAccounts,
+  showConnectorArrow = true,
+  showConnectorSwap,
+  leftSlot,
+  rightSlot,
+  leftRole = 'source',
+  rightRole = 'destination',
   allAccounts,
   onCreateAccountRequest,
   displayMode = 'standard',
@@ -94,6 +108,8 @@ export const SimpleFormAccountSections = React.memo(function SimpleFormAccountSe
   }, [expansionPosition]);
 
   const activeSide = expansionPosition ?? lastActiveSideRef.current;
+  const shouldShowConnectorSwap =
+    showConnectorSwap ?? (type === 'transfer' && Boolean(onSwapAccounts));
   const {
     animatedSvgStyle,
     containerWidth,
@@ -191,13 +207,13 @@ export const SimpleFormAccountSections = React.memo(function SimpleFormAccountSe
 
   const dropdownBody = (
     <View collapsable={false} onLayout={onDropdownLayout} style={dropdownMeasureStyle}>
-      <RouteAccountDropdown
-        activeAccountId={activeAccountId}
-        activeEmptyPrompt={activeEmptyPrompt}
-        activeLabel={activeLabel}
-        activeRole={activeSide === 'left' ? 'source' : 'destination'}
+      <AccountPickerDropdown
+        selectedAccountId={activeAccountId}
+        emptyPrompt={activeEmptyPrompt}
+        label={activeLabel}
+        role={activeSide === 'left' ? leftRole : rightRole}
         collapsedSections={collapsedSections}
-        hasActiveSelectedAccount={hasActiveSelectedAccount}
+        hasSelectedAccount={hasActiveSelectedAccount}
         hasArchivedAccounts={hasArchivedAccounts}
         isExpanded={isExpanded}
         onClear={handleClearActiveAccount}
@@ -230,39 +246,48 @@ export const SimpleFormAccountSections = React.memo(function SimpleFormAccountSe
       </Animated.View>
 
       <View style={styles.topRow} onLayout={onTopRowLayout}>
-        <RouteAccountNode
-          account={sourceAccount}
-          emptyPrompt={
-            sourceEmptyPrompt ?? AppConfig.strings.transactionFlow.simpleEntry.chooseAccount
-          }
-          isExpanded={isLeftExpanded}
-          label={sourceLabel}
-          showLabel={showNodeLabels}
-          onLayout={onLeftTabWrapperLayout}
-          onPress={() => {
-            Keyboard.dismiss();
-            onToggleExpansion('left');
-          }}
-          testID={`${testIDPrefix}-source-node`}
+        {leftSlot ?? (
+          <AccountPickerNode
+            account={sourceAccount}
+            emptyPrompt={
+              sourceEmptyPrompt ?? AppConfig.strings.transactionFlow.simpleEntry.chooseAccount
+            }
+            isExpanded={isLeftExpanded}
+            label={sourceLabel}
+            showLabel={showNodeLabels}
+            onLayout={onLeftTabWrapperLayout}
+            onPress={() => {
+              Keyboard.dismiss();
+              onToggleExpansion('left');
+            }}
+            testID={`${testIDPrefix}-source-node`}
+          />
+        )}
+        <RouteConnector
+          compact={displayMode === 'compact'}
+          showArrow={showConnectorArrow}
+          showSwap={shouldShowConnectorSwap}
+          onSwapAccounts={onSwapAccounts}
         />
-        <RouteConnector type={type} onSwapAccounts={onSwapAccounts} />
-        <RouteAccountNode
-          account={destAccount}
-          emptyPrompt={
-            destEmptyPrompt ??
-            (type === 'expense'
-              ? AppConfig.strings.transactionFlow.simpleEntry.chooseCategory
-              : AppConfig.strings.transactionFlow.simpleEntry.chooseAccount)
-          }
-          isExpanded={isRightExpanded}
-          label={destLabel}
-          showLabel={showNodeLabels}
-          onPress={() => {
-            Keyboard.dismiss();
-            onToggleExpansion('right');
-          }}
-          testID={`${testIDPrefix}-destination-node`}
-        />
+        {rightSlot ?? (
+          <AccountPickerNode
+            account={destAccount}
+            emptyPrompt={
+              destEmptyPrompt ??
+              (type === 'expense'
+                ? AppConfig.strings.transactionFlow.simpleEntry.chooseCategory
+                : AppConfig.strings.transactionFlow.simpleEntry.chooseAccount)
+            }
+            isExpanded={isRightExpanded}
+            label={destLabel}
+            showLabel={showNodeLabels}
+            onPress={() => {
+              Keyboard.dismiss();
+              onToggleExpansion('right');
+            }}
+            testID={`${testIDPrefix}-destination-node`}
+          />
+        )}
       </View>
 
       <View

@@ -10,7 +10,7 @@ import { AppConfig } from '@/src/constants';
 import { Opacity, Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
-import type { AccountRole, TabType } from '@/src/types/domainJournal';
+import type { AccountRole } from '@/src/types/domainJournal';
 import { EMPTY_ACCOUNT_ID, type AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { getSectionColor, resolveAccountAppearance } from '@/src/utils/accountCategory';
@@ -20,7 +20,7 @@ import { useMemo } from 'react';
 import { type LayoutChangeEvent, TouchableOpacity, View } from 'react-native';
 import { routeAccountSelectorStyles as styles } from './SimpleFormAccountSections.styles';
 
-interface RouteAccountNodeProps {
+export interface AccountPickerNodeProps {
   account?: AccountFields;
   emptyPrompt: string;
   isExpanded: boolean;
@@ -31,7 +31,7 @@ interface RouteAccountNodeProps {
   testID?: string;
 }
 
-export function RouteAccountNode({
+export function AccountPickerNode({
   account,
   emptyPrompt,
   isExpanded,
@@ -40,7 +40,7 @@ export function RouteAccountNode({
   onLayout,
   onPress,
   testID,
-}: RouteAccountNodeProps) {
+}: AccountPickerNodeProps) {
   const { theme } = useTheme();
   const reduceMotion = useReducedMotion();
   const appearance = useMemo(
@@ -60,6 +60,7 @@ export function RouteAccountNode({
         activeOpacity={Opacity.medium}
         style={[
           styles.nodeButton,
+          !showLabel && styles.compactNodeButton,
           isExpanded
             ? [
                 styles.activeTabButton,
@@ -80,11 +81,24 @@ export function RouteAccountNode({
         testID={testID}
       >
         {showLabel && (
-          <AppText variant="caption" weight="bold" color="tertiary" style={styles.nodeRoleLabel}>
-            {label}
-          </AppText>
+          <View style={styles.nodeHeaderRow}>
+            <AppText variant="caption" weight="bold" color="tertiary" style={styles.nodeRoleLabel}>
+              {label}
+            </AppText>
+            <MotiView
+              animate={{ rotate: isExpanded ? '180deg' : '0deg' }}
+              transition={reduceMotion ? { duration: 0 } : { type: 'timing', duration: 200 }}
+              testID="account-node-chevron"
+            >
+              <AppIcon
+                name={Icon.ChevronDown}
+                size={Size.xxs}
+                color={isExpanded ? appearance.accentColor : theme.textTertiary}
+              />
+            </MotiView>
+          </View>
         )}
-        <View style={styles.nodeAccountRow}>
+        <View style={[styles.nodeAccountRow, !showLabel && styles.compactNodeAccountRow]}>
           {hasAccount ? (
             <>
               <AccountCategoryPill color={appearance.categoryColor} size="sm" />
@@ -107,16 +121,6 @@ export function RouteAccountNode({
               {emptyPrompt}
             </AppText>
           )}
-          <MotiView
-            animate={{ rotate: isExpanded ? '180deg' : '0deg' }}
-            transition={reduceMotion ? { duration: 0 } : { type: 'timing', duration: 200 }}
-          >
-            <AppIcon
-              name={Icon.ChevronDown}
-              size={Size.xxs}
-              color={isExpanded ? appearance.accentColor : theme.textTertiary}
-            />
-          </MotiView>
         </View>
       </TouchableOpacity>
     </View>
@@ -124,19 +128,37 @@ export function RouteAccountNode({
 }
 
 interface RouteConnectorProps {
+  compact?: boolean;
   onSwapAccounts?: () => void;
-  type: TabType;
+  showArrow?: boolean;
+  showSwap?: boolean;
 }
 
-export function RouteConnector({ onSwapAccounts, type }: RouteConnectorProps) {
+export function RouteConnector({
+  compact = false,
+  onSwapAccounts,
+  showArrow = true,
+  showSwap = false,
+}: RouteConnectorProps) {
   const { theme } = useTheme();
+  const showSwapButton = showSwap && Boolean(onSwapAccounts);
+
+  if (!showArrow && !showSwapButton) return null;
 
   return (
-    <View style={styles.connectorContainer} testID="route-flow-connector">
-      <View style={styles.connectorArrow} testID="route-flow-arrow">
-        <AppIcon name={Icon.ArrowRight} size={Size.xxs} color={theme.textTertiary} />
-      </View>
-      {type === 'transfer' && onSwapAccounts && (
+    <View
+      style={[
+        styles.connectorContainer,
+        compact && !showSwapButton && styles.compactConnectorContainer,
+      ]}
+      testID="route-flow-connector"
+    >
+      {showArrow && (
+        <View style={styles.connectorArrow} testID="route-flow-arrow">
+          <AppIcon name={Icon.ArrowRight} size={Size.xxs} color={theme.textTertiary} />
+        </View>
+      )}
+      {showSwapButton && onSwapAccounts && (
         <TouchableOpacity
           onPress={onSwapAccounts}
           style={styles.connectorSwapTouchTarget}
@@ -163,34 +185,34 @@ export function RouteConnector({ onSwapAccounts, type }: RouteConnectorProps) {
   );
 }
 
-type AccountSections = ReturnType<typeof useAccountPickerList>['sections'];
+export type AccountPickerSections = ReturnType<typeof useAccountPickerList>['sections'];
 
-interface RouteAccountDropdownProps {
-  activeAccountId?: AccountId;
-  activeEmptyPrompt: string;
-  activeLabel: string;
-  activeRole: AccountRole;
+export interface AccountPickerDropdownProps {
+  selectedAccountId?: AccountId;
+  emptyPrompt: string;
+  label: string;
+  role: AccountRole;
   collapsedSections: Set<string>;
-  hasActiveSelectedAccount: boolean;
+  hasSelectedAccount: boolean;
   hasArchivedAccounts: boolean;
   isExpanded: boolean;
   onClear: () => void;
   onCreateAccountRequest?: (role: AccountRole, intent: CreateAccountIntent) => void;
   onSelect: (id: AccountId) => void;
-  sections: AccountSections;
+  sections: AccountPickerSections;
   setShowArchived: (show: boolean) => void;
   showArchived: boolean;
   testID: string;
   toggleSection: (key: string) => void;
 }
 
-export function RouteAccountDropdown({
-  activeAccountId,
-  activeEmptyPrompt,
-  activeLabel,
-  activeRole,
+export function AccountPickerDropdown({
+  selectedAccountId,
+  emptyPrompt,
+  label,
+  role,
   collapsedSections,
-  hasActiveSelectedAccount,
+  hasSelectedAccount,
   hasArchivedAccounts,
   isExpanded,
   onClear,
@@ -201,7 +223,7 @@ export function RouteAccountDropdown({
   showArchived,
   testID,
   toggleSection,
-}: RouteAccountDropdownProps) {
+}: AccountPickerDropdownProps) {
   const { theme } = useTheme();
   const showArchiveToggle = hasArchivedAccounts || showArchived;
 
@@ -220,10 +242,10 @@ export function RouteAccountDropdown({
         ]}
       >
         <AppText variant="caption" weight="bold" color="tertiary" style={styles.utilityTitle}>
-          {activeLabel.toUpperCase()}
+          {label.toUpperCase()}
         </AppText>
         <View style={styles.utilityActions}>
-          {hasActiveSelectedAccount && (
+          {hasSelectedAccount && (
             <TouchableOpacity
               onPress={onClear}
               style={[
@@ -292,7 +314,7 @@ export function RouteAccountDropdown({
           )}
           {onCreateAccountRequest && (
             <TouchableOpacity
-              onPress={() => onCreateAccountRequest(activeRole, { suggestedName: '' })}
+              onPress={() => onCreateAccountRequest(role, { suggestedName: '' })}
               style={[
                 styles.headerPlusButton,
                 {
@@ -314,7 +336,7 @@ export function RouteAccountDropdown({
       {sections.length === 0 ? (
         <View style={[styles.emptyContainer, { borderColor: theme.border }]}>
           <AppText variant="body" color="secondary">
-            {activeEmptyPrompt}
+            {emptyPrompt}
           </AppText>
         </View>
       ) : (
@@ -383,8 +405,8 @@ export function RouteAccountDropdown({
                       key={account.id}
                       item={account}
                       isSelected={
-                        Boolean(activeAccountId && activeAccountId !== EMPTY_ACCOUNT_ID) &&
-                        activeAccountId === account.id
+                        Boolean(selectedAccountId && selectedAccountId !== EMPTY_ACCOUNT_ID) &&
+                        selectedAccountId === account.id
                       }
                       onPress={() => onSelect(account.id)}
                     />
@@ -398,3 +420,9 @@ export function RouteAccountDropdown({
     </View>
   );
 }
+
+// Compatibility aliases for existing simple-route callers.
+export const RouteAccountNode = AccountPickerNode;
+export type RouteAccountNodeProps = AccountPickerNodeProps;
+export const RouteAccountDropdown = AccountPickerDropdown;
+export type RouteAccountDropdownProps = AccountPickerDropdownProps;

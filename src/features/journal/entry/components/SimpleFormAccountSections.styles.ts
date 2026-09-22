@@ -38,13 +38,18 @@ export const routeAccountSelectorStyles = StyleSheet.create({
     width: '100%',
     zIndex: 2,
   },
-  nodeWrapper: { flex: 1, minWidth: 0 },
+  nodeWrapper: { flex: 1, minWidth: 0, width: 0 },
   nodeButton: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     minHeight: Size.buttonLg,
     justifyContent: 'center',
     gap: Spacing.sm,
+  },
+  compactNodeButton: {
+    paddingVertical: Spacing.xs,
+    minHeight: 38,
+    gap: Spacing.xs,
   },
   standardNodeButton: { borderRadius: Shape.radius.lg, borderWidth: 1 },
   activeTabButton: {
@@ -56,8 +61,16 @@ export const routeAccountSelectorStyles = StyleSheet.create({
     borderColor: 'transparent',
   },
   nodeRoleLabel: {
+    flexShrink: 1,
     fontSize: Typography.sizes.xs,
     letterSpacing: Typography.letterSpacing.wide,
+  },
+  nodeHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.sm,
+    minWidth: 0,
   },
   nodeAccountRow: {
     flexDirection: 'row',
@@ -65,6 +78,7 @@ export const routeAccountSelectorStyles = StyleSheet.create({
     gap: Spacing.xs,
     minWidth: 0,
   },
+  compactNodeAccountRow: { alignItems: 'center' },
   nodeAccountText: {
     flex: 1,
     minWidth: 0,
@@ -85,6 +99,11 @@ export const routeAccountSelectorStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: Spacing.xs,
+  },
+  compactConnectorContainer: {
+    width: Size.xs,
+    minHeight: 38,
+    gap: Spacing.none,
   },
   connectorArrow: {
     width: Size.xs,

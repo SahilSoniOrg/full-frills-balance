@@ -16,6 +16,7 @@ export interface SimpleFormAmountInputProps {
   precision?: number;
   autoOpenCalculator?: boolean;
   onCalculatorDone?: () => void;
+  testID?: string;
 }
 
 export const SimpleFormAmountInput = React.memo(function SimpleFormAmountInput({
@@ -26,6 +27,7 @@ export const SimpleFormAmountInput = React.memo(function SimpleFormAmountInput({
   precision = 2,
   autoOpenCalculator = false,
   onCalculatorDone,
+  testID = 'hero-amount-input',
 }: SimpleFormAmountInputProps) {
   const { theme, fonts } = useTheme();
   const inputRef = useRef<TextInput>(null);
@@ -148,7 +150,7 @@ export const SimpleFormAmountInput = React.memo(function SimpleFormAmountInput({
                 height: inputHeight,
               },
             ]}
-            testID="hero-amount-input"
+            testID={testID}
           />
 
           {/* Action Accessories */}

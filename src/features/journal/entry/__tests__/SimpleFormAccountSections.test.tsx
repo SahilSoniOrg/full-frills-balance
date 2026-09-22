@@ -1,4 +1,5 @@
 import { SimpleFormAccountSections } from '../components/SimpleFormAccountSections';
+import { RouteAccountNode } from '../components/SimpleFormAccountSections.parts';
 import { ArchiveVisibilityScopeProvider } from '@/src/contexts/ArchiveVisibilityScope';
 import { AppConfig } from '@/src/constants';
 import { AccountType } from '@/src/types/enums';
@@ -31,6 +32,41 @@ const mockAccounts: AccountFields[] = [
 ];
 
 describe('SimpleFormAccountSections unselection and clear', () => {
+  it('keeps the chevron in the standard header and removes it in compact mode', () => {
+    const view = renderWithScope(
+      <RouteAccountNode
+        account={mockAccounts[0]}
+        emptyPrompt="Choose account"
+        isExpanded={false}
+        label="Paid from"
+        onPress={jest.fn()}
+        testID="standard-account-node"
+      />,
+    );
+
+    expect(
+      within(screen.getByTestId('standard-account-node')).getByTestId('account-node-chevron'),
+    ).toBeTruthy();
+
+    view.rerender(
+      <ArchiveVisibilityScopeProvider>
+        <RouteAccountNode
+          account={mockAccounts[0]}
+          emptyPrompt="Choose account"
+          isExpanded={false}
+          label="Paid from"
+          showLabel={false}
+          onPress={jest.fn()}
+          testID="compact-account-node"
+        />
+      </ArchiveVisibilityScopeProvider>,
+    );
+
+    expect(
+      within(screen.getByTestId('compact-account-node')).queryByTestId('account-node-chevron'),
+    ).toBeNull();
+  });
+
   it('toggles selection to EMPTY_ACCOUNT_ID when tapping the already-selected pill', () => {
     const onSelectSource = jest.fn();
     const onSelectDestination = jest.fn();

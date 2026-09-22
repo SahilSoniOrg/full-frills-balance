@@ -1,6 +1,6 @@
 import { AppIcon } from './AppIcon';
 import { AppText } from './AppText';
-import { Size, Spacing } from '@/src/constants';
+import { Size, Spacing, type RadiusKey } from '@/src/constants';
 import { Box } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Icon } from '@/src/types/domainIcons';
@@ -21,10 +21,12 @@ export function SwipeToRemove({
   label,
   onRemove,
   children,
+  borderRadius = 'r2',
 }: {
   readonly label: string;
   readonly onRemove: () => void;
   readonly children: ReactNode;
+  readonly borderRadius?: RadiusKey | number;
 }) {
   const { theme } = useTheme();
   const translateX = useSharedValue(0);
@@ -91,7 +93,7 @@ export function SwipeToRemove({
 
   return (
     <Animated.View onLayout={onLayout} style={wrapperStyle}>
-      <Box overflow="hidden" borderRadius="r2">
+      <Box overflow="hidden" borderRadius={borderRadius}>
         <Animated.View
           pointerEvents="none"
           style={[styles.swipeReveal, { backgroundColor: theme.error }, revealStyle]}
