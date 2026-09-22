@@ -138,7 +138,9 @@ export class JournalCalculator {
       }
     }
 
-    if (!line.accountCurrency || line.accountCurrency === baseCurrency) {
+    const normalizedLineCurrency = line.accountCurrency?.trim().toUpperCase();
+    const normalizedBaseCurrency = baseCurrency.trim().toUpperCase();
+    if (!normalizedLineCurrency || normalizedLineCurrency === normalizedBaseCurrency) {
       // Even for base currency, ensure we round to the currency precision
       // to avoid 10.100000000002 issues from manual entry or calculations
       return roundAmount(finalAmount);
