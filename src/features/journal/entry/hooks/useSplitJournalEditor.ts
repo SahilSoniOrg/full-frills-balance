@@ -1,46 +1,45 @@
 import type { AccountFields } from '@/src/types/plainDtos';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
+import { type SplitRowState } from '@/src/services/journal/splitJournalHelpers';
 import {
-  computeSplitTotals,
-  SPLIT_SOURCE_LINE_ID,
-  validateSplitState,
-} from '@/src/services/journal/splitJournalHelpers';
+  selectSplitDraftLines,
+  useSplitDraftProjection,
+} from '@/src/features/journal/entry/modes/split/splitDraftProjection';
 import { parseSimpleAmountInput } from '@/src/services/journal/simpleJournalHelpers';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
+import { TabType } from '@/src/types/domainJournal';
+import { TransactionType } from '@/src/types/enums';
 import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
+import {
+  filterGuidedLegAccounts,
+  isAccountAllowedOnGuidedLeg,
+} from '@/src/services/journal/guidedJournalAccountEligibility';
+import { getInferredAccountType } from '@/src/utils/accountCategory';
 import { preferences } from '@/src/services/preferences';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useJournalEditor } from './useJournalEditor';
 
 export interface UseSplitJournalEditorProps {
   accounts: AccountFields[];
+  workplaceCurrency: string;
   editor: ReturnType<typeof useJournalEditor>;
-  onSelectAccountRequest: (lineId: string) => void;
 }
 
 export function useSplitJournalEditor({
   accounts,
+  workplaceCurrency,
   editor,
-  onSelectAccountRequest,
 }: UseSplitJournalEditorProps): SplitJournalController {
   const initializedRef = useRef(false);
 
   const { setIsGuidedMode, isEdit, isSubmitting } = editor;
 
-  const sourceLine = editor.lines.find(line => line.transactionType === 'CREDIT');
-  const destinationLines = editor.lines.filter(line => line.transactionType === 'DEBIT');
-  const sourceAccountId = sourceLine?.accountId ?? EMPTY_ACCOUNT_ID;
-  const totalAmount = sourceLine?.amount ?? '';
-  const splits = useMemo(
-    () =>
-      destinationLines.map(line => ({
-        id: line.id,
-        accountId: line.accountId,
-        amount: line.amount,
-      })),
-    [destinationLines],
+  const { sourceLine, destinationLines } = useMemo(
+    () => selectSplitDraftLines(editor.lines),
+    [editor.lines],
   );
+  const lineSourceAccountId = sourceLine?.accountId ?? EMPTY_ACCOUNT_ID;
 
   const setSourceAccountId = useCallback(
     (accountId: AccountId) => {
@@ -64,43 +63,130 @@ export function useSplitJournalEditor({
   );
 
   const addSplitRow = editor.addLine;
-  const removeSplitRow = editor.removeLine;
+  const removeSplitRow = useCallback(
+    (id: string) => {
+      editor.setLines(previous => {
+        const splitRows = previous.filter(line => line.transactionType === TransactionType.DEBIT);
+        const targetIsSplitRow = splitRows.some(line => line.id === id);
+
+        // A split entry must retain at least one allocation row. Keeping the
+        // invariant here protects callers beyond the current swipe UI.
+        if (!targetIsSplitRow || splitRows.length <= 1) return previous;
+
+        return previous.filter(line => line.id !== id);
+      });
+    },
+    [editor],
+  );
   const updateSplitRow = useCallback(
-    (id: string, patch: Partial<Pick<(typeof splits)[number], 'accountId' | 'amount'>>) => {
-      editor.updateLine(id, patch);
+    (id: string, patch: Partial<Pick<SplitRowState, 'accountId' | 'amount' | 'exchangeRate'>>) => {
+      if (patch.accountId !== undefined) {
+        const account = accounts.find(candidate => candidate.id === patch.accountId);
+        editor.updateLine(id, {
+          ...patch,
+          exchangeRate: '',
+          accountName: account?.name ?? '',
+          accountType: account?.accountType,
+          accountCurrency: account?.currencyCode,
+        });
+        return;
+      }
+
+      const { exchangeRate, ...linePatch } = patch;
+      editor.updateLine(id, {
+        ...linePatch,
+        ...(exchangeRate === undefined ? {} : { exchangeRate: String(exchangeRate) }),
+      });
+    },
+    [accounts, editor],
+  );
+  const updateSourceExchangeRate = useCallback(
+    (exchangeRate: string) => {
+      if (sourceLine) editor.updateLine(sourceLine.id, { exchangeRate });
+    },
+    [editor, sourceLine],
+  );
+  const updateSplitAmounts = useCallback(
+    (updates: Record<string, string>) => {
+      const lineUpdates = Object.entries(updates).reduce<Record<string, { amount: string }>>(
+        (batch, [id, amount]) => {
+          batch[id] = { amount };
+          return batch;
+        },
+        {},
+      );
+      editor.updateLines(lineUpdates);
     },
     [editor],
   );
 
   const pinnedAccountIds = useMemo(() => {
     const selectedIds = [
-      sourceAccountId !== EMPTY_ACCOUNT_ID ? sourceAccountId : undefined,
-      ...splits.map(split => split.accountId),
+      lineSourceAccountId !== EMPTY_ACCOUNT_ID ? lineSourceAccountId : undefined,
+      ...destinationLines.map(line => line.accountId),
     ].filter((id): id is AccountId => !!id && id !== EMPTY_ACCOUNT_ID);
     return pinnedArchivedAccountIds(selectedIds, accounts);
-  }, [accounts, sourceAccountId, splits]);
+  }, [accounts, destinationLines, lineSourceAccountId]);
 
-  const { transactionAccounts, expenseAccounts } = useAccountSelection({
+  const { leafAccounts } = useAccountSelection({
     accounts,
     pinnedAccountIds,
   });
 
+  const transactionType = editor.transactionType;
+  const sourceAccounts = useMemo(
+    () => filterGuidedLegAccounts(leafAccounts, transactionType, TransactionType.CREDIT),
+    [leafAccounts, transactionType],
+  );
+  const allocationAccounts = useMemo(
+    () => filterGuidedLegAccounts(leafAccounts, transactionType, TransactionType.DEBIT),
+    [leafAccounts, transactionType],
+  );
+
+  const setTransactionType = useCallback(
+    (nextType: TabType) => {
+      if (nextType === editor.transactionType) return;
+
+      editor.setTransactionType(nextType);
+      const accountsById = new Map(accounts.map(account => [account.id, account]));
+      const clearInvalidSelection = (
+        line: (typeof editor.lines)[number],
+        side: TransactionType,
+      ) => {
+        if (!line.accountId || line.accountId === EMPTY_ACCOUNT_ID) return;
+        const account = accountsById.get(line.accountId);
+        if (account && isAccountAllowedOnGuidedLeg(account, nextType, side)) return;
+
+        editor.updateLine(line.id, {
+          accountId: EMPTY_ACCOUNT_ID,
+          accountName: '',
+          accountType: getInferredAccountType(nextType, side),
+          accountCurrency: undefined,
+        });
+      };
+
+      if (sourceLine) clearInvalidSelection(sourceLine, TransactionType.CREDIT);
+      destinationLines.forEach(line => clearInvalidSelection(line, TransactionType.DEBIT));
+    },
+    [accounts, destinationLines, editor, sourceLine],
+  );
+
   const resolvedSourceAccountId = useMemo(() => {
-    if (sourceAccountId !== EMPTY_ACCOUNT_ID) return sourceAccountId;
+    if (lineSourceAccountId !== EMPTY_ACCOUNT_ID) return lineSourceAccountId;
     if (isEdit) return EMPTY_ACCOUNT_ID;
     const lastSourceId = preferences.journalNav.lastUsedSourceAccountId;
-    if (lastSourceId && transactionAccounts.some(a => a.id === lastSourceId)) {
+    if (lastSourceId && sourceAccounts.some(a => a.id === lastSourceId)) {
       return lastSourceId;
     }
     return EMPTY_ACCOUNT_ID;
-  }, [sourceAccountId, isEdit, transactionAccounts]);
+  }, [isEdit, lineSourceAccountId, sourceAccounts]);
 
   useEffect(() => {
-    if (sourceAccountId !== EMPTY_ACCOUNT_ID) return;
+    if (lineSourceAccountId !== EMPTY_ACCOUNT_ID) return;
     if (resolvedSourceAccountId !== EMPTY_ACCOUNT_ID) {
       setSourceAccountId(resolvedSourceAccountId);
     }
-  }, [resolvedSourceAccountId, setSourceAccountId, sourceAccountId]);
+  }, [lineSourceAccountId, resolvedSourceAccountId, setSourceAccountId]);
 
   useEffect(() => {
     if (initializedRef.current) return;
@@ -109,79 +195,73 @@ export function useSplitJournalEditor({
     setIsGuidedMode(false);
   }, [setIsGuidedMode]);
 
-  const totals = useMemo(() => computeSplitTotals(totalAmount, splits), [totalAmount, splits]);
-
-  const validation = useMemo(
-    () =>
-      validateSplitState({
-        sourceAccountId: resolvedSourceAccountId,
-        totalAmount,
-        splits,
-      }),
-    [resolvedSourceAccountId, totalAmount, splits],
-  );
-
-  const isValid = validation.valid;
-
   const sourceAccount = useMemo(
-    () => accounts.find(a => a.id === resolvedSourceAccountId),
+    () => accounts.find(account => account.id === resolvedSourceAccountId),
     [accounts, resolvedSourceAccountId],
   );
-
-  const displayCurrency = sourceAccount?.currencyCode || accounts[0]?.currencyCode || 'USD';
-
-  const openSourceAccountPicker = useCallback(() => {
-    onSelectAccountRequest(SPLIT_SOURCE_LINE_ID);
-  }, [onSelectAccountRequest]);
-
-  const openSplitAccountPicker = useCallback(
-    (splitId: string) => {
-      onSelectAccountRequest(splitId);
-    },
-    [onSelectAccountRequest],
-  );
+  const displayCurrency = sourceAccount?.currencyCode || workplaceCurrency;
+  const splitDraft = useSplitDraftProjection({
+    lines: editor.lines,
+    accounts,
+    workplaceCurrency,
+    sourceAccountId: resolvedSourceAccountId,
+    precisionCurrency: displayCurrency,
+  });
+  const { precision, currencyContext, totals, totalAmount, splits } = splitDraft;
+  const isValid = splitDraft.validation.valid;
 
   return useMemo(
     () => ({
-      sourceAccountId: resolvedSourceAccountId,
+      transactionType,
+      setTransactionType,
+      sourceAccountId: splitDraft.sourceAccountId,
       setSourceAccountId,
       totalAmount,
       setTotalAmount,
+      updateSourceExchangeRate,
       splits,
       addSplitRow,
       removeSplitRow,
       updateSplitRow,
+      updateSplitAmounts,
       totals,
       isValid,
-      validationError: validation.valid ? null : validation.error,
-      transactionAccounts,
-      expenseAccounts,
+      validationError: splitDraft.validation.valid ? null : splitDraft.validation.error,
+      allAccounts: accounts,
+      sourceAccounts,
+      allocationAccounts,
       sourceAccount,
       displayCurrency,
-      openSourceAccountPicker,
-      openSplitAccountPicker,
+      precision,
+      journalDate: editor.journalDate,
+      currencyContext,
       isSubmitting,
       isValidTotal: parseSimpleAmountInput(totalAmount) > 0,
     }),
     [
-      resolvedSourceAccountId,
+      transactionType,
+      setTransactionType,
+      splitDraft,
       setSourceAccountId,
       totalAmount,
+      updateSourceExchangeRate,
       splits,
       addSplitRow,
       removeSplitRow,
       updateSplitRow,
+      updateSplitAmounts,
       totals,
       isValid,
-      validation,
-      transactionAccounts,
-      expenseAccounts,
+      accounts,
+      sourceAccounts,
+      allocationAccounts,
       sourceAccount,
       displayCurrency,
-      openSourceAccountPicker,
-      openSplitAccountPicker,
+      precision,
+      editor.journalDate,
       isSubmitting,
       setTotalAmount,
+      currencyContext,
     ],
   );
 }
