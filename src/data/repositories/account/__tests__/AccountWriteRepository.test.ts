@@ -66,3 +66,58 @@ describe('AccountWriteRepository refresh operations', () => {
     expect(deletedAccount.updatedAt.getTime()).toBe(deletedUpdatedAt);
   });
 });
+
+describe('AccountWriteRepository currency immutability', () => {
+  const workplaceId = 'wp-account-currency' as WorkplaceId;
+
+  beforeEach(async () => {
+    await database.write(async () => {
+      await database.unsafeResetDatabase();
+    });
+  });
+
+  it('rejects a changed currency before updating an account', async () => {
+    const account = await accountWriteRepository.create({
+      name: 'Checking',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId,
+    });
+
+    await expect(
+      accountWriteRepository.update(account, { name: 'Renamed', currencyCode: 'EUR' }, workplaceId),
+    ).rejects.toThrow('Account currency cannot be changed after creation');
+    expect(account.name).toBe('Checking');
+    expect(account.currencyCode).toBe('USD');
+  });
+
+  it('rejects a changed currency in direct batch preparation', async () => {
+    const account = await accountWriteRepository.create({
+      name: 'Checking',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId,
+    });
+
+    expect(() =>
+      accountWriteRepository.prepareUpdateBatchOps(account, { currencyCode: 'EUR' }, null),
+    ).toThrow('Account currency cannot be changed after creation');
+  });
+
+  it('allows unchanged currency alongside an ordinary update', async () => {
+    const account = await accountWriteRepository.create({
+      name: 'Checking',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId,
+    });
+
+    await accountWriteRepository.update(
+      account,
+      { name: 'Renamed', currencyCode: 'USD' },
+      workplaceId,
+    );
+    expect(account.name).toBe('Renamed');
+    expect(account.currencyCode).toBe('USD');
+  });
+});

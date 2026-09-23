@@ -19,6 +19,7 @@ import {
 } from '@/src/services/accounts/accountRules';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { ValidationError } from '@/src/utils/errors';
 import { logger } from '@/src/utils/logger';
 import { isValidHexColor } from '@/src/utils/accountCategory';
 import {
@@ -225,6 +226,15 @@ function assertDetailOnlyUpdate(updates: AccountDetailsUpdate): void {
   }
 }
 
+function assertCurrencyUnchanged(
+  account: Pick<Account, 'currencyCode'>,
+  updates: Pick<AccountDetailsUpdate, 'currencyCode'>,
+): void {
+  if (updates.currencyCode !== undefined && updates.currencyCode !== account.currencyCode) {
+    throw new ValidationError('Account currency cannot be changed after creation');
+  }
+}
+
 export type AccountFieldUpdateContext = {
   account: Account;
   updatePayload: Partial<AccountPersistenceInput>;
@@ -269,6 +279,7 @@ export async function prepareAccountFieldUpdate(
   assertDetailOnlyUpdate(updates);
   const account = await accountQueryRepository.find(workplaceId, accountId);
   if (!account) throw new Error('Account not found');
+  assertCurrencyUnchanged(account, updates);
 
   const beforeState = {
     name: account.name,
@@ -385,6 +396,7 @@ export async function saveAccount(
     const snapshot = createAccountTreeSnapshot(accounts);
     const account = snapshot.accountsById.get(accountId);
     if (!account) throw new Error('Account not found');
+    assertCurrencyUnchanged(account, updates);
 
     const nextType = updates.accountType ?? account.accountType;
     const parentWasSpecified = Object.prototype.hasOwnProperty.call(updates, 'parentAccountId');

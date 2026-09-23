@@ -11,6 +11,15 @@ import { accountQueryRepository } from './AccountQueryRepository';
 import type { AccountPersistenceInput } from './types';
 
 export class AccountWriteRepository {
+  private assertCurrencyUnchanged(
+    account: Account,
+    updates: Partial<AccountPersistenceInput>,
+  ): void {
+    if (updates.currencyCode !== undefined && updates.currencyCode !== account.currencyCode) {
+      throw new ValidationError('Account currency cannot be changed after creation');
+    }
+  }
+
   private get db() {
     return database;
   }
@@ -129,6 +138,7 @@ export class AccountWriteRepository {
     if (updates.workplaceId && updates.workplaceId !== workplaceId) {
       throw new Error('Workplace mismatch in update payload');
     }
+    this.assertCurrencyUnchanged(account, updates);
     if (updates.name && updates.name !== account.name) {
       await this.ensureUniqueName(updates.name, workplaceId, account.id);
     }
@@ -162,6 +172,7 @@ export class AccountWriteRepository {
     updates: Partial<AccountPersistenceInput>,
     existingMetadata: AccountMetadata | null,
   ): Model[] {
+    this.assertCurrencyUnchanged(account, updates);
     const batchOps: Model[] = [];
     const hasRowUpdates = Object.keys(updates).some(key => key !== 'metadata');
 
