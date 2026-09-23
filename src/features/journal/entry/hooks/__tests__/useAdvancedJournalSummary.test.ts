@@ -57,6 +57,27 @@ describe('useAdvancedJournalSummary', () => {
     expect(result.current.isBalanced).toBe(true);
   });
 
+  it('uses the saved journal currency as its accounting base when provided', () => {
+    const lines = [
+      {
+        amount: '20',
+        transactionType: TransactionType.DEBIT as const,
+        accountCurrency: 'USD',
+        exchangeRate: 0.5,
+      },
+      {
+        amount: '10',
+        transactionType: TransactionType.CREDIT as const,
+        accountCurrency: 'EUR',
+        exchangeRate: 1,
+      },
+    ];
+    const { result } = renderHook(() => useAdvancedJournalSummary(lines, 'EUR'));
+
+    expect(result.current.baseCurrency).toBe('EUR');
+    expect(result.current.isBalanced).toBe(true);
+  });
+
   it('handles currency switching', () => {
     const lines = [
       {

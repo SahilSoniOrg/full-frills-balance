@@ -239,6 +239,7 @@ describe('useTransactionComposerSession', () => {
     journalReadService.getJournalForEditor.mockResolvedValue({
       journal: {
         journalDate: '2026-08-25T12:00:00.000Z',
+        currencyCode: 'EUR',
         description: 'Loaded allocation',
         notes: '',
       },
@@ -279,6 +280,8 @@ describe('useTransactionComposerSession', () => {
     );
 
     await waitFor(() => expect(result.current.editor.loadState).toBe('loaded'));
+    expect(result.current.editor.valuationCurrency).toBe('EUR');
+    expect(result.current.splitState.currencyContext.baseCurrency).toBe('EUR');
     expect(result.current.splitState.totalAmount).toBe('75');
   });
 

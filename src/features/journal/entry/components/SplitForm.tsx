@@ -21,6 +21,7 @@ import { useCallback, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 type SplitFormProps = SplitJournalController & {
+  isEditing?: boolean;
   onCreateAccountRequestForRow: (
     rowId: string,
     role: AccountRole,
@@ -90,6 +91,7 @@ export function SplitForm({
   displayCurrency,
   precision,
   journalDate,
+  isEditing = false,
   onCreateAccountRequestForRow,
 }: SplitFormProps) {
   const { theme } = useTheme();
@@ -273,6 +275,7 @@ export function SplitForm({
             currencyCode={currencyCode}
             fallbackPrecision={precision}
             emptyPrompt={typeCopy.allocationEmptyPrompt}
+            isEditing={isEditing}
             isExpanded={activePickerKey === row.id}
             label={typeCopy.allocationLabel}
             onCreateAccountRequest={(role, intent) =>

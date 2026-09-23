@@ -53,7 +53,7 @@ describe('useJournalEditorExchangeRates', () => {
     renderHook(() =>
       useJournalEditorExchangeRates({
         lines,
-        workplaceCurrency: 'INR',
+        valuationCurrency: 'INR',
         journalDate: '2024-10-03',
         isLoading: false,
         isSubmitting: false,
@@ -96,7 +96,7 @@ describe('useJournalEditorExchangeRates', () => {
       (props: { journalDate: string }) =>
         useJournalEditorExchangeRates({
           lines,
-          workplaceCurrency: 'INR',
+          valuationCurrency: 'INR',
           journalDate: props.journalDate,
           isLoading: false,
           isSubmitting: false,
@@ -134,7 +134,7 @@ describe('useJournalEditorExchangeRates', () => {
       (props: { lines: any[] }) =>
         useJournalEditorExchangeRates({
           lines: props.lines,
-          workplaceCurrency: 'INR',
+          valuationCurrency: 'INR',
           journalDate: '2024-10-03',
           isLoading: false,
           isSubmitting: false,
@@ -152,5 +152,51 @@ describe('useJournalEditorExchangeRates', () => {
         'foreign-line': { exchangeRate: '' },
       });
     });
+  });
+
+  it('keeps hydrated journal rates on open and refreshes in the saved currency on the journal date', async () => {
+    mockFetchHistoricalRate.mockResolvedValue({ rate: 1.2 });
+    const updateLines = jest.fn();
+    const savedLine = {
+      id: 'foreign-line',
+      accountId: 'foreign-account',
+      accountName: 'EUR Account',
+      accountType: AccountType.ASSET,
+      accountCurrency: 'EUR',
+      amount: '10',
+      transactionType: TransactionType.DEBIT,
+      notes: '',
+      exchangeRate: '1.1',
+    } as any;
+    const { result, rerender } = renderHook(
+      (props: { isLoading: boolean; valuationCurrency: string; lines: any[] }) =>
+        useJournalEditorExchangeRates({
+          lines: props.lines,
+          valuationCurrency: props.valuationCurrency,
+          journalDate: '2022-03-04',
+          isLoading: props.isLoading,
+          isExistingJournal: true,
+          journalId: 'journal-1',
+          isSubmitting: false,
+          updateLines,
+        }),
+      {
+        initialProps: { isLoading: true, valuationCurrency: 'INR', lines: [] },
+      },
+    );
+
+    rerender({ isLoading: false, valuationCurrency: 'USD', lines: [savedLine] });
+
+    expect(updateLines).not.toHaveBeenCalled();
+    expect(mockFetchHistoricalRate).not.toHaveBeenCalled();
+
+    await result.current.fetchRatesForLines(['foreign-line'], true);
+
+    expect(mockFetchHistoricalRate).toHaveBeenCalledWith(
+      'EUR',
+      'USD',
+      Date.parse('2022-03-04T00:00:00.000Z'),
+    );
+    expect(updateLines).toHaveBeenCalledWith({ 'foreign-line': { exchangeRate: '1.2' } });
   });
 });

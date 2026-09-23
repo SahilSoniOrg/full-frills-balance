@@ -9,14 +9,14 @@ interface UseJournalEditorLineStateProps {
   initialAmount?: string;
   initialSourceId?: AccountId;
   initialDestinationId?: AccountId;
-  workplaceCurrency: string;
+  valuationCurrency: string;
 }
 
 function createInitialLines({
   initialAmount,
   initialSourceId,
   initialDestinationId,
-}: Omit<UseJournalEditorLineStateProps, 'workplaceCurrency'>): JournalEntryLine[] {
+}: Omit<UseJournalEditorLineStateProps, 'valuationCurrency'>): JournalEntryLine[] {
   return [
     {
       id: '1' as TransactionId,
@@ -45,7 +45,7 @@ export function useJournalEditorLineState({
   initialAmount,
   initialSourceId,
   initialDestinationId,
-  workplaceCurrency,
+  valuationCurrency,
 }: UseJournalEditorLineStateProps) {
   const [lines, setLines] = useState<JournalEntryLine[]>(() =>
     createInitialLines({ initialAmount, initialSourceId, initialDestinationId }),
@@ -92,11 +92,11 @@ export function useJournalEditorLineState({
     (id: string) => {
       setLines(
         previous =>
-          JournalCalculator.applyImbalanceRateCorrectionToLines(previous, id, workplaceCurrency) ??
+          JournalCalculator.applyImbalanceRateCorrectionToLines(previous, id, valuationCurrency) ??
           previous,
       );
     },
-    [workplaceCurrency],
+    [valuationCurrency],
   );
 
   return { lines, setLines, addLine, removeLine, updateLine, updateLines, balanceLine };

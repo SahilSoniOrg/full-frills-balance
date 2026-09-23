@@ -100,6 +100,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
 
   const currentModeOption =
     JOURNAL_ENTRY_MODE_OPTIONS.find(opt => opt.id === activeMode) || JOURNAL_ENTRY_MODE_OPTIONS[0];
+  const valuationCurrency = editor.valuationCurrency;
 
   if (isLoading) {
     return (
@@ -236,7 +237,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
             guidedAutopilot={guidedAutopilot}
             onCreateAccountRequestForRole={onCreateAccountRequestForRole}
             onSelectAccountRequest={onSelectAccountRequest}
-            workplaceCurrency={workplaceCurrency}
+            workplaceCurrency={valuationCurrency}
             workplaceId={workplaceId}
             meta={journalMetaProps}
             voiceModalVisible={isVoiceModalVisible}
@@ -250,7 +251,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
             {journalMetaCard}
             <SplitModePanel
               accounts={accounts}
-              workplaceCurrency={workplaceCurrency}
+              workplaceCurrency={valuationCurrency}
               editor={editor}
               onCreateAccountRequestForRow={onCreateAccountRequestForSplitRow}
             />
@@ -260,7 +261,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
             {journalMetaCard}
             <AdvancedModePanel
               editor={editor}
-              workplaceCurrency={workplaceCurrency}
+              workplaceCurrency={valuationCurrency}
               onSelectAccountRequest={onSelectAccountRequest}
             />
           </>

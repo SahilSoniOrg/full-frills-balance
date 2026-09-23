@@ -27,7 +27,7 @@ export function AdvancedModePanel({
     setSelectedCurrency,
     journalBaseCurrency,
     getLineBaseAmount,
-  } = useAdvancedJournalSummary(editor.lines);
+  } = useAdvancedJournalSummary(editor.lines, editor.valuationCurrency);
 
   return (
     <View style={{ paddingHorizontal: Spacing.lg }}>

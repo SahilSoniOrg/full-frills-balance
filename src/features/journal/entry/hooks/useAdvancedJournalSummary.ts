@@ -9,8 +9,12 @@ export interface AdvancedJournalLineLike {
   accountCurrency?: string;
 }
 
-export function useAdvancedJournalSummary(lines: AdvancedJournalLineLike[]) {
-  const { defaultCurrencyCode: defaultCurrency } = useWorkplace();
+export function useAdvancedJournalSummary(
+  lines: AdvancedJournalLineLike[],
+  valuationCurrency?: string,
+) {
+  const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  const defaultCurrency = valuationCurrency || workplaceCurrency;
   const firstLineCurrency = lines[0]?.accountCurrency;
 
   // Identify all unique currencies present in the lines

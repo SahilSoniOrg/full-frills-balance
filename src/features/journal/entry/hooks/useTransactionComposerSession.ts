@@ -31,10 +31,11 @@ export function useTransactionComposerSession(
 ) {
   const { accounts, currencyCode, ...editorOptions } = options;
   const editor = useJournalEditor(workplaceId, editorOptions);
+  const valuationCurrency = editor.valuationCurrency || currencyCode;
   const splitState = useSplitDraftProjection({
     lines: editor.lines,
     accounts,
-    workplaceCurrency: currencyCode,
+    workplaceCurrency: valuationCurrency,
   });
   const { sourceLine, destinationLines } = splitState;
 
@@ -93,8 +94,8 @@ export function useTransactionComposerSession(
   ]);
 
   const intentResolution = useMemo(
-    () => resolveTransactionIntent(intent, { accounts, currencyCode }),
-    [accounts, currencyCode, intent],
+    () => resolveTransactionIntent(intent, { accounts, currencyCode: valuationCurrency }),
+    [accounts, intent, valuationCurrency],
   );
 
   const postingPlan: PostingPlan | undefined = intentResolution.resolved
@@ -148,7 +149,7 @@ export function useTransactionComposerSession(
         return editor.submitPlan(
           {
             lines: editor.lines,
-            currencyCode,
+            currencyCode: valuationCurrency,
             description,
             date,
             notes: editor.notes || undefined,
@@ -158,7 +159,10 @@ export function useTransactionComposerSession(
       }
 
       const submissionIntent = { ...intent, description };
-      const resolution = resolveTransactionIntent(submissionIntent, { accounts, currencyCode });
+      const resolution = resolveTransactionIntent(submissionIntent, {
+        accounts,
+        currencyCode: valuationCurrency,
+      });
       if (!resolution.resolved) {
         return {
           success: false,
@@ -171,7 +175,7 @@ export function useTransactionComposerSession(
         mode === 'allocation' ? 'advanced' : editor.isGuidedMode ? 'simple' : 'advanced',
       );
     },
-    [accounts, currencyCode, destinationLines, editor, intent, sourceLine, splitValidation],
+    [accounts, destinationLines, editor, intent, sourceLine, splitValidation, valuationCurrency],
   );
 
   return {

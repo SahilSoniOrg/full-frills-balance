@@ -27,6 +27,7 @@ export interface SplitAllocationRowProps {
   currencyCode: string;
   fallbackPrecision: number;
   emptyPrompt: string;
+  isEditing?: boolean;
   isExpanded: boolean;
   label: string;
   journalDate?: string;
@@ -64,6 +65,7 @@ export function SplitAllocationRow({
   currencyCode,
   fallbackPrecision,
   emptyPrompt,
+  isEditing = false,
   isExpanded,
   label,
   journalDate,
@@ -113,7 +115,7 @@ export function SplitAllocationRow({
     manualDestBaseRate,
     journalDate,
     refreshNonce: rateRefreshNonce,
-    enabled: needsWorkplaceRate,
+    enabled: needsWorkplaceRate && (!isEditing || rateRefreshNonce > 0),
   });
 
   const pairKey = `${normalizedSourceCurrency ?? ''}|${rowCurrencyCode}|${workplaceCurrency}`;

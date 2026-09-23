@@ -2,9 +2,13 @@ import { AccountType, TransactionType } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 
 import { accountQueryRepository } from '@/src/data/repositories/account';
-import { journalEnrichmentQueries } from '@/src/data/repositories/journal/journalTimelineModule';
+import {
+  journalEnrichmentQueries,
+  journalQueryRepository,
+} from '@/src/data/repositories/journal/journalTimelineModule';
 import { JournalService } from '@/src/services/journal/journalDomainService';
 import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
+import { workplaceService } from '@/src/services/WorkplaceService';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/account');
@@ -59,6 +63,8 @@ describe('JournalService - saveJournalEntry', () => {
       { id: 'acc1', currencyCode: 'USD' },
       { id: 'acc2', currencyCode: 'USD' },
     ]);
+    (journalQueryRepository.find as jest.Mock).mockResolvedValue({ currencyCode: 'USD' });
+    (workplaceService.getCurrency as jest.Mock).mockResolvedValue('USD');
   });
 
   describe('saveJournalEntry', () => {
@@ -104,6 +110,51 @@ describe('JournalService - saveJournalEntry', () => {
         expect.any(Object),
         'wp-1' as WorkplaceId,
       );
+    });
+
+    it('validates and saves an edit in its saved currency after Workplace currency changes', async () => {
+      (workplaceService.getCurrency as jest.Mock).mockResolvedValue('INR');
+      (journalQueryRepository.find as jest.Mock).mockResolvedValue({ currencyCode: 'USD' });
+      const updateSpy = jest.spyOn(service, 'updateJournal').mockResolvedValue({ id: 'j1' } as any);
+
+      const result = await service.saveJournalEntry({
+        lines: [
+          {
+            accountId: 'eur-account',
+            amount: '100',
+            transactionType: TransactionType.DEBIT,
+            accountCurrency: 'EUR',
+            exchangeRate: '1.1',
+            notes: '',
+          },
+          {
+            accountId: 'usd-account',
+            amount: '110',
+            transactionType: TransactionType.CREDIT,
+            accountCurrency: 'USD',
+            exchangeRate: '',
+            notes: '',
+          },
+        ] as any,
+        description: 'Edited foreign journal',
+        journalDate: '2024-01-01',
+        journalId: 'journal123' as JournalId,
+        workplaceId: 'wp-1' as WorkplaceId,
+      });
+
+      expect(result).toMatchObject({ success: true, action: 'updated' });
+      expect(updateSpy).toHaveBeenCalledWith(
+        'journal123' as JournalId,
+        expect.objectContaining({
+          currencyCode: 'USD',
+          transactions: expect.arrayContaining([
+            expect.objectContaining({ currencyCode: 'EUR', exchangeRate: 1.1 }),
+            expect.objectContaining({ currencyCode: 'USD', exchangeRate: undefined }),
+          ]),
+        }),
+        'wp-1' as WorkplaceId,
+      );
+      expect(workplaceService.getCurrency).not.toHaveBeenCalled();
     });
 
     it('should fail if description is empty', async () => {

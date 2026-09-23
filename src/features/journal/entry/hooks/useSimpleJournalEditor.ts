@@ -38,6 +38,11 @@ export interface SimpleFormSection {
   role: AccountRole;
 }
 
+function parsePositiveRate(value: string | number | undefined): number | null {
+  const rate = Number(value);
+  return Number.isFinite(rate) && rate > 0 ? rate : null;
+}
+
 /**
  * useSimpleJournalEditor - Controller hook for the simple journal form.
  * Handles state, basic validation, and exchange rate calculations.
@@ -49,7 +54,9 @@ export function useSimpleJournalEditor({
   editor,
   onSelectAccountRequest,
 }: UseSimpleJournalEditorProps) {
-  const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  const { defaultCurrencyCode: defaultWorkplaceCurrency } = useWorkplace();
+  const valuationCurrency = editor.valuationCurrency || defaultWorkplaceCurrency;
+  const hasEditedSimpleDraft = useRef(!editor.isEdit);
   // Derived State from Editor
   const type = editor.transactionType;
   const isGuidedMode = editor.isGuidedMode;
@@ -113,27 +120,51 @@ export function useSimpleJournalEditor({
   const destCurrency = destAccount?.currencyCode;
 
   const isCrossCurrency = !!(sourceCurrency && destCurrency && sourceCurrency !== destCurrency);
-  const needsWorkplaceRate = !!(
+  const needsValuationRate = !!(
     sourceCurrency &&
     destCurrency &&
-    (sourceCurrency !== workplaceCurrency || destCurrency !== workplaceCurrency)
+    (sourceCurrency !== valuationCurrency || destCurrency !== valuationCurrency)
   );
 
-  const { exchangeRate, sourceBaseRate, destBaseRate, isLoadingRate, rateError } =
-    useCrossCurrencyRates({
-      sourceCurrency,
-      destCurrency,
-      workplaceCurrency,
-      manualSourceBaseRate,
-      manualDestBaseRate,
-      journalDate: editor.journalDate,
-      refreshNonce: rateRefreshNonce,
-      enabled: needsWorkplaceRate,
-    });
+  const marketRates = useCrossCurrencyRates({
+    sourceCurrency,
+    destCurrency,
+    workplaceCurrency: valuationCurrency,
+    manualSourceBaseRate,
+    manualDestBaseRate,
+    journalDate: editor.journalDate,
+    refreshNonce: rateRefreshNonce,
+    enabled: needsValuationRate && (!editor.isEdit || rateRefreshNonce > 0),
+  });
+  const savedSourceRate = parsePositiveRate(sourceLineExchangeRate);
+  const savedDestinationRate = parsePositiveRate(destinationLineExchangeRate);
+  const savedSourceBaseRate =
+    sourceCurrency === valuationCurrency
+      ? 1
+      : sourceCurrency === destCurrency
+        ? (savedSourceRate ?? savedDestinationRate)
+        : savedSourceRate;
+  const savedDestBaseRate =
+    destCurrency === valuationCurrency
+      ? 1
+      : sourceCurrency === destCurrency
+        ? savedSourceBaseRate
+        : savedDestinationRate;
+  const useSavedRates = editor.isEdit && rateRefreshNonce === 0;
+  const sourceBaseRate = useSavedRates ? savedSourceBaseRate : marketRates.sourceBaseRate;
+  const destBaseRate = useSavedRates ? savedDestBaseRate : marketRates.destBaseRate;
+  const exchangeRate = useSavedRates
+    ? sourceBaseRate && destBaseRate
+      ? sourceBaseRate / destBaseRate
+      : null
+    : marketRates.exchangeRate;
+  const isLoadingRate = useSavedRates ? false : marketRates.isLoadingRate;
+  const rateError = marketRates.rateError;
 
   useEffect(() => {
     if (previousJournalDateRef.current === editor.journalDate) return;
     previousJournalDateRef.current = editor.journalDate;
+    hasEditedSimpleDraft.current = true;
     setConvertedAmountLocked(false);
     setManualSourceBaseRate('');
     setManualDestBaseRate('');
@@ -150,6 +181,7 @@ export function useSimpleJournalEditor({
   // Primitive deps + empty-update guard prevent child→parent write loops.
   useEffect(() => {
     if (!isGuidedMode || !sourceLineId || !destinationLineId) return;
+    if (!hasEditedSimpleDraft.current) return;
 
     const updates = buildSimpleCrossCurrencyLineUpdates({
       isCrossCurrency,
@@ -158,7 +190,7 @@ export function useSimpleJournalEditor({
       destBaseRate,
       sourceCurrency,
       destCurrency,
-      baseCurrency: workplaceCurrency,
+      baseCurrency: valuationCurrency,
       amount,
       convertedAmount,
       sourceLine: { id: sourceLineId, exchangeRate: sourceLineExchangeRate, amount },
@@ -179,7 +211,7 @@ export function useSimpleJournalEditor({
     destBaseRate,
     sourceCurrency,
     destCurrency,
-    workplaceCurrency,
+    valuationCurrency,
     amount,
     convertedAmount,
     sourceLineId,
@@ -194,6 +226,7 @@ export function useSimpleJournalEditor({
   const setType = useCallback(
     (newType: TabType) => {
       if (newType === type) return;
+      hasEditedSimpleDraft.current = true;
 
       // Manual rates are pair-specific input, not part of a saved tab draft.
       setManualSourceBaseRate('');
@@ -246,6 +279,7 @@ export function useSimpleJournalEditor({
 
   const setAmount = useCallback(
     (newAmount: string) => {
+      hasEditedSimpleDraft.current = true;
       // Update both lines - the effect will handle the cross-currency conversion
       if (sourceLine) editor.updateLine(sourceLine.id, { amount: newAmount });
       if (destinationLine && !isCrossCurrency)
@@ -256,6 +290,7 @@ export function useSimpleJournalEditor({
 
   const setSourceId = useCallback(
     (id: AccountId) => {
+      hasEditedSimpleDraft.current = true;
       setManualSourceBaseRate('');
       setManualDestBaseRate('');
       setConvertedAmountLocked(false);
@@ -283,6 +318,7 @@ export function useSimpleJournalEditor({
 
   const setDestinationId = useCallback(
     (id: AccountId) => {
+      hasEditedSimpleDraft.current = true;
       setManualSourceBaseRate('');
       setManualDestBaseRate('');
       setConvertedAmountLocked(false);
@@ -310,6 +346,7 @@ export function useSimpleJournalEditor({
 
   const swapAccounts = useCallback(() => {
     if (type !== 'transfer') return;
+    hasEditedSimpleDraft.current = true;
 
     const currentSourceLine = editor.lines.find(
       line => line.transactionType === TransactionType.CREDIT,
@@ -354,6 +391,7 @@ export function useSimpleJournalEditor({
   }, [accounts, editor.lines, type, updateLines]);
 
   const setManualBaseRate = useCallback((role: 'source' | 'destination', value: string) => {
+    hasEditedSimpleDraft.current = true;
     setConvertedAmountLocked(false);
     if (role === 'source') setManualSourceBaseRate(value);
     else setManualDestBaseRate(value);
@@ -362,13 +400,14 @@ export function useSimpleJournalEditor({
   const setConvertedAmount = useCallback(
     (value: string) => {
       if (!sourceCurrency || !destCurrency) return;
+      hasEditedSimpleDraft.current = true;
       const parsedConverted = parseSimpleAmountInput(value);
       const rates = resolveWorkplaceRatesFromConvertedAmount({
         sourceAmount: numAmount,
         convertedAmount: parsedConverted,
         sourceCurrency,
         destCurrency,
-        workplaceCurrency,
+        workplaceCurrency: valuationCurrency,
         existingSourceBaseRate: sourceBaseRate,
         existingDestBaseRate: destBaseRate,
       });
@@ -376,18 +415,19 @@ export function useSimpleJournalEditor({
 
       setConvertedAmountLocked(true);
       setManualSourceBaseRate(
-        sourceCurrency === workplaceCurrency ? '' : formatManualBaseRate(rates.sourceBaseRate),
+        sourceCurrency === valuationCurrency ? '' : formatManualBaseRate(rates.sourceBaseRate),
       );
       setManualDestBaseRate(
-        destCurrency === workplaceCurrency || destCurrency === sourceCurrency
+        destCurrency === valuationCurrency || destCurrency === sourceCurrency
           ? ''
           : formatManualBaseRate(rates.destBaseRate),
       );
     },
-    [destBaseRate, destCurrency, numAmount, sourceBaseRate, sourceCurrency, workplaceCurrency],
+    [destBaseRate, destCurrency, numAmount, sourceBaseRate, sourceCurrency, valuationCurrency],
   );
 
   const resetToApiRate = useCallback(() => {
+    hasEditedSimpleDraft.current = true;
     setConvertedAmountLocked(false);
     setManualSourceBaseRate('');
     setManualDestBaseRate('');
@@ -439,7 +479,7 @@ export function useSimpleJournalEditor({
       manualSourceBaseRate,
       manualDestBaseRate,
       showManualRateFields,
-      needsWorkplaceRate,
+      needsWorkplaceRate: needsValuationRate,
       setManualBaseRate,
       setConvertedAmount,
       resetToApiRate,
@@ -453,7 +493,7 @@ export function useSimpleJournalEditor({
       allAccounts: accounts,
       sourceCurrency,
       destCurrency,
-      displayCurrency: sourceCurrency || destCurrency || workplaceCurrency,
+      displayCurrency: sourceCurrency || destCurrency || valuationCurrency,
       openAccountPicker,
       isValidAmount: numAmount > 0,
       accountSections,
@@ -476,7 +516,7 @@ export function useSimpleJournalEditor({
       manualSourceBaseRate,
       manualDestBaseRate,
       showManualRateFields,
-      needsWorkplaceRate,
+      needsValuationRate,
       setManualBaseRate,
       setConvertedAmount,
       resetToApiRate,
@@ -493,7 +533,7 @@ export function useSimpleJournalEditor({
       openAccountPicker,
       numAmount,
       accountSections,
-      workplaceCurrency,
+      valuationCurrency,
     ],
   );
 }

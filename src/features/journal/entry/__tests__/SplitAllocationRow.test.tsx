@@ -93,6 +93,31 @@ function renderRow(overrides: Partial<React.ComponentProps<typeof SplitAllocatio
 }
 
 describe('SplitAllocationRow', () => {
+  it('does not fetch rates while opening an existing allocation with saved rates', () => {
+    const onUpdateFxLine = jest.fn();
+    renderRow({
+      currencyCode: 'EUR',
+      isEditing: true,
+      sourceCurrency: 'EUR',
+      sourceExchangeRate: 1.1,
+      workplaceCurrency: 'USD',
+      row: {
+        id: 'saved-row',
+        accountId: asAccountId('missing-account'),
+        accountCurrency: 'USD',
+        amount: '11.00',
+        exchangeRate: '1',
+        precision: 2,
+      },
+      onUpdateFxLine,
+    });
+
+    expect(mockUseCrossCurrencyRates).toHaveBeenCalledWith(
+      expect.objectContaining({ enabled: false, workplaceCurrency: 'USD' }),
+    );
+    expect(onUpdateFxLine).not.toHaveBeenCalled();
+  });
+
   it('does not loop while bootstrapping a missing foreign rate through a parent update', () => {
     mockUseCrossCurrencyRates.mockReturnValue({
       exchangeRate: 0.01,

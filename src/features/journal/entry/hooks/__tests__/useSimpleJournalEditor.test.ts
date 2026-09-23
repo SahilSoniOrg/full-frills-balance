@@ -54,6 +54,8 @@ let mockWorkplaceCurrency = 'USD';
 function createEditor(options?: {
   crossCurrency?: boolean;
   type?: 'expense' | 'income' | 'transfer';
+  isEdit?: boolean;
+  valuationCurrency?: string;
 }) {
   const crossCurrency = options?.crossCurrency ?? false;
   const transactionType = options?.type ?? 'expense';
@@ -86,7 +88,8 @@ function createEditor(options?: {
     transactionType,
     setTransactionType: jest.fn(),
     isGuidedMode: true,
-    isEdit: false,
+    isEdit: options?.isEdit ?? false,
+    valuationCurrency: options?.valuationCurrency ?? mockWorkplaceCurrency,
     lines,
     setLines: jest.fn(),
     updateLine: jest.fn((id: string, updates: Record<string, unknown>) => {
@@ -163,6 +166,38 @@ describe('useSimpleJournalEditor', () => {
     expect(lastBatch['1'].exchangeRate).toBe((1.1).toFixed(6));
     expect(lastBatch['2'].exchangeRate).toBe((1.25).toFixed(6));
     expect(lastBatch['2'].amount).toBe(((100 * 1.1) / 1.25).toFixed(2));
+  });
+
+  it('uses saved journal rates on edit without fetching or rewriting lines on open', async () => {
+    mockWorkplaceCurrency = 'INR';
+    const editor = createEditor({ crossCurrency: true, isEdit: true, valuationCurrency: 'USD' });
+    editor.lines[0].accountId = 'eur-source';
+    editor.lines[0].accountCurrency = 'EUR';
+    editor.lines[0].amount = '100';
+    editor.lines[0].exchangeRate = '1.1';
+    editor.lines[1].accountId = 'usd-dest';
+    editor.lines[1].accountCurrency = 'USD';
+    editor.lines[1].amount = '110';
+    editor.lines[1].exchangeRate = '';
+
+    const { result } = renderHook(() =>
+      useSimpleJournalEditor({
+        accounts,
+        editor: editor as any,
+        onSelectAccountRequest: jest.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.exchangeRate).toBeCloseTo(1.1);
+    expect(result.current.convertedAmount).toBeCloseTo(110);
+    expect(mockFetchHistoricalRate).not.toHaveBeenCalled();
+    expect(mockFetchRate).not.toHaveBeenCalled();
+    expect(editor.updateLines).not.toHaveBeenCalled();
   });
 
   it('locks the saved rate from an edited converted amount and skips further API fetches', async () => {

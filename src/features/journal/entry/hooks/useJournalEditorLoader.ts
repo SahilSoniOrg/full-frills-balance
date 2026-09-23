@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 
 export interface JournalEditorHydration {
+  journalCurrency: string;
   description: string;
   notes: string;
   journalDate: string;
@@ -56,6 +57,7 @@ export function useJournalEditorLoader({
           const { journal, lines, transactionType, forceAdvancedMode } = result;
           const dateObj = new Date(journal.journalDate);
           hydrateEditor({
+            journalCurrency: journal.currencyCode,
             description: journal.description || '',
             notes: journal.notes || '',
             journalDate: dayjs(dateObj).format('YYYY-MM-DD'),

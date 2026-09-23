@@ -25,7 +25,8 @@ export class LedgerUpdateService {
       workplaceId,
       journalId,
     );
-    const prepared = await prepareJournalData(data, workplaceId);
+    const updateData = { ...data, currencyCode: originalJournal.currencyCode };
+    const prepared = await prepareJournalData(updateData, workplaceId);
 
     const extraOpCreator = () => {
       const mappedBeforeTransactions = originalTransactions.map(t => mapTransactionToAudit(t));
@@ -47,6 +48,7 @@ export class LedgerUpdateService {
             after: {
               description: data.description,
               journalDate: data.journalDate,
+              currencyCode: originalJournal.currencyCode,
               transactions: mappedAfterTransactions,
             },
           },
@@ -66,12 +68,12 @@ export class LedgerUpdateService {
       workplaceId,
       journalId,
       {
-        ...data,
+        ...updateData,
         transactions: prepared.transactions,
         totalAmount: prepared.totalAmount,
         displayType: prepared.displayType,
         calculatedBalances: prepared.calculatedBalances,
-        metadata: data.metadata,
+        metadata: updateData.metadata,
       },
       extraOpCreator,
       () => {

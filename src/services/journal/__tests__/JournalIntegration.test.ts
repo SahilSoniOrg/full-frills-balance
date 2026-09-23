@@ -207,7 +207,7 @@ describe('Journal ledger integration', () => {
         {
           description: 'Updated',
           journalDate: Date.now(),
-          currencyCode: 'USD',
+          currencyCode: 'INR',
           transactions: [
             {
               accountId: cashAccountId as AccountId,
@@ -232,6 +232,14 @@ describe('Journal ledger integration', () => {
       expect(updatedJournal).toBeDefined();
       expect(updatedJournal!.totalAmount).toBe(200);
       expect(updatedJournal!.description).toBe('Updated');
+      expect(updatedJournal!.currencyCode).toBe('USD');
+      const updatedTransactions = await transactionQueryRepository.findByJournal(
+        'wp-1' as WorkplaceId,
+        journal.id as JournalId,
+      );
+      expect(updatedTransactions.every(transaction => transaction.currencyCode === 'USD')).toBe(
+        true,
+      );
     }, 10000);
   });
 

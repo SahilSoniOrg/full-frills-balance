@@ -193,6 +193,7 @@ export class JournalWriteRepository {
 
     const existingJournal = await journalQueryRepository.find(workplaceId, journalId);
     if (!existingJournal) throw new Error('Journal not found');
+    const journalCurrency = existingJournal.currencyCode;
 
     const oldTransactions = await this.transactions
       .query(Q.where('journal_id', journalId), Q.where('workplace_id', workplaceId))
@@ -217,7 +218,7 @@ export class JournalWriteRepository {
           journalId,
           txData,
           journalFields.journalDate,
-          journalFields.currencyCode,
+          journalCurrency,
           workplaceId,
           calculatedBalances,
         ),
@@ -227,7 +228,7 @@ export class JournalWriteRepository {
         j.journalDate = journalFields.journalDate;
         j.description = journalFields.description;
         j.notes = journalFields.notes;
-        j.currencyCode = journalFields.currencyCode;
+        j.currencyCode = journalCurrency;
         j.status = journalFields.status ?? j.status;
         j.plannedPaymentId = journalFields.plannedPaymentId ?? j.plannedPaymentId;
         j.totalAmount = totalAmount ?? j.totalAmount;

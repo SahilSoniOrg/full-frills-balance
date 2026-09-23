@@ -100,6 +100,8 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   }, [isGuidedMode, advancedMode, setAdvancedMode, initialMode]);
   const [transactionType, setTransactionType] = useState<TabType>(initialType);
   const isEdit = !!journalId;
+  const [savedJournalCurrency, setSavedJournalCurrency] = useState<string>();
+  const valuationCurrency = isEdit ? savedJournalCurrency || workplaceCurrency : workplaceCurrency;
 
   // Advanced / Generic state
   const { lines, setLines, addLine, removeLine, updateLine, updateLines, balanceLine } =
@@ -107,7 +109,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       initialAmount,
       initialSourceId,
       initialDestinationId,
-      workplaceCurrency,
+      valuationCurrency,
     });
 
   const setGuidedModeInternal = useCallback(
@@ -139,6 +141,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   );
   const hydrateEditor = useCallback(
     (snapshot: JournalEditorHydration) => {
+      setSavedJournalCurrency(snapshot.journalCurrency);
       setDescription(snapshot.description);
       setNotes(snapshot.notes);
       setJournalDate(snapshot.journalDate);
@@ -177,9 +180,11 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
 
   const { fetchRatesForLines } = useJournalEditorExchangeRates({
     lines,
-    workplaceCurrency,
+    valuationCurrency,
     journalDate,
     isLoading,
+    isExistingJournal: isEdit,
+    journalId,
     isSubmitting,
     updateLines,
   });
@@ -211,8 +216,8 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   );
 
   const { imbalance, isUnbalanced, isEntryReadyToBalance } = useMemo(
-    () => deriveJournalEditorBalanceState(lines, workplaceCurrency),
-    [lines, workplaceCurrency],
+    () => deriveJournalEditorBalanceState(lines, valuationCurrency),
+    [lines, valuationCurrency],
   );
 
   return useMemo(
@@ -222,6 +227,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       transactionType,
       setTransactionType,
       isEdit,
+      valuationCurrency,
       isLoading,
       loadState,
       lines,
@@ -253,6 +259,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       setGuidedModeInternal,
       transactionType,
       isEdit,
+      valuationCurrency,
       isLoading,
       loadState,
       lines,

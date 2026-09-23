@@ -27,5 +27,11 @@ export function SplitModePanel({
     workplaceCurrency,
     editor,
   });
-  return <SplitForm {...splitEditor} onCreateAccountRequestForRow={onCreateAccountRequestForRow} />;
+  return (
+    <SplitForm
+      {...splitEditor}
+      isEditing={editor.isEdit}
+      onCreateAccountRequestForRow={onCreateAccountRequestForRow}
+    />
+  );
 }

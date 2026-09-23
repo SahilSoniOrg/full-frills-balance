@@ -243,6 +243,7 @@ describe('useJournalEditor', () => {
     const mockEditorData = {
       journal: {
         journalDate: '2024-01-01T12:00:00.000Z',
+        currencyCode: 'EUR',
         description: 'Test Load',
         notes: 'Test Notes Loaded',
       },
@@ -268,6 +269,7 @@ describe('useJournalEditor', () => {
     expect(result.current.description).toBe('Test Load');
     expect(result.current.notes).toBe('Test Notes Loaded');
     expect(result.current.lines).toHaveLength(2);
+    expect(result.current.valuationCurrency).toBe('EUR');
   });
 
   it('ignores stale edit loads when journalId changes before fetch completes', async () => {

@@ -206,7 +206,20 @@ export class JournalService {
     const { journalId, mode = 'advanced', workplaceId, ...entryParams } = params;
 
     try {
-      const assembled = await assembleCreateJournalData({ ...entryParams, workplaceId });
+      const existingJournal = journalId
+        ? await journalQueryRepository.find(workplaceId, journalId)
+        : null;
+      if (journalId && !existingJournal) {
+        return { success: false, error: 'Journal not found' };
+      }
+
+      const effectiveCurrencyCode =
+        existingJournal?.currencyCode ?? (await workplaceService.getCurrency(workplaceId));
+      const assembled = await assembleCreateJournalData({
+        ...entryParams,
+        workplaceId,
+        currencyCode: effectiveCurrencyCode,
+      });
       if (!assembled.success) {
         return assembled;
       }
