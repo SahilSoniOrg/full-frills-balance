@@ -10,6 +10,7 @@ import {
 } from '@/src/services/journal/splitJournalHelpers';
 import type { AccountRole, TabType } from '@/src/types/domainJournal';
 import type { AccountId } from '@/src/types/ids';
+import { formatRoundedAmount } from '@/src/utils/money';
 import { AccountPickerField } from '@/src/features/journal/entry/components/AccountPickerField';
 import { SplitAllocationRow } from '@/src/features/journal/entry/components/SplitAllocationRow';
 import { TransactionTypeSegmentedControl } from '@/src/features/journal/entry/components/TransactionTypeSegmentedControl';
@@ -108,7 +109,7 @@ export function SplitForm({
   const isOverAllocated = totals.remaining < 0;
   const canDistribute = hasTotal && totals.remaining > 0;
   const formatRemainingAmount = useCallback(
-    (amount: number) => `${currencySymbol} ${amount.toFixed(precision)}`,
+    (amount: number) => `${currencySymbol} ${formatRoundedAmount(amount, precision)}`,
     [currencySymbol, precision],
   );
   const remainingLabel = !hasTotal

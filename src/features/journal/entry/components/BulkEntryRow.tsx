@@ -130,7 +130,12 @@ export const BulkEntryRow = React.memo(
               <TouchableOpacity
                 onPress={() => onRemove(row.id)}
                 style={styles.deleteButton}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                hitSlop={{
+                  top: Spacing.md,
+                  bottom: Spacing.md,
+                  left: Spacing.md,
+                  right: Spacing.md,
+                }}
                 accessibilityRole="button"
                 accessibilityLabel={`Delete entry ${index + 1}`}
                 testID={`bulk-delete-${row.id}`}

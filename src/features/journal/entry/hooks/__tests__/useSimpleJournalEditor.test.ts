@@ -1,5 +1,7 @@
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
+import type { AccountFields } from '@/src/types/plainDtos';
+import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 
 import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
@@ -125,7 +127,7 @@ describe('useSimpleJournalEditor', () => {
       accountType: AccountType.EXPENSE,
       currencyCode: 'INR',
     },
-  ] as any;
+  ] as AccountFields[];
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -151,7 +153,7 @@ describe('useSimpleJournalEditor', () => {
     const { result } = renderHook(() =>
       useSimpleJournalEditor({
         accounts,
-        editor: editor as any,
+        editor: editor as ReturnType<typeof useJournalEditor>,
         onSelectAccountRequest: jest.fn(),
       }),
     );
@@ -183,7 +185,7 @@ describe('useSimpleJournalEditor', () => {
     const { result } = renderHook(() =>
       useSimpleJournalEditor({
         accounts,
-        editor: editor as any,
+        editor: editor as ReturnType<typeof useJournalEditor>,
         onSelectAccountRequest: jest.fn(),
       }),
     );
@@ -214,7 +216,7 @@ describe('useSimpleJournalEditor', () => {
     const { result } = renderHook(() =>
       useSimpleJournalEditor({
         accounts,
-        editor: editor as any,
+        editor: editor as ReturnType<typeof useJournalEditor>,
         onSelectAccountRequest: jest.fn(),
       }),
     );
@@ -261,7 +263,7 @@ describe('useSimpleJournalEditor', () => {
         editor.journalDate = journalDate;
         return useSimpleJournalEditor({
           accounts,
-          editor: editor as any,
+          editor: editor as ReturnType<typeof useJournalEditor>,
           onSelectAccountRequest: jest.fn(),
         });
       },
@@ -302,7 +304,7 @@ describe('useSimpleJournalEditor', () => {
     const { result } = renderHook(() =>
       useSimpleJournalEditor({
         accounts,
-        editor: editor as any,
+        editor: editor as ReturnType<typeof useJournalEditor>,
         onSelectAccountRequest: jest.fn(),
       }),
     );
@@ -340,7 +342,7 @@ describe('useSimpleJournalEditor', () => {
     renderHook(() =>
       useSimpleJournalEditor({
         accounts,
-        editor: editor as any,
+        editor: editor as ReturnType<typeof useJournalEditor>,
         onSelectAccountRequest: jest.fn(),
       }),
     );
@@ -381,7 +383,7 @@ describe('useSimpleJournalEditor', () => {
         editor.lines = editorLines;
         return useSimpleJournalEditor({
           accounts,
-          editor: editor as any,
+          editor: editor as ReturnType<typeof useJournalEditor>,
           onSelectAccountRequest: jest.fn(),
         });
       },
@@ -453,7 +455,7 @@ describe('useSimpleJournalEditor', () => {
         setLines,
         updateLine,
         updateLines,
-      } as any;
+      } as ReturnType<typeof useJournalEditor>;
       const simple = useSimpleJournalEditor({
         accounts,
         editor,
@@ -486,7 +488,7 @@ describe('useSimpleJournalEditor', () => {
     const { result } = renderHook(() =>
       useSimpleJournalEditor({
         accounts,
-        editor: editor as any,
+        editor: editor as ReturnType<typeof useJournalEditor>,
         onSelectAccountRequest: jest.fn(),
       }),
     );
@@ -522,7 +524,7 @@ describe('useSimpleJournalEditor', () => {
     const { result } = renderHook(() =>
       useSimpleJournalEditor({
         accounts,
-        editor: editor as any,
+        editor: editor as ReturnType<typeof useJournalEditor>,
         onSelectAccountRequest: jest.fn(),
       }),
     );
@@ -555,7 +557,7 @@ describe('useSimpleJournalEditor', () => {
     const { result } = renderHook(() =>
       useSimpleJournalEditor({
         accounts,
-        editor: editor as any,
+        editor: editor as ReturnType<typeof useJournalEditor>,
         onSelectAccountRequest: jest.fn(),
       }),
     );
@@ -598,7 +600,7 @@ describe('useSimpleJournalEditor', () => {
     const { result } = renderHook(() =>
       useSimpleJournalEditor({
         accounts,
-        editor: editor as any,
+        editor: editor as ReturnType<typeof useJournalEditor>,
         onSelectAccountRequest: jest.fn(),
       }),
     );
@@ -615,7 +617,7 @@ describe('useSimpleJournalEditor', () => {
     const { result } = renderHook(() =>
       useSimpleJournalEditor({
         accounts,
-        editor: editor as any,
+        editor: editor as ReturnType<typeof useJournalEditor>,
         onSelectAccountRequest: jest.fn(),
       }),
     );

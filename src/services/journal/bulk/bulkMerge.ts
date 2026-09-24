@@ -4,7 +4,7 @@ import { journalQueryRepository } from '@/src/data/repositories/journal/journalT
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { JournalDisplayType, TransactionType } from '@/src/types/enums';
-import { safeAdd } from '@/src/utils/money';
+import { fromMinorUnits, safeAdd } from '@/src/utils/money';
 import { evaluateJournalBalance } from '@/src/domain/accounting/journalBalanceEvaluator';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { currencyReadService } from '@/src/services/currency-read-service';
@@ -159,8 +159,8 @@ export async function analyzeJournalsForMerge(
       });
     }
   }
-  const totalDebit = evaluation.debitTotalMinorUnits / 10 ** evaluation.journalPrecision;
-  const totalCredit = evaluation.creditTotalMinorUnits / 10 ** evaluation.journalPrecision;
+  const totalDebit = fromMinorUnits(evaluation.debitTotalMinorUnits, evaluation.journalPrecision);
+  const totalCredit = fromMinorUnits(evaluation.creditTotalMinorUnits, evaluation.journalPrecision);
   const combinedLines = Array.from(lineMap.values());
 
   if (!evaluation.isBalanced) {

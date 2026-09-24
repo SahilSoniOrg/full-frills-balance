@@ -6,6 +6,7 @@ import { ManualBaseRateField } from './ManualBaseRateField';
 import { resolveExchangeRatePresentation } from '@/src/features/journal/entry/journalEntryPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { withOpacity } from '@/src/utils/color-math';
+import { formatRoundedAmount } from '@/src/utils/money';
 import { useCallback, useMemo, useState } from 'react';
 import {
   type StyleProp,
@@ -67,14 +68,14 @@ export function ExchangeRateCard({
   const { theme, fonts } = useTheme();
   const [convertedDraft, setConvertedDraft] = useState<string | null>(null);
   const [isConvertedFocused, setIsConvertedFocused] = useState(false);
-  const [convertedInputWidth, setConvertedInputWidth] = useState(72);
+  const [convertedInputWidth, setConvertedInputWidth] = useState(Size.fieldNarrow);
   const validExchangeRate = useMemo(() => {
     const numericRate = typeof exchangeRate === 'string' ? Number(exchangeRate) : exchangeRate;
     return typeof numericRate === 'number' && Number.isFinite(numericRate) && numericRate > 0
       ? numericRate
       : null;
   }, [exchangeRate]);
-  const formattedConverted = convertedAmount.toFixed(precision);
+  const formattedConverted = formatRoundedAmount(convertedAmount, precision);
   const convertedInputValue =
     convertedDraft ?? (validExchangeRate !== null ? formattedConverted : '');
   const destSymbol = destCurrency ? CURRENCY_SYMBOLS[destCurrency] || destCurrency : '';
@@ -151,7 +152,8 @@ export function ExchangeRateCard({
                     numberOfLines={1}
                     ellipsizeMode="tail"
                   >
-                    1 {displayedRate.sourceCurrency} = {displayedRate.exchangeRate.toFixed(4)}{' '}
+                    1 {displayedRate.sourceCurrency} ={' '}
+                    {formatRoundedAmount(displayedRate.exchangeRate, 4)}{' '}
                     {displayedRate.destinationCurrency}
                   </AppText>
                 </View>
@@ -237,7 +239,7 @@ export function ExchangeRateCard({
                     pointerEvents="none"
                     onLayout={event => {
                       const measuredWidth = Math.ceil(event.nativeEvent.layout.width);
-                      const nextWidth = Math.max(72, measuredWidth + Spacing.xs);
+                      const nextWidth = Math.max(Size.fieldNarrow, measuredWidth + Spacing.xs);
                       setConvertedInputWidth(current =>
                         current === nextWidth ? current : nextWidth,
                       );

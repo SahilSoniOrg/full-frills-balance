@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import { AppSegmentedControl, Icon, type SegmentedOption } from '@/src/components/core';
-import { Opacity, Spacing } from '@/src/constants/design-tokens';
+import { Opacity, Size, Spacing } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { TabType } from '@/src/types/domainJournal';
 import { withOpacity } from '@/src/utils/color-math';
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   compactTypeSwitcher: {
-    width: 108,
-    height: 38,
+    width: Size.typeIconWidth,
+    height: Size.controlCompact,
   },
 });

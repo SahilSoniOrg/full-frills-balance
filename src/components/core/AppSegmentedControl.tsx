@@ -1,4 +1,4 @@
-import { ChromeMotion, Opacity, Shape, Spacing } from '@/src/constants';
+import { ChromeMotion, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { Box } from '@/src/design-system/Box';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   optionLg: {
-    minHeight: 38,
+    minHeight: Size.controlCompact,
   },
   optionContent: {
     flexDirection: 'row',

@@ -1,4 +1,5 @@
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
+import { roundToPrecision } from '@/src/utils/money';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
   incomeItemName,
@@ -138,7 +139,7 @@ function describeDraftChange(previous: CashClarityDraft, current: CashClarityDra
 }
 
 function roundedAmount(amount: number): number {
-  return Math.round((amount + Number.EPSILON) * 100) / 100;
+  return roundToPrecision(amount, 2);
 }
 
 /** Describes a draft mutation using the same projection that supplies the displayed number. */

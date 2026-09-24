@@ -1,16 +1,19 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
+import type { AccountFields } from '@/src/types/plainDtos';
+import { useJournalEditor } from '../useJournalEditor';
 import { useSplitJournalEditor } from '../useSplitJournalEditor';
 
 jest.mock('@/src/features/journal/hooks/useAccountSelection', () => ({
   useAccountSelection: jest.fn(({ accounts }) => ({
     leafAccounts: accounts,
     transactionAccounts: accounts.filter(
-      (account: any) => account.accountType !== 'EXPENSE' && account.accountType !== 'INCOME',
+      (account: AccountFields) =>
+        account.accountType !== 'EXPENSE' && account.accountType !== 'INCOME',
     ),
-    expenseAccounts: accounts.filter((account: any) => account.accountType === 'EXPENSE'),
-    incomeAccounts: accounts.filter((account: any) => account.accountType === 'INCOME'),
+    expenseAccounts: accounts.filter((account: AccountFields) => account.accountType === 'EXPENSE'),
+    incomeAccounts: accounts.filter((account: AccountFields) => account.accountType === 'INCOME'),
   })),
 }));
 
@@ -73,14 +76,17 @@ function createEditor(sourceAccountId = 'cash') {
         if (updates[line.id]) Object.assign(line, updates[line.id]);
       });
     }),
-    setLines: jest.fn((nextLines: any) => {
-      const next = typeof nextLines === 'function' ? nextLines(lines) : nextLines;
+    setLines: jest.fn((nextLines: unknown) => {
+      const next =
+        typeof nextLines === 'function'
+          ? (nextLines as (current: typeof lines) => typeof lines)(lines)
+          : (nextLines as typeof lines);
       lines.splice(0, lines.length, ...next);
     }),
     addLine: jest.fn(),
     removeLine: jest.fn(),
     setIsGuidedMode: jest.fn(),
-  } as any;
+  } as ReturnType<typeof useJournalEditor>;
 }
 
 describe('useSplitJournalEditor', () => {
@@ -94,7 +100,7 @@ describe('useSplitJournalEditor', () => {
 
     const { result } = renderHook(() =>
       useSplitJournalEditor({
-        accounts: accounts as any,
+        accounts: accounts as AccountFields[],
         workplaceCurrency: 'USD',
         editor,
       }),
@@ -121,7 +127,7 @@ describe('useSplitJournalEditor', () => {
 
     const { result } = renderHook(() =>
       useSplitJournalEditor({
-        accounts: accounts as any,
+        accounts: accounts as AccountFields[],
         workplaceCurrency: 'INR',
         editor,
       }),
@@ -140,7 +146,7 @@ describe('useSplitJournalEditor', () => {
 
     const { result } = renderHook(() =>
       useSplitJournalEditor({
-        accounts: accounts as any,
+        accounts: accounts as AccountFields[],
         workplaceCurrency: 'USD',
         editor,
       }),
@@ -155,7 +161,7 @@ describe('useSplitJournalEditor', () => {
       'split-1': { amount: '20.00' },
       'split-2': { amount: '30.00' },
     });
-    expect(editor.lines.map((line: any) => line.amount)).toEqual(['50', '20.00', '30.00']);
+    expect(editor.lines.map(line => line.amount)).toEqual(['50', '20.00', '30.00']);
   });
 
   it('retains one allocation row when removing split rows', () => {
@@ -168,7 +174,7 @@ describe('useSplitJournalEditor', () => {
 
     const { result } = renderHook(() =>
       useSplitJournalEditor({
-        accounts: accounts as any,
+        accounts: accounts as AccountFields[],
         workplaceCurrency: 'USD',
         editor,
       }),
@@ -180,7 +186,7 @@ describe('useSplitJournalEditor', () => {
     });
 
     expect(editor.lines).toHaveLength(2);
-    expect(editor.lines.map((line: any) => line.id)).toEqual(['source', 'split-2']);
+    expect(editor.lines.map(line => line.id)).toEqual(['source', 'split-2']);
   });
 
   it.each([
@@ -210,7 +216,7 @@ describe('useSplitJournalEditor', () => {
 
       const { result } = renderHook(() =>
         useSplitJournalEditor({
-          accounts: accounts as any,
+          accounts: accounts as AccountFields[],
           workplaceCurrency: 'USD',
           editor,
         }),
@@ -231,7 +237,7 @@ describe('useSplitJournalEditor', () => {
 
     const { result } = renderHook(() =>
       useSplitJournalEditor({
-        accounts: accounts as any,
+        accounts: accounts as AccountFields[],
         workplaceCurrency: 'USD',
         editor,
       }),

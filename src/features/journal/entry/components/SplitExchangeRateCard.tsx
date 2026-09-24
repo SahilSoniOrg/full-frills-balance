@@ -4,6 +4,7 @@ import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import { withOpacity } from '@/src/utils/color-math';
+import { formatRoundedAmount } from '@/src/utils/money';
 import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -93,7 +94,8 @@ export function SplitExchangeRateCard({
         ) : displayedRate ? (
           <>
             <AppText variant="caption" color="tertiary" numberOfLines={1}>
-              1 {displayedRate.sourceCurrency} = {displayedRate.exchangeRate.toFixed(4)}{' '}
+              1 {displayedRate.sourceCurrency} ={' '}
+              {formatRoundedAmount(displayedRate.exchangeRate, 4)}{' '}
               {displayedRate.destinationCurrency}
             </AppText>
             <TouchableOpacity
@@ -143,7 +145,7 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 38,
+    minHeight: Size.controlCompact,
     marginBottom: -StyleSheet.hairlineWidth,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,

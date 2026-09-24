@@ -6,7 +6,7 @@ import { transactionQueryRepository } from '@/src/data/repositories/transaction'
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { effect } from '@/src/utils/accounting/BalanceEffects';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
-import { roundToPrecision } from '@/src/utils/money';
+import { fromMinorUnits, roundToPrecision } from '@/src/utils/money';
 import {
   evaluateJournalBalance,
   JournalBalanceError,
@@ -77,8 +77,10 @@ export async function prepareJournalData(
   const totalAmount =
     balanceEvaluation.journalTotalAmount ??
     (!isPosted && balanceEvaluation.issues[0]?.code === 'unbalanced'
-      ? Math.max(balanceEvaluation.debitTotalMinorUnits, balanceEvaluation.creditTotalMinorUnits) /
-        10 ** balanceEvaluation.journalPrecision
+      ? fromMinorUnits(
+          Math.max(balanceEvaluation.debitTotalMinorUnits, balanceEvaluation.creditTotalMinorUnits),
+          balanceEvaluation.journalPrecision,
+        )
       : undefined);
   if (totalAmount === undefined || hasInvalidLines || (isPosted && !balanceEvaluation.isBalanced)) {
     throw new JournalBalanceError(
@@ -91,7 +93,6 @@ export async function prepareJournalData(
 
   const isInactive = !isPosted;
   if (!isInactive) {
-    // Parallelize fetching latest transactions for all accounts involved
     await Promise.all(
       roundedTransactions.map(async tx => {
         const latestTx = await transactionQueryRepository.findLatestForAccountBeforeDate(

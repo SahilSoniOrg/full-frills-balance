@@ -1,5 +1,5 @@
 import { AppInput, AppText } from '@/src/components/core';
-import { Spacing, Typography } from '@/src/constants';
+import { Size, Spacing, Typography } from '@/src/constants';
 import { StyleSheet, View } from 'react-native';
 
 export function ManualBaseRateField({
@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   inputContainer: {
-    width: 72,
+    width: Size.fieldNarrow,
     minHeight: 0,
   },
   input: {

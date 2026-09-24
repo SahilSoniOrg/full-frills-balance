@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   typeSegment: {
-    width: 56,
+    width: Size.lineAmountWidth,
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',

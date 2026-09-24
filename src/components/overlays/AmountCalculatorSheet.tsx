@@ -445,7 +445,7 @@ export function AmountCalculatorSheet({
 
 const styles = StyleSheet.create({
   display: {
-    minHeight: 126,
+    minHeight: Size.calculatorPreview,
     justifyContent: 'flex-end',
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.xs,

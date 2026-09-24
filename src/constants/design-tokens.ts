@@ -171,6 +171,14 @@ export const Size = {
   buttonLg: 52,
   buttonXl: 60,
 
+  // Compact journal controls (amount field, segmented type, rate row)
+  controlCompact: 38,
+  fieldNarrow: 72,
+  fieldAmount: 96,
+  typeIconWidth: 108,
+  lineAmountWidth: 56,
+  calculatorPreview: 126,
+
   // Input sizes
   inputMd: 48,
   inputLg: 60,

@@ -1,4 +1,5 @@
 import { TransactionType } from '@/src/types/enums';
+import { fromMinorUnits, toMinorUnits } from '@/src/utils/money';
 import { sanitizeAmount } from '@/src/utils/validation';
 
 export interface JournalBalanceLineInput {
@@ -72,12 +73,8 @@ function normalizeCode(code: string | undefined): string {
   return code?.trim().toUpperCase() ?? '';
 }
 
-function toMinorUnits(amount: number, precision: number): number {
-  return Math.round((amount + Number.EPSILON) * 10 ** precision);
-}
-
 function formatMinorUnits(minorUnits: number, precision: number): number {
-  return minorUnits / 10 ** precision;
+  return fromMinorUnits(minorUnits, precision);
 }
 
 function formatDifference(minorUnits: number, precision: number, currency: string): string {

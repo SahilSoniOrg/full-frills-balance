@@ -4,7 +4,14 @@ import { AppConfig } from '@/src/constants';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import { parseSimpleAmountInput } from '@/src/services/journal/simpleJournalHelpers';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import { amountsAreEqual, roundToPrecision } from '@/src/utils/money';
+import {
+  amountsAreEqual,
+  formatRoundedAmount,
+  fromMinorUnits,
+  minorUnitFactor,
+  roundToPrecision,
+  toMinorUnits,
+} from '@/src/utils/money';
 
 const SPLIT_AMOUNT_PRECISION = 2;
 
@@ -35,7 +42,7 @@ export interface SplitTotals {
 }
 
 function formatSplitUnits(units: number, precision: number): string {
-  return (units / 10 ** precision).toFixed(precision);
+  return formatRoundedAmount(fromMinorUnits(units, precision), precision);
 }
 
 function distributeUnitsEvenly(totalUnits: number, count: number): number[] {
@@ -43,6 +50,44 @@ function distributeUnitsEvenly(totalUnits: number, count: number): number[] {
   const base = Math.floor(totalUnits / count);
   const extraUnits = totalUnits % count;
   return Array.from({ length: count }, (_, index) => base + (index < extraUnits ? 1 : 0));
+}
+
+/** Cross-currency pair rate for one split row. Pure; the row component only displays it. */
+export function resolveSplitPairRate(input: {
+  isCrossCurrency: boolean;
+  sourceRate: number | null;
+  destinationRate: number | null;
+  quotedRate: number | null;
+  hasManualWorkplaceRate: boolean;
+}): number | null {
+  if (!input.isCrossCurrency) return null;
+  if (input.hasManualWorkplaceRate && input.quotedRate && input.quotedRate > 0) {
+    return input.quotedRate;
+  }
+  if (input.sourceRate && input.destinationRate) {
+    return input.sourceRate / input.destinationRate;
+  }
+  return input.quotedRate && input.quotedRate > 0 ? input.quotedRate : null;
+}
+
+export function rowAmountFromBase(baseAmount: number, pairRate: number, precision: number): number {
+  return roundToPrecision(baseAmount * pairRate, precision);
+}
+
+export function amountInRowCurrency(
+  baseAmount: number,
+  pairRate: number,
+  precision: number,
+): string {
+  return formatRoundedAmount(rowAmountFromBase(baseAmount, pairRate, precision), precision);
+}
+
+export function amountInSourceCurrency(
+  nominalAmount: number,
+  pairRate: number,
+  precision: number,
+): string {
+  return formatRoundedAmount(nominalAmount / pairRate, precision);
 }
 
 export function getSplitCurrencyPrecision(currency: string | undefined, fallback = 2): number {
@@ -108,11 +153,11 @@ function formatBaseAmountForRow(
 ): string {
   const rate = getRateToBase(row.accountCurrency, row.exchangeRate, currencyContext.baseCurrency);
   const precision = getRowPrecision(row, fallbackPrecision);
-  return formatSplitUnits(Math.round((baseAmount / (rate || 1)) * 10 ** precision), precision);
+  return formatSplitUnits(toMinorUnits(baseAmount / (rate || 1), precision), precision);
 }
 
 function getSplitAmountUnits(amount: string, precision: number): number {
-  return Math.max(0, Math.round(parseSimpleAmountInput(amount) * 10 ** precision));
+  return Math.max(0, toMinorUnits(parseSimpleAmountInput(amount), precision));
 }
 
 function getRowBaseUnits(
@@ -129,7 +174,7 @@ function getRowBaseUnits(
     currencyContext,
     basePrecision,
   );
-  return Math.round(baseAmount * 10 ** basePrecision);
+  return toMinorUnits(baseAmount, basePrecision);
 }
 
 interface SplitAmountOption {
@@ -156,7 +201,7 @@ function reconcileCurrencyAmounts(
   if (splits.length === 0) return candidateAmounts;
 
   const basePrecision = getBasePrecision(currencyContext);
-  const baseFactor = 10 ** basePrecision;
+  const baseFactor = minorUnitFactor(basePrecision);
   const rowPrecisions = splits.map(row => getRowPrecision(row, sourcePrecision));
   const anchorUnits = candidateAmounts.map((amount, index) =>
     getSplitAmountUnits(amount, rowPrecisions[index]),
@@ -174,7 +219,7 @@ function reconcileCurrencyAmounts(
     row => getRateToBase(row.accountCurrency, row.exchangeRate, currencyContext.baseCurrency) || 1,
   );
   const baseUnitsPerRowUnit = rates.map(
-    (rate, index) => (rate * baseFactor) / 10 ** rowPrecisions[index],
+    (rate, index) => (rate * baseFactor) / minorUnitFactor(rowPrecisions[index]),
   );
   const largestBaseStep = Math.max(
     ...baseUnitsPerRowUnit.map(step => Math.max(1, Math.ceil(step))),
@@ -274,7 +319,7 @@ export function distributeSplitRemainder(
     const emptyIndexes = splits
       .map((split, index) => (parseSimpleAmountInput(split.amount) === 0 ? index : -1))
       .filter(index => index >= 0);
-    const factor = 10 ** basePrecision;
+    const factor = minorUnitFactor(basePrecision);
 
     if (emptyIndexes.length > 0) {
       const distributedBase = distributeUnitsEvenly(
@@ -296,7 +341,7 @@ export function distributeSplitRemainder(
         splits,
         candidateAmounts,
         splits.map(split => split.amount),
-        Math.round(totalBase * factor),
+        toMinorUnits(totalBase, basePrecision),
         currencyContext,
         precision,
       );
@@ -336,15 +381,15 @@ export function distributeSplitRemainder(
       splits,
       candidateAmounts,
       splits.map(split => split.amount),
-      Math.round(totalBase * factor),
+      toMinorUnits(totalBase, precision),
       currencyContext,
       precision,
     );
     return splits.map((split, index) => ({ ...split, amount: reconciledAmounts[index] }));
   }
 
-  const factor = 10 ** precision;
-  const totalUnits = Math.round(parseSimpleAmountInput(totalAmount) * factor);
+  const factor = minorUnitFactor(precision);
+  const totalUnits = toMinorUnits(parseSimpleAmountInput(totalAmount), precision);
   const amountsInUnits = splits.map(split =>
     Math.round(parseSimpleAmountInput(split.amount) * factor),
   );
@@ -408,12 +453,12 @@ export function equalizeSplitAmounts(
       basePrecision,
     );
     const distributedBase = distributeUnitsEvenly(
-      Math.round(totalBase * 10 ** basePrecision),
+      toMinorUnits(totalBase, basePrecision),
       splits.length,
     );
     const candidateAmounts = splits.map((split, index) =>
       formatBaseAmountForRow(
-        distributedBase[index] / 10 ** basePrecision,
+        fromMinorUnits(distributedBase[index], basePrecision),
         split,
         currencyContext,
         precision,
@@ -423,14 +468,14 @@ export function equalizeSplitAmounts(
       splits,
       candidateAmounts,
       splits.map(() => '0'),
-      Math.round(totalBase * 10 ** basePrecision),
+      toMinorUnits(totalBase, basePrecision),
       currencyContext,
       precision,
     );
     return splits.map((split, index) => ({ ...split, amount: reconciledAmounts[index] }));
   }
 
-  const totalUnits = Math.round(parseSimpleAmountInput(totalAmount) * 10 ** precision);
+  const totalUnits = toMinorUnits(parseSimpleAmountInput(totalAmount), precision);
   const distributed = distributeUnitsEvenly(totalUnits, splits.length);
   return splits.map((split, index) => ({
     ...split,

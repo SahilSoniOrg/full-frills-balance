@@ -9,9 +9,14 @@ import {
   resolveWorkplaceRatesFromConvertedAmount,
 } from '@/src/features/journal/entry/manualBaseRate';
 import {
+  amountInRowCurrency,
+  amountInSourceCurrency,
   getSplitCurrencyPrecision,
+  resolveSplitPairRate,
+  rowAmountFromBase,
   type SplitRowState,
 } from '@/src/services/journal/splitJournalHelpers';
+import { formatRoundedAmount } from '@/src/utils/money';
 import type { AccountRole } from '@/src/types/domainJournal';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -43,10 +48,6 @@ export interface SplitAllocationRowProps {
   sourceCurrency?: string;
   sourceExchangeRate?: string | number;
   workplaceCurrency: string;
-}
-
-function formatAmount(amount: number, precision: number): string {
-  return amount.toFixed(precision);
 }
 
 function positiveRate(value: string | number | undefined): number | null {
@@ -167,26 +168,23 @@ export function SplitAllocationRow({
     workplaceCurrency,
   ]);
 
-  const pairRate = useMemo(() => {
-    if (!isCrossCurrency) return null;
-    if (
-      rates.exchangeRate &&
-      rates.exchangeRate > 0 &&
-      (manualSourceBaseRate || manualDestBaseRate)
-    ) {
-      return rates.exchangeRate;
-    }
-    if (effectiveWorkplaceRates.sourceRate && effectiveWorkplaceRates.destinationRate) {
-      return effectiveWorkplaceRates.sourceRate / effectiveWorkplaceRates.destinationRate;
-    }
-    return rates.exchangeRate && rates.exchangeRate > 0 ? rates.exchangeRate : null;
-  }, [
-    effectiveWorkplaceRates,
-    isCrossCurrency,
-    manualDestBaseRate,
-    manualSourceBaseRate,
-    rates.exchangeRate,
-  ]);
+  const pairRate = useMemo(
+    () =>
+      resolveSplitPairRate({
+        isCrossCurrency,
+        sourceRate: effectiveWorkplaceRates.sourceRate,
+        destinationRate: effectiveWorkplaceRates.destinationRate,
+        quotedRate: rates.exchangeRate,
+        hasManualWorkplaceRate: Boolean(manualSourceBaseRate || manualDestBaseRate),
+      }),
+    [
+      effectiveWorkplaceRates,
+      isCrossCurrency,
+      manualDestBaseRate,
+      manualSourceBaseRate,
+      rates.exchangeRate,
+    ],
+  );
 
   const effectivePendingBaseAmount = useMemo(() => {
     if (pendingBaseAmount === null) return null;
@@ -206,20 +204,22 @@ export function SplitAllocationRow({
     if (effectivePendingBaseAmount !== null) return effectivePendingBaseAmount;
     const nominalAmount = Number.parseFloat(row.amount);
     return pairRate && Number.isFinite(nominalAmount)
-      ? formatAmount(nominalAmount / pairRate, sourcePrecision)
+      ? amountInSourceCurrency(nominalAmount, pairRate, sourcePrecision)
       : row.amount;
   }, [effectivePendingBaseAmount, isCrossCurrency, pairRate, row.amount, sourcePrecision]);
 
   const convertedAmount = useMemo(() => {
     if (!isCrossCurrency || !pairRate) return '';
     const base = Number.parseFloat(baseAmount);
-    return Number.isFinite(base) && base > 0 ? formatAmount(base * pairRate, rowPrecision) : '';
+    return Number.isFinite(base) && base > 0
+      ? amountInRowCurrency(base, pairRate, rowPrecision)
+      : '';
   }, [baseAmount, isCrossCurrency, pairRate, rowPrecision]);
 
   const persistRates = useCallback(
     (nextAmount: number, sourceRate: number | null, destinationRate: number | null) => {
       onUpdateFxLine({
-        amount: formatAmount(nextAmount, rowPrecision),
+        amount: formatRoundedAmount(nextAmount, rowPrecision),
         exchangeRate:
           rowCurrencyCode === workplaceCurrency && destinationRate === 1
             ? ''
@@ -255,7 +255,7 @@ export function SplitAllocationRow({
 
     consumedPendingBaseAmountRef.current = effectivePendingBaseAmount;
     persistRates(
-      base * pairRate,
+      rowAmountFromBase(base, pairRate, rowPrecision),
       effectiveWorkplaceRates.sourceRate,
       effectiveWorkplaceRates.destinationRate,
     );
@@ -267,6 +267,7 @@ export function SplitAllocationRow({
     pendingBaseAmount,
     persistRates,
     row.exchangeRate,
+    rowPrecision,
   ]);
 
   const handleBaseAmountChange = useCallback(
@@ -286,7 +287,7 @@ export function SplitAllocationRow({
 
       setPendingBaseAmount(null);
       persistRates(
-        base * pairRate,
+        rowAmountFromBase(base, pairRate, rowPrecision),
         effectiveWorkplaceRates.sourceRate,
         effectiveWorkplaceRates.destinationRate,
       );
@@ -298,6 +299,7 @@ export function SplitAllocationRow({
       onUpdateFxLine,
       pairRate,
       persistRates,
+      rowPrecision,
     ],
   );
 

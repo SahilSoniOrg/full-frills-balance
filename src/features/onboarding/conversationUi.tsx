@@ -659,7 +659,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   amountInput: {
-    width: 96,
+    width: Size.fieldAmount,
     minWidth: 48,
     flexShrink: 0,
     paddingHorizontal: 0,
@@ -670,7 +670,7 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   payInput: {
-    width: 72,
+    width: Size.fieldNarrow,
     fontSize: Typography.sizes.sm,
     textAlign: 'left',
   },

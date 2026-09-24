@@ -48,7 +48,7 @@ export const routeAccountSelectorStyles = StyleSheet.create({
   },
   compactNodeButton: {
     paddingVertical: Spacing.xs,
-    minHeight: 38,
+    minHeight: Size.controlCompact,
     gap: Spacing.xs,
   },
   standardNodeButton: { borderRadius: Shape.radius.lg, borderWidth: 1 },
@@ -102,7 +102,7 @@ export const routeAccountSelectorStyles = StyleSheet.create({
   },
   compactConnectorContainer: {
     width: Size.xs,
-    minHeight: 38,
+    minHeight: Size.controlCompact,
     gap: Spacing.none,
   },
   connectorArrow: {

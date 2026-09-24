@@ -9,6 +9,23 @@ export const roundToPrecision = (amount: number, precision: number): number => {
   return Math.round((amount + Number.EPSILON) * factor) / factor;
 };
 
+/** Scale that turns a major-unit amount into whole minor units. */
+export const minorUnitFactor = (precision: number): number => 10 ** precision;
+
+/** Whole minor units (cents, etc.) using the same edge-rounding as `roundToPrecision`. */
+export const toMinorUnits = (amount: number, precision: number): number => {
+  return Math.round((amount + Number.EPSILON) * minorUnitFactor(precision));
+};
+
+export const fromMinorUnits = (minorUnits: number, precision: number): number => {
+  return minorUnits / minorUnitFactor(precision);
+};
+
+/** Display string for an amount already rounded to the currency's precision. */
+export const formatRoundedAmount = (amount: number, precision: number): string => {
+  return roundToPrecision(amount, precision).toFixed(precision);
+};
+
 /**
  * Returns dynamic epsilon for zero-balance checks based on precision.
  * e.g., for precision 2, epsilon is 0.001.

@@ -23,6 +23,7 @@ import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types
 import type { BulkDeleteUndoToken } from '@/src/types/domainJournal';
 import { mapTransactionToAudit } from '@/src/types/audit';
 import { referenceNumberFromMetadataJson } from '@/src/utils/sms/SmsReferenceExtractor';
+import { fromMinorUnits, toMinorUnits } from '@/src/utils/money';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { Model, Q } from '@nozbe/watermelondb';
 
@@ -1693,10 +1694,10 @@ export class JournalPersistenceRepository {
 
     const totalMinorUnits =
       evaluation.journalTotalAmount !== undefined
-        ? Math.round(evaluation.journalTotalAmount * 10 ** evaluation.journalPrecision)
+        ? toMinorUnits(evaluation.journalTotalAmount, evaluation.journalPrecision)
         : Math.max(evaluation.debitTotalMinorUnits, evaluation.creditTotalMinorUnits);
     return {
-      totalAmount: totalMinorUnits / 10 ** evaluation.journalPrecision,
+      totalAmount: fromMinorUnits(totalMinorUnits, evaluation.journalPrecision),
       accountCurrencyById: new Map(accounts.map(account => [account.id, account.currencyCode])),
     };
   }

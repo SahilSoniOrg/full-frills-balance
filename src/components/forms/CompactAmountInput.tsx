@@ -1,6 +1,6 @@
 import { AppText } from '@/src/components/core';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
-import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
+import { Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { StyleProp, TextInputProps, ViewStyle } from 'react-native';
 import { StyleSheet, View } from 'react-native';
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    height: 38,
+    height: Size.controlCompact,
     borderRadius: Shape.radius.lg,
     borderWidth: 1,
   },
