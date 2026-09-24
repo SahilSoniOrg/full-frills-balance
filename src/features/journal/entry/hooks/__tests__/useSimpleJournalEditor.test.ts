@@ -176,6 +176,25 @@ describe('useSimpleJournalEditor', () => {
     expect(lastBatch['2'].amount).toBe(((100 * 1.1) / 1.25).toFixed(2));
   });
 
+  it('recalculates the converted amount when the destination currency changes', async () => {
+    mockFetchRate.mockImplementation(async (from: string) => (from === 'GBP' ? 1.25 : 1));
+    const editor = createEditor();
+    const { result } = renderHook(() =>
+      useSimpleJournalEditor({
+        accounts,
+        editor,
+        onSelectAccountRequest: jest.fn(),
+      }),
+    );
+
+    act(() => result.current.setDestinationId(asAccountId('gbp-dest')));
+
+    await waitFor(() => {
+      const lastBatch = (editor.updateLines as jest.Mock).mock.calls.at(-1)?.[0];
+      expect(lastBatch?.['2']?.amount).toBe('80.00');
+    });
+  });
+
   it('uses saved journal rates on edit without fetching or rewriting lines on open', async () => {
     mockWorkplaceCurrency = 'INR';
     const editor = createEditor({ crossCurrency: true, isEdit: true, valuationCurrency: 'USD' });

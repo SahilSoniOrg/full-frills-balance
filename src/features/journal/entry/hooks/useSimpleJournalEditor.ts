@@ -187,8 +187,8 @@ export function useSimpleJournalEditor({
     ],
   );
   const fxPair = useMemo(
-    () => resolveFxPair({ ...fxInput, override: fxOverride }),
-    [fxInput, fxOverride],
+    () => resolveFxPair({ ...fxInput, override: fxOverride, destPrecision }),
+    [destPrecision, fxInput, fxOverride],
   );
   const { isCrossCurrency, pairRate: exchangeRate, sourceBaseRate, destBaseRate } = fxPair;
   const convertedAmount = fxPair.convertedAmount ?? numAmount;
@@ -307,16 +307,18 @@ export function useSimpleJournalEditor({
       const side = sideForRole(role);
       const line = editor.lines.find(item => item.transactionType === side);
       if (!line) return;
-      editor.updateLine(
-        line.id,
-        lineAccountPatch(
-          id,
-          accounts.find(account => account.id === id),
-          getInferredAccountType(type, side),
-        ),
-      );
+      const nextAccount = accounts.find(account => account.id === id);
+      const currencyChanged =
+        role === 'destination' &&
+        Boolean(destCurrency) &&
+        nextAccount?.currencyCode !== destCurrency;
+      if (currencyChanged) setRateRefreshNonce(nonce => nonce + 1);
+      editor.updateLine(line.id, {
+        ...lineAccountPatch(id, nextAccount, getInferredAccountType(type, side)),
+        ...(currencyChanged ? { exchangeRate: '' } : {}),
+      });
     },
-    [accounts, editor, resetFxOverride, type],
+    [accounts, destCurrency, editor, resetFxOverride, type],
   );
   const setSourceId = useCallback((id: AccountId) => setAccount('source', id), [setAccount]);
   const setDestinationId = useCallback(

@@ -39,6 +39,25 @@ describe('simpleJournalHelpers cross-currency', () => {
     });
   });
 
+  it('restores the source amount when the destination returns to the same currency', () => {
+    const updates = buildSimpleCrossCurrencyLineUpdates({
+      isCrossCurrency: false,
+      exchangeRate: 1,
+      sourceBaseRate: 95.85,
+      destBaseRate: 95.85,
+      sourceCurrency: 'USD',
+      destCurrency: 'USD',
+      destPrecision: 2,
+      baseCurrency: 'INR',
+      amount: '6',
+      convertedAmount: 6,
+      sourceLine: { id: 'source' as any, exchangeRate: '95.850000', amount: '6' },
+      destinationLine: { id: 'destination' as any, exchangeRate: '', amount: '575.08' },
+    });
+
+    expect(updates.destination).toEqual({ exchangeRate: '95.850000', amount: '6' });
+  });
+
   const crossCurrencyInput = {
     isCrossCurrency: true,
     exchangeRate: 151.237,

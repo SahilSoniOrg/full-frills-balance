@@ -85,11 +85,16 @@ export function buildSimpleCrossCurrencyLineUpdates(
       updates[destinationLine.id] = { exchangeRate: '' };
     }
 
-    if (isCrossCurrency && destinationLine.amount !== formattedConverted) {
+    const destinationAmount = isCrossCurrency ? formattedConverted : amount;
+    if (destinationLine.amount !== destinationAmount) {
       updates[destinationLine.id] = {
         ...updates[destinationLine.id],
-        amount: formattedConverted,
+        amount: destinationAmount,
       };
+    }
+  } else if (!isCrossCurrency && sourceCurrency && destCurrency) {
+    if (destinationLine.amount !== amount) {
+      updates[destinationLine.id] = { amount };
     }
   } else if (!isCrossCurrency && !needsBaseCurrencyRates) {
     if (sourceLine.exchangeRate) updates[sourceLine.id] = { exchangeRate: '' };
