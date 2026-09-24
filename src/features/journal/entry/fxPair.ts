@@ -5,6 +5,7 @@ import {
   resolveWorkplaceRatesFromConvertedAmount,
 } from '@/src/features/journal/entry/manualBaseRate';
 import { parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
+import { roundToPrecision } from '@/src/utils/money';
 
 export const RATE_UNAVAILABLE = 'Rate unavailable';
 
@@ -47,6 +48,8 @@ export interface FxPairInput {
   saved?: FxSavedRates | null;
   override?: FxOverride;
   sourceAmount?: number;
+  /** Destination precision. When set, the pair rate is the one that ties the rounded amount. */
+  destPrecision?: number;
 }
 
 export type FxPairStatus = 'idle' | 'loading' | 'resolved' | 'unavailable';
@@ -73,6 +76,18 @@ export interface FxPair {
 }
 
 type FxCurrencies = Pick<FxPairInput, 'sourceCurrency' | 'destCurrency' | 'baseCurrency'>;
+
+/** Rounded destination amount, with the rate adjusted so it converts back to the source amount. */
+export function tieDestinationAmount(
+  sourceAmount: number,
+  sourceBaseRate: number,
+  destBaseRate: number,
+  destPrecision: number,
+): { amount: number; destBaseRate: number } {
+  const amount = roundToPrecision(sourceAmount * (sourceBaseRate / destBaseRate), destPrecision);
+  if (!(amount > 0)) return { amount, destBaseRate };
+  return { amount, destBaseRate: (sourceAmount * sourceBaseRate) / amount };
+}
 
 export function fxOverrideKey(...parts: (string | number | undefined)[]): string {
   return parts.map(part => part ?? '').join('|');
@@ -150,6 +165,11 @@ export function resolveFxPair(input: FxPairInput): FxPair {
     ));
   }
 
+  const tied =
+    input.destPrecision !== undefined && sourceBaseRate && destBaseRate && sourceAmount > 0
+      ? tieDestinationAmount(sourceAmount, sourceBaseRate, destBaseRate, input.destPrecision)
+      : null;
+  if (tied) destBaseRate = tied.destBaseRate;
   const pairRate = sourceBaseRate && destBaseRate ? sourceBaseRate / destBaseRate : null;
   const isLoading = !overrideRates && Boolean(fetched?.isLoading);
   const rateError = overrideRates ? null : (fetched?.error ?? null);
@@ -173,8 +193,9 @@ export function resolveFxPair(input: FxPairInput): FxPair {
     destBaseRate,
     pairRate,
     sourceAmount,
-    convertedAmount:
-      isCrossCurrency && pairRate && sourceAmount > 0 ? sourceAmount * pairRate : null,
+    convertedAmount: isCrossCurrency
+      ? (tied?.amount ?? (pairRate && sourceAmount > 0 ? sourceAmount * pairRate : null))
+      : null,
     status,
     isLoading,
     rateError,

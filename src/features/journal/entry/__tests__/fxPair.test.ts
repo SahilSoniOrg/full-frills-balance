@@ -237,4 +237,18 @@ describe('converted-amount override', () => {
     expect(override).toMatchObject({ kind: 'manualBase', source: '1.3', dest: '1.250000' });
     expect(resolveFxPair({ ...input, override }).pairRate).toBeCloseTo(1.3 / 1.25);
   });
+
+  it('adjusts the rate so the rounded destination amount ties back to the source', () => {
+    const pair = resolveFxPair({
+      sourceCurrency: 'INR',
+      destCurrency: 'USD',
+      baseCurrency: 'INR',
+      fetched: { sourceBaseRate: 1, destBaseRate: 95.8463, isLoading: false, error: null },
+      sourceAmount: 500,
+      destPrecision: 2,
+    });
+
+    expect(pair.convertedAmount).toBeCloseTo(5.22, 2);
+    expect(pair.convertedAmount! * pair.destBaseRate!).toBeCloseTo(500, 2);
+  });
 });
