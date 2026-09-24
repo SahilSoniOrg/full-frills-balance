@@ -276,32 +276,34 @@ export function SplitForm({
           {remainingLabel}
         </AppText>
 
-        {splits.map(row => (
-          <SplitAllocationRow
-            key={row.id}
-            allAccounts={allAccounts}
-            allocationAccounts={allocationAccounts}
-            canRemove={canRemove}
-            emptyPrompt={typeCopy.allocationEmptyPrompt}
-            fx={splitFx[row.id]}
-            isExpanded={activePickerKey === row.id}
-            label={typeCopy.allocationLabel}
-            onCreateAccountRequest={(role, intent) =>
-              handleCreateAccountRequest(row.id, role, intent)
-            }
-            onRemove={() => handleRemove(row.id)}
-            onSelectAccount={accountId => {
-              updateSplitRow(row.id, { accountId });
-              setActivePickerKey(null);
-            }}
-            onToggle={() => togglePicker(row.id)}
-            onChangeAmount={amount => updateSplitInputAmount(row.id, amount)}
-            onConvertedAmountChange={amount => updateSplitConvertedAmount(row.id, amount)}
-            onResetToApiRate={() => resetSplitRate(row.id)}
-            removeLabel={strings.removeSplit}
-            row={row}
-          />
-        ))}
+        <View style={styles.allocationRows}>
+          {splits.map(row => (
+            <SplitAllocationRow
+              key={row.id}
+              allAccounts={allAccounts}
+              allocationAccounts={allocationAccounts}
+              canRemove={canRemove}
+              emptyPrompt={typeCopy.allocationEmptyPrompt}
+              fx={splitFx[row.id]}
+              isExpanded={activePickerKey === row.id}
+              label={typeCopy.allocationLabel}
+              onCreateAccountRequest={(role, intent) =>
+                handleCreateAccountRequest(row.id, role, intent)
+              }
+              onRemove={() => handleRemove(row.id)}
+              onSelectAccount={accountId => {
+                updateSplitRow(row.id, { accountId });
+                setActivePickerKey(null);
+              }}
+              onToggle={() => togglePicker(row.id)}
+              onChangeAmount={amount => updateSplitInputAmount(row.id, amount)}
+              onConvertedAmountChange={amount => updateSplitConvertedAmount(row.id, amount)}
+              onResetToApiRate={() => resetSplitRate(row.id)}
+              removeLabel={strings.removeSplit}
+              row={row}
+            />
+          ))}
+        </View>
 
         {validationMessage && hasTotal ? (
           <View style={[styles.error, { backgroundColor: withOpacity(theme.error, Opacity.soft) }]}>
@@ -353,6 +355,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.md,
+  },
+  allocationRows: {
+    gap: Spacing.sm,
   },
   sectionHeader: {
     flexDirection: 'row',
