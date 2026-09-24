@@ -47,7 +47,6 @@ export interface JournalEntryShell {
   guidedAutopilot: boolean;
   splitState: ReturnType<typeof useTransactionComposerSession>['splitState'];
   validationIssues: ReturnType<typeof useTransactionComposerSession>['validationIssues'];
-  postingPlanValidation: ReturnType<typeof useTransactionComposerSession>['postingPlanValidation'];
   splitValidation: ReturnType<typeof useTransactionComposerSession>['splitValidation'];
   onSubmit: () => void;
   accounts: ReturnType<typeof useAccounts>['accounts'];
@@ -259,7 +258,6 @@ export function useJournalEntryShell(): JournalEntryShell {
     guidedAutopilot: seed.guidedAutopilot === true,
     splitState,
     validationIssues: session.validationIssues,
-    postingPlanValidation: session.postingPlanValidation,
     splitValidation: session.splitValidation,
     onSubmit,
     accounts,

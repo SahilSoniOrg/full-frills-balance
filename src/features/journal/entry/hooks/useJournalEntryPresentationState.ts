@@ -12,28 +12,20 @@ export function useJournalEntryPresentationState(vm: JournalEntryShell) {
   const { editor, loadSuggestions, onSelectSuggestion: applySuggestion } = vm;
   const isSubmitting = vm.editor.isSubmitting;
   const isBatchMode = vm.activeMode === 'batch';
-  const isAllocationPlanValid =
-    vm.validationIssues.length === 0 ||
-    vm.validationIssues.every(issue => issue.code === 'missing_description');
-  const isPlanValid =
-    vm.activeMode === 'allocation' ? isAllocationPlanValid : vm.postingPlanValidation.valid;
   const submitLabel = resolveJournalEntrySubmitLabel({
     activeMode: vm.activeMode,
     simpleType: vm.editor.transactionType,
     isEdit: vm.editor.isEdit,
     isSubmitting,
   });
-  const isSubmitDisabled = isJournalEntrySubmitDisabled({
+  const validation = {
     activeMode: vm.activeMode,
-    isPlanValid,
-    isSplitValid: vm.splitValidation.valid,
-  });
+    validationIssues: vm.validationIssues,
+    splitValidation: vm.splitValidation,
+  };
+  const isSubmitDisabled = isJournalEntrySubmitDisabled(validation);
   const missingRequirementHint = isSubmitDisabled
-    ? resolveJournalEntryValidationHint({
-        activeMode: vm.activeMode,
-        validationIssues: vm.validationIssues,
-        splitValidation: vm.splitValidation,
-      })
+    ? resolveJournalEntryValidationHint(validation)
     : null;
   const batchSubmitDisabled = !vm.batchEditor.isValid || vm.batchEditor.isSubmitting;
   const onScrollBeginDrag = useCallback(() => setHideSuggestions(true), []);

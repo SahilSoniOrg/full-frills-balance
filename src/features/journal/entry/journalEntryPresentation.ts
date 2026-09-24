@@ -158,23 +158,20 @@ export function resolveJournalEntrySubmitLabel(input: {
     : AppConfig.strings.advancedEntry.createJournal;
 }
 
-export function isJournalEntrySubmitDisabled(input: {
-  activeMode: JournalEntryScreenMode;
-  isPlanValid: boolean;
-  isSplitValid?: boolean;
-}): boolean {
-  if (input.activeMode === 'allocation') {
-    return !input.isSplitValid || !input.isPlanValid;
-  }
-  if (input.activeMode === 'basic') {
-    return !input.isPlanValid;
-  }
-  return !input.isPlanValid;
-}
-
 export type JournalEntryValidationIssue = TransactionDomainIssue | PostingPlanValidationIssue;
 
 type SplitValidation = { valid: true } | { valid: false; error: SplitValidationError };
+
+export function isJournalEntrySubmitDisabled(input: {
+  activeMode: JournalEntryScreenMode;
+  validationIssues: readonly JournalEntryValidationIssue[];
+  splitValidation?: SplitValidation;
+}): boolean {
+  return (
+    input.validationIssues.length > 0 ||
+    (input.activeMode === 'allocation' && input.splitValidation?.valid === false)
+  );
+}
 
 function resolveValidationIssueHint(issue: JournalEntryValidationIssue): string | null {
   const strings = AppConfig.strings.transactionFlow.validation;

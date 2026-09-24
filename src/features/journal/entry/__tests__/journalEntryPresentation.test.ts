@@ -135,19 +135,34 @@ describe('journalEntryPresentation', () => {
     expect(
       isJournalEntrySubmitDisabled({
         activeMode: 'basic',
-        isPlanValid: false,
+        validationIssues: [{ code: 'missing_amount', message: 'An amount is required' }],
       }),
     ).toBe(true);
+    expect(isJournalEntrySubmitDisabled({ activeMode: 'basic', validationIssues: [] })).toBe(false);
   });
 
-  it('keeps Split disabled when its resolved posting plan has an issue', () => {
+  it('keeps Split disabled when its posting plan or allocation draft has an issue', () => {
     expect(
       isJournalEntrySubmitDisabled({
         activeMode: 'allocation',
-        isPlanValid: false,
-        isSplitValid: true,
+        validationIssues: [{ code: 'unbalanced', message: 'Posting plan is not balanced' }],
+        splitValidation: { valid: true },
       }),
     ).toBe(true);
+    expect(
+      isJournalEntrySubmitDisabled({
+        activeMode: 'allocation',
+        validationIssues: [],
+        splitValidation: { valid: false, error: 'sum_mismatch' },
+      }),
+    ).toBe(true);
+    expect(
+      isJournalEntrySubmitDisabled({
+        activeMode: 'expert',
+        validationIssues: [],
+        splitValidation: { valid: false, error: 'sum_mismatch' },
+      }),
+    ).toBe(false);
   });
 
   describe('resolveJournalEntryValidationHint', () => {
