@@ -1,5 +1,5 @@
 import { TransactionType } from '@/src/types/enums';
-import { evaluateJournalBalance } from '@/src/services/accounting/journalBalanceEvaluator';
+import { evaluateJournalBalance } from '@/src/domain/accounting/journalBalanceEvaluator';
 
 describe('evaluateJournalBalance', () => {
   it('values each line in journal currency and accepts an exact mixed-currency balance', () => {

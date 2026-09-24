@@ -15,7 +15,7 @@ import Workplace from '@/src/data/models/Workplace';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { Model } from '@nozbe/watermelondb';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
-import { evaluateJournalBalance } from '@/src/domain/accounting/journalBalanceEvaluator';
+import { evaluateJournalLines } from '@/src/domain/accounting/journalBalanceEvaluator';
 import { JournalStatus } from '@/src/types/enums';
 import { toJournalStatus, toTransactionType } from '@/src/data/repositories/importValueParsers';
 
@@ -44,7 +44,6 @@ export class ImportRepository {
   }
 
   private async validatePostedJournalBalances(data: BatchImportData): Promise<void> {
-    const accountsById = new Map(data.accounts.map(account => [account.id, account]));
     const transactionsByJournalId = new Map<string, BatchImportData['transactions']>();
     for (const transaction of data.transactions) {
       if (transaction.deletedAt) continue;
@@ -64,37 +63,31 @@ export class ImportRepository {
         currency.precision,
       ]),
     );
-    const currencyCodes = new Set<string>();
-    for (const journal of postedJournals) {
-      currencyCodes.add(journal.currencyCode.trim().toUpperCase());
-      for (const transaction of transactionsByJournalId.get(journal.id) ?? []) {
-        const account = accountsById.get(transaction.accountId);
-        const accountCurrency = account && !account.deletedAt ? account.currencyCode : undefined;
-        if (accountCurrency) currencyCodes.add(accountCurrency.trim().toUpperCase());
-      }
-    }
-    for (const code of currencyCodes) {
-      if (!currencyPrecision.has(code)) {
-        currencyPrecision.set(code, await currencyRepository.getPrecision(code));
-      }
-    }
+    const accountCurrencyById = new Map(
+      data.accounts.map(account => [
+        account.id,
+        account.deletedAt ? undefined : account.currencyCode,
+      ]),
+    );
 
     for (const journal of postedJournals) {
-      const lines = transactionsByJournalId.get(journal.id) ?? [];
-      const evaluation = evaluateJournalBalance({
+      const evaluation = await evaluateJournalLines({
         journalCurrency: journal.currencyCode,
-        precisionByCurrency: currencyPrecision,
-        lines: lines.map(transaction => {
-          const account = accountsById.get(transaction.accountId);
-          return {
-            id: transaction.id,
-            accountId: transaction.accountId,
-            accountCurrency: account && !account.deletedAt ? account.currencyCode : undefined,
-            amount: transaction.amount,
-            exchangeRate: transaction.exchangeRate,
-            transactionType: toTransactionType(transaction.transactionType),
-          };
-        }),
+        lines: (transactionsByJournalId.get(journal.id) ?? []).map(transaction => ({
+          id: transaction.id,
+          accountId: transaction.accountId,
+          amount: transaction.amount,
+          exchangeRate: transaction.exchangeRate,
+          transactionType: toTransactionType(transaction.transactionType),
+        })),
+        accountCurrencyById,
+        getPrecision: async code => {
+          const known = currencyPrecision.get(code);
+          if (known !== undefined) return known;
+          const precision = await currencyRepository.getPrecision(code);
+          currencyPrecision.set(code, precision);
+          return precision;
+        },
       });
       if (!evaluation.isBalanced) {
         const details = evaluation.issues.map(issue => issue.message).join('; ');

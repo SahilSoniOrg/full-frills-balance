@@ -269,3 +269,53 @@ export function evaluateJournalBalance({
     issues,
   };
 }
+
+export type CurrencyPrecisionResolver = (currencyCode: string) => number | Promise<number>;
+
+/** Resolves the precision of each distinct currency code, keyed by normalized code. */
+export async function resolveCurrencyPrecisions(
+  currencyCodes: Iterable<string | undefined>,
+  getPrecision: CurrencyPrecisionResolver,
+): Promise<Map<string, number>> {
+  const codes = new Set([...currencyCodes].map(normalizeCode).filter(Boolean));
+  return new Map(
+    await Promise.all([...codes].map(async code => [code, await getPrecision(code)] as const)),
+  );
+}
+
+export type JournalLineValues = Omit<JournalBalanceLineInput, 'id' | 'accountCurrency'> & {
+  id?: string;
+};
+
+/**
+ * Evaluates journal lines against their account currencies, resolving every needed precision.
+ * Lines without an explicit id are identified by their index.
+ */
+export async function evaluateJournalLines({
+  journalCurrency,
+  lines,
+  accountCurrencyById,
+  getPrecision,
+}: {
+  journalCurrency: string;
+  lines: readonly JournalLineValues[];
+  accountCurrencyById: ReadonlyMap<string, string | undefined>;
+  getPrecision: CurrencyPrecisionResolver;
+}): Promise<JournalBalanceEvaluation> {
+  const precisionByCurrency = await resolveCurrencyPrecisions(
+    [journalCurrency, ...lines.map(line => accountCurrencyById.get(line.accountId))],
+    getPrecision,
+  );
+  return evaluateJournalBalance({
+    journalCurrency,
+    precisionByCurrency,
+    lines: lines.map((line, index) => ({
+      id: line.id ?? String(index),
+      accountId: line.accountId,
+      accountCurrency: accountCurrencyById.get(line.accountId),
+      amount: line.amount,
+      exchangeRate: line.exchangeRate,
+      transactionType: line.transactionType,
+    })),
+  });
+}

@@ -5,7 +5,7 @@ import { transactionQueryRepository } from '@/src/data/repositories/transaction'
 import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { JournalDisplayType, TransactionType } from '@/src/types/enums';
 import { fromMinorUnits, safeAdd } from '@/src/utils/money';
-import { evaluateJournalBalance } from '@/src/domain/accounting/journalBalanceEvaluator';
+import { evaluateJournalLines } from '@/src/domain/accounting/journalBalanceEvaluator';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { currencyReadService } from '@/src/services/currency-read-service';
 
@@ -121,26 +121,11 @@ export async function analyzeJournalsForMerge(
 
   const accountIds = [...new Set(allTransactions.map(transaction => transaction.accountId))];
   const accounts = await accountQueryRepository.findAllByIds(workplaceId, accountIds);
-  const accountsById = new Map(accounts.map(account => [account.id, account]));
-  const currencies = [currencyCode, ...accounts.map(account => account.currencyCode)].map(code =>
-    code.trim().toUpperCase(),
-  );
-  const precisionEntries = await Promise.all(
-    [...new Set(currencies)].map(
-      async currency => [currency, await currencyReadService.getPrecision(currency)] as const,
-    ),
-  );
-  const evaluation = evaluateJournalBalance({
+  const evaluation = await evaluateJournalLines({
     journalCurrency: currencyCode,
-    precisionByCurrency: new Map(precisionEntries),
-    lines: allTransactions.map((transaction, index) => ({
-      id: String(index),
-      accountId: transaction.accountId,
-      accountCurrency: accountsById.get(transaction.accountId)?.currencyCode,
-      amount: transaction.amount,
-      exchangeRate: transaction.exchangeRate,
-      transactionType: transaction.transactionType as TransactionType,
-    })),
+    lines: allTransactions,
+    accountCurrencyById: new Map(accounts.map(account => [account.id, account.currencyCode])),
+    getPrecision: code => currencyReadService.getPrecision(code),
   });
 
   // Display the combined effect in journal currency while the write path keeps
