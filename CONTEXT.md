@@ -4,6 +4,34 @@ Personal double-entry finance app. Ledger-first; balances derive from the journa
 
 ## Language
 
+### Journal currency
+
+**Workplace currency**:
+The Workplace's current default currency. A new manual journal uses it as its
+journal currency; changing the default does not change saved journals.
+
+**Journal currency**:
+The currency stored on a journal for its total and balancing. For an ordinary
+new journal it is the Workplace currency at creation and remains saved on that
+journal if the Workplace default changes.
+_Avoid_: Journal operating currency; separate valuation currency
+
+**Native line amount**:
+The amount stored on a posting line, expressed in that line's account currency.
+An amount is never interpreted in the source account's currency merely because
+the line is part of the same journal.
+The saved transaction currency should agree with the account currency; a mismatch
+is a data inconsistency, not a second currency for the account balance.
+
+**Per-line exchange rate**:
+The effective rate used to value one unit of a foreign posting line in its
+journal currency. Each line owns its rate, even when other lines use the same
+native currency.
+
+**Journal value**:
+A posting line's native amount expressed in its journal currency. It is the
+value compared with the other side of the journal for balance.
+
 ### Tenancy
 
 **User**:

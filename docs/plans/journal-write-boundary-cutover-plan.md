@@ -1,16 +1,16 @@
 # Journal write-boundary cutover plan
 
-Status: Production journal writes cut over to the persistence boundary; restore/import remains separately validated
+Status: Complete for production write cutover; post-cutover behavioral gaps tracked in currency plan
 
-Date: 2026-09-23
+Date: 2026-09-24
 
 Decision authority: [ADR 0007](../adr/0007-journal-currency-and-balancing-decision-layer.md). Currency calculation and editor rollout remain in the [journal currency consistency plan](journal-currency-unification-plan.md).
 
 ## Goal
 
-Move every ordinary journal write behind one persistence boundary. The boundary owns the final posted-balance check and performs that check against the state it saves, in the same database writer transaction. Build the layers in order, then move production paths one at a time with a test gate for each path.
+Move every ordinary journal write behind one persistence boundary. The boundary owns the final posted-balance check and performs that check against the state it saves, in the same database writer transaction. The layered cutover is complete; remaining issues concern currency semantics and edit policy, not migration of production writers.
 
-There is no schema change, data migration, or rewrite of saved journals. Production create/edit/post, bulk, lifecycle, account, planned-payment, SMS, merge, and restore paths now use the persistence boundary or its typed accounting session. The guarantee is complete for application journal writers.
+There is no schema change, data migration, or rewrite of saved journals. Production create/edit/post, bulk, lifecycle, account, planned-payment, SMS, merge, and restore paths now use the persistence boundary or its typed accounting session. The old ledger write services, old journal write repository, and their wrappers have been deleted. The guarantee is complete for application journal writers.
 
 ## Invariants
 
@@ -25,17 +25,19 @@ There is no schema change, data migration, or rewrite of saved journals. Product
 
 ## Current state and gap
 
-`JournalPersistenceRepository` owns plain-data put/post, reversal, merge, reassignment, single and bulk delete/restore, recovery, revert-to-planned, and non-posted planned-status operations. Posted balance checks run inside the writer that saves the change. Audit rows commit with the mutation; rebuild work is queued after commit. `AccountingWriteSession` composes journal writes with account, planned-payment, and inbox changes without exposing model-operation arrays.
+`JournalPersistenceRepository` owns plain-data `put`/`post`, reversal, merge, reassignment, single and bulk delete/restore, recovery, revert-to-planned, and non-posted planned-status operations. Posted balance checks run inside the writer that saves the change. Audit rows commit with the mutation; rebuild work is queued after commit. `AccountingWriteSession` composes journal writes with account, planned-payment, and inbox changes without exposing model-operation arrays.
 
-Production create/edit/post, duplication, manual bulk creation, reversal, opening-balance creation, balance adjustments, planned-payment occurrence/status flows, account and journal merge, account reassignment/undo, SMS auto-post, SMS-linked manual create, single delete/recovery, bulk delete/undo, and revert-to-planned use the boundary. Restore import keeps its dedicated normalization writer but preflights active posted journals before workplace creation. Description-only bulk rename remains an explicit maintenance command.
+Production create/edit/post, duplication, manual bulk creation, reversal, opening-balance creation, balance adjustments, planned-payment occurrence/status flows, account and journal merge, account reassignment/undo, SMS auto-post, SMS-linked manual create, single delete/recovery, bulk delete/undo, and revert-to-planned use the boundary. Restore import keeps its dedicated normalization writer but preflights active posted journals before workplace creation. Bulk rename and undo use generic sparse `put` calls in one accounting write session; transaction rows are preserved.
 
-`LedgerCreateService`, `LedgerUpdateService`, and `LedgerLifecycleService` are compatibility façades that delegate to the persistence service; they no longer prepare or persist journal models. `journalWriteModule` exports types only. The architecture guard rejects production imports of those legacy services and the legacy writer, except the description-only rename command. The old low-level repository remains for test fixtures only.
+The former `LedgerCreateService`, `LedgerUpdateService`, `LedgerLifecycleService`, `journalWriteModule`, `journalWriteTestHelpers`, and `journalWriteRepository` are removed. Test fixtures that need malformed or legacy rows use `src/testing/journalFixtures.ts` and deliberately bypass production validation. The architecture guard rejects restoring the removed writer files or importing their old module names.
+
+**Known post-cutover gap:** generic sparse `put` reloads and validates retained lines even for description, notes, or date-only edits. That preserves the repository's posted-balance invariant, but can reject a historical posted journal that fails current validation despite no monetary change. Date-only edits still need to update transaction dates and rebuild caches without changing amounts or rates. The currency plan tracks this nonmonetary-edit policy; it is not an outstanding writer cutover.
 
 ## Layered implementation order
 
 ### Layer 1 — Single-journal persistence contract
 
-**State:** Single-journal `put`/`post`, atomic `putMany`, exact posted-balance enforcement, atomic audit writes, persisted before/after rebuild scope, and core tests implemented. Typed composition remains a gate for cross-domain caller groups.
+**State: Complete.** Single-journal `put`/`post`, atomic `putMany`, exact posted-balance enforcement, atomic audit writes, persisted before/after rebuild scope, and core tests are implemented. Typed composition is used by the cross-domain caller groups.
 
 The base contract needed by the ordinary single-journal path is in place:
 
@@ -50,7 +52,7 @@ The base contract needed by the ordinary single-journal path is in place:
 
 ### Layer 2 — Application write service
 
-Create a new service above the persistence repository. It owns use-case preparation and orchestration; it does not own the final balance invariant.
+**State: Complete.** `JournalPersistenceService` owns use-case preparation and orchestration; it does not own the final balance invariant.
 
 - Resolve saved journal currency and effective status for edits before preparing derived fields.
 - Prepare/round line data and display information, preserving the saved currency on edits.
@@ -60,13 +62,13 @@ Create a new service above the persistence repository. It owns use-case preparat
 
 Do not make the new service a wrapper around `LedgerCreateService` or `LedgerUpdateService`. Shared journal preparation lives in the journal application layer.
 
-**State:** The service is used for all production journal write paths. Integration coverage verifies persistence, saved-currency preservation, audit/metadata writes, and repository error propagation. Rebuild scope comes from the actual persisted before/after state. Shared preparation is located in the journal application layer; rebuilds are enqueued only after repository/session success.
+Integration coverage verifies persistence, saved-currency preservation, audit/metadata writes, and repository error propagation. Rebuild scope comes from the actual persisted before/after state. Shared preparation is located in the journal application layer; rebuilds are enqueued only after repository/session success.
 
 ### Layer 3 — Standard journal editor
 
-**State:** Complete for ordinary create, edit, manual planned-to-posted, and SMS-linked manual create. Journal persistence and inbox linking share one accounting write session.
+**State: Complete** for ordinary create, edit, manual planned-to-posted, and SMS-linked manual create. Journal persistence and inbox linking share one accounting write session.
 
-Move the central manual path first:
+The central manual path now uses the application service:
 
 1. Create from `JournalService.createJournal` to new service `put`.
 2. Edit from `JournalService.updateJournal` to new service `put`.
@@ -77,7 +79,7 @@ Move the central manual path first:
 
 ### Layer 4 — Ordinary creators and batches
 
-Migrate one caller group at a time, with an integration test before removing its old route:
+**State: Complete for persistence cutover.** The caller groups below use the persistence service or a typed accounting session. Remaining currency-semantic verification is tracked in the currency plan.
 
 **Completed:** Single and bulk duplication, manual bulk creation, and reversal now use the persistence service. Multi-journal writes commit through one `putMany` batch.
 
@@ -109,7 +111,7 @@ Single and bulk delete/restore now use the same repository boundary. Restore val
 
 ### Layer 7 — Close bypasses and retire old plumbing
 
-**Complete for production routes:** legacy create/update/lifecycle services now delegate to the persistence service. The type-only `journalWriteModule` no longer exports the repository object. A new architecture check rejects production imports and calls to legacy financial writers; its sole legacy repository exception is the description-only rename command. Planned-state helpers cannot post. Older low-level model builders remain referenced by test fixtures only and are not exposed through the production façade.
+**Complete:** the old create/update/lifecycle services, write module, old journal writer, and test helper module have been deleted. Production code has no compatibility wrappers around them. The architecture check rejects reintroducing the removed writer files or importing their module names. Planned-state helpers cannot post. Raw fixture construction is isolated in `src/testing/journalFixtures.ts`. Bulk rename is no longer an exception: it uses generic sparse `put` through the persistence service.
 
 **Exit:** production writers are classified and cut over; deliberate legacy-write fixtures fail the new architecture check; focused integration tests and typecheck pass.
 
@@ -126,6 +128,8 @@ Single and bulk delete/restore now use the same repository boundary. Restore val
 - Restore preflight rejects invalid posted rows without modifying the destination Workplace.
 - A source scan/architecture guard catches direct journal/transaction model writes outside approved repository and restore boundaries.
 
-## Completion criteria
+## Completion status and remaining work
 
-The production cutover is complete: every application create, edit, post, bulk, lifecycle, and posted-account mutation reaches the new repository; SMS and restore have explicit tested policies; audit and workflow atomicity are preserved; and the architecture guard rejects legacy production write paths. Saved local history is not migrated or silently rewritten.
+**Complete:** every application create, edit, post, bulk, lifecycle, and posted-account mutation reaches the new repository; SMS and restore have explicit tested policies; audit and workflow atomicity are preserved; and the architecture guard rejects legacy production write paths. Saved local history is not migrated or silently rewritten.
+
+**Still pending outside this cutover:** align editor feedback with exact balance rules in every mode; let nonmonetary edits preserve legacy postings without revalidation; route reports through saved journal currency and journal-date rates; and prove any Ivy import corrections from source data. Track these in the [journal currency consistency plan](journal-currency-unification-plan.md).
