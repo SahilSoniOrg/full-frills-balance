@@ -32,7 +32,6 @@ import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActio
 import { useAccountPersistence } from '@/src/features/accounts/hooks/useAccountPersistence';
 import { useAccountValidation } from '@/src/features/accounts/hooks/useAccountValidation';
 import { resolveAccountFormDefaults } from '@/src/features/accounts/services/accountFormService';
-import { discardAccountCreationReturn } from '@/src/utils/accountCreationReturn';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
@@ -40,7 +39,7 @@ import { BalanceChangeCounterparty } from '@/src/services/accounts/balanceChange
 import { useAccountFormHeaderActions } from '@/src/features/accounts/hooks/useAccountFormHeaderActions';
 import type { AccountFormChromeState } from '@/src/features/accounts/hooks/useAccountFormHeaderActions';
 import { useLocalSearchParams, usePathname } from 'expo-router';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { of } from 'rxjs';
 
 export type { AccountMetadataFormModel };
@@ -116,11 +115,9 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     pType: string;
     pCurrency: string;
     pIcon: string;
-    returnToken: string;
+    returnTarget: string;
   }>();
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
-
-  useEffect(() => () => discardAccountCreationReturn(params.returnToken), [params.returnToken]);
 
   const accountId = params.accountId;
   const typeParam = params.type;
@@ -197,7 +194,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     existingAccount,
     accountId,
     accounts.length > 0,
-    params.returnToken,
+    params.returnTarget,
   );
 
   const { deleteAccount, recoverAccount, mergeAccounts } = useAccountActions(workplaceId);

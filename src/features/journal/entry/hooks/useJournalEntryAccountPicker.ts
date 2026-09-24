@@ -2,7 +2,7 @@ import type { CreateAccountIntent } from '@/src/components/account-selection';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { AppConfig } from '@/src/constants';
-import { AccountId } from '@/src/types/ids';
+import { AccountId, asAccountId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import {
   resolveJournalEntrySelectableAccounts,
@@ -13,8 +13,13 @@ import { getInferredAccountType } from '@/src/utils/accountCategory';
 import { AppNavigation } from '@/src/utils/navigation';
 import type { AccountRole } from '@/src/types/domainJournal';
 import type { useBulkJournalEditor } from './useBulkJournalEditor';
-import { registerAccountCreationReturn } from '@/src/utils/accountCreationReturn';
+import {
+  type AccountCreationResultParams,
+  type AccountCreationReturnTarget,
+  decodeAccountCreationReturnTarget,
+} from '@/src/utils/accountCreationReturn';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
+import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type SplitRowPick = { id: string; accountId?: AccountId };
@@ -80,6 +85,33 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
     [clearNextPickerFallback],
   );
 
+  const navigation = useNavigation<{ setParams: (params: AccountCreationResultParams) => void }>();
+  const { createdAccountId, createdAccountTarget } =
+    useLocalSearchParams<AccountCreationResultParams>();
+  const consumedCreatedAccountIdRef = useRef<string | null>(null);
+
+  const applyCreatedAccount = useCallback(
+    (target: AccountCreationReturnTarget, accountId: AccountId) => {
+      if (target.kind === 'line') {
+        applyAccountToActiveLine(target.lineId, accountId);
+      } else if (target.role === 'source') {
+        batchEditor?.rowActions.setSourceAccount(target.rowId, accountId);
+      } else {
+        batchEditor?.rowActions.setDestinationAccount(target.rowId, accountId);
+      }
+    },
+    [applyAccountToActiveLine, batchEditor],
+  );
+
+  useEffect(() => {
+    if (!createdAccountId || consumedCreatedAccountIdRef.current === createdAccountId) return;
+    consumedCreatedAccountIdRef.current = createdAccountId;
+    navigation.setParams({ createdAccountId: undefined, createdAccountTarget: undefined });
+
+    const target = decodeAccountCreationReturnTarget(createdAccountTarget);
+    if (target) applyCreatedAccount(target, asAccountId(createdAccountId));
+  }, [applyCreatedAccount, createdAccountId, createdAccountTarget, navigation]);
+
   const onSelectAccountRequest = useCallback(
     (idOrRole: string, requestOptions?: JournalEntryAccountPickerRequestOptions) => {
       const lineId = activeMode === 'allocation' ? idOrRole : editor.resolveActiveLineId(idOrRole);
@@ -139,7 +171,7 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
   );
 
   const navigateToAccountForm = useCallback(
-    (intent: CreateAccountIntent, lineId?: string, returnToken?: string) => {
+    (intent: CreateAccountIntent, lineId?: string) => {
       let inferredType: AccountType | undefined;
       const activeLine = editor.lines.find(l => l.id === lineId);
 
@@ -150,7 +182,7 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
       AppNavigation.toAccountForm(undefined, {
         name: intent.suggestedName,
         type: intent.type || inferredType,
-        returnToken,
+        returnTarget: lineId ? { kind: 'line', lineId } : undefined,
       });
     },
     [activeMode, editor.lines, editor.transactionType],
@@ -159,48 +191,29 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
   const onCreateAccountRequest = useCallback(
     (intent: CreateAccountIntent) => {
       const lineId = activeLineId ?? undefined;
-      const returnToken = lineId
-        ? registerAccountCreationReturn(accountId => {
-            applyAccountToActiveLine(lineId, accountId);
-          })
-        : undefined;
       onCloseAccountPicker();
-      navigateToAccountForm(intent, lineId, returnToken);
+      navigateToAccountForm(intent, lineId);
     },
-    [activeLineId, applyAccountToActiveLine, navigateToAccountForm, onCloseAccountPicker],
+    [activeLineId, navigateToAccountForm, onCloseAccountPicker],
   );
 
   const onCreateAccountRequestForRole = useCallback(
     (role: AccountRole, intent: CreateAccountIntent) => {
-      const lineId = editor.getLineIdByRole(role);
-      const returnToken = lineId
-        ? registerAccountCreationReturn(accountId => {
-            applyAccountToActiveLine(lineId, accountId);
-          })
-        : undefined;
-      navigateToAccountForm(intent, lineId, returnToken);
+      navigateToAccountForm(intent, editor.getLineIdByRole(role));
     },
-    [applyAccountToActiveLine, editor, navigateToAccountForm],
+    [editor, navigateToAccountForm],
   );
 
   const onCreateAccountRequestForBatchRow = useCallback(
     (rowId: string, role: AccountRole, intent: CreateAccountIntent) => {
       const row = batchEditor?.rows.find(item => item.id === rowId);
-      if (!row || !batchEditor) return;
-
-      const returnToken = registerAccountCreationReturn(accountId => {
-        if (role === 'source') {
-          batchEditor.rowActions.setSourceAccount(rowId, accountId);
-        } else {
-          batchEditor.rowActions.setDestinationAccount(rowId, accountId);
-        }
-      });
+      if (!row) return;
 
       const side = role === 'source' ? TransactionType.CREDIT : TransactionType.DEBIT;
       AppNavigation.toAccountForm(undefined, {
         name: intent.suggestedName,
         type: intent.type || getInferredAccountType(row.transactionType, side),
-        returnToken,
+        returnTarget: { kind: 'batchRow', rowId, role },
       });
     },
     [batchEditor],
@@ -216,17 +229,13 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
 
       const lineId = role === 'source' ? SPLIT_SOURCE_LINE_ID : rowId;
       const side = role === 'source' ? TransactionType.CREDIT : TransactionType.DEBIT;
-      const returnToken = registerAccountCreationReturn(accountId => {
-        applyAccountToActiveLine(lineId, accountId);
-      });
-
       AppNavigation.toAccountForm(undefined, {
         name: intent.suggestedName,
         type: intent.type || getInferredAccountType(editor.transactionType, side),
-        returnToken,
+        returnTarget: { kind: 'line', lineId },
       });
     },
-    [applyAccountToActiveLine, editor.transactionType, splitRows],
+    [editor.transactionType, splitRows],
   );
 
   const selectableAccounts = useMemo(

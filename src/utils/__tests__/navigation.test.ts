@@ -194,6 +194,26 @@ describe('journal-entry navigation', () => {
   });
 });
 
+describe('account form navigation', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('serializes the journal-entry return target into the account form route', () => {
+    AppNavigation.toAccountForm(undefined, {
+      name: 'Groceries',
+      returnTarget: { kind: 'batchRow', rowId: 'row-1', role: 'destination' },
+    });
+    AppNavigation.toAccountForm(undefined, { name: 'Wallet' });
+
+    expect(router.push).toHaveBeenNthCalledWith(
+      1,
+      '/account-creation?pName=Groceries&returnTarget=destination-row%3Arow-1',
+    );
+    expect(router.push).toHaveBeenNthCalledWith(2, '/account-creation?pName=Wallet');
+  });
+});
+
 describe('settings navigation', () => {
   beforeEach(() => {
     jest.clearAllMocks();

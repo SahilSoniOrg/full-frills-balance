@@ -122,6 +122,17 @@ describe('journalEntryRouteAdapter', () => {
     });
   });
 
+  it('keeps created-account return params out of the launch seed', () => {
+    expect(
+      parseTransactionIntentSeed({
+        mode: 'simple',
+        type: 'expense',
+        createdAccountId: 'new-account',
+        createdAccountTarget: 'line:line-1',
+      }),
+    ).toEqual({ editorMode: 'simple', type: 'expense' });
+  });
+
   it.each([
     'dashboard',
     'activity',

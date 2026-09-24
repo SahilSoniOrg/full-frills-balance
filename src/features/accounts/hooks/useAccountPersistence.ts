@@ -13,10 +13,8 @@ import { ValidationError } from '@/src/utils/errors';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { sanitizeInput } from '@/src/utils/validation';
-import {
-  discardAccountCreationReturn,
-  resolveAccountCreationReturn,
-} from '@/src/utils/accountCreationReturn';
+import { returnCreatedAccountToJournalEntry } from '@/src/utils/accountCreationReturn';
+import { useNavigation } from 'expo-router';
 import { useRef, useState } from 'react';
 
 export type AccountPersistenceSaveInput = {
@@ -35,14 +33,14 @@ export function useAccountPersistence(
   existingAccount: AccountFields | null | undefined,
   currentAccountId: AccountId | undefined,
   hasExistingAccounts: boolean,
-  accountCreationReturnToken?: string,
+  accountCreationReturnTarget?: string,
 ): PersistenceResult {
   const { createAccount, saveAccount, adjustBalance } = useAccountActions(workplaceId);
+  const navigation = useNavigation();
   const [isCreating, setIsCreating] = useState(false);
   const isSubmitting = useRef(false);
 
   const handleCancel = () => {
-    discardAccountCreationReturn(accountCreationReturnToken);
     AppNavigation.back();
   };
 
@@ -109,7 +107,11 @@ export function useAccountPersistence(
           metadata: payload.metadata,
         });
 
-        resolveAccountCreationReturn(accountCreationReturnToken, createdAccount.id);
+        returnCreatedAccountToJournalEntry(
+          navigation,
+          accountCreationReturnTarget,
+          createdAccount.id,
+        );
 
         toast.success(`"${sanitizedName}" has been created successfully!`);
 

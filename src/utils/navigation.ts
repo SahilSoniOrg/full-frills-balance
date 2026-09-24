@@ -5,6 +5,10 @@ import type { SetupJourneyId } from '@/src/services/setup/setupDraftIdentity';
 import { AccountType } from '../types/enums';
 import { AccountId, BudgetId, PlannedPaymentId } from '../types/ids';
 import { saveJournalSearchScope } from './journalSearchScope';
+import {
+  type AccountCreationReturnTarget,
+  encodeAccountCreationReturnTarget,
+} from './accountCreationReturn';
 
 const JOURNAL_ENTRY_NAVIGATION_DEDUPE_MS = 750;
 const MAX_INLINE_JOURNAL_IDS = 100;
@@ -243,7 +247,7 @@ export const AppNavigation = {
       type?: string;
       currency?: string;
       icon?: string;
-      returnToken?: string;
+      returnTarget?: AccountCreationReturnTarget;
     },
   ) => {
     router.push(
@@ -253,7 +257,9 @@ export const AppNavigation = {
         pType: preview?.type,
         pCurrency: preview?.currency,
         pIcon: preview?.icon,
-        returnToken: preview?.returnToken,
+        returnTarget: preview?.returnTarget
+          ? encodeAccountCreationReturnTarget(preview.returnTarget)
+          : undefined,
       }),
     );
   },
