@@ -5,6 +5,7 @@ import JournalMetadata from '@/src/data/models/JournalMetadata';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
+import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
@@ -12,6 +13,7 @@ import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { generatePlannedJournalForPayment } from '@/src/services/planned-payment/plannedPaymentJournalGeneration';
 import {
   processDuePlannedPayments,
+  postPlannedJournalOccurrence,
   postPlannedPaymentOccurrence,
   skipPlannedPaymentOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentOrchestration';
@@ -136,6 +138,184 @@ describe('planned payment orchestration persistence', () => {
       postPlannedPaymentOccurrence(WORKPLACE_ID, payment.id, occurrenceDate),
     ).rejects.toThrow(/already has a journal/);
     expect(batchSpy).toHaveBeenCalledTimes(1);
+  }, 30000);
+
+  it('allows this month after last month was posted today', async () => {
+    const payment = await createDuePayment();
+    const currentOccurrence = payment.nextOccurrence;
+    const currentDate = new Date(currentOccurrence);
+    const previousMonthLastDay = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      0,
+    ).getDate();
+    const previousOccurrence = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() - 1,
+      Math.min(currentDate.getDate(), previousMonthLastDay),
+    ).getTime();
+
+    await postPlannedPaymentOccurrence(WORKPLACE_ID, payment.id, previousOccurrence);
+    const [previousPostedJournal] = await journalPlannedQueries.findByPlannedPaymentIds(
+      WORKPLACE_ID,
+      [payment.id],
+    );
+    expect(previousPostedJournal.status).toBe(JournalStatus.POSTED);
+    expect(previousPostedJournal.journalDate).toBeGreaterThanOrEqual(currentOccurrence);
+
+    await journalPersistenceService.put(
+      {
+        journalDate: currentOccurrence,
+        description: payment.name,
+        currencyCode: payment.currencyCode,
+        transactions: buildPlannedPaymentTransferLines(payment),
+        status: JournalStatus.PLANNED,
+        plannedPaymentId: payment.id,
+      },
+      WORKPLACE_ID,
+    );
+
+    await postPlannedPaymentOccurrence(WORKPLACE_ID, payment.id, currentOccurrence);
+
+    const journals = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
+      payment.id,
+    ]);
+    expect(journals).toHaveLength(2);
+    expect(journals.every(journal => journal.status === JournalStatus.POSTED)).toBe(true);
+  }, 30000);
+
+  it('posts the exact planned journal selected by the occurrence action', async () => {
+    const payment = await createDuePayment();
+    const occurrenceDate = payment.nextOccurrence;
+    const scheduledJournal = await journalPersistenceService.put(
+      {
+        journalDate: occurrenceDate,
+        description: payment.name,
+        currencyCode: payment.currencyCode,
+        transactions: buildPlannedPaymentTransferLines(payment),
+        status: JournalStatus.PLANNED,
+        plannedPaymentId: payment.id,
+      },
+      WORKPLACE_ID,
+    );
+    const lookupSpy = jest.spyOn(journalPlannedQueries, 'findPlannedOnDay');
+
+    await postPlannedJournalOccurrence(
+      WORKPLACE_ID,
+      payment.id,
+      scheduledJournal.id,
+      occurrenceDate,
+    );
+
+    const reloaded = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
+      payment.id,
+    ]);
+    const reloadedPayment = await plannedPaymentRepository.find(WORKPLACE_ID, payment.id);
+    expect(reloaded).toHaveLength(1);
+    expect(reloaded[0].id).toBe(scheduledJournal.id);
+    expect(reloaded[0].status).toBe(JournalStatus.POSTED);
+    expect(reloadedPayment?.nextOccurrence).toBe(calculateNextOccurrence(occurrenceDate, payment));
+    expect(lookupSpy).not.toHaveBeenCalled();
+  }, 30000);
+
+  it('rejects a selected planned journal from a different occurrence date', async () => {
+    const payment = await createDuePayment();
+    const occurrenceDate = payment.nextOccurrence;
+    const scheduledJournal = await journalPersistenceService.put(
+      {
+        journalDate: occurrenceDate,
+        description: payment.name,
+        currencyCode: payment.currencyCode,
+        transactions: buildPlannedPaymentTransferLines(payment),
+        status: JournalStatus.PLANNED,
+        plannedPaymentId: payment.id,
+      },
+      WORKPLACE_ID,
+    );
+
+    await expect(
+      postPlannedJournalOccurrence(
+        WORKPLACE_ID,
+        payment.id,
+        scheduledJournal.id,
+        occurrenceDate + AppConfig.time.msPerDay,
+      ),
+    ).rejects.toThrow(/not scheduled for this occurrence/);
+
+    const [reloaded] = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
+      payment.id,
+    ]);
+    expect(reloaded.status).toBe(JournalStatus.PLANNED);
+  }, 30000);
+
+  it('posts a scheduled occurrence committed while its write is queued', async () => {
+    const payment = await createDuePayment();
+    const occurrenceDate = payment.nextOccurrence;
+    let releaseGeneration!: () => void;
+    let signalGeneration!: () => void;
+    const generationPaused = new Promise<void>(resolve => {
+      signalGeneration = resolve;
+    });
+    const continueGeneration = new Promise<void>(resolve => {
+      releaseGeneration = resolve;
+    });
+    let signalPostWrite!: () => void;
+    const postWriteStarted = new Promise<void>(resolve => {
+      signalPostWrite = resolve;
+    });
+    const databaseWrite = database.write.bind(database);
+    let writeCount = 0;
+    const assertAvailable = journalPersistenceRepository.assertPlannedOccurrenceAvailable.bind(
+      journalPersistenceRepository,
+    );
+
+    jest.spyOn(database, 'write').mockImplementation((...args) => {
+      const result = databaseWrite(...args);
+      if (++writeCount === 2) signalPostWrite();
+      return result;
+    });
+    jest
+      .spyOn(journalPersistenceRepository, 'assertPlannedOccurrenceAvailable')
+      .mockImplementation(async (...args) => {
+        signalGeneration();
+        await continueGeneration;
+        return assertAvailable(...args);
+      });
+
+    const generation = generatePlannedJournalForPayment(payment, occurrenceDate);
+    await generationPaused;
+    const posting = postPlannedPaymentOccurrence(WORKPLACE_ID, payment.id, occurrenceDate);
+    await postWriteStarted;
+    releaseGeneration();
+
+    await expect(generation).resolves.toBe(true);
+    await posting;
+
+    const reloaded = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
+      payment.id,
+    ]);
+    expect(reloaded).toHaveLength(1);
+    expect(reloaded[0].status).toBe(JournalStatus.POSTED);
+  }, 30000);
+
+  it('rejects an occurrence that is already posted rather than posting twice', async () => {
+    const payment = await createDuePayment();
+    const occurrenceDate = payment.nextOccurrence;
+    await journalPersistenceService.put(
+      {
+        journalDate: occurrenceDate,
+        description: payment.name,
+        currencyCode: payment.currencyCode,
+        transactions: buildPlannedPaymentTransferLines(payment),
+        status: JournalStatus.POSTED,
+        plannedPaymentId: payment.id,
+      },
+      WORKPLACE_ID,
+    );
+
+    await expect(
+      postPlannedPaymentOccurrence(WORKPLACE_ID, payment.id, occurrenceDate),
+    ).rejects.toThrow(/already has a journal/);
   }, 30000);
 
   it('skips a manual occurrence and advances its schedule in one batch', async () => {

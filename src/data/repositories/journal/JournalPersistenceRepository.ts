@@ -1570,35 +1570,38 @@ export class JournalPersistenceRepository {
         Q.where('deleted_at', Q.eq(null)),
       )
       .fetch();
-    const journalIds = journals
-      .filter(journal => !allowedJournalIds.has(journal.id))
+    const postedJournalIds = journals
+      .filter(journal => journal.status === JournalStatus.POSTED)
       .map(journal => journal.id);
-    const matchingDateJournal = journals.find(
-      journal =>
-        !allowedJournalIds.has(journal.id) &&
-        journal.journalDate >= dayStart &&
-        journal.journalDate <= dayEnd,
-    );
     const metadata =
-      !matchingDateJournal && journalIds.length > 0
+      postedJournalIds.length > 0
         ? await this.metadata
-            .query(Q.where('workplace_id', workplaceId), Q.where('journal_id', Q.oneOf(journalIds)))
+            .query(
+              Q.where('workplace_id', workplaceId),
+              Q.where('journal_id', Q.oneOf(postedJournalIds)),
+            )
             .fetch()
         : [];
-    const originalOccurrenceJournal = metadata.find(row => {
+    const originalDateByJournalId = new Map<JournalId, number>();
+    for (const row of metadata) {
       const metadataJson = safeParseJSON<Record<string, unknown>>(row.metadataJson, {});
       const rawOriginalDate = metadataJson[MetadataKeys.ORIGINAL_PLANNED_DATE];
       const originalDate =
         typeof rawOriginalDate === 'number' || typeof rawOriginalDate === 'string'
           ? Number(rawOriginalDate)
           : Number.NaN;
-      return Number.isFinite(originalDate) && originalDate >= dayStart && originalDate <= dayEnd;
+      if (Number.isFinite(originalDate)) {
+        originalDateByJournalId.set(row.journalId, originalDate);
+      }
+    }
+    const conflicting = journals.find(journal => {
+      if (allowedJournalIds.has(journal.id)) return false;
+      const occurrenceDate =
+        journal.status === JournalStatus.POSTED
+          ? (originalDateByJournalId.get(journal.id) ?? journal.journalDate)
+          : journal.journalDate;
+      return occurrenceDate >= dayStart && occurrenceDate <= dayEnd;
     });
-    const conflicting =
-      matchingDateJournal ??
-      (originalOccurrenceJournal
-        ? journals.find(journal => journal.id === originalOccurrenceJournal.journalId)
-        : undefined);
     if (conflicting) {
       throw new Error(
         `Planned payment ${plannedPaymentId} already has a journal for this occurrence (${conflicting.id})`,

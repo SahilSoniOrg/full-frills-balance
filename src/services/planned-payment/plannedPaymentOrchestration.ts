@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import { MetadataKeys, MetadataSources } from '@/src/constants/ledger-constants';
-import Journal from '@/src/data/models/Journal';
+import type Journal from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
@@ -19,35 +19,18 @@ import { JournalStatus, PlannedPaymentStatus } from '@/src/types/enums';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 
-export interface PlannedOccurrenceContext {
+interface PlannedOccurrenceWindow {
   normalizedDate: number;
   dayEnd: number;
-  existingPlanned: Journal[];
 }
 
 const dueProcessingByWorkplace = new Map<WorkplaceId, Promise<void>>();
 
-/**
- * Resolves the occurrence day window and any existing PLANNED journals for that day.
- * Always workplace-scopes journal queries.
- */
-export async function resolvePlannedOccurrenceContext(
-  workplaceId: WorkplaceId,
-  pp: PlannedPayment,
-  occurrenceDate: number,
-): Promise<PlannedOccurrenceContext> {
-  const plannedPaymentId = pp.id;
+/** Resolves the local day window used for one planned-payment occurrence. */
+function plannedOccurrenceWindow(occurrenceDate: number): PlannedOccurrenceWindow {
   const normalizedDate = normalizeToStartOfDay(occurrenceDate);
   const dayEnd = normalizedDate + (AppConfig.time.msPerDay - 1);
-
-  const existingPlanned = await journalPlannedQueries.findPlannedOnDay(
-    workplaceId,
-    plannedPaymentId,
-    normalizedDate,
-    dayEnd,
-  );
-
-  return { normalizedDate, dayEnd, existingPlanned };
+  return { normalizedDate, dayEnd };
 }
 
 function prepareScheduleAdvance(
@@ -62,42 +45,70 @@ function prepareScheduleAdvance(
   };
 }
 
-export async function postPlannedPaymentOccurrence(
+async function postPlannedPaymentOccurrenceInternal(
   workplaceId: WorkplaceId,
   plannedPaymentId: PlannedPaymentId,
   occurrenceDate: number,
+  targetJournalId?: string,
 ): Promise<void> {
   const pp = await requirePlannedPayment(workplaceId, plannedPaymentId);
 
   try {
-    const { normalizedDate, dayEnd, existingPlanned } = await resolvePlannedOccurrenceContext(
-      workplaceId,
-      pp,
-      occurrenceDate,
-    );
-
+    const { normalizedDate, dayEnd } = plannedOccurrenceWindow(occurrenceDate);
     const postTime = Date.now();
-    if (existingPlanned.length > 1) {
-      throw new Error(`Planned payment ${pp.id} has multiple planned journals for this occurrence`);
-    }
-    if (existingPlanned.length === 0 && !pp.toAccountId) {
-      throw new Error(`Planned payment ${pp.id} is missing toAccountId.`);
-    }
-
     const result = await runAccountingWriteSession(async session => {
+      let currentPlanned: Journal[];
+      if (targetJournalId) {
+        const paymentJournals = await journalPlannedQueries.findByPlannedPaymentIds(workplaceId, [
+          pp.id,
+        ]);
+        const selectedJournal = paymentJournals.find(journal => journal.id === targetJournalId);
+        if (!selectedJournal) {
+          throw new Error(
+            `Planned journal ${targetJournalId} does not belong to active planned payment ${pp.id}`,
+          );
+        }
+        if (selectedJournal.status !== JournalStatus.PLANNED) {
+          throw new Error(
+            `Planned journal ${targetJournalId} is no longer scheduled (status: ${selectedJournal.status})`,
+          );
+        }
+        if (selectedJournal.journalDate < normalizedDate || selectedJournal.journalDate > dayEnd) {
+          throw new Error(
+            `Planned journal ${targetJournalId} is not scheduled for this occurrence`,
+          );
+        }
+        currentPlanned = [selectedJournal];
+      } else {
+        currentPlanned = await journalPlannedQueries.findPlannedOnDay(
+          workplaceId,
+          pp.id,
+          normalizedDate,
+          dayEnd,
+        );
+      }
+      if (currentPlanned.length > 1) {
+        throw new Error(
+          `Planned payment ${pp.id} has multiple planned journals for this occurrence`,
+        );
+      }
+      if (currentPlanned.length === 0 && !pp.toAccountId) {
+        throw new Error(`Planned payment ${pp.id} is missing toAccountId.`);
+      }
+
       await journalPersistenceRepository.assertPlannedOccurrenceAvailable(
         workplaceId,
         pp.id,
         normalizedDate,
         dayEnd,
-        new Set(existingPlanned.map(journal => journal.id)),
+        new Set(currentPlanned.map(journal => journal.id)),
       );
 
       const journalResult =
-        existingPlanned.length > 0
+        currentPlanned.length > 0
           ? await journalPersistenceService.postInSession(
               session,
-              existingPlanned[0].id,
+              currentPlanned[0].id,
               workplaceId,
               postTime,
             )
@@ -144,6 +155,30 @@ export async function postPlannedPaymentOccurrence(
   }
 }
 
+/** Posts the exact scheduled journal selected from a planned-occurrence list. */
+export function postPlannedJournalOccurrence(
+  workplaceId: WorkplaceId,
+  plannedPaymentId: PlannedPaymentId,
+  journalId: string,
+  occurrenceDate: number,
+): Promise<void> {
+  return postPlannedPaymentOccurrenceInternal(
+    workplaceId,
+    plannedPaymentId,
+    occurrenceDate,
+    journalId,
+  );
+}
+
+/** Posts the payment's occurrence, creating a posted journal if none is scheduled yet. */
+export function postPlannedPaymentOccurrence(
+  workplaceId: WorkplaceId,
+  plannedPaymentId: PlannedPaymentId,
+  occurrenceDate: number,
+): Promise<void> {
+  return postPlannedPaymentOccurrenceInternal(workplaceId, plannedPaymentId, occurrenceDate);
+}
+
 /**
  * Skips a specific occurrence: marks or creates a SKIPPED journal and advances the schedule.
  */
@@ -155,20 +190,22 @@ export async function skipPlannedPaymentOccurrence(
   const pp = await requirePlannedPayment(workplaceId, plannedPaymentId);
 
   try {
-    const { normalizedDate, dayEnd, existingPlanned } = await resolvePlannedOccurrenceContext(
-      workplaceId,
-      pp,
-      occurrenceDate,
-    );
-
-    if (existingPlanned.length === 0 && !pp.toAccountId) {
-      logger.warn(
-        `[PlannedPaymentOrchestration] skipOccurrence: payment ${pp.id} has no toAccountId — advancing schedule without creating a journal.`,
-      );
-    }
+    const { normalizedDate, dayEnd } = plannedOccurrenceWindow(occurrenceDate);
 
     await runAccountingWriteSession(async session => {
-      const allowedJournalIds = new Set(existingPlanned.map(journal => journal.id));
+      const currentPlanned = await journalPlannedQueries.findPlannedOnDay(
+        workplaceId,
+        pp.id,
+        normalizedDate,
+        dayEnd,
+      );
+      if (currentPlanned.length === 0 && !pp.toAccountId) {
+        logger.warn(
+          `[PlannedPaymentOrchestration] skipOccurrence: payment ${pp.id} has no toAccountId — advancing schedule without creating a journal.`,
+        );
+      }
+
+      const allowedJournalIds = new Set(currentPlanned.map(journal => journal.id));
       await journalPersistenceRepository.assertPlannedOccurrenceAvailable(
         workplaceId,
         pp.id,
@@ -177,11 +214,11 @@ export async function skipPlannedPaymentOccurrence(
         allowedJournalIds,
       );
 
-      if (existingPlanned.length > 0) {
+      if (currentPlanned.length > 0) {
         await journalPersistenceRepository.setNonPostedStatusesInSession(
           session,
           workplaceId,
-          existingPlanned.map(journal => ({
+          currentPlanned.map(journal => ({
             journalId: journal.id,
             status: JournalStatus.SKIPPED,
             expectedStatus: JournalStatus.PLANNED,

@@ -2,7 +2,7 @@ import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments/types/PlannedOccurrenceViewModel';
 import {
-  postPlannedPaymentOccurrence,
+  postPlannedJournalOccurrence,
   skipPlannedPaymentOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { analytics } from '@/src/services/analytics';
@@ -49,6 +49,7 @@ export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
 
       if (!isSimulated && item.origin === 'PLANNED_JOURNAL' && item.plannedPaymentId) {
         const plannedPaymentId = item.plannedPaymentId;
+        const journalId = item.journalId;
         confirm.show({
           title: dialogTitle,
           message: `Do you want to record a payment of ${displayAmount} for ${displayTitle}?`,
@@ -57,9 +58,10 @@ export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
           destructiveCancel: true,
           onConfirm: async () => {
             try {
-              await postPlannedPaymentOccurrence(
+              await postPlannedJournalOccurrence(
                 workplaceId,
                 plannedPaymentId,
+                journalId,
                 item.occurrenceDate,
               );
               analytics.trackFeatureUsage('planned_payment', 'occurrence_paid', {
