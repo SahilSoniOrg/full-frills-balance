@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import {
-  stagePlannedPaymentWrite,
+  stageModelWrite,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
@@ -144,7 +144,7 @@ export class PlannedPaymentRepository {
       throw new Error('Planned payment changed while its occurrence was being processed');
     }
 
-    stagePlannedPaymentWrite(session, () => [this.prepareUpdate(workplaceId, record, updates)]);
+    stageModelWrite(session, () => [this.prepareUpdate(workplaceId, record, updates)]);
     return record;
   }
 
@@ -155,7 +155,7 @@ export class PlannedPaymentRepository {
   ): Promise<PlannedPayment> {
     const record = await this.find(workplaceId, id);
     if (!record) throw new Error('Planned payment not found');
-    stagePlannedPaymentWrite(session, () => [this.prepareDelete(workplaceId, record)]);
+    stageModelWrite(session, () => [this.prepareDelete(workplaceId, record)]);
     return record;
   }
 
@@ -236,7 +236,7 @@ export class PlannedPaymentRepository {
     targetAccountId: AccountId,
   ): Promise<void> {
     const records = await this.loadMergeRecords(workplaceId, sourceAccountIds, targetAccountId);
-    stagePlannedPaymentWrite(session, () =>
+    stageModelWrite(session, () =>
       this.prepareLoadedMergeOperations(records, sourceAccountIds, targetAccountId),
     );
   }

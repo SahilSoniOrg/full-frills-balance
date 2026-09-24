@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import {
-  stageAccountMergeWrite,
+  stageModelWrite,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
@@ -44,26 +44,25 @@ export class AccountMergeOperations {
       throw new Error('One or more source accounts could not be found in the workplace');
     }
 
-    stageAccountMergeWrite(session, () => {
-      const operations = this.prepareLoadedMergeWriteOperations(
+    stageModelWrite(session, () => {
+      const { accounts, metadata } = this.prepareLoadedMergeWriteOperations(
         records,
         sourceAccountIds,
         targetAccountId,
       );
-      return {
-        ...operations,
-        audits: [
-          auditRepository.prepareLog(
-            {
-              entityType: 'account',
-              entityId: targetAccountId,
-              action: AuditAction.UPDATE,
-              changes: { action: 'MERGE_ACCOUNTS', mergedAccountIds: sourceAccountIds },
-            },
-            workplaceId,
-          ),
-        ],
-      };
+      return [
+        ...accounts,
+        ...metadata,
+        auditRepository.prepareLog(
+          {
+            entityType: 'account',
+            entityId: targetAccountId,
+            action: AuditAction.UPDATE,
+            changes: { action: 'MERGE_ACCOUNTS', mergedAccountIds: sourceAccountIds },
+          },
+          workplaceId,
+        ),
+      ];
     });
   }
 

@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import {
-  stageBudgetMergeWrite,
+  stageModelWrite,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
 import Budget from '@/src/data/models/Budget';
@@ -248,7 +248,7 @@ export class BudgetRepository {
     targetAccountId: AccountId,
   ): Promise<void> {
     const records = await this.loadMergeRecords(workplaceId, sourceAccountIds, targetAccountId);
-    stageBudgetMergeWrite(session, () =>
+    stageModelWrite(session, () =>
       this.prepareLoadedMergeOperations(records, sourceAccountIds, targetAccountId),
     );
   }

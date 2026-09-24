@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import {
-  stageSmsRuleMergeWrite,
+  stageModelWrite,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
 import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/ids';
@@ -150,7 +150,7 @@ export class TransactionAutoPostRuleRepository {
     targetAccountId: AccountId,
   ): Promise<void> {
     const rules = await this.loadMergeRecords(workplaceId, sourceAccountIds);
-    stageSmsRuleMergeWrite(session, () =>
+    stageModelWrite(session, () =>
       this.prepareLoadedMergeOperations(rules, sourceAccountIds, targetAccountId),
     );
   }

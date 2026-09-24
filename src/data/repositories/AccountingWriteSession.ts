@@ -1,12 +1,5 @@
 import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
-import AccountMetadata from '@/src/data/models/AccountMetadata';
-import AuditLog from '@/src/data/models/AuditLog';
-import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
-import Budget from '@/src/data/models/Budget';
-import BudgetScope from '@/src/data/models/BudgetScope';
-import PlannedPayment from '@/src/data/models/PlannedPayment';
-import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { Model } from '@nozbe/watermelondb';
 
@@ -84,57 +77,6 @@ export function stageModelWrite(
   const state = getOpenState(session);
   if (typeof operations === 'function') state.operations.push(operations);
   else state.operations.push(...operations);
-}
-
-/** @internal Called by planned-payment persistence after validating typed updates. */
-export function stagePlannedPaymentWrite(
-  session: AccountingWriteSession,
-  operations: readonly PlannedPayment[] | (() => readonly PlannedPayment[]),
-): void {
-  const state = getOpenState(session);
-  if (typeof operations === 'function') state.operations.push(operations);
-  else state.operations.push(...operations);
-}
-
-/** @internal Called by the budget repository after preparing typed reference rewrites. */
-export function stageBudgetMergeWrite(
-  session: AccountingWriteSession,
-  operations: () => readonly (Budget | BudgetScope)[],
-): void {
-  getOpenState(session).operations.push(operations);
-}
-
-/** @internal Called by the SMS-rule repository after preparing typed reference rewrites. */
-export function stageSmsRuleMergeWrite(
-  session: AccountingWriteSession,
-  operations: () => readonly TransactionAutoPostRule[],
-): void {
-  getOpenState(session).operations.push(operations);
-}
-
-/** @internal Called by the snapshot repository after preparing typed deletions. */
-export function stageBalanceSnapshotMergeWrite(
-  session: AccountingWriteSession,
-  operations: () => readonly BalanceSnapshot[],
-): void {
-  getOpenState(session).operations.push(operations);
-}
-
-export interface AccountMergeWriteOperations {
-  accounts: readonly Account[];
-  metadata: readonly AccountMetadata[];
-  audits: readonly AuditLog[];
-}
-
-/** @internal Stages only account-owned merge changes and their audit row. */
-export function stageAccountMergeWrite(
-  session: AccountingWriteSession,
-  operations: () => AccountMergeWriteOperations,
-): void {
-  getOpenState(session).operations.push(() => {
-    const prepared = operations();
-    return [...prepared.accounts, ...prepared.metadata, ...prepared.audits];
-  });
 }
 
 /** @internal Includes not-yet-committed accounts when validating a journal. */

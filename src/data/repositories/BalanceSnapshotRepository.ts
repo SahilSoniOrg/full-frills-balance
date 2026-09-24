@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
 import {
-  stageBalanceSnapshotMergeWrite,
+  stageModelWrite,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
@@ -273,7 +273,7 @@ export class BalanceSnapshotRepository {
     accountIds: AccountId[],
   ): Promise<void> {
     const snapshots = await this.loadMergeRecords(workplaceId, accountIds);
-    stageBalanceSnapshotMergeWrite(session, () => this.prepareLoadedMergeOperations(snapshots));
+    stageModelWrite(session, () => this.prepareLoadedMergeOperations(snapshots));
   }
 
   private loadMergeRecords(workplaceId: WorkplaceId, accountIds: AccountId[]) {
