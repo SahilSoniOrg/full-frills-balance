@@ -8,7 +8,7 @@ import type { AccountFields } from '@/src/types/plainDtos';
 import type { AccountRole } from '@/src/types/domainJournal';
 import type { CreateAccountIntent } from '@/src/components/account-selection';
 import { EntryTransactionCard } from './EntryTransactionCard';
-import type { ExpansionPosition } from './SimpleFormAccountSections';
+import type { ExpansionPosition } from './AccountPickerPanel';
 import { getBulkJournalRowError } from '../hooks/bulkJournalHelpers';
 import {
   buildSimpleFormAccountSections,

@@ -18,7 +18,7 @@ import { withOpacity } from '@/src/utils/color-math';
 import { MotiView } from 'moti';
 import { useMemo } from 'react';
 import { type LayoutChangeEvent, TouchableOpacity, View } from 'react-native';
-import { routeAccountSelectorStyles as styles } from './SimpleFormAccountSections.styles';
+import { accountPickerStyles as styles } from './AccountPickerPanel.styles';
 
 export interface AccountPickerNodeProps {
   account?: AccountFields;
@@ -123,64 +123,6 @@ export function AccountPickerNode({
           )}
         </View>
       </TouchableOpacity>
-    </View>
-  );
-}
-
-interface RouteConnectorProps {
-  compact?: boolean;
-  onSwapAccounts?: () => void;
-  showArrow?: boolean;
-  showSwap?: boolean;
-}
-
-export function RouteConnector({
-  compact = false,
-  onSwapAccounts,
-  showArrow = true,
-  showSwap = false,
-}: RouteConnectorProps) {
-  const { theme } = useTheme();
-  const showSwapButton = showSwap && Boolean(onSwapAccounts);
-
-  if (!showArrow && !showSwapButton) return null;
-
-  return (
-    <View
-      style={[
-        styles.connectorContainer,
-        compact && !showSwapButton && styles.compactConnectorContainer,
-      ]}
-      testID="route-flow-connector"
-    >
-      {showArrow && (
-        <View style={styles.connectorArrow} testID="route-flow-arrow">
-          <AppIcon name={Icon.ArrowRight} size={Size.xxs} color={theme.textTertiary} />
-        </View>
-      )}
-      {showSwapButton && onSwapAccounts && (
-        <TouchableOpacity
-          onPress={onSwapAccounts}
-          style={styles.connectorSwapTouchTarget}
-          hitSlop={Spacing.xs}
-          accessibilityRole="button"
-          accessibilityLabel="Swap send from and deposit into accounts"
-          testID="route-swap-accounts-button"
-        >
-          <View
-            pointerEvents="none"
-            style={[
-              styles.connectorSwapVisual,
-              {
-                backgroundColor: withOpacity(theme.primary, Opacity.soft),
-                borderColor: withOpacity(theme.primary, Opacity.medium),
-              },
-            ]}
-          >
-            <AppIcon name={Icon.SwapHorizontal} size={Size.xxs} color={theme.primary} />
-          </View>
-        </TouchableOpacity>
-      )}
     </View>
   );
 }
@@ -420,9 +362,3 @@ export function AccountPickerDropdown({
     </View>
   );
 }
-
-// Compatibility aliases for existing simple-route callers.
-export const RouteAccountNode = AccountPickerNode;
-export type RouteAccountNodeProps = AccountPickerNodeProps;
-export const RouteAccountDropdown = AccountPickerDropdown;
-export type RouteAccountDropdownProps = AccountPickerDropdownProps;

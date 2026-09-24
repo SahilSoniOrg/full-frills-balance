@@ -2,7 +2,7 @@ import { useEaseInLayoutAnimation } from '@/src/hooks/useEaseInLayoutAnimation';
 import type { AccountRole, TabType } from '@/src/types/domainJournal';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { useCallback, useState } from 'react';
-import type { ExpansionPosition } from './SimpleFormAccountSections';
+import type { ExpansionPosition } from './AccountPickerPanel';
 
 interface UseSimpleFormExpansionInput {
   type: TabType;

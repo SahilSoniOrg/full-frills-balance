@@ -1,5 +1,5 @@
 import { SimpleFormAccountSections } from '../components/SimpleFormAccountSections';
-import { RouteAccountNode } from '../components/SimpleFormAccountSections.parts';
+import { AccountPickerNode } from '../components/AccountPickerPanel.parts';
 import { ArchiveVisibilityScopeProvider } from '@/src/contexts/ArchiveVisibilityScope';
 import { AppConfig } from '@/src/constants';
 import { AccountType } from '@/src/types/enums';
@@ -34,7 +34,7 @@ const mockAccounts: AccountFields[] = [
 describe('SimpleFormAccountSections unselection and clear', () => {
   it('keeps the chevron in the standard header and removes it in compact mode', () => {
     const view = renderWithScope(
-      <RouteAccountNode
+      <AccountPickerNode
         account={mockAccounts[0]}
         emptyPrompt="Choose account"
         isExpanded={false}
@@ -50,7 +50,7 @@ describe('SimpleFormAccountSections unselection and clear', () => {
 
     view.rerender(
       <ArchiveVisibilityScopeProvider>
-        <RouteAccountNode
+        <AccountPickerNode
           account={mockAccounts[0]}
           emptyPrompt="Choose account"
           isExpanded={false}

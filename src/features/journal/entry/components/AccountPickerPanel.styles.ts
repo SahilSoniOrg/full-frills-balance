@@ -1,27 +1,10 @@
 import { Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import { StyleSheet } from 'react-native';
 
-export const routeAccountSelectorStyles = StyleSheet.create({
+export const accountPickerStyles = StyleSheet.create({
   container: {
     marginHorizontal: Spacing.lg,
     overflow: 'hidden',
-  },
-  routeStickyGroup: { width: '100%' },
-  stickyRouteHeader: {
-    marginHorizontal: Spacing.lg,
-    padding: 1,
-    borderWidth: 1,
-    borderBottomWidth: 0,
-    borderTopLeftRadius: Shape.radius.lg,
-    borderTopRightRadius: Shape.radius.lg,
-  },
-  stickyRouteDropdown: {
-    marginHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
-    borderWidth: 1,
-    borderTopWidth: 0,
-    borderBottomLeftRadius: Shape.radius.lg,
-    borderBottomRightRadius: Shape.radius.lg,
   },
   expandedWrapper: { borderRadius: Shape.radius.lg },
   dropdownLayer: {
@@ -92,38 +75,6 @@ export const routeAccountSelectorStyles = StyleSheet.create({
     flexShrink: 1,
     fontSize: Typography.sizes.sm,
     lineHeight: Math.round(Typography.sizes.sm * Typography.lineHeights.tight),
-  },
-  connectorContainer: {
-    width: Size.buttonSm,
-    minHeight: Size.buttonLg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  compactConnectorContainer: {
-    width: Size.xs,
-    minHeight: Size.controlCompact,
-    gap: Spacing.none,
-  },
-  connectorArrow: {
-    width: Size.xs,
-    height: Size.xs,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  connectorSwapTouchTarget: {
-    width: Size.iconLg,
-    height: Size.iconLg,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  connectorSwapVisual: {
-    width: Size.md,
-    height: Size.md,
-    borderRadius: Shape.radius.full,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   dropdownBody: {
     paddingHorizontal: Spacing.md,
