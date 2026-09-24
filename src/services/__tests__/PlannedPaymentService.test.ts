@@ -13,7 +13,7 @@ import {
   postPlannedPaymentOccurrence,
   skipPlannedPaymentOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentOrchestration';
-import { generatePlannedJournalForPayment } from '@/src/services/planned-payment/plannedPaymentJournalGeneration';
+import { generatePlannedOccurrence } from '@/src/services/planned-payment/plannedPaymentJournalGeneration';
 import {
   calculateNextOccurrence,
   computeFirstOccurrence,
@@ -24,7 +24,6 @@ jest.mock('@/src/data/repositories/PlannedPaymentRepository');
 jest.mock('@/src/data/repositories/journal/journalPlannedModule');
 jest.mock('@/src/data/repositories/journal/JournalPersistenceRepository', () => ({
   journalPersistenceRepository: {
-    assertPlannedOccurrenceAvailable: jest.fn().mockResolvedValue(undefined),
     setNonPostedStatusesInSession: jest.fn().mockResolvedValue(undefined),
   },
 }));
@@ -65,12 +64,11 @@ describe('planned payment modules', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (journalPlannedQueries.findEarliestPlannedByPayment as jest.Mock).mockResolvedValue(undefined);
-    (journalPlannedQueries.findPlannedOnDay as jest.Mock).mockResolvedValue([]);
+    (journalPlannedQueries.findOccurrenceJournals as jest.Mock).mockResolvedValue({ kind: 'none' });
     (journalPlannedQueries.batchUpdateStatus as jest.Mock).mockResolvedValue(undefined);
     (journalPlannedQueries.findByPlannedPaymentAndStatus as jest.Mock).mockResolvedValue([]);
     (journalPlannedQueries.findUnpostedByPlannedPayment as jest.Mock).mockResolvedValue([]);
     (journalPlannedQueries.findByPlannedPaymentIds as jest.Mock).mockResolvedValue([]);
-    (journalPlannedQueries.countOnDay as jest.Mock).mockResolvedValue(0);
     (journalPlannedQueries.prepareStatusUpdates as jest.Mock).mockImplementation(
       (_workplaceId, journals, status) =>
         journals.map((journal: any) => {
@@ -328,7 +326,9 @@ describe('planned payment modules', () => {
       expect(journalPlannedQueries.findEarliestPlannedByPayment).not.toHaveBeenCalled();
       expect(journalPlannedQueries.findByPlannedPaymentAndStatus).not.toHaveBeenCalled();
       expect(plannedPaymentRepository.update).not.toHaveBeenCalled();
-      expect(database.write).not.toHaveBeenCalled();
+      expect(plannedPaymentRepository.updateInSession).not.toHaveBeenCalled();
+      expect(journalPersistenceService.putInSession).not.toHaveBeenCalled();
+      expect(journalPersistenceService.postInSession).not.toHaveBeenCalled();
     });
   });
 
@@ -357,7 +357,10 @@ describe('planned payment modules', () => {
       (journalPlannedQueries.findEarliestPlannedByPayment as jest.Mock).mockResolvedValue(
         mockJournal,
       );
-      (journalPlannedQueries.findPlannedOnDay as jest.Mock).mockResolvedValue([mockJournal]);
+      (journalPlannedQueries.findOccurrenceJournals as jest.Mock).mockResolvedValue({
+        kind: 'planned',
+        journals: [mockJournal],
+      });
 
       const updatePpSpy = jest
         .spyOn(plannedPaymentRepository, 'update')
@@ -366,7 +369,7 @@ describe('planned payment modules', () => {
       await postPlannedPaymentOccurrence('wp-1' as WorkplaceId, mockPP.id, mockPP.nextOccurrence);
 
       expect(journalPlannedQueries.findEarliestPlannedByPayment).not.toHaveBeenCalled();
-      expect(journalPlannedQueries.findPlannedOnDay).toHaveBeenCalledWith(
+      expect(journalPlannedQueries.findOccurrenceJournals).toHaveBeenCalledWith(
         'wp-1',
         'pp-1',
         expect.any(Number),
@@ -384,7 +387,7 @@ describe('planned payment modules', () => {
         'wp-1',
         'pp-1',
         expect.objectContaining({ nextOccurrence: expect.any(Number) }),
-        { nextOccurrence: mockPP.nextOccurrence },
+        { status: PlannedPaymentStatus.ACTIVE, nextOccurrence: mockPP.nextOccurrence },
       );
       expect(journalPersistenceService.afterAtomicWriteCommit).toHaveBeenCalled();
       expect(updatePpSpy).not.toHaveBeenCalled();
@@ -395,8 +398,6 @@ describe('planned payment modules', () => {
       (journalPlannedQueries.findEarliestPlannedByPayment as jest.Mock).mockResolvedValue(
         undefined,
       );
-      (journalPlannedQueries.findPlannedOnDay as jest.Mock).mockResolvedValue([]);
-
       const createJournalSpy = jest.spyOn(journalPersistenceService, 'putInSession');
       const updatePpSpy = jest
         .spyOn(plannedPaymentRepository, 'update')
@@ -427,6 +428,7 @@ describe('planned payment modules', () => {
       fromAccountId: 'acc-1',
       toAccountId: 'acc-2',
       intervalType: PlannedPaymentInterval.MONTHLY,
+      status: PlannedPaymentStatus.ACTIVE,
     };
 
     test('Marks existing PLANNED journal as SKIPPED and advances schedule', async () => {
@@ -440,13 +442,16 @@ describe('planned payment modules', () => {
       (journalPlannedQueries.findEarliestPlannedByPayment as jest.Mock).mockResolvedValue(
         mockJournal,
       );
-      (journalPlannedQueries.findPlannedOnDay as jest.Mock).mockResolvedValue([mockJournal]);
+      (journalPlannedQueries.findOccurrenceJournals as jest.Mock).mockResolvedValue({
+        kind: 'planned',
+        journals: [mockJournal],
+      });
       (journalPlannedQueries.prepareStatusUpdates as jest.Mock).mockReturnValue([mockJournal]);
 
       await skipPlannedPaymentOccurrence('wp-1' as WorkplaceId, mockPP.id, mockPP.nextOccurrence);
 
       expect(journalPlannedQueries.findEarliestPlannedByPayment).not.toHaveBeenCalled();
-      expect(journalPlannedQueries.findPlannedOnDay).toHaveBeenCalledWith(
+      expect(journalPlannedQueries.findOccurrenceJournals).toHaveBeenCalledWith(
         'wp-1',
         'pp-1',
         expect.any(Number),
@@ -482,25 +487,27 @@ describe('planned payment modules', () => {
       intervalN: 1,
       intervalType: PlannedPaymentInterval.MONTHLY,
       nextOccurrence: new Date(2024, 0, 1).getTime(),
+      status: PlannedPaymentStatus.ACTIVE,
     };
 
-    it('does not create a journal when cancellation arrives after the existence check', async () => {
+    it('does not commit when cancellation arrives during the occurrence lookup', async () => {
       const controller = new AbortController();
       (plannedPaymentRepository.findAllActive as jest.Mock).mockResolvedValue([mockPP]);
-      (journalPlannedQueries.findByPlannedPaymentIds as jest.Mock).mockResolvedValue([]);
-      (journalPlannedQueries.countOnDay as jest.Mock).mockImplementation(async () => {
+      (plannedPaymentRepository.find as jest.Mock).mockResolvedValue(mockPP);
+      (journalPlannedQueries.findOccurrenceJournals as jest.Mock).mockImplementation(async () => {
         controller.abort();
-        return 0;
+        return { kind: 'none' };
       });
 
       await processDuePlannedPayments('wp-1' as WorkplaceId, controller.signal);
 
-      expect(journalPersistenceService.putInSession).not.toHaveBeenCalled();
-      expect(plannedPaymentRepository.update).not.toHaveBeenCalled();
+      expect(journalPlannedQueries.findOccurrenceJournals).toHaveBeenCalledTimes(1);
+      expect(journalPersistenceService.afterAtomicWriteCommit).not.toHaveBeenCalled();
     });
 
     it('does not commit staged journal and schedule operations after cancellation', async () => {
       const controller = new AbortController();
+      (plannedPaymentRepository.find as jest.Mock).mockResolvedValue(mockPP);
       (journalPersistenceService.putInSession as jest.Mock).mockImplementation(async () => {
         controller.abort();
         return {
@@ -512,10 +519,13 @@ describe('planned payment modules', () => {
       });
 
       await expect(
-        generatePlannedJournalForPayment(mockPP as any, mockPP.nextOccurrence, {
-          signal: controller.signal,
-        }),
-      ).resolves.toBe(false);
+        generatePlannedOccurrence(
+          'wp-1' as WorkplaceId,
+          mockPP.id,
+          mockPP.nextOccurrence,
+          () => controller.signal.aborted,
+        ),
+      ).rejects.toThrow(/cancelled before commit/);
     });
   });
 

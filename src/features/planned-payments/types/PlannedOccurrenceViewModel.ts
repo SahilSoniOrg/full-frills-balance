@@ -25,7 +25,7 @@ interface PlannedOccurrenceBase {
 
 export type PlannedJournalOccurrence = PlannedOccurrenceBase & {
   origin: 'PLANNED_JOURNAL';
-  journalId: JournalId | string;
+  journalId: JournalId;
   plannedPaymentId?: PlannedPaymentId;
 };
 
