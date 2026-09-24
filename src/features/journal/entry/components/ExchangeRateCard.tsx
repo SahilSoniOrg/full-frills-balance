@@ -60,8 +60,8 @@ export function ExchangeRateCard({
   const displayedRate = useMemo(() => {
     if (!isCrossCurrency || pairRate === null) return null;
     const rate = { sourceCurrency, destinationCurrency: destCurrency, exchangeRate: pairRate };
-    return isAttached ? rate : resolveExchangeRatePresentation(rate);
-  }, [destCurrency, isAttached, isCrossCurrency, pairRate, sourceCurrency]);
+    return resolveExchangeRatePresentation(rate);
+  }, [destCurrency, isCrossCurrency, pairRate, sourceCurrency]);
 
   const testID = (suffix: string) => (testIDPrefix ? `${testIDPrefix}-${suffix}` : suffix);
   const cardTestID = testIDPrefix ? testID('card') : undefined;

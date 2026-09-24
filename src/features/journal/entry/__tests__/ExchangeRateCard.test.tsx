@@ -140,11 +140,11 @@ describe('ExchangeRateCard', () => {
       expect(screen.getByTestId('split-fx-card')).toBeTruthy();
     });
 
-    it('keeps the rate direction aligned with the editable conversion', () => {
+    it('quotes a sub-one rate in the direction that stays above one', () => {
       renderCard({ variant: 'attached', testIDPrefix: 'split-fx' }, attachedInput);
 
-      expect(screen.getByText('1 INR = 0.0104 USD')).toBeTruthy();
-      expect(screen.queryByText('1 USD = 96.1538 INR')).toBeNull();
+      expect(screen.getByText('1 USD = 96.1538 INR')).toBeTruthy();
+      expect(screen.queryByText('1 INR = 0.0104 USD')).toBeNull();
     });
 
     it('keeps the converted amount editable', () => {
