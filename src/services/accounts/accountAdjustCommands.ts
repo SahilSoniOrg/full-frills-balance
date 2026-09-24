@@ -1,7 +1,6 @@
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { findOrCreateBalanceCorrectionAccountInSession } from '@/src/services/accounts/accountSystemAccounts';
 import type { BalanceChangeCounterparty } from '@/src/services/accounts/balanceChangeClassification';
@@ -9,11 +8,9 @@ import {
   journalLegTypesForSignedAmount,
   isBalanceAdjustmentNeeded,
 } from '@/src/services/accounts/accountRules';
-import { journalPresenter } from '@/src/services/accounting/journalPresenter';
-import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { AccountType, JournalStatus } from '@/src/types/enums';
-import { effect } from '@/src/utils/accounting/BalanceEffects';
+import { JournalStatus } from '@/src/types/enums';
 import { logger } from '@/src/utils/logger';
 import { roundToPrecision } from '@/src/utils/money';
 
@@ -70,50 +67,20 @@ export async function adjustAccountBalance(
       targetAccount.accountType,
       discrepancy,
     );
-    const transactions = [
-      { accountId: targetAccount.id, amount, transactionType: accountTxType },
-      { accountId: balancingAccount.id, amount, transactionType: balancingTxType },
-    ];
-    const accountTypes = new Map<AccountId, AccountType>([
-      [targetAccount.id, targetAccount.accountType],
-      [balancingAccount.id, balancingAccount.accountType],
-    ]);
-    const runningBalanceByAccountId = new Map<AccountId, number | null>();
-    const journalDate = Date.now();
-
-    await Promise.all(
-      transactions.map(async transaction => {
-        const accountType = accountTypes.get(transaction.accountId)!;
-        const balanceBeforeJournal = await transactionRawRepository.getAccountSumRaw(
-          workplaceId,
-          transaction.accountId,
-          journalDate - 1,
-          accountType,
-        );
-        runningBalanceByAccountId.set(
-          transaction.accountId,
-          effect(accountType, transaction.transactionType).apply(
-            balanceBeforeJournal,
-            transaction.amount,
-            precision,
-          ),
-        );
-      }),
-    );
-
-    const journal = await journalPersistenceRepository.putInSession(
+    const journal = await journalPersistenceService.putInSession(
       session,
       {
-        journalDate,
+        journalDate: Date.now(),
         description:
           counterparty.kind === 'adjustment'
             ? `Balance Adjustment: ${targetAccount.name}`
             : `Balance update: ${targetAccount.name}`,
         currencyCode: targetAccount.currencyCode,
         status: JournalStatus.POSTED,
-        displayType: journalPresenter.getJournalDisplayType(transactions, accountTypes),
-        transactions,
-        runningBalanceByAccountId,
+        transactions: [
+          { accountId: targetAccount.id, amount, transactionType: accountTxType },
+          { accountId: balancingAccount.id, amount, transactionType: balancingTxType },
+        ],
       },
       workplaceId,
     );
@@ -131,9 +98,5 @@ export async function adjustAccountBalance(
   logger.info(
     `[AccountAdjustCommand] Adjusting balance for ${outcome.targetAccount.name}: ${outcome.currentBalance} -> ${targetBalance} (diff: ${outcome.discrepancy}, counterparty: ${counterparty.kind})`,
   );
-  rebuildQueueService.enqueueMany(
-    [...outcome.journal.affectedAccountIds],
-    outcome.journal.rebuildFromDate,
-    workplaceId,
-  );
+  journalPersistenceService.afterAtomicWriteCommit([outcome.journal], workplaceId);
 }

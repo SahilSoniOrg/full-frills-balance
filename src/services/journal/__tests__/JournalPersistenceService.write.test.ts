@@ -116,6 +116,48 @@ describe('JournalPersistenceService write paths', () => {
     expect(updated?.journalDate).toBe(newDate);
   });
 
+  it('put rounds line amounts to each account currency precision and derives the display type', async () => {
+    const yenCash = await accountWriteRepository.create({
+      name: 'Yen cash',
+      accountType: AccountType.ASSET,
+      currencyCode: 'JPY',
+      workplaceId,
+    });
+    const dinarIncome = await accountWriteRepository.create({
+      name: 'Dinar income',
+      accountType: AccountType.INCOME,
+      currencyCode: 'JOD',
+      workplaceId,
+    });
+
+    const journal = await journalPersistenceService.put(
+      {
+        description: 'Three-decimal posting',
+        journalDate: Date.now(),
+        currencyCode: 'JOD',
+        transactions: [
+          {
+            accountId: yenCash.id,
+            amount: 123.4,
+            transactionType: TransactionType.DEBIT,
+            exchangeRate: 0.005,
+          },
+          { accountId: dinarIncome.id, amount: 0.615, transactionType: TransactionType.CREDIT },
+        ],
+      },
+      workplaceId,
+    );
+
+    const saved = await transactionQueryRepository.findByJournal(workplaceId, journal.id);
+    expect(new Map(saved.map(line => [line.accountId, line.amount]))).toEqual(
+      new Map([
+        [yenCash.id, 123],
+        [dinarIncome.id, 0.615],
+      ]),
+    );
+    expect(journal.displayType).toBe(JournalDisplayType.INCOME);
+  });
+
   it('generic sparse put updates journal fields without replacing transaction rows', async () => {
     const journal = await journalPersistenceService.put(
       {
@@ -348,7 +390,6 @@ describe('JournalPersistenceService write paths', () => {
       journalPersistenceRepository.reassignAccounts(
         {
           accountIdByTransactionId: new Map([[debitLine.id, foreignCurrencyAccount.id]]),
-          displayTypeByJournalId: new Map(),
         },
         workplaceId,
       ),

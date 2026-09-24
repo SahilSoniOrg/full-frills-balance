@@ -60,10 +60,6 @@ jest.mock('@/src/data/database/Database', () => ({
   },
 }));
 
-jest.mock('@/src/services/journal/prepareJournalData', () => ({
-  prepareJournalData: jest.fn().mockResolvedValue({}),
-}));
-
 jest.mock('@/src/data/repositories/account', () => ({
   ...jest.requireActual('@/src/data/repositories/account'),
   accountQueryRepository: {

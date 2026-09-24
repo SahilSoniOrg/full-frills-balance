@@ -147,7 +147,6 @@ describe('journal write workplace ownership', () => {
           accountIdByTransactionId: new Map([
             [workplaceTwoTransaction.id, workplaceOneReplacementAccountId],
           ]),
-          displayTypeByJournalId: new Map(),
         },
         WORKPLACE_ONE,
       ),

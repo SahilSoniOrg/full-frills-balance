@@ -1,8 +1,10 @@
 import { database } from '@/src/data/database/Database';
+import AuditLog from '@/src/data/models/AuditLog';
 import Journal from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
+import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import {
   journalPersistenceRepository,
   type PutJournalInput,
@@ -69,6 +71,14 @@ describe('JournalPersistenceRepository', () => {
         Q.where('deleted_at', Q.eq(null)),
       )
       .fetch();
+  }
+
+  async function auditChanges(entityId: string): Promise<unknown[]> {
+    const audits = await database.collections
+      .get<AuditLog>('audit_logs')
+      .query(Q.where('entity_id', entityId), Q.where('workplace_id', WORKPLACE_ID))
+      .fetch();
+    return audits.map(audit => JSON.parse(audit.changes));
   }
 
   it('persists a balanced posted journal with its lines in one repository operation', async () => {
@@ -192,13 +202,66 @@ describe('JournalPersistenceRepository', () => {
     expect(result.journal.journalDate).toBe(1_500);
   });
 
-  it('rejects a posting line with more precision than its account currency supports', async () => {
-    await expect(
-      journalPersistenceRepository.put(
-        putInput({ transactions: lines(10.001, 10.001) }),
-        WORKPLACE_ID,
-      ),
-    ).rejects.toThrow(/precision/);
+  it('rounds posting lines to their account currency precision', async () => {
+    const { journal } = await journalPersistenceRepository.put(
+      putInput({ transactions: lines(10.004, 10.004) }),
+      WORKPLACE_ID,
+    );
+
+    expect((await activeTransactions(journal.id)).map(line => line.amount)).toEqual([10, 10]);
+    expect(journal.totalAmount).toBe(10);
+  });
+
+  it('derives the display type from line accounts when none is supplied', async () => {
+    const { journal } = await journalPersistenceRepository.put(
+      putInput({ displayType: undefined }),
+      WORKPLACE_ID,
+    );
+
+    expect(journal.displayType).toBe(JournalDisplayType.EXPENSE);
+  });
+
+  it('computes posted running balances in rebuild order, excluding the lines a put replaces', async () => {
+    await journalPersistenceRepository.put(putInput({ journalDate: 500 }), WORKPLACE_ID);
+    await journalPersistenceRepository.put(putInput({ journalDate: 1_000 }), WORKPLACE_ID);
+    const { journal } = await journalPersistenceRepository.put(
+      putInput({ journalDate: 1_000, transactions: lines(5, 5) }),
+      WORKPLACE_ID,
+    );
+    const runningBalances = async () =>
+      new Map(
+        (await activeTransactions(journal.id)).map(line => [line.accountId, line.runningBalance]),
+      );
+
+    expect(await runningBalances()).toEqual(
+      new Map([
+        [debitAccountId, 25],
+        [creditAccountId, -25],
+      ]),
+    );
+
+    await journalPersistenceRepository.put(
+      { journalId: journal.id, transactions: lines(7, 7) },
+      WORKPLACE_ID,
+    );
+    expect(await runningBalances()).toEqual(
+      new Map([
+        [debitAccountId, 27],
+        [creditAccountId, -27],
+      ]),
+    );
+  });
+
+  it('leaves running balances unset for planned journals', async () => {
+    const { journal } = await journalPersistenceRepository.put(
+      putInput({ status: JournalStatus.PLANNED }),
+      WORKPLACE_ID,
+    );
+
+    expect((await activeTransactions(journal.id)).map(line => line.runningBalance)).toEqual([
+      null,
+      null,
+    ]);
   });
 
   it('persists account currency from the account row instead of caller-provided line data', async () => {
@@ -273,8 +336,48 @@ describe('JournalPersistenceRepository', () => {
       TransactionType.CREDIT,
       TransactionType.DEBIT,
     ]);
+    expect(result.journal.displayType).toBe(JournalDisplayType.EXPENSE);
     expect(result.rebuildFromDate).toBe(1_000);
     expect(await database.collections.get('audit_logs').query().fetchCount()).toBe(3);
+    expect(await auditChanges(original.id)).toContainEqual({
+      before: { status: JournalStatus.POSTED, reversingJournalId: null },
+      after: { status: JournalStatus.REVERSED, reversingJournalId: result.journal.id },
+    });
+  });
+
+  it('renames journals without revalidating their persisted lines', async () => {
+    const { journal } = await journalPersistenceRepository.put(putInput(), WORKPLACE_ID);
+    const { journal: unchanged } = await journalPersistenceRepository.put(
+      putInput({ description: 'Unchanged' }),
+      WORKPLACE_ID,
+    );
+    const lines = await activeTransactions(journal.id);
+    await database.write(async () => {
+      await database.batch(
+        ...lines.map(line =>
+          line.prepareUpdate(record => {
+            if (line.transactionType === TransactionType.DEBIT) record.amount = 11;
+          }),
+        ),
+      );
+    });
+
+    const previousDescriptions = await runAccountingWriteSession(session =>
+      journalPersistenceRepository.renameInSession(session, WORKPLACE_ID, {
+        [journal.id]: 'Renamed',
+        [unchanged.id]: 'Unchanged',
+      }),
+    );
+
+    expect(previousDescriptions).toEqual({ [journal.id]: 'Journal' });
+    expect((await database.collections.get<Journal>('journals').find(journal.id)).description).toBe(
+      'Renamed',
+    );
+    expect(await auditChanges(journal.id)).toContainEqual({
+      before: { description: 'Journal' },
+      after: { description: 'Renamed' },
+    });
+    expect(await auditChanges(unchanged.id)).toHaveLength(1);
   });
 
   it('does not reverse an unposted journal', async () => {
@@ -294,6 +397,32 @@ describe('JournalPersistenceRepository', () => {
     expect(await database.collections.get('audit_logs').query().fetchCount()).toBe(1);
   });
 
+  it('derives display types from the reassigned lines in the same write', async () => {
+    const savingsAccount = await accountWriteRepository.create({
+      workplaceId: WORKPLACE_ID,
+      name: 'Savings',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+    });
+    const { journal } = await journalPersistenceRepository.put(
+      putInput({ displayType: undefined }),
+      WORKPLACE_ID,
+    );
+    expect(journal.displayType).toBe(JournalDisplayType.EXPENSE);
+    const creditLine = (await activeTransactions(journal.id)).find(
+      line => line.transactionType === TransactionType.CREDIT,
+    )!;
+
+    await journalPersistenceRepository.reassignAccounts(
+      { accountIdByTransactionId: new Map([[creditLine.id, savingsAccount.id]]) },
+      WORKPLACE_ID,
+    );
+
+    expect((await database.collections.get<Journal>('journals').find(journal.id)).displayType).toBe(
+      JournalDisplayType.TRANSFER,
+    );
+  });
+
   it('rejects account reassignment when the resulting posted journal cannot be valued', async () => {
     const foreignAccount = await accountWriteRepository.create({
       workplaceId: WORKPLACE_ID,
@@ -309,7 +438,6 @@ describe('JournalPersistenceRepository', () => {
       journalPersistenceRepository.reassignAccounts(
         {
           accountIdByTransactionId: new Map([[debitLine.id, foreignAccount.id]]),
-          displayTypeByJournalId: new Map(),
         },
         WORKPLACE_ID,
       ),
@@ -469,5 +597,9 @@ describe('JournalPersistenceRepository', () => {
     expect((await activeTransactions(journal.id)).map(line => line.transactionDate)).toEqual([
       1_000, 1_000,
     ]);
+    expect(await auditChanges(journal.id)).toContainEqual({
+      before: { status: JournalStatus.POSTED, journalDate: 2_000 },
+      after: { status: JournalStatus.PLANNED, journalDate: 1_000 },
+    });
   });
 });

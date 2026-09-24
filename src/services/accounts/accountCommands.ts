@@ -5,10 +5,7 @@ import { SerializedAccountMetadataPayload } from '@/src/types/plainDtos';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { getOpeningBalancesAccountInput } from '@/src/data/repositories/account/accountSystemAccountInputs';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
-import {
-  journalPersistenceRepository,
-  type JournalPersistenceResult,
-} from '@/src/data/repositories/journal/JournalPersistenceRepository';
+import type { JournalPersistenceResult } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { analytics } from '@/src/services/analytics';
@@ -20,13 +17,11 @@ import {
   resolveAccountSubtype,
   shouldPostInitialBalance,
 } from '@/src/services/accounts/accountRules';
-import { journalPresenter } from '@/src/services/accounting/journalPresenter';
-import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { IconName } from '@/src/types/domainIcons';
 import { isValidHexColor } from '@/src/utils/accountCategory';
 import { roundToPrecision } from '@/src/utils/money';
-import { effect } from '@/src/utils/accounting/BalanceEffects';
 
 /** Caller-owned fields for creating an account (form / onboarding data only). */
 export interface CreateAccountCommandInput {
@@ -94,7 +89,6 @@ export async function createAccount(
     metadata: input.metadata,
   };
 
-  const journalDate = Date.now();
   const { account, openingJournal } = await runAccountingWriteSession(async session => {
     const created = await accountWriteRepository.createInSession(session, payload, {
       appendWithinSiblingList: true,
@@ -115,51 +109,21 @@ export async function createAccount(
         input.accountType,
         input.initialBalance!,
       );
-      const transactions = [
-        {
-          accountId: created.id,
-          amount: roundedAmount,
-          transactionType: accountTxType,
-        },
-        {
-          accountId: balancingAccount.id,
-          amount: roundedAmount,
-          transactionType: balancingTxType,
-        },
-      ];
-      const accountTypes = new Map([
-        [created.id, created.accountType],
-        [balancingAccount.id, balancingAccount.accountType],
-      ]);
-      const displayType = journalPresenter.getJournalDisplayType(transactions, accountTypes);
-      const runningBalanceByAccountId = new Map<AccountId, number | null>();
-      await Promise.all(
-        transactions.map(async transaction => {
-          const transactionAccount =
-            transaction.accountId === created.id ? created : balancingAccount;
-          const latest = await transactionQueryRepository.findLatestForAccountBeforeDate(
-            workplaceId,
-            transaction.accountId,
-            journalDate,
-          );
-          const runningBalance = effect(
-            transactionAccount.accountType,
-            transaction.transactionType,
-          ).apply(latest?.runningBalance ?? 0, transaction.amount, precision);
-          runningBalanceByAccountId.set(transaction.accountId, runningBalance);
-        }),
-      );
-
-      openingJournal = await journalPersistenceRepository.putInSession(
+      openingJournal = await journalPersistenceService.putInSession(
         session,
         {
-          journalDate,
+          journalDate: Date.now(),
           description: `Initial Balance: ${input.name}`,
           currencyCode,
           status: JournalStatus.POSTED,
-          displayType,
-          transactions,
-          runningBalanceByAccountId,
+          transactions: [
+            { accountId: created.id, amount: roundedAmount, transactionType: accountTxType },
+            {
+              accountId: balancingAccount.id,
+              amount: roundedAmount,
+              transactionType: balancingTxType,
+            },
+          ],
         },
         workplaceId,
       );
@@ -169,11 +133,7 @@ export async function createAccount(
   });
 
   if (openingJournal) {
-    rebuildQueueService.enqueueMany(
-      [...openingJournal.affectedAccountIds],
-      openingJournal.rebuildFromDate,
-      workplaceId,
-    );
+    journalPersistenceService.afterAtomicWriteCommit([openingJournal], workplaceId);
   }
 
   analytics.logAccountCreated(account.accountType, account.currencyCode);

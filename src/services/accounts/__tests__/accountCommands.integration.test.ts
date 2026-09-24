@@ -102,7 +102,7 @@ describe('account commands (integration)', () => {
           session,
           {
             ...journal,
-            transactions: journal.transactions.map((line, index) =>
+            transactions: (journal.transactions ?? []).map((line, index) =>
               index === 0 ? { ...line, amount: line.amount + 1 } : line,
             ),
           },
@@ -368,7 +368,7 @@ describe('account commands (integration)', () => {
           session,
           {
             ...journal,
-            transactions: journal.transactions.map((line, index) =>
+            transactions: (journal.transactions ?? []).map((line, index) =>
               index === 0 ? { ...line, amount: line.amount + 1 } : line,
             ),
           },

@@ -1,12 +1,8 @@
-import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
-import { accountQueryRepository } from '@/src/data/repositories/account';
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { journalPresenter, type TransactionLike } from '@/src/services/accounting/journalPresenter';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
-import { AccountType, JournalDisplayType, TransactionType } from '@/src/types/enums';
+import { TransactionType } from '@/src/types/enums';
 import { groupTransactionsByJournal } from './bulkHelpers';
 
 export interface JournalAccountEditEligibility {
@@ -82,9 +78,8 @@ export interface BulkChangeAccountResult {
 
 /**
  * Bulk reassigns either the debit (destination) or credit (source) account across selected
- * journals in an atomic batch. Single-fetch: eligibility is verified inline from the same
- * transaction set used for the update, eliminating the TOCTOU race of a separate check.
- * Returns the original account mapping to support one-tap undo.
+ * journals in an atomic batch. The repository revalidates the affected journals and derives
+ * their display types inside the write. Returns the original account mapping for one-tap undo.
  */
 export async function bulkChangeJournalAccount(
   workplaceId: WorkplaceId,
@@ -92,7 +87,6 @@ export async function bulkChangeJournalAccount(
   targetType: 'debit' | 'credit',
   newAccountId: AccountId,
 ): Promise<BulkChangeAccountResult> {
-  // Single fetch — verify eligibility inline from the same data
   const allTransactions = await transactionQueryRepository.findByJournals(workplaceId, journalIds);
   const eligibility = evaluateEligibility(allTransactions, journalIds);
 
@@ -116,21 +110,11 @@ export async function bulkChangeJournalAccount(
     originalAccountIdByTransactionId[tx.id] = tx.accountId;
   }
 
-  // Load parent journals and recalculate displayTypes
-  const journals = await journalQueryRepository.findByIds(workplaceId, journalIds);
-  const displayTypeByJournalId = await computeSimulatedDisplayTypes(
-    workplaceId,
-    journals,
-    allTransactions,
-    tx => (tx.transactionType === transactionType ? newAccountId : tx.accountId),
-  );
-
   await journalPersistenceService.reassignAccounts(
     {
       accountIdByTransactionId: new Map(
         transactionsToUpdate.map(transaction => [transaction.id, newAccountId]),
       ),
-      displayTypeByJournalId,
     },
     workplaceId,
   );
@@ -155,18 +139,6 @@ export async function undoBulkChangeJournalAccount(
   const transactions = await transactionQueryRepository.findByIds(workplaceId, txIds);
   if (transactions.length === 0) return;
 
-  const journalIds = Array.from(new Set(transactions.map(t => t.journalId)));
-  const allTransactions = await transactionQueryRepository.findByJournals(workplaceId, journalIds);
-  const journals = await journalQueryRepository.findByIds(workplaceId, journalIds);
-
-  const displayTypeByJournalId = await computeSimulatedDisplayTypes(
-    workplaceId,
-    journals,
-    allTransactions,
-    tx => originalAccountIdByTransactionId[tx.id] ?? tx.accountId,
-  );
-
-  // Single atomic batch — each transaction goes back to its own original account and parent journals are updated
   await journalPersistenceService.reassignAccounts(
     {
       accountIdByTransactionId: new Map(
@@ -174,48 +146,7 @@ export async function undoBulkChangeJournalAccount(
           .filter(transaction => originalAccountIdByTransactionId[transaction.id])
           .map(transaction => [transaction.id, originalAccountIdByTransactionId[transaction.id]]),
       ),
-      displayTypeByJournalId,
     },
     workplaceId,
   );
-}
-
-/**
- * Computes updated display types for parent journals after simulated transaction account reassignments.
- */
-async function computeSimulatedDisplayTypes(
-  workplaceId: WorkplaceId,
-  journals: Journal[],
-  allTransactions: Transaction[],
-  resolveAccountId: (tx: Transaction) => AccountId,
-): Promise<Map<JournalId, JournalDisplayType>> {
-  const allAccountIds = new Set<AccountId>();
-  for (const tx of allTransactions) {
-    allAccountIds.add(tx.accountId);
-    allAccountIds.add(resolveAccountId(tx));
-  }
-
-  const accounts = await accountQueryRepository.findAllByIds(
-    workplaceId,
-    Array.from(allAccountIds),
-  );
-  const accountTypeMap = new Map<string, AccountType>(
-    accounts.map(a => [a.id, a.accountType as AccountType]),
-  );
-
-  const txByJournal = groupTransactionsByJournal(allTransactions);
-  const displayTypeByJournalId = new Map<JournalId, JournalDisplayType>();
-
-  for (const journal of journals) {
-    const txs = txByJournal.get(journal.id) ?? [];
-    const simulatedTxs: TransactionLike[] = txs.map(t => ({
-      accountId: resolveAccountId(t),
-      amount: t.amount,
-      transactionType: t.transactionType as TransactionType,
-    }));
-    const newDisplayType = journalPresenter.getJournalDisplayType(simulatedTxs, accountTypeMap);
-    displayTypeByJournalId.set(journal.id, newDisplayType);
-  }
-
-  return displayTypeByJournalId;
 }
