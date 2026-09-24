@@ -151,6 +151,22 @@ describe('explainDraftTransition', () => {
     ).toBe('$800 held from Safe to Spend — Rent payment changed');
   });
 
+  it('rounds the Safe-to-Spend delta to the draft currency precision', () => {
+    const yen = createInitialDraft('JPY', 'Personal');
+    const previous = {
+      ...yen,
+      accounts: [{ id: 'bank-1', kind: 'bank' as const, name: 'Bank', balance: 100 }],
+    };
+    const current = {
+      ...previous,
+      accounts: [{ ...previous.accounts[0], balance: 100.4 }],
+    };
+
+    expect(explainDraftTransition(previous, current, now)).toBe(
+      'Safe to Spend unchanged — Bank balance increased',
+    );
+  });
+
   it('returns null for metadata-only draft updates', () => {
     expect(explainDraftTransition(base, { ...base, workplaceName: 'Household' }, now)).toBeNull();
   });

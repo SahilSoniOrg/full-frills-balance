@@ -1,4 +1,5 @@
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { roundToPrecision } from '@/src/utils/money';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
@@ -138,10 +139,6 @@ function describeDraftChange(previous: CashClarityDraft, current: CashClarityDra
   );
 }
 
-function roundedAmount(amount: number): number {
-  return roundToPrecision(amount, 2);
-}
-
 /** Describes a draft mutation using the same projection that supplies the displayed number. */
 export function explainDraftTransition(
   previous: CashClarityDraft,
@@ -153,7 +150,10 @@ export function explainDraftTransition(
 
   const previousSafeToSpend = projectCashClarityDraft(previous, now).safeToSpend;
   const currentSafeToSpend = projectCashClarityDraft(current, now).safeToSpend;
-  const delta = roundedAmount(currentSafeToSpend - previousSafeToSpend);
+  const delta = roundToPrecision(
+    currentSafeToSpend - previousSafeToSpend,
+    CurrencyFormatter.getPrecisionFallback(current.currency),
+  );
   if (delta > 0) {
     return copy.changeSafeToSpendAdded(formatDraftAmount(delta, current.currency), reason);
   }
