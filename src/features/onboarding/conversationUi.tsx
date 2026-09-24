@@ -11,15 +11,13 @@ import { SelectionPickerSheet } from '@/src/components/filters/SelectionPickerSh
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { Size, Spacing, Typography } from '@/src/constants';
-import { Box, Inline, Stack, useKeyboard } from '@/src/design-system';
+import { Box, Inline, Stack, usePageKeyboard } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Icon, type IconName } from '@/src/types/domainIcons';
 import dayjs from 'dayjs';
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -63,7 +61,7 @@ export function ConversationStep({
   const [footerHeight, setFooterHeight] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
   const [focusedTarget, setFocusedTarget] = useState<number | null>(null);
-  const { isKeyboardVisible } = useKeyboard();
+  const { isKeyboardVisible } = usePageKeyboard();
   const scrollFocusedInput = useCallback((target: number) => {
     requestAnimationFrame(() => {
       scrollRef.current
@@ -85,55 +83,46 @@ export function ConversationStep({
     scrollFocusedInput(focusedTarget);
   }, [focusedTarget, isKeyboardVisible, scrollFocusedInput]);
 
-  const scrollContent = (
-    <ScrollView
-      ref={scrollRef}
-      style={styles.scrollView}
-      contentContainerStyle={[
-        styles.scroll,
-        { paddingBottom: isKeyboardVisible ? Spacing.lg : footerHeight + Spacing.lg },
-      ]}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-      onFocus={revealFocusedInput}
-      // Keep focus scrolling in one place so Android's native auto-scroll does
-      // not compete with the keyboard-aware responder below.
-      scrollsChildToFocus={false}
-      nestedScrollEnabled
-    >
-      <Stack gap="lg" paddingTop={title ? 'xl' : 'sm'}>
-        {title ? (
-          <Stack gap="sm" align="center">
-            <AppText
-              variant="title"
-              align="center"
-              adjustsFontSizeToFit
-              minimumFontScale={0.75}
-              style={styles.title}
-            >
-              {title}
-            </AppText>
-            {subtitle ? (
-              <AppText variant="body" color="secondary" style={styles.subtitle}>
-                {subtitle}
-              </AppText>
-            ) : null}
-          </Stack>
-        ) : null}
-        {children}
-      </Stack>
-    </ScrollView>
-  );
-
   return (
     <Box flex={1} minHeight={0}>
-      {Platform.OS === 'ios' ? (
-        <KeyboardAvoidingView behavior="padding" style={styles.keyboardContent}>
-          {scrollContent}
-        </KeyboardAvoidingView>
-      ) : (
-        scrollContent
-      )}
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: isKeyboardVisible ? Spacing.lg : footerHeight + Spacing.lg },
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        onFocus={revealFocusedInput}
+        onBlur={() => setFocusedTarget(null)}
+        // Keep focus scrolling in one place so Android's native auto-scroll does
+        // not compete with the keyboard-aware responder below.
+        scrollsChildToFocus={false}
+        nestedScrollEnabled
+      >
+        <Stack gap="lg" paddingTop={title ? 'xl' : 'sm'}>
+          {title ? (
+            <Stack gap="sm" align="center">
+              <AppText
+                variant="title"
+                align="center"
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}
+                style={styles.title}
+              >
+                {title}
+              </AppText>
+              {subtitle ? (
+                <AppText variant="body" color="secondary" style={styles.subtitle}>
+                  {subtitle}
+                </AppText>
+              ) : null}
+            </Stack>
+          ) : null}
+          {children}
+        </Stack>
+      </ScrollView>
       {!isKeyboardVisible ? (
         <Box
           background="background"
@@ -607,10 +596,6 @@ export function CollectStep({
 
 const styles = StyleSheet.create({
   scrollView: {
-    flex: 1,
-    minHeight: 0,
-  },
-  keyboardContent: {
     flex: 1,
     minHeight: 0,
   },

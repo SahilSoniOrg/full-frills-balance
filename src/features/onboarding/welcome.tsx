@@ -5,7 +5,7 @@ import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboard
 import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoticeStrings';
 import { Box, Stack } from '@/src/design-system';
 import { useState } from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
+import { Keyboard, Platform, ScrollView, StyleSheet } from 'react-native';
 
 export function WelcomeScene({
   name,
@@ -78,65 +78,60 @@ export function WelcomeScene({
   return (
     <>
       <Box flex={1} testID="onboarding-welcome">
-        <KeyboardAvoidingView
-          style={styles.keyboardAvoidingView}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          keyboardShouldPersistTaps="handled"
         >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-            keyboardShouldPersistTaps="handled"
-          >
-            <Stack flexGrow={1} justify="center" gap="xxxl" paddingVertical="md">
-              <Stack gap="xxxl" align="center">
-                <Stack gap="md" align="center" paddingHorizontal="md">
-                  <AppText
-                    testID="onboarding-welcome-hero"
-                    variant="caption"
-                    color="primary"
-                    weight="semibold"
-                    style={styles.eyebrow}
-                  >
-                    {splash.eyebrow}
-                  </AppText>
-                  <AppText variant="hero" style={styles.title}>
-                    {splash.title}
-                  </AppText>
-                  <AppText variant="body" color="secondary" style={styles.subtitle}>
-                    {splash.subtitle}
-                  </AppText>
-                </Stack>
-
-                <Stack gap="lg" width="100%" paddingHorizontal="md">
-                  <AppInput
-                    label={splash.inputLabel}
-                    placeholder={splash.inputPlaceholder}
-                    value={name ?? ''}
-                    onChangeText={onNameChange}
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                    accessibilityLabel={splash.inputLabel}
-                    testID="onboarding-name-input"
-                    returnKeyType="done"
-                    onSubmitEditing={() => run('start')}
-                  />
-                  <AppButton
-                    variant={trimmed ? 'primary' : 'secondary'}
-                    size="lg"
-                    onPress={() => run('start')}
-                    disabled={!trimmed}
-                    testID="onboarding-start"
-                  >
-                    {copy.startWithMoney}
-                  </AppButton>
-                </Stack>
+          <Stack flexGrow={1} justify="center" gap="xxxl" paddingVertical="md">
+            <Stack gap="xxxl" align="center">
+              <Stack gap="md" align="center" paddingHorizontal="md">
+                <AppText
+                  testID="onboarding-welcome-hero"
+                  variant="caption"
+                  color="primary"
+                  weight="semibold"
+                  style={styles.eyebrow}
+                >
+                  {splash.eyebrow}
+                </AppText>
+                <AppText variant="hero" style={styles.title}>
+                  {splash.title}
+                </AppText>
+                <AppText variant="body" color="secondary" style={styles.subtitle}>
+                  {splash.subtitle}
+                </AppText>
               </Stack>
 
-              {trustActions}
+              <Stack gap="lg" width="100%" paddingHorizontal="md">
+                <AppInput
+                  label={splash.inputLabel}
+                  placeholder={splash.inputPlaceholder}
+                  value={name ?? ''}
+                  onChangeText={onNameChange}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  accessibilityLabel={splash.inputLabel}
+                  testID="onboarding-name-input"
+                  returnKeyType="done"
+                  onSubmitEditing={() => run('start')}
+                />
+                <AppButton
+                  variant={trimmed ? 'primary' : 'secondary'}
+                  size="lg"
+                  onPress={() => run('start')}
+                  disabled={!trimmed}
+                  testID="onboarding-start"
+                >
+                  {copy.startWithMoney}
+                </AppButton>
+              </Stack>
             </Stack>
-          </ScrollView>
-        </KeyboardAvoidingView>
+
+            {trustActions}
+          </Stack>
+        </ScrollView>
       </Box>
       <PrivacyAcknowledgementSheet
         visible={prompt}
@@ -163,9 +158,6 @@ export function WelcomeScene({
 }
 
 const styles = StyleSheet.create({
-  keyboardAvoidingView: {
-    flex: 1,
-  },
   scrollContent: {
     flexGrow: 1,
     paddingTop: Spacing.lg,

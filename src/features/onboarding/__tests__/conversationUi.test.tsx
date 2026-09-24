@@ -1,8 +1,8 @@
 import { CollectStep, ConversationStep } from '../conversationUi';
 import { Spacing } from '@/src/constants/design-tokens';
-import { render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/utils/test-utils';
 import { Keyboard, ScrollView, StyleSheet, TextInput } from 'react-native';
-import { useKeyboard } from '@/src/design-system';
+import { usePageKeyboard } from '@/src/design-system';
 
 jest.mock('@/src/components/core', () => {
   const { Text: NativeText, TouchableOpacity } = jest.requireActual(
@@ -50,11 +50,11 @@ jest.mock('@/src/design-system', () => {
     Box: passthrough,
     Inline: passthrough,
     Stack: passthrough,
-    useKeyboard: jest.fn(),
+    usePageKeyboard: jest.fn(),
   };
 });
 
-const mockedUseKeyboard = jest.mocked(useKeyboard);
+const mockedUsePageKeyboard = jest.mocked(usePageKeyboard);
 
 jest.mock('@/src/hooks/use-theme', () => ({
   useTheme: () => ({
@@ -66,11 +66,7 @@ jest.mock('@/src/hooks/use-theme', () => ({
 describe('ConversationStep keyboard behavior', () => {
   beforeEach(() => {
     jest.spyOn(Keyboard, 'addListener').mockReturnValue({ remove: jest.fn() } as never);
-    mockedUseKeyboard.mockReturnValue({
-      keyboardHeight: 0,
-      isKeyboardVisible: false,
-      dismiss: jest.fn(),
-    });
+    mockedUsePageKeyboard.mockReturnValue({ isKeyboardVisible: false });
   });
 
   afterEach(() => {
@@ -89,12 +85,33 @@ describe('ConversationStep keyboard behavior', () => {
     expect(scrollView.props.onFocus).toEqual(expect.any(Function));
   });
 
+  it('re-reveals the focused input when the keyboard opens, but not after it blurs', () => {
+    const frame = jest.spyOn(global, 'requestAnimationFrame').mockImplementation(() => 0);
+    const step = () => (
+      <ConversationStep onBack={jest.fn()}>
+        <TextInput testID="collector-input" />
+      </ConversationStep>
+    );
+    const { rerender } = render(step());
+    const scrollView = screen.UNSAFE_getByType(ScrollView);
+
+    fireEvent(scrollView, 'focus', { nativeEvent: { target: 42 } });
+    expect(frame).toHaveBeenCalledTimes(1);
+
+    mockedUsePageKeyboard.mockReturnValue({ isKeyboardVisible: true });
+    rerender(step());
+    expect(frame).toHaveBeenCalledTimes(2);
+
+    mockedUsePageKeyboard.mockReturnValue({ isKeyboardVisible: false });
+    rerender(step());
+    fireEvent(scrollView, 'blur');
+    mockedUsePageKeyboard.mockReturnValue({ isKeyboardVisible: true });
+    rerender(step());
+    expect(frame).toHaveBeenCalledTimes(2);
+  });
+
   it('removes the footer from the layout while the keyboard is visible', () => {
-    mockedUseKeyboard.mockReturnValue({
-      keyboardHeight: 320,
-      isKeyboardVisible: true,
-      dismiss: jest.fn(),
-    });
+    mockedUsePageKeyboard.mockReturnValue({ isKeyboardVisible: true });
 
     render(
       <ConversationStep primaryLabel="Continue" onPrimary={jest.fn()} onBack={jest.fn()}>

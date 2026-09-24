@@ -19,6 +19,8 @@ export const ONBOARDING_STRINGS = {
   stageProtect: 'Protect',
   stageReserve: 'Reserve',
   stageClarity: 'Clarity',
+  stageProgress: (current: number, total: number, name: string) =>
+    `Step ${current} of ${total} · ${name}`,
   continueToClarity: 'See my cash clarity',
   reserveHeld: 'We’ll hold this as an everyday buffer.',
   reserveHeldHint: 'It is a guardrail, not a promise that you must spend it.',

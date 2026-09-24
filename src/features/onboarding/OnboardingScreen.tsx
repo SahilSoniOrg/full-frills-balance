@@ -1,6 +1,5 @@
-import { AppText, LoadingView } from '@/src/components/core';
-import { Box, Stack } from '@/src/design-system';
-import { MoneyText } from '@/src/components/shared/MoneyText';
+import { LoadingView } from '@/src/components/core';
+import { Box } from '@/src/design-system';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { startFirstRunRestoreFromDeviceName } from '@/src/features/setup';
 import { analytics } from '@/src/services/analytics';
@@ -13,8 +12,8 @@ import {
 import { AppNavigation } from '@/src/utils/navigation';
 import { toast } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { OnboardingChrome, ONBOARDING_STAGES } from './chrome';
+import { useMemo, useState, useSyncExternalStore } from 'react';
+import { OnboardingChrome, onboardingStage, SafeToSpendHeader } from './chrome';
 import { commitCashClarity } from './commitCashClarity';
 import {
   createInitialDraft,
@@ -48,27 +47,37 @@ export function OnboardingScreen() {
   );
   const [step, setStep] = useState<OnboardingStep>('welcome');
   const [history, setHistory] = useState<OnboardingStep[]>([]);
-  const [draft, setDraft] = useState<CashClarityDraft>(() =>
-    createInitialDraft(defaultOnboardingCurrency(), defaultWorkplaceName()),
-  );
+  const [{ draft, latestDraftChange }, setDraftState] = useState<{
+    readonly draft: CashClarityDraft;
+    readonly latestDraftChange: string | null;
+  }>(() => ({
+    draft: createInitialDraft(defaultOnboardingCurrency(), defaultWorkplaceName()),
+    latestDraftChange: null,
+  }));
   const [busy, setBusy] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
   const [heard, setHeard] = useState<string | null>(null);
-  const [latestDraftChange, setLatestDraftChange] = useState<string | null>(null);
-  const previousDraftRef = useRef(draft);
   const projection = useMemo(() => projectCashClarityDraft(draft), [draft]);
   const showSafeToSpend =
     step === 'now' || step === 'next' || step === 'protect' || step === 'reserve';
   const spendable = hasSpendableAccount(draft.accounts);
 
-  useEffect(() => {
-    if (previousDraftRef.current === draft) return;
-    const change = explainDraftTransition(previousDraftRef.current, draft);
-    previousDraftRef.current = draft;
-    setLatestDraftChange(change);
-  }, [draft]);
+  const updateDraft = (update: (current: CashClarityDraft) => CashClarityDraft) => {
+    setDraftState(current => {
+      const next = update(current.draft);
+      if (next === current.draft) return current;
+      return { draft: next, latestDraftChange: explainDraftTransition(current.draft, next) };
+    });
+  };
+
+  const clearDraftChange = () => {
+    setDraftState(current =>
+      current.latestDraftChange == null ? current : { ...current, latestDraftChange: null },
+    );
+  };
 
   const go = (next: OnboardingStep) => {
+    clearDraftChange();
     const fromIndex = ONBOARDING_STEPS.indexOf(step);
     const toIndex = ONBOARDING_STEPS.indexOf(next);
     if (toIndex >= 0 && fromIndex > toIndex) {
@@ -93,6 +102,7 @@ export function OnboardingScreen() {
   const back = () => {
     const previous = history[history.length - 1];
     setHeard(null);
+    clearDraftChange();
     if (!previous) {
       AppNavigation.back();
       return;
@@ -132,7 +142,7 @@ export function OnboardingScreen() {
     ) : step === 'welcome' ? (
       <WelcomeScene
         name={draft.displayName ?? ''}
-        onNameChange={displayName => setDraft(current => ({ ...current, displayName }))}
+        onNameChange={displayName => updateDraft(current => ({ ...current, displayName }))}
         privacyAcknowledged={privacyAcknowledged}
         onAcknowledgePrivacy={() => {
           acknowledgeCurrentPrivacyPolicy();
@@ -149,7 +159,7 @@ export function OnboardingScreen() {
     ) : step === 'currency' ? (
       <CurrencyScene
         currency={draft.currency}
-        onSelectCurrency={currency => setDraft(current => ({ ...current, currency }))}
+        onSelectCurrency={currency => updateDraft(current => ({ ...current, currency }))}
         onContinue={() => {
           const name = (draft.displayName ?? '').trim();
           advance('now', name ? copy.confirmYou(name) : undefined);
@@ -160,10 +170,10 @@ export function OnboardingScreen() {
       <MoneyScene
         currency={draft.currency}
         accounts={draft.accounts}
-        onAccountsChange={accounts => setDraft(current => ({ ...current, accounts }))}
+        onAccountsChange={accounts => updateDraft(current => ({ ...current, accounts }))}
         onContinue={heard => advance('next', heard)}
         onSkip={() => {
-          setDraft(current => ({ ...current, accounts: [] }));
+          updateDraft(current => ({ ...current, accounts: [] }));
           advance('next', copy.clarityNoCashYet);
         }}
         onBack={back}
@@ -173,7 +183,7 @@ export function OnboardingScreen() {
       <IncomeScene
         currency={draft.currency}
         income={draft.income}
-        onIncomeChange={income => setDraft(current => ({ ...current, income }))}
+        onIncomeChange={income => updateDraft(current => ({ ...current, income }))}
         onContinue={heard => advance('protect', heard)}
         onBack={back}
         hasSpendable={spendable}
@@ -183,7 +193,7 @@ export function OnboardingScreen() {
       <ProtectScene
         currency={draft.currency}
         commitment={draft.commitment}
-        onCommitmentChange={commitment => setDraft(current => ({ ...current, commitment }))}
+        onCommitmentChange={commitment => updateDraft(current => ({ ...current, commitment }))}
         onContinue={heard => advance('reserve', heard)}
         onBack={back}
         hasSpendable={spendable}
@@ -193,7 +203,7 @@ export function OnboardingScreen() {
       <ReserveScene
         currency={draft.currency}
         budget={draft.budget}
-        onBudgetChange={budget => setDraft(current => ({ ...current, budget }))}
+        onBudgetChange={budget => updateDraft(current => ({ ...current, budget }))}
         onContinue={heard => advance('clarity', heard)}
         onBack={back}
         hasSpendable={spendable}
@@ -214,60 +224,16 @@ export function OnboardingScreen() {
   return (
     <OnboardingChrome
       testID="onboarding-screen"
-      stage={ONBOARDING_STAGES[step]}
-      renderHeader={({ isKeyboardVisible }) => (
-        <>
-          {showSafeToSpend ? (
-            isKeyboardVisible ? (
-              <Box paddingVertical="sm">
-                <Stack direction="row" align="center" justify="space-between" gap="md">
-                  <AppText variant="caption" color="secondary" weight="medium">
-                    {copy.safeToSpend}
-                  </AppText>
-                  <MoneyText
-                    amount={projection.safeToSpend}
-                    currencyCode={draft.currency}
-                    formatStyle="sts"
-                    variant="subheading"
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.7}
-                    testID="onboarding-sts"
-                  />
-                </Stack>
-              </Box>
-            ) : (
-              <Stack gap="xs" paddingTop="sm" paddingBottom="md">
-                <AppText variant="body" color="secondary" weight="medium">
-                  {copy.safeToSpend}
-                </AppText>
-                <MoneyText
-                  amount={projection.safeToSpend}
-                  currencyCode={draft.currency}
-                  formatStyle="sts"
-                  variant="hero"
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.6}
-                  testID="onboarding-sts"
-                />
-              </Stack>
-            )
-          ) : null}
-          {showSafeToSpend && (latestDraftChange || heard) ? (
-            <Box paddingBottom="sm">
-              <AppText
-                variant="caption"
-                color="secondary"
-                numberOfLines={2}
-                testID="onboarding-sts-change"
-              >
-                {latestDraftChange ?? heard}
-              </AppText>
-            </Box>
-          ) : null}
-        </>
-      )}
+      stage={onboardingStage(step)}
+      header={
+        showSafeToSpend ? (
+          <SafeToSpendHeader
+            amount={projection.safeToSpend}
+            currency={draft.currency}
+            change={latestDraftChange ?? heard}
+          />
+        ) : null
+      }
     >
       <Box flex={1} minHeight={0}>
         {scene}

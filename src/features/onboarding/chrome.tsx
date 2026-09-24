@@ -1,33 +1,31 @@
 import { AppText } from '@/src/components/core';
+import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, Spacing } from '@/src/constants';
-import { Box, Inline, Inset, Page, useKeyboard } from '@/src/design-system';
+import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
+import { Box, Inline, Inset, Page, Stack, usePageKeyboard } from '@/src/design-system';
 import type { ReactNode } from 'react';
 import type { OnboardingStep } from './draft';
-import { ONBOARDING_FLOW, ONBOARDING_PROGRESS_FLOW } from './flow';
+import { ONBOARDING_PROGRESS_FLOW } from './flow';
 
 export type OnboardingStage = {
   readonly label: string;
-  readonly name: string;
   readonly current: number;
   readonly total: number;
 };
 
 export function OnboardingChrome({
   stage,
-  renderHeader,
+  header,
   testID,
   children,
 }: {
   readonly stage: OnboardingStage | null;
-  readonly renderHeader?: (context: { readonly isKeyboardVisible: boolean }) => ReactNode;
+  readonly header?: ReactNode;
   readonly testID: string;
   readonly children: ReactNode;
 }) {
-  const { isKeyboardVisible } = useKeyboard();
-  const header = renderHeader?.({ isKeyboardVisible });
-
   return (
-    <Page testID={testID} edges={isKeyboardVisible ? ['top'] : ['top', 'bottom']}>
+    <Page testID={testID} edges={['top', 'bottom']} keyboardAvoiding>
       <Box flex={1} minHeight={0}>
         <Inset horizontal="lg" top={0} bottom="sm" flex={1}>
           <Box
@@ -65,13 +63,80 @@ export function OnboardingChrome({
   );
 }
 
+/** Collapses to a single row while the keyboard is open so the focused field keeps its room. */
+export function SafeToSpendHeader({
+  amount,
+  currency,
+  change,
+}: {
+  readonly amount: number;
+  readonly currency: string;
+  readonly change: string | null;
+}) {
+  const { isKeyboardVisible: compact } = usePageKeyboard();
+
+  return (
+    <>
+      {compact ? (
+        <Box paddingVertical="sm">
+          <Stack direction="row" align="center" justify="space-between" gap="md">
+            <AppText variant="caption" color="secondary" weight="medium">
+              {copy.safeToSpend}
+            </AppText>
+            <MoneyText
+              amount={amount}
+              currencyCode={currency}
+              formatStyle="sts"
+              variant="subheading"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+              testID="onboarding-sts"
+            />
+          </Stack>
+        </Box>
+      ) : (
+        <Stack gap="xs" paddingTop="sm" paddingBottom="md">
+          <AppText variant="body" color="secondary" weight="medium">
+            {copy.safeToSpend}
+          </AppText>
+          <MoneyText
+            amount={amount}
+            currencyCode={currency}
+            formatStyle="sts"
+            variant="hero"
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.6}
+            testID="onboarding-sts"
+          />
+        </Stack>
+      )}
+      {change ? (
+        <Box paddingBottom="sm">
+          <AppText
+            variant="caption"
+            color="secondary"
+            numberOfLines={2}
+            testID="onboarding-sts-change"
+          >
+            {change}
+          </AppText>
+        </Box>
+      ) : null}
+    </>
+  );
+}
+
 const progressTotal = ONBOARDING_PROGRESS_FLOW.length;
 
-export const ONBOARDING_STAGES: Record<OnboardingStep, OnboardingStage | null> = Object.fromEntries(
-  ONBOARDING_FLOW.map(entry => {
-    if (!entry.progressName) return [entry.step, null];
-    const current = ONBOARDING_PROGRESS_FLOW.findIndex(item => item.step === entry.step) + 1;
-    const label = `Step ${current} of ${progressTotal} · ${entry.progressName}`;
-    return [entry.step, { label, name: entry.progressName, current, total: progressTotal }];
-  }),
-) as Record<OnboardingStep, OnboardingStage | null>;
+export function onboardingStage(step: OnboardingStep): OnboardingStage | null {
+  const index = ONBOARDING_PROGRESS_FLOW.findIndex(entry => entry.step === step);
+  if (index < 0) return null;
+  const current = index + 1;
+  return {
+    label: copy.stageProgress(current, progressTotal, ONBOARDING_PROGRESS_FLOW[index].progressName),
+    current,
+    total: progressTotal,
+  };
+}
