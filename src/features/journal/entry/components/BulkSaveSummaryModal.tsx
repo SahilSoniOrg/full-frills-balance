@@ -2,6 +2,7 @@ import { Icon, AppButton, AppIcon, AppText } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import type { SavedJournalSummary } from '@/src/features/journal/entry/types/bulkJournal';
 import { useTheme } from '@/src/hooks/use-theme';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { Modal, ScrollView, StyleSheet, View } from 'react-native';
 
 export interface BulkSaveSummaryModalProps {
@@ -43,7 +44,7 @@ export function BulkSaveSummaryModal({
                   {item.description}
                 </AppText>
                 <AppText variant="body" weight="bold" style={{ color: theme.primary }}>
-                  {item.amount.toFixed(2)} {item.currency}
+                  {CurrencyFormatter.formatAmount(item.amount, item.currency)}
                 </AppText>
               </View>
             ))}
