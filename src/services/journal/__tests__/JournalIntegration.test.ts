@@ -562,7 +562,7 @@ describe('Journal ledger integration', () => {
         {
           description: 'Updated',
           journalDate: Date.now(),
-          currencyCode: 'INR',
+          currencyCode: 'USD',
           transactions: [
             {
               accountId: cashAccountId as AccountId,
@@ -595,6 +595,38 @@ describe('Journal ledger integration', () => {
       expect(updatedTransactions.every(transaction => transaction.currencyCode === 'USD')).toBe(
         true,
       );
+
+      await expect(
+        journalService.updateJournal(
+          journal.id,
+          {
+            description: 'Should not be saved',
+            journalDate: Date.now(),
+            currencyCode: 'INR',
+            transactions: [
+              {
+                accountId: cashAccountId as AccountId,
+                amount: 300,
+                transactionType: TransactionType.CREDIT,
+              },
+              {
+                accountId: expenseAccountId as AccountId,
+                amount: 300,
+                transactionType: TransactionType.DEBIT,
+              },
+            ],
+          },
+          'wp-1' as WorkplaceId,
+        ),
+      ).rejects.toThrow('A saved journal currency cannot be changed');
+
+      const unchangedJournal = await journalQueryRepository.find(
+        'wp-1' as WorkplaceId,
+        journal.id as JournalId,
+      );
+      expect(unchangedJournal?.currencyCode).toBe('USD');
+      expect(unchangedJournal?.totalAmount).toBe(200);
+      expect(unchangedJournal?.description).toBe('Updated');
     }, 10000);
   });
 
