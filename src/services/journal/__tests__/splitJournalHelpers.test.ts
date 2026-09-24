@@ -3,6 +3,7 @@ import { AccountId } from '@/src/types/ids';
 import {
   computeSplitTotals,
   distributeSplitRemainder,
+  equalizeSourceAmounts,
   equalizeSplitAmounts,
   validateSplitState,
 } from '@/src/services/journal/splitJournalHelpers';
@@ -194,6 +195,10 @@ describe('splitJournalHelpers', () => {
       expect(distributeSplitRemainder('40.00', rows(['20.00', '10.00']), 2, usd)).toEqual(
         rows(['26.67', '13.33']),
       );
+    });
+
+    it('equalizes in the paid-from currency before any conversion', () => {
+      expect(equalizeSourceAmounts('300', 2, 2)).toEqual(['150.00', '150.00']);
     });
 
     it('equalizes with deterministic leftover-cent handling', () => {

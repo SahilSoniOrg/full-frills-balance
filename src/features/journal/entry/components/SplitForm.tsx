@@ -6,7 +6,7 @@ import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import {
   amountInSourceCurrency,
   distributeSplitRemainder,
-  equalizeSplitAmounts,
+  equalizeSourceAmounts,
   SPLIT_SOURCE_LINE_ID,
 } from '@/src/services/journal/splitJournalHelpers';
 import type { AccountRole, TabType } from '@/src/types/domainJournal';
@@ -146,10 +146,14 @@ export function SplitForm({
   );
 
   const handleEqualSplit = useCallback(() => {
-    if (hasTotal) {
-      applyAmounts(equalizeSplitAmounts(totalAmount, splits, precision, currencyContext));
-    }
-  }, [applyAmounts, currencyContext, hasTotal, precision, splits, totalAmount]);
+    if (!hasTotal || splits.length === 0) return;
+    const shares = equalizeSourceAmounts(totalAmount, splits.length, precision);
+    const updates: Record<string, string> = {};
+    splits.forEach((row, index) => {
+      updates[row.id] = shares[index];
+    });
+    updateSplitAmounts(updates);
+  }, [hasTotal, precision, splits, totalAmount, updateSplitAmounts]);
 
   const handleDistribute = useCallback(() => {
     if (canDistribute) {

@@ -361,6 +361,16 @@ export function distributeSplitRemainder(
   );
 }
 
+/** Equal shares of the total in the paid-from currency. FX conversion happens after. */
+export function equalizeSourceAmounts(
+  totalAmount: string,
+  count: number,
+  precision: number,
+): string[] {
+  const totalUnits = toMinorUnits(parseSimpleAmountInput(totalAmount), precision);
+  return distributeUnitsEvenly(totalUnits, count).map(units => formatSplitUnits(units, precision));
+}
+
 /** Replace every allocation with an exact equal share of the total. */
 export function equalizeSplitAmounts(
   totalAmount: string,
