@@ -2,7 +2,7 @@ import type { CreateAccountIntent } from '@/src/components/account-selection';
 import { SwipeToRemove } from '@/src/components/core';
 import { CompactAmountInput } from '@/src/components/forms/CompactAmountInput';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
-import { Spacing, Typography } from '@/src/constants/design-tokens';
+import { Typography } from '@/src/constants/design-tokens';
 import type { SplitRowFx } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import type { SplitRowState } from '@/src/services/journal/splitJournalHelpers';
 import type { AccountRole } from '@/src/types/domainJournal';
@@ -84,34 +84,34 @@ export function SplitAllocationRow({
         onResetToApiRate={onResetToApiRate}
         testIDPrefix={`split-fx-${row.id}`}
       />
-      <View style={styles.allocationRow}>
-        <AccountPickerField
-          account={category}
-          accounts={allocationAccounts}
-          allAccounts={allAccounts}
-          containerStyle={styles.categoryPicker}
-          displayMode="compact"
-          emptyPrompt={emptyPrompt}
-          isExpanded={isExpanded}
-          label={label}
-          onCreateAccountRequest={onCreateAccountRequest}
-          onSelect={onSelectAccount}
-          onToggle={onToggle}
-          role="destination"
-          testIDPrefix={`split-category-picker-${row.id}`}
-        />
-        <CompactAmountInput
-          value={inputAmount}
-          onChangeText={onChangeAmount}
-          currency={inputCurrency}
-          currencySymbol={CURRENCY_SYMBOLS[inputCurrency] || inputCurrency}
-          precision={inputPrecision}
-          placeholder={formatAmountPlaceholder(inputPrecision)}
-          containerStyle={styles.amountInputContainer}
-          inputStyle={[styles.amountInputText, { color: theme.text }]}
-          testID={`split-amount-input-${row.id}`}
-        />
-      </View>
+      <AccountPickerField
+        account={category}
+        accounts={allocationAccounts}
+        allAccounts={allAccounts}
+        containerStyle={styles.categoryPicker}
+        displayMode="compact"
+        emptyPrompt={emptyPrompt}
+        isExpanded={isExpanded}
+        label={label}
+        onCreateAccountRequest={onCreateAccountRequest}
+        onSelect={onSelectAccount}
+        onToggle={onToggle}
+        role="destination"
+        testIDPrefix={`split-category-picker-${row.id}`}
+        trailing={
+          <CompactAmountInput
+            value={inputAmount}
+            onChangeText={onChangeAmount}
+            currency={inputCurrency}
+            currencySymbol={CURRENCY_SYMBOLS[inputCurrency] || inputCurrency}
+            precision={inputPrecision}
+            placeholder={formatAmountPlaceholder(inputPrecision)}
+            containerStyle={styles.amountInputContainer}
+            inputStyle={[styles.amountInputText, { color: theme.text }]}
+            testID={`split-amount-input-${row.id}`}
+          />
+        }
+      />
     </View>
   );
 
@@ -131,15 +131,7 @@ const styles = StyleSheet.create({
   fxRowGroup: {
     borderTopWidth: 0,
   },
-  allocationRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    paddingVertical: Spacing.xs,
-    gap: Spacing.xs,
-  },
   categoryPicker: {
-    flex: 1,
-    minWidth: 0,
     marginHorizontal: 0,
   },
   amountInputContainer: {

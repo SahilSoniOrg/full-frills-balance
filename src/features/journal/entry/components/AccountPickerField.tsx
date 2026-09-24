@@ -2,6 +2,7 @@ import type { CreateAccountIntent } from '@/src/components/account-selection';
 import type { AccountRole } from '@/src/types/domainJournal';
 import type { AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
+import { type ReactNode } from 'react';
 import { Keyboard, type StyleProp, type ViewStyle } from 'react-native';
 import { AccountPickerPanel } from './AccountPickerPanel';
 import { AccountPickerNode } from './AccountPickerPanel.parts';
@@ -21,6 +22,8 @@ export interface AccountPickerFieldProps {
   onToggle: () => void;
   role: AccountRole;
   testIDPrefix?: string;
+  /** Sits in the tab row, so the folder body spans the account and this control. */
+  trailing?: ReactNode;
 }
 
 /** A single account selector. Simple mode composes two of these with a route connector. */
@@ -39,6 +42,7 @@ export function AccountPickerField({
   onToggle,
   role,
   testIDPrefix = 'account-picker',
+  trailing,
 }: AccountPickerFieldProps) {
   return (
     <AccountPickerPanel
@@ -51,19 +55,22 @@ export function AccountPickerField({
       lazyDropdown={lazyDropdown}
       onCreateAccountRequest={onCreateAccountRequest}
       renderNodes={({ visualSide, onLeftTabWrapperLayout }) => (
-        <AccountPickerNode
-          account={account}
-          emptyPrompt={emptyPrompt}
-          isExpanded={visualSide === 'left'}
-          label={label}
-          showLabel={displayMode === 'standard'}
-          onLayout={onLeftTabWrapperLayout}
-          onPress={() => {
-            Keyboard.dismiss();
-            onToggle();
-          }}
-          testID={`${testIDPrefix}-source-node`}
-        />
+        <>
+          <AccountPickerNode
+            account={account}
+            emptyPrompt={emptyPrompt}
+            isExpanded={visualSide === 'left'}
+            label={label}
+            showLabel={displayMode === 'standard'}
+            onLayout={onLeftTabWrapperLayout}
+            onPress={() => {
+              Keyboard.dismiss();
+              onToggle();
+            }}
+            testID={`${testIDPrefix}-source-node`}
+          />
+          {trailing}
+        </>
       )}
     />
   );

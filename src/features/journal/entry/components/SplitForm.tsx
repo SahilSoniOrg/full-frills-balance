@@ -197,36 +197,36 @@ export function SplitForm({
         <AppText variant="body" color="primary" weight="bold" style={styles.sectionTitle}>
           {typeCopy.sourceLabel}
         </AppText>
-        <View style={styles.topRow}>
-          <AccountPickerField
-            account={sourceAccount}
-            accounts={sourceAccounts}
-            allAccounts={allAccounts}
-            containerStyle={styles.folderPicker}
-            displayMode="compact"
-            emptyPrompt={typeCopy.sourceEmptyPrompt}
-            isExpanded={activePickerKey === 'source'}
-            label={typeCopy.sourceLabel}
-            onCreateAccountRequest={(role, intent) =>
-              handleCreateAccountRequest(SPLIT_SOURCE_LINE_ID, role, intent)
-            }
-            onSelect={handleSourceAccountSelect}
-            onToggle={() => togglePicker('source')}
-            role="source"
-            testIDPrefix="split-source-picker"
-          />
-          <CompactAmountInput
-            value={totalAmount}
-            onChangeText={setTotalAmount}
-            currency={currencyCode}
-            currencySymbol={currencySymbol}
-            precision={precision}
-            placeholder={formatAmountPlaceholder(precision)}
-            containerStyle={styles.amountInputContainer}
-            inputStyle={[styles.amountInputText, { color: theme.text }]}
-            testID="split-total-amount-input"
-          />
-        </View>
+        <AccountPickerField
+          account={sourceAccount}
+          accounts={sourceAccounts}
+          allAccounts={allAccounts}
+          containerStyle={styles.folderPicker}
+          displayMode="compact"
+          emptyPrompt={typeCopy.sourceEmptyPrompt}
+          isExpanded={activePickerKey === 'source'}
+          label={typeCopy.sourceLabel}
+          onCreateAccountRequest={(role, intent) =>
+            handleCreateAccountRequest(SPLIT_SOURCE_LINE_ID, role, intent)
+          }
+          onSelect={handleSourceAccountSelect}
+          onToggle={() => togglePicker('source')}
+          role="source"
+          testIDPrefix="split-source-picker"
+          trailing={
+            <CompactAmountInput
+              value={totalAmount}
+              onChangeText={setTotalAmount}
+              currency={currencyCode}
+              currencySymbol={currencySymbol}
+              precision={precision}
+              placeholder={formatAmountPlaceholder(precision)}
+              containerStyle={styles.amountInputContainer}
+              inputStyle={[styles.amountInputText, { color: theme.text }]}
+              testID="split-total-amount-input"
+            />
+          }
+        />
       </View>
 
       <View style={styles.allocationSection}>
@@ -338,11 +338,7 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.md,
     marginBottom: Spacing.xs,
   },
-  topRow: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.md,
-  },
-  folderPicker: { flex: 1, minWidth: 0, marginHorizontal: 0 },
+  folderPicker: { marginHorizontal: Spacing.md },
   amountInputContainer: {
     flex: 1,
     minWidth: 0,
