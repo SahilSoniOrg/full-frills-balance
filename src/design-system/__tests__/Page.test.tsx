@@ -1,5 +1,5 @@
 import { Spacing } from '@/src/constants/design-tokens';
-import { Page } from '@/src/design-system/Page';
+import { Page, usePageKeyboard } from '@/src/design-system/Page';
 import { render, screen } from '@/src/utils/test-utils';
 import { Keyboard, KeyboardAvoidingView, ScrollView, StyleSheet, Text } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -68,5 +68,24 @@ describe('Page safe-area ownership', () => {
     const safeArea = screen.UNSAFE_getByType(SafeAreaView);
     expect(safeArea.props.edges).not.toContain('bottom');
     expect(screen.UNSAFE_getByType(KeyboardAvoidingView).props.behavior).toBe('padding');
+  });
+
+  it('shares its keyboard visibility with descendants', () => {
+    mockedUseKeyboard.mockReturnValue({
+      keyboardHeight: 320,
+      isKeyboardVisible: true,
+      dismiss: jest.fn(),
+    });
+    const KeyboardProbe = () => (
+      <Text testID="probe">{usePageKeyboard().isKeyboardVisible ? 'open' : 'closed'}</Text>
+    );
+
+    render(
+      <Page keyboardAvoiding>
+        <KeyboardProbe />
+      </Page>,
+    );
+
+    expect(screen.getByTestId('probe')).toHaveTextContent('open');
   });
 });

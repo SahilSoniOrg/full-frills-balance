@@ -33,6 +33,11 @@ export type PageProps = ViewProps & {
   keyboardVerticalOffset?: number;
 };
 
+const PageKeyboardContext = React.createContext({ isKeyboardVisible: false });
+
+/** Keyboard visibility as tracked by the nearest `keyboardAvoiding` Page; always false otherwise. */
+export const usePageKeyboard = () => React.useContext(PageKeyboardContext);
+
 interface ContainerProps extends ViewProps {
   safeArea: boolean;
   edges: Edge[];
@@ -72,6 +77,7 @@ export const Page = ({
 }: PageProps) => {
   const { theme, themeMode } = useTheme();
   const { isKeyboardVisible } = useKeyboard(keyboardAvoiding);
+  const keyboardContext = React.useMemo(() => ({ isKeyboardVisible }), [isKeyboardVisible]);
 
   const resolvedStatusBar =
     statusBar === 'auto' ? (themeMode === 'dark' ? 'light' : 'dark') : statusBar;
@@ -126,25 +132,27 @@ export const Page = ({
     keyboardAvoiding && isKeyboardVisible ? edges.filter(edge => edge !== 'bottom') : edges;
 
   return (
-    <Container
-      safeArea={safeArea}
-      edges={containerEdges}
-      style={[styles.container, { backgroundColor }]}
-    >
-      <StatusBar style={resolvedStatusBar as 'light' | 'dark' | 'auto'} />
-      {header}
-      {useKeyboardAvoidingView ? (
-        <KeyboardAvoidingView
-          behavior="padding"
-          keyboardVerticalOffset={keyboardVerticalOffset}
-          style={styles.keyboardContainer}
-        >
-          {pageBody}
-        </KeyboardAvoidingView>
-      ) : (
-        pageBody
-      )}
-    </Container>
+    <PageKeyboardContext.Provider value={keyboardContext}>
+      <Container
+        safeArea={safeArea}
+        edges={containerEdges}
+        style={[styles.container, { backgroundColor }]}
+      >
+        <StatusBar style={resolvedStatusBar as 'light' | 'dark' | 'auto'} />
+        {header}
+        {useKeyboardAvoidingView ? (
+          <KeyboardAvoidingView
+            behavior="padding"
+            keyboardVerticalOffset={keyboardVerticalOffset}
+            style={styles.keyboardContainer}
+          >
+            {pageBody}
+          </KeyboardAvoidingView>
+        ) : (
+          pageBody
+        )}
+      </Container>
+    </PageKeyboardContext.Provider>
   );
 };
 
