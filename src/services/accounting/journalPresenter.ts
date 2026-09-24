@@ -1,5 +1,9 @@
 import { AccountType, TransactionType, JournalDisplayType, SemanticType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
+import {
+  deriveJournalDisplayType,
+  getSourceAndDestTypes,
+} from '@/src/domain/accounting/journalDisplayType';
 
 const SEMANTIC_MATRIX: Record<AccountType, Record<AccountType, SemanticType>> = {
   [AccountType.ASSET]: {
@@ -145,84 +149,9 @@ export const SEMANTIC_TYPE_COLORS: Record<SemanticType, JournalPresentation['col
 };
 
 export const journalPresenter = {
-  /**
-   * Determines the high-level type of a journal based on its transactions.
-   * Uses explicit type presence first, then falls back to structural analysis.
-   */
-  getJournalDisplayType(
-    txs: TransactionLike[],
-    accountTypes: Map<string, AccountType>,
-  ): JournalDisplayType {
-    let hasIncome = false;
-    let hasExpense = false;
+  getJournalDisplayType: deriveJournalDisplayType,
 
-    txs.forEach(tx => {
-      const type = accountTypes.get(tx.accountId);
-      if (type === AccountType.INCOME) hasIncome = true;
-      else if (type === AccountType.EXPENSE) hasExpense = true;
-    });
-
-    // 1. Explicit Domain Accounts take precedence
-    if (hasIncome && hasExpense) return JournalDisplayType.MIXED;
-    if (hasIncome) return JournalDisplayType.INCOME;
-    if (hasExpense) return JournalDisplayType.EXPENSE;
-
-    // 2. Structural/Semantic Classification
-    const { source, destination } = this.getSourceAndDestTypes(txs, accountTypes);
-
-    // Map semantic pairs to high-level display types
-    if (source === AccountType.INCOME || source === AccountType.EQUITY)
-      return JournalDisplayType.INCOME;
-    if (destination === AccountType.EXPENSE || destination === AccountType.EQUITY)
-      return JournalDisplayType.EXPENSE;
-
-    return JournalDisplayType.TRANSFER;
-  },
-
-  /**
-   * Identifies the primary Source and Destination account types for a journal.
-   * Handles both 2-leg and complex multi-leg/split transactions by finding the dominant flow.
-   */
-  getSourceAndDestTypes(
-    txs: TransactionLike[],
-    accountTypes: Map<string, AccountType>,
-  ): { source: AccountType; destination: AccountType } {
-    const creditWeights = new Map<AccountType, number>();
-    const debitWeights = new Map<AccountType, number>();
-
-    txs.forEach(tx => {
-      const type = accountTypes.get(tx.accountId);
-      if (!type) return;
-
-      const weight = Math.abs(tx.amount || 0);
-      if (tx.transactionType === TransactionType.CREDIT) {
-        creditWeights.set(type, (creditWeights.get(type) || 0) + weight);
-      } else {
-        debitWeights.set(type, (debitWeights.get(type) || 0) + weight);
-      }
-    });
-
-    // Find primary types by highest weight
-    let source = AccountType.ASSET;
-    let maxSourceWeight = -1;
-    creditWeights.forEach((weight, type) => {
-      if (weight > maxSourceWeight) {
-        maxSourceWeight = weight;
-        source = type;
-      }
-    });
-
-    let destination = AccountType.ASSET;
-    let maxDestWeight = -1;
-    debitWeights.forEach((weight, type) => {
-      if (weight > maxDestWeight) {
-        maxDestWeight = weight;
-        destination = type;
-      }
-    });
-
-    return { source, destination };
-  },
+  getSourceAndDestTypes,
 
   /**
    * Returns a human-readable specific label based on semantic analysis.

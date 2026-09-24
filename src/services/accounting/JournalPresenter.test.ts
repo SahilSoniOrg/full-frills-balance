@@ -224,5 +224,18 @@ describe('JournalPresenter', () => {
     it('returns T for TRANSFER', () => {
       expect(journalPresenter.getIconLabel(JournalDisplayType.TRANSFER)).toBe('T');
     });
+    it('returns J for MIXED', () => {
+      expect(journalPresenter.getIconLabel(JournalDisplayType.MIXED)).toBe('J');
+    });
+  });
+
+  describe('getPresentation', () => {
+    it('presents MIXED journals as a split without a semantic type', () => {
+      expect(journalPresenter.getPresentation(JournalDisplayType.MIXED)).toEqual({
+        type: JournalDisplayType.MIXED,
+        label: 'Split',
+        colorKey: 'textSecondary',
+      });
+    });
   });
 });
