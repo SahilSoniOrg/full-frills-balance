@@ -219,6 +219,11 @@ export const UI_STRINGS = {
     transfer: 'Transfer',
     expense: 'Expense',
     income: 'Income',
+    newEntryFab: {
+      label: 'New Entry',
+      openOptions: 'Open new entry options',
+      closeOptions: 'Close new entry options',
+    },
     transactionCount: (count: number) => (count === 1 ? '1 entry' : `${count} entries`),
     reconciledUntilHere: (dateText: string) => `Reconciled through ${dateText}`,
     errors: {

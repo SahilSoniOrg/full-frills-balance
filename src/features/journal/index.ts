@@ -4,6 +4,7 @@ export { default as JournalSearchScreen } from './list/screens/JournalSearchScre
 export { default as JournalDetailsScreen } from './screens/JournalDetailsScreen';
 export { useJournalEntryList } from './list/hooks/useJournalEntryList';
 export { useJournals } from './hooks/useJournals';
+export { useJournalEntryFab } from './hooks/useJournalEntryFab';
 export { JournalListModals } from './components/JournalListModals';
 export type { JournalListModalsProps, JournalActiveModal } from './types/modals';
 export { useJournalsBulkOperations } from './hooks/useJournalsBulkOperations';

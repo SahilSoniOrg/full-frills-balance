@@ -18,19 +18,34 @@ export interface FloatingActionButtonAction {
   testID?: string;
 }
 
-interface FABProps {
-  onPress: () => void;
+export type FloatingActionButtonBehavior =
+  | {
+      onPress: () => void;
+      actions?: undefined;
+      onExpand?: undefined;
+      closeAccessibilityLabel?: undefined;
+    }
+  | {
+      actions: readonly FloatingActionButtonAction[];
+      /** Fires when the action menu opens. */
+      onExpand?: () => void;
+      closeAccessibilityLabel: string;
+      onPress?: undefined;
+    };
+
+export type FloatingActionButtonProps = FloatingActionButtonBehavior & {
   style?: ViewStyle;
   label?: string;
   icon?: IconName;
   placement?: 'end' | 'center';
   accessibilityLabel?: string;
   bottomOffset?: number;
-  actions?: readonly FloatingActionButtonAction[];
-}
+};
 
 export const FloatingActionButton = ({
   onPress,
+  onExpand,
+  closeAccessibilityLabel,
   style,
   label,
   icon = Icon.Add,
@@ -38,7 +53,7 @@ export const FloatingActionButton = ({
   accessibilityLabel,
   bottomOffset,
   actions = [],
-}: FABProps) => {
+}: FloatingActionButtonProps) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const isExtended = Boolean(label);
@@ -49,11 +64,11 @@ export const FloatingActionButton = ({
   const handlePress = () => {
     void triggerHaptic('light');
     if (hasActions) {
-      if (!isExpanded) onPress();
+      if (!isExpanded) onExpand?.();
       setIsExpanded(!isExpanded);
       return;
     }
-    onPress();
+    onPress?.();
   };
 
   return (
@@ -122,7 +137,7 @@ export const FloatingActionButton = ({
           accessibilityRole="button"
           accessibilityLabel={
             hasActions && isExpanded
-              ? 'Close new entry options'
+              ? closeAccessibilityLabel
               : (accessibilityLabel ?? label ?? 'Create new item')
           }
           accessibilityState={{ expanded: hasActions ? isExpanded : undefined }}

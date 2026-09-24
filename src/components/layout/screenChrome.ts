@@ -1,24 +1,15 @@
-import { Icon, type IconName } from '@/src/types/domainIcons';
+import type {
+  FloatingActionButtonBehavior,
+  FloatingActionButtonProps,
+} from '@/src/components/core/FloatingActionButton';
+import { Icon } from '@/src/types/domainIcons';
 import type { ReactNode } from 'react';
 import type { ViewStyle } from 'react-native';
 
 export type NavBackIcon = typeof Icon.Back | typeof Icon.Close;
 
-export type ScreenFabChrome = {
-  onPress: () => void;
-  label?: string;
-  icon?: IconName;
-  placement?: 'end' | 'center';
-  accessibilityLabel?: string;
-  actions?: readonly {
-    id: string;
-    label: string;
-    icon?: IconName;
-    onPress: () => void;
-    accessibilityLabel?: string;
-    testID?: string;
-  }[];
-};
+export type ScreenFabChrome = FloatingActionButtonBehavior &
+  Pick<FloatingActionButtonProps, 'label' | 'icon' | 'placement' | 'accessibilityLabel'>;
 
 type ScreenChromeShared = {
   fab?: ScreenFabChrome;

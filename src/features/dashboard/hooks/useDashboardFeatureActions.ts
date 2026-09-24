@@ -1,5 +1,4 @@
 import { analytics } from '@/src/services/analytics';
-import { TabType } from '@/src/types/domainJournal';
 import { AccountId, PlannedPaymentId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -26,17 +25,8 @@ export function trackDashboardFirstPaint() {
   globalState.__BOOT_START_TIME__ = undefined;
 }
 
-/** Dashboard-owned telemetry and navigation for Safe-to-Spend and the tab FAB. */
+/** Dashboard-owned telemetry and navigation for Safe-to-Spend. */
 export function useDashboardFeatureActions() {
-  const openJournalEntry = useCallback(() => {
-    analytics.logEntrypointOpened('dashboard', 'bottom_action');
-  }, []);
-
-  const openJournalEntryType = useCallback((type: TabType) => {
-    analytics.logEntrypointSelected('dashboard', 'bottom_action', 'journal_entry');
-    AppNavigation.toSimpleJournalEntry(type, { guidedAutopilot: true });
-  }, []);
-
   const openAccount = useCallback(
     (
       account: {
@@ -107,8 +97,6 @@ export function useDashboardFeatureActions() {
   );
 
   return {
-    openJournalEntry,
-    openJournalEntryType,
     openAccount,
     openPlannedPayment,
     trackChartPoint,

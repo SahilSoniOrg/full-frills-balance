@@ -34,12 +34,7 @@ export function ScreenWithChrome({ chrome, children, ...rest }: ScreenWithChrome
       {children}
       {fab ? (
         <FloatingActionButton
-          onPress={fab.onPress}
-          label={fab.label}
-          icon={fab.icon}
-          placement={fab.placement}
-          accessibilityLabel={fab.accessibilityLabel}
-          actions={fab.actions}
+          {...fab}
           // Tab roots already sit above the tab bar; don't add the system
           // bottom inset a second time. Pushed screens retain safe-area spacing.
           bottomOffset={showBack ? undefined : Spacing.xl}

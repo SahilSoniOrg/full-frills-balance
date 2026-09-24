@@ -1,16 +1,14 @@
 import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
-import { Icon } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { JournalListHeaderActions } from '@/src/features/journal/components/JournalListHeaderActions';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
+import { useJournalEntryFab } from '@/src/features/journal/hooks/useJournalEntryFab';
 import { useJournalList } from '@/src/features/journal/hooks/useJournalList';
-import { analytics } from '@/src/services/analytics';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import type { TabType } from '@/src/types/domainJournal';
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 
 function JournalScreen() {
   const { workplaceId } = useWorkplace();
@@ -28,14 +26,7 @@ function JournalScreen() {
     workplaceId,
   );
 
-  const handleFabPress = useCallback(() => {
-    analytics.logEntrypointOpened('activity', 'bottom_action');
-  }, []);
-
-  const handleFabTypePress = useCallback((type: TabType) => {
-    analytics.logEntrypointSelected('activity', 'bottom_action', 'journal_entry');
-    AppNavigation.toSimpleJournalEntry(type, { guidedAutopilot: true });
-  }, []);
+  const fab = useJournalEntryFab('activity');
 
   const chrome = useMemo<TabScreenChrome>(
     () =>
@@ -53,43 +44,10 @@ function JournalScreen() {
         {
           active: journalList.isSelectionModeActive,
           onExit: journalList.exitSelectionMode,
-          fab: {
-            onPress: handleFabPress,
-            label: 'New Entry',
-            placement: 'end',
-            accessibilityLabel: 'Open new entry options',
-            actions: [
-              {
-                id: 'expense',
-                label: AppConfig.strings.journal.expense,
-                icon: Icon.ArrowDown,
-                testID: 'journal-entry-fab-expense',
-                onPress: () => handleFabTypePress('expense'),
-              },
-              {
-                id: 'income',
-                label: AppConfig.strings.journal.income,
-                icon: Icon.ArrowUp,
-                testID: 'journal-entry-fab-income',
-                onPress: () => handleFabTypePress('income'),
-              },
-              {
-                id: 'transfer',
-                label: AppConfig.strings.journal.transfer,
-                icon: Icon.SwapHorizontal,
-                testID: 'journal-entry-fab-transfer',
-                onPress: () => handleFabTypePress('transfer'),
-              },
-            ],
-          },
+          fab,
         },
       ),
-    [
-      handleFabPress,
-      handleFabTypePress,
-      journalList.exitSelectionMode,
-      journalList.isSelectionModeActive,
-    ],
+    [fab, journalList.exitSelectionMode, journalList.isSelectionModeActive],
   );
 
   return (
