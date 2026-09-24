@@ -7,7 +7,6 @@ import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtract
 import { JournalEntryLine } from '@/src/types/domainJournal';
 import { WorkplaceId } from '@/src/types/ids';
 import { sanitizeAmount } from '@/src/utils/validation';
-import type { JournalBalanceEvaluation } from '@/src/services/accounting/journalBalanceEvaluator';
 
 export type JournalSaveLineInput = {
   lines: JournalEntryLine[];
@@ -110,14 +109,10 @@ export function validateJournalEntryBalance(
 
 export function mapLinesToCreateTransactions(
   lines: JournalEntryLine[],
-  balanceEvaluation?: JournalBalanceEvaluation,
 ): CreateJournalData['transactions'] {
-  const evaluatedAmounts = new Map(
-    balanceEvaluation?.lineValues.map(line => [line.id, line.nativeAmount]) ?? [],
-  );
   return lines.map(l => ({
     accountId: l.accountId,
-    amount: evaluatedAmounts.get(l.id) ?? sanitizeAmount(l.amount, 9) ?? 0,
+    amount: sanitizeAmount(l.amount, 9) ?? 0,
     transactionType: l.transactionType,
     notes: l.notes && typeof l.notes === 'string' && l.notes.trim() ? l.notes.trim() : undefined,
     exchangeRate: l.exchangeRate ? parseFloat(l.exchangeRate) : undefined,
@@ -150,13 +145,10 @@ async function resolveSmsMetadataJson(
 
 /**
  * Validate structure and assemble CreateJournalData for a single entry.
- * Ledger preparation is the shared authority for monetary balance.
+ * The journal persistence repository is the authority for monetary balance and precision.
  */
 export async function assembleCreateJournalData(
-  params: JournalSaveLineInput & {
-    currencyCode?: string;
-    balanceEvaluation?: JournalBalanceEvaluation;
-  },
+  params: JournalSaveLineInput & { currencyCode?: string },
 ): Promise<JournalSaveValidationError | JournalSaveAssembled> {
   const structureError = validateJournalEntryStructure({
     lines: params.lines,
@@ -171,23 +163,6 @@ export async function assembleCreateJournalData(
 
   const currencyCode =
     params.currencyCode ?? (await workplaceService.getCurrency(params.workplaceId));
-
-  if (params.balanceEvaluation) {
-    const evaluation = params.balanceEvaluation;
-    const evaluatedLineIds = new Set(evaluation.lineValues.map(line => line.id));
-    const hasUnaccountedLine = params.lines.some(line => !evaluatedLineIds.has(line.id));
-    if (
-      !evaluation.isBalanced ||
-      evaluation.journalCurrency !== currencyCode.trim().toUpperCase() ||
-      evaluation.lineValues.length !== params.lines.length ||
-      hasUnaccountedLine
-    ) {
-      return {
-        success: false,
-        error: evaluation.issues[0]?.message ?? 'Exact balance validation is no longer valid',
-      };
-    }
-  }
 
   const smsMetadataJson = await resolveSmsMetadataJson(params.smsRecordId, params.workplaceId);
   const metadata =
@@ -207,7 +182,7 @@ export async function assembleCreateJournalData(
     notes: params.notes?.trim() || undefined,
     currencyCode,
     metadata,
-    transactions: mapLinesToCreateTransactions(params.lines, params.balanceEvaluation),
+    transactions: mapLinesToCreateTransactions(params.lines),
   };
 
   return { success: true, journalData };

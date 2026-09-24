@@ -8,7 +8,6 @@ import { EMPTY_ACCOUNT_ID, type WorkplaceId } from '@/src/types/ids';
 import { AppConfig } from '@/src/constants';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { useCurrencies } from '@/src/hooks/use-currencies';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { useSplitDraftProjection } from '@/src/features/journal/entry/modes/split/splitDraftProjection';
 import { useCallback, useMemo } from 'react';
 import {
@@ -35,21 +34,10 @@ export function useTransactionComposerSession(
   const editor = useJournalEditor(workplaceId, editorOptions);
   const valuationCurrency = editor.valuationCurrency || currencyCode;
   const { currencies } = useCurrencies();
-  const precisionByCurrency = useMemo(() => {
-    const precisions = new Map(
-      currencies.map(currency => [currency.code.toUpperCase(), currency.precision]),
-    );
-    for (const code of new Set([
-      valuationCurrency,
-      ...accounts.map(account => account.currencyCode),
-    ])) {
-      const normalizedCode = code.trim().toUpperCase();
-      if (!precisions.has(normalizedCode)) {
-        precisions.set(normalizedCode, CurrencyFormatter.getPrecisionFallback(normalizedCode));
-      }
-    }
-    return precisions;
-  }, [accounts, currencies, valuationCurrency]);
+  const precisionByCurrency = useMemo(
+    () => new Map(currencies.map(currency => [currency.code.toUpperCase(), currency.precision])),
+    [currencies],
+  );
   const splitState = useSplitDraftProjection({
     lines: editor.lines,
     accounts,
@@ -142,12 +130,9 @@ export function useTransactionComposerSession(
   const postingPlanValidation = useMemo<PostingPlanValidationResult>(
     () =>
       planForValidation
-        ? validatePostingPlan(planForValidation, accounts, {
-            balancePolicy: editor.isGuidedMode ? 'legacy' : 'exact',
-            precisionByCurrency,
-          })
+        ? validatePostingPlan(planForValidation, accounts, { precisionByCurrency })
         : { valid: false, issues: [] },
-    [accounts, editor.isGuidedMode, planForValidation, precisionByCurrency],
+    [accounts, planForValidation, precisionByCurrency],
   );
 
   // An unresolved intent has no posting plan to validate, so its resolver
@@ -199,7 +184,6 @@ export function useTransactionComposerSession(
             notes: editor.notes || undefined,
           },
           'advanced',
-          'exact',
         );
       }
 

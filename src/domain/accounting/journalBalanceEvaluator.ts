@@ -60,8 +60,6 @@ export interface EvaluateJournalBalanceInput {
   precisionByCurrency: ReadonlyMap<string, number>;
 }
 
-export type JournalBalancePolicy = 'legacy' | 'exact';
-
 export class JournalBalanceError extends Error {
   constructor(message: string) {
     super(message);

@@ -131,7 +131,7 @@ describe('transaction composer domain', () => {
       );
     });
 
-    it('keeps legacy tolerance opt-in and rejects a one-minor-unit exact-balance difference', () => {
+    it('rejects a one-minor-unit exact-balance difference with or without supplied precisions', () => {
       const fxAccounts = [
         ...accounts,
         {
@@ -177,20 +177,7 @@ describe('transaction composer domain', () => {
         date: Date.now(),
       };
 
-      expect(validatePostingPlan(roundedForeignPlan, fxAccounts)).toEqual({
-        valid: true,
-        issues: [],
-      });
-
-      expect(
-        validatePostingPlan(roundedForeignPlan, fxAccounts, {
-          balancePolicy: 'exact',
-          precisionByCurrency: new Map([
-            ['INR', 2],
-            ['THB', 2],
-          ]),
-        }),
-      ).toMatchObject({
+      const unbalanced = {
         valid: false,
         issues: [
           expect.objectContaining({
@@ -198,7 +185,53 @@ describe('transaction composer domain', () => {
             message: expect.stringContaining('0.01 INR'),
           }),
         ],
-      });
+      };
+      expect(validatePostingPlan(roundedForeignPlan, fxAccounts)).toMatchObject(unbalanced);
+      expect(
+        validatePostingPlan(roundedForeignPlan, fxAccounts, {
+          precisionByCurrency: new Map([
+            ['INR', 2],
+            ['THB', 2],
+          ]),
+        }),
+      ).toMatchObject(unbalanced);
+    });
+
+    it('uses supplied currency precision instead of the static table', () => {
+      const plan: PostingPlan = {
+        lines: [
+          {
+            id: asTransactionId('debit'),
+            accountId: asAccountId('food'),
+            accountName: 'Food',
+            accountType: AccountType.EXPENSE,
+            accountCurrency: 'USD',
+            amount: '10.004',
+            transactionType: TransactionType.DEBIT,
+            notes: '',
+            exchangeRate: '',
+          },
+          {
+            id: asTransactionId('credit'),
+            accountId: asAccountId('bank'),
+            accountName: 'Bank',
+            accountType: AccountType.ASSET,
+            accountCurrency: 'USD',
+            amount: '10',
+            transactionType: TransactionType.CREDIT,
+            notes: '',
+            exchangeRate: '',
+          },
+        ],
+        currencyCode: 'USD',
+        description: 'Precision',
+        date: Date.now(),
+      };
+
+      expect(validatePostingPlan(plan, accounts).valid).toBe(true);
+      expect(
+        validatePostingPlan(plan, accounts, { precisionByCurrency: new Map([['USD', 3]]) }),
+      ).toMatchObject({ valid: false, issues: [expect.objectContaining({ code: 'unbalanced' })] });
     });
 
     it('keeps separate source and destination amounts for a simple foreign-currency entry', () => {
@@ -271,7 +304,7 @@ describe('transaction composer domain', () => {
       });
     });
 
-    it('accepts higher-rate foreign amounts whose conversion rounds by more than one base minor unit', () => {
+    it('rejects higher-rate foreign amounts whose conversion misses the base amount', () => {
       const fxAccounts = [
         ...accounts,
         {
@@ -303,9 +336,14 @@ describe('transaction composer domain', () => {
 
       expect(resolved.resolved).toBe(true);
       if (!resolved.resolved) return;
-      expect(validatePostingPlan(resolved.plan, fxAccounts)).toEqual({
-        valid: true,
-        issues: [],
+      expect(validatePostingPlan(resolved.plan, fxAccounts)).toMatchObject({
+        valid: false,
+        issues: [
+          expect.objectContaining({
+            code: 'unbalanced',
+            message: expect.stringContaining('0.02 INR'),
+          }),
+        ],
       });
     });
 

@@ -1,5 +1,6 @@
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
-import { checkJournal } from '@/src/utils/accounting/BalanceEffects';
+import { parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { TransactionType } from '@/src/types/enums';
 import {
@@ -13,14 +14,13 @@ import {
 } from '@/src/types/domainTransaction';
 import { JournalEntryLine } from '@/src/types/domainJournal';
 import { AccountId, EMPTY_ACCOUNT_ID, asTransactionId } from '@/src/types/ids';
-import { evaluateJournalBalance } from '@/src/services/accounting/journalBalanceEvaluator';
-import type { JournalBalancePolicy } from '@/src/services/accounting/journalBalanceEvaluator';
+import { evaluateJournalBalance } from '@/src/domain/accounting/journalBalanceEvaluator';
 
 const RESOLUTION_EPSILON = 0.001;
 
-function parsePositiveAmount(value: string | undefined): number | null {
+function parsePositiveAmount(value: string | undefined, precision?: number): number | null {
   if (value === undefined || value.trim() === '') return null;
-  const parsed = sanitizeAmount(value);
+  const parsed = sanitizeAmount(value, precision);
   return parsed !== null && parsed > 0 ? parsed : null;
 }
 
@@ -283,24 +283,40 @@ export function resolveTransactionIntent(
   return { resolved: true, plan, issues: [] };
 }
 
-function validExchangeRate(value: string): boolean {
-  const rate = Number(value.trim());
-  return Number.isFinite(rate) && rate > 0;
+function withPrecisionFallbacks(
+  plan: PostingPlan,
+  precisionByCurrency: ReadonlyMap<string, number> | undefined,
+): Map<string, number> {
+  const precisions = new Map(
+    [...(precisionByCurrency ?? [])].map(([code, precision]) => [
+      code.trim().toUpperCase(),
+      precision,
+    ]),
+  );
+  for (const code of [plan.currencyCode, ...plan.lines.map(line => line.accountCurrency)]) {
+    const normalizedCode = code?.trim().toUpperCase();
+    if (normalizedCode && !precisions.has(normalizedCode)) {
+      precisions.set(normalizedCode, CurrencyFormatter.getPrecisionFallback(normalizedCode));
+    }
+  }
+  return precisions;
 }
 
-/** Validates a resolved plan against the supplied account snapshot and base currency. */
+/**
+ * Validates a resolved plan against the supplied account snapshot and base currency.
+ * Balance is always checked exactly in minor units; currencies missing from
+ * `precisionByCurrency` use the static precision table.
+ */
 export function validatePostingPlan(
   plan: PostingPlan,
   accounts: TransactionResolverContext['accounts'],
-  options: {
-    balancePolicy?: JournalBalancePolicy;
-    precisionByCurrency?: ReadonlyMap<string, number>;
-  } = {},
+  options: { precisionByCurrency?: ReadonlyMap<string, number> } = {},
 ): PostingPlanValidationResult {
   const issues: PostingPlanValidationResult['issues'] = [];
   const accountMap = new Map(accounts.map(account => [account.id, account]));
   const lineIds = new Set<string>();
   const baseCurrency = plan.currencyCode.trim().toUpperCase();
+  const precisionByCurrency = withPrecisionFallbacks(plan, options.precisionByCurrency);
 
   if (!plan.description.trim())
     issues.push({ code: 'missing_description', message: 'A description is required' });
@@ -355,13 +371,9 @@ export function validatePostingPlan(
     }
 
     const accountPrecision = line.accountCurrency
-      ? options.precisionByCurrency?.get(line.accountCurrency.trim().toUpperCase())
+      ? precisionByCurrency.get(line.accountCurrency.trim().toUpperCase())
       : undefined;
-    const amount =
-      options.balancePolicy === 'exact' && accountPrecision !== undefined
-        ? sanitizeAmount(line.amount, accountPrecision)
-        : parsePositiveAmount(line.amount);
-    if (amount === null)
+    if (parsePositiveAmount(line.amount, accountPrecision) === null)
       issues.push({
         code: 'invalid_amount',
         message: 'Posting amounts must be greater than zero',
@@ -377,7 +389,7 @@ export function validatePostingPlan(
         message: 'A foreign-currency line needs an exchange rate',
         lineId: line.id,
       });
-    } else if (line.exchangeRate.trim() && !validExchangeRate(line.exchangeRate)) {
+    } else if (line.exchangeRate.trim() && parsePositiveRate(line.exchangeRate) === null) {
       issues.push({
         code: 'invalid_exchange_rate',
         message: 'Exchange rates must be greater than zero',
@@ -394,43 +406,18 @@ export function validatePostingPlan(
     issues.push({ code: 'missing_account', message: 'A posting plan needs two distinct accounts' });
 
   if (issues.length === 0) {
-    if (options.balancePolicy === 'exact') {
-      const evaluation = evaluateJournalBalance({
-        lines: plan.lines,
-        journalCurrency: plan.currencyCode,
-        precisionByCurrency: options.precisionByCurrency ?? new Map(),
-      });
-      issues.push(
-        ...evaluation.issues.map(balanceIssue => ({
-          code: balanceIssue.code,
-          message: balanceIssue.message,
-          ...(balanceIssue.lineId ? { lineId: asTransactionId(balanceIssue.lineId) } : {}),
-        })),
-      );
-    } else {
-      const hasForeignCurrencyLine = plan.lines.some(line => {
-        const currency = line.accountCurrency?.trim().toUpperCase();
-        const rate = Number(line.exchangeRate?.trim());
-        return Boolean(
-          currency && currency !== baseCurrency && Number.isFinite(rate) && rate !== 1,
-        );
-      });
-      const balance = checkJournal(
-        plan.lines.map(line => ({
-          amount: sanitizeAmount(line.amount) ?? 0,
-          type: line.transactionType,
-          exchangeRate: line.exchangeRate ? Number.parseFloat(line.exchangeRate) : 1,
-        })),
-        undefined,
-        { allowExchangeRateRounding: hasForeignCurrencyLine },
-      );
-      if (!balance.isValid) {
-        issues.push({
-          code: 'unbalanced',
-          message: `Posting plan is not balanced: ${balance.imbalance}`,
-        });
-      }
-    }
+    const evaluation = evaluateJournalBalance({
+      lines: plan.lines,
+      journalCurrency: plan.currencyCode,
+      precisionByCurrency,
+    });
+    issues.push(
+      ...evaluation.issues.map(balanceIssue => ({
+        code: balanceIssue.code,
+        message: balanceIssue.message,
+        ...(balanceIssue.lineId ? { lineId: asTransactionId(balanceIssue.lineId) } : {}),
+      })),
+    );
   }
 
   return { valid: issues.length === 0, issues };

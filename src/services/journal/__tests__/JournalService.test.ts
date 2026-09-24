@@ -10,10 +10,7 @@ import { JournalService } from '@/src/services/journal/journalDomainService';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { currencyReadService } from '@/src/services/currency-read-service';
-import {
-  evaluateJournalBalance,
-  JournalBalanceError,
-} from '@/src/services/accounting/journalBalanceEvaluator';
+import { JournalBalanceError } from '@/src/domain/accounting/journalBalanceEvaluator';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/account');
@@ -158,61 +155,6 @@ describe('JournalService - saveJournalEntry', () => {
         'wp-1' as WorkplaceId,
       );
       expect(workplaceService.getCurrency).not.toHaveBeenCalled();
-    });
-
-    it('preserves evaluated three-decimal native amounts through journal assembly', async () => {
-      (workplaceService.getCurrency as jest.Mock).mockResolvedValue('JOD');
-      const lines = [
-        {
-          id: 'jpy-line',
-          accountId: 'yen-account',
-          accountName: 'Yen cash',
-          accountType: AccountType.ASSET,
-          accountCurrency: 'JPY',
-          amount: '123.4',
-          transactionType: TransactionType.DEBIT,
-          notes: '',
-          exchangeRate: '0.005',
-        },
-        {
-          id: 'jod-line',
-          accountId: 'dinar-account',
-          accountName: 'Dinar income',
-          accountType: AccountType.INCOME,
-          accountCurrency: 'JOD',
-          amount: '0.615',
-          transactionType: TransactionType.CREDIT,
-          notes: '',
-          exchangeRate: '',
-        },
-      ];
-      const balanceEvaluation = evaluateJournalBalance({
-        journalCurrency: 'JOD',
-        precisionByCurrency: new Map([
-          ['JOD', 3],
-          ['JPY', 0],
-        ]),
-        lines,
-      });
-
-      const result = await service.saveJournalEntry({
-        lines: lines as any,
-        description: 'Three-decimal posting',
-        journalDate: '2026-09-01',
-        balanceEvaluation,
-        workplaceId: 'wp-1' as WorkplaceId,
-      });
-
-      expect(result).toMatchObject({ success: true, action: 'created' });
-      expect(journalPersistenceService.put).toHaveBeenCalledWith(
-        expect.objectContaining({
-          transactions: expect.arrayContaining([
-            expect.objectContaining({ accountId: 'yen-account', amount: 123 }),
-            expect.objectContaining({ accountId: 'dinar-account', amount: 0.615 }),
-          ]),
-        }),
-        'wp-1',
-      );
     });
 
     it('should fail if description is empty', async () => {
@@ -396,7 +338,7 @@ describe('JournalService - saveJournalEntry', () => {
       expect(saveSpy).not.toHaveBeenCalled();
     });
 
-    it('passes the exact evaluation through for an advanced mixed-currency plan', async () => {
+    it('validates an advanced mixed-currency plan exactly before saving', async () => {
       (accountQueryRepository.findAllByIds as jest.Mock).mockResolvedValue([
         { id: 'acc1', name: 'Expense', accountType: AccountType.EXPENSE, currencyCode: 'EUR' },
         { id: 'acc2', name: 'Bank', accountType: AccountType.ASSET, currencyCode: 'USD' },
@@ -432,7 +374,6 @@ describe('JournalService - saveJournalEntry', () => {
       const result = await service.postPostingPlan({
         plan: plan as any,
         mode: 'advanced',
-        balancePolicy: 'exact',
         workplaceId: 'wp-1' as WorkplaceId,
       });
 
@@ -440,12 +381,7 @@ describe('JournalService - saveJournalEntry', () => {
       expect(currencyReadService.getPrecision).toHaveBeenCalledWith('EUR');
       expect(currencyReadService.getPrecision).toHaveBeenCalledWith('USD');
       expect(saveSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          balanceEvaluation: expect.objectContaining({
-            isBalanced: true,
-            journalTotalAmount: 12,
-          }),
-        }),
+        expect.objectContaining({ lines: plan.lines, mode: 'advanced' }),
       );
     });
 
@@ -482,7 +418,6 @@ describe('JournalService - saveJournalEntry', () => {
       const result = await service.postPostingPlan({
         plan: plan as any,
         mode: 'advanced',
-        balancePolicy: 'exact',
         workplaceId: 'wp-1' as WorkplaceId,
       });
 
@@ -504,7 +439,6 @@ describe('JournalService - saveJournalEntry', () => {
       const result = await service.postPostingPlan({
         plan: { ...postingPlan, currencyCode: 'INR' } as any,
         journalId: 'journal123' as JournalId,
-        balancePolicy: 'exact',
         workplaceId: 'wp-1' as WorkplaceId,
       });
 

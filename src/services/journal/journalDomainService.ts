@@ -20,13 +20,9 @@ import { journalPersistenceService } from '@/src/services/journal/JournalPersist
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import {
-  evaluateJournalBalance,
   JournalBalanceError,
-} from '@/src/services/accounting/journalBalanceEvaluator';
-import type {
-  JournalBalanceEvaluation,
-  JournalBalancePolicy,
-} from '@/src/services/accounting/journalBalanceEvaluator';
+  resolveCurrencyPrecisions,
+} from '@/src/domain/accounting/journalBalanceEvaluator';
 import { logger } from '@/src/utils/logger';
 import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants';
 import { assembleCreateJournalData, validateJournalEntryStructure } from './journalSaveHelpers';
@@ -47,7 +43,6 @@ export class JournalService {
     smsSender?: string;
     rawSmsBody?: string;
     mode?: 'simple' | 'advanced' | 'import';
-    balancePolicy?: JournalBalancePolicy;
     workplaceId: WorkplaceId;
   }): Promise<SubmitJournalResult> {
     const accountIds = [...new Set(params.plan.lines.map(line => line.accountId))];
@@ -58,58 +53,29 @@ export class JournalService {
       accountType: account.accountType,
       currencyCode: account.currencyCode,
     }));
-    let balanceEvaluation: JournalBalanceEvaluation | undefined;
-    let precisionByCurrency: Map<string, number> | undefined;
-    if (params.balancePolicy === 'exact') {
-      const existingJournal = params.journalId
-        ? await journalQueryRepository.find(params.workplaceId, params.journalId)
-        : null;
-      if (params.journalId && !existingJournal) {
-        return { success: false, error: 'Journal not found' };
-      }
-      const expectedCurrency =
-        existingJournal?.currencyCode ?? (await workplaceService.getCurrency(params.workplaceId));
-      if (params.plan.currencyCode.trim().toUpperCase() !== expectedCurrency.trim().toUpperCase()) {
-        return {
-          success: false,
-          error: `Posting plan currency must match the journal currency (${expectedCurrency})`,
-        };
-      }
-
-      const currencyCodes = [
-        expectedCurrency,
-        ...resolverAccounts.map(account => account.currencyCode),
-      ];
-      const uniqueCurrencyCodes = [
-        ...new Set(currencyCodes.map(code => code.trim().toUpperCase())),
-      ];
-      const precisions = await Promise.all(
-        uniqueCurrencyCodes.map(
-          async code => [code, await currencyReadService.getPrecision(code)] as const,
-        ),
-      );
-      precisionByCurrency = new Map(precisions);
+    const existingJournal = params.journalId
+      ? await journalQueryRepository.find(params.workplaceId, params.journalId)
+      : null;
+    if (params.journalId && !existingJournal) {
+      return { success: false, error: 'Journal not found' };
+    }
+    const expectedCurrency =
+      existingJournal?.currencyCode ?? (await workplaceService.getCurrency(params.workplaceId));
+    if (params.plan.currencyCode.trim().toUpperCase() !== expectedCurrency.trim().toUpperCase()) {
+      return {
+        success: false,
+        error: `Posting plan currency must match the journal currency (${expectedCurrency})`,
+      };
     }
 
-    const validation = validatePostingPlan(params.plan, resolverAccounts, {
-      balancePolicy: params.balancePolicy,
-      precisionByCurrency,
-    });
+    const precisionByCurrency = await resolveCurrencyPrecisions(
+      [expectedCurrency, ...resolverAccounts.map(account => account.currencyCode)],
+      code => currencyReadService.getPrecision(code),
+    );
+
+    const validation = validatePostingPlan(params.plan, resolverAccounts, { precisionByCurrency });
     if (!validation.valid) {
       return { success: false, error: validation.issues[0]?.message || 'Invalid posting plan' };
-    }
-    if (params.balancePolicy === 'exact' && precisionByCurrency) {
-      balanceEvaluation = evaluateJournalBalance({
-        lines: params.plan.lines,
-        journalCurrency: params.plan.currencyCode,
-        precisionByCurrency,
-      });
-      if (!balanceEvaluation.isBalanced) {
-        return {
-          success: false,
-          error: balanceEvaluation.issues[0]?.message || 'Journal is not exactly balanced',
-        };
-      }
     }
 
     return this.saveJournalEntry({
@@ -123,7 +89,6 @@ export class JournalService {
       smsSender: params.smsSender,
       rawSmsBody: params.rawSmsBody,
       mode: params.mode,
-      balanceEvaluation,
       workplaceId: params.workplaceId,
     });
   }
@@ -250,10 +215,9 @@ export class JournalService {
     smsSender?: string;
     rawSmsBody?: string;
     mode?: 'simple' | 'advanced' | 'import';
-    balanceEvaluation?: JournalBalanceEvaluation;
     workplaceId: WorkplaceId;
   }): Promise<SubmitJournalResult> {
-    const { journalId, mode = 'advanced', workplaceId, balanceEvaluation, ...entryParams } = params;
+    const { journalId, mode = 'advanced', workplaceId, ...entryParams } = params;
 
     try {
       const existingJournal = journalId
@@ -269,7 +233,6 @@ export class JournalService {
         ...entryParams,
         workplaceId,
         currencyCode: effectiveCurrencyCode,
-        balanceEvaluation,
       });
       if (!assembled.success) {
         return assembled;

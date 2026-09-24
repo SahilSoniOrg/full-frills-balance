@@ -1,5 +1,4 @@
 import type { PostingPlan } from '@/src/types/domainTransaction';
-import type { JournalBalancePolicy } from '@/src/services/accounting/journalBalanceEvaluator';
 import type { JournalId } from '@/src/types/ids';
 import { showErrorAlert } from '@/src/utils/alerts';
 import { triggerSaveOutcomeHaptic } from '@/src/utils/haptics';
@@ -36,11 +35,7 @@ export function useJournalEditorSubmission(options: {
   const submissionInFlightRef = useRef(false);
 
   const submitPlan = useCallback(
-    async (
-      plan: PostingPlan,
-      mode: 'simple' | 'advanced' | 'import',
-      balancePolicy?: JournalBalancePolicy,
-    ) => {
+    async (plan: PostingPlan, mode: 'simple' | 'advanced' | 'import') => {
       if (submissionInFlightRef.current) {
         return { success: false, error: 'Submission already in progress' } as const;
       }
@@ -51,7 +46,6 @@ export function useJournalEditorSubmission(options: {
           plan,
           journalId,
           mode,
-          balancePolicy,
           smsId,
           smsRecordId,
           smsSender,

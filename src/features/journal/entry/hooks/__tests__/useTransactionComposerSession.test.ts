@@ -382,7 +382,6 @@ describe('useTransactionComposerSession', () => {
 
     expect(journalService.postPostingPlan).toHaveBeenCalledWith(
       expect.objectContaining({
-        balancePolicy: 'exact',
         plan: expect.objectContaining({
           lines: expect.arrayContaining([
             expect.objectContaining({ accountId: asAccountId('cash'), amount: '30' }),
