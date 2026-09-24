@@ -86,7 +86,9 @@ export function tieDestinationAmount(
 ): { amount: number; destBaseRate: number } {
   const amount = roundToPrecision(sourceAmount * (sourceBaseRate / destBaseRate), destPrecision);
   if (!(amount > 0)) return { amount, destBaseRate };
-  return { amount, destBaseRate: (sourceAmount * sourceBaseRate) / amount };
+  const sourceBase = sourceAmount * sourceBaseRate;
+  if (Math.abs(amount * destBaseRate - sourceBase) < 1e-6) return { amount, destBaseRate };
+  return { amount, destBaseRate: sourceBase / amount };
 }
 
 export function fxOverrideKey(...parts: (string | number | undefined)[]): string {

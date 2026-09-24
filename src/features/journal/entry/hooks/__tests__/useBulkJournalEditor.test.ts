@@ -1,7 +1,10 @@
 import { AccountType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 
-import { useBulkJournalEditor } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
+import {
+  resolveBulkRowFxPair,
+  useBulkJournalEditor,
+} from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { triggerSaveOutcomeHaptic } from '@/src/utils/haptics';
 import { act, renderHook } from '@testing-library/react-native';
@@ -47,6 +50,34 @@ describe('useBulkJournalEditor', () => {
   afterEach(() => {
     jest.useRealTimers();
     mockFetchHistoricalRate = undefined;
+  });
+
+  it('ties a rounded destination amount back to the source amount', () => {
+    const pair = resolveBulkRowFxPair(
+      {
+        id: 'row',
+        description: '',
+        notes: '',
+        transactionType: 'transfer',
+        amount: '600',
+        sourceId: 'inr' as AccountId,
+        destinationId: 'usd' as AccountId,
+        journalDate: 0,
+        exchangeRate: '',
+        isCrossCurrency: true,
+        convertedAmount: 0,
+        isLoadingRate: false,
+        fxRates: { sourceBaseRate: 1, destBaseRate: 95.96, isLoading: false, error: null },
+      },
+      [
+        { id: 'inr', currencyCode: 'INR' },
+        { id: 'usd', currencyCode: 'USD' },
+      ] as any,
+      'INR',
+    );
+
+    expect(pair.convertedAmount).toBeCloseTo(6.25, 2);
+    expect(pair.convertedAmount! * pair.destBaseRate!).toBeCloseTo(600, 2);
   });
 
   it('initializes with a single empty row', () => {

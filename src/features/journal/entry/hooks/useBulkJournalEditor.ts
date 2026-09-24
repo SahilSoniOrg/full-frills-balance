@@ -14,6 +14,7 @@ import {
   type FxPair,
 } from '@/src/features/journal/entry/fxPair';
 import { fetchPairRates } from '@/src/features/journal/entry/hooks/useCrossCurrencyRates';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { logger } from '@/src/utils/logger';
 import { analytics } from '@/src/services/analytics';
@@ -80,13 +81,15 @@ export function resolveBulkRowFxPair(
   accounts: AccountFields[],
   workplaceCurrency: string,
 ): FxPair {
+  const destCurrency = accounts.find(account => account.id === row.destinationId)?.currencyCode;
   return resolveFxPair({
     sourceCurrency: accounts.find(account => account.id === row.sourceId)?.currencyCode,
-    destCurrency: accounts.find(account => account.id === row.destinationId)?.currencyCode,
+    destCurrency,
     baseCurrency: workplaceCurrency,
     fetched: row.fxRates ?? null,
     override: row.fxOverride,
     sourceAmount: sanitizeAmount(row.amount) || 0,
+    destPrecision: CurrencyFormatter.getPrecisionFallback(destCurrency),
   });
 }
 
