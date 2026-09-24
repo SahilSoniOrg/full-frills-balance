@@ -38,6 +38,7 @@ export function ClarityScene({
   const budgets = draft.budget.kind === 'set' ? draft.budget.items : [];
   const hasCash =
     projection.liquidNow > 0 || draft.accounts.some(account => account.kind !== 'card');
+  const hasAnyInput = hasCash || income.length > 0 || payments.length > 0 || budgets.length > 0;
   const stsColor: ComponentVariant =
     projection.safeToSpend > 0 ? 'primary' : projection.safeToSpend < 0 ? 'error' : 'secondary';
   const todayBeats = projection.today.filter(beat => beat.key !== 'sts');
@@ -127,7 +128,7 @@ export function ClarityScene({
           />
         ) : null}
 
-        {!(hasCash || income.length > 0 || payments.length > 0 || budgets.length > 0) ? (
+        {!hasAnyInput ? (
           <AppText variant="body" color="secondary" style={styles.proseCopy}>
             {copy.clarityNoCashYet}
           </AppText>
@@ -151,7 +152,7 @@ export function ClarityScene({
             safeToSpend={projection.safeToSpend}
             currency={currency}
           />
-          {!(hasCash || income.length > 0 || payments.length > 0 || budgets.length > 0) ? null : (
+          {hasAnyInput ? (
             <Stack gap="lg">
               {hasCash ? (
                 <ClarityGroup
@@ -161,7 +162,7 @@ export function ClarityScene({
                   amount={projection.liquidNow}
                   currency={currency}
                 >
-                  <ClarityFigure label={copy.cashYouHave} />
+                  <ClarityLabelRow label={copy.cashYouHave} />
                 </ClarityGroup>
               ) : null}
               {income.length > 0 ? (
@@ -173,17 +174,25 @@ export function ClarityScene({
                   currency={currency}
                   sign="+"
                 >
-                  {income.map(item => (
-                    <ClarityFigure
-                      key={item.id}
-                      amount={income.length > 1 ? item.amount : undefined}
-                      currency={currency}
-                      sign="+"
-                      tint="income"
-                      label={incomeItemName(item)}
-                      detail={dayjs(item.nextDate).format('D MMM')}
-                    />
-                  ))}
+                  {income.map(item =>
+                    income.length > 1 ? (
+                      <ClarityFigure
+                        key={item.id}
+                        amount={item.amount}
+                        currency={currency}
+                        sign="+"
+                        tint="income"
+                        label={incomeItemName(item)}
+                        detail={dayjs(item.nextDate).format('D MMM')}
+                      />
+                    ) : (
+                      <ClarityLabelRow
+                        key={item.id}
+                        label={incomeItemName(item)}
+                        detail={dayjs(item.nextDate).format('D MMM')}
+                      />
+                    ),
+                  )}
                 </ClarityGroup>
               ) : null}
               {payments.length > 0 ? (
@@ -195,17 +204,25 @@ export function ClarityScene({
                   currency={currency}
                   sign="-"
                 >
-                  {payments.map(item => (
-                    <ClarityFigure
-                      key={item.id}
-                      amount={payments.length > 1 ? item.amount : undefined}
-                      currency={currency}
-                      sign="-"
-                      tint="expense"
-                      label={paymentItemName(item)}
-                      detail={dayjs(item.dueDate).format('D MMM')}
-                    />
-                  ))}
+                  {payments.map(item =>
+                    payments.length > 1 ? (
+                      <ClarityFigure
+                        key={item.id}
+                        amount={item.amount}
+                        currency={currency}
+                        sign="-"
+                        tint="expense"
+                        label={paymentItemName(item)}
+                        detail={dayjs(item.dueDate).format('D MMM')}
+                      />
+                    ) : (
+                      <ClarityLabelRow
+                        key={item.id}
+                        label={paymentItemName(item)}
+                        detail={dayjs(item.dueDate).format('D MMM')}
+                      />
+                    ),
+                  )}
                 </ClarityGroup>
               ) : null}
               {budgets.length > 0 ? (
@@ -216,20 +233,24 @@ export function ClarityScene({
                   amount={projection.budgetReserveInWindow}
                   currency={currency}
                 >
-                  {budgets.map(item => (
-                    <ClarityFigure
-                      key={item.id}
-                      amount={budgets.length > 1 ? item.amount : undefined}
-                      currency={currency}
-                      tint="warning"
-                      label={item.name}
-                      detail={copy.monthly}
-                    />
-                  ))}
+                  {budgets.map(item =>
+                    budgets.length > 1 ? (
+                      <ClarityFigure
+                        key={item.id}
+                        amount={item.amount}
+                        currency={currency}
+                        tint="warning"
+                        label={item.name}
+                        detail={copy.monthly}
+                      />
+                    ) : (
+                      <ClarityLabelRow key={item.id} label={item.name} detail={copy.monthly} />
+                    ),
+                  )}
                 </ClarityGroup>
               ) : null}
             </Stack>
-          )}
+          ) : null}
         </Stack>
       </InfoSheet>
     </ConversationStep>
@@ -415,6 +436,25 @@ function ClarityGroup({
   );
 }
 
+function ClarityLabelRow({
+  label,
+  detail,
+  children,
+}: {
+  readonly label: string;
+  readonly detail?: string;
+  readonly children?: ReactNode;
+}) {
+  return (
+    <Inline align="center" justify="space-between" gap="md">
+      <AppText variant="caption" color="secondary" style={styles.figureCopy}>
+        {detail ? `${label} · ${detail}` : label}
+      </AppText>
+      {children}
+    </Inline>
+  );
+}
+
 function ClarityFigure({
   amount,
   currency,
@@ -423,29 +463,24 @@ function ClarityFigure({
   label,
   detail,
 }: {
-  readonly amount?: number;
-  readonly currency?: string;
+  readonly amount: number;
+  readonly currency: string;
   readonly sign?: '+' | '-';
-  readonly tint?: ComponentVariant;
+  readonly tint: ComponentVariant;
   readonly label: string;
-  readonly detail?: string;
+  readonly detail: string;
 }) {
   return (
-    <Inline align="center" justify="space-between" gap="md">
-      <AppText variant="caption" color="secondary" style={styles.figureCopy}>
-        {detail ? `${label} · ${detail}` : label}
-      </AppText>
-      {amount != null && currency && tint ? (
-        <MoneyText
-          amount={amount}
-          currencyCode={currency}
-          formatStyle="compact"
-          prefix={sign}
-          variant="caption"
-          color={tint}
-        />
-      ) : null}
-    </Inline>
+    <ClarityLabelRow label={label} detail={detail}>
+      <MoneyText
+        amount={amount}
+        currencyCode={currency}
+        formatStyle="compact"
+        prefix={sign}
+        variant="caption"
+        color={tint}
+      />
+    </ClarityLabelRow>
   );
 }
 
