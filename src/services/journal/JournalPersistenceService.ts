@@ -267,7 +267,7 @@ export class JournalPersistenceService {
       }
       return {
         ...normalizedInput,
-        journalId: existingJournal.id as JournalId,
+        journalId: existingJournal.id,
         currencyCode: existingJournal.currencyCode,
       };
     }

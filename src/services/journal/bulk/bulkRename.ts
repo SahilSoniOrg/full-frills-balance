@@ -23,7 +23,7 @@ export async function bulkRenameJournals(
 
   return runAccountingWriteSession(async session => {
     const journals = await journalQueryRepository.findByIds(workplaceId, journalIds);
-    const journalById = new Map(journals.map(journal => [journal.id as JournalId, journal]));
+    const journalById = new Map(journals.map(journal => [journal.id, journal]));
     const inverseRenames: Record<JournalId, string> = {};
     const effectiveRenames = journalIds.flatMap(journalId => {
       const journal = journalById.get(journalId);
