@@ -1,7 +1,9 @@
 import { AppText } from '@/src/components/core';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
+import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
+import { formatRoundedAmount } from '@/src/utils/money';
 import type { StyleProp, TextInputProps, ViewStyle } from 'react-native';
 import { StyleSheet, View } from 'react-native';
 import { CalculatorAmountInput } from './CalculatorAmountInput';
@@ -24,8 +26,8 @@ export function CompactAmountInput({
   currency,
   currencySymbol,
   onChangeText,
-  precision = 2,
-  placeholder = '0.00',
+  precision,
+  placeholder,
   label,
   containerStyle,
   inputStyle,
@@ -33,8 +35,10 @@ export function CompactAmountInput({
 }: CompactAmountInputProps) {
   const { theme } = useTheme();
   const normalizedCurrency = currency.trim().toUpperCase();
+  const { precision: currencyPrecision } = useCurrencyPrecision(normalizedCurrency);
+  const resolvedPrecision = precision ?? currencyPrecision;
   const resolvedCurrencySymbol =
-    currencySymbol || CURRENCY_SYMBOLS[normalizedCurrency] || currency || '$';
+    currencySymbol || CURRENCY_SYMBOLS[normalizedCurrency] || normalizedCurrency || '$';
 
   return (
     <View
@@ -68,9 +72,9 @@ export function CompactAmountInput({
         <CalculatorAmountInput
           value={value}
           onChangeText={onChangeText}
-          placeholder={placeholder}
+          placeholder={placeholder ?? formatRoundedAmount(0, resolvedPrecision)}
           currencySymbol={resolvedCurrencySymbol}
-          precision={precision}
+          precision={resolvedPrecision}
           variant="minimal"
           containerStyle={styles.inputContainer}
           inputStyle={[styles.amountInput, inputStyle]}

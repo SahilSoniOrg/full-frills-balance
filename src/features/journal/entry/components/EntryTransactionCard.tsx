@@ -124,7 +124,6 @@ function CompactAmountMetaInput({
         value={amount}
         onChangeText={onChangeText}
         currency={currency}
-        placeholder="0.00"
         testID={testID}
       />
     </View>
