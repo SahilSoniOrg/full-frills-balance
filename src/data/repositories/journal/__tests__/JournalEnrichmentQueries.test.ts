@@ -3,7 +3,7 @@ import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
+import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
@@ -53,7 +53,7 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
     workplaceOneAccountId = workplaceOneAccount.id;
     workplaceTwoAccountId = workplaceTwoAccount.id;
 
-    const workplaceOneJournal = await journalWriteRepository.createJournalWithTransactions(
+    const workplaceOneJournal = await createJournalFixture(
       {
         description: 'Coffee',
         journalDate: recentJournalDate(),
@@ -68,7 +68,7 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
       },
       workplaceOne,
     );
-    const workplaceTwoJournal = await journalWriteRepository.createJournalWithTransactions(
+    const workplaceTwoJournal = await createJournalFixture(
       {
         description: 'Coffee',
         journalDate: recentJournalDate() - 1_000,
@@ -244,7 +244,7 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
       workplaceId: workplaceOne,
     });
 
-    await journalWriteRepository.createJournalWithTransactions(
+    await createJournalFixture(
       {
         description: 'Milk',
         journalDate: recentJournalDate(),
@@ -259,7 +259,7 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
       },
       workplaceOne,
     );
-    await journalWriteRepository.createJournalWithTransactions(
+    await createJournalFixture(
       {
         description: 'Milk',
         journalDate: recentJournalDate() - 1_000,

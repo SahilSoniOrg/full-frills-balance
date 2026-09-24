@@ -3,7 +3,7 @@ import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
 import { accountListMetricsQueries } from '@/src/data/repositories/account/AccountListMetricsQueries';
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
+import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
@@ -53,7 +53,7 @@ describe('AccountListMetricsQueries workplace isolation', () => {
     localAccountId = localAccount.id;
     foreignAccountId = foreignAccount.id;
 
-    await journalWriteRepository.createJournalWithTransactions(
+    await createJournalFixture(
       {
         description: 'Valid local transaction',
         journalDate: DAY,
@@ -66,7 +66,7 @@ describe('AccountListMetricsQueries workplace isolation', () => {
       WORKPLACE_ONE,
     );
 
-    await journalWriteRepository.createJournalWithTransactions(
+    await createJournalFixture(
       {
         description: 'Valid foreign transaction',
         journalDate: DAY + 1_000,
@@ -80,7 +80,7 @@ describe('AccountListMetricsQueries workplace isolation', () => {
     );
 
     // Local transaction and journal linked to a foreign account.
-    await journalWriteRepository.createJournalWithTransactions(
+    await createJournalFixture(
       {
         description: 'Malformed foreign account link',
         journalDate: DAY + 2_000,
@@ -95,7 +95,7 @@ describe('AccountListMetricsQueries workplace isolation', () => {
 
     // Foreign journal linked to the local account; rewrite only the transaction
     // workplace so the journal predicate is solely responsible for rejecting it.
-    const foreignJournal = await journalWriteRepository.createJournalWithTransactions(
+    const foreignJournal = await createJournalFixture(
       {
         description: 'Malformed foreign journal link',
         journalDate: DAY + 3_000,
@@ -109,7 +109,7 @@ describe('AccountListMetricsQueries workplace isolation', () => {
     );
 
     // Local account and journal with a foreign transaction workplace.
-    const localJournal = await journalWriteRepository.createJournalWithTransactions(
+    const localJournal = await createJournalFixture(
       {
         description: 'Malformed foreign transaction link',
         journalDate: DAY + 4_000,

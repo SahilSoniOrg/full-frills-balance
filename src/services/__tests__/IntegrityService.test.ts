@@ -6,7 +6,7 @@ import AuditLog from '@/src/data/models/AuditLog';
 import Transaction from '@/src/data/models/Transaction';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
+import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { repairAccountBalance } from '@/src/services/integrity/integrityRepair';
 import * as integrityVerification from '@/src/services/integrity/integrityVerification';
@@ -42,7 +42,7 @@ describe('Integrity checks', () => {
 
   describe('computeBalanceFromTransactions', () => {
     it('should compute correct debit/credit balanced sum', async () => {
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'In',
           journalDate: Date.now(),
@@ -63,7 +63,7 @@ describe('Integrity checks', () => {
         'wp-1' as WorkplaceId,
       );
 
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'Out',
           journalDate: Date.now(),
@@ -94,7 +94,7 @@ describe('Integrity checks', () => {
 
   describe('verifyAccountBalance', () => {
     it('should detect when cached running balance is corrupted', async () => {
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'Deposit',
           journalDate: Date.now(),
@@ -137,7 +137,7 @@ describe('Integrity checks', () => {
 
   describe('repairAccountBalance', () => {
     it('should fix running balance discrepancies', async () => {
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'Deposit',
           journalDate: Date.now(),
@@ -239,7 +239,7 @@ describe('Integrity checks', () => {
     });
 
     it('does not commit a repair when cancellation arrives at the real writer boundary', async () => {
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'Corrupted balance source',
           journalDate: Date.now(),
@@ -314,7 +314,7 @@ describe('Integrity checks', () => {
 
       // Create two transactions at the exact same timestamp
       // Note: We use manual created_at via update to ensure they match exactly
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'First',
           journalDate: now,
@@ -329,7 +329,7 @@ describe('Integrity checks', () => {
         },
         'wp-1' as WorkplaceId,
       );
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'Second',
           journalDate: now,

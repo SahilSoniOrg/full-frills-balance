@@ -1,3 +1,4 @@
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 /**
@@ -32,7 +33,6 @@ import { accountQueryRepository, accountWriteRepository } from '@/src/data/repos
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { prepareAccountFieldUpdate } from '@/src/services/accounts/accountHierarchyCommands';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
-import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { foldBalances } from '@/src/utils/accounting/BalanceEffects';
 
@@ -106,7 +106,7 @@ describe('database migrations (LokiJS)', () => {
       workplaceId,
     });
 
-    await ledgerCreateService.createJournal(
+    await journalPersistenceService.put(
       {
         description: 'Migration smoke expense',
         journalDate: Date.UTC(2024, 0, 15, 12, 0, 0),

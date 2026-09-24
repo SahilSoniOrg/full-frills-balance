@@ -8,6 +8,8 @@ import type {
   JournalPersistenceResult,
   MergeJournalsInput,
   PutJournalInput,
+  PutJournalPatchInput,
+  PutJournalRequest,
   ReassignJournalAccountsInput,
 } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import type { AccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
@@ -19,10 +21,9 @@ import type { BulkDeleteUndoToken } from '@/src/types/domainJournal';
 import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { isRebuildEligibleJournalStatus } from '@/src/utils/journalStatus';
 
-export type JournalPersistenceServiceInput = Omit<
-  PutJournalInput,
-  'displayType' | 'runningBalanceByAccountId'
->;
+export type JournalPersistenceServiceInput =
+  | Omit<PutJournalInput, 'displayType' | 'runningBalanceByAccountId'>
+  | Omit<PutJournalPatchInput, 'displayType' | 'runningBalanceByAccountId'>;
 
 /** Application orchestration for the new journal persistence boundary. */
 export class JournalPersistenceService {
@@ -239,24 +240,60 @@ export class JournalPersistenceService {
   private async preparePutInput(
     input: JournalPersistenceServiceInput,
     workplaceId: WorkplaceId,
-  ): Promise<PutJournalInput> {
+  ): Promise<PutJournalRequest> {
     const existingJournal = input.journalId
       ? await journalQueryRepository.find(workplaceId, input.journalId)
       : null;
     if (input.journalId && !existingJournal) throw new Error('Journal not found');
 
-    const effectiveStatus = input.status ?? existingJournal?.status;
-    const normalizedInput: JournalPersistenceServiceInput = {
+    if (
+      existingJournal &&
+      input.currencyCode !== undefined &&
+      input.currencyCode.trim().toUpperCase() !== existingJournal.currencyCode.trim().toUpperCase()
+    ) {
+      throw new Error('A saved journal currency cannot be changed');
+    }
+
+    const normalizedInput = {
       ...input,
       currencyCode: existingJournal?.currencyCode ?? input.currencyCode,
     };
+
+    // Generic sparse puts (for example, description edits) retain the persisted
+    // lines. The repository reloads and validates them in its write session.
+    if (input.transactions === undefined) {
+      if (!existingJournal) {
+        throw new Error('A new journal requires transaction lines');
+      }
+      return {
+        ...normalizedInput,
+        journalId: existingJournal.id as JournalId,
+        currencyCode: existingJournal.currencyCode,
+      };
+    }
+
+    const journalDate = input.journalDate ?? existingJournal?.journalDate;
+    const currencyCode = existingJournal?.currencyCode ?? input.currencyCode;
+    if (journalDate === undefined || currencyCode === undefined) {
+      throw new Error('A new journal requires a date and currency');
+    }
+
+    const effectiveStatus = input.status ?? existingJournal?.status;
     const prepared = await prepareJournalData(
-      { ...normalizedInput, status: effectiveStatus },
+      {
+        ...normalizedInput,
+        journalDate,
+        currencyCode,
+        transactions: input.transactions,
+        status: effectiveStatus,
+      },
       workplaceId,
     );
 
     return {
       ...normalizedInput,
+      journalDate,
+      currencyCode,
       transactions: prepared.transactions,
       displayType: prepared.displayType,
       runningBalanceByAccountId: prepared.calculatedBalances,

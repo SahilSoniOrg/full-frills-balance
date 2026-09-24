@@ -5,22 +5,23 @@ import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const LEGACY_FINANCIAL_METHODS = new Set([
-  'assertBalancedIfPosted',
-  'bulkCreateJournals',
-  'bulkReassignTransactionAccounts',
-  'bulkRestoreJournals',
-  'bulkSoftDeleteJournals',
-  'createReversalJournal',
-  'persistReversal',
-  'prepareCreateJournalWithTransactions',
-  'preparePostJournalUpdates',
-  'prepareRevertJournalUpdates',
-  'updateJournalWithTransactions',
+const REMOVED_JOURNAL_WRITE_MODULES = new Set([
+  'journalWriteModule',
+  'journalWriteRepository',
+  'journalWriteTestHelpers',
+  'ledgerCreateService',
+  'ledgerLifecycleService',
+  'ledgerUpdateService',
 ]);
-const ALLOWED_LEGACY_REPOSITORY_CALLS = new Map([
-  ['src/services/journal/bulk/bulkRename.ts', new Set(['bulkUpdateDescriptions'])],
-]);
+const REMOVED_JOURNAL_WRITE_FILES = [
+  'src/data/repositories/journal/journalWriteModule.ts',
+  'src/data/repositories/journal/journalWriteRepository.ts',
+  'src/data/repositories/journal/journalWriteTestHelpers.ts',
+  'src/services/ledger/ledgerCreateService.ts',
+  'src/services/ledger/ledgerLifecycleService.ts',
+  'src/services/ledger/ledgerUpdateService.ts',
+  'src/services/ledger/prepareJournalData.ts',
+];
 
 function isSource(relativePath) {
   return (
@@ -52,27 +53,21 @@ function sourceFiles(root) {
   return files;
 }
 
-function propertyName(expression) {
-  if (ts.isPropertyAccessExpression(expression)) return expression.name.text;
-  if (
-    ts.isElementAccessExpression(expression) &&
-    ts.isStringLiteral(expression.argumentExpression)
-  ) {
-    return expression.argumentExpression.text;
-  }
-  return undefined;
-}
-
-function identifierName(expression) {
-  return ts.isIdentifier(expression) ? expression.text : undefined;
-}
-
 function moduleBaseName(moduleName) {
   return path.posix.basename(moduleName).replace(/\.(?:mjs|cjs|js|tsx?|jsx?)$/, '');
 }
 
 export function collectJournalWriteBoundaryFindings(root = ROOT) {
   const findings = [];
+  for (const relativePath of REMOVED_JOURNAL_WRITE_FILES) {
+    if (fs.existsSync(path.join(root, relativePath))) {
+      findings.push({
+        file: relativePath,
+        line: 1,
+        message: 'Removed journal write layer file has been restored',
+      });
+    }
+  }
   for (const file of sourceFiles(root)) {
     const text = fs.readFileSync(file.absolutePath, 'utf8');
     const sourceFile = ts.createSourceFile(
@@ -82,8 +77,6 @@ export function collectJournalWriteBoundaryFindings(root = ROOT) {
       true,
       file.relativePath.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
     );
-    const allowedCalls = ALLOWED_LEGACY_REPOSITORY_CALLS.get(file.relativePath);
-    const legacyRepositoryBindings = new Set(['journalWriteRepository']);
     const report = (node, message) => {
       const line = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
       findings.push({ file: file.relativePath, line, message });
@@ -93,66 +86,8 @@ export function collectJournalWriteBoundaryFindings(root = ROOT) {
       if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
         const moduleName = node.moduleSpecifier.text;
         const baseName = moduleBaseName(moduleName);
-        const namedImports = node.importClause?.namedBindings;
-        if (
-          ['ledgerCreateService', 'ledgerUpdateService', 'ledgerLifecycleService'].includes(
-            baseName,
-          )
-        ) {
-          report(node, `Production code imports legacy journal service ${baseName}`);
-        }
-        if (namedImports && ts.isNamedImports(namedImports)) {
-          const importedNames = new Set(
-            namedImports.elements.map(element => element.propertyName?.text ?? element.name.text),
-          );
-          for (const element of namedImports.elements) {
-            const originalName = element.propertyName?.text ?? element.name.text;
-            if (originalName === 'journalWriteRepository') {
-              legacyRepositoryBindings.add(element.name.text);
-            }
-          }
-          if (
-            baseName === 'journalWriteRepository' &&
-            importedNames.has('journalWriteRepository') &&
-            !allowedCalls
-          ) {
-            report(node, 'Production code imports the legacy journal write repository');
-          }
-          if (baseName === 'journalWriteModule' && importedNames.has('journalWriteRepository')) {
-            report(node, 'Production code imports the legacy journal write repository');
-          }
-        } else if (
-          baseName === 'journalWriteRepository' ||
-          (baseName === 'journalWriteModule' && namedImports)
-        ) {
-          if (!allowedCalls) {
-            report(node, 'Production code imports the legacy journal write repository');
-          }
-        }
-      }
-
-      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
-        const method = propertyName(node.expression);
-        const receiver = identifierName(node.expression.expression);
-        if (
-          receiver &&
-          legacyRepositoryBindings.has(receiver) &&
-          method &&
-          LEGACY_FINANCIAL_METHODS.has(method)
-        ) {
-          report(node, `Production call uses legacy journal persistence method ${method}`);
-        }
-        if (
-          receiver &&
-          legacyRepositoryBindings.has(receiver) &&
-          method &&
-          allowedCalls &&
-          !allowedCalls.has(method)
-        ) {
-          report(
-            node,
-            `Legacy repository call ${method} is not allowed in this maintenance command`,
-          );
+        if (REMOVED_JOURNAL_WRITE_MODULES.has(baseName)) {
+          report(node, `Production code imports removed journal write module ${baseName}`);
         }
       }
 

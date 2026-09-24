@@ -1,3 +1,4 @@
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
@@ -20,7 +21,6 @@ import { finishDeviceSetup, finishWorkplaceSetup } from '@/src/features/setup/se
 import { createSetupDraft } from '@/src/features/setup/SetupCoordinator';
 import { rememberPreparedRestore } from '@/src/features/setup/pickRestoreSource';
 import { createAccount } from '@/src/services/accounts/accountCommands';
-import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/services/preferences';
@@ -211,7 +211,7 @@ async function seedSmsReadyData(workplaceId: WorkplaceId): Promise<void> {
   }
 
   const journalDate = Date.now() - 60 * 60 * 1000;
-  const journal = await ledgerCreateService.createJournal(
+  const journal = await journalPersistenceService.put(
     {
       description: 'UPI Payment',
       journalDate,
@@ -293,7 +293,7 @@ async function seedSmsSyncHarness(workplaceId: WorkplaceId): Promise<void> {
     throw new Error('[E2E] sms-sync seed requires Bank and Food & Drink accounts');
   }
 
-  await ledgerCreateService.createJournal(
+  await journalPersistenceService.put(
     {
       description: 'UPI Payment',
       journalDate: Date.now() - 30 * 60 * 1000,
@@ -350,7 +350,7 @@ async function seedMergeEditData(workplaceId: WorkplaceId): Promise<void> {
     { id: 'e2e-merge-sports', account: sports, amount: 100, description: 'SMS Sports' },
   ];
   for (const leg of legs) {
-    await ledgerCreateService.createJournal(
+    await journalPersistenceService.put(
       {
         description: leg.description,
         journalDate: Date.now() - 60 * 60 * 1000,

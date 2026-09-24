@@ -59,6 +59,24 @@ export interface PutJournalInput {
   runningBalanceByAccountId?: ReadonlyMap<AccountId, number | null>;
 }
 
+/** Existing-journal update shape for generic sparse puts, such as a description edit. */
+export interface PutJournalPatchInput {
+  journalId: JournalId;
+  journalDate?: number;
+  description?: string;
+  notes?: string;
+  currencyCode?: string;
+  status?: JournalStatus;
+  originalJournalId?: JournalId;
+  plannedPaymentId?: PlannedPaymentId;
+  displayType?: JournalDisplayType;
+  transactions?: JournalPersistenceLine[];
+  metadata?: JournalPersistenceMetadata;
+  runningBalanceByAccountId?: ReadonlyMap<AccountId, number | null>;
+}
+
+export type PutJournalRequest = PutJournalInput | PutJournalPatchInput;
+
 export interface MergeJournalsInput {
   sourceJournalIds: readonly JournalId[];
   description?: string;
@@ -121,14 +139,45 @@ export class JournalPersistenceRepository {
     return database.collections.get<PlannedPayment>('planned_payments');
   }
 
-  async put(input: PutJournalInput, workplaceId: WorkplaceId): Promise<JournalPersistenceResult> {
-    return runAccountingWriteSession(session => this.putInSession(session, input, workplaceId));
+  async put(
+    input: PutJournalPatchInput,
+    workplaceId: WorkplaceId,
+  ): Promise<JournalPersistenceResult>;
+  async put(input: PutJournalRequest, workplaceId: WorkplaceId): Promise<JournalPersistenceResult>;
+  async put(input: PutJournalInput, workplaceId: WorkplaceId): Promise<JournalPersistenceResult>;
+  async put(input: PutJournalRequest, workplaceId: WorkplaceId): Promise<JournalPersistenceResult> {
+    return runAccountingWriteSession(session =>
+      this.stagePutInSession(session, input, workplaceId),
+    );
   }
 
   /** Stage a plain journal write in a caller-owned accounting write session. */
   async putInSession(
     session: AccountingWriteSession,
+    input: PutJournalPatchInput,
+    workplaceId: WorkplaceId,
+  ): Promise<JournalPersistenceResult>;
+  async putInSession(
+    session: AccountingWriteSession,
+    input: PutJournalRequest,
+    workplaceId: WorkplaceId,
+  ): Promise<JournalPersistenceResult>;
+  async putInSession(
+    session: AccountingWriteSession,
     input: PutJournalInput,
+    workplaceId: WorkplaceId,
+  ): Promise<JournalPersistenceResult>;
+  async putInSession(
+    session: AccountingWriteSession,
+    input: PutJournalRequest,
+    workplaceId: WorkplaceId,
+  ): Promise<JournalPersistenceResult> {
+    return this.stagePutInSession(session, input, workplaceId);
+  }
+
+  private async stagePutInSession(
+    session: AccountingWriteSession,
+    input: PutJournalRequest,
     workplaceId: WorkplaceId,
   ): Promise<JournalPersistenceResult> {
     const prepared = await this.preparePutOperations(input, workplaceId, session);
@@ -137,7 +186,7 @@ export class JournalPersistenceRepository {
   }
 
   async putMany(
-    inputs: readonly PutJournalInput[],
+    inputs: readonly PutJournalRequest[],
     workplaceId: WorkplaceId,
   ): Promise<JournalPersistenceResult[]> {
     if (inputs.length === 0) return [];
@@ -936,7 +985,7 @@ export class JournalPersistenceRepository {
   }
 
   private async preparePutOperations(
-    input: PutJournalInput,
+    input: PutJournalRequest,
     workplaceId: WorkplaceId,
     session?: AccountingWriteSession,
   ): Promise<{ ops: () => readonly Model[]; result: JournalPersistenceResult }> {
@@ -944,43 +993,6 @@ export class JournalPersistenceRepository {
       ? await this.findActiveJournal(input.journalId, workplaceId)
       : null;
     if (input.journalId && !existingJournal) throw new Error('Journal not found');
-
-    const previousStatus = existingJournal?.status;
-    const previousJournalDate = existingJournal?.journalDate;
-    const journalCurrency = existingJournal?.currencyCode ?? input.currencyCode;
-    if (
-      existingJournal &&
-      input.currencyCode.trim().toUpperCase() !== journalCurrency.trim().toUpperCase()
-    ) {
-      throw new JournalBalanceError('A saved journal currency cannot be changed');
-    }
-    const effectiveStatus = input.status ?? existingJournal?.status ?? JournalStatus.POSTED;
-    const balance = await this.validateJournal({
-      currencyCode: journalCurrency,
-      transactions: input.transactions,
-      status: effectiveStatus,
-      workplaceId,
-      session,
-    });
-
-    const now = new Date();
-    const journal =
-      existingJournal ??
-      this.journals.prepareCreate(record => {
-        record.workplaceId = workplaceId;
-        record.journalDate = input.journalDate;
-        record.description = input.description;
-        record.notes = input.notes;
-        record.currencyCode = journalCurrency;
-        record.status = effectiveStatus;
-        record.originalJournalId = input.originalJournalId;
-        record.plannedPaymentId = input.plannedPaymentId;
-        record.totalAmount = balance.totalAmount;
-        record.transactionCount = input.transactions.length;
-        record.displayType = input.displayType;
-        record.createdAt = now;
-        record.updatedAt = now;
-      });
 
     const oldTransactions = existingJournal
       ? await this.transactions
@@ -991,6 +1003,78 @@ export class JournalPersistenceRepository {
           )
           .fetch()
       : [];
+    const hasTransactionPayload = input.transactions !== undefined;
+    const transactionLines =
+      input.transactions ??
+      oldTransactions.map(transaction => ({
+        accountId: transaction.accountId,
+        amount: transaction.amount,
+        transactionType: transaction.transactionType as TransactionType,
+        notes: transaction.notes,
+        exchangeRate: transaction.exchangeRate,
+        currencyCode: transaction.currencyCode,
+      }));
+    const journalDate = input.journalDate ?? existingJournal?.journalDate;
+    const description = Object.prototype.hasOwnProperty.call(input, 'description')
+      ? input.description
+      : existingJournal?.description;
+    const notes = Object.prototype.hasOwnProperty.call(input, 'notes')
+      ? input.notes
+      : existingJournal?.notes;
+    const displayType = input.displayType ?? existingJournal?.displayType;
+    const previousStatus = existingJournal?.status;
+    const previousJournalDate = existingJournal?.journalDate;
+    const journalCurrency = existingJournal?.currencyCode ?? input.currencyCode;
+    if (journalCurrency === undefined) {
+      throw new Error('A new journal requires a currency');
+    }
+    if (
+      existingJournal &&
+      input.currencyCode !== undefined &&
+      input.currencyCode.trim().toUpperCase() !== journalCurrency.trim().toUpperCase()
+    ) {
+      throw new JournalBalanceError('A saved journal currency cannot be changed');
+    }
+    if (
+      !existingJournal &&
+      (!hasTransactionPayload || journalDate === undefined || !journalCurrency || !displayType)
+    ) {
+      throw new Error(
+        'A new journal requires a date, currency, display type, and transaction lines',
+      );
+    }
+    if (journalDate === undefined || displayType === undefined) {
+      throw new Error('Journal update is missing required persisted values');
+    }
+
+    const effectiveStatus = input.status ?? existingJournal?.status ?? JournalStatus.POSTED;
+    const balance = await this.validateJournal({
+      currencyCode: journalCurrency,
+      transactions: transactionLines,
+      status: effectiveStatus,
+      workplaceId,
+      session,
+    });
+
+    const now = new Date();
+    const journal =
+      existingJournal ??
+      this.journals.prepareCreate(record => {
+        record.workplaceId = workplaceId;
+        record.journalDate = journalDate;
+        record.description = description;
+        record.notes = notes;
+        record.currencyCode = journalCurrency;
+        record.status = effectiveStatus;
+        record.originalJournalId = input.originalJournalId;
+        record.plannedPaymentId = input.plannedPaymentId;
+        record.totalAmount = balance.totalAmount;
+        record.transactionCount = transactionLines.length;
+        record.displayType = displayType;
+        record.createdAt = now;
+        record.updatedAt = now;
+      });
+
     const existingMetadata =
       input.metadata && existingJournal
         ? await this.metadata
@@ -1010,12 +1094,12 @@ export class JournalPersistenceRepository {
             transactions: oldTransactions.map(mapTransactionToAudit),
           },
           after: {
-            description: input.description,
-            journalDate: input.journalDate,
+            description,
+            journalDate,
             currencyCode: journalCurrency,
             status: effectiveStatus,
             totalAmount: balance.totalAmount,
-            transactions: input.transactions.map(line =>
+            transactions: transactionLines.map(line =>
               mapTransactionToAudit({
                 ...line,
                 currencyCode: balance.accountCurrencyById.get(line.accountId),
@@ -1027,43 +1111,57 @@ export class JournalPersistenceRepository {
     const ops = (): readonly Model[] => {
       const journalOp = existingJournal
         ? existingJournal.prepareUpdate(record => {
-            record.journalDate = input.journalDate;
-            record.description = input.description;
-            record.notes = input.notes;
+            record.journalDate = journalDate;
+            record.description = description;
+            record.notes = notes;
             record.totalAmount = balance.totalAmount;
-            record.transactionCount = input.transactions.length;
-            record.displayType = input.displayType;
+            record.transactionCount = transactionLines.length;
+            record.displayType = displayType;
             record.status = effectiveStatus;
             record.updatedAt = now;
           })
         : journal;
-      const deletedTransactionOps = oldTransactions.map(transaction =>
-        transaction.prepareUpdate(record => {
-          record.deletedAt = now;
-          record.updatedAt = now;
-        }),
-      );
-      const newTransactions = input.transactions.map(line =>
-        this.transactions.prepareCreate(record => {
-          record.journalId = journal.id;
-          record.workplaceId = workplaceId;
-          record.accountId = line.accountId;
-          record.amount = line.amount;
-          record.transactionType = line.transactionType;
-          record.currencyCode = balance.accountCurrencyById.get(line.accountId)!;
-          record.transactionDate = input.journalDate;
-          record.notes = line.notes;
-          record.exchangeRate = line.exchangeRate;
-          record.runningBalance =
-            effectiveStatus === JournalStatus.POSTED
-              ? (input.runningBalanceByAccountId?.get(line.accountId) ?? null)
-              : null;
-          record.createdAt = now;
-          record.updatedAt = now;
-        }),
-      );
+      const transactionOps = hasTransactionPayload
+        ? [
+            ...oldTransactions.map(transaction =>
+              transaction.prepareUpdate(record => {
+                record.deletedAt = now;
+                record.updatedAt = now;
+              }),
+            ),
+            ...transactionLines.map(line =>
+              this.transactions.prepareCreate(record => {
+                record.journalId = journal.id;
+                record.workplaceId = workplaceId;
+                record.accountId = line.accountId;
+                record.amount = line.amount;
+                record.transactionType = line.transactionType;
+                record.currencyCode = balance.accountCurrencyById.get(line.accountId)!;
+                record.transactionDate = journalDate;
+                record.notes = line.notes;
+                record.exchangeRate = line.exchangeRate;
+                record.runningBalance =
+                  effectiveStatus === JournalStatus.POSTED
+                    ? (input.runningBalanceByAccountId?.get(line.accountId) ?? null)
+                    : null;
+                record.createdAt = now;
+                record.updatedAt = now;
+              }),
+            ),
+          ]
+        : journalDate !== existingJournal?.journalDate || effectiveStatus !== previousStatus
+          ? oldTransactions.map(transaction =>
+              transaction.prepareUpdate(record => {
+                if (journalDate !== existingJournal?.journalDate) {
+                  record.transactionDate = journalDate;
+                }
+                record.runningBalance = null;
+                record.updatedAt = now;
+              }),
+            )
+          : [];
 
-      const operations: Model[] = [journalOp, ...deletedTransactionOps, ...newTransactions];
+      const operations: Model[] = [journalOp, ...transactionOps];
       if (input.metadata) {
         if (existingMetadata) {
           operations.push(
@@ -1116,11 +1214,16 @@ export class JournalPersistenceRepository {
       ops,
       result: {
         journal,
-        affectedAccountIds: new Set<AccountId>([
-          ...oldTransactions.map(transaction => transaction.accountId),
-          ...input.transactions.map(transaction => transaction.accountId),
-        ]),
-        rebuildFromDate: Math.min(previousJournalDate ?? input.journalDate, input.journalDate),
+        affectedAccountIds:
+          hasTransactionPayload ||
+          journalDate !== previousJournalDate ||
+          effectiveStatus !== previousStatus
+            ? new Set<AccountId>([
+                ...oldTransactions.map(transaction => transaction.accountId),
+                ...transactionLines.map(transaction => transaction.accountId),
+              ])
+            : new Set<AccountId>(),
+        rebuildFromDate: Math.min(previousJournalDate ?? journalDate, journalDate),
         previousStatus,
         status: effectiveStatus,
       },

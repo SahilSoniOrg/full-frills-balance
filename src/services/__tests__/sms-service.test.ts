@@ -10,7 +10,7 @@ import { JournalId, WorkplaceId } from '@/src/types/ids';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
+import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { smsService } from '@/src/services/sms-service';
 import { database } from '@/src/data/database/Database';
 
@@ -217,7 +217,7 @@ describe('smsService workplace isolation', () => {
 
     const journalIds: JournalId[] = [];
     for (const journalDate of [1_000, 2_000]) {
-      const journal = await journalWriteRepository.createJournalWithTransactions(
+      const journal = await createJournalFixture(
         {
           description: 'Coffee',
           journalDate,

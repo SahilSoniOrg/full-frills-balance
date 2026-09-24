@@ -1,3 +1,4 @@
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 /**
@@ -14,7 +15,6 @@ import { createAccount } from '@/src/services/accounts/accountCommands';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { verifyAccountBalance } from '@/src/services/integrity';
-import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 
 describe('E2E Workflows', () => {
@@ -56,7 +56,7 @@ describe('E2E Workflows', () => {
       });
 
       // Morning: Coffee
-      await ledgerCreateService.createJournal(
+      await journalPersistenceService.put(
         {
           description: 'Morning Coffee',
           journalDate: Date.now() + 1000,
@@ -78,7 +78,7 @@ describe('E2E Workflows', () => {
       );
 
       // Lunch
-      await ledgerCreateService.createJournal(
+      await journalPersistenceService.put(
         {
           description: 'Lunch',
           journalDate: Date.now() + 2000,
@@ -100,7 +100,7 @@ describe('E2E Workflows', () => {
       );
 
       // Bus ride
-      await ledgerCreateService.createJournal(
+      await journalPersistenceService.put(
         {
           description: 'Bus',
           journalDate: Date.now() + 3000,
@@ -196,7 +196,7 @@ describe('E2E Workflows', () => {
       });
 
       // Make a purchase
-      const journal = await ledgerCreateService.createJournal(
+      const journal = await journalPersistenceService.put(
         {
           description: 'Accidental purchase',
           journalDate: FIXED_DATE + 10000,
@@ -260,7 +260,7 @@ describe('E2E Workflows', () => {
       });
 
       // Spend 100 EUR at 1.10 USD/EUR rate (= 110 USD in journal currency)
-      await ledgerCreateService.createJournal(
+      await journalPersistenceService.put(
         {
           description: 'Purchase in EUR',
           journalDate: Date.now(),

@@ -14,7 +14,7 @@ import { WorkplaceId } from '@/src/types/ids';
 import { database } from '@/src/data/database/Database';
 
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
+import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { deleteAccount } from '@/src/services/accounts/accountDeleteCommands';
@@ -183,7 +183,7 @@ describe('AccountRepository', () => {
       });
 
       // Deposit 1000
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'Initial',
           journalDate: Date.now() - 2000,
@@ -211,7 +211,7 @@ describe('AccountRepository', () => {
       );
 
       // Withdraw 300
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'Withdrawal',
           journalDate: Date.now() - 1000,
@@ -260,7 +260,7 @@ describe('AccountRepository', () => {
       const earlierTime = Date.now() - 5000;
       const laterTime = Date.now();
 
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'Earlier',
           journalDate: earlierTime,
@@ -287,7 +287,7 @@ describe('AccountRepository', () => {
         workplaceId,
       );
 
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'Later',
           journalDate: laterTime,
@@ -343,7 +343,7 @@ describe('AccountRepository', () => {
         workplaceId,
       });
 
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'Deposit',
           journalDate: Date.now(),

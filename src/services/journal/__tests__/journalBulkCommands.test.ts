@@ -1,3 +1,4 @@
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
@@ -15,7 +16,6 @@ import {
   mergeJournals,
   undoBulkChangeJournalAccount,
 } from '@/src/services/journal/bulk';
-import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import {
   AccountType,
@@ -65,7 +65,7 @@ describe('journalBulkCommands', () => {
   });
 
   it('bulkRenameJournals updates descriptions and supports undo', async () => {
-    const j1 = await ledgerCreateService.createJournal(
+    const j1 = await journalPersistenceService.put(
       {
         journalDate: Date.now(),
         description: 'Original 1',
@@ -78,7 +78,7 @@ describe('journalBulkCommands', () => {
       WP,
     );
 
-    const j2 = await ledgerCreateService.createJournal(
+    const j2 = await journalPersistenceService.put(
       {
         journalDate: Date.now(),
         description: 'Original 2',
@@ -90,6 +90,15 @@ describe('journalBulkCommands', () => {
       },
       WP,
     );
+
+    const originalTransactionIds = (
+      await database.collections
+        .get<Transaction>('transactions')
+        .query(Q.where('journal_id', Q.oneOf([j1.id, j2.id])))
+        .fetch()
+    )
+      .map(transaction => transaction.id)
+      .sort();
 
     const { renamedCount, inverseRenames } = await bulkRenameJournals(WP, {
       [j1.id as JournalId]: 'Renamed 1',
@@ -103,6 +112,16 @@ describe('journalBulkCommands', () => {
 
     expect(reloaded1.description).toBe('Renamed 1');
     expect(reloaded2.description).toBe('Renamed 2');
+    expect(
+      (
+        await database.collections
+          .get<Transaction>('transactions')
+          .query(Q.where('journal_id', Q.oneOf([j1.id, j2.id])))
+          .fetch()
+      )
+        .map(transaction => transaction.id)
+        .sort(),
+    ).toEqual(originalTransactionIds);
 
     // Test Undo
     await bulkRenameJournals(WP, inverseRenames);
@@ -110,10 +129,20 @@ describe('journalBulkCommands', () => {
     reloaded2 = await database.collections.get<Journal>('journals').find(j2.id);
     expect(reloaded1.description).toBe('Original 1');
     expect(reloaded2.description).toBe('Original 2');
+    expect(
+      (
+        await database.collections
+          .get<Transaction>('transactions')
+          .query(Q.where('journal_id', Q.oneOf([j1.id, j2.id])))
+          .fetch()
+      )
+        .map(transaction => transaction.id)
+        .sort(),
+    ).toEqual(originalTransactionIds);
   });
 
   it('bulkDuplicateJournals creates new clone entries in an atomic batch', async () => {
-    const j1 = await ledgerCreateService.createJournal(
+    const j1 = await journalPersistenceService.put(
       {
         journalDate: Date.now(),
         description: 'To Clone',
@@ -149,7 +178,7 @@ describe('journalBulkCommands', () => {
   });
 
   it('analyzeJournalsForMerge computes preview correctly and enforces balance invariants', async () => {
-    const j1 = await ledgerCreateService.createJournal(
+    const j1 = await journalPersistenceService.put(
       {
         journalDate: 1000,
         description: 'Coffee',
@@ -162,7 +191,7 @@ describe('journalBulkCommands', () => {
       WP,
     );
 
-    const j2 = await ledgerCreateService.createJournal(
+    const j2 = await journalPersistenceService.put(
       {
         journalDate: 2000,
         description: 'Snacks',
@@ -186,7 +215,7 @@ describe('journalBulkCommands', () => {
   });
 
   it('mergeJournals atomically creates combined entry and soft-deletes originals', async () => {
-    const j1 = await ledgerCreateService.createJournal(
+    const j1 = await journalPersistenceService.put(
       {
         journalDate: 1000,
         description: 'Part 1',
@@ -199,7 +228,7 @@ describe('journalBulkCommands', () => {
       WP,
     );
 
-    const j2 = await ledgerCreateService.createJournal(
+    const j2 = await journalPersistenceService.put(
       {
         journalDate: 2000,
         description: 'Part 2',
@@ -235,7 +264,7 @@ describe('journalBulkCommands', () => {
       currencyCode: 'EUR',
     });
     const createJournal = (journalDate: number, description: string) =>
-      ledgerCreateService.createJournal(
+      journalPersistenceService.put(
         {
           journalDate,
           description,
@@ -282,7 +311,7 @@ describe('journalBulkCommands', () => {
 
   it('rejects an unbalanced merged result without changing source rows', async () => {
     const createJournal = (description: string) =>
-      ledgerCreateService.createJournal(
+      journalPersistenceService.put(
         {
           journalDate: 1000,
           description,
@@ -325,7 +354,7 @@ describe('journalBulkCommands', () => {
 
   it('mergeJournals carries planned-payment and SMS links to the merged journal', async () => {
     const plannedPaymentId = 'planned-rent' as PlannedPaymentId;
-    const j1 = await ledgerCreateService.createJournal(
+    const j1 = await journalPersistenceService.put(
       {
         journalDate: 1000,
         description: 'Rent part 1',
@@ -344,7 +373,7 @@ describe('journalBulkCommands', () => {
       },
       WP,
     );
-    const j2 = await ledgerCreateService.createJournal(
+    const j2 = await journalPersistenceService.put(
       {
         journalDate: 2000,
         description: 'Rent part 2',
@@ -395,7 +424,7 @@ describe('journalBulkCommands', () => {
 
   it('analyzeJournalsForMerge rejects different planned-payment links', async () => {
     const createLinkedJournal = (plannedPaymentId: PlannedPaymentId, description: string) =>
-      ledgerCreateService.createJournal(
+      journalPersistenceService.put(
         {
           journalDate: 1000,
           description,
@@ -418,7 +447,7 @@ describe('journalBulkCommands', () => {
   });
 
   it('checkJournalAccountEditEligibility validates single debit / credit rules', async () => {
-    const singleDebitSingleCredit = await ledgerCreateService.createJournal(
+    const singleDebitSingleCredit = await journalPersistenceService.put(
       {
         journalDate: Date.now(),
         description: 'Simple',
@@ -441,7 +470,7 @@ describe('journalBulkCommands', () => {
   });
 
   it('bulkChangeJournalAccount updates destination leg and supports undo', async () => {
-    const j1 = await ledgerCreateService.createJournal(
+    const j1 = await journalPersistenceService.put(
       {
         journalDate: Date.now(),
         description: 'Entry 1',
@@ -482,7 +511,7 @@ describe('journalBulkCommands', () => {
   });
 
   it('bulkDeleteJournals rejects restore after the journal changes', async () => {
-    const journal = await ledgerCreateService.createJournal(
+    const journal = await journalPersistenceService.put(
       {
         journalDate: Date.now(),
         description: 'Changed after delete',
@@ -507,7 +536,7 @@ describe('journalBulkCommands', () => {
   });
 
   it('bulkDeleteJournals soft deletes journals and transactions in an atomic batch', async () => {
-    const j1 = await ledgerCreateService.createJournal(
+    const j1 = await journalPersistenceService.put(
       {
         journalDate: Date.now(),
         description: 'To Delete',

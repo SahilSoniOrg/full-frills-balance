@@ -3,7 +3,7 @@ import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
+import { createJournalFixture } from '@/src/testing/journalFixtures';
 import {
   transactionQueryRepository,
   transactionWriteRepository,
@@ -34,7 +34,7 @@ describe('AccountingRebuildService workplace isolation', () => {
       workplaceId: WORKPLACE_ONE,
     });
 
-    const foreignJournal = await journalWriteRepository.createJournalWithTransactions(
+    const foreignJournal = await createJournalFixture(
       {
         description: 'Malformed foreign link',
         journalDate: 1_000,
@@ -135,7 +135,7 @@ describe('AccountingRebuildService workplace isolation', () => {
       currencyCode: 'USD',
       workplaceId: WORKPLACE_ONE,
     });
-    const journal = await journalWriteRepository.createJournalWithTransactions(
+    const journal = await createJournalFixture(
       {
         description: 'Rebuild preparation',
         journalDate: 1_000,

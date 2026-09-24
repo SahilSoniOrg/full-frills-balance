@@ -1,7 +1,7 @@
 import { Icon } from '@/src/types/domainIcons';
 import { database } from '@/src/data/database/Database';
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
+import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
@@ -49,7 +49,7 @@ describe('TransactionRawMetricsQueries workplace isolation', () => {
     localAccountId = localAccount.id;
     foreignAccountId = foreignAccount.id;
 
-    await journalWriteRepository.createJournalWithTransactions(
+    await createJournalFixture(
       {
         description: 'Valid local transaction',
         journalDate: DAY,
@@ -64,7 +64,7 @@ describe('TransactionRawMetricsQueries workplace isolation', () => {
 
     // Malformed imported relation: a workplace-one transaction points at a
     // workplace-two account. Metrics must reject the joined foreign account.
-    await journalWriteRepository.createJournalWithTransactions(
+    await createJournalFixture(
       {
         description: 'Foreign account link',
         journalDate: DAY + 1_000,
@@ -79,7 +79,7 @@ describe('TransactionRawMetricsQueries workplace isolation', () => {
 
     // Malformed imported relation in the opposite direction: a workplace-two
     // transaction points at the workplace-one account.
-    await journalWriteRepository.createJournalWithTransactions(
+    await createJournalFixture(
       {
         description: 'Foreign transaction link',
         journalDate: DAY + 2_000,

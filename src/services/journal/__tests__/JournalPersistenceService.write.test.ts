@@ -1,21 +1,18 @@
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { database } from '@/src/data/database/Database';
-import { AccountType, TransactionType, JournalStatus } from '@/src/types/enums';
+import { AccountType, JournalDisplayType, TransactionType, JournalStatus } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalListQueryRepository } from '@/src/data/repositories/journal/journalListQueryRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
+import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
-import { ledgerLifecycleService } from '@/src/services/ledger/ledgerLifecycleService';
-import { ledgerUpdateService } from '@/src/services/ledger/ledgerUpdateService';
-import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 
 const workplaceId = 'wp-write' as WorkplaceId;
 
-describe('ledgerWriteService write paths', () => {
+describe('JournalPersistenceService write paths', () => {
   let cashAccountId: AccountId;
   let expenseAccountId: AccountId;
 
@@ -57,52 +54,27 @@ describe('ledgerWriteService write paths', () => {
     },
   ];
 
-  it('createMany returns empty array without writing', async () => {
-    const result = await ledgerCreateService.createMany([], workplaceId);
+  it('putMany returns an empty array without writing', async () => {
+    const result = await journalPersistenceService.putMany([], workplaceId);
     expect(result).toEqual([]);
   });
 
-  it('createMany batches multiple journals in one write', async () => {
+  it('putMany saves multiple journals in one write', async () => {
     const date1 = Date.UTC(2024, 3, 1, 12, 0, 0);
     const date2 = Date.UTC(2024, 3, 2, 12, 0, 0);
-    const prepared1 = await prepareJournalData(
-      {
-        description: 'One',
-        journalDate: date1,
-        currencyCode: 'USD',
-        transactions: balancedLines(),
-      },
-      workplaceId,
-    );
-    const prepared2 = await prepareJournalData(
-      {
-        description: 'Two',
-        journalDate: date2,
-        currencyCode: 'USD',
-        transactions: balancedLines(),
-      },
-      workplaceId,
-    );
-
-    const journals = await ledgerCreateService.createMany(
+    const journals = await journalPersistenceService.putMany(
       [
         {
-          data: {
-            description: 'One',
-            journalDate: date1,
-            currencyCode: 'USD',
-            transactions: balancedLines(),
-          },
-          prepared: prepared1,
+          description: 'One',
+          journalDate: date1,
+          currencyCode: 'USD',
+          transactions: balancedLines(),
         },
         {
-          data: {
-            description: 'Two',
-            journalDate: date2,
-            currencyCode: 'USD',
-            transactions: balancedLines(),
-          },
-          prepared: prepared2,
+          description: 'Two',
+          journalDate: date2,
+          currencyCode: 'USD',
+          transactions: balancedLines(),
         },
       ],
       workplaceId,
@@ -114,8 +86,8 @@ describe('ledgerWriteService write paths', () => {
     expect(listed.length).toBe(2);
   });
 
-  it('updateJournal changes description and enqueues rebuild', async () => {
-    const journal = await ledgerCreateService.createJournal(
+  it('put updates an existing journal and enqueues rebuild', async () => {
+    const journal = await journalPersistenceService.put(
       {
         description: 'Before',
         journalDate: Date.now(),
@@ -127,9 +99,9 @@ describe('ledgerWriteService write paths', () => {
     await rebuildQueueService.flush();
 
     const newDate = Date.UTC(2024, 6, 1, 12, 0, 0);
-    await ledgerUpdateService.updateJournal(
-      journal.id as JournalId,
+    await journalPersistenceService.put(
       {
+        journalId: journal.id as JournalId,
         description: 'After',
         journalDate: newDate,
         currencyCode: 'USD',
@@ -144,11 +116,45 @@ describe('ledgerWriteService write paths', () => {
     expect(updated?.journalDate).toBe(newDate);
   });
 
-  it('updateJournal throws when journal is missing', async () => {
+  it('generic sparse put updates journal fields without replacing transaction rows', async () => {
+    const journal = await journalPersistenceService.put(
+      {
+        description: 'Before sparse update',
+        journalDate: Date.now(),
+        currencyCode: 'USD',
+        transactions: balancedLines(),
+      },
+      workplaceId,
+    );
+    const originalTransactions = await transactionQueryRepository.findByJournal(
+      workplaceId,
+      journal.id as JournalId,
+    );
+
+    await journalPersistenceService.put(
+      { journalId: journal.id as JournalId, description: 'After sparse update' },
+      workplaceId,
+    );
+
+    const updated = await journalQueryRepository.find(workplaceId, journal.id as JournalId);
+    const savedTransactions = await transactionQueryRepository.findByJournal(
+      workplaceId,
+      journal.id as JournalId,
+    );
+    expect(updated?.description).toBe('After sparse update');
+    expect(savedTransactions.map(transaction => transaction.id)).toEqual(
+      originalTransactions.map(transaction => transaction.id),
+    );
+    expect(savedTransactions.map(transaction => transaction.amount)).toEqual(
+      originalTransactions.map(transaction => transaction.amount),
+    );
+  });
+
+  it('put throws when the requested journal is missing', async () => {
     await expect(
-      ledgerUpdateService.updateJournal(
-        'missing' as JournalId,
+      journalPersistenceService.put(
         {
+          journalId: 'missing' as JournalId,
           description: 'Nope',
           journalDate: Date.now(),
           currencyCode: 'USD',
@@ -160,7 +166,7 @@ describe('ledgerWriteService write paths', () => {
   });
 
   it('repository rejects an unbalanced update to an already-posted journal without changing it', async () => {
-    const journal = await ledgerCreateService.createJournal(
+    const journal = await journalPersistenceService.put(
       {
         description: 'Posted before',
         journalDate: Date.now(),
@@ -171,23 +177,28 @@ describe('ledgerWriteService write paths', () => {
     );
 
     await expect(
-      journalWriteRepository.updateJournalWithTransactions(workplaceId, journal.id as JournalId, {
-        description: 'Should not save',
-        journalDate: Date.now(),
-        currencyCode: 'USD',
-        transactions: [
-          {
-            accountId: cashAccountId,
-            amount: 25,
-            transactionType: TransactionType.CREDIT,
-          },
-          {
-            accountId: expenseAccountId,
-            amount: 24.99,
-            transactionType: TransactionType.DEBIT,
-          },
-        ],
-      }),
+      journalPersistenceRepository.put(
+        {
+          journalId: journal.id as JournalId,
+          description: 'Should not save',
+          journalDate: Date.now(),
+          currencyCode: 'USD',
+          displayType: JournalDisplayType.TRANSFER,
+          transactions: [
+            {
+              accountId: cashAccountId,
+              amount: 25,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId,
+              amount: 24.99,
+              transactionType: TransactionType.DEBIT,
+            },
+          ],
+        },
+        workplaceId,
+      ),
     ).rejects.toThrow('0.01 USD');
 
     const savedJournal = await journalQueryRepository.find(workplaceId, journal.id as JournalId);
@@ -200,7 +211,7 @@ describe('ledgerWriteService write paths', () => {
   });
 
   it('allows an unbalanced planned journal but rejects posting it', async () => {
-    const journal = await ledgerCreateService.createJournal(
+    const journal = await journalPersistenceService.put(
       {
         description: 'Unbalanced planned journal',
         journalDate: Date.now(),
@@ -224,7 +235,7 @@ describe('ledgerWriteService write paths', () => {
 
     expect(journal.status).toBe(JournalStatus.PLANNED);
     await expect(
-      ledgerLifecycleService.postJournal(journal.id as JournalId, workplaceId),
+      journalPersistenceService.post(journal.id as JournalId, workplaceId),
     ).rejects.toThrow('0.01 USD');
     expect((await journalQueryRepository.find(workplaceId, journal.id as JournalId))?.status).toBe(
       JournalStatus.PLANNED,
@@ -232,7 +243,7 @@ describe('ledgerWriteService write paths', () => {
   });
 
   it('allows an unbalanced planned update but rejects changing that update to POSTED', async () => {
-    const journal = await ledgerCreateService.createJournal(
+    const journal = await journalPersistenceService.put(
       {
         description: 'Planned balanced journal',
         journalDate: Date.now(),
@@ -260,15 +271,17 @@ describe('ledgerWriteService write paths', () => {
       ],
     };
 
-    await ledgerUpdateService.updateJournal(journal.id as JournalId, unbalancedData, workplaceId);
+    await journalPersistenceService.put(
+      { ...unbalancedData, journalId: journal.id as JournalId },
+      workplaceId,
+    );
     expect((await journalQueryRepository.find(workplaceId, journal.id as JournalId))?.status).toBe(
       JournalStatus.PLANNED,
     );
 
     await expect(
-      ledgerUpdateService.updateJournal(
-        journal.id as JournalId,
-        { ...unbalancedData, status: JournalStatus.POSTED },
+      journalPersistenceService.put(
+        { ...unbalancedData, journalId: journal.id as JournalId, status: JournalStatus.POSTED },
         workplaceId,
       ),
     ).rejects.toThrow('0.01 USD');
@@ -279,25 +292,29 @@ describe('ledgerWriteService write paths', () => {
 
   it('repository rejects an unbalanced posted create before persisting any rows', async () => {
     await expect(
-      journalWriteRepository.bulkCreateJournals(workplaceId, [
-        {
-          journalDate: Date.now(),
-          description: 'Unbalanced posted create',
-          currencyCode: 'USD',
-          transactions: [
-            {
-              accountId: cashAccountId,
-              amount: 25,
-              transactionType: TransactionType.CREDIT,
-            },
-            {
-              accountId: expenseAccountId,
-              amount: 24.99,
-              transactionType: TransactionType.DEBIT,
-            },
-          ],
-        },
-      ]),
+      journalPersistenceRepository.putMany(
+        [
+          {
+            journalDate: Date.now(),
+            description: 'Unbalanced posted create',
+            currencyCode: 'USD',
+            displayType: JournalDisplayType.TRANSFER,
+            transactions: [
+              {
+                accountId: cashAccountId,
+                amount: 25,
+                transactionType: TransactionType.CREDIT,
+              },
+              {
+                accountId: expenseAccountId,
+                amount: 24.99,
+                transactionType: TransactionType.DEBIT,
+              },
+            ],
+          },
+        ],
+        workplaceId,
+      ),
     ).rejects.toThrow('0.01 USD');
 
     expect(await journalListQueryRepository.findAll(workplaceId)).toHaveLength(0);
@@ -310,7 +327,7 @@ describe('ledgerWriteService write paths', () => {
       currencyCode: 'EUR',
       workplaceId,
     });
-    const journal = await ledgerCreateService.createJournal(
+    const journal = await journalPersistenceService.put(
       {
         description: 'Posted transfer',
         journalDate: Date.now(),
@@ -328,13 +345,13 @@ describe('ledgerWriteService write paths', () => {
     )!;
 
     await expect(
-      journalWriteRepository.bulkReassignTransactionAccounts({
+      journalPersistenceRepository.reassignAccounts(
+        {
+          accountIdByTransactionId: new Map([[debitLine.id, foreignCurrencyAccount.id]]),
+          displayTypeByJournalId: new Map(),
+        },
         workplaceId,
-        transactions: [debitLine],
-        newAccountId: foreignCurrencyAccount.id,
-        journals: [journal],
-        displayTypeByJournalId: new Map(),
-      }),
+      ),
     ).rejects.toThrow(/exchange rate/i);
 
     const savedDebitLine = (
@@ -344,7 +361,7 @@ describe('ledgerWriteService write paths', () => {
   });
 
   it('creates a reversal and marks the original reversed in one write', async () => {
-    const original = await ledgerCreateService.createJournal(
+    const original = await journalPersistenceService.put(
       {
         description: 'Lunch',
         journalDate: Date.now(),
@@ -355,7 +372,7 @@ describe('ledgerWriteService write paths', () => {
     );
 
     const writeSpy = jest.spyOn(database, 'write');
-    const reversal = await ledgerCreateService.createReversalJournal(
+    const reversal = await journalPersistenceService.reverse(
       original.id as JournalId,
       'Refund',
       workplaceId,
@@ -373,7 +390,7 @@ describe('ledgerWriteService write paths', () => {
 
   it('does not commit a reversal when the original journal is missing', async () => {
     await expect(
-      ledgerCreateService.createReversalJournal('missing' as JournalId, 'Refund', workplaceId),
+      journalPersistenceService.reverse('missing' as JournalId, 'Refund', workplaceId),
     ).rejects.toThrow(/Original journal not found/);
 
     const listed = await journalListQueryRepository.findAll(workplaceId);
@@ -381,7 +398,7 @@ describe('ledgerWriteService write paths', () => {
   });
 
   it('does not commit a reversal for a foreign workplace journal', async () => {
-    const original = await ledgerCreateService.createJournal(
+    const original = await journalPersistenceService.put(
       {
         description: 'Lunch',
         journalDate: Date.now(),
@@ -392,7 +409,7 @@ describe('ledgerWriteService write paths', () => {
     );
 
     await expect(
-      ledgerCreateService.createReversalJournal(
+      journalPersistenceService.reverse(
         original.id as JournalId,
         'Refund',
         'wp-other' as WorkplaceId,

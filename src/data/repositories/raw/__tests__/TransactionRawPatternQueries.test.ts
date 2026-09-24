@@ -2,7 +2,7 @@ import { Icon } from '@/src/types/domainIcons';
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
+import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { transactionRawPatternQueries } from '@/src/data/repositories/raw/TransactionRawPatternQueries';
 import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
@@ -53,7 +53,7 @@ describe('TransactionRawPatternQueries workplace isolation', () => {
     localAccountId = localAccount.id;
     foreignAccountId = foreignAccount.id;
 
-    const localJournal = await journalWriteRepository.createJournalWithTransactions(
+    const localJournal = await createJournalFixture(
       {
         description: 'Local recurring payment',
         journalDate: startDate,
@@ -64,7 +64,7 @@ describe('TransactionRawPatternQueries workplace isolation', () => {
       },
       workplaceOne,
     );
-    const foreignJournal = await journalWriteRepository.createJournalWithTransactions(
+    const foreignJournal = await createJournalFixture(
       {
         description: 'Foreign recurring payment',
         journalDate: startDate,

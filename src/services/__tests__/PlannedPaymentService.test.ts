@@ -1,11 +1,10 @@
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { database } from '@/src/data/database/Database';
 import { JournalStatus, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
-import { ledgerLifecycleService } from '@/src/services/ledger/ledgerLifecycleService';
 import { deletePlannedPayment } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { togglePlannedPaymentStatus } from '@/src/services/planned-payment/plannedPaymentLifecycle';
 import * as plannedPaymentOrchestration from '@/src/services/planned-payment/plannedPaymentOrchestration';
@@ -15,14 +14,11 @@ import {
   skipPlannedPaymentOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { generatePlannedJournalForPayment } from '@/src/services/planned-payment/plannedPaymentJournalGeneration';
-import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import {
   calculateNextOccurrence,
   computeFirstOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentRecurrence';
 
-jest.mock('@/src/services/ledger/ledgerCreateService');
-jest.mock('@/src/services/ledger/ledgerLifecycleService');
 jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
 jest.mock('@/src/data/repositories/journal/journalPlannedModule');
@@ -332,8 +328,6 @@ describe('planned payment modules', () => {
       expect(journalPlannedQueries.findEarliestPlannedByPayment).not.toHaveBeenCalled();
       expect(journalPlannedQueries.findByPlannedPaymentAndStatus).not.toHaveBeenCalled();
       expect(plannedPaymentRepository.update).not.toHaveBeenCalled();
-      expect(ledgerCreateService.createJournal).not.toHaveBeenCalled();
-      expect(ledgerLifecycleService.postJournal).not.toHaveBeenCalled();
       expect(database.write).not.toHaveBeenCalled();
     });
   });
@@ -364,7 +358,6 @@ describe('planned payment modules', () => {
         mockJournal,
       );
       (journalPlannedQueries.findPlannedOnDay as jest.Mock).mockResolvedValue([mockJournal]);
-      (ledgerLifecycleService.postJournal as jest.Mock).mockResolvedValue({} as any);
 
       const updatePpSpy = jest
         .spyOn(plannedPaymentRepository, 'update')
@@ -394,8 +387,6 @@ describe('planned payment modules', () => {
         { nextOccurrence: mockPP.nextOccurrence },
       );
       expect(journalPersistenceService.afterAtomicWriteCommit).toHaveBeenCalled();
-      expect(ledgerLifecycleService.postJournal).not.toHaveBeenCalled();
-      expect(ledgerCreateService.createJournal).not.toHaveBeenCalled();
       expect(updatePpSpy).not.toHaveBeenCalled();
     });
 

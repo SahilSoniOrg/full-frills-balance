@@ -1,4 +1,4 @@
-import { JournalDisplayType, JournalStatus, TransactionType } from './enums';
+import { JournalStatus, TransactionType } from './enums';
 import { AccountId, JournalId, PlannedPaymentId } from './ids';
 
 /** Plain journal input shared by editor, SMS, and import preparation flows. */
@@ -25,11 +25,4 @@ export interface CreateJournalData {
     originalSmsBody?: string;
     metadataJson?: string;
   };
-}
-
-/** Legacy prepared shape retained for test-only journal model builders. */
-export interface PrepareCreateJournalData extends CreateJournalData {
-  totalAmount?: number;
-  displayType?: JournalDisplayType;
-  calculatedBalances?: Map<string, number | null>;
 }

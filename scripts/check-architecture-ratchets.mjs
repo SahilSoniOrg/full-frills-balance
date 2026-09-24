@@ -29,7 +29,12 @@ const PRESENTATION_ROOTS = [
   'src/features/',
   'src/hooks/',
 ];
-const PERSISTENCE_SEAMS = ['src/data/database/', 'src/data/models/', 'src/data/repositories/'];
+const PERSISTENCE_SEAMS = [
+  'src/data/database/',
+  'src/data/models/',
+  'src/data/repositories/',
+  'src/testing/journalFixtures.ts',
+];
 const MODEL_ACCESS_SEAMS = [
   'src/data/database/',
   'src/data/models/',

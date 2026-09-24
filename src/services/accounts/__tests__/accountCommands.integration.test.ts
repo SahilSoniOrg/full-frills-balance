@@ -26,7 +26,7 @@ import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
+import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { journalListQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
@@ -215,7 +215,7 @@ describe('account commands (integration)', () => {
       workplaceId: WP,
     });
 
-    await journalWriteRepository.createJournalWithTransactions(
+    await createJournalFixture(
       {
         description: 'Seed',
         journalDate: Date.now(),
@@ -288,7 +288,7 @@ describe('account commands (integration)', () => {
       currencyCode: 'USD',
       workplaceId: WP,
     });
-    await journalWriteRepository.createJournalWithTransactions(
+    await createJournalFixture(
       {
         description: 'Seed with stale cache',
         journalDate: 1_000,
@@ -574,7 +574,7 @@ describe('account commands (integration)', () => {
       workplaceId: WP,
     });
 
-    await journalWriteRepository.createJournalWithTransactions(
+    await createJournalFixture(
       {
         description: 'Source transaction',
         journalDate: Date.now(),
@@ -920,7 +920,7 @@ describe('account commands (integration)', () => {
       currencyCode: 'USD',
       workplaceId: WP,
     });
-    await journalWriteRepository.createJournalWithTransactions(
+    await createJournalFixture(
       {
         description: 'Rollback transaction',
         journalDate: Date.now(),

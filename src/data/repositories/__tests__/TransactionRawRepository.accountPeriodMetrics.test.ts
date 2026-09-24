@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
+import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
@@ -42,7 +42,7 @@ describe('TransactionRawRepository account period metrics', () => {
     parentAccountId = parent.id;
     childAccountId = child.id;
 
-    await journalWriteRepository.createJournalWithTransactions(
+    await createJournalFixture(
       {
         description: 'In range',
         journalDate: firstDate,
@@ -55,7 +55,7 @@ describe('TransactionRawRepository account period metrics', () => {
       workplaceId,
     );
 
-    await journalWriteRepository.createJournalWithTransactions(
+    await createJournalFixture(
       {
         description: 'Outside range',
         journalDate: secondDate,

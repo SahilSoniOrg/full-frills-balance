@@ -1,9 +1,9 @@
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { firstValueFrom, take } from 'rxjs';
 import { database } from '@/src/data/database/Database';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { asAccountId, asJournalId, asWorkplaceId } from '@/src/types/ids';
-import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { transactionService } from '../TransactionService';
 
 const workplaceId = asWorkplaceId('wp-1');
@@ -35,7 +35,7 @@ describe('TransactionService observable reads', () => {
   });
 
   it('joins account metadata and derives balance effects', async () => {
-    const journal = await ledgerCreateService.createJournal(
+    const journal = await journalPersistenceService.put(
       {
         description: 'Opening balance',
         journalDate: Date.now(),

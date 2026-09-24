@@ -1,5 +1,6 @@
+import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { brandedKeys, JournalId, WorkplaceId } from '@/src/types/ids';
 
 export interface BulkRenameResult {
@@ -20,25 +21,24 @@ export async function bulkRenameJournals(
     return { renamedCount: 0, inverseRenames: {} };
   }
 
-  const journals = await journalQueryRepository.findByIds(workplaceId, journalIds);
-  const inverseRenames: Record<JournalId, string> = {};
-  const effectiveRenames: Record<JournalId, string> = {};
+  return runAccountingWriteSession(async session => {
+    const journals = await journalQueryRepository.findByIds(workplaceId, journalIds);
+    const journalById = new Map(journals.map(journal => [journal.id as JournalId, journal]));
+    const inverseRenames: Record<JournalId, string> = {};
+    const effectiveRenames = journalIds.flatMap(journalId => {
+      const journal = journalById.get(journalId);
+      const description = renames[journalId];
+      if (!journal || description === undefined || description === (journal.description ?? '')) {
+        return [];
+      }
+      inverseRenames[journalId] = journal.description ?? '';
+      return [{ journalId, description }];
+    });
 
-  for (const journal of journals) {
-    const id = journal.id;
-    const newName = renames[id];
-    if (newName !== undefined && newName !== (journal.description ?? '')) {
-      inverseRenames[id] = journal.description ?? '';
-      effectiveRenames[id] = newName;
+    for (const rename of effectiveRenames) {
+      await journalPersistenceService.putInSession(session, rename, workplaceId);
     }
-  }
 
-  if (Object.keys(effectiveRenames).length > 0) {
-    await journalWriteRepository.bulkUpdateDescriptions(workplaceId, journals, effectiveRenames);
-  }
-
-  return {
-    renamedCount: Object.keys(effectiveRenames).length,
-    inverseRenames,
-  };
+    return { renamedCount: effectiveRenames.length, inverseRenames };
+  });
 }

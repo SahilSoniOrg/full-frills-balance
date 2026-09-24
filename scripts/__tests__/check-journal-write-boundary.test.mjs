@@ -12,49 +12,43 @@ function fixtureRoot(t) {
   return root;
 }
 
-test('allows the new persistence service and the description-only maintenance command', t => {
+test('allows production callers to use the journal persistence boundary', t => {
   const root = fixtureRoot(t);
   fs.writeFileSync(
     path.join(root, 'src/services/journal/JournalPersistenceService.ts'),
     "import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';\njournalPersistenceRepository.put(input, workplaceId);\n",
   );
-  fs.writeFileSync(
-    path.join(root, 'src/services/journal/bulk/bulkRename.ts'),
-    "import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';\njournalWriteRepository.bulkUpdateDescriptions(workplaceId, journals, renames);\n",
-  );
-
   assert.deepEqual(collectJournalWriteBoundaryFindings(root), []);
 });
 
-test('rejects legacy journal services and direct financial repository calls', t => {
+test('rejects imports from removed journal write modules', t => {
   const root = fixtureRoot(t);
   fs.writeFileSync(
     path.join(root, 'src/services/unsafe.ts'),
     [
       "import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';",
-      "import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteModule';",
-      'ledgerCreateService.createJournal(data, workplaceId);',
-      'journalWriteRepository.updateJournalWithTransactions(workplaceId, journalId, data);',
+      "import { ledgerUpdateService } from '@/src/services/ledger/ledgerUpdateService';",
+      "import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';",
+      "import { journalWriteRepository as testWriter } from '@/src/data/repositories/journal/journalWriteModule';",
     ].join('\n'),
   );
 
   const findings = collectJournalWriteBoundaryFindings(root);
-  assert.equal(findings.length, 3);
-  assert.ok(findings.some(finding => finding.message.includes('imports legacy journal service')));
-  assert.ok(findings.some(finding => finding.message.includes('legacy journal write repository')));
-  assert.ok(findings.some(finding => finding.message.includes('updateJournalWithTransactions')));
+  assert.equal(findings.length, 4);
+  assert.ok(findings.every(finding => finding.message.includes('imports removed journal write module')));
 });
 
-test('rejects non-description writes through the maintenance exception', t => {
+test('rejects restoring a removed journal writer file', t => {
   const root = fixtureRoot(t);
-  fs.writeFileSync(
-    path.join(root, 'src/services/journal/bulk/bulkRename.ts'),
-    "import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';\njournalWriteRepository.bulkSoftDeleteJournals(workplaceId, ids);\n",
-  );
+  const removedWriter = path.join(root, 'src/data/repositories/journal/journalWriteRepository.ts');
+  fs.mkdirSync(path.dirname(removedWriter), { recursive: true });
+  fs.writeFileSync(removedWriter, 'export {};\n');
 
-  const findings = collectJournalWriteBoundaryFindings(root);
-  assert.equal(findings.length, 2);
-  assert.ok(
-    findings.some(finding => finding.message.includes('not allowed in this maintenance command')),
-  );
+  assert.deepEqual(collectJournalWriteBoundaryFindings(root), [
+    {
+      file: 'src/data/repositories/journal/journalWriteRepository.ts',
+      line: 1,
+      message: 'Removed journal write layer file has been restored',
+    },
+  ]);
 });

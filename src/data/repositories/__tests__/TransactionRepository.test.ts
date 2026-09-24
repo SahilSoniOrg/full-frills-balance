@@ -3,7 +3,7 @@ import { AccountType, TransactionType, JournalStatus } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
+import { createJournalFixture, softDeleteJournalFixture } from '@/src/testing/journalFixtures';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 
@@ -41,7 +41,7 @@ describe('TransactionRepository', () => {
 
   describe('findByJournal', () => {
     it('should return transactions for a specific journal', async () => {
-      const journal = await journalWriteRepository.createJournalWithTransactions(
+      const journal = await createJournalFixture(
         {
           description: 'Test Journal',
           journalDate: Date.now(),
@@ -73,7 +73,7 @@ describe('TransactionRepository', () => {
 
   describe('findEarliest', () => {
     it('returns the earliest active journal transaction only', async () => {
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'Planned earlier',
           journalDate: 1_000,
@@ -89,7 +89,7 @@ describe('TransactionRepository', () => {
         },
         'wp-1' as WorkplaceId,
       );
-      const posted = await journalWriteRepository.createJournalWithTransactions(
+      const posted = await createJournalFixture(
         {
           description: 'Posted later',
           journalDate: 2_000,
@@ -114,7 +114,7 @@ describe('TransactionRepository', () => {
   describe('rebuildRunningBalances', () => {
     it('should correctly calculate running balances', async () => {
       // Create a sequence of journals
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'T1',
           journalDate: 1000,
@@ -135,7 +135,7 @@ describe('TransactionRepository', () => {
         'wp-1' as WorkplaceId,
       ); // +100
 
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'T2',
           journalDate: 2000,
@@ -176,7 +176,7 @@ describe('TransactionRepository', () => {
 
     it('should handle inserted historic transactions', async () => {
       // T1
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'T1',
           journalDate: 1000,
@@ -198,7 +198,7 @@ describe('TransactionRepository', () => {
       );
 
       // T3
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'T3',
           journalDate: 3000,
@@ -220,7 +220,7 @@ describe('TransactionRepository', () => {
       );
 
       // T2 (Inserted)
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'T2',
           journalDate: 2000,
@@ -266,7 +266,7 @@ describe('TransactionRepository', () => {
 
   describe('findByAccountsAndDateRange', () => {
     it('should filter by date range', async () => {
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'In Range',
           journalDate: 2000,
@@ -287,7 +287,7 @@ describe('TransactionRepository', () => {
         'wp-1' as WorkplaceId,
       );
 
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'Out of Range',
           journalDate: 5000,
@@ -341,7 +341,7 @@ describe('TransactionRepository', () => {
         workplaceId: workplaceTwo,
       });
 
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'First chunk local transaction',
           journalDate: 2_000,
@@ -361,7 +361,7 @@ describe('TransactionRepository', () => {
         },
         workplaceOne,
       );
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'Second chunk local transaction',
           journalDate: 3_000,
@@ -381,7 +381,7 @@ describe('TransactionRepository', () => {
         },
         workplaceOne,
       );
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'Foreign transaction',
           journalDate: 2_500,
@@ -401,7 +401,7 @@ describe('TransactionRepository', () => {
         },
         workplaceTwo,
       );
-      const deletedJournal = await journalWriteRepository.createJournalWithTransactions(
+      const deletedJournal = await createJournalFixture(
         {
           description: 'Deleted local transaction',
           journalDate: 3_500,
@@ -421,8 +421,8 @@ describe('TransactionRepository', () => {
         },
         workplaceOne,
       );
-      await journalWriteRepository.softDeleteJournal(workplaceOne, deletedJournal.id as JournalId);
-      await journalWriteRepository.createJournalWithTransactions(
+      await softDeleteJournalFixture(workplaceOne, deletedJournal.id as JournalId);
+      await createJournalFixture(
         {
           description: 'Out of range local transaction',
           journalDate: 5_000,
@@ -467,7 +467,7 @@ describe('TransactionRepository', () => {
       const workplaceOne = 'wp-1' as WorkplaceId;
       const workplaceTwo = 'wp-2' as WorkplaceId;
 
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'wp-1 tx',
           journalDate: 1_000,
@@ -488,7 +488,7 @@ describe('TransactionRepository', () => {
         workplaceOne,
       );
 
-      await journalWriteRepository.createJournalWithTransactions(
+      await createJournalFixture(
         {
           description: 'wp-2 tx',
           journalDate: 2_000,

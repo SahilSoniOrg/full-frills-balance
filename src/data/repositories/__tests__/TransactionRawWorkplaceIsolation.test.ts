@@ -2,7 +2,7 @@ import { Icon } from '@/src/types/domainIcons';
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
+import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionObserveQueries } from '@/src/data/repositories/transaction';
@@ -81,7 +81,7 @@ describe('TransactionRawRepository workplace isolation', () => {
     });
     foreignAccountId = foreignAccount.id;
 
-    await journalWriteRepository.createJournalWithTransactions(
+    await createJournalFixture(
       {
         description: 'Workplace one transaction',
         journalDate: 1_000,
@@ -91,7 +91,7 @@ describe('TransactionRawRepository workplace isolation', () => {
       WORKPLACE_ONE,
     );
 
-    const localJournal = await journalWriteRepository.createJournalWithTransactions(
+    const localJournal = await createJournalFixture(
       {
         description: 'Local malformed-link host',
         journalDate: 2_000,
@@ -100,7 +100,7 @@ describe('TransactionRawRepository workplace isolation', () => {
       },
       WORKPLACE_ONE,
     );
-    const foreignJournal = await journalWriteRepository.createJournalWithTransactions(
+    const foreignJournal = await createJournalFixture(
       {
         description: 'Foreign malformed-link host',
         journalDate: 3_000,

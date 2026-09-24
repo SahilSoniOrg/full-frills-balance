@@ -1,3 +1,4 @@
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import ExpoSmsInbox, { SmsMessage } from '@/modules/expo-sms-inbox';
 import { database } from '@/src/data/database/Database';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
@@ -11,7 +12,6 @@ import {
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
-import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { SmsParser } from '@/src/services/ledger/SmsParser';
 import { smsSyncPipeline } from '@/src/services/sms/pipeline';
@@ -65,7 +65,7 @@ export async function seedExpenseJournal(params: {
   };
 }): Promise<{ id: JournalId; totalAmount: number }> {
   const workplaceId = params.workplaceId ?? SMS_TEST_WORKPLACE;
-  const journal = await ledgerCreateService.createJournal(
+  const journal = await journalPersistenceService.put(
     {
       description: params.description,
       journalDate: params.journalDate,

@@ -1,3 +1,4 @@
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { Icon } from '@/src/types/domainIcons';
 import { database } from '@/src/data/database/Database';
 import { AccountType, TransactionType } from '@/src/types/enums';
@@ -5,7 +6,6 @@ import { WorkplaceId } from '@/src/types/ids';
 
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
-import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { saveAccount, updateAccount } from '@/src/services/accounts/accountHierarchyCommands';
 
@@ -86,7 +86,7 @@ describe('Account Hierarchy Integration', () => {
       workplaceId,
     });
 
-    await ledgerCreateService.createJournal(
+    await journalPersistenceService.put(
       {
         journalDate: Date.now(),
         description: 'Child Tx',
@@ -144,7 +144,7 @@ describe('Account Hierarchy Integration', () => {
       workplaceId,
     });
 
-    await ledgerCreateService.createJournal(
+    await journalPersistenceService.put(
       {
         journalDate: Date.now(),
         description: 'C Tx',
@@ -258,7 +258,7 @@ describe('Account Hierarchy Integration', () => {
     });
 
     // Add a transaction
-    await ledgerCreateService.createJournal(
+    await journalPersistenceService.put(
       {
         journalDate: Date.now(),
         description: 'Tx',
