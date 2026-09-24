@@ -191,7 +191,6 @@ export const SimpleFormAmountInput = React.memo(function SimpleFormAmountInput({
       {/* Full Expression Math Calculator Modal */}
       <AmountCalculatorSheet
         visible={calculatorVisible}
-        initialAmount={amount}
         currencySymbol={currencySymbol}
         precision={precision}
         onClose={() => setCalculatorVisible(false)}

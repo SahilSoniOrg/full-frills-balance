@@ -6,7 +6,7 @@ import {
   evaluateCalculatorExpression,
   formatRationalToCurrency,
 } from '@/src/utils/amountExpression';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type SetStateAction } from 'react';
 import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 type CalculatorKeyType = 'utility' | 'digit' | 'decimal' | 'operator' | 'backspace' | 'equals';
@@ -19,8 +19,6 @@ type CalculatorKey = {
 
 interface AmountCalculatorSheetProps {
   visible: boolean;
-  /** Kept for API compatibility. Every opening intentionally starts empty. */
-  initialAmount: string;
   currencySymbol: string;
   precision: number;
   onClose: () => void;
@@ -95,7 +93,6 @@ function zeroForPrecision(precision: number): string {
 
 export function AmountCalculatorSheet({
   visible,
-  initialAmount,
   currencySymbol,
   precision,
   onClose,
@@ -106,11 +103,6 @@ export function AmountCalculatorSheet({
   const expressionInputRef = useRef<TextInput>(null);
   const [expression, setExpression] = useState('');
   const [detailsExpanded, setDetailsExpanded] = useState(false);
-
-  // The calculator is an amount-entry surface, not an editor for the prior
-  // transaction amount. Keep the prop for existing callers, but deliberately
-  // reset on each opening.
-  void initialAmount;
 
   useEffect(() => {
     if (!visible) return;
@@ -125,18 +117,21 @@ export function AmountCalculatorSheet({
   const hasUserInput = expression.length > 0;
   const resultDisplay =
     evaluation.formattedValue ?? (hasUserInput ? '—' : zeroForPrecision(precision));
-  const detailsAvailable = Boolean(evaluation.exactValue && evaluation.detailedValue);
-  const showError = Boolean(
-    evaluation.errorMessage && evaluation.error !== 'NEGATIVE_RESULT' && hasUserInput,
-  );
+  const detailsAvailable = Boolean(evaluation.detailedValue);
+  const showError = Boolean(evaluation.errorMessage && hasUserInput);
+  const resultColor = evaluation.error === 'NEGATIVE_RESULT' ? theme.error : theme.primary;
 
-  const setExpressionFromInput = (value: string) => {
-    setExpression(normalizeTypedExpression(value));
+  const editExpression = (update: SetStateAction<string>) => {
+    setExpression(update);
     setDetailsExpanded(false);
   };
 
+  const setExpressionFromInput = (value: string) => {
+    editExpression(normalizeTypedExpression(value));
+  };
+
   const appendDigit = (value: string) => {
-    setExpression(current => {
+    editExpression(current => {
       const operand = currentOperand(current);
       const hasDecimal = operand.includes('.');
       const fractionalDigits = operand.split('.')[1]?.length ?? 0;
@@ -149,32 +144,29 @@ export function AmountCalculatorSheet({
       if (!current && value === '00') return '0';
       return `${current}${value}`;
     });
-    setDetailsExpanded(false);
   };
 
   const appendDecimal = () => {
     if (precision === 0) return;
-    setExpression(current => {
+    editExpression(current => {
       const operand = currentOperand(current);
       if (operand.includes('.')) return current;
       return `${current}${operand ? '.' : '0.'}`;
     });
-    setDetailsExpanded(false);
   };
 
   const appendOperator = (operator: string) => {
-    setExpression(current => {
+    editExpression(current => {
       if (!current) return current;
       if (isOperator(current.at(-1) ?? '')) {
         return `${current.slice(0, -1)}${operator}`;
       }
       return `${current}${operator}`;
     });
-    setDetailsExpanded(false);
   };
 
   const clearCurrentOperand = () => {
-    setExpression(current => {
+    editExpression(current => {
       if (!current || isOperator(current.at(-1) ?? '')) return current;
       const operatorIndex = Math.max(
         current.lastIndexOf('+'),
@@ -184,22 +176,14 @@ export function AmountCalculatorSheet({
       );
       return current.slice(0, operatorIndex + 1);
     });
-    setDetailsExpanded(false);
   };
 
   const backspace = () => {
-    setExpression(current => (current ? current.slice(0, -1) : current));
-    setDetailsExpanded(false);
-  };
-
-  const allClear = () => {
-    setExpression('');
-    setDetailsExpanded(false);
+    editExpression(current => (current ? current.slice(0, -1) : current));
   };
 
   const resetCalculator = () => {
-    setExpression('');
-    setDetailsExpanded(false);
+    editExpression('');
   };
 
   const handleClose = () => {
@@ -214,8 +198,7 @@ export function AmountCalculatorSheet({
 
   const handleEquals = () => {
     if (!evaluation.canSubmit || !evaluation.formattedValue) return;
-    setExpression(evaluation.formattedValue);
-    setDetailsExpanded(false);
+    editExpression(evaluation.formattedValue);
   };
 
   const handleDone = () => {
@@ -240,7 +223,7 @@ export function AmountCalculatorSheet({
         break;
       case 'utility':
         if (key.value === 'AC') {
-          allClear();
+          resetCalculator();
         } else {
           clearCurrentOperand();
         }
@@ -284,10 +267,7 @@ export function AmountCalculatorSheet({
           <AppText
             variant="hero"
             weight="bold"
-            style={[
-              styles.resultAmount,
-              { color: evaluation.error === 'NEGATIVE_RESULT' ? theme.error : theme.primary },
-            ]}
+            style={[styles.resultAmount, { color: resultColor }]}
             numberOfLines={1}
             adjustsFontSizeToFit
             minimumFontScale={0.65}
@@ -296,12 +276,7 @@ export function AmountCalculatorSheet({
             <AppText
               variant="heading"
               weight="bold"
-              style={[
-                styles.currencyPrefix,
-                {
-                  color: evaluation.error === 'NEGATIVE_RESULT' ? theme.error : theme.primary,
-                },
-              ]}
+              style={[styles.currencyPrefix, { color: resultColor }]}
             >
               {currencySymbol}
             </AppText>
@@ -363,16 +338,6 @@ export function AmountCalculatorSheet({
               </View>
             )}
           </>
-        )}
-
-        {evaluation.error === 'NEGATIVE_RESULT' && (
-          <AppText
-            variant="caption"
-            style={{ color: theme.error }}
-            testID="amount-calculator-invalid"
-          >
-            Amount cannot be negative
-          </AppText>
         )}
       </View>
 

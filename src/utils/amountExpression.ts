@@ -18,13 +18,10 @@ export type CalculatorError =
   'DIVISION_BY_ZERO' | 'NEGATIVE_RESULT' | 'EXCESS_PRECISION' | 'INVALID_EXPRESSION';
 
 export type CalculatorEvaluation = {
-  exactValue: Rational | null;
   formattedValue: string | null;
   detailedValue: string | null;
-  normalizedExpression: string;
   error: CalculatorError | null;
   errorMessage: string | null;
-  incomplete: boolean;
   canSubmit: boolean;
 };
 
@@ -72,7 +69,6 @@ function multiplyRationals(left: Rational, right: Rational): Rational {
 }
 
 function divideRationals(left: Rational, right: Rational): Rational {
-  if (right.numerator === 0n) throw new Error('DIVISION_BY_ZERO');
   return rational(left.numerator * right.denominator, left.denominator * right.numerator);
 }
 
@@ -102,28 +98,13 @@ function operatorFromSymbol(symbol: string): CalculatorOperator | null {
   }
 }
 
-function operatorSymbol(operator: CalculatorOperator): string {
-  switch (operator) {
-    case 'ADD':
-      return '+';
-    case 'SUBTRACT':
-      return '−';
-    case 'MULTIPLY':
-      return '×';
-    case 'DIVIDE':
-      return '÷';
-  }
-}
-
 function operatorPrecedence(operator: CalculatorOperator): number {
   return operator === 'MULTIPLY' || operator === 'DIVIDE' ? 2 : 1;
 }
 
 function tokenizeCalculatorExpression(
   expression: string,
-):
-  | { tokens: CalculatorToken[] }
-  | { error: CalculatorError; errorMessage: string; incomplete?: boolean } {
+): { tokens: CalculatorToken[] } | { error: CalculatorError; errorMessage: string } {
   const normalized = expression.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
   const tokens: CalculatorToken[] = [];
   let index = 0;
@@ -158,11 +139,7 @@ function tokenizeCalculatorExpression(
         return { error: 'INVALID_EXPRESSION', errorMessage: 'Invalid number' };
       }
       if (raw === '.') {
-        return {
-          error: 'INVALID_EXPRESSION',
-          errorMessage: 'Incomplete number',
-          incomplete: true,
-        };
+        return { error: 'INVALID_EXPRESSION', errorMessage: 'Incomplete number' };
       }
       tokens.push({ type: 'NUMBER', raw });
       continue;
@@ -180,15 +157,18 @@ function isNumberToken(
   return token.type === 'NUMBER';
 }
 
-function evaluateCalculatorTokens(tokens: CalculatorToken[]): Rational {
+type TokenFailure = { error: Extract<CalculatorError, 'DIVISION_BY_ZERO' | 'INVALID_EXPRESSION'> };
+
+function evaluateCalculatorTokens(tokens: CalculatorToken[]): { value: Rational } | TokenFailure {
   const values: Rational[] = [];
   const operators: CalculatorOperator[] = [];
 
-  const applyTopOperator = () => {
+  const applyTopOperator = (): TokenFailure | null => {
     const operator = operators.pop();
     const right = values.pop();
     const left = values.pop();
-    if (!operator || !left || !right) throw new Error('INVALID_EXPRESSION');
+    if (!operator || !left || !right) return { error: 'INVALID_EXPRESSION' };
+    if (operator === 'DIVIDE' && right.numerator === 0n) return { error: 'DIVISION_BY_ZERO' };
 
     switch (operator) {
       case 'ADD':
@@ -204,12 +184,13 @@ function evaluateCalculatorTokens(tokens: CalculatorToken[]): Rational {
         values.push(divideRationals(left, right));
         break;
     }
+    return null;
   };
 
   for (const token of tokens) {
     if (isNumberToken(token)) {
       const value = parseDecimalRational(token.raw);
-      if (!value) throw new Error('INVALID_EXPRESSION');
+      if (!value) return { error: 'INVALID_EXPRESSION' };
       values.push(value);
       continue;
     }
@@ -218,14 +199,18 @@ function evaluateCalculatorTokens(tokens: CalculatorToken[]): Rational {
       operators.length > 0 &&
       operatorPrecedence(operators[operators.length - 1]) >= operatorPrecedence(token.operator)
     ) {
-      applyTopOperator();
+      const failure = applyTopOperator();
+      if (failure) return failure;
     }
     operators.push(token.operator);
   }
 
-  while (operators.length > 0) applyTopOperator();
-  if (values.length !== 1) throw new Error('INVALID_EXPRESSION');
-  return values[0];
+  while (operators.length > 0) {
+    const failure = applyTopOperator();
+    if (failure) return failure;
+  }
+  if (values.length !== 1) return { error: 'INVALID_EXPRESSION' };
+  return { value: values[0] };
 }
 
 function roundRationalToMinorUnits(value: Rational, precision: number): bigint {
@@ -276,21 +261,17 @@ export function formatRationalForDetails(value: Rational, maxFractionDigits = 12
   return `${negative ? '-' : ''}${integer}.${fraction}${remainder === 0n ? '' : '…'}`;
 }
 
-function formatCalculatorExpression(tokens: CalculatorToken[]): string {
-  return tokens
-    .map(token => (token.type === 'NUMBER' ? token.raw : operatorSymbol(token.operator)))
-    .join(' ');
-}
+const TOKEN_ERROR_MESSAGES = {
+  DIVISION_BY_ZERO: 'Cannot divide by zero',
+  INVALID_EXPRESSION: 'Invalid expression',
+} as const;
 
 function calculatorResult(overrides: Partial<CalculatorEvaluation>): CalculatorEvaluation {
   return {
-    exactValue: null,
     formattedValue: null,
     detailedValue: null,
-    normalizedExpression: '',
     error: null,
     errorMessage: null,
-    incomplete: false,
     canSubmit: false,
     ...overrides,
   };
@@ -306,13 +287,10 @@ export function evaluateCalculatorExpression(
     return calculatorResult({
       error: tokenized.error,
       errorMessage: tokenized.errorMessage,
-      incomplete: tokenized.incomplete ?? false,
     });
   }
 
-  if (tokenized.tokens.length === 0) {
-    return calculatorResult({ incomplete: true });
-  }
+  if (tokenized.tokens.length === 0) return calculatorResult({});
 
   for (const token of tokenized.tokens) {
     if (!isNumberToken(token)) continue;
@@ -348,35 +326,22 @@ export function evaluateCalculatorExpression(
 
   const hasTrailingOperator = expectsNumber;
   const evaluableTokens = hasTrailingOperator ? tokenized.tokens.slice(0, -1) : tokenized.tokens;
-  if (evaluableTokens.length === 0) return calculatorResult({ incomplete: true });
+  if (evaluableTokens.length === 0) return calculatorResult({});
 
-  let exactValue: Rational;
-  try {
-    exactValue = evaluateCalculatorTokens(evaluableTokens);
-  } catch (error) {
-    if (error instanceof Error && error.message === 'DIVISION_BY_ZERO') {
-      return calculatorResult({
-        error: 'DIVISION_BY_ZERO',
-        errorMessage: 'Cannot divide by zero',
-        normalizedExpression: formatCalculatorExpression(evaluableTokens),
-      });
-    }
+  const evaluated = evaluateCalculatorTokens(evaluableTokens);
+  if ('error' in evaluated) {
     return calculatorResult({
-      error: 'INVALID_EXPRESSION',
-      errorMessage: 'Invalid expression',
-      normalizedExpression: formatCalculatorExpression(evaluableTokens),
+      error: evaluated.error,
+      errorMessage: TOKEN_ERROR_MESSAGES[evaluated.error],
     });
   }
 
-  const isNegative = exactValue.numerator < 0n;
+  const isNegative = evaluated.value.numerator < 0n;
   return calculatorResult({
-    exactValue,
-    formattedValue: formatRationalToCurrency(exactValue, precision),
-    detailedValue: formatRationalForDetails(exactValue),
-    normalizedExpression: formatCalculatorExpression(evaluableTokens),
+    formattedValue: formatRationalToCurrency(evaluated.value, precision),
+    detailedValue: formatRationalForDetails(evaluated.value),
     error: isNegative ? 'NEGATIVE_RESULT' : null,
     errorMessage: isNegative ? 'Amount cannot be negative' : null,
-    incomplete: hasTrailingOperator,
     canSubmit: !isNegative,
   });
 }

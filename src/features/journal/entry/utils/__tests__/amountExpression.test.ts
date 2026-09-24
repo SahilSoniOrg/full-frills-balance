@@ -11,7 +11,6 @@ describe('exact calculator evaluator', () => {
     expect(result).toMatchObject({
       formattedValue: '100.00',
       detailedValue: '100',
-      normalizedExpression: '100 ÷ 3 × 3',
       canSubmit: true,
       error: null,
     });
@@ -47,8 +46,6 @@ describe('exact calculator evaluator', () => {
   it('normalizes trailing operators without changing the entered expression until commit', () => {
     expect(evaluateCalculatorExpression('250+', 2)).toMatchObject({
       formattedValue: '250.00',
-      normalizedExpression: '250',
-      incomplete: true,
       canSubmit: true,
     });
   });
@@ -66,10 +63,19 @@ describe('exact calculator evaluator', () => {
   });
 
   it('formats exact repeating results with a bounded detail preview', () => {
-    const result = evaluateCalculatorExpression('100/3', 2);
-    expect(result.exactValue).not.toBeNull();
-    expect(formatRationalForDetails(result.exactValue!)).toBe('33.333333333333…');
-    expect(formatRationalToCurrency(result.exactValue!, 2)).toBe('33.33');
+    expect(evaluateCalculatorExpression('100/3', 2)).toMatchObject({
+      detailedValue: '33.333333333333…',
+      formattedValue: '33.33',
+    });
+    expect(formatRationalForDetails({ numerator: 1n, denominator: 3n }, 4)).toBe('0.3333…');
+  });
+
+  it('reports division by zero inside a larger expression', () => {
+    expect(evaluateCalculatorExpression('5+10/0*2', 2)).toMatchObject({
+      error: 'DIVISION_BY_ZERO',
+      formattedValue: null,
+      canSubmit: false,
+    });
   });
 
   it('handles half-even ties without floating-point assumptions', () => {

@@ -69,7 +69,6 @@ export function CalculatorAmountInput({
       />
       <AmountCalculatorSheet
         visible={visible}
-        initialAmount={value}
         currencySymbol={currencySymbol}
         precision={precision}
         onClose={() => setVisible(false)}
