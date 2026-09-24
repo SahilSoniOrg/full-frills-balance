@@ -7,10 +7,12 @@ import { triggerSaveOutcomeHaptic } from '@/src/utils/haptics';
 import { act, renderHook } from '@testing-library/react-native';
 
 const mockFetchRate = jest.fn();
+let mockFetchHistoricalRate: jest.Mock | undefined;
 jest.mock('@/src/hooks/useExchangeRate', () => ({
   useExchangeRate: () => ({
     fetchRate: mockFetchRate,
     fetchRequiredRate: mockFetchRate,
+    fetchHistoricalRate: mockFetchHistoricalRate,
   }),
 }));
 
@@ -44,6 +46,7 @@ describe('useBulkJournalEditor', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+    mockFetchHistoricalRate = undefined;
   });
 
   it('initializes with a single empty row', () => {
@@ -790,6 +793,58 @@ describe('useBulkJournalEditor', () => {
     // Row MUST still show the second rate (1.25), not the stale rate (1.10)
     expect(result.current.rows[0].exchangeRate).toBe('1.250000');
     expect(result.current.rows[0].convertedAmount).toBe(125);
+  });
+
+  it('fetches the rate for the row date and refetches when the day changes', async () => {
+    const jan1 = Date.parse('2026-01-01T00:00:00.000Z');
+    const jan2 = Date.parse('2026-01-02T00:00:00.000Z');
+    mockFetchHistoricalRate = jest.fn(async (_from: string, _to: string, timestamp: number) => ({
+      rate: timestamp === jan2 ? 1.2 : 1.1,
+    }));
+
+    const { result } = renderHook(() =>
+      useBulkJournalEditor({
+        workplaceId: 'wp1' as WorkplaceId,
+        workplaceCurrency: 'USD',
+        accounts,
+        onSaveSuccess: onSaveSuccessMock,
+      }),
+    );
+    const rowId = result.current.rows[0].id;
+
+    await act(async () => {
+      result.current.rowActions.setJournalDate(rowId, new Date(2026, 0, 1, 10).getTime());
+      result.current.rowActions.setAmount(rowId, '100');
+      result.current.rowActions.setSourceAccount(rowId, 'acc3' as AccountId);
+      result.current.rowActions.setDestinationAccount(rowId, 'acc1' as AccountId);
+    });
+
+    expect(mockFetchHistoricalRate).toHaveBeenLastCalledWith('EUR', 'USD', jan1);
+    expect(mockFetchRate).not.toHaveBeenCalled();
+    expect(result.current.rows[0]).toMatchObject({
+      exchangeRate: '1.100000',
+      convertedAmount: 110,
+    });
+
+    act(() => result.current.rowActions.setManualBaseRate(rowId, 'source', '1.3'));
+    expect(result.current.rows[0].exchangeRate).toBe('1.300000');
+
+    await act(async () => {
+      result.current.rowActions.setJournalDate(rowId, new Date(2026, 0, 2, 10).getTime());
+    });
+
+    expect(mockFetchHistoricalRate).toHaveBeenLastCalledWith('EUR', 'USD', jan2);
+    expect(result.current.rows[0]).toMatchObject({
+      exchangeRate: '1.200000',
+      convertedAmount: 120,
+      sourceBaseRateInput: '',
+    });
+
+    const callsBeforeTimeEdit = mockFetchHistoricalRate.mock.calls.length;
+    await act(async () => {
+      result.current.rowActions.setJournalDate(rowId, new Date(2026, 0, 2, 18).getTime());
+    });
+    expect(mockFetchHistoricalRate).toHaveBeenCalledTimes(callsBeforeTimeEdit);
   });
 
   it('provides loading validation message when exchange rate is loading', async () => {

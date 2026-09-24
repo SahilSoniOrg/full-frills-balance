@@ -1,15 +1,19 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import dayjs from 'dayjs';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
-import { fetchCrossCurrencyRates } from '@/src/services/currency/crossCurrencyRates';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import {
-  hasManualBaseRateDraft,
-  resolveManualWorkplaceRates,
-  resolveWorkplaceRatesFromConvertedAmount,
-} from '@/src/features/journal/entry/manualBaseRate';
+  NO_FX_OVERRIDE,
+  resolveFxPair,
+  withConvertedAmount,
+  withManualBaseRate,
+  type FxFetchedRates,
+  type FxPair,
+} from '@/src/features/journal/entry/fxPair';
+import { fetchPairRates } from '@/src/features/journal/entry/hooks/useCrossCurrencyRates';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { logger } from '@/src/utils/logger';
 import { analytics } from '@/src/services/analytics';
@@ -36,6 +40,12 @@ import type {
 
 const generateRowId = () => generateId();
 const BULK_VALIDATION_DEBOUNCE_MS = 1000;
+const LOADING_RATES: FxFetchedRates = {
+  sourceBaseRate: null,
+  destBaseRate: null,
+  isLoading: true,
+  error: null,
+};
 
 function reconcileVisibleValidation(
   previousRow: BulkJournalRow,
@@ -60,57 +70,54 @@ function reconcileVisibleValidation(
   return { ...nextRow, validationError: undefined };
 }
 
-function applyManualBaseRate(
+function rowJournalDay(journalDate: number): string {
+  return dayjs(journalDate).format('YYYY-MM-DD');
+}
+
+/** FX pair for one bulk row, resolved from the row's accounts, fetched rates, and override. */
+export function resolveBulkRowFxPair(
   row: BulkJournalRow,
   accounts: AccountFields[],
   workplaceCurrency: string,
-): BulkJournalRow {
-  const sourceCurrency = accounts.find(account => account.id === row.sourceId)?.currencyCode;
-  const destinationCurrency = accounts.find(
-    account => account.id === row.destinationId,
-  )?.currencyCode;
-  if (!row.isCrossCurrency || !sourceCurrency || !destinationCurrency) return row;
+): FxPair {
+  return resolveFxPair({
+    sourceCurrency: accounts.find(account => account.id === row.sourceId)?.currencyCode,
+    destCurrency: accounts.find(account => account.id === row.destinationId)?.currencyCode,
+    baseCurrency: workplaceCurrency,
+    fetched: row.fxRates ?? null,
+    override: row.fxOverride,
+    sourceAmount: sanitizeAmount(row.amount) || 0,
+  });
+}
 
-  const resolved = resolveManualWorkplaceRates(
-    sourceCurrency,
-    destinationCurrency,
-    workplaceCurrency,
-    row.sourceBaseRateInput,
-    row.destBaseRateInput,
-  );
-  if (!resolved) {
-    if (
-      hasManualBaseRateDraft(
-        sourceCurrency,
-        destinationCurrency,
-        workplaceCurrency,
-        row.sourceBaseRateInput,
-        row.destBaseRateInput,
-      )
-    ) {
-      return {
-        ...row,
-        rateError: row.exchangeRate ? undefined : 'Rate unavailable',
-      };
-    }
+function projectRowFx(row: BulkJournalRow, pair: FxPair): BulkJournalRow {
+  if (!pair.isCrossCurrency) {
     return {
       ...row,
+      fxRates: null,
+      fxOverride: NO_FX_OVERRIDE,
       exchangeRate: '',
-      convertedAmount: 0,
       sourceBaseRate: undefined,
       destBaseRate: undefined,
-      rateError: 'Rate unavailable',
+      sourceBaseRateInput: '',
+      destBaseRateInput: '',
+      isCrossCurrency: false,
+      convertedAmount: 0,
+      isLoadingRate: false,
+      rateError: undefined,
     };
   }
-
-  const amount = sanitizeAmount(row.amount) || 0;
   return {
     ...row,
-    sourceBaseRate: resolved.sourceBaseRate,
-    destBaseRate: resolved.destBaseRate,
-    exchangeRate: resolved.exchangeRate.toFixed(6),
-    convertedAmount: sanitizeAmount(amount * resolved.exchangeRate) || 0,
-    rateError: undefined,
+    exchangeRate: pair.pairRate ? pair.pairRate.toFixed(6) : '',
+    sourceBaseRate: pair.sourceBaseRate ?? undefined,
+    destBaseRate: pair.destBaseRate ?? undefined,
+    sourceBaseRateInput: pair.manualSourceBaseRate,
+    destBaseRateInput: pair.manualDestBaseRate,
+    isCrossCurrency: true,
+    convertedAmount: pair.convertedAmount === null ? 0 : sanitizeAmount(pair.convertedAmount) || 0,
+    isLoadingRate: pair.isLoading,
+    rateError: pair.rateError ?? undefined,
   };
 }
 
@@ -120,7 +127,7 @@ export function useBulkJournalEditor({
   accounts,
   onSaveSuccess,
 }: UseBulkJournalEditorProps) {
-  const { fetchRequiredRate } = useExchangeRate();
+  const { fetchRequiredRate, fetchHistoricalRate } = useExchangeRate();
   const { saveBulkJournalEntries } = useJournalActions(workplaceId);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submissionInFlightRef = useRef(false);
@@ -148,6 +155,8 @@ export function useBulkJournalEditor({
         isLoadingRate: false,
         validationError: undefined,
         rateError: undefined,
+        fxRates: prevRow.fxRates,
+        fxOverride: prevRow.fxOverride,
       };
     }
     return {
@@ -173,6 +182,7 @@ export function useBulkJournalEditor({
   // Maintain a synchronous ref for immediate reads/writes inside callbacks to prevent race conditions during rapid updates
   const latestRowsRef = useRef(rows);
   const validationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rateRequestSeqRef = useRef(new Map<string, number>());
 
   const clearValidationTimer = useCallback(() => {
     if (validationTimerRef.current) {
@@ -209,11 +219,65 @@ export function useBulkJournalEditor({
     [scheduleValidation],
   );
 
+  const updateRow = useCallback(
+    (rowId: string, update: (row: BulkJournalRow) => BulkJournalRow) => {
+      const nextRows = latestRowsRef.current.map(row => (row.id === rowId ? update(row) : row));
+      commitRows(nextRows);
+      return nextRows.find(row => row.id === rowId);
+    },
+    [commitRows],
+  );
+
+  /** The only path that writes a row's projected FX fields. */
+  const applyRates = useCallback(
+    (row: BulkJournalRow, rates: FxFetchedRates | null = row.fxRates ?? null) => {
+      const nextRow = { ...row, fxRates: rates };
+      return reconcileVisibleValidation(
+        row,
+        projectRowFx(nextRow, resolveBulkRowFxPair(nextRow, accounts, workplaceCurrency)),
+      );
+    },
+    [accounts, workplaceCurrency],
+  );
+
+  const refreshRates = useCallback(
+    (rowId: string) => {
+      const row = latestRowsRef.current.find(item => item.id === rowId);
+      if (!row) return;
+      const requestSeq = (rateRequestSeqRef.current.get(rowId) ?? 0) + 1;
+      rateRequestSeqRef.current.set(rowId, requestSeq);
+
+      const { sourceCurrency, destCurrency, isCrossCurrency } = resolveBulkRowFxPair(
+        row,
+        accounts,
+        workplaceCurrency,
+      );
+      updateRow(rowId, current => applyRates(current, isCrossCurrency ? LOADING_RATES : null));
+      if (!isCrossCurrency) return;
+
+      void fetchPairRates(
+        {
+          sourceCurrency,
+          destCurrency,
+          baseCurrency: workplaceCurrency,
+          journalDate: rowJournalDay(row.journalDate),
+        },
+        { fetchRequiredRate, fetchHistoricalRate },
+      ).then(rates => {
+        if (rateRequestSeqRef.current.get(rowId) !== requestSeq) return;
+        updateRow(rowId, current => applyRates(current, rates));
+      });
+    },
+    [accounts, applyRates, fetchHistoricalRate, fetchRequiredRate, updateRow, workplaceCurrency],
+  );
+
   const addRow = useCallback(() => {
     if (latestRowsRef.current.length >= MAX_BULK_JOURNAL_ROWS) return;
     const lastRow = latestRowsRef.current[latestRowsRef.current.length - 1];
-    commitRows([...latestRowsRef.current, createRow(lastRow)]);
-  }, [commitRows, createRow]);
+    const nextRow = createRow(lastRow);
+    commitRows([...latestRowsRef.current, nextRow]);
+    if (nextRow.fxRates?.isLoading) refreshRates(nextRow.id);
+  }, [commitRows, createRow, refreshRates]);
 
   const removeRow = useCallback(
     (id: string) => {
@@ -232,188 +296,6 @@ export function useBulkJournalEditor({
     setSubmitError(null);
   }, [clearValidationTimer, createRow]);
 
-  const fetchRatesForChangedAccounts = useCallback(
-    async (rowId: string, sourceId: AccountId, destinationId: AccountId, amountStr: string) => {
-      const sourceAccount = accounts.find(a => a.id === sourceId);
-      const destAccount = accounts.find(a => a.id === destinationId);
-
-      const sourceCurrency = sourceAccount?.currencyCode;
-      const destCurrency = destAccount?.currencyCode;
-
-      const isCross = !!(sourceCurrency && destCurrency && sourceCurrency !== destCurrency);
-
-      if (!isCross) {
-        const nextRows = latestRowsRef.current.map(row => {
-          if (row.id !== rowId) return row;
-          const nextRow = {
-            ...row,
-            exchangeRate: '',
-            sourceBaseRate: undefined,
-            destBaseRate: undefined,
-            sourceBaseRateInput: '',
-            destBaseRateInput: '',
-            isCrossCurrency: false,
-            convertedAmount: 0,
-            isLoadingRate: false,
-            validationError: getBulkJournalDuplicateAccountError(row.sourceId, row.destinationId),
-            rateError: undefined,
-          };
-          return reconcileVisibleValidation(row, nextRow);
-        });
-        commitRows(nextRows);
-        return;
-      }
-
-      // Mark row as loading rate
-      const loadingRows = latestRowsRef.current.map(row => {
-        if (row.id !== rowId) return row;
-        return {
-          ...row,
-          isLoadingRate: true,
-          rateError: undefined,
-        };
-      });
-      commitRows(loadingRows);
-
-      try {
-        const rates = await fetchCrossCurrencyRates(
-          sourceCurrency,
-          destCurrency,
-          workplaceCurrency,
-          fetchRequiredRate,
-        );
-        if (!rates) {
-          const noRateRows = latestRowsRef.current.map(row => {
-            if (row.id !== rowId) return row;
-            if (row.sourceId !== sourceId || row.destinationId !== destinationId) return row;
-            if (
-              hasManualBaseRateDraft(
-                sourceCurrency,
-                destCurrency,
-                workplaceCurrency,
-                row.sourceBaseRateInput,
-                row.destBaseRateInput,
-              )
-            ) {
-              const nextRow = applyManualBaseRate(
-                { ...row, isCrossCurrency: true, isLoadingRate: false },
-                accounts,
-                workplaceCurrency,
-              );
-              return reconcileVisibleValidation(row, nextRow);
-            }
-            const nextRow = {
-              ...row,
-              isCrossCurrency: true,
-              exchangeRate: '',
-              sourceBaseRate: undefined,
-              destBaseRate: undefined,
-              convertedAmount: 0,
-              isLoadingRate: false,
-              rateError: 'Rate unavailable',
-            };
-            return reconcileVisibleValidation(row, nextRow);
-          });
-          commitRows(noRateRows);
-          return;
-        }
-        const { sourceBaseRate: srcRate, destBaseRate: dstRate, exchangeRate: crossRate } = rates;
-        const convertedAmount = sanitizeAmount((parseFloat(amountStr) || 0) * crossRate) || 0;
-
-        const successRows = latestRowsRef.current.map(row => {
-          if (row.id !== rowId) return row;
-          // Prevent race condition: if accounts have changed since fetch started, ignore stale results
-          if (row.sourceId !== sourceId || row.destinationId !== destinationId) return row;
-          if (
-            hasManualBaseRateDraft(
-              sourceCurrency,
-              destCurrency,
-              workplaceCurrency,
-              row.sourceBaseRateInput,
-              row.destBaseRateInput,
-            )
-          ) {
-            const nextRow = applyManualBaseRate(
-              { ...row, isCrossCurrency: true, isLoadingRate: false },
-              accounts,
-              workplaceCurrency,
-            );
-            return reconcileVisibleValidation(row, nextRow);
-          }
-          const nextRow = {
-            ...row,
-            exchangeRate: crossRate.toFixed(6),
-            sourceBaseRate: srcRate,
-            destBaseRate: dstRate,
-            isCrossCurrency: true,
-            convertedAmount,
-            isLoadingRate: false,
-            rateError: undefined,
-          };
-          return reconcileVisibleValidation(row, nextRow);
-        });
-        commitRows(successRows);
-      } catch (err) {
-        logger.error('Failed to fetch rate for bulk row', {
-          rowId,
-          sourceCurrency,
-          destCurrency,
-          err,
-        });
-        const errorRows = latestRowsRef.current.map(row => {
-          if (row.id !== rowId) return row;
-          // Prevent race condition: if accounts have changed since fetch started, ignore stale errors
-          if (row.sourceId !== sourceId || row.destinationId !== destinationId) return row;
-          if (
-            hasManualBaseRateDraft(
-              sourceCurrency,
-              destCurrency,
-              workplaceCurrency,
-              row.sourceBaseRateInput,
-              row.destBaseRateInput,
-            )
-          ) {
-            const nextRow = applyManualBaseRate(
-              { ...row, isCrossCurrency: true, isLoadingRate: false },
-              accounts,
-              workplaceCurrency,
-            );
-            return reconcileVisibleValidation(row, nextRow);
-          }
-          const nextRow = {
-            ...row,
-            isCrossCurrency: true,
-            exchangeRate: '',
-            sourceBaseRate: undefined,
-            destBaseRate: undefined,
-            convertedAmount: 0,
-            isLoadingRate: false,
-            rateError: 'Rate unavailable',
-          };
-          return reconcileVisibleValidation(row, nextRow);
-        });
-        commitRows(errorRows);
-      }
-    },
-    [accounts, commitRows, fetchRequiredRate, workplaceCurrency],
-  );
-
-  const updateRow = useCallback(
-    (rowId: string, update: (row: BulkJournalRow) => BulkJournalRow) => {
-      const nextRows = latestRowsRef.current.map(row => (row.id === rowId ? update(row) : row));
-      commitRows(nextRows);
-      return nextRows.find(row => row.id === rowId);
-    },
-    [commitRows],
-  );
-
-  const refreshRatesForRow = useCallback(
-    (rowId: string, row: BulkJournalRow) => {
-      void fetchRatesForChangedAccounts(rowId, row.sourceId, row.destinationId, row.amount);
-    },
-    [fetchRatesForChangedAccounts],
-  );
-
   const setDescription = useCallback(
     (rowId: string, value: string) => {
       updateRow(rowId, row => reconcileVisibleValidation(row, { ...row, description: value }));
@@ -430,63 +312,47 @@ export function useBulkJournalEditor({
 
   const setAmount = useCallback(
     (rowId: string, value: string) => {
-      updateRow(rowId, row => {
-        const sanitizedAmount = sanitizeAmount(value) || 0;
-        const convertedAmount =
-          row.isCrossCurrency && row.exchangeRate
-            ? sanitizeAmount(sanitizedAmount * parseFloat(row.exchangeRate)) || 0
-            : 0;
-        return reconcileVisibleValidation(row, { ...row, amount: value, convertedAmount });
-      });
+      updateRow(rowId, row => applyRates({ ...row, amount: value }));
     },
-    [updateRow],
+    [applyRates, updateRow],
+  );
+
+  const updateAndRefreshRates = useCallback(
+    (rowId: string, update: (row: BulkJournalRow) => BulkJournalRow) => {
+      updateRow(rowId, row =>
+        reconcileVisibleValidation(row, { ...update(row), fxOverride: NO_FX_OVERRIDE }),
+      );
+      refreshRates(rowId);
+    },
+    [refreshRates, updateRow],
   );
 
   const setJournalDate = useCallback(
     (rowId: string, value: number) => {
-      updateRow(rowId, row => reconcileVisibleValidation(row, { ...row, journalDate: value }));
+      const row = latestRowsRef.current.find(item => item.id === rowId);
+      if (row && rowJournalDay(row.journalDate) !== rowJournalDay(value)) {
+        updateAndRefreshRates(rowId, current => ({ ...current, journalDate: value }));
+        return;
+      }
+      updateRow(rowId, current =>
+        reconcileVisibleValidation(current, { ...current, journalDate: value }),
+      );
     },
-    [updateRow],
-  );
-
-  const updateAccountAndRefresh = useCallback(
-    (rowId: string, update: (row: BulkJournalRow) => BulkJournalRow) => {
-      const target = updateRow(rowId, update);
-      if (target) refreshRatesForRow(rowId, target);
-    },
-    [refreshRatesForRow, updateRow],
+    [updateAndRefreshRates, updateRow],
   );
 
   const setSourceAccount = useCallback(
     (rowId: string, value: AccountId) => {
-      updateAccountAndRefresh(rowId, row => {
-        const nextRow = {
-          ...row,
-          sourceId: value,
-          sourceBaseRateInput: '',
-          destBaseRateInput: '',
-          validationError: getBulkJournalDuplicateAccountError(value, row.destinationId),
-        };
-        return reconcileVisibleValidation(row, nextRow);
-      });
+      updateAndRefreshRates(rowId, row => ({ ...row, sourceId: value }));
     },
-    [updateAccountAndRefresh],
+    [updateAndRefreshRates],
   );
 
   const setDestinationAccount = useCallback(
     (rowId: string, value: AccountId) => {
-      updateAccountAndRefresh(rowId, row => {
-        const nextRow = {
-          ...row,
-          destinationId: value,
-          sourceBaseRateInput: '',
-          destBaseRateInput: '',
-          validationError: getBulkJournalDuplicateAccountError(row.sourceId, value),
-        };
-        return reconcileVisibleValidation(row, nextRow);
-      });
+      updateAndRefreshRates(rowId, row => ({ ...row, destinationId: value }));
     },
-    [updateAccountAndRefresh],
+    [updateAndRefreshRates],
   );
 
   const applySuggestion = useCallback(
@@ -520,138 +386,67 @@ export function useBulkJournalEditor({
 
   const setTransactionType = useCallback(
     (rowId: string, value: BulkJournalRow['transactionType']) => {
-      updateAccountAndRefresh(rowId, row => {
+      updateAndRefreshRates(rowId, row => {
         const nextAccounts = resolveGuidedAccountsAfterTabChange(
           value,
           new Map(accounts.map(account => [account.id, account])),
           row.sourceId,
           row.destinationId,
         );
-        const nextRow = {
+        return {
           ...row,
           transactionType: value,
           sourceId: nextAccounts.sourceAccountId,
           destinationId: nextAccounts.destinationAccountId,
-          sourceBaseRateInput: '',
-          destBaseRateInput: '',
-          validationError: getBulkJournalDuplicateAccountError(
-            nextAccounts.sourceAccountId,
-            nextAccounts.destinationAccountId,
-          ),
         };
-        return reconcileVisibleValidation(row, nextRow);
       });
     },
-    [accounts, updateAccountAndRefresh],
+    [accounts, updateAndRefreshRates],
   );
 
   const setConvertedAmount = useCallback(
     (rowId: string, value: number) => {
       updateRow(rowId, row => {
-        const sourceAccount = accounts.find(account => account.id === row.sourceId);
-        const destinationAccount = accounts.find(account => account.id === row.destinationId);
-        const convertedAmount = sanitizeAmount(String(value)) || 0;
-        const rates = resolveWorkplaceRatesFromConvertedAmount({
-          sourceAmount: sanitizeAmount(row.amount) || 0,
-          convertedAmount,
-          sourceCurrency: sourceAccount?.currencyCode ?? workplaceCurrency,
-          destCurrency: destinationAccount?.currencyCode ?? workplaceCurrency,
-          workplaceCurrency,
-          existingSourceBaseRate: row.sourceBaseRate,
-          existingDestBaseRate: row.destBaseRate,
-        });
-
-        const nextRow = rates
-          ? {
-              ...row,
-              sourceBaseRate: rates.sourceBaseRate,
-              destBaseRate: rates.destBaseRate,
-              exchangeRate: rates.exchangeRate.toFixed(6),
-              convertedAmount,
-            }
-          : { ...row, convertedAmount };
-        return reconcileVisibleValidation(row, nextRow);
+        const override = withConvertedAmount(
+          resolveBulkRowFxPair(row, accounts, workplaceCurrency),
+          sanitizeAmount(String(value)) || 0,
+        );
+        return override
+          ? applyRates({ ...row, fxOverride: override })
+          : reconcileVisibleValidation(row, row);
       });
     },
-    [accounts, updateRow, workplaceCurrency],
+    [accounts, applyRates, updateRow, workplaceCurrency],
   );
 
   const setManualBaseRate = useCallback(
     (rowId: string, role: 'source' | 'destination', value: string) => {
-      const target = updateRow(rowId, row =>
-        reconcileVisibleValidation(
-          row,
-          applyManualBaseRate(
-            {
-              ...row,
-              [role === 'source' ? 'sourceBaseRateInput' : 'destBaseRateInput']: value,
-            },
-            accounts,
-            workplaceCurrency,
-          ),
-        ),
-      );
-      if (!target?.isCrossCurrency) return;
-
-      const sourceCurrency = accounts.find(account => account.id === target.sourceId)?.currencyCode;
-      const destCurrency = accounts.find(
-        account => account.id === target.destinationId,
-      )?.currencyCode;
-      if (
-        sourceCurrency &&
-        destCurrency &&
-        !hasManualBaseRateDraft(
-          sourceCurrency,
-          destCurrency,
-          workplaceCurrency,
-          target.sourceBaseRateInput,
-          target.destBaseRateInput,
-        )
-      ) {
-        refreshRatesForRow(rowId, target);
-      }
+      updateRow(rowId, row => {
+        const pair = resolveBulkRowFxPair(row, accounts, workplaceCurrency);
+        if (!pair.isCrossCurrency) return row;
+        return applyRates({ ...row, fxOverride: withManualBaseRate(pair, role, value) });
+      });
     },
-    [accounts, refreshRatesForRow, updateRow, workplaceCurrency],
+    [accounts, applyRates, updateRow, workplaceCurrency],
   );
 
   const swapRowAccounts = useCallback(
     (rowId: string) => {
-      const row = latestRowsRef.current.find(item => item.id === rowId);
-      if (!row) return;
-
-      const nextRows = latestRowsRef.current.map(item => {
-        if (item.id !== rowId) return item;
-        const nextRow = {
-          ...item,
-          sourceId: row.destinationId,
-          destinationId: row.sourceId,
-          sourceBaseRateInput: '',
-          destBaseRateInput: '',
-          validationError: getBulkJournalDuplicateAccountError(row.destinationId, row.sourceId),
-        };
-        return reconcileVisibleValidation(item, nextRow);
-      });
-
-      commitRows(nextRows);
-
-      void fetchRatesForChangedAccounts(rowId, row.destinationId, row.sourceId, row.amount);
+      updateAndRefreshRates(rowId, row => ({
+        ...row,
+        sourceId: row.destinationId,
+        destinationId: row.sourceId,
+      }));
     },
-    [commitRows, fetchRatesForChangedAccounts],
+    [updateAndRefreshRates],
   );
 
   const refreshRowRate = useCallback(
     (rowId: string) => {
-      const row = latestRowsRef.current.find(item => item.id === rowId);
-      if (!row) return;
-
-      const nextRows = latestRowsRef.current.map(item =>
-        item.id === rowId ? { ...item, sourceBaseRateInput: '', destBaseRateInput: '' } : item,
-      );
-      commitRows(nextRows);
-
-      void fetchRatesForChangedAccounts(rowId, row.sourceId, row.destinationId, row.amount);
+      updateRow(rowId, row => ({ ...row, fxOverride: NO_FX_OVERRIDE }));
+      refreshRates(rowId);
     },
-    [commitRows, fetchRatesForChangedAccounts],
+    [refreshRates, updateRow],
   );
 
   const isValid = useMemo(() => {

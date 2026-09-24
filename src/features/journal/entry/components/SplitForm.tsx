@@ -22,7 +22,6 @@ import { useCallback, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 type SplitFormProps = SplitJournalController & {
-  isEditing?: boolean;
   onCreateAccountRequestForRow: (
     rowId: string,
     role: AccountRole,
@@ -76,11 +75,14 @@ export function SplitForm({
   transactionType,
   setTransactionType,
   splits,
+  splitFx,
   addSplitRow,
   removeSplitRow,
   updateSplitRow,
   updateSplitAmounts,
-  updateSourceExchangeRate,
+  updateSplitInputAmount,
+  updateSplitConvertedAmount,
+  resetSplitRate,
   totals,
   currencyContext,
   validationError,
@@ -91,8 +93,6 @@ export function SplitForm({
   setSourceAccountId,
   displayCurrency,
   precision,
-  journalDate,
-  isEditing = false,
   onCreateAccountRequestForRow,
 }: SplitFormProps) {
   const { theme } = useTheme();
@@ -273,10 +273,8 @@ export function SplitForm({
             allAccounts={allAccounts}
             allocationAccounts={allocationAccounts}
             canRemove={canRemove}
-            currencyCode={currencyCode}
-            fallbackPrecision={precision}
             emptyPrompt={typeCopy.allocationEmptyPrompt}
-            isEditing={isEditing}
+            fx={splitFx[row.id]}
             isExpanded={activePickerKey === row.id}
             label={typeCopy.allocationLabel}
             onCreateAccountRequest={(role, intent) =>
@@ -288,15 +286,11 @@ export function SplitForm({
               setActivePickerKey(null);
             }}
             onToggle={() => togglePicker(row.id)}
-            onUpdateAmount={amount => updateSplitRow(row.id, { amount })}
-            onUpdateFxLine={patch => updateSplitRow(row.id, patch)}
-            onUpdateSourceExchangeRate={updateSourceExchangeRate}
+            onChangeAmount={amount => updateSplitInputAmount(row.id, amount)}
+            onConvertedAmountChange={amount => updateSplitConvertedAmount(row.id, amount)}
+            onResetToApiRate={() => resetSplitRate(row.id)}
             removeLabel={strings.removeSplit}
             row={row}
-            sourceCurrency={currencyContext.sourceCurrency}
-            sourceExchangeRate={currencyContext.sourceExchangeRate}
-            journalDate={journalDate}
-            workplaceCurrency={currencyContext.baseCurrency}
           />
         ))}
 

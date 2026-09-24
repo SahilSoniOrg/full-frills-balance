@@ -6,15 +6,8 @@ import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { AccountRole, JournalEntryLine, TabType } from '@/src/types/domainJournal';
 
 import { filterGuidedLegAccounts } from '@/src/services/journal/guidedJournalAccountEligibility';
-
-export function computeSimpleConvertedAmount(
-  numAmount: number,
-  isCrossCurrency: boolean,
-  exchangeRate: number | null,
-): number {
-  if (!isCrossCurrency || !exchangeRate) return numAmount;
-  return numAmount * exchangeRate;
-}
+import { parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
+import { formatRoundedAmount } from '@/src/utils/money';
 
 export function parseSimpleAmountInput(amount: string): number {
   return parseFloat(amount.replace(/[^0-9.]/g, '')) || 0;
@@ -35,6 +28,7 @@ export interface SimpleCrossCurrencySyncInput {
   destBaseRate: number | null;
   sourceCurrency?: string;
   destCurrency?: string;
+  destPrecision: number;
   baseCurrency: string;
   amount: string;
   convertedAmount: number;
@@ -53,6 +47,7 @@ export function buildSimpleCrossCurrencyLineUpdates(
     destBaseRate,
     sourceCurrency,
     destCurrency,
+    destPrecision,
     baseCurrency,
     amount,
     convertedAmount,
@@ -67,13 +62,10 @@ export function buildSimpleCrossCurrencyLineUpdates(
     (sourceCurrency !== baseCurrency || destCurrency !== baseCurrency),
   );
   const hasResolvedBaseRates =
-    Number.isFinite(sourceBaseRate) &&
-    Number.isFinite(destBaseRate) &&
-    (sourceBaseRate ?? 0) > 0 &&
-    (destBaseRate ?? 0) > 0;
+    parsePositiveRate(sourceBaseRate) !== null && parsePositiveRate(destBaseRate) !== null;
 
   if ((isCrossCurrency && exchangeRate) || (needsBaseCurrencyRates && hasResolvedBaseRates)) {
-    const formattedConverted = convertedAmount.toFixed(2);
+    const formattedConverted = formatRoundedAmount(convertedAmount, destPrecision);
 
     if (sourceCurrency !== baseCurrency && sourceBaseRate) {
       const srcRateStr = sourceBaseRate.toFixed(6);

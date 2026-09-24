@@ -35,7 +35,6 @@ export function SimpleModePanel({
   guidedAutopilot,
   onCreateAccountRequestForRole,
   onSelectAccountRequest,
-  workplaceCurrency,
   workplaceId,
   voiceModalVisible,
   onVoiceModalVisibleChange,
@@ -79,18 +78,7 @@ export function SimpleModePanel({
           destinationId={simpleEditor.destinationId}
           onSwapAccounts={swapAccounts}
           onCreateAccountRequest={onCreateAccountRequestForRole}
-          isCrossCurrency={simpleEditor.isCrossCurrency}
-          exchangeRate={simpleEditor.exchangeRate}
-          isLoadingRate={simpleEditor.isLoadingRate}
-          rateError={simpleEditor.rateError}
-          convertedAmount={simpleEditor.convertedAmount}
-          sourceCurrency={simpleEditor.sourceCurrency}
-          destCurrency={simpleEditor.destCurrency}
-          workplaceCurrency={workplaceCurrency}
-          needsWorkplaceRate={simpleEditor.needsWorkplaceRate}
-          showManualRateFields={simpleEditor.showManualRateFields}
-          manualSourceBaseRate={simpleEditor.manualSourceBaseRate}
-          manualDestBaseRate={simpleEditor.manualDestBaseRate}
+          fxPair={simpleEditor.fxPair}
           setManualBaseRate={simpleEditor.setManualBaseRate}
           setConvertedAmount={simpleEditor.setConvertedAmount}
           resetToApiRate={simpleEditor.resetToApiRate}

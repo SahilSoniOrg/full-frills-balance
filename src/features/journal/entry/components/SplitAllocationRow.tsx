@@ -3,56 +3,33 @@ import { SwipeToRemove } from '@/src/components/core';
 import { CompactAmountInput } from '@/src/components/forms/CompactAmountInput';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { Spacing, Typography } from '@/src/constants/design-tokens';
-import { useCrossCurrencyRates } from '@/src/features/journal/entry/hooks/useCrossCurrencyRates';
-import {
-  formatManualBaseRate,
-  resolveWorkplaceRatesFromConvertedAmount,
-} from '@/src/features/journal/entry/manualBaseRate';
-import {
-  amountInRowCurrency,
-  amountInSourceCurrency,
-  getSplitCurrencyPrecision,
-  resolveSplitPairRate,
-  rowAmountFromBase,
-  type SplitRowState,
-} from '@/src/services/journal/splitJournalHelpers';
-import { formatRoundedAmount } from '@/src/utils/money';
+import type { SplitRowFx } from '@/src/features/journal/entry/modes/split/splitJournalState';
+import type { SplitRowState } from '@/src/services/journal/splitJournalHelpers';
 import type { AccountRole } from '@/src/types/domainJournal';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AccountPickerField } from './AccountPickerField';
-import { SplitExchangeRateCard } from './SplitExchangeRateCard';
+import { ExchangeRateCard } from './ExchangeRateCard';
 
 export interface SplitAllocationRowProps {
   allAccounts: AccountFields[];
   allocationAccounts: AccountFields[];
   canRemove: boolean;
-  currencyCode: string;
-  fallbackPrecision: number;
   emptyPrompt: string;
-  isEditing?: boolean;
+  fx: SplitRowFx;
   isExpanded: boolean;
   label: string;
-  journalDate?: string;
+  onChangeAmount: (amount: string) => void;
+  onConvertedAmountChange: (amount: string) => void;
   onCreateAccountRequest: (role: AccountRole, intent: CreateAccountIntent) => void;
   onRemove: () => void;
+  onResetToApiRate: () => void;
   onSelectAccount: (accountId: SplitRowState['accountId']) => void;
   onToggle: () => void;
-  onUpdateAmount: (amount: string) => void;
-  onUpdateFxLine: (patch: { amount: string; exchangeRate: string }) => void;
-  onUpdateSourceExchangeRate: (exchangeRate: string) => void;
   removeLabel: string;
   row: SplitRowState;
-  sourceCurrency?: string;
-  sourceExchangeRate?: string | number;
-  workplaceCurrency: string;
-}
-
-function positiveRate(value: string | number | undefined): number | null {
-  const rate = Number(value);
-  return Number.isFinite(rate) && rate > 0 ? rate : null;
 }
 
 function formatAmountPlaceholder(precision: number): string {
@@ -63,299 +40,23 @@ export function SplitAllocationRow({
   allAccounts,
   allocationAccounts,
   canRemove,
-  currencyCode,
-  fallbackPrecision,
   emptyPrompt,
-  isEditing = false,
+  fx,
   isExpanded,
   label,
-  journalDate,
+  onChangeAmount,
+  onConvertedAmountChange,
   onCreateAccountRequest,
   onRemove,
+  onResetToApiRate,
   onSelectAccount,
   onToggle,
-  onUpdateAmount,
-  onUpdateFxLine,
-  onUpdateSourceExchangeRate,
   removeLabel,
   row,
-  sourceCurrency,
-  sourceExchangeRate,
-  workplaceCurrency,
 }: SplitAllocationRowProps) {
   const { theme } = useTheme();
   const category = allocationAccounts.find(account => account.id === row.accountId);
-  const rowCurrencyCode = (category?.currencyCode || row.accountCurrency || currencyCode)
-    .trim()
-    .toUpperCase();
-  const normalizedSourceCurrency = sourceCurrency?.trim().toUpperCase();
-  const isCrossCurrency = Boolean(
-    normalizedSourceCurrency && rowCurrencyCode && normalizedSourceCurrency !== rowCurrencyCode,
-  );
-  const rowPrecision = row.precision ?? fallbackPrecision;
-  const sourcePrecision = normalizedSourceCurrency
-    ? getSplitCurrencyPrecision(normalizedSourceCurrency, fallbackPrecision)
-    : fallbackPrecision;
-  const [manualSourceBaseRate, setManualSourceBaseRate] = useState('');
-  const [manualDestBaseRate, setManualDestBaseRate] = useState('');
-  const [rateRefreshNonce, setRateRefreshNonce] = useState(0);
-  const [pendingBaseAmount, setPendingBaseAmount] = useState<string | null>(null);
-  const previousPairRef = useRef('');
-  const consumedPendingBaseAmountRef = useRef<string | null>(null);
-
-  const needsWorkplaceRate = Boolean(
-    isCrossCurrency &&
-    normalizedSourceCurrency &&
-    (normalizedSourceCurrency !== workplaceCurrency || rowCurrencyCode !== workplaceCurrency),
-  );
-  const rates = useCrossCurrencyRates({
-    sourceCurrency: normalizedSourceCurrency,
-    destCurrency: rowCurrencyCode,
-    workplaceCurrency,
-    manualSourceBaseRate,
-    manualDestBaseRate,
-    journalDate,
-    refreshNonce: rateRefreshNonce,
-    enabled: needsWorkplaceRate && (!isEditing || rateRefreshNonce > 0),
-  });
-
-  const pairKey = `${normalizedSourceCurrency ?? ''}|${rowCurrencyCode}|${workplaceCurrency}`;
-  useEffect(() => {
-    if (previousPairRef.current === pairKey) return;
-    previousPairRef.current = pairKey;
-    consumedPendingBaseAmountRef.current = null;
-    setManualSourceBaseRate('');
-    setManualDestBaseRate('');
-    setPendingBaseAmount(isCrossCurrency && !positiveRate(row.exchangeRate) ? row.amount : null);
-  }, [isCrossCurrency, pairKey, row.amount, row.exchangeRate]);
-
-  const effectiveWorkplaceRates = useMemo(() => {
-    const sourceRate =
-      normalizedSourceCurrency === workplaceCurrency
-        ? 1
-        : (positiveRate(sourceExchangeRate) ?? rates.sourceBaseRate);
-    const destinationRate =
-      rowCurrencyCode === workplaceCurrency
-        ? 1
-        : (positiveRate(row.exchangeRate) ?? rates.destBaseRate);
-    return { sourceRate, destinationRate };
-  }, [
-    normalizedSourceCurrency,
-    rates.destBaseRate,
-    rates.sourceBaseRate,
-    row.exchangeRate,
-    rowCurrencyCode,
-    sourceExchangeRate,
-    workplaceCurrency,
-  ]);
-
-  useEffect(() => {
-    if (
-      !isCrossCurrency ||
-      normalizedSourceCurrency === workplaceCurrency ||
-      positiveRate(sourceExchangeRate) ||
-      !effectiveWorkplaceRates.sourceRate
-    )
-      return;
-
-    onUpdateSourceExchangeRate(formatManualBaseRate(effectiveWorkplaceRates.sourceRate));
-  }, [
-    effectiveWorkplaceRates.sourceRate,
-    isCrossCurrency,
-    normalizedSourceCurrency,
-    onUpdateSourceExchangeRate,
-    sourceExchangeRate,
-    workplaceCurrency,
-  ]);
-
-  const pairRate = useMemo(
-    () =>
-      resolveSplitPairRate({
-        isCrossCurrency,
-        sourceRate: effectiveWorkplaceRates.sourceRate,
-        destinationRate: effectiveWorkplaceRates.destinationRate,
-        quotedRate: rates.exchangeRate,
-        hasManualWorkplaceRate: Boolean(manualSourceBaseRate || manualDestBaseRate),
-      }),
-    [
-      effectiveWorkplaceRates,
-      isCrossCurrency,
-      manualDestBaseRate,
-      manualSourceBaseRate,
-      rates.exchangeRate,
-    ],
-  );
-
-  const effectivePendingBaseAmount = useMemo(() => {
-    if (pendingBaseAmount === null) return null;
-    if (positiveRate(row.exchangeRate)) return null;
-
-    const pending = Number.parseFloat(pendingBaseAmount);
-    const rowAmount = Number.parseFloat(row.amount);
-    if (!positiveRate(row.exchangeRate) && Number.isFinite(rowAmount) && rowAmount !== pending) {
-      return row.amount;
-    }
-
-    return pendingBaseAmount;
-  }, [pendingBaseAmount, row.amount, row.exchangeRate]);
-
-  const baseAmount = useMemo(() => {
-    if (!isCrossCurrency) return row.amount;
-    if (effectivePendingBaseAmount !== null) return effectivePendingBaseAmount;
-    const nominalAmount = Number.parseFloat(row.amount);
-    return pairRate && Number.isFinite(nominalAmount)
-      ? amountInSourceCurrency(nominalAmount, pairRate, sourcePrecision)
-      : row.amount;
-  }, [effectivePendingBaseAmount, isCrossCurrency, pairRate, row.amount, sourcePrecision]);
-
-  const convertedAmount = useMemo(() => {
-    if (!isCrossCurrency || !pairRate) return '';
-    const base = Number.parseFloat(baseAmount);
-    return Number.isFinite(base) && base > 0
-      ? amountInRowCurrency(base, pairRate, rowPrecision)
-      : '';
-  }, [baseAmount, isCrossCurrency, pairRate, rowPrecision]);
-
-  const persistRates = useCallback(
-    (nextAmount: number, sourceRate: number | null, destinationRate: number | null) => {
-      onUpdateFxLine({
-        amount: formatRoundedAmount(nextAmount, rowPrecision),
-        exchangeRate:
-          rowCurrencyCode === workplaceCurrency && destinationRate === 1
-            ? ''
-            : destinationRate
-              ? formatManualBaseRate(destinationRate)
-              : '',
-      });
-      if (normalizedSourceCurrency !== workplaceCurrency && sourceRate) {
-        onUpdateSourceExchangeRate(formatManualBaseRate(sourceRate));
-      }
-    },
-    [
-      normalizedSourceCurrency,
-      onUpdateFxLine,
-      onUpdateSourceExchangeRate,
-      rowCurrencyCode,
-      rowPrecision,
-      workplaceCurrency,
-    ],
-  );
-
-  useEffect(() => {
-    if (
-      !isCrossCurrency ||
-      pendingBaseAmount === null ||
-      positiveRate(row.exchangeRate) ||
-      !pairRate
-    )
-      return;
-    if (consumedPendingBaseAmountRef.current === effectivePendingBaseAmount) return;
-    const base = Number.parseFloat(effectivePendingBaseAmount ?? pendingBaseAmount);
-    if (!(base > 0) || !effectiveWorkplaceRates.destinationRate) return;
-
-    consumedPendingBaseAmountRef.current = effectivePendingBaseAmount;
-    persistRates(
-      rowAmountFromBase(base, pairRate, rowPrecision),
-      effectiveWorkplaceRates.sourceRate,
-      effectiveWorkplaceRates.destinationRate,
-    );
-  }, [
-    effectivePendingBaseAmount,
-    effectiveWorkplaceRates,
-    isCrossCurrency,
-    pairRate,
-    pendingBaseAmount,
-    persistRates,
-    row.exchangeRate,
-    rowPrecision,
-  ]);
-
-  const handleBaseAmountChange = useCallback(
-    (value: string) => {
-      if (!isCrossCurrency) {
-        onUpdateAmount(value);
-        return;
-      }
-
-      const base = Number.parseFloat(value);
-      if (!(base > 0) || !pairRate || !effectiveWorkplaceRates.destinationRate) {
-        consumedPendingBaseAmountRef.current = null;
-        setPendingBaseAmount(value);
-        onUpdateFxLine({ amount: value, exchangeRate: '' });
-        return;
-      }
-
-      setPendingBaseAmount(null);
-      persistRates(
-        rowAmountFromBase(base, pairRate, rowPrecision),
-        effectiveWorkplaceRates.sourceRate,
-        effectiveWorkplaceRates.destinationRate,
-      );
-    },
-    [
-      effectiveWorkplaceRates,
-      isCrossCurrency,
-      onUpdateAmount,
-      onUpdateFxLine,
-      pairRate,
-      persistRates,
-      rowPrecision,
-    ],
-  );
-
-  const handleConvertedAmountChange = useCallback(
-    (value: string) => {
-      if (!isCrossCurrency || !normalizedSourceCurrency) return;
-      const base = Number.parseFloat(baseAmount);
-      const converted = Number.parseFloat(value);
-      const nextRates = resolveWorkplaceRatesFromConvertedAmount({
-        sourceAmount: base,
-        convertedAmount: converted,
-        sourceCurrency: normalizedSourceCurrency,
-        destCurrency: rowCurrencyCode,
-        workplaceCurrency,
-        existingSourceBaseRate: effectiveWorkplaceRates.sourceRate,
-        existingDestBaseRate: effectiveWorkplaceRates.destinationRate,
-      });
-      if (!nextRates) return;
-
-      setManualSourceBaseRate(
-        normalizedSourceCurrency === workplaceCurrency
-          ? ''
-          : formatManualBaseRate(nextRates.sourceBaseRate),
-      );
-      setManualDestBaseRate(
-        rowCurrencyCode === workplaceCurrency ? '' : formatManualBaseRate(nextRates.destBaseRate),
-      );
-      setPendingBaseAmount(null);
-      persistRates(converted, nextRates.sourceBaseRate, nextRates.destBaseRate);
-    },
-    [
-      baseAmount,
-      effectiveWorkplaceRates,
-      isCrossCurrency,
-      normalizedSourceCurrency,
-      persistRates,
-      rowCurrencyCode,
-      workplaceCurrency,
-    ],
-  );
-
-  const handleResetToApiRate = useCallback(() => {
-    consumedPendingBaseAmountRef.current = null;
-    setPendingBaseAmount(baseAmount);
-    setManualSourceBaseRate('');
-    setManualDestBaseRate('');
-    onUpdateFxLine({ amount: baseAmount, exchangeRate: '' });
-    if (normalizedSourceCurrency !== workplaceCurrency) onUpdateSourceExchangeRate('');
-    setRateRefreshNonce(nonce => nonce + 1);
-  }, [
-    baseAmount,
-    normalizedSourceCurrency,
-    onUpdateFxLine,
-    onUpdateSourceExchangeRate,
-    workplaceCurrency,
-  ]);
+  const { pair, inputAmount, inputCurrency, inputPrecision, rowPrecision } = fx;
 
   const handleAccessibilityAction = useCallback(
     (event: { nativeEvent: { actionName: string } }) => {
@@ -368,24 +69,19 @@ export function SplitAllocationRow({
     <View
       style={[
         styles.rowGroup,
-        isCrossCurrency && styles.fxRowGroup,
+        pair.isCrossCurrency && styles.fxRowGroup,
         { borderTopColor: theme.border },
       ]}
       testID={`split-allocation-row-${row.id}`}
       accessibilityActions={canRemove ? [{ name: 'delete', label: removeLabel }] : undefined}
       onAccessibilityAction={handleAccessibilityAction}
     >
-      <SplitExchangeRateCard
-        baseCurrency={normalizedSourceCurrency || currencyCode}
-        convertedAmount={convertedAmount}
-        convertedCurrency={rowCurrencyCode}
-        exchangeRate={pairRate}
-        isLoadingRate={rates.isLoadingRate}
-        onConvertedAmountChange={handleConvertedAmountChange}
-        onResetToApiRate={handleResetToApiRate}
+      <ExchangeRateCard
+        variant="attached"
+        pair={pair}
         precision={rowPrecision}
-        rateError={rates.rateError}
-        visible={isCrossCurrency}
+        onConvertedAmountChange={onConvertedAmountChange}
+        onResetToApiRate={onResetToApiRate}
         testIDPrefix={`split-fx-${row.id}`}
       />
       <View style={styles.allocationRow}>
@@ -405,16 +101,12 @@ export function SplitAllocationRow({
           testIDPrefix={`split-category-picker-${row.id}`}
         />
         <CompactAmountInput
-          value={baseAmount}
-          onChangeText={handleBaseAmountChange}
-          currency={isCrossCurrency ? normalizedSourceCurrency || currencyCode : rowCurrencyCode}
-          currencySymbol={
-            CURRENCY_SYMBOLS[
-              isCrossCurrency ? normalizedSourceCurrency || currencyCode : rowCurrencyCode
-            ] || (isCrossCurrency ? normalizedSourceCurrency || currencyCode : rowCurrencyCode)
-          }
-          precision={isCrossCurrency ? sourcePrecision : rowPrecision}
-          placeholder={formatAmountPlaceholder(isCrossCurrency ? sourcePrecision : rowPrecision)}
+          value={inputAmount}
+          onChangeText={onChangeAmount}
+          currency={inputCurrency}
+          currencySymbol={CURRENCY_SYMBOLS[inputCurrency] || inputCurrency}
+          precision={inputPrecision}
+          placeholder={formatAmountPlaceholder(inputPrecision)}
           containerStyle={styles.amountInputContainer}
           inputStyle={[styles.amountInputText, { color: theme.text }]}
           testID={`split-amount-input-${row.id}`}

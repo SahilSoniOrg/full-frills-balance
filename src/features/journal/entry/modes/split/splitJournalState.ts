@@ -5,8 +5,18 @@ import {
   SplitValidationError,
   SplitCurrencyContext,
 } from '@/src/services/journal/splitJournalHelpers';
+import type { FxPair } from '@/src/features/journal/entry/fxPair';
 import { AccountId } from '@/src/types/ids';
 import { TabType } from '@/src/types/domainJournal';
+
+/** Resolved FX view of one allocation row. Cross-currency rows are entered in the source currency. */
+export interface SplitRowFx {
+  pair: FxPair;
+  inputAmount: string;
+  inputCurrency: string;
+  inputPrecision: number;
+  rowPrecision: number;
+}
 
 /** Observable split-entry draft + derived display fields. */
 export interface SplitJournalState {
@@ -14,6 +24,7 @@ export interface SplitJournalState {
   sourceAccountId: AccountId;
   totalAmount: string;
   splits: SplitRowState[];
+  splitFx: Record<string, SplitRowFx>;
   totals: SplitTotals;
   currencyContext: SplitCurrencyContext;
   isValid: boolean;
@@ -34,7 +45,6 @@ export interface SplitJournalActions {
   setTransactionType: (type: TabType) => void;
   setSourceAccountId: (id: AccountId) => void;
   setTotalAmount: (amount: string) => void;
-  updateSourceExchangeRate: (exchangeRate: string) => void;
   addSplitRow: () => void;
   removeSplitRow: (id: string) => void;
   updateSplitRow: (
@@ -42,6 +52,9 @@ export interface SplitJournalActions {
     patch: Partial<Pick<SplitRowState, 'accountId' | 'amount' | 'exchangeRate'>>,
   ) => void;
   updateSplitAmounts: (updates: Record<string, string>) => void;
+  updateSplitInputAmount: (id: string, amount: string) => void;
+  updateSplitConvertedAmount: (id: string, amount: string) => void;
+  resetSplitRate: (id: string) => void;
 }
 
 /** Full split-mode controller contract used by SplitForm and shell wiring. */

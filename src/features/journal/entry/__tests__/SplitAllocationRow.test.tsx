@@ -1,9 +1,11 @@
 import { ArchiveVisibilityScopeProvider } from '@/src/contexts/ArchiveVisibilityScope';
+import { resolveFxPair } from '@/src/features/journal/entry/fxPair';
+import type { SplitRowFx } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import { AccountType } from '@/src/types/enums';
 import { asAccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { act, fireEvent, render, screen } from '@/src/utils/test-utils';
-import React, { useState } from 'react';
+import React from 'react';
 import { SplitAllocationRow } from '../components/SplitAllocationRow';
 
 jest.mock('@/src/hooks/use-reduced-motion', () => ({
@@ -25,24 +27,6 @@ jest.mock('react-native-gesture-handler', () => ({
   GestureDetector: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-jest.mock('@/src/features/journal/entry/hooks/useCrossCurrencyRates', () => ({
-  useCrossCurrencyRates: jest.fn(),
-}));
-
-const mockUseCrossCurrencyRates = jest.requireMock(
-  '@/src/features/journal/entry/hooks/useCrossCurrencyRates',
-).useCrossCurrencyRates as jest.Mock;
-
-beforeEach(() => {
-  mockUseCrossCurrencyRates.mockReturnValue({
-    exchangeRate: null,
-    sourceBaseRate: null,
-    destBaseRate: null,
-    isLoadingRate: false,
-    rateError: null,
-  });
-});
-
 const accounts: AccountFields[] = [
   {
     id: asAccountId('category-food'),
@@ -58,6 +42,30 @@ const accounts: AccountFields[] = [
   } as AccountFields,
 ];
 
+const sameCurrencyFx: SplitRowFx = {
+  pair: resolveFxPair({ sourceCurrency: 'INR', destCurrency: 'INR', baseCurrency: 'INR' }),
+  inputAmount: '12.50',
+  inputCurrency: 'INR',
+  inputPrecision: 2,
+  rowPrecision: 2,
+};
+
+function foreignFx(destBaseRate: number | null, inputAmount: string): SplitRowFx {
+  return {
+    pair: resolveFxPair({
+      sourceCurrency: 'USD',
+      destCurrency: 'INR',
+      baseCurrency: 'USD',
+      fetched: { sourceBaseRate: 1, destBaseRate, isLoading: false, error: null },
+      sourceAmount: Number.parseFloat(inputAmount) || 0,
+    }),
+    inputAmount,
+    inputCurrency: 'USD',
+    inputPrecision: 2,
+    rowPrecision: 2,
+  };
+}
+
 function renderRow(overrides: Partial<React.ComponentProps<typeof SplitAllocationRow>> = {}) {
   return render(
     <ArchiveVisibilityScopeProvider>
@@ -65,21 +73,18 @@ function renderRow(overrides: Partial<React.ComponentProps<typeof SplitAllocatio
         allAccounts={accounts}
         allocationAccounts={accounts}
         canRemove
-        currencyCode="INR"
-        fallbackPrecision={2}
         emptyPrompt="Choose category"
+        fx={sameCurrencyFx}
         isExpanded
         label="Category"
+        onChangeAmount={jest.fn()}
+        onConvertedAmountChange={jest.fn()}
         onCreateAccountRequest={jest.fn()}
         onRemove={jest.fn()}
+        onResetToApiRate={jest.fn()}
         onSelectAccount={jest.fn()}
         onToggle={jest.fn()}
-        onUpdateAmount={jest.fn()}
-        onUpdateFxLine={jest.fn()}
-        onUpdateSourceExchangeRate={jest.fn()}
         removeLabel="Remove split"
-        sourceCurrency="INR"
-        workplaceCurrency="INR"
         row={{
           id: 'row-1',
           accountId: asAccountId('category-food'),
@@ -93,269 +98,15 @@ function renderRow(overrides: Partial<React.ComponentProps<typeof SplitAllocatio
 }
 
 describe('SplitAllocationRow', () => {
-  it('does not fetch rates while opening an existing allocation with saved rates', () => {
-    const onUpdateFxLine = jest.fn();
-    renderRow({
-      currencyCode: 'EUR',
-      isEditing: true,
-      sourceCurrency: 'EUR',
-      sourceExchangeRate: 1.1,
-      workplaceCurrency: 'USD',
-      row: {
-        id: 'saved-row',
-        accountId: asAccountId('missing-account'),
-        accountCurrency: 'USD',
-        amount: '11.00',
-        exchangeRate: '1',
-        precision: 2,
-      },
-      onUpdateFxLine,
-    });
-
-    expect(mockUseCrossCurrencyRates).toHaveBeenCalledWith(
-      expect.objectContaining({ enabled: false, workplaceCurrency: 'USD' }),
-    );
-    expect(onUpdateFxLine).not.toHaveBeenCalled();
-  });
-
-  it('does not loop while bootstrapping a missing foreign rate through a parent update', () => {
-    mockUseCrossCurrencyRates.mockReturnValue({
-      exchangeRate: 0.01,
-      sourceBaseRate: 1,
-      destBaseRate: 100,
-      isLoadingRate: false,
-      rateError: null,
-    });
-
-    const persistFxLine = jest.fn();
-
-    function Harness() {
-      const [row, setRow] = useState({
-        id: 'foreign-bootstrap',
-        accountId: asAccountId('category-food'),
-        accountCurrency: 'INR',
-        amount: '8.00',
-        exchangeRate: '',
-        precision: 2,
-      });
-
-      return (
-        <ArchiveVisibilityScopeProvider>
-          <SplitAllocationRow
-            allAccounts={accounts}
-            allocationAccounts={accounts}
-            canRemove={false}
-            currencyCode="USD"
-            fallbackPrecision={2}
-            emptyPrompt="Choose category"
-            isExpanded={false}
-            label="Category"
-            onCreateAccountRequest={jest.fn()}
-            onRemove={jest.fn()}
-            onSelectAccount={jest.fn()}
-            onToggle={jest.fn()}
-            onUpdateAmount={jest.fn()}
-            onUpdateFxLine={patch => {
-              persistFxLine(patch);
-              setRow(current => ({ ...current, ...patch }));
-            }}
-            onUpdateSourceExchangeRate={jest.fn()}
-            removeLabel="Remove split"
-            sourceCurrency="USD"
-            workplaceCurrency="USD"
-            row={row}
-          />
-        </ArchiveVisibilityScopeProvider>
-      );
-    }
-
-    const { rerender } = render(<Harness />);
-    expect(persistFxLine).toHaveBeenCalledTimes(1);
-
-    rerender(<Harness />);
-
-    expect(screen.getByTestId('split-fx-foreign-bootstrap-card')).toBeTruthy();
-    expect(persistFxLine).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows a parent-applied equal split after an initial zero foreign amount', () => {
-    mockUseCrossCurrencyRates.mockReturnValue({
-      exchangeRate: 100,
-      sourceBaseRate: 1,
-      destBaseRate: 0.01,
-      isLoadingRate: false,
-      rateError: null,
-    });
-
-    const onUpdateFxLine = jest.fn();
-    const result = renderRow({
-      currencyCode: 'USD',
-      row: {
-        id: 'foreign-equal-split',
-        accountId: asAccountId('category-food'),
-        accountCurrency: 'INR',
-        amount: '0.00',
-        exchangeRate: '',
-        precision: 2,
-      },
-      sourceCurrency: 'USD',
-      workplaceCurrency: 'USD',
-      onUpdateFxLine,
-    });
-
-    result.rerender(
-      <ArchiveVisibilityScopeProvider>
-        <SplitAllocationRow
-          allAccounts={accounts}
-          allocationAccounts={accounts}
-          canRemove={false}
-          currencyCode="USD"
-          fallbackPrecision={2}
-          emptyPrompt="Choose category"
-          isExpanded={false}
-          label="Category"
-          onCreateAccountRequest={jest.fn()}
-          onRemove={jest.fn()}
-          onSelectAccount={jest.fn()}
-          onToggle={jest.fn()}
-          onUpdateAmount={jest.fn()}
-          onUpdateFxLine={onUpdateFxLine}
-          onUpdateSourceExchangeRate={jest.fn()}
-          removeLabel="Remove split"
-          row={{
-            id: 'foreign-equal-split',
-            accountId: asAccountId('category-food'),
-            accountCurrency: 'INR',
-            amount: '800.00',
-            exchangeRate: '',
-            precision: 2,
-          }}
-          sourceCurrency="USD"
-          workplaceCurrency="USD"
-        />
-      </ArchiveVisibilityScopeProvider>,
-    );
-
-    expect(screen.getByTestId('split-amount-input-foreign-equal-split')).toHaveProp(
-      'value',
-      '800.00',
-    );
-    expect(onUpdateFxLine).toHaveBeenCalledWith({
-      amount: '80000.00',
-      exchangeRate: '0.010000',
-    });
-  });
-
-  it('publishes the fetched source rate before a zero foreign split is equalized', () => {
-    mockUseCrossCurrencyRates.mockReturnValue({
-      exchangeRate: 0.0104,
-      sourceBaseRate: 0.0104,
-      destBaseRate: 1,
-      isLoadingRate: false,
-      rateError: null,
-    });
-
-    const usdAccounts = [
-      {
-        ...accounts[0],
-        currencyCode: 'USD',
-      },
-    ];
-    const onUpdateSourceExchangeRate = jest.fn();
-
-    renderRow({
-      allAccounts: usdAccounts,
-      allocationAccounts: usdAccounts,
-      currencyCode: 'INR',
-      onUpdateSourceExchangeRate,
-      row: {
-        id: 'foreign-zero-source-rate',
-        accountId: asAccountId('category-food'),
-        accountCurrency: 'USD',
-        amount: '0.00',
-        exchangeRate: '',
-        precision: 2,
-      },
-      sourceCurrency: 'INR',
-      workplaceCurrency: 'USD',
-    });
-
-    expect(onUpdateSourceExchangeRate).toHaveBeenCalledWith('0.010400');
-  });
-
-  it('persists a refreshed API rate even when the base amount is unchanged', () => {
-    mockUseCrossCurrencyRates.mockReturnValue({
-      exchangeRate: 0.01,
-      sourceBaseRate: 1,
-      destBaseRate: 100,
-      isLoadingRate: false,
-      rateError: null,
-    });
-
-    const persistFxLine = jest.fn();
-
-    function Harness() {
-      const [row, setRow] = useState({
-        id: 'foreign-reset',
-        accountId: asAccountId('category-food'),
-        accountCurrency: 'INR',
-        amount: '8.00',
-        exchangeRate: '',
-        precision: 2,
-      });
-
-      return (
-        <ArchiveVisibilityScopeProvider>
-          <SplitAllocationRow
-            allAccounts={accounts}
-            allocationAccounts={accounts}
-            canRemove={false}
-            currencyCode="USD"
-            fallbackPrecision={2}
-            emptyPrompt="Choose category"
-            isExpanded={false}
-            label="Category"
-            onCreateAccountRequest={jest.fn()}
-            onRemove={jest.fn()}
-            onSelectAccount={jest.fn()}
-            onToggle={jest.fn()}
-            onUpdateAmount={jest.fn()}
-            onUpdateFxLine={patch => {
-              persistFxLine(patch);
-              setRow(current => ({ ...current, ...patch }));
-            }}
-            onUpdateSourceExchangeRate={jest.fn()}
-            removeLabel="Remove split"
-            sourceCurrency="USD"
-            workplaceCurrency="USD"
-            row={row}
-          />
-        </ArchiveVisibilityScopeProvider>
-      );
-    }
-
-    render(<Harness />);
-    expect(persistFxLine).toHaveBeenCalledTimes(1);
-
-    act(() => {
-      fireEvent.press(screen.getByTestId('split-fx-foreign-reset-reset-rate-button'));
-    });
-
-    expect(persistFxLine).toHaveBeenCalledTimes(3);
-    expect(persistFxLine).toHaveBeenLastCalledWith({
-      amount: '0.08',
-      exchangeRate: '100.000000',
-    });
-  });
-
   it('keeps row-specific picker, amount, and test-id behavior together', () => {
     const onSelectAccount = jest.fn();
-    const onUpdateAmount = jest.fn();
-    renderRow({ onSelectAccount, onUpdateAmount });
+    const onChangeAmount = jest.fn();
+    renderRow({ onSelectAccount, onChangeAmount });
 
     expect(screen.getByTestId('split-allocation-row-row-1')).toBeTruthy();
     expect(screen.getByTestId('split-category-picker-row-1-source-node')).toBeTruthy();
     expect(screen.getByTestId('split-amount-input-row-1')).toBeTruthy();
+    expect(screen.queryByTestId('split-fx-row-1-card')).toBeNull();
     expect(screen.getByTestId('account-picker-option-category-food')).toHaveProp(
       'accessibilityState',
       { selected: true },
@@ -367,7 +118,7 @@ describe('SplitAllocationRow', () => {
     });
 
     expect(onSelectAccount).toHaveBeenCalledWith(asAccountId('category-rent'));
-    expect(onUpdateAmount).toHaveBeenCalledWith('20.00');
+    expect(onChangeAmount).toHaveBeenCalledWith('20.00');
   });
 
   it('preserves archived selected accounts and routes creation to the allocation role', () => {
@@ -393,18 +144,15 @@ describe('SplitAllocationRow', () => {
     expect(onCreateAccountRequest).toHaveBeenCalledWith('destination', { suggestedName: '' });
   });
 
-  it('attaches an editable FX leg above a foreign split row', () => {
-    const onUpdateFxLine = jest.fn();
-    mockUseCrossCurrencyRates.mockReturnValue({
-      exchangeRate: 83,
-      sourceBaseRate: 1,
-      destBaseRate: 1 / 83,
-      isLoadingRate: false,
-      rateError: null,
-    });
-
+  it('attaches the FX card above a foreign row and forwards its edits', () => {
+    const onChangeAmount = jest.fn();
+    const onConvertedAmountChange = jest.fn();
+    const onResetToApiRate = jest.fn();
     renderRow({
-      onUpdateFxLine,
+      fx: foreignFx(1 / 83, '50.00'),
+      onChangeAmount,
+      onConvertedAmountChange,
+      onResetToApiRate,
       row: {
         id: 'foreign-row',
         accountId: asAccountId('category-food'),
@@ -413,11 +161,10 @@ describe('SplitAllocationRow', () => {
         exchangeRate: String(1 / 83),
         precision: 2,
       },
-      sourceCurrency: 'USD',
-      workplaceCurrency: 'USD',
     });
 
     expect(screen.getByTestId('split-fx-foreign-row-card')).toBeTruthy();
+    expect(screen.getByTestId('split-amount-input-foreign-row')).toHaveProp('value', '50.00');
     expect(screen.getByTestId('split-fx-foreign-row-converted-amount-input')).toHaveProp(
       'value',
       '4150.00',
@@ -429,19 +176,17 @@ describe('SplitAllocationRow', () => {
         screen.getByTestId('split-fx-foreign-row-converted-amount-input'),
         '5000',
       );
+      fireEvent.press(screen.getByTestId('split-fx-foreign-row-reset-fx-rate-button'));
     });
 
-    expect(onUpdateFxLine).toHaveBeenLastCalledWith({
-      amount: '5000.00',
-      exchangeRate: '0.010000',
-    });
+    expect(onChangeAmount).toHaveBeenCalledWith('60');
+    expect(onConvertedAmountChange).toHaveBeenLastCalledWith('5000');
+    expect(onResetToApiRate).toHaveBeenCalledTimes(1);
   });
 
-  it('leaves the converted side empty until a missing rate is entered', () => {
-    const onUpdateFxLine = jest.fn();
-
+  it('leaves the converted side empty until a rate is known', () => {
     renderRow({
-      onUpdateFxLine,
+      fx: foreignFx(null, '50.00'),
       row: {
         id: 'unrated-row',
         accountId: asAccountId('category-food'),
@@ -450,26 +195,12 @@ describe('SplitAllocationRow', () => {
         exchangeRate: '',
         precision: 2,
       },
-      sourceCurrency: 'USD',
-      workplaceCurrency: 'USD',
     });
 
     expect(screen.getByTestId('split-fx-unrated-row-converted-amount-input')).toHaveProp(
       'value',
       '',
     );
-
-    act(() => {
-      fireEvent.changeText(
-        screen.getByTestId('split-fx-unrated-row-converted-amount-input'),
-        '4150',
-      );
-    });
-
-    expect(onUpdateFxLine).toHaveBeenCalledWith({
-      amount: '4150.00',
-      exchangeRate: '0.012048',
-    });
   });
 
   it('exposes delete through accessibility when removal is allowed', () => {

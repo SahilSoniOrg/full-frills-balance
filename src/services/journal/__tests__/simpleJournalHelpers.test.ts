@@ -1,5 +1,4 @@
 import {
-  computeSimpleConvertedAmount,
   buildSimpleCrossCurrencyLineUpdates,
   ensureSelectedAccountVisible,
   isSimpleTargetAccountUnset,
@@ -10,17 +9,6 @@ import { AccountType } from '@/src/types/enums';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 
 describe('simpleJournalHelpers cross-currency', () => {
-  describe('computeSimpleConvertedAmount', () => {
-    it('returns amount unchanged when not cross-currency', () => {
-      expect(computeSimpleConvertedAmount(50, false, 2)).toBe(50);
-    });
-
-    it('multiplies by exchange rate when cross-currency', () => {
-      expect(computeSimpleConvertedAmount(100, true, 0.5)).toBe(50);
-      expect(computeSimpleConvertedAmount(100, true, null)).toBe(100);
-    });
-  });
-
   describe('resolveSimpleHeroAmount', () => {
     it('keeps an empty source amount instead of filling from the destination', () => {
       expect(resolveSimpleHeroAmount('', '0.00')).toBe('');
@@ -37,6 +25,7 @@ describe('simpleJournalHelpers cross-currency', () => {
       destBaseRate: 95.51,
       sourceCurrency: 'USD',
       destCurrency: 'USD',
+      destPrecision: 2,
       baseCurrency: 'INR',
       amount: '5.99',
       convertedAmount: 5.99,
@@ -48,6 +37,36 @@ describe('simpleJournalHelpers cross-currency', () => {
       source: { exchangeRate: '95.510000' },
       destination: { exchangeRate: '95.510000' },
     });
+  });
+
+  const crossCurrencyInput = {
+    isCrossCurrency: true,
+    exchangeRate: 151.237,
+    sourceBaseRate: 1,
+    destBaseRate: 0.0066,
+    sourceCurrency: 'USD',
+    baseCurrency: 'USD',
+    amount: '10.00',
+    convertedAmount: 1512.37,
+    sourceLine: { id: 'source' as any, exchangeRate: '', amount: '10.00' },
+    destinationLine: { id: 'destination' as any, exchangeRate: '', amount: '' },
+  };
+
+  it('formats the converted amount with the supplied destination precision', () => {
+    expect(
+      buildSimpleCrossCurrencyLineUpdates({
+        ...crossCurrencyInput,
+        destCurrency: 'JPY',
+        destPrecision: 0,
+      }).destination?.amount,
+    ).toBe('1512');
+    expect(
+      buildSimpleCrossCurrencyLineUpdates({
+        ...crossCurrencyInput,
+        destCurrency: 'JPY',
+        destPrecision: 3,
+      }).destination?.amount,
+    ).toBe('1512.370');
   });
 });
 

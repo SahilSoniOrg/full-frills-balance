@@ -10,6 +10,7 @@ import type { CreateAccountIntent } from '@/src/components/account-selection';
 import { EntryTransactionCard } from './EntryTransactionCard';
 import type { ExpansionPosition } from './AccountPickerPanel';
 import { getBulkJournalRowError } from '../hooks/bulkJournalHelpers';
+import { resolveBulkRowFxPair } from '../hooks/useBulkJournalEditor';
 import {
   buildSimpleFormAccountSections,
   type SimpleFormSectionConfig,
@@ -87,7 +88,10 @@ export const BulkEntryRow = React.memo(
     );
 
     const sourceCurrency = sourceAccount?.currencyCode;
-    const destCurrency = destAccount?.currencyCode;
+    const fxPair = useMemo(
+      () => resolveBulkRowFxPair(row, accounts, workplaceCurrency),
+      [accounts, row, workplaceCurrency],
+    );
 
     const rowDate = useMemo(() => dayjs(row.journalDate).format('YYYY-MM-DD'), [row.journalDate]);
     const rowTime = useMemo(() => dayjs(row.journalDate).format('HH:mm'), [row.journalDate]);
@@ -159,31 +163,17 @@ export const BulkEntryRow = React.memo(
             testID: `bulk-amount-${row.id}`,
           }}
           exchangeRate={{
-            amount: row.amount,
+            pair: fxPair,
             destLabel: destinationLabel,
-            sourceCurrency,
-            destCurrency,
-            workplaceCurrency,
-            isCrossCurrency: row.isCrossCurrency,
-            exchangeRate: row.exchangeRate,
-            isLoadingRate: row.isLoadingRate,
-            rateError: row.rateError,
-            convertedAmount: row.convertedAmount,
-            needsWorkplaceRate: !row.exchangeRate,
-            showManualRateFields: Boolean(
-              row.sourceBaseRateInput || row.destBaseRateInput || !row.exchangeRate,
-            ),
-            manualSourceBaseRate: row.sourceBaseRateInput ?? '',
-            manualDestBaseRate: row.destBaseRateInput ?? '',
-            setManualBaseRate: (role, value) => rowActions.setManualBaseRate(row.id, role, value),
-            setConvertedAmount: value => {
+            onManualBaseRateChange: (role, value) =>
+              rowActions.setManualBaseRate(row.id, role, value),
+            onConvertedAmountChange: value => {
               const nextAmount = Number.parseFloat(value);
               if (Number.isFinite(nextAmount) && nextAmount > 0) {
                 rowActions.setConvertedAmount(row.id, nextAmount);
               }
             },
-            resetToApiRate: () => onRefreshRate(row.id),
-            visible: row.isCrossCurrency,
+            onResetToApiRate: () => onRefreshRate(row.id),
             testIDPrefix: `bulk-${row.id}`,
           }}
           accountSections={{

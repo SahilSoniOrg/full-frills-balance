@@ -1,6 +1,7 @@
 import { type CreateAccountIntent } from '@/src/components/account-selection';
 import { AppConfig } from '@/src/constants';
 import { Size, Spacing } from '@/src/constants/design-tokens';
+import type { FxPair } from '@/src/features/journal/entry/fxPair';
 import { EntryTransactionCard } from './EntryTransactionCard';
 import type { JournalMetaCardProps } from './JournalMetaCard';
 import { useSimpleFormExpansion, type AccountFlowHandle } from './useSimpleFormExpansion';
@@ -39,18 +40,7 @@ export interface SimpleFormProps {
   onCreateAccountRequest?: (role: AccountRole, intent: CreateAccountIntent) => void;
 
   // Cross-Currency
-  isCrossCurrency: boolean;
-  exchangeRate: number | null;
-  isLoadingRate: boolean;
-  rateError: string | null;
-  convertedAmount: number;
-  sourceCurrency?: string;
-  destCurrency?: string;
-  workplaceCurrency: string;
-  needsWorkplaceRate: boolean;
-  showManualRateFields: boolean;
-  manualSourceBaseRate: string;
-  manualDestBaseRate: string;
+  fxPair: FxPair;
   setManualBaseRate: (role: 'source' | 'destination', value: string) => void;
   setConvertedAmount: (value: string) => void;
   resetToApiRate: () => void;
@@ -76,18 +66,7 @@ export const SimpleForm = React.memo(function SimpleForm({
   destinationId,
   onSwapAccounts,
   onCreateAccountRequest,
-  isCrossCurrency,
-  exchangeRate,
-  isLoadingRate,
-  rateError,
-  convertedAmount,
-  sourceCurrency,
-  destCurrency,
-  workplaceCurrency,
-  needsWorkplaceRate,
-  showManualRateFields,
-  manualSourceBaseRate,
-  manualDestBaseRate,
+  fxPair,
   setManualBaseRate,
   setConvertedAmount,
   resetToApiRate,
@@ -143,10 +122,6 @@ export const SimpleForm = React.memo(function SimpleForm({
     };
   }, [accountFlowRef, startAutopilotAccountFlow]);
 
-  const showRateCard = Boolean(
-    sourceId && destinationId && (isCrossCurrency || showManualRateFields),
-  );
-
   // Node Labels: Left is Source, Right is Destination
   const sourceLabel =
     sourceSection?.title || AppConfig.strings.transactionFlow.simpleEntry.sourceAccount;
@@ -176,24 +151,11 @@ export const SimpleForm = React.memo(function SimpleForm({
           onCalculatorDone,
         }}
         exchangeRate={{
-          amount,
+          pair: fxPair,
           destLabel,
-          sourceCurrency,
-          destCurrency,
-          workplaceCurrency,
-          isCrossCurrency,
-          exchangeRate,
-          isLoadingRate,
-          rateError,
-          convertedAmount,
-          needsWorkplaceRate,
-          showManualRateFields,
-          manualSourceBaseRate,
-          manualDestBaseRate,
-          setManualBaseRate,
-          setConvertedAmount,
-          resetToApiRate,
-          visible: showRateCard,
+          onManualBaseRateChange: setManualBaseRate,
+          onConvertedAmountChange: setConvertedAmount,
+          onResetToApiRate: resetToApiRate,
           precision,
         }}
         accountSections={{

@@ -1,24 +1,29 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { AccountFields } from '@/src/types/plainDtos';
-import { AccountType, TransactionType } from '@/src/types/enums';
+import { TransactionType } from '@/src/types/enums';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { AccountRole, JournalEntryLine, TabType } from '@/src/types/domainJournal';
 
 import { resolveGuidedAccountsAfterTabChange } from '@/src/services/journal/guidedJournalAccountEligibility';
+import { lineAccountPatch } from '@/src/services/journal/journalEditorHelpers';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import {
-  formatManualBaseRate,
-  resolveWorkplaceRatesFromConvertedAmount,
-} from '@/src/features/journal/entry/manualBaseRate';
+  fxOverrideKey,
+  NO_FX_OVERRIDE,
+  resolveFxPair,
+  withConvertedAmount,
+  withManualBaseRate,
+  type FxOverride,
+} from '@/src/features/journal/entry/fxPair';
 import {
   buildSimpleCrossCurrencyLineUpdates,
   buildSimpleFormAccountSections,
-  computeSimpleConvertedAmount,
   parseSimpleAmountInput,
   resolveSimpleHeroAmount,
 } from '@/src/services/journal/simpleJournalHelpers';
 import { getInferredAccountType } from '@/src/utils/accountCategory';
 import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
+import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCrossCurrencyRates } from './useCrossCurrencyRates';
 import { useJournalEditor } from './useJournalEditor';
@@ -53,9 +58,8 @@ export interface SimpleFormSection {
   role: AccountRole;
 }
 
-function parsePositiveRate(value: string | number | undefined): number | null {
-  const rate = Number(value);
-  return Number.isFinite(rate) && rate > 0 ? rate : null;
+function sideForRole(role: AccountRole): TransactionType {
+  return role === 'source' ? TransactionType.CREDIT : TransactionType.DEBIT;
 }
 
 /**
@@ -98,9 +102,17 @@ export function useSimpleJournalEditor({
   const sourceLineExchangeRate = sourceLine?.exchangeRate ?? '';
   const destinationLineExchangeRate = destinationLine?.exchangeRate ?? '';
   const destinationLineAmount = destinationLine?.amount ?? '';
-  const [manualSourceBaseRate, setManualSourceBaseRate] = useState('');
-  const [manualDestBaseRate, setManualDestBaseRate] = useState('');
-  const [convertedAmountLocked, setConvertedAmountLocked] = useState(false);
+
+  const fxKey = fxOverrideKey(sourceId, destinationId, valuationCurrency, editor.journalDate);
+  const [fxOverrideState, setFxOverrideState] = useState<{ key: string; override: FxOverride }>({
+    key: fxKey,
+    override: NO_FX_OVERRIDE,
+  });
+  const fxOverride = fxOverrideState.key === fxKey ? fxOverrideState.override : NO_FX_OVERRIDE;
+  const resetFxOverride = useCallback(
+    () => setFxOverrideState({ key: '', override: NO_FX_OVERRIDE }),
+    [],
+  );
   const [rateRefreshNonce, setRateRefreshNonce] = useState(0);
 
   const pinnedAccountIds = useMemo(() => {
@@ -133,67 +145,62 @@ export function useSimpleJournalEditor({
 
   const sourceCurrency = sourceAccount?.currencyCode;
   const destCurrency = destAccount?.currencyCode;
+  const { precision: destPrecision } = useCurrencyPrecision(destCurrency);
 
-  const isCrossCurrency = !!(sourceCurrency && destCurrency && sourceCurrency !== destCurrency);
   const needsValuationRate = !!(
     sourceCurrency &&
     destCurrency &&
     (sourceCurrency !== valuationCurrency || destCurrency !== valuationCurrency)
   );
+  const useSavedRates = editor.isEdit && rateRefreshNonce === 0;
 
   const marketRates = useCrossCurrencyRates({
     sourceCurrency,
     destCurrency,
     workplaceCurrency: valuationCurrency,
-    manualSourceBaseRate,
-    manualDestBaseRate,
     journalDate: editor.journalDate,
     refreshNonce: rateRefreshNonce,
-    enabled: needsValuationRate && (!editor.isEdit || rateRefreshNonce > 0),
+    enabled: needsValuationRate && !useSavedRates,
   });
-  const savedSourceRate = parsePositiveRate(sourceLineExchangeRate);
-  const savedDestinationRate = parsePositiveRate(destinationLineExchangeRate);
-  const savedSourceBaseRate =
-    sourceCurrency === valuationCurrency
-      ? 1
-      : sourceCurrency === destCurrency
-        ? (savedSourceRate ?? savedDestinationRate)
-        : savedSourceRate;
-  const savedDestBaseRate =
-    destCurrency === valuationCurrency
-      ? 1
-      : sourceCurrency === destCurrency
-        ? savedSourceBaseRate
-        : savedDestinationRate;
-  const useSavedRates = editor.isEdit && rateRefreshNonce === 0;
-  const sourceBaseRate = useSavedRates ? savedSourceBaseRate : marketRates.sourceBaseRate;
-  const destBaseRate = useSavedRates ? savedDestBaseRate : marketRates.destBaseRate;
-  const exchangeRate = useSavedRates
-    ? sourceBaseRate && destBaseRate
-      ? sourceBaseRate / destBaseRate
-      : null
-    : marketRates.exchangeRate;
-  const isLoadingRate = useSavedRates ? false : marketRates.isLoadingRate;
-  const rateError = marketRates.rateError;
+  const numAmount = useMemo(() => parseSimpleAmountInput(amount), [amount]);
+
+  const fxInput = useMemo(
+    () => ({
+      sourceCurrency,
+      destCurrency,
+      baseCurrency: valuationCurrency,
+      fetched: useSavedRates ? null : marketRates,
+      saved: useSavedRates
+        ? { sourceRate: sourceLineExchangeRate, destRate: destinationLineExchangeRate }
+        : null,
+      sourceAmount: numAmount,
+    }),
+    [
+      destCurrency,
+      destinationLineExchangeRate,
+      marketRates,
+      numAmount,
+      sourceCurrency,
+      sourceLineExchangeRate,
+      useSavedRates,
+      valuationCurrency,
+    ],
+  );
+  const fxPair = useMemo(
+    () => resolveFxPair({ ...fxInput, override: fxOverride }),
+    [fxInput, fxOverride],
+  );
+  const { isCrossCurrency, pairRate: exchangeRate, sourceBaseRate, destBaseRate } = fxPair;
+  const convertedAmount = fxPair.convertedAmount ?? numAmount;
 
   useEffect(() => {
     if (previousJournalDateRef.current === editor.journalDate) return;
     previousJournalDateRef.current = editor.journalDate;
     hasEditedSimpleDraft.current = true;
-    setConvertedAmountLocked(false);
-    setManualSourceBaseRate('');
-    setManualDestBaseRate('');
   }, [editor.journalDate]);
 
-  const numAmount = useMemo(() => parseSimpleAmountInput(amount), [amount]);
-
-  const convertedAmount = useMemo(
-    () => computeSimpleConvertedAmount(numAmount, isCrossCurrency, exchangeRate),
-    [numAmount, isCrossCurrency, exchangeRate],
-  );
-
-  // Sync exchange rate and converted amounts back to lines for Advanced mode consistency.
-  // Primitive deps + empty-update guard prevent child→parent write loops.
+  // Lines stay the submit/advanced-mode source of truth, so the resolved pair is
+  // projected onto them here. Primitive deps + empty-update guard prevent write loops.
   useEffect(() => {
     if (!isGuidedMode || !sourceLineId || !destinationLineId) return;
     if (!hasEditedSimpleDraft.current) return;
@@ -205,6 +212,7 @@ export function useSimpleJournalEditor({
       destBaseRate,
       sourceCurrency,
       destCurrency,
+      destPrecision,
       baseCurrency: valuationCurrency,
       amount,
       convertedAmount,
@@ -226,6 +234,7 @@ export function useSimpleJournalEditor({
     destBaseRate,
     sourceCurrency,
     destCurrency,
+    destPrecision,
     valuationCurrency,
     amount,
     convertedAmount,
@@ -244,9 +253,7 @@ export function useSimpleJournalEditor({
       hasEditedSimpleDraft.current = true;
 
       // Manual rates are pair-specific input, not part of a saved tab draft.
-      setManualSourceBaseRate('');
-      setManualDestBaseRate('');
-      setConvertedAmountLocked(false);
+      resetFxOverride();
       tabDraftsRef.current[type] = editor.lines.map(line => ({ ...line }));
       const savedDraft = tabDraftsRef.current[newType];
       editor.setTransactionType(newType);
@@ -266,30 +273,20 @@ export function useSimpleJournalEditor({
         side: typeof TransactionType.CREDIT | typeof TransactionType.DEBIT,
       ) => {
         if (!line) return;
-        if (!accountId || accountId === EMPTY_ACCOUNT_ID) {
-          editor.updateLine(line.id, {
-            transactionType: side,
-            accountId: EMPTY_ACCOUNT_ID,
-            accountName: '',
-            accountType: getInferredAccountType(newType, side),
-            accountCurrency: undefined,
-          });
-          return;
-        }
-        const account = accountsById.get(accountId);
         editor.updateLine(line.id, {
           transactionType: side,
-          accountId,
-          accountName: account?.name || '',
-          accountType: account?.accountType || getInferredAccountType(newType, side),
-          accountCurrency: account?.currencyCode,
+          ...lineAccountPatch(
+            accountId,
+            accountsById.get(accountId),
+            getInferredAccountType(newType, side),
+          ),
         });
       };
 
       applyAccountToLine(sourceLine, nextSourceId, TransactionType.CREDIT);
       applyAccountToLine(destinationLine, nextDestId, TransactionType.DEBIT);
     },
-    [type, editor, sourceLine, destinationLine, accounts, sourceId, destinationId],
+    [type, editor, sourceLine, destinationLine, accounts, sourceId, destinationId, resetFxOverride],
   );
 
   const setAmount = useCallback(
@@ -303,60 +300,28 @@ export function useSimpleJournalEditor({
     [editor, sourceLine, destinationLine, isCrossCurrency],
   );
 
-  const setSourceId = useCallback(
-    (id: AccountId) => {
+  const setAccount = useCallback(
+    (role: AccountRole, id: AccountId) => {
       hasEditedSimpleDraft.current = true;
-      setManualSourceBaseRate('');
-      setManualDestBaseRate('');
-      setConvertedAmountLocked(false);
-      const line = editor.lines.find(item => item.transactionType === TransactionType.CREDIT);
+      resetFxOverride();
+      const side = sideForRole(role);
+      const line = editor.lines.find(item => item.transactionType === side);
       if (!line) return;
-      if (!id || id === EMPTY_ACCOUNT_ID) {
-        editor.updateLine(line.id, {
-          accountId: EMPTY_ACCOUNT_ID,
-          accountName: '',
-          accountType: getInferredAccountType(type, TransactionType.CREDIT),
-          accountCurrency: undefined,
-        });
-        return;
-      }
-      const account = accounts.find(a => a.id === id);
-      editor.updateLine(line.id, {
-        accountId: id,
-        accountName: account?.name || '',
-        accountType: account?.accountType || AccountType.ASSET,
-        accountCurrency: account?.currencyCode,
-      });
+      editor.updateLine(
+        line.id,
+        lineAccountPatch(
+          id,
+          accounts.find(account => account.id === id),
+          getInferredAccountType(type, side),
+        ),
+      );
     },
-    [accounts, editor, type],
+    [accounts, editor, resetFxOverride, type],
   );
-
+  const setSourceId = useCallback((id: AccountId) => setAccount('source', id), [setAccount]);
   const setDestinationId = useCallback(
-    (id: AccountId) => {
-      hasEditedSimpleDraft.current = true;
-      setManualSourceBaseRate('');
-      setManualDestBaseRate('');
-      setConvertedAmountLocked(false);
-      const line = editor.lines.find(item => item.transactionType === TransactionType.DEBIT);
-      if (!line) return;
-      if (!id || id === EMPTY_ACCOUNT_ID) {
-        editor.updateLine(line.id, {
-          accountId: EMPTY_ACCOUNT_ID,
-          accountName: '',
-          accountType: getInferredAccountType(type, TransactionType.DEBIT),
-          accountCurrency: undefined,
-        });
-        return;
-      }
-      const account = accounts.find(a => a.id === id);
-      editor.updateLine(line.id, {
-        accountId: id,
-        accountName: account?.name || '',
-        accountType: account?.accountType || AccountType.ASSET,
-        accountCurrency: account?.currencyCode,
-      });
-    },
-    [accounts, editor, type],
+    (id: AccountId) => setAccount('destination', id),
+    [setAccount],
   );
 
   const swapAccounts = useCallback(() => {
@@ -371,88 +336,47 @@ export function useSimpleJournalEditor({
     );
     if (!currentSourceLine || !currentDestinationLine) return;
 
-    const getAccountUpdates = (accountId: AccountId, side: TransactionType) => {
-      if (!accountId || accountId === EMPTY_ACCOUNT_ID) {
-        return {
-          accountId: EMPTY_ACCOUNT_ID,
-          accountName: '',
-          accountType: getInferredAccountType(type, side),
-          accountCurrency: undefined,
-        };
-      }
-
-      const account = accounts.find(item => item.id === accountId);
-      return {
+    const patchFor = (accountId: AccountId, side: TransactionType) =>
+      lineAccountPatch(
         accountId,
-        accountName: account?.name || '',
-        accountType: account?.accountType || AccountType.ASSET,
-        accountCurrency: account?.currencyCode,
-      };
-    };
+        accounts.find(item => item.id === accountId),
+        getInferredAccountType(type, side),
+      );
 
     updateLines({
-      [currentSourceLine.id]: getAccountUpdates(
-        currentDestinationLine.accountId,
-        TransactionType.CREDIT,
-      ),
-      [currentDestinationLine.id]: getAccountUpdates(
-        currentSourceLine.accountId,
-        TransactionType.DEBIT,
-      ),
+      [currentSourceLine.id]: patchFor(currentDestinationLine.accountId, TransactionType.CREDIT),
+      [currentDestinationLine.id]: patchFor(currentSourceLine.accountId, TransactionType.DEBIT),
     });
-    setManualSourceBaseRate('');
-    setManualDestBaseRate('');
-    setConvertedAmountLocked(false);
-  }, [accounts, editor.lines, type, updateLines]);
+    resetFxOverride();
+  }, [accounts, editor.lines, resetFxOverride, type, updateLines]);
 
-  const setManualBaseRate = useCallback((role: 'source' | 'destination', value: string) => {
-    hasEditedSimpleDraft.current = true;
-    setConvertedAmountLocked(false);
-    if (role === 'source') setManualSourceBaseRate(value);
-    else setManualDestBaseRate(value);
-  }, []);
+  const setManualBaseRate = useCallback(
+    (role: 'source' | 'destination', value: string) => {
+      hasEditedSimpleDraft.current = true;
+      setFxOverrideState(previous => {
+        const current = previous.key === fxKey ? previous.override : NO_FX_OVERRIDE;
+        const pair = resolveFxPair({ ...fxInput, override: current });
+        return { key: fxKey, override: withManualBaseRate(pair, role, value) };
+      });
+    },
+    [fxInput, fxKey],
+  );
 
   const setConvertedAmount = useCallback(
     (value: string) => {
-      if (!sourceCurrency || !destCurrency) return;
+      const override = withConvertedAmount(fxPair, parseSimpleAmountInput(value));
+      if (!override) return;
       hasEditedSimpleDraft.current = true;
-      const parsedConverted = parseSimpleAmountInput(value);
-      const rates = resolveWorkplaceRatesFromConvertedAmount({
-        sourceAmount: numAmount,
-        convertedAmount: parsedConverted,
-        sourceCurrency,
-        destCurrency,
-        workplaceCurrency: valuationCurrency,
-        existingSourceBaseRate: sourceBaseRate,
-        existingDestBaseRate: destBaseRate,
-      });
-      if (!rates) return;
-
-      setConvertedAmountLocked(true);
-      setManualSourceBaseRate(
-        sourceCurrency === valuationCurrency ? '' : formatManualBaseRate(rates.sourceBaseRate),
-      );
-      setManualDestBaseRate(
-        destCurrency === valuationCurrency || destCurrency === sourceCurrency
-          ? ''
-          : formatManualBaseRate(rates.destBaseRate),
-      );
+      setFxOverrideState({ key: fxKey, override });
     },
-    [destBaseRate, destCurrency, numAmount, sourceBaseRate, sourceCurrency, valuationCurrency],
+    [fxKey, fxPair],
   );
 
   const resetToApiRate = useCallback(() => {
     hasEditedSimpleDraft.current = true;
-    setConvertedAmountLocked(false);
-    setManualSourceBaseRate('');
-    setManualDestBaseRate('');
+    resetFxOverride();
     setRateRefreshNonce(nonce => nonce + 1);
-  }, []);
-
-  const showManualRateFields = Boolean(
-    rateError ||
-    (!convertedAmountLocked && (manualSourceBaseRate.trim() || manualDestBaseRate.trim())),
-  );
+  }, [resetFxOverride]);
 
   const accountSections = useMemo((): SimpleFormSection[] => {
     return buildSimpleFormAccountSections(type, {
@@ -490,16 +414,17 @@ export function useSimpleJournalEditor({
       description: editor.description,
 
       isSubmitting: editor.isSubmitting,
+      fxPair,
       exchangeRate,
-      manualSourceBaseRate,
-      manualDestBaseRate,
-      showManualRateFields,
+      manualSourceBaseRate: fxPair.manualSourceBaseRate,
+      manualDestBaseRate: fxPair.manualDestBaseRate,
+      showManualRateFields: fxPair.needsManualRates,
       needsWorkplaceRate: needsValuationRate,
       setManualBaseRate,
       setConvertedAmount,
       resetToApiRate,
-      isLoadingRate,
-      rateError,
+      isLoadingRate: fxPair.isLoading,
+      rateError: fxPair.rateError,
       isCrossCurrency,
       convertedAmount,
       transactionAccounts,
@@ -527,16 +452,12 @@ export function useSimpleJournalEditor({
       editor.journalTime,
       editor.description,
       editor.isSubmitting,
+      fxPair,
       exchangeRate,
-      manualSourceBaseRate,
-      manualDestBaseRate,
-      showManualRateFields,
       needsValuationRate,
       setManualBaseRate,
       setConvertedAmount,
       resetToApiRate,
-      isLoadingRate,
-      rateError,
       isCrossCurrency,
       convertedAmount,
       transactionAccounts,

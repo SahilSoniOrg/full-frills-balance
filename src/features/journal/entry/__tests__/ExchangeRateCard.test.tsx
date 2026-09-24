@@ -2,59 +2,71 @@ import { AppConfig, Spacing } from '@/src/constants';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
 import { StyleSheet } from 'react-native';
 import { ExchangeRateCard, type ExchangeRateCardProps } from '../components/ExchangeRateCard';
+import { RATE_UNAVAILABLE, resolveFxPair, type FxPairInput } from '../fxPair';
 
-const baseProps: ExchangeRateCardProps = {
-  amount: '10',
-  destLabel: 'Money to',
+const pairInput: FxPairInput = {
   sourceCurrency: 'USD',
   destCurrency: 'EUR',
-  workplaceCurrency: 'USD',
-  isCrossCurrency: true,
-  exchangeRate: 1.25,
-  isLoadingRate: false,
-  rateError: null,
-  convertedAmount: 12.5,
-  needsWorkplaceRate: false,
-  showManualRateFields: false,
-  manualSourceBaseRate: '',
-  manualDestBaseRate: '',
-  setManualBaseRate: jest.fn(),
-  setConvertedAmount: jest.fn(),
-  resetToApiRate: jest.fn(),
-  visible: true,
+  baseCurrency: 'USD',
+  fetched: { sourceBaseRate: 1, destBaseRate: 0.8, isLoading: false, error: null },
+  sourceAmount: 10,
+};
+
+const baseProps: ExchangeRateCardProps = {
+  pair: resolveFxPair(pairInput),
+  destLabel: 'Money to',
+  onManualBaseRateChange: jest.fn(),
+  onConvertedAmountChange: jest.fn(),
+  onResetToApiRate: jest.fn(),
   testIDPrefix: 'exchange-rate',
 };
 
-function renderCard(overrides: Partial<ExchangeRateCardProps> = {}) {
-  return render(<ExchangeRateCard {...baseProps} {...overrides} />);
+function renderCard(
+  overrides: Partial<ExchangeRateCardProps> = {},
+  input: Partial<FxPairInput> = {},
+) {
+  return render(
+    <ExchangeRateCard
+      {...baseProps}
+      pair={resolveFxPair({ ...pairInput, ...input })}
+      {...overrides}
+    />,
+  );
 }
 
 describe('ExchangeRateCard', () => {
-  it.each([
-    ['null', null],
-    ['empty string', ''],
-    ['invalid string', 'not-a-rate'],
-    ['partially numeric string', '12abc'],
-    ['zero', 0],
-    ['negative number', -1],
-  ] as const)('does not render a market rate for %s', (_label, exchangeRate) => {
-    renderCard({ exchangeRate });
+  it('renders the market rate for a resolved pair', () => {
+    renderCard();
 
-    expect(screen.queryByText(/1 USD =/)).toBeNull();
+    expect(screen.getByText('1 USD = 1.2500 EUR')).toBeTruthy();
   });
 
-  it.each([1.25, '1.25'] as const)(
-    'renders a market rate for a positive rate: %s',
-    exchangeRate => {
-      renderCard({ exchangeRate });
+  it('shows the unavailable message instead of a rate when the pair has none', () => {
+    renderCard(
+      {},
+      {
+        fetched: {
+          sourceBaseRate: null,
+          destBaseRate: null,
+          isLoading: false,
+          error: RATE_UNAVAILABLE,
+        },
+      },
+    );
 
-      expect(screen.getByText('1 USD = 1.2500 EUR')).toBeTruthy();
-    },
-  );
+    expect(screen.queryByText(/1 USD =/)).toBeNull();
+    expect(screen.getByText(/Rate unavailable\./)).toBeTruthy();
+  });
+
+  it('renders nothing for a same-currency pair without manual input', () => {
+    renderCard({}, { destCurrency: 'USD' });
+
+    expect(screen.queryByTestId('exchange-rate-card')).toBeNull();
+  });
 
   it('expands the converted input to fit a long edited amount', () => {
-    const setConvertedAmount = jest.fn();
-    renderCard({ setConvertedAmount });
+    const onConvertedAmountChange = jest.fn();
+    renderCard({ onConvertedAmountChange });
 
     const input = screen.getByTestId('exchange-rate-converted-amount-input');
     const measure = screen.getByTestId('exchange-rate-converted-amount-measure');
@@ -65,7 +77,7 @@ describe('ExchangeRateCard', () => {
       nativeEvent: { layout: { width: 156, height: 20, x: 0, y: 0 } },
     });
 
-    expect(setConvertedAmount).toHaveBeenCalledWith(longAmount);
+    expect(onConvertedAmountChange).toHaveBeenCalledWith(longAmount);
     expect(screen.getByTestId('exchange-rate-converted-amount-input').props.value).toBe(longAmount);
     expect(
       StyleSheet.flatten(screen.getByTestId('exchange-rate-converted-amount-input').props.style)
@@ -74,8 +86,8 @@ describe('ExchangeRateCard', () => {
   });
 
   it('exposes an accessible reset control and resets the local converted draft', () => {
-    const resetToApiRate = jest.fn();
-    renderCard({ resetToApiRate });
+    const onResetToApiRate = jest.fn();
+    renderCard({ onResetToApiRate });
 
     const input = screen.getByTestId('exchange-rate-converted-amount-input');
     fireEvent.changeText(input, '99.99');
@@ -88,7 +100,81 @@ describe('ExchangeRateCard', () => {
 
     fireEvent.press(resetButton);
 
-    expect(resetToApiRate).toHaveBeenCalledTimes(1);
+    expect(onResetToApiRate).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('exchange-rate-converted-amount-input').props.value).toBe('12.50');
+  });
+
+  it('shows manual base-rate fields only when the pair needs them', () => {
+    const onManualBaseRateChange = jest.fn();
+    renderCard(
+      { onManualBaseRateChange },
+      {
+        sourceCurrency: 'EUR',
+        destCurrency: 'GBP',
+        fetched: {
+          sourceBaseRate: null,
+          destBaseRate: null,
+          isLoading: false,
+          error: RATE_UNAVAILABLE,
+        },
+      },
+    );
+
+    fireEvent.changeText(screen.getAllByPlaceholderText('Rate')[1], '1.25');
+    expect(onManualBaseRateChange).toHaveBeenCalledWith('destination', '1.25');
+  });
+
+  describe('attached variant', () => {
+    const attachedInput: Partial<FxPairInput> = {
+      sourceCurrency: 'INR',
+      destCurrency: 'USD',
+      baseCurrency: 'USD',
+      fetched: { sourceBaseRate: 0.0104, destBaseRate: 1, isLoading: false, error: null },
+      sourceAmount: 1,
+    };
+
+    it('renders the converted currency symbol once', () => {
+      renderCard({ variant: 'attached', testIDPrefix: 'split-fx' }, attachedInput);
+
+      expect(screen.getAllByText('$')).toHaveLength(1);
+      expect(screen.getByTestId('split-fx-card')).toBeTruthy();
+    });
+
+    it('keeps the rate direction aligned with the editable conversion', () => {
+      renderCard({ variant: 'attached', testIDPrefix: 'split-fx' }, attachedInput);
+
+      expect(screen.getByText('1 INR = 0.0104 USD')).toBeTruthy();
+      expect(screen.queryByText('1 USD = 96.1538 INR')).toBeNull();
+    });
+
+    it('keeps the converted amount editable', () => {
+      const onConvertedAmountChange = jest.fn();
+      renderCard(
+        { variant: 'attached', testIDPrefix: 'split-fx', onConvertedAmountChange },
+        attachedInput,
+      );
+
+      fireEvent.changeText(screen.getByTestId('split-fx-converted-amount-input'), '0.02');
+
+      expect(onConvertedAmountChange).toHaveBeenCalledWith('0.02');
+    });
+
+    it('never renders manual base-rate fields', () => {
+      renderCard(
+        { variant: 'attached', testIDPrefix: 'split-fx' },
+        {
+          ...attachedInput,
+          fetched: {
+            sourceBaseRate: null,
+            destBaseRate: null,
+            isLoading: false,
+            error: RATE_UNAVAILABLE,
+          },
+        },
+      );
+
+      expect(screen.getByText(RATE_UNAVAILABLE)).toBeTruthy();
+      expect(screen.queryByPlaceholderText('Rate')).toBeNull();
+    });
   });
 });

@@ -2,7 +2,12 @@ import { AccountFields } from '@/src/types/plainDtos';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import type { TabType } from '@/src/types/domainJournal';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
+import type { FxFetchedRates, FxOverride } from '@/src/features/journal/entry/fxPair';
 
+/**
+ * `fxRates` and `fxOverride` are the FX inputs; `exchangeRate` through `rateError`
+ * and the base-rate inputs are projected from them by the bulk editor.
+ */
 export interface BulkJournalRow {
   id: string;
   description: string;
@@ -22,6 +27,8 @@ export interface BulkJournalRow {
   isLoadingRate: boolean;
   validationError?: string;
   rateError?: string;
+  fxRates?: FxFetchedRates | null;
+  fxOverride?: FxOverride;
 }
 
 export interface BulkJournalRowActions {

@@ -1,4 +1,8 @@
-import { useCrossCurrencyRates } from '@/src/features/journal/entry/hooks/useCrossCurrencyRates';
+import {
+  currencyPairKey,
+  useCrossCurrencyRates,
+  useCrossCurrencyRatesMap,
+} from '@/src/features/journal/entry/hooks/useCrossCurrencyRates';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 const mockFetchRate = jest.fn();
@@ -18,7 +22,7 @@ describe('useCrossCurrencyRates', () => {
     mockFetchHistoricalRate.mockReset();
   });
 
-  it('fetches and resolves cross-currency rates relative to workplace currency', async () => {
+  it('fetches cross-currency base rates relative to workplace currency', async () => {
     mockFetchRate.mockImplementation(async (from: string) => {
       if (from === 'EUR') return 1.1;
       if (from === 'GBP') return 1.25;
@@ -34,16 +38,18 @@ describe('useCrossCurrencyRates', () => {
       }),
     );
 
+    expect(result.current.isLoading).toBe(true);
     await waitFor(() => {
-      expect(result.current.isLoadingRate).toBe(false);
-      expect(result.current.exchangeRate).toBeCloseTo(1.1 / 1.25);
-      expect(result.current.sourceBaseRate).toBe(1.1);
-      expect(result.current.destBaseRate).toBe(1.25);
-      expect(result.current.rateError).toBeNull();
+      expect(result.current).toEqual({
+        sourceBaseRate: 1.1,
+        destBaseRate: 1.25,
+        isLoading: false,
+        error: null,
+      });
     });
   });
 
-  it('clears rates when disabled or same-currency', async () => {
+  it('reports idle rates when disabled or same-currency', async () => {
     mockFetchRate.mockResolvedValue(1.1);
 
     const { result, rerender } = renderHook(
@@ -64,21 +70,19 @@ describe('useCrossCurrencyRates', () => {
     );
 
     await waitFor(() => {
-      expect(result.current.exchangeRate).not.toBeNull();
+      expect(result.current.sourceBaseRate).toBe(1.1);
     });
 
     rerender({ sourceCurrency: 'USD', destCurrency: 'USD', enabled: true });
-
-    await waitFor(() => {
-      expect(result.current.exchangeRate).toBeNull();
-      expect(result.current.sourceBaseRate).toBeNull();
-      expect(result.current.destBaseRate).toBeNull();
-      expect(result.current.isLoadingRate).toBe(false);
+    expect(result.current).toEqual({
+      sourceBaseRate: null,
+      destBaseRate: null,
+      isLoading: false,
+      error: null,
     });
 
     rerender({ sourceCurrency: 'EUR', destCurrency: 'USD', enabled: false });
-
-    expect(result.current.exchangeRate).toBeNull();
+    expect(result.current.sourceBaseRate).toBeNull();
   });
 
   it('resolves a workplace-relative rate when both account currencies are foreign but equal', async () => {
@@ -94,10 +98,9 @@ describe('useCrossCurrencyRates', () => {
     );
 
     await waitFor(() => {
-      expect(result.current.exchangeRate).toBe(1);
       expect(result.current.sourceBaseRate).toBe(95.51);
       expect(result.current.destBaseRate).toBe(95.51);
-      expect(result.current.rateError).toBeNull();
+      expect(result.current.error).toBeNull();
     });
   });
 
@@ -115,7 +118,6 @@ describe('useCrossCurrencyRates', () => {
     );
 
     await waitFor(() => {
-      expect(result.current.exchangeRate).toBe(1);
       expect(result.current.sourceBaseRate).toBe(95.51);
       expect(result.current.destBaseRate).toBe(95.51);
     });
@@ -138,8 +140,6 @@ describe('useCrossCurrencyRates', () => {
       resolveSecond = r;
     });
 
-    // First pair: EUR→USD (one fetch for EUR, USD leg is 1.0)
-    // Second pair: GBP→USD (one fetch for GBP)
     mockFetchRate.mockReturnValueOnce(firstRatePromise).mockReturnValueOnce(secondRatePromise);
 
     const { result, rerender } = renderHook(
@@ -155,9 +155,7 @@ describe('useCrossCurrencyRates', () => {
       },
     );
 
-    await waitFor(() => {
-      expect(result.current.isLoadingRate).toBe(true);
-    });
+    expect(result.current.isLoading).toBe(true);
 
     rerender({ sourceCurrency: 'GBP', destCurrency: 'USD' });
 
@@ -167,9 +165,8 @@ describe('useCrossCurrencyRates', () => {
     });
 
     await waitFor(() => {
-      expect(result.current.exchangeRate).toBe(1.25);
       expect(result.current.sourceBaseRate).toBe(1.25);
-      expect(result.current.isLoadingRate).toBe(false);
+      expect(result.current.isLoading).toBe(false);
     });
 
     await act(async () => {
@@ -177,10 +174,8 @@ describe('useCrossCurrencyRates', () => {
       await firstRatePromise;
     });
 
-    // Stale EUR rate must not overwrite the newer GBP rate
-    expect(result.current.exchangeRate).toBe(1.25);
     expect(result.current.sourceBaseRate).toBe(1.25);
-    expect(result.current.rateError).toBeNull();
+    expect(result.current.error).toBeNull();
   });
 
   it('does not apply rate state after unmount mid-fetch', async () => {
@@ -199,22 +194,20 @@ describe('useCrossCurrencyRates', () => {
       }),
     );
 
-    await waitFor(() => {
-      expect(result.current.isLoadingRate).toBe(true);
-    });
+    expect(result.current.isLoading).toBe(true);
     unmount();
 
     await act(async () => {
       resolveRate(1.1);
       await ratePromise;
     });
-
-    // No throw / state update after unmount; assertion is that act completed cleanly
-    expect(true).toBe(true);
   });
 
-  it('surfaces rateError when fetch fails for the latest request', async () => {
-    mockFetchRate.mockRejectedValueOnce(new Error('network'));
+  it.each([
+    ['fetch fails', () => mockFetchRate.mockRejectedValueOnce(new Error('network'))],
+    ['the required lookup reports no rate', () => mockFetchRate.mockResolvedValueOnce(null)],
+  ])('surfaces Rate unavailable when %s', async (_label, arrange) => {
+    arrange();
 
     const { result } = renderHook(() =>
       useCrossCurrencyRates({
@@ -226,92 +219,13 @@ describe('useCrossCurrencyRates', () => {
     );
 
     await waitFor(() => {
-      expect(result.current.isLoadingRate).toBe(false);
-      expect(result.current.rateError).toBe('Rate unavailable');
-      expect(result.current.exchangeRate).toBeNull();
+      expect(result.current).toEqual({
+        sourceBaseRate: null,
+        destBaseRate: null,
+        isLoading: false,
+        error: 'Rate unavailable',
+      });
     });
-  });
-
-  it('surfaces rateError when the required lookup reports no rate', async () => {
-    mockFetchRate.mockResolvedValueOnce(null);
-
-    const { result } = renderHook(() =>
-      useCrossCurrencyRates({
-        sourceCurrency: 'EUR',
-        destCurrency: 'USD',
-        workplaceCurrency: 'USD',
-        enabled: true,
-      }),
-    );
-
-    await waitFor(() => {
-      expect(result.current.rateError).toBe('Rate unavailable');
-      expect(result.current.exchangeRate).toBeNull();
-      expect(result.current.isLoadingRate).toBe(false);
-    });
-  });
-
-  it('uses manually entered workplace-relative rates when lookup is unavailable', async () => {
-    mockFetchRate.mockResolvedValueOnce(null);
-
-    const { result } = renderHook(() =>
-      useCrossCurrencyRates({
-        sourceCurrency: 'EUR',
-        destCurrency: 'GBP',
-        workplaceCurrency: 'USD',
-        manualSourceBaseRate: '1.1',
-        manualDestBaseRate: '1.25',
-        enabled: true,
-      }),
-    );
-
-    await waitFor(() => {
-      expect(result.current.exchangeRate).toBeCloseTo(0.88);
-      expect(result.current.sourceBaseRate).toBe(1.1);
-      expect(result.current.destBaseRate).toBe(1.25);
-      expect(result.current.rateError).toBeNull();
-    });
-    expect(mockFetchRate).not.toHaveBeenCalled();
-  });
-
-  it('keeps a typed 1.25 draft without treating 1. as a finished rate or refetching', async () => {
-    mockFetchRate.mockResolvedValue(null);
-
-    const { result, rerender } = renderHook(
-      (props: { manualSourceBaseRate: string }) =>
-        useCrossCurrencyRates({
-          sourceCurrency: 'EUR',
-          destCurrency: 'USD',
-          workplaceCurrency: 'USD',
-          manualSourceBaseRate: props.manualSourceBaseRate,
-          enabled: true,
-        }),
-      { initialProps: { manualSourceBaseRate: '' } },
-    );
-
-    await waitFor(() => {
-      expect(result.current.rateError).toBe('Rate unavailable');
-    });
-    expect(mockFetchRate).toHaveBeenCalledTimes(1);
-
-    rerender({ manualSourceBaseRate: '1' });
-    await waitFor(() => {
-      expect(result.current.exchangeRate).toBe(1);
-      expect(result.current.rateError).toBeNull();
-    });
-
-    rerender({ manualSourceBaseRate: '1.' });
-    await act(async () => {
-      await Promise.resolve();
-    });
-    expect(result.current.exchangeRate).toBe(1);
-    expect(result.current.rateError).toBeNull();
-
-    rerender({ manualSourceBaseRate: '1.25' });
-    await waitFor(() => {
-      expect(result.current.exchangeRate).toBe(1.25);
-    });
-    expect(mockFetchRate).toHaveBeenCalledTimes(1);
   });
 
   it('clears the previous rate when a historical lookup fails after the journal date changes', async () => {
@@ -331,15 +245,66 @@ describe('useCrossCurrencyRates', () => {
       { initialProps: { journalDate: '2024-10-03' } },
     );
 
-    await waitFor(() => expect(result.current.exchangeRate).toBe(1.1));
+    await waitFor(() => expect(result.current.sourceBaseRate).toBe(1.1));
 
     rerender({ journalDate: '2024-10-04' });
 
     await waitFor(() => {
-      expect(result.current.rateError).toBe('Rate unavailable');
-      expect(result.current.exchangeRate).toBeNull();
+      expect(result.current.error).toBe('Rate unavailable');
       expect(result.current.sourceBaseRate).toBeNull();
       expect(result.current.destBaseRate).toBeNull();
     });
+  });
+
+  it('refetches the same pair when the refresh nonce changes', async () => {
+    mockFetchRate.mockResolvedValueOnce(1.1).mockResolvedValueOnce(1.2);
+
+    const { result, rerender } = renderHook(
+      (props: { refreshNonce: number }) =>
+        useCrossCurrencyRates({
+          sourceCurrency: 'EUR',
+          destCurrency: 'USD',
+          workplaceCurrency: 'USD',
+          refreshNonce: props.refreshNonce,
+          enabled: true,
+        }),
+      { initialProps: { refreshNonce: 0 } },
+    );
+
+    await waitFor(() => expect(result.current.sourceBaseRate).toBe(1.1));
+    rerender({ refreshNonce: 1 });
+    await waitFor(() => expect(result.current.sourceBaseRate).toBe(1.2));
+    expect(mockFetchRate).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('useCrossCurrencyRatesMap', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockFetchHistoricalRate.mockReset();
+  });
+
+  it('fetches each distinct pair once and keys results by pair', async () => {
+    mockFetchRate.mockImplementation(async (from: string) => (from === 'EUR' ? 1.1 : 0.012));
+
+    const { result } = renderHook(() =>
+      useCrossCurrencyRatesMap({
+        pairs: [
+          { sourceCurrency: 'USD', destCurrency: 'EUR' },
+          { sourceCurrency: 'USD', destCurrency: 'INR' },
+          { sourceCurrency: 'USD', destCurrency: 'EUR' },
+          { sourceCurrency: 'USD', destCurrency: 'USD' },
+        ],
+        workplaceCurrency: 'USD',
+        enabled: true,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current[currencyPairKey('USD', 'EUR')]?.destBaseRate).toBe(1.1);
+      expect(result.current[currencyPairKey('USD', 'INR')]?.destBaseRate).toBe(0.012);
+    });
+    expect(result.current[currencyPairKey('USD', 'USD')]).toBeUndefined();
+    expect(mockFetchRate).toHaveBeenCalledTimes(2);
   });
 });
