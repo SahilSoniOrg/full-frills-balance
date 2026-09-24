@@ -68,7 +68,7 @@ export function ExchangeRateCard({
   const { theme, fonts } = useTheme();
   const [convertedDraft, setConvertedDraft] = useState<string | null>(null);
   const [isConvertedFocused, setIsConvertedFocused] = useState(false);
-  const [convertedInputWidth, setConvertedInputWidth] = useState(Size.fieldNarrow);
+  const [convertedInputWidth, setConvertedInputWidth] = useState<number>(Size.fieldNarrow);
   const validExchangeRate = useMemo(() => {
     const numericRate = typeof exchangeRate === 'string' ? Number(exchangeRate) : exchangeRate;
     return typeof numericRate === 'number' && Number.isFinite(numericRate) && numericRate > 0

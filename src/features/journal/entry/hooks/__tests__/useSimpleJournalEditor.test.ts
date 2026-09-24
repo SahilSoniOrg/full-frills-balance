@@ -1,9 +1,11 @@
 import { AccountType, TransactionType } from '@/src/types/enums';
-import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
+import { asAccountId, asTransactionId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
-import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
-
-import { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
+import type { JournalEntryLine } from '@/src/types/domainJournal';
+import {
+  type UseSimpleJournalEditorProps,
+  useSimpleJournalEditor,
+} from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useCallback, useState } from 'react';
 
@@ -59,12 +61,17 @@ function createEditor(options?: {
   isEdit?: boolean;
   valuationCurrency?: string;
 }) {
+  type EditorContract = UseSimpleJournalEditorProps['editor'];
+  type Editor = Omit<EditorContract, 'updateLine' | 'updateLines'> & {
+    updateLine: jest.MockedFunction<EditorContract['updateLine']>;
+    updateLines: jest.MockedFunction<EditorContract['updateLines']>;
+  };
   const crossCurrency = options?.crossCurrency ?? false;
   const transactionType = options?.type ?? 'expense';
-  const lines = [
+  const lines: Editor['lines'] = [
     {
-      id: '1',
-      accountId: 'source',
+      id: asTransactionId('1'),
+      accountId: asAccountId('source'),
       accountName: 'Cash',
       accountType: AccountType.ASSET,
       amount: '100',
@@ -74,8 +81,8 @@ function createEditor(options?: {
       accountCurrency: crossCurrency ? 'EUR' : 'USD',
     },
     {
-      id: '2',
-      accountId: 'destination',
+      id: asTransactionId('2'),
+      accountId: asAccountId('destination'),
       accountName: crossCurrency ? 'EUR Bank' : 'Food',
       accountType: crossCurrency ? AccountType.ASSET : AccountType.EXPENSE,
       amount: '100',
@@ -86,7 +93,7 @@ function createEditor(options?: {
     },
   ];
 
-  const editor = {
+  const editor: Editor = {
     transactionType,
     setTransactionType: jest.fn(),
     isGuidedMode: true,
@@ -94,18 +101,17 @@ function createEditor(options?: {
     valuationCurrency: options?.valuationCurrency ?? mockWorkplaceCurrency,
     lines,
     setLines: jest.fn(),
-    updateLine: jest.fn((id: string, updates: Record<string, unknown>) => {
+    updateLine: jest.fn((id: string, updates: Partial<JournalEntryLine>) => {
       const line = editor.lines.find(l => l.id === id);
       if (line) Object.assign(line, updates);
     }),
-    updateLines: jest.fn((batch: Record<string, Record<string, unknown>>) => {
+    updateLines: jest.fn((batch: Record<string, Partial<JournalEntryLine>>) => {
       Object.entries(batch).forEach(([id, updates]) => {
         const line = editor.lines.find(l => l.id === id);
         if (line) Object.assign(line, updates);
       });
     }),
     description: 'Lunch',
-    setDescription: jest.fn(),
     isSubmitting: false,
     journalDate: '2026-01-01',
     journalTime: '12:00',
@@ -147,13 +153,13 @@ describe('useSimpleJournalEditor', () => {
     });
 
     const editor = createEditor({ crossCurrency: true });
-    editor.lines[0].accountId = 'eur-source';
-    editor.lines[1].accountId = 'gbp-dest';
+    editor.lines[0].accountId = asAccountId('eur-source');
+    editor.lines[1].accountId = asAccountId('gbp-dest');
 
     const { result } = renderHook(() =>
       useSimpleJournalEditor({
         accounts,
-        editor: editor as ReturnType<typeof useJournalEditor>,
+        editor,
         onSelectAccountRequest: jest.fn(),
       }),
     );
@@ -173,11 +179,11 @@ describe('useSimpleJournalEditor', () => {
   it('uses saved journal rates on edit without fetching or rewriting lines on open', async () => {
     mockWorkplaceCurrency = 'INR';
     const editor = createEditor({ crossCurrency: true, isEdit: true, valuationCurrency: 'USD' });
-    editor.lines[0].accountId = 'eur-source';
+    editor.lines[0].accountId = asAccountId('eur-source');
     editor.lines[0].accountCurrency = 'EUR';
     editor.lines[0].amount = '100';
     editor.lines[0].exchangeRate = '1.1';
-    editor.lines[1].accountId = 'usd-dest';
+    editor.lines[1].accountId = asAccountId('usd-dest');
     editor.lines[1].accountCurrency = 'USD';
     editor.lines[1].amount = '110';
     editor.lines[1].exchangeRate = '';
@@ -185,7 +191,7 @@ describe('useSimpleJournalEditor', () => {
     const { result } = renderHook(() =>
       useSimpleJournalEditor({
         accounts,
-        editor: editor as ReturnType<typeof useJournalEditor>,
+        editor,
         onSelectAccountRequest: jest.fn(),
       }),
     );
@@ -209,14 +215,14 @@ describe('useSimpleJournalEditor', () => {
     const editor = createEditor();
     editor.lines[0].amount = '50';
     editor.lines[1].amount = '50';
-    editor.lines[1].accountId = 'inr-dest';
+    editor.lines[1].accountId = asAccountId('inr-dest');
     editor.lines[1].accountName = 'Subscriptions';
     editor.lines[1].accountCurrency = 'INR';
 
     const { result } = renderHook(() =>
       useSimpleJournalEditor({
         accounts,
-        editor: editor as ReturnType<typeof useJournalEditor>,
+        editor,
         onSelectAccountRequest: jest.fn(),
       }),
     );
@@ -254,7 +260,7 @@ describe('useSimpleJournalEditor', () => {
     const editor = createEditor();
     editor.lines[0].amount = '50';
     editor.lines[1].amount = '50';
-    editor.lines[1].accountId = 'inr-dest';
+    editor.lines[1].accountId = asAccountId('inr-dest');
     editor.lines[1].accountName = 'Subscriptions';
     editor.lines[1].accountCurrency = 'INR';
 
@@ -263,7 +269,7 @@ describe('useSimpleJournalEditor', () => {
         editor.journalDate = journalDate;
         return useSimpleJournalEditor({
           accounts,
-          editor: editor as ReturnType<typeof useJournalEditor>,
+          editor,
           onSelectAccountRequest: jest.fn(),
         });
       },
@@ -304,7 +310,7 @@ describe('useSimpleJournalEditor', () => {
     const { result } = renderHook(() =>
       useSimpleJournalEditor({
         accounts,
-        editor: editor as ReturnType<typeof useJournalEditor>,
+        editor,
         onSelectAccountRequest: jest.fn(),
       }),
     );
@@ -333,16 +339,16 @@ describe('useSimpleJournalEditor', () => {
     });
 
     const editor = createEditor({ crossCurrency: true });
-    editor.lines[0].accountId = 'eur-source';
+    editor.lines[0].accountId = asAccountId('eur-source');
     editor.lines[0].exchangeRate = (1.1).toFixed(6);
-    editor.lines[1].accountId = 'gbp-dest';
+    editor.lines[1].accountId = asAccountId('gbp-dest');
     editor.lines[1].exchangeRate = (1.25).toFixed(6);
     editor.lines[1].amount = ((100 * 1.1) / 1.25).toFixed(2);
 
     renderHook(() =>
       useSimpleJournalEditor({
         accounts,
-        editor: editor as ReturnType<typeof useJournalEditor>,
+        editor,
         onSelectAccountRequest: jest.fn(),
       }),
     );
@@ -374,8 +380,8 @@ describe('useSimpleJournalEditor', () => {
     mockFetchRate.mockReturnValueOnce(firstRatePromise).mockReturnValueOnce(secondRatePromise);
 
     const editor = createEditor({ crossCurrency: true });
-    editor.lines[0].accountId = 'eur-source';
-    editor.lines[1].accountId = 'usd-dest';
+    editor.lines[0].accountId = asAccountId('eur-source');
+    editor.lines[1].accountId = asAccountId('usd-dest');
     editor.lines[1].accountCurrency = 'USD';
 
     const { result, rerender } = renderHook(
@@ -383,7 +389,7 @@ describe('useSimpleJournalEditor', () => {
         editor.lines = editorLines;
         return useSimpleJournalEditor({
           accounts,
-          editor: editor as ReturnType<typeof useJournalEditor>,
+          editor,
           onSelectAccountRequest: jest.fn(),
         });
       },
@@ -397,13 +403,18 @@ describe('useSimpleJournalEditor', () => {
     // Switch source from EUR to GBP while first fetch is in flight
     const nextLines = editor.lines.map(l =>
       l.id === '1'
-        ? { ...l, accountId: 'eur-source', accountCurrency: 'GBP', accountName: 'GBP Cash' }
+        ? {
+            ...l,
+            accountId: asAccountId('eur-source'),
+            accountCurrency: 'GBP',
+            accountName: 'GBP Cash',
+          }
         : l,
     );
     // Use gbp account id that exists
     nextLines[0] = {
       ...nextLines[0],
-      accountId: 'gbp-dest',
+      accountId: asAccountId('gbp-dest'),
       accountName: 'GBP Bank',
       accountCurrency: 'GBP',
     };
@@ -438,10 +449,10 @@ describe('useSimpleJournalEditor', () => {
         'expense',
       );
       const [lines, setLines] = useState(createEditor().lines);
-      const updateLine = useCallback((id: string, updates: Record<string, unknown>) => {
+      const updateLine = useCallback((id: string, updates: Partial<JournalEntryLine>) => {
         setLines(current => current.map(line => (line.id === id ? { ...line, ...updates } : line)));
       }, []);
-      const updateLines = useCallback((updates: Record<string, Record<string, unknown>>) => {
+      const updateLines = useCallback((updates: Record<string, Partial<JournalEntryLine>>) => {
         setLines(current =>
           current.map(line => (updates[line.id] ? { ...line, ...updates[line.id] } : line)),
         );
@@ -455,7 +466,7 @@ describe('useSimpleJournalEditor', () => {
         setLines,
         updateLine,
         updateLines,
-      } as ReturnType<typeof useJournalEditor>;
+      };
       const simple = useSimpleJournalEditor({
         accounts,
         editor,
@@ -480,15 +491,15 @@ describe('useSimpleJournalEditor', () => {
     mockFetchRate.mockResolvedValue(null);
 
     const editor = createEditor({ crossCurrency: true });
-    editor.lines[0].accountId = 'eur-source';
-    editor.lines[1].accountId = 'usd-dest';
+    editor.lines[0].accountId = asAccountId('eur-source');
+    editor.lines[1].accountId = asAccountId('usd-dest');
     editor.lines[1].accountName = 'USD Bank';
     editor.lines[1].accountCurrency = 'USD';
 
     const { result } = renderHook(() =>
       useSimpleJournalEditor({
         accounts,
-        editor: editor as ReturnType<typeof useJournalEditor>,
+        editor,
         onSelectAccountRequest: jest.fn(),
       }),
     );
@@ -518,13 +529,13 @@ describe('useSimpleJournalEditor', () => {
 
   it('allows unselecting accounts to EMPTY_ACCOUNT_ID and keeps them unselected', async () => {
     const editor = createEditor();
-    editor.lines[0].accountId = 'source';
-    editor.lines[1].accountId = 'destination';
+    editor.lines[0].accountId = asAccountId('source');
+    editor.lines[1].accountId = asAccountId('destination');
 
     const { result } = renderHook(() =>
       useSimpleJournalEditor({
         accounts,
-        editor: editor as ReturnType<typeof useJournalEditor>,
+        editor,
         onSelectAccountRequest: jest.fn(),
       }),
     );
@@ -557,7 +568,7 @@ describe('useSimpleJournalEditor', () => {
     const { result } = renderHook(() =>
       useSimpleJournalEditor({
         accounts,
-        editor: editor as ReturnType<typeof useJournalEditor>,
+        editor,
         onSelectAccountRequest: jest.fn(),
       }),
     );
@@ -600,7 +611,7 @@ describe('useSimpleJournalEditor', () => {
     const { result } = renderHook(() =>
       useSimpleJournalEditor({
         accounts,
-        editor: editor as ReturnType<typeof useJournalEditor>,
+        editor,
         onSelectAccountRequest: jest.fn(),
       }),
     );
@@ -617,7 +628,7 @@ describe('useSimpleJournalEditor', () => {
     const { result } = renderHook(() =>
       useSimpleJournalEditor({
         accounts,
-        editor: editor as ReturnType<typeof useJournalEditor>,
+        editor,
         onSelectAccountRequest: jest.fn(),
       }),
     );

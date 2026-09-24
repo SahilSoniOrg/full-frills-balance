@@ -1,9 +1,9 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { AccountType, TransactionType } from '@/src/types/enums';
-import { AccountId } from '@/src/types/ids';
+import { asAccountId, asTransactionId, type AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
-import { useJournalEditor } from '../useJournalEditor';
-import { useSplitJournalEditor } from '../useSplitJournalEditor';
+import { type UseSplitJournalEditorProps, useSplitJournalEditor } from '../useSplitJournalEditor';
+import type { JournalEntryLine } from '@/src/types/domainJournal';
 
 jest.mock('@/src/features/journal/hooks/useAccountSelection', () => ({
   useAccountSelection: jest.fn(({ accounts }) => ({
@@ -28,65 +28,67 @@ jest.mock('@/src/hooks/use-currencies', () => ({
 }));
 
 function createEditor(sourceAccountId = 'cash') {
-  const lines = [
+  type Editor = UseSplitJournalEditorProps['editor'];
+  const lines: Editor['lines'] = [
     {
-      id: 'source',
-      accountId: sourceAccountId,
+      id: asTransactionId('source'),
+      accountId: asAccountId(sourceAccountId),
       accountName: 'Cash',
       accountType: AccountType.ASSET,
       accountCurrency: 'USD',
       amount: '50',
       transactionType: TransactionType.CREDIT,
+      notes: '',
       exchangeRate: '',
     },
     {
-      id: 'split-1',
-      accountId: 'groceries',
+      id: asTransactionId('split-1'),
+      accountId: asAccountId('groceries'),
       accountName: 'Groceries',
       accountType: AccountType.EXPENSE,
       accountCurrency: 'USD',
       amount: '25',
       transactionType: TransactionType.DEBIT,
+      notes: '',
       exchangeRate: '',
     },
     {
-      id: 'split-2',
-      accountId: 'bills',
+      id: asTransactionId('split-2'),
+      accountId: asAccountId('bills'),
       accountName: 'Bills',
       accountType: AccountType.EXPENSE,
       accountCurrency: 'USD',
       amount: '25',
       transactionType: TransactionType.DEBIT,
+      notes: '',
       exchangeRate: '',
     },
   ];
 
-  return {
+  const editor: Editor = {
     transactionType: 'expense',
     setTransactionType: jest.fn(),
     lines,
     isEdit: false,
     isSubmitting: false,
-    updateLine: jest.fn((id: string, patch: Record<string, unknown>) => {
+    journalDate: '2026-01-01',
+    updateLine: jest.fn((id: string, patch: Partial<JournalEntryLine>) => {
       const line = lines.find(candidate => candidate.id === id);
       if (line) Object.assign(line, patch);
     }),
-    updateLines: jest.fn((updates: Record<string, Record<string, unknown>>) => {
+    updateLines: jest.fn((updates: Record<string, Partial<JournalEntryLine>>) => {
       lines.forEach(line => {
         if (updates[line.id]) Object.assign(line, updates[line.id]);
       });
     }),
-    setLines: jest.fn((nextLines: unknown) => {
-      const next =
-        typeof nextLines === 'function'
-          ? (nextLines as (current: typeof lines) => typeof lines)(lines)
-          : (nextLines as typeof lines);
+    setLines: jest.fn((nextLines: Parameters<Editor['setLines']>[0]) => {
+      const next = typeof nextLines === 'function' ? nextLines(lines) : nextLines;
       lines.splice(0, lines.length, ...next);
     }),
     addLine: jest.fn(),
-    removeLine: jest.fn(),
     setIsGuidedMode: jest.fn(),
-  } as ReturnType<typeof useJournalEditor>;
+  };
+  return editor;
 }
 
 describe('useSplitJournalEditor', () => {

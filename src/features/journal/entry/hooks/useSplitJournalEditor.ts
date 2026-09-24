@@ -23,7 +23,20 @@ import { useJournalEditor } from './useJournalEditor';
 export interface UseSplitJournalEditorProps {
   accounts: AccountFields[];
   workplaceCurrency: string;
-  editor: ReturnType<typeof useJournalEditor>;
+  editor: Pick<
+    ReturnType<typeof useJournalEditor>,
+    | 'setIsGuidedMode'
+    | 'isEdit'
+    | 'isSubmitting'
+    | 'lines'
+    | 'updateLine'
+    | 'updateLines'
+    | 'setLines'
+    | 'addLine'
+    | 'transactionType'
+    | 'setTransactionType'
+    | 'journalDate'
+  >;
 }
 
 export function useSplitJournalEditor({

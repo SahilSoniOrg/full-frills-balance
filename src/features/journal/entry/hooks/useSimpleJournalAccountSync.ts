@@ -10,7 +10,10 @@ import { useJournalEditor } from './useJournalEditor';
 
 interface UseSimpleJournalAccountSyncProps {
   accounts: AccountFields[];
-  editor: ReturnType<typeof useJournalEditor>;
+  editor: Pick<
+    ReturnType<typeof useJournalEditor>,
+    'isGuidedMode' | 'isEdit' | 'setLines' | 'lines' | 'updateLines'
+  >;
   type: TabType;
   sourceId: AccountId;
   destinationId: AccountId;

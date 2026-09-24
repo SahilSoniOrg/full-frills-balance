@@ -26,7 +26,22 @@ import { useSimpleJournalAccountSync } from './useSimpleJournalAccountSync';
 
 export interface UseSimpleJournalEditorProps {
   accounts: AccountFields[];
-  editor: ReturnType<typeof useJournalEditor>;
+  editor: Pick<
+    ReturnType<typeof useJournalEditor>,
+    | 'isEdit'
+    | 'isGuidedMode'
+    | 'transactionType'
+    | 'valuationCurrency'
+    | 'lines'
+    | 'updateLines'
+    | 'journalDate'
+    | 'setTransactionType'
+    | 'setLines'
+    | 'updateLine'
+    | 'journalTime'
+    | 'description'
+    | 'isSubmitting'
+  >;
   onSelectAccountRequest: (role: AccountRole) => void;
 }
 
