@@ -10,7 +10,6 @@ import { JournalId, WorkplaceId } from '@/src/types/ids';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
-import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
 import { smsService } from '@/src/services/sms-service';
 import { database } from '@/src/data/database/Database';
@@ -77,68 +76,6 @@ describe('smsService.parseTransactionMessage', () => {
 
     expect(parsed.parseStatus).toBe(InboxParseStatus.IGNORED);
     expect(parsed.parseReason).toContain('Personal');
-  });
-});
-
-describe('TransactionAutoPostRuleRepository.prepareMergeOperations', () => {
-  test('handles dual-reference case (both source and category accounts are source accounts)', async () => {
-    const sourceAccountIds = ['acc-1', 'acc-2'];
-    const targetAccountId = 'target-acc';
-    const workplaceId = 'wp-1';
-
-    const mockRule = {
-      id: 'rule-dual',
-      sourceAccountId: 'acc-1',
-      categoryAccountId: 'acc-2',
-      actionsJson: JSON.stringify({
-        disposition: 'auto_post',
-        sourceAccountId: 'acc-1',
-        categoryAccountId: 'acc-2',
-      }),
-      prepareUpdate: jest.fn().mockImplementation((fn: any) => {
-        const record = {
-          id: 'rule-dual',
-          sourceAccountId: 'acc-1',
-          categoryAccountId: 'acc-2',
-          actionsJson: JSON.stringify({
-            disposition: 'auto_post',
-            sourceAccountId: 'acc-1',
-            categoryAccountId: 'acc-2',
-          }),
-        };
-        fn(record);
-        return record;
-      }),
-    };
-
-    // Mock query and fetch
-    const mockQuery = {
-      fetch: jest.fn().mockResolvedValue([mockRule]),
-    };
-
-    // Mock database.collections.get to return our mock rules
-    const databaseSpy = jest.spyOn(database.collections, 'get').mockReturnValue({
-      query: jest.fn().mockReturnValue(mockQuery),
-    } as any);
-
-    const ops = await transactionAutoPostRuleRepository.prepareMergeOperations(
-      workplaceId as any,
-      sourceAccountIds as any,
-      targetAccountId as any,
-    );
-
-    // Verify exactly one prepareUpdate was called
-    expect(mockRule.prepareUpdate).toHaveBeenCalledTimes(1);
-    expect(ops.length).toBe(1);
-    expect((ops[0] as any).sourceAccountId).toBe(targetAccountId);
-    expect((ops[0] as any).categoryAccountId).toBe(targetAccountId);
-    expect(JSON.parse((ops[0] as any).actionsJson)).toEqual({
-      disposition: 'auto_post',
-      sourceAccountId: targetAccountId,
-      categoryAccountId: targetAccountId,
-    });
-
-    databaseSpy.mockRestore();
   });
 });
 

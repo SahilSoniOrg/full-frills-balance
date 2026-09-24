@@ -1,4 +1,8 @@
 import { database } from '@/src/data/database/Database';
+import {
+  stageBudgetMergeWrite,
+  type AccountingWriteSession,
+} from '@/src/data/repositories/AccountingWriteSession';
 import Budget from '@/src/data/models/Budget';
 import BudgetScope from '@/src/data/models/BudgetScope';
 import { AccountId, BudgetId, WorkplaceId } from '@/src/types/ids';
@@ -237,16 +241,19 @@ export class BudgetRepository {
    * Prepares WatermelonDB operations to merge budget references from source accounts
    * into a target account.
    */
-  async prepareMergeOperations(
+  async mergeAccountsInSession(
+    session: AccountingWriteSession,
     workplaceId: WorkplaceId,
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
-  ): Promise<(Budget | BudgetScope)[]> {
+  ): Promise<void> {
     const records = await this.loadMergeRecords(workplaceId, sourceAccountIds, targetAccountId);
-    return this.prepareLoadedMergeOperations(records, sourceAccountIds, targetAccountId);
+    stageBudgetMergeWrite(session, () =>
+      this.prepareLoadedMergeOperations(records, sourceAccountIds, targetAccountId),
+    );
   }
 
-  async loadMergeRecords(
+  private async loadMergeRecords(
     workplaceId: WorkplaceId,
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
@@ -258,7 +265,7 @@ export class BudgetRepository {
     return { scopes, budgets };
   }
 
-  prepareLoadedMergeOperations(
+  private prepareLoadedMergeOperations(
     { scopes, budgets }: BudgetMergeRecords,
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,

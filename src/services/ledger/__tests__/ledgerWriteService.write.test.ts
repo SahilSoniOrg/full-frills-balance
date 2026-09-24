@@ -5,7 +5,10 @@ import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalListQueryRepository } from '@/src/data/repositories/journal/journalListQueryRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
+import { ledgerLifecycleService } from '@/src/services/ledger/ledgerLifecycleService';
 import { ledgerUpdateService } from '@/src/services/ledger/ledgerUpdateService';
 import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
@@ -154,6 +157,190 @@ describe('ledgerWriteService write paths', () => {
         workplaceId,
       ),
     ).rejects.toThrow(/Journal not found/);
+  });
+
+  it('repository rejects an unbalanced update to an already-posted journal without changing it', async () => {
+    const journal = await ledgerCreateService.createJournal(
+      {
+        description: 'Posted before',
+        journalDate: Date.now(),
+        currencyCode: 'USD',
+        transactions: balancedLines(),
+      },
+      workplaceId,
+    );
+
+    await expect(
+      journalWriteRepository.updateJournalWithTransactions(workplaceId, journal.id as JournalId, {
+        description: 'Should not save',
+        journalDate: Date.now(),
+        currencyCode: 'USD',
+        transactions: [
+          {
+            accountId: cashAccountId,
+            amount: 25,
+            transactionType: TransactionType.CREDIT,
+          },
+          {
+            accountId: expenseAccountId,
+            amount: 24.99,
+            transactionType: TransactionType.DEBIT,
+          },
+        ],
+      }),
+    ).rejects.toThrow('0.01 USD');
+
+    const savedJournal = await journalQueryRepository.find(workplaceId, journal.id as JournalId);
+    const savedTransactions = await transactionQueryRepository.findByJournal(
+      workplaceId,
+      journal.id as JournalId,
+    );
+    expect(savedJournal?.description).toBe('Posted before');
+    expect(savedTransactions.map(transaction => transaction.amount)).toEqual([25, 25]);
+  });
+
+  it('allows an unbalanced planned journal but rejects posting it', async () => {
+    const journal = await ledgerCreateService.createJournal(
+      {
+        description: 'Unbalanced planned journal',
+        journalDate: Date.now(),
+        currencyCode: 'USD',
+        status: JournalStatus.PLANNED,
+        transactions: [
+          {
+            accountId: cashAccountId,
+            amount: 25,
+            transactionType: TransactionType.CREDIT,
+          },
+          {
+            accountId: expenseAccountId,
+            amount: 24.99,
+            transactionType: TransactionType.DEBIT,
+          },
+        ],
+      },
+      workplaceId,
+    );
+
+    expect(journal.status).toBe(JournalStatus.PLANNED);
+    await expect(
+      ledgerLifecycleService.postJournal(journal.id as JournalId, workplaceId),
+    ).rejects.toThrow('0.01 USD');
+    expect((await journalQueryRepository.find(workplaceId, journal.id as JournalId))?.status).toBe(
+      JournalStatus.PLANNED,
+    );
+  });
+
+  it('allows an unbalanced planned update but rejects changing that update to POSTED', async () => {
+    const journal = await ledgerCreateService.createJournal(
+      {
+        description: 'Planned balanced journal',
+        journalDate: Date.now(),
+        currencyCode: 'USD',
+        status: JournalStatus.PLANNED,
+        transactions: balancedLines(),
+      },
+      workplaceId,
+    );
+    const unbalancedData = {
+      description: 'Planned unbalanced journal',
+      journalDate: Date.now(),
+      currencyCode: 'USD',
+      transactions: [
+        {
+          accountId: cashAccountId,
+          amount: 25,
+          transactionType: TransactionType.CREDIT,
+        },
+        {
+          accountId: expenseAccountId,
+          amount: 24.99,
+          transactionType: TransactionType.DEBIT,
+        },
+      ],
+    };
+
+    await ledgerUpdateService.updateJournal(journal.id as JournalId, unbalancedData, workplaceId);
+    expect((await journalQueryRepository.find(workplaceId, journal.id as JournalId))?.status).toBe(
+      JournalStatus.PLANNED,
+    );
+
+    await expect(
+      ledgerUpdateService.updateJournal(
+        journal.id as JournalId,
+        { ...unbalancedData, status: JournalStatus.POSTED },
+        workplaceId,
+      ),
+    ).rejects.toThrow('0.01 USD');
+    expect(
+      (await journalQueryRepository.find(workplaceId, journal.id as JournalId))?.description,
+    ).toBe('Planned unbalanced journal');
+  });
+
+  it('repository rejects an unbalanced posted create before persisting any rows', async () => {
+    await expect(
+      journalWriteRepository.bulkCreateJournals(workplaceId, [
+        {
+          journalDate: Date.now(),
+          description: 'Unbalanced posted create',
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: cashAccountId,
+              amount: 25,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId,
+              amount: 24.99,
+              transactionType: TransactionType.DEBIT,
+            },
+          ],
+        },
+      ]),
+    ).rejects.toThrow('0.01 USD');
+
+    expect(await journalListQueryRepository.findAll(workplaceId)).toHaveLength(0);
+  });
+
+  it('repository rejects account reassignment that breaks a posted journal balance', async () => {
+    const foreignCurrencyAccount = await accountWriteRepository.create({
+      name: 'Euro account',
+      accountType: AccountType.ASSET,
+      currencyCode: 'EUR',
+      workplaceId,
+    });
+    const journal = await ledgerCreateService.createJournal(
+      {
+        description: 'Posted transfer',
+        journalDate: Date.now(),
+        currencyCode: 'USD',
+        transactions: balancedLines(),
+      },
+      workplaceId,
+    );
+    const transactions = await transactionQueryRepository.findByJournal(
+      workplaceId,
+      journal.id as JournalId,
+    );
+    const debitLine = transactions.find(
+      transaction => transaction.transactionType === TransactionType.DEBIT,
+    )!;
+
+    await expect(
+      journalWriteRepository.bulkReassignTransactionAccounts({
+        workplaceId,
+        transactions: [debitLine],
+        newAccountId: foreignCurrencyAccount.id,
+        journals: [journal],
+        displayTypeByJournalId: new Map(),
+      }),
+    ).rejects.toThrow(/exchange rate/i);
+
+    const savedDebitLine = (
+      await transactionQueryRepository.findByJournal(workplaceId, journal.id as JournalId)
+    ).find(transaction => transaction.id === debitLine.id);
+    expect(savedDebitLine?.accountId).toBe(expenseAccountId);
   });
 
   it('creates a reversal and marks the original reversed in one write', async () => {

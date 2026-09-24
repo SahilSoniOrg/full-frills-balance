@@ -3,6 +3,10 @@ import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
+import {
+  stageModelWrite,
+  type AccountingWriteSession,
+} from '@/src/data/repositories/AccountingWriteSession';
 import { Model, Q } from '@nozbe/watermelondb';
 import { Observable } from 'rxjs';
 
@@ -194,6 +198,28 @@ export class TransactionInboxRepository {
       Object.assign(entry, data);
     });
     return { ops: [record], record };
+  }
+
+  /** Defers inbox model preparation until the enclosing accounting session flushes. */
+  stageUpsertInSession(
+    session: AccountingWriteSession,
+    data: TransactionInboxRecordWriteData,
+    existingRecord: TransactionInboxRecord | null,
+  ): void {
+    stageModelWrite(session, () => this.prepareUpsert(data, existingRecord).ops);
+  }
+
+  /** Reloads and stages a manual journal link in the enclosing accounting transaction. */
+  async stageLinkByIdInSession(
+    session: AccountingWriteSession,
+    workplaceId: WorkplaceId,
+    recordId: string,
+    journalId: JournalId,
+    disposition: InboxProcessingStatus.IMPORTED | InboxProcessingStatus.AUTO_POSTED,
+  ): Promise<void> {
+    const record = await this.find(workplaceId, recordId);
+    if (!record) throw new Error('Inbox record not found');
+    stageModelWrite(session, () => [this.prepareLink(record, journalId, disposition)]);
   }
 
   async persistLink(

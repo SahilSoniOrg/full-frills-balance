@@ -227,6 +227,102 @@ describe('journalBulkCommands', () => {
     expect(reloaded2.deletedAt).toBeTruthy();
   });
 
+  it('merge preserves foreign-currency line amounts and rates in one batch', async () => {
+    const foreignAsset = await accountWriteRepository.create({
+      workplaceId: WP,
+      name: 'Euro savings',
+      accountType: AccountType.ASSET,
+      currencyCode: 'EUR',
+    });
+    const createJournal = (journalDate: number, description: string) =>
+      ledgerCreateService.createJournal(
+        {
+          journalDate,
+          description,
+          currencyCode: 'USD',
+          transactions: [
+            { accountId: expenseAccId, amount: 100, transactionType: TransactionType.DEBIT },
+            {
+              accountId: foreignAsset.id,
+              amount: 90,
+              transactionType: TransactionType.CREDIT,
+              exchangeRate: 10 / 9,
+            },
+          ],
+        },
+        WP,
+      );
+    const j1 = await createJournal(1000, 'Euro purchase 1');
+    const j2 = await createJournal(2000, 'Euro purchase 2');
+    const preview = await analyzeJournalsForMerge(WP, [j1.id, j2.id]);
+    expect(preview.canMerge).toBe(true);
+    expect(preview.totalDebit).toBe(200);
+    expect(preview.totalCredit).toBe(200);
+    const batchSpy = jest.spyOn(database, 'batch');
+
+    const merged = await mergeJournals(WP, [j1.id, j2.id]);
+
+    expect(batchSpy).toHaveBeenCalledTimes(1);
+    batchSpy.mockRestore();
+    expect(merged.totalAmount).toBe(200);
+    const mergedTransactions = await database.collections
+      .get<Transaction>('transactions')
+      .query(Q.where('journal_id', merged.id), Q.where('deleted_at', Q.eq(null)))
+      .fetch();
+    expect(mergedTransactions).toHaveLength(4);
+    expect(
+      mergedTransactions
+        .filter(transaction => transaction.accountId === foreignAsset.id)
+        .map(transaction => [transaction.amount, transaction.exchangeRate]),
+    ).toEqual([
+      [90, 10 / 9],
+      [90, 10 / 9],
+    ]);
+  });
+
+  it('rejects an unbalanced merged result without changing source rows', async () => {
+    const createJournal = (description: string) =>
+      ledgerCreateService.createJournal(
+        {
+          journalDate: 1000,
+          description,
+          currencyCode: 'USD',
+          transactions: [
+            { accountId: expenseAccId, amount: 10, transactionType: TransactionType.DEBIT },
+            { accountId: assetAccId, amount: 10, transactionType: TransactionType.CREDIT },
+          ],
+        },
+        WP,
+      );
+    const j1 = await createJournal('Part 1');
+    const j2 = await createJournal('Part 2');
+    const sourceTransactions = await database.collections
+      .get<Transaction>('transactions')
+      .query(Q.where('journal_id', j1.id), Q.where('deleted_at', Q.eq(null)))
+      .fetch();
+    await database.write(() =>
+      sourceTransactions[0].update(transaction => {
+        transaction.amount += 1;
+      }),
+    );
+    const batchSpy = jest.spyOn(database, 'batch');
+
+    await expect(mergeJournals(WP, [j1.id, j2.id])).rejects.toThrow(/differ by 1\.00 USD/);
+
+    expect(batchSpy).not.toHaveBeenCalled();
+    batchSpy.mockRestore();
+    const activeJournals = await database.collections
+      .get<Journal>('journals')
+      .query(Q.where('workplace_id', WP), Q.where('deleted_at', Q.eq(null)))
+      .fetch();
+    expect(activeJournals.map(journal => journal.id).sort()).toEqual([j1.id, j2.id].sort());
+    const activeTransactions = await database.collections
+      .get<Transaction>('transactions')
+      .query(Q.where('deleted_at', Q.eq(null)), Q.where('workplace_id', WP))
+      .fetch();
+    expect(activeTransactions).toHaveLength(4);
+  });
+
   it('mergeJournals carries planned-payment and SMS links to the merged journal', async () => {
     const plannedPaymentId = 'planned-rent' as PlannedPaymentId;
     const j1 = await ledgerCreateService.createJournal(
@@ -407,9 +503,7 @@ describe('journalBulkCommands', () => {
       });
     });
 
-    await expect(bulkRestoreJournals(WP, deleteToken)).rejects.toThrow(
-      'no longer matches the delete operation',
-    );
+    await expect(bulkRestoreJournals(WP, deleteToken)).rejects.toThrow(/delete operation/);
   });
 
   it('bulkDeleteJournals soft deletes journals and transactions in an atomic batch', async () => {

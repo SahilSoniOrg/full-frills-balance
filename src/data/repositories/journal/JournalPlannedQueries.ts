@@ -1,9 +1,17 @@
 import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
-import type Transaction from '@/src/data/models/Transaction';
 import { JournalStatus } from '@/src/types/enums';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { Model, Q } from '@nozbe/watermelondb';
+
+export type PlannedJournalStatus =
+  JournalStatus.PLANNED | JournalStatus.PAUSED | JournalStatus.SKIPPED;
+
+const PLANNED_STATUSES = new Set<JournalStatus>([
+  JournalStatus.PLANNED,
+  JournalStatus.PAUSED,
+  JournalStatus.SKIPPED,
+]);
 
 /** Planned-payment journal lookups and status batch helpers. */
 export class JournalPlannedQueries {
@@ -109,45 +117,29 @@ export class JournalPlannedQueries {
   prepareStatusUpdates(
     workplaceId: WorkplaceId,
     journals: Journal[],
-    status: JournalStatus | ((journal: Journal) => JournalStatus),
+    status: PlannedJournalStatus | ((journal: Journal) => PlannedJournalStatus),
   ): Model[] {
     this.assertJournalOwnership(workplaceId, journals);
-    return journals.map(journal =>
+    const updates = journals.map(journal => ({
+      journal,
+      status: typeof status === 'function' ? status(journal) : status,
+    }));
+    const invalidUpdate = updates.find(update => !PLANNED_STATUSES.has(update.status));
+    if (invalidUpdate) {
+      throw new Error(`Unsupported planned journal status: ${invalidUpdate.status}`);
+    }
+    return updates.map(({ journal, status: nextStatus }) =>
       journal.prepareUpdate((record: Journal) => {
-        record.status = typeof status === 'function' ? status(journal) : status;
+        record.status = nextStatus;
         record.updatedAt = new Date();
       }),
     );
   }
 
-  prepareSoftDeleteUpdates(
-    workplaceId: WorkplaceId,
-    journals: Journal[],
-    transactions: Transaction[],
-    deletedAt = new Date(),
-  ): Model[] {
-    this.assertModelOwnership(workplaceId, journals, transactions);
-
-    const journalUpdates = journals.map(journal =>
-      journal.prepareUpdate(record => {
-        record.deletedAt = deletedAt;
-        record.updatedAt = deletedAt;
-      }),
-    );
-    const transactionUpdates = transactions.map(transaction =>
-      transaction.prepareUpdate(record => {
-        record.deletedAt = deletedAt;
-        record.updatedAt = deletedAt;
-      }),
-    );
-
-    return [...journalUpdates, ...transactionUpdates];
-  }
-
   async batchUpdateStatus(
     workplaceId: WorkplaceId,
     journals: Journal[],
-    status: JournalStatus,
+    status: PlannedJournalStatus,
   ): Promise<void> {
     if (journals.length === 0) return;
     const updates = this.prepareStatusUpdates(workplaceId, journals, status);
@@ -160,23 +152,10 @@ export class JournalPlannedQueries {
     this.assertModelOwnership(workplaceId, journals);
   }
 
-  private assertModelOwnership(
-    workplaceId: WorkplaceId,
-    journals: Journal[],
-    transactions: Transaction[] = [],
-  ): void {
+  private assertModelOwnership(workplaceId: WorkplaceId, journals: Journal[]): void {
     const foreignJournal = journals.find(journal => journal.workplaceId !== workplaceId);
     if (foreignJournal) {
       throw new Error(`Journal ${foreignJournal.id} does not belong to workplace ${workplaceId}`);
-    }
-
-    const foreignTransaction = transactions.find(
-      transaction => transaction.workplaceId !== workplaceId,
-    );
-    if (foreignTransaction) {
-      throw new Error(
-        `Transaction ${foreignTransaction.id} does not belong to workplace ${workplaceId}`,
-      );
     }
   }
 }

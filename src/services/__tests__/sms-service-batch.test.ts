@@ -1,8 +1,15 @@
 import { database } from '@/src/data/database/Database';
-import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import ExpoSmsInbox from '@/modules/expo-sms-inbox';
 import { smsService } from '@/src/services/sms-service';
-import { InboxProcessingStatus } from '@/src/types/enums';
+import { InboxProcessingStatus, JournalStatus } from '@/src/types/enums';
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
+import {
+  stageModelWrite,
+  type AccountingWriteSession,
+} from '@/src/data/repositories/AccountingWriteSession';
+import type Journal from '@/src/data/models/Journal';
+import type { JournalPersistenceResult } from '@/src/data/repositories/journal/JournalPersistenceRepository';
+import type { Model } from '@nozbe/watermelondb';
 
 jest.mock('react-native/Libraries/Utilities/Platform', () => ({
   __esModule: true,
@@ -53,12 +60,7 @@ jest.mock('@/src/data/database/Database', () => ({
   },
 }));
 
-jest.mock('@/src/services/ledger/ledgerCreateService', () => ({
-  ledgerCreateService: {
-    prepareCreateJournalFromPreparedData: jest.fn(),
-  },
-}));
-jest.mock('@/src/services/ledger/prepareJournalData', () => ({
+jest.mock('@/src/services/journal/prepareJournalData', () => ({
   prepareJournalData: jest.fn().mockResolvedValue({}),
 }));
 
@@ -142,7 +144,7 @@ describe('SmsService Batching', () => {
 
     // Check that batch was called with collected ops
     const batchArgs = (database.batch as jest.Mock).mock.calls;
-    const totalBatchedOps = batchArgs.reduce((acc, call) => acc + call[0].length, 0);
+    const totalBatchedOps = batchArgs.reduce((acc, call) => acc + call.length, 0);
 
     // We have 2 messages, each should create 1 SmsInboxRecord
     expect(totalBatchedOps).toBe(2);
@@ -188,12 +190,23 @@ describe('SmsService Batching', () => {
       return null;
     });
 
-    // Mock ledgerCreateService to return some ops
-    (ledgerCreateService.prepareCreateJournalFromPreparedData as jest.Mock).mockReturnValue({
-      journal: { id: 'journal-1' },
-      ops: [{ id: 'op-1' }, { id: 'op-2' }],
-      accountsToRebuild: new Set(['acc-1']),
-    });
+    const journalResult: JournalPersistenceResult = {
+      journal: { id: 'journal-1' } as Journal,
+      affectedAccountIds: new Set(),
+      rebuildFromDate: Date.now(),
+      status: JournalStatus.POSTED,
+    };
+    jest
+      .spyOn(journalPersistenceService, 'putInSession')
+      .mockImplementation(
+        async (session: AccountingWriteSession): Promise<JournalPersistenceResult> => {
+          stageModelWrite(session, [
+            { id: 'journal-op' } as Model,
+            { id: 'transaction-op' } as Model,
+          ]);
+          return journalResult;
+        },
+      );
 
     // Remove the incorrect mock for journalRepository.getRuleDefinition
     // since it's a private method of SmsService, not JournalRepository.
@@ -203,10 +216,11 @@ describe('SmsService Batching', () => {
     // Verify database.batch was called
     expect(database.batch).toHaveBeenCalled();
     const batchArgs = (database.batch as jest.Mock).mock.calls;
-    const totalBatchedOps = batchArgs.reduce((acc, call) => acc + call[0].length, 0);
+    const totalBatchedOps = batchArgs.reduce((acc, call) => acc + call.length, 0);
 
     // Should be at least 3 ops (1 inbox record + 2 ledger ops)
     expect(totalBatchedOps).toBeGreaterThanOrEqual(3);
+    expect(journalPersistenceService.putInSession).toHaveBeenCalledTimes(1);
   });
 
   it('rechecks the scoped inbox state inside the final write before auto-posting', async () => {
@@ -271,7 +285,7 @@ describe('SmsService Batching', () => {
 
     expect(database.write).toHaveBeenCalledTimes(1);
     expect(finalFetch).toHaveBeenCalledTimes(1);
-    expect(ledgerCreateService.prepareCreateJournalFromPreparedData).not.toHaveBeenCalled();
+    expect(journalPersistenceService.putInSession).not.toHaveBeenCalled();
     expect(mockInboxCollection.prepareCreate).not.toHaveBeenCalled();
     expect(existingRecord.prepareUpdate).toHaveBeenCalledTimes(1);
     expect(existingRecord.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);

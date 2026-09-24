@@ -2,12 +2,12 @@ import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { journalPresenter, type TransactionLike } from '@/src/services/accounting/journalPresenter';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { AccountType, JournalDisplayType, TransactionType } from '@/src/types/enums';
-import { enqueueRebuildIfNeeded, groupTransactionsByJournal } from './bulkHelpers';
+import { groupTransactionsByJournal } from './bulkHelpers';
 
 export interface JournalAccountEditEligibility {
   canEditDebit: boolean;
@@ -110,14 +110,10 @@ export async function bulkChangeJournalAccount(
     return { updatedCount: 0, originalAccountIdByTransactionId: {} };
   }
 
-  const affectedAccounts = new Set<AccountId>([newAccountId]);
-  let minDate = Infinity;
   const originalAccountIdByTransactionId: Record<string, AccountId> = {};
 
   for (const tx of transactionsToUpdate) {
     originalAccountIdByTransactionId[tx.id] = tx.accountId;
-    affectedAccounts.add(tx.accountId);
-    minDate = Math.min(minDate, tx.transactionDate);
   }
 
   // Load parent journals and recalculate displayTypes
@@ -129,15 +125,15 @@ export async function bulkChangeJournalAccount(
     tx => (tx.transactionType === transactionType ? newAccountId : tx.accountId),
   );
 
-  await journalWriteRepository.bulkReassignTransactionAccounts({
+  await journalPersistenceService.reassignAccounts(
+    {
+      accountIdByTransactionId: new Map(
+        transactionsToUpdate.map(transaction => [transaction.id, newAccountId]),
+      ),
+      displayTypeByJournalId,
+    },
     workplaceId,
-    transactions: transactionsToUpdate,
-    newAccountId,
-    journals,
-    displayTypeByJournalId,
-  });
-
-  enqueueRebuildIfNeeded(affectedAccounts, minDate, workplaceId);
+  );
 
   return {
     updatedCount: transactionsToUpdate.length,
@@ -163,18 +159,6 @@ export async function undoBulkChangeJournalAccount(
   const allTransactions = await transactionQueryRepository.findByJournals(workplaceId, journalIds);
   const journals = await journalQueryRepository.findByIds(workplaceId, journalIds);
 
-  const affectedAccounts = new Set<AccountId>();
-  let minDate = Infinity;
-
-  for (const tx of transactions) {
-    const originalAccId = originalAccountIdByTransactionId[tx.id];
-    if (originalAccId) {
-      affectedAccounts.add(originalAccId);
-      affectedAccounts.add(tx.accountId);
-      minDate = Math.min(minDate, tx.transactionDate);
-    }
-  }
-
   const displayTypeByJournalId = await computeSimulatedDisplayTypes(
     workplaceId,
     journals,
@@ -183,15 +167,17 @@ export async function undoBulkChangeJournalAccount(
   );
 
   // Single atomic batch — each transaction goes back to its own original account and parent journals are updated
-  await journalWriteRepository.bulkReassignTransactionAccountsToOriginals({
+  await journalPersistenceService.reassignAccounts(
+    {
+      accountIdByTransactionId: new Map(
+        transactions
+          .filter(transaction => originalAccountIdByTransactionId[transaction.id])
+          .map(transaction => [transaction.id, originalAccountIdByTransactionId[transaction.id]]),
+      ),
+      displayTypeByJournalId,
+    },
     workplaceId,
-    transactions,
-    originalAccountIdByTxId: originalAccountIdByTransactionId,
-    journals,
-    displayTypeByJournalId,
-  });
-
-  enqueueRebuildIfNeeded(affectedAccounts, minDate, workplaceId);
+  );
 }
 
 /**

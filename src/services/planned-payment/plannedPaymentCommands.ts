@@ -1,10 +1,8 @@
 import type PlannedPayment from '@/src/data/models/PlannedPayment';
-import { persistBatch } from '@/src/data/repositories/persistBatch';
-import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { analytics } from '@/src/services/analytics';
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { PlannedPaymentCommandInput } from '@/src/services/planned-payment/plannedPaymentCommandInputs';
 import {
   buildCreatePersistenceInput,
@@ -60,28 +58,6 @@ export async function deletePlannedPayment(
   workplaceId: WorkplaceId,
   plannedPaymentId: PlannedPaymentId,
 ): Promise<void> {
-  const existing = await requirePlannedPayment(workplaceId, plannedPaymentId);
-
-  const unpostedJournals = await journalPlannedQueries.findUnpostedByPlannedPayment(
-    workplaceId,
-    plannedPaymentId,
-  );
-
-  const transactions =
-    unpostedJournals.length > 0
-      ? await transactionQueryRepository.findByJournals(
-          workplaceId,
-          unpostedJournals.map(journal => journal.id),
-        )
-      : [];
-
-  await persistBatch(() => {
-    const ppOp = plannedPaymentRepository.prepareDelete(workplaceId, existing);
-    const journalOps = journalPlannedQueries.prepareSoftDeleteUpdates(
-      workplaceId,
-      unpostedJournals,
-      transactions,
-    );
-    return [ppOp, ...journalOps];
-  });
+  await requirePlannedPayment(workplaceId, plannedPaymentId);
+  await journalPersistenceService.deletePlannedPayment(workplaceId, plannedPaymentId);
 }

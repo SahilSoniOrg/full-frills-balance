@@ -1,11 +1,12 @@
 import { AppConfig } from '@/src/constants';
+import { MetadataKeys, MetadataSources } from '@/src/constants/ledger-constants';
 import Journal from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
+import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
+import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
-import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
-import { ledgerLifecycleService } from '@/src/services/ledger/ledgerLifecycleService';
+import type { PlannedPaymentPersistenceInput } from '@/src/data/repositories/PlannedPaymentRepository';
 import { generatePlannedJournalForPayment } from '@/src/services/planned-payment/plannedPaymentJournalGeneration';
 import { buildPlannedPaymentTransferLines } from '@/src/services/planned-payment/plannedPaymentJournalLines';
 import {
@@ -13,10 +14,10 @@ import {
   normalizeToStartOfDay,
 } from '@/src/services/planned-payment/plannedPaymentRecurrence';
 import { requirePlannedPayment } from '@/src/services/planned-payment/plannedPaymentWorkplace';
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { JournalStatus, PlannedPaymentStatus } from '@/src/types/enums';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
-import { Model } from '@nozbe/watermelondb';
 
 export interface PlannedOccurrenceContext {
   normalizedDate: number;
@@ -50,16 +51,15 @@ export async function resolvePlannedOccurrenceContext(
 }
 
 function prepareScheduleAdvance(
-  workplaceId: WorkplaceId,
   pp: PlannedPayment,
   normalizedOccurrenceDate: number,
-): Model | null {
+): Partial<PlannedPaymentPersistenceInput> | null {
   const nextOcc = calculateNextOccurrence(normalizedOccurrenceDate, pp);
   if (nextOcc <= pp.nextOccurrence) return null;
-  return plannedPaymentRepository.prepareUpdate(workplaceId, pp, {
+  return {
     nextOccurrence: nextOcc,
     ...(pp.endDate && nextOcc > pp.endDate ? { status: PlannedPaymentStatus.COMPLETED } : {}),
-  });
+  };
 }
 
 export async function postPlannedPaymentOccurrence(
@@ -70,40 +70,69 @@ export async function postPlannedPaymentOccurrence(
   const pp = await requirePlannedPayment(workplaceId, plannedPaymentId);
 
   try {
-    const { normalizedDate, existingPlanned } = await resolvePlannedOccurrenceContext(
+    const { normalizedDate, dayEnd, existingPlanned } = await resolvePlannedOccurrenceContext(
       workplaceId,
       pp,
       occurrenceDate,
     );
 
     const postTime = Date.now();
-    const getScheduleOp = () => {
-      const scheduleOp = prepareScheduleAdvance(workplaceId, pp, normalizedDate);
-      return scheduleOp ? [scheduleOp] : [];
-    };
-
-    if (existingPlanned.length > 0) {
-      await ledgerLifecycleService.postJournal(existingPlanned[0].id, workplaceId, {
-        extraOps: getScheduleOp,
-      });
-    } else {
-      if (!pp.toAccountId) {
-        throw new Error(`Planned payment ${pp.id} is missing toAccountId.`);
-      }
-
-      await ledgerCreateService.createJournal(
-        {
-          journalDate: postTime,
-          description: pp.name,
-          currencyCode: pp.currencyCode,
-          transactions: buildPlannedPaymentTransferLines(pp),
-          status: JournalStatus.POSTED,
-          plannedPaymentId: pp.id,
-        },
-        workplaceId,
-        { extraOps: getScheduleOp },
-      );
+    if (existingPlanned.length > 1) {
+      throw new Error(`Planned payment ${pp.id} has multiple planned journals for this occurrence`);
     }
+    if (existingPlanned.length === 0 && !pp.toAccountId) {
+      throw new Error(`Planned payment ${pp.id} is missing toAccountId.`);
+    }
+
+    const result = await runAccountingWriteSession(async session => {
+      await journalPersistenceRepository.assertPlannedOccurrenceAvailable(
+        workplaceId,
+        pp.id,
+        normalizedDate,
+        dayEnd,
+        new Set(existingPlanned.map(journal => journal.id)),
+      );
+
+      const journalResult =
+        existingPlanned.length > 0
+          ? await journalPersistenceService.postInSession(
+              session,
+              existingPlanned[0].id,
+              workplaceId,
+              postTime,
+            )
+          : await journalPersistenceService.putInSession(
+              session,
+              {
+                journalDate: postTime,
+                description: pp.name,
+                currencyCode: pp.currencyCode,
+                transactions: buildPlannedPaymentTransferLines(pp),
+                status: JournalStatus.POSTED,
+                plannedPaymentId: pp.id,
+                metadata: {
+                  importSource: MetadataSources.MANUAL_POST,
+                  metadataJson: JSON.stringify({
+                    [MetadataKeys.ORIGINAL_PLANNED_DATE]: normalizedDate,
+                  }),
+                },
+              },
+              workplaceId,
+            );
+
+      const scheduleUpdates = prepareScheduleAdvance(pp, normalizedDate);
+      if (scheduleUpdates) {
+        await plannedPaymentRepository.updateInSession(
+          session,
+          workplaceId,
+          pp.id,
+          scheduleUpdates,
+          { nextOccurrence: pp.nextOccurrence },
+        );
+      }
+      return journalResult;
+    });
+    journalPersistenceService.afterAtomicWriteCommit([result], workplaceId);
 
     logger.info(
       `Manually posted occurrence for planned payment ${pp.id} at ${new Date(postTime).toLocaleString()}`,
@@ -126,54 +155,68 @@ export async function skipPlannedPaymentOccurrence(
   const pp = await requirePlannedPayment(workplaceId, plannedPaymentId);
 
   try {
-    const { normalizedDate, existingPlanned } = await resolvePlannedOccurrenceContext(
+    const { normalizedDate, dayEnd, existingPlanned } = await resolvePlannedOccurrenceContext(
       workplaceId,
       pp,
       occurrenceDate,
     );
 
-    if (existingPlanned.length > 0) {
-      await persistBatch(() => {
-        const scheduleOp = prepareScheduleAdvance(workplaceId, pp, normalizedDate);
-        return [
-          ...journalPlannedQueries.prepareStatusUpdates(
-            workplaceId,
-            existingPlanned,
-            JournalStatus.SKIPPED,
-          ),
-          ...(scheduleOp ? [scheduleOp] : []),
-        ];
-      });
-    } else if (!pp.toAccountId) {
+    if (existingPlanned.length === 0 && !pp.toAccountId) {
       logger.warn(
         `[PlannedPaymentOrchestration] skipOccurrence: payment ${pp.id} has no toAccountId — advancing schedule without creating a journal.`,
       );
-      await persistBatch(() => {
-        const scheduleOp = prepareScheduleAdvance(workplaceId, pp, normalizedDate);
-        return scheduleOp ? [scheduleOp] : [];
-      });
-    } else {
-      await ledgerCreateService.createJournal(
-        {
-          journalDate: normalizedDate,
-          description: pp.name,
-          currencyCode: pp.currencyCode,
-          transactions: buildPlannedPaymentTransferLines(pp, {
-            includeNotes: false,
-            includeCurrency: false,
-          }),
-          status: JournalStatus.SKIPPED,
-          plannedPaymentId: pp.id,
-        },
-        workplaceId,
-        {
-          extraOps: () => {
-            const scheduleOp = prepareScheduleAdvance(workplaceId, pp, normalizedDate);
-            return scheduleOp ? [scheduleOp] : [];
-          },
-        },
-      );
     }
+
+    await runAccountingWriteSession(async session => {
+      const allowedJournalIds = new Set(existingPlanned.map(journal => journal.id));
+      await journalPersistenceRepository.assertPlannedOccurrenceAvailable(
+        workplaceId,
+        pp.id,
+        normalizedDate,
+        dayEnd,
+        allowedJournalIds,
+      );
+
+      if (existingPlanned.length > 0) {
+        await journalPersistenceRepository.setNonPostedStatusesInSession(
+          session,
+          workplaceId,
+          existingPlanned.map(journal => ({
+            journalId: journal.id,
+            status: JournalStatus.SKIPPED,
+            expectedStatus: JournalStatus.PLANNED,
+          })),
+        );
+      } else if (pp.toAccountId) {
+        await journalPersistenceService.putInSession(
+          session,
+          {
+            journalDate: normalizedDate,
+            description: pp.name,
+            currencyCode: pp.currencyCode,
+            transactions: buildPlannedPaymentTransferLines(pp, {
+              includeNotes: false,
+              includeCurrency: false,
+            }),
+            status: JournalStatus.SKIPPED,
+            plannedPaymentId: pp.id,
+          },
+          workplaceId,
+        );
+      }
+
+      const scheduleUpdates = prepareScheduleAdvance(pp, normalizedDate);
+      if (scheduleUpdates) {
+        await plannedPaymentRepository.updateInSession(
+          session,
+          workplaceId,
+          pp.id,
+          scheduleUpdates,
+          { nextOccurrence: pp.nextOccurrence },
+        );
+      }
+      return undefined;
+    });
 
     logger.info(
       `Skipped occurrence for planned payment ${pp.id} at ${new Date(normalizedDate).toLocaleDateString()}`,
@@ -241,10 +284,13 @@ async function processDuePlannedPaymentsNow(
       break;
     }
     let nextOcc = normalizeToStartOfDay(pp.nextOccurrence);
+    let expectedNextOccurrence = pp.nextOccurrence;
 
     if (nextOcc > horizon) continue;
 
     let generationsCount = 0;
+    let generationFailed = false;
+    let shouldComplete = false;
     const MAX_GENERATIONS = AppConfig.insights.maxPlannedPaymentGenerations;
 
     while (nextOcc <= horizon && generationsCount < MAX_GENERATIONS) {
@@ -267,12 +313,14 @@ async function processDuePlannedPaymentsNow(
           const created = await generatePlannedJournalForPayment(pp, nextOcc, {
             signal,
             isCurrent,
-            extraOps: () => {
-              const scheduleOp = prepareScheduleAdvance(workplaceId, pp, nextOcc);
-              return scheduleOp ? [scheduleOp] : [];
-            },
+            expectedNextOccurrence,
+            expectedStatus: PlannedPaymentStatus.ACTIVE,
           });
-          if (!created) break;
+          if (!created) {
+            generationFailed = true;
+            break;
+          }
+          expectedNextOccurrence = calculateNextOccurrence(nextOcc, pp);
           if (isCancelled()) break;
           if (!journalledDays.has(pp.id)) journalledDays.set(pp.id, new Set());
           journalledDays.get(pp.id)!.add(nextOcc);
@@ -287,11 +335,7 @@ async function processDuePlannedPaymentsNow(
 
       if (pp.endDate && nextOcc > pp.endDate) {
         if (isCancelled()) break;
-        if (pp.status !== PlannedPaymentStatus.COMPLETED) {
-          await plannedPaymentRepository.update(workplaceId, pp, {
-            status: PlannedPaymentStatus.COMPLETED,
-          });
-        }
+        shouldComplete = pp.status !== PlannedPaymentStatus.COMPLETED;
         break;
       }
     }
@@ -302,9 +346,19 @@ async function processDuePlannedPaymentsNow(
       );
     }
 
-    if (nextOcc !== pp.nextOccurrence) {
-      if (isCancelled()) break;
-      await plannedPaymentRepository.update(workplaceId, pp, { nextOccurrence: nextOcc });
+    if (isCancelled()) break;
+    if (!generationFailed) {
+      const scheduleUpdates: Partial<PlannedPaymentPersistenceInput> = {
+        ...(nextOcc !== expectedNextOccurrence ? { nextOccurrence: nextOcc } : {}),
+        ...(shouldComplete ? { status: PlannedPaymentStatus.COMPLETED } : {}),
+      };
+      if (Object.keys(scheduleUpdates).length > 0) {
+        await runAccountingWriteSession(session =>
+          plannedPaymentRepository.updateInSession(session, workplaceId, pp.id, scheduleUpdates, {
+            nextOccurrence: expectedNextOccurrence,
+          }),
+        );
+      }
     }
   }
 }

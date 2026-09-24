@@ -7,35 +7,32 @@ import {
   journalQueryRepository,
 } from '@/src/data/repositories/journal/journalTimelineModule';
 import { JournalService } from '@/src/services/journal/journalDomainService';
-import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { workplaceService } from '@/src/services/WorkplaceService';
+import { currencyReadService } from '@/src/services/currency-read-service';
+import {
+  evaluateJournalBalance,
+  JournalBalanceError,
+} from '@/src/services/accounting/journalBalanceEvaluator';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/account');
-jest.mock('@/src/data/repositories/journal/journalWriteModule');
 jest.mock('@/src/data/repositories/journal/journalTimelineModule');
 jest.mock('@/src/data/repositories/transaction');
 jest.mock('@/src/services/audit-service');
 jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/utils/logger');
-jest.mock('@/src/services/ledger/ledgerCreateService', () => ({
-  ledgerCreateService: {
-    createJournal: jest.fn(),
-    createMany: jest.fn(),
-    createReversalJournal: jest.fn(),
-  },
-}));
-jest.mock('@/src/services/ledger/ledgerUpdateService', () => ({
-  ledgerUpdateService: {
-    updateJournal: jest.fn(),
-  },
-}));
-jest.mock('@/src/services/ledger/ledgerLifecycleService', () => ({
-  ledgerLifecycleService: {
-    deleteJournal: jest.fn(),
-    recoverJournal: jest.fn(),
-    postJournal: jest.fn(),
+jest.mock('@/src/services/journal/JournalPersistenceService', () => ({
+  journalPersistenceService: {
+    put: jest.fn(),
+    putAndLinkInboxRecord: jest.fn(),
+    putMany: jest.fn(),
+    post: jest.fn(),
+    delete: jest.fn(),
+    recover: jest.fn(),
+    bulkRestore: jest.fn(),
     revertToPlanned: jest.fn(),
+    reverse: jest.fn(),
   },
 }));
 jest.mock('@/src/services/preferences', () => ({
@@ -46,6 +43,9 @@ jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {
     getCurrency: jest.fn(() => Promise.resolve('USD')),
   },
+}));
+jest.mock('@/src/services/currency-read-service', () => ({
+  currencyReadService: { getPrecision: jest.fn().mockResolvedValue(2) },
 }));
 
 describe('JournalService - saveJournalEntry', () => {
@@ -65,6 +65,10 @@ describe('JournalService - saveJournalEntry', () => {
     ]);
     (journalQueryRepository.find as jest.Mock).mockResolvedValue({ currencyCode: 'USD' });
     (workplaceService.getCurrency as jest.Mock).mockResolvedValue('USD');
+    (journalPersistenceService.put as jest.Mock).mockResolvedValue({ id: 'j1' });
+    (journalPersistenceService.putMany as jest.Mock).mockResolvedValue([]);
+    (journalPersistenceService.post as jest.Mock).mockResolvedValue({ id: 'j1' });
+    (journalPersistenceService.reverse as jest.Mock).mockResolvedValue({ id: 'j1' });
   });
 
   describe('saveJournalEntry', () => {
@@ -74,10 +78,6 @@ describe('JournalService - saveJournalEntry', () => {
     ];
 
     it('should create new journal if no ID provided', async () => {
-      const createSpy = jest
-        .spyOn(ledgerCreateService, 'createJournal')
-        .mockResolvedValue({ id: 'j1' } as any);
-
       const result = await service.saveJournalEntry({
         lines: validLines as any,
         description: 'Test Journal',
@@ -88,7 +88,10 @@ describe('JournalService - saveJournalEntry', () => {
 
       expect(result.success).toBe(true);
       expect(result.action).toBe('created');
-      expect(createSpy).toHaveBeenCalled();
+      expect(journalPersistenceService.put).toHaveBeenCalledWith(
+        expect.objectContaining({ currencyCode: 'USD' }),
+        'wp-1',
+      );
     });
 
     it('should update existing journal if ID provided', async () => {
@@ -157,6 +160,61 @@ describe('JournalService - saveJournalEntry', () => {
       expect(workplaceService.getCurrency).not.toHaveBeenCalled();
     });
 
+    it('preserves evaluated three-decimal native amounts through journal assembly', async () => {
+      (workplaceService.getCurrency as jest.Mock).mockResolvedValue('JOD');
+      const lines = [
+        {
+          id: 'jpy-line',
+          accountId: 'yen-account',
+          accountName: 'Yen cash',
+          accountType: AccountType.ASSET,
+          accountCurrency: 'JPY',
+          amount: '123.4',
+          transactionType: TransactionType.DEBIT,
+          notes: '',
+          exchangeRate: '0.005',
+        },
+        {
+          id: 'jod-line',
+          accountId: 'dinar-account',
+          accountName: 'Dinar income',
+          accountType: AccountType.INCOME,
+          accountCurrency: 'JOD',
+          amount: '0.615',
+          transactionType: TransactionType.CREDIT,
+          notes: '',
+          exchangeRate: '',
+        },
+      ];
+      const balanceEvaluation = evaluateJournalBalance({
+        journalCurrency: 'JOD',
+        precisionByCurrency: new Map([
+          ['JOD', 3],
+          ['JPY', 0],
+        ]),
+        lines,
+      });
+
+      const result = await service.saveJournalEntry({
+        lines: lines as any,
+        description: 'Three-decimal posting',
+        journalDate: '2026-09-01',
+        balanceEvaluation,
+        workplaceId: 'wp-1' as WorkplaceId,
+      });
+
+      expect(result).toMatchObject({ success: true, action: 'created' });
+      expect(journalPersistenceService.put).toHaveBeenCalledWith(
+        expect.objectContaining({
+          transactions: expect.arrayContaining([
+            expect.objectContaining({ accountId: 'yen-account', amount: 123 }),
+            expect.objectContaining({ accountId: 'dinar-account', amount: 0.615 }),
+          ]),
+        }),
+        'wp-1',
+      );
+    });
+
     it('should fail if description is empty', async () => {
       const result = await service.saveJournalEntry({
         lines: validLines as any,
@@ -171,6 +229,11 @@ describe('JournalService - saveJournalEntry', () => {
     });
 
     it('should fail if journal is unbalanced', async () => {
+      jest
+        .spyOn(journalPersistenceService, 'put')
+        .mockRejectedValueOnce(
+          new JournalBalanceError('Journal debits and credits differ by 10.00 USD'),
+        );
       const unbalancedLines = [
         { accountId: 'acc1', amount: '100', transactionType: TransactionType.DEBIT, notes: '' },
         { accountId: 'acc2', amount: '90', transactionType: TransactionType.CREDIT, notes: '' },
@@ -185,13 +248,10 @@ describe('JournalService - saveJournalEntry', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('Journal is not balanced');
+      expect(result.error).toContain('10.00 USD');
     });
 
     it('should handle timestamp dates', async () => {
-      const createSpy = jest
-        .spyOn(ledgerCreateService, 'createJournal')
-        .mockResolvedValue({ id: 'j1' } as any);
       const ts = Date.now();
 
       const result = await service.saveJournalEntry({
@@ -202,11 +262,50 @@ describe('JournalService - saveJournalEntry', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(createSpy).toHaveBeenCalledWith(
+      expect(journalPersistenceService.put).toHaveBeenCalledWith(
         expect.objectContaining({
           journalDate: ts,
         }),
         'wp-1' as WorkplaceId,
+      );
+    });
+  });
+
+  describe('standard journal write routes', () => {
+    it('routes edits through the persistence service', async () => {
+      await service.updateJournal(
+        'journal123' as JournalId,
+        {
+          journalDate: 1_000,
+          currencyCode: 'USD',
+          transactions: [],
+        } as any,
+        'wp-1' as WorkplaceId,
+      );
+
+      expect(journalPersistenceService.put).toHaveBeenCalledWith(
+        expect.objectContaining({ journalId: 'journal123' }),
+        'wp-1',
+      );
+    });
+
+    it('routes manual posting through the persistence service', async () => {
+      await service.postJournal('journal123' as JournalId, 'wp-1' as WorkplaceId);
+
+      expect(journalPersistenceService.post).toHaveBeenCalledWith('journal123', 'wp-1');
+    });
+
+    it('routes reversals through the persistence service', async () => {
+      await service.createReversalJournal(
+        'journal123' as JournalId,
+        'Correction',
+        'wp-1' as WorkplaceId,
+      );
+
+      expect(journalPersistenceService.reverse).toHaveBeenCalledWith(
+        'journal123',
+        'Correction',
+        'wp-1',
       );
     });
   });
@@ -224,7 +323,7 @@ describe('JournalService - saveJournalEntry', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('at most 100 entries');
-      expect(ledgerCreateService.createMany).not.toHaveBeenCalled();
+      expect(journalPersistenceService.putMany).not.toHaveBeenCalled();
     });
   });
 
@@ -294,6 +393,125 @@ describe('JournalService - saveJournalEntry', () => {
       });
 
       expect(result).toEqual({ success: false, error: 'Posting line account metadata is stale' });
+      expect(saveSpy).not.toHaveBeenCalled();
+    });
+
+    it('passes the exact evaluation through for an advanced mixed-currency plan', async () => {
+      (accountQueryRepository.findAllByIds as jest.Mock).mockResolvedValue([
+        { id: 'acc1', name: 'Expense', accountType: AccountType.EXPENSE, currencyCode: 'EUR' },
+        { id: 'acc2', name: 'Bank', accountType: AccountType.ASSET, currencyCode: 'USD' },
+      ]);
+      const saveSpy = jest.spyOn(service, 'saveJournalEntry').mockResolvedValue({
+        success: true,
+        action: 'created',
+      });
+      const plan = {
+        ...postingPlan,
+        lines: [
+          {
+            ...postingPlan.lines[0],
+            accountName: 'Expense',
+            accountType: AccountType.EXPENSE,
+            accountCurrency: 'EUR',
+            amount: '10.00',
+            transactionType: TransactionType.DEBIT,
+            exchangeRate: '1.2',
+          },
+          {
+            ...postingPlan.lines[1],
+            accountName: 'Bank',
+            accountType: AccountType.ASSET,
+            accountCurrency: 'USD',
+            amount: '12.00',
+            transactionType: TransactionType.CREDIT,
+            exchangeRate: '',
+          },
+        ],
+      };
+
+      const result = await service.postPostingPlan({
+        plan: plan as any,
+        mode: 'advanced',
+        balancePolicy: 'exact',
+        workplaceId: 'wp-1' as WorkplaceId,
+      });
+
+      expect(result.success).toBe(true);
+      expect(currencyReadService.getPrecision).toHaveBeenCalledWith('EUR');
+      expect(currencyReadService.getPrecision).toHaveBeenCalledWith('USD');
+      expect(saveSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          balanceEvaluation: expect.objectContaining({
+            isBalanced: true,
+            journalTotalAmount: 12,
+          }),
+        }),
+      );
+    });
+
+    it('rejects a one-minor-unit difference in an exact advanced plan', async () => {
+      (accountQueryRepository.findAllByIds as jest.Mock).mockResolvedValue([
+        { id: 'acc1', name: 'Expense', accountType: AccountType.EXPENSE, currencyCode: 'EUR' },
+        { id: 'acc2', name: 'Bank', accountType: AccountType.ASSET, currencyCode: 'USD' },
+      ]);
+      const saveSpy = jest.spyOn(service, 'saveJournalEntry');
+      const plan = {
+        ...postingPlan,
+        lines: [
+          {
+            ...postingPlan.lines[0],
+            accountName: 'Expense',
+            accountType: AccountType.EXPENSE,
+            accountCurrency: 'EUR',
+            amount: '10.00',
+            transactionType: TransactionType.DEBIT,
+            exchangeRate: '1.2',
+          },
+          {
+            ...postingPlan.lines[1],
+            accountName: 'Bank',
+            accountType: AccountType.ASSET,
+            accountCurrency: 'USD',
+            amount: '12.01',
+            transactionType: TransactionType.CREDIT,
+            exchangeRate: '',
+          },
+        ],
+      };
+
+      const result = await service.postPostingPlan({
+        plan: plan as any,
+        mode: 'advanced',
+        balancePolicy: 'exact',
+        workplaceId: 'wp-1' as WorkplaceId,
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Journal debits and credits differ by 0.01 USD',
+      });
+      expect(saveSpy).not.toHaveBeenCalled();
+    });
+
+    it('keeps exact edits in the journal saved currency', async () => {
+      (accountQueryRepository.findAllByIds as jest.Mock).mockResolvedValue([
+        { id: 'acc1', name: 'Cash', accountType: AccountType.ASSET, currencyCode: 'USD' },
+        { id: 'acc2', name: 'Income', accountType: AccountType.INCOME, currencyCode: 'USD' },
+      ]);
+      (journalQueryRepository.find as jest.Mock).mockResolvedValue({ currencyCode: 'USD' });
+      const saveSpy = jest.spyOn(service, 'saveJournalEntry');
+
+      const result = await service.postPostingPlan({
+        plan: { ...postingPlan, currencyCode: 'INR' } as any,
+        journalId: 'journal123' as JournalId,
+        balancePolicy: 'exact',
+        workplaceId: 'wp-1' as WorkplaceId,
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Posting plan currency must match the journal currency (USD)',
+      });
       expect(saveSpy).not.toHaveBeenCalled();
     });
   });

@@ -1,47 +1,23 @@
 import { database } from '@/src/data/database/Database';
+import {
+  evaluateJournalBalance,
+  JournalBalanceError,
+} from '@/src/domain/accounting/journalBalanceEvaluator';
+import { accountQueryRepository } from '@/src/data/repositories/account';
+import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import Journal from '@/src/data/models/Journal';
 import { BulkDeleteUndoToken } from '@/src/types/domainJournal';
 import { JournalStatus, JournalDisplayType, TransactionType } from '@/src/types/enums';
-import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Transaction from '@/src/data/models/Transaction';
-import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { referenceNumberFromMetadataJson } from '@/src/utils/sms/SmsReferenceExtractor';
 import { logger } from '@/src/utils/logger';
 import { Model, Q } from '@nozbe/watermelondb';
-
-export interface CreateJournalData {
-  journalDate: number;
-  description?: string;
-  notes?: string;
-  currencyCode: string;
-  originalJournalId?: JournalId;
-  status?: JournalStatus;
-  plannedPaymentId?: PlannedPaymentId;
-  transactions: {
-    accountId: AccountId;
-    amount: number;
-    transactionType: TransactionType;
-    notes?: string;
-    exchangeRate?: number;
-    currencyCode?: string;
-  }[];
-  metadata?: {
-    importSource: string;
-    originalSmsId?: string;
-    originalSmsSender?: string;
-    originalSmsBody?: string;
-    metadataJson?: string;
-  };
-}
-
-export interface PrepareCreateJournalData extends CreateJournalData {
-  totalAmount?: number;
-  displayType?: JournalDisplayType;
-  calculatedBalances?: Map<string, number | null>;
-}
+import type { CreateJournalData, PrepareCreateJournalData } from '@/src/types/journalWrite';
+export type { CreateJournalData, PrepareCreateJournalData } from '@/src/types/journalWrite';
 
 /** Journal create/update/delete and reversal persistence. */
 export class JournalWriteRepository {
@@ -57,8 +33,127 @@ export class JournalWriteRepository {
     return database.collections.get<JournalMetadata>('journal_metadata');
   }
 
-  private get transactionInboxRecords() {
-    return database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
+  /**
+   * Repository write guard: every persisted POSTED journal must balance using
+   * the current account currencies and their supported decimal precision.
+   * Draft/planned/skipped/paused journals intentionally bypass this check.
+   */
+  async assertBalancedIfPosted(
+    journalData: Pick<CreateJournalData, 'currencyCode' | 'transactions' | 'status'>,
+    workplaceId: WorkplaceId,
+    effectiveStatus: JournalStatus = journalData.status ?? JournalStatus.POSTED,
+  ): Promise<void> {
+    await this.assertJournalsBalancedIfPosted([{ journalData, effectiveStatus }], workplaceId);
+  }
+
+  private async assertJournalsBalancedIfPosted(
+    candidates: {
+      journalData: Pick<CreateJournalData, 'currencyCode' | 'transactions' | 'status'>;
+      effectiveStatus: JournalStatus;
+    }[],
+    workplaceId: WorkplaceId,
+  ): Promise<void> {
+    const postedCandidates = candidates.filter(
+      candidate => candidate.effectiveStatus === JournalStatus.POSTED,
+    );
+    if (postedCandidates.length === 0) return;
+
+    const accountIds = [
+      ...new Set(
+        postedCandidates.flatMap(candidate =>
+          candidate.journalData.transactions.map(transaction => transaction.accountId),
+        ),
+      ),
+    ];
+    const accounts = await accountQueryRepository.findAllByIds(workplaceId, accountIds);
+    const accountsById = new Map(accounts.map(account => [account.id, account]));
+    const missingAccountIds = accountIds.filter(accountId => !accountsById.has(accountId));
+    if (missingAccountIds.length > 0) {
+      throw new Error(
+        `Posted journal references missing or deleted account(s): ${missingAccountIds.join(', ')}`,
+      );
+    }
+
+    const currencies = new Set([
+      ...postedCandidates.map(candidate => candidate.journalData.currencyCode.trim().toUpperCase()),
+      ...accounts.map(account => account.currencyCode.trim().toUpperCase()),
+    ]);
+    const precisionEntries = await Promise.all(
+      [...currencies].map(
+        async currency => [currency, await currencyRepository.getPrecision(currency)] as const,
+      ),
+    );
+    const precisionByCurrency = new Map(precisionEntries);
+
+    for (const { journalData } of postedCandidates) {
+      const evaluation = evaluateJournalBalance({
+        journalCurrency: journalData.currencyCode,
+        precisionByCurrency,
+        lines: journalData.transactions.map((transaction, index) => ({
+          id: String(index),
+          accountId: transaction.accountId,
+          accountCurrency: accountsById.get(transaction.accountId)?.currencyCode,
+          amount: transaction.amount,
+          exchangeRate: transaction.exchangeRate,
+          transactionType: transaction.transactionType,
+        })),
+      });
+
+      const unroundedLine = evaluation.lineValues.find(
+        (line, index) => line.nativeAmount !== journalData.transactions[index]?.amount,
+      );
+      if (unroundedLine) {
+        throw new JournalBalanceError(
+          `Posted journal line ${unroundedLine.id} exceeds ${unroundedLine.accountCurrency} precision`,
+        );
+      }
+
+      if (!evaluation.isBalanced) {
+        throw new JournalBalanceError(
+          evaluation.issues[0]?.message ?? 'Posted journal is not balanced',
+        );
+      }
+    }
+  }
+
+  private async assertAccountChangesPreservePostedBalances(
+    workplaceId: WorkplaceId,
+    journals: Journal[],
+    accountIdByTransactionId: ReadonlyMap<string, AccountId>,
+  ): Promise<void> {
+    const postedJournals = journals.filter(journal => journal.status === JournalStatus.POSTED);
+    if (postedJournals.length === 0) return;
+
+    const transactions = await this.transactions
+      .query(
+        Q.where('journal_id', Q.oneOf(postedJournals.map(journal => journal.id))),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.where('workplace_id', workplaceId),
+      )
+      .fetch();
+    const transactionsByJournal = new Map<string, Transaction[]>();
+    for (const transaction of transactions) {
+      const group = transactionsByJournal.get(transaction.journalId) ?? [];
+      group.push(transaction);
+      transactionsByJournal.set(transaction.journalId, group);
+    }
+
+    await this.assertJournalsBalancedIfPosted(
+      postedJournals.map(journal => ({
+        effectiveStatus: JournalStatus.POSTED,
+        journalData: {
+          currencyCode: journal.currencyCode,
+          status: JournalStatus.POSTED,
+          transactions: (transactionsByJournal.get(journal.id) ?? []).map(transaction => ({
+            accountId: accountIdByTransactionId.get(transaction.id) ?? transaction.accountId,
+            amount: transaction.amount,
+            exchangeRate: transaction.exchangeRate,
+            transactionType: transaction.transactionType as TransactionType,
+          })),
+        },
+      })),
+      workplaceId,
+    );
   }
 
   private prepareTransaction(
@@ -194,6 +289,11 @@ export class JournalWriteRepository {
     const existingJournal = await journalQueryRepository.find(workplaceId, journalId);
     if (!existingJournal) throw new Error('Journal not found');
     const journalCurrency = existingJournal.currencyCode;
+    await this.assertBalancedIfPosted(
+      { ...journalData, currencyCode: journalCurrency },
+      workplaceId,
+      journalData.status ?? existingJournal.status,
+    );
 
     const oldTransactions = await this.transactions
       .query(Q.where('journal_id', journalId), Q.where('workplace_id', workplaceId))
@@ -642,104 +742,6 @@ export class JournalWriteRepository {
   }
 
   /**
-   * Atomically creates a new merged journal and soft-deletes the source journals in a single database batch.
-   */
-  async mergeJournalsAtomic(params: {
-    workplaceId: WorkplaceId;
-    sourceJournalIds: JournalId[];
-    newJournalData: PrepareCreateJournalData;
-  }): Promise<{
-    mergedJournal: Journal;
-    affectedAccountIds: Set<AccountId>;
-    minDate: number;
-  }> {
-    const { workplaceId, sourceJournalIds, newJournalData } = params;
-
-    const sourceJournals = await journalQueryRepository.findByIds(workplaceId, sourceJournalIds);
-    const sourceTransactions = await this.transactions
-      .query(
-        Q.where('journal_id', Q.oneOf(sourceJournalIds)),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.where('workplace_id', workplaceId),
-      )
-      .fetch();
-    const sourceMetadata = await this.journalMetadata
-      .query(Q.where('journal_id', Q.oneOf(sourceJournalIds)), Q.where('workplace_id', workplaceId))
-      .fetch();
-    const sourceInboxRecords = await this.transactionInboxRecords
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.or(
-          Q.where('linked_journal_id', Q.oneOf(sourceJournalIds)),
-          Q.where('duplicate_journal_id', Q.oneOf(sourceJournalIds)),
-        ),
-      )
-      .fetch();
-
-    const { journal, transactions, metadataRecord } = this.prepareCreateJournalWithTransactions(
-      newJournalData,
-      workplaceId,
-    );
-
-    const affectedAccountIds = new Set<AccountId>();
-    let minDate = newJournalData.journalDate;
-
-    for (const tx of sourceTransactions) {
-      affectedAccountIds.add(tx.accountId);
-      minDate = Math.min(minDate, tx.transactionDate);
-    }
-    for (const tx of newJournalData.transactions) {
-      affectedAccountIds.add(tx.accountId);
-    }
-
-    await database.write(async () => {
-      const now = new Date();
-      const sourceJournalDeletes = sourceJournals.map(j =>
-        j.prepareUpdate(record => {
-          record.deletedAt = now;
-          record.updatedAt = now;
-        }),
-      );
-      const sourceTxDeletes = sourceTransactions.map(t =>
-        t.prepareUpdate(record => {
-          record.deletedAt = now;
-          record.updatedAt = now;
-        }),
-      );
-      const metadataRetargets = sourceMetadata.map(metadata =>
-        metadata.prepareUpdate(record => {
-          record.journalId = journal.id;
-          record.updatedAt = now;
-        }),
-      );
-      const inboxRetargets = sourceInboxRecords.map(inboxRecord =>
-        inboxRecord.prepareUpdate(record => {
-          if (record.linkedJournalId && sourceJournalIds.includes(record.linkedJournalId)) {
-            record.linkedJournalId = journal.id;
-          }
-          if (record.duplicateJournalId && sourceJournalIds.includes(record.duplicateJournalId)) {
-            record.duplicateJournalId = journal.id;
-          }
-        }),
-      );
-
-      const batchOps: Model[] = [
-        journal,
-        ...transactions,
-        ...metadataRetargets,
-        ...inboxRetargets,
-        ...sourceJournalDeletes,
-        ...sourceTxDeletes,
-      ];
-      if (metadataRecord) batchOps.push(metadataRecord);
-
-      await database.batch(batchOps);
-    });
-
-    return { mergedJournal: journal, affectedAccountIds, minDate };
-  }
-
-  /**
    * Bulk updates accountId for a list of transactions and refreshes parent journals in a single atomic database batch.
    */
   async bulkReassignTransactionAccounts(params: {
@@ -752,6 +754,11 @@ export class JournalWriteRepository {
     const { workplaceId, transactions, newAccountId, journals, displayTypeByJournalId } = params;
     if (transactions.length === 0 && journals.length === 0) return;
     this.assertModelOwnership(workplaceId, journals, transactions);
+    await this.assertAccountChangesPreservePostedBalances(
+      workplaceId,
+      journals,
+      new Map(transactions.map(transaction => [transaction.id, newAccountId])),
+    );
 
     await database.write(async () => {
       const now = new Date();
@@ -788,6 +795,11 @@ export class JournalWriteRepository {
       params;
     if (transactions.length === 0 && journals.length === 0) return;
     this.assertModelOwnership(workplaceId, journals, transactions);
+    await this.assertAccountChangesPreservePostedBalances(
+      workplaceId,
+      journals,
+      new Map(Object.entries(originalAccountIdByTxId)),
+    );
 
     await database.write(async () => {
       const now = new Date();
@@ -826,6 +838,14 @@ export class JournalWriteRepository {
     if (items.length === 0) {
       return { journals: [], affectedAccountIds: new Set(), minDate: Infinity };
     }
+
+    await this.assertJournalsBalancedIfPosted(
+      items.map(item => ({
+        journalData: item,
+        effectiveStatus: item.status ?? JournalStatus.POSTED,
+      })),
+      workplaceId,
+    );
 
     const createdJournals: Journal[] = [];
     const allOps: Model[] = [];

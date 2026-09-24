@@ -1,11 +1,13 @@
 import Journal from '@/src/data/models/Journal';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { JournalDisplayType, TransactionType } from '@/src/types/enums';
 import { safeAdd } from '@/src/utils/money';
-import { enqueueRebuildIfNeeded } from './bulkHelpers';
+import { evaluateJournalBalance } from '@/src/domain/accounting/journalBalanceEvaluator';
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
+import { currencyReadService } from '@/src/services/currency-read-service';
 
 export interface MergeLine {
   accountId: AccountId;
@@ -72,7 +74,9 @@ export async function analyzeJournalsForMerge(
     .filter((j): j is Journal => Boolean(j));
 
   const currencyCode = orderedJournals[0].currencyCode;
-  const sameCurrency = orderedJournals.every(j => j.currencyCode === currencyCode);
+  const sameCurrency = orderedJournals.every(
+    journal => journal.currencyCode.trim().toUpperCase() === currencyCode.trim().toUpperCase(),
+  );
   if (!sameCurrency) {
     return mergeFailure('Cannot merge transactions with different currencies.', {
       sourceJournals: orderedJournals,
@@ -115,44 +119,65 @@ export async function analyzeJournalsForMerge(
   // Collect all transactions via canonical repository
   const allTransactions = await transactionQueryRepository.findByJournals(workplaceId, journalIds);
 
-  // Aggregate legs by accountId and transactionType using canonical safeAdd
-  const lineMap = new Map<string, MergeLine>();
-  let totalDebit = 0;
-  let totalCredit = 0;
+  const accountIds = [...new Set(allTransactions.map(transaction => transaction.accountId))];
+  const accounts = await accountQueryRepository.findAllByIds(workplaceId, accountIds);
+  const accountsById = new Map(accounts.map(account => [account.id, account]));
+  const currencies = [currencyCode, ...accounts.map(account => account.currencyCode)].map(code =>
+    code.trim().toUpperCase(),
+  );
+  const precisionEntries = await Promise.all(
+    [...new Set(currencies)].map(
+      async currency => [currency, await currencyReadService.getPrecision(currency)] as const,
+    ),
+  );
+  const evaluation = evaluateJournalBalance({
+    journalCurrency: currencyCode,
+    precisionByCurrency: new Map(precisionEntries),
+    lines: allTransactions.map((transaction, index) => ({
+      id: String(index),
+      accountId: transaction.accountId,
+      accountCurrency: accountsById.get(transaction.accountId)?.currencyCode,
+      amount: transaction.amount,
+      exchangeRate: transaction.exchangeRate,
+      transactionType: transaction.transactionType as TransactionType,
+    })),
+  });
 
-  for (const tx of allTransactions) {
-    const key = `${tx.accountId}_${tx.transactionType}`;
+  // Display the combined effect in journal currency while the write path keeps
+  // each source line's native amount and exchange rate intact.
+  const lineMap = new Map<string, MergeLine>();
+  for (const line of evaluation.lineValues) {
+    const key = `${line.accountId}_${line.transactionType}`;
     const existing = lineMap.get(key);
-    const txType = tx.transactionType as TransactionType;
     if (existing) {
-      existing.amount = safeAdd(existing.amount, tx.amount, 2);
+      existing.amount = safeAdd(existing.amount, line.journalAmount, evaluation.journalPrecision);
     } else {
       lineMap.set(key, {
-        accountId: tx.accountId,
-        transactionType: txType,
-        amount: tx.amount,
+        accountId: line.accountId as AccountId,
+        transactionType: line.transactionType,
+        amount: line.journalAmount,
       });
     }
-
-    if (txType === TransactionType.DEBIT) {
-      totalDebit = safeAdd(totalDebit, tx.amount, 2);
-    } else {
-      totalCredit = safeAdd(totalCredit, tx.amount, 2);
-    }
   }
+  const totalDebit = evaluation.debitTotalMinorUnits / 10 ** evaluation.journalPrecision;
+  const totalCredit = evaluation.creditTotalMinorUnits / 10 ** evaluation.journalPrecision;
+  const combinedLines = Array.from(lineMap.values());
 
-  // Double-entry accounting invariant check
-  if (Math.abs(totalDebit - totalCredit) > 0.001) {
-    return mergeFailure('Selected transactions are unbalanced across total debits and credits.', {
-      sourceJournals: orderedJournals,
-      totalDebit,
-      totalCredit,
-      currencyCode,
-      combinedDescription,
-      suggestedDate: maxDate,
-      suggestedDisplayType,
-      combinedLines: Array.from(lineMap.values()),
-    });
+  if (!evaluation.isBalanced) {
+    return mergeFailure(
+      evaluation.issues[0]?.message ??
+        'Selected transactions are unbalanced across total debits and credits.',
+      {
+        sourceJournals: orderedJournals,
+        totalDebit,
+        totalCredit,
+        currencyCode,
+        combinedDescription,
+        suggestedDate: maxDate,
+        suggestedDisplayType,
+        combinedLines,
+      },
+    );
   }
 
   return {
@@ -165,7 +190,7 @@ export async function analyzeJournalsForMerge(
     suggestedDate: maxDate,
     suggestedDisplayType,
     plannedPaymentId,
-    combinedLines: Array.from(lineMap.values()),
+    combinedLines,
   };
 }
 
@@ -177,31 +202,13 @@ export async function mergeJournals(
   journalIds: JournalId[],
   options?: { description?: string; journalDate?: number; displayType?: JournalDisplayType },
 ): Promise<Journal> {
-  const analysis = await analyzeJournalsForMerge(workplaceId, journalIds);
-  if (!analysis.canMerge) {
-    throw new Error(analysis.reason || 'Cannot merge selected journals');
-  }
-
-  const { mergedJournal, affectedAccountIds, minDate } =
-    await journalWriteRepository.mergeJournalsAtomic({
-      workplaceId,
+  return journalPersistenceService.merge(
+    {
       sourceJournalIds: journalIds,
-      newJournalData: {
-        journalDate: options?.journalDate ?? analysis.suggestedDate,
-        description: options?.description || analysis.combinedDescription,
-        currencyCode: analysis.currencyCode,
-        totalAmount: analysis.totalDebit,
-        displayType: options?.displayType ?? analysis.suggestedDisplayType,
-        plannedPaymentId: analysis.plannedPaymentId,
-        transactions: analysis.combinedLines.map(line => ({
-          accountId: line.accountId,
-          amount: line.amount,
-          transactionType: line.transactionType,
-        })),
-      },
-    });
-
-  enqueueRebuildIfNeeded(affectedAccountIds, minDate, workplaceId);
-
-  return mergedJournal;
+      description: options?.description,
+      journalDate: options?.journalDate,
+      displayType: options?.displayType,
+    },
+    workplaceId,
+  );
 }

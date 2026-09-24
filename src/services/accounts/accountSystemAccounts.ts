@@ -1,9 +1,13 @@
 import { AppConfig } from '@/src/constants';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
-import { getOpeningBalancesAccountInput } from '@/src/data/repositories/account/accountSystemAccountInputs';
+import {
+  getBalanceCorrectionAccountInput,
+  getOpeningBalancesAccountInput,
+} from '@/src/data/repositories/account/accountSystemAccountInputs';
+import type { AccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import { workplaceService } from '@/src/services/WorkplaceService';
+import Account from '@/src/data/models/Account';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { AccountSubtype, AccountType } from '@/src/types/enums';
 export function isSystemAccount(account: { name: string }): boolean {
   const { openingBalances, balanceCorrections } = AppConfig.systemAccounts;
   const lower = account.name.trim().toLowerCase();
@@ -33,26 +37,38 @@ export async function getOpeningBalancesAccountId(
   return (await accountWriteRepository.create(input)).id;
 }
 
-export async function findOrCreateBalanceCorrectionAccount(
+export async function findOrCreateBalanceCorrectionAccountInSession(
+  session: AccountingWriteSession,
   currencyCode: string,
   workplaceId: WorkplaceId,
-): Promise<AccountId> {
+): Promise<Account> {
+  const existing = await findBalanceCorrectionAccount(currencyCode, workplaceId);
+  if (existing) return existing;
+
+  const targetCurrency = currencyCode || (await workplaceService.getCurrency(workplaceId));
+  return accountWriteRepository.createInSession(
+    session,
+    getBalanceCorrectionAccountInput(targetCurrency, workplaceId),
+  );
+}
+
+async function findBalanceCorrectionAccount(
+  currencyCode: string,
+  workplaceId: WorkplaceId,
+): Promise<Account | null> {
   const { balanceCorrections } = AppConfig.systemAccounts;
-  let targetCurrency = currencyCode;
-  if (!targetCurrency) {
-    targetCurrency = await workplaceService.getCurrency(workplaceId);
-  }
+  const targetCurrency = currencyCode || (await workplaceService.getCurrency(workplaceId));
 
   for (const legacyName of balanceCorrections.legacyNames) {
     const legacy = await findAccountByName(workplaceId, legacyName);
     if (legacy && (legacy.currencyCode === targetCurrency || !legacy.currencyCode)) {
-      return legacy.id;
+      return legacy;
     }
   }
 
-  const name = `${balanceCorrections.namePrefix} (${targetCurrency})`;
-  const existing = await findAccountByName(workplaceId, name);
-  if (existing) return existing.id;
+  const input = getBalanceCorrectionAccountInput(targetCurrency, workplaceId);
+  const existing = await findAccountByName(workplaceId, input.name);
+  if (existing) return existing;
 
   const allAccounts = await accountQueryRepository.findAll(workplaceId);
   const fallback = allAccounts.find(
@@ -61,17 +77,5 @@ export async function findOrCreateBalanceCorrectionAccount(
       a.currencyCode === targetCurrency &&
       !a.deletedAt,
   );
-  if (fallback) return fallback.id;
-
-  return (
-    await accountWriteRepository.create({
-      name,
-      accountType: AccountType.EQUITY,
-      accountSubtype: AccountSubtype.OPENING_BALANCE,
-      currencyCode: targetCurrency,
-      description: balanceCorrections.description,
-      icon: balanceCorrections.icon,
-      workplaceId,
-    })
-  ).id;
+  return fallback ?? null;
 }

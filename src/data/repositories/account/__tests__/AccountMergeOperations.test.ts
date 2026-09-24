@@ -1,11 +1,8 @@
 import { database } from '@/src/data/database/Database';
-import {
-  accountMergeOperations,
-  accountQueryRepository,
-  accountWriteRepository,
-} from '@/src/data/repositories/account';
+import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { AccountType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
+import { mergeAccounts } from '@/src/services/accounts/accountMergeCommands';
 
 const WORKPLACE_A = 'wp-account-merge-a' as WorkplaceId;
 const WORKPLACE_B = 'wp-account-merge-b' as WorkplaceId;
@@ -17,7 +14,7 @@ describe('AccountMergeOperations', () => {
     });
   }, 15_000);
 
-  it('does not delete a foreign source account included in a mixed-workplace ID list', async () => {
+  it('rejects a mixed-workplace source list without mutating either source', async () => {
     const target = await accountWriteRepository.create({
       name: 'Target',
       accountType: AccountType.ASSET,
@@ -38,21 +35,17 @@ describe('AccountMergeOperations', () => {
     });
     const foreignUpdatedAt = foreignSource.updatedAt.getTime();
 
-    await database.write(async () => {
-      const operations = await accountMergeOperations.prepareMergeOperations(
-        WORKPLACE_A,
-        [localSource.id, foreignSource.id],
-        target.id,
-      );
-      await database.batch(operations);
-    });
+    await expect(
+      mergeAccounts(WORKPLACE_A, target.id, [localSource.id, foreignSource.id]),
+    ).rejects.toThrow();
 
-    const [deletedLocalSource, unchangedForeignSource] = await Promise.all([
+    const [unchangedLocalSource, unchangedForeignSource] = await Promise.all([
       accountQueryRepository.findWithDeleted(WORKPLACE_A, localSource.id),
       accountQueryRepository.findWithDeleted(WORKPLACE_B, foreignSource.id),
     ]);
 
-    expect(deletedLocalSource?.deletedAt).toBeInstanceOf(Date);
+    expect(unchangedLocalSource?.deletedAt).toBeNull();
+    expect(unchangedLocalSource?.updatedAt.getTime()).toBe(localSource.updatedAt.getTime());
     expect(unchangedForeignSource?.deletedAt).toBeNull();
     expect(unchangedForeignSource?.updatedAt.getTime()).toBe(foreignUpdatedAt);
   });

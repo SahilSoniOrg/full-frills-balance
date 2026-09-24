@@ -15,6 +15,10 @@ jest.mock('expo-router', () => ({
 jest.mock('@/src/hooks/useAdvancedModePrefs', () => ({
   useAdvancedModePrefs: jest.fn(() => ({ advancedMode: false, setAdvancedMode: jest.fn() })),
 }));
+jest.mock('@/src/hooks/use-currencies', () => ({
+  useCurrencies: jest.fn(() => ({ currencies: [], isLoading: false })),
+  useCurrencyPrecision: jest.fn(() => ({ precision: 2, isLoading: false })),
+}));
 jest.mock('@/src/hooks/useExchangeRate', () => ({
   useExchangeRate: jest.fn(() => ({
     fetchRate: jest.fn(),
@@ -363,12 +367,22 @@ describe('useTransactionComposerSession', () => {
       result.current.editor.setDescription('Merged transaction');
     });
 
+    expect(result.current.postingPlanValidation).toMatchObject({ valid: true, issues: [] });
+    expect(result.current.validationIssues).toEqual([]);
+    act(() => result.current.editor.updateLine('debit-food' as any, { amount: '26' }));
+    expect(result.current.postingPlanValidation.valid).toBe(false);
+    expect(result.current.validationIssues).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'unbalanced' })]),
+    );
+    act(() => result.current.editor.updateLine('debit-food' as any, { amount: '25' }));
+
     await act(async () => {
       await result.current.submit('editor');
     });
 
     expect(journalService.postPostingPlan).toHaveBeenCalledWith(
       expect.objectContaining({
+        balancePolicy: 'exact',
         plan: expect.objectContaining({
           lines: expect.arrayContaining([
             expect.objectContaining({ accountId: asAccountId('cash'), amount: '30' }),

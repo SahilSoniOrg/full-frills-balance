@@ -1,5 +1,9 @@
 import { database } from '@/src/data/database/Database';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
+import {
+  stageSmsRuleMergeWrite,
+  type AccountingWriteSession,
+} from '@/src/data/repositories/AccountingWriteSession';
 import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 import { Observable } from 'rxjs';
@@ -139,20 +143,23 @@ export class TransactionAutoPostRuleRepository {
     return Array.from(byId.values());
   }
 
-  async prepareMergeOperations(
+  async mergeAccountsInSession(
+    session: AccountingWriteSession,
     workplaceId: WorkplaceId,
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
-  ): Promise<TransactionAutoPostRule[]> {
+  ): Promise<void> {
     const rules = await this.loadMergeRecords(workplaceId, sourceAccountIds);
-    return this.prepareLoadedMergeOperations(rules, sourceAccountIds, targetAccountId);
+    stageSmsRuleMergeWrite(session, () =>
+      this.prepareLoadedMergeOperations(rules, sourceAccountIds, targetAccountId),
+    );
   }
 
-  loadMergeRecords(workplaceId: WorkplaceId, sourceAccountIds: AccountId[]) {
+  private loadMergeRecords(workplaceId: WorkplaceId, sourceAccountIds: AccountId[]) {
     return this.findAllReferencingAccountIds(workplaceId, sourceAccountIds);
   }
 
-  prepareLoadedMergeOperations(
+  private prepareLoadedMergeOperations(
     rules: TransactionAutoPostRule[],
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,

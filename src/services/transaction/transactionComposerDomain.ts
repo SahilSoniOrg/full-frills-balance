@@ -13,6 +13,8 @@ import {
 } from '@/src/types/domainTransaction';
 import { JournalEntryLine } from '@/src/types/domainJournal';
 import { AccountId, EMPTY_ACCOUNT_ID, asTransactionId } from '@/src/types/ids';
+import { evaluateJournalBalance } from '@/src/services/accounting/journalBalanceEvaluator';
+import type { JournalBalancePolicy } from '@/src/services/accounting/journalBalanceEvaluator';
 
 const RESOLUTION_EPSILON = 0.001;
 
@@ -290,6 +292,10 @@ function validExchangeRate(value: string): boolean {
 export function validatePostingPlan(
   plan: PostingPlan,
   accounts: TransactionResolverContext['accounts'],
+  options: {
+    balancePolicy?: JournalBalancePolicy;
+    precisionByCurrency?: ReadonlyMap<string, number>;
+  } = {},
 ): PostingPlanValidationResult {
   const issues: PostingPlanValidationResult['issues'] = [];
   const accountMap = new Map(accounts.map(account => [account.id, account]));
@@ -348,7 +354,13 @@ export function validatePostingPlan(
       });
     }
 
-    const amount = parsePositiveAmount(line.amount);
+    const accountPrecision = line.accountCurrency
+      ? options.precisionByCurrency?.get(line.accountCurrency.trim().toUpperCase())
+      : undefined;
+    const amount =
+      options.balancePolicy === 'exact' && accountPrecision !== undefined
+        ? sanitizeAmount(line.amount, accountPrecision)
+        : parsePositiveAmount(line.amount);
     if (amount === null)
       issues.push({
         code: 'invalid_amount',
@@ -382,25 +394,42 @@ export function validatePostingPlan(
     issues.push({ code: 'missing_account', message: 'A posting plan needs two distinct accounts' });
 
   if (issues.length === 0) {
-    const hasForeignCurrencyLine = plan.lines.some(line => {
-      const currency = line.accountCurrency?.trim().toUpperCase();
-      const rate = Number(line.exchangeRate?.trim());
-      return Boolean(currency && currency !== baseCurrency && Number.isFinite(rate) && rate !== 1);
-    });
-    const balance = checkJournal(
-      plan.lines.map(line => ({
-        amount: sanitizeAmount(line.amount) ?? 0,
-        type: line.transactionType,
-        exchangeRate: line.exchangeRate ? Number.parseFloat(line.exchangeRate) : 1,
-      })),
-      undefined,
-      { allowExchangeRateRounding: hasForeignCurrencyLine },
-    );
-    if (!balance.isValid) {
-      issues.push({
-        code: 'unbalanced',
-        message: `Posting plan is not balanced: ${balance.imbalance}`,
+    if (options.balancePolicy === 'exact') {
+      const evaluation = evaluateJournalBalance({
+        lines: plan.lines,
+        journalCurrency: plan.currencyCode,
+        precisionByCurrency: options.precisionByCurrency ?? new Map(),
       });
+      issues.push(
+        ...evaluation.issues.map(balanceIssue => ({
+          code: balanceIssue.code,
+          message: balanceIssue.message,
+          ...(balanceIssue.lineId ? { lineId: asTransactionId(balanceIssue.lineId) } : {}),
+        })),
+      );
+    } else {
+      const hasForeignCurrencyLine = plan.lines.some(line => {
+        const currency = line.accountCurrency?.trim().toUpperCase();
+        const rate = Number(line.exchangeRate?.trim());
+        return Boolean(
+          currency && currency !== baseCurrency && Number.isFinite(rate) && rate !== 1,
+        );
+      });
+      const balance = checkJournal(
+        plan.lines.map(line => ({
+          amount: sanitizeAmount(line.amount) ?? 0,
+          type: line.transactionType,
+          exchangeRate: line.exchangeRate ? Number.parseFloat(line.exchangeRate) : 1,
+        })),
+        undefined,
+        { allowExchangeRateRounding: hasForeignCurrencyLine },
+      );
+      if (!balance.isValid) {
+        issues.push({
+          code: 'unbalanced',
+          message: `Posting plan is not balanced: ${balance.imbalance}`,
+        });
+      }
     }
   }
 

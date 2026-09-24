@@ -7,6 +7,8 @@ import type {
 import { EMPTY_ACCOUNT_ID, type WorkplaceId } from '@/src/types/ids';
 import { AppConfig } from '@/src/constants';
 import { sanitizeAmount } from '@/src/utils/validation';
+import { useCurrencies } from '@/src/hooks/use-currencies';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { useSplitDraftProjection } from '@/src/features/journal/entry/modes/split/splitDraftProjection';
 import { useCallback, useMemo } from 'react';
 import {
@@ -32,6 +34,22 @@ export function useTransactionComposerSession(
   const { accounts, currencyCode, ...editorOptions } = options;
   const editor = useJournalEditor(workplaceId, editorOptions);
   const valuationCurrency = editor.valuationCurrency || currencyCode;
+  const { currencies } = useCurrencies();
+  const precisionByCurrency = useMemo(() => {
+    const precisions = new Map(
+      currencies.map(currency => [currency.code.toUpperCase(), currency.precision]),
+    );
+    for (const code of new Set([
+      valuationCurrency,
+      ...accounts.map(account => account.currencyCode),
+    ])) {
+      const normalizedCode = code.trim().toUpperCase();
+      if (!precisions.has(normalizedCode)) {
+        precisions.set(normalizedCode, CurrencyFormatter.getPrecisionFallback(normalizedCode));
+      }
+    }
+    return precisions;
+  }, [accounts, currencies, valuationCurrency]);
   const splitState = useSplitDraftProjection({
     lines: editor.lines,
     accounts,
@@ -102,16 +120,42 @@ export function useTransactionComposerSession(
     ? intentResolution.plan
     : undefined;
 
+  const planForValidation = useMemo<PostingPlan | undefined>(() => {
+    if (editor.isGuidedMode) return postingPlan;
+    return {
+      lines: editor.lines,
+      currencyCode: valuationCurrency,
+      description: editor.description.trim() || 'Journal entry',
+      date: new Date(`${editor.journalDate}T${editor.journalTime || '00:00'}`).getTime(),
+      notes: editor.notes || undefined,
+    };
+  }, [
+    editor.description,
+    editor.isGuidedMode,
+    editor.journalDate,
+    editor.journalTime,
+    editor.lines,
+    editor.notes,
+    postingPlan,
+    valuationCurrency,
+  ]);
   const postingPlanValidation = useMemo<PostingPlanValidationResult>(
-    () => (postingPlan ? validatePostingPlan(postingPlan, accounts) : { valid: false, issues: [] }),
-    [accounts, postingPlan],
+    () =>
+      planForValidation
+        ? validatePostingPlan(planForValidation, accounts, {
+            balancePolicy: editor.isGuidedMode ? 'legacy' : 'exact',
+            precisionByCurrency,
+          })
+        : { valid: false, issues: [] },
+    [accounts, editor.isGuidedMode, planForValidation, precisionByCurrency],
   );
 
   // An unresolved intent has no posting plan to validate, so its resolver
   // issues are the canonical explanation for a disabled submit action.
-  const validationIssues = intentResolution.resolved
-    ? postingPlanValidation.issues
-    : intentResolution.issues;
+  const validationIssues =
+    !editor.isGuidedMode || intentResolution.resolved
+      ? postingPlanValidation.issues
+      : intentResolution.issues;
 
   const splitValidation = splitState.validation;
 
@@ -155,6 +199,7 @@ export function useTransactionComposerSession(
             notes: editor.notes || undefined,
           },
           'advanced',
+          'exact',
         );
       }
 

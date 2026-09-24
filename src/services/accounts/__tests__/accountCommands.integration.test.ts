@@ -4,6 +4,7 @@ import {
   AccountType,
   TransactionType,
   JournalDisplayType,
+  JournalStatus,
   AuditAction,
   PlannedPaymentInterval,
   PlannedPaymentStatus,
@@ -16,15 +17,20 @@ import { WorkplaceId } from '@/src/types/ids';
 import { database } from '@/src/data/database/Database';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
+import Journal from '@/src/data/models/Journal';
+import Transaction from '@/src/data/models/Transaction';
 
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
+import { getBalanceCorrectionAccountInput } from '@/src/data/repositories/account/accountSystemAccountInputs';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteTestHelpers';
 import { journalListQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
+import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { Q } from '@nozbe/watermelondb';
 import { adjustAccountBalance } from '@/src/services/accounts/accountAdjustCommands';
 import { applyAccountArchiveChanges } from '@/src/services/accounts/accountArchiveCommands';
@@ -42,6 +48,10 @@ describe('account commands (integration)', () => {
       await database.unsafeResetDatabase();
     });
   }, 15000);
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
 
   it('create persists account, audit log, and initial balance journal', async () => {
     const created = await createAccount(WP, {
@@ -67,6 +77,7 @@ describe('account commands (integration)', () => {
 
   it('create with opening balance uses one write', async () => {
     const writeSpy = jest.spyOn(database, 'write');
+    const batchSpy = jest.spyOn(database, 'batch');
     await createAccount(WP, {
       name: 'Checking',
       accountType: AccountType.ASSET,
@@ -75,7 +86,45 @@ describe('account commands (integration)', () => {
       workplaceId: WP,
     });
     expect(writeSpy).toHaveBeenCalledTimes(1);
+    expect(batchSpy).toHaveBeenCalledTimes(1);
     writeSpy.mockRestore();
+    batchSpy.mockRestore();
+  });
+
+  it('does not persist account rows or audits when opening-journal validation fails', async () => {
+    const putInSession = journalPersistenceRepository.putInSession.bind(
+      journalPersistenceRepository,
+    );
+    const putSpy = jest
+      .spyOn(journalPersistenceRepository, 'putInSession')
+      .mockImplementation((session, journal, workplaceId) =>
+        putInSession(
+          session,
+          {
+            ...journal,
+            transactions: journal.transactions.map((line, index) =>
+              index === 0 ? { ...line, amount: line.amount + 1 } : line,
+            ),
+          },
+          workplaceId,
+        ),
+      );
+
+    await expect(
+      createAccount(WP, {
+        name: 'Rejected opening account',
+        accountType: AccountType.ASSET,
+        currencyCode: 'USD',
+        initialBalance: 500,
+        workplaceId: WP,
+      }),
+    ).rejects.toThrow(/differ by/);
+    putSpy.mockRestore();
+
+    expect(await database.collections.get('accounts').query().fetchCount()).toBe(0);
+    expect(await database.collections.get('journals').query().fetchCount()).toBe(0);
+    expect(await database.collections.get('transactions').query().fetchCount()).toBe(0);
+    expect(await database.collections.get('audit_logs').query().fetchCount()).toBe(0);
   });
 
   it('create stores metadata on the account', async () => {
@@ -192,9 +241,15 @@ describe('account commands (integration)', () => {
       },
       WP,
     );
+    const writeSpy = jest.spyOn(database, 'write');
+    const batchSpy = jest.spyOn(database, 'batch');
     await adjustAccountBalance(WP, asset, 250);
+    expect(writeSpy).toHaveBeenCalledTimes(1);
+    expect(batchSpy).toHaveBeenCalledTimes(1);
     const balance = await balanceReadService.getAccountBalance(asset.id, WP);
     expect(balance.balance).toBe(250);
+    writeSpy.mockRestore();
+    batchSpy.mockRestore();
   });
 
   it('adjustBalance can pair with an income category counterparty', async () => {
@@ -218,6 +273,118 @@ describe('account commands (integration)', () => {
 
     const balance = await balanceReadService.getAccountBalance(asset.id, WP);
     expect(balance.balance).toBe(75);
+  });
+
+  it('calculates the adjustment from ledger entries instead of stale running-balance cache', async () => {
+    const asset = await createAccount(WP, {
+      name: 'Stale cache asset',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    const equity = await createAccount(WP, {
+      name: 'Stale cache equity',
+      accountType: AccountType.EQUITY,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    await journalWriteRepository.createJournalWithTransactions(
+      {
+        description: 'Seed with stale cache',
+        journalDate: 1_000,
+        currencyCode: 'USD',
+        totalAmount: 100,
+        displayType: JournalDisplayType.TRANSFER,
+        transactions: [
+          { accountId: asset.id, amount: 100, transactionType: TransactionType.DEBIT },
+          { accountId: equity.id, amount: 100, transactionType: TransactionType.CREDIT },
+        ],
+        calculatedBalances: new Map([
+          [asset.id, 900],
+          [equity.id, 900],
+        ]),
+      },
+      WP,
+    );
+
+    await adjustAccountBalance(WP, asset, 250);
+
+    const adjustment = (await journalListQueryRepository.findAll(WP)).find(journal =>
+      journal.description?.startsWith('Balance Adjustment: Stale cache asset'),
+    );
+    expect(adjustment).toBeTruthy();
+    const lines = await transactionQueryRepository.findByJournal(WP, adjustment!.id);
+    expect(lines[0].amount).toBe(150);
+    expect(
+      await transactionRawRepository.getAccountSumRaw(
+        WP,
+        asset.id,
+        Number.MAX_SAFE_INTEGER,
+        AccountType.ASSET,
+      ),
+    ).toBe(250);
+  });
+
+  it('serializes concurrent adjustments so only the remaining difference is posted', async () => {
+    const asset = await createAccount(WP, {
+      name: 'Concurrent adjustment asset',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+
+    await Promise.all([adjustAccountBalance(WP, asset, 250), adjustAccountBalance(WP, asset, 250)]);
+
+    const adjustments = (await journalListQueryRepository.findAll(WP)).filter(journal =>
+      journal.description?.startsWith('Balance Adjustment: Concurrent adjustment asset'),
+    );
+    expect(adjustments).toHaveLength(1);
+    expect(
+      await transactionRawRepository.getAccountSumRaw(
+        WP,
+        asset.id,
+        Number.MAX_SAFE_INTEGER,
+        AccountType.ASSET,
+      ),
+    ).toBe(250);
+    const correctionInput = getBalanceCorrectionAccountInput('USD', WP);
+    expect(await accountQueryRepository.findByName(WP, correctionInput.name)).toBeTruthy();
+  });
+
+  it('does not leave a correction account when adjustment-journal validation fails', async () => {
+    const asset = await createAccount(WP, {
+      name: 'Rejected adjustment asset',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    const putInSession = journalPersistenceRepository.putInSession.bind(
+      journalPersistenceRepository,
+    );
+    const putSpy = jest
+      .spyOn(journalPersistenceRepository, 'putInSession')
+      .mockImplementation((session, journal, workplaceId) =>
+        putInSession(
+          session,
+          {
+            ...journal,
+            transactions: journal.transactions.map((line, index) =>
+              index === 0 ? { ...line, amount: line.amount + 1 } : line,
+            ),
+          },
+          workplaceId,
+        ),
+      );
+    const batchSpy = jest.spyOn(database, 'batch');
+
+    await expect(adjustAccountBalance(WP, asset, 75)).rejects.toThrow(/differ by/);
+    putSpy.mockRestore();
+
+    const correctionInput = getBalanceCorrectionAccountInput('USD', WP);
+    expect(await accountQueryRepository.findByName(WP, correctionInput.name)).toBeNull();
+    expect(await database.collections.get('journals').query().fetchCount()).toBe(0);
+    expect(await database.collections.get('transactions').query().fetchCount()).toBe(0);
+    expect(batchSpy).not.toHaveBeenCalled();
   });
 
   it('reconcileAccount sets reconciledAt and audits update', async () => {
@@ -360,9 +527,12 @@ describe('account commands (integration)', () => {
       workplaceId: WP,
     });
     const writeSpy = jest.spyOn(database, 'write');
+    const batchSpy = jest.spyOn(database, 'batch');
     await mergeAccounts(WP, target.id, [source.id]);
     expect(writeSpy).toHaveBeenCalledTimes(1);
+    expect(batchSpy).toHaveBeenCalledTimes(1);
     writeSpy.mockRestore();
+    batchSpy.mockRestore();
 
     const audits = await auditRepository.findByEntity('account', target.id, WP);
     expect(audits.some(a => a.action === AuditAction.UPDATE)).toBe(true);
@@ -512,6 +682,7 @@ describe('account commands (integration)', () => {
     expect(targetTransactions).toHaveLength(1);
     expect(targetTransactions[0].currencyCode).toBe('EUR');
     expect(targetTransactions[0].exchangeRate).toBe(0.9);
+    expect(targetTransactions[0].runningBalance).toBeNull();
 
     const refreshedChild = await accountQueryRepository.find(WP, child.id);
     expect(refreshedChild?.parentAccountId).toBe(target.id);
@@ -540,6 +711,89 @@ describe('account commands (integration)', () => {
       .query(Q.where('workplace_id', WP), Q.where('account_id', Q.oneOf([source.id, target.id])))
       .fetch();
     expect(snapshots).toHaveLength(0);
+  });
+
+  it('rejects an unbalanced posted journal before changing any merge references', async () => {
+    const target = await createAccount(WP, {
+      name: 'Keep unbalanced merge',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    const source = await createAccount(WP, {
+      name: 'Fold unbalanced merge',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    const equity = await accountWriteRepository.create({
+      name: 'Unbalanced merge equity',
+      accountType: AccountType.EQUITY,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    await database.write(async () => {
+      const journal = await database.collections.get<Journal>('journals').create(record => {
+        record.workplaceId = WP;
+        record.journalDate = Date.now();
+        record.description = 'Legacy unbalanced posted journal';
+        record.currencyCode = 'USD';
+        record.status = JournalStatus.POSTED;
+        record.totalAmount = 25;
+        record.transactionCount = 2;
+        record.displayType = JournalDisplayType.TRANSFER;
+        record.createdAt = new Date();
+        record.updatedAt = new Date();
+      });
+      const transactions = database.collections.get<Transaction>('transactions');
+      await transactions.create(record => {
+        record.workplaceId = WP;
+        record.journalId = journal.id;
+        record.accountId = source.id;
+        record.amount = 25;
+        record.transactionType = TransactionType.DEBIT;
+        record.currencyCode = 'USD';
+        record.transactionDate = Date.now();
+        record.createdAt = new Date();
+        record.updatedAt = new Date();
+      });
+      await transactions.create(record => {
+        record.workplaceId = WP;
+        record.journalId = journal.id;
+        record.accountId = equity.id;
+        record.amount = 24;
+        record.transactionType = TransactionType.CREDIT;
+        record.currencyCode = 'USD';
+        record.transactionDate = Date.now();
+        record.createdAt = new Date();
+        record.updatedAt = new Date();
+      });
+    });
+    const budget = await budgetRepository.create(
+      WP,
+      {
+        name: 'Merge stays intact on balance failure',
+        amount: 100,
+        currencyCode: 'USD',
+        startMonth: '2026-09',
+        assetAccountIds: [source.id],
+      },
+      [source.id],
+    );
+    const batchSpy = jest.spyOn(database, 'batch');
+
+    await expect(mergeAccounts(WP, target.id, [source.id])).rejects.toThrow(/differ by/);
+
+    expect(batchSpy).not.toHaveBeenCalled();
+    expect(await accountQueryRepository.find(WP, source.id)).toBeTruthy();
+    expect(await transactionQueryRepository.findAllByAccountIds(WP, [source.id])).toHaveLength(1);
+    expect(await transactionQueryRepository.findAllByAccountIds(WP, [target.id])).toHaveLength(0);
+    expect((await budgetRepository.find(WP, budget.id))?.assetAccountIds).toBe(source.id);
+    expect((await budgetRepository.getScopes(WP, budget.id)).map(scope => scope.accountId)).toEqual(
+      [source.id],
+    );
+    const targetAudits = await auditRepository.findByEntity('account', target.id, WP);
+    expect(targetAudits.some(audit => audit.changes.includes('MERGE_ACCOUNTS'))).toBe(false);
   });
 
   it('merges multiple sources without duplicating colliding budget scopes or funding ids', async () => {

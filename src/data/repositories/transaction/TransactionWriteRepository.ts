@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
-import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { WorkplaceId } from '@/src/types/ids';
 import { roundToPrecision } from '@/src/utils/money';
 import { transactionQueryRepository } from './TransactionQueryRepository';
 
@@ -115,23 +115,6 @@ export class TransactionWriteRepository {
     return transaction.prepareUpdate(record => {
       record.runningBalance = runningBalance;
     });
-  }
-
-  loadMergeRecords(workplaceId: WorkplaceId, sourceAccountIds: AccountId[]) {
-    return transactionQueryRepository.findAllByAccountIds(workplaceId, sourceAccountIds);
-  }
-
-  prepareLoadedMergeOperations(
-    transactions: Transaction[],
-    targetAccountId: AccountId,
-  ): Transaction[] {
-    return transactions.map(transaction =>
-      transaction.prepareUpdate(record => {
-        record.accountId = targetAccountId;
-        record.runningBalance = null; // Invalidate cache
-        record.updatedAt = new Date();
-      }),
-    );
   }
 }
 

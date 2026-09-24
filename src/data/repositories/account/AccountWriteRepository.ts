@@ -1,9 +1,16 @@
 import { database } from '@/src/data/database/Database';
+import {
+  getStagedAccounts,
+  runAccountingWriteSession,
+  stageAccountCreation,
+  type AccountingWriteSession,
+} from '@/src/data/repositories/AccountingWriteSession';
 import Account from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
+import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { getDefaultSubtypeForType, isSubtypeAllowedForType } from '@/src/types/accountSubtype';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { AccountSubtype, AccountType } from '@/src/types/enums';
+import { AccountSubtype, AccountType, AuditAction } from '@/src/types/enums';
 import { ValidationError } from '@/src/utils/errors';
 import { Model, Q } from '@nozbe/watermelondb';
 import { accountMergeOperations } from './AccountMergeOperations';
@@ -33,7 +40,80 @@ export class AccountWriteRepository {
   }
 
   async create(data: AccountPersistenceInput): Promise<Account> {
-    return this.persistCreatedAccount({ payload: data });
+    return runAccountingWriteSession(session => this.createInSession(session, data));
+  }
+
+  /**
+   * Stage account creation in a caller-owned atomic accounting write.
+   * The session keeps prepared models private to the repository layer.
+   */
+  async createInSession(
+    session: AccountingWriteSession,
+    data: AccountPersistenceInput,
+    options: {
+      appendWithinSiblingList?: boolean;
+      audit?: { initialBalance?: number };
+    } = {},
+  ): Promise<Account> {
+    if (!data.workplaceId) {
+      throw new ValidationError('workplaceId is required to create an account');
+    }
+    await this.ensureUniqueName(data.name, data.workplaceId);
+
+    const normalizedName = data.name.trim().toLowerCase();
+    if (
+      getStagedAccounts(session, data.workplaceId).some(
+        account => account.name.trim().toLowerCase() === normalizedName,
+      )
+    ) {
+      throw new ValidationError(`Account with name "${data.name}" already exists`);
+    }
+
+    let payload = data;
+    if (options.appendWithinSiblingList) {
+      const persistedAccounts = await accountQueryRepository.findAll(data.workplaceId);
+      const candidates = [...persistedAccounts, ...getStagedAccounts(session, data.workplaceId)];
+      payload = {
+        ...data,
+        orderNum: candidates.filter(
+          candidate =>
+            (candidate.parentAccountId || undefined) === (data.parentAccountId || undefined) &&
+            candidate.accountType === data.accountType,
+        ).length,
+      };
+    }
+
+    const prepared = this.prepareCreateOps(payload);
+    const operations = [...prepared.ops];
+    if (options.audit) {
+      const { account } = prepared;
+      operations.push(
+        auditRepository.prepareLog(
+          {
+            entityType: 'account',
+            entityId: account.id,
+            action: AuditAction.CREATE,
+            changes: {
+              after: {
+                name: account.name,
+                accountType: account.accountType,
+                accountSubtype: account.accountSubtype,
+                currencyCode: account.currencyCode,
+                description: account.description,
+                icon: account.icon,
+                color: account.color,
+                orderNum: account.orderNum,
+                parentAccountId: account.parentAccountId,
+                initialBalance: options.audit.initialBalance,
+              },
+            },
+          },
+          data.workplaceId,
+        ),
+      );
+    }
+    stageAccountCreation(session, prepared.account, operations);
+    return prepared.account;
   }
 
   prepareCreateOps(data: AccountPersistenceInput): { account: Account; ops: Model[] } {
@@ -70,54 +150,6 @@ export class AccountWriteRepository {
     }
 
     return { account, ops };
-  }
-
-  /**
-   * One writer for a new account plus optional companion rows, extra ops, and a
-   * follow-up batch (e.g. opening-balance journal after the account is visible).
-   */
-  async persistCreatedAccount(params: {
-    payload: AccountPersistenceInput;
-    /** Resolve lock-sensitive fields from the writer's current account set. */
-    resolvePayload?: (accounts: readonly Account[]) => AccountPersistenceInput;
-    companionPayloads?: AccountPersistenceInput[];
-    extraOps?: (created: { account: Account; companions: Account[] }) => Model[];
-    followUpBatch?: (created: { account: Account; companions: Account[] }) => Promise<Model[]>;
-    afterBatch?: () => void;
-  }): Promise<Account> {
-    if (!params.payload.workplaceId) {
-      throw new ValidationError('workplaceId is required to create an account');
-    }
-    await this.ensureUniqueName(params.payload.name, params.payload.workplaceId);
-    for (const companion of params.companionPayloads ?? []) {
-      if (!companion.workplaceId) {
-        throw new ValidationError('workplaceId is required to create an account');
-      }
-      await this.ensureUniqueName(companion.name, companion.workplaceId);
-    }
-
-    const account = await this.db.write(async () => {
-      const payload = params.resolvePayload
-        ? params.resolvePayload(await accountQueryRepository.findAll(params.payload.workplaceId))
-        : params.payload;
-      const { account, ops } = this.prepareCreateOps(payload);
-      const companions: Account[] = [];
-      for (const companion of params.companionPayloads ?? []) {
-        const prepared = this.prepareCreateOps(companion);
-        companions.push(prepared.account);
-        ops.push(...prepared.ops);
-      }
-      const extras = params.extraOps?.({ account, companions }) ?? [];
-      await this.db.batch(...ops, ...extras);
-
-      const followUp = (await params.followUpBatch?.({ account, companions })) ?? [];
-      if (followUp.length > 0) {
-        await this.db.batch(...followUp);
-      }
-      return account;
-    });
-    params.afterBatch?.();
-    return account;
   }
 
   /**
@@ -375,21 +407,16 @@ export class AccountWriteRepository {
     }
   }
 
-  loadMergeRecords(
+  /** Stage account-owned reference changes, source deletion, and audit in one session batch. */
+  mergeInSession(
+    session: AccountingWriteSession,
     workplaceId: WorkplaceId,
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
-  ) {
-    return accountMergeOperations.loadMergeRecords(workplaceId, sourceAccountIds, targetAccountId);
-  }
-
-  prepareLoadedMergeOperations(
-    records: Parameters<typeof accountMergeOperations.prepareLoadedMergeOperations>[0],
-    sourceAccountIds: AccountId[],
-    targetAccountId: AccountId,
-  ) {
-    return accountMergeOperations.prepareLoadedMergeOperations(
-      records,
+  ): Promise<void> {
+    return accountMergeOperations.mergeInSession(
+      session,
+      workplaceId,
       sourceAccountIds,
       targetAccountId,
     );

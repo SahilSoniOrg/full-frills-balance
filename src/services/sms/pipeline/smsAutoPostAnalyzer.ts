@@ -1,13 +1,10 @@
 import { SmsMessage } from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
-import { CreateJournalData } from '@/src/data/repositories/journal/journalWriteModule';
-import { prepareJournalData } from '@/src/services/ledger/prepareJournalData';
+import type { CreateJournalData } from '@/src/types/journalWrite';
 import { ParsedTransaction, toTransactionDirection } from '@/src/services/ledger/SmsParser';
 import { smsRuleEngine } from '@/src/services/sms/SmsRuleEngine';
 import { JournalStatus, TransactionType } from '@/src/types/enums';
-import { WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
 import { SmsMatchData } from '@/src/utils/sms/RuleMatcher';
 import { computeSmsFingerprint } from './smsFingerprint';
 import { AutoPostRuleAnalysis } from './types';
@@ -16,7 +13,6 @@ export async function analyzeAutoPost(
   message: SmsMessage,
   parsed: ParsedTransaction,
   activeRules: TransactionAutoPostRule[],
-  workplaceId: WorkplaceId,
 ): Promise<AutoPostRuleAnalysis | null> {
   const matchData: SmsMatchData = {
     senderAddress: message.address,
@@ -77,19 +73,7 @@ export async function analyzeAutoPost(
           ],
         };
 
-        try {
-          const preparedJournal = await prepareJournalData(journalData, workplaceId);
-          return {
-            disposition: 'auto_post',
-            ruleId: rule.id,
-            createData: { journalData, preparedJournal },
-          };
-        } catch (e) {
-          logger.warn(`Failed to prepare journal data for auto-post rule ${rule.id}`, {
-            error: e,
-          });
-          return { disposition: 'review', ruleId: rule.id };
-        }
+        return { disposition: 'auto_post', ruleId: rule.id, createData: { journalData } };
       }
     }
   }

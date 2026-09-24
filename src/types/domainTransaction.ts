@@ -109,6 +109,12 @@ export type PostingPlanValidationCode =
   | 'missing_exchange_rate'
   | 'invalid_exchange_rate'
   | 'account_metadata_mismatch'
+  | 'invalid_journal_currency'
+  | 'missing_currency_precision'
+  | 'invalid_currency_precision'
+  | 'missing_line_currency'
+  | 'amount_out_of_range'
+  | 'invalid_structure'
   | 'unbalanced';
 
 export interface PostingPlanValidationIssue {

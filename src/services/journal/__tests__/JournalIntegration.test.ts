@@ -1,4 +1,11 @@
-import { AccountType, TransactionType } from '@/src/types/enums';
+import {
+  AccountType,
+  InboxParseStatus,
+  InboxProcessingStatus,
+  JournalStatus,
+  TransactionDirection,
+  TransactionType,
+} from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 /**
  * Integration tests for journal write/read modules (ledger + journal query repositories).
@@ -6,10 +13,13 @@ import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
  */
 
 import { database } from '@/src/data/database/Database';
+import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 
 import Journal from '@/src/data/models/Journal';
+import JournalMetadata from '@/src/data/models/JournalMetadata';
 
 import { accountWriteRepository } from '@/src/data/repositories/account';
+import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
@@ -17,6 +27,7 @@ import { journalService } from '@/src/services/journal/journalDomainService';
 import { observeEnrichedJournals } from '@/src/services/journal/journalTimelineReadModel';
 import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { Q } from '@nozbe/watermelondb';
 
 describe('Journal ledger integration', () => {
   let cashAccountId: string;
@@ -27,6 +38,12 @@ describe('Journal ledger integration', () => {
     rebuildQueueService.stop();
     await database.write(async () => {
       await database.unsafeResetDatabase();
+    });
+    await workplaceRepository.create({
+      id: 'wp-1' as WorkplaceId,
+      name: 'Test Workplace',
+      icon: 'wallet',
+      defaultCurrencyCode: 'USD',
     });
 
     // Create test accounts
@@ -53,6 +70,300 @@ describe('Journal ledger integration', () => {
     expenseAccountId = expense.id;
     incomeAccountId = income.id;
   }, 10000);
+
+  describe('standard persistence service cutover', () => {
+    it('rejects an unbalanced posted create before writing journal, lines, or audit', async () => {
+      await expect(
+        journalService.createJournal(
+          {
+            journalDate: 1_700_000_000_000,
+            currencyCode: 'USD',
+            transactions: [
+              {
+                accountId: cashAccountId as AccountId,
+                amount: 100,
+                transactionType: TransactionType.DEBIT,
+              },
+              {
+                accountId: expenseAccountId as AccountId,
+                amount: 50,
+                transactionType: TransactionType.CREDIT,
+              },
+            ],
+          },
+          'wp-1' as WorkplaceId,
+        ),
+      ).rejects.toThrow('Journal debits and credits differ by 50.00 USD');
+
+      expect(await database.collections.get<Journal>('journals').query().fetchCount()).toBe(0);
+      expect(await database.collections.get('transactions').query().fetchCount()).toBe(0);
+      expect(await database.collections.get('audit_logs').query().fetchCount()).toBe(0);
+    }, 10000);
+
+    it('saves a manual bulk request through one atomic persistence batch', async () => {
+      const response = await journalService.saveBulkJournalEntries(
+        [10, 20].map((amount, index) => ({
+          description: `Bulk entry ${index + 1}`,
+          journalDate: 1_700_000_000_000 + index,
+          workplaceId: 'wp-1' as WorkplaceId,
+          lines: [
+            {
+              id: `debit-${index}` as any,
+              accountId: cashAccountId as AccountId,
+              accountName: 'Cash',
+              accountType: AccountType.ASSET,
+              accountCurrency: 'USD',
+              amount: String(amount),
+              transactionType: TransactionType.DEBIT,
+              notes: '',
+              exchangeRate: '',
+            },
+            {
+              id: `credit-${index}` as any,
+              accountId: expenseAccountId as AccountId,
+              accountName: 'Food',
+              accountType: AccountType.EXPENSE,
+              accountCurrency: 'USD',
+              amount: String(amount),
+              transactionType: TransactionType.CREDIT,
+              notes: '',
+              exchangeRate: '',
+            },
+          ],
+        })),
+      );
+
+      if (!response.success) throw new Error(response.error ?? 'Bulk save failed');
+      expect(response).toMatchObject({
+        success: true,
+        summaries: [{ amount: 10 }, { amount: 20 }],
+      });
+      expect(await database.collections.get<Journal>('journals').query().fetchCount()).toBe(2);
+      expect(await database.collections.get('audit_logs').query().fetchCount()).toBe(2);
+      await rebuildQueueService.flush();
+      expect(
+        (
+          await balanceReadService.getAccountBalance(
+            cashAccountId as AccountId,
+            'wp-1' as WorkplaceId,
+          )
+        ).balance,
+      ).toBe(30);
+    }, 10000);
+
+    it('reverses an entry through the new repository boundary', async () => {
+      const original = await journalService.createJournal(
+        {
+          description: 'Original entry',
+          journalDate: 1_700_000_000_000,
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 40,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: expenseAccountId as AccountId,
+              amount: 40,
+              transactionType: TransactionType.CREDIT,
+            },
+          ],
+        },
+        'wp-1' as WorkplaceId,
+      );
+
+      const reversal = await journalService.createReversalJournal(
+        original.id,
+        'Correction',
+        'wp-1' as WorkplaceId,
+      );
+      const markedOriginal = await database.collections.get<Journal>('journals').find(original.id);
+
+      expect(reversal.originalJournalId).toBe(original.id);
+      expect(reversal.description).toContain('(Correction)');
+      expect(markedOriginal.status).toBe(JournalStatus.REVERSED);
+      expect(markedOriginal.reversingJournalId).toBe(reversal.id);
+      await rebuildQueueService.flush();
+      expect(
+        (
+          await balanceReadService.getAccountBalance(
+            cashAccountId as AccountId,
+            'wp-1' as WorkplaceId,
+          )
+        ).balance,
+      ).toBe(0);
+    }, 10000);
+
+    it('creates, edits, and posts through the guarded write boundary with atomic audit metadata', async () => {
+      const plannedDate = 1_700_000_000_000;
+      const journal = await journalService.createJournal(
+        {
+          description: 'Planned entry',
+          journalDate: plannedDate,
+          currencyCode: 'USD',
+          status: JournalStatus.PLANNED,
+          transactions: [
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 50,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: expenseAccountId as AccountId,
+              amount: 50,
+              transactionType: TransactionType.CREDIT,
+            },
+          ],
+        },
+        'wp-1' as WorkplaceId,
+      );
+
+      const editedDate = plannedDate + 1_000;
+      await journalService.updateJournal(
+        journal.id,
+        {
+          description: 'Edited planned entry',
+          journalDate: editedDate,
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 75,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: expenseAccountId as AccountId,
+              amount: 75,
+              transactionType: TransactionType.CREDIT,
+            },
+          ],
+        },
+        'wp-1' as WorkplaceId,
+      );
+
+      const posted = await journalService.postJournal(journal.id, 'wp-1' as WorkplaceId);
+      const metadata = await database.collections
+        .get<JournalMetadata>('journal_metadata')
+        .query(Q.where('journal_id', journal.id), Q.where('workplace_id', 'wp-1'))
+        .fetch();
+      const auditCount = await database.collections
+        .get('audit_logs')
+        .query(Q.where('entity_id', journal.id), Q.where('workplace_id', 'wp-1'))
+        .fetchCount();
+
+      expect(posted.status).toBe(JournalStatus.POSTED);
+      expect(posted.journalDate).toBeGreaterThan(editedDate);
+      expect(metadata).toHaveLength(1);
+      expect(JSON.parse(metadata[0].metadataJson ?? '{}')).toMatchObject({
+        originalPlannedDate: editedDate,
+      });
+      expect(auditCount).toBe(3);
+      expect(
+        await transactionQueryRepository.findByJournal('wp-1' as WorkplaceId, journal.id),
+      ).toHaveLength(2);
+
+      await rebuildQueueService.flush();
+      expect(
+        (
+          await balanceReadService.getAccountBalance(
+            cashAccountId as AccountId,
+            'wp-1' as WorkplaceId,
+          )
+        ).balance,
+      ).toBe(75);
+    }, 10000);
+  });
+
+  describe('SMS-linked manual journal creation', () => {
+    async function createInboxRecord(deviceSourceId: string) {
+      let recordId = '';
+      await transactionInboxRepository.persistScanBatch(() => {
+        const prepared = transactionInboxRepository.prepareUpsert(
+          {
+            workplaceId: 'wp-1' as WorkplaceId,
+            channel: 'sms',
+            deviceSourceId,
+            inputDate: 1_700_000_000_000,
+            inputFingerprint: `fingerprint-${deviceSourceId}`,
+            parseStatus: InboxParseStatus.PARSED,
+            direction: TransactionDirection.DEBIT,
+            processingStatus: InboxProcessingStatus.PENDING,
+            firstSeenAt: 1_700_000_000_000,
+            lastScannedAt: 1_700_000_000_000,
+          },
+          null,
+        );
+        recordId = prepared.record.id;
+        return prepared.ops;
+      });
+      return transactionInboxRepository.find('wp-1' as WorkplaceId, recordId);
+    }
+
+    it('links a valid journal and leaves the inbox unchanged when posting validation fails', async () => {
+      const firstRecord = await createInboxRecord('manual-sms-valid');
+      const journal = await journalService.createJournal(
+        {
+          journalDate: 1_700_000_000_000,
+          description: 'SMS expense',
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 20,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId as AccountId,
+              amount: 20,
+              transactionType: TransactionType.DEBIT,
+            },
+          ],
+        },
+        'wp-1' as WorkplaceId,
+        firstRecord,
+      );
+      const linkedRecord = await transactionInboxRepository.find(
+        'wp-1' as WorkplaceId,
+        firstRecord!.id,
+      );
+      expect(linkedRecord?.linkedJournalId).toBe(journal.id);
+      expect(linkedRecord?.processingStatus).toBe(InboxProcessingStatus.IMPORTED);
+
+      const secondRecord = await createInboxRecord('manual-sms-invalid');
+      await expect(
+        journalService.createJournal(
+          {
+            journalDate: 1_700_000_000_001,
+            description: 'Unbalanced SMS expense',
+            currencyCode: 'USD',
+            transactions: [
+              {
+                accountId: cashAccountId as AccountId,
+                amount: 21,
+                transactionType: TransactionType.CREDIT,
+              },
+              {
+                accountId: expenseAccountId as AccountId,
+                amount: 20,
+                transactionType: TransactionType.DEBIT,
+              },
+            ],
+          },
+          'wp-1' as WorkplaceId,
+          secondRecord,
+        ),
+      ).rejects.toThrow(/differ by/);
+
+      const unchangedInboxRecord = await transactionInboxRepository.find(
+        'wp-1' as WorkplaceId,
+        secondRecord!.id,
+      );
+      expect(unchangedInboxRecord?.linkedJournalId).toBeNull();
+      expect(unchangedInboxRecord?.processingStatus).toBe(InboxProcessingStatus.PENDING);
+      expect(await database.collections.get<Journal>('journals').query().fetchCount()).toBe(1);
+    }, 10000);
+  });
 
   describe('createJournalWithTransactions', () => {
     it('should create a balanced journal successfully', async () => {
@@ -105,7 +416,51 @@ describe('Journal ledger integration', () => {
           },
           'wp-1' as WorkplaceId,
         ),
-      ).rejects.toThrow(/Unbalanced journal/);
+      ).rejects.toThrow('Journal debits and credits differ by 50.00 USD');
+    });
+
+    it('does not persist a foreign journal with a one-minor-unit FX difference', async () => {
+      const thaiAccount = await accountWriteRepository.create({
+        name: 'Thai expense',
+        accountType: AccountType.EXPENSE,
+        currencyCode: 'THB',
+        workplaceId: 'wp-1' as WorkplaceId,
+      });
+      const rupeeAccount = await accountWriteRepository.create({
+        name: 'Rupee bank',
+        accountType: AccountType.ASSET,
+        currencyCode: 'INR',
+        workplaceId: 'wp-1' as WorkplaceId,
+      });
+
+      await expect(
+        ledgerCreateService.createJournal(
+          {
+            description: 'Rounded foreign expense',
+            journalDate: Date.now(),
+            currencyCode: 'INR',
+            transactions: [
+              {
+                accountId: thaiAccount.id as AccountId,
+                amount: 76.82,
+                transactionType: TransactionType.DEBIT,
+                currencyCode: 'THB',
+                exchangeRate: 2.89,
+              },
+              {
+                accountId: rupeeAccount.id as AccountId,
+                amount: 222,
+                transactionType: TransactionType.CREDIT,
+                currencyCode: 'INR',
+              },
+            ],
+          },
+          'wp-1' as WorkplaceId,
+        ),
+      ).rejects.toThrow('0.01 INR');
+
+      const journalCount = await database.collections.get<Journal>('journals').query().fetchCount();
+      expect(journalCount).toBe(0);
     });
 
     it('should handle multi-leg journals', async () => {

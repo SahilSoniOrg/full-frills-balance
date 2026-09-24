@@ -131,7 +131,7 @@ describe('transaction composer domain', () => {
       );
     });
 
-    it('accepts a rounded foreign-currency amount within one base-currency minor unit', () => {
+    it('keeps legacy tolerance opt-in and rejects a one-minor-unit exact-balance difference', () => {
       const fxAccounts = [
         ...accounts,
         {
@@ -180,6 +180,24 @@ describe('transaction composer domain', () => {
       expect(validatePostingPlan(roundedForeignPlan, fxAccounts)).toEqual({
         valid: true,
         issues: [],
+      });
+
+      expect(
+        validatePostingPlan(roundedForeignPlan, fxAccounts, {
+          balancePolicy: 'exact',
+          precisionByCurrency: new Map([
+            ['INR', 2],
+            ['THB', 2],
+          ]),
+        }),
+      ).toMatchObject({
+        valid: false,
+        issues: [
+          expect.objectContaining({
+            code: 'unbalanced',
+            message: expect.stringContaining('0.01 INR'),
+          }),
+        ],
       });
     });
 

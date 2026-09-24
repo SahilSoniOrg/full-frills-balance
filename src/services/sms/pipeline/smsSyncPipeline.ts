@@ -1,25 +1,28 @@
 import { smsJournalQueries } from '@/src/data/repositories/journal/journalSmsModule';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
+import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
+import type { JournalPersistenceResult } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { analytics } from '@/src/services/analytics';
 import { SmsParser } from '@/src/services/ledger/SmsParser';
-import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import {
   coalesceActionableDuplicate,
   findReferenceDuplicateMatch,
 } from '@/src/services/sms/smsDuplicateDetection';
 import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
 import { smsRuleEngine } from '@/src/services/sms/SmsRuleEngine';
-import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { WorkplaceId } from '@/src/types/ids';
 import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
 import { logger } from '@/src/utils/logger';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
-import { Model } from '@nozbe/watermelondb';
 import { analyzeAutoPost } from './smsAutoPostAnalyzer';
 import { findManyDuplicateCandidates } from './smsDuplicateMatcher';
 import { computeSmsFingerprint, resolveProcessingStatus } from './smsFingerprint';
 import { processScanBatchItem } from './smsInboxRecordPreparer';
 import { SmsAnalysisResult } from './types';
+
+class SmsScanCancelledError extends Error {}
 
 export class SmsSyncPipeline {
   private readonly workplaceScans = new Map<WorkplaceId, Promise<void>>();
@@ -140,7 +143,7 @@ export class SmsSyncPipeline {
           parsed.parseStatus === InboxParseStatus.PARSED &&
           nextStatus === InboxProcessingStatus.PENDING
         ) {
-          const ruleResult = await analyzeAutoPost(message, parsed, activeRules, workplaceId);
+          const ruleResult = await analyzeAutoPost(message, parsed, activeRules);
           if (ruleResult) {
             if (ruleResult.disposition === 'ignore') {
               finalStatus = InboxProcessingStatus.DISMISSED;
@@ -148,7 +151,6 @@ export class SmsSyncPipeline {
               autoPost = {
                 ruleId: ruleResult.ruleId,
                 journalData: ruleResult.createData.journalData,
-                preparedJournal: ruleResult.createData.preparedJournal,
               };
               finalStatus = InboxProcessingStatus.AUTO_POSTED;
             }
@@ -171,13 +173,11 @@ export class SmsSyncPipeline {
     // --- Phase 2: Synchronous Batching ---
     let importedCount = 0;
     let totalOps = 0;
-    const allAccountsToRebuild = new Set<AccountId>();
     const triggeredRuleIds: string[] = [];
 
     if (analysisResults.length > 0 && !signal?.aborted) {
-      // Re-fetch before preparing models. WatermelonDB requires prepareUpdate/
-      // prepareCreate to be followed by database.batch synchronously; awaiting
-      // these reads inside the batch builder triggers its diagnostic error.
+      // Re-fetch before entering the accounting write session. Its staged model factories
+      // prepare every record immediately before the session's single database.batch.
       const messageIds = analysisResults.map(result => result.message.id);
       const fingerprints = analysisResults.map(result => result.fingerprint);
       const [latestRecords, latestJournalsById, latestJournalsByFingerprint] = await Promise.all([
@@ -190,51 +190,56 @@ export class SmsSyncPipeline {
       );
       const latestProcessedIds = new Set<string>();
 
-      const committed = await transactionInboxRepository.persistScanBatch(
-        () => {
-          if (signal?.aborted) return [];
-          const allOps: Model[] = [];
-
+      let stagedImportedCount = 0;
+      let stagedOperationCount = 0;
+      let journalResults: JournalPersistenceResult[] = [];
+      let committed = false;
+      try {
+        journalResults = await runAccountingWriteSession(async session => {
           for (const result of analysisResults) {
+            if (signal?.aborted) throw new SmsScanCancelledError();
             const latestRecord = latestRecordsByMessageId.get(result.message.id) ?? null;
             const latestJournal =
               latestJournalsById.get(result.message.id) ??
               latestJournalsByFingerprint.get(result.fingerprint) ??
               null;
 
-            const { journalOps, inboxRecord, autoPosted } = processScanBatchItem({
+            const item = await processScanBatchItem({
+              session,
               result,
               latestRecord,
               latestJournal,
               latestProcessedIds,
               workplaceId,
-              allAccountsToRebuild,
               triggeredRuleIds,
             });
-
-            const { ops: inboxOps, record } = transactionInboxRepository.prepareUpsert(
-              inboxRecord,
+            transactionInboxRepository.stageUpsertInSession(
+              session,
+              item.inboxRecord,
               latestRecord,
             );
-
-            allOps.push(...journalOps, ...inboxOps);
-            if (autoPosted) importedCount += 1;
-            latestRecordsByMessageId.set(result.message.id, record);
+            if (item.autoPosted) stagedImportedCount += 1;
+            if (item.journalResult) journalResults.push(item.journalResult);
+            stagedOperationCount += 1;
+            if (item.autoPosted && result.autoPost) {
+              stagedOperationCount +=
+                result.autoPost.journalData.transactions.length +
+                (result.autoPost.journalData.metadata ? 1 : 0) +
+                2;
+            }
           }
-
-          totalOps = allOps.length;
-          return allOps;
-        },
-        () => {
-          if (allAccountsToRebuild.size > 0) {
-            const latestDate = Math.max(...messages.map(m => m.date));
-            rebuildQueueService.enqueueMany(allAccountsToRebuild, latestDate, workplaceId);
-          }
-        },
-        signal,
-      );
+          if (signal?.aborted) throw new SmsScanCancelledError();
+          return journalResults;
+        });
+        committed = true;
+      } catch (error) {
+        if (!(error instanceof SmsScanCancelledError)) throw error;
+      }
 
       if (committed) {
+        importedCount = stagedImportedCount;
+        totalOps = stagedOperationCount;
+        journalPersistenceService.afterAtomicWriteCommit(journalResults, workplaceId);
         triggeredRuleIds.forEach(ruleId => analytics.logSmsRuleTriggered(ruleId, true));
       }
     }

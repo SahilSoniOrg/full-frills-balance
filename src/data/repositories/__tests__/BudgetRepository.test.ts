@@ -1,5 +1,4 @@
 import { database } from '@/src/data/database/Database';
-import Budget from '@/src/data/models/Budget';
 import BudgetScope from '@/src/data/models/BudgetScope';
 import { AccountType } from '@/src/types/enums';
 import { AccountId, BudgetId, WorkplaceId } from '@/src/types/ids';
@@ -187,67 +186,6 @@ describe('BudgetRepository', () => {
 
       expect(matches).toHaveLength(1);
       expect(matches[0].name).toBe('Source budget');
-    });
-  });
-
-  describe('prepareMergeOperations', () => {
-    it('retargets scoped references, deduplicates funding ids, and keeps scope operations first', async () => {
-      const workplaceId = 'wp-1' as WorkplaceId;
-      const foreignWorkplaceId = 'wp-2' as WorkplaceId;
-      const sourceAccountId = accountId1 as AccountId;
-      const targetAccountId = accountId2 as AccountId;
-
-      const localBudget = await budgetRepository.create(
-        workplaceId,
-        {
-          name: 'Local Food',
-          amount: 500,
-          currencyCode: 'USD',
-          startMonth: '2023-10',
-          assetAccountIds: [sourceAccountId, targetAccountId],
-        },
-        [sourceAccountId],
-      );
-      const foreignBudget = await budgetRepository.create(
-        foreignWorkplaceId,
-        {
-          name: 'Foreign Food',
-          amount: 500,
-          currencyCode: 'USD',
-          startMonth: '2023-10',
-          assetAccountIds: [sourceAccountId],
-        },
-        [sourceAccountId],
-      );
-
-      const operations = await budgetRepository.prepareMergeOperations(
-        workplaceId,
-        [sourceAccountId, sourceAccountId],
-        targetAccountId,
-      );
-
-      expect(operations).toHaveLength(2);
-      expect(operations[0]).toBeInstanceOf(BudgetScope);
-      expect(operations[1]).toBeInstanceOf(Budget);
-
-      await database.write(async () => {
-        await database.batch(operations);
-      });
-
-      const localScopes = await budgetRepository.getScopes(workplaceId, localBudget.id as BudgetId);
-      expect(localScopes[0].accountId).toBe(targetAccountId);
-      expect((await budgetRepository.find(workplaceId, localBudget.id))?.assetAccountIds).toBe(
-        targetAccountId,
-      );
-
-      const foreignScopes = await budgetRepository.getScopes(
-        foreignWorkplaceId,
-        foreignBudget.id as BudgetId,
-      );
-      expect(foreignScopes[0].accountId).toBe(sourceAccountId);
-      expect(
-        (await budgetRepository.find(foreignWorkplaceId, foreignBudget.id))?.assetAccountIds,
-      ).toBe(sourceAccountId);
     });
   });
 });

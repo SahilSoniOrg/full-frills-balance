@@ -1,6 +1,7 @@
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { JournalEntryLine } from '@/src/types/domainJournal';
 import type { PostingPlan } from '@/src/types/domainTransaction';
+import type { JournalBalancePolicy } from '@/src/services/accounting/journalBalanceEvaluator';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { useCallback } from 'react';
 
@@ -17,6 +18,7 @@ type PostPostingPlanParams = {
   smsSender?: string;
   rawSmsBody?: string;
   mode?: 'simple' | 'advanced' | 'import';
+  balancePolicy?: JournalBalancePolicy;
 };
 
 type BulkJournalEntry = {

@@ -1,4 +1,5 @@
-import { persistBatch } from '@/src/data/repositories/persistBatch';
+import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
+import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
@@ -43,25 +44,30 @@ export async function togglePlannedPaymentStatus(
     }
   }
 
-  await persistBatch(() => {
-    const ppUpdate = plannedPaymentRepository.prepareStatusUpdate(
+  await runAccountingWriteSession(async session => {
+    await plannedPaymentRepository.updateInSession(
+      session,
       workplaceId,
-      pp,
-      newStatus,
-      isPausing ? undefined : updatedNextOccurrence,
+      pp.id,
+      {
+        status: newStatus,
+        ...(isPausing ? {} : { nextOccurrence: updatedNextOccurrence }),
+      },
+      { status: pp.status, nextOccurrence: pp.nextOccurrence },
     );
-    const journalUpdates = journalPlannedQueries.prepareStatusUpdates(
+    await journalPersistenceRepository.setNonPostedStatusesInSession(
+      session,
       workplaceId,
-      targetJournals,
-      isPausing
-        ? JournalStatus.PAUSED
-        : journal =>
-            normalizeToStartOfDay(journal.journalDate) >= nowMidnight
-              ? JournalStatus.PLANNED
-              : JournalStatus.SKIPPED,
+      targetJournals.map(journal => ({
+        journalId: journal.id,
+        expectedStatus: targetStatus,
+        status: isPausing
+          ? JournalStatus.PAUSED
+          : normalizeToStartOfDay(journal.journalDate) >= nowMidnight
+            ? JournalStatus.PLANNED
+            : JournalStatus.SKIPPED,
+      })),
     );
-
-    return [ppUpdate, ...journalUpdates];
   });
 
   if (!isPausing) {

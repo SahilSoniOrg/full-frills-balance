@@ -1,5 +1,9 @@
 import { database } from '@/src/data/database/Database';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
+import {
+  stagePlannedPaymentWrite,
+  type AccountingWriteSession,
+} from '@/src/data/repositories/AccountingWriteSession';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { Model, Q } from '@nozbe/watermelondb';
@@ -122,11 +126,44 @@ export class PlannedPaymentRepository {
     });
   }
 
+  async updateInSession(
+    session: AccountingWriteSession,
+    workplaceId: WorkplaceId,
+    id: PlannedPaymentId,
+    updates: Partial<PlannedPaymentPersistenceInput>,
+    expected?: Partial<Pick<PlannedPayment, 'status' | 'nextOccurrence'>>,
+  ): Promise<PlannedPayment> {
+    const record = await this.find(workplaceId, id);
+    if (!record) throw new Error('This planned payment was deleted.');
+    if (
+      expected &&
+      ((expected.status !== undefined && record.status !== expected.status) ||
+        (expected.nextOccurrence !== undefined &&
+          record.nextOccurrence !== expected.nextOccurrence))
+    ) {
+      throw new Error('Planned payment changed while its occurrence was being processed');
+    }
+
+    stagePlannedPaymentWrite(session, () => [this.prepareUpdate(workplaceId, record, updates)]);
+    return record;
+  }
+
+  async deleteInSession(
+    session: AccountingWriteSession,
+    workplaceId: WorkplaceId,
+    id: PlannedPaymentId,
+  ): Promise<PlannedPayment> {
+    const record = await this.find(workplaceId, id);
+    if (!record) throw new Error('Planned payment not found');
+    stagePlannedPaymentWrite(session, () => [this.prepareDelete(workplaceId, record)]);
+    return record;
+  }
+
   prepareUpdate(
     workplaceId: WorkplaceId,
     pp: PlannedPayment,
     updates: Partial<PlannedPaymentPersistenceInput>,
-  ): Model {
+  ): PlannedPayment {
     if (pp.workplaceId !== workplaceId) {
       throw new Error('Planned payment not found or does not belong to the workplace');
     }
@@ -148,14 +185,15 @@ export class PlannedPaymentRepository {
     });
   }
 
-  prepareDelete(workplaceId: WorkplaceId, pp: PlannedPayment): Model {
+  private prepareDelete(workplaceId: WorkplaceId, pp: PlannedPayment): PlannedPayment {
     if (pp.workplaceId !== workplaceId) {
       throw new Error('Planned payment not found or does not belong to the workplace');
     }
 
+    const now = new Date();
     return pp.prepareUpdate(record => {
-      record.deletedAt = new Date();
-      record.updatedAt = new Date();
+      record.deletedAt = now;
+      record.updatedAt = now;
     });
   }
 
@@ -191,16 +229,19 @@ export class PlannedPaymentRepository {
    * Prepares WatermelonDB operations to merge planned-payment references from source
    * accounts into a target account.
    */
-  async prepareMergeOperations(
+  async mergeAccountsInSession(
+    session: AccountingWriteSession,
     workplaceId: WorkplaceId,
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
-  ): Promise<PlannedPayment[]> {
+  ): Promise<void> {
     const records = await this.loadMergeRecords(workplaceId, sourceAccountIds, targetAccountId);
-    return this.prepareLoadedMergeOperations(records, sourceAccountIds, targetAccountId);
+    stagePlannedPaymentWrite(session, () =>
+      this.prepareLoadedMergeOperations(records, sourceAccountIds, targetAccountId),
+    );
   }
 
-  async loadMergeRecords(
+  private async loadMergeRecords(
     workplaceId: WorkplaceId,
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
@@ -214,7 +255,7 @@ export class PlannedPaymentRepository {
     return { sourceFrom, sourceTo, targetFrom, targetTo };
   }
 
-  prepareLoadedMergeOperations(
+  private prepareLoadedMergeOperations(
     records: PlannedPaymentMergeRecords,
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,

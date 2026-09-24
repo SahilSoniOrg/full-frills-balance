@@ -47,6 +47,10 @@ describe('planned payment commands (integration)', () => {
     toAccountId = to.id;
   }, 15000);
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   const baseInput = () => ({
     name: 'Monthly rent',
     amount: 1200,
@@ -195,12 +199,19 @@ describe('planned payment commands (integration)', () => {
 
   it('pause and resume go through service façade', async () => {
     const created = await createPlannedPayment(WP, baseInput());
+    const writeSpy = jest.spyOn(database, 'write');
+    const batchSpy = jest.spyOn(database, 'batch');
+
     const pausedStatus = await togglePlannedPaymentStatus(WP, created.id);
     expect(pausedStatus).toBe(PlannedPaymentStatus.PAUSED);
+    expect(writeSpy).toHaveBeenCalledTimes(1);
+    expect(batchSpy).toHaveBeenCalledTimes(1);
 
     const paused = await plannedPaymentRepository.find(WP, created.id);
     expect(paused?.status).toBe(PlannedPaymentStatus.PAUSED);
 
+    writeSpy.mockRestore();
+    batchSpy.mockRestore();
     const resumedStatus = await togglePlannedPaymentStatus(WP, paused!.id);
     expect(resumedStatus).toBe(PlannedPaymentStatus.ACTIVE);
   });

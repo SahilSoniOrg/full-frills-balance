@@ -1,7 +1,6 @@
 export { accountObserveQueries, AccountObserveQueries } from './AccountObserveQueries';
 export { accountQueryRepository, AccountQueryRepository } from './AccountQueryRepository';
 export { accountWriteRepository, AccountWriteRepository } from './AccountWriteRepository';
-export { accountMergeOperations } from './AccountMergeOperations';
 export {
   getBalanceCorrectionAccountInput,
   getOpeningBalancesAccountInput,

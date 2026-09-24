@@ -1,10 +1,14 @@
 import Account from '@/src/data/models/Account';
-import { AuditAction, AccountSubtype, AccountType } from '@/src/types/enums';
+import { AccountSubtype, AccountType, JournalStatus } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { SerializedAccountMetadataPayload } from '@/src/types/plainDtos';
-import { accountWriteRepository } from '@/src/data/repositories/account';
+import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { getOpeningBalancesAccountInput } from '@/src/data/repositories/account/accountSystemAccountInputs';
-import { auditRepository } from '@/src/data/repositories/AuditRepository';
+import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
+import {
+  journalPersistenceRepository,
+  type JournalPersistenceResult,
+} from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { analytics } from '@/src/services/analytics';
@@ -16,13 +20,13 @@ import {
   resolveAccountSubtype,
   shouldPostInitialBalance,
 } from '@/src/services/accounts/accountRules';
-import { findAccountByName } from '@/src/services/accounts/accountSystemAccounts';
-import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
+import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { IconName } from '@/src/types/domainIcons';
 import { isValidHexColor } from '@/src/utils/accountCategory';
 import { roundToPrecision } from '@/src/utils/money';
+import { effect } from '@/src/utils/accounting/BalanceEffects';
 
 /** Caller-owned fields for creating an account (form / onboarding data only). */
 export interface CreateAccountCommandInput {
@@ -90,97 +94,87 @@ export async function createAccount(
     metadata: input.metadata,
   };
 
-  let existingOpeningId: AccountId | undefined;
-  let companionPayloads: ReturnType<typeof getOpeningBalancesAccountInput>[] | undefined;
-  if (postOpening) {
-    const openingInput = getOpeningBalancesAccountInput(currencyCode, input.workplaceId);
-    const existingOpening = await findAccountByName(workplaceId, openingInput.name);
-    if (existingOpening) {
-      existingOpeningId = existingOpening.id;
-    } else {
-      companionPayloads = [openingInput];
-    }
-  }
-
   const journalDate = Date.now();
-  let accountsToRebuild: Set<AccountId> | undefined;
+  const { account, openingJournal } = await runAccountingWriteSession(async session => {
+    const created = await accountWriteRepository.createInSession(session, payload, {
+      appendWithinSiblingList: true,
+      audit: { initialBalance: input.initialBalance },
+    });
+    let openingJournal: JournalPersistenceResult | undefined;
 
-  const account = await accountWriteRepository.persistCreatedAccount({
-    payload,
-    resolvePayload: accounts => ({
-      ...payload,
-      orderNum: accounts.filter(
-        candidate =>
-          (candidate.parentAccountId || undefined) === (input.parentAccountId || undefined) &&
-          candidate.accountType === input.accountType,
-      ).length,
-    }),
-    companionPayloads,
-    extraOps: ({ account: created }) => [
-      auditRepository.prepareLog(
+    if (postOpening) {
+      const openingInput = getOpeningBalancesAccountInput(currencyCode, input.workplaceId);
+      const existingOpening = await accountQueryRepository.findByName(
+        workplaceId,
+        openingInput.name,
+      );
+      const balancingAccount =
+        existingOpening ?? (await accountWriteRepository.createInSession(session, openingInput));
+      const roundedAmount = roundToPrecision(Math.abs(input.initialBalance!), precision);
+      const { accountTxType, balancingTxType } = journalLegTypesForSignedAmount(
+        input.accountType,
+        input.initialBalance!,
+      );
+      const transactions = [
         {
-          entityType: 'account',
-          entityId: created.id,
-          action: AuditAction.CREATE,
-          changes: {
-            after: {
-              name: created.name,
-              accountType: created.accountType,
-              accountSubtype: created.accountSubtype,
-              currencyCode: created.currencyCode,
-              description: created.description,
-              icon: created.icon,
-              color: created.color,
-              orderNum: created.orderNum,
-              parentAccountId: created.parentAccountId,
-              initialBalance: input.initialBalance,
-            },
-          },
+          accountId: created.id,
+          amount: roundedAmount,
+          transactionType: accountTxType,
+        },
+        {
+          accountId: balancingAccount.id,
+          amount: roundedAmount,
+          transactionType: balancingTxType,
+        },
+      ];
+      const accountTypes = new Map([
+        [created.id, created.accountType],
+        [balancingAccount.id, balancingAccount.accountType],
+      ]);
+      const displayType = journalPresenter.getJournalDisplayType(transactions, accountTypes);
+      const runningBalanceByAccountId = new Map<AccountId, number | null>();
+      await Promise.all(
+        transactions.map(async transaction => {
+          const transactionAccount =
+            transaction.accountId === created.id ? created : balancingAccount;
+          const latest = await transactionQueryRepository.findLatestForAccountBeforeDate(
+            workplaceId,
+            transaction.accountId,
+            journalDate,
+          );
+          const runningBalance = effect(
+            transactionAccount.accountType,
+            transaction.transactionType,
+          ).apply(latest?.runningBalance ?? 0, transaction.amount, precision);
+          runningBalanceByAccountId.set(transaction.accountId, runningBalance);
+        }),
+      );
+
+      openingJournal = await journalPersistenceRepository.putInSession(
+        session,
+        {
+          journalDate,
+          description: `Initial Balance: ${input.name}`,
+          currencyCode,
+          status: JournalStatus.POSTED,
+          displayType,
+          transactions,
+          runningBalanceByAccountId,
         },
         workplaceId,
-      ),
-    ],
-    followUpBatch: postOpening
-      ? async ({ account: created, companions }) => {
-          const roundedAmount = roundToPrecision(Math.abs(input.initialBalance!), precision);
-          const balancingAccountId = existingOpeningId ?? companions[0]?.id;
-          if (!balancingAccountId) {
-            throw new Error('Opening balances account missing');
-          }
-          const { accountTxType, balancingTxType } = journalLegTypesForSignedAmount(
-            input.accountType,
-            input.initialBalance!,
-          );
-          const prepared = await ledgerCreateService.prepareCreateJournal(
-            {
-              journalDate,
-              description: `Initial Balance: ${input.name}`,
-              currencyCode,
-              transactions: [
-                {
-                  accountId: created.id,
-                  amount: roundedAmount,
-                  transactionType: accountTxType,
-                },
-                {
-                  accountId: balancingAccountId,
-                  amount: roundedAmount,
-                  transactionType: balancingTxType,
-                },
-              ],
-            },
-            input.workplaceId,
-          );
-          accountsToRebuild = prepared.accountsToRebuild;
-          return prepared.ops;
-        }
-      : undefined,
-    afterBatch: () => {
-      if (accountsToRebuild && accountsToRebuild.size > 0) {
-        rebuildQueueService.enqueueMany(accountsToRebuild, journalDate, workplaceId);
-      }
-    },
+      );
+    }
+
+    return { account: created, openingJournal };
   });
+
+  if (openingJournal) {
+    rebuildQueueService.enqueueMany(
+      [...openingJournal.affectedAccountIds],
+      openingJournal.rebuildFromDate,
+      workplaceId,
+    );
+  }
 
   analytics.logAccountCreated(account.accountType, account.currencyCode);
 

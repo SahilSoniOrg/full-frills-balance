@@ -1,7 +1,13 @@
 import { Icon } from '@/src/types/domainIcons';
 import { database } from '@/src/data/database/Database';
-import { AccountSubtype, AccountType } from '@/src/types/enums';
-import { AccountId, WorkplaceId } from '@/src/types/ids';
+import {
+  AccountSubtype,
+  AccountType,
+  JournalDisplayType,
+  JournalStatus,
+  TransactionType,
+} from '@/src/types/enums';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import Account from '@/src/data/models/Account';
@@ -159,6 +165,106 @@ describe('ImportRepository', () => {
       expect(metadata[0].statementDay).toBe(2);
       expect(metadata[0].dueDay).toBe(20);
       expect(metadata[0].autopayEnabled).toBe(true);
+    });
+  });
+
+  describe('new-workplace posted journal preflight', () => {
+    const workplace = {
+      id: 'restore-preflight' as WorkplaceId,
+      name: 'Restored ledger',
+      icon: Icon.Briefcase,
+      defaultCurrencyCode: 'USD',
+    };
+
+    const accountRows = [
+      {
+        id: 'restore-debit',
+        name: 'Cash',
+        accountType: AccountType.ASSET,
+        currencyCode: 'USD',
+      },
+      {
+        id: 'restore-credit',
+        name: 'Expense',
+        accountType: AccountType.EXPENSE,
+        currencyCode: 'USD',
+      },
+    ];
+
+    const journalRows = [
+      {
+        id: 'restore-journal',
+        journalDate: 1_000,
+        currencyCode: 'USD',
+        status: JournalStatus.POSTED,
+        totalAmount: 10,
+        transactionCount: 2,
+        displayType: JournalDisplayType.TRANSFER,
+      },
+    ];
+
+    it('rejects an unbalanced posted journal before publishing any workplace records', async () => {
+      await expect(
+        importRepository.batchInsertNewWorkplace(workplace, {
+          accounts: accountRows,
+          journals: journalRows,
+          transactions: [
+            {
+              id: 'restore-line-debit',
+              journalId: 'restore-journal' as JournalId,
+              accountId: 'restore-debit' as AccountId,
+              amount: 10,
+              transactionType: TransactionType.DEBIT,
+              currencyCode: 'USD',
+              transactionDate: 1_000,
+            },
+            {
+              id: 'restore-line-credit',
+              journalId: 'restore-journal' as JournalId,
+              accountId: 'restore-credit' as AccountId,
+              amount: 9,
+              transactionType: TransactionType.CREDIT,
+              currencyCode: 'USD',
+              transactionDate: 1_000,
+            },
+          ],
+        }),
+      ).rejects.toThrow(/posted journal restore-journal is invalid or unbalanced/);
+
+      expect(await database.collections.get('workplaces').query().fetchCount()).toBe(0);
+      expect(await database.collections.get('accounts').query().fetchCount()).toBe(0);
+      expect(await database.collections.get('journals').query().fetchCount()).toBe(0);
+      expect(await database.collections.get('transactions').query().fetchCount()).toBe(0);
+    });
+
+    it('allows an unbalanced planned journal in the snapshot', async () => {
+      const created = await importRepository.batchInsertNewWorkplace(workplace, {
+        accounts: accountRows,
+        journals: [{ ...journalRows[0], status: JournalStatus.PLANNED }],
+        transactions: [
+          {
+            id: 'planned-line-debit',
+            journalId: 'restore-journal' as JournalId,
+            accountId: 'restore-debit' as AccountId,
+            amount: 10,
+            transactionType: TransactionType.DEBIT,
+            currencyCode: 'USD',
+            transactionDate: 1_000,
+          },
+          {
+            id: 'planned-line-credit',
+            journalId: 'restore-journal' as JournalId,
+            accountId: 'restore-credit' as AccountId,
+            amount: 9,
+            transactionType: TransactionType.CREDIT,
+            currencyCode: 'USD',
+            transactionDate: 1_000,
+          },
+        ],
+      });
+
+      expect(created.id).toBe(workplace.id);
+      expect(await database.collections.get('journals').query().fetchCount()).toBe(1);
     });
   });
 });

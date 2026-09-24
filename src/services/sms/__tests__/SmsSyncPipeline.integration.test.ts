@@ -1,5 +1,11 @@
 import { AppConfig } from '@/src/constants';
-import { InboxProcessingStatus } from '@/src/types/enums';
+import { InboxProcessingStatus, JournalStatus } from '@/src/types/enums';
+import { AccountId } from '@/src/types/ids';
+import { database } from '@/src/data/database/Database';
+import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
+import Journal from '@/src/data/models/Journal';
+import Transaction from '@/src/data/models/Transaction';
+import { Q } from '@nozbe/watermelondb';
 import { smsMessageFromFixture } from '@/src/testing/smsFixtures';
 import { storage } from '@/src/utils/storage';
 import {
@@ -363,6 +369,72 @@ describe('SmsSyncPipeline integration', () => {
 
       const inbox = await fetchInboxByDeviceId('sms-exact-c3', SMS_TEST_WORKPLACE_B);
       expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
+    });
+  });
+
+  describe('auto-post persistence boundary', () => {
+    it('posts through the accounting repository and stays idempotent on a repeated scan', async () => {
+      const message = smsMessageFromFixture('swiggyNoRef', {
+        id: 'sms-auto-post-1',
+        date: baseDate,
+      });
+      await transactionAutoPostRuleRepository.save(
+        {
+          mode: 'regex',
+          senderMatch: message.address,
+          actions: {
+            disposition: 'auto_post',
+            sourceAccountId: cashId as AccountId,
+            categoryAccountId: expenseId as AccountId,
+          },
+          isActive: true,
+        },
+        SMS_TEST_WORKPLACE,
+      );
+
+      await expect(scanSmsInbox(SMS_TEST_WORKPLACE, [message])).resolves.toBe(1);
+      const inbox = await fetchInboxByDeviceId(message.id);
+      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
+      expect(inbox?.linkedJournalId).toBeTruthy();
+      const journal = await database.collections
+        .get<Journal>('journals')
+        .find(inbox!.linkedJournalId!);
+      expect(journal.status).toBe(JournalStatus.POSTED);
+      expect(
+        await database.collections
+          .get<Transaction>('transactions')
+          .query(Q.where('journal_id', journal.id), Q.where('deleted_at', Q.eq(null)))
+          .fetchCount(),
+      ).toBe(2);
+
+      await expect(scanSmsInbox(SMS_TEST_WORKPLACE, [message])).resolves.toBe(0);
+      expect(await database.collections.get<Journal>('journals').query().fetchCount()).toBe(1);
+    });
+
+    it('leaves inbox pending and creates no journal when persistence validation fails', async () => {
+      const message = smsMessageFromFixture('swiggyNoRef', {
+        id: 'sms-auto-post-missing-account',
+        date: baseDate,
+      });
+      await transactionAutoPostRuleRepository.save(
+        {
+          mode: 'regex',
+          senderMatch: message.address,
+          actions: {
+            disposition: 'auto_post',
+            sourceAccountId: 'missing-account' as AccountId,
+            categoryAccountId: expenseId as AccountId,
+          },
+          isActive: true,
+        },
+        SMS_TEST_WORKPLACE,
+      );
+
+      await expect(scanSmsInbox(SMS_TEST_WORKPLACE, [message])).resolves.toBe(0);
+      expect((await fetchInboxByDeviceId(message.id))?.processingStatus).toBe(
+        InboxProcessingStatus.PENDING,
+      );
+      expect(await database.collections.get<Journal>('journals').query().fetchCount()).toBe(0);
     });
   });
 

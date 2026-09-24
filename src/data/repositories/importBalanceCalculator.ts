@@ -44,7 +44,10 @@ export async function calculateImportRunningBalances(
 
   const accountMap = new Map(data.accounts.map(a => [a.id, a]));
   const currencies = await database.collections.get<Currency>('currencies').query().fetch();
-  const precisionMap = new Map(currencies.map(c => [c.code, c.precision]));
+  const precisionMap = new Map(currencies.map(c => [c.code.trim().toUpperCase(), c.precision]));
+  for (const currency of data.currencies ?? []) {
+    precisionMap.set(currency.code.trim().toUpperCase(), currency.precision);
+  }
 
   const patches: ImportBalancePatch[] = [];
   let accountsProcessed = 0;
@@ -57,7 +60,7 @@ export async function calculateImportRunningBalances(
     const accountType = isAccountType(account.accountType)
       ? account.accountType
       : AccountType.ASSET;
-    const precision = precisionMap.get(account.currencyCode) ?? 2;
+    const precision = precisionMap.get(account.currencyCode.trim().toUpperCase()) ?? 2;
 
     const ordered = [...accountTransactions].sort((a, b) => {
       if (a.transactionDate !== b.transactionDate) return a.transactionDate - b.transactionDate;

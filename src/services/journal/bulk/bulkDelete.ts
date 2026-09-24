@@ -1,7 +1,6 @@
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { BulkDeleteUndoToken } from '@/src/types/domainJournal';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
-import { enqueueRebuildIfNeeded } from './bulkHelpers';
 
 /**
  * Atomically soft deletes multiple journals and their child transactions in a single batch.
@@ -14,9 +13,5 @@ export async function bulkDeleteJournals(
     return { journals: [], transactions: [] };
   }
 
-  const { affectedAccountIds, minDate, undoToken } =
-    await journalWriteRepository.bulkSoftDeleteJournals(workplaceId, journalIds);
-
-  enqueueRebuildIfNeeded(affectedAccountIds, minDate, workplaceId);
-  return undoToken;
+  return journalPersistenceService.bulkDelete(workplaceId, journalIds);
 }

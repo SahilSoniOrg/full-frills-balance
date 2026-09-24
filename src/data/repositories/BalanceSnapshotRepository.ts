@@ -1,5 +1,9 @@
 import { database } from '@/src/data/database/Database';
 import BalanceSnapshot from '@/src/data/models/BalanceSnapshot';
+import {
+  stageBalanceSnapshotMergeWrite,
+  type AccountingWriteSession,
+} from '@/src/data/repositories/AccountingWriteSession';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
@@ -263,21 +267,22 @@ export class BalanceSnapshotRepository {
   /**
    * Prepares WatermelonDB operations to delete balance snapshots for multiple accounts.
    */
-  async prepareMergeOperations(
+  async deleteForAccountMergeInSession(
+    session: AccountingWriteSession,
     workplaceId: WorkplaceId,
     accountIds: AccountId[],
-  ): Promise<BalanceSnapshot[]> {
+  ): Promise<void> {
     const snapshots = await this.loadMergeRecords(workplaceId, accountIds);
-    return this.prepareLoadedMergeOperations(snapshots);
+    stageBalanceSnapshotMergeWrite(session, () => this.prepareLoadedMergeOperations(snapshots));
   }
 
-  loadMergeRecords(workplaceId: WorkplaceId, accountIds: AccountId[]) {
+  private loadMergeRecords(workplaceId: WorkplaceId, accountIds: AccountId[]) {
     return this.snapshots
       .query(Q.where('workplace_id', workplaceId), Q.where('account_id', Q.oneOf(accountIds)))
       .fetch();
   }
 
-  prepareLoadedMergeOperations(snapshots: BalanceSnapshot[]): BalanceSnapshot[] {
+  private prepareLoadedMergeOperations(snapshots: BalanceSnapshot[]): BalanceSnapshot[] {
     return snapshots.map(s => s.prepareDestroyPermanently());
   }
 }

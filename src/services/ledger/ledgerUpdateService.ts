@@ -1,85 +1,16 @@
 import Journal from '@/src/data/models/Journal';
-import { auditRepository } from '@/src/data/repositories/AuditRepository';
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
-import {
-  CreateJournalData,
-  journalWriteRepository,
-} from '@/src/data/repositories/journal/journalWriteModule';
-import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { AuditAction } from '@/src/types/enums';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
-import { mapTransactionToAudit } from '@/src/types/audit';
-import { prepareJournalData } from './prepareJournalData';
+import type { CreateJournalData } from '@/src/types/journalWrite';
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 
+/** Transitional update API; persistence and posted-balance enforcement live in the journal boundary. */
 export class LedgerUpdateService {
-  async updateJournal(
+  updateJournal(
     journalId: JournalId,
     data: CreateJournalData,
     workplaceId: WorkplaceId,
   ): Promise<Journal> {
-    const originalJournal = await journalQueryRepository.find(workplaceId, journalId);
-    if (!originalJournal) throw new Error('Journal not found');
-
-    const originalTransactions = await transactionQueryRepository.findByJournal(
-      workplaceId,
-      journalId,
-    );
-    const updateData = { ...data, currencyCode: originalJournal.currencyCode };
-    const prepared = await prepareJournalData(updateData, workplaceId);
-
-    const extraOpCreator = () => {
-      const mappedBeforeTransactions = originalTransactions.map(t => mapTransactionToAudit(t));
-      const mappedAfterTransactions = data.transactions.map(t => mapTransactionToAudit(t));
-      return auditRepository.prepareLog(
-        {
-          entityType: 'journal',
-          entityId: journalId,
-          action: AuditAction.UPDATE,
-          changes: {
-            before: {
-              description: originalJournal.description,
-              journalDate: originalJournal.journalDate,
-              currencyCode: originalJournal.currencyCode,
-              status: originalJournal.status,
-              totalAmount: originalJournal.totalAmount,
-              transactions: mappedBeforeTransactions,
-            },
-            after: {
-              description: data.description,
-              journalDate: data.journalDate,
-              currencyCode: originalJournal.currencyCode,
-              transactions: mappedAfterTransactions,
-            },
-          },
-        },
-        workplaceId,
-      );
-    };
-
-    const originalAccountIds = new Set(originalTransactions.map(t => t.accountId));
-    const allAccountsToRebuild = new Set<AccountId>([
-      ...prepared.accountsToRebuild,
-      ...originalAccountIds,
-    ]);
-    const rebuildFromDate = Math.min(originalJournal.journalDate, data.journalDate);
-
-    return journalWriteRepository.updateJournalWithTransactions(
-      workplaceId,
-      journalId,
-      {
-        ...updateData,
-        transactions: prepared.transactions,
-        totalAmount: prepared.totalAmount,
-        displayType: prepared.displayType,
-        calculatedBalances: prepared.calculatedBalances,
-        metadata: updateData.metadata,
-      },
-      extraOpCreator,
-      () => {
-        rebuildQueueService.enqueueMany(allAccountsToRebuild, rebuildFromDate, workplaceId);
-      },
-    );
+    return journalPersistenceService.put({ ...data, journalId }, workplaceId);
   }
 }
 

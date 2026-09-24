@@ -2,13 +2,15 @@ import { SmsMessage } from '@/modules/expo-sms-inbox';
 import Journal from '@/src/data/models/Journal';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { TransactionInboxRecordWriteData } from '@/src/data/repositories/TransactionInboxRepository';
-import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
+import type { AccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
+import type { JournalPersistenceResult } from '@/src/data/repositories/journal/JournalPersistenceRepository';
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { ParsedTransaction, toTransactionDirection } from '@/src/services/ledger/SmsParser';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
-import { Model } from '@nozbe/watermelondb';
+import { logger } from '@/src/utils/logger';
 import { resolveProcessingStatus } from './smsFingerprint';
 import { SmsAnalysisResult } from './types';
 
@@ -57,26 +59,26 @@ export function prepareUpsertInboxRecord(
   };
 }
 
-export function processScanBatchItem(params: {
+export async function processScanBatchItem(params: {
+  session: AccountingWriteSession;
   result: SmsAnalysisResult;
   latestRecord: TransactionInboxRecord | null;
   latestJournal: Journal | null;
   latestProcessedIds: Set<string>;
   workplaceId: WorkplaceId;
-  allAccountsToRebuild: Set<AccountId>;
   triggeredRuleIds: string[];
-}): {
-  journalOps: Model[];
+}): Promise<{
   inboxRecord: TransactionInboxRecordWriteData;
   autoPosted: boolean;
-} {
+  journalResult?: JournalPersistenceResult;
+}> {
   const {
     result,
+    session,
     latestRecord,
     latestJournal,
     latestProcessedIds,
     workplaceId,
-    allAccountsToRebuild,
     triggeredRuleIds,
   } = params;
 
@@ -96,23 +98,25 @@ export function processScanBatchItem(params: {
     finalStatus = InboxProcessingStatus.DISMISSED;
   }
 
-  const allOps: Model[] = [];
   let autoPosted = false;
+  let journalResult: JournalPersistenceResult | undefined;
 
   if (result.autoPost && !linkedJournalId && finalStatus === InboxProcessingStatus.PENDING) {
-    const { journal, ops, accountsToRebuild } =
-      ledgerCreateService.prepareCreateJournalFromPreparedData(
+    try {
+      journalResult = await journalPersistenceService.putInSession(
+        session,
         result.autoPost.journalData,
-        result.autoPost.preparedJournal,
         workplaceId,
       );
-
-    allOps.push(...ops);
-    accountsToRebuild.forEach(id => allAccountsToRebuild.add(id));
-    linkedJournalId = journal.id;
-    finalStatus = InboxProcessingStatus.AUTO_POSTED;
-    autoPosted = true;
-    triggeredRuleIds.push(result.autoPost.ruleId);
+      linkedJournalId = journalResult.journal.id;
+      finalStatus = InboxProcessingStatus.AUTO_POSTED;
+      autoPosted = true;
+      triggeredRuleIds.push(result.autoPost.ruleId);
+    } catch (error) {
+      logger.warn(`SMS auto-post rule ${result.autoPost.ruleId} failed persistence validation`, {
+        error,
+      });
+    }
   }
 
   const inboxRecord = prepareUpsertInboxRecord(
@@ -125,5 +129,5 @@ export function processScanBatchItem(params: {
     linkedJournalId,
     result.duplicate || undefined,
   );
-  return { journalOps: allOps, inboxRecord, autoPosted };
+  return { inboxRecord, autoPosted, journalResult };
 }

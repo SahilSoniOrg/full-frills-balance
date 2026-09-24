@@ -1,7 +1,6 @@
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { BulkDeleteUndoToken } from '@/src/types/domainJournal';
 import { WorkplaceId } from '@/src/types/ids';
-import { enqueueRebuildIfNeeded } from './bulkHelpers';
 
 export type { BulkDeleteUndoToken } from '@/src/types/domainJournal';
 
@@ -12,10 +11,5 @@ export async function bulkRestoreJournals(
 ): Promise<void> {
   if (token.journals.length === 0 && token.transactions.length === 0) return;
 
-  const { affectedAccountIds, minDate } = await journalWriteRepository.bulkRestoreJournals(
-    workplaceId,
-    token,
-  );
-
-  enqueueRebuildIfNeeded(affectedAccountIds, minDate, workplaceId);
+  await journalPersistenceService.bulkRestore(workplaceId, token);
 }

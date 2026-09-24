@@ -2,8 +2,8 @@ import { database } from '@/src/data/database/Database';
 import { JournalStatus, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
+import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { ledgerCreateService } from '@/src/services/ledger/ledgerCreateService';
 import { ledgerLifecycleService } from '@/src/services/ledger/ledgerLifecycleService';
 import { deletePlannedPayment } from '@/src/services/planned-payment/plannedPaymentCommands';
@@ -15,6 +15,7 @@ import {
   skipPlannedPaymentOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { generatePlannedJournalForPayment } from '@/src/services/planned-payment/plannedPaymentJournalGeneration';
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import {
   calculateNextOccurrence,
   computeFirstOccurrence,
@@ -25,6 +26,30 @@ jest.mock('@/src/services/ledger/ledgerLifecycleService');
 jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
 jest.mock('@/src/data/repositories/journal/journalPlannedModule');
+jest.mock('@/src/data/repositories/journal/JournalPersistenceRepository', () => ({
+  journalPersistenceRepository: {
+    assertPlannedOccurrenceAvailable: jest.fn().mockResolvedValue(undefined),
+    setNonPostedStatusesInSession: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+jest.mock('@/src/services/journal/JournalPersistenceService', () => ({
+  journalPersistenceService: {
+    putInSession: jest.fn().mockResolvedValue({
+      journal: {},
+      affectedAccountIds: new Set(),
+      rebuildFromDate: 0,
+      status: 'PLANNED',
+    }),
+    postInSession: jest.fn().mockResolvedValue({
+      journal: {},
+      affectedAccountIds: new Set(),
+      rebuildFromDate: 0,
+      status: 'POSTED',
+    }),
+    deletePlannedPayment: jest.fn(),
+    afterAtomicWriteCommit: jest.fn(),
+  },
+}));
 jest.mock('@/src/data/repositories/transaction', () => ({
   ...jest.requireActual('@/src/data/repositories/transaction'),
 
@@ -57,9 +82,12 @@ describe('planned payment modules', () => {
           return { journalId: journal.id, status: journal.status };
         }),
     );
-    (journalPlannedQueries.prepareSoftDeleteUpdates as jest.Mock).mockReturnValue([]);
+    (journalPersistenceService.deletePlannedPayment as jest.Mock).mockResolvedValue(undefined);
     (plannedPaymentRepository.prepareUpdate as jest.Mock).mockImplementation(
       (_workplaceId, _pp, updates) => ({ updates }),
+    );
+    (plannedPaymentRepository.updateInSession as jest.Mock).mockImplementation(
+      (_session, _workplaceId, ppId, updates) => ({ id: ppId, ...updates }),
     );
     (plannedPaymentRepository.prepareStatusUpdate as jest.Mock).mockImplementation(
       (_workplaceId, pp, status, nextOccurrence) => {
@@ -351,19 +379,23 @@ describe('planned payment modules', () => {
         expect.any(Number),
         expect.any(Number),
       );
-      // Promote existing PLANNED journal via canonical ledger write path
-      expect(ledgerLifecycleService.postJournal).toHaveBeenCalledWith('existing-j-1', 'wp-1', {
-        extraOps: expect.any(Function),
-      });
+      expect(journalPersistenceService.postInSession).toHaveBeenCalledWith(
+        expect.anything(),
+        'existing-j-1',
+        'wp-1',
+        expect.any(Number),
+      );
+      expect(journalPersistenceService.putInSession).not.toHaveBeenCalled();
+      expect(plannedPaymentRepository.updateInSession).toHaveBeenCalledWith(
+        expect.anything(),
+        'wp-1',
+        'pp-1',
+        expect.objectContaining({ nextOccurrence: expect.any(Number) }),
+        { nextOccurrence: mockPP.nextOccurrence },
+      );
+      expect(journalPersistenceService.afterAtomicWriteCommit).toHaveBeenCalled();
+      expect(ledgerLifecycleService.postJournal).not.toHaveBeenCalled();
       expect(ledgerCreateService.createJournal).not.toHaveBeenCalled();
-
-      // Trigger lazy extraOps to verify schedule advance
-      const postOptions = (ledgerLifecycleService.postJournal as jest.Mock).mock.calls[0][2];
-      expect(typeof postOptions?.extraOps).toBe('function');
-      const extraOpsResult =
-        typeof postOptions?.extraOps === 'function' ? postOptions.extraOps() : [];
-      expect(plannedPaymentRepository.prepareUpdate).toHaveBeenCalled();
-      expect(extraOpsResult).toEqual([expect.objectContaining({ updates: expect.any(Object) })]);
       expect(updatePpSpy).not.toHaveBeenCalled();
     });
 
@@ -374,9 +406,7 @@ describe('planned payment modules', () => {
       );
       (journalPlannedQueries.findPlannedOnDay as jest.Mock).mockResolvedValue([]);
 
-      const createJournalSpy = jest
-        .spyOn(ledgerCreateService, 'createJournal')
-        .mockResolvedValue({} as any);
+      const createJournalSpy = jest.spyOn(journalPersistenceService, 'putInSession');
       const updatePpSpy = jest
         .spyOn(plannedPaymentRepository, 'update')
         .mockResolvedValue({} as any);
@@ -384,12 +414,13 @@ describe('planned payment modules', () => {
       await postPlannedPaymentOccurrence('wp-1' as WorkplaceId, mockPP.id, mockPP.nextOccurrence);
 
       expect(createJournalSpy).toHaveBeenCalled();
-      const createOptions = createJournalSpy.mock.calls[0][2];
-      expect(typeof createOptions?.extraOps).toBe('function');
-      if (typeof createOptions?.extraOps === 'function') {
-        createOptions.extraOps({} as any);
-      }
-      expect(plannedPaymentRepository.prepareUpdate).toHaveBeenCalled();
+      expect(createJournalSpy.mock.calls[0][1]).toEqual(
+        expect.objectContaining({
+          status: JournalStatus.POSTED,
+          plannedPaymentId: mockPP.id,
+        }),
+      );
+      expect(plannedPaymentRepository.updateInSession).toHaveBeenCalled();
       expect(updatePpSpy).not.toHaveBeenCalled();
     });
   });
@@ -430,13 +461,19 @@ describe('planned payment modules', () => {
         expect.any(Number),
         expect.any(Number),
       );
-      expect(journalPlannedQueries.prepareStatusUpdates).toHaveBeenCalledWith(
+      expect(journalPersistenceRepository.setNonPostedStatusesInSession).toHaveBeenCalledWith(
+        expect.anything(),
         'wp-1',
-        [mockJournal],
-        JournalStatus.SKIPPED,
+        [
+          {
+            journalId: mockJournal.id,
+            status: JournalStatus.SKIPPED,
+            expectedStatus: JournalStatus.PLANNED,
+          },
+        ],
       );
-      expect(plannedPaymentRepository.prepareUpdate).toHaveBeenCalled();
-      const nextOcc = (plannedPaymentRepository.prepareUpdate as jest.Mock).mock.calls[0][2]
+      expect(plannedPaymentRepository.updateInSession).toHaveBeenCalled();
+      const nextOcc = (plannedPaymentRepository.updateInSession as jest.Mock).mock.calls[0][3]
         .nextOccurrence as number;
       expect(new Date(nextOcc).getMonth()).toBe(1); // Feb
     });
@@ -467,18 +504,21 @@ describe('planned payment modules', () => {
 
       await processDuePlannedPayments('wp-1' as WorkplaceId, controller.signal);
 
-      expect(ledgerCreateService.createJournal).not.toHaveBeenCalled();
+      expect(journalPersistenceService.putInSession).not.toHaveBeenCalled();
       expect(plannedPaymentRepository.update).not.toHaveBeenCalled();
     });
 
-    it('does not return journal operations after cancellation during preparation', async () => {
+    it('does not commit staged journal and schedule operations after cancellation', async () => {
       const controller = new AbortController();
-      (ledgerCreateService.createJournal as jest.Mock).mockImplementation(
-        async (_data, _workplaceId, options) => {
-          controller.abort();
-          options.extraOps({} as any);
-        },
-      );
+      (journalPersistenceService.putInSession as jest.Mock).mockImplementation(async () => {
+        controller.abort();
+        return {
+          journal: {},
+          affectedAccountIds: new Set(),
+          rebuildFromDate: 0,
+          status: JournalStatus.PLANNED,
+        };
+      });
 
       await expect(
         generatePlannedJournalForPayment(mockPP as any, mockPP.nextOccurrence, {
@@ -488,79 +528,40 @@ describe('planned payment modules', () => {
     });
   });
 
-  describe('delete preparation', () => {
-    it('keeps planned payment, journal, and transaction operations in one ordered batch', async () => {
+  describe('planned-payment deletion boundary', () => {
+    it('delegates the payment and unposted-journal cascade to one accounting session', async () => {
       const plannedPayment = {
         id: 'pp-delete' as PlannedPaymentId,
         workplaceId: 'wp-1' as WorkplaceId,
-        prepareUpdate: jest.fn(),
       };
-      const journal = {
-        id: 'journal-delete',
-        workplaceId: 'wp-1' as WorkplaceId,
-        prepareUpdate: jest.fn(),
-      };
-      const transaction = {
-        id: 'transaction-delete',
-        workplaceId: 'wp-1' as WorkplaceId,
-        prepareUpdate: jest.fn(),
-      };
-      const plannedPaymentOp = { id: 'planned-payment-op' };
-      const journalOp = { id: 'journal-op' };
-      const transactionOp = { id: 'transaction-op' };
 
       (plannedPaymentRepository.find as jest.Mock).mockResolvedValue(plannedPayment);
-      (plannedPaymentRepository.prepareDelete as jest.Mock).mockReturnValue(plannedPaymentOp);
-      (journalPlannedQueries.findUnpostedByPlannedPayment as jest.Mock).mockResolvedValue([
-        journal,
-      ]);
-      (transactionQueryRepository.findByJournals as jest.Mock).mockResolvedValue([transaction]);
-      (journalPlannedQueries.prepareSoftDeleteUpdates as jest.Mock).mockReturnValue([
-        journalOp,
-        transactionOp,
-      ]);
 
       await deletePlannedPayment('wp-1' as WorkplaceId, plannedPayment.id);
 
-      expect(database.batch).toHaveBeenCalledWith([plannedPaymentOp, journalOp, transactionOp]);
-      expect(journalPlannedQueries.prepareSoftDeleteUpdates).toHaveBeenCalledWith(
+      expect(journalPersistenceService.deletePlannedPayment).toHaveBeenCalledWith(
         'wp-1',
-        [journal],
-        [transaction],
+        plannedPayment.id,
       );
-      expect(plannedPayment.prepareUpdate).not.toHaveBeenCalled();
-      expect(journal.prepareUpdate).not.toHaveBeenCalled();
-      expect(transaction.prepareUpdate).not.toHaveBeenCalled();
+      expect(database.batch).not.toHaveBeenCalled();
     });
 
-    it('does not submit a batch when repository preparation fails', async () => {
+    it('propagates a failure from the atomic persistence operation', async () => {
       const plannedPayment = {
         id: 'pp-delete' as PlannedPaymentId,
         workplaceId: 'wp-1' as WorkplaceId,
-        prepareUpdate: jest.fn(),
-      };
-      const journal = {
-        id: 'journal-delete',
-        workplaceId: 'wp-1' as WorkplaceId,
-        prepareUpdate: jest.fn(),
       };
 
       (plannedPaymentRepository.find as jest.Mock).mockResolvedValue(plannedPayment);
-      (plannedPaymentRepository.prepareDelete as jest.Mock).mockReturnValue({ id: 'pp-op' });
-      (journalPlannedQueries.findUnpostedByPlannedPayment as jest.Mock).mockResolvedValue([
-        journal,
-      ]);
-      (journalPlannedQueries.prepareSoftDeleteUpdates as jest.Mock).mockImplementation(() => {
-        throw new Error('foreign planned-payment journal');
-      });
+      (journalPersistenceService.deletePlannedPayment as jest.Mock).mockRejectedValue(
+        new Error('atomic delete failed'),
+      );
 
       await expect(deletePlannedPayment('wp-1' as WorkplaceId, plannedPayment.id)).rejects.toThrow(
-        'foreign planned-payment journal',
+        'atomic delete failed',
       );
 
       expect(database.batch).not.toHaveBeenCalled();
-      expect(plannedPayment.prepareUpdate).not.toHaveBeenCalled();
-      expect(journal.prepareUpdate).not.toHaveBeenCalled();
     });
   });
 
@@ -592,21 +593,27 @@ describe('planned payment modules', () => {
         JournalStatus.PLANNED,
       );
       expect(newStatus).toBe(PlannedPaymentStatus.PAUSED);
-      expect(plannedPaymentRepository.prepareStatusUpdate).toHaveBeenCalledWith(
+      expect(plannedPaymentRepository.updateInSession).toHaveBeenCalledWith(
+        expect.anything(),
         'wp-1',
-        mockPP,
-        PlannedPaymentStatus.PAUSED,
-        undefined,
+        'pp-1',
+        { status: PlannedPaymentStatus.PAUSED },
+        expect.objectContaining({ status: PlannedPaymentStatus.ACTIVE }),
       );
-      expect(journalPlannedQueries.prepareStatusUpdates).toHaveBeenCalledWith(
+      expect(journalPersistenceRepository.setNonPostedStatusesInSession).toHaveBeenCalledWith(
+        expect.anything(),
         'wp-1',
-        [mockJournal],
-        JournalStatus.PAUSED,
+        [
+          {
+            journalId: 'j-planned',
+            status: JournalStatus.PAUSED,
+            expectedStatus: JournalStatus.PLANNED,
+          },
+        ],
       );
       expect(mockPP.prepareUpdate).not.toHaveBeenCalled();
       expect(mockJournal.prepareUpdate).not.toHaveBeenCalled();
-      expect(mockJournal.status).toBe('PAUSED');
-      expect(database.batch).toHaveBeenCalled();
+      expect(database.write).toHaveBeenCalled();
     });
 
     test('Resuming: toggles status to ACTIVE, updates paused journals, and processes due payments', async () => {
@@ -657,24 +664,33 @@ describe('planned payment modules', () => {
         JournalStatus.PAUSED,
       );
       expect(newStatus).toBe(PlannedPaymentStatus.ACTIVE);
-      expect(plannedPaymentRepository.prepareStatusUpdate).toHaveBeenCalledWith(
+      const plannedPaymentUpdates = (plannedPaymentRepository.updateInSession as jest.Mock).mock
+        .calls[0][3];
+      expect(plannedPaymentUpdates.status).toBe(PlannedPaymentStatus.ACTIVE);
+      expect(plannedPaymentUpdates.nextOccurrence).toBeGreaterThan(oldNextOccurrence);
+      expect(plannedPaymentUpdates.nextOccurrence).toBeGreaterThanOrEqual(Date.now() - 86400000); // normalized to today midnight
+      expect(journalPersistenceRepository.setNonPostedStatusesInSession).toHaveBeenCalledWith(
+        expect.anything(),
         'wp-1',
-        mockPP,
-        PlannedPaymentStatus.ACTIVE,
-        expect.any(Number),
-      );
-      expect(mockPP.nextOccurrence).toBeGreaterThan(oldNextOccurrence);
-      expect(mockPP.nextOccurrence).toBeGreaterThanOrEqual(Date.now() - 86400000); // normalized to today midnight
-      expect(journalPlannedQueries.prepareStatusUpdates).toHaveBeenCalledWith(
-        'wp-1',
-        [mockFutureJournal, mockPastJournal],
-        expect.any(Function),
+        [
+          {
+            journalId: 'j-future',
+            status: JournalStatus.PLANNED,
+            expectedStatus: JournalStatus.PAUSED,
+          },
+          {
+            journalId: 'j-past',
+            status: JournalStatus.SKIPPED,
+            expectedStatus: JournalStatus.PAUSED,
+          },
+        ],
       );
       expect(mockPP.prepareUpdate).not.toHaveBeenCalled();
       expect(mockFutureJournal.prepareUpdate).not.toHaveBeenCalled();
       expect(mockPastJournal.prepareUpdate).not.toHaveBeenCalled();
-      expect(mockFutureJournal.status).toBe('PLANNED');
-      expect(mockPastJournal.status).toBe('SKIPPED');
+      // Status changes are persisted by the repository, not applied optimistically to query models.
+      expect(mockFutureJournal.status).toBe('PAUSED');
+      expect(mockPastJournal.status).toBe('PAUSED');
       // Lifecycle calls processDuePlannedPayments directly (not the façade method).
       expect(processDueSpy).toHaveBeenCalledWith('wp-1');
       processDueSpy.mockRestore();

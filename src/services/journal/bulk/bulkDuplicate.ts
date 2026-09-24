@@ -1,10 +1,10 @@
 import Journal from '@/src/data/models/Journal';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
-import { journalWriteRepository } from '@/src/data/repositories/journal/journalWriteRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { JournalDisplayType, TransactionType } from '@/src/types/enums';
+import { TransactionType } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
-import { enqueueRebuildIfNeeded, groupTransactionsByJournal } from './bulkHelpers';
+import { groupTransactionsByJournal } from './bulkHelpers';
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 
 /**
  * Duplicates a set of journals into new active entries in a single atomic database batch.
@@ -26,8 +26,6 @@ export async function bulkDuplicateJournals(
       journalDate: now,
       description: journal.description ? `${journal.description}` : undefined,
       currencyCode: journal.currencyCode,
-      totalAmount: journal.totalAmount,
-      displayType: journal.displayType as JournalDisplayType,
       transactions: txs.map(tx => ({
         accountId: tx.accountId,
         amount: tx.amount,
@@ -39,13 +37,5 @@ export async function bulkDuplicateJournals(
     };
   });
 
-  const {
-    journals: createdJournals,
-    affectedAccountIds,
-    minDate,
-  } = await journalWriteRepository.bulkCreateJournals(workplaceId, createItems);
-
-  enqueueRebuildIfNeeded(affectedAccountIds, minDate, workplaceId);
-
-  return createdJournals;
+  return journalPersistenceService.putMany(createItems, workplaceId);
 }
