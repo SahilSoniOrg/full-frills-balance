@@ -333,11 +333,14 @@ export class JournalService {
           return { ...assembled, summaries: [] };
         }
 
+        const sourceLine =
+          entry.lines.find(line => line.transactionType === TransactionType.CREDIT) ??
+          entry.lines[0];
         preparedItems.push({
           data: assembled.journalData,
           description: entry.description,
-          amount: parseFloat(entry.lines[0].amount),
-          currency: currencyCode,
+          amount: parseFloat(sourceLine.amount),
+          currency: sourceLine.accountCurrency || currencyCode,
         });
       }
     } catch (error) {
