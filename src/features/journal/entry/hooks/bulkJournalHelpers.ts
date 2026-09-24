@@ -4,6 +4,7 @@ import { JournalEntryLine } from '@/src/types/domainJournal';
 import { WorkplaceId, EMPTY_ACCOUNT_ID, TransactionId } from '@/src/types/ids';
 
 import { generator as generateId } from '@/src/data/database/idGenerator';
+import { parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
 import { sanitizeAmount } from '@/src/utils/validation';
 import type { BulkJournalRow } from '../types/bulkJournal';
 
@@ -25,7 +26,7 @@ export function validateBulkJournalRow(row: BulkJournalRow): string | undefined 
     return 'Destination account is required';
   if (row.sourceId === row.destinationId) return DUPLICATE_ACCOUNT_ERROR;
   if (row.isLoadingRate) return 'Exchange rate is loading...';
-  if (row.isCrossCurrency && (!row.exchangeRate || parseFloat(row.exchangeRate) <= 0)) {
+  if (row.isCrossCurrency && parsePositiveRate(row.exchangeRate) === null) {
     return 'Exchange rate is required for cross-currency';
   }
   return undefined;

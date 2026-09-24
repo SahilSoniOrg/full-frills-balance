@@ -1,8 +1,45 @@
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { AccountId, EMPTY_ACCOUNT_ID, TransactionId } from '@/src/types/ids';
 import { JournalEntryLine, TabType } from '@/src/types/domainJournal';
+import type { AccountFields } from '@/src/types/plainDtos';
 
 import { JournalLineInput } from '@/src/services/accounting/JournalCalculator';
+
+/** A finite rate greater than zero, or null for blank, malformed, zero, or negative input. */
+export function parsePositiveRate(value: string | number | null | undefined): number | null {
+  const rate = Number(value);
+  return Number.isFinite(rate) && rate > 0 ? rate : null;
+}
+
+export type LineAccountPatch = Pick<
+  JournalEntryLine,
+  'accountId' | 'accountName' | 'accountType' | 'accountCurrency'
+>;
+
+/**
+ * Account fields a journal line carries for a selected account id.
+ * `fallbackType` applies when the id is empty or the account is not in the list.
+ */
+export function lineAccountPatch(
+  accountId: AccountId,
+  account: Pick<AccountFields, 'name' | 'accountType' | 'currencyCode'> | undefined,
+  fallbackType: AccountType,
+): LineAccountPatch {
+  if (!accountId || accountId === EMPTY_ACCOUNT_ID || !account) {
+    return {
+      accountId: accountId || EMPTY_ACCOUNT_ID,
+      accountName: '',
+      accountType: fallbackType,
+      accountCurrency: undefined,
+    };
+  }
+  return {
+    accountId,
+    accountName: account.name || '',
+    accountType: account.accountType || fallbackType,
+    accountCurrency: account.currencyCode,
+  };
+}
 
 /** Enriched journal leg as returned for edit-mode load (transaction service / repository). */
 export interface JournalEditorEnrichedLine {

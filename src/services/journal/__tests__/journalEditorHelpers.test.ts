@@ -7,6 +7,7 @@ import {
   isJournalEditorEntryReady,
   isSimpleModeDisabledByLines,
   isSplitModeDisabledByLines,
+  lineAccountPatch,
   mapEditorLinesForBalanceCheck,
   mapEnrichedLinesToEditorState,
   normalizeJournalLinesForGuidedMode,
@@ -313,6 +314,37 @@ describe('journalEditorHelpers', () => {
           line('split', TransactionType.DEBIT),
         ]),
       ).toBe(true);
+    });
+  });
+
+  describe('lineAccountPatch', () => {
+    const account = { name: 'EUR Bank', accountType: AccountType.ASSET, currencyCode: 'EUR' };
+
+    it('copies the selected account metadata onto the line', () => {
+      expect(lineAccountPatch('eur' as any, account, AccountType.EXPENSE)).toEqual({
+        accountId: 'eur',
+        accountName: 'EUR Bank',
+        accountType: AccountType.ASSET,
+        accountCurrency: 'EUR',
+      });
+    });
+
+    it('clears metadata and uses the fallback type for an empty selection', () => {
+      expect(lineAccountPatch(EMPTY_ACCOUNT_ID, undefined, AccountType.INCOME)).toEqual({
+        accountId: EMPTY_ACCOUNT_ID,
+        accountName: '',
+        accountType: AccountType.INCOME,
+        accountCurrency: undefined,
+      });
+    });
+
+    it('keeps an unknown account id with the fallback type', () => {
+      expect(lineAccountPatch('missing' as any, undefined, AccountType.EXPENSE)).toEqual({
+        accountId: 'missing',
+        accountName: '',
+        accountType: AccountType.EXPENSE,
+        accountCurrency: undefined,
+      });
     });
   });
 });

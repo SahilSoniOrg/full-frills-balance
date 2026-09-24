@@ -7,22 +7,11 @@ import {
   filterGuidedLegAccounts,
   filterToLeafAccounts,
 } from '@/src/services/journal/guidedJournalAccountEligibility';
+import { lineAccountPatch } from '@/src/services/journal/journalEditorHelpers';
 import { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 
 type SplitRowPick = { id: string; accountId?: AccountId };
-
-export function buildJournalLineAccountPatch(
-  accountId: AccountId,
-  account: AccountFields | undefined,
-): Partial<JournalEntryLine> {
-  return {
-    accountId,
-    accountName: account?.name ?? '',
-    accountType: account?.accountType ?? AccountType.ASSET,
-    accountCurrency: account?.currencyCode,
-  };
-}
 
 /** Apply a picker choice directly to a journal line (guided / advanced shell path). */
 export function applyJournalLineAccountSelection(input: {
@@ -34,7 +23,7 @@ export function applyJournalLineAccountSelection(input: {
   const { lineId, accountId, accounts, updateLine } = input;
   if (!lineId || !accountId || accountId === EMPTY_ACCOUNT_ID) return;
   const account = accounts.find(item => item.id === accountId);
-  updateLine(lineId, buildJournalLineAccountPatch(accountId, account));
+  updateLine(lineId, lineAccountPatch(accountId, account, AccountType.ASSET));
 }
 
 export function resolveJournalEntrySelectableAccounts(input: {

@@ -1,5 +1,6 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { JournalCalculator, JournalLineInput } from '@/src/services/accounting/JournalCalculator';
+import { parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
 import { useMemo, useState } from 'react';
 
 export interface AdvancedJournalLineLike {
@@ -48,10 +49,7 @@ export function useAdvancedJournalSummary(
 
   const selectedCurrencyRate = useMemo(() => {
     const line = lines.find(l => l.accountCurrency === selectedCurrency);
-    if (!line) return 1;
-    const rate =
-      typeof line.exchangeRate === 'string' ? parseFloat(line.exchangeRate) : line.exchangeRate;
-    return rate && rate > 0 ? rate : 1;
+    return parsePositiveRate(line?.exchangeRate) ?? 1;
   }, [lines, selectedCurrency]);
 
   // Totals in currently selected display currency.

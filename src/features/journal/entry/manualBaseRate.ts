@@ -1,11 +1,10 @@
+import { parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
+
 /** True when the string is a finished positive rate, not a mid-keystroke draft. */
 export function parseManualBaseRate(value: string | undefined): number | null {
   const trimmed = value?.trim() ?? '';
-  if (!trimmed || trimmed.endsWith('.')) return null;
   if (!/^\d*\.?\d+$/.test(trimmed)) return null;
-  const rate = Number.parseFloat(trimmed);
-  if (!Number.isFinite(rate) || rate <= 0) return null;
-  return rate;
+  return parsePositiveRate(trimmed);
 }
 
 export function hasManualBaseRateDraft(
@@ -74,8 +73,8 @@ export function resolveWorkplaceRatesFromConvertedAmount(input: {
   if (!(sourceAmount > 0) || !(convertedAmount > 0)) return null;
   if (!Number.isFinite(sourceAmount) || !Number.isFinite(convertedAmount)) return null;
 
-  const exchangeRate = convertedAmount / sourceAmount;
-  if (!Number.isFinite(exchangeRate) || exchangeRate <= 0) return null;
+  const exchangeRate = parsePositiveRate(convertedAmount / sourceAmount);
+  if (exchangeRate === null) return null;
 
   if (destCurrency === workplaceCurrency) {
     return { sourceBaseRate: exchangeRate, destBaseRate: 1, exchangeRate };
@@ -84,14 +83,8 @@ export function resolveWorkplaceRatesFromConvertedAmount(input: {
     return { sourceBaseRate: 1, destBaseRate: 1 / exchangeRate, exchangeRate };
   }
 
-  const destBase =
-    input.existingDestBaseRate != null && input.existingDestBaseRate > 0
-      ? input.existingDestBaseRate
-      : null;
-  const sourceBase =
-    input.existingSourceBaseRate != null && input.existingSourceBaseRate > 0
-      ? input.existingSourceBaseRate
-      : null;
+  const destBase = parsePositiveRate(input.existingDestBaseRate);
+  const sourceBase = parsePositiveRate(input.existingSourceBaseRate);
 
   if (destBase != null) {
     return {

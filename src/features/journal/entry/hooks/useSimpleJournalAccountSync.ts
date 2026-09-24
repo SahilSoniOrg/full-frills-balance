@@ -1,9 +1,11 @@
 import type { AccountFields } from '@/src/types/plainDtos';
-import { TransactionType, AccountType } from '@/src/types/enums';
+import { TransactionType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
 import { JournalEntryLine, TabType } from '@/src/types/domainJournal';
 
+import { lineAccountPatch } from '@/src/services/journal/journalEditorHelpers';
 import { shouldApplyLastUsedAccountDefault } from '@/src/services/journal/simpleJournalHelpers';
+import { getInferredAccountType } from '@/src/utils/accountCategory';
 import { preferences } from '@/src/services/preferences';
 import { useEffect, useRef } from 'react';
 import { useJournalEditor } from './useJournalEditor';
@@ -56,15 +58,22 @@ export function useSimpleJournalAccountSync({
 
     if (!newSourceId && !newDestId) return;
 
+    const withAccount = (line: JournalEntryLine, accountId: AccountId): JournalEntryLine => ({
+      ...line,
+      ...lineAccountPatch(
+        accountId,
+        accounts.find(item => item.id === accountId),
+        getInferredAccountType(type, line.transactionType),
+      ),
+    });
+
     editor.setLines(lines =>
       lines.map(line => {
         if (line.transactionType === TransactionType.CREDIT && newSourceId) {
-          const account = accounts.find(item => item.id === newSourceId);
-          return withAccountDetails(line, newSourceId, account);
+          return withAccount(line, newSourceId);
         }
         if (line.transactionType === TransactionType.DEBIT && newDestId) {
-          const account = accounts.find(item => item.id === newDestId);
-          return withAccountDetails(line, newDestId, account);
+          return withAccount(line, newDestId);
         }
         return line;
       }),
@@ -79,27 +88,9 @@ export function useSimpleJournalAccountSync({
       if (!line.accountId || line.accountName) return;
       const account = accounts.find(item => item.id === line.accountId);
       if (!account) return;
-      updates[line.id] = {
-        accountName: account.name,
-        accountType: account.accountType,
-        accountCurrency: account.currencyCode,
-      };
+      updates[line.id] = lineAccountPatch(line.accountId, account, line.accountType);
     });
 
     if (Object.keys(updates).length > 0) editor.updateLines(updates);
   }, [accounts, editor.lines, editor]);
-}
-
-function withAccountDetails(
-  line: JournalEntryLine,
-  accountId: AccountId,
-  account: AccountFields | undefined,
-): JournalEntryLine {
-  return {
-    ...line,
-    accountId,
-    accountName: account?.name || '',
-    accountType: account?.accountType || AccountType.ASSET,
-    accountCurrency: account?.currencyCode,
-  };
 }

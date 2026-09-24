@@ -3,6 +3,7 @@ import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/
 import { analytics } from '@/src/services/analytics';
 import { TransactionType } from '@/src/types/enums';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
+import { lineAccountPatch } from '@/src/services/journal/journalEditorHelpers';
 import {
   isSimpleTargetAccountUnset,
   resolveTargetAccountIdForSimpleTab,
@@ -38,12 +39,7 @@ export function useJournalSuggestionApplication(
     const role = tabType === 'income' ? 'source' : 'destination';
     const line = tabType === 'income' ? sourceLine : destLine;
     if (line) {
-      editor.updateLine(line.id, {
-        accountId: targetAccountId,
-        accountName: account.name,
-        accountType: account.accountType,
-        accountCurrency: account.currencyCode,
-      });
+      editor.updateLine(line.id, lineAccountPatch(targetAccountId, account, account.accountType));
       return { role, id: targetAccountId };
     }
   };
