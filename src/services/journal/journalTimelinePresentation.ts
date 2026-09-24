@@ -83,7 +83,7 @@ export function mapJournalToTimelineItem(
     return {
       title: journal.description || defaultTitle,
       amount: viewerAccount?.amount ?? journal.totalAmount,
-      currencyCode: journal.currencyCode,
+      currencyCode: viewerAccount?.currencyCode || journal.currencyCode,
       transactionDate: journal.journalDate,
       presentation,
       badges,

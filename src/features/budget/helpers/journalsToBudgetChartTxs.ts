@@ -20,7 +20,7 @@ export function journalsToBudgetChartTxs(
       txs.push({
         transactionDate: journal.journalDate,
         amount: account.amount ?? journal.totalAmount,
-        currencyCode: journal.currencyCode,
+        currencyCode: account.currencyCode || journal.currencyCode,
         transactionType: account.role === 'SOURCE' ? TransactionType.CREDIT : TransactionType.DEBIT,
       });
     }

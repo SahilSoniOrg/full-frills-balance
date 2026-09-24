@@ -27,11 +27,13 @@ function enrichmentRow(
   transactionType: TransactionType,
   accountType: AccountType,
   accountName: string,
+  currencyCode = 'USD',
 ): JournalEnrichmentRow {
   return {
     journal_id: journalId as JournalEnrichmentRow['journal_id'],
     account_id: accountId as JournalEnrichmentRow['account_id'],
     amount,
+    account_currency_code: currencyCode,
     transaction_type: transactionType,
     account_name: accountName,
     account_type: accountType,
@@ -68,6 +70,16 @@ describe('enrichJournals', () => {
     const enriched = enrichJournals([journal], rows);
     expect(enriched[0].accounts.map(a => a.id)).toEqual(['cash', 'food']);
   });
+
+  it('keeps each account currency separate from the journal currency', () => {
+    const enriched = enrichJournals(
+      [journalStub('j-1')],
+      [enrichmentRow('j-1', 'cash', 10, TransactionType.CREDIT, AccountType.ASSET, 'Cash', 'EUR')],
+    );
+
+    expect(enriched[0].currencyCode).toBe('USD');
+    expect(enriched[0].accounts[0]).toMatchObject({ amount: 10, currencyCode: 'EUR' });
+  });
 });
 
 describe('enrichedJournalsAreEqual', () => {
@@ -88,6 +100,20 @@ describe('enrichedJournalsAreEqual', () => {
     );
 
     expect(enrichedJournalsAreEqual(base, updated)).toBe(false);
+  });
+
+  it('returns false when only an account currency changes', () => {
+    const journal = journalStub('j-1');
+    const usd = enrichJournals(
+      [journal],
+      [enrichmentRow('j-1', 'cash', 10, TransactionType.CREDIT, AccountType.ASSET, 'Cash')],
+    );
+    const eur = enrichJournals(
+      [journal],
+      [enrichmentRow('j-1', 'cash', 10, TransactionType.CREDIT, AccountType.ASSET, 'Cash', 'EUR')],
+    );
+
+    expect(enrichedJournalsAreEqual(usd, eur)).toBe(false);
   });
 
   it('returns true when snapshots match', () => {

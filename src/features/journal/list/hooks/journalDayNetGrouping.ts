@@ -53,13 +53,9 @@ export function getJournalViewerSignedAmount(
 ): number {
   const viewerAccount = journal.accounts.find(a => a.id === viewer.accountId);
   const legAmount = viewerAccount?.amount ?? journal.totalAmount;
-  const amount = amountInBaseCurrency(
-    legAmount,
-    journal.currencyCode,
-    baseCurrency,
-    exchangeRateMap,
-  );
-  warnIfMissingFxRate(amount, journal.currencyCode, baseCurrency, exchangeRateMap);
+  const legCurrency = viewerAccount?.currencyCode || journal.currencyCode;
+  const amount = amountInBaseCurrency(legAmount, legCurrency, baseCurrency, exchangeRateMap);
+  warnIfMissingFxRate(amount, legCurrency, baseCurrency, exchangeRateMap);
   if (viewerAccount?.role === 'DESTINATION') return amount;
   if (viewerAccount?.role === 'SOURCE') return -amount;
   return 0;

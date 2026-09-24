@@ -103,4 +103,40 @@ describe('journalsToBudgetChartTxs', () => {
       },
     ]);
   });
+
+  it('uses the scoped line currency for budget conversion', () => {
+    const txs = journalsToBudgetChartTxs(
+      [
+        {
+          id: 'j1' as JournalId,
+          journalDate: 1,
+          currencyCode: 'INR',
+          status: 'POSTED',
+          totalAmount: 800,
+          transactionCount: 1,
+          displayType: JournalDisplayType.TRANSFER,
+          accounts: [
+            {
+              id: 'cash' as AccountId,
+              name: 'Dollar account',
+              accountType: AccountType.ASSET,
+              role: 'SOURCE',
+              amount: 10,
+              currencyCode: 'USD',
+            },
+          ],
+        },
+      ],
+      ['cash' as AccountId],
+    );
+
+    expect(txs).toEqual([
+      {
+        transactionDate: 1,
+        amount: 10,
+        currencyCode: 'USD',
+        transactionType: TransactionType.CREDIT,
+      },
+    ]);
+  });
 });

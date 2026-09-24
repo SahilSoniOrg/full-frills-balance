@@ -89,6 +89,42 @@ describe('journalTimelinePresentation', () => {
     expect(item.amount).not.toBe(100);
   });
 
+  it('labels a scoped line in its saved currency and the whole journal in journal currency', () => {
+    const journal = {
+      id: 'j1' as JournalId,
+      journalDate: Date.now(),
+      currencyCode: 'INR',
+      status: 'POSTED',
+      totalAmount: 800,
+      transactionCount: 2,
+      displayType: JournalDisplayType.TRANSFER,
+      accounts: [
+        {
+          id: 'usd' as AccountId,
+          name: 'Dollar account',
+          accountType: AccountType.ASSET,
+          role: 'SOURCE' as const,
+          amount: 10,
+          currencyCode: 'USD',
+        },
+        {
+          id: 'inr' as AccountId,
+          name: 'Rupee account',
+          accountType: AccountType.ASSET,
+          role: 'DESTINATION' as const,
+          amount: 800,
+          currencyCode: 'INR',
+        },
+      ],
+    };
+
+    expect(mapJournalToTimelineItem(journal).amount).toBe(800);
+    expect(mapJournalToTimelineItem(journal).currencyCode).toBe('INR');
+    const scoped = mapJournalToTimelineItem(journal, { accountId: 'usd' as AccountId });
+    expect(scoped.amount).toBe(10);
+    expect(scoped.currencyCode).toBe('USD');
+  });
+
   it('mapJournalToTimelineItem with viewer shows counterparty badges only', () => {
     const item = mapJournalToTimelineItem(
       {

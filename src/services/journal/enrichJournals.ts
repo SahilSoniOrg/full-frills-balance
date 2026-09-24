@@ -49,6 +49,7 @@ export function enrichJournals(
         'SOURCE' | 'DESTINATION',
       icon: r.account_icon,
       amount: r.amount,
+      currencyCode: r.account_currency_code,
     }));
 
     const txsForPresenter = rows.map(r => ({
@@ -105,6 +106,7 @@ export function journalEnrichmentFingerprint(journal: EnrichedJournal): string {
       id: a.id,
       role: a.role,
       amount: a.amount,
+      currencyCode: a.currencyCode ?? '',
       name: a.name,
       accountType: a.accountType,
       icon: a.icon ?? '',

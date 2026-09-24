@@ -71,6 +71,7 @@ export interface EnrichedJournal {
     icon?: string;
     role: 'SOURCE' | 'DESTINATION' | 'NEUTRAL';
     amount?: number;
+    currencyCode?: string;
   }[];
   semanticType?: SemanticType;
   semanticLabel?: string;

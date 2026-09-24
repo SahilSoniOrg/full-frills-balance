@@ -6,6 +6,7 @@ export type JournalEnrichmentRow = {
   journal_id: JournalId;
   account_id: AccountId;
   amount: number;
+  account_currency_code: string;
   transaction_type: TransactionType;
   account_name: string;
   account_type: AccountType;

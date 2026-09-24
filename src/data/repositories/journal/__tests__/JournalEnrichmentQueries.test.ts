@@ -125,6 +125,7 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
     expect(sql).toContain('j.workplace_id = ?');
     expect(sql).toContain('t.workplace_id = ?');
     expect(sql).toContain('a.workplace_id = ?');
+    expect(sql).toContain('a.currency_code as account_currency_code');
     expect(args.filter(arg => arg === workplaceOne)).toHaveLength(3);
   });
 
@@ -142,7 +143,31 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
       account_id: workplaceOneAccountId,
       account_name: 'Workplace One Checking',
       amount: 10,
+      account_currency_code: 'USD',
     });
+  });
+
+  it('uses the immutable account currency when a saved transaction currency differs', async () => {
+    jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue(null);
+    const transactions = await database.collections
+      .get<Transaction>('transactions')
+      .query()
+      .fetch();
+    const line = transactions.find(
+      tx => tx.journalId === workplaceOneJournalId && tx.accountId === workplaceOneAccountId,
+    );
+    expect(line).toBeDefined();
+    await database.write(async () => {
+      await line!.update(tx => {
+        tx.currencyCode = 'EUR';
+      });
+    });
+
+    const rows = await journalEnrichmentQueries.getEnrichmentDataRaw(workplaceOne, [
+      workplaceOneJournalId,
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].account_currency_code).toBe('USD');
   });
 
   it('scopes raw recent-suggestion joins to every workplace-owned table', async () => {
