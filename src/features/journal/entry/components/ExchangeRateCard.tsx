@@ -8,7 +8,7 @@ import { resolveExchangeRatePresentation } from '@/src/features/journal/entry/jo
 import { useTheme } from '@/src/hooks/use-theme';
 import { withOpacity } from '@/src/utils/color-math';
 import { formatRoundedAmount } from '@/src/utils/money';
-import { useCallback, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import {
   type StyleProp,
   StyleSheet,
@@ -25,8 +25,9 @@ export interface ExchangeRateCardProps {
   onResetToApiRate: () => void;
   /** Omit to hide manual base-rate fields (split rows only accept a converted amount). */
   onManualBaseRateChange?: (role: 'source' | 'destination', value: string) => void;
-  /** `attached` renders a compact tab joined to the row below it. */
+  /** `attached` wraps the rate and `children` (the account row) in one card. */
   variant?: 'card' | 'attached';
+  children?: ReactNode;
   destLabel?: string;
   precision?: number;
   containerStyle?: StyleProp<ViewStyle>;
@@ -45,6 +46,7 @@ export function ExchangeRateCard({
   precision = 2,
   containerStyle,
   testIDPrefix,
+  children,
 }: ExchangeRateCardProps) {
   const { theme, fonts } = useTheme();
   const [convertedDraft, setConvertedDraft] = useState<string | null>(null);
@@ -178,14 +180,17 @@ export function ExchangeRateCard({
   if (isAttached) {
     return (
       <View style={[styles.attachedCard, cardColors, containerStyle]} testID={cardTestID}>
-        <View style={styles.attachedRateBlock}>{rateSummary}</View>
-        <View style={styles.attachedConvertedBlock}>
-          <AppIcon name={Icon.ArrowRight} size={Size.xxs} color={theme.textTertiary} />
-          <AppText variant="caption" color="secondary">
-            {destSymbol}
-          </AppText>
-          {convertedInput}
+        <View style={styles.attachedHeader}>
+          <View style={styles.attachedRateBlock}>{rateSummary}</View>
+          <View style={styles.attachedConvertedBlock}>
+            <AppIcon name={Icon.ArrowRight} size={Size.xxs} color={theme.textTertiary} />
+            <AppText variant="caption" color="secondary">
+              {destSymbol}
+            </AppText>
+            {convertedInput}
+          </View>
         </View>
+        {children}
       </View>
     );
   }
@@ -333,18 +338,16 @@ const styles = StyleSheet.create({
   },
   manualRateFields: { width: '100%', gap: Spacing.xs },
   attachedCard: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: Shape.radius.lg,
+    overflow: 'hidden',
+  },
+  attachedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: Size.controlCompact,
-    marginBottom: -StyleSheet.hairlineWidth,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderTopLeftRadius: Shape.radius.md,
-    borderTopRightRadius: Shape.radius.md,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-    borderBottomWidth: 0,
     gap: Spacing.sm,
   },
   attachedRateBlock: {
@@ -352,7 +355,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     gap: Spacing.xs,
   },
   attachedRateRow: {
@@ -363,8 +366,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   attachedConvertedBlock: {
-    flex: 1,
-    minWidth: 0,
+    flexShrink: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',

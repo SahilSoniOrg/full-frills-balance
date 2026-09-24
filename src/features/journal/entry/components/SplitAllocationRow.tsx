@@ -65,53 +65,58 @@ export function SplitAllocationRow({
     [canRemove, onRemove],
   );
 
+  const showFxCard = pair.isCrossCurrency || pair.needsManualRates;
+  const accountField = (
+    <AccountPickerField
+      account={category}
+      accounts={allocationAccounts}
+      allAccounts={allAccounts}
+      containerStyle={styles.categoryPicker}
+      displayMode="compact"
+      emptyPrompt={emptyPrompt}
+      isExpanded={isExpanded}
+      label={label}
+      onCreateAccountRequest={onCreateAccountRequest}
+      onSelect={onSelectAccount}
+      onToggle={onToggle}
+      role="destination"
+      testIDPrefix={`split-category-picker-${row.id}`}
+      trailing={
+        <CompactAmountInput
+          value={inputAmount}
+          onChangeText={onChangeAmount}
+          currency={inputCurrency}
+          currencySymbol={CURRENCY_SYMBOLS[inputCurrency] || inputCurrency}
+          precision={inputPrecision}
+          placeholder={formatAmountPlaceholder(inputPrecision)}
+          containerStyle={styles.amountInputContainer}
+          inputStyle={[styles.amountInputText, { color: theme.text }]}
+          testID={`split-amount-input-${row.id}`}
+        />
+      }
+    />
+  );
+
   const content = (
     <View
-      style={[
-        styles.rowGroup,
-        pair.isCrossCurrency && styles.fxRowGroup,
-        { borderTopColor: theme.border },
-      ]}
       testID={`split-allocation-row-${row.id}`}
       accessibilityActions={canRemove ? [{ name: 'delete', label: removeLabel }] : undefined}
       onAccessibilityAction={handleAccessibilityAction}
     >
-      <ExchangeRateCard
-        variant="attached"
-        pair={pair}
-        precision={rowPrecision}
-        onConvertedAmountChange={onConvertedAmountChange}
-        onResetToApiRate={onResetToApiRate}
-        testIDPrefix={`split-fx-${row.id}`}
-      />
-      <AccountPickerField
-        account={category}
-        accounts={allocationAccounts}
-        allAccounts={allAccounts}
-        containerStyle={styles.categoryPicker}
-        displayMode="compact"
-        emptyPrompt={emptyPrompt}
-        isExpanded={isExpanded}
-        label={label}
-        onCreateAccountRequest={onCreateAccountRequest}
-        onSelect={onSelectAccount}
-        onToggle={onToggle}
-        role="destination"
-        testIDPrefix={`split-category-picker-${row.id}`}
-        trailing={
-          <CompactAmountInput
-            value={inputAmount}
-            onChangeText={onChangeAmount}
-            currency={inputCurrency}
-            currencySymbol={CURRENCY_SYMBOLS[inputCurrency] || inputCurrency}
-            precision={inputPrecision}
-            placeholder={formatAmountPlaceholder(inputPrecision)}
-            containerStyle={styles.amountInputContainer}
-            inputStyle={[styles.amountInputText, { color: theme.text }]}
-            testID={`split-amount-input-${row.id}`}
-          />
-        }
-      />
+      {showFxCard ? (
+        <ExchangeRateCard
+          variant="attached"
+          pair={pair}
+          precision={rowPrecision}
+          onConvertedAmountChange={onConvertedAmountChange}
+          onResetToApiRate={onResetToApiRate}
+          testIDPrefix={`split-fx-${row.id}`}
+        >
+          {accountField}
+        </ExchangeRateCard>
+      ) : (
+        accountField
+      )}
     </View>
   );
 
@@ -125,12 +130,6 @@ export function SplitAllocationRow({
 }
 
 const styles = StyleSheet.create({
-  rowGroup: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  fxRowGroup: {
-    borderTopWidth: 0,
-  },
   categoryPicker: {
     marginHorizontal: 0,
   },
