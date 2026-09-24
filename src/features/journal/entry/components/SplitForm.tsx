@@ -4,6 +4,7 @@ import { CompactAmountInput } from '@/src/components/forms/CompactAmountInput';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import {
+  amountInSourceCurrency,
   distributeSplitRemainder,
   equalizeSplitAmounts,
   SPLIT_SOURCE_LINE_ID,
@@ -131,13 +132,17 @@ export function SplitForm({
       const updates: Record<string, string> = {};
       nextSplits.forEach(nextRow => {
         const currentRow = splits.find(row => row.id === nextRow.id);
-        if (currentRow && currentRow.amount !== nextRow.amount) {
-          updates[nextRow.id] = nextRow.amount;
-        }
+        if (!currentRow || currentRow.amount === nextRow.amount) return;
+        const fx = splitFx[nextRow.id];
+        const nominal = Number.parseFloat(nextRow.amount);
+        updates[nextRow.id] =
+          fx?.pair.isCrossCurrency && fx.pair.pairRate && Number.isFinite(nominal)
+            ? amountInSourceCurrency(nominal, fx.pair.pairRate, fx.inputPrecision)
+            : nextRow.amount;
       });
       if (Object.keys(updates).length > 0) updateSplitAmounts(updates);
     },
-    [splits, updateSplitAmounts],
+    [splitFx, splits, updateSplitAmounts],
   );
 
   const handleEqualSplit = useCallback(() => {

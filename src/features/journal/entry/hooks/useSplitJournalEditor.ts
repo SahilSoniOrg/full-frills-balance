@@ -7,7 +7,6 @@ import {
 import {
   amountInSourceCurrency,
   getSplitCurrencyPrecision,
-  rowAmountFromBase,
   type SplitRowState,
 } from '@/src/services/journal/splitJournalHelpers';
 import {
@@ -16,6 +15,7 @@ import {
 } from '@/src/features/journal/entry/modes/split/splitDraftProjection';
 import {
   resolveFxPair,
+  tieDestinationAmount,
   withConvertedAmount,
   type FxPairInput,
 } from '@/src/features/journal/entry/fxPair';
@@ -159,9 +159,7 @@ export function useSplitJournalEditor({
         },
         {},
       );
-      setSourceAmounts(amounts =>
-        withSourceAmounts(amounts, Object.fromEntries(Object.keys(updates).map(id => [id, null]))),
-      );
+      setSourceAmounts(amounts => withSourceAmounts(amounts, updates));
       updateLines(lineUpdates);
     },
     [updateLines],
@@ -298,12 +296,19 @@ export function useSplitJournalEditor({
       if (isPending) pending.add(split.id);
 
       const nominalAmount = Number.parseFloat(split.amount);
+      const remembered = sourceAmounts.get(split.id);
       const inputAmount =
-        isCrossCurrency && !isPending && pairRate && Number.isFinite(nominalAmount)
-          ? amountInSourceCurrency(nominalAmount, pairRate, sourcePrecision)
-          : split.amount;
+        isCrossCurrency && remembered != null
+          ? remembered
+          : isCrossCurrency && !isPending && pairRate && Number.isFinite(nominalAmount)
+            ? amountInSourceCurrency(nominalAmount, pairRate, sourcePrecision)
+            : split.amount;
       byId[split.id] = {
-        pair: resolveFxPair({ ...input, sourceAmount: Number.parseFloat(inputAmount) || 0 }),
+        pair: resolveFxPair({
+          ...input,
+          sourceAmount: Number.parseFloat(inputAmount) || 0,
+          destPrecision: rowPrecision,
+        }),
         inputAmount,
         inputCurrency: isCrossCurrency && sourceCurrency ? sourceCurrency : destCurrency,
         inputPrecision: isCrossCurrency ? sourcePrecision : rowPrecision,
@@ -355,18 +360,13 @@ export function useSplitJournalEditor({
       const { pairRate, sourceBaseRate, destBaseRate, isCrossCurrency } = fx.pair;
       if (!isCrossCurrency) continue;
       marketSourceRate ??= sourceBaseRate;
-      if (!pendingIds.has(split.id) || !pairRate || !destBaseRate) continue;
+      if (!pendingIds.has(split.id) || !pairRate || !sourceBaseRate || !destBaseRate) continue;
       const base = Number.parseFloat(split.amount);
       if (!(base > 0)) continue;
+      const tied = tieDestinationAmount(base, sourceBaseRate, destBaseRate, fx.rowPrecision);
       Object.assign(
         updates,
-        fxLineUpdates(
-          split.id,
-          fx,
-          rowAmountFromBase(base, pairRate, fx.rowPrecision),
-          sourceBaseRate,
-          destBaseRate,
-        ),
+        fxLineUpdates(split.id, fx, tied.amount, sourceBaseRate, tied.destBaseRate),
       );
     }
     if (
@@ -437,22 +437,15 @@ export function useSplitJournalEditor({
 
       const base = Number.parseFloat(amount);
       const { pairRate, sourceBaseRate, destBaseRate } = fx.pair;
-      if (!(base > 0) || !pairRate || !destBaseRate) {
+      if (!(base > 0) || !pairRate || !sourceBaseRate || !destBaseRate) {
         setSourceAmounts(amounts => withSourceAmounts(amounts, { [id]: amount }));
         updateLine(id, { amount });
         return;
       }
 
-      setSourceAmounts(amounts => withSourceAmounts(amounts, { [id]: null }));
-      updateLines(
-        fxLineUpdates(
-          id,
-          fx,
-          rowAmountFromBase(base, pairRate, fx.rowPrecision),
-          sourceBaseRate,
-          destBaseRate,
-        ),
-      );
+      const tied = tieDestinationAmount(base, sourceBaseRate, destBaseRate, fx.rowPrecision);
+      setSourceAmounts(amounts => withSourceAmounts(amounts, { [id]: amount }));
+      updateLines(fxLineUpdates(id, fx, tied.amount, sourceBaseRate, tied.destBaseRate));
     },
     [fxLineUpdates, splitFx, updateLine, updateLines],
   );

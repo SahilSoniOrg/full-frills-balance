@@ -369,6 +369,21 @@ describe('useSplitJournalEditor FX rows', () => {
     expect(result.current.split.splitFx.food.pair.convertedAmount).toBe(800);
   });
 
+  it('keeps an entered source amount when the rounded conversion does not invert exactly', () => {
+    mockUseCrossCurrencyRatesMap.mockReturnValue({ 'USD>INR': fetched(1, 83.5) });
+    const { result, rerender, line } = renderStatefulSplit([
+      fxLine('source', TransactionType.CREDIT, 'cash-usd', '100'),
+      fxLine('food', TransactionType.DEBIT, 'food-inr', ''),
+    ]);
+
+    act(() => result.current.split.updateSplitInputAmount('food', '100'));
+    rerender({});
+
+    expect(line('food').amount).toBe('1.20');
+    expect(result.current.split.splitFx.food.inputAmount).toBe('100');
+    expect(Number(line('food').amount) * Number(line('food').exchangeRate)).toBeCloseTo(100, 2);
+  });
+
   it('converts a parent-applied equal split after an initial zero amount', () => {
     mockUseCrossCurrencyRatesMap.mockReturnValue({ 'USD>INR': fetched(1, 0.01) });
     const { result, updateLinesSpy, line } = renderStatefulSplit([
@@ -408,7 +423,7 @@ describe('useSplitJournalEditor FX rows', () => {
 
     expect(line('travel')).toMatchObject({ amount: '10.00', exchangeRate: '' });
     expect(line('source').exchangeRate).toBe('0.012500');
-    expect(result.current.split.splitFx.travel.inputAmount).toBe('800.00');
+    expect(result.current.split.splitFx.travel.inputAmount).toBe('800');
   });
 
   it('keeps saved rates and skips fetching when opening an existing entry', () => {
