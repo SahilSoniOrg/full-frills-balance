@@ -37,9 +37,10 @@ describe('buildWorkplaceRowFx', () => {
     expect(fx.pair.destCurrency).toBe('USD');
   });
 
-  it('waits for a rate when a foreign row has none yet', () => {
+  it('does not report loading without an active rate request', () => {
     const fx = buildWorkplaceRowFx(line({ accountCurrency: 'EUR' }), 'USD');
-    expect(fx.pair.isLoading).toBe(true);
+    expect(fx.pair.isLoading).toBe(false);
+    expect(fx.pair.status).toBe('unavailable');
     expect(fx.pair.convertedAmount).toBeNull();
   });
 });

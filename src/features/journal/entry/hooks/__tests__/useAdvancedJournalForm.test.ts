@@ -144,7 +144,7 @@ describe('useAdvancedJournalForm', () => {
 
     expect(result.current.fromLines[0].exchangeRate).toBe('');
     expect(result.current.toLines[0].exchangeRate).toBe('1.2');
-    expect(result.current.rowFx['euro-from'].pair.isLoading).toBe(true);
+    expect(result.current.rowFx['euro-from'].pair.isLoading).toBe(false);
     expect(result.current.rowFx['euro-to'].pair.isLoading).toBe(false);
     expect(result.current.rowFx['euro-to'].pair.sourceBaseRate).toBeCloseTo(1.2);
   });

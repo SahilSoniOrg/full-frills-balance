@@ -459,7 +459,7 @@ describe('useSplitJournalEditor FX rows', () => {
     expect(line('source').exchangeRate).toBe('1.1');
     expect(fetchRatesForLines).toHaveBeenCalledTimes(1);
     expect(fetchRatesForLines).toHaveBeenCalledWith(['spend'], true);
-    expect(result.current.split.splitFx.spend.pair.isLoading).toBe(true);
+    expect(result.current.split.splitFx.spend.pair.isLoading).toBe(false);
     expect(result.current.split.sourceFx.pair.isLoading).toBe(false);
   });
 

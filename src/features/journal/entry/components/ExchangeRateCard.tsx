@@ -1,15 +1,15 @@
-import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
+import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import type { FxPair } from '@/src/features/journal/entry/fxPair';
-import { ManualBaseRateField } from './ManualBaseRateField';
 import { resolveExchangeRatePresentation } from '@/src/features/journal/entry/journalEntryPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { withOpacity } from '@/src/utils/color-math';
 import { formatRoundedAmount } from '@/src/utils/money';
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
-import { type StyleProp, StyleSheet, Text, TextInput, type ViewStyle, View } from 'react-native';
+import { type StyleProp, StyleSheet, Text, TextInput, View, type ViewStyle } from 'react-native';
+import { ManualBaseRateField } from './ManualBaseRateField';
 
 export interface ExchangeRateCardProps {
   pair: FxPair;
@@ -113,6 +113,19 @@ export function ExchangeRateCard({
     onResetToApiRate();
   }, [onResetToApiRate]);
 
+  const resetRateButton = (
+    <PressScaleTouchable
+      onPress={handleResetToApiRate}
+      accessibilityRole="button"
+      accessibilityLabel={AppConfig.strings.transactionFlow.resetToMarketRate}
+      testID={testID('reset-fx-rate-button')}
+      hitSlop={RESET_HIT_SLOP}
+      surfaceStyle={styles.resetButton}
+    >
+      <AppIcon name={Icon.Refresh} size={Size.iconXs} color={theme.primary} />
+    </PressScaleTouchable>
+  );
+
   if (!isCrossCurrency && !pair.needsManualRates) return null;
 
   const rateSummary = pair.isLoading ? (
@@ -127,36 +140,28 @@ export function ExchangeRateCard({
           {displayedRate.destinationCurrency}
         </AppText>
       </View>
-      <PressScaleTouchable
-        onPress={handleResetToApiRate}
-        accessibilityRole="button"
-        accessibilityLabel={AppConfig.strings.transactionFlow.resetToMarketRate}
-        testID={testID('reset-fx-rate-button')}
-        hitSlop={RESET_HIT_SLOP}
-        surfaceStyle={styles.resetButton}
-      >
-        <AppIcon name={Icon.Refresh} size={Size.iconXs} color={theme.primary} />
-      </PressScaleTouchable>
+      {resetRateButton}
     </View>
-  ) : isAttached ? (
-    <AppText variant="caption" color={pair.rateError ? 'error' : 'secondary'} numberOfLines={2}>
-      {pair.rateError ||
-        AppConfig.strings.transactionFlow.enterConvertedOrWorkplaceRate(destCurrency ?? '')}
-    </AppText>
-  ) : pair.rateError ? (
-    <View style={styles.fxRateStatus}>
-      <AppText variant="caption" color="error">
-        {pair.rateError}.{' '}
-        {AppConfig.strings.transactionFlow.enterConvertedOrWorkplaceRate(baseCurrency)}
-      </AppText>
+  ) : (
+    <View style={isAttached ? styles.attachedRateRow : styles.fxRateRow}>
+      <View style={styles.fxRateLabel}>
+        <AppText
+          variant="caption"
+          color={pair.rateError ? 'error' : 'secondary'}
+          numberOfLines={isAttached ? 2 : undefined}
+        >
+          {pair.rateError
+            ? isAttached
+              ? pair.rateError
+              : `${pair.rateError}. ${AppConfig.strings.transactionFlow.enterConvertedOrWorkplaceRate(baseCurrency)}`
+            : AppConfig.strings.transactionFlow.enterConvertedOrWorkplaceRate(
+                isAttached ? (destCurrency ?? '') : baseCurrency,
+              )}
+        </AppText>
+      </View>
+      {pair.needsBaseRate ? resetRateButton : null}
     </View>
-  ) : pair.needsBaseRate ? (
-    <View style={styles.fxRateStatus}>
-      <AppText variant="caption" color="secondary">
-        {AppConfig.strings.transactionFlow.enterConvertedOrWorkplaceRate(baseCurrency)}
-      </AppText>
-    </View>
-  ) : null;
+  );
 
   const convertedInput = destCurrency ? (
     <TextInput
@@ -326,10 +331,6 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
     flex: 1,
     minWidth: 0,
-    flexShrink: 1,
-  },
-  fxRateStatus: {
-    flex: 1,
     flexShrink: 1,
   },
   fxRateLabel: {

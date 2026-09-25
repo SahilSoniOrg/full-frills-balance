@@ -2,6 +2,7 @@ import type { AccountFields } from '@/src/types/plainDtos';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import {
   buildWorkplaceRowFx,
+  getLineRateFetchState,
   useWorkplaceLineEdits,
   type RowFx,
 } from '@/src/features/journal/entry/hooks/workplaceRowFx';
@@ -43,7 +44,8 @@ export interface UseSplitJournalEditorProps {
     | 'transactionType'
     | 'setTransactionType'
     | 'journalDate'
-  >;
+  > &
+    Partial<Pick<ReturnType<typeof useJournalEditor>, 'rateFetchStates' | 'valuationCurrency'>>;
 }
 
 function normalizeCurrency(currency: string | undefined): string | undefined {
@@ -236,10 +238,24 @@ export function useSplitJournalEditor({
           exchangeRate: split.exchangeRate ?? '',
         },
         workplaceCurrency,
+        getLineRateFetchState(
+          editor.rateFetchStates ?? {},
+          split.id,
+          split.accountCurrency,
+          editor.valuationCurrency ?? workplaceCurrency,
+          editor.journalDate,
+        ),
+        editor.journalDate,
       );
     });
     return byId;
-  }, [splits, workplaceCurrency]);
+  }, [
+    editor.journalDate,
+    editor.rateFetchStates,
+    editor.valuationCurrency,
+    splits,
+    workplaceCurrency,
+  ]);
 
   const sourceFx = useMemo(
     () =>
@@ -250,8 +266,25 @@ export function useSplitJournalEditor({
           exchangeRate: currencyContext.sourceExchangeRate ?? '',
         },
         workplaceCurrency,
+        getLineRateFetchState(
+          editor.rateFetchStates ?? {},
+          sourceLine?.id ?? '',
+          sourceCurrency,
+          editor.valuationCurrency ?? workplaceCurrency,
+          editor.journalDate,
+        ),
+        editor.journalDate,
       ),
-    [currencyContext.sourceExchangeRate, sourceCurrency, totalAmount, workplaceCurrency],
+    [
+      currencyContext.sourceExchangeRate,
+      editor.journalDate,
+      editor.rateFetchStates,
+      editor.valuationCurrency,
+      sourceCurrency,
+      sourceLine?.id,
+      totalAmount,
+      workplaceCurrency,
+    ],
   );
 
   const rowFx = useMemo(() => {
@@ -285,13 +318,14 @@ export function useSplitJournalEditor({
     if (Object.keys(updates).length > 0) updateLines(updates);
   }, [accounts, destinationLines, isEdit, sourceCurrency, sourceLine, updateLines]);
 
+  const hasResolvedRates = (fx: RowFx) => !fx.pair.needsBaseRate || fx.pair.status === 'resolved';
   const canEqualize =
     totals.total > 0 &&
     splits.length > 0 &&
-    !sourceFx.pair.isLoading &&
+    hasResolvedRates(sourceFx) &&
     splits.every(split => {
       const fx = splitFx[split.id];
-      return Boolean(fx && !fx.pair.isLoading);
+      return Boolean(fx && hasResolvedRates(fx));
     });
 
   const updateSplitRow = useCallback(

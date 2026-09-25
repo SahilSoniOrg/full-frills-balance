@@ -1,7 +1,7 @@
 import {
+  RATE_UNAVAILABLE,
   withConvertedAmount,
   resolveFxPair,
-  type FxFetchedRates,
   type FxPair,
 } from '@/src/features/journal/entry/fxPair';
 import { formatManualBaseRate } from '@/src/features/journal/entry/manualBaseRate';
@@ -23,6 +23,30 @@ export interface RowFx {
   rowPrecision: number;
 }
 
+export interface LineRateFetchState {
+  accountCurrency: string;
+  valuationCurrency: string;
+  journalDate: string;
+  requestId: number;
+  status: 'loading' | 'error';
+}
+
+export function getLineRateFetchState(
+  states: Record<string, LineRateFetchState>,
+  lineId: string,
+  accountCurrency: string | undefined,
+  valuationCurrency: string,
+  journalDate: string,
+): LineRateFetchState | undefined {
+  const state = states[lineId];
+  if (!state) return undefined;
+  return state.accountCurrency.trim().toUpperCase() === accountCurrency?.trim().toUpperCase() &&
+    state.valuationCurrency.trim().toUpperCase() === valuationCurrency.trim().toUpperCase() &&
+    state.journalDate === journalDate
+    ? state
+    : undefined;
+}
+
 export function buildWorkplaceRowFx(
   line: {
     amount: string;
@@ -30,14 +54,26 @@ export function buildWorkplaceRowFx(
     exchangeRate?: string | number;
   },
   workplaceCurrency: string,
+  fetchState?: LineRateFetchState,
+  journalDate?: string,
 ): RowFx {
   const currency = (line.accountCurrency || workplaceCurrency).trim().toUpperCase();
   const base = workplaceCurrency.trim().toUpperCase();
   const isForeign = currency !== base;
   const hasRate = parsePositiveRate(line.exchangeRate) != null;
-  const fetched: FxFetchedRates | undefined =
-    isForeign && !hasRate
-      ? { sourceBaseRate: null, destBaseRate: null, isLoading: true, error: null }
+  const matchesFetchContext = Boolean(
+    fetchState &&
+    fetchState.accountCurrency.trim().toUpperCase() === currency &&
+    fetchState.journalDate === journalDate,
+  );
+  const fetched =
+    isForeign && !hasRate && matchesFetchContext && fetchState
+      ? {
+          sourceBaseRate: null,
+          destBaseRate: null,
+          isLoading: fetchState.status === 'loading',
+          error: fetchState.status === 'error' ? RATE_UNAVAILABLE : null,
+        }
       : undefined;
   const inputPrecision = getSplitCurrencyPrecision(currency);
   const rowPrecision = getSplitCurrencyPrecision(base);

@@ -174,6 +174,10 @@ describe('ExchangeRateCard', () => {
       );
 
       expect(screen.getByText(RATE_UNAVAILABLE)).toBeTruthy();
+      expect(screen.queryByText(AppConfig.strings.transactionFlow.resetToMarketRate)).toBeNull();
+      expect(screen.getByTestId('split-fx-reset-fx-rate-button').props.accessibilityLabel).toBe(
+        AppConfig.strings.transactionFlow.resetToMarketRate,
+      );
       expect(screen.queryByPlaceholderText('Rate')).toBeNull();
     });
   });

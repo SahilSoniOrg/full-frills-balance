@@ -1,5 +1,6 @@
 import {
   buildWorkplaceRowFx,
+  getLineRateFetchState,
   useWorkplaceLineEdits,
   type RowFx,
 } from '@/src/features/journal/entry/hooks/workplaceRowFx';
@@ -25,7 +26,13 @@ import { useCallback, useMemo } from 'react';
 type Editor = Pick<
   ReturnType<typeof useJournalEditor>,
   'lines' | 'addLine' | 'removeLine' | 'updateLine' | 'updateLines' | 'fetchRatesForLines'
->;
+> &
+  Partial<
+    Pick<
+      ReturnType<typeof useJournalEditor>,
+      'valuationCurrency' | 'journalDate' | 'rateFetchStates'
+    >
+  >;
 
 export interface AdvancedJournalFormController {
   fromLines: JournalEntryLine[];
@@ -94,10 +101,23 @@ export function useAdvancedJournalForm({
   const rowFx = useMemo(() => {
     const byId: Record<string, RowFx> = {};
     lines.forEach(line => {
-      byId[line.id] = buildWorkplaceRowFx(line, workplaceCurrency);
+      const fetchState = getLineRateFetchState(
+        editor.rateFetchStates ?? {},
+        line.id,
+        line.accountCurrency,
+        editor.valuationCurrency ?? workplaceCurrency,
+        editor.journalDate ?? '',
+      );
+      byId[line.id] = buildWorkplaceRowFx(line, workplaceCurrency, fetchState, editor.journalDate);
     });
     return byId;
-  }, [lines, workplaceCurrency]);
+  }, [
+    editor.journalDate,
+    editor.rateFetchStates,
+    editor.valuationCurrency,
+    lines,
+    workplaceCurrency,
+  ]);
 
   const fromTotal = useMemo(
     () =>

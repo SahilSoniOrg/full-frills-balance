@@ -176,7 +176,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     onSuccess,
   });
 
-  const { fetchRatesForLines } = useJournalEditorExchangeRates({
+  const { fetchRatesForLines, rateFetchStates } = useJournalEditorExchangeRates({
     lines,
     valuationCurrency,
     journalDate,
@@ -239,6 +239,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       updateLine,
       updateLines,
       fetchRatesForLines,
+      rateFetchStates,
       getLineIdByRole,
       resolveActiveLineId,
       submitPlan,
@@ -262,6 +263,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       updateLine,
       updateLines,
       fetchRatesForLines,
+      rateFetchStates,
       getLineIdByRole,
       resolveActiveLineId,
       submitPlan,
