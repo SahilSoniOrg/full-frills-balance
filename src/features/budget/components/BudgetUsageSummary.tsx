@@ -73,6 +73,11 @@ export function BudgetUsageSummary({
         </Row>
 
         <BudgetProgressBar progress={progress} statusColor={statusColor} size="md" />
+        {usage.hasUnvaluedEntries ? (
+          <AppText variant="caption" color="warning">
+            {AppConfig.strings.budget.incompleteFxWarning}
+          </AppText>
+        ) : null}
       </Column>
     );
   }
@@ -110,6 +115,11 @@ export function BudgetUsageSummary({
       </Row>
 
       <BudgetProgressBar progress={progress} statusColor={statusColor} />
+      {usage.hasUnvaluedEntries ? (
+        <AppText variant="caption" color="warning">
+          {AppConfig.strings.budget.incompleteFxWarning}
+        </AppText>
+      ) : null}
     </Column>
   );
 }

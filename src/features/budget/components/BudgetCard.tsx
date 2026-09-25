@@ -66,7 +66,13 @@ export function BudgetCard({ item, onPress }: BudgetCardProps) {
                   <AppIcon
                     name={vm.previousPeriodIcon}
                     size={Size.xxs}
-                    color={vm.previousPeriodColor === 'error' ? theme.error : theme.success}
+                    color={
+                      vm.previousPeriodColor === 'error'
+                        ? theme.error
+                        : vm.previousPeriodColor === 'warning'
+                          ? theme.warning
+                          : theme.success
+                    }
                   />
                   <Text variant="xs" weight="semibold" color={vm.previousPeriodColor}>
                     {vm.previousPeriodLabel}

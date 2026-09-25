@@ -106,6 +106,7 @@ export class BudgetReadService {
               .pipe(
                 switchMap(transactions =>
                   calculateBudgetSpendFromTransactions(
+                    workplaceId,
                     transactions,
                     budget.amount,
                     budget.currencyCode,

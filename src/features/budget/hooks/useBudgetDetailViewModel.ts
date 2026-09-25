@@ -1,28 +1,35 @@
 import { AppConfig } from '@/src/constants';
+import type Account from '@/src/data/models/Account';
+import type Transaction from '@/src/data/models/Transaction';
+import { accountObserveQueries } from '@/src/data/repositories/account';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
   buildBudgetDetailPreview,
   buildBudgetUsagePreview,
 } from '@/src/features/budget/helpers/budgetDetailPresentation';
-import { journalsToBudgetChartTxs } from '@/src/features/budget/helpers/journalsToBudgetChartTxs';
+import { resolveLeafExpenseAccountIds } from '@/src/services/budget/budgetCalculationHelpers';
+import {
+  buildBudgetCumulativeChart,
+  type BudgetCumulativeChart,
+} from '@/src/services/budget/budgetCumulativeChartService';
 import {
   useJournalEntryList,
   useJournalsBulkOperations,
   type JournalListModalsProps,
 } from '@/src/features/journal';
 import type { ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
-import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
-import { useExchangeRates } from '@/src/hooks/useExchangeRates';
-import { useObservable } from '@/src/hooks/useObservable';
+import { useObservable, useObservableWithEnrichment } from '@/src/hooks/useObservable';
 import { analytics } from '@/src/services/analytics';
 import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { BudgetUsage } from '@/src/services/budget/types';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
-import { buildBudgetCumulativeSeries } from '@/src/services/projections';
+import { AccountType } from '@/src/types/enums';
 import { BudgetId, JournalId } from '@/src/types/ids';
 import { PlainBudget } from '@/src/types/plainDtos';
 import { confirm } from '@/src/utils/alerts';
+import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import dayjs from 'dayjs';
@@ -41,7 +48,7 @@ export interface BudgetDetailViewModel {
   prevMonth: () => void;
   resetToToday: () => void;
   isCurrentMonth: boolean;
-  chartData: { data: { x: number; y: number }[]; domainX: [number, number] } | null;
+  chartData: BudgetCumulativeChart | null;
   periodLabel: string;
   handleDelete: () => void;
   handleEdit: () => void;
@@ -65,9 +72,6 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
 
   const [refTimestamp, setRefTimestamp] = useState(() => Date.now());
   const baseCurrency = workplaceCurrency;
-
-  const { rateMap: ratesMap = {} } = useExchangeRates(baseCurrency);
-  const { precision } = useCurrencyPrecision(baseCurrency);
 
   const budgetData$ = useMemo(() => {
     return budgetReadService.observeById(workplaceId, budgetId).pipe(
@@ -120,11 +124,38 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
 
   const scopeAccountIds = useMemo(() => scopeRecords.map(scope => scope.accountId), [scopeRecords]);
 
+  const { data: scopeAccounts = [] } = useObservable(
+    () => accountObserveQueries.observeByIds(workplaceId, scopeAccountIds),
+    [workplaceId, scopeAccountIds],
+    [] as Account[],
+  );
+  const { data: expenseAccounts = [] } = useObservable(
+    () => accountObserveQueries.observeByType(workplaceId, AccountType.EXPENSE),
+    [workplaceId],
+    [] as Account[],
+  );
+
+  const chartAccountIds = useMemo(
+    () => Array.from(resolveLeafExpenseAccountIds(scopeAccounts, expenseAccounts, workplaceId)),
+    [scopeAccounts, expenseAccounts, workplaceId],
+  );
+
   const budgetDateRange = useMemo(() => {
     if (!budget) return undefined;
     const { startDate, endDate } = BudgetPeriodUtils.getCurrentPeriod(budget, refTimestamp);
     return { startDate, endDate };
   }, [budget, refTimestamp]);
+
+  const chartTransactions$ = useMemo(() => {
+    if (!budgetDateRange || chartAccountIds.length === 0) return of([] as Transaction[]);
+    return transactionQueryRepository.observeBudgetTransactionsByJournalDateRange(
+      workplaceId,
+      chartAccountIds,
+      budgetDateRange.startDate,
+      budgetDateRange.endDate,
+      ACTIVE_JOURNAL_STATUSES,
+    );
+  }, [budgetDateRange, chartAccountIds, workplaceId]);
 
   const journalList = useJournalEntryList({
     workplaceId,
@@ -142,29 +173,44 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
     onShareSelected: journalList.onShareSelected,
   });
 
-  const chartData = useMemo(() => {
-    if (!budget) return null;
+  const journalContextVersion = useMemo(
+    () =>
+      journalList.journals
+        .map(journal => `${journal.id}:${journal.journalDate}:${journal.currencyCode}`)
+        .join('|'),
+    [journalList.journals],
+  );
 
-    const { startDate, endDate } = BudgetPeriodUtils.getCurrentPeriod(budget, refTimestamp);
-    const chartTransactions = journalsToBudgetChartTxs(journalList.journals, scopeAccountIds);
+  const { data: chartData } = useObservableWithEnrichment(
+    () => chartTransactions$,
+    (transactions: Transaction[]) => {
+      if (!budget || !budgetDateRange) return Promise.resolve(null);
+      return buildBudgetCumulativeChart({
+        workplaceId,
+        transactions,
+        accounts: [...scopeAccounts, ...expenseAccounts],
+        targetCurrency: budget.currencyCode,
+        periodStart: budgetDateRange.startDate,
+        periodEnd: budgetDateRange.endDate,
+      });
+    },
+    [
+      chartTransactions$,
+      budget?.id,
+      budget?.currencyCode,
+      budgetDateRange,
+      workplaceId,
+      scopeAccounts,
+      expenseAccounts,
+      journalContextVersion,
+    ],
+    null,
+  );
 
-    return buildBudgetCumulativeSeries({
-      transactions: chartTransactions,
-      periodStart: startDate,
-      periodEnd: endDate,
-      baseCurrency,
-      rateMap: ratesMap,
-      precision,
-    });
-  }, [
-    journalList.journals,
-    refTimestamp,
-    budget,
-    baseCurrency,
-    ratesMap,
-    precision,
-    scopeAccountIds,
-  ]);
+  const displayedUsage = useMemo(() => {
+    if (!usage || !chartData?.hasUnvaluedEntries || usage.hasUnvaluedEntries) return usage;
+    return { ...usage, hasUnvaluedEntries: true };
+  }, [chartData?.hasUnvaluedEntries, usage]);
 
   const nextMonth = useCallback(() => {
     if (!budget) return;
@@ -233,7 +279,7 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
 
   return {
     budget,
-    usage,
+    usage: displayedUsage,
     items: journalList.items,
     isLoading: isLoading || journalList.isLoading,
     targetMonth: dayjs(refTimestamp).format('YYYY-MM'),

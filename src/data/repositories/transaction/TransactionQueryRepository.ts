@@ -124,6 +124,33 @@ export class TransactionQueryRepository {
       .observeWithColumns(['amount', 'transaction_type', 'currency_code', 'exchange_rate']);
   }
 
+  /** Budget detail chart uses journalDate for both period filtering and chart points. */
+  observeBudgetTransactionsByJournalDateRange(
+    workplaceId: WorkplaceId,
+    accountIds: readonly AccountId[],
+    startJournalDate: number,
+    endJournalDate: number,
+    activeJournalStatuses: readonly ActiveJournalStatus[],
+  ): Observable<Transaction[]> {
+    if (accountIds.length === 0) return of([] as Transaction[]);
+
+    return this.transactions
+      .query(
+        Q.experimentalJoinTables(['journals']),
+        Q.where('workplace_id', workplaceId),
+        Q.where('account_id', Q.oneOf([...accountIds])),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.on('journals', [
+          Q.where('workplace_id', workplaceId),
+          Q.where('journal_date', Q.gte(startJournalDate)),
+          Q.where('journal_date', Q.lte(endJournalDate)),
+          Q.where('status', Q.oneOf([...activeJournalStatuses])),
+          Q.where('deleted_at', Q.eq(null)),
+        ]),
+      )
+      .observeWithColumns(['amount', 'transaction_type', 'currency_code', 'exchange_rate']);
+  }
+
   async findAllNonDeleted(workplaceId: WorkplaceId): Promise<Transaction[]> {
     return this.transactions
       .query(Q.where('deleted_at', Q.eq(null)), Q.where('workplace_id', workplaceId))

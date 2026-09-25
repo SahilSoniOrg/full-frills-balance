@@ -32,7 +32,7 @@ export interface BudgetListCardViewModel {
   periodSubtitle: string;
   statusColor: ColorKey;
   previousPeriodLabel?: string;
-  previousPeriodColor: 'error' | 'success';
+  previousPeriodColor: 'error' | 'success' | 'warning';
   previousPeriodIcon: IconName;
 }
 
@@ -73,7 +73,15 @@ export function resolveBudgetStatus(usagePercent: number): {
 }
 
 export function presentBudgetUsage(usage: BudgetUsage): BudgetUsageViewModel {
-  const { statusColor, statusBadge } = resolveBudgetStatus(usage.usagePercent);
+  const resolvedStatus = resolveBudgetStatus(usage.usagePercent);
+  const statusColor = usage.hasUnvaluedEntries ? 'warning' : resolvedStatus.statusColor;
+  const statusBadge = usage.hasUnvaluedEntries
+    ? {
+        variant: 'warning' as const,
+        icon: Icon.Alert,
+        text: AppConfig.strings.budget.incompleteStatus,
+      }
+    : resolvedStatus.statusBadge;
   const isOver = usage.remaining < 0;
   const progress = Math.min(100, Math.max(0, usage.usagePercent * 100));
 
@@ -103,16 +111,22 @@ export function presentBudgetListCard(
       : AppConfig.strings.budget.daysLeft(daysLeft);
 
   let previousPeriodLabel: string | undefined;
-  let previousPeriodColor: 'error' | 'success' = 'success';
+  let previousPeriodColor: 'error' | 'success' | 'warning' = 'success';
   let previousPeriodIcon: IconName = Icon.TrendingUp;
 
   if (previousUsage) {
-    const wasOver = previousUsage.remaining < 0;
-    previousPeriodLabel = wasOver
-      ? AppConfig.strings.budget.overLastPeriod
-      : AppConfig.strings.budget.underLastPeriod;
-    previousPeriodColor = wasOver ? 'error' : 'success';
-    previousPeriodIcon = wasOver ? Icon.TrendingDown : Icon.TrendingUp;
+    if (previousUsage.hasUnvaluedEntries) {
+      previousPeriodLabel = AppConfig.strings.budget.incompleteStatus;
+      previousPeriodColor = 'warning';
+      previousPeriodIcon = Icon.Alert;
+    } else {
+      const wasOver = previousUsage.remaining < 0;
+      previousPeriodLabel = wasOver
+        ? AppConfig.strings.budget.overLastPeriod
+        : AppConfig.strings.budget.underLastPeriod;
+      previousPeriodColor = wasOver ? 'error' : 'success';
+      previousPeriodIcon = wasOver ? Icon.TrendingDown : Icon.TrendingUp;
+    }
   }
 
   return {

@@ -1,4 +1,3 @@
-import { amountInBaseCurrency } from '@/src/services/ledger/buildDayNetStats';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 import dayjs from 'dayjs';
 
@@ -6,8 +5,8 @@ export type ChartPoint = { x: number; y: number };
 
 export type BudgetCumulativeTx = {
   transactionDate: number;
+  /** Amount already converted to the budget currency at the journal date. */
   amount: number;
-  currencyCode: string;
   transactionType: string;
 };
 
@@ -15,8 +14,6 @@ export type BuildBudgetCumulativeSeriesInput = {
   transactions: BudgetCumulativeTx[];
   periodStart: number;
   periodEnd: number;
-  baseCurrency: string;
-  rateMap: Record<string, number>;
   precision: number;
 };
 
@@ -27,12 +24,12 @@ export type BudgetCumulativeSeries = {
 
 /**
  * Builds a day-anchored step series of cumulative budget spend over a period.
- * Debits increase spent; credits decrease. Amounts convert to base via rateMap.
+ * Transactions must already be valued in the budget currency.
  */
 export function buildBudgetCumulativeSeries(
   input: BuildBudgetCumulativeSeriesInput,
 ): BudgetCumulativeSeries {
-  const { transactions, periodStart, periodEnd, baseCurrency, rateMap, precision } = input;
+  const { transactions, periodStart, periodEnd, precision } = input;
 
   const sortedTxs = [...transactions].sort((a, b) => a.transactionDate - b.transactionDate);
   const data: ChartPoint[] = [];
@@ -56,7 +53,7 @@ export function buildBudgetCumulativeSeries(
       dayjs(sortedTxs[txIndex].transactionDate).isSame(currentDay, 'day')
     ) {
       const tx = sortedTxs[txIndex];
-      const amount = amountInBaseCurrency(tx.amount, tx.currencyCode, baseCurrency, rateMap);
+      const amount = tx.amount;
 
       data.push({ x: tx.transactionDate, y: cumulativeSpent });
 

@@ -1,8 +1,7 @@
-import { AccountType, TransactionType, JournalDisplayType } from '@/src/types/enums';
+import { AccountType, JournalDisplayType } from '@/src/types/enums';
 import { AccountId, JournalId } from '@/src/types/ids';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 
-import { journalsToBudgetChartTxs } from '@/src/features/budget/helpers/journalsToBudgetChartTxs';
 import { journalsToTimelineRows } from '@/src/services/journal/journalTimelineRows';
 
 describe('journalsToTimelineRows', () => {
@@ -58,85 +57,5 @@ describe('journalsToTimelineRows', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].listId).toBe('j1');
     expect(rows[0].selectionId).toBe('j1');
-  });
-});
-
-describe('journalsToBudgetChartTxs', () => {
-  it('maps scoped legs to debit/credit chart rows', () => {
-    const txs = journalsToBudgetChartTxs(
-      [
-        {
-          id: 'j1' as JournalId,
-          journalDate: 100,
-          currencyCode: 'USD',
-          status: 'POSTED',
-          totalAmount: 50,
-          transactionCount: 2,
-          displayType: JournalDisplayType.EXPENSE,
-          accounts: [
-            {
-              id: 'cash' as AccountId,
-              name: 'Cash',
-              accountType: AccountType.ASSET,
-              role: 'SOURCE',
-              amount: 50,
-            },
-            {
-              id: 'food' as AccountId,
-              name: 'Food',
-              accountType: AccountType.EXPENSE,
-              role: 'DESTINATION',
-              amount: 50,
-            },
-          ],
-        },
-      ],
-      ['food' as AccountId],
-    );
-
-    expect(txs).toEqual([
-      {
-        transactionDate: 100,
-        amount: 50,
-        currencyCode: 'USD',
-        transactionType: TransactionType.DEBIT,
-      },
-    ]);
-  });
-
-  it('uses the scoped line currency for budget conversion', () => {
-    const txs = journalsToBudgetChartTxs(
-      [
-        {
-          id: 'j1' as JournalId,
-          journalDate: 1,
-          currencyCode: 'INR',
-          status: 'POSTED',
-          totalAmount: 800,
-          transactionCount: 1,
-          displayType: JournalDisplayType.TRANSFER,
-          accounts: [
-            {
-              id: 'cash' as AccountId,
-              name: 'Dollar account',
-              accountType: AccountType.ASSET,
-              role: 'SOURCE',
-              amount: 10,
-              currencyCode: 'USD',
-            },
-          ],
-        },
-      ],
-      ['cash' as AccountId],
-    );
-
-    expect(txs).toEqual([
-      {
-        transactionDate: 1,
-        amount: 10,
-        currencyCode: 'USD',
-        transactionType: TransactionType.CREDIT,
-      },
-    ]);
   });
 });

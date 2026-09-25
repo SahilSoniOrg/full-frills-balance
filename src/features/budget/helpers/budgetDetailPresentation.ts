@@ -6,6 +6,7 @@ export interface BudgetUsagePreview {
   remaining: number;
   budgetAmount: number;
   usagePercent: number;
+  hasUnvaluedEntries?: boolean;
 }
 
 export interface BudgetDetailPreviewInput {
