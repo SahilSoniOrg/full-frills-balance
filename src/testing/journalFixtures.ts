@@ -1,13 +1,50 @@
 import { database } from '@/src/data/database/Database';
+import { accountWriteRepository } from '@/src/data/repositories/account';
+import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import Journal from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Transaction from '@/src/data/models/Transaction';
-import { JournalDisplayType, JournalStatus } from '@/src/types/enums';
+import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { AccountType, JournalDisplayType, JournalStatus } from '@/src/types/enums';
 import type { CreateJournalData } from '@/src/types/journalWrite';
 import type { JournalId, WorkplaceId } from '@/src/types/ids';
 import { referenceNumberFromMetadataJson } from '@/src/utils/sms/SmsReferenceExtractor';
 import type { Model } from '@nozbe/watermelondb';
 import { Q } from '@nozbe/watermelondb';
+
+export async function resetJournalIntegrationWorkplace() {
+  rebuildQueueService.stop();
+  await database.write(async () => {
+    await database.unsafeResetDatabase();
+  });
+  await workplaceRepository.create({
+    id: 'wp-1' as WorkplaceId,
+    name: 'Test Workplace',
+    icon: 'wallet',
+    defaultCurrencyCode: 'USD',
+  });
+
+  const cash = await accountWriteRepository.create({
+    name: 'Cash',
+    accountType: AccountType.ASSET,
+    currencyCode: 'USD',
+    workplaceId: 'wp-1' as WorkplaceId,
+  });
+  const expense = await accountWriteRepository.create({
+    name: 'Food',
+    accountType: AccountType.EXPENSE,
+    currencyCode: 'USD',
+    workplaceId: 'wp-1' as WorkplaceId,
+  });
+  const income = await accountWriteRepository.create({
+    name: 'Salary',
+    accountType: AccountType.INCOME,
+    currencyCode: 'USD',
+    workplaceId: 'wp-1' as WorkplaceId,
+  });
+
+  return { cashAccountId: cash.id, expenseAccountId: expense.id, incomeAccountId: income.id };
+}
 
 /** Extra persisted fields accepted when a test needs to construct legacy or malformed rows. */
 export interface RawJournalFixtureData extends CreateJournalData {
