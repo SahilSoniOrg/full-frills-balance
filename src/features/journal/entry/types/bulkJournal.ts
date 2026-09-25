@@ -4,11 +4,8 @@ import type { TabType } from '@/src/types/domainJournal';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import type { FxFetchedRates, FxOverride } from '@/src/features/journal/entry/fxPair';
 
-/**
- * `fxRates` and `fxOverride` are the FX inputs; `exchangeRate` through `rateError`
- * and the base-rate inputs are projected from them by the bulk editor.
- */
-export interface BulkJournalRow {
+/** User-authored values and rate inputs kept by the batch editor. */
+export interface BulkJournalDraft {
   id: string;
   description: string;
   notes: string;
@@ -17,6 +14,13 @@ export interface BulkJournalRow {
   sourceId: AccountId;
   destinationId: AccountId;
   journalDate: number;
+  validationError?: string;
+  fxRates?: FxFetchedRates | null;
+  fxOverride?: FxOverride;
+}
+
+/** Values calculated from a draft for display, validation, and saving. */
+export interface BulkJournalRow extends BulkJournalDraft {
   exchangeRate: string; // Cross-rate (source -> destination)
   sourceBaseRate?: number; // Rate to workplace currency
   destBaseRate?: number; // Rate to workplace currency
@@ -25,10 +29,7 @@ export interface BulkJournalRow {
   isCrossCurrency: boolean;
   convertedAmount: number;
   isLoadingRate: boolean;
-  validationError?: string;
   rateError?: string;
-  fxRates?: FxFetchedRates | null;
-  fxOverride?: FxOverride;
 }
 
 export interface BulkJournalRowActions {

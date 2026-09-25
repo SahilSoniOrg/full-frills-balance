@@ -1,5 +1,6 @@
 import { AccountType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
+import type { AccountFields } from '@/src/types/plainDtos';
 
 import {
   resolveBulkRowFxPair,
@@ -63,10 +64,6 @@ describe('useBulkJournalEditor', () => {
         sourceId: 'inr' as AccountId,
         destinationId: 'usd' as AccountId,
         journalDate: 0,
-        exchangeRate: '',
-        isCrossCurrency: true,
-        convertedAmount: 0,
-        isLoadingRate: false,
         fxRates: { sourceBaseRate: 1, destBaseRate: 95.96, isLoading: false, error: null },
       },
       [
@@ -371,6 +368,56 @@ describe('useBulkJournalEditor', () => {
     expect(updatedRow.isCrossCurrency).toBe(true);
     expect(updatedRow.exchangeRate).toBe('1.100000');
     expect(updatedRow.convertedAmount).toBe(110);
+  });
+
+  it('reprojects the visible FX pair when account currency metadata changes', async () => {
+    mockFetchRate.mockResolvedValue(1.1);
+
+    const { result, rerender } = renderHook<
+      ReturnType<typeof useBulkJournalEditor>,
+      { accountSet: typeof accounts }
+    >(
+      ({ accountSet }) =>
+        useBulkJournalEditor({
+          workplaceId: 'wp1' as WorkplaceId,
+          workplaceCurrency: 'USD',
+          accounts: accountSet,
+          onSaveSuccess: onSaveSuccessMock,
+        }),
+      { initialProps: { accountSet: accounts } },
+    );
+    const rowId = result.current.rows[0].id;
+
+    await act(async () => {
+      result.current.rowActions.setAmount(rowId, '100');
+      result.current.rowActions.setSourceAccount(rowId, 'acc3' as AccountId);
+      result.current.rowActions.setDestinationAccount(rowId, 'acc1' as AccountId);
+    });
+
+    expect(result.current.rows[0]).toMatchObject({
+      isCrossCurrency: true,
+      exchangeRate: '1.100000',
+      convertedAmount: 110,
+    });
+
+    const sameCurrencyAccounts = accounts.map((account: AccountFields) =>
+      account.id === 'acc3' ? { ...account, currencyCode: 'USD' } : account,
+    );
+    rerender({ accountSet: sameCurrencyAccounts });
+
+    expect(result.current.rows[0]).toMatchObject({
+      isCrossCurrency: false,
+      exchangeRate: '',
+      convertedAmount: 0,
+    });
+
+    rerender({ accountSet: accounts });
+
+    expect(result.current.rows[0]).toMatchObject({
+      isCrossCurrency: true,
+      exchangeRate: '1.100000',
+      convertedAmount: 110,
+    });
   });
 
   it('recalculates convertedAmount when amount changes for cross-currency row', async () => {

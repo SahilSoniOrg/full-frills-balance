@@ -35,6 +35,7 @@ import {
 } from '@/src/services/journal/simpleJournalHelpers';
 import type {
   BulkJournalRow,
+  BulkJournalDraft,
   BulkJournalRowActions,
   UseBulkJournalEditorProps,
 } from '../types/bulkJournal';
@@ -49,9 +50,9 @@ const LOADING_RATES: FxFetchedRates = {
 };
 
 function reconcileVisibleValidation(
-  previousRow: BulkJournalRow,
-  nextRow: BulkJournalRow,
-): BulkJournalRow {
+  previousRow: BulkJournalDraft,
+  nextRow: BulkJournalDraft,
+): BulkJournalDraft {
   const duplicateAccountError = getBulkJournalDuplicateAccountError(
     nextRow.sourceId,
     nextRow.destinationId,
@@ -77,7 +78,7 @@ function rowJournalDay(journalDate: number): string {
 
 /** FX pair for one bulk row, resolved from the row's accounts, fetched rates, and override. */
 export function resolveBulkRowFxPair(
-  row: BulkJournalRow,
+  row: BulkJournalDraft,
   accounts: AccountFields[],
   workplaceCurrency: string,
 ): FxPair {
@@ -93,12 +94,10 @@ export function resolveBulkRowFxPair(
   });
 }
 
-function projectRowFx(row: BulkJournalRow, pair: FxPair): BulkJournalRow {
+function projectRowFx(row: BulkJournalDraft, pair: FxPair): BulkJournalRow {
   if (!pair.isCrossCurrency) {
     return {
       ...row,
-      fxRates: null,
-      fxOverride: NO_FX_OVERRIDE,
       exchangeRate: '',
       sourceBaseRate: undefined,
       destBaseRate: undefined,
@@ -124,6 +123,10 @@ function projectRowFx(row: BulkJournalRow, pair: FxPair): BulkJournalRow {
   };
 }
 
+function projectRow(row: BulkJournalDraft, accounts: AccountFields[], workplaceCurrency: string) {
+  return projectRowFx(row, resolveBulkRowFxPair(row, accounts, workplaceCurrency));
+}
+
 export function useBulkJournalEditor({
   workplaceId,
   workplaceCurrency,
@@ -137,7 +140,7 @@ export function useBulkJournalEditor({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Initialize with one empty row
-  const createRow = useCallback((prevRow?: BulkJournalRow): BulkJournalRow => {
+  const createRow = useCallback((prevRow?: BulkJournalDraft): BulkJournalDraft => {
     if (prevRow) {
       return {
         id: generateRowId(),
@@ -148,16 +151,7 @@ export function useBulkJournalEditor({
         sourceId: prevRow.sourceId,
         destinationId: prevRow.destinationId,
         journalDate: prevRow.journalDate,
-        exchangeRate: prevRow.exchangeRate,
-        sourceBaseRate: prevRow.sourceBaseRate,
-        destBaseRate: prevRow.destBaseRate,
-        sourceBaseRateInput: prevRow.sourceBaseRateInput,
-        destBaseRateInput: prevRow.destBaseRateInput,
-        isCrossCurrency: prevRow.isCrossCurrency,
-        convertedAmount: prevRow.convertedAmount,
-        isLoadingRate: false,
         validationError: undefined,
-        rateError: undefined,
         fxRates: prevRow.fxRates,
         fxOverride: prevRow.fxOverride,
       };
@@ -171,19 +165,18 @@ export function useBulkJournalEditor({
       sourceId: EMPTY_ACCOUNT_ID,
       destinationId: EMPTY_ACCOUNT_ID,
       journalDate: Date.now(),
-      exchangeRate: '',
-      isCrossCurrency: false,
-      convertedAmount: 0,
-      isLoadingRate: false,
       validationError: undefined,
-      rateError: undefined,
     };
   }, []);
 
-  const [rows, setRows] = useState<BulkJournalRow[]>(() => [createRow()]);
+  const [drafts, setDrafts] = useState<BulkJournalDraft[]>(() => [createRow()]);
+  const rows = useMemo(
+    () => drafts.map(row => projectRow(row, accounts, workplaceCurrency)),
+    [accounts, drafts, workplaceCurrency],
+  );
 
   // Maintain a synchronous ref for immediate reads/writes inside callbacks to prevent race conditions during rapid updates
-  const latestRowsRef = useRef(rows);
+  const latestRowsRef = useRef(drafts);
   const validationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rateRequestSeqRef = useRef(new Map<string, number>());
 
@@ -200,47 +193,37 @@ export function useBulkJournalEditor({
       validationTimerRef.current = null;
       const validatedRows = latestRowsRef.current.map(row => ({
         ...row,
-        validationError: isBulkJournalRowEmpty(row) ? undefined : validateBulkJournalRow(row),
+        validationError: isBulkJournalRowEmpty(projectRow(row, accounts, workplaceCurrency))
+          ? undefined
+          : validateBulkJournalRow(projectRow(row, accounts, workplaceCurrency)),
       }));
       latestRowsRef.current = validatedRows;
-      setRows(validatedRows);
+      setDrafts(validatedRows);
     }, BULK_VALIDATION_DEBOUNCE_MS);
-  }, [clearValidationTimer]);
+  }, [accounts, clearValidationTimer, workplaceCurrency]);
 
   useEffect(() => clearValidationTimer, [clearValidationTimer]);
 
   useEffect(() => {
-    latestRowsRef.current = rows;
-  }, [rows]);
+    latestRowsRef.current = drafts;
+  }, [drafts]);
 
   const commitRows = useCallback(
-    (nextRows: BulkJournalRow[], shouldScheduleValidation = true) => {
+    (nextRows: BulkJournalDraft[], shouldScheduleValidation = true) => {
       latestRowsRef.current = nextRows;
-      setRows(nextRows);
+      setDrafts(nextRows);
       if (shouldScheduleValidation) scheduleValidation();
     },
     [scheduleValidation],
   );
 
   const updateRow = useCallback(
-    (rowId: string, update: (row: BulkJournalRow) => BulkJournalRow) => {
+    (rowId: string, update: (row: BulkJournalDraft) => BulkJournalDraft) => {
       const nextRows = latestRowsRef.current.map(row => (row.id === rowId ? update(row) : row));
       commitRows(nextRows);
       return nextRows.find(row => row.id === rowId);
     },
     [commitRows],
-  );
-
-  /** The only path that writes a row's projected FX fields. */
-  const applyRates = useCallback(
-    (row: BulkJournalRow, rates: FxFetchedRates | null = row.fxRates ?? null) => {
-      const nextRow = { ...row, fxRates: rates };
-      return reconcileVisibleValidation(
-        row,
-        projectRowFx(nextRow, resolveBulkRowFxPair(nextRow, accounts, workplaceCurrency)),
-      );
-    },
-    [accounts, workplaceCurrency],
   );
 
   const refreshRates = useCallback(
@@ -255,7 +238,12 @@ export function useBulkJournalEditor({
         accounts,
         workplaceCurrency,
       );
-      updateRow(rowId, current => applyRates(current, isCrossCurrency ? LOADING_RATES : null));
+      updateRow(rowId, current =>
+        reconcileVisibleValidation(current, {
+          ...current,
+          fxRates: isCrossCurrency ? LOADING_RATES : null,
+        }),
+      );
       if (!isCrossCurrency) return;
 
       void fetchPairRates(
@@ -268,10 +256,12 @@ export function useBulkJournalEditor({
         { fetchRequiredRate, fetchHistoricalRate },
       ).then(rates => {
         if (rateRequestSeqRef.current.get(rowId) !== requestSeq) return;
-        updateRow(rowId, current => applyRates(current, rates));
+        updateRow(rowId, current =>
+          reconcileVisibleValidation(current, { ...current, fxRates: rates }),
+        );
       });
     },
-    [accounts, applyRates, fetchHistoricalRate, fetchRequiredRate, updateRow, workplaceCurrency],
+    [accounts, fetchHistoricalRate, fetchRequiredRate, updateRow, workplaceCurrency],
   );
 
   const addRow = useCallback(() => {
@@ -295,7 +285,7 @@ export function useBulkJournalEditor({
     clearValidationTimer();
     const nextRows = [createRow()];
     latestRowsRef.current = nextRows;
-    setRows(nextRows);
+    setDrafts(nextRows);
     setSubmitError(null);
   }, [clearValidationTimer, createRow]);
 
@@ -315,13 +305,13 @@ export function useBulkJournalEditor({
 
   const setAmount = useCallback(
     (rowId: string, value: string) => {
-      updateRow(rowId, row => applyRates({ ...row, amount: value }));
+      updateRow(rowId, row => reconcileVisibleValidation(row, { ...row, amount: value }));
     },
-    [applyRates, updateRow],
+    [updateRow],
   );
 
   const updateAndRefreshRates = useCallback(
-    (rowId: string, update: (row: BulkJournalRow) => BulkJournalRow) => {
+    (rowId: string, update: (row: BulkJournalDraft) => BulkJournalDraft) => {
       updateRow(rowId, row =>
         reconcileVisibleValidation(row, { ...update(row), fxOverride: NO_FX_OVERRIDE }),
       );
@@ -415,11 +405,11 @@ export function useBulkJournalEditor({
           sanitizeAmount(String(value)) || 0,
         );
         return override
-          ? applyRates({ ...row, fxOverride: override })
+          ? reconcileVisibleValidation(row, { ...row, fxOverride: override })
           : reconcileVisibleValidation(row, row);
       });
     },
-    [accounts, applyRates, updateRow, workplaceCurrency],
+    [accounts, updateRow, workplaceCurrency],
   );
 
   const setManualBaseRate = useCallback(
@@ -427,10 +417,13 @@ export function useBulkJournalEditor({
       updateRow(rowId, row => {
         const pair = resolveBulkRowFxPair(row, accounts, workplaceCurrency);
         if (!pair.isCrossCurrency) return row;
-        return applyRates({ ...row, fxOverride: withManualBaseRate(pair, role, value) });
+        return reconcileVisibleValidation(row, {
+          ...row,
+          fxOverride: withManualBaseRate(pair, role, value),
+        });
       });
     },
-    [accounts, applyRates, updateRow, workplaceCurrency],
+    [accounts, updateRow, workplaceCurrency],
   );
 
   const swapRowAccounts = useCallback(
@@ -454,7 +447,7 @@ export function useBulkJournalEditor({
 
   const isValid = useMemo(() => {
     if (rows.length === 0) return false;
-    return rows.every(row => validateBulkJournalRow(row) === undefined && !row.isLoadingRate);
+    return rows.every(row => validateBulkJournalRow(row) === undefined);
   }, [rows]);
 
   const isAtMaxRows = rows.length >= MAX_BULK_JOURNAL_ROWS;
@@ -492,7 +485,7 @@ export function useBulkJournalEditor({
     clearValidationTimer();
     let hasErrors = false;
     const validatedRows = latestRowsRef.current.map(row => {
-      const error = validateBulkJournalRow(row);
+      const error = validateBulkJournalRow(projectRow(row, accounts, workplaceCurrency));
       if (error) hasErrors = true;
       return { ...row, validationError: error };
     });
@@ -509,7 +502,7 @@ export function useBulkJournalEditor({
 
     try {
       const entries = buildBulkJournalEntries(
-        latestRowsRef.current,
+        latestRowsRef.current.map(row => projectRow(row, accounts, workplaceCurrency)),
         accounts,
         workplaceCurrency,
         workplaceId,

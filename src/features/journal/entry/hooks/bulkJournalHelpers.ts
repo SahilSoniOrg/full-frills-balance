@@ -6,6 +6,8 @@ import { WorkplaceId, EMPTY_ACCOUNT_ID, TransactionId } from '@/src/types/ids';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
 import { sanitizeAmount } from '@/src/utils/validation';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { formatRoundedAmount } from '@/src/utils/money';
 import type { BulkJournalRow } from '../types/bulkJournal';
 
 export const DUPLICATE_ACCOUNT_ERROR = 'Source and destination accounts must be distinct';
@@ -64,7 +66,12 @@ export function buildBulkJournalEntries(
         accountId: row.destinationId,
         accountName: destAccount?.name || '',
         accountType: destAccount?.accountType || AccountType.ASSET,
-        amount: isCross ? row.convertedAmount.toFixed(2) : row.amount,
+        amount: isCross
+          ? formatRoundedAmount(
+              row.convertedAmount,
+              CurrencyFormatter.getPrecisionFallback(destCurrency),
+            )
+          : row.amount,
         transactionType: TransactionType.DEBIT,
         notes: '',
         exchangeRate: isCross && row.destBaseRate ? row.destBaseRate.toFixed(6) : '',

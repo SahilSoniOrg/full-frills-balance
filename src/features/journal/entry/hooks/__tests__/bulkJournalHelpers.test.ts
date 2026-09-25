@@ -62,6 +62,25 @@ describe('buildBulkJournalEntries', () => {
 
     expect(entries[0].notes).toBe('');
   });
+
+  it('preserves the destination currency precision in converted entries', () => {
+    const kwdAccounts = [accounts[0], { ...accounts[1], currencyCode: 'KWD' }] as AccountFields[];
+    const entries = buildBulkJournalEntries(
+      [
+        makeRow({
+          isCrossCurrency: true,
+          convertedAmount: 1.234,
+          sourceBaseRate: 1,
+          destBaseRate: 3.282,
+        }),
+      ],
+      kwdAccounts,
+      'USD',
+      asWorkplaceId('wp1'),
+    );
+
+    expect(entries[0].lines[0].amount).toBe('1.234');
+  });
 });
 
 describe('validateBulkJournalRow', () => {
