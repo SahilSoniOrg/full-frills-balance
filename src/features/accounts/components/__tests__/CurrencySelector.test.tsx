@@ -1,5 +1,6 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, waitFor } from '@testing-library/react-native';
 import { CurrencySelector } from '@/src/features/accounts/components/CurrencySelector';
+import { render } from '@/src/utils/test-utils';
 
 jest.mock('react-native/Libraries/Modal/Modal', () => ({
   __esModule: true,
@@ -16,6 +17,8 @@ jest.mock('@/src/components/core', () => {
     AppInput: ({ style, ...props }: any) => React.createElement(TextInput, { ...props, style }),
     AppIcon: ({ name, style, ...props }: any) =>
       React.createElement(View, { ...props, style, 'data-icon': name }),
+    AppCard: ({ children, style, ...props }: any) =>
+      React.createElement(View, { ...props, style }, children),
     IconButton: ({ name, onPress, accessibilityLabel, ...props }: any) =>
       React.createElement(
         TouchableOpacity,
@@ -32,12 +35,17 @@ jest.mock('@/src/hooks/use-theme', () => ({
     theme: {
       background: '#ffffff',
       text: '#000000',
+      textSecondary: '#666666',
       border: '#e0e0e0',
       surface: '#ffffff',
       primary: '#007bff',
       overlay: 'rgba(0,0,0,0.5)',
     },
   }),
+}));
+
+jest.mock('@/src/hooks/use-reduced-motion', () => ({
+  useReducedMotion: () => true,
 }));
 
 const mockCurrencies = [
