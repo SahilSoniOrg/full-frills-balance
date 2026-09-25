@@ -1,4 +1,5 @@
 import { WorkplaceCurrencyStep } from '@/src/features/setup';
+import { triggerHaptic } from '@/src/utils/haptics';
 
 export function CurrencyScene({
   currency,
@@ -15,7 +16,10 @@ export function CurrencyScene({
     <WorkplaceCurrencyStep
       selectedCurrency={currency}
       onSelectCurrency={onSelectCurrency}
-      onContinue={onContinue}
+      onContinue={() => {
+        void triggerHaptic('light');
+        onContinue();
+      }}
       onBack={onBack}
       isCompleting={false}
     />

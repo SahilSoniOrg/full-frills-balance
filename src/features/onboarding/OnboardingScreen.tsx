@@ -11,6 +11,7 @@ import {
 } from '@/src/services/legal/privacyPolicyAcceptance';
 import { AppNavigation } from '@/src/utils/navigation';
 import { toast } from '@/src/utils/alerts';
+import { triggerSaveOutcomeHaptic } from '@/src/utils/haptics';
 import { logger } from '@/src/utils/logger';
 import { useMemo, useState, useSyncExternalStore } from 'react';
 import { OnboardingChrome, onboardingStage, SafeToSpendHeader } from './chrome';
@@ -127,9 +128,11 @@ export function OnboardingScreen() {
     setBusy(true);
     try {
       await commitCashClarity(draft);
+      triggerSaveOutcomeHaptic(true);
       AppNavigation.toDashboard();
     } catch (error) {
       logger.error('[Onboarding] Failed to finish setup', error);
+      triggerSaveOutcomeHaptic(false);
       setFinishError('We could not finish setup. Check your details and try again.');
     } finally {
       setBusy(false);
