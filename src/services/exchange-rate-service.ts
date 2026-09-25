@@ -198,10 +198,15 @@ export class ExchangeRateService {
     records: { toCurrency: string; rate: number; effectiveDate?: number }[],
   ): Record<string, number> {
     const rates: Record<string, number> = {};
+    const effectiveDateByCurrency = new Map<string, number>();
     let latestTimestamp = 0;
     records.forEach(r => {
-      rates[r.toCurrency] = r.rate;
-      if ((r.effectiveDate || 0) > latestTimestamp) latestTimestamp = r.effectiveDate || 0;
+      const effectiveDate = r.effectiveDate || 0;
+      if (effectiveDate >= (effectiveDateByCurrency.get(r.toCurrency) ?? 0)) {
+        rates[r.toCurrency] = r.rate;
+        effectiveDateByCurrency.set(r.toCurrency, effectiveDate);
+      }
+      if (effectiveDate > latestTimestamp) latestTimestamp = effectiveDate;
     });
     this.memoryCache.set(fromCurrency, {
       rates,

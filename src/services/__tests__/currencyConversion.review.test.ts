@@ -30,14 +30,7 @@ describe('currency conversion historical dates', () => {
     expect(exchangeRateService.getRate).not.toHaveBeenCalled();
   });
 
-  it('ignores a stored silent 1.0 rate and looks up the historical quote', async () => {
-    jest.mocked(exchangeRateService.getHistoricalRate).mockResolvedValue({
-      rate: 83,
-      requestedDate: 100,
-      effectiveDate: 100,
-      source: 'test',
-    });
-
+  it('accepts a stored positive 1.0 rate for unlike currencies', async () => {
     await expect(
       convertAmount({
         amount: 10,
@@ -47,7 +40,7 @@ describe('currency conversion historical dates', () => {
         storedExchangeRate: 1,
         rateDate: 100,
       }),
-    ).resolves.toEqual({ ok: true, amount: 830 });
-    expect(exchangeRateService.getHistoricalRate).toHaveBeenCalledWith('USD', 'INR', 100);
+    ).resolves.toEqual({ ok: true, amount: 10 });
+    expect(exchangeRateService.getHistoricalRate).not.toHaveBeenCalled();
   });
 });

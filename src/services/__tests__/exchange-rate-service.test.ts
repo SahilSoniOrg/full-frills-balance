@@ -81,6 +81,18 @@ describe('ExchangeRateService', () => {
       expect(rate).toBe(0.91);
       expect(mockFetch).not.toHaveBeenCalled();
     });
+
+    it('uses the newest cached quote when records are returned out of date order', async () => {
+      const olderDate = Date.now() - 2 * 24 * 60 * 60 * 1000;
+      const newerDate = Date.now() - 60 * 60 * 1000;
+      (exchangeRateRepository.getAllRatesForBase as jest.Mock).mockResolvedValue([
+        { rate: 1.1, effectiveDate: newerDate, fromCurrency: 'EUR', toCurrency: 'USD' },
+        { rate: 1.2, effectiveDate: olderDate, fromCurrency: 'EUR', toCurrency: 'USD' },
+      ]);
+
+      await expect(service.getRate('EUR', 'USD')).resolves.toBe(1.1);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
   });
 
   describe('getRequiredRate', () => {

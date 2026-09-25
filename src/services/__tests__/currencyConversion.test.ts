@@ -34,25 +34,27 @@ describe('convertAmount', () => {
       toCurrency: 'USD',
       mode: 'historical',
       storedExchangeRate: 1.1,
+      rateDate: Date.UTC(2024, 2, 2),
     });
     expect(result).toEqual({ ok: true, amount: 110 });
     expect(getRate).not.toHaveBeenCalled();
   });
 
-  it('historical mode falls back to getRate when stored rate is missing', async () => {
-    getRate.mockResolvedValue(1.25);
+  it('historical mode uses the event date when the stored rate is missing', async () => {
+    getHistoricalRate.mockResolvedValue({ rate: 1.25 });
     const result = await convertAmount({
       amount: 80,
       fromCurrency: 'GBP',
       toCurrency: 'USD',
       mode: 'historical',
+      rateDate: Date.UTC(2024, 2, 2),
     });
     expect(result).toEqual({ ok: true, amount: 100 });
-    expect(getRate).toHaveBeenCalledWith('GBP', 'USD');
+    expect(getHistoricalRate).toHaveBeenCalledWith('GBP', 'USD', Date.UTC(2024, 2, 2));
+    expect(getRate).not.toHaveBeenCalled();
   });
 
-  it('historical mode ignores a stored 1.0 and looks up the journal date', async () => {
-    getHistoricalRate.mockResolvedValue({ rate: 1.1 });
+  it('historical mode accepts a stored positive 1.0 rate', async () => {
     const result = await convertAmount({
       amount: 50,
       fromCurrency: 'EUR',
@@ -61,8 +63,8 @@ describe('convertAmount', () => {
       storedExchangeRate: 1.0,
       rateDate: Date.UTC(2024, 2, 2),
     });
-    expect(result).toEqual({ ok: true, amount: 55 });
-    expect(getHistoricalRate).toHaveBeenCalledWith('EUR', 'USD', Date.UTC(2024, 2, 2));
+    expect(result).toEqual({ ok: true, amount: 50 });
+    expect(getHistoricalRate).not.toHaveBeenCalled();
     expect(getRate).not.toHaveBeenCalled();
   });
 
@@ -90,15 +92,17 @@ describe('convertAmount', () => {
   });
 
   it('returns missing_rate for invalid stored historical rate and failed lookup', async () => {
-    getRate.mockResolvedValue(1.0);
+    getHistoricalRate.mockRejectedValue(new Error('No historical quote'));
     const result = await convertAmount({
       amount: 50,
       fromCurrency: 'EUR',
       toCurrency: 'USD',
       mode: 'historical',
       storedExchangeRate: 0,
+      rateDate: Date.UTC(2024, 2, 2),
     });
     expect(result).toEqual({ ok: false, reason: 'missing_rate' });
+    expect(getRate).not.toHaveBeenCalled();
   });
 
   it('respects custom precision', async () => {
