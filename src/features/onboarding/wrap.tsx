@@ -1,18 +1,34 @@
 import { AppCard, AppText, ColoredDot, Icon, IconButton } from '@/src/components/core';
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { Typography } from '@/src/constants';
+import { ChromeMotion, Typography } from '@/src/constants';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { Inline, Stack } from '@/src/design-system';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { ComponentVariant } from '@/src/utils/style-helpers';
 import dayjs from 'dayjs';
+import { MotiView } from 'moti';
 import { type ReactNode, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { ConversationStep } from './conversationUi';
 import { ClarityChart } from './clarityChart';
 import { incomeItemName, paymentItemName, type CashClarityDraft } from './draft';
 import type { CashClarityProjection, ClarityBeat } from './projectCashClarityDraft';
+
+function ClarityResultPanel({ children }: { readonly children: ReactNode }) {
+  const reduceMotion = useReducedMotion();
+  if (reduceMotion) return <>{children}</>;
+  return (
+    <MotiView
+      from={{ opacity: 0, scale: ChromeMotion.panelFromScale }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={ChromeMotion.sheetSpring}
+    >
+      {children}
+    </MotiView>
+  );
+}
 
 export function ClarityScene({
   currency,
@@ -58,49 +74,51 @@ export function ClarityScene({
             {finishError}
           </AppText>
         ) : null}
-        <AppCard
-          variant={projection.safeToSpend > 0 ? 'ghost' : 'outline'}
-          paddingSize="lg"
-          testID="onboarding-clarity-result"
-        >
-          <Stack gap="md">
-            <Inline align="center" justify="space-between" gap="md">
-              <Stack gap="xs" flex={1}>
-                <AppText
-                  variant="caption"
-                  color="secondary"
-                  weight="bold"
-                  style={styles.stageLabel}
-                >
-                  {copy.safeToSpend}
-                </AppText>
-                <AppText variant="caption" color="secondary">
-                  {copy.overNextDays(projection.windowDays)}
-                </AppText>
-              </Stack>
-              <IconButton
-                name={Icon.HelpCircle}
-                variant="clear"
-                accessibilityLabel={copy.clarityExplainAction}
-                onPress={() => setExplanationVisible(true)}
-                testID="onboarding-clarity-info-button"
+        <ClarityResultPanel>
+          <AppCard
+            variant={projection.safeToSpend > 0 ? 'ghost' : 'outline'}
+            paddingSize="lg"
+            testID="onboarding-clarity-result"
+          >
+            <Stack gap="md">
+              <Inline align="center" justify="space-between" gap="md">
+                <Stack gap="xs" flex={1}>
+                  <AppText
+                    variant="caption"
+                    color="secondary"
+                    weight="bold"
+                    style={styles.stageLabel}
+                  >
+                    {copy.safeToSpend}
+                  </AppText>
+                  <AppText variant="caption" color="secondary">
+                    {copy.overNextDays(projection.windowDays)}
+                  </AppText>
+                </Stack>
+                <IconButton
+                  name={Icon.HelpCircle}
+                  variant="clear"
+                  accessibilityLabel={copy.clarityExplainAction}
+                  onPress={() => setExplanationVisible(true)}
+                  testID="onboarding-clarity-info-button"
+                />
+              </Inline>
+              <MoneyText
+                amount={projection.safeToSpend}
+                currencyCode={currency}
+                formatStyle="compact"
+                variant="hero"
+                color={stsColor}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                testID="onboarding-clarity-sts"
               />
-            </Inline>
-            <MoneyText
-              amount={projection.safeToSpend}
-              currencyCode={currency}
-              formatStyle="compact"
-              variant="hero"
-              color={stsColor}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              testID="onboarding-clarity-sts"
-            />
-            <AppText variant="body" color="secondary" style={styles.proseCopy}>
-              {copy.clarityDefinition}
-            </AppText>
-          </Stack>
-        </AppCard>
+              <AppText variant="body" color="secondary" style={styles.proseCopy}>
+                {copy.clarityDefinition}
+              </AppText>
+            </Stack>
+          </AppCard>
+        </ClarityResultPanel>
 
         <Stack gap="sm">
           <AppText variant="subheading">{copy.clarityExplainAction}</AppText>

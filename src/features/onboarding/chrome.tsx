@@ -1,8 +1,10 @@
 import { AppText } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { AppConfig, Spacing } from '@/src/constants';
+import { AppConfig, ChromeMotion, Spacing } from '@/src/constants';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { Box, Inline, Inset, Page, Stack, usePageKeyboard } from '@/src/design-system';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
+import { MotiView } from 'moti';
 import type { ReactNode } from 'react';
 import type { OnboardingStep } from './draft';
 import { ONBOARDING_PROGRESS_FLOW } from './flow';
@@ -24,6 +26,9 @@ export function OnboardingChrome({
   readonly testID: string;
   readonly children: ReactNode;
 }) {
+  const reduceMotion = useReducedMotion();
+  const progressRatio = stage ? stage.current / stage.total : 0;
+
   return (
     <Page testID={testID} edges={['top', 'bottom']} keyboardAvoiding>
       <Box flex={1} minHeight={0}>
@@ -43,12 +48,22 @@ export function OnboardingChrome({
                   </AppText>
                 </Inline>
                 <Box height={Spacing.xs} borderRadius="full" background="border" overflow="hidden">
-                  <Box
-                    height="100%"
-                    width={`${(stage.current / stage.total) * 100}%`}
-                    borderRadius="full"
-                    background="primary"
-                  />
+                  {reduceMotion ? (
+                    <Box
+                      height="100%"
+                      width={`${progressRatio * 100}%`}
+                      borderRadius="full"
+                      background="primary"
+                    />
+                  ) : (
+                    <MotiView
+                      animate={{ width: `${progressRatio * 100}%` }}
+                      transition={ChromeMotion.panel}
+                      style={{ height: '100%', borderRadius: 999, overflow: 'hidden' }}
+                    >
+                      <Box height="100%" width="100%" borderRadius="full" background="primary" />
+                    </MotiView>
+                  )}
                 </Box>
               </Box>
             ) : null}
@@ -74,6 +89,20 @@ export function SafeToSpendHeader({
   readonly change: string | null;
 }) {
   const { isKeyboardVisible: compact } = usePageKeyboard();
+  const reduceMotion = useReducedMotion();
+
+  const amountText = (variant: 'subheading' | 'hero') => (
+    <MoneyText
+      amount={amount}
+      currencyCode={currency}
+      formatStyle="sts"
+      variant={variant}
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={variant === 'hero' ? 0.6 : 0.7}
+      testID="onboarding-sts"
+    />
+  );
 
   return (
     <>
@@ -83,16 +112,7 @@ export function SafeToSpendHeader({
             <AppText variant="caption" color="secondary" weight="medium">
               {copy.safeToSpend}
             </AppText>
-            <MoneyText
-              amount={amount}
-              currencyCode={currency}
-              formatStyle="sts"
-              variant="subheading"
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.7}
-              testID="onboarding-sts"
-            />
+            {amountText('subheading')}
           </Stack>
         </Box>
       ) : (
@@ -100,16 +120,17 @@ export function SafeToSpendHeader({
           <AppText variant="body" color="secondary" weight="medium">
             {copy.safeToSpend}
           </AppText>
-          <MoneyText
-            amount={amount}
-            currencyCode={currency}
-            formatStyle="sts"
-            variant="hero"
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.6}
-            testID="onboarding-sts"
-          />
+          {reduceMotion ? (
+            amountText('hero')
+          ) : (
+            <MotiView
+              from={{ opacity: 0, scale: ChromeMotion.panelFromScale }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={ChromeMotion.sheetSpring}
+            >
+              {amountText('hero')}
+            </MotiView>
+          )}
         </Stack>
       )}
       {change ? (
