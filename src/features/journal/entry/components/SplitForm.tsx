@@ -1,5 +1,5 @@
 import type { CreateAccountIntent } from '@/src/components/account-selection';
-import { AppIcon, AppText, Icon } from '@/src/components/core';
+import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
 import { CompactAmountInput } from '@/src/components/forms/CompactAmountInput';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
@@ -20,7 +20,7 @@ import { resolveSimpleTypeAccentColor } from '@/src/features/journal/entry/journ
 import { useTheme } from '@/src/hooks/use-theme';
 import { withOpacity } from '@/src/utils/color-math';
 import { useCallback, useState } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 type SplitFormProps = SplitJournalController & {
   onCreateAccountRequestForRow: (
@@ -239,7 +239,7 @@ export function SplitForm({
             {typeCopy.allocationTitle}
           </AppText>
           <View style={styles.actions}>
-            <TouchableOpacity
+            <PressScaleTouchable
               onPress={handleEqualSplit}
               disabled={!hasTotal}
               style={[styles.actionButton, { opacity: hasTotal ? 1 : 0.45 }]}
@@ -248,14 +248,14 @@ export function SplitForm({
               <AppText variant="caption" color="secondary" weight="semibold">
                 {strings.equalSplit}
               </AppText>
-            </TouchableOpacity>
+            </PressScaleTouchable>
             <View
               style={[
                 styles.actionDivider,
                 { backgroundColor: withOpacity(theme.border, Opacity.active) },
               ]}
             />
-            <TouchableOpacity
+            <PressScaleTouchable
               onPress={handleDistribute}
               disabled={!canDistribute}
               style={[styles.actionButton, { opacity: canDistribute ? 1 : 0.45 }]}
@@ -264,7 +264,7 @@ export function SplitForm({
               <AppText variant="caption" color="secondary" weight="semibold">
                 {strings.distribute}
               </AppText>
-            </TouchableOpacity>
+            </PressScaleTouchable>
           </View>
         </View>
         <AppText
@@ -314,9 +314,10 @@ export function SplitForm({
           </View>
         ) : null}
 
-        <TouchableOpacity
+        <PressScaleTouchable
           onPress={addSplitRow}
-          style={[styles.addButton, { borderColor: withOpacity(theme.primary, Opacity.medium) }]}
+          style={styles.addButtonTouchable}
+          surfaceStyle={[styles.addButton, { borderColor: withOpacity(theme.primary, Opacity.medium) }]}
           accessibilityRole="button"
           testID="split-add-row"
         >
@@ -324,7 +325,7 @@ export function SplitForm({
           <AppText variant="caption" color="primary" weight="semibold">
             {strings.addSplit}
           </AppText>
-        </TouchableOpacity>
+        </PressScaleTouchable>
         {canRemove ? (
           <AppText variant="caption" color="tertiary" style={styles.swipeHint}>
             {strings.swipeToRemove}
@@ -397,14 +398,16 @@ const styles = StyleSheet.create({
     borderRadius: Shape.radius.r2,
   },
   errorText: { flex: 1 },
-  addButton: {
+  addButtonTouchable: {
     alignSelf: 'center',
     width: '42%',
+    marginTop: Spacing.md,
+  },
+  addButton: {
     minHeight: Size.buttonSm,
     borderWidth: 1,
     borderStyle: 'dashed',
     borderRadius: Shape.radius.full,
-    marginTop: Spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

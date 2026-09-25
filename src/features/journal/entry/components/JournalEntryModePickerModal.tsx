@@ -1,4 +1,4 @@
-import { Icon, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { AppConfig } from '@/src/constants';
 import { BorderWidth, Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens';
@@ -7,7 +7,7 @@ import type { JournalEntryScreenMode } from '@/src/features/journal/entry/journa
 import { useTheme } from '@/src/hooks/use-theme';
 import { withOpacity } from '@/src/utils/color-math';
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 export interface JournalEntryModePickerModalProps {
   visible: boolean;
@@ -68,7 +68,7 @@ export const JournalEntryModePickerModal = React.memo(function JournalEntryModeP
                 isDisabled && styles.disabledCard,
               ]}
             >
-              <TouchableOpacity
+              <PressScaleTouchable
                 onPress={() => {
                   if (!isDisabled) {
                     onSelectMode(opt.id);
@@ -76,7 +76,8 @@ export const JournalEntryModePickerModal = React.memo(function JournalEntryModeP
                   }
                 }}
                 disabled={isDisabled}
-                style={styles.optionMain}
+                style={styles.optionMainTouchable}
+                surfaceStyle={styles.optionMain}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isSelected, disabled: isDisabled }}
                 testID={`journal-entry-mode-${opt.id}`}
@@ -166,11 +167,11 @@ export const JournalEntryModePickerModal = React.memo(function JournalEntryModeP
                 {isSelected && (
                   <AppIcon name={Icon.Check} size={Size.iconSm} color={theme.primary} />
                 )}
-              </TouchableOpacity>
+              </PressScaleTouchable>
 
-              <TouchableOpacity
+              <PressScaleTouchable
                 onPress={() => onHelpMode(opt.id)}
-                style={[
+                surfaceStyle={[
                   styles.helpButton,
                   {
                     backgroundColor: isSelected
@@ -198,7 +199,7 @@ export const JournalEntryModePickerModal = React.memo(function JournalEntryModeP
                   size={Size.iconSm}
                   color={isSelected ? theme.primary : theme.textSecondary}
                 />
-              </TouchableOpacity>
+              </PressScaleTouchable>
             </View>
           );
         })}
@@ -223,8 +224,10 @@ const styles = StyleSheet.create({
     borderWidth: BorderWidth.medium,
     gap: Spacing.md,
   },
-  optionMain: {
+  optionMainTouchable: {
     flex: 1,
+  },
+  optionMain: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,

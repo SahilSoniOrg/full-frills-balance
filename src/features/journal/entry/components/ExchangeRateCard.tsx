@@ -1,4 +1,4 @@
-import { Icon, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
@@ -14,7 +14,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   type ViewStyle,
   View,
 } from 'react-native';
@@ -107,15 +106,16 @@ export function ExchangeRateCard({
           {displayedRate.destinationCurrency}
         </AppText>
       </View>
-      <TouchableOpacity
+      <PressScaleTouchable
         onPress={handleResetToApiRate}
         accessibilityRole="button"
         accessibilityLabel={AppConfig.strings.transactionFlow.resetToMarketRate}
         testID={testID('reset-fx-rate-button')}
         hitSlop={RESET_HIT_SLOP}
+        surfaceStyle={styles.resetButton}
       >
         <AppIcon name={Icon.Refresh} size={Size.iconXs} color={theme.primary} />
-      </TouchableOpacity>
+      </PressScaleTouchable>
     </View>
   ) : isAttached ? (
     <AppText variant="caption" color={pair.rateError ? 'error' : 'secondary'} numberOfLines={2}>
@@ -317,6 +317,10 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
     minWidth: 0,
     flexShrink: 1,
+  },
+  resetButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   convertedInput: {
     flexShrink: 0,
