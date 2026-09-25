@@ -1,10 +1,11 @@
-import { Icon, AppIcon, AppInput, AppText, IconButton } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { Icon, AppIcon, AppInput, AppText } from '@/src/components/core';
+import { ModalSurface } from '@/src/components/overlays/ModalSurface';
+import { AppConfig, Opacity, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import type { PlainCurrency } from '@/src/types/plainDtos';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useMemo, useState } from 'react';
-import { FlatList, Keyboard, Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { FlatList, Keyboard, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface CurrencyPickerSheetProps {
   visible: boolean;
@@ -53,104 +54,92 @@ export function CurrencyPickerSheet({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={closeAndReset}>
-      <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
-        <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
-            <AppText variant="heading">{title}</AppText>
-            <IconButton
-              name={Icon.Close}
-              variant="clear"
-              iconColor={theme.text}
-              onPress={closeAndReset}
-              accessibilityLabel="Close currency picker"
-            />
-          </View>
-
-          <View style={styles.searchContainer}>
-            <AppInput
-              placeholder={searchPlaceholder}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              leftIcon={Icon.Search}
-              containerStyle={{ marginBottom: Spacing.sm }}
-            />
-          </View>
-
-          <FlatList
-            keyboardShouldPersistTaps="always"
-            data={filteredCurrencies}
-            keyExtractor={item => item.code}
-            renderItem={({ item }) => {
-              const isSelected = selectedCode === item.code;
-              return (
-                <TouchableOpacity
-                  style={[
-                    styles.currencyItem,
-                    { borderBottomColor: theme.border },
-                    isSelected && {
-                      backgroundColor:
-                        selectedBackgroundColor ?? withOpacity(theme.primary, Opacity.selection),
-                    },
-                  ]}
-                  onPress={() => handleSelect(item.code)}
-                  accessibilityLabel={`${item.name} (${item.code})`}
-                  accessibilityRole="button"
-                >
-                  <View>
-                    <AppText variant="body">{item.name}</AppText>
-                    <AppText variant="caption" color="secondary">
-                      {item.code}
-                    </AppText>
-                  </View>
-                  <View style={styles.currencyRight}>
-                    <AppText variant="subheading">{item.symbol}</AppText>
-                    {isSelected && (
-                      <AppIcon
-                        name={Icon.CheckCircle}
-                        size={Size.iconSm}
-                        color={theme.primary}
-                        style={{ marginLeft: Spacing.sm }}
-                      />
-                    )}
-                  </View>
-                </TouchableOpacity>
-              );
-            }}
-          />
-        </View>
+    <ModalSurface
+      visible={visible}
+      title={title}
+      onClose={closeAndReset}
+      position="bottomSheet"
+      fixedHeight
+      scrollable={false}
+      maxHeightPercent={70}
+      contentStyle={styles.body}
+      accessibilityCloseLabel="Close currency picker"
+    >
+      <View style={styles.searchContainer}>
+        <AppInput
+          placeholder={searchPlaceholder}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          leftIcon={Icon.Search}
+          containerStyle={{ marginBottom: Spacing.sm }}
+        />
       </View>
-    </Modal>
+
+      <FlatList
+        keyboardShouldPersistTaps="always"
+        data={filteredCurrencies}
+        keyExtractor={item => item.code}
+        style={styles.list}
+        renderItem={({ item }) => {
+          const isSelected = selectedCode === item.code;
+          return (
+            <TouchableOpacity
+              style={[
+                styles.currencyItem,
+                { borderBottomColor: theme.border },
+                isSelected && {
+                  backgroundColor:
+                    selectedBackgroundColor ?? withOpacity(theme.primary, Opacity.selection),
+                },
+              ]}
+              onPress={() => handleSelect(item.code)}
+              accessibilityLabel={`${item.name} (${item.code})`}
+              accessibilityRole="button"
+            >
+              <View>
+                <AppText variant="body">{item.name}</AppText>
+                <AppText variant="caption" color="secondary">
+                  {item.code}
+                </AppText>
+              </View>
+              <View style={styles.currencyRight}>
+                <AppText variant="subheading">{item.symbol}</AppText>
+                {isSelected && (
+                  <AppIcon
+                    name={Icon.CheckCircle}
+                    size={Size.iconSm}
+                    color={theme.primary}
+                    style={{ marginLeft: Spacing.sm }}
+                  />
+                )}
+              </View>
+            </TouchableOpacity>
+          );
+        }}
+      />
+    </ModalSurface>
   );
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
+  body: {
     flex: 1,
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    height: '70%',
-    borderTopLeftRadius: Shape.radius.r3,
-    borderTopRightRadius: Shape.radius.r3,
-    overflow: 'hidden',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: Spacing.lg,
-    borderBottomWidth: 1,
+    minHeight: 0,
+    gap: 0,
   },
   searchContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xs,
+  },
+  list: {
+    flex: 1,
+    minHeight: 0,
   },
   currencyItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: Spacing.lg,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xs,
     borderBottomWidth: 1,
   },
   currencyRight: {
