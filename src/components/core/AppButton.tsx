@@ -178,6 +178,8 @@ export function AppButton({
 const styles = StyleSheet.create({
   buttonBase: {
     borderRadius: Shape.radius.full,
+    borderWidth: 1,
+    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
