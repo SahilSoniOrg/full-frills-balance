@@ -122,6 +122,7 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
   const shortfall = headline?.shortfall;
   const trajectoryMinBalance = headline?.trajectoryMinBalance;
   const firstMajorInflowDayFromData = headline?.firstMajorInflowDay;
+  const hasUnvaluedEntries = headline?.hasUnvaluedEntries === true;
   const rawCurrencyCode = headline?.currencyCode;
 
   // Bulletproof data presence check: ensure both headline and currency exist
@@ -157,7 +158,9 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
                 : AppConfig.strings.dashboard.safeToSpendTitle,
               subtitle: isShortfall
                 ? AppConfig.strings.dashboard.shortfallSubtitle
-                : AppConfig.strings.dashboard.afterObligations,
+                : hasUnvaluedEntries
+                  ? AppConfig.strings.dashboard.safeToSpendUi.incompleteFxWarning
+                  : AppConfig.strings.dashboard.afterObligations,
               updatedAt: Date.now(),
             }
           : undefined,
@@ -200,6 +203,7 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
     shortfall,
     trajectoryMinBalance,
     firstMajorInflowDayFromData,
+    hasUnvaluedEntries,
     currencyCode,
     isDataPresent,
     isAppReady,

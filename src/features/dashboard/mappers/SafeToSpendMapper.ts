@@ -19,6 +19,7 @@ export interface SafeToSpendMapperInput {
   liquidAssetSubtypes: SafeToSpendDashboard['liquidAssetSubtypes'];
   accountMap: Map<string, AccountFields>;
   safeToSpendDays: number;
+  hasUnvaluedEntries?: boolean;
 }
 
 export class SafeToSpendMapper {
@@ -76,6 +77,7 @@ export class SafeToSpendMapper {
       accountSummaries,
       liquidAssetSubtypes,
       accountMap,
+      hasUnvaluedEntries = false,
     } = result;
 
     const safeToSpend = summary?.safeToSpend ?? 0;
@@ -125,6 +127,7 @@ export class SafeToSpendMapper {
       isPositiveSafeToSpend,
       isLoading,
       safeToSpendDays: result.safeToSpendDays,
+      ...(hasUnvaluedEntries ? { hasUnvaluedEntries: true } : {}),
       labels: SafeToSpendMapper.resolveLabels(
         AppConfig.strings.dashboard.safeToSpendUi,
         result.safeToSpendDays,

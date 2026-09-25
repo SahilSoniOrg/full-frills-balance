@@ -112,6 +112,7 @@ export function DashboardScreenView({
     liquidAssetSubtypes: safeToSpendData?.liquidAssetSubtypes ?? [],
     accountMap: fullSafeToSpendData?.accountMap ?? EMPTY_ACCOUNT_MAP,
     safeToSpendDays: safeToSpendData?.safeToSpendDays ?? 0,
+    hasUnvaluedEntries: safeToSpendData?.hasUnvaluedEntries ?? false,
     uiState,
     isLoading: !safeToSpendData,
   });

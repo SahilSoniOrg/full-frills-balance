@@ -1,5 +1,5 @@
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
-import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
+import { useMoneyFormat, useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppCard, AppText } from '@/src/components/core';
 import { Opacity, Shape, Spacing, Typography } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
@@ -64,6 +64,7 @@ export const SafeToSpendExplanationModal = ({
   const formulaDays = viewModel.safeToSpendDays;
   const { theme } = useTheme();
   const formatSts = useStsMoneyFormat(isLoading);
+  const formatMoney = useMoneyFormat({ loading: isLoading });
 
   const styles = React.useMemo(
     () =>
@@ -148,7 +149,7 @@ export const SafeToSpendExplanationModal = ({
         <FormulaStepRow
           title={step1.title}
           detail={step1.detail}
-          amountText={formatSts(totalLiquidAssets, currencyCode)}
+          amountText={formatMoney(totalLiquidAssets, currencyCode)}
           amountColor="primary"
           isExpanded={expandedSection === 'assets'}
           onToggle={() => setExpandedSection(expandedSection === 'assets' ? null : 'assets')}

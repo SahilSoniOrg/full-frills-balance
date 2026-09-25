@@ -21,6 +21,7 @@ export type SafeToSpendHeadline = {
   shortfall: number;
   trajectoryMinBalance: number;
   firstMajorInflowDay: number | null;
+  hasUnvaluedEntries?: boolean;
 };
 
 export interface SafeToSpendHandle {
@@ -39,6 +40,7 @@ function toHeadline(result: SafeToSpendDashboard): SafeToSpendHeadline {
     shortfall: result.summary.shortfall,
     trajectoryMinBalance: result.summary.trajectoryMinBalance,
     firstMajorInflowDay: result.summary.firstMajorInflowDay ?? null,
+    ...(result.hasUnvaluedEntries ? { hasUnvaluedEntries: true } : {}),
   };
 }
 

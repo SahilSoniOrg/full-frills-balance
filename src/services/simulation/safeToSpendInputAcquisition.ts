@@ -4,13 +4,15 @@ import Budget from '@/src/data/models/Budget';
 import Journal from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { DailyDelta } from '@/src/data/repositories/TransactionTypes';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { BudgetUsage } from '@/src/services/budget/types';
+import { convertAmount } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
@@ -20,7 +22,11 @@ import {
   observeWorkplaceJournalMeta,
 } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { isLiquidAssetSubtype } from '@/src/utils/accountSubtypeUtils';
+import { effect } from '@/src/utils/accounting/BalanceEffects';
+import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/services/preferences';
+import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
+import { roundToPrecision } from '@/src/utils/money';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import dayjs from 'dayjs';
 import { combineLatest, from, Observable, of } from 'rxjs';
@@ -43,6 +49,7 @@ export type SafeToSpendInputSnapshot = {
   plannedJournals: Journal[];
   usages: BudgetUsage[];
   rawDeltas: DailyDelta[];
+  hasUnvaluedEntries?: boolean;
   startingBalances: Map<AccountId, number>;
   totalLiquidAssetsAmount: number;
   liabilityAccountBalances: { account: Account; balance: number }[];
@@ -150,7 +157,7 @@ export function observeSafeToSpendInputSnapshot(
       }
 
       const history$ = from(
-        transactionRawRepository.getDailyDeltasGroupedRaw(
+        transactionQueryRepository.findByAccountsAndDateRange(
           workplaceId,
           mapped.liquidAssetIds,
           lookbackDate,
@@ -167,7 +174,7 @@ export function observeSafeToSpendInputSnapshot(
           : of([] as BudgetUsage[]);
 
       return combineLatest([budgetUsage$, history$]).pipe(
-        switchMap(async ([usages, rawDeltas]) => {
+        switchMap(async ([usages, transactions]) => {
           const uniqueBaseCurrencies = new Set<string>();
           uniqueBaseCurrencies.add(mapped.defaultCurrencyCode);
 
@@ -193,23 +200,79 @@ export function observeSafeToSpendInputSnapshot(
             ),
           );
 
-          const allBalances = await balanceReadService.getAccountBalances(
-            workplaceId,
-            now.valueOf(),
-            mapped.defaultCurrencyCode,
-            undefined,
-            [...mapped.liquidAssetIds, ...mapped.liquidLiabilities.map(l => l.id)],
-          );
+          const journalIds = [...new Set(transactions.map(transaction => transaction.journalId))];
+          const [allBalances, journals] = await Promise.all([
+            balanceReadService.getAccountBalances(
+              workplaceId,
+              now.valueOf(),
+              mapped.defaultCurrencyCode,
+              undefined,
+              [...mapped.liquidAssetIds, ...mapped.liquidLiabilities.map(l => l.id)],
+            ),
+            journalQueryRepository.findByIds(workplaceId, journalIds),
+          ]);
           const balancesMapByAccountId = new Map(allBalances.map(b => [b.accountId, b.balance]));
+          const accountById = new Map(mapped.liquidAssets.map(account => [account.id, account]));
+          const journalById = new Map(journals.map(journal => [journal.id, journal]));
+          const rawDeltas: DailyDelta[] = [];
+          let hasUnvaluedEntries = false;
+
+          for (const transaction of transactions) {
+            const account = accountById.get(transaction.accountId);
+            const journal = journalById.get(transaction.journalId);
+            if (!account || !journal) {
+              hasUnvaluedEntries = true;
+              logger.warn('[SafeToSpendInputAcquisition] Skipping history line without context', {
+                transactionId: transaction.id,
+                journalId: transaction.journalId,
+              });
+              continue;
+            }
+            rawDeltas.push({
+              dayStart: dayjs(transaction.transactionDate).startOf('day').valueOf(),
+              currencyCode: transaction.currencyCode,
+              accountType: account.accountType,
+              delta: effect(account.accountType, transaction.transactionType).delta(
+                transaction.amount,
+              ),
+              journalCurrencyCode: journal.currencyCode,
+              journalDate: journal.journalDate,
+              exchangeRate: transaction.exchangeRate,
+            });
+          }
 
           const startingBalances = new Map<AccountId, number>();
-          let totalLiquidAssetsAmount = 0;
+          const convertedAssetBalances = await Promise.all(
+            mapped.liquidAssets.map(async account => {
+              const balance = balancesMapByAccountId.get(account.id) || 0;
+              startingBalances.set(account.id, balance);
 
-          for (const a of mapped.liquidAssets) {
-            const balance = balancesMapByAccountId.get(a.id) || 0;
-            totalLiquidAssetsAmount += balance;
-            startingBalances.set(a.id, balance);
-          }
+              const fromCurrency = account.currencyCode || mapped.defaultCurrencyCode;
+              if (balance === 0 || fromCurrency === mapped.defaultCurrencyCode) return balance;
+
+              const converted = await convertAmount({
+                amount: balance,
+                fromCurrency,
+                toCurrency: mapped.defaultCurrencyCode,
+                mode: 'spot',
+                precision: getCurrencyPrecision(mapped.defaultCurrencyCode),
+              });
+              if (!converted.ok) {
+                hasUnvaluedEntries = true;
+                logger.warn('[SafeToSpendInputAcquisition] Liquid asset spot rate unavailable', {
+                  accountId: account.id,
+                  fromCurrency,
+                  toCurrency: mapped.defaultCurrencyCode,
+                });
+                return null;
+              }
+              return converted.amount;
+            }),
+          );
+          const totalLiquidAssetsAmount = roundToPrecision(
+            convertedAssetBalances.reduce<number>((total, balance) => total + (balance ?? 0), 0),
+            getCurrencyPrecision(mapped.defaultCurrencyCode),
+          );
 
           const liabilityAccountBalances = mapped.liquidLiabilities.map(l => {
             const balance = Math.abs(balancesMapByAccountId.get(l.id) || 0);
@@ -228,7 +291,8 @@ export function observeSafeToSpendInputSnapshot(
             plannedPayments: mapped.plannedPayments,
             plannedJournals: mapped.plannedJournals,
             usages,
-            rawDeltas: rawDeltas || [],
+            rawDeltas,
+            hasUnvaluedEntries,
             startingBalances,
             totalLiquidAssetsAmount,
             liabilityAccountBalances,

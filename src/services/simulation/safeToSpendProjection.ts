@@ -8,6 +8,7 @@ import {
   type SafeToSpendDashboard,
 } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import type { SafeToSpendInputSnapshot } from '@/src/services/simulation/safeToSpendInputAcquisition';
+import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { Money } from '@/src/utils/money';
 import { startTrace } from '@/src/utils/TraceService';
 
@@ -30,6 +31,7 @@ export async function projectSafeToSpendDashboardFromSnapshot(
     budgets,
     usages,
     rawDeltas,
+    hasUnvaluedEntries: acquisitionHasUnvaluedEntries,
     startingBalances,
     totalLiquidAssetsAmount,
     liabilityAccountBalances,
@@ -55,13 +57,14 @@ export async function projectSafeToSpendDashboardFromSnapshot(
 
   trace.metric('simulation_complete');
 
-  const netCashFlowByDay = await buildNetCashFlowByDay(rawDeltas, defaultCurrencyCode);
+  const history = await buildNetCashFlowByDay(rawDeltas, defaultCurrencyCode);
 
   const historyPoints = buildSafeToSpendHistoryPoints({
     startOfToday,
     safeToSpendDays,
     totalLiquidAssets: totalLiquidMoney.amount,
-    netCashFlowByDay,
+    netCashFlowByDay: history.netCashFlowByDay,
+    precision: getCurrencyPrecision(defaultCurrencyCode),
   });
 
   const projectionPoints = mapSimulationToProjectionPoints(runResult);
@@ -84,5 +87,10 @@ export async function projectSafeToSpendDashboardFromSnapshot(
     historyPoints,
     projectionPoints,
     safeDaysCount,
+    hasUnvaluedEntries:
+      acquisitionHasUnvaluedEntries ||
+      runResult.hasUnvaluedEntries === true ||
+      history.hasUnvaluedEntries ||
+      usages.some(usage => usage.hasUnvaluedEntries),
   });
 }

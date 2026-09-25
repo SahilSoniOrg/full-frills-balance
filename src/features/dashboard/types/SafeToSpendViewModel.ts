@@ -52,6 +52,7 @@ export interface SafeToSpendViewModel {
   // Flags
   isOverCommitted: boolean;
   isPositiveSafeToSpend: boolean;
+  hasUnvaluedEntries?: boolean;
   isLoading: boolean;
   safeToSpendDays: number;
 

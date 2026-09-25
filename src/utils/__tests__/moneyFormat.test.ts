@@ -32,6 +32,10 @@ describe('formatStsAmount / formatMoneyAmount', () => {
     expect(formatMoneyAmount(100, 'USD', false, { style: 'sts', loading: false })).toBe('$100');
   });
 
+  it('preserves cents for exact Safe-to-Spend balance breakdowns', () => {
+    expect(formatMoneyAmount(11.37, 'USD', false)).toBe('$11.37');
+  });
+
   it('prepends prefix when not in privacy mode', () => {
     expect(formatMoneyAmount(100, 'USD', false, { prefix: '+' })).toBe('+$100.00');
   });

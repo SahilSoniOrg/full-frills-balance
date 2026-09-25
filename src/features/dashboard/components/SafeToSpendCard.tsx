@@ -1,4 +1,5 @@
-import { AppSurface } from '@/src/components/core';
+import { AppSurface, AppText } from '@/src/components/core';
+import { AppConfig } from '@/src/constants';
 import type { SafeToSpendProjection } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 import { SafeToSpendBreakdownBar } from './SafeToSpendBreakdownBar';
@@ -97,6 +98,13 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     >
       <SafeToSpendCardLayout
         summary={header}
+        warning={
+          viewModel.hasUnvaluedEntries ? (
+            <AppText variant="caption" color="warning">
+              {AppConfig.strings.dashboard.safeToSpendUi.incompleteFxWarning}
+            </AppText>
+          ) : null
+        }
         breakdown={breakdown}
         metrics={metrics}
         chart={chart}

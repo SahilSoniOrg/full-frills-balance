@@ -111,6 +111,7 @@ export class CashFlowSimulationService {
 
     const rateMap = new Map<string, number>();
     rateMap.set(resultCurrency, 1);
+    let hasUnvaluedEntries = false;
     await Promise.all(
       Array.from(baseCurrencies).map(async from => {
         if (from === resultCurrency) {
@@ -122,6 +123,7 @@ export class CashFlowSimulationService {
           fromCurrency: from,
           toCurrency: resultCurrency,
           mode: 'spot',
+          precision: 12,
         });
         if (converted.ok) {
           rateMap.set(from, converted.amount);
@@ -138,6 +140,7 @@ export class CashFlowSimulationService {
       if (fromCurrency === resultCurrency) return amount;
       const rate = rateMap.get(fromCurrency);
       if (rate === undefined) {
+        if (amount !== 0) hasUnvaluedEntries = true;
         logger.warn(
           `[CashFlowSimulationService] Skipping amount in ${fromCurrency} (no FX rate to ${resultCurrency})`,
         );
@@ -147,7 +150,7 @@ export class CashFlowSimulationService {
     };
 
     // Normalize and Fetch remaining dependent data in parallel
-    const [{ statementBalances, settledSinceStatement }, budgetCategoryMap] = await Promise.all([
+    const [statementValues, budgetCategoryMap] = await Promise.all([
       fetchStatementValues(
         liabilityAccountBalances,
         metadataMap,
@@ -158,6 +161,8 @@ export class CashFlowSimulationService {
       ),
       fetchBudgetCategoryMap(budgets, allAccounts, workplaceId),
     ]);
+    const { statementBalances, settledSinceStatement } = statementValues;
+    hasUnvaluedEntries ||= statementValues.hasUnvaluedEntries;
 
     // Currency Normalization using explicit mapping (avoiding class spread).
     // Preserve period fields so BudgetFlowGenerator can burn DAILY/WEEKLY/etc.
@@ -330,6 +335,7 @@ export class CashFlowSimulationService {
       liquidAccountIdsSet,
       liabilityAccountBalances,
       accountMap,
+      ...(hasUnvaluedEntries ? { hasUnvaluedEntries: true } : {}),
     };
 
     trace?.metric('total_duration');

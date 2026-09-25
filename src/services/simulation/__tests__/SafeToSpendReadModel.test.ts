@@ -14,6 +14,7 @@ import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { convertAmount } from '@/src/services/currencyConversion';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import {
   reactiveCacheCoordinator,
@@ -33,6 +34,10 @@ jest.mock('@/src/data/repositories/WorkplaceRepository');
 jest.mock('@/src/services/exchange-rate-service');
 jest.mock('@/src/services/currencyConversion', () => ({
   convertAmount: jest.fn(async ({ amount }: { amount: number }) => ({ ok: true, amount })),
+  convertJournalLineAmount: jest.fn(async ({ amount }: { amount: number }) => ({
+    ok: true,
+    amount,
+  })),
 }));
 jest.mock('@/src/services/budget/budgetReadService');
 jest.mock('@/src/services/balance/balanceReadService', () => ({
@@ -120,6 +125,108 @@ describe('SafeToSpendReadModel', () => {
   });
 
   describe('forWorkplace().watch()', () => {
+    it('values foreign liquid asset balances at the current spot rate', done => {
+      const euroWallet = {
+        id: 'euro-wallet',
+        accountType: AccountType.ASSET,
+        accountSubtype: AccountSubtype.CASH,
+        currencyCode: 'EUR',
+      };
+      (accountObserveQueries.observeByType as jest.Mock).mockImplementation((_workplaceId, type) =>
+        type === AccountType.ASSET ? of([euroWallet]) : of([]),
+      );
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of([euroWallet]));
+      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([
+        { accountId: euroWallet.id, balance: 10, currencyCode: 'EUR' },
+      ]);
+      (convertAmount as jest.Mock).mockImplementation(
+        async ({ amount, fromCurrency, toCurrency, mode }) =>
+          fromCurrency === 'EUR' && toCurrency === 'USD' && mode === 'spot'
+            ? { ok: true, amount: amount * 1.137 }
+            : { ok: true, amount },
+      );
+      (cashFlowSimulationService.simulate as jest.Mock).mockResolvedValue({
+        ...emptySimResult,
+        report: {
+          ...emptySimResult.report,
+          allFlows: [],
+          liabilities: {
+            total: 0,
+            totalCreditCard: 0,
+            totalOther: 0,
+            committed: 0,
+            committedCreditCard: 0,
+            committedOther: 0,
+          },
+        },
+      });
+
+      safeToSpendReadModel
+        .forWorkplace('test-wp' as WorkplaceId)
+        .watch()
+        .subscribe(result => {
+          expect(convertAmount).toHaveBeenCalledWith(
+            expect.objectContaining({
+              amount: 10,
+              fromCurrency: 'EUR',
+              toCurrency: 'USD',
+              mode: 'spot',
+            }),
+          );
+          expect(result.totalLiquidAssets).toBe(11.37);
+          done();
+        });
+    });
+
+    it('does not label an unvalued foreign balance as workplace currency', done => {
+      const usdWallet = {
+        id: 'usd-wallet',
+        accountType: AccountType.ASSET,
+        accountSubtype: AccountSubtype.CASH,
+        currencyCode: 'USD',
+      };
+      const euroWallet = {
+        id: 'euro-wallet',
+        accountType: AccountType.ASSET,
+        accountSubtype: AccountSubtype.CASH,
+        currencyCode: 'EUR',
+      };
+      const assets = [usdWallet, euroWallet];
+      (accountObserveQueries.observeByType as jest.Mock).mockImplementation((_workplaceId, type) =>
+        type === AccountType.ASSET ? of(assets) : of([]),
+      );
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(assets));
+      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([
+        { accountId: usdWallet.id, balance: 5, currencyCode: 'USD' },
+        { accountId: euroWallet.id, balance: 10, currencyCode: 'EUR' },
+      ]);
+      (convertAmount as jest.Mock).mockResolvedValue({ ok: false, reason: 'missing_rate' });
+      (cashFlowSimulationService.simulate as jest.Mock).mockResolvedValue({
+        ...emptySimResult,
+        report: {
+          ...emptySimResult.report,
+          allFlows: [],
+          liabilities: {
+            total: 0,
+            totalCreditCard: 0,
+            totalOther: 0,
+            committed: 0,
+            committedCreditCard: 0,
+            committedOther: 0,
+          },
+        },
+      });
+
+      safeToSpendReadModel
+        .forWorkplace('test-wp' as WorkplaceId)
+        .watch()
+        .subscribe(result => {
+          expect(result.totalLiquidAssets).toBe(5);
+          expect(result.hasUnvaluedEntries).toBe(true);
+          done();
+        });
+    });
+
     it('should calculate safe to spend using only liquid assets and liquid liabilities', done => {
       const mockAssets = [
         { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },

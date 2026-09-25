@@ -10,8 +10,12 @@ import {
   SimulationRunResult,
 } from '@/src/services/simulation/types';
 import { LIQUID_ASSET_SUBTYPES } from '@/src/utils/accountSubtypeUtils';
-import { convertAmount } from '@/src/services/currencyConversion';
+import { AppConfig } from '@/src/constants/app-config';
+import { convertJournalLineAmount } from '@/src/services/currencyConversion';
+import { runTasksWithBoundedConcurrency } from '@/src/utils/asyncConcurrency';
 import { logger } from '@/src/utils/logger';
+import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
+import { roundToPrecision } from '@/src/utils/money';
 import dayjs, { Dayjs } from 'dayjs';
 
 export interface SafeToSpendDataPoint {
@@ -52,36 +56,69 @@ export interface SafeToSpendDashboard {
   projection: SafeToSpendProjection;
   accountMap: Map<string, AccountFields>;
   safeToSpendDays: number;
+  /** True when a budget or history line could not be valued. */
+  hasUnvaluedEntries?: boolean;
 }
 
 export async function buildNetCashFlowByDay(
   deltas: DailyDelta[],
   defaultCurrencyCode: string,
-): Promise<Map<number, number>> {
+): Promise<{ netCashFlowByDay: Map<number, number>; hasUnvaluedEntries: boolean }> {
   const netCashFlowByDay = new Map<number, number>();
-  for (const delta of deltas) {
-    let amount = delta.delta;
-    if (delta.currencyCode !== defaultCurrencyCode) {
-      const converted = await convertAmount({
-        amount: delta.delta,
-        fromCurrency: delta.currencyCode,
-        toCurrency: defaultCurrencyCode,
-        mode: 'historical',
-      });
-      if (!converted.ok) {
-        logger.warn('FX unavailable for Safe-to-Spend history delta', {
+  const convertedDeltas: ({ dayStart: number; amount: number } | null)[] = new Array(
+    deltas.length,
+  ).fill(null);
+  const unvaluedEntries = new Array<boolean>(deltas.length).fill(false);
+
+  await runTasksWithBoundedConcurrency(
+    deltas,
+    AppConfig.performance.maxConcurrentOperations,
+    async (delta, index) => {
+      if (!delta.journalCurrencyCode || delta.journalDate === undefined) {
+        unvaluedEntries[index] = true;
+        logger.warn('Journal FX context unavailable for Safe-to-Spend history delta', {
           from: delta.currencyCode,
           to: defaultCurrencyCode,
           dayStart: delta.dayStart,
         });
-        continue;
+        return;
       }
-      amount = converted.amount;
-    }
-    const localDayStart = dayjs(delta.dayStart).startOf('day').valueOf();
-    netCashFlowByDay.set(localDayStart, (netCashFlowByDay.get(localDayStart) || 0) + amount);
+
+      const converted = await convertJournalLineAmount({
+        amount: delta.delta,
+        lineCurrency: delta.currencyCode,
+        journalCurrency: delta.journalCurrencyCode,
+        targetCurrency: defaultCurrencyCode,
+        storedLineRate: delta.exchangeRate ?? undefined,
+        journalDate: delta.journalDate,
+      });
+      if (!converted.ok) {
+        unvaluedEntries[index] = true;
+        logger.warn('FX unavailable for Safe-to-Spend history delta', {
+          from: converted.missingRate.fromCurrency,
+          to: converted.missingRate.toCurrency,
+          journalDate: delta.journalDate,
+          dayStart: delta.dayStart,
+        });
+        return;
+      }
+
+      convertedDeltas[index] = { dayStart: delta.dayStart, amount: converted.amount };
+    },
+  );
+
+  for (const converted of convertedDeltas) {
+    if (!converted) continue;
+    const localDayStart = dayjs(converted.dayStart).startOf('day').valueOf();
+    netCashFlowByDay.set(
+      localDayStart,
+      roundToPrecision(
+        (netCashFlowByDay.get(localDayStart) || 0) + converted.amount,
+        getCurrencyPrecision(defaultCurrencyCode),
+      ),
+    );
   }
-  return netCashFlowByDay;
+  return { netCashFlowByDay, hasUnvaluedEntries: unvaluedEntries.some(Boolean) };
 }
 
 export function buildSafeToSpendHistoryPoints(input: {
@@ -89,13 +126,17 @@ export function buildSafeToSpendHistoryPoints(input: {
   safeToSpendDays: number;
   totalLiquidAssets: number;
   netCashFlowByDay: Map<number, number>;
+  precision?: number;
 }): SafeToSpendDataPoint[] {
   const historyPoints: SafeToSpendDataPoint[] = [];
   let runningBalance = input.totalLiquidAssets;
   for (let i = 0; i < input.safeToSpendDays; i++) {
     const targetDay = input.startOfToday.subtract(i, 'day').valueOf();
     const flowThatDay = input.netCashFlowByDay.get(targetDay) || 0;
-    runningBalance -= flowThatDay;
+    runningBalance = roundToPrecision(
+      runningBalance - flowThatDay,
+      input.precision ?? AppConfig.constants.precision,
+    );
     historyPoints.push({
       timestamp: targetDay - 1000,
       value: runningBalance,
@@ -159,6 +200,7 @@ export function assembleSafeToSpendDashboard(input: {
   historyPoints: SafeToSpendDataPoint[];
   projectionPoints: SafeToSpendDataPoint[];
   safeDaysCount: number | null;
+  hasUnvaluedEntries?: boolean;
 }): SafeToSpendDashboard {
   const {
     runResult,
@@ -168,6 +210,7 @@ export function assembleSafeToSpendDashboard(input: {
     historyPoints,
     projectionPoints,
     safeDaysCount,
+    hasUnvaluedEntries = false,
   } = input;
 
   return {
@@ -192,6 +235,7 @@ export function assembleSafeToSpendDashboard(input: {
     },
     accountMap: runResult.accountMap,
     safeToSpendDays,
+    ...(hasUnvaluedEntries ? { hasUnvaluedEntries: true } : {}),
   };
 }
 

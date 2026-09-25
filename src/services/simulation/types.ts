@@ -207,6 +207,8 @@ export interface SimulationRunResult {
   liquidAccountIdsSet: Set<string>;
   liabilityAccountBalances: { account: AccountFields; balance: number }[];
   accountMap: Map<string, AccountFields>;
+  /** True if a forecast input could not be converted into the simulation currency. */
+  hasUnvaluedEntries?: boolean;
 }
 
 // --- UI / Presentation Types ---

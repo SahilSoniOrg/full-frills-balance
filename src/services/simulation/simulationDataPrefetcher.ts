@@ -42,9 +42,14 @@ export async function fetchStatementValues(
   toCurrency: string,
   rateMap: Map<string, number>,
   workplaceId: WorkplaceId,
-): Promise<{ statementBalances: Map<string, number>; settledSinceStatement: Map<string, number> }> {
+): Promise<{
+  statementBalances: Map<string, number>;
+  settledSinceStatement: Map<string, number>;
+  hasUnvaluedEntries: boolean;
+}> {
   const balances = new Map<string, number>();
   const settledAmounts = new Map<string, number>();
+  let hasUnvaluedEntries = false;
 
   const convert = (amount: number, from: string) => {
     const fromCurrency = from || toCurrency;
@@ -53,6 +58,7 @@ export async function fetchStatementValues(
     }
     const rate = rateMap.get(fromCurrency);
     if (rate === undefined) {
+      if (amount !== 0) hasUnvaluedEntries = true;
       logger.warn(
         `[SimulationDataPrefetcher] Skipping statement value in ${fromCurrency} (no FX rate to ${toCurrency})`,
       );
@@ -116,7 +122,11 @@ export async function fetchStatementValues(
       }
     }),
   );
-  return { statementBalances: balances, settledSinceStatement: settledAmounts };
+  return {
+    statementBalances: balances,
+    settledSinceStatement: settledAmounts,
+    hasUnvaluedEntries,
+  };
 }
 
 export async function fetchJournalTransactions(

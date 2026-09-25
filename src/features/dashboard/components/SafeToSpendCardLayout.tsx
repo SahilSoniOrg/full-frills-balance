@@ -9,6 +9,7 @@ interface SafeToSpendCardLayoutProps {
   breakdown: React.ReactNode;
   metrics: React.ReactNode;
   chart: React.ReactNode;
+  warning?: React.ReactNode;
 }
 
 export function SafeToSpendCardLayout({
@@ -16,6 +17,7 @@ export function SafeToSpendCardLayout({
   breakdown,
   metrics,
   chart,
+  warning,
 }: SafeToSpendCardLayoutProps) {
   const [contentWidth, setContentWidth] = useState(0);
   const useTwoColumns = Boolean(chart) && contentWidth >= TWO_COLUMN_MIN_WIDTH;
@@ -36,6 +38,7 @@ export function SafeToSpendCardLayout({
               <View style={{ flex: 2, minWidth: 0 }}>
                 <Column gap="lg">
                   {summary}
+                  {warning}
                   {breakdown}
                 </Column>
               </View>
@@ -48,6 +51,7 @@ export function SafeToSpendCardLayout({
         <View testID="safe-to-spend-card-layout-stacked">
           <Column gap="lg">
             {summary}
+            {warning}
             {breakdown}
             {metrics}
             {chart ? (
