@@ -1,20 +1,18 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Icon, AppIcon, AppText } from '@/src/components/core';
-import { AppConfig, Spacing, Shape, Size } from '@/src/constants';
+import { Spacing, Shape, Size } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { BulkJournalRow, BulkJournalRowActions } from '../types/bulkJournal';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { AccountRole } from '@/src/types/domainJournal';
 import type { CreateAccountIntent } from '@/src/components/account-selection';
+import { EntryInlineError } from './EntryInlineError';
 import { EntryTransactionCard } from './EntryTransactionCard';
 import type { ExpansionPosition } from './AccountPickerPanel';
 import { getBulkJournalRowError } from '../hooks/bulkJournalHelpers';
 import { resolveBulkRowFxPair } from '../hooks/useBulkJournalEditor';
-import {
-  buildSimpleFormAccountSections,
-  type SimpleFormSectionConfig,
-} from '@/src/services/journal/simpleJournalHelpers';
+import { buildSimpleFormAccountSections } from '@/src/services/journal/simpleJournalHelpers';
 import { filterToLeafAccounts } from '@/src/services/journal/guidedJournalAccountEligibility';
 import { resolveSimpleTypeAccentColor } from '../journalEntryPresentation';
 import { useJournalSuggestions } from '@/src/features/journal/hooks/useJournalSuggestions';
@@ -61,14 +59,6 @@ export const BulkEntryRow = React.memo(
       row.description,
       row.transactionType,
     );
-    const sourceAccount = useMemo(
-      () => accounts.find(a => a.id === row.sourceId),
-      [accounts, row.sourceId],
-    );
-    const destAccount = useMemo(
-      () => accounts.find(a => a.id === row.destinationId),
-      [accounts, row.destinationId],
-    );
     const leafAccounts = useMemo(() => filterToLeafAccounts(accounts), [accounts]);
     const accountSections = useMemo(
       () =>
@@ -80,14 +70,6 @@ export const BulkEntryRow = React.memo(
         }),
       [accounts, leafAccounts, row.destinationId, row.sourceId, row.transactionType],
     );
-    const sourceSection = accountSections.find(
-      (section: SimpleFormSectionConfig) => section.role === 'source',
-    );
-    const destinationSection = accountSections.find(
-      (section: SimpleFormSectionConfig) => section.role === 'destination',
-    );
-
-    const sourceCurrency = sourceAccount?.currencyCode;
     const fxPair = useMemo(
       () => resolveBulkRowFxPair(row, accounts, workplaceCurrency),
       [accounts, row, workplaceCurrency],
@@ -99,12 +81,50 @@ export const BulkEntryRow = React.memo(
     const updateRowDateTime = (date: string, time: string) => {
       rowActions.setJournalDate(row.id, dayjs(`${date}T${time}`).valueOf());
     };
-    const destinationLabel =
-      destinationSection?.title ?? AppConfig.strings.transactionFlow.simpleEntry.toAccount;
-
     return (
       <View style={[styles.container, { borderColor: rowError ? theme.error : theme.border }]}>
         <EntryTransactionCard
+          density="compact"
+          type={row.transactionType}
+          onChangeType={type => rowActions.setTransactionType(row.id, type)}
+          accentColor={resolveSimpleTypeAccentColor(row.transactionType, theme)}
+          amount={row.amount}
+          onChangeAmount={value => rowActions.setAmount(row.id, value)}
+          amountTestID={`bulk-amount-${row.id}`}
+          pair={fxPair}
+          onManualBaseRateChange={(role, value) =>
+            rowActions.setManualBaseRate(row.id, role, value)
+          }
+          onConvertedAmountChange={value => {
+            const nextAmount = Number.parseFloat(value);
+            if (Number.isFinite(nextAmount) && nextAmount > 0) {
+              rowActions.setConvertedAmount(row.id, nextAmount);
+            }
+          }}
+          onResetToApiRate={() => onRefreshRate(row.id)}
+          fxTestIDPrefix={`bulk-${row.id}`}
+          accountSections={accountSections}
+          accounts={accounts}
+          sourceId={row.sourceId}
+          destinationId={row.destinationId}
+          expansionPosition={accountExpansion}
+          onToggleExpansion={side => onToggleAccountExpansion(row.id, side)}
+          onSelectSource={id => {
+            rowActions.setSourceAccount(row.id, id);
+            onToggleAccountExpansion(row.id, 'left');
+          }}
+          onSelectDestination={id => {
+            rowActions.setDestinationAccount(row.id, id);
+            onToggleAccountExpansion(row.id, 'right');
+          }}
+          onSwapAccounts={() => onSwapAccounts(row.id)}
+          onCreateAccountRequest={
+            onCreateAccountRequest
+              ? (role, intent) => onCreateAccountRequest(row.id, role, intent)
+              : undefined
+          }
+          lazyDropdown
+          accountTestIDPrefix={`bulk-route-${row.id}`}
           meta={{
             description: row.description,
             setDescription: value => {
@@ -150,79 +170,13 @@ export const BulkEntryRow = React.memo(
             descriptionTestID: `bulk-description-${row.id}`,
             descriptionClearTestID: `bulk-clear-description-${row.id}`,
           }}
-          typeSwitcher={{
-            value: row.transactionType,
-            onChange: type => rowActions.setTransactionType(row.id, type),
-            accentColor: resolveSimpleTypeAccentColor(row.transactionType, theme),
-          }}
-          amount={{
-            variant: 'compact',
-            amount: row.amount,
-            currency: sourceCurrency || '',
-            onChangeText: value => rowActions.setAmount(row.id, value),
-            testID: `bulk-amount-${row.id}`,
-          }}
-          exchangeRate={{
-            pair: fxPair,
-            destLabel: destinationLabel,
-            onManualBaseRateChange: (role, value) =>
-              rowActions.setManualBaseRate(row.id, role, value),
-            onConvertedAmountChange: value => {
-              const nextAmount = Number.parseFloat(value);
-              if (Number.isFinite(nextAmount) && nextAmount > 0) {
-                rowActions.setConvertedAmount(row.id, nextAmount);
-              }
-            },
-            onResetToApiRate: () => onRefreshRate(row.id),
-            testIDPrefix: `bulk-${row.id}`,
-          }}
-          accountSections={{
-            expansionPosition: accountExpansion,
-            onToggleExpansion: side => onToggleAccountExpansion(row.id, side),
-            sourceLabel:
-              sourceSection?.title ?? AppConfig.strings.transactionFlow.simpleEntry.fromAccount,
-            sourceAccount,
-            sourceAccounts: sourceSection?.accounts ?? [],
-            onSelectSource: id => {
-              rowActions.setSourceAccount(row.id, id);
-              onToggleAccountExpansion(row.id, 'left');
-            },
-            sourceEmptyPrompt: AppConfig.strings.transactionFlow.simpleEntry.chooseAccount,
-            destLabel:
-              destinationSection?.title ?? AppConfig.strings.transactionFlow.simpleEntry.toAccount,
-            destAccount,
-            destAccounts: destinationSection?.accounts ?? [],
-            onSelectDestination: id => {
-              rowActions.setDestinationAccount(row.id, id);
-              onToggleAccountExpansion(row.id, 'right');
-            },
-            destEmptyPrompt:
-              row.transactionType === 'expense'
-                ? AppConfig.strings.transactionFlow.simpleEntry.chooseCategory
-                : AppConfig.strings.transactionFlow.simpleEntry.chooseAccount,
-            type: row.transactionType,
-            onSwapAccounts: () => onSwapAccounts(row.id),
-            onCreateAccountRequest: onCreateAccountRequest
-              ? (role, intent) => onCreateAccountRequest(row.id, role, intent)
-              : undefined,
-            allAccounts: accounts,
-            lazyDropdown: true,
-            testIDPrefix: `bulk-route-${row.id}`,
-          }}
           metaContainerStyle={styles.metaCardEmbedded}
           exchangeRateContainerStyle={styles.fxCardEmbedded}
           accountSectionsContainerStyle={styles.accountSelector}
         />
 
         {/* Validation error — shown below all content */}
-        {rowError && (
-          <View style={[styles.errorBar, { backgroundColor: theme.error + '12' }]}>
-            <AppIcon name={Icon.Error} size={Size.iconXs} color={theme.error} />
-            <AppText variant="caption" color="error" weight="semibold" style={styles.errorText}>
-              {rowError}
-            </AppText>
-          </View>
-        )}
+        {rowError ? <EntryInlineError message={rowError} /> : null}
       </View>
     );
   },
@@ -263,17 +217,5 @@ const styles = StyleSheet.create({
     marginHorizontal: 0,
     marginTop: 0,
     alignSelf: 'stretch',
-  },
-  errorBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs + 2,
-    marginTop: Spacing.sm,
-    paddingVertical: Spacing.xs + 2,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: Shape.radius.r2,
-  },
-  errorText: {
-    flex: 1,
   },
 });

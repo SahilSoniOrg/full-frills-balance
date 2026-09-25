@@ -1,5 +1,4 @@
 import { type CreateAccountIntent } from '@/src/components/account-selection';
-import { AppConfig } from '@/src/constants';
 import { Size, Spacing } from '@/src/constants/design-tokens';
 import type { FxPair } from '@/src/features/journal/entry/fxPair';
 import { EntryTransactionCard } from './EntryTransactionCard';
@@ -8,7 +7,7 @@ import { useSimpleFormExpansion, type AccountFlowHandle } from './useSimpleFormE
 import { AccountRole, TabType } from '@/src/types/domainJournal';
 import { AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
-import React, { type RefObject, useEffect, useMemo } from 'react';
+import React, { type RefObject, useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
@@ -75,30 +74,8 @@ export const SimpleForm = React.memo(function SimpleForm({
   onCalculatorDone,
   accountFlowRef,
 }: SimpleFormProps) {
-  const accountsMap = useMemo(
-    () => new Map<string, AccountFields>(accounts.map(a => [a.id, a])),
-    [accounts],
-  );
-
-  const sourceAccount = useMemo(
-    () => (sourceId ? accountsMap.get(sourceId) : undefined),
-    [accountsMap, sourceId],
-  );
-  const destAccount = useMemo(
-    () => (destinationId ? accountsMap.get(destinationId) : undefined),
-    [accountsMap, destinationId],
-  );
-
-  // Section titles and configs
-  const sourceSection = useMemo(
-    () => accountSections.find(s => s.role === 'source'),
-    [accountSections],
-  );
-  const destSection = useMemo(
-    () => accountSections.find(s => s.role === 'destination'),
-    [accountSections],
-  );
-
+  const sourceSection = accountSections.find(section => section.role === 'source');
+  const destinationSection = accountSections.find(section => section.role === 'destination');
   const {
     expansionPosition,
     handleSelectDestination,
@@ -111,7 +88,7 @@ export const SimpleForm = React.memo(function SimpleForm({
     destinationId,
     autopilotFirstRole,
     onSelectSource: id => sourceSection?.onSelect(id),
-    onSelectDestination: id => destSection?.onSelect(id),
+    onSelectDestination: id => destinationSection?.onSelect(id),
   });
 
   useEffect(() => {
@@ -121,12 +98,6 @@ export const SimpleForm = React.memo(function SimpleForm({
       accountFlowRef.current = null;
     };
   }, [accountFlowRef, startAutopilotAccountFlow]);
-
-  // Node Labels: Left is Source, Right is Destination
-  const sourceLabel =
-    sourceSection?.title || AppConfig.strings.transactionFlow.simpleEntry.sourceAccount;
-  const destLabel =
-    destSection?.title || AppConfig.strings.transactionFlow.simpleEntry.destinationAccount;
 
   return (
     <ScrollView
@@ -138,42 +109,31 @@ export const SimpleForm = React.memo(function SimpleForm({
       testID="simple-entry-scroll-view"
     >
       <EntryTransactionCard
+        density="hero"
         meta={meta}
-        typeSwitcher={{ value: type, onChange: setType, accentColor }}
-        amount={{
-          variant: 'hero',
-          amount,
-          setAmount,
-          currency,
-          accentColor,
-          precision,
-          autoOpenCalculator,
-          onCalculatorDone,
-        }}
-        exchangeRate={{
-          pair: fxPair,
-          destLabel,
-          onManualBaseRateChange: setManualBaseRate,
-          onConvertedAmountChange: setConvertedAmount,
-          onResetToApiRate: resetToApiRate,
-          precision,
-        }}
-        accountSections={{
-          expansionPosition,
-          onToggleExpansion: handleToggleExpansion,
-          sourceLabel,
-          sourceAccount,
-          sourceAccounts: sourceSection?.accounts ?? [],
-          onSelectSource: handleSelectSource,
-          destLabel,
-          destAccount,
-          destAccounts: destSection?.accounts ?? [],
-          onSelectDestination: handleSelectDestination,
-          type,
-          onSwapAccounts,
-          allAccounts: accounts,
-          onCreateAccountRequest,
-        }}
+        type={type}
+        onChangeType={setType}
+        accentColor={accentColor}
+        amount={amount}
+        onChangeAmount={setAmount}
+        currency={currency}
+        precision={precision}
+        autoOpenCalculator={autoOpenCalculator}
+        onCalculatorDone={onCalculatorDone}
+        pair={fxPair}
+        onManualBaseRateChange={setManualBaseRate}
+        onConvertedAmountChange={setConvertedAmount}
+        onResetToApiRate={resetToApiRate}
+        accountSections={accountSections}
+        accounts={accounts}
+        sourceId={sourceId}
+        destinationId={destinationId}
+        expansionPosition={expansionPosition}
+        onToggleExpansion={handleToggleExpansion}
+        onSelectSource={handleSelectSource}
+        onSelectDestination={handleSelectDestination}
+        onSwapAccounts={onSwapAccounts}
+        onCreateAccountRequest={onCreateAccountRequest}
         exchangeRateContainerStyle={styles.fxCardSpacing}
       />
     </ScrollView>

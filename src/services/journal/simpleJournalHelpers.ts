@@ -130,6 +130,24 @@ export function ensureSelectedAccountVisible(
   return selected ? [selected, ...sectionAccounts] : sectionAccounts;
 }
 
+export function resolveAccountLeg<
+  T extends Pick<SimpleFormSectionConfig, 'title' | 'accounts' | 'role'>,
+>(
+  sections: T[],
+  role: AccountRole,
+  selectedId: AccountId | undefined,
+  accounts: AccountFields[],
+  fallbackTitle: string,
+) {
+  const section = sections.find(candidate => candidate.role === role);
+  return {
+    section,
+    label: section?.title ?? fallbackTitle,
+    account: selectedId ? accounts.find(account => account.id === selectedId) : undefined,
+    accounts: section?.accounts ?? [],
+  };
+}
+
 export function buildSimpleFormAccountSections(
   type: TabType,
   options: {
