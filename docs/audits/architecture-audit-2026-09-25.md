@@ -44,13 +44,13 @@ Each item records one primary refactoring action. Paths and behavior below refle
 
 ### F-01 — P0: Reporting FX uses the wrong rate contract
 
-**Files:** src/services/reports/reportingDeltaEngine.ts:15; src/services/reports-v2/reader/ledgerFactReader.ts:148; src/services/currencyConversion.ts:67; src/services/budget/budgetCalculationHelpers.ts:52; docs/adr/0007-journal-currency-and-balancing-decision-layer.md:53.
+**Files:** src/services/reports/reportingDeltaEngine.ts:15; src/services/reports/reportingPeriodLoader.ts; src/services/reports-v2/reader/ledgerFactReader.ts:148; src/services/currencyConversion.ts:67; src/services/budget/budgetCalculationHelpers.ts:52; src/services/budget/budgetCumulativeChartService.ts; src/features/budget/hooks/useBudgetDetailViewModel.ts; src/data/repositories/transaction/TransactionQueryRepository.ts; src/services/simulation/safeToSpendDashboardProjection.ts; src/services/simulation/safeToSpendInputAcquisition.ts; src/services/simulation/CashFlowSimulationService.ts; src/services/import/historicalExchangeRateBackfill.ts:22; src/services/import/phases/transactionSynthesizer.ts; src/services/import/plugins/ivy-plugin.ts; docs/adr/0007-journal-currency-and-balancing-decision-layer.md:53.
 
-**Problem & entropy risk:** A stored line rate converts line currency to the saved journal currency, but reporting paths can pass it as though it converts directly to the target currency. The v1 report path omits the historical event date, and a generic historical helper can fall back to spot rates. Each new report path can silently invent its own FX interpretation.
+**Problem & entropy risk:** A stored line rate converts line currency to the saved journal currency, but reporting paths can pass it as though it converts directly to the target currency. The v1 report path omits the historical event date, and a generic historical helper can fall back to spot rates. Restore backfill can also seed a line rate against the Workplace default instead of that journal's currency. Each new report or import path can silently invent its own FX interpretation.
 
 **Action:** RELOCATE.
 
-**Proposed architecture:** A journal-aware conversion boundary accepts line currency, journal currency, stored line rate, journal date, and target currency. It applies the stored line-to-journal rate, then converts journal-to-target at the journal date. Historical callers must provide the event date.
+**Proposed architecture:** A journal-aware conversion boundary accepts line currency, journal currency, stored line rate, journal date, and target currency. It applies the stored line-to-journal rate, then converts journal-to-target at the journal date. Historical callers must provide the event date, and import backfill must create a missing line rate against its journal currency.
 
 **Before → after:** Report passes stored line rate directly to target → report requests an explicit two-leg, date-aware journal conversion.
 
@@ -394,12 +394,14 @@ Each item records one primary refactoring action. Paths and behavior below refle
 
 Implemented in source; verification pending:
 
+- **F-01:** Routed v1/v2 reports, budget usage and detail-chart lines, and Safe-to-Spend history through journal currency at the journal date. V1 converts individual postings before aggregation; report, budget, and history totals preserve target-currency precision. Missing historical quotes or journal context are surfaced in report, budget, Safe-to-Spend, and 30-day account cash-flow UI; prior-period budget comparisons show “Incomplete” rather than deriving a result from partial data. Safe-to-Spend also flags forecast inputs that could not be spot-converted. Restore backfill uses each journal's currency; Ivy transfer imports store the journal-per-line rate, and cross-currency imports without a destination amount or quote are skipped with a warning. The report warning is scoped to Overview and Spending, since the incomplete flag does not cover Wealth. The iOS Release simulator build and targeted Detox review pass: Reports and Budget Details show the EUR 10.00 expense as USD 11.00 at its journal-date rate, while the Safe-to-Spend cash line shows -$11.37 at the seeded current spot rate. The updated recording is `artifacts/detox/f01-review/ios-detox-cash-spot.mp4`, with its popup screenshot alongside it. Full unit/Detox suites and large-range performance remain unverified. Legacy imported/direct-writer rates have no provenance marker, so their direction cannot be proven and their rows remain unchanged. V1's per-posting read replaces the grouped SQL path and needs performance measurement on large date ranges.
+- **F-02:** Safe-to-Spend now converts each nonzero liquid-asset balance to workplace currency at the latest available spot quote before summing the displayed cash total. A missing quote excludes that amount and sets the existing unvalued-input flag; cached duplicate quotes are resolved by newest effective date. Targeted tests verify EUR 10.00 at 1.137 becomes USD 11.37 and that unavailable FX is not mislabeled. The separate safe-days sign check still sums native starting balances, so F-02 remains open until that aggregate also uses a converted total.
 - **F-08:** Decode ZIP base64 to bytes before creating web download blobs.
 - **F-11:** Pass the persisted reminder weekday during bootstrap scheduling.
 - **F-22:** Advance Ivy recurrences using the normalized interval value.
 - **F-25:** Match each report chart with its own tooltip callback.
 
-The audit remains **INCOMPLETE** because repository coverage and depth checks are unresolved. These code changes have not been tested or built.
+The audit remains **INCOMPLETE** because repository coverage and depth checks are unresolved. The targeted F-01 simulator flow is the only behavioral verification recorded here; full-suite coverage remains unverified.
 
 ## Refactor Order
 
