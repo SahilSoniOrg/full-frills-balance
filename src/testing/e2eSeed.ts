@@ -202,6 +202,17 @@ async function seedExtraAccounts(workplaceId: WorkplaceId): Promise<void> {
   });
 }
 
+async function seedFxDemoAccounts(workplaceId: WorkplaceId): Promise<void> {
+  await createAccount(workplaceId, {
+    name: 'Euro Wallet',
+    accountType: AccountType.ASSET,
+    currencyCode: 'EUR',
+    initialBalance: 0,
+    icon: Icon.Wallet,
+    workplaceId,
+  });
+}
+
 async function seedSmsReadyData(workplaceId: WorkplaceId): Promise<void> {
   rebuildQueueService.stop();
   const bank = await accountQueryRepository.findByName(workplaceId, 'Bank');
@@ -397,6 +408,10 @@ export async function runE2eSeedProfile(profile: E2eSeedProfile): Promise<Workpl
 
   if (profile === 'planned-payments') {
     await seedExtraAccounts(workplaceId);
+  }
+
+  if (profile === 'fx-demo') {
+    await seedFxDemoAccounts(workplaceId);
   }
 
   if (profile === 'sms-ready') {
