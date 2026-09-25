@@ -9,14 +9,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { withOpacity } from '@/src/utils/color-math';
 import { formatRoundedAmount } from '@/src/utils/money';
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
-import {
-  type StyleProp,
-  StyleSheet,
-  Text,
-  TextInput,
-  type ViewStyle,
-  View,
-} from 'react-native';
+import { type StyleProp, StyleSheet, Text, TextInput, type ViewStyle, View } from 'react-native';
 
 export interface ExchangeRateCardProps {
   pair: FxPair;
@@ -34,6 +27,34 @@ export interface ExchangeRateCardProps {
 }
 
 const RESET_HIT_SLOP = { top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm };
+
+/** Same chrome the attached exchange-rate card uses, without the rate row. */
+export function AttachedRowShell({
+  children,
+  style,
+  testID,
+}: {
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
+}) {
+  const { theme } = useTheme();
+  return (
+    <View
+      testID={testID}
+      style={[
+        styles.attachedCard,
+        {
+          backgroundColor: withOpacity(theme.primary, Opacity.selection),
+          borderColor: withOpacity(theme.primary, Opacity.active),
+        },
+        style,
+      ]}
+    >
+      {children}
+    </View>
+  );
+}
 
 export function ExchangeRateCard({
   pair,
@@ -179,7 +200,7 @@ export function ExchangeRateCard({
 
   if (isAttached) {
     return (
-      <View style={[styles.attachedCard, cardColors, containerStyle]} testID={cardTestID}>
+      <AttachedRowShell style={containerStyle} testID={cardTestID}>
         <View style={styles.attachedHeader}>
           <View style={styles.attachedRateBlock}>{rateSummary}</View>
           <View style={styles.attachedConvertedBlock}>
@@ -191,7 +212,7 @@ export function ExchangeRateCard({
           </View>
         </View>
         {children}
-      </View>
+      </AttachedRowShell>
     );
   }
 

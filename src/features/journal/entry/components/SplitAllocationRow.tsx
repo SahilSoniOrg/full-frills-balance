@@ -1,17 +1,18 @@
 import type { CreateAccountIntent } from '@/src/components/account-selection';
-import { SwipeToRemove } from '@/src/components/core';
+import { AppIcon, AppInput, PressScaleTouchable, SwipeToRemove } from '@/src/components/core';
 import { CompactAmountInput } from '@/src/components/forms/CompactAmountInput';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
-import { Typography } from '@/src/constants/design-tokens';
+import { Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import type { SplitRowFx } from '@/src/features/journal/entry/modes/split/splitJournalState';
 import type { SplitRowState } from '@/src/services/journal/splitJournalHelpers';
 import type { AccountRole } from '@/src/types/domainJournal';
+import { Icon, type IconName } from '@/src/types/domainIcons';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AccountPickerField } from './AccountPickerField';
-import { ExchangeRateCard } from './ExchangeRateCard';
+import { AttachedRowShell, ExchangeRateCard } from './ExchangeRateCard';
 
 export interface SplitAllocationRowProps {
   allAccounts: AccountFields[];
@@ -21,10 +22,20 @@ export interface SplitAllocationRowProps {
   fx: SplitRowFx;
   isExpanded: boolean;
   label: string;
+  /** Defaults to the split allocation row (a destination leg). */
+  role?: AccountRole;
+  /** Prefix for row test IDs. Defaults to the split row ids. */
+  testIDPrefix?: string;
   onChangeAmount: (amount: string) => void;
+  notes?: string;
+  notesPlaceholder?: string;
+  onChangeNotes?: (notes: string) => void;
   onConvertedAmountChange: (amount: string) => void;
   onCreateAccountRequest: (role: AccountRole, intent: CreateAccountIntent) => void;
   onRemove: () => void;
+  onMove?: () => void;
+  moveLabel?: string;
+  moveIcon?: IconName;
   onResetToApiRate: () => void;
   onSelectAccount: (accountId: SplitRowState['accountId']) => void;
   onToggle: () => void;
@@ -44,10 +55,18 @@ export function SplitAllocationRow({
   fx,
   isExpanded,
   label,
+  role = 'destination',
+  testIDPrefix = 'split',
   onChangeAmount,
+  notes,
+  notesPlaceholder,
+  onChangeNotes,
   onConvertedAmountChange,
   onCreateAccountRequest,
   onRemove,
+  onMove,
+  moveLabel,
+  moveIcon = Icon.ArrowDown,
   onResetToApiRate,
   onSelectAccount,
   onToggle,
@@ -79,27 +98,58 @@ export function SplitAllocationRow({
       onCreateAccountRequest={onCreateAccountRequest}
       onSelect={onSelectAccount}
       onToggle={onToggle}
-      role="destination"
-      testIDPrefix={`split-category-picker-${row.id}`}
+      role={role}
+      testIDPrefix={`${testIDPrefix}-category-picker-${row.id}`}
       trailing={
-        <CompactAmountInput
-          value={inputAmount}
-          onChangeText={onChangeAmount}
-          currency={inputCurrency}
-          currencySymbol={CURRENCY_SYMBOLS[inputCurrency] || inputCurrency}
-          precision={inputPrecision}
-          placeholder={formatAmountPlaceholder(inputPrecision)}
-          containerStyle={styles.amountInputContainer}
-          inputStyle={[styles.amountInputText, { color: theme.text }]}
-          testID={`split-amount-input-${row.id}`}
-        />
+        <View style={styles.trailing}>
+          <CompactAmountInput
+            value={inputAmount}
+            onChangeText={onChangeAmount}
+            currency={inputCurrency}
+            currencySymbol={CURRENCY_SYMBOLS[inputCurrency] || inputCurrency}
+            precision={inputPrecision}
+            placeholder={formatAmountPlaceholder(inputPrecision)}
+            containerStyle={styles.amountInputContainer}
+            inputStyle={[styles.amountInputText, { color: theme.text }]}
+            testID={`${testIDPrefix}-amount-input-${row.id}`}
+          />
+          {onMove ? (
+            <PressScaleTouchable
+              onPress={onMove}
+              accessibilityRole="button"
+              accessibilityLabel={moveLabel}
+              style={styles.moveButton}
+              testID={`${testIDPrefix}-move-${row.id}`}
+            >
+              <AppIcon name={moveIcon} size={Size.iconXs} color={theme.textSecondary} />
+            </PressScaleTouchable>
+          ) : null}
+        </View>
       }
     />
   );
 
+  const notesField = onChangeNotes ? (
+    <AppInput
+      value={notes ?? ''}
+      onChangeText={onChangeNotes}
+      placeholder={notesPlaceholder}
+      variant="minimal"
+      containerStyle={styles.notes}
+      inputStyle={styles.notesInput}
+      testID={`${testIDPrefix}-notes-${row.id}`}
+    />
+  ) : null;
+  const rowBody = (
+    <>
+      {accountField}
+      {notesField}
+    </>
+  );
+
   const content = (
     <View
-      testID={`split-allocation-row-${row.id}`}
+      testID={`${testIDPrefix}-allocation-row-${row.id}`}
       accessibilityActions={canRemove ? [{ name: 'delete', label: removeLabel }] : undefined}
       onAccessibilityAction={handleAccessibilityAction}
     >
@@ -110,10 +160,12 @@ export function SplitAllocationRow({
           precision={rowPrecision}
           onConvertedAmountChange={onConvertedAmountChange}
           onResetToApiRate={onResetToApiRate}
-          testIDPrefix={`split-fx-${row.id}`}
+          testIDPrefix={`${testIDPrefix}-fx-${row.id}`}
         >
-          {accountField}
+          {rowBody}
         </ExchangeRateCard>
+      ) : notesField ? (
+        <AttachedRowShell>{rowBody}</AttachedRowShell>
       ) : (
         accountField
       )}
@@ -130,6 +182,19 @@ export function SplitAllocationRow({
 }
 
 const styles = StyleSheet.create({
+  trailing: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  moveButton: {
+    minWidth: Size.buttonSm,
+    minHeight: Size.buttonSm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   categoryPicker: {
     marginHorizontal: 0,
   },
@@ -138,6 +203,15 @@ const styles = StyleSheet.create({
     minWidth: 0,
     width: 0,
     alignSelf: 'stretch',
+  },
+  notes: {
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.xs,
+  },
+  notesInput: {
+    minHeight: 0,
+    paddingVertical: 2,
+    fontSize: Typography.sizes.sm,
   },
   amountInputText: {
     minWidth: 0,
