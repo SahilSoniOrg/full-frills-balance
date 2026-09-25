@@ -5,7 +5,7 @@ import {
   useAccountPickerList,
   type CreateAccountIntent,
 } from '@/src/components/account-selection';
-import { AppIcon, AppText, Icon } from '@/src/components/core';
+import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Opacity, Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
@@ -17,7 +17,7 @@ import { getSectionColor, resolveAccountAppearance } from '@/src/utils/accountCa
 import { withOpacity } from '@/src/utils/color-math';
 import { MotiView } from 'moti';
 import { useMemo } from 'react';
-import { type LayoutChangeEvent, TouchableOpacity, View } from 'react-native';
+import { type LayoutChangeEvent, View } from 'react-native';
 import { accountPickerStyles as styles } from './AccountPickerPanel.styles';
 
 export interface AccountPickerNodeProps {
@@ -55,10 +55,10 @@ export function AccountPickerNode({
 
   return (
     <View style={styles.nodeWrapper} onLayout={onLayout}>
-      <TouchableOpacity
+      <PressScaleTouchable
         onPress={onPress}
-        activeOpacity={Opacity.medium}
-        style={[
+        style={styles.nodeTouchable}
+        surfaceStyle={[
           styles.nodeButton,
           !showLabel && styles.compactNodeButton,
           isExpanded
@@ -122,7 +122,7 @@ export function AccountPickerNode({
             </AppText>
           )}
         </View>
-      </TouchableOpacity>
+      </PressScaleTouchable>
     </View>
   );
 }
@@ -188,9 +188,9 @@ export function AccountPickerDropdown({
         </AppText>
         <View style={styles.utilityActions}>
           {hasSelectedAccount && (
-            <TouchableOpacity
+            <PressScaleTouchable
               onPress={onClear}
-              style={[
+              surfaceStyle={[
                 styles.clearPillButton,
                 {
                   borderColor: withOpacity(theme.border, Opacity.heavy),
@@ -210,12 +210,12 @@ export function AccountPickerDropdown({
               >
                 Clear
               </AppText>
-            </TouchableOpacity>
+            </PressScaleTouchable>
           )}
           {showArchiveToggle && (
-            <TouchableOpacity
+            <PressScaleTouchable
               onPress={() => setShowArchived(!showArchived)}
-              style={[
+              surfaceStyle={[
                 styles.archivePillButton,
                 {
                   borderColor: showArchived
@@ -252,12 +252,12 @@ export function AccountPickerDropdown({
                   ? AppConfig.strings.accounts.archive.hideArchived
                   : AppConfig.strings.accounts.archive.showArchived}
               </AppText>
-            </TouchableOpacity>
+            </PressScaleTouchable>
           )}
           {onCreateAccountRequest && (
-            <TouchableOpacity
+            <PressScaleTouchable
               onPress={() => onCreateAccountRequest(role, { suggestedName: '' })}
-              style={[
+              surfaceStyle={[
                 styles.headerPlusButton,
                 {
                   borderColor: withOpacity(theme.primary, Opacity.heavy),
@@ -270,7 +270,7 @@ export function AccountPickerDropdown({
               hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
             >
               <AppIcon name={Icon.Plus} size={Size.xs} color={theme.primary} />
-            </TouchableOpacity>
+            </PressScaleTouchable>
           )}
         </View>
       </View>
@@ -295,10 +295,10 @@ export function AccountPickerDropdown({
                 ],
               ]}
             >
-              <TouchableOpacity
-                activeOpacity={Opacity.medium}
+              <PressScaleTouchable
                 onPress={() => toggleSection(section.key)}
-                style={styles.sectionToggle}
+                style={styles.sectionTouchable}
+                surfaceStyle={styles.sectionToggle}
                 accessibilityRole="button"
                 accessibilityLabel={`${section.title}, ${section.data.length} accounts, ${isSectionCollapsed ? 'collapsed' : 'expanded'}`}
               >
@@ -338,7 +338,7 @@ export function AccountPickerDropdown({
                   size={Size.xxs}
                   color={theme.textTertiary}
                 />
-              </TouchableOpacity>
+              </PressScaleTouchable>
 
               {!isSectionCollapsed && (
                 <View style={styles.compactPillGrid}>

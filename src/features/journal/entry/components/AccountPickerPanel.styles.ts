@@ -22,6 +22,7 @@ export const accountPickerStyles = StyleSheet.create({
     zIndex: 2,
   },
   nodeWrapper: { flex: 1, minWidth: 0, width: 0 },
+  nodeTouchable: { width: '100%' },
   nodeButton: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
@@ -124,6 +125,7 @@ export const accountPickerStyles = StyleSheet.create({
     paddingTop: Spacing.sm,
     marginTop: Spacing.none,
   },
+  sectionTouchable: { alignSelf: 'stretch' },
   sectionToggle: {
     flexDirection: 'row',
     justifyContent: 'space-between',
