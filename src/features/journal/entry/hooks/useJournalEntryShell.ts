@@ -155,12 +155,12 @@ export function useJournalEntryShell(): JournalEntryShell {
   const { activeMode, onToggleMode, isSimpleModeDisabled, isSplitModeDisabled } =
     useJournalEntryModeState(editor, seed.editorMode);
 
-  const { batchEditor, batchSummary, onContinueBatch, onDoneBatch } = useBatchJournalSession(
-    workplaceId,
-    workplaceCurrency,
-    accounts,
-    onToggleMode,
-  );
+  const {
+    batchEditor,
+    batchSummary,
+    onContinueBatch,
+    onDoneBatch: clearBatchAfterSave,
+  } = useBatchJournalSession(workplaceId, workplaceCurrency, accounts);
   const { saveAll: saveBatch } = batchEditor;
 
   const draftFingerprint = createJournalDraftFingerprint({
@@ -176,6 +176,10 @@ export function useJournalEntryShell(): JournalEntryShell {
     fingerprint: draftFingerprint,
     baselineReady: !editor.isEdit || editor.loadState === 'loaded',
   });
+  const onDoneBatch = useCallback(() => {
+    clearBatchAfterSave();
+    leaveGuard.leaveAfterSave();
+  }, [clearBatchAfterSave, leaveGuard.leaveAfterSave]);
   useEffect(() => {
     leaveAfterSaveRef.current = leaveGuard.leaveAfterSave;
   }, [leaveGuard.leaveAfterSave]);

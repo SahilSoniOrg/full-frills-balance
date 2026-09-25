@@ -3,13 +3,11 @@ import type { AccountFields } from '@/src/types/plainDtos';
 import type { WorkplaceId } from '@/src/types/ids';
 import type { SavedJournalSummary } from '../types/bulkJournal';
 import { useBulkJournalEditor } from './useBulkJournalEditor';
-import type { JournalEntryScreenMode } from '../journalEntryPresentation';
 
 export function useBatchJournalSession(
   workplaceId: WorkplaceId,
   workplaceCurrency: string,
   accounts: AccountFields[],
-  onToggleMode: (mode: JournalEntryScreenMode) => void,
 ) {
   const [batchSummary, setBatchSummary] = useState<{
     count: number;
@@ -33,7 +31,6 @@ export function useBatchJournalSession(
   const onDoneBatch = useCallback(() => {
     setBatchSummary(null);
     clearRows();
-    onToggleMode('basic');
-  }, [clearRows, onToggleMode]);
+  }, [clearRows]);
   return { batchEditor, batchSummary, onContinueBatch, onDoneBatch };
 }
