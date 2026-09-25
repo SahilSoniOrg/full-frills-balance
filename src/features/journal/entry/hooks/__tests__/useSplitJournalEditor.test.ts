@@ -3,23 +3,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { asAccountId, asTransactionId, type AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
-import type { FxFetchedRates } from '@/src/features/journal/entry/fxPair';
 import { type UseSplitJournalEditorProps, useSplitJournalEditor } from '../useSplitJournalEditor';
 import type { JournalEntryLine } from '@/src/types/domainJournal';
-
-jest.mock('@/src/features/journal/entry/hooks/useCrossCurrencyRates', () => ({
-  currencyPairKey: (source?: string, dest?: string) => `${source ?? ''}>${dest ?? ''}`,
-  useCrossCurrencyRatesMap: jest.fn(() => ({})),
-}));
-
-const mockUseCrossCurrencyRatesMap = jest.requireMock(
-  '@/src/features/journal/entry/hooks/useCrossCurrencyRates',
-).useCrossCurrencyRatesMap as jest.Mock;
-
-beforeEach(() => {
-  mockUseCrossCurrencyRatesMap.mockReset();
-  mockUseCrossCurrencyRatesMap.mockReturnValue({});
-});
 
 jest.mock('@/src/features/journal/hooks/useAccountSelection', () => ({
   useAccountSelection: jest.fn(({ accounts }) => ({
@@ -102,6 +87,7 @@ function createEditor(sourceAccountId = 'cash') {
       lines.splice(0, lines.length, ...next);
     }),
     addLine: jest.fn(),
+    fetchRatesForLines: jest.fn(),
     setIsGuidedMode: jest.fn(),
   };
   return editor;
@@ -279,13 +265,6 @@ describe('useSplitJournalEditor', () => {
   });
 });
 
-const fetched = (sourceBaseRate: number | null, destBaseRate: number | null): FxFetchedRates => ({
-  sourceBaseRate,
-  destBaseRate,
-  isLoading: false,
-  error: null,
-});
-
 const fxAccounts = [
   { id: 'cash-usd', name: 'Cash', accountType: AccountType.ASSET, currencyCode: 'USD' },
   { id: 'cash-inr', name: 'Wallet', accountType: AccountType.ASSET, currencyCode: 'INR' },
@@ -318,6 +297,7 @@ function fxLine(
 
 function renderStatefulSplit(initialLines: JournalEntryLine[], isEdit = false) {
   const updateLinesSpy = jest.fn();
+  const fetchRatesForLines = jest.fn();
   const hook = renderHook(() => {
     const [lines, setLines] = useState(initialLines);
     const updateLine = useCallback((id: string, patch: Partial<JournalEntryLine>) => {
@@ -339,6 +319,7 @@ function renderStatefulSplit(initialLines: JournalEntryLine[], isEdit = false) {
         updateLines,
         setLines,
         addLine: jest.fn(),
+        fetchRatesForLines,
         setIsGuidedMode: jest.fn(),
       }),
       [lines, updateLine, updateLines],
@@ -347,151 +328,157 @@ function renderStatefulSplit(initialLines: JournalEntryLine[], isEdit = false) {
     return { split, lines };
   });
   const line = (id: string) => hook.result.current.lines.find(candidate => candidate.id === id)!;
-  return { ...hook, updateLinesSpy, line };
+  return { ...hook, updateLinesSpy, fetchRatesForLines, line };
 }
 
 describe('useSplitJournalEditor FX rows', () => {
-  it('converts a source-currency amount once the pair rate resolves', () => {
-    mockUseCrossCurrencyRatesMap.mockReturnValue({ 'USD>INR': fetched(1, 0.01) });
-    const { result, rerender, updateLinesSpy, line } = renderStatefulSplit([
+  it('shows the workplace rate on a foreign allocation and keeps that row in its own currency', () => {
+    const { result } = renderStatefulSplit([
       fxLine('source', TransactionType.CREDIT, 'cash-usd', '8'),
-      fxLine('food', TransactionType.DEBIT, 'food-inr', '8.00'),
+      fxLine('food', TransactionType.DEBIT, 'food-inr', '800.00', '0.01'),
     ]);
 
-    rerender({});
-
-    expect(updateLinesSpy).toHaveBeenCalledTimes(1);
-    expect(line('food')).toMatchObject({ amount: '800.00', exchangeRate: '0.010000' });
+    expect(result.current.split.sourceFx.pair.isCrossCurrency).toBe(false);
     expect(result.current.split.splitFx.food).toMatchObject({
-      inputAmount: '8.00',
+      inputAmount: '800.00',
+      inputCurrency: 'INR',
+    });
+    expect(result.current.split.splitFx.food.pair).toMatchObject({
+      isCrossCurrency: true,
+      sourceCurrency: 'INR',
+      destCurrency: 'USD',
+    });
+    expect(result.current.split.splitFx.food.pair.convertedAmount).toBeCloseTo(8);
+  });
+
+  it('puts the workplace rate on the foreign source row and leaves a workplace allocation in its own currency', () => {
+    const { result } = renderStatefulSplit([
+      fxLine('source', TransactionType.CREDIT, 'cash-eur', '40', '1.137'),
+      fxLine('travel', TransactionType.DEBIT, 'travel-usd', '45.48'),
+    ]);
+
+    expect(result.current.split.sourceFx).toMatchObject({
+      inputAmount: '40',
+      inputCurrency: 'EUR',
+    });
+    expect(result.current.split.sourceFx.pair).toMatchObject({
+      isCrossCurrency: true,
+      sourceCurrency: 'EUR',
+      destCurrency: 'USD',
+    });
+    expect(result.current.split.splitFx.travel).toMatchObject({
+      inputAmount: '45.48',
       inputCurrency: 'USD',
     });
-    expect(result.current.split.splitFx.food.pair.convertedAmount).toBe(800);
+    expect(result.current.split.splitFx.travel.pair.isCrossCurrency).toBe(false);
   });
 
-  it('keeps an entered source amount when the rounded conversion does not invert exactly', () => {
-    mockUseCrossCurrencyRatesMap.mockReturnValue({ 'USD>INR': fetched(1, 83.5) });
-    const { result, rerender, line } = renderStatefulSplit([
-      fxLine('source', TransactionType.CREDIT, 'cash-usd', '100'),
-      fxLine('food', TransactionType.DEBIT, 'food-inr', ''),
+  it('shows a workplace rate on every row that shares a foreign currency', () => {
+    const { result } = renderStatefulSplit([
+      fxLine('source', TransactionType.CREDIT, 'cash-eur', '10', '1.137'),
+      fxLine('spend', TransactionType.DEBIT, 'cash-eur', '4', '1.2'),
     ]);
 
-    act(() => result.current.split.updateSplitInputAmount('food', '100'));
-    rerender({});
-
-    expect(line('food').amount).toBe('1.20');
-    expect(result.current.split.splitFx.food.inputAmount).toBe('100');
-    expect(Number(line('food').amount) * Number(line('food').exchangeRate)).toBeCloseTo(100, 2);
+    expect(result.current.split.sourceFx.pair.isCrossCurrency).toBe(true);
+    expect(result.current.split.sourceFx.pair.sourceBaseRate).toBeCloseTo(1.137);
+    expect(result.current.split.splitFx.spend).toMatchObject({
+      inputAmount: '4',
+      inputCurrency: 'EUR',
+    });
+    expect(result.current.split.splitFx.spend.pair.sourceBaseRate).toBeCloseTo(1.2);
   });
 
-  it('converts a parent-applied equal split after an initial zero amount', () => {
-    mockUseCrossCurrencyRatesMap.mockReturnValue({ 'USD>INR': fetched(1, 0.01) });
-    const { result, updateLinesSpy, line } = renderStatefulSplit([
-      fxLine('source', TransactionType.CREDIT, 'cash-usd', '8'),
-      fxLine('food', TransactionType.DEBIT, 'food-inr', '0.00'),
-    ]);
-    expect(updateLinesSpy).not.toHaveBeenCalled();
-
-    act(() => result.current.split.updateSplitAmounts({ food: '8.00' }));
-
-    expect(line('food')).toMatchObject({ amount: '800.00', exchangeRate: '0.010000' });
-  });
-
-  it('publishes the fetched source rate before a zero foreign split is equalized', () => {
-    mockUseCrossCurrencyRatesMap.mockReturnValue({ 'INR>USD': fetched(0.0104, 1) });
-    const { line } = renderStatefulSplit([
-      fxLine('source', TransactionType.CREDIT, 'cash-inr', '1000'),
-      fxLine('travel', TransactionType.DEBIT, 'travel-usd', '0.00'),
-    ]);
-
-    expect(line('source').exchangeRate).toBe('0.010400');
-    expect(line('travel')).toMatchObject({ amount: '0.00', exchangeRate: '' });
-  });
-
-  it('converts a workplace-currency row exactly once when the source rate arrives', () => {
-    const { result, rerender, line } = renderStatefulSplit([
-      fxLine('source', TransactionType.CREDIT, 'cash-inr', '800'),
+  it('stores a typed allocation in the account currency', () => {
+    const { result, line } = renderStatefulSplit([
+      fxLine('source', TransactionType.CREDIT, 'cash-eur', '40', '1.137'),
       fxLine('travel', TransactionType.DEBIT, 'travel-usd', ''),
     ]);
 
-    act(() => result.current.split.updateSplitInputAmount('travel', '800'));
-    expect(line('travel').amount).toBe('800');
+    act(() => result.current.split.updateAmount('travel', '45.48'));
 
-    mockUseCrossCurrencyRatesMap.mockReturnValue({ 'INR>USD': fetched(0.0125, 1) });
-    rerender({});
-    rerender({});
-
-    expect(line('travel')).toMatchObject({ amount: '10.00', exchangeRate: '' });
-    expect(line('source').exchangeRate).toBe('0.012500');
-    expect(result.current.split.splitFx.travel.inputAmount).toBe('800');
+    expect(line('travel')).toMatchObject({ amount: '45.48', exchangeRate: '' });
+    expect(result.current.split.splitFx.travel.inputCurrency).toBe('USD');
+    expect(line('source').exchangeRate).toBe('1.137');
   });
 
-  it('keeps saved rates and skips fetching when opening an existing entry', () => {
+  it('keeps a saved source rate on the source row when opening an existing entry', () => {
     const { result, updateLinesSpy } = renderStatefulSplit(
       [
         fxLine('source', TransactionType.CREDIT, 'cash-eur', '10', '1.1'),
-        fxLine('travel', TransactionType.DEBIT, 'travel-usd', '11.00', '1'),
+        fxLine('travel', TransactionType.DEBIT, 'travel-usd', '11.00'),
       ],
       true,
     );
 
-    expect(mockUseCrossCurrencyRatesMap).toHaveBeenCalledWith(
-      expect.objectContaining({ enabled: false, workplaceCurrency: 'USD' }),
-    );
     expect(updateLinesSpy).not.toHaveBeenCalled();
-    expect(result.current.split.splitFx.travel.inputAmount).toBe('10.00');
-  });
-
-  it('resets to the market rate and re-persists the refreshed conversion', () => {
-    mockUseCrossCurrencyRatesMap.mockReturnValue({ 'USD>INR': fetched(1, 0.01) });
-    const { result, updateLinesSpy, line } = renderStatefulSplit([
-      fxLine('source', TransactionType.CREDIT, 'cash-usd', '8'),
-      fxLine('food', TransactionType.DEBIT, 'food-inr', '8.00'),
-    ]);
-    expect(updateLinesSpy).toHaveBeenCalledTimes(1);
-
-    act(() => result.current.split.resetSplitRate('food'));
-
-    expect(updateLinesSpy).toHaveBeenNthCalledWith(2, {
-      food: { amount: '8.00', exchangeRate: '' },
+    expect(result.current.split.sourceFx.inputAmount).toBe('10');
+    expect(result.current.split.sourceFx.pair.sourceBaseRate).toBeCloseTo(1.1);
+    expect(result.current.split.splitFx.travel).toMatchObject({
+      inputAmount: '11.00',
+      inputCurrency: 'USD',
     });
-    expect(updateLinesSpy).toHaveBeenCalledTimes(3);
-    expect(line('food')).toMatchObject({ amount: '800.00', exchangeRate: '0.010000' });
-    expect(mockUseCrossCurrencyRatesMap).toHaveBeenLastCalledWith(
-      expect.objectContaining({ refreshNonce: 1, enabled: true }),
+  });
+
+  it('copies the source rate once onto a same-currency allocation saved without one', () => {
+    const { result, line } = renderStatefulSplit(
+      [
+        fxLine('source', TransactionType.CREDIT, 'cash-eur', '10', '1.1'),
+        fxLine('spend', TransactionType.DEBIT, 'cash-eur', '4', ''),
+      ],
+      true,
     );
+
+    expect(line('spend').exchangeRate).toBe('1.1');
+    expect(line('source').exchangeRate).toBe('1.1');
+
+    act(() => result.current.split.resetRate('spend'));
+
+    expect(line('spend').exchangeRate).toBe('');
+    expect(line('source').exchangeRate).toBe('1.1');
   });
 
-  it('derives rates from an edited converted amount', () => {
-    mockUseCrossCurrencyRatesMap.mockReturnValue({ 'USD>INR': fetched(1, 1 / 83) });
-    const { result, line } = renderStatefulSplit([
-      fxLine('source', TransactionType.CREDIT, 'cash-usd', '50'),
-      fxLine('food', TransactionType.DEBIT, 'food-inr', '4150.00', String(1 / 83)),
+  it('leaves a new same-currency allocation for the line fetcher', () => {
+    const { updateLinesSpy, line } = renderStatefulSplit([
+      fxLine('source', TransactionType.CREDIT, 'cash-eur', '10', '1.1'),
+      fxLine('spend', TransactionType.DEBIT, 'cash-eur', '4', ''),
     ]);
-    expect(result.current.split.splitFx.food.inputAmount).toBe('50.00');
 
-    act(() => result.current.split.updateSplitConvertedAmount('food', '5000'));
-
-    expect(line('food')).toMatchObject({ amount: '5000.00', exchangeRate: '0.010000' });
+    expect(updateLinesSpy).not.toHaveBeenCalled();
+    expect(line('spend').exchangeRate).toBe('');
   });
 
-  it('accepts a converted amount when no market rate is available', () => {
+  it('refreshes only the row whose rate was reset', () => {
+    const { result, fetchRatesForLines, line } = renderStatefulSplit([
+      fxLine('source', TransactionType.CREDIT, 'cash-eur', '10', '1.1'),
+      fxLine('spend', TransactionType.DEBIT, 'cash-eur', '4', '1.2'),
+    ]);
+
+    act(() => result.current.split.resetRate('spend'));
+
+    expect(line('spend').exchangeRate).toBe('');
+    expect(line('source').exchangeRate).toBe('1.1');
+    expect(fetchRatesForLines).toHaveBeenCalledTimes(1);
+    expect(fetchRatesForLines).toHaveBeenCalledWith(['spend'], true);
+    expect(result.current.split.splitFx.spend.pair.isLoading).toBe(true);
+    expect(result.current.split.sourceFx.pair.isLoading).toBe(false);
+  });
+
+  it('derives one line rate from an edited workplace amount', () => {
     const { result, line } = renderStatefulSplit([
       fxLine('source', TransactionType.CREDIT, 'cash-usd', '50'),
-      fxLine('food', TransactionType.DEBIT, 'food-inr', '50.00'),
+      fxLine('food', TransactionType.DEBIT, 'food-inr', '4150.00', '0.012048'),
     ]);
-    expect(result.current.split.splitFx.food.pair.convertedAmount).toBeNull();
 
-    act(() => result.current.split.updateSplitConvertedAmount('food', '4150'));
+    act(() => result.current.split.updateConvertedAmount('food', '50'));
 
     expect(line('food')).toMatchObject({ amount: '4150.00', exchangeRate: '0.012048' });
+    expect(line('source').exchangeRate).toBe('');
   });
 
-  it('keeps the entered source amount when switching to another foreign category', () => {
-    mockUseCrossCurrencyRatesMap.mockReturnValue({ 'USD>INR': fetched(1, 1 / 83) });
+  it('keeps the account-currency amount when switching to another account in that currency', () => {
     const { result, line } = renderStatefulSplit([
       fxLine('source', TransactionType.CREDIT, 'cash-usd', '50'),
-      fxLine('food', TransactionType.DEBIT, 'food-inr', '4150.00', String(1 / 83)),
+      fxLine('food', TransactionType.DEBIT, 'food-inr', '4150.00', '0.012048'),
     ]);
 
     act(() => result.current.split.updateSplitRow('food', { accountId: asAccountId('rent-inr') }));
@@ -499,8 +486,11 @@ describe('useSplitJournalEditor FX rows', () => {
     expect(line('food')).toMatchObject({
       accountId: 'rent-inr',
       amount: '4150.00',
-      exchangeRate: '0.012048',
+      exchangeRate: '',
     });
-    expect(result.current.split.splitFx.food.inputAmount).toBe('50.00');
+    expect(result.current.split.splitFx.food).toMatchObject({
+      inputAmount: '4150.00',
+      inputCurrency: 'INR',
+    });
   });
 });

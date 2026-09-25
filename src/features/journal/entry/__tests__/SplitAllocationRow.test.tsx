@@ -1,6 +1,6 @@
 import { ArchiveVisibilityScopeProvider } from '@/src/contexts/ArchiveVisibilityScope';
 import { resolveFxPair } from '@/src/features/journal/entry/fxPair';
-import type { SplitRowFx } from '@/src/features/journal/entry/modes/split/splitJournalState';
+import type { RowFx } from '@/src/features/journal/entry/hooks/workplaceRowFx';
 import { AccountType } from '@/src/types/enums';
 import { asAccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
@@ -42,7 +42,7 @@ const accounts: AccountFields[] = [
   } as AccountFields,
 ];
 
-const sameCurrencyFx: SplitRowFx = {
+const sameCurrencyFx: RowFx = {
   pair: resolveFxPair({ sourceCurrency: 'INR', destCurrency: 'INR', baseCurrency: 'INR' }),
   inputAmount: '12.50',
   inputCurrency: 'INR',
@@ -50,7 +50,7 @@ const sameCurrencyFx: SplitRowFx = {
   rowPrecision: 2,
 };
 
-function foreignFx(destBaseRate: number | null, inputAmount: string): SplitRowFx {
+function foreignFx(destBaseRate: number | null, inputAmount: string): RowFx {
   return {
     pair: resolveFxPair({
       sourceCurrency: 'USD',

@@ -83,16 +83,13 @@ export function buildSplitDraftProjection({
   const splits = destinationLines.map(line => {
     const account = accounts.find(candidate => candidate.id === line.accountId);
     const accountCurrency = account?.currencyCode || line.accountCurrency;
-    const usesSourceCurrency =
-      Boolean(accountCurrency && sourceCurrency) &&
-      accountCurrency!.trim().toUpperCase() === sourceCurrency!.trim().toUpperCase();
 
     return {
       id: line.id,
       accountId: line.accountId,
       amount: line.amount,
       accountCurrency,
-      exchangeRate: usesSourceCurrency ? sourceLine?.exchangeRate : line.exchangeRate,
+      exchangeRate: line.exchangeRate,
       precision: accountCurrency
         ? (precisionByCurrency?.get(accountCurrency.toUpperCase()) ??
           getSplitCurrencyPrecision(accountCurrency))

@@ -2,10 +2,9 @@ import { AppConfig } from '@/src/constants';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { render, screen } from '@/src/utils/test-utils';
-import React from 'react';
 import { AdvancedForm } from '../components/AdvancedForm';
-import type { AdvancedJournalFormController } from '../hooks/useAdvancedJournalForm';
 import { resolveFxPair } from '../fxPair';
+import type { AdvancedJournalFormController } from '../hooks/useAdvancedJournalForm';
 
 jest.mock('../components/SplitAllocationRow', () => ({
   SplitAllocationRow: ({ label, row }: { label: string; row: { id: string } }) => {

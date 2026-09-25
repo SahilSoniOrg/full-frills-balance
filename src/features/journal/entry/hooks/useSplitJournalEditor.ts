@@ -1,43 +1,29 @@
 import type { AccountFields } from '@/src/types/plainDtos';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import {
-  SplitJournalController,
-  type SplitRowFx,
-} from '@/src/features/journal/entry/modes/split/splitJournalState';
-import {
-  amountInSourceCurrency,
-  getSplitCurrencyPrecision,
-  type SplitRowState,
-} from '@/src/services/journal/splitJournalHelpers';
+  buildWorkplaceRowFx,
+  useWorkplaceLineEdits,
+  type RowFx,
+} from '@/src/features/journal/entry/hooks/workplaceRowFx';
+import { SplitJournalController } from '@/src/features/journal/entry/modes/split/splitJournalState';
+import type { SplitRowState } from '@/src/services/journal/splitJournalHelpers';
 import {
   selectSplitDraftLines,
   useSplitDraftProjection,
 } from '@/src/features/journal/entry/modes/split/splitDraftProjection';
-import {
-  resolveFxPair,
-  tieDestinationAmount,
-  withConvertedAmount,
-  type FxPairInput,
-} from '@/src/features/journal/entry/fxPair';
-import { formatManualBaseRate } from '@/src/features/journal/entry/manualBaseRate';
-import {
-  currencyPairKey,
-  useCrossCurrencyRatesMap,
-} from '@/src/features/journal/entry/hooks/useCrossCurrencyRates';
 import { lineAccountPatch, parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
 import { parseSimpleAmountInput } from '@/src/services/journal/simpleJournalHelpers';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
-import { JournalEntryLine, TabType } from '@/src/types/domainJournal';
+import { TabType } from '@/src/types/domainJournal';
 import { TransactionType } from '@/src/types/enums';
 import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
-import { formatRoundedAmount } from '@/src/utils/money';
 import {
   filterGuidedLegAccounts,
   isAccountAllowedOnGuidedLeg,
 } from '@/src/services/journal/guidedJournalAccountEligibility';
 import { getInferredAccountType } from '@/src/utils/accountCategory';
 import { preferences } from '@/src/services/preferences';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useJournalEditor } from './useJournalEditor';
 
 export interface UseSplitJournalEditorProps {
@@ -51,6 +37,7 @@ export interface UseSplitJournalEditorProps {
     | 'lines'
     | 'updateLine'
     | 'updateLines'
+    | 'fetchRatesForLines'
     | 'setLines'
     | 'addLine'
     | 'transactionType'
@@ -59,34 +46,23 @@ export interface UseSplitJournalEditorProps {
   >;
 }
 
-type LineUpdates = Record<string, Partial<JournalEntryLine>>;
-
-type SourceAmounts = ReadonlyMap<string, string>;
-
-const NO_SOURCE_AMOUNTS: SourceAmounts = new Map();
-
-function withSourceAmounts(amounts: SourceAmounts, changes: Record<string, string | null>) {
-  const entries = Object.entries(changes);
-  if (entries.every(([id, amount]) => (amounts.get(id) ?? null) === amount)) return amounts;
-  const next = new Map(amounts);
-  entries.forEach(([id, amount]) => (amount === null ? next.delete(id) : next.set(id, amount)));
-  return next;
-}
-
-function withoutUnchanged(updates: LineUpdates, lines: JournalEntryLine[]): LineUpdates {
-  return Object.fromEntries(
-    Object.entries(updates).filter(([id, patch]) => {
-      const line = lines.find(candidate => candidate.id === id);
-      return (
-        !line ||
-        Object.entries(patch).some(([key, value]) => line[key as keyof JournalEntryLine] !== value)
-      );
-    }),
-  );
-}
-
 function normalizeCurrency(currency: string | undefined): string | undefined {
   return currency?.trim().toUpperCase() || undefined;
+}
+
+/** Existing same-currency allocations that never stored their own workplace rate. */
+function sameCurrencyRateSeeds(
+  sourceCurrency: string,
+  sourceRate: string | number,
+  lines: { id: string; currency: string | undefined; exchangeRate?: string | number }[],
+): Record<string, { exchangeRate: string }> {
+  const rate = String(sourceRate);
+  const updates: Record<string, { exchangeRate: string }> = {};
+  lines.forEach(line => {
+    if (line.currency !== sourceCurrency || parsePositiveRate(line.exchangeRate) != null) return;
+    updates[line.id] = { exchangeRate: rate };
+  });
+  return updates;
 }
 
 export function useSplitJournalEditor({
@@ -95,15 +71,10 @@ export function useSplitJournalEditor({
   editor,
 }: UseSplitJournalEditorProps): SplitJournalController {
   const initializedRef = useRef(false);
-  const [rateRefreshNonce, setRateRefreshNonce] = useState(0);
-  /**
-   * Row id -> line amount written in the source currency while awaiting a rate. The entry
-   * only applies while the line still holds that amount. Rows in a foreign non-workplace
-   * currency without a line rate are also read as source-currency amounts.
-   */
-  const [sourceAmounts, setSourceAmounts] = useState(NO_SOURCE_AMOUNTS);
+  const seededRef = useRef(false);
 
-  const { setIsGuidedMode, isEdit, isSubmitting, updateLine, updateLines } = editor;
+  const { setIsGuidedMode, isEdit, isSubmitting, updateLine, updateLines, fetchRatesForLines } =
+    editor;
 
   const { sourceLine, destinationLines } = useMemo(
     () => selectSplitDraftLines(editor.lines),
@@ -161,7 +132,6 @@ export function useSplitJournalEditor({
         },
         {},
       );
-      setSourceAmounts(amounts => withSourceAmounts(amounts, updates));
       updateLines(lineUpdates);
     },
     [updateLines],
@@ -255,161 +225,80 @@ export function useSplitJournalEditor({
   const isValid = splitDraft.validation.valid;
 
   const sourceCurrency = normalizeCurrency(currencyContext.sourceCurrency);
-  const fallbackRowCurrency = normalizeCurrency(displayCurrency) ?? 'USD';
-  const rowCurrency = useCallback(
-    (split: SplitRowState) => normalizeCurrency(split.accountCurrency) ?? fallbackRowCurrency,
-    [fallbackRowCurrency],
-  );
 
-  const fxPairs = useMemo(
-    () =>
-      splits
-        .map(split => ({ sourceCurrency, destCurrency: rowCurrency(split) }))
-        .filter(pair => pair.sourceCurrency && pair.sourceCurrency !== pair.destCurrency),
-    [rowCurrency, sourceCurrency, splits],
-  );
-  const fxRates = useCrossCurrencyRatesMap({
-    pairs: fxPairs,
-    workplaceCurrency,
-    journalDate: editor.journalDate,
-    refreshNonce: rateRefreshNonce,
-    enabled: !isEdit || rateRefreshNonce > 0,
-  });
-
-  const { splitFx, pendingIds } = useMemo(() => {
-    const byId: Record<string, SplitRowFx> = {};
-    const pending = new Set<string>();
-    const sourcePrecision = getSplitCurrencyPrecision(sourceCurrency, precision);
+  const splitFx = useMemo(() => {
+    const byId: Record<string, RowFx> = {};
     splits.forEach(split => {
-      const destCurrency = rowCurrency(split);
-      const rowPrecision = split.precision ?? precision;
-      const input: FxPairInput = {
-        sourceCurrency,
-        destCurrency,
-        baseCurrency: workplaceCurrency,
-        fetched: fxRates[currencyPairKey(sourceCurrency, destCurrency)] ?? null,
-        saved: { sourceRate: currencyContext.sourceExchangeRate, destRate: split.exchangeRate },
-      };
-      const { isCrossCurrency, pairRate } = resolveFxPair(input);
-      const isPending =
-        isCrossCurrency &&
-        (sourceAmounts.get(split.id) === split.amount ||
-          (destCurrency !== workplaceCurrency && !parsePositiveRate(split.exchangeRate)));
-      if (isPending) pending.add(split.id);
-
-      const nominalAmount = Number.parseFloat(split.amount);
-      const remembered = sourceAmounts.get(split.id);
-      const inputAmount =
-        isCrossCurrency && remembered != null
-          ? remembered
-          : isCrossCurrency && !isPending && pairRate && Number.isFinite(nominalAmount)
-            ? amountInSourceCurrency(nominalAmount, pairRate, sourcePrecision)
-            : split.amount;
-      byId[split.id] = {
-        pair: resolveFxPair({
-          ...input,
-          sourceAmount: Number.parseFloat(inputAmount) || 0,
-          destPrecision: rowPrecision,
-        }),
-        inputAmount,
-        inputCurrency: isCrossCurrency && sourceCurrency ? sourceCurrency : destCurrency,
-        inputPrecision: isCrossCurrency ? sourcePrecision : rowPrecision,
-        rowPrecision,
-      };
-    });
-    return { splitFx: byId, pendingIds: pending };
-  }, [
-    currencyContext.sourceExchangeRate,
-    fxRates,
-    precision,
-    rowCurrency,
-    sourceAmounts,
-    sourceCurrency,
-    splits,
-    workplaceCurrency,
-  ]);
-
-  const fxLineUpdates = useCallback(
-    (
-      id: string,
-      fx: SplitRowFx,
-      amount: number,
-      sourceBaseRate: number | null,
-      destBaseRate: number | null,
-    ): LineUpdates => {
-      const updates: LineUpdates = {
-        [id]: {
-          amount: formatRoundedAmount(amount, fx.rowPrecision),
-          exchangeRate:
-            fx.pair.destCurrency === workplaceCurrency || !destBaseRate
-              ? ''
-              : formatManualBaseRate(destBaseRate),
+      byId[split.id] = buildWorkplaceRowFx(
+        {
+          amount: split.amount,
+          accountCurrency: split.accountCurrency,
+          exchangeRate: split.exchangeRate ?? '',
         },
-      };
-      if (sourceLine && fx.pair.sourceCurrency !== workplaceCurrency && sourceBaseRate) {
-        updates[sourceLine.id] = { exchangeRate: formatManualBaseRate(sourceBaseRate) };
-      }
-      return updates;
-    },
-    [sourceLine, workplaceCurrency],
+        workplaceCurrency,
+      );
+    });
+    return byId;
+  }, [splits, workplaceCurrency]);
+
+  const sourceFx = useMemo(
+    () =>
+      buildWorkplaceRowFx(
+        {
+          amount: totalAmount,
+          accountCurrency: sourceCurrency ?? workplaceCurrency,
+          exchangeRate: currencyContext.sourceExchangeRate ?? '',
+        },
+        workplaceCurrency,
+      ),
+    [currencyContext.sourceExchangeRate, sourceCurrency, totalAmount, workplaceCurrency],
+  );
+
+  const rowFx = useMemo(() => {
+    if (!sourceLine) return splitFx;
+    return { ...splitFx, [sourceLine.id]: sourceFx };
+  }, [sourceFx, sourceLine, splitFx]);
+
+  const { updateAmount, updateConvertedAmount, resetRate } = useWorkplaceLineEdits(
+    rowFx,
+    updateLine,
+    fetchRatesForLines,
   );
 
   useEffect(() => {
-    const updates: LineUpdates = {};
-    let marketSourceRate: number | null = null;
-    for (const split of splits) {
+    if (!isEdit || seededRef.current) return;
+    const sourceRate = sourceLine?.exchangeRate;
+    if (!sourceCurrency || parsePositiveRate(sourceRate) == null || sourceRate == null) return;
+    seededRef.current = true;
+    const updates = sameCurrencyRateSeeds(
+      sourceCurrency,
+      sourceRate,
+      destinationLines.map(line => ({
+        id: line.id,
+        currency: normalizeCurrency(
+          accounts.find(candidate => candidate.id === line.accountId)?.currencyCode ||
+            line.accountCurrency,
+        ),
+        exchangeRate: line.exchangeRate,
+      })),
+    );
+    if (Object.keys(updates).length > 0) updateLines(updates);
+  }, [accounts, destinationLines, isEdit, sourceCurrency, sourceLine, updateLines]);
+
+  const canEqualize =
+    totals.total > 0 &&
+    splits.length > 0 &&
+    !sourceFx.pair.isLoading &&
+    splits.every(split => {
       const fx = splitFx[split.id];
-      const { pairRate, sourceBaseRate, destBaseRate, isCrossCurrency } = fx.pair;
-      if (!isCrossCurrency) continue;
-      marketSourceRate ??= sourceBaseRate;
-      if (!pendingIds.has(split.id) || !pairRate || !sourceBaseRate || !destBaseRate) continue;
-      const base = Number.parseFloat(split.amount);
-      if (!(base > 0)) continue;
-      const tied = tieDestinationAmount(base, sourceBaseRate, destBaseRate, fx.rowPrecision);
-      Object.assign(
-        updates,
-        fxLineUpdates(split.id, fx, tied.amount, sourceBaseRate, tied.destBaseRate),
-      );
-    }
-    if (
-      sourceLine &&
-      !updates[sourceLine.id] &&
-      sourceCurrency !== workplaceCurrency &&
-      !parsePositiveRate(sourceLine.exchangeRate) &&
-      marketSourceRate
-    ) {
-      updates[sourceLine.id] = { exchangeRate: formatManualBaseRate(marketSourceRate) };
-    }
-    const changed = withoutUnchanged(updates, editor.lines);
-    if (Object.keys(changed).length > 0) updateLines(changed);
-  }, [
-    editor.lines,
-    fxLineUpdates,
-    pendingIds,
-    sourceCurrency,
-    sourceLine,
-    splitFx,
-    splits,
-    updateLines,
-    workplaceCurrency,
-  ]);
+      return Boolean(fx && !fx.pair.isLoading);
+    });
 
   const updateSplitRow = useCallback(
     (id: string, patch: Partial<Pick<SplitRowState, 'accountId' | 'amount' | 'exchangeRate'>>) => {
       if (patch.accountId !== undefined) {
         const account = accounts.find(candidate => candidate.id === patch.accountId);
-        const nextCurrency = normalizeCurrency(account?.currencyCode);
-        const becomesCross = Boolean(
-          sourceCurrency && nextCurrency && nextCurrency !== sourceCurrency,
-        );
-        const lineAmount = destinationLines.find(candidate => candidate.id === id)?.amount;
-        const sourceAmount = splitFx[id]?.inputAmount ?? lineAmount ?? '';
-        setSourceAmounts(amounts =>
-          withSourceAmounts(amounts, { [id]: becomesCross ? sourceAmount : null }),
-        );
         updateLine(id, {
-          ...patch,
-          ...(sourceAmount !== lineAmount ? { amount: sourceAmount } : {}),
           exchangeRate: '',
           ...lineAccountPatch(
             patch.accountId,
@@ -426,68 +315,21 @@ export function useSplitJournalEditor({
         ...(exchangeRate === undefined ? {} : { exchangeRate: String(exchangeRate) }),
       });
     },
-    [accounts, destinationLines, sourceCurrency, splitFx, transactionType, updateLine],
+    [accounts, transactionType, updateLine],
   );
 
-  const updateSplitInputAmount = useCallback(
-    (id: string, amount: string) => {
-      const fx = splitFx[id];
-      if (!fx?.pair.isCrossCurrency) {
-        updateLine(id, { amount });
-        return;
-      }
-
-      const base = Number.parseFloat(amount);
-      const { pairRate, sourceBaseRate, destBaseRate } = fx.pair;
-      if (!(base > 0) || !pairRate || !sourceBaseRate || !destBaseRate) {
-        setSourceAmounts(amounts => withSourceAmounts(amounts, { [id]: amount }));
-        updateLine(id, { amount });
-        return;
-      }
-
-      const tied = tieDestinationAmount(base, sourceBaseRate, destBaseRate, fx.rowPrecision);
-      setSourceAmounts(amounts => withSourceAmounts(amounts, { [id]: amount }));
-      updateLines(fxLineUpdates(id, fx, tied.amount, sourceBaseRate, tied.destBaseRate));
+  const updateSourceConvertedAmount = useCallback(
+    (amount: string) => {
+      if (!sourceLine) return;
+      updateConvertedAmount(sourceLine.id, amount);
     },
-    [fxLineUpdates, splitFx, updateLine, updateLines],
+    [sourceLine, updateConvertedAmount],
   );
 
-  const updateSplitConvertedAmount = useCallback(
-    (id: string, amount: string) => {
-      const fx = splitFx[id];
-      if (!fx?.pair.isCrossCurrency) return;
-      const convertedAmount = Number.parseFloat(amount);
-      const override = withConvertedAmount(fx.pair, convertedAmount);
-      if (override?.kind !== 'converted') return;
-
-      setSourceAmounts(amounts => withSourceAmounts(amounts, { [id]: null }));
-      updateLines(
-        fxLineUpdates(
-          id,
-          fx,
-          convertedAmount,
-          override.rates.sourceBaseRate,
-          override.rates.destBaseRate,
-        ),
-      );
-    },
-    [fxLineUpdates, splitFx, updateLines],
-  );
-
-  const resetSplitRate = useCallback(
-    (id: string) => {
-      const fx = splitFx[id];
-      if (!fx) return;
-      const updates: LineUpdates = { [id]: { amount: fx.inputAmount, exchangeRate: '' } };
-      if (sourceLine && fx.pair.sourceCurrency !== workplaceCurrency) {
-        updates[sourceLine.id] = { exchangeRate: '' };
-      }
-      setSourceAmounts(amounts => withSourceAmounts(amounts, { [id]: fx.inputAmount }));
-      updateLines(updates);
-      setRateRefreshNonce(nonce => nonce + 1);
-    },
-    [sourceLine, splitFx, updateLines, workplaceCurrency],
-  );
+  const resetSourceRate = useCallback(() => {
+    if (!sourceLine) return;
+    resetRate(sourceLine.id);
+  }, [resetRate, sourceLine]);
 
   return useMemo(
     () => ({
@@ -499,13 +341,17 @@ export function useSplitJournalEditor({
       setTotalAmount,
       splits,
       splitFx,
+      sourceFx,
+      canEqualize,
       addSplitRow,
       removeSplitRow,
       updateSplitRow,
       updateSplitAmounts,
-      updateSplitInputAmount,
-      updateSplitConvertedAmount,
-      resetSplitRate,
+      updateAmount,
+      updateConvertedAmount,
+      resetRate,
+      updateSourceConvertedAmount,
+      resetSourceRate,
       totals,
       isValid,
       validationError: splitDraft.validation.valid ? null : splitDraft.validation.error,
@@ -528,13 +374,17 @@ export function useSplitJournalEditor({
       totalAmount,
       splits,
       splitFx,
+      sourceFx,
+      canEqualize,
       addSplitRow,
       removeSplitRow,
       updateSplitRow,
       updateSplitAmounts,
-      updateSplitInputAmount,
-      updateSplitConvertedAmount,
-      resetSplitRate,
+      updateAmount,
+      updateConvertedAmount,
+      resetRate,
+      updateSourceConvertedAmount,
+      resetSourceRate,
       totals,
       isValid,
       accounts,

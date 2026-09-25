@@ -1,7 +1,8 @@
-import { withConvertedAmount } from '@/src/features/journal/entry/fxPair';
-import { formatManualBaseRate } from '@/src/features/journal/entry/manualBaseRate';
-import { buildAdvancedRowFx } from '@/src/features/journal/entry/modes/advanced/advancedRowFx';
-import type { SplitRowFx } from '@/src/features/journal/entry/modes/split/splitJournalState';
+import {
+  buildWorkplaceRowFx,
+  useWorkplaceLineEdits,
+  type RowFx,
+} from '@/src/features/journal/entry/hooks/workplaceRowFx';
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
@@ -29,7 +30,7 @@ type Editor = Pick<
 export interface AdvancedJournalFormController {
   fromLines: JournalEntryLine[];
   toLines: JournalEntryLine[];
-  rowFx: Record<string, SplitRowFx>;
+  rowFx: Record<string, RowFx>;
   accounts: AccountFields[];
   fromTotal: number;
   toTotal: number;
@@ -91,9 +92,9 @@ export function useAdvancedJournalForm({
   const { leafAccounts } = useAccountSelection({ accounts, pinnedAccountIds });
 
   const rowFx = useMemo(() => {
-    const byId: Record<string, SplitRowFx> = {};
+    const byId: Record<string, RowFx> = {};
     lines.forEach(line => {
-      byId[line.id] = buildAdvancedRowFx(line, workplaceCurrency);
+      byId[line.id] = buildWorkplaceRowFx(line, workplaceCurrency);
     });
     return byId;
   }, [lines, workplaceCurrency]);
@@ -218,11 +219,10 @@ export function useAdvancedJournalForm({
     [accounts, lines, updateLine],
   );
 
-  const updateAmount = useCallback(
-    (id: string, amount: string) => {
-      updateLine(id, { amount });
-    },
-    [updateLine],
+  const { updateAmount, updateConvertedAmount, resetRate } = useWorkplaceLineEdits(
+    rowFx,
+    updateLine,
+    fetchRatesForLines,
   );
 
   const updateNotes = useCallback(
@@ -230,29 +230,6 @@ export function useAdvancedJournalForm({
       updateLine(id, { notes });
     },
     [updateLine],
-  );
-
-  const updateConvertedAmount = useCallback(
-    (id: string, amount: string) => {
-      const line = lines.find(candidate => candidate.id === id);
-      if (!line) return;
-      const converted = Number.parseFloat(amount);
-      const override = withConvertedAmount(
-        buildAdvancedRowFx(line, workplaceCurrency).pair,
-        converted,
-      );
-      if (override?.kind !== 'converted') return;
-      updateLine(id, { exchangeRate: formatManualBaseRate(override.rates.sourceBaseRate) });
-    },
-    [lines, updateLine, workplaceCurrency],
-  );
-
-  const resetRate = useCallback(
-    (id: string) => {
-      updateLine(id, { exchangeRate: '' });
-      void fetchRatesForLines([id], true);
-    },
-    [fetchRatesForLines, updateLine],
   );
 
   const moveLine = useCallback(

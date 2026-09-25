@@ -1,6 +1,6 @@
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { EMPTY_ACCOUNT_ID, asTransactionId } from '@/src/types/ids';
-import { buildAdvancedRowFx } from '../advancedRowFx';
+import { buildWorkplaceRowFx } from '../workplaceRowFx';
 
 function line(
   overrides: { amount?: string; accountCurrency?: string; exchangeRate?: string } = {},
@@ -18,16 +18,16 @@ function line(
   };
 }
 
-describe('buildAdvancedRowFx', () => {
+describe('buildWorkplaceRowFx', () => {
   it('hides a rate card when the row currency is the workplace currency', () => {
-    const fx = buildAdvancedRowFx(line({ accountCurrency: 'USD' }), 'USD');
+    const fx = buildWorkplaceRowFx(line({ accountCurrency: 'USD' }), 'USD');
     expect(fx.pair.isCrossCurrency).toBe(false);
     expect(fx.inputCurrency).toBe('USD');
     expect(fx.inputAmount).toBe('100');
   });
 
   it('converts a foreign row into the workplace currency with the stored rate', () => {
-    const fx = buildAdvancedRowFx(
+    const fx = buildWorkplaceRowFx(
       line({ amount: '40', accountCurrency: 'EUR', exchangeRate: '1.25' }),
       'USD',
     );
@@ -38,7 +38,7 @@ describe('buildAdvancedRowFx', () => {
   });
 
   it('waits for a rate when a foreign row has none yet', () => {
-    const fx = buildAdvancedRowFx(line({ accountCurrency: 'EUR' }), 'USD');
+    const fx = buildWorkplaceRowFx(line({ accountCurrency: 'EUR' }), 'USD');
     expect(fx.pair.isLoading).toBe(true);
     expect(fx.pair.convertedAmount).toBeNull();
   });

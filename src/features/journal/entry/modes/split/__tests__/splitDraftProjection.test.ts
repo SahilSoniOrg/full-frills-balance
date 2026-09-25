@@ -121,7 +121,8 @@ describe('splitDraftProjection', () => {
 
     expect(projection.sourceCurrency).toBe('INR');
     expect(projection.splits[0].accountCurrency).toBe('INR');
-    expect(projection.totals).toEqual({ total: 80, allocated: 80.83, remaining: -0.83 });
+    expect(projection.splits[0].exchangeRate).toBe(String(80 / 80.46));
+    expect(projection.totals).toEqual({ total: 80, allocated: 6666.67, remaining: -6586.67 });
   });
 
   it('uses registered precision for a custom workplace currency in cross-currency totals', () => {

@@ -127,4 +127,25 @@ describe('useAdvancedJournalForm', () => {
 
     expect(result.current.toLines[0].amount).toBe('0');
   });
+
+  it('refreshes one foreign row without clearing another row in the same currency', () => {
+    const { result } = renderForm([
+      line('euro-from', TransactionType.CREDIT, '10', {
+        accountCurrency: 'EUR',
+        exchangeRate: '1.1',
+      }),
+      line('euro-to', TransactionType.DEBIT, '4', {
+        accountCurrency: 'EUR',
+        exchangeRate: '1.2',
+      }),
+    ]);
+
+    act(() => result.current.resetRate('euro-from'));
+
+    expect(result.current.fromLines[0].exchangeRate).toBe('');
+    expect(result.current.toLines[0].exchangeRate).toBe('1.2');
+    expect(result.current.rowFx['euro-from'].pair.isLoading).toBe(true);
+    expect(result.current.rowFx['euro-to'].pair.isLoading).toBe(false);
+    expect(result.current.rowFx['euro-to'].pair.sourceBaseRate).toBeCloseTo(1.2);
+  });
 });
