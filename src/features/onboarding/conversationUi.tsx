@@ -4,26 +4,23 @@ import {
   AppIcon,
   AppText,
   FilterChipButton,
+  PressScaleTouchable,
   SwipeToRemove,
 } from '@/src/components/core';
 import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModal';
 import { SelectionPickerSheet } from '@/src/components/filters/SelectionPickerSheet';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
-import { Size, Spacing, Typography } from '@/src/constants';
+import { ChromeMotion, Size, Spacing, Typography } from '@/src/constants';
 import { Box, Inline, Stack, usePageKeyboard } from '@/src/design-system';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Icon, type IconName } from '@/src/types/domainIcons';
+import { triggerHaptic } from '@/src/utils/haptics';
 import dayjs from 'dayjs';
+import { MotiView } from 'moti';
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Keyboard,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  type FocusEvent,
-} from 'react-native';
+import { Keyboard, ScrollView, StyleSheet, TextInput, type FocusEvent } from 'react-native';
 import Animated, { Easing, LinearTransition } from 'react-native-reanimated';
 import { parseAmount } from './draft';
 
@@ -31,6 +28,20 @@ export interface ConversationOption {
   readonly id: string;
   readonly label: string;
   readonly icon?: IconName;
+}
+
+function ConversationPanel({ children }: { readonly children: ReactNode }) {
+  const reduceMotion = useReducedMotion();
+  if (reduceMotion) return <>{children}</>;
+  return (
+    <MotiView
+      from={{ opacity: 0, scale: ChromeMotion.panelFromScale, translateY: 8 }}
+      animate={{ opacity: 1, scale: 1, translateY: 0 }}
+      transition={ChromeMotion.panel}
+    >
+      {children}
+    </MotiView>
+  );
 }
 
 export function ConversationStep({
@@ -101,27 +112,29 @@ export function ConversationStep({
         scrollsChildToFocus={false}
         nestedScrollEnabled
       >
-        <Stack gap="lg" paddingTop={title ? 'xl' : 'sm'}>
-          {title ? (
-            <Stack gap="sm" align="center">
-              <AppText
-                variant="title"
-                align="center"
-                adjustsFontSizeToFit
-                minimumFontScale={0.75}
-                style={styles.title}
-              >
-                {title}
-              </AppText>
-              {subtitle ? (
-                <AppText variant="body" color="secondary" style={styles.subtitle}>
-                  {subtitle}
+        <ConversationPanel>
+          <Stack gap="lg" paddingTop={title ? 'xl' : 'sm'}>
+            {title ? (
+              <Stack gap="sm" align="center">
+                <AppText
+                  variant="title"
+                  align="center"
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.75}
+                  style={styles.title}
+                >
+                  {title}
                 </AppText>
-              ) : null}
-            </Stack>
-          ) : null}
-          {children}
-        </Stack>
+                {subtitle ? (
+                  <AppText variant="body" color="secondary" style={styles.subtitle}>
+                    {subtitle}
+                  </AppText>
+                ) : null}
+              </Stack>
+            ) : null}
+            {children}
+          </Stack>
+        </ConversationPanel>
       </ScrollView>
       {!isKeyboardVisible ? (
         <Box
@@ -138,7 +151,15 @@ export function ConversationStep({
         >
           <Stack space="xs">
             {onSkip ? (
-              <AppButton variant="ghost" size="md" onPress={onSkip} testID="onboarding-skip">
+              <AppButton
+                variant="ghost"
+                size="md"
+                onPress={() => {
+                  void triggerHaptic('light');
+                  onSkip();
+                }}
+                testID="onboarding-skip"
+              >
                 {skipLabel ?? copy.addLater}
               </AppButton>
             ) : null}
@@ -148,6 +169,7 @@ export function ConversationStep({
                 size="lg"
                 onPress={() => {
                   Keyboard.dismiss();
+                  void triggerHaptic('light');
                   onPrimary();
                 }}
                 disabled={primaryDisabled || primaryLoading}
@@ -272,14 +294,15 @@ export function CollectedList({
   readonly onPaymentAmountChange?: (id: string, amount: number) => void;
   readonly onPaymentDateChange?: (id: string, date: number) => void;
 }) {
+  const reduceMotion = useReducedMotion();
   if (items.length === 0) return null;
+  const rowLayout = reduceMotion
+    ? undefined
+    : LinearTransition.duration(320).easing(Easing.out(Easing.cubic));
   return (
     <Stack gap="sm">
       {items.map(item => (
-        <Animated.View
-          key={item.id}
-          layout={LinearTransition.duration(320).easing(Easing.out(Easing.cubic))}
-        >
+        <Animated.View key={item.id} layout={rowLayout}>
           <CollectedRow
             item={item}
             currency={currency}
@@ -446,8 +469,11 @@ function CollectedRow({
             {cadence ? (
               <Inline align="center" justify="space-between" gap="sm">
                 {cadence.intervals && onIntervalChange ? (
-                  <TouchableOpacity
-                    onPress={() => setPickingInterval(true)}
+                  <PressScaleTouchable
+                    onPress={() => {
+                      void triggerHaptic('light');
+                      setPickingInterval(true);
+                    }}
                     accessibilityRole="button"
                     accessibilityLabel={copy.salaryOften}
                     testID={`onboarding-interval-${item.id}`}
@@ -459,7 +485,7 @@ function CollectedRow({
                       </AppText>
                       <AppIcon name={Icon.ChevronDown} size={Size.iconXs} color="textSecondary" />
                     </Inline>
-                  </TouchableOpacity>
+                  </PressScaleTouchable>
                 ) : (
                   <Box />
                 )}
