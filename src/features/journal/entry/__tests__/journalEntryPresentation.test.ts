@@ -1,4 +1,5 @@
 import {
+  resolveAllocationStatus,
   isJournalEntrySubmitDisabled,
   parseJournalEntryRouteParams,
   resolveExchangeRatePresentation,
@@ -269,6 +270,41 @@ describe('journalEntryPresentation', () => {
       const limited = limitQuickTileAccounts(accounts, 'acc-25', 15);
       expect(limited).toHaveLength(15);
       expect(limited.some(a => a.id === 'acc-25')).toBe(true);
+    });
+  });
+
+  describe('resolveAllocationStatus', () => {
+    it('hides the status until an amount exists when there is no empty label', () => {
+      expect(
+        resolveAllocationStatus({
+          hasAmount: false,
+          balanced: false,
+          remaining: 0,
+          formattedAmount: '$0',
+          emptyLabel: null,
+        }).label,
+      ).toBeNull();
+    });
+
+    it('marks an exact allocation as even and an overrun as over', () => {
+      expect(
+        resolveAllocationStatus({
+          hasAmount: true,
+          balanced: true,
+          remaining: 0,
+          formattedAmount: '$0',
+          emptyLabel: 'Enter a total',
+        }).tone,
+      ).toBe('even');
+      expect(
+        resolveAllocationStatus({
+          hasAmount: true,
+          balanced: false,
+          remaining: -2,
+          formattedAmount: '$2',
+          emptyLabel: null,
+        }).tone,
+      ).toBe('over');
     });
   });
 });

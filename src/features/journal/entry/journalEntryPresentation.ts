@@ -249,6 +249,34 @@ export function resolveJournalEntryValidationHint(input: {
   return null;
 }
 
+export type AllocationStatusTone = 'neutral' | 'even' | 'over';
+
+/** Shared remaining copy for split and advanced. `emptyLabel` is null when the status should hide. */
+export function resolveAllocationStatus(input: {
+  hasAmount: boolean;
+  balanced: boolean;
+  remaining: number;
+  formattedAmount: string;
+  emptyLabel: string | null;
+}): { label: string | null; tone: AllocationStatusTone } {
+  const strings = AppConfig.strings.transactionFlow.splitEntry;
+  if (!input.hasAmount) return { label: input.emptyLabel, tone: 'neutral' };
+  if (input.balanced) return { label: strings.remainingZero, tone: 'even' };
+  if (input.remaining > 0) {
+    return { label: strings.remainingPositive(input.formattedAmount), tone: 'neutral' };
+  }
+  return { label: strings.remainingNegative(input.formattedAmount), tone: 'over' };
+}
+
+export function allocationStatusColor(
+  tone: AllocationStatusTone,
+  theme: { error: string; primary: string; textSecondary: string },
+): string {
+  if (tone === 'over') return theme.error;
+  if (tone === 'even') return theme.primary;
+  return theme.textSecondary;
+}
+
 export function resolveSimpleAmountTypography(amountLength: number): {
   amountFontSize: number;
   currencyFontSize: number;
