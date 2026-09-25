@@ -15,6 +15,49 @@ export const UI_STRINGS = {
     allTime: 'All Time',
     searchPlaceholder: 'Search…',
     none: 'None',
+    incompleteFx: {
+      reviewDetails: 'Review details',
+      detailsTitle: 'Why these figures are incomplete',
+      safeToSpendDetailsTitle: 'Why this estimate is incomplete',
+      budgetDetailsTitle: 'Why this budget is incomplete',
+      reportsDetailsTitle: 'Why these report figures are incomplete',
+      cashFlowDetailsTitle: 'Why this cash flow is incomplete',
+      detailsIntro: (currency: string) =>
+        `Some amounts were left out because they could not be converted to ${currency}.`,
+      budgetDetailsIntro:
+        'Some journal lines could not be valued because journal context or a historical exchange rate was unavailable. Budget figures may be incomplete.',
+      reportsDetailsIntro:
+        'Some figures may be incomplete because journal context or a historical exchange rate is unavailable.',
+      excludedStartingBalancesTitle: 'Cash left out of this estimate',
+      excludedStartingBalance: (accountName: string, amount: string) =>
+        `${accountName}: ${amount} was not included.`,
+      missingCurrentExchangeRate: (from: string, to: string) =>
+        `No current ${from} → ${to} exchange rate is available.`,
+      missingHistoricalRatesTitle: 'Missing historical rates',
+      missingHistoricalExchangeRate: (from: string, to: string, date: string) =>
+        `No historical ${from} → ${to} exchange rate was available for ${date}.`,
+      groupedRatesNote:
+        'Rates are grouped by currency pair and date. Each missing rate can affect multiple entries.',
+      additionalRatesNotListed: (count: number) =>
+        `${count} additional missing rate${count === 1 ? '' : 's'} not listed.`,
+      unidentifiedItems:
+        'The affected journal lines are not available to list here. Their amounts are left out of this total.',
+      safeToSpendUnidentifiedItems:
+        'Other affected journal, budget, or projected amounts are not available to list here.',
+      refreshCurrentRates: 'Refresh rates',
+      refreshingCurrentRates: 'Refreshing rates…',
+      currentRatesRefreshResult: (updated: number, missing: number) =>
+        updated > 0
+          ? `Updated ${updated} rate${updated === 1 ? '' : 's'}; ${missing} still unavailable.`
+          : 'The latest rates are still unavailable. You can enter them manually.',
+      manualRatesTitle: 'Enter the current rate manually',
+      manualRatesDescription:
+        'Enter how much of the second currency equals 1 unit of the first. This becomes the current spot rate across the app; historical report dates keep their own rates.',
+      manualRateInputLabel: (from: string, to: string) => `1 ${from} in ${to}`,
+      saveManualRates: 'Use manual rate',
+      savingManualRates: 'Saving rate…',
+      manualRateSaveFailed: 'Could not save the manual rate. Try again.',
+    },
   },
   update: {
     checking: 'Checking for updates…',
@@ -155,17 +198,6 @@ export const UI_STRINGS = {
       calculationLedger: 'Calculation details',
       projectedLabel: 'Projected',
       incompleteFxWarning: 'Some values could not be converted. Safe to Spend may be incomplete.',
-      reviewIncompleteValues: 'Review details',
-      incompleteFxDetailsTitle: 'Why this estimate is incomplete',
-      incompleteFxDetailsIntro: (currency: string) =>
-        `Some amounts were left out because they could not be converted to ${currency}.`,
-      excludedStartingBalancesTitle: 'Cash left out of this estimate',
-      excludedStartingBalance: (accountName: string, amount: string) =>
-        `${accountName}: ${amount} was not included.`,
-      missingCurrentExchangeRate: (from: string, to: string) =>
-        `No current ${from} → ${to} exchange rate is available.`,
-      incompleteFxUnidentifiedItems:
-        'The affected journal, budget, or projected amounts are not available to list here.',
     },
     hub: {
       title: 'Review',
@@ -305,6 +337,8 @@ export const UI_STRINGS = {
   },
   reportsV2: {
     title: 'Money overview',
+    incompleteFxWarning:
+      'Some cross-currency activity was omitted because no historical exchange rate was available.',
     fetchMissingRates: 'Fetch missing rates',
     fetchMissingRatesTitle: 'Look up historical rates?',
     fetchMissingRatesMessage:

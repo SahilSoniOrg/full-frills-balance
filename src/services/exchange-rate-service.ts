@@ -14,8 +14,14 @@ import {
   type HistoricalRate,
 } from '@/src/services/currency/historicalExchangeRateProvider';
 import { logger } from '@/src/utils/logger';
+import { Subject, type Observable } from 'rxjs';
 
 const CACHE_DURATION_MS = AppConfig.time.msPerDay; // 24 hours
+
+type InFlightRateRequest = {
+  promise: Promise<Record<string, number>>;
+  forceRefresh: boolean;
+};
 
 function isUsableRequiredRate(rate: number | undefined): rate is number {
   return rate !== undefined && Number.isFinite(rate) && rate > 0;
@@ -24,9 +30,14 @@ function isUsableRequiredRate(rate: number | undefined): rate is number {
 export class ExchangeRateService {
   private memoryCache: Map<string, { rates: Record<string, number>; timestamp: number }> =
     new Map();
-  private inFlightRequests: Map<string, Promise<Record<string, number>>> = new Map();
+  private inFlightRequests: Map<string, InFlightRateRequest> = new Map();
   private historicalMemoryCache: Map<string, HistoricalRate> = new Map();
   private historicalInFlightRequests: Map<string, Promise<HistoricalRate>> = new Map();
+  private readonly spotRateUpdates = new Subject<string>();
+
+  observeSpotRateUpdates(): Observable<string> {
+    return this.spotRateUpdates.asObservable();
+  }
 
   /**
    * Get exchange rate, using cache if available and recent
@@ -90,6 +101,24 @@ export class ExchangeRateService {
       );
       return null;
     }
+  }
+
+  /** Save an explicitly user-entered rate for current spot conversions only. */
+  async setManualSpotRate(fromCurrency: string, toCurrency: string, rate: number): Promise<void> {
+    const from = fromCurrency.trim().toUpperCase();
+    const to = toCurrency.trim().toUpperCase();
+    if (!from || !to || from === to || !isUsableRequiredRate(rate)) {
+      throw new Error('A valid cross-currency rate is required');
+    }
+
+    await exchangeRateRepository.cacheRatesBatch(from, [{ toCurrency: to, rate }], 'manual');
+
+    const cached = this.memoryCache.get(from);
+    this.memoryCache.set(from, {
+      rates: { ...(cached?.rates ?? {}), [to]: rate },
+      timestamp: Date.now(),
+    });
+    this.spotRateUpdates.next(from);
   }
 
   /**
@@ -239,10 +268,16 @@ export class ExchangeRateService {
 
     const existingRequest = this.inFlightRequests.get(fromCurrency);
     if (existingRequest) {
-      return existingRequest;
+      if (!forceRefresh || existingRequest.forceRefresh) return existingRequest.promise;
+
+      await existingRequest.promise.catch(() => undefined);
+      const nextRequest = this.inFlightRequests.get(fromCurrency);
+      if (nextRequest) return nextRequest.promise;
+      return this.fetchRatesForBase(fromCurrency, true);
     }
 
-    const requestPromise = (async () => {
+    let requestPromise!: Promise<Record<string, number>>;
+    requestPromise = (async () => {
       try {
         if (!forceRefresh) {
           const cachedRecords = await exchangeRateRepository.getAllRatesForBase(fromCurrency);
@@ -272,9 +307,21 @@ export class ExchangeRateService {
         }
 
         const data = await response.json();
-        const rates = data.rates as Record<string, number>;
+        const providerRates = data.rates as Record<string, number>;
 
-        if (!rates) throw new Error('Missing rates in response');
+        if (!providerRates) throw new Error('Missing rates in response');
+
+        const rates = { ...providerRates };
+        const cachedRecords = await exchangeRateRepository.getAllRatesForBase(fromCurrency);
+        for (const record of cachedRecords) {
+          if (
+            record.source === 'manual' &&
+            !isUsableRequiredRate(rates[record.toCurrency]) &&
+            isUsableRequiredRate(record.rate)
+          ) {
+            rates[record.toCurrency] = record.rate;
+          }
+        }
 
         logger.metric('ExchangeRateService.fetchNetwork', fetchDuration, { base: fromCurrency });
 
@@ -283,18 +330,32 @@ export class ExchangeRateService {
           timestamp: Date.now(),
         });
 
-        const rateArray = Object.entries(rates).map(([to, rate]) => ({
+        const rateArray = Object.entries(providerRates).map(([to, rate]) => ({
           toCurrency: to,
           rate,
         }));
 
-        exchangeRateRepository.cacheRatesBatch(fromCurrency, rateArray).catch(err => {
-          const errMsg = err instanceof Error ? err.message : String(err);
-          logger.error(
-            `[ExchangeRateService] Background DB batch persist failed: ${errMsg}`,
-            err || new Error('Batch persist failed'),
-          );
-        });
+        const persistPromise = exchangeRateRepository.cacheRatesBatch(fromCurrency, rateArray);
+        if (forceRefresh) {
+          try {
+            await persistPromise;
+          } catch (err) {
+            const errMsg = err instanceof Error ? err.message : String(err);
+            logger.error(
+              `[ExchangeRateService] DB batch persist failed: ${errMsg}`,
+              err || new Error('Batch persist failed'),
+            );
+          }
+        } else {
+          persistPromise.catch(err => {
+            const errMsg = err instanceof Error ? err.message : String(err);
+            logger.error(
+              `[ExchangeRateService] Background DB batch persist failed: ${errMsg}`,
+              err || new Error('Batch persist failed'),
+            );
+          });
+        }
+        if (forceRefresh) this.spotRateUpdates.next(fromCurrency);
 
         return rates;
       } catch (error) {
@@ -309,11 +370,13 @@ export class ExchangeRateService {
 
         throw error || new Error(`Failed to fetch rates for ${fromCurrency}`);
       } finally {
-        this.inFlightRequests.delete(fromCurrency);
+        if (this.inFlightRequests.get(fromCurrency)?.promise === requestPromise) {
+          this.inFlightRequests.delete(fromCurrency);
+        }
       }
     })();
 
-    this.inFlightRequests.set(fromCurrency, requestPromise);
+    this.inFlightRequests.set(fromCurrency, { promise: requestPromise, forceRefresh });
     return requestPromise;
   }
 
@@ -362,16 +425,15 @@ export class ExchangeRateService {
       const duration = Date.now() - start;
 
       if (recentRates.length > 0) {
-        // Group by base currency
-        recentRates.forEach(r => {
-          const entry = this.memoryCache.get(r.fromCurrency) || { rates: {}, timestamp: 0 };
-          // Only keep the newest rate for each pair if DB has duplicates
-          if (r.effectiveDate >= entry.timestamp) {
-            entry.rates[r.toCurrency] = r.rate;
-            entry.timestamp = r.effectiveDate;
-          }
-          this.memoryCache.set(r.fromCurrency, entry);
-        });
+        const ratesByBase = new Map<string, typeof recentRates>();
+        for (const rate of recentRates) {
+          const records = ratesByBase.get(rate.fromCurrency) ?? [];
+          records.push(rate);
+          ratesByBase.set(rate.fromCurrency, records);
+        }
+        ratesByBase.forEach((records, currency) =>
+          this.hydrateMemoryFromRecords(currency, records),
+        );
       }
 
       logger.info(

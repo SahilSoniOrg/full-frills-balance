@@ -319,6 +319,7 @@ export function useReportsV2ViewModel({
     setActiveSection,
     state,
     result,
+    missingRateQuotes,
     renderedSection,
     error,
     onRefresh: () => runImmediately('refreshing'),

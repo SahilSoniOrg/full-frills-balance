@@ -1,5 +1,6 @@
 import { ChartInteractionProvider } from '@/src/components/charts/ChartInteractionProvider';
 import { AlertContainer } from '@/src/components/overlays/AlertContainer';
+import { IncompleteFxDetailsContainer } from '@/src/components/overlays/IncompleteFxDetailsContainer';
 import { ToastContainer } from '@/src/components/overlays/Toast';
 import { ErrorBoundary } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
@@ -97,6 +98,7 @@ function RootLayout() {
                             </AppLockInterceptor>
                           </LaunchCoordinatorContent>
                           <AlertContainer />
+                          <IncompleteFxDetailsContainer />
                         </MaybeAnalyticsProvider>
                       </UpdateGate>
                     </LaunchCoordinatorProvider>

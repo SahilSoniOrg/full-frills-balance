@@ -26,6 +26,7 @@ import { useEaseInLayoutAnimation } from '@/src/hooks/useEaseInLayoutAnimation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, SectionList, StyleSheet, View } from 'react-native';
+import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
 
 const TAB_OPTIONS = [
   { id: 'accounts' as const, label: 'Accounts' },
@@ -278,6 +279,15 @@ export function AccountsListView({
                     warning={
                       inflowPeriod === '30days' && hasUnvaluedEntries
                         ? AppConfig.strings.reports.incompleteFxWarning
+                        : undefined
+                    }
+                    onWarningPress={
+                      inflowPeriod === '30days' && hasUnvaluedEntries
+                        ? () =>
+                            showIncompleteFxDetails({
+                              context: 'cash-flow',
+                              currencyCode,
+                            })
                         : undefined
                     }
                   />

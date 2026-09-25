@@ -3,6 +3,7 @@ import { AppCard, AppText, AppSegmentedControl } from '@/src/components/core';
 import { Shape, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
+import { IncompleteFxWarning } from './IncompleteFxWarning';
 
 interface CashFlowCardProps {
   totalIncome: number;
@@ -12,6 +13,7 @@ interface CashFlowCardProps {
   currencyCode: string;
   isLoading?: boolean;
   warning?: string;
+  onWarningPress?: () => void;
 }
 
 export const CashFlowCard = ({
@@ -22,6 +24,7 @@ export const CashFlowCard = ({
   currencyCode,
   isLoading = false,
   warning,
+  onWarningPress,
 }: CashFlowCardProps) => {
   const { theme, fonts } = useTheme();
 
@@ -103,7 +106,11 @@ export const CashFlowCard = ({
           </View>
         </View>
       </View>
-      {warning ? (
+      {warning && onWarningPress ? (
+        <View style={styles.warning}>
+          <IncompleteFxWarning message={warning} onPress={onWarningPress} />
+        </View>
+      ) : warning ? (
         <AppText variant="caption" color="warning" style={styles.warning}>
           {warning}
         </AppText>

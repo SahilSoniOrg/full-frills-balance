@@ -7,6 +7,8 @@ import { presentBudgetUsage } from '@/src/features/budget/helpers/budgetCardPres
 import { BudgetUsage } from '@/src/services/budget/types';
 import { useTheme } from '@/src/hooks/use-theme';
 import { BudgetProgressBar } from './BudgetProgressBar';
+import { IncompleteFxWarning } from '@/src/components/shared/IncompleteFxWarning';
+import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
 
 interface BudgetUsageSummaryProps {
   usage: BudgetUsage;
@@ -74,9 +76,10 @@ export function BudgetUsageSummary({
 
         <BudgetProgressBar progress={progress} statusColor={statusColor} size="md" />
         {usage.hasUnvaluedEntries ? (
-          <AppText variant="caption" color="warning">
-            {AppConfig.strings.budget.incompleteFxWarning}
-          </AppText>
+          <IncompleteFxWarning
+            message={AppConfig.strings.budget.incompleteFxWarning}
+            onPress={() => showIncompleteFxDetails({ context: 'budget', currencyCode })}
+          />
         ) : null}
       </Column>
     );
@@ -116,9 +119,10 @@ export function BudgetUsageSummary({
 
       <BudgetProgressBar progress={progress} statusColor={statusColor} />
       {usage.hasUnvaluedEntries ? (
-        <AppText variant="caption" color="warning">
-          {AppConfig.strings.budget.incompleteFxWarning}
-        </AppText>
+        <IncompleteFxWarning
+          message={AppConfig.strings.budget.incompleteFxWarning}
+          onPress={() => showIncompleteFxDetails({ context: 'budget', currencyCode })}
+        />
       ) : null}
     </Column>
   );

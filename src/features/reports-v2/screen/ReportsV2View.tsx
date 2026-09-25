@@ -3,6 +3,7 @@ import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { AppTabs, EmptyStateView, LoadingView, type TabOption } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
+import { AppConfig } from '@/src/constants';
 import { Spacing } from '@/src/constants/design-tokens';
 import { Inset } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -12,6 +13,8 @@ import type { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView } from 'react-native';
+import { IncompleteFxWarning } from '@/src/components/shared/IncompleteFxWarning';
+import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
 import { REPORTS_V2_SECTIONS } from '../helpers';
 import { useReportsV2ViewModel } from '../hooks/useReportsV2ViewModel';
 import type { ReportsV2SectionId } from '../types';
@@ -128,6 +131,19 @@ export function ReportsV2View({ engine, workplaceId, targetCurrency, chrome }: R
               <ReportsV2QualityBanner
                 warnings={warnings}
                 onPress={() => vm.setActiveSection('health')}
+              />
+            ) : null}
+            {vm.missingRateQuotes.length > 0 ? (
+              <IncompleteFxWarning
+                testID="reports-v2-incomplete-fx-warning"
+                message={AppConfig.strings.reportsV2.incompleteFxWarning}
+                onPress={() =>
+                  showIncompleteFxDetails({
+                    context: 'reports',
+                    currencyCode: targetCurrency,
+                    missingRateQuotes: vm.missingRateQuotes,
+                  })
+                }
               />
             ) : null}
             {vm.state === 'error' && !vm.result ? (

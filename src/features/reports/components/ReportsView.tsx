@@ -3,7 +3,7 @@ import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { FilterDisclosure } from '@/src/components/filters/FilterDisclosure';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Inset } from '@/src/design-system';
-import { AppTabs, AppText, Icon, type TabOption } from '@/src/components/core';
+import { AppTabs, Icon, type TabOption } from '@/src/components/core';
 import { ReportFilterChrome } from '@/src/features/reports/components/ReportFilterChrome';
 import { ReportOverviewSection } from '@/src/features/reports/components/sections/ReportOverviewSection';
 import { ReportSpendingSection } from '@/src/features/reports/components/sections/ReportSpendingSection';
@@ -14,6 +14,8 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { RefreshControl, StyleSheet, useWindowDimensions } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useCallback, useState } from 'react';
+import { IncompleteFxWarning } from '@/src/components/shared/IncompleteFxWarning';
+import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
 
 const REPORT_TABS: readonly TabOption<ReportTab>[] = [
   { id: 'OVERVIEW', label: AppConfig.strings.reports.tabs.overview },
@@ -97,9 +99,16 @@ export function ReportsView({ vm, chrome }: ReportsViewProps) {
             testID="report-tabs"
           />
           {hasUnvaluedEntries && activeTab !== 'WEALTH' ? (
-            <AppText variant="caption" color="warning">
-              {AppConfig.strings.reports.incompleteFxWarning}
-            </AppText>
+            <IncompleteFxWarning
+              testID="reports-incomplete-fx-warning"
+              message={AppConfig.strings.reports.incompleteFxWarning}
+              onPress={() =>
+                showIncompleteFxDetails({
+                  context: 'reports',
+                  currencyCode: overview.targetCurrency,
+                })
+              }
+            />
           ) : null}
           {activeTab === 'OVERVIEW' && (
             <ReportOverviewSection vm={overview} chartWidth={CHART_WIDTH} />

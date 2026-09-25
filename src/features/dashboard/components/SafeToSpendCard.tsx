@@ -1,13 +1,14 @@
-import { useState } from 'react';
-import { PressScaleTouchable, AppSurface, AppText } from '@/src/components/core';
-import { AppConfig, Spacing } from '@/src/constants';
+import { AppSurface } from '@/src/components/core';
+import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
+import { AppConfig } from '@/src/constants';
 import type { SafeToSpendProjection } from '@/src/services/simulation/safeToSpendDashboardProjection';
+import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
+import { IncompleteFxWarning } from '@/src/components/shared/IncompleteFxWarning';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 import { SafeToSpendBreakdownBar } from './SafeToSpendBreakdownBar';
 import { SafeToSpendBreakdownMetrics } from './SafeToSpendBreakdownMetrics';
 import { SafeToSpendChart } from './SafeToSpendChart';
 import { SafeToSpendCardLayout } from './SafeToSpendCardLayout';
-import { SafeToSpendIncompleteDataModal } from './SafeToSpendIncompleteDataModal';
 import { SafeToSpendHeader } from './SafeToSpendHeader';
 
 export interface SafeToSpendCardProps {
@@ -31,6 +32,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     onLegendPress,
     showChart = true,
   } = props;
+  const formatMoney = useMoneyFormat();
   const {
     isOverCommitted,
     isPositiveSafeToSpend,
@@ -44,7 +46,6 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
   } = viewModel;
 
   const loading = isLoading ?? vmLoading;
-  const [isIncompleteDataVisible, setIncompleteDataVisible] = useState(false);
   const hasBreakdownData = effectiveTotal > 0;
   const hasProjectionData = projection.history.length > 0 || projection.projection.length > 0;
 
@@ -103,34 +104,30 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
         summary={header}
         warning={
           viewModel.hasUnvaluedEntries ? (
-            <PressScaleTouchable
+            <IncompleteFxWarning
               testID="safe-to-spend-incomplete-warning"
-              accessibilityRole="button"
-              accessibilityLabel={`${AppConfig.strings.dashboard.safeToSpendUi.incompleteFxWarning} ${AppConfig.strings.dashboard.safeToSpendUi.reviewIncompleteValues}`}
-              accessibilityHint="Opens details about amounts left out of this estimate."
-              onPress={() => setIncompleteDataVisible(true)}
-              hitSlop={{ top: Spacing.sm, bottom: Spacing.sm }}
-              style={{ alignSelf: 'stretch' }}
-              surfaceStyle={{ gap: Spacing.xs, paddingVertical: Spacing.xs }}
-            >
-              <AppText variant="caption" color="warning">
-                {AppConfig.strings.dashboard.safeToSpendUi.incompleteFxWarning}
-              </AppText>
-              <AppText variant="caption" weight="bold" color="warning">
-                {AppConfig.strings.dashboard.safeToSpendUi.reviewIncompleteValues}
-              </AppText>
-            </PressScaleTouchable>
+              message={AppConfig.strings.dashboard.safeToSpendUi.incompleteFxWarning}
+              onPress={() =>
+                showIncompleteFxDetails({
+                  context: 'safe-to-spend',
+                  currencyCode,
+                  unvaluedStartingBalances: (viewModel.unvaluedStartingBalances ?? []).map(
+                    balance => ({
+                      accountId: balance.accountId,
+                      accountName: balance.accountName,
+                      fromCurrency: balance.fromCurrency,
+                      toCurrency: balance.toCurrency,
+                      amountLabel: formatMoney(balance.amount, balance.fromCurrency),
+                    }),
+                  ),
+                })
+              }
+            />
           ) : null
         }
         breakdown={breakdown}
         metrics={metrics}
         chart={chart}
-      />
-      <SafeToSpendIncompleteDataModal
-        visible={isIncompleteDataVisible}
-        onClose={() => setIncompleteDataVisible(false)}
-        currencyCode={currencyCode}
-        unvaluedStartingBalances={viewModel.unvaluedStartingBalances ?? []}
       />
     </AppSurface>
   );

@@ -47,6 +47,7 @@ export function InfoSheet({
           <AppButton
             variant={secondaryAction.variant || 'secondary'}
             onPress={secondaryAction.onPress}
+            disabled={secondaryAction.disabled}
             style={styles.actionButtonContainer}
             buttonStyle={styles.actionButton}
           >

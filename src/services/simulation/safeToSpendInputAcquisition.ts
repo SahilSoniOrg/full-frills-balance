@@ -31,7 +31,7 @@ import type { UnvaluedStartingBalance } from './types';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import dayjs from 'dayjs';
 import { combineLatest, from, Observable, of } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { map, startWith, switchMap } from 'rxjs/operators';
 
 /**
  * Fully resolved inputs for Safe-to-Spend projection (simulation + history assembly).
@@ -176,7 +176,8 @@ export function observeSafeToSpendInputSnapshot(
           ? combineLatest(budgetUsageObservables)
           : of([] as BudgetUsage[]);
 
-      return combineLatest([budgetUsage$, history$]).pipe(
+      const spotRateUpdates$ = exchangeRateService.observeSpotRateUpdates().pipe(startWith(''));
+      return combineLatest([budgetUsage$, history$, spotRateUpdates$]).pipe(
         switchMap(async ([usages, transactions]) => {
           const uniqueBaseCurrencies = new Set<string>();
           uniqueBaseCurrencies.add(mapped.defaultCurrencyCode);
