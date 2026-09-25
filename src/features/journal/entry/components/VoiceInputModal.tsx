@@ -1,4 +1,5 @@
-import { Icon, AppButton, AppIcon, AppInput, AppText, IconButton } from '@/src/components/core';
+import { Icon, AppButton, AppIcon, AppInput, AppText } from '@/src/components/core';
+import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { Separator } from '@/src/design-system';
 import {
@@ -12,14 +13,10 @@ import { useEffect } from 'react';
 import {
   ActivityIndicator,
   Animated,
-  Modal,
-  Pressable,
-  ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface VoiceInputModalProps {
   visible: boolean;
@@ -36,9 +33,13 @@ const PREDEFINED_TEMPLATES = [
   '450 usd for iphone using chase card',
 ];
 
+/**
+ * Voice capture sheet. Uses ModalSurface Moti enter; keeps RN Animated for the
+ * waveform (volume bars) — that path is not Moti and stays outside Moti nesting
+ * that would re-drive the visualizer.
+ */
 export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: VoiceInputModalProps) {
   const { theme } = useTheme();
-  const insets = useSafeAreaInsets();
 
   const { animValues, onVolumeChange, setRecording } = useVoiceVisualizer();
 
@@ -66,351 +67,294 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
   }, [isRecording, setRecording]);
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={[styles.overlay, { backgroundColor: theme.overlay }]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-        <View
-          style={[
-            styles.content,
-            {
-              backgroundColor: theme.background,
-              paddingBottom: insets.bottom + Spacing.md,
-            },
-          ]}
-        >
-          <View style={styles.header}>
-            <IconButton name={Icon.Close} onPress={onClose} />
-            <View style={styles.headerTitle}>
-              <AppText variant="subheading" weight="bold">
-                Voice Input
-              </AppText>
-              <AppText variant="caption" color="secondary">
-                Speak naturally to record an entry
-              </AppText>
-            </View>
-            <View style={{ width: Size.md + Spacing.md }} />
-          </View>
-
-          <ScrollView
-            style={styles.scrollableArea}
-            contentContainerStyle={styles.scrollableContent}
-            keyboardShouldPersistTaps="handled"
+    <ModalSurface
+      visible={visible}
+      title="Voice Input"
+      onClose={onClose}
+      position="bottomSheet"
+      fixedHeight
+      scrollable
+      maxHeightPercent={85}
+      accessibilityCloseLabel="Close voice input"
+      footer={
+        <View style={styles.footerActions}>
+          <AppButton
+            variant="primary"
+            disabled={!parserOutput || isParsing}
+            onPress={applyParsedResult}
           >
-            <View style={styles.visualizerContainer}>
-              <View style={[styles.visualizerBacking, { backgroundColor: theme.surfaceSecondary }]}>
-                {isRecording ? (
-                  <TouchableOpacity onPress={stopRecording} style={styles.barGroup}>
-                    {animValues.map((anim, idx) => (
-                      <Animated.View
-                        key={idx}
-                        style={[
-                          styles.waveformBar,
-                          {
-                            backgroundColor: theme.primary,
-                            transform: [{ scaleY: anim }],
-                          },
-                        ]}
-                      />
-                    ))}
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    onPress={startRecording}
-                    style={[styles.micIconTouch, { backgroundColor: theme.primary }]}
-                  >
-                    <AppIcon name={Icon.Mic} size={28} color={theme.onPrimary} />
-                  </TouchableOpacity>
-                )}
-              </View>
+            Confirm & Apply
+          </AppButton>
+        </View>
+      }
+    >
+      <AppText variant="caption" color="secondary" style={styles.intro}>
+        Speak naturally to record an entry
+      </AppText>
 
-              <AppText variant="caption" color="secondary" style={styles.recordingStateLabel}>
-                {isRecording
-                  ? 'Listening... Tap to stop speaking.'
-                  : 'Tap the microphone to start speaking.'}
-              </AppText>
-            </View>
-
-            <Separator style={styles.divider} />
-
-            <View style={styles.section}>
-              <AppText
-                variant="caption"
-                weight="bold"
-                color="secondary"
-                style={styles.sectionLabel}
-              >
-                Voice Transcript
-              </AppText>
-              <View style={styles.inputContainer}>
-                <AppInput
-                  value={transcription}
-                  onChangeText={setTranscription}
-                  placeholder="e.g. 250 rupees for coffee at starbucks using icici credit"
-                  multiline
-                  flex={1}
-                  width="auto"
-                  style={styles.textArea}
+      <View style={styles.visualizerContainer}>
+        <View style={[styles.visualizerBacking, { backgroundColor: theme.surfaceSecondary }]}>
+          {isRecording ? (
+            <TouchableOpacity onPress={stopRecording} style={styles.barGroup}>
+              {animValues.map((anim, idx) => (
+                <Animated.View
+                  key={idx}
+                  style={[
+                    styles.waveformBar,
+                    {
+                      backgroundColor: theme.primary,
+                      transform: [{ scaleY: anim }],
+                    },
+                  ]}
                 />
-                <View style={styles.parseActionsGroup}>
-                  {transcription.trim().length > 0 && (
-                    <TouchableOpacity
-                      onPress={() => void parseTranscription(transcription)}
-                      disabled={isParsing}
-                      style={[
-                        styles.parseTextTouch,
-                        {
-                          backgroundColor: theme.surfaceSecondary,
-                          borderColor: theme.border,
-                          borderWidth: 1,
-                        },
-                      ]}
-                    >
-                      <AppText variant="caption" weight="bold" color="primary">
-                        {isParsing ? '...' : 'Auto'}
-                      </AppText>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
+              ))}
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              onPress={startRecording}
+              style={[styles.micIconTouch, { backgroundColor: theme.primary }]}
+            >
+              <AppIcon name={Icon.Mic} size={28} color={theme.onPrimary} />
+            </TouchableOpacity>
+          )}
+        </View>
 
-              <AppText
-                variant="caption"
-                weight="bold"
-                color="secondary"
-                style={styles.sectionLabel}
-              >
-                Try These Templates
-              </AppText>
-              <View style={styles.templateList}>
-                {PREDEFINED_TEMPLATES.map((item, idx) => (
-                  <TouchableOpacity
-                    key={idx}
-                    onPress={() => selectTemplate(item)}
-                    style={[
-                      styles.templateRow,
-                      {
-                        backgroundColor: theme.surfaceSecondary,
-                        borderColor: theme.border,
-                      },
-                    ]}
-                  >
-                    <AppIcon name={Icon.Sparkles} size={14} color={theme.primary} />
-                    <AppText
-                      variant="caption"
-                      color="primary"
-                      weight="medium"
-                      style={styles.templateText}
-                    >
-                      &quot;{item}&quot;
-                    </AppText>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
+        <AppText variant="caption" color="secondary" style={styles.recordingStateLabel}>
+          {isRecording
+            ? 'Listening... Tap to stop speaking.'
+            : 'Tap the microphone to start speaking.'}
+        </AppText>
+      </View>
 
-            {isParsing && (
-              <View style={styles.resolutionContainer}>
-                <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
-                  Resolving with on-device AI...
-                </AppText>
-                <ActivityIndicator
-                  size="small"
-                  color={theme.primary}
-                  style={{ marginTop: Spacing.sm }}
-                />
-              </View>
-            )}
+      <Separator style={styles.divider} />
 
-            {!isParsing && parserOutput && parserOutput.transactions.length > 0 && (
-              <View
+      <View style={styles.section}>
+        <AppText variant="caption" weight="bold" color="secondary" style={styles.sectionLabel}>
+          Voice Transcript
+        </AppText>
+        <View style={styles.inputContainer}>
+          <AppInput
+            value={transcription}
+            onChangeText={setTranscription}
+            placeholder="e.g. 250 rupees for coffee at starbucks using icici credit"
+            multiline
+            flex={1}
+            width="auto"
+            style={styles.textArea}
+          />
+          <View style={styles.parseActionsGroup}>
+            {transcription.trim().length > 0 && (
+              <TouchableOpacity
+                onPress={() => void parseTranscription(transcription)}
+                disabled={isParsing}
                 style={[
-                  styles.resolutionContainer,
+                  styles.parseTextTouch,
                   {
                     backgroundColor: theme.surfaceSecondary,
                     borderColor: theme.border,
+                    borderWidth: 1,
                   },
                 ]}
               >
-                <View style={styles.resolutionTop}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
-                    <AppText variant="subheading" weight="bold">
-                      {parserOutput.isHighConfidence
-                        ? 'Auto-Resolved Output'
-                        : 'Suggested Resolution'}
-                    </AppText>
-                    {parserOutput.provider === 'ai' && (
-                      <View
-                        style={{
-                          backgroundColor: theme.primary + '20',
-                          paddingHorizontal: 6,
-                          paddingVertical: 2,
-                          borderRadius: 4,
-                        }}
-                      >
-                        <AppText variant="caption" weight="bold" style={{ color: theme.primary }}>
-                          NATIVE AI
-                        </AppText>
-                      </View>
-                    )}
-                  </View>
-                  <View
-                    style={[
-                      styles.directionBadge,
-                      {
-                        backgroundColor:
-                          parserOutput.transactions[0].type === 'income'
-                            ? theme.success + '20'
-                            : theme.error + '20',
-                      },
-                    ]}
-                  >
-                    <AppText
-                      variant="caption"
-                      weight="bold"
-                      style={{
-                        color:
-                          parserOutput.transactions[0].type === 'income'
-                            ? theme.success
-                            : theme.error,
-                      }}
-                    >
-                      {parserOutput.transactions[0].type === 'income'
-                        ? 'Income (+)'
-                        : 'Expense (-)'}
-                    </AppText>
-                  </View>
-                </View>
-
-                <Separator style={{ marginVertical: Spacing.sm }} />
-
-                <View style={styles.resolutionGrid}>
-                  <View style={styles.gridRow}>
-                    <AppText variant="caption" color="secondary">
-                      Amount
-                    </AppText>
-                    <AppText variant="body" weight="semibold">
-                      {parserOutput.transactions[0].amount
-                        ? `${parserOutput.transactions[0].currencyCode || 'INR'} ${parserOutput.transactions[0].amount}`
-                        : 'Not detected'}
-                    </AppText>
-                  </View>
-
-                  <View style={styles.gridRow}>
-                    <AppText variant="caption" color="secondary">
-                      Merchant / Note
-                    </AppText>
-                    <AppText variant="body" weight="semibold">
-                      {parserOutput.transactions[0].categoryNameHint ||
-                        parserOutput.transactions[0].description ||
-                        'Not detected'}
-                    </AppText>
-                  </View>
-
-                  <View style={styles.gridRow}>
-                    <AppText variant="caption" color="secondary">
-                      {parserOutput.transactions[0].type === 'income'
-                        ? 'Resolved Asset (Destination)'
-                        : 'Resolved Asset (Source)'}
-                    </AppText>
-                    <View style={styles.resolvedAccountBox}>
-                      <AppIcon name={Icon.CreditCard} size={14} color={theme.textSecondary} />
-                      <AppText variant="body" weight="bold">
-                        {parserOutput.transactions[0].accountNameHint || 'Default account'}
-                      </AppText>
-                    </View>
-                  </View>
-
-                  <View style={styles.gridRow}>
-                    <AppText variant="caption" color="secondary">
-                      {parserOutput.transactions[0].type === 'income'
-                        ? 'Resolved Category (Source)'
-                        : 'Resolved Category (Destination)'}
-                    </AppText>
-                    <View style={styles.resolvedAccountBox}>
-                      <AppIcon name={Icon.Tag} size={14} color={theme.textSecondary} />
-                      <AppText variant="body" weight="bold">
-                        {parserOutput.transactions[0].categoryNameHint || 'Default category'}
-                      </AppText>
-                    </View>
-                  </View>
-
-                  <View style={styles.gridRow}>
-                    <AppText variant="caption" color="secondary">
-                      Processing Time
-                    </AppText>
-                    <AppText variant="body" weight="semibold">
-                      {parserOutput.processTimeMs ? `${parserOutput.processTimeMs}ms` : '--'}
-                    </AppText>
-                  </View>
-
-                  <View style={styles.gridRow}>
-                    <AppText variant="caption" color="secondary">
-                      Confidence Rating
-                    </AppText>
-                    <AppText
-                      variant="caption"
-                      weight="bold"
-                      style={{
-                        color:
-                          parserOutput.confidenceScore > 0.8
-                            ? theme.success
-                            : parserOutput.confidenceScore > 0.6
-                              ? theme.warning
-                              : theme.textSecondary,
-                      }}
-                    >
-                      {Math.round(parserOutput.confidenceScore * 100)}%
-                    </AppText>
-                  </View>
-                </View>
-              </View>
+                <AppText variant="caption" weight="bold" color="primary">
+                  {isParsing ? '...' : 'Auto'}
+                </AppText>
+              </TouchableOpacity>
             )}
-          </ScrollView>
-
-          <Separator style={styles.divider} />
-          <View style={styles.footerActions}>
-            <AppButton
-              variant="primary"
-              disabled={!parserOutput || isParsing}
-              onPress={applyParsedResult}
-            >
-              Confirm & Apply
-            </AppButton>
           </View>
         </View>
+
+        <AppText variant="caption" weight="bold" color="secondary" style={styles.sectionLabel}>
+          Try These Templates
+        </AppText>
+        <View style={styles.templateList}>
+          {PREDEFINED_TEMPLATES.map((item, idx) => (
+            <TouchableOpacity
+              key={idx}
+              onPress={() => selectTemplate(item)}
+              style={[
+                styles.templateRow,
+                {
+                  backgroundColor: theme.surfaceSecondary,
+                  borderColor: theme.border,
+                },
+              ]}
+            >
+              <AppIcon name={Icon.Sparkles} size={14} color={theme.primary} />
+              <AppText
+                variant="caption"
+                color="primary"
+                weight="medium"
+                style={styles.templateText}
+              >
+                &quot;{item}&quot;
+              </AppText>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
-    </Modal>
+
+      {isParsing && (
+        <View style={styles.resolutionContainer}>
+          <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
+            Resolving with on-device AI...
+          </AppText>
+          <ActivityIndicator
+            size="small"
+            color={theme.primary}
+            style={{ marginTop: Spacing.sm }}
+          />
+        </View>
+      )}
+
+      {!isParsing && parserOutput && parserOutput.transactions.length > 0 && (
+        <View
+          style={[
+            styles.resolutionContainer,
+            {
+              backgroundColor: theme.surfaceSecondary,
+              borderColor: theme.border,
+            },
+          ]}
+        >
+          <View style={styles.resolutionTop}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+              <AppText variant="subheading" weight="bold">
+                {parserOutput.isHighConfidence ? 'Auto-Resolved Output' : 'Suggested Resolution'}
+              </AppText>
+              {parserOutput.provider === 'ai' && (
+                <View
+                  style={{
+                    backgroundColor: theme.primary + '20',
+                    paddingHorizontal: 6,
+                    paddingVertical: 2,
+                    borderRadius: 4,
+                  }}
+                >
+                  <AppText variant="caption" weight="bold" style={{ color: theme.primary }}>
+                    NATIVE AI
+                  </AppText>
+                </View>
+              )}
+            </View>
+            <View
+              style={[
+                styles.directionBadge,
+                {
+                  backgroundColor:
+                    parserOutput.transactions[0].type === 'income'
+                      ? theme.success + '20'
+                      : theme.error + '20',
+                },
+              ]}
+            >
+              <AppText
+                variant="caption"
+                weight="bold"
+                style={{
+                  color:
+                    parserOutput.transactions[0].type === 'income'
+                      ? theme.success
+                      : theme.error,
+                }}
+              >
+                {parserOutput.transactions[0].type === 'income' ? 'Income (+)' : 'Expense (-)'}
+              </AppText>
+            </View>
+          </View>
+
+          <Separator style={{ marginVertical: Spacing.sm }} />
+
+          <View style={styles.resolutionGrid}>
+            <View style={styles.gridRow}>
+              <AppText variant="caption" color="secondary">
+                Amount
+              </AppText>
+              <AppText variant="body" weight="semibold">
+                {parserOutput.transactions[0].amount
+                  ? `${parserOutput.transactions[0].currencyCode || 'INR'} ${parserOutput.transactions[0].amount}`
+                  : 'Not detected'}
+              </AppText>
+            </View>
+
+            <View style={styles.gridRow}>
+              <AppText variant="caption" color="secondary">
+                Merchant / Note
+              </AppText>
+              <AppText variant="body" weight="semibold">
+                {parserOutput.transactions[0].categoryNameHint ||
+                  parserOutput.transactions[0].description ||
+                  'Not detected'}
+              </AppText>
+            </View>
+
+            <View style={styles.gridRow}>
+              <AppText variant="caption" color="secondary">
+                {parserOutput.transactions[0].type === 'income'
+                  ? 'Resolved Asset (Destination)'
+                  : 'Resolved Asset (Source)'}
+              </AppText>
+              <View style={styles.resolvedAccountBox}>
+                <AppIcon name={Icon.CreditCard} size={14} color={theme.textSecondary} />
+                <AppText variant="body" weight="bold">
+                  {parserOutput.transactions[0].accountNameHint || 'Default account'}
+                </AppText>
+              </View>
+            </View>
+
+            <View style={styles.gridRow}>
+              <AppText variant="caption" color="secondary">
+                {parserOutput.transactions[0].type === 'income'
+                  ? 'Resolved Category (Source)'
+                  : 'Resolved Category (Destination)'}
+              </AppText>
+              <View style={styles.resolvedAccountBox}>
+                <AppIcon name={Icon.Tag} size={14} color={theme.textSecondary} />
+                <AppText variant="body" weight="bold">
+                  {parserOutput.transactions[0].categoryNameHint || 'Default category'}
+                </AppText>
+              </View>
+            </View>
+
+            <View style={styles.gridRow}>
+              <AppText variant="caption" color="secondary">
+                Processing Time
+              </AppText>
+              <AppText variant="body" weight="semibold">
+                {parserOutput.processTimeMs ? `${parserOutput.processTimeMs}ms` : '--'}
+              </AppText>
+            </View>
+
+            <View style={styles.gridRow}>
+              <AppText variant="caption" color="secondary">
+                Confidence Rating
+              </AppText>
+              <AppText
+                variant="caption"
+                weight="bold"
+                style={{
+                  color:
+                    parserOutput.confidenceScore > 0.8
+                      ? theme.success
+                      : parserOutput.confidenceScore > 0.6
+                        ? theme.warning
+                        : theme.textSecondary,
+                }}
+              >
+                {Math.round(parserOutput.confidenceScore * 100)}%
+              </AppText>
+            </View>
+          </View>
+        </View>
+      )}
+    </ModalSurface>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  content: {
-    borderTopLeftRadius: Shape.radius.r2,
-    borderTopRightRadius: Shape.radius.r2,
-    paddingTop: Spacing.md,
-    height: '85%',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
-  headerTitle: {
-    alignItems: 'center',
-    gap: 2,
-  },
-  scrollableArea: {
-    flex: 1,
-  },
-  scrollableContent: {
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.xl,
+  intro: {
+    textAlign: 'center',
+    marginBottom: Spacing.xs,
   },
   visualizerContainer: {
     alignItems: 'center',
@@ -523,6 +467,6 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   footerActions: {
-    paddingHorizontal: Spacing.lg,
+    width: '100%',
   },
 });
