@@ -3,6 +3,7 @@ import { WorkplaceId } from '@/src/types/ids';
 
 import { accountObserveQueries } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
@@ -30,6 +31,7 @@ jest.mock('@/src/data/repositories/transaction');
 jest.mock('@/src/data/repositories/TransactionRawRepository');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
 jest.mock('@/src/data/repositories/journal/journalTimelineModule');
+jest.mock('@/src/data/repositories/journal/journalQueryRepository');
 jest.mock('@/src/data/repositories/WorkplaceRepository');
 jest.mock('@/src/services/exchange-rate-service');
 jest.mock('@/src/services/currencyConversion', () => ({
@@ -87,6 +89,7 @@ const emptySimResult = {
   },
   accountSummaries: [],
   accountMap: new Map(),
+  normalizedStartingBalances: new Map<string, number>(),
 };
 
 describe('SafeToSpendReadModel', () => {
@@ -106,6 +109,7 @@ describe('SafeToSpendReadModel', () => {
     (plannedPaymentRepository.observeActive as jest.Mock).mockReturnValue(of([]));
     (journalObserveQueries.observeStatusMeta as jest.Mock).mockReturnValue(of([]));
     (journalObserveQueries.observePlannedInRange as jest.Mock).mockReturnValue(of([]));
+    (journalQueryRepository.findByIds as jest.Mock).mockResolvedValue([]);
     (transactionObserveQueries.observeByDateRange as jest.Mock).mockImplementation(() => of([]));
     (transactionObserveQueries.observeActiveCount as jest.Mock).mockReturnValue(of(0));
     (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
@@ -114,6 +118,7 @@ describe('SafeToSpendReadModel', () => {
     (transactionRawRepository.getDailyDeltasGroupedRaw as jest.Mock).mockResolvedValue([]);
     (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(new Map());
     (exchangeRateService.fetchRatesForBase as jest.Mock).mockResolvedValue({});
+    (exchangeRateService.observeSpotRateUpdates as jest.Mock).mockReturnValue(of(''));
     (budgetReadService.observeBudgetUsage as jest.Mock).mockReturnValue(
       of({ remaining: 0, spent: 0 }),
     );
@@ -282,6 +287,7 @@ describe('SafeToSpendReadModel', () => {
         },
         accountSummaries: [],
         accountMap: new Map(),
+        normalizedStartingBalances: new Map<string, number>(),
       });
 
       safeToSpendReadModel
@@ -447,6 +453,7 @@ describe('SafeToSpendReadModel', () => {
         },
         accountSummaries: [],
         accountMap: new Map(),
+        normalizedStartingBalances: new Map<string, number>(),
       });
 
       safeToSpendReadModel
