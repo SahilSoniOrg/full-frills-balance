@@ -1,54 +1,40 @@
+import type { CreateAccountIntent } from '@/src/components/account-selection';
 import { AdvancedForm } from '@/src/features/journal/entry/components/AdvancedForm';
-import { JournalSummary } from '@/src/features/journal/entry/components/JournalSummary';
-import { useAdvancedJournalSummary } from '@/src/features/journal/entry/hooks/useAdvancedJournalSummary';
+import { useAdvancedJournalForm } from '@/src/features/journal/entry/hooks/useAdvancedJournalForm';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
-import { Spacing } from '@/src/constants';
-import { View } from 'react-native';
+import type { AccountRole } from '@/src/types/domainJournal';
+import type { AccountFields } from '@/src/types/plainDtos';
 
 export type AdvancedModePanelProps = {
+  accounts: AccountFields[];
   editor: ReturnType<typeof useJournalEditor>;
   workplaceCurrency: string;
-  onSelectAccountRequest: (lineId: string) => void;
+  onCreateAccountRequestForRow: (
+    rowId: string,
+    role: AccountRole,
+    intent: CreateAccountIntent,
+  ) => void;
+  showLineNotes?: boolean;
 };
 
 export function AdvancedModePanel({
+  accounts,
   editor,
   workplaceCurrency,
-  onSelectAccountRequest,
+  onCreateAccountRequestForRow,
+  showLineNotes = false,
 }: AdvancedModePanelProps) {
-  const {
-    totalDebits,
-    totalCredits,
-    isBalanced,
-    isBalancedDisplay,
-    imbalance,
-    availableCurrencies,
-    selectedCurrency,
-    setSelectedCurrency,
-    journalBaseCurrency,
-    getLineBaseAmount,
-  } = useAdvancedJournalSummary(editor.lines, editor.valuationCurrency);
+  const form = useAdvancedJournalForm({
+    editor,
+    accounts,
+    workplaceCurrency,
+  });
 
   return (
-    <View style={{ paddingHorizontal: Spacing.lg }}>
-      <AdvancedForm
-        editor={editor}
-        workplaceCurrency={workplaceCurrency}
-        journalBaseCurrency={journalBaseCurrency}
-        getLineBaseAmount={getLineBaseAmount}
-        onSelectAccountRequest={onSelectAccountRequest}
-      />
-      <JournalSummary
-        totalDebits={totalDebits}
-        totalCredits={totalCredits}
-        isBalanced={isBalanced}
-        isBalancedDisplay={isBalancedDisplay}
-        baseImbalance={imbalance}
-        availableCurrencies={availableCurrencies}
-        selectedCurrency={selectedCurrency}
-        onSelectCurrency={setSelectedCurrency}
-        workplaceCurrency={workplaceCurrency}
-      />
-    </View>
+    <AdvancedForm
+      {...form}
+      showLineNotes={showLineNotes}
+      onCreateAccountRequestForRow={onCreateAccountRequestForRow}
+    />
   );
 }

@@ -42,6 +42,11 @@ export interface JournalMetaCardProps {
   setTime: (time: string) => void;
   notes?: string;
   setNotes?: (notes: string) => void;
+  /** Journal or line notes already exist, even when the journal note string is empty. */
+  notesAdded?: boolean;
+  /** When set, the parent owns visibility so the header and rows update together. */
+  showNotes?: boolean;
+  onNotesVisibilityChange?: (visible: boolean) => void;
   suggestions?: JournalAutofillSuggestion[];
   suggestionState?: JournalSuggestionState;
   suggestionMaxHeight?: number;
@@ -72,6 +77,9 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
   setTime,
   notes = '',
   setNotes,
+  notesAdded = false,
+  showNotes: showNotesProp,
+  onNotesVisibilityChange,
   suggestions = [],
   suggestionState = 'idle',
   suggestionMaxHeight,
@@ -95,26 +103,18 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
   const { theme } = useTheme();
   const { resolvedHourCycle } = useHourCyclePrefs();
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showNotes, setShowNotes] = useState(!!notes);
+  const isNotesControlled = showNotesProp !== undefined;
+  const [uncontrolledNotesVisible, setUncontrolledNotesVisible] = useState(() => !!notes);
+  const showNotes = isNotesControlled ? showNotesProp : uncontrolledNotesVisible;
+  const setShowNotes = useCallback(
+    (visible: boolean) => {
+      onNotesVisibilityChange?.(visible);
+      if (!isNotesControlled) setUncontrolledNotesVisible(visible);
+    },
+    [isNotesControlled, onNotesVisibilityChange],
+  );
   const [isFocused, setIsFocused] = useState(false);
-  const notesRevealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (notes) {
-      notesRevealTimerRef.current = setTimeout(() => {
-        notesRevealTimerRef.current = null;
-        setShowNotes(true);
-      }, 0);
-    }
-
-    return () => {
-      if (notesRevealTimerRef.current) {
-        clearTimeout(notesRevealTimerRef.current);
-        notesRevealTimerRef.current = null;
-      }
-    };
-  }, [notes]);
 
   useEffect(() => {
     return () => {
@@ -271,7 +271,7 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
         {/* Notes Disclosure Toggle */}
         {setNotes && (
           <TouchableOpacity
-            onPress={() => setShowNotes(prev => !prev)}
+            onPress={() => setShowNotes(!showNotes)}
             style={[
               styles.metaPill,
               {
@@ -298,7 +298,7 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
                 { color: showNotes ? theme.primary : theme.textSecondary },
               ]}
             >
-              {notes ? 'Notes added' : 'Add notes'}
+              {notes || notesAdded ? 'Notes added' : 'Add notes'}
             </AppText>
           </TouchableOpacity>
         )}

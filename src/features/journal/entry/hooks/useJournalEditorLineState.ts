@@ -2,21 +2,19 @@ import { AccountType, TransactionType } from '@/src/types/enums';
 import { AccountId, EMPTY_ACCOUNT_ID, TransactionId } from '@/src/types/ids';
 import { JournalEntryLine } from '@/src/types/domainJournal';
 
-import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
 import { useCallback, useState } from 'react';
 
 interface UseJournalEditorLineStateProps {
   initialAmount?: string;
   initialSourceId?: AccountId;
   initialDestinationId?: AccountId;
-  valuationCurrency: string;
 }
 
 function createInitialLines({
   initialAmount,
   initialSourceId,
   initialDestinationId,
-}: Omit<UseJournalEditorLineStateProps, 'valuationCurrency'>): JournalEntryLine[] {
+}: UseJournalEditorLineStateProps): JournalEntryLine[] {
   return [
     {
       id: '1' as TransactionId,
@@ -45,13 +43,12 @@ export function useJournalEditorLineState({
   initialAmount,
   initialSourceId,
   initialDestinationId,
-  valuationCurrency,
 }: UseJournalEditorLineStateProps) {
   const [lines, setLines] = useState<JournalEntryLine[]>(() =>
     createInitialLines({ initialAmount, initialSourceId, initialDestinationId }),
   );
 
-  const addLine = useCallback(() => {
+  const addLine = useCallback((transactionType: TransactionType = TransactionType.DEBIT) => {
     setLines(previous => {
       const ids = previous.map(line => parseInt(line.id)).filter(id => !isNaN(id));
       const nextId = (ids.length > 0 ? Math.max(...ids) + 1 : previous.length + 1).toString();
@@ -63,7 +60,7 @@ export function useJournalEditorLineState({
           accountName: '',
           accountType: AccountType.ASSET,
           amount: '',
-          transactionType: TransactionType.DEBIT,
+          transactionType,
           notes: '',
           exchangeRate: '',
         },
@@ -72,9 +69,7 @@ export function useJournalEditorLineState({
   }, []);
 
   const removeLine = useCallback((id: string) => {
-    setLines(previous =>
-      previous.length <= 2 ? previous : previous.filter(line => line.id !== id),
-    );
+    setLines(previous => previous.filter(line => line.id !== id));
   }, []);
 
   const updateLine = useCallback((id: string, updates: Partial<JournalEntryLine>) => {
@@ -88,16 +83,5 @@ export function useJournalEditorLineState({
     );
   }, []);
 
-  const balanceLine = useCallback(
-    (id: string) => {
-      setLines(
-        previous =>
-          JournalCalculator.applyImbalanceRateCorrectionToLines(previous, id, valuationCurrency) ??
-          previous,
-      );
-    },
-    [valuationCurrency],
-  );
-
-  return { lines, setLines, addLine, removeLine, updateLine, updateLines, balanceLine };
+  return { lines, setLines, addLine, removeLine, updateLine, updateLines };
 }

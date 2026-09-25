@@ -27,6 +27,14 @@ export type JournalEntryViewProps = JournalEntryShell;
 export function JournalEntryView(props: JournalEntryViewProps) {
   const { theme, fonts } = useTheme();
   const [helpMode, setHelpMode] = useState<JournalEntryScreenMode | null>(null);
+  const notesAdded =
+    props.editor.notes.trim() !== '' || props.editor.lines.some(line => line.notes.trim() !== '');
+  const [showEntryNotes, setShowEntryNotes] = useState(notesAdded);
+  const [notesWereAdded, setNotesWereAdded] = useState(notesAdded);
+  if (notesAdded !== notesWereAdded) {
+    setNotesWereAdded(notesAdded);
+    if (notesAdded) setShowEntryNotes(true);
+  }
   const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
   const [isModePickerVisible, setIsModePickerVisible] = useState(false);
   const descriptionInputRef = useRef<TextInput>(null);
@@ -90,6 +98,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
     onCreateAccountRequestForRole,
     onCreateAccountRequestForBatchRow,
     onCreateAccountRequestForSplitRow,
+    onCreateAccountRequestForAdvancedRow,
     suggestions,
     suggestionState,
     showEditBanner,
@@ -135,6 +144,9 @@ export function JournalEntryView(props: JournalEntryViewProps) {
     setTime: editor.setJournalTime,
     notes: editor.notes,
     setNotes: editor.setNotes,
+    notesAdded,
+    showNotes: showEntryNotes,
+    onNotesVisibilityChange: setShowEntryNotes,
     suggestions,
     suggestionState,
     onSelectSuggestion: handleSelectSuggestion,
@@ -260,9 +272,11 @@ export function JournalEntryView(props: JournalEntryViewProps) {
           <>
             {journalMetaCard}
             <AdvancedModePanel
+              accounts={accounts}
               editor={editor}
               workplaceCurrency={valuationCurrency}
-              onSelectAccountRequest={onSelectAccountRequest}
+              onCreateAccountRequestForRow={onCreateAccountRequestForAdvancedRow}
+              showLineNotes={showEntryNotes}
             />
           </>
         ) : (

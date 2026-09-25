@@ -83,6 +83,11 @@ export interface JournalEntryShell {
     role: AccountRole,
     intent: CreateAccountIntent,
   ) => void;
+  onCreateAccountRequestForAdvancedRow: (
+    rowId: string,
+    role: AccountRole,
+    intent: CreateAccountIntent,
+  ) => void;
   suggestions: JournalAutofillSuggestion[];
   suggestionState: JournalSuggestionState;
   onSelectSuggestion: (
@@ -233,6 +238,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     onCreateAccountRequestForRole,
     onCreateAccountRequestForBatchRow,
     onCreateAccountRequestForSplitRow,
+    onCreateAccountRequestForAdvancedRow,
     selectableAccounts,
     selectedAccountId,
     accountPickerTitle,
@@ -283,6 +289,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     onCreateAccountRequestForRole,
     onCreateAccountRequestForBatchRow,
     onCreateAccountRequestForSplitRow,
+    onCreateAccountRequestForAdvancedRow,
     suggestions,
     suggestionState,
     onSelectSuggestion,

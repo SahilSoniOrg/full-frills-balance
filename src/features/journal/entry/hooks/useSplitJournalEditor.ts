@@ -134,7 +134,9 @@ export function useSplitJournalEditor({
     [sourceLine, updateLine],
   );
 
-  const addSplitRow = editor.addLine;
+  const addSplitRow = useCallback(() => {
+    editor.addLine();
+  }, [editor]);
   const removeSplitRow = useCallback(
     (id: string) => {
       editor.setLines(previous => {

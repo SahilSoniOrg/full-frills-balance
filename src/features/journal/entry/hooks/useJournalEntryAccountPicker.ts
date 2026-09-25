@@ -238,6 +238,17 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
     [editor.transactionType, splitRows],
   );
 
+  const onCreateAccountRequestForAdvancedRow = useCallback(
+    (rowId: string, _role: AccountRole, intent: CreateAccountIntent) => {
+      AppNavigation.toAccountForm(undefined, {
+        name: intent.suggestedName,
+        type: intent.type || AccountType.ASSET,
+        returnTarget: { kind: 'line', lineId: rowId },
+      });
+    },
+    [],
+  );
+
   const selectableAccounts = useMemo(
     () =>
       resolveJournalEntrySelectableAccounts({
@@ -284,6 +295,7 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
     onCreateAccountRequestForRole,
     onCreateAccountRequestForBatchRow,
     onCreateAccountRequestForSplitRow,
+    onCreateAccountRequestForAdvancedRow,
     selectableAccounts,
     selectedAccountId,
     accountPickerTitle,

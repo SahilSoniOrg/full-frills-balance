@@ -113,21 +113,14 @@ describe('useJournalEditor', () => {
     expect(result.current.lines).toHaveLength(3);
   });
 
-  it('should remove lines but keep minimum 2', () => {
+  it('should remove a line even when only two remain', () => {
     const { result } = renderHook(() => useJournalEditor('test-workplace' as WorkplaceId));
 
     act(() => {
       result.current.removeLine(result.current.lines[0].id);
     });
 
-    expect(result.current.lines).toHaveLength(2); // Should not go below 2
-
-    act(() => {
-      result.current.addLine(); // Now 3
-      result.current.removeLine(result.current.lines[0].id);
-    });
-
-    expect(result.current.lines).toHaveLength(2);
+    expect(result.current.lines).toHaveLength(1);
   });
 
   it('should fail submission if service fails', async () => {

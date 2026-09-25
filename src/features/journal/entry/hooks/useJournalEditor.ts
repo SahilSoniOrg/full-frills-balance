@@ -10,7 +10,6 @@ import {
   JournalEditorLoadState,
   useJournalEditorLoader,
 } from '@/src/features/journal/entry/hooks/useJournalEditorLoader';
-import { deriveJournalEditorBalanceState } from '@/src/features/journal/entry/journalEditorBalancePolicy';
 import { normalizeJournalLinesForGuidedMode } from '@/src/services/journal/journalEditorHelpers';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -104,12 +103,11 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   const valuationCurrency = isEdit ? savedJournalCurrency || workplaceCurrency : workplaceCurrency;
 
   // Advanced / Generic state
-  const { lines, setLines, addLine, removeLine, updateLine, updateLines, balanceLine } =
+  const { lines, setLines, addLine, removeLine, updateLine, updateLines } =
     useJournalEditorLineState({
       initialAmount,
       initialSourceId,
       initialDestinationId,
-      valuationCurrency,
     });
 
   const setGuidedModeInternal = useCallback(
@@ -215,11 +213,6 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     [isGuidedMode, getLineIdByRole],
   );
 
-  const { imbalance, isUnbalanced, isEntryReadyToBalance } = useMemo(
-    () => deriveJournalEditorBalanceState(lines, valuationCurrency),
-    [lines, valuationCurrency],
-  );
-
   return useMemo(
     () => ({
       isGuidedMode,
@@ -245,14 +238,10 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       removeLine,
       updateLine,
       updateLines,
-      balanceLine,
       fetchRatesForLines,
       getLineIdByRole,
       resolveActiveLineId,
       submitPlan,
-      imbalance,
-      isUnbalanced,
-      isEntryReadyToBalance,
     }),
     [
       isGuidedMode,
@@ -272,14 +261,10 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       removeLine,
       updateLine,
       updateLines,
-      balanceLine,
       fetchRatesForLines,
       getLineIdByRole,
       resolveActiveLineId,
       submitPlan,
-      imbalance,
-      isUnbalanced,
-      isEntryReadyToBalance,
       setLines,
     ],
   );
