@@ -32,6 +32,10 @@ export const accountQueries = {
     return accountObserveQueries.observeByType(workplaceId, accountType).pipe(map(toPlainAccounts));
   },
 
+  observeByIds(workplaceId: WorkplaceId, accountIds: AccountId[]) {
+    return accountObserveQueries.observeByIds(workplaceId, accountIds).pipe(map(toPlainAccounts));
+  },
+
   observeHasChildren(workplaceId: WorkplaceId, accountId: AccountId) {
     return accountObserveQueries.observeHasChildren(workplaceId, accountId);
   },
