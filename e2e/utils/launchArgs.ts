@@ -5,6 +5,7 @@ export type E2eSeedProfile =
   | 'onboarded'
   | 'journal-ready'
   | 'fx-demo'
+  | 'fx-missing-rate'
   | 'planned-payments'
   | 'sms-ready'
   | 'sms-sync'

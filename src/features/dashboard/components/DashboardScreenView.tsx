@@ -113,6 +113,7 @@ export function DashboardScreenView({
     accountMap: fullSafeToSpendData?.accountMap ?? EMPTY_ACCOUNT_MAP,
     safeToSpendDays: safeToSpendData?.safeToSpendDays ?? 0,
     hasUnvaluedEntries: safeToSpendData?.hasUnvaluedEntries ?? false,
+    unvaluedStartingBalances: safeToSpendData?.unvaluedStartingBalances,
     uiState,
     isLoading: !safeToSpendData,
   });

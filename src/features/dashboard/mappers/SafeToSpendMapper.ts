@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
+import type { UnvaluedStartingBalance } from '@/src/services/simulation/types';
 import { selectCommittedEntries } from '@/src/services/simulation/selectors/committed';
 import { selectDebtEntries } from '@/src/services/simulation/selectors/debt';
 import { selectIncomeEntries } from '@/src/services/simulation/selectors/income';
@@ -20,6 +21,7 @@ export interface SafeToSpendMapperInput {
   accountMap: Map<string, AccountFields>;
   safeToSpendDays: number;
   hasUnvaluedEntries?: boolean;
+  unvaluedStartingBalances?: UnvaluedStartingBalance[];
 }
 
 export class SafeToSpendMapper {
@@ -54,6 +56,7 @@ export class SafeToSpendMapper {
         committed: [],
         debt: [],
         accountSummaries: result.accountSummaries || [],
+        unvaluedStartingBalances: result.unvaluedStartingBalances,
         liquidAssetSubtypes: result.liquidAssetSubtypes || [],
         isOverCommitted: false,
         isPositiveSafeToSpend: false,
@@ -78,6 +81,7 @@ export class SafeToSpendMapper {
       liquidAssetSubtypes,
       accountMap,
       hasUnvaluedEntries = false,
+      unvaluedStartingBalances,
     } = result;
 
     const safeToSpend = summary?.safeToSpend ?? 0;
@@ -128,6 +132,7 @@ export class SafeToSpendMapper {
       isLoading,
       safeToSpendDays: result.safeToSpendDays,
       ...(hasUnvaluedEntries ? { hasUnvaluedEntries: true } : {}),
+      ...(unvaluedStartingBalances?.length ? { unvaluedStartingBalances } : {}),
       labels: SafeToSpendMapper.resolveLabels(
         AppConfig.strings.dashboard.safeToSpendUi,
         result.safeToSpendDays,

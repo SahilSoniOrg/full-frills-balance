@@ -55,6 +55,7 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
     accountMap,
     safeToSpendDays,
     hasUnvaluedEntries,
+    unvaluedStartingBalances,
   } = props;
 
   const viewModel = useMemo(() => {
@@ -68,6 +69,7 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
         accountMap,
         safeToSpendDays,
         hasUnvaluedEntries,
+        unvaluedStartingBalances,
       },
       {
         isLoading: !!propsIsLoading,
@@ -85,6 +87,7 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
     currencyCode,
     safeToSpendDays,
     hasUnvaluedEntries,
+    unvaluedStartingBalances,
   ]);
 
   const handleSetInfoVisible = useCallback(

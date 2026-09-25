@@ -2,6 +2,14 @@ import { AccountFields } from '@/src/types/plainDtos';
 import { AccountId, BudgetId } from '@/src/types/ids';
 import { AccountSubtype } from '@/src/types/enums';
 
+export interface UnvaluedStartingBalance {
+  accountId: AccountId;
+  accountName: string;
+  amount: number;
+  fromCurrency: string;
+  toCurrency: string;
+}
+
 export enum FlowCategory {
   INCOME = 'INCOME',
   BUDGET = 'BUDGET',
@@ -203,7 +211,8 @@ export interface SimulationRunResult {
   report: SimulationReport;
   accountSummaries: AccountSimulationSummary[];
   allFlows: Flow[];
-  startingBalances: Map<string, number>;
+  /** Starting balances normalized to the simulation's result currency. */
+  normalizedStartingBalances: Map<string, number>;
   liquidAccountIdsSet: Set<string>;
   liabilityAccountBalances: { account: AccountFields; balance: number }[];
   accountMap: Map<string, AccountFields>;

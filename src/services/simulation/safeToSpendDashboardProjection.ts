@@ -8,6 +8,7 @@ import {
   SimulationReport,
   SimulationEngineResult,
   SimulationRunResult,
+  UnvaluedStartingBalance,
 } from '@/src/services/simulation/types';
 import { LIQUID_ASSET_SUBTYPES } from '@/src/utils/accountSubtypeUtils';
 import { AppConfig } from '@/src/constants/app-config';
@@ -29,7 +30,8 @@ export interface SafeToSpendDataPoint {
 export interface SafeToSpendProjection {
   history: SafeToSpendDataPoint[];
   projection: SafeToSpendDataPoint[];
-  safeDaysCount: number | null;
+  /** Undefined means the estimate is unavailable because required inputs were unvalued. */
+  safeDaysCount: number | null | undefined;
   safeToSpend: number;
 }
 
@@ -41,7 +43,7 @@ type SafeToSpendSummary = Pick<
     SimulationReport['summary'],
     'totalFutureInflow' | 'totalPlannedInflow' | 'totalPlannedOutflow' | 'totalCommittedPlanned'
   > & {
-    safeDaysCount: number | null;
+    safeDaysCount: number | null | undefined;
   };
 
 /** Payload from `safeToSpend.forWorkplace(id).watch()` — dashboard + chart. */
@@ -56,8 +58,9 @@ export interface SafeToSpendDashboard {
   projection: SafeToSpendProjection;
   accountMap: Map<string, AccountFields>;
   safeToSpendDays: number;
-  /** True when a budget or history line could not be valued. */
+  /** True when any input used by the projection could not be valued. */
   hasUnvaluedEntries?: boolean;
+  unvaluedStartingBalances?: UnvaluedStartingBalance[];
 }
 
 export async function buildNetCashFlowByDay(
@@ -177,12 +180,14 @@ export function mapSimulationToProjectionPoints(
 
 export function computeLiquidSafeDaysCount(input: {
   liquidAssetIds: AccountId[];
-  startingBalances: Map<AccountId, number>;
   runResult: SimulationRunResult;
-}): number | null {
-  const liquidIds = new Set(input.liquidAssetIds);
+  hasUnvaluedEntries?: boolean;
+}): number | null | undefined {
+  if (input.hasUnvaluedEntries || input.runResult.hasUnvaluedEntries) return undefined;
+
+  const liquidIds = new Set<string>(input.liquidAssetIds);
   let startingGlobal = 0;
-  for (const [accountId, balance] of input.startingBalances.entries()) {
+  for (const [accountId, balance] of input.runResult.normalizedStartingBalances.entries()) {
     if (liquidIds.has(accountId)) startingGlobal += balance;
   }
   if (startingGlobal < 0) return 0;
@@ -195,12 +200,11 @@ export function assembleSafeToSpendDashboard(input: {
   defaultCurrencyCode: string;
   safeToSpendDays: number;
   totalLiquidAssets: number;
-  liquidAssetIds: AccountId[];
-  startingBalances: Map<AccountId, number>;
   historyPoints: SafeToSpendDataPoint[];
   projectionPoints: SafeToSpendDataPoint[];
-  safeDaysCount: number | null;
+  safeDaysCount: number | null | undefined;
   hasUnvaluedEntries?: boolean;
+  unvaluedStartingBalances?: UnvaluedStartingBalance[];
 }): SafeToSpendDashboard {
   const {
     runResult,
@@ -211,6 +215,7 @@ export function assembleSafeToSpendDashboard(input: {
     projectionPoints,
     safeDaysCount,
     hasUnvaluedEntries = false,
+    unvaluedStartingBalances = [],
   } = input;
 
   return {
@@ -236,6 +241,7 @@ export function assembleSafeToSpendDashboard(input: {
     accountMap: runResult.accountMap,
     safeToSpendDays,
     ...(hasUnvaluedEntries ? { hasUnvaluedEntries: true } : {}),
+    ...(unvaluedStartingBalances.length > 0 ? { unvaluedStartingBalances } : {}),
   };
 }
 

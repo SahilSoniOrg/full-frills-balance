@@ -27,6 +27,7 @@ import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/services/preferences';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { roundToPrecision } from '@/src/utils/money';
+import type { UnvaluedStartingBalance } from './types';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import dayjs from 'dayjs';
 import { combineLatest, from, Observable, of } from 'rxjs';
@@ -50,6 +51,8 @@ export type SafeToSpendInputSnapshot = {
   usages: BudgetUsage[];
   rawDeltas: DailyDelta[];
   hasUnvaluedEntries?: boolean;
+  hasUnvaluedStartingBalances?: boolean;
+  unvaluedStartingBalances?: UnvaluedStartingBalance[];
   startingBalances: Map<AccountId, number>;
   totalLiquidAssetsAmount: number;
   liabilityAccountBalances: { account: Account; balance: number }[];
@@ -215,7 +218,9 @@ export function observeSafeToSpendInputSnapshot(
           const accountById = new Map(mapped.liquidAssets.map(account => [account.id, account]));
           const journalById = new Map(journals.map(journal => [journal.id, journal]));
           const rawDeltas: DailyDelta[] = [];
+          const unvaluedStartingBalances: UnvaluedStartingBalance[] = [];
           let hasUnvaluedEntries = false;
+          let hasUnvaluedStartingBalances = false;
 
           for (const transaction of transactions) {
             const account = accountById.get(transaction.accountId);
@@ -259,6 +264,14 @@ export function observeSafeToSpendInputSnapshot(
               });
               if (!converted.ok) {
                 hasUnvaluedEntries = true;
+                hasUnvaluedStartingBalances = true;
+                unvaluedStartingBalances.push({
+                  accountId: account.id,
+                  accountName: account.name,
+                  amount: balance,
+                  fromCurrency,
+                  toCurrency: mapped.defaultCurrencyCode,
+                });
                 logger.warn('[SafeToSpendInputAcquisition] Liquid asset spot rate unavailable', {
                   accountId: account.id,
                   fromCurrency,
@@ -293,6 +306,8 @@ export function observeSafeToSpendInputSnapshot(
             usages,
             rawDeltas,
             hasUnvaluedEntries,
+            hasUnvaluedStartingBalances,
+            unvaluedStartingBalances,
             startingBalances,
             totalLiquidAssetsAmount,
             liabilityAccountBalances,

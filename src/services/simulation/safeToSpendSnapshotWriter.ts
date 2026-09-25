@@ -49,7 +49,7 @@ export function toSafeToSpendPaintSnapshot(
           dailyBurn,
         }),
       ),
-      safeDaysCount: projection?.safeDaysCount ?? null,
+      safeDaysCount: projection?.safeDaysCount,
       safeToSpend: projection?.safeToSpend ?? dashboard.summary.safeToSpend,
     },
   };

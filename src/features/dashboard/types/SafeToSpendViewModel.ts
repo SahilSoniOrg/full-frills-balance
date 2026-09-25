@@ -6,6 +6,7 @@ import {
   AccountSimulationSummary,
   DebtEntry,
   IncomeEntry,
+  UnvaluedStartingBalance,
 } from '@/src/services/simulation/types';
 
 export type ResolvedCopy<T> = T extends (...args: never[]) => infer R
@@ -53,6 +54,7 @@ export interface SafeToSpendViewModel {
   isOverCommitted: boolean;
   isPositiveSafeToSpend: boolean;
   hasUnvaluedEntries?: boolean;
+  unvaluedStartingBalances?: UnvaluedStartingBalance[];
   isLoading: boolean;
   safeToSpendDays: number;
 

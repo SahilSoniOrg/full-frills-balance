@@ -32,6 +32,8 @@ export async function projectSafeToSpendDashboardFromSnapshot(
     usages,
     rawDeltas,
     hasUnvaluedEntries: acquisitionHasUnvaluedEntries,
+    hasUnvaluedStartingBalances,
+    unvaluedStartingBalances = [],
     startingBalances,
     totalLiquidAssetsAmount,
     liabilityAccountBalances,
@@ -68,11 +70,19 @@ export async function projectSafeToSpendDashboardFromSnapshot(
   });
 
   const projectionPoints = mapSimulationToProjectionPoints(runResult);
-
+  const hasUnvaluedEntries =
+    acquisitionHasUnvaluedEntries ||
+    runResult.hasUnvaluedEntries === true ||
+    history.hasUnvaluedEntries ||
+    usages.some(usage => usage.hasUnvaluedEntries);
+  const hasUnvaluedSafeDaysInputs =
+    hasUnvaluedStartingBalances ||
+    runResult.hasUnvaluedEntries === true ||
+    usages.some(usage => usage.hasUnvaluedEntries);
   const safeDaysCount = computeLiquidSafeDaysCount({
     liquidAssetIds,
-    startingBalances,
     runResult,
+    hasUnvaluedEntries: hasUnvaluedSafeDaysInputs,
   });
 
   trace.end();
@@ -82,15 +92,10 @@ export async function projectSafeToSpendDashboardFromSnapshot(
     defaultCurrencyCode,
     safeToSpendDays,
     totalLiquidAssets: totalLiquidMoney.amount,
-    liquidAssetIds,
-    startingBalances,
     historyPoints,
     projectionPoints,
     safeDaysCount,
-    hasUnvaluedEntries:
-      acquisitionHasUnvaluedEntries ||
-      runResult.hasUnvaluedEntries === true ||
-      history.hasUnvaluedEntries ||
-      usages.some(usage => usage.hasUnvaluedEntries),
+    hasUnvaluedEntries,
+    unvaluedStartingBalances,
   });
 }

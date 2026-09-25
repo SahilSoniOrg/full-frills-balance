@@ -154,8 +154,18 @@ export const UI_STRINGS = {
       waitingForIncome: 'Waiting on payday',
       calculationLedger: 'Calculation details',
       projectedLabel: 'Projected',
-      incompleteFxWarning:
-        'Some journal lines or currency quotes could not be valued. Budget, history, or projected cash flow may be incomplete.',
+      incompleteFxWarning: 'Some values could not be converted. Safe to Spend may be incomplete.',
+      reviewIncompleteValues: 'Review details',
+      incompleteFxDetailsTitle: 'Why this estimate is incomplete',
+      incompleteFxDetailsIntro: (currency: string) =>
+        `Some amounts were left out because they could not be converted to ${currency}.`,
+      excludedStartingBalancesTitle: 'Cash left out of this estimate',
+      excludedStartingBalance: (accountName: string, amount: string) =>
+        `${accountName}: ${amount} was not included.`,
+      missingCurrentExchangeRate: (from: string, to: string) =>
+        `No current ${from} → ${to} exchange rate is available.`,
+      incompleteFxUnidentifiedItems:
+        'The affected journal, budget, or projected amounts are not available to list here.',
     },
     hub: {
       title: 'Review',

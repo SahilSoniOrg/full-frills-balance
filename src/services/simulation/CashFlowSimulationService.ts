@@ -331,7 +331,7 @@ export class CashFlowSimulationService {
       report,
       accountSummaries,
       allFlows,
-      startingBalances: normalizedStartingBalances,
+      normalizedStartingBalances,
       liquidAccountIdsSet,
       liabilityAccountBalances,
       accountMap,
