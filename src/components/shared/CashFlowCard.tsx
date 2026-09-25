@@ -11,6 +11,7 @@ interface CashFlowCardProps {
   onChangePeriod: (period: 'overall' | 'month' | '30days') => void;
   currencyCode: string;
   isLoading?: boolean;
+  warning?: string;
 }
 
 export const CashFlowCard = ({
@@ -20,6 +21,7 @@ export const CashFlowCard = ({
   onChangePeriod,
   currencyCode,
   isLoading = false,
+  warning,
 }: CashFlowCardProps) => {
   const { theme, fonts } = useTheme();
 
@@ -101,6 +103,11 @@ export const CashFlowCard = ({
           </View>
         </View>
       </View>
+      {warning ? (
+        <AppText variant="caption" color="warning" style={styles.warning}>
+          {warning}
+        </AppText>
+      ) : null}
     </AppCard>
   );
 };
@@ -142,5 +149,8 @@ const styles = StyleSheet.create({
     width: 1,
     height: '100%',
     marginHorizontal: Spacing.md,
+  },
+  warning: {
+    marginTop: Spacing.md,
   },
 });

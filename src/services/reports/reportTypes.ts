@@ -26,8 +26,6 @@ export interface ReportingDeltaInput {
   amount?: number;
   dayStart?: number;
   accountType?: AccountType;
-  /** Per-leg rate from the transaction when available (historical conversion). */
-  exchangeRate?: number;
 }
 
 export interface CategoryBreakdown {

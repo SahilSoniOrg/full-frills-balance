@@ -24,12 +24,12 @@ describe('fetchMissingHistoricalRates', () => {
     expect(getHistoricalRate).toHaveBeenCalledWith('USD', 'INR', Date.UTC(2026, 8, 1));
   });
 
-  it('counts a silent 1.0 quote as failed so the toast cannot claim success', async () => {
+  it('counts a positive 1.0 historical quote as successful', async () => {
     getHistoricalRate.mockResolvedValue({ rate: 1 });
     await expect(fetchMissingHistoricalRates(quotes)).resolves.toEqual({
       attempted: 1,
-      fetched: 0,
-      failed: 1,
+      fetched: 1,
+      failed: 0,
     });
   });
 

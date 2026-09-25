@@ -1,42 +1,21 @@
 import Transaction from '@/src/data/models/Transaction';
-import { convertAmount } from '@/src/services/currencyConversion';
-import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { transactionQueryRepository } from '@/src/data/repositories/transaction';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
+import { AppConfig } from '@/src/constants/app-config';
+import { convertJournalLineAmount } from '@/src/services/currencyConversion';
 import {
   ConvertedReportTransaction,
   ReportAccount,
   ReportingDeltaInput,
 } from '@/src/services/reports/reportTypes';
-import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { WorkplaceId } from '@/src/types/ids';
 import { effect } from '@/src/utils/accounting/BalanceEffects';
+import { runTasksWithBoundedConcurrency } from '@/src/utils/asyncConcurrency';
 import { logger } from '@/src/utils/logger';
 import dayjs from 'dayjs';
 
-async function convertReportingAmount(
-  amount: number,
-  fromCurrency: string,
-  targetCurrency: string,
-  storedExchangeRate?: number,
-): Promise<number | null> {
-  const result = await convertAmount({
-    amount,
-    fromCurrency,
-    toCurrency: targetCurrency,
-    mode: 'historical',
-    storedExchangeRate,
-  });
-  if (!result.ok) {
-    logger.warn(
-      `[reportingDeltaEngine] Skipping amount: FX unavailable (${fromCurrency} -> ${targetCurrency})`,
-    );
-    return null;
-  }
-  return result.amount;
-}
-
 /**
- * Pre-fetches exchange rates and converts a batch of raw Transaction records to the target
- * reporting currency. Unified replacement for the two near-identical private methods
+ * Converts a batch of raw Transaction records to the target reporting currency. Unified
+ * replacement for the two near-identical private methods
  * (getConvertedReportTransactions / getConvertedReportTransactionsFromRaw) that previously
  * lived in ReportService.
  */
@@ -44,101 +23,65 @@ export async function convertReportTransactions(
   transactions: Transaction[],
   targetCurrency: string,
   accounts: ReportAccount[],
-): Promise<ConvertedReportTransaction[]> {
-  if (transactions.length === 0) return [];
+  workplaceId: WorkplaceId,
+): Promise<{ transactions: ConvertedReportTransaction[]; hasUnvaluedEntries: boolean }> {
+  if (transactions.length === 0) return { transactions: [], hasUnvaluedEntries: false };
 
   const accountMap = new Map(accounts.map(a => [a.id, a]));
-
-  // 1. Collect unique source currencies
-  const sourceCurrencies = new Set<string>();
-  transactions.forEach(tx => {
-    const account = accountMap.get(tx.accountId);
-    const txCurrency = tx.currencyCode || account?.currencyCode || targetCurrency;
-    sourceCurrencies.add(txCurrency);
-  });
-
-  // 2. Pre-fetch rates in parallel
-  await Promise.all(
-    Array.from(sourceCurrencies).map(base => {
-      const promise = exchangeRateService.fetchRatesForBase?.(base);
-      return promise && typeof promise.catch === 'function'
-        ? promise.catch(() => {})
-        : Promise.resolve();
-    }),
+  const journals = await journalQueryRepository.findByIds(workplaceId, [
+    ...new Set(transactions.map(transaction => transaction.journalId)),
+  ]);
+  const journalById = new Map(journals.map(journal => [journal.id, journal]));
+  const converted: (ConvertedReportTransaction | null)[] = new Array(transactions.length).fill(
+    null,
   );
+  const unvaluedEntries = new Array<boolean>(transactions.length).fill(false);
 
-  const converted = await Promise.all(
-    transactions.map(async tx => {
-      const account = accountMap.get(tx.accountId);
-      const accountType = account?.accountType;
-      if (!accountType) return null;
+  await runTasksWithBoundedConcurrency(
+    transactions,
+    AppConfig.performance.maxConcurrentOperations,
+    async (transaction, index) => {
+      const account = accountMap.get(transaction.accountId);
+      const journal = journalById.get(transaction.journalId);
+      if (!account || !journal) {
+        unvaluedEntries[index] = true;
+        return;
+      }
 
-      const txCurrency = tx.currencyCode || account?.currencyCode || targetCurrency;
-      const amount = await convertReportingAmount(
-        tx.amount,
-        txCurrency,
+      const lineCurrency = transaction.currencyCode || account.currencyCode || journal.currencyCode;
+      const result = await convertJournalLineAmount({
+        amount: transaction.amount,
+        lineCurrency,
+        journalCurrency: journal.currencyCode,
         targetCurrency,
-        tx.exchangeRate,
-      );
-      if (amount === null) return null;
+        storedLineRate: transaction.exchangeRate,
+        journalDate: journal.journalDate,
+      });
+      if (!result.ok) {
+        unvaluedEntries[index] = true;
+        logger.warn('[reportingDeltaEngine] Skipping amount: journal FX unavailable', {
+          transactionId: transaction.id,
+          fromCurrency: result.missingRate.fromCurrency,
+          toCurrency: result.missingRate.toCurrency,
+          journalDate: journal.journalDate,
+        });
+        return;
+      }
 
-      return {
-        accountId: tx.accountId,
-        accountType,
-        transactionType: tx.transactionType,
-        transactionDate: tx.transactionDate,
-        amount,
+      converted[index] = {
+        accountId: transaction.accountId,
+        accountType: account.accountType,
+        transactionType: transaction.transactionType,
+        transactionDate: transaction.transactionDate,
+        amount: result.amount,
       };
-    }),
+    },
   );
 
-  return converted.filter((row): row is ConvertedReportTransaction => !!row);
-}
-
-/**
- * Normalizes currency on an array of ReportingDeltaInput objects using cached rates.
- */
-export async function normalizeDeltas<T extends ReportingDeltaInput>(
-  deltas: T[],
-  targetCurrency: string,
-): Promise<T[]> {
-  if (deltas.length === 0) return [];
-
-  const sourceCurrencies = new Set<string>();
-  deltas.forEach(d => sourceCurrencies.add(d.currencyCode));
-
-  await Promise.all(
-    Array.from(sourceCurrencies).map(base => {
-      const promise = exchangeRateService.fetchRatesForBase?.(base);
-      return promise && typeof promise.catch === 'function'
-        ? promise.catch(() => {})
-        : Promise.resolve();
-    }),
-  );
-
-  const normalized: T[] = [];
-  for (const row of await Promise.all(
-    deltas.map(async d => {
-      if (d.currencyCode === targetCurrency) {
-        return d;
-      }
-      const convertedDelta = await convertReportingAmount(
-        d.delta,
-        d.currencyCode,
-        targetCurrency,
-        d.exchangeRate,
-      );
-      if (convertedDelta === null) {
-        return null;
-      }
-      return { ...d, delta: convertedDelta, currencyCode: targetCurrency } as T;
-    }),
-  )) {
-    if (row !== null) {
-      normalized.push(row);
-    }
-  }
-  return normalized;
+  return {
+    transactions: converted.filter((row): row is ConvertedReportTransaction => row !== null),
+    hasUnvaluedEntries: unvaluedEntries.some(Boolean),
+  };
 }
 
 /**
@@ -163,40 +106,4 @@ export function mapTransactionsToReportingDeltas(
       accountType: type,
     };
   });
-}
-
-/**
- * Fetches raw deltas from the DB, normalizes currency, and falls back to in-memory
- * transaction scanning when the raw query returns empty (e.g. before running_balance rebuild).
- * Eliminates the as unknown as T double-cast that previously lived in ReportService.
- */
-export async function getScopedReportingDeltas<T extends ReportingDeltaInput>(
-  workplaceId: WorkplaceId,
-  accountIds: AccountId[],
-  startDate: number,
-  endDate: number,
-  targetCurrency: string,
-  accounts: ReportAccount[],
-  fetchRaw: (ids: AccountId[], start: number, end: number) => Promise<T[]>,
-): Promise<ReportingDeltaInput[]> {
-  if (accountIds.length === 0) return [];
-
-  const items = await fetchRaw(accountIds, startDate, endDate);
-  if (items.length > 0) {
-    return normalizeDeltas(items, targetCurrency);
-  }
-
-  logger.metric('ReportService.getScopedDeltas.fallbackTriggered', 1, {
-    accountCount: accountIds.length,
-    rangeDays: dayjs(endDate).diff(dayjs(startDate), 'days'),
-  });
-
-  const transactions = await transactionQueryRepository.findByAccountsAndDateRange(
-    workplaceId,
-    accountIds,
-    startDate,
-    endDate,
-  );
-  const converted = await convertReportTransactions(transactions, targetCurrency, accounts);
-  return mapTransactionsToReportingDeltas(converted, accounts, targetCurrency);
 }

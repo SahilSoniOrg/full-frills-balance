@@ -1,4 +1,6 @@
 import { TransactionType } from '@/src/types/enums';
+import { AppConfig } from '@/src/constants/app-config';
+import { roundToPrecision } from '@/src/utils/money';
 
 import dayjs from 'dayjs';
 import { ConvertedReportTransaction } from './reportTypes';
@@ -19,6 +21,7 @@ export interface IncomeVsExpenseHistoryPoint {
 
 export function calculateSpendingHeatmapFromTransactions(
   transactions: ConvertedReportTransaction[],
+  precision: number = AppConfig.constants.precision,
 ): HeatmapPoint[] {
   const densityMap = new Map<string, number>();
 
@@ -27,7 +30,7 @@ export function calculateSpendingHeatmapFromTransactions(
 
     const dt = dayjs(tx.transactionDate);
     const key = `${dt.day()}_${dt.hour()}`;
-    densityMap.set(key, (densityMap.get(key) || 0) + tx.amount);
+    densityMap.set(key, roundToPrecision((densityMap.get(key) || 0) + tx.amount, precision));
   }
 
   const points: HeatmapPoint[] = [];

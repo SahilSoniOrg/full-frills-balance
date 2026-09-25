@@ -1,10 +1,7 @@
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import {
   convertReportTransactions,
-  getScopedReportingDeltas,
   mapTransactionsToReportingDeltas,
-  normalizeDeltas,
 } from '@/src/services/reports/reportingDeltaEngine';
 import {
   ConvertedReportTransaction,
@@ -14,16 +11,17 @@ import {
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 export interface ReportingPeriodData {
-  /** Per-account period totals — SQL aggregates when available, else transaction-mapped deltas. */
+  /** Per-posting period deltas, converted before any total is aggregated. */
   accountPeriodDeltas: ReportingDeltaInput[];
-  /** Day-bucketed deltas for history and daily income vs expense charts. */
+  /** Per-posting day deltas for history and daily income vs expense charts. */
   dailyDeltas: ReportingDeltaInput[];
   /** Converted transactions for spending heatmap (requires hour-level granularity). */
   convertedTransactions: ConvertedReportTransaction[];
+  hasUnvaluedEntries: boolean;
 }
 
 /**
- * Account-period deltas only (raw SQL with transaction-scan fallback).
+ * Account-period deltas converted posting by posting.
  * Used by lightweight callers such as the accounts list period totals.
  */
 export async function loadAccountPeriodReportingDeltas(
@@ -33,17 +31,18 @@ export async function loadAccountPeriodReportingDeltas(
   endDate: number,
   currency: string,
   accounts: ReportAccount[],
-): Promise<ReportingDeltaInput[]> {
-  return getScopedReportingDeltas(
+): Promise<{ deltas: ReportingDeltaInput[]; hasUnvaluedEntries: boolean }> {
+  const transactions = await transactionQueryRepository.findByAccountsAndDateRange(
     workplaceId,
     accountIds,
     startDate,
     endDate,
-    currency,
-    accounts,
-    (ids, start, end) =>
-      transactionRawRepository.getAccountDeltasGroupedRaw(workplaceId, ids, start, end),
   );
+  const converted = await convertReportTransactions(transactions, currency, accounts, workplaceId);
+  return {
+    deltas: mapTransactionsToReportingDeltas(converted.transactions, accounts, currency),
+    hasUnvaluedEntries: converted.hasUnvaluedEntries,
+  };
 }
 
 /**
@@ -60,31 +59,40 @@ export async function loadReportingPeriodData(
 ): Promise<ReportingPeriodData> {
   const allIds = allAccounts.map(a => a.id);
   if (allIds.length === 0) {
-    return { accountPeriodDeltas: [], dailyDeltas: [], convertedTransactions: [] };
+    return {
+      accountPeriodDeltas: [],
+      dailyDeltas: [],
+      convertedTransactions: [],
+      hasUnvaluedEntries: false,
+    };
   }
 
-  const [rawAccountRows, rawDailyRows, transactions] = await Promise.all([
-    transactionRawRepository.getAccountDeltasGroupedRaw(workplaceId, allIds, startDate, endDate),
-    transactionRawRepository.getDailyDeltasGroupedRaw(workplaceId, allIds, startDate, endDate),
-    transactionQueryRepository.findByAccountsAndDateRange(workplaceId, allIds, startDate, endDate),
-  ]);
+  const transactions = await transactionQueryRepository.findByAccountsAndDateRange(
+    workplaceId,
+    allIds,
+    startDate,
+    endDate,
+  );
 
-  const convertedTransactions = await convertReportTransactions(
+  const converted = await convertReportTransactions(
     transactions,
     currency,
     allAccounts,
+    workplaceId,
   );
+  const convertedTransactions = converted.transactions;
   const transactionDeltas = mapTransactionsToReportingDeltas(
     convertedTransactions,
     allAccounts,
     currency,
   );
 
-  const accountPeriodDeltas =
-    rawAccountRows.length > 0 ? await normalizeDeltas(rawAccountRows, currency) : transactionDeltas;
-
-  const dailyDeltas =
-    rawDailyRows.length > 0 ? await normalizeDeltas(rawDailyRows, currency) : transactionDeltas;
-
-  return { accountPeriodDeltas, dailyDeltas, convertedTransactions };
+  // Keep each converted posting until report aggregation so minor-unit rounding
+  // matches the journal evaluator for every line.
+  return {
+    accountPeriodDeltas: transactionDeltas,
+    dailyDeltas: transactionDeltas,
+    convertedTransactions,
+    hasUnvaluedEntries: converted.hasUnvaluedEntries,
+  };
 }

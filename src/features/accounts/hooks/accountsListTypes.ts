@@ -62,6 +62,7 @@ export interface AccountsListViewModel {
   inflowIncome: number;
   inflowExpense: number;
   isPeriodLoading: boolean;
+  hasUnvaluedEntries?: boolean;
   currencyCode: string;
   activeTab: 'accounts' | 'categories';
   setActiveTab: (tab: 'accounts' | 'categories') => void;

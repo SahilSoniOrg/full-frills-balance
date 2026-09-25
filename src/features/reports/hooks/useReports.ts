@@ -108,7 +108,13 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
           : Promise.resolve(null),
       ]);
 
-      return { ...snapshot, previousIncomeVsExpense };
+      return {
+        ...snapshot,
+        previousIncomeVsExpense,
+        hasUnvaluedEntries:
+          snapshot.hasUnvaluedEntries === true ||
+          previousIncomeVsExpense?.hasUnvaluedEntries === true,
+      };
     },
     [
       workplaceId,
@@ -129,6 +135,7 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
       sankeyData: emptySankeyData(),
       spendingHeatmap: [],
       calendarHeatmap: [],
+      hasUnvaluedEntries: false,
       previousIncomeVsExpense: null,
     },
   );
@@ -193,6 +200,7 @@ export function useReports(workplaceId: WorkplaceId, currencyCode: string) {
     sankeyData: data.sankeyData,
     spendingHeatmap: data.spendingHeatmap,
     calendarHeatmap: data.calendarHeatmap,
+    hasUnvaluedEntries: data.hasUnvaluedEntries ?? false,
     targetCurrency,
     loading,
     error,

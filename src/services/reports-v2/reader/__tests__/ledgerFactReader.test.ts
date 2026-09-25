@@ -1,7 +1,7 @@
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { journalListQueryRepository } from '@/src/data/repositories/journal/journalListQueryRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { convertAmount } from '@/src/services/currencyConversion';
+import { convertJournalLineAmount } from '@/src/services/currencyConversion';
 import { AccountType, JournalDisplayType, JournalStatus, TransactionType } from '@/src/types/enums';
 import { asWorkplaceId } from '@/src/types/ids';
 import { readReportLedger } from '../ledgerFactReader';
@@ -25,13 +25,13 @@ jest.mock('@/src/data/repositories/transaction', () => ({
   },
 }));
 jest.mock('@/src/services/currencyConversion', () => ({
-  convertAmount: jest.fn(),
+  convertJournalLineAmount: jest.fn(),
 }));
 
 const accounts = accountQueryRepository as jest.Mocked<typeof accountQueryRepository>;
 const journals = journalListQueryRepository as jest.Mocked<typeof journalListQueryRepository>;
 const transactions = transactionQueryRepository as jest.Mocked<typeof transactionQueryRepository>;
-const convert = convertAmount as jest.MockedFunction<typeof convertAmount>;
+const convert = convertJournalLineAmount as jest.MockedFunction<typeof convertJournalLineAmount>;
 
 const query: ReportQuery = {
   workplaceId: asWorkplaceId('workplace-1'),
@@ -50,6 +50,7 @@ const query: ReportQuery = {
 describe('readReportLedger', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    convert.mockResolvedValue({ ok: true, amount: 1000 });
     accounts.findAll.mockResolvedValue([
       {
         id: 'salary',
@@ -97,7 +98,14 @@ describe('readReportLedger', () => {
       Date.UTC(2026, 8, 16),
     );
     expect(transactions.findByJournals).toHaveBeenCalledWith(query.workplaceId, ['j1']);
-    expect(convert).not.toHaveBeenCalled();
+    expect(convert).toHaveBeenCalledWith({
+      amount: 1000,
+      lineCurrency: 'INR',
+      journalCurrency: 'INR',
+      targetCurrency: 'INR',
+      storedLineRate: undefined,
+      journalDate: Date.UTC(2026, 8, 5),
+    });
     expect(snapshot.actualFacts).toHaveLength(1);
     expect(snapshot.actualFacts[0]).toMatchObject({
       journalId: 'j1',
@@ -133,11 +141,11 @@ describe('readReportLedger', () => {
     expect(convert).toHaveBeenCalledTimes(1);
     expect(convert).toHaveBeenCalledWith(
       expect.objectContaining({
-        fromCurrency: 'USD',
-        toCurrency: 'INR',
-        mode: 'historical',
-        storedExchangeRate: 83,
-        rateDate: Date.UTC(2026, 8, 5),
+        lineCurrency: 'USD',
+        journalCurrency: 'INR',
+        targetCurrency: 'INR',
+        storedLineRate: 83,
+        journalDate: Date.UTC(2026, 8, 5),
       }),
     );
     expect(snapshot.actualFacts[0]?.historicalBaseAmount).toBe(830);
@@ -177,7 +185,7 @@ describe('readReportLedger', () => {
       },
     ] as never);
     convert.mockImplementation(async input => {
-      if (input.fromCurrency === 'USD') {
+      if (input.lineCurrency === 'USD') {
         await new Promise(resolve => setTimeout(resolve, 20));
         return { ok: true, amount: 830 };
       }
@@ -208,7 +216,11 @@ describe('readReportLedger', () => {
         transactionType: TransactionType.CREDIT,
       },
     ] as never);
-    convert.mockResolvedValue({ ok: false, reason: 'missing_rate' });
+    convert.mockResolvedValue({
+      ok: false,
+      reason: 'missing_rate',
+      missingRate: { fromCurrency: 'USD', toCurrency: 'INR' },
+    });
 
     const snapshot = await readReportLedger({ ...query, targetCurrency: 'INR' });
 

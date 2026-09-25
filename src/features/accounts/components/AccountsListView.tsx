@@ -57,6 +57,7 @@ export function AccountsListView({
   inflowIncome,
   inflowExpense,
   isPeriodLoading,
+  hasUnvaluedEntries,
   currencyCode,
   activeTab,
   setActiveTab,
@@ -274,6 +275,11 @@ export function AccountsListView({
                     onChangePeriod={setInflowPeriod}
                     currencyCode={currencyCode}
                     isLoading={isLoading || isPeriodLoading}
+                    warning={
+                      inflowPeriod === '30days' && hasUnvaluedEntries
+                        ? AppConfig.strings.reports.incompleteFxWarning
+                        : undefined
+                    }
                   />
                 </View>
               )}

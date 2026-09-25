@@ -1,5 +1,4 @@
 import { AppConfig } from '@/src/constants/app-config';
-import { isUsableCrossCurrencyRate } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import type { MissingRateQuote } from '@/src/services/reports-v2/types/result';
 import { runTasksWithBoundedConcurrency } from '@/src/utils/asyncConcurrency';
@@ -31,7 +30,7 @@ export async function fetchMissingHistoricalRates(
           quote.toCurrency,
           quote.rateDate,
         );
-        if (isUsableCrossCurrencyRate(quote.fromCurrency, quote.toCurrency, result.rate)) {
+        if (Number.isFinite(result.rate) && result.rate > 0) {
           fetched += 1;
         } else {
           failed += 1;

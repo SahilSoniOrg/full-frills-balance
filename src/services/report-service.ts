@@ -29,7 +29,8 @@ import {
   calculateCategoryBreakdownItems,
   calculateIncomeVsExpenseSummary,
 } from '@/src/services/accounting/accountingHelpers';
-import { Money } from '@/src/utils/money';
+import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
+import { roundToPrecision } from '@/src/utils/money';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
@@ -64,7 +65,7 @@ export class ReportService {
     endDate: number,
     targetCurrency?: string,
     filterAccountIds?: string[],
-  ): Promise<{ income: number; expense: number }> {
+  ): Promise<{ income: number; expense: number; hasUnvaluedEntries?: boolean }> {
     const { currency, incomeAccounts, expenseAccounts } = await this.getReportAccounts(
       workplaceId,
       targetCurrency,
@@ -73,7 +74,7 @@ export class ReportService {
     const allIds = allAccounts.map(a => a.id);
     if (allIds.length === 0) return { income: 0, expense: 0 };
 
-    const normalizedDeltas = await loadAccountPeriodReportingDeltas(
+    const loaded = await loadAccountPeriodReportingDeltas(
       workplaceId,
       allIds,
       startDate,
@@ -82,7 +83,10 @@ export class ReportService {
       allAccounts,
     );
 
-    return this.calculateIncomeVsExpenseFromDeltas(normalizedDeltas, allAccounts, currency);
+    return {
+      ...this.calculateIncomeVsExpenseFromDeltas(loaded.deltas, allAccounts, currency),
+      ...(loaded.hasUnvaluedEntries ? { hasUnvaluedEntries: true } : {}),
+    };
   }
 
   async getReportSnapshot(
@@ -100,7 +104,7 @@ export class ReportService {
     const scopedIncome = incomeAccounts.filter(a => allAccounts.some(x => x.id === a.id));
     const scopedExpense = expenseAccounts.filter(a => allAccounts.some(x => x.id === a.id));
 
-    const { accountPeriodDeltas, dailyDeltas, convertedTransactions } =
+    const { accountPeriodDeltas, dailyDeltas, convertedTransactions, hasUnvaluedEntries } =
       await loadReportingPeriodData(workplaceId, allAccounts, startDate, endDate, currency);
 
     const incomeVsExpense = this.calculateIncomeVsExpenseFromDeltas(
@@ -136,7 +140,10 @@ export class ReportService {
       incomeCategoryBreakdown,
       expenseCategoryBreakdown,
     );
-    const spendingHeatmap = calculateSpendingHeatmapFromTransactions(convertedTransactions);
+    const spendingHeatmap = calculateSpendingHeatmapFromTransactions(
+      convertedTransactions,
+      getCurrencyPrecision(currency),
+    );
     const calendarHeatmap = calculateCalendarHeatmapFromHistory(history);
 
     return {
@@ -149,6 +156,7 @@ export class ReportService {
       sankeyData,
       spendingHeatmap,
       calendarHeatmap,
+      ...(hasUnvaluedEntries ? { hasUnvaluedEntries: true } : {}),
     };
   }
 
@@ -170,11 +178,11 @@ export class ReportService {
     deltas: ReportingDeltaInput[],
     currency: string,
   ): ExpenseCategory[] {
-    const sums = new Map<string, Money>();
+    const precision = getCurrencyPrecision(currency);
+    const sums = new Map<string, number>();
     for (const d of deltas) {
-      const delta = Money.from(d.delta, currency);
       if (d.accountId) {
-        sums.set(d.accountId, (sums.get(d.accountId) || Money.from(0, currency)).add(delta));
+        sums.set(d.accountId, roundToPrecision((sums.get(d.accountId) || 0) + d.delta, precision));
       }
     }
 
@@ -184,7 +192,7 @@ export class ReportService {
   private calculateCategoryBreakdownFromDeltas(
     accounts: ReportAccount[],
     deltas: ReportingDeltaInput[],
-    _currency: string,
+    currency: string,
   ): CategoryBreakdown[] {
     const accountSubtypeMap = new Map(accounts.map(a => [a.id, a.accountSubtype]));
     const items = deltas
@@ -202,13 +210,13 @@ export class ReportService {
         return item !== null;
       });
 
-    return calculateCategoryBreakdownItems(items);
+    return calculateCategoryBreakdownItems(items, getCurrencyPrecision(currency));
   }
 
   private calculateIncomeVsExpenseFromDeltas(
     deltas: ReportingDeltaInput[],
     accounts: ReportAccount[],
-    _currency: string,
+    currency: string,
   ): { income: number; expense: number } {
     const accountTypeMap = new Map(accounts.map(a => [a.id, a.accountType]));
     const mapped = deltas
@@ -221,7 +229,7 @@ export class ReportService {
       })
       .filter((item): item is { accountType: AccountType; amount: number } => item !== null);
 
-    const summary = calculateIncomeVsExpenseSummary(mapped);
+    const summary = calculateIncomeVsExpenseSummary(mapped, getCurrencyPrecision(currency));
     return { income: summary.income, expense: summary.expense };
   }
 
@@ -232,6 +240,7 @@ export class ReportService {
     currency: string,
   ): { date: number; income: number; expense: number }[] {
     const dailyMap = new Map<number, { income: number; expense: number }>();
+    const precision = getCurrencyPrecision(currency);
 
     let current = dayjs(startDate).startOf('day');
     const end = dayjs(endDate).endOf('day');
@@ -245,11 +254,10 @@ export class ReportService {
       const bucket = dailyMap.get(dayjs(d.dayStart).startOf('day').valueOf());
       if (!bucket) continue;
 
-      const delta = Money.from(d.delta, currency);
       if (d.accountType === AccountType.INCOME) {
-        bucket.income = Money.from(bucket.income, currency).add(delta).amount;
+        bucket.income = roundToPrecision(bucket.income + d.delta, precision);
       } else if (d.accountType === AccountType.EXPENSE) {
-        bucket.expense = Money.from(bucket.expense, currency).add(delta).amount;
+        bucket.expense = roundToPrecision(bucket.expense + d.delta, precision);
       }
     }
 
@@ -297,21 +305,21 @@ export class ReportService {
 
   private buildBreakdownFromSums(
     scopedAccounts: ReportAccount[],
-    sums: Map<string, Money>,
+    sums: Map<string, number>,
   ): ExpenseCategory[] {
     const result: ExpenseCategory[] = [];
     let totalPositiveAmount = 0;
     for (const account of scopedAccounts) {
-      const m = sums.get(account.id) || Money.from(0);
-      if (m.amount > 0) {
+      const amount = sums.get(account.id) || 0;
+      if (amount > 0) {
         result.push({
           accountId: account.id,
           accountName: account.name,
-          amount: m.amount,
+          amount,
           percentage: 0,
           color: account.color || undefined,
         });
-        totalPositiveAmount += m.amount;
+        totalPositiveAmount += amount;
       }
     }
 

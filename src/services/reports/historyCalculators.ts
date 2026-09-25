@@ -1,9 +1,10 @@
 import { AppConfig } from '@/src/constants/app-config';
+import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { AccountType } from '@/src/types/enums';
 
 import { IncomeVsExpense } from '@/src/services/reports/reportSnapshot';
 import { ReportingDeltaInput } from '@/src/services/reports/reportTypes';
-import { Money } from '@/src/utils/money';
+import { roundToPrecision } from '@/src/utils/money';
 import dayjs from 'dayjs';
 
 export function getHistoryConfig(startDate: number, endDate: number) {
@@ -49,6 +50,7 @@ export function calculateHistoryFromDeltas(
 ): IncomeVsExpense[] {
   const historyMap = initializeHistoryMap(startDate, endDate);
   const { bucketUnit } = getHistoryConfig(startDate, endDate);
+  const precision = getCurrencyPrecision(currency);
 
   for (const d of deltas) {
     if (!d.dayStart) continue;
@@ -56,11 +58,10 @@ export function calculateHistoryFromDeltas(
     const bucket = historyMap.get(bucketKey);
     if (!bucket) continue;
 
-    const delta = Money.from(d.delta, currency);
     if (d.accountType === AccountType.INCOME) {
-      bucket.income = Money.from(bucket.income, currency).add(delta).amount;
+      bucket.income = roundToPrecision(bucket.income + d.delta, precision);
     } else if (d.accountType === AccountType.EXPENSE) {
-      bucket.expense = Money.from(bucket.expense, currency).add(delta).amount;
+      bucket.expense = roundToPrecision(bucket.expense + d.delta, precision);
     }
   }
 

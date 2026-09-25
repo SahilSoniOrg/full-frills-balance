@@ -154,6 +154,8 @@ export const UI_STRINGS = {
       waitingForIncome: 'Waiting on payday',
       calculationLedger: 'Calculation details',
       projectedLabel: 'Projected',
+      incompleteFxWarning:
+        'Some journal lines or currency quotes could not be valued. Budget, history, or projected cash flow may be incomplete.',
     },
     hub: {
       title: 'Review',
@@ -288,6 +290,8 @@ export const UI_STRINGS = {
     sankeySpendingColumn: 'Spending',
     sankeyIncomeLabel: (name: string) => `Income · ${name}`,
     sankeyExpenseLabel: (name: string) => `Spent · ${name}`,
+    incompleteFxWarning:
+      'Some figures may be incomplete because journal context or a historical exchange rate is unavailable.',
   },
   reportsV2: {
     title: 'Money overview',
@@ -1088,6 +1092,9 @@ export const UI_STRINGS = {
     statusOnTrack: 'On track',
     statusNearLimit: 'Near limit',
     statusOverBudget: 'Over budget',
+    incompleteStatus: 'Incomplete',
+    incompleteFxWarning:
+      'Some journal lines could not be valued because journal context or a historical exchange rate is unavailable. Budget figures may be incomplete.',
     details: {
       screenTitle: 'Budget Details',
       deleteTitle: 'Delete Budget',

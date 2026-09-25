@@ -29,6 +29,7 @@ export interface AccountsInflowSummary {
   inflowIncome: number;
   inflowExpense: number;
   isPeriodLoading: boolean;
+  hasUnvaluedEntries: boolean;
 }
 
 /**
@@ -48,6 +49,7 @@ export function useAccountsInflowSummary({
   const [rollingPeriodTotals, setRollingPeriodTotals] = useState<{
     income: number;
     expense: number;
+    hasUnvaluedEntries?: boolean;
   } | null>(null);
   const [isPeriodLoading, setIsPeriodLoading] = useState(false);
 
@@ -126,5 +128,7 @@ export function useAccountsInflowSummary({
     inflowIncome,
     inflowExpense,
     isPeriodLoading,
+    hasUnvaluedEntries:
+      inflowPeriod === '30days' && rollingPeriodTotals?.hasUnvaluedEntries === true,
   };
 }

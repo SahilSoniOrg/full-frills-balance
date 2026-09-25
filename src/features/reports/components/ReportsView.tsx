@@ -3,7 +3,7 @@ import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { FilterDisclosure } from '@/src/components/filters/FilterDisclosure';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Inset } from '@/src/design-system';
-import { AppTabs, Icon, type TabOption } from '@/src/components/core';
+import { AppTabs, AppText, Icon, type TabOption } from '@/src/components/core';
 import { ReportFilterChrome } from '@/src/features/reports/components/ReportFilterChrome';
 import { ReportOverviewSection } from '@/src/features/reports/components/sections/ReportOverviewSection';
 import { ReportSpendingSection } from '@/src/features/reports/components/sections/ReportSpendingSection';
@@ -28,7 +28,16 @@ interface ReportsViewProps {
 
 export function ReportsView({ vm, chrome }: ReportsViewProps) {
   const { theme } = useTheme();
-  const { filters, activeTab, setActiveTab, loading, overview, spending, wealth } = vm;
+  const {
+    filters,
+    activeTab,
+    setActiveTab,
+    loading,
+    hasUnvaluedEntries,
+    overview,
+    spending,
+    wealth,
+  } = vm;
   const [areFiltersExpanded, setAreFiltersExpanded] = useState(false);
 
   const { width } = useWindowDimensions();
@@ -87,6 +96,11 @@ export function ReportsView({ vm, chrome }: ReportsViewProps) {
             onChange={setActiveTab}
             testID="report-tabs"
           />
+          {hasUnvaluedEntries && activeTab !== 'WEALTH' ? (
+            <AppText variant="caption" color="warning">
+              {AppConfig.strings.reports.incompleteFxWarning}
+            </AppText>
+          ) : null}
           {activeTab === 'OVERVIEW' && (
             <ReportOverviewSection vm={overview} chartWidth={CHART_WIDTH} />
           )}

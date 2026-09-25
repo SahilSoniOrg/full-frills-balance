@@ -130,16 +130,22 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     [accounts, activeTab],
   );
 
-  const { inflowPeriod, setInflowPeriod, inflowIncome, inflowExpense, isPeriodLoading } =
-    useAccountsInflowSummary({
-      workplaceId,
-      workplaceCurrency,
-      accounts,
-      balances: dashboardData.balances,
-      totalIncome,
-      totalExpense,
-      dataVersion: version,
-    });
+  const {
+    inflowPeriod,
+    setInflowPeriod,
+    inflowIncome,
+    inflowExpense,
+    isPeriodLoading,
+    hasUnvaluedEntries,
+  } = useAccountsInflowSummary({
+    workplaceId,
+    workplaceCurrency,
+    accounts,
+    balances: dashboardData.balances,
+    totalIncome,
+    totalExpense,
+    dataVersion: version,
+  });
 
   const { applyArchiveChanges } = useAccountActions(workplaceId);
 
@@ -320,6 +326,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     inflowIncome,
     inflowExpense,
     isPeriodLoading,
+    hasUnvaluedEntries,
     currencyCode: workplaceCurrency,
     searchQuery,
     isSearching,

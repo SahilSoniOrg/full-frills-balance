@@ -40,4 +40,6 @@ export interface ReportSnapshot {
   sankeyData: SankeyData;
   spendingHeatmap: HeatmapPoint[];
   calendarHeatmap: HeatmapPoint[]; // reuse HeatmapPoint: x=dayOfWeek, y=weekOfMonth
+  /** True when one or more journal lines could not be valued for this report. */
+  hasUnvaluedEntries?: boolean;
 }

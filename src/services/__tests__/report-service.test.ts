@@ -2,7 +2,7 @@ import { AccountType, TransactionType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 
 import { accountQueryRepository } from '@/src/data/repositories/account';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { ReportService } from '@/src/services/report-service';
@@ -10,11 +10,8 @@ import dayjs from 'dayjs';
 
 jest.mock('@/src/data/repositories/account');
 jest.mock('@/src/data/repositories/transaction');
-jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
-  transactionRawRepository: {
-    getAccountDeltasGroupedRaw: jest.fn().mockResolvedValue([]),
-    getDailyDeltasGroupedRaw: jest.fn().mockResolvedValue([]),
-  },
+jest.mock('@/src/data/repositories/journal/journalQueryRepository', () => ({
+  journalQueryRepository: { findByIds: jest.fn() },
 }));
 jest.mock('@/src/services/exchange-rate-service');
 jest.mock('@/src/services/WorkplaceService', () => ({
@@ -57,14 +54,16 @@ describe('ReportService', () => {
   let service: ReportService;
   const START_DATE = new Date('2024-01-01T00:00:00.000Z').getTime();
   const END_DATE = new Date('2024-01-31T23:59:59.999Z').getTime();
+  const JOURNAL_ID = 'journal-1';
 
   beforeEach(() => {
     service = new ReportService();
     jest.clearAllMocks();
     (exchangeRateService.getRate as jest.Mock).mockResolvedValue(1);
     (exchangeRateService.fetchRatesForBase as jest.Mock).mockResolvedValue({});
-    (transactionRawRepository.getAccountDeltasGroupedRaw as jest.Mock).mockResolvedValue([]);
-    (transactionRawRepository.getDailyDeltasGroupedRaw as jest.Mock).mockResolvedValue([]);
+    (journalQueryRepository.findByIds as jest.Mock).mockResolvedValue([
+      { id: JOURNAL_ID, currencyCode: 'USD', journalDate: START_DATE },
+    ]);
   });
 
   describe('getIncomeVsExpense', () => {
@@ -73,6 +72,7 @@ describe('ReportService', () => {
 
       const mockTransactions = [
         {
+          journalId: JOURNAL_ID,
           accountId: 'salary',
           amount: 2000,
           transactionType: TransactionType.CREDIT,
@@ -80,6 +80,7 @@ describe('ReportService', () => {
           transactionDate: dayjs(START_DATE).add(1, 'day').valueOf(),
         },
         {
+          journalId: JOURNAL_ID,
           accountId: 'food',
           amount: 100,
           transactionType: TransactionType.DEBIT,
@@ -104,6 +105,7 @@ describe('ReportService', () => {
 
       const mockTransactions = [
         {
+          journalId: JOURNAL_ID,
           accountId: 'salary',
           amount: 2000,
           transactionType: TransactionType.CREDIT,
@@ -111,6 +113,7 @@ describe('ReportService', () => {
           transactionDate: dayjs(START_DATE).add(1, 'day').valueOf(),
         },
         {
+          journalId: JOURNAL_ID,
           accountId: 'food',
           amount: 100,
           transactionType: TransactionType.DEBIT,
@@ -148,12 +151,24 @@ describe('ReportService', () => {
 
     it('does not leak out-of-scope deltas into a filtered category breakdown', async () => {
       mockIncomeExpenseAccounts();
-      (transactionRawRepository.getAccountDeltasGroupedRaw as jest.Mock).mockResolvedValue([
-        { accountId: 'salary', currencyCode: 'USD', delta: 2000 },
-        { accountId: 'food', currencyCode: 'USD', delta: 100 },
+      (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([
+        {
+          journalId: JOURNAL_ID,
+          accountId: 'salary',
+          amount: 2000,
+          transactionType: TransactionType.CREDIT,
+          currencyCode: 'USD',
+          transactionDate: START_DATE,
+        },
+        {
+          journalId: JOURNAL_ID,
+          accountId: 'food',
+          amount: 100,
+          transactionType: TransactionType.DEBIT,
+          currencyCode: 'USD',
+          transactionDate: START_DATE,
+        },
       ]);
-      (transactionRawRepository.getDailyDeltasGroupedRaw as jest.Mock).mockResolvedValue([]);
-      (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
 
       const result = await service.getReportSnapshot(
         'wp-1' as WorkplaceId,
@@ -182,6 +197,7 @@ describe('ReportService', () => {
 
       const mockTransactions = [
         {
+          journalId: JOURNAL_ID,
           accountId: 'food',
           amount: 100,
           transactionType: TransactionType.DEBIT,
@@ -189,6 +205,7 @@ describe('ReportService', () => {
           transactionDate: START_DATE,
         },
         {
+          journalId: JOURNAL_ID,
           accountId: 'refunds',
           amount: 50,
           transactionType: TransactionType.CREDIT,
@@ -207,27 +224,26 @@ describe('ReportService', () => {
       expect(result.expenseBreakdown[0].percentage).toBe(100);
     });
 
-    it('matches getIncomeVsExpense when SQL account aggregates are present', async () => {
+    it('matches period totals across lightweight and full report paths', async () => {
       mockIncomeExpenseAccounts();
-      (transactionRawRepository.getAccountDeltasGroupedRaw as jest.Mock).mockResolvedValue([
-        { accountId: 'salary', currencyCode: 'USD', delta: 2000 },
-        { accountId: 'food', currencyCode: 'USD', delta: 100 },
-      ]);
-      (transactionRawRepository.getDailyDeltasGroupedRaw as jest.Mock).mockResolvedValue([
+      (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([
         {
-          dayStart: dayjs(START_DATE).add(1, 'day').startOf('day').valueOf(),
+          journalId: JOURNAL_ID,
+          accountId: 'salary',
+          amount: 2000,
+          transactionType: TransactionType.CREDIT,
           currencyCode: 'USD',
-          accountType: AccountType.INCOME,
-          delta: 2000,
+          transactionDate: dayjs(START_DATE).add(1, 'day').valueOf(),
         },
         {
-          dayStart: dayjs(START_DATE).add(1, 'day').startOf('day').valueOf(),
+          journalId: JOURNAL_ID,
+          accountId: 'food',
+          amount: 100,
+          transactionType: TransactionType.DEBIT,
           currencyCode: 'USD',
-          accountType: AccountType.EXPENSE,
-          delta: 100,
+          transactionDate: dayjs(START_DATE).add(1, 'day').valueOf(),
         },
       ]);
-      (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
 
       const [totals, snapshot] = await Promise.all([
         service.getIncomeVsExpense('wp-1' as WorkplaceId, START_DATE, END_DATE),
@@ -238,29 +254,34 @@ describe('ReportService', () => {
       expect(totals).toEqual({ income: 2000, expense: 100 });
     });
 
-    it('bucketed history reflects daily SQL aggregates', async () => {
+    it('bucketed history reflects individually converted postings', async () => {
       mockIncomeExpenseAccounts();
-      (transactionRawRepository.getDailyDeltasGroupedRaw as jest.Mock).mockResolvedValue([
+      (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([
         {
-          dayStart: dayjs(START_DATE).add(1, 'day').startOf('day').valueOf(),
+          journalId: JOURNAL_ID,
+          accountId: 'salary',
+          amount: 2000,
+          transactionType: TransactionType.CREDIT,
           currencyCode: 'USD',
-          accountType: AccountType.INCOME,
-          delta: 2000,
+          transactionDate: dayjs(START_DATE).add(1, 'day').valueOf(),
         },
         {
-          dayStart: dayjs(START_DATE).add(1, 'day').startOf('day').valueOf(),
+          journalId: JOURNAL_ID,
+          accountId: 'food',
+          amount: 50,
+          transactionType: TransactionType.DEBIT,
           currencyCode: 'USD',
-          accountType: AccountType.EXPENSE,
-          delta: 50,
+          transactionDate: dayjs(START_DATE).add(1, 'day').valueOf(),
         },
         {
-          dayStart: dayjs(START_DATE).add(2, 'day').startOf('day').valueOf(),
+          journalId: JOURNAL_ID,
+          accountId: 'food',
+          amount: 100,
+          transactionType: TransactionType.DEBIT,
           currencyCode: 'USD',
-          accountType: AccountType.EXPENSE,
-          delta: 100,
+          transactionDate: dayjs(START_DATE).add(2, 'day').valueOf(),
         },
       ]);
-      (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
 
       const result = await service.getReportSnapshot('wp-1' as WorkplaceId, START_DATE, END_DATE);
 

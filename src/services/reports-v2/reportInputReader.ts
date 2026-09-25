@@ -124,7 +124,7 @@ async function readBalanceInputs(
         fromCurrency: account.currencyCode,
         toCurrency: query.targetCurrency,
         mode: 'historical',
-        rateDate: valuation.rateDate,
+        rateDate: valuation.rateDate ?? asOfDate,
       });
       if (!converted.ok) {
         warnings.push({

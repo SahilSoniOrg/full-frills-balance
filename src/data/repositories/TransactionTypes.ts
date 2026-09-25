@@ -33,6 +33,10 @@ export interface DailyDelta {
   currencyCode: string;
   accountType: AccountType;
   delta: number;
+  /** Saved journal context retained until historical valuation is complete. */
+  journalCurrencyCode?: string;
+  journalDate?: number;
+  exchangeRate?: number | null;
 }
 
 /**

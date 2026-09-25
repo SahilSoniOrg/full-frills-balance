@@ -2,7 +2,7 @@ import { accountQueryRepository } from '@/src/data/repositories/account';
 import { journalListQueryRepository } from '@/src/data/repositories/journal/journalListQueryRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { AppConfig } from '@/src/constants/app-config';
-import { convertAmount } from '@/src/services/currencyConversion';
+import { convertJournalLineAmount } from '@/src/services/currencyConversion';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import type AccountModel from '@/src/data/models/Account';
@@ -10,7 +10,6 @@ import type Journal from '@/src/data/models/Journal';
 import type Transaction from '@/src/data/models/Transaction';
 import type { AccountId, JournalId } from '@/src/types/ids';
 import { runTasksWithBoundedConcurrency } from '@/src/utils/asyncConcurrency';
-import { roundToPrecision } from '@/src/utils/money';
 import type { ReportWarning, MissingRateQuote } from '../types/result';
 import type { ReportingFact } from '../types/fact';
 import type { ReportPeriod } from '../types/period';
@@ -150,23 +149,22 @@ async function convertLine(
   account: AccountModel,
   journal: Journal,
   targetCurrency: string,
-): Promise<{ ok: true; amount: number } | { ok: false; fromCurrency: string }> {
+): Promise<
+  | { ok: true; amount: number }
+  | { ok: false; missingRate: { fromCurrency: string; toCurrency: string } }
+> {
   const fromCurrency = transaction.currencyCode || account.currencyCode || journal.currencyCode;
-  if (fromCurrency === targetCurrency) {
-    return {
-      ok: true,
-      amount: roundToPrecision(transaction.amount, AppConfig.constants.precision),
-    };
-  }
-  const result = await convertAmount({
+  const result = await convertJournalLineAmount({
     amount: transaction.amount,
-    fromCurrency,
-    toCurrency: targetCurrency,
-    mode: 'historical',
-    storedExchangeRate: transaction.exchangeRate,
-    rateDate: journal.journalDate,
+    lineCurrency: fromCurrency,
+    journalCurrency: journal.currencyCode,
+    targetCurrency,
+    storedLineRate: transaction.exchangeRate,
+    journalDate: journal.journalDate,
   });
-  return result.ok ? { ok: true, amount: result.amount } : { ok: false, fromCurrency };
+  return result.ok
+    ? { ok: true, amount: result.amount }
+    : { ok: false, missingRate: result.missingRate };
 }
 
 function toReportingFact(
@@ -287,13 +285,11 @@ async function buildFacts(
       if (!converted.ok) {
         if (job.isInSelectedPeriod) {
           missingRateJournalIds.push(job.journal.id);
-          if (converted.fromCurrency) {
-            missingRateQuotes.push({
-              fromCurrency: converted.fromCurrency.trim().toUpperCase(),
-              toCurrency: query.targetCurrency.trim().toUpperCase(),
-              rateDate: job.journal.journalDate,
-            });
-          }
+          missingRateQuotes.push({
+            fromCurrency: converted.missingRate.fromCurrency.trim().toUpperCase(),
+            toCurrency: converted.missingRate.toCurrency.trim().toUpperCase(),
+            rateDate: job.journal.journalDate,
+          });
         }
         return;
       }

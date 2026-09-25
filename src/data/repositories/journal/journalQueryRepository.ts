@@ -32,13 +32,20 @@ export class JournalQueryRepository {
 
   async findByIds(workplaceId: WorkplaceId, ids: JournalId[]): Promise<Journal[]> {
     if (ids.length === 0) return [];
-    return this.journals
-      .query(
-        Q.where('id', Q.oneOf(ids)),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.where('workplace_id', workplaceId),
-      )
-      .fetch();
+    const results: Journal[] = [];
+    const CHUNK_SIZE = 100;
+    for (let index = 0; index < ids.length; index += CHUNK_SIZE) {
+      const chunk = ids.slice(index, index + CHUNK_SIZE);
+      const journals = await this.journals
+        .query(
+          Q.where('id', Q.oneOf(chunk)),
+          Q.where('deleted_at', Q.eq(null)),
+          Q.where('workplace_id', workplaceId),
+        )
+        .fetch();
+      results.push(...journals);
+    }
+    return results;
   }
 
   async findWithDeletedByIds(workplaceId: WorkplaceId, ids: JournalId[]): Promise<Journal[]> {

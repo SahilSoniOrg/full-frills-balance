@@ -20,6 +20,7 @@ export interface ReportsViewModel {
   activeTab: ReportTab;
   setActiveTab: (tab: ReportTab) => void;
   loading: boolean;
+  hasUnvaluedEntries: boolean;
   overview: ReportOverviewTabVm;
   spending: ReportSpendingTabVm;
   wealth: ReportWealthTabVm;
@@ -48,6 +49,7 @@ export function useReportsViewModel(): ReportsViewModel {
     sankeyData,
     spendingHeatmap,
     calendarHeatmap,
+    hasUnvaluedEntries,
   } = useReports(workplaceId, defaultCurrencyCode);
 
   const [activeTab, setActiveTab] = useState<ReportTab>('OVERVIEW');
@@ -158,6 +160,7 @@ export function useReportsViewModel(): ReportsViewModel {
       analytics.trackFeatureUsage('reports', 'change_tab', { tab });
     },
     loading,
+    hasUnvaluedEntries,
     overview,
     spending,
     wealth,
