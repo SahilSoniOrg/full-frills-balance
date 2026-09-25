@@ -12,6 +12,7 @@ import {
 } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 import { accountQueryRepository } from '@/src/data/repositories/account';
+import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
 
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { generator } from '@/src/data/database/idGenerator';
@@ -207,10 +208,26 @@ async function seedFxDemoAccounts(workplaceId: WorkplaceId): Promise<void> {
     name: 'Euro Wallet',
     accountType: AccountType.ASSET,
     currencyCode: 'EUR',
-    initialBalance: 0,
+    initialBalance: 20,
     icon: Icon.Wallet,
     workplaceId,
   });
+  const historicalRateDate = new Date();
+  historicalRateDate.setUTCHours(0, 0, 0, 0);
+  const requestedDate = historicalRateDate.valueOf();
+  await exchangeRateRepository.cacheHistoricalRate({
+    fromCurrency: 'EUR',
+    toCurrency: 'USD',
+    rate: 1.1,
+    requestedDate,
+    effectiveDate: requestedDate,
+    source: 'e2e-fixture',
+  });
+  await exchangeRateRepository.cacheRatesBatch(
+    'EUR',
+    [{ toCurrency: 'USD', rate: 1.137 }],
+    'e2e-fixture',
+  );
 }
 
 async function seedSmsReadyData(workplaceId: WorkplaceId): Promise<void> {
