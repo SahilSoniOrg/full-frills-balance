@@ -2,7 +2,7 @@ import type { JournalEntryLine } from '@/src/types/domainJournal';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { TransactionType } from '@/src/types/enums';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
-import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
+import { useCurrencies } from '@/src/hooks/use-currencies';
 import {
   computeSplitTotals,
   getSplitCurrencyPrecision,
@@ -35,6 +35,7 @@ export interface BuildSplitDraftProjectionOptions {
   accounts: AccountFields[];
   workplaceCurrency: string;
   precision: number;
+  precisionByCurrency?: ReadonlyMap<string, number>;
   sourceAccountId?: AccountId;
 }
 
@@ -72,6 +73,7 @@ export function buildSplitDraftProjection({
   accounts,
   workplaceCurrency,
   precision,
+  precisionByCurrency,
   sourceAccountId,
 }: BuildSplitDraftProjectionOptions): SplitDraftProjection {
   const { sourceLine, destinationLines } = selectSplitDraftLines(lines);
@@ -91,11 +93,17 @@ export function buildSplitDraftProjection({
       amount: line.amount,
       accountCurrency,
       exchangeRate: usesSourceCurrency ? sourceLine?.exchangeRate : line.exchangeRate,
-      precision: accountCurrency ? getSplitCurrencyPrecision(accountCurrency) : undefined,
+      precision: accountCurrency
+        ? (precisionByCurrency?.get(accountCurrency.toUpperCase()) ??
+          getSplitCurrencyPrecision(accountCurrency))
+        : undefined,
     };
   });
   const currencyContext: SplitCurrencyContext = {
     baseCurrency: workplaceCurrency,
+    basePrecision:
+      precisionByCurrency?.get(workplaceCurrency.toUpperCase()) ??
+      getSplitCurrencyPrecision(workplaceCurrency),
     sourceCurrency,
     sourceExchangeRate: sourceLine?.exchangeRate,
   };
@@ -138,9 +146,15 @@ export function useSplitDraftProjection({
     [accounts, resolvedSourceAccountId],
   );
   const sourceCurrency = resolveSourceCurrency(selectedLines.sourceLine, sourceAccount);
-  const { precision } = useCurrencyPrecision(
-    precisionCurrency || sourceCurrency || workplaceCurrency,
+  const { currencies } = useCurrencies();
+  const precisionByCurrency = useMemo(
+    () => new Map(currencies.map(currency => [currency.code.toUpperCase(), currency.precision])),
+    [currencies],
   );
+  const selectedCurrency = precisionCurrency || sourceCurrency || workplaceCurrency;
+  const precision =
+    precisionByCurrency.get(selectedCurrency.toUpperCase()) ??
+    getSplitCurrencyPrecision(selectedCurrency);
 
   return useMemo(
     () =>
@@ -149,8 +163,9 @@ export function useSplitDraftProjection({
         accounts,
         workplaceCurrency,
         precision,
+        precisionByCurrency,
         sourceAccountId,
       }),
-    [accounts, lines, precision, sourceAccountId, workplaceCurrency],
+    [accounts, lines, precision, precisionByCurrency, sourceAccountId, workplaceCurrency],
   );
 }

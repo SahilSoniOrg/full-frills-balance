@@ -40,7 +40,7 @@ jest.mock('@/src/services/preferences', () => ({
 }));
 
 jest.mock('@/src/hooks/use-currencies', () => ({
-  useCurrencyPrecision: () => ({ precision: 2 }),
+  useCurrencies: () => ({ currencies: [], isLoading: false }),
 }));
 
 function createEditor(sourceAccountId = 'cash') {

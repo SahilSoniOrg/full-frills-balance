@@ -175,6 +175,48 @@ describe('splitJournalHelpers', () => {
 
       expect(result).toEqual({ valid: false, error: 'sum_mismatch' });
     });
+
+    it('keeps a three-decimal workplace currency exact across FX', () => {
+      const result = validateSplitState({
+        sourceAccountId: 'usd-wallet' as AccountId,
+        totalAmount: '0.01',
+        precision: 2,
+        currency: {
+          baseCurrency: 'KWD',
+          sourceCurrency: 'USD',
+          sourceExchangeRate: 0.3333,
+        },
+        splits: [
+          {
+            id: 'kwd-category',
+            accountId: 'category' as AccountId,
+            amount: '0.004',
+            accountCurrency: 'KWD',
+            precision: 3,
+          },
+        ],
+      });
+
+      expect(result).toEqual({ valid: false, error: 'sum_mismatch' });
+    });
+
+    it('requires an exchange rate for a foreign allocation', () => {
+      const result = validateSplitState({
+        sourceAccountId: 'usd-wallet' as AccountId,
+        totalAmount: '10',
+        currency: { baseCurrency: 'USD', sourceCurrency: 'USD' },
+        splits: [
+          {
+            id: 'eur-category',
+            accountId: 'category' as AccountId,
+            amount: '10',
+            accountCurrency: 'EUR',
+          },
+        ],
+      });
+
+      expect(result).toEqual({ valid: false, error: 'missing_exchange_rate' });
+    });
   });
 
   describe('split allocation shortcuts', () => {
@@ -205,6 +247,43 @@ describe('splitJournalHelpers', () => {
       expect(equalizeSplitAmounts('10.00', rows(['', '', '']), 2, usd)).toEqual(
         rows(['3.34', '3.33', '3.33']),
       );
+    });
+
+    it('does not equalize foreign allocations before the source exchange rate is known', () => {
+      const splits = [
+        { id: 'eur-row', accountId: 'eur' as AccountId, amount: '7.00', accountCurrency: 'EUR' },
+      ];
+
+      expect(
+        equalizeSplitAmounts('20.00', splits, 2, {
+          baseCurrency: 'USD',
+          sourceCurrency: 'INR',
+        }),
+      ).toEqual(splits);
+    });
+
+    it('does not distribute a remainder while a foreign allocation rate is missing', () => {
+      const splits = [
+        {
+          id: 'usd-row',
+          accountId: 'usd' as AccountId,
+          amount: '2.00',
+          accountCurrency: 'USD',
+        },
+        {
+          id: 'eur-row',
+          accountId: 'eur' as AccountId,
+          amount: '3.00',
+          accountCurrency: 'EUR',
+        },
+      ];
+
+      expect(
+        distributeSplitRemainder('10.00', splits, 2, {
+          baseCurrency: 'USD',
+          sourceCurrency: 'USD',
+        }),
+      ).toEqual(splits);
     });
 
     it('uses the currency precision for zero-decimal currencies', () => {

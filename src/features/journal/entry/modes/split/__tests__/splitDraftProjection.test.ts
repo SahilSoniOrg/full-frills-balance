@@ -124,6 +124,40 @@ describe('splitDraftProjection', () => {
     expect(projection.totals).toEqual({ total: 80, allocated: 80.83, remaining: -0.83 });
   });
 
+  it('uses registered precision for a custom workplace currency in cross-currency totals', () => {
+    const projection = buildSplitDraftProjection({
+      lines: [
+        line({
+          id: asTransactionId('source'),
+          accountId: asAccountId('usd-wallet'),
+          amount: '0.01',
+          exchangeRate: '0.4444',
+          transactionType: TransactionType.CREDIT,
+        }),
+        line({
+          id: asTransactionId('allocation'),
+          accountId: asAccountId('custom-category'),
+          amount: '0.004',
+        }),
+      ],
+      accounts: [
+        account('usd-wallet', 'USD'),
+        account('custom-category', 'XCU', AccountType.EXPENSE),
+      ],
+      workplaceCurrency: 'XCU',
+      precision: 2,
+      precisionByCurrency: new Map([
+        ['USD', 2],
+        ['XCU', 3],
+      ]),
+    });
+
+    expect(projection.currencyContext.basePrecision).toBe(3);
+    expect(projection.splits[0].precision).toBe(3);
+    expect(projection.totals).toEqual({ total: 0.01, allocated: 0.01, remaining: 0 });
+    expect(projection.validation).toEqual({ valid: true });
+  });
+
   it('selects exactly one source line and all allocation lines', () => {
     const source = line({ id: asTransactionId('source'), transactionType: TransactionType.CREDIT });
     const allocation = line({

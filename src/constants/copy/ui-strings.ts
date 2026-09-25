@@ -606,6 +606,7 @@ export const UI_STRINGS = {
         invalid_total: 'Enter a total amount greater than zero.',
         missing_split_account: 'Choose a category for each split.',
         invalid_split_amount: 'Each split needs an amount greater than zero.',
+        missing_exchange_rate: 'Add an exchange rate for each foreign-currency split.',
         sum_mismatch: 'Split amounts must add up to the total.',
       },
     },
