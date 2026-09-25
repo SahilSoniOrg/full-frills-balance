@@ -1,7 +1,4 @@
 import { AppConfig } from '@/src/constants';
-import type Account from '@/src/data/models/Account';
-import type Transaction from '@/src/data/models/Transaction';
-import { accountObserveQueries } from '@/src/data/repositories/account';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
@@ -20,6 +17,7 @@ import {
 } from '@/src/features/journal';
 import type { ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
 import { useObservable, useObservableWithEnrichment } from '@/src/hooks/useObservable';
+import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { analytics } from '@/src/services/analytics';
 import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
@@ -125,14 +123,14 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
   const scopeAccountIds = useMemo(() => scopeRecords.map(scope => scope.accountId), [scopeRecords]);
 
   const { data: scopeAccounts = [] } = useObservable(
-    () => accountObserveQueries.observeByIds(workplaceId, scopeAccountIds),
+    () => accountQueries.observeByIds(workplaceId, scopeAccountIds),
     [workplaceId, scopeAccountIds],
-    [] as Account[],
+    [],
   );
   const { data: expenseAccounts = [] } = useObservable(
-    () => accountObserveQueries.observeByType(workplaceId, AccountType.EXPENSE),
+    () => accountQueries.observeByType(workplaceId, AccountType.EXPENSE),
     [workplaceId],
-    [] as Account[],
+    [],
   );
 
   const chartAccountIds = useMemo(
@@ -147,7 +145,7 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
   }, [budget, refTimestamp]);
 
   const chartTransactions$ = useMemo(() => {
-    if (!budgetDateRange || chartAccountIds.length === 0) return of([] as Transaction[]);
+    if (!budgetDateRange || chartAccountIds.length === 0) return of([]);
     return transactionQueryRepository.observeBudgetTransactionsByJournalDateRange(
       workplaceId,
       chartAccountIds,
@@ -183,7 +181,7 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
 
   const { data: chartData } = useObservableWithEnrichment(
     () => chartTransactions$,
-    (transactions: Transaction[]) => {
+    transactions => {
       if (!budget || !budgetDateRange) return Promise.resolve(null);
       return buildBudgetCumulativeChart({
         workplaceId,

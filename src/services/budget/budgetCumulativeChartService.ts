@@ -1,6 +1,4 @@
-import type Account from '@/src/data/models/Account';
 import type Journal from '@/src/data/models/Journal';
-import type Transaction from '@/src/data/models/Transaction';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { AppConfig } from '@/src/constants/app-config';
 import { convertJournalLineAmount } from '@/src/services/currencyConversion';
@@ -9,7 +7,8 @@ import type {
   BudgetCumulativeSeries,
   BudgetCumulativeTx,
 } from '@/src/services/projections/buildBudgetCumulativeSeries';
-import type { AccountId, WorkplaceId } from '@/src/types/ids';
+import type { TransactionType } from '@/src/types/enums';
+import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { runTasksWithBoundedConcurrency } from '@/src/utils/asyncConcurrency';
 import { logger } from '@/src/utils/logger';
@@ -18,10 +17,27 @@ export interface BudgetCumulativeChart extends BudgetCumulativeSeries {
   hasUnvaluedEntries: boolean;
 }
 
+/** Chart account fields — models or plain DTOs. */
+export type BudgetChartAccountInput = {
+  id: AccountId;
+  currencyCode?: string;
+};
+
+/** Chart transaction fields — models or plain DTOs. */
+export type BudgetChartTransactionInput = {
+  id: string;
+  journalId: JournalId;
+  accountId: AccountId;
+  amount: number;
+  currencyCode?: string;
+  exchangeRate?: number;
+  transactionType: TransactionType;
+};
+
 export interface BuildBudgetCumulativeChartInput {
   workplaceId: WorkplaceId;
-  transactions: Transaction[];
-  accounts: Account[];
+  transactions: BudgetChartTransactionInput[];
+  accounts: BudgetChartAccountInput[];
   targetCurrency: string;
   periodStart: number;
   periodEnd: number;
@@ -42,7 +58,7 @@ export async function buildBudgetCumulativeChart({
   const journalById = new Map<string, Journal>(
     journals.map(journal => [journal.id, journal] as const),
   );
-  const accountById = new Map<AccountId, Account>(
+  const accountById = new Map<AccountId, BudgetChartAccountInput>(
     accounts.map(account => [account.id, account] as const),
   );
   const chartTransactions: (BudgetCumulativeTx | null)[] = new Array(transactions.length).fill(

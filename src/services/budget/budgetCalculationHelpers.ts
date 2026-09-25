@@ -14,22 +14,34 @@ import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { roundToPrecision } from '@/src/utils/money';
 import { BudgetUsage } from './types';
 
+/** Minimal account shape for leaf resolution — models or plain DTOs. */
+export type BudgetLeafAccountInput = {
+  id: AccountId;
+  accountType: AccountType;
+  parentAccountId?: AccountId | null;
+  /** Present on Watermelon models; omitted on plain DTOs already workplace-scoped. */
+  workplaceId?: WorkplaceId;
+};
+
 /**
  * Resolve all leaf expense account IDs from the given scope accounts.
  */
 export function resolveLeafExpenseAccountIds(
-  scopeAccounts: (Account | null | undefined)[],
-  allExpenses: Account[],
+  scopeAccounts: (BudgetLeafAccountInput | null | undefined)[],
+  allExpenses: BudgetLeafAccountInput[],
   workplaceId: WorkplaceId,
 ): Set<AccountId> {
+  const inWorkplace = (acc: BudgetLeafAccountInput) =>
+    acc.workplaceId == null || acc.workplaceId === workplaceId;
+
   const rootExpenseIds = scopeAccounts
     .filter(
-      (acc): acc is Account =>
-        acc != null && acc.workplaceId === workplaceId && acc.accountType === AccountType.EXPENSE,
+      (acc): acc is BudgetLeafAccountInput =>
+        acc != null && inWorkplace(acc) && acc.accountType === AccountType.EXPENSE,
     )
     .map(acc => acc.id);
 
-  const workplaceExpenses = allExpenses.filter(acc => acc.workplaceId === workplaceId);
+  const workplaceExpenses = allExpenses.filter(inWorkplace);
 
   return ScopeResolver.resolveLeafAccountIds(rootExpenseIds, workplaceExpenses);
 }
