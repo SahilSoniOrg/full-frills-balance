@@ -1,7 +1,7 @@
 import { getArchivedAccountPickerRowPresentation } from '@/src/components/accounts/archivedAccountDisplay';
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
 import { ShowArchivedButton } from '@/src/components/accounts/ShowArchivedButton';
-import { AppButton, AppIcon, AppInput, AppText, Icon, ListRow } from '@/src/components/core';
+import { AppButton, AppIcon, AppInput, AppText, Icon, ListRow, PressScaleTouchable } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useAccountColors } from '@/src/hooks/useAccountColors';
@@ -127,14 +127,14 @@ export const AccountPickerPill = React.memo(
     const contentColor = isSelected ? theme.onPrimary : accentColor;
 
     return (
-      <TouchableOpacity
+      <PressScaleTouchable
         accessibilityRole="button"
         accessibilityLabel={item.name}
         accessibilityState={{ selected: isSelected }}
         testID={testID ?? `account-picker-option-${item.id}`}
         onPress={onPress}
-        activeOpacity={Opacity.medium}
-        style={[
+        style={style}
+        surfaceStyle={[
           styles.pill,
           isLongName && styles.pillLongName,
           {
@@ -142,7 +142,6 @@ export const AccountPickerPill = React.memo(
             borderColor: isSelected ? accentColor : withOpacity(accentColor, Opacity.muted),
             opacity,
           },
-          style,
         ]}
       >
         <AppIcon
@@ -176,7 +175,7 @@ export const AccountPickerPill = React.memo(
         ) : isSelected ? (
           <AppIcon name={Icon.Check} size={Size.xxs} color={theme.onPrimary} />
         ) : null}
-      </TouchableOpacity>
+      </PressScaleTouchable>
     );
   },
 );
