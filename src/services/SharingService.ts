@@ -46,7 +46,7 @@ class SharingService {
 
     try {
       if (Platform.OS === 'web') {
-        this.downloadAsFileWeb(content, filename, mimeType);
+        this.downloadAsFileWeb(content, filename, mimeType, effectiveFormat);
         this.track('share_sheet_opened', provider, { format, mode: 'web' });
         return;
       }
@@ -126,7 +126,7 @@ class SharingService {
 
     try {
       if (Platform.OS === 'web') {
-        this.downloadAsFileWeb(content, filename, mimeType);
+        this.downloadAsFileWeb(content, filename, mimeType, effectiveFormat);
         return;
       }
 
@@ -319,8 +319,17 @@ class SharingService {
     }
   }
 
-  private downloadAsFileWeb(content: string, filename: string, mimeType: string): void {
-    const blob = new Blob([content], { type: mimeType });
+  private downloadAsFileWeb(
+    content: string,
+    filename: string,
+    mimeType: string,
+    format: ShareFormat,
+  ): void {
+    const blobContent =
+      format === ShareFormat.ZIP
+        ? Uint8Array.from(atob(content), character => character.charCodeAt(0))
+        : content;
+    const blob = new Blob([blobContent], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

@@ -84,6 +84,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
           const notifCadence = preferences.notifications.notificationCadence;
           const notifHour = preferences.notifications.notificationHour;
           const notifMinute = preferences.notifications.notificationMinute;
+          const notifWeekday = preferences.notifications.notificationWeekday;
 
           await Promise.allSettled([
             purgeLocalAiCachesOnce(),
@@ -96,7 +97,12 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
             processDuePlannedPayments(workplaceId, lease.signal),
             sharingService.init(),
             exchangeRateService.preWarmCache(defaultCurrencyCode),
-            notificationService.scheduleReminder(notifCadence, notifHour, notifMinute),
+            notificationService.scheduleReminder(
+              notifCadence,
+              notifHour,
+              notifMinute,
+              notifWeekday,
+            ),
             ...(Platform.OS === 'android' && preferences.sms.isSmsImportEnabled && workplaceId
               ? [
                   import('@/src/services/sms-service').then(({ smsService }) =>

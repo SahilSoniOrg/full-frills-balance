@@ -87,7 +87,7 @@ export function ReportWealthSection({ vm, chartWidth }: ReportWealthSectionProps
             width={chartWidth}
             onPress={setSelectedAreaIndex}
             selectedIndex={selectedAreaIndex}
-            renderTooltipContent={renderBarTooltip}
+            renderTooltipContent={renderAreaTooltip}
           />
         </View>
         <View style={styles.legendContainer}>
@@ -115,7 +115,7 @@ export function ReportWealthSection({ vm, chartWidth }: ReportWealthSectionProps
             width={chartWidth}
             onPress={setSelectedBarIndex}
             selectedIndex={selectedBarIndex}
-            renderTooltipContent={renderAreaTooltip}
+            renderTooltipContent={renderBarTooltip}
           />
         </View>
       </ReportChartCard>

@@ -243,12 +243,11 @@ export const ivyPlugin: ImportPlugin = {
           if (finalNextOcc < today) return;
         } else if (finalNextOcc < today) {
           let safetyCap = 0;
-          const intervalName = rule.intervalType ? `${rule.intervalType}LY` : 'MONTHLY';
           while (finalNextOcc < today && safetyCap < 1000) {
             finalNextOcc = advanceOccurrence(
               finalNextOcc,
               rule.intervalN || 1,
-              intervalName,
+              intervalType,
               recurrenceDay,
               recurrenceMonth,
             );
