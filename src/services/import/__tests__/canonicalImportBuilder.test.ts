@@ -468,7 +468,17 @@ describe('CanonicalImportBuilder', () => {
         description: 'USD to GBP Explicit',
       });
 
-      const { canonical } = builder.build();
+      builder.addTransaction({
+        id: 'missing-rate-transfer',
+        amount: 25,
+        currencyCode: 'USD',
+        type: 'TRANSFER',
+        sourceAccountId: 'acc-usd',
+        targetAccountId: 'acc-eur',
+        description: 'USD to EUR Missing Rate',
+      });
+
+      const { canonical, issues } = builder.build();
 
       const inferredJournal = canonical.journals.find(
         j => j.description === 'USD to EUR Inferred',
@@ -477,7 +487,7 @@ describe('CanonicalImportBuilder', () => {
         t => t.journalId === inferredJournal.id && t.transactionType === TransactionType.DEBIT,
       )!;
       expect(inferredDebit.amount).toBe(90);
-      expect(inferredDebit.exchangeRate).toBe(0.9);
+      expect(inferredDebit.exchangeRate).toBeCloseTo(100 / 90);
 
       const explicitJournal = canonical.journals.find(
         j => j.description === 'USD to GBP Explicit',
@@ -486,7 +496,16 @@ describe('CanonicalImportBuilder', () => {
         t => t.journalId === explicitJournal.id && t.transactionType === TransactionType.DEBIT,
       )!;
       expect(explicitDebit.amount).toBe(80);
-      expect(explicitDebit.exchangeRate).toBe(0.8);
+      expect(explicitDebit.exchangeRate).toBe(1.25);
+      expect(canonical.journals.some(j => j.description === 'USD to EUR Missing Rate')).toBe(false);
+      expect(issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            sourceId: 'missing-rate-transfer',
+            code: 'MISSING_EXCHANGE_RATE',
+          }),
+        ]),
+      );
     });
 
     it('rejects invalid amounts and missing source/destination accounts', () => {

@@ -16,7 +16,7 @@ const baseData: BatchImportData = {
     {
       id: 'journal-1',
       journalDate: Date.UTC(2020, 0, 2, 12),
-      currencyCode: 'USD',
+      currencyCode: 'CAD',
       status: 'POSTED',
       totalAmount: 100,
       transactionCount: 2,
@@ -39,7 +39,7 @@ const baseData: BatchImportData = {
       accountId: 'account-2' as BatchImportData['transactions'][number]['accountId'],
       amount: 100,
       transactionType: 'CREDIT',
-      currencyCode: 'USD',
+      currencyCode: 'CAD',
       transactionDate: Date.UTC(2020, 0, 2, 12),
     },
     {
@@ -68,7 +68,7 @@ describe('backfillHistoricalExchangeRates', () => {
       source: 'frankfurter/ecb:historical',
     });
 
-    const result = await backfillHistoricalExchangeRates(baseData, 'USD');
+    const result = await backfillHistoricalExchangeRates(baseData);
 
     expect(result.data.transactions.map(transaction => transaction.exchangeRate)).toEqual([
       1.1,
@@ -78,7 +78,7 @@ describe('backfillHistoricalExchangeRates', () => {
     expect(exchangeRateService.getHistoricalRate).toHaveBeenCalledTimes(1);
     expect(exchangeRateService.getHistoricalRate).toHaveBeenCalledWith(
       'EUR',
-      'USD',
+      'CAD',
       Date.UTC(2020, 0, 2, 12),
     );
     expect(result.warnings).toEqual([]);
@@ -89,12 +89,12 @@ describe('backfillHistoricalExchangeRates', () => {
       new Error('No historical exchange rate found'),
     );
 
-    const result = await backfillHistoricalExchangeRates(baseData, 'USD');
+    const result = await backfillHistoricalExchangeRates(baseData);
 
     expect(result.data.transactions[0].exchangeRate).toBeUndefined();
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0]).toEqual(expect.stringContaining('transaction-foreign'));
-    expect(result.warnings[0]).toEqual(expect.stringContaining('EUR -> USD'));
+    expect(result.warnings[0]).toEqual(expect.stringContaining('EUR -> CAD'));
   });
 
   it('limits concurrent historical lookups during large imports', async () => {
@@ -114,7 +114,7 @@ describe('backfillHistoricalExchangeRates', () => {
       transactionDate: Date.UTC(2020, 0, 2 + index),
     }));
 
-    const result = await backfillHistoricalExchangeRates({ ...baseData, transactions }, 'USD');
+    const result = await backfillHistoricalExchangeRates({ ...baseData, transactions });
 
     expect(result.warnings).toEqual([]);
     expect(result.data.transactions).toHaveLength(transactions.length);
@@ -132,7 +132,7 @@ describe('backfillHistoricalExchangeRates', () => {
       transactions: [{ ...baseData.transactions[0], transactionDate: Number.NaN }],
     };
 
-    const result = await backfillHistoricalExchangeRates(invalidData, 'USD');
+    const result = await backfillHistoricalExchangeRates(invalidData);
 
     expect(result.data.transactions[0].exchangeRate).toBeUndefined();
     expect(result.warnings).toEqual([expect.stringContaining('transaction-foreign')]);

@@ -68,29 +68,6 @@ export function synthesizeTransactions(params: {
       const destCurrency =
         (tx.targetAccountId && params.accountCurrencyMap.get(tx.targetAccountId)) || txCurrency;
 
-      journals.push({
-        id: journalId,
-        journalDate: date,
-        description: tx.description || 'Transfer',
-        notes: tx.notes,
-        currencyCode: sourceCurrency,
-        status: JournalStatus.POSTED,
-        totalAmount: amount,
-        transactionCount: 2,
-        displayType: JournalDisplayType.TRANSFER,
-      });
-
-      // Credit source (outflow from source)
-      transactions.push({
-        id: generator() as TransactionId,
-        journalId,
-        accountId: sourceId,
-        amount,
-        transactionType: TransactionType.CREDIT,
-        currencyCode: sourceCurrency,
-        transactionDate: date,
-      });
-
       // Validate targetAmount and exchangeRate
       let validTargetAmount: number | undefined;
       if (tx.targetAmount !== undefined) {
@@ -122,19 +99,58 @@ export function synthesizeTransactions(params: {
         }
       }
 
-      const destAmount =
-        validTargetAmount !== undefined
-          ? validTargetAmount
-          : validExchangeRate !== undefined
-            ? amount * validExchangeRate
-            : amount;
+      const isCrossCurrency = sourceCurrency !== destCurrency;
+      if (isCrossCurrency && validTargetAmount === undefined && validExchangeRate === undefined) {
+        params.issues.push({
+          severity: 'warning',
+          entity: 'transaction',
+          sourceId: tx.id,
+          code: 'MISSING_EXCHANGE_RATE',
+          message: `Cross-currency transfer was skipped because its destination amount and exchange rate are missing.`,
+        });
+        continue;
+      }
 
-      // Exchange rate multiplier = destination amount / source amount
-      const effectiveExchangeRate =
-        validExchangeRate ??
-        (sourceCurrency !== destCurrency && amount > 0 && destAmount > 0
-          ? destAmount / amount
-          : undefined);
+      const destAmount = isCrossCurrency
+        ? (validTargetAmount ?? amount * validExchangeRate!)
+        : amount;
+      let effectiveExchangeRate: number | undefined;
+      if (isCrossCurrency) {
+        effectiveExchangeRate = amount / destAmount;
+        if (!Number.isFinite(effectiveExchangeRate) || effectiveExchangeRate <= 0) {
+          params.issues.push({
+            severity: 'error',
+            entity: 'transaction',
+            sourceId: tx.id,
+            code: 'INVALID_EXCHANGE_RATE',
+            message: 'The transfer values do not produce a valid journal line exchange rate.',
+          });
+          continue;
+        }
+      }
+
+      journals.push({
+        id: journalId,
+        journalDate: date,
+        description: tx.description || 'Transfer',
+        notes: tx.notes,
+        currencyCode: sourceCurrency,
+        status: JournalStatus.POSTED,
+        totalAmount: amount,
+        transactionCount: 2,
+        displayType: JournalDisplayType.TRANSFER,
+      });
+
+      // Credit source (outflow from source).
+      transactions.push({
+        id: generator() as TransactionId,
+        journalId,
+        accountId: sourceId,
+        amount,
+        transactionType: TransactionType.CREDIT,
+        currencyCode: sourceCurrency,
+        transactionDate: date,
+      });
 
       // Debit dest (inflow to destination)
       transactions.push({

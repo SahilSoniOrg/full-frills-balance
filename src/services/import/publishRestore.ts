@@ -160,10 +160,7 @@ export async function publishRestore(
     report(onProgress, 'Restore already published; verifying Workplace...', 0.72);
   } else {
     const sourceData = resolveParsedImportBatchData({ canonical: prepared.canonicalData });
-    const backfilled = await backfillHistoricalExchangeRates(
-      sourceData,
-      normalizedCorrections.defaultCurrencyCode,
-    );
+    const backfilled = await backfillHistoricalExchangeRates(sourceData);
     warnings.push(...backfilled.warnings);
     // The repository owns the database transaction and balance preparation. Keeping this
     // call as one operation is what prevents a partially published Workplace graph.

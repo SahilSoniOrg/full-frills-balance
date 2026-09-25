@@ -7,13 +7,6 @@ function hasValidRate(rate: number | undefined): rate is number {
   return typeof rate === 'number' && Number.isFinite(rate) && rate > 0;
 }
 
-function transactionDate(
-  transaction: CanonicalTransaction,
-  journalDates: Map<string, number>,
-): number {
-  return journalDates.get(transaction.journalId) ?? transaction.transactionDate;
-}
-
 function formatTransactionDate(date: number): string {
   const parsed = new Date(date);
   return Number.isNaN(parsed.getTime()) ? 'invalid date' : parsed.toISOString().slice(0, 10);
@@ -21,10 +14,8 @@ function formatTransactionDate(date: number): string {
 
 export async function backfillHistoricalExchangeRates(
   data: BatchImportData,
-  defaultCurrency: string,
 ): Promise<{ data: BatchImportData; warnings: string[] }> {
-  const targetCurrency = defaultCurrency.trim().toUpperCase();
-  const journalDates = new Map(data.journals.map(journal => [journal.id, journal.journalDate]));
+  const journalById = new Map(data.journals.map(journal => [journal.id, journal]));
 
   type BackfillResult = { transaction: CanonicalTransaction; warning?: string };
   const results: BackfillResult[] = new Array(data.transactions.length);
@@ -38,17 +29,34 @@ export async function backfillHistoricalExchangeRates(
         return;
       }
 
+      const journal = journalById.get(transaction.journalId);
+      if (!journal) {
+        results[index] = {
+          transaction,
+          warning: `Journal currency unavailable for transaction ${transaction.id}; no historical exchange rate was added.`,
+        };
+        return;
+      }
+
       const fromCurrency = transaction.currencyCode.trim().toUpperCase();
-      if (!fromCurrency || fromCurrency === targetCurrency) {
+      const journalCurrency = journal.currencyCode.trim().toUpperCase();
+      if (!fromCurrency || !journalCurrency) {
+        results[index] = {
+          transaction,
+          warning: `Currency unavailable for transaction ${transaction.id}; no historical exchange rate was added.`,
+        };
+        return;
+      }
+      if (fromCurrency === journalCurrency) {
         results[index] = { transaction };
         return;
       }
 
-      const date = transactionDate(transaction, journalDates);
+      const date = journal.journalDate;
       try {
         const quote = await exchangeRateService.getHistoricalRate(
           fromCurrency,
-          targetCurrency,
+          journalCurrency,
           date,
         );
         results[index] = { transaction: { ...transaction, exchangeRate: quote.rate } };
@@ -56,7 +64,7 @@ export async function backfillHistoricalExchangeRates(
         const reason = error instanceof Error ? error.message : String(error);
         results[index] = {
           transaction,
-          warning: `Historical exchange rate unavailable for transaction ${transaction.id} (${fromCurrency} -> ${targetCurrency} on ${formatTransactionDate(date)}): ${reason}`,
+          warning: `Historical exchange rate unavailable for transaction ${transaction.id} (${fromCurrency} -> ${journalCurrency} on ${formatTransactionDate(date)}): ${reason}`,
         };
       }
     },

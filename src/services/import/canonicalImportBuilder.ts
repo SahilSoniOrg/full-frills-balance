@@ -67,8 +67,8 @@ export interface ImportTransactionInput {
   description?: string;
   notes?: string;
   /**
-   * Stored exchange rate multiplier: destination amount / source amount.
-   * e.g. 100 USD -> 85 EUR means rate = 0.85.
+   * Source-to-destination quote multiplier used to derive the imported destination amount.
+   * The canonical journal line stores its inverse: journal currency per native line currency.
    */
   exchangeRate?: number;
   isOpeningBalance?: boolean;
@@ -122,6 +122,8 @@ export interface ImportIssue {
     | 'DUPLICATE_CATEGORY_ID'
     | 'INVALID_TRANSFER_DESTINATION'
     | 'INVALID_AMOUNT'
+    | 'MISSING_EXCHANGE_RATE'
+    | 'INVALID_EXCHANGE_RATE'
     | 'INVALID_ENUM'
     | 'INVALID_ICON';
   message: string;

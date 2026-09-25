@@ -139,6 +139,7 @@ describe('IvyImportPlugin', () => {
         accounts: [
           ...validIvyData.accounts,
           { id: 'ivy-a2', name: 'Bank EUR', currency: 'EUR', color: 0, accountCategory: 'ASSET' },
+          { id: 'ivy-a3', name: 'Bank INR', currency: 'INR', color: 0, accountCategory: 'ASSET' },
         ],
         transactions: [
           {
@@ -150,20 +151,32 @@ describe('IvyImportPlugin', () => {
             toAmount: 85,
             dateTime: '2023-01-01T10:00:00Z',
           },
+          {
+            id: 'ivy-t3',
+            accountId: 'ivy-a1',
+            toAccountId: 'ivy-a3',
+            type: 'TRANSFER',
+            amount: 100,
+            toAmount: 85,
+            dateTime: '2023-01-02T10:00:00Z',
+          },
         ],
       };
 
       const context = { json: dataWithTransfer } as ImportFileContext;
       const stats = await parseImport(context);
-      expect(stats.journals).toBe(1);
-      expect(stats.transactions).toBe(2);
+      expect(stats.journals).toBe(2);
+      expect(stats.transactions).toBe(4);
 
-      // Native quote is base/foreign (USD per EUR).
-      const debitTx = lastBatch.transactions.find(
+      // Stored quote is journal currency per unit of each native foreign currency.
+      const convertedLines = lastBatch.transactions.filter(
         (t: any) => t.transactionType === 'DEBIT' && t.exchangeRate !== undefined,
       );
-      expect(debitTx.exchangeRate).toBeCloseTo(100 / 85);
-      expect(debitTx.currencyCode).toBe('EUR');
+      expect(convertedLines).toHaveLength(2);
+      expect(convertedLines.map((t: any) => t.currencyCode).sort()).toEqual(['EUR', 'INR']);
+      expect(convertedLines.every((t: any) => Math.abs(t.exchangeRate - 100 / 85) < 1e-10)).toBe(
+        true,
+      );
     });
 
     it('handles one-off planned transactions (dueDate) and deleted transactions', async () => {
