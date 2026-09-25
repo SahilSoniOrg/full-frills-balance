@@ -1,11 +1,28 @@
 import { AppButton, AppInput, AppText } from '@/src/components/core';
 import { PrivacyAcknowledgementSheet } from '@/src/components/legal/PrivacyAcknowledgementSheet';
-import { AppConfig, Spacing, Typography } from '@/src/constants';
+import { AppConfig, ChromeMotion, Spacing, Typography } from '@/src/constants';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoticeStrings';
 import { Box, Stack } from '@/src/design-system';
-import { useState } from 'react';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
+import { triggerHaptic } from '@/src/utils/haptics';
+import { MotiView } from 'moti';
+import { type ReactNode, useState } from 'react';
 import { Keyboard, Platform, ScrollView, StyleSheet } from 'react-native';
+
+function WelcomePanel({ children }: { readonly children: ReactNode }) {
+  const reduceMotion = useReducedMotion();
+  if (reduceMotion) return <>{children}</>;
+  return (
+    <MotiView
+      from={{ opacity: 0, scale: ChromeMotion.panelFromScale, translateY: 8 }}
+      animate={{ opacity: 1, scale: 1, translateY: 0 }}
+      transition={ChromeMotion.panel}
+    >
+      {children}
+    </MotiView>
+  );
+}
 
 export function WelcomeScene({
   name,
@@ -37,6 +54,7 @@ export function WelcomeScene({
       setPrompt(true);
       return;
     }
+    void triggerHaptic('light');
     if (action === 'start') onStart();
     else onRestore();
   };
@@ -85,49 +103,51 @@ export function WelcomeScene({
           keyboardShouldPersistTaps="handled"
         >
           <Stack flexGrow={1} justify="center" gap="xxxl" paddingVertical="md">
-            <Stack gap="xxxl" align="center">
-              <Stack gap="md" align="center" paddingHorizontal="md">
-                <AppText
-                  testID="onboarding-welcome-hero"
-                  variant="caption"
-                  color="primary"
-                  weight="semibold"
-                  style={styles.eyebrow}
-                >
-                  {splash.eyebrow}
-                </AppText>
-                <AppText variant="hero" style={styles.title}>
-                  {splash.title}
-                </AppText>
-                <AppText variant="body" color="secondary" style={styles.subtitle}>
-                  {splash.subtitle}
-                </AppText>
-              </Stack>
+            <WelcomePanel>
+              <Stack gap="xxxl" align="center">
+                <Stack gap="md" align="center" paddingHorizontal="md">
+                  <AppText
+                    testID="onboarding-welcome-hero"
+                    variant="caption"
+                    color="primary"
+                    weight="semibold"
+                    style={styles.eyebrow}
+                  >
+                    {splash.eyebrow}
+                  </AppText>
+                  <AppText variant="hero" style={styles.title}>
+                    {splash.title}
+                  </AppText>
+                  <AppText variant="body" color="secondary" style={styles.subtitle}>
+                    {splash.subtitle}
+                  </AppText>
+                </Stack>
 
-              <Stack gap="lg" width="100%" paddingHorizontal="md">
-                <AppInput
-                  label={splash.inputLabel}
-                  placeholder={splash.inputPlaceholder}
-                  value={name ?? ''}
-                  onChangeText={onNameChange}
-                  autoCapitalize="words"
-                  autoCorrect={false}
-                  accessibilityLabel={splash.inputLabel}
-                  testID="onboarding-name-input"
-                  returnKeyType="done"
-                  onSubmitEditing={() => run('start')}
-                />
-                <AppButton
-                  variant={trimmed ? 'primary' : 'secondary'}
-                  size="lg"
-                  onPress={() => run('start')}
-                  disabled={!trimmed}
-                  testID="onboarding-start"
-                >
-                  {copy.startWithMoney}
-                </AppButton>
+                <Stack gap="lg" width="100%" paddingHorizontal="md">
+                  <AppInput
+                    label={splash.inputLabel}
+                    placeholder={splash.inputPlaceholder}
+                    value={name ?? ''}
+                    onChangeText={onNameChange}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    accessibilityLabel={splash.inputLabel}
+                    testID="onboarding-name-input"
+                    returnKeyType="done"
+                    onSubmitEditing={() => run('start')}
+                  />
+                  <AppButton
+                    variant={trimmed ? 'primary' : 'secondary'}
+                    size="lg"
+                    onPress={() => run('start')}
+                    disabled={!trimmed}
+                    testID="onboarding-start"
+                  >
+                    {copy.startWithMoney}
+                  </AppButton>
+                </Stack>
               </Stack>
-            </Stack>
+            </WelcomePanel>
 
             {trustActions}
           </Stack>
@@ -145,6 +165,7 @@ export function WelcomeScene({
           onPrivacyNotice();
         }}
         onAcknowledge={() => {
+          void triggerHaptic('light');
           onAcknowledgePrivacy();
           setPrompt(false);
           const action = pending;
