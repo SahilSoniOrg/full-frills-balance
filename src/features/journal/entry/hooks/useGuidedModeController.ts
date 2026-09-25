@@ -53,13 +53,6 @@ export function useGuidedModeController({
       autopilotActive,
       firstAutopilotRole,
     }),
-    [
-      autopilotActive,
-      firstAutopilotRole,
-      handleApplyVoiceInput,
-      precision,
-      simpleEditor,
-      simpleEditor.swapAccounts,
-    ],
+    [autopilotActive, firstAutopilotRole, handleApplyVoiceInput, precision, simpleEditor],
   );
 }
