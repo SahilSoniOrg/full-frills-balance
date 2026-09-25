@@ -1,4 +1,4 @@
-import { AppButton, AppText } from '@/src/components/core';
+import { AppButton, AppText, PressScaleTouchable } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -6,6 +6,7 @@ import {
   evaluateCalculatorExpression,
   formatRationalToCurrency,
 } from '@/src/utils/amountExpression';
+import { triggerHaptic } from '@/src/utils/haptics';
 import { useEffect, useMemo, useRef, useState, type SetStateAction } from 'react';
 import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -208,6 +209,7 @@ export function AmountCalculatorSheet({
   };
 
   const handleKey = (key: CalculatorKey) => {
+    void triggerHaptic('light');
     switch (key.type) {
       case 'digit':
         appendDigit(key.value);
@@ -364,12 +366,12 @@ export function AmountCalculatorSheet({
                 : `amount-calculator-key-${key.value}`;
 
               return (
-                <TouchableOpacity
+                <PressScaleTouchable
                   key={`${key.type}-${key.value}`}
                   onPress={() => handleKey(key)}
                   disabled={isDisabled}
-                  activeOpacity={0.72}
-                  style={[
+                  style={styles.keyTouchable}
+                  surfaceStyle={[
                     styles.key,
                     { backgroundColor },
                     isDisabled && { borderColor: theme.border, borderWidth: 1 },
@@ -386,7 +388,7 @@ export function AmountCalculatorSheet({
                   >
                     {key.label}
                   </AppText>
-                </TouchableOpacity>
+                </PressScaleTouchable>
               );
             })}
           </View>
@@ -462,8 +464,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.sm,
   },
-  key: {
+  keyTouchable: {
     flex: 1,
+  },
+  key: {
     minHeight: Size.buttonLg,
     alignItems: 'center',
     justifyContent: 'center',
