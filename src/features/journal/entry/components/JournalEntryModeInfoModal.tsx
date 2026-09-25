@@ -16,14 +16,9 @@ interface JournalEntryModeInfoModalProps {
 
 type JournalEntryModeHelp = {
   title: string;
-  intro: string;
-  unlocks: string;
   exampleTitle: string;
   exampleScenario: string;
   exampleItems: readonly string[];
-  whyBetterTitle: string;
-  benefits: readonly string[];
-  footer: string;
 };
 
 const MODE_HELP_BY_ID = {
@@ -43,19 +38,14 @@ export function JournalEntryModeInfoModal({
 }: JournalEntryModeInfoModalProps) {
   const { theme } = useTheme();
   const details = MODE_HELP_BY_ID[mode];
-  const isAdvancedMode = mode === 'expert';
 
   return (
     <InfoSheet
       visible={visible}
       title={details.title}
       onClose={onClose}
-      maxHeightPercent={isAdvancedMode ? 85 : 72}
-      accessibilityCloseLabel={
-        isAdvancedMode
-          ? AppConfig.strings.transactionFlow.modesHelpAccessibility
-          : AppConfig.strings.transactionFlow.closeModeHelpAccessibility
-      }
+      maxHeightPercent={72}
+      accessibilityCloseLabel={AppConfig.strings.transactionFlow.closeModeHelpAccessibility}
       primaryAction={{
         label: isActive ? 'Done' : canUseMode ? `Use ${details.title}` : 'Advanced required',
         variant: 'primary',
@@ -66,16 +56,6 @@ export function JournalEntryModeInfoModal({
         },
       }}
     >
-      <View style={styles.section}>
-        <AppText variant="body">{details.intro}</AppText>
-      </View>
-
-      <View style={[styles.highlightSection, { backgroundColor: theme.surfaceSecondary }]}>
-        <AppText variant="body" weight="medium" color="primary">
-          {details.unlocks}
-        </AppText>
-      </View>
-
       <View style={styles.section}>
         <AppText variant="heading" style={styles.sectionTitle}>
           {details.exampleTitle}
@@ -95,29 +75,6 @@ export function JournalEntryModeInfoModal({
           ))}
         </View>
       </View>
-
-      <View style={styles.section}>
-        <AppText variant="heading" style={styles.sectionTitle}>
-          {details.whyBetterTitle}
-        </AppText>
-        {details.benefits.map((benefit, index) => (
-          <View key={index} style={styles.benefitItem}>
-            <AppText variant="body" color="secondary">
-              {benefit}
-            </AppText>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.footer}>
-        <AppText
-          variant="caption"
-          italic
-          style={{ color: theme.textSecondary, textAlign: 'center' }}
-        >
-          {details.footer}
-        </AppText>
-      </View>
     </InfoSheet>
   );
 }
@@ -128,10 +85,6 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: Typography.sizes.base,
-  },
-  highlightSection: {
-    padding: Spacing.md,
-    borderRadius: Shape.radius.md,
   },
   scenario: {
     opacity: Opacity.soft,
@@ -150,12 +103,5 @@ const styles = StyleSheet.create({
   },
   exampleItemText: {
     flex: 1,
-  },
-  benefitItem: {
-    marginBottom: Spacing.sm,
-  },
-  footer: {
-    marginTop: Spacing.md,
-    paddingTop: Spacing.lg,
   },
 });

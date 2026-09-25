@@ -44,46 +44,27 @@ export function SimpleModePanel({
   accountFlowRef,
 }: SimpleModePanelProps) {
   const { theme } = useTheme();
-  const {
-    simpleEditor,
-    precision,
-    handleApplyVoiceInput,
-    autopilotActive,
-    firstAutopilotRole,
-    swapAccounts,
-  } = useGuidedModeController({
-    accounts,
-    editor,
-    guidedAutopilot,
-    onSelectAccountRequest,
-  });
+  const { simpleEditor, precision, handleApplyVoiceInput, autopilotActive, firstAutopilotRole } =
+    useGuidedModeController({
+      accounts,
+      editor,
+      guidedAutopilot,
+      onSelectAccountRequest,
+    });
   const activeColor = resolveSimpleTypeAccentColor(simpleEditor.type, theme);
 
   return (
     <>
       <View style={styles.container}>
         <SimpleForm
+          editor={simpleEditor}
           meta={meta}
-          setType={simpleEditor.setType}
           onScrollBeginDrag={onScrollBeginDrag}
-          type={simpleEditor.type}
-          amount={simpleEditor.amount}
-          setAmount={simpleEditor.setAmount}
-          currency={simpleEditor.displayCurrency}
           accentColor={activeColor}
           precision={precision}
-          accounts={accounts}
-          accountSections={simpleEditor.accountSections}
-          sourceId={simpleEditor.sourceId}
-          destinationId={simpleEditor.destinationId}
-          onSwapAccounts={swapAccounts}
           onCreateAccountRequest={(role, intent) =>
             onCreateAccountForTarget({ kind: 'role', role }, intent)
           }
-          fxPair={simpleEditor.fxPair}
-          setManualBaseRate={simpleEditor.setManualBaseRate}
-          setConvertedAmount={simpleEditor.setConvertedAmount}
-          resetToApiRate={simpleEditor.resetToApiRate}
           autoOpenCalculator={autopilotActive}
           autopilotFirstRole={firstAutopilotRole}
           onCalculatorDone={onCalculatorDone}

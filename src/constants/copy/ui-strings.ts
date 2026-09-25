@@ -594,7 +594,6 @@ export const UI_STRINGS = {
       `Enter the converted amount or the rate to ${currency}.`,
     simple: 'Simple',
     advanced: 'Advanced',
-    modesHelpAccessibility: 'What is Advanced Mode?',
     modeHelpAccessibility: (mode: string) => `How ${mode} mode works`,
     closeModeHelpAccessibility: 'Close mode help',
     headers: {
@@ -679,9 +678,6 @@ export const UI_STRINGS = {
   journalEntryModesHelp: {
     guided: {
       title: 'Simple',
-      intro:
-        'Use Simple for one transaction with one account on each side: where the money came from and where it went.',
-      unlocks: 'Creates one transaction with two balanced lines.',
       exampleTitle: 'Example',
       exampleScenario: 'You spend ₹500 on groceries from your bank account.',
       exampleItems: [
@@ -689,19 +685,9 @@ export const UI_STRINGS = {
         'Choose your bank or wallet for how you paid',
         'Enter ₹500 and save',
       ],
-      whyBetterTitle: 'Use Simple when',
-      benefits: [
-        'Coffee, groceries, bills, salary, and other everyday transactions.',
-        'The quickest way to record one payment or one deposit.',
-        'Keeps the entry simple when you do not need to break the amount apart.',
-      ],
-      footer: 'If one payment covers several things, use Split instead.',
     },
     split: {
       title: 'Split',
-      intro:
-        'Use Split for one transaction that belongs in several categories. Enter the full amount once, then divide it into parts.',
-      unlocks: 'Creates one transaction; every part must add up to the full amount.',
       exampleTitle: 'Example',
       exampleScenario: 'You pay ₹1,000 for dinner: ₹800 for food and ₹200 for drinks.',
       exampleItems: [
@@ -709,19 +695,9 @@ export const UI_STRINGS = {
         'Add ₹800 for Food & Drink',
         'Add ₹200 for Drinks',
       ],
-      whyBetterTitle: 'Use Split when',
-      benefits: [
-        'One receipt includes several kinds of spending.',
-        'You want one payment to show up in more than one place.',
-        'You want a clear breakdown without entering separate payments.',
-      ],
-      footer: 'If you need to describe several money movements in one entry, use Advanced.',
     },
     bulk: {
       title: 'Batch',
-      intro:
-        'Use Batch to enter several separate transactions in one sitting without reopening the entry screen each time.',
-      unlocks: 'Creates one separate transaction for every row.',
       exampleTitle: 'Example',
       exampleScenario:
         'You are catching up on this week’s groceries, transport, and coffee purchases.',
@@ -730,32 +706,13 @@ export const UI_STRINGS = {
         'Start the next row; repeated details are carried over for you',
         'Change what is different, then continue down the list',
       ],
-      whyBetterTitle: 'Use Batch when',
-      benefits: [
-        'You have several transactions to catch up on.',
-        'Many entries use the same payment method or type.',
-        'You want speed without combining separate purchases.',
-      ],
-      footer:
-        'Batch is for separate transactions; use Split when one payment covers several things.',
     },
   },
   advancedModeExplanation: {
     title: 'Advanced',
-    intro:
-      'Use Advanced when one entry needs several accounts on both sides. List where it comes from and where it goes. To must add up to From.',
-    unlocks: 'Creates one custom journal entry; To must add up to From.',
     exampleTitle: 'Example',
     exampleScenario: '$50 meal paid with $40 from Bank and $10 from Cash.',
     exampleItems: ['From Bank $40', 'From Cash $10', 'To Food $50'],
-    whyBetterTitle: 'Use Advanced when',
-    benefits: [
-      'One entry can affect multiple accounts.',
-      'Your books stay balanced because total debits and credits must match.',
-      'Useful for split payments, transfers with fees, and payroll entries.',
-    ],
-    footer:
-      'Simple mode covers everyday spending. Advanced mode is there whenever you need complete, multi-line flexibility.',
   },
   accounts: {
     emptyTitle: 'No accounts yet',

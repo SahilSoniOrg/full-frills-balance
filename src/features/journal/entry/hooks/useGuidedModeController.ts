@@ -47,7 +47,6 @@ export function useGuidedModeController({
   return useMemo(
     () => ({
       simpleEditor,
-      swapAccounts: simpleEditor.swapAccounts,
       precision,
       handleApplyVoiceInput,
       autopilotActive,

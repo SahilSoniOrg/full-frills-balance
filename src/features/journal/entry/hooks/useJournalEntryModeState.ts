@@ -9,7 +9,7 @@ import {
 } from '@/src/services/journal/journalEditorHelpers';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { showErrorAlert } from '@/src/utils/alerts';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 type JournalEditorModeState = Pick<
   ReturnType<typeof useJournalEditor>,
@@ -20,24 +20,16 @@ export function useJournalEntryModeState(
   editor: JournalEditorModeState,
   routeMode?: JournalEntryRouteEditorMode,
 ) {
-  const [activeMode, setActiveMode] = useState<JournalEntryScreenMode>(() =>
-    resolveJournalEntryScreenMode(routeMode),
-  );
   const { isGuidedMode: editorIsGuidedMode, setIsGuidedMode, lines } = editor;
+  const [shellMode, setShellMode] = useState<'allocation' | 'batch' | null>(() => {
+    const initialMode = resolveJournalEntryScreenMode(routeMode);
+    return initialMode === 'allocation' || initialMode === 'batch' ? initialMode : null;
+  });
   const isSplitModeDisabled = isSplitModeDisabledByLines(lines);
 
-  // The editor owns guided/expert state. The shell owns only route-level modes
-  // (allocation and batch), so a forced expert transition cannot create a
-  // second state machine here.
-  const effectiveMode = useMemo(
-    () =>
-      activeMode === 'allocation' && isSplitModeDisabled
-        ? 'expert'
-        : activeMode === 'basic' && !editorIsGuidedMode
-          ? 'expert'
-          : activeMode,
-    [activeMode, editorIsGuidedMode, isSplitModeDisabled],
-  );
+  // Basic/Advanced follow the editor flag; only Split/Batch need shell state.
+  const activeMode: JournalEntryScreenMode = shellMode ?? (editorIsGuidedMode ? 'basic' : 'expert');
+  const effectiveMode = activeMode === 'allocation' && isSplitModeDisabled ? 'expert' : activeMode;
 
   const onToggleMode = useCallback(
     (mode: JournalEntryScreenMode) => {
@@ -58,7 +50,7 @@ export function useJournalEntryModeState(
         return;
       }
 
-      setActiveMode(mode);
+      setShellMode(mode === 'allocation' || mode === 'batch' ? mode : null);
       if (mode === 'basic' || mode === 'expert') {
         setIsGuidedMode(mode === 'basic');
       }
