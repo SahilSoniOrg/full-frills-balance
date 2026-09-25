@@ -3,12 +3,12 @@ import { AppConfig } from '@/src/constants';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { AccountFields } from '@/src/types/plainDtos';
-import type { AccountRole } from '@/src/types/domainJournal';
 import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import {
   JournalEntryAccountPickerRequestOptions,
   useJournalEntryAccountPicker,
+  type JournalAccountCreateTarget,
 } from '@/src/features/journal/entry/hooks/useJournalEntryAccountPicker';
 import { applyJournalLineAccountSelection } from '@/src/features/journal/entry/journalEntryAccountPickerPolicy';
 import type { AutopilotAppliedAccount } from '@/src/features/journal/entry/components/useSimpleFormExpansion';
@@ -72,20 +72,8 @@ export interface JournalEntryShell {
   isSimpleModeDisabled: boolean;
   isSplitModeDisabled: boolean;
   onCreateAccountRequest: (intent: CreateAccountIntent) => void;
-  onCreateAccountRequestForRole: (role: AccountRole, intent: CreateAccountIntent) => void;
-  onCreateAccountRequestForBatchRow: (
-    rowId: string,
-    role: AccountRole,
-    intent: CreateAccountIntent,
-  ) => void;
-  onCreateAccountRequestForSplitRow: (
-    rowId: string,
-    role: AccountRole,
-    intent: CreateAccountIntent,
-  ) => void;
-  onCreateAccountRequestForAdvancedRow: (
-    rowId: string,
-    role: AccountRole,
+  onCreateAccountForTarget: (
+    target: JournalAccountCreateTarget,
     intent: CreateAccountIntent,
   ) => void;
   suggestions: JournalAutofillSuggestion[];
@@ -235,10 +223,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     onAccountPickerDismiss,
     onAccountSelected,
     onCreateAccountRequest,
-    onCreateAccountRequestForRole,
-    onCreateAccountRequestForBatchRow,
-    onCreateAccountRequestForSplitRow,
-    onCreateAccountRequestForAdvancedRow,
+    onCreateAccountForTarget,
     selectableAccounts,
     selectedAccountId,
     accountPickerTitle,
@@ -286,10 +271,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     isSimpleModeDisabled,
     isSplitModeDisabled,
     onCreateAccountRequest,
-    onCreateAccountRequestForRole,
-    onCreateAccountRequestForBatchRow,
-    onCreateAccountRequestForSplitRow,
-    onCreateAccountRequestForAdvancedRow,
+    onCreateAccountForTarget,
     suggestions,
     suggestionState,
     onSelectSuggestion,

@@ -24,6 +24,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type SplitRowPick = { id: string; accountId?: AccountId };
 
+export type JournalAccountCreateTarget =
+  | { kind: 'role'; role: AccountRole }
+  | { kind: 'batchRow'; rowId: string; role: AccountRole }
+  | { kind: 'splitRow'; rowId: string; role: AccountRole }
+  | { kind: 'advancedRow'; rowId: string; role: AccountRole };
+
+export function bindRowAccountCreate(
+  kind: Extract<JournalAccountCreateTarget, { rowId: string }>['kind'],
+  onCreateAccountForTarget: (
+    target: JournalAccountCreateTarget,
+    intent: CreateAccountIntent,
+  ) => void,
+) {
+  return (rowId: string, role: AccountRole, intent: CreateAccountIntent) =>
+    onCreateAccountForTarget({ kind, rowId, role }, intent);
+}
+
 export type JournalEntryAccountPickerRequestOptions = {
   /** Continue the guided post-amount flow with the complementary account side. */
   autoAdvance?: boolean;
@@ -197,56 +214,48 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
     [activeLineId, navigateToAccountForm, onCloseAccountPicker],
   );
 
-  const onCreateAccountRequestForRole = useCallback(
-    (role: AccountRole, intent: CreateAccountIntent) => {
-      navigateToAccountForm(intent, editor.getLineIdByRole(role));
-    },
-    [editor, navigateToAccountForm],
-  );
+  const onCreateAccountForTarget = useCallback(
+    (target: JournalAccountCreateTarget, intent: CreateAccountIntent) => {
+      if (target.kind === 'role') {
+        navigateToAccountForm(intent, editor.getLineIdByRole(target.role));
+        return;
+      }
 
-  const onCreateAccountRequestForBatchRow = useCallback(
-    (rowId: string, role: AccountRole, intent: CreateAccountIntent) => {
-      const row = batchEditor?.rows.find(item => item.id === rowId);
-      if (!row) return;
+      if (target.kind === 'batchRow') {
+        const row = batchEditor?.rows.find(item => item.id === target.rowId);
+        if (!row) return;
+        const side = target.role === 'source' ? TransactionType.CREDIT : TransactionType.DEBIT;
+        AppNavigation.toAccountForm(undefined, {
+          name: intent.suggestedName,
+          type: intent.type || getInferredAccountType(row.transactionType, side),
+          returnTarget: { kind: 'batchRow', rowId: target.rowId, role: target.role },
+        });
+        return;
+      }
 
-      const side = role === 'source' ? TransactionType.CREDIT : TransactionType.DEBIT;
-      AppNavigation.toAccountForm(undefined, {
-        name: intent.suggestedName,
-        type: intent.type || getInferredAccountType(row.transactionType, side),
-        returnTarget: { kind: 'batchRow', rowId, role },
-      });
-    },
-    [batchEditor],
-  );
+      if (target.kind === 'splitRow') {
+        const row = splitRows.find(item => item.id === target.rowId);
+        // The source account belongs to the split entry, not to an allocation
+        // row. It must remain creatable even when the last allocation row was
+        // removed or an older draft loads without one.
+        if (target.role !== 'source' && !row) return;
+        const lineId = target.role === 'source' ? SPLIT_SOURCE_LINE_ID : target.rowId;
+        const side = target.role === 'source' ? TransactionType.CREDIT : TransactionType.DEBIT;
+        AppNavigation.toAccountForm(undefined, {
+          name: intent.suggestedName,
+          type: intent.type || getInferredAccountType(editor.transactionType, side),
+          returnTarget: { kind: 'line', lineId },
+        });
+        return;
+      }
 
-  const onCreateAccountRequestForSplitRow = useCallback(
-    (rowId: string, role: AccountRole, intent: CreateAccountIntent) => {
-      const row = splitRows.find(item => item.id === rowId);
-      // The source account belongs to the split entry, not to an allocation
-      // row. It must remain creatable even when the last allocation row was
-      // removed or an older draft loads without one.
-      if (role !== 'source' && !row) return;
-
-      const lineId = role === 'source' ? SPLIT_SOURCE_LINE_ID : rowId;
-      const side = role === 'source' ? TransactionType.CREDIT : TransactionType.DEBIT;
-      AppNavigation.toAccountForm(undefined, {
-        name: intent.suggestedName,
-        type: intent.type || getInferredAccountType(editor.transactionType, side),
-        returnTarget: { kind: 'line', lineId },
-      });
-    },
-    [editor.transactionType, splitRows],
-  );
-
-  const onCreateAccountRequestForAdvancedRow = useCallback(
-    (rowId: string, _role: AccountRole, intent: CreateAccountIntent) => {
       AppNavigation.toAccountForm(undefined, {
         name: intent.suggestedName,
         type: intent.type || AccountType.ASSET,
-        returnTarget: { kind: 'line', lineId: rowId },
+        returnTarget: { kind: 'line', lineId: target.rowId },
       });
     },
-    [],
+    [batchEditor, editor, navigateToAccountForm, splitRows],
   );
 
   const selectableAccounts = useMemo(
@@ -292,10 +301,7 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
     onCloseAccountPicker,
     onAccountSelected,
     onCreateAccountRequest,
-    onCreateAccountRequestForRole,
-    onCreateAccountRequestForBatchRow,
-    onCreateAccountRequestForSplitRow,
-    onCreateAccountRequestForAdvancedRow,
+    onCreateAccountForTarget,
     selectableAccounts,
     selectedAccountId,
     accountPickerTitle,

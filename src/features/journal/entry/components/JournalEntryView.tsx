@@ -95,10 +95,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
     onCloseAccountPicker,
     onAccountPickerDismiss,
     onCreateAccountRequest,
-    onCreateAccountRequestForRole,
-    onCreateAccountRequestForBatchRow,
-    onCreateAccountRequestForSplitRow,
-    onCreateAccountRequestForAdvancedRow,
+    onCreateAccountForTarget,
     suggestions,
     suggestionState,
     showEditBanner,
@@ -247,7 +244,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
             accounts={accounts}
             editor={editor}
             guidedAutopilot={guidedAutopilot}
-            onCreateAccountRequestForRole={onCreateAccountRequestForRole}
+            onCreateAccountForTarget={onCreateAccountForTarget}
             onSelectAccountRequest={onSelectAccountRequest}
             workplaceCurrency={valuationCurrency}
             workplaceId={workplaceId}
@@ -265,7 +262,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
               accounts={accounts}
               workplaceCurrency={valuationCurrency}
               editor={editor}
-              onCreateAccountRequestForRow={onCreateAccountRequestForSplitRow}
+              onCreateAccountForTarget={onCreateAccountForTarget}
             />
           </>
         ) : activeMode === 'expert' ? (
@@ -275,7 +272,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
               accounts={accounts}
               editor={editor}
               workplaceCurrency={valuationCurrency}
-              onCreateAccountRequestForRow={onCreateAccountRequestForAdvancedRow}
+              onCreateAccountForTarget={onCreateAccountForTarget}
               showLineNotes={showEntryNotes}
             />
           </>
@@ -288,7 +285,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
             summary={props.batchSummary}
             onContinue={props.onContinueBatch}
             onDone={props.onDoneBatch}
-            onCreateAccountRequestForRow={onCreateAccountRequestForBatchRow}
+            onCreateAccountForTarget={onCreateAccountForTarget}
           />
         )}
       </View>

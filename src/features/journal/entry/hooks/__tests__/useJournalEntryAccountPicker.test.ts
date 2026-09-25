@@ -76,9 +76,10 @@ describe('useJournalEntryAccountPicker', () => {
     );
 
     act(() => {
-      result.current.onCreateAccountRequestForSplitRow('', 'source', {
-        suggestedName: 'New cash account',
-      });
+      result.current.onCreateAccountForTarget(
+        { kind: 'splitRow', rowId: '', role: 'source' },
+        { suggestedName: 'New cash account' },
+      );
     });
 
     expect(AppNavigation.toAccountForm).toHaveBeenCalledWith(
@@ -108,9 +109,10 @@ describe('useJournalEntryAccountPicker', () => {
       result.current.onCreateAccountRequest({ suggestedName: 'Groceries' });
     });
     act(() => {
-      result.current.onCreateAccountRequestForBatchRow('row-1', 'source', {
-        suggestedName: 'Wallet',
-      });
+      result.current.onCreateAccountForTarget(
+        { kind: 'batchRow', rowId: 'row-1', role: 'source' },
+        { suggestedName: 'Wallet' },
+      );
     });
 
     expect(AppNavigation.toAccountForm).toHaveBeenNthCalledWith(

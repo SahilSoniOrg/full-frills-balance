@@ -15,7 +15,7 @@ export type SimpleModePanelProps = Pick<
   | 'accounts'
   | 'editor'
   | 'guidedAutopilot'
-  | 'onCreateAccountRequestForRole'
+  | 'onCreateAccountForTarget'
   | 'onSelectAccountRequest'
   | 'workplaceCurrency'
   | 'workplaceId'
@@ -33,7 +33,7 @@ export function SimpleModePanel({
   accounts,
   editor,
   guidedAutopilot,
-  onCreateAccountRequestForRole,
+  onCreateAccountForTarget,
   onSelectAccountRequest,
   workplaceId,
   voiceModalVisible,
@@ -77,7 +77,9 @@ export function SimpleModePanel({
           sourceId={simpleEditor.sourceId}
           destinationId={simpleEditor.destinationId}
           onSwapAccounts={swapAccounts}
-          onCreateAccountRequest={onCreateAccountRequestForRole}
+          onCreateAccountRequest={(role, intent) =>
+            onCreateAccountForTarget({ kind: 'role', role }, intent)
+          }
           fxPair={simpleEditor.fxPair}
           setManualBaseRate={simpleEditor.setManualBaseRate}
           setConvertedAmount={simpleEditor.setConvertedAmount}
