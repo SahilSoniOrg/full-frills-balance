@@ -100,24 +100,6 @@ class ReactiveCacheCoordinator {
       this.entries.delete(key);
     }
   }
-
-  /** Bust all streams whose inputs change when an account is archived/restored. */
-  invalidateAccountArchiveCaches(workplaceId: WorkplaceId): void {
-    this.clearNamespaces(
-      [
-        REACTIVE_CACHE_NAMESPACES.dashboard,
-        REACTIVE_CACHE_NAMESPACES.optimizedAccountList,
-        REACTIVE_CACHE_NAMESPACES.accountDashboard,
-        REACTIVE_CACHE_NAMESPACES.aggregatedAccountBalances,
-        REACTIVE_CACHE_NAMESPACES.workplaceAccounts,
-        REACTIVE_CACHE_NAMESPACES.workplaceJournalMeta,
-        REACTIVE_CACHE_NAMESPACES.workplaceActiveCount,
-        REACTIVE_CACHE_NAMESPACES.safeToSpend,
-        REACTIVE_CACHE_NAMESPACES.insights,
-      ],
-      workplaceId,
-    );
-  }
 }
 
 export const reactiveCacheCoordinator = new ReactiveCacheCoordinator();

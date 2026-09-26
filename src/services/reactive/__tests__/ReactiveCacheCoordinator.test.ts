@@ -100,53 +100,6 @@ describe('ReactiveCacheCoordinator', () => {
     secondSubscription.unsubscribe();
   });
 
-  it('invalidates every account-dependent stream for the affected workplace', () => {
-    const workplaceId = 'workplace-one' as WorkplaceId;
-    const teardown = jest.fn();
-    const createSource = () => sourceWithTeardown(teardown);
-    const subscriptions = [
-      reactiveCacheCoordinator.getOrCreate({
-        namespace: REACTIVE_CACHE_NAMESPACES.dashboard,
-        key: 'USD_workplace-one',
-        workplaceId,
-        createSource,
-      }),
-      reactiveCacheCoordinator.getOrCreate({
-        namespace: REACTIVE_CACHE_NAMESPACES.aggregatedAccountBalances,
-        key: 'USD_workplace-one',
-        workplaceId,
-        createSource,
-      }),
-      reactiveCacheCoordinator.getOrCreate({
-        namespace: REACTIVE_CACHE_NAMESPACES.workplaceActiveCount,
-        key: workplaceId,
-        workplaceId,
-        createSource,
-      }),
-      reactiveCacheCoordinator.getOrCreate({
-        namespace: REACTIVE_CACHE_NAMESPACES.safeToSpend,
-        key: workplaceId,
-        workplaceId,
-        createSource,
-      }),
-      reactiveCacheCoordinator.getOrCreate({
-        namespace: REACTIVE_CACHE_NAMESPACES.insights,
-        key: `${workplaceId}_false`,
-        workplaceId,
-        createSource,
-      }),
-    ].map(observable => observable.subscribe());
-
-    reactiveCacheCoordinator.invalidateAccountArchiveCaches(workplaceId);
-
-    expect(teardown).toHaveBeenCalledTimes(5);
-    expect(
-      reactiveCacheCoordinator.hasNamespace(REACTIVE_CACHE_NAMESPACES.workplaceActiveCount),
-    ).toBe(false);
-
-    subscriptions.forEach(subscription => subscription.unsubscribe());
-  });
-
   it('evicts feature caches through the same workplace-scoped seam', () => {
     const departingWorkplace = 'workplace-departing' as WorkplaceId;
     const activeWorkplace = 'workplace-active' as WorkplaceId;
