@@ -2,6 +2,7 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { confirm, toast } from '@/src/utils/alerts';
 import { AppButton, AppText, LoadingView } from '@/src/components/core';
 import { Spacing } from '@/src/constants/design-tokens';
+import { useOptionalWorkplace } from '@/src/contexts/WorkplaceContext';
 import { ThemeOverride } from '@/src/contexts/UIContext';
 import { Box, Page, Stack } from '@/src/design-system';
 import { PostedJournalImportError } from '@/src/domain/accounting/PostedJournalImportError';
@@ -37,6 +38,7 @@ import {
   applySetupOutcome,
   createJourneyCoordinator,
   resolveSetupJourney,
+  restoreJourneyForWorkplaceCreation,
   restoreLeaveNeedsConfirm,
 } from './setupRuntime';
 import {
@@ -55,12 +57,13 @@ import { useSetupJourneyViewState } from './hooks/useSetupJourneyViewState';
 function restoreSwitchForJourney(
   journeyId: SetupJourneyId,
   onSwitchJourney: (journeyId: SetupJourneyId, name?: string) => void,
+  workplaceOpen: boolean,
 ): (() => void) | undefined {
   switch (journeyId) {
     case 'empty_device_workplace':
       return () => onSwitchJourney('empty_device_restore');
     case 'create_workplace':
-      return () => onSwitchJourney('picker_restore');
+      return () => onSwitchJourney(restoreJourneyForWorkplaceCreation(workplaceOpen));
     default:
       return undefined;
   }
@@ -84,6 +87,7 @@ function SetupJourneyScreen({
 }) {
   const recipe = getSetupRecipe(journeyId);
   const coordinator = useMemo(() => createJourneyCoordinator(journeyId), [journeyId]);
+  const workplaceOpen = useOptionalWorkplace() !== undefined;
 
   useSyncExternalStore(subscribeToSetupDraft, readSetupDraftSnapshot, readSetupDraftSnapshot);
   const [submittingSlice, setSubmittingSlice] = useState<SetupSliceId>();
@@ -420,7 +424,7 @@ function SetupJourneyScreen({
                 goBack();
               }
             }}
-            onRestore={restoreSwitchForJourney(journeyId, onSwitchJourney)}
+            onRestore={restoreSwitchForJourney(journeyId, onSwitchJourney, workplaceOpen)}
           />
         );
       }

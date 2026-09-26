@@ -7,6 +7,7 @@ import {
   abandonRestoreJourney,
   applySetupOutcome,
   createJourneyCoordinator,
+  restoreJourneyForWorkplaceCreation,
   restoreLeaveNeedsConfirm,
 } from '../setupRuntime';
 import type { RestoreSetupDraft } from '../setupTypes';
@@ -103,6 +104,18 @@ describe('abandon restore', () => {
       'Sahil',
     );
     expect(onSwitchJourney).toHaveBeenCalledWith('first_run', 'Sahil');
+  });
+});
+
+describe('restore from create workplace', () => {
+  it('stays on the optional settings restore while a workplace is open', () => {
+    expect(restoreJourneyForWorkplaceCreation(true)).toBe('settings_restore');
+    expect(getSetupRecipe('settings_restore').entryPolicy).toBe('optional');
+  });
+
+  it('uses the blocking picker restore when no workplace is open', () => {
+    expect(restoreJourneyForWorkplaceCreation(false)).toBe('picker_restore');
+    expect(getSetupRecipe('picker_restore').entryPolicy).toBe('blocking');
   });
 });
 

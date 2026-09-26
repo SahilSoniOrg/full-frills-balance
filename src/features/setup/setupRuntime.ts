@@ -31,6 +31,16 @@ export function resolveOptionalJourney(params: {
   return undefined;
 }
 
+/**
+ * Create-workplace is optional, so books screens stay mounted behind it.
+ * Restore has to stay optional too, or those screens render without a Workplace.
+ */
+export function restoreJourneyForWorkplaceCreation(
+  workplaceOpen: boolean,
+): 'settings_restore' | 'picker_restore' {
+  return workplaceOpen ? 'settings_restore' : 'picker_restore';
+}
+
 export function resolveSetupJourney(
   params: { mode?: string; journey?: string },
   override?: SetupJourneyId,
