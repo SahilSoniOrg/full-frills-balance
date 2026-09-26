@@ -1,6 +1,13 @@
 import { Icon, type IconName } from '@/src/types/domainIcons';
 import { UI_STRINGS } from './copy/ui-strings';
 
+const isDevelopmentBuild =
+  __DEV__ ||
+  process.env.EXPO_PUBLIC_APP_VARIANT === 'development' ||
+  process.env.APP_VARIANT === 'development';
+const enableAnalyticsInDev = process.env.EXPO_PUBLIC_ENABLE_ANALYTICS_IN_DEV === '1';
+const analyticsEnabled = !isDevelopmentBuild || enableAnalyticsInDev;
+
 /**
  * App Configuration - Behavior defaults and app-wide settings
  *
@@ -83,9 +90,9 @@ export const AppConfig = {
   // Feature toggles
   features: {
     enableAnalytics: true, // Analytics collection
-    enableSentry: !__DEV__, // Error tracking
+    enableSentry: analyticsEnabled, // Error tracking
     // Keep deterministic E2E performance runs free of analytics network work.
-    enablePostHog: !__DEV__ && process.env.EXPO_PUBLIC_E2E !== '1', // Product analytics
+    enablePostHog: analyticsEnabled && process.env.EXPO_PUBLIC_E2E !== '1', // Product analytics
     enableDebugMode: false, // Debug logging
     enableExperimentalFeatures: false,
     debug: {
