@@ -4,7 +4,7 @@ import type { IconName } from '@/src/types/domainIcons';
 import { useRevealHorizontalItem } from '@/src/components/filters/useRevealHorizontalItem';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
-import { Bleed, Inline } from '@/src/design-system';
+import { Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View, type ViewStyle } from 'react-native';
@@ -148,7 +148,7 @@ export const SelectionTileList: React.FC<SelectionTileListProps> = ({
   }
 
   return (
-    <Bleed horizontal="lg">
+    <View style={styles.bleed}>
       <ScrollView ref={scrollRef} horizontal showsHorizontalScrollIndicator={false}>
         <View ref={contentRef} style={styles.scrollContent}>
           {items.map(item => {
@@ -174,11 +174,14 @@ export const SelectionTileList: React.FC<SelectionTileListProps> = ({
           })}
         </View>
       </ScrollView>
-    </Bleed>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  bleed: {
+    marginHorizontal: -Spacing.lg,
+  },
   scrollContent: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.xs,

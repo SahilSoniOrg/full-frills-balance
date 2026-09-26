@@ -1,4 +1,3 @@
-export * from './Bleed';
 export * from './Box';
 export * from './FadeIn';
 export * from './Inline';

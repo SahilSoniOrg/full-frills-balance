@@ -95,12 +95,6 @@ export function resolveStyleColors<T extends StyleProp<ViewStyle | TextStyle>>(
   return flattened as unknown as T;
 }
 
-export function negateSpace(value: SpacingKey | number | undefined): number | undefined {
-  const resolved = resolvePaddingSpacing(value);
-  if (resolved === undefined) return undefined;
-  return -resolved;
-}
-
 export const BOX_PROP_KEY_LIST = [
   'padding',
   'paddingHorizontal',
