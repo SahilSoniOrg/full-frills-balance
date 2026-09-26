@@ -3,8 +3,12 @@
  */
 
 import { database } from '@/src/data/database/Database';
-import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
+import Currency from '@/src/data/models/Currency';
+import { Q } from '@nozbe/watermelondb';
 import { CurrencyInitService } from '@/src/services/currency-init-service';
+
+const activeCurrencies = () =>
+  database.get<Currency>('currencies').query(Q.where('deleted_at', null)).fetch();
 
 describe('CurrencyInitService', () => {
   let service: CurrencyInitService;
@@ -19,15 +23,15 @@ describe('CurrencyInitService', () => {
 
   describe('initialize', () => {
     it('should populate currencies if table is empty', async () => {
-      const countBefore = await currencyRepository.findAll();
+      const countBefore = await activeCurrencies();
       expect(countBefore.length).toBe(0);
 
       await service.initialize();
 
-      const countAfter = await currencyRepository.findAll();
+      const countAfter = await activeCurrencies();
       expect(countAfter.length).toBeGreaterThan(0);
 
-      const usd = await currencyRepository.findByCode('USD');
+      const usd = (await activeCurrencies()).find(c => c.code === 'USD');
       expect(usd).toBeDefined();
       expect(usd?.name).toBe('US Dollar');
     });
@@ -35,18 +39,18 @@ describe('CurrencyInitService', () => {
     it('should do nothing if all currencies are present', async () => {
       // Initialize once
       await service.initialize();
-      const countInitial = (await currencyRepository.findAll()).length;
+      const countInitial = (await activeCurrencies()).length;
 
       // Initialize again
       await service.initialize();
-      const countFinal = (await currencyRepository.findAll()).length;
+      const countFinal = (await activeCurrencies()).length;
 
       expect(countFinal).toBe(countInitial);
     });
 
     it('should add missing currencies if new ones are introduced', async () => {
       await service.initialize();
-      const allCurrencies = await currencyRepository.findAll();
+      const allCurrencies = await activeCurrencies();
       const initialCount = allCurrencies.length;
 
       // Simulate a "missing" currency by deleting one
@@ -56,13 +60,13 @@ describe('CurrencyInitService', () => {
         await currencyToDelete.destroyPermanently();
       });
 
-      const countAfterDelete = (await currencyRepository.findAll()).length;
+      const countAfterDelete = (await activeCurrencies()).length;
       expect(countAfterDelete).toBe(initialCount - 1);
 
       // Re-initialize should restore it
       await service.initialize();
 
-      const countFinal = (await currencyRepository.findAll()).length;
+      const countFinal = (await activeCurrencies()).length;
       expect(countFinal).toBe(initialCount);
     });
   });
