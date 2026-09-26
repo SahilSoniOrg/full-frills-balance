@@ -14,7 +14,7 @@ import { isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
 import { logger } from '@/src/utils/logger';
 import { toLiabilityMetadata } from './liabilityMetadata';
 import { TimeContext } from './TimeContext';
-import { ScopeResolver } from '@/src/services/forward-finance/scope/ScopeResolver';
+import { resolveLeafAccountIds } from '@/src/services/forward-finance/scope/ScopeResolver';
 import { LiabilityMetadata } from './types';
 import { getCorrespondingStatementDate, getNextDueDate } from './utils/liabilityUtils';
 
@@ -170,7 +170,7 @@ export async function fetchBudgetCategoryMap(
   budgets.forEach(budget => {
     const scopes = scopesByBudget.get(budget.id) || [];
     const rootScopeIds = scopes.map(s => s.accountId);
-    const leafIds = ScopeResolver.resolveLeafAccountIds(rootScopeIds, expenses);
+    const leafIds = resolveLeafAccountIds(rootScopeIds, expenses);
     map.set(budget.id, leafIds as Set<string>);
   });
 

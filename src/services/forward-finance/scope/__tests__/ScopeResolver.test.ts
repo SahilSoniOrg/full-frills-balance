@@ -1,4 +1,4 @@
-import { ScopeResolver } from '../ScopeResolver';
+import { resolveLeafAccountIds } from '../ScopeResolver';
 
 describe('ScopeResolver', () => {
   const accounts = [
@@ -11,14 +11,14 @@ describe('ScopeResolver', () => {
   ];
 
   it('resolves strictly leaf nodes for budget spend posting', () => {
-    const leaves = ScopeResolver.resolveLeafAccountIds(['food'], accounts);
+    const leaves = resolveLeafAccountIds(['food'], accounts);
     expect(leaves.has('food' as any)).toBe(false); // food has children -> not a leaf
     expect(leaves.has('groceries' as any)).toBe(true);
     expect(leaves.has('dining' as any)).toBe(true);
   });
 
   it('handles deep root queries', () => {
-    const leaves = ScopeResolver.resolveLeafAccountIds(['root-expenses'], accounts);
+    const leaves = resolveLeafAccountIds(['root-expenses'], accounts);
     expect(leaves).toEqual(new Set(['groceries', 'dining', 'rent', 'utilities']));
   });
 
@@ -29,6 +29,6 @@ describe('ScopeResolver', () => {
       { id: 'c', parentAccountId: 'b' },
     ];
 
-    expect(() => ScopeResolver.resolveLeafAccountIds(['a'], cyclicAccounts)).not.toThrow();
+    expect(() => resolveLeafAccountIds(['a'], cyclicAccounts)).not.toThrow();
   });
 });

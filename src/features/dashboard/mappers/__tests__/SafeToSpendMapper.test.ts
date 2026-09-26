@@ -1,4 +1,4 @@
-import { SafeToSpendMapper } from '@/src/features/dashboard/mappers/SafeToSpendMapper';
+import { mapSafeToSpendViewModel } from '@/src/features/dashboard/mappers/SafeToSpendMapper';
 import { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import { FlowCategory, FlowSource } from '@/src/services/simulation/types';
 import { AccountId } from '@/src/types/ids';
@@ -85,7 +85,7 @@ describe('SafeToSpendMapper', () => {
   };
 
   const mapToVM = (res = mockResult, opt = mockOptions) =>
-    SafeToSpendMapper.mapToViewModel(
+    mapSafeToSpendViewModel(
       {
         ...res,
         accountMap: res.accountMap || new Map(),
@@ -94,7 +94,7 @@ describe('SafeToSpendMapper', () => {
     );
 
   it('returns fallback data if report is missing', () => {
-    const vm = SafeToSpendMapper.mapToViewModel({} as any, mockOptions);
+    const vm = mapSafeToSpendViewModel({} as any, mockOptions);
     expect(vm.safeToSpend).toBe(0);
     expect(vm.isLoading).toBe(true);
   });

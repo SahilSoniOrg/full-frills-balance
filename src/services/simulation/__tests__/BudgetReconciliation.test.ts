@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import Budget from '@/src/data/models/Budget';
 import dayjs from 'dayjs';
-import { budgetProjectionProvider } from '@/src/services/budget/budgetProjectionProvider';
+import { projectBudgetCapacities } from '@/src/services/budget/budgetProjectionProvider';
 import { BudgetFlowGenerator } from '../engines/BudgetFlowGenerator';
 import { FlowCategory, FlowSource, ScheduledProjection, SimulationContext } from '../types';
 import { AccountId } from '@/src/types/ids';
@@ -57,7 +57,7 @@ describe('BudgetReconciliation', () => {
 
     const budgetCategoryMap = new Map([['b1', new Set(['cat1'])]]);
 
-    const capacities = budgetProjectionProvider.projectCapacities(
+    const capacities = projectBudgetCapacities(
       context,
       [budget],
       [usage as any],

@@ -1,6 +1,6 @@
 import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDashboardFeatureActions';
 import React, { useCallback, useMemo } from 'react';
-import { SafeToSpendMapper } from '../mappers/SafeToSpendMapper';
+import { mapSafeToSpendViewModel } from '../mappers/SafeToSpendMapper';
 import type { SafeToSpendMapperInput } from '../mappers/SafeToSpendMapper';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 
@@ -59,7 +59,7 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
   } = props;
 
   const viewModel = useMemo(() => {
-    return SafeToSpendMapper.mapToViewModel(
+    return mapSafeToSpendViewModel(
       {
         summary,
         totalLiquidAssets,

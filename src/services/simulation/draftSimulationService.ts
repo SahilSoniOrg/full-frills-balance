@@ -1,4 +1,4 @@
-import { budgetProjectionProvider } from '@/src/services/budget/budgetProjectionProvider';
+import { projectBudgetCapacities } from '@/src/services/budget/budgetProjectionProvider';
 import { PlannedFlowGenerator } from './engines/PlannedFlowGenerator';
 import { LiabilityFlowGenerator } from './engines/LiabilityFlowGenerator';
 import { ProjectionComposer } from './ProjectionComposer';
@@ -57,7 +57,7 @@ export function simulateDraftScenario(input: DraftSimulationScenario): {
     new Map(),
   );
 
-  const capacities = budgetProjectionProvider.projectCapacities(
+  const capacities = projectBudgetCapacities(
     context,
     [...input.budgets],
     input.budgets.map(budget => ({

@@ -5,7 +5,7 @@ import { accountQueryRepository } from '@/src/data/repositories/account';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { AppConfig } from '@/src/constants/app-config';
 import { convertJournalLineAmount } from '@/src/services/currencyConversion';
-import { ScopeResolver } from '@/src/services/forward-finance/scope/ScopeResolver';
+import { resolveLeafAccountIds } from '@/src/services/forward-finance/scope/ScopeResolver';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { runTasksWithBoundedConcurrency } from '@/src/utils/asyncConcurrency';
@@ -43,7 +43,7 @@ export function resolveLeafExpenseAccountIds(
 
   const workplaceExpenses = allExpenses.filter(inWorkplace);
 
-  return ScopeResolver.resolveLeafAccountIds(rootExpenseIds, workplaceExpenses);
+  return resolveLeafAccountIds(rootExpenseIds, workplaceExpenses);
 }
 
 /**

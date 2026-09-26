@@ -11,12 +11,12 @@ import { AccountType } from '@/src/types/enums';
 import { logger } from '@/src/utils/logger';
 import { Trace } from '@/src/utils/TraceService';
 import dayjs from 'dayjs';
-import { budgetProjectionProvider } from '@/src/services/budget/budgetProjectionProvider';
+import { projectBudgetCapacities } from '@/src/services/budget/budgetProjectionProvider';
 import { PlannedFlowGenerator } from '@/src/services/simulation/engines/PlannedFlowGenerator';
 import { keepProjectablePlannedJournals } from '@/src/services/planned-payment/projectablePlannedJournals';
 import { LiabilityFlowGenerator } from './engines/LiabilityFlowGenerator';
 import { ProjectionComposer } from './ProjectionComposer';
-import { SimulationReportGenerator } from './SimulationReportGenerator';
+import { generateAccountSummaries, generateSimulationReport } from './SimulationReportGenerator';
 
 import { Simulator } from './Simulator';
 import { TimeContext } from './TimeContext';
@@ -249,7 +249,7 @@ export class CashFlowSimulationService {
       journalTxsMap,
     );
 
-    const budgetCapacities = budgetProjectionProvider.projectCapacities(
+    const budgetCapacities = projectBudgetCapacities(
       context,
       filteredBudgets,
       filteredUsages,
@@ -307,7 +307,7 @@ export class CashFlowSimulationService {
     trace?.metric('simulation_execution');
 
     // 4. PHASE: POST-PROCESS SUMMARIES
-    const report = SimulationReportGenerator.generate(
+    const report = generateSimulationReport(
       allFlows,
       accountMap,
       normalizedLiabilityBalances,
@@ -315,7 +315,7 @@ export class CashFlowSimulationService {
     );
     trace?.metric('post_process_report');
 
-    const accountSummaries = SimulationReportGenerator.generateAccountSummaries({
+    const accountSummaries = generateAccountSummaries({
       allFlows,
       liquidAccountIdsSet,
       accountMap,

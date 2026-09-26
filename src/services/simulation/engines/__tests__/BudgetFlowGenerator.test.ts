@@ -1,6 +1,6 @@
 import Account from '@/src/data/models/Account';
 import Budget from '@/src/data/models/Budget';
-import { budgetProjectionProvider } from '@/src/services/budget/budgetProjectionProvider';
+import { projectBudgetCapacities } from '@/src/services/budget/budgetProjectionProvider';
 import { BudgetUsage } from '@/src/services/budget/types';
 import { AccountId } from '@/src/types/ids';
 import { SimulationContext } from '../../types';
@@ -35,12 +35,7 @@ describe('BudgetFlowGenerator', () => {
 
   it('generates daily burn flows in default mode', () => {
     // 300 remaining over 30 days = 10 per day
-    const capacities = budgetProjectionProvider.projectCapacities(
-      mockContext,
-      budgets,
-      usages,
-      budgetCategoryMap,
-    );
+    const capacities = projectBudgetCapacities(mockContext, budgets, usages, budgetCategoryMap);
     const flows = BudgetFlowGenerator.materializeFlows(mockContext, capacities);
 
     expect(flows).toHaveLength(30);
@@ -64,7 +59,7 @@ describe('BudgetFlowGenerator', () => {
       orderedLiquidAccountIds: ['acc-1' as AccountId, 'acc-2' as AccountId],
     };
 
-    const capacities = budgetProjectionProvider.projectCapacities(
+    const capacities = projectBudgetCapacities(
       contextWithTwoAccounts,
       multiAccountBudget as unknown as Budget[],
       [{ spent: 0, remaining: 100, budgetAmount: 100, usagePercent: 0 }] as BudgetUsage[],
@@ -94,7 +89,7 @@ describe('BudgetFlowGenerator', () => {
       },
     ] as unknown as Budget[];
 
-    const capacities = budgetProjectionProvider.projectCapacities(
+    const capacities = projectBudgetCapacities(
       mockContext,
       dailyBudgets,
       [{ spent: 4000, remaining: 0, budgetAmount: 4000, usagePercent: 1 }],
@@ -120,7 +115,7 @@ describe('BudgetFlowGenerator', () => {
       },
     ] as unknown as Budget[];
 
-    const capacities = budgetProjectionProvider.projectCapacities(
+    const capacities = projectBudgetCapacities(
       mockContext,
       dailyBudgets,
       [{ spent: 0, remaining: 100, budgetAmount: 100, usagePercent: 0 }],

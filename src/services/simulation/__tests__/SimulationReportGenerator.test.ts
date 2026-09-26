@@ -1,4 +1,4 @@
-import { SimulationReportGenerator } from '@/src/services/simulation/SimulationReportGenerator';
+import { generateSimulationReport } from '@/src/services/simulation/SimulationReportGenerator';
 import { Flow, FlowCategory, FlowSource } from '@/src/services/simulation/types';
 import Account from '@/src/data/models/Account';
 import { AccountId } from '@/src/types/ids';
@@ -65,7 +65,7 @@ describe('SimulationReportGenerator', () => {
       },
     ];
 
-    const report = SimulationReportGenerator.generate(flows, accountMap, [], liquidAccountIdsSet);
+    const report = generateSimulationReport(flows, accountMap, [], liquidAccountIdsSet);
 
     expect(report.summary.totalFutureInflow).toBe(2000);
     expect(report.summary.totalPlannedInflow).toBe(2000);
@@ -89,7 +89,7 @@ describe('SimulationReportGenerator', () => {
       },
     ];
 
-    const report = SimulationReportGenerator.generate(
+    const report = generateSimulationReport(
       flows,
       accountMap,
       [{ account: accountMap.get('cc' as AccountId)!, balance: 500 }],
@@ -134,12 +134,7 @@ describe('SimulationReportGenerator', () => {
       'savings' as AccountId,
     ]);
 
-    const report = SimulationReportGenerator.generate(
-      flows,
-      accountMap,
-      [],
-      liquidAccountIdsWithSavings,
-    );
+    const report = generateSimulationReport(flows, accountMap, [], liquidAccountIdsWithSavings);
 
     // External-to-Liquid = INFLOW
     expect(report.summary.totalFutureInflow).toBe(3000);
@@ -180,7 +175,7 @@ describe('SimulationReportGenerator', () => {
       'savings' as AccountId,
       'goal-fund' as AccountId,
     ]);
-    const report = SimulationReportGenerator.generate(flows, accountMap, [], liquidAccountIds);
+    const report = generateSimulationReport(flows, accountMap, [], liquidAccountIds);
 
     // Only the SIP (PLANNED_PAYMENT) should be a commitment.
     // The Manual Rebalancing should be ignored.
