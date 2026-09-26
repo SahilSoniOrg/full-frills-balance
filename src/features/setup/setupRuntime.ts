@@ -176,7 +176,7 @@ export function applySetupOutcome(
     return;
   }
   if (outcome.kind !== 'journey_discarded') return;
-  if (recipe.discardTo === 'first_run') onSwitchJourney('first_run', candidateName);
+  if (recipe.discardTo === 'first_run') AppNavigation.toFirstRun(candidateName);
   else if (recipe.discardTo === 'picker') AppNavigation.toDashboard();
   else if (recipe.discardTo === 'empty_device_workplace') {
     onSwitchJourney('empty_device_workplace');

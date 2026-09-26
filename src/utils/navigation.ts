@@ -64,6 +64,13 @@ export const AppNavigation = {
     router.replace({ pathname: '/onboarding', params: { journey } });
   },
 
+  toFirstRun: (name?: string) => {
+    router.replace({
+      pathname: '/onboarding',
+      params: { journey: 'first_run', ...(name ? { name } : {}) },
+    });
+  },
+
   /**
    * Navigate to the Accounts List tab.
    */

@@ -13,6 +13,7 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { toast } from '@/src/utils/alerts';
 import { triggerSaveOutcomeHaptic } from '@/src/utils/haptics';
 import { logger } from '@/src/utils/logger';
+import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState, useSyncExternalStore } from 'react';
 import { OnboardingChrome, onboardingStage, SafeToSpendHeader } from './chrome';
 import { commitCashClarity } from './commitCashClarity';
@@ -46,13 +47,17 @@ export function OnboardingScreen() {
     hasAcknowledgedCurrentPrivacyPolicy,
     hasAcknowledgedCurrentPrivacyPolicy,
   );
+  const { name: nameParam } = useLocalSearchParams<{ name?: string | string[] }>();
   const [step, setStep] = useState<OnboardingStep>('welcome');
   const [history, setHistory] = useState<OnboardingStep[]>([]);
   const [{ draft, latestDraftChange }, setDraftState] = useState<{
     readonly draft: CashClarityDraft;
     readonly latestDraftChange: string | null;
   }>(() => ({
-    draft: createInitialDraft(defaultOnboardingCurrency(), defaultWorkplaceName()),
+    draft: {
+      ...createInitialDraft(defaultOnboardingCurrency(), defaultWorkplaceName()),
+      displayName: (Array.isArray(nameParam) ? nameParam[0] : nameParam) ?? '',
+    },
     latestDraftChange: null,
   }));
   const [busy, setBusy] = useState(false);

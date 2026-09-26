@@ -13,7 +13,12 @@ import {
 import type { RestoreSetupDraft } from '../setupTypes';
 
 jest.mock('@/src/utils/navigation', () => ({
-  AppNavigation: { toDashboard: jest.fn(), toSettings: jest.fn(), back: jest.fn() },
+  AppNavigation: {
+    toDashboard: jest.fn(),
+    toSettings: jest.fn(),
+    toFirstRun: jest.fn(),
+    back: jest.fn(),
+  },
 }));
 jest.mock('../setupFinishers', () => ({
   discardRestorePublication: jest.fn(),
@@ -71,6 +76,7 @@ describe('abandon restore', () => {
     discard.mockReset().mockResolvedValue(undefined);
     clear.mockReset();
     (AppNavigation.toDashboard as jest.Mock).mockReset();
+    (AppNavigation.toFirstRun as jest.Mock).mockReset();
   });
 
   it('confirms only after restore books were published', () => {
@@ -87,7 +93,8 @@ describe('abandon restore', () => {
     );
     expect(discard).toHaveBeenCalledTimes(1);
     expect(clear).toHaveBeenCalledTimes(1);
-    expect(onSwitchJourney).toHaveBeenCalledWith('first_run', 'Sahil');
+    expect(AppNavigation.toFirstRun).toHaveBeenCalledWith('Sahil');
+    expect(onSwitchJourney).not.toHaveBeenCalled();
   });
 
   it('returns picker restore to the dashboard after abandon', async () => {
@@ -95,7 +102,7 @@ describe('abandon restore', () => {
     expect(AppNavigation.toDashboard).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps first-run name when discarding back to device setup', () => {
+  it('returns first-run restore to onboarding with the entered name', () => {
     const onSwitchJourney = jest.fn();
     applySetupOutcome(
       { kind: 'journey_discarded' },
@@ -103,7 +110,8 @@ describe('abandon restore', () => {
       onSwitchJourney,
       'Sahil',
     );
-    expect(onSwitchJourney).toHaveBeenCalledWith('first_run', 'Sahil');
+    expect(AppNavigation.toFirstRun).toHaveBeenCalledWith('Sahil');
+    expect(onSwitchJourney).not.toHaveBeenCalled();
   });
 });
 
