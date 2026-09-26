@@ -93,7 +93,7 @@ describe('TransactionRawMetricsQueries workplace isolation', () => {
     );
   });
 
-  it('scopes every workplace-owned SQL table for all three metrics queries', async () => {
+  it('scopes every workplace-owned SQL table for all metrics queries', async () => {
     const queryRaw = jest.spyOn(transactionRawMetricsQueries, 'queryRaw').mockResolvedValue([]);
     const accountIds = [localAccountId, foreignAccountId];
 
@@ -108,14 +108,8 @@ describe('TransactionRawMetricsQueries workplace isolation', () => {
       DAY - 1,
       DAY + 3_000,
     );
-    await transactionRawMetricsQueries.getAccountDeltasGroupedRaw(
-      WORKPLACE_ONE,
-      accountIds,
-      DAY - 1,
-      DAY + 3_000,
-    );
 
-    expect(queryRaw).toHaveBeenCalledTimes(3);
+    expect(queryRaw).toHaveBeenCalledTimes(2);
     for (const [sql, args = []] of queryRaw.mock.calls) {
       expect(sql).toContain('t.workplace_id = ?');
       expect(sql).toContain('a.workplace_id = ?');
@@ -128,19 +122,13 @@ describe('TransactionRawMetricsQueries workplace isolation', () => {
     jest.spyOn(transactionRawMetricsQueries, 'queryRaw').mockResolvedValue(null);
     const accountIds = [localAccountId, foreignAccountId];
 
-    const [latestBalances, dailyDeltas, accountDeltas] = await Promise.all([
+    const [latestBalances, dailyDeltas] = await Promise.all([
       transactionRawMetricsQueries.getLatestBalancesRaw(
         WORKPLACE_ONE,
         accountIds,
         Number.MAX_SAFE_INTEGER,
       ),
       transactionRawMetricsQueries.getDailyDeltasGroupedRaw(
-        WORKPLACE_ONE,
-        accountIds,
-        DAY - 1,
-        DAY + 3_000,
-      ),
-      transactionRawMetricsQueries.getAccountDeltasGroupedRaw(
         WORKPLACE_ONE,
         accountIds,
         DAY - 1,
@@ -160,6 +148,5 @@ describe('TransactionRawMetricsQueries workplace isolation', () => {
       accountType: AccountType.ASSET,
       delta: 10,
     });
-    expect(accountDeltas).toEqual([{ accountId: localAccountId, currencyCode: 'USD', delta: 10 }]);
   });
 });

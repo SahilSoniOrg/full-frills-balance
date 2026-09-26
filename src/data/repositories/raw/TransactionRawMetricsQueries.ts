@@ -8,7 +8,7 @@ import dayjs from 'dayjs';
 import { getRawAdapter, rowsFromQueryRaw } from '../../database/DatabaseUtils';
 import Account from '../../models/Account';
 import Transaction from '../../models/Transaction';
-import { AccountDelta, DailyDelta, RawSQLArg } from '../TransactionTypes';
+import { DailyDelta, RawSQLArg } from '../TransactionTypes';
 
 interface RawDailyDeltaRow extends DailyDelta {
   dayStartStr: string;
@@ -234,92 +234,6 @@ export class TransactionRawMetricsQueries {
     }
 
     return Array.from(grouped.values()).sort((a, b) => a.dayStart - b.dayStart);
-  }
-
-  async getAccountDeltasGroupedRaw(
-    workplaceId: WorkplaceId,
-    accountIds: string[],
-    startDate: number,
-    endDate: number,
-  ): Promise<AccountDelta[]> {
-    if (accountIds.length === 0) return [];
-
-    const accountPlaceholders = accountIds.map(() => '?').join(',');
-    const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
-
-    const { increaseCase, decreaseCase } = periodFlowSQL();
-    const sql = `
-      SELECT
-        t.account_id AS accountId,
-        t.currency_code AS currencyCode,
-        SUM(${increaseCase}) - SUM(${decreaseCase}) AS delta
-      FROM transactions t
-      JOIN accounts a ON t.account_id = a.id
-      JOIN journals j ON t.journal_id = j.id
-      WHERE t.account_id IN (${accountPlaceholders})
-        AND t.transaction_date >= ?
-        AND t.transaction_date <= ?
-        AND t.deleted_at IS NULL
-        AND t.workplace_id = ?
-        AND a.workplace_id = ?
-        AND j.deleted_at IS NULL
-        AND j.workplace_id = ?
-        AND j.status IN (${placeholders})
-      GROUP BY t.account_id, t.currency_code
-    `;
-
-    const raws = await this.queryRaw<AccountDelta>(sql, [
-      ...accountIds,
-      startDate,
-      endDate,
-      workplaceId,
-      workplaceId,
-      workplaceId,
-      ...ACTIVE_JOURNAL_STATUSES,
-    ]);
-
-    if (raws !== null) return raws;
-
-    const [accounts, txs] = await Promise.all([
-      database.collections
-        .get<Account>('accounts')
-        .query(Q.where('id', Q.oneOf(accountIds)), Q.where('workplace_id', workplaceId))
-        .fetch(),
-      database.collections
-        .get<Transaction>('transactions')
-        .query(
-          Q.where('workplace_id', workplaceId),
-          Q.on('accounts', 'workplace_id', Q.eq(workplaceId)),
-          Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
-          Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-          Q.on('journals', 'deleted_at', Q.eq(null)),
-          Q.where('account_id', Q.oneOf(accountIds)),
-          Q.where('transaction_date', Q.gte(startDate)),
-          Q.where('transaction_date', Q.lte(endDate)),
-          Q.where('deleted_at', Q.eq(null)),
-        )
-        .fetch(),
-    ]);
-
-    const accountTypeById = new Map(accounts.map(a => [a.id, a.accountType]));
-    const grouped = new Map<string, AccountDelta>();
-
-    for (const tx of txs) {
-      const accountType = accountTypeById.get(tx.accountId);
-      if (!accountType) continue;
-
-      const key = `${tx.accountId}|${tx.currencyCode}`;
-      const delta = effect(accountType, tx.transactionType).delta(tx.amount);
-      const existing = grouped.get(key);
-
-      if (existing) {
-        existing.delta += delta;
-      } else {
-        grouped.set(key, { accountId: tx.accountId, currencyCode: tx.currencyCode, delta });
-      }
-    }
-
-    return Array.from(grouped.values());
   }
 }
 

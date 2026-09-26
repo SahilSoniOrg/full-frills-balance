@@ -14,7 +14,6 @@ import { transactionRawPatternQueries } from './raw/TransactionRawPatternQueries
 import { transactionRawRebuildQueries } from './raw/TransactionRawRebuildQueries';
 import { transactionObserveQueries } from './transaction';
 import {
-  AccountDelta,
   DailyDelta,
   RawSQLArg,
   RebuildTransaction,
@@ -90,20 +89,6 @@ export class TransactionRawRepository {
     endDate: number,
   ): Promise<DailyDelta[]> {
     return transactionRawMetricsQueries.getDailyDeltasGroupedRaw(
-      workplaceId,
-      accountIds,
-      startDate,
-      endDate,
-    );
-  }
-
-  async getAccountDeltasGroupedRaw(
-    workplaceId: WorkplaceId,
-    accountIds: string[],
-    startDate: number,
-    endDate: number,
-  ): Promise<AccountDelta[]> {
-    return transactionRawMetricsQueries.getAccountDeltasGroupedRaw(
       workplaceId,
       accountIds,
       startDate,

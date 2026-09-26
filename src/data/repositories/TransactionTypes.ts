@@ -42,12 +42,6 @@ export interface DailyDelta {
 /**
  * Account-level net balance change data.
  */
-export interface AccountDelta {
-  accountId: AccountId;
-  currencyCode: string;
-  delta: number;
-}
-
 /**
  * Recurring transaction pattern candidate.
  */
