@@ -1,29 +1,9 @@
-import type { SelectionTilePresentation } from '@/src/components/shared/SelectionTileList';
 import { Opacity } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
 
 export type ArchivedPickerRowPresentation = {
   opacity: number;
   emphasizeIndicator: boolean;
 };
-
-/** Journal/account chip row: full-opacity archived tiles with dashed border. */
-export function getArchivedAccountTilePresentation(
-  isArchived: boolean,
-  isSelected: boolean,
-  accentColor: string,
-): SelectionTilePresentation | undefined {
-  if (!isArchived) return undefined;
-
-  return {
-    borderStyle: 'dashed',
-    borderWidth: 2,
-    borderColor: isSelected ? withOpacity(accentColor, Opacity.medium) : undefined,
-    showSelectedFill: false,
-    showCheckmark: false,
-    opacity: 1,
-  };
-}
 
 /** Browse-all picker rows: muted unless pinned/selected. */
 export function getArchivedAccountPickerRowPresentation(

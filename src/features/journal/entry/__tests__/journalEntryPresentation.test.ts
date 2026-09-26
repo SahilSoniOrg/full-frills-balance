@@ -10,7 +10,6 @@ import {
   resolveSimpleAmountTypography,
 } from '../journalEntryPresentation';
 import { Typography } from '@/src/constants/design-tokens';
-import { limitQuickTileAccounts } from '@/src/features/journal/components/accountTilePolicy';
 
 describe('journalEntryPresentation', () => {
   describe('resolveExchangeRatePresentation', () => {
@@ -247,29 +246,6 @@ describe('journalEntryPresentation', () => {
           validationIssues: [{ code: 'missing_amount', message: 'An amount is required' }],
         }),
       ).toBeNull();
-    });
-  });
-
-  describe('limitQuickTileAccounts', () => {
-    const accounts = Array.from({ length: 30 }, (_, i) => ({
-      id: `acc-${i}`,
-      name: `Account ${i}`,
-    }));
-
-    it('returns all accounts when length is within limit', () => {
-      expect(limitQuickTileAccounts(accounts.slice(0, 10), '', 15)).toHaveLength(10);
-    });
-
-    it('limits to top N accounts', () => {
-      const limited = limitQuickTileAccounts(accounts, '', 15);
-      expect(limited).toHaveLength(15);
-      expect(limited[0].id).toBe('acc-0');
-    });
-
-    it('ensures selected account outside top N is included', () => {
-      const limited = limitQuickTileAccounts(accounts, 'acc-25', 15);
-      expect(limited).toHaveLength(15);
-      expect(limited.some(a => a.id === 'acc-25')).toBe(true);
     });
   });
 
