@@ -5,7 +5,6 @@ import type {
   ReportSectionId,
 } from '@/src/services/reports-v2/types/query';
 import type { ReportResult } from '@/src/services/reports-v2/types/result';
-import type { ReportsV2QueryEngine } from '@/src/services/reports-v2/reportQueryEngine';
 
 export type ReportsV2SectionId = ReportSectionId;
 export type ReportsV2PeriodPreset = 'month' | 'quarter' | 'year' | 'all-time' | 'custom';
@@ -77,5 +76,3 @@ export interface ReportsV2ViewModel {
   onRequestAccountScope?: () => void;
   onRequestCurrency?: () => void;
 }
-
-export type ReportsV2Engine = ReportsV2QueryEngine;
