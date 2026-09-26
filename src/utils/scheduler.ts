@@ -23,8 +23,3 @@ export function runAfterInteractions(
     handle.cancel();
   };
 }
-
-/**
- * Standard delay helper
- */
-export const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

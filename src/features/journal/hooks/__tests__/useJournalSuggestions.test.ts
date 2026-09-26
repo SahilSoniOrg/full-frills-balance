@@ -8,13 +8,6 @@ import { WorkplaceId } from '@/src/types/ids';
 import { act, renderHook } from '@testing-library/react-native';
 
 jest.mock('@/src/services/journal/journalDomainService');
-jest.mock('@/src/utils/scheduler', () => ({
-  runAfterInteractions: (task: () => void) => {
-    task();
-    return jest.fn();
-  },
-}));
-
 describe('useJournalSuggestions', () => {
   const workplaceId = 'wp-suggestions-test' as WorkplaceId;
   const mockSuggestions = [
