@@ -3,7 +3,6 @@ import type { SetupJourneyId } from '../setupTypes';
 
 describe('Setup recipes', () => {
   it.each([
-    ['first_run', ['device', 'workplace', 'appearance', 'summary']],
     [
       'first_run_restore',
       [
@@ -34,7 +33,6 @@ describe('Setup recipes', () => {
   });
 
   it('keeps workplace identity policy in the journey recipe', () => {
-    expect(getSetupRecipe('first_run').workplaceIdentity).toBe('automatic');
     expect(getSetupRecipe('empty_device_workplace').workplaceIdentity).toBe('automatic');
     expect(getSetupRecipe('create_workplace').workplaceIdentity).toBe('editable');
     expect(getSetupRecipe('first_run_restore').workplaceIdentity).toBe('editable');

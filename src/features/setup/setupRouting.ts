@@ -26,7 +26,3 @@ export function shouldRedirectSetupToEntry(journeyId: string, pathname: string):
   if (journeyId === FIRST_RUN_JOURNEY) return pathname !== '/onboarding';
   return !SETUP_GATE_ROUTES.has(pathname);
 }
-
-export function shouldSeedSetupDraft(journeyId: string): boolean {
-  return journeyId !== FIRST_RUN_JOURNEY;
-}

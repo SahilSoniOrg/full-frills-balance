@@ -60,20 +60,6 @@ const restoreCore: readonly SetupRecipeEntry[] = [
   effect('publish_restore'),
 ];
 
-const firstRun: SetupRecipe = {
-  journeyId: 'first_run',
-  draftKind: 'first_run',
-  workplaceIdentity: 'automatic',
-  entryPolicy: 'blocking',
-  atStart: 'stay',
-  entries: [
-    slice('device', 'required'),
-    slice('workplace', 'required'),
-    slice('appearance', 'always_show'),
-    slice('summary', 'required'),
-  ],
-};
-
 const firstRunRestore: SetupRecipe = {
   journeyId: 'first_run_restore',
   draftKind: 'restore',
@@ -148,7 +134,6 @@ const createWorkplace: SetupRecipe = {
 };
 
 export const SETUP_RECIPES: Readonly<Record<SetupJourneyId, SetupRecipe>> = {
-  first_run: firstRun,
   first_run_restore: firstRunRestore,
   empty_device_workplace: emptyDeviceWorkplace,
   empty_device_restore: emptyDeviceRestore,

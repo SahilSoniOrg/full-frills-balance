@@ -6,10 +6,10 @@ import {
   startFirstRunRestoreFromDeviceName,
 } from '../SetupCoordinator';
 import type {
-  FirstRunSetupDraft,
   RestoreSetupDraft,
   SetupDraft,
   SetupOutcome,
+  WorkplaceCreationSetupDraft,
   WorkplaceSetupOutput,
 } from '../setupTypes';
 
@@ -72,26 +72,22 @@ describe('SetupCoordinator', () => {
   it('creates a draft, accepts a slice, and persists the checkpoint', async () => {
     const store = memoryStore();
     const coordinator = createSetupCoordinator({
-      journeyId: 'first_run',
+      journeyId: 'empty_device_workplace',
       operationId,
       draftStore: store,
       finish: unusedFinish,
       effects: { commitDevice: mockCommitDevice },
     });
-    expect(coordinator.next()).toMatchObject({ kind: 'present', sliceId: 'device' });
-    coordinator.present('device');
-    await coordinator.accept('device', {
-      displayName: { value: 'Sahil', source: 'user_entered' },
-    });
-    expect(coordinator.getDraft()).toMatchObject({
-      acceptedSlices: ['device'],
-      presentedHistory: ['device'],
-      device: { displayName: { value: 'Sahil' } },
-    });
     expect(coordinator.next()).toMatchObject({ kind: 'present', sliceId: 'workplace' });
-    expect(mockCommitDevice).toHaveBeenCalledWith({
-      displayName: { value: 'Sahil', source: 'user_entered' },
+    coordinator.present('workplace');
+    await coordinator.accept('workplace', workplace);
+    expect(coordinator.getDraft()).toMatchObject({
+      acceptedSlices: ['workplace'],
+      presentedHistory: ['workplace'],
+      workplace,
     });
+    expect(store.current()).toMatchObject({ acceptedSlices: ['workplace'] });
+    expect(coordinator.next()).toMatchObject({ kind: 'present', sliceId: 'summary' });
   });
 
   it('does not persist Device output when the checkpoint write fails', async () => {
@@ -99,19 +95,46 @@ describe('SetupCoordinator', () => {
       throw new Error('prefs');
     });
     const store = memoryStore();
-    const coordinator = createSetupCoordinator({
-      journeyId: 'first_run',
+    const published: RestoreSetupDraft = {
+      schemaVersion: 1,
+      kind: 'restore',
+      journeyId: 'first_run_restore',
+      entryPolicy: 'blocking',
       operationId,
+      presentedHistory: ['restore_source', 'restore_summary'],
+      acceptedSlices: ['restore_source', 'workplace', 'restore_summary'],
+      restore: {
+        sources: [source],
+        summary: { intent: 'continue' },
+        handoffs: [
+          {
+            operationId,
+            workplaceId: operationId,
+            fingerprint: 'abc',
+            facts: source.facts,
+            stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
+            warnings: [],
+          },
+        ],
+      },
+      workplace,
+    };
+    const coordinator = createSetupCoordinator({
+      journeyId: 'first_run_restore',
+      operationId,
+      draft: published,
       draftStore: store,
       finish: unusedFinish,
       effects: { commitDevice: mockCommitDevice },
     });
+    expect(coordinator.next()).toMatchObject({ kind: 'present', sliceId: 'device' });
     await expect(
       coordinator.accept('device', {
         displayName: { value: 'Sahil', source: 'user_entered' },
       }),
     ).rejects.toThrow('prefs');
-    expect(coordinator.getDraft().acceptedSlices).toEqual([]);
+    expect(coordinator.getDraft().acceptedSlices).toEqual(published.acceptedSlices);
+    expect(coordinator.getDraft()).not.toHaveProperty('device');
   });
 
   it('runs authoritative auto-acceptance one checkpoint at a time', async () => {
@@ -373,50 +396,46 @@ describe('SetupCoordinator', () => {
 
   it('returns to summary after editing an accepted slice', async () => {
     const store = memoryStore();
-    const draft: FirstRunSetupDraft = {
+    const draft: WorkplaceCreationSetupDraft = {
       schemaVersion: 1,
-      kind: 'first_run',
-      journeyId: 'first_run',
+      kind: 'workplace_creation',
+      journeyId: 'empty_device_workplace',
       entryPolicy: 'blocking',
       operationId,
-      presentedHistory: ['device', 'workplace', 'appearance', 'summary'],
-      acceptedSlices: ['device', 'workplace', 'appearance', 'summary'],
-      device: { displayName: { value: 'Old', source: 'user_entered' } },
+      presentedHistory: ['workplace', 'summary'],
+      acceptedSlices: ['workplace', 'summary'],
       workplace,
-      appearance: {
-        themeId: { value: 'deep-space', source: 'defaulted' },
-        fontId: { value: 'deep-space', source: 'defaulted' },
-      },
       summary: { confirmed: true },
     };
     const coordinator = createSetupCoordinator({
-      journeyId: 'first_run',
+      journeyId: 'empty_device_workplace',
       operationId,
       draft,
       draftStore: store,
       finish: unusedFinish,
       effects: { commitDevice: mockCommitDevice },
     });
-    coordinator.edit('device');
-    expect(coordinator.next()).toMatchObject({ kind: 'present', sliceId: 'device' });
-    await coordinator.accept('device', { displayName: { value: 'New', source: 'user_entered' } });
+    coordinator.edit('workplace');
+    expect(coordinator.next()).toMatchObject({ kind: 'present', sliceId: 'workplace' });
+    await coordinator.accept('workplace', {
+      ...workplace,
+      name: { value: 'Renamed', source: 'user_entered' },
+    });
     expect(coordinator.next()).toMatchObject({ kind: 'present', sliceId: 'summary' });
     expect(coordinator.getDraft().activeSlice).toBe('summary');
   });
 
   it('derives Back from the recipe instead of entering a slice the journey does not own', async () => {
-    const firstRun = createSetupCoordinator({
-      journeyId: 'first_run',
+    const emptyDevice = createSetupCoordinator({
+      journeyId: 'empty_device_workplace',
       operationId,
       draftStore: memoryStore(),
       finish: unusedFinish,
       effects: { commitDevice: mockCommitDevice },
     });
-    firstRun.present('device');
-    await firstRun.accept('device', {
-      displayName: { value: 'Sahil', source: 'user_entered' },
-    });
-    expect(firstRun.back()).toEqual({ kind: 'present', sliceId: 'device' });
+    emptyDevice.present('workplace');
+    await emptyDevice.accept('workplace', workplace);
+    expect(emptyDevice.back()).toEqual({ kind: 'present', sliceId: 'workplace' });
 
     const creation = createSetupCoordinator({
       journeyId: 'create_workplace',
@@ -443,20 +462,15 @@ describe('SetupCoordinator', () => {
 
   it('keeps the draft when a finisher fails and clears only after success', async () => {
     const store = memoryStore();
-    const draft: FirstRunSetupDraft = {
+    const draft: WorkplaceCreationSetupDraft = {
       schemaVersion: 1,
-      kind: 'first_run',
-      journeyId: 'first_run',
+      kind: 'workplace_creation',
+      journeyId: 'empty_device_workplace',
       entryPolicy: 'blocking',
       operationId,
-      presentedHistory: ['device', 'workplace', 'appearance', 'summary'],
-      acceptedSlices: ['device', 'workplace', 'appearance', 'summary'],
-      device: { displayName: { value: 'Sahil', source: 'user_entered' } },
+      presentedHistory: ['workplace', 'summary'],
+      acceptedSlices: ['workplace', 'summary'],
       workplace,
-      appearance: {
-        themeId: { value: 'deep-space', source: 'defaulted' },
-        fontId: { value: 'deep-space', source: 'defaulted' },
-      },
       summary: { confirmed: true },
     };
     const finisher = jest
@@ -464,7 +478,7 @@ describe('SetupCoordinator', () => {
       .mockRejectedValueOnce(new Error('retry'))
       .mockResolvedValue({ kind: 'device_registered' });
     const coordinator = createSetupCoordinator({
-      journeyId: 'first_run',
+      journeyId: 'empty_device_workplace',
       operationId,
       draft,
       draftStore: store,

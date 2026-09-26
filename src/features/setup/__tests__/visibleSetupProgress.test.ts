@@ -2,16 +2,18 @@ import { Icon } from '@/src/types/domainIcons';
 import { asWorkplaceId } from '@/src/types/ids';
 import { getRestoreAutoOutput } from '../restoreAutoOutput';
 import { getSetupRecipe } from '../setupRecipes';
-import type { FirstRunSetupDraft, RestoreSetupDraft } from '../setupTypes';
+import type { RestoreSetupDraft, WorkplaceCreationSetupDraft } from '../setupTypes';
 import { visibleSetupProgress } from '../visibleSetupProgress';
 
 const operationId = asWorkplaceId('setup-operation');
 
-function firstRun(overrides: Partial<FirstRunSetupDraft> = {}): FirstRunSetupDraft {
+function workplaceCreation(
+  overrides: Partial<WorkplaceCreationSetupDraft> = {},
+): WorkplaceCreationSetupDraft {
   return {
     schemaVersion: 1,
-    kind: 'first_run',
-    journeyId: 'first_run',
+    kind: 'workplace_creation',
+    journeyId: 'empty_device_workplace',
     entryPolicy: 'blocking',
     operationId,
     presentedHistory: [],
@@ -35,35 +37,32 @@ function restore(overrides: Partial<RestoreSetupDraft> = {}): RestoreSetupDraft 
 }
 
 describe('visibleSetupProgress', () => {
-  it('counts first-run workplace screens instead of the workplace slice', () => {
-    const draft = firstRun({
-      acceptedSlices: ['device'],
-      presentedHistory: ['device'],
-    });
+  it('counts workplace screens instead of the workplace slice', () => {
+    const draft = workplaceCreation();
     expect(
       visibleSetupProgress({
-        recipe: getSetupRecipe('first_run'),
+        recipe: getSetupRecipe('empty_device_workplace'),
         draft,
         currentSlice: 'workplace',
         workplaceCheckpoint: 'currency',
       }),
-    ).toEqual({ current: 2, total: 6, completed: 1 });
+    ).toEqual({ current: 1, total: 4, completed: 0 });
   });
 
   it('keeps edit-from-summary on the accounts screen in the same denominator', () => {
-    const draft = firstRun({
-      acceptedSlices: ['device', 'workplace', 'appearance', 'summary'],
-      presentedHistory: ['device', 'workplace', 'appearance', 'summary'],
+    const draft = workplaceCreation({
+      acceptedSlices: ['workplace', 'summary'],
+      presentedHistory: ['workplace', 'summary'],
       activeSlice: 'workplace',
     });
     expect(
       visibleSetupProgress({
-        recipe: getSetupRecipe('first_run'),
+        recipe: getSetupRecipe('empty_device_workplace'),
         draft,
         currentSlice: 'workplace',
         workplaceCheckpoint: 'accounts',
       }),
-    ).toEqual({ current: 3, total: 6, completed: 2 });
+    ).toEqual({ current: 2, total: 4, completed: 1 });
   });
 
   it('does not inflate restore progress with starter book screens', () => {

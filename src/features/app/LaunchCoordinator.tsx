@@ -14,7 +14,6 @@ import {
   setupEntryPath,
   shouldRedirectSetupToEntry,
   shouldRenderSetupGateChildren,
-  shouldSeedSetupDraft,
 } from '@/src/features/setup';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { applyDeviceRecovery, decideDeviceRecovery } from '@/src/services/launch/deviceRecovery';
@@ -263,7 +262,6 @@ export function LaunchCoordinatorProvider({
     if (resolution.kind !== 'setup' || resolution.unreadable) return;
     if (!isSetupJourneyId(resolution.journeyId)) return;
     if (loadSetupDraft()) return;
-    if (!shouldSeedSetupDraft(resolution.journeyId)) return;
     saveSetupDraft(createSetupDraft(resolution.journeyId, generator() as WorkplaceId));
   }, [resolution]);
 

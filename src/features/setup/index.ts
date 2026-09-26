@@ -27,7 +27,6 @@ export {
   setupEntryPath,
   shouldRedirectSetupToEntry,
   shouldRenderSetupGateChildren,
-  shouldSeedSetupDraft,
   shouldShowCashClarity,
 } from './setupRouting';
 export type * from './setupTypes';

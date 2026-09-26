@@ -2,7 +2,7 @@ import { Icon } from '@/src/types/domainIcons';
 import { asWorkplaceId } from '@/src/types/ids';
 import { parseSetupDraft, SETUP_DRAFT_KEY, SetupDraftStore } from '../SetupDraftStore';
 import { storage } from '@/src/utils/storage';
-import type { FirstRunSetupDraft, RestoreSetupDraft } from '../setupTypes';
+import type { RestoreSetupDraft } from '../setupTypes';
 import { AccountType } from '@/src/types/enums';
 
 jest.mock('@/src/utils/storage', () => ({
@@ -15,14 +15,15 @@ const mockRemove = storage.remove as jest.Mock;
 
 const operationId = asWorkplaceId('operation');
 
-const draft: FirstRunSetupDraft = {
+const draft: RestoreSetupDraft = {
   schemaVersion: 1,
-  kind: 'first_run',
-  journeyId: 'first_run',
+  kind: 'restore',
+  journeyId: 'first_run_restore',
   entryPolicy: 'blocking',
   operationId,
   presentedHistory: ['device'],
   acceptedSlices: ['device'],
+  restore: {},
   device: { displayName: { value: 'Sahil', source: 'user_entered' } },
 };
 
@@ -51,7 +52,7 @@ describe('SetupDraftStore', () => {
     mockRemove.mockReset();
   });
 
-  it('round-trips a typed first-run draft', () => {
+  it('round-trips a typed draft', () => {
     const store = new SetupDraftStore();
     store.save(draft);
     expect(mockSet).toHaveBeenCalledWith(SETUP_DRAFT_KEY, JSON.stringify(draft));
@@ -68,7 +69,7 @@ describe('SetupDraftStore', () => {
   });
 
   it('accepts starter selections in the persisted schema shape', () => {
-    const withWorkplace: FirstRunSetupDraft = {
+    const withWorkplace: RestoreSetupDraft = {
       ...draft,
       presentedHistory: ['device', 'workplace'],
       acceptedSlices: ['device', 'workplace'],
@@ -90,14 +91,23 @@ describe('SetupDraftStore', () => {
     { schemaVersion: 1, kind: 'first_run', journeyId: 'unknown' },
     {
       schemaVersion: 1,
-      kind: 'first_run',
-      journeyId: 'first_run',
+      kind: 'workplace_creation',
+      journeyId: 'empty_device_workplace',
       entryPolicy: 'blocking',
       operationId: 'x',
       presentedHistory: ['bogus'],
       acceptedSlices: [],
     },
-  ])('rejects malformed drafts %#', partial => {
+    {
+      schemaVersion: 1,
+      kind: 'first_run',
+      journeyId: 'first_run',
+      entryPolicy: 'blocking',
+      operationId: 'x',
+      presentedHistory: [],
+      acceptedSlices: [],
+    },
+  ])('rejects malformed and retired drafts %#', partial => {
     expect(parseSetupDraft({ ...partial })).toBeUndefined();
   });
 

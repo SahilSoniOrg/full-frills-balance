@@ -44,7 +44,7 @@ export function restoreJourneyForWorkplaceCreation(
 export function resolveSetupJourney(
   params: { mode?: string; journey?: string },
   override?: SetupJourneyId,
-): SetupJourneyId {
+): SetupJourneyId | undefined {
   if (override) return override;
   const draft = loadSetupDraft();
   if (draft?.entryPolicy === 'blocking' && isSetupJourneyId(draft.journeyId)) {
@@ -53,7 +53,7 @@ export function resolveSetupJourney(
   return (
     resolveOptionalJourney(params) ??
     (draft && isSetupJourneyId(draft.journeyId) ? draft.journeyId : undefined) ??
-    (preferences.device.deviceRegistered ? 'empty_device_workplace' : 'first_run')
+    (preferences.device.deviceRegistered ? 'empty_device_workplace' : undefined)
   );
 }
 

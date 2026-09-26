@@ -3,15 +3,21 @@ import { asWorkplaceId } from '@/src/types/ids';
 import { getRestoreAutoOutput } from '../restoreAutoOutput';
 import { getSetupRecipe } from '../setupRecipes';
 import { resolveNextSetupAction } from '../resolveNextSetupAction';
-import type { FirstRunSetupDraft, RestoreSetupDraft, SetupSliceOutput } from '../setupTypes';
+import type {
+  RestoreSetupDraft,
+  SetupSliceOutput,
+  WorkplaceCreationSetupDraft,
+} from '../setupTypes';
 
 const operationId = asWorkplaceId('setup-operation');
 
-function firstRun(overrides: Partial<FirstRunSetupDraft> = {}): FirstRunSetupDraft {
+function workplaceCreation(
+  overrides: Partial<WorkplaceCreationSetupDraft> = {},
+): WorkplaceCreationSetupDraft {
   return {
     schemaVersion: 1,
-    kind: 'first_run',
-    journeyId: 'first_run',
+    kind: 'workplace_creation',
+    journeyId: 'empty_device_workplace',
     entryPolicy: 'blocking',
     operationId,
     presentedHistory: [],
@@ -36,22 +42,24 @@ function restore(overrides: Partial<RestoreSetupDraft> = {}): RestoreSetupDraft 
 
 describe('resolveNextSetupAction', () => {
   it('presents the first required slice and reports recipe progress', () => {
-    expect(resolveNextSetupAction(getSetupRecipe('first_run'), firstRun())).toEqual({
+    expect(
+      resolveNextSetupAction(getSetupRecipe('empty_device_workplace'), workplaceCreation()),
+    ).toEqual({
       kind: 'present',
-      sliceId: 'device',
-      progress: { current: 1, total: 4, completed: 0 },
+      sliceId: 'workplace',
+      progress: { current: 1, total: 2, completed: 0 },
     });
   });
 
   it('advances past accepted slices', () => {
-    const draft = firstRun({
-      acceptedSlices: ['device'],
-      presentedHistory: ['device'],
+    const draft = workplaceCreation({
+      acceptedSlices: ['workplace'],
+      presentedHistory: ['workplace'],
     });
-    expect(resolveNextSetupAction(getSetupRecipe('first_run'), draft)).toMatchObject({
+    expect(resolveNextSetupAction(getSetupRecipe('empty_device_workplace'), draft)).toMatchObject({
       kind: 'present',
-      sliceId: 'workplace',
-      progress: { current: 2, total: 4, completed: 1 },
+      sliceId: 'summary',
+      progress: { current: 2, total: 2, completed: 1 },
     });
   });
 
@@ -141,20 +149,12 @@ describe('resolveNextSetupAction', () => {
     });
   });
 
-  it('always presents Appearance even when facts are available, then finishes accepted recipes', () => {
-    const draft = firstRun({
-      acceptedSlices: ['device', 'workplace'],
-      presentedHistory: ['device', 'workplace'],
+  it('finishes once every slice is accepted', () => {
+    const complete = workplaceCreation({
+      acceptedSlices: ['workplace', 'summary'],
+      presentedHistory: ['workplace', 'summary'],
     });
-    expect(resolveNextSetupAction(getSetupRecipe('first_run'), draft)).toMatchObject({
-      kind: 'present',
-      sliceId: 'appearance',
-    });
-    const complete = firstRun({
-      acceptedSlices: ['device', 'workplace', 'appearance', 'summary'],
-      presentedHistory: ['device', 'workplace', 'appearance', 'summary'],
-    });
-    expect(resolveNextSetupAction(getSetupRecipe('first_run'), complete)).toEqual({
+    expect(resolveNextSetupAction(getSetupRecipe('empty_device_workplace'), complete)).toEqual({
       kind: 'finish',
     });
   });
@@ -247,14 +247,14 @@ describe('resolveNextSetupAction', () => {
   });
 
   it('reopens an explicitly active slice without changing accepted outputs', () => {
-    const draft = firstRun({
-      acceptedSlices: ['device', 'workplace'],
-      presentedHistory: ['device', 'workplace'],
-      activeSlice: 'device',
+    const draft = workplaceCreation({
+      acceptedSlices: ['workplace', 'summary'],
+      presentedHistory: ['workplace', 'summary'],
+      activeSlice: 'workplace',
     });
-    expect(resolveNextSetupAction(getSetupRecipe('first_run'), draft)).toMatchObject({
+    expect(resolveNextSetupAction(getSetupRecipe('empty_device_workplace'), draft)).toMatchObject({
       kind: 'present',
-      sliceId: 'device',
+      sliceId: 'workplace',
     });
   });
 });

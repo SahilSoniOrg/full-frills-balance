@@ -16,7 +16,6 @@ import { forgetAllPreparedRestores } from './pickRestoreSource';
 import type {
   AppearanceSetupOutput,
   DeviceSetupOutput,
-  FirstRunSetupDraft,
   RestoreDraftState,
   RestoreHandoff,
   RestoreSetupDraft,
@@ -321,54 +320,6 @@ function acceptedOutputIsPresent(draft: SetupDraft): boolean {
   return true;
 }
 
-function parseFirstRun(value: RecordValue, base: SetupDraftBase): FirstRunSetupDraft | undefined {
-  const allowed = [
-    'schemaVersion',
-    'kind',
-    'journeyId',
-    'entryPolicy',
-    'operationId',
-    'presentedHistory',
-    'acceptedSlices',
-    'activeSlice',
-    'device',
-    'workplace',
-    'appearance',
-    'summary',
-  ];
-  if (
-    !hasOnlyKeys(value, allowed) ||
-    value.kind !== 'first_run' ||
-    value.journeyId !== 'first_run' ||
-    value.entryPolicy !== 'blocking'
-  ) {
-    return undefined;
-  }
-  const device = value.device === undefined ? undefined : parseDevice(value.device);
-  const workplace = value.workplace === undefined ? undefined : parseWorkplace(value.workplace);
-  const appearance = value.appearance === undefined ? undefined : parseAppearance(value.appearance);
-  const summary = value.summary === undefined ? undefined : parseSummary(value.summary);
-  if (
-    (value.device !== undefined && !device) ||
-    (value.workplace !== undefined && !workplace) ||
-    (value.appearance !== undefined && !appearance) ||
-    (value.summary !== undefined && !summary)
-  ) {
-    return undefined;
-  }
-  const draft: FirstRunSetupDraft = {
-    ...base,
-    kind: 'first_run',
-    journeyId: 'first_run',
-    entryPolicy: 'blocking',
-    ...(device ? { device } : {}),
-    ...(workplace ? { workplace } : {}),
-    ...(appearance ? { appearance } : {}),
-    ...(summary ? { summary } : {}),
-  };
-  return acceptedOutputIsPresent(draft) ? draft : undefined;
-}
-
 function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDraft | undefined {
   const allowed = [
     'schemaVersion',
@@ -549,7 +500,6 @@ export function parseSetupDraft(value: unknown): SetupDraft | undefined {
   ) {
     return undefined;
   }
-  if (value.kind === 'first_run') return parseFirstRun(value, base);
   if (value.kind === 'restore') return parseRestore(value, base);
   if (value.kind === 'workplace_creation') return parseWorkplaceCreation(value, base);
   return undefined;

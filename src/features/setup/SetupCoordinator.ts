@@ -93,9 +93,6 @@ export function createSetupDraft(
     acceptedSlices: [] as const,
     entryPolicy: entryPolicyOverride ?? recipe.entryPolicy,
   };
-  if (recipe.draftKind === 'first_run') {
-    return { ...base, kind: 'first_run', journeyId: 'first_run', entryPolicy: 'blocking' };
-  }
   if (recipe.draftKind === 'workplace_creation') {
     if (journeyId !== 'empty_device_workplace' && journeyId !== 'create_workplace') {
       throw new Error(`Workplace creation cannot use journey ${journeyId}`);

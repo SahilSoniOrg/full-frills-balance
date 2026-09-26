@@ -104,16 +104,6 @@ export interface SetupDraftBase {
   readonly activeSlice?: SetupSliceId;
 }
 
-export interface FirstRunSetupDraft extends SetupDraftBase {
-  readonly kind: 'first_run';
-  readonly journeyId: 'first_run';
-  readonly entryPolicy: 'blocking';
-  readonly device?: DeviceSetupOutput;
-  readonly workplace?: WorkplaceSetupOutput;
-  readonly appearance?: AppearanceSetupOutput;
-  readonly summary?: SetupSummaryOutput;
-}
-
 export interface RestoreDraftState {
   /** Selected workplaces, primary first. */
   readonly sources?: readonly RestoreSourceOutput[];
@@ -143,7 +133,7 @@ export interface WorkplaceCreationSetupDraft extends SetupDraftBase {
 }
 
 /** Explicit union: adding a slice adds a field here, not a string-keyed output map. */
-export type SetupDraft = FirstRunSetupDraft | RestoreSetupDraft | WorkplaceCreationSetupDraft;
+export type SetupDraft = RestoreSetupDraft | WorkplaceCreationSetupDraft;
 
 export type SetupSliceOutput =
   | DeviceSetupOutput

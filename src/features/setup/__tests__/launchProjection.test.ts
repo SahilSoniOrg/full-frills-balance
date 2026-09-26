@@ -9,8 +9,8 @@ describe('Setup launch projection', () => {
     const unsubscribe = subscribeToSetupDraft(onChange);
     saveSetupDraft({
       schemaVersion: 1,
-      kind: 'first_run',
-      journeyId: 'first_run',
+      kind: 'workplace_creation',
+      journeyId: 'empty_device_workplace',
       entryPolicy: 'blocking',
       operationId: asWorkplaceId('operation'),
       presentedHistory: [],
@@ -21,8 +21,8 @@ describe('Setup launch projection', () => {
       readBlockingSetupProjection(
         JSON.stringify({
           schemaVersion: 1,
-          kind: 'first_run',
-          journeyId: 'first_run',
+          kind: 'workplace_creation',
+          journeyId: 'empty_device_workplace',
           entryPolicy: 'blocking',
           operationId: 'operation',
           presentedHistory: [],
@@ -30,7 +30,7 @@ describe('Setup launch projection', () => {
         }),
       ),
     ).toEqual({
-      journeyId: 'first_run',
+      journeyId: 'empty_device_workplace',
       entryPolicy: 'blocking',
     });
     clearSetupDraft();

@@ -10,7 +10,7 @@ import {
   readSetupDraftSnapshot,
   subscribeToSetupDraft,
 } from '@/src/services/setup/launchProjection';
-import { useLocalSearchParams } from 'expo-router';
+import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { ScrollView } from 'react-native-gesture-handler';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
@@ -602,6 +602,9 @@ function SetupScreen() {
     return <UnreadableSetupDraft />;
   }
   const journeyId = resolveSetupJourney({ mode, journey }, journeyOverride);
+  if (!journeyId) {
+    return <Redirect href={{ pathname: '/onboarding', params: { journey: 'first_run' } }} />;
+  }
   return (
     <SetupJourneyScreen
       key={journeyId}

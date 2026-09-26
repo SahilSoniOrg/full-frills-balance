@@ -238,9 +238,6 @@ export async function finishSetup(
 
   if (!draft.workplace) throw new Error('Workplace setup is incomplete');
   const workplaceId = await finishWorkplaceSetup(draft.operationId, draft.workplace);
-  if (draft.kind === 'first_run' && options.applyAppearance !== false && draft.appearance) {
-    finishAppearanceSetup(draft.appearance);
-  }
   if (options.activate !== false) preferences.device.setActiveWorkplaceId(workplaceId);
   return workplaceId;
 }
