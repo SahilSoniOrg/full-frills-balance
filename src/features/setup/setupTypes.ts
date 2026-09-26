@@ -1,4 +1,3 @@
-import { FontIds, ThemeIds, type FontId, type ThemeId } from '@/src/constants/design-tokens';
 import { AccountType } from '@/src/types/enums';
 import { type IconName } from '@/src/types/domainIcons';
 import type { AccountId, WorkplaceId } from '@/src/types/ids';
@@ -15,7 +14,7 @@ export type RestoreJourneyId =
 
 export type SetupEntryPolicy = 'blocking' | 'optional';
 export type SetupSliceId =
-  'device' | 'restore_source' | 'workplace' | 'restore_summary' | 'appearance' | 'summary';
+  'device' | 'restore_source' | 'workplace' | 'restore_summary' | 'summary';
 export type SetupSlicePolicy = 'required' | 'when_missing' | 'always_show';
 export type SetupEffectId = 'publish_restore';
 
@@ -57,11 +56,6 @@ export type WorkplaceSetupPrefill = {
   readonly icon?: Sourced<IconName>;
   readonly baseCurrency?: Sourced<string>;
 };
-
-export interface AppearanceSetupOutput {
-  readonly themeId: Sourced<ThemeId>;
-  readonly fontId: Sourced<FontId>;
-}
 
 export interface RestoreSourceRef {
   readonly uri: string;
@@ -120,7 +114,6 @@ export interface RestoreSetupDraft extends SetupDraftBase {
   readonly restore: RestoreDraftState;
   readonly device?: DeviceSetupOutput;
   readonly workplace?: WorkplaceSetupOutput;
-  readonly appearance?: AppearanceSetupOutput;
   readonly summary?: SetupSummaryOutput;
 }
 
@@ -138,7 +131,6 @@ export type SetupDraft = RestoreSetupDraft | WorkplaceCreationSetupDraft;
 export type SetupSliceOutput =
   | DeviceSetupOutput
   | WorkplaceSetupOutput
-  | AppearanceSetupOutput
   | readonly RestoreSourceOutput[]
   | RestoreSummaryOutput
   | SetupSummaryOutput;
@@ -148,7 +140,6 @@ export interface SetupSliceOutputById {
   readonly restore_source: readonly RestoreSourceOutput[];
   readonly workplace: WorkplaceSetupOutput;
   readonly restore_summary: RestoreSummaryOutput;
-  readonly appearance: AppearanceSetupOutput;
   readonly summary: SetupSummaryOutput;
 }
 
@@ -195,7 +186,6 @@ export function isSetupSliceId(value: unknown): value is SetupSliceId {
     value === 'restore_source' ||
     value === 'workplace' ||
     value === 'restore_summary' ||
-    value === 'appearance' ||
     value === 'summary'
   );
 }
@@ -207,14 +197,6 @@ export function isSetupFactSource(value: unknown): value is SetupFactSource {
     value === 'existing' ||
     value === 'defaulted'
   );
-}
-
-export function isThemeId(value: unknown): value is ThemeId {
-  return typeof value === 'string' && Object.values(ThemeIds).includes(value as ThemeId);
-}
-
-export function isFontId(value: unknown): value is FontId {
-  return typeof value === 'string' && Object.values(FontIds).includes(value as FontId);
 }
 
 export function isWorkplaceId(value: unknown): value is WorkplaceId {

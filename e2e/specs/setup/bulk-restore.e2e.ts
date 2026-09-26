@@ -28,8 +28,6 @@ it('restores selected workplaces and returns to the workplace selector', async (
   await device.takeScreenshot('bulk-restore-ready');
   await element(by.id('restore-summary-continue')).tap();
   await new Promise(resolve => setTimeout(resolve, 5000));
-  await expect(element(by.id('onboarding-theme-continue-button'))).toExist();
-  await element(by.id('onboarding-theme-continue-button')).tap();
   await expect(element(by.id('onboarding-summary-step'))).toExist();
   await element(by.id('onboarding-finish-button')).tap();
 

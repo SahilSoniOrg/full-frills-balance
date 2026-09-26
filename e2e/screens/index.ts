@@ -5,7 +5,6 @@ export const onboarding = {
   skip: 'onboarding-skip',
   continue: 'onboarding-continue-button',
   gridContinue: 'selectable-grid-continue-button',
-  themeContinue: 'onboarding-theme-continue-button',
   finishButton: 'onboarding-finish-button',
   workplaceIdentityContinue: 'workplace-basic-info-continue-button',
   workplaceNameInput: 'workplace-name-input',

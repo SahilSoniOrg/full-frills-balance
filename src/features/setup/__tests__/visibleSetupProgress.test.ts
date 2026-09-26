@@ -87,6 +87,6 @@ describe('visibleSetupProgress', () => {
         definitions: { getAutoOutput: getRestoreAutoOutput },
         currentSlice: 'restore_summary',
       }),
-    ).toEqual({ current: 2, total: 4, completed: 1 });
+    ).toEqual({ current: 2, total: 3, completed: 1 });
   });
 });

@@ -287,7 +287,7 @@ describe('SetupCoordinator', () => {
 
     await expect(coordinator.runPendingEffect()).resolves.toMatchObject({
       kind: 'present',
-      sliceId: 'appearance',
+      sliceId: 'summary',
     });
     expect(mockCommitDevice).toHaveBeenCalledWith(device);
     expect(coordinator.getDraft().acceptedSlices).toContain('device');

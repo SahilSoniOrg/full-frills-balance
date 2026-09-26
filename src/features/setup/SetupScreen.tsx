@@ -3,7 +3,6 @@ import { confirm, toast } from '@/src/utils/alerts';
 import { AppButton, AppText, LoadingView } from '@/src/components/core';
 import { Spacing } from '@/src/constants/design-tokens';
 import { useOptionalWorkplace } from '@/src/contexts/WorkplaceContext';
-import { ThemeOverride } from '@/src/contexts/UIContext';
 import { Box, Page, Stack } from '@/src/design-system';
 import { PostedJournalImportError } from '@/src/domain/accounting/PostedJournalImportError';
 import {
@@ -14,7 +13,6 @@ import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { ScrollView } from 'react-native-gesture-handler';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
-import { AppearanceSetupSlice } from './AppearanceSetupSlice';
 import { DeviceSetupSlice } from './DeviceSetupSlice';
 import { RestoreSourceSlice } from './RestoreSourceSlice';
 import { RestoreSummarySlice } from './RestoreSummarySlice';
@@ -336,13 +334,10 @@ function SetupJourneyScreen({
     setWorkplaceTargetStep,
     workplaceStep,
     setWorkplaceStep,
-    setAppearancePreview,
     displayName,
     workplaceInitial,
     workplaceCheckpoint,
     displayProgress,
-    appearanceInitial,
-    appearanceOverride,
   } = useSetupJourneyViewState({
     journeyId,
     candidateName,
@@ -437,24 +432,6 @@ function SetupJourneyScreen({
             onIntent={intent => void acceptRestoreIntent(intent)}
           />
         ) : null;
-      case 'appearance': {
-        const appearanceBackTarget: SetupSliceId =
-          draft.kind === 'restore'
-            ? recipeContainsSlice(recipe, 'device')
-              ? 'device'
-              : 'restore_summary'
-            : 'workplace';
-        return (
-          <AppearanceSetupSlice
-            currencyCode={draft.workplace?.baseCurrency.value ?? ''}
-            initial={appearanceInitial}
-            isCompleting={submittingSlice === 'appearance'}
-            onPreviewChange={setAppearancePreview}
-            onContinue={output => void advance('appearance', output)}
-            onBack={() => goTo(appearanceBackTarget)}
-          />
-        );
-      }
       case 'summary':
         return (
           <SetupSummarySlice
@@ -463,7 +440,13 @@ function SetupJourneyScreen({
             onEdit={goTo}
             onConfirm={() => void finish()}
             onBack={() =>
-              goTo(recipeContainsSlice(recipe, 'appearance') ? 'appearance' : 'workplace')
+              goTo(
+                draft.kind === 'restore'
+                  ? recipeContainsSlice(recipe, 'device')
+                    ? 'device'
+                    : 'restore_summary'
+                  : 'workplace',
+              )
             }
           />
         );
@@ -473,97 +456,95 @@ function SetupJourneyScreen({
   };
 
   return (
-    <ThemeOverride themeId={appearanceOverride?.themeId} fontId={appearanceOverride?.fontId}>
-      <WorkplaceSetupLayout
-        testID="setup-screen"
-        currentStep={displayProgress.current}
-        totalSteps={displayProgress.total}
-        keyboardAvoiding={
-          restoreJournalFailure !== undefined ||
-          showRestoreFxRepairCompletion ||
-          slice === 'device' ||
-          (slice === 'workplace' && workplaceCheckpoint === 'identity')
-        }
-        backAction={
-          !resolving && (slice === 'restore_source' || slice === 'restore_summary')
-            ? goBack
-            : undefined
-        }
-        backDisabled={submittingSlice !== undefined}
-      >
-        {showRestoreFxRepairCompletion ? (
-          <Box flex={1} padding="lg">
-            <Stack flex={1} space="md">
-              <AppText variant="title">Restore changes applied</AppText>
-              <AppText variant="body" color="secondary">
-                {restoreChangesSummary(restoreFxRepairReport.length, bulkRestoreCount)}
-              </AppText>
-              <ScrollView
-                style={{ flex: 1 }}
-                contentContainerStyle={{ paddingBottom: Spacing.md }}
-                showsVerticalScrollIndicator
-                testID="restore-changes-scroll"
-              >
-                <Stack space="sm">
-                  {restoreFxRepairReport.map((change, index) => (
-                    <AppText
-                      key={`${index}-${change}`}
-                      testID={`restore-fx-repair-change-${index}`}
-                      variant="caption"
-                      color="secondary"
-                    >
-                      {change}
-                    </AppText>
-                  ))}
-                </Stack>
-              </ScrollView>
-              <AppButton
-                variant="primary"
-                onPress={() => void continueAfterRestoreChanges()}
-                loading={submittingSlice === 'restore_summary'}
-                disabled={submittingSlice !== undefined}
-              >
-                Continue to restored data
-              </AppButton>
-            </Stack>
-          </Box>
-        ) : resolving && restoreJournalFailure ? (
-          <Box flex={1} padding="lg">
-            <RestoreJournalRecovery
-              details={restoreJournalFailure.error.details}
-              issues={restoreJournalFailure.entries}
-              previouslyAppliedChanges={restoreFxRepairReport}
-              isBusy={submittingSlice !== undefined || restoreJournalFailure.refreshing}
-              onRetry={() => void retryRestore()}
-              onApplyFxSuggestions={journalIds => void applyRestoreFxSuggestions(journalIds)}
-              onIgnore={journalId => void ignoreRestoreJournal(journalId)}
-              onSaveEdits={(journalId, edits) => void applyRestoreJournalEdit(journalId, edits)}
-            />
-          </Box>
-        ) : resolving && resolutionError ? (
-          <Box flex={1} padding="lg" justifyContent="center">
-            <Stack space="md">
-              <AppText variant="body" color="secondary">
-                {resolutionError}
-              </AppText>
-              <AppButton variant="primary" onPress={() => void retryRestore()}>
-                Retry
-              </AppButton>
-            </Stack>
-          </Box>
-        ) : resolving ? (
-          <LoadingView
-            loading
-            text={
-              restorePublicationProgress ??
-              (bulkRestoreCount > 1 ? `Restoring workplaces (1/${bulkRestoreCount})...` : undefined)
-            }
+    <WorkplaceSetupLayout
+      testID="setup-screen"
+      currentStep={displayProgress.current}
+      totalSteps={displayProgress.total}
+      keyboardAvoiding={
+        restoreJournalFailure !== undefined ||
+        showRestoreFxRepairCompletion ||
+        slice === 'device' ||
+        (slice === 'workplace' && workplaceCheckpoint === 'identity')
+      }
+      backAction={
+        !resolving && (slice === 'restore_source' || slice === 'restore_summary')
+          ? goBack
+          : undefined
+      }
+      backDisabled={submittingSlice !== undefined}
+    >
+      {showRestoreFxRepairCompletion ? (
+        <Box flex={1} padding="lg">
+          <Stack flex={1} space="md">
+            <AppText variant="title">Restore changes applied</AppText>
+            <AppText variant="body" color="secondary">
+              {restoreChangesSummary(restoreFxRepairReport.length, bulkRestoreCount)}
+            </AppText>
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: Spacing.md }}
+              showsVerticalScrollIndicator
+              testID="restore-changes-scroll"
+            >
+              <Stack space="sm">
+                {restoreFxRepairReport.map((change, index) => (
+                  <AppText
+                    key={`${index}-${change}`}
+                    testID={`restore-fx-repair-change-${index}`}
+                    variant="caption"
+                    color="secondary"
+                  >
+                    {change}
+                  </AppText>
+                ))}
+              </Stack>
+            </ScrollView>
+            <AppButton
+              variant="primary"
+              onPress={() => void continueAfterRestoreChanges()}
+              loading={submittingSlice === 'restore_summary'}
+              disabled={submittingSlice !== undefined}
+            >
+              Continue to restored data
+            </AppButton>
+          </Stack>
+        </Box>
+      ) : resolving && restoreJournalFailure ? (
+        <Box flex={1} padding="lg">
+          <RestoreJournalRecovery
+            details={restoreJournalFailure.error.details}
+            issues={restoreJournalFailure.entries}
+            previouslyAppliedChanges={restoreFxRepairReport}
+            isBusy={submittingSlice !== undefined || restoreJournalFailure.refreshing}
+            onRetry={() => void retryRestore()}
+            onApplyFxSuggestions={journalIds => void applyRestoreFxSuggestions(journalIds)}
+            onIgnore={journalId => void ignoreRestoreJournal(journalId)}
+            onSaveEdits={(journalId, edits) => void applyRestoreJournalEdit(journalId, edits)}
           />
-        ) : (
-          renderSlice()
-        )}
-      </WorkplaceSetupLayout>
-    </ThemeOverride>
+        </Box>
+      ) : resolving && resolutionError ? (
+        <Box flex={1} padding="lg" justifyContent="center">
+          <Stack space="md">
+            <AppText variant="body" color="secondary">
+              {resolutionError}
+            </AppText>
+            <AppButton variant="primary" onPress={() => void retryRestore()}>
+              Retry
+            </AppButton>
+          </Stack>
+        </Box>
+      ) : resolving ? (
+        <LoadingView
+          loading
+          text={
+            restorePublicationProgress ??
+            (bulkRestoreCount > 1 ? `Restoring workplaces (1/${bulkRestoreCount})...` : undefined)
+          }
+        />
+      ) : (
+        renderSlice()
+      )}
+    </WorkplaceSetupLayout>
   );
 }
 

@@ -5,15 +5,7 @@ describe('Setup recipes', () => {
   it.each([
     [
       'first_run_restore',
-      [
-        'restore_source',
-        'workplace',
-        'restore_summary',
-        'publish_restore',
-        'device',
-        'appearance',
-        'summary',
-      ],
+      ['restore_source', 'workplace', 'restore_summary', 'publish_restore', 'device', 'summary'],
     ],
     ['empty_device_workplace', ['workplace', 'summary']],
     ['empty_device_restore', ['restore_source', 'workplace', 'restore_summary', 'publish_restore']],

@@ -11,7 +11,7 @@ import {
 import { loadPreparedRestores } from './pickRestoreSource';
 import { getRestoreAutoOutput } from './restoreAutoOutput';
 import { discardRestorePublication, finishDeviceSetup, finishSetup } from './setupFinishers';
-import { getSetupRecipe, recipeContainsSlice } from './setupRecipes';
+import { getSetupRecipe } from './setupRecipes';
 import { clearSetupDraft, loadSetupDraft } from './SetupDraftStore';
 import {
   isSetupJourneyId,
@@ -58,7 +58,6 @@ export function resolveSetupJourney(
 }
 
 export function createJourneyCoordinator(journeyId: SetupJourneyId): SetupCoordinator {
-  const recipe = getSetupRecipe(journeyId);
   const existing = loadSetupDraft();
   const draft = existing?.journeyId === journeyId ? existing : createSeededDraft(journeyId);
   return createSetupCoordinator({
@@ -125,7 +124,7 @@ export function createJourneyCoordinator(journeyId: SetupJourneyId): SetupCoordi
         }
       },
     },
-    finish: async finished => finishJourney(finished, recipeContainsSlice(recipe, 'appearance')),
+    finish: finishJourney,
   });
 }
 
@@ -133,13 +132,12 @@ function createSeededDraft(journeyId: SetupJourneyId): SetupDraft {
   return createSetupDraft(journeyId, generator() as WorkplaceId);
 }
 
-async function finishJourney(draft: SetupDraft, applyAppearance: boolean): Promise<SetupOutcome> {
+async function finishJourney(draft: SetupDraft): Promise<SetupOutcome> {
   if (draft.kind === 'restore') {
     const intent = draft.restore.summary?.intent ?? 'continue';
     const isBulkRestore = restoreSources(draft).length > 1;
     const workplaceId = await finishSetup(draft, {
       activate: !isBulkRestore && (intent === 'open' || intent === 'continue'),
-      applyAppearance,
     });
     if (!workplaceId) throw new Error('Restore publication is incomplete');
     if (isBulkRestore) preferences.device.setActiveWorkplaceId(undefined);

@@ -1,4 +1,3 @@
-import { FontIds, ThemeIds } from '@/src/constants';
 import { Icon, AppButton, AppText } from '@/src/components/core';
 import { Box, Stack } from '@/src/design-system';
 import { SetupReviewStep } from './SetupReviewStep';
@@ -34,7 +33,6 @@ export function SetupSummarySlice({
   const [retryKey, setRetryKey] = useState(0);
   const [importedBooks, setImportedBooks] = useState<ImportedBooks>({ status: 'loading' });
   const name = 'device' in draft ? (draft.device?.displayName.value ?? '') : '';
-  const appearance = 'appearance' in draft ? draft.appearance : undefined;
 
   useEffect(() => {
     if (!imported) return;
@@ -110,21 +108,17 @@ export function SetupSummarySlice({
         selectedCurrency={selectedCurrency}
         accountCount={accounts}
         categoryCount={categories}
-        themeId={appearance?.themeId.value ?? ThemeIds.DEEP_SPACE}
-        fontId={appearance?.fontId.value ?? FontIds.DEEP_SPACE}
         onChangeWorkplace={() => onEdit('workplace', 'identity')}
         onChangeProfile={() => onEdit('device')}
         onChangeCurrency={() => onEdit('workplace', 'currency')}
         onChangeAccounts={() => onEdit('workplace', 'accounts')}
         onChangeCategories={() => onEdit('workplace', 'categories')}
-        onChangeAppearance={() => onEdit('appearance')}
         onConfirm={onConfirm}
         onBack={onBack}
         isCompleting={isCompleting}
         isImportedWorkplace={imported}
         importedWorkplaces={imported && importedBooks.status === 'ready' ? importedBooks.views : []}
         workplaceEditable={!imported}
-        showAppearance={'appearance' in draft}
         showProfile={recipeContainsSlice(getSetupRecipe(draft.journeyId), 'device')}
       />
     </View>

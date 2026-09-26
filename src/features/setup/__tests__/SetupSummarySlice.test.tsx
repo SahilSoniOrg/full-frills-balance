@@ -1,7 +1,6 @@
 import { Icon } from '@/src/types/domainIcons';
 import { fireEvent, render, screen, waitFor } from '@/src/utils/test-utils';
 import { asWorkplaceId } from '@/src/types/ids';
-import { ThemeIds, FontIds } from '@/src/constants';
 import type { ImportStats } from '@/src/services/import/types';
 import { SetupSummarySlice } from '../SetupSummarySlice';
 import { loadRestoreSummaries } from '../setupFinishers';
@@ -19,8 +18,8 @@ const restoreDraft = (stats: ImportStats): RestoreSetupDraft => ({
   journeyId: 'first_run_restore',
   entryPolicy: 'blocking',
   operationId: asWorkplaceId('operation'),
-  presentedHistory: ['restore_source', 'restore_summary', 'device', 'appearance', 'summary'],
-  acceptedSlices: ['restore_source', 'workplace', 'restore_summary', 'device', 'appearance'],
+  presentedHistory: ['restore_source', 'restore_summary', 'device', 'summary'],
+  acceptedSlices: ['restore_source', 'workplace', 'restore_summary', 'device'],
   restore: {
     sources: [
       {
@@ -47,10 +46,6 @@ const restoreDraft = (stats: ImportStats): RestoreSetupDraft => ({
     selectedAccounts: [],
     selectedCategories: [],
     acceptedCheckpoints: ['identity', 'currency', 'accounts', 'categories'],
-  },
-  appearance: {
-    themeId: { value: ThemeIds.DEEP_SPACE, source: 'user_entered' },
-    fontId: { value: FontIds.DEEP_SPACE, source: 'user_entered' },
   },
 });
 

@@ -34,7 +34,7 @@ describe('Setup journeys', () => {
   it('opens optional Workplace creation without blocking the current Workplace', async () => {
     await launchOnboardedApp({ seedProfile: 'onboarded', disableSynchronization: true });
     await openWorkplaceCreation();
-    await setupPage.completeFromWorkplace(false);
+    await setupPage.completeFromWorkplace();
     await waitForDashboard();
   });
 
@@ -52,7 +52,7 @@ describe('Setup journeys', () => {
     await relaunchPreservingData();
     await setupPage.waitForRestoreSummary();
     await setupPage.continueRestoreSummary();
-    await setupPage.finishAppearanceAndSummary('E2E Restore User');
+    await setupPage.finishSummary('E2E Restore User');
     await waitForDashboard();
   });
 });

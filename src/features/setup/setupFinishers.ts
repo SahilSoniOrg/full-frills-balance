@@ -6,7 +6,6 @@ import { preferences } from '@/src/services/preferences';
 import { generateWorkplaceName } from '@/src/utils/workplaceName';
 import { claimedRestoreFingerprint, isRestoreOwnershipTuple } from '@/src/services/import/restore';
 import type {
-  AppearanceSetupOutput,
   DeviceSetupOutput,
   RestoreSetupDraft,
   SetupDraft,
@@ -74,12 +73,6 @@ export function finishDeviceSetup(output: DeviceSetupOutput): void {
   preferences.device.setDeviceRegistered(true);
 }
 
-/** Appearance is global User preference, applied only after explicit acceptance. */
-export function finishAppearanceSetup(output: AppearanceSetupOutput): void {
-  preferences.themePrefs.setThemeId(output.themeId.value);
-  preferences.themePrefs.setFontId(output.fontId.value);
-}
-
 /** Publish a fresh Workplace atomically. Repeating operationId is safe. */
 export async function finishWorkplaceSetup(
   operationId: WorkplaceId,
@@ -97,7 +90,6 @@ export async function finishWorkplaceSetup(
 
 export interface FinishSetupOptions {
   readonly activate?: boolean;
-  readonly applyAppearance?: boolean;
 }
 
 async function publishedRestoreWorkplace(draft: SetupDraft) {
@@ -231,7 +223,6 @@ export async function finishSetup(
         });
       }
     }
-    if (options.applyAppearance && draft.appearance) finishAppearanceSetup(draft.appearance);
     if (options.activate !== false) preferences.device.setActiveWorkplaceId(workplace.id);
     return workplace.id;
   }

@@ -13,12 +13,7 @@ export {
 } from './SetupCoordinator';
 export { resolveNextSetupAction } from './resolveNextSetupAction';
 export { getSetupRecipe, SETUP_RECIPES } from './setupRecipes';
-export {
-  finishAppearanceSetup,
-  finishDeviceSetup,
-  finishSetup,
-  finishWorkplaceSetup,
-} from './setupFinishers';
+export { finishDeviceSetup, finishSetup, finishWorkplaceSetup } from './setupFinishers';
 export { default as SetupScreen } from './SetupScreen';
 export { WorkplaceIdentityStep } from './WorkplaceIdentityStep';
 export { WorkplaceCurrencyStep } from './components/workplace-setup/WorkplaceCurrencyStep';

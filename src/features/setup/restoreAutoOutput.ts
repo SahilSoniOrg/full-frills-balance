@@ -1,8 +1,6 @@
 import { isValidIconName } from '@/src/types/domainIcons';
-import { FontIds, ThemeIds } from '@/src/constants/design-tokens';
 import {
   primaryRestoreSource,
-  type AppearanceSetupOutput,
   type DeviceSetupOutput,
   type SetupDraft,
   type SetupSliceId,
@@ -32,22 +30,6 @@ export function getRestoreWorkplacePrefill(draft: SetupDraft): WorkplaceSetupPre
   if (!workplace) return undefined;
   const prefill = workplacePrefill(workplace);
   return prefill.name || prefill.icon || prefill.baseCurrency ? prefill : undefined;
-}
-
-export function getRestoreAppearancePrefill(draft: SetupDraft): AppearanceSetupOutput | undefined {
-  if (draft.kind !== 'restore') return undefined;
-  const appearance = primaryRestoreSource(draft)?.facts.appearance;
-  if (!appearance?.themeId && !appearance?.fontId) return undefined;
-  return {
-    themeId: {
-      value: appearance.themeId ?? ThemeIds.DEEP_SPACE,
-      source: appearance.themeId ? 'imported' : 'defaulted',
-    },
-    fontId: {
-      value: appearance.fontId ?? FontIds.DEEP_SPACE,
-      source: appearance.fontId ? 'imported' : 'defaulted',
-    },
-  };
 }
 
 function workplacePrefill(workplace: {

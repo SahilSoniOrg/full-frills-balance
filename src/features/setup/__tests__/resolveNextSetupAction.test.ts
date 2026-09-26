@@ -71,7 +71,7 @@ describe('resolveNextSetupAction', () => {
     ).toMatchObject({
       kind: 'present',
       sliceId: 'restore_source',
-      progress: { current: 1, total: 4 },
+      progress: { current: 1, total: 3 },
     });
   });
 

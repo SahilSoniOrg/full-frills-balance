@@ -1,5 +1,5 @@
 import { Icon, AppButton, AppCard, AppIcon, AppText, IconName } from '@/src/components/core';
-import { AppConfig, FontId, FontIds, Size, Spacing, ThemeId, ThemeIds } from '@/src/constants';
+import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { RestoreSummaryView } from './setupFinishers';
@@ -12,36 +12,19 @@ interface SetupReviewStepProps {
   selectedCurrency: string;
   accountCount: number;
   categoryCount: number;
-  themeId: ThemeId;
-  fontId: FontId;
   onChangeProfile: () => void;
   onChangeWorkplace: () => void;
   onChangeCurrency: () => void;
   onChangeAccounts: () => void;
   onChangeCategories: () => void;
-  onChangeAppearance: () => void;
   onConfirm: () => void;
   onBack: () => void;
   isCompleting: boolean;
   isImportedWorkplace?: boolean;
-  showAppearance?: boolean;
   showProfile?: boolean;
   workplaceEditable?: boolean;
   importedWorkplaces?: readonly RestoreSummaryView[];
 }
-
-const THEME_LABELS: Record<ThemeId, string> = {
-  [ThemeIds.DEEP_SPACE]: AppConfig.strings.settings.appearance.deepSpace.label,
-  [ThemeIds.GOLD_OBSIDIAN]: AppConfig.strings.settings.appearance.goldObsidian.label,
-  [ThemeIds.IVY]: AppConfig.strings.settings.appearance.ivy.label,
-  [ThemeIds.EDITORIAL]: AppConfig.strings.settings.appearance.editorial.label,
-};
-
-const FONT_LABELS: Record<FontId, string> = {
-  [FontIds.DEEP_SPACE]: AppConfig.strings.settings.appearance.serifSans.label,
-  [FontIds.IVY]: AppConfig.strings.settings.appearance.modernGeometric.label,
-  [FontIds.EDITORIAL]: AppConfig.strings.settings.appearance.classicSerif.label,
-};
 
 function ReviewRow({
   label,
@@ -135,19 +118,15 @@ export function SetupReviewStep({
   selectedCurrency,
   accountCount,
   categoryCount,
-  themeId,
-  fontId,
   onChangeProfile,
   onChangeWorkplace,
   onChangeCurrency,
   onChangeAccounts,
   onChangeCategories,
-  onChangeAppearance,
   onConfirm,
   onBack,
   isCompleting,
   isImportedWorkplace = false,
-  showAppearance = true,
   showProfile = true,
   workplaceEditable,
   importedWorkplaces = [],
@@ -223,14 +202,6 @@ export function SetupReviewStep({
               />
             </Inline>
           </Box>
-          {showAppearance && (
-            <ReviewRow
-              label={strings.appearance}
-              value={`${THEME_LABELS[themeId]} · ${FONT_LABELS[fontId]}`}
-              onChange={onChangeAppearance}
-              icon={Icon.Palette}
-            />
-          )}
         </AppCard>
         {importedWorkplaces.length > 1 && (
           <AppCard variant="outline" paddingSize="md" style={styles.importedWorkplaces}>

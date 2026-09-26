@@ -68,12 +68,7 @@ const firstRunRestore: SetupRecipe = {
   atStart: 'first_run',
   discardTo: 'first_run',
   restoreSummary: { primary: { intent: 'continue', label: 'Continue setup' } },
-  entries: [
-    ...restoreCore,
-    slice('device', 'when_missing'),
-    slice('appearance', 'always_show'),
-    slice('summary', 'required'),
-  ],
+  entries: [...restoreCore, slice('device', 'when_missing'), slice('summary', 'required')],
 };
 
 const emptyDeviceWorkplace: SetupRecipe = {

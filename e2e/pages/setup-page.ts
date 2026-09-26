@@ -26,8 +26,7 @@ export class SetupPage {
     await tapById(setupIds.restoreSummaryContinue, ONBOARDING_TIMEOUT_MS);
   }
 
-  async finishAppearanceAndSummary(profileName?: string): Promise<void> {
-    await tapById(setupIds.themeContinue, ONBOARDING_TIMEOUT_MS);
+  async finishSummary(profileName?: string): Promise<void> {
     await this.expectSummary();
     if (profileName) await this.expectProfileName(profileName);
     await tapById(setupIds.finishButton, ONBOARDING_TIMEOUT_MS);
@@ -82,18 +81,12 @@ export class SetupPage {
     await tapById(setupIds.finishButton, ONBOARDING_TIMEOUT_MS);
   }
 
-  async completeFromWorkplace(includeAppearance = true): Promise<void> {
+  async completeFromWorkplace(): Promise<void> {
     await tapById(setupIds.workplaceIdentityContinue, ONBOARDING_TIMEOUT_MS);
     for (let i = 0; i < 3; i += 1) {
       await tapById(setupIds.gridContinue, ONBOARDING_TIMEOUT_MS);
     }
-    if (includeAppearance) {
-      await this.finishAppearanceAndSummary();
-      return;
-    }
-
-    await this.expectSummary();
-    await tapById(setupIds.finishButton, ONBOARDING_TIMEOUT_MS);
+    await this.finishSummary();
   }
 }
 

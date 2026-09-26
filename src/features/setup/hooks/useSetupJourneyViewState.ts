@@ -1,11 +1,6 @@
-import { FontId, FontIds, ThemeId, ThemeIds } from '@/src/constants';
 import { useState } from 'react';
-import {
-  getRestoreAutoOutput,
-  getRestoreAppearancePrefill,
-  getRestoreWorkplacePrefill,
-} from '../restoreAutoOutput';
-import { recipeContainsSlice, type SetupRecipe } from '../setupRecipes';
+import { getRestoreAutoOutput, getRestoreWorkplacePrefill } from '../restoreAutoOutput';
+import type { SetupRecipe } from '../setupRecipes';
 import type { NextSetupAction } from '../resolveNextSetupAction';
 import {
   isRestoreJourneyId,
@@ -41,10 +36,6 @@ export function useSetupJourneyViewState({
       initial: draft.workplace ?? getRestoreWorkplacePrefill(draft),
     }),
   );
-  const [appearancePreview, setAppearancePreview] = useState<{
-    themeId: ThemeId;
-    fontId: FontId;
-  }>();
 
   const displayName =
     ('device' in draft ? draft.device?.displayName.value : undefined) ||
@@ -63,28 +54,15 @@ export function useSetupJourneyViewState({
           workplaceCheckpoint,
         })
       : { current: 1, total: 1, completed: 0 };
-  const appearanceInitial =
-    ('appearance' in draft ? draft.appearance : undefined) ?? getRestoreAppearancePrefill(draft);
-  const appearanceOverride =
-    appearancePreview ??
-    ((slice === 'appearance' || slice === 'summary') && recipeContainsSlice(recipe, 'appearance')
-      ? {
-          themeId: appearanceInitial?.themeId.value ?? ThemeIds.DEEP_SPACE,
-          fontId: appearanceInitial?.fontId.value ?? FontIds.DEEP_SPACE,
-        }
-      : undefined);
 
   return {
     workplaceTargetStep,
     setWorkplaceTargetStep,
     workplaceStep,
     setWorkplaceStep,
-    setAppearancePreview,
     displayName,
     workplaceInitial,
     workplaceCheckpoint,
     displayProgress,
-    appearanceInitial,
-    appearanceOverride,
   };
 }

@@ -30,7 +30,6 @@ const SOURCE_DOWNSTREAM: readonly SetupSliceId[] = [
   'workplace',
   'restore_summary',
   'device',
-  'appearance',
   'summary',
 ];
 
@@ -158,7 +157,6 @@ function applyRestoreSource(
     },
     workplace: undefined,
     device: undefined,
-    appearance: undefined,
     summary: undefined,
   };
 }
@@ -173,11 +171,6 @@ function applyOutput(draft: SetupDraft, acceptance: SliceAcceptance): SetupDraft
       return { ...draft, acceptedSlices, device: acceptance.output };
     case 'workplace':
       return { ...draft, acceptedSlices, workplace: acceptance.output };
-    case 'appearance':
-      if (draft.kind === 'workplace_creation') {
-        throw new Error('Appearance slice is not in this Setup journey');
-      }
-      return { ...draft, acceptedSlices, appearance: acceptance.output };
     case 'restore_source':
       if (draft.kind !== 'restore') throw new Error('Restore source is not in this Setup journey');
       return applyRestoreSource(draft, acceptance.output);

@@ -1,5 +1,4 @@
 import { AccountType } from '@/src/types/enums';
-import type { FontId, ThemeId } from '@/src/constants/design-tokens';
 import { isValidIconName, type IconName } from '@/src/types/domainIcons';
 import { asAccountId, asWorkplaceId } from '@/src/types/ids';
 import { storage } from '@/src/utils/storage';
@@ -14,7 +13,6 @@ import {
 } from '@/src/services/import/restore';
 import { forgetAllPreparedRestores } from './pickRestoreSource';
 import type {
-  AppearanceSetupOutput,
   DeviceSetupOutput,
   RestoreDraftState,
   RestoreHandoff,
@@ -34,12 +32,10 @@ import type {
 } from './setupTypes';
 import {
   isAccountType,
-  isFontId,
   isRestoreJourneyId,
   isSetupFactSource,
   isSetupJourneyId,
   isSetupSliceId,
-  isThemeId,
   isWorkplaceId,
   restoreSources,
 } from './setupTypes';
@@ -89,14 +85,6 @@ function parseIcon(value: unknown): IconName | undefined {
   return typeof value === 'string' && isValidIconName(value) ? value : undefined;
 }
 
-function parseTheme(value: unknown): ThemeId | undefined {
-  return isThemeId(value) ? value : undefined;
-}
-
-function parseFont(value: unknown): FontId | undefined {
-  return isFontId(value) ? value : undefined;
-}
-
 function parseStarter(value: unknown): StarterAccountInput | undefined {
   if (!isRecord(value) || !hasOnlyKeys(value, ['id', 'name', 'type', 'icon'])) return undefined;
   if (value.id !== undefined && !isWorkplaceId(value.id)) return undefined;
@@ -132,13 +120,6 @@ function parseSourcedIcon(value: unknown): Sourced<IconName> | undefined {
 
 function parseSourcedCurrency(value: unknown): Sourced<string> | undefined {
   return parseNonEmptySourcedString(value);
-}
-
-function parseAppearance(value: unknown): AppearanceSetupOutput | undefined {
-  if (!isRecord(value) || !hasOnlyKeys(value, ['themeId', 'fontId'])) return undefined;
-  const themeId = parseSourced(value.themeId, parseTheme);
-  const fontId = parseSourced(value.fontId, parseFont);
-  return themeId && fontId ? { themeId, fontId } : undefined;
 }
 
 const CHECKPOINTS: readonly WorkplaceCheckpoint[] = [
@@ -309,7 +290,6 @@ function acceptedOutputIsPresent(draft: SetupDraft): boolean {
   const accepted = new Set(draft.acceptedSlices);
   if (draft.kind !== 'workplace_creation') {
     if (accepted.has('device') && !draft.device) return false;
-    if (accepted.has('appearance') && !draft.appearance) return false;
   }
   if (accepted.has('workplace') && !draft.workplace) return false;
   if (accepted.has('summary') && !draft.summary) return false;
@@ -333,7 +313,6 @@ function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDra
     'restore',
     'device',
     'workplace',
-    'appearance',
     'summary',
   ];
   if (
@@ -380,7 +359,6 @@ function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDra
       : parseNonEmptySourcedString(value.restore.deviceCandidate);
   const device = value.device === undefined ? undefined : parseDevice(value.device);
   const workplace = value.workplace === undefined ? undefined : parseWorkplace(value.workplace);
-  const appearance = value.appearance === undefined ? undefined : parseAppearance(value.appearance);
   const summary = value.summary === undefined ? undefined : parseSummary(value.summary);
   if (
     (rawSources !== undefined && !sources) ||
@@ -393,7 +371,6 @@ function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDra
     (value.restore.deviceCandidate !== undefined && !deviceCandidate) ||
     (value.device !== undefined && !device) ||
     (value.workplace !== undefined && !workplace) ||
-    (value.appearance !== undefined && !appearance) ||
     (value.summary !== undefined && !summary)
   ) {
     return undefined;
@@ -422,11 +399,10 @@ function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDra
     restore,
     ...(device ? { device } : {}),
     ...(workplace ? { workplace } : {}),
-    ...(appearance ? { appearance } : {}),
     ...(summary ? { summary } : {}),
   };
   if (value.journeyId === 'picker_restore' || value.journeyId === 'settings_restore') {
-    if (device || appearance || summary) return undefined;
+    if (device || summary) return undefined;
   }
   if (value.journeyId === 'first_run_restore' && value.entryPolicy !== 'blocking') return undefined;
   if (value.journeyId === 'empty_device_restore' && value.entryPolicy !== 'blocking')
@@ -475,9 +451,22 @@ function parseWorkplaceCreation(
   return acceptedOutputIsPresent(draft) ? draft : undefined;
 }
 
+/** Drafts saved before the appearance step was removed still carry it; an in-flight restore must stay readable. */
+function withoutRetiredAppearance(value: RecordValue): RecordValue {
+  const next: RecordValue = { ...value };
+  delete next.appearance;
+  if (next.activeSlice === 'appearance') delete next.activeSlice;
+  for (const key of ['presentedHistory', 'acceptedSlices'] as const) {
+    const items = next[key];
+    if (Array.isArray(items)) next[key] = items.filter(item => item !== 'appearance');
+  }
+  return next;
+}
+
 /** Strict parser for the single device-local Setup draft. Invalid drafts are discarded. */
-export function parseSetupDraft(value: unknown): SetupDraft | undefined {
-  if (!isRecord(value)) return undefined;
+export function parseSetupDraft(raw: unknown): SetupDraft | undefined {
+  if (!isRecord(raw)) return undefined;
+  const value = withoutRetiredAppearance(raw);
   const base = parseBase(value);
   if (
     !base ||
@@ -493,7 +482,6 @@ export function parseSetupDraft(value: unknown): SetupDraft | undefined {
       'activeSlice',
       'device',
       'workplace',
-      'appearance',
       'summary',
       'restore',
     ])

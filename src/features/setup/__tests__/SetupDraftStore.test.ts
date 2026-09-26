@@ -111,6 +111,21 @@ describe('SetupDraftStore', () => {
     expect(parseSetupDraft({ ...partial })).toBeUndefined();
   });
 
+  it('drops the retired appearance step from saved drafts', () => {
+    expect(
+      parseSetupDraft({
+        ...draft,
+        presentedHistory: ['device', 'appearance'],
+        acceptedSlices: ['device', 'appearance'],
+        activeSlice: 'appearance',
+        appearance: {
+          themeId: { value: 'ivy', source: 'user_entered' },
+          fontId: { value: 'ivy', source: 'user_entered' },
+        },
+      }),
+    ).toEqual(draft);
+  });
+
   it('rejects an impossible accepted output and operation-mismatched handoff', () => {
     expect(
       parseSetupDraft({ ...draft, acceptedSlices: ['device'], device: undefined }),

@@ -60,10 +60,6 @@ it('preserves review scroll and keeps the restore action reachable for a long re
     }
   }
 
-  await waitFor(element(by.id('onboarding-theme-continue-button')))
-    .toExist()
-    .withTimeout(60000);
-  await element(by.id('onboarding-theme-continue-button')).tap();
   await waitFor(element(by.id('onboarding-summary-step')))
     .toExist()
     .withTimeout(60000);
