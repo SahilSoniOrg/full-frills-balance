@@ -1,5 +1,8 @@
 import { TransactionType } from '@/src/types/enums';
-import { evaluateJournalBalance } from '@/src/domain/accounting/journalBalanceEvaluator';
+import {
+  evaluateJournalBalance,
+  proposeUniqueJournalFxRate,
+} from '@/src/domain/accounting/journalBalanceEvaluator';
 
 describe('evaluateJournalBalance', () => {
   it('values each line in journal currency and accepts an exact mixed-currency balance', () => {
@@ -174,5 +177,135 @@ describe('evaluateJournalBalance', () => {
         expect.objectContaining({ code: 'missing_exchange_rate', lineId: 'eur-line' }),
       ]),
     );
+  });
+});
+
+describe('proposeUniqueJournalFxRate', () => {
+  const precisionByCurrency = new Map([
+    ['HKD', 2],
+    ['INR', 2],
+    ['USD', 2],
+  ]);
+
+  it('derives the unique rate from account amounts and balances a debit-side FX line', () => {
+    const proposal = proposeUniqueJournalFxRate({
+      journalCurrency: 'INR',
+      precisionByCurrency,
+      lines: [
+        {
+          id: 'hkd-cash',
+          accountId: 'hkd-account',
+          accountCurrency: 'HKD',
+          amount: 500.76,
+          exchangeRate: 11.5348,
+          transactionType: TransactionType.DEBIT,
+        },
+        {
+          id: 'inr-bank',
+          accountId: 'inr-account',
+          accountCurrency: 'INR',
+          amount: 5791.12,
+          transactionType: TransactionType.CREDIT,
+        },
+      ],
+    });
+
+    expect(proposal?.transactionId).toBe('hkd-cash');
+    expect(proposal?.exchangeRate).toBeCloseTo(5791.12 / 500.76, 12);
+    expect(proposal?.evaluation).toMatchObject({
+      isBalanced: true,
+      debitTotalMinorUnits: 579112,
+      creditTotalMinorUnits: 579112,
+    });
+    expect(proposal?.evaluation.lineValues.find(line => line.id === 'hkd-cash')).toMatchObject({
+      nativeAmount: 500.76,
+      journalAmount: 5791.12,
+    });
+  });
+
+  it('derives the unique rate when the foreign line is on the credit side', () => {
+    const proposal = proposeUniqueJournalFxRate({
+      journalCurrency: 'INR',
+      precisionByCurrency,
+      lines: [
+        {
+          id: 'inr-bank',
+          accountId: 'inr-account',
+          accountCurrency: 'INR',
+          amount: 5791.12,
+          transactionType: TransactionType.DEBIT,
+        },
+        {
+          id: 'hkd-cash',
+          accountId: 'hkd-account',
+          accountCurrency: 'HKD',
+          amount: 500.76,
+          exchangeRate: 11.5348,
+          transactionType: TransactionType.CREDIT,
+        },
+      ],
+    });
+
+    expect(proposal?.transactionId).toBe('hkd-cash');
+    expect(proposal?.evaluation.isBalanced).toBe(true);
+  });
+
+  it('does not guess when more than one foreign rate can be adjusted', () => {
+    const proposal = proposeUniqueJournalFxRate({
+      journalCurrency: 'INR',
+      precisionByCurrency,
+      lines: [
+        {
+          id: 'hkd-cash',
+          accountId: 'hkd-account',
+          accountCurrency: 'HKD',
+          amount: 500.76,
+          exchangeRate: 11.5348,
+          transactionType: TransactionType.DEBIT,
+        },
+        {
+          id: 'usd-cash',
+          accountId: 'usd-account',
+          accountCurrency: 'USD',
+          amount: 2,
+          exchangeRate: 90,
+          transactionType: TransactionType.DEBIT,
+        },
+        {
+          id: 'inr-bank',
+          accountId: 'inr-account',
+          accountCurrency: 'INR',
+          amount: 5971.12,
+          transactionType: TransactionType.CREDIT,
+        },
+      ],
+    });
+
+    expect(proposal).toBeUndefined();
+  });
+
+  it('does not use FX to repair a same-currency imbalance', () => {
+    const proposal = proposeUniqueJournalFxRate({
+      journalCurrency: 'USD',
+      precisionByCurrency,
+      lines: [
+        {
+          id: 'usd-debit',
+          accountId: 'debit-account',
+          accountCurrency: 'USD',
+          amount: 10,
+          transactionType: TransactionType.DEBIT,
+        },
+        {
+          id: 'usd-credit',
+          accountId: 'credit-account',
+          accountCurrency: 'USD',
+          amount: 9.99,
+          transactionType: TransactionType.CREDIT,
+        },
+      ],
+    });
+
+    expect(proposal).toBeUndefined();
   });
 });

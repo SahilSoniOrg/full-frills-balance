@@ -15,9 +15,15 @@ import Workplace from '@/src/data/models/Workplace';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { Model } from '@nozbe/watermelondb';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
-import { evaluateJournalLines } from '@/src/domain/accounting/journalBalanceEvaluator';
+import {
+  evaluateJournalBalance,
+  proposeUniqueJournalFxRate,
+  resolveCurrencyPrecisions,
+} from '@/src/domain/accounting/journalBalanceEvaluator';
 import { JournalStatus } from '@/src/types/enums';
 import { toJournalStatus, toTransactionType } from '@/src/data/repositories/importValueParsers';
+import { PostedJournalImportError } from '@/src/domain/accounting/PostedJournalImportError';
+import type { PostedJournalImportIssue } from '@/src/domain/accounting/PostedJournalImportError';
 
 export class ImportRepository {
   private async prepareImportData(
@@ -43,7 +49,10 @@ export class ImportRepository {
     ];
   }
 
-  private async validatePostedJournalBalances(data: BatchImportData): Promise<void> {
+  private async validatePostedJournalBalances(
+    workplaceId: WorkplaceId,
+    data: BatchImportData,
+  ): Promise<void> {
     const transactionsByJournalId = new Map<string, BatchImportData['transactions']>();
     for (const transaction of data.transactions) {
       if (transaction.deletedAt) continue;
@@ -58,10 +67,9 @@ export class ImportRepository {
     if (postedJournals.length === 0) return;
 
     const currencyPrecision = new Map(
-      (data.currencies ?? []).map(currency => [
-        currency.code.trim().toUpperCase(),
-        currency.precision,
-      ]),
+      (data.currencies ?? [])
+        .filter(currency => currency.deletedAt == null)
+        .map(currency => [currency.code.trim().toUpperCase(), currency.precision]),
     );
     const accountCurrencyById = new Map(
       data.accounts.map(account => [
@@ -70,32 +78,54 @@ export class ImportRepository {
       ]),
     );
 
+    const issues: PostedJournalImportIssue[] = [];
     for (const journal of postedJournals) {
-      const evaluation = await evaluateJournalLines({
-        journalCurrency: journal.currencyCode,
-        lines: (transactionsByJournalId.get(journal.id) ?? []).map(transaction => ({
-          id: transaction.id,
-          accountId: transaction.accountId,
-          amount: transaction.amount,
-          exchangeRate: transaction.exchangeRate,
-          transactionType: toTransactionType(transaction.transactionType),
-        })),
-        accountCurrencyById,
-        getPrecision: async code => {
+      const transactions = transactionsByJournalId.get(journal.id) ?? [];
+      const precisionByCurrency = await resolveCurrencyPrecisions(
+        [
+          journal.currencyCode,
+          ...transactions.map(transaction => accountCurrencyById.get(transaction.accountId)),
+        ],
+        async code => {
           const known = currencyPrecision.get(code);
           if (known !== undefined) return known;
           const precision = await currencyRepository.getPrecision(code);
           currencyPrecision.set(code, precision);
           return precision;
         },
+      );
+      const input = {
+        journalCurrency: journal.currencyCode,
+        precisionByCurrency,
+        lines: transactions.map(transaction => ({
+          id: transaction.id,
+          accountId: transaction.accountId,
+          accountCurrency: accountCurrencyById.get(transaction.accountId),
+          amount: transaction.amount,
+          exchangeRate: transaction.exchangeRate,
+          transactionType: toTransactionType(transaction.transactionType),
+        })),
+      };
+      const evaluation = evaluateJournalBalance(input);
+      if (evaluation.isBalanced) continue;
+
+      const inferredFx = proposeUniqueJournalFxRate(input);
+      issues.push({
+        journalId: journal.id,
+        details: evaluation.issues.map(issue => issue.message).join('; '),
+        evaluation,
+        ...(inferredFx
+          ? {
+              fxProposal: {
+                transactionId: inferredFx.transactionId,
+                exchangeRate: inferredFx.exchangeRate,
+                evaluation: inferredFx.evaluation,
+              },
+            }
+          : {}),
       });
-      if (!evaluation.isBalanced) {
-        const details = evaluation.issues.map(issue => issue.message).join('; ');
-        throw new Error(
-          `Restore rejected: posted journal ${journal.id} is invalid or unbalanced${details ? `: ${details}` : ''}`,
-        );
-      }
     }
+    if (issues.length > 0) throw new PostedJournalImportError(workplaceId, issues);
   }
 
   private async batchPreparedOperations(
@@ -152,7 +182,7 @@ export class ImportRepository {
     onProgress?: (message: string, progress?: number) => void,
   ): Promise<Workplace> {
     await this.prepareImportData(data, onProgress);
-    await this.validatePostedJournalBalances(data);
+    await this.validatePostedJournalBalances(workplace.id, data);
 
     let created!: Workplace;
     await database.write(async () => {

@@ -11,21 +11,47 @@ import { restoreSources, type RestoreSetupDraft, type RestoreSourceOutput } from
 import * as DocumentPicker from 'expo-document-picker';
 import { generator } from '@/src/data/database/idGenerator';
 import type { WorkplaceId } from '@/src/types/ids';
+import { InboxProcessingStatus } from '@/src/types/enums';
+import type { CanonicalJournal, CanonicalTransaction } from '@/src/types/importContracts';
+import type { TransactionType } from '@/src/types/enums';
+import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
+import { toTransactionType } from '@/src/data/repositories/importValueParsers';
+import {
+  evaluateJournalBalance,
+  proposeUniqueJournalFxRate,
+  resolveCurrencyPrecisions,
+} from '@/src/domain/accounting/journalBalanceEvaluator';
+import type {
+  PostedJournalFxProposal,
+  PostedJournalImportIssue,
+} from '@/src/domain/accounting/PostedJournalImportError';
+import type { JournalBalanceEvaluation } from '@/src/domain/accounting/journalBalanceEvaluator';
+import { fromMinorUnits, toMinorUnits } from '@/src/utils/money';
+import { formatDate } from '@/src/utils/dateUtils';
 
 const preparedByFingerprint = new Map<string, PreparedRestore>();
 const preparedByOperationId = new Map<string, PreparedRestore>();
+const preparedByWorkplaceIndex = new Map<string, PreparedRestore>();
+
+function indexedSourceKey(fingerprint: string, workplaceIndex: number): string {
+  return `${fingerprint}:${workplaceIndex}`;
+}
 
 export function rememberPreparedRestore(
   prepared: PreparedRestore,
   operationId?: WorkplaceId,
+  workplaceIndex?: number,
 ): void {
   if (operationId) preparedByOperationId.set(operationId, prepared);
-  else preparedByFingerprint.set(prepared.fingerprint, prepared);
+  else if (workplaceIndex !== undefined) {
+    preparedByWorkplaceIndex.set(indexedSourceKey(prepared.fingerprint, workplaceIndex), prepared);
+  } else preparedByFingerprint.set(prepared.fingerprint, prepared);
 }
 
 export function forgetAllPreparedRestores(): void {
   preparedByFingerprint.clear();
   preparedByOperationId.clear();
+  preparedByWorkplaceIndex.clear();
 }
 
 export function keepPreparedRestores(sources: readonly RestoreSourceOutput[]): void {
@@ -35,11 +61,21 @@ export function keepPreparedRestores(sources: readonly RestoreSourceOutput[]): v
   const operationIds = new Set<string>(
     sources.flatMap(source => (source.operationId ? [source.operationId] : [])),
   );
+  const indexedSources = new Set(
+    sources.flatMap(source =>
+      !source.operationId && source.source.workplaceIndex !== undefined
+        ? [indexedSourceKey(source.source.fingerprint, source.source.workplaceIndex)]
+        : [],
+    ),
+  );
   for (const fingerprint of preparedByFingerprint.keys()) {
     if (!fingerprints.has(fingerprint)) preparedByFingerprint.delete(fingerprint);
   }
   for (const operationId of preparedByOperationId.keys()) {
     if (!operationIds.has(operationId)) preparedByOperationId.delete(operationId);
+  }
+  for (const key of preparedByWorkplaceIndex.keys()) {
+    if (!indexedSources.has(key)) preparedByWorkplaceIndex.delete(key);
   }
 }
 
@@ -145,7 +181,7 @@ export async function pickAndPrepareRestore(
           ),
       });
       const operationId = preparedSources.length === 0 ? undefined : (generator() as WorkplaceId);
-      rememberPreparedRestore(prepared, operationId);
+      rememberPreparedRestore(prepared, operationId, entries[index] ? index : undefined);
       preparedSources.push({
         source: sourceRefFor(file, prepared.fingerprint, entries[index] ? index : undefined),
         facts: prepared.facts,
@@ -198,7 +234,9 @@ export async function loadPreparedRestores(draft: RestoreSetupDraft): Promise<Pr
       ? preparedByOperationId.get(source.operationId)
       : source.source.workplaceIndex === undefined
         ? preparedByFingerprint.get(source.source.fingerprint)
-        : undefined;
+        : preparedByWorkplaceIndex.get(
+            indexedSourceKey(source.source.fingerprint, source.source.workplaceIndex),
+          );
     if (cached) {
       prepared.push(cached);
       continue;
@@ -208,10 +246,481 @@ export async function loadPreparedRestores(draft: RestoreSetupDraft): Promise<Pr
     const plugin = importRegistry.detect(selectedContext);
     if (!plugin) throw new Error('Could not determine restore file format');
     const item = await prepareRestore(plugin, selectedContext);
-    rememberPreparedRestore(item, source.operationId);
+    rememberPreparedRestore(item, source.operationId, source.source.workplaceIndex);
     prepared.push(item);
   }
   return prepared;
+}
+
+export interface PreparedRestoreJournalView {
+  readonly journal: CanonicalJournal;
+  readonly precisionByCurrency: ReadonlyMap<string, number>;
+  readonly fxProposal?: PostedJournalFxProposal;
+  readonly lines: readonly {
+    readonly transaction: CanonicalTransaction;
+    readonly accountName?: string;
+    readonly accountCurrency?: string;
+    readonly transactionType: TransactionType;
+    readonly proposedExchangeRate?: number;
+  }[];
+}
+
+export interface PreparedRestoreJournalIssueView extends PreparedRestoreJournalView {
+  readonly details: string;
+  readonly evaluation: JournalBalanceEvaluation;
+}
+
+async function precisionByCurrencyForJournal(
+  canonicalData: PreparedRestore['canonicalData'],
+  journal: CanonicalJournal,
+  lines: readonly { transaction: CanonicalTransaction; accountCurrency?: string }[],
+): Promise<Map<string, number>> {
+  const activeImportedPrecisions = new Map(
+    (canonicalData.currencies ?? [])
+      .filter(currency => currency.deletedAt == null)
+      .map(currency => [currency.code.trim().toUpperCase(), currency.precision]),
+  );
+  return resolveCurrencyPrecisions(
+    [
+      journal.currencyCode,
+      ...lines.map(line => line.accountCurrency ?? line.transaction.currencyCode),
+    ],
+    code => activeImportedPrecisions.get(code) ?? currencyRepository.getPrecision(code),
+  );
+}
+
+function sourceIndexForWorkplace(draft: RestoreSetupDraft, workplaceId: WorkplaceId): number {
+  return restoreSources(draft).findIndex(
+    (source, index) =>
+      source.operationId === workplaceId ||
+      (index === 0 && !source.operationId && draft.operationId === workplaceId),
+  );
+}
+
+export function getPreparedRestoreWorkplaceName(
+  draft: RestoreSetupDraft,
+  workplaceId: WorkplaceId,
+): string | undefined {
+  const source = restoreSources(draft)[sourceIndexForWorkplace(draft, workplaceId)];
+  return source?.facts.workplace.name?.trim() || undefined;
+}
+
+async function preparedRestoreAt(
+  draft: RestoreSetupDraft,
+  workplaceId: WorkplaceId,
+): Promise<{ index: number; prepared: PreparedRestore } | undefined> {
+  const index = sourceIndexForWorkplace(draft, workplaceId);
+  if (index < 0) return undefined;
+  const prepared = (await loadPreparedRestores(draft))[index];
+  return prepared ? { index, prepared } : undefined;
+}
+
+function rememberRestoreAt(
+  draft: RestoreSetupDraft,
+  index: number,
+  prepared: PreparedRestore,
+): void {
+  const source = restoreSources(draft)[index];
+  rememberPreparedRestore(prepared, source?.operationId, source?.source.workplaceIndex);
+}
+
+async function preparedRestoreJournalView(
+  canonicalData: PreparedRestore['canonicalData'],
+  journalId: string,
+  fxProposal?: PostedJournalFxProposal,
+): Promise<PreparedRestoreJournalView | undefined> {
+  const journal = canonicalData.journals.find(candidate => candidate.id === journalId);
+  if (!journal) return undefined;
+  const accounts = new Map(
+    canonicalData.accounts.map(account => [
+      account.id,
+      {
+        name: account.name,
+        currencyCode: account.deletedAt ? undefined : account.currencyCode,
+      },
+    ]),
+  );
+  const transactions = canonicalData.transactions.filter(
+    transaction => transaction.journalId === journalId && !transaction.deletedAt,
+  );
+  const lines = transactions.map(transaction => ({
+    transaction,
+    accountName: accounts.get(transaction.accountId)?.name,
+    accountCurrency: accounts.get(transaction.accountId)?.currencyCode,
+    transactionType: toTransactionType(transaction.transactionType),
+    proposedExchangeRate:
+      fxProposal?.transactionId === transaction.id ? fxProposal.exchangeRate : undefined,
+  }));
+  const precisionByCurrency = await precisionByCurrencyForJournal(canonicalData, journal, lines);
+  return {
+    journal,
+    precisionByCurrency,
+    ...(fxProposal ? { fxProposal } : {}),
+    lines,
+  };
+}
+
+/** Read all rejected entries from the same prepared Workplace in one pass. */
+export async function getPreparedRestoreJournalIssues(
+  draft: RestoreSetupDraft,
+  workplaceId: WorkplaceId,
+  issues: readonly PostedJournalImportIssue[],
+): Promise<PreparedRestoreJournalIssueView[]> {
+  const item = await preparedRestoreAt(draft, workplaceId);
+  if (!item) return [];
+  const views = await Promise.all(
+    issues.map(async issue => {
+      const entry = await preparedRestoreJournalView(
+        item.prepared.canonicalData,
+        issue.journalId,
+        issue.fxProposal,
+      );
+      return entry ? { ...entry, details: issue.details, evaluation: issue.evaluation } : undefined;
+    }),
+  );
+  return views.filter((view): view is PreparedRestoreJournalIssueView => view !== undefined);
+}
+
+export interface RestoreJournalLineEdit {
+  readonly transactionId: string;
+  readonly amount: string;
+  readonly exchangeRate?: string;
+}
+
+/** Apply edits to the in-memory prepared backup so publication retries use the revised lines. */
+export async function editPreparedRestoreJournal(
+  draft: RestoreSetupDraft,
+  workplaceId: WorkplaceId,
+  journalId: string,
+  edits: readonly RestoreJournalLineEdit[],
+): Promise<string> {
+  const item = await preparedRestoreAt(draft, workplaceId);
+  if (!item)
+    throw new Error('The prepared restore is no longer available. Select the backup again.');
+  const { canonicalData } = item.prepared;
+  const journal = canonicalData.journals.find(candidate => candidate.id === journalId);
+  if (!journal) throw new Error('This journal entry is no longer available in the backup.');
+  const lines = canonicalData.transactions.filter(
+    transaction => transaction.journalId === journalId && !transaction.deletedAt,
+  );
+  const editsById = new Map(edits.map(edit => [edit.transactionId, edit]));
+  if (editsById.size !== lines.length || lines.some(line => !editsById.has(line.id))) {
+    throw new Error('Every posting line must have a valid edit.');
+  }
+
+  const accountCurrencyById = new Map(
+    canonicalData.accounts.map(account => [
+      account.id,
+      account.deletedAt ? undefined : account.currencyCode,
+    ]),
+  );
+  const transactions = canonicalData.transactions.map(transaction => {
+    if (transaction.journalId !== journalId || transaction.deletedAt) return transaction;
+    const edit = editsById.get(transaction.id);
+    if (!edit || !edit.amount.trim()) throw new Error('Enter an amount for every posting line.');
+    const amount = Number(edit.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error('Posting amounts must be greater than zero.');
+    }
+    const accountCurrency = accountCurrencyById.get(transaction.accountId);
+    if (
+      !accountCurrency ||
+      accountCurrency.trim().toUpperCase() === journal.currencyCode.trim().toUpperCase()
+    ) {
+      return { ...transaction, amount };
+    }
+    const rate = edit.exchangeRate?.trim() ? Number(edit.exchangeRate) : Number.NaN;
+    if (!Number.isFinite(rate) || rate <= 0) {
+      throw new Error('Exchange rates must be greater than zero.');
+    }
+    return { ...transaction, amount, exchangeRate: rate };
+  });
+  const updatedLines = transactions.filter(
+    transaction => transaction.journalId === journalId && !transaction.deletedAt,
+  );
+  const precisionByCurrency = await precisionByCurrencyForJournal(
+    canonicalData,
+    journal,
+    updatedLines.map(transaction => ({
+      transaction,
+      accountCurrency: accountCurrencyById.get(transaction.accountId),
+    })),
+  );
+  const evaluation = evaluateJournalBalance({
+    journalCurrency: journal.currencyCode,
+    precisionByCurrency,
+    lines: updatedLines.map(transaction => ({
+      id: transaction.id,
+      accountId: transaction.accountId,
+      accountCurrency: accountCurrencyById.get(transaction.accountId),
+      amount: transaction.amount,
+      exchangeRate: transaction.exchangeRate,
+      transactionType: toTransactionType(transaction.transactionType),
+    })),
+  });
+  if (!evaluation.isBalanced) {
+    const message = evaluation.issues.map(issue => issue.message).join('; ');
+    throw new Error(message || 'Balance the journal before applying these changes.');
+  }
+  const normalizedAmounts = new Map(
+    evaluation.lineValues.map(line => [line.id, line.nativeAmount]),
+  );
+  const normalizedTransactions = transactions.map(transaction => {
+    const amount = normalizedAmounts.get(transaction.id);
+    return amount === undefined ? transaction : { ...transaction, amount };
+  });
+  const accountNameById = new Map(
+    canonicalData.accounts.map(account => [account.id, account.name]),
+  );
+  const changes = lines.flatMap(original => {
+    const updated = normalizedTransactions.find(candidate => candidate.id === original.id);
+    if (!updated) return [];
+    const currency = accountCurrencyById.get(original.accountId) ?? original.currencyCode;
+    const changesForLine: string[] = [];
+    if (original.amount !== updated.amount) {
+      changesForLine.push(`${original.amount} ${currency} → ${updated.amount} ${currency}`);
+    }
+    if (original.exchangeRate !== updated.exchangeRate) {
+      changesForLine.push(
+        `rate ${original.exchangeRate ?? 'missing'} → ${updated.exchangeRate ?? 'missing'} ${journal.currencyCode}`,
+      );
+    }
+    return changesForLine.length > 0
+      ? [
+          `${accountNameById.get(original.accountId) ?? 'Posting line'}: ${changesForLine.join(', ')}`,
+        ]
+      : [];
+  });
+  const change = changes.length
+    ? `Edited “${journal.description?.trim() || 'Imported journal entry'}” (${formatDate(journal.journalDate)}): ${changes.join('; ')}.`
+    : `Reviewed “${journal.description?.trim() || 'Imported journal entry'}” (${formatDate(journal.journalDate)}); no amount or rate changes were needed.`;
+  const totalMinorUnits =
+    evaluation.journalTotalAmount !== undefined
+      ? toMinorUnits(evaluation.journalTotalAmount, evaluation.journalPrecision)
+      : Math.max(evaluation.debitTotalMinorUnits, evaluation.creditTotalMinorUnits);
+  const journals = canonicalData.journals.map(candidate =>
+    candidate.id === journalId
+      ? {
+          ...candidate,
+          totalAmount: fromMinorUnits(totalMinorUnits, evaluation.journalPrecision),
+        }
+      : candidate,
+  );
+
+  rememberRestoreAt(draft, item.index, {
+    ...item.prepared,
+    canonicalData: { ...canonicalData, journals, transactions: normalizedTransactions },
+    warnings: [...item.prepared.warnings, change],
+  });
+  return change;
+}
+
+export interface RestoreFxRepairResult {
+  readonly changes: readonly string[];
+}
+
+/** Apply only uniquely inferred FX rates that preserve imported account amounts. */
+export async function applyPreparedRestoreFxSuggestions(
+  draft: RestoreSetupDraft,
+  workplaceId: WorkplaceId,
+  issues: readonly PostedJournalImportIssue[],
+): Promise<RestoreFxRepairResult> {
+  const item = await preparedRestoreAt(draft, workplaceId);
+  if (!item)
+    throw new Error('The prepared restore is no longer available. Select the backup again.');
+
+  const { canonicalData } = item.prepared;
+  const accountCurrencyById = new Map(
+    canonicalData.accounts.map(account => [
+      account.id,
+      account.deletedAt ? undefined : account.currencyCode,
+    ]),
+  );
+  let transactions = canonicalData.transactions;
+  let journals = canonicalData.journals;
+  const changes: string[] = [];
+
+  for (const issue of issues) {
+    const proposal = issue.fxProposal;
+    if (!proposal?.evaluation.isBalanced) {
+      throw new Error('This implied rate suggestion is not safe to apply automatically.');
+    }
+    const journal = journals.find(candidate => candidate.id === issue.journalId);
+    if (!journal || journal.deletedAt) {
+      throw new Error(
+        'A journal in the restore changed before its suggested rate could be applied.',
+      );
+    }
+    const activeLines = transactions.filter(
+      transaction => transaction.journalId === journal.id && !transaction.deletedAt,
+    );
+    const precisionByCurrency = await precisionByCurrencyForJournal(
+      canonicalData,
+      journal,
+      activeLines.map(transaction => ({
+        transaction,
+        accountCurrency: accountCurrencyById.get(transaction.accountId),
+      })),
+    );
+    const input = {
+      journalCurrency: journal.currencyCode,
+      precisionByCurrency,
+      lines: activeLines.map(transaction => ({
+        id: transaction.id,
+        accountId: transaction.accountId,
+        accountCurrency: accountCurrencyById.get(transaction.accountId),
+        amount: transaction.amount,
+        exchangeRate: transaction.exchangeRate,
+        transactionType: toTransactionType(transaction.transactionType),
+      })),
+    };
+    const expected = proposeUniqueJournalFxRate(input);
+    if (
+      !expected ||
+      expected.transactionId !== proposal.transactionId ||
+      expected.exchangeRate !== proposal.exchangeRate
+    ) {
+      throw new Error('The implied rate suggestion no longer matches the journal amounts.');
+    }
+
+    const updatedTransactions = transactions.map(transaction =>
+      transaction.id === expected.transactionId
+        ? { ...transaction, exchangeRate: expected.exchangeRate }
+        : transaction,
+    );
+    const evaluation = evaluateJournalBalance({
+      ...input,
+      lines: input.lines.map(line =>
+        line.id === expected.transactionId
+          ? { ...line, exchangeRate: expected.exchangeRate }
+          : line,
+      ),
+    });
+    if (!evaluation.isBalanced) {
+      throw new Error('The implied rate no longer balances its journal.');
+    }
+
+    // Keep imported native amounts byte-for-byte; only the journal valuation changes.
+    transactions = updatedTransactions;
+    const totalMinorUnits = Math.max(
+      evaluation.debitTotalMinorUnits,
+      evaluation.creditTotalMinorUnits,
+    );
+    journals = journals.map(candidate =>
+      candidate.id === journal.id
+        ? {
+            ...candidate,
+            totalAmount: fromMinorUnits(totalMinorUnits, evaluation.journalPrecision),
+          }
+        : candidate,
+    );
+
+    const line = activeLines.find(candidate => candidate.id === expected.transactionId);
+    const currency = line ? (accountCurrencyById.get(line.accountId) ?? line.currencyCode) : '';
+    const description = journal.description?.trim() || 'Imported journal entry';
+    const displayRate = Number(expected.exchangeRate.toPrecision(10)).toString();
+    changes.push(
+      `Adjusted FX for “${description}” (${formatDate(journal.journalDate)}): 1 ${currency} = ${displayRate} ${journal.currencyCode}. Account amounts were kept unchanged.`,
+    );
+  }
+
+  if (issues.length === 0) {
+    throw new Error('There are no uniquely balanceable FX suggestions to apply.');
+  }
+  rememberRestoreAt(draft, item.index, {
+    ...item.prepared,
+    canonicalData: { ...canonicalData, journals, transactions },
+    warnings: [...item.prepared.warnings, ...changes],
+  });
+  return { changes };
+}
+
+/** Remove the rejected entry and dependent rows from the prepared backup before retrying. */
+export async function ignorePreparedRestoreJournal(
+  draft: RestoreSetupDraft,
+  workplaceId: WorkplaceId,
+  journalId: string,
+): Promise<string> {
+  const item = await preparedRestoreAt(draft, workplaceId);
+  if (!item)
+    throw new Error('The prepared restore is no longer available. Select the backup again.');
+  const { canonicalData } = item.prepared;
+  if (!canonicalData.journals.some(journal => journal.id === journalId)) {
+    throw new Error('This journal entry is no longer available in the backup.');
+  }
+
+  const transactionIds = new Set(
+    canonicalData.transactions
+      .filter(transaction => transaction.journalId === journalId)
+      .map(transaction => transaction.id),
+  );
+  const journal = canonicalData.journals.find(candidate => candidate.id === journalId);
+  const journals = canonicalData.journals
+    .filter(journal => journal.id !== journalId)
+    .map(journal => ({
+      ...journal,
+      ...(journal.originalJournalId === journalId ? { originalJournalId: undefined } : {}),
+      ...(journal.reversingJournalId === journalId ? { reversingJournalId: undefined } : {}),
+    }));
+  const canonicalDataWithoutJournal = {
+    ...canonicalData,
+    journals,
+    transactions: canonicalData.transactions.filter(
+      transaction => transaction.journalId !== journalId,
+    ),
+    journalMetadata: canonicalData.journalMetadata?.filter(
+      metadata => metadata.journalId !== journalId,
+    ),
+    auditLogs: canonicalData.auditLogs?.filter(
+      log =>
+        !(log.entityType === 'journal' && log.entityId === journalId) &&
+        !(log.entityType === 'transaction' && transactionIds.has(log.entityId)),
+    ),
+    balanceSnapshots: canonicalData.balanceSnapshots?.filter(
+      snapshot => !transactionIds.has(snapshot.transactionId),
+    ),
+    transactionInboxRecords: canonicalData.transactionInboxRecords?.map(record => {
+      const unlinked = record.linkedJournalId === journalId;
+      const unmarkedDuplicate = record.duplicateJournalId === journalId;
+      if (!unlinked && !unmarkedDuplicate) return record;
+      return {
+        ...record,
+        ...(unlinked
+          ? {
+              linkedJournalId: undefined,
+              processingStatus: InboxProcessingStatus.PENDING,
+              processedAt: undefined,
+            }
+          : {}),
+        ...(unmarkedDuplicate
+          ? {
+              duplicateJournalId: undefined,
+              ...(record.processingStatus === InboxProcessingStatus.DUPLICATE_FLAGGED
+                ? {
+                    processingStatus: InboxProcessingStatus.PENDING,
+                    processedAt: undefined,
+                  }
+                : {}),
+            }
+          : {}),
+      };
+    }),
+  };
+
+  const change = journal
+    ? `Ignored “${journal.description?.trim() || 'a journal entry'}” (${formatDate(journal.journalDate)}) during restore.`
+    : 'Ignored a journal entry during restore.';
+  rememberRestoreAt(draft, item.index, {
+    ...item.prepared,
+    canonicalData: canonicalDataWithoutJournal,
+    stats: {
+      ...item.prepared.stats,
+      journals: Math.max(0, item.prepared.stats.journals - 1),
+      transactions: Math.max(0, item.prepared.stats.transactions - transactionIds.size),
+    },
+    warnings: [...item.prepared.warnings, change],
+  });
+  return change;
 }
 
 async function selectV2WorkplaceAtIndex(

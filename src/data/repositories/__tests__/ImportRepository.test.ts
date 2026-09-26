@@ -229,11 +229,89 @@ describe('ImportRepository', () => {
             },
           ],
         }),
-      ).rejects.toThrow(/posted journal restore-journal is invalid or unbalanced/);
+      ).rejects.toThrow(/Journal debits and credits differ by 1.00 USD/);
 
       expect(await database.collections.get('workplaces').query().fetchCount()).toBe(0);
       expect(await database.collections.get('accounts').query().fetchCount()).toBe(0);
       expect(await database.collections.get('journals').query().fetchCount()).toBe(0);
+      expect(await database.collections.get('transactions').query().fetchCount()).toBe(0);
+    });
+
+    it('proposes the implied FX rate while preserving imported account amounts', async () => {
+      await expect(
+        importRepository.batchInsertNewWorkplace(workplace, {
+          accounts: [
+            {
+              id: 'restore-hkd',
+              name: 'HKD Cash',
+              accountType: AccountType.ASSET,
+              currencyCode: 'HKD',
+            },
+            {
+              id: 'restore-inr',
+              name: 'INR Bank',
+              accountType: AccountType.ASSET,
+              currencyCode: 'INR',
+            },
+          ],
+          journals: [
+            {
+              ...journalRows[0],
+              currencyCode: 'INR',
+              totalAmount: 5791.12,
+            },
+          ],
+          transactions: [
+            {
+              id: 'restore-line-hkd',
+              journalId: 'restore-journal' as JournalId,
+              accountId: 'restore-hkd' as AccountId,
+              amount: 500.76,
+              transactionType: TransactionType.DEBIT,
+              currencyCode: 'HKD',
+              transactionDate: 1_000,
+              exchangeRate: 11.5348,
+            },
+            {
+              id: 'restore-line-inr',
+              journalId: 'restore-journal' as JournalId,
+              accountId: 'restore-inr' as AccountId,
+              amount: 5791.12,
+              transactionType: TransactionType.CREDIT,
+              currencyCode: 'INR',
+              transactionDate: 1_000,
+            },
+          ],
+          currencies: [
+            {
+              id: 'currency-hkd',
+              code: 'HKD',
+              symbol: 'HK$',
+              name: 'Hong Kong Dollar',
+              precision: 2,
+            },
+            { id: 'currency-inr', code: 'INR', symbol: '₹', name: 'Indian Rupee', precision: 2 },
+          ],
+        }),
+      ).rejects.toMatchObject({
+        issues: [
+          expect.objectContaining({
+            fxProposal: expect.objectContaining({
+              transactionId: 'restore-line-hkd',
+              exchangeRate: 5791.12 / 500.76,
+              evaluation: expect.objectContaining({
+                isBalanced: true,
+                lineValues: expect.arrayContaining([
+                  expect.objectContaining({ id: 'restore-line-hkd', nativeAmount: 500.76 }),
+                  expect.objectContaining({ id: 'restore-line-inr', nativeAmount: 5791.12 }),
+                ]),
+              }),
+            }),
+          }),
+        ],
+      });
+
+      expect(await database.collections.get('workplaces').query().fetchCount()).toBe(0);
       expect(await database.collections.get('transactions').query().fetchCount()).toBe(0);
     });
 

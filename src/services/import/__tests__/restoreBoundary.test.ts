@@ -177,6 +177,37 @@ describe('restore service boundary', () => {
     expect(preferences.device.setActiveWorkplaceId).not.toHaveBeenCalled();
   });
 
+  it('finishes restore without waiting for the online exchange-rate refresh', async () => {
+    const previousE2eFlag = process.env.EXPO_PUBLIC_E2E;
+    process.env.EXPO_PUBLIC_E2E = '0';
+    (importRepository.batchInsertNewWorkplace as jest.Mock).mockResolvedValue({
+      id: operationId,
+      name: 'Imported Books',
+      icon: Icon.Briefcase,
+      defaultCurrencyCode: 'USD',
+    });
+    (exchangeRateService.syncTodayRates as jest.Mock).mockImplementationOnce(
+      () => new Promise<void>(() => undefined),
+    );
+
+    try {
+      await expect(
+        publishRestore(prepared(), {
+          operationId,
+          corrections: {
+            name: 'Imported Books',
+            icon: Icon.Briefcase,
+            defaultCurrencyCode: 'USD',
+          },
+        }),
+      ).resolves.toMatchObject({ workplaceId: operationId });
+      expect(exchangeRateService.syncTodayRates).toHaveBeenCalledWith('USD');
+    } finally {
+      if (previousE2eFlag === undefined) delete process.env.EXPO_PUBLIC_E2E;
+      else process.env.EXPO_PUBLIC_E2E = previousE2eFlag;
+    }
+  });
+
   it('backfills missing foreign transaction rates before publication', async () => {
     (importRepository.batchInsertNewWorkplace as jest.Mock).mockResolvedValue({
       id: operationId,
@@ -221,7 +252,7 @@ describe('restore service boundary', () => {
     expect(exchangeRateService.getHistoricalRate).toHaveBeenCalledWith(
       'EUR',
       'USD',
-      Date.UTC(2020, 0, 2, 12),
+      Date.UTC(2020, 0, 2),
     );
   });
 

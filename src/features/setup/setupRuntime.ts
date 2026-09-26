@@ -58,7 +58,7 @@ export function createJourneyCoordinator(journeyId: SetupJourneyId): SetupCoordi
     resolution: { getAutoOutput: getRestoreAutoOutput },
     effects: {
       commitDevice: finishDeviceSetup,
-      publishRestore: async restoreDraft => {
+      publishRestore: async (restoreDraft, onProgress) => {
         const preparedRestores = await loadPreparedRestores(restoreDraft);
         const workplace = restoreDraft.workplace;
         if (!workplace) throw new Error('Workplace corrections are missing');
@@ -90,7 +90,11 @@ export function createJourneyCoordinator(journeyId: SetupJourneyId): SetupCoordi
                     }
                   : undefined;
             if (!corrections) throw new Error('Bulk restore workplace metadata is incomplete');
-            const handoff = await publishRestore(prepared, { operationId, corrections });
+            const handoff = await publishRestore(prepared, {
+              operationId,
+              corrections,
+              onProgress,
+            });
             if (index > 0 && !(await workplaceService.getWorkplace(operationId))) {
               throw new Error(`Restored workplace was not saved: ${imported.name}`);
             }

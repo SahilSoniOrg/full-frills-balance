@@ -5,7 +5,7 @@ import {
   resolveWorkplaceRatesFromConvertedAmount,
 } from '@/src/features/journal/entry/manualBaseRate';
 import { parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
-import { roundToPrecision } from '@/src/utils/money';
+import { normalizeCurrencyAmount } from '@/src/domain/accounting/journalFx';
 
 export const RATE_UNAVAILABLE = 'Rate unavailable';
 
@@ -84,7 +84,10 @@ export function tieDestinationAmount(
   destBaseRate: number,
   destPrecision: number,
 ): { amount: number; destBaseRate: number } {
-  const amount = roundToPrecision(sourceAmount * (sourceBaseRate / destBaseRate), destPrecision);
+  const amount = normalizeCurrencyAmount(
+    sourceAmount * (sourceBaseRate / destBaseRate),
+    destPrecision,
+  ).amount;
   if (!(amount > 0)) return { amount, destBaseRate };
   const sourceBase = sourceAmount * sourceBaseRate;
   if (Math.abs(amount * destBaseRate - sourceBase) < 1e-6) return { amount, destBaseRate };

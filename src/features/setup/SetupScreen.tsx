@@ -1,14 +1,17 @@
 import { AppNavigation } from '@/src/utils/navigation';
 import { confirm, toast } from '@/src/utils/alerts';
 import { AppButton, AppText, LoadingView } from '@/src/components/core';
+import { Spacing } from '@/src/constants/design-tokens';
 import { ThemeOverride } from '@/src/contexts/UIContext';
 import { Box, Page, Stack } from '@/src/design-system';
+import { PostedJournalImportError } from '@/src/domain/accounting/PostedJournalImportError';
 import {
   readSetupDraftSnapshot,
   subscribeToSetupDraft,
 } from '@/src/services/setup/launchProjection';
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { ScrollView } from 'react-native-gesture-handler';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { AppearanceSetupSlice } from './AppearanceSetupSlice';
 import { DeviceSetupSlice } from './DeviceSetupSlice';
@@ -19,6 +22,16 @@ import type { SetupSliceOutputById } from './SetupCoordinator';
 import { discardUnreadableSetupDraft, loadSetupDraft, saveSetupDraft } from './SetupDraftStore';
 import { getSetupRecipe, recipeContainsSlice } from './setupRecipes';
 import { SetupSummarySlice } from './SetupSummarySlice';
+import { RestoreJournalRecovery } from './RestoreJournalRecovery';
+import {
+  applyPreparedRestoreFxSuggestions,
+  editPreparedRestoreJournal,
+  getPreparedRestoreWorkplaceName,
+  getPreparedRestoreJournalIssues,
+  ignorePreparedRestoreJournal,
+  type PreparedRestoreJournalIssueView,
+  type RestoreJournalLineEdit,
+} from './pickRestoreSource';
 import {
   abandonRestoreJourney,
   applySetupOutcome,
@@ -29,6 +42,7 @@ import {
 import {
   isRestoreJourneyId,
   restoreSources,
+  type RestoreSetupDraft,
   type RestoreSummaryIntent,
   type SetupJourneyId,
   type SetupSliceId,
@@ -52,6 +66,13 @@ function restoreSwitchForJourney(
   }
 }
 
+function restoreChangesSummary(changeCount: number, workplaceCount: number): string {
+  const changes = `${changeCount} ${changeCount === 1 ? 'change' : 'changes'}`;
+  const scope =
+    workplaceCount > 1 ? `while restoring ${workplaceCount} workplaces` : 'during restore';
+  return `We applied ${changes} ${scope}. Review the list, then continue.`;
+}
+
 function SetupJourneyScreen({
   journeyId,
   candidateName,
@@ -67,6 +88,15 @@ function SetupJourneyScreen({
   useSyncExternalStore(subscribeToSetupDraft, readSetupDraftSnapshot, readSetupDraftSnapshot);
   const [submittingSlice, setSubmittingSlice] = useState<SetupSliceId>();
   const [resolutionError, setResolutionError] = useState<string>();
+  const [restoreJournalFailure, setRestoreJournalFailure] = useState<{
+    error: PostedJournalImportError;
+    entries?: readonly PreparedRestoreJournalIssueView[];
+    refreshing: boolean;
+  }>();
+  const [restoreFxRepairReport, setRestoreFxRepairReport] = useState<readonly string[]>([]);
+  const restoreFxRepairReportRef = useRef<readonly string[]>([]);
+  const [showRestoreFxRepairCompletion, setShowRestoreFxRepairCompletion] = useState(false);
+  const [restorePublicationProgress, setRestorePublicationProgress] = useState<string>();
   const draft = coordinator.getDraft();
   const action = coordinator.next();
   const slice =
@@ -76,15 +106,58 @@ function SetupJourneyScreen({
   const resolving = action.kind === 'auto_accept' || action.kind === 'run_effect';
   const bulkRestoreCount = draft.kind === 'restore' ? restoreSources(draft).length : 0;
 
+  const showResolutionFailure = (error: unknown) => {
+    const message = error instanceof Error ? error.message : 'Could not continue Setup.';
+    setResolutionError(message);
+    if (draft.kind !== 'restore' || !(error instanceof PostedJournalImportError)) {
+      setRestoreJournalFailure(undefined);
+      return;
+    }
+
+    setRestoreJournalFailure({
+      error,
+      entries: restoreJournalFailure?.entries,
+      refreshing: true,
+    });
+    void getPreparedRestoreJournalIssues(draft, error.workplaceId, error.issues)
+      .then(entries => {
+        setRestoreJournalFailure(current =>
+          current?.error === error ? { error, entries, refreshing: false } : current,
+        );
+      })
+      .catch(() => {
+        setRestoreJournalFailure(current => (current?.error === error ? undefined : current));
+      });
+  };
+
+  const resolutionToastMessage = (error: unknown, fallback: string) =>
+    error instanceof PostedJournalImportError
+      ? error.details || 'A journal entry needs attention.'
+      : error instanceof Error
+        ? error.message
+        : fallback;
+
   const settle = async () => {
-    const nextAction = await coordinator.runPendingEffect();
+    const nextAction = await coordinator.runPendingEffect(message =>
+      setRestorePublicationProgress(message),
+    );
     if (nextAction.kind === 'present') {
       coordinator.present(nextAction.sliceId);
       return;
     }
     if (nextAction.kind === 'finish') {
+      if (restoreFxRepairReportRef.current.length > 0) {
+        setShowRestoreFxRepairCompletion(true);
+        return;
+      }
       applySetupOutcome(await coordinator.finish(), recipe, onSwitchJourney);
     }
+  };
+
+  const recordRestoreChanges = (changes: readonly string[]) => {
+    const updated = [...restoreFxRepairReportRef.current, ...changes];
+    restoreFxRepairReportRef.current = updated;
+    setRestoreFxRepairReport(updated);
   };
 
   useEffect(() => {
@@ -93,9 +166,8 @@ function SetupJourneyScreen({
       saveSetupDraft(coordinator.getDraft());
     }
     void settle().catch(error => {
-      const message = error instanceof Error ? error.message : 'Could not resume Setup.';
-      setResolutionError(message);
-      toast.error(message);
+      showResolutionFailure(error);
+      toast.error(resolutionToastMessage(error, 'Could not resume Setup.'));
     });
     // Resume publication or auto-accept once when this journey mounts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -111,9 +183,8 @@ function SetupJourneyScreen({
       await coordinator.accept(sliceId, output);
       await settle();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Could not continue Setup.';
-      setResolutionError(message);
-      toast.error(message);
+      showResolutionFailure(error);
+      toast.error(resolutionToastMessage(error, 'Could not continue Setup.'));
     } finally {
       setSubmittingSlice(undefined);
     }
@@ -126,9 +197,14 @@ function SetupJourneyScreen({
       if (coordinator.next().kind !== 'finish') {
         await coordinator.accept('summary', { confirmed: true });
       }
+      if (restoreFxRepairReportRef.current.length > 0) {
+        setShowRestoreFxRepairCompletion(true);
+        return;
+      }
       applySetupOutcome(await coordinator.finish(), recipe, onSwitchJourney);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not finish Setup.');
+      showResolutionFailure(error);
+      toast.error(resolutionToastMessage(error, 'Could not finish Setup.'));
     } finally {
       setSubmittingSlice(undefined);
     }
@@ -170,9 +246,82 @@ function SetupJourneyScreen({
       await coordinator.accept('restore_summary', { intent });
       await settle();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Could not continue restore.';
-      setResolutionError(message);
-      toast.error(message);
+      showResolutionFailure(error);
+      toast.error(resolutionToastMessage(error, 'Could not continue restore.'));
+    } finally {
+      setSubmittingSlice(undefined);
+    }
+  };
+
+  const retryRestore = async () => {
+    setSubmittingSlice('restore_source');
+    setResolutionError(undefined);
+    setRestoreJournalFailure(undefined);
+    try {
+      await settle();
+    } catch (error) {
+      showResolutionFailure(error);
+    } finally {
+      setSubmittingSlice(undefined);
+    }
+  };
+
+  const runRestoreJournalMutation = async (
+    mutate: (
+      restoreDraft: RestoreSetupDraft,
+      failure: NonNullable<typeof restoreJournalFailure>,
+    ) => Promise<readonly string[]>,
+  ) => {
+    if (draft.kind !== 'restore' || !restoreJournalFailure) return;
+    const restoreDraft = draft;
+    const failure = restoreJournalFailure;
+    setSubmittingSlice('restore_source');
+    setResolutionError(undefined);
+    try {
+      const changes = await mutate(restoreDraft, failure);
+      const workplaceName = getPreparedRestoreWorkplaceName(
+        restoreDraft,
+        failure.error.workplaceId,
+      );
+      recordRestoreChanges(
+        workplaceName ? changes.map(change => `${workplaceName} · ${change}`) : changes,
+      );
+      await settle();
+    } catch (error) {
+      showResolutionFailure(error);
+    } finally {
+      setSubmittingSlice(undefined);
+    }
+  };
+
+  const applyRestoreJournalEdit = (journalId: string, edits: readonly RestoreJournalLineEdit[]) =>
+    runRestoreJournalMutation(async (restoreDraft, failure) => [
+      await editPreparedRestoreJournal(restoreDraft, failure.error.workplaceId, journalId, edits),
+    ]);
+
+  const ignoreRestoreJournal = (journalId: string) =>
+    runRestoreJournalMutation(async (restoreDraft, failure) => [
+      await ignorePreparedRestoreJournal(restoreDraft, failure.error.workplaceId, journalId),
+    ]);
+
+  const applyRestoreFxSuggestions = (journalIds: readonly string[]) =>
+    runRestoreJournalMutation(async (restoreDraft, failure) => {
+      const selectedIds = new Set(journalIds);
+      const selectedIssues = failure.error.issues.filter(issue => selectedIds.has(issue.journalId));
+      const result = await applyPreparedRestoreFxSuggestions(
+        restoreDraft,
+        failure.error.workplaceId,
+        selectedIssues,
+      );
+      return result.changes;
+    });
+
+  const continueAfterRestoreChanges = async () => {
+    setSubmittingSlice('restore_summary');
+    try {
+      applySetupOutcome(await coordinator.finish(), recipe, onSwitchJourney);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not finish restore.');
     } finally {
       setSubmittingSlice(undefined);
     }
@@ -326,7 +475,10 @@ function SetupJourneyScreen({
         currentStep={displayProgress.current}
         totalSteps={displayProgress.total}
         keyboardAvoiding={
-          slice === 'device' || (slice === 'workplace' && workplaceCheckpoint === 'identity')
+          restoreJournalFailure !== undefined ||
+          showRestoreFxRepairCompletion ||
+          slice === 'device' ||
+          (slice === 'workplace' && workplaceCheckpoint === 'identity')
         }
         backAction={
           !resolving && (slice === 'restore_source' || slice === 'restore_summary')
@@ -335,19 +487,62 @@ function SetupJourneyScreen({
         }
         backDisabled={submittingSlice !== undefined}
       >
-        {resolving && resolutionError ? (
+        {showRestoreFxRepairCompletion ? (
+          <Box flex={1} padding="lg">
+            <Stack flex={1} space="md">
+              <AppText variant="title">Restore changes applied</AppText>
+              <AppText variant="body" color="secondary">
+                {restoreChangesSummary(restoreFxRepairReport.length, bulkRestoreCount)}
+              </AppText>
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: Spacing.md }}
+                showsVerticalScrollIndicator
+                testID="restore-changes-scroll"
+              >
+                <Stack space="sm">
+                  {restoreFxRepairReport.map((change, index) => (
+                    <AppText
+                      key={`${index}-${change}`}
+                      testID={`restore-fx-repair-change-${index}`}
+                      variant="caption"
+                      color="secondary"
+                    >
+                      {change}
+                    </AppText>
+                  ))}
+                </Stack>
+              </ScrollView>
+              <AppButton
+                variant="primary"
+                onPress={() => void continueAfterRestoreChanges()}
+                loading={submittingSlice === 'restore_summary'}
+                disabled={submittingSlice !== undefined}
+              >
+                Continue to restored data
+              </AppButton>
+            </Stack>
+          </Box>
+        ) : resolving && restoreJournalFailure ? (
+          <Box flex={1} padding="lg">
+            <RestoreJournalRecovery
+              details={restoreJournalFailure.error.details}
+              issues={restoreJournalFailure.entries}
+              previouslyAppliedChanges={restoreFxRepairReport}
+              isBusy={submittingSlice !== undefined || restoreJournalFailure.refreshing}
+              onRetry={() => void retryRestore()}
+              onApplyFxSuggestions={journalIds => void applyRestoreFxSuggestions(journalIds)}
+              onIgnore={journalId => void ignoreRestoreJournal(journalId)}
+              onSaveEdits={(journalId, edits) => void applyRestoreJournalEdit(journalId, edits)}
+            />
+          </Box>
+        ) : resolving && resolutionError ? (
           <Box flex={1} padding="lg" justifyContent="center">
             <Stack space="md">
               <AppText variant="body" color="secondary">
                 {resolutionError}
               </AppText>
-              <AppButton
-                variant="primary"
-                onPress={() => {
-                  setResolutionError(undefined);
-                  void settle();
-                }}
-              >
+              <AppButton variant="primary" onPress={() => void retryRestore()}>
                 Retry
               </AppButton>
             </Stack>
@@ -356,7 +551,8 @@ function SetupJourneyScreen({
           <LoadingView
             loading
             text={
-              bulkRestoreCount > 1 ? `Restoring workplaces (1/${bulkRestoreCount})...` : undefined
+              restorePublicationProgress ??
+              (bulkRestoreCount > 1 ? `Restoring workplaces (1/${bulkRestoreCount})...` : undefined)
             }
           />
         ) : (

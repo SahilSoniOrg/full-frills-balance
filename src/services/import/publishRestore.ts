@@ -14,6 +14,9 @@ import { preferences } from '@/src/services/preferences';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { logger } from '@/src/utils/logger';
 import { restorePublicationClaims } from './restorePublicationClaims';
+import { toJournalStatus } from '@/src/data/repositories/importValueParsers';
+import { JournalStatus } from '@/src/types/enums';
+import { resolveJournalFxRate } from '@/src/domain/accounting/journalFx';
 import type { WorkplaceId } from '@/src/types/ids';
 import type {
   PreparedRestore,
@@ -76,27 +79,6 @@ async function runPostPublicationChecks(
   snapshotService.clearSnapshotsForWorkplace(workplaceId);
 
   const currencies = usedCurrencyCodes(data, defaultCurrency);
-  if (currencies.length > 0) {
-    let completed = 0;
-    await Promise.all(
-      currencies.map(async code => {
-        try {
-          await exchangeRateService.syncTodayRates(code);
-        } catch (error) {
-          logger.warn(`[RestorePublication] Exchange rate sync failed for ${code}`, { error });
-          warnings.push(`Exchange rate sync failed for ${code}`);
-        } finally {
-          completed += 1;
-          report(
-            callback,
-            `Updating exchange rates (${completed}/${currencies.length})...`,
-            0.72 + (completed / currencies.length) * 0.14,
-          );
-        }
-      }),
-    );
-  }
-
   try {
     await forceRunCheck(workplaceId, (message, progress) =>
       report(callback, message, 0.86 + progress * 0.07),
@@ -124,6 +106,18 @@ async function runPostPublicationChecks(
   } catch (error) {
     logger.warn('[RestorePublication] Balance rebuild failed after publication', { error });
     warnings.push('Post-import balance rebuild failed');
+  }
+
+  // Fresh rates are useful after restore, but restoring imported books must work
+  // offline. Refresh in the background and keep Detox runs deterministic.
+  if (process.env.EXPO_PUBLIC_E2E !== '1') {
+    for (const code of currencies) {
+      void exchangeRateService.syncTodayRates(code).catch(error => {
+        logger.warn(`[RestorePublication] Background exchange rate sync failed for ${code}`, {
+          error,
+        });
+      });
+    }
   }
 }
 
@@ -160,7 +154,36 @@ export async function publishRestore(
     report(onProgress, 'Restore already published; verifying Workplace...', 0.72);
   } else {
     const sourceData = resolveParsedImportBatchData({ canonical: prepared.canonicalData });
-    const backfilled = await backfillHistoricalExchangeRates(sourceData);
+    const postedJournalIds = new Set(
+      sourceData.journals
+        .filter(
+          journal => !journal.deletedAt && toJournalStatus(journal.status) === JournalStatus.POSTED,
+        )
+        .map(journal => journal.id),
+    );
+    const journalById = new Map(sourceData.journals.map(journal => [journal.id, journal]));
+    const accountCurrencyById = new Map(
+      sourceData.accounts.map(account => [
+        account.id,
+        account.deletedAt ? undefined : account.currencyCode,
+      ]),
+    );
+    const preserveTransactionIds = new Set(
+      sourceData.transactions.flatMap(transaction => {
+        if (!postedJournalIds.has(transaction.journalId)) return [];
+        const journal = journalById.get(transaction.journalId);
+        const accountCurrency = accountCurrencyById.get(transaction.accountId);
+        if (!journal || !accountCurrency) return [];
+        const rate = resolveJournalFxRate({
+          accountCurrency,
+          journalCurrency: journal.currencyCode,
+          importedRate: transaction.exchangeRate,
+        });
+        return rate.source === 'missing' || rate.source === 'invalid' ? [transaction.id] : [];
+      }),
+    );
+    report(onProgress, 'Preparing restored entries...', 0.12);
+    const backfilled = await backfillHistoricalExchangeRates(sourceData, preserveTransactionIds);
     warnings.push(...backfilled.warnings);
     // The repository owns the database transaction and balance preparation. Keeping this
     // call as one operation is what prevents a partially published Workplace graph.

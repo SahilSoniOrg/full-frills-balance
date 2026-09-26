@@ -1,36 +1,14 @@
 {
-  "accounts": [
-    "journal"
-  ],
-  "app": [
-    "dev",
-    "setup",
-    "onboarding"
-  ],
-  "budget": [
-    "accounts",
-    "journal"
-  ],
-  "commitments": [
-    "budget",
-    "planned-payments"
-  ],
-  "dashboard": [
-    "journal",
-    "planned-payments"
-  ],
-  "hub": [
-    "journal"
-  ],
-  "onboarding": [
-    "setup"
-  ],
+  "accounts": ["journal"],
+  "app": ["dev", "setup", "onboarding"],
+  "budget": ["accounts", "journal"],
+  "commitments": ["budget", "planned-payments"],
+  "dashboard": ["journal", "planned-payments"],
+  "hub": ["journal"],
+  "onboarding": ["setup"],
   "journal": [],
-  "planned-payments": [
-    "journal"
-  ],
+  "planned-payments": ["journal"],
   "reports": [],
-  "settings": [
-    "accounts"
-  ]
+  "settings": ["accounts"],
+  "setup": ["journal"]
 }

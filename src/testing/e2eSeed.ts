@@ -113,13 +113,125 @@ async function seedPickerReady(): Promise<void> {
 const FIRST_RUN_RESTORE_CANDIDATE = 'E2E Restore User';
 
 /** Prepare the fixture and persist a pre-publication draft. Setup owns publishRestore. */
-async function seedFirstRunRestore(): Promise<WorkplaceId> {
-  const prepared = await prepareFirstRunRestoreFixture();
-  const workplaceFacts = prepared.facts.workplace;
+async function seedFirstRunRestore(
+  withFxMismatch = false,
+  invalidJournalCount = 1,
+): Promise<WorkplaceId> {
+  const sourcePrepared = await prepareFirstRunRestoreFixture();
+  // Keep the restore-flow E2E focused on publication and first-run setup.
+  acknowledgeCurrentPrivacyPolicy();
+  const cashAccountId = sourcePrepared.canonicalData.accounts.find(
+    account => account.name === 'Cash',
+  )?.id;
+  const categoryAccountId = sourcePrepared.canonicalData.accounts.find(
+    account => account.name === 'Food & Drink',
+  )?.id;
+  const prepared = withFxMismatch
+    ? {
+        ...sourcePrepared,
+        facts: {
+          ...sourcePrepared.facts,
+          workplace: { ...sourcePrepared.facts.workplace, defaultCurrencyCode: 'INR' },
+        },
+        canonicalData: {
+          ...sourcePrepared.canonicalData,
+          accounts: sourcePrepared.canonicalData.accounts.map(account =>
+            account.id === cashAccountId
+              ? { ...account, name: 'HKD Cash', currencyCode: 'HKD' }
+              : account.id === categoryAccountId
+                ? { ...account, name: 'Federal Fi', currencyCode: 'INR' }
+                : account,
+          ),
+          journals: sourcePrepared.canonicalData.journals.map(journal => ({
+            ...journal,
+            description: 'HKD Cash out',
+            currencyCode: 'INR',
+            totalAmount: 5791.12,
+          })),
+          transactions: sourcePrepared.canonicalData.transactions.map(transaction => {
+            if (transaction.accountId === categoryAccountId) {
+              return {
+                ...transaction,
+                amount: 5791.12,
+                currencyCode: 'INR',
+                transactionType: TransactionType.CREDIT,
+              };
+            }
+            if (transaction.accountId === cashAccountId) {
+              return {
+                ...transaction,
+                id: 'restore-fx-hkd-line',
+                amount: 500.76,
+                currencyCode: 'HKD',
+                transactionType: TransactionType.DEBIT,
+                exchangeRate: 11.5348,
+              };
+            }
+            return transaction;
+          }),
+        },
+      }
+    : sourcePrepared;
+  const restoreFixture = withFxMismatch
+    ? (() => {
+        const baseJournal = prepared.canonicalData.journals[0];
+        const baseTransaction = prepared.canonicalData.transactions.find(
+          transaction => transaction.accountId === categoryAccountId,
+        );
+        if (!baseJournal || !baseTransaction || !categoryAccountId) {
+          throw new Error('[E2E] Restore FX fixture is missing its base journal or account');
+        }
+        const invalidJournals = Array.from({ length: invalidJournalCount }, (_, index) => ({
+          ...baseJournal,
+          id: (index === 0
+            ? 'restore-invalid-same-currency-journal'
+            : `restore-invalid-same-currency-journal-${index}`) as typeof baseTransaction.journalId,
+          description: `Unbalanced INR journal ${index + 1}`,
+          journalDate: baseJournal.journalDate - index * 86_400_000,
+          currencyCode: 'INR',
+          totalAmount: 10,
+          transactionCount: 2,
+        }));
+        const invalidTransactions = invalidJournals.flatMap((journal, index) => {
+          const suffix = index === 0 ? '' : `-${index}`;
+          return [
+            {
+              ...baseTransaction,
+              id: `restore-invalid-same-currency-debit${suffix}`,
+              journalId: journal.id,
+              accountId: baseTransaction.accountId,
+              amount: 10,
+              currencyCode: 'INR',
+              transactionType: TransactionType.DEBIT,
+              exchangeRate: undefined,
+            },
+            {
+              ...baseTransaction,
+              id: `restore-invalid-same-currency-credit${suffix}`,
+              journalId: journal.id,
+              accountId: baseTransaction.accountId,
+              amount: 9.99,
+              currencyCode: 'INR',
+              transactionType: TransactionType.CREDIT,
+              exchangeRate: undefined,
+            },
+          ];
+        });
+        return {
+          ...prepared,
+          canonicalData: {
+            ...prepared.canonicalData,
+            journals: [...prepared.canonicalData.journals, ...invalidJournals],
+            transactions: [...prepared.canonicalData.transactions, ...invalidTransactions],
+          },
+        };
+      })()
+    : prepared;
+  const workplaceFacts = restoreFixture.facts.workplace;
   if (!workplaceFacts.name || !workplaceFacts.icon || !workplaceFacts.defaultCurrencyCode) {
     throw new Error('[E2E] Restore fixture is missing Workplace identity');
   }
-  rememberPreparedRestore(prepared);
+  rememberPreparedRestore(restoreFixture);
   const operationId = generator() as WorkplaceId;
   saveSetupDraft({
     schemaVersion: 1,
@@ -146,6 +258,8 @@ async function seedFirstRunRestore(): Promise<WorkplaceId> {
             fingerprint: prepared.fingerprint,
           },
           facts: prepared.facts,
+          stats: prepared.stats,
+          warnings: prepared.warnings,
         },
       ],
       deviceCandidate: { value: FIRST_RUN_RESTORE_CANDIDATE, source: 'user_entered' },
@@ -154,8 +268,11 @@ async function seedFirstRunRestore(): Promise<WorkplaceId> {
   return operationId;
 }
 
-async function seedBulkRestore(): Promise<WorkplaceId> {
-  const operationId = await seedFirstRunRestore();
+async function seedBulkRestore(
+  withFxMismatch = false,
+  invalidJournalCount = 1,
+): Promise<WorkplaceId> {
+  const operationId = await seedFirstRunRestore(withFxMismatch, invalidJournalCount);
   const draft = loadSetupDraft();
   if (!draft || draft.kind !== 'restore') return operationId;
   const sources = restoreSources(draft);
@@ -414,8 +531,14 @@ export async function runE2eSeedProfile(profile: E2eSeedProfile): Promise<Workpl
   if (profile === 'first-run-restore') {
     return seedFirstRunRestore();
   }
+  if (profile === 'first-run-restore-fx-recovery') {
+    return seedFirstRunRestore(true);
+  }
   if (profile === 'bulk-restore') {
     return seedBulkRestore();
+  }
+  if (profile === 'bulk-restore-long-review') {
+    return seedBulkRestore(true, 20);
   }
   if (profile === 'bulk-restore-selection') {
     const workplaceId = await seedOnboarded(profile);

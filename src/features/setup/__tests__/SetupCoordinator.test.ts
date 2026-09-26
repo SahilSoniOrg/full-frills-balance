@@ -228,6 +228,48 @@ describe('SetupCoordinator', () => {
     });
   });
 
+  it('advances automatic setup steps after restore publication', async () => {
+    const store = memoryStore();
+    const draft: RestoreSetupDraft = {
+      schemaVersion: 1,
+      kind: 'restore',
+      journeyId: 'first_run_restore',
+      entryPolicy: 'blocking',
+      operationId,
+      presentedHistory: ['restore_source'],
+      acceptedSlices: ['restore_source', 'workplace', 'restore_summary'],
+      restore: { sources: [source], summary: { intent: 'continue' } },
+      workplace,
+    };
+    const device = { displayName: { value: 'Imported', source: 'imported' as const } };
+    const publishRestore = jest.fn().mockResolvedValue([
+      {
+        operationId,
+        workplaceId: operationId,
+        fingerprint: 'abc',
+        facts: { workplace: {} },
+        stats: { accounts: 0, journals: 0, transactions: 0, skippedTransactions: 0 },
+        warnings: [],
+      },
+    ]);
+    const coordinator = createSetupCoordinator({
+      journeyId: 'first_run_restore',
+      operationId,
+      draft,
+      draftStore: store,
+      resolution: { getAutoOutput: sliceId => (sliceId === 'device' ? device : undefined) },
+      finish: unusedFinish,
+      effects: { publishRestore, commitDevice: mockCommitDevice },
+    });
+
+    await expect(coordinator.runPendingEffect()).resolves.toMatchObject({
+      kind: 'present',
+      sliceId: 'appearance',
+    });
+    expect(mockCommitDevice).toHaveBeenCalledWith(device);
+    expect(coordinator.getDraft().acceptedSlices).toContain('device');
+  });
+
   it('persists every batch restore handoff after publication', async () => {
     const store = memoryStore();
     const secondOperationId = asWorkplaceId('operation-2');

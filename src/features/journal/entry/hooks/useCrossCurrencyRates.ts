@@ -8,6 +8,7 @@ import {
   RATE_UNAVAILABLE,
   type FxFetchedRates,
 } from '@/src/features/journal/entry/fxPair';
+import { getHistoricalFxTimestamp } from '@/src/domain/accounting/journalFx';
 import { logger } from '@/src/utils/logger';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -58,12 +59,15 @@ function fetchPairBaseRates(
   }: Required<Pick<CurrencyPairRequest, 'sourceCurrency' | 'destCurrency'>> & CurrencyPairRequest,
   { fetchRequiredRate, fetchHistoricalRate }: RateFetchers,
 ): Promise<CrossCurrencyRates | null> {
-  const historicalTimestamp = journalDate ? Date.parse(`${journalDate}T00:00:00.000Z`) : Number.NaN;
-  const fetchRate =
-    Number.isFinite(historicalTimestamp) && fetchHistoricalRate
-      ? async (fromCurrency: string, toCurrency: string) =>
-          (await fetchHistoricalRate(fromCurrency, toCurrency, historicalTimestamp)).rate
-      : (fromCurrency: string, toCurrency: string) => fetchRequiredRate(fromCurrency, toCurrency);
+  let fetchRate: (fromCurrency: string, toCurrency: string) => Promise<number | null>;
+  if (journalDate !== undefined) {
+    const historicalTimestamp = getHistoricalFxTimestamp(journalDate);
+    if (historicalTimestamp === undefined || !fetchHistoricalRate) return Promise.resolve(null);
+    fetchRate = async (fromCurrency, toCurrency) =>
+      (await fetchHistoricalRate(fromCurrency, toCurrency, historicalTimestamp)).rate;
+  } else {
+    fetchRate = (fromCurrency, toCurrency) => fetchRequiredRate(fromCurrency, toCurrency);
+  }
   return fetchCrossCurrencyRates(sourceCurrency, destCurrency, baseCurrency, fetchRate);
 }
 

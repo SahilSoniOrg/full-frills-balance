@@ -22,6 +22,7 @@ export interface ExchangeRateCardProps {
   children?: ReactNode;
   destLabel?: string;
   precision?: number;
+  resetRateAccessibilityLabel?: string;
   containerStyle?: StyleProp<ViewStyle>;
   testIDPrefix?: string;
 }
@@ -64,6 +65,7 @@ export function ExchangeRateCard({
   variant = 'card',
   destLabel,
   precision = 2,
+  resetRateAccessibilityLabel,
   containerStyle,
   testIDPrefix,
   children,
@@ -117,7 +119,9 @@ export function ExchangeRateCard({
     <PressScaleTouchable
       onPress={handleResetToApiRate}
       accessibilityRole="button"
-      accessibilityLabel={AppConfig.strings.transactionFlow.resetToMarketRate}
+      accessibilityLabel={
+        resetRateAccessibilityLabel ?? AppConfig.strings.transactionFlow.resetToMarketRate
+      }
       testID={testID('reset-fx-rate-button')}
       hitSlop={RESET_HIT_SLOP}
       surfaceStyle={styles.resetButton}
@@ -128,40 +132,41 @@ export function ExchangeRateCard({
 
   if (!isCrossCurrency && !pair.needsManualRates) return null;
 
-  const rateSummary = pair.isLoading ? (
-    <AppText variant="caption" color="secondary">
-      {AppConfig.strings.transactionFlow.fetchingRate}
-    </AppText>
-  ) : displayedRate ? (
-    <View style={isAttached ? styles.attachedRateRow : styles.fxRateRow}>
-      <View style={styles.fxRateLabel}>
-        <AppText variant="caption" color="tertiary" numberOfLines={1} ellipsizeMode="tail">
-          1 {displayedRate.sourceCurrency} = {formatRoundedAmount(displayedRate.exchangeRate, 4)}{' '}
-          {displayedRate.destinationCurrency}
-        </AppText>
+  const rateSummary =
+    pair.isLoading && !displayedRate ? (
+      <AppText variant="caption" color="secondary">
+        {AppConfig.strings.transactionFlow.fetchingRate}
+      </AppText>
+    ) : displayedRate ? (
+      <View style={isAttached ? styles.attachedRateRow : styles.fxRateRow}>
+        <View style={styles.fxRateLabel}>
+          <AppText variant="caption" color="tertiary" numberOfLines={1} ellipsizeMode="tail">
+            1 {displayedRate.sourceCurrency} = {formatRoundedAmount(displayedRate.exchangeRate, 4)}{' '}
+            {displayedRate.destinationCurrency}
+          </AppText>
+        </View>
+        {resetRateButton}
       </View>
-      {resetRateButton}
-    </View>
-  ) : (
-    <View style={isAttached ? styles.attachedRateRow : styles.fxRateRow}>
-      <View style={styles.fxRateLabel}>
-        <AppText
-          variant="caption"
-          color={pair.rateError ? 'error' : 'secondary'}
-          numberOfLines={isAttached ? 2 : undefined}
-        >
-          {pair.rateError
-            ? isAttached
-              ? pair.rateError
-              : `${pair.rateError}. ${AppConfig.strings.transactionFlow.enterConvertedOrWorkplaceRate(baseCurrency)}`
-            : AppConfig.strings.transactionFlow.enterConvertedOrWorkplaceRate(
-                isAttached ? (destCurrency ?? '') : baseCurrency,
-              )}
-        </AppText>
+    ) : (
+      <View style={isAttached ? styles.attachedRateRow : styles.fxRateRow}>
+        <View style={styles.fxRateLabel}>
+          <AppText
+            variant="caption"
+            color={pair.rateError ? 'error' : 'secondary'}
+            numberOfLines={isAttached ? 2 : undefined}
+          >
+            {pair.rateError
+              ? isAttached
+                ? pair.rateError
+                : `${pair.rateError}. ${AppConfig.strings.transactionFlow.enterConvertedOrWorkplaceRate(baseCurrency)}`
+              : AppConfig.strings.transactionFlow.enterConvertedOrWorkplaceRate(
+                  isAttached ? (destCurrency ?? '') : baseCurrency,
+                )}
+          </AppText>
+        </View>
+        {pair.needsBaseRate ? resetRateButton : null}
       </View>
-      {pair.needsBaseRate ? resetRateButton : null}
-    </View>
-  );
+    );
 
   const convertedInput = destCurrency ? (
     <TextInput
@@ -228,7 +233,7 @@ export function ExchangeRateCard({
 
   return (
     <View style={[styles.fxCard, containerStyle, cardColors]} testID={cardTestID}>
-      {pair.isLoading ? (
+      {pair.isLoading && !displayedRate ? (
         rateSummary
       ) : (
         <View style={styles.fxContent}>

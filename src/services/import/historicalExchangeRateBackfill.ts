@@ -2,18 +2,18 @@ import { AppConfig } from '@/src/constants/app-config';
 import type { BatchImportData, CanonicalTransaction } from '@/src/types/importContracts';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { runTasksWithBoundedConcurrency } from '@/src/utils/asyncConcurrency';
+import {
+  getJournalFxDateKey,
+  getJournalHistoricalFxTimestamp,
+} from '@/src/domain/accounting/journalFx';
 
 function hasValidRate(rate: number | undefined): rate is number {
   return typeof rate === 'number' && Number.isFinite(rate) && rate > 0;
 }
 
-function formatTransactionDate(date: number): string {
-  const parsed = new Date(date);
-  return Number.isNaN(parsed.getTime()) ? 'invalid date' : parsed.toISOString().slice(0, 10);
-}
-
 export async function backfillHistoricalExchangeRates(
   data: BatchImportData,
+  preserveTransactionIds: ReadonlySet<string> = new Set(),
 ): Promise<{ data: BatchImportData; warnings: string[] }> {
   const journalById = new Map(data.journals.map(journal => [journal.id, journal]));
 
@@ -24,6 +24,11 @@ export async function backfillHistoricalExchangeRates(
     data.transactions,
     AppConfig.performance.maxConcurrentOperations,
     async (transaction, index) => {
+      if (preserveTransactionIds.has(transaction.id)) {
+        results[index] = { transaction };
+        return;
+      }
+
       if (hasValidRate(transaction.exchangeRate)) {
         results[index] = { transaction };
         return;
@@ -52,7 +57,15 @@ export async function backfillHistoricalExchangeRates(
         return;
       }
 
-      const date = journal.journalDate;
+      const date = getJournalHistoricalFxTimestamp(journal.journalDate);
+      const dateKey = getJournalFxDateKey(journal.journalDate) ?? 'invalid date';
+      if (date === undefined) {
+        results[index] = {
+          transaction,
+          warning: `Historical exchange rate unavailable for transaction ${transaction.id} (${fromCurrency} -> ${journalCurrency} on ${dateKey}): invalid journal date.`,
+        };
+        return;
+      }
       try {
         const quote = await exchangeRateService.getHistoricalRate(
           fromCurrency,
@@ -64,7 +77,7 @@ export async function backfillHistoricalExchangeRates(
         const reason = error instanceof Error ? error.message : String(error);
         results[index] = {
           transaction,
-          warning: `Historical exchange rate unavailable for transaction ${transaction.id} (${fromCurrency} -> ${journalCurrency} on ${formatTransactionDate(date)}): ${reason}`,
+          warning: `Historical exchange rate unavailable for transaction ${transaction.id} (${fromCurrency} -> ${journalCurrency} on ${dateKey}): ${reason}`,
         };
       }
     },

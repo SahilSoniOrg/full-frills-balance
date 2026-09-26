@@ -24,6 +24,7 @@ import { generator } from '@/src/data/database/idGenerator';
 import type { WorkplaceId } from '@/src/types/ids';
 
 type SliceAcceptance = SetupSliceAcceptance;
+type RestoreProgress = (message: string, progress?: number) => void;
 
 const SOURCE_DOWNSTREAM: readonly SetupSliceId[] = [
   'workplace',
@@ -46,7 +47,10 @@ export interface SetupCoordinatorOptions {
     draft: SetupDraft,
   ) => void | Promise<void>;
   readonly effects?: {
-    readonly publishRestore?: (draft: RestoreSetupDraft) => Promise<readonly RestoreHandoff[]>;
+    readonly publishRestore?: (
+      draft: RestoreSetupDraft,
+      onProgress?: RestoreProgress,
+    ) => Promise<readonly RestoreHandoff[]>;
     readonly discardRestorePublication?: (draft: RestoreSetupDraft) => Promise<void>;
     readonly commitDevice?: (output: DeviceSetupOutput) => void;
   };
@@ -72,7 +76,7 @@ export interface SetupCoordinator {
   readonly back: () => BackResult;
   readonly edit: (sliceId: SetupSliceId) => void;
   /** Execute the one restore publication boundary, if the resolver requests it. */
-  readonly runPendingEffect: () => Promise<NextSetupAction>;
+  readonly runPendingEffect: (onProgress?: RestoreProgress) => Promise<NextSetupAction>;
   readonly finish: () => Promise<SetupOutcome>;
 }
 
@@ -295,13 +299,13 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
     persist({ ...draft, activeSlice: sliceId });
   };
 
-  const runPendingEffect = async (): Promise<NextSetupAction> => {
+  const runPendingEffect = async (onProgress?: RestoreProgress): Promise<NextSetupAction> => {
     const action = await advanceAutoAccepted();
     if (action.kind !== 'run_effect' || action.effectId !== 'publish_restore') return action;
     if (draft.kind !== 'restore' || !options.effects?.publishRestore) {
       throw new Error('Restore publication effect is not configured');
     }
-    const handoffs = await options.effects.publishRestore(draft);
+    const handoffs = await options.effects.publishRestore(draft, onProgress);
     persist({
       ...draft,
       restore: {
@@ -309,7 +313,7 @@ export function createSetupCoordinator(options: SetupCoordinatorOptions): SetupC
         handoffs,
       },
     });
-    return next();
+    return advanceAutoAccepted();
   };
 
   const finish = async (): Promise<SetupOutcome> => {

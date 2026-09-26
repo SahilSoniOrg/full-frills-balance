@@ -1,6 +1,7 @@
 import { TransactionType } from '@/src/types/enums';
-import { fromMinorUnits, toMinorUnits } from '@/src/utils/money';
+import { fromMinorUnits } from '@/src/utils/money';
 import { sanitizeAmount } from '@/src/utils/validation';
+import { convertJournalCurrencyAmount, resolveJournalFxRate } from './journalFx';
 
 export interface JournalBalanceLineInput {
   id: string;
@@ -163,40 +164,40 @@ export function evaluateJournalBalance({
       continue;
     }
 
-    const nativeAmountMinorUnits = toMinorUnits(amount, nativePrecision);
-    const nativeAmount = formatMinorUnits(nativeAmountMinorUnits, nativePrecision);
-    const isJournalCurrencyLine = accountCurrency === journalCurrency;
-    const rawExchangeRate =
-      typeof line.exchangeRate === 'number'
-        ? line.exchangeRate
-        : line.exchangeRate?.trim()
-          ? Number(line.exchangeRate)
-          : undefined;
-
-    let exchangeRate = 1;
-    if (!isJournalCurrencyLine) {
-      if (rawExchangeRate === undefined) {
+    const rate = resolveJournalFxRate({
+      accountCurrency,
+      journalCurrency,
+      importedRate: line.exchangeRate,
+    });
+    if (rate.rate === undefined) {
+      if (rate.source === 'missing') {
         issues.push({
           code: 'missing_exchange_rate',
           message: `A line in ${accountCurrency} needs an exchange rate to ${journalCurrency}`,
           lineId: line.id,
         });
-        continue;
-      }
-      if (!Number.isFinite(rawExchangeRate) || rawExchangeRate <= 0) {
+      } else {
         issues.push({
           code: 'invalid_exchange_rate',
           message: 'Exchange rates must be greater than zero',
           lineId: line.id,
         });
-        continue;
       }
-      exchangeRate = rawExchangeRate;
+      continue;
     }
+
+    const exchangeRate = rate.rate;
 
     if (journalPrecision === undefined || !Number.isInteger(journalPrecision)) continue;
 
-    const journalAmountMinorUnits = toMinorUnits(nativeAmount * exchangeRate, journalPrecision);
+    const conversion = convertJournalCurrencyAmount({
+      nativeAmount: amount,
+      nativePrecision,
+      exchangeRate,
+      journalPrecision,
+    });
+    const { nativeAmountMinorUnits, nativeAmount, journalAmountMinorUnits, journalAmount } =
+      conversion;
     if (
       !Number.isSafeInteger(nativeAmountMinorUnits) ||
       !Number.isSafeInteger(journalAmountMinorUnits)
@@ -219,7 +220,7 @@ export function evaluateJournalBalance({
       nativeAmount,
       exchangeRate,
       journalAmountMinorUnits,
-      journalAmount: formatMinorUnits(journalAmountMinorUnits, journalPrecision),
+      journalAmount,
     });
 
     if (line.transactionType === TransactionType.DEBIT) {
@@ -266,6 +267,78 @@ export function evaluateJournalBalance({
     isBalanced,
     issues,
   };
+}
+
+export interface UniqueJournalFxRateProposal {
+  readonly transactionId: string;
+  readonly exchangeRate: number;
+  readonly evaluation: JournalBalanceEvaluation;
+}
+
+/**
+ * Infer the only rate that can balance a journal while preserving every native amount.
+ * This is intentionally limited to journals with exactly one foreign-currency line.
+ */
+export function proposeUniqueJournalFxRate(
+  input: EvaluateJournalBalanceInput,
+): UniqueJournalFxRateProposal | undefined {
+  const journalCurrency = normalizeCode(input.journalCurrency);
+  if (!journalCurrency || input.lines.length < 2) return undefined;
+
+  const linesWithCurrency = input.lines.filter(line => normalizeCode(line.accountCurrency));
+  if (linesWithCurrency.length !== input.lines.length) return undefined;
+
+  const foreignLines = input.lines.filter(
+    line => normalizeCode(line.accountCurrency) !== journalCurrency,
+  );
+  if (foreignLines.length !== 1) return undefined;
+  const candidate = foreignLines[0];
+  if (!candidate) return undefined;
+
+  const evaluate = (exchangeRate?: number) =>
+    evaluateJournalBalance({
+      ...input,
+      lines: input.lines.map(line => (line.id === candidate.id ? { ...line, exchangeRate } : line)),
+    });
+
+  const candidateAtUnitRate = evaluate(1);
+  if (
+    candidateAtUnitRate.issues.some(issue => issue.code !== 'unbalanced') ||
+    candidateAtUnitRate.lineValues.length !== input.lines.length
+  ) {
+    return undefined;
+  }
+  const candidateValue = candidateAtUnitRate.lineValues.find(line => line.id === candidate.id);
+  if (!candidateValue || candidateValue.nativeAmount <= 0) return undefined;
+
+  const withoutCandidateRate = evaluate(undefined);
+  if (
+    withoutCandidateRate.issues.length !== 1 ||
+    withoutCandidateRate.issues[0]?.lineId !== candidate.id ||
+    !['missing_exchange_rate', 'invalid_exchange_rate'].includes(
+      withoutCandidateRate.issues[0]?.code ?? '',
+    )
+  ) {
+    return undefined;
+  }
+
+  const neededMinorUnits =
+    candidate.transactionType === TransactionType.DEBIT
+      ? withoutCandidateRate.creditTotalMinorUnits - withoutCandidateRate.debitTotalMinorUnits
+      : withoutCandidateRate.debitTotalMinorUnits - withoutCandidateRate.creditTotalMinorUnits;
+  if (!Number.isSafeInteger(neededMinorUnits) || neededMinorUnits <= 0) return undefined;
+
+  const neededJournalAmount = fromMinorUnits(
+    neededMinorUnits,
+    candidateAtUnitRate.journalPrecision,
+  );
+  const exchangeRate = neededJournalAmount / candidateValue.nativeAmount;
+  if (!Number.isFinite(exchangeRate) || exchangeRate <= 0) return undefined;
+
+  const evaluation = evaluate(exchangeRate);
+  return evaluation.isBalanced
+    ? { transactionId: candidate.id, exchangeRate, evaluation }
+    : undefined;
 }
 
 export type CurrencyPrecisionResolver = (currencyCode: string) => number | Promise<number>;

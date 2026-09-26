@@ -12,7 +12,9 @@ export type E2eSeedProfile =
   | 'merge-edit'
   | 'picker-ready'
   | 'first-run-restore'
+  | 'first-run-restore-fx-recovery'
   | 'bulk-restore'
+  | 'bulk-restore-long-review'
   | 'bulk-restore-selection'
   | 'settings-bulk-restore';
 
@@ -27,7 +29,9 @@ export const E2E_SEED_PROFILES: readonly E2eSeedProfile[] = [
   'merge-edit',
   'picker-ready',
   'first-run-restore',
+  'first-run-restore-fx-recovery',
   'bulk-restore',
+  'bulk-restore-long-review',
   'bulk-restore-selection',
   'settings-bulk-restore',
 ] as const;
