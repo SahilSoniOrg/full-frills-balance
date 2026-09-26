@@ -80,7 +80,7 @@ Delete dead code, collapse single-caller layers, and drop duplicate tooling. No 
 
 ## Later (after everything above)
 
-- **Onboarding and setup merge.** `features/onboarding` (~3.7k prod lines) and `features/setup` (~10.6k) are two first-run flows that already call into each other (`commitCashClarity.ts`, `mapToWorkplaceOutput.ts`, `startFirstRunRestoreFromDeviceName`). `OnboardingRoute.tsx` switches between them via `shouldShowCashClarity`. Candidate: one setup journey with cash clarity as setup slices. Not started; needs its own plan.
+- **Onboarding and setup merge.** `features/onboarding` (~3.7k prod lines) and `features/setup` (~10.6k) are two first-run flows that already call into each other (`commitCashClarity.ts`, `mapToWorkplaceOutput.ts`, `startFirstRunRestoreFromDeviceName`). `OnboardingRoute.tsx` switches between them via `shouldShowCashClarity`. Candidate: one setup journey with cash clarity as setup slices. Planned in `onboarding-setup-merge-plan.md`.
 
 ## Log
 
