@@ -58,7 +58,7 @@ Delete dead code, collapse single-caller layers, and drop duplicate tooling. No 
 | 5 | Generic `usePreference` helper for the preference hooks | kept | owner decision: keep preference hooks separate |
 | 15 | Migrate design-system `Text` users to `AppText`; delete `Text` | **needs decision** | see Log |
 | 16 | Remove `TransactionRawRepository` pass-through methods | partial | `83b83507` |
-| 17 | `dateUtils` boundary math on dayjs | todo | |
+| 17 | `dateUtils` boundary math on dayjs | done | `0bd1dc3a` |
 | 6 | Shared core for the three journal editor hooks | todo | |
 
 ## Kept on purpose
@@ -93,3 +93,4 @@ Delete dead code, collapse single-caller layers, and drop duplicate tooling. No 
 - 2026-09-27: Item 5 dropped by owner: keep preference hooks separate.
 - 2026-09-27: Item 15 left pending a decision. 49 usages rely on `Text`-only props (size variants `xs`..`xxl`, margins, opacity) across BudgetCard, AppTabs, SetupStsPreview, PlannedPaymentHistoryCard, PlannedPaymentDetailsView (17), PlannedPaymentCard, SafeToSpendLedger, SafeToSpendHeader, AccountCard (8). `AppText` has no equivalent variants and adds tabular numerals, so a migration means picking a mapping per usage and risks visual regressions.
 - 2026-09-27: Item 16: deleted `getAccountDeltasGroupedRaw` (no production caller) from the facade and the metrics query module. The other pass-throughs stay: nothing outside `src/data` imports `repositories/raw/*`, so `transactionRawRepository` is the single raw-SQL entry point for services, and 12 test files mock it. Removing them would widen the data-layer surface services depend on to save ~60 lines.
+- 2026-09-27: Item 17 done: day/month boundaries, previous/next month and month labels use dayjs (-52 lines). One intended behavior change: `getLastNRange(n, 'months')` now clamps to month end (Mar 31 minus 1 month is Feb 28/29, not Mar 3 as with `Date.setMonth`).
