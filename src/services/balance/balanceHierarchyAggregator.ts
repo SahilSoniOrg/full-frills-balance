@@ -43,50 +43,7 @@ export class BalanceHierarchyAggregator {
 
       const { parentIdMap, levelMap, maxDepth } = this.hierarchyCache!;
 
-      // 2. Track sub-tree currencies for each parent to determine target currency
-      // Optimization: Lazy allocation - Store string for single currency, Set for multiple
-      const subTreeCurrencies = new Map<string, Set<string> | string>();
-      for (const a of accounts) {
-        const balance = balancesMap.get(a.id);
-        if (balance && (balance.balance !== 0 || balance.transactionCount > 0)) {
-          subTreeCurrencies.set(a.id, balance.currencyCode);
-        }
-      }
-
-      // 3. Propagate currency lists up the chain using the level map (Leaf to Root)
-      for (let d = maxDepth; d > 0; d--) {
-        const ids = levelMap.get(d) || [];
-        for (const id of ids) {
-          const parentId = parentIdMap.get(id);
-          if (!parentId) continue;
-
-          const myData = subTreeCurrencies.get(id);
-          if (!myData) continue;
-
-          const parentData = subTreeCurrencies.get(parentId);
-          if (!parentData) {
-            // Clone if it's a Set to prevent reference sharing across branches
-            subTreeCurrencies.set(parentId, myData instanceof Set ? new Set(myData) : myData);
-          } else if (parentData instanceof Set) {
-            if (myData instanceof Set) {
-              myData.forEach(c => parentData.add(c));
-            } else {
-              parentData.add(myData);
-            }
-          } else if (parentData !== myData) {
-            // Upgrade to Set
-            const newSet = new Set<string>([parentData]);
-            if (myData instanceof Set) {
-              myData.forEach(c => newSet.add(c));
-            } else {
-              newSet.add(myData);
-            }
-            subTreeCurrencies.set(parentId, newSet);
-          }
-        }
-      }
-
-      // 4. Pre-fetch all required exchange rates for the entire hierarchy in parallel
+      // 2. Pre-fetch all required exchange rates for the entire hierarchy in parallel
       const uniqueBaseCurrencies = new Set<string>();
       uniqueBaseCurrencies.add(targetDefaultCurrency); // Always pre-fetch default
 
@@ -103,7 +60,7 @@ export class BalanceHierarchyAggregator {
         ),
       );
 
-      // 5. Staged aggregation setup (Transactional read consistency)
+      // 3. Staged aggregation setup (Transactional read consistency)
       // We aggregate into a separate structure to avoid exposing half-baked states to reactive readers.
       const stagedResults = new Map<
         string,
@@ -131,7 +88,8 @@ export class BalanceHierarchyAggregator {
         });
       }
 
-      // 6. Aggregate leaf-to-root, level by level (Synchronous execution)
+      // 4. Aggregate leaf-to-root. A parent total stays in that account's currency;
+      // children in another currency are converted into it.
       for (let d = maxDepth; d > 0; d--) {
         const accountIdsAtLevel = levelMap.get(d) || [];
 
@@ -139,100 +97,72 @@ export class BalanceHierarchyAggregator {
           const parentId = parentIdMap.get(accountId);
           if (!parentId) continue;
 
-          const myBalance = balancesMap.get(accountId);
-          const parentBalance = balancesMap.get(parentId);
-          if (!myBalance || !parentBalance) continue;
-
           const parentStaged = stagedResults.get(parentId);
-          if (!parentStaged) continue;
-
-          const targetCurrency = parentStaged.currencyCode;
-
-          const pData = subTreeCurrencies.get(parentId);
-          let effectiveCurrency = targetCurrency;
-
-          if (typeof pData === 'string') {
-            effectiveCurrency = pData;
-          } else if (pData instanceof Set) {
-            // Optimization: Zero-allocation set peeking
-            // If the set has exactly one currency, use it. Otherwise, fallback to the target default.
-            const firstCurrency = pData.values().next().value;
-            effectiveCurrency =
-              pData.size === 1 && typeof firstCurrency === 'string'
-                ? firstCurrency
-                : targetDefaultCurrency;
-          }
-
-          // Stage currency alongside numeric values — never mutate live balance objects mid-aggregation
-          parentStaged.currencyCode = effectiveCurrency;
-
-          const precision =
-            currencyPrecisionMap.get(effectiveCurrency) ?? AppConfig.defaultCurrencyPrecision;
-
           const myStaged = stagedResults.get(accountId);
-          if (!myStaged) continue;
-          const myBalanceMoney = Money.from(myStaged.balance, myBalance.currencyCode);
-          const myIncomeMoney = Money.from(myStaged.monthlyIncome, myBalance.currencyCode);
-          const myExpensesMoney = Money.from(myStaged.monthlyExpenses, myBalance.currencyCode);
+          if (!parentStaged || !myStaged) continue;
 
-          let convertedBalance = myBalanceMoney;
-          let convertedIncome = myIncomeMoney;
-          let convertedExpenses = myExpensesMoney;
+          const parentCurrency = parentStaged.currencyCode;
+          const childCurrency = myStaged.currencyCode;
+          const precision =
+            currencyPrecisionMap.get(parentCurrency) ?? AppConfig.defaultCurrencyPrecision;
 
-          if (myBalance.currencyCode !== effectiveCurrency) {
+          let convertedBalance = Money.from(myStaged.balance, childCurrency);
+          let convertedIncome = Money.from(myStaged.monthlyIncome, childCurrency);
+          let convertedExpenses = Money.from(myStaged.monthlyExpenses, childCurrency);
+
+          if (childCurrency !== parentCurrency) {
             const [balanceConv, incomeConv, expensesConv] = await Promise.all([
               convertAmount({
                 amount: myStaged.balance,
-                fromCurrency: myBalance.currencyCode,
-                toCurrency: effectiveCurrency,
+                fromCurrency: childCurrency,
+                toCurrency: parentCurrency,
                 mode: 'spot',
               }),
               convertAmount({
                 amount: myStaged.monthlyIncome,
-                fromCurrency: myBalance.currencyCode,
-                toCurrency: effectiveCurrency,
+                fromCurrency: childCurrency,
+                toCurrency: parentCurrency,
                 mode: 'spot',
               }),
               convertAmount({
                 amount: myStaged.monthlyExpenses,
-                fromCurrency: myBalance.currencyCode,
-                toCurrency: effectiveCurrency,
+                fromCurrency: childCurrency,
+                toCurrency: parentCurrency,
                 mode: 'spot',
               }),
             ]);
 
             if (!balanceConv.ok || !incomeConv.ok || !expensesConv.ok) {
               logger.warn(
-                `[BalanceHierarchyAggregator] Skipping child aggregation for ${accountId}: FX unavailable (${myBalance.currencyCode} -> ${effectiveCurrency})`,
+                `[BalanceHierarchyAggregator] Skipping child aggregation for ${accountId}: FX unavailable (${childCurrency} -> ${parentCurrency})`,
               );
               continue;
             }
 
-            convertedBalance = Money.from(balanceConv.amount, effectiveCurrency);
-            convertedIncome = Money.from(incomeConv.amount, effectiveCurrency);
-            convertedExpenses = Money.from(expensesConv.amount, effectiveCurrency);
+            convertedBalance = Money.from(balanceConv.amount, parentCurrency);
+            convertedIncome = Money.from(incomeConv.amount, parentCurrency);
+            convertedExpenses = Money.from(expensesConv.amount, parentCurrency);
 
             // Track mixed child balances (O(1) Map lookup instead of O(N) find)
-            const existing = parentStaged.childBalancesMap.get(myBalance.currencyCode);
+            const existing = parentStaged.childBalancesMap.get(childCurrency);
             if (existing) {
               const childPrecision =
-                currencyPrecisionMap.get(myBalance.currencyCode) ??
-                AppConfig.defaultCurrencyPrecision;
-              existing.balance = Money.from(existing.balance, myBalance.currencyCode)
-                .add(Money.from(myStaged.balance, myBalance.currencyCode))
+                currencyPrecisionMap.get(childCurrency) ?? AppConfig.defaultCurrencyPrecision;
+              existing.balance = Money.from(existing.balance, childCurrency)
+                .add(Money.from(myStaged.balance, childCurrency))
                 .round(childPrecision).amount;
             } else {
-              parentStaged.childBalancesMap.set(myBalance.currencyCode, {
-                currencyCode: myBalance.currencyCode,
+              parentStaged.childBalancesMap.set(childCurrency, {
+                currencyCode: childCurrency,
                 balance: myStaged.balance,
                 transactionCount: myStaged.transactionCount,
               });
             }
           }
 
-          const parentBalanceMoney = Money.from(parentStaged.balance, effectiveCurrency);
-          const parentIncomeMoney = Money.from(parentStaged.monthlyIncome, effectiveCurrency);
-          const parentExpensesMoney = Money.from(parentStaged.monthlyExpenses, effectiveCurrency);
+          const parentBalanceMoney = Money.from(parentStaged.balance, parentCurrency);
+          const parentIncomeMoney = Money.from(parentStaged.monthlyIncome, parentCurrency);
+          const parentExpensesMoney = Money.from(parentStaged.monthlyExpenses, parentCurrency);
 
           parentStaged.balance = parentBalanceMoney.add(convertedBalance).round(precision).amount;
           parentStaged.monthlyIncome = parentIncomeMoney
@@ -245,11 +175,10 @@ export class BalanceHierarchyAggregator {
         }
       }
 
-      // 7. Commit staged results to the main balances map in a synchronous pass
+      // 5. Commit staged results to the main balances map in a synchronous pass
       // This pattern ensures that any parallel readers never see half-aggregated states.
       // Category accounts are always displayed in the Workplace currency. Their
-      // direct balance may be stored in a foreign account currency, and parent
-      // aggregation may have selected a single subtree currency, so normalize
+      // direct balance may be stored in a foreign account currency, so normalize
       // the staged values before publishing them to account-detail readers.
       const categoryAccounts = accounts.filter(
         account =>

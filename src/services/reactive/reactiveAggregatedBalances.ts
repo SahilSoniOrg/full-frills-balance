@@ -14,7 +14,11 @@ import {
   reactiveCacheCoordinator,
   REACTIVE_CACHE_NAMESPACES,
 } from '@/src/services/reactive/ReactiveCacheCoordinator';
-import { wealthService, WealthSummary } from '@/src/services/wealth-service';
+import {
+  selectBalancesForWealthSummary,
+  wealthService,
+  WealthSummary,
+} from '@/src/services/wealth-service';
 import { AccountBalance } from '@/src/types/domainReadModels';
 import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
@@ -136,9 +140,12 @@ export function observeAggregatedAccountBalances(
             const parentIds = new Set(
               accounts.map(a => a.parentAccountId).filter(Boolean) as string[],
             );
-            const leafBalances = finalBalances.filter(b => !parentIds.has(b.accountId));
             const wealthSummary = await wealthService.calculateSummary(
-              leafBalances,
+              selectBalancesForWealthSummary(
+                finalBalances,
+                new Map(accounts.map(account => [account.id, account.currencyCode])),
+                parentIds,
+              ),
               targetCurrency,
             );
 

@@ -6,7 +6,7 @@ import { transactionRawRepository } from '@/src/data/repositories/TransactionRaw
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { convertAmount } from '@/src/services/currencyConversion';
-import { wealthService } from '@/src/services/wealth-service';
+import { selectBalancesForWealthSummary, wealthService } from '@/src/services/wealth-service';
 import dayjs from 'dayjs';
 
 // Mock dependencies
@@ -115,6 +115,47 @@ describe('WealthService', () => {
       const summary = await wealthService.calculateSummary(balances as any, 'USD');
       expect(summary.totalAssets).toBeCloseTo(110, 2); // 100 * 1.1
     });
+
+    it('converts each account direct balance from that account currency', async () => {
+      (convertAmount as jest.Mock).mockImplementation(
+        async ({ amount, fromCurrency, toCurrency }) => {
+          if (fromCurrency === 'HKD' && toCurrency === 'INR') {
+            return { ok: true, amount: amount * 11.5348 };
+          }
+          if (fromCurrency === 'EUR' && toCurrency === 'INR') {
+            return { ok: true, amount: amount * 90 };
+          }
+          return { ok: true, amount };
+        },
+      );
+
+      const selected = selectBalancesForWealthSummary(
+        [
+          {
+            accountId: 'parent',
+            accountType: AccountType.ASSET,
+            balance: 500.76,
+            directBalance: 500.76,
+            currencyCode: 'INR',
+          },
+          {
+            accountId: 'child',
+            accountType: AccountType.ASSET,
+            balance: 40,
+            directBalance: 40,
+            currencyCode: 'EUR',
+          },
+        ] as any,
+        new Map([
+          ['parent', 'HKD'],
+          ['child', 'EUR'],
+        ]),
+        new Set(['parent']),
+      );
+
+      const summary = await wealthService.calculateSummary(selected, 'INR');
+      expect(summary.netWorth).toBeCloseTo(500.76 * 11.5348 + 40 * 90, 2);
+    });
   });
 
   describe('getNetWorthHistory', () => {
@@ -189,15 +230,22 @@ describe('WealthService', () => {
       jest.useRealTimers();
     });
 
-    it('should filter out parent accounts to avoid double-counting', async () => {
+    it('counts a parent direct balance once and does not add the rolled-up total again', async () => {
       const mockAccounts = [
         {
           id: 'parent1',
           name: 'Parent',
           accountType: AccountType.ASSET,
           parentAccountId: undefined,
+          currencyCode: 'USD',
         },
-        { id: 'child1', name: 'Child', accountType: AccountType.ASSET, parentAccountId: 'parent1' },
+        {
+          id: 'child1',
+          name: 'Child',
+          accountType: AccountType.ASSET,
+          parentAccountId: 'parent1',
+          currencyCode: 'USD',
+        },
       ];
       (accountQueryRepository.findAll as jest.Mock).mockResolvedValue(mockAccounts);
 
@@ -206,9 +254,16 @@ describe('WealthService', () => {
           accountId: 'parent1',
           accountType: AccountType.ASSET,
           balance: 1500,
+          directBalance: 0,
           currencyCode: 'USD',
-        }, // Aggregated
-        { accountId: 'child1', accountType: AccountType.ASSET, balance: 1500, currencyCode: 'USD' }, // Leaf
+        },
+        {
+          accountId: 'child1',
+          accountType: AccountType.ASSET,
+          balance: 1500,
+          directBalance: 1500,
+          currencyCode: 'USD',
+        },
       ];
       (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue(mockBalances);
       (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
@@ -220,7 +275,7 @@ describe('WealthService', () => {
       );
 
       const lastEntry = history[history.length - 1];
-      // Should only count child1 (1500), not parent1 + child1 (3000)
+      // Parent direct balance is 0; the 1500 rollup must not be added to the child.
       expect(lastEntry.totalAssets).toBe(1500);
       expect(lastEntry.netWorth).toBe(1500);
     });

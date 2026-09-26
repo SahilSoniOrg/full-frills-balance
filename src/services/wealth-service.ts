@@ -43,6 +43,35 @@ async function resolveWealthRate(fromCurrency: string, toCurrency: string): Prom
   return result.ok ? result.amount : null;
 }
 
+/**
+ * Balances that may be added into one workplace-currency wealth total.
+ * Asset and liability amounts stay in each account's own currency (`directBalance`)
+ * so a parent rollup is not relabeled as the workplace currency and then summed raw.
+ * Parent direct postings are included once; child postings are not counted again.
+ */
+export function selectBalancesForWealthSummary(
+  balances: readonly AccountBalance[],
+  accountCurrencyById: ReadonlyMap<string, string>,
+  parentIds: ReadonlySet<string>,
+): AccountBalance[] {
+  return balances.flatMap(balance => {
+    if (
+      balance.accountType === AccountType.ASSET ||
+      balance.accountType === AccountType.LIABILITY
+    ) {
+      return [
+        {
+          ...balance,
+          balance: balance.directBalance ?? balance.balance,
+          currencyCode: accountCurrencyById.get(balance.accountId) || balance.currencyCode,
+        },
+      ];
+    }
+    if (parentIds.has(balance.accountId)) return [];
+    return [balance];
+  });
+}
+
 function addDailyDelta(
   dailyDeltas: Map<string, DailyTotals>,
   dayKey: string,
@@ -141,19 +170,20 @@ export const wealthService = {
     const end = dayjs(endDate).endOf('day');
     const now = dayjs().endOf('day');
 
-    // 1. Get current balances and filter for leaf accounts to prevent double-counting
+    // 1. Get current direct balances. Parent rollups are not added on top of children.
     const allAccounts = await accountQueryRepository.findAll(workplaceId);
-    const parentIds = new Set(
-      allAccounts
-        .map((a: { parentAccountId?: string }) => a.parentAccountId)
-        .filter(Boolean) as string[],
+    const accountCurrencyById = new Map(
+      allAccounts.map(account => [account.id, account.currencyCode]),
     );
 
     const allBalances = await balanceReadService.getAccountBalances(workplaceId);
-    let relevantBalances = allBalances.filter(
+    let relevantBalances = selectBalancesForWealthSummary(
+      allBalances,
+      accountCurrencyById,
+      new Set(),
+    ).filter(
       (a: AccountBalance) =>
-        !parentIds.has(a.accountId) &&
-        (a.accountType === AccountType.ASSET || a.accountType === AccountType.LIABILITY),
+        a.accountType === AccountType.ASSET || a.accountType === AccountType.LIABILITY,
     );
 
     if (accountIds && accountIds.length > 0) {

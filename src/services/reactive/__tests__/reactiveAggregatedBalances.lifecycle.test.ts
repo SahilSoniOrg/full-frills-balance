@@ -36,6 +36,7 @@ jest.mock('@/src/services/currency-read-service', () => ({
   currencyReadService: { getAllPrecisions: jest.fn() },
 }));
 jest.mock('@/src/services/wealth-service', () => ({
+  selectBalancesForWealthSummary: (balances: readonly unknown[]) => balances,
   wealthService: { calculateSummary: jest.fn() },
 }));
 jest.mock('@/src/utils/SnapshotService', () => ({
