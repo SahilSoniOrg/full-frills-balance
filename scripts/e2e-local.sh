@@ -5,9 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-export PATH="${HOME}/.maestro/bin:${PATH}"
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
-ADB="$ANDROID_HOME/platform-tools/adb"
 export EXPO_PUBLIC_E2E=1
 
 if [[ ! -f .env.local ]]; then
@@ -16,14 +14,6 @@ fi
 
 echo "==> Jest SMS integration tests"
 bunx jest --testPathPattern="SmsSyncPipeline.integration|transactionInboxMapping.integration|smsDuplicateDetection|SmsSyncPipeline.test|SmsReferenceExtractor" --coverage=false
-
-if [[ -f android/app/build/outputs/apk/release/app-release.apk ]]; then
-  echo "==> Maestro (Android)"
-  "$ADB" install -r android/app/build/outputs/apk/release/app-release.apk
-  maestro test .maestro
-else
-  echo "==> Skipping Maestro: build release APK first (bun run e2e:build:android)"
-fi
 
 if [[ -f android/app/build/outputs/apk/androidTest/release/app-release-androidTest.apk ]]; then
   echo "==> Detox Android smoke"

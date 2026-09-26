@@ -1,8 +1,8 @@
 # Detox (native iOS & Android)
 
-End-to-end tests run on iOS/Android simulators and emulators by default, with opt-in attached-device configurations for release validation. Playwright tests in `e2e/*.test.ts` cover the web export.
+End-to-end tests run on iOS/Android simulators and emulators by default, with opt-in attached-device configurations for release validation.
 
-**Maestro** and **Detox** run locally. See [`.maestro/README.md`](../.maestro/README.md). iOS Detox also runs in GitHub Actions (`.github/workflows/detox.yml`).
+Detox runs locally. iOS Detox also runs in GitHub Actions (`.github/workflows/detox.yml`).
 
 ## iOS (default): Release + embedded bundle
 
@@ -38,7 +38,7 @@ cp .env.e2e.example .env.local
 EXPO_PUBLIC_E2E=1 bun run e2e:build:ios
 ```
 
-Android Detox/Maestro native setup (`expo-detox-config-plugin`, `DetoxTest.java`, `.so` packaging) is applied by **config plugins** in `app.config.ts` — safe to re-run `npx expo prebuild --platform android` after native changes. Do not hand-edit `android/build.gradle` for packaging; use `plugins/withAndroidNativeLibPackaging.js`.
+Android Detox native setup (`expo-detox-config-plugin`, `DetoxTest.java`, `.so` packaging) is applied by **config plugins** in `app.config.ts` — safe to re-run `npx expo prebuild --platform android` after native changes. Do not hand-edit `android/build.gradle` for packaging; use `plugins/withAndroidNativeLibPackaging.js`.
 
 ## Run tests locally
 
@@ -115,7 +115,3 @@ Screenshots on failure under `artifacts/detox/`. Video:
 ```bash
 DETOX_RECORD_VIDEO=1 bun run test:detox:video
 ```
-
-## Maestro (recording only)
-
-Maestro still uses the **dev client** + Metro. See `scripts/record-onboarding-ios.sh` and `maestro/`.

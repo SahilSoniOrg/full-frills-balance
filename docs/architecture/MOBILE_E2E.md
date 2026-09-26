@@ -9,8 +9,4 @@ CI and local commands:
 
 Typecheck that tree with `bun run typecheck:e2e` (`tsconfig.e2e.json`). App `tsc` excludes these specs so a Detox import cannot fail product typecheck.
 
-Not the mobile contract:
-
-- Maestro `.maestro/` — local device smoke, not CI gate
-
 Layout: `e2e/specs` (cases), `e2e/screens` (testIDs), `e2e/actions` (launch/flows), `e2e/pages` (page objects), `e2e/constants`, `e2e/utils`. Native setup lives in `detox/README.md`.
