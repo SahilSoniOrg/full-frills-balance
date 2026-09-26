@@ -44,11 +44,11 @@ Delete dead code, collapse single-caller layers, and drop duplicate tooling. No 
 
 | # | Item | Status | Commit |
 | --- | --- | --- | --- |
-| 33 | Merge one-export files into existing helpers (keep helpers, not inline): `stringUtils.ts`, `limits.ts`, `use-color-scheme.ts` | todo | |
-| 24 | Remove journal `*Module.ts` re-export files; import repositories directly | todo | |
-| 10 | Merge single-caller micro-hooks into their only caller | todo | |
-| 27 | Static-only classes to plain functions (`SafeToSpendMapper`, `ScopeResolver`, `SimulationReportGenerator`, `BudgetProjectionProvider`) | todo | |
-| 12 | Remove `sms-service` facade; import SMS pipeline/repositories directly | todo | |
+| 33 | Merge one-export files into existing helpers: `snakeToCamel` into `utils/serialization.ts`, `MAX_BULK_JOURNAL_ROWS` into `constants/ledger-constants.ts`. `use-color-scheme` deleted: its only user (design preview) now uses RN `useColorScheme` like `RootLayout` and `useThemePrefs` | done | `cb206a57` |
+| 24 | Remove `journalMetadataModule` / `journalPlannedModule` / `journalSmsModule` (one re-export each); import repositories directly. Kept `journalTimelineModule`: it aggregates four repositories plus `journalsQuery` | done | `8aa3c8be` |
+| 10 | Merge single-caller micro-hooks into their only caller: `useSelectedItemMap`, `usePressScale`, `useScreenPrivacyMode`, `useDebounce`, `useExpandableSearch`. `useDeviceMotionPrefs` moves to item 5; `useExchangeRate` and the `useJournalEditor` sub-hooks move to item 6. Account-form `hooks/form/*` split: **needs decision** (see Log) | partial | `01b72416` |
+| 27 | Static-only classes to plain functions: `mapSafeToSpendViewModel`, `resolveLeafAccountIds`, `generateSimulationReport` / `generateAccountSummaries`, `projectBudgetCapacities` | done | `980d2c55` |
+| 12 | Remove `sms-service` facade; import SMS pipeline/repositories directly | kept | see Log |
 
 ### Phase D: larger refactors
 
@@ -86,3 +86,5 @@ Delete dead code, collapse single-caller layers, and drop duplicate tooling. No 
 - 2026-09-26: Plan written.
 - 2026-09-26: Phase A done except 34. Item 25 kept: `runtimeVersion` is pinned to `'1.0.0'`, so OTA bundles can land on older native binaries without the Expo reload bridge; the `Updates.reloadAsync` fallback is a real compatibility path, not a wrapper.
 - 2026-09-26: Phase B done. `verify` passes architecture, typecheck and lint; tests match the pre-existing failure baseline. Fixed a read-boundary violation from item 30's test change (`38232874`).
+- 2026-09-26: Phase C done. Item 12 kept: every `smsService` method has a production caller, and the facade maps inbox/rule models to plain DTOs (`toPlainInboxRecord`, `toPlainSmsRule`). Removing it would push model imports into ~10 feature files against the presentation-model boundary.
+- 2026-09-26: Item 10 account-form split left as is pending a decision: `hooks/form/*` (5 files, 540 lines) splits one reducer-backed form by concern (core, pickers, metadata, balance classify). Merging into `useAccountFormViewModel` gives an ~870-line hook and saves only ~60 lines of glue.
