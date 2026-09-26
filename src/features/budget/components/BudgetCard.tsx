@@ -1,7 +1,7 @@
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { Icon, AppIcon, AppSurface, PressScaleTouchable } from '@/src/components/core';
+import { Icon, AppIcon, AppSurface, PressScaleTouchable, AppText } from '@/src/components/core';
 import { Size, Spacing } from '@/src/constants';
-import { Box, Column, Row, Text } from '@/src/design-system';
+import { Box, Column, Row } from '@/src/design-system';
 import { presentBudgetListCard } from '@/src/features/budget/helpers/budgetCardPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { BudgetItem } from '../types';
@@ -48,19 +48,24 @@ export function BudgetCard({ item, onPress }: BudgetCardProps) {
                 <AppIcon name={Icon.PieChart} color={vm.statusColor} size={Size.iconSm} />
               </Box>
               <Column flex={1} style={{ minWidth: 0 }}>
-                <Text variant="lg" weight="bold" numberOfLines={1}>
+                <AppText variant="bodyLarge" weight="bold" numberOfLines={1}>
                   {vm.name}
-                </Text>
-                <Text variant="xs" color="secondary" opacity={0.6} numberOfLines={1} marginTop="xs">
+                </AppText>
+                <AppText
+                  variant="caption"
+                  color="secondary"
+                  numberOfLines={1}
+                  style={{ opacity: 0.6, marginTop: Spacing.xs }}
+                >
                   {vm.periodSubtitle}
-                </Text>
+                </AppText>
               </Column>
             </Row>
 
             <Column align="flex-end" style={{ flexShrink: 0 }}>
-              <Text variant="xl" weight="bold">
+              <AppText variant="heading" weight="bold">
                 {formatMoney(vm.amount, vm.currencyCode)}
-              </Text>
+              </AppText>
               {vm.previousPeriodLabel && (
                 <Row align="center" gap="xs" marginTop="xs">
                   <AppIcon
@@ -74,9 +79,9 @@ export function BudgetCard({ item, onPress }: BudgetCardProps) {
                           : theme.success
                     }
                   />
-                  <Text variant="xs" weight="semibold" color={vm.previousPeriodColor}>
+                  <AppText variant="caption" weight="semibold" color={vm.previousPeriodColor}>
                     {vm.previousPeriodLabel}
-                  </Text>
+                  </AppText>
                 </Row>
               )}
             </Column>

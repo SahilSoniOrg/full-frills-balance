@@ -1,10 +1,18 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { SelectionActionBar } from '@/src/components/shared/SelectionActionBar';
-import { Icon, AppButton, AppIcon, AppSurface, Badge, IvyIcon } from '@/src/components/core';
+import {
+  Icon,
+  AppButton,
+  AppIcon,
+  AppSurface,
+  Badge,
+  IvyIcon,
+  AppText,
+} from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig, Size, Spacing } from '@/src/constants';
-import { Box, Column, Row, Text } from '@/src/design-system';
+import { Box, Column, Row } from '@/src/design-system';
 import { PlannedPaymentHistoryCard } from '@/src/features/planned-payments/components/PlannedPaymentHistoryCard';
 import { getPlannedPaymentHistoryPresentation } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
 import { PlannedPaymentDetailsViewModel } from '@/src/features/planned-payments/hooks/usePlannedPaymentDetailsViewModel';
@@ -74,12 +82,12 @@ export function PlannedPaymentDetailsView({
     >
       {isLoading ? (
         <Column flex={1} align="center" justify="center">
-          <Text variant="base">{AppConfig.strings.common.loading}</Text>
+          <AppText variant="body">{AppConfig.strings.common.loading}</AppText>
         </Column>
       ) : isMissing ? (
         <Column flex={1} align="center" justify="center" gap="md">
           <AppIcon name={Icon.Error} size={Size.xxl} color={theme.textSecondary} />
-          <Text variant="subheading">Planned Payment not found</Text>
+          <AppText variant="subheading">Planned Payment not found</AppText>
           <AppButton variant="ghost" onPress={onBack} style={{ marginTop: Spacing.lg }}>
             Go Back
           </AppButton>
@@ -109,9 +117,9 @@ export function PlannedPaymentDetailsView({
                   <AppIcon name={iconName} size={32} color={accentColor} />
                 </Box>
                 <Column flex={1} justify="center">
-                  <Text variant="xl" weight="bold" marginBottom="xs">
+                  <AppText variant="heading" weight="bold" style={{ marginBottom: Spacing.xs }}>
                     {nameText}
-                  </Text>
+                  </AppText>
                   <Row gap="xs" align="center" flexWrap="wrap">
                     <Badge variant={statusVariant} size="sm">
                       {statusLabel}
@@ -130,9 +138,14 @@ export function PlannedPaymentDetailsView({
 
               <Row gap="lg" marginBottom="lg">
                 <Column flex={1}>
-                  <Text variant="xs" color="secondary" weight="bold" opacity={0.6} marginBottom={4}>
+                  <AppText
+                    variant="caption"
+                    color="secondary"
+                    weight="bold"
+                    style={{ opacity: 0.6, marginBottom: 4 }}
+                  >
                     AMOUNT NEXT
-                  </Text>
+                  </AppText>
                   {amount != null && currencyCode ? (
                     <MoneyText
                       amount={amount}
@@ -141,38 +154,53 @@ export function PlannedPaymentDetailsView({
                       weight="bold"
                     />
                   ) : (
-                    <Text variant="xxl" weight="bold">
+                    <AppText variant="xl" weight="bold">
                       ...
-                    </Text>
+                    </AppText>
                   )}
                 </Column>
                 <Column flex={1}>
-                  <Text variant="xs" color="secondary" weight="bold" opacity={0.6} marginBottom={4}>
+                  <AppText
+                    variant="caption"
+                    color="secondary"
+                    weight="bold"
+                    style={{ opacity: 0.6, marginBottom: 4 }}
+                  >
                     DATE NEXT
-                  </Text>
-                  <Text variant="base" weight="bold">
+                  </AppText>
+                  <AppText variant="body" weight="bold">
                     {nextOccurrenceText}
-                  </Text>
+                  </AppText>
                 </Column>
               </Row>
 
               <Row paddingVertical="sm" paddingTop={0}>
                 <Column flex={1}>
-                  <Text variant="xs" color="secondary" weight="bold" opacity={0.6} marginBottom={4}>
+                  <AppText
+                    variant="caption"
+                    color="secondary"
+                    weight="bold"
+                    style={{ opacity: 0.6, marginBottom: 4 }}
+                  >
                     RECURRENCE
-                  </Text>
-                  <Text variant="base" weight="semibold">
+                  </AppText>
+                  <AppText variant="body" weight="semibold">
                     {intervalLabel}
-                  </Text>
+                  </AppText>
                 </Column>
               </Row>
 
               <Box height={1} background="divider" marginVertical="md" />
 
               <Column>
-                <Text variant="xs" color="secondary" weight="bold" opacity={0.6} marginBottom="md">
+                <AppText
+                  variant="caption"
+                  color="secondary"
+                  weight="bold"
+                  style={{ opacity: 0.6, marginBottom: Spacing.md }}
+                >
                   ACCOUNT FLOW
-                </Text>
+                </AppText>
                 <Column gap="sm">
                   <Row align="center" gap="md">
                     <IvyIcon
@@ -183,9 +211,14 @@ export function PlannedPaymentDetailsView({
                       size={Size.avatarSm}
                       shape="circle"
                     />
-                    <Text variant="base" weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
+                    <AppText
+                      variant="body"
+                      weight="bold"
+                      numberOfLines={1}
+                      style={{ flexShrink: 1 }}
+                    >
                       {fromAccount?.name || AppConfig.strings.common.loading}
-                    </Text>
+                    </AppText>
                   </Row>
 
                   <Row align="center" paddingLeft="xs" marginVertical={-2}>
@@ -201,9 +234,14 @@ export function PlannedPaymentDetailsView({
                       size={Size.avatarSm}
                       shape="circle"
                     />
-                    <Text variant="base" weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
+                    <AppText
+                      variant="body"
+                      weight="bold"
+                      numberOfLines={1}
+                      style={{ flexShrink: 1 }}
+                    >
                       {toAccount?.name || AppConfig.strings.common.loading}
-                    </Text>
+                    </AppText>
                   </Row>
                 </Column>
               </Column>
@@ -216,9 +254,9 @@ export function PlannedPaymentDetailsView({
               >
                 <Row align="center" justify="center" gap="sm">
                   <AppIcon name={Icon.Check} size={18} color={theme.onPrimary} />
-                  <Text variant="base" weight="bold" style={{ color: theme.onPrimary }}>
+                  <AppText variant="body" weight="bold" style={{ color: theme.onPrimary }}>
                     Record Next Occurrence
-                  </Text>
+                  </AppText>
                 </Row>
               </AppButton>
 
@@ -226,9 +264,9 @@ export function PlannedPaymentDetailsView({
                 <AppButton variant="outline" onPress={onSkip} style={{ flex: 1 }}>
                   <Row align="center" justify="center" gap="sm">
                     <AppIcon name={Icon.Close} size={18} color={theme.text} />
-                    <Text variant="base" weight="bold">
+                    <AppText variant="body" weight="bold">
                       Skip Next
-                    </Text>
+                    </AppText>
                   </Row>
                 </AppButton>
 
@@ -239,18 +277,18 @@ export function PlannedPaymentDetailsView({
                       size={16}
                       color={theme.text}
                     />
-                    <Text variant="base" weight="semibold">
+                    <AppText variant="body" weight="semibold">
                       {statusLabel === 'ACTIVE' ? 'Pause' : 'Resume'}
-                    </Text>
+                    </AppText>
                   </Row>
                 </AppButton>
               </Row>
             </Column>
 
             <Box marginHorizontal="sm" marginBottom="lg" marginTop="lg">
-              <Text variant="heading" weight="bold" color="secondary">
+              <AppText variant="heading" weight="bold" color="secondary">
                 History
-              </Text>
+              </AppText>
             </Box>
             {history?.length === 0 ? (
               <AppSurface
@@ -265,9 +303,9 @@ export function PlannedPaymentDetailsView({
                   borderStyle: 'dashed',
                 }}
               >
-                <Text color="secondary" align="center">
+                <AppText color="secondary" align="center">
                   No entries recorded yet.
-                </Text>
+                </AppText>
               </AppSurface>
             ) : (
               <Column marginBottom="lg">

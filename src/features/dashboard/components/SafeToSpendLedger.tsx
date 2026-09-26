@@ -3,7 +3,7 @@ import { Icon, AppIcon, AppText, Badge, IconName } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { formatAccountSubtypeLabel } from '@/src/types/accountSubtype';
-import { Stack, Text } from '@/src/design-system';
+import { Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDashboardFeatureActions';
 import { AccountSimulationSummary } from '@/src/services/simulation/types';
@@ -33,14 +33,14 @@ export const SafeToSpendLedger = ({
   return (
     <Stack gap="md">
       <Stack gap="sm">
-        <Text
-          variant="xs"
+        <AppText
+          variant="caption"
           weight="bold"
           color="secondary"
           style={{ textTransform: 'uppercase', letterSpacing: 1.5, fontSize: 10 }}
         >
           {labels.categoriesUsed}
-        </Text>
+        </AppText>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs }}>
           {liquidAssetSubtypes.length > 0 ? (
             liquidAssetSubtypes.map((st, i) => (
@@ -54,9 +54,9 @@ export const SafeToSpendLedger = ({
               </Badge>
             ))
           ) : (
-            <Text variant="xs" color="secondary" italic>
+            <AppText variant="caption" color="secondary" italic>
               {labels.noneDetectedYet}
-            </Text>
+            </AppText>
           )}
         </View>
       </Stack>

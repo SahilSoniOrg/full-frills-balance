@@ -1,6 +1,6 @@
-import { Icon, IconButton } from '@/src/components/core';
+import { Icon, IconButton, AppText } from '@/src/components/core';
 import { AppConfig, ChromeMotion, Size } from '@/src/constants';
-import { Column, Row, Text } from '@/src/design-system';
+import { Column, Row } from '@/src/design-system';
 import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -31,7 +31,7 @@ export const SafeToSpendHeader = ({
   const reduceMotion = useReducedMotion();
 
   const amountText = (
-    <Text
+    <AppText
       testID="safe-to-spend-amount"
       variant="hero"
       color={isOverCommitted ? 'error' : isPositiveSafeToSpend ? 'success' : undefined}
@@ -42,14 +42,14 @@ export const SafeToSpendHeader = ({
       ellipsizeMode="tail"
     >
       {formatSts(amount, currencyCode)}
-    </Text>
+    </AppText>
   );
 
   return (
     <Column gap="xs">
       <Row align="center" justify="space-between" gap="sm">
-        <Text
-          variant="xs"
+        <AppText
+          variant="caption"
           weight="bold"
           color={isOverCommitted ? 'error' : 'secondary'}
           style={{ letterSpacing: 1.2, textTransform: 'uppercase', flex: 1 }}
@@ -57,7 +57,7 @@ export const SafeToSpendHeader = ({
           adjustsFontSizeToFit
         >
           {isOverCommitted ? strings.shortfall : strings.safeToSpendTitle}
-        </Text>
+        </AppText>
         <IconButton
           name={Icon.HelpCircle}
           variant="clear"
@@ -81,14 +81,14 @@ export const SafeToSpendHeader = ({
         amountText
       )}
 
-      <Text
-        variant="xs"
+      <AppText
+        variant="caption"
         color={isOverCommitted ? 'error' : 'secondary'}
-        opacity={0.8}
         numberOfLines={3}
+        style={{ opacity: 0.8 }}
       >
         {isOverCommitted ? strings.shortfallSubtitle : strings.afterObligations}
-      </Text>
+      </AppText>
     </Column>
   );
 };

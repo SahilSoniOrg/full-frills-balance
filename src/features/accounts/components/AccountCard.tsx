@@ -6,11 +6,12 @@ import {
   IconButton,
   IvyIcon,
   PressScaleTouchable,
+  AppText,
 } from '@/src/components/core';
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
 import { BorderWidth, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { ColorKey } from '@/src/constants/design-tokens';
-import { Box, Column, Row, Text } from '@/src/design-system';
+import { Box, Column, Row } from '@/src/design-system';
 import { AccountId } from '@/src/types/ids';
 
 import { getAccountStatsConfig } from '@/src/features/accounts/helpers/accountCardStatsConfig';
@@ -123,14 +124,14 @@ export function AccountCardBase({
                     size={Size.avatarSm}
                   />
                 </View>
-                <Text
-                  variant="base"
+                <AppText
+                  variant="body"
                   weight="bold"
                   numberOfLines={1}
                   style={{ color: resolvedTextColor, flex: 1 }}
                 >
                   {account.name}
-                </Text>
+                </AppText>
                 {account.isArchived ? <ArchivedAccountIndicator /> : null}
               </Row>
 
@@ -146,14 +147,13 @@ export function AccountCardBase({
                     gap="xs"
                   >
                     <AppIcon name={Icon.ShieldCheck} color={resolvedTextColor} size={Size.iconXs} />
-                    <Text
+                    <AppText
                       weight="medium"
-                      variant="xs"
-                      opacity={0.8}
-                      style={{ color: resolvedTextColor, lineHeight: 12 }}
+                      variant="caption"
+                      style={{ opacity: 0.8, color: resolvedTextColor, lineHeight: 12 }}
                     >
                       {reconciledDateText}
-                    </Text>
+                    </AppText>
                   </Row>
                 )}
                 {isSelectionModeActive && (
@@ -178,8 +178,8 @@ export function AccountCardBase({
             </Row>
 
             <Column align="center" justify="center" paddingVertical="md" gap="xs">
-              <Text
-                variant="xxxl"
+              <AppText
+                variant="title"
                 weight="bold"
                 style={{
                   color: resolvedTextColor,
@@ -187,17 +187,16 @@ export function AccountCardBase({
                 }}
               >
                 {formatMoney(account.balance, account.currencyCode)}
-              </Text>
+              </AppText>
               {account.workplaceBalance !== undefined &&
                 account.currencyCode !== workplaceCurrencyCode && (
-                  <Text
-                    variant="sm"
+                  <AppText
+                    variant="bodySmall"
                     weight="medium"
-                    opacity={0.8}
-                    style={{ color: resolvedTextColor }}
+                    style={{ opacity: 0.8, color: resolvedTextColor }}
                   >
                     ≈ {formatMoney(account.workplaceBalance, workplaceCurrencyCode)}
-                  </Text>
+                  </AppText>
                 )}
             </Column>
           </Column>
@@ -240,35 +239,33 @@ export function AccountCardBase({
         {account.showMonthlyStats && (
           <Row paddingHorizontal="lg" paddingVertical="md" align="center" justify="space-between">
             <Column align="center" flex={1}>
-              <Text
-                variant="xs"
+              <AppText
+                variant="caption"
                 weight="bold"
                 color="secondary"
-                opacity={0.6}
-                style={{ marginBottom: Spacing.xs, letterSpacing: 0.5 }}
+                style={{ opacity: 0.6, marginBottom: Spacing.xs, letterSpacing: 0.5 }}
               >
                 {stats.leftLabel}
-              </Text>
-              <Text variant="sm" weight="bold">
+              </AppText>
+              <AppText variant="bodySmall" weight="bold">
                 {formatMoney(stats.leftAmount, account.currencyCode)}
-              </Text>
+              </AppText>
             </Column>
 
             <Box width={BorderWidth.thin} height={Size.md} background={dividerColor} />
 
             <Column align="center" flex={1}>
-              <Text
-                variant="xs"
+              <AppText
+                variant="caption"
                 weight="bold"
                 color="secondary"
-                opacity={0.6}
-                style={{ marginBottom: Spacing.xs, letterSpacing: 0.5 }}
+                style={{ opacity: 0.6, marginBottom: Spacing.xs, letterSpacing: 0.5 }}
               >
                 {stats.rightLabel}
-              </Text>
-              <Text variant="sm" weight="bold">
+              </AppText>
+              <AppText variant="bodySmall" weight="bold">
                 {formatMoney(stats.rightAmount, account.currencyCode)}
-              </Text>
+              </AppText>
             </Column>
           </Row>
         )}

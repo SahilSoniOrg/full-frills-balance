@@ -6,10 +6,11 @@ import {
   Badge,
   PressScaleTouchable,
   type IconName,
+  AppText,
 } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Theme } from '@/src/constants/design-tokens';
-import { Box, Column, Row, Text } from '@/src/design-system';
+import { Box, Column, Row } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PlainPlannedPayment } from '@/src/types/plainDtos';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
@@ -146,13 +147,13 @@ function PlannedPaymentCardComponent({ item, onPress }: PlannedPaymentCardProps)
                 <AppIcon name={vm.iconName} color={vm.amountColor} size={Size.iconSm} />
               </Box>
               <Column flex={1}>
-                <Text variant="base" weight="bold" numberOfLines={1}>
+                <AppText variant="body" weight="bold" numberOfLines={1}>
                   {vm.name}
-                </Text>
+                </AppText>
                 <Row align="center" gap="sm" marginTop="xs">
-                  <Text variant="xs" color="secondary" opacity={0.6}>
+                  <AppText variant="caption" color="secondary" style={{ opacity: 0.6 }}>
                     {vm.intervalLabel}
-                  </Text>
+                  </AppText>
                   <Badge variant={vm.statusBadge.variant} size="sm" icon={vm.statusBadge.icon}>
                     {vm.statusBadge.text}
                   </Badge>
@@ -161,9 +162,9 @@ function PlannedPaymentCardComponent({ item, onPress }: PlannedPaymentCardProps)
             </Row>
 
             <Column align="flex-end">
-              <Text variant="lg" weight="bold" color={vm.amountColor}>
+              <AppText variant="bodyLarge" weight="bold" color={vm.amountColor}>
                 {formatMoney(vm.amount, vm.currencyCode)}
-              </Text>
+              </AppText>
             </Column>
           </Row>
 
@@ -176,9 +177,9 @@ function PlannedPaymentCardComponent({ item, onPress }: PlannedPaymentCardProps)
                 size={Size.xxs}
                 color={vm.dateColor}
               />
-              <Text variant="xs" weight="medium" style={{ color: vm.dateColor }}>
+              <AppText variant="caption" weight="medium" style={{ color: vm.dateColor }}>
                 {vm.dateLabel}
-              </Text>
+              </AppText>
             </Row>
             <AppIcon
               name={Icon.ChevronRight}

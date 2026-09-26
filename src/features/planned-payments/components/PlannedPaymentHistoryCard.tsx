@@ -1,8 +1,8 @@
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { Icon, AppIcon, AppSurface, Badge, IconName } from '@/src/components/core';
+import { Icon, AppIcon, AppSurface, Badge, IconName, AppText } from '@/src/components/core';
 import { Opacity, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
-import { Box, Column, Row, Text } from '@/src/design-system';
+import { Box, Column, Row } from '@/src/design-system';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDate } from '@/src/utils/dateUtils';
@@ -76,9 +76,9 @@ export const PlannedPaymentHistoryCard = ({
               color={isSelected ? theme.primary : theme.textTertiary}
             />
           ) : null}
-          <Text variant="subheading" weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
+          <AppText variant="subheading" weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
             {formattedDate}
-          </Text>
+          </AppText>
         </Row>
 
         <Badge
@@ -99,17 +99,17 @@ export const PlannedPaymentHistoryCard = ({
       <Box unsafe_backgroundRaw={withOpacity('#000', Opacity.ghost)} padding="md" borderRadius="md">
         <Row gap="md">
           <Column flex={1}>
-            <Text variant="xs" color="secondary" marginBottom="xs">
+            <AppText variant="caption" color="secondary" style={{ marginBottom: Spacing.xs }}>
               AMOUNT
-            </Text>
+            </AppText>
             <Row align="center" gap="xs">
-              <Text
-                variant="base"
+              <AppText
+                variant="body"
                 weight="bold"
                 style={{ color: theme[presentation.typeColor as keyof typeof theme] as string }}
               >
                 {formatMoney(journalAmount, currencyCode)}
-              </Text>
+              </AppText>
               {isAmountDeviated && (
                 <Box
                   unsafe_backgroundRaw={withOpacity(theme.warning, Opacity.soft)}
@@ -121,26 +121,24 @@ export const PlannedPaymentHistoryCard = ({
               )}
             </Row>
             {isAmountDeviated && (
-              <Text
-                variant="xs"
+              <AppText
+                variant="caption"
                 color="warning"
-                opacity={0.8}
-                marginTop={2}
-                style={{ fontSize: 10 }}
+                style={{ opacity: 0.8, marginTop: 2, fontSize: 10 }}
               >
                 Originally {formatMoney(plannedAmount, currencyCode)}
-              </Text>
+              </AppText>
             )}
           </Column>
 
           <Column flex={1}>
-            <Text variant="xs" color="secondary" marginBottom="xs">
+            <AppText variant="caption" color="secondary" style={{ marginBottom: Spacing.xs }}>
               TITLE
-            </Text>
+            </AppText>
             <Row align="center" style={{ flexShrink: 1 }}>
-              <Text variant="base" numberOfLines={1} style={{ flexShrink: 1 }}>
+              <AppText variant="body" numberOfLines={1} style={{ flexShrink: 1 }}>
                 {journalTitle || 'No Title'}
-              </Text>
+              </AppText>
               {isTitleDeviated && (
                 <Box
                   unsafe_backgroundRaw={withOpacity(theme.primary, Opacity.soft)}

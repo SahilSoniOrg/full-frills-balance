@@ -9,7 +9,16 @@ import { memo, useMemo } from 'react';
 import { StyleSheet, Text, type TextProps, type TextStyle } from 'react-native';
 
 export type AppTextProps = TextProps & {
-  variant?: 'caption' | 'body' | 'subheading' | 'heading' | 'title' | 'xl' | 'hero';
+  variant?:
+    | 'caption'
+    | 'bodySmall'
+    | 'body'
+    | 'bodyLarge'
+    | 'subheading'
+    | 'heading'
+    | 'title'
+    | 'xl'
+    | 'hero';
   color?: ComponentVariant;
   align?: 'auto' | 'left' | 'right' | 'center' | 'justify';
   weight?: 'regular' | 'medium' | 'semibold' | 'bold';
@@ -39,8 +48,12 @@ export const AppText = memo(function AppText({
       switch (variant) {
         case 'caption':
           return styles.caption;
+        case 'bodySmall':
+          return styles.bodySmall;
         case 'body':
           return styles.body;
+        case 'bodyLarge':
+          return styles.bodyLarge;
         case 'subheading':
           return styles.subheading;
         case 'heading':
@@ -68,14 +81,14 @@ export const AppText = memo(function AppText({
       // Dark mode weight compensation: light-on-dark text reads optically thinner,
       // so bump body/caption weight up one step for readability parity with light mode.
       const compensatedWeight =
-        themeMode === 'dark' && ['body', 'caption'].includes(variant)
+        themeMode === 'dark' && ['caption', 'bodySmall', 'body', 'bodyLarge'].includes(variant)
           ? weight === 'regular'
             ? 'medium'
             : weight === 'medium'
               ? 'semibold'
               : weight
           : weight;
-      // For body/caption, delegate to the weight prop to select the right Sans-Serif file
+      // For body/caption sizes, delegate to the weight prop to select the right Sans-Serif file
       return fonts[compensatedWeight] || fonts.regular;
     })();
 
@@ -136,9 +149,19 @@ const styles = StyleSheet.create({
     lineHeight: Math.round(Typography.sizes.xs * Typography.lineHeights.tight),
     letterSpacing: Typography.letterSpacing.normal,
   },
+  bodySmall: {
+    fontSize: Typography.sizes.sm,
+    lineHeight: Math.round(Typography.sizes.sm * Typography.lineHeights.normal),
+    letterSpacing: Typography.letterSpacing.normal,
+  },
   body: {
     fontSize: Typography.sizes.base,
     lineHeight: Math.round(Typography.sizes.base * Typography.lineHeights.normal),
+    letterSpacing: Typography.letterSpacing.normal,
+  },
+  bodyLarge: {
+    fontSize: Typography.sizes.lg,
+    lineHeight: Math.round(Typography.sizes.lg * Typography.lineHeights.normal),
     letterSpacing: Typography.letterSpacing.normal,
   },
   subheading: {

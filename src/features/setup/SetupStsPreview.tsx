@@ -3,7 +3,7 @@ import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { Icon, AppIcon, AppSurface, AppText, ColoredDot } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
-import { Box, Column, Row, Text } from '@/src/design-system';
+import { Box, Column, Row } from '@/src/design-system';
 import type { SafeToSpendProjection } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import { SAFE_TO_SPEND_PREVIEW, SafeToSpendPreviewFixture } from './fixtures/safeToSpendPreview';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -72,16 +72,16 @@ export function SetupStsPreview({
     >
       <Column gap="lg">
         <Column gap="xs">
-          <Text
-            variant="xs"
+          <AppText
+            variant="caption"
             weight="bold"
             color={isOverCommitted ? 'error' : 'secondary'}
             style={{ letterSpacing: 1.2, textTransform: 'uppercase' }}
             numberOfLines={1}
           >
             {isOverCommitted ? strings.shortfall : strings.safeToSpendTitle}
-          </Text>
-          <Text
+          </AppText>
+          <AppText
             variant="hero"
             color={isOverCommitted ? 'error' : isPositiveSafeToSpend ? 'success' : undefined}
             weight="bold"
@@ -90,10 +90,14 @@ export function SetupStsPreview({
             minimumFontScale={0.55}
           >
             {formattedSafeToSpend}
-          </Text>
-          <Text variant="xs" color={isOverCommitted ? 'error' : 'secondary'} opacity={0.8}>
+          </AppText>
+          <AppText
+            variant="caption"
+            color={isOverCommitted ? 'error' : 'secondary'}
+            style={{ opacity: 0.8 }}
+          >
             {isOverCommitted ? strings.shortfallSubtitle : strings.afterObligations}
-          </Text>
+          </AppText>
         </Column>
 
         {effectiveTotal > 0 ? (

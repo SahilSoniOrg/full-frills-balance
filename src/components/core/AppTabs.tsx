@@ -1,5 +1,6 @@
+import { AppText } from './AppText';
 import { BorderWidth, ChromeMotion, Opacity, Size, Spacing } from '@/src/constants';
-import { Box, Text } from '@/src/design-system';
+import { Box } from '@/src/design-system';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { triggerHaptic } from '@/src/utils/haptics';
@@ -132,13 +133,13 @@ function AppTabsComponent<T extends string | number>({
                 style={styles.tab}
               >
                 <Box flexDirection="row" alignItems="center" gap="xs">
-                  <Text
-                    variant="base"
+                  <AppText
+                    variant="body"
                     weight={isSelected ? 'bold' : 'medium'}
                     style={{ color: isSelected ? theme.primary : theme.textSecondary }}
                   >
                     {option.label}
-                  </Text>
+                  </AppText>
                   {option.badge !== undefined && (
                     <Box
                       background={isSelected ? 'primary' : 'surfaceSecondary'}
@@ -148,8 +149,8 @@ function AppTabsComponent<T extends string | number>({
                       alignItems="center"
                       justifyContent="center"
                     >
-                      <Text
-                        variant="xs"
+                      <AppText
+                        variant="caption"
                         weight="bold"
                         style={{
                           color: isSelected ? theme.onPrimary : theme.textSecondary,
@@ -157,7 +158,7 @@ function AppTabsComponent<T extends string | number>({
                         }}
                       >
                         {option.badge}
-                      </Text>
+                      </AppText>
                     </Box>
                   )}
                 </Box>
