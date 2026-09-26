@@ -9,6 +9,8 @@ export interface Money {
 export interface AccountBalance {
   accountId: AccountId;
   balance: number;
+  /** Current spot valuation in the workplace currency, when available. */
+  workplaceBalance?: number;
   directBalance: number;
   currencyCode: string;
   transactionCount: number;

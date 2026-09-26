@@ -50,6 +50,7 @@ export function AccountCardBase({
   const { fonts, theme } = useTheme();
   const { resolvedHourCycle } = useHourCyclePrefs();
   const formatMoney = useMoneyFormat({ loading: isLoading });
+  const workplaceCurrencyCode = account.workplaceCurrencyCode ?? account.currencyCode;
   // The account color owns the card surface, so this contrast color is derived
   // from the account surface rather than the category marker.
   const resolvedTextColor = account.textColor;
@@ -176,7 +177,7 @@ export function AccountCardBase({
               </Row>
             </Row>
 
-            <Column align="center" justify="center" paddingVertical="md">
+            <Column align="center" justify="center" paddingVertical="md" gap="xs">
               <Text
                 variant="xxxl"
                 weight="bold"
@@ -187,6 +188,17 @@ export function AccountCardBase({
               >
                 {formatMoney(account.balance, account.currencyCode)}
               </Text>
+              {account.workplaceBalance !== undefined &&
+                account.currencyCode !== workplaceCurrencyCode && (
+                  <Text
+                    variant="sm"
+                    weight="medium"
+                    opacity={0.8}
+                    style={{ color: resolvedTextColor }}
+                  >
+                    ≈ {formatMoney(account.workplaceBalance, workplaceCurrencyCode)}
+                  </Text>
+                )}
             </Column>
           </Column>
 

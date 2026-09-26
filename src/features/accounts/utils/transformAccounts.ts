@@ -29,6 +29,8 @@ export interface AccountCardViewModel {
   textColor: string;
   /** Raw balance — presentational layer formats using screen privacy flag. */
   balance: number;
+  workplaceBalance?: number;
+  workplaceCurrencyCode?: string;
   monthlyIncome: number;
   monthlyExpenses: number;
   showMonthlyStats: boolean;
@@ -54,6 +56,7 @@ export interface AccountSectionViewModel {
 
 interface BalancesByAccountId {
   balance: number;
+  workplaceBalance?: number;
   monthlyIncome: number;
   monthlyExpenses: number;
   currencyCode?: string;
@@ -106,6 +109,7 @@ export function transformAccountsToSections(
 
   const {
     balancesByAccountId,
+    defaultCurrency,
     showAccountMonthlyStats,
     collapsedSections,
     theme,
@@ -147,6 +151,7 @@ export function transformAccountsToSections(
       totalAccounts++;
       const balanceData = balancesByAccountId.get(account.id) || null;
       const balance = balanceData?.balance || 0;
+      const workplaceBalance = balanceData?.workplaceBalance;
       const monthlyIncome = balanceData?.monthlyIncome || 0;
       const monthlyExpenses = balanceData?.monthlyExpenses || 0;
       const isExpanded = expandedAccountIds.has(account.id);
@@ -164,6 +169,8 @@ export function transformAccountsToSections(
             : 0;
       // Round financial values to 2dp to avoid fp drift causing phantom cache misses.
       const roundedBalance = Math.round(balance * 100) / 100;
+      const roundedWorkplaceBalance =
+        workplaceBalance === undefined ? '' : Math.round(workplaceBalance * 100) / 100;
       const roundedIncome = Math.round(monthlyIncome * 100) / 100;
       const roundedExpenses = Math.round(monthlyExpenses * 100) / 100;
       // hasChildren is keyed explicitly: child writes don't bump this account's updatedAt.
@@ -173,7 +180,7 @@ export function transformAccountsToSections(
           : account.archivedAt
             ? new Date(account.archivedAt).getTime()
             : 0;
-      const stateKey = `${account.id}:${updatedAtTs}:${archivedAtTs}:${account.name}:${account.icon ?? ''}:${account.color ?? ''}:${depth}:${children.length > 0}:${isExpanded}:${showAccountMonthlyStats}:${roundedBalance}:${roundedIncome}:${roundedExpenses}`;
+      const stateKey = `${account.id}:${updatedAtTs}:${archivedAtTs}:${account.name}:${account.icon ?? ''}:${account.color ?? ''}:${depth}:${children.length > 0}:${isExpanded}:${showAccountMonthlyStats}:${defaultCurrency}:${roundedBalance}:${roundedWorkplaceBalance}:${roundedIncome}:${roundedExpenses}`;
 
       // Try current bucket then old bucket (aging)
       let viewModel = currentBucket.get(stateKey) || oldBucket.get(stateKey);
@@ -232,6 +239,8 @@ export function transformAccountsToSections(
         accountColor: meta.accountColor,
         textColor: meta.textColor,
         balance,
+        workplaceBalance,
+        workplaceCurrencyCode: defaultCurrency,
         monthlyIncome,
         monthlyExpenses,
         showMonthlyStats: showAccountMonthlyStats || isExpanded,

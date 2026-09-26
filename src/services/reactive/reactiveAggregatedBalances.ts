@@ -22,6 +22,8 @@ import {
 import { AccountBalance } from '@/src/types/domainReadModels';
 import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
+import { convertAmount } from '@/src/services/currencyConversion';
+import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { startTrace } from '@/src/utils/TraceService';
@@ -134,6 +136,19 @@ export function observeAggregatedAccountBalances(
               precisionMap,
               targetCurrency,
               trace,
+            );
+
+            await Promise.all(
+              Array.from(balancesMap.values()).map(async balance => {
+                const converted = await convertAmount({
+                  amount: balance.balance,
+                  fromCurrency: balance.currencyCode,
+                  toCurrency: targetCurrency,
+                  mode: 'spot',
+                  precision: getCurrencyPrecision(targetCurrency),
+                });
+                if (converted.ok) balance.workplaceBalance = converted.amount;
+              }),
             );
 
             const finalBalances = Array.from(balancesMap.values());
