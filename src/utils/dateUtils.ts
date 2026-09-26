@@ -150,50 +150,34 @@ export const getPerfNow = () => performance.now();
  * @param timestamp Unix timestamp in milliseconds
  * @returns Start of day timestamp
  */
-export const getStartOfDay = (timestamp: number): number => {
-  const date = new Date(timestamp);
-  date.setHours(0, 0, 0, 0);
-  return date.getTime();
-};
+export const getStartOfDay = (timestamp: number): number =>
+  dayjs(timestamp).startOf('day').valueOf();
 
 /**
  * Gets the end of day (23:59:59.999) for a given timestamp
  * @param timestamp Unix timestamp in milliseconds
  * @returns End of day timestamp
  */
-export const getEndOfDay = (timestamp: number): number => {
-  const date = new Date(timestamp);
-  date.setHours(23, 59, 59, 999);
-  return date.getTime();
-};
+export const getEndOfDay = (timestamp: number): number => dayjs(timestamp).endOf('day').valueOf();
+
+const monthStart = (month: number, year: number) => dayjs(new Date(year, month, 1));
 
 /**
  * Gets a date range for a specific month and year
  */
 export const getMonthRange = (month: number, year: number): DateRange => {
-  const startDate = new Date(year, month, 1, 0, 0, 0, 0).getTime();
-  const endDate = new Date(year, month + 1, 0, 23, 59, 59, 999).getTime();
-  return { startDate, endDate };
+  const start = monthStart(month, year);
+  return { startDate: start.valueOf(), endDate: start.endOf('month').valueOf() };
 };
 
 /**
  * Gets a date range for the last N days/weeks/months
  */
 export const getLastNRange = (n: number, unit: 'days' | 'weeks' | 'months'): DateRange => {
-  const now = Date.now();
-  const startDate = new Date(now);
-
-  if (unit === 'days') {
-    startDate.setDate(startDate.getDate() - n);
-  } else if (unit === 'weeks') {
-    startDate.setDate(startDate.getDate() - n * 7);
-  } else if (unit === 'months') {
-    startDate.setMonth(startDate.getMonth() - n);
-  }
-
+  const now = dayjs();
   return {
-    startDate: getStartOfDay(startDate.getTime()),
-    endDate: getEndOfDay(now),
+    startDate: now.subtract(n, unit).startOf('day').valueOf(),
+    endDate: now.endOf('day').valueOf(),
   };
 };
 
@@ -201,79 +185,43 @@ export const getLastNRange = (n: number, unit: 'days' | 'weeks' | 'months'): Dat
  * Gets the current month range
  */
 export const getCurrentMonthRange = (): DateRange => {
-  const now = new Date();
-  const month = now.getMonth();
-  const year = now.getFullYear();
-  const range = getMonthRange(month, year);
-  return { ...range, label: getMonthLabel(month, year) };
+  const now = dayjs();
+  const range = getMonthRange(now.month(), now.year());
+  return { ...range, label: getMonthLabel(now.month(), now.year()) };
+};
+
+const shiftedMonthRange = (
+  currentMonth: number,
+  currentYear: number,
+  offset: number,
+): { range: DateRange; month: number; year: number } => {
+  const target = monthStart(currentMonth, currentYear).add(offset, 'month');
+  const month = target.month();
+  const year = target.year();
+  return {
+    range: { ...getMonthRange(month, year), label: getMonthLabel(month, year) },
+    month,
+    year,
+  };
 };
 
 /**
  * Gets the previous month range
  */
-export const getPreviousMonthRange = (
-  currentMonth: number,
-  currentYear: number,
-): { range: DateRange; month: number; year: number } => {
-  let prevMonth = currentMonth - 1;
-  let prevYear = currentYear;
-
-  if (prevMonth < 0) {
-    prevMonth = 11;
-    prevYear -= 1;
-  }
-
-  const range = getMonthRange(prevMonth, prevYear);
-  return {
-    range: { ...range, label: getMonthLabel(prevMonth, prevYear) },
-    month: prevMonth,
-    year: prevYear,
-  };
-};
+export const getPreviousMonthRange = (currentMonth: number, currentYear: number) =>
+  shiftedMonthRange(currentMonth, currentYear, -1);
 
 /**
  * Gets the next month range
  */
-export const getNextMonthRange = (
-  currentMonth: number,
-  currentYear: number,
-): { range: DateRange; month: number; year: number } => {
-  let nextMonth = currentMonth + 1;
-  let nextYear = currentYear;
-
-  if (nextMonth > 11) {
-    nextMonth = 0;
-    nextYear += 1;
-  }
-
-  const range = getMonthRange(nextMonth, nextYear);
-  return {
-    range: { ...range, label: getMonthLabel(nextMonth, nextYear) },
-    month: nextMonth,
-    year: nextYear,
-  };
-};
+export const getNextMonthRange = (currentMonth: number, currentYear: number) =>
+  shiftedMonthRange(currentMonth, currentYear, 1);
 
 /**
  * Helper to get a formatted label for a month range (e.g. "Jan 2024")
  */
-export const getMonthLabel = (month: number, year: number): string => {
-  const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-  return `${months[month]} ${year}`;
-};
+export const getMonthLabel = (month: number, year: number): string =>
+  monthStart(month, year).format('MMM YYYY');
 
 /**
  * Formats a timestamp for the day separator in lists (e.g. "Monday, Feb 23, 2026")
