@@ -1,4 +1,4 @@
-import { smsJournalQueries } from '@/src/data/repositories/journal/journalSmsModule';
+import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';

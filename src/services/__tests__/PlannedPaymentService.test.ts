@@ -2,7 +2,7 @@ import { journalPersistenceService } from '@/src/services/journal/JournalPersist
 import { database } from '@/src/data/database/Database';
 import { JournalStatus, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
-import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
+import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { deletePlannedPayment } from '@/src/services/planned-payment/plannedPaymentCommands';
@@ -21,7 +21,7 @@ import {
 
 jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
-jest.mock('@/src/data/repositories/journal/journalPlannedModule');
+jest.mock('@/src/data/repositories/journal/JournalPlannedQueries');
 jest.mock('@/src/data/repositories/journal/JournalPersistenceRepository', () => ({
   journalPersistenceRepository: {
     setNonPostedStatusesInSession: jest.fn().mockResolvedValue(undefined),

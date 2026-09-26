@@ -9,7 +9,7 @@ import {
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
+import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import {
   createPlannedPayment,

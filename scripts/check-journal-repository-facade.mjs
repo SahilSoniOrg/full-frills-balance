@@ -6,9 +6,9 @@
  * now accessed by intent through modules under src/data/repositories/journal/:
  *   - journalTimelineModule             (list / by-id / observation / enrichment reads)
  *   - JournalPersistenceRepository      (journal writes and lifecycle commands)
- *   - journalPlannedModule              (planned-payment scheduling lookups)
- *   - journalSmsModule                  (SMS-dedup lookups)
- *   - journalMetadataModule             (metadata lookup / patch)
+ *   - JournalPlannedQueries             (planned-payment scheduling lookups)
+ *   - SmsJournalQueries                 (SMS-dedup lookups)
+ *   - journalMetadataRepository         (metadata lookup / patch)
  *
  * This check fails if the façade file returns or if any module imports it,
  * preventing the gateway pattern from reappearing under the same name.

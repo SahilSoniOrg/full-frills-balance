@@ -7,7 +7,7 @@ import {
   type JournalPersistenceResult,
 } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import type { PlannedOccurrenceJournals } from '@/src/data/repositories/journal/JournalPlannedQueries';
-import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
+import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { buildPlannedPaymentTransferLines } from '@/src/services/planned-payment/plannedPaymentJournalLines';

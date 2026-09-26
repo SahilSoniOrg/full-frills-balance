@@ -1,6 +1,6 @@
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
-import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
+import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import {

@@ -1,4 +1,4 @@
-import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataModule';
+import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
 import { useObservable } from '@/src/hooks/useObservable';
 import {
   mapSmsJournalMetadataDisplay,

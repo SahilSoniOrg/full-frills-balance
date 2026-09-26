@@ -5,7 +5,7 @@ import JournalMetadata from '@/src/data/models/JournalMetadata';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import { journalPlannedQueries } from '@/src/data/repositories/journal/journalPlannedModule';
+import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';

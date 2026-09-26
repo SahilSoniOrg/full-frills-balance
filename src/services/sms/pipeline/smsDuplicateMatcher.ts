@@ -1,6 +1,6 @@
 import { SmsMessage } from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
-import { smsJournalQueries } from '@/src/data/repositories/journal/journalSmsModule';
+import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import {
   DuplicateMatch,
