@@ -19,15 +19,15 @@ Delete dead code, collapse single-caller layers, and drop duplicate tooling. No 
 
 | # | Item | Status | Commit |
 | --- | --- | --- | --- |
-| 29 | Delete `invalidateAccountArchiveCaches` (test-only caller) | todo | |
-| 30 | Delete unused `CurrencyInitService.getAllCurrencies` / `getCurrencyByCode` / `COMMON_CURRENCY_CODES` | todo | |
-| 21 | Merge `currencyConversion.review.test.ts` into `currencyConversion.test.ts` | todo | |
-| 11 | Delete unused `AccountTileList` | todo | |
-| 32 | Scheduler: drop unused `delay` and the `requestIdleCallback` branch | todo | |
-| 34 | Drop `test:detox:build` alias script | todo | |
-| 22 | Delete `Bleed` (single caller) | todo | |
-| 25 | Replace `reloadApp` wrapper with `reloadAppAsync` at its call site | todo | |
-| 28 | Drop single-implementation `ReportsV2QueryEngine` interface | todo | |
+| 29 | Delete `invalidateAccountArchiveCaches` (test-only caller) | done | `dbb2e852` |
+| 30 | Delete unused `CurrencyInitService.getAllCurrencies` / `getCurrencyByCode` / `COMMON_CURRENCY_CODES` | done | `44f758e7` |
+| 21 | Delete `currencyConversion.review.test.ts` (both cases already in `currencyConversion.test.ts`) | done | `ed6b110d` |
+| 11 | Delete unused `AccountTileList`, plus orphaned `accountTilePolicy` and `getArchivedAccountTilePresentation` | done | `615e2eb2` |
+| 32 | Scheduler: drop unused `delay` and a stale test mock. Kept the `requestIdleCallback` branch: `InteractionManager` is deprecated in RN 0.86 | done | `4842519c` |
+| 34 | Drop `test:detox:build` alias script (moved after item 7: `record-onboarding-ios.sh` calls it) | todo | |
+| 22 | Delete `Bleed` (single caller) and `negateSpace` | done | `0e2b6a61` |
+| 25 | Replace `reloadApp` wrapper with `reloadAppAsync` at its call site | kept | see Log |
+| 28 | Drop unused `ReportsV2Engine` type alias. Kept the interface: it is the injection seam for view-model test mocks | done | `e4b1e18b` |
 
 ### Phase B: tooling
 
@@ -82,3 +82,4 @@ Delete dead code, collapse single-caller layers, and drop duplicate tooling. No 
 ## Log
 
 - 2026-09-26: Plan written.
+- 2026-09-26: Phase A done except 34. Item 25 kept: `runtimeVersion` is pinned to `'1.0.0'`, so OTA bundles can land on older native binaries without the Expo reload bridge; the `Updates.reloadAsync` fallback is a real compatibility path, not a wrapper.
