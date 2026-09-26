@@ -56,8 +56,8 @@ Delete dead code, collapse single-caller layers, and drop duplicate tooling. No 
 | --- | --- | --- | --- |
 | 4 | Design preview: keep out of production navigation/bundle | already done | see Log |
 | 5 | Generic `usePreference` helper for the preference hooks | kept | owner decision: keep preference hooks separate |
-| 15 | Migrate design-system `Text` users to `AppText`; delete `Text` | todo | |
-| 16 | Remove `TransactionRawRepository` pass-through methods | todo | |
+| 15 | Migrate design-system `Text` users to `AppText`; delete `Text` | **needs decision** | see Log |
+| 16 | Remove `TransactionRawRepository` pass-through methods | partial | `83b83507` |
 | 17 | `dateUtils` boundary math on dayjs | todo | |
 | 6 | Shared core for the three journal editor hooks | todo | |
 
@@ -91,3 +91,5 @@ Delete dead code, collapse single-caller layers, and drop duplicate tooling. No 
 - 2026-09-26: Item 10 account-form split left as is pending a decision: `hooks/form/*` (5 files, 540 lines) splits one reducer-backed form by concern (core, pickers, metadata, balance classify). Merging into `useAccountFormViewModel` gives an ~870-line hook and saves only ~60 lines of glue.
 - 2026-09-27: Item 4 needs no change. Production Android export (`APP_VARIANT=production`) contains none of the preview screen's strings even before any change: the screen's `if (!__DEV__) return <Redirect/>` early return lets the minifier drop the body. A `__DEV__`-gated route saved ~1 KB and added a file, so it was reverted.
 - 2026-09-27: Item 5 dropped by owner: keep preference hooks separate.
+- 2026-09-27: Item 15 left pending a decision. 49 usages rely on `Text`-only props (size variants `xs`..`xxl`, margins, opacity) across BudgetCard, AppTabs, SetupStsPreview, PlannedPaymentHistoryCard, PlannedPaymentDetailsView (17), PlannedPaymentCard, SafeToSpendLedger, SafeToSpendHeader, AccountCard (8). `AppText` has no equivalent variants and adds tabular numerals, so a migration means picking a mapping per usage and risks visual regressions.
+- 2026-09-27: Item 16: deleted `getAccountDeltasGroupedRaw` (no production caller) from the facade and the metrics query module. The other pass-throughs stay: nothing outside `src/data` imports `repositories/raw/*`, so `transactionRawRepository` is the single raw-SQL entry point for services, and 12 test files mock it. Removing them would widen the data-layer surface services depend on to save ~60 lines.
