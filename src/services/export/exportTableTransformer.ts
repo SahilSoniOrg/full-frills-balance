@@ -4,11 +4,11 @@ import { exportRepository } from '@/src/data/repositories/ExportRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
+import { snakeToCamel } from '@/src/utils/serialization';
 import {
   DATE_COLUMN_NAMES,
   EXPORT_OMIT_SOFT_DELETED_TABLES,
   getTableSchema,
-  snakeToCamel,
   toIsoDate,
   typeSafeColumns,
 } from './exportSchemaUtils';

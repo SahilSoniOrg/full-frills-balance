@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
-import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants';
+import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants/ledger-constants';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
 import {
   NO_FX_OVERRIDE,

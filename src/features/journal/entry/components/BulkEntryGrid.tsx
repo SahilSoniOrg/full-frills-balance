@@ -10,7 +10,8 @@ import {
   View,
 } from 'react-native';
 import { AppButton, AppIcon, AppText, Icon } from '@/src/components/core';
-import { AppConfig, MAX_BULK_JOURNAL_ROWS, Spacing, Shape, Size } from '@/src/constants';
+import { AppConfig, Spacing, Shape, Size } from '@/src/constants';
+import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants/ledger-constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { BulkJournalRow, BulkJournalRowActions } from '../types/bulkJournal';
 import { BulkEntryRow } from './BulkEntryRow';

@@ -1,5 +1,5 @@
 import Model from '@nozbe/watermelondb/Model';
-import { snakeToCamel } from '@/src/utils/stringUtils';
+import { snakeToCamel } from '@/src/utils/serialization';
 
 /**
  * Projects a Watermelon model into the schema-shaped row consumed by export.

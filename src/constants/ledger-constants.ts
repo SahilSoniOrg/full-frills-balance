@@ -2,6 +2,9 @@
  * Ledger Constants - Shared keys and sources for journals and metadata
  */
 
+/** Maximum number of bulk journal rows that fits within the WatermelonDB bridge limit. */
+export const MAX_BULK_JOURNAL_ROWS = 100;
+
 export const MetadataKeys = {
   ORIGINAL_PLANNED_DATE: 'originalPlannedDate',
 } as const;

@@ -6,7 +6,6 @@
 export * from './design-tokens';
 export * from './report-constants';
 export * from './account-constants';
-export * from './limits';
 export * from './chrome-motion';
 
 // App configuration - Behavior and settings only

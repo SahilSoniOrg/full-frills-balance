@@ -43,12 +43,11 @@ import { ListRow } from '@/src/components/core/ListRow';
 import { Shape, Size, Spacing, ThemeMode } from '@/src/constants';
 import { ThemeOverride } from '@/src/contexts/UIContext';
 import { Box, Inline, Inset, Page, Separator, Skeleton, Stack } from '@/src/design-system';
-import { useColorScheme } from '@/src/hooks/use-color-scheme';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PeriodFilter } from '@/src/utils/dateUtils';
 import { Redirect } from 'expo-router';
 import { type ReactNode, useState } from 'react';
-import { Switch } from 'react-native';
+import { Switch, useColorScheme } from 'react-native';
 
 const PREVIEW_TAB_OPTIONS = [
   { id: 'overview', label: 'Overview' },

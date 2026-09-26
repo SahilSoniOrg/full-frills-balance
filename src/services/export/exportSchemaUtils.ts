@@ -2,8 +2,6 @@ import { schema } from '@/src/data/database/schema';
 import { TableSchema } from '@nozbe/watermelondb';
 import { AppSchema } from '@nozbe/watermelondb/Schema';
 
-export { snakeToCamel } from '@/src/utils/stringUtils';
-
 export const DATE_COLUMN_NAMES = [
   'created_at',
   'updated_at',

@@ -24,7 +24,7 @@ import {
   resolveCurrencyPrecisions,
 } from '@/src/domain/accounting/journalBalanceEvaluator';
 import { logger } from '@/src/utils/logger';
-import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants';
+import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants/ledger-constants';
 import { assembleCreateJournalData, validateJournalEntryStructure } from './journalSaveHelpers';
 
 export interface SubmitJournalResult {

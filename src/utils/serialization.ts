@@ -1,5 +1,7 @@
 import { logger } from '@/src/utils/logger';
 
+export const snakeToCamel = (str: string) => str.replace(/(_\w)/g, match => match[1].toUpperCase());
+
 /**
  * Safely parse a JSON string with an optional fallback.
  * Logs an error if parsing fails.
