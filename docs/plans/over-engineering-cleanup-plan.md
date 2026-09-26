@@ -54,8 +54,8 @@ Delete dead code, collapse single-caller layers, and drop duplicate tooling. No 
 
 | # | Item | Status | Commit |
 | --- | --- | --- | --- |
-| 4 | Design preview: keep out of production navigation/bundle | todo | |
-| 5 | Generic `usePreference` helper for the preference hooks | todo | |
+| 4 | Design preview: keep out of production navigation/bundle | already done | see Log |
+| 5 | Generic `usePreference` helper for the preference hooks | kept | owner decision: keep preference hooks separate |
 | 15 | Migrate design-system `Text` users to `AppText`; delete `Text` | todo | |
 | 16 | Remove `TransactionRawRepository` pass-through methods | todo | |
 | 17 | `dateUtils` boundary math on dayjs | todo | |
@@ -76,6 +76,7 @@ Delete dead code, collapse single-caller layers, and drop duplicate tooling. No 
 | 26 | `check-rules.sh` | Used separately. |
 | 31 | Duplicate `.so` `pickFirst` | Leave as is. |
 | 35 | `expo-image`, `expo-web-browser` deps | Leave for now. |
+| 5 | Preference hooks (`use*Prefs`) | Keep separate (owner decision after review). `useDeviceMotionPrefs` stays too. |
 
 ## Later (after everything above)
 
@@ -88,3 +89,5 @@ Delete dead code, collapse single-caller layers, and drop duplicate tooling. No 
 - 2026-09-26: Phase B done. `verify` passes architecture, typecheck and lint; tests match the pre-existing failure baseline. Fixed a read-boundary violation from item 30's test change (`38232874`).
 - 2026-09-26: Phase C done. Item 12 kept: every `smsService` method has a production caller, and the facade maps inbox/rule models to plain DTOs (`toPlainInboxRecord`, `toPlainSmsRule`). Removing it would push model imports into ~10 feature files against the presentation-model boundary.
 - 2026-09-26: Item 10 account-form split left as is pending a decision: `hooks/form/*` (5 files, 540 lines) splits one reducer-backed form by concern (core, pickers, metadata, balance classify). Merging into `useAccountFormViewModel` gives an ~870-line hook and saves only ~60 lines of glue.
+- 2026-09-27: Item 4 needs no change. Production Android export (`APP_VARIANT=production`) contains none of the preview screen's strings even before any change: the screen's `if (!__DEV__) return <Redirect/>` early return lets the minifier drop the body. A `__DEV__`-gated route saved ~1 KB and added a file, so it was reverted.
+- 2026-09-27: Item 5 dropped by owner: keep preference hooks separate.
