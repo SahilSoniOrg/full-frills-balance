@@ -126,11 +126,7 @@ Existing debt around unscoped raw queries, presentation imports of database mode
 ```bash
 bun run verify                    # same as CI on PRs (includes architecture + typecheck:e2e)
 
-# Mobile E2E (Detox, authoritative): see docs/architecture/MOBILE_E2E.md
-# Web E2E (Playwright)
-bun run test:e2e:build
-bun run serve:e2e
-bun run test:e2e
+# Mobile E2E (Detox): see docs/architecture/MOBILE_E2E.md
 ```
 
 ---

@@ -27,11 +27,6 @@
     "test": "jest",
     "test:ci": "jest --ci --coverage --maxWorkers=2",
     "test:watch": "jest --watch",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:debug": "playwright test --debug",
-    "test:e2e:build": "expo export -p web --output-dir dist-e2e",
-    "serve:e2e": "serve dist-e2e -p 8081 --single",
     "e2e:build:ios": "EXPO_PUBLIC_E2E=1 detox build --configuration ios.sim.release",
     "e2e:test:ios": "detox test --configuration ios.sim.release e2e/specs",
     "e2e:test:ios:device": "test -n \"$DETOX_IOS_DEVICE_UDID\" || { echo 'Set DETOX_IOS_DEVICE_UDID first'; exit 1; }; detox test --configuration ios.device.release e2e/specs",
@@ -111,7 +106,6 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "^7.29.7",
-    "@playwright/test": "^1.63.0",
     "@react-native-community/cli": "20.2.0",
     "@testing-library/jest-native": "^5.4.3",
     "@testing-library/react-native": "^13.3.3",
@@ -133,7 +127,6 @@
     "prettier": "^3.9.6",
     "react-native-launch-arguments": "^4.1.1",
     "react-test-renderer": "19.2.3",
-    "serve": "^14.2.6",
     "sharp": "^0.35.4",
     "source-map-explorer": "^2.5.3",
     "typescript": "^6.0.3"

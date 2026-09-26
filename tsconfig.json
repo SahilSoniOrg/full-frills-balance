@@ -22,14 +22,13 @@
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts",
-    "e2e/pages/**/*.ts",
-    "e2e/fixtures.ts"
+    "expo-env.d.ts"
   ],
   "exclude": [
     "node_modules",
     "e2e/specs/**",
     "e2e/actions/**",
+    "e2e/pages/**",
     "e2e/constants/**",
     "e2e/utils/**"
   ]

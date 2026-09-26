@@ -8,6 +8,7 @@
   "include": [
     "e2e/specs/**/*.ts",
     "e2e/actions/**/*.ts",
+    "e2e/pages/**/*.ts",
     "e2e/constants/**/*.ts",
     "e2e/utils/**/*.ts",
     "e2e/screens/**/*.ts"
