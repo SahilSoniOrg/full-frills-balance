@@ -33,6 +33,11 @@ export class ExchangeRateService {
   private inFlightRequests: Map<string, InFlightRateRequest> = new Map();
   private historicalMemoryCache: Map<string, HistoricalRate> = new Map();
   private historicalInFlightRequests: Map<string, Promise<HistoricalRate>> = new Map();
+  /** Bases whose current memory table came from the network, not a partial local cache. */
+  private readonly networkFetchedBases = new Set<string>();
+  /** Bases that already got one automatic refresh after a missing quote. */
+  private readonly quoteRefreshAttempted = new Set<string>();
+  private readonly missingQuoteRefreshes = new Map<string, Promise<Record<string, number>>>();
   private readonly spotRateUpdates = new Subject<string>();
 
   observeSpotRateUpdates(): Observable<string> {
@@ -61,15 +66,12 @@ export class ExchangeRateService {
     }
 
     try {
-      // Use the unified fetcher which handles memory, DB, and network layers sequentially.
-      const rates = await this.fetchRatesForBase(fromCurrency, forceRefresh);
-
-      if (!rates[toCurrency]) {
+      const rate = await this.lookupRate(fromCurrency, toCurrency, forceRefresh);
+      if (rate == null) {
         logger.warn(`No rate found for ${fromCurrency} to ${toCurrency}. Defaulting to 1.0`);
         return 1.0;
       }
-
-      return rates[toCurrency];
+      return rate;
     } catch (error) {
       logger.error(`Exchange rate failure (${fromCurrency} -> ${toCurrency}):`, error);
       return 1.0; // Graceful fallback
@@ -89,9 +91,7 @@ export class ExchangeRateService {
     if (!fromCurrency || !toCurrency) return null;
 
     try {
-      const rates = await this.fetchRatesForBase(fromCurrency, forceRefresh);
-      const rate = rates[toCurrency];
-      return isUsableRequiredRate(rate) ? rate : null;
+      return await this.lookupRate(fromCurrency, toCurrency, forceRefresh);
     } catch (error) {
       logger.warn(
         `[ExchangeRateService] Required rate unavailable (${fromCurrency} -> ${toCurrency})`,
@@ -99,6 +99,45 @@ export class ExchangeRateService {
           error,
         },
       );
+      return null;
+    }
+  }
+
+  /**
+   * Read a pair from cache, then from the network once when that quote is absent.
+   * A partial local table (one historical pair, or another quote) must not count
+   * as a complete rate sheet for a different currency.
+   */
+  private async lookupRate(
+    fromCurrency: string,
+    toCurrency: string,
+    forceRefresh: boolean,
+  ): Promise<number | null> {
+    const rates = await this.fetchRatesForBase(fromCurrency, forceRefresh);
+    const direct = rates[toCurrency];
+    if (isUsableRequiredRate(direct)) return direct;
+
+    let pending = this.missingQuoteRefreshes.get(fromCurrency);
+    if (
+      !pending &&
+      !forceRefresh &&
+      !this.networkFetchedBases.has(fromCurrency) &&
+      !this.quoteRefreshAttempted.has(fromCurrency)
+    ) {
+      this.quoteRefreshAttempted.add(fromCurrency);
+      pending = this.fetchRatesForBase(fromCurrency, true).finally(() => {
+        this.missingQuoteRefreshes.delete(fromCurrency);
+      });
+      this.missingQuoteRefreshes.set(fromCurrency, pending);
+    }
+
+    if (!pending) return null;
+
+    try {
+      const refreshed = await pending;
+      const rate = refreshed[toCurrency];
+      return isUsableRequiredRate(rate) ? rate : null;
+    } catch {
       return null;
     }
   }
@@ -329,6 +368,7 @@ export class ExchangeRateService {
           rates,
           timestamp: Date.now(),
         });
+        this.networkFetchedBases.add(fromCurrency);
 
         const rateArray = Object.entries(providerRates).map(([to, rate]) => ({
           toCurrency: to,

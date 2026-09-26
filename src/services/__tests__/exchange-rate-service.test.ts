@@ -93,6 +93,77 @@ describe('ExchangeRateService', () => {
       await expect(service.getRate('EUR', 'USD')).resolves.toBe(1.1);
       expect(mockFetch).not.toHaveBeenCalled();
     });
+
+    it('refreshes from the network when the cached table is missing the requested quote', async () => {
+      (exchangeRateRepository.getAllRatesForBase as jest.Mock).mockResolvedValue([
+        {
+          rate: 0.85,
+          effectiveDate: Date.now(),
+          fromCurrency: 'USD',
+          toCurrency: 'EUR',
+        },
+      ]);
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ rates: { INR: 83.2, EUR: 0.85 } }),
+      });
+
+      await expect(service.getRate('USD', 'INR')).resolves.toBe(83.2);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('USD'));
+    });
+
+    it('shares one refresh across concurrent lookups for the same base', async () => {
+      (exchangeRateRepository.getAllRatesForBase as jest.Mock).mockResolvedValue([
+        {
+          rate: 0.85,
+          effectiveDate: Date.now(),
+          fromCurrency: 'USD',
+          toCurrency: 'EUR',
+        },
+      ]);
+      let resolveFetch: (value: unknown) => void = () => undefined;
+      mockFetch.mockReturnValue(
+        new Promise(resolve => {
+          resolveFetch = resolve;
+        }),
+      );
+
+      const pending = Promise.all([service.getRate('USD', 'INR'), service.getRate('USD', 'THB')]);
+      for (let i = 0; i < 20 && mockFetch.mock.calls.length === 0; i++) {
+        await Promise.resolve();
+      }
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      resolveFetch({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ rates: { INR: 83.2, THB: 33.1 } }),
+      });
+
+      await expect(pending).resolves.toEqual([83.2, 33.1]);
+    });
+
+    it('does not refresh again when the network table still lacks the quote', async () => {
+      (exchangeRateRepository.getAllRatesForBase as jest.Mock).mockResolvedValue([
+        {
+          rate: 0.85,
+          effectiveDate: Date.now(),
+          fromCurrency: 'USD',
+          toCurrency: 'EUR',
+        },
+      ]);
+      mockFetch.mockResolvedValue({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ rates: { EUR: 0.85 } }),
+      });
+
+      await expect(service.getRate('USD', 'INR')).resolves.toBe(1);
+      await expect(service.getRate('USD', 'INR')).resolves.toBe(1);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('getRequiredRate', () => {
