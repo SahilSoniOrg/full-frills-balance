@@ -13,6 +13,8 @@ Delete dead code, collapse single-caller layers, and drop duplicate tooling. No 
 3. After each commit, flip the row to `done` and record the short SHA.
 4. Run `bun run verify` at the end of each phase.
 
+**Known pre-existing failures** (same on base `462b671d`, not caused by this cleanup): `launchCoordinatorRouting.test.ts` (Jest cannot parse `@shopify/flash-list` ESM), `useBulkJournalEditor.test.ts` (5 FX tests), `historicalExchangeRateBackfill.test.ts`. 3 suites / 7 tests. Everything else in `verify` passes.
+
 ## Progress
 
 ### Phase A: dead code and trivial cuts
@@ -24,7 +26,7 @@ Delete dead code, collapse single-caller layers, and drop duplicate tooling. No 
 | 21 | Delete `currencyConversion.review.test.ts` (both cases already in `currencyConversion.test.ts`) | done | `ed6b110d` |
 | 11 | Delete unused `AccountTileList`, plus orphaned `accountTilePolicy` and `getArchivedAccountTilePresentation` | done | `615e2eb2` |
 | 32 | Scheduler: drop unused `delay` and a stale test mock. Kept the `requestIdleCallback` branch: `InteractionManager` is deprecated in RN 0.86 | done | `4842519c` |
-| 34 | Drop `test:detox:build` alias script (moved after item 7: `record-onboarding-ios.sh` calls it) | todo | |
+| 34 | Drop `test:detox:build` alias script (done after item 7: `record-onboarding-ios.sh` called it) | done | `d7e5d615` |
 | 22 | Delete `Bleed` (single caller) and `negateSpace` | done | `0e2b6a61` |
 | 25 | Replace `reloadApp` wrapper with `reloadAppAsync` at its call site | kept | see Log |
 | 28 | Drop unused `ReportsV2Engine` type alias. Kept the interface: it is the injection seam for view-model test mocks | done | `e4b1e18b` |
@@ -33,10 +35,10 @@ Delete dead code, collapse single-caller layers, and drop duplicate tooling. No 
 
 | # | Item | Status | Commit |
 | --- | --- | --- | --- |
-| 2 | Remove Playwright web E2E (specs, pages, config, workflow, scripts, `@playwright/test`, `serve`) | todo | |
-| 7 | Remove Maestro stack (`.maestro/`, `maestro/`, `record-onboarding-ios.sh`, scripts) | todo | |
-| 13 | Replace hand-rolled cycle detector with `madge --circular` + baseline | todo | |
-| 19 | Run `check-service-database-access` once in `verify` | todo | |
+| 2 | Remove Playwright web E2E (specs, page objects, config, workflow, scripts, `@playwright/test`, `serve`, the Playwright-only dashboard benchmark doc). `e2e/pages/setup-page.ts` is Detox and moved under `tsconfig.e2e.json` | done | `ad3f7e9e` |
+| 7 | Remove Maestro stack (`.maestro/`, `maestro/`, `record-onboarding-ios.sh`, scripts) | done | `3e238d83` |
+| 13 | Replace hand-rolled cycle detector with `madge` + baseline (adds `madge` devDependency) | done | `84e753bf` |
+| 19 | Run `check-service-database-access` once in `verify` (dropped from `typecheck`; `check:architecture-ratchets` already enforces it with an empty baseline; standalone script kept) | done | `24ecfb24` |
 
 ### Phase C: small consolidations
 
@@ -83,3 +85,4 @@ Delete dead code, collapse single-caller layers, and drop duplicate tooling. No 
 
 - 2026-09-26: Plan written.
 - 2026-09-26: Phase A done except 34. Item 25 kept: `runtimeVersion` is pinned to `'1.0.0'`, so OTA bundles can land on older native binaries without the Expo reload bridge; the `Updates.reloadAsync` fallback is a real compatibility path, not a wrapper.
+- 2026-09-26: Phase B done. `verify` passes architecture, typecheck and lint; tests match the pre-existing failure baseline. Fixed a read-boundary violation from item 30's test change (`38232874`).
