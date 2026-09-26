@@ -1,4 +1,4 @@
-import { usePressScale, PRESS_SCALE } from '@/src/hooks/usePressScale';
+import { usePressScale, PRESS_SCALE } from '@/src/components/core/PressScaleTouchable';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { act, renderHook } from '@testing-library/react-native';
 

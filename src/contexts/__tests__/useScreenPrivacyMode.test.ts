@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react-native';
-import { useScreenPrivacyMode } from '../useScreenPrivacyMode';
+import { useScreenPrivacyMode } from '@/src/contexts/PrivacyScope';
 
 describe('useScreenPrivacyMode', () => {
   it('mirrors global privacy mode when there is no override', () => {

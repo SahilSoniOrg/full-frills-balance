@@ -1,7 +1,7 @@
-import { Opacity } from '@/src/constants/design-tokens';
-import { usePressScale } from '@/src/hooks/usePressScale';
+import { Opacity, Scale } from '@/src/constants/design-tokens';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { MotiView } from 'moti';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   TouchableOpacity,
   type GestureResponderEvent,
@@ -9,6 +9,32 @@ import {
   type TouchableOpacityProps,
   type ViewStyle,
 } from 'react-native';
+
+export const PRESS_SCALE = Scale.press;
+const PRESS_IN_DURATION_MS = 100;
+const PRESS_OUT_DURATION_MS = 150;
+
+/**
+ * Moti animate/transition props for chrome press feedback.
+ */
+export function usePressScale() {
+  const reduceMotion = useReducedMotion();
+  const [pressed, setPressed] = useState(false);
+
+  return {
+    animate: { scale: reduceMotion || !pressed ? Scale.identity : PRESS_SCALE },
+    transition: {
+      type: 'timing' as const,
+      duration: pressed ? PRESS_IN_DURATION_MS : PRESS_OUT_DURATION_MS,
+    },
+    handlePressIn: () => {
+      if (!reduceMotion) setPressed(true);
+    },
+    handlePressOut: () => {
+      if (!reduceMotion) setPressed(false);
+    },
+  };
+}
 
 export type PressScaleTouchableProps = Omit<TouchableOpacityProps, 'activeOpacity'> & {
   children: ReactNode;

@@ -1,4 +1,4 @@
-import { useSelectedItemMap } from '@/src/hooks/useSelectedItemMap';
+import { useSelectedItemMap } from '@/src/hooks/useListSelection';
 import { useSelection } from '@/src/hooks/useSelection';
 import { act, renderHook } from '@testing-library/react-native';
 

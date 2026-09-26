@@ -1,10 +1,18 @@
 import type { AccountFields } from '@/src/types/plainDtos';
 import { useArchiveScopedAccounts } from '@/src/contexts/ArchiveVisibilityScope';
-import { useDebounce } from '@/src/hooks/useDebounce';
 import { AccountId } from '@/src/types/ids';
 import { PlainAccount } from '@/src/types/plainDtos';
 import { getAccountSections } from '@/src/utils/accountCategory';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 /**
  * useAccountPickerList - Logic for the account picker.
