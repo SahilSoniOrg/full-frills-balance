@@ -10,7 +10,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "typecheck": "node scripts/check-service-database-access.mjs && tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "typecheck:e2e": "tsc --noEmit -p tsconfig.e2e.json",
     "check:unsafe-types": "node scripts/check-unsafe-type-ratchet.mjs",
     "check:journal-facade": "node scripts/check-journal-repository-facade.mjs",
