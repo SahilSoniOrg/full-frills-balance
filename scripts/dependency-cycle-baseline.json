@@ -1,19 +1,10 @@
 {
-  "description": "Known production dependency cycles. New cycles and stale entries fail the architecture check.",
+  "description": "Known production dependency cycles (madge). New cycles and stale entries fail the architecture check.",
   "cycles": [
-    [
-      "src/data/models/Account.ts",
-      "src/data/models/AccountMetadata.ts",
-      "src/data/models/Journal.ts",
-      "src/data/models/Transaction.ts"
-    ],
-    [
-      "src/data/models/Budget.ts",
-      "src/data/models/BudgetScope.ts"
-    ],
-    [
-      "src/services/import/canonicalImportBuilder.ts",
-      "src/services/import/phases/transactionSynthesizer.ts"
-    ]
+    "src/data/models/Account.ts -> src/data/models/AccountMetadata.ts",
+    "src/data/models/Account.ts -> src/data/models/Transaction.ts",
+    "src/data/models/Transaction.ts -> src/data/models/Journal.ts",
+    "src/data/models/Budget.ts -> src/data/models/BudgetScope.ts",
+    "src/services/import/canonicalImportBuilder.ts -> src/services/import/phases/transactionSynthesizer.ts"
   ]
 }
