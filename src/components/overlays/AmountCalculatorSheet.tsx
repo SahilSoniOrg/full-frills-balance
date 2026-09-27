@@ -267,6 +267,14 @@ export function AmountCalculatorSheet({
 
         <View style={styles.resultRow}>
           <AppText
+            variant="heading"
+            weight="bold"
+            style={[styles.currencyPrefix, { color: resultColor }]}
+            accessible={false}
+          >
+            {currencySymbol}
+          </AppText>
+          <AppText
             variant="hero"
             weight="bold"
             style={[styles.resultAmount, { color: resultColor }]}
@@ -275,13 +283,6 @@ export function AmountCalculatorSheet({
             minimumFontScale={0.65}
             accessibilityLabel={`Calculated amount ${currencySymbol}${resultDisplay}`}
           >
-            <AppText
-              variant="heading"
-              weight="bold"
-              style={[styles.currencyPrefix, { color: resultColor }]}
-            >
-              {currencySymbol}
-            </AppText>
             {resultDisplay}
           </AppText>
         </View>
@@ -430,11 +431,12 @@ const styles = StyleSheet.create({
   },
   resultRow: {
     width: '100%',
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'baseline',
     paddingTop: Spacing.xs,
   },
   resultAmount: {
-    width: '100%',
     flexShrink: 1,
     fontSize: Typography.sizes.hero + Spacing.sm,
     lineHeight: Typography.sizes.hero + Spacing.xxxl,
@@ -444,6 +446,7 @@ const styles = StyleSheet.create({
   currencyPrefix: {
     fontSize: Typography.sizes.lg,
     lineHeight: Typography.sizes.lg,
+    marginRight: Spacing.xs,
   },
   detailsToggle: {
     alignSelf: 'flex-end',
