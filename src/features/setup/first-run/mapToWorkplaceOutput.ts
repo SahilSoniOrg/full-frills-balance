@@ -6,7 +6,7 @@ import type {
   StarterAccountInput,
   StarterCategoryInput,
   WorkplaceSetupOutput,
-} from '@/src/features/setup';
+} from '../setupTypes';
 import {
   ACCOUNT_KIND_META,
   budgetLookupName,

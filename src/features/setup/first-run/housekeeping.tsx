@@ -1,4 +1,4 @@
-import { WorkplaceCurrencyStep } from '@/src/features/setup';
+import { WorkplaceCurrencyStep } from '../components/workplace-setup/WorkplaceCurrencyStep';
 import { triggerHaptic } from '@/src/utils/haptics';
 
 export function CurrencyScene({

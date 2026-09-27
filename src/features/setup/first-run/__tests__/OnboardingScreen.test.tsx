@@ -21,7 +21,7 @@ jest.mock('@/src/components/shared/MoneyText', () => {
   };
 });
 
-jest.mock('@/src/features/setup', () => ({ startFirstRunRestoreFromDeviceName: jest.fn() }));
+jest.mock('../../SetupCoordinator', () => ({ startFirstRunRestoreFromDeviceName: jest.fn() }));
 jest.mock('@/src/services/analytics', () => ({
   analytics: { logPrivacyPolicyAcknowledged: jest.fn() },
 }));

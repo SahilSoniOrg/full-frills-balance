@@ -15,6 +15,7 @@ export { resolveNextSetupAction } from './resolveNextSetupAction';
 export { getSetupRecipe, SETUP_RECIPES } from './setupRecipes';
 export { finishDeviceSetup, finishSetup, finishWorkplaceSetup } from './setupFinishers';
 export { default as SetupScreen } from './SetupScreen';
+export { default as CashClarityScreen } from './first-run';
 export { WorkplaceIdentityStep } from './WorkplaceIdentityStep';
 export { WorkplaceCurrencyStep } from './components/workplace-setup/WorkplaceCurrencyStep';
 export {

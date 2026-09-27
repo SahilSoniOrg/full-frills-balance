@@ -1,7 +1,7 @@
 import { LoadingView } from '@/src/components/core';
 import { Box } from '@/src/design-system';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
-import { startFirstRunRestoreFromDeviceName } from '@/src/features/setup';
+import { startFirstRunRestoreFromDeviceName } from '../SetupCoordinator';
 import { analytics } from '@/src/services/analytics';
 import { AppConfig } from '@/src/constants/app-config';
 import {

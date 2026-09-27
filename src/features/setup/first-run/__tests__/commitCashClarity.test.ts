@@ -1,4 +1,4 @@
-import { finishDeviceSetup } from '@/src/features/setup';
+import { finishDeviceSetup } from '../../setupFinishers';
 import { AccountType, PlannedPaymentInterval } from '@/src/types/enums';
 import { asWorkplaceId } from '@/src/types/ids';
 import { createInitialDraft, type CashClarityDraft } from '../draft';
@@ -56,8 +56,9 @@ jest.mock('@/src/services/WorkplaceService', () => ({
   },
 }));
 
-jest.mock('@/src/features/setup', () => ({
-  clearSetupDraft: jest.fn(),
+jest.mock('../../SetupDraftStore', () => ({ clearSetupDraft: jest.fn() }));
+
+jest.mock('../../setupFinishers', () => ({
   finishDeviceSetup: jest.fn(),
   finishWorkplaceSetup: (...args: unknown[]) => mockFinishWorkplaceSetup(...args),
 }));
