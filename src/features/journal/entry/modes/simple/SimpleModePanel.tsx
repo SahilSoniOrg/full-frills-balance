@@ -65,7 +65,7 @@ export function SimpleModePanel({
           onCreateAccountRequest={(role, intent) =>
             onCreateAccountForTarget({ kind: 'role', role }, intent)
           }
-          autoOpenCalculator={autopilotActive}
+          autoFocusAmount={autopilotActive}
           autopilotFirstRole={firstAutopilotRole}
           onCalculatorDone={onCalculatorDone}
           accountFlowRef={accountFlowRef}

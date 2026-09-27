@@ -61,10 +61,7 @@ export function useSimpleFormExpansion({
   onSelectDestination,
 }: UseSimpleFormExpansionInput) {
   const prepareLayoutAnimation = useEaseInLayoutAnimation();
-  const [expansionPosition, setExpansionPosition] = useState<ExpansionPosition>(() => {
-    if (sourceId && destinationId) return null;
-    return type === 'expense' ? 'right' : 'left';
-  });
+  const [expansionPosition, setExpansionPosition] = useState<ExpansionPosition>(null);
   const [autopilotNextRole, setAutopilotNextRole] = useState<AccountRole | null>(null);
 
   const startAutopilotAccountFlow = useCallback(

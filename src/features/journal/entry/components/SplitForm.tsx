@@ -187,6 +187,7 @@ export function SplitForm({
           containerStyle={styles.folderPicker}
           displayMode="compact"
           emptyPrompt={typeCopy.sourceEmptyPrompt}
+          lazyDropdown
           exchangeRate={{
             pair: sourceFx.pair,
             precision: sourceFx.rowPrecision,

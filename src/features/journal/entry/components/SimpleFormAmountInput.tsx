@@ -14,7 +14,7 @@ export interface SimpleFormAmountInputProps {
   currency: string;
   accentColor: string;
   precision?: number;
-  autoOpenCalculator?: boolean;
+  autoFocusAmount?: boolean;
   onCalculatorDone?: () => void;
   testID?: string;
 }
@@ -25,13 +25,14 @@ export const SimpleFormAmountInput = React.memo(function SimpleFormAmountInput({
   currency,
   accentColor,
   precision = 2,
-  autoOpenCalculator = false,
+  autoFocusAmount = false,
   onCalculatorDone,
   testID = 'hero-amount-input',
 }: SimpleFormAmountInputProps) {
   const { theme, fonts } = useTheme();
   const inputRef = useRef<TextInput>(null);
-  const [calculatorVisible, setCalculatorVisible] = useState(autoOpenCalculator);
+  const [calculatorVisible, setCalculatorVisible] = useState(false);
+  const [calculatorMounted, setCalculatorMounted] = useState(false);
   const calculatorDoneRef = useRef(onCalculatorDone);
   const pendingDoneRef = useRef<(() => void) | null>(null);
   const dismissFallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -40,6 +41,12 @@ export const SimpleFormAmountInput = React.memo(function SimpleFormAmountInput({
   useEffect(() => {
     calculatorDoneRef.current = onCalculatorDone;
   }, [onCalculatorDone]);
+
+  useEffect(() => {
+    if (!autoFocusAmount) return;
+    const focusTimer = setTimeout(() => inputRef.current?.focus(), 0);
+    return () => clearTimeout(focusTimer);
+  }, [autoFocusAmount]);
 
   useEffect(
     () => () => {
@@ -94,6 +101,11 @@ export const SimpleFormAmountInput = React.memo(function SimpleFormAmountInput({
     setIsFocused(false);
     handleDone();
   }, [handleDone]);
+
+  const openCalculator = useCallback(() => {
+    setCalculatorMounted(true);
+    setCalculatorVisible(true);
+  }, []);
 
   const hasAmount = Boolean(amount && parseFloat(amount) > 0);
   const { amountFontSize, currencyFontSize, currencyLineHeight, inputHeight } = useMemo(
@@ -173,7 +185,7 @@ export const SimpleFormAmountInput = React.memo(function SimpleFormAmountInput({
               </TouchableOpacity>
             )}
             <TouchableOpacity
-              onPress={() => setCalculatorVisible(true)}
+              onPress={openCalculator}
               style={[
                 styles.iconButton,
                 { backgroundColor: withOpacity(accentColor, Opacity.soft) },
@@ -190,19 +202,21 @@ export const SimpleFormAmountInput = React.memo(function SimpleFormAmountInput({
       </TouchableOpacity>
 
       {/* Full Expression Math Calculator Modal */}
-      <AmountCalculatorSheet
-        visible={calculatorVisible}
-        currencySymbol={currencySymbol}
-        precision={precision}
-        onClose={() => setCalculatorVisible(false)}
-        onDismiss={finishCalculatorHandoff}
-        onDone={val => {
-          setAmount(val);
-          pendingDoneRef.current = calculatorDoneRef.current ?? null;
-          setCalculatorVisible(false);
-          dismissFallbackTimerRef.current = setTimeout(finishCalculatorHandoff, 300);
-        }}
-      />
+      {calculatorMounted ? (
+        <AmountCalculatorSheet
+          visible={calculatorVisible}
+          currencySymbol={currencySymbol}
+          precision={precision}
+          onClose={() => setCalculatorVisible(false)}
+          onDismiss={finishCalculatorHandoff}
+          onDone={val => {
+            setAmount(val);
+            pendingDoneRef.current = calculatorDoneRef.current ?? null;
+            setCalculatorVisible(false);
+            dismissFallbackTimerRef.current = setTimeout(finishCalculatorHandoff, 300);
+          }}
+        />
+      ) : null}
     </View>
   );
 });

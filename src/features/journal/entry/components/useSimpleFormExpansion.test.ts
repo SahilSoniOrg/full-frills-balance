@@ -42,7 +42,7 @@ describe('resolveAutopilotExpansion', () => {
 });
 
 describe('useSimpleFormExpansion', () => {
-  it('keeps the side the user selected for expense entries', () => {
+  it('starts with account selectors closed and lets the user open either side', () => {
     const { result } = renderHook(() =>
       useSimpleFormExpansion({
         type: 'expense',
@@ -52,6 +52,8 @@ describe('useSimpleFormExpansion', () => {
         onSelectDestination: jest.fn(),
       }),
     );
+
+    expect(result.current.expansionPosition).toBeNull();
 
     act(() => result.current.handleToggleExpansion('left'));
     expect(result.current.expansionPosition).toBe('left');
@@ -63,7 +65,7 @@ describe('useSimpleFormExpansion', () => {
     expect(result.current.expansionPosition).toBe('left');
   });
 
-  it('opens the first empty account role after description handoff', () => {
+  it('keeps selectors closed until an explicit autopilot account flow starts', () => {
     const { result } = renderHook(() =>
       useSimpleFormExpansion({
         type: 'expense',
@@ -75,7 +77,7 @@ describe('useSimpleFormExpansion', () => {
       }),
     );
 
-    expect(result.current.expansionPosition).toBe('right');
+    expect(result.current.expansionPosition).toBeNull();
     act(() => result.current.startAutopilotAccountFlow());
     expect(result.current.expansionPosition).toBe('right');
   });

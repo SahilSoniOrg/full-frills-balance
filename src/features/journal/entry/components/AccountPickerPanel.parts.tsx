@@ -16,7 +16,7 @@ import type { AccountFields } from '@/src/types/plainDtos';
 import { getSectionColor, resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { withOpacity } from '@/src/utils/color-math';
 import { MotiView } from 'moti';
-import { useMemo } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { type LayoutChangeEvent, View } from 'react-native';
 import { accountPickerStyles as styles } from './AccountPickerPanel.styles';
 
@@ -136,7 +136,6 @@ export interface AccountPickerDropdownProps {
   role: AccountRole;
   collapsedSections: Set<string>;
   hasSelectedAccount: boolean;
-  hasArchivedAccounts: boolean;
   isExpanded: boolean;
   onClear: () => void;
   onCreateAccountRequest?: (role: AccountRole, intent: CreateAccountIntent) => void;
@@ -155,7 +154,6 @@ export function AccountPickerDropdown({
   role,
   collapsedSections,
   hasSelectedAccount,
-  hasArchivedAccounts,
   isExpanded,
   onClear,
   onCreateAccountRequest,
@@ -167,8 +165,13 @@ export function AccountPickerDropdown({
   toggleSection,
 }: AccountPickerDropdownProps) {
   const { theme } = useTheme();
-  const showArchiveToggle = hasArchivedAccounts || showArchived;
-
+  const onSelectRef = useRef(onSelect);
+  useLayoutEffect(() => {
+    onSelectRef.current = onSelect;
+  }, [onSelect]);
+  const handleAccountPress = useCallback((id: AccountId) => {
+    onSelectRef.current(id);
+  }, []);
   return (
     <View
       testID={testID}
@@ -212,48 +215,46 @@ export function AccountPickerDropdown({
               </AppText>
             </PressScaleTouchable>
           )}
-          {showArchiveToggle && (
-            <PressScaleTouchable
-              onPress={() => setShowArchived(!showArchived)}
-              surfaceStyle={[
-                styles.archivePillButton,
-                {
-                  borderColor: showArchived
-                    ? theme.primary
-                    : withOpacity(theme.border, Opacity.heavy),
-                  backgroundColor: showArchived
-                    ? withOpacity(theme.primary, Opacity.soft)
-                    : 'transparent',
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={
-                showArchived
-                  ? AppConfig.strings.accounts.archive.hideArchived
-                  : AppConfig.strings.accounts.archive.showArchived
-              }
-              testID="show-archived-button"
-              hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
+          <PressScaleTouchable
+            onPress={() => setShowArchived(!showArchived)}
+            surfaceStyle={[
+              styles.archivePillButton,
+              {
+                borderColor: showArchived
+                  ? theme.primary
+                  : withOpacity(theme.border, Opacity.heavy),
+                backgroundColor: showArchived
+                  ? withOpacity(theme.primary, Opacity.soft)
+                  : 'transparent',
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={
+              showArchived
+                ? AppConfig.strings.accounts.archive.hideArchived
+                : AppConfig.strings.accounts.archive.showArchived
+            }
+            testID="show-archived-button"
+            hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
+          >
+            <AppIcon
+              name={Icon.Archive}
+              size={Size.iconXs}
+              color={showArchived ? theme.primary : theme.textTertiary}
+            />
+            <AppText
+              variant="caption"
+              weight="semibold"
+              style={{
+                fontSize: Typography.sizes.xs,
+                color: showArchived ? theme.primary : theme.textTertiary,
+              }}
             >
-              <AppIcon
-                name={Icon.Archive}
-                size={Size.iconXs}
-                color={showArchived ? theme.primary : theme.textTertiary}
-              />
-              <AppText
-                variant="caption"
-                weight="semibold"
-                style={{
-                  fontSize: Typography.sizes.xs,
-                  color: showArchived ? theme.primary : theme.textTertiary,
-                }}
-              >
-                {showArchived
-                  ? AppConfig.strings.accounts.archive.hideArchived
-                  : AppConfig.strings.accounts.archive.showArchived}
-              </AppText>
-            </PressScaleTouchable>
-          )}
+              {showArchived
+                ? AppConfig.strings.accounts.archive.hideArchived
+                : AppConfig.strings.accounts.archive.showArchived}
+            </AppText>
+          </PressScaleTouchable>
           {onCreateAccountRequest && (
             <PressScaleTouchable
               onPress={() => onCreateAccountRequest(role, { suggestedName: '' })}
@@ -350,7 +351,7 @@ export function AccountPickerDropdown({
                         Boolean(selectedAccountId && selectedAccountId !== EMPTY_ACCOUNT_ID) &&
                         selectedAccountId === account.id
                       }
-                      onPress={() => onSelect(account.id)}
+                      onSelectId={handleAccountPress}
                     />
                   ))}
                 </View>

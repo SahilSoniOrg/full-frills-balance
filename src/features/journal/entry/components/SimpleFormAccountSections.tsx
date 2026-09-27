@@ -4,10 +4,11 @@ import { AppConfig } from '@/src/constants';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountRole, TabType } from '@/src/types/domainJournal';
-import { AccountId } from '@/src/types/ids';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { withOpacity } from '@/src/utils/color-math';
-import React, { useState } from 'react';
+import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
+import React, { useMemo, useState } from 'react';
 import {
   Keyboard,
   StyleSheet,
@@ -92,6 +93,13 @@ export const SimpleFormAccountSections = React.memo(function SimpleFormAccountSe
   }
 
   const activeSide = expansionPosition ?? lastActiveSide;
+  const transferPinnedAccountIds = useMemo(() => {
+    if (type !== 'transfer') return undefined;
+    const selectedIds = [sourceAccount?.id, destAccount?.id].filter((id): id is AccountId =>
+      Boolean(id && id !== EMPTY_ACCOUNT_ID),
+    );
+    return pinnedArchivedAccountIds(selectedIds, allAccounts ?? sourceAccounts);
+  }, [allAccounts, destAccount?.id, sourceAccount?.id, sourceAccounts, type]);
   const showNodeLabels = displayMode === 'standard';
   const resolvedDestEmptyPrompt =
     destEmptyPrompt ??
@@ -106,6 +114,7 @@ export const SimpleFormAccountSections = React.memo(function SimpleFormAccountSe
           emptyPrompt: sourceEmptyPrompt,
           label: sourceLabel,
           onSelect: onSelectSource,
+          pinnedAccountIds: transferPinnedAccountIds,
           role: 'source',
         }
       : {
@@ -114,6 +123,7 @@ export const SimpleFormAccountSections = React.memo(function SimpleFormAccountSe
           emptyPrompt: resolvedDestEmptyPrompt,
           label: destLabel,
           onSelect: onSelectDestination,
+          pinnedAccountIds: transferPinnedAccountIds,
           role: 'destination',
         };
 

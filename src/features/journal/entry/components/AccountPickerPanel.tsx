@@ -6,11 +6,11 @@ import { useTheme } from '@/src/hooks/use-theme';
 import type { AccountRole } from '@/src/types/domainJournal';
 import { EMPTY_ACCOUNT_ID, type AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
-import { hasArchivedAccountsInList, pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
+import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
 import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { withOpacity } from '@/src/utils/color-math';
 import { MotiView } from 'moti';
-import { useCallback, useMemo, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import {
   Keyboard,
   StyleSheet,
@@ -34,6 +34,7 @@ export interface AccountPickerLeg {
   emptyPrompt: string;
   label: string;
   onSelect: (id: AccountId) => void;
+  pinnedAccountIds?: ReadonlySet<AccountId>;
   role: AccountRole;
 }
 
@@ -72,15 +73,25 @@ export function AccountPickerPanel({
 }: AccountPickerPanelProps) {
   const { theme } = useTheme();
   const { showArchived, setShowArchived } = useArchiveVisibility();
-  const { account, accounts, emptyPrompt, label, onSelect, role } = activeLeg;
+  const {
+    account,
+    accounts,
+    emptyPrompt,
+    label,
+    onSelect,
+    pinnedAccountIds: legPinnedIds,
+    role,
+  } = activeLeg;
+  const [hasOpenedDropdown, setHasOpenedDropdown] = useState(!lazyDropdown);
   const activeAccountId = account?.id;
   const pinnedAccountIds = useMemo(
     () =>
+      legPinnedIds ??
       pinnedArchivedAccountIds(
         activeAccountId && activeAccountId !== EMPTY_ACCOUNT_ID ? [activeAccountId] : [],
-        accounts,
+        allAccounts ?? accounts,
       ),
-    [activeAccountId, accounts],
+    [activeAccountId, allAccounts, accounts, legPinnedIds],
   );
   const { sections, toggleSection, collapsedSections } = useAccountPickerList({
     accounts,
@@ -88,10 +99,6 @@ export function AccountPickerPanel({
     pinnedAccountIds,
   });
   const hasSelectedAccount = Boolean(account && account.id !== EMPTY_ACCOUNT_ID);
-  const hasArchivedAccounts = useMemo(
-    () => hasArchivedAccountsInList(allAccounts ?? accounts),
-    [allAccounts, accounts],
-  );
   const accentColor = useMemo(
     () => (account ? resolveAccountAppearance(account, theme).accentColor : theme.textSecondary),
     [account, theme],
@@ -110,6 +117,8 @@ export function AccountPickerPanel({
     svgPath,
   } = useFolderLayoutAnimation({ expansionPosition, activeSide });
   const visualSide = expansionPosition ?? (isRevealVisible ? activeSide : null);
+
+  if (isRevealVisible && !hasOpenedDropdown) setHasOpenedDropdown(true);
 
   const handleSelect = useCallback(
     (id: AccountId) => {
@@ -133,7 +142,6 @@ export function AccountPickerPanel({
         role={role}
         collapsedSections={collapsedSections}
         hasSelectedAccount={hasSelectedAccount}
-        hasArchivedAccounts={hasArchivedAccounts}
         isExpanded={isExpanded}
         onClear={handleClear}
         onCreateAccountRequest={onCreateAccountRequest}
@@ -170,12 +178,12 @@ export function AccountPickerPanel({
       </View>
 
       <View
-        style={[styles.dropdownLayer, !isExpanded && styles.dropdownCollapsed]}
+        style={[styles.dropdownLayer, !isRevealVisible && styles.dropdownCollapsed]}
         pointerEvents={isExpanded ? 'auto' : 'none'}
         accessibilityElementsHidden={!isExpanded}
         importantForAccessibility={isExpanded ? 'yes' : 'no-hide-descendants'}
       >
-        {(!lazyDropdown || isRevealVisible) &&
+        {(!lazyDropdown || hasOpenedDropdown) &&
           (reduceMotion ? (
             dropdownBody
           ) : (

@@ -1,7 +1,7 @@
 import { getArchivedAccountPickerRowPresentation } from '@/src/components/accounts/archivedAccountDisplay';
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
 import { ShowArchivedButton } from '@/src/components/accounts/ShowArchivedButton';
-import { AppButton, AppIcon, AppInput, AppText, Icon, ListRow, PressScaleTouchable } from '@/src/components/core';
+import { AppButton, AppIcon, AppInput, AppText, Icon, ListRow } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useAccountColors } from '@/src/hooks/useAccountColors';
@@ -99,7 +99,8 @@ export interface AccountPickerPillProps {
   isSelected: boolean;
   isMultiple?: boolean;
   isPinnedArchived?: boolean;
-  onPress: () => void;
+  onPress?: () => void;
+  onSelectId?: (id: AccountId) => void;
   testID?: string;
   style?: StyleProp<ViewStyle>;
 }
@@ -111,6 +112,7 @@ export const AccountPickerPill = React.memo(
     isMultiple = false,
     isPinnedArchived = false,
     onPress,
+    onSelectId,
     testID,
     style,
   }: AccountPickerPillProps) => {
@@ -125,16 +127,24 @@ export const AccountPickerPill = React.memo(
     const nameLength = item.name.length;
     const isLongName = nameLength > 14;
     const contentColor = isSelected ? theme.onPrimary : accentColor;
+    const handlePress = useCallback(() => {
+      if (onSelectId) {
+        onSelectId(item.id);
+      } else {
+        onPress?.();
+      }
+    }, [item.id, onPress, onSelectId]);
 
     return (
-      <PressScaleTouchable
+      <TouchableOpacity
         accessibilityRole="button"
         accessibilityLabel={item.name}
         accessibilityState={{ selected: isSelected }}
         testID={testID ?? `account-picker-option-${item.id}`}
-        onPress={onPress}
-        style={style}
-        surfaceStyle={[
+        onPress={handlePress}
+        activeOpacity={Opacity.heavy}
+        style={[
+          style,
           styles.pill,
           isLongName && styles.pillLongName,
           {
@@ -175,7 +185,7 @@ export const AccountPickerPill = React.memo(
         ) : isSelected ? (
           <AppIcon name={Icon.Check} size={Size.xxs} color={theme.onPrimary} />
         ) : null}
-      </PressScaleTouchable>
+      </TouchableOpacity>
     );
   },
 );

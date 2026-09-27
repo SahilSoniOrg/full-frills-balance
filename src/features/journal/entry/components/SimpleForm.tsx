@@ -16,7 +16,7 @@ export interface SimpleFormProps {
   meta: JournalMetaCardProps;
   onScrollBeginDrag?: () => void;
   onCreateAccountRequest?: (role: AccountRole, intent: CreateAccountIntent) => void;
-  autoOpenCalculator?: boolean;
+  autoFocusAmount?: boolean;
   autopilotFirstRole?: AccountRole;
   onCalculatorDone?: () => void;
   accountFlowRef?: RefObject<AccountFlowHandle | null>;
@@ -29,7 +29,7 @@ export const SimpleForm = React.memo(function SimpleForm({
   meta,
   onScrollBeginDrag,
   onCreateAccountRequest,
-  autoOpenCalculator = false,
+  autoFocusAmount = false,
   autopilotFirstRole,
   onCalculatorDone,
   accountFlowRef,
@@ -78,7 +78,7 @@ export const SimpleForm = React.memo(function SimpleForm({
         onChangeAmount={editor.setAmount}
         currency={editor.displayCurrency}
         precision={precision}
-        autoOpenCalculator={autoOpenCalculator}
+        autoFocusAmount={autoFocusAmount}
         onCalculatorDone={onCalculatorDone}
         pair={editor.fxPair}
         onManualBaseRateChange={editor.setManualBaseRate}

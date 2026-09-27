@@ -158,16 +158,32 @@ export function buildSimpleFormAccountSections(
 ): SimpleFormSectionConfig[] {
   const { leafAccounts, accountPool, sourceId, destinationId } = options;
 
-  const sourceAccounts = ensureSelectedAccountVisible(
-    filterGuidedLegAccounts(leafAccounts, type, TransactionType.CREDIT),
-    sourceId,
-    accountPool,
-  );
-  const destinationAccounts = ensureSelectedAccountVisible(
-    filterGuidedLegAccounts(leafAccounts, type, TransactionType.DEBIT),
-    destinationId,
-    accountPool,
-  );
+  const transferAccounts =
+    type === 'transfer'
+      ? ensureSelectedAccountVisible(
+          ensureSelectedAccountVisible(
+            filterGuidedLegAccounts(leafAccounts, type, TransactionType.CREDIT),
+            sourceId,
+            accountPool,
+          ),
+          destinationId,
+          accountPool,
+        )
+      : null;
+  const sourceAccounts =
+    transferAccounts ??
+    ensureSelectedAccountVisible(
+      filterGuidedLegAccounts(leafAccounts, type, TransactionType.CREDIT),
+      sourceId,
+      accountPool,
+    );
+  const destinationAccounts =
+    transferAccounts ??
+    ensureSelectedAccountVisible(
+      filterGuidedLegAccounts(leafAccounts, type, TransactionType.DEBIT),
+      destinationId,
+      accountPool,
+    );
 
   if (type === 'expense') {
     return [

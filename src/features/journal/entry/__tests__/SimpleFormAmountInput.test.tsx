@@ -25,7 +25,7 @@ jest.mock('@/src/components/overlays/AmountCalculatorSheet', () => ({
 }));
 
 describe('SimpleFormAmountInput', () => {
-  it('starts and completes the guided calculator handoff', () => {
+  it('opens the calculator on demand and completes the handoff', () => {
     const setAmount = jest.fn();
     const onCalculatorDone = jest.fn();
 
@@ -35,11 +35,11 @@ describe('SimpleFormAmountInput', () => {
         setAmount={setAmount}
         currency="USD"
         accentColor="#3366ff"
-        autoOpenCalculator
         onCalculatorDone={onCalculatorDone}
       />,
     );
 
+    fireEvent.press(screen.getByTestId('amount-input'));
     fireEvent.press(screen.getByTestId('mock-calculator-done'));
     expect(setAmount).toHaveBeenCalledWith('42');
     expect(onCalculatorDone).toHaveBeenCalledTimes(1);

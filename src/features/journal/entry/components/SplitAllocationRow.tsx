@@ -96,6 +96,7 @@ export function SplitAllocationRow({
         containerStyle={styles.categoryPicker}
         displayMode="compact"
         emptyPrompt={emptyPrompt}
+        lazyDropdown
         exchangeRate={{
           pair,
           precision: rowPrecision,

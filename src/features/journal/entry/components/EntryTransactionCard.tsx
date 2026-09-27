@@ -35,7 +35,7 @@ export interface EntryTransactionCardProps {
   /** Hero mode passes the editor display currency. Compact mode uses the source account. */
   currency?: string;
   precision?: number;
-  autoOpenCalculator?: boolean;
+  autoFocusAmount?: boolean;
   onCalculatorDone?: () => void;
   amountTestID?: string;
   pair: FxPair;
@@ -70,7 +70,7 @@ export function EntryTransactionCard({
   onChangeAmount,
   currency,
   precision,
-  autoOpenCalculator,
+  autoFocusAmount,
   onCalculatorDone,
   amountTestID,
   pair,
@@ -133,7 +133,7 @@ export function EntryTransactionCard({
               currency={amountCurrency}
               accentColor={accentColor}
               precision={precision}
-              autoOpenCalculator={autoOpenCalculator}
+              autoFocusAmount={autoFocusAmount}
               onCalculatorDone={onCalculatorDone}
             />
           </View>
@@ -181,7 +181,7 @@ export function EntryTransactionCard({
         onCreateAccountRequest={onCreateAccountRequest}
         displayMode={density === 'compact' ? 'compact' : 'standard'}
         containerStyle={accountSectionsContainerStyle}
-        lazyDropdown={lazyDropdown}
+        lazyDropdown={lazyDropdown ?? density === 'hero'}
         testIDPrefix={accountTestIDPrefix}
       />
     </>

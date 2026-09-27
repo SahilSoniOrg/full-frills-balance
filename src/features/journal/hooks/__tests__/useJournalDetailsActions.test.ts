@@ -27,20 +27,16 @@ jest.mock('@/src/utils/navigation', () => ({
 }));
 
 describe('useJournalDetailsActions', () => {
-  const duplicateJournal = jest.fn();
-
   beforeEach(() => {
     jest.clearAllMocks();
-    duplicateJournal.mockResolvedValue({ id: 'copied-journal' });
     (useJournalActions as jest.Mock).mockReturnValue({
       deleteJournal: jest.fn(),
-      duplicateJournal,
       postJournal: jest.fn(),
       revertToPlanned: jest.fn(),
     });
   });
 
-  it('opens the duplicated journal in the editor with copy context', async () => {
+  it('opens the journal copy flow with the original journal id', () => {
     const { result } = renderHook(() =>
       useJournalDetailsActions({
         workplaceId: 'wp-1' as WorkplaceId,
@@ -52,15 +48,12 @@ describe('useJournalDetailsActions', () => {
       }),
     );
 
-    await act(async () => {
-      await result.current.handleCopy();
+    act(() => {
+      result.current.handleCopy();
     });
 
-    expect(duplicateJournal).toHaveBeenCalledWith('journal-1');
     expect(AppNavigation.toJournalEntry).toHaveBeenCalledWith({
-      journalId: 'copied-journal',
-      initialDate: '2026-08-25T12:30:00.000Z',
-      amount: '12.34',
+      params: { copyJournalId: 'journal-1' },
     });
   });
 });
