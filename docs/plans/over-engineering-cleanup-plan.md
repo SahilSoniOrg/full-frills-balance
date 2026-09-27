@@ -13,7 +13,7 @@ Delete dead code, collapse single-caller layers, and drop duplicate tooling. No 
 3. After each commit, flip the row to `done` and record the short SHA.
 4. Run `bun run verify` at the end of each phase.
 
-**Known pre-existing failures** (same on base `462b671d`, not caused by this cleanup): `launchCoordinatorRouting.test.ts` (Jest cannot parse `@shopify/flash-list` ESM), `useBulkJournalEditor.test.ts` (5 FX tests), `historicalExchangeRateBackfill.test.ts`. 3 suites / 7 tests. Everything else in `verify` passes.
+**Known failures:** none. The three suites that already failed on base `462b671d` (`launchCoordinatorRouting`, `useBulkJournalEditor` FX, `historicalExchangeRateBackfill`) were fixed on 2026-09-27; `test:ci` is fully green.
 
 ## Progress
 

@@ -4,7 +4,7 @@
 
 ## How to resume
 
-Work phase by phase. Each phase ends green (`bun run verify`, same known failures as the cleanup plan) with first-run, restore and create-workplace completable on a device. Update the Progress table and Log after each commit.
+Work phase by phase. Each phase ends green (`bun run verify` fully green) with first-run, restore and create-workplace completable on a device. Update the Progress table and Log after each commit.
 
 ## Current shape
 

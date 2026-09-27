@@ -12,11 +12,14 @@ import { act, renderHook } from '@testing-library/react-native';
 
 const mockFetchRate = jest.fn();
 let mockFetchHistoricalRate: jest.Mock | undefined;
+const mockFetchHistoricalFromRequired = async (from: string, to: string) => ({
+  rate: await mockFetchRate(from, to),
+});
 jest.mock('@/src/hooks/useExchangeRate', () => ({
   useExchangeRate: () => ({
     fetchRate: mockFetchRate,
     fetchRequiredRate: mockFetchRate,
-    fetchHistoricalRate: mockFetchHistoricalRate,
+    fetchHistoricalRate: mockFetchHistoricalRate ?? mockFetchHistoricalFromRequired,
   }),
 }));
 

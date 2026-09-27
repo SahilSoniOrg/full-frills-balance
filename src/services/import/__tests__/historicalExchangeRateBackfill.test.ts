@@ -79,7 +79,7 @@ describe('backfillHistoricalExchangeRates', () => {
     expect(exchangeRateService.getHistoricalRate).toHaveBeenCalledWith(
       'EUR',
       'CAD',
-      Date.UTC(2020, 0, 2, 12),
+      Date.UTC(2020, 0, 2),
     );
     expect(result.warnings).toEqual([]);
   });

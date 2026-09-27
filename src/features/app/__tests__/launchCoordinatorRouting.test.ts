@@ -6,6 +6,8 @@ import {
   shouldShowCashClarity,
 } from '../LaunchCoordinator';
 
+jest.mock('@shopify/flash-list', () => ({ FlashList: () => null }));
+
 describe('LaunchCoordinator gate routing', () => {
   it('does not mount the app stack on a stale books route during reset recovery', () => {
     expect(shouldRenderGateChildren('setup', '/maintenance-settings')).toBe(false);
