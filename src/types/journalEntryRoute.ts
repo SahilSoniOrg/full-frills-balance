@@ -16,6 +16,7 @@ export type TransactionIntentSeed = {
   type?: JournalEntrySimpleType;
   guidedAutopilot?: boolean;
   journalId?: JournalId;
+  copyFromJournalId?: JournalId;
   sourceAccountId?: AccountId;
   destinationAccountId?: AccountId;
   amount?: string;
@@ -30,6 +31,7 @@ export type LegacyJournalEntryQueryParams = {
   type?: JournalEntrySimpleType;
   guidedAutopilot?: string;
   journalId?: string;
+  copyJournalId?: string;
   sourceAccountId?: string;
   destinationAccountId?: string;
   amount?: string;
@@ -57,6 +59,7 @@ export function toLegacyJournalEntryQueryParams(
     type: seed.type,
     guidedAutopilot: seed.guidedAutopilot ? 'true' : undefined,
     journalId: seed.journalId,
+    copyJournalId: seed.copyFromJournalId,
     sourceAccountId: seed.sourceAccountId,
     destinationAccountId: seed.destinationAccountId,
     amount: seed.amount,

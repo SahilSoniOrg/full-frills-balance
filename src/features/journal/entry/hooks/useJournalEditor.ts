@@ -19,6 +19,7 @@ import { useJournalEditorSubmission } from './useJournalEditorSubmission';
 
 export interface UseJournalEditorOptions {
   journalId?: JournalId;
+  copyFromJournalId?: JournalId;
   initialMode?: 'simple' | 'advanced';
   initialType?: 'expense' | 'income' | 'transfer';
   initialAmount?: string;
@@ -49,6 +50,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   const { postPostingPlan } = useJournalActions(workplaceId);
   const {
     journalId,
+    copyFromJournalId,
     initialMode,
     initialType = 'expense',
     initialAmount,
@@ -98,9 +100,11 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     }
   }, [isGuidedMode, advancedMode, setAdvancedMode, initialMode]);
   const [transactionType, setTransactionType] = useState<TabType>(initialType);
-  const isEdit = !!journalId;
+  const isCopy = !!copyFromJournalId;
+  const isEdit = !!journalId && !isCopy;
   const [savedJournalCurrency, setSavedJournalCurrency] = useState<string>();
-  const valuationCurrency = isEdit ? savedJournalCurrency || workplaceCurrency : workplaceCurrency;
+  const valuationCurrency =
+    isEdit || isCopy ? savedJournalCurrency || workplaceCurrency : workplaceCurrency;
 
   // Advanced / Generic state
   const { lines, setLines, addLine, removeLine, updateLine, updateLines } =
@@ -160,7 +164,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   );
   const loadState: JournalEditorLoadState = useJournalEditorLoader({
     workplaceId,
-    journalId,
+    journalId: copyFromJournalId ?? journalId,
     hydrateEditor,
   });
   const isLoading = loadState === 'loading';
@@ -168,6 +172,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   const { isSubmitting, submitPlan } = useJournalEditorSubmission({
     postPostingPlan,
     journalId: isEdit ? journalId : undefined,
+    newJournalCurrencyCode: isCopy ? valuationCurrency : undefined,
     smsId,
     smsRecordId,
     smsSender,
@@ -220,6 +225,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       transactionType,
       setTransactionType,
       isEdit,
+      isCopy,
       valuationCurrency,
       isLoading,
       loadState,

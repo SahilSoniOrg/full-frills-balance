@@ -134,6 +134,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     accounts,
     currencyCode: workplaceCurrency,
     journalId: seed.journalId,
+    copyFromJournalId: seed.copyFromJournalId,
     initialMode:
       seed.editorMode === 'bulk' || seed.editorMode === 'split' ? undefined : seed.editorMode,
     initialType: seed.type,
@@ -173,7 +174,7 @@ export function useJournalEntryShell(): JournalEntryShell {
   });
   const leaveGuard = useJournalEntryLeaveGuard({
     fingerprint: draftFingerprint,
-    baselineReady: !editor.isEdit || editor.loadState === 'loaded',
+    baselineReady: (!editor.isEdit && !editor.isCopy) || editor.loadState === 'loaded',
   });
   const { leaveAfterSave } = leaveGuard;
   const onDoneBatch = useCallback(() => {
@@ -248,8 +249,8 @@ export function useJournalEntryShell(): JournalEntryShell {
   const onSelectSuggestion = useJournalSuggestionApplication(editor, accounts, activeMode);
 
   const headerTitle = useMemo(
-    () => resolveJournalEntryHeaderTitle({ isEdit: editor.isEdit }),
-    [editor.isEdit],
+    () => resolveJournalEntryHeaderTitle({ isEdit: editor.isEdit, isCopy: editor.isCopy }),
+    [editor.isCopy, editor.isEdit],
   );
 
   return {
@@ -265,8 +266,10 @@ export function useJournalEntryShell(): JournalEntryShell {
     isLoading: editor.isLoading,
     loadState: editor.loadState,
     headerTitle,
-    showEditBanner: editor.isEdit,
-    editBannerText: AppConfig.strings.transactionFlow.banners.editing,
+    showEditBanner: editor.isEdit || editor.isCopy,
+    editBannerText: editor.isCopy
+      ? AppConfig.strings.transactionFlow.banners.copying
+      : AppConfig.strings.transactionFlow.banners.editing,
     showAccountPicker,
     onCloseAccountPicker,
     onAccountPickerDismiss,

@@ -39,6 +39,7 @@ export class JournalService {
   async postPostingPlan(params: {
     plan: PostingPlan;
     journalId?: JournalId;
+    newJournalCurrencyCode?: string;
     smsId?: string;
     smsRecordId?: string;
     smsSender?: string;
@@ -61,7 +62,9 @@ export class JournalService {
       return { success: false, error: 'Journal not found' };
     }
     const expectedCurrency =
-      existingJournal?.currencyCode ?? (await workplaceService.getCurrency(params.workplaceId));
+      existingJournal?.currencyCode ??
+      params.newJournalCurrencyCode ??
+      (await workplaceService.getCurrency(params.workplaceId));
     if (params.plan.currencyCode.trim().toUpperCase() !== expectedCurrency.trim().toUpperCase()) {
       return {
         success: false,
@@ -85,6 +88,7 @@ export class JournalService {
       notes: params.plan.notes,
       journalDate: params.plan.date,
       journalId: params.journalId,
+      newJournalCurrencyCode: params.newJournalCurrencyCode,
       smsId: params.smsId,
       smsRecordId: params.smsRecordId,
       smsSender: params.smsSender,
@@ -211,6 +215,7 @@ export class JournalService {
     journalDate: string | number;
     journalTime?: string;
     journalId?: JournalId;
+    newJournalCurrencyCode?: string;
     smsId?: string;
     smsRecordId?: string;
     smsSender?: string;
@@ -218,7 +223,13 @@ export class JournalService {
     mode?: 'simple' | 'advanced' | 'import';
     workplaceId: WorkplaceId;
   }): Promise<SubmitJournalResult> {
-    const { journalId, mode = 'advanced', workplaceId, ...entryParams } = params;
+    const {
+      journalId,
+      mode = 'advanced',
+      workplaceId,
+      newJournalCurrencyCode,
+      ...entryParams
+    } = params;
 
     try {
       const existingJournal = journalId
@@ -229,7 +240,9 @@ export class JournalService {
       }
 
       const effectiveCurrencyCode =
-        existingJournal?.currencyCode ?? (await workplaceService.getCurrency(workplaceId));
+        existingJournal?.currencyCode ??
+        newJournalCurrencyCode ??
+        (await workplaceService.getCurrency(workplaceId));
       const assembled = await assembleCreateJournalData({
         ...entryParams,
         workplaceId,

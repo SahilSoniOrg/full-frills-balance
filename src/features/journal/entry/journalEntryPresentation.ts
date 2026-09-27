@@ -23,6 +23,7 @@ export type JournalEntryRouteParams = {
   type?: JournalEntrySimpleType;
   guidedAutopilot?: boolean;
   journalId?: JournalId;
+  copyFromJournalId?: JournalId;
   sourceAccountId?: AccountId;
   destinationAccountId?: AccountId;
   amount?: string;
@@ -72,6 +73,9 @@ export function parseJournalEntryRouteParams(params: ExpoSearchParams): JournalE
     type,
     ...(guidedAutopilot ? { guidedAutopilot: true } : {}),
     journalId: firstString(params.journalId) as JournalId | undefined,
+    ...(firstString(params.copyJournalId)
+      ? { copyFromJournalId: firstString(params.copyJournalId) as JournalId }
+      : {}),
     sourceAccountId,
     destinationAccountId,
     amount: firstString(params.amount),
@@ -96,8 +100,12 @@ export function resolveJournalEntryScreenMode(
   return 'basic';
 }
 
-export function resolveJournalEntryHeaderTitle(input: { isEdit: boolean }): string {
+export function resolveJournalEntryHeaderTitle(input: {
+  isEdit: boolean;
+  isCopy?: boolean;
+}): string {
   if (input.isEdit) return AppConfig.strings.transactionFlow.headers.edit;
+  if (input.isCopy) return AppConfig.strings.transactionFlow.headers.copy;
   return AppConfig.strings.transactionFlow.headers.new;
 }
 

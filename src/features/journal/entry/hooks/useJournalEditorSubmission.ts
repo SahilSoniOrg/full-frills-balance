@@ -11,6 +11,7 @@ type PostPostingPlan = ReturnType<typeof useJournalActions>['postPostingPlan'];
 export function useJournalEditorSubmission(options: {
   postPostingPlan: PostPostingPlan;
   journalId?: JournalId;
+  newJournalCurrencyCode?: string;
   smsId?: string;
   smsRecordId?: string;
   smsSender?: string;
@@ -24,6 +25,7 @@ export function useJournalEditorSubmission(options: {
   const {
     postPostingPlan,
     journalId,
+    newJournalCurrencyCode,
     smsId,
     smsRecordId,
     smsSender,
@@ -45,6 +47,7 @@ export function useJournalEditorSubmission(options: {
         const result = await postPostingPlan({
           plan,
           journalId,
+          newJournalCurrencyCode,
           mode,
           smsId,
           smsRecordId,
@@ -74,7 +77,17 @@ export function useJournalEditorSubmission(options: {
         setIsSubmitting(false);
       }
     },
-    [journalId, onAfterSave, onSuccess, postPostingPlan, rawSmsBody, smsId, smsRecordId, smsSender],
+    [
+      journalId,
+      newJournalCurrencyCode,
+      onAfterSave,
+      onSuccess,
+      postPostingPlan,
+      rawSmsBody,
+      smsId,
+      smsRecordId,
+      smsSender,
+    ],
   );
 
   return { isSubmitting, submitPlan };

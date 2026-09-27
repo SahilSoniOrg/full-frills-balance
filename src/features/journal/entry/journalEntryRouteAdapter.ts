@@ -45,6 +45,7 @@ export function toTransactionIntentSeed(route: JournalEntryRouteParams): Transac
     type: route.type,
     guidedAutopilot: route.guidedAutopilot,
     journalId: route.journalId,
+    copyFromJournalId: route.copyFromJournalId,
     sourceAccountId: route.sourceAccountId,
     destinationAccountId: route.destinationAccountId,
     amount: route.amount,

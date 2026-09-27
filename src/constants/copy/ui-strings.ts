@@ -602,11 +602,13 @@ export const UI_STRINGS = {
     closeModeHelpAccessibility: 'Close mode help',
     headers: {
       edit: 'Edit entry',
+      copy: 'Copy entry',
       new: 'New entry',
       default: 'New entry',
     },
     banners: {
       editing: 'Editing this entry',
+      copying: 'Copying this entry',
     },
     bulkEntryHint:
       'Each row is a separate transaction. Add the first one, then add rows to carry repeated details forward.',

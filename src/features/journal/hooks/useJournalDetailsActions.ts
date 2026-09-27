@@ -28,8 +28,7 @@ export function useJournalDetailsActions({
   plannedPaymentId,
   journalDate,
 }: UseTransactionDetailsActionsProps) {
-  const { deleteJournal, duplicateJournal, postJournal, revertToPlanned } =
-    useJournalActions(workplaceId);
+  const { deleteJournal, postJournal, revertToPlanned } = useJournalActions(workplaceId);
   const isPrivacyMode = useEffectivePrivacyMode();
   const displayAmount = formatMoneyAmount(amount, currencyCode, isPrivacyMode);
 
@@ -51,21 +50,9 @@ export function useJournalDetailsActions({
     );
   }, [deleteJournal, journalId]);
 
-  const handleCopy = useCallback(async () => {
-    try {
-      const newJournal = await duplicateJournal(journalId);
-      toast.success('New transaction created from copy.');
-      AppNavigation.toJournalEntry({
-        journalId: newJournal.id,
-        initialDate: journalDate ? new Date(journalDate).toISOString() : undefined,
-        amount: amount ? String(amount) : undefined,
-      });
-    } catch (error) {
-      logger.error('Failed to copy transaction:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      showErrorAlert(`Could not copy transaction: ${errorMessage}`);
-    }
-  }, [duplicateJournal, journalId, journalDate, amount]);
+  const handleCopy = useCallback(() => {
+    AppNavigation.toJournalEntry({ params: { copyJournalId: journalId } });
+  }, [journalId]);
 
   const handlePost = useCallback(async () => {
     if (status !== 'PLANNED') return;

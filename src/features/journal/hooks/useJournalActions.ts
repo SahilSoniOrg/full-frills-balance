@@ -12,6 +12,7 @@ type SaveJournalEntryParams = Omit<
 type PostPostingPlanParams = {
   plan: PostingPlan;
   journalId?: JournalId;
+  newJournalCurrencyCode?: string;
   smsId?: string;
   smsRecordId?: string;
   smsSender?: string;
