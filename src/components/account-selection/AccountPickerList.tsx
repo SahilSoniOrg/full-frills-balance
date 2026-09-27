@@ -210,8 +210,11 @@ type AccountPickerListProps = {
 
 type PickerAccount = AccountFields | PlainAccount;
 type DisplaySection = Omit<AccountSection, 'data'> & {
+  accountCount: number;
   data: (PickerAccount | PickerAccount[])[];
 };
+
+const PILLS_PER_ROW = 24;
 
 export function AccountPickerList(props: AccountPickerListProps) {
   const {
@@ -250,9 +253,16 @@ export function AccountPickerList(props: AccountPickerListProps) {
   } = useAccountPickerList({ accounts, excludeParentAccounts, pinnedAccountIds });
   const displaySections = useMemo<DisplaySection[]>(
     () =>
-      useCompactAccountPicker
-        ? sections.map(section => ({ ...section, data: [section.data] }))
-        : sections,
+      sections.map(section => {
+        if (!useCompactAccountPicker) {
+          return { ...section, accountCount: section.data.length };
+        }
+        const data: DisplaySection['data'] = [];
+        for (let index = 0; index < section.data.length; index += PILLS_PER_ROW) {
+          data.push(section.data.slice(index, index + PILLS_PER_ROW));
+        }
+        return { ...section, accountCount: section.data.length, data };
+      }),
     [sections, useCompactAccountPicker],
   );
   const extraData = useMemo(
@@ -296,12 +306,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
   );
   const renderSectionHeader = useCallback(
     ({ section }: { section: DisplaySection }) => {
-      const { title, data, type, key } = section;
-      const accountCount = useCompactAccountPicker
-        ? Array.isArray(data[0])
-          ? data[0].length
-          : 0
-        : data.length;
+      const { title, accountCount, type, key } = section;
       const isCollapsed = collapsedSections.has(key) && !isSearchMode;
       return (
         <View style={[styles.sectionHeader, { backgroundColor: theme.background }]}>
@@ -349,15 +354,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
         </View>
       );
     },
-    [
-      collapsedSections,
-      isSearchMode,
-      theme,
-      toggleSection,
-      onCreateRequest,
-      onClose,
-      useCompactAccountPicker,
-    ],
+    [collapsedSections, isSearchMode, theme, toggleSection, onCreateRequest, onClose],
   );
   const renderItem = useCallback(
     ({ item, section }: { item: PickerAccount | PickerAccount[]; section: DisplaySection }) => {
@@ -432,10 +429,12 @@ export function AccountPickerList(props: AccountPickerListProps) {
         <SectionList<PickerAccount | PickerAccount[], DisplaySection>
           sections={displaySections}
           testID="account-picker-list"
-          keyExtractor={(item, index) => {
-            if (Array.isArray(item)) return `account-picker-row-${index}`;
+          keyExtractor={item => {
+            if (Array.isArray(item)) return `account-picker-row-${item[0].id}`;
             return (item as PickerAccount).id;
           }}
+          initialNumToRender={useCompactAccountPicker ? 2 : 10}
+          maxToRenderPerBatch={useCompactAccountPicker ? 2 : 10}
           extraData={extraData}
           contentContainerStyle={styles.listContent}
           stickySectionHeadersEnabled

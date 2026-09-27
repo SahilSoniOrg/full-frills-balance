@@ -2,8 +2,8 @@ import { useVisibleAccounts } from '@/src/contexts/ArchiveVisibilityScope';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
-import { getAccountSections, isBalanceSheetAccount } from '@/src/utils/accountCategory';
-import { useCallback, useMemo, useState } from 'react';
+import { isBalanceSheetAccount } from '@/src/utils/accountCategory';
+import { useMemo } from 'react';
 
 export interface UseAccountSelectionOptions {
   accounts: AccountFields[];
@@ -18,20 +18,7 @@ export function useAccountSelection({
   accounts,
   pinnedAccountIds = new Set<AccountId>(),
 }: UseAccountSelectionOptions) {
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const visibleAccounts = useVisibleAccounts(accounts, pinnedAccountIds);
-
-  const toggleSection = useCallback((title: string) => {
-    setCollapsedSections(prev => {
-      const next = new Set(prev);
-      if (next.has(title)) {
-        next.delete(title);
-      } else {
-        next.add(title);
-      }
-      return next;
-    });
-  }, []);
 
   const leafAccounts = useMemo(() => {
     const parentIds = new Set(
@@ -39,10 +26,6 @@ export function useAccountSelection({
     );
     return visibleAccounts.filter(a => !parentIds.has(a.id));
   }, [visibleAccounts]);
-
-  const sections = useMemo(() => {
-    return getAccountSections(leafAccounts);
-  }, [leafAccounts]);
 
   const transactionAccounts = useMemo(() => {
     return leafAccounts.filter(a => isBalanceSheetAccount(a.accountType));
@@ -58,9 +41,6 @@ export function useAccountSelection({
   );
 
   return {
-    sections,
-    collapsedSections,
-    toggleSection,
     transactionAccounts,
     expenseAccounts,
     incomeAccounts,

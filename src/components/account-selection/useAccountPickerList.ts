@@ -1,9 +1,11 @@
 import type { AccountFields } from '@/src/types/plainDtos';
-import { useArchiveScopedAccounts } from '@/src/contexts/ArchiveVisibilityScope';
+import { useVisibleAccounts } from '@/src/contexts/ArchiveVisibilityScope';
 import { AccountId } from '@/src/types/ids';
 import { PlainAccount } from '@/src/types/plainDtos';
 import { getAccountSections } from '@/src/utils/accountCategory';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+
+const EMPTY_ACCOUNTS: (AccountFields | PlainAccount)[] = [];
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -22,20 +24,22 @@ export function useAccountPickerList({
   accounts,
   excludeParentAccounts,
   pinnedAccountIds = new Set<AccountId>(),
+  enabled = true,
 }: {
   accounts: (AccountFields | PlainAccount)[];
   excludeParentAccounts: boolean;
   pinnedAccountIds?: ReadonlySet<AccountId>;
+  enabled?: boolean;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearch = useDebounce(searchQuery, 150);
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const isSearchMode = debouncedSearch.trim().length > 0;
 
-  const { visibleAccounts } = useArchiveScopedAccounts(accounts, pinnedAccountIds);
+  const visibleAccounts = useVisibleAccounts(enabled ? accounts : EMPTY_ACCOUNTS, pinnedAccountIds);
 
   const filteredAccounts = useMemo(() => {
-    if (!visibleAccounts || visibleAccounts.length === 0) return [];
+    if (visibleAccounts.length === 0) return [];
 
     let result = visibleAccounts;
     if (isSearchMode) {
@@ -59,8 +63,8 @@ export function useAccountPickerList({
   }, [accounts, visibleAccounts, debouncedSearch, isSearchMode, excludeParentAccounts]);
 
   const sections = useMemo(() => {
-    return getAccountSections(filteredAccounts);
-  }, [filteredAccounts]);
+    return enabled ? getAccountSections(filteredAccounts) : [];
+  }, [enabled, filteredAccounts]);
 
   const toggleSection = useCallback((sectionKey: string) => {
     setCollapsedSections(prev => {

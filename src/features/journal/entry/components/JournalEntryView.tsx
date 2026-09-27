@@ -14,8 +14,7 @@ import { SimpleModePanel } from '@/src/features/journal/entry/modes/simple/Simpl
 import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitModePanel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { withOpacity } from '@/src/utils/color-math';
-import { memo, useCallback, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { JournalEntryModeInfoModal } from './JournalEntryModeInfoModal';
 import { JournalEntryModePickerModal } from './JournalEntryModePickerModal';
@@ -24,37 +23,6 @@ import { JournalMetaCard, type JournalMetaCardProps } from './JournalMetaCard';
 import type { AccountFlowHandle, AutopilotAppliedAccount } from './useSimpleFormExpansion';
 
 export type JournalEntryViewProps = JournalEntryShell;
-
-/**
- * Mount a mode on first use, then retain its subtree while another mode is active.
- * Ignoring prop changes while inactive prevents hidden forms from rerendering on
- * every journal edit; activation supplies the latest props to the retained tree.
- */
-const KeepAliveModePanel = memo(
-  function KeepAliveModePanel({
-    active,
-    children,
-    visited,
-  }: {
-    active: boolean;
-    children: ReactNode;
-    visited: boolean;
-  }) {
-    if (!visited) return null;
-
-    return (
-      <View
-        style={[styles.modePanel, !active && styles.modePanelHidden]}
-        pointerEvents={active ? 'auto' : 'none'}
-        accessibilityElementsHidden={!active}
-        importantForAccessibility={active ? 'auto' : 'no-hide-descendants'}
-      >
-        {children}
-      </View>
-    );
-  },
-  (previous, next) => !previous.active && !next.active && previous.visited === next.visited,
-);
 
 export function JournalEntryView(props: JournalEntryViewProps) {
   const { theme, fonts } = useTheme();
@@ -69,9 +37,6 @@ export function JournalEntryView(props: JournalEntryViewProps) {
   }
   const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
   const [isModePickerVisible, setIsModePickerVisible] = useState(false);
-  const [visitedModes, setVisitedModes] = useState<Set<JournalEntryScreenMode>>(
-    () => new Set([props.activeMode]),
-  );
   const descriptionInputRef = useRef<TextInput>(null);
   const accountFlowRef = useRef<AccountFlowHandle | null>(null);
 
@@ -85,13 +50,14 @@ export function JournalEntryView(props: JournalEntryViewProps) {
     batchSubmitDisabled,
     hideSuggestions,
     onDescriptionFocus,
+    onScrollBeginDrag: onPresentationScrollBeginDrag,
     setDescription,
     onSelectSuggestion,
   } = presentation;
   const dismissDescriptionOnScroll = useCallback(() => {
     descriptionInputRef.current?.blur();
-    presentation.onScrollBeginDrag();
-  }, [presentation.onScrollBeginDrag]);
+    onPresentationScrollBeginDrag();
+  }, [onPresentationScrollBeginDrag]);
 
   const focusDescription = useCallback(() => {
     setTimeout(() => descriptionInputRef.current?.focus(), 0);
@@ -149,19 +115,6 @@ export function JournalEntryView(props: JournalEntryViewProps) {
     saveSuccessPulse,
     onClose,
   } = props;
-
-  const handleModeChange = useCallback(
-    (mode: JournalEntryScreenMode) => {
-      setVisitedModes(previous => {
-        if (previous.has(mode)) return previous;
-        const next = new Set(previous);
-        next.add(mode);
-        return next;
-      });
-      onToggleMode(mode);
-    },
-    [onToggleMode],
-  );
 
   const currentModeOption =
     JOURNAL_ENTRY_MODE_OPTIONS.find(opt => opt.id === activeMode) || JOURNAL_ENTRY_MODE_OPTIONS[0];
@@ -298,7 +251,8 @@ export function JournalEntryView(props: JournalEntryViewProps) {
       }
     >
       <View style={styles.bodyContent}>
-        <KeepAliveModePanel active={activeMode === 'basic'} visited={visitedModes.has('basic')}>
+        {/* Simple mode */}
+        {activeMode === 'basic' ? (
           <SimpleModePanel
             accounts={accounts}
             editor={editor}
@@ -308,17 +262,13 @@ export function JournalEntryView(props: JournalEntryViewProps) {
             workplaceCurrency={valuationCurrency}
             workplaceId={workplaceId}
             meta={journalMetaProps}
-            voiceModalVisible={activeMode === 'basic' && isVoiceModalVisible}
+            voiceModalVisible={isVoiceModalVisible}
             onVoiceModalVisibleChange={setIsVoiceModalVisible}
             onScrollBeginDrag={dismissDescriptionOnScroll}
             onCalculatorDone={focusDescription}
             accountFlowRef={accountFlowRef}
           />
-        </KeepAliveModePanel>
-        <KeepAliveModePanel
-          active={activeMode === 'allocation'}
-          visited={visitedModes.has('allocation')}
-        >
+        ) : activeMode === 'allocation' ? (
           <>
             {journalMetaCard}
             <SplitModePanel
@@ -328,8 +278,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
               onCreateAccountForTarget={onCreateAccountForTarget}
             />
           </>
-        </KeepAliveModePanel>
-        <KeepAliveModePanel active={activeMode === 'expert'} visited={visitedModes.has('expert')}>
+        ) : activeMode === 'expert' ? (
           <>
             {journalMetaCard}
             <AdvancedModePanel
@@ -340,19 +289,18 @@ export function JournalEntryView(props: JournalEntryViewProps) {
               showLineNotes={showEntryNotes}
             />
           </>
-        </KeepAliveModePanel>
-        <KeepAliveModePanel active={activeMode === 'batch'} visited={visitedModes.has('batch')}>
+        ) : (
           <BatchModePanel
             editor={props.batchEditor}
             accounts={accounts}
             workplaceCurrency={workplaceCurrency}
             workplaceId={workplaceId}
-            summary={activeMode === 'batch' ? props.batchSummary : null}
+            summary={props.batchSummary}
             onContinue={props.onContinueBatch}
             onDone={props.onDoneBatch}
             onCreateAccountForTarget={onCreateAccountForTarget}
           />
-        </KeepAliveModePanel>
+        )}
       </View>
 
       {/* Account Picker Modal */}
@@ -374,7 +322,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
         activeMode={activeMode}
         isSimpleDisabled={props.isSimpleModeDisabled}
         isSplitDisabled={isSplitModeDisabled}
-        onSelectMode={handleModeChange}
+        onSelectMode={onToggleMode}
         onHelpMode={mode => {
           setIsModePickerVisible(false);
           setHelpMode(mode);
@@ -395,7 +343,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
                 ? !isSplitModeDisabled
                 : true
           }
-          onUseMode={handleModeChange}
+          onUseMode={onToggleMode}
           onClose={() => setHelpMode(null)}
         />
       )}
@@ -449,11 +397,5 @@ const styles = StyleSheet.create({
     flex: 1,
     position: 'relative',
     zIndex: 1,
-  },
-  modePanelHidden: {
-    display: 'none',
-  },
-  modePanel: {
-    flex: 1,
   },
 });

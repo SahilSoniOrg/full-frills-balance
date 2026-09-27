@@ -2,7 +2,6 @@ import { AccountCategoryPill } from '@/src/components/accounts/AccountCategoryPi
 import {
   AccountPickerPill,
   getAccountIcon,
-  useAccountPickerList,
   type CreateAccountIntent,
 } from '@/src/components/account-selection';
 import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
@@ -17,7 +16,9 @@ import { getSectionColor, resolveAccountAppearance } from '@/src/utils/accountCa
 import { withOpacity } from '@/src/utils/color-math';
 import { MotiView } from 'moti';
 import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
-import { type LayoutChangeEvent, View } from 'react-native';
+import { Platform, type LayoutChangeEvent, View } from 'react-native';
+import { AccountPickerRecycledList } from './AccountPickerRecycledList';
+import type { AccountPickerSections } from './accountPickerRows';
 import { accountPickerStyles as styles } from './AccountPickerPanel.styles';
 
 export interface AccountPickerNodeProps {
@@ -127,8 +128,6 @@ export function AccountPickerNode({
   );
 }
 
-export type AccountPickerSections = ReturnType<typeof useAccountPickerList>['sections'];
-
 export interface AccountPickerDropdownProps {
   selectedAccountId?: AccountId;
   emptyPrompt: string;
@@ -136,6 +135,7 @@ export interface AccountPickerDropdownProps {
   role: AccountRole;
   collapsedSections: Set<string>;
   hasSelectedAccount: boolean;
+  hasArchivedAccounts: boolean;
   isExpanded: boolean;
   onClear: () => void;
   onCreateAccountRequest?: (role: AccountRole, intent: CreateAccountIntent) => void;
@@ -154,6 +154,7 @@ export function AccountPickerDropdown({
   role,
   collapsedSections,
   hasSelectedAccount,
+  hasArchivedAccounts,
   isExpanded,
   onClear,
   onCreateAccountRequest,
@@ -172,6 +173,11 @@ export function AccountPickerDropdown({
   const handleAccountPress = useCallback((id: AccountId) => {
     onSelectRef.current(id);
   }, []);
+  const showArchiveToggle = hasArchivedAccounts || showArchived;
+  const visibleAccountCount = sections.reduce(
+    (count, section) => count + (collapsedSections.has(section.key) ? 0 : section.data.length),
+    0,
+  );
   return (
     <View
       testID={testID}
@@ -215,46 +221,48 @@ export function AccountPickerDropdown({
               </AppText>
             </PressScaleTouchable>
           )}
-          <PressScaleTouchable
-            onPress={() => setShowArchived(!showArchived)}
-            surfaceStyle={[
-              styles.archivePillButton,
-              {
-                borderColor: showArchived
-                  ? theme.primary
-                  : withOpacity(theme.border, Opacity.heavy),
-                backgroundColor: showArchived
-                  ? withOpacity(theme.primary, Opacity.soft)
-                  : 'transparent',
-              },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={
-              showArchived
-                ? AppConfig.strings.accounts.archive.hideArchived
-                : AppConfig.strings.accounts.archive.showArchived
-            }
-            testID="show-archived-button"
-            hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
-          >
-            <AppIcon
-              name={Icon.Archive}
-              size={Size.iconXs}
-              color={showArchived ? theme.primary : theme.textTertiary}
-            />
-            <AppText
-              variant="caption"
-              weight="semibold"
-              style={{
-                fontSize: Typography.sizes.xs,
-                color: showArchived ? theme.primary : theme.textTertiary,
-              }}
+          {showArchiveToggle && (
+            <PressScaleTouchable
+              onPress={() => setShowArchived(!showArchived)}
+              surfaceStyle={[
+                styles.archivePillButton,
+                {
+                  borderColor: showArchived
+                    ? theme.primary
+                    : withOpacity(theme.border, Opacity.heavy),
+                  backgroundColor: showArchived
+                    ? withOpacity(theme.primary, Opacity.soft)
+                    : 'transparent',
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={
+                showArchived
+                  ? AppConfig.strings.accounts.archive.hideArchived
+                  : AppConfig.strings.accounts.archive.showArchived
+              }
+              testID="show-archived-button"
+              hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
             >
-              {showArchived
-                ? AppConfig.strings.accounts.archive.hideArchived
-                : AppConfig.strings.accounts.archive.showArchived}
-            </AppText>
-          </PressScaleTouchable>
+              <AppIcon
+                name={Icon.Archive}
+                size={Size.iconXs}
+                color={showArchived ? theme.primary : theme.textTertiary}
+              />
+              <AppText
+                variant="caption"
+                weight="semibold"
+                style={{
+                  fontSize: Typography.sizes.xs,
+                  color: showArchived ? theme.primary : theme.textTertiary,
+                }}
+              >
+                {showArchived
+                  ? AppConfig.strings.accounts.archive.hideArchived
+                  : AppConfig.strings.accounts.archive.showArchived}
+              </AppText>
+            </PressScaleTouchable>
+          )}
           {onCreateAccountRequest && (
             <PressScaleTouchable
               onPress={() => onCreateAccountRequest(role, { suggestedName: '' })}
@@ -282,6 +290,14 @@ export function AccountPickerDropdown({
             {emptyPrompt}
           </AppText>
         </View>
+      ) : Platform.OS !== 'web' && visibleAccountCount > 32 ? (
+        <AccountPickerRecycledList
+          sections={sections}
+          collapsedSections={collapsedSections}
+          selectedAccountId={selectedAccountId}
+          onSelect={handleAccountPress}
+          toggleSection={toggleSection}
+        />
       ) : (
         sections.map((section, index) => {
           const isSectionCollapsed = collapsedSections.has(section.key);

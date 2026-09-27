@@ -5,8 +5,33 @@ import { AppConfig } from '@/src/constants';
 import { AccountType } from '@/src/types/enums';
 import { asAccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
+import * as accountCategory from '@/src/utils/accountCategory';
 import { act, fireEvent, render, screen, within } from '@/src/utils/test-utils';
 import React from 'react';
+import { StyleSheet } from 'react-native';
+import type { AccountPickerListItem } from '../components/accountPickerRows';
+
+jest.mock('@shopify/flash-list', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { View } = require('react-native') as typeof import('react-native');
+  return {
+    FlashList: ({
+      data,
+      renderItem,
+      testID,
+    }: {
+      data: AccountPickerListItem[];
+      renderItem: (info: { item: AccountPickerListItem; index: number }) => React.ReactNode;
+      testID?: string;
+    }) => (
+      <View testID={testID}>
+        {data.map((item, index) => (
+          <View key={item.key}>{renderItem({ item, index })}</View>
+        ))}
+      </View>
+    ),
+  };
+});
 
 jest.mock('@/src/hooks/use-reduced-motion', () => ({
   useReducedMotion: () => true,
@@ -31,7 +56,61 @@ const mockAccounts: AccountFields[] = [
   } as AccountFields,
 ];
 
+function pillHasWrappingAncestor(accountId: string): boolean {
+  const pill = screen.getByTestId(`account-picker-option-${accountId}`);
+  let ancestor: typeof pill | null = pill.parent;
+  while (ancestor) {
+    if (StyleSheet.flatten(ancestor.props.style)?.flexWrap === 'wrap') return true;
+    ancestor = ancestor.parent;
+  }
+  return false;
+}
+
 describe('SimpleFormAccountSections unselection and clear', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('keeps the original flowing pills for a typical account list', () => {
+    renderWithScope(
+      <SimpleFormAccountSections
+        expansionPosition="left"
+        onToggleExpansion={jest.fn()}
+        sourceLabel="Paid with"
+        sourceAccounts={mockAccounts}
+        onSelectSource={jest.fn()}
+        destLabel="Spend on"
+        destAccounts={mockAccounts}
+        onSelectDestination={jest.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId('journal-account-folder-list')).toBeNull();
+    expect(pillHasWrappingAncestor('acc-cash')).toBe(true);
+    expect(screen.queryByTestId('show-archived-button')).toBeNull();
+  });
+
+  it('keeps flowing pills when a large account list is recycled', () => {
+    const manyAccounts = Array.from({ length: 40 }, (_, index) => ({
+      ...mockAccounts[0],
+      id: asAccountId(`large-${index}`),
+      name: `Account ${index}`,
+    }));
+    renderWithScope(
+      <SimpleFormAccountSections
+        expansionPosition="left"
+        onToggleExpansion={jest.fn()}
+        sourceLabel="Paid with"
+        sourceAccounts={manyAccounts}
+        onSelectSource={jest.fn()}
+        destLabel="Spend on"
+        destAccounts={manyAccounts}
+        onSelectDestination={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('journal-account-folder-list')).toBeTruthy();
+    expect(pillHasWrappingAncestor('large-0')).toBe(true);
+  });
+
   it('keeps the chevron in the standard header and removes it in compact mode', () => {
     const view = renderWithScope(
       <AccountPickerNode
@@ -300,6 +379,7 @@ describe('SimpleFormAccountSections unselection and clear', () => {
   });
 
   it('can lazily mount an embedded dropdown with row-specific test IDs', () => {
+    const groupAccounts = jest.spyOn(accountCategory, 'getAccountSections');
     const view = renderWithScope(
       <SimpleFormAccountSections
         expansionPosition={null}
@@ -317,6 +397,7 @@ describe('SimpleFormAccountSections unselection and clear', () => {
 
     expect(screen.getByTestId('bulk-route-row-1-source-node')).toBeTruthy();
     expect(screen.queryByTestId('bulk-route-row-1-source-dropdown')).toBeNull();
+    expect(groupAccounts).not.toHaveBeenCalled();
 
     view.rerender(
       <ArchiveVisibilityScopeProvider>
@@ -336,6 +417,7 @@ describe('SimpleFormAccountSections unselection and clear', () => {
     );
 
     expect(screen.getByTestId('bulk-route-row-1-source-dropdown')).toBeTruthy();
+    expect(groupAccounts).toHaveBeenCalled();
   });
 
   it('hides compact node labels in collapsed and expanded states', () => {
@@ -391,7 +473,7 @@ describe('SimpleFormAccountSections unselection and clear', () => {
     expect(screen.getByText('SEND FROM')).toBeTruthy();
   });
 
-  it('keeps the flow arrow and adds a separate transfer swap action', () => {
+  it('uses the transfer flow arrow as the swap action', () => {
     const onSwapAccounts = jest.fn();
     const view = renderWithScope(
       <SimpleFormAccountSections
@@ -411,7 +493,7 @@ describe('SimpleFormAccountSections unselection and clear', () => {
     );
 
     expect(screen.getByTestId('route-flow-arrow')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('route-swap-accounts-button'));
+    fireEvent.press(screen.getByTestId('route-flow-arrow'));
     expect(onSwapAccounts).toHaveBeenCalledTimes(1);
 
     view.rerender(

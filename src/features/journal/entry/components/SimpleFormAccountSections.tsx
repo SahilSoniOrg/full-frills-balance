@@ -98,6 +98,7 @@ export const SimpleFormAccountSections = React.memo(function SimpleFormAccountSe
     const selectedIds = [sourceAccount?.id, destAccount?.id].filter((id): id is AccountId =>
       Boolean(id && id !== EMPTY_ACCOUNT_ID),
     );
+    if (selectedIds.length === 0) return undefined;
     return pinnedArchivedAccountIds(selectedIds, allAccounts ?? sourceAccounts);
   }, [allAccounts, destAccount?.id, sourceAccount?.id, sourceAccounts, type]);
   const showNodeLabels = displayMode === 'standard';
@@ -187,21 +188,21 @@ function RouteConnector({
     <View
       style={[
         styles.connectorContainer,
-        compact && !onSwapAccounts && styles.compactConnectorContainer,
+        compact &&
+          (onSwapAccounts
+            ? styles.compactTransferConnectorContainer
+            : styles.compactConnectorContainer),
       ]}
       testID="route-flow-connector"
     >
-      <View style={styles.connectorArrow} testID="route-flow-arrow">
-        <AppIcon name={Icon.ArrowRight} size={Size.xxs} color={theme.textTertiary} />
-      </View>
       {onSwapAccounts && (
         <TouchableOpacity
           onPress={onSwapAccounts}
-          style={styles.connectorSwapTouchTarget}
-          hitSlop={Spacing.xs}
+          style={styles.connectorButton}
+          hitSlop={Spacing.sm}
           accessibilityRole="button"
           accessibilityLabel="Swap send from and deposit into accounts"
-          testID="route-swap-accounts-button"
+          testID="route-flow-arrow"
         >
           <View
             pointerEvents="none"
@@ -213,9 +214,14 @@ function RouteConnector({
               },
             ]}
           >
-            <AppIcon name={Icon.SwapHorizontal} size={Size.xxs} color={theme.primary} />
+            <AppIcon name={Icon.ArrowRight} size={Size.xs} color={theme.primary} />
           </View>
         </TouchableOpacity>
+      )}
+      {!onSwapAccounts && (
+        <View style={styles.connectorArrow} testID="route-flow-arrow">
+          <AppIcon name={Icon.ArrowRight} size={Size.xxs} color={theme.textTertiary} />
+        </View>
       )}
     </View>
   );
@@ -234,21 +240,26 @@ const styles = StyleSheet.create({
     minHeight: Size.controlCompact,
     gap: Spacing.none,
   },
+  compactTransferConnectorContainer: {
+    width: Size.sm,
+    minHeight: Size.controlCompact,
+    gap: Spacing.none,
+  },
+  connectorButton: {
+    width: Size.sm,
+    height: Size.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   connectorArrow: {
     width: Size.xs,
     height: Size.xs,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  connectorSwapTouchTarget: {
-    width: Size.iconLg,
-    height: Size.iconLg,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   connectorSwapVisual: {
-    width: Size.md,
-    height: Size.md,
+    width: Size.sm,
+    height: Size.sm,
     borderRadius: Shape.radius.full,
     borderWidth: 1,
     justifyContent: 'center',

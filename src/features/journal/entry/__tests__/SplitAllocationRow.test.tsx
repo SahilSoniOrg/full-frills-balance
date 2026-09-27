@@ -8,6 +8,8 @@ import { act, fireEvent, render, screen } from '@/src/utils/test-utils';
 import React from 'react';
 import { SplitAllocationRow } from '../components/SplitAllocationRow';
 
+jest.mock('@shopify/flash-list', () => ({ FlashList: () => null }));
+
 jest.mock('@/src/hooks/use-reduced-motion', () => ({
   useReducedMotion: () => true,
 }));

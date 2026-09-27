@@ -5,15 +5,6 @@ import { ArchiveVisibilityScopeProvider } from '@/src/contexts/ArchiveVisibility
 import { useAccountSelection } from '@/src/features/journal/hooks/useAccountSelection';
 import { renderHook } from '@testing-library/react-native';
 
-// Mock getAccountSections as it's not the focus of this test
-jest.mock('@/src/utils/accountCategory', () => {
-  const actual = jest.requireActual('@/src/utils/accountCategory');
-  return {
-    ...actual,
-    getAccountSections: jest.fn(accounts => [{ title: 'All', data: accounts }]),
-  };
-});
-
 describe('useAccountSelection', () => {
   const mockAccounts = [
     { id: 'parent1', name: 'Parent 1', accountType: AccountType.ASSET, parentAccountId: undefined },
