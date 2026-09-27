@@ -5,8 +5,10 @@ import { analytics } from '@/src/services/analytics';
 import {
   cleanupDatabase as cleanupDatabaseRecords,
   forceRunCheck,
+  journalBalanceInsightService,
   resetDatabase,
 } from '@/src/services/integrity';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
 
 export type MaintenanceSettingsViewModel = ReturnType<typeof useDataMaintenanceActions>;
@@ -22,6 +24,20 @@ export function useMaintenanceSettingsViewModel(): MaintenanceSettingsViewModel 
     [workplaceId],
   );
 
+  const findUnbalancedJournals = useCallback(
+    () => journalBalanceInsightService.refresh(workplaceId, 'maintenance'),
+    [workplaceId],
+  );
+
+  const reviewUnbalancedJournals = useCallback(() => {
+    analytics.logEntrypointSelected(
+      'settings_maintenance',
+      'balance_audit',
+      'journal_balance_review',
+    );
+    AppNavigation.toJournalBalanceReview();
+  }, []);
+
   const cleanupDatabase = useCallback(() => cleanupDatabaseRecords(), []);
 
   const resetApp = useCallback(async () => {
@@ -32,6 +48,8 @@ export function useMaintenanceSettingsViewModel(): MaintenanceSettingsViewModel 
 
   return useDataMaintenanceActions({
     runIntegrityCheck,
+    findUnbalancedJournals,
+    reviewUnbalancedJournals,
     cleanupDatabase,
     resetApp,
     requireRestart,

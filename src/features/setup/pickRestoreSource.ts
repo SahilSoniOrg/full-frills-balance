@@ -26,6 +26,7 @@ import type {
   PostedJournalImportIssue,
 } from '@/src/domain/accounting/PostedJournalImportError';
 import type { JournalBalanceEvaluation } from '@/src/domain/accounting/journalBalanceEvaluator';
+import type { JournalBalanceLineEdit } from '@/src/domain/accounting/journalBalanceReview';
 import { fromMinorUnits, toMinorUnits } from '@/src/utils/money';
 import { formatDate } from '@/src/utils/dateUtils';
 
@@ -381,11 +382,7 @@ export async function getPreparedRestoreJournalIssues(
   return views.filter((view): view is PreparedRestoreJournalIssueView => view !== undefined);
 }
 
-export interface RestoreJournalLineEdit {
-  readonly transactionId: string;
-  readonly amount: string;
-  readonly exchangeRate?: string;
-}
+export type RestoreJournalLineEdit = JournalBalanceLineEdit;
 
 /** Apply edits to the in-memory prepared backup so publication retries use the revised lines. */
 export async function editPreparedRestoreJournal(

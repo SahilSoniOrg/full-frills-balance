@@ -565,6 +565,11 @@ export const AppNavigation = {
     );
   },
 
+  /** Review and fix posted journals whose debits and credits don't match. */
+  toJournalBalanceReview: () => {
+    router.push('/journal-balance-review' as Href);
+  },
+
   /**
    * Navigate to the Reports screen.
    */

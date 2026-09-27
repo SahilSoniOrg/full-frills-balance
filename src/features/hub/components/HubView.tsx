@@ -4,6 +4,7 @@ import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Size, Spacing } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { HubWidget } from '@/src/features/hub/components/HubWidget';
+import { insightTypePresentation } from '@/src/features/hub/helpers/insightTypePresentation';
 import type { HubViewModel } from '@/src/features/hub/hooks/useHubViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Insight } from '@/src/services/insight/InsightService';
@@ -78,7 +79,7 @@ export function HubView({
                 borderColor="border"
                 leading={
                   <AppIcon
-                    name={item.type === 'subscription-amnesiac' ? Icon.History : Icon.TrendingUp}
+                    name={insightTypePresentation(item.type).icon}
                     size={Size.xs}
                     color={theme.text}
                   />

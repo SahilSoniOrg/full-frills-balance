@@ -210,6 +210,7 @@ export const UI_STRINGS = {
       noDismissed: 'No dismissed items.',
       restore: 'Restore',
       dismiss: 'Dismiss',
+      reviewEntries: 'Review entries',
       emergencyFund: {
         title: 'No Rainy-Day Cushion Set Up',
         description: 'You don’t have an account marked as an Emergency Fund.',
@@ -510,6 +511,9 @@ export const UI_STRINGS = {
       integrityTitle: 'Checking Books',
       integrityWait: 'Making sure everything adds up…',
       integrityHint: 'This check runs while the app stays open.',
+      balanceAuditDesc:
+        "Find posted entries whose debits and credits don't match, such as older imports with missing exchange rates.",
+      balanceAuditBtn: 'Find Unbalanced Entries',
       seedMockDesc:
         'Explore a sample space with realistic accounts and bills. Leaves your real books untouched.',
       seedMockBtn: 'Try Demo Books',

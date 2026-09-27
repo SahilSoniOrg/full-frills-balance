@@ -70,6 +70,7 @@ export type FeatureEventMap = {
     | 'export_completed'
     | 'database_vacuum'
     | 'integrity_check'
+    | 'journal_balance_audit'
     | 'factory_reset_initiated'
     | 'factory_reset_completed';
   dashboard: 'safe_to_spend_toggle' | 'quick_action' | 'networth_visibility_toggle';

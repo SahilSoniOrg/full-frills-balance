@@ -3,6 +3,7 @@ import { Icon, AppCard, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { resolveInsightSeverityPresentation } from '@/src/features/hub/helpers/insightSeverityChrome';
+import { insightTypePresentation } from '@/src/features/hub/helpers/insightTypePresentation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Insight } from '@/src/services/insight/InsightService';
 import React from 'react';
@@ -60,22 +61,6 @@ export const HubWidget = ({
     low: AppConfig.strings.alerts.info,
   };
 
-  const getPrimaryActionLabel = (patternType: Insight['type']) => {
-    if (patternType === 'app-update') {
-      return AppConfig.strings.update.updateNow;
-    }
-    if (patternType === 'subscription-amnesiac') {
-      return AppConfig.strings.journal.plannedPayments;
-    }
-    if (patternType === 'slow-leak') {
-      return AppConfig.strings.reports.spendingBreakdown;
-    }
-    if (patternType === 'lifestyle-drift') {
-      return AppConfig.strings.dashboard.notifications.planEmergencyFund;
-    }
-    return AppConfig.strings.dashboard.hub.title;
-  };
-
   return (
     <>
       <View style={styles.container}>
@@ -114,6 +99,7 @@ export const HubWidget = ({
         </View>
         <View style={styles.listContent}>
           {insights.map(insight => {
+            const presentation = insightTypePresentation(insight.type);
             const severity = resolveInsightSeverityPresentation(
               insight.severity,
               theme,
@@ -154,15 +140,7 @@ export const HubWidget = ({
                           { backgroundColor: withOpacity(severity.color, Opacity.hover) },
                         ]}
                       >
-                        <AppIcon
-                          name={
-                            insight.type === 'subscription-amnesiac'
-                              ? Icon.History
-                              : Icon.TrendingUp
-                          }
-                          size={Size.xs}
-                          color={severity.color}
-                        />
+                        <AppIcon name={presentation.icon} size={Size.xs} color={severity.color} />
                       </View>
                       <AppText
                         variant="body"
@@ -242,28 +220,30 @@ export const HubWidget = ({
                         { backgroundColor: withOpacity(severity.color, Opacity.hover) },
                       ]}
                       accessibilityRole="button"
-                      accessibilityLabel={getPrimaryActionLabel(insight.type)}
+                      accessibilityLabel={presentation.actionLabel}
                     >
                       <AppText variant="caption" weight="medium" style={{ color: severity.color }}>
-                        {getPrimaryActionLabel(insight.type)}
+                        {presentation.actionLabel}
                       </AppText>
                       <AppIcon name={Icon.ChevronRight} size={14} color={severity.color} />
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                      onPress={e => {
-                        e.stopPropagation();
-                        onDismiss(insight.id);
-                      }}
-                      style={[styles.dismissPill, { backgroundColor: theme.surfaceSecondary }]}
-                      accessibilityRole="button"
-                      accessibilityLabel="Dismiss insight"
-                    >
-                      <AppIcon name={Icon.Close} size={14} color={theme.textSecondary} />
-                      <AppText variant="caption" color="secondary">
-                        {AppConfig.strings.dashboard.hub.dismiss}
-                      </AppText>
-                    </TouchableOpacity>
+                    {presentation.dismissible ? (
+                      <TouchableOpacity
+                        onPress={e => {
+                          e.stopPropagation();
+                          onDismiss(insight.id);
+                        }}
+                        style={[styles.dismissPill, { backgroundColor: theme.surfaceSecondary }]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Dismiss insight"
+                      >
+                        <AppIcon name={Icon.Close} size={14} color={theme.textSecondary} />
+                        <AppText variant="caption" color="secondary">
+                          {AppConfig.strings.dashboard.hub.dismiss}
+                        </AppText>
+                      </TouchableOpacity>
+                    ) : null}
                   </View>
 
                   <AppText

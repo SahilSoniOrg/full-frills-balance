@@ -90,6 +90,11 @@ const ROUTE_METADATA_MAP: Record<
   'reports-v2': { screenType: 'reports', flowContext: 'financial_reporting_v2', isModal: false },
   hub: { screenType: 'hub', flowContext: 'intelligence_hub', isModal: false },
   'insight-details': { screenType: 'hub', flowContext: 'insight_inspection', isModal: true },
+  'journal-balance-review': {
+    screenType: 'journal',
+    flowContext: 'balance_review',
+    isModal: false,
+  },
   'audit-log': { screenType: 'audit', flowContext: 'audit_review', isModal: false },
 
   // SMS & Automation

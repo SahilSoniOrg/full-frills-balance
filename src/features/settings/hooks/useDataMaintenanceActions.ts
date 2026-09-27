@@ -11,10 +11,17 @@ interface IntegrityResult {
   repairsSuccessful: number;
 }
 
+interface JournalBalanceAuditResult {
+  journalsChecked: number;
+  unbalanced: readonly unknown[];
+}
+
 interface UseDataMaintenanceActionsProps {
   runIntegrityCheck: (
     onProgress: (message: string, progress: number) => void,
   ) => Promise<IntegrityResult>;
+  findUnbalancedJournals: () => Promise<JournalBalanceAuditResult>;
+  reviewUnbalancedJournals: () => void;
   cleanupDatabase: () => Promise<{ deletedCount: number }>;
   resetApp: () => Promise<void>;
   requireRestart: (options: RestartOptions) => void;
@@ -22,6 +29,8 @@ interface UseDataMaintenanceActionsProps {
 
 export function useDataMaintenanceActions({
   runIntegrityCheck,
+  findUnbalancedJournals,
+  reviewUnbalancedJournals,
   cleanupDatabase,
   resetApp,
   requireRestart,
@@ -29,6 +38,7 @@ export function useDataMaintenanceActions({
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
   const [integrityProgress, setIntegrityProgress] = useState(0);
   const [integrityProgressMessage, setIntegrityProgressMessage] = useState('');
+  const [isAuditingBalances, setIsAuditingBalances] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
@@ -61,6 +71,35 @@ export function useDataMaintenanceActions({
       toast.error('Integrity check failed');
     }
   }, [runIntegrityCheck]);
+
+  const onAuditJournalBalances = useCallback(async () => {
+    setIsAuditingBalances(true);
+    try {
+      const { journalsChecked, unbalanced } = await findUnbalancedJournals();
+      analytics.trackFeatureUsage('data_management', 'journal_balance_audit', {
+        journals_checked: journalsChecked,
+        unbalanced_found: unbalanced.length,
+      });
+      if (unbalanced.length === 0) {
+        alert.show({
+          title: 'All Entries Balance',
+          message: `Checked ${journalsChecked} posted entries. Debits and credits match in every one.`,
+        });
+        return;
+      }
+      confirm.show({
+        title: 'Unbalanced Entries Found',
+        message: `${unbalanced.length} of ${journalsChecked} posted entries don't balance. Review them to correct the amounts or exchange rates.`,
+        confirmText: 'Review',
+        onConfirm: reviewUnbalancedJournals,
+      });
+    } catch (error) {
+      logger.error('[onAuditJournalBalances] Check failed', error);
+      toast.error('Balance check failed');
+    } finally {
+      setIsAuditingBalances(false);
+    }
+  }, [findUnbalancedJournals, reviewUnbalancedJournals]);
 
   const onCleanup = useCallback(async () => {
     confirm.show({
@@ -167,6 +206,8 @@ export function useDataMaintenanceActions({
     onFixIntegrity,
     integrityProgress,
     integrityProgressMessage,
+    isAuditingBalances,
+    onAuditJournalBalances,
     onCleanup,
     onFactoryReset,
     isSeeding,

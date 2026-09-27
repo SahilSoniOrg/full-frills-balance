@@ -249,6 +249,25 @@ export class AnalyticsService {
     this.track('integrity_issue', { table, issueType });
   }
 
+  logJournalBalanceChecked(unbalancedCount: number, journalsChecked: number) {
+    this.track('journal_balance_checked', {
+      unbalanced_count: unbalancedCount,
+      journals_checked: journalsChecked,
+    });
+  }
+
+  logUnbalancedJournalsPromptAnswered(choice: 'fix_now' | 'later' | 'dismissed') {
+    this.track('unbalanced_journals_prompt_answered', { choice });
+  }
+
+  logUnbalancedJournalsCleared(peakCount: number, daysOpen: number, source: string) {
+    this.track('unbalanced_journals_cleared', {
+      peak_count: peakCount,
+      days_open: daysOpen,
+      source,
+    });
+  }
+
   logExportCompleted(format: string) {
     this.track('export_completed', { format });
   }

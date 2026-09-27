@@ -157,6 +157,10 @@ export class TransactionQueryRepository {
       .fetch();
   }
 
+  async findAllActive(workplaceId: WorkplaceId): Promise<Transaction[]> {
+    return this.transactions.query(...buildActiveClauses(workplaceId)).fetch();
+  }
+
   async findWithMissingAccountId(workplaceId: WorkplaceId): Promise<Transaction[]> {
     return this.transactions
       .query(

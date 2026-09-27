@@ -12,6 +12,9 @@ import { act, renderHook } from '@testing-library/react-native';
 
 jest.mock('@/src/contexts/app-shell/appReady', () => ({ useAppReady: jest.fn() }));
 jest.mock('@/src/features/app/bootstrap', () => ({ runAppBootstrapSideEffects: jest.fn() }));
+jest.mock('@/src/features/app/journalBalanceStartupCheck', () => ({
+  checkJournalBalancesOnStartup: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('@/src/features/app/purgeLocalAiCaches', () => ({
   purgeLocalAiCachesOnce: jest.fn().mockResolvedValue(undefined),
 }));
@@ -57,7 +60,7 @@ jest.mock('@/src/services/simulation/SafeToSpendReadModel', () => ({
   },
 }));
 jest.mock('@/src/utils/logger', () => ({
-  logger: { error: jest.fn(), info: jest.fn() },
+  logger: { error: jest.fn(), info: jest.fn(), warn: jest.fn() },
 }));
 jest.mock('@/src/services/preferences', () => ({
   preferences: {

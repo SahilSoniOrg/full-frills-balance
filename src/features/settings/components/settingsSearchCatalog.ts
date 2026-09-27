@@ -39,6 +39,7 @@ const SETTINGS_SEARCH_ICONS: Record<string, IconName> = {
   'data-import': Icon.FolderOpen,
   'audit-log': Icon.History,
   maintenance: Icon.Wrench,
+  'journal-balance-audit': Icon.Scale,
   cleanup: Icon.Delete,
   reset: Icon.Refresh,
   'about-support': Icon.Info,
@@ -273,6 +274,14 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: AppConfig.strings.settings.maintenance.integrityDesc,
       section: 'Data',
       keywords: ['maintenance', 'integrity', 'verify', 'repair', 'books'],
+      navigate: actions.onMaintenance,
+    },
+    {
+      id: 'journal-balance-audit',
+      title: AppConfig.strings.settings.maintenance.balanceAuditBtn,
+      description: AppConfig.strings.settings.maintenance.balanceAuditDesc,
+      section: 'Data',
+      keywords: ['maintenance', 'unbalanced', 'imbalanced', 'debit', 'credit', 'journal', 'import'],
       navigate: actions.onMaintenance,
     },
     {

@@ -22,6 +22,14 @@ export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
           onPress={vm.onFixIntegrity}
           loading={vm.isMaintenanceMode}
         />
+        <SettingsMenuItem
+          searchId="journal-balance-audit"
+          leftIcon={Icon.Scale}
+          title={AppConfig.strings.settings.maintenance.balanceAuditBtn}
+          description={AppConfig.strings.settings.maintenance.balanceAuditDesc}
+          onPress={vm.onAuditJournalBalances}
+          loading={vm.isAuditingBalances}
+        />
         {__DEV__ && (
           <SettingsMenuItem
             searchId="seed-mock-data"

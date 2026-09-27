@@ -14,7 +14,12 @@ export interface InsightContext {
 export interface Insight {
   id: string;
   type:
-    'slow-leak' | 'phantom-surplus' | 'subscription-amnesiac' | 'lifestyle-drift' | 'app-update';
+    | 'slow-leak'
+    | 'phantom-surplus'
+    | 'subscription-amnesiac'
+    | 'lifestyle-drift'
+    | 'app-update'
+    | 'unbalanced-journals';
   severity: 'low' | 'medium' | 'high';
   message: string;
   description: string;

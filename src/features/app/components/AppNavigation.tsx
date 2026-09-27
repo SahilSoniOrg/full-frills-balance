@@ -63,6 +63,7 @@ export function NavigationStack() {
       <Stack.Screen name="planned-payment-details" options={detailOptions} />
       <Stack.Screen name="budget-details" options={detailOptions} />
       <Stack.Screen name="insight-details" options={detailOptions} />
+      <Stack.Screen name="journal-balance-review" options={detailOptions} />
       <Stack.Screen name="hub" options={detailOptions} />
       <Stack.Screen name="reports" options={detailOptions} />
       <Stack.Screen name="reports-v2" options={detailOptions} />

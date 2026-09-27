@@ -4,6 +4,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useProfilePrefs } from '@/src/hooks/useProfilePrefs';
 import { useSmsPrefs } from '@/src/hooks/useSmsPrefs';
 import { useInsightPatterns } from '@/src/hooks/useInsightPatterns';
+import { useSupplementalInsights } from '@/src/hooks/useSupplementalInsights';
 import { useUnreadSmsCount } from '@/src/hooks/useUnreadSmsCount';
 import { getPerfNow } from '@/src/utils/dateUtils';
 import { logger as appLogger } from '@/src/utils/logger';
@@ -27,10 +28,11 @@ export function useDashboardHeaderChrome(): DashboardHeaderChrome {
   const { isAppReady } = useAppReady();
   const { isSmsImportEnabled } = useSmsPrefs();
   const { data: insights } = useInsightPatterns(workplaceId, { enabled: isAppReady });
+  const supplementalInsights = useSupplementalInsights(workplaceId);
   const { data: unreadSmsCount } = useUnreadSmsCount(workplaceId);
   const mountTimeRef = useRef(getPerfNow());
 
-  const notificationCount = insights?.length || 0;
+  const notificationCount = (insights?.length || 0) + supplementalInsights.length;
 
   useEffect(() => {
     if (notificationCount > 0) {

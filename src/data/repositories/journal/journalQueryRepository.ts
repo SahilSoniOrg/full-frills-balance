@@ -1,5 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
+import { JournalStatus } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 
@@ -79,6 +80,16 @@ export class JournalQueryRepository {
         Q.where('status', 'POSTED'),
         Q.sortBy('journal_date', Q.desc),
         Q.take(limit),
+      )
+      .fetch();
+  }
+
+  async findAllPosted(workplaceId: WorkplaceId): Promise<Journal[]> {
+    return this.journals
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.where('status', JournalStatus.POSTED),
       )
       .fetch();
   }

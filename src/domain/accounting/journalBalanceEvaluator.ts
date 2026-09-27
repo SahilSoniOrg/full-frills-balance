@@ -68,7 +68,7 @@ export class JournalBalanceError extends Error {
   }
 }
 
-function normalizeCode(code: string | undefined): string {
+export function normalizeCurrencyCode(code: string | undefined): string {
   return code?.trim().toUpperCase() ?? '';
 }
 
@@ -85,9 +85,12 @@ export function evaluateJournalBalance({
   journalCurrency: requestedJournalCurrency,
   precisionByCurrency: requestedPrecisions,
 }: EvaluateJournalBalanceInput): JournalBalanceEvaluation {
-  const journalCurrency = normalizeCode(requestedJournalCurrency);
+  const journalCurrency = normalizeCurrencyCode(requestedJournalCurrency);
   const precisionByCurrency = new Map(
-    [...requestedPrecisions.entries()].map(([code, precision]) => [normalizeCode(code), precision]),
+    [...requestedPrecisions.entries()].map(([code, precision]) => [
+      normalizeCurrencyCode(code),
+      precision,
+    ]),
   );
   const issues: JournalBalanceIssue[] = [];
   const lineValues: EvaluatedJournalBalanceLine[] = [];
@@ -123,7 +126,7 @@ export function evaluateJournalBalance({
   let creditTotalMinorUnits = 0;
 
   for (const line of lines) {
-    const accountCurrency = normalizeCode(line.accountCurrency);
+    const accountCurrency = normalizeCurrencyCode(line.accountCurrency);
     if (!accountCurrency) {
       issues.push({
         code: 'missing_line_currency',
@@ -282,14 +285,14 @@ export interface UniqueJournalFxRateProposal {
 export function proposeUniqueJournalFxRate(
   input: EvaluateJournalBalanceInput,
 ): UniqueJournalFxRateProposal | undefined {
-  const journalCurrency = normalizeCode(input.journalCurrency);
+  const journalCurrency = normalizeCurrencyCode(input.journalCurrency);
   if (!journalCurrency || input.lines.length < 2) return undefined;
 
-  const linesWithCurrency = input.lines.filter(line => normalizeCode(line.accountCurrency));
+  const linesWithCurrency = input.lines.filter(line => normalizeCurrencyCode(line.accountCurrency));
   if (linesWithCurrency.length !== input.lines.length) return undefined;
 
   const foreignLines = input.lines.filter(
-    line => normalizeCode(line.accountCurrency) !== journalCurrency,
+    line => normalizeCurrencyCode(line.accountCurrency) !== journalCurrency,
   );
   if (foreignLines.length !== 1) return undefined;
   const candidate = foreignLines[0];
@@ -348,7 +351,7 @@ export async function resolveCurrencyPrecisions(
   currencyCodes: Iterable<string | undefined>,
   getPrecision: CurrencyPrecisionResolver,
 ): Promise<Map<string, number>> {
-  const codes = new Set([...currencyCodes].map(normalizeCode).filter(Boolean));
+  const codes = new Set([...currencyCodes].map(normalizeCurrencyCode).filter(Boolean));
   return new Map(
     await Promise.all([...codes].map(async code => [code, await getPrecision(code)] as const)),
   );

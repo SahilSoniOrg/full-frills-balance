@@ -19,6 +19,7 @@ import { processDuePlannedPayments } from '@/src/services/planned-payment/planne
 import { notificationService } from '@/src/services/notification/NotificationService';
 import { WorkplaceId } from '@/src/types/ids';
 import { runAppBootstrapSideEffects } from '../bootstrap';
+import { checkJournalBalancesOnStartup } from '../journalBalanceStartupCheck';
 import { purgeLocalAiCachesOnce } from '../purgeLocalAiCaches';
 import { LatestGenerationCoordinator } from './latestGeneration';
 
@@ -115,6 +116,13 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
                 ]
               : []),
           ]);
+
+          // Runs after the batch so a full journal scan does not contend with startup work.
+          if (lease.isCurrent()) {
+            await checkJournalBalancesOnStartup(workplaceId, lease.signal).catch(error =>
+              logger.warn('[Bootstrap] Journal balance check failed', { error }),
+            );
+          }
 
           if (lease.isCurrent()) {
             logger.info(`[Bootstrap] Workplace ${workplaceId} fully stabilized.`);

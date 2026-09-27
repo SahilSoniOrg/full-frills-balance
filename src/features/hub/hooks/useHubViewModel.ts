@@ -5,8 +5,11 @@ import { useSupplementalInsights } from '@/src/hooks/useSupplementalInsights';
 import { useUnreadSmsCount } from '@/src/hooks/useUnreadSmsCount';
 import { analytics } from '@/src/services/analytics';
 import { insightService, Insight } from '@/src/services/insight/InsightService';
+import { journalBalanceInsightService } from '@/src/services/integrity';
+import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { updateInsightService } from '@/src/services/update/updateInsightService';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 
 export type HubTab = 'active' | 'dismissed';
@@ -43,6 +46,16 @@ export function useHubViewModel(): HubViewModel {
   const dismissedSupplementalInsights = useSupplementalInsights(workplaceId, true);
   const { data: unreadSmsCount } = useUnreadSmsCount(workplaceId);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (journalBalanceInsightService.hasIssues(workplaceId)) {
+        void journalBalanceInsightService.refresh(workplaceId, 'hub').catch(error => {
+          logger.warn('[Hub] Journal balance refresh failed', { error });
+        });
+      }
+    }, [workplaceId]),
+  );
+
   const dismissInsight = useCallback(
     async (id: string) => {
       if (supplementalInsights.some(insight => insight.id === id)) {
@@ -72,6 +85,11 @@ export function useHubViewModel(): HubViewModel {
   }, []);
 
   const onOpenInsight = useCallback((insight: Insight) => {
+    if (insight.type === 'unbalanced-journals') {
+      analytics.logEntrypointSelected('hub', 'notification', 'journal_balance_review');
+      AppNavigation.toJournalBalanceReview();
+      return;
+    }
     AppNavigation.toInsightDetails({
       id: insight.id,
       message: insight.message,
