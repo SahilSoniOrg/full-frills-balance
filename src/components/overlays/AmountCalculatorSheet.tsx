@@ -437,7 +437,8 @@ const styles = StyleSheet.create({
     width: '100%',
     flexShrink: 1,
     fontSize: Typography.sizes.hero + Spacing.sm,
-    lineHeight: Typography.sizes.hero + Spacing.md,
+    lineHeight: Typography.sizes.hero + Spacing.xxxl,
+    includeFontPadding: true,
     textAlign: 'right',
   },
   currencyPrefix: {

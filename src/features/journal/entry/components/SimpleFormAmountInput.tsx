@@ -147,6 +147,7 @@ export const SimpleFormAmountInput = React.memo(function SimpleFormAmountInput({
                 color: accentColor,
                 fontFamily: fonts.bold,
                 fontSize: amountFontSize,
+                lineHeight: Math.max(Size.buttonMd, amountFontSize + Spacing.md),
                 height: inputHeight,
               },
             ]}
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     minWidth: 0,
-    paddingVertical: Spacing.xs,
+    paddingVertical: 0,
     paddingLeft: Spacing.xs,
     paddingRight: Spacing.xs,
     margin: 0,

@@ -1,4 +1,4 @@
-import { AppConfig, Size, Typography } from '@/src/constants';
+import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
 import { AccountId, JournalId } from '@/src/types/ids';
 import { TabType } from '@/src/types/domainJournal';
 import type {
@@ -288,7 +288,7 @@ export function resolveSimpleAmountTypography(amountLength: number): {
       amountFontSize: Typography.sizes.xl,
       currencyFontSize: Typography.sizes.sm,
       currencyLineHeight: Math.round(Typography.sizes.sm * Typography.lineHeights.tight),
-      inputHeight: Size.buttonLg,
+      inputHeight: Math.max(Size.buttonMd, Typography.sizes.xl + Spacing.md),
     };
   }
   if (amountLength > 8) {
@@ -296,7 +296,7 @@ export function resolveSimpleAmountTypography(amountLength: number): {
       amountFontSize: Typography.sizes.xxl,
       currencyFontSize: Typography.sizes.base,
       currencyLineHeight: Math.round(Typography.sizes.base * Typography.lineHeights.tight),
-      inputHeight: Size.buttonLg,
+      inputHeight: Math.max(Size.buttonMd, Typography.sizes.xxl + Spacing.md),
     };
   }
   if (amountLength > 6) {
@@ -304,13 +304,13 @@ export function resolveSimpleAmountTypography(amountLength: number): {
       amountFontSize: Typography.sizes.xxxl,
       currencyFontSize: Typography.sizes.lg,
       currencyLineHeight: Math.round(Typography.sizes.lg * Typography.lineHeights.tight),
-      inputHeight: Size.xxl,
+      inputHeight: Math.max(Size.buttonMd, Typography.sizes.xxxl + Spacing.md),
     };
   }
   return {
     amountFontSize: Typography.sizes.jumbo,
     currencyFontSize: Typography.sizes.xxl,
     currencyLineHeight: Math.round(Typography.sizes.xxl * Typography.lineHeights.tight),
-    inputHeight: Size.xxl,
+    inputHeight: Typography.sizes.jumbo + Spacing.md,
   };
 }
