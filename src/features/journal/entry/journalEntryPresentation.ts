@@ -103,11 +103,11 @@ export function resolveJournalEntryHeaderTitle(input: { isEdit: boolean }): stri
 
 export function resolveSimpleTypeAccentColor(
   type: TabType,
-  theme: { expense: string; income: string; primary: string },
+  theme: { expense: string; income: string; transfer: string },
 ): string {
   if (type === 'expense') return theme.expense;
   if (type === 'income') return theme.income;
-  return theme.primary;
+  return theme.transfer;
 }
 
 export function resolveExchangeRatePresentation(input: {

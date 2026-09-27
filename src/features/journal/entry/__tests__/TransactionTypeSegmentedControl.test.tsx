@@ -46,7 +46,7 @@ jest.mock('@/src/hooks/use-theme', () => ({
       textSecondary: '#333333',
       expense: '#dd0000',
       income: '#00aa00',
-      primary: '#0000dd',
+      transfer: '#0000dd',
     },
   }),
 }));

@@ -98,7 +98,7 @@ export interface JournalPresentation {
   type: JournalDisplayType;
   label: string;
   colorKey:
-    | 'primary'
+    | 'transfer'
     | 'success'
     | 'error'
     | 'textSecondary'
@@ -111,7 +111,7 @@ export interface JournalPresentation {
 
 export const SEMANTIC_TYPE_COLORS: Record<SemanticType, JournalPresentation['colorKey']> = {
   // Asset sourced
-  [SemanticType.TRANSFER]: 'primary',
+  [SemanticType.TRANSFER]: 'transfer',
   [SemanticType.DEBT_PAYMENT]: 'liability',
   [SemanticType.OWNER_WITHDRAWAL]: 'equity',
   [SemanticType.INCOME_REVERSAL]: 'error',
@@ -193,7 +193,7 @@ export const journalPresenter = {
       case JournalDisplayType.EXPENSE:
         return { type, label: semanticLabel || 'Expense', colorKey: 'error' };
       case JournalDisplayType.TRANSFER:
-        return { type, label: semanticLabel || 'Transfer', colorKey: 'primary' };
+        return { type, label: semanticLabel || 'Transfer', colorKey: 'transfer' };
       case JournalDisplayType.MIXED:
       default:
         return { type, label: semanticLabel || 'Split', colorKey: 'textSecondary' };
