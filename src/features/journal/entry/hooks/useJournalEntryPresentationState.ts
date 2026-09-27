@@ -1,4 +1,4 @@
-import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
+import type { JournalSuggestion } from '@/src/types/journalSuggestions';
 import type { JournalEntryShell } from './useJournalEntryShell';
 import { useCallback, useState } from 'react';
 import {
@@ -42,7 +42,7 @@ export function useJournalEntryPresentationState(vm: JournalEntryShell) {
     [editor, loadSuggestions],
   );
   const onSelectSuggestion = useCallback(
-    (suggestion: JournalAutofillSuggestion) => {
+    (suggestion: JournalSuggestion) => {
       setHideSuggestions(false);
       return applySuggestion(suggestion);
     },

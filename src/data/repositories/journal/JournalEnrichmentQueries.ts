@@ -4,16 +4,97 @@ import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import type {
-  JournalAutofillSuggestion,
-  JournalEnrichmentRow,
-} from '@/src/data/repositories/journal/journalEnrichmentTypes';
+  JournalSuggestion,
+  JournalSuggestionPage,
+  JournalSuggestionAccount,
+} from '@/src/types/journalSuggestions';
+import type { JournalEnrichmentRow } from '@/src/data/repositories/journal/journalEnrichmentTypes';
+import {
+  isSuggestionPageCompatible,
+  isSuggestionTransactionCompatible,
+} from '@/src/domain/journal/journalSuggestionRules';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { AccountType } from '@/src/types/enums';
+import { AccountType, TransactionType } from '@/src/types/enums';
+import type { TabType } from '@/src/types/domainJournal';
+import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
-import dayjs from 'dayjs';
 
-const SUGGESTION_LOOKBACK_MONTHS = 3;
+type JournalSuggestionRouteRow = {
+  description: string;
+  journal_id: string;
+  journal_date: number;
+  transaction_type: TransactionType;
+  account_id: AccountId;
+  account_name: string;
+  account_type: AccountType;
+};
+
+function buildJournalSuggestions(
+  rows: JournalSuggestionRouteRow[],
+  page: JournalSuggestionPage,
+  tabType: TabType | undefined,
+  limit: number,
+): JournalSuggestion[] {
+  const journals = new Map<
+    string,
+    {
+      description: string;
+      journalDate: number;
+      sources: Map<AccountId, JournalSuggestionAccount>;
+      destinations: Map<AccountId, JournalSuggestionAccount>;
+    }
+  >();
+
+  for (const row of rows) {
+    const journalKey = row.journal_id;
+    const journal = journals.get(journalKey) ?? {
+      description: row.description,
+      journalDate: Number(row.journal_date) || 0,
+      sources: new Map<AccountId, JournalSuggestionAccount>(),
+      destinations: new Map<AccountId, JournalSuggestionAccount>(),
+    };
+    const account = { id: row.account_id, name: row.account_name, type: row.account_type };
+    const side =
+      row.transaction_type === TransactionType.CREDIT ? journal.sources : journal.destinations;
+    side.set(account.id, account);
+    journals.set(journalKey, journal);
+  }
+
+  const patterns = new Map<string, JournalSuggestion>();
+  for (const journal of journals.values()) {
+    const sources = [...journal.sources.values()].sort((a, b) => a.id.localeCompare(b.id));
+    const destinations = [...journal.destinations.values()].sort((a, b) =>
+      a.id.localeCompare(b.id),
+    );
+    const route = { sources, destinations };
+    if (!isSuggestionPageCompatible(route, page)) continue;
+    if (!isSuggestionTransactionCompatible(route, tabType)) continue;
+
+    const routeKey = JSON.stringify([
+      journal.description.trim(),
+      sources.map(account => account.id),
+      destinations.map(account => account.id),
+    ]);
+    const previous = patterns.get(routeKey);
+    const count = (previous?.history.count ?? 0) + 1;
+    patterns.set(routeKey, {
+      key: routeKey,
+      description: journal.description,
+      route: { sources, destinations },
+      history: {
+        count,
+        lastUsedAt: Math.max(previous?.history.lastUsedAt ?? 0, journal.journalDate),
+      },
+    });
+  }
+
+  return [...patterns.values()]
+    .sort(
+      (a, b) => b.history.lastUsedAt - a.history.lastUsedAt || b.history.count - a.history.count,
+    )
+    .slice(0, limit || undefined);
+}
 
 /** Read-side enrichment and suggestion queries for journals (raw SQL + ORM fallbacks). */
 export class JournalEnrichmentQueries {
@@ -25,34 +106,25 @@ export class JournalEnrichmentQueries {
     return database.collections.get<Transaction>('transactions');
   }
 
-  async getRecentUniqueDescriptions(
-    workplaceId: WorkplaceId,
-    queryOrLimit: string | number = '',
-    limit: number = 20,
-  ): Promise<JournalAutofillSuggestion[]> {
-    return this.getRecentSuggestionsWithTargetAccounts(workplaceId, queryOrLimit, limit);
-  }
-
-  async getRecentSuggestionsWithTargetAccounts(
-    workplaceId: WorkplaceId,
-    queryOrLimit: string | number = '',
-    requestedLimit: number = 20,
-  ): Promise<JournalAutofillSuggestion[]> {
-    const query = typeof queryOrLimit === 'string' ? queryOrLimit.trim() : '';
-    const limit = typeof queryOrLimit === 'number' ? queryOrLimit : requestedLimit;
-    const boundedLimit = limit === 0 ? 0 : Math.max(1, Math.min(50, limit));
-    const cutoffDate = dayjs().subtract(SUGGESTION_LOOKBACK_MONTHS, 'month').valueOf();
+  async findJournalSuggestions(params: {
+    workplaceId: WorkplaceId;
+    query: string;
+    page: JournalSuggestionPage;
+    transactionType?: TabType;
+    limit: number;
+  }): Promise<JournalSuggestion[]> {
+    const { workplaceId, page, transactionType } = params;
+    const query = params.query.trim();
+    const boundedLimit = params.limit === 0 ? 0 : Math.max(1, Math.min(50, params.limit));
     const descriptionPattern = `%${query}%`;
+    const statusPlaceholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(', ');
     const sql = `
       WITH recent_descriptions AS (
-        SELECT
-          description,
-          COUNT(*) as journal_count,
-          MAX(journal_date) as latest_date
+        SELECT description, MAX(journal_date) as latest_date
         FROM journals
         WHERE workplace_id = ?
-          AND journal_date >= ?
           AND deleted_at IS NULL
+          AND status IN (${statusPlaceholders})
           AND description IS NOT NULL
           AND description != ''
           AND LOWER(description) LIKE LOWER(?)
@@ -61,126 +133,49 @@ export class JournalEnrichmentQueries {
         ${boundedLimit > 0 ? 'LIMIT ?' : ''}
       )
       SELECT
-        d.description as description,
-        d.journal_count as journal_count,
-        d.latest_date as latest_date,
-        t.account_id as account_id,
+        j.description as description,
+        j.id as journal_id,
+        j.journal_date as journal_date,
+        t.transaction_type as transaction_type,
+        a.id as account_id,
         a.name as account_name,
-        a.account_type as account_type,
-        COUNT(DISTINCT CASE WHEN a.id IS NOT NULL THEN j.id END) as account_usage_count,
-        MAX(j.journal_date) as account_latest_date
+        a.account_type as account_type
       FROM recent_descriptions d
       JOIN journals j ON j.description = d.description
         AND j.workplace_id = ?
-        AND j.journal_date >= ?
         AND j.deleted_at IS NULL
-      LEFT JOIN transactions t ON t.journal_id = j.id
-        AND t.workplace_id = ?
+        AND j.status IN (${statusPlaceholders})
+      JOIN transactions t ON t.journal_id = j.id
+        AND t.workplace_id = j.workplace_id
         AND t.deleted_at IS NULL
-      LEFT JOIN accounts a ON a.id = t.account_id
-        AND a.workplace_id = ?
+      JOIN accounts a ON a.id = t.account_id
+        AND a.workplace_id = j.workplace_id
         AND a.deleted_at IS NULL
-      GROUP BY d.description, d.journal_count, d.latest_date,
-        t.account_id, a.name, a.account_type
-      ORDER BY d.latest_date DESC, account_usage_count DESC
+      ORDER BY j.journal_date DESC, j.id, t.transaction_type, t.account_id
     `;
 
     try {
-      const results = await transactionRawRepository.queryRaw<{
-        description: string;
-        journal_count: number;
-        account_id: AccountId | null;
-        account_name: string | null;
-        account_type: AccountType | null;
-        account_usage_count: number;
-        account_latest_date: number | null;
-        latest_date: number;
-      }>(sql, [
+      const results = await transactionRawRepository.queryRaw<JournalSuggestionRouteRow>(sql, [
         workplaceId,
-        cutoffDate,
+        ...ACTIVE_JOURNAL_STATUSES,
         descriptionPattern,
         ...(boundedLimit > 0 ? [boundedLimit] : []),
         workplaceId,
-        cutoffDate,
-        workplaceId,
-        workplaceId,
+        ...ACTIVE_JOURNAL_STATUSES,
       ]);
 
       if (!results) {
-        return this.getRecentSuggestionsFallback(workplaceId, query, boundedLimit);
-      }
-
-      // Group rows by description preserving order of latest_date
-      const groups = new Map<
-        string,
-        {
-          description: string;
-          journalCount: number;
-          accounts: {
-            accountId: AccountId;
-            accountName: string;
-            accountType: AccountType;
-            count: number;
-            latestDate: number;
-          }[];
-        }
-      >();
-
-      for (const row of results) {
-        if (!row.description) continue;
-        let group = groups.get(row.description);
-        if (!group) {
-          group = {
-            description: row.description,
-            journalCount: Number(row.journal_count) || 0,
-            accounts: [],
-          };
-          groups.set(row.description, group);
-        }
-        if (row.account_id && row.account_name && row.account_type) {
-          group.accounts.push({
-            accountId: row.account_id,
-            accountName: row.account_name,
-            accountType: row.account_type,
-            count: Number(row.account_usage_count) || 0,
-            latestDate: Number(row.account_latest_date) || 0,
-          });
-        }
-      }
-
-      const suggestions: JournalAutofillSuggestion[] = [];
-      for (const group of groups.values()) {
-        const accounts = [...group.accounts].sort(
-          (a, b) => b.latestDate - a.latestDate || b.count - a.count,
+        return this.getRecentSuggestionsFallback(
+          workplaceId,
+          query,
+          page,
+          transactionType,
+          boundedLimit,
         );
-
-        if (accounts.length === 0) {
-          suggestions.push({
-            description: group.description,
-            count: group.journalCount,
-          });
-        } else {
-          for (const account of accounts) {
-            suggestions.push({
-              description: group.description,
-              count: group.journalCount,
-              confidence: Math.min(1, account.count / group.journalCount),
-              targetAccountId: account.accountId,
-              targetAccountName: account.accountName,
-              targetAccountType: account.accountType,
-            });
-            if (boundedLimit > 0 && suggestions.length >= boundedLimit) break;
-          }
-        }
-        if (boundedLimit > 0 && suggestions.length >= boundedLimit) break;
       }
-
-      return suggestions;
+      return buildJournalSuggestions(results, page, transactionType, boundedLimit);
     } catch (error) {
-      logger.error(
-        '[JournalEnrichmentQueries] getRecentSuggestionsWithTargetAccounts failed',
-        error,
-      );
+      logger.error('[JournalEnrichmentQueries] findJournalSuggestions failed', error);
       return [];
     }
   }
@@ -188,19 +183,20 @@ export class JournalEnrichmentQueries {
   private async getRecentSuggestionsFallback(
     workplaceId: WorkplaceId,
     query: string,
+    page: JournalSuggestionPage,
+    tabType: TabType | undefined,
     limit: number,
-  ): Promise<JournalAutofillSuggestion[]> {
-    const cutoffDate = dayjs().subtract(SUGGESTION_LOOKBACK_MONTHS, 'month').valueOf();
+  ): Promise<JournalSuggestion[]> {
     const journals = await this.journals
       .query(
         Q.where('workplace_id', workplaceId),
-        Q.where('journal_date', Q.gte(cutoffDate)),
         Q.where('deleted_at', Q.eq(null)),
+        Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
         Q.where('description', Q.notEq(null)),
         Q.where('description', Q.notEq('')),
         ...(query ? [Q.where('description', Q.like(`%${query}%`))] : []),
         Q.sortBy('journal_date', 'desc'),
-        ...(limit > 0 ? [Q.take(limit * 2)] : []),
+        ...(limit > 0 ? [Q.take(limit * 4)] : []),
       )
       .fetch();
 
@@ -236,61 +232,34 @@ export class JournalEnrichmentQueries {
             )
             .fetch();
     const accountsById = new Map(accounts.map(account => [account.id, account]));
-    const descriptionByJournalId = new Map<string, string>();
-    for (const journal of journals) {
-      if (journal.description) descriptionByJournalId.set(journal.id, journal.description);
-    }
-    const accountJournalsByDescription = new Map<string, Map<AccountId, Set<string>>>();
-
+    const transactionsByJournal = new Map<string, Transaction[]>();
     for (const tx of transactions) {
-      const description = descriptionByJournalId.get(tx.journalId);
-      if (!description || !accountsById.has(tx.accountId)) continue;
-      let accountJournals = accountJournalsByDescription.get(description);
-      if (!accountJournals) {
-        accountJournals = new Map();
-        accountJournalsByDescription.set(description, accountJournals);
-      }
-      let journalIdsForAccount = accountJournals.get(tx.accountId);
-      if (!journalIdsForAccount) {
-        journalIdsForAccount = new Set();
-        accountJournals.set(tx.accountId, journalIdsForAccount);
-      }
-      journalIdsForAccount.add(tx.journalId);
+      const rows = transactionsByJournal.get(tx.journalId) ?? [];
+      rows.push(tx);
+      transactionsByJournal.set(tx.journalId, rows);
     }
 
-    const suggestions: JournalAutofillSuggestion[] = [];
+    const suggestionRows: JournalSuggestionRouteRow[] = [];
     for (const [description, jList] of descJournalMap.entries()) {
-      const accountEntries = [
-        ...(accountJournalsByDescription.get(description)?.entries() ?? []),
-      ].map(([accountId, journalIds]) => {
-        const account = accountsById.get(accountId)!;
-        return {
-          accountId,
-          accountName: account.name,
-          accountType: account.accountType,
-          count: journalIds.size,
-        };
-      });
-      if (accountEntries.length === 0) {
-        suggestions.push({ description, count: jList.length });
-      } else {
-        const accounts = [...accountEntries].sort((a, b) => b.count - a.count);
-        for (const account of accounts) {
-          suggestions.push({
+      for (const journal of jList) {
+        const journalTransactions = transactionsByJournal.get(journal.id) ?? [];
+        for (const tx of journalTransactions) {
+          const account = accountsById.get(tx.accountId);
+          if (!account) continue;
+          suggestionRows.push({
             description,
-            count: jList.length,
-            confidence: Math.min(1, account.count / jList.length),
-            targetAccountId: account.accountId,
-            targetAccountName: account.accountName,
-            targetAccountType: account.accountType,
+            journal_id: journal.id,
+            journal_date: journal.journalDate,
+            transaction_type: tx.transactionType,
+            account_id: account.id,
+            account_name: account.name,
+            account_type: account.accountType,
           });
-          if (limit > 0 && suggestions.length >= limit) break;
         }
       }
-      if (limit > 0 && suggestions.length >= limit) break;
     }
 
-    return suggestions;
+    return buildJournalSuggestions(suggestionRows, page, tabType, limit);
   }
 
   async getEnrichmentDataRaw(

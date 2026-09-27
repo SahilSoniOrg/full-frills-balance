@@ -4,7 +4,8 @@ import { TransactionType } from '@/src/types/enums';
 import { JournalEntryLine } from '@/src/types/domainJournal';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 
-import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
+import type { JournalSuggestion, JournalSuggestionPage } from '@/src/types/journalSuggestions';
+import type { TabType } from '@/src/types/domainJournal';
 import type { PostingPlan, TransactionResolverAccount } from '@/src/types/domainTransaction';
 import { validatePostingPlan } from '@/src/services/transaction/transactionComposerDomain';
 import {
@@ -385,8 +386,8 @@ export class JournalService {
     }
   }
 
-  private suggestionsCache = new Map<string, JournalAutofillSuggestion[]>();
-  private inFlightSuggestions = new Map<string, Promise<JournalAutofillSuggestion[]>>();
+  private suggestionsCache = new Map<string, JournalSuggestion[]>();
+  private inFlightSuggestions = new Map<string, Promise<JournalSuggestion[]>>();
   private suggestionsGeneration = new Map<WorkplaceId, number>();
 
   private getSuggestionsGeneration(workplaceId: WorkplaceId): number {
@@ -417,15 +418,27 @@ export class JournalService {
     }
   }
 
-  async getJournalSuggestions(
-    workplaceId: WorkplaceId,
-    query = '',
-    limit = 20,
-  ): Promise<JournalAutofillSuggestion[]> {
+  async getJournalSuggestions(params: {
+    workplaceId: WorkplaceId;
+    query: string;
+    page: JournalSuggestionPage;
+    transactionType?: TabType;
+    limit?: number;
+  }): Promise<JournalSuggestion[]> {
+    const { workplaceId, page, transactionType } = params;
+    const query = params.query ?? '';
+    const limit = params.limit ?? 20;
     if (!workplaceId) return [];
     const normalizedQuery = query.trim().toLowerCase();
     const boundedLimit = limit === 0 ? 0 : Math.max(1, Math.min(50, limit));
-    const cacheKey = `${workplaceId}:${normalizedQuery}:${boundedLimit}`;
+    const cacheKey = [
+      workplaceId,
+      'route-v3',
+      page,
+      transactionType ?? 'all',
+      normalizedQuery,
+      boundedLimit,
+    ].join(':');
     if (this.suggestionsCache.has(cacheKey)) {
       return this.suggestionsCache.get(cacheKey)!;
     }
@@ -434,9 +447,15 @@ export class JournalService {
     }
 
     const generation = this.getSuggestionsGeneration(workplaceId);
-    let fetchPromise: Promise<JournalAutofillSuggestion[]>;
+    let fetchPromise: Promise<JournalSuggestion[]>;
     fetchPromise = journalEnrichmentQueries
-      .getRecentUniqueDescriptions(workplaceId, normalizedQuery, boundedLimit)
+      .findJournalSuggestions({
+        workplaceId,
+        query: normalizedQuery,
+        page,
+        transactionType,
+        limit: boundedLimit,
+      })
       .then(suggestions => {
         if (this.getSuggestionsGeneration(workplaceId) === generation) {
           this.suggestionsCache.set(cacheKey, suggestions);

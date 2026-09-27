@@ -462,23 +462,39 @@ describe('JournalService - suggestion cache', () => {
   it('does not let an invalidated request repopulate the cache with stale data', async () => {
     const firstRequest = deferred<any>();
     const secondRequest = deferred<any>();
-    (journalEnrichmentQueries.getRecentUniqueDescriptions as jest.Mock)
+    (journalEnrichmentQueries.findJournalSuggestions as jest.Mock)
       .mockReturnValueOnce(firstRequest.promise)
       .mockReturnValueOnce(secondRequest.promise);
 
-    const initialLoad = service.getJournalSuggestions('wp-1' as WorkplaceId);
+    const suggestionParams = {
+      workplaceId: 'wp-1' as WorkplaceId,
+      query: '',
+      page: 'simple' as const,
+      limit: 20,
+    };
+    const initialLoad = service.getJournalSuggestions(suggestionParams);
     service.clearSuggestionsCache('wp-1' as WorkplaceId);
-    const refreshedLoad = service.getJournalSuggestions('wp-1' as WorkplaceId);
+    const refreshedLoad = service.getJournalSuggestions(suggestionParams);
 
-    firstRequest.resolve([{ description: 'old' }] as any);
+    const oldSuggestion = {
+      key: 'old',
+      description: 'old',
+      route: { sources: [], destinations: [] },
+      history: { count: 1, lastUsedAt: 0 },
+    };
+    const newSuggestion = {
+      key: 'new',
+      description: 'new',
+      route: { sources: [], destinations: [] },
+      history: { count: 1, lastUsedAt: 1 },
+    };
+    firstRequest.resolve([oldSuggestion] as any);
     await initialLoad;
-    secondRequest.resolve([{ description: 'new' }] as any);
+    secondRequest.resolve([newSuggestion] as any);
     await refreshedLoad;
 
-    await expect(service.getJournalSuggestions('wp-1' as WorkplaceId)).resolves.toEqual([
-      { description: 'new' },
-    ]);
-    expect(journalEnrichmentQueries.getRecentUniqueDescriptions).toHaveBeenCalledTimes(2);
+    await expect(service.getJournalSuggestions(suggestionParams)).resolves.toEqual([newSuggestion]);
+    expect(journalEnrichmentQueries.findJournalSuggestions).toHaveBeenCalledTimes(2);
   });
 });
 

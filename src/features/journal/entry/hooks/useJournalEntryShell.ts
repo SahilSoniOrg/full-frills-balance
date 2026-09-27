@@ -3,7 +3,7 @@ import { AppConfig } from '@/src/constants';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { AccountFields } from '@/src/types/plainDtos';
-import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
+import type { JournalSuggestion } from '@/src/types/journalSuggestions';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import {
   JournalEntryAccountPickerRequestOptions,
@@ -29,6 +29,7 @@ import type { SavedJournalSummary } from '@/src/features/journal/entry/types/bul
 import { useJournalSuggestionApplication } from '@/src/features/journal/entry/hooks/useJournalSuggestionApplication';
 import {
   JournalSuggestionState,
+  JournalSuggestionPage,
   useJournalSuggestions,
 } from '@/src/features/journal/hooks/useJournalSuggestions';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
@@ -76,11 +77,9 @@ export interface JournalEntryShell {
     target: JournalAccountCreateTarget,
     intent: CreateAccountIntent,
   ) => void;
-  suggestions: JournalAutofillSuggestion[];
+  suggestions: JournalSuggestion[];
   suggestionState: JournalSuggestionState;
-  onSelectSuggestion: (
-    suggestion: JournalAutofillSuggestion,
-  ) => AutopilotAppliedAccount | undefined;
+  onSelectSuggestion: (suggestion: JournalSuggestion) => AutopilotAppliedAccount | undefined;
   loadSuggestions: () => void;
   workplaceCurrency: string;
   workplaceId: WorkplaceId;
@@ -185,11 +184,15 @@ export function useJournalEntryShell(): JournalEntryShell {
     leaveAfterSaveRef.current = leaveAfterSave;
   }, [leaveAfterSave]);
 
-  const suggestionTabType = activeMode === 'basic' ? editor.transactionType : undefined;
+  const suggestionTabType =
+    activeMode === 'basic' || activeMode === 'allocation' ? editor.transactionType : undefined;
+  const suggestionPage: JournalSuggestionPage =
+    activeMode === 'allocation' ? 'split' : activeMode === 'expert' ? 'advanced' : 'simple';
   const { suggestions, suggestionState, loadSuggestions } = useJournalSuggestions(
     workplaceId,
     editor.description,
     suggestionTabType,
+    suggestionPage,
   );
 
   const onSubmit = useCallback(() => {

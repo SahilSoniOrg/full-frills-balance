@@ -170,128 +170,162 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
     expect(rows[0].account_currency_code).toBe('USD');
   });
 
-  it('scopes raw recent-suggestion joins to every workplace-owned table', async () => {
+  it('scopes suggestion joins and applies the bounded three-month description query', async () => {
     const queryRaw = jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue([]);
 
-    await journalEnrichmentQueries.getRecentSuggestionsWithTargetAccounts(workplaceOne, 10);
+    await journalEnrichmentQueries.findJournalSuggestions({
+      workplaceId: workplaceOne,
+      query: 'coffee',
+      page: 'simple',
+      limit: 3,
+    });
 
     const [sql, args = []] = queryRaw.mock.calls[0];
     expect(sql).toContain('j.workplace_id = ?');
-    expect(sql).toContain('t.workplace_id = ?');
-    expect(sql).toContain('a.workplace_id = ?');
-    expect(args.filter(arg => arg === workplaceOne)).toHaveLength(4);
+    expect(sql).toContain('t.workplace_id = j.workplace_id');
+    expect(sql).toContain('a.workplace_id = j.workplace_id');
+    expect(sql).not.toContain('journal_date >= ?');
+    expect(sql).toContain('LOWER(description) LIKE LOWER(?)');
+    expect(args.filter(arg => arg === workplaceOne)).toHaveLength(2);
+    expect(args).toContain('%coffee%');
+    expect(args).toContain(3);
+    expect(args.filter((arg): arg is number => typeof arg === 'number')).toEqual([3]);
   });
 
-  it('limits suggestions to the last three months', async () => {
-    const queryRaw = jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue([]);
-
-    await journalEnrichmentQueries.getRecentSuggestionsWithTargetAccounts(workplaceOne, 10);
-
-    const [sql, args = []] = queryRaw.mock.calls[0];
-    expect(sql).toContain('journal_date >= ?');
-    expect(args).toHaveLength(8);
-    expect(typeof args[1]).toBe('number');
-    expect(args[1]).toBeLessThan(Date.now());
-    expect(args[2]).toBe('%%');
-  });
-
-  it('isolates recent-suggestion fallback from malformed transaction and account links', async () => {
+  it('isolates fallback rows from foreign-workplace links and drops incomplete routes', async () => {
     jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue(null);
 
-    const suggestions = await journalEnrichmentQueries.getRecentSuggestionsWithTargetAccounts(
-      workplaceOne,
-      10,
-    );
-
-    expect(suggestions).toEqual([
-      {
-        description: 'Coffee',
-        count: 1,
-        confidence: 1,
-        targetAccountId: workplaceOneAccountId,
-        targetAccountName: 'Workplace One Checking',
-        targetAccountType: AccountType.ASSET,
-      },
-    ]);
-  });
-
-  it('pushes the description search into the bounded recent-query contract', async () => {
-    const queryRaw = jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue([]);
-
-    await journalEnrichmentQueries.getRecentSuggestionsWithTargetAccounts(
-      workplaceOne,
-      'coffee',
-      3,
-    );
-
-    const [sql, args = []] = queryRaw.mock.calls[0];
-    expect(sql).toContain('LOWER(description) LIKE LOWER(?)');
-    expect(args[2]).toBe('%coffee%');
-    expect(args[3]).toBe(3);
-  });
-
-  it('returns every target category used with the same description', async () => {
-    const food = await accountWriteRepository.create({
-      name: 'Food',
-      accountType: AccountType.EXPENSE,
-      currencyCode: 'USD',
+    const suggestions = await journalEnrichmentQueries.findJournalSuggestions({
       workplaceId: workplaceOne,
-    });
-    const groceries = await accountWriteRepository.create({
-      name: 'Groceries',
-      accountType: AccountType.EXPENSE,
-      currencyCode: 'USD',
-      workplaceId: workplaceOne,
+      query: '',
+      page: 'simple',
+      limit: 10,
     });
 
-    await createJournalFixture(
-      {
-        description: 'Milk',
-        journalDate: recentJournalDate(),
-        currencyCode: 'USD',
-        transactions: [
-          {
-            accountId: food.id,
-            amount: 10,
-            transactionType: TransactionType.DEBIT,
-          },
-        ],
-      },
-      workplaceOne,
-    );
-    await createJournalFixture(
-      {
-        description: 'Milk',
-        journalDate: recentJournalDate() - 1_000,
-        currencyCode: 'USD',
-        transactions: [
-          {
-            accountId: groceries.id,
-            amount: 12,
-            transactionType: TransactionType.DEBIT,
-          },
-        ],
-      },
-      workplaceOne,
-    );
+    expect(suggestions).toEqual([]);
+  });
 
-    const milkSuggestions = (
-      await journalEnrichmentQueries.getRecentSuggestionsWithTargetAccounts(workplaceOne, 10)
-    ).filter(suggestion => suggestion.description === 'Milk');
+  it('shows every applicable route shape in split and advanced modes without merging journals', async () => {
+    const [source, secondSource] = await Promise.all(
+      ['Federal FI', 'Savings'].map(name =>
+        accountWriteRepository.create({
+          name,
+          accountType: AccountType.ASSET,
+          currencyCode: 'USD',
+          workplaceId: workplaceOne,
+        }),
+      ),
+    );
+    const [groceries, foodAndDrinks, rent, utilities] = await Promise.all(
+      ['Groceries', 'Food & Drinks', 'Rent', 'Utilities'].map(name =>
+        accountWriteRepository.create({
+          name,
+          accountType: AccountType.EXPENSE,
+          currencyCode: 'USD',
+          workplaceId: workplaceOne,
+        }),
+      ),
+    );
+    const createRoute = (description: string, credits: AccountId[], debits: AccountId[]) =>
+      createJournalFixture(
+        {
+          description,
+          journalDate: recentJournalDate(),
+          currencyCode: 'USD',
+          transactions: [
+            ...credits.map(accountId => ({
+              accountId,
+              amount: 10,
+              transactionType: TransactionType.CREDIT,
+            })),
+            ...debits.map(accountId => ({
+              accountId,
+              amount: 10,
+              transactionType: TransactionType.DEBIT,
+            })),
+          ],
+        },
+        workplaceOne,
+      );
 
-    expect(milkSuggestions).toEqual([
-      expect.objectContaining({
-        description: 'Milk',
-        targetAccountId: food.id,
-        targetAccountName: 'Food',
-        targetAccountType: AccountType.EXPENSE,
-      }),
-      expect.objectContaining({
-        description: 'Milk',
-        targetAccountId: groceries.id,
-        targetAccountName: 'Groceries',
-        targetAccountType: AccountType.EXPENSE,
-      }),
-    ]);
+    await createRoute('Milk', [source.id], [groceries.id]);
+    await createRoute('Milk', [source.id], [foodAndDrinks.id]);
+    await createRoute('One meal', [source.id], [groceries.id]);
+    await createRoute('Split meal', [source.id], [groceries.id, foodAndDrinks.id]);
+    await createRoute('Reverse meal', [source.id, secondSource.id], [rent.id]);
+    await createRoute('Advanced meal', [source.id, secondSource.id], [rent.id, utilities.id]);
+
+    const simpleSuggestions = await journalEnrichmentQueries.findJournalSuggestions({
+      workplaceId: workplaceOne,
+      query: 'Milk',
+      page: 'simple',
+      limit: 20,
+    });
+    const milkSuggestions = simpleSuggestions.filter(
+      suggestion => suggestion.description === 'Milk',
+    );
+    expect(milkSuggestions).toHaveLength(2);
+    expect(
+      milkSuggestions.map(suggestion => suggestion.route.destinations.map(account => account.id)),
+    ).toEqual(expect.arrayContaining([[groceries.id], [foodAndDrinks.id]]));
+
+    const splitSuggestions = await journalEnrichmentQueries.findJournalSuggestions({
+      workplaceId: workplaceOne,
+      query: 'meal',
+      page: 'split',
+      limit: 20,
+    });
+    expect(new Set(splitSuggestions.map(suggestion => suggestion.description))).toEqual(
+      new Set(['One meal', 'Split meal']),
+    );
+    const oneToOneSplit = splitSuggestions.find(
+      suggestion => suggestion.description === 'One meal',
+    );
+    expect(oneToOneSplit?.route).toMatchObject({
+      sources: [expect.objectContaining({ id: source.id })],
+      destinations: [expect.objectContaining({ id: groceries.id })],
+    });
+    const oneToManySplit = splitSuggestions.find(
+      suggestion => suggestion.description === 'Split meal',
+    );
+    expect(oneToManySplit?.route).toMatchObject({
+      sources: [expect.objectContaining({ id: source.id })],
+      destinations: expect.arrayContaining([
+        expect.objectContaining({ id: groceries.id }),
+        expect.objectContaining({ id: foodAndDrinks.id }),
+      ]),
+    });
+
+    const advancedSuggestions = await journalEnrichmentQueries.findJournalSuggestions({
+      workplaceId: workplaceOne,
+      query: 'meal',
+      page: 'advanced',
+      limit: 20,
+    });
+    expect(new Set(advancedSuggestions.map(suggestion => suggestion.description))).toEqual(
+      new Set(['One meal', 'Split meal', 'Reverse meal', 'Advanced meal']),
+    );
+    expect(
+      advancedSuggestions.find(suggestion => suggestion.description === 'Reverse meal')?.route,
+    ).toMatchObject({
+      sources: expect.arrayContaining([
+        expect.objectContaining({ id: source.id }),
+        expect.objectContaining({ id: secondSource.id }),
+      ]),
+      destinations: [expect.objectContaining({ id: rent.id })],
+    });
+    const manyToMany = advancedSuggestions.find(
+      suggestion => suggestion.description === 'Advanced meal',
+    );
+    expect(manyToMany?.route).toMatchObject({
+      sources: expect.arrayContaining([
+        expect.objectContaining({ id: source.id }),
+        expect.objectContaining({ id: secondSource.id }),
+      ]),
+      destinations: expect.arrayContaining([
+        expect.objectContaining({ id: rent.id }),
+        expect.objectContaining({ id: utilities.id }),
+      ]),
+    });
   });
 });

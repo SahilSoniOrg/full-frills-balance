@@ -8,7 +8,7 @@ import {
 import { AppConfig } from '@/src/constants';
 import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import type { AccountFields } from '@/src/types/plainDtos';
-import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
+import type { JournalSuggestion } from '@/src/types/journalSuggestions';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { TabType } from '@/src/types/domainJournal';
@@ -47,10 +47,10 @@ export interface JournalMetaCardProps {
   /** When set, the parent owns visibility so the header and rows update together. */
   showNotes?: boolean;
   onNotesVisibilityChange?: (visible: boolean) => void;
-  suggestions?: JournalAutofillSuggestion[];
+  suggestions?: JournalSuggestion[];
   suggestionState?: JournalSuggestionState;
   suggestionMaxHeight?: number;
-  onSelectSuggestion?: (suggestion: JournalAutofillSuggestion) => void;
+  onSelectSuggestion?: (suggestion: JournalSuggestion) => void;
   activeTabType?: TabType;
   accounts?: AccountFields[];
   onVoiceInputPress?: () => void;
@@ -128,8 +128,9 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
   }, [date, time, resolvedHourCycle]);
 
   const handleSelectSuggestion = useCallback(
-    (suggestion: JournalAutofillSuggestion) => {
+    (suggestion: JournalSuggestion) => {
       Keyboard.dismiss();
+      descriptionInputRef?.current?.blur();
       setIsFocused(false);
       if (blurTimerRef.current) {
         clearTimeout(blurTimerRef.current);

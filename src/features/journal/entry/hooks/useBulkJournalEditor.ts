@@ -20,7 +20,7 @@ import { logger } from '@/src/utils/logger';
 import { analytics } from '@/src/services/analytics';
 import { triggerSaveOutcomeHaptic } from '@/src/utils/haptics';
 import type { AccountFields } from '@/src/types/plainDtos';
-import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
+import type { JournalSuggestion } from '@/src/types/journalSuggestions';
 import { resolveGuidedAccountsAfterTabChange } from '@/src/services/journal/guidedJournalAccountEligibility';
 import {
   DUPLICATE_ACCOUNT_ERROR,
@@ -29,10 +29,6 @@ import {
   isBulkJournalRowEmpty,
   validateBulkJournalRow,
 } from './bulkJournalHelpers';
-import {
-  isSimpleTargetAccountUnset,
-  resolveTargetAccountIdForSimpleTab,
-} from '@/src/services/journal/simpleJournalHelpers';
 import type {
   BulkJournalRow,
   BulkJournalDraft,
@@ -349,29 +345,31 @@ export function useBulkJournalEditor({
   );
 
   const applySuggestion = useCallback(
-    (rowId: string, suggestion: JournalAutofillSuggestion) => {
+    (rowId: string, suggestion: JournalSuggestion) => {
       analytics.trackFeatureUsage('journal', 'suggestion_accepted', {
-        has_target_account: !!suggestion.targetAccountId,
-        target_account_type: suggestion.targetAccountType || 'none',
+        has_target_account:
+          suggestion.route.sources.length + suggestion.route.destinations.length > 0,
+        target_account_type: 'route',
         mode: 'batch',
       });
       setDescription(rowId, suggestion.description);
 
       const row = latestRowsRef.current.find(item => item.id === rowId);
-      if (
-        !row ||
-        !isSimpleTargetAccountUnset(row.transactionType, row.sourceId, row.destinationId)
-      ) {
+      if (!row) return;
+
+      if (suggestion.route.sources.length !== 1 || suggestion.route.destinations.length !== 1)
         return;
-      }
-
-      const targetAccountId = resolveTargetAccountIdForSimpleTab(suggestion, row.transactionType);
-      if (!targetAccountId || !accounts.some(account => account.id === targetAccountId)) return;
-
-      if (row.transactionType === 'income') {
-        setSourceAccount(rowId, targetAccountId);
-      } else {
-        setDestinationAccount(rowId, targetAccountId);
+      const sourceAccountId = suggestion.route.sources[0].id;
+      const destinationAccountId = suggestion.route.destinations[0].id;
+      const sourceAccount = sourceAccountId
+        ? accounts.find(account => account.id === sourceAccountId)
+        : undefined;
+      const destinationAccount = destinationAccountId
+        ? accounts.find(account => account.id === destinationAccountId)
+        : undefined;
+      if (sourceAccount && destinationAccount) {
+        setSourceAccount(rowId, sourceAccount.id);
+        setDestinationAccount(rowId, destinationAccount.id);
       }
     },
     [accounts, setDescription, setDestinationAccount, setSourceAccount],

@@ -4,7 +4,7 @@ import {
 } from '../components/JournalSuggestionsDropdown';
 import { AccountType } from '@/src/types/enums';
 import type { AccountFields } from '@/src/types/plainDtos';
-import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
+import type { JournalSuggestion } from '@/src/types/journalSuggestions';
 import type { AccountId } from '@/src/types/ids';
 
 const accounts: AccountFields[] = [
@@ -26,32 +26,41 @@ const accountsMap = new Map(accounts.map(account => [account.id, account]));
 
 function suggestion(
   description: string,
-  targetAccountId?: AccountId,
-  targetAccountType?: AccountType,
-): JournalAutofillSuggestion {
-  return { description, count: 1, targetAccountId, targetAccountType };
+  destinationId: AccountId = 'food' as AccountId,
+): JournalSuggestion {
+  return {
+    key: `${description}:${destinationId}`,
+    description,
+    route: {
+      sources: [{ id: 'cash' as AccountId, name: 'Cash', type: AccountType.ASSET }],
+      destinations: [
+        {
+          id: destinationId,
+          name: destinationId === 'food' ? 'Food' : 'Cash',
+          type: destinationId === 'food' ? AccountType.EXPENSE : AccountType.ASSET,
+        },
+      ],
+    },
+    history: { count: 1, lastUsedAt: 1 },
+  };
 }
 
 describe('JournalSuggestionsDropdown helpers', () => {
-  it('deduplicates descriptions by normalized text and resolved account', () => {
+  it('filters routes to accounts compatible with the active tab', () => {
     const result = filterJournalSuggestions(
-      [
-        suggestion(' Lunch ', 'food' as AccountId, AccountType.EXPENSE),
-        suggestion('lunch', 'food' as AccountId, AccountType.EXPENSE),
-        suggestion('Lunch', 'cash' as AccountId, AccountType.ASSET),
-      ],
+      [suggestion('Lunch', 'food' as AccountId), suggestion('Lunch', 'cash' as AccountId)],
       accountsMap,
       'expense',
     );
 
-    expect(result).toHaveLength(2);
-    expect(result.map(item => item.targetAccountId)).toEqual(['food', 'cash']);
+    expect(result).toHaveLength(1);
+    expect(result[0].route.destinations[0].id).toBe('food');
   });
 
-  it('keeps an ineligible target suggestion while omitting its account match', () => {
-    const item = suggestion('Lunch', 'cash' as AccountId, AccountType.ASSET);
+  it('does not resolve an incompatible destination account', () => {
+    const item = suggestion('Lunch', 'cash' as AccountId);
 
     expect(resolveSuggestionAccount(item, accountsMap, 'expense')).toBeUndefined();
-    expect(filterJournalSuggestions([item], accountsMap, 'expense')).toEqual([item]);
+    expect(filterJournalSuggestions([item], accountsMap, 'expense')).toEqual([]);
   });
 });

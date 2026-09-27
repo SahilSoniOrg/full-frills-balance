@@ -53,6 +53,10 @@ export function JournalEntryView(props: JournalEntryViewProps) {
     setDescription,
     onSelectSuggestion,
   } = presentation;
+  const dismissDescriptionOnScroll = useCallback(() => {
+    descriptionInputRef.current?.blur();
+    presentation.onScrollBeginDrag();
+  }, [presentation.onScrollBeginDrag]);
 
   const focusDescription = useCallback(() => {
     setTimeout(() => descriptionInputRef.current?.focus(), 0);
@@ -69,9 +73,16 @@ export function JournalEntryView(props: JournalEntryViewProps) {
   const handleSelectSuggestion = useCallback(
     (suggestion: Parameters<typeof onSelectSuggestion>[0]) => {
       const applied = onSelectSuggestion(suggestion);
+      if (
+        props.activeMode === 'basic' &&
+        suggestion.route.sources.length === 1 &&
+        suggestion.route.destinations.length === 1
+      ) {
+        return;
+      }
       startGuidedAccountFlow(applied);
     },
-    [onSelectSuggestion, startGuidedAccountFlow],
+    [onSelectSuggestion, props.activeMode, startGuidedAccountFlow],
   );
 
   const {
@@ -168,8 +179,9 @@ export function JournalEntryView(props: JournalEntryViewProps) {
         activeMode !== 'basic'
           ? {
               keyboardShouldPersistTaps: 'handled',
-              onScrollBeginDrag: presentation.onScrollBeginDrag,
+              onScrollBeginDrag: dismissDescriptionOnScroll,
               scrollEventThrottle: 16,
+              testID: 'journal-entry-page-scroll-view',
               contentContainerStyle: { paddingBottom: Spacing.xxxxl + Size.xxl },
             }
           : undefined
@@ -251,7 +263,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
             meta={journalMetaProps}
             voiceModalVisible={isVoiceModalVisible}
             onVoiceModalVisibleChange={setIsVoiceModalVisible}
-            onScrollBeginDrag={presentation.onScrollBeginDrag}
+            onScrollBeginDrag={dismissDescriptionOnScroll}
             onCalculatorDone={focusDescription}
             accountFlowRef={accountFlowRef}
           />

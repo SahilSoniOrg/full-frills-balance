@@ -1,64 +1,69 @@
-import { AccountCategoryPill } from '@/src/components/accounts/AccountCategoryPill';
-import { getAccountIcon } from '@/src/components/account-selection';
 import { Icon, AppIcon, AppText } from '@/src/components/core';
+import { getAccountIcon } from '@/src/components/account-selection';
 import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
-import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
+import type { JournalSuggestion } from '@/src/types/journalSuggestions';
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { TabType } from '@/src/types/domainJournal';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountType } from '@/src/types/enums';
 import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { withOpacity } from '@/src/utils/color-math';
+import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
 import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-const MAX_VISIBLE_SUGGESTIONS = 8;
+const MAX_VISIBLE_SUGGESTIONS = 6;
 
 export type JournalSuggestionState = 'idle' | 'loading' | 'empty' | 'error' | 'results';
 
 export function resolveSuggestionAccount(
-  suggestion: JournalAutofillSuggestion,
+  suggestion: JournalSuggestion,
   accountsMap: Map<string, AccountFields>,
   tabType?: TabType,
 ): AccountFields | undefined {
-  if (!suggestion.targetAccountId || !suggestion.targetAccountType) return undefined;
-  if (tabType === 'expense' && suggestion.targetAccountType !== AccountType.EXPENSE)
-    return undefined;
-  if (tabType === 'income' && suggestion.targetAccountType !== AccountType.INCOME) return undefined;
-  if (
-    tabType === 'transfer' &&
-    suggestion.targetAccountType !== AccountType.ASSET &&
-    suggestion.targetAccountType !== AccountType.LIABILITY
-  ) {
-    return undefined;
-  }
-  return accountsMap.get(suggestion.targetAccountId);
+  const accountId =
+    tabType === 'expense'
+      ? suggestion.route.destinations[0]?.id
+      : tabType === 'income'
+        ? suggestion.route.sources[0]?.id
+        : (suggestion.route.destinations[0]?.id ?? suggestion.route.sources[0]?.id);
+  if (!accountId) return undefined;
+  const account = accountsMap.get(accountId);
+  const routeAccount = [...suggestion.route.sources, ...suggestion.route.destinations].find(
+    item => item.id === accountId,
+  );
+  const accountType = account?.accountType ?? routeAccount?.type;
+  if (tabType === 'expense' && accountType !== AccountType.EXPENSE) return undefined;
+  if (tabType === 'income' && accountType !== AccountType.INCOME) return undefined;
+  return account;
 }
 
 export function filterJournalSuggestions(
-  suggestions: JournalAutofillSuggestion[],
+  suggestions: JournalSuggestion[],
   accountsMap: Map<string, AccountFields>,
   tabType?: TabType,
-): JournalAutofillSuggestion[] {
-  const seen = new Set<string>();
-
+): JournalSuggestion[] {
   return suggestions.filter(suggestion => {
-    const targetAccount = resolveSuggestionAccount(suggestion, accountsMap, tabType);
-    const key = `${suggestion.description.trim().toLowerCase()}:${targetAccount?.id ?? 'none'}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
+    const accountIds = [
+      ...suggestion.route.sources.map(account => account.id),
+      ...suggestion.route.destinations.map(account => account.id),
+    ];
+    return (
+      accountIds.every(id => accountsMap.has(id)) &&
+      Boolean(resolveSuggestionAccount(suggestion, accountsMap, tabType))
+    );
   });
 }
 
 export interface JournalSuggestionsDropdownProps {
   visible: boolean;
   hideSuggestions?: boolean;
-  suggestions?: JournalAutofillSuggestion[];
+  suggestions?: JournalSuggestion[];
   suggestionState?: JournalSuggestionState;
   activeTabType?: TabType;
   accounts?: AccountFields[];
-  onSelectSuggestion: (suggestion: JournalAutofillSuggestion) => void;
+  onSelectSuggestion: (suggestion: JournalSuggestion) => void;
   maxHeight?: number;
 }
 
@@ -73,6 +78,7 @@ export const JournalSuggestionsDropdown = React.memo(function JournalSuggestions
   maxHeight = 220,
 }: JournalSuggestionsDropdownProps) {
   const { theme } = useTheme();
+  const { resolvedHourCycle } = useHourCyclePrefs();
   const accountsMap = useMemo(
     () => new Map<string, AccountFields>(accounts.map(account => [account.id, account])),
     [accounts],
@@ -97,13 +103,18 @@ export const JournalSuggestionsDropdown = React.memo(function JournalSuggestions
       ]}
     >
       {suggestionState !== 'results' || visibleSuggestions.length === 0 ? (
-        <AppText variant="caption" color="secondary" style={styles.suggestionStatus}>
-          {suggestionState === 'loading'
-            ? 'Looking for previous descriptions…'
-            : suggestionState === 'error'
-              ? 'Suggestions are unavailable right now.'
-              : 'No matching previous descriptions.'}
-        </AppText>
+        <View style={styles.suggestionStatus}>
+          {suggestionState === 'loading' && (
+            <ActivityIndicator size="small" color={theme.primary} />
+          )}
+          <AppText variant="caption" color="secondary">
+            {suggestionState === 'loading'
+              ? 'Finding previous descriptions…'
+              : suggestionState === 'error'
+                ? 'Suggestions are unavailable right now.'
+                : 'No previous descriptions match.'}
+          </AppText>
+        </View>
       ) : (
         <ScrollView
           keyboardShouldPersistTaps="always"
@@ -115,71 +126,113 @@ export const JournalSuggestionsDropdown = React.memo(function JournalSuggestions
           ]}
           contentContainerStyle={styles.dropdownScrollContent}
         >
-          <View style={styles.dropdownWrapContainer}>
+          <View style={styles.suggestionList}>
             {visibleSuggestions.slice(0, MAX_VISIBLE_SUGGESTIONS).map(suggestion => {
               const targetAccount = resolveSuggestionAccount(
                 suggestion,
                 accountsMap,
                 activeTabType,
               );
-              const { accentColor, categoryColor } = targetAccount
+              const sourceAccounts = suggestion.route.sources
+                .map(account => accountsMap.get(account.id))
+                .filter((account): account is AccountFields => Boolean(account));
+              const destinationAccounts = suggestion.route.destinations
+                .map(account => accountsMap.get(account.id))
+                .filter((account): account is AccountFields => Boolean(account));
+              const sourceAccount = sourceAccounts[0];
+              const destinationAccount = destinationAccounts[0];
+              const lastUsedLabel = formatRelativeReconciledDate(
+                suggestion.history.lastUsedAt,
+                resolvedHourCycle,
+              );
+              const { accentColor } = targetAccount
                 ? resolveAccountAppearance(targetAccount, theme)
-                : { accentColor: theme.primary, categoryColor: theme.primary };
-              const accountIcon = targetAccount ? getAccountIcon(targetAccount) : undefined;
+                : { accentColor: theme.primary };
+              const sourceColor = sourceAccount
+                ? resolveAccountAppearance(sourceAccount, theme).accentColor
+                : theme.textSecondary;
+              const renderAccount = (account: AccountFields) => {
+                const color = resolveAccountAppearance(account, theme).accentColor;
+                return (
+                  <View key={account.id} style={styles.accountLeg}>
+                    <AppIcon name={getAccountIcon(account)} size={Size.xxs} color={color} />
+                    <AppText
+                      variant="caption"
+                      style={[styles.accountName, { color }]}
+                      numberOfLines={1}
+                    >
+                      {account.name}
+                    </AppText>
+                  </View>
+                );
+              };
 
               return (
-                <TouchableOpacity
-                  key={`${suggestion.description}:${targetAccount?.id ?? 'none'}`}
+                <Pressable
+                  key={suggestion.key}
                   onPress={() => onSelectSuggestion(suggestion)}
-                  style={[
-                    styles.sparsePill,
+                  style={({ pressed }) => [
+                    styles.suggestionPill,
                     {
-                      backgroundColor: withOpacity(accentColor, Opacity.soft),
-                      borderColor: withOpacity(accentColor, Opacity.medium),
+                      backgroundColor: pressed
+                        ? withOpacity(accentColor, Opacity.active)
+                        : withOpacity(accentColor, Opacity.soft),
+                      borderColor: withOpacity(accentColor, Opacity.active),
                     },
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel={`Suggestion: ${suggestion.description}`}
+                  accessibilityLabel={`${suggestion.description}${sourceAccounts.length || destinationAccounts.length ? `, ${sourceAccounts.map(account => account.name).join(', ') || 'Unknown account'} to ${destinationAccounts.map(account => account.name).join(', ') || 'Unknown account'}` : targetAccount ? `, ${targetAccount.name}` : ''}`}
+                  accessibilityHint={`Last used ${lastUsedLabel}`}
                 >
-                  <AppText
-                    variant="body"
-                    weight="semibold"
-                    style={[styles.pillTitle, { color: theme.text }]}
-                    numberOfLines={1}
-                  >
-                    {suggestion.description}
-                  </AppText>
-
-                  {targetAccount && (
-                    <View
-                      style={[
-                        styles.pillAccountBadge,
-                        {
-                          backgroundColor: withOpacity(accentColor, Opacity.soft),
-                          borderColor: withOpacity(accentColor, Opacity.active),
-                        },
-                      ]}
-                    >
-                      <AccountCategoryPill color={categoryColor} size="sm" />
-                      {accountIcon && (
-                        <AppIcon
-                          name={accountIcon}
-                          size={Size.xxs}
-                          color={accentColor}
-                          fallbackIcon={Icon.Wallet}
-                        />
-                      )}
+                  <View style={styles.suggestionCopy}>
+                    <View style={styles.suggestionHeading}>
                       <AppText
-                        variant="caption"
+                        variant="body"
                         weight="semibold"
-                        style={{ color: accentColor }}
+                        style={[styles.suggestionDescription, { color: theme.text }]}
                         numberOfLines={1}
                       >
-                        {targetAccount.name}
+                        {suggestion.description}
+                      </AppText>
+                      <AppText
+                        variant="caption"
+                        style={[styles.lastUsedDate, { color: theme.textTertiary }]}
+                        numberOfLines={1}
+                      >
+                        {lastUsedLabel}
                       </AppText>
                     </View>
-                  )}
-                </TouchableOpacity>
+                    {(sourceAccount || destinationAccount || targetAccount) && (
+                      <View style={styles.accountRoute}>
+                        <View style={styles.routeSide}>
+                          {sourceAccounts.length ? (
+                            sourceAccounts.map(renderAccount)
+                          ) : !destinationAccounts.length && targetAccount ? (
+                            <AppText
+                              variant="caption"
+                              style={[styles.accountName, { color: sourceColor }]}
+                              numberOfLines={1}
+                            >
+                              {targetAccount.name}
+                            </AppText>
+                          ) : null}
+                        </View>
+                        {sourceAccounts.length > 0 && destinationAccounts.length > 0 && (
+                          <View style={styles.routeArrow}>
+                            <AppIcon
+                              name={Icon.ArrowRight}
+                              size={Size.xxs}
+                              color={theme.textTertiary}
+                            />
+                          </View>
+                        )}
+                        <View style={styles.routeSide}>
+                          {destinationAccounts.map(renderAccount)}
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                </Pressable>
               );
             })}
           </View>
@@ -196,11 +249,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     marginTop: Spacing.xs,
-    borderRadius: Shape.radius.lg,
+    borderRadius: Shape.radius.md,
     borderWidth: 1,
-    padding: Spacing.sm,
+    padding: Spacing.xs,
     zIndex: 1000,
-    ...Shape.elevation.lg,
+    ...Shape.elevation.md,
   },
   dropdownScrollView: {
     width: '100%',
@@ -212,37 +265,72 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   suggestionStatus: {
-    padding: Spacing.md,
-  },
-  dropdownWrapContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-    width: '100%',
-    alignItems: 'center',
-  },
-  sparsePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
+    minHeight: Size.buttonMd,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    borderRadius: Shape.radius.full,
-    borderWidth: 1,
-    maxWidth: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
-  pillTitle: {
-    fontSize: Typography.sizes.sm,
+  suggestionList: {
+    width: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+  },
+  suggestionPill: {
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Shape.radius.md,
+    borderWidth: 1,
+  },
+  suggestionCopy: {
+    minWidth: 0,
+    gap: 2,
+  },
+  suggestionHeading: {
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  accountRoute: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    minWidth: 0,
+  },
+  routeSide: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    gap: 2,
+    minWidth: 0,
     flexShrink: 1,
   },
-  pillAccountBadge: {
+  routeArrow: {
+    alignSelf: 'center',
+  },
+  accountLeg: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Shape.radius.full,
-    borderWidth: 1,
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  suggestionDescription: {
+    fontSize: Typography.sizes.sm,
+    flexShrink: 1,
+  },
+  lastUsedDate: {
     flexShrink: 0,
+  },
+  accountName: {
+    minWidth: 0,
+    flexShrink: 1,
   },
 });

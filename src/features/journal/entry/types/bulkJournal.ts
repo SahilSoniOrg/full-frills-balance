@@ -1,7 +1,7 @@
 import { AccountFields } from '@/src/types/plainDtos';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import type { TabType } from '@/src/types/domainJournal';
-import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
+import type { JournalSuggestion } from '@/src/types/journalSuggestions';
 import type { FxFetchedRates, FxOverride } from '@/src/features/journal/entry/fxPair';
 
 /** User-authored values and rate inputs kept by the batch editor. */
@@ -42,7 +42,7 @@ export interface BulkJournalRowActions {
   setDestinationAccount: (rowId: string, value: AccountId) => void;
   setConvertedAmount: (rowId: string, value: number) => void;
   setManualBaseRate: (rowId: string, role: 'source' | 'destination', value: string) => void;
-  applySuggestion: (rowId: string, suggestion: JournalAutofillSuggestion) => void;
+  applySuggestion: (rowId: string, suggestion: JournalSuggestion) => void;
 }
 
 export interface SavedJournalSummary {

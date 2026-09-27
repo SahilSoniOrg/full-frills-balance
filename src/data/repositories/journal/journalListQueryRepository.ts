@@ -2,8 +2,6 @@ import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
 import { JournalStatus } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
-import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
-import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
@@ -91,13 +89,6 @@ export class JournalListQueryRepository {
     return this.journals
       .query(Q.where('deleted_at', Q.eq(null)), Q.where('workplace_id', workplaceId))
       .fetchCount();
-  }
-
-  async getRecentUniqueDescriptions(
-    workplaceId: WorkplaceId,
-    limit: number = 500,
-  ): Promise<JournalAutofillSuggestion[]> {
-    return journalEnrichmentQueries.getRecentUniqueDescriptions(workplaceId, limit);
   }
 }
 

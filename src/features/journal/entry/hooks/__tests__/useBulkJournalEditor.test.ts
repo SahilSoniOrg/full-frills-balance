@@ -163,11 +163,13 @@ describe('useBulkJournalEditor', () => {
     act(() => {
       result.current.rowActions.setTransactionType(rowId, 'expense');
       result.current.rowActions.applySuggestion(rowId, {
+        key: 'lunch:cash-food',
         description: 'Lunch',
-        count: 3,
-        targetAccountId: 'acc2' as AccountId,
-        targetAccountName: 'Food',
-        targetAccountType: AccountType.EXPENSE,
+        route: {
+          sources: [{ id: 'acc1' as AccountId, name: 'Cash', type: AccountType.ASSET }],
+          destinations: [{ id: 'acc2' as AccountId, name: 'Food', type: AccountType.EXPENSE }],
+        },
+        history: { count: 3, lastUsedAt: 1 },
       });
     });
 

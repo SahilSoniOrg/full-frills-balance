@@ -1,9 +1,8 @@
 import { AppConfig } from '@/src/constants';
-import type { AccountFields } from '@/src/types/plainDtos';
-import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
-import { AccountType, TransactionType } from '@/src/types/enums';
-import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { AccountRole, JournalEntryLine, TabType } from '@/src/types/domainJournal';
+import { TransactionType } from '@/src/types/enums';
+import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
+import type { AccountFields } from '@/src/types/plainDtos';
 
 import { filterGuidedLegAccounts } from '@/src/services/journal/guidedJournalAccountEligibility';
 import { parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
@@ -249,34 +248,6 @@ export function shouldApplyLastUsedAccountDefault(
     return type === 'transfer' || type === 'expense';
   }
   return type === 'transfer' || type === 'income';
-}
-
-/** Resolves the target account ID from a suggestion if it matches the active tab's expected account type. */
-export function resolveTargetAccountIdForSimpleTab(
-  suggestion: JournalAutofillSuggestion,
-  tabType: TabType,
-): AccountId | undefined {
-  if (!suggestion.targetAccountId || !suggestion.targetAccountType) {
-    return undefined;
-  }
-
-  if (tabType === 'expense' && suggestion.targetAccountType === AccountType.EXPENSE) {
-    return suggestion.targetAccountId;
-  }
-
-  if (tabType === 'income' && suggestion.targetAccountType === AccountType.INCOME) {
-    return suggestion.targetAccountId;
-  }
-
-  if (
-    tabType === 'transfer' &&
-    (suggestion.targetAccountType === AccountType.ASSET ||
-      suggestion.targetAccountType === AccountType.LIABILITY)
-  ) {
-    return suggestion.targetAccountId;
-  }
-
-  return undefined;
 }
 
 /** Whether the target account leg for the given simple tab is currently unset / empty. */

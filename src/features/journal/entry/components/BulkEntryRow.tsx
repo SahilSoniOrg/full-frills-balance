@@ -167,8 +167,8 @@ export const BulkEntryRow = React.memo(
                 <AppIcon name={Icon.Delete} size={Size.iconXs} color={theme.textSecondary} />
               </TouchableOpacity>
             ),
-            descriptionTestID: `bulk-description-${row.id}`,
-            descriptionClearTestID: `bulk-clear-description-${row.id}`,
+            descriptionTestID: `bulk-description-${index + 1}`,
+            descriptionClearTestID: `bulk-clear-description-${index + 1}`,
           }}
           metaContainerStyle={styles.metaCardEmbedded}
           exchangeRateContainerStyle={styles.fxCardEmbedded}

@@ -98,7 +98,7 @@ export const BulkEntryGrid = React.memo(
       );
     }, []);
 
-    const handleAddRow = useCallback(() => {
+    const blurFocusedInput = useCallback(() => {
       Keyboard.dismiss();
       const focused = TextInput.State.currentlyFocusedInput();
       if (focused) TextInput.State.blurTextInput(focused);
@@ -106,10 +106,14 @@ export const BulkEntryGrid = React.memo(
         const active = document.activeElement;
         if (active instanceof HTMLElement) active.blur();
       }
+    }, []);
+
+    const handleAddRow = useCallback(() => {
+      blurFocusedInput();
       setExpandedAccountPicker(null);
       setDatePickerRowId(null);
       addRow();
-    }, [addRow]);
+    }, [addRow, blurFocusedInput]);
 
     const handleRemoveRow = useCallback(
       (rowId: string) => {
@@ -245,6 +249,8 @@ export const BulkEntryGrid = React.memo(
           <ScrollView
             contentContainerStyle={styles.scrollContainer}
             keyboardShouldPersistTaps="handled"
+            onScrollBeginDrag={blurFocusedInput}
+            testID="bulk-entry-list"
           >
             {listHeader}
             {rows.map((row, index) => renderRow({ item: row, index }))}
@@ -260,6 +266,8 @@ export const BulkEntryGrid = React.memo(
             ListFooterComponent={listFooter}
             contentContainerStyle={styles.scrollContainer}
             keyboardShouldPersistTaps="handled"
+            onScrollBeginDrag={blurFocusedInput}
+            testID="bulk-entry-list"
           />
         )}
 

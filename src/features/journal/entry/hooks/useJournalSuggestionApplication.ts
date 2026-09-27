@@ -1,46 +1,99 @@
 import type { AutopilotAppliedAccount } from '@/src/features/journal/entry/components/useSimpleFormExpansion';
-import type { JournalAutofillSuggestion } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import { analytics } from '@/src/services/analytics';
-import { TransactionType } from '@/src/types/enums';
-import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { lineAccountPatch } from '@/src/services/journal/journalEditorHelpers';
-import {
-  isSimpleTargetAccountUnset,
-  resolveTargetAccountIdForSimpleTab,
-} from '@/src/services/journal/simpleJournalHelpers';
-import type { useJournalEditor } from './useJournalEditor';
-import type { JournalEntryScreenMode } from '../journalEntryPresentation';
+import { AccountType, TransactionType } from '@/src/types/enums';
+import { EMPTY_ACCOUNT_ID, TransactionId } from '@/src/types/ids';
+import type { JournalSuggestion } from '@/src/types/journalSuggestions';
 import type { AccountFields } from '@/src/types/plainDtos';
+import type { JournalEntryScreenMode } from '../journalEntryPresentation';
+import type { useJournalEditor } from './useJournalEditor';
 
 export function useJournalSuggestionApplication(
   editor: ReturnType<typeof useJournalEditor>,
   accounts: AccountFields[],
   activeMode: JournalEntryScreenMode,
-): (suggestion: JournalAutofillSuggestion) => AutopilotAppliedAccount | undefined {
-  return (suggestion: JournalAutofillSuggestion) => {
+): (suggestion: JournalSuggestion) => AutopilotAppliedAccount | undefined {
+  return (suggestion: JournalSuggestion) => {
     analytics.trackFeatureUsage('journal', 'suggestion_accepted', {
-      has_target_account: !!suggestion.targetAccountId,
-      target_account_type: suggestion.targetAccountType || 'none',
+      has_target_account:
+        suggestion.route.sources.length + suggestion.route.destinations.length > 0,
+      target_account_type: 'route',
       mode: activeMode,
     });
     editor.setDescription(suggestion.description);
-    if (activeMode !== 'basic') return;
 
-    const sourceLine = editor.lines.find(l => l.transactionType === TransactionType.CREDIT);
-    const destLine = editor.lines.find(l => l.transactionType === TransactionType.DEBIT);
-    const sourceId = sourceLine?.accountId ?? EMPTY_ACCOUNT_ID;
-    const destId = destLine?.accountId ?? EMPTY_ACCOUNT_ID;
-    const tabType = editor.transactionType;
-    if (!isSimpleTargetAccountUnset(tabType, sourceId, destId)) return;
-    const targetAccountId = resolveTargetAccountIdForSimpleTab(suggestion, tabType);
-    const account = targetAccountId && accounts.find(a => a.id === targetAccountId);
-    if (!targetAccountId || !account) return;
+    const sourceIds = suggestion.route.sources.map(item => item.id);
+    const destinationIds = suggestion.route.destinations.map(item => item.id);
+    const routeSources = sourceIds
+      .map(id => accounts.find(account => account.id === id))
+      .filter((account): account is AccountFields => Boolean(account));
+    const routeDestinations = destinationIds
+      .map(id => accounts.find(account => account.id === id))
+      .filter((account): account is AccountFields => Boolean(account));
+    const hasCompleteRoute =
+      routeSources.length === sourceIds.length &&
+      routeDestinations.length === destinationIds.length;
 
-    const role = tabType === 'income' ? 'source' : 'destination';
-    const line = tabType === 'income' ? sourceLine : destLine;
-    if (line) {
-      editor.updateLine(line.id, lineAccountPatch(targetAccountId, account, account.accountType));
-      return { role, id: targetAccountId };
+    if (hasCompleteRoute && routeSources.length && routeDestinations.length) {
+      if (activeMode === 'basic' && (routeSources.length !== 1 || routeDestinations.length !== 1))
+        return;
+      editor.setLines(current => {
+        const credits = new Map(
+          current
+            .filter(line => line.transactionType === TransactionType.CREDIT)
+            .map(line => [line.accountId, line]),
+        );
+        const debits = new Map(
+          current
+            .filter(line => line.transactionType === TransactionType.DEBIT)
+            .map(line => [line.accountId, line]),
+        );
+        const fallbackCredit = current.find(
+          line => line.transactionType === TransactionType.CREDIT,
+        );
+        const fallbackDebit = current.find(line => line.transactionType === TransactionType.DEBIT);
+        const maxId = current
+          .map(line => Number(line.id))
+          .filter(Number.isFinite)
+          .reduce((max, id) => Math.max(max, id), 0);
+        let nextId = maxId + 1;
+        const makeLine = (
+          account: AccountFields,
+          transactionType: TransactionType,
+          existing?: (typeof current)[number],
+        ) => ({
+          ...(existing ?? {
+            id: String(nextId++) as TransactionId,
+            accountId: EMPTY_ACCOUNT_ID,
+            accountName: '',
+            accountType: AccountType.ASSET,
+            amount: '',
+            transactionType,
+            notes: '',
+            exchangeRate: '',
+          }),
+          ...lineAccountPatch(account.id, account, account.accountType),
+          transactionType,
+        });
+        const creditLines = routeSources.map(account =>
+          makeLine(
+            account,
+            TransactionType.CREDIT,
+            credits.get(account.id) ?? (activeMode === 'basic' ? fallbackCredit : undefined),
+          ),
+        );
+        const debitLines = routeDestinations.map(account =>
+          makeLine(
+            account,
+            TransactionType.DEBIT,
+            debits.get(account.id) ?? (activeMode === 'basic' ? fallbackDebit : undefined),
+          ),
+        );
+        return [...debitLines, ...creditLines];
+      });
+      return;
     }
+
+    return;
   };
 }
