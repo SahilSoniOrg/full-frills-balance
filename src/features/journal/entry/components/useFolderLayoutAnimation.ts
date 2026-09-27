@@ -138,7 +138,8 @@ export function useFolderLayoutAnimation({
   }, []);
 
   const shelfY = tabHeight + SHELF_OFFSET;
-  const effectiveHeight = shelfY + dropdownContentHeight;
+  // dropdownContentHeight already includes the SHELF_OFFSET padding from dropdownMeasureStyle.
+  const effectiveHeight = tabHeight + dropdownContentHeight;
   const svgPath = useMemo(() => {
     if (containerWidth <= 0 || effectiveHeight <= shelfY || tabWidth <= 0) return '';
 
