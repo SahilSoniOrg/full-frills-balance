@@ -176,13 +176,14 @@ export function useJournalEntryShell(): JournalEntryShell {
     fingerprint: draftFingerprint,
     baselineReady: !editor.isEdit || editor.loadState === 'loaded',
   });
+  const { leaveAfterSave } = leaveGuard;
   const onDoneBatch = useCallback(() => {
     clearBatchAfterSave();
-    leaveGuard.leaveAfterSave();
-  }, [clearBatchAfterSave, leaveGuard.leaveAfterSave]);
+    leaveAfterSave();
+  }, [clearBatchAfterSave, leaveAfterSave]);
   useEffect(() => {
-    leaveAfterSaveRef.current = leaveGuard.leaveAfterSave;
-  }, [leaveGuard.leaveAfterSave]);
+    leaveAfterSaveRef.current = leaveAfterSave;
+  }, [leaveAfterSave]);
 
   const suggestionTabType = activeMode === 'basic' ? editor.transactionType : undefined;
   const { suggestions, suggestionState, loadSuggestions } = useJournalSuggestions(

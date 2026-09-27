@@ -5,12 +5,12 @@ import { render, screen } from '@/src/utils/test-utils';
 import { AdvancedForm } from '../components/AdvancedForm';
 import { resolveFxPair } from '../fxPair';
 import type { AdvancedJournalFormController } from '../hooks/useAdvancedJournalForm';
+import { Text as MockText } from 'react-native';
 
 jest.mock('../components/SplitAllocationRow', () => ({
-  SplitAllocationRow: ({ label, row }: { label: string; row: { id: string } }) => {
-    const { Text } = require('react-native');
-    return <Text>{`${label}:${row.id}`}</Text>;
-  },
+  SplitAllocationRow: ({ label, row }: { label: string; row: { id: string } }) => (
+    <MockText>{`${label}:${row.id}`}</MockText>
+  ),
 }));
 
 function controller(
