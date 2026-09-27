@@ -2,7 +2,7 @@ import { AppConfig } from '@/src/constants';
 import { BorderWidth, Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Dimensions, type LayoutChangeEvent } from 'react-native';
+import { Dimensions, PixelRatio, type LayoutChangeEvent } from 'react-native';
 import { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 type FolderSide = 'left' | 'right';
@@ -16,6 +16,13 @@ const INITIAL_TAB_HEIGHT = Size.buttonLg;
 const dropdownMeasureStyle = {
   paddingTop: SHELF_OFFSET,
 };
+
+// onLayout reports unrounded sizes, but the clipping container's native frame is snapped to
+// physical pixels and can be up to one pixel shorter; flooring keeps the stroke inside it.
+function floorToPixel(value: number): number {
+  const scale = PixelRatio.get();
+  return Math.floor(value * scale) / scale;
+}
 
 const REVEAL_TIMING = {
   duration: AppConfig.animation.normal,
@@ -95,7 +102,7 @@ export function useFolderLayoutAnimation({
   const [containerWidth, setContainerWidth] = useState<number>(initialContainerWidth);
   const [tabWidth, setTabWidth] = useState<number>(initialTabWidth);
   const [tabHeight, setTabHeight] = useState<number>(INITIAL_TAB_HEIGHT);
-  const [dropdownContentHeight, setDropdownContentHeight] = useState(0);
+  const [effectiveHeight, setEffectiveHeight] = useState(0);
   const isExpanded = expansionPosition !== null;
   const [holdChrome, setHoldChrome] = useState(isExpanded);
   const revealProgress = useSharedValue(isExpanded ? 1 : 0);
@@ -123,7 +130,7 @@ export function useFolderLayoutAnimation({
 
   const onTopRowLayout = useCallback((event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
-    if (width > 0) setContainerWidth(width);
+    if (width > 0) setContainerWidth(floorToPixel(width));
     if (height > 0) setTabHeight(height);
   }, []);
 
@@ -132,14 +139,16 @@ export function useFolderLayoutAnimation({
     if (width > 0) setTabWidth(width);
   }, []);
 
-  const onDropdownLayout = useCallback((event: LayoutChangeEvent) => {
-    const { height } = event.nativeEvent.layout;
-    if (height > 0) setDropdownContentHeight(height);
-  }, []);
+  // The outline keeps its expanded height while the collapse fade plays.
+  const onContainerLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      const { height } = event.nativeEvent.layout;
+      if (isExpanded && height > 0) setEffectiveHeight(floorToPixel(height));
+    },
+    [isExpanded],
+  );
 
   const shelfY = tabHeight + SHELF_OFFSET;
-  // dropdownContentHeight already includes the SHELF_OFFSET padding from dropdownMeasureStyle.
-  const effectiveHeight = tabHeight + dropdownContentHeight;
   const svgPath = useMemo(() => {
     if (containerWidth <= 0 || effectiveHeight <= shelfY || tabWidth <= 0) return '';
 
@@ -167,7 +176,7 @@ export function useFolderLayoutAnimation({
     effectiveHeight,
     isExpanded,
     isRevealVisible,
-    onDropdownLayout,
+    onContainerLayout,
     onLeftTabWrapperLayout,
     onTopRowLayout,
     reduceMotion,

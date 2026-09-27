@@ -103,7 +103,7 @@ export function AccountPickerPanel({
     effectiveHeight,
     isExpanded,
     isRevealVisible,
-    onDropdownLayout,
+    onContainerLayout,
     onLeftTabWrapperLayout,
     onTopRowLayout,
     reduceMotion,
@@ -125,7 +125,7 @@ export function AccountPickerPanel({
   }, [onSelect]);
 
   const dropdownBody = (
-    <View collapsable={false} onLayout={onDropdownLayout} style={dropdownMeasureStyle}>
+    <View style={dropdownMeasureStyle}>
       <AccountPickerDropdown
         selectedAccountId={activeAccountId}
         emptyPrompt={emptyPrompt}
@@ -149,6 +149,7 @@ export function AccountPickerPanel({
 
   return (
     <Animated.View
+      onLayout={onContainerLayout}
       style={[styles.container, isRevealVisible && styles.expandedWrapper, containerStyle]}
     >
       <Animated.View style={[StyleSheet.absoluteFill, animatedSvgStyle]} pointerEvents="none">
