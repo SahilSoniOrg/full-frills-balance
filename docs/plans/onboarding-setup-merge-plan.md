@@ -1,6 +1,6 @@
 # Onboarding and setup merge plan
 
-**Status:** phase 1 done; phase 2 next. Follows `over-engineering-cleanup-plan.md`.
+**Status:** phases 1 and 2 done; phase 3 not planned. Follows `over-engineering-cleanup-plan.md`.
 
 ## How to resume
 
@@ -60,7 +60,7 @@ Coupling is one-way (onboarding → setup, allowlisted in `scripts/cross-feature
 | Phase | Status | Commit |
 | --- | --- | --- |
 | 1. Retire legacy first-run | done | `1371b81a`, `62f40a4d`, `1fd1a84f` |
-| 2. One feature folder | todo | |
+| 2. One feature folder | done | `849d7fb0` |
 | 3. Cash clarity on coordinator | not planned yet | |
 
 ## Log
@@ -71,3 +71,4 @@ Coupling is one-way (onboarding → setup, allowlisted in `scripts/cross-feature
   - `62f40a4d`: `first_run` removed from `SETUP_JOURNEY_IDS`, recipes and draft kinds (it stays a launch journey string). `resolveSetupJourney` returns `undefined` for an unregistered device and `SetupScreen` redirects to cash clarity. `shouldSeedSetupDraft` deleted (always true once journey IDs exclude `first_run`). Saved `first_run` drafts parse as unreadable, so launch lands in cash clarity, whose commit clears the draft.
   - `1fd1a84f`: appearance slice, `AppearanceThemeStep`, `finishAppearanceSetup`, draft field, summary/review rows and copy removed (-863 lines). `parseSetupDraft` strips a legacy `appearance` step/field so an in-flight restore saved before the update stays readable. Restore no longer applies the theme from the backup (import still parses `RestoreFacts.appearance`; unused by setup now). Detox setup specs updated to skip the theme screen.
   - `verify`: same 3 known failing suites / 7 tests; lint 0 errors. Not yet exercised on a device: restore discard back to cash clarity, and a first-run restore end to end.
+- 2026-09-27: Phase 2 done (`849d7fb0`). `src/features/onboarding` is now `src/features/setup/first-run` (pure renames). First-run imports setup modules directly (`../SetupDraftStore`, `../setupFinishers`, `../SetupCoordinator`, `../setupTypes`, `WorkplaceCurrencyStep`) instead of the setup barrel; test mocks follow. The setup barrel exports `CashClarityScreen`, which `OnboardingRoute` renders. Allowlist entries for `onboarding` removed. Architecture checks (feature boundaries, dependency cycles) pass.
