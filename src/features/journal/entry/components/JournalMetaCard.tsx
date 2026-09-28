@@ -180,7 +180,7 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
     <View style={[styles.container, containerStyle]}>
       {showBanner && <EntryEditBanner text={bannerText || ''} style={styles.banner} />}
 
-      {/* Keep suggestions inside the field's native touch bounds. */}
+      {/* Anchor suggestions to the field so the overlay does not move the form. */}
       <View style={styles.inputContainer}>
         {/* Description Input Row - Ghost with subtle focus underline */}
         <View
@@ -200,40 +200,46 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
               />
             )}
           </View>
-          <AppInput
-            ref={resolvedDescriptionInputRef}
-            value={description}
-            onChangeText={setDescription}
-            onFocus={() => {
-              if (blurTimerRef.current) {
-                clearTimeout(blurTimerRef.current);
-                blurTimerRef.current = null;
-              }
-              setIsFocused(true);
-              onDescriptionFocus?.();
-            }}
-            onBlur={() => {
-              // A drag inside the dropdown is still an interaction with this field.
-              if (isInteractingWithSuggestionsRef.current) {
-                blurredDuringSuggestionInteractionRef.current = true;
-                return;
-              }
-              if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
-              blurTimerRef.current = setTimeout(() => {
-                blurTimerRef.current = null;
-                setIsFocused(false);
-              }, 250);
-            }}
-            onSubmitEditing={() => {
-              resolvedDescriptionInputRef.current?.blur();
-              onDescriptionSubmitEditing?.();
-            }}
-            placeholder={AppConfig.strings.advancedEntry.descriptionPlaceholder}
-            variant="minimal"
-            flex={1}
-            style={styles.descriptionInput}
-            testID={descriptionTestID}
-          />
+          <View
+            style={styles.descriptionInputSlot}
+            onTouchStart={() => handleSuggestionInteractionChange(true)}
+            onTouchEnd={() => handleSuggestionInteractionChange(false)}
+          >
+            <AppInput
+              ref={resolvedDescriptionInputRef}
+              value={description}
+              onChangeText={setDescription}
+              onFocus={() => {
+                if (blurTimerRef.current) {
+                  clearTimeout(blurTimerRef.current);
+                  blurTimerRef.current = null;
+                }
+                setIsFocused(true);
+                onDescriptionFocus?.();
+              }}
+              onBlur={() => {
+                // A drag inside the dropdown is still an interaction with this field.
+                if (isInteractingWithSuggestionsRef.current) {
+                  blurredDuringSuggestionInteractionRef.current = true;
+                  return;
+                }
+                if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+                blurTimerRef.current = setTimeout(() => {
+                  blurTimerRef.current = null;
+                  setIsFocused(false);
+                }, 250);
+              }}
+              onSubmitEditing={() => {
+                resolvedDescriptionInputRef.current?.blur();
+                onDescriptionSubmitEditing?.();
+              }}
+              placeholder={AppConfig.strings.advancedEntry.descriptionPlaceholder}
+              variant="minimal"
+              flex={1}
+              style={styles.descriptionInput}
+              testID={descriptionTestID}
+            />
+          </View>
 
           {description ? (
             <TouchableOpacity
@@ -411,6 +417,9 @@ const styles = StyleSheet.create({
   descriptionInput: {
     fontSize: Typography.sizes.base,
     fontWeight: '500',
+  },
+  descriptionInputSlot: {
+    flex: 1,
   },
   trailingAction: {
     padding: Spacing.xs,

@@ -63,6 +63,10 @@ export function JournalEntryView(props: JournalEntryViewProps) {
     descriptionInputRef.current?.blur();
     onPresentationScrollBeginDrag();
   }, [onPresentationScrollBeginDrag]);
+  const dismissDescriptionOnOutsideTouch = useCallback(() => {
+    if (isInteractingWithSuggestionsRef.current) return;
+    descriptionInputRef.current?.blur();
+  }, []);
 
   const focusDescription = useCallback(() => {
     setTimeout(() => descriptionInputRef.current?.focus(), 0);
@@ -180,6 +184,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
   return (
     <Page
       testID="journal-entry-screen"
+      onTouchStart={dismissDescriptionOnOutsideTouch}
       keyboardAvoiding
       scrollable={!isBatchMode && activeMode !== 'basic'}
       scrollViewProps={
