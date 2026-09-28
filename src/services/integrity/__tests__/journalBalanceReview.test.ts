@@ -3,6 +3,10 @@ import type Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { Q } from '@nozbe/watermelondb';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
+import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { balanceReadService } from '@/src/services/balance/balanceReadService';
+import { reactiveDataService } from '@/src/services/ReactiveDataService';
+import { filter, firstValueFrom, timeout } from 'rxjs';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { findUnbalancedJournals } from '../journalBalanceAudit';
@@ -18,6 +22,14 @@ describe('journal balance review', () => {
   let cashId: AccountId;
   let equityId: AccountId;
   let eurCashId: AccountId;
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  afterAll(() => {
+    rebuildQueueService.stop();
+  });
 
   beforeEach(async () => {
     await database.write(async () => {
@@ -77,8 +89,11 @@ describe('journal balance review', () => {
 
   it('applies implied FX rates without changing account amounts', async () => {
     const fx = await createMissingRateJournal();
+    const enqueueSpy = jest.spyOn(rebuildQueueService, 'enqueueMany');
 
     await expect(applyJournalBalanceFxSuggestions(workplaceId, [fx.id])).resolves.toBe(1);
+    expect(enqueueSpy).toHaveBeenCalledWith(new Set([eurCashId, equityId]), 1_000, workplaceId);
+    await rebuildQueueService.flush();
 
     await expect(findUnbalancedJournals(workplaceId)).resolves.toMatchObject({ unbalanced: [] });
     const eurLines = await database.collections
@@ -93,6 +108,7 @@ describe('journal balance review', () => {
   it('saves edits that balance the journal and rejects edits that do not', async () => {
     const short = await createShortJournal();
     const [entry] = await loadJournalBalanceReview(workplaceId, 'review');
+    const enqueueSpy = jest.spyOn(rebuildQueueService, 'enqueueMany');
     const edits = (credit: string) =>
       entry!.lines.map(line => ({
         transactionId: line.id,
@@ -103,7 +119,56 @@ describe('journal balance review', () => {
       /differ by 2.00 USD/,
     );
     await saveJournalBalanceEdits(workplaceId, short.id, edits('50'));
+    expect(enqueueSpy).toHaveBeenCalledWith(new Set([cashId, equityId]), 2_000, workplaceId);
+    await rebuildQueueService.flush();
 
     await expect(loadJournalBalanceReview(workplaceId, 'review')).resolves.toEqual([]);
+  });
+
+  it('rebuilds later account balances after correcting an older journal amount', async () => {
+    const short = await createShortJournal();
+    await createJournalFixture(
+      {
+        description: 'Later entry',
+        journalDate: 3_000,
+        currencyCode: 'USD',
+        transactions: [
+          { accountId: cashId, amount: 20, transactionType: TransactionType.DEBIT },
+          { accountId: equityId, amount: 20, transactionType: TransactionType.CREDIT },
+        ],
+        calculatedBalances: new Map([
+          [cashId, 70],
+          [equityId, 69],
+        ]),
+      },
+      workplaceId,
+    );
+    const accountsList$ = reactiveDataService.observeOptimizedAccountList('USD', workplaceId);
+    const initialSummary = await firstValueFrom(accountsList$);
+    expect(initialSummary.wealthSummary.netWorth).toBe(70);
+    const [entry] = await loadJournalBalanceReview(workplaceId, 'review');
+    const edits = entry!.lines.map(line => ({ transactionId: line.id, amount: '40' }));
+    const refreshedSummary = firstValueFrom(
+      accountsList$.pipe(
+        filter(data => data.wealthSummary.netWorth === 60),
+        timeout({ first: 5000 }),
+      ),
+    );
+
+    await expect(balanceReadService.getAccountBalance(cashId, workplaceId)).resolves.toMatchObject({
+      balance: 70,
+    });
+    await saveJournalBalanceEdits(workplaceId, short.id, edits);
+    await expect(balanceReadService.getAccountBalance(cashId, workplaceId)).resolves.toMatchObject({
+      balance: 70,
+    });
+    await rebuildQueueService.flush();
+
+    const balance = await balanceReadService.getAccountBalance(cashId, workplaceId);
+    expect(balance.balance).toBe(60);
+    await expect(refreshedSummary).resolves.toMatchObject({
+      wealthSummary: { netWorth: 60 },
+    });
+    reactiveDataService.clearCache(workplaceId);
   });
 });
