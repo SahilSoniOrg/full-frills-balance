@@ -105,7 +105,7 @@ export function InsightDetailsView({
   );
 
   return (
-    <ScreenWithChrome chrome={chrome} withPadding={false}>
+    <ScreenWithChrome chrome={chrome} withPadding>
       <JournalEntryListView
         items={items}
         isLoading={isLoading}
@@ -125,7 +125,7 @@ export function InsightDetailsView({
 
 const styles = StyleSheet.create({
   headerContainer: {
-    padding: Spacing.lg,
+    paddingVertical: Spacing.lg,
   },
   hero: {
     padding: Spacing.xl,

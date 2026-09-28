@@ -98,7 +98,11 @@ function JournalBalanceReviewScreen() {
     );
   }
 
-  return <ScreenWithChrome chrome={chrome}>{content}</ScreenWithChrome>;
+  return (
+    <ScreenWithChrome chrome={chrome} withPadding>
+      {content}
+    </ScreenWithChrome>
+  );
 }
 
 export default withPrivacyScope(JournalBalanceReviewScreen);
