@@ -1,5 +1,6 @@
 import {
   findPostedJournalBalanceSourcePage,
+  findPostedJournalBalanceSourcesByIds,
   type JournalBalanceSource,
 } from '@/src/data/repositories/journal/journalBalanceLineQueries';
 import {
@@ -9,7 +10,7 @@ import {
   type JournalBalanceEvaluation,
 } from '@/src/domain/accounting/journalBalanceEvaluator';
 import { currencyReadService } from '@/src/services/currency-read-service';
-import type { WorkplaceId } from '@/src/types/ids';
+import type { JournalId, WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 
 const AUDIT_PAGE_SIZE = 100;
@@ -79,5 +80,37 @@ export async function findUnbalancedJournals(
     `[JournalBalanceAudit] Checked ${journalsChecked} journals, ${unbalanced.length} unbalanced`,
     { workplaceId },
   );
+  return { journalsChecked, precisionByCurrency, unbalanced };
+}
+
+/** Rechecks only previously flagged journals so cleared/deleted issues do not linger in cache. */
+export async function findUnbalancedJournalsByIds(
+  workplaceId: WorkplaceId,
+  journalIds: readonly JournalId[],
+): Promise<JournalBalanceAuditResult> {
+  const precisionByCurrency = new Map<string, number>();
+  const unbalanced: UnbalancedJournal[] = [];
+  let journalsChecked = 0;
+  const uniqueIds = [...new Set(journalIds)];
+
+  for (let offset = 0; offset < uniqueIds.length; offset += AUDIT_PAGE_SIZE) {
+    await new Promise<void>(resolve => setTimeout(resolve, 0));
+    const journals = await findPostedJournalBalanceSourcesByIds(
+      workplaceId,
+      uniqueIds.slice(offset, offset + AUDIT_PAGE_SIZE),
+    );
+    const pagePrecisions = await resolveJournalPrecisions(journals, precisionByCurrency);
+    for (const [code, precision] of pagePrecisions) precisionByCurrency.set(code, precision);
+    for (const journal of journals) {
+      const evaluation = evaluateJournalBalance({
+        journalCurrency: journal.currencyCode,
+        precisionByCurrency,
+        lines: journal.lines,
+      });
+      if (!evaluation.isBalanced) unbalanced.push({ journal, evaluation });
+    }
+    journalsChecked += journals.length;
+  }
+
   return { journalsChecked, precisionByCurrency, unbalanced };
 }

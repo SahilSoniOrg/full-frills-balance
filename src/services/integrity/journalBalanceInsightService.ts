@@ -1,8 +1,12 @@
 import { analytics } from '@/src/services/analytics';
 import type { Insight } from '@/src/services/insight/insightTypes';
-import type { WorkplaceId } from '@/src/types/ids';
+import type { JournalId, WorkplaceId } from '@/src/types/ids';
 import { storage } from '@/src/utils/storage';
-import { findUnbalancedJournals, type JournalBalanceAuditResult } from './journalBalanceAudit';
+import {
+  findUnbalancedJournals,
+  findUnbalancedJournalsByIds,
+  type JournalBalanceAuditResult,
+} from './journalBalanceAudit';
 
 type Listener = () => void;
 export type JournalBalanceCheckSource =
@@ -14,8 +18,20 @@ interface OpenIssue {
 
 const PROMPTED_KEY_PREFIX = 'journal_balance_prompted_v1_';
 const OPEN_ISSUE_KEY_PREFIX = 'journal_balance_open_issue_v1_';
+const COMPLETED_AUDIT_KEY_PREFIX = 'journal_balance_completed_audit_v1_';
+// Increment when journalBalanceEvaluator changes what qualifies as a balanced posted journal.
+const BALANCE_RULE_VERSION = 1;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const NO_INSIGHTS: readonly Insight[] = [];
+
+interface CompletedAudit {
+  balanceRuleVersion: number;
+  unbalancedJournalIds: JournalId[];
+}
+
+function isJournalId(value: unknown): value is JournalId {
+  return typeof value === 'string' && value.length > 0;
+}
 
 function readOpenIssue(key: string): OpenIssue | null {
   const raw = storage.getString(key);
@@ -25,6 +41,30 @@ function readOpenIssue(key: string): OpenIssue | null {
     return typeof parsed.peakCount === 'number' && typeof parsed.firstDetectedAt === 'number'
       ? { peakCount: parsed.peakCount, firstDetectedAt: parsed.firstDetectedAt }
       : null;
+  } catch {
+    return null;
+  }
+}
+
+function readCompletedAudit(key: string): CompletedAudit | null {
+  const raw = storage.getString(key);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as {
+      balanceRuleVersion?: unknown;
+      unbalancedJournalIds?: unknown;
+    };
+    if (
+      parsed.balanceRuleVersion !== BALANCE_RULE_VERSION ||
+      !Array.isArray(parsed.unbalancedJournalIds) ||
+      !parsed.unbalancedJournalIds.every(isJournalId)
+    ) {
+      return null;
+    }
+    return {
+      balanceRuleVersion: BALANCE_RULE_VERSION,
+      unbalancedJournalIds: [...new Set(parsed.unbalancedJournalIds)],
+    };
   } catch {
     return null;
   }
@@ -59,13 +99,43 @@ function buildInsight(journalIds: string[]): Insight {
 class JournalBalanceInsightService {
   private readonly listeners = new Set<Listener>();
   private readonly insights = new Map<WorkplaceId, readonly [Insight]>();
+  private readonly inFlightRefreshes = new Map<WorkplaceId, Promise<JournalBalanceAuditResult>>();
 
   async refresh(
     workplaceId: WorkplaceId,
     source: JournalBalanceCheckSource,
   ): Promise<JournalBalanceAuditResult> {
-    const result = await findUnbalancedJournals(workplaceId);
+    const inFlight = this.inFlightRefreshes.get(workplaceId);
+    if (inFlight) return inFlight;
+
+    const refresh = this.refreshWorkplace(workplaceId, source);
+    this.inFlightRefreshes.set(workplaceId, refresh);
+    try {
+      return await refresh;
+    } finally {
+      if (this.inFlightRefreshes.get(workplaceId) === refresh) {
+        this.inFlightRefreshes.delete(workplaceId);
+      }
+    }
+  }
+
+  private async refreshWorkplace(
+    workplaceId: WorkplaceId,
+    source: JournalBalanceCheckSource,
+  ): Promise<JournalBalanceAuditResult> {
+    const auditKey = `${COMPLETED_AUDIT_KEY_PREFIX}${workplaceId}`;
+    const completedAudit = readCompletedAudit(auditKey);
+    const result = completedAudit
+      ? await findUnbalancedJournalsByIds(workplaceId, completedAudit.unbalancedJournalIds)
+      : await findUnbalancedJournals(workplaceId);
     const journalIds = result.unbalanced.map(entry => entry.journal.journalId);
+    storage.set(
+      auditKey,
+      JSON.stringify({
+        balanceRuleVersion: BALANCE_RULE_VERSION,
+        unbalancedJournalIds: journalIds,
+      } satisfies CompletedAudit),
+    );
     this.trackOpenIssue(workplaceId, journalIds.length, source);
     const insight = journalIds.length > 0 ? buildInsight(journalIds) : undefined;
     if (insight?.id !== this.insights.get(workplaceId)?.[0].id) {

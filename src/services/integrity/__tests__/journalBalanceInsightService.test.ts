@@ -4,10 +4,13 @@ import { journalBalanceInsightService } from '../journalBalanceInsightService';
 const mockStorage = new Map<string, string>();
 const mockCleared = jest.fn();
 const mockFind = jest.fn();
+const mockFindByIds = jest.fn();
+let currentUnbalancedJournalIds: string[] = [];
 
 // Mock state lives outside the factories so it survives jest.resetModules (a simulated relaunch).
 jest.mock('../journalBalanceAudit', () => ({
   findUnbalancedJournals: (...args: unknown[]) => mockFind(...args),
+  findUnbalancedJournalsByIds: (...args: unknown[]) => mockFindByIds(...args),
 }));
 jest.mock('@/src/utils/storage', () => ({
   storage: {
@@ -22,14 +25,24 @@ jest.mock('@/src/services/analytics', () => ({
 
 const workplaceId = 'wp-insight' as WorkplaceId;
 
-function auditReturns(journalIds: string[]) {
-  mockFind.mockResolvedValue({
+function auditResult(journalIds: string[]) {
+  return {
     journalsChecked: 10,
     unbalanced: journalIds.map(journalId => ({
       journal: { journalId: journalId as JournalId },
       evaluation: {},
     })),
-  });
+  };
+}
+
+function auditReturns(journalIds: string[]) {
+  currentUnbalancedJournalIds = journalIds;
+  mockFind.mockResolvedValue(auditResult(journalIds));
+  mockFindByIds.mockImplementation((_workplace: WorkplaceId, journalIdsToCheck: string[]) =>
+    Promise.resolve(
+      auditResult(currentUnbalancedJournalIds.filter(id => journalIdsToCheck.includes(id))),
+    ),
+  );
 }
 
 describe('journalBalanceInsightService', () => {
@@ -37,6 +50,7 @@ describe('journalBalanceInsightService', () => {
     mockStorage.clear();
     auditReturns([]);
     await journalBalanceInsightService.refresh(workplaceId, 'hub');
+    mockStorage.clear();
     jest.clearAllMocks();
   });
 
@@ -46,7 +60,7 @@ describe('journalBalanceInsightService', () => {
 
   it('reports the cleanup once, with the peak count and how long it stayed open', async () => {
     jest.useFakeTimers({ now: new Date('2026-09-01T00:00:00Z') });
-    auditReturns(['j1', 'j2']);
+    auditReturns(['j1', 'j2', 'j3']);
     await journalBalanceInsightService.refresh(workplaceId, 'startup');
     auditReturns(['j1', 'j2', 'j3']);
     await journalBalanceInsightService.refresh(workplaceId, 'hub');
@@ -74,7 +88,46 @@ describe('journalBalanceInsightService', () => {
     auditReturns([]);
     await afterRestart.refresh(workplaceId, 'startup');
 
+    expect(mockFind).toHaveBeenCalledTimes(1);
+    expect(mockFindByIds).toHaveBeenCalledWith(workplaceId, ['j1']);
     expect(mockCleared).toHaveBeenCalledWith(1, 0, 'startup');
+  });
+
+  it('runs the full audit once, then only checks the persisted finding set', async () => {
+    auditReturns(['j1']);
+    await journalBalanceInsightService.refresh(workplaceId, 'startup');
+    auditReturns(['j1']);
+    await journalBalanceInsightService.refresh(workplaceId, 'hub');
+
+    expect(mockFind).toHaveBeenCalledTimes(1);
+    expect(mockFindByIds).toHaveBeenCalledTimes(1);
+    expect(mockFindByIds).toHaveBeenCalledWith(workplaceId, ['j1']);
+  });
+
+  it('does not repeat a clean full audit after a restart', async () => {
+    await journalBalanceInsightService.refresh(workplaceId, 'startup');
+    jest.resetModules();
+    const { journalBalanceInsightService: afterRestart } = jest.requireActual<
+      typeof import('../journalBalanceInsightService')
+    >('../journalBalanceInsightService');
+
+    await afterRestart.refresh(workplaceId, 'startup');
+
+    expect(mockFind).toHaveBeenCalledTimes(1);
+    expect(mockFindByIds).toHaveBeenCalledWith(workplaceId, []);
+  });
+
+  it('runs a new full audit when the cached balance-rule version is stale', async () => {
+    await journalBalanceInsightService.refresh(workplaceId, 'startup');
+    const auditKey = `journal_balance_completed_audit_v1_${workplaceId}`;
+    mockStorage.set(auditKey, JSON.stringify({ balanceRuleVersion: 0, unbalancedJournalIds: [] }));
+    jest.clearAllMocks();
+    auditReturns(['j1']);
+
+    await journalBalanceInsightService.refresh(workplaceId, 'startup');
+
+    expect(mockFind).toHaveBeenCalledTimes(1);
+    expect(mockFindByIds).not.toHaveBeenCalled();
   });
 
   it('does not report a cleanup when nothing was unbalanced', async () => {
@@ -124,7 +177,7 @@ describe('journalBalanceInsightService', () => {
     await journalBalanceInsightService.refresh(workplaceId, 'hub');
     expect(journalBalanceInsightService.claimPrompt(workplaceId)).toBeNull();
 
-    auditReturns(['j1', 'j2', 'j3']);
+    auditReturns(['j2']);
     await journalBalanceInsightService.refresh(workplaceId, 'hub');
     expect(journalBalanceInsightService.claimPrompt(workplaceId)).not.toBeNull();
   });

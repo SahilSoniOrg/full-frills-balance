@@ -4,8 +4,12 @@ import { transactionRawRepository } from '@/src/data/repositories/TransactionRaw
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { createJournalFixture, softDeleteJournalFixture } from '@/src/testing/journalFixtures';
 import { AccountType, JournalStatus, TransactionType } from '@/src/types/enums';
-import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { findUnbalancedJournals, type JournalBalanceAuditResult } from '../journalBalanceAudit';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import {
+  findUnbalancedJournals,
+  findUnbalancedJournalsByIds,
+  type JournalBalanceAuditResult,
+} from '../journalBalanceAudit';
 
 const workplaceId = 'wp-1' as WorkplaceId;
 
@@ -79,6 +83,44 @@ describe('findUnbalancedJournals', () => {
     expect(summarize(result)).toEqual([
       { journalId: broken.id, issues: ['Journal debits and credits differ by 1.00 USD'] },
     ]);
+  });
+
+  it('rechecks only the requested posted journals', async () => {
+    const balanced = await createJournalFixture(
+      {
+        description: 'Balanced',
+        journalDate: 1_000,
+        currencyCode: 'USD',
+        transactions: lines(50, 50),
+      },
+      workplaceId,
+    );
+    const broken = await createJournalFixture(
+      {
+        description: 'Legacy',
+        journalDate: 2_000,
+        currencyCode: 'USD',
+        transactions: lines(50, 49),
+      },
+      workplaceId,
+    );
+    await createJournalFixture(
+      {
+        description: 'Unrequested legacy',
+        journalDate: 3_000,
+        currencyCode: 'USD',
+        transactions: lines(50, 48),
+      },
+      workplaceId,
+    );
+
+    const result = await findUnbalancedJournalsByIds(workplaceId, [
+      balanced.id as JournalId,
+      broken.id as JournalId,
+    ]);
+
+    expect(result.journalsChecked).toBe(2);
+    expect(summarize(result).map(entry => entry.journalId)).toEqual([broken.id]);
   });
 
   it('flags foreign-currency lines stored without an exchange rate', async () => {
