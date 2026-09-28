@@ -66,7 +66,7 @@ describe('ExchangeRateService', () => {
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it('uses stale DB cache without hitting the network', async () => {
+    it('refreshes a stale DB cache from the API', async () => {
       const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
       (exchangeRateRepository.getAllRatesForBase as jest.Mock).mockResolvedValue([
         {
@@ -76,10 +76,70 @@ describe('ExchangeRateService', () => {
           toCurrency: 'EUR',
         },
       ]);
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ rates: { EUR: 0.92 } }),
+      });
 
-      const rate = await service.getRate('USD', 'EUR');
-      expect(rate).toBe(0.91);
-      expect(mockFetch).not.toHaveBeenCalled();
+      await expect(service.getRate('USD', 'EUR')).resolves.toBe(0.92);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('refreshes a stale in-memory rate sheet from the API', async () => {
+      const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
+      const memoryCache = (
+        service as unknown as {
+          memoryCache: Map<string, { rates: Record<string, number>; timestamp: number }>;
+        }
+      ).memoryCache;
+      memoryCache.set('USD', { rates: { EUR: 0.91 }, timestamp: twoDaysAgo });
+      (exchangeRateRepository.getAllRatesForBase as jest.Mock).mockResolvedValue([]);
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ rates: { EUR: 0.92 } }),
+      });
+
+      await expect(service.getRate('USD', 'EUR')).resolves.toBe(0.92);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('refreshes when any latest quote in a cached rate sheet is stale', async () => {
+      const now = Date.now();
+      (exchangeRateRepository.getAllRatesForBase as jest.Mock).mockResolvedValue([
+        { rate: 0.92, effectiveDate: now, fromCurrency: 'USD', toCurrency: 'EUR' },
+        {
+          rate: 83,
+          effectiveDate: now - 2 * 24 * 60 * 60 * 1000,
+          fromCurrency: 'USD',
+          toCurrency: 'INR',
+        },
+      ]);
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ rates: { EUR: 0.93, INR: 84 } }),
+      });
+
+      await expect(service.getRate('USD', 'EUR')).resolves.toBe(0.93);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to the stale DB quote when the API is unavailable', async () => {
+      const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
+      (exchangeRateRepository.getAllRatesForBase as jest.Mock).mockResolvedValue([
+        {
+          rate: 0.91,
+          effectiveDate: twoDaysAgo,
+          fromCurrency: 'USD',
+          toCurrency: 'EUR',
+        },
+      ]);
+      mockFetch.mockRejectedValueOnce(new Error('Network unavailable'));
+
+      await expect(service.getRate('USD', 'EUR')).resolves.toBe(0.91);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
     it('uses the newest cached quote when records are returned out of date order', async () => {
