@@ -38,20 +38,6 @@ export function useJournalSuggestionApplication(
       if (activeMode === 'basic' && (routeSources.length !== 1 || routeDestinations.length !== 1))
         return;
       editor.setLines(current => {
-        const credits = new Map(
-          current
-            .filter(line => line.transactionType === TransactionType.CREDIT)
-            .map(line => [line.accountId, line]),
-        );
-        const debits = new Map(
-          current
-            .filter(line => line.transactionType === TransactionType.DEBIT)
-            .map(line => [line.accountId, line]),
-        );
-        const fallbackCredit = current.find(
-          line => line.transactionType === TransactionType.CREDIT,
-        );
-        const fallbackDebit = current.find(line => line.transactionType === TransactionType.DEBIT);
         const maxId = current
           .map(line => Number(line.id))
           .filter(Number.isFinite)
@@ -75,20 +61,34 @@ export function useJournalSuggestionApplication(
           ...lineAccountPatch(account.id, account, account.accountType),
           transactionType,
         });
-        const creditLines = routeSources.map(account =>
-          makeLine(
-            account,
-            TransactionType.CREDIT,
-            credits.get(account.id) ?? (activeMode === 'basic' ? fallbackCredit : undefined),
-          ),
-        );
-        const debitLines = routeDestinations.map(account =>
-          makeLine(
-            account,
-            TransactionType.DEBIT,
-            debits.get(account.id) ?? (activeMode === 'basic' ? fallbackDebit : undefined),
-          ),
-        );
+
+        const mergeSide = (
+          transactionType: TransactionType,
+          suggestedAccounts: AccountFields[],
+        ) => {
+          const existingLines = current.filter(line => line.transactionType === transactionType);
+          const selectedIds = new Set(
+            existingLines
+              .filter(line => line.accountId && line.accountId !== EMPTY_ACCOUNT_ID)
+              .map(line => line.accountId),
+          );
+          const unselectedSuggestions = suggestedAccounts.filter(
+            account => !selectedIds.has(account.id),
+          );
+          let suggestionIndex = 0;
+          const merged = existingLines.map(line => {
+            if (line.accountId && line.accountId !== EMPTY_ACCOUNT_ID) return line;
+            const account = unselectedSuggestions[suggestionIndex++];
+            return account ? makeLine(account, transactionType, line) : line;
+          });
+          while (suggestionIndex < unselectedSuggestions.length) {
+            merged.push(makeLine(unselectedSuggestions[suggestionIndex++], transactionType));
+          }
+          return merged;
+        };
+
+        const creditLines = mergeSide(TransactionType.CREDIT, routeSources);
+        const debitLines = mergeSide(TransactionType.DEBIT, routeDestinations);
         return [...debitLines, ...creditLines];
       });
       return;
