@@ -4,12 +4,16 @@ import { transactionRawRepository } from '@/src/data/repositories/TransactionRaw
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { TransactionType } from '@/src/types/enums';
+import { TransactionType, AccountType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 import { foldBalances } from '@/src/utils/accounting/BalanceEffects';
-import { amountsAreEqual } from '@/src/utils/money';
+import { amountsAreEqual, Money, roundToPrecision } from '@/src/utils/money';
 import { storage } from '@/src/utils/storage';
 import { firstValueFrom } from 'rxjs';
+import { selectBalancesForWealthSummary } from '@/src/services/wealth-service';
+import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { isUsableCrossCurrencyRate } from '@/src/services/currencyConversion';
+import { AppConfig } from '@/src/constants/app-config';
 
 type StoredAccountListSnapshot = {
   timestamp?: number;
@@ -126,6 +130,44 @@ export async function createBalanceDiagnostics(workplaceId: WorkplaceId, currenc
     balanceDifference: account.balanceDifference,
   }));
 
+  const selectedForWealth = selectBalancesForWealthSummary(
+    live.balances,
+    new Map(accounts.map(account => [account.id, account.currencyCode])),
+    new Set(accounts.map(account => account.parentAccountId).filter(Boolean) as string[]),
+  );
+  const spotValuations = await Promise.all(
+    selectedForWealth.map(async balance => {
+      const fromCurrency = balance.currencyCode || currencyCode;
+      const sameCurrency = fromCurrency === currencyCode;
+      const rate = sameCurrency
+        ? 1
+        : await exchangeRateService.getRequiredRate(fromCurrency, currencyCode);
+      const usable = sameCurrency || isUsableCrossCurrencyRate(fromCurrency, currencyCode, rate);
+      const convertedAmount = usable
+        ? roundToPrecision(balance.balance * (rate as number), AppConfig.constants.precision)
+        : null;
+
+      return {
+        accountId: balance.accountId,
+        accountType: balance.accountType,
+        currencyCode: fromCurrency,
+        sourceBalance: balance.balance,
+        rateToWorkplaceCurrency: usable ? rate : null,
+        convertedBalance: convertedAmount,
+      };
+    }),
+  );
+  let totalAssets = Money.from(0, currencyCode);
+  let totalLiabilities = Money.from(0, currencyCode);
+  for (const valuation of spotValuations) {
+    if (valuation.convertedBalance === null) continue;
+    const amount = Money.from(valuation.convertedBalance, currencyCode);
+    if (valuation.accountType === AccountType.ASSET) totalAssets = totalAssets.add(amount);
+    else if (valuation.accountType === AccountType.LIABILITY) {
+      totalLiabilities = totalLiabilities.add(amount);
+    }
+  }
+
   return {
     generatedAt: new Date().toISOString(),
     workplaceId,
@@ -135,6 +177,16 @@ export async function createBalanceDiagnostics(workplaceId: WorkplaceId, currenc
       persistedSnapshot: storedSnapshot?.data?.wealthSummary?.netWorth ?? null,
       snapshotTimestamp: storedSnapshot?.timestamp ?? null,
       snapshotWorkplaceId: storedSnapshot?.workplaceId ?? null,
+    },
+    spotValuation: {
+      recalculatedAt: new Date().toISOString(),
+      targetCurrency: currencyCode,
+      totalAssets: totalAssets.amount,
+      totalLiabilities: totalLiabilities.amount,
+      netWorth: totalAssets.subtract(totalLiabilities).amount,
+      matchesLiveNetWorth:
+        totalAssets.subtract(totalLiabilities).amount === live.wealthSummary.netWorth,
+      accounts: spotValuations,
     },
     rebuildQueue: rebuildQueueService.getDiagnostics(workplaceId),
     accounts: accountBalanceComparisons,

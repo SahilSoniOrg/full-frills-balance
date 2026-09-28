@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "typecheck:e2e": "tsc --noEmit -p tsconfig.e2e.json",
     "check:unsafe-types": "node scripts/check-unsafe-type-ratchet.mjs",
+    "diagnostics:compare": "node scripts/compare-balance-diagnostics.mjs",
     "check:journal-facade": "node scripts/check-journal-repository-facade.mjs",
     "check:journal-write-boundary": "node --test scripts/__tests__/check-journal-write-boundary.test.mjs && node scripts/check-journal-write-boundary.mjs",
     "check:read-boundaries": "node scripts/check-read-boundaries.mjs",
