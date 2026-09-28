@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import {
   Keyboard,
   Platform,
@@ -12,6 +12,7 @@ import {
 import { AppButton, AppIcon, AppText, Icon } from '@/src/components/core';
 import { AppConfig, Spacing, Shape, Size } from '@/src/constants';
 import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants/ledger-constants';
+import { usePageKeyboard } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { BulkJournalRow, BulkJournalRowActions } from '../types/bulkJournal';
 import { BulkEntryRow } from './BulkEntryRow';
@@ -57,9 +58,24 @@ export const BulkEntryGrid = React.memo(
   }: BulkEntryGridProps) => {
     const { theme } = useTheme();
     const isInteractingWithSuggestionsRef = useRef(false);
+    const listRef = useRef<FlashListRef<BulkJournalRow>>(null);
+    const [focusedDescriptionIndex, setFocusedDescriptionIndex] = useState<number | null>(null);
+    const { isKeyboardVisible } = usePageKeyboard();
     const onSuggestionInteractionChange = useCallback((interacting: boolean) => {
       isInteractingWithSuggestionsRef.current = interacting;
     }, []);
+
+    useEffect(() => {
+      if (!isKeyboardVisible || focusedDescriptionIndex === null) return;
+      requestAnimationFrame(() => {
+        void listRef.current?.scrollToIndex({
+          index: focusedDescriptionIndex,
+          animated: true,
+          viewPosition: 0,
+        });
+      });
+      setFocusedDescriptionIndex(null);
+    }, [focusedDescriptionIndex, isKeyboardVisible]);
 
     const [expandedAccountPicker, setExpandedAccountPicker] = useState<{
       rowId: string;
@@ -154,6 +170,7 @@ export const BulkEntryGrid = React.memo(
           onSwapAccounts={swapRowAccounts}
           onRefreshRate={refreshRowRate}
           onSuggestionInteractionChange={onSuggestionInteractionChange}
+          onDescriptionFocus={setFocusedDescriptionIndex}
           onCreateAccountRequest={onCreateAccountRequest}
         />
       ),
@@ -165,6 +182,7 @@ export const BulkEntryGrid = React.memo(
         swapRowAccounts,
         refreshRowRate,
         onSuggestionInteractionChange,
+        setFocusedDescriptionIndex,
         onCreateAccountRequest,
         rowActions,
         workplaceCurrency,
@@ -265,6 +283,7 @@ export const BulkEntryGrid = React.memo(
           </ScrollView>
         ) : (
           <FlashList
+            ref={listRef}
             data={rows}
             renderItem={renderRow}
             keyExtractor={row => row.id}
