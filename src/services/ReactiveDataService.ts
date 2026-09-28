@@ -186,14 +186,15 @@ class ReactiveDataService {
   observeOptimizedAccountList(
     targetCurrency: string,
     workplaceId: WorkplaceId,
+    persistSnapshot: boolean = true,
   ): Observable<LiveAccountsSummaryData> {
-    const cacheKey = `${targetCurrency}_${workplaceId}`;
+    const cacheKey = `${targetCurrency}_${workplaceId}${persistSnapshot ? '' : '_diagnostic'}`;
     return reactiveCacheCoordinator.getOrCreate({
       namespace: REACTIVE_CACHE_NAMESPACES.optimizedAccountList,
       key: cacheKey,
       workplaceId,
       createSource: () =>
-        observeAggregatedAccountBalances(targetCurrency, workplaceId).pipe(
+        observeAggregatedAccountBalances(targetCurrency, workplaceId, false, persistSnapshot).pipe(
           map(({ accounts, balancesMap, wealthSummary }) => {
             const plainAccounts = toPlainAccounts(accounts);
 
@@ -206,7 +207,9 @@ class ReactiveDataService {
           }),
           tap(data => {
             // Persist for Instant Boot / Remount on Accounts Screen
-            snapshotService.deferCustomSnapshot(workplaceId, 'accounts_list_data', data);
+            if (persistSnapshot) {
+              snapshotService.deferCustomSnapshot(workplaceId, 'accounts_list_data', data);
+            }
           }),
         ),
       decorate: observable => withFirstEmissionMetric(observable, 'Hydration.Hit.AccountList'),
