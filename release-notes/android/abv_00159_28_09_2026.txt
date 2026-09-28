@@ -1,0 +1,28 @@
+# New release 🚀
+
+The entry screen has a faster account picker and clearer ways to split a payment or move money between currencies. Missing exchange rates and entries that don’t balance are also easier to find and fix.
+
+---
+
+## Also in this update
+
+* **Entry layouts:** Switch between expense, income and transfer from a compact control. Advanced entries now use **From** and **To** sides, and the fold-out account picker responds faster on long account lists.
+* **Suggestions:** When you type a familiar description, you can reuse the accounts from a previous entry.
+* **Splits across currencies:** Split a payment between accounts in different currencies. Each row shows an exchange rate only when it needs one.
+* **Currency rounding:** Converted amounts round to the account’s currency. If rounding would leave a small mismatch, the app adjusts the effective rate to keep the entry balanced.
+* **Foreign-currency totals:** Accounts show an approximate balance in your workplace currency. Net worth and Safe to Spend use current rates, while budgets and reports use rates from entry dates. Missing rates are flagged where totals may be incomplete.
+* **Balance review:** At startup, the app checks posted entries and prompts you if any don’t balance. If you dismiss the prompt, the issue stays in Hub notifications until it’s fixed. During restore, you can fix or ignore unbalanced backup entries before continuing.
+* **Finishing an entry:** A copy is created only when you save it, and adding a new account during entry takes you back to that entry.
+* **Planned payments:** Posting a scheduled entry now uses the occurrence you selected.
+
+---
+
+## Big difference you’ll notice
+
+Multi-currency splits now handle rounding differences automatically, so you can finish an entry without manually adjusting amounts just to make everything balance.
+
+---
+
+## Under the hood
+
+Planned payment posting and schedule updates are now atomic. Either both changes are saved or neither is, preventing partially completed postings.
