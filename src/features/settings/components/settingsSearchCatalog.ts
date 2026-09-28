@@ -40,7 +40,6 @@ const SETTINGS_SEARCH_ICONS: Record<string, IconName> = {
   'audit-log': Icon.History,
   maintenance: Icon.Wrench,
   'journal-balance-audit': Icon.Scale,
-  'balance-diagnostics': Icon.Database,
   cleanup: Icon.Delete,
   reset: Icon.Refresh,
   'about-support': Icon.Info,
@@ -283,14 +282,6 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       description: AppConfig.strings.settings.maintenance.balanceAuditDesc,
       section: 'Data',
       keywords: ['maintenance', 'unbalanced', 'imbalanced', 'debit', 'credit', 'journal', 'import'],
-      navigate: actions.onMaintenance,
-    },
-    {
-      id: 'balance-diagnostics',
-      title: 'Balance diagnostics',
-      description: 'Compare live balances, database values, snapshots, and rebuild queue state',
-      section: 'Data',
-      keywords: ['maintenance', 'balance', 'net worth', 'database', 'snapshot', 'rebuild', 'queue'],
       navigate: actions.onMaintenance,
     },
     {

@@ -61,11 +61,10 @@ export function observeAggregatedAccountBalances(
   targetCurrency: string,
   workplaceId: WorkplaceId,
   includeTotalCount: boolean = false,
-  persistSnapshots: boolean = true,
 ): Observable<AggregatedAccountBalances> {
   return reactiveCacheCoordinator.getOrCreate({
     namespace: REACTIVE_CACHE_NAMESPACES.aggregatedAccountBalances,
-    key: `${targetCurrency}_${workplaceId}_${includeTotalCount ? 'with-count' : 'period-only'}${persistSnapshots ? '' : '_diagnostic'}`,
+    key: `${targetCurrency}_${workplaceId}_${includeTotalCount ? 'with-count' : 'period-only'}`,
     workplaceId,
     createSource: () => {
       let disposed = false;
@@ -165,7 +164,7 @@ export function observeAggregatedAccountBalances(
               targetCurrency,
             );
 
-            if (!disposed && persistSnapshots) {
+            if (!disposed) {
               snapshotService.deferWealthSnapshot(workplaceId, wealthSummary);
             }
 

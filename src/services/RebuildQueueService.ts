@@ -57,40 +57,6 @@ class RebuildQueueService {
   private pendingRetries: Map<string, PendingRetry> = new Map();
   private lifecycleGeneration = 0;
 
-  getDiagnostics(workplaceId: WorkplaceId) {
-    const storedQueue = safeParseJSON<[string, number][]>(
-      storage.getString(RebuildQueueService.STORAGE_KEY) ?? '[]',
-      [],
-    );
-    const processingBatch = safeParseJSON<[string, number][]>(
-      storage.getString(RebuildQueueService.PROCESSING_KEY) ?? '[]',
-      [],
-    );
-    const matchingItems = (items: [string, number][]) =>
-      items
-        .filter(([key]) => key.startsWith(`${workplaceId}__`))
-        .map(([key, fromDate]) => ({ accountId: parseQueueKey(key)[1], fromDate }));
-
-    return {
-      isProcessing: this.isProcessing,
-      hasScheduledProcessing: this.timeoutId !== null,
-      inMemory: matchingItems(Array.from(this.queue.entries())),
-      persisted: matchingItems(storedQueue),
-      processingBatch: matchingItems(processingBatch),
-      pendingRetries: Array.from(this.pendingRetries.values())
-        .filter(retry => retry.item.id.startsWith(`${workplaceId}__`))
-        .map(retry => ({
-          accountId: parseQueueKey(retry.item.id)[1],
-          fromDate: retry.item.fromDate,
-          retryCount: this.retryCounts.get(retry.item.id) ?? 0,
-        })),
-      rebuildLocks: storage
-        .getAllKeys()
-        .filter(key => key.startsWith(`rebuild_lock_${workplaceId}__`))
-        .map(key => ({ accountId: key.slice(`rebuild_lock_${workplaceId}__`.length) })),
-    };
-  }
-
   constructor(config: Partial<RebuildQueueConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     if (typeof window !== 'undefined') {

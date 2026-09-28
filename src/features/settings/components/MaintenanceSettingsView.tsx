@@ -1,21 +1,16 @@
 import { Icon } from '@/src/types/domainIcons';
-import { AppConfig, Spacing } from '@/src/constants';
+import { AppConfig } from '@/src/constants';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
 import { SettingsMaintenanceOverlay } from '@/src/features/settings/components/SettingsMaintenanceOverlay';
 import type { MaintenanceSettingsViewModel } from '@/src/features/settings/hooks/useMaintenanceSettingsViewModel';
-import { AppText, PressScaleTouchable } from '@/src/components/core';
-import { useTheme } from '@/src/hooks/use-theme';
-import { ScrollView, StyleSheet, View } from 'react-native';
 
 interface MaintenanceSettingsViewProps {
   vm: MaintenanceSettingsViewModel;
 }
 
 export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
-  const { theme } = useTheme();
-
   return (
     <SettingsLayout title={AppConfig.strings.settings.sections.maintenanceAndReset}>
       <SettingsMenu header={AppConfig.strings.settings.sections.maintenance}>
@@ -34,14 +29,6 @@ export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
           description={AppConfig.strings.settings.maintenance.balanceAuditDesc}
           onPress={vm.onAuditJournalBalances}
           loading={vm.isAuditingBalances}
-        />
-        <SettingsMenuItem
-          searchId="balance-diagnostics"
-          leftIcon={Icon.Database}
-          title="Balance diagnostics"
-          description="Compare saved balances, live net worth, snapshots, and rebuild queue state."
-          onPress={vm.onCreateBalanceDiagnostics}
-          loading={vm.isLoadingBalanceDiagnostics}
         />
         {__DEV__ && (
           <SettingsMenuItem
@@ -62,42 +49,6 @@ export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
           loading={vm.isCleaning}
         />
       </SettingsMenu>
-
-      {vm.balanceDiagnostics && (
-        <View
-          style={[
-            styles.diagnosticsCard,
-            { backgroundColor: theme.surface, borderColor: theme.border },
-          ]}
-        >
-          <AppText variant="subheading" weight="semibold">
-            Balance diagnostics report
-          </AppText>
-          <AppText variant="caption" color="secondary">
-            Read-only local data. Share only if you choose to send this report.
-          </AppText>
-          <ScrollView
-            nestedScrollEnabled
-            style={[styles.diagnosticsOutput, { backgroundColor: theme.surfaceSecondary }]}
-          >
-            <AppText selectable variant="caption" style={styles.diagnosticsText}>
-              {vm.balanceDiagnostics}
-            </AppText>
-          </ScrollView>
-          <View style={styles.diagnosticsActions}>
-            <PressScaleTouchable onPress={vm.onShareBalanceDiagnostics}>
-              <AppText color="primary" weight="semibold">
-                Share report
-              </AppText>
-            </PressScaleTouchable>
-            <PressScaleTouchable onPress={vm.onDismissBalanceDiagnostics}>
-              <AppText color="secondary" weight="semibold">
-                Close
-              </AppText>
-            </PressScaleTouchable>
-          </View>
-        </View>
-      )}
 
       <SettingsMenu header={AppConfig.strings.settings.sections.dangerZone}>
         <SettingsMenuItem
@@ -136,25 +87,3 @@ export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
     </SettingsLayout>
   );
 }
-
-const styles = StyleSheet.create({
-  diagnosticsCard: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 12,
-    padding: Spacing.md,
-    gap: Spacing.sm,
-  },
-  diagnosticsOutput: {
-    maxHeight: 320,
-    borderRadius: 8,
-    padding: Spacing.sm,
-  },
-  diagnosticsText: {
-    fontFamily: 'monospace',
-  },
-  diagnosticsActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingTop: Spacing.xs,
-  },
-});
