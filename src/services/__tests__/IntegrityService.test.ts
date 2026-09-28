@@ -133,6 +133,48 @@ describe('Integrity checks', () => {
       expect(result.matches).toBe(false);
       expect(result.computedBalance).toBe(500);
     });
+
+    it('checks future-dated transactions like the Accounts screen does', async () => {
+      await createJournalFixture(
+        {
+          description: 'Future deposit',
+          journalDate: Date.now() + 5 * 24 * 60 * 60 * 1000,
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 500,
+              transactionType: TransactionType.DEBIT,
+            },
+            {
+              accountId: equityAccountId as AccountId,
+              amount: 500,
+              transactionType: TransactionType.CREDIT,
+            },
+          ],
+        },
+        'wp-1' as WorkplaceId,
+      );
+
+      const futureTransaction = await database.collections
+        .get<Transaction>('transactions')
+        .query(Q.where('account_id', cashAccountId))
+        .fetch();
+      await database.write(async () => {
+        await futureTransaction[0].update(transaction => {
+          transaction.runningBalance = 9999;
+        });
+      });
+
+      const result = await integrityVerification.verifyAccountBalance(
+        cashAccountId as AccountId,
+        'wp-1' as WorkplaceId,
+      );
+
+      expect(result.matches).toBe(false);
+      expect(result.cachedBalance).toBe(9999);
+      expect(result.computedBalance).toBe(500);
+    });
   });
 
   describe('repairAccountBalance', () => {

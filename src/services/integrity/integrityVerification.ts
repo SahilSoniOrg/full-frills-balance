@@ -105,7 +105,7 @@ export async function computeBalanceFromScratch(
 export async function verifyAccountBalance(
   accountId: AccountId,
   workplaceId: WorkplaceId,
-  cutoffDate: number = Date.now(),
+  cutoffDate: number = Number.MAX_SAFE_INTEGER,
 ): Promise<BalanceVerificationResult> {
   const start = Date.now();
   const account = await accountQueryRepository.find(workplaceId, accountId);
