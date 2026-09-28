@@ -11,7 +11,7 @@ import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { withOpacity } from '@/src/utils/color-math';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
 import React, { useMemo, useRef } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { ScrollView, State } from 'react-native-gesture-handler';
 
 const MAX_VISIBLE_SUGGESTIONS = 6;
@@ -92,7 +92,8 @@ export const JournalSuggestionsDropdown = React.memo(function JournalSuggestions
     [accountsMap, activeTabType, suggestions],
   );
 
-  if (!visible || hideSuggestions || suggestionState === 'idle') return null;
+  if (!visible || hideSuggestions || suggestionState === 'idle' || suggestionState === 'loading')
+    return null;
 
   return (
     <View
@@ -108,15 +109,10 @@ export const JournalSuggestionsDropdown = React.memo(function JournalSuggestions
     >
       {suggestionState !== 'results' || visibleSuggestions.length === 0 ? (
         <View style={styles.suggestionStatus}>
-          {suggestionState === 'loading' && (
-            <ActivityIndicator size="small" color={theme.primary} />
-          )}
           <AppText variant="caption" color="secondary">
-            {suggestionState === 'loading'
-              ? 'Finding previous descriptions…'
-              : suggestionState === 'error'
-                ? 'Suggestions are unavailable right now.'
-                : 'No previous descriptions match.'}
+            {suggestionState === 'error'
+              ? 'Suggestions are unavailable right now.'
+              : 'No previous descriptions match.'}
           </AppText>
         </View>
       ) : (
@@ -221,9 +217,12 @@ export const JournalSuggestionsDropdown = React.memo(function JournalSuggestions
                   <View style={styles.suggestionCopy}>
                     <View style={styles.suggestionHeading}>
                       <AppText
-                        variant="body"
+                        variant="caption"
                         weight="semibold"
-                        style={[styles.suggestionDescription, { color: theme.text }]}
+                        style={[
+                          styles.suggestionDescription,
+                          { color: theme.text, fontSize: Typography.sizes.sm },
+                        ]}
                         numberOfLines={1}
                       >
                         {suggestion.description}
@@ -278,6 +277,10 @@ export const JournalSuggestionsDropdown = React.memo(function JournalSuggestions
 
 const styles = StyleSheet.create({
   dropdownLayer: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
     marginTop: Spacing.xs,
     borderRadius: Shape.radius.md,
     borderWidth: 1,
@@ -288,7 +291,6 @@ const styles = StyleSheet.create({
   dropdownScrollView: {
     width: '100%',
     maxHeight: 200,
-    borderRadius: Shape.radius.lg,
   },
   dropdownScrollContent: {
     width: '100%',
@@ -314,7 +316,7 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
-    borderRadius: Shape.radius.md,
+    borderRadius: Shape.radius.sm,
     borderWidth: 1,
   },
   suggestionCopy: {
@@ -325,6 +327,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: Spacing.sm,
   },
   accountRoute: {
@@ -358,6 +361,7 @@ const styles = StyleSheet.create({
   },
   lastUsedDate: {
     flexShrink: 0,
+    fontSize: 11,
   },
   accountName: {
     minWidth: 0,

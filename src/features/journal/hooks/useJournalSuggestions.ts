@@ -14,10 +14,11 @@ export function resolveJournalSuggestionState(params: {
   error: Error | null;
   suggestions: JournalSuggestion[];
 }): JournalSuggestionState {
+  if (params.suggestions.length > 0) return 'results';
   if (params.isLoading) return 'loading';
   if (params.error) return 'error';
-  if (!params.query.trim()) return params.suggestions.length > 0 ? 'results' : 'idle';
-  return params.suggestions.length > 0 ? 'results' : 'empty';
+  if (!params.query.trim()) return 'idle';
+  return 'empty';
 }
 
 /** Loads route templates for the active page once the description field is engaged. */
@@ -73,7 +74,8 @@ export function useJournalSuggestions(
   }, [activeTabType, enabled, normalizedQuery, page, requestKey, workplaceId]);
 
   const isCurrentRequestSettled = settledRequest?.key === requestKey;
-  const suggestions = isCurrentRequestSettled ? settledRequest.suggestions : [];
+  // Keep the last successful list on screen while a new query is in flight.
+  const suggestions = settledRequest?.suggestions ?? [];
   const error = isCurrentRequestSettled ? settledRequest.error : null;
   const isLoading = enabled && Boolean(workplaceId) && !isCurrentRequestSettled;
 
