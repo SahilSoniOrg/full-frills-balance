@@ -164,6 +164,7 @@ export class ImportRepository {
     onProgress?: (message: string, progress?: number) => void,
   ): Promise<void> {
     await this.prepareImportData(data, onProgress);
+    await this.validatePostedJournalBalances(workplaceId, data);
 
     await database.write(async () => {
       await this.batchPreparedOperations(this.prepareOperations(workplaceId, data), onProgress);

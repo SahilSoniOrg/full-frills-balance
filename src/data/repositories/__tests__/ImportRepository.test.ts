@@ -203,6 +203,37 @@ describe('ImportRepository', () => {
       },
     ];
 
+    it('rejects an unbalanced posted journal through the generic import writer too', async () => {
+      await expect(
+        importRepository.batchInsert('existing-workplace' as WorkplaceId, {
+          accounts: accountRows,
+          journals: journalRows,
+          transactions: [
+            {
+              id: 'generic-line-debit',
+              journalId: 'restore-journal' as JournalId,
+              accountId: 'restore-debit' as AccountId,
+              amount: 10,
+              transactionType: TransactionType.DEBIT,
+              currencyCode: 'USD',
+              transactionDate: 1_000,
+            },
+            {
+              id: 'generic-line-credit',
+              journalId: 'restore-journal' as JournalId,
+              accountId: 'restore-credit' as AccountId,
+              amount: 9,
+              transactionType: TransactionType.CREDIT,
+              currencyCode: 'USD',
+              transactionDate: 1_000,
+            },
+          ],
+        }),
+      ).rejects.toThrow(/Journal debits and credits differ by 1.00 USD/);
+
+      expect(await database.collections.get('journals').query().fetchCount()).toBe(0);
+    });
+
     it('rejects an unbalanced posted journal before publishing any workplace records', async () => {
       await expect(
         importRepository.batchInsertNewWorkplace(workplace, {
