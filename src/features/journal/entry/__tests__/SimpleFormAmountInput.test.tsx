@@ -1,5 +1,6 @@
 import { SimpleFormAmountInput } from '../components/SimpleFormAmountInput';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { useState } from 'react';
 
 jest.mock('@/src/components/overlays/AmountCalculatorSheet', () => ({
   AmountCalculatorSheet: ({
@@ -25,6 +26,27 @@ jest.mock('@/src/components/overlays/AmountCalculatorSheet', () => ({
 }));
 
 describe('SimpleFormAmountInput', () => {
+  it('keeps typing at the cursor after the first digit instead of selecting the amount', () => {
+    function AmountEntry() {
+      const [amount, setAmount] = useState('');
+      return (
+        <SimpleFormAmountInput
+          amount={amount}
+          setAmount={setAmount}
+          currency="USD"
+          accentColor="#3366ff"
+        />
+      );
+    }
+    render(<AmountEntry />);
+    const input = screen.getByTestId('hero-amount-input');
+    fireEvent(input, 'focus');
+    fireEvent.changeText(input, '1');
+    expect(input.props.selectTextOnFocus).toBeFalsy();
+    fireEvent.changeText(input, '12');
+    expect(input.props.value).toBe('12');
+  });
+
   it('opens the calculator on demand and completes the handoff', () => {
     const setAmount = jest.fn();
     const onCalculatorDone = jest.fn();

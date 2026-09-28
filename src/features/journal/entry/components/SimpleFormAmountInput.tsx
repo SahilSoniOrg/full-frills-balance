@@ -149,7 +149,6 @@ export const SimpleFormAmountInput = React.memo(function SimpleFormAmountInput({
             onSubmitEditing={handleDone}
             onFocus={handleFocus}
             onBlur={handleBlur}
-            selectTextOnFocus
             numberOfLines={1}
             cursorColor={accentColor}
             selectionColor={withOpacity(accentColor, Opacity.muted)}
