@@ -1,4 +1,3 @@
-import { useAdvancedModePrefs } from '@/src/hooks/useAdvancedModePrefs';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { TransactionType } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
@@ -12,7 +11,7 @@ import {
 } from '@/src/features/journal/entry/hooks/useJournalEditorLoader';
 import { normalizeJournalLinesForGuidedMode } from '@/src/services/journal/journalEditorHelpers';
 import dayjs from 'dayjs';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useJournalEditorExchangeRates } from './useJournalEditorExchangeRates';
 import { useJournalEditorLineState } from './useJournalEditorLineState';
 import { useJournalEditorSubmission } from './useJournalEditorSubmission';
@@ -45,7 +44,6 @@ export interface UseJournalEditorOptions {
  * Consolidates state management and business logic for both simple and advanced modes.
  */
 export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEditorOptions = {}) {
-  const { advancedMode, setAdvancedMode } = useAdvancedModePrefs();
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const { postPostingPlan } = useJournalActions(workplaceId);
   const {
@@ -67,38 +65,11 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     onSuccess,
   } = options;
 
-  /**
-   * Initialize mode from explicit prop or user preference
-   * - If initialMode is provided: use it (overrides preference)
-   * - Otherwise: use the user's saved advancedMode preference
-   */
+  /** Explicit route modes win; new journal entries always start in Simple mode. */
   const [isGuidedMode, setIsGuidedMode] = useState(() => {
     if (initialMode) return initialMode === 'simple';
-    return !advancedMode;
+    return true;
   });
-
-  /**
-   * Sync user's mode preference when they manually toggle
-   *
-   * BEHAVIOR:
-   * - When user toggles Simple ↔ Advanced, save their preference
-   * - Only syncs if no explicit initialMode was provided
-   * - initialMode (if present) acts as a one-time override, not a persistent preference
-   *
-   * This ensures:
-   * 1. Deep links can force a specific mode (via initialMode)
-   * 2. User's manual toggles are remembered for next time
-   * 3. The preference persists across app restarts
-   */
-  useEffect(() => {
-    // Only sync if no explicit initialMode was provided (which overrides preference)
-    if (!initialMode) {
-      const newAdvancedMode = !isGuidedMode;
-      if (newAdvancedMode !== advancedMode) {
-        setAdvancedMode(newAdvancedMode);
-      }
-    }
-  }, [isGuidedMode, advancedMode, setAdvancedMode, initialMode]);
   const [transactionType, setTransactionType] = useState<TabType>(initialType);
   const isCopy = !!copyFromJournalId;
   const isEdit = !!journalId && !isCopy;
