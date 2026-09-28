@@ -1,6 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { createJournalFixture, softDeleteJournalFixture } from '@/src/testing/journalFixtures';
 import { AccountType, JournalStatus, TransactionType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
@@ -116,6 +117,77 @@ describe('findUnbalancedJournals', () => {
     const result = await findUnbalancedJournals(workplaceId);
 
     expect(summarize(result).map(entry => entry.journalId)).toEqual([broken.id]);
+  });
+
+  it('checks every journal across full and partial fallback pages', async () => {
+    const brokenIds: string[] = [];
+    for (let index = 0; index < 103; index++) {
+      const broken = index % 25 === 0;
+      const journal = await createJournalFixture(
+        {
+          description: `Legacy ${index}`,
+          journalDate: index,
+          currencyCode: 'USD',
+          transactions: lines(50, broken ? 49 : 50),
+        },
+        workplaceId,
+      );
+      if (broken) brokenIds.push(journal.id);
+    }
+    const query = jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue(null);
+    try {
+      const result = await findUnbalancedJournals(workplaceId);
+      expect(result.journalsChecked).toBe(103);
+      expect(result.unbalanced.map(entry => entry.journal.journalId).sort()).toEqual(
+        brokenIds.sort(),
+      );
+      expect(query).toHaveBeenCalledTimes(2);
+    } finally {
+      query.mockRestore();
+    }
+  });
+
+  it('continues past a full fallback page when an entry is reversed during loading', async () => {
+    const journalIds: string[] = [];
+    for (let index = 0; index < 101; index++) {
+      const journal = await createJournalFixture(
+        {
+          description: `Legacy ${index}`,
+          journalDate: index,
+          currencyCode: 'USD',
+          transactions: lines(50, 49),
+        },
+        workplaceId,
+      );
+      journalIds.push(journal.id);
+    }
+    let reversedId: string | undefined;
+    const findPage = journalQueryRepository.findPostedPage.bind(journalQueryRepository);
+    const pages = jest
+      .spyOn(journalQueryRepository, 'findPostedPage')
+      .mockImplementation(async (...args) => {
+        const page = await findPage(...args);
+        if (!reversedId && page.length > 0) {
+          reversedId = page[0].id;
+          await database.write(() =>
+            page[0].update(journal => {
+              journal.status = JournalStatus.REVERSED;
+            }),
+          );
+        }
+        return page;
+      });
+    const query = jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue(null);
+    try {
+      const result = await findUnbalancedJournals(workplaceId);
+      expect(result.journalsChecked).toBe(100);
+      expect(result.unbalanced.map(entry => entry.journal.journalId).sort()).toEqual(
+        journalIds.filter(id => id !== reversedId).sort(),
+      );
+    } finally {
+      pages.mockRestore();
+      query.mockRestore();
+    }
   });
 
   it('ignores planned, reversed, and deleted journals, matching the save-time rule', async () => {

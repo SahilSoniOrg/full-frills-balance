@@ -93,6 +93,23 @@ export class JournalQueryRepository {
       )
       .fetch();
   }
+
+  async findPostedPage(
+    workplaceId: WorkplaceId,
+    afterJournalId: string,
+    limit: number,
+  ): Promise<Journal[]> {
+    return this.journals
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.where('status', JournalStatus.POSTED),
+        Q.where('id', Q.gt(afterJournalId)),
+        Q.sortBy('id', Q.asc),
+        Q.take(limit),
+      )
+      .fetch();
+  }
 }
 
 export const journalQueryRepository = new JournalQueryRepository();

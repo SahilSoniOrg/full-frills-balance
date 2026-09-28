@@ -30,6 +30,12 @@ export interface JournalBalanceSource {
   lines: JournalBalanceSourceLine[];
 }
 
+export interface JournalBalanceSourcePage {
+  journals: JournalBalanceSource[];
+  /** Captured from fetched IDs before mutable models can be filtered during hydration. */
+  nextJournalId: JournalId | null;
+}
+
 interface RawJournalBalanceRow {
   journalId: JournalId;
   journalCurrency: string;
@@ -46,7 +52,19 @@ interface RawJournalBalanceRow {
   notes: string | null;
 }
 
+// These indexes exist on every Watermelon SQLite schema. Pin the cursor and
+// journal-line lookups so SQLite cannot choose a workplace-wide scan per page/row.
 const POSTED_JOURNAL_LINES_SQL = `
+  WITH journal_page AS (
+    SELECT id, currency_code, description, journal_date
+    FROM journals INDEXED BY sqlite_autoindex_journals_1
+    WHERE workplace_id = ?
+      AND deleted_at IS NULL
+      AND status = ?
+      AND id > ?
+    ORDER BY id ASC
+    LIMIT ?
+  )
   SELECT
     j.id AS journal_id,
     j.currency_code AS journal_currency,
@@ -61,14 +79,12 @@ const POSTED_JOURNAL_LINES_SQL = `
     t.exchange_rate AS exchange_rate,
     t.transaction_type AS transaction_type,
     t.notes AS notes
-  FROM journals j
-  LEFT JOIN transactions t
+  FROM journal_page j
+  LEFT JOIN transactions t INDEXED BY transactions_journal_id
     ON t.journal_id = j.id AND t.deleted_at IS NULL AND t.workplace_id = ?
   LEFT JOIN accounts a
     ON a.id = t.account_id AND a.deleted_at IS NULL AND a.workplace_id = ?
-  WHERE j.workplace_id = ?
-    AND j.deleted_at IS NULL
-    AND j.status = ?
+  ORDER BY j.id ASC
 `;
 
 function groupRows(rows: readonly RawJournalBalanceRow[]): JournalBalanceSource[] {
@@ -141,20 +157,29 @@ async function sourcesFromModels(
   return [...byJournalId.values()];
 }
 
-/** Every posted journal in the workplace; one raw query where the adapter supports it. */
-export async function findPostedJournalBalanceSources(
+/** Bound the journal read before joining, so a page always contains every line of each journal. */
+export async function findPostedJournalBalanceSourcePage(
   workplaceId: WorkplaceId,
-): Promise<JournalBalanceSource[]> {
+  afterJournalId: string,
+  limit: number,
+): Promise<JournalBalanceSourcePage> {
   const rows = await transactionRawRepository.queryRaw<RawJournalBalanceRow>(
     POSTED_JOURNAL_LINES_SQL,
-    [workplaceId, workplaceId, workplaceId, JournalStatus.POSTED],
+    [workplaceId, JournalStatus.POSTED, afterJournalId, limit, workplaceId, workplaceId],
   );
-  if (rows !== null) return groupRows(rows);
-  const [journals, transactions] = await Promise.all([
-    journalQueryRepository.findAllPosted(workplaceId),
-    transactionQueryRepository.findAllActive(workplaceId),
-  ]);
-  return sourcesFromModels(workplaceId, journals, transactions);
+  if (rows !== null) {
+    const journals = groupRows(rows);
+    return {
+      journals,
+      nextJournalId: journals.length === limit ? journals[journals.length - 1].journalId : null,
+    };
+  }
+  const journals = await journalQueryRepository.findPostedPage(workplaceId, afterJournalId, limit);
+  const journalIds = journals.map(journal => journal.id);
+  const nextJournalId = journalIds.length === limit ? journalIds[journalIds.length - 1] : null;
+  if (journals.length === 0) return { journals: [], nextJournalId };
+  const transactions = await transactionQueryRepository.findByJournals(workplaceId, journalIds);
+  return { journals: await sourcesFromModels(workplaceId, journals, transactions), nextJournalId };
 }
 
 /** The given journals, skipping any that are no longer posted. */
