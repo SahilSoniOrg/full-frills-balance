@@ -38,6 +38,10 @@ export function JournalEntryView(props: JournalEntryViewProps) {
   const [isVoiceModalVisible, setIsVoiceModalVisible] = useState(false);
   const [isModePickerVisible, setIsModePickerVisible] = useState(false);
   const descriptionInputRef = useRef<TextInput>(null);
+  const isInteractingWithSuggestionsRef = useRef(false);
+  const onSuggestionInteractionChange = useCallback((interacting: boolean) => {
+    isInteractingWithSuggestionsRef.current = interacting;
+  }, []);
   const accountFlowRef = useRef<AccountFlowHandle | null>(null);
 
   const presentation = useJournalEntryPresentationState(props);
@@ -55,6 +59,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
     onSelectSuggestion,
   } = presentation;
   const dismissDescriptionOnScroll = useCallback(() => {
+    if (isInteractingWithSuggestionsRef.current) return;
     descriptionInputRef.current?.blur();
     onPresentationScrollBeginDrag();
   }, [onPresentationScrollBeginDrag]);
@@ -163,6 +168,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
     accounts,
     onDescriptionFocus,
     hideSuggestions,
+    onSuggestionInteractionChange,
     onVoiceInputPress: activeMode === 'basic' ? () => setIsVoiceModalVisible(true) : undefined,
     showBanner: showEditBanner,
     bannerText: editBannerText,

@@ -58,6 +58,7 @@ export interface JournalMetaCardProps {
   bannerText?: string;
   onDescriptionFocus?: () => void;
   hideSuggestions?: boolean;
+  onSuggestionInteractionChange?: (interacting: boolean) => void;
   onDescriptionSubmitEditing?: () => void;
   descriptionInputRef?: RefObject<TextInput | null>;
   onDateTimePickerRequest?: () => void;
@@ -91,6 +92,7 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
   bannerText,
   onDescriptionFocus,
   hideSuggestions = false,
+  onSuggestionInteractionChange,
   onDescriptionSubmitEditing,
   descriptionInputRef,
   onDateTimePickerRequest,
@@ -114,13 +116,35 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
     [isNotesControlled, onNotesVisibilityChange],
   );
   const [isFocused, setIsFocused] = useState(false);
+  const internalDescriptionInputRef = useRef<TextInput>(null);
+  const resolvedDescriptionInputRef = descriptionInputRef ?? internalDescriptionInputRef;
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInteractingWithSuggestionsRef = useRef(false);
+  const blurredDuringSuggestionInteractionRef = useRef(false);
+
+  const handleSuggestionInteractionChange = useCallback(
+    (interacting: boolean) => {
+      isInteractingWithSuggestionsRef.current = interacting;
+      if (interacting && blurTimerRef.current) {
+        clearTimeout(blurTimerRef.current);
+        blurTimerRef.current = null;
+        blurredDuringSuggestionInteractionRef.current = true;
+      }
+      if (!interacting && blurredDuringSuggestionInteractionRef.current) {
+        blurredDuringSuggestionInteractionRef.current = false;
+        resolvedDescriptionInputRef.current?.focus();
+      }
+      onSuggestionInteractionChange?.(interacting);
+    },
+    [onSuggestionInteractionChange, resolvedDescriptionInputRef],
+  );
 
   useEffect(() => {
     return () => {
       if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+      onSuggestionInteractionChange?.(false);
     };
-  }, []);
+  }, [onSuggestionInteractionChange]);
 
   const formattedDateTime = useMemo(() => {
     const raw = `${date}T${time}`;
@@ -129,8 +153,10 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
 
   const handleSelectSuggestion = useCallback(
     (suggestion: JournalSuggestion) => {
+      blurredDuringSuggestionInteractionRef.current = false;
+      handleSuggestionInteractionChange(false);
       Keyboard.dismiss();
-      descriptionInputRef?.current?.blur();
+      resolvedDescriptionInputRef.current?.blur();
       setIsFocused(false);
       if (blurTimerRef.current) {
         clearTimeout(blurTimerRef.current);
@@ -142,14 +168,19 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
         setDescription(suggestion.description);
       }
     },
-    [onSelectSuggestion, setDescription],
+    [
+      handleSuggestionInteractionChange,
+      resolvedDescriptionInputRef,
+      onSelectSuggestion,
+      setDescription,
+    ],
   );
 
   return (
     <View style={[styles.container, containerStyle]}>
       {showBanner && <EntryEditBanner text={bannerText || ''} style={styles.banner} />}
 
-      {/* Description Input Container with Absolute Floating Dropdown */}
+      {/* Keep suggestions inside the field's native touch bounds. */}
       <View style={styles.inputContainer}>
         {/* Description Input Row - Ghost with subtle focus underline */}
         <View
@@ -170,7 +201,7 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
             )}
           </View>
           <AppInput
-            ref={descriptionInputRef}
+            ref={resolvedDescriptionInputRef}
             value={description}
             onChangeText={setDescription}
             onFocus={() => {
@@ -182,6 +213,11 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
               onDescriptionFocus?.();
             }}
             onBlur={() => {
+              // A drag inside the dropdown is still an interaction with this field.
+              if (isInteractingWithSuggestionsRef.current) {
+                blurredDuringSuggestionInteractionRef.current = true;
+                return;
+              }
               if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
               blurTimerRef.current = setTimeout(() => {
                 blurTimerRef.current = null;
@@ -189,7 +225,7 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
               }, 250);
             }}
             onSubmitEditing={() => {
-              descriptionInputRef?.current?.blur();
+              resolvedDescriptionInputRef.current?.blur();
               onDescriptionSubmitEditing?.();
             }}
             placeholder={AppConfig.strings.advancedEntry.descriptionPlaceholder}
@@ -233,11 +269,12 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
           activeTabType={activeTabType}
           accounts={accounts}
           onSelectSuggestion={handleSelectSuggestion}
+          onInteractionChange={handleSuggestionInteractionChange}
           maxHeight={suggestionMaxHeight}
         />
       </View>
 
-      {/* Date & Notes Pill Row (Ghost, Breathable - Does not get pushed down) */}
+      {/* Date & Notes Pill Row */}
       <View style={styles.metaRow}>
         {/* Date Picker Pill */}
         <TouchableOpacity

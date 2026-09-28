@@ -358,6 +358,28 @@ async function seedFxMissingRateAccount(workplaceId: WorkplaceId): Promise<void>
   });
 }
 
+async function seedJournalSuggestions(workplaceId: WorkplaceId): Promise<void> {
+  const bank = await accountQueryRepository.findByName(workplaceId, 'Bank');
+  const groceries = await accountQueryRepository.findByName(workplaceId, 'Groceries');
+  if (!bank || !groceries) throw new Error('[E2E] Missing suggestion fixture accounts');
+
+  for (let index = 1; index <= 6; index += 1) {
+    await journalPersistenceService.put(
+      {
+        description: `Detox grocery history item ${index}`,
+        journalDate: Date.now() - index * 60_000,
+        currencyCode: 'USD',
+        transactions: [
+          { accountId: bank.id, amount: 12, transactionType: TransactionType.CREDIT },
+          { accountId: groceries.id, amount: 12, transactionType: TransactionType.DEBIT },
+        ],
+      },
+      workplaceId,
+    );
+  }
+  await rebuildQueueService.flush();
+}
+
 async function seedSmsReadyData(workplaceId: WorkplaceId): Promise<void> {
   rebuildQueueService.stop();
   const bank = await accountQueryRepository.findByName(workplaceId, 'Bank');
@@ -551,6 +573,10 @@ export async function runE2eSeedProfile(profile: E2eSeedProfile): Promise<Workpl
   }
 
   const workplaceId = await seedOnboarded(profile);
+
+  if (profile === 'journal-suggestions') {
+    await seedJournalSuggestions(workplaceId);
+  }
 
   if (profile === 'picker-ready') {
     await seedPickerReady();

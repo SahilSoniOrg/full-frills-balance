@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlashList } from '@shopify/flash-list';
 import {
   Keyboard,
@@ -56,6 +56,10 @@ export const BulkEntryGrid = React.memo(
     isAtMaxRows,
   }: BulkEntryGridProps) => {
     const { theme } = useTheme();
+    const isInteractingWithSuggestionsRef = useRef(false);
+    const onSuggestionInteractionChange = useCallback((interacting: boolean) => {
+      isInteractingWithSuggestionsRef.current = interacting;
+    }, []);
 
     const [expandedAccountPicker, setExpandedAccountPicker] = useState<{
       rowId: string;
@@ -99,6 +103,7 @@ export const BulkEntryGrid = React.memo(
     }, []);
 
     const blurFocusedInput = useCallback(() => {
+      if (isInteractingWithSuggestionsRef.current) return;
       Keyboard.dismiss();
       const focused = TextInput.State.currentlyFocusedInput();
       if (focused) TextInput.State.blurTextInput(focused);
@@ -148,6 +153,7 @@ export const BulkEntryGrid = React.memo(
           onToggleAccountExpansion={handleToggleAccountExpansion}
           onSwapAccounts={swapRowAccounts}
           onRefreshRate={refreshRowRate}
+          onSuggestionInteractionChange={onSuggestionInteractionChange}
           onCreateAccountRequest={onCreateAccountRequest}
         />
       ),
@@ -158,6 +164,7 @@ export const BulkEntryGrid = React.memo(
         handleToggleAccountExpansion,
         swapRowAccounts,
         refreshRowRate,
+        onSuggestionInteractionChange,
         onCreateAccountRequest,
         rowActions,
         workplaceCurrency,

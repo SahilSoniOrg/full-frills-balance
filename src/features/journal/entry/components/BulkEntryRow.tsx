@@ -34,6 +34,7 @@ interface BulkEntryRowProps {
   onToggleAccountExpansion: (id: string, side: 'left' | 'right') => void;
   onSwapAccounts: (id: string) => void;
   onRefreshRate: (id: string) => void;
+  onSuggestionInteractionChange?: (interacting: boolean) => void;
   onCreateAccountRequest?: (rowId: string, role: AccountRole, intent: CreateAccountIntent) => void;
 }
 
@@ -51,6 +52,7 @@ export const BulkEntryRow = React.memo(
     onToggleAccountExpansion,
     onSwapAccounts,
     onRefreshRate,
+    onSuggestionInteractionChange,
     onCreateAccountRequest,
   }: BulkEntryRowProps) => {
     const { theme } = useTheme();
@@ -140,6 +142,7 @@ export const BulkEntryRow = React.memo(
             suggestions,
             suggestionState,
             suggestionMaxHeight: BATCH_SUGGESTION_MAX_HEIGHT,
+            onSuggestionInteractionChange,
             activeTabType: row.transactionType,
             accounts,
             onDescriptionFocus: () => void loadSuggestions(),

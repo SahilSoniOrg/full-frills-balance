@@ -11,14 +11,18 @@ jest.setTimeout(300000);
 
 describe(':ios: journal suggestions', () => {
   it('suggests a saved description and route, then applies it to a new entry', async () => {
-    await launchOnboardedApp({ seedProfile: 'journal-ready' });
+    await launchOnboardedApp({ seedProfile: 'journal-suggestions' });
     await element(by.id(tabs.activity)).tap();
     await element(by.label('Open new entry options')).tap();
     await element(by.id('journal-entry-fab-expense')).tap();
     await waitFor(element(by.id('journal-entry-screen')))
       .toExist()
       .withTimeout(30000);
-    await element(by.id('amount-calculator-close')).tap();
+
+    const amountInput = element(by.id('hero-amount-input'));
+    await amountInput.tap();
+    await amountInput.typeText('12');
+    await waitFor(amountInput).toHaveText('12').withTimeout(15000);
 
     await element(by.id('journal-description-input')).typeText('Detox grocery purchase');
     await element(by.id('journal-route-source-node')).tap();
@@ -43,7 +47,6 @@ describe(':ios: journal suggestions', () => {
     await waitFor(element(by.id('journal-entry-screen')))
       .toExist()
       .withTimeout(30000);
-    await element(by.id('amount-calculator-close')).tap();
 
     const descriptionInput = element(by.id('journal-description-input'));
     await descriptionInput.tap();
@@ -52,6 +55,12 @@ describe(':ios: journal suggestions', () => {
     const suggestion = element(by.label('Detox grocery purchase, Bank to Groceries'));
     await waitFor(suggestion).toBeVisible().withTimeout(30000);
     await device.takeScreenshot('journal-suggestion-route-visible');
+
+    await element(by.id('journal-suggestions-scroll-view')).swipe('up', 'slow', 0.5);
+    const scrolledSuggestion = element(by.label('Detox grocery history item 5, Bank to Groceries'));
+    await waitFor(scrolledSuggestion).toBeVisible().withTimeout(15000);
+    await element(by.id('journal-suggestions-scroll-view')).swipe('down', 'slow', 0.5);
+    await waitFor(suggestion).toBeVisible().withTimeout(15000);
 
     await element(by.id('simple-entry-scroll-view')).swipe('up', 'fast', 0.6);
     await waitFor(suggestion).not.toBeVisible().withTimeout(15000);
@@ -83,6 +92,11 @@ describe(':ios: journal suggestions', () => {
     await batchDescription.typeText('Detox grocery');
     const batchSuggestion = element(by.label('Detox grocery purchase, Bank to Groceries'));
     await waitFor(batchSuggestion).toBeVisible().withTimeout(30000);
+    await element(by.id('journal-suggestions-scroll-view')).swipe('up', 'slow', 0.5);
+    const batchScrolledSuggestion = element(
+      by.label('Detox grocery history item 5, Bank to Groceries'),
+    );
+    await waitFor(batchScrolledSuggestion).toBeVisible().withTimeout(15000);
     await element(by.id('bulk-entry-list')).swipe('up', 'fast', 0.5);
     await waitFor(batchSuggestion).not.toBeVisible().withTimeout(15000);
     await element(by.id('bulk-entry-list')).scrollTo('top');
@@ -99,6 +113,11 @@ describe(':ios: journal suggestions', () => {
       await modeDescription.replaceText('Detox grocery');
       const modeSuggestion = element(by.label('Detox grocery purchase, Bank to Groceries'));
       await waitFor(modeSuggestion).toBeVisible().withTimeout(15000);
+      await element(by.id('journal-suggestions-scroll-view')).swipe('up', 'slow', 0.5);
+      const modeScrolledSuggestion = element(
+        by.label('Detox grocery history item 5, Bank to Groceries'),
+      );
+      await waitFor(modeScrolledSuggestion).toBeVisible().withTimeout(15000);
       await element(by.id('journal-entry-page-scroll-view')).swipe('up', 'fast', 0.5);
       await waitFor(modeSuggestion).not.toBeVisible().withTimeout(15000);
       await element(by.id('journal-entry-page-scroll-view')).scrollTo('top');

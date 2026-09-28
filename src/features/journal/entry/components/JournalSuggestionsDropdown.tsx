@@ -10,8 +10,9 @@ import { AccountType } from '@/src/types/enums';
 import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { withOpacity } from '@/src/utils/color-math';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
-import React, { useMemo } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useMemo, useRef } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ScrollView, State } from 'react-native-gesture-handler';
 
 const MAX_VISIBLE_SUGGESTIONS = 6;
 
@@ -64,6 +65,7 @@ export interface JournalSuggestionsDropdownProps {
   activeTabType?: TabType;
   accounts?: AccountFields[];
   onSelectSuggestion: (suggestion: JournalSuggestion) => void;
+  onInteractionChange?: (interacting: boolean) => void;
   maxHeight?: number;
 }
 
@@ -75,10 +77,12 @@ export const JournalSuggestionsDropdown = React.memo(function JournalSuggestions
   activeTabType,
   accounts = [],
   onSelectSuggestion,
+  onInteractionChange,
   maxHeight = 220,
 }: JournalSuggestionsDropdownProps) {
   const { theme } = useTheme();
   const { resolvedHourCycle } = useHourCyclePrefs();
+  const isDraggingRef = useRef(false);
   const accountsMap = useMemo(
     () => new Map<string, AccountFields>(accounts.map(account => [account.id, account])),
     [accounts],
@@ -117,8 +121,38 @@ export const JournalSuggestionsDropdown = React.memo(function JournalSuggestions
         </View>
       ) : (
         <ScrollView
+          testID="journal-suggestions-scroll-view"
           keyboardShouldPersistTaps="always"
+          keyboardDismissMode="none"
+          disallowInterruption
           nestedScrollEnabled
+          onTouchStart={() => {
+            onInteractionChange?.(true);
+          }}
+          onTouchEnd={() => onInteractionChange?.(isDraggingRef.current)}
+          // A parent scroll cancels this responder before its drag callback runs.
+          // Keep the field focused until this native scroll ends or is cancelled.
+          onTouchCancel={() => {
+            isDraggingRef.current = true;
+            onInteractionChange?.(true);
+          }}
+          onScrollBeginDrag={() => {
+            isDraggingRef.current = true;
+            onInteractionChange?.(true);
+          }}
+          onScrollEndDrag={() => {
+            isDraggingRef.current = false;
+            onInteractionChange?.(false);
+          }}
+          onHandlerStateChange={({ nativeEvent: { state } }) => {
+            if (state === State.ACTIVE) {
+              isDraggingRef.current = true;
+              onInteractionChange?.(true);
+            } else if (state === State.END || state === State.CANCELLED || state === State.FAILED) {
+              isDraggingRef.current = false;
+              onInteractionChange?.(false);
+            }
+          }}
           showsVerticalScrollIndicator={false}
           style={[
             styles.dropdownScrollView,
@@ -244,10 +278,6 @@ export const JournalSuggestionsDropdown = React.memo(function JournalSuggestions
 
 const styles = StyleSheet.create({
   dropdownLayer: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
     marginTop: Spacing.xs,
     borderRadius: Shape.radius.md,
     borderWidth: 1,
