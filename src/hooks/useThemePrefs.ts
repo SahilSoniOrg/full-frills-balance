@@ -24,35 +24,35 @@ export function useThemePrefs(): ThemePrefsState {
 
   const themePreference = useSyncExternalStore(
     onStoreChange => {
-      const sub = preferences.themePrefs.observeTheme().subscribe(() => {
+      const sub = preferences.observe('theme').subscribe(() => {
         onStoreChange();
       });
       return () => sub.unsubscribe();
     },
-    () => preferences.themePrefs.theme || 'system',
-    () => preferences.themePrefs.theme || 'system',
+    () => preferences.getSnapshot().theme || 'system',
+    () => preferences.getSnapshot().theme || 'system',
   );
 
   const themeId = useSyncExternalStore(
     onStoreChange => {
-      const sub = preferences.themePrefs.observeThemeId().subscribe(() => {
+      const sub = preferences.observe('themeId').subscribe(() => {
         onStoreChange();
       });
       return () => sub.unsubscribe();
     },
-    () => preferences.themePrefs.themeId || ThemeIds.DEEP_SPACE,
-    () => preferences.themePrefs.themeId || ThemeIds.DEEP_SPACE,
+    () => preferences.getSnapshot().themeId || ThemeIds.DEEP_SPACE,
+    () => preferences.getSnapshot().themeId || ThemeIds.DEEP_SPACE,
   );
 
   const fontId = useSyncExternalStore(
     onStoreChange => {
-      const sub = preferences.themePrefs.observeFontId().subscribe(() => {
+      const sub = preferences.observe('fontId').subscribe(() => {
         onStoreChange();
       });
       return () => sub.unsubscribe();
     },
-    () => preferences.themePrefs.fontId || FontIds.DEEP_SPACE,
-    () => preferences.themePrefs.fontId || FontIds.DEEP_SPACE,
+    () => preferences.getSnapshot().fontId || FontIds.DEEP_SPACE,
+    () => preferences.getSnapshot().fontId || FontIds.DEEP_SPACE,
   );
 
   const themeMode = useMemo<ThemeMode>(() => {
@@ -64,16 +64,16 @@ export function useThemePrefs(): ThemePrefsState {
   }, [themePreference, systemColorScheme]);
 
   const setThemePreference = useCallback((theme: ThemeAppearance) => {
-    preferences.themePrefs.setTheme(theme);
+    preferences.update({ theme });
   }, []);
 
   const setThemeId = useCallback((nextThemeId: ThemeId) => {
-    preferences.themePrefs.setThemeId(nextThemeId);
+    preferences.update({ themeId: nextThemeId });
   }, []);
 
   const setFontId = useCallback((nextFontId: FontId) => {
     void commitFontIdAfterLoad(nextFontId, id => {
-      preferences.themePrefs.setFontId(id as FontId);
+      preferences.update({ fontId: id as FontId });
     });
   }, []);
 

@@ -6,6 +6,8 @@ import { AccountId, BudgetId, WorkplaceId } from '@/src/types/ids';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { Q } from '@nozbe/watermelondb';
+import { map } from 'rxjs/operators';
+import { observeAfterInitial } from '@/src/testing/observeAfterInitial';
 
 describe('BudgetRepository', () => {
   let accountId1: string;
@@ -78,6 +80,64 @@ describe('BudgetRepository', () => {
       const scopes = await budgetRepository.getScopes('wp-1' as WorkplaceId, budget.id as BudgetId);
       expect(scopes).toHaveLength(1);
       expect(scopes[0].accountId).toBe(accountId2);
+    });
+
+    it('re-emits budget list and detail when recurrence fields change', async () => {
+      const workplaceId = 'wp-1' as WorkplaceId;
+      const budget = await budgetRepository.create(
+        workplaceId,
+        {
+          name: 'Monthly Food',
+          amount: 500,
+          currencyCode: 'USD',
+          startMonth: '2023-10',
+          intervalType: 'MONTHLY',
+          recurrenceDay: 1,
+        },
+        [accountId1 as AccountId],
+      );
+      const detail = observeAfterInitial(
+        budgetRepository.observeById(workplaceId, budget.id).pipe(map(item => item?.recurrenceDay)),
+      );
+      const activeList = observeAfterInitial(
+        budgetRepository
+          .observeAllActive(workplaceId)
+          .pipe(map(items => items.find(item => item.id === budget.id)?.recurrenceDay)),
+      );
+
+      await Promise.all([detail.initial, activeList.initial]);
+      await budgetRepository.update(workplaceId, budget, { recurrenceDay: 15 }, [
+        accountId1 as AccountId,
+      ]);
+
+      await expect(Promise.all([detail.nextValue, activeList.nextValue])).resolves.toEqual([
+        15, 15,
+      ]);
+    });
+
+    it('re-emits scopes when an existing scope is moved to another account', async () => {
+      const workplaceId = 'wp-1' as WorkplaceId;
+      const budget = await budgetRepository.create(
+        workplaceId,
+        { name: 'Food', amount: 500, currencyCode: 'USD', startMonth: '2023-10' },
+        [accountId1 as AccountId],
+      );
+      const scopes = observeAfterInitial(
+        budgetRepository
+          .observeScopes(workplaceId, budget.id)
+          .pipe(map(items => items[0]?.accountId)),
+      );
+
+      await scopes.initial;
+      const [scope] = await budgetRepository.getScopes(workplaceId, budget.id);
+      await database.write(async () => {
+        await scope.update(record => {
+          record.accountId = accountId2 as AccountId;
+          record.updatedAt = new Date();
+        });
+      });
+
+      await expect(scopes.nextValue).resolves.toBe(accountId2);
     });
 
     it('should delete a budget and its scopes', async () => {

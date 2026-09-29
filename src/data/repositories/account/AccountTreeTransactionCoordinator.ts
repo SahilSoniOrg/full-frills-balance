@@ -1,5 +1,5 @@
-import { database } from '@/src/data/database/Database';
 import { accountQueryRepository } from './AccountQueryRepository';
+import { accountWriteRepository } from './AccountWriteRepository';
 import type Account from '@/src/data/models/Account';
 import type { WorkplaceId } from '@/src/types/ids';
 import type { Model } from '@nozbe/watermelondb';
@@ -22,16 +22,11 @@ export class AccountTreeTransactionCoordinator {
     workplaceId: WorkplaceId,
     plan: (accounts: readonly Account[]) => Promise<AccountTreeTransactionPlan<T>>,
   ): Promise<T> {
-    return database.write(async () => {
+    return accountWriteRepository.commitMutationPlan(async () => {
       // Load exactly once after acquiring the write lock so the plan and its
       // receipt describe the same workplace-scoped state that is committed.
       const accounts = await accountQueryRepository.findAll(workplaceId);
-      const prepared = await plan(accounts);
-      const ops = prepared.prepareOps();
-      if (ops.length > 0) {
-        await database.batch(...ops);
-      }
-      return prepared.result;
+      return plan(accounts);
     });
   }
 }

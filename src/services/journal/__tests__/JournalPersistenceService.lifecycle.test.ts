@@ -8,7 +8,7 @@ import Journal from '@/src/data/models/Journal';
 
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 
 const workplaceId = 'wp-1' as WorkplaceId;
@@ -226,12 +226,26 @@ describe('JournalPersistenceService lifecycle', () => {
       );
 
       await database.write(async () => {
-        await journalMetadataRepository.patch(
-          workplaceId,
+        const now = new Date();
+        const metadata = await journalMetadataRepository.findByJournalId(
           journal.id as JournalId,
-          { note: 'no planned date here' },
-          'test',
+          workplaceId,
         );
+        if (metadata) {
+          await metadata.update(record => {
+            record.metadataJson = JSON.stringify({ note: 'no planned date here' });
+            record.updatedAt = now;
+          });
+        } else {
+          await database.collections.get<JournalMetadata>('journal_metadata').create(record => {
+            record.journalId = journal.id as JournalId;
+            record.workplaceId = workplaceId;
+            record.importSource = 'test';
+            record.metadataJson = JSON.stringify({ note: 'no planned date here' });
+            record.createdAt = now;
+            record.updatedAt = now;
+          });
+        }
       });
 
       await journalPersistenceService.revertToPlanned(journal.id as JournalId, workplaceId);

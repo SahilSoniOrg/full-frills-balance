@@ -185,7 +185,7 @@ describe('database migrations (LokiJS)', () => {
       workplaceId,
     );
 
-    expect(updated.color).toBe('');
+    expect(updated.account.color).toBe('');
     const fetched = await accountQueryRepository.find(workplaceId, coloredAccount.id);
     expect(fetched?.color).toBe('');
   });

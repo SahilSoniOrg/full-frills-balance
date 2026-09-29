@@ -1,12 +1,15 @@
 import fs from 'fs';
 import path from 'path';
 
-describe('TransactionRawRepository transaction count pruning', () => {
-  const source = fs.readFileSync(path.join(__dirname, '..', 'TransactionRawRepository.ts'), 'utf8');
+describe('TransactionRawMetricsQueries transaction count pruning', () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, '..', 'raw', 'TransactionRawMetricsQueries.ts'),
+    'utf8',
+  );
 
   const countMethod = source.slice(
-    source.indexOf('async getAccountTransactionCountsRaw'),
-    source.indexOf('async getTransactionsMetadataRaw'),
+    source.indexOf('async getAccountTransactionCounts('),
+    source.indexOf('async getLatestBalancesRaw('),
   );
 
   it('prunes counts per-account via last_date, not a workplace-wide min snapshot date', () => {

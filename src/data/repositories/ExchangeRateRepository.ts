@@ -7,7 +7,22 @@
 
 import { database } from '@/src/data/database/Database';
 import ExchangeRate from '@/src/data/models/ExchangeRate';
+import { observeQueryWithModelChanges } from '@/src/data/repositories/observeQueryWithModelChanges';
 import { Q } from '@nozbe/watermelondb';
+
+export interface ExchangeRateCacheInput {
+  toCurrency: string;
+  rate: number;
+}
+
+export interface HistoricalExchangeRateInput {
+  fromCurrency: string;
+  toCurrency: string;
+  rate: number;
+  requestedDate: number;
+  effectiveDate: number;
+  source: string;
+}
 
 class ExchangeRateRepository {
   private get collection() {
@@ -80,20 +95,20 @@ class ExchangeRateRepository {
    * Observe all exchange rate changes
    */
   observeAll() {
-    return this.collection.query().observe();
+    return observeQueryWithModelChanges(this.collection.query());
   }
 
   /**
    * Observe the latest rates for a base currency
    */
   observeLatestRates(fromCurrency: string) {
-    return this.collection
-      .query(
+    return observeQueryWithModelChanges(
+      this.collection.query(
         Q.where('from_currency', fromCurrency),
         Q.sortBy('effective_date', 'desc'),
         Q.sortBy('created_at', 'desc'),
-      )
-      .observe();
+      ),
+    );
   }
 
   /**
@@ -102,7 +117,7 @@ class ExchangeRateRepository {
    */
   async cacheRatesBatch(
     fromCurrency: string,
-    rates: { toCurrency: string; rate: number }[],
+    rates: readonly ExchangeRateCacheInput[],
     source: string = 'exchangerate-api.com',
   ): Promise<void> {
     if (rates.length === 0) return;
@@ -124,14 +139,7 @@ class ExchangeRateRepository {
   }
 
   /** Persist one historical rate keyed by the requested day. */
-  async cacheHistoricalRate(input: {
-    fromCurrency: string;
-    toCurrency: string;
-    rate: number;
-    requestedDate: number;
-    effectiveDate: number;
-    source: string;
-  }): Promise<void> {
+  async cacheHistoricalRate(input: HistoricalExchangeRateInput): Promise<void> {
     await database.write(async () => {
       const existing = await this.getCachedRateForDate(
         input.fromCurrency,

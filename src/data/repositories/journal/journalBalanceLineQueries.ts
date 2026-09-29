@@ -2,7 +2,7 @@ import type Journal from '@/src/data/models/Journal';
 import type Transaction from '@/src/data/models/Transaction';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
 import { JournalStatus, type TransactionType } from '@/src/types/enums';
 import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { journalQueryRepository } from './journalQueryRepository';
@@ -163,10 +163,14 @@ export async function findPostedJournalBalanceSourcePage(
   afterJournalId: string,
   limit: number,
 ): Promise<JournalBalanceSourcePage> {
-  const rows = await transactionRawRepository.queryRaw<RawJournalBalanceRow>(
-    POSTED_JOURNAL_LINES_SQL,
-    [workplaceId, JournalStatus.POSTED, afterJournalId, limit, workplaceId, workplaceId],
-  );
+  const rows = await rawSqlExecutor.query<RawJournalBalanceRow>(POSTED_JOURNAL_LINES_SQL, [
+    workplaceId,
+    JournalStatus.POSTED,
+    afterJournalId,
+    limit,
+    workplaceId,
+    workplaceId,
+  ]);
   if (rows !== null) {
     const journals = groupRows(rows);
     return {

@@ -4,6 +4,7 @@ import AccountMetadata from '@/src/data/models/AccountMetadata';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { Q, Query } from '@nozbe/watermelondb';
+import { buildAccountClauses } from './accountFilters';
 
 export class AccountQueryRepository {
   private get db() {
@@ -18,41 +19,29 @@ export class AccountQueryRepository {
     return this.db.collections.get<AccountMetadata>('account_metadata');
   }
 
+  /** Missing, deleted, and foreign-workplace rows resolve to null; query errors propagate. */
   async find(workplaceId: WorkplaceId, id: AccountId): Promise<Account | null> {
-    try {
-      const account = await this.accounts.find(id);
-      if (account.deletedAt) return null;
-      if (account.workplaceId !== workplaceId) return null;
-      return account;
-    } catch {
-      return null;
-    }
+    const accounts = await this.accounts
+      .query(...buildAccountClauses({ workplaceId, accountIds: [id] }))
+      .fetch();
+    return accounts[0] ?? null;
   }
 
   async findWithDeleted(workplaceId: WorkplaceId, id: AccountId): Promise<Account | null> {
-    try {
-      const account = await this.accounts.find(id);
-      if (account.workplaceId !== workplaceId) return null;
-      return account;
-    } catch {
-      return null;
-    }
+    const accounts = await this.accounts
+      .query(...buildAccountClauses({ workplaceId, accountIds: [id], includeDeleted: true }))
+      .fetch();
+    return accounts[0] ?? null;
   }
 
   async findMetadata(
     workplaceId: WorkplaceId,
     accountId: AccountId,
   ): Promise<AccountMetadata | null> {
-    try {
-      const clauses: Q.Clause[] = [
-        Q.where('account_id', accountId),
-        Q.where('workplace_id', workplaceId),
-      ];
-      const records = await this.metadata.query(...clauses).fetch();
-      return records[0] || null;
-    } catch {
-      return null;
-    }
+    const records = await this.metadata
+      .query(Q.where('account_id', accountId), Q.where('workplace_id', workplaceId))
+      .fetch();
+    return records[0] ?? null;
   }
 
   async findMetadataByAccountIds(
@@ -60,11 +49,9 @@ export class AccountQueryRepository {
     accountIds: AccountId[],
   ): Promise<AccountMetadata[]> {
     if (accountIds.length === 0) return [];
-    const clauses: Q.Clause[] = [
-      Q.where('account_id', Q.oneOf(accountIds)),
-      Q.where('workplace_id', workplaceId),
-    ];
-    return await this.metadata.query(...clauses).fetch();
+    return this.metadata
+      .query(Q.where('account_id', Q.oneOf(accountIds)), Q.where('workplace_id', workplaceId))
+      .fetch();
   }
 
   async findMetadataByPayFromAccountIds(
@@ -82,66 +69,38 @@ export class AccountQueryRepository {
 
   async findAllByIds(workplaceId: WorkplaceId, ids: AccountId[]): Promise<Account[]> {
     if (ids.length === 0) return [];
-    const clauses: Q.Clause[] = [
-      Q.where('id', Q.oneOf(ids)),
-      Q.where('deleted_at', Q.eq(null)),
-      Q.where('workplace_id', workplaceId),
-    ];
-    return this.accounts.query(...clauses).fetch();
+    return this.accounts.query(...buildAccountClauses({ workplaceId, accountIds: ids })).fetch();
   }
 
   async findByName(workplaceId: WorkplaceId, name: string): Promise<Account | null> {
-    const clauses: Q.Clause[] = [
-      Q.where('name', name),
-      Q.where('deleted_at', Q.eq(null)),
-      Q.where('workplace_id', workplaceId),
-    ];
-    const accounts = await this.accounts.query(...clauses).fetch();
+    const accounts = await this.accounts
+      .query(...buildAccountClauses({ workplaceId, name }))
+      .fetch();
     return accounts[0] || null;
   }
 
   async findAll(workplaceId: WorkplaceId): Promise<Account[]> {
-    const clauses: Q.Clause[] = [
-      Q.where('deleted_at', Q.eq(null)),
-      Q.where('workplace_id', workplaceId),
-    ];
-    clauses.push(Q.sortBy('order_num', Q.asc));
-    return this.accounts.query(...clauses).fetch();
+    return this.accounts.query(...buildAccountClauses({ workplaceId, sortByOrder: true })).fetch();
   }
 
   async findByType(workplaceId: WorkplaceId, accountType: AccountType): Promise<Account[]> {
-    const clauses: Q.Clause[] = [
-      Q.where('account_type', accountType),
-      Q.where('deleted_at', Q.eq(null)),
-      Q.where('workplace_id', workplaceId),
-    ];
-    clauses.push(Q.sortBy('order_num', Q.asc));
-    return this.accounts.query(...clauses).fetch();
+    return this.accounts
+      .query(...buildAccountClauses({ workplaceId, accountType, sortByOrder: true }))
+      .fetch();
   }
 
   async exists(workplaceId: WorkplaceId): Promise<boolean> {
-    const clauses: Q.Clause[] = [Q.where('deleted_at', Q.eq(null))];
-    if (workplaceId) {
-      clauses.push(Q.where('workplace_id', workplaceId));
-    }
-    const count = await this.accounts.query(...clauses).fetchCount();
+    const count = await this.accounts.query(...buildAccountClauses({ workplaceId })).fetchCount();
     return count > 0;
   }
 
   async countNonDeleted(workplaceId: WorkplaceId): Promise<number> {
-    const clauses: Q.Clause[] = [
-      Q.where('deleted_at', Q.eq(null)),
-      Q.where('workplace_id', workplaceId),
-    ];
-    return this.accounts.query(...clauses).fetchCount();
+    return this.accounts.query(...buildAccountClauses({ workplaceId })).fetchCount();
   }
 
   queryByParentId(workplaceId: WorkplaceId, parentId: AccountId): Query<Account> {
     return this.accounts.query(
-      Q.where('workplace_id', workplaceId),
-      Q.where('parent_account_id', parentId),
-      Q.where('deleted_at', Q.eq(null)),
-      Q.sortBy('order_num', Q.asc),
+      ...buildAccountClauses({ workplaceId, parentAccountId: parentId, sortByOrder: true }),
     );
   }
 }

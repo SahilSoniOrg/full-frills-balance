@@ -5,6 +5,7 @@ import {
 } from '@/src/data/repositories/AccountingWriteSession';
 import Budget from '@/src/data/models/Budget';
 import BudgetScope from '@/src/data/models/BudgetScope';
+import { observeQueryWithModelChanges } from '@/src/data/repositories/observeQueryWithModelChanges';
 import { AccountId, BudgetId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
@@ -22,6 +23,8 @@ export interface BudgetInput {
   active?: boolean;
   assetAccountIds?: AccountId[];
 }
+
+export type BudgetPatch = Partial<BudgetInput>;
 
 export type BudgetMergeRecords = {
   scopes: BudgetScope[];
@@ -42,19 +45,19 @@ export class BudgetRepository {
   }
 
   observeAllActive(workplaceId: WorkplaceId) {
-    return this.budgets
-      .query(
+    return observeQueryWithModelChanges(
+      this.budgets.query(
         Q.where('workplace_id', workplaceId),
         Q.where('active', true),
         Q.sortBy('start_month', Q.desc),
-      )
-      .observeWithColumns(['name', 'amount', 'currency_code', 'start_month', 'active']);
+      ),
+    );
   }
 
   observeScopes(workplaceId: WorkplaceId, budgetId: BudgetId) {
-    return this.budgetScopes
-      .query(Q.where('workplace_id', workplaceId), Q.where('budget_id', budgetId))
-      .observe();
+    return observeQueryWithModelChanges(
+      this.budgetScopes.query(Q.where('workplace_id', workplaceId), Q.where('budget_id', budgetId)),
+    );
   }
 
   async getScopes(workplaceId: WorkplaceId, budgetId: BudgetId): Promise<BudgetScope[]> {
@@ -74,20 +77,16 @@ export class BudgetRepository {
   }
 
   observeById(workplaceId: WorkplaceId, id: BudgetId) {
-    return this.budgets
-      .query(Q.where('workplace_id', workplaceId), Q.where('id', id))
-      .observe()
-      .pipe(map(budgets => budgets[0] || null));
+    return observeQueryWithModelChanges(
+      this.budgets.query(Q.where('workplace_id', workplaceId), Q.where('id', id)),
+    ).pipe(map(budgets => budgets[0] || null));
   }
 
   async find(workplaceId: WorkplaceId, id: BudgetId): Promise<Budget | null> {
-    try {
-      const budget = await this.budgets.find(id);
-      if (budget.workplaceId !== workplaceId) return null;
-      return budget;
-    } catch {
-      return null;
-    }
+    const budgets = await this.budgets
+      .query(Q.where('workplace_id', workplaceId), Q.where('id', id))
+      .fetch();
+    return budgets[0] ?? null;
   }
 
   async create(
@@ -131,7 +130,7 @@ export class BudgetRepository {
   async update(
     workplaceId: WorkplaceId,
     budget: Budget,
-    updates: Partial<BudgetInput>,
+    updates: BudgetPatch,
     accountIds: AccountId[],
   ): Promise<Budget> {
     return await this.db.write(async () => {

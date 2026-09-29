@@ -1,6 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { createJournalFixture, softDeleteJournalFixture } from '@/src/testing/journalFixtures';
 import { AccountType, JournalStatus, TransactionType } from '@/src/types/enums';
@@ -154,7 +154,7 @@ describe('findUnbalancedJournals', () => {
       },
       workplaceId,
     );
-    jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValueOnce(null);
+    jest.spyOn(rawSqlExecutor, 'query').mockResolvedValueOnce(null);
 
     const result = await findUnbalancedJournals(workplaceId);
 
@@ -176,7 +176,7 @@ describe('findUnbalancedJournals', () => {
       );
       if (broken) brokenIds.push(journal.id);
     }
-    const query = jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue(null);
+    const query = jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue(null);
     try {
       const result = await findUnbalancedJournals(workplaceId);
       expect(result.journalsChecked).toBe(103);
@@ -219,7 +219,7 @@ describe('findUnbalancedJournals', () => {
         }
         return page;
       });
-    const query = jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue(null);
+    const query = jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue(null);
     try {
       const result = await findUnbalancedJournals(workplaceId);
       expect(result.journalsChecked).toBe(100);

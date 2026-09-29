@@ -7,7 +7,8 @@ import Transaction from '@/src/data/models/Transaction';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { accountLedgerMetricsQueries } from '@/src/data/repositories/account/AccountLedgerMetricsQueries';
+import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { AccountType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 import { isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
@@ -79,12 +80,12 @@ export async function fetchStatementValues(
         const s1Date = getCorrespondingStatementDate(d1Date, metadata.statementDay, dueDay);
 
         const [latestBalances, metrics] = await Promise.all([
-          transactionRawRepository.getLatestBalancesRaw(
+          transactionRawMetricsQueries.getLatestBalancesRaw(
             workplaceId,
             [lb.account.id],
             s1Date.valueOf(),
           ),
-          transactionRawRepository.getAccountPeriodMetricsRaw(
+          accountLedgerMetricsQueries.getPeriodMetrics(
             workplaceId,
             lb.account.id,
             s1Date.valueOf(),
@@ -108,7 +109,7 @@ export async function fetchStatementValues(
         const prevDue = nextDue.subtract(1, 'month');
 
         // We check for any payments (totalDecrease) between prevDue and now
-        const metrics = await transactionRawRepository.getAccountPeriodMetricsRaw(
+        const metrics = await accountLedgerMetricsQueries.getPeriodMetrics(
           workplaceId,
           lb.account.id,
           prevDue.valueOf(),

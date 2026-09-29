@@ -3,12 +3,11 @@ import { WorkplaceId } from '@/src/types/ids';
 import { AppConfig } from '@/src/constants';
 
 import { accountObserveQueries } from '@/src/data/repositories/account';
-import {
-  journalObserveQueries,
-  journalQueryRepository,
-} from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { transactionRawPatternQueries } from '@/src/data/repositories/raw/TransactionRawPatternQueries';
+import { transactionInsightQueries } from '@/src/data/repositories/transaction/TransactionInsightQueries';
 import {
   transactionObserveQueries,
   transactionQueryRepository,
@@ -20,12 +19,18 @@ import {
 } from '@/src/services/reactive/ReactiveCacheCoordinator';
 import { firstValueFrom, of } from 'rxjs';
 import { take } from 'rxjs/operators';
+jest.mock('@/src/data/repositories/raw/TransactionRawPatternQueries', () => ({
+  transactionRawPatternQueries: { getRecurringPatternsRaw: jest.fn() },
+}));
+jest.mock('@/src/data/repositories/transaction/TransactionInsightQueries', () => ({
+  transactionInsightQueries: { findActiveMetadata: jest.fn() },
+}));
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/account');
-jest.mock('@/src/data/repositories/journal/journalTimelineModule');
+jest.mock('@/src/data/repositories/journal/JournalObserveQueries');
+jest.mock('@/src/data/repositories/journal/journalQueryRepository');
 jest.mock('@/src/data/repositories/transaction');
-jest.mock('@/src/data/repositories/TransactionRawRepository');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
 jest.mock('@/src/utils/logger');
 jest.mock('@/src/services/preferences', () => ({
@@ -63,8 +68,8 @@ describe('PatternService', () => {
     (journalObserveQueries.observeStatusMeta as jest.Mock).mockReturnValue(
       of({ count: 1, lastUpdatedAt: new Date() }),
     );
-    (transactionRawRepository.getRecurringPatternsRaw as jest.Mock).mockResolvedValue([]);
-    (transactionRawRepository.getTransactionsMetadataRaw as jest.Mock).mockResolvedValue([]);
+    (transactionRawPatternQueries.getRecurringPatternsRaw as jest.Mock).mockResolvedValue([]);
+    (transactionInsightQueries.findActiveMetadata as jest.Mock).mockResolvedValue([]);
   });
 
   describe('observePatterns', () => {
@@ -84,19 +89,19 @@ describe('PatternService', () => {
 
       try {
         await jest.advanceTimersByTimeAsync(0);
-        (transactionRawRepository.getRecurringPatternsRaw as jest.Mock).mockClear();
+        (transactionRawPatternQueries.getRecurringPatternsRaw as jest.Mock).mockClear();
 
         patternService.clearCache(firstWorkplace);
         await jest.advanceTimersByTimeAsync(AppConfig.insights.refreshIntervalMs);
 
         expect(firstCompleted).toHaveBeenCalledTimes(1);
         expect(secondCompleted).not.toHaveBeenCalled();
-        expect(transactionRawRepository.getRecurringPatternsRaw).not.toHaveBeenCalledWith(
+        expect(transactionRawPatternQueries.getRecurringPatternsRaw).not.toHaveBeenCalledWith(
           firstWorkplace,
           expect.any(Number),
           expect.any(Number),
         );
-        expect(transactionRawRepository.getRecurringPatternsRaw).toHaveBeenCalledWith(
+        expect(transactionRawPatternQueries.getRecurringPatternsRaw).toHaveBeenCalledWith(
           secondWorkplace,
           expect.any(Number),
           expect.any(Number),
@@ -140,7 +145,7 @@ describe('PatternService', () => {
       (accountObserveQueries.observeAll as jest.Mock).mockImplementation(
         (workplaceId: WorkplaceId) => of(accountsByWorkplace.get(workplaceId) ?? []),
       );
-      (transactionRawRepository.getRecurringPatternsRaw as jest.Mock).mockImplementation(
+      (transactionRawPatternQueries.getRecurringPatternsRaw as jest.Mock).mockImplementation(
         (workplaceId: WorkplaceId) =>
           Promise.resolve([
             {
@@ -160,12 +165,12 @@ describe('PatternService', () => {
         firstValueFrom(patternService.observePatterns(workplaceTwo).pipe(take(1))),
       ]);
 
-      expect(transactionRawRepository.getRecurringPatternsRaw).toHaveBeenCalledWith(
+      expect(transactionRawPatternQueries.getRecurringPatternsRaw).toHaveBeenCalledWith(
         workplaceOne,
         expect.any(Number),
         expect.any(Number),
       );
-      expect(transactionRawRepository.getRecurringPatternsRaw).toHaveBeenCalledWith(
+      expect(transactionRawPatternQueries.getRecurringPatternsRaw).toHaveBeenCalledWith(
         workplaceTwo,
         expect.any(Number),
         expect.any(Number),
@@ -244,7 +249,7 @@ describe('PatternService', () => {
       ];
 
       (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));
-      (transactionRawRepository.getTransactionsMetadataRaw as jest.Mock).mockResolvedValue(
+      (transactionInsightQueries.findActiveMetadata as jest.Mock).mockResolvedValue(
         mockTransactions,
       );
 
@@ -336,7 +341,7 @@ describe('PatternService', () => {
       };
 
       (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));
-      (transactionRawRepository.getRecurringPatternsRaw as jest.Mock).mockResolvedValue([
+      (transactionRawPatternQueries.getRecurringPatternsRaw as jest.Mock).mockResolvedValue([
         {
           accountId: 'acc1',
           amount: 10,
@@ -360,7 +365,7 @@ describe('PatternService', () => {
       (journalQueryRepository.findByIds as jest.Mock).mockResolvedValue(
         Object.values(mockJournals),
       );
-      (transactionRawRepository.getTransactionsMetadataRaw as jest.Mock).mockResolvedValue([]);
+      (transactionInsightQueries.findActiveMetadata as jest.Mock).mockResolvedValue([]);
 
       patternService
         .observePatterns('wp1' as WorkplaceId)

@@ -23,11 +23,11 @@ export function AppReadyProvider({ children }: { children: React.ReactNode }) {
 
   const fontId = useSyncExternalStore(
     onStoreChange => {
-      const sub = preferences.themePrefs.observeFontId().subscribe(() => onStoreChange());
+      const sub = preferences.observe('fontId').subscribe(() => onStoreChange());
       return () => sub.unsubscribe();
     },
-    () => preferences.themePrefs.fontId || FontIds.DEEP_SPACE,
-    () => preferences.themePrefs.fontId || FontIds.DEEP_SPACE,
+    () => preferences.getSnapshot().fontId || FontIds.DEEP_SPACE,
+    () => preferences.getSnapshot().fontId || FontIds.DEEP_SPACE,
   );
 
   useEffect(() => {

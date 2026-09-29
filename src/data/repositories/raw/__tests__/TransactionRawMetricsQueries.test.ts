@@ -3,6 +3,7 @@ import { database } from '@/src/data/database/Database';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
+import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
@@ -94,7 +95,7 @@ describe('TransactionRawMetricsQueries workplace isolation', () => {
   });
 
   it('scopes every workplace-owned SQL table for all metrics queries', async () => {
-    const queryRaw = jest.spyOn(transactionRawMetricsQueries, 'queryRaw').mockResolvedValue([]);
+    const queryRaw = jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue([]);
     const accountIds = [localAccountId, foreignAccountId];
 
     await transactionRawMetricsQueries.getLatestBalancesRaw(
@@ -119,7 +120,7 @@ describe('TransactionRawMetricsQueries workplace isolation', () => {
   });
 
   it('rejects malformed cross-workplace links in every ORM fallback', async () => {
-    jest.spyOn(transactionRawMetricsQueries, 'queryRaw').mockResolvedValue(null);
+    jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue(null);
     const accountIds = [localAccountId, foreignAccountId];
 
     const [latestBalances, dailyDeltas] = await Promise.all([

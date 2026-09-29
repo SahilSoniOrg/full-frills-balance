@@ -1,9 +1,7 @@
 import { toPlainJournal } from '@/src/data/models/Journal';
 import { accountQueryRepository } from '@/src/data/repositories/account';
-import {
-  journalObserveQueries,
-  journalQueryRepository,
-} from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import {
   JournalEditorEnrichedLine,

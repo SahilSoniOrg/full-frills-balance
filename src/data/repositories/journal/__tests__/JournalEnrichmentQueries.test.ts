@@ -4,7 +4,7 @@ import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
@@ -114,7 +114,7 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
   });
 
   it('scopes raw enrichment joins to journals, transactions, and accounts', async () => {
-    const queryRaw = jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue([]);
+    const queryRaw = jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue([]);
 
     await journalEnrichmentQueries.getEnrichmentDataRaw(workplaceOne, [
       workplaceOneJournalId,
@@ -130,7 +130,7 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
   });
 
   it('isolates enrichment fallback from mixed journal IDs and malformed links', async () => {
-    jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue(null);
+    jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue(null);
 
     const rows = await journalEnrichmentQueries.getEnrichmentDataRaw(workplaceOne, [
       workplaceOneJournalId,
@@ -148,7 +148,7 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
   });
 
   it('uses the immutable account currency when a saved transaction currency differs', async () => {
-    jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue(null);
+    jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue(null);
     const transactions = await database.collections
       .get<Transaction>('transactions')
       .query()
@@ -171,7 +171,7 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
   });
 
   it('scopes suggestion joins and applies the bounded three-month description query', async () => {
-    const queryRaw = jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue([]);
+    const queryRaw = jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue([]);
 
     await journalEnrichmentQueries.findJournalSuggestions({
       workplaceId: workplaceOne,
@@ -193,7 +193,7 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
   });
 
   it('isolates fallback rows from foreign-workplace links and drops incomplete routes', async () => {
-    jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue(null);
+    jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue(null);
 
     const suggestions = await journalEnrichmentQueries.findJournalSuggestions({
       workplaceId: workplaceOne,

@@ -1,7 +1,6 @@
 import { database } from '@/src/data/database/Database';
-import { supportsRawSql } from '@/src/data/database/DatabaseUtils';
 import { schema } from '@/src/data/database/schema';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
 import { exportService } from '@/src/services/export';
 import { WORKPLACE_DATA_TABLES } from '@/src/services/workplace/workplaceDataTables';
 import { WorkplaceId } from '@/src/types/ids';
@@ -9,6 +8,9 @@ import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/services/preferences';
 import { compression } from '@/src/utils/compression';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
+jest.mock('@/src/data/repositories/raw/RawSqlExecutor', () => ({
+  rawSqlExecutor: { query: jest.fn() },
+}));
 
 jest.mock('@/src/data/database/Database', () => ({
   database: {
@@ -19,18 +21,8 @@ jest.mock('@/src/data/database/Database', () => ({
   },
 }));
 
-jest.mock('@/src/data/database/DatabaseUtils', () => ({
-  supportsRawSql: jest.fn(() => false),
-}));
-
 jest.mock('@/src/data/repositories/WorkplaceRepository', () => ({
   workplaceRepository: { find: jest.fn() },
-}));
-
-jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
-  transactionRawRepository: {
-    queryRaw: jest.fn(),
-  },
 }));
 
 jest.mock('@/src/services/preferences', () => ({
@@ -76,6 +68,7 @@ describe('ExportService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (workplaceRepository.find as jest.Mock).mockResolvedValue(undefined);
+    (rawSqlExecutor.query as jest.Mock).mockResolvedValue(null);
   });
 
   describe('exportToJSON', () => {
@@ -323,7 +316,6 @@ describe('ExportService', () => {
         }
         return collectionByTable.get(tableName);
       });
-      (supportsRawSql as jest.Mock).mockReturnValue(false);
       (preferences.loadPreferences as jest.Mock).mockResolvedValue({});
 
       await exportService.exportToJSON(workplaceId);
@@ -351,81 +343,79 @@ describe('ExportService', () => {
 
     it('excludes soft-deleted journals and transaction legs from raw SQL export', async () => {
       const FIXED_DATE = new Date('2024-01-01T12:00:00Z');
-      (supportsRawSql as jest.Mock).mockReturnValue(true);
-      (transactionRawRepository.queryRaw as jest.Mock).mockImplementation(
-        async (sql: string, _params: unknown[], tableName: string) => {
-          expect(sql).toEqual(expect.any(String));
-          if (tableName === 'transactions') {
-            expect(sql).toContain('deleted_at IS NULL');
-            return [
-              {
-                id: 't-active',
-                journalId: 'j-active',
-                accountId: 'acc1',
-                amount: 10,
-                transactionType: 'DEBIT',
-                currencyCode: 'USD',
-                transactionDate: FIXED_DATE.valueOf(),
-                createdAt: FIXED_DATE.valueOf(),
-                updatedAt: FIXED_DATE.valueOf(),
-              },
-            ];
-          }
-          if (tableName === 'journals') {
-            expect(sql).toContain('deleted_at IS NULL');
-            return [
-              {
-                id: 'j-active',
-                journalDate: FIXED_DATE.valueOf(),
-                currencyCode: 'USD',
-                totalAmount: 10,
-                transactionCount: 1,
-                displayType: 'EXPENSE',
-                status: 'POSTED',
-                createdAt: FIXED_DATE.valueOf(),
-                updatedAt: FIXED_DATE.valueOf(),
-              },
-            ];
-          }
-          if (tableName === 'accounts') {
-            return [
-              {
-                id: 'acc1',
-                name: 'Cash',
-                accountType: 'ASSET',
-                currencyCode: 'USD',
-                createdAt: FIXED_DATE.valueOf(),
-                updatedAt: FIXED_DATE.valueOf(),
-              },
-            ];
-          }
-          if (tableName === 'balance_snapshots') {
-            return [
-              {
-                id: 'snap-active',
-                accountId: 'acc1',
-                transactionId: 't-active',
-                transactionDate: FIXED_DATE.valueOf(),
-                absoluteBalance: 10,
-                transactionCount: 1,
-                createdAt: FIXED_DATE.valueOf(),
-                updatedAt: FIXED_DATE.valueOf(),
-              },
-              {
-                id: 'snap-orphan',
-                accountId: 'acc1',
-                transactionId: 't-deleted',
-                transactionDate: FIXED_DATE.valueOf(),
-                absoluteBalance: 5,
-                transactionCount: 1,
-                createdAt: FIXED_DATE.valueOf(),
-                updatedAt: FIXED_DATE.valueOf(),
-              },
-            ];
-          }
-          return [];
-        },
-      );
+      (rawSqlExecutor.query as jest.Mock).mockImplementation(async (sql: string) => {
+        expect(sql).toEqual(expect.any(String));
+        const tableName = /FROM "([a-z_]+)"/i.exec(sql)?.[1];
+        if (tableName === 'transactions') {
+          expect(sql).toContain('"deleted_at" IS NULL');
+          return [
+            {
+              id: 't-active',
+              journalId: 'j-active',
+              accountId: 'acc1',
+              amount: 10,
+              transactionType: 'DEBIT',
+              currencyCode: 'USD',
+              transactionDate: FIXED_DATE.valueOf(),
+              createdAt: FIXED_DATE.valueOf(),
+              updatedAt: FIXED_DATE.valueOf(),
+            },
+          ];
+        }
+        if (tableName === 'journals') {
+          expect(sql).toContain('"deleted_at" IS NULL');
+          return [
+            {
+              id: 'j-active',
+              journalDate: FIXED_DATE.valueOf(),
+              currencyCode: 'USD',
+              totalAmount: 10,
+              transactionCount: 1,
+              displayType: 'EXPENSE',
+              status: 'POSTED',
+              createdAt: FIXED_DATE.valueOf(),
+              updatedAt: FIXED_DATE.valueOf(),
+            },
+          ];
+        }
+        if (tableName === 'accounts') {
+          return [
+            {
+              id: 'acc1',
+              name: 'Cash',
+              accountType: 'ASSET',
+              currencyCode: 'USD',
+              createdAt: FIXED_DATE.valueOf(),
+              updatedAt: FIXED_DATE.valueOf(),
+            },
+          ];
+        }
+        if (tableName === 'balance_snapshots') {
+          return [
+            {
+              id: 'snap-active',
+              accountId: 'acc1',
+              transactionId: 't-active',
+              transactionDate: FIXED_DATE.valueOf(),
+              absoluteBalance: 10,
+              transactionCount: 1,
+              createdAt: FIXED_DATE.valueOf(),
+              updatedAt: FIXED_DATE.valueOf(),
+            },
+            {
+              id: 'snap-orphan',
+              accountId: 'acc1',
+              transactionId: 't-deleted',
+              transactionDate: FIXED_DATE.valueOf(),
+              absoluteBalance: 5,
+              transactionCount: 1,
+              createdAt: FIXED_DATE.valueOf(),
+              updatedAt: FIXED_DATE.valueOf(),
+            },
+          ];
+        }
+        return [];
+      });
 
       mockGet.mockImplementation((tableName: string) => {
         if (tableName === 'workplaces') {
@@ -459,8 +449,6 @@ describe('ExportService', () => {
       expect(parsed.transactions.map((t: { id: string }) => t.id)).toEqual(['t-active']);
       expect(parsed.journals.map((j: { id: string }) => j.id)).toEqual(['j-active']);
       expect(parsed.balance_snapshots.map((s: { id: string }) => s.id)).toEqual(['snap-active']);
-
-      (supportsRawSql as jest.Mock).mockReturnValue(false);
     });
 
     it('should handle errors', async () => {

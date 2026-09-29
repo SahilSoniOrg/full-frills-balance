@@ -4,6 +4,7 @@ import {
   stageModelWrite,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
+import { observeQueryWithModelChanges } from '@/src/data/repositories/observeQueryWithModelChanges';
 import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 import { Observable } from 'rxjs';
@@ -26,15 +27,11 @@ export class TransactionAutoPostRuleRepository {
     return database.collections.get<TransactionAutoPostRule>('transaction_auto_post_rules');
   }
 
-  async find(workplaceId: WorkplaceId, id: string): Promise<TransactionAutoPostRule | undefined> {
-    try {
-      const matches = await this.rules
-        .query(Q.where('id', id), Q.where('workplace_id', workplaceId))
-        .fetch();
-      return matches[0];
-    } catch {
-      return undefined;
-    }
+  async find(workplaceId: WorkplaceId, id: string): Promise<TransactionAutoPostRule | null> {
+    const matches = await this.rules
+      .query(Q.where('id', id), Q.where('workplace_id', workplaceId))
+      .fetch();
+    return matches[0] ?? null;
   }
 
   async findAllByWorkplace(workplaceId: WorkplaceId): Promise<TransactionAutoPostRule[]> {
@@ -42,7 +39,7 @@ export class TransactionAutoPostRuleRepository {
   }
 
   observeAllByWorkplace(workplaceId: WorkplaceId): Observable<TransactionAutoPostRule[]> {
-    return this.rules.query(Q.where('workplace_id', workplaceId)).observe();
+    return observeQueryWithModelChanges(this.rules.query(Q.where('workplace_id', workplaceId)));
   }
 
   async findActiveByWorkplace(workplaceId: WorkplaceId): Promise<TransactionAutoPostRule[]> {

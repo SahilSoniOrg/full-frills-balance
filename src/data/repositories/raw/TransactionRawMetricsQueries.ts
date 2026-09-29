@@ -2,72 +2,129 @@ import { database } from '@/src/data/database/Database';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { effect, periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
-import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
-import { getRawAdapter, rowsFromQueryRaw } from '../../database/DatabaseUtils';
 import Account from '../../models/Account';
 import Transaction from '../../models/Transaction';
-import { DailyDelta, RawSQLArg } from '../TransactionTypes';
+import { AccountTransactionBoundary, DailyDelta } from '../TransactionTypes';
+import { rawSqlExecutor } from './RawSqlExecutor';
 
 interface RawDailyDeltaRow extends DailyDelta {
   dayStartStr: string;
 }
 
 export class TransactionRawMetricsQueries {
-  private keyCache: Map<string, string> = new Map();
-  private mappingCache: Map<string, { original: string; camel: string }[]> = new Map();
-
-  private toCamelCase(str: string): string {
-    const cached = this.keyCache.get(str);
-    if (cached) return cached;
-    const result = str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-    this.keyCache.set(str, result);
-    return result;
+  async getLatestBalancesAndCounts(
+    workplaceId: WorkplaceId,
+    accountBoundaries: readonly AccountTransactionBoundary[],
+    endDate: number,
+  ): Promise<{ balances: Map<string, number>; counts: Map<string, number> }> {
+    const [balances, counts] = await Promise.all([
+      this.getLatestBalancesRaw(
+        workplaceId,
+        accountBoundaries.map(boundary => boundary.accountId),
+        endDate,
+      ),
+      this.getAccountTransactionCounts(workplaceId, accountBoundaries, endDate),
+    ]);
+    return { balances, counts };
   }
 
-  async queryRaw<T>(sql: string, args: RawSQLArg[] = [], table?: string): Promise<T[] | null> {
-    const sqlAdapter = getRawAdapter(database);
-    if (!sqlAdapter || typeof sqlAdapter.queryRaw !== 'function') return null;
+  /** Count active journal legs after each account's own snapshot cursor. */
+  async getAccountTransactionCounts(
+    workplaceId: WorkplaceId,
+    accountBoundaries: readonly AccountTransactionBoundary[],
+    endDate: number,
+  ): Promise<Map<string, number>> {
+    if (accountBoundaries.length === 0) return new Map();
 
-    try {
-      const result = await sqlAdapter.queryRaw(sql, args, table);
-      const rawRows = rowsFromQueryRaw(result);
-      if (rawRows.length === 0) return [];
-
-      const sampleRow = rawRows[0];
-      if (!sampleRow || typeof sampleRow !== 'object') return [];
-      const keys = Object.keys(sampleRow);
-      const schemaSignature = keys.join('|');
-
-      let mapping = this.mappingCache.get(schemaSignature);
-      if (!mapping) {
-        mapping = keys.map(key => {
-          const lower = key.toLowerCase();
-          return { original: key, camel: this.toCamelCase(lower) };
-        });
-        this.mappingCache.set(schemaSignature, mapping);
+    const results = new Map<string, number>(
+      accountBoundaries.map(({ accountId }) => [accountId, 0]),
+    );
+    for (let index = 0; index < accountBoundaries.length; index += 100) {
+      const chunk = accountBoundaries.slice(index, index + 100);
+      const statusPlaceholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
+      const values: (string | number)[] = [];
+      const boundaryRows = chunk.map(boundary => {
+        values.push(
+          boundary.accountId,
+          boundary.afterTransactionDate ?? 0,
+          boundary.afterTransactionCreatedAt ?? 0,
+          boundary.afterTransactionId ?? '',
+        );
+        return 'SELECT ? as acc_id, ? as last_date, ? as last_created, ? as last_id';
+      });
+      const sql = `
+        WITH search_boundaries(acc_id, last_date, last_created, last_id) AS (
+          ${boundaryRows.join(' UNION ALL ')}
+        )
+        SELECT t.account_id as accountId, COUNT(*) as count
+        FROM transactions t
+        JOIN journals j ON t.journal_id = j.id
+        JOIN search_boundaries b ON t.account_id = b.acc_id
+        WHERE t.workplace_id = ?
+          AND j.workplace_id = ?
+          AND t.deleted_at IS NULL
+          AND j.deleted_at IS NULL
+          AND j.status IN (${statusPlaceholders})
+          AND t.transaction_date <= ?
+          AND t.transaction_date >= b.last_date
+          AND (
+            b.last_id = ''
+            OR t.transaction_date > b.last_date
+            OR (t.transaction_date = b.last_date AND t.created_at > b.last_created)
+            OR (t.transaction_date = b.last_date AND t.created_at = b.last_created AND t.id > b.last_id)
+          )
+        GROUP BY t.account_id
+      `;
+      const rows = await rawSqlExecutor.query<{ accountId: AccountId; count: number }>(sql, [
+        ...values,
+        workplaceId,
+        workplaceId,
+        ...ACTIVE_JOURNAL_STATUSES,
+        endDate,
+      ]);
+      if (rows !== null) {
+        for (const row of rows) results.set(row.accountId, row.count);
+        continue;
       }
 
-      const mappingLen = mapping.length;
-      const resultRows: T[] = new Array(rawRows.length);
+      const boundariesByAccount = new Map(chunk.map(boundary => [boundary.accountId, boundary]));
+      const minimumDate = Math.min(...chunk.map(boundary => boundary.afterTransactionDate ?? 0));
+      const transactions = await database.collections
+        .get<Transaction>('transactions')
+        .query(
+          Q.where('workplace_id', workplaceId),
+          Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
+          Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+          Q.on('journals', 'deleted_at', Q.eq(null)),
+          Q.where('account_id', Q.oneOf(chunk.map(boundary => boundary.accountId))),
+          Q.where('transaction_date', Q.gte(minimumDate)),
+          Q.where('transaction_date', Q.lte(endDate)),
+          Q.where('deleted_at', Q.eq(null)),
+        )
+        .fetch();
 
-      for (let r = 0; r < rawRows.length; r++) {
-        const row = rawRows[r] as Record<string, unknown>;
-        const normalized: Record<string, unknown> = {};
-        for (let i = 0; i < mappingLen; i++) {
-          const m = mapping[i];
-          const val = row[m.original];
-          normalized[m.original] = val;
-          if (m.original !== m.camel) normalized[m.camel] = val;
+      for (const transaction of transactions) {
+        const boundary = boundariesByAccount.get(transaction.accountId);
+        if (!boundary) continue;
+        const lastDate = boundary.afterTransactionDate ?? 0;
+        const lastCreatedAt = boundary.afterTransactionCreatedAt ?? 0;
+        const lastId = boundary.afterTransactionId ?? '';
+        const createdAt = transaction.createdAt.getTime();
+        const isAfterCursor =
+          lastId === '' ||
+          transaction.transactionDate > lastDate ||
+          (transaction.transactionDate === lastDate && createdAt > lastCreatedAt) ||
+          (transaction.transactionDate === lastDate &&
+            createdAt === lastCreatedAt &&
+            transaction.id > lastId);
+        if (transaction.transactionDate >= lastDate && isAfterCursor) {
+          results.set(transaction.accountId, (results.get(transaction.accountId) ?? 0) + 1);
         }
-        resultRows[r] = normalized as T;
       }
-      return resultRows;
-    } catch (error) {
-      logger.error('[TransactionRawMetricsQueries] queryRaw failed', { error });
-      throw error;
     }
+    return results;
   }
 
   async getLatestBalancesRaw(
@@ -106,7 +163,7 @@ export class TransactionRawMetricsQueries {
       WHERE rn = 1
     `;
 
-    const raws = await this.queryRaw<{ accountId: AccountId; runningBalance: number }>(sql, [
+    const raws = await rawSqlExecutor.query<{ accountId: AccountId; runningBalance: number }>(sql, [
       ...accountIds,
       cutoffDate,
       workplaceId,
@@ -176,7 +233,7 @@ export class TransactionRawMetricsQueries {
       ORDER BY dayStartStr ASC
     `;
 
-    const raws = await this.queryRaw<RawDailyDeltaRow>(sql, [
+    const raws = await rawSqlExecutor.query<RawDailyDeltaRow>(sql, [
       ...accountIds,
       startDate,
       endDate,

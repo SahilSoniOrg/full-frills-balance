@@ -8,7 +8,7 @@ import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import Transaction from '@/src/data/models/Transaction';
-import { getRawAdapter, rowsFromQueryRaw } from '../database/DatabaseUtils';
+import { rawSqlExecutor } from './raw/RawSqlExecutor';
 
 /**
  * Repository for Balance Snapshots.
@@ -132,11 +132,6 @@ export class BalanceSnapshotRepository {
     const result = new Map<string, SnapshotData>();
     if (accountIds.length === 0) return result;
 
-    const sqlAdapter = getRawAdapter(database);
-    if (!sqlAdapter || typeof sqlAdapter.queryRaw !== 'function') {
-      return this.findLatestForAccountsOrm(workplaceId, accountIds, date);
-    }
-
     const sql = `
       WITH RankedSnapshots AS (
         SELECT 
@@ -167,11 +162,14 @@ export class BalanceSnapshotRepository {
     `;
 
     try {
-      const rows = await sqlAdapter.queryRaw(sql, [workplaceId, workplaceId, ...accountIds, date]);
-      const data = rowsFromQueryRaw(rows);
-      for (const row of data) {
-        if (!row || typeof row !== 'object') continue;
-        const snapshot = row as SnapshotData;
+      const rows = await rawSqlExecutor.query<SnapshotData>(sql, [
+        workplaceId,
+        workplaceId,
+        ...accountIds,
+        date,
+      ]);
+      if (rows === null) return this.findLatestForAccountsOrm(workplaceId, accountIds, date);
+      for (const snapshot of rows) {
         result.set(snapshot.accountId, snapshot);
       }
       return result;

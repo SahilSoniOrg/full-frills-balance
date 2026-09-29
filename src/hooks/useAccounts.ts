@@ -8,7 +8,7 @@ import {
   observeAccountBalance,
   observeActiveTransactions,
 } from '@/src/services/accounts/accountDerivedReads';
-import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { useObservable } from '@/src/hooks/useObservable';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { currencyReadService } from '@/src/services/currency-read-service';

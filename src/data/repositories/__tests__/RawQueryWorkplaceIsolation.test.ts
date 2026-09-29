@@ -3,8 +3,11 @@ import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
+import { accountLedgerMetricsQueries } from '@/src/data/repositories/account/AccountLedgerMetricsQueries';
+import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
 import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { transactionRawRebuildQueries } from '@/src/data/repositories/raw/TransactionRawRebuildQueries';
+import { transactionInsightQueries } from '@/src/data/repositories/transaction/TransactionInsightQueries';
 import { transactionObserveQueries } from '@/src/data/repositories/transaction';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
@@ -15,7 +18,7 @@ import { firstValueFrom, of, take } from 'rxjs';
 const WORKPLACE_ONE = 'wp-raw-isolation-1' as WorkplaceId;
 const WORKPLACE_TWO = 'wp-raw-isolation-2' as WorkplaceId;
 
-describe('TransactionRawRepository workplace isolation', () => {
+describe('named raw-query workplace isolation', () => {
   let accountId: AccountId;
   let foreignAccountId: AccountId;
 
@@ -136,9 +139,9 @@ describe('TransactionRawRepository workplace isolation', () => {
   });
 
   it('scopes transaction-count SQL to both transaction and journal workplace', async () => {
-    const queryRaw = jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue([]);
+    const queryRaw = jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue([]);
 
-    await transactionRawRepository.getAccountTransactionCountsRaw(
+    await transactionRawMetricsQueries.getAccountTransactionCounts(
       WORKPLACE_ONE,
       [{ accountId, startDate: 0 }],
       Number.MAX_SAFE_INTEGER,
@@ -151,9 +154,9 @@ describe('TransactionRawRepository workplace isolation', () => {
   });
 
   it('isolates transaction counts by workplace in the ORM fallback', async () => {
-    jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue(null);
+    jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue(null);
 
-    const counts = await transactionRawRepository.getAccountTransactionCountsRaw(
+    const counts = await transactionRawMetricsQueries.getAccountTransactionCounts(
       WORKPLACE_ONE,
       [{ accountId, startDate: 0 }],
       Number.MAX_SAFE_INTEGER,
@@ -163,9 +166,9 @@ describe('TransactionRawRepository workplace isolation', () => {
   });
 
   it('scopes rebuild SQL to both transaction and journal workplace', async () => {
-    const queryRaw = jest.spyOn(transactionRawMetricsQueries, 'queryRaw').mockResolvedValue([]);
+    const queryRaw = jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue([]);
 
-    await transactionRawRepository.getRebuildDataRaw(WORKPLACE_ONE, accountId, 0);
+    await transactionRawRebuildQueries.getRebuildDataRaw(WORKPLACE_ONE, accountId, 0);
 
     const [sql, args = []] = queryRaw.mock.calls[0];
     expect(sql).toContain('t.workplace_id = ?');
@@ -174,9 +177,9 @@ describe('TransactionRawRepository workplace isolation', () => {
   });
 
   it('isolates rebuild data by workplace in the ORM fallback', async () => {
-    jest.spyOn(transactionRawMetricsQueries, 'queryRaw').mockResolvedValue(null);
+    jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue(null);
 
-    const transactions = await transactionRawRepository.getRebuildDataRaw(
+    const transactions = await transactionRawRebuildQueries.getRebuildDataRaw(
       WORKPLACE_ONE,
       accountId,
       0,
@@ -187,9 +190,9 @@ describe('TransactionRawRepository workplace isolation', () => {
   });
 
   it('scopes account-sum SQL and cursor subqueries to both workplaces', async () => {
-    const queryRaw = jest.spyOn(transactionRawMetricsQueries, 'queryRaw').mockResolvedValue([]);
+    const queryRaw = jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue([]);
 
-    await transactionRawRepository.getAccountSumRaw(
+    await transactionRawRebuildQueries.getAccountSumRaw(
       WORKPLACE_ONE,
       accountId,
       Number.MAX_SAFE_INTEGER,
@@ -209,9 +212,9 @@ describe('TransactionRawRepository workplace isolation', () => {
   });
 
   it('isolates account sums by transaction workplace in the ORM fallback', async () => {
-    jest.spyOn(transactionRawMetricsQueries, 'queryRaw').mockResolvedValue(null);
+    jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue(null);
 
-    const sum = await transactionRawRepository.getAccountSumRaw(
+    const sum = await transactionRawRebuildQueries.getAccountSumRaw(
       WORKPLACE_ONE,
       accountId,
       Number.MAX_SAFE_INTEGER,
@@ -222,9 +225,9 @@ describe('TransactionRawRepository workplace isolation', () => {
   });
 
   it('scopes metadata SQL to transaction, journal, and account workplaces', async () => {
-    const queryRaw = jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue([]);
+    const queryRaw = jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue([]);
 
-    await transactionRawRepository.getTransactionsMetadataRaw(
+    await transactionInsightQueries.findActiveMetadata(
       WORKPLACE_ONE,
       [accountId, foreignAccountId],
       0,
@@ -240,9 +243,9 @@ describe('TransactionRawRepository workplace isolation', () => {
   });
 
   it('isolates metadata in the ORM fallback despite malformed cross-workplace links', async () => {
-    jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue(null);
+    jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue(null);
 
-    const metadata = await transactionRawRepository.getTransactionsMetadataRaw(
+    const metadata = await transactionInsightQueries.findActiveMetadata(
       WORKPLACE_ONE,
       [accountId, foreignAccountId],
       0,
@@ -254,9 +257,9 @@ describe('TransactionRawRepository workplace isolation', () => {
   });
 
   it('scopes bulk period SQL to transaction, journal, and account workplaces', async () => {
-    const queryRaw = jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue([]);
+    const queryRaw = jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue([]);
 
-    await transactionRawRepository.getBulkAccountPeriodMetricsRaw(
+    await accountLedgerMetricsQueries.getPeriodMetricsByAccount(
       WORKPLACE_ONE,
       [
         { accountId, accountType: AccountType.ASSET },
@@ -275,9 +278,9 @@ describe('TransactionRawRepository workplace isolation', () => {
   });
 
   it('keeps bulk period fallback metrics isolated despite malformed links', async () => {
-    jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue(null);
+    jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue(null);
 
-    const metrics = await transactionRawRepository.getBulkAccountPeriodMetricsRaw(
+    const metrics = await accountLedgerMetricsQueries.getPeriodMetricsByAccount(
       WORKPLACE_ONE,
       [
         { accountId, accountType: AccountType.ASSET },
@@ -293,11 +296,11 @@ describe('TransactionRawRepository workplace isolation', () => {
 
   it('scopes unreconciled SQL to transaction, journal, and account workplaces', async () => {
     jest.spyOn(transactionObserveQueries, 'observeActiveCount').mockReturnValue(of(0));
-    const queryRaw = jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue([]);
+    const queryRaw = jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue([]);
 
     await firstValueFrom(
-      transactionRawRepository
-        .observeUnreconciledMetricsRaw(WORKPLACE_ONE, accountId, null, AccountType.ASSET)
+      accountLedgerMetricsQueries
+        .observeUnreconciledMetrics(WORKPLACE_ONE, accountId, null, AccountType.ASSET)
         .pipe(take(1)),
     );
 
@@ -306,21 +309,29 @@ describe('TransactionRawRepository workplace isolation', () => {
     expect(sql).toContain('a.workplace_id = ?');
     expect(sql).toContain('j.workplace_id = ?');
     expect(args.filter(arg => arg === WORKPLACE_ONE)).toHaveLength(3);
-    expect(args.slice(2)).toEqual([0, null, WORKPLACE_ONE, WORKPLACE_ONE, WORKPLACE_ONE]);
+    expect(args.slice(2)).toEqual([
+      0,
+      null,
+      WORKPLACE_ONE,
+      WORKPLACE_ONE,
+      WORKPLACE_ONE,
+      'POSTED',
+      'REVERSED',
+    ]);
   });
 
   it('emits isolated unreconciled fallback metrics for local and foreign accounts', async () => {
     jest.spyOn(transactionObserveQueries, 'observeActiveCount').mockReturnValue(of(0));
-    jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue(null);
+    jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue(null);
 
     const localMetrics = await firstValueFrom(
-      transactionRawRepository
-        .observeUnreconciledMetricsRaw(WORKPLACE_ONE, accountId, null, AccountType.ASSET)
+      accountLedgerMetricsQueries
+        .observeUnreconciledMetrics(WORKPLACE_ONE, accountId, null, AccountType.ASSET)
         .pipe(take(1)),
     );
     const foreignMetrics = await firstValueFrom(
-      transactionRawRepository
-        .observeUnreconciledMetricsRaw(WORKPLACE_ONE, foreignAccountId, null, AccountType.ASSET)
+      accountLedgerMetricsQueries
+        .observeUnreconciledMetrics(WORKPLACE_ONE, foreignAccountId, null, AccountType.ASSET)
         .pipe(take(1)),
     );
 

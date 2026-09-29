@@ -1,7 +1,6 @@
 import { AuditAction } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
-import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { deleteBlockers, type DeleteBlocker } from '@/src/services/accounts/accountReferenceGraph';
 import { analytics } from '@/src/services/analytics';
@@ -27,25 +26,15 @@ export async function deleteAccount(accountId: AccountId, workplaceId: Workplace
     throw formatAccountDeleteBlockersError(account.name, blockers);
   }
 
-  await accountWriteRepository.delete(workplaceId, account, () => [
-    auditRepository.prepareLog(
-      {
-        entityType: 'account',
-        entityId: account.id,
-        action: AuditAction.DELETE,
-        changes: {
-          before: {
-            name: account.name,
-            deletedAt: account.deletedAt,
-          },
-          after: {
-            deletedAt: new Date(),
-          },
-        },
+  await accountWriteRepository.delete(workplaceId, account, {
+    audit: {
+      action: AuditAction.DELETE,
+      changes: {
+        before: { name: account.name, deletedAt: account.deletedAt },
+        after: { deletedAt: new Date() },
       },
-      workplaceId,
-    ),
-  ]);
+    },
+  });
 
   analytics.trackFeatureUsage('account', 'delete', {
     account_type: account.accountType,
@@ -60,20 +49,15 @@ export async function recoverAccount(
   const account = await accountQueryRepository.findWithDeleted(workplaceId, accountId);
   if (!account) return;
 
-  await accountWriteRepository.recover(workplaceId, account, () => [
-    auditRepository.prepareLog(
-      {
-        entityType: 'account',
-        entityId: accountId,
-        action: AuditAction.UPDATE,
-        changes: {
-          before: { deletedAt: account.deletedAt },
-          after: { action: 'RECOVERED', deletedAt: undefined },
-        },
+  await accountWriteRepository.recover(workplaceId, account, {
+    audit: {
+      action: AuditAction.UPDATE,
+      changes: {
+        before: { deletedAt: account.deletedAt },
+        after: { action: 'RECOVERED', deletedAt: undefined },
       },
-      workplaceId,
-    ),
-  ]);
+    },
+  });
 
   analytics.trackFeatureUsage('account', 'recover', {
     account_type: account.accountType,

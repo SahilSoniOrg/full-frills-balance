@@ -1,6 +1,6 @@
 import Journal from '@/src/data/models/Journal';
 import { accountQueryRepository } from '@/src/data/repositories/account';
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { JournalDisplayType, TransactionType } from '@/src/types/enums';

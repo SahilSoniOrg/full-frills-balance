@@ -1,4 +1,4 @@
-import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { EntityStatus } from '@/src/features/audit/auditLogTypes';
 import { useObservable } from '@/src/hooks/useObservable';
 import { accountQueries } from '@/src/services/accounts/accountQueries';

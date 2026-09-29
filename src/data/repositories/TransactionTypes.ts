@@ -2,13 +2,6 @@ import { AccountId, JournalId, TransactionId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
 
 /**
- * Valid primitive types for raw SQL query arguments.
- * Note: JS Date objects must be converted to timestamps (number) before passing
- * to the SQL engine to ensure driver compatibility.
- */
-export type RawSQLArg = string | number | boolean | null;
-
-/**
  * Shared types and DTOs for transaction-related data.
  * These are primarily used for high-performance raw SQL queries.
  */
@@ -68,6 +61,15 @@ export interface TransactionMetadata {
   transactionDate: number;
   transactionType: TransactionType;
   currencyCode: string;
+}
+
+/** Per-account cursor used to count ledger rows after the latest snapshot. */
+export interface AccountTransactionBoundary {
+  accountId: AccountId;
+  startDate: number;
+  afterTransactionId?: TransactionId;
+  afterTransactionDate?: number;
+  afterTransactionCreatedAt?: number;
 }
 
 /**

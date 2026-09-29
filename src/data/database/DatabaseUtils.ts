@@ -4,7 +4,7 @@ export type RawSqlArg = string | number | boolean | null;
 
 /** Named seam for Watermelon raw SQL. Callers must not reach private adapter internals. */
 export interface RawSqlAdapter {
-  queryRaw: (sql: string, args: RawSqlArg[], table?: string) => Promise<unknown>;
+  queryRaw: (sql: string, args: RawSqlArg[]) => Promise<unknown>;
   executeRawBatch?: (statements: [string, RawSqlArg[]][]) => Promise<void>;
 }
 
@@ -31,7 +31,7 @@ export function getRawAdapter(database: Database): RawSqlAdapter | null {
   if (db && typeof db.unsafeQueryRaw === 'function') {
     const unsafeQueryRaw = db.unsafeQueryRaw;
     const rawAdapter: RawSqlAdapter = {
-      queryRaw: async (sql: string, args: RawSqlArg[], _table?: string) => {
+      queryRaw: async (sql: string, args: RawSqlArg[]) => {
         return unsafeQueryRaw(sql, args);
       },
     };
@@ -59,11 +59,4 @@ export function rowsFromQueryRaw(result: unknown): unknown[] {
     if (Array.isArray(rows)) return rows;
   }
   return [];
-}
-
-/**
- * Checks if the database adapter supports raw SQL queries.
- */
-export function supportsRawSql(database: Database): boolean {
-  return getRawAdapter(database) !== null;
 }

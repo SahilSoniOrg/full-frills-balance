@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import { MetadataKeys, MetadataSources } from '@/src/constants/ledger-constants';
 import { database } from '@/src/data/database/Database';
+import Journal from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import Transaction from '@/src/data/models/Transaction';
@@ -27,8 +28,10 @@ import {
   PlannedPaymentInterval,
   PlannedPaymentStatus,
 } from '@/src/types/enums';
-import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
+import { firstValueFrom } from 'rxjs';
+import { map, skip, tap, timeout } from 'rxjs/operators';
 
 const WORKPLACE_ID = 'wp-planned-atomic' as WorkplaceId;
 
@@ -84,6 +87,20 @@ describe('planned payment orchestration persistence', () => {
     });
   }
 
+  async function findJournalsForPayments(
+    workplaceId: WorkplaceId,
+    plannedPaymentIds: PlannedPaymentId[],
+  ) {
+    return database.collections
+      .get<Journal>('journals')
+      .query(
+        Q.where('planned_payment_id', Q.oneOf(plannedPaymentIds)),
+        Q.where('workplace_id', workplaceId),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .fetch();
+  }
+
   it('creates the journal and advances nextOccurrence in one writer batch', async () => {
     const payment = await createDuePayment();
     const expectedNextOccurrence = calculateNextOccurrence(payment.nextOccurrence, payment);
@@ -92,9 +109,7 @@ describe('planned payment orchestration persistence', () => {
 
     await processDuePlannedPayments(WORKPLACE_ID);
 
-    const journals = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
-      payment.id,
-    ]);
+    const journals = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
     const reloaded = await plannedPaymentRepository.find(WORKPLACE_ID, payment.id);
 
     expect(journals).toHaveLength(1);
@@ -124,9 +139,7 @@ describe('planned payment orchestration persistence', () => {
 
     await postPlannedPaymentOccurrence(WORKPLACE_ID, payment.id, occurrenceDate);
 
-    const [journal] = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
-      payment.id,
-    ]);
+    const [journal] = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
     const reloaded = await plannedPaymentRepository.find(WORKPLACE_ID, payment.id);
     expect(journal.status).toBe(JournalStatus.POSTED);
     expect(reloaded?.nextOccurrence).toBe(expectedNextOccurrence);
@@ -155,10 +168,7 @@ describe('planned payment orchestration persistence', () => {
     ).getTime();
 
     await postPlannedPaymentOccurrence(WORKPLACE_ID, payment.id, previousOccurrence);
-    const [previousPostedJournal] = await journalPlannedQueries.findByPlannedPaymentIds(
-      WORKPLACE_ID,
-      [payment.id],
-    );
+    const [previousPostedJournal] = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
     expect(previousPostedJournal.status).toBe(JournalStatus.POSTED);
     expect(previousPostedJournal.journalDate).toBeGreaterThanOrEqual(currentOccurrence);
 
@@ -176,9 +186,7 @@ describe('planned payment orchestration persistence', () => {
 
     await postPlannedPaymentOccurrence(WORKPLACE_ID, payment.id, currentOccurrence);
 
-    const journals = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
-      payment.id,
-    ]);
+    const journals = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
     expect(journals).toHaveLength(2);
     expect(journals.every(journal => journal.status === JournalStatus.POSTED)).toBe(true);
   }, 30000);
@@ -206,15 +214,53 @@ describe('planned payment orchestration persistence', () => {
       occurrenceDate,
     );
 
-    const reloaded = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
-      payment.id,
-    ]);
+    const reloaded = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
     const reloadedPayment = await plannedPaymentRepository.find(WORKPLACE_ID, payment.id);
     expect(reloaded).toHaveLength(1);
     expect(reloaded[0].id).toBe(scheduledJournal.id);
     expect(reloaded[0].status).toBe(JournalStatus.POSTED);
     expect(reloadedPayment?.nextOccurrence).toBe(calculateNextOccurrence(occurrenceDate, payment));
     expect(lookupSpy).toHaveBeenCalledTimes(1);
+  }, 30000);
+
+  it('refreshes the planned-payment listing when posting advances its next occurrence', async () => {
+    const payment = await createDuePayment();
+    const occurrenceDate = payment.nextOccurrence;
+    const expectedNextOccurrence = calculateNextOccurrence(occurrenceDate, payment);
+    const scheduledJournal = await journalPersistenceService.put(
+      {
+        journalDate: occurrenceDate,
+        description: payment.name,
+        currencyCode: payment.currencyCode,
+        transactions: buildPlannedPaymentTransferLines(payment),
+        status: JournalStatus.PLANNED,
+        plannedPaymentId: payment.id,
+      },
+      WORKPLACE_ID,
+    );
+
+    let markInitialEmission!: () => void;
+    const initialEmission = new Promise<void>(resolve => {
+      markInitialEmission = resolve;
+    });
+    const listedNextOccurrence = firstValueFrom(
+      plannedPaymentRepository.observeAll(WORKPLACE_ID).pipe(
+        tap(() => markInitialEmission()),
+        skip(1),
+        map(items => items.find(item => item.id === payment.id)?.nextOccurrence),
+        timeout({ first: 2000 }),
+      ),
+    );
+
+    await initialEmission;
+    await postPlannedJournalOccurrence(
+      WORKPLACE_ID,
+      payment.id,
+      scheduledJournal.id,
+      occurrenceDate,
+    );
+
+    await expect(listedNextOccurrence).resolves.toBe(expectedNextOccurrence);
   }, 30000);
 
   it('rejects a selected planned journal from a different occurrence date', async () => {
@@ -241,9 +287,7 @@ describe('planned payment orchestration persistence', () => {
       ),
     ).rejects.toThrow(/not scheduled for this occurrence/);
 
-    const [reloaded] = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
-      payment.id,
-    ]);
+    const [reloaded] = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
     expect(reloaded.status).toBe(JournalStatus.PLANNED);
   }, 30000);
 
@@ -289,9 +333,7 @@ describe('planned payment orchestration persistence', () => {
     await expect(generation).resolves.toMatchObject({ completed: true });
     await posting;
 
-    const reloaded = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
-      payment.id,
-    ]);
+    const reloaded = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
     expect(reloaded).toHaveLength(1);
     expect(reloaded[0].status).toBe(JournalStatus.POSTED);
   }, 30000);
@@ -324,9 +366,7 @@ describe('planned payment orchestration persistence', () => {
 
     await skipPlannedPaymentOccurrence(WORKPLACE_ID, payment.id, payment.nextOccurrence);
 
-    const [journal] = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
-      payment.id,
-    ]);
+    const [journal] = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
     const reloaded = await plannedPaymentRepository.find(WORKPLACE_ID, payment.id);
     expect(journal.status).toBe(JournalStatus.SKIPPED);
     expect(reloaded?.nextOccurrence).toBe(expectedNextOccurrence);
@@ -349,9 +389,7 @@ describe('planned payment orchestration persistence', () => {
 
     await postPlannedPaymentOccurrence(WORKPLACE_ID, payment.id, occurrenceDate);
 
-    const [journal] = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
-      payment.id,
-    ]);
+    const [journal] = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
     const [metadata] = await database.collections
       .get<JournalMetadata>('journal_metadata')
       .query(Q.where('journal_id', journal.id))
@@ -396,9 +434,7 @@ describe('planned payment orchestration persistence', () => {
       postPlannedPaymentOccurrence(WORKPLACE_ID, payment.id, payment.nextOccurrence),
     ).rejects.toThrow(/differ by/);
 
-    const [reloadedJournal] = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
-      payment.id,
-    ]);
+    const [reloadedJournal] = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
     const reloadedPayment = await plannedPaymentRepository.find(WORKPLACE_ID, payment.id);
     expect(reloadedJournal.status).toBe(JournalStatus.PLANNED);
     expect(reloadedPayment?.nextOccurrence).toBe(payment.nextOccurrence);
@@ -412,9 +448,7 @@ describe('planned payment orchestration persistence', () => {
       processDuePlannedPayments(WORKPLACE_ID),
     ]);
 
-    const journals = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
-      payment.id,
-    ]);
+    const journals = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
     expect(journals).toHaveLength(1);
   }, 30000);
 
@@ -429,9 +463,7 @@ describe('planned payment orchestration persistence', () => {
 
     expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
     expect(results.filter(result => result.status === 'rejected')).toHaveLength(1);
-    const journals = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
-      payment.id,
-    ]);
+    const journals = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
     const reloaded = await plannedPaymentRepository.find(WORKPLACE_ID, payment.id);
     expect(journals).toHaveLength(1);
     expect(reloaded?.nextOccurrence).toBe(calculateNextOccurrence(occurrenceDate, payment));
@@ -449,9 +481,7 @@ describe('planned payment orchestration persistence', () => {
       generatePlannedOccurrence(WORKPLACE_ID, payment.id, payment.nextOccurrence),
     ).rejects.toThrow('simulated schedule persistence failure');
 
-    const journals = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
-      payment.id,
-    ]);
+    const journals = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
     const reloaded = await plannedPaymentRepository.find(WORKPLACE_ID, payment.id);
 
     expect(journals).toHaveLength(0);
@@ -482,9 +512,7 @@ describe('planned payment orchestration persistence', () => {
       ),
     ).rejects.toThrow(/cancelled before commit/);
 
-    const journals = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
-      payment.id,
-    ]);
+    const journals = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
     const reloaded = await plannedPaymentRepository.find(WORKPLACE_ID, payment.id);
 
     expect(journals).toHaveLength(0);
@@ -552,12 +580,8 @@ describe('planned payment orchestration persistence', () => {
 
     await expect(processDuePlannedPayments(WORKPLACE_ID)).resolves.toBeUndefined();
 
-    const conflictedJournals = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
-      conflicted.id,
-    ]);
-    const healthyJournals = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
-      healthy.id,
-    ]);
+    const conflictedJournals = await findJournalsForPayments(WORKPLACE_ID, [conflicted.id]);
+    const healthyJournals = await findJournalsForPayments(WORKPLACE_ID, [healthy.id]);
     const reloadedConflicted = await plannedPaymentRepository.find(WORKPLACE_ID, conflicted.id);
     const reloadedHealthy = await plannedPaymentRepository.find(WORKPLACE_ID, healthy.id);
 
@@ -590,9 +614,7 @@ describe('planned payment orchestration persistence', () => {
 
     await processDuePlannedPayments(WORKPLACE_ID);
 
-    const journals = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
-      payment.id,
-    ]);
+    const journals = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
     const reloaded = await plannedPaymentRepository.find(WORKPLACE_ID, payment.id);
     expect(journals).toHaveLength(1);
     expect(journals[0].journalDate).toBe(postedEarlyAt);
@@ -613,9 +635,7 @@ describe('planned payment orchestration persistence', () => {
       postPlannedPaymentOccurrence(WORKPLACE_ID, payment.id, occurrenceDate),
     ).rejects.toThrow(/not active/);
 
-    const journals = await journalPlannedQueries.findByPlannedPaymentIds(WORKPLACE_ID, [
-      payment.id,
-    ]);
+    const journals = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
     const reloaded = await plannedPaymentRepository.find(WORKPLACE_ID, payment.id);
     expect(journals).toHaveLength(0);
     expect(reloaded?.nextOccurrence).toBe(occurrenceDate);

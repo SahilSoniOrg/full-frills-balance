@@ -6,7 +6,7 @@ import {
   PlannedPaymentStatus,
   AccountType,
 } from '@/src/types/enums';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
@@ -64,6 +64,17 @@ describe('planned payment commands (integration)', () => {
     recurrenceDay: 15,
   });
 
+  async function findJournalsForPayment(plannedPaymentId: PlannedPaymentId) {
+    return database.collections
+      .get<Journal>('journals')
+      .query(
+        Q.where('planned_payment_id', plannedPaymentId),
+        Q.where('workplace_id', WP),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .fetch();
+  }
+
   it('create persists payment, generates planned journals, and advances due processing', async () => {
     const created = await createPlannedPayment(WP, baseInput());
 
@@ -73,7 +84,7 @@ describe('planned payment commands (integration)', () => {
     const reloaded = await plannedPaymentRepository.find(WP, created.id);
     expect(reloaded?.name).toBe('Monthly rent');
 
-    const journals = await journalPlannedQueries.findByPlannedPaymentIds(WP, [created.id]);
+    const journals = await findJournalsForPayment(created.id);
     expect(journals.length).toBeGreaterThan(0);
     expect(journals.some(j => j.status === JournalStatus.PLANNED)).toBe(true);
   });
@@ -109,7 +120,7 @@ describe('planned payment commands (integration)', () => {
   it('delete soft-deletes active payment and cascades to unposted planned journals and transactions', async () => {
     const created = await createPlannedPayment(WP, baseInput());
 
-    const journalsBefore = await journalPlannedQueries.findByPlannedPaymentIds(WP, [created.id]);
+    const journalsBefore = await findJournalsForPayment(created.id);
     expect(journalsBefore.length).toBeGreaterThan(0);
     const journalIds = journalsBefore.map(j => j.id);
 
@@ -128,7 +139,7 @@ describe('planned payment commands (integration)', () => {
     const gone = await plannedPaymentRepository.find(WP, created.id);
     expect(gone).toBeNull();
 
-    const journalsAfter = await journalPlannedQueries.findByPlannedPaymentIds(WP, [created.id]);
+    const journalsAfter = await findJournalsForPayment(created.id);
     expect(journalsAfter.length).toBe(0);
 
     const txAfter = await database.collections
@@ -145,7 +156,7 @@ describe('planned payment commands (integration)', () => {
   it('delete preserves POSTED historical journals associated with the planned payment', async () => {
     const created = await createPlannedPayment(WP, baseInput());
 
-    const plannedJournals = await journalPlannedQueries.findByPlannedPaymentIds(WP, [created.id]);
+    const plannedJournals = await findJournalsForPayment(created.id);
     expect(plannedJournals.length).toBeGreaterThan(0);
 
     // Simulate posting one of the journals
@@ -164,7 +175,7 @@ describe('planned payment commands (integration)', () => {
     expect(reloaded.status).toBe(JournalStatus.POSTED);
 
     // Only the POSTED journal remains; all PLANNED journals are deleted
-    const remaining = await journalPlannedQueries.findByPlannedPaymentIds(WP, [created.id]);
+    const remaining = await findJournalsForPayment(created.id);
     expect(remaining.length).toBe(1);
     expect(remaining[0].id).toBe(postedJournal.id);
     expect(remaining[0].status).toBe(JournalStatus.POSTED);
@@ -179,7 +190,7 @@ describe('planned payment commands (integration)', () => {
 
   it('refuses to revert a posted journal to scheduled after its planned payment is deleted', async () => {
     const created = await createPlannedPayment(WP, baseInput());
-    const plannedJournals = await journalPlannedQueries.findByPlannedPaymentIds(WP, [created.id]);
+    const plannedJournals = await findJournalsForPayment(created.id);
     const postedJournal = plannedJournals[0];
     await database.write(async () => {
       await postedJournal.update(record => {

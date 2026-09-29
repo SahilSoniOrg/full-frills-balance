@@ -4,7 +4,7 @@ import Transaction from '@/src/data/models/Transaction';
 import { accountListMetricsQueries } from '@/src/data/repositories/account/AccountListMetricsQueries';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
@@ -141,7 +141,7 @@ describe('AccountListMetricsQueries workplace isolation', () => {
   });
 
   it('scopes accounts, transactions, and journals in every raw SQL branch', async () => {
-    const queryRaw = jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue([]);
+    const queryRaw = jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue([]);
 
     await accountListMetricsQueries.getAccountListItemsRaw(
       DAY - 1,
@@ -176,7 +176,7 @@ describe('AccountListMetricsQueries workplace isolation', () => {
   });
 
   it('matches scoped list metrics in the ORM fallback despite malformed links', async () => {
-    jest.spyOn(transactionRawRepository, 'queryRaw').mockResolvedValue(null);
+    jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue(null);
 
     const rows = await accountListMetricsQueries.getAccountListItemsRaw(
       DAY - 1,

@@ -5,6 +5,7 @@ import type { ActiveJournalStatus } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import { Observable, of } from 'rxjs';
+import { fetchSequentiallyInChunks } from '../fetchSequentiallyInChunks';
 import { buildActiveClauses, deterministicSort } from './transactionActiveClauses';
 
 export class TransactionQueryRepository {
@@ -20,70 +21,43 @@ export class TransactionQueryRepository {
   }
 
   async find(workplaceId: WorkplaceId, id: TransactionId): Promise<Transaction | null> {
-    try {
-      const transaction = await this.transactions.find(id);
-      if (transaction.deletedAt) return null;
-      if (transaction.workplaceId !== workplaceId) return null;
-      return transaction;
-    } catch {
-      return null;
-    }
+    const transactions = await this.transactions
+      .query(
+        Q.where('id', id),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.where('workplace_id', workplaceId),
+      )
+      .fetch();
+    return transactions[0] ?? null;
   }
 
+  /**
+   * Results follow requested chunk order and WatermelonDB order within each chunk.
+   * This does not promise input-ID order within a chunk.
+   */
   async findByJournals(workplaceId: WorkplaceId, journalIds: JournalId[]): Promise<Transaction[]> {
-    if (journalIds.length === 0) return [];
-    const CHUNK_SIZE = 100;
-    if (journalIds.length <= CHUNK_SIZE) {
-      return this.transactions
+    return fetchSequentiallyInChunks(journalIds, chunk =>
+      this.transactions
         .query(
-          Q.where('journal_id', Q.oneOf(journalIds)),
+          Q.where('journal_id', Q.oneOf([...chunk])),
           Q.where('deleted_at', Q.eq(null)),
           Q.where('workplace_id', workplaceId),
         )
-        .fetch();
-    }
-
-    const results: Transaction[] = [];
-    for (let i = 0; i < journalIds.length; i += CHUNK_SIZE) {
-      const chunk = journalIds.slice(i, i + CHUNK_SIZE);
-      const batch = await this.transactions
-        .query(
-          Q.where('journal_id', Q.oneOf(chunk)),
-          Q.where('deleted_at', Q.eq(null)),
-          Q.where('workplace_id', workplaceId),
-        )
-        .fetch();
-      results.push(...batch);
-    }
-    return results;
+        .fetch(),
+    );
   }
 
+  /** Results follow requested chunk order; rows within a chunk retain database order. */
   async findByIds(workplaceId: WorkplaceId, ids: string[]): Promise<Transaction[]> {
-    if (ids.length === 0) return [];
-    const CHUNK_SIZE = 100;
-    if (ids.length <= CHUNK_SIZE) {
-      return this.transactions
+    return fetchSequentiallyInChunks(ids, chunk =>
+      this.transactions
         .query(
-          Q.where('id', Q.oneOf(ids)),
+          Q.where('id', Q.oneOf([...chunk])),
           Q.where('deleted_at', Q.eq(null)),
           Q.where('workplace_id', workplaceId),
         )
-        .fetch();
-    }
-
-    const results: Transaction[] = [];
-    for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
-      const chunk = ids.slice(i, i + CHUNK_SIZE);
-      const batch = await this.transactions
-        .query(
-          Q.where('id', Q.oneOf(chunk)),
-          Q.where('deleted_at', Q.eq(null)),
-          Q.where('workplace_id', workplaceId),
-        )
-        .fetch();
-      results.push(...batch);
-    }
-    return results;
+        .fetch(),
+    );
   }
 
   async findByJournal(workplaceId: WorkplaceId, journalId: JournalId): Promise<Transaction[]> {

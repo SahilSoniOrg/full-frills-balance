@@ -1,9 +1,9 @@
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { JournalDisplayType, JournalStatus } from '@/src/types/enums';
 import { PlainInboxRecord } from '@/src/types/plainDtos';
 import { enrichTransactionInboxRecords } from '../transactionInboxMapping';
 
-jest.mock('@/src/data/repositories/journal/journalTimelineModule', () => ({
+jest.mock('@/src/data/repositories/journal/journalQueryRepository', () => ({
   journalQueryRepository: {
     findByIds: jest.fn(),
   },

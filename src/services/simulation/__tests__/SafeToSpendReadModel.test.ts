@@ -4,9 +4,10 @@ import { WorkplaceId } from '@/src/types/ids';
 import { accountObserveQueries } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
-import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
+import { transactionRawPatternQueries } from '@/src/data/repositories/raw/TransactionRawPatternQueries';
 import {
   transactionObserveQueries,
   transactionQueryRepository,
@@ -24,13 +25,21 @@ import {
 import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { BehaviorSubject, of } from 'rxjs';
+jest.mock('@/src/data/repositories/raw/TransactionRawMetricsQueries', () => ({
+  transactionRawMetricsQueries: {
+    getDailyDeltasGroupedRaw: jest.fn(),
+    getLatestBalancesRaw: jest.fn(),
+  },
+}));
+jest.mock('@/src/data/repositories/raw/TransactionRawPatternQueries', () => ({
+  transactionRawPatternQueries: { getRecurringPatternsRaw: jest.fn() },
+}));
 
 jest.mock('@/src/data/repositories/account');
 jest.mock('@/src/data/repositories/BudgetRepository');
 jest.mock('@/src/data/repositories/transaction');
-jest.mock('@/src/data/repositories/TransactionRawRepository');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
-jest.mock('@/src/data/repositories/journal/journalTimelineModule');
+jest.mock('@/src/data/repositories/journal/JournalObserveQueries');
 jest.mock('@/src/data/repositories/journal/journalQueryRepository');
 jest.mock('@/src/data/repositories/WorkplaceRepository');
 jest.mock('@/src/services/exchange-rate-service');
@@ -114,9 +123,9 @@ describe('SafeToSpendReadModel', () => {
     (transactionObserveQueries.observeActiveCount as jest.Mock).mockReturnValue(of(0));
     (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
     (transactionQueryRepository.findByJournals as jest.Mock).mockResolvedValue([]);
-    (transactionRawRepository.getRecurringPatternsRaw as jest.Mock).mockResolvedValue([]);
-    (transactionRawRepository.getDailyDeltasGroupedRaw as jest.Mock).mockResolvedValue([]);
-    (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(new Map());
+    (transactionRawPatternQueries.getRecurringPatternsRaw as jest.Mock).mockResolvedValue([]);
+    (transactionRawMetricsQueries.getDailyDeltasGroupedRaw as jest.Mock).mockResolvedValue([]);
+    (transactionRawMetricsQueries.getLatestBalancesRaw as jest.Mock).mockResolvedValue(new Map());
     (exchangeRateService.fetchRatesForBase as jest.Mock).mockResolvedValue({});
     (exchangeRateService.observeSpotRateUpdates as jest.Mock).mockReturnValue(of(''));
     (budgetReadService.observeBudgetUsage as jest.Mock).mockReturnValue(

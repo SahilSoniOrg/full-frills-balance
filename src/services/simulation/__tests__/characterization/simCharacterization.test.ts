@@ -11,15 +11,11 @@ import Budget from '@/src/data/models/Budget';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import { FlowCategory, FlowSource } from '@/src/services/simulation/types';
-
-jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
-  transactionRawRepository: {
-    getLatestBalancesRaw: jest.fn().mockResolvedValue(new Map()),
-    getAccountPeriodMetricsRaw: jest.fn().mockResolvedValue({ totalDecrease: 0, totalIncrease: 0 }),
-  },
+jest.mock('@/src/data/repositories/raw/TransactionRawMetricsQueries', () => ({
+  transactionRawMetricsQueries: { getLatestBalancesRaw: jest.fn() },
 }));
 
 jest.mock('@/src/data/repositories/transaction', () => ({
@@ -304,7 +300,7 @@ describe('Forward-Finance Characterization Baseline (Behavior Locks)', () => {
       },
     ]);
 
-    (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(
+    (transactionRawMetricsQueries.getLatestBalancesRaw as jest.Mock).mockResolvedValue(
       new Map([[creditCardAccountId, 800]]),
     );
 

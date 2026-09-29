@@ -2,10 +2,8 @@ import { AccountType, TransactionType } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 
 import { accountQueryRepository } from '@/src/data/repositories/account';
-import {
-  journalEnrichmentQueries,
-  journalQueryRepository,
-} from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { JournalService } from '@/src/services/journal/journalDomainService';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { workplaceService } from '@/src/services/WorkplaceService';
@@ -14,7 +12,8 @@ import { JournalBalanceError } from '@/src/domain/accounting/journalBalanceEvalu
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/account');
-jest.mock('@/src/data/repositories/journal/journalTimelineModule');
+jest.mock('@/src/data/repositories/journal/JournalEnrichmentQueries');
+jest.mock('@/src/data/repositories/journal/journalQueryRepository');
 jest.mock('@/src/data/repositories/transaction');
 jest.mock('@/src/services/audit-service');
 jest.mock('@/src/services/RebuildQueueService');

@@ -1,6 +1,5 @@
-import { AppConfig } from '@/src/constants/app-config';
 import { preferences } from '@/src/services/preferences';
-import type { NotificationCadence } from '@/src/services/preferences';
+import type { NotificationCadence } from '@/src/services/notification/NotificationService';
 import { useCallback, useSyncExternalStore } from 'react';
 
 export type NotificationPrefsState = {
@@ -19,68 +18,58 @@ export type NotificationPrefsState = {
 export function useNotificationPrefs(): NotificationPrefsState {
   const notificationCadence = useSyncExternalStore(
     onStoreChange => {
-      const sub = preferences.notifications.observeCadence().subscribe(() => {
+      const sub = preferences.observe('notificationCadence').subscribe(() => {
         onStoreChange();
       });
       return () => sub.unsubscribe();
     },
-    () => preferences.notifications.notificationCadence,
-    () => preferences.notifications.notificationCadence,
+    () => preferences.getSnapshot().notificationCadence || 'none',
+    () => preferences.getSnapshot().notificationCadence || 'none',
   );
 
   const notificationHour = useSyncExternalStore(
     onStoreChange => {
-      const sub = preferences.notifications.observeHour().subscribe(() => {
+      const sub = preferences.observe('notificationHour').subscribe(() => {
         onStoreChange();
       });
       return () => sub.unsubscribe();
     },
-    () =>
-      preferences.notifications.notificationHour ?? AppConfig.defaults.notifications.defaultHour,
-    () =>
-      preferences.notifications.notificationHour ?? AppConfig.defaults.notifications.defaultHour,
+    () => preferences.getSnapshot().notificationHour,
+    () => preferences.getSnapshot().notificationHour,
   );
 
   const notificationMinute = useSyncExternalStore(
     onStoreChange => {
-      const sub = preferences.notifications.observeMinute().subscribe(() => {
+      const sub = preferences.observe('notificationMinute').subscribe(() => {
         onStoreChange();
       });
       return () => sub.unsubscribe();
     },
-    () =>
-      preferences.notifications.notificationMinute ??
-      AppConfig.defaults.notifications.defaultMinute,
-    () =>
-      preferences.notifications.notificationMinute ??
-      AppConfig.defaults.notifications.defaultMinute,
+    () => preferences.getSnapshot().notificationMinute,
+    () => preferences.getSnapshot().notificationMinute,
   );
 
   const notificationWeekday = useSyncExternalStore(
     onStoreChange => {
-      const sub = preferences.notifications.observeWeekday().subscribe(() => {
+      const sub = preferences.observe('notificationWeekday').subscribe(() => {
         onStoreChange();
       });
       return () => sub.unsubscribe();
     },
-    () =>
-      preferences.notifications.notificationWeekday ??
-      AppConfig.defaults.notifications.defaultWeekday,
-    () =>
-      preferences.notifications.notificationWeekday ??
-      AppConfig.defaults.notifications.defaultWeekday,
+    () => preferences.getSnapshot().notificationWeekday,
+    () => preferences.getSnapshot().notificationWeekday,
   );
 
   const setNotificationCadence = useCallback((cadence: NotificationCadence) => {
-    preferences.notifications.setNotificationCadence(cadence);
+    preferences.update({ notificationCadence: cadence });
   }, []);
 
   const setNotificationTime = useCallback((hour: number, minute: number) => {
-    preferences.notifications.setNotificationTime(hour, minute);
+    preferences.update({ notificationHour: hour, notificationMinute: minute });
   }, []);
 
   const setNotificationWeekday = useCallback((weekday: number) => {
-    preferences.notifications.setNotificationWeekday(weekday);
+    preferences.update({ notificationWeekday: weekday });
   }, []);
 
   return {

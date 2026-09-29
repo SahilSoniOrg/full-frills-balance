@@ -1,49 +1,30 @@
-import { WorkplaceId } from '@/src/types/ids';
-import { ParserOutput, TransactionFallbackAIProvider } from './types/ai-parsing';
-import { mockAIProvider } from './TransactionFallbackAIProvider';
-
-import { PipelineContext, PipelineStep } from './pipeline/types';
-import { ContextGatheringStep } from './pipeline/steps/ContextGatheringStep';
+import { workplaceService } from '@/src/services/WorkplaceService';
+import type { WorkplaceId } from '@/src/types/ids';
+import type { ParserOutput } from './types/ai-parsing';
+import type { IngestionContext } from './pipeline/types';
 import { DeterministicStep } from './pipeline/steps/DeterministicStep';
 import { AiFallbackStep } from './pipeline/steps/AiFallbackStep';
 
 export class TransactionIngestionService {
-  private customAiProvider: TransactionFallbackAIProvider | null = null;
-  private pipelineSteps: PipelineStep[] = [
-    new ContextGatheringStep(),
-    new DeterministicStep(),
-    new AiFallbackStep(),
-  ];
-
-  setAiProvider(provider: TransactionFallbackAIProvider) {
-    this.customAiProvider = provider;
-  }
-
-  private getEffectiveAiProvider(): TransactionFallbackAIProvider {
-    return this.customAiProvider ?? mockAIProvider;
-  }
-
   async ingest(
     transcript: string,
     workplaceId: WorkplaceId,
     forceAi: boolean = false,
   ): Promise<ParserOutput> {
-    const context: PipelineContext = {
+    const startTime = Date.now();
+    const context: IngestionContext = {
       transcript,
       workplaceId,
       forceAi,
-      startTime: Date.now(),
-      aiProvider: this.getEffectiveAiProvider(),
-      isHalted: false,
+      startTime,
+      defaultCurrency: await workplaceService.getCurrency(workplaceId),
     };
 
-    for (const step of this.pipelineSteps) {
-      await step.execute(context);
-      if (context.isHalted) break;
-    }
+    await new DeterministicStep().execute(context);
+    if (!context.result) await new AiFallbackStep().execute(context);
 
     if (!context.result) {
-      throw new Error('Pipeline failed to produce a result');
+      throw new Error('Transaction ingestion failed to produce a result');
     }
 
     return context.result;

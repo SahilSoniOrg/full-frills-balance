@@ -1,17 +1,13 @@
-import Account from '@/src/data/models/Account';
-import { WorkplaceId } from '@/src/types/ids';
-import { ParserOutput, TransactionFallbackAIProvider } from '../types/ai-parsing';
+import type { WorkplaceId } from '@/src/types/ids';
+import type { ParserOutput } from '../types/ai-parsing';
 
-export interface PipelineContext {
+export interface IngestionContext {
   transcript: string;
   workplaceId: WorkplaceId;
   forceAi: boolean;
   startTime: number;
-  aiProvider: TransactionFallbackAIProvider;
 
-  // Populated by ContextGatheringStep
-  defaultCurrency?: string;
-  allAccounts?: Account[];
+  defaultCurrency: string;
 
   // Populated by DeterministicStep
   parsed?: {
@@ -33,10 +29,4 @@ export interface PipelineContext {
 
   // The final result
   result?: ParserOutput;
-
-  isHalted: boolean;
-}
-
-export interface PipelineStep {
-  execute(context: PipelineContext): Promise<void>;
 }

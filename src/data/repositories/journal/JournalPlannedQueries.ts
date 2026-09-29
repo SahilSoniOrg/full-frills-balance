@@ -5,42 +5,17 @@ import JournalMetadata from '@/src/data/models/JournalMetadata';
 import { JournalStatus } from '@/src/types/enums';
 import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { safeParseJSON } from '@/src/utils/serialization';
-import { Model, Q } from '@nozbe/watermelondb';
-
-export type PlannedJournalStatus =
-  JournalStatus.PLANNED | JournalStatus.PAUSED | JournalStatus.SKIPPED;
+import { Q } from '@nozbe/watermelondb';
 
 export type PlannedOccurrenceJournals =
   | { kind: 'none' }
   | { kind: 'planned'; journals: Journal[] }
   | { kind: 'settled'; journalId: JournalId };
 
-const PLANNED_STATUSES = new Set<JournalStatus>([
-  JournalStatus.PLANNED,
-  JournalStatus.PAUSED,
-  JournalStatus.SKIPPED,
-]);
-
-/** Planned-payment journal lookups and status batch helpers. */
+/** Read queries for planned-payment journals. Writes go through journal persistence. */
 export class JournalPlannedQueries {
   private get journals() {
     return database.collections.get<Journal>('journals');
-  }
-
-  async findEarliestPlannedByPayment(
-    workplaceId: WorkplaceId,
-    plannedPaymentId: PlannedPaymentId,
-  ): Promise<Journal | undefined> {
-    const results = await this.journals
-      .query(
-        Q.where('planned_payment_id', plannedPaymentId),
-        Q.where('workplace_id', workplaceId),
-        Q.where('status', JournalStatus.PLANNED),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.sortBy('journal_date', Q.asc),
-      )
-      .fetch();
-    return results[0];
   }
 
   /**
@@ -81,20 +56,6 @@ export class JournalPlannedQueries {
     return planned.length > 0 ? { kind: 'planned', journals: planned } : { kind: 'none' };
   }
 
-  async findByPlannedPaymentIds(
-    workplaceId: WorkplaceId,
-    plannedPaymentIds: PlannedPaymentId[],
-  ): Promise<Journal[]> {
-    if (plannedPaymentIds.length === 0) return [];
-    return this.journals
-      .query(
-        Q.where('planned_payment_id', Q.oneOf(plannedPaymentIds)),
-        Q.where('workplace_id', workplaceId),
-        Q.where('deleted_at', Q.eq(null)),
-      )
-      .fetch();
-  }
-
   async findByPlannedPaymentAndStatus(
     workplaceId: WorkplaceId,
     plannedPaymentId: PlannedPaymentId,
@@ -108,57 +69,6 @@ export class JournalPlannedQueries {
         Q.where('deleted_at', Q.eq(null)),
       )
       .fetch();
-  }
-
-  async findUnpostedByPlannedPayment(
-    workplaceId: WorkplaceId,
-    plannedPaymentId: PlannedPaymentId,
-  ): Promise<Journal[]> {
-    return this.journals
-      .query(
-        Q.where('planned_payment_id', plannedPaymentId),
-        Q.where('workplace_id', workplaceId),
-        Q.where(
-          'status',
-          Q.oneOf([JournalStatus.PLANNED, JournalStatus.PAUSED, JournalStatus.SKIPPED]),
-        ),
-        Q.where('deleted_at', Q.eq(null)),
-      )
-      .fetch();
-  }
-
-  prepareStatusUpdates(
-    workplaceId: WorkplaceId,
-    journals: Journal[],
-    status: PlannedJournalStatus | ((journal: Journal) => PlannedJournalStatus),
-  ): Model[] {
-    this.assertJournalOwnership(workplaceId, journals);
-    const updates = journals.map(journal => ({
-      journal,
-      status: typeof status === 'function' ? status(journal) : status,
-    }));
-    const invalidUpdate = updates.find(update => !PLANNED_STATUSES.has(update.status));
-    if (invalidUpdate) {
-      throw new Error(`Unsupported planned journal status: ${invalidUpdate.status}`);
-    }
-    return updates.map(({ journal, status: nextStatus }) =>
-      journal.prepareUpdate((record: Journal) => {
-        record.status = nextStatus;
-        record.updatedAt = new Date();
-      }),
-    );
-  }
-
-  async batchUpdateStatus(
-    workplaceId: WorkplaceId,
-    journals: Journal[],
-    status: PlannedJournalStatus,
-  ): Promise<void> {
-    if (journals.length === 0) return;
-    const updates = this.prepareStatusUpdates(workplaceId, journals, status);
-    await database.write(async () => {
-      await database.batch(updates);
-    });
   }
 
   private async originalPlannedDates(
@@ -183,17 +93,6 @@ export class JournalPlannedQueries {
       }
     }
     return originalDateByJournalId;
-  }
-
-  private assertJournalOwnership(workplaceId: WorkplaceId, journals: Journal[]): void {
-    this.assertModelOwnership(workplaceId, journals);
-  }
-
-  private assertModelOwnership(workplaceId: WorkplaceId, journals: Journal[]): void {
-    const foreignJournal = journals.find(journal => journal.workplaceId !== workplaceId);
-    if (foreignJournal) {
-      throw new Error(`Journal ${foreignJournal.id} does not belong to workplace ${workplaceId}`);
-    }
   }
 }
 

@@ -1,54 +1,23 @@
-import { AccountType } from '@/src/types/enums';
-
 import { analytics } from '@/src/services/analytics';
 import { resolveAccount } from '@/src/services/ledger/resolution';
 import { logger } from '@/src/utils/logger';
-import { AIContext, TransactionSemanticTag } from '../../types/ai-parsing';
-import { PipelineContext, PipelineStep } from '../types';
+import type { TransactionSemanticTag } from '../../types/ai-parsing';
+import { parseMockTransaction } from '../../mockTransactionParser';
+import type { IngestionContext } from '../types';
 
-export class AiFallbackStep implements PipelineStep {
-  async execute(context: PipelineContext): Promise<void> {
+export class AiFallbackStep {
+  async execute(context: IngestionContext): Promise<void> {
     analytics.logAiIngestion(context.forceAi ? 'ai_forced' : 'ai_fallback_triggered');
 
-    const allAccounts = context.allAccounts || [];
-    const assetAccountNames = allAccounts
-      .filter(a => a.accountType === AccountType.ASSET || a.accountType === AccountType.LIABILITY)
-      .map(a => a.name);
-    const categoryAccountNames = allAccounts
-      .filter(a => a.accountType === AccountType.INCOME || a.accountType === AccountType.EXPENSE)
-      .map(a => a.name);
-
     const parsed = context.parsed!;
-    const defaultCurrency = context.defaultCurrency!;
+    const defaultCurrency = context.defaultCurrency;
     const resolved = context.resolved!;
 
-    const aiContext: AIContext = {
-      accounts: assetAccountNames,
-      categories: categoryAccountNames,
-      parserHints: {
-        amount: parsed.amount,
-        rawAccount: parsed.sourceAccountHint,
-        rawItem: parsed.destinationCategoryHint,
-        direction: parsed.direction,
-      },
-    };
-
     try {
-      let timeoutOccurred = false;
-      const aiParsed = await Promise.race([
-        context.aiProvider.parse(context.transcript, aiContext),
-        new Promise<null>(resolve =>
-          setTimeout(() => {
-            timeoutOccurred = true;
-            resolve(null);
-          }, 20000),
-        ),
-      ]);
+      const aiParsed = await parseMockTransaction(context.transcript);
 
       const latency = Date.now() - context.startTime;
-      if (timeoutOccurred) {
-        analytics.logAiIngestion('ai_timeout', { latency_ms: latency });
-      } else if (aiParsed) {
+      if (aiParsed) {
         analytics.logAiIngestion('ai_success', { latency_ms: latency });
 
         // SECOND PASS RESOLUTION
@@ -79,7 +48,6 @@ export class AiFallbackStep implements PipelineStep {
           provider: 'ai',
           processTimeMs: Date.now() - context.startTime,
         };
-        context.isHalted = true;
         return;
       } else {
         analytics.logAiIngestion('ai_failure', { latency_ms: latency });

@@ -4,9 +4,10 @@ import {
   stageModelWrite,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
+import { observeQueryWithModelChanges } from '@/src/data/repositories/observeQueryWithModelChanges';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
-import { Model, Q } from '@nozbe/watermelondb';
+import { Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
 
 export interface PlannedPaymentPersistenceInput {
@@ -27,6 +28,14 @@ export interface PlannedPaymentPersistenceInput {
   recurrenceMonth?: number;
 }
 
+export type PlannedPaymentScheduleUpdate = Partial<
+  Omit<PlannedPaymentPersistenceInput, 'status' | 'nextOccurrence'>
+> & { nextOccurrence?: number };
+
+export type PlannedPaymentOccurrenceUpdate = Partial<
+  Pick<PlannedPaymentPersistenceInput, 'status' | 'nextOccurrence'>
+>;
+
 export type PlannedPaymentMergeRecords = {
   sourceFrom: PlannedPayment[];
   sourceTo: PlannedPayment[];
@@ -44,31 +53,30 @@ export class PlannedPaymentRepository {
   }
 
   observeAll(workplaceId: WorkplaceId) {
-    return this.plannedPayments
-      .query(
+    return observeQueryWithModelChanges(
+      this.plannedPayments.query(
         Q.where('workplace_id', workplaceId),
         Q.where('deleted_at', Q.eq(null)),
         Q.sortBy('next_occurrence', Q.asc),
-      )
-      .observe();
+      ),
+    );
   }
 
   observeById(workplaceId: WorkplaceId, id: PlannedPaymentId) {
-    return this.plannedPayments
-      .query(Q.where('workplace_id', workplaceId), Q.where('id', id))
-      .observe()
-      .pipe(map(results => results[0] ?? null));
+    return observeQueryWithModelChanges(
+      this.plannedPayments.query(Q.where('workplace_id', workplaceId), Q.where('id', id)),
+    ).pipe(map(results => results[0] ?? null));
   }
 
   observeActive(workplaceId: WorkplaceId) {
-    return this.plannedPayments
-      .query(
+    return observeQueryWithModelChanges(
+      this.plannedPayments.query(
         Q.where('workplace_id', workplaceId),
         Q.where('status', PlannedPaymentStatus.ACTIVE),
         Q.where('deleted_at', Q.eq(null)),
         Q.sortBy('next_occurrence', Q.asc),
-      )
-      .observe();
+      ),
+    );
   }
 
   async findAllActive(workplaceId: WorkplaceId): Promise<PlannedPayment[]> {
@@ -82,14 +90,14 @@ export class PlannedPaymentRepository {
   }
 
   async find(workplaceId: WorkplaceId, id: PlannedPaymentId): Promise<PlannedPayment | null> {
-    try {
-      const plannedPayment = await this.plannedPayments.find(id);
-      if (plannedPayment.deletedAt) return null;
-      if (plannedPayment.workplaceId !== workplaceId) return null;
-      return plannedPayment;
-    } catch {
-      return null;
-    }
+    const matches = await this.plannedPayments
+      .query(
+        Q.where('id', id),
+        Q.where('workplace_id', workplaceId),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .fetch();
+    return matches[0] ?? null;
   }
 
   async create(
@@ -107,10 +115,10 @@ export class PlannedPaymentRepository {
     return result;
   }
 
-  async update(
+  async updateSchedule(
     workplaceId: WorkplaceId,
     pp: PlannedPayment,
-    updates: Partial<PlannedPaymentPersistenceInput>,
+    updates: PlannedPaymentScheduleUpdate,
   ): Promise<PlannedPayment> {
     //get first to verify workplace scoping
     const record = await this.find(workplaceId, pp.id);
@@ -130,7 +138,7 @@ export class PlannedPaymentRepository {
     session: AccountingWriteSession,
     workplaceId: WorkplaceId,
     id: PlannedPaymentId,
-    updates: Partial<PlannedPaymentPersistenceInput>,
+    updates: PlannedPaymentOccurrenceUpdate,
     expected?: Partial<Pick<PlannedPayment, 'status' | 'nextOccurrence'>>,
   ): Promise<PlannedPayment> {
     const record = await this.find(workplaceId, id);
@@ -159,7 +167,7 @@ export class PlannedPaymentRepository {
     return record;
   }
 
-  prepareUpdate(
+  private prepareUpdate(
     workplaceId: WorkplaceId,
     pp: PlannedPayment,
     updates: Partial<PlannedPaymentPersistenceInput>,
@@ -170,18 +178,6 @@ export class PlannedPaymentRepository {
     return pp.prepareUpdate(record => {
       Object.assign(record, updates);
       record.updatedAt = new Date();
-    });
-  }
-
-  prepareStatusUpdate(
-    workplaceId: WorkplaceId,
-    pp: PlannedPayment,
-    status: PlannedPaymentStatus,
-    nextOccurrence?: number,
-  ): Model {
-    return this.prepareUpdate(workplaceId, pp, {
-      status,
-      ...(nextOccurrence === undefined ? {} : { nextOccurrence }),
     });
   }
 

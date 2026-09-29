@@ -3,7 +3,9 @@ import { AccountType, TransactionType } from '@/src/types/enums';
 import { TransactionId, WorkplaceId } from '@/src/types/ids';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
-import { transactionWriteRepository } from '@/src/data/repositories/transaction';
+import Transaction from '@/src/data/models/Transaction';
+import { createJournalFixture } from '@/src/testing/journalFixtures';
+import { Q } from '@nozbe/watermelondb';
 
 describe('BalanceSnapshotRepository', () => {
   beforeEach(async () => {
@@ -30,31 +32,34 @@ describe('BalanceSnapshotRepository', () => {
       workplaceId: wp2,
     });
 
-    const tx1 = await transactionWriteRepository.create(
+    const localJournal = await createJournalFixture(
       {
-        accountId: acc1.id,
-        amount: 100,
-        transactionType: TransactionType.DEBIT,
+        journalDate: 1000,
+        description: 'Local snapshot fixture',
         currencyCode: 'USD',
-        transactionDate: 1000,
+        transactions: [{ accountId: acc1.id, amount: 100, transactionType: TransactionType.DEBIT }],
       },
-      2,
-      true,
       wp1,
     );
-
-    const foreignTx = await transactionWriteRepository.create(
+    const foreignJournal = await createJournalFixture(
       {
-        accountId: foreignAcc.id,
-        amount: 500,
-        transactionType: TransactionType.DEBIT,
+        journalDate: 1000,
+        description: 'Foreign snapshot fixture',
         currencyCode: 'USD',
-        transactionDate: 1000,
+        transactions: [
+          { accountId: foreignAcc.id, amount: 500, transactionType: TransactionType.DEBIT },
+        ],
       },
-      2,
-      true,
       wp2,
     );
+    const [tx1] = await database.collections
+      .get<Transaction>('transactions')
+      .query(Q.where('journal_id', localJournal.id))
+      .fetch();
+    const [foreignTx] = await database.collections
+      .get<Transaction>('transactions')
+      .query(Q.where('journal_id', foreignJournal.id))
+      .fetch();
 
     await balanceSnapshotRepository.create(wp1, {
       accountId: acc1.id,

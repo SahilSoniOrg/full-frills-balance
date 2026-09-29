@@ -4,7 +4,7 @@ import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';
 import Transaction from '../../models/Transaction';
 import { RecurringPattern } from '../TransactionTypes';
-import { transactionRawMetricsQueries } from './TransactionRawMetricsQueries';
+import { rawSqlExecutor } from './RawSqlExecutor';
 
 export class TransactionRawPatternQueries {
   async getRecurringPatternsRaw(
@@ -38,7 +38,7 @@ export class TransactionRawPatternQueries {
       ORDER BY occurrenceCount DESC
     `;
 
-    const raws = await transactionRawMetricsQueries.queryRaw<RecurringPattern>(sql, [
+    const raws = await rawSqlExecutor.query<RecurringPattern>(sql, [
       startDate,
       workplaceId,
       workplaceId,

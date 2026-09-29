@@ -1,6 +1,5 @@
-import { persistBatch } from '@/src/data/repositories/persistBatch';
 import AuditLog from '@/src/data/models/AuditLog';
-import { accountQueryRepository } from '@/src/data/repositories/account';
+import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import {
   ArchiveAuditEntry,
@@ -87,10 +86,13 @@ export async function applyAccountArchiveChanges(
   if (!prepared) return false;
 
   const { archiveTargets, unarchiveTargets, now } = prepared.plan;
-  await persistBatch(() => [
-    ...prepareArchiveTargetOps(archiveTargets, unarchiveTargets, now),
-    ...prepareArchiveAuditLogs(workplaceId, prepared.auditEntries),
-  ]);
+  await accountWriteRepository.commitMutationPlan(async () => ({
+    prepareOps: () => [
+      ...prepareArchiveTargetOps(archiveTargets, unarchiveTargets, now),
+      ...prepareArchiveAuditLogs(workplaceId, prepared.auditEntries),
+    ],
+    result: undefined,
+  }));
 
   trackArchiveAnalytics(archiveTargets, unarchiveTargets);
   return true;

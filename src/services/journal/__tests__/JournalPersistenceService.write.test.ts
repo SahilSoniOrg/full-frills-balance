@@ -4,8 +4,7 @@ import { AccountType, JournalDisplayType, TransactionType, JournalStatus } from 
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import { journalListQueryRepository } from '@/src/data/repositories/journal/journalListQueryRepository';
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
@@ -82,7 +81,7 @@ describe('JournalPersistenceService write paths', () => {
     await rebuildQueueService.flush();
 
     expect(journals.length).toBe(2);
-    const listed = await journalListQueryRepository.findAll(workplaceId);
+    const listed = await journalQueryRepository.findAll(workplaceId);
     expect(listed.length).toBe(2);
   });
 
@@ -359,7 +358,7 @@ describe('JournalPersistenceService write paths', () => {
       ),
     ).rejects.toThrow('0.01 USD');
 
-    expect(await journalListQueryRepository.findAll(workplaceId)).toHaveLength(0);
+    expect(await journalQueryRepository.findAll(workplaceId)).toHaveLength(0);
   });
 
   it('repository rejects account reassignment that breaks a posted journal balance', async () => {
@@ -434,7 +433,7 @@ describe('JournalPersistenceService write paths', () => {
       journalPersistenceService.reverse('missing' as JournalId, 'Refund', workplaceId),
     ).rejects.toThrow(/Original journal not found/);
 
-    const listed = await journalListQueryRepository.findAll(workplaceId);
+    const listed = await journalQueryRepository.findAll(workplaceId);
     expect(listed).toEqual([]);
   });
 
@@ -457,7 +456,7 @@ describe('JournalPersistenceService write paths', () => {
       ),
     ).rejects.toThrow(/Original journal not found/);
 
-    const listed = await journalListQueryRepository.findAll(workplaceId);
+    const listed = await journalQueryRepository.findAll(workplaceId);
     expect(listed).toHaveLength(1);
     expect(listed[0].id).toBe(original.id);
     expect(listed[0].status).not.toBe(JournalStatus.REVERSED);

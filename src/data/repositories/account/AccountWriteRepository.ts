@@ -3,11 +3,12 @@ import {
   getStagedAccounts,
   runAccountingWriteSession,
   stageAccountCreation,
+  stageModelWrite,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
 import Account from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
-import { auditRepository } from '@/src/data/repositories/AuditRepository';
+import { auditRepository, type AuditEntry } from '@/src/data/repositories/AuditRepository';
 import { getDefaultSubtypeForType, isSubtypeAllowedForType } from '@/src/types/accountSubtype';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountSubtype, AccountType, AuditAction } from '@/src/types/enums';
@@ -16,6 +17,32 @@ import { Model, Q } from '@nozbe/watermelondb';
 import { accountMergeOperations } from './AccountMergeOperations';
 import { accountQueryRepository } from './AccountQueryRepository';
 import type { AccountPersistenceInput } from './types';
+
+export type AccountAuditContribution = Pick<AuditEntry, 'action' | 'changes'>;
+
+export interface AccountMutationCommitFacts {
+  balanceRebuildAccountIds: AccountId[];
+}
+
+/** Validated account-local changes plus the effects implied by committing them. */
+export interface AccountMutationPlan {
+  workplaceId: WorkplaceId;
+  account: Account;
+  normalizedUpdates: Partial<AccountPersistenceInput>;
+  existingMetadata: AccountMetadata | null;
+  audit?: AccountAuditContribution;
+  commitFacts: AccountMutationCommitFacts;
+}
+
+export interface AccountMutationResult {
+  account: Account;
+  commitFacts: AccountMutationCommitFacts;
+}
+
+export interface PreparedAccountMutation<T> {
+  prepareOps: () => readonly Model[];
+  result: T;
+}
 
 export class AccountWriteRepository {
   private assertCurrencyUnchanged(
@@ -41,6 +68,15 @@ export class AccountWriteRepository {
 
   async create(data: AccountPersistenceInput): Promise<Account> {
     return runAccountingWriteSession(session => this.createInSession(session, data));
+  }
+
+  /** Commit a validated account workflow through the shared single-writer session. */
+  async commitMutationPlan<T>(prepare: () => Promise<PreparedAccountMutation<T>>): Promise<T> {
+    return runAccountingWriteSession(async session => {
+      const plan = await prepare();
+      stageModelWrite(session, plan.prepareOps);
+      return plan.result;
+    });
   }
 
   /**
@@ -160,10 +196,8 @@ export class AccountWriteRepository {
     account: Account,
     updates: Partial<AccountPersistenceInput>,
     workplaceId: WorkplaceId,
-  ): Promise<{
-    normalizedUpdates: Partial<AccountPersistenceInput>;
-    existingMetadata: AccountMetadata | null;
-  }> {
+    audit?: AccountAuditContribution,
+  ): Promise<AccountMutationPlan> {
     if (account.workplaceId !== workplaceId) {
       throw new Error('Account does not belong to the specified workplace');
     }
@@ -192,7 +226,20 @@ export class AccountWriteRepository {
       ? await accountQueryRepository.findMetadata(workplaceId, account.id)
       : null;
 
-    return { normalizedUpdates, existingMetadata };
+    const rebuildsBalance =
+      normalizedUpdates.accountType !== undefined &&
+      normalizedUpdates.accountType !== account.accountType;
+
+    return {
+      workplaceId,
+      account,
+      normalizedUpdates,
+      existingMetadata,
+      audit,
+      commitFacts: {
+        balanceRebuildAccountIds: rebuildsBalance ? [account.id] : [],
+      },
+    };
   }
 
   /**
@@ -313,29 +360,35 @@ export class AccountWriteRepository {
     account: Account,
     updates: Partial<AccountPersistenceInput>,
     workplaceId: WorkplaceId,
-    extraOps?: (account: Account) => Model[],
-  ): Promise<Account> {
-    const { normalizedUpdates, existingMetadata } = await this.planUpdate(
-      account,
-      updates,
-      workplaceId,
-    );
+    options: { audit?: AccountAuditContribution } = {},
+  ): Promise<AccountMutationResult> {
+    const plan = await this.planUpdate(account, updates, workplaceId, options.audit);
 
-    return await this.db.write(async () => {
-      const batchOps = this.prepareUpdateBatchOps(account, normalizedUpdates, existingMetadata);
-      const extras = extraOps?.(account) ?? [];
-      if (batchOps.length + extras.length > 0) {
-        await this.db.batch(...batchOps, ...extras);
-      }
-      return account;
-    });
+    return this.commitMutationPlan(async () => ({
+      prepareOps: () => [
+        ...this.prepareUpdateBatchOps(plan.account, plan.normalizedUpdates, plan.existingMetadata),
+        ...(plan.audit
+          ? [
+              auditRepository.prepareLog(
+                {
+                  entityType: 'account',
+                  entityId: plan.account.id,
+                  ...plan.audit,
+                },
+                plan.workplaceId,
+              ),
+            ]
+          : []),
+      ],
+      result: { account: plan.account, commitFacts: plan.commitFacts },
+    }));
   }
 
   async delete(
     workplaceId: WorkplaceId,
     account: Account,
-    extraOps?: (account: Account) => Model[],
-  ): Promise<void> {
+    options: { audit?: AccountAuditContribution } = {},
+  ): Promise<AccountMutationResult> {
     const existingAccount = await accountQueryRepository.find(workplaceId, account.id);
     if (!existingAccount) {
       throw new Error('Cannot delete account. Account not found in workplace provided.');
@@ -346,32 +399,68 @@ export class AccountWriteRepository {
     if (children.length > 0) {
       throw new Error('Cannot delete account with children. Please delete or move children first.');
     }
-    await this.db.write(async () => {
-      const deleteOp = account.prepareUpdate(record => {
-        record.deletedAt = new Date();
-        record.updatedAt = new Date();
-      });
-      const extras = extraOps?.(account) ?? [];
-      await this.db.batch(deleteOp, ...extras);
-    });
+    return this.commitMutationPlan(async () => ({
+      prepareOps: () => [
+        existingAccount.prepareUpdate(record => {
+          record.deletedAt = new Date();
+          record.updatedAt = new Date();
+        }),
+        ...(options.audit
+          ? [
+              auditRepository.prepareLog(
+                {
+                  entityType: 'account',
+                  entityId: existingAccount.id,
+                  ...options.audit,
+                },
+                workplaceId,
+              ),
+            ]
+          : []),
+      ],
+      result: {
+        account: existingAccount,
+        commitFacts: {
+          balanceRebuildAccountIds: [],
+        },
+      },
+    }));
   }
 
   async recover(
     workplaceId: WorkplaceId,
     account: Account,
-    extraOps?: (account: Account) => Model[],
-  ): Promise<void> {
+    options: { audit?: AccountAuditContribution } = {},
+  ): Promise<AccountMutationResult> {
     if (account.workplaceId !== workplaceId) {
       throw new Error('Account does not belong to the specified workplace');
     }
-    await this.db.write(async () => {
-      const recoverOp = account.prepareUpdate(record => {
-        record.deletedAt = undefined;
-        record.updatedAt = new Date();
-      });
-      const extras = extraOps?.(account) ?? [];
-      await this.db.batch(recoverOp, ...extras);
-    });
+    return this.commitMutationPlan(async () => ({
+      prepareOps: () => [
+        account.prepareUpdate(record => {
+          record.deletedAt = undefined;
+          record.updatedAt = new Date();
+        }),
+        ...(options.audit
+          ? [
+              auditRepository.prepareLog(
+                {
+                  entityType: 'account',
+                  entityId: account.id,
+                  ...options.audit,
+                },
+                workplaceId,
+              ),
+            ]
+          : []),
+      ],
+      result: {
+        account,
+        commitFacts: {
+          balanceRebuildAccountIds: [],
+        },
+      },
+    }));
   }
 
   async ensureUniqueName(
