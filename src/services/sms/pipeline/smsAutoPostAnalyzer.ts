@@ -1,15 +1,17 @@
 import { SmsMessage } from '@/modules/expo-sms-inbox';
-import { AppConfig } from '@/src/constants';
+import { accountQueryRepository } from '@/src/data/repositories/account';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import type { CreateJournalData } from '@/src/types/journalWrite';
 import { ParsedTransaction, toTransactionDirection } from '@/src/services/ledger/SmsParser';
 import { smsRuleEngine } from '@/src/services/sms/SmsRuleEngine';
 import { JournalStatus, TransactionType } from '@/src/types/enums';
+import type { WorkplaceId } from '@/src/types/ids';
 import { SmsMatchData } from '@/src/utils/sms/RuleMatcher';
 import { computeSmsFingerprint } from './smsFingerprint';
 import { AutoPostRuleAnalysis } from './types';
 
 export async function analyzeAutoPost(
+  workplaceId: WorkplaceId,
   message: SmsMessage,
   parsed: ParsedTransaction,
   activeRules: TransactionAutoPostRule[],
@@ -39,6 +41,23 @@ export async function analyzeAutoPost(
       const categoryAccountId = definition.actions.categoryAccountId;
 
       if (sourceAccountId && categoryAccountId && parsed.amount) {
+        const sourceAccount = parsed.currencyCode
+          ? null
+          : await accountQueryRepository.find(workplaceId, sourceAccountId);
+        const inferredCurrency = parsed.currencyCode || sourceAccount?.currencyCode;
+        const exactCurrencyFormat = parsed.confidence >= 0.9 && !!parsed.currencyCode;
+        const accountScopedFormat =
+          parsed.confidence >= 0.82 &&
+          parsed.parseReason?.startsWith('Matched SMS format ') &&
+          !!sourceAccount?.currencyCode;
+
+        // An explicit currency can stand on its own. An ambiguous symbol such as
+        // `$` or `Rs` needs both a matched format and the user's selected account
+        // currency; generic fallback extraction stays in review.
+        if ((!exactCurrencyFormat && !accountScopedFormat) || !inferredCurrency) {
+          return { disposition: 'review', ruleId: rule.id };
+        }
+
         const isExpense = parsed.type === 'debit';
         const journalData: CreateJournalData = {
           journalDate: message.date,
@@ -48,7 +67,7 @@ export async function analyzeAutoPost(
               ? `Expense via ${message.address}`
               : `Income via ${message.address}`,
           notes: '',
-          currencyCode: parsed.currencyCode || AppConfig.defaultCurrency,
+          currencyCode: inferredCurrency,
           status: JournalStatus.POSTED,
           metadata: {
             importSource: 'sms',

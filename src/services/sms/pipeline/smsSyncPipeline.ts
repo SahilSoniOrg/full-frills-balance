@@ -143,7 +143,7 @@ export class SmsSyncPipeline {
           parsed.parseStatus === InboxParseStatus.PARSED &&
           nextStatus === InboxProcessingStatus.PENDING
         ) {
-          const ruleResult = await analyzeAutoPost(message, parsed, activeRules);
+          const ruleResult = await analyzeAutoPost(workplaceId, message, parsed, activeRules);
           if (ruleResult) {
             if (ruleResult.disposition === 'ignore') {
               finalStatus = InboxProcessingStatus.DISMISSED;

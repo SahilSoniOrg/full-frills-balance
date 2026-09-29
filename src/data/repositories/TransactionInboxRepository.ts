@@ -26,6 +26,8 @@ export interface TransactionInboxRecordWriteData {
   inputDate: number;
   inputFingerprint: string;
   parseStatus: TransactionInboxRecord['parseStatus'];
+  parseConfidence?: number;
+  parseReason?: string;
   parsedAmount?: number;
   parsedCurrencyCode?: string;
   parsedMerchant?: string;
