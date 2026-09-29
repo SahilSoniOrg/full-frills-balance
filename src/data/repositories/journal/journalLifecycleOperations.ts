@@ -3,6 +3,7 @@ import {
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
+import { assertExpectedJournalSnapshot } from '@/src/data/repositories/journal/journalAuditGuard';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { MetadataKeys } from '@/src/constants/ledger-constants';
@@ -29,6 +30,7 @@ import type {
 import { AuditAction, JournalStatus } from '@/src/types/enums';
 import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import type { BulkDeleteUndoToken } from '@/src/types/domainJournal';
+import type { AuditEventMetadata } from '@/src/types/auditEvents';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { Q } from '@nozbe/watermelondb';
 
@@ -47,6 +49,7 @@ async function stageSoftDelete(
   session: AccountingWriteSession,
   workplaceId: WorkplaceId,
   journals: readonly Journal[],
+  auditMetadata?: AuditEventMetadata,
 ): Promise<{ deletedAt: Date; transactions: Transaction[] }> {
   const allTransactions = await fetchJournalTransactions(
     workplaceId,
@@ -65,6 +68,7 @@ async function stageSoftDelete(
         transactionsByJournal.get(journal.id) ?? [],
         deletedAt,
         workplaceId,
+        auditMetadata,
       ),
     ),
   ]);
@@ -75,10 +79,23 @@ export async function stageDelete(
   session: AccountingWriteSession,
   journalId: JournalId,
   workplaceId: WorkplaceId,
+  auditMetadata?: AuditEventMetadata,
+  expectedCurrent?: Record<string, unknown>,
 ): Promise<JournalRebuildImpact> {
   const journal = await findActiveJournal(journalId, workplaceId);
-  if (!journal) return emptyRebuildImpact();
-  const { transactions } = await stageSoftDelete(session, workplaceId, [journal]);
+  if (!journal) {
+    if (expectedCurrent) {
+      throw new Error(
+        'This journal changed after the selected history entry. Refresh and review the latest change.',
+      );
+    }
+    return emptyRebuildImpact();
+  }
+  if (expectedCurrent) {
+    const currentTransactions = await fetchJournalTransactions(workplaceId, [journalId]);
+    assertExpectedJournalSnapshot(expectedCurrent, journal, currentTransactions);
+  }
+  const { transactions } = await stageSoftDelete(session, workplaceId, [journal], auditMetadata);
   return rebuildImpactFor([journal], transactions);
 }
 
@@ -127,6 +144,8 @@ export async function stageRecover(
   session: AccountingWriteSession,
   journalId: JournalId,
   workplaceId: WorkplaceId,
+  auditMetadata?: AuditEventMetadata,
+  expectedCurrent?: Record<string, unknown>,
 ): Promise<JournalPersistenceResult> {
   let journal: Journal;
   try {
@@ -146,6 +165,9 @@ export async function stageRecover(
       previousDeletedAt &&
       transaction.deletedAt.getTime() === previousDeletedAt.getTime(),
   );
+  if (expectedCurrent) {
+    assertExpectedJournalSnapshot(expectedCurrent, journal, restoreTransactions);
+  }
   const resultingTransactions = [
     ...transactions.filter(transaction => !transaction.deletedAt),
     ...restoreTransactions,
@@ -162,7 +184,7 @@ export async function stageRecover(
   stageModelWrite(session, () => [
     prepareDeletedAt(journal, undefined, now),
     ...restoreTransactions.map(transaction => prepareDeletedAt(transaction, undefined, now)),
-    prepareRestoreAudit(journalId, previousDeletedAt, now, workplaceId),
+    prepareRestoreAudit(journalId, previousDeletedAt, now, workplaceId, auditMetadata),
   ]);
 
   return {
@@ -260,9 +282,15 @@ export async function stageRevertToPlanned(
   session: AccountingWriteSession,
   journalId: JournalId,
   workplaceId: WorkplaceId,
+  auditMetadata?: AuditEventMetadata,
+  expectedCurrent?: Record<string, unknown>,
 ): Promise<JournalPersistenceResult> {
   const journal = await findActiveJournal(journalId, workplaceId);
   if (!journal) throw new Error('Journal not found');
+  if (expectedCurrent) {
+    const currentTransactions = await fetchJournalTransactions(workplaceId, [journalId]);
+    assertExpectedJournalSnapshot(expectedCurrent, journal, currentTransactions);
+  }
   const previousStatus = journal.status;
   if (previousStatus !== JournalStatus.POSTED && previousStatus !== JournalStatus.SKIPPED) {
     throw new Error(
@@ -315,6 +343,11 @@ export async function stageRevertToPlanned(
       {
         entityType: 'journal',
         entityId: journalId,
+        eventType: auditMetadata?.eventType ?? 'journal.reverted_to_planned',
+        source: auditMetadata?.source,
+        correlationId: auditMetadata?.correlationId,
+        revertsLogId: auditMetadata?.revertsLogId,
+        undoable: auditMetadata?.undoable,
         action: AuditAction.UPDATE,
         changes: {
           before: { status: previousStatus, journalDate: currentJournalDate },
@@ -342,6 +375,7 @@ export async function stageNonPostedStatuses(
     status: JournalStatus;
     expectedStatus?: JournalStatus;
   }[],
+  auditMetadata?: AuditEventMetadata,
 ): Promise<void> {
   const ids = updates.map(update => update.journalId);
   if (new Set(ids).size !== ids.length) {
@@ -387,7 +421,12 @@ export async function stageNonPostedStatuses(
         {
           entityType: 'journal',
           entityId: journal.id,
+          eventType: auditMetadata?.eventType ?? 'journal.status_changed',
           action: AuditAction.UPDATE,
+          source: auditMetadata?.source,
+          correlationId: auditMetadata?.correlationId,
+          revertsLogId: auditMetadata?.revertsLogId,
+          undoable: auditMetadata?.undoable,
           changes: {
             before: { status: previousStatus },
             after: { status },

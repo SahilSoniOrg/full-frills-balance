@@ -10,6 +10,7 @@ import type { PostingPlan, TransactionResolverAccount } from '@/src/types/domain
 import { validatePostingPlan } from '@/src/services/transaction/transactionComposerDomain';
 import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
+import type { AuditEventMetadata } from '@/src/types/auditEvents';
 import type { CreateJournalData } from '@/src/types/journalWrite';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { accountQueryRepository } from '@/src/data/repositories/account';
@@ -112,22 +113,44 @@ export class JournalService {
     journalId: JournalId,
     data: CreateJournalData,
     workplaceId: WorkplaceId,
+    auditMetadata?: AuditEventMetadata,
+    expectedCurrent?: Record<string, unknown>,
   ): Promise<Journal> {
     this.clearSuggestionsCache(workplaceId);
-    return journalPersistenceService.put({ ...data, journalId }, workplaceId);
+    return journalPersistenceService.put(
+      { ...data, journalId },
+      workplaceId,
+      auditMetadata,
+      expectedCurrent,
+    );
   }
 
-  async deleteJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<void> {
+  async deleteJournal(
+    journalId: JournalId,
+    workplaceId: WorkplaceId,
+    auditMetadata?: AuditEventMetadata,
+    expectedCurrent?: Record<string, unknown>,
+  ): Promise<void> {
     this.clearSuggestionsCache(workplaceId);
-    await journalPersistenceService.delete(journalId, workplaceId);
+    await journalPersistenceService.delete(journalId, workplaceId, auditMetadata, expectedCurrent);
     analytics.trackFeatureUsage('journal', 'delete', {
       journal_id: journalId,
     });
   }
 
-  async recoverJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
+  async recoverJournal(
+    journalId: JournalId,
+    workplaceId: WorkplaceId,
+    auditMetadata?: AuditEventMetadata,
+    expectedCurrent?: Record<string, unknown>,
+  ): Promise<Journal> {
     this.clearSuggestionsCache(workplaceId);
-    const journal = await journalPersistenceService.recover(journalId, workplaceId);
+    const journal = await journalPersistenceService.recover(
+      journalId,
+      workplaceId,
+      auditMetadata,
+      expectedCurrent,
+    );
     analytics.trackFeatureUsage('journal', 'recover', {
       journal_id: journalId,
       currency: journal.currencyCode,
@@ -135,8 +158,20 @@ export class JournalService {
     return journal;
   }
 
-  async postJournal(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
-    const journal = await journalPersistenceService.post(journalId, workplaceId);
+  async postJournal(
+    journalId: JournalId,
+    workplaceId: WorkplaceId,
+    postedAt?: number,
+    auditMetadata?: AuditEventMetadata,
+    expectedCurrent?: Record<string, unknown>,
+  ): Promise<Journal> {
+    const journal = await journalPersistenceService.post(
+      journalId,
+      workplaceId,
+      postedAt,
+      auditMetadata,
+      expectedCurrent,
+    );
     analytics.trackFeatureUsage('journal', 'post', {
       journal_id: journalId,
       currency: journal.currencyCode,
@@ -144,8 +179,18 @@ export class JournalService {
     return journal;
   }
 
-  async revertToPlanned(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
-    const journal = await journalPersistenceService.revertToPlanned(journalId, workplaceId);
+  async revertToPlanned(
+    journalId: JournalId,
+    workplaceId: WorkplaceId,
+    auditMetadata?: AuditEventMetadata,
+    expectedCurrent?: Record<string, unknown>,
+  ): Promise<Journal> {
+    const journal = await journalPersistenceService.revertToPlanned(
+      journalId,
+      workplaceId,
+      auditMetadata,
+      expectedCurrent,
+    );
     analytics.trackFeatureUsage('journal', 'revert_to_planned', {
       journal_id: journalId,
       currency: journal.currencyCode,

@@ -1,5 +1,6 @@
 import Journal from '@/src/data/models/Journal';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
+import { generator } from '@/src/data/database/idGenerator';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
@@ -17,6 +18,7 @@ import { InboxProcessingStatus } from '@/src/types/enums';
 import type { BulkDeleteUndoToken } from '@/src/types/domainJournal';
 import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { isRebuildEligibleJournalStatus } from '@/src/utils/journalStatus';
+import type { AuditEventMetadata } from '@/src/types/auditEvents';
 
 /** Display type is always derived by the repository from the lines it persists. */
 export type JournalPersistenceServiceInput =
@@ -24,8 +26,18 @@ export type JournalPersistenceServiceInput =
 
 /** Application orchestration for the new journal persistence boundary. */
 export class JournalPersistenceService {
-  async put(input: JournalPersistenceServiceInput, workplaceId: WorkplaceId): Promise<Journal> {
-    const result = await journalPersistenceRepository.put(input, workplaceId);
+  async put(
+    input: JournalPersistenceServiceInput,
+    workplaceId: WorkplaceId,
+    auditMetadata?: AuditEventMetadata,
+    expectedCurrent?: Record<string, unknown>,
+  ): Promise<Journal> {
+    const result = await journalPersistenceRepository.put(
+      input,
+      workplaceId,
+      auditMetadata,
+      expectedCurrent,
+    );
     this.enqueueRebuilds([result], workplaceId);
     return result.journal;
   }
@@ -36,11 +48,13 @@ export class JournalPersistenceService {
     workplaceId: WorkplaceId,
     inboxRecordId: string,
   ): Promise<Journal> {
+    const correlationId = generator();
     const result = await runAccountingWriteSession(async session => {
       const journalResult = await journalPersistenceRepository.putInSession(
         session,
         input,
         workplaceId,
+        { correlationId },
       );
       await transactionInboxRepository.stageLinkByIdInSession(
         session,
@@ -48,6 +62,7 @@ export class JournalPersistenceService {
         inboxRecordId,
         journalResult.journal.id,
         InboxProcessingStatus.IMPORTED,
+        { correlationId },
       );
       return journalResult;
     });
@@ -63,8 +78,9 @@ export class JournalPersistenceService {
     session: AccountingWriteSession,
     input: JournalPersistenceServiceInput,
     workplaceId: WorkplaceId,
+    auditMetadata?: AuditEventMetadata,
   ): Promise<JournalPersistenceResult> {
-    return journalPersistenceRepository.putInSession(session, input, workplaceId);
+    return journalPersistenceRepository.putInSession(session, input, workplaceId, auditMetadata);
   }
 
   async putMany(
@@ -76,14 +92,36 @@ export class JournalPersistenceService {
     return results.map(result => result.journal);
   }
 
-  async post(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
-    const result = await journalPersistenceRepository.post(journalId, workplaceId);
+  async post(
+    journalId: JournalId,
+    workplaceId: WorkplaceId,
+    postedAt?: number,
+    auditMetadata?: AuditEventMetadata,
+    expectedCurrent?: Record<string, unknown>,
+  ): Promise<Journal> {
+    const result = await journalPersistenceRepository.post(
+      journalId,
+      workplaceId,
+      postedAt,
+      auditMetadata,
+      expectedCurrent,
+    );
     this.enqueueRebuilds([result], workplaceId);
     return result.journal;
   }
 
-  async delete(journalId: JournalId, workplaceId: WorkplaceId): Promise<void> {
-    const impact = await journalPersistenceRepository.delete(journalId, workplaceId);
+  async delete(
+    journalId: JournalId,
+    workplaceId: WorkplaceId,
+    auditMetadata?: AuditEventMetadata,
+    expectedCurrent?: Record<string, unknown>,
+  ): Promise<void> {
+    const impact = await journalPersistenceRepository.delete(
+      journalId,
+      workplaceId,
+      auditMetadata,
+      expectedCurrent,
+    );
     this.enqueueImpacts([impact], workplaceId);
   }
 
@@ -124,8 +162,18 @@ export class JournalPersistenceService {
     this.enqueueImpacts([impact], workplaceId);
   }
 
-  async recover(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
-    const result = await journalPersistenceRepository.recover(journalId, workplaceId);
+  async recover(
+    journalId: JournalId,
+    workplaceId: WorkplaceId,
+    auditMetadata?: AuditEventMetadata,
+    expectedCurrent?: Record<string, unknown>,
+  ): Promise<Journal> {
+    const result = await journalPersistenceRepository.recover(
+      journalId,
+      workplaceId,
+      auditMetadata,
+      expectedCurrent,
+    );
     this.enqueueImpacts([result], workplaceId);
     return result.journal;
   }
@@ -135,8 +183,18 @@ export class JournalPersistenceService {
     this.enqueueImpacts([impact], workplaceId);
   }
 
-  async revertToPlanned(journalId: JournalId, workplaceId: WorkplaceId): Promise<Journal> {
-    const result = await journalPersistenceRepository.revertToPlanned(journalId, workplaceId);
+  async revertToPlanned(
+    journalId: JournalId,
+    workplaceId: WorkplaceId,
+    auditMetadata?: AuditEventMetadata,
+    expectedCurrent?: Record<string, unknown>,
+  ): Promise<Journal> {
+    const result = await journalPersistenceRepository.revertToPlanned(
+      journalId,
+      workplaceId,
+      auditMetadata,
+      expectedCurrent,
+    );
     this.enqueueRebuilds([result], workplaceId);
     return result.journal;
   }
@@ -146,8 +204,15 @@ export class JournalPersistenceService {
     journalId: JournalId,
     workplaceId: WorkplaceId,
     postedAt = Date.now(),
+    auditMetadata?: AuditEventMetadata,
   ): Promise<JournalPersistenceResult> {
-    return journalPersistenceRepository.postInSession(session, journalId, workplaceId, postedAt);
+    return journalPersistenceRepository.postInSession(
+      session,
+      journalId,
+      workplaceId,
+      postedAt,
+      auditMetadata,
+    );
   }
 
   /** Enqueue derived-balance rebuilds only after the enclosing session has committed. */

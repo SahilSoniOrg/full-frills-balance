@@ -1,9 +1,11 @@
 import { database } from '@/src/data/database/Database';
+import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import Account from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { prepareAuxiliaryImportRecords } from '@/src/data/repositories/importAuxiliaryWriters';
 import { prepareCoreImportRecords } from '@/src/data/repositories/importCoreWriters';
+import { prepareImportedEntityAuditRecords } from '@/src/data/repositories/importAuditWriters';
 import {
   calculateImportRunningBalances,
   applyImportBalancePatches,
@@ -20,10 +22,11 @@ import {
   proposeUniqueJournalFxRate,
   resolveCurrencyPrecisions,
 } from '@/src/domain/accounting/journalBalanceEvaluator';
-import { JournalStatus } from '@/src/types/enums';
+import { AuditAction, JournalStatus } from '@/src/types/enums';
 import { toJournalStatus, toTransactionType } from '@/src/data/repositories/importValueParsers';
 import { PostedJournalImportError } from '@/src/domain/accounting/PostedJournalImportError';
 import type { PostedJournalImportIssue } from '@/src/domain/accounting/PostedJournalImportError';
+import { generator as generateId } from '@/src/data/database/idGenerator';
 
 export class ImportRepository {
   private async prepareImportData(
@@ -185,11 +188,53 @@ export class ImportRepository {
     await this.prepareImportData(data, onProgress);
     await this.validatePostedJournalBalances(workplace.id, data);
 
+    const importCorrelationId = generateId();
     let created!: Workplace;
     await database.write(async () => {
       created = workplaceRepository.prepareCreate(workplace);
       await this.batchPreparedOperations(
-        [created, ...this.prepareOperations(workplace.id, data)],
+        [
+          created,
+          ...this.prepareOperations(workplace.id, data),
+          ...prepareImportedEntityAuditRecords(workplace.id, data, {
+            correlationId: importCorrelationId,
+            importPluginId: data.importMetadata?.pluginId,
+            sourceFormatVersion: data.sourceFormatVersion,
+          }),
+          auditRepository.prepareLog(
+            {
+              entityType: 'workplace',
+              entityId: workplace.id,
+              eventType: 'workplace.restored',
+              source: 'import',
+              correlationId: importCorrelationId,
+              action: AuditAction.CREATE,
+              undoable: false,
+              changes: {
+                after: {
+                  name: workplace.name,
+                  icon: workplace.icon,
+                  defaultCurrencyCode: workplace.defaultCurrencyCode,
+                },
+                importedAccounts: data.accounts.length,
+                importedJournals: data.journals.length,
+                importedTransactions: data.transactions.length,
+                importedBudgets: data.budgets?.length ?? 0,
+                importedPlannedPayments: data.plannedPayments?.length ?? 0,
+                importedAutomationRules: data.transactionAutoPostRules?.length ?? 0,
+                importedAccountMetadata: data.accountMetadata?.length ?? 0,
+                importedBudgetScopes: data.budgetScopes?.length ?? 0,
+                importedJournalMetadata: data.journalMetadata?.length ?? 0,
+                importedInboxRecords: data.transactionInboxRecords?.length ?? 0,
+                importedBalanceSnapshots: data.balanceSnapshots?.length ?? 0,
+                restoredHistoryEntries: data.auditLogs?.length ?? 0,
+                importPluginId: data.importMetadata?.pluginId ?? null,
+                sourceFormatVersion: data.sourceFormatVersion ?? null,
+              },
+            },
+            workplace.id,
+          ),
+        ],
         onProgress,
         true,
       );

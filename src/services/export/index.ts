@@ -4,3 +4,4 @@ export * from './exportTableTransformer';
 export * from './nativeBackupExporter';
 export * from './currentWorkplaceBackupExporter';
 export * from './exportSerialization';
+export * from './auditArchiveExporter';

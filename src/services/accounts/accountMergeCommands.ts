@@ -22,6 +22,7 @@ import {
 } from '@/src/services/accounts/accountRules';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { logger } from '@/src/utils/logger';
+import { generator } from '@/src/data/database/idGenerator';
 
 /**
  * Merge rewrite/destroy paths keyed by Account reference site.
@@ -103,6 +104,7 @@ export async function mergeAccounts(
   }
 
   const prepareKinds = mergePrepareKindsFromSites();
+  const correlationId = generator();
   let targetAccountType: AccountType = AccountType.ASSET;
 
   await runAccountingWriteSession(async session => {
@@ -130,6 +132,7 @@ export async function mergeAccounts(
           workplaceId,
           filteredSourceIds,
           targetAccountId,
+          correlationId,
         ),
       );
     }
@@ -140,6 +143,7 @@ export async function mergeAccounts(
           workplaceId,
           filteredSourceIds,
           targetAccountId,
+          correlationId,
         ),
       );
     }
@@ -150,6 +154,7 @@ export async function mergeAccounts(
           workplaceId,
           filteredSourceIds,
           targetAccountId,
+          correlationId,
         ),
       );
     }
@@ -160,6 +165,7 @@ export async function mergeAccounts(
           workplaceId,
           filteredSourceIds,
           targetAccountId,
+          correlationId,
         ),
       );
     }
@@ -170,6 +176,7 @@ export async function mergeAccounts(
           workplaceId,
           filteredSourceIds,
           targetAccountId,
+          correlationId,
         ),
       );
     }

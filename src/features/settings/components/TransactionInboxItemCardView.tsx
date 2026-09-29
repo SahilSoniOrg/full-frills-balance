@@ -42,6 +42,15 @@ export function TransactionInboxItemCardView({
 
   const channelIcon = item.channel === 'voice' ? Icon.Mic : Icon.MessageSquare;
   const channelLabel = item.channel === 'voice' ? 'Spoken' : 'SMS';
+  const linkedJournalUnavailable =
+    item.linkedJournal?.status === 'DELETED' || item.linkedJournal?.status === 'MISSING';
+  const linkedJournalColor = linkedJournalUnavailable ? theme.warning : theme.success;
+  const linkedJournalLabel =
+    item.linkedJournal?.status === 'DELETED'
+      ? 'deleted journal'
+      : item.linkedJournal?.status === 'MISSING'
+        ? 'unavailable journal'
+        : 'linked journal';
 
   return (
     <AppCard style={styles.card} testID={testID}>
@@ -102,10 +111,10 @@ export function TransactionInboxItemCardView({
         {item.linkedJournal && (
           <Badge
             size="sm"
-            backgroundColor={withOpacity(theme.success, Opacity.soft)}
-            textColor={theme.success}
+            backgroundColor={withOpacity(linkedJournalColor, Opacity.soft)}
+            textColor={linkedJournalColor}
           >
-            linked journal
+            {linkedJournalLabel}
           </Badge>
         )}
       </View>
@@ -133,11 +142,11 @@ export function TransactionInboxItemCardView({
       )}
 
       <View style={styles.actions}>
-        {item.linkedJournal ? (
+        {item.linkedJournal && !linkedJournalUnavailable ? (
           <AppButton size="sm" variant="outline" onPress={() => onOpenJournal(item)}>
             Open Journal
           </AppButton>
-        ) : (
+        ) : item.linkedJournal ? null : (
           <>
             <AppButton
               size="sm"

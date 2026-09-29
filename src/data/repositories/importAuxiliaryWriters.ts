@@ -19,10 +19,22 @@ import {
   setRecordTimestamps,
 } from '@/src/data/repositories/importPersistenceAdapter';
 import type { BatchImportData } from '@/src/types/importContracts';
+import type { AuditEntityType } from '@/src/types/enums';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { TransactionChannel } from '@/src/types/domainJournal';
 import { WorkplaceId } from '@/src/types/ids';
 import { Model } from '@nozbe/watermelondb';
+
+function readAuditPayloadString(changes: string, key: string): string | undefined {
+  try {
+    const value: unknown = JSON.parse(changes);
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+    const field = (value as Record<string, unknown>)[key];
+    return typeof field === 'string' ? field : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export function prepareAuxiliaryImportRecords(
   workplaceId: WorkplaceId,
@@ -44,13 +56,19 @@ export function prepareAuxiliaryImportRecords(
 
   const auditLogPrepares = (data.auditLogs || []).map(log =>
     auditLogs.prepareCreate(record => {
+      const entityType = String(log.entityType).toLowerCase() as AuditEntityType;
       record._raw.id = log.id;
       record.workplaceId = workplaceId;
-      record.entityType = log.entityType;
-      record.entityId = log.entityId;
+      record.entityType = entityType;
+      record.entityId = entityType === 'workplace' ? workplaceId : log.entityId;
       record.action = toAuditAction(log.action);
       record.changes = log.changes;
       record.timestamp = log.timestamp;
+      record.source = readAuditPayloadString(log.changes, 'source') ?? 'app';
+      record.eventType =
+        readAuditPayloadString(log.changes, 'eventType') ??
+        `${entityType}.${log.action.toLowerCase()}`;
+      record.correlationId = readAuditPayloadString(log.changes, 'correlationId') ?? null;
       record._raw._status = 'synced';
       setRecordTimestamps(record, { createdAt: log.createdAt });
     }),

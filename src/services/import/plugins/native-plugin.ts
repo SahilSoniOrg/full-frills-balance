@@ -6,7 +6,6 @@
  */
 
 import { generator as generateId } from '@/src/data/database/idGenerator';
-import { AuditEntityType } from '@/src/types/enums';
 import { AccountId, BudgetId, JournalId, PlannedPaymentId, TransactionId } from '@/src/types/ids';
 import {
   CanonicalAccount,
@@ -32,6 +31,10 @@ import {
   remapFundingAccountIdsCsv,
   requireMappedAccountId,
 } from '@/src/services/import/plugins/nativeImportAccountRemap';
+import {
+  remapNativeAuditLog,
+  type AuditImportEntityIdMaps,
+} from '@/src/services/import/plugins/nativeImportAuditRemap';
 import { countAccountsVsCategories } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
 import { UIPreferences } from '@/src/services/preferences';
@@ -155,6 +158,12 @@ export const nativePlugin: ImportPlugin = {
     const transactionMap = new Map<string, TransactionId>();
     const budgetMap = new Map<string, BudgetId>();
     const plannedPaymentMap = new Map<string, PlannedPaymentId>();
+    const autoPostRules = autoPostRulesFromData(data);
+    const inboxSources =
+      data.transactionInboxRecords || data.smsInboxRecords || data.sms_inbox_records || [];
+    const autoPostRuleMap = new Map<string, string>();
+    const inboxRecordMap = new Map<string, string>();
+    const auditLogMap = new Map<string, string>();
     const accountCurrencyMap = new Map<string, string>(); // Optimization: avoid .find() in transaction loop
 
     // Pre-populate maps with new IDs
@@ -168,6 +177,21 @@ export const nativePlugin: ImportPlugin = {
     (data.plannedPayments || []).forEach(pp =>
       plannedPaymentMap.set(pp.id, generateId() as PlannedPaymentId),
     );
+    autoPostRules.forEach(rule => autoPostRuleMap.set(rule.id, generateId()));
+    inboxSources.forEach(record => inboxRecordMap.set(record.id, generateId()));
+    (data.auditLogs || []).forEach(log => auditLogMap.set(log.id, generateId()));
+
+    const auditEntityMaps: AuditImportEntityIdMaps = {
+      account: accountMap,
+      journal: journalMap,
+      transaction: transactionMap,
+      exchange_rate: new Map(),
+      budget: budgetMap,
+      planned_payment: plannedPaymentMap,
+      transaction_auto_post_rule: autoPostRuleMap,
+      transaction_inbox_record: inboxRecordMap,
+      workplace: new Map(),
+    };
 
     try {
       const currencyCode =
@@ -262,21 +286,13 @@ export const nativePlugin: ImportPlugin = {
         journals,
         transactions,
         auditLogs: (data.auditLogs || []).map(log => {
-          let mappedEntityId = log.entityId;
-          const type = log.entityType as AuditEntityType;
-          if (type === 'account') mappedEntityId = accountMap.get(log.entityId) || log.entityId;
-          else if (type === 'journal')
-            mappedEntityId = journalMap.get(log.entityId) || log.entityId;
-          else if (type === 'transaction')
-            mappedEntityId = transactionMap.get(log.entityId) || log.entityId;
-
+          const remappedLog = remapNativeAuditLog(log, {
+            entities: auditEntityMaps,
+            auditLogs: auditLogMap,
+          });
           return {
-            id: generateId(),
-            entityType: log.entityType,
-            entityId: mappedEntityId,
-            action: log.action,
-            changes: log.changes,
-            timestamp: log.timestamp,
+            ...remappedLog,
+            id: auditLogMap.get(log.id) ?? generateId(),
             createdAt: parseTimestamp(log.createdAt),
           };
         }),
@@ -387,19 +403,15 @@ export const nativePlugin: ImportPlugin = {
           updatedAt: parseTimestamp(meta.updatedAt),
         })),
         transactionAutoPostRules: remapAutoPostRulesForImport(
-          autoPostRulesFromData(data),
+          autoPostRules,
           accountMap,
           generateId,
           parseTimestamp,
           plan,
+          autoPostRuleMap,
         ),
-        transactionInboxRecords: (
-          data.transactionInboxRecords ||
-          data.smsInboxRecords ||
-          data.sms_inbox_records ||
-          []
-        ).map(inbox => ({
-          id: generateId(),
+        transactionInboxRecords: inboxSources.map(inbox => ({
+          id: inboxRecordMap.get(inbox.id) ?? generateId(),
           channel: inbox.channel,
           deviceSourceId: inbox.deviceSourceId,
           senderAddress: inbox.senderAddress,

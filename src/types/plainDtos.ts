@@ -11,6 +11,7 @@ import {
   PlannedPaymentStatus,
   TransactionDirection,
 } from '@/src/types/enums';
+import type { AuditActor } from '@/src/types/auditEvents';
 
 /**
  * PlainAccount - Plain JSON object representation of an Account model.
@@ -141,6 +142,11 @@ export interface PlainAuditLog {
   action: AuditAction;
   changes: string;
   timestamp: number;
+  eventType?: string;
+  source?: string;
+  actor?: AuditActor;
+  correlationId?: string;
+  revertsLogId?: string;
   canRevert: boolean;
 }
 
@@ -198,11 +204,14 @@ export interface PlainJournal {
 export interface SerializedAccountMetadataPayload {
   statementDay: number | null;
   dueDay: number | null;
+  minimumBalanceAmount?: number | null;
   creditLimitAmount: number | null;
   aprBps: number | null;
   emiDay: number | null;
   loanTenureMonths: number | null;
   minimumPaymentAmount: number | null;
+  autopayEnabled?: boolean | null;
+  gracePeriodDays?: number | null;
   minimumPaymentPercent: number | null;
   minPaymentOnly: boolean;
   payFromAccountId: AccountId | null;

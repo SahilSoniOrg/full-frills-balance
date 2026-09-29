@@ -921,5 +921,98 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 33,
+      steps: [
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_audit_logs_workplace_timeline
+          ON audit_logs (workplace_id, timestamp DESC, id DESC);
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_audit_logs_workplace_entity_timeline
+          ON audit_logs (workplace_id, entity_type, entity_id, timestamp DESC, id DESC);
+        `),
+      ],
+    },
+    {
+      toVersion: 34,
+      steps: [
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_audit_logs_workplace_type_timeline
+          ON audit_logs (workplace_id, entity_type, timestamp DESC, id DESC);
+        `),
+      ],
+    },
+    {
+      toVersion: 35,
+      steps: [
+        addColumns({
+          table: 'audit_logs',
+          columns: [
+            { name: 'source', type: 'string', isOptional: true },
+            { name: 'event_type', type: 'string', isOptional: true },
+            { name: 'correlation_id', type: 'string', isOptional: true },
+          ],
+        }),
+        unsafeExecuteSql(`
+          UPDATE audit_logs
+          SET
+            source = CASE
+              WHEN json_valid(changes) THEN COALESCE(json_extract(changes, '$.source'), 'app')
+              ELSE 'app'
+            END,
+            event_type = CASE
+              WHEN json_valid(changes) THEN COALESCE(
+                json_extract(changes, '$.eventType'),
+                lower(entity_type) || '.' || lower(action)
+              )
+              ELSE lower(entity_type) || '.' || lower(action)
+            END,
+            correlation_id = CASE
+              WHEN json_valid(changes) THEN json_extract(changes, '$.correlationId')
+              ELSE NULL
+            END;
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_audit_logs_workplace_source_timeline
+          ON audit_logs (workplace_id, source, timestamp DESC, id DESC);
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_audit_logs_workplace_event_timeline
+          ON audit_logs (workplace_id, event_type, timestamp DESC, id DESC);
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_audit_logs_workplace_correlation_timeline
+          ON audit_logs (workplace_id, correlation_id, timestamp DESC, id DESC);
+        `),
+      ],
+    },
+    {
+      toVersion: 36,
+      steps: [
+        unsafeExecuteSql(`
+          UPDATE audit_logs
+          SET entity_type = lower(entity_type)
+          WHERE entity_type <> lower(entity_type);
+        `),
+      ],
+    },
+    {
+      toVersion: 37,
+      steps: [
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_audit_logs_workplace_timeline
+          ON audit_logs (workplace_id, timestamp DESC, id DESC);
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_audit_logs_workplace_entity_timeline
+          ON audit_logs (workplace_id, entity_type, entity_id, timestamp DESC, id DESC);
+        `),
+        unsafeExecuteSql(`
+          CREATE INDEX IF NOT EXISTS idx_audit_logs_workplace_type_timeline
+          ON audit_logs (workplace_id, entity_type, timestamp DESC, id DESC);
+        `),
+      ],
+    },
   ],
 });

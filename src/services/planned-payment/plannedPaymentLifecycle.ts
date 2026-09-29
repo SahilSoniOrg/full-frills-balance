@@ -10,6 +10,7 @@ import {
 import { requirePlannedPayment } from '@/src/services/planned-payment/plannedPaymentWorkplace';
 import { JournalStatus, PlannedPaymentStatus } from '@/src/types/enums';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
+import { generator } from '@/src/data/database/idGenerator';
 
 /**
  * Toggles planned-payment ACTIVE ↔ PAUSED.
@@ -34,6 +35,7 @@ export async function togglePlannedPaymentStatus(
     pp.id,
     targetStatus,
   );
+  const correlationId = generator();
 
   const nowMidnight = normalizeToStartOfDay(Date.now());
   let updatedNextOccurrence = pp.nextOccurrence;
@@ -54,6 +56,12 @@ export async function togglePlannedPaymentStatus(
         ...(isPausing ? {} : { nextOccurrence: updatedNextOccurrence }),
       },
       { status: pp.status, nextOccurrence: pp.nextOccurrence },
+      {
+        eventType: 'planned_payment.status_changed',
+        source: 'app',
+        correlationId,
+        undoable: false,
+      },
     );
     await journalPersistenceRepository.setNonPostedStatusesInSession(
       session,
@@ -67,6 +75,7 @@ export async function togglePlannedPaymentStatus(
             ? JournalStatus.PLANNED
             : JournalStatus.SKIPPED,
       })),
+      { source: 'app', correlationId },
     );
   });
 

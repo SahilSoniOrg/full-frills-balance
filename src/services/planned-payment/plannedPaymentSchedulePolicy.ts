@@ -45,13 +45,15 @@ export function buildUpdatePersistenceInput(
 
   return {
     ...input,
-    nextOccurrence: schedulingChanged
-      ? computeFirstOccurrence(input.startDate, {
-          intervalN: input.intervalN,
-          intervalType: input.intervalType,
-          recurrenceDay: input.recurrenceDay,
-          recurrenceMonth: input.recurrenceMonth,
-        })
-      : existing.nextOccurrence,
+    ...(schedulingChanged
+      ? {
+          nextOccurrence: computeFirstOccurrence(input.startDate, {
+            intervalN: input.intervalN,
+            intervalType: input.intervalType,
+            recurrenceDay: input.recurrenceDay,
+            recurrenceMonth: input.recurrenceMonth,
+          }),
+        }
+      : {}),
   };
 }

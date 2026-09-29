@@ -1,28 +1,55 @@
 import { WorkplaceId } from '@/src/types/ids';
+export interface AuditRevertContext {
+  auditLogId: string;
+}
+
 export type RevertHandler<T = any> = (
   entityId: string,
   changes: { before?: Partial<T>; after?: Partial<T> },
   action: string,
   workplaceId: WorkplaceId,
-) => Promise<void>;
+  context?: AuditRevertContext,
+) => Promise<void | boolean>;
+
+export type RevertCapability = (action: string, changes: Record<string, unknown>) => boolean;
+
+interface RevertRegistration {
+  handler: RevertHandler;
+  canRevert: RevertCapability;
+}
 
 class RevertRegistry {
-  private handlers = new Map<string, RevertHandler>();
+  private handlers = new Map<string, RevertRegistration>();
 
   /**
    * Register a reversion handler for a specific entity type.
    * This allows features to provide reversion logic without AuditService
    * needing to import the feature services directly.
    */
-  register(entityType: string, handler: RevertHandler) {
-    this.handlers.set(entityType.toLowerCase(), handler);
+  register(entityType: string, handler: RevertHandler, canRevert?: RevertCapability) {
+    this.handlers.set(entityType.toLowerCase(), {
+      handler,
+      canRevert:
+        canRevert ??
+        ((action, changes) =>
+          action === 'CREATE' || action === 'DELETE' || Boolean(changes.before)),
+    });
   }
 
   /**
    * Get the handler for an entity type.
    */
   getHandler(entityType: string): RevertHandler | undefined {
-    return this.handlers.get(entityType.toLowerCase());
+    return this.handlers.get(entityType.toLowerCase())?.handler;
+  }
+
+  getRegisteredEntityTypes(): string[] {
+    return [...this.handlers.keys()].sort();
+  }
+
+  supports(entityType: string, action: string, changes: Record<string, unknown>): boolean {
+    const registration = this.handlers.get(entityType.toLowerCase());
+    return registration ? registration.canRevert(action, changes) : false;
   }
 }
 

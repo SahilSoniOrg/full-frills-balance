@@ -10,18 +10,42 @@ import {
   AuditChangeRecord,
   AuditChangeValue,
   ParsedChanges,
+  getAuditDetails,
+  getAuditFieldDiff,
   getChangeField,
   hasBeforeAfterChanges,
   isAuditChangeRecord,
 } from '@/src/features/audit/auditLogTypes';
+import { isAuditEventPayload } from '@/src/types/auditEvents';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { formatDate } from '@/src/utils/dateUtils';
+import type { ResolvedHourCycle } from '@/src/utils/hourCycle';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
 const FINANCIAL_KEYS = ['amount', 'totalAmount', 'totalDebits', 'totalCredits'] as const;
 const TRANSACTIONS_KEY = 'transactions';
 const CURRENCY_CODE_KEY = 'currencyCode';
+const STRUCTURED_JSON_FIELDS = new Set(['actionsJson', 'channelsJson', 'conditionsJson']);
+const DATE_FIELDS = new Set([
+  'archivedAt',
+  'createdAt',
+  'deletedAt',
+  'effectiveDate',
+  'endDate',
+  'firstSeenAt',
+  'inputDate',
+  'journalDate',
+  'lastScannedAt',
+  'nextOccurrence',
+  'processedAt',
+  'reconciledAt',
+  'startDate',
+  'transactionDate',
+  'updatedAt',
+]);
 
 interface AuditLogChangesViewProps {
   changes: ParsedChanges;
@@ -29,10 +53,60 @@ interface AuditLogChangesViewProps {
   workplaceCurrency: string;
 }
 
+type AuditLogChangesRenderProps = AuditLogChangesViewProps & {
+  hourCycle: ResolvedHourCycle;
+};
+
+function formatAuditFieldLabel(field: string): string {
+  const explicitLabel = AppConfig.strings.audit.fieldLabels[field];
+  if (explicitLabel) return explicitLabel;
+
+  const words = field
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .replace(/([a-z\d])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .trim();
+  return words
+    .replace(/\bId\b/g, 'ID')
+    .replace(/\bIds\b/g, 'IDs')
+    .replace(/^\w/, character => character.toUpperCase());
+}
+
+function formatAuditDate(
+  value: AuditChangeValue,
+  hourCycle: ResolvedHourCycle,
+): string | undefined {
+  const timestamp = typeof value === 'number' ? value : Date.parse(String(value));
+  if (!Number.isFinite(timestamp)) return undefined;
+  const date = new Date(timestamp);
+  return Number.isNaN(date.getTime())
+    ? undefined
+    : formatDate(date, { includeTime: true, hourCycle });
+}
+
+function accountReferenceLabel(id: string, accountMap: AuditAccountMap): string {
+  return accountMap[id]?.name || `${AppConfig.strings.audit.accountPrefix}${id.slice(0, 8)}`;
+}
+
 function renderScalarValue(value: AuditChangeValue | undefined): string {
-  if (value === null || value === undefined) return 'null';
+  if (value === null || value === undefined) return AppConfig.strings.audit.notSet;
   if (typeof value === 'object') return '[Object]';
   return String(value);
+}
+
+function parseStructuredJsonField(
+  field: string,
+  value: AuditChangeValue | undefined,
+): AuditChangeValue | undefined {
+  if (typeof value !== 'string' || !STRUCTURED_JSON_FIELDS.has(field)) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return isAuditChangeRecord(parsed) || Array.isArray(parsed)
+      ? (parsed as AuditChangeValue)
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 interface ChangeValueRendererProps {
@@ -41,6 +115,7 @@ interface ChangeValueRendererProps {
   workplaceCurrency: string;
   changeKey: string;
   value: AuditChangeValue | undefined;
+  hourCycle: ResolvedHourCycle;
   currencyCode?: string;
   isAfter?: boolean;
   oppositeValue?: AuditChangeValue | undefined;
@@ -52,12 +127,53 @@ function ChangeValueRenderer({
   workplaceCurrency,
   changeKey,
   value,
+  hourCycle,
   currencyCode,
   isAfter = false,
   oppositeValue,
 }: ChangeValueRendererProps): React.ReactNode {
   if (value === null || value === undefined) {
-    return <AppText variant="caption">null</AppText>;
+    return <AppText variant="caption">{AppConfig.strings.audit.notSet}</AppText>;
+  }
+
+  const structuredValue = parseStructuredJsonField(changeKey, value);
+  if (structuredValue !== undefined) {
+    return (
+      <ChangeValueRenderer
+        theme={theme}
+        accountMap={accountMap}
+        workplaceCurrency={workplaceCurrency}
+        changeKey={changeKey}
+        value={structuredValue}
+        oppositeValue={parseStructuredJsonField(changeKey, oppositeValue)}
+        hourCycle={hourCycle}
+        currencyCode={currencyCode}
+        isAfter={isAfter}
+      />
+    );
+  }
+
+  if (DATE_FIELDS.has(changeKey)) {
+    const formattedDate = formatAuditDate(value, hourCycle);
+    if (formattedDate) {
+      return (
+        <AppText variant="caption" color="secondary">
+          {formattedDate}
+        </AppText>
+      );
+    }
+  }
+
+  if (
+    typeof value === 'string' &&
+    changeKey.toLowerCase().endsWith('accountid') &&
+    accountMap[value]
+  ) {
+    return (
+      <AppText variant="caption" color="secondary">
+        {accountMap[value].name}
+      </AppText>
+    );
   }
 
   if (
@@ -87,15 +203,44 @@ function ChangeValueRenderer({
       );
     }
 
+    if (
+      changeKey.toLowerCase().endsWith('accountids') &&
+      value.every(item => typeof item === 'string')
+    ) {
+      return (
+        <View style={{ marginTop: Spacing.xs }}>
+          {value.map(id => (
+            <AppText key={id} variant="caption" color="secondary">
+              • {accountReferenceLabel(id, accountMap)}
+            </AppText>
+          ))}
+        </View>
+      );
+    }
+
     return (
       <View style={{ marginTop: Spacing.xs }}>
-        {value.map((val, index) => (
-          <View key={index} style={{ marginBottom: Spacing.xs }}>
-            <AppText variant="caption" color="secondary">
-              • {JSON.stringify(val)}
-            </AppText>
-          </View>
-        ))}
+        {value.map((val, index) =>
+          isAuditChangeRecord(val) || Array.isArray(val) ? (
+            <ChangeValueRenderer
+              key={index}
+              theme={theme}
+              accountMap={accountMap}
+              workplaceCurrency={workplaceCurrency}
+              changeKey={changeKey}
+              value={val}
+              hourCycle={hourCycle}
+              currencyCode={currencyCode}
+              isAfter={isAfter}
+            />
+          ) : (
+            <View key={index} style={{ marginBottom: Spacing.xs }}>
+              <AppText variant="caption" color="secondary">
+                • {renderScalarValue(val)}
+              </AppText>
+            </View>
+          ),
+        )}
       </View>
     );
   }
@@ -109,11 +254,29 @@ function ChangeValueRenderer({
           backgroundColor: theme.surfaceSecondary,
         }}
       >
-        {Object.entries(value).map(([k, v]) => (
-          <AppText key={k} variant="caption" color="secondary">
-            {k}: {typeof v === 'object' && v !== null ? '[Object]' : renderScalarValue(v)}
+        {Object.entries(value).length === 0 ? (
+          <AppText variant="caption" color="secondary">
+            {AppConfig.strings.audit.noDetails}
           </AppText>
-        ))}
+        ) : (
+          Object.entries(value).map(([key, nestedValue]) => (
+            <View key={key} style={{ marginBottom: Spacing.xs }}>
+              <AppText variant="caption" weight="semibold">
+                {formatAuditFieldLabel(key)}
+              </AppText>
+              <ChangeValueRenderer
+                theme={theme}
+                accountMap={accountMap}
+                workplaceCurrency={workplaceCurrency}
+                changeKey={key}
+                value={nestedValue}
+                hourCycle={hourCycle}
+                currencyCode={currencyCode}
+                isAfter={isAfter}
+              />
+            </View>
+          ))
+        )}
       </View>
     );
   }
@@ -129,8 +292,9 @@ function BeforeAfterChangesView({
   changes,
   accountMap,
   workplaceCurrency,
+  hourCycle,
   theme,
-}: AuditLogChangesViewProps & { theme: Theme }) {
+}: AuditLogChangesRenderProps & { theme: Theme }) {
   if (!hasBeforeAfterChanges(changes)) return null;
 
   const { before, after } = changes;
@@ -178,7 +342,7 @@ function BeforeAfterChangesView({
                 }}
               >
                 <AppText variant="caption" weight="bold">
-                  {key}:
+                  {formatAuditFieldLabel(key)}:
                 </AppText>
                 <View
                   style={{
@@ -249,7 +413,7 @@ function BeforeAfterChangesView({
             }}
           >
             <AppText variant="caption" weight="bold">
-              {key}:
+              {formatAuditFieldLabel(key)}:
             </AppText>
             <View
               style={{
@@ -266,6 +430,7 @@ function BeforeAfterChangesView({
                   workplaceCurrency={workplaceCurrency}
                   changeKey={key}
                   value={beforeVal}
+                  hourCycle={hourCycle}
                   currencyCode={beforeCurrencyCode}
                   isAfter={false}
                   oppositeValue={afterVal}
@@ -281,6 +446,7 @@ function BeforeAfterChangesView({
                   workplaceCurrency={workplaceCurrency}
                   changeKey={key}
                   value={afterVal}
+                  hourCycle={hourCycle}
                   currencyCode={afterCurrencyCode}
                   isAfter
                   oppositeValue={beforeVal}
@@ -298,8 +464,9 @@ function FlatChangesView({
   changes,
   accountMap,
   workplaceCurrency,
+  hourCycle,
   theme,
-}: AuditLogChangesViewProps & { theme: Theme }) {
+}: AuditLogChangesRenderProps & { theme: Theme }) {
   const record = changes as AuditChangeRecord;
   return (
     <View
@@ -316,7 +483,7 @@ function FlatChangesView({
           style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: Spacing.xs }}
         >
           <AppText variant="caption" weight="bold">
-            {key}:{' '}
+            {formatAuditFieldLabel(key)}:{' '}
           </AppText>
           <ChangeValueRenderer
             theme={theme}
@@ -324,6 +491,7 @@ function FlatChangesView({
             workplaceCurrency={workplaceCurrency}
             changeKey={key}
             value={value}
+            hourCycle={hourCycle}
             currencyCode={workplaceCurrency}
           />
         </View>
@@ -338,23 +506,42 @@ export function AuditLogChangesView({
   workplaceCurrency,
 }: AuditLogChangesViewProps) {
   const { theme } = useTheme();
+  const { resolvedHourCycle } = useHourCyclePrefs();
+  const fieldDiff = getAuditFieldDiff(changes);
+  const details = isAuditEventPayload(changes) ? getAuditDetails(changes) : undefined;
+  const hasDetails = !!details && Object.keys(details).length > 0;
 
-  if (hasBeforeAfterChanges(changes)) {
+  if (fieldDiff) {
     return (
-      <BeforeAfterChangesView
-        changes={changes}
-        accountMap={accountMap}
-        workplaceCurrency={workplaceCurrency}
-        theme={theme}
-      />
+      <View>
+        <BeforeAfterChangesView
+          changes={fieldDiff}
+          accountMap={accountMap}
+          workplaceCurrency={workplaceCurrency}
+          hourCycle={resolvedHourCycle}
+          theme={theme}
+        />
+        {hasDetails && (
+          <FlatChangesView
+            changes={details}
+            accountMap={accountMap}
+            workplaceCurrency={workplaceCurrency}
+            hourCycle={resolvedHourCycle}
+            theme={theme}
+          />
+        )}
+      </View>
     );
   }
 
+  if (isAuditEventPayload(changes) && !hasDetails) return null;
+
   return (
     <FlatChangesView
-      changes={changes}
+      changes={getAuditDetails(changes)}
       accountMap={accountMap}
       workplaceCurrency={workplaceCurrency}
+      hourCycle={resolvedHourCycle}
       theme={theme}
     />
   );

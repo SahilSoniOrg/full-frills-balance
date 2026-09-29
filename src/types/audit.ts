@@ -17,6 +17,7 @@ export interface TransactionAuditState {
 
 export interface JournalAuditState {
   description?: string;
+  notes?: string | null;
   journalDate?: number;
   currencyCode?: string;
   status?: string;
@@ -31,10 +32,14 @@ export interface AccountAuditState {
   accountType?: AccountType;
   accountSubtype?: AccountSubtype;
   currencyCode?: string;
-  description?: string;
-  icon?: IconName;
-  parentAccountId?: AccountId;
-  deletedAt?: Date;
+  description?: string | null;
+  icon?: IconName | null;
+  color?: string | null;
+  parentAccountId?: AccountId | null;
+  orderNum?: number | null;
+  reconciledAt?: Date | null;
+  metadata?: Record<string, unknown> | null;
+  deletedAt?: Date | null;
   /** null = explicitly not archived. Persisted audits use ISO strings; normalized to Date at revert. */
   archivedAt?: Date | null;
   restoredAt?: Date;

@@ -8,6 +8,10 @@
 import { database } from '@/src/data/database/Database';
 import ExchangeRate from '@/src/data/models/ExchangeRate';
 import { observeQueryWithModelChanges } from '@/src/data/repositories/observeQueryWithModelChanges';
+import { auditRepository } from '@/src/data/repositories/AuditRepository';
+import { AuditAction } from '@/src/types/enums';
+import type { WorkplaceId } from '@/src/types/ids';
+import type { Model } from '@nozbe/watermelondb';
 import { Q } from '@nozbe/watermelondb';
 
 export interface ExchangeRateCacheInput {
@@ -135,6 +139,77 @@ class ExchangeRateRepository {
       );
 
       await database.batch(operations);
+    });
+  }
+
+  /** Persist user-entered current rates and their audit records atomically. */
+  async cacheManualRates(
+    workplaceId: WorkplaceId,
+    rates: { fromCurrency: string; toCurrency: string; rate: number }[],
+    correlationId: string,
+  ): Promise<void> {
+    if (rates.length === 0) return;
+
+    const normalizedRates = rates.map(rate => ({
+      fromCurrency: rate.fromCurrency.trim().toUpperCase(),
+      toCurrency: rate.toCurrency.trim().toUpperCase(),
+      rate: rate.rate,
+    }));
+    const pairKeys = new Set<string>();
+    for (const rate of normalizedRates) {
+      const pairKey = `${rate.fromCurrency}->${rate.toCurrency}`;
+      if (
+        !rate.fromCurrency ||
+        !rate.toCurrency ||
+        rate.fromCurrency === rate.toCurrency ||
+        !Number.isFinite(rate.rate) ||
+        rate.rate <= 0 ||
+        pairKeys.has(pairKey)
+      ) {
+        throw new Error('Manual exchange rates must contain unique, valid currency pairs');
+      }
+      pairKeys.add(pairKey);
+    }
+
+    await database.write(async () => {
+      const timestamp = Date.now();
+      const operations: Model[] = [];
+      for (const rate of normalizedRates) {
+        const existing = await this.getCachedRate(rate.fromCurrency, rate.toCurrency);
+        if (existing?.source === 'manual' && existing.rate === rate.rate) continue;
+
+        operations.push(
+          this.collection.prepareCreate(record => {
+            record.fromCurrency = rate.fromCurrency;
+            record.toCurrency = rate.toCurrency;
+            record.rate = rate.rate;
+            record.effectiveDate = timestamp;
+            record.source = 'manual';
+          }),
+          auditRepository.prepareLog(
+            {
+              entityType: 'exchange_rate',
+              entityId: `${rate.fromCurrency}->${rate.toCurrency}`,
+              displayName: `${rate.fromCurrency} → ${rate.toCurrency}`,
+              eventType: 'exchange_rate.manual_set',
+              action: AuditAction.UPDATE,
+              source: 'app',
+              correlationId,
+              undoable: false,
+              changes: {
+                before: {
+                  rate: existing?.rate ?? null,
+                  rateSource: existing?.source ?? null,
+                },
+                after: { rate: rate.rate, rateSource: 'manual' },
+              },
+            },
+            workplaceId,
+          ),
+        );
+      }
+
+      if (operations.length > 0) await database.batch(operations);
     });
   }
 

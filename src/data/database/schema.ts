@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 32,
+  version: 37,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -158,6 +158,9 @@ CREATE INDEX IF NOT EXISTS idx_transactions_account_date ON transactions (accoun
         { name: 'timestamp', type: 'number', isIndexed: true },
         { name: 'created_at', type: 'number' },
         { name: 'workplace_id', type: 'string', isIndexed: true },
+        { name: 'source', type: 'string', isOptional: true },
+        { name: 'event_type', type: 'string', isOptional: true },
+        { name: 'correlation_id', type: 'string', isOptional: true },
       ],
       unsafeSql: sql => `${sql};
 CREATE TRIGGER IF NOT EXISTS trg_audit_logs_workplace_id_check
@@ -166,7 +169,25 @@ FOR EACH ROW
 WHEN NEW.workplace_id IS NULL OR NEW.workplace_id = ''
 BEGIN
   SELECT RAISE(ABORT, 'Workplace ID cannot be empty on audit_logs');
-END;`,
+END;
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_workplace_timeline
+ON audit_logs (workplace_id, timestamp DESC, id DESC);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_workplace_entity_timeline
+ON audit_logs (workplace_id, entity_type, entity_id, timestamp DESC, id DESC);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_workplace_type_timeline
+ON audit_logs (workplace_id, entity_type, timestamp DESC, id DESC);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_workplace_source_timeline
+ON audit_logs (workplace_id, source, timestamp DESC, id DESC);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_workplace_event_timeline
+ON audit_logs (workplace_id, event_type, timestamp DESC, id DESC);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_workplace_correlation_timeline
+ON audit_logs (workplace_id, correlation_id, timestamp DESC, id DESC);`,
     }),
     tableSchema({
       name: 'budgets',

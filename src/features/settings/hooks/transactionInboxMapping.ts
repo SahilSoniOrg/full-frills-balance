@@ -14,7 +14,7 @@ export async function enrichTransactionInboxRecords(
   const duplicateIds = Array.from(
     new Set(records.map(record => record.duplicateJournalId).filter(Boolean) as JournalId[]),
   );
-  const journals = await journalQueryRepository.findByIds(
+  const journals = await journalQueryRepository.findWithDeletedByIds(
     workplaceId,
     Array.from(new Set([...linkedIds, ...duplicateIds])),
   );
@@ -22,10 +22,14 @@ export async function enrichTransactionInboxRecords(
 
   return records.map((record): TransactionInboxItem => {
     const metadata = record.metadataJson ? JSON.parse(record.metadataJson) : {};
-    const duplicateJournal = record.duplicateJournalId
+    const duplicateJournalRecord = record.duplicateJournalId
       ? journalMap.get(record.duplicateJournalId)
       : undefined;
-    const duplicateCandidate: TransactionDuplicateCandidate | undefined = record.duplicateJournalId
+    const duplicateJournal = duplicateJournalRecord?.deletedAt
+      ? undefined
+      : duplicateJournalRecord;
+    const duplicateCandidate: TransactionDuplicateCandidate | undefined =
+      record.duplicateJournalId && duplicateJournal
       ? {
           journalId: record.duplicateJournalId,
           journalDate: duplicateJournal?.journalDate || record.inputDate,
@@ -35,6 +39,9 @@ export async function enrichTransactionInboxRecords(
           score: record.duplicateConfidence || 0,
           reasons: Array.isArray(metadata.duplicateReasons) ? metadata.duplicateReasons : [],
         }
+      : undefined;
+    const linkedJournal = record.linkedJournalId
+      ? journalMap.get(record.linkedJournalId)
       : undefined;
 
     return {
@@ -57,12 +64,16 @@ export async function enrichTransactionInboxRecords(
       linkedJournal: record.linkedJournalId
         ? {
             journalId: record.linkedJournalId,
-            description: journalMap.get(record.linkedJournalId)?.description,
-            journalDate: journalMap.get(record.linkedJournalId)?.journalDate || record.inputDate,
-            status: journalMap.get(record.linkedJournalId)?.status || 'POSTED',
-            totalAmount: journalMap.get(record.linkedJournalId)?.totalAmount,
-            currencyCode: journalMap.get(record.linkedJournalId)?.currencyCode,
-            displayType: journalMap.get(record.linkedJournalId)?.displayType,
+            description: linkedJournal?.description,
+            journalDate: linkedJournal?.journalDate || record.inputDate,
+            status: linkedJournal
+              ? linkedJournal.deletedAt
+                ? 'DELETED'
+                : linkedJournal.status
+              : 'MISSING',
+            totalAmount: linkedJournal?.totalAmount,
+            currencyCode: linkedJournal?.currencyCode,
+            displayType: linkedJournal?.displayType,
           }
         : undefined,
       duplicateCandidate,

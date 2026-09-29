@@ -126,6 +126,11 @@ export async function createAccount(
           ],
         },
         workplaceId,
+        {
+          eventType: 'journal.opening_balance_created',
+          source: 'app',
+          undoable: false,
+        },
       );
     }
 

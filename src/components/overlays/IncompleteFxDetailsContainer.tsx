@@ -149,17 +149,20 @@ function IncompleteFxDetailsSheet({
 
   const handleSaveManualRates = async () => {
     if (!manualRatesReady || isSaving) return;
+    if (!request.workplaceId) {
+      setSaveError(true);
+      return;
+    }
     setIsSaving(true);
     setSaveError(false);
     try {
-      await Promise.all(
-        pairsToResolve.map(pair =>
-          exchangeRateService.setManualSpotRate(
-            pair.fromCurrency,
-            pair.toCurrency,
-            parseRateInput(rateInputs[pairKey(pair)])!,
-          ),
-        ),
+      await exchangeRateService.setManualSpotRates(
+        request.workplaceId,
+        pairsToResolve.map(pair => ({
+          fromCurrency: pair.fromCurrency,
+          toCurrency: pair.toCurrency,
+          rate: parseRateInput(rateInputs[pairKey(pair)])!,
+        })),
       );
       onClose();
     } catch {

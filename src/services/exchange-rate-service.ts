@@ -8,7 +8,9 @@
  */
 
 import { AppConfig } from '@/src/constants/app-config';
+import { generator } from '@/src/data/database/idGenerator';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
+import type { WorkplaceId } from '@/src/types/ids';
 import {
   fetchHistoricalRate,
   type HistoricalRate,
@@ -147,22 +149,40 @@ export class ExchangeRateService {
     }
   }
 
-  /** Save an explicitly user-entered rate for current spot conversions only. */
-  async setManualSpotRate(fromCurrency: string, toCurrency: string, rate: number): Promise<void> {
-    const from = fromCurrency.trim().toUpperCase();
-    const to = toCurrency.trim().toUpperCase();
-    if (!from || !to || from === to || !isUsableRequiredRate(rate)) {
+  /** Save user-entered current rates as one auditable operation. */
+  async setManualSpotRates(
+    workplaceId: WorkplaceId,
+    rates: { fromCurrency: string; toCurrency: string; rate: number }[],
+  ): Promise<void> {
+    const normalizedRates = rates.map(rate => ({
+      fromCurrency: rate.fromCurrency.trim().toUpperCase(),
+      toCurrency: rate.toCurrency.trim().toUpperCase(),
+      rate: rate.rate,
+    }));
+    if (
+      normalizedRates.some(
+        rate =>
+          !rate.fromCurrency ||
+          !rate.toCurrency ||
+          rate.fromCurrency === rate.toCurrency ||
+          !isUsableRequiredRate(rate.rate),
+      )
+    ) {
       throw new Error('A valid cross-currency rate is required');
     }
 
-    await exchangeRateRepository.cacheRatesBatch(from, [{ toCurrency: to, rate }], 'manual');
+    await exchangeRateRepository.cacheManualRates(workplaceId, normalizedRates, generator());
 
-    const cached = this.memoryCache.get(from);
-    this.memoryCache.set(from, {
-      rates: { ...(cached?.rates ?? {}), [to]: rate },
-      timestamp: Date.now(),
-    });
-    this.spotRateUpdates.next(from);
+    const updatedBases = new Set<string>();
+    for (const { fromCurrency, toCurrency, rate } of normalizedRates) {
+      const cached = this.memoryCache.get(fromCurrency);
+      this.memoryCache.set(fromCurrency, {
+        rates: { ...(cached?.rates ?? {}), [toCurrency]: rate },
+        timestamp: Date.now(),
+      });
+      updatedBases.add(fromCurrency);
+    }
+    updatedBases.forEach(fromCurrency => this.spotRateUpdates.next(fromCurrency));
   }
 
   /**

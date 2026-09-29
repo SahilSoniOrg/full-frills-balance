@@ -18,7 +18,7 @@ import { accountMergeOperations } from './AccountMergeOperations';
 import { accountQueryRepository } from './AccountQueryRepository';
 import type { AccountPersistenceInput } from './types';
 
-export type AccountAuditContribution = Pick<AuditEntry, 'action' | 'changes'>;
+export type AccountAuditContribution = Omit<AuditEntry, 'entityType' | 'entityId'>;
 
 export interface AccountMutationCommitFacts {
   balanceRebuildAccountIds: AccountId[];
@@ -88,7 +88,7 @@ export class AccountWriteRepository {
     data: AccountPersistenceInput,
     options: {
       appendWithinSiblingList?: boolean;
-      audit?: { initialBalance?: number };
+      audit?: { initialBalance?: number; correlationId?: string };
     } = {},
   ): Promise<Account> {
     if (!data.workplaceId) {
@@ -119,40 +119,16 @@ export class AccountWriteRepository {
       };
     }
 
-    const prepared = this.prepareCreateOps(payload);
+    const prepared = this.prepareCreateOps(payload, options.audit ? { audit: options.audit } : {});
     const operations = [...prepared.ops];
-    if (options.audit) {
-      const { account } = prepared;
-      operations.push(
-        auditRepository.prepareLog(
-          {
-            entityType: 'account',
-            entityId: account.id,
-            action: AuditAction.CREATE,
-            changes: {
-              after: {
-                name: account.name,
-                accountType: account.accountType,
-                accountSubtype: account.accountSubtype,
-                currencyCode: account.currencyCode,
-                description: account.description,
-                icon: account.icon,
-                color: account.color,
-                orderNum: account.orderNum,
-                parentAccountId: account.parentAccountId,
-                initialBalance: options.audit.initialBalance,
-              },
-            },
-          },
-          data.workplaceId,
-        ),
-      );
-    }
     stageAccountCreation(session, prepared.account, operations);
     return prepared.account;
   }
 
-  prepareCreateOps(data: AccountPersistenceInput): { account: Account; ops: Model[] } {
+  prepareCreateOps(
+    data: AccountPersistenceInput,
+    options: { audit?: { initialBalance?: number; correlationId?: string } } = {},
+  ): { account: Account; ops: Model[] } {
     if (!data.workplaceId) {
       throw new ValidationError('workplaceId is required to create an account');
     }
@@ -185,7 +161,69 @@ export class AccountWriteRepository {
       );
     }
 
+    if (options.audit) {
+      ops.push(
+        this.prepareCreateAuditLog(
+          account,
+          data,
+          options.audit.initialBalance,
+          options.audit.correlationId,
+        ),
+      );
+    }
+
     return { account, ops };
+  }
+
+  private prepareCreateAuditLog(
+    account: Account,
+    data: AccountPersistenceInput,
+    initialBalance?: number,
+    correlationId?: string,
+  ): Model {
+    const metadata = data.metadata;
+    return auditRepository.prepareLog(
+      {
+        entityType: 'account',
+        entityId: account.id,
+        eventType: 'account.created',
+        action: AuditAction.CREATE,
+        correlationId,
+        changes: {
+          after: {
+            name: account.name,
+            accountType: account.accountType,
+            accountSubtype: account.accountSubtype,
+            currencyCode: account.currencyCode,
+            description: account.description,
+            icon: account.icon,
+            color: account.color,
+            orderNum: account.orderNum,
+            parentAccountId: account.parentAccountId,
+            metadata: metadata
+              ? {
+                  statementDay: metadata.statementDay ?? null,
+                  dueDay: metadata.dueDay ?? null,
+                  minimumPaymentAmount: metadata.minimumPaymentAmount ?? null,
+                  minimumBalanceAmount: metadata.minimumBalanceAmount ?? null,
+                  creditLimitAmount: metadata.creditLimitAmount ?? null,
+                  aprBps: metadata.aprBps ?? null,
+                  emiDay: metadata.emiDay ?? null,
+                  loanTenureMonths: metadata.loanTenureMonths ?? null,
+                  autopayEnabled: metadata.autopayEnabled ?? null,
+                  gracePeriodDays: metadata.gracePeriodDays ?? null,
+                  payFromAccountId: metadata.payFromAccountId ?? null,
+                  minPaymentOnly: metadata.minPaymentOnly ?? null,
+                  minimumPaymentPercent: metadata.minimumPaymentPercent ?? null,
+                  notes: metadata.notes ?? null,
+                }
+              : null,
+            initialBalance,
+          },
+        },
+      },
+      data.workplaceId!,
+    );
   }
 
   /**
@@ -222,7 +260,7 @@ export class AccountWriteRepository {
     const nextSubtype = normalizedUpdates.accountSubtype ?? account.accountSubtype;
     this.validateSubtype(nextType, nextSubtype);
 
-    const existingMetadata = updates.metadata
+    const existingMetadata = Object.prototype.hasOwnProperty.call(updates, 'metadata')
       ? await accountQueryRepository.findMetadata(workplaceId, account.id)
       : null;
 
@@ -265,6 +303,13 @@ export class AccountWriteRepository {
             ...accountUpdates
           } = updates;
           Object.assign(acc, accountUpdates);
+          if ('description' in updates) acc.description = updates.description ?? undefined;
+          if ('icon' in updates) acc.icon = updates.icon ?? undefined;
+          if ('parentAccountId' in updates) {
+            acc.parentAccountId = updates.parentAccountId ?? undefined;
+          }
+          if ('orderNum' in updates) acc.orderNum = updates.orderNum ?? undefined;
+          if ('reconciledAt' in updates) acc.reconciledAt = updates.reconciledAt ?? undefined;
           if ('archivedAt' in updates) {
             acc.archivedAt = updates.archivedAt ?? undefined;
           }
@@ -276,26 +321,30 @@ export class AccountWriteRepository {
       );
     }
 
-    if (updates.metadata) {
-      if (existingMetadata) {
-        batchOps.push(
-          existingMetadata.prepareUpdate(meta => {
-            Object.assign(meta, updates.metadata);
-            meta.updatedAt = new Date();
-          }),
-        );
-      } else {
-        batchOps.push(
-          this.metadata.prepareCreate(meta => {
-            Object.assign(meta, updates.metadata);
-            meta.account.set(account);
-            if (account.workplaceId) {
-              meta.workplaceId = account.workplaceId;
-            }
-            meta.createdAt = new Date();
-            meta.updatedAt = new Date();
-          }),
-        );
+    if ('metadata' in updates) {
+      if (updates.metadata === null) {
+        if (existingMetadata) batchOps.push(existingMetadata.prepareDestroyPermanently());
+      } else if (updates.metadata) {
+        if (existingMetadata) {
+          batchOps.push(
+            existingMetadata.prepareUpdate(meta => {
+              Object.assign(meta, updates.metadata);
+              meta.updatedAt = new Date();
+            }),
+          );
+        } else {
+          batchOps.push(
+            this.metadata.prepareCreate(meta => {
+              Object.assign(meta, updates.metadata);
+              meta.account.set(account);
+              if (account.workplaceId) {
+                meta.workplaceId = account.workplaceId;
+              }
+              meta.createdAt = new Date();
+              meta.updatedAt = new Date();
+            }),
+          );
+        }
       }
     }
 
@@ -360,107 +409,164 @@ export class AccountWriteRepository {
     account: Account,
     updates: Partial<AccountPersistenceInput>,
     workplaceId: WorkplaceId,
-    options: { audit?: AccountAuditContribution } = {},
+    options: {
+      audit?: AccountAuditContribution;
+      extraOps?: (account: Account, metadata: AccountMetadata | null) => Model[];
+      validateCurrent?: (
+        account: Account,
+        metadata: AccountMetadata | null,
+      ) => void | Promise<void>;
+    } = {},
   ): Promise<AccountMutationResult> {
     const plan = await this.planUpdate(account, updates, workplaceId, options.audit);
 
-    return this.commitMutationPlan(async () => ({
-      prepareOps: () => [
-        ...this.prepareUpdateBatchOps(plan.account, plan.normalizedUpdates, plan.existingMetadata),
-        ...(plan.audit
-          ? [
-              auditRepository.prepareLog(
-                {
-                  entityType: 'account',
-                  entityId: plan.account.id,
-                  ...plan.audit,
-                },
-                plan.workplaceId,
-              ),
-            ]
-          : []),
-      ],
-      result: { account: plan.account, commitFacts: plan.commitFacts },
-    }));
+    return this.commitMutationPlan(async () => {
+      let currentAccount = plan.account;
+      let currentMetadata = plan.existingMetadata;
+      if (options.extraOps || options.validateCurrent) {
+        const freshAccount = await accountQueryRepository.findWithDeleted(workplaceId, account.id);
+        if (!freshAccount) throw new Error('Account not found');
+        currentAccount = freshAccount;
+        currentMetadata = await accountQueryRepository.findMetadata(workplaceId, account.id);
+      }
+      await options.validateCurrent?.(currentAccount, currentMetadata);
+
+      return {
+        prepareOps: () => [
+          ...this.prepareUpdateBatchOps(
+            currentAccount,
+            plan.normalizedUpdates,
+            currentMetadata,
+          ),
+          ...(plan.audit
+            ? [
+                auditRepository.prepareLog(
+                  {
+                    entityType: 'account',
+                    entityId: currentAccount.id,
+                    ...plan.audit,
+                  },
+                  plan.workplaceId,
+                ),
+              ]
+            : []),
+          ...(options.extraOps?.(currentAccount, currentMetadata) ?? []),
+        ],
+        result: { account: currentAccount, commitFacts: plan.commitFacts },
+      };
+    });
   }
 
   async delete(
     workplaceId: WorkplaceId,
     account: Account,
-    options: { audit?: AccountAuditContribution } = {},
+    options: {
+      audit?: AccountAuditContribution;
+      extraOps?: (account: Account, deletedAt: Date) => Model[];
+      validateCurrent?: (
+        account: Account,
+        metadata: AccountMetadata | null,
+      ) => void | Promise<void>;
+    } = {},
   ): Promise<AccountMutationResult> {
-    const existingAccount = await accountQueryRepository.find(workplaceId, account.id);
-    if (!existingAccount) {
-      throw new Error('Cannot delete account. Account not found in workplace provided.');
-    }
-    const children = await accountQueryRepository
-      .queryByParentId(workplaceId, existingAccount.id)
-      .fetch();
-    if (children.length > 0) {
-      throw new Error('Cannot delete account with children. Please delete or move children first.');
-    }
-    return this.commitMutationPlan(async () => ({
-      prepareOps: () => [
-        existingAccount.prepareUpdate(record => {
-          record.deletedAt = new Date();
-          record.updatedAt = new Date();
-        }),
-        ...(options.audit
-          ? [
-              auditRepository.prepareLog(
-                {
-                  entityType: 'account',
-                  entityId: existingAccount.id,
-                  ...options.audit,
-                },
-                workplaceId,
-              ),
-            ]
-          : []),
-      ],
-      result: {
-        account: existingAccount,
-        commitFacts: {
-          balanceRebuildAccountIds: [],
+    return this.commitMutationPlan(async () => {
+      const currentAccount = await accountQueryRepository.find(workplaceId, account.id);
+      if (!currentAccount) {
+        throw new Error('Cannot delete account. Account not found in workplace provided.');
+      }
+      const currentMetadata = options.validateCurrent || options.extraOps
+        ? await accountQueryRepository.findMetadata(workplaceId, account.id)
+        : null;
+      await options.validateCurrent?.(currentAccount, currentMetadata);
+
+      const children = await accountQueryRepository
+        .queryByParentId(workplaceId, currentAccount.id)
+        .fetch();
+      if (children.length > 0) {
+        throw new Error(
+          'Cannot delete account with children. Please delete or move children first.',
+        );
+      }
+
+      const deletedAt = new Date();
+      return {
+        prepareOps: () => [
+          currentAccount.prepareUpdate(record => {
+            record.deletedAt = deletedAt;
+            record.updatedAt = deletedAt;
+          }),
+          ...(options.audit
+            ? [
+                auditRepository.prepareLog(
+                  {
+                    entityType: 'account',
+                    entityId: currentAccount.id,
+                    ...options.audit,
+                  },
+                  workplaceId,
+                ),
+              ]
+            : []),
+          ...(options.extraOps?.(currentAccount, deletedAt) ?? []),
+        ],
+        result: {
+          account: currentAccount,
+          commitFacts: { balanceRebuildAccountIds: [] },
         },
-      },
-    }));
+      };
+    });
   }
 
   async recover(
     workplaceId: WorkplaceId,
     account: Account,
-    options: { audit?: AccountAuditContribution } = {},
+    options: {
+      audit?: AccountAuditContribution;
+      extraOps?: (account: Account, restoredAt: Date) => Model[];
+      validateCurrent?: (
+        account: Account,
+        metadata: AccountMetadata | null,
+      ) => void | Promise<void>;
+    } = {},
   ): Promise<AccountMutationResult> {
     if (account.workplaceId !== workplaceId) {
       throw new Error('Account does not belong to the specified workplace');
     }
-    return this.commitMutationPlan(async () => ({
-      prepareOps: () => [
-        account.prepareUpdate(record => {
-          record.deletedAt = undefined;
-          record.updatedAt = new Date();
-        }),
-        ...(options.audit
-          ? [
-              auditRepository.prepareLog(
-                {
-                  entityType: 'account',
-                  entityId: account.id,
-                  ...options.audit,
-                },
-                workplaceId,
-              ),
-            ]
-          : []),
-      ],
-      result: {
-        account,
-        commitFacts: {
-          balanceRebuildAccountIds: [],
+    return this.commitMutationPlan(async () => {
+      const currentAccount = await accountQueryRepository.findWithDeleted(workplaceId, account.id);
+      if (!currentAccount) throw new Error('Account not found');
+      const currentMetadata = options.validateCurrent || options.extraOps
+        ? await accountQueryRepository.findMetadata(workplaceId, account.id)
+        : null;
+      await options.validateCurrent?.(currentAccount, currentMetadata);
+
+      const restoredAt = new Date();
+      return {
+        prepareOps: () => [
+          currentAccount.prepareUpdate(record => {
+            record.deletedAt = undefined;
+            record.updatedAt = restoredAt;
+          }),
+          ...(options.audit
+            ? [
+                auditRepository.prepareLog(
+                  {
+                    entityType: 'account',
+                    entityId: currentAccount.id,
+                    ...options.audit,
+                  },
+                  workplaceId,
+                ),
+              ]
+            : []),
+          ...(options.extraOps?.(currentAccount, restoredAt) ?? []),
+        ],
+        result: {
+          account: currentAccount,
+          commitFacts: { balanceRebuildAccountIds: [] },
         },
-      },
-    }));
+      };
+    });
   }
 
   async ensureUniqueName(
@@ -502,12 +608,14 @@ export class AccountWriteRepository {
     workplaceId: WorkplaceId,
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
+    correlationId?: string,
   ): Promise<void> {
     return accountMergeOperations.mergeInSession(
       session,
       workplaceId,
       sourceAccountIds,
       targetAccountId,
+      correlationId,
     );
   }
 }

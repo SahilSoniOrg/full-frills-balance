@@ -274,6 +274,8 @@ export interface CanonicalBalanceSnapshot {
 
 /** Persistence-facing batch shape for an already-normalized import. */
 export interface BatchImportData {
+  sourceFormatVersion?: string;
+  importMetadata?: CanonicalImportMetadata;
   accounts: CanonicalAccount[];
   journals: CanonicalJournal[];
   transactions: CanonicalTransaction[];

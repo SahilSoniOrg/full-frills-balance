@@ -104,6 +104,34 @@ class SharingService {
     }
   }
 
+  /** Shares a file that was written incrementally by a large-data exporter. */
+  async shareFile(
+    provider: Pick<ShareProvider, 'id' | 'title'>,
+    fileUri: string,
+    mimeType: string,
+  ): Promise<void> {
+    if (Platform.OS === 'web') {
+      throw new Error('Sharing an existing file is only supported on native platforms');
+    }
+
+    this.track('share_started', provider, { effective_format: 'file' });
+    try {
+      await this.cleanupOldFiles();
+      if (!(await Sharing.isAvailableAsync())) throw new Error('Sharing is unavailable');
+      this.pendingFiles.push({ uri: fileUri, createdAt: Date.now() });
+      await Sharing.shareAsync(fileUri, { mimeType, dialogTitle: provider.title });
+      this.track('share_sheet_opened', provider, { format: 'file', mode: 'file' });
+    } catch (error) {
+      this.pendingFiles = this.pendingFiles.filter(file => file.uri !== fileUri);
+      await files.deleteFile(fileUri);
+      this.track('share_failed', provider, {
+        effective_format: 'file',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    }
+  }
+
   /**
    * Generic save method that accepts a ShareProvider.
    * Prompts user for location on Android, shares with save hint on iOS.
@@ -235,7 +263,11 @@ class SharingService {
     }
   }
 
-  private track(event: string, provider: ShareProvider, extra: AnalyticsProperties = {}) {
+  private track(
+    event: string,
+    provider: Pick<ShareProvider, 'id'>,
+    extra: AnalyticsProperties = {},
+  ) {
     analytics.track(event, {
       provider: provider.id,
       ...extra,

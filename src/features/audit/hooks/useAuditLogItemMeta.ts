@@ -1,6 +1,6 @@
 import { Icon, type IconName } from '@/src/types/domainIcons';
 import { AppConfig, ColorKey } from '@/src/constants';
-import { AuditAction } from '@/src/types/enums';
+import { AuditAction, AuditEntityType } from '@/src/types/enums';
 import {
   AuditLogEntry,
   EntityStatus,
@@ -51,6 +51,21 @@ export function useAuditLogItemMeta({ item, entityStatusMap }: UseAuditLogItemMe
   const entityDisplayName = useMemo(() => getEntityDisplayName(parsedChanges), [parsedChanges]);
 
   const canRevert = useMemo(() => computeCanRevert(item, entityStatusMap), [item, entityStatusMap]);
+  const eventLabel =
+    AppConfig.strings.audit.eventLabels[item.eventType || ''] ||
+    item.action.charAt(0) + item.action.slice(1).toLowerCase();
+  const sourceLabel = item.source
+    ? AppConfig.strings.audit.sourceLabels[item.source] || item.source
+    : undefined;
+  const actorName =
+    item.actor?.label?.trim() ||
+    (item.actor?.type
+      ? AppConfig.strings.audit.actorTypes[item.actor.type] || item.actor.type
+      : undefined);
+  const actorLabel = actorName ? AppConfig.strings.audit.byActor(actorName) : undefined;
+  const revertsLabel = item.revertsLogId
+    ? AppConfig.strings.audit.revertsLabel(item.revertsLogId)
+    : undefined;
 
   const timestampLabel = useMemo(
     () => formatDate(item.timestamp, { includeTime: true, hourCycle: resolvedHourCycle }),
@@ -61,7 +76,12 @@ export function useAuditLogItemMeta({ item, entityStatusMap }: UseAuditLogItemMe
     actionColor,
     actionIcon,
     parsedChanges,
-    entityLabel: AppConfig.strings.audit.entityLabels[item.entityType] || item.entityType,
+    entityLabel:
+      AppConfig.strings.audit.entityLabels[item.entityType as AuditEntityType] || item.entityType,
+    eventLabel,
+    sourceLabel,
+    actorLabel,
+    revertsLabel,
     entityDisplayName,
     timestampLabel,
     entityIdLabel: AppConfig.strings.audit.idLabel(

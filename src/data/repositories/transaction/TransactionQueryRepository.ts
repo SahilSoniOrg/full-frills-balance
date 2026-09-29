@@ -72,6 +72,18 @@ export class TransactionQueryRepository {
       .fetch();
   }
 
+  /** Includes soft-deleted line versions for audit validation and recovery flows. */
+  async findByJournalIncludingDeleted(
+    workplaceId: WorkplaceId,
+    journalId: JournalId,
+  ): Promise<Transaction[]> {
+    return this.transactions
+      .query(Q.where('journal_id', journalId), Q.where('workplace_id', workplaceId))
+      .extend(Q.sortBy('transaction_date', Q.asc))
+      .extend(Q.sortBy('created_at', Q.asc))
+      .fetch();
+  }
+
   observeBudgetTransactions(
     workplaceId: WorkplaceId,
     accountIds: readonly AccountId[],

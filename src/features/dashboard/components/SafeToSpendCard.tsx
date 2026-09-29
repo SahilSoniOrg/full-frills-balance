@@ -1,4 +1,5 @@
 import { AppSurface } from '@/src/components/core';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppConfig } from '@/src/constants';
 import type { SafeToSpendProjection } from '@/src/services/simulation/safeToSpendDashboardProjection';
@@ -33,6 +34,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     showChart = true,
   } = props;
   const formatMoney = useMoneyFormat();
+  const { workplaceId } = useWorkplace();
   const {
     isOverCommitted,
     isPositiveSafeToSpend,
@@ -110,6 +112,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
               onPress={() =>
                 showIncompleteFxDetails({
                   context: 'safe-to-spend',
+                  workplaceId,
                   currencyCode,
                   unvaluedStartingBalances: (viewModel.unvaluedStartingBalances ?? []).map(
                     balance => ({

@@ -1,5 +1,12 @@
 import { AuditAction } from '@/src/types/enums';
+import { getAuditEntityCapabilities } from '@/src/types/auditEntityCapabilities';
 import { AccountId } from '@/src/types/ids';
+import {
+  AuditEventPayload,
+  getAuditEventFieldDeltas,
+  isAuditEventPayload,
+} from '@/src/types/auditEvents';
+import type { AuditActor } from '@/src/types/auditEvents';
 
 export interface EntityStatus {
   exists: boolean;
@@ -13,6 +20,11 @@ export interface AuditLogEntry {
   action: AuditAction;
   changes: string;
   timestamp: number;
+  eventType?: string;
+  source?: string;
+  actor?: AuditActor;
+  correlationId?: string;
+  revertsLogId?: string;
   canRevert?: boolean;
 }
 
@@ -28,7 +40,7 @@ export interface ParsedBeforeAfterChanges {
   after?: AuditChangeRecord;
 }
 
-export type ParsedChanges = ParsedBeforeAfterChanges | AuditChangeRecord;
+export type ParsedChanges = ParsedBeforeAfterChanges | AuditChangeRecord | AuditEventPayload;
 
 export interface AuditTransactionSnapshot {
   accountId: AccountId;
@@ -50,8 +62,9 @@ export function isTransactionSnapshot(value: unknown): value is AuditTransaction
 export function parseAuditChanges(changes: string): ParsedChanges | null {
   try {
     const parsed: unknown = JSON.parse(changes);
+    if (isAuditEventPayload(parsed)) return parsed;
     if (!isAuditChangeRecord(parsed)) return null;
-    return parsed;
+    return parsed as ParsedChanges;
   } catch {
     return null;
   }
@@ -59,21 +72,53 @@ export function parseAuditChanges(changes: string): ParsedChanges | null {
 
 export function getEntityDisplayName(parsed: ParsedChanges | null): string {
   if (!parsed) return '';
-  let record: AuditChangeRecord;
-  if ('after' in parsed && isAuditChangeRecord(parsed.after)) {
-    record = parsed.after;
-  } else if ('before' in parsed && isAuditChangeRecord(parsed.before)) {
-    record = parsed.before;
-  } else if (isAuditChangeRecord(parsed)) {
-    record = parsed;
-  } else {
-    return '';
+  if (isAuditEventPayload(parsed) && parsed.displayName) return parsed.displayName;
+  const records: AuditChangeRecord[] = isAuditEventPayload(parsed)
+    ? [parsed.details, parsed.after ?? {}, parsed.before ?? {}]
+    : [
+        ...('after' in parsed && isAuditChangeRecord(parsed.after) ? [parsed.after] : []),
+        ...('before' in parsed && isAuditChangeRecord(parsed.before) ? [parsed.before] : []),
+        parsed as AuditChangeRecord,
+      ];
+  for (const record of records) {
+    if (typeof record.name === 'string') return record.name;
+    if (typeof record.description === 'string') return record.description;
+    if (typeof record.accountName === 'string') return record.accountName;
   }
-  const name = record.name;
-  const description = record.description;
-  if (typeof name === 'string') return name;
-  if (typeof description === 'string') return description;
   return '';
+}
+
+export function getAuditFieldDiff(
+  changes: ParsedChanges,
+): (ParsedBeforeAfterChanges & { before: AuditChangeRecord; after: AuditChangeRecord }) | null {
+  if (isAuditEventPayload(changes)) {
+    const before: AuditChangeRecord = {};
+    const after: AuditChangeRecord = {};
+    for (const [key, delta] of Object.entries(getAuditEventFieldDeltas(changes))) {
+      before[key] = delta.before as AuditChangeValue;
+      after[key] = delta.after as AuditChangeValue;
+    }
+    return Object.keys(before).length > 0 ? { before, after } : null;
+  }
+
+  if (!hasBeforeAfterChanges(changes)) return null;
+  const { before, after } = changes;
+  // Older account updates used a full `before` snapshot and a sparse `after` patch.
+  // Treat only the after keys as changed so untouched fields are not shown as cleared.
+  const keys = Object.keys(after).filter(key => key !== 'action');
+  if (keys.length === 0) return null;
+  const projectedBefore: AuditChangeRecord = {};
+  const projectedAfter: AuditChangeRecord = {};
+  for (const key of keys) {
+    projectedBefore[key] = Object.prototype.hasOwnProperty.call(before, key) ? before[key] : null;
+    projectedAfter[key] = after[key] ?? null;
+  }
+  return { before: projectedBefore, after: projectedAfter };
+}
+
+export function getAuditDetails(changes: ParsedChanges): AuditChangeRecord {
+  if (isAuditEventPayload(changes)) return changes.details;
+  return changes as AuditChangeRecord;
 }
 
 export function hasBeforeAfterChanges(
@@ -101,20 +146,22 @@ export function computeCanRevert(
   if (!item.canRevert) return false;
 
   const status = entityStatusMap[item.entityId];
-  if (!status || !status.exists) {
-    return false;
-  }
+  if (!status) return false;
 
   if (item.action === AuditAction.CREATE) {
-    return !status.isDeleted;
+    return status.exists && !status.isDeleted;
   }
 
   if (item.action === AuditAction.DELETE) {
-    return status.isDeleted;
+    return (
+      status.isDeleted ||
+      (!status.exists &&
+        getAuditEntityCapabilities(item.entityType).canRecreateAfterDelete === true)
+    );
   }
 
   if (item.action === AuditAction.UPDATE) {
-    return !status.isDeleted;
+    return status.exists && !status.isDeleted;
   }
 
   return false;

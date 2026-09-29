@@ -204,6 +204,7 @@ export function remapAutoPostRulesForImport(
   nextId: () => string,
   parseTimestamp: (value?: number | string) => number | undefined,
   plan?: ImportPlan,
+  ruleIdMap?: ReadonlyMap<string, string>,
 ): CanonicalTransactionAutoPostRule[] {
   const patchesByKey = new Map((plan?.rulePatches ?? []).map(patch => [patch.ruleKey, patch]));
 
@@ -228,7 +229,7 @@ export function remapAutoPostRulesForImport(
     }
 
     return {
-      id: nextId(),
+      id: ruleIdMap?.get(rule.id) ?? nextId(),
       channelsJson: rule.channelsJson,
       senderMatch: rule.senderMatch,
       bodyMatch: rule.bodyMatch,
