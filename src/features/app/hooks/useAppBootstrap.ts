@@ -82,10 +82,17 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
           analytics.identify(anonId);
 
           // 4. Stabilization
-          const notifCadence = preferences.notifications.notificationCadence;
-          const notifHour = preferences.notifications.notificationHour;
-          const notifMinute = preferences.notifications.notificationMinute;
-          const notifWeekday = preferences.notifications.notificationWeekday;
+          const {
+            notificationCadence,
+            notificationHour: notifHour,
+            notificationMinute: notifMinute,
+            notificationWeekday: notifWeekday,
+          } = preferences.getSnapshot();
+          const notifCadence = notificationCadence || 'none';
+          const shouldProcessSms =
+            Platform.OS === 'android' &&
+            preferences.device.getSnapshot().isSmsImportEnabled &&
+            Boolean(workplaceId);
 
           await Promise.allSettled([
             purgeLocalAiCachesOnce(),
@@ -104,7 +111,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
               notifMinute,
               notifWeekday,
             ),
-            ...(Platform.OS === 'android' && preferences.sms.isSmsImportEnabled && workplaceId
+            ...(shouldProcessSms
               ? [
                   import('@/src/services/sms-service').then(({ smsService }) =>
                     lease.isCurrent()

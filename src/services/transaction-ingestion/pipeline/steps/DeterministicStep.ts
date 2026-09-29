@@ -1,14 +1,14 @@
 import { analytics } from '@/src/services/analytics';
 import { resolveAccount } from '@/src/services/ledger/resolution';
 import { VoiceExtractor } from '@/src/services/ledger/VoiceExtractor';
-import { TransactionSemanticTag } from '../../types/ai-parsing';
-import { PipelineContext, PipelineStep } from '../types';
+import type { TransactionSemanticTag } from '../../types/ai-parsing';
+import type { IngestionContext } from '../types';
 
 const voiceExtractor = new VoiceExtractor();
 
-export class DeterministicStep implements PipelineStep {
-  async execute(context: PipelineContext): Promise<void> {
-    const defaultCurrency = context.defaultCurrency!;
+export class DeterministicStep {
+  async execute(context: IngestionContext): Promise<void> {
+    const defaultCurrency = context.defaultCurrency;
 
     const rawInput = {
       channel: 'voice' as const,
@@ -45,7 +45,6 @@ export class DeterministicStep implements PipelineStep {
         provider: 'deterministic',
         processTimeMs: Date.now() - context.startTime,
       };
-      context.isHalted = true;
       return;
     }
 
@@ -84,7 +83,6 @@ export class DeterministicStep implements PipelineStep {
         provider: 'deterministic',
         processTimeMs: latency,
       };
-      context.isHalted = true;
       return;
     }
   }

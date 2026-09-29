@@ -2,7 +2,7 @@ export type TransactionType = 'expense' | 'income' | 'transfer' | 'unknown';
 
 export type TransactionSemanticTag = 'refund' | 'cashback' | 'chargeback' | 'reversal' | undefined;
 
-export interface TransactionResult {
+interface TransactionResult {
   type: TransactionType;
   semanticTag?: TransactionSemanticTag;
   amount?: number;
@@ -28,26 +28,4 @@ export interface ParserOutput {
     passTimings?: Record<string, number>;
     totalInferenceMs?: number;
   };
-}
-
-export interface AIContext {
-  accounts: string[];
-  categories: string[];
-  parserHints: {
-    amount?: number;
-    rawAccount?: string;
-    rawItem?: string;
-    intentHint?: string;
-    direction?: 'credit' | 'debit' | 'unknown';
-  };
-}
-
-export interface TransactionFallbackAIProvider {
-  parse(
-    transcript: string,
-    context: AIContext,
-    options?: {
-      timeout?: number;
-    },
-  ): Promise<ParserOutput | null>;
 }

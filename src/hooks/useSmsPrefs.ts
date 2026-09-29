@@ -12,17 +12,17 @@ export type SmsPrefsState = {
 export function useSmsPrefs(): SmsPrefsState {
   const isSmsImportEnabled = useSyncExternalStore(
     onStoreChange => {
-      const sub = preferences.sms.observeSmsImportEnabled().subscribe(() => {
+      const sub = preferences.device.observe('isSmsImportEnabled').subscribe(() => {
         onStoreChange();
       });
       return () => sub.unsubscribe();
     },
-    () => preferences.sms.isSmsImportEnabled,
-    () => preferences.sms.isSmsImportEnabled,
+    () => preferences.device.getSnapshot().isSmsImportEnabled,
+    () => preferences.device.getSnapshot().isSmsImportEnabled,
   );
 
   const setIsSmsImportEnabled = useCallback((enabled: boolean) => {
-    preferences.sms.setIsSmsImportEnabled(enabled);
+    preferences.device.update({ isSmsImportEnabled: enabled });
   }, []);
 
   return {

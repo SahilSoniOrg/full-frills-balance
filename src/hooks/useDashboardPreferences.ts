@@ -12,17 +12,17 @@ export type DashboardPreferencesState = {
 export function useDashboardPreferences(): DashboardPreferencesState {
   const showSafeToSpendChart = useSyncExternalStore(
     onStoreChange => {
-      const sub = preferences.dashboard.observeShowSafeToSpendChart().subscribe(() => {
+      const sub = preferences.observe('showSafeToSpendChart').subscribe(() => {
         onStoreChange();
       });
       return () => sub.unsubscribe();
     },
-    () => preferences.dashboard.showSafeToSpendChart,
-    () => preferences.dashboard.showSafeToSpendChart,
+    () => preferences.getSnapshot().showSafeToSpendChart,
+    () => preferences.getSnapshot().showSafeToSpendChart,
   );
 
   const setShowSafeToSpendChart = useCallback((show: boolean) => {
-    preferences.dashboard.setShowSafeToSpendChart(show);
+    preferences.update({ showSafeToSpendChart: show });
   }, []);
 
   return {

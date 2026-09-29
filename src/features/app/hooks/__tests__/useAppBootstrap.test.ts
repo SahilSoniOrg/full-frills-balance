@@ -67,13 +67,14 @@ jest.mock('@/src/services/preferences', () => ({
     device: {
       anonymizedId: 'anonymous-test-id' as string | undefined,
       setAnonymizedId: jest.fn(),
+      getSnapshot: () => ({ isSmsImportEnabled: false }),
     },
-    notifications: {
+    getSnapshot: () => ({
       notificationCadence: 'daily',
       notificationHour: 9,
       notificationMinute: 0,
-    },
-    sms: { isSmsImportEnabled: false },
+      notificationWeekday: 1,
+    }),
   },
 }));
 jest.mock('@/src/utils/scheduler', () => ({
