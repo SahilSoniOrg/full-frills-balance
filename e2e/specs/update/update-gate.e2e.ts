@@ -18,6 +18,7 @@ describe('Mandatory update gate', () => {
         e2eAuth: E2E_AUTH_TOKEN,
         e2eReset: '1',
         e2eSeedProfile: 'onboarded',
+        e2eUpdateGateMode: 'required',
       },
     });
 
@@ -49,6 +50,7 @@ describe('Available update notice', () => {
         e2eAuth: E2E_AUTH_TOKEN,
         e2eReset: '1',
         e2eSeedProfile: 'onboarded',
+        e2eUpdateGateMode: 'available',
       },
     });
 

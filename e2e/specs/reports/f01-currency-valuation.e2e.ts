@@ -66,7 +66,7 @@ async function createForeignExpense(): Promise<void> {
   await waitFor(element(by.id('journal-entry-screen')))
     .toExist()
     .withTimeout(30000);
-  await tapById('amount-calculator-close');
+  await element(by.id('hero-amount-input')).tapReturnKey();
   await tapById('journal-entry-mode-selector-trigger');
   await tapById('journal-entry-mode-allocation');
   await element(by.id('journal-description-input')).typeText('F01 Euro market purchase');
@@ -77,10 +77,9 @@ async function createForeignExpense(): Promise<void> {
   await tapByText('Food & Drink', 15000);
 
   await enterAmount('split-total-amount-input', '10');
-  await enterAmount('split-amount-input-1', '10');
-  const convertedAmount = element(by.id('split-fx-1-converted-amount-input'));
+  await enterAmount('split-amount-input-1', '11');
+  const convertedAmount = element(by.id('split-source-fx-converted-amount-input'));
   await waitFor(convertedAmount).toBeVisible().withTimeout(30000);
-  await convertedAmount.replaceText('11.00');
 
   await tapById('submit-footer-button');
   await waitFor(element(by.text('F01 Euro market purchase')))

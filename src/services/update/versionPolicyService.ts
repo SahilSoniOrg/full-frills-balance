@@ -2,15 +2,22 @@ import * as Application from 'expo-application';
 import { Platform } from 'react-native';
 import { AppConfig } from '@/src/constants/app-config';
 import { storage } from '@/src/utils/storage';
+import { readE2eLaunchConfig } from '@/src/testing/e2eLaunchArgs';
 import type { VersionCheckResult, VersionPolicy, VersionPolicyManifest } from './types';
 
 const CACHE_KEY = 'full_frills_balance_version_policy_v2';
-const E2E_UPDATE_GATE_MODE =
-  process.env.EXPO_PUBLIC_E2E === '1' ? process.env.EXPO_PUBLIC_UPDATE_GATE_E2E : undefined;
 const REQUEST_TIMEOUT_MS = 5000;
 
+function getE2eUpdateGateMode(): 'available' | 'required' | undefined {
+  if (process.env.EXPO_PUBLIC_E2E !== '1') return undefined;
+  const launchMode = readE2eLaunchConfig()?.updateGateMode;
+  if (launchMode) return launchMode;
+  const buildMode = process.env.EXPO_PUBLIC_UPDATE_GATE_E2E;
+  return buildMode === 'available' || buildMode === 'required' ? buildMode : undefined;
+}
+
 export function isVersionPolicyConfigured(): boolean {
-  return Boolean(AppConfig.api.versionPolicyUrl) || Boolean(E2E_UPDATE_GATE_MODE);
+  return Boolean(AppConfig.api.versionPolicyUrl) || Boolean(getE2eUpdateGateMode());
 }
 
 function isValidPolicy(value: unknown): value is VersionPolicy {
@@ -73,8 +80,9 @@ export async function fetchVersionPolicy(
   endpoint = AppConfig.api.versionPolicyUrl,
 ): Promise<VersionPolicy | null> {
   if (Platform.OS !== 'ios' && Platform.OS !== 'android') return null;
-  if (!endpoint && E2E_UPDATE_GATE_MODE) {
-    if (E2E_UPDATE_GATE_MODE === 'available') {
+  const e2eUpdateGateMode = getE2eUpdateGateMode();
+  if (!endpoint && e2eUpdateGateMode) {
+    if (e2eUpdateGateMode === 'available') {
       return {
         minimumBuild: 0,
         latestBuild: Number.MAX_SAFE_INTEGER,

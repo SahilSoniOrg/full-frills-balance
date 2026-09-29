@@ -89,7 +89,7 @@ export async function openSafeToSpendExplanation(options?: {
     await openDashboardTab();
   }
   await tapByLabel('Open safe-to-spend calculation info');
-  await assertTextVisible('How Safe to Spend Is Calculated');
+  await assertTextVisible('How Safe to Spend Works');
   await assertVisibleById(SAFE_TO_SPEND_PROJECTED_GAP_COPY, LONG_TIMEOUT_MS);
 }
 
@@ -98,8 +98,9 @@ export { SAFE_TO_SPEND_PROJECTED_GAP_COPY };
 export async function createPlannedPayment(name: string, amount: string): Promise<void> {
   await openCommitmentsTab();
   await tapById('commitments-tabs-item-planned');
-  await tapByLabel('Create a new planned payment');
+  await tapByLabel('Add bill');
   await typeById(plannedPayments.heroName, name);
+  await element(by.id(plannedPayments.heroName)).tapReturnKey();
   await tapById(`${plannedPayments.heroAmount}-calculator`);
   for (const key of amount) {
     await tapById(`amount-calculator-key-${key}`);

@@ -17,14 +17,14 @@ describe('Workplace lifecycle', () => {
 
     await launchOnboardedApp({ seedProfile: 'onboarded' });
     await tapById(tabs.settings);
-    await tapByLabel('Current Workplace');
-    await tapByLabel(workplaceName);
+    await tapById('settings-current-workplace');
+    await tapById('current-workplace-workplaces');
     await tapByLabel(`Delete ${workplaceName}`);
     await replaceById('confirmation-value-input', workplaceName);
     await element(by.id('confirmation-value-input')).tapReturnKey();
     await tapById('confirmation-primary-action');
 
     await assertVisibleById('setup-screen', 120000);
-    await assertTextVisible('Choose your currency', 30000);
+    await assertTextVisible('Choose your main currency', 30000);
   });
 });

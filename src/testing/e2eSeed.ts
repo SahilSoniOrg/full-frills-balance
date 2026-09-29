@@ -36,8 +36,8 @@ import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
 import { prepareRestore, publishRestore } from '@/src/services/import/restore';
 import { SETUP_DRAFT_KEY } from '@/src/services/setup/setupDraftIdentity';
 import {
+  FIRST_RUN_RESTORE_BACKUP,
   FIRST_RUN_RESTORE_SOURCE_NAME,
-  FIRST_RUN_RESTORE_SOURCE_URI,
   prepareFirstRunRestoreFixture,
 } from './fixtures/firstRunRestoreBackup';
 import { assertE2eHarnessEnabled } from './e2eRuntimeGate';
@@ -117,6 +117,12 @@ async function seedFirstRunRestore(
   withFxMismatch = false,
   invalidJournalCount = 1,
 ): Promise<WorkplaceId> {
+  // The fixture must survive a process restart because Setup reloads the source
+  // from its persisted URI when the in-memory prepared-restore cache is gone.
+  const restoreSourceUri = await files.writeContent(
+    FIRST_RUN_RESTORE_SOURCE_NAME,
+    JSON.stringify(FIRST_RUN_RESTORE_BACKUP),
+  );
   const sourcePrepared = await prepareFirstRunRestoreFixture();
   // Keep the restore-flow E2E focused on publication and first-run setup.
   acknowledgeCurrentPrivacyPolicy();
@@ -253,7 +259,7 @@ async function seedFirstRunRestore(
       sources: [
         {
           source: {
-            uri: FIRST_RUN_RESTORE_SOURCE_URI,
+            uri: restoreSourceUri,
             name: FIRST_RUN_RESTORE_SOURCE_NAME,
             fingerprint: prepared.fingerprint,
           },

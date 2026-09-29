@@ -31,7 +31,7 @@ describe('Settings navigation', () => {
     await tapById(tabs.settings);
     await assertTextVisible('Settings', 30000);
     await expect(element(by.id('header-workplace-switcher'))).toBeVisible();
-    await assertTextVisible('Preferences', 30000);
+    await assertTextVisible('PREFERENCES', 30000);
   });
 
   it('offers v2 workplace scope selection for exports', async () => {
