@@ -7,7 +7,7 @@ import { accountWriteRepository } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
-import { observeAfterInitial } from '@/src/data/repositories/__tests__/helpers/observeAfterInitial';
+import { observeAfterInitial } from '@/src/testing/observeAfterInitial';
 
 describe('BudgetRepository', () => {
   let accountId1: string;

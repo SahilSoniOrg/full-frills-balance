@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import { accountObserveQueries } from '@/src/data/repositories/account/AccountObserveQueries';
 import { accountWriteRepository } from '@/src/data/repositories/account/AccountWriteRepository';
-import { observeAfterInitial } from '@/src/data/repositories/__tests__/helpers/observeAfterInitial';
+import { observeAfterInitial } from '@/src/testing/observeAfterInitial';
 import { AccountType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 import { map } from 'rxjs/operators';

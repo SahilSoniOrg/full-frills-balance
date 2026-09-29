@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { map } from 'rxjs/operators';
-import { observeAfterInitial } from '@/src/data/repositories/__tests__/helpers/observeAfterInitial';
+import { observeAfterInitial } from '@/src/testing/observeAfterInitial';
 
 describe('TransactionAutoPostRuleRepository', () => {
   beforeEach(async () => {

@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import ExchangeRate from '@/src/data/models/ExchangeRate';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
 import { map } from 'rxjs/operators';
-import { observeAfterInitial } from '@/src/data/repositories/__tests__/helpers/observeAfterInitial';
+import { observeAfterInitial } from '@/src/testing/observeAfterInitial';
 
 describe('ExchangeRateRepository historical rates', () => {
   beforeEach(async () => {

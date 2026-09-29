@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
 import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
-import { observeAfterInitial } from '@/src/data/repositories/__tests__/helpers/observeAfterInitial';
+import { observeAfterInitial } from '@/src/testing/observeAfterInitial';
 import { JournalDisplayType, JournalStatus } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 import { map } from 'rxjs/operators';
