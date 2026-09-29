@@ -3,7 +3,7 @@ import { accountObserveQueries } from '@/src/data/repositories/account';
 import { AccountType } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { DisplayTransaction } from '@/src/types/domainReadModels';
-import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { transactionObserveQueries } from '@/src/data/repositories/transaction';
 import { effect } from '@/src/utils/accounting/BalanceEffects';
 import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';

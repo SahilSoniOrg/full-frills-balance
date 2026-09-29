@@ -8,7 +8,7 @@ import Journal from '@/src/data/models/Journal';
 
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 
 const workplaceId = 'wp-1' as WorkplaceId;

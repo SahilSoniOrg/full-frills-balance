@@ -20,7 +20,7 @@ import JournalMetadata from '@/src/data/models/JournalMetadata';
 
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { journalService } from '@/src/services/journal/journalDomainService';

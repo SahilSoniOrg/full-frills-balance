@@ -1,5 +1,5 @@
 import { accountQueryRepository } from '@/src/data/repositories/account';
-import { journalListQueryRepository } from '@/src/data/repositories/journal/journalListQueryRepository';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { AppConfig } from '@/src/constants/app-config';
 import { convertJournalLineAmount } from '@/src/services/currencyConversion';
@@ -320,13 +320,13 @@ export async function readReportLedger(
   const factPeriod = options.factPeriod ?? query.period;
   const [accounts, actual, planned] = await Promise.all([
     accountQueryRepository.findAll(query.workplaceId),
-    journalListQueryRepository.findPostedInDateRange(
+    journalQueryRepository.findPostedInDateRange(
       query.workplaceId,
       factPeriod.startDate,
       factPeriod.endDate,
     ),
     query.basis === 'ACTUAL_PLUS_PLANNED'
-      ? journalListQueryRepository.findPlannedInDateRange(
+      ? journalQueryRepository.findPlannedInDateRange(
           query.workplaceId,
           factPeriod.startDate,
           factPeriod.endDate,

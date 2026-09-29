@@ -1,11 +1,32 @@
 import { database } from '@/src/data/database/Database';
+import Transaction from '@/src/data/models/Transaction';
 import Journal from '@/src/data/models/Journal';
 import { JournalStatus } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
-import Transaction from '@/src/data/models/Transaction';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';
 import { map, of } from 'rxjs';
+
+export interface JournalTimelineDateRange {
+  startDate?: number;
+  endDate?: number;
+  accountId?: string;
+  accountVersion?: number;
+  journalIds?: string[];
+  plannedPaymentId?: string;
+  accountIds?: string[];
+}
+
+export interface JournalTimelineQuery {
+  workplaceId: WorkplaceId;
+  limit: number;
+  dateRange?: JournalTimelineDateRange;
+  searchQuery?: string;
+  status?: JournalStatus[];
+  minAmount?: number;
+  maxAmount?: number;
+  displayType?: string;
+}
 
 const JOURNAL_LIST_OBSERVE_COLUMNS = [
   'journal_date',
@@ -28,6 +49,69 @@ export class JournalObserveQueries {
 
   private get transactions() {
     return database.collections.get<Transaction>('transactions');
+  }
+
+  observeTimeline({
+    workplaceId,
+    limit,
+    dateRange,
+    searchQuery,
+    status,
+    minAmount,
+    maxAmount,
+    displayType,
+  }: JournalTimelineQuery) {
+    const clauses: Q.Clause[] = [
+      Q.experimentalJoinTables(['transactions']),
+      Q.where('workplace_id', workplaceId),
+      Q.where('deleted_at', Q.eq(null)),
+      Q.where('status', Q.oneOf(status || [...ACTIVE_JOURNAL_STATUSES])),
+      Q.sortBy('journal_date', 'desc'),
+      Q.sortBy('created_at', 'desc'),
+      Q.take(limit),
+    ];
+
+    const accountIds = dateRange?.accountIds || (dateRange?.accountId ? [dateRange.accountId] : []);
+    if (accountIds.length > 0 && !dateRange?.plannedPaymentId) {
+      clauses.push(
+        Q.on('transactions', [
+          Q.where('workplace_id', workplaceId),
+          Q.where('account_id', Q.oneOf(accountIds)),
+          Q.where('deleted_at', Q.eq(null)),
+        ]),
+      );
+    }
+
+    if (dateRange) {
+      if (dateRange.startDate !== undefined) {
+        clauses.push(Q.where('journal_date', Q.gte(dateRange.startDate)));
+      }
+      if (dateRange.endDate !== undefined) {
+        clauses.push(Q.where('journal_date', Q.lte(dateRange.endDate)));
+      }
+      if (dateRange.journalIds?.length) {
+        clauses.push(Q.where('id', Q.oneOf(dateRange.journalIds)));
+      }
+      if (dateRange.plannedPaymentId) {
+        clauses.push(Q.where('planned_payment_id', Q.eq(dateRange.plannedPaymentId)));
+      }
+    }
+
+    const query = searchQuery?.trim();
+    if (query) {
+      clauses.push(
+        Q.or(
+          Q.where('description', Q.like(`%${Q.sanitizeLikeString(query)}%`)),
+          Q.where('notes', Q.like(`%${Q.sanitizeLikeString(query)}%`)),
+        ),
+      );
+    }
+
+    if (minAmount !== undefined) clauses.push(Q.where('total_amount', Q.gte(minAmount)));
+    if (maxAmount !== undefined) clauses.push(Q.where('total_amount', Q.lte(maxAmount)));
+    if (displayType) clauses.push(Q.where('display_type', Q.eq(displayType)));
+
+    return this.journals.query(...clauses).observeWithColumns([...JOURNAL_LIST_OBSERVE_COLUMNS]);
   }
 
   observeByIdsWithDeleted(workplaceId: WorkplaceId, journalIds: JournalId[]) {

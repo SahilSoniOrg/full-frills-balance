@@ -4,7 +4,7 @@ import { WorkplaceId } from '@/src/types/ids';
 import { accountObserveQueries } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
-import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import {
@@ -30,7 +30,7 @@ jest.mock('@/src/data/repositories/BudgetRepository');
 jest.mock('@/src/data/repositories/transaction');
 jest.mock('@/src/data/repositories/TransactionRawRepository');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
-jest.mock('@/src/data/repositories/journal/journalTimelineModule');
+jest.mock('@/src/data/repositories/journal/JournalObserveQueries');
 jest.mock('@/src/data/repositories/journal/journalQueryRepository');
 jest.mock('@/src/data/repositories/WorkplaceRepository');
 jest.mock('@/src/services/exchange-rate-service');

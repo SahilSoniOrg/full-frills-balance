@@ -8,10 +8,8 @@ import type { JournalSuggestion, JournalSuggestionPage } from '@/src/types/journ
 import type { TabType } from '@/src/types/domainJournal';
 import type { PostingPlan, TransactionResolverAccount } from '@/src/types/domainTransaction';
 import { validatePostingPlan } from '@/src/services/transaction/transactionComposerDomain';
-import {
-  journalEnrichmentQueries,
-  journalQueryRepository,
-} from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import type { CreateJournalData } from '@/src/types/journalWrite';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { accountQueryRepository } from '@/src/data/repositories/account';

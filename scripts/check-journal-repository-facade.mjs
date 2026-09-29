@@ -4,7 +4,9 @@
  *
  * The all-purpose gateway was removed (plan commit 21). Journal persistence is
  * now accessed by intent through modules under src/data/repositories/journal/:
- *   - journalTimelineModule             (list / by-id / observation / enrichment reads)
+ *   - journalQueryRepository            (scoped list / by-id / date-range reads)
+ *   - JournalObserveQueries             (reactive read models)
+ *   - JournalEnrichmentQueries           (timeline / suggestion enrichment)
  *   - JournalPersistenceRepository      (journal writes and lifecycle commands)
  *   - JournalPlannedQueries             (planned-payment scheduling lookups)
  *   - SmsJournalQueries                 (SMS-dedup lookups)
@@ -24,6 +26,21 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const FACADE_PATH = path.join(ROOT, 'src/data/repositories/JournalRepository.ts');
+const LEGACY_QUERY_MODULES = [
+  'src/data/repositories/journal/journalListQueryRepository.ts',
+  'src/data/repositories/journal/journalTimelineModule.ts',
+];
+
+const legacyModules = LEGACY_QUERY_MODULES.filter(relativePath =>
+  fs.existsSync(path.join(ROOT, relativePath)),
+);
+if (legacyModules.length > 0) {
+  console.error(
+    'Journal query compatibility modules FAILED: remove obsolete aliases and import the owning module directly.\n  ' +
+      legacyModules.join('\n  '),
+  );
+  process.exit(1);
+}
 
 if (fs.existsSync(FACADE_PATH)) {
   console.error(
@@ -68,6 +85,6 @@ if (offending.length > 0) {
 }
 
 console.log(
-  'JournalRepository façade OK: façade deleted; callers use journal intent modules. PlannedPaymentService façade deleted.',
+  'Journal repository boundaries OK: broad and compatibility façades deleted; callers use owning modules. PlannedPaymentService façade deleted.',
 );
 process.exit(0);

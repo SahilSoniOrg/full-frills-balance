@@ -1,14 +1,15 @@
 import { accountQueryRepository } from '@/src/data/repositories/account';
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { journalReadService } from '@/src/services/journal/journalReadService';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 
-jest.mock('@/src/data/repositories/journal/journalTimelineModule', () => ({
-  journalObserveQueries: {
-    observeById: jest.fn(),
-  },
+jest.mock('@/src/data/repositories/journal/JournalObserveQueries', () => ({
+  journalObserveQueries: { observeById: jest.fn() },
+}));
+
+jest.mock('@/src/data/repositories/journal/journalQueryRepository', () => ({
   journalQueryRepository: {
     find: jest.fn(),
   },

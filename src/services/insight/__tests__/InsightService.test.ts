@@ -3,10 +3,8 @@ import { WorkplaceId } from '@/src/types/ids';
 import { AppConfig } from '@/src/constants';
 
 import { accountObserveQueries } from '@/src/data/repositories/account';
-import {
-  journalObserveQueries,
-  journalQueryRepository,
-} from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import {
@@ -23,7 +21,8 @@ import { take } from 'rxjs/operators';
 
 // Mock dependencies
 jest.mock('@/src/data/repositories/account');
-jest.mock('@/src/data/repositories/journal/journalTimelineModule');
+jest.mock('@/src/data/repositories/journal/JournalObserveQueries');
+jest.mock('@/src/data/repositories/journal/journalQueryRepository');
 jest.mock('@/src/data/repositories/transaction');
 jest.mock('@/src/data/repositories/TransactionRawRepository');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');

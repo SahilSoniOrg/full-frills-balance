@@ -1,7 +1,7 @@
 import Account from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import { accountObserveQueries } from '@/src/data/repositories/account';
-import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { transactionObserveQueries } from '@/src/data/repositories/transaction';
 import {
   reactiveCacheCoordinator,

@@ -1,5 +1,5 @@
 import { accountQueryRepository } from '@/src/data/repositories/account';
-import { journalListQueryRepository } from '@/src/data/repositories/journal/journalListQueryRepository';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { convertJournalLineAmount } from '@/src/services/currencyConversion';
 import { AccountType, JournalDisplayType, JournalStatus, TransactionType } from '@/src/types/enums';
@@ -10,8 +10,8 @@ import type { ReportQuery } from '../../types/query';
 jest.mock('@/src/data/repositories/account', () => ({
   accountQueryRepository: { findAll: jest.fn() },
 }));
-jest.mock('@/src/data/repositories/journal/journalListQueryRepository', () => ({
-  journalListQueryRepository: {
+jest.mock('@/src/data/repositories/journal/journalQueryRepository', () => ({
+  journalQueryRepository: {
     findAll: jest.fn(),
     findAllPlanned: jest.fn(),
     findPostedInDateRange: jest.fn(),
@@ -29,7 +29,7 @@ jest.mock('@/src/services/currencyConversion', () => ({
 }));
 
 const accounts = accountQueryRepository as jest.Mocked<typeof accountQueryRepository>;
-const journals = journalListQueryRepository as jest.Mocked<typeof journalListQueryRepository>;
+const journals = journalQueryRepository as jest.Mocked<typeof journalQueryRepository>;
 const transactions = transactionQueryRepository as jest.Mocked<typeof transactionQueryRepository>;
 const convert = convertJournalLineAmount as jest.MockedFunction<typeof convertJournalLineAmount>;
 

@@ -34,19 +34,6 @@ export interface JournalTimelineItem {
   notes?: string;
 }
 
-export interface ObservableDateRange {
-  startDate: number;
-  endDate: number;
-}
-
-export interface JournalObserveFilter extends ObservableDateRange {
-  accountId?: string;
-  accountVersion?: number;
-  journalIds?: string[];
-  plannedPaymentId?: string;
-  accountIds?: string[];
-}
-
 export interface TransactionAccountBadgeSource {
   id?: string;
   name: string;

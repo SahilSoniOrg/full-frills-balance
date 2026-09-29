@@ -1,6 +1,6 @@
 # Repository Layer Direction and Refactor Plan
 
-Status: proposed; initial low-risk slices in progress locally
+Status: Phase 1 complete; remaining phases are planned
 Scope: repositories inside the Full Frills Balance app codebase
 Related: [Architecture Audit](./ARCHITECTURE_AUDIT.md), [Persistence Ownership Inventory](./PERSISTENCE_OWNERSHIP_INVENTORY.md)
 
@@ -18,7 +18,7 @@ This repository already has useful persistence boundaries. `JournalPersistenceRe
 
 The highest-value seams to improve are:
 
-1. **Journal reads:** `journalQueryRepository.ts` and `journalListQueryRepository.ts` split related reads and repeat common scoping and deleted-row rules. A shared typed query contract can consolidate ordinary journal fetches while leaving enrichment, SMS, and planned-payment projections specialized.
+1. **Journal reads:** ordinary journal fetches now have one canonical owner in `journalQueryRepository.ts`. Timeline filtering lives in `JournalObserveQueries`; enrichment, SMS, and planned-payment projections remain specialized.
 2. **Journal inputs:** `CreateJournalData`, `PutJournalInput`, and `PutJournalPatchInput` repeat line and metadata shapes. Share the stable write fields, but retain a distinct sparse patch type.
 3. **Transaction reads:** `findByJournals` and `findByIds` repeat chunked fetch logic. Share safe chunk execution and criteria where semantics match; retain special ordering and joined budget queries.
 4. **Account reads:** fetch and observe repositories repeat workplace, type, ID, and deleted-row filters. Share filter construction, but preserve separate fetch and reactive interfaces because observation columns and RxJS behavior are part of their contracts.
@@ -109,20 +109,16 @@ Every planned consolidation has named callers and a written compatibility contra
 
 ### Phase 1 — Consolidate journal read and write contracts
 
-**Work**
+**Completed work**
 
-- Define a typed journal fetch/list query contract covering the current single/by-ID/recent/page/date-range/count operations. Consolidate duplicate query construction between the two ordinary journal query repositories.
-- Keep `JournalObserveQueries`, `JournalEnrichmentQueries`, `SmsJournalQueries`, `JournalPlannedQueries`, and balance-line queries specialized where they have distinct reactive or domain projections. Share clause builders only when the exact semantics match.
-- Share journal line and metadata input types between `CreateJournalData` and the persistence full-write input. Keep `PutJournalPatchInput` sparse and intentional.
-- Document the aggregate boundary: transaction rows are journal legs, and their lifecycle follows journal persistence. Preserve the one-session journal path and audit/rebuild result.
+- Ordinary journal fetch/list operations share one typed query repository; callers import it directly, with no list alias module or timeline re-export barrel.
+- `JournalObserveQueries`, `JournalEnrichmentQueries`, `SmsJournalQueries`, `JournalPlannedQueries`, and balance-line queries remain specialized where their reactive or domain projections differ.
+- Journal line and metadata input types are shared between `CreateJournalData` and the persistence full-write input; `PutJournalPatchInput` remains sparse and intentional.
+- The aggregate boundary is explicit: transaction rows are journal legs, and their lifecycle follows journal persistence. The one-session journal path and audit/rebuild result are preserved.
 
-**Exit condition**
+**Exit condition — met**
 
-There is one obvious ordinary journal query entry point; specialized projections remain explicit; callers cannot accidentally create or update transaction legs independently; patch behavior and post-commit rebuild impact are unchanged.
-
-**Risk to control**
-
-The current duplicated methods may differ on planned/posted status, deleted rows, sort order, or date field. Compare each caller’s observed result before moving it to a shared query.
+There is one ordinary journal query entry point; specialized projections remain explicit; callers cannot accidentally create or update transaction legs independently; patch behavior and post-commit rebuild impact are unchanged.
 
 ### Phase 2 — Unify transaction and account query mechanics
 
@@ -209,7 +205,7 @@ Before merging a phase, review the affected operations against these contracts:
 
 Verification is phase-specific: targeted repository/workflow checks, architecture boundaries, type checking, lint, and the project’s full verification command before the complete refactor lands. Native SQLite/JSI behavior remains a separate device-level proof point already called out in the persistence inventory.
 
-Initial slices share sequential ID-query chunking between journal and transaction readers, journal line/metadata/full-write input types between preparation and persistence, and one owner for ordinary fetch/list journal queries. The former list-module exports remain as compatibility aliases until callers migrate. The review gates above apply to these slices and each subsequent phase.
+Phase 1 delivered sequential ID-query chunking shared by journal and transaction readers, shared journal line/metadata/full-write input types, and one owner for ordinary journal fetch/list queries. All in-repository callers now use owning modules directly; the compatibility aliases and re-export barrel have been removed. The review gates above apply to this work and each subsequent phase.
 
 ## Explicit non-goals
 

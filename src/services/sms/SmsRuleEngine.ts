@@ -5,7 +5,7 @@ import Transaction from '@/src/data/models/Transaction';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { accountQueryRepository } from '@/src/data/repositories/account';
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import {
   SmsRuleDraftInput,
   transactionAutoPostRuleRepository,

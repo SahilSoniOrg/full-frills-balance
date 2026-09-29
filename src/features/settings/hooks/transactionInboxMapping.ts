@@ -1,4 +1,4 @@
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { PlainInboxRecord } from '@/src/types/plainDtos';
 import { TransactionDuplicateCandidate, TransactionInboxItem } from '@/src/types/domainJournal';

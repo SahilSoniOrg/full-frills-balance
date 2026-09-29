@@ -12,7 +12,7 @@ import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { Animation } from '@/src/constants';
 import Transaction from '@/src/data/models/Transaction';
 
-import { journalObserveQueries } from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { transactionObserveQueries } from '@/src/data/repositories/transaction';
 import { accountQueries } from '@/src/services/accounts/accountQueries';

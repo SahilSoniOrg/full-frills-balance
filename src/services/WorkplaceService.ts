@@ -6,7 +6,7 @@ import { WorkplaceId } from '@/src/types/ids';
 import Workplace, { toPlainWorkplace } from '@/src/data/models/Workplace';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { accountQueryRepository } from '@/src/data/repositories/account';
-import { journalListQueryRepository } from '@/src/data/repositories/journal/journalListQueryRepository';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { analytics } from '@/src/services/analytics';
 import { preferences, preferencesMigration } from '@/src/services/preferences';
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
@@ -99,7 +99,7 @@ export class WorkplaceService {
     const accounts = await accountQueryRepository.findAll(workplaceId);
     return {
       ...countAccountsVsCategories(accounts),
-      journals: await journalListQueryRepository.countNonDeleted(workplaceId),
+      journals: await journalQueryRepository.countNonDeleted(workplaceId),
     };
   }
 

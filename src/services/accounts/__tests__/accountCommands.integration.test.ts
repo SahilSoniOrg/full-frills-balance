@@ -15,7 +15,7 @@ import { accountQueryRepository, accountWriteRepository } from '@/src/data/repos
 import { getBalanceCorrectionAccountInput } from '@/src/data/repositories/account/accountSystemAccountInputs';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
-import { journalListQueryRepository } from '@/src/data/repositories/journal/journalTimelineModule';
+import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
@@ -55,7 +55,7 @@ describe('account commands (integration)', () => {
     const audits = await auditRepository.findByEntity('account', created.id, WP);
     expect(audits.some(a => a.action === AuditAction.CREATE)).toBe(true);
 
-    const journals = await journalListQueryRepository.findAll(WP);
+    const journals = await journalQueryRepository.findAll(WP);
     expect(journals.some(j => j.description?.includes('Initial Balance'))).toBe(true);
   });
 
@@ -293,7 +293,7 @@ describe('account commands (integration)', () => {
 
     await adjustAccountBalance(WP, asset, 250);
 
-    const adjustment = (await journalListQueryRepository.findAll(WP)).find(journal =>
+    const adjustment = (await journalQueryRepository.findAll(WP)).find(journal =>
       journal.description?.startsWith('Balance Adjustment: Stale cache asset'),
     );
     expect(adjustment).toBeTruthy();
@@ -319,7 +319,7 @@ describe('account commands (integration)', () => {
 
     await Promise.all([adjustAccountBalance(WP, asset, 250), adjustAccountBalance(WP, asset, 250)]);
 
-    const adjustments = (await journalListQueryRepository.findAll(WP)).filter(journal =>
+    const adjustments = (await journalQueryRepository.findAll(WP)).filter(journal =>
       journal.description?.startsWith('Balance Adjustment: Concurrent adjustment asset'),
     );
     expect(adjustments).toHaveLength(1);
