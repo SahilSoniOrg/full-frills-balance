@@ -91,6 +91,16 @@ jest.mock('@/src/data/repositories/journal/SmsJournalQueries', () => ({
 }));
 jest.mock('@/src/utils/logger');
 
+function createMockAuditCollection() {
+  return {
+    prepareCreate: jest.fn(fn => {
+      const record = {};
+      fn(record);
+      return record;
+    }),
+  };
+}
+
 describe('SmsService Batching', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -123,10 +133,12 @@ describe('SmsService Batching', () => {
         fetch: jest.fn().mockResolvedValue([]),
       }),
     };
+    const mockAuditCollection = createMockAuditCollection();
 
     (database.collections.get as jest.Mock).mockImplementation(name => {
       if (name === 'transaction_inbox_records') return mockInboxCollection;
       if (name === 'transaction_auto_post_rules') return mockRulesCollection;
+      if (name === 'audit_logs') return mockAuditCollection;
       return null;
     });
 
@@ -142,9 +154,10 @@ describe('SmsService Batching', () => {
     const batchArgs = (database.batch as jest.Mock).mock.calls;
     const totalBatchedOps = batchArgs.reduce((acc, call) => acc + call.length, 0);
 
-    // We have 2 messages, each should create 1 SmsInboxRecord
-    expect(totalBatchedOps).toBe(2);
+    // Each message creates an inbox record and its audit entry.
+    expect(totalBatchedOps).toBe(4);
     expect(mockInboxCollection.prepareCreate).toHaveBeenCalledTimes(2);
+    expect(mockAuditCollection.prepareCreate).toHaveBeenCalledTimes(2);
   });
 
   it('includes ledger operations in the same batch when auto-post is triggered', async () => {
@@ -179,10 +192,12 @@ describe('SmsService Batching', () => {
         ]),
       }),
     };
+    const mockAuditCollection = createMockAuditCollection();
 
     (database.collections.get as jest.Mock).mockImplementation(name => {
       if (name === 'transaction_inbox_records') return mockInboxCollection;
       if (name === 'transaction_auto_post_rules') return mockRulesCollection;
+      if (name === 'audit_logs') return mockAuditCollection;
       return null;
     });
 
@@ -214,8 +229,8 @@ describe('SmsService Batching', () => {
     const batchArgs = (database.batch as jest.Mock).mock.calls;
     const totalBatchedOps = batchArgs.reduce((acc, call) => acc + call.length, 0);
 
-    // Should be at least 3 ops (1 inbox record + 2 ledger ops)
-    expect(totalBatchedOps).toBeGreaterThanOrEqual(3);
+    // Inbox record + its audit entry + 2 ledger operations.
+    expect(totalBatchedOps).toBeGreaterThanOrEqual(4);
     expect(journalPersistenceService.putInSession).toHaveBeenCalledTimes(1);
   });
 
@@ -270,10 +285,12 @@ describe('SmsService Batching', () => {
         ]),
       }),
     };
+    const mockAuditCollection = createMockAuditCollection();
 
     (database.collections.get as jest.Mock).mockImplementation(name => {
       if (name === 'transaction_inbox_records') return mockInboxCollection;
       if (name === 'transaction_auto_post_rules') return mockRulesCollection;
+      if (name === 'audit_logs') return mockAuditCollection;
       return null;
     });
 

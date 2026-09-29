@@ -67,6 +67,8 @@ describe('account archive revert integration', () => {
       mockAccount,
       { archivedAt: null },
       workplaceId,
+      expect.any(Function),
+      expect.any(Function),
     );
     expect(record.archivedAt).toBeUndefined();
   });

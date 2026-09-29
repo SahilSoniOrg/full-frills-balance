@@ -41,6 +41,8 @@ describe('Journal ledger integration', () => {
 
   describe('standard persistence service cutover', () => {
     it('rejects an unbalanced posted create before writing journal, lines, or audit', async () => {
+      const auditCountBefore = await database.collections.get('audit_logs').query().fetchCount();
+
       await expect(
         journalService.createJournal(
           {
@@ -65,10 +67,13 @@ describe('Journal ledger integration', () => {
 
       expect(await database.collections.get<Journal>('journals').query().fetchCount()).toBe(0);
       expect(await database.collections.get('transactions').query().fetchCount()).toBe(0);
-      expect(await database.collections.get('audit_logs').query().fetchCount()).toBe(0);
+      expect(await database.collections.get('audit_logs').query().fetchCount()).toBe(
+        auditCountBefore,
+      );
     }, 10000);
 
     it('saves a manual bulk request through one atomic persistence batch', async () => {
+      const auditCountBefore = await database.collections.get('audit_logs').query().fetchCount();
       const response = await journalService.saveBulkJournalEntries(
         [10, 20].map((amount, index) => ({
           description: `Bulk entry ${index + 1}`,
@@ -107,7 +112,9 @@ describe('Journal ledger integration', () => {
         summaries: [{ amount: 10 }, { amount: 20 }],
       });
       expect(await database.collections.get<Journal>('journals').query().fetchCount()).toBe(2);
-      expect(await database.collections.get('audit_logs').query().fetchCount()).toBe(2);
+      expect(await database.collections.get('audit_logs').query().fetchCount()).toBe(
+        auditCountBefore + 2,
+      );
       await rebuildQueueService.flush();
       expect(
         (

@@ -6,13 +6,14 @@ import { enrichTransactionInboxRecords } from '../transactionInboxMapping';
 jest.mock('@/src/data/repositories/journal/journalQueryRepository', () => ({
   journalQueryRepository: {
     findByIds: jest.fn(),
+    findWithDeletedByIds: jest.fn(),
   },
 }));
 
 describe('enrichTransactionInboxRecords', () => {
   it('carries canonical linked-journal preview fields instead of SMS values', async () => {
     const linkedJournalId = 'journal-1' as any;
-    (journalQueryRepository.findByIds as jest.Mock).mockResolvedValue([
+    (journalQueryRepository.findWithDeletedByIds as jest.Mock).mockResolvedValue([
       {
         id: linkedJournalId,
         description: 'Actual journal description',

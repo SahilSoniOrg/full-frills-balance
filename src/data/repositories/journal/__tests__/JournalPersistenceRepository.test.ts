@@ -78,7 +78,10 @@ describe('JournalPersistenceRepository', () => {
       .get<AuditLog>('audit_logs')
       .query(Q.where('entity_id', entityId), Q.where('workplace_id', WORKPLACE_ID))
       .fetch();
-    return audits.map(audit => JSON.parse(audit.changes));
+    return audits.map(audit => {
+      const payload = JSON.parse(audit.changes);
+      return { before: payload.before, after: payload.after };
+    });
   }
 
   it('persists a balanced posted journal with its lines in one repository operation', async () => {

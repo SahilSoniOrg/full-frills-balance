@@ -79,7 +79,7 @@ describe('plannedPaymentSchedulePolicy', () => {
       name: 'Rent updated',
       amount: 1100,
     });
-    expect(nonSchedule.nextOccurrence).toBe(existing.nextOccurrence);
+    expect(nonSchedule).not.toHaveProperty('nextOccurrence');
     expect(nonSchedule.name).toBe('Rent updated');
 
     const schedule = buildUpdatePersistenceInput(existing, {
