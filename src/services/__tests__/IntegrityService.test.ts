@@ -228,14 +228,14 @@ describe('Integrity checks', () => {
       expect(JSON.parse(auditLogs[0].changes)).toEqual(
         expect.objectContaining({
           before: expect.objectContaining({
-            cachedBalance: 9999,
-            computedBalance: 500,
+            runningBalance: 9999,
           }),
           after: expect.objectContaining({
+            runningBalance: 500,
             repairType: 'running_balance',
             trigger: 'repair',
-            balanceAfterRepair: 500,
           }),
+          details: expect.objectContaining({ computedBalance: 500 }),
         }),
       );
     });

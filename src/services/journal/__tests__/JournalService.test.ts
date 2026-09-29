@@ -227,13 +227,21 @@ describe('JournalService - saveJournalEntry', () => {
       expect(journalPersistenceService.put).toHaveBeenCalledWith(
         expect.objectContaining({ journalId: 'journal123' }),
         'wp-1',
+        undefined,
+        undefined,
       );
     });
 
     it('routes manual posting through the persistence service', async () => {
       await service.postJournal('journal123' as JournalId, 'wp-1' as WorkplaceId);
 
-      expect(journalPersistenceService.post).toHaveBeenCalledWith('journal123', 'wp-1');
+      expect(journalPersistenceService.post).toHaveBeenCalledWith(
+        'journal123',
+        'wp-1',
+        undefined,
+        undefined,
+        undefined,
+      );
     });
 
     it('routes reversals through the persistence service', async () => {

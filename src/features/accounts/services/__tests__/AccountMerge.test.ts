@@ -79,6 +79,7 @@ describe('mergeAccounts command', () => {
         workplaceId,
         sourceIds,
         target.id,
+        expect.any(String),
       );
     }
     expect(snapshotSpy).toHaveBeenCalledWith(expect.anything(), workplaceId, [

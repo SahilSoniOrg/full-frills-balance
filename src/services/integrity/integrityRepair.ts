@@ -25,17 +25,17 @@ export function prepareRunningBalanceRepair(
       undoable: false,
       changes: {
         before: {
-          cachedBalance: discrepancy.cachedBalance,
-          computedBalance: discrepancy.computedBalance,
-          discrepancy: discrepancy.discrepancy,
-          snapshotCorrupted: discrepancy.snapshotCorrupted ?? false,
+          runningBalance: discrepancy.cachedBalance,
         },
         after: {
+          runningBalance: discrepancy.computedBalance,
           repairType: 'running_balance',
           trigger,
           accountName: discrepancy.accountName,
-          balanceAfterRepair: discrepancy.computedBalance,
         },
+        computedBalance: discrepancy.computedBalance,
+        discrepancy: discrepancy.discrepancy,
+        snapshotCorrupted: discrepancy.snapshotCorrupted ?? false,
       },
     },
     workplaceId,

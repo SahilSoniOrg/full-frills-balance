@@ -354,6 +354,7 @@ describe('planned payment modules', () => {
         'existing-j-1',
         'wp-1',
         expect.any(Number),
+        expect.objectContaining({ source: 'app', correlationId: expect.any(String) }),
       );
       expect(journalPersistenceService.putInSession).not.toHaveBeenCalled();
       expect(plannedPaymentRepository.updateInSession).toHaveBeenCalledWith(
@@ -362,6 +363,12 @@ describe('planned payment modules', () => {
         'pp-1',
         expect.objectContaining({ nextOccurrence: expect.any(Number) }),
         { status: PlannedPaymentStatus.ACTIVE, nextOccurrence: mockPP.nextOccurrence },
+        expect.objectContaining({
+          eventType: 'planned_payment.schedule_advanced',
+          source: 'system',
+          undoable: false,
+          correlationId: expect.any(String),
+        }),
       );
       expect(journalPersistenceService.afterAtomicWriteCommit).toHaveBeenCalled();
       expect(updatePpSpy).not.toHaveBeenCalled();
@@ -432,6 +439,7 @@ describe('planned payment modules', () => {
             expectedStatus: JournalStatus.PLANNED,
           },
         ],
+        expect.objectContaining({ source: 'app', correlationId: expect.any(String) }),
       );
       expect(plannedPaymentRepository.updateInSession).toHaveBeenCalled();
       const nextOcc = (plannedPaymentRepository.updateInSession as jest.Mock).mock.calls[0][3]
@@ -565,6 +573,12 @@ describe('planned payment modules', () => {
         'pp-1',
         { status: PlannedPaymentStatus.PAUSED },
         expect.objectContaining({ status: PlannedPaymentStatus.ACTIVE }),
+        expect.objectContaining({
+          eventType: 'planned_payment.status_changed',
+          source: 'app',
+          undoable: false,
+          correlationId: expect.any(String),
+        }),
       );
       expect(journalPersistenceRepository.setNonPostedStatusesInSession).toHaveBeenCalledWith(
         expect.anything(),
@@ -576,6 +590,7 @@ describe('planned payment modules', () => {
             expectedStatus: JournalStatus.PLANNED,
           },
         ],
+        expect.objectContaining({ source: 'app', correlationId: expect.any(String) }),
       );
       expect(mockPP.prepareUpdate).not.toHaveBeenCalled();
       expect(mockJournal.prepareUpdate).not.toHaveBeenCalled();
@@ -650,6 +665,7 @@ describe('planned payment modules', () => {
             expectedStatus: JournalStatus.PAUSED,
           },
         ],
+        expect.objectContaining({ source: 'app', correlationId: expect.any(String) }),
       );
       expect(mockPP.prepareUpdate).not.toHaveBeenCalled();
       expect(mockFutureJournal.prepareUpdate).not.toHaveBeenCalled();

@@ -154,12 +154,30 @@ describe('WorkplaceService transitions', () => {
 
     await workplaceService.migrateLegacyCurrency();
 
-    expect(mockWorkplaces.update).toHaveBeenNthCalledWith(1, first, {
-      defaultCurrencyCode: 'INR',
-    });
-    expect(mockWorkplaces.update).toHaveBeenNthCalledWith(2, second, {
-      defaultCurrencyCode: 'INR',
-    });
+    expect(mockWorkplaces.update).toHaveBeenNthCalledWith(
+      1,
+      first,
+      {
+        defaultCurrencyCode: 'INR',
+      },
+      {
+        eventType: 'workplace.currency_migrated',
+        source: 'system',
+        undoable: false,
+      },
+    );
+    expect(mockWorkplaces.update).toHaveBeenNthCalledWith(
+      2,
+      second,
+      {
+        defaultCurrencyCode: 'INR',
+      },
+      {
+        eventType: 'workplace.currency_migrated',
+        source: 'system',
+        undoable: false,
+      },
+    );
     expect(preferencesMigration.clearLegacyCurrencyCode).toHaveBeenCalledTimes(1);
   });
 
@@ -180,9 +198,17 @@ describe('WorkplaceService transitions', () => {
 
     await workplaceService.migrateLegacyCurrency(['existing-wp' as any]);
 
-    expect(mockWorkplaces.update).toHaveBeenCalledWith(existing, {
-      defaultCurrencyCode: 'INR',
-    });
+    expect(mockWorkplaces.update).toHaveBeenCalledWith(
+      existing,
+      {
+        defaultCurrencyCode: 'INR',
+      },
+      {
+        eventType: 'workplace.currency_migrated',
+        source: 'system',
+        undoable: false,
+      },
+    );
     expect(mockWorkplaces.update).not.toHaveBeenCalledWith(createdLater, expect.anything());
     expect(preferencesMigration.clearLegacyCurrencyCode).toHaveBeenCalledTimes(1);
   });
