@@ -7,7 +7,7 @@ import {
   transactionWriteRepository,
 } from '@/src/data/repositories/transaction';
 import { currencyReadService } from '@/src/services/currency-read-service';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { transactionRawRebuildQueries } from '@/src/data/repositories/raw/TransactionRawRebuildQueries';
 import { RebuildTransaction } from '@/src/data/repositories/TransactionTypes';
 import { foldBalances } from '@/src/utils/accounting/BalanceEffects';
 import { logger } from '@/src/utils/logger';
@@ -118,11 +118,8 @@ export class AccountingRebuildService {
 
     // 2. Fetch minimal raw transaction data for calculation
     // This is significantly faster than fetching full models (O(1) memory per row vs O(Model))
-    let rawTransactions: RebuildTransaction[] = await transactionRawRepository.getRebuildDataRaw(
-      workplaceId,
-      accountId,
-      startDate,
-    );
+    let rawTransactions: RebuildTransaction[] =
+      await transactionRawRebuildQueries.getRebuildDataRaw(workplaceId, accountId, startDate);
     if (isRebuildCancelled(signal, isCurrent)) return;
 
     // Precise Anchor: If we have a snapshot, find its transaction and skip everything up to it.

@@ -2,17 +2,19 @@ import { AccountType, TransactionType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 
 import { accountQueryRepository } from '@/src/data/repositories/account';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { selectBalancesForWealthSummary, wealthService } from '@/src/services/wealth-service';
 import dayjs from 'dayjs';
+jest.mock('@/src/data/repositories/raw/TransactionRawMetricsQueries', () => ({
+  transactionRawMetricsQueries: { getDailyDeltasGroupedRaw: jest.fn() },
+}));
 
 // Mock dependencies
 jest.mock('@/src/services/currencyConversion');
 jest.mock('@/src/data/repositories/account');
-jest.mock('@/src/data/repositories/TransactionRawRepository');
 jest.mock('@/src/data/repositories/transaction');
 jest.mock('@/src/services/balance/balanceReadService');
 jest.mock('@/src/services/WorkplaceService', () => ({
@@ -35,7 +37,7 @@ describe('WealthService', () => {
       ok: true,
       amount,
     }));
-    (transactionRawRepository.getDailyDeltasGroupedRaw as jest.Mock).mockResolvedValue([]);
+    (transactionRawMetricsQueries.getDailyDeltasGroupedRaw as jest.Mock).mockResolvedValue([]);
     (accountQueryRepository.findAll as jest.Mock).mockResolvedValue([]);
   });
 

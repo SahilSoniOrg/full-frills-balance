@@ -21,16 +21,20 @@ export class TransactionQueryRepository {
   }
 
   async find(workplaceId: WorkplaceId, id: TransactionId): Promise<Transaction | null> {
-    try {
-      const transaction = await this.transactions.find(id);
-      if (transaction.deletedAt) return null;
-      if (transaction.workplaceId !== workplaceId) return null;
-      return transaction;
-    } catch {
-      return null;
-    }
+    const transactions = await this.transactions
+      .query(
+        Q.where('id', id),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.where('workplace_id', workplaceId),
+      )
+      .fetch();
+    return transactions[0] ?? null;
   }
 
+  /**
+   * Results follow requested chunk order and WatermelonDB order within each chunk.
+   * This does not promise input-ID order within a chunk.
+   */
   async findByJournals(workplaceId: WorkplaceId, journalIds: JournalId[]): Promise<Transaction[]> {
     return fetchSequentiallyInChunks(journalIds, chunk =>
       this.transactions
@@ -43,6 +47,7 @@ export class TransactionQueryRepository {
     );
   }
 
+  /** Results follow requested chunk order; rows within a chunk retain database order. */
   async findByIds(workplaceId: WorkplaceId, ids: string[]): Promise<Transaction[]> {
     return fetchSequentiallyInChunks(ids, chunk =>
       this.transactions

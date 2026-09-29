@@ -9,6 +9,20 @@ import { database } from '@/src/data/database/Database';
 import ExchangeRate from '@/src/data/models/ExchangeRate';
 import { Q } from '@nozbe/watermelondb';
 
+export interface ExchangeRateCacheInput {
+  toCurrency: string;
+  rate: number;
+}
+
+export interface HistoricalExchangeRateInput {
+  fromCurrency: string;
+  toCurrency: string;
+  rate: number;
+  requestedDate: number;
+  effectiveDate: number;
+  source: string;
+}
+
 class ExchangeRateRepository {
   private get collection() {
     return database.collections.get<ExchangeRate>('exchange_rates');
@@ -102,7 +116,7 @@ class ExchangeRateRepository {
    */
   async cacheRatesBatch(
     fromCurrency: string,
-    rates: { toCurrency: string; rate: number }[],
+    rates: readonly ExchangeRateCacheInput[],
     source: string = 'exchangerate-api.com',
   ): Promise<void> {
     if (rates.length === 0) return;
@@ -124,14 +138,7 @@ class ExchangeRateRepository {
   }
 
   /** Persist one historical rate keyed by the requested day. */
-  async cacheHistoricalRate(input: {
-    fromCurrency: string;
-    toCurrency: string;
-    rate: number;
-    requestedDate: number;
-    effectiveDate: number;
-    source: string;
-  }): Promise<void> {
+  async cacheHistoricalRate(input: HistoricalExchangeRateInput): Promise<void> {
     await database.write(async () => {
       const existing = await this.getCachedRateForDate(
         input.fromCurrency,

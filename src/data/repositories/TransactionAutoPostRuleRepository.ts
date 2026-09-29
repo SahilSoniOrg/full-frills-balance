@@ -26,15 +26,11 @@ export class TransactionAutoPostRuleRepository {
     return database.collections.get<TransactionAutoPostRule>('transaction_auto_post_rules');
   }
 
-  async find(workplaceId: WorkplaceId, id: string): Promise<TransactionAutoPostRule | undefined> {
-    try {
-      const matches = await this.rules
-        .query(Q.where('id', id), Q.where('workplace_id', workplaceId))
-        .fetch();
-      return matches[0];
-    } catch {
-      return undefined;
-    }
+  async find(workplaceId: WorkplaceId, id: string): Promise<TransactionAutoPostRule | null> {
+    const matches = await this.rules
+      .query(Q.where('id', id), Q.where('workplace_id', workplaceId))
+      .fetch();
+    return matches[0] ?? null;
   }
 
   async findAllByWorkplace(workplaceId: WorkplaceId): Promise<TransactionAutoPostRule[]> {

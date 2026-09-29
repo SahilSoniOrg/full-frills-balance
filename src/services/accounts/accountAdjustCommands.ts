@@ -1,6 +1,6 @@
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { transactionRawRebuildQueries } from '@/src/data/repositories/raw/TransactionRawRebuildQueries';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { findOrCreateBalanceCorrectionAccountInSession } from '@/src/services/accounts/accountSystemAccounts';
 import type { BalanceChangeCounterparty } from '@/src/services/accounts/balanceChangeClassification';
@@ -32,7 +32,7 @@ export async function adjustAccountBalance(
 
     const precision = await currencyReadService.getPrecision(targetAccount.currencyCode);
     const currentBalance = roundToPrecision(
-      await transactionRawRepository.getAccountSumRaw(
+      await transactionRawRebuildQueries.getAccountSumRaw(
         workplaceId,
         targetAccount.id,
         Number.MAX_SAFE_INTEGER,

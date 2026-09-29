@@ -1,5 +1,8 @@
 import PlannedPayment from '@/src/data/models/PlannedPayment';
-import { PlannedPaymentPersistenceInput } from '@/src/data/repositories/PlannedPaymentRepository';
+import {
+  PlannedPaymentPersistenceInput,
+  PlannedPaymentScheduleUpdate,
+} from '@/src/data/repositories/PlannedPaymentRepository';
 import { computeFirstOccurrence } from '@/src/services/planned-payment/plannedPaymentRecurrence';
 import { PlannedPaymentCommandInput } from '@/src/services/planned-payment/plannedPaymentCommandInputs';
 import { PlannedPaymentStatus } from '@/src/types/enums';
@@ -37,7 +40,7 @@ export function buildCreatePersistenceInput(
 export function buildUpdatePersistenceInput(
   existing: PlannedPayment,
   input: PlannedPaymentCommandInput,
-): Partial<PlannedPaymentPersistenceInput> {
+): PlannedPaymentScheduleUpdate {
   const schedulingChanged = isPlannedPaymentScheduleChange(existing, input);
 
   return {

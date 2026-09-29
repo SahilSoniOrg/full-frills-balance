@@ -5,8 +5,9 @@ import { effect } from '@/src/utils/accounting/BalanceEffects';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';
 import Transaction from '../../models/Transaction';
-import { RawSQLArg, RebuildTransaction } from '../TransactionTypes';
-import { transactionRawMetricsQueries } from './TransactionRawMetricsQueries';
+import type { RawSqlArg } from '@/src/data/database/DatabaseUtils';
+import { RebuildTransaction } from '../TransactionTypes';
+import { rawSqlExecutor } from './RawSqlExecutor';
 
 export class TransactionRawRebuildQueries {
   async getAccountSumRaw(
@@ -67,7 +68,7 @@ export class TransactionRawRebuildQueries {
             : ''
         }
     `;
-    const args: RawSQLArg[] = [
+    const args: RawSqlArg[] = [
       accountId,
       cutoffDate,
       workplaceId,
@@ -87,7 +88,7 @@ export class TransactionRawRebuildQueries {
       addCursorArgs(afterTransactionId);
     }
 
-    const raws = await transactionRawMetricsQueries.queryRaw<{ total: number }>(sql, args);
+    const raws = await rawSqlExecutor.query<{ total: number }>(sql, args);
     if (raws !== null) return raws[0]?.total || 0;
 
     const filterClauses: Q.Clause[] = [
@@ -173,7 +174,7 @@ export class TransactionRawRebuildQueries {
       ORDER BY t.transaction_date ASC, t.created_at ASC, t.id ASC
     `;
 
-    const raws = await transactionRawMetricsQueries.queryRaw<RebuildTransaction>(sql, [
+    const raws = await rawSqlExecutor.query<RebuildTransaction>(sql, [
       accountId,
       startDate,
       workplaceId,

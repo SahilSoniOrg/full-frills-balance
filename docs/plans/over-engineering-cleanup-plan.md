@@ -57,7 +57,7 @@ Delete dead code, collapse single-caller layers, and drop duplicate tooling. No 
 | 4 | Design preview: keep out of production navigation/bundle | already done | see Log |
 | 5 | Generic `usePreference` helper for the preference hooks | kept | owner decision: keep preference hooks separate |
 | 15 | Migrate design-system `Text` users to `AppText`; delete `Text` | done | `5804d28f` |
-| 16 | Remove `TransactionRawRepository` pass-through methods | partial | `83b83507` |
+| 16 | Remove `TransactionRawRepository` pass-through methods | done | PR #64 |
 | 17 | `dateUtils` boundary math on dayjs | done | `0bd1dc3a` |
 | 6 | Shared core for the three journal editor hooks | already done | see Log |
 
@@ -92,7 +92,7 @@ Delete dead code, collapse single-caller layers, and drop duplicate tooling. No 
 - 2026-09-27: Item 4 needs no change. Production Android export (`APP_VARIANT=production`) contains none of the preview screen's strings even before any change: the screen's `if (!__DEV__) return <Redirect/>` early return lets the minifier drop the body. A `__DEV__`-gated route saved ~1 KB and added a file, so it was reverted.
 - 2026-09-27: Item 5 dropped by owner: keep preference hooks separate.
 - 2026-09-27: Item 15 left pending a decision. 49 usages rely on `Text`-only props (size variants `xs`..`xxl`, margins, opacity) across BudgetCard, AppTabs, SetupStsPreview, PlannedPaymentHistoryCard, PlannedPaymentDetailsView (17), PlannedPaymentCard, SafeToSpendLedger, SafeToSpendHeader, AccountCard (8). `AppText` has no equivalent variants and adds tabular numerals, so a migration means picking a mapping per usage and risks visual regressions.
-- 2026-09-27: Item 16: deleted `getAccountDeltasGroupedRaw` (no production caller) from the facade and the metrics query module. The other pass-throughs stay: nothing outside `src/data` imports `repositories/raw/*`, so `transactionRawRepository` is the single raw-SQL entry point for services, and 12 test files mock it. Removing them would widen the data-layer surface services depend on to save ~60 lines.
+- 2026-09-29: Item 16 completed in PR #64. Deleted the broad facade; metrics, rebuild, pattern, insight, account-ledger, journal-enrichment and export SQL now live behind named query modules and `RawSqlExecutor`. An architecture guard prevents direct production raw-SQL calls and facade reintroduction.
 - 2026-09-27: Item 17 done: day/month boundaries, previous/next month and month labels use dayjs (-52 lines). One intended behavior change: `getLastNRange(n, 'months')` now clamps to month end (Mar 31 minus 1 month is Feb 28/29, not Mar 3 as with `Date.setMonth`).
 - 2026-09-27: Item 6 needs no change. `useSimpleJournalEditor` and `useSplitJournalEditor` are mode controllers that already take `useJournalEditor` (the shared core) as their `editor` input. `useBulkJournalEditor` edits N independent journals (one per row), so it cannot sit on the single-journal core; it already reuses the same FX primitives (`useExchangeRate`, `useCrossCurrencyRates`). `jscpd` (min 5 lines) finds 0 clones across the editor hooks and their helpers (2,398 lines).
 - 2026-09-27: Item 10 remainder left as is. `useExchangeRate` has 4 callers, so it is not a micro-hook. The `useJournalEditor` sub-hooks (loader 88, line state 87, submission 81, exchange rates 224 lines, the last with its own test file) each have one caller, but merging gives a ~750-line hook; same trade-off as the account-form split, so it goes with that decision.

@@ -23,7 +23,7 @@ import type {
   PutJournalRequest,
   ReverseJournalOptions,
 } from '@/src/data/repositories/journal/journalPersistenceTypes';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { transactionRawRebuildQueries } from '@/src/data/repositories/raw/TransactionRawRebuildQueries';
 import { JournalBalanceError } from '@/src/domain/accounting/journalBalanceEvaluator';
 import { AuditAction, JournalDisplayType, JournalStatus, TransactionType } from '@/src/types/enums';
 import { AccountId, brandedKeys, JournalId, WorkplaceId } from '@/src/types/ids';
@@ -137,7 +137,7 @@ async function runningBalancesAfter(
     accountIds.map(async accountId => {
       const { accountType } = balance.accountsById.get(accountId)!;
       const precision = balance.precisionByAccountId.get(accountId)!;
-      let runningBalance = await transactionRawRepository.getAccountSumRaw(
+      let runningBalance = await transactionRawRebuildQueries.getAccountSumRaw(
         workplaceId,
         accountId,
         journalDate,

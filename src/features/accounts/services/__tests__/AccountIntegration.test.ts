@@ -98,8 +98,8 @@ describe('AccountRepository', () => {
         workplaceId,
       );
 
-      expect(updated.accountType).toBe(AccountType.EQUITY);
-      expect(updated.accountSubtype).toBe(AccountSubtype.OPENING_BALANCE);
+      expect(updated.account.accountType).toBe(AccountType.EQUITY);
+      expect(updated.account.accountSubtype).toBe(AccountSubtype.OPENING_BALANCE);
     });
 
     it('archives primary + child via applyAccountArchiveChanges', async () => {
@@ -146,9 +146,9 @@ describe('AccountRepository', () => {
         { archivedAt: now },
         workplaceId,
       );
-      expect(updated.archivedAt?.toISOString()).toBe(now.toISOString());
+      expect(updated.account.archivedAt?.toISOString()).toBe(now.toISOString());
 
-      await accountWriteRepository.update(updated, { archivedAt: null }, workplaceId);
+      await accountWriteRepository.update(updated.account, { archivedAt: null }, workplaceId);
       const refreshed = await accountQueryRepository.find(workplaceId, account.id);
       expect(refreshed?.archivedAt == null).toBe(true);
     });

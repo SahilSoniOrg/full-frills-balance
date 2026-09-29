@@ -1,12 +1,12 @@
 import Account from '@/src/data/models/Account';
 import { AuditAction } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { persistBatch } from '@/src/data/repositories/persistBatch';
 import {
   accountQueryRepository,
   accountTreeTransactionCoordinator,
   accountWriteRepository,
 } from '@/src/data/repositories/account';
+import type { AccountMutationCommitFacts } from '@/src/data/repositories/account/AccountWriteRepository';
 import type { AccountPersistenceInput } from '@/src/data/repositories/account/types';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
@@ -335,6 +335,7 @@ export function emitAccountUpdateSideEffects(
   ctx: AccountFieldUpdateContext,
   updates: AccountPersistedFieldUpdate,
   workplaceId: WorkplaceId,
+  commitFacts: AccountMutationCommitFacts,
 ): void {
   analytics.trackFeatureUsage('account', 'update', {
     account_type: ctx.beforeState.accountType,
@@ -342,8 +343,8 @@ export function emitAccountUpdateSideEffects(
     fields_updated: Object.keys(updates),
   });
 
-  if (updates.accountType && updates.accountType !== ctx.beforeState.accountType) {
-    rebuildQueueService.enqueue(ctx.account.id, 0, workplaceId);
+  for (const accountId of commitFacts.balanceRebuildAccountIds) {
+    rebuildQueueService.enqueue(accountId, 0, workplaceId);
   }
 }
 
@@ -359,25 +360,20 @@ export async function updateAccount(
 ): Promise<Account> {
   const ctx = await prepareAccountFieldUpdate(workplaceId, accountId, updates);
 
-  const updatedAccount = await accountWriteRepository.update(
+  const mutation = await accountWriteRepository.update(
     ctx.account,
     ctx.updatePayload,
     workplaceId,
-    () => [
-      auditRepository.prepareLog(
-        {
-          entityType: 'account',
-          entityId: accountId,
-          action: AuditAction.UPDATE,
-          changes: buildAccountUpdateAuditChanges(ctx, updates),
-        },
-        workplaceId,
-      ),
-    ],
+    {
+      audit: {
+        action: AuditAction.UPDATE,
+        changes: buildAccountUpdateAuditChanges(ctx, updates),
+      },
+    },
   );
 
-  emitAccountUpdateSideEffects(ctx, updates, workplaceId);
-  return updatedAccount;
+  emitAccountUpdateSideEffects(ctx, updates, workplaceId, mutation.commitFacts);
+  return mutation.account;
 }
 
 /**
@@ -391,6 +387,7 @@ export async function saveAccount(
 ): Promise<Account> {
   let sideEffectContext: AccountFieldUpdateContext | undefined;
   let sideEffectUpdates: AccountPersistedFieldUpdate = updates;
+  let sideEffectCommitFacts: AccountMutationCommitFacts | undefined;
 
   const saved = await accountTreeTransactionCoordinator.run(workplaceId, async accounts => {
     const snapshot = createAccountTreeSnapshot(accounts);
@@ -541,11 +538,17 @@ export async function saveAccount(
 
     sideEffectContext = context;
     sideEffectUpdates = auditAfter;
+    sideEffectCommitFacts = plannedDetail.commitFacts;
     return { prepareOps, result: account };
   });
 
-  if (sideEffectContext) {
-    emitAccountUpdateSideEffects(sideEffectContext, sideEffectUpdates, workplaceId);
+  if (sideEffectContext && sideEffectCommitFacts) {
+    emitAccountUpdateSideEffects(
+      sideEffectContext,
+      sideEffectUpdates,
+      workplaceId,
+      sideEffectCommitFacts,
+    );
   }
   return saved;
 }
@@ -883,29 +886,37 @@ export async function updateAccounts(
     })),
   );
 
-  await persistBatch(() => [
-    ...planned.flatMap(({ context, update }) =>
-      accountWriteRepository.prepareUpdateBatchOps(
-        context.account,
-        update.normalizedUpdates,
-        update.existingMetadata,
+  await accountWriteRepository.commitMutationPlan(async () => ({
+    prepareOps: () => [
+      ...planned.flatMap(({ context, update }) =>
+        accountWriteRepository.prepareUpdateBatchOps(
+          context.account,
+          update.normalizedUpdates,
+          update.existingMetadata,
+        ),
       ),
-    ),
-    ...planned.map(({ context, update }) =>
-      auditRepository.prepareLog(
-        {
-          entityType: 'account',
-          entityId: context.account.id,
-          action: AuditAction.UPDATE,
-          changes: buildAccountUpdateAuditChanges(context, update.normalizedUpdates),
-        },
-        workplaceId,
+      ...planned.map(({ context, update }) =>
+        auditRepository.prepareLog(
+          {
+            entityType: 'account',
+            entityId: context.account.id,
+            action: AuditAction.UPDATE,
+            changes: buildAccountUpdateAuditChanges(context, update.normalizedUpdates),
+          },
+          workplaceId,
+        ),
       ),
-    ),
-  ]);
+    ],
+    result: undefined,
+  }));
 
   planned.forEach(({ context, update }) => {
-    emitAccountUpdateSideEffects(context, update.normalizedUpdates, workplaceId);
+    emitAccountUpdateSideEffects(
+      context,
+      update.normalizedUpdates,
+      workplaceId,
+      update.commitFacts,
+    );
   });
 
   return planned.map(({ context }) => context.account);

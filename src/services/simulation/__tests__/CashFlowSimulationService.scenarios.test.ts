@@ -3,7 +3,8 @@ import { AccountId, BudgetId, PlannedPaymentId, WorkplaceId } from '@/src/types/
 
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { accountLedgerMetricsQueries } from '@/src/data/repositories/account/AccountLedgerMetricsQueries';
+import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { convertAmount } from '@/src/services/currencyConversion';
 import {
@@ -12,6 +13,12 @@ import {
 } from '@/src/services/simulation/CashFlowSimulationService';
 import { FlowSource } from '@/src/services/simulation/types';
 import dayjs from 'dayjs';
+jest.mock('@/src/data/repositories/account/AccountLedgerMetricsQueries', () => ({
+  accountLedgerMetricsQueries: { getPeriodMetrics: jest.fn() },
+}));
+jest.mock('@/src/data/repositories/raw/TransactionRawMetricsQueries', () => ({
+  transactionRawMetricsQueries: { getLatestBalancesRaw: jest.fn() },
+}));
 
 jest.mock('@/src/utils/logger', () => ({
   logger: {
@@ -25,13 +32,6 @@ jest.mock('@/src/data/repositories/BudgetRepository', () => ({
   budgetRepository: {
     getScopes: jest.fn().mockResolvedValue([]),
     getScopesByBudgetIds: jest.fn().mockResolvedValue([]),
-  },
-}));
-
-jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
-  transactionRawRepository: {
-    getLatestBalancesRaw: jest.fn().mockResolvedValue(new Map()),
-    getAccountPeriodMetricsRaw: jest.fn().mockResolvedValue({ totalDecrease: 0, totalIncrease: 0 }),
   },
 }));
 
@@ -160,8 +160,8 @@ describe('CashFlowSimulationService scenario coverage', () => {
     jest.setSystemTime(new Date('2026-04-01T00:00:00Z'));
     (budgetRepository.getScopesByBudgetIds as jest.Mock).mockResolvedValue([]);
     (transactionQueryRepository.findByJournals as jest.Mock).mockResolvedValue([]);
-    (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(new Map());
-    (transactionRawRepository.getAccountPeriodMetricsRaw as jest.Mock).mockResolvedValue({
+    (transactionRawMetricsQueries.getLatestBalancesRaw as jest.Mock).mockResolvedValue(new Map());
+    (accountLedgerMetricsQueries.getPeriodMetrics as jest.Mock).mockResolvedValue({
       totalDecrease: 0,
       totalIncrease: 0,
     });
@@ -379,7 +379,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
   });
 
   it('applies explicit liability overpayments in full and does not generate an additional bill for the covered statement', async () => {
-    (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(
+    (transactionRawMetricsQueries.getLatestBalancesRaw as jest.Mock).mockResolvedValue(
       new Map([['cc', 400]]),
     );
 
@@ -413,10 +413,10 @@ describe('CashFlowSimulationService scenario coverage', () => {
   });
 
   it('uses settled credit-card payments to reduce only the remaining statement obligation', async () => {
-    (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(
+    (transactionRawMetricsQueries.getLatestBalancesRaw as jest.Mock).mockResolvedValue(
       new Map([['cc', 500]]),
     );
-    (transactionRawRepository.getAccountPeriodMetricsRaw as jest.Mock).mockResolvedValue({
+    (accountLedgerMetricsQueries.getPeriodMetrics as jest.Mock).mockResolvedValue({
       totalDecrease: 200,
       totalIncrease: 0,
     });
@@ -755,7 +755,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
     // Today is April 1st.
     // April 1st spending -> May 1st Statement -> May 15th Due.
 
-    (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(
+    (transactionRawMetricsQueries.getLatestBalancesRaw as jest.Mock).mockResolvedValue(
       new Map([['cc', 0]]),
     );
 

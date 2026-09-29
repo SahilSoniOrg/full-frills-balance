@@ -17,14 +17,14 @@ export class SmsJournalQueries {
   }
 
   private async find(workplaceId: WorkplaceId, id: JournalId): Promise<Journal | null> {
-    try {
-      const journal = await this.journals.find(id);
-      if (journal.deletedAt) return null;
-      if (journal.workplaceId !== workplaceId) return null;
-      return journal;
-    } catch {
-      return null;
-    }
+    const journals = await this.journals
+      .query(
+        Q.where('id', id),
+        Q.where('deleted_at', Q.eq(null)),
+        Q.where('workplace_id', workplaceId),
+      )
+      .fetch();
+    return journals[0] ?? null;
   }
 
   private async findByIds(workplaceId: WorkplaceId, ids: JournalId[]): Promise<Journal[]> {

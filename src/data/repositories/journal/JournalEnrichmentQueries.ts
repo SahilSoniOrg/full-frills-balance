@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
 import type {
   JournalSuggestion,
   JournalSuggestionPage,
@@ -155,7 +155,7 @@ export class JournalEnrichmentQueries {
     `;
 
     try {
-      const results = await transactionRawRepository.queryRaw<JournalSuggestionRouteRow>(sql, [
+      const results = await rawSqlExecutor.query<JournalSuggestionRouteRow>(sql, [
         workplaceId,
         ...ACTIVE_JOURNAL_STATUSES,
         descriptionPattern,
@@ -290,7 +290,7 @@ export class JournalEnrichmentQueries {
       ORDER BY t.journal_id, t.account_id
     `;
 
-    const results = await transactionRawRepository.queryRaw<JournalEnrichmentRow>(sql, [
+    const results = await rawSqlExecutor.query<JournalEnrichmentRow>(sql, [
       workplaceId,
       workplaceId,
       workplaceId,

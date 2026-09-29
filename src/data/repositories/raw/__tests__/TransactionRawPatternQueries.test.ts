@@ -4,7 +4,7 @@ import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { transactionRawPatternQueries } from '@/src/data/repositories/raw/TransactionRawPatternQueries';
-import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
+import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
@@ -106,7 +106,7 @@ describe('TransactionRawPatternQueries workplace isolation', () => {
   });
 
   it('scopes every workplace-owned SQL table with matching arguments', async () => {
-    const queryRaw = jest.spyOn(transactionRawMetricsQueries, 'queryRaw').mockResolvedValue([]);
+    const queryRaw = jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue([]);
 
     await transactionRawPatternQueries.getRecurringPatternsRaw(workplaceOne, startDate, 3);
 
@@ -118,7 +118,7 @@ describe('TransactionRawPatternQueries workplace isolation', () => {
   });
 
   it('rejects both malformed cross-workplace join directions in the ORM fallback', async () => {
-    jest.spyOn(transactionRawMetricsQueries, 'queryRaw').mockResolvedValue(null);
+    jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue(null);
 
     const patterns = await transactionRawPatternQueries.getRecurringPatternsRaw(
       workplaceOne,

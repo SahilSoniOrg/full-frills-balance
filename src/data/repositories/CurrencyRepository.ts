@@ -3,6 +3,13 @@ import Currency from '@/src/data/models/Currency';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { Q } from '@nozbe/watermelondb';
 
+export interface CurrencyInput {
+  code: string;
+  symbol: string;
+  name: string;
+  precision: number;
+}
+
 export class CurrencyRepository {
   private get currencies() {
     return database.collections.get<Currency>('currencies');
@@ -60,12 +67,7 @@ export class CurrencyRepository {
   /**
    * Create a single currency
    */
-  async create(data: {
-    code: string;
-    symbol: string;
-    name: string;
-    precision: number;
-  }): Promise<Currency> {
+  async create(data: CurrencyInput): Promise<Currency> {
     return database.write(async () => {
       return this.currencies.create(currency => {
         currency.code = data.code;
@@ -79,9 +81,7 @@ export class CurrencyRepository {
   /**
    * Seed default currencies (batch operation)
    */
-  async seedDefaults(
-    currencies: { code: string; symbol: string; name: string; precision: number }[],
-  ): Promise<void> {
+  async seedDefaults(currencies: readonly CurrencyInput[]): Promise<void> {
     await database.write(async () => {
       for (const currencyData of currencies) {
         await this.currencies.create(currency => {

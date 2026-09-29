@@ -1,12 +1,12 @@
 import { database } from '@/src/data/database/Database';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { accountLedgerMetricsQueries } from '@/src/data/repositories/account/AccountLedgerMetricsQueries';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { firstValueFrom } from 'rxjs';
 
-describe('TransactionRawRepository account period metrics', () => {
+describe('AccountLedgerMetricsQueries period metrics', () => {
   const workplaceId = '00000000-0000-4000-8000-000000000001' as WorkplaceId;
   const firstDate = new Date('2026-08-22T12:00:00.000Z').getTime();
   const secondDate = new Date('2026-09-05T12:00:00.000Z').getTime();
@@ -71,7 +71,7 @@ describe('TransactionRawRepository account period metrics', () => {
 
   it('changes totals when the date range changes for a parent subtree', async () => {
     const firstRange = await firstValueFrom(
-      transactionRawRepository.observeAccountPeriodMetricsRaw(
+      accountLedgerMetricsQueries.observePeriodMetrics(
         workplaceId,
         [parentAccountId, childAccountId],
         firstDate - 1,
@@ -80,7 +80,7 @@ describe('TransactionRawRepository account period metrics', () => {
       ),
     );
     const secondRange = await firstValueFrom(
-      transactionRawRepository.observeAccountPeriodMetricsRaw(
+      accountLedgerMetricsQueries.observePeriodMetrics(
         workplaceId,
         [parentAccountId, childAccountId],
         secondDate - 1,

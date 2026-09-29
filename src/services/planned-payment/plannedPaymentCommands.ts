@@ -36,7 +36,7 @@ export async function updatePlannedPayment(
 
   await assertWritable(workplaceId, [input.fromAccountId, input.toAccountId], 'Planned payment');
   const updates = buildUpdatePersistenceInput(existing, input);
-  return plannedPaymentRepository.update(workplaceId, existing, updates);
+  return plannedPaymentRepository.updateSchedule(workplaceId, existing, updates);
 }
 
 export async function upsertPlannedPaymentByName(

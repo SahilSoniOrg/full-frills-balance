@@ -2,7 +2,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AccountBalance } from '@/src/types/domainReadModels';
@@ -56,7 +56,7 @@ export class BalanceReadService {
       baseCount = snapshot.transactionCount;
     }
 
-    const deltaCount = await transactionRawRepository.getAccountTransactionCountsRaw(
+    const deltaCount = await transactionRawMetricsQueries.getAccountTransactionCounts(
       workplaceId,
       [
         {
@@ -133,7 +133,7 @@ export class BalanceReadService {
 
       // Phase 2: Latest Balances & Transaction Counts (Single Pass Optimization)
       const { balances: latestBalancesMap, counts: deltaCountsMap } =
-        await transactionRawRepository.getLatestBalancesAndCountsRaw(
+        await transactionRawMetricsQueries.getLatestBalancesAndCounts(
           workplaceId,
           countInput,
           cutoffDate,

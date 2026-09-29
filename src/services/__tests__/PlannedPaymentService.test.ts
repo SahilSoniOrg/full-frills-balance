@@ -66,9 +66,6 @@ describe('planned payment modules', () => {
     (journalPlannedQueries.findOccurrenceJournals as jest.Mock).mockResolvedValue({ kind: 'none' });
     (journalPlannedQueries.findByPlannedPaymentAndStatus as jest.Mock).mockResolvedValue([]);
     (journalPersistenceService.deletePlannedPayment as jest.Mock).mockResolvedValue(undefined);
-    (plannedPaymentRepository.prepareUpdate as jest.Mock).mockImplementation(
-      (_workplaceId, _pp, updates) => ({ updates }),
-    );
     (plannedPaymentRepository.updateInSession as jest.Mock).mockImplementation(
       (_session, _workplaceId, ppId, updates) => ({ id: ppId, ...updates }),
     );
@@ -306,7 +303,7 @@ describe('planned payment modules', () => {
 
       expect(plannedPaymentRepository.find).toHaveBeenCalledWith(workplaceId, foreignId);
       expect(journalPlannedQueries.findByPlannedPaymentAndStatus).not.toHaveBeenCalled();
-      expect(plannedPaymentRepository.update).not.toHaveBeenCalled();
+      expect(plannedPaymentRepository.updateSchedule).not.toHaveBeenCalled();
       expect(plannedPaymentRepository.updateInSession).not.toHaveBeenCalled();
       expect(journalPersistenceService.putInSession).not.toHaveBeenCalled();
       expect(journalPersistenceService.postInSession).not.toHaveBeenCalled();
@@ -341,7 +338,7 @@ describe('planned payment modules', () => {
       });
 
       const updatePpSpy = jest
-        .spyOn(plannedPaymentRepository, 'update')
+        .spyOn(plannedPaymentRepository, 'updateSchedule')
         .mockResolvedValue({} as any);
 
       await postPlannedPaymentOccurrence('wp-1' as WorkplaceId, mockPP.id, mockPP.nextOccurrence);
@@ -374,7 +371,7 @@ describe('planned payment modules', () => {
       (plannedPaymentRepository.find as jest.Mock).mockResolvedValue(mockPP);
       const createJournalSpy = jest.spyOn(journalPersistenceService, 'putInSession');
       const updatePpSpy = jest
-        .spyOn(plannedPaymentRepository, 'update')
+        .spyOn(plannedPaymentRepository, 'updateSchedule')
         .mockResolvedValue({} as any);
 
       await postPlannedPaymentOccurrence('wp-1' as WorkplaceId, mockPP.id, mockPP.nextOccurrence);

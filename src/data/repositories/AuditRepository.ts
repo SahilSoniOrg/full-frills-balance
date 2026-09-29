@@ -19,13 +19,10 @@ export class AuditRepository {
   }
 
   async find(id: string, workplaceId: WorkplaceId): Promise<AuditLog | null> {
-    try {
-      const auditLog = await this.auditLogs.find(id);
-      if (auditLog.workplaceId !== workplaceId) return null;
-      return auditLog;
-    } catch {
-      return null;
-    }
+    const records = await this.auditLogs
+      .query(Q.where('id', id), Q.where('workplace_id', workplaceId))
+      .fetch();
+    return records[0] ?? null;
   }
 
   /**

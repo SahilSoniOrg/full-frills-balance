@@ -1,6 +1,6 @@
 # Repository Layer Direction and Refactor Plan
 
-Status: Phase 1 complete; remaining phases are planned
+Status: Phases 0–6 complete; implementation is in the repository-layer PR
 Scope: repositories inside the Full Frills Balance app codebase
 Related: [Architecture Audit](./ARCHITECTURE_AUDIT.md), [Persistence Ownership Inventory](./PERSISTENCE_OWNERSHIP_INVENTORY.md)
 
@@ -58,17 +58,17 @@ Use ordinary CRUD for entities whose writes are genuinely local. A standard enti
 
 Do not force the same CRUD contract onto every table:
 
-| Data / current owner | CRUD direction | Complex workflow owner |
-| --- | --- | --- |
-| Account | Scoped lookup/list and typed create/update/delete/recover APIs. Hierarchy and archive fields stay behind validated mutations. | Account commands/coordinator for opening balances, hierarchy/order changes, archive/recovery, and merge. |
-| Journal + transaction legs | Treat as one ledger aggregate. Do not expose independent transaction-leg CRUD. Keep semantic journal operations such as put, post, reverse, merge, delete, and recover. | Journal/ledger workflow using `JournalPersistenceRepository` and one accounting write session; audit joins the batch where required. |
-| Planned payment | Ordinary schedule reads and local schedule edits may use CRUD-like operations. Occurrence identity and schedule advancement are not ordinary updates. | Planned-payment workflow stages schedule changes with journal creation/post/skip atomically. |
-| Transaction inbox | Keep inbox row status and lookup APIs distinct from ledger transactions. Linking or auto-posting must maintain inbox and journal consistency. | Inbox/import/SMS workflow; link and ledger writes share a transaction when the operation requires it. |
-| Budget and auto-post rule | Use small typed CRUD surfaces where current behavior is local and callers need it. Validate workplace and referenced account ownership. | Budget calculations and auto-post execution stay in their feature workflows. |
-| Balance snapshots and running balances | Expose read/rebuild operations, not general-purpose CRUD. They are disposable projections. | Rebuild/integrity workflow; source-of-truth changes remain journal writes. |
-| Audit records | Append and query; no update/delete API in normal feature code. | The owning mutation includes audit creation in its atomic batch when that is the audit contract. |
-| Import/export, database reset, workplace lifecycle | Keep privileged, workflow-specific interfaces. Do not disguise them as entity CRUD. | Restore/import/export/workplace lifecycle owners. |
-| Currency and exchange-rate reference data | Keep focused typed read/write operations matching actual callers; do not broaden into a generic settings store. | Conversion and sync workflows retain their existing domain rules. |
+| Data / current owner                               | CRUD direction                                                                                                                                                          | Complex workflow owner                                                                                                               |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Account                                            | Scoped lookup/list and typed create/update/delete/recover APIs. Hierarchy and archive fields stay behind validated mutations.                                           | Account commands/coordinator for opening balances, hierarchy/order changes, archive/recovery, and merge.                             |
+| Journal + transaction legs                         | Treat as one ledger aggregate. Do not expose independent transaction-leg CRUD. Keep semantic journal operations such as put, post, reverse, merge, delete, and recover. | Journal/ledger workflow using `JournalPersistenceRepository` and one accounting write session; audit joins the batch where required. |
+| Planned payment                                    | Ordinary schedule reads and local schedule edits may use CRUD-like operations. Occurrence identity and schedule advancement are not ordinary updates.                   | Planned-payment workflow stages schedule changes with journal creation/post/skip atomically.                                         |
+| Transaction inbox                                  | Keep inbox row status and lookup APIs distinct from ledger transactions. Linking or auto-posting must maintain inbox and journal consistency.                           | Inbox/import/SMS workflow; link and ledger writes share a transaction when the operation requires it.                                |
+| Budget and auto-post rule                          | Use small typed CRUD surfaces where current behavior is local and callers need it. Validate workplace and referenced account ownership.                                 | Budget calculations and auto-post execution stay in their feature workflows.                                                         |
+| Balance snapshots and running balances             | Expose read/rebuild operations, not general-purpose CRUD. They are disposable projections.                                                                              | Rebuild/integrity workflow; source-of-truth changes remain journal writes.                                                           |
+| Audit records                                      | Append and query; no update/delete API in normal feature code.                                                                                                          | The owning mutation includes audit creation in its atomic batch when that is the audit contract.                                     |
+| Import/export, database reset, workplace lifecycle | Keep privileged, workflow-specific interfaces. Do not disguise them as entity CRUD.                                                                                     | Restore/import/export/workplace lifecycle owners.                                                                                    |
+| Currency and exchange-rate reference data          | Keep focused typed read/write operations matching actual callers; do not broaden into a generic settings store.                                                         | Conversion and sync workflows retain their existing domain rules.                                                                    |
 
 ## Interface and shared-utility rules
 
@@ -106,6 +106,8 @@ Each phase is a separately reviewable change. Preserve current behavior first; i
 **Exit condition**
 
 Every planned consolidation has named callers and a written compatibility contract. No implementation starts from class-name similarity alone.
+
+**Completed:** [`REPOSITORY_MAP.md`](./REPOSITORY_MAP.md) records owners, inputs/outputs, write boundaries, caller groups, source-of-truth versus projection status, and preserved query/write semantics.
 
 ### Phase 1 — Consolidate journal read and write contracts
 
@@ -206,6 +208,20 @@ Before merging a phase, review the affected operations against these contracts:
 Verification is phase-specific: targeted repository/workflow checks, architecture boundaries, type checking, lint, and the project’s full verification command before the complete refactor lands. Native SQLite/JSI behavior remains a separate device-level proof point already called out in the persistence inventory.
 
 Phase 1 delivered sequential ID-query chunking shared by journal and transaction readers, shared journal line/metadata/full-write input types, and one owner for ordinary journal fetch/list queries. All in-repository callers now use owning modules directly; the compatibility aliases and re-export barrel have been removed. The review gates above apply to this work and each subsequent phase.
+
+## Completion record
+
+All roadmap phases are implemented in this PR:
+
+- **Phase 0:** Added the repository map and recorded the semantic contracts governing each consolidation.
+- **Phase 1:** Canonical journal query/persistence interfaces and typed write inputs; redundant reexports and aliases removed.
+- **Phase 2:** Shared account filter construction, bounded transaction/journal fetch utility with ordering contract, and scoped missing/error semantics for account, transaction and journal lookups.
+- **Phase 3:** Account mutation plans, typed audit contributions and commit facts; update/delete/recover and hierarchy/archive paths use the accounting write session.
+- **Phase 4:** Removed `TransactionRawRepository`; moved raw SQL ownership into named typed feature query modules behind `RawSqlExecutor`; added a guard against direct production raw-SQL calls and facade reintroduction.
+- **Phase 5:** Normalized only needed entity inputs and APIs for budgets, planned payments, auto-post rules, currencies and exchange rates. Schedule occurrence writes remain workflow-owned; global reference/cache data remains unscoped by workplace by design.
+- **Phase 6:** Removed obsolete callers/wrappers and updated this map/inventory. Existing repository dependency and direct-persistence checks remain active.
+
+Verification on 2026-09-29: architecture checks, privacy-policy check, and TypeScript checks passed; `test:ci` passed 415 suites and 2,517 tests; lint had zero errors and two existing warnings in untouched journal-editor/suggestions hooks. Detox execution was excluded at the user's direction. Device-level WatermelonDB/SQLite proof remains the separate open item recorded in the persistence inventory.
 
 ## Explicit non-goals
 

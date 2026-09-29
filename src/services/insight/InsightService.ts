@@ -1,7 +1,8 @@
 import { AppConfig } from '@/src/constants';
 import Account from '@/src/data/models/Account';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { transactionInsightQueries } from '@/src/data/repositories/transaction/TransactionInsightQueries';
+import { transactionRawPatternQueries } from '@/src/data/repositories/raw/TransactionRawPatternQueries';
 import { startTrace } from '@/src/utils/TraceService';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/services/preferences';
@@ -84,12 +85,12 @@ export class InsightService {
         // 1. Concurrent Fetch: Recurring candidates and Expense history
         trace.metric('fetch_data');
         const [recurringCandidates, expenseTransactions] = await Promise.all([
-          transactionRawRepository.getRecurringPatternsRaw(
+          transactionRawPatternQueries.getRecurringPatternsRaw(
             workplaceId,
             ninetyDaysAgo as number,
             minCount,
           ),
-          transactionRawRepository.getTransactionsMetadataRaw(
+          transactionInsightQueries.findActiveMetadata(
             workplaceId,
             (accounts as Account[])
               .filter((a: Account) => a.accountType === AccountType.EXPENSE)

@@ -2,8 +2,9 @@ import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import { isAccountSubtype, isAccountType } from '@/src/types/accountSubtype';
 import Transaction from '@/src/data/models/Transaction';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
-import { RawAccountRow, RawSQLArg } from '@/src/data/repositories/TransactionTypes';
+import type { RawSqlArg } from '@/src/data/database/DatabaseUtils';
+import { RawAccountRow } from '@/src/data/repositories/TransactionTypes';
+import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
 import type { AccountListItemRaw } from './types';
 import { effect, periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
 import { WorkplaceId } from '@/src/types/ids';
@@ -88,7 +89,7 @@ export class AccountListMetricsQueries {
       ORDER BY a.order_num ASC
     `;
 
-    const args: RawSQLArg[] = [workplaceId, workplaceId, ...statusArgs, workplaceId];
+    const args: RawSqlArg[] = [workplaceId, workplaceId, ...statusArgs, workplaceId];
     args.push(
       startOfMonth,
       endOfMonth,
@@ -105,7 +106,7 @@ export class AccountListMetricsQueries {
     args.push(workplaceId);
 
     const start = Date.now();
-    const results = await transactionRawRepository.queryRaw<RawAccountRow>(sql, args);
+    const results = await rawSqlExecutor.query<RawAccountRow>(sql, args);
     const duration = Date.now() - start;
 
     logger.info(`[Trace] AccountListMetricsQueries.getAccountListItemsRaw: ${duration}ms`, {

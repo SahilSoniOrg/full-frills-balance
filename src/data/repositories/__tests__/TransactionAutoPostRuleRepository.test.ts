@@ -64,7 +64,7 @@ describe('TransactionAutoPostRuleRepository', () => {
     // Delete
     await transactionAutoPostRuleRepository.delete(wpId, rule.id);
     const deleted = await transactionAutoPostRuleRepository.find(wpId, rule.id);
-    expect(deleted).toBeUndefined();
+    expect(deleted).toBeNull();
   });
 
   it('does not read, update, or delete a rule through another workplace', async () => {
@@ -80,7 +80,7 @@ describe('TransactionAutoPostRuleRepository', () => {
       owner,
     );
 
-    expect(await transactionAutoPostRuleRepository.find(other, rule.id)).toBeUndefined();
+    expect(await transactionAutoPostRuleRepository.find(other, rule.id)).toBeNull();
     await expect(
       transactionAutoPostRuleRepository.save(
         {

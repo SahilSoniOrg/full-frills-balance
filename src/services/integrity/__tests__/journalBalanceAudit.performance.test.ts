@@ -1,12 +1,12 @@
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { asWorkplaceId } from '@/src/types/ids';
 import { findUnbalancedJournals } from '../journalBalanceAudit';
-
-jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
-  transactionRawRepository: { queryRaw: jest.fn() },
+jest.mock('@/src/data/repositories/raw/RawSqlExecutor', () => ({
+  rawSqlExecutor: { query: jest.fn() },
 }));
+
 jest.mock('@/src/services/currency-read-service', () => ({
   currencyReadService: { getPrecision: jest.fn().mockResolvedValue(2) },
 }));
@@ -31,7 +31,7 @@ const rows = Array.from({ length: 250 }, (_, index) =>
 
 describe('journal balance audit responsiveness', () => {
   it('lets queued UI work run between bounded reads without splitting journal lines', async () => {
-    const query = jest.mocked(transactionRawRepository.queryRaw);
+    const query = jest.mocked(rawSqlExecutor.query);
     let uiTurns = 0;
     const uiTurnsAtReads: number[] = [];
     const timers: ReturnType<typeof setTimeout>[] = [];

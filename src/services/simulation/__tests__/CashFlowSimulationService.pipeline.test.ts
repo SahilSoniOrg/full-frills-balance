@@ -3,12 +3,15 @@ import { BudgetUsage } from '@/src/services/budget/types';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { AccountId, BudgetId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
 import dayjs from 'dayjs';
 import { cashFlowSimulationService, SimulationInput } from '../CashFlowSimulationService';
 import { FlowSource } from '../types';
+jest.mock('@/src/data/repositories/raw/TransactionRawMetricsQueries', () => ({
+  transactionRawMetricsQueries: { getLatestBalancesRaw: jest.fn() },
+}));
 
 jest.mock('@/src/utils/logger', () => ({
   logger: {
@@ -32,14 +35,6 @@ jest.mock('@/src/data/repositories/BudgetRepository', () => ({
   budgetRepository: {
     getScopes: jest.fn().mockResolvedValue([]),
     getScopesByBudgetIds: jest.fn().mockResolvedValue([]),
-  },
-}));
-
-jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
-  transactionRawRepository: {
-    getLatestBalancesRaw: jest.fn().mockResolvedValue(new Map()),
-    getAccountPeriodMetricsRaw: jest.fn().mockResolvedValue({ totalDecrease: 0, totalIncrease: 0 }),
-    getJournalTransactionsForJournalsRaw: jest.fn().mockResolvedValue([]),
   },
 }));
 
@@ -260,7 +255,7 @@ describe('CashFlowSimulationService - End-to-End Backend Pipeline', () => {
           payFromAccountId: bank.id,
         },
       ]);
-      (transactionRawRepository.getLatestBalancesRaw as jest.Mock).mockResolvedValue(
+      (transactionRawMetricsQueries.getLatestBalancesRaw as jest.Mock).mockResolvedValue(
         new Map([[creditCard.id, 0]]),
       );
       (budgetRepository.getScopesByBudgetIds as jest.Mock).mockResolvedValue([

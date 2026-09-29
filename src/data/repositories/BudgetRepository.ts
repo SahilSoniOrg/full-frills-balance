@@ -23,6 +23,8 @@ export interface BudgetInput {
   assetAccountIds?: AccountId[];
 }
 
+export type BudgetPatch = Partial<BudgetInput>;
+
 export type BudgetMergeRecords = {
   scopes: BudgetScope[];
   budgets: Budget[];
@@ -81,13 +83,10 @@ export class BudgetRepository {
   }
 
   async find(workplaceId: WorkplaceId, id: BudgetId): Promise<Budget | null> {
-    try {
-      const budget = await this.budgets.find(id);
-      if (budget.workplaceId !== workplaceId) return null;
-      return budget;
-    } catch {
-      return null;
-    }
+    const budgets = await this.budgets
+      .query(Q.where('workplace_id', workplaceId), Q.where('id', id))
+      .fetch();
+    return budgets[0] ?? null;
   }
 
   async create(
@@ -131,7 +130,7 @@ export class BudgetRepository {
   async update(
     workplaceId: WorkplaceId,
     budget: Budget,
-    updates: Partial<BudgetInput>,
+    updates: BudgetPatch,
     accountIds: AccountId[],
   ): Promise<Budget> {
     return await this.db.write(async () => {

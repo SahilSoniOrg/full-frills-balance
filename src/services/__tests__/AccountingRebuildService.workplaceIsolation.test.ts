@@ -4,11 +4,11 @@ import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
+import { transactionRawRebuildQueries } from '@/src/data/repositories/raw/TransactionRawRebuildQueries';
 import {
   transactionQueryRepository,
   transactionWriteRepository,
 } from '@/src/data/repositories/transaction';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
@@ -67,7 +67,7 @@ describe('AccountingRebuildService workplace isolation', () => {
       transactionCount: 1,
     });
 
-    jest.spyOn(transactionRawRepository, 'getRebuildDataRaw').mockResolvedValue([
+    jest.spyOn(transactionRawRebuildQueries, 'getRebuildDataRaw').mockResolvedValue([
       {
         id: foreignTransaction.id,
         amount: 25,
@@ -102,7 +102,7 @@ describe('AccountingRebuildService workplace isolation', () => {
     const controller = new AbortController();
     const batchSpy = jest.spyOn(database, 'batch');
 
-    jest.spyOn(transactionRawRepository, 'getRebuildDataRaw').mockResolvedValue([
+    jest.spyOn(transactionRawRebuildQueries, 'getRebuildDataRaw').mockResolvedValue([
       {
         id: 'tx-during-cancel' as TransactionId,
         amount: 25,
@@ -159,7 +159,7 @@ describe('AccountingRebuildService workplace isolation', () => {
       transactionCount: 1,
     });
 
-    jest.spyOn(transactionRawRepository, 'getRebuildDataRaw').mockResolvedValue([
+    jest.spyOn(transactionRawRebuildQueries, 'getRebuildDataRaw').mockResolvedValue([
       {
         id: transaction.id,
         amount: 25,

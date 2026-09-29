@@ -7,6 +7,7 @@ import { AccountType } from '@/src/types/enums';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';
 import { distinctUntilChanged, map, of, Observable } from 'rxjs';
+import { buildAccountClauses } from './accountFilters';
 
 export class AccountObserveQueries {
   private get db() {
@@ -22,13 +23,8 @@ export class AccountObserveQueries {
   }
 
   observeAll(workplaceId: WorkplaceId): Observable<Account[]> {
-    const clauses: Q.Clause[] = [
-      Q.where('deleted_at', Q.eq(null)),
-      Q.where('workplace_id', workplaceId),
-      Q.sortBy('order_num', Q.asc),
-    ];
     return this.accounts
-      .query(...clauses)
+      .query(...buildAccountClauses({ workplaceId, sortByOrder: true }))
       .observeWithColumns([
         'account_type',
         'account_subtype',
@@ -47,24 +43,14 @@ export class AccountObserveQueries {
   }
 
   observeHierarchy(workplaceId: WorkplaceId): Observable<Account[]> {
-    const clauses: Q.Clause[] = [
-      Q.where('deleted_at', Q.eq(null)),
-      Q.where('workplace_id', workplaceId),
-    ];
     return this.accounts
-      .query(...clauses)
+      .query(...buildAccountClauses({ workplaceId }))
       .observeWithColumns(['parent_account_id', 'deleted_at', 'archived_at']);
   }
 
   observeByType(workplaceId: WorkplaceId, accountType: AccountType): Observable<Account[]> {
-    const clauses: Q.Clause[] = [
-      Q.where('account_type', accountType),
-      Q.where('deleted_at', Q.eq(null)),
-      Q.where('workplace_id', workplaceId),
-      Q.sortBy('order_num', Q.asc),
-    ];
     return this.accounts
-      .query(...clauses)
+      .query(...buildAccountClauses({ workplaceId, accountType, sortByOrder: true }))
       .observeWithColumns([
         'name',
         'account_subtype',
@@ -84,14 +70,8 @@ export class AccountObserveQueries {
       return of([] as Account[]);
     }
 
-    const clauses: Q.Clause[] = [
-      Q.where('id', Q.oneOf(accountIds)),
-      Q.where('deleted_at', Q.eq(null)),
-      Q.where('workplace_id', workplaceId),
-    ];
-
     return this.accounts
-      .query(...clauses)
+      .query(...buildAccountClauses({ workplaceId, accountIds }))
       .observeWithColumns([
         'name',
         'account_type',
@@ -109,7 +89,7 @@ export class AccountObserveQueries {
 
   observeById(workplaceId: WorkplaceId, accountId: AccountId): Observable<Account | null> {
     return this.accounts
-      .query(Q.where('id', accountId), Q.where('workplace_id', workplaceId))
+      .query(...buildAccountClauses({ workplaceId, accountIds: [accountId] }))
       .observeWithColumns([
         'name',
         'account_type',
@@ -135,11 +115,7 @@ export class AccountObserveQueries {
   /** Primitive archived_at for React — avoids stale UI from stable model references. */
   observeArchivedAt(workplaceId: WorkplaceId, accountId: AccountId): Observable<number | null> {
     return this.accounts
-      .query(
-        Q.where('id', accountId),
-        Q.where('workplace_id', workplaceId),
-        Q.where('deleted_at', Q.eq(null)),
-      )
+      .query(...buildAccountClauses({ workplaceId, accountIds: [accountId] }))
       .observeWithColumns(['archived_at', 'deleted_at'])
       .pipe(
         map(accounts => {
@@ -154,11 +130,7 @@ export class AccountObserveQueries {
   /** Primitive reconciled_at (ms) for React — avoids stale UI from the dashboard balance pipeline. */
   observeReconciledAt(workplaceId: WorkplaceId, accountId: AccountId): Observable<number | null> {
     return this.accounts
-      .query(
-        Q.where('id', accountId),
-        Q.where('workplace_id', workplaceId),
-        Q.where('deleted_at', Q.eq(null)),
-      )
+      .query(...buildAccountClauses({ workplaceId, accountIds: [accountId] }))
       .observeWithColumns(['reconciled_at', 'deleted_at'])
       .pipe(
         map(accounts => {
@@ -212,12 +184,8 @@ export class AccountObserveQueries {
       return of([] as Account[]);
     }
 
-    const clauses: Q.Clause[] = [
-      Q.where('id', Q.oneOf(accountIds)),
-      Q.where('workplace_id', workplaceId),
-    ];
     return this.accounts
-      .query(...clauses)
+      .query(...buildAccountClauses({ workplaceId, accountIds, includeDeleted: true }))
       .observeWithColumns([
         'name',
         'account_type',
@@ -233,22 +201,14 @@ export class AccountObserveQueries {
 
   observeHasChildren(workplaceId: WorkplaceId, accountId: AccountId): Observable<boolean> {
     return this.accounts
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('parent_account_id', accountId),
-        Q.where('deleted_at', Q.eq(null)),
-      )
+      .query(...buildAccountClauses({ workplaceId, parentAccountId: accountId }))
       .observe()
       .pipe(map(children => children.length > 0));
   }
 
   observeSubAccountCount(workplaceId: WorkplaceId, accountId: AccountId): Observable<number> {
     return this.accounts
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('parent_account_id', accountId),
-        Q.where('deleted_at', Q.eq(null)),
-      )
+      .query(...buildAccountClauses({ workplaceId, parentAccountId: accountId }))
       .observeCount();
   }
 }

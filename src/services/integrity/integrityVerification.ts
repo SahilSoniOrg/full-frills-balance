@@ -1,6 +1,7 @@
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
+import { transactionRawRebuildQueries } from '@/src/data/repositories/raw/TransactionRawRebuildQueries';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { analytics } from '@/src/services/analytics';
@@ -60,7 +61,7 @@ export async function computeBalanceFromTransactions(
 
   // HIGH PERFORMANCE: Use raw SQL aggregate (SUM)
   // Optimization: Bypasses ORM bridge deserialization (O(1) Memory, O(N) DB Scan)
-  const deltaResult = await transactionRawRepository.getAccountSumRaw(
+  const deltaResult = await transactionRawRebuildQueries.getAccountSumRaw(
     workplaceId,
     accountId,
     effectiveCutoff,
@@ -86,7 +87,7 @@ export async function computeBalanceFromScratch(
   if (!account) throw new Error(`Account ${accountId} not found`);
 
   // HIGH PERFORMANCE: Use raw SQL aggregate (SUM) from scratch (no snapshot)
-  return transactionRawRepository.getAccountSumRaw(
+  return transactionRawRebuildQueries.getAccountSumRaw(
     workplaceId,
     accountId,
     cutoffDate,
@@ -116,7 +117,7 @@ export async function verifyAccountBalance(
   const precision = await currencyReadService.getPrecision(account.currencyCode);
 
   // 1. Get the "Cached" balance (the actual running_balance column of the latest transaction)
-  const latestBalances = await transactionRawRepository.getLatestBalancesRaw(
+  const latestBalances = await transactionRawMetricsQueries.getLatestBalancesRaw(
     workplaceId,
     [accountId],
     cutoffDate,

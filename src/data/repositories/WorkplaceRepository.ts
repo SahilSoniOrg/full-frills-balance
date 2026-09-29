@@ -4,6 +4,7 @@ import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { catchError, of } from 'rxjs';
 import { AccountType } from '@/src/types/enums';
 import { IconName } from '@/src/types/domainIcons';
+import { Q } from '@nozbe/watermelondb';
 import { accountWriteRepository } from './account/AccountWriteRepository';
 import {
   getBalanceCorrectionAccountInput,
@@ -104,11 +105,8 @@ export class WorkplaceRepository {
   }
 
   async find(id: WorkplaceId): Promise<Workplace | undefined> {
-    try {
-      return await this.workplaces.find(id);
-    } catch {
-      return undefined;
-    }
+    const workplaces = await this.workplaces.query(Q.where('id', id)).fetch();
+    return workplaces[0];
   }
 
   async findAll(): Promise<Workplace[]> {

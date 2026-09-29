@@ -48,12 +48,10 @@ export class TransactionInboxRepository {
   }
 
   async find(workplaceId: WorkplaceId, id: string): Promise<TransactionInboxRecord | null> {
-    try {
-      const record = await this.inbox.find(id);
-      return record.workplaceId === workplaceId ? record : null;
-    } catch {
-      return null;
-    }
+    const records = await this.inbox
+      .query(Q.where('id', id), Q.where('workplace_id', workplaceId))
+      .fetch();
+    return records[0] ?? null;
   }
 
   async findByDeviceSourceIds(

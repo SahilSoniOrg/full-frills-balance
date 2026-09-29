@@ -18,7 +18,7 @@ import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { transactionRawRebuildQueries } from '@/src/data/repositories/raw/TransactionRawRebuildQueries';
 import { adjustAccountBalance } from '@/src/services/accounts/accountAdjustCommands';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { reconcileAccount } from '@/src/services/accounts/accountReconcileCommands';
@@ -300,7 +300,7 @@ describe('account commands (integration)', () => {
     const lines = await transactionQueryRepository.findByJournal(WP, adjustment!.id);
     expect(lines[0].amount).toBe(150);
     expect(
-      await transactionRawRepository.getAccountSumRaw(
+      await transactionRawRebuildQueries.getAccountSumRaw(
         WP,
         asset.id,
         Number.MAX_SAFE_INTEGER,
@@ -324,7 +324,7 @@ describe('account commands (integration)', () => {
     );
     expect(adjustments).toHaveLength(1);
     expect(
-      await transactionRawRepository.getAccountSumRaw(
+      await transactionRawRebuildQueries.getAccountSumRaw(
         WP,
         asset.id,
         Number.MAX_SAFE_INTEGER,

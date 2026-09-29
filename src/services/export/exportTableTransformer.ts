@@ -1,7 +1,4 @@
-import { database } from '@/src/data/database/Database';
-import { supportsRawSql } from '@/src/data/database/DatabaseUtils';
 import { exportRepository } from '@/src/data/repositories/ExportRepository';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
 import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { snakeToCamel } from '@/src/utils/serialization';
@@ -45,30 +42,15 @@ export async function fetchAndTransformTable<T extends object>(
   const omitSoftDeleted =
     EXPORT_OMIT_SOFT_DELETED_TABLES.has(tableName) && columnNames.includes('deleted_at');
 
-  if (supportsRawSql(database)) {
-    const selectFields = columnNames.map(snake => `${snake} AS ${snakeToCamel(snake)}`).join(', ');
-    const whereClauses: string[] = [];
-    const params: (string | number)[] = [];
-    if (columnNames.includes('workplace_id')) {
-      whereClauses.push('workplace_id = ?');
-      params.push(workplaceId);
-    }
-    if (omitSoftDeleted) {
-      whereClauses.push('deleted_at IS NULL');
-    }
-    let sql = `SELECT ${selectFields} FROM ${tableName}`;
-    if (whereClauses.length > 0) {
-      sql += ` WHERE ${whereClauses.join(' AND ')}`;
-    }
-    const results = await transactionRawRepository.queryRaw<Record<string, unknown>>(
-      sql,
-      params,
-      tableName,
-    );
-    if (results !== null) {
-      raws = results;
-      useFallback = false;
-    }
+  const results = await exportRepository.fetchRawTable({
+    tableName,
+    columns: columnNames.map(source => ({ source, alias: snakeToCamel(source) })),
+    workplaceId,
+    includeDeleted: !omitSoftDeleted,
+  });
+  if (results !== null) {
+    raws = results;
+    useFallback = false;
   }
 
   if (useFallback) {

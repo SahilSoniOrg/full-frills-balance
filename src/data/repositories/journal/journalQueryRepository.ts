@@ -26,26 +26,16 @@ export class JournalQueryRepository {
   }
 
   async find(workplaceId: WorkplaceId, id: JournalId): Promise<Journal | null> {
-    try {
-      const journal = await this.journals.find(id);
-      if (journal.deletedAt) return null;
-      if (journal.workplaceId !== workplaceId) return null;
-      return journal;
-    } catch {
-      return null;
-    }
+    const journals = await this.nonDeletedQuery(workplaceId, Q.where('id', id)).fetch();
+    return journals[0] ?? null;
   }
 
   async findWithDeleted(workplaceId: WorkplaceId, id: JournalId): Promise<Journal | null> {
-    try {
-      const journal = await this.journals.find(id);
-      if (journal.workplaceId !== workplaceId) return null;
-      return journal;
-    } catch {
-      return null;
-    }
+    const journals = await this.scopedQuery(workplaceId, Q.where('id', id)).fetch();
+    return journals[0] ?? null;
   }
 
+  /** Results follow requested chunk order; rows within a chunk retain database order. */
   async findByIds(workplaceId: WorkplaceId, ids: JournalId[]): Promise<Journal[]> {
     return fetchSequentiallyInChunks(ids, chunk =>
       this.nonDeletedQuery(workplaceId, Q.where('id', Q.oneOf([...chunk]))).fetch(),

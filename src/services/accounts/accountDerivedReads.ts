@@ -13,7 +13,7 @@ import { Animation } from '@/src/constants';
 import Transaction from '@/src/data/models/Transaction';
 
 import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { accountLedgerMetricsQueries } from '@/src/data/repositories/account/AccountLedgerMetricsQueries';
 import { transactionObserveQueries } from '@/src/data/repositories/transaction';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
@@ -51,7 +51,7 @@ export function observeUnreconciledMetrics(
   accountType: AccountType,
 ): Observable<{ count: number; total: number }> {
   if (!accountId || !workplaceId) return of({ count: 0, total: 0 });
-  return transactionRawRepository.observeUnreconciledMetricsRaw(
+  return accountLedgerMetricsQueries.observeUnreconciledMetrics(
     workplaceId,
     accountId,
     reconciledAt,
@@ -71,7 +71,7 @@ export function observeAccountPeriodMetrics(
   if (!accountId || !workplaceId) {
     return of({ totalIncrease: 0, totalDecrease: 0 });
   }
-  return transactionRawRepository.observeAccountPeriodMetricsRaw(
+  return accountLedgerMetricsQueries.observePeriodMetrics(
     workplaceId,
     accountIds,
     startDate,

@@ -14,10 +14,12 @@ jest.mock('@/src/utils/logger', () => ({
   },
 }));
 
-jest.mock('@/src/data/repositories/TransactionRawRepository', () => ({
-  transactionRawRepository: {
-    getLatestBalancesRaw: jest.fn().mockResolvedValue(new Map()),
-    getAccountPeriodMetricsRaw: jest.fn().mockResolvedValue({ totalDecrease: 0, totalIncrease: 0 }),
+jest.mock('@/src/data/repositories/raw/TransactionRawMetricsQueries', () => ({
+  transactionRawMetricsQueries: { getLatestBalancesRaw: jest.fn().mockResolvedValue(new Map()) },
+}));
+jest.mock('@/src/data/repositories/account/AccountLedgerMetricsQueries', () => ({
+  accountLedgerMetricsQueries: {
+    getPeriodMetrics: jest.fn().mockResolvedValue({ totalDecrease: 0, totalIncrease: 0 }),
   },
 }));
 jest.mock('@/src/data/repositories/transaction', () => ({

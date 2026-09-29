@@ -1,5 +1,4 @@
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
-import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { analytics } from '@/src/services/analytics';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AuditAction } from '@/src/types/enums';
@@ -8,21 +7,11 @@ export async function reconcileAccount(accountId: AccountId, date: Date, workpla
   const account = await accountQueryRepository.find(workplaceId, accountId);
   if (!account) throw new Error('Account not found');
 
-  const updatedAccount = await accountWriteRepository.update(
+  const mutation = await accountWriteRepository.update(
     account,
     { reconciledAt: date },
     workplaceId,
-    () => [
-      auditRepository.prepareLog(
-        {
-          entityType: 'account',
-          entityId: accountId,
-          action: AuditAction.UPDATE,
-          changes: { reconciledAt: date },
-        },
-        workplaceId,
-      ),
-    ],
+    { audit: { action: AuditAction.UPDATE, changes: { reconciledAt: date } } },
   );
 
   analytics.trackFeatureUsage('account', 'reconcile', {
@@ -30,5 +19,5 @@ export async function reconcileAccount(accountId: AccountId, date: Date, workpla
     reconcile_date: date.toISOString(),
   });
 
-  return updatedAccount;
+  return mutation.account;
 }

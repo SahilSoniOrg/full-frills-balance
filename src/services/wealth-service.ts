@@ -4,7 +4,7 @@ import { AccountBalance } from '@/src/types/domainReadModels';
 import { WorkplaceId } from '@/src/types/ids';
 
 import { accountQueryRepository } from '@/src/data/repositories/account';
-import { transactionRawRepository } from '@/src/data/repositories/TransactionRawRepository';
+import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { DailyDelta } from '@/src/data/repositories/TransactionTypes';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
@@ -220,7 +220,7 @@ export const wealthService = {
 
     // 3. BULK FETCH daily deltas grouped by currency and type (O(1) round-trip, O(M) rows)
     const activeIds = relevantBalances.map(b => b.accountId);
-    const deltas: DailyDelta[] = await transactionRawRepository.getDailyDeltasGroupedRaw(
+    const deltas: DailyDelta[] = await transactionRawMetricsQueries.getDailyDeltasGroupedRaw(
       workplaceId,
       activeIds,
       start.valueOf(),

@@ -27,6 +27,14 @@ export interface PlannedPaymentPersistenceInput {
   recurrenceMonth?: number;
 }
 
+export type PlannedPaymentScheduleUpdate = Partial<
+  Omit<PlannedPaymentPersistenceInput, 'status' | 'nextOccurrence'>
+> & { nextOccurrence?: number };
+
+export type PlannedPaymentOccurrenceUpdate = Partial<
+  Pick<PlannedPaymentPersistenceInput, 'status' | 'nextOccurrence'>
+>;
+
 export type PlannedPaymentMergeRecords = {
   sourceFrom: PlannedPayment[];
   sourceTo: PlannedPayment[];
@@ -82,14 +90,14 @@ export class PlannedPaymentRepository {
   }
 
   async find(workplaceId: WorkplaceId, id: PlannedPaymentId): Promise<PlannedPayment | null> {
-    try {
-      const plannedPayment = await this.plannedPayments.find(id);
-      if (plannedPayment.deletedAt) return null;
-      if (plannedPayment.workplaceId !== workplaceId) return null;
-      return plannedPayment;
-    } catch {
-      return null;
-    }
+    const matches = await this.plannedPayments
+      .query(
+        Q.where('id', id),
+        Q.where('workplace_id', workplaceId),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .fetch();
+    return matches[0] ?? null;
   }
 
   async create(
@@ -107,10 +115,10 @@ export class PlannedPaymentRepository {
     return result;
   }
 
-  async update(
+  async updateSchedule(
     workplaceId: WorkplaceId,
     pp: PlannedPayment,
-    updates: Partial<PlannedPaymentPersistenceInput>,
+    updates: PlannedPaymentScheduleUpdate,
   ): Promise<PlannedPayment> {
     //get first to verify workplace scoping
     const record = await this.find(workplaceId, pp.id);
@@ -130,7 +138,7 @@ export class PlannedPaymentRepository {
     session: AccountingWriteSession,
     workplaceId: WorkplaceId,
     id: PlannedPaymentId,
-    updates: Partial<PlannedPaymentPersistenceInput>,
+    updates: PlannedPaymentOccurrenceUpdate,
     expected?: Partial<Pick<PlannedPayment, 'status' | 'nextOccurrence'>>,
   ): Promise<PlannedPayment> {
     const record = await this.find(workplaceId, id);
@@ -159,7 +167,7 @@ export class PlannedPaymentRepository {
     return record;
   }
 
-  prepareUpdate(
+  private prepareUpdate(
     workplaceId: WorkplaceId,
     pp: PlannedPayment,
     updates: Partial<PlannedPaymentPersistenceInput>,
