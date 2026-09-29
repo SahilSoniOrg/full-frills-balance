@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
+import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { bulkRenameJournals } from '@/src/services/journal/bulk';
@@ -53,6 +53,7 @@ describe('journal write workplace ownership', () => {
         journalDate: 1_000,
         description: 'Workplace One Journal',
         currencyCode: 'USD',
+        status: JournalStatus.PLANNED,
         transactions: [
           {
             accountId: workplaceOneAccount.id,
@@ -90,30 +91,19 @@ describe('journal write workplace ownership', () => {
     );
   });
 
-  async function expectRejectedBeforeWrite(operation: () => Promise<unknown>): Promise<void> {
-    const writeSpy = jest.spyOn(database, 'write');
-    await expect(operation()).rejects.toThrow(/does not belong to workplace/);
-    expect(writeSpy).not.toHaveBeenCalled();
-  }
-
-  it('rejects a foreign journal before preparing planned-status updates', () => {
-    expect(() =>
-      journalPlannedQueries.prepareStatusUpdates(
-        WORKPLACE_ONE,
-        [workplaceOneJournal, workplaceTwoJournal],
-        JournalStatus.SKIPPED,
+  it('rejects planned-status updates for a journal owned by another workplace', async () => {
+    await expect(
+      runAccountingWriteSession(session =>
+        journalPersistenceRepository.setNonPostedStatusesInSession(session, WORKPLACE_ONE, [
+          { journalId: workplaceTwoJournal.id, status: JournalStatus.SKIPPED },
+        ]),
       ),
-    ).toThrow(/does not belong to workplace/);
-  });
+    ).rejects.toThrow(`Journal ${workplaceTwoJournal.id} not found`);
 
-  it('rejects a foreign journal before opening the planned-status writer', async () => {
-    await expectRejectedBeforeWrite(() =>
-      journalPlannedQueries.batchUpdateStatus(
-        WORKPLACE_ONE,
-        [workplaceTwoJournal],
-        JournalStatus.SKIPPED,
-      ),
-    );
+    const reloadedJournal = await database.collections
+      .get<Journal>('journals')
+      .find(workplaceTwoJournal.id);
+    expect(reloadedJournal.status).toBe(JournalStatus.POSTED);
   });
 
   it('scopes ID-based journal, rename, and account-reassignment writes to the workplace', async () => {
@@ -173,10 +163,14 @@ describe('journal write workplace ownership', () => {
   });
 
   it('preserves valid planned-status and journal renames for owned rows', async () => {
-    await journalPlannedQueries.batchUpdateStatus(
-      WORKPLACE_ONE,
-      [workplaceOneJournal],
-      JournalStatus.SKIPPED,
+    await runAccountingWriteSession(session =>
+      journalPersistenceRepository.setNonPostedStatusesInSession(session, WORKPLACE_ONE, [
+        {
+          journalId: workplaceOneJournal.id,
+          status: JournalStatus.SKIPPED,
+          expectedStatus: JournalStatus.PLANNED,
+        },
+      ]),
     );
     const rename = await bulkRenameJournals(WORKPLACE_ONE, {
       [workplaceOneJournal.id]: 'Owned rename',

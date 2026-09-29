@@ -1,38 +1,20 @@
 import type Journal from '@/src/data/models/Journal';
-import { JournalDisplayType, JournalStatus, TransactionType } from '@/src/types/enums';
+import type {
+  JournalWriteFields,
+  JournalWriteLine,
+  JournalWriteMetadata,
+} from '@/src/types/journalWrite';
+import { JournalDisplayType, JournalStatus } from '@/src/types/enums';
 import { AccountId, JournalId, PlannedPaymentId } from '@/src/types/ids';
 
-export interface JournalPersistenceLine {
-  accountId: AccountId;
-  amount: number;
-  transactionType: TransactionType;
-  notes?: string;
-  exchangeRate?: number;
-  currencyCode?: string;
-}
-
-export interface JournalPersistenceMetadata {
-  importSource: string;
-  originalSmsId?: string;
-  originalSmsSender?: string;
-  originalSmsBody?: string;
-  metadataJson?: string;
-}
+export type JournalPersistenceLine = JournalWriteLine;
+export type JournalPersistenceMetadata = JournalWriteMetadata;
 
 /** Plain input to the journal persistence boundary. Contains no WatermelonDB models. */
-export interface PutJournalInput {
+export interface PutJournalInput extends JournalWriteFields {
   journalId?: JournalId;
-  journalDate: number;
-  description?: string;
-  notes?: string;
-  currencyCode: string;
-  status?: JournalStatus;
-  originalJournalId?: JournalId;
-  plannedPaymentId?: PlannedPaymentId;
   /** Derived from the lines and their account types when omitted. */
   displayType?: JournalDisplayType;
-  transactions: JournalPersistenceLine[];
-  metadata?: JournalPersistenceMetadata;
 }
 
 /** Existing-journal update shape for generic sparse puts, such as a description edit. */

@@ -6,7 +6,7 @@ import {
 } from '@/src/data/repositories/AccountingWriteSession';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
-import { Model, Q } from '@nozbe/watermelondb';
+import { Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
 
 export interface PlannedPaymentPersistenceInput {
@@ -170,18 +170,6 @@ export class PlannedPaymentRepository {
     return pp.prepareUpdate(record => {
       Object.assign(record, updates);
       record.updatedAt = new Date();
-    });
-  }
-
-  prepareStatusUpdate(
-    workplaceId: WorkplaceId,
-    pp: PlannedPayment,
-    status: PlannedPaymentStatus,
-    nextOccurrence?: number,
-  ): Model {
-    return this.prepareUpdate(workplaceId, pp, {
-      status,
-      ...(nextOccurrence === undefined ? {} : { nextOccurrence }),
     });
   }
 
