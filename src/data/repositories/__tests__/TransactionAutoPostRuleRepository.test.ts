@@ -1,6 +1,8 @@
 import { database } from '@/src/data/database/Database';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { map } from 'rxjs/operators';
+import { observeAfterInitial } from '@/src/data/repositories/__tests__/helpers/observeAfterInitial';
 
 describe('TransactionAutoPostRuleRepository', () => {
   beforeEach(async () => {
@@ -97,5 +99,37 @@ describe('TransactionAutoPostRuleRepository', () => {
       'SMS rule not found in workplace',
     );
     expect(await transactionAutoPostRuleRepository.find(owner, rule.id)).toBeTruthy();
+  });
+
+  it('re-emits the rule list when an existing rule is edited', async () => {
+    const workplaceId = 'wp-rules' as WorkplaceId;
+    const rule = await transactionAutoPostRuleRepository.save(
+      {
+        mode: 'regex',
+        senderMatch: 'BANK',
+        actions: { disposition: 'auto_post' },
+        isActive: true,
+      },
+      workplaceId,
+    );
+    const listedSender = observeAfterInitial(
+      transactionAutoPostRuleRepository
+        .observeAllByWorkplace(workplaceId)
+        .pipe(map(rules => rules.find(item => item.id === rule.id)?.senderMatch)),
+    );
+
+    await listedSender.initial;
+    await transactionAutoPostRuleRepository.save(
+      {
+        id: rule.id,
+        mode: 'regex',
+        senderMatch: 'UPDATED BANK',
+        actions: { disposition: 'auto_post' },
+        isActive: true,
+      },
+      workplaceId,
+    );
+
+    await expect(listedSender.nextValue).resolves.toBe('UPDATED BANK');
   });
 });

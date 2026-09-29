@@ -4,6 +4,7 @@ import {
   stageModelWrite,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
+import { observeQueryWithModelChanges } from '@/src/data/repositories/observeQueryWithModelChanges';
 import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 import { Observable } from 'rxjs';
@@ -38,7 +39,7 @@ export class TransactionAutoPostRuleRepository {
   }
 
   observeAllByWorkplace(workplaceId: WorkplaceId): Observable<TransactionAutoPostRule[]> {
-    return this.rules.query(Q.where('workplace_id', workplaceId)).observe();
+    return observeQueryWithModelChanges(this.rules.query(Q.where('workplace_id', workplaceId)));
   }
 
   async findActiveByWorkplace(workplaceId: WorkplaceId): Promise<TransactionAutoPostRule[]> {

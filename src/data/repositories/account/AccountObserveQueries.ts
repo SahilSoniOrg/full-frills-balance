@@ -2,6 +2,7 @@ import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import Transaction from '@/src/data/models/Transaction';
+import { observeQueryWithModelChanges } from '@/src/data/repositories/observeQueryWithModelChanges';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
@@ -171,9 +172,9 @@ export class AccountObserveQueries {
   }
 
   observeMetadata(workplaceId: WorkplaceId, accountId: AccountId): Observable<AccountMetadata[]> {
-    return this.metadata
-      .query(Q.where('account_id', accountId), Q.where('workplace_id', workplaceId))
-      .observe();
+    return observeQueryWithModelChanges(
+      this.metadata.query(Q.where('account_id', accountId), Q.where('workplace_id', workplaceId)),
+    );
   }
 
   observeByIdsWithDeleted(

@@ -1,6 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
 import Journal from '@/src/data/models/Journal';
+import { observeQueryWithModelChanges } from '@/src/data/repositories/observeQueryWithModelChanges';
 import { JournalStatus } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
@@ -195,15 +196,15 @@ export class JournalObserveQueries {
   }
 
   observePlannedInRange(workplaceId: WorkplaceId, startDate: number, endDate: number) {
-    return this.journals
-      .query(
+    return observeQueryWithModelChanges(
+      this.journals.query(
         Q.where('workplace_id', workplaceId),
         Q.where('status', JournalStatus.PLANNED),
         Q.where('journal_date', Q.gte(startDate)),
         Q.where('journal_date', Q.lte(endDate)),
         Q.where('deleted_at', Q.eq(null)),
-      )
-      .observe();
+      ),
+    );
   }
 }
 

@@ -1,6 +1,8 @@
 import { database } from '@/src/data/database/Database';
 import ExchangeRate from '@/src/data/models/ExchangeRate';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
+import { map } from 'rxjs/operators';
+import { observeAfterInitial } from '@/src/data/repositories/__tests__/helpers/observeAfterInitial';
 
 describe('ExchangeRateRepository historical rates', () => {
   beforeEach(async () => {
@@ -43,5 +45,33 @@ describe('ExchangeRateRepository historical rates', () => {
       effectiveDate: secondEffectiveDate,
       source: 'fawazahmed0/currency-api:historical',
     });
+  });
+
+  it('re-emits rate observers when an existing historical rate is corrected', async () => {
+    const requestedDate = Date.UTC(2024, 2, 3);
+    const input = {
+      fromCurrency: 'EUR',
+      toCurrency: 'USD',
+      requestedDate,
+      effectiveDate: Date.UTC(2024, 2, 2),
+      source: 'historical-test',
+    };
+    await exchangeRateRepository.cacheHistoricalRate({ ...input, rate: 1.08 });
+
+    const allRates = observeAfterInitial(
+      exchangeRateRepository.observeAll().pipe(map(rates => rates[0]?.rate)),
+    );
+    const latestRates = observeAfterInitial(
+      exchangeRateRepository
+        .observeLatestRates('EUR')
+        .pipe(map(rates => rates.find(rate => rate.toCurrency === 'USD')?.rate)),
+    );
+    await Promise.all([allRates.initial, latestRates.initial]);
+
+    await exchangeRateRepository.cacheHistoricalRate({ ...input, rate: 1.09 });
+
+    await expect(Promise.all([allRates.nextValue, latestRates.nextValue])).resolves.toEqual([
+      1.09, 1.09,
+    ]);
   });
 });

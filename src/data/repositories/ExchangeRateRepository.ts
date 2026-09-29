@@ -7,6 +7,7 @@
 
 import { database } from '@/src/data/database/Database';
 import ExchangeRate from '@/src/data/models/ExchangeRate';
+import { observeQueryWithModelChanges } from '@/src/data/repositories/observeQueryWithModelChanges';
 import { Q } from '@nozbe/watermelondb';
 
 export interface ExchangeRateCacheInput {
@@ -94,20 +95,20 @@ class ExchangeRateRepository {
    * Observe all exchange rate changes
    */
   observeAll() {
-    return this.collection.query().observe();
+    return observeQueryWithModelChanges(this.collection.query());
   }
 
   /**
    * Observe the latest rates for a base currency
    */
   observeLatestRates(fromCurrency: string) {
-    return this.collection
-      .query(
+    return observeQueryWithModelChanges(
+      this.collection.query(
         Q.where('from_currency', fromCurrency),
         Q.sortBy('effective_date', 'desc'),
         Q.sortBy('created_at', 'desc'),
-      )
-      .observe();
+      ),
+    );
   }
 
   /**
