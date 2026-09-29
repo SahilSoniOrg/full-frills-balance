@@ -9,6 +9,26 @@ import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
 
+const plannedPaymentObservableColumns = [
+  'name',
+  'description',
+  'amount',
+  'currency_code',
+  'from_account_id',
+  'to_account_id',
+  'interval_n',
+  'interval_type',
+  'start_date',
+  'end_date',
+  'next_occurrence',
+  'status',
+  'is_auto_post',
+  'recurrence_day',
+  'recurrence_month',
+  'updated_at',
+  'deleted_at',
+];
+
 export interface PlannedPaymentPersistenceInput {
   name: string;
   description?: string;
@@ -58,13 +78,13 @@ export class PlannedPaymentRepository {
         Q.where('deleted_at', Q.eq(null)),
         Q.sortBy('next_occurrence', Q.asc),
       )
-      .observe();
+      .observeWithColumns(plannedPaymentObservableColumns);
   }
 
   observeById(workplaceId: WorkplaceId, id: PlannedPaymentId) {
     return this.plannedPayments
       .query(Q.where('workplace_id', workplaceId), Q.where('id', id))
-      .observe()
+      .observeWithColumns(plannedPaymentObservableColumns)
       .pipe(map(results => results[0] ?? null));
   }
 
@@ -76,7 +96,7 @@ export class PlannedPaymentRepository {
         Q.where('deleted_at', Q.eq(null)),
         Q.sortBy('next_occurrence', Q.asc),
       )
-      .observe();
+      .observeWithColumns(plannedPaymentObservableColumns);
   }
 
   async findAllActive(workplaceId: WorkplaceId): Promise<PlannedPayment[]> {

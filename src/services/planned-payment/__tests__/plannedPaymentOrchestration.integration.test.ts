@@ -30,6 +30,8 @@ import {
 } from '@/src/types/enums';
 import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
+import { firstValueFrom } from 'rxjs';
+import { map, skip, tap, timeout } from 'rxjs/operators';
 
 const WORKPLACE_ID = 'wp-planned-atomic' as WorkplaceId;
 
@@ -219,6 +221,46 @@ describe('planned payment orchestration persistence', () => {
     expect(reloaded[0].status).toBe(JournalStatus.POSTED);
     expect(reloadedPayment?.nextOccurrence).toBe(calculateNextOccurrence(occurrenceDate, payment));
     expect(lookupSpy).toHaveBeenCalledTimes(1);
+  }, 30000);
+
+  it('refreshes the planned-payment listing when posting advances its next occurrence', async () => {
+    const payment = await createDuePayment();
+    const occurrenceDate = payment.nextOccurrence;
+    const expectedNextOccurrence = calculateNextOccurrence(occurrenceDate, payment);
+    const scheduledJournal = await journalPersistenceService.put(
+      {
+        journalDate: occurrenceDate,
+        description: payment.name,
+        currencyCode: payment.currencyCode,
+        transactions: buildPlannedPaymentTransferLines(payment),
+        status: JournalStatus.PLANNED,
+        plannedPaymentId: payment.id,
+      },
+      WORKPLACE_ID,
+    );
+
+    let markInitialEmission!: () => void;
+    const initialEmission = new Promise<void>(resolve => {
+      markInitialEmission = resolve;
+    });
+    const listedNextOccurrence = firstValueFrom(
+      plannedPaymentRepository.observeAll(WORKPLACE_ID).pipe(
+        tap(() => markInitialEmission()),
+        skip(1),
+        map(items => items.find(item => item.id === payment.id)?.nextOccurrence),
+        timeout({ first: 2000 }),
+      ),
+    );
+
+    await initialEmission;
+    await postPlannedJournalOccurrence(
+      WORKPLACE_ID,
+      payment.id,
+      scheduledJournal.id,
+      occurrenceDate,
+    );
+
+    await expect(listedNextOccurrence).resolves.toBe(expectedNextOccurrence);
   }, 30000);
 
   it('rejects a selected planned journal from a different occurrence date', async () => {
