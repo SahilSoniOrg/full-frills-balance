@@ -18,6 +18,10 @@ import { Subject, type Observable } from 'rxjs';
 
 const CACHE_DURATION_MS = AppConfig.time.msPerDay; // 24 hours
 
+function isE2eOfflineMode(): boolean {
+  return process.env.EXPO_PUBLIC_E2E === '1';
+}
+
 type InFlightRateRequest = {
   promise: Promise<Record<string, number>>;
   forceRefresh: boolean;
@@ -121,6 +125,7 @@ export class ExchangeRateService {
     if (
       !pending &&
       !forceRefresh &&
+      !isE2eOfflineMode() &&
       !this.networkFetchedBases.has(fromCurrency) &&
       !this.quoteRefreshAttempted.has(fromCurrency)
     ) {
@@ -326,11 +331,11 @@ export class ExchangeRateService {
             if (hydrated && this.isRateFresh(hydrated.timestamp)) return cachedRates;
 
             // Keep E2E deterministic and offline; production refreshes stale quotes below.
-            if (process.env.EXPO_PUBLIC_E2E === '1') return cachedRates;
+            if (isE2eOfflineMode()) return cachedRates;
           }
 
           // Detox waits for in-flight fetch(); E2E first-load must not hit the API.
-          if (process.env.EXPO_PUBLIC_E2E === '1') {
+          if (isE2eOfflineMode()) {
             return {};
           }
         }
@@ -488,7 +493,7 @@ export class ExchangeRateService {
 
       // Network refresh is Detox-tracked and can dwarf first-load. E2E builds
       // stay on the imported/DB rates; production still repairs staleness.
-      if (baseCurrency && process.env.EXPO_PUBLIC_E2E !== '1') {
+      if (baseCurrency && !isE2eOfflineMode()) {
         void this.syncTodayRates(baseCurrency);
       }
     } catch (error) {

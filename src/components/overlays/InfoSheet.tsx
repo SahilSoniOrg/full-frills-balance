@@ -9,6 +9,7 @@ type InfoSheetAction = {
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
   disabled?: boolean;
+  testID?: string;
 };
 
 interface InfoSheetProps {
@@ -48,6 +49,7 @@ export function InfoSheet({
             variant={secondaryAction.variant || 'secondary'}
             onPress={secondaryAction.onPress}
             disabled={secondaryAction.disabled}
+            testID={secondaryAction.testID}
             style={styles.actionButtonContainer}
             buttonStyle={styles.actionButton}
           >
@@ -59,6 +61,7 @@ export function InfoSheet({
             variant={primaryAction.variant || 'primary'}
             onPress={primaryAction.onPress}
             disabled={primaryAction.disabled}
+            testID={primaryAction.testID}
             style={styles.actionButtonContainer}
             buttonStyle={styles.actionButton}
           >

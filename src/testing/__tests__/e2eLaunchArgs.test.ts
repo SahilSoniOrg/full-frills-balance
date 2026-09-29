@@ -66,4 +66,30 @@ describe('readE2eLaunchConfig', () => {
       seedProfile: 'journal-ready',
     });
   });
+
+  it('parses an update-gate mode only with the authenticated E2E launch', () => {
+    process.env.EXPO_PUBLIC_E2E = '1';
+    (Constants.expoConfig as { extra: Record<string, unknown> }).extra = {
+      e2eHarnessEnabled: true,
+    };
+    valueMock.mockReturnValue({
+      e2eAuth: E2E_AUTH_TOKEN,
+      e2eUpdateGateMode: 'required',
+    });
+
+    expect(readE2eLaunchConfig()).toEqual({ reset: false, updateGateMode: 'required' });
+  });
+
+  it('ignores an unknown update-gate mode', () => {
+    process.env.EXPO_PUBLIC_E2E = '1';
+    (Constants.expoConfig as { extra: Record<string, unknown> }).extra = {
+      e2eHarnessEnabled: true,
+    };
+    valueMock.mockReturnValue({
+      e2eAuth: E2E_AUTH_TOKEN,
+      e2eUpdateGateMode: 'skip',
+    });
+
+    expect(readE2eLaunchConfig()).toEqual({ reset: false });
+  });
 });

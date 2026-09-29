@@ -5,6 +5,7 @@
  */
 import { by, device, element, expect, waitFor } from 'detox';
 import { E2E_AUTH_TOKEN } from '../../utils/launchArgs';
+import { scrollToId, tapByText } from '../../actions/mobile/elementActions';
 
 jest.setTimeout(180000);
 
@@ -43,8 +44,9 @@ it('offers a uniquely implied FX rate and keeps imported account amounts during 
   await expect(element(by.text('Debit 5791.12 · Credit 5791.12 INR'))).toExist();
   await device.takeScreenshot('restore-implied-fx-preview');
 
-  await element(by.text('Review or edit this rate')).tap();
+  await tapByText('Review or edit this rate');
   await expect(element(by.text('Review journal entry'))).toExist();
+  await scrollToId('restore-journal-edit');
   await element(by.id('restore-journal-edit')).tap();
   await expect(
     element(by.id('restore-journal-fx-restore-fx-hkd-line-converted-amount-input')),

@@ -19,7 +19,7 @@ describe(':ios: FX journal entry demo', () => {
     await waitFor(element(by.id('journal-entry-screen')))
       .toExist()
       .withTimeout(30000);
-    await element(by.id('amount-calculator-close')).tap();
+    await element(by.id('hero-amount-input')).tapReturnKey();
     await element(by.id('journal-entry-mode-selector-trigger')).tap();
     await element(by.id('journal-entry-mode-allocation')).tap();
 
@@ -38,10 +38,9 @@ describe(':ios: FX journal entry demo', () => {
     await element(by.text('Food & Drink')).tap();
 
     await enterAmount('split-total-amount-input', '10');
-    await enterAmount('split-amount-input-1', '10');
-    const convertedAmount = element(by.id('split-fx-1-converted-amount-input'));
+    await enterAmount('split-amount-input-1', '11');
+    const convertedAmount = element(by.id('split-source-fx-converted-amount-input'));
     await waitFor(convertedAmount).toBeVisible().withTimeout(30000);
-    await convertedAmount.replaceText('11.00');
 
     await element(by.id('submit-footer-button')).tap();
     await waitFor(element(by.text('Euro market purchase')))

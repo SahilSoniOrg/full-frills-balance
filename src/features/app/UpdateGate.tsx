@@ -18,12 +18,18 @@ import { exportUpdateBackup } from '@/src/services/export';
 import type { VersionPolicy } from '@/src/services/update/types';
 import { updateInsightService } from '@/src/services/update/updateInsightService';
 import { toast } from '@/src/utils/alerts';
+import { readE2eLaunchConfig } from '@/src/testing/e2eLaunchArgs';
 import { AppState, Linking, Platform, StyleSheet, TouchableOpacity } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-const E2E_AVAILABLE_NOTICE =
-  process.env.EXPO_PUBLIC_E2E === '1' && process.env.EXPO_PUBLIC_UPDATE_GATE_E2E === 'available';
+function isE2eAvailableNotice(): boolean {
+  return (
+    process.env.EXPO_PUBLIC_E2E === '1' &&
+    (readE2eLaunchConfig()?.updateGateMode ?? process.env.EXPO_PUBLIC_UPDATE_GATE_E2E) ===
+      'available'
+  );
+}
 
 type GateState =
   | { kind: 'checking' }
@@ -112,7 +118,7 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
     const notice = state.available;
     const timeoutId = setTimeout(() => {
       toast.info(notice.availableMessage ?? AppConfig.strings.update.availableMessage, {
-        duration: E2E_AVAILABLE_NOTICE ? 120000 : undefined,
+        duration: isE2eAvailableNotice() ? 120000 : undefined,
         dismissible: true,
         action: {
           label: AppConfig.strings.update.updateNow,

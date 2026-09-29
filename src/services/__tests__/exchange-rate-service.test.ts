@@ -174,6 +174,18 @@ describe('ExchangeRateService', () => {
       expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('USD'));
     });
 
+    it('leaves a missing quote unavailable during E2E startup until explicitly refreshed', async () => {
+      const originalE2e = process.env.EXPO_PUBLIC_E2E;
+      process.env.EXPO_PUBLIC_E2E = '1';
+      try {
+        await expect(service.getRequiredRate('EUR', 'USD')).resolves.toBeNull();
+        expect(mockFetch).not.toHaveBeenCalled();
+      } finally {
+        if (originalE2e === undefined) delete process.env.EXPO_PUBLIC_E2E;
+        else process.env.EXPO_PUBLIC_E2E = originalE2e;
+      }
+    });
+
     it('shares one refresh across concurrent lookups for the same base', async () => {
       (exchangeRateRepository.getAllRatesForBase as jest.Mock).mockResolvedValue([
         {
