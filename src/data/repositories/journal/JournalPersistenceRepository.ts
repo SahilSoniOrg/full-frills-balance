@@ -35,6 +35,7 @@ import {
 import { JournalStatus } from '@/src/types/enums';
 import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import type { BulkDeleteUndoToken } from '@/src/types/domainJournal';
+import type { AuditEventMetadata } from '@/src/types/auditEvents';
 
 export type {
   JournalPersistenceLine,
@@ -56,8 +57,15 @@ export type { BulkDeleteResult };
  * inside the same WatermelonDB writer transaction as the mutation.
  */
 export class JournalPersistenceRepository {
-  async put(input: PutJournalRequest, workplaceId: WorkplaceId): Promise<JournalPersistenceResult> {
-    return runAccountingWriteSession(session => this.putInSession(session, input, workplaceId));
+  async put(
+    input: PutJournalRequest,
+    workplaceId: WorkplaceId,
+    auditMetadata?: AuditEventMetadata,
+    expectedCurrent?: Record<string, unknown>,
+  ): Promise<JournalPersistenceResult> {
+    return runAccountingWriteSession(session =>
+      this.putInSession(session, input, workplaceId, auditMetadata, expectedCurrent),
+    );
   }
 
   /** Stage a plain journal write in a caller-owned accounting write session. */
@@ -65,8 +73,10 @@ export class JournalPersistenceRepository {
     session: AccountingWriteSession,
     input: PutJournalRequest,
     workplaceId: WorkplaceId,
+    auditMetadata?: AuditEventMetadata,
+    expectedCurrent?: Record<string, unknown>,
   ): Promise<JournalPersistenceResult> {
-    return stagePut(session, input, workplaceId);
+    return stagePut(session, input, workplaceId, auditMetadata, expectedCurrent);
   }
 
   async putMany(
@@ -99,9 +109,11 @@ export class JournalPersistenceRepository {
     journalId: JournalId,
     workplaceId: WorkplaceId,
     postedAt = Date.now(),
+    auditMetadata?: AuditEventMetadata,
+    expectedCurrent?: Record<string, unknown>,
   ): Promise<JournalPersistenceResult> {
     return runAccountingWriteSession(session =>
-      this.postInSession(session, journalId, workplaceId, postedAt),
+      this.postInSession(session, journalId, workplaceId, postedAt, auditMetadata, expectedCurrent),
     );
   }
 
@@ -110,8 +122,10 @@ export class JournalPersistenceRepository {
     journalId: JournalId,
     workplaceId: WorkplaceId,
     postedAt = Date.now(),
+    auditMetadata?: AuditEventMetadata,
+    expectedCurrent?: Record<string, unknown>,
   ): Promise<JournalPersistenceResult> {
-    return stagePost(session, journalId, workplaceId, postedAt);
+    return stagePost(session, journalId, workplaceId, postedAt, auditMetadata, expectedCurrent);
   }
 
   async reverse(
@@ -165,13 +179,27 @@ export class JournalPersistenceRepository {
     workplaceId: WorkplaceId,
     sourceAccountIds: readonly AccountId[],
     targetAccountId: AccountId,
+    correlationId?: string,
   ): Promise<void> {
-    return stageRetargetAccountsForMerge(session, workplaceId, sourceAccountIds, targetAccountId);
+    return stageRetargetAccountsForMerge(
+      session,
+      workplaceId,
+      sourceAccountIds,
+      targetAccountId,
+      correlationId,
+    );
   }
 
   /** Soft-deletes a journal and its currently active lines as one repository command. */
-  async delete(journalId: JournalId, workplaceId: WorkplaceId): Promise<JournalRebuildImpact> {
-    return runAccountingWriteSession(session => stageDelete(session, journalId, workplaceId));
+  async delete(
+    journalId: JournalId,
+    workplaceId: WorkplaceId,
+    auditMetadata?: AuditEventMetadata,
+    expectedCurrent?: Record<string, unknown>,
+  ): Promise<JournalRebuildImpact> {
+    return runAccountingWriteSession(session =>
+      stageDelete(session, journalId, workplaceId, auditMetadata, expectedCurrent),
+    );
   }
 
   /** Bulk soft-delete plus a token that can restore exactly this operation. */
@@ -195,8 +223,15 @@ export class JournalPersistenceRepository {
   }
 
   /** Restores a deleted journal only when its posted entries still satisfy current rules. */
-  async recover(journalId: JournalId, workplaceId: WorkplaceId): Promise<JournalPersistenceResult> {
-    return runAccountingWriteSession(session => stageRecover(session, journalId, workplaceId));
+  async recover(
+    journalId: JournalId,
+    workplaceId: WorkplaceId,
+    auditMetadata?: AuditEventMetadata,
+    expectedCurrent?: Record<string, unknown>,
+  ): Promise<JournalPersistenceResult> {
+    return runAccountingWriteSession(session =>
+      stageRecover(session, journalId, workplaceId, auditMetadata, expectedCurrent),
+    );
   }
 
   /** Restores exactly one bulk-delete operation after validating each resulting journal. */
@@ -214,9 +249,11 @@ export class JournalPersistenceRepository {
   async revertToPlanned(
     journalId: JournalId,
     workplaceId: WorkplaceId,
+    auditMetadata?: AuditEventMetadata,
+    expectedCurrent?: Record<string, unknown>,
   ): Promise<JournalPersistenceResult> {
     return runAccountingWriteSession(session =>
-      stageRevertToPlanned(session, journalId, workplaceId),
+      stageRevertToPlanned(session, journalId, workplaceId, auditMetadata, expectedCurrent),
     );
   }
 
@@ -228,8 +265,9 @@ export class JournalPersistenceRepository {
       status: JournalStatus;
       expectedStatus?: JournalStatus;
     }[],
+    auditMetadata?: AuditEventMetadata,
   ): Promise<void> {
-    return stageNonPostedStatuses(session, workplaceId, updates);
+    return stageNonPostedStatuses(session, workplaceId, updates, auditMetadata);
   }
 }
 

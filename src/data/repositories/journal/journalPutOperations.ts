@@ -24,10 +24,12 @@ import type {
   ReverseJournalOptions,
 } from '@/src/data/repositories/journal/journalPersistenceTypes';
 import { transactionRawRebuildQueries } from '@/src/data/repositories/raw/TransactionRawRebuildQueries';
+import { assertExpectedJournalSnapshot } from '@/src/data/repositories/journal/journalAuditGuard';
 import { JournalBalanceError } from '@/src/domain/accounting/journalBalanceEvaluator';
 import { AuditAction, JournalDisplayType, JournalStatus, TransactionType } from '@/src/types/enums';
 import { AccountId, brandedKeys, JournalId, WorkplaceId } from '@/src/types/ids';
 import { mapTransactionToAudit } from '@/src/types/audit';
+import type { AuditEventMetadata } from '@/src/types/auditEvents';
 import { effect } from '@/src/utils/accounting/BalanceEffects';
 import { isActiveJournalStatus } from '@/src/utils/journalStatus';
 import { referenceNumberFromMetadataJson } from '@/src/utils/sms/SmsReferenceExtractor';
@@ -167,9 +169,19 @@ export async function preparePutOperations(
   input: PutJournalRequest,
   workplaceId: WorkplaceId,
   session: AccountingWriteSession,
+  auditMetadata?: AuditEventMetadata,
+  expectedCurrent?: Record<string, unknown>,
 ): Promise<PreparedJournalWrite> {
   const put = await resolvePut(input, workplaceId);
   const { existing, oldTransactions, journalDate, status } = put;
+  if (expectedCurrent) {
+    if (!existing) {
+      throw new Error(
+        'This journal changed after the selected history entry. Refresh and review the latest change.',
+      );
+    }
+    assertExpectedJournalSnapshot(expectedCurrent, existing, oldTransactions);
+  }
   const balance = await validateJournal({
     currencyCode: put.currencyCode,
     transactions: put.lines,
@@ -222,6 +234,7 @@ export async function preparePutOperations(
     ? {
         before: {
           description: existing.description,
+          notes: existing.notes,
           journalDate: existing.journalDate,
           currencyCode: existing.currencyCode,
           status: existing.status,
@@ -230,6 +243,7 @@ export async function preparePutOperations(
         },
         after: {
           description: put.description,
+          notes: put.notes,
           journalDate,
           currencyCode: put.currencyCode,
           status,
@@ -242,7 +256,22 @@ export async function preparePutOperations(
           ),
         },
       }
-    : { description: input.description };
+    : {
+        after: {
+          description: put.description,
+          notes: put.notes,
+          journalDate,
+          currencyCode: put.currencyCode,
+          status,
+          totalAmount: balance.totalAmount,
+          transactions: lines.map(line =>
+            mapTransactionToAudit({
+              ...line,
+              currencyCode: balance.accountsById.get(line.accountId)?.currencyCode,
+            }),
+          ),
+        },
+      };
   const previousStatus = existing?.status;
   const previousJournalDate = existing?.journalDate;
   const touchesLines =
@@ -314,6 +343,18 @@ export async function preparePutOperations(
         {
           entityType: 'journal',
           entityId: journal.id,
+          eventType:
+            auditMetadata?.eventType ??
+            (existing
+              ? 'journal.updated'
+              : input.plannedPaymentId
+                ? 'journal.planned_payment_generated'
+                : 'journal.created'),
+          source: auditMetadata?.source,
+          correlationId: auditMetadata?.correlationId,
+          revertsLogId: auditMetadata?.revertsLogId,
+          undoable:
+            auditMetadata?.undoable ?? (!existing && input.plannedPaymentId ? false : undefined),
           action: existing ? AuditAction.UPDATE : AuditAction.CREATE,
           changes: auditChanges,
         },
@@ -344,8 +385,16 @@ export async function stagePut(
   session: AccountingWriteSession,
   input: PutJournalRequest,
   workplaceId: WorkplaceId,
+  auditMetadata?: AuditEventMetadata,
+  expectedCurrent?: Record<string, unknown>,
 ): Promise<JournalPersistenceResult> {
-  const prepared = await preparePutOperations(input, workplaceId, session);
+  const prepared = await preparePutOperations(
+    input,
+    workplaceId,
+    session,
+    auditMetadata,
+    expectedCurrent,
+  );
   stageModelWrite(session, prepared.ops);
   return prepared.result;
 }
@@ -355,9 +404,15 @@ export async function stagePost(
   journalId: JournalId,
   workplaceId: WorkplaceId,
   postedAt: number,
+  auditMetadata?: AuditEventMetadata,
+  expectedCurrent?: Record<string, unknown>,
 ): Promise<JournalPersistenceResult> {
   const journal = await findActiveJournal(journalId, workplaceId);
   if (!journal) throw new Error('Journal not found');
+  if (expectedCurrent) {
+    const currentTransactions = await fetchJournalTransactions(workplaceId, [journalId]);
+    assertExpectedJournalSnapshot(expectedCurrent, journal, currentTransactions);
+  }
   if (journal.status !== JournalStatus.PLANNED) {
     throw new Error(
       `Cannot post journal with status ${journal.status}. Only PLANNED journals can be posted.`,
@@ -414,6 +469,11 @@ export async function stagePost(
       {
         entityType: 'journal',
         entityId: journalId,
+        eventType: auditMetadata?.eventType ?? 'journal.posted',
+        source: auditMetadata?.source,
+        correlationId: auditMetadata?.correlationId,
+        revertsLogId: auditMetadata?.revertsLogId,
+        undoable: auditMetadata?.undoable,
         action: AuditAction.UPDATE,
         changes: {
           before: { status: JournalStatus.PLANNED, journalDate: originalPlannedDate },
@@ -470,6 +530,11 @@ export async function stageReverse(
     },
     workplaceId,
     session,
+    {
+      eventType: 'journal.reversal_created',
+      source: 'app',
+      undoable: false,
+    },
   );
   const reversingJournalId = prepared.result.journal.id;
 
@@ -484,11 +549,13 @@ export async function stageReverse(
       {
         entityType: 'journal',
         entityId: originalJournalId,
+        eventType: 'journal.reversed',
         action: AuditAction.UPDATE,
         changes: {
           before: { status: originalStatus, reversingJournalId: originalReversingJournalId },
           after: { status: JournalStatus.REVERSED, reversingJournalId },
         },
+        undoable: false,
       },
       workplaceId,
     ),
@@ -535,6 +602,7 @@ export async function stageRename(
         {
           entityType: 'journal',
           entityId: journal.id,
+          eventType: 'journal.renamed',
           action: AuditAction.UPDATE,
           changes: {
             before: { description: previousDescription },

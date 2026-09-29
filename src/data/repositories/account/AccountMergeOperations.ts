@@ -1,6 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
+import AuditLog from '@/src/data/models/AuditLog';
 import {
   stageModelWrite,
   type AccountingWriteSession,
@@ -21,7 +22,27 @@ export type AccountMergeRecords = {
 export type AccountMergeWriteOperations = {
   accounts: Account[];
   metadata: AccountMetadata[];
+  audits: AuditLog[];
 };
+
+function metadataAuditState(record: AccountMetadata): Record<string, unknown> {
+  return {
+    statementDay: record.statementDay ?? null,
+    dueDay: record.dueDay ?? null,
+    minimumPaymentAmount: record.minimumPaymentAmount ?? null,
+    minimumBalanceAmount: record.minimumBalanceAmount ?? null,
+    creditLimitAmount: record.creditLimitAmount ?? null,
+    aprBps: record.aprBps ?? null,
+    emiDay: record.emiDay ?? null,
+    loanTenureMonths: record.loanTenureMonths ?? null,
+    autopayEnabled: record.autopayEnabled ?? null,
+    gracePeriodDays: record.gracePeriodDays ?? null,
+    payFromAccountId: record.payFromAccountId ?? null,
+    minPaymentOnly: record.minPaymentOnly ?? null,
+    minimumPaymentPercent: record.minimumPaymentPercent ?? null,
+    notes: record.notes ?? null,
+  };
+}
 
 /** Account merge read + prepareUpdate batching (metadata, sub-accounts, soft-delete sources). */
 export class AccountMergeOperations {
@@ -38,6 +59,7 @@ export class AccountMergeOperations {
     workplaceId: WorkplaceId,
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
+    correlationId?: string,
   ): Promise<void> {
     const records = await this.loadMergeRecords(workplaceId, sourceAccountIds, targetAccountId);
     if (records.sourceAccounts.length !== sourceAccountIds.length) {
@@ -45,20 +67,26 @@ export class AccountMergeOperations {
     }
 
     stageModelWrite(session, () => {
-      const { accounts, metadata } = this.prepareLoadedMergeWriteOperations(
+      const { accounts, metadata, audits } = this.prepareLoadedMergeWriteOperations(
         records,
         sourceAccountIds,
         targetAccountId,
+        correlationId,
       );
       return [
         ...accounts,
         ...metadata,
+        ...audits,
         auditRepository.prepareLog(
           {
             entityType: 'account',
             entityId: targetAccountId,
+            eventType: 'account.merged',
             action: AuditAction.UPDATE,
+            source: 'app',
+            correlationId,
             changes: { action: 'MERGE_ACCOUNTS', mergedAccountIds: sourceAccountIds },
+            undoable: false,
           },
           workplaceId,
         ),
@@ -110,6 +138,7 @@ export class AccountMergeOperations {
     records: AccountMergeRecords,
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
+    correlationId?: string,
   ): AccountMergeWriteOperations {
     const sourceIds = new Set<string>(sourceAccountIds);
     const movedChildren = records.sourceChildren
@@ -119,36 +148,113 @@ export class AccountMergeOperations {
       records.targetChildren.reduce((max, child) => Math.max(max, child.orderNum ?? -1), -1) + 1;
     const accounts: Account[] = [];
     const metadata: AccountMetadata[] = [];
+    const audits: AuditLog[] = [];
+    const now = new Date();
+    const sourceMetadataByAccountId = new Map(
+      records.sourceMetadata.map(record => [record.accountId, record]),
+    );
     movedChildren.forEach((record, index) => {
+      const nextOrderNum = nextOrder + index;
       accounts.push(
         record.prepareUpdate(updated => {
           updated.parentAccountId = targetAccountId;
-          updated.orderNum = nextOrder + index;
-          updated.updatedAt = new Date();
+          updated.orderNum = nextOrderNum;
+          updated.updatedAt = now;
         }),
+      );
+      audits.push(
+        auditRepository.prepareLog(
+          {
+            entityType: 'account',
+            entityId: record.id,
+            eventType: 'account.hierarchy_retargeted',
+            action: AuditAction.UPDATE,
+            source: 'app',
+            correlationId,
+            changes: {
+              before: {
+                name: record.name,
+                parentAccountId: record.parentAccountId ?? null,
+                orderNum: record.orderNum ?? null,
+              },
+              after: {
+                name: record.name,
+                parentAccountId: targetAccountId,
+                orderNum: nextOrderNum,
+              },
+            },
+            undoable: false,
+          },
+          record.workplaceId,
+        ),
       );
     });
     records.sourceAccounts.forEach(record => {
+      const sourceMetadata = sourceMetadataByAccountId.get(record.id);
       accounts.push(
         record.prepareUpdate(updated => {
-          updated.deletedAt = new Date();
-          updated.updatedAt = new Date();
+          updated.deletedAt = now;
+          updated.updatedAt = now;
         }),
+      );
+      audits.push(
+        auditRepository.prepareLog(
+          {
+            entityType: 'account',
+            entityId: record.id,
+            eventType: 'account.merged_into',
+            action: AuditAction.UPDATE,
+            source: 'app',
+            correlationId,
+            changes: {
+              before: {
+                name: record.name,
+                deletedAt: null,
+                ...(sourceMetadata ? { metadata: metadataAuditState(sourceMetadata) } : {}),
+              },
+              after: {
+                name: record.name,
+                deletedAt: now,
+                ...(sourceMetadata ? { metadata: null } : {}),
+              },
+              mergedIntoAccountId: targetAccountId,
+            },
+            undoable: false,
+          },
+          record.workplaceId,
+        ),
       );
     });
     records.metadataToRetarget
       .filter(record => !sourceIds.has(record.accountId))
       .forEach(record => {
+        const before = metadataAuditState(record);
+        const after = { ...before, payFromAccountId: targetAccountId };
         metadata.push(
           record.prepareUpdate(updated => {
             updated.payFromAccountId = targetAccountId;
-            updated.updatedAt = new Date();
+            updated.updatedAt = now;
           }),
+        );
+        audits.push(
+          auditRepository.prepareLog(
+            {
+              entityType: 'account',
+              entityId: record.accountId,
+              eventType: 'account.payment_source_retargeted',
+              action: AuditAction.UPDATE,
+              source: 'app',
+              correlationId,
+              changes: { before: { metadata: before }, after: { metadata: after } },
+              undoable: false,
+            },
+            record.workplaceId,
+          ),
         );
       });
     metadata.push(...records.sourceMetadata.map(record => record.prepareDestroyPermanently()));
 
-    return { accounts, metadata };
+    return { accounts, metadata, audits };
   }
 }
 

@@ -211,7 +211,11 @@ export class WorkplaceService {
     logger.info(`[WorkplaceService] Migrating legacy currency ${legacyCurrency} to workplaces`);
     for (const workplace of workplaces) {
       if (workplace.defaultCurrencyCode === legacyCurrency) continue;
-      await workplaceRepository.update(workplace, { defaultCurrencyCode: legacyCurrency });
+      await workplaceRepository.update(
+        workplace,
+        { defaultCurrencyCode: legacyCurrency },
+        { source: 'system', eventType: 'workplace.currency_migrated', undoable: false },
+      );
     }
     preferencesMigration.clearLegacyCurrencyCode();
   }

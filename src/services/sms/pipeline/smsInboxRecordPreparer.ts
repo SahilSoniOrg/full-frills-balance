@@ -2,6 +2,7 @@ import { SmsMessage } from '@/modules/expo-sms-inbox';
 import Journal from '@/src/data/models/Journal';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { TransactionInboxRecordWriteData } from '@/src/data/repositories/TransactionInboxRepository';
+import { generator } from '@/src/data/database/idGenerator';
 import type { AccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import type { JournalPersistenceResult } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
@@ -70,6 +71,7 @@ export async function processScanBatchItem(params: {
 }): Promise<{
   inboxRecord: TransactionInboxRecordWriteData;
   autoPosted: boolean;
+  auditCorrelationId?: string;
   journalResult?: JournalPersistenceResult;
 }> {
   const {
@@ -99,20 +101,29 @@ export async function processScanBatchItem(params: {
   }
 
   let autoPosted = false;
+  let auditCorrelationId: string | undefined;
   let journalResult: JournalPersistenceResult | undefined;
 
   if (result.autoPost && !linkedJournalId && finalStatus === InboxProcessingStatus.PENDING) {
     try {
+      auditCorrelationId = generator();
       journalResult = await journalPersistenceService.putInSession(
         session,
         result.autoPost.journalData,
         workplaceId,
+        {
+          eventType: 'journal.sms_auto_posted',
+          source: 'system',
+          correlationId: auditCorrelationId,
+          undoable: false,
+        },
       );
       linkedJournalId = journalResult.journal.id;
       finalStatus = InboxProcessingStatus.AUTO_POSTED;
       autoPosted = true;
       triggeredRuleIds.push(result.autoPost.ruleId);
     } catch (error) {
+      auditCorrelationId = undefined;
       logger.warn(`SMS auto-post rule ${result.autoPost.ruleId} failed persistence validation`, {
         error,
       });
@@ -129,5 +140,5 @@ export async function processScanBatchItem(params: {
     linkedJournalId,
     result.duplicate || undefined,
   );
-  return { inboxRecord, autoPosted, journalResult };
+  return { inboxRecord, autoPosted, auditCorrelationId, journalResult };
 }

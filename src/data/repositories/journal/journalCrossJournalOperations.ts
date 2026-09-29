@@ -4,6 +4,7 @@ import {
 } from '@/src/data/repositories/AccountingWriteSession';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
+import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import {
   fetchActiveJournals,
   fetchJournalTransactions,
@@ -22,8 +23,9 @@ import type {
   MergeJournalsInput,
   ReassignJournalAccountsInput,
 } from '@/src/data/repositories/journal/journalPersistenceTypes';
-import { JournalDisplayType, JournalStatus } from '@/src/types/enums';
+import { AuditAction, JournalDisplayType, JournalStatus } from '@/src/types/enums';
 import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
+import { mapTransactionToAudit } from '@/src/types/audit';
 import { Q } from '@nozbe/watermelondb';
 
 /** Validates each journal as it would read after moving lines to other accounts. */
@@ -253,6 +255,7 @@ export async function stageRetargetAccountsForMerge(
   workplaceId: WorkplaceId,
   sourceAccountIds: readonly AccountId[],
   targetAccountId: AccountId,
+  correlationId?: string,
 ): Promise<void> {
   if (sourceAccountIds.length === 0) return;
 
@@ -278,13 +281,60 @@ export async function stageRetargetAccountsForMerge(
   );
 
   const now = new Date();
-  stageModelWrite(session, () =>
-    movedTransactions.map(transaction =>
+  const transactionsByJournal = groupTransactionsByJournal(journalTransactions);
+  stageModelWrite(session, () => [
+    ...movedTransactions.map(transaction =>
       transaction.prepareUpdate(record => {
         record.accountId = targetAccountId;
         record.runningBalance = null;
         record.updatedAt = now;
       }),
     ),
-  );
+    ...journals.map(journal => {
+      const transactions = transactionsByJournal.get(journal.id) ?? [];
+      const beforeTransactions = transactions.map(mapTransactionToAudit);
+      const afterTransactions = transactions.map(transaction =>
+        mapTransactionToAudit({
+          accountId: sourceIds.has(transaction.accountId) ? targetAccountId : transaction.accountId,
+          amount: transaction.amount,
+          transactionType: transaction.transactionType,
+          notes: transaction.notes,
+          exchangeRate: transaction.exchangeRate,
+          currencyCode: transaction.currencyCode,
+        }),
+      );
+      return auditRepository.prepareLog(
+        {
+          entityType: 'journal',
+          entityId: journal.id,
+          eventType: 'journal.accounts_retargeted',
+          action: AuditAction.UPDATE,
+          source: 'app',
+          correlationId,
+          changes: {
+            before: {
+              description: journal.description,
+              notes: journal.notes,
+              journalDate: journal.journalDate,
+              currencyCode: journal.currencyCode,
+              status: journal.status,
+              totalAmount: journal.totalAmount,
+              transactions: beforeTransactions,
+            },
+            after: {
+              description: journal.description,
+              notes: journal.notes,
+              journalDate: journal.journalDate,
+              currencyCode: journal.currencyCode,
+              status: journal.status,
+              totalAmount: journal.totalAmount,
+              transactions: afterTransactions,
+            },
+          },
+          undoable: false,
+        },
+        workplaceId,
+      );
+    }),
+  ]);
 }

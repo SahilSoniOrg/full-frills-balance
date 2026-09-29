@@ -59,12 +59,12 @@ type AccountPersistedFieldUpdate = {
   accountType?: AccountPersistenceInput['accountType'];
   accountSubtype?: AccountPersistenceInput['accountSubtype'];
   currencyCode?: string;
-  description?: string;
-  icon?: string;
+  description?: AccountPersistenceInput['description'];
+  icon?: AccountPersistenceInput['icon'];
   color?: string;
   metadata?: AccountPersistenceInput['metadata'];
   parentAccountId?: AccountId | null;
-  orderNum?: number;
+  orderNum?: AccountPersistenceInput['orderNum'];
 };
 
 function siblingListState(
@@ -202,6 +202,31 @@ async function getPlainMetadata(
   };
 }
 
+const ACCOUNT_METADATA_AUDIT_FIELDS = [
+  'statementDay',
+  'dueDay',
+  'minimumPaymentAmount',
+  'minimumBalanceAmount',
+  'creditLimitAmount',
+  'aprBps',
+  'emiDay',
+  'loanTenureMonths',
+  'autopayEnabled',
+  'gracePeriodDays',
+  'payFromAccountId',
+  'minPaymentOnly',
+  'minimumPaymentPercent',
+  'notes',
+] as const;
+
+function completeMetadataAuditState(
+  metadata: Record<string, unknown> | null | undefined,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    ACCOUNT_METADATA_AUDIT_FIELDS.map(field => [field, metadata?.[field] ?? null]),
+  );
+}
+
 function buildAccountDetailPayload(
   updates: AccountDetailsUpdate,
 ): Partial<AccountPersistenceInput> {
@@ -244,6 +269,7 @@ export type AccountFieldUpdateContext = {
     accountSubtype: Account['accountSubtype'];
     currencyCode: string;
     description?: string;
+    color?: string;
   };
   beforeMetadata: Record<string, unknown> | undefined;
 };
@@ -252,6 +278,16 @@ function buildAccountUpdateAuditChanges(
   context: AccountFieldUpdateContext,
   after: AccountPersistedFieldUpdate,
 ) {
+  const auditAfter = { ...after };
+  if (Object.prototype.hasOwnProperty.call(after, 'metadata')) {
+    auditAfter.metadata =
+      after.metadata === null
+        ? null
+        : {
+            ...completeMetadataAuditState(context.beforeMetadata),
+            ...after.metadata,
+          };
+  }
   return {
     before: {
       name: context.beforeState.name,
@@ -259,11 +295,12 @@ function buildAccountUpdateAuditChanges(
       accountSubtype: context.beforeState.accountSubtype,
       currencyCode: context.beforeState.currencyCode,
       description: context.beforeState.description,
+      color: context.beforeState.color,
       icon: context.account.icon,
       parentAccountId: context.account.parentAccountId,
-      metadata: context.beforeMetadata,
+      metadata: context.beforeMetadata ? completeMetadataAuditState(context.beforeMetadata) : null,
     },
-    after,
+    after: auditAfter,
   };
 }
 
@@ -287,6 +324,7 @@ export async function prepareAccountFieldUpdate(
     accountSubtype: account.accountSubtype,
     currencyCode: account.currencyCode,
     description: account.description,
+    color: account.color,
   };
 
   const isTypeChanging =

@@ -16,6 +16,7 @@ import {
 import { AccountArchiveChanges } from '@/src/utils/accountArchive';
 import { AuditAction } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
+import { generator } from '@/src/data/database/idGenerator';
 
 export type PreparedArchiveMutation = {
   plan: ArchiveMutationPlan;
@@ -63,12 +64,15 @@ export function serializeArchiveAuditChanges(
 export function prepareArchiveAuditLogs(
   workplaceId: WorkplaceId,
   entries: ArchiveAuditEntry[],
+  correlationId?: string,
 ): AuditLog[] {
   return entries.map(entry =>
     auditRepository.prepareLog(
       {
         entityType: 'account',
         entityId: entry.entityId,
+        eventType: entry.action === 'ARCHIVED' ? 'account.archived' : 'account.unarchived',
+        correlationId,
         action: AuditAction.UPDATE,
         changes: serializeArchiveAuditChanges(entry),
       },
@@ -86,10 +90,11 @@ export async function applyAccountArchiveChanges(
   if (!prepared) return false;
 
   const { archiveTargets, unarchiveTargets, now } = prepared.plan;
+  const correlationId = generator();
   await accountWriteRepository.commitMutationPlan(async () => ({
     prepareOps: () => [
       ...prepareArchiveTargetOps(archiveTargets, unarchiveTargets, now),
-      ...prepareArchiveAuditLogs(workplaceId, prepared.auditEntries),
+      ...prepareArchiveAuditLogs(workplaceId, prepared.auditEntries, correlationId),
     ],
     result: undefined,
   }));

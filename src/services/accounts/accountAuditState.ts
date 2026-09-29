@@ -56,10 +56,15 @@ export function normalizeAccountAuditState(
   const normalized = { ...before } as AccountAuditState;
 
   if ('deletedAt' in raw) {
-    normalized.deletedAt = parsePersistedAuditDate(raw.deletedAt) ?? undefined;
+    const deletedAt = parsePersistedAuditDate(raw.deletedAt);
+    if (deletedAt !== undefined) normalized.deletedAt = deletedAt;
   }
   if ('archivedAt' in raw) {
     normalized.archivedAt = parsePersistedArchivedAtStrict(raw.archivedAt);
+  }
+  if ('reconciledAt' in raw) {
+    const reconciledAt = parsePersistedAuditDate(raw.reconciledAt);
+    if (reconciledAt !== undefined) normalized.reconciledAt = reconciledAt;
   }
 
   return normalized;

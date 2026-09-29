@@ -14,6 +14,7 @@ import { storage } from '@/src/utils/storage';
 import { claimedRestoreFingerprint } from '@/src/services/import/restoreOwnership';
 import { restorePublicationClaims } from '@/src/services/import/restorePublicationClaims';
 import { SETUP_DRAFT_KEY } from '@/src/services/setup/setupDraftIdentity';
+import { clearLocalAuditActorId } from '@/src/services/audit-identity';
 
 const RESETTABLE_DRAFT_KEYS = [
   'onboarding_resume_state_v1',
@@ -46,6 +47,7 @@ export async function resetDatabase(): Promise<void> {
   try {
     await databaseRepository.resetDatabase();
     preferences.clearPreferences();
+    clearLocalAuditActorId();
     RESETTABLE_DRAFT_KEYS.forEach(key => storage.remove(key));
     storage.remove(SETUP_DRAFT_KEY);
     restorePublicationClaims.clearAll();

@@ -18,6 +18,7 @@ import {
 import { requirePlannedPayment } from '@/src/services/planned-payment/plannedPaymentWorkplace';
 import { JournalStatus, PlannedPaymentStatus } from '@/src/types/enums';
 import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
+import { generator } from '@/src/data/database/idGenerator';
 import { logger } from '@/src/utils/logger';
 
 /**
@@ -89,8 +90,19 @@ export async function settlePlannedOccurrence(
     day.dayStart,
     day.dayEnd,
   );
-  const journal = await applyOccurrenceAction(session, payment, day, occurrence, action);
-  return { journal, ...(await advanceSchedule(session, payment, day.dayStart)) };
+  const correlationId = generator();
+  const journal = await applyOccurrenceAction(
+    session,
+    payment,
+    day,
+    occurrence,
+    action,
+    correlationId,
+  );
+  return {
+    journal,
+    ...(await advanceSchedule(session, payment, day.dayStart, correlationId)),
+  };
 }
 
 async function applyOccurrenceAction(
@@ -99,6 +111,7 @@ async function applyOccurrenceAction(
   { dayStart }: OccurrenceDay,
   occurrence: PlannedOccurrenceJournals,
   action: PlannedOccurrenceAction,
+  correlationId: string,
 ): Promise<JournalPersistenceResult | null> {
   if (action.kind === 'generate') {
     if (occurrence.kind !== 'none') return null;
@@ -119,6 +132,7 @@ async function applyOccurrenceAction(
         plannedPaymentId: payment.id,
       },
       payment.workplaceId,
+      { source: 'system', correlationId },
     );
   }
 
@@ -138,6 +152,7 @@ async function applyOccurrenceAction(
           status: JournalStatus.SKIPPED,
           expectedStatus: JournalStatus.PLANNED,
         })),
+        { source: 'app', correlationId },
       );
       return null;
     }
@@ -161,6 +176,12 @@ async function applyOccurrenceAction(
         plannedPaymentId: payment.id,
       },
       payment.workplaceId,
+      {
+        eventType: 'journal.planned_payment_skipped',
+        source: 'app',
+        correlationId,
+        undoable: false,
+      },
     );
   }
 
@@ -178,6 +199,7 @@ async function applyOccurrenceAction(
       planned[0].id,
       payment.workplaceId,
       action.postedAt,
+      { source: 'app', correlationId },
     );
   }
   if (!payment.toAccountId) {
@@ -198,6 +220,7 @@ async function applyOccurrenceAction(
       },
     },
     payment.workplaceId,
+    { source: 'app', correlationId },
   );
 }
 
@@ -205,6 +228,7 @@ async function advanceSchedule(
   session: AccountingWriteSession,
   payment: PlannedPayment,
   dayStart: number,
+  correlationId: string,
 ): Promise<Omit<PlannedOccurrenceSettlement, 'journal'>> {
   const nextOccurrence = calculateNextOccurrence(dayStart, payment);
   if (payment.status !== PlannedPaymentStatus.ACTIVE || nextOccurrence <= payment.nextOccurrence) {
@@ -217,6 +241,12 @@ async function advanceSchedule(
     payment.id,
     { nextOccurrence, ...(completed ? { status: PlannedPaymentStatus.COMPLETED } : {}) },
     { status: PlannedPaymentStatus.ACTIVE, nextOccurrence: payment.nextOccurrence },
+    {
+      eventType: completed ? 'planned_payment.completed' : 'planned_payment.schedule_advanced',
+      source: 'system',
+      correlationId,
+      undoable: false,
+    },
   );
   return { nextOccurrence, completed };
 }

@@ -14,6 +14,8 @@ export function batchImportDataFromCanonical(canonical: CanonicalImport): BatchI
 
   const v1 = canonical as CanonicalImportV1;
   return {
+    sourceFormatVersion: v1.sourceFormatVersion,
+    importMetadata: v1.importMetadata,
     accounts: v1.accounts,
     journals: v1.journals,
     transactions: v1.transactions,
@@ -40,7 +42,7 @@ export function canonicalImportFromBatchImportData(
 ): CanonicalImportV1 {
   return {
     version: CANONICAL_IMPORT_VERSION_V1,
-    sourceFormatVersion: options.sourceFormatVersion,
+    sourceFormatVersion: options.sourceFormatVersion ?? data.sourceFormatVersion,
     accounts: data.accounts,
     journals: data.journals,
     transactions: data.transactions,
@@ -55,7 +57,7 @@ export function canonicalImportFromBatchImportData(
     transactionAutoPostRules: data.transactionAutoPostRules,
     transactionInboxRecords: data.transactionInboxRecords,
     balanceSnapshots: data.balanceSnapshots,
-    importMetadata: options.importMetadata,
+    importMetadata: options.importMetadata ?? data.importMetadata,
   };
 }
 

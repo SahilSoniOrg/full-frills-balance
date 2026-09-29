@@ -8,14 +8,14 @@ export interface AccountPersistenceInput {
   accountType: AccountType;
   accountSubtype?: AccountSubtype;
   currencyCode: string;
-  description?: string;
-  icon?: string;
+  description?: string | null;
+  icon?: string | null;
   color?: string;
-  orderNum?: number;
-  reconciledAt?: Date;
-  parentAccountId?: AccountId;
+  orderNum?: number | null;
+  reconciledAt?: Date | null;
+  parentAccountId?: AccountId | null;
   workplaceId: WorkplaceId;
-  metadata?: Partial<SerializedAccountMetadataPayload>;
+  metadata?: Partial<SerializedAccountMetadataPayload> | null;
   /** null clears archive. Omit to leave unchanged. */
   archivedAt?: Date | null;
   /** null clears soft-delete. Omit to leave unchanged. */

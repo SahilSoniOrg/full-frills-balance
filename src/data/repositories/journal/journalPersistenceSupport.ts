@@ -23,6 +23,7 @@ import { deriveJournalDisplayType } from '@/src/domain/accounting/journalDisplay
 import { AuditAction, JournalDisplayType, JournalStatus, TransactionType } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { mapTransactionToAudit } from '@/src/types/audit';
+import type { AuditEventMetadata } from '@/src/types/auditEvents';
 import { fromMinorUnits, toMinorUnits } from '@/src/utils/money';
 import { Model, Q } from '@nozbe/watermelondb';
 
@@ -162,16 +163,24 @@ export function prepareDeleteAudit(
   transactions: readonly Transaction[],
   deletedAt: Date,
   workplaceId: WorkplaceId,
+  auditMetadata?: AuditEventMetadata,
 ) {
   return auditRepository.prepareLog(
     {
       entityType: 'journal',
       entityId: journal.id,
+      eventType: auditMetadata?.eventType ?? 'journal.deleted',
+      source: auditMetadata?.source,
+      correlationId: auditMetadata?.correlationId,
+      revertsLogId: auditMetadata?.revertsLogId,
+      undoable: auditMetadata?.undoable,
       action: AuditAction.DELETE,
       changes: {
         before: {
           status: journal.status,
           description: journal.description,
+          notes: journal.notes,
+          journalDate: journal.journalDate,
           totalAmount: journal.totalAmount,
           currencyCode: journal.currencyCode,
           transactions: transactions.map(mapTransactionToAudit),
@@ -188,11 +197,17 @@ export function prepareRestoreAudit(
   previousDeletedAt: Date | undefined,
   restoredAt: Date,
   workplaceId: WorkplaceId,
+  auditMetadata?: AuditEventMetadata,
 ) {
   return auditRepository.prepareLog(
     {
       entityType: 'journal',
       entityId: journalId,
+      eventType: auditMetadata?.eventType ?? 'journal.restored',
+      source: auditMetadata?.source,
+      correlationId: auditMetadata?.correlationId,
+      revertsLogId: auditMetadata?.revertsLogId,
+      undoable: auditMetadata?.undoable,
       action: AuditAction.UPDATE,
       changes: {
         before: { deletedAt: previousDeletedAt },

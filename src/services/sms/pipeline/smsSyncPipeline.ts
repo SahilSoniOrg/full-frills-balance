@@ -217,6 +217,7 @@ export class SmsSyncPipeline {
               session,
               item.inboxRecord,
               latestRecord,
+              { correlationId: item.auditCorrelationId },
             );
             if (item.autoPosted) stagedImportedCount += 1;
             if (item.journalResult) journalResults.push(item.journalResult);

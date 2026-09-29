@@ -83,7 +83,19 @@ export enum AuditAction {
   DELETE = 'DELETE',
 }
 
-export type AuditEntityType = 'account' | 'journal' | 'transaction';
+export const AUDIT_ENTITY_TYPES = [
+  'account',
+  'journal',
+  'transaction',
+  'exchange_rate',
+  'budget',
+  'planned_payment',
+  'transaction_auto_post_rule',
+  'transaction_inbox_record',
+  'workplace',
+] as const;
+
+export type AuditEntityType = (typeof AUDIT_ENTITY_TYPES)[number];
 
 export enum InboxProcessingStatus {
   PENDING = 'pending',

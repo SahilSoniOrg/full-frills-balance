@@ -1,13 +1,17 @@
 import { database } from '@/src/data/database/Database';
+import Account from '@/src/data/models/Account';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
+import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import {
   stageModelWrite,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
 import { observeQueryWithModelChanges } from '@/src/data/repositories/observeQueryWithModelChanges';
-import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
+import { AuditAction, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
+import type { AuditEventType } from '@/src/types/auditEvents';
 import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
+import type { Model } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
 
 export interface PlannedPaymentPersistenceInput {
@@ -43,6 +47,49 @@ export type PlannedPaymentMergeRecords = {
   targetTo: PlannedPayment[];
 };
 
+function auditPlannedPaymentState(
+  payment: PlannedPayment,
+  overrides: Partial<PlannedPaymentPersistenceInput> = {},
+): Record<string, unknown> {
+  return {
+    name: overrides.name ?? payment.name,
+    description: Object.prototype.hasOwnProperty.call(overrides, 'description')
+      ? (overrides.description ?? null)
+      : (payment.description ?? null),
+    amount: overrides.amount ?? payment.amount,
+    currencyCode: overrides.currencyCode ?? payment.currencyCode,
+    fromAccountId: overrides.fromAccountId ?? payment.fromAccountId,
+    toAccountId: overrides.toAccountId ?? payment.toAccountId,
+    intervalN: overrides.intervalN ?? payment.intervalN,
+    intervalType: overrides.intervalType ?? payment.intervalType,
+    startDate: overrides.startDate ?? payment.startDate,
+    endDate: Object.prototype.hasOwnProperty.call(overrides, 'endDate')
+      ? (overrides.endDate ?? null)
+      : (payment.endDate ?? null),
+    nextOccurrence: overrides.nextOccurrence ?? payment.nextOccurrence,
+    status: overrides.status ?? payment.status,
+    isAutoPost: overrides.isAutoPost ?? payment.isAutoPost,
+    recurrenceDay: Object.prototype.hasOwnProperty.call(overrides, 'recurrenceDay')
+      ? (overrides.recurrenceDay ?? null)
+      : (payment.recurrenceDay ?? null),
+    recurrenceMonth: Object.prototype.hasOwnProperty.call(overrides, 'recurrenceMonth')
+      ? (overrides.recurrenceMonth ?? null)
+      : (payment.recurrenceMonth ?? null),
+  };
+}
+
+function stableAuditJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableAuditJson).join(',')}]`;
+  if (typeof value === 'object' && value !== null) {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map(key => `${JSON.stringify(key)}:${stableAuditJson(record[key])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value ?? null);
+}
+
 export class PlannedPaymentRepository {
   private get db() {
     return database;
@@ -66,6 +113,12 @@ export class PlannedPaymentRepository {
     return observeQueryWithModelChanges(
       this.plannedPayments.query(Q.where('workplace_id', workplaceId), Q.where('id', id)),
     ).pipe(map(results => results[0] ?? null));
+  }
+
+  observeByIdsIncludingDeleted(workplaceId: WorkplaceId, ids: PlannedPaymentId[]) {
+    return this.plannedPayments
+      .query(Q.where('workplace_id', workplaceId), Q.where('id', Q.oneOf(ids)))
+      .observe();
   }
 
   observeActive(workplaceId: WorkplaceId) {
@@ -105,12 +158,26 @@ export class PlannedPaymentRepository {
     data: PlannedPaymentPersistenceInput,
   ): Promise<PlannedPayment> {
     const result = await this.db.write(async () => {
-      return this.plannedPayments.create(pp => {
+      const created = await this.plannedPayments.create(pp => {
         Object.assign(pp, data);
         pp.createdAt = new Date();
         pp.updatedAt = new Date();
         pp.workplaceId = workplaceId;
       });
+      await this.db.batch(
+        auditRepository.prepareLog(
+          {
+            entityType: 'planned_payment',
+            entityId: created.id,
+            eventType: 'planned_payment.created',
+            action: AuditAction.CREATE,
+            changes: { after: auditPlannedPaymentState(created) },
+            undoable: false,
+          },
+          workplaceId,
+        ),
+      );
+      return created;
     });
     return result;
   }
@@ -120,17 +187,169 @@ export class PlannedPaymentRepository {
     pp: PlannedPayment,
     updates: PlannedPaymentScheduleUpdate,
   ): Promise<PlannedPayment> {
-    //get first to verify workplace scoping
-    const record = await this.find(workplaceId, pp.id);
-    if (!record) {
-      throw new Error('Planned payment not found');
-    }
     return await this.db.write(async () => {
-      await pp.update(record => {
-        Object.assign(record, updates);
-        record.updatedAt = new Date();
+      const record = await this.find(workplaceId, pp.id);
+      if (!record) throw new Error('Planned payment not found');
+      const before = auditPlannedPaymentState(record);
+      const after = auditPlannedPaymentState(record, updates);
+      const update = record.prepareUpdate(current => {
+        Object.assign(current, updates);
+        current.updatedAt = new Date();
       });
-      return pp;
+      await this.db.batch(
+        update,
+        auditRepository.prepareLog(
+          {
+            entityType: 'planned_payment',
+            entityId: pp.id,
+            eventType: 'planned_payment.updated',
+            action: AuditAction.UPDATE,
+            changes: { before, after },
+            undoable: true,
+          },
+          workplaceId,
+        ),
+      );
+      return record;
+    });
+  }
+
+  async revertAuditUpdate(
+    workplaceId: WorkplaceId,
+    id: PlannedPaymentId,
+    before: Record<string, unknown>,
+    after: Record<string, unknown>,
+    changedFields: readonly string[],
+    auditLogId: string,
+  ): Promise<void> {
+    const revertibleFields = new Set([
+      'name',
+      'description',
+      'amount',
+      'currencyCode',
+      'fromAccountId',
+      'toAccountId',
+      'intervalN',
+      'intervalType',
+      'startDate',
+      'endDate',
+      'nextOccurrence',
+      'isAutoPost',
+      'recurrenceDay',
+      'recurrenceMonth',
+    ]);
+    const conflictMessage =
+      'This planned payment changed after the selected history entry. Refresh and review the latest change.';
+
+    await this.db.write(async () => {
+      let record: PlannedPayment;
+      try {
+        record = await this.plannedPayments.find(id);
+      } catch {
+        throw new Error(conflictMessage);
+      }
+      if (record.workplaceId !== workplaceId || record.deletedAt || changedFields.length === 0) {
+        throw new Error(conflictMessage);
+      }
+
+      const current = auditPlannedPaymentState(record);
+      const restored: Record<string, unknown> = { ...current };
+      for (const field of changedFields) {
+        if (
+          !revertibleFields.has(field) ||
+          !Object.prototype.hasOwnProperty.call(before, field) ||
+          !Object.prototype.hasOwnProperty.call(after, field) ||
+          stableAuditJson(current[field]) !== stableAuditJson(after[field])
+        ) {
+          throw new Error(conflictMessage);
+        }
+        restored[field] = before[field];
+      }
+
+      const accountIds = [...new Set([restored.fromAccountId, restored.toAccountId])];
+      if (accountIds.some(accountId => typeof accountId !== 'string')) {
+        throw new Error(conflictMessage);
+      }
+      const accounts = await this.db.collections
+        .get<Account>('accounts')
+        .query(
+          Q.where('workplace_id', workplaceId),
+          Q.where('id', Q.oneOf(accountIds as string[])),
+          Q.where('deleted_at', Q.eq(null)),
+        )
+        .fetch();
+      if (accounts.length !== accountIds.length) throw new Error(conflictMessage);
+
+      const updates: Partial<PlannedPaymentPersistenceInput> = {};
+      for (const field of changedFields) {
+        const value = restored[field];
+        switch (field) {
+          case 'name':
+            updates.name = value as string;
+            break;
+          case 'description':
+            updates.description = value == null ? undefined : (value as string);
+            break;
+          case 'amount':
+            updates.amount = value as number;
+            break;
+          case 'currencyCode':
+            updates.currencyCode = value as string;
+            break;
+          case 'fromAccountId':
+            updates.fromAccountId = value as AccountId;
+            break;
+          case 'toAccountId':
+            updates.toAccountId = value as AccountId;
+            break;
+          case 'intervalN':
+            updates.intervalN = value as number;
+            break;
+          case 'intervalType':
+            updates.intervalType = value as PlannedPaymentInterval;
+            break;
+          case 'startDate':
+            updates.startDate = value as number;
+            break;
+          case 'endDate':
+            updates.endDate = value == null ? undefined : (value as number);
+            break;
+          case 'nextOccurrence':
+            updates.nextOccurrence = value as number;
+            break;
+          case 'isAutoPost':
+            updates.isAutoPost = value as boolean;
+            break;
+          case 'recurrenceDay':
+            updates.recurrenceDay = value == null ? undefined : (value as number);
+            break;
+          case 'recurrenceMonth':
+            updates.recurrenceMonth = value == null ? undefined : (value as number);
+            break;
+        }
+      }
+
+      const restoredState = auditPlannedPaymentState(record, updates);
+      const now = new Date();
+      await this.db.batch(
+        record.prepareUpdate(currentRecord => {
+          Object.assign(currentRecord, updates);
+          currentRecord.updatedAt = now;
+        }),
+        auditRepository.prepareLog(
+          {
+            entityType: 'planned_payment',
+            entityId: id,
+            eventType: 'planned_payment.reverted',
+            action: AuditAction.UPDATE,
+            source: 'app',
+            revertsLogId: auditLogId,
+            undoable: false,
+            changes: { before: current, after: restoredState },
+          },
+          workplaceId,
+        ),
+      );
     });
   }
 
@@ -140,6 +359,12 @@ export class PlannedPaymentRepository {
     id: PlannedPaymentId,
     updates: PlannedPaymentOccurrenceUpdate,
     expected?: Partial<Pick<PlannedPayment, 'status' | 'nextOccurrence'>>,
+    auditOptions: {
+      eventType?: AuditEventType;
+      source?: 'app' | 'system' | (string & {});
+      correlationId?: string;
+      undoable?: boolean;
+    } = {},
   ): Promise<PlannedPayment> {
     const record = await this.find(workplaceId, id);
     if (!record) throw new Error('This planned payment was deleted.');
@@ -152,7 +377,25 @@ export class PlannedPaymentRepository {
       throw new Error('Planned payment changed while its occurrence was being processed');
     }
 
-    stageModelWrite(session, () => [this.prepareUpdate(workplaceId, record, updates)]);
+    stageModelWrite(session, () => [
+      this.prepareUpdate(workplaceId, record, updates),
+      auditRepository.prepareLog(
+        {
+          entityType: 'planned_payment',
+          entityId: record.id,
+          eventType: auditOptions.eventType ?? 'planned_payment.updated',
+          source: auditOptions.source ?? 'system',
+          correlationId: auditOptions.correlationId,
+          action: AuditAction.UPDATE,
+          changes: {
+            before: auditPlannedPaymentState(record),
+            after: auditPlannedPaymentState(record, updates),
+          },
+          undoable: auditOptions.undoable ?? false,
+        },
+        workplaceId,
+      ),
+    ]);
     return record;
   }
 
@@ -163,7 +406,21 @@ export class PlannedPaymentRepository {
   ): Promise<PlannedPayment> {
     const record = await this.find(workplaceId, id);
     if (!record) throw new Error('Planned payment not found');
-    stageModelWrite(session, () => [this.prepareDelete(workplaceId, record)]);
+    stageModelWrite(session, () => [
+      this.prepareDelete(workplaceId, record),
+      auditRepository.prepareLog(
+        {
+          entityType: 'planned_payment',
+          entityId: record.id,
+          eventType: 'planned_payment.deleted',
+          source: 'app',
+          action: AuditAction.DELETE,
+          changes: { before: auditPlannedPaymentState(record), after: { deletedAt: new Date() } },
+          undoable: false,
+        },
+        workplaceId,
+      ),
+    ]);
     return record;
   }
 
@@ -230,10 +487,11 @@ export class PlannedPaymentRepository {
     workplaceId: WorkplaceId,
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
+    correlationId?: string,
   ): Promise<void> {
     const records = await this.loadMergeRecords(workplaceId, sourceAccountIds, targetAccountId);
     stageModelWrite(session, () =>
-      this.prepareLoadedMergeOperations(records, sourceAccountIds, targetAccountId),
+      this.prepareLoadedMergeOperations(records, sourceAccountIds, targetAccountId, correlationId),
     );
   }
 
@@ -255,7 +513,8 @@ export class PlannedPaymentRepository {
     records: PlannedPaymentMergeRecords,
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
-  ): PlannedPayment[] {
+    correlationId?: string,
+  ): Model[] {
     const sourceIds = new Set(sourceAccountIds);
 
     const sourceRecords = new Map(
@@ -302,14 +561,32 @@ export class PlannedPaymentRepository {
       }
     }
 
-    return [...sourceRecords.values()].map(record =>
-      record.prepareUpdate(updated => {
-        if (sourceIds.has(updated.fromAccountId)) updated.fromAccountId = targetAccountId;
-        if (sourceIds.has(updated.toAccountId)) updated.toAccountId = targetAccountId;
-        if (pausedSourceIds.has(record.id)) updated.status = PlannedPaymentStatus.PAUSED;
-        updated.updatedAt = new Date();
-      }),
-    );
+    return [...sourceRecords.values()].flatMap(record => {
+      const updates: Partial<PlannedPaymentPersistenceInput> = {
+        fromAccountId: sourceIds.has(record.fromAccountId) ? targetAccountId : record.fromAccountId,
+        toAccountId: sourceIds.has(record.toAccountId) ? targetAccountId : record.toAccountId,
+        ...(pausedSourceIds.has(record.id) ? { status: PlannedPaymentStatus.PAUSED } : {}),
+      };
+      return [
+        this.prepareUpdate(record.workplaceId, record, updates),
+        auditRepository.prepareLog(
+          {
+            entityType: 'planned_payment',
+            entityId: record.id,
+            eventType: 'planned_payment.accounts_retargeted',
+            source: 'app',
+            correlationId,
+            action: AuditAction.UPDATE,
+            changes: {
+              before: auditPlannedPaymentState(record),
+              after: auditPlannedPaymentState(record, updates),
+            },
+            undoable: false,
+          },
+          record.workplaceId,
+        ),
+      ];
+    });
   }
 }
 

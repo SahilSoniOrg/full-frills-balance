@@ -1,10 +1,25 @@
 import { AppConfig } from '@/src/constants';
 import AuditLog, { toPlainAuditLog } from '@/src/data/models/AuditLog';
-import { AuditEntry, auditRepository } from '@/src/data/repositories/AuditRepository';
+import {
+  AuditEntry,
+  AuditLogCursor,
+  auditRepository,
+} from '@/src/data/repositories/AuditRepository';
 import { revertRegistry } from '@/src/services/revert-registry';
 import { AuditEntityType } from '@/src/types/enums';
+import type { AuditEventSource, AuditEventType } from '@/src/types/auditEvents';
 import { WorkplaceId } from '@/src/types/ids';
+import { PlainAuditLog } from '@/src/types/plainDtos';
 import { map } from 'rxjs';
+
+function toSupportedPlainAuditLog(log: AuditLog): PlainAuditLog {
+  const changes = log.parsedChanges;
+  return {
+    ...toPlainAuditLog(log),
+    canRevert:
+      log.canRevert && !!changes && revertRegistry.supports(log.entityType, log.action, changes),
+  };
+}
 
 /**
  * Audit Service
@@ -28,13 +43,13 @@ export class AuditService {
   ): Promise<{ success: boolean; error?: string }> {
     const log = await auditRepository.find(logId, workplaceId);
     if (!log) return { success: false, error: AppConfig.strings.audit.errors.notFound(logId) };
-    if (!log.canRevert)
-      return { success: false, error: AppConfig.strings.audit.errors.revertFailed };
     const changes = log.parsedChanges;
-    if (!changes) return { success: false, error: AppConfig.strings.audit.errors.revertFailed };
+    if (!changes || !log.canRevert) {
+      return { success: false, error: AppConfig.strings.audit.errors.revertFailed };
+    }
 
     const handler = revertRegistry.getHandler(log.entityType);
-    if (!handler) {
+    if (!handler || !revertRegistry.supports(log.entityType, log.action, changes)) {
       return {
         success: false,
         error: AppConfig.strings.audit.errors.revertTypeNotSupported(log.entityType),
@@ -42,7 +57,12 @@ export class AuditService {
     }
 
     try {
-      await handler(log.entityId, changes, log.action, workplaceId);
+      const reverted = await handler(log.entityId, changes, log.action, workplaceId, {
+        auditLogId: log.id,
+      });
+      if (reverted === false) {
+        return { success: false, error: AppConfig.strings.audit.errors.revertFailed };
+      }
       return { success: true };
     } catch (error: unknown) {
       return {
@@ -56,17 +76,6 @@ export class AuditService {
   }
 
   /**
-   * Get audit trail for a specific entity
-   */
-  async getAuditTrail(
-    entityType: AuditEntityType,
-    entityId: string,
-    workplaceId: WorkplaceId,
-  ): Promise<AuditLog[]> {
-    return auditRepository.findByEntity(entityType, entityId, workplaceId);
-  }
-
-  /**
    * Get recent audit logs (for audit viewer)
    */
   async getRecentLogs(
@@ -76,13 +85,43 @@ export class AuditService {
     return auditRepository.fetchRecent(limit, workplaceId);
   }
 
+  /** Legacy convenience API, bounded to recent history. Use getOlderLogs for pagination. */
+  async getAuditTrail(
+    entityType: AuditEntityType,
+    entityId: string,
+    workplaceId: WorkplaceId,
+  ): Promise<AuditLog[]> {
+    return auditRepository.findByEntity(entityType, entityId, workplaceId);
+  }
+
+  async getOlderLogs(
+    cursor: AuditLogCursor,
+    limit: number,
+    workplaceId: WorkplaceId,
+    entity?: {
+      entityType?: AuditEntityType;
+      entityId?: string;
+      source?: AuditEventSource;
+      eventType?: AuditEventType;
+      correlationId?: string;
+    },
+  ): Promise<PlainAuditLog[]> {
+    const logs = await auditRepository.fetchOlder(cursor, limit, workplaceId, entity);
+    return logs.map(toSupportedPlainAuditLog);
+  }
+
   /**
    * Observe audit trail for a specific entity
    */
-  observeAuditTrail(entityType: AuditEntityType, entityId: string, workplaceId: WorkplaceId) {
+  observeAuditTrail(
+    entityType: AuditEntityType,
+    entityId: string,
+    workplaceId: WorkplaceId,
+    limit: number = AppConfig.pagination.auditScreenLimit,
+  ) {
     return auditRepository
-      .observeByEntity(entityType, entityId, workplaceId)
-      .pipe(map(logs => logs.map(toPlainAuditLog)));
+      .observeByEntity(entityType, entityId, workplaceId, limit)
+      .pipe(map(logs => logs.map(toSupportedPlainAuditLog)));
   }
 
   /**
@@ -91,10 +130,14 @@ export class AuditService {
   observeRecentLogs(
     limit: number = AppConfig.pagination.auditRecentLimit,
     workplaceId: WorkplaceId,
+    entityType?: AuditEntityType,
+    source?: AuditEventSource,
+    eventType?: AuditEventType,
+    correlationId?: string,
   ) {
     return auditRepository
-      .observeRecent(limit, workplaceId)
-      .pipe(map(logs => logs.map(toPlainAuditLog)));
+      .observeRecent(limit, workplaceId, entityType, source, eventType, correlationId)
+      .pipe(map(logs => logs.map(toSupportedPlainAuditLog)));
   }
 
   /**

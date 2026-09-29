@@ -11,7 +11,16 @@ export async function reconcileAccount(accountId: AccountId, date: Date, workpla
     account,
     { reconciledAt: date },
     workplaceId,
-    { audit: { action: AuditAction.UPDATE, changes: { reconciledAt: date } } },
+    {
+      audit: {
+        action: AuditAction.UPDATE,
+        eventType: 'account.reconciled',
+        changes: {
+          before: { reconciledAt: account.reconciledAt ?? null },
+          after: { reconciledAt: date },
+        },
+      },
+    },
   );
 
   analytics.trackFeatureUsage('account', 'reconcile', {

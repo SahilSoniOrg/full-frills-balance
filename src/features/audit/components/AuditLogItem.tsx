@@ -3,6 +3,7 @@ import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { AuditLogChangesView } from '@/src/features/audit/components/AuditLogChangesView';
+import { getAuditEntityCapabilities } from '@/src/types/auditEntityCapabilities';
 import { AuditLogEntry, EntityStatus } from '@/src/features/audit/auditLogTypes';
 import { useAuditLogItemMeta } from '@/src/features/audit/hooks/useAuditLogItemMeta';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -14,6 +15,7 @@ interface AuditLogItemProps {
   onToggle: () => void;
   onView?: (entityType: string, entityId: string, name?: string) => void;
   onRevert?: (logId: string) => void;
+  onShowRelated?: (correlationId: string) => void;
   accountMap: Record<string, { name: string; currency: string }>;
   entityStatusMap: Record<string, EntityStatus>;
   workplaceCurrency: string;
@@ -25,16 +27,25 @@ export const AuditLogItem = ({
   onToggle,
   onView,
   onRevert,
+  onShowRelated,
   accountMap,
   entityStatusMap,
   workplaceCurrency,
 }: AuditLogItemProps) => {
   const { theme } = useTheme();
+  const canViewEntity =
+    item.action !== 'DELETE' &&
+    item.eventType !== 'account.merged_into' &&
+    getAuditEntityCapabilities(item.entityType).canView;
   const {
     actionColor,
     actionIcon,
     parsedChanges,
     entityLabel,
+    eventLabel,
+    sourceLabel,
+    actorLabel,
+    revertsLabel,
     entityDisplayName,
     timestampLabel,
     entityIdLabel,
@@ -69,12 +80,26 @@ export const AuditLogItem = ({
                 {entityDisplayName ? `: ${entityDisplayName}` : ''}
               </AppText>
               <AppText variant="caption" style={{ color: theme[actionColor] }}>
-                {item.action}
+                {eventLabel}
               </AppText>
             </Inline>
             <AppText variant="caption" color="secondary">
               {timestampLabel}
             </AppText>
+            {(sourceLabel || actorLabel || revertsLabel || item.correlationId) && (
+              <AppText variant="caption" color="secondary">
+                {[
+                  sourceLabel,
+                  actorLabel,
+                  revertsLabel,
+                  item.correlationId
+                    ? AppConfig.strings.audit.correlationLabel(item.correlationId)
+                    : undefined,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </AppText>
+            )}
             <AppText variant="caption" color="secondary" numberOfLines={1}>
               {entityIdLabel}
             </AppText>
@@ -96,7 +121,20 @@ export const AuditLogItem = ({
           />
 
           <Inline justify="flex-end" gap="sm">
-            {onView && (
+            {onShowRelated && item.correlationId && (
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: theme.surfaceSecondary }]}
+                onPress={() => onShowRelated(item.correlationId!)}
+                accessibilityRole="button"
+                accessibilityLabel={AppConfig.strings.audit.relatedChangesCta}
+              >
+                <AppIcon name={Icon.History} size={Size.xs} color={theme.textSecondary} />
+                <AppText variant="caption" weight="semibold">
+                  {AppConfig.strings.audit.relatedChangesCta}
+                </AppText>
+              </TouchableOpacity>
+            )}
+            {onView && canViewEntity && (
               <TouchableOpacity
                 style={[styles.actionButton, { backgroundColor: theme.surfaceSecondary }]}
                 onPress={() =>

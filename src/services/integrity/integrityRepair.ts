@@ -19,7 +19,10 @@ export function prepareRunningBalanceRepair(
     {
       entityType: 'account',
       entityId: discrepancy.accountId,
+      eventType: 'account.balance_repaired',
       action: AuditAction.UPDATE,
+      source: 'repair',
+      undoable: false,
       changes: {
         before: {
           cachedBalance: discrepancy.cachedBalance,

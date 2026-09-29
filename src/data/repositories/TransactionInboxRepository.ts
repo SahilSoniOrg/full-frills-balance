@@ -1,7 +1,14 @@
 import { database } from '@/src/data/database/Database';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
-import { InboxProcessingStatus } from '@/src/types/enums';
+import { AuditAction, InboxProcessingStatus } from '@/src/types/enums';
+import type { AuditEventType } from '@/src/types/auditEvents';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
+import { auditRepository } from '@/src/data/repositories/AuditRepository';
+import {
+  inboxAuditState,
+  mergeInboxAuditState,
+  sameInboxAuditState,
+} from '@/src/data/repositories/inboxAuditState';
 import { persistBatch } from '@/src/data/repositories/persistBatch';
 import {
   stageModelWrite,
@@ -32,6 +39,10 @@ export interface TransactionInboxRecordWriteData {
   metadataJson?: string;
   firstSeenAt: number;
   lastScannedAt: number;
+}
+
+export interface InboxAuditContext {
+  correlationId?: string;
 }
 
 function isProcessedStatus(status: InboxProcessingStatus): boolean {
@@ -176,17 +187,34 @@ export class TransactionInboxRepository {
   prepareUpsert(
     data: TransactionInboxRecordWriteData,
     existingRecord: TransactionInboxRecord | null,
+    auditContext?: InboxAuditContext,
   ): { ops: Model[]; record: TransactionInboxRecord } {
     if (existingRecord && existingRecord.workplaceId !== data.workplaceId) {
       throw new Error('Inbox record does not belong to the specified workplace');
     }
 
     if (existingRecord) {
+      const before = inboxAuditState(existingRecord);
+      const after = mergeInboxAuditState(existingRecord, data);
       return {
         ops: [
           existingRecord.prepareUpdate(record => {
             Object.assign(record, data);
           }),
+          ...(!sameInboxAuditState(before, after)
+            ? [
+                this.prepareAudit(
+                  existingRecord.id,
+                  AuditAction.UPDATE,
+                  'transaction_inbox_record.updated',
+                  before,
+                  after,
+                  data.workplaceId,
+                  'system',
+                  auditContext?.correlationId,
+                ),
+              ]
+            : []),
         ],
         record: existingRecord,
       };
@@ -195,7 +223,47 @@ export class TransactionInboxRepository {
     const record = this.inbox.prepareCreate((entry: TransactionInboxRecord) => {
       Object.assign(entry, data);
     });
-    return { ops: [record], record };
+    return {
+      ops: [
+        record,
+        this.prepareAudit(
+          record.id,
+          AuditAction.CREATE,
+          'transaction_inbox_record.created',
+          undefined,
+          inboxAuditState(data),
+          data.workplaceId,
+          'system',
+          auditContext?.correlationId,
+        ),
+      ],
+      record,
+    };
+  }
+
+  private prepareAudit(
+    entityId: string,
+    action: AuditAction,
+    eventType: AuditEventType,
+    before: Record<string, unknown> | undefined,
+    after: Record<string, unknown>,
+    workplaceId: WorkplaceId,
+    source: 'app' | 'system',
+    correlationId?: string,
+  ): Model {
+    return auditRepository.prepareLog(
+      {
+        entityType: 'transaction_inbox_record',
+        entityId,
+        action,
+        eventType,
+        source,
+        correlationId,
+        undoable: false,
+        changes: before ? { before, after } : { after },
+      },
+      workplaceId,
+    );
   }
 
   /** Defers inbox model preparation until the enclosing accounting session flushes. */
@@ -203,8 +271,9 @@ export class TransactionInboxRepository {
     session: AccountingWriteSession,
     data: TransactionInboxRecordWriteData,
     existingRecord: TransactionInboxRecord | null,
+    auditContext?: InboxAuditContext,
   ): void {
-    stageModelWrite(session, () => this.prepareUpsert(data, existingRecord).ops);
+    stageModelWrite(session, () => this.prepareUpsert(data, existingRecord, auditContext).ops);
   }
 
   /** Reloads and stages a manual journal link in the enclosing accounting transaction. */
@@ -214,10 +283,13 @@ export class TransactionInboxRepository {
     recordId: string,
     journalId: JournalId,
     disposition: InboxProcessingStatus.IMPORTED | InboxProcessingStatus.AUTO_POSTED,
+    auditContext?: InboxAuditContext,
   ): Promise<void> {
     const record = await this.find(workplaceId, recordId);
     if (!record) throw new Error('Inbox record not found');
-    stageModelWrite(session, () => [this.prepareLink(record, journalId, disposition)]);
+    stageModelWrite(session, () =>
+      this.prepareLinkOperations(record, journalId, disposition, auditContext),
+    );
   }
 
   async persistLink(
@@ -228,7 +300,7 @@ export class TransactionInboxRepository {
   ): Promise<void> {
     const record = await this.find(workplaceId, recordId);
     if (!record) return;
-    await persistBatch(() => [this.prepareLink(record, journalId, disposition)]);
+    await persistBatch(() => this.prepareLinkOperations(record, journalId, disposition));
   }
 
   async persistStatus(
@@ -238,7 +310,61 @@ export class TransactionInboxRepository {
   ): Promise<void> {
     const record = await this.find(workplaceId, recordId);
     if (!record) return;
-    await persistBatch(() => [this.prepareStatus(record, status)]);
+    await persistBatch(() => this.prepareStatusOperations(record, status));
+  }
+
+  private prepareLinkOperations(
+    record: TransactionInboxRecord,
+    journalId: JournalId,
+    disposition: InboxProcessingStatus.IMPORTED | InboxProcessingStatus.AUTO_POSTED,
+    auditContext?: InboxAuditContext,
+  ): Model[] {
+    const before = inboxAuditState(record);
+    const after = mergeInboxAuditState(record, {
+      linkedJournalId: journalId,
+      processingStatus: disposition,
+    });
+    return [
+      this.prepareLink(record, journalId, disposition),
+      ...(!sameInboxAuditState(before, after)
+        ? [
+            this.prepareAudit(
+              record.id,
+              AuditAction.UPDATE,
+              'transaction_inbox_record.linked',
+              before,
+              after,
+              record.workplaceId,
+              'app',
+              auditContext?.correlationId,
+            ),
+          ]
+        : []),
+    ];
+  }
+
+  private prepareStatusOperations(
+    record: TransactionInboxRecord,
+    status: InboxProcessingStatus,
+  ): Model[] {
+    const before = inboxAuditState(record);
+    const after = mergeInboxAuditState(record, { processingStatus: status });
+    return [
+      this.prepareStatus(record, status),
+      ...(!sameInboxAuditState(before, after)
+        ? [
+            this.prepareAudit(
+              record.id,
+              AuditAction.UPDATE,
+              'transaction_inbox_record.status_changed',
+              before,
+              after,
+              record.workplaceId,
+              'app',
+            ),
+          ]
+        : []),
+    ];
   }
 
   async persistScanBatch(

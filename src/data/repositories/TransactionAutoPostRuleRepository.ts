@@ -1,15 +1,17 @@
 import { database } from '@/src/data/database/Database';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
+import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import {
   stageModelWrite,
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
 import { observeQueryWithModelChanges } from '@/src/data/repositories/observeQueryWithModelChanges';
 import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/ids';
-import { Q } from '@nozbe/watermelondb';
+import { Model, Q } from '@nozbe/watermelondb';
 import { Observable } from 'rxjs';
 import { SmsRuleActions, SmsRuleCondition, SmsRuleMode } from '@/src/utils/sms/RuleMatcher';
 import { syncRuleActionsFromColumns } from '@/src/utils/sms/ruleActionsAccountIds';
+import { AuditAction } from '@/src/types/enums';
 
 export interface SmsRuleDraftInput {
   id?: string;
@@ -20,6 +22,31 @@ export interface SmsRuleDraftInput {
   actions: SmsRuleActions;
   isActive: boolean;
   priority?: number;
+}
+
+function auditRuleState(
+  rule: TransactionAutoPostRule,
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  const fields = [
+    'channelsJson',
+    'senderMatch',
+    'bodyMatch',
+    'conditionsJson',
+    'actionsJson',
+    'priority',
+    'sourceAccountId',
+    'categoryAccountId',
+    'isActive',
+  ] as const;
+  return Object.fromEntries(
+    fields.map(field => [
+      field,
+      Object.prototype.hasOwnProperty.call(overrides, field)
+        ? (overrides[field] ?? null)
+        : (rule[field] ?? null),
+    ]),
+  );
 }
 
 export class TransactionAutoPostRuleRepository {
@@ -52,7 +79,21 @@ export class TransactionAutoPostRuleRepository {
     await database.write(async () => {
       const rule = await this.find(workplaceId, id);
       if (!rule) throw new Error('SMS rule not found in workplace');
-      await rule.destroyPermanently();
+      await database.batch(
+        rule.prepareDestroyPermanently(),
+        auditRepository.prepareLog(
+          {
+            entityType: 'transaction_auto_post_rule',
+            entityId: rule.id,
+            eventType: 'transaction_auto_post_rule.deleted',
+            action: AuditAction.DELETE,
+            source: 'app',
+            changes: { before: auditRuleState(rule) },
+            undoable: false,
+          },
+          workplaceId,
+        ),
+      );
     });
   }
 
@@ -83,6 +124,7 @@ export class TransactionAutoPostRuleRepository {
       if (data.id) {
         const rule = await this.find(workplaceId, data.id);
         if (!rule) throw new Error('SMS rule not found in workplace');
+        const before = auditRuleState(rule);
         await rule.update(record => {
           record.channelsJson = JSON.stringify(['sms']);
           record.senderMatch = senderFallback;
@@ -95,9 +137,23 @@ export class TransactionAutoPostRuleRepository {
           record.categoryAccountId = categoryAccountId || EMPTY_ACCOUNT_ID;
           record.isActive = data.isActive;
         });
+        await database.batch(
+          auditRepository.prepareLog(
+            {
+              entityType: 'transaction_auto_post_rule',
+              entityId: rule.id,
+              eventType: 'transaction_auto_post_rule.updated',
+              action: AuditAction.UPDATE,
+              source: 'app',
+              changes: { before, after: auditRuleState(rule) },
+              undoable: false,
+            },
+            workplaceId,
+          ),
+        );
         return rule;
       } else {
-        return await this.rules.create(record => {
+        const rule = await this.rules.create(record => {
           record.workplaceId = workplaceId;
           record.channelsJson = JSON.stringify(['sms']);
           record.senderMatch = senderFallback;
@@ -110,6 +166,21 @@ export class TransactionAutoPostRuleRepository {
           record.categoryAccountId = categoryAccountId || EMPTY_ACCOUNT_ID;
           record.isActive = data.isActive;
         });
+        await database.batch(
+          auditRepository.prepareLog(
+            {
+              entityType: 'transaction_auto_post_rule',
+              entityId: rule.id,
+              eventType: 'transaction_auto_post_rule.created',
+              action: AuditAction.CREATE,
+              source: 'app',
+              changes: { after: auditRuleState(rule) },
+              undoable: false,
+            },
+            workplaceId,
+          ),
+        );
+        return rule;
       }
     });
   }
@@ -145,10 +216,11 @@ export class TransactionAutoPostRuleRepository {
     workplaceId: WorkplaceId,
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
+    correlationId?: string,
   ): Promise<void> {
     const rules = await this.loadMergeRecords(workplaceId, sourceAccountIds);
     stageModelWrite(session, () =>
-      this.prepareLoadedMergeOperations(rules, sourceAccountIds, targetAccountId),
+      this.prepareLoadedMergeOperations(rules, sourceAccountIds, targetAccountId, correlationId),
     );
   }
 
@@ -160,20 +232,45 @@ export class TransactionAutoPostRuleRepository {
     rules: TransactionAutoPostRule[],
     sourceAccountIds: AccountId[],
     targetAccountId: AccountId,
-  ): TransactionAutoPostRule[] {
+    correlationId?: string,
+  ): Model[] {
     const sourceIds = new Set(sourceAccountIds);
 
-    return rules.map(record => {
+    return rules.flatMap(record => {
       const source = sourceIds.has(record.sourceAccountId) ? targetAccountId : undefined;
       const category = sourceIds.has(record.categoryAccountId) ? targetAccountId : undefined;
-      return record.prepareUpdate((r: TransactionAutoPostRule) => {
-        if (source) r.sourceAccountId = source;
-        if (category) r.categoryAccountId = category;
-        r.actionsJson = syncRuleActionsFromColumns(r.actionsJson, {
-          sourceAccountId: source ?? r.sourceAccountId,
-          categoryAccountId: category ?? r.categoryAccountId,
-        });
+      const nextSource = source ?? record.sourceAccountId;
+      const nextCategory = category ?? record.categoryAccountId;
+      const nextActions = syncRuleActionsFromColumns(record.actionsJson, {
+        sourceAccountId: source ?? record.sourceAccountId,
+        categoryAccountId: category ?? record.categoryAccountId,
       });
+      const before = auditRuleState(record);
+      const after = auditRuleState(record, {
+        sourceAccountId: nextSource,
+        categoryAccountId: nextCategory,
+        actionsJson: nextActions,
+      });
+      return [
+        record.prepareUpdate((r: TransactionAutoPostRule) => {
+          if (source) r.sourceAccountId = source;
+          if (category) r.categoryAccountId = category;
+          r.actionsJson = nextActions;
+        }),
+        auditRepository.prepareLog(
+          {
+            entityType: 'transaction_auto_post_rule',
+            entityId: record.id,
+            eventType: 'transaction_auto_post_rule.accounts_retargeted',
+            action: AuditAction.UPDATE,
+            source: 'app',
+            correlationId,
+            changes: { before, after },
+            undoable: false,
+          },
+          record.workplaceId,
+        ),
+      ];
     });
   }
 

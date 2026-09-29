@@ -1,5 +1,6 @@
 import type { UnvaluedStartingBalance } from '@/src/services/simulation/types';
 import type { MissingRateQuote } from '@/src/services/reports-v2/types/result';
+import type { WorkplaceId } from '@/src/types/ids';
 
 export type IncompleteFxContext = 'safe-to-spend' | 'budget' | 'reports' | 'cash-flow';
 export type IncompleteFxBalanceDetail = Pick<
@@ -9,6 +10,7 @@ export type IncompleteFxBalanceDetail = Pick<
 
 export interface IncompleteFxDetailsRequest {
   context: IncompleteFxContext;
+  workplaceId?: WorkplaceId;
   currencyCode: string;
   unvaluedStartingBalances?: IncompleteFxBalanceDetail[];
   missingRateQuotes?: readonly MissingRateQuote[];
