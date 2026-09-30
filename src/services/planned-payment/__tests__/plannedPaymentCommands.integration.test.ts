@@ -11,12 +11,14 @@ import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
+import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import {
   createPlannedPayment,
   deletePlannedPayment,
   updatePlannedPayment,
 } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { journalService } from '@/src/services/journal/journalDomainService';
+import { analytics } from '@/src/services/analytics';
 import { togglePlannedPaymentStatus } from '@/src/services/planned-payment/plannedPaymentLifecycle';
 import { Q } from '@nozbe/watermelondb';
 import { deleteAccount } from '@/src/services/accounts/accountDeleteCommands';
@@ -88,6 +90,39 @@ describe('planned payment commands (integration)', () => {
     const journals = await findJournalsForPayment(created.id);
     expect(journals.length).toBeGreaterThan(0);
     expect(journals.some(j => j.status === JournalStatus.PLANNED)).toBe(true);
+  });
+
+  it('leaves no payment, audit, journals, or analytics on publication failure', async () => {
+    const batch = jest.spyOn(database, 'batch');
+    batch.mockRejectedValueOnce(new Error('injected publication failure'));
+    const analyticsLog = jest.spyOn(analytics, 'logPlannedPaymentCreated');
+
+    await expect(createPlannedPayment(WP, baseInput())).rejects.toThrow(
+      'injected publication failure',
+    );
+    expect(await database.collections.get('planned_payments').query().fetchCount()).toBe(0);
+    expect(await database.collections.get('audit_logs').query().fetchCount()).toBe(0);
+    expect(await database.collections.get('journals').query().fetchCount()).toBe(0);
+    expect(analyticsLog).not.toHaveBeenCalled();
+  });
+
+  it('publishes a direct repository create and its audit in one batch', async () => {
+    const batch = jest.spyOn(database, 'batch');
+    const created = await plannedPaymentRepository.create(WP, {
+      ...baseInput(),
+      nextOccurrence: baseInput().startDate,
+      status: PlannedPaymentStatus.ACTIVE,
+    });
+    expect(batch).toHaveBeenCalledTimes(1);
+    expect(await plannedPaymentRepository.find(WP, created.id)).not.toBeNull();
+    const logs = await auditRepository.findByEntity('planned_payment', created.id, WP);
+    expect(logs).toHaveLength(1);
+    expect(logs[0].eventType).toBe('planned_payment.created');
+    expect(logs[0].source).toBe('app');
+    expect(logs[0].canRevert).toBe(false);
+    expect(logs[0].parsedChanges?.displayName).toBe('Monthly rent');
+    expect(logs[0].correlationId).toBeFalsy();
+    batch.mockRestore();
   });
 
   it.each(['funding', 'target'] as const)(

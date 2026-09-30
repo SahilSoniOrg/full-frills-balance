@@ -1,5 +1,24 @@
 # App improvement audit — September 30, 2026
 
+## P1 implementation levels — September 30, 2026
+
+The user authorized the four levels below, with GPT-6 Luna implementing and the orchestrator reviewing and committing each level before the next starts. This section supersedes the earlier parked status for F21/F22.
+
+| Level | Scope | Status |
+|---|---|---|
+| 1 | F21/F22 — audit integrity | Implemented and reviewed in this commit. |
+| 2 | F08/F09/F11 — privacy, SMS retention, projection teardown | Pending. |
+| 3 | F06/F07 — currency precision and onboarding recurrence | Pending. |
+| 4 | F10/F13/F14 — dated forecasts, next obligations, binding-day explanation | Pending. |
+
+### Level 1 — audit integrity
+
+Budget updates now capture the original audit snapshot before model preparation mutates it, then derive the new state from the updated model. Regression tests cover amount 100 → 200 → undo to 100, scalar edits, combined scope/funding edits, and stale undo rejection. Planned-payment creation now stages the payment and creation audit in one batch; failure leaves no payment, audit, generated journal, or creation analytics side effect.
+
+The worker reproduced both defects before fixing them. Full `bun run verify` completed with exit 0: **422 suites / 2,580 tests**, architecture/privacy/type checks and lint passed, retaining only two baseline journal-hook warnings. The worker's broader focused run passed 7 suites / 81 tests. Parent independently reviewed the patch and ran the budget/audit/payment regression suites. Evidence: `/tmp/full-frills-level-1-verify.log` and `/tmp/full-frills-level-1-parent-review.log`. Native SQLite parity remains unverified.
+
+Level 2 preflight correction: `AnalyticsService.logBudgetCreated` already ignores its amount argument. The older F08 claim that budget creation transmits that amount was too broad; budget deletion names, arbitrary telemetry properties, and unsanitized diagnostics remain relevant. Level 2 will validate SDK payloads directly.
+
 ## F01–F05 implementation review — September 30, 2026
 
 GPT-6 Luna implemented the five authorized P0 fixes in the shared checkout on top of `26387c52`. The orchestrator reviewed the changes, requested corrections, and independently ran regression checks. The original audit below remains a baseline review, not an exhaustive audit of this patch.

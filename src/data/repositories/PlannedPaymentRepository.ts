@@ -170,13 +170,14 @@ export class PlannedPaymentRepository {
   ): Promise<PlannedPayment> {
     const result = await this.db.write(async () => {
       await validateReferences?.();
-      const created = await this.plannedPayments.create(pp => {
+      const created = this.plannedPayments.prepareCreate(pp => {
         Object.assign(pp, data);
         pp.createdAt = new Date();
         pp.updatedAt = new Date();
         pp.workplaceId = workplaceId;
       });
       await this.db.batch(
+        created,
         auditRepository.prepareLog(
           {
             entityType: 'planned_payment',

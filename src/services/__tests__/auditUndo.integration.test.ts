@@ -1,6 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
+import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
@@ -16,7 +17,7 @@ import {
   PlannedPaymentStatus,
   TransactionType,
 } from '@/src/types/enums';
-import { WorkplaceId } from '@/src/types/ids';
+import { AccountId, BudgetId, WorkplaceId } from '@/src/types/ids';
 
 const wp = 'wp-review' as WorkplaceId;
 registerAuditHandlers();
@@ -89,6 +90,108 @@ test('a stale account undo leaves the account and history untouched', async () =
   const count = await auditRepository.countByWorkplace(wp);
   expect((await auditService.revertEntry(log.id, wp)).success).toBe(false);
   expect(a.name).toBe('Latest edit');
+  expect(await auditRepository.countByWorkplace(wp)).toBe(count);
+});
+
+test('budget amount history captures pre-edit state and undo restores it', async () => {
+  const scope = await account('Budget scope');
+  const budget = await budgetRepository.create(
+    wp,
+    { name: 'Food', amount: 100, currencyCode: 'USD', startMonth: '2026-09' },
+    [scope.id as AccountId],
+  );
+
+  await budgetRepository.update(wp, budget, { amount: 200 }, [scope.id as AccountId]);
+  const [log] = (await auditRepository.findByEntity('budget', budget.id, wp)).filter(
+    entry => entry.eventType === 'budget.updated',
+  );
+  expect(log.parsedChanges?.before).toMatchObject({ amount: 100 });
+  expect(log.parsedChanges?.after).toMatchObject({ amount: 200 });
+  expect(await auditService.revertEntry(log.id, wp)).toEqual({ success: true });
+  expect((await budgetRepository.find(wp, budget.id as BudgetId))?.amount).toBe(100);
+});
+
+test.each([
+  [{ name: 'Renamed' }, 'name', 'Old name', 'Renamed'],
+  [{ active: false }, 'active', true, false],
+  [{ currencyCode: 'EUR' }, 'currencyCode', 'USD', 'EUR'],
+  [{ startDate: 1700000000000 }, 'startDate', null, 1700000000000],
+  [{ intervalType: 'WEEKLY' }, 'intervalType', 'MONTHLY', 'WEEKLY'],
+  [{ intervalN: 2 }, 'intervalN', 1, 2],
+  [{ recurrenceDay: 12 }, 'recurrenceDay', null, 12],
+  [{ recurrenceMonth: 4 }, 'recurrenceMonth', null, 4],
+] as const)(
+  'budget scalar edit has truthful %s audit values',
+  async (updates, field, beforeValue, afterValue) => {
+    const budget = await budgetRepository.create(
+      wp,
+      {
+        name: 'Old name',
+        amount: 100,
+        currencyCode: 'USD',
+        startMonth: '2026-09',
+        intervalType: 'MONTHLY',
+        intervalN: 1,
+      },
+      [],
+    );
+    await budgetRepository.update(wp, budget, updates, []);
+    const [log] = (await auditRepository.findByEntity('budget', budget.id, wp)).filter(
+      entry => entry.eventType === 'budget.updated',
+    );
+    expect(log.parsedChanges?.before).toMatchObject({ [field]: beforeValue });
+    expect(log.parsedChanges?.after).toMatchObject({ [field]: afterValue });
+  },
+);
+
+test('budget undo restores combined scalar, scope, and funding edits', async () => {
+  const originalScope = await account('Original scope');
+  const replacementScope = await account('Replacement scope');
+  const budget = await budgetRepository.create(
+    wp,
+    {
+      name: 'Original',
+      amount: 100,
+      currencyCode: 'USD',
+      startMonth: '2026-09',
+      assetAccountIds: [originalScope.id as AccountId],
+    },
+    [originalScope.id as AccountId],
+  );
+  await budgetRepository.update(
+    wp,
+    budget,
+    { name: 'Edited', amount: 250, assetAccountIds: [replacementScope.id as AccountId] },
+    [replacementScope.id as AccountId],
+  );
+  const [log] = (await auditRepository.findByEntity('budget', budget.id, wp)).filter(
+    entry => entry.eventType === 'budget.updated',
+  );
+  expect(await auditService.revertEntry(log.id, wp)).toEqual({ success: true });
+  const restored = await budgetRepository.find(wp, budget.id as BudgetId);
+  expect(restored?.name).toBe('Original');
+  expect(restored?.amount).toBe(100);
+  expect(restored?.assetAccountIds).toBe(originalScope.id);
+  expect(
+    (await budgetRepository.getScopes(wp, budget.id as BudgetId)).map(item => item.accountId),
+  ).toEqual([originalScope.id]);
+});
+
+test('stale budget undo rejects without changing budget or history', async () => {
+  const scope = await account('Scope');
+  const budget = await budgetRepository.create(
+    wp,
+    { name: 'Original', amount: 100, currencyCode: 'USD', startMonth: '2026-09' },
+    [scope.id as AccountId],
+  );
+  await budgetRepository.update(wp, budget, { amount: 200 }, [scope.id as AccountId]);
+  const [firstEdit] = (await auditRepository.findByEntity('budget', budget.id, wp)).filter(
+    entry => entry.eventType === 'budget.updated',
+  );
+  await budgetRepository.update(wp, budget, { amount: 300 }, [scope.id as AccountId]);
+  const count = await auditRepository.countByWorkplace(wp);
+  expect((await auditService.revertEntry(firstEdit.id, wp)).success).toBe(false);
+  expect((await budgetRepository.find(wp, budget.id as BudgetId))?.amount).toBe(300);
   expect(await auditRepository.countByWorkplace(wp)).toBe(count);
 });
 

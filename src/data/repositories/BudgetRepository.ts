@@ -288,6 +288,10 @@ export class BudgetRepository {
       if (!existingBudget) {
         throw new Error('Budget not found');
       }
+      const before = auditBudgetState(
+        existingBudget,
+        existingScopes.map(scope => scope.accountId),
+      );
       const updateOp = existingBudget.prepareUpdate(record => {
         if (updates.name !== undefined) record.name = updates.name;
         if (updates.amount !== undefined) record.amount = updates.amount;
@@ -321,15 +325,7 @@ export class BudgetRepository {
 
       const removeOps = toRemove.map(scope => scope.prepareDestroyPermanently());
 
-      const before = auditBudgetState(
-        existingBudget,
-        existingScopes.map(scope => scope.accountId),
-      );
-      const after: Record<string, unknown> = { ...before };
-      for (const [field, value] of Object.entries(updates)) {
-        if (value !== undefined) after[field] = value;
-      }
-      after.scopedAccountIds = [...accountIds];
+      const after = auditBudgetState(existingBudget, accountIds);
       await this.db.batch(
         updateOp,
         ...addOps,
