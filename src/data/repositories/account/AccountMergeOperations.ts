@@ -155,6 +155,11 @@ export class AccountMergeOperations {
     );
     movedChildren.forEach((record, index) => {
       const nextOrderNum = nextOrder + index;
+      const before = {
+        name: record.name,
+        parentAccountId: record.parentAccountId ?? null,
+        orderNum: record.orderNum ?? null,
+      };
       accounts.push(
         record.prepareUpdate(updated => {
           updated.parentAccountId = targetAccountId;
@@ -172,11 +177,7 @@ export class AccountMergeOperations {
             source: 'app',
             correlationId,
             changes: {
-              before: {
-                name: record.name,
-                parentAccountId: record.parentAccountId ?? null,
-                orderNum: record.orderNum ?? null,
-              },
+              before,
               after: {
                 name: record.name,
                 parentAccountId: targetAccountId,

@@ -3,6 +3,7 @@ import { accountQueryRepository, accountWriteRepository } from '@/src/data/repos
 import type { AccountPersistenceInput } from '@/src/data/repositories/account/types';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import { normalizeAccountAuditState } from '@/src/services/accounts/accountAuditState';
+import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { AccountAuditState } from '@/src/types/audit';
 import { AuditAction } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
@@ -190,48 +191,50 @@ export async function revertAccountFromAuditState(
 
   if (Object.keys(payload).length === 0) return false;
 
-  await accountWriteRepository.update(
-    account,
-    payload,
-    workplaceId,
-    {
-      extraOps: (currentAccount, currentMetadata) => {
-        const auditBefore: Record<string, unknown> = {};
-        for (const field of changedFields) {
-          auditBefore[field] = currentFieldValue(field, currentAccount, currentMetadata);
-        }
-        return [
-          auditRepository.prepareLog(
-            {
-              entityType: 'account',
-              entityId: accountId,
-              eventType: 'account.reverted',
-              action: AuditAction.UPDATE,
-              source: 'app',
-              revertsLogId: options.auditLogId,
-              changes: { before: auditBefore, after: payload },
-            },
-            workplaceId,
-          ),
-        ];
-      },
-      validateCurrent: (currentAccount, currentMetadata) => {
-        for (const field of changedFields) {
-          if (
-            Object.prototype.hasOwnProperty.call(expectedAfter, field) &&
-            !matchesExpected(
-              currentSnapshotValue(field, currentAccount, currentMetadata),
-              expectedAfter[field],
-            )
-          ) {
-            throw new Error(
-              'This account changed after the selected history entry. Refresh and review the latest change.',
-            );
-          }
-        }
-      },
+  const auditBefore: Record<string, unknown> = {};
+  await accountWriteRepository.update(account, payload, workplaceId, {
+    extraOps: () => {
+      return [
+        auditRepository.prepareLog(
+          {
+            entityType: 'account',
+            entityId: accountId,
+            eventType: 'account.reverted',
+            action: AuditAction.UPDATE,
+            source: 'app',
+            revertsLogId: options.auditLogId,
+            changes: { before: auditBefore, after: payload },
+          },
+          workplaceId,
+        ),
+      ];
     },
-  );
+    validateCurrent: async (currentAccount, currentMetadata) => {
+      for (const field of changedFields) {
+        if (
+          Object.prototype.hasOwnProperty.call(expectedAfter, field) &&
+          !matchesExpected(
+            currentSnapshotValue(field, currentAccount, currentMetadata),
+            expectedAfter[field],
+          )
+        ) {
+          throw new Error(
+            'This account changed after the selected history entry. Refresh and review the latest change.',
+          );
+        }
+      }
+      if (payload.metadata?.payFromAccountId) {
+        await assertWritable(
+          workplaceId,
+          [payload.metadata.payFromAccountId],
+          'Account metadata pay-from',
+        );
+      }
+      for (const field of changedFields) {
+        auditBefore[field] = currentFieldValue(field, currentAccount, currentMetadata);
+      }
+    },
+  });
 
   return true;
 }

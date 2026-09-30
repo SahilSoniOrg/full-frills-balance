@@ -98,7 +98,14 @@ export function getAuditFieldDiff(
       before[key] = delta.before as AuditChangeValue;
       after[key] = delta.after as AuditChangeValue;
     }
-    return Object.keys(before).length > 0 ? { before, after } : null;
+    if (Object.keys(before).length === 0) return null;
+    const currencyCode =
+      changes.currencyCode ?? changes.after?.currencyCode ?? changes.before?.currencyCode;
+    if (typeof currencyCode === 'string') {
+      before.currencyCode ??= currencyCode;
+      after.currencyCode ??= currencyCode;
+    }
+    return { before, after };
   }
 
   if (!hasBeforeAfterChanges(changes)) return null;

@@ -687,6 +687,12 @@ export class BudgetRepository {
       scopesByBudget.set(scope.budget.id, budgetScopes);
     }
 
+    const scopeIdsByBudget = new Map(
+      [...scopesByBudget].map(([budgetId, budgetScopes]) => [
+        budgetId,
+        budgetScopes.map(scope => scope.accountId),
+      ]),
+    );
     const scopeOps: BudgetScope[] = [];
     const changedBudgetIds = new Set<string>();
     for (const budgetScopes of scopesByBudget.values()) {
@@ -725,16 +731,13 @@ export class BudgetRepository {
         });
 
       if (changed) {
-        const before = auditBudgetState(
-          budget,
-          (scopesByBudget.get(budget.id) ?? []).map(scope => scope.accountId),
-        );
+        const before = auditBudgetState(budget, scopeIdsByBudget.get(budget.id) ?? []);
         const nextAssetAccountIds = [...new Set(accountIds)];
-        const afterScopes = (scopesByBudget.get(budget.id) ?? [])
-          .map(scope => scope.accountId)
-          .filter(accountId => !sourceIds.has(accountId));
+        const afterScopes = (scopeIdsByBudget.get(budget.id) ?? []).filter(
+          accountId => !sourceIds.has(accountId),
+        );
         if (
-          (scopesByBudget.get(budget.id) ?? []).some(scope => sourceIds.has(scope.accountId)) &&
+          (scopeIdsByBudget.get(budget.id) ?? []).some(accountId => sourceIds.has(accountId)) &&
           !afterScopes.includes(targetAccountId)
         ) {
           afterScopes.push(targetAccountId);
@@ -773,13 +776,10 @@ export class BudgetRepository {
       if (budgetOps.some(operation => operation.id === budgetId)) continue;
       const budget = budgetsById.get(budgetId as BudgetId);
       if (!budget) continue;
-      const before = auditBudgetState(
-        budget,
-        (scopesByBudget.get(budgetId) ?? []).map(scope => scope.accountId),
+      const before = auditBudgetState(budget, scopeIdsByBudget.get(budgetId) ?? []);
+      const afterScopeIds = (scopeIdsByBudget.get(budgetId) ?? []).filter(
+        accountId => !sourceIds.has(accountId),
       );
-      const afterScopeIds = (scopesByBudget.get(budgetId) ?? [])
-        .map(scope => scope.accountId)
-        .filter(accountId => !sourceIds.has(accountId));
       if (!afterScopeIds.includes(targetAccountId)) afterScopeIds.push(targetAccountId);
       budgetAuditOps.push(
         auditRepository.prepareLog(

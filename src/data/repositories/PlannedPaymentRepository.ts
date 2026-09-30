@@ -377,25 +377,26 @@ export class PlannedPaymentRepository {
       throw new Error('Planned payment changed while its occurrence was being processed');
     }
 
-    stageModelWrite(session, () => [
-      this.prepareUpdate(workplaceId, record, updates),
-      auditRepository.prepareLog(
-        {
-          entityType: 'planned_payment',
-          entityId: record.id,
-          eventType: auditOptions.eventType ?? 'planned_payment.updated',
-          source: auditOptions.source ?? 'system',
-          correlationId: auditOptions.correlationId,
-          action: AuditAction.UPDATE,
-          changes: {
-            before: auditPlannedPaymentState(record),
-            after: auditPlannedPaymentState(record, updates),
+    stageModelWrite(session, () => {
+      const before = auditPlannedPaymentState(record);
+      const after = auditPlannedPaymentState(record, updates);
+      return [
+        this.prepareUpdate(workplaceId, record, updates),
+        auditRepository.prepareLog(
+          {
+            entityType: 'planned_payment',
+            entityId: record.id,
+            eventType: auditOptions.eventType ?? 'planned_payment.updated',
+            source: auditOptions.source ?? 'system',
+            correlationId: auditOptions.correlationId,
+            action: AuditAction.UPDATE,
+            changes: { before, after },
+            undoable: auditOptions.undoable ?? false,
           },
-          undoable: auditOptions.undoable ?? false,
-        },
-        workplaceId,
-      ),
-    ]);
+          workplaceId,
+        ),
+      ];
+    });
     return record;
   }
 
@@ -567,6 +568,8 @@ export class PlannedPaymentRepository {
         toAccountId: sourceIds.has(record.toAccountId) ? targetAccountId : record.toAccountId,
         ...(pausedSourceIds.has(record.id) ? { status: PlannedPaymentStatus.PAUSED } : {}),
       };
+      const before = auditPlannedPaymentState(record);
+      const after = auditPlannedPaymentState(record, updates);
       return [
         this.prepareUpdate(record.workplaceId, record, updates),
         auditRepository.prepareLog(
@@ -577,10 +580,7 @@ export class PlannedPaymentRepository {
             source: 'app',
             correlationId,
             action: AuditAction.UPDATE,
-            changes: {
-              before: auditPlannedPaymentState(record),
-              after: auditPlannedPaymentState(record, updates),
-            },
+            changes: { before, after },
             undoable: false,
           },
           record.workplaceId,
