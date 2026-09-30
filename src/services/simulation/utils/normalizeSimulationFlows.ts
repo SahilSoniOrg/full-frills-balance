@@ -1,12 +1,9 @@
 import type { Flow } from '../types';
 import { assertGlobalIntegrity } from './SimulationIntegrity';
 
-/** Applies the canonical flow normalization shared by preview and production. */
+/** Clones and validates flows while retaining fractional allocations until totals are materialized. */
 export function normalizeSimulationFlows(flows: readonly Flow[]): Flow[] {
-  const normalized = flows.map(flow => ({
-    ...flow,
-    amount: Math.round((flow.amount + Number.EPSILON) * 100) / 100,
-  }));
+  const normalized = flows.map(flow => ({ ...flow }));
   assertGlobalIntegrity(normalized);
   return normalized;
 }

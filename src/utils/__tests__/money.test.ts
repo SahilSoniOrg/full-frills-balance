@@ -108,4 +108,23 @@ describe('money utilities', () => {
       expect(money.multiply(2).amount).toBe(21.11);
     });
   });
+
+  describe('currency-aware Money defaults', () => {
+    it('preserves three-decimal KWD amounts across arithmetic', () => {
+      const amount = new Money(1.001, 'KWD');
+      expect(amount.round().amount).toBe(1.001);
+      expect(amount.add(new Money(0.001, 'KWD')).amount).toBe(1.002);
+      expect(amount.subtract(new Money(0.001, 'KWD')).amount).toBe(1);
+      expect(amount.multiply(1.5).amount).toBe(1.502);
+    });
+
+    it('uses zero-decimal precision for JPY and still honors explicit overrides', () => {
+      const jpy = new Money(1.6, 'JPY');
+      expect(jpy.round().amount).toBe(2);
+      expect(jpy.add(new Money(1, 'JPY')).amount).toBe(3);
+      expect(jpy.multiply(2).amount).toBe(3);
+      expect(jpy.round(3).amount).toBe(1.6);
+      expect(jpy.add(new Money(0.4, 'JPY'), 2).amount).toBe(2);
+    });
+  });
 });

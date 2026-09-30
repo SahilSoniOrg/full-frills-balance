@@ -11,6 +11,8 @@ import { accountLedgerMetricsQueries } from '@/src/data/repositories/account/Acc
 import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { AccountType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
+import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
+import { roundToPrecision } from '@/src/utils/money';
 import { isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
 import { logger } from '@/src/utils/logger';
 import { toLiabilityMetadata } from './liabilityMetadata';
@@ -43,6 +45,7 @@ export async function fetchStatementValues(
   toCurrency: string,
   rateMap: Map<string, number>,
   workplaceId: WorkplaceId,
+  precision = getCurrencyPrecision(toCurrency),
 ): Promise<{
   statementBalances: Map<string, number>;
   settledSinceStatement: Map<string, number>;
@@ -55,7 +58,7 @@ export async function fetchStatementValues(
   const convert = (amount: number, from: string) => {
     const fromCurrency = from || toCurrency;
     if (fromCurrency === toCurrency) {
-      return Math.round((amount + Number.EPSILON) * 100) / 100;
+      return roundToPrecision(amount, precision);
     }
     const rate = rateMap.get(fromCurrency);
     if (rate === undefined) {
@@ -66,7 +69,7 @@ export async function fetchStatementValues(
       return 0;
     }
     const val = amount * rate;
-    return Math.round((val + Number.EPSILON) * 100) / 100;
+    return roundToPrecision(val, precision);
   };
 
   await Promise.all(

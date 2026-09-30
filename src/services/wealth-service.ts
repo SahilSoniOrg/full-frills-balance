@@ -8,7 +8,7 @@ import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/Transa
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { DailyDelta } from '@/src/data/repositories/TransactionTypes';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
-import { convertAmount } from '@/src/services/currencyConversion';
+import { convertAmount, resolveSpotExchangeRate } from '@/src/services/currencyConversion';
 import { effect } from '@/src/utils/accounting/BalanceEffects';
 import { logger } from '@/src/utils/logger';
 import { Money } from '@/src/utils/money';
@@ -34,13 +34,8 @@ export interface DailyNetWorth {
 type DailyTotals = { assets: number; liabilities: number };
 
 async function resolveWealthRate(fromCurrency: string, toCurrency: string): Promise<number | null> {
-  const result = await convertAmount({
-    amount: 1,
-    fromCurrency,
-    toCurrency,
-    mode: 'spot',
-  });
-  return result.ok ? result.amount : null;
+  const result = await resolveSpotExchangeRate(fromCurrency, toCurrency);
+  return result.ok ? result.rate : null;
 }
 
 /**

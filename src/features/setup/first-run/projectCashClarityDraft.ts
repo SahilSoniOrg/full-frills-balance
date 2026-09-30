@@ -2,6 +2,9 @@ import { AppConfig } from '@/src/constants/app-config';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { simulateDraftScenario } from '@/src/services/simulation/draftSimulationService';
 import { TimeContext } from '@/src/services/simulation/TimeContext';
+import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
+import { roundToPrecision } from '@/src/utils/money';
+import { buildOnboardingIncomeRecurrence } from './incomeRecurrence';
 import type {
   SimulationBudget,
   SimulationLiabilityAccount,
@@ -94,6 +97,7 @@ export function projectCashClarityDraft(
   const time = new TimeContext(now, windowDays);
   const start = time.getStartOfToday();
   const currency = draft.currency;
+  const precision = getCurrencyPrecision(currency);
   const omitted: string[] = [];
 
   const startingBalances = new Map<AccountId, number>();
@@ -126,7 +130,8 @@ export function projectCashClarityDraft(
 
   if (draft.income.kind === 'recurring' && payFrom) {
     draft.income.items.forEach(item => {
-      if (!inWindow(item.nextDate, start, windowDays)) return;
+      const recurrence = buildOnboardingIncomeRecurrence(item);
+      if (!inWindow(recurrence.firstOccurrence, start, windowDays)) return;
       plannedPayments.push({
         id: `draft-income-${item.id}`,
         name: incomeItemName(item),
@@ -134,10 +139,11 @@ export function projectCashClarityDraft(
         currencyCode: currency,
         fromAccountId: INCOME_CATEGORY_ID,
         toAccountId: payFrom,
-        nextOccurrence: item.nextDate,
-        intervalType: item.interval,
-        intervalN: item.intervalN,
-        recurrenceDay: dayjs(item.nextDate).date(),
+        nextOccurrence: recurrence.firstOccurrence,
+        intervalType: recurrence.intervalType,
+        intervalN: recurrence.intervalN,
+        recurrenceDay: recurrence.recurrenceDay,
+        recurrenceMonth: recurrence.recurrenceMonth,
       });
     });
   } else if (draft.income.kind === 'skipped') {
@@ -226,14 +232,14 @@ export function projectCashClarityDraft(
   const plannedOutflowInWindow = flowSummary.totalPlannedOutflow;
   const projectedRoom =
     liquidNow + expectedIncomeInWindow - plannedOutflowInWindow - budgetReserveInWindow;
-  const heldNow = Math.max(0, Math.round((liquidNow - safeToSpend + Number.EPSILON) * 100) / 100);
+  const heldNow = Math.max(0, roundToPrecision(liquidNow - safeToSpend, precision));
   const { heldLabel, today, ahead } = clarityBeats(draft, {
     windowDays,
     start,
-    liquidNow,
+    liquidNow: roundToPrecision(liquidNow, precision),
     heldNow,
     safeToSpend,
-    projectedRoom,
+    projectedRoom: roundToPrecision(projectedRoom, precision),
   });
 
   return {
@@ -248,11 +254,11 @@ export function projectCashClarityDraft(
         kind: flow.kind,
       })),
     })),
-    liquidNow,
+    liquidNow: roundToPrecision(liquidNow, precision),
     expectedIncomeInWindow,
     plannedOutflowInWindow,
     budgetReserveInWindow,
-    projectedRoom,
+    projectedRoom: roundToPrecision(projectedRoom, precision),
     heldNow,
     heldLabel,
     today,
@@ -288,11 +294,19 @@ function clarityBeats(
   readonly today: readonly ClarityBeat[];
   readonly ahead: readonly ClarityBeat[];
 } {
-  const incomeItems = draft.income.kind === 'recurring' ? draft.income.items : [];
+  const incomeItems =
+    draft.income.kind === 'recurring'
+      ? draft.income.items.map(item => ({
+          item,
+          recurrence: buildOnboardingIncomeRecurrence(item),
+        }))
+      : [];
   const paymentItems = draft.commitment.kind === 'payment' ? draft.commitment.items : [];
   const budgetItems = draft.budget.kind === 'set' ? draft.budget.items : [];
-  const firstIncome = incomeItems.reduce<number | undefined>((soonest, item) => {
-    if (soonest === undefined || item.nextDate < soonest) return item.nextDate;
+  const firstIncome = incomeItems.reduce<number | undefined>((soonest, { recurrence }) => {
+    if (soonest === undefined || recurrence.firstOccurrence < soonest) {
+      return recurrence.firstOccurrence;
+    }
     return soonest;
   }, undefined);
   const heldLabel = firstIncome ? copy.clarityHeld : copy.clarityHeldNoIncome;
@@ -311,13 +325,13 @@ function clarityBeats(
   });
 
   const ahead: ClarityBeat[] = [
-    ...incomeItems.map(item => ({
+    ...incomeItems.map(({ item, recurrence }) => ({
       key: item.id,
       label: incomeItemName(item),
       amount: item.amount,
       sign: '+' as const,
-      subtitle: inWindow(item.nextDate, numbers.start, numbers.windowDays)
-        ? copy.clarityIncomeSubtitle(formatDay(item.nextDate))
+      subtitle: inWindow(recurrence.firstOccurrence, numbers.start, numbers.windowDays)
+        ? copy.clarityIncomeSubtitle(formatDay(recurrence.firstOccurrence))
         : copy.clarityIncomeOutside,
     })),
     ...paymentItems.map(item => ({

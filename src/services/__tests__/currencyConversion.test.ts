@@ -1,4 +1,4 @@
-import { convertAmount } from '@/src/services/currencyConversion';
+import { convertAmount, resolveSpotExchangeRate } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 
 jest.mock('@/src/services/exchange-rate-service', () => ({
@@ -115,5 +115,32 @@ describe('convertAmount', () => {
       precision: 3,
     });
     expect(result).toEqual({ ok: true, amount: 12.346 });
+  });
+
+  it('uses target currency precision for identity conversion by default', async () => {
+    await expect(
+      convertAmount({
+        amount: 1.001,
+        fromCurrency: 'KWD',
+        toCurrency: 'KWD',
+        mode: 'spot',
+      }),
+    ).resolves.toEqual({ ok: true, amount: 1.001 });
+    await expect(
+      convertAmount({
+        amount: 1.6,
+        fromCurrency: 'JPY',
+        toCurrency: 'JPY',
+        mode: 'spot',
+      }),
+    ).resolves.toEqual({ ok: true, amount: 2 });
+  });
+
+  it('resolves precise valid spot rates separately from rounded money amounts', async () => {
+    getRate.mockResolvedValue(0.123456789);
+    await expect(resolveSpotExchangeRate('EUR', 'KWD')).resolves.toEqual({
+      ok: true,
+      rate: 0.123456789,
+    });
   });
 });

@@ -41,6 +41,38 @@ function simulateWith({
 }
 
 describe('Simulator numeric input invariants', () => {
+  it('rounds projection outputs using result currency precision', () => {
+    const startingBalances = new Map([['a', 1.001]]);
+    const precise = Simulator.simulate(
+      startingBalances,
+      [],
+      1,
+      new Set(['a']),
+      [],
+      0,
+      1_700_000_000_000,
+      undefined,
+      3,
+    );
+    const wholeUnit = Simulator.simulate(
+      new Map([['a', 1.6]]),
+      [],
+      1,
+      new Set(['a']),
+      [],
+      0,
+      1_700_000_000_000,
+      undefined,
+      0,
+    );
+
+    expect(precise.summary.safeToSpend).toBe(1.001);
+    expect(precise.projections[0]?.globalBalance).toBe(1.001);
+    expect(precise.projections[0]?.accountBalances.get('a')).toBe(1.001);
+    expect(wholeUnit.summary.safeToSpend).toBe(2);
+    expect(wholeUnit.projections[0]?.globalBalance).toBe(2);
+  });
+
   it.each([NaN, Infinity, -Infinity])('rejects non-finite starting balance %s', balance => {
     expect(() => simulateWith({ startingBalances: new Map([['a', balance]]) })).toThrow(
       '[SimulationInputInvariant] starting balance for a must be finite',

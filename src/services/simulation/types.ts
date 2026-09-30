@@ -145,6 +145,7 @@ export interface SimulationPlannedPayment {
   intervalType: string;
   intervalN: number;
   recurrenceDay?: number;
+  recurrenceMonth?: number;
   endDate?: number;
 }
 

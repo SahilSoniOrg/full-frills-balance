@@ -5,7 +5,7 @@ import { accountQueryRepository } from '@/src/data/repositories/account';
 import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
-import { convertAmount } from '@/src/services/currencyConversion';
+import { convertAmount, resolveSpotExchangeRate } from '@/src/services/currencyConversion';
 import { selectBalancesForWealthSummary, wealthService } from '@/src/services/wealth-service';
 import dayjs from 'dayjs';
 jest.mock('@/src/data/repositories/raw/TransactionRawMetricsQueries', () => ({
@@ -37,6 +37,7 @@ describe('WealthService', () => {
       ok: true,
       amount,
     }));
+    (resolveSpotExchangeRate as jest.Mock).mockResolvedValue({ ok: true, rate: 1 });
     (transactionRawMetricsQueries.getDailyDeltasGroupedRaw as jest.Mock).mockResolvedValue([]);
     (accountQueryRepository.findAll as jest.Mock).mockResolvedValue([]);
   });
@@ -167,6 +168,10 @@ describe('WealthService', () => {
       ];
       (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue(mockBalances);
       (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
+      (resolveSpotExchangeRate as jest.Mock).mockResolvedValue({
+        ok: false,
+        reason: 'missing_rate',
+      });
       (convertAmount as jest.Mock).mockResolvedValue({ ok: false, reason: 'missing_rate' });
 
       const history = await wealthService.getNetWorthHistory(
@@ -230,6 +235,28 @@ describe('WealthService', () => {
       expect(firstEntry?.totalAssets).toBe(0);
 
       jest.useRealTimers();
+    });
+
+    it('applies the full unrounded spot rate to large balances before currency rounding', async () => {
+      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([
+        {
+          accountId: 'acc1',
+          accountType: AccountType.ASSET,
+          balance: 123_456_789,
+          currencyCode: 'EUR',
+        },
+      ]);
+      (transactionRawMetricsQueries.getDailyDeltasGroupedRaw as jest.Mock).mockResolvedValue([]);
+      (resolveSpotExchangeRate as jest.Mock).mockResolvedValue({ ok: true, rate: 0.123456789 });
+
+      const history = await wealthService.getNetWorthHistory(
+        'workplace-1' as WorkplaceId,
+        START_DATE,
+        END_DATE,
+        'USD',
+      );
+
+      expect(history.at(-1)?.totalAssets).toBe(15_241_578.75);
     });
 
     it('counts a parent direct balance once and does not add the rolled-up total again', async () => {

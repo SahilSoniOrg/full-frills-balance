@@ -4,11 +4,12 @@ import Budget from '@/src/data/models/Budget';
 import Journal from '@/src/data/models/Journal';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import { BudgetUsage } from '@/src/services/budget/types';
-import { convertAmount } from '@/src/services/currencyConversion';
+import { resolveSpotExchangeRate } from '@/src/services/currencyConversion';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { logger } from '@/src/utils/logger';
+import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { Trace } from '@/src/utils/TraceService';
 import dayjs from 'dayjs';
 import { projectBudgetCapacities } from '@/src/services/budget/budgetProjectionProvider';
@@ -64,6 +65,7 @@ export class CashFlowSimulationService {
     } = input;
 
     const time = new TimeContext(dayjs(), simulationDays);
+    const resultPrecision = getCurrencyPrecision(resultCurrency);
     const simulationStartMs = time.getStartOfToday().valueOf();
     const simulationEndMs = time.getEndMs();
 
@@ -118,15 +120,9 @@ export class CashFlowSimulationService {
           rateMap.set(from, 1);
           return;
         }
-        const converted = await convertAmount({
-          amount: 1,
-          fromCurrency: from,
-          toCurrency: resultCurrency,
-          mode: 'spot',
-          precision: 12,
-        });
-        if (converted.ok) {
-          rateMap.set(from, converted.amount);
+        const resolvedRate = await resolveSpotExchangeRate(from, resultCurrency);
+        if (resolvedRate.ok) {
+          rateMap.set(from, resolvedRate.rate);
         } else {
           logger.warn(
             `[CashFlowSimulationService] FX unavailable for ${from} -> ${resultCurrency}`,
@@ -158,6 +154,7 @@ export class CashFlowSimulationService {
         resultCurrency,
         rateMap, // Pass rateMap to avoid extra fetches
         workplaceId,
+        resultPrecision,
       ),
       fetchBudgetCategoryMap(budgets, allAccounts, workplaceId),
     ]);
@@ -197,6 +194,7 @@ export class CashFlowSimulationService {
       intervalType: pp.intervalType,
       intervalN: pp.intervalN,
       recurrenceDay: pp.recurrenceDay,
+      recurrenceMonth: pp.recurrenceMonth,
       endDate: pp.endDate,
     }));
 
@@ -303,6 +301,7 @@ export class CashFlowSimulationService {
       0,
       simulationStartMs,
       trace,
+      resultPrecision,
     );
     trace?.metric('simulation_execution');
 
@@ -312,6 +311,7 @@ export class CashFlowSimulationService {
       accountMap,
       normalizedLiabilityBalances,
       context.liquidAccountIds,
+      resultPrecision,
     );
     trace?.metric('post_process_report');
 
@@ -323,6 +323,7 @@ export class CashFlowSimulationService {
       accountMinBalancesBeforeIncome: simulationResult.summary.accountMinBalancesBeforeIncome,
       accountMinBalances: simulationResult.summary.accountMinBalances,
       firstMajorInflowDay: simulationResult.summary.firstMajorInflowDay,
+      precision: resultPrecision,
     });
     trace?.metric('post_process_summaries');
 

@@ -13,6 +13,8 @@ import type {
   SimulationPlannedPayment,
 } from './types';
 import type { AccountId } from '@/src/types/ids';
+import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
+import { roundToPrecision } from '@/src/utils/money';
 
 export interface DraftSimulationScenario {
   readonly simulationStartMs: number;
@@ -37,6 +39,7 @@ export function simulateDraftScenario(input: DraftSimulationScenario): {
   readonly projections: SimulationEngineResult['projections'];
 } {
   const liquidIds = [...input.liquidAccountIds];
+  const precision = getCurrencyPrecision(input.resultCurrency);
   const liquidAccountIds = new Set(liquidIds);
   const context = {
     simulationStartMs: input.simulationStartMs,
@@ -87,6 +90,8 @@ export function simulateDraftScenario(input: DraftSimulationScenario): {
     liquidIds,
     0,
     input.simulationStartMs,
+    undefined,
+    precision,
   );
   const normalizedFlows = normalizeSimulationFlows(allFlows);
   const budgetReserveInWindow = normalizedFlows.reduce(
@@ -102,8 +107,8 @@ export function simulateDraftScenario(input: DraftSimulationScenario): {
 
   return {
     safeToSpend: simulation.summary.safeToSpend,
-    flowSummary: summarizeSimulationFlows(normalizedFlows, liquidAccountIds),
-    budgetReserveInWindow: Math.round((budgetReserveInWindow + Number.EPSILON) * 100) / 100,
+    flowSummary: summarizeSimulationFlows(normalizedFlows, liquidAccountIds, precision),
+    budgetReserveInWindow: roundToPrecision(budgetReserveInWindow, precision),
     projections: simulation.projections,
   };
 }

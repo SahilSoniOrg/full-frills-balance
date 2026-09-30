@@ -49,6 +49,7 @@ jest.mock('@/src/services/currencyConversion', () => ({
   convertAmount: jest.fn(async ({ amount }: any) => {
     return { ok: true, amount };
   }),
+  resolveSpotExchangeRate: jest.fn(async () => ({ ok: true, rate: 1 })),
 }));
 
 jest.mock('@/src/utils/logger', () => ({

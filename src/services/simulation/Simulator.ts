@@ -5,6 +5,7 @@ import { Flow, SimulationEngineResult } from './types';
 import { findFirstMajorInflowDay } from './utils/FlowPolicy';
 import { assertValidFlow } from './utils/FlowInvariants';
 import { assertValidSimulationInputs } from './utils/SimulationInputInvariants';
+import { roundToPrecision } from '@/src/utils/money';
 
 export class Simulator {
   /**
@@ -20,6 +21,7 @@ export class Simulator {
     startDayOffset: number = 0,
     startDayTimestamp: number = Date.now(),
     parentTrace?: Trace,
+    precision = AppConfig.constants.precision,
   ): SimulationEngineResult {
     const trace = parentTrace || startTrace('Simulator.simulate');
     try {
@@ -64,7 +66,7 @@ export class Simulator {
 
       const roundedAccountBalances = new Map<string, number>();
       for (const [id, bal] of currentBalances.entries()) {
-        roundedAccountBalances.set(id, Math.round(((bal ?? 0) + Number.EPSILON) * 100) / 100);
+        roundedAccountBalances.set(id, roundToPrecision(bal ?? 0, precision));
       }
       let accountBalancesSnapshot = new Map(roundedAccountBalances);
 
@@ -98,7 +100,7 @@ export class Simulator {
             }
 
             // Update rounded map only for changed accounts
-            roundedAccountBalances.set(id, Math.round((bal + Number.EPSILON) * 100) / 100);
+            roundedAccountBalances.set(id, roundToPrecision(bal, precision));
           }
 
           // Preserve independent snapshots only when balances changed. Quiet
@@ -115,7 +117,7 @@ export class Simulator {
         projections.push({
           dayOffset: todayOffset,
           timestamp,
-          globalBalance: Math.round((globalBalance + Number.EPSILON) * 100) / 100,
+          globalBalance: roundToPrecision(globalBalance, precision),
           accountBalances: accountBalancesSnapshot,
           flows: todayFlows,
         });
@@ -132,22 +134,19 @@ export class Simulator {
 
       const res = {
         summary: {
-          safeToSpend: Math.round((safeToSpend + Number.EPSILON) * 100) / 100,
-          shortfall:
-            Math.round(
-              ((globalMinBalance < 0 ? Math.abs(globalMinBalance) : 0) + Number.EPSILON) * 100,
-            ) / 100,
-          trajectoryMinBalance: Math.round((globalMinBalance + Number.EPSILON) * 100) / 100,
+          safeToSpend: roundToPrecision(safeToSpend, precision),
+          shortfall: roundToPrecision(
+            globalMinBalance < 0 ? Math.abs(globalMinBalance) : 0,
+            precision,
+          ),
+          trajectoryMinBalance: roundToPrecision(globalMinBalance, precision),
           accountMinBalances: new Map(
-            Array.from(accountMinBalances).map(([id, b]) => [
-              id,
-              Math.round((b + Number.EPSILON) * 100) / 100,
-            ]),
+            Array.from(accountMinBalances).map(([id, b]) => [id, roundToPrecision(b, precision)]),
           ),
           accountMinBalancesBeforeIncome: new Map(
             Array.from(accountMinBalancesBeforeIncome).map(([id, b]) => [
               id,
-              Math.round((b + Number.EPSILON) * 100) / 100,
+              roundToPrecision(b, precision),
             ]),
           ),
           firstMajorInflowDay,

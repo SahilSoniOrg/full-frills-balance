@@ -2,6 +2,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import { AccountFields } from '@/src/types/plainDtos';
 import { AccountId } from '@/src/types/ids';
 import { AccountSubtype } from '@/src/types/enums';
+import { roundToPrecision } from '@/src/utils/money';
 import dayjs from 'dayjs';
 import { AccountSimulationSummary, Flow, FlowCategory, SimulationReport } from './types';
 import { findFirstMajorInflowDay } from './utils/FlowPolicy';
@@ -13,27 +14,33 @@ export function generateSimulationReport(
   accountMap: Map<string, AccountFields>,
   liabilityAccountBalances: { account: AccountFields; balance: number }[],
   liquidAccountIdsSet: Set<string>,
+  precision = AppConfig.constants.precision,
 ): SimulationReport {
-  const roundedFlows = normalizeSimulationFlows(allFlows);
+  const normalizedFlows = normalizeSimulationFlows(allFlows);
 
   const now = dayjs().startOf('day');
 
   return {
-    summary: generateSummary(roundedFlows, liquidAccountIdsSet),
-    allFlows: roundedFlows,
-    budget: generateBudgetSummary(roundedFlows, now),
-    liabilities: generateLiabilities(roundedFlows, accountMap, liabilityAccountBalances),
+    summary: generateSummary(normalizedFlows, liquidAccountIdsSet, precision),
+    allFlows: normalizedFlows,
+    budget: generateBudgetSummary(normalizedFlows, now, precision),
+    liabilities: generateLiabilities(
+      normalizedFlows,
+      accountMap,
+      liabilityAccountBalances,
+      precision,
+    ),
   };
 }
 
-function generateSummary(allFlows: Flow[], liquidAccountIdsSet: Set<string>) {
+function generateSummary(allFlows: Flow[], liquidAccountIdsSet: Set<string>, precision: number) {
   const firstMajorInflowDay = findFirstMajorInflowDay(
     allFlows,
     liquidAccountIdsSet,
     AppConfig.defaults.simulation.majorInflowThreshold,
   );
 
-  const summary = summarizeSimulationFlows(allFlows, liquidAccountIdsSet);
+  const summary = summarizeSimulationFlows(allFlows, liquidAccountIdsSet, precision);
 
   return {
     firstMajorInflowDay,
@@ -44,7 +51,7 @@ function generateSummary(allFlows: Flow[], liquidAccountIdsSet: Set<string>) {
   };
 }
 
-function generateBudgetSummary(allFlows: Flow[], now: dayjs.Dayjs) {
+function generateBudgetSummary(allFlows: Flow[], now: dayjs.Dayjs, precision: number) {
   const daysLeftInMonth = now.daysInMonth() - now.date() + 1;
   let currentMonthRemaining = 0;
   let nextMonthProjected = 0;
@@ -62,8 +69,8 @@ function generateBudgetSummary(allFlows: Flow[], now: dayjs.Dayjs) {
   }
 
   return {
-    currentMonthRemaining: Math.round((currentMonthRemaining + Number.EPSILON) * 100) / 100,
-    nextMonthProjected: Math.round((nextMonthProjected + Number.EPSILON) * 100) / 100,
+    currentMonthRemaining: roundToPrecision(currentMonthRemaining, precision),
+    nextMonthProjected: roundToPrecision(nextMonthProjected, precision),
     nextMonthDays: Math.max(0, AppConfig.defaults.safeToSpendDays - daysLeftInMonth),
   };
 }
@@ -72,6 +79,7 @@ function generateLiabilities(
   allFlows: Flow[],
   accountMap: Map<string, AccountFields>,
   liabilityAccountBalances: { account: AccountFields; balance: number }[],
+  precision: number,
 ) {
   let totalLiabilities = 0;
   let totalCreditCard = 0;
@@ -104,12 +112,12 @@ function generateLiabilities(
   }
 
   return {
-    total: Math.round((totalLiabilities + Number.EPSILON) * 100) / 100,
-    totalCreditCard: Math.round((totalCreditCard + Number.EPSILON) * 100) / 100,
-    totalOther: Math.round((totalOther + Number.EPSILON) * 100) / 100,
-    committed: Math.round((committed + Number.EPSILON) * 100) / 100,
-    committedCreditCard: Math.round((committedCreditCard + Number.EPSILON) * 100) / 100,
-    committedOther: Math.round((committedOther + Number.EPSILON) * 100) / 100,
+    total: roundToPrecision(totalLiabilities, precision),
+    totalCreditCard: roundToPrecision(totalCreditCard, precision),
+    totalOther: roundToPrecision(totalOther, precision),
+    committed: roundToPrecision(committed, precision),
+    committedCreditCard: roundToPrecision(committedCreditCard, precision),
+    committedOther: roundToPrecision(committedOther, precision),
   };
 }
 
@@ -121,6 +129,7 @@ export function generateAccountSummaries({
   accountMinBalancesBeforeIncome,
   accountMinBalances,
   firstMajorInflowDay,
+  precision = AppConfig.constants.precision,
 }: {
   allFlows: Flow[];
   liquidAccountIdsSet: Set<AccountId> | Set<string>;
@@ -129,6 +138,7 @@ export function generateAccountSummaries({
   accountMinBalancesBeforeIncome: Map<string, number>;
   accountMinBalances: Map<string, number>;
   firstMajorInflowDay: number | null;
+  precision?: number;
 }): AccountSimulationSummary[] {
   // Pre-group all flows by account for O(1) inside account loop
   const flowsByAccount = new Map<string, Flow[]>();
@@ -219,7 +229,7 @@ export function generateAccountSummaries({
       .slice(0, 3)
       .map(d => ({
         name: d.name,
-        amount: d.amount,
+        amount: roundToPrecision(d.amount, precision),
         source: d.source,
         isPostIncome: firstMajorInflowDay !== null && d.minDay >= firstMajorInflowDay,
       }));
@@ -229,7 +239,7 @@ export function generateAccountSummaries({
       .slice(0, 3)
       .map(d => ({
         name: d.name,
-        amount: d.amount,
+        amount: roundToPrecision(d.amount, precision),
         source: d.source,
         isPostIncome: firstMajorInflowDay !== null && d.minDay >= firstMajorInflowDay,
       }));
@@ -238,13 +248,13 @@ export function generateAccountSummaries({
       accountId,
       accountName: acc?.name || 'Unknown',
       color: acc?.color || undefined,
-      startingBalance: startingBal,
-      safeToSpend: Math.max(0, Math.min(startingBal, minBefore)),
-      shortfall: minBefore < 0 ? Math.abs(minBefore) : 0,
-      minBalance: absoluteMin,
+      startingBalance: roundToPrecision(startingBal, precision),
+      safeToSpend: roundToPrecision(Math.max(0, Math.min(startingBal, minBefore)), precision),
+      shortfall: roundToPrecision(minBefore < 0 ? Math.abs(minBefore) : 0, precision),
+      minBalance: roundToPrecision(absoluteMin, precision),
       usageDetails: {
-        totalInflow,
-        totalOutflow,
+        totalInflow: roundToPrecision(totalInflow, precision),
+        totalOutflow: roundToPrecision(totalOutflow, precision),
         topInflows,
         topOutflows,
       },

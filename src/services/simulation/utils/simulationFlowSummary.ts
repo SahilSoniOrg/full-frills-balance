@@ -1,4 +1,5 @@
 import { Flow, FlowCategory } from '../types';
+import { roundToPrecision } from '@/src/utils/money';
 import { getLiquidImpact, isCommitmentFlow } from './FlowPolicy';
 
 export interface SimulationFlowSummary {
@@ -11,6 +12,7 @@ export interface SimulationFlowSummary {
 export function summarizeSimulationFlows(
   flows: readonly Flow[],
   liquidAccountIds: ReadonlySet<string>,
+  precision = 2,
 ): SimulationFlowSummary {
   let totalFutureInflow = 0;
   let totalPlannedOutflow = 0;
@@ -39,12 +41,8 @@ export function summarizeSimulationFlows(
   }
 
   return {
-    totalFutureInflow: round(totalFutureInflow),
-    totalPlannedOutflow: round(totalPlannedOutflow),
-    totalCommittedPlanned: round(totalCommittedPlanned),
+    totalFutureInflow: roundToPrecision(totalFutureInflow, precision),
+    totalPlannedOutflow: roundToPrecision(totalPlannedOutflow, precision),
+    totalCommittedPlanned: roundToPrecision(totalCommittedPlanned, precision),
   };
-}
-
-function round(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
 }

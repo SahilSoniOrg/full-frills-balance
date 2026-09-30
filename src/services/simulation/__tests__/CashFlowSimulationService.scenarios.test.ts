@@ -6,7 +6,7 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { accountLedgerMetricsQueries } from '@/src/data/repositories/account/AccountLedgerMetricsQueries';
 import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { convertAmount } from '@/src/services/currencyConversion';
+import { convertAmount, resolveSpotExchangeRate } from '@/src/services/currencyConversion';
 import {
   cashFlowSimulationService,
   SimulationInput,
@@ -62,6 +62,7 @@ jest.mock('@/src/services/currencyConversion', () => ({
     ok: true,
     amount: fromCurrency === toCurrency ? amount : amount,
   })),
+  resolveSpotExchangeRate: jest.fn(async () => ({ ok: true, rate: 1 })),
 }));
 
 describe('CashFlowSimulationService scenario coverage', () => {
@@ -598,6 +599,7 @@ describe('CashFlowSimulationService scenario coverage', () => {
         return { ok: true, amount };
       },
     );
+    (resolveSpotExchangeRate as jest.Mock).mockResolvedValue({ ok: true, rate: 1.1 });
 
     const result = await simulate({
       startingBalances: new Map([['cash' as AccountId, 1000]]),

@@ -1,6 +1,6 @@
 import Account from '@/src/data/models/Account';
 import { BudgetUsage } from '@/src/services/budget/types';
-import { convertAmount } from '@/src/services/currencyConversion';
+import { resolveSpotExchangeRate } from '@/src/services/currencyConversion';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
@@ -45,7 +45,7 @@ jest.mock('@/src/data/repositories/PlannedPaymentRepository', () => ({
 }));
 
 jest.mock('@/src/services/currencyConversion', () => ({
-  convertAmount: jest.fn().mockResolvedValue({ ok: true, amount: 1 }),
+  resolveSpotExchangeRate: jest.fn().mockResolvedValue({ ok: true, rate: 1 }),
 }));
 
 describe('CashFlowSimulationService - End-to-End Backend Pipeline', () => {
@@ -104,14 +104,7 @@ describe('CashFlowSimulationService - End-to-End Backend Pipeline', () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-04-01T00:00:00Z'));
-    (convertAmount as jest.Mock).mockImplementation(
-      async ({ amount, fromCurrency, toCurrency }: any) => {
-        if (!fromCurrency || !toCurrency || fromCurrency === toCurrency) {
-          return { ok: true, amount };
-        }
-        return { ok: true, amount };
-      },
-    );
+    (resolveSpotExchangeRate as jest.Mock).mockResolvedValue({ ok: true, rate: 1 });
   });
 
   afterEach(() => {
@@ -409,5 +402,79 @@ describe('CashFlowSimulationService - End-to-End Backend Pipeline', () => {
       // Remaining budget capacity ($500) burned over cycle: total spend = 600 -> Safe to spend = 1400
       expect(result.simulationResult.summary.safeToSpend).toBeCloseTo(1400, 0);
     });
+  });
+
+  it.each([
+    ['KWD', 1.001, 3],
+    ['JPY', 500, 0],
+  ])(
+    'keeps %s budget slices fractional until production totals are materialized',
+    async (currency, amount, precision) => {
+      const accountSet = [
+        cash,
+        bank,
+        creditCard,
+        groceriesCategory,
+        diningCategory,
+        incomeCategory,
+      ].map(account => ({ ...account, currencyCode: currency }) as Account);
+      (budgetRepository.getScopesByBudgetIds as jest.Mock).mockResolvedValue([
+        { budgetId: 'b-precision', accountId: groceriesCategory.id, account: groceriesCategory },
+      ]);
+
+      const result = await simulate({
+        startingBalances: new Map([[cash.id, 10_000]]),
+        liquidAssetIds: [cash.id],
+        budgets: [
+          {
+            id: 'b-precision' as BudgetId,
+            name: 'Precision budget',
+            amount,
+            assetAccountIds: cash.id,
+            currencyCode: currency,
+            intervalType: 'MONTHLY',
+            intervalN: 1,
+            startDate: baseDate.startOf('month').valueOf(),
+            recurrenceDay: 1,
+          } as any,
+        ],
+        usages: [
+          { remaining: amount, budgetAmount: amount, spent: 0, usagePercent: 0 } as BudgetUsage,
+        ],
+        allAccounts: accountSet,
+        resultCurrency: currency,
+      });
+
+      const budgetFlows = result.allFlows!.filter(flow => flow.category === 'BUDGET');
+      const allocated = budgetFlows.reduce((sum, flow) => sum + flow.amount, 0);
+      const roundedAmount = Number(amount.toFixed(precision));
+      expect(budgetFlows.length).toBeGreaterThan(1);
+      expect(budgetFlows.some(flow => flow.amount !== Number(flow.amount.toFixed(precision)))).toBe(
+        true,
+      );
+      expect(allocated).toBeCloseTo(amount, 10);
+      expect(result.simulationResult.summary.safeToSpend).toBe(
+        Number((10_000 - amount).toFixed(precision)),
+      );
+      expect(
+        result.report.budget.currentMonthRemaining + result.report.budget.nextMonthProjected,
+      ).toBe(roundedAmount);
+      expect(result.report.summary.totalCommittedPlanned).toBe(roundedAmount);
+    },
+  );
+
+  it('keeps missing foreign spot rates visible as unvalued simulation entries', async () => {
+    const euroAccount = { ...cash, id: 'acc-euro' as AccountId, currencyCode: 'EUR' } as Account;
+    (resolveSpotExchangeRate as jest.Mock).mockResolvedValue({ ok: false, reason: 'missing_rate' });
+
+    const result = await simulate({
+      startingBalances: new Map([[euroAccount.id, 250]]),
+      liquidAssetIds: [euroAccount.id],
+      allAccounts: [euroAccount],
+      resultCurrency: 'USD',
+    });
+
+    expect(result.hasUnvaluedEntries).toBe(true);
+    expect(result.simulationResult.summary.safeToSpend).toBe(0);
   });
 });

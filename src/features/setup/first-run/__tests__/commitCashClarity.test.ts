@@ -4,6 +4,9 @@ import { asWorkplaceId } from '@/src/types/ids';
 import { createInitialDraft, type CashClarityDraft } from '../draft';
 import { commitCashClarity } from '../commitCashClarity';
 import { draftAccountId, starterCategoryId } from '../mapToWorkplaceOutput';
+import dayjs from 'dayjs';
+import { calculateNextOccurrence } from '@/src/services/planned-payment/plannedPaymentRecurrence';
+import { projectCashClarityDraft } from '../projectCashClarityDraft';
 
 const mockFindAll = jest.fn();
 const mockUpsertPayment = jest.fn();
@@ -125,10 +128,79 @@ describe('commitCashClarity', () => {
         name: 'Salary',
         intervalType: PlannedPaymentInterval.WEEKLY,
         intervalN: 2,
+        startDate: dayjs(salaryIncome.nextDate).startOf('day').valueOf(),
+        recurrenceDay: 5,
         fromAccountId: starterCategoryId(WORKPLACE_ID, 'Salary'),
         toAccountId: draftAccountId(WORKPLACE_ID, 'main'),
       }),
     );
+  });
+
+  it('saves and previews one Wednesday fortnightly draft while retaining yearly month rules', async () => {
+    const onboardingDraft = draft({
+      income: {
+        kind: 'recurring',
+        items: [
+          {
+            ...salaryIncome,
+            nextDate: Date.parse('2026-09-30T12:00:00Z'),
+          },
+          {
+            id: 'freelance',
+            name: 'Freelance',
+            source: 'freelance',
+            amount: 2000,
+            interval: PlannedPaymentInterval.YEARLY,
+            intervalN: 1,
+            nextDate: Date.parse('2028-02-29T12:00:00Z'),
+          },
+        ],
+      },
+    });
+    mockFindAll.mockResolvedValue([
+      account(draftAccountId(WORKPLACE_ID, 'main'), 'Bank', AccountType.ASSET),
+      account(starterCategoryId(WORKPLACE_ID, 'Salary'), 'Salary', AccountType.INCOME),
+      account(starterCategoryId(WORKPLACE_ID, 'Freelance'), 'Freelance', AccountType.INCOME),
+    ]);
+
+    await commitCashClarity(onboardingDraft);
+
+    const weeklySaved = mockUpsertPayment.mock.calls
+      .map(([, input]) => input)
+      .find(input => input.name === 'Salary');
+    const yearlySaved = mockUpsertPayment.mock.calls
+      .map(([, input]) => input)
+      .find(input => input.name === 'Freelance');
+    expect(weeklySaved).toEqual(
+      expect.objectContaining({
+        intervalType: PlannedPaymentInterval.WEEKLY,
+        intervalN: 2,
+        recurrenceDay: 3,
+      }),
+    );
+    expect(yearlySaved).toEqual(
+      expect.objectContaining({
+        intervalType: PlannedPaymentInterval.YEARLY,
+        recurrenceMonth: 2,
+        recurrenceDay: 29,
+      }),
+    );
+    expect(
+      dayjs(
+        calculateNextOccurrence(yearlySaved.startDate, {
+          intervalType: yearlySaved.intervalType,
+          intervalN: yearlySaved.intervalN,
+          recurrenceMonth: yearlySaved.recurrenceMonth,
+          recurrenceDay: yearlySaved.recurrenceDay,
+        }),
+      ).format('YYYY-MM-DD'),
+    ).toBe('2029-02-28');
+
+    const preview = projectCashClarityDraft(onboardingDraft, dayjs('2026-09-14T10:00:00'));
+    const previewPayday = preview.chart.find(point =>
+      point.events.some(event => event.name === 'Salary'),
+    );
+    expect(dayjs(previewPayday?.x).format('YYYY-MM-DD')).toBe('2026-09-30');
   });
 
   it('rethrows the same workplace id and upserts changed income on retry', async () => {

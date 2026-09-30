@@ -6,7 +6,7 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { accountLedgerMetricsQueries } from '@/src/data/repositories/account/AccountLedgerMetricsQueries';
 import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { convertAmount } from '@/src/services/currencyConversion';
+import { convertAmount, resolveSpotExchangeRate } from '@/src/services/currencyConversion';
 import {
   cashFlowSimulationService,
   SimulationInput,
@@ -53,6 +53,7 @@ jest.mock('@/src/services/currencyConversion', () => ({
     ok: true,
     amount: fromCurrency === toCurrency ? amount : amount,
   })),
+  resolveSpotExchangeRate: jest.fn(async () => ({ ok: true, rate: 1 })),
 }));
 
 jest.mock('@/src/utils/logger', () => ({
@@ -346,6 +347,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
         return { ok: true, amount };
       },
     );
+    (resolveSpotExchangeRate as jest.Mock).mockResolvedValue({ ok: true, rate: 2 });
 
     const result = await simulate({
       startingBalances: new Map<AccountId, number>([
@@ -524,6 +526,7 @@ describe('CashFlowSimulationService liability-heavy coverage', () => {
         return { ok: true, amount };
       },
     );
+    (resolveSpotExchangeRate as jest.Mock).mockResolvedValue({ ok: true, rate: 2 });
     (transactionRawMetricsQueries.getLatestBalancesRaw as jest.Mock).mockResolvedValue(
       new Map([['cc-eur', 400]]),
     );

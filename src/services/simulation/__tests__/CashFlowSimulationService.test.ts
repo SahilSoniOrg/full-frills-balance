@@ -52,6 +52,10 @@ jest.mock('@/src/services/currencyConversion', () => ({
     if (fromCurrency === 'EUR') return { ok: true, amount: amount * 2 };
     return { ok: true, amount };
   }),
+  resolveSpotExchangeRate: jest.fn(async (fromCurrency: string, _toCurrency: string) => ({
+    ok: true,
+    rate: fromCurrency === 'EUR' ? 2 : 1,
+  })),
 }));
 
 jest.mock('@/src/utils/logger', () => ({

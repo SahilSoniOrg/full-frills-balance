@@ -1,4 +1,5 @@
 import { AppConfig } from '@/src/constants';
+import { getCurrencyPrecision } from './currencyPrecision';
 
 /**
  * Rounds a number to a specific precision (decimal places).
@@ -79,48 +80,45 @@ export class Money {
   /**
    * Creates a new Money instance with the amount rounded to the given precision.
    */
-  public round(precision: number = AppConfig.defaultCurrencyPrecision): Money {
+  public round(precision: number = getCurrencyPrecision(this.currencyCode)): Money {
     return new Money(roundToPrecision(this.amount, precision), this.currencyCode);
   }
 
   /**
    * Adds another Money instance of the SAME currency.
    */
-  public add(other: Money): Money {
+  public add(other: Money, precision: number = getCurrencyPrecision(this.currencyCode)): Money {
     if (this.currencyCode !== other.currencyCode) {
       throw new Error(
         `Currency mismatch in addition: ${this.currencyCode} vs ${other.currencyCode}`,
       );
     }
-    return new Money(
-      safeAdd(this.amount, other.amount, AppConfig.defaultCurrencyPrecision),
-      this.currencyCode,
-    );
+    return new Money(safeAdd(this.amount, other.amount, precision), this.currencyCode);
   }
 
   /**
    * Subtracts another Money instance of the SAME currency.
    */
-  public subtract(other: Money): Money {
+  public subtract(
+    other: Money,
+    precision: number = getCurrencyPrecision(this.currencyCode),
+  ): Money {
     if (this.currencyCode !== other.currencyCode) {
       throw new Error(
         `Currency mismatch in subtraction: ${this.currencyCode} vs ${other.currencyCode}`,
       );
     }
-    return new Money(
-      safeSubtract(this.amount, other.amount, AppConfig.defaultCurrencyPrecision),
-      this.currencyCode,
-    );
+    return new Money(safeSubtract(this.amount, other.amount, precision), this.currencyCode);
   }
 
   /**
    * Multiplies the amount by a factor (e.g., exchange rate).
    */
-  public multiply(factor: number): Money {
-    return new Money(
-      safeMultiply(this.amount, factor, AppConfig.defaultCurrencyPrecision),
-      this.currencyCode,
-    );
+  public multiply(
+    factor: number,
+    precision: number = getCurrencyPrecision(this.currencyCode),
+  ): Money {
+    return new Money(safeMultiply(this.amount, factor, precision), this.currencyCode);
   }
 
   /**

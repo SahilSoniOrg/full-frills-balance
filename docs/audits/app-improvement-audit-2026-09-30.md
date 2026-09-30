@@ -7,8 +7,8 @@ The user authorized the four levels below, with GPT-6 Luna implementing and the 
 | Level | Scope | Status |
 |---|---|---|
 | 1 | F21/F22 — audit integrity | Committed as `b3d0f6d0`. |
-| 2 | F08/F09/F11 — privacy, SMS retention, projection teardown | Implemented and reviewed in this commit. |
-| 3 | F06/F07 — currency precision and onboarding recurrence | Pending. |
+| 2 | F08/F09/F11 — privacy, SMS retention, projection teardown | Committed as `d3d20a7e`. |
+| 3 | F06/F07 — currency precision and onboarding recurrence | Implemented and reviewed in this commit. |
 | 4 | F10/F13/F14 — dated forecasts, next obligations, binding-day explanation | Pending. |
 
 ### Level 1 — audit integrity
@@ -28,6 +28,14 @@ SMS scanning is manual. Raw sender/body remain local while an SMS awaits review 
 Widget publication and teardown share one service and queue. Deletion, workplace reset, factory reset, and restore clear reactive/persistent projections after successful database publication. Old leases cannot republish deleted data, inactive-workplace cleanup preserves another owner's widget, and failed cleanup is reported as committed warnings with persisted recovery on launch/foreground. Pending snapshot cleanup blocks old cached reads. Both native widget modules expose explicit clear operations, with a JavaScript fallback for older binaries.
 
 Parent review independently passed 2 privacy/digest suites / 9 tests and 3 lifecycle suites / 23 tests. Four ASCII digest inputs also matched an independent SHA-256 implementation. Final `bun run verify` completed with exit 0: **428 suites / 2,613 tests**, including architecture, policy-version and type checks; lint retains only the two baseline warnings. Evidence: `/tmp/full-frills-level-2-verify-final-retry-1.log`, `/tmp/full-frills-level-2-parent-privacy-focused.log`, and `/tmp/full-frills-level-2-parent-lifecycle.log`. The first full run's outdated mocks and plaintext-fingerprint expectation were corrected before the final passing run. Native widget storage behavior on iOS/Android hardware and native SQLite parity remain unverified; SDK tests intercept mocked outgoing calls, not production transmissions. The public privacy page was not deployed by this task, and historical user-written notes are not destructively rewritten.
+
+### Level 3 — currency precision and onboarding recurrence
+
+Money arithmetic and amount conversion now default to the owning/result currency precision, while explicit precision overrides remain available. Wealth history and production forecasts resolve a validated, unrounded spot multiplier before applying it to balances. Simulation headlines, balance snapshots, budget/liability reports, account summaries, and onboarding draft totals round at their currency boundary. Fractional daily allocations remain unrounded until totals are materialized; production and draft regressions preserve a 1.001 KWD reserve and a 500 JPY reserve across a month.
+
+Onboarding preview and persistence share one recurrence builder. Weekly income uses weekday, monthly income uses day of month, and yearly income carries both day and month. The chosen first occurrence is normalized through the existing recurrence engine. Tests cover Wednesday fortnightly dates, saved preview agreement, month-end clamping, yearly month preservation, and leap years. Existing saved schedules were not migrated.
+
+Worker focused checks passed **19 suites / 164 tests**. Final `bun run verify` completed with exit 0: **430 suites / 2,631 tests**, architecture/privacy/type checks passed, and lint retains the two baseline journal-hook warnings. Parent independently passed **5 finance suites / 46 tests** and **3 onboarding suites / 37 tests**. Evidence: `/tmp/full-frills-level-3-verify-rerun.log`, `/tmp/full-frills-level-3-parent-finance.log`, and `/tmp/full-frills-level-3-parent-recurrence.log`. Native runtime and SQLite parity remain unverified.
 
 ## F01–F05 implementation review — September 30, 2026
 

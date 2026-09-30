@@ -225,6 +225,7 @@ export class PlannedFlowGenerator {
       intervalType: pp.intervalType,
       intervalN: pp.intervalN,
       recurrenceDay: pp.recurrenceDay,
+      recurrenceMonth: pp.recurrenceMonth,
     });
   }
 }

@@ -31,6 +31,7 @@ import {
   starterCategoryId,
 } from './mapToWorkplaceOutput';
 import { clearPendingCashClarityWorkplaceId } from './pendingWorkplace';
+import { buildOnboardingIncomeRecurrence } from './incomeRecurrence';
 
 type NamedAccount = Pick<
   AccountFields,
@@ -121,6 +122,7 @@ async function commitCashClarityNow(draft: CashClarityDraft): Promise<WorkplaceI
     if (draft.income.kind === 'recurring' && payFromId) {
       for (const item of draft.income.items) {
         const incomeName = incomeItemName(item);
+        const recurrence = buildOnboardingIncomeRecurrence(item);
         const incomeAccount = requireAccount(
           accountsById,
           starterCategoryId(workplaceId, incomeSourceName(item.source)),
@@ -132,11 +134,12 @@ async function commitCashClarityNow(draft: CashClarityDraft): Promise<WorkplaceI
           currencyCode: draft.currency,
           fromAccountId: incomeAccount.id,
           toAccountId: payFromId,
-          intervalN: item.intervalN,
-          intervalType: item.interval,
-          startDate: item.nextDate,
+          intervalN: recurrence.intervalN,
+          intervalType: recurrence.intervalType,
+          startDate: recurrence.firstOccurrence,
           isAutoPost: false,
-          recurrenceDay: dayjs(item.nextDate).date(),
+          recurrenceDay: recurrence.recurrenceDay,
+          recurrenceMonth: recurrence.recurrenceMonth,
         });
       }
     }

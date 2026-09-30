@@ -1,4 +1,3 @@
-import { AppConfig } from '@/src/constants/app-config';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { roundToPrecision } from '@/src/utils/money';
@@ -30,6 +29,9 @@ export type ConvertAmountFailure = {
 };
 export type ConvertAmountResult = ConvertAmountSuccess | ConvertAmountFailure;
 
+export type SpotExchangeRateResult =
+  { ok: true; rate: number } | { ok: false; reason: 'missing_rate' };
+
 function isValidRate(rate: number | undefined | null): rate is number {
   return typeof rate === 'number' && Number.isFinite(rate) && rate > 0;
 }
@@ -47,6 +49,19 @@ export function isUsableCrossCurrencyRate(
   return isValidRate(rate) && !isSilentParityRate(fromCurrency, toCurrency, rate);
 }
 
+/** Resolves an unrounded multiplier without treating money amounts as rates. */
+export async function resolveSpotExchangeRate(
+  fromCurrency: string,
+  toCurrency: string,
+): Promise<SpotExchangeRateResult> {
+  if (!fromCurrency || !toCurrency) return { ok: false, reason: 'missing_rate' };
+  if (fromCurrency === toCurrency) return { ok: true, rate: 1 };
+  const rate = await exchangeRateService.getRate(fromCurrency, toCurrency);
+  return isUsableCrossCurrencyRate(fromCurrency, toCurrency, rate)
+    ? { ok: true, rate }
+    : { ok: false, reason: 'missing_rate' };
+}
+
 /**
  * Single entry point for currency conversion (ADR-0005).
  * Never treats a missing cross-currency rate as 1.0.
@@ -59,7 +74,7 @@ export async function convertAmount(input: ConvertAmountInput): Promise<ConvertA
     mode,
     storedExchangeRate,
     rateDate,
-    precision = AppConfig.constants.precision,
+    precision = getCurrencyPrecision(toCurrency),
   } = input;
 
   if (!fromCurrency || !toCurrency) {
@@ -96,11 +111,11 @@ export async function convertAmount(input: ConvertAmountInput): Promise<ConvertA
     };
   }
 
-  const rate = await exchangeRateService.getRate(fromCurrency, toCurrency);
-  if (!isUsableCrossCurrencyRate(fromCurrency, toCurrency, rate)) {
+  const rate = await resolveSpotExchangeRate(fromCurrency, toCurrency);
+  if (!rate.ok) {
     return { ok: false, reason: 'missing_rate' };
   }
-  return { ok: true, amount: roundToPrecision(amount * rate, precision) };
+  return { ok: true, amount: roundToPrecision(amount * rate.rate, precision) };
 }
 
 export type JournalLineConversionInput = {

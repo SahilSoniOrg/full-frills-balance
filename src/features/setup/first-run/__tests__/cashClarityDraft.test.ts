@@ -123,6 +123,34 @@ describe('projectCashClarityDraft', () => {
     );
   });
 
+  it('previews a Wednesday fortnightly payday on the same selected date that setup saves', () => {
+    const result = projectCashClarityDraft(
+      draft({
+        income: {
+          kind: 'recurring',
+          items: [
+            {
+              id: 'salary',
+              name: 'Salary',
+              source: 'salary',
+              amount: 80000,
+              interval: PlannedPaymentInterval.WEEKLY,
+              intervalN: 2,
+              nextDate: dayjs('2026-09-30T18:45:00').valueOf(),
+            },
+          ],
+        },
+      }),
+      dayjs('2026-09-14T10:00:00'),
+    );
+    const payday = result.chart.find(point => point.events.some(event => event.name === 'Salary'));
+
+    expect(dayjs(payday?.x).format('YYYY-MM-DD')).toBe('2026-09-30');
+    expect(payday?.events).toContainEqual(
+      expect.objectContaining({ name: 'Salary', amount: 80000, kind: 'INFLOW' }),
+    );
+  });
+
   it('explains in-window planned payments on the clarity lines', () => {
     const result = projectCashClarityDraft(
       draft({
