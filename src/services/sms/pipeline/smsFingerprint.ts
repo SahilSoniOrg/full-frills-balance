@@ -26,7 +26,14 @@ export function resolveProcessingStatus(params: {
 }): InboxProcessingStatus {
   const { parsed, processedIds, exactJournalId, duplicate, existingStatus } = params;
 
-  if (existingStatus && existingStatus !== InboxProcessingStatus.PENDING) {
+  const mayRecoverFromParseFailure =
+    existingStatus === InboxProcessingStatus.PARSE_FAILED &&
+    parsed.parseStatus === InboxParseStatus.PARSED;
+  if (
+    existingStatus &&
+    existingStatus !== InboxProcessingStatus.PENDING &&
+    !mayRecoverFromParseFailure
+  ) {
     return existingStatus;
   }
   if (parsed.parseStatus === InboxParseStatus.PARSE_FAILED)

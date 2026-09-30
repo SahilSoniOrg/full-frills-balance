@@ -37,7 +37,7 @@ export class SmsParser {
     });
 
     const isPhoneNumber = /^\+?\d{10,14}$/.test(sms.address);
-    if (isPhoneNumber && info.direction === 'unknown') {
+    if (isPhoneNumber && info.direction === 'unknown' && !info.isTransactionLike) {
       return {
         id: sms.id,
         type: 'unknown',
@@ -50,7 +50,7 @@ export class SmsParser {
       };
     }
 
-    if (info.direction === 'unknown') {
+    if (info.direction === 'unknown' && !info.isTransactionLike) {
       return {
         id: sms.id,
         type: 'unknown',
@@ -65,19 +65,22 @@ export class SmsParser {
       };
     }
 
-    if (!info.amount) {
+    if (info.direction === 'unknown' || info.amount == null) {
       return {
         id: sms.id,
         merchant: info.merchantName,
-        type: info.direction === 'debit' ? 'debit' : 'credit',
+        type: info.direction,
         date: sms.date,
         rawBody: sms.body,
         address: sms.address,
         accountSource: info.sourceAccountHint,
         referenceNumber: info.referenceNumber,
-        confidence: 0.45,
+        confidence: info.parseConfidence ?? 0.3,
         parseStatus: InboxParseStatus.PARSE_FAILED,
-        parseReason: 'Could not find a supported amount',
+        parseReason:
+          info.direction === 'unknown'
+            ? 'Could not determine transaction direction; review this message'
+            : 'Could not find a supported transaction amount; review this message',
       };
     }
 
@@ -92,11 +95,13 @@ export class SmsParser {
       accountSource: info.sourceAccountHint,
       referenceNumber: info.referenceNumber,
       currencyCode: info.currencyCode,
-      confidence: info.merchantName ? 0.92 : 0.82,
+      confidence: info.parseConfidence ?? (info.merchantName ? 0.82 : 0.72),
       parseStatus: InboxParseStatus.PARSED,
-      parseReason: info.currencyCode
-        ? 'Parsed transaction and currency hint'
-        : 'Parsed transaction amount',
+      parseReason:
+        info.parseReason ||
+        (info.currencyCode
+          ? 'Parsed transaction and currency'
+          : 'Parsed transaction amount; currency needs review'),
     };
   }
 }

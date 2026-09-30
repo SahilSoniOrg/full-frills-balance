@@ -42,6 +42,8 @@ export function prepareUpsertInboxRecord(
     inputDate: sms.date,
     inputFingerprint: fingerprint,
     parseStatus: parsed.parseStatus,
+    parseConfidence: parsed.confidence,
+    parseReason: parsed.parseReason,
     parsedAmount: parsed.amount,
     parsedCurrencyCode: parsed.currencyCode,
     parsedMerchant: parsed.merchant,
