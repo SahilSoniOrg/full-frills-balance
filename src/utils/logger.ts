@@ -7,6 +7,11 @@
 
 import * as Sentry from '@sentry/react-native';
 import { AppConfig } from '@/src/constants/app-config';
+import {
+  safeDiagnosticError,
+  sanitizeLogContext,
+  sanitizeLogMessage,
+} from '@/src/utils/observabilityPrivacy';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'metric';
 
@@ -41,7 +46,8 @@ class Logger {
     }
 
     // Trace logic: Console visibility for developers
-    const safeMessage = message !== null && message !== undefined ? String(message) : 'Unknown';
+    const safeMessage = sanitizeLogMessage(message);
+    const safeContext = sanitizeLogContext(context);
     if (safeMessage.startsWith('[Trace]')) {
       if (!AppConfig.features.debug.tracePerformance) {
         return;
@@ -49,13 +55,16 @@ class Logger {
     }
 
     const timestamp = new Date().toISOString();
-    const contextStr = context?.traceId ? ` [TRC:${context.traceId}]` : '';
+    const contextStr =
+      safeContext?.traceId && typeof safeContext.traceId === 'string'
+        ? ` [TRC:${safeContext.traceId}]`
+        : '';
     let detailStr = '';
-    if (context) {
+    if (safeContext) {
       try {
-        detailStr = ` | ${JSON.stringify(context)}`;
-      } catch (error) {
-        detailStr = ` | [Serialization Error: ${error instanceof Error ? error.message : String(error)}]`;
+        detailStr = ` | ${JSON.stringify(safeContext)}`;
+      } catch {
+        detailStr = ' | [Diagnostic context unavailable]';
       }
     }
 
@@ -132,45 +141,25 @@ class Logger {
 
   error(message: string | unknown, error?: Error | unknown, context?: LogContext) {
     try {
-      const safeMessage =
-        message !== null && message !== undefined ? String(message) : 'Unknown Error';
-
-      const errorContext = {
-        ...context,
-        error:
-          error instanceof Error
-            ? {
-                message: error.message,
-                stack: error.stack,
-              }
-            : error !== undefined && error !== null
-              ? error
-              : undefined,
-      };
-
-      this.log('error', safeMessage, errorContext);
+      const safeMessage = sanitizeLogMessage(message);
+      const safeError =
+        error === undefined || error === null ? undefined : safeDiagnosticError(error);
+      const safeContext = sanitizeLogContext(context);
+      this.log('error', safeMessage, {
+        ...safeContext,
+        ...(safeError ? { error: safeError } : {}),
+      });
 
       // Report to Sentry (defensively)
       try {
-        if (error instanceof Error) {
-          Sentry.captureException(error, { extra: context });
-        } else if (typeof error === 'string' && error) {
-          Sentry.captureMessage(error, { extra: context });
-        } else if (error && error !== null) {
-          // For non-Error, non-string but truthy objects, create a wrapper
-          Sentry.captureException(new Error(String(error)), {
-            extra: { ...context, originalError: error },
-          });
-        } else if (safeMessage !== 'Unknown Error') {
-          // If we only have a message, capture it
-          Sentry.captureMessage(safeMessage, { extra: context });
-        }
+        if (safeError) Sentry.captureException(safeError);
+        else Sentry.captureMessage(safeMessage);
       } catch {
         // Ignore Sentry errors to prevent infinite loops or crashes
       }
-    } catch (globalErr) {
+    } catch {
       // Absolute fallback if logger itself fails
-      console.log('Logger.error critically failed', String(globalErr));
+      console.log('Logger.error critically failed');
     }
   }
 

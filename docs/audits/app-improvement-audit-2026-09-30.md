@@ -2,12 +2,12 @@
 
 ## P1 implementation levels — September 30, 2026
 
-The user authorized the four levels below, with GPT-6 Luna implementing and the orchestrator reviewing and committing each level before the next starts. This section supersedes the earlier parked status for F21/F22.
+The user authorized the four levels below, with GPT-6 Luna implementing and the orchestrator reviewing and committing each level before the next starts. This section records implemented levels separately from the historical findings below.
 
 | Level | Scope | Status |
 |---|---|---|
-| 1 | F21/F22 — audit integrity | Implemented and reviewed in this commit. |
-| 2 | F08/F09/F11 — privacy, SMS retention, projection teardown | Pending. |
+| 1 | F21/F22 — audit integrity | Committed as `b3d0f6d0`. |
+| 2 | F08/F09/F11 — privacy, SMS retention, projection teardown | Implemented and reviewed in this commit. |
 | 3 | F06/F07 — currency precision and onboarding recurrence | Pending. |
 | 4 | F10/F13/F14 — dated forecasts, next obligations, binding-day explanation | Pending. |
 
@@ -18,6 +18,16 @@ Budget updates now capture the original audit snapshot before model preparation 
 The worker reproduced both defects before fixing them. Full `bun run verify` completed with exit 0: **422 suites / 2,580 tests**, architecture/privacy/type checks and lint passed, retaining only two baseline journal-hook warnings. The worker's broader focused run passed 7 suites / 81 tests. Parent independently reviewed the patch and ran the budget/audit/payment regression suites. Evidence: `/tmp/full-frills-level-1-verify.log` and `/tmp/full-frills-level-1-parent-review.log`. Native SQLite parity remains unverified.
 
 Level 2 preflight correction: `AnalyticsService.logBudgetCreated` already ignores its amount argument. The older F08 claim that budget creation transmits that amount was too broad; budget deletion names, arbitrary telemetry properties, and unsanitized diagnostics remain relevant. Level 2 will validate SDK payloads directly.
+
+### Level 2 — privacy, SMS retention, projection teardown
+
+Observability now owns permitted event fields and values before PostHog calls and before diagnostic logs are buffered. The unrestricted SDK provider is removed, PostHog automatic capture is disabled, and Sentry error, breadcrumb, and transaction payloads are rebuilt from permitted fields. Native Sentry reporting is disabled because its automatic events bypass the JavaScript filters. Diagnostic exports use the same sanitized error representation; arbitrary error text and source-path details are intentionally reduced.
+
+SMS scanning is manual. Raw sender/body remain local while an SMS awaits review and are cleared when imported, auto-posted, or dismissed. New journal writes omit raw SMS copies; persisted duplicate identifiers are SHA-256 digests. Bounded, idempotent repository cleanup handles older inbox, journal metadata, and known audit copies, including after restore. Extracted financial details, user notes, and unrelated channel metadata are preserved. The local policy and acknowledgement copy now explain this lifecycle, with policy version September 30, 2026.
+
+Widget publication and teardown share one service and queue. Deletion, workplace reset, factory reset, and restore clear reactive/persistent projections after successful database publication. Old leases cannot republish deleted data, inactive-workplace cleanup preserves another owner's widget, and failed cleanup is reported as committed warnings with persisted recovery on launch/foreground. Pending snapshot cleanup blocks old cached reads. Both native widget modules expose explicit clear operations, with a JavaScript fallback for older binaries.
+
+Parent review independently passed 2 privacy/digest suites / 9 tests and 3 lifecycle suites / 23 tests. Four ASCII digest inputs also matched an independent SHA-256 implementation. Final `bun run verify` completed with exit 0: **428 suites / 2,613 tests**, including architecture, policy-version and type checks; lint retains only the two baseline warnings. Evidence: `/tmp/full-frills-level-2-verify-final-retry-1.log`, `/tmp/full-frills-level-2-parent-privacy-focused.log`, and `/tmp/full-frills-level-2-parent-lifecycle.log`. The first full run's outdated mocks and plaintext-fingerprint expectation were corrected before the final passing run. Native widget storage behavior on iOS/Android hardware and native SQLite parity remain unverified; SDK tests intercept mocked outgoing calls, not production transmissions. The public privacy page was not deployed by this task, and historical user-written notes are not destructively rewritten.
 
 ## F01–F05 implementation review — September 30, 2026
 

@@ -15,6 +15,7 @@ import { AppConfig } from '@/src/constants';
 import { buildReferenceDuplicateMatch } from '@/src/services/sms/smsDuplicateDetection';
 import { logger } from '@/src/utils/logger';
 import { computeSmsReservationKey, resolveProcessingStatus } from './smsFingerprint';
+import { sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
 import { SmsAnalysisResult } from './types';
 
 export function prepareUpsertInboxRecord(
@@ -31,16 +32,22 @@ export function prepareUpsertInboxRecord(
   const existingMetadata = existingRecord?.metadataJson
     ? safeParseJSON<Record<string, unknown>>(existingRecord.metadataJson, {})
     : {};
+  const cleanedMetadata = sanitizeSmsMetadataJson(JSON.stringify(existingMetadata), true);
   const metadataJson = JSON.stringify({
-    ...existingMetadata,
+    ...(cleanedMetadata ? safeParseJSON<Record<string, unknown>>(cleanedMetadata, {}) : {}),
     ...(duplicate ? { duplicateReasons: duplicate.reasons } : {}),
   });
+  const keepPendingReviewContent = ![
+    InboxProcessingStatus.IMPORTED,
+    InboxProcessingStatus.AUTO_POSTED,
+    InboxProcessingStatus.DISMISSED,
+  ].includes(processingStatus);
   return {
     workplaceId,
     channel: 'sms' as const,
     deviceSourceId: sms.id,
-    senderAddress: sms.address,
-    rawBody: sms.body,
+    senderAddress: keepPendingReviewContent ? sms.address : undefined,
+    rawBody: keepPendingReviewContent ? sms.body : undefined,
     inputDate: sms.date,
     inputFingerprint: fingerprint,
     parseStatus: parsed.parseStatus,

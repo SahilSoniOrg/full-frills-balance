@@ -16,6 +16,7 @@ import {
 } from '@/src/data/repositories/AccountingWriteSession';
 import { Model, Q } from '@nozbe/watermelondb';
 import { Observable } from 'rxjs';
+import { sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
 
 export interface TransactionInboxRecordWriteData {
   workplaceId: WorkplaceId;
@@ -174,6 +175,9 @@ export class TransactionInboxRepository {
       entry.linkedJournalId = journalId;
       entry.processingStatus = disposition;
       entry.processedAt = Date.now();
+      entry.senderAddress = undefined;
+      entry.rawBody = undefined;
+      entry.metadataJson = sanitizeSmsMetadataJson(entry.metadataJson, true);
     });
   }
 
@@ -181,6 +185,11 @@ export class TransactionInboxRepository {
     return record.prepareUpdate(entry => {
       entry.processingStatus = status;
       entry.processedAt = isProcessedStatus(status) ? Date.now() : undefined;
+      if (isProcessedStatus(status)) {
+        entry.senderAddress = undefined;
+        entry.rawBody = undefined;
+        entry.metadataJson = sanitizeSmsMetadataJson(entry.metadataJson, true);
+      }
     });
   }
 
@@ -193,13 +202,21 @@ export class TransactionInboxRepository {
       throw new Error('Inbox record does not belong to the specified workplace');
     }
 
+    const safeData: TransactionInboxRecordWriteData = {
+      ...data,
+      ...(isProcessedStatus(data.processingStatus)
+        ? { senderAddress: undefined, rawBody: undefined }
+        : {}),
+      metadataJson: sanitizeSmsMetadataJson(data.metadataJson, data.channel === 'sms'),
+    };
+
     if (existingRecord) {
       const before = inboxAuditState(existingRecord);
-      const after = mergeInboxAuditState(existingRecord, data);
+      const after = mergeInboxAuditState(existingRecord, safeData);
       return {
         ops: [
           existingRecord.prepareUpdate(record => {
-            Object.assign(record, data);
+            Object.assign(record, safeData);
           }),
           ...(!sameInboxAuditState(before, after)
             ? [
@@ -209,7 +226,7 @@ export class TransactionInboxRepository {
                   'transaction_inbox_record.updated',
                   before,
                   after,
-                  data.workplaceId,
+                  safeData.workplaceId,
                   'system',
                   auditContext?.correlationId,
                 ),
@@ -221,7 +238,7 @@ export class TransactionInboxRepository {
     }
 
     const record = this.inbox.prepareCreate((entry: TransactionInboxRecord) => {
-      Object.assign(entry, data);
+      Object.assign(entry, safeData);
     });
     return {
       ops: [
@@ -232,7 +249,7 @@ export class TransactionInboxRepository {
           'transaction_inbox_record.created',
           undefined,
           inboxAuditState(data),
-          data.workplaceId,
+          safeData.workplaceId,
           'system',
           auditContext?.correlationId,
         ),

@@ -2,6 +2,7 @@ import { AppConfig } from '@/src/constants';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { DuplicateMatch } from '@/src/services/sms/smsDuplicateDetection';
 import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
+import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
 
 const SMS_CONFIG = AppConfig.input.sms;
 const DUPLICATE_CONFIG = SMS_CONFIG.duplicateDetection;
@@ -14,7 +15,9 @@ export function computeSmsFingerprint(sender: string, body: string, date: number
     .replace(/[^a-z0-9 ]/g, '')
     .trim();
   const dateBucket = Math.floor(date / DUPLICATE_CONFIG.fingerprintDayBucketMs);
-  return `${normalizedSender}::${normalizedBody.slice(0, 160)}::${dateBucket}`;
+  return hashLegacySmsFingerprint(
+    `${normalizedSender}::${normalizedBody.slice(0, 160)}::${dateBucket}`,
+  );
 }
 
 /** Strict same-scan reservation identity; unlike the persisted legacy fingerprint, this keeps

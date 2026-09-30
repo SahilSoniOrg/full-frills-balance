@@ -90,6 +90,9 @@ jest.mock('@/src/data/repositories/journal/SmsJournalQueries', () => ({
   },
 }));
 jest.mock('@/src/utils/logger');
+jest.mock('@/src/services/sms/SmsPrivacyService', () => ({
+  smsPrivacyService: { cleanupLegacyContent: jest.fn().mockResolvedValue(undefined) },
+}));
 
 function createMockAuditCollection() {
   return {

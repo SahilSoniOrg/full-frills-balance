@@ -9,6 +9,7 @@ import {
   resetDatabase,
 } from '@/src/services/integrity';
 import { AppNavigation } from '@/src/utils/navigation';
+import { toast } from '@/src/utils/alerts';
 import { useCallback } from 'react';
 
 export type MaintenanceSettingsViewModel = ReturnType<typeof useDataMaintenanceActions>;
@@ -42,7 +43,12 @@ export function useMaintenanceSettingsViewModel(): MaintenanceSettingsViewModel 
 
   const resetApp = useCallback(async () => {
     analytics.logFactoryReset();
-    await resetDatabase();
+    const result = await resetDatabase();
+    if (result.warnings.length > 0) {
+      toast.warning(
+        'Your data was reset. Some cached displays could not be cleared and may need a restart.',
+      );
+    }
     requireRestart({ type: 'RESET' });
   }, [requireRestart]);
 

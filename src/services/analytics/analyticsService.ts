@@ -1,5 +1,14 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { logger } from '@/src/utils/logger';
+import {
+  safeDiagnosticError,
+  safeAnalyticsIdentity,
+  sanitizeAnalyticsProperties,
+  sanitizeGlobalAnalyticsProperties,
+  sanitizeSentryBreadcrumb,
+  sanitizeSentryErrorEvent,
+  sanitizeSentryTransactionEvent,
+} from '@/src/utils/observabilityPrivacy';
 import * as Sentry from '@sentry/react-native';
 import * as Application from 'expo-application';
 import PostHog from 'posthog-react-native';
@@ -18,15 +27,19 @@ export class AnalyticsService {
   private sessionStartTime: number = Date.now();
   private sessionTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
 
-  public get posthog(): PostHog | null {
-    return this._posthog;
-  }
+  private static readonly SENTRY_OPTIONS = {
+    sendDefaultPii: false,
+    // Sentry 7.11 drops JS beforeSend hooks from native initialization options.
+    // Disable the native SDK, leaving only JS transport behind our sanitizer.
+    enableNative: false,
+    enableNativeCrashHandling: false,
+  } as const;
 
   /**
    * Get the anonymous distinct ID for the current user.
    */
   getDistinctId(): string {
-    return this._posthog?.getDistinctId() || 'anonymous';
+    return safeAnalyticsIdentity(this._posthog?.getDistinctId());
   }
 
   /**
@@ -60,12 +73,13 @@ export class AnalyticsService {
         this._posthog = new PostHog(POSTHOG_API_KEY, {
           host: POSTHOG_HOST,
           disabled: !isPosthogEnabled,
-          errorTracking: { autocapture: true },
+          errorTracking: { autocapture: false, exceptionSteps: { enabled: false } },
+          captureAppLifecycleEvents: false,
+          capturePushNotificationSubscriptions: false,
+          capturePushNotificationOpened: false,
           enablePersistSessionIdAcrossRestart: true,
-          customAppProperties: props => ({
-            ...props,
-            ...getGlobalProperties(),
-          }),
+          customAppProperties: props =>
+            sanitizeGlobalAnalyticsProperties({ ...props, ...getGlobalProperties() }),
           enableSessionReplay: false,
         });
 
@@ -101,8 +115,12 @@ export class AnalyticsService {
         dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
         enabled: true,
         debug: false,
+        ...AnalyticsService.SENTRY_OPTIONS,
         tracesSampleRate: 1.0,
         integrations: [navigationIntegration, Sentry.reactNativeTracingIntegration()],
+        beforeSend: event => sanitizeSentryErrorEvent(event),
+        beforeSendTransaction: event => sanitizeSentryTransactionEvent(event),
+        beforeBreadcrumb: crumb => sanitizeSentryBreadcrumb(crumb),
       });
 
       if (this._posthog) {
@@ -120,17 +138,14 @@ export class AnalyticsService {
    * Track a custom event
    */
   track(eventName: string, props?: AnalyticsProperties): boolean {
-    if (!this.posthog) return false;
+    if (!this._posthog) return false;
+    const safeProperties = sanitizeAnalyticsProperties(eventName, props);
+    if (safeProperties === null) return false;
 
     try {
-      this.posthog.capture(
-        eventName,
-        Object.fromEntries(
-          Object.entries(props ?? {}).filter(([, value]) => value !== undefined),
-        ) as Record<string, string | number | boolean | null>,
-      );
+      this._posthog.capture(eventName, safeProperties);
       if (__DEV__) {
-        logger.debug(`[Analytics] Tracked: ${eventName}`, props);
+        logger.debug(`[Analytics] Tracked event ${eventName}`);
       }
       return true;
     } catch (error) {
@@ -143,32 +158,37 @@ export class AnalyticsService {
    * Identify the user/device with enhanced properties
    */
   identify(distinctId: string, properties?: Record<string, string | number | boolean>) {
-    Sentry.setUser({ id: distinctId });
-    if (!this.posthog) return;
+    const safeId = safeAnalyticsIdentity(distinctId);
+    Sentry.setUser({ id: safeId });
+    if (!this._posthog) return;
 
     try {
-      this.posthog.identify(distinctId, properties);
+      this._posthog.identify(safeId);
       if (__DEV__) {
-        logger.debug(`[Analytics] Identified: ${distinctId}`, properties);
+        logger.debug('[Analytics] Identified anonymous device');
       }
     } catch (error) {
-      logger.error(`[Analytics] Failed to identify user: ${distinctId}`, error);
+      logger.error('[Analytics] Failed to identify anonymous device', error);
     }
+    void properties;
   }
 
   /**
    * Track a screen view
    */
   screen(screenName: string, props?: Record<string, string | number | boolean>) {
-    if (!this.posthog) return;
+    if (!this._posthog) return;
+    const safeProperties = sanitizeAnalyticsProperties('screen_view', {
+      ...props,
+      screen: screenName,
+    });
+    if (!safeProperties) return;
 
     try {
-      this.posthog.screen(screenName, props);
-      if (__DEV__) {
-        logger.debug(`[Analytics] Screen: ${screenName}`, props);
-      }
+      this._posthog.screen(String(safeProperties.screen ?? 'other'), safeProperties);
+      if (__DEV__) logger.debug('[Analytics] Screen viewed');
     } catch (error) {
-      logger.error(`[Analytics] Failed to track screen: ${screenName}`, error);
+      logger.error('[Analytics] Failed to track screen', error);
     }
   }
 
@@ -300,20 +320,11 @@ export class AnalyticsService {
   }
 
   logError(error: Error, componentStack?: string) {
-    const trimLimit = AppConfig.constants.validation.maxTrimLength;
-    this.track('app_error', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack?.slice(0, trimLimit) || 'no-stack',
-      componentStack: componentStack?.slice(0, trimLimit) || 'no-component-stack',
-    });
+    this.track('app_error', { name: error.name });
 
     // Report to Sentry with component stack
-    Sentry.captureException(error, {
-      contexts: {
-        react: { componentStack },
-      },
-    });
+    Sentry.captureException(safeDiagnosticError(error));
+    void componentStack;
   }
 
   /**
@@ -397,16 +408,14 @@ export class AnalyticsService {
    * Update user properties for better segmentation
    */
   updateUserProperties(properties: AnalyticsProperties) {
-    if (!this.posthog) return;
+    if (!this._posthog) return;
+    const safeProperties = sanitizeGlobalAnalyticsProperties(properties);
 
     try {
-      this.posthog.setPersonProperties(
-        Object.fromEntries(
-          Object.entries(properties).filter(([, value]) => value !== undefined),
-        ) as Record<string, string | number | boolean | null>,
-      );
+      if (Object.keys(safeProperties).length === 0) return;
+      this._posthog.setPersonProperties(safeProperties);
       if (__DEV__) {
-        logger.debug('[Analytics] Updated user properties', properties);
+        logger.debug('[Analytics] Updated permitted app context');
       }
     } catch (error) {
       logger.error('[Analytics] Failed to update user properties', error);

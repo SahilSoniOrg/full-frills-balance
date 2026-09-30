@@ -15,6 +15,8 @@ import { WORKPLACE_SCOPED_TABLE_NAMES } from '@/src/services/workplace/workplace
 import { countAccountsVsCategories } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
 import { snapshotService } from '@/src/utils/SnapshotService';
+import { reactiveCacheCoordinator } from '@/src/services/reactive/ReactiveCacheCoordinator';
+import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
 import { distinctUntilChanged, map, Observable } from 'rxjs';
 
 export class WorkplaceService {
@@ -45,7 +47,11 @@ export class WorkplaceService {
   ): Promise<Workplace> {
     const workplaceId = options.id ?? (generator() as WorkplaceId);
     const existing = await this.getWorkplace(workplaceId);
-    if (existing) return existing;
+    if (existing) {
+      snapshotService.resumeSnapshotsForWorkplace(workplaceId);
+      widgetProjectionService.resumeWorkplace(workplaceId);
+      return existing;
+    }
 
     let workplace: Workplace;
     try {
@@ -65,6 +71,8 @@ export class WorkplaceService {
       if (published) return published;
       throw error;
     }
+    snapshotService.resumeSnapshotsForWorkplace(workplaceId);
+    widgetProjectionService.resumeWorkplace(workplaceId);
     analytics.logWorkplaceCreated(name, icon);
     return workplace;
   }
@@ -75,6 +83,8 @@ export class WorkplaceService {
       if (!id) throw new Error('Invalid workplaceId');
       const target = await this.getWorkplace(id);
       if (!target) throw new Error(`Workplace not found: ${id}`);
+      snapshotService.resumeSnapshotsForWorkplace(id);
+      widgetProjectionService.resumeWorkplace(id);
       const previousId = preferences.device.activeWorkplaceId;
       if (previousId === id) return;
       this.publishActiveWorkplace(id);
@@ -128,19 +138,33 @@ export class WorkplaceService {
 
       // Remove scoped data and the shell together. The resolver will expose the
       // creation gate when this was the last Workplace.
+      const wasActive = preferences.device.activeWorkplaceId === id;
       await databaseRepository.destroyWorkplace(id, WORKPLACE_SCOPED_TABLE_NAMES);
-      snapshotService.clearSnapshotsForWorkplace(id);
       const warnings: string[] = [];
+      try {
+        reactiveCacheCoordinator.clearAll(id);
+      } catch (error) {
+        logger.warn('[WorkplaceService] Projection cache cleanup failed after deletion', { error });
+        warnings.push('Projection cache cleanup failed');
+      }
+      if (!snapshotService.clearSnapshotsForWorkplace(id)) warnings.push('Snapshot cleanup failed');
 
       // Repair the pointer only after the database publication succeeds. Never
       // point at a deleted Workplace, including when the last one is removed.
-      if (preferences.device.activeWorkplaceId === id) {
+      if (wasActive) {
         try {
           preferences.device.setActiveWorkplaceId(undefined);
         } catch (error) {
           logger.warn('[WorkplaceService] Active Workplace pointer cleanup failed', { error });
           warnings.push('Active Workplace pointer cleanup failed');
         }
+      }
+      const activeWorkplaceId = preferences.device.activeWorkplaceId;
+      try {
+        await widgetProjectionService.clearWorkplace(id, wasActive ? id : activeWorkplaceId);
+      } catch (error) {
+        logger.warn('[WorkplaceService] Widget cleanup failed after deletion', { error });
+        warnings.push('Widget cleanup failed');
       }
       try {
         preferences.workplace.clear(id);

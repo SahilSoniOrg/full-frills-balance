@@ -9,7 +9,7 @@ export const PRIVACY_NOTICE_STRINGS = {
   acknowledgementPromptCalloutBody:
     'No bank connection. Your financial records stay on this device unless you choose to export or share them.',
   acknowledgementPromptDetails:
-    'Exchange rates and optional analytics may use limited technical data. They do not receive transaction amounts, merchants, balances, notes, or SMS text.',
+    'SMS import runs only when you start it. Raw messages stay on this device while awaiting review, then are cleared after import or dismissal. Cleanup removes known structured SMS copies; user-written notes and other free-form historical text are left intact. Analytics does not receive transaction amounts, merchants, balances, notes, or SMS text.',
   acknowledgementPromptClose: 'Close privacy acknowledgement',
   acknowledgementPromptAction: 'Acknowledge & continue',
   subtitle: 'A plain-language summary of what Full Frills Balance stores and sends.',
@@ -25,7 +25,7 @@ export const PRIVACY_NOTICE_STRINGS = {
     'Full Frills Balance does not connect to bank accounts. You add accounts, balances, income, spending, and notes yourself, or import a file you choose.',
   localTitle: 'Financial records stay local',
   localBody:
-    'Your accounts, journals, entries, categories, and balances are stored on this device. No login or cloud account is required.',
+    'Your accounts, journals, entries, categories, and balances are stored on this device. SMS messages are read only when you start import; raw sender and message text stay local while awaiting review, then are cleared from the inbox after import or dismissal. Cleanup removes known structured SMS copies, while user-written notes and other free-form historical text are left intact. No login or cloud account is required.',
   onlineTitle: 'Limited online services',
   onlineBody:
     'The app may request exchange rates. If product analytics is enabled, it may send best-effort pseudonymous product and technical events, including the policy version you acknowledge. This telemetry is not a signed legal record. We do not intentionally send transaction amounts, merchants, balances, notes, or SMS text to analytics providers. Session replay is disabled.',

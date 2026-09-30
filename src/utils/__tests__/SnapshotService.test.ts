@@ -7,6 +7,7 @@ jest.mock('@/src/utils/storage', () => ({
   storage: {
     set: jest.fn((key: string, value: unknown) => mockSnapshotStore.set(key, value)),
     getString: jest.fn((key: string) => mockSnapshotStore.get(key) as string | undefined),
+    getBoolean: jest.fn((key: string) => mockSnapshotStore.get(key) as boolean | undefined),
     remove: jest.fn((key: string) => mockSnapshotStore.delete(key)),
     getAllKeys: jest.fn(() => Array.from(mockSnapshotStore.keys())),
   },
@@ -17,6 +18,8 @@ describe('SnapshotService', () => {
     mockSnapshotStore.clear();
     jest.clearAllMocks();
     snapshotService.clearSnapshots();
+    snapshotService.resumeSnapshotsForWorkplace('workplace-1');
+    snapshotService.resumeSnapshotsForWorkplace('workplace-2');
     jest.clearAllMocks();
   });
 
@@ -92,6 +95,55 @@ describe('SnapshotService', () => {
     snapshotService.clearSnapshots();
     jest.runAllTimers();
     expect(mockSnapshotStore.has('dashboard_data_snapshot_workplace-1')).toBe(false);
+  });
+
+  it('blocks stale snapshot emissions until a published workplace resumes writes', () => {
+    snapshotService.clearSnapshots();
+    snapshotService.saveCustomSnapshot('workplace-1', 'safe_to_spend', { stale: true });
+    expect(mockSnapshotStore.has('safe_to_spend_workplace-1')).toBe(false);
+
+    snapshotService.resumeSnapshotsForWorkplace('workplace-1');
+    snapshotService.saveCustomSnapshot('workplace-1', 'safe_to_spend', { current: true });
+    expect(mockSnapshotStore.has('safe_to_spend_workplace-1')).toBe(true);
+  });
+
+  it('clears the Safe to Spend projection key for one workplace', () => {
+    snapshotService.saveCustomSnapshot('workplace-1', 'safe_to_spend', { value: 1 });
+    snapshotService.saveCustomSnapshot('workplace-2', 'safe_to_spend', { value: 2 });
+    snapshotService.clearSnapshotsForWorkplace('workplace-1');
+    expect(mockSnapshotStore.has('safe_to_spend_workplace-1')).toBe(false);
+    expect(mockSnapshotStore.has('safe_to_spend_workplace-2')).toBe(true);
+  });
+
+  it('retries persisted cleanup markers on startup', () => {
+    mockSnapshotStore.set('snapshot_cleanup_pending_all_v1', true);
+    mockSnapshotStore.set(
+      'dashboard_data_snapshot_workplace-1',
+      JSON.stringify({ data: {}, timestamp: 1, workplaceId: 'workplace-1' }),
+    );
+    expect(snapshotService.getDashboardSnapshot('workplace-1')).toBeNull();
+    expect(snapshotService.retryPendingCleanup()).toBe(true);
+    expect(mockSnapshotStore.has('dashboard_data_snapshot_workplace-1')).toBe(false);
+    expect(mockSnapshotStore.has('snapshot_cleanup_pending_all_v1')).toBe(false);
+    snapshotService.resumeSnapshotsForWorkplace('workplace-1');
+    snapshotService.saveDashboardSnapshot('workplace-1', { fresh: true });
+    expect(snapshotService.getDashboardSnapshot('workplace-1')).toEqual({ fresh: true });
+  });
+
+  it('keeps reset snapshots unreadable and unwritable after cleanup until domain resume', () => {
+    snapshotService.clearSnapshots();
+    mockSnapshotStore.set(
+      'dashboard_data_snapshot_workplace-1',
+      JSON.stringify({ data: { stale: true }, timestamp: Date.now(), workplaceId: 'workplace-1' }),
+    );
+    mockSnapshotStore.set('snapshot_cleanup_pending_all_v1', true);
+    expect(snapshotService.getDashboardSnapshot('workplace-1')).toBeNull();
+    expect(snapshotService.retryPendingCleanup()).toBe(true);
+    snapshotService.saveDashboardSnapshot('workplace-1', { stale: false });
+    expect(mockSnapshotStore.has('dashboard_data_snapshot_workplace-1')).toBe(false);
+    snapshotService.resumeSnapshotsForWorkplace('workplace-1');
+    snapshotService.saveDashboardSnapshot('workplace-1', { fresh: true });
+    expect(snapshotService.getDashboardSnapshot('workplace-1')).toEqual({ fresh: true });
   });
 
   it('clears all snapshot types for one workplace without touching another', () => {

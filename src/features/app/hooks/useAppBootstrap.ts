@@ -7,7 +7,6 @@ import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/services/preferences';
 import { runAfterInteractions } from '@/src/utils/scheduler';
 import { useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
 
 // Cache Warmup Imports
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
@@ -16,12 +15,15 @@ import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { sharingService } from '@/src/services/SharingService';
 import { cleanupGhostWorkplaces, runStartupCheck } from '@/src/services/integrity';
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
+import { smsPrivacyService } from '@/src/services/sms/SmsPrivacyService';
 import { notificationService } from '@/src/services/notification/NotificationService';
 import { WorkplaceId } from '@/src/types/ids';
 import { runAppBootstrapSideEffects } from '../bootstrap';
 import { checkJournalBalancesOnStartup } from '../journalBalanceStartupCheck';
 import { purgeLocalAiCachesOnce } from '../purgeLocalAiCaches';
-import { LatestGenerationCoordinator } from './latestGeneration';
+import { LatestGenerationCoordinator } from '@/src/services/LatestGenerationCoordinator';
+import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
+import { snapshotService } from '@/src/utils/SnapshotService';
 
 /**
  * Bootstraps app-wide side effects and data hydration.
@@ -38,6 +40,8 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
 
   useEffect(() => {
     if (workplaceId) {
+      widgetProjectionService.resumeWorkplace(workplaceId);
+      snapshotService.resumeSnapshotsForWorkplace(workplaceId);
       analytics.syncActiveWorkplace(workplaceId, defaultCurrencyCode);
     }
 
@@ -89,11 +93,6 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
             notificationWeekday: notifWeekday,
           } = preferences.getSnapshot();
           const notifCadence = notificationCadence || 'none';
-          const shouldProcessSms =
-            Platform.OS === 'android' &&
-            preferences.device.getSnapshot().isSmsImportEnabled &&
-            Boolean(workplaceId);
-
           await Promise.allSettled([
             purgeLocalAiCachesOnce(),
             currencyInitService.initialize(),
@@ -103,6 +102,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
             runStartupCheck(workplaceId, lease.signal),
             cleanupGhostWorkplaces(),
             processDuePlannedPayments(workplaceId, lease.signal),
+            smsPrivacyService.cleanupLegacyContent(),
             sharingService.init(),
             exchangeRateService.preWarmCache(defaultCurrencyCode),
             notificationService.scheduleReminder(
@@ -111,17 +111,6 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
               notifMinute,
               notifWeekday,
             ),
-            ...(shouldProcessSms
-              ? [
-                  import('@/src/services/sms-service').then(({ smsService }) =>
-                    lease.isCurrent()
-                      ? smsService
-                          .processUnprocessedSms(workplaceId, lease.signal)
-                          .then(() => undefined)
-                      : Promise.resolve(),
-                  ),
-                ]
-              : []),
           ]);
 
           // Runs after the batch so a full journal scan does not contend with startup work.

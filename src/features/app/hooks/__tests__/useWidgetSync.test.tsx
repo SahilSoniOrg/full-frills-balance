@@ -34,8 +34,8 @@ jest.mock('@/src/hooks/use-theme', () => ({
     },
   }),
 }));
-jest.mock('@/src/features/app/hooks/loadWidgetModule', () => ({
-  loadWidgetModule: async () => ({ syncWidgetData: mockSyncWidgetData }),
+jest.mock('@/src/services/widgets/nativeWidgetAdapter', () => ({
+  loadNativeWidgetAdapter: async () => ({ syncWidgetData: mockSyncWidgetData }),
 }));
 jest.mock('react-native/Libraries/Utilities/Platform', () => ({
   __esModule: true,

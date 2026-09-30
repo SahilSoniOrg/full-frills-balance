@@ -4,6 +4,7 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { compression } from '../utils/compression';
 import { logger } from '../utils/logger';
+import { safeDiagnosticError } from '../utils/observabilityPrivacy';
 import { analytics } from './analytics';
 import { ShareFormat, sharingService } from './SharingService';
 
@@ -76,14 +77,14 @@ export class BugReportService {
     lines.push(
       `App Version: ${Application.nativeApplicationVersion} (${Application.nativeBuildVersion})`,
     );
-    lines.push(`Device Name: ${Device.deviceName}`);
     lines.push('');
 
     if (error) {
+      const safeError = safeDiagnosticError(error);
       lines.push('--- Error Details ---');
-      lines.push(`Name: ${error.name}`);
-      lines.push(`Message: ${error.message}`);
-      lines.push(`Stack:\n${error.stack || 'No stack trace available'}`);
+      lines.push(`Name: ${safeError.name}`);
+      lines.push(`Message: ${safeError.message}`);
+      lines.push(`Stack:\n${safeError.stack || 'No safe stack frames available'}`);
       lines.push('');
     }
 

@@ -104,8 +104,7 @@ function buildDescription(
 ): string {
   if (customDescription?.trim()) return expandDescriptionTemplate(customDescription, item);
   if (item.parsedMerchant?.trim()) return item.parsedMerchant.trim();
-  if (item.senderAddress?.trim()) return item.senderAddress.trim();
-  return type.charAt(0).toUpperCase() + type.slice(1);
+  return `${type.charAt(0).toUpperCase() + type.slice(1)} via SMS`;
 }
 
 function buildNotes(item: TransactionInboxItem): string {

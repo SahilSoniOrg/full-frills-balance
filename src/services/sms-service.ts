@@ -15,6 +15,7 @@ import {
   SmsRuleSuggestion,
 } from '@/src/services/sms/SmsRuleEngine';
 import { smsSyncPipeline } from '@/src/services/sms/pipeline';
+import { smsPrivacyService } from '@/src/services/sms/SmsPrivacyService';
 import { map, Observable } from 'rxjs';
 
 export type SmsInboxFilterStatus =
@@ -38,6 +39,7 @@ class SmsService {
     workplaceId: WorkplaceId,
     pageSize: number = AppConfig.pagination.smsImportScanLimit,
   ): Promise<SmsSyncResult> {
+    await smsPrivacyService.cleanupLegacyContent();
     const importedCount = await smsSyncPipeline.scanInbox(workplaceId, pageSize);
     return { cursor: pageSize, importedCount };
   }
@@ -47,12 +49,14 @@ class SmsService {
     workplaceId: WorkplaceId,
     pageSize: number = AppConfig.pagination.smsImportScanLimit,
   ): Promise<SmsSyncResult> {
+    await smsPrivacyService.cleanupLegacyContent();
     const nextCursor = cursor + pageSize;
     const importedCount = await smsSyncPipeline.scanInbox(workplaceId, nextCursor);
     return { cursor: nextCursor, importedCount };
   }
 
   async processUnprocessedSms(workplaceId: WorkplaceId, signal?: AbortSignal): Promise<number> {
+    await smsPrivacyService.cleanupLegacyContent();
     return smsSyncPipeline.scanInbox(workplaceId, AppConfig.pagination.smsImportScanLimit, signal);
   }
 

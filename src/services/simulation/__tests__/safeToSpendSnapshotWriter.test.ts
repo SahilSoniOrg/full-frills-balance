@@ -16,6 +16,7 @@ jest.mock('@/src/utils/storage', () => ({
   storage: {
     set: jest.fn((key: string, value: unknown) => mockSnapshotStore.set(key, value)),
     getString: jest.fn((key: string) => mockSnapshotStore.get(key) as string | undefined),
+    getBoolean: jest.fn((key: string) => mockSnapshotStore.get(key) as boolean | undefined),
     remove: jest.fn((key: string) => mockSnapshotStore.delete(key)),
     getAllKeys: jest.fn(() => Array.from(mockSnapshotStore.keys())),
   },
@@ -88,6 +89,7 @@ describe('safeToSpendSnapshotWriter', () => {
   beforeEach(() => {
     mockSnapshotStore.clear();
     snapshotService.clearSnapshots();
+    snapshotService.resumeSnapshotsForWorkplace('wp-1');
   });
 
   it('round-trips the mint number without heavy sim payloads', () => {

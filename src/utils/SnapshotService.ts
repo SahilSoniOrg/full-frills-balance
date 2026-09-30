@@ -3,6 +3,8 @@ import { storage } from './storage';
 
 const DASHBOARD_SNAPSHOT_KEY = 'dashboard_data_snapshot';
 const WEALTH_SNAPSHOT_KEY = 'wealth_summary_snapshot';
+const SNAPSHOT_CLEANUP_PENDING_ALL = 'snapshot_cleanup_pending_all_v1';
+const SNAPSHOT_CLEANUP_PENDING_WORKPLACE = 'snapshot_cleanup_pending_workplace_v1_';
 
 // 2 days TTL for snapshots to ensure they don't get too stale
 const SNAPSHOT_MAX_AGE_MS = 2 * 24 * 60 * 60 * 1000;
@@ -27,6 +29,8 @@ class SnapshotService {
    * cold-boot behavior.
    */
   private readonly lastPersistedPayloads = new Map<string, string>();
+  private readonly blockedWorkplaces = new Set<string>();
+  private snapshotsPaused = false;
 
   private static isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null;
@@ -117,7 +121,13 @@ class SnapshotService {
   }
 
   private saveSnapshot<T>(storageKey: string, workplaceId: string, data: T, label: string): void {
+    if (this.snapshotsPaused || this.blockedWorkplaces.has(workplaceId)) return;
     try {
+      if (
+        storage.getBoolean(SNAPSHOT_CLEANUP_PENDING_ALL) ||
+        storage.getBoolean(`${SNAPSHOT_CLEANUP_PENDING_WORKPLACE}${workplaceId}`)
+      )
+        return;
       const payload = JSON.stringify(data, this.replacer) ?? 'undefined';
 
       // A storage read protects correctness if snapshots were cleared outside
@@ -179,6 +189,13 @@ class SnapshotService {
    */
   private getValidatedSnapshot<T>(key: string, workplaceId: string): T | null {
     try {
+      if (
+        this.snapshotsPaused ||
+        this.blockedWorkplaces.has(workplaceId) ||
+        storage.getBoolean(SNAPSHOT_CLEANUP_PENDING_ALL) ||
+        storage.getBoolean(`${SNAPSHOT_CLEANUP_PENDING_WORKPLACE}${workplaceId}`)
+      )
+        return null;
       const stored = storage.getString(key);
       if (!stored) return null;
 
@@ -213,39 +230,71 @@ class SnapshotService {
   /**
    * Clears all snapshot records selectively without wiping non-snapshot storage keys.
    */
-  clearSnapshots(): void {
+  clearSnapshots(): boolean {
+    this.snapshotsPaused = true;
     if (this.pendingWriteTimer !== null) {
       clearTimeout(this.pendingWriteTimer);
       this.pendingWriteTimer = null;
     }
     this.pendingWrites.clear();
     try {
+      storage.set(SNAPSHOT_CLEANUP_PENDING_ALL, true);
+    } catch {
+      /* Storage may still permit the actual removals. */
+    }
+    try {
       const keys = storage.getAllKeys();
       for (const key of keys) {
         if (
           key.startsWith(DASHBOARD_SNAPSHOT_KEY) ||
           key.startsWith(WEALTH_SNAPSHOT_KEY) ||
-          key.includes('_snapshot_')
+          key.includes('_snapshot_') ||
+          key.startsWith('safe_to_spend_')
         ) {
           storage.remove(key);
         }
       }
       this.lastPersistedPayloads.clear();
+      storage.remove(SNAPSHOT_CLEANUP_PENDING_ALL);
+      return true;
     } catch (error) {
       logger.warn('[SnapshotService] Failed to clear snapshots', { error });
+      return false;
     }
   }
 
   /** Clears persisted and queued snapshots for one workplace after a full data replacement. */
-  clearSnapshotsForWorkplace(workplaceId: string): void {
+  resumeSnapshotsForWorkplace(workplaceId: string): void {
+    this.snapshotsPaused = false;
+    this.blockedWorkplaces.delete(workplaceId);
+  }
+
+  clearSnapshotsForWorkplace(workplaceId: string): boolean {
+    this.blockedWorkplaces.add(workplaceId);
     const suffix = `_${workplaceId}`;
     for (const key of this.pendingWrites.keys()) {
       if (key.endsWith(suffix)) this.pendingWrites.delete(key);
     }
-
+    try {
+      storage.set(`${SNAPSHOT_CLEANUP_PENDING_WORKPLACE}${workplaceId}`, true);
+    } catch {
+      /* Storage may still permit the actual removals. */
+    }
     try {
       const keys = storage.getAllKeys();
       for (const key of keys) {
+        if (
+          (key.endsWith(suffix) &&
+            (key.startsWith(DASHBOARD_SNAPSHOT_KEY) ||
+              key.startsWith(WEALTH_SNAPSHOT_KEY) ||
+              key.includes('_snapshot_') ||
+              key.startsWith('safe_to_spend_'))) ||
+          key === `safe_to_spend_${workplaceId}`
+        ) {
+          storage.remove(key);
+          this.lastPersistedPayloads.delete(key);
+          continue;
+        }
         const stored = storage.getString(key);
         if (!stored) continue;
 
@@ -263,9 +312,42 @@ class SnapshotService {
           // Ignore unrelated non-JSON storage entries.
         }
       }
+      storage.remove(`${SNAPSHOT_CLEANUP_PENDING_WORKPLACE}${workplaceId}`);
+      return true;
     } catch (error) {
       logger.warn('[SnapshotService] Failed to clear workplace snapshots', { error });
+      return false;
     }
+  }
+
+  retryPendingCleanup(): boolean {
+    const wasPaused = this.snapshotsPaused;
+    const previouslyBlocked = new Set(this.blockedWorkplaces);
+    try {
+      if (storage.getBoolean(SNAPSHOT_CLEANUP_PENDING_ALL)) {
+        const cleared = this.clearSnapshots();
+        if (cleared) this.restorePublicationEligibility(wasPaused, previouslyBlocked);
+        return cleared;
+      }
+      const pendingWorkplaces = storage
+        .getAllKeys()
+        .filter(key => key.startsWith(SNAPSHOT_CLEANUP_PENDING_WORKPLACE))
+        .map(key => key.slice(SNAPSHOT_CLEANUP_PENDING_WORKPLACE.length));
+      const cleared = pendingWorkplaces.every(workplaceId =>
+        this.clearSnapshotsForWorkplace(workplaceId),
+      );
+      if (cleared) this.restorePublicationEligibility(wasPaused, previouslyBlocked);
+      return cleared;
+    } catch (error) {
+      logger.warn('[SnapshotService] Pending snapshot cleanup retry failed', { error });
+      return false;
+    }
+  }
+
+  private restorePublicationEligibility(wasPaused: boolean, previouslyBlocked: Set<string>): void {
+    this.snapshotsPaused = wasPaused;
+    this.blockedWorkplaces.clear();
+    previouslyBlocked.forEach(workplaceId => this.blockedWorkplaces.add(workplaceId));
   }
 }
 

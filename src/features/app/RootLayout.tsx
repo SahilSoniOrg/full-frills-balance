@@ -15,9 +15,8 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-naviga
 import * as Sentry from '@sentry/react-native';
 import { useNavigationContainerRef } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import PostHog, { PostHogProvider } from 'posthog-react-native';
 import React, { useEffect, useSyncExternalStore } from 'react';
-import { View, useColorScheme } from 'react-native';
+import { Platform, View, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   SafeAreaProvider,
@@ -41,6 +40,8 @@ import { useAppBootstrap } from './hooks/useAppBootstrap';
 import { useAppForegroundMaintenance } from './hooks/useAppForegroundMaintenance';
 import { useFonts } from './hooks/useFonts';
 import { useTelemetry } from './hooks/useTelemetry';
+import { snapshotService } from '@/src/utils/SnapshotService';
+import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
 import { useWidgetSync } from './hooks/useWidgetSync';
 import { UpdateGate } from './UpdateGate';
 import {
@@ -90,16 +91,14 @@ function RootLayout() {
                       <SplashOrchestrator />
                       <ToastContainer />
                       <UpdateGate>
-                        <MaybeAnalyticsProvider client={analytics.posthog}>
-                          <LaunchCoordinatorContent gateChildren={<AppContent />}>
-                            <WorkplaceBootstrap />
-                            <AppLockInterceptor>
-                              <AppContent />
-                            </AppLockInterceptor>
-                          </LaunchCoordinatorContent>
-                          <AlertContainer />
-                          <IncompleteFxDetailsContainer />
-                        </MaybeAnalyticsProvider>
+                        <LaunchCoordinatorContent gateChildren={<AppContent />}>
+                          <WorkplaceBootstrap />
+                          <AppLockInterceptor>
+                            <AppContent />
+                          </AppLockInterceptor>
+                        </LaunchCoordinatorContent>
+                        <AlertContainer />
+                        <IncompleteFxDetailsContainer />
                       </UpdateGate>
                     </LaunchCoordinatorProvider>
                   </ThemeProvider>
@@ -119,6 +118,19 @@ function RootLayout() {
 function EarlyBootstrap() {
   useFonts();
   useTelemetry();
+  useEffect(() => {
+    const retryWidgetCleanup =
+      Platform.OS === 'web' ? Promise.resolve() : widgetProjectionService.recoverPendingCleanup();
+    void Promise.all([
+      retryWidgetCleanup,
+      Promise.resolve().then(() => snapshotService.retryPendingCleanup()),
+    ])
+      .then(([_, snapshotsCleared]) => {
+        if (!snapshotsCleared)
+          logger.warn('[EarlyBootstrap] Snapshot cleanup retry remains pending');
+      })
+      .catch(error => logger.warn('[EarlyBootstrap] Projection cleanup retry failed', { error }));
+  }, []);
   return null;
 }
 
@@ -205,21 +217,6 @@ function SplashOrchestrator() {
   }, [canHideSplash, isAppReady, isDataHydrated]);
 
   return null;
-}
-
-function MaybeAnalyticsProvider({
-  client,
-  children,
-}: {
-  client: PostHog | null;
-  children: React.ReactNode;
-}) {
-  if (!client) return <>{children}</>;
-  return (
-    <PostHogProvider client={client} debug={__DEV__}>
-      {children}
-    </PostHogProvider>
-  );
 }
 
 export default Sentry.wrap(RootLayout);

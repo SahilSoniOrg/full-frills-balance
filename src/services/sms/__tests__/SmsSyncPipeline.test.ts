@@ -4,10 +4,7 @@ import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { AppConfig } from '@/src/constants';
 import { ParsedTransaction, toTransactionDirection } from '@/src/services/ledger/SmsParser';
 import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
-import {
-  computeSmsFingerprint,
-  resolveProcessingStatus,
-} from '../pipeline/smsFingerprint';
+import { computeSmsFingerprint, resolveProcessingStatus } from '../pipeline/smsFingerprint';
 import { findManyDuplicateCandidates } from '../pipeline/smsDuplicateMatcher';
 import { prepareUpsertInboxRecord } from '../pipeline/smsInboxRecordPreparer';
 
@@ -136,8 +133,9 @@ describe('SmsSyncPipeline', () => {
       );
 
       expect(fp1).toEqual(fp2);
-      expect(fp1).toContain('18005550199');
-      expect(fp1).toContain('spent 2500 at starbucks coffee');
+      expect(fp1).toMatch(/^sha256:[a-f\d]{64}$/i);
+      expect(fp1).not.toContain('18005550199');
+      expect(fp1).not.toContain('spent 2500 at starbucks coffee');
     });
 
     it('buckets fingerprints by fingerprintDayBucketMs config', () => {

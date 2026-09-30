@@ -37,7 +37,7 @@ jest.mock('@/src/utils/navigation', () => ({
 jest.mock('@/src/utils/alerts', () => ({
   alert: { show: jest.fn() },
   confirm: { show: jest.fn() },
-  toast: { error: jest.fn() },
+  toast: { error: jest.fn(), warning: jest.fn() },
 }));
 
 const mockUseAppRestart = useAppRestart as jest.Mock;
@@ -52,7 +52,7 @@ describe('useMaintenanceSettingsViewModel', () => {
     jest.clearAllMocks();
     mockUseAppRestart.mockReturnValue({ requireRestart: mockRequireRestart });
     mockUseWorkplace.mockReturnValue({ workplaceId: 'workplace-1' });
-    mockResetDatabase.mockResolvedValue(undefined);
+    mockResetDatabase.mockResolvedValue({ status: 'committed', warnings: [] });
   });
 
   it('resets the database before requesting an app restart', async () => {

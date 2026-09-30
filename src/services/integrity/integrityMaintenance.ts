@@ -15,6 +15,9 @@ import { claimedRestoreFingerprint } from '@/src/services/import/restoreOwnershi
 import { restorePublicationClaims } from '@/src/services/import/restorePublicationClaims';
 import { SETUP_DRAFT_KEY } from '@/src/services/setup/setupDraftIdentity';
 import { clearLocalAuditActorId } from '@/src/services/audit-identity';
+import { reactiveCacheCoordinator } from '@/src/services/reactive/ReactiveCacheCoordinator';
+import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
+import { snapshotService } from '@/src/utils/SnapshotService';
 
 const RESETTABLE_DRAFT_KEYS = [
   'onboarding_resume_state_v1',
@@ -26,7 +29,7 @@ const RESETTABLE_DRAFT_KEYS = [
 export async function resetWorkplace(
   workplaceId: WorkplaceId,
   keepWorkplaceRecord: boolean = false,
-): Promise<void> {
+): Promise<{ status: 'committed' | 'committed_with_warnings'; warnings: string[] }> {
   logger.warn(`[IntegrityMaintenance] CLEARING DATA FOR WORKPLACE: ${workplaceId}`);
   try {
     if (!keepWorkplaceRecord) {
@@ -40,22 +43,82 @@ export async function resetWorkplace(
     logger.error(`[IntegrityMaintenance] Failed to reset workplace ${workplaceId}:`, error);
     throw error;
   }
+  const warnings: string[] = [];
+  const activeWorkplaceId = preferences.device.activeWorkplaceId;
+  const cleanup = (label: string, operation: () => void) => {
+    try {
+      operation();
+    } catch (error) {
+      logger.warn(`[IntegrityMaintenance] ${label} failed after publication`, { error });
+      warnings.push(label);
+    }
+  };
+  cleanup('Reactive projection cleanup', () => {
+    reactiveCacheCoordinator.clearAll(workplaceId);
+  });
+  if (!snapshotService.clearSnapshotsForWorkplace(workplaceId)) {
+    warnings.push('Snapshot cleanup');
+  }
+  if (keepWorkplaceRecord) snapshotService.resumeSnapshotsForWorkplace(workplaceId);
+  if (!keepWorkplaceRecord && activeWorkplaceId === workplaceId) {
+    cleanup('Active Workplace pointer cleanup', () =>
+      preferences.device.setActiveWorkplaceId(undefined),
+    );
+  }
+  if (!keepWorkplaceRecord) {
+    cleanup('Workplace preference cleanup', () => preferences.workplace.clear(workplaceId));
+  }
+  try {
+    await widgetProjectionService.clearWorkplace(
+      workplaceId,
+      activeWorkplaceId === workplaceId ? workplaceId : undefined,
+    );
+  } catch (error) {
+    logger.warn('[IntegrityMaintenance] Widget cleanup failed after publication', { error });
+    warnings.push('Widget cleanup');
+  }
+  return { status: warnings.length ? 'committed_with_warnings' : 'committed', warnings };
 }
 
-export async function resetDatabase(): Promise<void> {
+export async function resetDatabase(): Promise<{
+  status: 'committed' | 'committed_with_warnings';
+  warnings: string[];
+}> {
   logger.warn('[IntegrityMaintenance] STARTING FACTORY RESET...');
   try {
     await databaseRepository.resetDatabase();
-    preferences.clearPreferences();
-    clearLocalAuditActorId();
-    RESETTABLE_DRAFT_KEYS.forEach(key => storage.remove(key));
-    storage.remove(SETUP_DRAFT_KEY);
-    restorePublicationClaims.clearAll();
-    logger.info('[IntegrityMaintenance] Database reset successful.');
   } catch (error) {
     logger.error('[IntegrityMaintenance] CRITICAL: Factory reset failed:', error);
     throw error;
   }
+  const warnings: string[] = [];
+  const cleanup = (label: string, operation: () => void) => {
+    try {
+      operation();
+    } catch (error) {
+      logger.warn(`[IntegrityMaintenance] ${label} failed after factory reset`, { error });
+      warnings.push(label);
+    }
+  };
+  cleanup('Preference cleanup', () => preferences.clearPreferences());
+  cleanup('Audit identity cleanup', () => clearLocalAuditActorId());
+  cleanup('Setup draft cleanup', () => {
+    RESETTABLE_DRAFT_KEYS.forEach(key => storage.remove(key));
+    storage.remove(SETUP_DRAFT_KEY);
+    restorePublicationClaims.clearAll();
+  });
+  cleanup('Reactive projection cleanup', () => {
+    reactiveCacheCoordinator.clearAll();
+  });
+  if (!snapshotService.clearSnapshots()) warnings.push('Snapshot cleanup');
+  try {
+    await widgetProjectionService.clearAll();
+  } catch (error) {
+    logger.warn('[IntegrityMaintenance] Widget cleanup failed after factory reset', { error });
+    warnings.push('Widget cleanup');
+  }
+  logger.info('[IntegrityMaintenance] Database reset committed.');
+  return { status: warnings.length ? 'committed_with_warnings' : 'committed', warnings };
 }
 
 export async function cleanupDatabase(): Promise<{ deletedCount: number }> {

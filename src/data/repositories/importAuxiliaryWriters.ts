@@ -20,10 +20,16 @@ import {
 } from '@/src/data/repositories/importPersistenceAdapter';
 import type { BatchImportData } from '@/src/types/importContracts';
 import type { AuditEntityType } from '@/src/types/enums';
-import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
+import {
+  InboxProcessingStatus,
+  PlannedPaymentInterval,
+  PlannedPaymentStatus,
+} from '@/src/types/enums';
 import { TransactionChannel } from '@/src/types/domainJournal';
 import { WorkplaceId } from '@/src/types/ids';
 import { Model } from '@nozbe/watermelondb';
+import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
+import { sanitizeSmsAuditChanges, sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
 
 function readAuditPayloadString(changes: string, key: string): string | undefined {
   try {
@@ -62,7 +68,7 @@ export function prepareAuxiliaryImportRecords(
       record.entityType = entityType;
       record.entityId = entityType === 'workplace' ? workplaceId : log.entityId;
       record.action = toAuditAction(log.action);
-      record.changes = log.changes;
+      record.changes = sanitizeSmsAuditChanges(log.changes) ?? log.changes;
       record.timestamp = log.timestamp;
       record.source = readAuditPayloadString(log.changes, 'source') ?? 'app';
       record.eventType =
@@ -167,9 +173,12 @@ export function prepareAuxiliaryImportRecords(
       setImportPersistenceRawField(record, 'journal_id', metadata.journalId);
       record.importSource = metadata.importSource;
       record.originalSmsId = metadata.originalSmsId;
-      record.originalSmsSender = metadata.originalSmsSender;
-      record.originalSmsBody = metadata.originalSmsBody;
-      record.metadataJson = metadata.metadataJson;
+      record.originalSmsSender = undefined;
+      record.originalSmsBody = undefined;
+      record.metadataJson = sanitizeSmsMetadataJson(
+        metadata.metadataJson,
+        metadata.importSource === 'sms',
+      );
       record._raw._status = 'synced';
       setRecordTimestamps(record, { createdAt: metadata.createdAt, updatedAt: metadata.updatedAt });
     }),
@@ -199,10 +208,21 @@ export function prepareAuxiliaryImportRecords(
       record.workplaceId = workplaceId;
       record.channel = inbox.channel as TransactionChannel;
       record.deviceSourceId = inbox.deviceSourceId;
-      record.senderAddress = inbox.senderAddress;
-      record.rawBody = inbox.rawBody;
+      const isSms = inbox.channel === 'sms';
+      const processingStatus = toInboxProcessingStatus(inbox.processingStatus);
+      const terminalSms =
+        isSms &&
+        [
+          InboxProcessingStatus.IMPORTED,
+          InboxProcessingStatus.AUTO_POSTED,
+          InboxProcessingStatus.DISMISSED,
+        ].includes(processingStatus);
+      record.senderAddress = terminalSms ? undefined : inbox.senderAddress;
+      record.rawBody = terminalSms ? undefined : inbox.rawBody;
       record.inputDate = inbox.inputDate;
-      record.inputFingerprint = inbox.inputFingerprint;
+      record.inputFingerprint = isSms
+        ? hashLegacySmsFingerprint(inbox.inputFingerprint)
+        : inbox.inputFingerprint;
       record.parseStatus = toInboxParseStatus(inbox.parseStatus);
       record.parsedAmount = inbox.parsedAmount;
       record.parsedCurrencyCode = inbox.parsedCurrencyCode;
@@ -210,13 +230,13 @@ export function prepareAuxiliaryImportRecords(
       record.parsedAccountSource = inbox.parsedAccountSource;
       record.referenceNumber = inbox.referenceNumber;
       record.direction = toTransactionDirection(inbox.direction);
-      record.processingStatus = toInboxProcessingStatus(inbox.processingStatus);
+      record.processingStatus = processingStatus;
       record.linkedJournalId = inbox.linkedJournalId;
       record.duplicateJournalId = inbox.duplicateJournalId;
       record.duplicateConfidence = inbox.duplicateConfidence;
       record.parseConfidence = inbox.parseConfidence;
       record.parseReason = inbox.parseReason;
-      record.metadataJson = inbox.metadataJson;
+      record.metadataJson = sanitizeSmsMetadataJson(inbox.metadataJson, isSms);
       record.firstSeenAt = inbox.firstSeenAt;
       record.lastScannedAt = inbox.lastScannedAt;
       record.processedAt = inbox.processedAt;

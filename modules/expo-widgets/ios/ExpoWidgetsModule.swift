@@ -70,5 +70,23 @@ public final class ExpoWidgetsModule: Module {
         WidgetCenter.shared.reloadAllTimelines()
       }
     }
+
+    AsyncFunction("clearWidgetData") {
+      guard let defaults = UserDefaults(suiteName: self.appGroupId) else {
+        throw NSError(domain: "ExpoWidgets", code: 1, userInfo: [NSLocalizedDescriptionKey: "Widget storage is unavailable"])
+      }
+      [
+        "safe_to_spend_amount", "safe_to_spend_currency", "safe_to_spend_formatted_amount",
+        "safe_to_spend_title", "safe_to_spend_subtitle", "safe_to_spend_updated_at",
+        "widget_theme_id", "widget_theme_mode", "widget_theme_background_start",
+        "widget_theme_background_end", "widget_theme_title_color", "widget_theme_primary_text_color",
+        "widget_theme_secondary_text_color", "widget_theme_action_icon_color",
+        "widget_theme_income_accent_color", "widget_theme_expense_accent_color",
+        "widget_theme_transfer_accent_color", "widget_is_privacy_enabled"
+      ].forEach { defaults.removeObject(forKey: $0) }
+      if #available(iOS 14.0, *) {
+        WidgetCenter.shared.reloadAllTimelines()
+      }
+    }
   }
 }

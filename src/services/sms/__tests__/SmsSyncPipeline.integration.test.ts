@@ -580,6 +580,8 @@ describe('SmsSyncPipeline integration', () => {
       const inbox = await fetchInboxByDeviceId(message.id);
       expect(inbox?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
       expect(inbox?.linkedJournalId).toBeTruthy();
+      expect(inbox?.rawBody).toBeFalsy();
+      expect(inbox?.senderAddress).toBeFalsy();
       const journal = await database.collections
         .get<Journal>('journals')
         .find(inbox!.linkedJournalId!);
@@ -592,6 +594,10 @@ describe('SmsSyncPipeline integration', () => {
       ).toBe(2);
 
       await expect(scanSmsInbox(SMS_TEST_WORKPLACE, [message])).resolves.toBe(0);
+      const rescannedInbox = await fetchInboxByDeviceId(message.id);
+      expect(rescannedInbox?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
+      expect(rescannedInbox?.rawBody).toBeFalsy();
+      expect(rescannedInbox?.senderAddress).toBeFalsy();
       expect(await database.collections.get<Journal>('journals').query().fetchCount()).toBe(1);
     });
 

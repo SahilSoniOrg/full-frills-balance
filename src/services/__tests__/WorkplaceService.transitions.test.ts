@@ -45,7 +45,19 @@ jest.mock('@/src/services/preferences', () => ({
 }));
 
 jest.mock('@/src/utils/SnapshotService', () => ({
-  snapshotService: { clearSnapshotsForWorkplace: jest.fn() },
+  snapshotService: {
+    clearSnapshotsForWorkplace: jest.fn(() => true),
+    resumeSnapshotsForWorkplace: jest.fn(),
+  },
+}));
+jest.mock('@/src/services/reactive/ReactiveCacheCoordinator', () => ({
+  reactiveCacheCoordinator: { clearAll: jest.fn() },
+}));
+jest.mock('@/src/services/widgets/WidgetProjectionService', () => ({
+  widgetProjectionService: {
+    resumeWorkplace: jest.fn(),
+    clearWorkplace: jest.fn().mockResolvedValue(undefined),
+  },
 }));
 
 const mockWorkplaces = workplaceRepository as jest.Mocked<typeof workplaceRepository>;

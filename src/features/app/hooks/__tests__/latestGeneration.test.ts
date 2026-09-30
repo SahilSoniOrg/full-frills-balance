@@ -1,4 +1,4 @@
-import { LatestGenerationCoordinator } from '@/src/features/app/hooks/latestGeneration';
+import { LatestGenerationCoordinator } from '@/src/services/LatestGenerationCoordinator';
 
 function deferred() {
   let resolve!: () => void;

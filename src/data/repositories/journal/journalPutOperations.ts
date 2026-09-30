@@ -33,6 +33,7 @@ import type { AuditEventMetadata } from '@/src/types/auditEvents';
 import { effect } from '@/src/utils/accounting/BalanceEffects';
 import { isActiveJournalStatus } from '@/src/utils/journalStatus';
 import { referenceNumberFromMetadataJson } from '@/src/utils/sms/SmsReferenceExtractor';
+import { sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { Model, Q } from '@nozbe/watermelondb';
 
@@ -117,10 +118,13 @@ function assignMetadata(
 ): void {
   record.importSource = metadata.importSource;
   record.originalSmsId = metadata.originalSmsId;
-  record.originalSmsSender = metadata.originalSmsSender;
-  record.originalSmsBody = metadata.originalSmsBody;
-  record.metadataJson = metadata.metadataJson;
-  record.referenceNumber = referenceNumberFromMetadataJson(metadata.metadataJson);
+  record.originalSmsSender = undefined;
+  record.originalSmsBody = undefined;
+  record.metadataJson = sanitizeSmsMetadataJson(
+    metadata.metadataJson,
+    metadata.importSource === 'sms',
+  );
+  record.referenceNumber = referenceNumberFromMetadataJson(record.metadataJson);
   record.updatedAt = now;
 }
 

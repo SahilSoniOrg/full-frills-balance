@@ -1,7 +1,7 @@
 import { useAppLock } from '@/src/contexts/app-shell/AppLockProvider';
 import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useWidgetSync } from '@/src/features/app/hooks/useWidgetSync';
-import { loadWidgetModule } from '@/src/features/app/hooks/loadWidgetModule';
+import { loadNativeWidgetAdapter } from '@/src/services/widgets/nativeWidgetAdapter';
 import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -20,7 +20,9 @@ jest.mock('@/src/hooks/usePrivacyPrefs', () => ({ usePrivacyPrefs: jest.fn() }))
 jest.mock('@/src/hooks/useThemePrefs', () => ({ useThemePrefs: jest.fn() }));
 jest.mock('@/src/hooks/use-theme', () => ({ useTheme: jest.fn() }));
 jest.mock('@/src/hooks/useObservable', () => ({ useObservable: jest.fn() }));
-jest.mock('@/src/features/app/hooks/loadWidgetModule', () => ({ loadWidgetModule: jest.fn() }));
+jest.mock('@/src/services/widgets/nativeWidgetAdapter', () => ({
+  loadNativeWidgetAdapter: jest.fn(),
+}));
 jest.mock('@/modules/expo-widgets', () => ({
   __esModule: true,
   default: { syncWidgetData: jest.fn() },
@@ -60,7 +62,7 @@ describe('useWidgetSync generation ordering', () => {
         },
       }),
     );
-    (loadWidgetModule as jest.Mock).mockResolvedValue(expoWidgetsModule);
+    (loadNativeWidgetAdapter as jest.Mock).mockResolvedValue(expoWidgetsModule);
   });
 
   afterEach(() => {
@@ -72,7 +74,7 @@ describe('useWidgetSync generation ordering', () => {
     const workplaceALoad = new Promise<typeof expoWidgetsModule>(resolve => {
       resolveWorkplaceALoad = resolve;
     });
-    (loadWidgetModule as jest.Mock)
+    (loadNativeWidgetAdapter as jest.Mock)
       .mockImplementationOnce(() => workplaceALoad)
       .mockResolvedValue(expoWidgetsModule);
 

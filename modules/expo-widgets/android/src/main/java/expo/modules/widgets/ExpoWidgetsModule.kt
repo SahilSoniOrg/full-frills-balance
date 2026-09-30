@@ -23,6 +23,13 @@ class ExpoWidgetsModule : Module() {
       val context: Context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
       refreshWidgetProviders(context)
     }
+
+    AsyncFunction("clearWidgetData") {
+      val context: Context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+      val cleared = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().clear().commit()
+      if (!cleared) throw IllegalStateException("Widget storage could not be cleared")
+      refreshWidgetProviders(context)
+    }
   }
 
   private fun syncSnapshot(context: Context, snapshot: Map<String, Any?>) {

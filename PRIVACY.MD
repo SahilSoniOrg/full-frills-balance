@@ -1,14 +1,16 @@
 Privacy Policy for Full Frills Balance
 
-Effective Date: September 7, 2026
+Effective Date: September 30, 2026
 
-Last Updated: September 7, 2026
+Last Updated: September 30, 2026
 
 Public copy: https://full-frills-landing.vercel.app/privacy.html
 
 Welcome to Full Frills Balance. This Privacy Policy explains how Full Frills Balance handles your information and protects your privacy.
 
-Policy update (September 7, 2026): This update clarifies that the current app is local-first, does not connect to bank accounts, and does not provide online sync or cloud backup. It also documents privacy principles for a possible future encrypted sync feature. The future-sync section describes planned behavior only; it does not mean that feature is available today.
+Policy update (September 30, 2026): This update clarifies local SMS review retention and that SMS scans happen only when you start an import. It also clarifies that diagnostic and analytics fields are allowlisted. The September 7 update's local-first and future-sync statements remain in force; planned sync behavior does not mean that feature is available today.
+
+- September 30, 2026 — Clarified local SMS review retention, known-field cleanup limits, and allowlisted diagnostics and analytics.
 
 1. Overview
 
@@ -36,7 +38,6 @@ imported transaction records
 
 rule-based tagging preferences
 
-
 We do not store this financial data on our own servers.
 
 The app may also store the version of this Privacy Policy you acknowledged and the acknowledgement time. That local record is the app's acknowledgement state and remains on your device. If product analytics is enabled, the app may send a best-effort pseudonymous acknowledgement event to PostHog with the policy version as its event-specific data, alongside the standard analytics and device context described below. This telemetry is not a signed legal record. It does not send the policy text, a signature, or your financial records.
@@ -55,20 +56,21 @@ extract transaction details such as amount, sender, and transaction type
 
 create transaction entries inside the app
 
+SMS inbox scanning happens only when you manually start an import. Granting SMS permission or enabling SMS import does not start background or launch-time scans.
 
-All SMS processing currently happens only when the user manually starts import.
+While a message is waiting for your review, its sender and raw message body are stored locally in the SMS inbox. When you import or dismiss the message, the app clears that raw sender and body from the inbox. A created transaction may retain extracted details such as amount, currency, merchant, and reference number, plus a one-way deduplication digest. New SMS imports do not copy the raw message or sender into journal metadata, notes, or audit fields. A bounded local cleanup removes known raw SMS fields from existing SMS inbox records, structured journal metadata, and machine-generated audit payloads. It leaves user-written notes and other free-form historical text intact, so those may still contain text you chose to save.
 
 SMS permission is optional, and the app remains usable without granting SMS access.
 
 We do not intentionally upload full SMS content, sender details, or message bodies to external servers.
 
-Raw SMS content is not stored after processing, except where limited extracted data may be saved if you create app rules for tagging, account mapping, or transaction descriptions.
+Raw SMS content is retained locally in the inbox only while the item awaits review; it is cleared from that record after import or dismissal. The cleanup removes known structured copies, but does not rewrite user-written notes or arbitrary historical free-form text. SMS rule configuration may retain rule conditions you chose, and imported financial entries retain extracted transaction details.
 
 4. Analytics and Telemetry
 
 We use PostHog and Expo Insights for product analytics and technical improvement.
 
-Analytics may include:
+Analytics may include only allowlisted event fields and values, including:
 
 pages visited inside the app
 
@@ -84,12 +86,11 @@ selected currency preference
 
 app version, build, and variant
 
-device model, device name, OS name and version, and tablet flag
+operating system name and version, and tablet flag
 
 pseudonymous analytics identifiers
 
 privacy policy acknowledgement events (policy version as event-specific data)
-
 
 We do not intentionally send:
 
@@ -107,12 +108,11 @@ user-entered notes
 
 privacy policy text or signatures
 
-
 Analytics identifiers are pseudonymous and are used only to understand app usage and improve functionality.
 
 PostHog session replay is disabled. We do not record in-app screenshots or screen replays for product analytics.
 
-**Sentry (crash reporting)** is separate from PostHog. When enabled, Sentry receives error reports and performance traces (for example stack traces and navigation timing). We do not enable Sentry session replay or screen recording.
+**Sentry (crash reporting)** is separate from PostHog. When enabled, JavaScript error reports and performance traces may include approved error classes, safe runtime bundle frame locations, and navigation timing. Native Sentry reporting is disabled because its automatic channels bypass the JavaScript privacy filters. We do not enable Sentry session replay or screen recording.
 
 5. Internet Use
 
@@ -121,7 +121,6 @@ Although Full Frills Balance is primarily offline, internet access is used for l
 retrieving currency exchange rates from ExchangeRate-API
 
 sending analytics telemetry
-
 
 Exchange-rate requests do not include your transaction history or personal financial records.
 
@@ -145,7 +144,6 @@ phone number verification
 
 cloud account
 
-
 8. Data Sharing
 
 We do not sell personal data.
@@ -159,7 +157,6 @@ Depending on features you choose to use, the app may request:
 SMS permission for transaction import
 
 storage access for export and backup
-
 
 Permissions are optional where possible and used only for app functionality.
 

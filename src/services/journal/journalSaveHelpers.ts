@@ -170,8 +170,6 @@ export async function assembleCreateJournalData(
       ? {
           importSource: params.smsId ? 'sms' : 'manual',
           originalSmsId: params.smsId,
-          originalSmsSender: params.smsSender,
-          originalSmsBody: params.rawSmsBody,
           metadataJson: smsMetadataJson,
         }
       : undefined;

@@ -1,7 +1,9 @@
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { logger } from '@/src/utils/logger';
+import { snapshotService } from '@/src/utils/SnapshotService';
+import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
 import { useEffect, useRef } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, Platform } from 'react-native';
 
 const RESUME_FLUSH_DEBOUNCE_MS = 500;
 
@@ -23,6 +25,14 @@ export function useAppForegroundMaintenance() {
         rebuildQueueService.flush().catch(error => {
           logger.warn('[ForegroundMaintenance] Rebuild queue flush failed', { error });
         });
+        void Promise.all([
+          Promise.resolve().then(() => snapshotService.retryPendingCleanup()),
+          Platform.OS === 'web'
+            ? Promise.resolve()
+            : widgetProjectionService.recoverPendingCleanup(),
+        ]).catch(error =>
+          logger.warn('[ForegroundMaintenance] Projection cleanup retry failed', { error }),
+        );
       }, RESUME_FLUSH_DEBOUNCE_MS);
     };
 

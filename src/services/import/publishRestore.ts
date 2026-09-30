@@ -10,7 +10,9 @@ import { backfillHistoricalExchangeRates } from '@/src/services/import/historica
 import { forceRunCheck } from '@/src/services/integrity';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { snapshotService } from '@/src/utils/SnapshotService';
+import { smsPrivacyService } from '@/src/services/sms/SmsPrivacyService';
 import { preferences } from '@/src/services/preferences';
+import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { logger } from '@/src/utils/logger';
 import { restorePublicationClaims } from './restorePublicationClaims';
@@ -75,8 +77,27 @@ async function runPostPublicationChecks(
   callback: PublishRestoreOptions['onProgress'],
   warnings: string[],
 ): Promise<void> {
+  try {
+    await smsPrivacyService.cleanupLegacyContent(true);
+  } catch (error) {
+    logger.warn('[RestorePublication] Legacy SMS privacy cleanup failed after publication', {
+      error,
+    });
+    warnings.push('Legacy SMS content cleanup failed');
+  }
   reactiveDataService.clearCache(workplaceId);
   snapshotService.clearSnapshotsForWorkplace(workplaceId);
+  snapshotService.resumeSnapshotsForWorkplace(workplaceId);
+  try {
+    await widgetProjectionService.clearWorkplace(workplaceId, preferences.device.activeWorkplaceId);
+  } catch (error) {
+    logger.warn('[RestorePublication] Widget projection cleanup failed after publication', {
+      error,
+    });
+    warnings.push('Widget projection cleanup failed');
+  } finally {
+    widgetProjectionService.resumeWorkplace(workplaceId);
+  }
 
   const currencies = usedCurrencyCodes(data, defaultCurrency);
   try {

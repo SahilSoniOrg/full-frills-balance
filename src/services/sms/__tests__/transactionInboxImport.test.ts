@@ -68,6 +68,16 @@ describe('buildTransactionInboxImportNavigation', () => {
     expect(navigation.params.notes).toBe('');
   });
 
+  it('does not copy an unparsed SMS sender into the automatic description fallback', () => {
+    const navigation = buildTransactionInboxImportNavigation(
+      { ...item, parsedMerchant: undefined, senderAddress: 'PrivateBankSender' },
+      [],
+      null,
+    );
+    expect(navigation.params.description).toBe('Expense via SMS');
+    expect(navigation.params.notes).toBe('');
+  });
+
   it('passes mode option when provided', () => {
     const navigation = buildTransactionInboxImportNavigation(
       item,

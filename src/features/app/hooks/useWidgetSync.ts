@@ -23,10 +23,7 @@ import type {
   WidgetDataSnapshot,
   WidgetThemeSnapshot,
 } from '@/modules/expo-widgets/src/ExpoWidgets.types';
-import { LatestGenerationCoordinator } from './latestGeneration';
-import { loadWidgetModule } from './loadWidgetModule';
-
-const widgetSyncCoordinator = new LatestGenerationCoordinator();
+import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
 
 function clampChannel(value: number) {
   return Math.max(0, Math.min(255, Math.round(value)));
@@ -131,15 +128,13 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
   const currencyCode = rawCurrencyCode || defaultCurrencyCode;
 
   React.useEffect(() => {
-    const lease = widgetSyncCoordinator.begin();
+    const lease = widgetProjectionService.begin(workplaceId);
 
     if (Platform.OS === 'web' || isAppCurrentlyLocked || !isAppReady) {
       return () => lease.cancel();
     }
 
     const bootstrapWidgets = async () => {
-      // Lazy load the native module to avoid touching it during web/bootstrap paths.
-      const expoWidgetsModule = await loadWidgetModule();
       if (!lease.isCurrent()) return;
 
       const isShortfall = (shortfall ?? 0) > 0;
@@ -169,7 +164,7 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
         isPrivacyEnabled: isWidgetPrivacyEnabled,
       };
 
-      await lease.runSerialized(() => expoWidgetsModule.syncWidgetData(snapshot));
+      await lease.publish(snapshot);
     };
 
     // Use a small timeout to debounce rapid changes (e.g. during batch operations)

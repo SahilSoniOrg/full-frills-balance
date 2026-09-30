@@ -45,16 +45,14 @@ export async function analyzeAutoPost(
           description: parsed.merchant
             ? `${parsed.merchant}`
             : isExpense
-              ? `Expense via ${message.address}`
-              : `Income via ${message.address}`,
+              ? 'Expense via SMS'
+              : 'Income via SMS',
           notes: '',
           currencyCode: parsed.currencyCode || AppConfig.defaultCurrency,
           status: JournalStatus.POSTED,
           metadata: {
             importSource: 'sms',
             originalSmsId: message.id,
-            originalSmsSender: message.address,
-            originalSmsBody: message.body,
             metadataJson: JSON.stringify({
               smsFingerprint: computeSmsFingerprint(message.address, message.body, message.date),
             }),
