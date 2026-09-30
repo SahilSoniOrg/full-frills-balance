@@ -51,6 +51,7 @@ describe('useWidgetSync generation ordering', () => {
     (useObservable as jest.Mock).mockImplementation(
       (_factory: unknown, dependencies: [WorkplaceId]) => ({
         data: {
+          quality: 'ready',
           currencyCode: dependencies[0] === 'workplace-a' ? 'USD' : 'EUR',
           firstMajorInflowDay: null,
           safeToSpend: dependencies[0] === 'workplace-a' ? 100 : 200,

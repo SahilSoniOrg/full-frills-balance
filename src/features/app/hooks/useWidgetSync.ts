@@ -9,6 +9,7 @@ import { useObservable } from '@/src/hooks/useObservable';
 import {
   safeToSpendReadModel,
   SafeToSpendHeadline,
+  isSafeToSpendHeadlineCurrent,
 } from '@/src/services/simulation/SafeToSpendReadModel';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import React from 'react';
@@ -126,7 +127,7 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
   const rawCurrencyCode = headline?.currencyCode;
 
   // Bulletproof data presence check: ensure both headline and currency exist
-  const isDataPresent = !!headline && !!rawCurrencyCode;
+  const isDataPresent = isSafeToSpendHeadlineCurrent(headline) && !!rawCurrencyCode;
   const currencyCode = rawCurrencyCode || defaultCurrencyCode;
 
   React.useEffect(() => {

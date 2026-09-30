@@ -17,6 +17,12 @@ export function computeSmsFingerprint(sender: string, body: string, date: number
   return `${normalizedSender}::${normalizedBody.slice(0, 160)}::${dateBucket}`;
 }
 
+/** Strict same-scan reservation identity; unlike the persisted legacy fingerprint, this keeps
+ * the complete body and exact timestamp so truncated/day-bucket collisions stay separate. */
+export function computeSmsReservationKey(sender: string, body: string, date: number): string {
+  return JSON.stringify([sender.toLowerCase(), body, date]);
+}
+
 export function resolveProcessingStatus(params: {
   parsed: ParsedTransaction;
   processedIds: Set<string>;

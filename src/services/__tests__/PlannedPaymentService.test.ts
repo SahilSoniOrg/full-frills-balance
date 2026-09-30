@@ -63,6 +63,7 @@ jest.mock('@/src/data/database/Database', () => ({
 describe('planned payment modules', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (plannedPaymentRepository.findAllForDueSettlement as jest.Mock).mockResolvedValue([]);
     (journalPlannedQueries.findOccurrenceJournals as jest.Mock).mockResolvedValue({ kind: 'none' });
     (journalPlannedQueries.findByPlannedPaymentAndStatus as jest.Mock).mockResolvedValue([]);
     (journalPersistenceService.deletePlannedPayment as jest.Mock).mockResolvedValue(undefined);

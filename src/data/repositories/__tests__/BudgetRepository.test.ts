@@ -8,6 +8,9 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
 import { observeAfterInitial } from '@/src/testing/observeAfterInitial';
+import { deleteAccount } from '@/src/services/accounts/accountDeleteCommands';
+import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
+import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 
 describe('BudgetRepository', () => {
   let accountId1: string;
@@ -35,6 +38,177 @@ describe('BudgetRepository', () => {
   });
 
   describe('CRUD operations', () => {
+    it('publishes budget, scopes, and audit in one batch and publishes nothing on batch failure', async () => {
+      const batch = jest.spyOn(database, 'batch');
+      batch.mockRejectedValueOnce(new Error('injected publication failure'));
+      await expect(
+        budgetRepository.create(
+          'wp-1' as WorkplaceId,
+          {
+            name: 'Atomic',
+            amount: 100,
+            currencyCode: 'USD',
+            startMonth: '2026-09',
+          },
+          [accountId1 as AccountId],
+        ),
+      ).rejects.toThrow('injected publication failure');
+      expect(batch).toHaveBeenCalledTimes(1);
+      expect(await database.collections.get('budgets').query().fetchCount()).toBe(0);
+      expect(await database.collections.get('budget_scopes').query().fetchCount()).toBe(0);
+      expect(await database.collections.get('audit_logs').query().fetchCount()).toBe(0);
+      batch.mockRestore();
+    });
+
+    it('publishes the complete created budget graph with one atomic batch', async () => {
+      const batch = jest.spyOn(database, 'batch');
+      const budget = await budgetRepository.create(
+        'wp-1' as WorkplaceId,
+        {
+          name: 'Atomic success',
+          amount: 100,
+          currencyCode: 'USD',
+          startMonth: '2026-09',
+        },
+        [accountId1 as AccountId],
+      );
+      expect(batch).toHaveBeenCalledTimes(1);
+      expect(
+        await budgetRepository.getScopes('wp-1' as WorkplaceId, budget.id as BudgetId),
+      ).toHaveLength(1);
+      expect(await database.collections.get('audit_logs').query().fetchCount()).toBe(1);
+      batch.mockRestore();
+    });
+
+    it('serializes budget publication against account deletion in the owning writer', async () => {
+      let entered!: () => void;
+      let release!: () => void;
+      const validatorEntered = new Promise<void>(resolve => {
+        entered = resolve;
+      });
+      const validationGate = new Promise<void>(resolve => {
+        release = resolve;
+      });
+      const create = budgetRepository.create(
+        'wp-1' as WorkplaceId,
+        {
+          name: 'Race budget',
+          amount: 100,
+          currencyCode: 'USD',
+          startMonth: '2026-09',
+        },
+        [accountId1 as AccountId],
+        async () => {
+          entered();
+          await validationGate;
+          await assertWritable('wp-1' as WorkplaceId, [accountId1 as AccountId], 'Budget');
+        },
+      );
+      await validatorEntered;
+      const deletion = deleteAccount(accountId1 as AccountId, 'wp-1' as WorkplaceId);
+      const deletionResult = expect(deletion).rejects.toThrow(/cannot be deleted while referenced/);
+      release();
+      await create;
+      await deletionResult;
+      expect(
+        await budgetRepository.findAllReferencingAssetAccountId(
+          'wp-1' as WorkplaceId,
+          accountId1 as AccountId,
+        ),
+      ).toHaveLength(0);
+      expect(
+        await budgetRepository.getScopes(
+          'wp-1' as WorkplaceId,
+          (await budgetRepository.findAllActive('wp-1' as WorkplaceId))[0].id,
+        ),
+      ).toHaveLength(1);
+    });
+
+    it('rejects creation when account deletion committed before the writer validation', async () => {
+      await deleteAccount(accountId1 as AccountId, 'wp-1' as WorkplaceId);
+      await expect(
+        budgetRepository.create(
+          'wp-1' as WorkplaceId,
+          {
+            name: 'Dangling attempt',
+            amount: 100,
+            currencyCode: 'USD',
+            startMonth: '2026-09',
+          },
+          [accountId1 as AccountId],
+          () => assertWritable('wp-1' as WorkplaceId, [accountId1 as AccountId], 'Budget'),
+        ),
+      ).rejects.toThrow(/missing or deleted account/);
+      expect(await database.collections.get('budgets').query().fetchCount()).toBe(0);
+    });
+
+    it('rejects a budget scope update that reintroduces an account deleted first', async () => {
+      const budget = await budgetRepository.create(
+        'wp-1' as WorkplaceId,
+        {
+          name: 'Update guard',
+          amount: 100,
+          currencyCode: 'USD',
+          startMonth: '2026-09',
+        },
+        [accountId2 as AccountId],
+      );
+      await deleteAccount(accountId1 as AccountId, 'wp-1' as WorkplaceId);
+      await expect(
+        budgetWriteService.updateBudget(
+          'wp-1' as WorkplaceId,
+          budget.id as BudgetId,
+          { amount: 200 },
+          [accountId1 as AccountId],
+        ),
+      ).rejects.toThrow(/missing or deleted account/);
+      expect(
+        (await budgetRepository.find('wp-1' as WorkplaceId, budget.id as BudgetId))?.amount,
+      ).toBe(100);
+      expect(
+        (await budgetRepository.getScopes('wp-1' as WorkplaceId, budget.id as BudgetId))[0]
+          .accountId,
+      ).toBe(accountId2);
+    });
+
+    it('blocks deletion when an in-flight budget publishes a funding-account reference', async () => {
+      let entered!: () => void;
+      let release!: () => void;
+      const enteredValidation = new Promise<void>(resolve => {
+        entered = resolve;
+      });
+      const gate = new Promise<void>(resolve => {
+        release = resolve;
+      });
+      const create = budgetRepository.create(
+        'wp-1' as WorkplaceId,
+        {
+          name: 'Funding race',
+          amount: 100,
+          currencyCode: 'USD',
+          startMonth: '2026-09',
+          assetAccountIds: [accountId1 as AccountId],
+        },
+        [],
+        async () => {
+          entered();
+          await gate;
+          await assertWritable('wp-1' as WorkplaceId, [accountId1 as AccountId], 'Budget');
+        },
+      );
+      await enteredValidation;
+      const deletion = deleteAccount(accountId1 as AccountId, 'wp-1' as WorkplaceId);
+      const deletionResult = expect(deletion).rejects.toThrow(/cannot be deleted while referenced/);
+      release();
+      await create;
+      await deletionResult;
+      expect(
+        await budgetRepository.findAllReferencingAssetAccountId(
+          'wp-1' as WorkplaceId,
+          accountId1 as AccountId,
+        ),
+      ).toHaveLength(1);
+    });
     it('should create a budget with scopes', async () => {
       const budget = await budgetRepository.create(
         'wp-1' as WorkplaceId,

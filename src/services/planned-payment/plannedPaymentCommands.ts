@@ -16,9 +16,10 @@ export async function createPlannedPayment(
   workplaceId: WorkplaceId,
   input: PlannedPaymentCommandInput,
 ): Promise<PlannedPayment> {
-  await assertWritable(workplaceId, [input.fromAccountId, input.toAccountId], 'Planned payment');
   const persistence = buildCreatePersistenceInput(input);
-  const created = await plannedPaymentRepository.create(workplaceId, persistence);
+  const created = await plannedPaymentRepository.create(workplaceId, persistence, () =>
+    assertWritable(workplaceId, [input.fromAccountId, input.toAccountId], 'Planned payment'),
+  );
   analytics.logPlannedPaymentCreated(input.intervalType, input.isAutoPost ? 'auto' : 'manual');
   await processDuePlannedPayments(workplaceId);
   return created;
@@ -34,9 +35,10 @@ export async function updatePlannedPayment(
     throw new Error('Planned payment not found');
   }
 
-  await assertWritable(workplaceId, [input.fromAccountId, input.toAccountId], 'Planned payment');
   const updates = buildUpdatePersistenceInput(existing, input);
-  return plannedPaymentRepository.updateSchedule(workplaceId, existing, updates);
+  return plannedPaymentRepository.updateSchedule(workplaceId, existing, updates, () =>
+    assertWritable(workplaceId, [input.fromAccountId, input.toAccountId], 'Planned payment'),
+  );
 }
 
 export async function upsertPlannedPaymentByName(

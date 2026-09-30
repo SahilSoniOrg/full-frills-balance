@@ -142,6 +142,16 @@ export class PlannedPaymentRepository {
       .fetch();
   }
 
+  async findAllForDueSettlement(workplaceId: WorkplaceId): Promise<PlannedPayment[]> {
+    return this.plannedPayments
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('status', Q.oneOf([PlannedPaymentStatus.ACTIVE, PlannedPaymentStatus.COMPLETED])),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .fetch();
+  }
+
   async find(workplaceId: WorkplaceId, id: PlannedPaymentId): Promise<PlannedPayment | null> {
     const matches = await this.plannedPayments
       .query(
@@ -156,8 +166,10 @@ export class PlannedPaymentRepository {
   async create(
     workplaceId: WorkplaceId,
     data: PlannedPaymentPersistenceInput,
+    validateReferences?: () => Promise<unknown>,
   ): Promise<PlannedPayment> {
     const result = await this.db.write(async () => {
+      await validateReferences?.();
       const created = await this.plannedPayments.create(pp => {
         Object.assign(pp, data);
         pp.createdAt = new Date();
@@ -186,8 +198,10 @@ export class PlannedPaymentRepository {
     workplaceId: WorkplaceId,
     pp: PlannedPayment,
     updates: PlannedPaymentScheduleUpdate,
+    validateReferences?: () => Promise<unknown>,
   ): Promise<PlannedPayment> {
     return await this.db.write(async () => {
+      await validateReferences?.();
       const record = await this.find(workplaceId, pp.id);
       if (!record) throw new Error('Planned payment not found');
       const before = auditPlannedPaymentState(record);

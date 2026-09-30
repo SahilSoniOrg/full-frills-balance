@@ -1,4 +1,4 @@
-import { AppSurface } from '@/src/components/core';
+import { AppSurface, AppText } from '@/src/components/core';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppConfig } from '@/src/constants';
@@ -21,6 +21,7 @@ export interface SafeToSpendCardProps {
   viewModel: SafeToSpendViewModel;
   /** When false, hides the projection chart; amount and breakdown stay. Default true. */
   showChart?: boolean;
+  quality?: 'ready' | 'stale' | 'unavailable';
 }
 
 export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
@@ -32,6 +33,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     onInfoPress,
     onLegendPress,
     showChart = true,
+    quality = 'ready',
   } = props;
   const formatMoney = useMoneyFormat();
   const { workplaceId } = useWorkplace();
@@ -83,17 +85,22 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
       />
     ) : null;
 
-  const header = (
-    <SafeToSpendHeader
-      isOverCommitted={isOverCommitted}
-      isPositiveSafeToSpend={isPositiveSafeToSpend}
-      amount={isOverCommitted ? shortfall : safeToSpend}
-      currencyCode={currencyCode}
-      loading={loading}
-      infoDisabled={!detailsReady}
-      onInfoPress={onInfoPress}
-    />
-  );
+  const header =
+    quality === 'unavailable' ? (
+      <AppText color="secondary">
+        {AppConfig.strings.dashboard.safeToSpendUi.forecastUnavailable}
+      </AppText>
+    ) : (
+      <SafeToSpendHeader
+        isOverCommitted={isOverCommitted}
+        isPositiveSafeToSpend={isPositiveSafeToSpend}
+        amount={isOverCommitted ? shortfall : safeToSpend}
+        currencyCode={currencyCode}
+        loading={loading}
+        infoDisabled={!detailsReady}
+        onInfoPress={onInfoPress}
+      />
+    );
 
   return (
     <AppSurface
@@ -105,7 +112,11 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
       <SafeToSpendCardLayout
         summary={header}
         warning={
-          viewModel.hasUnvaluedEntries ? (
+          quality === 'stale' ? (
+            <AppText color="secondary">
+              {AppConfig.strings.dashboard.safeToSpendUi.forecastStale}
+            </AppText>
+          ) : viewModel.hasUnvaluedEntries ? (
             <IncompleteFxWarning
               testID="safe-to-spend-incomplete-warning"
               message={AppConfig.strings.dashboard.safeToSpendUi.incompleteFxWarning}
@@ -128,9 +139,9 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
             />
           ) : null
         }
-        breakdown={breakdown}
-        metrics={metrics}
-        chart={chart}
+        breakdown={quality === 'unavailable' ? null : breakdown}
+        metrics={quality === 'unavailable' ? null : metrics}
+        chart={quality === 'unavailable' ? null : chart}
       />
     </AppSurface>
   );

@@ -8,6 +8,7 @@ import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
+import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { generatePlannedOccurrence } from '@/src/services/planned-payment/plannedPaymentJournalGeneration';
@@ -18,6 +19,7 @@ import {
   skipPlannedPaymentOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { buildPlannedPaymentTransferLines } from '@/src/services/planned-payment/plannedPaymentJournalLines';
+import { togglePlannedPaymentStatus } from '@/src/services/planned-payment/plannedPaymentLifecycle';
 import {
   calculateNextOccurrence,
   normalizeToStartOfDay,
@@ -117,6 +119,179 @@ describe('planned payment orchestration persistence', () => {
     expect(reloaded?.nextOccurrence).toBe(expectedNextOccurrence);
     expect(writeSpy).toHaveBeenCalledTimes(1);
     expect(batchSpy).toHaveBeenCalledTimes(1);
+  }, 30000);
+
+  it('keeps a finite future auto-post occurrence planned, then posts it once when due', async () => {
+    const today = normalizeToStartOfDay(Date.now());
+    const dueDate = today + AppConfig.time.msPerDay;
+    let clock = Date.now();
+    const dateNow = jest.spyOn(Date, 'now').mockImplementation(() => clock);
+    const payment = await plannedPaymentRepository.create(WORKPLACE_ID, {
+      name: 'Finite future rent',
+      amount: 1200,
+      currencyCode: 'USD',
+      fromAccountId,
+      toAccountId,
+      intervalN: 1,
+      intervalType: PlannedPaymentInterval.DAILY,
+      startDate: dueDate,
+      endDate: dueDate,
+      nextOccurrence: dueDate,
+      status: PlannedPaymentStatus.ACTIVE,
+      isAutoPost: true,
+    });
+
+    await processDuePlannedPayments(WORKPLACE_ID);
+    let [journal] = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
+    let reloaded = await plannedPaymentRepository.find(WORKPLACE_ID, payment.id);
+    expect(journal.status).toBe(JournalStatus.PLANNED);
+    expect(reloaded?.status).toBe(PlannedPaymentStatus.COMPLETED);
+    expect(
+      (
+        await balanceReadService.getAccountBalances(WORKPLACE_ID, Date.now(), 'USD', undefined, [
+          fromAccountId,
+        ])
+      )[0].balance,
+    ).toBe(0);
+
+    try {
+      clock = dueDate + AppConfig.time.msPerDay;
+      await processDuePlannedPayments(WORKPLACE_ID);
+      [journal] = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
+      expect(journal.status).toBe(JournalStatus.POSTED);
+      await processDuePlannedPayments(WORKPLACE_ID);
+      expect(await findJournalsForPayments(WORKPLACE_ID, [payment.id])).toHaveLength(1);
+    } finally {
+      dateNow.mockRestore();
+    }
+    await rebuildQueueService.flush();
+    expect(
+      (
+        await balanceReadService.getAccountBalances(
+          WORKPLACE_ID,
+          dueDate + AppConfig.time.msPerDay,
+          'USD',
+          undefined,
+          [fromAccountId],
+        )
+      )[0].balance,
+    ).toBe(-1200);
+  }, 30000);
+
+  it('auto-posts an occurrence that is due today', async () => {
+    const occurrence = normalizeToStartOfDay(Date.now());
+    const payment = await plannedPaymentRepository.create(WORKPLACE_ID, {
+      name: 'Due today',
+      amount: 1200,
+      currencyCode: 'USD',
+      fromAccountId,
+      toAccountId,
+      intervalN: 1,
+      intervalType: PlannedPaymentInterval.DAILY,
+      startDate: occurrence,
+      endDate: occurrence,
+      nextOccurrence: occurrence,
+      status: PlannedPaymentStatus.ACTIVE,
+      isAutoPost: true,
+    });
+    await processDuePlannedPayments(WORKPLACE_ID);
+    const [journal] = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
+    expect(journal.status).toBe(JournalStatus.POSTED);
+    await rebuildQueueService.flush();
+    expect(
+      (
+        await balanceReadService.getAccountBalances(WORKPLACE_ID, Date.now(), 'USD', undefined, [
+          fromAccountId,
+        ])
+      )[0].balance,
+    ).toBe(-1200);
+  }, 30000);
+
+  it('leaves a paused finite schedule occurrence untouched until the user resumes it', async () => {
+    const today = normalizeToStartOfDay(Date.now());
+    const dueDate = today + AppConfig.time.msPerDay;
+    const payment = await plannedPaymentRepository.create(WORKPLACE_ID, {
+      name: 'Paused finite future',
+      amount: 1200,
+      currencyCode: 'USD',
+      fromAccountId,
+      toAccountId,
+      intervalN: 1,
+      intervalType: PlannedPaymentInterval.DAILY,
+      startDate: dueDate,
+      endDate: dueDate,
+      nextOccurrence: dueDate,
+      status: PlannedPaymentStatus.ACTIVE,
+      isAutoPost: true,
+    });
+    const scheduled = await journalPersistenceService.put(
+      {
+        journalDate: dueDate,
+        description: payment.name,
+        currencyCode: payment.currencyCode,
+        transactions: buildPlannedPaymentTransferLines(payment),
+        status: JournalStatus.PLANNED,
+        plannedPaymentId: payment.id,
+      },
+      WORKPLACE_ID,
+    );
+    await togglePlannedPaymentStatus(WORKPLACE_ID, payment.id);
+    const pausedClock = jest.spyOn(Date, 'now').mockReturnValue(dueDate);
+    try {
+      await processDuePlannedPayments(WORKPLACE_ID);
+      const stillPaused = await database.collections.get<Journal>('journals').find(scheduled.id);
+      expect(stillPaused.status).toBe(JournalStatus.PAUSED);
+      expect(
+        (
+          await balanceReadService.getAccountBalances(WORKPLACE_ID, dueDate, 'USD', undefined, [
+            fromAccountId,
+          ])
+        )[0].balance,
+      ).toBe(0);
+      await togglePlannedPaymentStatus(WORKPLACE_ID, payment.id);
+      const [resumed] = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
+      expect(resumed.status).toBe(JournalStatus.POSTED);
+      expect(await findJournalsForPayments(WORKPLACE_ID, [payment.id])).toHaveLength(1);
+    } finally {
+      pausedClock.mockRestore();
+    }
+  }, 30000);
+
+  it('cancels a due auto-post after settlement staging but before its batch commits', async () => {
+    const today = normalizeToStartOfDay(Date.now());
+    const dueDate = today + AppConfig.time.msPerDay;
+    const payment = await plannedPaymentRepository.create(WORKPLACE_ID, {
+      name: 'Cancellation due',
+      amount: 1200,
+      currencyCode: 'USD',
+      fromAccountId,
+      toAccountId,
+      intervalN: 1,
+      intervalType: PlannedPaymentInterval.DAILY,
+      startDate: dueDate,
+      endDate: dueDate,
+      nextOccurrence: dueDate,
+      status: PlannedPaymentStatus.ACTIVE,
+      isAutoPost: true,
+    });
+    await processDuePlannedPayments(WORKPLACE_ID);
+    const controller = new AbortController();
+    const clock = jest.spyOn(Date, 'now').mockReturnValue(dueDate + AppConfig.time.msPerDay);
+    const findOccurrence = jest.spyOn(journalPlannedQueries, 'findOccurrenceJournals');
+    const originalFind = findOccurrence.getMockImplementation()!;
+    findOccurrence.mockImplementation(async (...args) => {
+      const found = await originalFind(...args);
+      controller.abort();
+      return found;
+    });
+    try {
+      await processDuePlannedPayments(WORKPLACE_ID, controller.signal);
+    } finally {
+      findOccurrence.mockRestore();
+      clock.mockRestore();
+    }
+    const [journal] = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
+    expect(journal.status).toBe(JournalStatus.PLANNED);
   }, 30000);
 
   it('posts an existing planned occurrence with its schedule advance in one batch', async () => {

@@ -16,6 +16,8 @@ import type { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpend
 
 /** Widget / headline path — intentionally tiny. */
 export type SafeToSpendHeadline = {
+  quality: 'ready' | 'stale' | 'unavailable';
+  projectionError?: string;
   currencyCode: string;
   safeToSpend: number;
   shortfall: number;
@@ -23,6 +25,12 @@ export type SafeToSpendHeadline = {
   firstMajorInflowDay: number | null;
   hasUnvaluedEntries?: boolean;
 };
+
+export function isSafeToSpendHeadlineCurrent(
+  headline: SafeToSpendHeadline | null | undefined,
+): headline is SafeToSpendHeadline {
+  return headline?.quality === 'ready';
+}
 
 export interface SafeToSpendHandle {
   /** Dashboard default — currency and window resolved inside the Module. */
@@ -35,6 +43,8 @@ export interface SafeToSpendHandle {
 
 function toHeadline(result: SafeToSpendDashboard): SafeToSpendHeadline {
   return {
+    quality: result.quality ?? 'ready',
+    ...(result.projectionError ? { projectionError: result.projectionError } : {}),
     currencyCode: result.currencyCode,
     safeToSpend: result.summary.safeToSpend,
     shortfall: result.summary.shortfall,
@@ -98,15 +108,55 @@ export class SafeToSpendReadModel {
     workplaceId: WorkplaceId,
     defaultCurrencyCode: string,
   ): Observable<SafeToSpendDashboard> {
+    let lastSuccessful: SafeToSpendDashboard | undefined;
     return observeSafeToSpendInputSnapshot(workplaceId, defaultCurrencyCode).pipe(
       switchMap(outcome => {
         if (outcome.kind === 'empty') {
-          return of(createEmptySafeToSpendDashboard(outcome.defaultCurrencyCode));
+          lastSuccessful = undefined;
+          return of({
+            ...createEmptySafeToSpendDashboard(outcome.defaultCurrencyCode),
+            quality: 'ready' as const,
+          });
+        }
+        if (outcome.kind === 'failed') {
+          const previous = lastSuccessful;
+          return of(
+            previous
+              ? { ...previous, quality: 'stale' as const, projectionError: 'Input refresh failed' }
+              : {
+                  ...createEmptySafeToSpendDashboard(defaultCurrencyCode),
+                  quality: 'unavailable' as const,
+                  projectionError: 'Input unavailable',
+                },
+          );
         }
 
         return from(projectSafeToSpendDashboardFromSnapshot(outcome.snapshot)).pipe(
           tap(result => {
+            const ready = { ...result, quality: 'ready' as const };
+            lastSuccessful = ready;
             persistSafeToSpendSnapshot(workplaceId, result);
+          }),
+          map(result => ({ ...result, quality: 'ready' as const })),
+          catchError(err => {
+            logger.error(
+              `[SafeToSpendReadModel] Projection failed (Workplace: ${workplaceId}):`,
+              err,
+            );
+            const previous = lastSuccessful;
+            return of(
+              previous
+                ? {
+                    ...previous,
+                    quality: 'stale' as const,
+                    projectionError: 'Projection refresh failed',
+                  }
+                : {
+                    ...createEmptySafeToSpendDashboard(defaultCurrencyCode),
+                    quality: 'unavailable' as const,
+                    projectionError: 'Projection failed',
+                  },
+            );
           }),
         );
       }),
@@ -115,7 +165,16 @@ export class SafeToSpendReadModel {
           `[SafeToSpendReadModel] Error in simulation pipeline (Workplace: ${workplaceId}):`,
           err,
         );
-        return of(createEmptySafeToSpendDashboard(defaultCurrencyCode));
+        const previous = lastSuccessful;
+        return of(
+          previous
+            ? { ...previous, quality: 'stale' as const, projectionError: 'Input refresh failed' }
+            : {
+                ...createEmptySafeToSpendDashboard(defaultCurrencyCode),
+                quality: 'unavailable' as const,
+                projectionError: 'Input unavailable',
+              },
+        );
       }),
     );
   }

@@ -27,7 +27,8 @@ import { logger } from '@/src/utils/logger';
  * A `post` with `journalId` only posts that scheduled journal.
  */
 export type PlannedOccurrenceAction =
-  | { kind: 'generate' }
+  | { kind: 'generate'; asOf: number }
+  | { kind: 'autoPostDue'; postedAt: number; journalId: JournalId }
   | { kind: 'post'; postedAt: number; journalId?: JournalId }
   | { kind: 'skip' };
 
@@ -75,6 +76,9 @@ export async function settlePlannedOccurrence(
   const payment = await requirePlannedPayment(workplaceId, plannedPaymentId);
   if (action.kind === 'generate' || payment.status === PlannedPaymentStatus.PAUSED) {
     assertActive(payment);
+  }
+  if (action.kind === 'autoPostDue' && payment.status === PlannedPaymentStatus.PAUSED) {
+    throw new Error(`Planned payment ${payment.id} is paused`);
   }
   const day = occurrenceDay(occurrenceDate);
   if (
@@ -128,10 +132,29 @@ async function applyOccurrenceAction(
         description: payment.name,
         currencyCode: payment.currencyCode,
         transactions: buildPlannedPaymentTransferLines(payment),
-        status: payment.isAutoPost ? JournalStatus.POSTED : JournalStatus.PLANNED,
+        status:
+          payment.isAutoPost && dayStart <= action.asOf
+            ? JournalStatus.POSTED
+            : JournalStatus.PLANNED,
         plannedPaymentId: payment.id,
       },
       payment.workplaceId,
+      { source: 'system', correlationId },
+    );
+  }
+
+  if (action.kind === 'autoPostDue') {
+    if (!payment.isAutoPost || dayStart > normalizeToStartOfDay(action.postedAt)) return null;
+    if (
+      occurrence.kind !== 'planned' ||
+      !occurrence.journals.some(journal => journal.id === action.journalId)
+    )
+      return null;
+    return journalPersistenceService.postInSession(
+      session,
+      action.journalId,
+      payment.workplaceId,
+      action.postedAt,
       { source: 'system', correlationId },
     );
   }

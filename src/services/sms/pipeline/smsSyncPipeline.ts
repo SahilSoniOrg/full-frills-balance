@@ -176,19 +176,12 @@ export class SmsSyncPipeline {
     const triggeredRuleIds: string[] = [];
 
     if (analysisResults.length > 0 && !signal?.aborted) {
-      // Re-fetch before entering the accounting write session. Its staged model factories
-      // prepare every record immediately before the session's single database.batch.
       const messageIds = analysisResults.map(result => result.message.id);
       const fingerprints = analysisResults.map(result => result.fingerprint);
-      const [latestRecords, latestJournalsById, latestJournalsByFingerprint] = await Promise.all([
-        transactionInboxRepository.findByDeviceSourceIds(workplaceId, messageIds),
-        smsJournalQueries.findJournalsByOriginalSmsIds(messageIds, workplaceId),
-        smsJournalQueries.findJournalsBySmsFingerprints(fingerprints, workplaceId),
-      ]);
-      const latestRecordsByMessageId = new Map(
-        latestRecords.map(record => [record.deviceSourceId, record]),
-      );
       const latestProcessedIds = new Set<string>();
+      const reservedDeviceIds = new Set<string>();
+      const reservedFingerprints = new Map<string, import('@/src/types/ids').JournalId>();
+      const reservedReferences = new Map<string, import('@/src/types/ids').JournalId>();
 
       let stagedImportedCount = 0;
       let stagedOperationCount = 0;
@@ -196,20 +189,54 @@ export class SmsSyncPipeline {
       let committed = false;
       try {
         journalResults = await runAccountingWriteSession(async session => {
+          // These reads occur after acquiring the owning writer, so persisted duplicates
+          // cannot slip between the final check and publication.
+          const [
+            latestRecords,
+            latestJournalsById,
+            latestJournalsByFingerprint,
+            latestByReference,
+          ] = await Promise.all([
+            transactionInboxRepository.findByDeviceSourceIds(workplaceId, messageIds),
+            smsJournalQueries.findJournalsByOriginalSmsIds(messageIds, workplaceId),
+            // Existing linked-inbox fingerprint lookup remains on the persisted legacy scheme;
+            // the stricter full-body/exact-time key below is only for uncommitted siblings.
+            smsJournalQueries.findJournalsBySmsFingerprints(fingerprints, workplaceId),
+            smsJournalQueries.findJournalsByReferenceNumbers(referenceNumbers, workplaceId),
+          ]);
+          const latestRecordsByMessageId = new Map(
+            latestRecords.map(record => [record.deviceSourceId, record]),
+          );
           for (const result of analysisResults) {
             if (signal?.aborted) throw new SmsScanCancelledError();
+            if (reservedDeviceIds.has(result.message.id)) continue;
             const latestRecord = latestRecordsByMessageId.get(result.message.id) ?? null;
             const latestJournal =
               latestJournalsById.get(result.message.id) ??
               latestJournalsByFingerprint.get(result.fingerprint) ??
               null;
+            const referenceJournal = result.parsed.referenceNumber
+              ? latestByReference.get(normalizeSmsReferenceNumber(result.parsed.referenceNumber))
+              : undefined;
+            const latestReferenceDuplicate = referenceJournal
+              ? findReferenceDuplicateMatch(
+                  result.parsed,
+                  new Map([
+                    [normalizeSmsReferenceNumber(result.parsed.referenceNumber!), referenceJournal],
+                  ]),
+                )
+              : null;
 
             const item = await processScanBatchItem({
               session,
               result,
               latestRecord,
               latestJournal,
+              latestReferenceDuplicate,
               latestProcessedIds,
+              reservedDeviceIds,
+              reservedFingerprints,
+              reservedReferences,
               workplaceId,
               triggeredRuleIds,
             });

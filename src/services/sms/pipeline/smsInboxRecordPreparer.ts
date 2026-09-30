@@ -11,8 +11,10 @@ import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
+import { AppConfig } from '@/src/constants';
+import { buildReferenceDuplicateMatch } from '@/src/services/sms/smsDuplicateDetection';
 import { logger } from '@/src/utils/logger';
-import { resolveProcessingStatus } from './smsFingerprint';
+import { computeSmsReservationKey, resolveProcessingStatus } from './smsFingerprint';
 import { SmsAnalysisResult } from './types';
 
 export function prepareUpsertInboxRecord(
@@ -65,7 +67,11 @@ export async function processScanBatchItem(params: {
   result: SmsAnalysisResult;
   latestRecord: TransactionInboxRecord | null;
   latestJournal: Journal | null;
+  latestReferenceDuplicate?: import('@/src/services/sms/smsDuplicateDetection').DuplicateMatch;
   latestProcessedIds: Set<string>;
+  reservedDeviceIds: Set<string>;
+  reservedFingerprints: Map<string, JournalId>;
+  reservedReferences: Map<string, JournalId>;
   workplaceId: WorkplaceId;
   triggeredRuleIds: string[];
 }): Promise<{
@@ -79,19 +85,58 @@ export async function processScanBatchItem(params: {
     session,
     latestRecord,
     latestJournal,
+    latestReferenceDuplicate,
     latestProcessedIds,
+    reservedDeviceIds,
+    reservedFingerprints,
+    reservedReferences,
     workplaceId,
     triggeredRuleIds,
   } = params;
 
   let linkedJournalId = latestJournal?.id ?? latestRecord?.linkedJournalId;
+  let effectiveDuplicate = latestReferenceDuplicate ?? result.duplicate;
   let finalStatus = resolveProcessingStatus({
     parsed: result.parsed,
     processedIds: latestProcessedIds,
     exactJournalId: linkedJournalId,
-    duplicate: result.duplicate,
+    duplicate: effectiveDuplicate,
     existingStatus: latestRecord?.processingStatus,
   });
+
+  const reference = result.parsed.referenceNumber
+    ? normalizeSmsReferenceNumber(result.parsed.referenceNumber)
+    : undefined;
+  // A reused reference must retain every compatible claim within this batch.
+  const referenceReservationKey =
+    reference && result.parsed.amount != null
+      ? JSON.stringify([
+          reference,
+          result.parsed.amount,
+          result.parsed.currencyCode?.toUpperCase(),
+          toTransactionDirection(result.parsed.type),
+        ])
+      : undefined;
+  reservedDeviceIds.add(result.message.id);
+  const reservedReferenceJournalId = referenceReservationKey
+    ? reservedReferences.get(referenceReservationKey)
+    : undefined;
+  const reservationKey = computeSmsReservationKey(
+    result.message.address,
+    result.message.body,
+    result.message.date,
+  );
+  const reservedJournalId = reservedReferenceJournalId ?? reservedFingerprints.get(reservationKey);
+  if (!linkedJournalId && reservedJournalId) {
+    effectiveDuplicate = reservedReferenceJournalId
+      ? buildReferenceDuplicateMatch(reservedJournalId, result.parsed.referenceNumber!)
+      : {
+          journalId: reservedJournalId,
+          score: AppConfig.input.sms.duplicateDetection.scoreThreshold,
+          reasons: ['Exact SMS content within this scan'],
+        };
+    finalStatus = InboxProcessingStatus.DUPLICATE_FLAGGED;
+  }
 
   if (
     result.finalStatus === InboxProcessingStatus.DISMISSED &&
@@ -121,6 +166,11 @@ export async function processScanBatchItem(params: {
       linkedJournalId = journalResult.journal.id;
       finalStatus = InboxProcessingStatus.AUTO_POSTED;
       autoPosted = true;
+      if (result.parsed.id) latestProcessedIds.add(result.parsed.id);
+      reservedFingerprints.set(reservationKey, linkedJournalId);
+      if (referenceReservationKey) {
+        reservedReferences.set(referenceReservationKey, linkedJournalId);
+      }
       triggeredRuleIds.push(result.autoPost.ruleId);
     } catch (error) {
       auditCorrelationId = undefined;
@@ -138,7 +188,7 @@ export async function processScanBatchItem(params: {
     finalStatus,
     workplaceId,
     linkedJournalId,
-    result.duplicate || undefined,
+    effectiveDuplicate || undefined,
   );
   return { inboxRecord, autoPosted, auditCorrelationId, journalResult };
 }

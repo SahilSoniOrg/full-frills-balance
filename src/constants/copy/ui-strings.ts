@@ -170,6 +170,8 @@ export const UI_STRINGS = {
       inflowDesc: (days: number) => `Expected paychecks and deposits within ${days} days.`,
     },
     safeToSpendUi: {
+      forecastUnavailable: 'Forecast unavailable. Your spending amount could not be calculated.',
+      forecastStale: 'Showing the last available forecast. The latest refresh failed.',
       safePrefix: 'Safe to Spend:',
       committedPrefix: 'Reserved:',
       debtsPrefix: 'Upcoming:',

@@ -19,6 +19,7 @@ import {
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { togglePlannedPaymentStatus } from '@/src/services/planned-payment/plannedPaymentLifecycle';
 import { Q } from '@nozbe/watermelondb';
+import { deleteAccount } from '@/src/services/accounts/accountDeleteCommands';
 
 const WP = 'wp-pp-cmd' as WorkplaceId;
 
@@ -89,6 +90,52 @@ describe('planned payment commands (integration)', () => {
     expect(journals.some(j => j.status === JournalStatus.PLANNED)).toBe(true);
   });
 
+  it.each(['funding', 'target'] as const)(
+    'serializes planned-payment %s reference publication against account deletion',
+    async accountRole => {
+      const accountId = accountRole === 'funding' ? fromAccountId : toAccountId;
+      let entered!: () => void;
+      let release!: () => void;
+      const enteredValidation = new Promise<void>(resolve => {
+        entered = resolve;
+      });
+      const gate = new Promise<void>(resolve => {
+        release = resolve;
+      });
+      const originalCreate = plannedPaymentRepository.create.bind(plannedPaymentRepository);
+      jest
+        .spyOn(plannedPaymentRepository, 'create')
+        .mockImplementation(async (workplaceId, data, validate) =>
+          originalCreate(workplaceId, data, async () => {
+            entered();
+            await gate;
+            await validate?.();
+          }),
+        );
+
+      const creation = createPlannedPayment(WP, baseInput());
+      await enteredValidation;
+      const deletion = deleteAccount(accountId, WP);
+      const deletionResult = expect(deletion).rejects.toThrow(/cannot be deleted while referenced/);
+      release();
+      const created = await creation;
+      await deletionResult;
+      expect(await plannedPaymentRepository.find(WP, created.id)).not.toBeNull();
+    },
+  );
+
+  it.each(['funding', 'target'] as const)(
+    'rejects planned-payment creation after %s account deletion wins',
+    async accountRole => {
+      const accountId = accountRole === 'funding' ? fromAccountId : toAccountId;
+      await deleteAccount(accountId, WP);
+      await expect(createPlannedPayment(WP, baseInput())).rejects.toThrow(
+        /missing or deleted account/,
+      );
+      expect(await database.collections.get('planned_payments').query().fetchCount()).toBe(0);
+    },
+  );
+
   it('non-schedule update changes fields without resetting nextOccurrence', async () => {
     const created = await createPlannedPayment(WP, baseInput());
     const beforeNext = created.nextOccurrence;
@@ -115,6 +162,25 @@ describe('planned payment commands (integration)', () => {
 
     expect(updated.nextOccurrence).toBe(newStart);
     expect(updated.intervalN).toBe(2);
+  });
+
+  it('rejects a planned-payment replacement reference deleted before update', async () => {
+    const replacement = await accountWriteRepository.create({
+      name: 'Replacement rent',
+      accountType: AccountType.EXPENSE,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    const created = await createPlannedPayment(WP, baseInput());
+    await deleteAccount(replacement.id, WP);
+    await expect(
+      updatePlannedPayment(WP, created.id, {
+        ...baseInput(),
+        toAccountId: replacement.id,
+      }),
+    ).rejects.toThrow(/missing or deleted account/);
+    const reloaded = await plannedPaymentRepository.find(WP, created.id);
+    expect(reloaded?.toAccountId).toBe(toAccountId);
   });
 
   it('delete soft-deletes active payment and cascades to unposted planned journals and transactions', async () => {

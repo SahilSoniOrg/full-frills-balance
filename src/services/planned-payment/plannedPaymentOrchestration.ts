@@ -1,6 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
+import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import {
   settlePlannedOccurrence,
@@ -127,9 +128,45 @@ async function processDuePlannedPaymentsNow(
   const isCancelled = () => signal?.aborted === true || isCurrent?.() === false;
 
   if (isCancelled()) return;
+  const asOf = normalizeToStartOfDay(Date.now());
+  const settleablePayments = await plannedPaymentRepository.findAllForDueSettlement(workplaceId);
+  for (const payment of settleablePayments) {
+    if (isCancelled() || !payment.isAutoPost) continue;
+    try {
+      const planned = await journalPlannedQueries.findByPlannedPaymentAndStatus(
+        workplaceId,
+        payment.id,
+        JournalStatus.PLANNED,
+      );
+      for (const journal of planned) {
+        if (isCancelled()) break;
+        const occurrenceDate = normalizeToStartOfDay(journal.journalDate);
+        if (occurrenceDate > asOf) continue;
+        const posted = await runAccountingWriteSession(async session => {
+          if (isCancelled()) return null;
+          const settlement = await settlePlannedOccurrence(
+            session,
+            workplaceId,
+            payment.id,
+            occurrenceDate,
+            { kind: 'autoPostDue', postedAt: Date.now(), journalId: journal.id },
+          );
+          if (isCancelled())
+            throw new Error('Planned occurrence settlement cancelled before commit.');
+          return settlement.journal;
+        });
+        if (posted?.status === JournalStatus.POSTED) {
+          journalPersistenceService.afterAtomicWriteCommit([posted], workplaceId);
+        }
+      }
+    } catch (error) {
+      if (isCancelled()) break;
+      logger.error(`Failed to settle due planned occurrence for payment ${payment.id}`, error);
+    }
+  }
   const activePayments = await plannedPaymentRepository.findAllActive(workplaceId);
 
-  const nowTime = normalizeToStartOfDay(Date.now());
+  const nowTime = asOf;
   const horizon = nowTime + AppConfig.insights.recurringHorizonDays * AppConfig.time.msPerDay;
   const maxGenerations = AppConfig.insights.maxPlannedPaymentGenerations;
 
@@ -149,6 +186,7 @@ async function processDuePlannedPaymentsNow(
           pp.id,
           occurrence,
           isCancelled,
+          asOf,
         );
         if (settlement.completed) break;
         occurrence = normalizeToStartOfDay(settlement.nextOccurrence);

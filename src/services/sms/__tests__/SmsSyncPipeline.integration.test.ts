@@ -4,6 +4,7 @@ import { AccountId } from '@/src/types/ids';
 import { database } from '@/src/data/database/Database';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import Journal from '@/src/data/models/Journal';
+import AuditLog from '@/src/data/models/AuditLog';
 import Transaction from '@/src/data/models/Transaction';
 import { Q } from '@nozbe/watermelondb';
 import { smsMessageFromFixture } from '@/src/testing/smsFixtures';
@@ -373,6 +374,189 @@ describe('SmsSyncPipeline integration', () => {
   });
 
   describe('auto-post persistence boundary', () => {
+    async function enableAutoPostFor(message: ReturnType<typeof smsMessageFromFixture>) {
+      await transactionAutoPostRuleRepository.save(
+        {
+          mode: 'regex',
+          senderMatch: message.address,
+          actions: {
+            disposition: 'auto_post',
+            sourceAccountId: cashId as AccountId,
+            categoryAccountId: expenseId as AccountId,
+          },
+          isActive: true,
+        },
+        SMS_TEST_WORKPLACE,
+      );
+    }
+
+    it('auto-posts duplicate reference candidates only once within a scan', async () => {
+      const first = smsMessageFromFixture('upiRef121554846690', {
+        id: 'ref-duplicate-a',
+        date: baseDate,
+      });
+      const second = smsMessageFromFixture('upiRef121554846690', {
+        id: 'ref-duplicate-b',
+        date: baseDate + 1000,
+      });
+      await enableAutoPostFor(first);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [first, second]);
+
+      expect(
+        await database.collections
+          .get<Journal>('journals')
+          .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
+          .fetchCount(),
+      ).toBe(1);
+      expect((await fetchInboxByDeviceId(first.id))?.processingStatus).toBe(
+        InboxProcessingStatus.AUTO_POSTED,
+      );
+      expect((await fetchInboxByDeviceId(second.id))?.processingStatus).toBe(
+        InboxProcessingStatus.DUPLICATE_FLAGGED,
+      );
+    });
+
+    it('reserves exact no-reference content within a scan and correlates the accepted audit group once', async () => {
+      const first = smsMessageFromFixture('swiggyNoRef', {
+        id: 'content-duplicate-a',
+        date: baseDate,
+      });
+      const second = smsMessageFromFixture('swiggyNoRef', {
+        id: 'content-duplicate-b',
+        date: baseDate,
+      });
+      await enableAutoPostFor(first);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [first, second]);
+
+      expect(
+        await database.collections
+          .get<Journal>('journals')
+          .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
+          .fetchCount(),
+      ).toBe(1);
+      expect((await fetchInboxByDeviceId(second.id))?.processingStatus).toBe(
+        InboxProcessingStatus.DUPLICATE_FLAGGED,
+      );
+      const journal = (
+        await database.collections
+          .get<Journal>('journals')
+          .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
+          .fetch()
+      )[0];
+      const auditCollection = database.collections.get<AuditLog>('audit_logs');
+      const journalLogs = await auditCollection
+        .query(
+          Q.where('workplace_id', SMS_TEST_WORKPLACE),
+          Q.where('entity_id', journal.id),
+          Q.where('event_type', 'journal.sms_auto_posted'),
+        )
+        .fetch();
+      expect(journalLogs).toHaveLength(1);
+      const logs = await auditCollection
+        .query(
+          Q.where('workplace_id', SMS_TEST_WORKPLACE),
+          Q.where('correlation_id', journalLogs[0].correlationId),
+        )
+        .fetch();
+      expect(logs.filter(log => log.eventType === 'journal.sms_auto_posted')).toHaveLength(1);
+      expect(logs.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('stages only one inbox record when a device message ID is repeated in a scan', async () => {
+      const message = smsMessageFromFixture('swiggyNoRef', {
+        id: 'same-device-id',
+        date: baseDate,
+      });
+      await enableAutoPostFor(message);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [message, message]);
+      expect(
+        await database.collections
+          .get<Journal>('journals')
+          .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
+          .fetchCount(),
+      ).toBe(1);
+      expect(
+        await database.collections
+          .get('transaction_inbox_records')
+          .query(Q.where('device_source_id', message.id))
+          .fetchCount(),
+      ).toBe(1);
+    });
+
+    it('does not collapse the same reference when parsed amounts differ', async () => {
+      const first = smsMessageFromFixture('upiRef121554846690', {
+        id: 'ref-amount-a',
+        date: baseDate,
+      });
+      const second = smsMessageFromFixture('upiRef121554846690', {
+        id: 'ref-amount-b',
+        date: baseDate + 1000,
+        body: 'INR 500.00 debited (UPI Ref No 121554846690) on 07-Mar.',
+      });
+      await enableAutoPostFor(first);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [first, second]);
+
+      expect(
+        await database.collections
+          .get<Journal>('journals')
+          .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
+          .fetchCount(),
+      ).toBe(2);
+      expect((await fetchInboxByDeviceId(second.id))?.processingStatus).toBe(
+        InboxProcessingStatus.AUTO_POSTED,
+      );
+    });
+
+    it('retains earlier reference claims when another amount reuses the reference', async () => {
+      const messages = [100, 200, 100].map((amount, index) =>
+        smsMessageFromFixture('upiRef121554846690', {
+          id: `ref-reused-${index}`,
+          date: baseDate + index * 1000,
+          body: `INR ${amount}.00 debited (UPI Ref No 121554846690) on 07-Mar.`,
+        }),
+      );
+      await enableAutoPostFor(messages[0]);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, messages);
+
+      expect(
+        await database.collections
+          .get<Journal>('journals')
+          .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
+          .fetchCount(),
+      ).toBe(2);
+      const records = await Promise.all(messages.map(message => fetchInboxByDeviceId(message.id)));
+      expect(records.map(record => record?.processingStatus)).toEqual([
+        InboxProcessingStatus.AUTO_POSTED,
+        InboxProcessingStatus.AUTO_POSTED,
+        InboxProcessingStatus.DUPLICATE_FLAGGED,
+      ]);
+      expect(records[2]?.duplicateJournalId).toBe(records[0]?.linkedJournalId);
+    });
+
+    it('keeps same-amount transactions with distinct references in the same scan', async () => {
+      const first = smsMessageFromFixture('upiRef121554846690', {
+        id: 'ref-distinct-a',
+        date: baseDate,
+      });
+      const second = smsMessageFromFixture('upiRef121554846690', {
+        id: 'ref-distinct-b',
+        date: baseDate + 1000,
+        body: 'INR 250.00 debited (UPI Ref No 121554846691) on 07-Mar.',
+      });
+      await enableAutoPostFor(first);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [first, second]);
+
+      expect(
+        await database.collections
+          .get<Journal>('journals')
+          .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
+          .fetchCount(),
+      ).toBe(2);
+      expect((await fetchInboxByDeviceId(second.id))?.processingStatus).toBe(
+        InboxProcessingStatus.AUTO_POSTED,
+      );
+    });
+
     it('posts through the accounting repository and stays idempotent on a repeated scan', async () => {
       const message = smsMessageFromFixture('swiggyNoRef', {
         id: 'sms-auto-post-1',

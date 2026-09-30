@@ -220,9 +220,11 @@ export class BudgetRepository {
     workplaceId: WorkplaceId,
     data: BudgetInput,
     accountIds: AccountId[],
+    validateReferences?: () => Promise<unknown>,
   ): Promise<Budget> {
     return await this.db.write(async () => {
-      const budget = await this.budgets.create(record => {
+      await validateReferences?.();
+      const budget = this.budgets.prepareCreate(record => {
         record.workplaceId = workplaceId;
         record.name = data.name;
         record.amount = data.amount;
@@ -250,6 +252,7 @@ export class BudgetRepository {
       );
 
       await this.db.batch(
+        budget,
         ...scopeCreates,
         auditRepository.prepareLog(
           {
@@ -272,8 +275,10 @@ export class BudgetRepository {
     budget: Budget,
     updates: BudgetPatch,
     accountIds: AccountId[],
+    validateReferences?: () => Promise<unknown>,
   ): Promise<Budget> {
     return await this.db.write(async () => {
+      await validateReferences?.();
       const existingScopes = await this.budgetScopes
         .query(Q.where('workplace_id', workplaceId), Q.where('budget_id', budget.id))
         .fetch();

@@ -13,8 +13,9 @@ export class BudgetWriteService {
     data: BudgetInput,
     accountIds: AccountId[],
   ): Promise<Budget> {
-    await assertWritable(workplaceId, [...accountIds, ...(data.assetAccountIds ?? [])], 'Budget');
-    const budget = await budgetRepository.create(workplaceId, data, accountIds);
+    const budget = await budgetRepository.create(workplaceId, data, accountIds, () =>
+      assertWritable(workplaceId, [...accountIds, ...(data.assetAccountIds ?? [])], 'Budget'),
+    );
 
     analytics.logBudgetCreated(data.amount, data.currencyCode);
     analytics.trackFeatureUsage('budget', 'create', {
@@ -36,12 +37,13 @@ export class BudgetWriteService {
     data: Partial<BudgetInput>,
     accountIds: AccountId[],
   ): Promise<Budget> {
-    await assertWritable(workplaceId, [...accountIds, ...(data.assetAccountIds ?? [])], 'Budget');
     const budget = await budgetRepository.find(workplaceId, budgetId);
     if (!budget) {
       throw new Error('Budget not found');
     }
-    const updatedBudget = await budgetRepository.update(workplaceId, budget, data, accountIds);
+    const updatedBudget = await budgetRepository.update(workplaceId, budget, data, accountIds, () =>
+      assertWritable(workplaceId, [...accountIds, ...(data.assetAccountIds ?? [])], 'Budget'),
+    );
 
     analytics.trackFeatureUsage('budget', 'update', {
       budget_id: budget.id,

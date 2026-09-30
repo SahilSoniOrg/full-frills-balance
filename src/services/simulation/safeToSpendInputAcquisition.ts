@@ -31,7 +31,7 @@ import type { UnvaluedStartingBalance } from './types';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import dayjs from 'dayjs';
 import { combineLatest, from, Observable, of } from 'rxjs';
-import { map, startWith, switchMap } from 'rxjs/operators';
+import { catchError, map, retry, startWith, switchMap } from 'rxjs/operators';
 
 /**
  * Fully resolved inputs for Safe-to-Spend projection (simulation + history assembly).
@@ -62,6 +62,7 @@ export type SafeToSpendInputSnapshot = {
 
 export type SafeToSpendInputOutcome =
   | { kind: 'empty'; defaultCurrencyCode: string }
+  | { kind: 'failed'; defaultCurrencyCode: string; error: unknown }
   | { kind: 'ready'; snapshot: SafeToSpendInputSnapshot };
 
 type LedgerReactiveBundle = {
@@ -318,7 +319,13 @@ export function observeSafeToSpendInputSnapshot(
 
           return { kind: 'ready' as const, snapshot };
         }),
+        catchError(error =>
+          of({ kind: 'failed' as const, defaultCurrencyCode: mapped.defaultCurrencyCode, error }),
+        ),
       );
     }),
+    // Re-subscribe briefly when a reactive ledger source itself errors; asynchronous per-input
+    // assembly failures are converted to `failed` outcomes above and remain input-reactive.
+    retry({ count: 2, delay: 100 }),
   );
 }

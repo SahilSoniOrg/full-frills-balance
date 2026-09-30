@@ -494,7 +494,7 @@ describe('SafeToSpendReadModel', () => {
         });
     });
 
-    it('falls back without persisting when simulation rejects invalid input', done => {
+    it('marks projection failure unavailable instead of a valid zero', done => {
       const mockAssets = [
         { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
       ];
@@ -511,8 +511,138 @@ describe('SafeToSpendReadModel', () => {
         .watch()
         .subscribe(result => {
           expect(result.summary.safeToSpend).toBe(0);
+          expect(result.quality).toBe('unavailable');
+          expect(result.projectionError).toBeTruthy();
           expect(snapshotService.saveCustomSnapshot).not.toHaveBeenCalled();
           done();
+        });
+    });
+
+    it('keeps observing inputs after projection failure and recovers on a new input', done => {
+      const assets = [
+        { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
+      ];
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(assets));
+      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([
+        { accountId: 'a1', balance: 500 },
+      ]);
+      const days$ = new BehaviorSubject(60);
+      jest.requireMock('@/src/services/preferences').preferences.sts.observeForWorkplace = jest.fn(
+        () => days$.asObservable(),
+      );
+      (cashFlowSimulationService.simulate as jest.Mock)
+        .mockRejectedValueOnce(new Error('projection failed'))
+        .mockResolvedValue({
+          ...emptySimResult,
+          simulationResult: {
+            summary: { safeToSpend: 75, shortfall: 0, trajectoryMinBalance: 75 },
+            projections: [],
+          },
+        });
+      const seen: string[] = [];
+      const sub = safeToSpendReadModel
+        .forWorkplace('test-wp' as WorkplaceId)
+        .watch()
+        .subscribe(result => {
+          seen.push(result.quality ?? 'ready');
+          if (seen.length === 1) {
+            expect(result.quality).toBe('unavailable');
+            days$.next(61);
+          } else if (seen.length === 2) {
+            expect(result.quality).toBe('ready');
+            expect(result.summary.safeToSpend).toBe(75);
+            sub.unsubscribe();
+            done();
+          }
+        });
+    });
+
+    it('marks stale values, clears them for empty books, and does not restore them after cache reset', done => {
+      const liquid = [
+        { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
+      ];
+      const nonLiquid = [
+        {
+          id: 'retirement',
+          accountType: AccountType.ASSET,
+          accountSubtype: AccountSubtype.RETIREMENT,
+        },
+      ];
+      const accounts$ = new BehaviorSubject(liquid);
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(accounts$.asObservable());
+      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([
+        { accountId: 'a1', balance: 500 },
+      ]);
+      const days$ = new BehaviorSubject(60);
+      jest.requireMock('@/src/services/preferences').preferences.sts.observeForWorkplace = jest.fn(
+        () => days$.asObservable(),
+      );
+      (cashFlowSimulationService.simulate as jest.Mock)
+        .mockResolvedValueOnce({
+          ...emptySimResult,
+          simulationResult: {
+            summary: { safeToSpend: 88, shortfall: 0, trajectoryMinBalance: 88 },
+            projections: [],
+          },
+        })
+        .mockRejectedValueOnce(new Error('refresh failed'))
+        .mockRejectedValueOnce(new Error('recovery failed'));
+      const sub = safeToSpendReadModel
+        .forWorkplace('test-wp' as WorkplaceId)
+        .watch()
+        .subscribe(result => {
+          if (result.quality === 'ready' && result.summary.safeToSpend === 88) {
+            days$.next(61);
+          } else if (result.quality === 'stale') {
+            expect(result.summary.safeToSpend).toBe(88);
+            accounts$.next(nonLiquid);
+          } else if (result.quality === 'ready' && result.summary.safeToSpend === 0) {
+            safeToSpendReadModel.clearCache();
+            sub.unsubscribe();
+            accounts$.next(liquid);
+            safeToSpendReadModel
+              .forWorkplace('test-wp' as WorkplaceId)
+              .watch()
+              .subscribe(next => {
+                expect(next.quality).toBe('unavailable');
+                expect(next.projectionError).toBeTruthy();
+                done();
+              });
+          }
+        });
+    });
+
+    it('surfaces a balance-acquisition failure and recovers when the observed accounts change', done => {
+      const liquid = [
+        { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
+      ];
+      const accounts$ = new BehaviorSubject(liquid);
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(accounts$.asObservable());
+      (balanceReadService.getAccountBalances as jest.Mock)
+        .mockRejectedValueOnce(new Error('balance read failed'))
+        .mockResolvedValue([{ accountId: 'a1', balance: 500 }]);
+      (cashFlowSimulationService.simulate as jest.Mock).mockResolvedValue({
+        ...emptySimResult,
+        simulationResult: {
+          summary: { safeToSpend: 45, shortfall: 0, trajectoryMinBalance: 45 },
+          projections: [],
+        },
+      });
+      const sub = safeToSpendReadModel
+        .forWorkplace('test-wp' as WorkplaceId)
+        .watch()
+        .subscribe(result => {
+          if (result.quality === 'unavailable') {
+            expect(result.projectionError).toBeTruthy();
+            accounts$.next([
+              ...liquid,
+              { id: 'a2', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
+            ]);
+          } else if (result.quality === 'ready') {
+            expect(result.summary.safeToSpend).toBe(45);
+            sub.unsubscribe();
+            done();
+          }
         });
     });
 

@@ -48,6 +48,9 @@ type SafeToSpendSummary = Pick<
 
 /** Payload from `safeToSpend.forWorkplace(id).watch()` — dashboard + chart. */
 export interface SafeToSpendDashboard {
+  /** Availability of the latest projection. Empty financial data remains `ready`. */
+  quality?: 'ready' | 'stale' | 'unavailable';
+  projectionError?: string;
   summary: SafeToSpendSummary & { safeCurrentBalance?: number };
   report: SimulationRunResult['report'];
   accountSummaries: SimulationRunResult['accountSummaries'];

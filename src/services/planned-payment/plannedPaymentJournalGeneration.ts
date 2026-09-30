@@ -16,6 +16,7 @@ export async function generatePlannedOccurrence(
   plannedPaymentId: PlannedPaymentId,
   occurrenceDate: number,
   isCancelled: () => boolean = () => false,
+  asOf = Date.now(),
 ): Promise<PlannedOccurrenceSettlement> {
   const assertNotCancelled = () => {
     if (isCancelled()) throw new Error('Planned journal generation cancelled before commit.');
@@ -29,7 +30,7 @@ export async function generatePlannedOccurrence(
       workplaceId,
       plannedPaymentId,
       occurrenceDate,
-      { kind: 'generate' },
+      { kind: 'generate', asOf },
     );
     assertNotCancelled();
     return result;

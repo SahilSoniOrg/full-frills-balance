@@ -79,7 +79,11 @@ export function useDashboardViewModel(): DashboardViewModel {
   );
 
   const hasSafeToSpendData = !!safeToSpendData;
-  const safeToSpendDetailsReady = !!safeToSpendData && !('snapshotKind' in safeToSpendData);
+  const safeToSpendDetailsReady =
+    !!safeToSpendData &&
+    !('snapshotKind' in safeToSpendData) &&
+    safeToSpendData.quality !== 'unavailable' &&
+    safeToSpendData.quality !== 'stale';
   // Log Safe To Spend Data arrival
   useEffect(() => {
     if (hasSafeToSpendData) {
