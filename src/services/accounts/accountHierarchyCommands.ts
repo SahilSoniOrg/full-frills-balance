@@ -479,6 +479,7 @@ export async function saveAccount(
       accountSubtype: account.accountSubtype,
       currencyCode: account.currencyCode,
       description: account.description,
+      color: account.color,
     };
     const beforeMetadata = await getPlainMetadata(accountId, workplaceId);
     const detailPayload = buildAccountDetailPayload(updates);

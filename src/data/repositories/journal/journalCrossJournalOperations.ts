@@ -282,6 +282,12 @@ export async function stageRetargetAccountsForMerge(
 
   const now = new Date();
   const transactionsByJournal = groupTransactionsByJournal(journalTransactions);
+  const beforeTransactionsByJournal = new Map(
+    [...transactionsByJournal].map(([journalId, transactions]) => [
+      journalId,
+      transactions.map(mapTransactionToAudit),
+    ]),
+  );
   stageModelWrite(session, () => [
     ...movedTransactions.map(transaction =>
       transaction.prepareUpdate(record => {
@@ -292,7 +298,7 @@ export async function stageRetargetAccountsForMerge(
     ),
     ...journals.map(journal => {
       const transactions = transactionsByJournal.get(journal.id) ?? [];
-      const beforeTransactions = transactions.map(mapTransactionToAudit);
+      const beforeTransactions = beforeTransactionsByJournal.get(journal.id) ?? [];
       const afterTransactions = transactions.map(transaction =>
         mapTransactionToAudit({
           accountId: sourceIds.has(transaction.accountId) ? targetAccountId : transaction.accountId,

@@ -376,7 +376,16 @@ export function registerAuditHandlers(): void {
       }
       const expectedCurrent = expectedJournalFields(changes);
 
-      if (before.status === JournalStatus.PLANNED && !before.transactions) {
+      const statusOnlyChange = eventFieldNames(changes).every(
+        field => field === 'status' || field === 'journalDate',
+      );
+      const legacyStatusChange = changes.eventType === undefined && statusOnlyChange;
+      if (
+        before.status === JournalStatus.PLANNED &&
+        statusOnlyChange &&
+        (changes.eventType === 'journal.posted' ||
+          (legacyStatusChange && currentJournal.status === JournalStatus.POSTED))
+      ) {
         await journalService.revertToPlanned(
           journalId,
           workplaceId,
@@ -388,7 +397,12 @@ export function registerAuditHandlers(): void {
         );
         return true;
       }
-      if (before.status === JournalStatus.POSTED && !before.transactions) {
+      if (
+        before.status === JournalStatus.POSTED &&
+        statusOnlyChange &&
+        (changes.eventType === 'journal.reverted_to_planned' ||
+          (legacyStatusChange && currentJournal.status === JournalStatus.PLANNED))
+      ) {
         await journalService.postJournal(
           journalId,
           workplaceId,

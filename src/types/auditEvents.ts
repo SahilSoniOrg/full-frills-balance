@@ -118,6 +118,8 @@ interface AuditEventPayloadBase {
   eventType: string;
   source: AuditEventSource;
   displayName?: string;
+  /** Currency context for financial fields, including when the currency did not change. */
+  currencyCode?: string;
   actor?: AuditActor;
   correlationId?: string;
   revertsLogId?: string;
@@ -160,9 +162,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isAuditFieldDeltas(value: unknown): value is Record<string, AuditFieldDelta> {
   return (
     isRecord(value) &&
-    Object.values(value).every(
-      delta => isRecord(delta) && 'before' in delta && 'after' in delta,
-    )
+    Object.values(value).every(delta => isRecord(delta) && 'before' in delta && 'after' in delta)
   );
 }
 
@@ -294,6 +294,8 @@ export function createAuditEventPayload(input: AuditEventInput): AuditEventPaylo
 
   const displayName = input.displayName ?? findAuditDisplayName(details, stateAfter, before);
   if (displayName) payload.displayName = displayName;
+  const currencyCode = stateAfter?.currencyCode ?? before?.currencyCode;
+  if (typeof currencyCode === 'string') payload.currencyCode = currencyCode;
   if (input.actor) payload.actor = input.actor;
   if (input.correlationId) payload.correlationId = input.correlationId;
   if (input.revertsLogId) payload.revertsLogId = input.revertsLogId;
@@ -319,6 +321,7 @@ export function isAuditEventPayload(value: unknown): value is AuditEventPayload 
     typeof value.source !== 'string' ||
     typeof value.undoable !== 'boolean' ||
     (value.displayName !== undefined && typeof value.displayName !== 'string') ||
+    (value.currencyCode !== undefined && typeof value.currencyCode !== 'string') ||
     !isRecord(value.details) ||
     (value.before !== undefined && !isRecord(value.before)) ||
     (value.after !== undefined && !isRecord(value.after))
