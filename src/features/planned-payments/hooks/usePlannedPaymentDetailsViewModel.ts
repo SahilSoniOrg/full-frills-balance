@@ -286,7 +286,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       intervalLabel,
       nextOccurrenceText:
         item.nextDueOccurrence === undefined
-          ? 'No future occurrence'
+          ? AppConfig.strings.plannedPayments.noUpcomingOccurrence
           : new Date(item.nextDueOccurrence).toLocaleDateString(),
       isAutoPost: item.isAutoPost,
 

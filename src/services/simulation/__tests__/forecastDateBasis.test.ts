@@ -30,15 +30,24 @@ describe('observeForecastDateBasis', () => {
     );
 
     expect(timers.size).toBe(1);
-    now += 15 * 60 * 1000;
+    now += 5 * 60 * 1000;
     foreground?.();
     foreground?.();
     expect(timers.size).toBe(1);
-    expect(values).toHaveLength(3);
+    expect(values).toEqual(Array(3).fill(new Date(2026, 8, 30).getTime()));
 
     now = new Date(2026, 9, 1, 0, 10).getTime();
     foreground?.();
-    expect(values[3]).toBe(new Date(2026, 9, 1).getTime());
+    foreground?.();
+    expect(values).toEqual([
+      ...Array(3).fill(new Date(2026, 8, 30).getTime()),
+      ...Array(2).fill(new Date(2026, 9, 1).getTime()),
+    ]);
+    expect(timers.size).toBe(1);
+
+    now = new Date(2026, 9, 2, 0, 0, 0, 5).getTime();
+    [...timers.values()][0]();
+    expect(values[5]).toBe(new Date(2026, 9, 2).getTime());
     expect(timers.size).toBe(1);
 
     subscription.unsubscribe();

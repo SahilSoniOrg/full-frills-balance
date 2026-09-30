@@ -629,7 +629,8 @@ const SAFE_DIAGNOSTIC_NAMES = new Set([
 
 export function safeErrorName(value: unknown): string {
   if (typeof value !== 'string') return 'Error';
-  return SAFE_DIAGNOSTIC_NAMES.has(value) ? value : 'ApplicationError';
+  if (SAFE_DIAGNOSTIC_NAMES.has(value)) return value;
+  return /^[A-Z][A-Za-z0-9]{0,60}(?:Error|Exception)$/.test(value) ? value : 'ApplicationError';
 }
 
 export function safeAnalyticsIdentity(value: unknown): string {
@@ -649,10 +650,9 @@ function safeStackFrames(stack?: string): string | undefined {
     .map(line => {
       const match = line.match(/^\s*at\s+(?:(.*?)\s+\()?(.+?):(\d+):(\d+)\)?$/);
       if (!match) return undefined;
-      const rawFile = match[2].replace(/\\/g, '/');
-      const file = safeCodeFramePath(rawFile);
+      const file = safeCodeFramePath(match[2].replace(/^address at /, ''));
       if (!file) return undefined;
-      const fn = safeCodeFrameFunction(match[1]);
+      const fn = safeCodeFrameFunction(match[1]) ?? 'anonymous';
       return `    at ${fn} (${file}:${match[3]}:${match[4]})`;
     })
     .filter((frame): frame is string => !!frame)
@@ -660,73 +660,41 @@ function safeStackFrames(stack?: string): string | undefined {
   return frames.length ? frames.join('\n') : undefined;
 }
 
-const SAFE_CODE_DIRECTORIES = new Set([
-  'src',
-  'features',
-  'services',
-  'data',
-  'repositories',
-  'components',
-  'hooks',
-  'utils',
-  'contexts',
-  'constants',
-  'modules',
-  'expo-widgets',
-  'node_modules',
-  'react-native',
-  'expo',
-  'app',
-  'index',
-  'dist',
-  'build',
-  'assets',
-  'vendor',
-  'hermes',
-  'bundle',
-]);
+const APP_CODE_ROOTS = new Set(['src', 'app', 'modules', 'node_modules']);
+const CODE_PATH_SEGMENT = /^[A-Za-z0-9_.@()[\]+-]{1,100}$/;
+const CODE_FILE = /\.(?:[cm]?[jt]sx?|bundle|jsbundle|hbc)$/;
 
+/**
+ * Keeps bundle and repository-relative source paths (for grouping and source maps) while
+ * dropping device/host prefixes, query strings and anything that is not a code path.
+ */
 function safeCodeFramePath(value: string): string | undefined {
-  const path = value.replace(/\\/g, '/').split('/').filter(Boolean).slice(-5);
-  const filename = path[path.length - 1];
-  if (
-    ['index.android.bundle', 'index.ios.bundle', 'main.jsbundle', 'application.bundle'].includes(
-      filename,
-    )
-  ) {
-    return filename;
+  if (value === '[native code]' || value === 'native') return value;
+  const withoutQuery = value.replace(/\\/g, '/').split(/[?#]/, 1)[0];
+  const appScheme = withoutQuery.startsWith('app:///') ? 'app:///' : '';
+  const segments = withoutQuery
+    .replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]*/i, '')
+    .split('/')
+    .filter(Boolean);
+  const rootIndex = segments.findIndex(segment => APP_CODE_ROOTS.has(segment));
+  const filename = segments[segments.length - 1];
+  const kept =
+    rootIndex >= 0
+      ? segments.slice(rootIndex)
+      : filename && CODE_FILE.test(filename)
+        ? [filename]
+        : [];
+  if (!kept.length || kept.length > 12 || kept.some(part => !CODE_PATH_SEGMENT.test(part))) {
+    return undefined;
   }
-  if (path.length < 2 || path.some(part => !/^[A-Za-z0-9_.@-]{1,80}$/.test(part))) return undefined;
-  if (!path.slice(0, -1).some(part => SAFE_CODE_DIRECTORIES.has(part))) return undefined;
-  // Preserve frame coordinates while excluding arbitrary source file names.
-  return 'application.bundle';
+  return `${appScheme}${kept.join('/')}`;
 }
 
-function safeCodeFrameFunction(value?: string): string {
-  if (!value) return 'anonymous';
-  const name = value.replace(/\s*\[as\s+[^\]]+\]/g, '');
-  return SAFE_CODE_FUNCTIONS.has(name) ? name : 'application';
+function safeCodeFrameFunction(value?: string): string | undefined {
+  if (!value) return undefined;
+  const name = value.replace(/\s*\[as\s+[^\]]+\]/g, '').trim();
+  return /^[A-Za-z_$?<][\w$.<>?-]{0,127}$/.test(name) ? name : '?';
 }
-
-const SAFE_CODE_FUNCTIONS = new Set([
-  'render',
-  'commitHookEffectListMount',
-  'commitPassiveMountOnFiber',
-  'performSyncWorkOnRoot',
-  'performWorkOnRoot',
-  'dispatchEvent',
-  'onPress',
-  'onSubmit',
-  'useEffect',
-  'useMemo',
-  'useCallback',
-  'fetch',
-  'async',
-  'Promise.all',
-  'anonymous',
-  'run',
-  'execute',
-]);
 
 export function safeDiagnosticError(error: unknown): Error {
   const source = error instanceof Error ? error : undefined;
@@ -748,6 +716,7 @@ const SAFE_LOG_SITES = new Set([
   'IntegrityMaintenance',
   'SnapshotService',
   'useWidgetSync',
+  'WidgetProjection',
   'JournalList',
   'JournalQueryRepository',
   'JournalBalanceReview',
@@ -920,11 +889,14 @@ export function sanitizeSentryErrorEvent(event: ErrorEvent): ErrorEvent {
     contexts: sanitizeSentryContexts(event.contexts),
     tags: sanitizeSentryTags(event.tags),
     breadcrumbs: event.breadcrumbs?.map(sanitizeSentryBreadcrumb),
+    sdk: sanitizeSentrySdk(event.sdk),
+    debug_meta: sanitizeSentryDebugMeta(event.debug_meta),
     exception: event.exception?.values
       ? {
           values: event.exception.values.slice(0, 5).map(value => ({
             type: safeErrorName(value.type),
             value: 'Application error',
+            mechanism: sanitizeSentryMechanism(value.mechanism),
             stacktrace: value.stacktrace?.frames
               ? {
                   frames: value.stacktrace.frames.slice(-20).map(frame => ({
@@ -1065,6 +1037,48 @@ function safeVersion(value: unknown): string | undefined {
     /^\d{1,4}(?:\.\d{1,4}){0,3}(?:[-+][A-Za-z0-9.-]{1,20})?$/.test(value)
     ? value
     : undefined;
+}
+
+function sanitizeSentrySdk(sdk: ErrorEvent['sdk']): ErrorEvent['sdk'] {
+  if (!sdk || !/^sentry\.[a-z.-]{1,60}$/.test(String(sdk.name))) return undefined;
+  return { name: sdk.name, version: safeVersion(sdk.version) ?? '0.0.0' };
+}
+
+function sanitizeSentryDebugMeta(meta: ErrorEvent['debug_meta']): ErrorEvent['debug_meta'] {
+  const images = meta?.images
+    ?.filter(image => image.type === 'sourcemap')
+    .map(image => ({
+      type: 'sourcemap' as const,
+      code_file: safeCodeFramePath(String(image.code_file ?? '')),
+      debug_id: safeDebugId(image.debug_id),
+    }))
+    .filter(
+      (image): image is { type: 'sourcemap'; code_file: string; debug_id: string } =>
+        !!image.code_file && !!image.debug_id,
+    )
+    .slice(0, 10);
+  return images?.length ? { images } : undefined;
+}
+
+function safeDebugId(value: unknown): string | undefined {
+  return typeof value === 'string' &&
+    /^[a-f\d]{8}-?[a-f\d]{4}-?[a-f\d]{4}-?[a-f\d]{4}-?[a-f\d]{12}$/i.test(value)
+    ? value
+    : undefined;
+}
+
+type SentryMechanism = NonNullable<
+  NonNullable<NonNullable<ErrorEvent['exception']>['values']>[number]['mechanism']
+>;
+
+function sanitizeSentryMechanism(mechanism?: SentryMechanism): SentryMechanism | undefined {
+  if (!mechanism || !/^[A-Za-z][A-Za-z0-9_.]{0,40}$/.test(String(mechanism.type))) {
+    return undefined;
+  }
+  return {
+    type: mechanism.type,
+    handled: typeof mechanism.handled === 'boolean' ? mechanism.handled : undefined,
+  };
 }
 
 function sanitizeSentryTags(tags: ErrorEvent['tags']): ErrorEvent['tags'] {

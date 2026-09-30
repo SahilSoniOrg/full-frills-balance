@@ -39,7 +39,37 @@ class Logger {
     this.performanceReporter = reporter;
   }
 
-  private log(level: LogLevel, message: string | unknown, context?: LogContext) {
+  private formatLine(
+    timestamp: string,
+    level: LogLevel,
+    message: string,
+    context?: Record<string, unknown>,
+  ): string {
+    const contextStr =
+      context?.traceId && typeof context.traceId === 'string' ? ` [TRC:${context.traceId}]` : '';
+    let detailStr = '';
+    if (context && Object.keys(context).length) {
+      try {
+        detailStr = ` | ${JSON.stringify(context, (_key, value: unknown) =>
+          value instanceof Error ? (value.stack ?? `${value.name}: ${value.message}`) : value,
+        )}`;
+      } catch {
+        detailStr = ' | [Diagnostic context unavailable]';
+      }
+    }
+    return `[${timestamp}] [${level.toUpperCase()}]${contextStr} ${message}${detailStr}`;
+  }
+
+  /**
+   * The buffer feeds bug-report exports and is always sanitized. Only the development
+   * console receives the original message, context and error.
+   */
+  private log(
+    level: LogLevel,
+    message: string | unknown,
+    context?: LogContext,
+    rawError?: unknown,
+  ) {
     // Skip debug logs in production
     if (level === 'debug' && !this.isDevelopment) {
       return;
@@ -54,26 +84,13 @@ class Logger {
       }
     }
 
-    const timestamp = new Date().toISOString();
-    const contextStr =
-      safeContext?.traceId && typeof safeContext.traceId === 'string'
-        ? ` [TRC:${safeContext.traceId}]`
-        : '';
-    let detailStr = '';
-    if (safeContext) {
-      try {
-        detailStr = ` | ${JSON.stringify(safeContext)}`;
-      } catch {
-        detailStr = ' | [Diagnostic context unavailable]';
-      }
-    }
-
     // Don't clutter console with raw metrics in prod unless Trace feature is on
     if (level === 'metric' && !AppConfig.features.debug.tracePerformance && !this.isDevelopment) {
       return;
     }
 
-    const logMessage = `[${timestamp}] [${level.toUpperCase()}]${contextStr} ${safeMessage}${detailStr}`;
+    const timestamp = new Date().toISOString();
+    const logMessage = this.formatLine(timestamp, level, safeMessage, safeContext);
 
     // Update in-memory buffer
     this.logBuffer.push(logMessage);
@@ -81,8 +98,19 @@ class Logger {
       this.logBuffer.shift();
     }
 
+    let consoleMessage = logMessage;
+    if (this.isDevelopment) {
+      const rawMessage =
+        message instanceof Error ? `${message.name}: ${message.message}` : String(message);
+      const rawContext =
+        rawError === undefined || rawError === null ? context : { ...context, error: rawError };
+      consoleMessage = this.formatLine(timestamp, level, rawMessage, rawContext);
+    }
+
     // Safety: Ensure we never pass anything but a string to console methods
-    const outputMessage = String(logMessage || `[${timestamp}] [${level.toUpperCase()}] (Empty)`);
+    const outputMessage = String(
+      consoleMessage || `[${timestamp}] [${level.toUpperCase()}] (Empty)`,
+    );
 
     try {
       switch (level) {
@@ -144,11 +172,15 @@ class Logger {
       const safeMessage = sanitizeLogMessage(message);
       const safeError =
         error === undefined || error === null ? undefined : safeDiagnosticError(error);
-      const safeContext = sanitizeLogContext(context);
-      this.log('error', safeMessage, {
-        ...safeContext,
-        ...(safeError ? { error: safeError } : {}),
-      });
+      this.log(
+        'error',
+        message,
+        {
+          ...context,
+          ...(safeError ? { error: safeError } : {}),
+        },
+        error,
+      );
 
       // Report to Sentry (defensively)
       try {

@@ -1,5 +1,8 @@
+import type { SmsMessage } from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
-import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
+import type TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
+import { ParsedTransaction, toTransactionDirection } from '@/src/services/ledger/SmsParser';
+import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { DuplicateMatch } from '@/src/services/sms/smsDuplicateDetection';
 import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
 import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
@@ -20,10 +23,48 @@ export function computeSmsFingerprint(sender: string, body: string, date: number
   );
 }
 
-/** Strict same-scan reservation identity; unlike the persisted legacy fingerprint, this keeps
- * the complete body and exact timestamp so truncated/day-bucket collisions stay separate. */
-export function computeSmsReservationKey(sender: string, body: string, date: number): string {
-  return JSON.stringify([sender.toLowerCase(), body, date]);
+/** Fingerprints a redelivery could be stored under; the day bucket may differ across midnight. */
+export function redeliveryFingerprintCandidates(message: SmsMessage): string[] {
+  const window = DUPLICATE_CONFIG.redeliveryWindowMs;
+  return [
+    ...new Set(
+      [message.date - window, message.date, message.date + window].map(date =>
+        computeSmsFingerprint(message.address, message.body, date),
+      ),
+    ),
+  ];
+}
+
+/**
+ * A stored SMS is the same delivery when its content fingerprint, parsed identity and delivery
+ * time (within the redelivery window) all match. Same-template messages outside the window are
+ * separate transactions.
+ */
+export function isStoredRedelivery(
+  message: SmsMessage,
+  parsed: ParsedTransaction,
+  stored: Pick<
+    TransactionInboxRecord,
+    | 'inputDate'
+    | 'inputFingerprint'
+    | 'parsedAmount'
+    | 'parsedCurrencyCode'
+    | 'direction'
+    | 'referenceNumber'
+  >,
+): boolean {
+  const reference = parsed.referenceNumber
+    ? normalizeSmsReferenceNumber(parsed.referenceNumber)
+    : undefined;
+  return (
+    Math.abs(stored.inputDate - message.date) <= DUPLICATE_CONFIG.redeliveryWindowMs &&
+    stored.inputFingerprint ===
+      computeSmsFingerprint(message.address, message.body, stored.inputDate) &&
+    (stored.parsedAmount ?? undefined) === parsed.amount &&
+    (stored.parsedCurrencyCode ?? '').toUpperCase() === (parsed.currencyCode ?? '').toUpperCase() &&
+    stored.direction === toTransactionDirection(parsed.type) &&
+    (stored.referenceNumber || undefined) === reference
+  );
 }
 
 export function resolveProcessingStatus(params: {

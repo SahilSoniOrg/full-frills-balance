@@ -6,6 +6,11 @@ import { DuplicateMatch } from '@/src/services/sms/smsDuplicateDetection';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { JournalId } from '@/src/types/ids';
 
+export interface SmsContentReservation {
+  journalId: JournalId;
+  messageDate: number;
+}
+
 export interface SmsAnalysisResult {
   message: SmsMessage;
   parsed: ParsedTransaction;

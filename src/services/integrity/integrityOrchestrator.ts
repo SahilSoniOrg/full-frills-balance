@@ -1,6 +1,5 @@
 import { schema } from '@/src/data/database/schema';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
-import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { analytics } from '@/src/services/analytics';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
@@ -136,9 +135,7 @@ export async function forceRunCheck(
     // Perform ONE single unified refresh for all repaired accounts at the very end
     if (repairedAccountIds.length > 0) {
       onProgress?.('Updating database snapshots...', 0.96);
-      await persistBatch(() =>
-        accountWriteRepository.prepareRefreshOps(workplaceId, repairedAccountIds),
-      );
+      await accountWriteRepository.refreshAccounts(workplaceId, repairedAccountIds);
     }
   } else {
     onProgress?.('No discrepancies found. All balances correct.', 0.9);

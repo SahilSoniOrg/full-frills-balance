@@ -315,6 +315,7 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
       const context = {
         simulationStartMs: startOfToday.valueOf(),
         simulationDays: 30,
+        resultCurrency: 'USD',
         liquidAccountIds: new Set(['main-checking']),
         orderedLiquidAccountIds: ['main-checking'],
         liabilityAccountIds: new Set(['cc-1']),
@@ -334,6 +335,34 @@ describe('LiabilityFlowGenerator - Dynamic Cycles', () => {
         kind: 'OUTFLOW',
         accountId: 'main-checking',
       });
+    });
+  });
+
+  describe('Payment amounts', () => {
+    const minPercentFlows = (resultCurrency: string) =>
+      LiabilityFlowGenerator.generate(
+        {
+          simulationStartMs: startOfToday.valueOf(),
+          simulationDays: 30,
+          resultCurrency,
+          liquidAccountIds: new Set(['main-checking']),
+          orderedLiquidAccountIds: ['main-checking'],
+          liabilityAccountIds: new Set(['cc-1']),
+          accountMap: new Map(),
+        } as any,
+        [],
+        [{ account: mockAcc('cc-1', AccountSubtype.CREDIT_CARD, 'Visa'), balance: 1234.5678 }],
+        new Map([
+          ['cc-1', { statementDay: 1, dueDay: 15, minPaymentOnly: true, minimumPaymentPercent: 5 }],
+        ]),
+        new Map([['cc-1', 1234.5678]]),
+        new Map(),
+      );
+
+    it('rounds emitted payments to the result currency precision', () => {
+      expect(minPercentFlows('USD')[0].amount).toBe(61.73);
+      expect(minPercentFlows('KWD')[0].amount).toBe(61.728);
+      expect(minPercentFlows('JPY')[0].amount).toBe(62);
     });
   });
 });

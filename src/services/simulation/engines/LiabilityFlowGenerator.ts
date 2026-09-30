@@ -1,5 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
+import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
+import { roundToPrecision } from '@/src/utils/money';
 import dayjs from 'dayjs';
 import { AccountSubtype } from '@/src/types/enums';
 import {
@@ -97,7 +99,11 @@ export class LiabilityFlowGenerator {
           }
         }
 
-        if (remainingAmount > AppConfig.defaults.simulation.financialEpsilon) {
+        const paymentAmount = roundToPrecision(
+          remainingAmount,
+          getCurrencyPrecision(context.resultCurrency),
+        );
+        if (paymentAmount > AppConfig.defaults.simulation.financialEpsilon) {
           // Emit OUTFLOW from the preferred liquid account
           // NEW LOGIC: Just pick the first liquid account if none specified
           const payFromId =
@@ -109,7 +115,7 @@ export class LiabilityFlowGenerator {
           flows.push({
             kind: 'OUTFLOW',
             accountId: payFromId,
-            amount: remainingAmount,
+            amount: paymentAmount,
             dayOffset: obligation.dueDayOffset,
             category: FlowCategory.DEBT,
             timeframe: 'FUTURE',

@@ -1,4 +1,5 @@
 import { database } from '@/src/data/database/Database';
+import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { TransactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { InboxParseStatus, InboxProcessingStatus, TransactionDirection } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
@@ -68,6 +69,87 @@ describe('TransactionInboxRepository integration', () => {
     expect(updated?.processingStatus).toBe(InboxProcessingStatus.DUPLICATE_FLAGGED);
     expect(updated?.duplicateJournalId).toBe('journal-duplicate');
     expect(updated?.duplicateConfidence).toBe(0.91);
+  });
+
+  describe('raw SMS retention', () => {
+    const seed = async (deviceSourceId: string, channel: 'sms' | 'voice' = 'sms') => {
+      const record = await database.write(() =>
+        database.collections
+          .get<TransactionInboxRecord>('transaction_inbox_records')
+          .create(entry => {
+            entry.workplaceId = workplaceId;
+            entry.channel = channel;
+            entry.deviceSourceId = deviceSourceId;
+            entry.senderAddress = 'HDFCBK';
+            entry.rawBody = 'Debited INR 500 at SWIGGY';
+            entry.inputDate = 1_700_000_000_000;
+            entry.inputFingerprint = `fingerprint-${deviceSourceId}`;
+            entry.parseStatus = InboxParseStatus.PARSED;
+            entry.direction = TransactionDirection.DEBIT;
+            entry.processingStatus = InboxProcessingStatus.PENDING;
+            entry.metadataJson = JSON.stringify({ body: 'Debited INR 500 at SWIGGY', keep: 1 });
+            entry.firstSeenAt = 1_700_000_000_000;
+            entry.lastScannedAt = 1_700_000_000_000;
+          }),
+      );
+      return record.id;
+    };
+
+    it('keeps sender and body through dismiss and undismiss, then clears them on import', async () => {
+      const recordId = await seed('sms-dismiss-restore');
+
+      await repository.persistStatus(workplaceId, recordId, InboxProcessingStatus.DISMISSED);
+      const dismissed = await repository.find(workplaceId, recordId);
+      expect(dismissed?.processedAt).toEqual(expect.any(Number));
+      expect(dismissed?.senderAddress).toBe('HDFCBK');
+      expect(dismissed?.rawBody).toBe('Debited INR 500 at SWIGGY');
+
+      await repository.persistStatus(workplaceId, recordId, InboxProcessingStatus.PENDING);
+      const restored = await repository.find(workplaceId, recordId);
+      expect(restored?.processedAt).toBeFalsy();
+      expect(restored?.senderAddress).toBe('HDFCBK');
+      expect(restored?.rawBody).toBe('Debited INR 500 at SWIGGY');
+
+      await repository.persistLink(
+        workplaceId,
+        recordId,
+        'journal-imported' as JournalId,
+        InboxProcessingStatus.IMPORTED,
+      );
+      const imported = await repository.find(workplaceId, recordId);
+      expect(imported?.senderAddress).toBeFalsy();
+      expect(imported?.rawBody).toBeFalsy();
+      expect(imported?.metadataJson).not.toContain('SWIGGY');
+    });
+
+    it.each([InboxProcessingStatus.IMPORTED, InboxProcessingStatus.AUTO_POSTED])(
+      'clears sender and body when status becomes %s',
+      async status => {
+        const recordId = await seed(`sms-status-${status}`);
+        await repository.persistStatus(workplaceId, recordId, status);
+        const record = await repository.find(workplaceId, recordId);
+        expect(record?.senderAddress).toBeFalsy();
+        expect(record?.rawBody).toBeFalsy();
+      },
+    );
+
+    it('does not apply SMS cleanup to voice records', async () => {
+      const recordId = await seed('voice-imported', 'voice');
+      await repository.persistStatus(workplaceId, recordId, InboxProcessingStatus.IMPORTED);
+      await repository.persistLink(
+        workplaceId,
+        recordId,
+        'journal-voice' as JournalId,
+        InboxProcessingStatus.IMPORTED,
+      );
+      const record = await repository.find(workplaceId, recordId);
+      expect(record?.senderAddress).toBe('HDFCBK');
+      expect(record?.rawBody).toBe('Debited INR 500 at SWIGGY');
+      expect(JSON.parse(record!.metadataJson!)).toEqual({
+        body: 'Debited INR 500 at SWIGGY',
+        keep: 1,
+      });
+    });
   });
 
   it('rejects preparing a row from another workplace', async () => {

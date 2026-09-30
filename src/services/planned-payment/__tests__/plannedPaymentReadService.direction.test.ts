@@ -9,6 +9,10 @@ describe('planned-payment account direction', () => {
     [AccountType.EXPENSE, AccountType.ASSET, 'inflow'],
     [AccountType.ASSET, AccountType.LIABILITY, 'outflow'],
     [AccountType.LIABILITY, AccountType.ASSET, 'inflow'],
+    [AccountType.LIABILITY, AccountType.EXPENSE, 'outflow'],
+    [AccountType.INCOME, AccountType.LIABILITY, 'inflow'],
+    [AccountType.EXPENSE, AccountType.LIABILITY, 'inflow'],
+    [AccountType.LIABILITY, AccountType.LIABILITY, 'transfer'],
     [AccountType.INCOME, AccountType.EXPENSE, 'unknown'],
   ] as const)('%s → %s is %s', (from, to, expected) => {
     expect(classifyPlannedPaymentDirection(from, to)).toBe(expected);

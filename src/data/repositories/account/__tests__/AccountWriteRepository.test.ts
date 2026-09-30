@@ -1,6 +1,5 @@
 import { database } from '@/src/data/database/Database';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
-import { persistBatch } from '@/src/data/repositories/persistBatch';
 import { AccountType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 
@@ -15,7 +14,7 @@ describe('AccountWriteRepository refresh operations', () => {
     });
   });
 
-  it('prepares refreshes only for requested accounts in the workplace', async () => {
+  it('refreshes only requested live accounts in the workplace', async () => {
     const localAccount = await accountWriteRepository.create({
       name: 'Local account',
       accountType: AccountType.ASSET,
@@ -47,13 +46,11 @@ describe('AccountWriteRepository refresh operations', () => {
     const deletedUpdatedAt = deletedAccount.updatedAt.getTime();
 
     const batchSpy = jest.spyOn(database, 'batch');
-    await persistBatch(() =>
-      accountWriteRepository.prepareRefreshOps(localWorkplace, [
-        localAccount.id,
-        foreignAccount.id,
-        deletedAccount.id,
-      ] as AccountId[]),
-    );
+    await accountWriteRepository.refreshAccounts(localWorkplace, [
+      localAccount.id,
+      foreignAccount.id,
+      deletedAccount.id,
+    ] as AccountId[]);
 
     expect(batchSpy).toHaveBeenCalledTimes(1);
     expect(batchSpy.mock.calls[0][0]).toHaveLength(1);

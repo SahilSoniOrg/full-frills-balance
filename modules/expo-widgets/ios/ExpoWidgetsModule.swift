@@ -4,6 +4,19 @@ import WidgetKit
 public final class ExpoWidgetsModule: Module {
   private let appGroupId = "group.in.sahilsoni.fullfrillsbalance.widgets"
 
+  private static let safeToSpendKeys = [
+    "safe_to_spend_amount", "safe_to_spend_currency", "safe_to_spend_formatted_amount",
+    "safe_to_spend_title", "safe_to_spend_subtitle", "safe_to_spend_updated_at",
+  ]
+  private static let themeKeys = [
+    "widget_theme_id", "widget_theme_mode", "widget_theme_background_start",
+    "widget_theme_background_end", "widget_theme_title_color", "widget_theme_primary_text_color",
+    "widget_theme_secondary_text_color", "widget_theme_action_icon_color",
+    "widget_theme_income_accent_color", "widget_theme_expense_accent_color",
+    "widget_theme_transfer_accent_color",
+  ]
+  private static let privacyKey = "widget_is_privacy_enabled"
+
   public func definition() -> ModuleDefinition {
     Name("ExpoWidgets")
 
@@ -20,12 +33,7 @@ public final class ExpoWidgetsModule: Module {
         defaults.set(safeToSpend["subtitle"] as? String ?? "", forKey: "safe_to_spend_subtitle")
         defaults.set((safeToSpend["updatedAt"] as? NSNumber)?.doubleValue ?? Date().timeIntervalSince1970 * 1000, forKey: "safe_to_spend_updated_at")
       } else {
-        defaults.removeObject(forKey: "safe_to_spend_amount")
-        defaults.removeObject(forKey: "safe_to_spend_currency")
-        defaults.removeObject(forKey: "safe_to_spend_formatted_amount")
-        defaults.removeObject(forKey: "safe_to_spend_title")
-        defaults.removeObject(forKey: "safe_to_spend_subtitle")
-        defaults.removeObject(forKey: "safe_to_spend_updated_at")
+        ExpoWidgetsModule.safeToSpendKeys.forEach { defaults.removeObject(forKey: $0) }
       }
 
       if let theme = snapshot["theme"] as? [String: Any] {
@@ -41,23 +49,13 @@ public final class ExpoWidgetsModule: Module {
         defaults.set(theme["expenseAccentColor"] as? String ?? "", forKey: "widget_theme_expense_accent_color")
         defaults.set(theme["transferAccentColor"] as? String ?? "", forKey: "widget_theme_transfer_accent_color")
       } else {
-        defaults.removeObject(forKey: "widget_theme_id")
-        defaults.removeObject(forKey: "widget_theme_mode")
-        defaults.removeObject(forKey: "widget_theme_background_start")
-        defaults.removeObject(forKey: "widget_theme_background_end")
-        defaults.removeObject(forKey: "widget_theme_title_color")
-        defaults.removeObject(forKey: "widget_theme_primary_text_color")
-        defaults.removeObject(forKey: "widget_theme_secondary_text_color")
-        defaults.removeObject(forKey: "widget_theme_action_icon_color")
-        defaults.removeObject(forKey: "widget_theme_income_accent_color")
-        defaults.removeObject(forKey: "widget_theme_expense_accent_color")
-        defaults.removeObject(forKey: "widget_theme_transfer_accent_color")
+        ExpoWidgetsModule.themeKeys.forEach { defaults.removeObject(forKey: $0) }
       }
 
       if let isPrivacyEnabled = snapshot["isPrivacyEnabled"] as? Bool {
-        defaults.set(isPrivacyEnabled, forKey: "widget_is_privacy_enabled")
+        defaults.set(isPrivacyEnabled, forKey: ExpoWidgetsModule.privacyKey)
       } else {
-        defaults.set(false, forKey: "widget_is_privacy_enabled")
+        defaults.set(false, forKey: ExpoWidgetsModule.privacyKey)
       }
 
       if #available(iOS 14.0, *) {
@@ -72,18 +70,12 @@ public final class ExpoWidgetsModule: Module {
     }
 
     AsyncFunction("clearWidgetData") {
+      // Without the app group, sync cannot have stored anything for the widget to read.
       guard let defaults = UserDefaults(suiteName: self.appGroupId) else {
-        throw NSError(domain: "ExpoWidgets", code: 1, userInfo: [NSLocalizedDescriptionKey: "Widget storage is unavailable"])
+        return
       }
-      [
-        "safe_to_spend_amount", "safe_to_spend_currency", "safe_to_spend_formatted_amount",
-        "safe_to_spend_title", "safe_to_spend_subtitle", "safe_to_spend_updated_at",
-        "widget_theme_id", "widget_theme_mode", "widget_theme_background_start",
-        "widget_theme_background_end", "widget_theme_title_color", "widget_theme_primary_text_color",
-        "widget_theme_secondary_text_color", "widget_theme_action_icon_color",
-        "widget_theme_income_accent_color", "widget_theme_expense_accent_color",
-        "widget_theme_transfer_accent_color", "widget_is_privacy_enabled"
-      ].forEach { defaults.removeObject(forKey: $0) }
+      (ExpoWidgetsModule.safeToSpendKeys + ExpoWidgetsModule.themeKeys + [ExpoWidgetsModule.privacyKey])
+        .forEach { defaults.removeObject(forKey: $0) }
       if #available(iOS 14.0, *) {
         WidgetCenter.shared.reloadAllTimelines()
       }

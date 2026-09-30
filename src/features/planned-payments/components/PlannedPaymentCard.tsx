@@ -115,7 +115,9 @@ export function presentPlannedPaymentCard(
     intervalLabel: getIntervalLabel(),
     statusBadge,
     dateLabel:
-      nextDate === undefined ? 'No upcoming occurrence' : `Next: ${getSmartDateLabel(nextDate)}`,
+      nextDate === undefined
+        ? AppConfig.strings.plannedPayments.noUpcomingOccurrence
+        : `Next: ${getSmartDateLabel(nextDate)}`,
     dateColor,
     iconName:
       item.flowDirection === 'outflow'

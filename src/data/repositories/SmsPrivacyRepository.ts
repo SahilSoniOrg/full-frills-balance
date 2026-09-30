@@ -2,20 +2,19 @@ import { database } from '@/src/data/database/Database';
 import AuditLog from '@/src/data/models/AuditLog';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
-import { InboxProcessingStatus } from '@/src/types/enums';
 import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
-import { sanitizeSmsAuditChanges, sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
+import {
+  clearsRawSmsContent,
+  sanitizeSmsAuditChanges,
+  sanitizeSmsMetadataJson,
+} from '@/src/utils/smsPrivateMetadata';
 import { Q } from '@nozbe/watermelondb';
 import type { Model } from '@nozbe/watermelondb';
 
 const BATCH_SIZE = 100;
 
-function terminal(status: InboxProcessingStatus): boolean {
-  return [
-    InboxProcessingStatus.IMPORTED,
-    InboxProcessingStatus.AUTO_POSTED,
-    InboxProcessingStatus.DISMISSED,
-  ].includes(status);
+function sameOptional(a: string | null | undefined, b: string | null | undefined): boolean {
+  return (a ?? null) === (b ?? null);
 }
 
 function queryAfter<T extends Model>(collection: string, afterId: string | undefined) {
@@ -25,6 +24,10 @@ function queryAfter<T extends Model>(collection: string, afterId: string | undef
   return database.collections.get<T>(collection).query(...clauses);
 }
 
+/**
+ * Each page decides every update before preparing any: on device, work between a
+ * prepareUpdate and batch() lets queued microtasks observe the pending record.
+ */
 export class SmsPrivacyRepository {
   async scrubLegacySmsContent(): Promise<void> {
     await this.scrubInboxRecords();
@@ -41,32 +44,35 @@ export class SmsPrivacyRepository {
           cursor,
         ).fetch();
         if (!records.length) return undefined;
-        const operations: Model[] = [];
-        for (const record of records) {
-          if (record.channel !== 'sms') continue;
+        const updates = records.flatMap(record => {
+          if (record.channel !== 'sms') return [];
           const fingerprint = hashLegacySmsFingerprint(record.inputFingerprint);
           const metadataJson = sanitizeSmsMetadataJson(record.metadataJson, true);
           const eraseRawContent =
-            terminal(record.processingStatus) &&
+            clearsRawSmsContent(record.processingStatus) &&
             (record.senderAddress != null || record.rawBody != null);
           if (
             fingerprint === record.inputFingerprint &&
-            metadataJson === record.metadataJson &&
+            sameOptional(metadataJson, record.metadataJson) &&
             !eraseRawContent
           )
-            continue;
-          operations.push(
-            record.prepareUpdate(current => {
-              current.inputFingerprint = fingerprint;
-              current.metadataJson = metadataJson;
-              if (terminal(current.processingStatus)) {
-                current.senderAddress = undefined;
-                current.rawBody = undefined;
-              }
-            }),
+            return [];
+          return [{ record, fingerprint, metadataJson, eraseRawContent }];
+        });
+        if (updates.length) {
+          await database.batch(
+            updates.map(({ record, fingerprint, metadataJson, eraseRawContent }) =>
+              record.prepareUpdate(current => {
+                current.inputFingerprint = fingerprint;
+                current.metadataJson = metadataJson;
+                if (eraseRawContent) {
+                  current.senderAddress = undefined;
+                  current.rawBody = undefined;
+                }
+              }),
+            ),
           );
         }
-        if (operations.length) await database.batch(...operations);
         return records[records.length - 1].id;
       });
       if (!nextCursor) return;
@@ -80,8 +86,7 @@ export class SmsPrivacyRepository {
       const nextCursor = await database.write(async () => {
         const records = await queryAfter<JournalMetadata>('journal_metadata', cursor).fetch();
         if (!records.length) return undefined;
-        const operations: Model[] = [];
-        for (const record of records) {
+        const updates = records.flatMap(record => {
           const metadataJson = sanitizeSmsMetadataJson(
             record.metadataJson,
             record.importSource === 'sms',
@@ -89,21 +94,22 @@ export class SmsPrivacyRepository {
           if (
             !record.originalSmsSender &&
             !record.originalSmsBody &&
-            metadataJson === record.metadataJson
+            sameOptional(metadataJson, record.metadataJson)
           )
-            continue;
-          operations.push(
-            record.prepareUpdate(current => {
-              current.originalSmsSender = undefined;
-              current.originalSmsBody = undefined;
-              current.metadataJson = sanitizeSmsMetadataJson(
-                current.metadataJson,
-                current.importSource === 'sms',
-              );
-            }),
+            return [];
+          return [{ record, metadataJson }];
+        });
+        if (updates.length) {
+          await database.batch(
+            updates.map(({ record, metadataJson }) =>
+              record.prepareUpdate(current => {
+                current.originalSmsSender = undefined;
+                current.originalSmsBody = undefined;
+                current.metadataJson = metadataJson;
+              }),
+            ),
           );
         }
-        if (operations.length) await database.batch(...operations);
         return records[records.length - 1].id;
       });
       if (!nextCursor) return;
@@ -117,18 +123,19 @@ export class SmsPrivacyRepository {
       const nextCursor = await database.write(async () => {
         const records = await queryAfter<AuditLog>('audit_logs', cursor).fetch();
         if (!records.length) return undefined;
-        const operations: Model[] = [];
-        for (const record of records) {
+        const updates = records.flatMap(record => {
           const changes = sanitizeSmsAuditChanges(record.changes);
-          if (changes && changes !== record.changes) {
-            operations.push(
+          return changes && changes !== record.changes ? [{ record, changes }] : [];
+        });
+        if (updates.length) {
+          await database.batch(
+            updates.map(({ record, changes }) =>
               record.prepareUpdate(current => {
                 current.changes = changes;
               }),
-            );
-          }
+            ),
+          );
         }
-        if (operations.length) await database.batch(...operations);
         return records[records.length - 1].id;
       });
       if (!nextCursor) return;

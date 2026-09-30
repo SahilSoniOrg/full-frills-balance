@@ -1,6 +1,9 @@
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { type PlainPlannedPayment } from '@/src/types/plainDtos';
 import { confirm } from '@/src/utils/alerts';
+import { AppConfig } from '@/src/constants/app-config';
+import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
+import { formatDate } from '@/src/utils/dateUtils';
 import {
   buildPlannedPaymentDetailsActions,
   resolvePlannedPaymentActionTarget,
@@ -93,9 +96,21 @@ describe('plannedPaymentDetailsActions', () => {
     actions.onPost?.();
     expect(confirm.show).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        message: expect.stringContaining(new Date(projectedEarlierDate).toLocaleDateString()),
+        message: AppConfig.strings.plannedPayments.details.postNowMessage(
+          formatDate(projectedEarlierDate),
+          formatMoneyAmount(item.amount, item.currencyCode, false),
+        ),
       }),
     );
+    actions.onSkip?.();
+    expect(confirm.show).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        message: AppConfig.strings.plannedPayments.details.skipMessage(
+          formatDate(projectedEarlierDate),
+        ),
+      }),
+    );
+    actions.onPost?.();
     expect((confirm.show as jest.Mock).mock.calls.at(-1)?.[0].message).not.toContain('advance');
   });
 });

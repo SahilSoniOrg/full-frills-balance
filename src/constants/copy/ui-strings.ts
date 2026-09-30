@@ -210,6 +210,29 @@ export const UI_STRINGS = {
       projectedLabel: 'Projected',
       incompleteFxWarning: 'Some values could not be converted. Safe to Spend may be incomplete.',
     },
+    safeToSpendProvenance: {
+      basedOn: (date: string, days: number, updatedAt?: string) =>
+        `Based on ${date} · ${days}-day forecast${updatedAt ? ` · updated ${updatedAt}` : ''}`,
+      savedLessThanMinuteAgo: 'Saved less than a minute ago',
+      savedAgo: (hours: number, minutes: number) => `Saved ${hours}h ${minutes}m ago`,
+    },
+    safeToSpendConstraint: {
+      title: 'How this amount is constrained',
+      basedOn: (date: string) => `Based on ${date}.`,
+      horizon: (days: number) => `Lowest dated balance over ${days} days.`,
+      staleNote: 'This is a saved estimate and may be out of date.',
+      forecastDay: (day: number) => `day ${day}`,
+      cashAvailableNow: (amount: string) => `Cash available now: ${amount}`,
+      cashCeilingBinds: (amount: string) => `Binding limit: cash available now: ${amount}`,
+      lowestProjectedBalance: (date: string, amount: string) =>
+        `Lowest projected balance · ${date}: ${amount}`,
+      laterIncomeNote: 'Money arriving later does not cover bills due before it arrives.',
+      heldThroughLowPoint: (amount: string) => `Held through the low point: ${amount}`,
+      projectedShortfall: (amount: string) => `Projected shortfall: ${amount}`,
+      includedOutflow: (label: string, amount: string) => `Included outflow: ${label} · ${amount}`,
+      expectedInflow: (label: string, amount: string, date: string) =>
+        `Expected inflow: ${label} · ${amount} · first on ${date}`,
+    },
     hub: {
       title: 'Review',
       activeTab: 'Active',
@@ -1204,9 +1227,14 @@ export const UI_STRINGS = {
       deleteConfirmTitle: 'Delete Planned Payment',
       deleteConfirmMessage: 'This permanently removes this planned payment rule.',
       postNowTitle: 'Post Planned Payment Now',
+      postNowMessage: (date: string, amount: string) =>
+        `Record the scheduled entry for ${date} (${amount}).`,
       skipTitle: 'Skip This Occurrence',
+      skipMessage: (date: string) =>
+        `Mark the scheduled entry for ${date} as skipped without creating a transaction.`,
       skipConfirm: 'Skip Occurrence',
     },
+    noUpcomingOccurrence: 'No upcoming occurrence',
     emptyTitle: 'No recurring bills added',
     emptySubtitle:
       'Add rent, subscriptions, and regular bills so Safe to Spend can protect that money in advance.',

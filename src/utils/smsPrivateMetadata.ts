@@ -1,3 +1,4 @@
+import { InboxProcessingStatus } from '@/src/types/enums';
 import { hashLegacySmsFingerprint } from './smsFingerprintHash';
 
 const EXPLICIT_SMS_RAW_KEYS = new Set([
@@ -104,6 +105,11 @@ export function sanitizeSmsAuditChanges(raw: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** Dismissed SMS stay restorable, and the native inbox cannot re-read a single message. */
+export function clearsRawSmsContent(status: InboxProcessingStatus): boolean {
+  return status === InboxProcessingStatus.IMPORTED || status === InboxProcessingStatus.AUTO_POSTED;
 }
 
 export function isHashedSmsFingerprint(value: string | undefined): boolean {

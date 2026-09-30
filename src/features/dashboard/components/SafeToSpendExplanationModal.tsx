@@ -1,8 +1,9 @@
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { useMoneyFormat, useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppCard, AppText } from '@/src/components/core';
-import { Opacity, Shape, Spacing, Typography } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Spacing, Typography } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
+import { formatDate } from '@/src/utils/dateUtils';
 import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
@@ -16,6 +17,7 @@ import {
   IncomeStepBreakdown,
 } from './explanation';
 import { SafeToSpendLedger } from './SafeToSpendLedger';
+import { SafeToSpendForecastDetails } from './SafeToSpendForecastDetails';
 
 function parseFormulaItem(
   item: string | ((days: number) => string) | undefined,
@@ -81,6 +83,9 @@ export const SafeToSpendExplanationModal = ({
           marginBottom: Spacing.xl,
           lineHeight: Typography.sizes.sm * Typography.lineHeights.normal,
         },
+        forecastDetails: {
+          marginBottom: Spacing.lg,
+        },
         card: {
           marginBottom: Spacing.xl,
           borderRadius: Shape.radius.r3,
@@ -124,6 +129,12 @@ export const SafeToSpendExplanationModal = ({
   const step3 = parseFormulaItem(info.formulaItems[2], formulaDays);
   const step4 = parseFormulaItem(info.formulaItems[3], formulaDays);
 
+  const constraint = AppConfig.strings.dashboard.safeToSpendConstraint;
+  const formatForecastDay = (dayOffset: number) =>
+    asOf === undefined
+      ? constraint.forecastDay(dayOffset + 1)
+      : formatDate(dayjs(asOf).startOf('day').add(dayOffset, 'day').valueOf());
+
   return (
     <InfoSheet
       visible={visible}
@@ -144,50 +155,64 @@ export const SafeToSpendExplanationModal = ({
         {info.unlocks}
       </AppText>
 
+      {asOf !== undefined || viewModel.snapshotAgeMs !== undefined ? (
+        <View style={styles.forecastDetails}>
+          <SafeToSpendForecastDetails viewModel={viewModel} />
+        </View>
+      ) : null}
+
       {explanation && (
         <AppCard paddingSize="lg" elevation="sm" style={styles.card}>
-          <AppText variant="subheading">How this amount is constrained</AppText>
+          <AppText variant="subheading">{constraint.title}</AppText>
           <AppText variant="caption" color="secondary" style={styles.introText}>
-            {asOf === undefined ? '' : `Based on ${dayjs(asOf).format('D MMM YYYY')}. `}
-            Lowest dated balance over {explanation.horizonDays} days.{' '}
-            {quality === 'stale' ? 'This is a saved estimate and may be out of date.' : ''}
+            {[
+              constraint.horizon(explanation.horizonDays),
+              quality === 'stale' ? constraint.staleNote : null,
+            ]
+              .filter(Boolean)
+              .join(' ')}
           </AppText>
           <AppText variant="caption">
-            Cash available now: {formatMoney(explanation.cashCeiling, currencyCode)}
+            {constraint.cashAvailableNow(formatMoney(explanation.cashCeiling, currencyCode))}
           </AppText>
           <AppText variant="caption">
             {explanation.bindingDayOffset === null
-              ? 'Binding limit: cash available now'
-              : `Lowest projected balance · ${asOf === undefined ? `day ${explanation.bindingDayOffset + 1}` : dayjs(asOf).startOf('day').add(explanation.bindingDayOffset, 'day').format('D MMM YYYY')}`}
-            : {formatMoney(explanation.minimumDatedBalance, currencyCode)}
+              ? constraint.cashCeilingBinds(
+                  formatMoney(explanation.minimumDatedBalance, currencyCode),
+                )
+              : constraint.lowestProjectedBalance(
+                  formatForecastDay(explanation.bindingDayOffset),
+                  formatMoney(explanation.minimumDatedBalance, currencyCode),
+                )}
           </AppText>
           {explanation.bindingDayOffset !== null &&
           explanation.assumedInflows.some(
             flow => flow.firstDayOffset > explanation.bindingDayOffset!,
           ) ? (
             <AppText variant="caption" color="secondary">
-              Money arriving later does not cover bills due before it arrives.
+              {constraint.laterIncomeNote}
             </AppText>
           ) : null}
           <AppText variant="caption">
-            Held through the low point: {formatMoney(explanation.heldAmount, currencyCode)}
+            {constraint.heldThroughLowPoint(formatMoney(explanation.heldAmount, currencyCode))}
           </AppText>
           {explanation.shortfall > 0 && (
             <AppText variant="caption">
-              Projected shortfall: {formatMoney(explanation.shortfall, currencyCode)}
+              {constraint.projectedShortfall(formatMoney(explanation.shortfall, currencyCode))}
             </AppText>
           )}
-          {explanation.constrainingOutflows.map((flow, index) => (
-            <AppText key={`out-${index}`} variant="caption">
-              Included outflow: {flow.label} · {formatMoney(flow.amount, currencyCode)}
+          {explanation.constrainingOutflows.map(flow => (
+            <AppText key={`out-${flow.source}-${flow.label}`} variant="caption">
+              {constraint.includedOutflow(flow.label, formatMoney(flow.amount, currencyCode))}
             </AppText>
           ))}
-          {explanation.assumedInflows.map((flow, index) => (
-            <AppText key={`in-${index}`} variant="caption">
-              Expected inflow: {flow.label} · {formatMoney(flow.amount, currencyCode)} · first on{' '}
-              {asOf === undefined
-                ? `day ${flow.firstDayOffset + 1}`
-                : dayjs(asOf).startOf('day').add(flow.firstDayOffset, 'day').format('D MMM YYYY')}
+          {explanation.assumedInflows.map(flow => (
+            <AppText key={`in-${flow.source}-${flow.label}`} variant="caption">
+              {constraint.expectedInflow(
+                flow.label,
+                formatMoney(flow.amount, currencyCode),
+                formatForecastDay(flow.firstDayOffset),
+              )}
             </AppText>
           ))}
         </AppCard>
@@ -195,7 +220,7 @@ export const SafeToSpendExplanationModal = ({
 
       <AppCard paddingSize="none" elevation="lg" style={styles.card}>
         <View style={styles.ledgerHeader}>
-          <AppText variant="subheading">Supporting forecast inputs</AppText>
+          <AppText variant="subheading">{info.bucketTitle}</AppText>
         </View>
 
         {/* Step 1: Assets */}
@@ -245,7 +270,7 @@ export const SafeToSpendExplanationModal = ({
         <FormulaStepRow
           title={step3.title}
           detail={step3.detail}
-          amountText={formatSts(committedTotal, currencyCode)}
+          amountText={formatSts(committedTotal, currencyCode, { prefix: '–' })}
           amountColor="warning"
           isExpanded={expandedSection === 'committed'}
           onToggle={() => setExpandedSection(expandedSection === 'committed' ? null : 'committed')}
@@ -267,7 +292,7 @@ export const SafeToSpendExplanationModal = ({
         <FormulaStepRow
           title={step4.title}
           detail={step4.detail}
-          amountText={formatSts(committedLiabilities, currencyCode)}
+          amountText={formatSts(committedLiabilities, currencyCode, { prefix: '–' })}
           amountColor="error"
           isExpanded={expandedSection === 'debts'}
           onToggle={() => setExpandedSection(expandedSection === 'debts' ? null : 'debts')}

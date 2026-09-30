@@ -5,11 +5,16 @@ import { AccountSubtype } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
 import { mapSafeToSpendViewModel } from '@/src/features/dashboard/mappers/SafeToSpendMapper';
 import { SafeToSpendExplanationModal } from '../SafeToSpendExplanationModal';
+import { AppConfig } from '@/src/constants';
+import { formatDate } from '@/src/utils/dateUtils';
 import { render, screen } from '@/src/utils/test-utils';
 
 jest.mock('@/src/components/shared/moneyFormat', () => ({
   useMoneyFormat: () => (amount: number) => `USD ${amount.toFixed(2)}`,
-  useStsMoneyFormat: () => (amount: number) => `USD ${amount.toFixed(2)}`,
+  useStsMoneyFormat:
+    () =>
+    (amount: number, _currency: string, options: { prefix?: string } = {}) =>
+      `${options.prefix ?? ''}USD ${amount.toFixed(2)}`,
 }));
 
 describe('SafeToSpendExplanationModal dated explanation', () => {
@@ -102,14 +107,23 @@ describe('SafeToSpendExplanationModal dated explanation', () => {
       />,
     );
 
-    expect(screen.getByText(/Cash available now: USD 1000\.00/)).toBeTruthy();
-    expect(screen.getByText(/Lowest projected balance · 5 Oct 2026: USD 200\.00/)).toBeTruthy();
-    expect(screen.getByText(/Held through the low point: USD 800\.00/)).toBeTruthy();
+    const copy = AppConfig.strings.dashboard.safeToSpendConstraint;
+    expect(screen.getByText(copy.cashAvailableNow('USD 1000.00'))).toBeTruthy();
     expect(
-      screen.getByText(/Money arriving later does not cover bills due before it arrives/),
+      screen.getByText(
+        copy.lowestProjectedBalance(formatDate(new Date(2026, 9, 5).getTime()), 'USD 200.00'),
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(copy.heldThroughLowPoint('USD 800.00'))).toBeTruthy();
+    expect(screen.getByText(copy.laterIncomeNote)).toBeTruthy();
+    expect(
+      screen.getByText(
+        copy.expectedInflow('Salary', 'USD 1500.00', formatDate(new Date(2026, 9, 20).getTime())),
+      ),
     ).toBeTruthy();
     expect(
-      screen.getByText(/Expected inflow: Salary · USD 1500\.00 · first on 20 Oct 2026/),
+      screen.getByText(AppConfig.strings.dashboard.safeToSpendExplanation.bucketTitle),
     ).toBeTruthy();
+    expect(screen.getAllByText('–USD 800.00').length).toBeGreaterThan(0);
   });
 });

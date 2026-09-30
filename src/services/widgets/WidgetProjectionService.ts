@@ -1,6 +1,7 @@
 import type { WidgetDataSnapshot } from '@/modules/expo-widgets/src/ExpoWidgets.types';
 import type { WorkplaceId } from '@/src/types/ids';
 import { loadNativeWidgetAdapter } from './nativeWidgetAdapter';
+import { logger } from '@/src/utils/logger';
 import { storage } from '@/src/utils/storage';
 
 const WIDGET_CLEANUP_PENDING_ALL_KEY = 'widget_cleanup_all_pending_v1';
@@ -77,17 +78,45 @@ export class WidgetProjectionService {
         }
         this.snapshots.set(workplaceId, snapshot);
         return this.enqueue(async () => {
-          await this.retryPendingCleanup();
-          if (!isCurrent()) return;
-          const nativeModule = await loadNativeWidgetAdapter();
-          if (!isCurrent()) return;
-          await syncNativeWidgetData(nativeModule, workplaceId, snapshot);
-          // Native writes are uncancellable; reflect the actual last completed owner even
-          // if a reset/deletion invalidated this request while it was in flight.
-          this.nativeOwner = workplaceId;
+          let cleanupFailed = false;
+          let cleanupError: unknown;
+          try {
+            await this.retryPendingCleanup();
+          } catch (error) {
+            cleanupFailed = true;
+            cleanupError = error;
+          }
+          const replaced = await this.publishIfCurrent(isCurrent, workplaceId, snapshot);
+          if (!cleanupFailed) return;
+          if (!replaced) throw cleanupError;
+          logger.warn('[WidgetProjection] Pending widget clear failed before publication', {
+            error: cleanupError,
+          });
         });
       },
     };
+  }
+
+  private async publishIfCurrent(
+    isCurrent: () => boolean,
+    workplaceId: WorkplaceId,
+    snapshot: WidgetDataSnapshot,
+  ): Promise<boolean> {
+    if (!isCurrent()) return false;
+    const nativeModule = await loadNativeWidgetAdapter();
+    if (!isCurrent()) return false;
+    await syncNativeWidgetData(nativeModule, workplaceId, snapshot);
+    // Native writes are uncancellable; reflect the actual last completed owner even
+    // if a reset/deletion invalidated this request while it was in flight.
+    this.nativeOwner = workplaceId;
+    if (!isCurrent()) return false;
+    // Native sync rewrites or removes every widget key, so a publication that is still
+    // current after its write leaves nothing a pending clear would need to remove.
+    this.pendingGlobalClear = false;
+    this.pendingWorkplaceClears.clear();
+    storage.remove(WIDGET_CLEANUP_PENDING_ALL_KEY);
+    this.removePendingMarkers();
+    return true;
   }
 
   async clearWorkplace(workplaceId: WorkplaceId, activeWorkplaceId?: WorkplaceId): Promise<void> {
@@ -199,7 +228,6 @@ export class WidgetProjectionService {
       this.pendingGlobalClear = false;
       storage.remove(WIDGET_NATIVE_OWNER_KEY);
       storage.remove(WIDGET_SYNC_PENDING_KEY);
-      storage.remove(WIDGET_CLEANUP_PENDING_ALL_KEY);
       storage.remove(WIDGET_CLEANUP_PENDING_ALL_KEY);
       this.removePendingMarkers();
       return;

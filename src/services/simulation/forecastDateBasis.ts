@@ -29,7 +29,10 @@ const productionDependencies: ForecastDateBasisDependencies = {
   },
 };
 
-/** Emits immediately, at local midnight, and on foreground resume; teardown owns its timer. */
+/**
+ * Emits immediately, at local midnight and on foreground resume. Same-day resumes also
+ * retry failed acquisitions and refresh their cutoff; teardown owns its single timer.
+ */
 export function observeForecastDateBasis(
   dependencies: ForecastDateBasisDependencies = productionDependencies,
 ): Observable<ForecastDateBasis> {
@@ -44,7 +47,8 @@ export function observeForecastDateBasis(
         timer = undefined;
       }
       const asOf = dependencies.now();
-      subscriber.next({ asOf, startOfToday: dayjs(asOf).startOf('day').valueOf() });
+      const startOfToday = dayjs(asOf).startOf('day').valueOf();
+      subscriber.next({ asOf, startOfToday });
       if (disposed) return;
       const nextMidnight = dayjs(asOf).add(1, 'day').startOf('day').valueOf();
       timer = dependencies.setTimer(emitAndSchedule, Math.max(1, nextMidnight - asOf + 5));

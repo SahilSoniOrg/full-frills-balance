@@ -27,12 +27,20 @@ export class AnalyticsService {
   private sessionStartTime: number = Date.now();
   private sessionTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // Sentry 7.11 strips JS privacy hooks from native initialization. Native crash reports
+  // can retain exception text and crash-memory strings, so only sanitized JS reporting
+  // is enabled until equivalent native redaction exists.
+  // Never set replaysSessionSampleRate/replaysOnErrorSampleRate: any number, even 0,
+  // installs the mobile replay integration.
   private static readonly SENTRY_OPTIONS = {
     sendDefaultPii: false,
-    // Sentry 7.11 drops JS beforeSend hooks from native initialization options.
-    // Disable the native SDK, leaving only JS transport behind our sanitizer.
     enableNative: false,
     enableNativeCrashHandling: false,
+    attachScreenshot: false,
+    attachViewHierarchy: false,
+    // iOS-only native options; automatic native breadcrumbs bypass beforeBreadcrumb.
+    enableAutoBreadcrumbTracking: false,
+    enableNetworkBreadcrumbs: false,
   } as const;
 
   /**

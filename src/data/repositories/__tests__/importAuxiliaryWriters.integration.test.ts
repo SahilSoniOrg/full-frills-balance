@@ -52,6 +52,13 @@ describe('import inbox privacy integration', () => {
             amount: 500,
           }),
         },
+        {
+          ...base,
+          id: 'sms-dismissed',
+          channel: 'sms',
+          processingStatus: InboxProcessingStatus.DISMISSED,
+          linkedJournalId: undefined,
+        },
       ],
     };
 
@@ -77,5 +84,10 @@ describe('import inbox privacy integration', () => {
     expect(sms.metadataJson).not.toContain('PrivateSender');
     expect(sms.metadataJson).toContain('Merchant');
     expect(sms.metadataJson).toContain('500');
+
+    const dismissed = await records.find('sms-dismissed');
+    expect(dismissed.senderAddress).toBe('PrivateSender');
+    expect(dismissed.rawBody).toBe('PrivateMerchant message 500');
+    expect(dismissed.inputFingerprint).toBe(hashLegacySmsFingerprint(LEGACY_FINGERPRINT));
   });
 });

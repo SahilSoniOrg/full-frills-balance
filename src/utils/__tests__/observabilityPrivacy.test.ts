@@ -134,14 +134,17 @@ describe('observability privacy boundary', () => {
             stacktrace: {
               frames: [
                 {
-                  filename: `src/${PRIVATE_MARKER}.tsx`,
-                  function: PRIVATE_MARKER,
+                  filename: `/var/mobile/Documents/${PRIVATE_MARKER} statement.pdf`,
+                  function: `Paid ${PRIVATE_MARKER} 450`,
                   lineno: 12,
                   colno: 7,
+                  vars: { marker: PRIVATE_MARKER },
+                  context_line: PRIVATE_MARKER,
                   data: { marker: PRIVATE_MARKER },
                 },
               ],
             },
+            mechanism: { type: 'onerror', handled: false, data: { marker: PRIVATE_MARKER } },
           },
         ],
       },
@@ -152,12 +155,121 @@ describe('observability privacy boundary', () => {
     expect(sanitized.contexts?.app).toEqual({ app_version: '1.2.3', app_build: undefined });
     expect(sanitized.exception?.values?.[0]?.type).toBe('ApplicationError');
     expect(sanitized.exception?.values?.[0]?.value).toBe('Application error');
+    expect(sanitized.exception?.values?.[0]?.mechanism).toEqual({
+      type: 'onerror',
+      handled: false,
+    });
+    expect(sanitized.exception?.values?.[0]?.stacktrace?.frames?.[0]).toEqual({
+      filename: undefined,
+      function: '?',
+      lineno: 12,
+      colno: 7,
+      in_app: undefined,
+    });
     expect(sanitized.breadcrumbs?.[0]).toEqual({
       timestamp: 12,
       type: 'default',
       category: 'app',
       level: 'info',
     });
+  });
+
+  it('keeps code identifiers needed for grouping and source maps', () => {
+    const debugId = '0f1e2d3c-4b5a-4968-8778-695a4b3c2d1e';
+    const sanitized = sanitizeSentryErrorEvent({
+      sdk: { name: 'sentry.javascript.react-native', version: '7.11.0', packages: [] },
+      debug_meta: {
+        images: [
+          { type: 'sourcemap', code_file: 'app:///index.android.bundle', debug_id: debugId },
+          { type: 'macho', code_file: `/private/${PRIVATE_MARKER}`, debug_id: debugId },
+        ],
+      },
+      exception: {
+        values: [
+          {
+            type: 'DatabaseConnectionError',
+            value: `${PRIVATE_MARKER} not found`,
+            stacktrace: {
+              frames: [
+                {
+                  filename: 'app:///index.android.bundle',
+                  function: 'Object.createBudget [as create]',
+                  lineno: 1,
+                  colno: 48213,
+                  in_app: true,
+                },
+                {
+                  filename:
+                    '/Users/dev/full-frills-balance/src/services/budget/budgetWriteService.ts',
+                  function: 'BudgetWriteService.create',
+                  lineno: 20,
+                  colno: 4,
+                  in_app: true,
+                },
+                {
+                  filename:
+                    'http://192.168.1.5:8081/node_modules/react-native/index.js?platform=ios',
+                  function: undefined,
+                  lineno: 3,
+                  colno: 9,
+                  in_app: false,
+                },
+              ],
+            },
+          },
+        ],
+      },
+    } as unknown as ErrorEvent);
+
+    expect(JSON.stringify(sanitized)).not.toContain(PRIVATE_MARKER);
+    expect(sanitized.sdk).toEqual({ name: 'sentry.javascript.react-native', version: '7.11.0' });
+    expect(sanitized.debug_meta).toEqual({
+      images: [{ type: 'sourcemap', code_file: 'app:///index.android.bundle', debug_id: debugId }],
+    });
+    const exception = sanitized.exception?.values?.[0];
+    expect(exception?.type).toBe('DatabaseConnectionError');
+    expect(exception?.value).toBe('Application error');
+    expect(exception?.stacktrace?.frames).toEqual([
+      {
+        filename: 'app:///index.android.bundle',
+        function: 'Object.createBudget',
+        lineno: 1,
+        colno: 48213,
+        in_app: true,
+      },
+      {
+        filename: 'src/services/budget/budgetWriteService.ts',
+        function: 'BudgetWriteService.create',
+        lineno: 20,
+        colno: 4,
+        in_app: true,
+      },
+      {
+        filename: 'node_modules/react-native/index.js',
+        function: undefined,
+        lineno: 3,
+        colno: 9,
+        in_app: false,
+      },
+    ]);
+  });
+
+  it('rebuilds diagnostic error stacks with code frames but without the message', () => {
+    const error = new TypeError(`${PRIVATE_MARKER} balance 450`);
+    error.stack = [
+      `TypeError: ${PRIVATE_MARKER} balance 450`,
+      '    at BudgetWriteService.create (/Users/dev/full-frills-balance/src/services/budget/budgetWriteService.ts:20:4)',
+      '    at anonymous (address at index.android.bundle:1:48213)',
+    ].join('\n');
+    const safe = safeDiagnosticError(error);
+    expect(`${safe.message}${safe.stack}`).not.toContain(PRIVATE_MARKER);
+    expect(safe.stack).toBe(
+      [
+        'TypeError: Application error',
+        '    at BudgetWriteService.create (src/services/budget/budgetWriteService.ts:20:4)',
+        '    at anonymous (index.android.bundle:1:48213)',
+      ].join('\n'),
+    );
   });
 
   it('removes private breadcrumb and span payloads while retaining safe timing', () => {

@@ -16,7 +16,7 @@ import {
 } from '@/src/data/repositories/AccountingWriteSession';
 import { Model, Q } from '@nozbe/watermelondb';
 import { Observable } from 'rxjs';
-import { sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
+import { clearsRawSmsContent, sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
 
 export interface TransactionInboxRecordWriteData {
   workplaceId: WorkplaceId;
@@ -52,6 +52,12 @@ function isProcessedStatus(status: InboxProcessingStatus): boolean {
     status === InboxProcessingStatus.AUTO_POSTED ||
     status === InboxProcessingStatus.DISMISSED
   );
+}
+
+function clearRawSmsContent(entry: TransactionInboxRecord): void {
+  entry.senderAddress = undefined;
+  entry.rawBody = undefined;
+  entry.metadataJson = sanitizeSmsMetadataJson(entry.metadataJson, true);
 }
 
 export class TransactionInboxRepository {
@@ -175,9 +181,7 @@ export class TransactionInboxRepository {
       entry.linkedJournalId = journalId;
       entry.processingStatus = disposition;
       entry.processedAt = Date.now();
-      entry.senderAddress = undefined;
-      entry.rawBody = undefined;
-      entry.metadataJson = sanitizeSmsMetadataJson(entry.metadataJson, true);
+      if (entry.channel === 'sms') clearRawSmsContent(entry);
     });
   }
 
@@ -185,11 +189,7 @@ export class TransactionInboxRepository {
     return record.prepareUpdate(entry => {
       entry.processingStatus = status;
       entry.processedAt = isProcessedStatus(status) ? Date.now() : undefined;
-      if (isProcessedStatus(status)) {
-        entry.senderAddress = undefined;
-        entry.rawBody = undefined;
-        entry.metadataJson = sanitizeSmsMetadataJson(entry.metadataJson, true);
-      }
+      if (entry.channel === 'sms' && clearsRawSmsContent(status)) clearRawSmsContent(entry);
     });
   }
 
@@ -204,7 +204,7 @@ export class TransactionInboxRepository {
 
     const safeData: TransactionInboxRecordWriteData = {
       ...data,
-      ...(isProcessedStatus(data.processingStatus)
+      ...(clearsRawSmsContent(data.processingStatus)
         ? { senderAddress: undefined, rawBody: undefined }
         : {}),
       metadataJson: sanitizeSmsMetadataJson(data.metadataJson, data.channel === 'sms'),

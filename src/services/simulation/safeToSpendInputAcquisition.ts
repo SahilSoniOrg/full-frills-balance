@@ -166,31 +166,34 @@ export function observeSafeToSpendInputSnapshot(
           Observable<Journal[]>,
           Observable<number>,
           Observable<unknown>,
-        ])
-          .pipe(
-            firstFastDebounce(Animation.observeDebounce),
-            map(([allAccounts, budgets, plannedPayments, plannedJournals]) => {
-              const assets = allAccounts.filter(a => a.accountType === AccountType.ASSET);
-              const liabilities = allAccounts.filter(a => a.accountType === AccountType.LIABILITY);
-              return {
-                assets,
-                liabilities,
-                budgets,
-                plannedPayments,
-                allAccounts,
-                plannedJournals,
-                safeToSpendDays,
-                defaultCurrencyCode,
-                workplaceId,
-                dateBasis,
-              };
-            }),
-          )
-          .pipe(map(bundle => ({ kind: 'bundle' as const, bundle }))),
+        ]).pipe(
+          firstFastDebounce(Animation.observeDebounce),
+          map(([allAccounts, budgets, plannedPayments, plannedJournals]) => {
+            const assets = allAccounts.filter(a => a.accountType === AccountType.ASSET);
+            const liabilities = allAccounts.filter(a => a.accountType === AccountType.LIABILITY);
+            return {
+              assets,
+              liabilities,
+              budgets,
+              plannedPayments,
+              allAccounts,
+              plannedJournals,
+              safeToSpendDays,
+              defaultCurrencyCode,
+              workplaceId,
+              dateBasis,
+            };
+          }),
+          map(bundle => ({ kind: 'bundle' as const, bundle })),
+          // Only ledger emissions reset the retry count, so a persistently failing source settles
+          // on `failed` until the next date-basis or horizon change resubscribes it.
+          retry({ count: 2, delay: 100, resetOnSuccess: true }),
+          catchError(error => of({ kind: 'failed' as const, defaultCurrencyCode, error })),
+        ),
       );
     }),
     switchMap(emission => {
-      if (emission.kind === 'refreshing') return of(emission);
+      if (emission.kind === 'refreshing' || emission.kind === 'failed') return of(emission);
       const bundle = emission.bundle;
       const mapped = mapLedgerBundle(bundle);
       // A ledger emission can happen hours after the basis timer (for example, a
@@ -376,8 +379,5 @@ export function observeSafeToSpendInputSnapshot(
         ),
       );
     }),
-    // Re-subscribe briefly when a reactive ledger source itself errors; asynchronous per-input
-    // assembly failures are converted to `failed` outcomes above and remain input-reactive.
-    retry({ count: 2, delay: 100 }),
   );
 }

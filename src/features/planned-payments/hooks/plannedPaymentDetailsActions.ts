@@ -1,6 +1,7 @@
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { AppConfig } from '@/src/constants/app-config';
 import { confirm } from '@/src/utils/alerts';
+import { formatDate } from '@/src/utils/dateUtils';
 import { PlainPlannedPayment } from '@/src/types/plainDtos';
 import type { JournalId } from '@/src/types/ids';
 
@@ -48,13 +49,16 @@ export function buildPlannedPaymentDetailsActions(
   };
 
   const target = resolvePlannedPaymentActionTarget(item);
-  const occurrenceLabel = target ? new Date(target.occurrenceDate).toLocaleDateString() : '';
+  const occurrenceLabel = target ? formatDate(target.occurrenceDate) : '';
   const onPost = !target
     ? undefined
     : () => {
         confirm.show({
           title: AppConfig.strings.plannedPayments.details.postNowTitle,
-          message: `Record the scheduled entry for ${occurrenceLabel} (${displayAmount}).`,
+          message: AppConfig.strings.plannedPayments.details.postNowMessage(
+            occurrenceLabel,
+            displayAmount,
+          ),
           onConfirm: handlers.handlePostNow,
         });
       };
@@ -64,7 +68,7 @@ export function buildPlannedPaymentDetailsActions(
     : () => {
         confirm.show({
           title: AppConfig.strings.plannedPayments.details.skipTitle,
-          message: `Mark the scheduled entry for ${occurrenceLabel} as skipped without creating a transaction.`,
+          message: AppConfig.strings.plannedPayments.details.skipMessage(occurrenceLabel),
           confirmText: AppConfig.strings.plannedPayments.details.skipConfirm,
           destructive: true,
           onConfirm: handlers.handleSkip,

@@ -2,6 +2,8 @@ import { renderHook } from '@testing-library/react-native';
 import { useDashboardViewModel } from '../useDashboardViewModel';
 import { SafeToSpendCard } from '@/src/features/dashboard/components/SafeToSpendCard';
 import { mapSafeToSpendViewModel } from '@/src/features/dashboard/mappers/SafeToSpendMapper';
+import { AppConfig } from '@/src/constants';
+import { formatDate } from '@/src/utils/dateUtils';
 import { render, screen } from '@/src/utils/test-utils';
 import type { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
 
@@ -136,7 +138,8 @@ describe('dashboard forecast ownership and snapshot provenance', () => {
         onLegendPress={() => undefined}
       />,
     );
-    expect(screen.getByText('Saved 2h 0m ago')).toBeTruthy();
-    expect(screen.getByText(/Based on/)).toBeTruthy();
+    const provenance = AppConfig.strings.dashboard.safeToSpendProvenance;
+    expect(screen.getByText(provenance.savedAgo(2, 0))).toBeTruthy();
+    expect(screen.getByText(provenance.basedOn(formatDate(savedAt - 1000), 30))).toBeTruthy();
   });
 });

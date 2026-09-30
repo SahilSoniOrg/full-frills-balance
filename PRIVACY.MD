@@ -10,8 +10,6 @@ Welcome to Full Frills Balance. This Privacy Policy explains how Full Frills Bal
 
 Policy update (September 30, 2026): This update clarifies local SMS review retention and that SMS scans happen only when you start an import. It also clarifies that diagnostic and analytics fields are allowlisted. The September 7 update's local-first and future-sync statements remain in force; planned sync behavior does not mean that feature is available today.
 
-- September 30, 2026 — Clarified local SMS review retention, known-field cleanup limits, and allowlisted diagnostics and analytics.
-
 1. Overview
 
 Full Frills Balance is designed primarily as an offline personal money management application. It does not connect to bank accounts; financial records are based on information you enter or files you choose to import.
@@ -58,13 +56,13 @@ create transaction entries inside the app
 
 SMS inbox scanning happens only when you manually start an import. Granting SMS permission or enabling SMS import does not start background or launch-time scans.
 
-While a message is waiting for your review, its sender and raw message body are stored locally in the SMS inbox. When you import or dismiss the message, the app clears that raw sender and body from the inbox. A created transaction may retain extracted details such as amount, currency, merchant, and reference number, plus a one-way deduplication digest. New SMS imports do not copy the raw message or sender into journal metadata, notes, or audit fields. A bounded local cleanup removes known raw SMS fields from existing SMS inbox records, structured journal metadata, and machine-generated audit payloads. It leaves user-written notes and other free-form historical text intact, so those may still contain text you chose to save.
+While a message is waiting for your review, or after you dismiss it, its sender and raw message body are stored locally in the SMS inbox so you can review or restore it. When the message is imported or auto-posted, the app clears that raw sender and body from the inbox. A created transaction may retain extracted details such as amount, currency, merchant, and reference number, plus a one-way deduplication digest. New SMS imports do not copy the raw message or sender into journal metadata, notes, or audit fields. A bounded local cleanup removes known raw SMS fields from existing SMS inbox records, structured journal metadata, and machine-generated audit payloads. It leaves user-written notes and other free-form historical text intact, so those may still contain text you chose to save.
 
 SMS permission is optional, and the app remains usable without granting SMS access.
 
 We do not intentionally upload full SMS content, sender details, or message bodies to external servers.
 
-Raw SMS content is retained locally in the inbox only while the item awaits review; it is cleared from that record after import or dismissal. The cleanup removes known structured copies, but does not rewrite user-written notes or arbitrary historical free-form text. SMS rule configuration may retain rule conditions you chose, and imported financial entries retain extracted transaction details.
+Raw SMS content is retained locally in the inbox only while the item awaits review or is dismissed (so it can be restored); it is cleared from that record once the item is imported or auto-posted. The cleanup removes known structured copies, but does not rewrite user-written notes or arbitrary historical free-form text. SMS rule configuration may retain rule conditions you chose, and imported financial entries retain extracted transaction details.
 
 4. Analytics and Telemetry
 
@@ -112,7 +110,7 @@ Analytics identifiers are pseudonymous and are used only to understand app usage
 
 PostHog session replay is disabled. We do not record in-app screenshots or screen replays for product analytics.
 
-**Sentry (crash reporting)** is separate from PostHog. When enabled, JavaScript error reports and performance traces may include approved error classes, safe runtime bundle frame locations, and navigation timing. Native Sentry reporting is disabled because its automatic channels bypass the JavaScript privacy filters. We do not enable Sentry session replay or screen recording.
+**Sentry (crash reporting)** is separate from PostHog. When enabled, error reports and performance traces may include error types, code locations (function names, file paths and line numbers from the app's own code), and navigation timing; error message text is removed before sending. Native crash reporting is disabled because its reports bypass the JavaScript privacy filters. Native crashes, freezes and out-of-memory terminations are not reported through the native SDK. We do not attach screenshots or screen layouts, and we do not enable Sentry session replay or screen recording.
 
 5. Internet Use
 
@@ -203,5 +201,6 @@ This Privacy Policy may be updated when app features or data practices change. W
 
 Update history:
 
+- September 30, 2026 — clarified local SMS review retention, known-field cleanup limits, and allowlisted diagnostics and analytics.
 - September 7, 2026 — clarified current local-first and no-bank behavior, export files, analytics and crash reporting, and planned privacy principles for optional encrypted sync. No sync feature was enabled by this update.
 - March 5, 2026 — initial policy published.

@@ -352,19 +352,22 @@ export class AccountWriteRepository {
   }
 
   /**
-   * Prepare the final reactive refresh for the requested live accounts.
-   *
-   * Resolve the accounts and prepare their updates inside the caller's write
-   * batch factory so model preparation stays synchronous with the eventual
-   * batch commit. Account lookup is workplace-scoped and ignores deleted rows.
+   * Touches the requested live accounts in one write so observers refresh.
+   * Account lookup is workplace-scoped and ignores deleted rows.
    */
-  async prepareRefreshOps(workplaceId: WorkplaceId, accountIds: AccountId[]): Promise<Model[]> {
-    const accounts = await accountQueryRepository.findAllByIds(workplaceId, accountIds);
-    return accounts.map(account =>
-      account.prepareUpdate(record => {
-        record.updatedAt = new Date();
-      }),
-    );
+  async refreshAccounts(workplaceId: WorkplaceId, accountIds: AccountId[]): Promise<void> {
+    await database.write(async () => {
+      const accounts = await accountQueryRepository.findAllByIds(workplaceId, accountIds);
+      if (accounts.length === 0) return;
+      const now = new Date();
+      await database.batch(
+        accounts.map(account =>
+          account.prepareUpdate(record => {
+            record.updatedAt = now;
+          }),
+        ),
+      );
+    });
   }
 
   /**
@@ -433,11 +436,7 @@ export class AccountWriteRepository {
 
       return {
         prepareOps: () => [
-          ...this.prepareUpdateBatchOps(
-            currentAccount,
-            plan.normalizedUpdates,
-            currentMetadata,
-          ),
+          ...this.prepareUpdateBatchOps(currentAccount, plan.normalizedUpdates, currentMetadata),
           ...(plan.audit
             ? [
                 auditRepository.prepareLog(
@@ -474,9 +473,10 @@ export class AccountWriteRepository {
       if (!currentAccount) {
         throw new Error('Cannot delete account. Account not found in workplace provided.');
       }
-      const currentMetadata = options.validateCurrent || options.extraOps
-        ? await accountQueryRepository.findMetadata(workplaceId, account.id)
-        : null;
+      const currentMetadata =
+        options.validateCurrent || options.extraOps
+          ? await accountQueryRepository.findMetadata(workplaceId, account.id)
+          : null;
       await options.validateCurrent?.(currentAccount, currentMetadata);
 
       const children = await accountQueryRepository
@@ -535,9 +535,10 @@ export class AccountWriteRepository {
     return this.commitMutationPlan(async () => {
       const currentAccount = await accountQueryRepository.findWithDeleted(workplaceId, account.id);
       if (!currentAccount) throw new Error('Account not found');
-      const currentMetadata = options.validateCurrent || options.extraOps
-        ? await accountQueryRepository.findMetadata(workplaceId, account.id)
-        : null;
+      const currentMetadata =
+        options.validateCurrent || options.extraOps
+          ? await accountQueryRepository.findMetadata(workplaceId, account.id)
+          : null;
       await options.validateCurrent?.(currentAccount, currentMetadata);
 
       const restoredAt = new Date();

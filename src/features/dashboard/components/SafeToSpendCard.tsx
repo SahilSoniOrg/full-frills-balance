@@ -11,7 +11,7 @@ import { SafeToSpendBreakdownMetrics } from './SafeToSpendBreakdownMetrics';
 import { SafeToSpendChart } from './SafeToSpendChart';
 import { SafeToSpendCardLayout } from './SafeToSpendCardLayout';
 import { SafeToSpendHeader } from './SafeToSpendHeader';
-import dayjs from 'dayjs';
+import { SafeToSpendForecastDetails } from './SafeToSpendForecastDetails';
 
 export interface SafeToSpendCardProps {
   projection: SafeToSpendProjection;
@@ -53,6 +53,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
   const loading = isLoading ?? vmLoading;
   const hasBreakdownData = effectiveTotal > 0;
   const hasProjectionData = projection.history.length > 0 || projection.projection.length > 0;
+  const hasForecastIssue = quality !== 'ready' || Boolean(viewModel.hasUnvaluedEntries);
 
   const breakdown = hasBreakdownData ? (
     <SafeToSpendBreakdownBar
@@ -113,53 +114,38 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
       <SafeToSpendCardLayout
         summary={header}
         warning={
-          <>
-            {quality === 'stale' ? (
-              <AppText color="secondary">
-                {AppConfig.strings.dashboard.safeToSpendUi.forecastStale}
-              </AppText>
-            ) : null}
-            {viewModel.asOf !== undefined ? (
-              <AppText variant="caption" color="secondary">
-                Based on {dayjs(viewModel.asOf).format('D MMM YYYY')} · {viewModel.safeToSpendDays}
-                -day forecast
-                {viewModel.generatedAt !== undefined
-                  ? ` · updated ${dayjs(viewModel.generatedAt).format('D MMM, h:mm A')}`
-                  : ''}
-              </AppText>
-            ) : null}
-            {viewModel.snapshotAgeMs !== undefined ? (
-              <AppText variant="caption" color="secondary">
-                Saved{' '}
-                {viewModel.snapshotAgeMs < 60_000
-                  ? 'less than a minute'
-                  : `${Math.floor(viewModel.snapshotAgeMs / 3_600_000)}h ${Math.floor((viewModel.snapshotAgeMs % 3_600_000) / 60_000)}m`}{' '}
-                ago
-              </AppText>
-            ) : null}
-            {quality !== 'stale' && viewModel.hasUnvaluedEntries ? (
-              <IncompleteFxWarning
-                testID="safe-to-spend-incomplete-warning"
-                message={AppConfig.strings.dashboard.safeToSpendUi.incompleteFxWarning}
-                onPress={() =>
-                  showIncompleteFxDetails({
-                    context: 'safe-to-spend',
-                    workplaceId,
-                    currencyCode,
-                    unvaluedStartingBalances: (viewModel.unvaluedStartingBalances ?? []).map(
-                      balance => ({
-                        accountId: balance.accountId,
-                        accountName: balance.accountName,
-                        fromCurrency: balance.fromCurrency,
-                        toCurrency: balance.toCurrency,
-                        amountLabel: formatMoney(balance.amount, balance.fromCurrency),
-                      }),
-                    ),
-                  })
-                }
-              />
-            ) : null}
-          </>
+          hasForecastIssue ? (
+            <>
+              {quality === 'stale' ? (
+                <AppText color="secondary">
+                  {AppConfig.strings.dashboard.safeToSpendUi.forecastStale}
+                </AppText>
+              ) : null}
+              <SafeToSpendForecastDetails viewModel={viewModel} />
+              {quality !== 'stale' && viewModel.hasUnvaluedEntries ? (
+                <IncompleteFxWarning
+                  testID="safe-to-spend-incomplete-warning"
+                  message={AppConfig.strings.dashboard.safeToSpendUi.incompleteFxWarning}
+                  onPress={() =>
+                    showIncompleteFxDetails({
+                      context: 'safe-to-spend',
+                      workplaceId,
+                      currencyCode,
+                      unvaluedStartingBalances: (viewModel.unvaluedStartingBalances ?? []).map(
+                        balance => ({
+                          accountId: balance.accountId,
+                          accountName: balance.accountName,
+                          fromCurrency: balance.fromCurrency,
+                          toCurrency: balance.toCurrency,
+                          amountLabel: formatMoney(balance.amount, balance.fromCurrency),
+                        }),
+                      ),
+                    })
+                  }
+                />
+              ) : null}
+            </>
+          ) : null
         }
         breakdown={quality === 'unavailable' ? null : breakdown}
         metrics={quality === 'unavailable' ? null : metrics}

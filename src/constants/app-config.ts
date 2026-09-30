@@ -69,6 +69,7 @@ export const AppConfig = {
         weightMerchant: 0.15,
         referenceMatchScore: 1,
         fingerprintDayBucketMs: 24 * 60 * 60 * 1000,
+        redeliveryWindowMs: 10 * 1000,
         fuzzyWindowMs: 4 * 60 * 60 * 1000,
       },
       batchOpChunkSize: 200,

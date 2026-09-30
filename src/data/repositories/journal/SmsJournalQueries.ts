@@ -94,47 +94,33 @@ export class SmsJournalQueries {
     return this.find(workplaceId, record.linkedJournalId);
   }
 
-  async findJournalsBySmsFingerprints(
+  /** Linked SMS inbox records stored under any of the fingerprints, with their live journals. */
+  async findLinkedSmsRecordsByFingerprints(
     fingerprints: string[],
     workplaceId: WorkplaceId,
-  ): Promise<Map<string, Journal>> {
-    if (fingerprints.length === 0) return new Map();
+  ): Promise<{ record: TransactionInboxRecord; journal: Journal }[]> {
+    if (fingerprints.length === 0) return [];
 
     const inboxRecords = await database.collections
       .get<TransactionInboxRecord>('transaction_inbox_records')
       .query(
         Q.where('input_fingerprint', Q.oneOf(fingerprints)),
+        Q.where('linked_journal_id', Q.notEq(null)),
         Q.where('workplace_id', workplaceId),
         Q.where('channel', 'sms'),
       )
       .fetch();
+    if (inboxRecords.length === 0) return [];
 
-    const fingerprintToJournalId = new Map<string, JournalId>();
-    const journalIds: JournalId[] = [];
-
-    for (const record of inboxRecords) {
-      const linkedJournalId = record.linkedJournalId;
-      const smsFingerprint = record.inputFingerprint;
-      if (linkedJournalId && smsFingerprint) {
-        journalIds.push(linkedJournalId);
-        fingerprintToJournalId.set(smsFingerprint, linkedJournalId);
-      }
-    }
-
-    if (journalIds.length === 0) return new Map();
-
-    const journals = await this.findByIds(workplaceId, journalIds);
-    const journalMap = new Map(journals.map(j => [j.id, j]));
-    const resultMap = new Map<string, Journal>();
-
-    for (const [fingerprint, journalId] of fingerprintToJournalId) {
-      const journal = journalMap.get(journalId);
-      if (journal) {
-        resultMap.set(fingerprint, journal);
-      }
-    }
-
-    return resultMap;
+    const journals = await this.findByIds(
+      workplaceId,
+      inboxRecords.map(record => record.linkedJournalId!),
+    );
+    const journalMap = new Map(journals.map(journal => [journal.id, journal]));
+    return inboxRecords.flatMap(record => {
+      const journal = journalMap.get(record.linkedJournalId!);
+      return journal ? [{ record, journal }] : [];
+    });
   }
 
   async findJournalsByReferenceNumbers(

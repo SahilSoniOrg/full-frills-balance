@@ -3,6 +3,7 @@ import { InboxProcessingStatus, JournalStatus } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
 import { database } from '@/src/data/database/Database';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
+import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import Journal from '@/src/data/models/Journal';
 import AuditLog from '@/src/data/models/AuditLog';
 import Transaction from '@/src/data/models/Transaction';
@@ -348,6 +349,7 @@ describe('SmsSyncPipeline integration', () => {
       await seedInboxRecord({
         deviceSourceId: 'prior-linked-sms',
         inputFingerprint: fingerprint,
+        inputDate: baseDate - 3000,
         linkedJournalId: journal.id,
         parsedAmount: parsed.amount,
         processingStatus: InboxProcessingStatus.IMPORTED,
@@ -460,6 +462,259 @@ describe('SmsSyncPipeline integration', () => {
         .fetch();
       expect(logs.filter(log => log.eventType === 'journal.sms_auto_posted')).toHaveLength(1);
       expect(logs.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('flags a repeated no-reference SMS delivered seconds apart within one scan', async () => {
+      const first = smsMessageFromFixture('swiggyNoRef', {
+        id: 'content-redelivered-a',
+        date: baseDate,
+      });
+      const second = smsMessageFromFixture('swiggyNoRef', {
+        id: 'content-redelivered-b',
+        date: baseDate + 4000,
+      });
+      await enableAutoPostFor(first);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [first, second]);
+
+      const journals = await database.collections
+        .get<Journal>('journals')
+        .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
+        .fetch();
+      expect(journals).toHaveLength(1);
+      expect((await fetchInboxByDeviceId(first.id))?.processingStatus).toBe(
+        InboxProcessingStatus.AUTO_POSTED,
+      );
+      const flagged = await fetchInboxByDeviceId(second.id);
+      expect(flagged?.processingStatus).toBe(InboxProcessingStatus.DUPLICATE_FLAGGED);
+      expect(flagged?.duplicateJournalId).toBe(journals[0].id);
+      expect(flagged?.linkedJournalId).toBeFalsy();
+      expect(flagged?.rawBody).toBe(second.body);
+    });
+
+    it('auto-posts distinct long messages sharing the legacy fingerprint prefix', async () => {
+      const prefix = 'Account transaction notification '.repeat(8);
+      const messages = [
+        smsMessageFromFixture('upiRef121554846690', {
+          id: 'long-content-a',
+          date: baseDate,
+          body: `${prefix}INR 250.00 debited (UPI Ref No 121554846690) on 07-Mar.`,
+        }),
+        smsMessageFromFixture('upiRef121554846690', {
+          id: 'long-content-b',
+          date: baseDate + 4000,
+          body: `${prefix}INR 900.00 debited (UPI Ref No 121554846691) on 07-Mar.`,
+        }),
+      ];
+      expect(fingerprintForMessage(messages[0])).toBe(fingerprintForMessage(messages[1]));
+      await enableAutoPostFor(messages[0]);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, messages);
+
+      const records = await Promise.all(messages.map(message => fetchInboxByDeviceId(message.id)));
+      expect(records.map(record => record?.parsedAmount)).toEqual([250, 900]);
+      expect(records.map(record => record?.referenceNumber)).toEqual([
+        '121554846690',
+        '121554846691',
+      ]);
+      expect(records.map(record => record?.processingStatus)).toEqual([
+        InboxProcessingStatus.AUTO_POSTED,
+        InboxProcessingStatus.AUTO_POSTED,
+      ]);
+      expect(records[0]?.linkedJournalId).toBeTruthy();
+      expect(records[1]?.linkedJournalId).toBeTruthy();
+      expect(records[1]?.linkedJournalId).not.toBe(records[0]?.linkedJournalId);
+      expect(
+        await database.collections
+          .get<Journal>('journals')
+          .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
+          .fetchCount(),
+      ).toBe(2);
+    });
+
+    it('auto-posts identical no-reference templates hours apart on the same day', async () => {
+      const dayStart = Math.floor(baseDate / AppConfig.time.msPerDay) * AppConfig.time.msPerDay;
+      const first = smsMessageFromFixture('swiggyNoRef', {
+        id: 'same-template-morning',
+        date: dayStart + 9 * 60 * 60 * 1000,
+      });
+      const second = {
+        ...first,
+        id: 'same-template-afternoon',
+        date: first.date + 6 * 60 * 60 * 1000,
+      };
+      expect(fingerprintForMessage(first)).toBe(fingerprintForMessage(second));
+      await enableAutoPostFor(first);
+      // Native inboxes commonly return newest-first; the distance check must be symmetric.
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [second, first]);
+
+      const records = await Promise.all(
+        [first, second].map(message => fetchInboxByDeviceId(message.id)),
+      );
+      expect(records.map(record => record?.processingStatus)).toEqual([
+        InboxProcessingStatus.AUTO_POSTED,
+        InboxProcessingStatus.AUTO_POSTED,
+      ]);
+      expect(records[1]?.linkedJournalId).not.toBe(records[0]?.linkedJournalId);
+      expect(
+        await database.collections
+          .get<Journal>('journals')
+          .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
+          .fetchCount(),
+      ).toBe(2);
+    });
+
+    it.each([false, true])(
+      'flags redelivery across midnight with newest-first=%s',
+      async newestFirst => {
+        const dayStart = Math.floor(baseDate / AppConfig.time.msPerDay) * AppConfig.time.msPerDay;
+        const older = smsMessageFromFixture('swiggyNoRef', {
+          id: 'midnight-older',
+          date: dayStart + AppConfig.time.msPerDay - 2000,
+        });
+        const newer = { ...older, id: 'midnight-newer', date: older.date + 4000 };
+        expect(fingerprintForMessage(older)).not.toBe(fingerprintForMessage(newer));
+        await enableAutoPostFor(older);
+        const messages = newestFirst ? [newer, older] : [older, newer];
+        await scanSmsInbox(SMS_TEST_WORKPLACE, messages);
+
+        const posted = await fetchInboxByDeviceId(messages[0].id);
+        const duplicate = await fetchInboxByDeviceId(messages[1].id);
+        expect(posted?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
+        expect(duplicate?.processingStatus).toBe(InboxProcessingStatus.DUPLICATE_FLAGGED);
+        expect(duplicate?.duplicateJournalId).toBe(posted?.linkedJournalId);
+        expect(duplicate?.linkedJournalId).toBeFalsy();
+        expect(duplicate?.rawBody).toBe(messages[1].body);
+        expect(
+          await database.collections
+            .get<Journal>('journals')
+            .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
+            .fetchCount(),
+        ).toBe(1);
+      },
+    );
+
+    it('retains earlier content claims when scan timestamps are out of order', async () => {
+      const dayStart = Math.floor(baseDate / AppConfig.time.msPerDay) * AppConfig.time.msPerDay;
+      const first = smsMessageFromFixture('swiggyNoRef', {
+        id: 'content-claim-first',
+        date: dayStart + 9 * 60 * 60 * 1000,
+      });
+      const later = { ...first, id: 'content-claim-later', date: first.date + 6 * 60 * 60 * 1000 };
+      const redelivery = { ...first, id: 'content-claim-redelivery', date: first.date + 4000 };
+      await enableAutoPostFor(first);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [first, later, redelivery]);
+
+      const records = await Promise.all(
+        [first, later, redelivery].map(message => fetchInboxByDeviceId(message.id)),
+      );
+      expect(records.map(record => record?.processingStatus)).toEqual([
+        InboxProcessingStatus.AUTO_POSTED,
+        InboxProcessingStatus.AUTO_POSTED,
+        InboxProcessingStatus.DUPLICATE_FLAGGED,
+      ]);
+      expect(records[2]?.duplicateJournalId).toBe(records[0]?.linkedJournalId);
+      expect(records[2]?.linkedJournalId).toBeFalsy();
+      expect(
+        await database.collections
+          .get<Journal>('journals')
+          .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
+          .fetchCount(),
+      ).toBe(2);
+    });
+
+    describe('across separate scans', () => {
+      const journalCount = () =>
+        database.collections
+          .get<Journal>('journals')
+          .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
+          .fetchCount();
+
+      it('links a redelivery seconds later to the earlier journal', async () => {
+        const first = smsMessageFromFixture('swiggyNoRef', {
+          id: 'cross-redeliver-a',
+          date: baseDate,
+        });
+        const redelivery = { ...first, id: 'cross-redeliver-b', date: baseDate + 4000 };
+        await enableAutoPostFor(first);
+        await scanSmsInbox(SMS_TEST_WORKPLACE, [first]);
+        await scanSmsInbox(SMS_TEST_WORKPLACE, [redelivery]);
+
+        const [original, repeated] = await Promise.all(
+          [first, redelivery].map(message => fetchInboxByDeviceId(message.id)),
+        );
+        expect(repeated?.processingStatus).toBe(InboxProcessingStatus.IMPORTED);
+        expect(repeated?.linkedJournalId).toBe(original?.linkedJournalId);
+        expect(await journalCount()).toBe(1);
+      });
+
+      it('links a redelivery that crosses midnight', async () => {
+        const dayStart = Math.floor(baseDate / AppConfig.time.msPerDay) * AppConfig.time.msPerDay;
+        const older = smsMessageFromFixture('swiggyNoRef', {
+          id: 'cross-midnight-older',
+          date: dayStart + AppConfig.time.msPerDay - 2000,
+        });
+        const newer = { ...older, id: 'cross-midnight-newer', date: older.date + 4000 };
+        expect(fingerprintForMessage(older)).not.toBe(fingerprintForMessage(newer));
+        await enableAutoPostFor(older);
+        await scanSmsInbox(SMS_TEST_WORKPLACE, [older]);
+        await scanSmsInbox(SMS_TEST_WORKPLACE, [newer]);
+
+        const repeated = await fetchInboxByDeviceId(newer.id);
+        expect(repeated?.processingStatus).toBe(InboxProcessingStatus.IMPORTED);
+        expect(repeated?.linkedJournalId).toBe(
+          (await fetchInboxByDeviceId(older.id))?.linkedJournalId,
+        );
+        expect(await journalCount()).toBe(1);
+      });
+
+      it('auto-posts an identical template hours later on the same day', async () => {
+        const dayStart = Math.floor(baseDate / AppConfig.time.msPerDay) * AppConfig.time.msPerDay;
+        const morning = smsMessageFromFixture('swiggyNoRef', {
+          id: 'cross-template-morning',
+          date: dayStart + 9 * 60 * 60 * 1000,
+        });
+        const afternoon = {
+          ...morning,
+          id: 'cross-template-afternoon',
+          date: morning.date + 6 * 60 * 60 * 1000,
+        };
+        expect(fingerprintForMessage(morning)).toBe(fingerprintForMessage(afternoon));
+        await enableAutoPostFor(morning);
+        await scanSmsInbox(SMS_TEST_WORKPLACE, [morning]);
+        await scanSmsInbox(SMS_TEST_WORKPLACE, [afternoon]);
+
+        const [first, second] = await Promise.all(
+          [morning, afternoon].map(message => fetchInboxByDeviceId(message.id)),
+        );
+        expect(second?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
+        expect(second?.linkedJournalId).not.toBe(first?.linkedJournalId);
+        expect(await journalCount()).toBe(2);
+      });
+
+      it('auto-posts a distinct debit sharing the legacy fingerprint prefix', async () => {
+        const prefix = 'Account transaction notification '.repeat(8);
+        const small = smsMessageFromFixture('upiRef121554846690', {
+          id: 'cross-long-a',
+          date: baseDate,
+          body: `${prefix}INR 250.00 debited (UPI Ref No 121554846690) on 07-Mar.`,
+        });
+        const large = smsMessageFromFixture('upiRef121554846690', {
+          id: 'cross-long-b',
+          date: baseDate + 4000,
+          body: `${prefix}INR 900.00 debited (UPI Ref No 121554846691) on 07-Mar.`,
+        });
+        expect(fingerprintForMessage(small)).toBe(fingerprintForMessage(large));
+        await enableAutoPostFor(small);
+        await scanSmsInbox(SMS_TEST_WORKPLACE, [small]);
+        await scanSmsInbox(SMS_TEST_WORKPLACE, [large]);
+
+        const [first, second] = await Promise.all(
+          [small, large].map(message => fetchInboxByDeviceId(message.id)),
+        );
+        expect(second?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
+        expect(second?.parsedAmount).toBe(900);
+        expect(second?.linkedJournalId).not.toBe(first?.linkedJournalId);
+        expect(await journalCount()).toBe(2);
+      });
     });
 
     it('stages only one inbox record when a device message ID is repeated in a scan', async () => {
@@ -696,6 +951,27 @@ describe('SmsSyncPipeline integration', () => {
       expect(inbox?.linkedJournalId).toBe(journal.id);
     });
 
+    it('keeps raw SMS on a dismissed record across re-scans so it can be restored', async () => {
+      const message = smsMessageFromFixture('swiggyNoRef', {
+        id: 'sms-rescan-dismissed',
+        date: baseDate,
+      });
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [message]);
+      const pending = await fetchInboxByDeviceId(message.id);
+      await transactionInboxRepository.persistStatus(
+        SMS_TEST_WORKPLACE,
+        pending!.id,
+        InboxProcessingStatus.DISMISSED,
+      );
+
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [message]);
+
+      const dismissed = await fetchInboxByDeviceId(message.id);
+      expect(dismissed?.processingStatus).toBe(InboxProcessingStatus.DISMISSED);
+      expect(dismissed?.senderAddress).toBe(message.address);
+      expect(dismissed?.rawBody).toBe(message.body);
+    });
+
     it('keeps DUPLICATE_FLAGGED stable across repeated scans', async () => {
       const parsed = await parseFixtureMessage('upiRef121554846690', baseDate);
       await seedExpenseJournal({
@@ -745,6 +1021,29 @@ describe('SmsSyncPipeline integration', () => {
 
       const inbox = await fetchInboxByDeviceId('sms-edge-e2');
       expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PARSE_FAILED);
+    });
+
+    it('stores no raw text for an SMS dismissed by an ignore rule', async () => {
+      const message = smsMessageFromFixture('swiggyNoRef', {
+        id: 'sms-edge-ignored',
+        date: baseDate,
+      });
+      await transactionAutoPostRuleRepository.save(
+        {
+          mode: 'regex',
+          senderMatch: message.address,
+          actions: { disposition: 'ignore' },
+          isActive: true,
+        },
+        SMS_TEST_WORKPLACE,
+      );
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [message]);
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [message]);
+
+      const inbox = await fetchInboxByDeviceId('sms-edge-ignored');
+      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.DISMISSED);
+      expect(inbox?.senderAddress).toBeFalsy();
+      expect(inbox?.rawBody).toBeFalsy();
     });
 
     it('does not create inbox records for personal phone-number senders', async () => {

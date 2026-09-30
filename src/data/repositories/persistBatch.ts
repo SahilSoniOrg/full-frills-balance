@@ -1,10 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import { Model } from '@nozbe/watermelondb';
 
-export type BatchOpsInput =
-  | Model[]
-  | readonly Model[]
-  | (() => Model[] | readonly Model[] | Promise<Model[] | readonly Model[]>);
+export type BatchOpsInput = Model[] | readonly Model[] | (() => Model[] | readonly Model[]);
 
 /**
  * One writer for database batch operations. Supports either a pre-built array of Models
@@ -20,8 +17,7 @@ export async function persistBatch(
   afterBatch?: () => void,
 ): Promise<void> {
   const didPersist = await database.write(async () => {
-    const rawOps = typeof opsOrFactory === 'function' ? opsOrFactory() : opsOrFactory;
-    const ops = rawOps instanceof Promise ? await rawOps : rawOps;
+    const ops = typeof opsOrFactory === 'function' ? opsOrFactory() : opsOrFactory;
     if (!ops || ops.length === 0) return false;
     await database.batch(ops as Model[]);
     return true;

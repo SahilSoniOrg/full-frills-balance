@@ -149,7 +149,7 @@ async function processDuePlannedPaymentsNow(
             workplaceId,
             payment.id,
             occurrenceDate,
-            { kind: 'autoPostDue', postedAt: Date.now(), journalId: journal.id },
+            { kind: 'autoPostDue', asOf, journalId: journal.id },
           );
           if (isCancelled())
             throw new Error('Planned occurrence settlement cancelled before commit.');

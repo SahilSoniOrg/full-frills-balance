@@ -20,10 +20,13 @@ export function classifyPlannedPaymentDirection(
   toType: AccountType | undefined,
 ): PlannedPaymentObligation['flowDirection'] {
   if (!fromType || !toType) return 'unknown';
-  if (fromType === AccountType.INCOME && toType === AccountType.ASSET) return 'inflow';
-  if (fromType === AccountType.ASSET && toType === AccountType.EXPENSE) return 'outflow';
-  if (fromType === AccountType.ASSET && toType === AccountType.ASSET) return 'transfer';
-  if (fromType === AccountType.EXPENSE && toType === AccountType.ASSET) return 'inflow';
+  const isBalanceSheet = (type: AccountType) =>
+    type === AccountType.ASSET || type === AccountType.LIABILITY;
+  const isIncomeStatement = (type: AccountType) =>
+    type === AccountType.INCOME || type === AccountType.EXPENSE;
+  if (isBalanceSheet(fromType) && toType === AccountType.EXPENSE) return 'outflow';
+  if (isIncomeStatement(fromType) && isBalanceSheet(toType)) return 'inflow';
+  if (fromType === toType && isBalanceSheet(fromType)) return 'transfer';
   if (fromType === AccountType.ASSET && toType === AccountType.LIABILITY) return 'outflow';
   if (fromType === AccountType.LIABILITY && toType === AccountType.ASSET) return 'inflow';
   return 'unknown';

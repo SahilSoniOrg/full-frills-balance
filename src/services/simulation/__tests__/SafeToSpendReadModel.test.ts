@@ -25,9 +25,15 @@ import {
 import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { observeSafeToSpendInputSnapshot } from '@/src/services/simulation/safeToSpendInputAcquisition';
-import type { ForecastDateBasis } from '@/src/services/simulation/forecastDateBasis';
-import { BehaviorSubject, of, Subject } from 'rxjs';
+import * as forecastDateBasis from '@/src/services/simulation/forecastDateBasis';
+import type {
+  ForecastDateBasis,
+  ForecastDateBasisDependencies,
+} from '@/src/services/simulation/forecastDateBasis';
+import { BehaviorSubject, defer, firstValueFrom, of, Subject, throwError } from 'rxjs';
+import { filter, timeout } from 'rxjs/operators';
 import { afterEach } from '@jest/globals';
+import dayjs from 'dayjs';
 jest.mock('@/src/data/repositories/raw/TransactionRawMetricsQueries', () => ({
   transactionRawMetricsQueries: {
     getDailyDeltasGroupedRaw: jest.fn(),
@@ -148,6 +154,88 @@ describe('SafeToSpendReadModel', () => {
   });
 
   describe('forWorkplace().watch()', () => {
+    it('recovers a failed balance acquisition on a same-day foreground resume without ledger edits', async () => {
+      let clock = new Date(2026, 8, 30, 9).getTime();
+      jest.spyOn(Date, 'now').mockImplementation(() => clock);
+      let foreground: (() => void) | undefined;
+      let nextTimer = 0;
+      const timers = new Map<number, () => void>();
+      const dependencies: ForecastDateBasisDependencies = {
+        now: () => clock,
+        setTimer: callback => {
+          const id = ++nextTimer;
+          timers.set(id, callback);
+          return id as unknown as ReturnType<typeof setTimeout>;
+        },
+        clearTimer: timer => {
+          timers.delete(timer as unknown as number);
+        },
+        observeForeground: listener => {
+          foreground = listener;
+          return () => {
+            foreground = undefined;
+          };
+        },
+      };
+      const realObserveDateBasis = forecastDateBasis.observeForecastDateBasis;
+      jest
+        .spyOn(forecastDateBasis, 'observeForecastDateBasis')
+        .mockImplementation(() => realObserveDateBasis(dependencies));
+      const cash = {
+        id: 'cash',
+        accountType: AccountType.ASSET,
+        accountSubtype: AccountSubtype.CASH,
+        currencyCode: 'USD',
+      };
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of([cash]));
+      (balanceReadService.getAccountBalances as jest.Mock)
+        .mockRejectedValueOnce(new Error('temporary balance read failure'))
+        .mockResolvedValue([{ accountId: 'cash', balance: 1000 }]);
+      (cashFlowSimulationService.simulate as jest.Mock).mockImplementation(
+        async ({ startingBalances }) => {
+          const balance = startingBalances.get('cash');
+          return {
+            ...emptySimResult,
+            simulationResult: {
+              summary: { safeToSpend: balance, shortfall: 0, trajectoryMinBalance: balance },
+              projections: [],
+            },
+          };
+        },
+      );
+      const stream = safeToSpendReadModel.forWorkplace('test-wp' as WorkplaceId).watch();
+      try {
+        const failed = await firstValueFrom(
+          stream.pipe(
+            filter(result => result.quality === 'unavailable'),
+            timeout({ first: 1000 }),
+          ),
+        );
+        expect(failed.projectionError).toBe('Input unavailable');
+        expect(balanceReadService.getAccountBalances).toHaveBeenCalledTimes(1);
+        expect(timers.size).toBe(1);
+
+        clock += 60 * 60 * 1000;
+        const recovered = firstValueFrom(
+          stream.pipe(
+            filter(result => result.quality === 'ready'),
+            timeout({ first: 1000 }),
+          ),
+        );
+        foreground?.();
+        const ready = await recovered;
+        expect(ready.summary.safeToSpend).toBe(1000);
+        expect(ready.totalLiquidAssets).toBe(1000);
+        expect(ready.asOf).toBe(clock);
+        expect(balanceReadService.getAccountBalances).toHaveBeenCalledTimes(2);
+        expect(timers.size).toBe(1);
+      } finally {
+        safeToSpendReadModel.clearCache();
+      }
+      expect(timers.size).toBe(0);
+      expect(foreground).toBeUndefined();
+    });
+
     it('invalidates the previous currency before a deferred replacement acquisition completes', done => {
       const workplaces$ = new BehaviorSubject({ defaultCurrencyCode: 'USD' });
       (workplaceRepository.observeById as jest.Mock).mockReturnValue(workplaces$.asObservable());
@@ -265,6 +353,75 @@ describe('SafeToSpendReadModel', () => {
         }
       });
       basis$.next({ asOf: dayOne, startOfToday: new Date(2026, 8, 30).getTime() });
+    });
+
+    it('keeps observing when ledger source errors are separated by successful emissions', done => {
+      const cash = {
+        id: 'cash',
+        accountType: AccountType.ASSET,
+        accountSubtype: AccountSubtype.CASH,
+      };
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of([cash]));
+      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([
+        { accountId: 'cash', balance: 1000 },
+      ]);
+      const sources: BehaviorSubject<unknown[]>[] = [];
+      (journalObserveQueries.observePlannedInRange as jest.Mock).mockImplementation(() =>
+        defer(() => {
+          const source = new BehaviorSubject<unknown[]>([]);
+          sources.push(source);
+          return source;
+        }),
+      );
+      const basis$ = new BehaviorSubject<ForecastDateBasis>({
+        asOf: Date.now(),
+        startOfToday: dayjs().startOf('day').valueOf(),
+      });
+      let readyCount = 0;
+      const subscription = observeSafeToSpendInputSnapshot(
+        'test-wp' as WorkplaceId,
+        'USD',
+        basis$,
+      ).subscribe(outcome => {
+        expect(outcome.kind).not.toBe('failed');
+        if (outcome.kind !== 'ready') return;
+        readyCount += 1;
+        if (readyCount <= 3) {
+          sources[sources.length - 1].error(new Error('planned journal source failed'));
+          return;
+        }
+        subscription.unsubscribe();
+        done();
+      });
+    });
+
+    it('settles on a failed outcome when a ledger source keeps erroring', done => {
+      const cash = {
+        id: 'cash',
+        accountType: AccountType.ASSET,
+        accountSubtype: AccountSubtype.CASH,
+      };
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of([cash]));
+      (journalObserveQueries.observePlannedInRange as jest.Mock).mockImplementation(() =>
+        throwError(() => new Error('planned journal source failed')),
+      );
+      const basis$ = new BehaviorSubject<ForecastDateBasis>({
+        asOf: Date.now(),
+        startOfToday: dayjs().startOf('day').valueOf(),
+      });
+      const subscription = observeSafeToSpendInputSnapshot(
+        'test-wp' as WorkplaceId,
+        'USD',
+        basis$,
+      ).subscribe({
+        next: outcome => {
+          if (outcome.kind !== 'failed') return;
+          expect(journalObserveQueries.observePlannedInRange).toHaveBeenCalledTimes(1);
+          subscription.unsubscribe();
+          done();
+        },
+        error: done,
+      });
     });
 
     it('uses a fresh noon acquisition cutoff after its morning date-basis emission', done => {

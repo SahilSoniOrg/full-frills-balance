@@ -114,7 +114,7 @@ describe('AnalyticsService', () => {
     ]);
   });
 
-  it('disables Sentry native channels that cannot run JavaScript sanitizers', () => {
+  it('keeps unsanitized native reporting disabled while retaining sanitized JS reporting', () => {
     const previous = AppConfig.features.enableSentry;
     (AppConfig.features as { enableSentry: boolean }).enableSentry = true;
     const init = jest.spyOn(Sentry, 'init').mockImplementation(() => undefined);
@@ -122,16 +122,74 @@ describe('AnalyticsService', () => {
       (analytics as unknown as { initializeSentry: () => void }).initializeSentry();
       expect(init).toHaveBeenCalledWith(
         expect.objectContaining({
+          enabled: true,
           enableNative: false,
           enableNativeCrashHandling: false,
+          attachScreenshot: false,
+          attachViewHierarchy: false,
+          enableAutoBreadcrumbTracking: false,
+          enableNetworkBreadcrumbs: false,
           sendDefaultPii: false,
           beforeSend: expect.any(Function),
           beforeBreadcrumb: expect.any(Function),
           beforeSendTransaction: expect.any(Function),
         }),
       );
+      const options = init.mock.calls[0][0] as Record<string, unknown>;
+      expect(options).not.toHaveProperty('replaysSessionSampleRate');
+      expect(options).not.toHaveProperty('replaysOnErrorSampleRate');
     } finally {
       init.mockRestore();
+      (AppConfig.features as { enableSentry: boolean }).enableSentry = previous;
+    }
+  });
+
+  it('never lets a private error message reach the Sentry payload', () => {
+    const previous = AppConfig.features.enableSentry;
+    (AppConfig.features as { enableSentry: boolean }).enableSentry = true;
+    const init = jest.spyOn(Sentry, 'init').mockImplementation(() => undefined);
+    const capture = jest.spyOn(Sentry, 'captureException').mockImplementation(() => '');
+    try {
+      (analytics as unknown as { initializeSentry: () => void }).initializeSentry();
+      const { beforeSend } = init.mock.calls[0][0] as {
+        beforeSend: (event: Sentry.ErrorEvent) => Sentry.ErrorEvent;
+      };
+      const privateError = new TypeError('Paid PrivateMerchant 450.00');
+      analytics.logError(privateError);
+      const captured = capture.mock.calls[0][0] as Error;
+
+      const payload = beforeSend({
+        exception: {
+          values: [
+            {
+              type: captured.name,
+              value: privateError.message,
+              stacktrace: {
+                frames: [
+                  {
+                    filename: 'app:///src/services/budget/budgetWriteService.ts',
+                    function: 'createBudget',
+                    lineno: 20,
+                    colno: 4,
+                    vars: { name: 'PrivateMerchant' },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+        extra: { note: 'PrivateMerchant' },
+      } as unknown as Sentry.ErrorEvent);
+
+      expect(`${captured.message}${captured.stack}`).not.toContain('PrivateMerchant');
+      expect(JSON.stringify(payload)).not.toContain('PrivateMerchant');
+      expect(payload.exception?.values?.[0]).toMatchObject({
+        type: 'TypeError',
+        stacktrace: { frames: [{ function: 'createBudget', lineno: 20, colno: 4 }] },
+      });
+    } finally {
+      init.mockRestore();
+      capture.mockRestore();
       (AppConfig.features as { enableSentry: boolean }).enableSentry = previous;
     }
   });

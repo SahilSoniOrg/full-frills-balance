@@ -14,7 +14,7 @@ describe('SmsPrivacyRepository integration', () => {
     await database.write(() => database.unsafeResetDatabase());
   });
 
-  it('scrubs only terminal SMS content, migrates old identities, preserves notes, and is idempotent', async () => {
+  it('scrubs only imported or auto-posted SMS content, migrates old identities, preserves notes, and is idempotent', async () => {
     await database.write(async () => {
       const inbox = database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
       const makeInbox = (id: string, channel: string, status: InboxProcessingStatus) =>
@@ -110,8 +110,8 @@ describe('SmsPrivacyRepository integration', () => {
     const autoPosted = await inbox.find('sms-auto-posted');
     const pending = await inbox.find('sms-pending');
     const voice = await inbox.find('voice-dismissed');
-    expect(dismissed.senderAddress).toBeFalsy();
-    expect(dismissed.rawBody).toBeFalsy();
+    expect(dismissed.senderAddress).toBe('PrivateBank');
+    expect(dismissed.rawBody).toContain('PrivateMerchant');
     expect(dismissed.inputFingerprint).toBe(
       hashLegacySmsFingerprint('privatebank::privatemerchant purchase 500::19675'),
     );
@@ -163,5 +163,35 @@ describe('SmsPrivacyRepository integration', () => {
       smsMeta.metadataJson,
       auditAgain.changes,
     ]).toEqual(afterFirstPass);
+  });
+
+  it('writes nothing on a rerun when scrubbed rows have no metadata', async () => {
+    await database.write(async () => {
+      await database.collections
+        .get<TransactionInboxRecord>('transaction_inbox_records')
+        .create(record => {
+          record.workplaceId = WORKPLACE;
+          record.channel = 'sms';
+          record.deviceSourceId = 'device-clean';
+          record.inputDate = 1_700_000_000_000;
+          record.inputFingerprint = hashLegacySmsFingerprint('bank::spent::19675');
+          record.parseStatus = InboxParseStatus.PARSED;
+          record.direction = TransactionDirection.DEBIT;
+          record.processingStatus = InboxProcessingStatus.IMPORTED;
+          record.firstSeenAt = 1_700_000_000_000;
+          record.lastScannedAt = 1_700_000_000_000;
+        });
+      await database.collections.get<JournalMetadata>('journal_metadata').create(record => {
+        record.workplaceId = WORKPLACE;
+        Object.assign(record._raw, { journal_id: 'journal-clean' });
+        record.importSource = 'sms';
+      });
+    });
+    const batchSpy = jest.spyOn(database, 'batch');
+
+    await repository.scrubLegacySmsContent();
+
+    expect(batchSpy).not.toHaveBeenCalled();
+    batchSpy.mockRestore();
   });
 });

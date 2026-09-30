@@ -20,16 +20,16 @@ import {
 } from '@/src/data/repositories/importPersistenceAdapter';
 import type { BatchImportData } from '@/src/types/importContracts';
 import type { AuditEntityType } from '@/src/types/enums';
-import {
-  InboxProcessingStatus,
-  PlannedPaymentInterval,
-  PlannedPaymentStatus,
-} from '@/src/types/enums';
+import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { TransactionChannel } from '@/src/types/domainJournal';
 import { WorkplaceId } from '@/src/types/ids';
 import { Model } from '@nozbe/watermelondb';
 import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
-import { sanitizeSmsAuditChanges, sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
+import {
+  clearsRawSmsContent,
+  sanitizeSmsAuditChanges,
+  sanitizeSmsMetadataJson,
+} from '@/src/utils/smsPrivateMetadata';
 
 function readAuditPayloadString(changes: string, key: string): string | undefined {
   try {
@@ -210,15 +210,9 @@ export function prepareAuxiliaryImportRecords(
       record.deviceSourceId = inbox.deviceSourceId;
       const isSms = inbox.channel === 'sms';
       const processingStatus = toInboxProcessingStatus(inbox.processingStatus);
-      const terminalSms =
-        isSms &&
-        [
-          InboxProcessingStatus.IMPORTED,
-          InboxProcessingStatus.AUTO_POSTED,
-          InboxProcessingStatus.DISMISSED,
-        ].includes(processingStatus);
-      record.senderAddress = terminalSms ? undefined : inbox.senderAddress;
-      record.rawBody = terminalSms ? undefined : inbox.rawBody;
+      const clearRawSms = isSms && clearsRawSmsContent(processingStatus);
+      record.senderAddress = clearRawSms ? undefined : inbox.senderAddress;
+      record.rawBody = clearRawSms ? undefined : inbox.rawBody;
       record.inputDate = inbox.inputDate;
       record.inputFingerprint = isSms
         ? hashLegacySmsFingerprint(inbox.inputFingerprint)

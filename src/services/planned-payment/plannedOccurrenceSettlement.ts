@@ -28,7 +28,7 @@ import { logger } from '@/src/utils/logger';
  */
 export type PlannedOccurrenceAction =
   | { kind: 'generate'; asOf: number }
-  | { kind: 'autoPostDue'; postedAt: number; journalId: JournalId }
+  | { kind: 'autoPostDue'; asOf: number; journalId: JournalId }
   | { kind: 'post'; postedAt: number; journalId?: JournalId }
   | { kind: 'skip' };
 
@@ -144,17 +144,17 @@ async function applyOccurrenceAction(
   }
 
   if (action.kind === 'autoPostDue') {
-    if (!payment.isAutoPost || dayStart > normalizeToStartOfDay(action.postedAt)) return null;
-    if (
-      occurrence.kind !== 'planned' ||
-      !occurrence.journals.some(journal => journal.id === action.journalId)
-    )
-      return null;
+    if (!payment.isAutoPost || dayStart > normalizeToStartOfDay(action.asOf)) return null;
+    const due =
+      occurrence.kind === 'planned'
+        ? occurrence.journals.find(journal => journal.id === action.journalId)
+        : undefined;
+    if (!due) return null;
     return journalPersistenceService.postInSession(
       session,
-      action.journalId,
+      due.id,
       payment.workplaceId,
-      action.postedAt,
+      due.journalDate,
       { source: 'system', correlationId },
     );
   }

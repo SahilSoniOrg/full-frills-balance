@@ -14,9 +14,9 @@ import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtract
 import { AppConfig } from '@/src/constants';
 import { buildReferenceDuplicateMatch } from '@/src/services/sms/smsDuplicateDetection';
 import { logger } from '@/src/utils/logger';
-import { computeSmsReservationKey, resolveProcessingStatus } from './smsFingerprint';
-import { sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
-import { SmsAnalysisResult } from './types';
+import { resolveProcessingStatus } from './smsFingerprint';
+import { clearsRawSmsContent, sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
+import { SmsAnalysisResult, SmsContentReservation } from './types';
 
 export function prepareUpsertInboxRecord(
   sms: SmsMessage,
@@ -37,17 +37,19 @@ export function prepareUpsertInboxRecord(
     ...(cleanedMetadata ? safeParseJSON<Record<string, unknown>>(cleanedMetadata, {}) : {}),
     ...(duplicate ? { duplicateReasons: duplicate.reasons } : {}),
   });
-  const keepPendingReviewContent = ![
-    InboxProcessingStatus.IMPORTED,
-    InboxProcessingStatus.AUTO_POSTED,
-    InboxProcessingStatus.DISMISSED,
-  ].includes(processingStatus);
+  // Scan-dismissed messages (non-transactions, ignore rules) never gain raw text; a record the
+  // user dismissed keeps what it already holds so it stays restorable.
+  const rawContent =
+    processingStatus === InboxProcessingStatus.DISMISSED
+      ? { senderAddress: existingRecord?.senderAddress, rawBody: existingRecord?.rawBody }
+      : clearsRawSmsContent(processingStatus)
+        ? { senderAddress: undefined, rawBody: undefined }
+        : { senderAddress: sms.address, rawBody: sms.body };
   return {
     workplaceId,
     channel: 'sms' as const,
     deviceSourceId: sms.id,
-    senderAddress: keepPendingReviewContent ? sms.address : undefined,
-    rawBody: keepPendingReviewContent ? sms.body : undefined,
+    ...rawContent,
     inputDate: sms.date,
     inputFingerprint: fingerprint,
     parseStatus: parsed.parseStatus,
@@ -77,7 +79,7 @@ export async function processScanBatchItem(params: {
   latestReferenceDuplicate?: import('@/src/services/sms/smsDuplicateDetection').DuplicateMatch;
   latestProcessedIds: Set<string>;
   reservedDeviceIds: Set<string>;
-  reservedFingerprints: Map<string, JournalId>;
+  reservedContents: Map<string, SmsContentReservation[]>;
   reservedReferences: Map<string, JournalId>;
   workplaceId: WorkplaceId;
   triggeredRuleIds: string[];
@@ -95,7 +97,7 @@ export async function processScanBatchItem(params: {
     latestReferenceDuplicate,
     latestProcessedIds,
     reservedDeviceIds,
-    reservedFingerprints,
+    reservedContents,
     reservedReferences,
     workplaceId,
     triggeredRuleIds,
@@ -125,22 +127,34 @@ export async function processScanBatchItem(params: {
         ])
       : undefined;
   reservedDeviceIds.add(result.message.id);
+  // The persisted fingerprint truncates content and buckets by day. Same-scan claims
+  // retain full text and parsed identity, then compare actual delivery timestamps.
+  const contentReservationKey = JSON.stringify([
+    result.message.address.toLowerCase(),
+    result.message.body,
+    reference,
+    result.parsed.amount,
+    result.parsed.currencyCode?.toUpperCase(),
+    toTransactionDirection(result.parsed.type),
+  ]);
+  const reservedContent = reservedContents
+    .get(contentReservationKey)
+    ?.find(
+      reservation =>
+        Math.abs(result.message.date - reservation.messageDate) <=
+        AppConfig.input.sms.duplicateDetection.redeliveryWindowMs,
+    );
   const reservedReferenceJournalId = referenceReservationKey
     ? reservedReferences.get(referenceReservationKey)
     : undefined;
-  const reservationKey = computeSmsReservationKey(
-    result.message.address,
-    result.message.body,
-    result.message.date,
-  );
-  const reservedJournalId = reservedReferenceJournalId ?? reservedFingerprints.get(reservationKey);
+  const reservedJournalId = reservedReferenceJournalId ?? reservedContent?.journalId;
   if (!linkedJournalId && reservedJournalId) {
     effectiveDuplicate = reservedReferenceJournalId
       ? buildReferenceDuplicateMatch(reservedJournalId, result.parsed.referenceNumber!)
       : {
           journalId: reservedJournalId,
           score: AppConfig.input.sms.duplicateDetection.scoreThreshold,
-          reasons: ['Exact SMS content within this scan'],
+          reasons: ['Same SMS content delivered within seconds in this scan'],
         };
     finalStatus = InboxProcessingStatus.DUPLICATE_FLAGGED;
   }
@@ -174,7 +188,9 @@ export async function processScanBatchItem(params: {
       finalStatus = InboxProcessingStatus.AUTO_POSTED;
       autoPosted = true;
       if (result.parsed.id) latestProcessedIds.add(result.parsed.id);
-      reservedFingerprints.set(reservationKey, linkedJournalId);
+      const contentReservations = reservedContents.get(contentReservationKey) ?? [];
+      contentReservations.push({ journalId: linkedJournalId, messageDate: result.message.date });
+      reservedContents.set(contentReservationKey, contentReservations);
       if (referenceReservationKey) {
         reservedReferences.set(referenceReservationKey, linkedJournalId);
       }

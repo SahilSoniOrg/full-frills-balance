@@ -1,5 +1,6 @@
 import { WidgetProjectionService } from '../WidgetProjectionService';
 import { loadNativeWidgetAdapter } from '../nativeWidgetAdapter';
+import { logger } from '@/src/utils/logger';
 import { storage } from '@/src/utils/storage';
 
 async function flushUntilStarted(started: () => boolean): Promise<void> {
@@ -14,6 +15,9 @@ const nativeWidgets = {
 
 jest.mock('../nativeWidgetAdapter', () => ({
   loadNativeWidgetAdapter: jest.fn(),
+}));
+jest.mock('@/src/utils/logger', () => ({
+  logger: { warn: jest.fn() },
 }));
 jest.mock('@/src/utils/storage', () => ({
   storage: {
@@ -37,6 +41,7 @@ describe('WidgetProjectionService', () => {
     (storage.getAllKeys as jest.Mock).mockReturnValue([]);
     (storage.set as jest.Mock).mockReset();
     (storage.remove as jest.Mock).mockReset();
+    (logger.warn as jest.Mock).mockClear();
     service = new WidgetProjectionService();
   });
 
@@ -155,5 +160,67 @@ describe('WidgetProjectionService', () => {
     await nextLease.publish({ next: true } as never);
     expect(nativeWidgets.clearWidgetData).toHaveBeenCalledTimes(2);
     expect(nativeWidgets.syncWidgetData).toHaveBeenLastCalledWith({ next: true });
+  });
+
+  it('publishes a new current snapshot even when the pending clear keeps failing', async () => {
+    const stored = new Map<string, unknown>();
+    (storage.set as jest.Mock).mockImplementation((key: string, value: unknown) =>
+      stored.set(key, value),
+    );
+    (storage.remove as jest.Mock).mockImplementation((key: string) => stored.delete(key));
+    (storage.getString as jest.Mock).mockImplementation((key: string) => {
+      const value = stored.get(key);
+      return typeof value === 'string' ? value : undefined;
+    });
+    (storage.getBoolean as jest.Mock).mockImplementation((key: string) => stored.get(key) === true);
+    (storage.getAllKeys as jest.Mock).mockImplementation(() => [...stored.keys()]);
+    nativeWidgets.clearWidgetData.mockRejectedValue(new Error('widget storage unavailable'));
+
+    let finishA!: () => void;
+    nativeWidgets.syncWidgetData.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          finishA = resolve;
+        }),
+    );
+    const leaseA = service.begin('wp-a' as never);
+    const publishingA = leaseA.publish({ owner: 'a' } as never);
+    await flushUntilStarted(() => typeof finishA === 'function');
+    const clearingA = service.clearWorkplace('wp-a' as never, 'wp-a' as never);
+    finishA();
+    await publishingA;
+    await expect(clearingA).rejects.toThrow('widget storage unavailable');
+    // The deleted workplace's in-flight write must not retire its own clear marker.
+    expect(stored.get('widget_cleanup_owner_pending_v1_wp-a')).toBe(true);
+    await expect(leaseA.publish({ stale: true } as never)).resolves.toBe(false);
+
+    await service.begin('wp-b' as never).publish({ owner: 'b' } as never);
+    expect(nativeWidgets.syncWidgetData).toHaveBeenLastCalledWith({ owner: 'b' });
+    expect(stored.has('widget_cleanup_owner_pending_v1_wp-a')).toBe(false);
+    expect(stored.get('widget_native_owner_v1')).toBe('wp-b');
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+
+    const clearAttempts = nativeWidgets.clearWidgetData.mock.calls.length;
+    await service.begin('wp-b' as never).publish({ owner: 'b', next: true } as never);
+    expect(nativeWidgets.clearWidgetData).toHaveBeenCalledTimes(clearAttempts);
+    expect(nativeWidgets.syncWidgetData).toHaveBeenLastCalledWith({ owner: 'b', next: true });
+    expect(nativeWidgets.syncWidgetData).not.toHaveBeenCalledWith({ stale: true });
+  });
+
+  it('publishes after a failed factory-reset clear once a workplace resumes', async () => {
+    nativeWidgets.clearWidgetData.mockRejectedValue(new Error('widget storage unavailable'));
+    await expect(service.clearAll()).rejects.toThrow('widget storage unavailable');
+    await expect(service.begin('wp-a' as never).publish({ old: true } as never)).resolves.toBe(
+      false,
+    );
+
+    service.resumeWorkplace('wp-b' as never);
+    await service.begin('wp-b' as never).publish({ owner: 'b' } as never);
+    await service.begin('wp-b' as never).publish({ owner: 'b', next: true } as never);
+
+    expect(nativeWidgets.clearWidgetData).toHaveBeenCalledTimes(2);
+    expect(nativeWidgets.syncWidgetData).toHaveBeenLastCalledWith({ owner: 'b', next: true });
+    expect(nativeWidgets.syncWidgetData).not.toHaveBeenCalledWith({ old: true });
+    expect(storage.remove).toHaveBeenCalledWith('widget_cleanup_all_pending_v1');
   });
 });

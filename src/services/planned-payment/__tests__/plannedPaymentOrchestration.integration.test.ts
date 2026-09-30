@@ -286,6 +286,7 @@ describe('planned payment orchestration persistence', () => {
       await processDuePlannedPayments(WORKPLACE_ID);
       [journal] = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
       expect(journal.status).toBe(JournalStatus.POSTED);
+      expect(journal.journalDate).toBe(dueDate);
       await processDuePlannedPayments(WORKPLACE_ID);
       expect(await findJournalsForPayments(WORKPLACE_ID, [payment.id])).toHaveLength(1);
     } finally {

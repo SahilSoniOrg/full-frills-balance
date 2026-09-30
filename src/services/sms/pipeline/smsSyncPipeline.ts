@@ -3,8 +3,10 @@ import { transactionAutoPostRuleRepository } from '@/src/data/repositories/Trans
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import type { JournalPersistenceResult } from '@/src/data/repositories/journal/JournalPersistenceRepository';
+import type { SmsMessage } from '@/modules/expo-sms-inbox';
+import type Journal from '@/src/data/models/Journal';
 import { analytics } from '@/src/services/analytics';
-import { SmsParser } from '@/src/services/ledger/SmsParser';
+import { ParsedTransaction, SmsParser } from '@/src/services/ledger/SmsParser';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import {
   coalesceActionableDuplicate,
@@ -18,11 +20,32 @@ import { logger } from '@/src/utils/logger';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { analyzeAutoPost } from './smsAutoPostAnalyzer';
 import { findManyDuplicateCandidates } from './smsDuplicateMatcher';
-import { computeSmsFingerprint, resolveProcessingStatus } from './smsFingerprint';
+import {
+  computeSmsFingerprint,
+  isStoredRedelivery,
+  redeliveryFingerprintCandidates,
+  resolveProcessingStatus,
+} from './smsFingerprint';
 import { processScanBatchItem } from './smsInboxRecordPreparer';
-import { SmsAnalysisResult } from './types';
+import { SmsAnalysisResult, SmsContentReservation } from './types';
 
 class SmsScanCancelledError extends Error {}
+
+async function findRedeliveredJournals(
+  items: readonly { message: SmsMessage; parsed: ParsedTransaction }[],
+  workplaceId: WorkplaceId,
+): Promise<Map<string, Journal>> {
+  const linked = await smsJournalQueries.findLinkedSmsRecordsByFingerprints(
+    [...new Set(items.flatMap(({ message }) => redeliveryFingerprintCandidates(message)))],
+    workplaceId,
+  );
+  const journals = new Map<string, Journal>();
+  for (const { message, parsed } of items) {
+    const match = linked.find(({ record }) => isStoredRedelivery(message, parsed, record));
+    if (match) journals.set(message.id, match.journal);
+  }
+  return journals;
+}
 
 export class SmsSyncPipeline {
   private readonly workplaceScans = new Map<WorkplaceId, Promise<void>>();
@@ -84,7 +107,6 @@ export class SmsSyncPipeline {
     );
 
     const messageIds = messages.map(m => m.id);
-    const fingerprints = parsedMessages.map(m => m.fingerprint);
 
     const referenceNumbers = Array.from(
       new Set(
@@ -95,9 +117,9 @@ export class SmsSyncPipeline {
       ),
     );
 
-    const [journalsById, journalsByFingerprint, journalsByReference] = await Promise.all([
+    const [journalsById, redeliveredJournals, journalsByReference] = await Promise.all([
       smsJournalQueries.findJournalsByOriginalSmsIds(messageIds, workplaceId),
-      smsJournalQueries.findJournalsBySmsFingerprints(fingerprints, workplaceId),
+      findRedeliveredJournals(parsedMessages, workplaceId),
       smsJournalQueries.findJournalsByReferenceNumbers(referenceNumbers, workplaceId),
     ]);
 
@@ -125,7 +147,7 @@ export class SmsSyncPipeline {
         const exactJournal = journalsById.get(message.id) || null;
         const fingerprintJournal = exactJournal
           ? null
-          : journalsByFingerprint.get(fingerprint) || null;
+          : redeliveredJournals.get(message.id) || null;
 
         const nextStatus = resolveProcessingStatus({
           parsed,
@@ -177,10 +199,9 @@ export class SmsSyncPipeline {
 
     if (analysisResults.length > 0 && !signal?.aborted) {
       const messageIds = analysisResults.map(result => result.message.id);
-      const fingerprints = analysisResults.map(result => result.fingerprint);
       const latestProcessedIds = new Set<string>();
       const reservedDeviceIds = new Set<string>();
-      const reservedFingerprints = new Map<string, import('@/src/types/ids').JournalId>();
+      const reservedContents = new Map<string, SmsContentReservation[]>();
       const reservedReferences = new Map<string, import('@/src/types/ids').JournalId>();
 
       let stagedImportedCount = 0;
@@ -191,19 +212,13 @@ export class SmsSyncPipeline {
         journalResults = await runAccountingWriteSession(async session => {
           // These reads occur after acquiring the owning writer, so persisted duplicates
           // cannot slip between the final check and publication.
-          const [
-            latestRecords,
-            latestJournalsById,
-            latestJournalsByFingerprint,
-            latestByReference,
-          ] = await Promise.all([
-            transactionInboxRepository.findByDeviceSourceIds(workplaceId, messageIds),
-            smsJournalQueries.findJournalsByOriginalSmsIds(messageIds, workplaceId),
-            // Existing linked-inbox fingerprint lookup remains on the persisted legacy scheme;
-            // the stricter full-body/exact-time key below is only for uncommitted siblings.
-            smsJournalQueries.findJournalsBySmsFingerprints(fingerprints, workplaceId),
-            smsJournalQueries.findJournalsByReferenceNumbers(referenceNumbers, workplaceId),
-          ]);
+          const [latestRecords, latestJournalsById, latestRedeliveredJournals, latestByReference] =
+            await Promise.all([
+              transactionInboxRepository.findByDeviceSourceIds(workplaceId, messageIds),
+              smsJournalQueries.findJournalsByOriginalSmsIds(messageIds, workplaceId),
+              findRedeliveredJournals(analysisResults, workplaceId),
+              smsJournalQueries.findJournalsByReferenceNumbers(referenceNumbers, workplaceId),
+            ]);
           const latestRecordsByMessageId = new Map(
             latestRecords.map(record => [record.deviceSourceId, record]),
           );
@@ -213,7 +228,7 @@ export class SmsSyncPipeline {
             const latestRecord = latestRecordsByMessageId.get(result.message.id) ?? null;
             const latestJournal =
               latestJournalsById.get(result.message.id) ??
-              latestJournalsByFingerprint.get(result.fingerprint) ??
+              latestRedeliveredJournals.get(result.message.id) ??
               null;
             const referenceJournal = result.parsed.referenceNumber
               ? latestByReference.get(normalizeSmsReferenceNumber(result.parsed.referenceNumber))
@@ -235,7 +250,7 @@ export class SmsSyncPipeline {
               latestReferenceDuplicate,
               latestProcessedIds,
               reservedDeviceIds,
-              reservedFingerprints,
+              reservedContents,
               reservedReferences,
               workplaceId,
               triggeredRuleIds,
