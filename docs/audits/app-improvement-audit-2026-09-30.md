@@ -8,8 +8,8 @@ The user authorized the four levels below, with GPT-6 Luna implementing and the 
 |---|---|---|
 | 1 | F21/F22 — audit integrity | Committed as `b3d0f6d0`. |
 | 2 | F08/F09/F11 — privacy, SMS retention, projection teardown | Committed as `d3d20a7e`. |
-| 3 | F06/F07 — currency precision and onboarding recurrence | Implemented and reviewed in this commit. |
-| 4 | F10/F13/F14 — dated forecasts, next obligations, binding-day explanation | Pending. |
+| 3 | F06/F07 — currency precision and onboarding recurrence | Committed as `888f19d7`. |
+| 4 | F10/F13/F14 — dated forecasts, next obligations, binding-day explanation | Implemented and reviewed in this commit. |
 
 ### Level 1 — audit integrity
 
@@ -36,6 +36,18 @@ Money arithmetic and amount conversion now default to the owning/result currency
 Onboarding preview and persistence share one recurrence builder. Weekly income uses weekday, monthly income uses day of month, and yearly income carries both day and month. The chosen first occurrence is normalized through the existing recurrence engine. Tests cover Wednesday fortnightly dates, saved preview agreement, month-end clamping, yearly month preservation, and leap years. Existing saved schedules were not migrated.
 
 Worker focused checks passed **19 suites / 164 tests**. Final `bun run verify` completed with exit 0: **430 suites / 2,631 tests**, architecture/privacy/type checks passed, and lint retains the two baseline journal-hook warnings. Parent independently passed **5 finance suites / 46 tests** and **3 onboarding suites / 37 tests**. Evidence: `/tmp/full-frills-level-3-verify-rerun.log`, `/tmp/full-frills-level-3-parent-finance.log`, and `/tmp/full-frills-level-3-parent-recurrence.log`. Native runtime and SQLite parity remain unverified.
+
+### Level 4 — dated forecasts, next obligations, and timing explanation
+
+Safe-to-Spend now carries workplace, acquisition time, calculation time, and forecast horizon through the dashboard, headline, and saved paint snapshot. A service owns local-midnight and foreground refresh, reschedules one timer, and disposes it with its reactive owner. Date changes rebuild planned-journal ranges and budget-period usage. Each ledger acquisition captures a fresh cutoff so a transaction recorded later in the same foreground session is included. Clock/currency invalidation cancels older projection publication and marks retained data stale while refreshing; workplace/currency consumer guards prevent old data appearing as current.
+
+Saved paint is always stale and displays the original calculation time or a known legacy cache age. Widget publication retains the projection's original calculation time as `updatedAt`, including ownership guards for workplace and currency. The JavaScript payload carries `asOf` and horizon, but the current native widget implementation neither persists nor displays those extra fields; its visible timestamp remains `updatedAt`.
+
+Commitment read projections combine plans, undeleted planned journals, and account types in one stream. The next due date is the earliest outstanding generated journal or valid recurrence cursor. Finite completed schedules can still expose and settle outstanding generated entries; exhausted and paused actions are disabled. Loaded details, navigation seeds, and post/skip targets use the projected date and journal identity. Income, expense, transfer, and unknown directions are derived from account semantics rather than amount sign. Confirmation copy describes the selected date without promising a cursor advance.
+
+The simulator owns the explanation using the same unrounded trajectory and currency-rounded headline: current cash ceiling, earliest binding low point, held cash, shortfall, horizon, constraining liquid outflows, and expected inflow dates. Non-liquid and out-of-window flows are excluded. The UI presents this timing constraint separately from supporting forecast totals. A rendered simulator-to-mapper regression verifies cash 1,000, rent 800 on day 5, and salary 1,500 on day 20 produce safe spending 200 and held cash 800 before payday. Three-decimal shortfall, cash-ceiling, snapshot age, ownership, and exact occurrence targets have regressions.
+
+Final `bun run verify` completed with exit 0: **436 suites / 2,658 tests**, architecture/privacy/type checks passed, and lint retains only the two baseline journal-hook warnings. Worker final focused checks passed **10 suites / 51 tests**; the read-model suite passed **18/18** and exited without forced shutdown. Parent independently passed **9 suites / 60 tests**, also without forced shutdown. Evidence: `/tmp/full-frills-level-4-verify-final.log`, `/tmp/full-frills-level-4-focused-final-retry2.log`, `/tmp/full-frills-level-4-readmodel-no-force-retry.log`, and `/tmp/full-frills-level-4-parent-final.log`. Earlier incomplete widget/provenance fixtures and a test clock issue were corrected before final verification. Native device/SQLite parity and live timezone-change behavior remain unverified; controlled-clock and mocked SDK tests do not establish them. F12, F17, and P2 work remain outside these four authorized levels.
 
 ## F01–F05 implementation review — September 30, 2026
 

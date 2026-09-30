@@ -1,8 +1,8 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { logger } from '@/src/utils/logger';
 import { Trace, startTrace } from '@/src/utils/TraceService';
-import { Flow, SimulationEngineResult } from './types';
-import { findFirstMajorInflowDay } from './utils/FlowPolicy';
+import { Flow, SafeToSpendExplanationFlow, SimulationEngineResult } from './types';
+import { findFirstMajorInflowDay, getLiquidImpact } from './utils/FlowPolicy';
 import { assertValidFlow } from './utils/FlowInvariants';
 import { assertValidSimulationInputs } from './utils/SimulationInputInvariants';
 import { roundToPrecision } from '@/src/utils/money';
@@ -47,6 +47,7 @@ export class Simulator {
       }
 
       let globalMinBalance = globalBalance;
+      let globalMinDayOffset: number | null = null;
 
       // 1. Identify first major inflow day (Income only)
       const firstMajorInflowDay = findFirstMajorInflowDay(
@@ -108,7 +109,10 @@ export class Simulator {
           accountBalancesSnapshot = new Map(roundedAccountBalances);
         }
 
-        globalMinBalance = Math.min(globalMinBalance, globalBalance);
+        if (globalBalance < globalMinBalance) {
+          globalMinBalance = globalBalance;
+          globalMinDayOffset = todayOffset;
+        }
 
         // Set timestamp to the end of the day (23:59:59)
         const timestamp =
@@ -131,6 +135,62 @@ export class Simulator {
       }
 
       const safeToSpend = Math.max(0, Math.min(totalStartingBalance, globalMinBalance));
+      const bindingDayOffset = globalMinBalance < totalStartingBalance ? globalMinDayOffset : null;
+      const collectExplanationFlows = (
+        predicate: (flow: Flow) => boolean,
+      ): SafeToSpendExplanationFlow[] => {
+        const grouped = new Map<string, SafeToSpendExplanationFlow>();
+        for (const flow of flows) {
+          if (
+            flow.dayOffset < startDayOffset ||
+            flow.dayOffset >= startDayOffset + days ||
+            flow.timeframe !== 'FUTURE' ||
+            !predicate(flow)
+          )
+            continue;
+          const key = `${flow.origin}\u0000${flow.label}`;
+          const existing = grouped.get(key);
+          if (existing) {
+            grouped.set(key, {
+              ...existing,
+              amount: existing.amount + flow.amount,
+              firstDayOffset: Math.min(existing.firstDayOffset, flow.dayOffset),
+              occurrenceCount: existing.occurrenceCount + 1,
+            });
+          } else {
+            grouped.set(key, {
+              label: flow.label,
+              source: flow.origin,
+              amount: flow.amount,
+              firstDayOffset: flow.dayOffset,
+              occurrenceCount: 1,
+            });
+          }
+        }
+        return [...grouped.values()].map(flow => ({
+          ...flow,
+          amount: roundToPrecision(flow.amount, precision),
+        }));
+      };
+      const safeToSpendExplanation = {
+        cashCeiling: roundToPrecision(totalStartingBalance, precision),
+        minimumDatedBalance: roundToPrecision(globalMinBalance, precision),
+        bindingDayOffset,
+        heldAmount: roundToPrecision(Math.max(0, totalStartingBalance - safeToSpend), precision),
+        shortfall: roundToPrecision(
+          globalMinBalance < 0 ? Math.abs(globalMinBalance) : 0,
+          precision,
+        ),
+        horizonDays: days,
+        constrainingOutflows: collectExplanationFlows(flow => {
+          if (bindingDayOffset === null || flow.dayOffset > bindingDayOffset) return false;
+          const impact = getLiquidImpact(flow, liquidAccountIds);
+          return impact.direction === 'OUTFLOW';
+        }),
+        assumedInflows: collectExplanationFlows(
+          flow => getLiquidImpact(flow, liquidAccountIds).direction === 'INFLOW',
+        ),
+      };
 
       const res = {
         summary: {
@@ -151,6 +211,7 @@ export class Simulator {
           ),
           firstMajorInflowDay,
         },
+        safeToSpendExplanation,
         accountSummaries: [], // Will be populated by the orchestrator
         projections,
         allFlows: flows,

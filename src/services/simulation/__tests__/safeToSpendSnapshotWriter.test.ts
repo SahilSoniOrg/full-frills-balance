@@ -24,6 +24,20 @@ jest.mock('@/src/utils/storage', () => ({
 
 function sampleDashboard(): SafeToSpendDashboard {
   return {
+    workplaceId: 'workplace-1' as WorkplaceId,
+    asOf: 1_759_200_000_000,
+    generatedAt: 1_759_200_000_100,
+    horizonDays: 60,
+    explanation: {
+      cashCeiling: 9000,
+      minimumDatedBalance: 4321,
+      bindingDayOffset: 3,
+      heldAmount: 4679,
+      shortfall: 0,
+      horizonDays: 60,
+      constrainingOutflows: [],
+      assumedInflows: [],
+    },
     summary: {
       safeToSpend: 4321,
       shortfall: 0,

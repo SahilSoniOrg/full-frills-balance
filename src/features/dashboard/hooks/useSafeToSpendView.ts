@@ -48,6 +48,11 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
 
   const {
     summary,
+    explanation,
+    asOf,
+    generatedAt,
+    quality,
+    snapshotAgeMs,
     totalLiquidAssets,
     report,
     accountSummaries,
@@ -62,6 +67,11 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
     return mapSafeToSpendViewModel(
       {
         summary,
+        explanation,
+        asOf,
+        generatedAt,
+        quality,
+        snapshotAgeMs,
         totalLiquidAssets,
         report: report!, // Mapper handles null/undefined
         accountSummaries,
@@ -78,6 +88,11 @@ export function useSafeToSpendView(props: SafeToSpendViewProps): SafeToSpendView
     );
   }, [
     summary,
+    explanation,
+    asOf,
+    generatedAt,
+    quality,
+    snapshotAgeMs,
     totalLiquidAssets,
     report,
     accountSummaries,

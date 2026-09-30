@@ -16,9 +16,18 @@ export interface SafeToSpendPaintSnapshot extends Omit<
 /** Tag snapshots written before the paint discriminator was introduced. */
 export function restoreSafeToSpendPaintSnapshot(
   snapshot: SafeToSpendPaintSnapshot | SafeToSpendDashboard,
+  metadata?: { timestamp: number; workplaceId: string },
 ): SafeToSpendPaintSnapshot {
-  if ('snapshotKind' in snapshot) return snapshot;
-  return { ...snapshot, snapshotKind: 'paint' };
+  const originalGeneratedAt = snapshot.generatedAt || metadata?.timestamp;
+  const age =
+    originalGeneratedAt === undefined ? undefined : Math.max(0, Date.now() - originalGeneratedAt);
+  return {
+    ...snapshot,
+    workplaceId: (metadata?.workplaceId ?? snapshot.workplaceId) as WorkplaceId,
+    quality: 'stale',
+    ...(age === undefined ? {} : { snapshotAgeMs: age }),
+    snapshotKind: 'paint',
+  };
 }
 
 /** Drop heavy sim payloads so the mint number can round-trip through MMKV. */

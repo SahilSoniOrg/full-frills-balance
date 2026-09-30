@@ -250,6 +250,7 @@ export function PlannedPaymentDetailsView({
               <AppButton
                 variant="primary"
                 onPress={onPost}
+                disabled={!onPost}
                 style={{ width: '100%', marginBottom: Spacing.md }}
               >
                 <Row align="center" justify="center" gap="sm">
@@ -261,7 +262,12 @@ export function PlannedPaymentDetailsView({
               </AppButton>
 
               <Row gap="md">
-                <AppButton variant="outline" onPress={onSkip} style={{ flex: 1 }}>
+                <AppButton
+                  variant="outline"
+                  onPress={onSkip}
+                  disabled={!onSkip}
+                  style={{ flex: 1 }}
+                >
                   <Row align="center" justify="center" gap="sm">
                     <AppIcon name={Icon.Close} size={18} color={theme.text} />
                     <AppText variant="body" weight="bold">

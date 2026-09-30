@@ -7,6 +7,7 @@ import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import dayjs from 'dayjs';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 import {
   CommittedStepBreakdown,
@@ -59,6 +60,9 @@ export const SafeToSpendExplanationModal = ({
     debt,
     currencyCode,
     isLoading,
+    explanation,
+    asOf,
+    quality,
   } = viewModel;
 
   const formulaDays = viewModel.safeToSpendDays;
@@ -140,9 +144,58 @@ export const SafeToSpendExplanationModal = ({
         {info.unlocks}
       </AppText>
 
+      {explanation && (
+        <AppCard paddingSize="lg" elevation="sm" style={styles.card}>
+          <AppText variant="subheading">How this amount is constrained</AppText>
+          <AppText variant="caption" color="secondary" style={styles.introText}>
+            {asOf === undefined ? '' : `Based on ${dayjs(asOf).format('D MMM YYYY')}. `}
+            Lowest dated balance over {explanation.horizonDays} days.{' '}
+            {quality === 'stale' ? 'This is a saved estimate and may be out of date.' : ''}
+          </AppText>
+          <AppText variant="caption">
+            Cash available now: {formatMoney(explanation.cashCeiling, currencyCode)}
+          </AppText>
+          <AppText variant="caption">
+            {explanation.bindingDayOffset === null
+              ? 'Binding limit: cash available now'
+              : `Lowest projected balance · ${asOf === undefined ? `day ${explanation.bindingDayOffset + 1}` : dayjs(asOf).startOf('day').add(explanation.bindingDayOffset, 'day').format('D MMM YYYY')}`}
+            : {formatMoney(explanation.minimumDatedBalance, currencyCode)}
+          </AppText>
+          {explanation.bindingDayOffset !== null &&
+          explanation.assumedInflows.some(
+            flow => flow.firstDayOffset > explanation.bindingDayOffset!,
+          ) ? (
+            <AppText variant="caption" color="secondary">
+              Money arriving later does not cover bills due before it arrives.
+            </AppText>
+          ) : null}
+          <AppText variant="caption">
+            Held through the low point: {formatMoney(explanation.heldAmount, currencyCode)}
+          </AppText>
+          {explanation.shortfall > 0 && (
+            <AppText variant="caption">
+              Projected shortfall: {formatMoney(explanation.shortfall, currencyCode)}
+            </AppText>
+          )}
+          {explanation.constrainingOutflows.map((flow, index) => (
+            <AppText key={`out-${index}`} variant="caption">
+              Included outflow: {flow.label} · {formatMoney(flow.amount, currencyCode)}
+            </AppText>
+          ))}
+          {explanation.assumedInflows.map((flow, index) => (
+            <AppText key={`in-${index}`} variant="caption">
+              Expected inflow: {flow.label} · {formatMoney(flow.amount, currencyCode)} · first on{' '}
+              {asOf === undefined
+                ? `day ${flow.firstDayOffset + 1}`
+                : dayjs(asOf).startOf('day').add(flow.firstDayOffset, 'day').format('D MMM YYYY')}
+            </AppText>
+          ))}
+        </AppCard>
+      )}
+
       <AppCard paddingSize="none" elevation="lg" style={styles.card}>
         <View style={styles.ledgerHeader}>
-          <AppText variant="subheading">{info.bucketTitle}</AppText>
+          <AppText variant="subheading">Supporting forecast inputs</AppText>
         </View>
 
         {/* Step 1: Assets */}
@@ -192,7 +245,7 @@ export const SafeToSpendExplanationModal = ({
         <FormulaStepRow
           title={step3.title}
           detail={step3.detail}
-          amountText={formatSts(committedTotal, currencyCode, { prefix: '–' })}
+          amountText={formatSts(committedTotal, currencyCode)}
           amountColor="warning"
           isExpanded={expandedSection === 'committed'}
           onToggle={() => setExpandedSection(expandedSection === 'committed' ? null : 'committed')}
@@ -214,7 +267,7 @@ export const SafeToSpendExplanationModal = ({
         <FormulaStepRow
           title={step4.title}
           detail={step4.detail}
-          amountText={formatSts(committedLiabilities, currencyCode, { prefix: '–' })}
+          amountText={formatSts(committedLiabilities, currencyCode)}
           amountColor="error"
           isExpanded={expandedSection === 'debts'}
           onToggle={() => setExpandedSection(expandedSection === 'debts' ? null : 'debts')}

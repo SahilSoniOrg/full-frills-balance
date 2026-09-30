@@ -10,6 +10,7 @@ import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPl
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
+import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { generatePlannedOccurrence } from '@/src/services/planned-payment/plannedPaymentJournalGeneration';
 import {
@@ -32,8 +33,8 @@ import {
 } from '@/src/types/enums';
 import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
-import { firstValueFrom } from 'rxjs';
-import { map, skip, tap, timeout } from 'rxjs/operators';
+import { firstValueFrom, ReplaySubject } from 'rxjs';
+import { filter, map, skip, tap, timeout } from 'rxjs/operators';
 
 const WORKPLACE_ID = 'wp-planned-atomic' as WorkplaceId;
 
@@ -119,6 +120,132 @@ describe('planned payment orchestration persistence', () => {
     expect(reloaded?.nextOccurrence).toBe(expectedNextOccurrence);
     expect(writeSpy).toHaveBeenCalledTimes(1);
     expect(batchSpy).toHaveBeenCalledTimes(1);
+  }, 30000);
+
+  it('projects and settles the generated unpaid occurrence before the advanced cursor', async () => {
+    const payment = await createDuePayment('Finite rent');
+    const originalOccurrence = payment.nextOccurrence;
+    const projection$ = new ReplaySubject<
+      import('@/src/services/planned-payment/plannedPaymentReadService').PlannedPaymentObligation[]
+    >(1);
+    const projectionSubscription = plannedPaymentReadService
+      .observeObligations(WORKPLACE_ID)
+      .subscribe(items => projection$.next(items));
+    const initial = await firstValueFrom(
+      projection$.pipe(
+        map(items => items.find(item => item.id === payment.id)),
+        filter(item => !!item),
+        timeout({ first: 3000 }),
+      ),
+    );
+    expect(initial?.nextDueOccurrence).toBe(originalOccurrence);
+    const generatedProjection = firstValueFrom(
+      projection$.pipe(
+        skip(1),
+        map(items => items.find(item => item.id === payment.id)),
+        filter(item => !!item && item.outstandingJournalId !== undefined),
+        timeout({ first: 3000 }),
+      ),
+    );
+    await processDuePlannedPayments(WORKPLACE_ID);
+    const [generated] = await findJournalsForPayments(WORKPLACE_ID, [payment.id]);
+    expect(generated).toBeDefined();
+    const projected = await generatedProjection;
+    expect(projected?.nextDueOccurrence).toBe(originalOccurrence);
+    expect(projected?.outstandingJournalId).toBe(generated.id);
+    expect(projected?.nextOccurrence).toBeGreaterThan(originalOccurrence);
+
+    const otherWorkplaceItems = await firstValueFrom(
+      plannedPaymentReadService.observeObligations('wp-other' as WorkplaceId),
+    );
+    expect(otherWorkplaceItems).toEqual([]);
+    const settledProjection = firstValueFrom(
+      projection$.pipe(
+        skip(1),
+        map(items => items.find(item => item.id === payment.id)),
+        filter(item => !!item && item.outstandingJournalId === undefined),
+        timeout({ first: 3000 }),
+      ),
+    );
+
+    await postPlannedJournalOccurrence(
+      WORKPLACE_ID,
+      payment.id,
+      generated.id,
+      projected!.nextDueOccurrence!,
+    );
+    const settled = await settledProjection;
+    expect(settled?.outstandingJournalId).toBeUndefined();
+    expect(settled?.nextDueOccurrence).toBeUndefined();
+    projectionSubscription.unsubscribe();
+  }, 30000);
+
+  it('reactively drops a deleted planned journal and exposes the next active cursor', async () => {
+    const occurrence = normalizeToStartOfDay(Date.now()) + AppConfig.time.msPerDay;
+    const payment = await plannedPaymentRepository.create(WORKPLACE_ID, {
+      name: 'Recurring rent',
+      amount: 1200,
+      currencyCode: 'USD',
+      fromAccountId,
+      toAccountId,
+      intervalN: 1,
+      intervalType: PlannedPaymentInterval.DAILY,
+      startDate: occurrence,
+      nextOccurrence: occurrence,
+      status: PlannedPaymentStatus.ACTIVE,
+      isAutoPost: false,
+    });
+    const projected$ = new ReplaySubject<
+      import('@/src/services/planned-payment/plannedPaymentReadService').PlannedPaymentObligation[]
+    >(1);
+    const subscription = plannedPaymentReadService
+      .observeObligations(WORKPLACE_ID)
+      .subscribe(items => projected$.next(items));
+    const initial = await firstValueFrom(
+      projected$.pipe(
+        map(items => items.find(item => item.id === payment.id)),
+        filter(item => !!item),
+        timeout({ first: 3000 }),
+      ),
+    );
+    expect(initial?.nextDueOccurrence).toBe(occurrence);
+    const generatedState = firstValueFrom(
+      projected$.pipe(
+        skip(1),
+        map(items => items.find(item => item.id === payment.id)),
+        filter(item => !!item && item.outstandingJournalId !== undefined),
+        timeout({ first: 3000 }),
+      ),
+    );
+    await generatePlannedOccurrence(WORKPLACE_ID, payment.id, occurrence);
+    const withPending = await generatedState;
+    expect(withPending?.nextDueOccurrence).toBe(occurrence);
+    expect(withPending?.nextOccurrence).toBeGreaterThan(occurrence);
+    if (!withPending?.outstandingJournalId) throw new Error('Expected a generated planned journal');
+    const pendingJournalId = withPending.outstandingJournalId;
+
+    const cursorAfterDelete = firstValueFrom(
+      projected$.pipe(
+        skip(1),
+        map(items => items.find(item => item.id === payment.id)),
+        filter(
+          item =>
+            !!item &&
+            item.outstandingJournalId === undefined &&
+            item.nextDueOccurrence === withPending.nextOccurrence,
+        ),
+        timeout({ first: 3000 }),
+      ),
+    );
+    await database.write(async () => {
+      const journal = await database.collections.get<Journal>('journals').find(pendingJournalId);
+      await journal.update(record => {
+        record.deletedAt = new Date();
+      });
+    });
+    const afterDelete = await cursorAfterDelete;
+    expect(afterDelete?.nextDueOccurrence).toBe(withPending.nextOccurrence);
+    subscription.unsubscribe();
   }, 30000);
 
   it('keeps a finite future auto-post occurrence planned, then posts it once when due', async () => {

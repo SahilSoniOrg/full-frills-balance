@@ -41,6 +41,8 @@ export type SimulationInput = {
   resultCurrency: string;
   workplaceId: WorkplaceId;
   simulationDays?: number;
+  /** Captured by the owning read model; reused for every date-sensitive calculation. */
+  asOf?: number;
   trace?: Trace;
 };
 
@@ -61,10 +63,11 @@ export class CashFlowSimulationService {
       resultCurrency,
       workplaceId,
       simulationDays = AppConfig.defaults.safeToSpendDays,
+      asOf = Date.now(),
       trace,
     } = input;
 
-    const time = new TimeContext(dayjs(), simulationDays);
+    const time = new TimeContext(dayjs(asOf), simulationDays);
     const resultPrecision = getCurrencyPrecision(resultCurrency);
     const simulationStartMs = time.getStartOfToday().valueOf();
     const simulationEndMs = time.getEndMs();
@@ -312,6 +315,8 @@ export class CashFlowSimulationService {
       normalizedLiabilityBalances,
       context.liquidAccountIds,
       resultPrecision,
+      asOf,
+      simulationDays,
     );
     trace?.metric('post_process_report');
 

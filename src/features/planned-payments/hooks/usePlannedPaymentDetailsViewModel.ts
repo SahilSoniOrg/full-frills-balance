@@ -284,7 +284,10 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
 
       // Recurrence Details
       intervalLabel,
-      nextOccurrenceText: new Date(item.nextOccurrence).toLocaleDateString(),
+      nextOccurrenceText:
+        item.nextDueOccurrence === undefined
+          ? 'No future occurrence'
+          : new Date(item.nextDueOccurrence).toLocaleDateString(),
       isAutoPost: item.isAutoPost,
 
       // Account flow

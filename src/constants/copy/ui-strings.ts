@@ -131,10 +131,10 @@ export const UI_STRINGS = {
     safeToSpendExplanation: {
       title: 'How Safe to Spend Works',
       intro:
-        'Safe to Spend is what you can spend today without worrying about rent, bills, or money you’ve set aside.',
+        'Safe to Spend is the lower of your cash today and the lowest dated liquid balance in the forecast.',
       unlocks:
         'The number is cautious on purpose. If money is spoken for soon, it won’t show up as free to spend. Even if your bank balance looks high, upcoming bills are quietly protected.',
-      formulaTitle: 'How it adds up',
+      formulaTitle: 'Forecast inputs',
       formulaItems: [
         'Cash you have: money in your everyday checking and wallet.',
         (days: number) =>
@@ -144,7 +144,7 @@ export const UI_STRINGS = {
         'Card balances: money owed soon that is already protected in your reserves.',
         'Safe to Spend: what’s left over to spend completely guilt-free.',
       ],
-      bucketTitle: 'The Breakdown',
+      bucketTitle: 'Supporting forecast inputs',
       exampleTitle: 'Current Picture',
       benefitsTitle: 'Why it keeps you safe',
       benefits: [
@@ -155,7 +155,7 @@ export const UI_STRINGS = {
       footer: 'Calculated from your accounts, planned payments, and category budgets.',
       closeCta: 'Got it',
       logicNote:
-        'Paychecks arriving before a bill is due will cover it. Cash is only set aside when a bill comes due first.',
+        'Income counts on its expected date. A later paycheck does not cover an earlier bill at the earlier point in the forecast.',
     },
     legendDetails: {
       safeTitle: 'Safe to Spend',

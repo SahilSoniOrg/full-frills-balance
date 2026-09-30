@@ -59,6 +59,10 @@ describe('useWidgetSync availability', () => {
       jest.useFakeTimers();
       mockHeadline = {
         quality: 'ready',
+        workplaceId: asWorkplaceId('widget-test'),
+        asOf: 1_759_200_000_000,
+        generatedAt: 1_759_200_000_100,
+        horizonDays: 60,
         currencyCode: 'USD',
         safeToSpend: 250,
         shortfall: 0,
@@ -73,6 +77,10 @@ describe('useWidgetSync availability', () => {
 
       mockHeadline = {
         quality,
+        workplaceId: asWorkplaceId('widget-test'),
+        asOf: 1_759_200_000_000,
+        generatedAt: 1_759_200_000_100,
+        horizonDays: 60,
         currencyCode: 'USD',
         safeToSpend: 0,
         shortfall: 0,

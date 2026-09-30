@@ -8,6 +8,7 @@ import {
   IncomeEntry,
   UnvaluedStartingBalance,
 } from '@/src/services/simulation/types';
+import type { SafeToSpendExplanation } from '@/src/services/simulation/types';
 
 export type ResolvedCopy<T> = T extends (...args: never[]) => infer R
   ? R
@@ -23,6 +24,11 @@ export type SafeToSpendInfo = ResolvedCopy<
 >;
 
 export interface SafeToSpendViewModel {
+  explanation?: SafeToSpendExplanation;
+  asOf?: number;
+  generatedAt?: number;
+  quality?: 'ready' | 'stale' | 'unavailable';
+  snapshotAgeMs?: number;
   currencyCode: string;
   // Raw Totals
   safeToSpend: number;

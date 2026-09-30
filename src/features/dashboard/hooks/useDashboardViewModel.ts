@@ -46,7 +46,7 @@ type DashboardExplanationSection = 'assets' | 'income' | 'committed' | 'debts';
 type DashboardLegendItem = 'safe' | 'committed' | 'debts';
 
 export function useDashboardViewModel(): DashboardViewModel {
-  const { workplaceId } = useWorkplace();
+  const { workplaceId, defaultCurrencyCode } = useWorkplace();
   const { isInitialized, isAppReady } = useAppReady();
   const { hasCompletedOnboarding } = useOnboardingSession();
   const { showSafeToSpendChart } = useDashboardPreferences();
@@ -70,20 +70,26 @@ export function useDashboardViewModel(): DashboardViewModel {
     () => (isAppReady ? safeToSpendReadModel.forWorkplace(workplaceId).watch() : EMPTY),
     [workplaceId, isAppReady],
     () => {
-      const cached = snapshotService.getCustomSnapshot<
+      const cached = snapshotService.getCustomSnapshotWithMetadata<
         SafeToSpendPaintSnapshot | SafeToSpendDashboard
       >(workplaceId, 'safe_to_spend');
       appLogger.info(`[Dashboard] STS snapshot ${cached ? 'hit' : 'miss'}`);
-      return cached ? restoreSafeToSpendPaintSnapshot(cached) : null;
+      return cached ? restoreSafeToSpendPaintSnapshot(cached.data, cached) : null;
     },
   );
 
-  const hasSafeToSpendData = !!safeToSpendData;
+  const visibleSafeToSpendData = useMemo(() => {
+    if (!safeToSpendData || safeToSpendData.workplaceId !== workplaceId) return null;
+    return safeToSpendData.currencyCode !== defaultCurrencyCode
+      ? { ...safeToSpendData, quality: 'stale' as const }
+      : safeToSpendData;
+  }, [safeToSpendData, workplaceId, defaultCurrencyCode]);
+  const hasSafeToSpendData = !!visibleSafeToSpendData;
   const safeToSpendDetailsReady =
-    !!safeToSpendData &&
-    !('snapshotKind' in safeToSpendData) &&
-    safeToSpendData.quality !== 'unavailable' &&
-    safeToSpendData.quality !== 'stale';
+    !!visibleSafeToSpendData &&
+    !('snapshotKind' in visibleSafeToSpendData) &&
+    visibleSafeToSpendData.quality === 'ready' &&
+    visibleSafeToSpendData.currencyCode === defaultCurrencyCode;
   // Log Safe To Spend Data arrival
   useEffect(() => {
     if (hasSafeToSpendData) {
@@ -138,11 +144,15 @@ export function useDashboardViewModel(): DashboardViewModel {
     },
   });
 
+  const currentReadyDashboard =
+    safeToSpendDetailsReady && visibleSafeToSpendData && !('snapshotKind' in visibleSafeToSpendData)
+      ? visibleSafeToSpendData
+      : null;
   const plannedOccurrences = usePlannedOccurrences({
     workplaceId,
-    allFlows: safeToSpendDetailsReady ? safeToSpendData.report.allFlows : undefined,
-    accountMap: safeToSpendDetailsReady ? safeToSpendData.accountMap : undefined,
-    currencyCode: safeToSpendData?.currencyCode,
+    allFlows: currentReadyDashboard?.report.allFlows,
+    accountMap: currentReadyDashboard?.accountMap,
+    currencyCode: visibleSafeToSpendData?.currencyCode,
   });
 
   const hasJournalItems = recentJournalEntries.items.length > 0;
@@ -172,7 +182,7 @@ export function useDashboardViewModel(): DashboardViewModel {
       recentJournalEntries,
       plannedOccurrences,
       journalSectionTitle: sectionTitle,
-      safeToSpendData,
+      safeToSpendData: visibleSafeToSpendData,
       safeToSpendDetailsReady,
       explanationModalState,
       legendModalState,
@@ -183,7 +193,7 @@ export function useDashboardViewModel(): DashboardViewModel {
       recentJournalEntries,
       plannedOccurrences,
       sectionTitle,
-      safeToSpendData,
+      visibleSafeToSpendData,
       safeToSpendDetailsReady,
       explanationModalState,
       legendModalState,

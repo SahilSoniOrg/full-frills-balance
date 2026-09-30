@@ -184,10 +184,18 @@ class SnapshotService {
     return this.getValidatedSnapshot<T>(`${key}_${workplaceId}`, workplaceId);
   }
 
+  getCustomSnapshotWithMetadata<T = unknown>(workplaceId: string, key: string): Snapshot<T> | null {
+    return this.getValidatedSnapshotRecord<T>(`${key}_${workplaceId}`, workplaceId);
+  }
+
   /**
    * Internal helper to validate snapshot workplace and age.
    */
   private getValidatedSnapshot<T>(key: string, workplaceId: string): T | null {
+    return this.getValidatedSnapshotRecord<T>(key, workplaceId)?.data ?? null;
+  }
+
+  private getValidatedSnapshotRecord<T>(key: string, workplaceId: string): Snapshot<T> | null {
     try {
       if (
         this.snapshotsPaused ||
@@ -218,7 +226,7 @@ class SnapshotService {
         return null;
       }
 
-      return snapshot.data;
+      return snapshot;
     } catch (error) {
       logger.error(`[SnapshotService] Failed to load snapshot: ${key}`, {
         error: error instanceof Error ? error.message : String(error),

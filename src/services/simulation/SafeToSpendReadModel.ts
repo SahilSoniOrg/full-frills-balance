@@ -13,10 +13,15 @@ import { Platform } from 'react-native';
 import { firstValueFrom, from, Observable, of } from 'rxjs';
 import { catchError, map, switchMap, take, tap } from 'rxjs/operators';
 import type { SafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
+import { observeForecastDateBasis } from '@/src/services/simulation/forecastDateBasis';
 
 /** Widget / headline path — intentionally tiny. */
 export type SafeToSpendHeadline = {
   quality: 'ready' | 'stale' | 'unavailable';
+  workplaceId: WorkplaceId;
+  asOf: number;
+  generatedAt: number;
+  horizonDays: number;
   projectionError?: string;
   currencyCode: string;
   safeToSpend: number;
@@ -44,6 +49,10 @@ export interface SafeToSpendHandle {
 function toHeadline(result: SafeToSpendDashboard): SafeToSpendHeadline {
   return {
     quality: result.quality ?? 'ready',
+    workplaceId: result.workplaceId,
+    asOf: result.asOf,
+    generatedAt: result.generatedAt,
+    horizonDays: result.horizonDays,
     ...(result.projectionError ? { projectionError: result.projectionError } : {}),
     currencyCode: result.currencyCode,
     safeToSpend: result.summary.safeToSpend,
@@ -95,27 +104,57 @@ export class SafeToSpendReadModel {
       namespace: REACTIVE_CACHE_NAMESPACES.safeToSpend,
       key: workplaceId,
       workplaceId,
-      createSource: () =>
-        workplaceService
-          .observeCurrency(workplaceId)
-          .pipe(
-            switchMap(currencyCode => this.buildSafeToSpendPipeline(workplaceId, currencyCode)),
-          ),
+      createSource: () => this.observeWorkplaceProjection(workplaceId),
     });
+  }
+
+  private observeWorkplaceProjection(workplaceId: WorkplaceId): Observable<SafeToSpendDashboard> {
+    let hasCurrency = false;
+    return workplaceService.observeCurrency(workplaceId).pipe(
+      switchMap(currencyCode => {
+        const currencyChanged = hasCurrency;
+        hasCurrency = true;
+        return this.buildSafeToSpendPipeline(workplaceId, currencyCode, currencyChanged);
+      }),
+    );
   }
 
   private buildSafeToSpendPipeline(
     workplaceId: WorkplaceId,
     defaultCurrencyCode: string,
+    invalidateImmediately = false,
   ): Observable<SafeToSpendDashboard> {
     let lastSuccessful: SafeToSpendDashboard | undefined;
-    return observeSafeToSpendInputSnapshot(workplaceId, defaultCurrencyCode).pipe(
+    return observeSafeToSpendInputSnapshot(
+      workplaceId,
+      defaultCurrencyCode,
+      invalidateImmediately ? observeForecastDateBasis() : undefined,
+    ).pipe(
       switchMap(outcome => {
+        if (outcome.kind === 'refreshing') {
+          return of(
+            lastSuccessful
+              ? { ...lastSuccessful, quality: 'stale' as const, projectionError: undefined }
+              : {
+                  ...createEmptySafeToSpendDashboard(defaultCurrencyCode, {
+                    workplaceId: outcome.workplaceId,
+                    asOf: outcome.asOf,
+                    horizonDays: outcome.horizonDays,
+                    quality: 'unavailable',
+                  }),
+                  projectionError: 'Refreshing forecast',
+                },
+          );
+        }
         if (outcome.kind === 'empty') {
           lastSuccessful = undefined;
           return of({
-            ...createEmptySafeToSpendDashboard(outcome.defaultCurrencyCode),
-            quality: 'ready' as const,
+            ...createEmptySafeToSpendDashboard(outcome.defaultCurrencyCode, {
+              workplaceId: outcome.workplaceId,
+              asOf: outcome.asOf,
+              horizonDays: outcome.horizonDays,
+              quality: 'ready',
+            }),
           });
         }
         if (outcome.kind === 'failed') {
@@ -124,8 +163,12 @@ export class SafeToSpendReadModel {
             previous
               ? { ...previous, quality: 'stale' as const, projectionError: 'Input refresh failed' }
               : {
-                  ...createEmptySafeToSpendDashboard(defaultCurrencyCode),
-                  quality: 'unavailable' as const,
+                  ...createEmptySafeToSpendDashboard(defaultCurrencyCode, {
+                    workplaceId,
+                    asOf: Date.now(),
+                    horizonDays: 0,
+                    quality: 'unavailable',
+                  }),
                   projectionError: 'Input unavailable',
                 },
           );
@@ -135,7 +178,7 @@ export class SafeToSpendReadModel {
           tap(result => {
             const ready = { ...result, quality: 'ready' as const };
             lastSuccessful = ready;
-            persistSafeToSpendSnapshot(workplaceId, result);
+            persistSafeToSpendSnapshot(workplaceId, ready);
           }),
           map(result => ({ ...result, quality: 'ready' as const })),
           catchError(err => {
@@ -152,8 +195,12 @@ export class SafeToSpendReadModel {
                     projectionError: 'Projection refresh failed',
                   }
                 : {
-                    ...createEmptySafeToSpendDashboard(defaultCurrencyCode),
-                    quality: 'unavailable' as const,
+                    ...createEmptySafeToSpendDashboard(defaultCurrencyCode, {
+                      workplaceId,
+                      asOf: Date.now(),
+                      horizonDays: 0,
+                      quality: 'unavailable',
+                    }),
                     projectionError: 'Projection failed',
                   },
             );
@@ -170,8 +217,12 @@ export class SafeToSpendReadModel {
           previous
             ? { ...previous, quality: 'stale' as const, projectionError: 'Input refresh failed' }
             : {
-                ...createEmptySafeToSpendDashboard(defaultCurrencyCode),
-                quality: 'unavailable' as const,
+                ...createEmptySafeToSpendDashboard(defaultCurrencyCode, {
+                  workplaceId,
+                  asOf: Date.now(),
+                  horizonDays: 0,
+                  quality: 'unavailable',
+                }),
                 projectionError: 'Input unavailable',
               },
         );

@@ -124,7 +124,10 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
   const rawCurrencyCode = headline?.currencyCode;
 
   // Bulletproof data presence check: ensure both headline and currency exist
-  const isDataPresent = isSafeToSpendHeadlineCurrent(headline) && !!rawCurrencyCode;
+  const isDataPresent =
+    isSafeToSpendHeadlineCurrent(headline) &&
+    headline.workplaceId === workplaceId &&
+    rawCurrencyCode === defaultCurrencyCode;
   const currencyCode = rawCurrencyCode || defaultCurrencyCode;
 
   React.useEffect(() => {
@@ -157,7 +160,9 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
                 : hasUnvaluedEntries
                   ? AppConfig.strings.dashboard.safeToSpendUi.incompleteFxWarning
                   : AppConfig.strings.dashboard.afterObligations,
-              updatedAt: Date.now(),
+              updatedAt: headline?.generatedAt ?? 0,
+              asOf: headline?.asOf,
+              horizonDays: headline?.horizonDays,
             }
           : undefined,
         theme: buildWidgetThemeSnapshot(themeId, themeMode, theme),
@@ -199,6 +204,10 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
     shortfall,
     trajectoryMinBalance,
     firstMajorInflowDayFromData,
+    headline?.generatedAt,
+    headline?.asOf,
+    headline?.workplaceId,
+    headline?.horizonDays,
     hasUnvaluedEntries,
     currencyCode,
     isDataPresent,

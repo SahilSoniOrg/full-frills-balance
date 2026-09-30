@@ -7,6 +7,9 @@ export type SafeToSpendSnapshot = {
   title: string;
   subtitle: string;
   updatedAt: number;
+  /** Forecast acquisition basis; native widget templates currently display updatedAt only. */
+  asOf?: number;
+  horizonDays?: number;
 };
 
 export type WidgetThemeSnapshot = {

@@ -24,7 +24,10 @@ import {
 } from '@/src/services/reactive/ReactiveCacheCoordinator';
 import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadModel';
 import { snapshotService } from '@/src/utils/SnapshotService';
-import { BehaviorSubject, of } from 'rxjs';
+import { observeSafeToSpendInputSnapshot } from '@/src/services/simulation/safeToSpendInputAcquisition';
+import type { ForecastDateBasis } from '@/src/services/simulation/forecastDateBasis';
+import { BehaviorSubject, of, Subject } from 'rxjs';
+import { afterEach } from '@jest/globals';
 jest.mock('@/src/data/repositories/raw/TransactionRawMetricsQueries', () => ({
   transactionRawMetricsQueries: {
     getDailyDeltasGroupedRaw: jest.fn(),
@@ -102,6 +105,12 @@ const emptySimResult = {
 };
 
 describe('SafeToSpendReadModel', () => {
+  afterEach(() => {
+    safeToSpendReadModel.clearCache();
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     reactiveCacheCoordinator.clearNamespaces([
@@ -139,6 +148,186 @@ describe('SafeToSpendReadModel', () => {
   });
 
   describe('forWorkplace().watch()', () => {
+    it('invalidates the previous currency before a deferred replacement acquisition completes', done => {
+      const workplaces$ = new BehaviorSubject({ defaultCurrencyCode: 'USD' });
+      (workplaceRepository.observeById as jest.Mock).mockReturnValue(workplaces$.asObservable());
+      const cash = {
+        id: 'cash',
+        accountType: AccountType.ASSET,
+        accountSubtype: AccountSubtype.CASH,
+      };
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of([cash]));
+      (accountObserveQueries.observeByType as jest.Mock).mockImplementation((_wp, type) =>
+        type === AccountType.ASSET ? of([cash]) : of([]),
+      );
+      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([
+        { accountId: 'cash', balance: 1000 },
+      ]);
+      let releaseEur: ((value: unknown) => void) | undefined;
+      let currencyInvalidated = false;
+      const eurResult = {
+        ...emptySimResult,
+        simulationResult: {
+          summary: { safeToSpend: 900, shortfall: 0, trajectoryMinBalance: 900 },
+          projections: [],
+        },
+      };
+      (cashFlowSimulationService.simulate as jest.Mock)
+        .mockResolvedValueOnce({
+          ...emptySimResult,
+          simulationResult: {
+            summary: { safeToSpend: 1000, shortfall: 0, trajectoryMinBalance: 1000 },
+            projections: [],
+          },
+        })
+        .mockImplementationOnce(
+          () =>
+            new Promise(resolve => {
+              releaseEur = resolve;
+              if (currencyInvalidated) resolve(eurResult);
+            }),
+        );
+
+      let readySeen = false;
+      const sub = safeToSpendReadModel
+        .forWorkplace('test-wp' as WorkplaceId)
+        .watch()
+        .subscribe(result => {
+          if (result.quality === 'ready' && result.currencyCode === 'USD') {
+            readySeen = true;
+            workplaces$.next({ defaultCurrencyCode: 'EUR' });
+          } else if (
+            readySeen &&
+            result.currencyCode === 'EUR' &&
+            result.quality === 'unavailable'
+          ) {
+            expect(result.projectionError).toBe('Refreshing forecast');
+            currencyInvalidated = true;
+            releaseEur?.(eurResult);
+          } else if (result.currencyCode === 'EUR' && result.quality === 'ready') {
+            expect(result.summary.safeToSpend).toBe(900);
+            sub.unsubscribe();
+            done();
+          }
+        });
+    });
+
+    it('rebuilds acquisition date windows and budget usage from a controlled new-day basis', done => {
+      const dayOne = new Date(2026, 8, 30, 9).getTime();
+      const dayTwo = new Date(2026, 9, 1, 9).getTime();
+      const dateNow = jest.spyOn(Date, 'now').mockReturnValue(dayOne);
+      const cash = {
+        id: 'cash',
+        accountType: AccountType.ASSET,
+        accountSubtype: AccountSubtype.CASH,
+      };
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of([cash]));
+      (accountObserveQueries.observeByType as jest.Mock).mockImplementation((_wp, type) =>
+        type === AccountType.ASSET ? of([cash]) : of([]),
+      );
+      (budgetRepository.observeAllActive as jest.Mock).mockReturnValue(
+        of([{ id: 'budget-1', currencyCode: 'USD' }]),
+      );
+      (balanceReadService.getAccountBalances as jest.Mock).mockImplementation(
+        async (_wp: WorkplaceId, asOf: number) => [
+          { accountId: 'cash', balance: asOf === dayTwo ? 1200 : 1000 },
+        ],
+      );
+      const basis$ = new Subject<ForecastDateBasis>();
+      let readyCount = 0;
+      const subscription = observeSafeToSpendInputSnapshot(
+        'test-wp' as WorkplaceId,
+        'USD',
+        basis$,
+      ).subscribe(outcome => {
+        if (outcome.kind !== 'ready') return;
+        readyCount += 1;
+        if (readyCount === 1) {
+          expect(outcome.snapshot.asOf).toBe(dayOne);
+          dateNow.mockReturnValue(dayTwo);
+          basis$.next({ asOf: dayTwo, startOfToday: new Date(2026, 9, 1).getTime() });
+        } else {
+          expect(outcome.snapshot.asOf).toBe(dayTwo);
+          expect(outcome.snapshot.startOfToday.valueOf()).toBe(new Date(2026, 9, 1).getTime());
+          expect(journalObserveQueries.observePlannedInRange).toHaveBeenLastCalledWith(
+            'test-wp',
+            new Date(2026, 7, 2).getTime(),
+            new Date(2026, 10, 30, 23, 59, 59, 999).getTime(),
+          );
+          expect(budgetReadService.observeBudgetUsage).toHaveBeenLastCalledWith(
+            'test-wp',
+            'budget-1',
+            dayTwo,
+          );
+          subscription.unsubscribe();
+          dateNow.mockRestore();
+          done();
+        }
+      });
+      basis$.next({ asOf: dayOne, startOfToday: new Date(2026, 8, 30).getTime() });
+    });
+
+    it('uses a fresh noon acquisition cutoff after its morning date-basis emission', done => {
+      const morning = new Date(2026, 8, 30, 9).getTime();
+      const noon = new Date(2026, 8, 30, 12).getTime();
+      jest.useFakeTimers().setSystemTime(morning);
+      const cash = {
+        id: 'cash',
+        accountType: AccountType.ASSET,
+        accountSubtype: AccountSubtype.CASH,
+      };
+      const accounts$ = new BehaviorSubject([cash]);
+      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(accounts$.asObservable());
+      (accountObserveQueries.observeByType as jest.Mock).mockImplementation((_wp, type) =>
+        type === AccountType.ASSET ? accounts$.asObservable() : of([]),
+      );
+      (balanceReadService.getAccountBalances as jest.Mock).mockImplementation(
+        async (_wp: WorkplaceId, asOf: number) => [
+          { accountId: 'cash', balance: asOf >= noon ? 1200 : 1000 },
+        ],
+      );
+      (cashFlowSimulationService.simulate as jest.Mock).mockImplementation(
+        async (input: { startingBalances: Map<string, number> }) => ({
+          ...emptySimResult,
+          simulationResult: {
+            summary: {
+              safeToSpend: input.startingBalances.get('cash'),
+              shortfall: 0,
+              trajectoryMinBalance: input.startingBalances.get('cash'),
+            },
+            projections: [],
+          },
+        }),
+      );
+
+      let readyCount = 0;
+      const sub = safeToSpendReadModel
+        .forWorkplace('test-wp' as WorkplaceId)
+        .watch()
+        .subscribe(result => {
+          if (result.quality !== 'ready') return;
+          readyCount += 1;
+          if (readyCount === 1) {
+            expect(result.asOf).toBe(morning);
+            expect(result.summary.safeToSpend).toBe(1000);
+            jest.setSystemTime(noon);
+            accounts$.next([{ ...cash }]);
+            void jest.advanceTimersByTimeAsync(1000);
+          } else {
+            expect(result.asOf).toBeGreaterThanOrEqual(noon);
+            expect(result.summary.safeToSpend).toBe(1200);
+            expect(
+              (balanceReadService.getAccountBalances as jest.Mock).mock.calls.at(-1)?.[1],
+            ).toBe(result.asOf);
+            expect(
+              (cashFlowSimulationService.simulate as jest.Mock).mock.calls.at(-1)?.[0].asOf,
+            ).toBe(result.asOf);
+            sub.unsubscribe();
+            done();
+          }
+        });
+    });
+
     it('values foreign liquid asset balances at the current spot rate', done => {
       const euroWallet = {
         id: 'euro-wallet',
@@ -548,7 +737,7 @@ describe('SafeToSpendReadModel', () => {
           if (seen.length === 1) {
             expect(result.quality).toBe('unavailable');
             days$.next(61);
-          } else if (seen.length === 2) {
+          } else if (result.quality === 'ready' && seen.length >= 2) {
             expect(result.quality).toBe('ready');
             expect(result.summary.safeToSpend).toBe(75);
             sub.unsubscribe();
@@ -711,6 +900,7 @@ describe('SafeToSpendReadModel', () => {
         .forWorkplace('test-wp' as WorkplaceId)
         .watch()
         .subscribe(result => {
+          if (result.quality !== 'ready') return;
           seen.push(result.summary.safeToSpend);
           if (seen.length === 1) {
             expect(result.summary.safeToSpend).toBe(60);

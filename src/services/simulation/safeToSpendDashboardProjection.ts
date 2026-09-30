@@ -1,6 +1,6 @@
 import type { AccountFields } from '@/src/types/plainDtos';
 import { DailyDelta } from '@/src/data/repositories/TransactionTypes';
-import { AccountId } from '@/src/types/ids';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountSubtype } from '@/src/types/enums';
 import {
   FlowSource,
@@ -9,6 +9,7 @@ import {
   SimulationEngineResult,
   SimulationRunResult,
   UnvaluedStartingBalance,
+  SafeToSpendExplanation,
 } from '@/src/services/simulation/types';
 import { LIQUID_ASSET_SUBTYPES } from '@/src/utils/accountSubtypeUtils';
 import { AppConfig } from '@/src/constants/app-config';
@@ -51,7 +52,13 @@ export interface SafeToSpendDashboard {
   /** Availability of the latest projection. Empty financial data remains `ready`. */
   quality?: 'ready' | 'stale' | 'unavailable';
   projectionError?: string;
+  workplaceId: WorkplaceId;
+  asOf: number;
+  generatedAt: number;
+  horizonDays: number;
+  snapshotAgeMs?: number;
   summary: SafeToSpendSummary & { safeCurrentBalance?: number };
+  explanation: SafeToSpendExplanation;
   report: SimulationRunResult['report'];
   accountSummaries: SimulationRunResult['accountSummaries'];
   totalLiquidAssets: number;
@@ -200,6 +207,9 @@ export function computeLiquidSafeDaysCount(input: {
 
 export function assembleSafeToSpendDashboard(input: {
   runResult: SimulationRunResult;
+  workplaceId: WorkplaceId;
+  asOf: number;
+  generatedAt: number;
   defaultCurrencyCode: string;
   safeToSpendDays: number;
   totalLiquidAssets: number;
@@ -211,6 +221,9 @@ export function assembleSafeToSpendDashboard(input: {
 }): SafeToSpendDashboard {
   const {
     runResult,
+    workplaceId,
+    asOf,
+    generatedAt,
     defaultCurrencyCode,
     safeToSpendDays,
     totalLiquidAssets,
@@ -222,6 +235,12 @@ export function assembleSafeToSpendDashboard(input: {
   } = input;
 
   return {
+    quality: 'ready',
+    workplaceId,
+    asOf,
+    generatedAt,
+    horizonDays: safeToSpendDays,
+    explanation: runResult.simulationResult.safeToSpendExplanation,
     summary: {
       ...runResult.simulationResult.summary,
       ...runResult.report.summary,
@@ -248,8 +267,29 @@ export function assembleSafeToSpendDashboard(input: {
   };
 }
 
-export function createEmptySafeToSpendDashboard(resultCurrency: string): SafeToSpendDashboard {
+export function createEmptySafeToSpendDashboard(
+  resultCurrency: string,
+  options: {
+    workplaceId: WorkplaceId;
+    asOf: number;
+    horizonDays: number;
+    quality: 'ready' | 'stale' | 'unavailable';
+  },
+): SafeToSpendDashboard {
+  const zeroExplanation: SafeToSpendExplanation = {
+    cashCeiling: 0,
+    minimumDatedBalance: 0,
+    bindingDayOffset: null,
+    heldAmount: 0,
+    shortfall: 0,
+    horizonDays: options.horizonDays,
+    constrainingOutflows: [],
+    assumedInflows: [],
+  };
   return {
+    ...options,
+    generatedAt: Date.now(),
+    explanation: zeroExplanation,
     summary: {
       safeToSpend: 0,
       shortfall: 0,

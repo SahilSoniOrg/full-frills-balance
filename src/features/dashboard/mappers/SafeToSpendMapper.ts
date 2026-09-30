@@ -13,6 +13,11 @@ export interface MapperOptions {
 }
 
 export interface SafeToSpendMapperInput {
+  explanation?: SafeToSpendDashboard['explanation'];
+  asOf?: number;
+  generatedAt?: number;
+  quality?: SafeToSpendDashboard['quality'];
+  snapshotAgeMs?: number;
   summary: SafeToSpendDashboard['summary'];
   report: SafeToSpendDashboard['report'];
   totalLiquidAssets: number;
@@ -109,6 +114,11 @@ export function mapSafeToSpendViewModel(
 
   return {
     currencyCode,
+    explanation: result.explanation,
+    asOf: result.asOf,
+    generatedAt: result.generatedAt,
+    quality: result.quality,
+    snapshotAgeMs: result.snapshotAgeMs,
     safeToSpend,
     shortfall,
     totalLiquidAssets: totalLiquidAssets || 0,

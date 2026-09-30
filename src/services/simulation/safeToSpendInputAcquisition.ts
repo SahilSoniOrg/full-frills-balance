@@ -28,9 +28,10 @@ import { preferences } from '@/src/services/preferences';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { roundToPrecision } from '@/src/utils/money';
 import type { UnvaluedStartingBalance } from './types';
+import { observeForecastDateBasis, type ForecastDateBasis } from './forecastDateBasis';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import dayjs from 'dayjs';
-import { combineLatest, from, Observable, of } from 'rxjs';
+import { combineLatest, EMPTY, from, merge, Observable, of } from 'rxjs';
 import { catchError, map, retry, startWith, switchMap } from 'rxjs/operators';
 
 /**
@@ -58,10 +59,25 @@ export type SafeToSpendInputSnapshot = {
   liabilityAccountBalances: { account: Account; balance: number }[];
   startOfToday: dayjs.Dayjs;
   lookbackDate: number;
+  asOf: number;
+  horizonDays: number;
 };
 
 export type SafeToSpendInputOutcome =
-  | { kind: 'empty'; defaultCurrencyCode: string }
+  | {
+      kind: 'empty';
+      defaultCurrencyCode: string;
+      workplaceId: WorkplaceId;
+      asOf: number;
+      horizonDays: number;
+    }
+  | {
+      kind: 'refreshing';
+      defaultCurrencyCode: string;
+      workplaceId: WorkplaceId;
+      asOf: number;
+      horizonDays: number;
+    }
   | { kind: 'failed'; defaultCurrencyCode: string; error: unknown }
   | { kind: 'ready'; snapshot: SafeToSpendInputSnapshot };
 
@@ -75,6 +91,7 @@ type LedgerReactiveBundle = {
   safeToSpendDays: number;
   defaultCurrencyCode: string;
   workplaceId: WorkplaceId;
+  dateBasis: ForecastDateBasis;
 };
 
 function mapLedgerBundle(bundle: LedgerReactiveBundle): LedgerReactiveBundle & {
@@ -110,54 +127,87 @@ function mapLedgerBundle(bundle: LedgerReactiveBundle): LedgerReactiveBundle & {
 export function observeSafeToSpendInputSnapshot(
   workplaceId: WorkplaceId,
   defaultCurrencyCode: string,
+  dateBasisSource?: Observable<ForecastDateBasis>,
 ): Observable<SafeToSpendInputOutcome> {
-  return combineLatest([preferences.sts.observeForWorkplace(workplaceId)]).pipe(
-    switchMap(([safeToSpendDays]) => {
-      return combineLatest([
-        observeWorkplaceAccounts(workplaceId),
-        budgetRepository.observeAllActive(workplaceId),
-        plannedPaymentRepository.observeActive(workplaceId),
-        journalObserveQueries.observePlannedInRange(
-          workplaceId,
-          dayjs().subtract(safeToSpendDays, 'day').startOf('day').valueOf(),
-          dayjs().add(safeToSpendDays, 'day').endOf('day').valueOf(),
-        ),
-        observeWorkplaceActiveTransactionCount(workplaceId),
-        observeWorkplaceJournalMeta(workplaceId),
-      ] as [
-        Observable<Account[]>,
-        Observable<Budget[]>,
-        Observable<PlannedPayment[]>,
-        Observable<Journal[]>,
-        Observable<number>,
-        Observable<unknown>,
-      ]).pipe(
-        map(([allAccounts, budgets, plannedPayments, plannedJournals]) => {
-          const assets = allAccounts.filter(a => a.accountType === AccountType.ASSET);
-          const liabilities = allAccounts.filter(a => a.accountType === AccountType.LIABILITY);
-          return {
-            assets,
-            liabilities,
-            budgets,
-            plannedPayments,
-            allAccounts,
-            plannedJournals,
-            safeToSpendDays,
-            defaultCurrencyCode,
+  let hasObservedBasis = dateBasisSource !== undefined;
+  return combineLatest([
+    preferences.sts.observeForWorkplace(workplaceId),
+    dateBasisSource ?? observeForecastDateBasis(),
+  ]).pipe(
+    switchMap(([safeToSpendDays, dateBasis]) => {
+      const now = dayjs(dateBasis.asOf);
+      const startOfToday = now.startOf('day');
+      const refreshing: SafeToSpendInputOutcome = {
+        kind: 'refreshing',
+        defaultCurrencyCode,
+        workplaceId,
+        asOf: dateBasis.asOf,
+        horizonDays: safeToSpendDays,
+      };
+      const invalidation$ = hasObservedBasis ? of(refreshing) : EMPTY;
+      hasObservedBasis = true;
+      return merge(
+        invalidation$,
+        combineLatest([
+          observeWorkplaceAccounts(workplaceId),
+          budgetRepository.observeAllActive(workplaceId),
+          plannedPaymentRepository.observeActive(workplaceId),
+          journalObserveQueries.observePlannedInRange(
             workplaceId,
-          };
-        }),
+            startOfToday.subtract(safeToSpendDays, 'day').valueOf(),
+            startOfToday.add(safeToSpendDays, 'day').endOf('day').valueOf(),
+          ),
+          observeWorkplaceActiveTransactionCount(workplaceId),
+          observeWorkplaceJournalMeta(workplaceId),
+        ] as [
+          Observable<Account[]>,
+          Observable<Budget[]>,
+          Observable<PlannedPayment[]>,
+          Observable<Journal[]>,
+          Observable<number>,
+          Observable<unknown>,
+        ])
+          .pipe(
+            firstFastDebounce(Animation.observeDebounce),
+            map(([allAccounts, budgets, plannedPayments, plannedJournals]) => {
+              const assets = allAccounts.filter(a => a.accountType === AccountType.ASSET);
+              const liabilities = allAccounts.filter(a => a.accountType === AccountType.LIABILITY);
+              return {
+                assets,
+                liabilities,
+                budgets,
+                plannedPayments,
+                allAccounts,
+                plannedJournals,
+                safeToSpendDays,
+                defaultCurrencyCode,
+                workplaceId,
+                dateBasis,
+              };
+            }),
+          )
+          .pipe(map(bundle => ({ kind: 'bundle' as const, bundle }))),
       );
     }),
-    firstFastDebounce(Animation.observeDebounce),
-    switchMap(bundle => {
+    switchMap(emission => {
+      if (emission.kind === 'refreshing') return of(emission);
+      const bundle = emission.bundle;
       const mapped = mapLedgerBundle(bundle);
-      const now = dayjs();
+      // A ledger emission can happen hours after the basis timer (for example, a
+      // transaction posted at noon after a 9am foreground). Capture a fresh instant
+      // for this acquisition and share it across balances, budget usage and simulation.
+      const asOf = Date.now();
+      const now = dayjs(asOf);
       const startOfToday = now.startOf('day');
       const lookbackDate = startOfToday.subtract(mapped.safeToSpendDays, 'day').valueOf();
-
       if (mapped.liquidAssets.length === 0) {
-        return of({ kind: 'empty' as const, defaultCurrencyCode: mapped.defaultCurrencyCode });
+        return of({
+          kind: 'empty' as const,
+          defaultCurrencyCode: mapped.defaultCurrencyCode,
+          workplaceId,
+          asOf,
+          horizonDays: mapped.safeToSpendDays,
+        });
       }
 
       const history$ = from(
@@ -170,7 +220,7 @@ export function observeSafeToSpendInputSnapshot(
       );
 
       const budgetUsageObservables = mapped.budgets.map(b =>
-        budgetReadService.observeBudgetUsage(workplaceId, b.id),
+        budgetReadService.observeBudgetUsage(workplaceId, b.id, asOf),
       );
       const budgetUsage$ =
         budgetUsageObservables.length > 0
@@ -209,7 +259,7 @@ export function observeSafeToSpendInputSnapshot(
           const [allBalances, journals] = await Promise.all([
             balanceReadService.getAccountBalances(
               workplaceId,
-              now.valueOf(),
+              asOf,
               mapped.defaultCurrencyCode,
               undefined,
               [...mapped.liquidAssetIds, ...mapped.liquidLiabilities.map(l => l.id)],
@@ -315,6 +365,8 @@ export function observeSafeToSpendInputSnapshot(
             liabilityAccountBalances,
             startOfToday,
             lookbackDate,
+            asOf,
+            horizonDays: mapped.safeToSpendDays,
           };
 
           return { kind: 'ready' as const, snapshot };

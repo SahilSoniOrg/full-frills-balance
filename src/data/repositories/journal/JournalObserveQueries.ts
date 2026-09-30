@@ -206,6 +206,22 @@ export class JournalObserveQueries {
       ),
     );
   }
+
+  observeAllPlanned(workplaceId: WorkplaceId) {
+    return this.journals
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('status', JournalStatus.PLANNED),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .observeWithColumns([
+        'status',
+        'journal_date',
+        'deleted_at',
+        'planned_payment_id',
+        'updated_at',
+      ]);
+  }
 }
 
 export const journalObserveQueries = new JournalObserveQueries();

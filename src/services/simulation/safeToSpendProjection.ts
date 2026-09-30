@@ -22,6 +22,8 @@ export async function projectSafeToSpendDashboardFromSnapshot(
   const trace = startTrace('SafeToSpendReadModel.observeSafeToSpend');
   const {
     workplaceId,
+    asOf,
+    horizonDays,
     defaultCurrencyCode,
     safeToSpendDays,
     allAccounts,
@@ -53,7 +55,8 @@ export async function projectSafeToSpendDashboardFromSnapshot(
     allAccounts,
     resultCurrency: defaultCurrencyCode,
     workplaceId,
-    simulationDays: safeToSpendDays,
+    simulationDays: horizonDays,
+    asOf,
     trace,
   });
 
@@ -85,12 +88,16 @@ export async function projectSafeToSpendDashboardFromSnapshot(
     hasUnvaluedEntries: hasUnvaluedSafeDaysInputs,
   });
 
+  const generatedAt = Date.now();
   trace.end();
 
   return assembleSafeToSpendDashboard({
     runResult,
+    workplaceId,
+    asOf,
+    generatedAt,
     defaultCurrencyCode,
-    safeToSpendDays,
+    safeToSpendDays: horizonDays,
     totalLiquidAssets: totalLiquidMoney.amount,
     historyPoints,
     projectionPoints,

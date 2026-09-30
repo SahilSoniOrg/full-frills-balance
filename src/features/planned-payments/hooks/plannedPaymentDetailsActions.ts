@@ -2,6 +2,19 @@ import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { AppConfig } from '@/src/constants/app-config';
 import { confirm } from '@/src/utils/alerts';
 import { PlainPlannedPayment } from '@/src/types/plainDtos';
+import type { JournalId } from '@/src/types/ids';
+
+export function resolvePlannedPaymentActionTarget(item: {
+  status: PlainPlannedPayment['status'];
+  nextDueOccurrence?: number;
+  outstandingJournalId?: string;
+}): { occurrenceDate: number; journalId?: JournalId } | undefined {
+  if (item.status === 'PAUSED' || item.nextDueOccurrence === undefined) return undefined;
+  return {
+    occurrenceDate: item.nextDueOccurrence,
+    ...(item.outstandingJournalId ? { journalId: item.outstandingJournalId as JournalId } : {}),
+  };
+}
 
 interface PlannedPaymentDetailsActionHandlers {
   handleEdit: () => void;
@@ -11,7 +24,7 @@ interface PlannedPaymentDetailsActionHandlers {
 }
 
 export function buildPlannedPaymentDetailsActions(
-  item: PlainPlannedPayment,
+  item: PlainPlannedPayment & { nextDueOccurrence?: number; outstandingJournalId?: string },
   handlers: PlannedPaymentDetailsActionHandlers,
   options: { isPrivacyMode?: boolean } = {},
 ) {
@@ -34,23 +47,29 @@ export function buildPlannedPaymentDetailsActions(
     },
   };
 
-  const onPost = () => {
-    confirm.show({
-      title: AppConfig.strings.plannedPayments.details.postNowTitle,
-      message: `This will post the upcoming instance for ${displayAmount} and advance the schedule to the next occurrence.`,
-      onConfirm: handlers.handlePostNow,
-    });
-  };
+  const target = resolvePlannedPaymentActionTarget(item);
+  const occurrenceLabel = target ? new Date(target.occurrenceDate).toLocaleDateString() : '';
+  const onPost = !target
+    ? undefined
+    : () => {
+        confirm.show({
+          title: AppConfig.strings.plannedPayments.details.postNowTitle,
+          message: `Record the scheduled entry for ${occurrenceLabel} (${displayAmount}).`,
+          onConfirm: handlers.handlePostNow,
+        });
+      };
 
-  const onSkip = () => {
-    confirm.show({
-      title: AppConfig.strings.plannedPayments.details.skipTitle,
-      message: `This will skip the upcoming instance on ${new Date(item.nextOccurrence).toLocaleDateString()} and advance the schedule without creating a transaction.`,
-      confirmText: AppConfig.strings.plannedPayments.details.skipConfirm,
-      destructive: true,
-      onConfirm: handlers.handleSkip,
-    });
-  };
+  const onSkip = !target
+    ? undefined
+    : () => {
+        confirm.show({
+          title: AppConfig.strings.plannedPayments.details.skipTitle,
+          message: `Mark the scheduled entry for ${occurrenceLabel} as skipped without creating a transaction.`,
+          confirmText: AppConfig.strings.plannedPayments.details.skipConfirm,
+          destructive: true,
+          onConfirm: handlers.handleSkip,
+        });
+      };
 
   return { headerActions, onPost, onSkip };
 }

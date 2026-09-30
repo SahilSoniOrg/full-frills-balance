@@ -1,16 +1,16 @@
 import { EmptyStateView, ErrorStateView, LoadingView } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { PlannedPaymentCard } from '@/src/features/planned-payments/components/PlannedPaymentCard';
-import { PlainPlannedPayment } from '@/src/types/plainDtos';
+import type { PlannedPaymentObligation } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet, View } from 'react-native';
 
 export type PlannedPaymentListViewProps = {
-  items: PlainPlannedPayment[];
+  items: PlannedPaymentObligation[];
   isLoading: boolean;
   error: Error | null;
   onRetry: () => void;
-  onItemPress: (item: PlainPlannedPayment) => void;
+  onItemPress: (item: PlannedPaymentObligation) => void;
   onCreate?: () => void;
 };
 

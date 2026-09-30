@@ -1,13 +1,15 @@
 import { useObservable } from '@/src/hooks/useObservable';
-import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
-import { PlainPlannedPayment } from '@/src/types/plainDtos';
+import {
+  plannedPaymentReadService,
+  type PlannedPaymentObligation,
+} from '@/src/services/planned-payment/plannedPaymentReadService';
 import { WorkplaceId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo } from 'react';
 
 export function usePlannedPayments(workplaceId: WorkplaceId) {
   const observable = useMemo(
-    () => plannedPaymentReadService.observeAll(workplaceId),
+    () => plannedPaymentReadService.observeObligations(workplaceId),
     [workplaceId],
   );
 
@@ -16,18 +18,18 @@ export function usePlannedPayments(workplaceId: WorkplaceId) {
     isLoading,
     error,
     retry,
-  } = useObservable<PlainPlannedPayment[]>(
+  } = useObservable<PlannedPaymentObligation[]>(
     () => observable,
     [workplaceId],
-    [] as PlainPlannedPayment[],
+    [] as PlannedPaymentObligation[],
   );
 
-  const onItemPress = useCallback((item: PlainPlannedPayment) => {
+  const onItemPress = useCallback((item: PlannedPaymentObligation) => {
     AppNavigation.toPlannedPaymentDetails(item.id, {
       description: item.name,
       amount: item.amount,
       currency: item.currencyCode,
-      nextDate: item.nextOccurrence,
+      nextDate: item.nextDueOccurrence,
     });
   }, []);
 

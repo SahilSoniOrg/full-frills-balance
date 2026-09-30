@@ -15,15 +15,17 @@ export function generateSimulationReport(
   liabilityAccountBalances: { account: AccountFields; balance: number }[],
   liquidAccountIdsSet: Set<string>,
   precision = AppConfig.constants.precision,
+  asOf = Date.now(),
+  horizonDays = AppConfig.defaults.safeToSpendDays,
 ): SimulationReport {
   const normalizedFlows = normalizeSimulationFlows(allFlows);
 
-  const now = dayjs().startOf('day');
+  const now = dayjs(asOf).startOf('day');
 
   return {
     summary: generateSummary(normalizedFlows, liquidAccountIdsSet, precision),
     allFlows: normalizedFlows,
-    budget: generateBudgetSummary(normalizedFlows, now, precision),
+    budget: generateBudgetSummary(normalizedFlows, now, precision, horizonDays),
     liabilities: generateLiabilities(
       normalizedFlows,
       accountMap,
@@ -51,7 +53,12 @@ function generateSummary(allFlows: Flow[], liquidAccountIdsSet: Set<string>, pre
   };
 }
 
-function generateBudgetSummary(allFlows: Flow[], now: dayjs.Dayjs, precision: number) {
+function generateBudgetSummary(
+  allFlows: Flow[],
+  now: dayjs.Dayjs,
+  precision: number,
+  horizonDays: number,
+) {
   const daysLeftInMonth = now.daysInMonth() - now.date() + 1;
   let currentMonthRemaining = 0;
   let nextMonthProjected = 0;
@@ -71,7 +78,7 @@ function generateBudgetSummary(allFlows: Flow[], now: dayjs.Dayjs, precision: nu
   return {
     currentMonthRemaining: roundToPrecision(currentMonthRemaining, precision),
     nextMonthProjected: roundToPrecision(nextMonthProjected, precision),
-    nextMonthDays: Math.max(0, AppConfig.defaults.safeToSpendDays - daysLeftInMonth),
+    nextMonthDays: Math.max(0, horizonDays - daysLeftInMonth),
   };
 }
 

@@ -100,6 +100,27 @@ export interface Transfer extends FlowBase {
 
 export type Flow = Inflow | Outflow | Transfer;
 
+export interface SafeToSpendExplanationFlow {
+  readonly label: string;
+  readonly source: FlowSource;
+  readonly amount: number;
+  readonly firstDayOffset: number;
+  readonly occurrenceCount: number;
+}
+
+/** Calculated from the same rounded balance trajectory as the headline. */
+export interface SafeToSpendExplanation {
+  readonly cashCeiling: number;
+  readonly minimumDatedBalance: number;
+  /** Null means the starting cash ceiling binds before any dated flow. */
+  readonly bindingDayOffset: number | null;
+  readonly heldAmount: number;
+  readonly shortfall: number;
+  readonly horizonDays: number;
+  readonly constrainingOutflows: readonly SafeToSpendExplanationFlow[];
+  readonly assumedInflows: readonly SafeToSpendExplanationFlow[];
+}
+
 export interface SimulationContext {
   simulationStartMs: number;
   simulationDays: number;
@@ -189,6 +210,7 @@ export interface SimulationEngineResult {
     accountMinBalancesBeforeIncome: Map<string, number>;
     firstMajorInflowDay: number | null;
   };
+  safeToSpendExplanation: SafeToSpendExplanation;
   accountSummaries: AccountSimulationSummary[];
   projections: {
     timestamp: number;

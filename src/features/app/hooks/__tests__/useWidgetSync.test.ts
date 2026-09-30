@@ -54,6 +54,10 @@ describe('useWidgetSync generation ordering', () => {
       (_factory: unknown, dependencies: [WorkplaceId]) => ({
         data: {
           quality: 'ready',
+          workplaceId: dependencies[0],
+          asOf: 1_759_200_000_000,
+          generatedAt: 1_759_200_000_100,
+          horizonDays: 60,
           currencyCode: dependencies[0] === 'workplace-a' ? 'USD' : 'EUR',
           firstMajorInflowDay: null,
           safeToSpend: dependencies[0] === 'workplace-a' ? 100 : 200,
@@ -79,7 +83,8 @@ describe('useWidgetSync generation ordering', () => {
       .mockResolvedValue(expoWidgetsModule);
 
     const { rerender } = renderHook<void, { workplaceId: WorkplaceId }>(
-      ({ workplaceId }) => useWidgetSync(workplaceId, 'USD'),
+      ({ workplaceId }) =>
+        useWidgetSync(workplaceId, workplaceId === 'workplace-b' ? 'EUR' : 'USD'),
       {
         initialProps: { workplaceId: 'workplace-a' as WorkplaceId },
       },
@@ -106,6 +111,38 @@ describe('useWidgetSync generation ordering', () => {
     expect(expoWidgetsModule.syncWidgetData).toHaveBeenCalledTimes(1);
     expect(
       (expoWidgetsModule.syncWidgetData as jest.Mock).mock.calls[0][0].safeToSpend,
-    ).toMatchObject({ amount: 200, currencyCode: 'EUR' });
+    ).toMatchObject({
+      amount: 200,
+      currencyCode: 'EUR',
+      updatedAt: 1_759_200_000_100,
+      asOf: 1_759_200_000_000,
+      horizonDays: 60,
+    });
+  });
+
+  it('does not publish a ready amount owned by another workplace/currency', async () => {
+    (useObservable as jest.Mock).mockReturnValue({
+      data: {
+        quality: 'ready',
+        workplaceId: 'workplace-a',
+        currencyCode: 'USD',
+        asOf: 1_759_200_000_000,
+        generatedAt: 1_759_200_000_100,
+        horizonDays: 60,
+        safeToSpend: 300,
+        shortfall: 0,
+        trajectoryMinBalance: 300,
+        firstMajorInflowDay: null,
+      },
+    });
+    renderHook(() => useWidgetSync('workplace-b' as WorkplaceId, 'EUR'));
+    await act(async () => {
+      jest.advanceTimersByTime(600);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(
+      (expoWidgetsModule.syncWidgetData as jest.Mock).mock.calls.at(-1)?.[0].safeToSpend,
+    ).toBeUndefined();
   });
 });

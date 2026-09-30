@@ -5,6 +5,20 @@ import { AccountId } from '@/src/types/ids';
 
 describe('SafeToSpendMapper', () => {
   const mockResult: SafeToSpendDashboard = {
+    workplaceId: 'workplace-1' as SafeToSpendDashboard['workplaceId'],
+    asOf: 1_759_200_000_000,
+    generatedAt: 1_759_200_000_100,
+    horizonDays: 30,
+    explanation: {
+      cashCeiling: 1000,
+      minimumDatedBalance: 500,
+      bindingDayOffset: 5,
+      heldAmount: 500,
+      shortfall: 0,
+      horizonDays: 30,
+      constrainingOutflows: [],
+      assumedInflows: [],
+    },
     summary: {
       safeToSpend: 1000,
       shortfall: 0,
@@ -128,6 +142,13 @@ describe('SafeToSpendMapper', () => {
     expect(vm.income[0].amount).not.toBe(0);
     expect(vm.committed[0]?.amount).not.toBe(0);
     expect(vm.debt[0]?.amount).not.toBe(0);
+  });
+
+  it('keeps the engine explanation and acquisition basis intact for the presenter', () => {
+    const vm = mapToVM();
+    expect(vm.explanation).toBe(mockResult.explanation);
+    expect(vm.asOf).toBe(mockResult.asOf);
+    expect(vm.generatedAt).toBe(mockResult.generatedAt);
   });
 
   it('resolves dynamic labels with safeToSpendDays', () => {

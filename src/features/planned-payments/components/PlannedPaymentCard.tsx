@@ -12,12 +12,12 @@ import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Theme } from '@/src/constants/design-tokens';
 import { Box, Column, Row } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { PlainPlannedPayment } from '@/src/types/plainDtos';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { getSmartDateLabel } from '@/src/utils/dateUtils';
+import type { PlannedPaymentObligation } from '@/src/services/planned-payment/plannedPaymentReadService';
 
 export interface PlannedPaymentCardProps {
-  item: PlainPlannedPayment;
+  item: PlannedPaymentObligation;
   onPress: () => void;
 }
 
@@ -25,7 +25,8 @@ export interface PlannedPaymentCardViewModel {
   name: string;
   amount: number;
   currencyCode: string;
-  amountColor: 'error' | 'success';
+  amountColor: 'error' | 'success' | 'secondary';
+  flowDirection: 'inflow' | 'outflow' | 'transfer' | 'unknown';
   intervalLabel: string;
   statusBadge: {
     variant: 'default' | 'error' | 'warning' | 'success';
@@ -39,7 +40,7 @@ export interface PlannedPaymentCardViewModel {
 }
 
 export function presentPlannedPaymentCard(
-  item: PlainPlannedPayment,
+  item: PlannedPaymentObligation,
   theme: Theme,
 ): PlannedPaymentCardViewModel {
   const getIntervalLabel = () => {
@@ -60,7 +61,9 @@ export function presentPlannedPaymentCard(
     return AppConfig.strings.plannedPayments.everyN(n, type);
   };
 
-  const dateValue = new Date(item.nextOccurrence).setHours(0, 0, 0, 0);
+  const nextDate = item.nextDueOccurrence;
+  const dateValue =
+    nextDate === undefined ? Number.MAX_SAFE_INTEGER : new Date(nextDate).setHours(0, 0, 0, 0);
   const today = new Date().setHours(0, 0, 0, 0);
   const tomorrow = new Date(Date.now() + 86400000).setHours(0, 0, 0, 0);
   const isActive = item.status === PlannedPaymentStatus.ACTIVE;
@@ -102,12 +105,24 @@ export function presentPlannedPaymentCard(
     name: item.name,
     amount: item.amount,
     currencyCode: item.currencyCode,
-    amountColor: item.amount < 0 ? 'error' : 'success',
+    amountColor:
+      item.flowDirection === 'outflow'
+        ? 'error'
+        : item.flowDirection === 'inflow'
+          ? 'success'
+          : 'secondary',
+    flowDirection: item.flowDirection,
     intervalLabel: getIntervalLabel(),
     statusBadge,
-    dateLabel: `Next: ${getSmartDateLabel(item.nextOccurrence)}`,
+    dateLabel:
+      nextDate === undefined ? 'No upcoming occurrence' : `Next: ${getSmartDateLabel(nextDate)}`,
     dateColor,
-    iconName: item.amount < 0 ? Icon.TrendingDown : Icon.TrendingUp,
+    iconName:
+      item.flowDirection === 'outflow'
+        ? Icon.TrendingDown
+        : item.flowDirection === 'inflow'
+          ? Icon.TrendingUp
+          : Icon.SwapHorizontal,
     isOverdue,
   };
 }
@@ -141,7 +156,13 @@ function PlannedPaymentCardComponent({ item, onPress }: PlannedPaymentCardProps)
                 borderRadius="md"
                 alignItems="center"
                 justifyContent="center"
-                background={vm.amountColor === 'error' ? 'error' : 'success'}
+                background={
+                  vm.amountColor === 'error'
+                    ? 'error'
+                    : vm.amountColor === 'success'
+                      ? 'success'
+                      : 'surfaceSecondary'
+                }
                 backgroundOpacity="soft"
               >
                 <AppIcon name={vm.iconName} color={vm.amountColor} size={Size.iconSm} />
