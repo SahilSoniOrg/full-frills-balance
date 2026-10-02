@@ -79,7 +79,7 @@ export function IconButton({
       hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
       disabled={disabled}
       accessibilityRole="button"
-      accessibilityState={{ disabled }}
+      accessibilityState={{ ...props.accessibilityState, disabled }}
     >
       <AppIcon name={name} size={size} color={finalIconColor} />
     </PressScaleTouchable>

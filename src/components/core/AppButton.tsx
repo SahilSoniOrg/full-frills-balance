@@ -168,7 +168,11 @@ export function AppButton({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ disabled: disabled || loading, busy: loading }}
+      accessibilityState={{
+        ...props.accessibilityState,
+        disabled: disabled || loading,
+        busy: loading,
+      }}
     >
       {renderChildren()}
     </PressScaleTouchable>
