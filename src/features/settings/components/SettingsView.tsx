@@ -96,7 +96,7 @@ export function SettingsView({
       headerActions={<WorkplaceSwitcher />}
       scrollViewProps={{ onScrollBeginDrag: () => searchInputRef.current?.blur() }}
     >
-      <Stack space="lg">
+      <Stack space="md">
         <SettingsSearchResults
           query={searchQuery}
           onQueryChange={setSearchQuery}
@@ -142,7 +142,6 @@ export function SettingsView({
                 searchId="appearance"
                 leftIcon={Icon.Palette}
                 title={AppConfig.strings.settings.sections.appearance}
-                description="Theme, typography, time, and display options"
                 onPress={onAppearance}
                 testID="settings-appearance"
               />
