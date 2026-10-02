@@ -1,40 +1,40 @@
-import { BudgetId } from '@/src/types/ids';
-import { buildBudgetDetailPreview, buildBudgetUsagePreview } from '../budgetDetailPresentation';
+import { presentBudgetPeriod } from '../budgetDetailPresentation';
 
-describe('budgetDetailPresentation', () => {
-  const budgetId = 'budget-1' as BudgetId;
+describe('selected budget period', () => {
+  const range = {
+    startDate: new Date(2026, 9, 1).getTime(),
+    endDate: new Date(2026, 9, 31, 23, 59, 59, 999).getTime(),
+  };
+  const usage = { spent: 126.55, remaining: 290, budgetAmount: 416.55, usagePercent: 0.3 };
 
-  it('builds a typed preview budget from navigation params', () => {
+  it('includes today when allocating the remaining amount', () => {
+    const result = presentBudgetPeriod(range, usage, new Date(2026, 9, 3, 23, 59).getTime());
+    expect(result.dailyRemaining).toBe(10);
+    expect(result.timingText).toBe('29 days remaining, including today');
+    expect(result.dateRangeText).toBe('1 Oct 2026 – 31 Oct 2026');
+  });
+
+  it('keeps the final day available instead of dividing by zero', () => {
+    const result = presentBudgetPeriod(range, usage, new Date(2026, 9, 31, 23, 59).getTime());
+    expect(result.dailyRemaining).toBe(290);
+    expect(result.timingText).toBe('Ends today');
+  });
+
+  it('does not present historical or incomplete balances as daily capacity', () => {
+    expect(presentBudgetPeriod(range, usage, new Date(2026, 10, 1).getTime())).toMatchObject({
+      timingText: 'Period ended',
+      dailyRemaining: undefined,
+    });
     expect(
-      buildBudgetDetailPreview({
-        budgetId,
-        name: 'Food',
-        amount: '125.50',
-        currency: 'EUR',
-        period: 'MONTHLY',
-        baseCurrency: 'USD',
-      }),
-    ).toMatchObject({
-      id: budgetId,
-      name: 'Food',
-      amount: 125.5,
-      currencyCode: 'EUR',
-      intervalType: 'MONTHLY',
-      intervalN: 1,
-    });
-  });
-
-  it('uses the same parsed amount for preview usage', () => {
-    expect(buildBudgetUsagePreview({ name: 'Food', amount: '125.50' })).toEqual({
-      spent: 0,
-      remaining: 125.5,
-      budgetAmount: 125.5,
-      usagePercent: 0,
-    });
-  });
-
-  it('returns no preview when the route has no budget name', () => {
-    expect(buildBudgetDetailPreview({ budgetId, baseCurrency: 'USD', amount: '10' })).toBeNull();
-    expect(buildBudgetUsagePreview({ amount: '10' })).toBeNull();
+      presentBudgetPeriod(
+        range,
+        { ...usage, hasUnvaluedEntries: true },
+        new Date(2026, 9, 3).getTime(),
+      ).dailyRemaining,
+    ).toBeUndefined();
+    expect(
+      presentBudgetPeriod(range, { ...usage, remaining: -10 }, new Date(2026, 9, 3).getTime())
+        .dailyRemaining,
+    ).toBeUndefined();
   });
 });

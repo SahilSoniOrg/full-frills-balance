@@ -309,24 +309,8 @@ export const AppNavigation = {
   /**
    * Navigate to the Budget Detail screen.
    */
-  toBudgetDetail: (
-    budgetId: BudgetId,
-    preview?: {
-      name?: string;
-      amount?: number;
-      currency?: string;
-      period?: string;
-    },
-  ) => {
-    router.push(
-      buildRoute('/budget-details', {
-        id: budgetId,
-        pName: preview?.name,
-        pAmount: preview?.amount,
-        pCurrency: preview?.currency,
-        pPeriod: preview?.period,
-      }),
-    );
+  toBudgetDetail: (budgetId: BudgetId) => {
+    router.push(buildRoute('/budget-details', { id: budgetId }));
   },
 
   /**

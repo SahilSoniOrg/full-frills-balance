@@ -17,7 +17,7 @@ function BudgetDetailScreenInner() {
   const { theme } = useTheme();
 
   const chrome = useMemo<ScreenNavChrome>(() => {
-    const phase = vm.isLoading || !vm.budget || !vm.usage ? 'loading' : 'ready';
+    const phase = vm.isLoading ? 'loading' : vm.isMissing ? 'missing' : 'ready';
 
     return buildDetailNavChrome({
       phase,
@@ -30,7 +30,7 @@ function BudgetDetailScreenInner() {
         />
       ),
     });
-  }, [theme, vm.budget, vm.handleDelete, vm.handleEdit, vm.isLoading, vm.usage]);
+  }, [theme, vm.handleDelete, vm.handleEdit, vm.isLoading, vm.isMissing]);
 
   return <BudgetDetailView {...vm} chrome={chrome} />;
 }

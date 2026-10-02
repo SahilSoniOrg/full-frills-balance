@@ -344,7 +344,7 @@ export function useAuditLogViewModel(): AuditLogViewModel {
     } else if (type === 'journal') {
       AppNavigation.toJournalDetails(id as JournalId, { title: name });
     } else if (type === 'budget') {
-      AppNavigation.toBudgetDetail(id as BudgetId, { name });
+      AppNavigation.toBudgetDetail(id as BudgetId);
     } else if (type === 'planned_payment') {
       AppNavigation.toPlannedPaymentDetails(id as PlannedPaymentId, { description: name });
     }

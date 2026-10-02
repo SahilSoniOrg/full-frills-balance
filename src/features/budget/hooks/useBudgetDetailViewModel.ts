@@ -1,11 +1,8 @@
 import { AppConfig } from '@/src/constants';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import {
-  buildBudgetDetailPreview,
-  buildBudgetUsagePreview,
-} from '@/src/features/budget/helpers/budgetDetailPresentation';
 import { resolveLeafExpenseAccountIds } from '@/src/services/budget/budgetCalculationHelpers';
+import { parseBudgetAssetAccountIds } from '@/src/services/budget/budgetAssetAccountIds';
 import {
   buildBudgetCumulativeChart,
   type BudgetCumulativeChart,
@@ -24,8 +21,8 @@ import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { BudgetUsage } from '@/src/services/budget/types';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { AccountType } from '@/src/types/enums';
-import { BudgetId, JournalId } from '@/src/types/ids';
-import { PlainBudget } from '@/src/types/plainDtos';
+import { AccountId, BudgetId, JournalId } from '@/src/types/ids';
+import { PlainAccount, PlainBudget } from '@/src/types/plainDtos';
 import { confirm } from '@/src/utils/alerts';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
@@ -41,12 +38,31 @@ export interface BudgetDetailViewModel {
   usage: BudgetUsage | null;
   items: JournalListItem[];
   isLoading: boolean;
+  isMissing: boolean;
+  isLoadingActivity: boolean;
+  isLoadingMore: boolean;
+  onEndReached?: () => void;
+  periodRange?: { startDate: number; endDate: number };
+  scopeAccounts: PlainAccount[];
+  fundingAccounts: PlainAccount[];
+  isLoadingScope: boolean;
+  isLoadingFunding: boolean;
   targetMonth: string;
   nextMonth: () => void;
   prevMonth: () => void;
   resetToToday: () => void;
   isCurrentMonth: boolean;
   chartData: BudgetCumulativeChart | null;
+  isLoadingInsights: boolean;
+  insightsError?: string;
+  previousUsageError?: string;
+  onRetryInsights: () => void;
+  previousUsage: BudgetUsage | null;
+  previousPeriodRange?: { startDate: number; endDate: number };
+  expenseAccounts: PlainAccount[];
+  activityCategory: PlainAccount | null;
+  onFilterCategory: (id: AccountId | null) => void;
+  onAddExpense: () => void;
   periodLabel: string;
   handleDelete: () => void;
   handleEdit: () => void;
@@ -58,18 +74,11 @@ export interface BudgetDetailViewModel {
 }
 
 export function useBudgetDetailViewModel(): BudgetDetailViewModel {
-  const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
-  const params = useLocalSearchParams<{
-    id: BudgetId;
-    pName?: string;
-    pAmount?: string;
-    pCurrency?: string;
-    pPeriod?: string;
-  }>();
-  const budgetId = params.id;
+  const { workplaceId } = useWorkplace();
+  const { id: budgetId } = useLocalSearchParams<{ id: BudgetId }>();
 
   const [refTimestamp, setRefTimestamp] = useState(() => Date.now());
-  const baseCurrency = workplaceCurrency;
+  const [activityCategoryId, setActivityCategoryId] = useState<AccountId | null>(null);
 
   const budgetData$ = useMemo(() => {
     return budgetReadService.observeById(workplaceId, budgetId).pipe(
@@ -89,42 +98,29 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
     null,
   );
 
-  const { data: scopeRecords = [] } = useObservable(
+  const { data: scopeRecords = [], isLoading: isLoadingScopes } = useObservable(
     () => (budgetId ? budgetReadService.observeScopes(workplaceId, budgetId) : of([])),
     [workplaceId, budgetId],
     [],
   );
 
-  const pName = params.pName as string;
-  const pAmount = params.pAmount as string;
-  const pCurrency = params.pCurrency as string;
-  const pPeriod = params.pPeriod as string;
-
-  const previewInput = useMemo(
-    () => ({
-      budgetId,
-      name: pName,
-      amount: pAmount,
-      currency: pCurrency,
-      period: pPeriod,
-      baseCurrency,
-    }),
-    [baseCurrency, budgetId, pAmount, pCurrency, pName, pPeriod],
-  );
-
-  const budget: PlainBudget | null = dbBudgetData
-    ? dbBudgetData[0]
-    : buildBudgetDetailPreview(previewInput);
-
-  const usage = dbBudgetData ? dbBudgetData[1] : buildBudgetUsagePreview(previewInput);
-
-  const isLoading = dbLoading && !pName;
+  const budget: PlainBudget | null = dbBudgetData?.[0] ?? null;
+  const usage = dbBudgetData?.[1] ?? null;
 
   const scopeAccountIds = useMemo(() => scopeRecords.map(scope => scope.accountId), [scopeRecords]);
 
-  const { data: scopeAccounts = [] } = useObservable(
+  const { data: scopeAccounts = [], isLoading: isLoadingScopeAccounts } = useObservable(
     () => accountQueries.observeByIds(workplaceId, scopeAccountIds),
     [workplaceId, scopeAccountIds],
+    [],
+  );
+  const fundingAccountIds = useMemo(
+    () => parseBudgetAssetAccountIds(budget?.assetAccountIds),
+    [budget?.assetAccountIds],
+  );
+  const { data: fundingAccounts = [], isLoading: isLoadingFunding } = useObservable(
+    () => accountQueries.observeByIds(workplaceId, fundingAccountIds),
+    [workplaceId, fundingAccountIds],
     [],
   );
   const { data: expenseAccounts = [] } = useObservable(
@@ -155,12 +151,46 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
     );
   }, [budgetDateRange, chartAccountIds, workplaceId]);
 
+  const previousPeriodRange = useMemo(
+    () =>
+      budget && budgetDateRange
+        ? BudgetPeriodUtils.getCurrentPeriod(budget, budgetDateRange.startDate - 1)
+        : undefined,
+    [budget, budgetDateRange],
+  );
+  const {
+    data: previousUsage,
+    error: previousError,
+    retry: retryPrevious,
+  } = useObservable<BudgetUsage | null>(
+    () =>
+      budget && previousPeriodRange
+        ? budgetReadService.observeBudgetUsage(
+            workplaceId,
+            budget.id,
+            previousPeriodRange.startDate,
+          )
+        : of(null),
+    [workplaceId, budget?.id, previousPeriodRange],
+    null,
+    { keepPreviousData: false },
+  );
+  const activityCategory =
+    activityCategoryId && chartAccountIds.includes(activityCategoryId)
+      ? (expenseAccounts.find(account => account.id === activityCategoryId) ?? null)
+      : null;
+  const activityAccountIds = useMemo(
+    () => (activityCategory ? [activityCategory.id] : chartAccountIds),
+    [activityCategory, chartAccountIds],
+  );
+
   const journalList = useJournalEntryList({
     workplaceId,
     pageSize: AppConfig.pagination.budgetDetailsTransactionsPageSize,
     dateRange: budgetDateRange,
-    queryOptions: { accountIds: scopeAccountIds },
-    expandScopedLegs: scopeAccountIds.length > 0 ? scopeAccountIds : undefined,
+    statuses: [...ACTIVE_JOURNAL_STATUSES],
+    queryOptions: { accountIds: activityAccountIds },
+    expandScopedLegs: activityAccountIds.length > 0 ? activityAccountIds : undefined,
     paginationPolicy: 'always',
   });
 
@@ -179,7 +209,12 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
     [journalList.journals],
   );
 
-  const { data: chartData } = useObservableWithEnrichment(
+  const {
+    data: chartData,
+    isLoading: isLoadingInsights,
+    error: chartError,
+    retry: retryChart,
+  } = useObservableWithEnrichment(
     () => chartTransactions$,
     transactions => {
       if (!budget || !budgetDateRange) return Promise.resolve(null);
@@ -203,6 +238,7 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
       journalContextVersion,
     ],
     null,
+    { keepPreviousData: false },
   );
 
   const displayedUsage = useMemo(() => {
@@ -246,10 +282,6 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
       destructive: true,
       onConfirm: async () => {
         try {
-          if (!dbBudgetData) {
-            logger.warn('Cannot delete preview/mock budget');
-            return;
-          }
           await budgetWriteService.deleteBudget(workplaceId, budget.id);
           analytics.trackFeatureUsage('budget', 'delete', {
             budget_id: budget.id,
@@ -264,7 +296,7 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
         }
       },
     });
-  }, [budget, dbBudgetData, workplaceId]);
+  }, [budget, workplaceId]);
 
   const handleEdit = useCallback(() => {
     if (!budget) return;
@@ -275,17 +307,55 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
     });
   }, [budget]);
 
+  const exitActivitySelection = journalList.exitSelectionMode;
+  const onFilterCategory = useCallback(
+    (id: AccountId | null) => {
+      exitActivitySelection();
+      setActivityCategoryId(id);
+    },
+    [exitActivitySelection],
+  );
+  const onRetryInsights = useCallback(() => {
+    retryChart();
+    retryPrevious();
+  }, [retryChart, retryPrevious]);
+  const onAddExpense = useCallback(() => {
+    AppNavigation.toSimpleJournalEntry('expense', {
+      destinationAccountId:
+        activityCategory?.id ?? (chartAccountIds.length === 1 ? chartAccountIds[0] : undefined),
+    });
+  }, [activityCategory?.id, chartAccountIds]);
+
   return {
     budget,
     usage: displayedUsage,
     items: journalList.items,
-    isLoading: isLoading || journalList.isLoading,
+    isLoading: dbLoading,
+    isMissing: !dbLoading && !dbBudgetData,
+    isLoadingActivity: journalList.isLoading,
+    isLoadingMore: journalList.isLoadingMore,
+    onEndReached: journalList.onEndReached,
+    periodRange: budgetDateRange,
+    scopeAccounts,
+    fundingAccounts,
+    isLoadingScope: isLoadingScopes || isLoadingScopeAccounts,
+    isLoadingFunding,
     targetMonth: dayjs(refTimestamp).format('YYYY-MM'),
     nextMonth,
     prevMonth,
     resetToToday,
     isCurrentMonth,
     chartData,
+    isLoadingInsights: isLoadingInsights || isLoadingScopes || isLoadingScopeAccounts,
+    insightsError: chartError ? 'Could not load the spending breakdown.' : undefined,
+    previousUsageError: previousError ? 'Previous period spending is unavailable.' : undefined,
+    onRetryInsights,
+    previousUsage,
+    previousPeriodRange,
+    expenseAccounts,
+    activityCategory,
+    onFilterCategory,
+    onAddExpense,
     periodLabel: budget ? BudgetPeriodUtils.getPeriodLabel(budget, refTimestamp) : '',
     handleDelete,
     handleEdit,
