@@ -55,7 +55,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     predictiveBackGestureEnabled: false,
     // Gradle build types derive dev/preview IDs from this stable production base.
     package: appVariants.production.androidApplicationId,
-    permissions: ['READ_SMS'],
+    permissions: ['READ_SMS', 'RECEIVE_SMS'],
     blockedPermissions: [
       'android.permission.READ_MEDIA_IMAGES',
       'android.permission.READ_MEDIA_VIDEO',

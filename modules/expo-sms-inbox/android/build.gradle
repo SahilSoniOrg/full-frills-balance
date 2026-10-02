@@ -16,3 +16,8 @@ android {
     abortOnError false
   }
 }
+
+// The SMS receiver starts a React Native headless task from this library.
+dependencies {
+  implementation("com.facebook.react:react-android")
+}
