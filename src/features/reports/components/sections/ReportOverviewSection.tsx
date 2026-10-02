@@ -3,6 +3,9 @@ import { NetWorthTrendWidget } from '@/src/features/reports/components/widgets/N
 import { IncomeExpenseBalanceWidget } from '@/src/features/reports/components/widgets/IncomeExpenseBalanceWidget';
 import { MoneyFlowWidget } from '@/src/features/reports/components/widgets/MoneyFlowWidget';
 import { ReportSummaryCard } from '@/src/features/reports/components/ReportSummaryCard';
+import { Icon } from '@/src/components/core';
+import { DetailDisclosure } from '@/src/components/shared/DetailDisclosure';
+import { Column } from '@/src/design-system';
 
 interface ReportOverviewSectionProps {
   vm: ReportOverviewTabVm;
@@ -35,19 +38,23 @@ export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionP
         onViewTransactions={onViewTransactions}
       />
 
-      <IncomeExpenseBalanceWidget
-        incomeBarFlex={incomeBarFlex}
-        expenseBarFlex={expenseBarFlex}
-        income={income}
-        expense={expense}
-        currencyCode={targetCurrency}
-      />
-
-      <MoneyFlowWidget
-        sankeyData={sankeyData}
-        currencyCode={targetCurrency}
-        chartWidth={chartWidth}
-      />
+      <DetailDisclosure title="Income, expense & money flow" icon={Icon.BarChart} variant="plain">
+        <Column gap="xl">
+          <IncomeExpenseBalanceWidget
+            incomeBarFlex={incomeBarFlex}
+            expenseBarFlex={expenseBarFlex}
+            income={income}
+            expense={expense}
+            currencyCode={targetCurrency}
+          />
+          <MoneyFlowWidget
+            sankeyData={sankeyData}
+            currencyCode={targetCurrency}
+            chartWidth={chartWidth}
+          />
+        </Column>
+      </DetailDisclosure>
     </>
   );
 }
+
