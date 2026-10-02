@@ -66,7 +66,7 @@ function pillHasWrappingAncestor(accountId: string): boolean {
   return false;
 }
 
-describe('SimpleFormAccountSections unselection and clear', () => {
+describe('SimpleFormAccountSections selection and clear', () => {
   afterEach(() => jest.restoreAllMocks());
 
   it('keeps the original flowing pills for a typical account list', () => {
@@ -146,7 +146,7 @@ describe('SimpleFormAccountSections unselection and clear', () => {
     ).toBeNull();
   });
 
-  it('toggles selection to EMPTY_ACCOUNT_ID when tapping the already-selected pill', () => {
+  it('keeps the account selected when tapping the already-selected pill', () => {
     const onSelectSource = jest.fn();
     const onSelectDestination = jest.fn();
     const onToggleExpansion = jest.fn();
@@ -166,13 +166,13 @@ describe('SimpleFormAccountSections unselection and clear', () => {
       />,
     );
 
-    // Tapping the selected pill ('Cash Wallet') toggles it off
+    // Reconfirming an account must not erase the selection.
     const selectedPill = screen.getByTestId('account-picker-option-acc-cash');
     act(() => {
       fireEvent.press(selectedPill);
     });
 
-    expect(onSelectSource).toHaveBeenCalledWith(EMPTY_ACCOUNT_ID);
+    expect(onSelectSource).toHaveBeenCalledWith(mockAccounts[0].id);
   });
 
   it('renders Clear button when an account is selected and clears to EMPTY_ACCOUNT_ID on press', () => {
@@ -251,7 +251,7 @@ describe('SimpleFormAccountSections unselection and clear', () => {
     expect(screen.getByTestId('account-picker-option-acc-archived')).toBeTruthy();
   });
 
-  it('supports unselecting destination account as well', () => {
+  it('clears the destination explicitly and keeps it selected when reconfirmed', () => {
     const onSelectSource = jest.fn();
     const onSelectDestination = jest.fn();
     const onToggleExpansion = jest.fn();
@@ -278,12 +278,12 @@ describe('SimpleFormAccountSections unselection and clear', () => {
     });
     expect(onSelectDestination).toHaveBeenCalledWith(EMPTY_ACCOUNT_ID);
 
-    // Tapping already-selected pill on destination side toggles off
+    // Choosing the destination again keeps it selected.
     const bankPill = screen.getByTestId('account-picker-option-acc-bank');
     act(() => {
       fireEvent.press(bankPill);
     });
-    expect(onSelectDestination).toHaveBeenCalledWith(EMPTY_ACCOUNT_ID);
+    expect(onSelectDestination).toHaveBeenLastCalledWith(mockAccounts[1].id);
   });
 
   it.each([

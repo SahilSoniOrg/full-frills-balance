@@ -127,9 +127,9 @@ export function AccountPickerPanel({
   const handleSelect = useCallback(
     (id: AccountId) => {
       Keyboard.dismiss();
-      onSelect(activeAccountId === id ? EMPTY_ACCOUNT_ID : id);
+      onSelect(id);
     },
-    [activeAccountId, onSelect],
+    [onSelect],
   );
 
   const handleClear = useCallback(() => {
