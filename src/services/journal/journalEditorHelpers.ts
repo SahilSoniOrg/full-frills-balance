@@ -3,8 +3,6 @@ import { AccountId, EMPTY_ACCOUNT_ID, TransactionId } from '@/src/types/ids';
 import { JournalEntryLine, TabType } from '@/src/types/domainJournal';
 import type { AccountFields } from '@/src/types/plainDtos';
 
-import { JournalLineInput } from '@/src/services/accounting/JournalCalculator';
-
 /** A finite rate greater than zero, or null for blank, malformed, zero, or negative input. */
 export function parsePositiveRate(value: string | number | null | undefined): number | null {
   const rate = Number(value);
@@ -150,32 +148,6 @@ export function mapEnrichedLinesToEditorState(
   }
 
   return { lines, forceAdvancedMode, simpleTabType };
-}
-
-/** Maps editor lines into the shape used by JournalCalculator balance checks. */
-export function mapEditorLinesForBalanceCheck(
-  lines: JournalEntryLine[],
-  _workplaceCurrency: string,
-): JournalLineInput[] {
-  return lines.map(l => ({
-    amount: l.amount,
-    type: l.transactionType,
-    exchangeRate: l.exchangeRate,
-    accountCurrency: l.accountCurrency,
-  }));
-}
-
-/** True when every line has an account and a parseable amount (ready to balance). */
-export function isJournalEditorEntryReady(
-  lines: JournalEntryLine[],
-  _workplaceCurrency: string,
-): boolean {
-  return lines.every(
-    l =>
-      l.accountId !== EMPTY_ACCOUNT_ID &&
-      l.amount !== '' &&
-      !isNaN(parseFloat(l.amount.toString())),
-  );
 }
 
 /** Line counts toward the simple-mode two-leg limit only when the user has entered data. */

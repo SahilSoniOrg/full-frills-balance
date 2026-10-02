@@ -50,18 +50,6 @@ function distributeUnitsEvenly(totalUnits: number, count: number): number[] {
   return Array.from({ length: count }, (_, index) => base + (index < extraUnits ? 1 : 0));
 }
 
-export function rowAmountFromBase(baseAmount: number, pairRate: number, precision: number): number {
-  return roundToPrecision(baseAmount * pairRate, precision);
-}
-
-export function amountInSourceCurrency(
-  nominalAmount: number,
-  pairRate: number,
-  precision: number,
-): string {
-  return formatRoundedAmount(nominalAmount / pairRate, precision);
-}
-
 export function getSplitCurrencyPrecision(currency: string | undefined, fallback = 2): number {
   return currency ? CurrencyFormatter.getPrecisionFallback(currency) : fallback;
 }
@@ -361,16 +349,6 @@ export function distributeSplitRemainder(
       precision,
     ),
   );
-}
-
-/** Equal shares of the total in the paid-from currency. FX conversion happens after. */
-export function equalizeSourceAmounts(
-  totalAmount: string,
-  count: number,
-  precision: number,
-): string[] {
-  const totalUnits = toMinorUnits(parseSimpleAmountInput(totalAmount), precision);
-  return distributeUnitsEvenly(totalUnits, count).map(units => formatSplitUnits(units, precision));
 }
 
 /** Replace every allocation with an exact equal share of the total. */

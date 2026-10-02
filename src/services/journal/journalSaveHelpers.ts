@@ -1,6 +1,5 @@
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import type { CreateJournalData } from '@/src/types/journalWrite';
-import { checkJournal } from '@/src/utils/accounting/BalanceEffects';
 import { validateDistinctAccounts } from '@/src/services/accounting/JournalValidation';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
@@ -69,40 +68,6 @@ export function resolveJournalTimestamp(
   }
 
   return { ok: true, timestamp: combinedTimestamp };
-}
-
-export function validateJournalEntryBalance(
-  lines: JournalEntryLine[],
-  baseCurrency?: string,
-): JournalSaveValidationError | null {
-  const domainLines = lines.map(line => ({
-    amount: sanitizeAmount(line.amount) || 0,
-    type: line.transactionType,
-    exchangeRate: line.exchangeRate ? parseFloat(line.exchangeRate) : 1,
-    accountCurrency: line.accountCurrency,
-  }));
-
-  const normalizedBaseCurrency = baseCurrency?.trim().toUpperCase();
-  const hasForeignCurrencyLine = normalizedBaseCurrency
-    ? lines.some(line => {
-        const currency = line.accountCurrency?.trim().toUpperCase();
-        const rate = Number(line.exchangeRate?.trim());
-        return Boolean(
-          currency && currency !== normalizedBaseCurrency && Number.isFinite(rate) && rate !== 1,
-        );
-      })
-    : false;
-  const balanceValidation = checkJournal(domainLines, undefined, {
-    allowExchangeRateRounding: hasForeignCurrencyLine,
-  });
-  if (!balanceValidation.isValid) {
-    return {
-      success: false,
-      error: `Journal is not balanced. Discrepancy: ${balanceValidation.imbalance}`,
-    };
-  }
-
-  return null;
 }
 
 export function mapLinesToCreateTransactions(

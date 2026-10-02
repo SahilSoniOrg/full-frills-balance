@@ -265,18 +265,3 @@ export function shouldApplyLastUsedAccountDefault(
   }
   return type === 'transfer' || type === 'income';
 }
-
-/** Whether the target account leg for the given simple tab is currently unset / empty. */
-export function isSimpleTargetAccountUnset(
-  tabType: TabType,
-  sourceId: AccountId,
-  destinationId: AccountId,
-): boolean {
-  if (tabType === 'expense' || tabType === 'transfer') {
-    return !destinationId || destinationId === EMPTY_ACCOUNT_ID;
-  }
-  if (tabType === 'income') {
-    return !sourceId || sourceId === EMPTY_ACCOUNT_ID;
-  }
-  return false;
-}

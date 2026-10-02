@@ -1,7 +1,6 @@
 import {
   buildSimpleCrossCurrencyLineUpdates,
   ensureSelectedAccountVisible,
-  isSimpleTargetAccountUnset,
   resolveSimpleHeroAmount,
 } from '@/src/services/journal/simpleJournalHelpers';
 import { AccountType } from '@/src/types/enums';
@@ -108,31 +107,5 @@ describe('ensureSelectedAccountVisible', () => {
   it('returns the section unchanged when nothing is selected', () => {
     const section = [{ id: 'bank', name: 'Bank', accountType: AccountType.ASSET } as any];
     expect(ensureSelectedAccountVisible(section, EMPTY_ACCOUNT_ID, pool)).toBe(section);
-  });
-});
-
-describe('isSimpleTargetAccountUnset', () => {
-  it('checks destination for expense tab', () => {
-    expect(isSimpleTargetAccountUnset('expense', 'source-acc' as any, EMPTY_ACCOUNT_ID)).toBe(true);
-    expect(isSimpleTargetAccountUnset('expense', 'source-acc' as any, '' as any)).toBe(true);
-    expect(isSimpleTargetAccountUnset('expense', 'source-acc' as any, 'dest-acc' as any)).toBe(
-      false,
-    );
-  });
-
-  it('checks source for income tab', () => {
-    expect(isSimpleTargetAccountUnset('income', EMPTY_ACCOUNT_ID, 'dest-acc' as any)).toBe(true);
-    expect(isSimpleTargetAccountUnset('income', 'source-acc' as any, 'dest-acc' as any)).toBe(
-      false,
-    );
-  });
-
-  it('checks destination for transfer tab', () => {
-    expect(isSimpleTargetAccountUnset('transfer', 'source-acc' as any, EMPTY_ACCOUNT_ID)).toBe(
-      true,
-    );
-    expect(isSimpleTargetAccountUnset('transfer', 'source-acc' as any, 'dest-acc' as any)).toBe(
-      false,
-    );
   });
 });
