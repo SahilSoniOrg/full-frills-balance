@@ -16,17 +16,6 @@ export class SmsJournalQueries {
     return database.collections.get<JournalMetadata>('journal_metadata');
   }
 
-  private async find(workplaceId: WorkplaceId, id: JournalId): Promise<Journal | null> {
-    const journals = await this.journals
-      .query(
-        Q.where('id', id),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.where('workplace_id', workplaceId),
-      )
-      .fetch();
-    return journals[0] ?? null;
-  }
-
   private async findByIds(workplaceId: WorkplaceId, ids: JournalId[]): Promise<Journal[]> {
     if (ids.length === 0) return [];
     return this.journals
@@ -36,18 +25,6 @@ export class SmsJournalQueries {
         Q.where('workplace_id', workplaceId),
       )
       .fetch();
-  }
-
-  async findJournalByOriginalSmsId(
-    originalSmsId: string,
-    workplaceId: WorkplaceId,
-  ): Promise<Journal | null> {
-    const metadata = await this.journalMetadata
-      .query(Q.where('original_sms_id', originalSmsId), Q.where('workplace_id', workplaceId))
-      .fetch();
-
-    if (metadata.length === 0) return null;
-    return this.find(workplaceId, metadata[0].journalId);
   }
 
   async findJournalsByOriginalSmsIds(
@@ -73,25 +50,6 @@ export class SmsJournalQueries {
       }
     }
     return resultMap;
-  }
-
-  async findJournalBySmsFingerprint(
-    smsFingerprint: string,
-    workplaceId: WorkplaceId,
-  ): Promise<Journal | null> {
-    const inboxRecords = await database.collections
-      .get<TransactionInboxRecord>('transaction_inbox_records')
-      .query(
-        Q.where('input_fingerprint', smsFingerprint),
-        Q.where('workplace_id', workplaceId),
-        Q.where('channel', 'sms'),
-      )
-      .fetch();
-
-    const record = inboxRecords.find(r => r.linkedJournalId);
-    if (!record || !record.linkedJournalId) return null;
-
-    return this.find(workplaceId, record.linkedJournalId);
   }
 
   /** Linked SMS inbox records stored under any of the fingerprints, with their live journals. */

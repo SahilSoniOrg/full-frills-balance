@@ -90,9 +90,7 @@ jest.mock('@/src/services/WorkplaceService', () => ({
 // the JournalRepository facade.
 jest.mock('@/src/data/repositories/journal/SmsJournalQueries', () => ({
   smsJournalQueries: {
-    findJournalByOriginalSmsId: jest.fn().mockResolvedValue(null),
     findJournalsByOriginalSmsIds: jest.fn().mockResolvedValue(new Map()),
-    findJournalBySmsFingerprint: jest.fn().mockResolvedValue(null),
     findLinkedSmsRecordsByFingerprints: jest.fn().mockResolvedValue([]),
     findJournalsByReferenceNumbers: jest.fn().mockResolvedValue(new Map()),
     findNearbyJournals: jest.fn().mockResolvedValue([]),
