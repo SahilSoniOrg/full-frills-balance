@@ -42,22 +42,7 @@ export interface MultiWorkplaceExportMetadata {
   workplaces: readonly MultiWorkplaceExportEntry[];
 }
 
-/** Legacy eager table shape retained for downstream import compatibility. */
-export type ExportTable = readonly [key: string, data: readonly unknown[]];
 export type ExportTableSource = readonly [key: string, load: () => Promise<readonly unknown[]>];
-
-/** @deprecated Use serializeExportPayloadFromSources to avoid retaining all tables in memory. */
-export async function serializeExportPayload(
-  metadata: ExportMetadata,
-  tables: readonly ExportTable[],
-  onProgress?: (message: string, progress: number) => void,
-): Promise<string> {
-  return serializeExportPayloadFromSources(
-    metadata,
-    tables.map(([key, data]) => [key, async () => data] as ExportTableSource),
-    onProgress,
-  );
-}
 
 /** Serialize tables on demand so fetched table arrays do not accumulate. */
 export async function serializeExportPayloadFromSources(
