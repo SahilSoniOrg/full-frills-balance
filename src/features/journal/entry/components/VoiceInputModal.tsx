@@ -10,13 +10,7 @@ import { useVoiceVisualizer } from '@/src/features/journal/entry/hooks/useVoiceV
 import { useTheme } from '@/src/hooks/use-theme';
 import { WorkplaceId } from '@/src/types/ids';
 import { useEffect } from 'react';
-import {
-  ActivityIndicator,
-  Animated,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 interface VoiceInputModalProps {
   visible: boolean;
@@ -197,13 +191,9 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
       {isParsing && (
         <View style={styles.resolutionContainer}>
           <AppText variant="body" color="secondary" style={{ textAlign: 'center' }}>
-            Resolving with on-device AI...
+            Finding accounts for your entry...
           </AppText>
-          <ActivityIndicator
-            size="small"
-            color={theme.primary}
-            style={{ marginTop: Spacing.sm }}
-          />
+          <ActivityIndicator size="small" color={theme.primary} style={{ marginTop: Spacing.sm }} />
         </View>
       )}
 
@@ -222,20 +212,6 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
               <AppText variant="subheading" weight="bold">
                 {parserOutput.isHighConfidence ? 'Auto-Resolved Output' : 'Suggested Resolution'}
               </AppText>
-              {parserOutput.provider === 'ai' && (
-                <View
-                  style={{
-                    backgroundColor: theme.primary + '20',
-                    paddingHorizontal: 6,
-                    paddingVertical: 2,
-                    borderRadius: 4,
-                  }}
-                >
-                  <AppText variant="caption" weight="bold" style={{ color: theme.primary }}>
-                    NATIVE AI
-                  </AppText>
-                </View>
-              )}
             </View>
             <View
               style={[
@@ -253,9 +229,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                 weight="bold"
                 style={{
                   color:
-                    parserOutput.transactions[0].type === 'income'
-                      ? theme.success
-                      : theme.error,
+                    parserOutput.transactions[0].type === 'income' ? theme.success : theme.error,
                 }}
               >
                 {parserOutput.transactions[0].type === 'income' ? 'Income (+)' : 'Expense (-)'}

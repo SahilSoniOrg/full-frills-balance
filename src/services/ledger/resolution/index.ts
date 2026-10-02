@@ -11,15 +11,7 @@ import { ResolutionParams, ResolutionResult } from './types';
 export type { ResolutionParams, ResolutionResult } from './types';
 
 export async function resolveAccount(params: ResolutionParams): Promise<ResolutionResult> {
-  const {
-    sourceHint,
-    destinationHint,
-    direction,
-    workplaceId,
-    isReversal,
-    rawText,
-    unconstrained,
-  } = params;
+  const { sourceHint, destinationHint, direction, workplaceId, isReversal, rawText } = params;
 
   // Fetch active accounts in workspace
   const accounts = await accountQueryRepository.findAll(workplaceId);
@@ -49,8 +41,8 @@ export async function resolveAccount(params: ResolutionParams): Promise<Resoluti
 
   // 1. Fuzzy match for Source Account
   const primarySourceHint = sourceHint || destinationHint;
-  if (primarySourceHint && (unconstrained ? accounts : assetAccounts).length > 0) {
-    const bestSource = fuzzyMatch(primarySourceHint, unconstrained ? accounts : assetAccounts);
+  if (primarySourceHint && assetAccounts.length > 0) {
+    const bestSource = fuzzyMatch(primarySourceHint, assetAccounts);
     // If using the fallback hint (destinationHint), require a slightly more conservative threshold (e.g. >= 0.70)
     const threshold = sourceHint ? 0.85 : 0.7;
     if (bestSource && bestSource.score >= threshold) {
@@ -62,7 +54,7 @@ export async function resolveAccount(params: ResolutionParams): Promise<Resoluti
 
   // 2. Fuzzy match for Category Account
   const primaryCategoryHint = destinationHint || sourceHint;
-  const candidateCategoryAccounts = unconstrained ? accounts : targetCategoryAccounts;
+  const candidateCategoryAccounts = targetCategoryAccounts;
   if (primaryCategoryHint && candidateCategoryAccounts.length > 0) {
     const bestCategory = fuzzyMatch(primaryCategoryHint, candidateCategoryAccounts);
     // If using the fallback hint (sourceHint), require a slightly more conservative threshold (e.g. >= 0.70)
@@ -72,7 +64,7 @@ export async function resolveAccount(params: ResolutionParams): Promise<Resoluti
       categoryScore = bestCategory.score;
       categoryStrategy = 'fuzzy';
     } else {
-      // Synonym lookup (Only for actual categories if not unconstrained)
+      // Synonym lookup for categories
       const words = primaryCategoryHint
         .toLowerCase()
         .split(/[\s,._\-\/]+/)
@@ -166,10 +158,8 @@ export async function resolveAccount(params: ResolutionParams): Promise<Resoluti
         ? expenseAccounts[0]?.id || EMPTY_ACCOUNT_ID
         : categoryAccounts[0]?.id || EMPTY_ACCOUNT_ID;
 
-  const fallbackSource =
-    resolvedSourceId || (unconstrained ? undefined : assetAccounts[0]?.id) || EMPTY_ACCOUNT_ID;
-  const fallbackCategory =
-    resolvedCategoryId || (unconstrained ? undefined : defaultCategory) || EMPTY_ACCOUNT_ID;
+  const fallbackSource = resolvedSourceId || assetAccounts[0]?.id || EMPTY_ACCOUNT_ID;
+  const fallbackCategory = resolvedCategoryId || defaultCategory || EMPTY_ACCOUNT_ID;
 
   // Penalize strategy and confidence if only one of the sides resolved successfully
   const finalStrategy =
@@ -186,9 +176,7 @@ export async function resolveAccount(params: ResolutionParams): Promise<Resoluti
       ? (sourceScore + categoryScore) / 2
       : resolvedSourceId || resolvedCategoryId
         ? Math.max(sourceScore, categoryScore) * 0.9 // Small penalty if only one side matched
-        : unconstrained
-          ? 0
-          : 0.4; // Zero confidence if AI second-pass failed to match anything
+        : 0.4;
 
   // 6. Semantic Tagging
   let semanticType: string | undefined;

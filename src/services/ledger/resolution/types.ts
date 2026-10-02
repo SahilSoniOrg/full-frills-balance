@@ -18,5 +18,4 @@ export interface ResolutionParams {
   workplaceId: WorkplaceId;
   isReversal?: boolean;
   rawText?: string;
-  unconstrained?: boolean; // If true, allows matching sourceHint to category and vice versa
 }

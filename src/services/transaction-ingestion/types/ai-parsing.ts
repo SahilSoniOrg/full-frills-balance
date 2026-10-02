@@ -22,10 +22,6 @@ export interface ParserOutput {
   transactions: TransactionResult[];
   confidenceScore: number;
   isHighConfidence: boolean;
-  provider: 'deterministic' | 'ai';
+  provider: 'deterministic';
   processTimeMs?: number;
-  debugMetrics?: {
-    passTimings?: Record<string, number>;
-    totalInferenceMs?: number;
-  };
 }

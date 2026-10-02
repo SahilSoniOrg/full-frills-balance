@@ -1,6 +1,6 @@
 import { analytics } from '@/src/services/analytics';
 import type { ParserOutput } from '@/src/services/transaction-ingestion';
-import { transactionIngestionService } from '@/src/services/transaction-ingestion';
+import { ingestTransaction } from '@/src/services/transaction-ingestion';
 import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
@@ -97,18 +97,18 @@ export function useVoiceJournalParse({
   }, []);
 
   const parseTranscription = useCallback(
-    async (textToParse: string, forceAi: boolean = false) => {
+    async (textToParse: string) => {
       if (!textToParse.trim()) return;
       setIsParsing(true);
       Keyboard.dismiss();
 
       try {
-        const output = await transactionIngestionService.ingest(textToParse, workplaceId, forceAi);
+        const output = await ingestTransaction(textToParse, workplaceId);
         setParserOutput(output);
         analytics.trackFeatureUsage('voice_journal', 'parsed', {
           success: !!output && output.transactions.length > 0,
           transaction_count: output?.transactions?.length || 0,
-          is_ai: forceAi,
+          is_ai: false,
         });
       } catch (err) {
         logger.error('[useVoiceJournalParse] Extraction failed', err);
