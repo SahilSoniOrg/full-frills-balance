@@ -242,15 +242,25 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
           </View>
 
           {description ? (
-            <TouchableOpacity
-              onPress={() => setDescription('')}
-              style={styles.trailingAction}
-              accessibilityLabel="Clear description"
-              accessibilityRole="button"
-              testID={descriptionClearTestID}
+            <View
+              // Treat clearing as a field interaction before the page's outside-touch handler runs.
+              onTouchStart={() => handleSuggestionInteractionChange(true)}
+              onTouchEnd={() => handleSuggestionInteractionChange(false)}
+              onTouchCancel={() => handleSuggestionInteractionChange(false)}
             >
-              <AppIcon name={Icon.Close} size={Size.xs} color={theme.textTertiary} />
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  setDescription('');
+                  resolvedDescriptionInputRef.current?.focus();
+                }}
+                style={styles.trailingAction}
+                accessibilityLabel="Clear description"
+                accessibilityRole="button"
+                testID={descriptionClearTestID}
+              >
+                <AppIcon name={Icon.Close} size={Size.xs} color={theme.textTertiary} />
+              </TouchableOpacity>
+            </View>
           ) : null}
 
           {trailingAction ??
