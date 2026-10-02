@@ -125,6 +125,19 @@ export class SafeToSpendReadModel {
     invalidateImmediately = false,
   ): Observable<SafeToSpendDashboard> {
     let lastSuccessful: SafeToSpendDashboard | undefined;
+    const failureSnapshot = (staleError: string, unavailableError: string): SafeToSpendDashboard =>
+      lastSuccessful
+        ? { ...lastSuccessful, quality: 'stale', projectionError: staleError }
+        : {
+            ...createEmptySafeToSpendDashboard(defaultCurrencyCode, {
+              workplaceId,
+              asOf: Date.now(),
+              horizonDays: 0,
+              quality: 'unavailable',
+            }),
+            projectionError: unavailableError,
+          };
+
     return observeSafeToSpendInputSnapshot(
       workplaceId,
       defaultCurrencyCode,
@@ -158,20 +171,7 @@ export class SafeToSpendReadModel {
           });
         }
         if (outcome.kind === 'failed') {
-          const previous = lastSuccessful;
-          return of(
-            previous
-              ? { ...previous, quality: 'stale' as const, projectionError: 'Input refresh failed' }
-              : {
-                  ...createEmptySafeToSpendDashboard(defaultCurrencyCode, {
-                    workplaceId,
-                    asOf: Date.now(),
-                    horizonDays: 0,
-                    quality: 'unavailable',
-                  }),
-                  projectionError: 'Input unavailable',
-                },
-          );
+          return of(failureSnapshot('Input refresh failed', 'Input unavailable'));
         }
 
         return from(projectSafeToSpendDashboardFromSnapshot(outcome.snapshot)).pipe(
@@ -186,24 +186,7 @@ export class SafeToSpendReadModel {
               `[SafeToSpendReadModel] Projection failed (Workplace: ${workplaceId}):`,
               err,
             );
-            const previous = lastSuccessful;
-            return of(
-              previous
-                ? {
-                    ...previous,
-                    quality: 'stale' as const,
-                    projectionError: 'Projection refresh failed',
-                  }
-                : {
-                    ...createEmptySafeToSpendDashboard(defaultCurrencyCode, {
-                      workplaceId,
-                      asOf: Date.now(),
-                      horizonDays: 0,
-                      quality: 'unavailable',
-                    }),
-                    projectionError: 'Projection failed',
-                  },
-            );
+            return of(failureSnapshot('Projection refresh failed', 'Projection failed'));
           }),
         );
       }),
@@ -212,20 +195,7 @@ export class SafeToSpendReadModel {
           `[SafeToSpendReadModel] Error in simulation pipeline (Workplace: ${workplaceId}):`,
           err,
         );
-        const previous = lastSuccessful;
-        return of(
-          previous
-            ? { ...previous, quality: 'stale' as const, projectionError: 'Input refresh failed' }
-            : {
-                ...createEmptySafeToSpendDashboard(defaultCurrencyCode, {
-                  workplaceId,
-                  asOf: Date.now(),
-                  horizonDays: 0,
-                  quality: 'unavailable',
-                }),
-                projectionError: 'Input unavailable',
-              },
-        );
+        return of(failureSnapshot('Input refresh failed', 'Input unavailable'));
       }),
     );
   }
