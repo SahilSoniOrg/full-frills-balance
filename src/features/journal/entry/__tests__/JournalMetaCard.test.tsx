@@ -137,6 +137,34 @@ describe('JournalMetaCard suggestions', () => {
     expect(screen.queryByText('Lunch')).toBeNull();
   });
 
+  it('opens new notes ready to type and preserves them when collapsed', () => {
+    function Entry() {
+      const [notes, setNotes] = useState('');
+      return (
+        <JournalMetaCard
+          description="Lunch"
+          setDescription={jest.fn()}
+          date="2026-09-28"
+          setDate={jest.fn()}
+          time="12:00"
+          setTime={jest.fn()}
+          notes={notes}
+          setNotes={setNotes}
+        />
+      );
+    }
+    render(<Entry />);
+    fireEvent.press(screen.getByRole('button', { name: 'Add notes' }));
+    const notesInput = screen.getByTestId('journal-notes-input');
+    expect(notesInput.props.autoFocus).toBe(true);
+    fireEvent.changeText(notesInput, 'Shared with a friend');
+    fireEvent.press(screen.getByRole('button', { name: 'Hide notes' }));
+    expect(screen.queryByTestId('journal-notes-input')).toBeNull();
+    fireEvent.press(screen.getByRole('button', { name: 'Show notes' }));
+    expect(screen.getByTestId('journal-notes-input').props.value).toBe('Shared with a friend');
+    expect(screen.getByTestId('journal-notes-input').props.autoFocus).toBe(false);
+  });
+
   it('keeps a native scroll protected after it cancels the JavaScript touch responder', () => {
     const onSuggestionInteractionChange = jest.fn();
     const dropdown = renderSuggestions({ onSuggestionInteractionChange });

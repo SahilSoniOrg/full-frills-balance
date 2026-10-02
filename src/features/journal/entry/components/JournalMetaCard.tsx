@@ -339,7 +339,10 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
               },
             ]}
             accessibilityRole="button"
-            accessibilityLabel={showNotes ? 'Hide notes' : 'Add notes'}
+            accessibilityLabel={
+              showNotes ? 'Hide notes' : notes || notesAdded ? 'Show notes' : 'Add notes'
+            }
+            accessibilityState={{ expanded: showNotes }}
           >
             <AppIcon
               name={Icon.Edit}
@@ -355,7 +358,7 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
                 { color: showNotes ? theme.primary : theme.textSecondary },
               ]}
             >
-              {notes || notesAdded ? 'Notes added' : 'Add notes'}
+              {showNotes ? 'Hide notes' : notes || notesAdded ? 'Notes added' : 'Add notes'}
             </AppText>
           </TouchableOpacity>
         )}
@@ -376,6 +379,8 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
             value={notes}
             onChangeText={setNotes}
             placeholder="Add any extra journal details or tags..."
+            accessibilityLabel="Entry notes"
+            autoFocus={!notes && !notesAdded}
             multiline
             variant="minimal"
             style={[styles.notesInput, { color: theme.textSecondary }]}
