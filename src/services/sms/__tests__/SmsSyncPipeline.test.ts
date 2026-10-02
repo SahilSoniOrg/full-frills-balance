@@ -67,14 +67,14 @@ describe('SmsSyncPipeline', () => {
       await flushMicrotasks();
 
       expect(scanOnce).toHaveBeenCalledTimes(1);
-      expect(scanOnce).toHaveBeenNthCalledWith(1, 'wp-1', 50, undefined);
+      expect(scanOnce).toHaveBeenNthCalledWith(1, 'wp-1', 50, undefined, {});
 
       firstScan.resolve(1);
       await expect(recent).resolves.toBe(1);
       await flushMicrotasks();
 
       expect(scanOnce).toHaveBeenCalledTimes(2);
-      expect(scanOnce).toHaveBeenNthCalledWith(2, 'wp-1', 100, undefined);
+      expect(scanOnce).toHaveBeenNthCalledWith(2, 'wp-1', 100, undefined, {});
 
       secondScan.resolve(2);
       await expect(older).resolves.toBe(2);
@@ -93,8 +93,8 @@ describe('SmsSyncPipeline', () => {
       await flushMicrotasks();
 
       expect(scanOnce).toHaveBeenCalledTimes(2);
-      expect(scanOnce).toHaveBeenCalledWith('wp-a', 50, undefined);
-      expect(scanOnce).toHaveBeenCalledWith('wp-b', 75, undefined);
+      expect(scanOnce).toHaveBeenCalledWith('wp-a', 50, undefined, {});
+      expect(scanOnce).toHaveBeenCalledWith('wp-b', 75, undefined, {});
 
       firstScan.resolve(3);
       secondScan.resolve(4);

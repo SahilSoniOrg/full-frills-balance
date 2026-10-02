@@ -13,6 +13,7 @@ export async function analyzeAutoPost(
   message: SmsMessage,
   parsed: ParsedTransaction,
   activeRules: TransactionAutoPostRule[],
+  allowAutoPost = true,
 ): Promise<AutoPostRuleAnalysis | null> {
   const matchData: SmsMatchData = {
     senderAddress: message.address,
@@ -31,8 +32,13 @@ export async function analyzeAutoPost(
         return { disposition: 'ignore', ruleId: rule.id };
       }
 
-      if (definition.actions.disposition === 'review') {
-        return { disposition: 'review', ruleId: rule.id };
+      if (definition.actions.disposition === 'review' || !allowAutoPost) {
+        return {
+          disposition: 'review',
+          ruleId: rule.id,
+          sourceAccountId: definition.actions.sourceAccountId,
+          categoryAccountId: definition.actions.categoryAccountId,
+        };
       }
 
       const sourceAccountId = definition.actions.sourceAccountId;
@@ -71,7 +77,13 @@ export async function analyzeAutoPost(
           ],
         };
 
-        return { disposition: 'auto_post', ruleId: rule.id, createData: { journalData } };
+        return {
+          disposition: 'auto_post',
+          ruleId: rule.id,
+          createData: { journalData },
+          sourceAccountId,
+          categoryAccountId,
+        };
       }
     }
   }

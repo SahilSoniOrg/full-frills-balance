@@ -14,9 +14,10 @@ import {
 } from '@/src/services/sms/smsDuplicateDetection';
 import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
 import { smsRuleEngine } from '@/src/services/sms/SmsRuleEngine';
-import { WorkplaceId } from '@/src/types/ids';
+import type { JournalId, WorkplaceId } from '@/src/types/ids';
 import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
 import { logger } from '@/src/utils/logger';
+import { preferences } from '@/src/services/preferences';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { analyzeAutoPost } from './smsAutoPostAnalyzer';
 import { findManyDuplicateCandidates } from './smsDuplicateMatcher';
@@ -26,8 +27,14 @@ import {
   redeliveryFingerprintCandidates,
   resolveProcessingStatus,
 } from './smsFingerprint';
-import { processScanBatchItem } from './smsInboxRecordPreparer';
+import { processScanBatchItem, prepareUpsertInboxRecord } from './smsInboxRecordPreparer';
 import { SmsAnalysisResult, SmsContentReservation } from './types';
+import type { SmsScanOrigin } from '@/src/types/smsInbox';
+
+export interface SmsScanOptions {
+  origin?: SmsScanOrigin;
+  promptForPermission?: boolean;
+}
 
 class SmsScanCancelledError extends Error {}
 
@@ -50,15 +57,34 @@ async function findRedeliveredJournals(
 export class SmsSyncPipeline {
   private readonly workplaceScans = new Map<WorkplaceId, Promise<void>>();
 
-  async scanInbox(workplaceId: WorkplaceId, limit: number, signal?: AbortSignal): Promise<number> {
-    if (signal?.aborted) return 0;
+  scanInbox(
+    workplaceId: WorkplaceId,
+    limit: number,
+    signal?: AbortSignal,
+    options: SmsScanOptions = {},
+  ): Promise<number> {
+    return this.enqueueScan(workplaceId, () =>
+      this.scanInboxOnce(workplaceId, limit, signal, options),
+    );
+  }
+
+  scanMessages(
+    workplaceId: WorkplaceId,
+    messages: readonly SmsMessage[],
+    signal?: AbortSignal,
+    options: SmsScanOptions = {},
+  ): Promise<number> {
+    return this.enqueueScan(workplaceId, () =>
+      this.processMessages(workplaceId, messages, signal, options.origin ?? 'manual'),
+    );
+  }
+
+  private async enqueueScan(
+    workplaceId: WorkplaceId,
+    createScan: () => Promise<number>,
+  ): Promise<number> {
     const previousScan = this.workplaceScans.get(workplaceId) ?? Promise.resolve();
-    const scan = previousScan
-      .catch(() => undefined)
-      .then(() => {
-        if (signal?.aborted) return 0;
-        return this.scanInboxOnce(workplaceId, limit, signal);
-      });
+    const scan = previousScan.catch(() => undefined).then(createScan);
     const completion = scan.then(
       () => undefined,
       () => undefined,
@@ -79,10 +105,24 @@ export class SmsSyncPipeline {
     workplaceId: WorkplaceId,
     limit: number,
     signal?: AbortSignal,
+    options: SmsScanOptions = {},
+  ): Promise<number> {
+    if (signal?.aborted) return 0;
+    const messages = await smsInboxBridge.getLatestMessages(
+      limit,
+      options.promptForPermission ?? true,
+    );
+    return this.processMessages(workplaceId, messages, signal, options.origin ?? 'manual');
+  }
+
+  private async processMessages(
+    workplaceId: WorkplaceId,
+    messages: readonly SmsMessage[],
+    signal?: AbortSignal,
+    origin: SmsScanOrigin = 'manual',
   ): Promise<number> {
     if (signal?.aborted) return 0;
     const start = Date.now();
-    const messages = await smsInboxBridge.getLatestMessages(limit);
     if (messages.length === 0 || signal?.aborted) {
       return 0;
     }
@@ -138,7 +178,19 @@ export class SmsSyncPipeline {
 
     const analysisResults: SmsAnalysisResult[] = await Promise.all(
       candidateMessages.map(async ({ message, parsed, fingerprint }) => {
-        const existingRecord = existingMap.get(message.id) || null;
+        const existingRecord =
+          existingMap.get(message.id) ??
+          (await transactionInboxRepository.findMatchingSms(
+            workplaceId,
+            prepareUpsertInboxRecord(
+              message,
+              parsed,
+              fingerprint,
+              null,
+              InboxProcessingStatus.PENDING,
+              workplaceId,
+            ),
+          ));
         const referenceDuplicate = findReferenceDuplicateMatch(parsed, journalsByReference);
         const duplicate = coalesceActionableDuplicate(
           referenceDuplicate,
@@ -158,6 +210,7 @@ export class SmsSyncPipeline {
         });
 
         let autoPost: SmsAnalysisResult['autoPost'] = undefined;
+        let reviewRule: SmsAnalysisResult['reviewRule'] = undefined;
         let finalStatus = nextStatus;
         const finalJournalId = exactJournal?.id || fingerprintJournal?.id || undefined;
 
@@ -165,11 +218,25 @@ export class SmsSyncPipeline {
           parsed.parseStatus === InboxParseStatus.PARSED &&
           nextStatus === InboxProcessingStatus.PENDING
         ) {
-          const ruleResult = await analyzeAutoPost(message, parsed, activeRules);
+          const ruleResult = await analyzeAutoPost(
+            message,
+            parsed,
+            activeRules,
+            preferences.device.isSmsAutoPostEnabled && !existingRecord?.consumedWorkplaces?.length,
+          );
           if (ruleResult) {
             if (ruleResult.disposition === 'ignore') {
               finalStatus = InboxProcessingStatus.DISMISSED;
+            } else if (ruleResult.disposition === 'review') {
+              reviewRule = {
+                sourceAccountId: ruleResult.sourceAccountId,
+                categoryAccountId: ruleResult.categoryAccountId,
+              };
             } else if (ruleResult.disposition === 'auto_post' && ruleResult.createData) {
+              reviewRule = {
+                sourceAccountId: ruleResult.sourceAccountId,
+                categoryAccountId: ruleResult.categoryAccountId,
+              };
               autoPost = {
                 ruleId: ruleResult.ruleId,
                 journalData: ruleResult.createData.journalData,
@@ -188,6 +255,7 @@ export class SmsSyncPipeline {
           exactJournalId: finalJournalId,
           finalStatus,
           autoPost,
+          reviewRule,
         };
       }),
     );
@@ -202,7 +270,7 @@ export class SmsSyncPipeline {
       const latestProcessedIds = new Set<string>();
       const reservedDeviceIds = new Set<string>();
       const reservedContents = new Map<string, SmsContentReservation[]>();
-      const reservedReferences = new Map<string, import('@/src/types/ids').JournalId>();
+      const reservedReferences = new Map<string, JournalId>();
 
       let stagedImportedCount = 0;
       let stagedOperationCount = 0;
@@ -225,7 +293,19 @@ export class SmsSyncPipeline {
           for (const result of analysisResults) {
             if (signal?.aborted) throw new SmsScanCancelledError();
             if (reservedDeviceIds.has(result.message.id)) continue;
-            const latestRecord = latestRecordsByMessageId.get(result.message.id) ?? null;
+            const latestRecord =
+              latestRecordsByMessageId.get(result.message.id) ??
+              (await transactionInboxRepository.findMatchingSms(
+                workplaceId,
+                prepareUpsertInboxRecord(
+                  result.message,
+                  result.parsed,
+                  result.fingerprint,
+                  null,
+                  InboxProcessingStatus.PENDING,
+                  workplaceId,
+                ),
+              ));
             const latestJournal =
               latestJournalsById.get(result.message.id) ??
               latestRedeliveredJournals.get(result.message.id) ??
@@ -255,11 +335,21 @@ export class SmsSyncPipeline {
               workplaceId,
               triggeredRuleIds,
             });
-            transactionInboxRepository.stageUpsertInSession(
+            await transactionInboxRepository.stageUpsertInSession(
               session,
               item.inboxRecord,
               latestRecord,
               { correlationId: item.auditCorrelationId },
+              {
+                origin,
+                source: { senderAddress: result.message.address, rawBody: result.message.body },
+                queueReview:
+                  (origin === 'arrival' || origin === 'catch_up') &&
+                  [InboxProcessingStatus.PENDING, InboxProcessingStatus.PARSE_FAILED].includes(
+                    item.inboxRecord.processingStatus,
+                  ),
+                reviewRule: result.reviewRule,
+              },
             );
             if (item.autoPosted) stagedImportedCount += 1;
             if (item.journalResult) journalResults.push(item.journalResult);

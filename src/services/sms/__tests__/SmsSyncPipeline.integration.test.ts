@@ -4,9 +4,11 @@ import { AccountId } from '@/src/types/ids';
 import { database } from '@/src/data/database/Database';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
+import { preferences } from '@/src/services/preferences';
 import Journal from '@/src/data/models/Journal';
 import AuditLog from '@/src/data/models/AuditLog';
 import Transaction from '@/src/data/models/Transaction';
+import type TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { Q } from '@nozbe/watermelondb';
 import { smsMessageFromFixture } from '@/src/testing/smsFixtures';
 import { storage } from '@/src/utils/storage';
@@ -90,6 +92,8 @@ describe('SmsSyncPipeline integration', () => {
 
   beforeEach(async () => {
     storage.clearAll();
+    preferences.device.setSmsAutoPostEnabled(true);
+    preferences.device.update({ areSmsReviewNotificationsEnabled: true });
     await resetSmsTestDb();
     ({ cashId, expenseId } = await seedSmsTestAccounts());
     mockAndroidSmsInbox([]);
@@ -392,6 +396,27 @@ describe('SmsSyncPipeline integration', () => {
       );
     }
 
+    it('leaves matching entries pending when the SMS auto-post master switch is off', async () => {
+      const message = smsMessageFromFixture('swiggyNoRef', {
+        id: 'auto-post-master-off',
+        date: baseDate,
+      });
+      await enableAutoPostFor(message);
+      preferences.device.setSmsAutoPostEnabled(false);
+
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [message]);
+
+      expect((await fetchInboxByDeviceId(message.id))?.processingStatus).toBe(
+        InboxProcessingStatus.PENDING,
+      );
+      expect(
+        await database.collections
+          .get<Journal>('journals')
+          .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
+          .fetchCount(),
+      ).toBe(0);
+    });
+
     it('auto-posts duplicate reference candidates only once within a scan', async () => {
       const first = smsMessageFromFixture('upiRef121554846690', {
         id: 'ref-duplicate-a',
@@ -413,8 +438,8 @@ describe('SmsSyncPipeline integration', () => {
       expect((await fetchInboxByDeviceId(first.id))?.processingStatus).toBe(
         InboxProcessingStatus.AUTO_POSTED,
       );
-      expect((await fetchInboxByDeviceId(second.id))?.processingStatus).toBe(
-        InboxProcessingStatus.DUPLICATE_FLAGGED,
+      expect((await fetchInboxByDeviceId(second.id))?.id).toBe(
+        (await fetchInboxByDeviceId(first.id))?.id,
       );
     });
 
@@ -436,8 +461,8 @@ describe('SmsSyncPipeline integration', () => {
           .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
           .fetchCount(),
       ).toBe(1);
-      expect((await fetchInboxByDeviceId(second.id))?.processingStatus).toBe(
-        InboxProcessingStatus.DUPLICATE_FLAGGED,
+      expect((await fetchInboxByDeviceId(second.id))?.id).toBe(
+        (await fetchInboxByDeviceId(first.id))?.id,
       );
       const journal = (
         await database.collections
@@ -485,10 +510,10 @@ describe('SmsSyncPipeline integration', () => {
         InboxProcessingStatus.AUTO_POSTED,
       );
       const flagged = await fetchInboxByDeviceId(second.id);
-      expect(flagged?.processingStatus).toBe(InboxProcessingStatus.DUPLICATE_FLAGGED);
-      expect(flagged?.duplicateJournalId).toBe(journals[0].id);
-      expect(flagged?.linkedJournalId).toBeFalsy();
-      expect(flagged?.rawBody).toBe(second.body);
+      expect(flagged?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
+      expect(flagged?.id).toBe((await fetchInboxByDeviceId(first.id))?.id);
+      expect(flagged?.linkedJournalId).toBe(journals[0].id);
+      expect(flagged?.rawBody).toBe(first.body);
     });
 
     it('auto-posts distinct long messages sharing the legacy fingerprint prefix', async () => {
@@ -579,10 +604,10 @@ describe('SmsSyncPipeline integration', () => {
         const posted = await fetchInboxByDeviceId(messages[0].id);
         const duplicate = await fetchInboxByDeviceId(messages[1].id);
         expect(posted?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
-        expect(duplicate?.processingStatus).toBe(InboxProcessingStatus.DUPLICATE_FLAGGED);
-        expect(duplicate?.duplicateJournalId).toBe(posted?.linkedJournalId);
-        expect(duplicate?.linkedJournalId).toBeFalsy();
-        expect(duplicate?.rawBody).toBe(messages[1].body);
+        expect(duplicate?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
+        expect(duplicate?.id).toBe(posted?.id);
+        expect(duplicate?.linkedJournalId).toBe(posted?.linkedJournalId);
+        expect(duplicate?.rawBody).toBe(older.body);
         expect(
           await database.collections
             .get<Journal>('journals')
@@ -609,10 +634,10 @@ describe('SmsSyncPipeline integration', () => {
       expect(records.map(record => record?.processingStatus)).toEqual([
         InboxProcessingStatus.AUTO_POSTED,
         InboxProcessingStatus.AUTO_POSTED,
-        InboxProcessingStatus.DUPLICATE_FLAGGED,
+        InboxProcessingStatus.AUTO_POSTED,
       ]);
-      expect(records[2]?.duplicateJournalId).toBe(records[0]?.linkedJournalId);
-      expect(records[2]?.linkedJournalId).toBeFalsy();
+      expect(records[2]?.id).toBe(records[0]?.id);
+      expect(records[2]?.linkedJournalId).toBe(records[0]?.linkedJournalId);
       expect(
         await database.collections
           .get<Journal>('journals')
@@ -641,7 +666,7 @@ describe('SmsSyncPipeline integration', () => {
         const [original, repeated] = await Promise.all(
           [first, redelivery].map(message => fetchInboxByDeviceId(message.id)),
         );
-        expect(repeated?.processingStatus).toBe(InboxProcessingStatus.IMPORTED);
+        expect(repeated?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
         expect(repeated?.linkedJournalId).toBe(original?.linkedJournalId);
         expect(await journalCount()).toBe(1);
       });
@@ -659,7 +684,7 @@ describe('SmsSyncPipeline integration', () => {
         await scanSmsInbox(SMS_TEST_WORKPLACE, [newer]);
 
         const repeated = await fetchInboxByDeviceId(newer.id);
-        expect(repeated?.processingStatus).toBe(InboxProcessingStatus.IMPORTED);
+        expect(repeated?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
         expect(repeated?.linkedJournalId).toBe(
           (await fetchInboxByDeviceId(older.id))?.linkedJournalId,
         );
@@ -783,9 +808,9 @@ describe('SmsSyncPipeline integration', () => {
       expect(records.map(record => record?.processingStatus)).toEqual([
         InboxProcessingStatus.AUTO_POSTED,
         InboxProcessingStatus.AUTO_POSTED,
-        InboxProcessingStatus.DUPLICATE_FLAGGED,
+        InboxProcessingStatus.AUTO_POSTED,
       ]);
-      expect(records[2]?.duplicateJournalId).toBe(records[0]?.linkedJournalId);
+      expect(records[2]?.id).toBe(records[0]?.id);
     });
 
     it('keeps same-amount transactions with distinct references in the same scan', async () => {
@@ -835,8 +860,8 @@ describe('SmsSyncPipeline integration', () => {
       const inbox = await fetchInboxByDeviceId(message.id);
       expect(inbox?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
       expect(inbox?.linkedJournalId).toBeTruthy();
-      expect(inbox?.rawBody).toBeFalsy();
-      expect(inbox?.senderAddress).toBeFalsy();
+      expect(inbox?.rawBody).toBe(message.body);
+      expect(inbox?.senderAddress).toBe(message.address);
       const journal = await database.collections
         .get<Journal>('journals')
         .find(inbox!.linkedJournalId!);
@@ -851,8 +876,8 @@ describe('SmsSyncPipeline integration', () => {
       await expect(scanSmsInbox(SMS_TEST_WORKPLACE, [message])).resolves.toBe(0);
       const rescannedInbox = await fetchInboxByDeviceId(message.id);
       expect(rescannedInbox?.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
-      expect(rescannedInbox?.rawBody).toBeFalsy();
-      expect(rescannedInbox?.senderAddress).toBeFalsy();
+      expect(rescannedInbox?.rawBody).toBe(message.body);
+      expect(rescannedInbox?.senderAddress).toBe(message.address);
       expect(await database.collections.get<Journal>('journals').query().fetchCount()).toBe(1);
     });
 
@@ -1023,7 +1048,7 @@ describe('SmsSyncPipeline integration', () => {
       expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PARSE_FAILED);
     });
 
-    it('stores no raw text for an SMS dismissed by an ignore rule', async () => {
+    it('retains the Device source for a financial SMS dismissed by an ignore rule', async () => {
       const message = smsMessageFromFixture('swiggyNoRef', {
         id: 'sms-edge-ignored',
         date: baseDate,
@@ -1042,8 +1067,8 @@ describe('SmsSyncPipeline integration', () => {
 
       const inbox = await fetchInboxByDeviceId('sms-edge-ignored');
       expect(inbox?.processingStatus).toBe(InboxProcessingStatus.DISMISSED);
-      expect(inbox?.senderAddress).toBeFalsy();
-      expect(inbox?.rawBody).toBeFalsy();
+      expect(inbox?.senderAddress).toBe(message.address);
+      expect(inbox?.rawBody).toBe(message.body);
     });
 
     it('does not create inbox records for personal phone-number senders', async () => {
@@ -1089,7 +1114,14 @@ describe('SmsSyncPipeline integration', () => {
 
       const unchangedA = await fetchInboxByDeviceId(message.id, SMS_TEST_WORKPLACE);
       const createdB = await fetchInboxByDeviceId(message.id, SMS_TEST_WORKPLACE_B);
-      expect(unchangedA?.id).toBe(workplaceARecord.id);
+      expect(unchangedA?.id).toBe(createdB?.id);
+      expect(
+        (
+          await database
+            .get<TransactionInboxRecord>('transaction_inbox_records')
+            .find(workplaceARecord.id)
+        ).rawBody,
+      ).toBe('Workplace A original body');
       expect(unchangedA?.rawBody).toBe('Workplace A original body');
       expect(unchangedA?.processingStatus).toBe(InboxProcessingStatus.DISMISSED);
       expect(createdB).not.toBeNull();
