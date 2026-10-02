@@ -8,18 +8,29 @@ import type { AccountFields } from '@/src/types/plainDtos';
 import { useAccount } from '@/src/hooks/useAccounts';
 import { useJournalsBulkOperations, type JournalListModalsProps } from '@/src/features/journal';
 import { buildPlannedPaymentDetailsActions } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsActions';
-import { formatPlannedPaymentInterval } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
+import {
+  formatPlannedPaymentInterval,
+  presentPlannedPaymentDue,
+} from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
 import { usePlannedPaymentDetails } from '@/src/features/planned-payments/hooks/usePlannedPaymentDetails';
 import { useSelection } from '@/src/hooks/useSelection';
 import { useTheme } from '@/src/hooks/use-theme';
-import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { shareJournalEntries } from '@/src/services/sharing/JournalShareProvider';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
-import { JournalDisplayType } from '@/src/types/enums';
-import { JournalId } from '@/src/types/ids';
+import { JournalDisplayType, PlannedPaymentStatus } from '@/src/types/enums';
+import { AccountId, JournalId } from '@/src/types/ids';
 import { getAccountTypeColorKey } from '@/src/utils/accountCategory';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
+import { formatDate, getNow } from '@/src/utils/dateUtils';
+import { ComponentVariant } from '@/src/utils/style-helpers';
+import {
+  getNextPlannedPaymentOccurrences,
+  summarizePlannedPaymentActivity,
+  type PlannedPaymentActivitySummary,
+  type PlannedPaymentNextOccurrence,
+} from '@/src/services/planned-payment/plannedPaymentDetailService';
+import type { Money } from '@/src/types/domainReadModels';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 
@@ -27,13 +38,15 @@ export interface PlannedPaymentDetailsViewModel {
   theme: Theme;
   isLoading: boolean;
   isMissing: boolean;
+  isPreview?: boolean;
   onBack: () => void;
 
   title?: string;
   amount?: number | null;
   currencyCode?: string;
   nameText?: string;
-  statusLabel?: string;
+  status?: PlannedPaymentStatus;
+  statusText?: string;
   statusVariant?: 'success' | 'default';
   typeLabel?: string;
   typeColorKey?: ColorKey;
@@ -43,6 +56,22 @@ export interface PlannedPaymentDetailsViewModel {
   intervalLabel?: string;
   nextOccurrenceText?: string;
   isAutoPost?: boolean;
+  description?: string;
+  startDateText?: string;
+  endDateText?: string;
+  dueLabel?: string;
+  dueColor?: ComponentVariant;
+  scheduleHelpText?: string;
+  occurrenceAmount?: Money;
+  outstandingJournalId?: JournalId;
+  nextOccurrences?: PlannedPaymentNextOccurrence[];
+  activitySummary?: PlannedPaymentActivitySummary;
+  isLoadingActivity?: boolean;
+  isLoadingHistory?: boolean;
+  activityError?: string;
+  onRetryActivity?: () => void;
+  pendingAction?: 'record' | 'skip' | 'toggle' | 'delete' | null;
+  actionError?: string | null;
 
   fromAccount?: AccountFields | null;
   toAccount?: AccountFields | null;
@@ -50,6 +79,9 @@ export interface PlannedPaymentDetailsViewModel {
   toAccountColorKey?: string;
 
   history?: EnrichedJournal[];
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
 
   rawAmount?: number;
   rawName?: string;
@@ -62,6 +94,7 @@ export interface PlannedPaymentDetailsViewModel {
   onSkip?: () => void;
   onToggleStatus?: () => void;
   onOpenJournal: (journalId: JournalId) => void;
+  onOpenAccount: (accountId: AccountId) => void;
 
   selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
@@ -74,6 +107,12 @@ export interface PlannedPaymentDetailsViewModel {
   actions?: SelectionAction[];
   modals?: JournalListModalsProps;
 }
+
+const STATUS_TEXT: Record<PlannedPaymentStatus, string> = {
+  [PlannedPaymentStatus.ACTIVE]: 'Active',
+  [PlannedPaymentStatus.PAUSED]: 'Paused',
+  [PlannedPaymentStatus.COMPLETED]: 'Completed',
+};
 
 export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDetailsViewModel {
   const { theme } = useTheme();
@@ -91,11 +130,21 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
     item,
     history,
     isLoading,
+    isLoadingMore,
+    hasMore,
+    loadMore,
     handleEdit,
     handleDelete,
     handleToggleStatus,
     handlePostNow,
     handleSkip,
+    activity,
+    isLoadingActivity,
+    isLoadingHistory,
+    activityError,
+    retryActivity,
+    pendingAction,
+    actionError,
   } = usePlannedPaymentDetails(id, workplaceId);
 
   const { account: fromAccount } = useAccount(item?.fromAccountId || null, workplaceId);
@@ -156,6 +205,9 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
   const onOpenJournal = useCallback((journalId: JournalId) => {
     AppNavigation.toJournalDetails(journalId);
   }, []);
+  const onOpenAccount = useCallback((accountId: AccountId) => {
+    AppNavigation.toAccountDetails(accountId);
+  }, []);
 
   const selectionProps = useMemo(
     () => ({
@@ -170,6 +222,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       actions: bulkOperations.actions,
       modals: bulkOperations.modals,
       onOpenJournal,
+      onOpenAccount,
     }),
     [
       selectedIds,
@@ -183,6 +236,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       bulkOperations.actions,
       bulkOperations.modals,
       onOpenJournal,
+      onOpenAccount,
     ],
   );
 
@@ -195,12 +249,12 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
           theme,
           isLoading: isLoadingVisible,
           isMissing: false,
+          isPreview: true,
           onBack: () => AppNavigation.back(),
-          title: AppConfig.strings.plannedPayments.details.screenTitle,
+          title: 'Planned payment',
           amount: previewAmount !== null && Number.isFinite(previewAmount) ? previewAmount : null,
           currencyCode: pCurrency,
           nameText: pDesc,
-          statusLabel: '',
           typeLabel: '',
           typeColorKey: 'primary',
           iconName: Icon.Document,
@@ -213,10 +267,6 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
           history: [],
           rawAmount: previewAmount ?? 0,
           rawName: pDesc,
-          headerActions: { onEdit: handleEdit, onDelete: () => {} },
-          onPost: () => {},
-          onSkip: () => {},
-          onToggleStatus: handleToggleStatus,
           ...selectionProps,
         };
       }
@@ -229,22 +279,35 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       };
     }
 
-    const isIncome = item.amount > 0 && fromAccount?.accountType === 'INCOME';
-    const isTransfer =
-      !!item.toAccountId &&
-      toAccount?.accountType !== 'EXPENSE' &&
-      toAccount?.accountType !== 'INCOME';
+    const isIncome = item.flowDirection === 'inflow';
+    const isTransfer = item.flowDirection === 'transfer' || item.flowDirection === 'unknown';
     const displayType = isTransfer
       ? JournalDisplayType.TRANSFER
       : isIncome
         ? JournalDisplayType.INCOME
         : JournalDisplayType.EXPENSE;
 
-    const presentation = journalPresenter.getPresentation(displayType);
-    const typeColorKey = presentation.colorKey as ColorKey;
-    const typeLabel = presentation.label;
+    const typeColorKey: ColorKey = isIncome ? 'income' : isTransfer ? 'transfer' : 'expense';
+    const typeLabel = isIncome
+      ? 'Money in'
+      : item.flowDirection === 'outflow'
+        ? 'Money out'
+        : item.flowDirection === 'transfer'
+          ? 'Transfer'
+          : 'Account movement';
 
     const intervalLabel = formatPlannedPaymentInterval(item);
+    const due = presentPlannedPaymentDue(item, getNow());
+    const outstanding = item.outstandingJournalId
+      ? activity?.find(
+          journal => journal.id === item.outstandingJournalId && journal.status === 'PLANNED',
+        )
+      : undefined;
+    const occurrenceAmount = item.outstandingJournalId
+      ? outstanding
+        ? { amount: outstanding.totalAmount, currencyCode: outstanding.currencyCode }
+        : undefined
+      : { amount: item.amount, currencyCode: item.currencyCode };
 
     const { headerActions, onPost, onSkip } = buildPlannedPaymentDetailsActions(
       item,
@@ -254,10 +317,16 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
         handlePostNow,
         handleSkip,
       },
-      { isPrivacyMode },
+      {
+        isPrivacyMode,
+        occurrence: occurrenceAmount,
+        isBusy: !!pendingAction,
+        isTargetUnavailable: isLoadingActivity || !!activityError,
+      },
     );
 
-    const onToggleStatus = handleToggleStatus;
+    const onToggleStatus =
+      item.status === PlannedPaymentStatus.COMPLETED ? undefined : handleToggleStatus;
 
     return {
       theme,
@@ -266,11 +335,12 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       onBack: () => AppNavigation.back(),
 
       // Core Details
-      title: AppConfig.strings.plannedPayments.details.screenTitle,
+      title: 'Planned payment',
       amount: item.amount,
       currencyCode: item.currencyCode,
       nameText: item.name,
-      statusLabel: item.status,
+      status: item.status,
+      statusText: STATUS_TEXT[item.status],
       statusVariant: item.status === 'ACTIVE' ? 'success' : 'default',
       typeLabel,
       typeColorKey,
@@ -289,6 +359,26 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
           ? AppConfig.strings.plannedPayments.noUpcomingOccurrence
           : new Date(item.nextDueOccurrence).toLocaleDateString(),
       isAutoPost: item.isAutoPost,
+      description: item.description,
+      startDateText: formatDate(item.startDate),
+      endDateText: item.endDate == null ? 'No end date' : formatDate(item.endDate),
+      dueLabel: due.label,
+      dueColor: due.color,
+      scheduleHelpText: due.helpText,
+      occurrenceAmount,
+      outstandingJournalId: outstanding?.id,
+      activitySummary: activity ? summarizePlannedPaymentActivity(activity, getNow()) : undefined,
+      nextOccurrences: activity ? getNextPlannedPaymentOccurrences(item, activity) : undefined,
+      isLoadingActivity,
+      isLoadingHistory,
+      activityError: activityError
+        ? 'Could not load payment activity.'
+        : !isLoadingActivity && item.outstandingJournalId && !outstanding
+          ? 'The next occurrence is unavailable. Refresh payment activity.'
+          : undefined,
+      onRetryActivity: retryActivity,
+      pendingAction,
+      actionError,
 
       // Account flow
       fromAccount,
@@ -300,6 +390,9 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
 
       // History
       history,
+      hasMore,
+      isLoadingMore,
+      onLoadMore: loadMore,
 
       rawAmount: item.amount,
       rawName: item.name,
@@ -315,6 +408,16 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
   }, [
     item,
     history,
+    activity,
+    isLoadingActivity,
+    isLoadingHistory,
+    activityError,
+    retryActivity,
+    pendingAction,
+    actionError,
+    hasMore,
+    isLoadingMore,
+    loadMore,
     isLoading,
     theme,
     fromAccount,

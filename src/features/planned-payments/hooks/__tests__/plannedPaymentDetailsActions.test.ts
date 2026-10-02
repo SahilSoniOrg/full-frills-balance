@@ -60,6 +60,35 @@ describe('plannedPaymentDetailsActions', () => {
     expect(call.message).not.toContain('125');
   });
 
+  it('confirms the edited occurrence amount and currency instead of the rule amount', () => {
+    const actions = buildPlannedPaymentDetailsActions(
+      { ...item, outstandingJournalId: 'edited' },
+      handlers,
+      { occurrence: { amount: 89.5, currencyCode: 'EUR' } },
+    );
+    actions.onPost?.();
+    expect(confirm.show).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        message: AppConfig.strings.plannedPayments.details.postNowMessage(
+          formatDate(item.nextDueOccurrence),
+          formatMoneyAmount(89.5, 'EUR', false),
+        ),
+      }),
+    );
+  });
+
+  it('blocks settlement until the saved occurrence amount is known, and header actions while a write is running', () => {
+    const unresolved = buildPlannedPaymentDetailsActions(
+      { ...item, outstandingJournalId: 'edited' },
+      handlers,
+    );
+    expect(unresolved.onPost).toBeUndefined();
+    expect(unresolved.onSkip).toBeUndefined();
+    const busy = buildPlannedPaymentDetailsActions(item, handlers, { isBusy: true });
+    busy.headerActions.onDelete();
+    expect(confirm.show).not.toHaveBeenCalled();
+  });
+
   it('does not expose post or skip actions without an actionable projected date', () => {
     const actions = buildPlannedPaymentDetailsActions(
       { ...item, nextDueOccurrence: undefined },

@@ -4,6 +4,7 @@ import { confirm } from '@/src/utils/alerts';
 import { formatDate } from '@/src/utils/dateUtils';
 import { PlainPlannedPayment } from '@/src/types/plainDtos';
 import type { JournalId } from '@/src/types/ids';
+import type { Money } from '@/src/types/domainReadModels';
 
 export function resolvePlannedPaymentActionTarget(item: {
   status: PlainPlannedPayment['status'];
@@ -27,17 +28,26 @@ interface PlannedPaymentDetailsActionHandlers {
 export function buildPlannedPaymentDetailsActions(
   item: PlainPlannedPayment & { nextDueOccurrence?: number; outstandingJournalId?: string },
   handlers: PlannedPaymentDetailsActionHandlers,
-  options: { isPrivacyMode?: boolean } = {},
+  options: {
+    isPrivacyMode?: boolean;
+    occurrence?: Money;
+    isBusy?: boolean;
+    isTargetUnavailable?: boolean;
+  } = {},
 ) {
+  const occurrence = options.occurrence ?? item;
   const displayAmount = formatMoneyAmount(
-    item.amount,
-    item.currencyCode,
+    occurrence.amount,
+    occurrence.currencyCode,
     options.isPrivacyMode ?? false,
   );
 
   const headerActions = {
-    onEdit: handlers.handleEdit,
+    onEdit: () => {
+      if (!options.isBusy) handlers.handleEdit();
+    },
     onDelete: () => {
+      if (options.isBusy) return;
       confirm.show({
         title: AppConfig.strings.plannedPayments.details.deleteConfirmTitle,
         message: AppConfig.strings.plannedPayments.details.deleteConfirmMessage,
@@ -48,7 +58,10 @@ export function buildPlannedPaymentDetailsActions(
     },
   };
 
-  const target = resolvePlannedPaymentActionTarget(item);
+  const target =
+    options.isTargetUnavailable || (item.outstandingJournalId && !options.occurrence)
+      ? undefined
+      : resolvePlannedPaymentActionTarget(item);
   const occurrenceLabel = target ? formatDate(target.occurrenceDate) : '';
   const onPost = !target
     ? undefined
