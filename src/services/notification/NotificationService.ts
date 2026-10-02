@@ -1,181 +1,227 @@
 import { AppConfig } from '@/src/constants';
-import { logger } from '@/src/utils/logger';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 export type NotificationCadence = 'none' | 'daily' | 'weekly';
+export const SMS_REVIEW_NOTIFICATION_TYPE = 'sms_transaction_needs_review';
+export const SMS_REVIEW_CHANNEL = 'sms-review';
+const REMINDER_CHANNEL = 'journal-reminders';
+const REMINDER_ID = 'journal-reminder';
 
-/**
- * OS notification scheduling only.
- * Safe-to-Spend lives at `@/src/services/simulation/SafeToSpendReadModel`.
- * Insights live at `@/src/services/insight/InsightService`.
- */
+export interface SmsReviewIntent {
+  type: typeof SMS_REVIEW_NOTIFICATION_TYPE;
+  inboxRecordId: string;
+  workplaceId?: string;
+  grouped?: boolean;
+  hasDetails?: boolean;
+}
+
+/** OS adapter. Eligibility, previews, persistence, and navigation live with their owners. */
 export class NotificationService {
+  private channels: Promise<void> | null = null;
   private reminderGeneration = 0;
   private reminderQueue: Promise<void> = Promise.resolve();
+  private reviewVisible = false;
+  private reviewRecordId?: string;
 
   constructor() {
     if (Platform.OS === 'web') return;
-
     Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldShowBanner: true,
-        shouldShowList: true,
-        shouldPlaySound: true,
-        shouldSetBadge: true,
-      }),
+      handleNotification: async notification => {
+        const show = !(
+          (this.reviewVisible ||
+            (this.reviewRecordId &&
+              notification.request.content.data?.inboxRecordId === this.reviewRecordId)) &&
+          notification.request.content.data?.type === SMS_REVIEW_NOTIFICATION_TYPE
+        );
+        return {
+          shouldShowAlert: show,
+          shouldShowBanner: show,
+          shouldShowList: show,
+          shouldPlaySound: show,
+          shouldSetBadge: false,
+        };
+      },
     });
+  }
 
-    if (Platform.OS === 'android') {
-      Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FF231F7C',
+  setSmsReviewVisible(visible: boolean, recordId?: string): void {
+    this.reviewVisible = visible;
+    this.reviewRecordId = recordId;
+  }
+
+  private ensureChannels(): Promise<void> {
+    if (Platform.OS !== 'android') return Promise.resolve();
+    if (!this.channels) {
+      this.channels = (async () => {
+        await Notifications.setNotificationChannelAsync(SMS_REVIEW_CHANNEL, {
+          name: 'SMS to review',
+          importance: Notifications.AndroidImportance.DEFAULT,
+        });
+        await Notifications.setNotificationChannelAsync(REMINDER_CHANNEL, {
+          name: 'Journal reminders',
+          importance: Notifications.AndroidImportance.DEFAULT,
+        });
+      })().catch(error => {
+        this.channels = null;
+        throw error;
       });
     }
+    return this.channels;
   }
 
   async requestPermissions(): Promise<boolean> {
     if (Platform.OS === 'web') return false;
-
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    return finalStatus === 'granted';
+    await this.ensureChannels();
+    const existing = await Notifications.getPermissionsAsync();
+    if (existing?.status === 'granted') return true;
+    if (existing?.canAskAgain === false) return false;
+    return (await Notifications.requestPermissionsAsync())?.status === 'granted';
   }
 
   async checkPermissions(): Promise<boolean> {
     if (Platform.OS === 'web') return false;
-    const { status } = await Notifications.getPermissionsAsync();
-    return status === 'granted';
+    return (await Notifications.getPermissionsAsync())?.status === 'granted';
   }
 
-  private async cancelScheduledNotifications(): Promise<void> {
-    await Notifications.cancelAllScheduledNotificationsAsync();
-    logger.info('Cancelled all scheduled notifications');
+  async canDeliverSmsReview(): Promise<boolean> {
+    if (!(await this.checkPermissions())) return false;
+    await this.ensureChannels();
+    if (Platform.OS !== 'android') return true;
+    const channel = await Notifications.getNotificationChannelAsync(SMS_REVIEW_CHANNEL);
+    return !!channel && channel.importance !== Notifications.AndroidImportance.NONE;
+  }
+
+  async deliverSmsReview(
+    identifier: string,
+    body: string,
+    intent: SmsReviewIntent,
+  ): Promise<boolean> {
+    if (!(await this.canDeliverSmsReview())) return false;
+    // A stable ID replaces an alert if delivery succeeds but saving its receipt is interrupted.
+    await Notifications.dismissNotificationAsync(identifier);
+    await Notifications.scheduleNotificationAsync({
+      identifier,
+      content: {
+        title: intent.grouped ? 'SMS transactions to review' : 'Transaction needs your input',
+        body,
+        data: { ...intent },
+      },
+      trigger: Platform.OS === 'android' ? { channelId: SMS_REVIEW_CHANNEL } : null,
+    });
+    return true;
+  }
+
+  /** Removes only SMS alerts that no longer represent an actionable review. */
+  async reconcileSmsReviews(
+    keep: (intent: SmsReviewIntent, identifier: string) => Promise<boolean>,
+  ): Promise<void> {
+    if (Platform.OS === 'web') return;
+    const [presented, scheduled] = await Promise.all([
+      Notifications.getPresentedNotificationsAsync(),
+      Notifications.getAllScheduledNotificationsAsync(),
+    ]);
+    const requests = new Map<string, Notifications.NotificationRequest>([
+      ...presented.map(
+        notification => [notification.request.identifier, notification.request] as const,
+      ),
+      ...scheduled.map(request => [request.identifier, request] as const),
+    ]);
+    for (const request of requests.values()) {
+      const data = request.content.data;
+      if (data?.type !== SMS_REVIEW_NOTIFICATION_TYPE) continue;
+      const intent: SmsReviewIntent = {
+        type: SMS_REVIEW_NOTIFICATION_TYPE,
+        inboxRecordId: typeof data.inboxRecordId === 'string' ? data.inboxRecordId : '',
+        workplaceId: typeof data.workplaceId === 'string' ? data.workplaceId : undefined,
+        grouped: data.grouped === true,
+        hasDetails: data.hasDetails === true,
+      };
+      if (await keep(intent, request.identifier)) continue;
+      await Notifications.cancelScheduledNotificationAsync(request.identifier);
+      await Notifications.dismissNotificationAsync(request.identifier);
+    }
   }
 
   scheduleReminder(
     cadence: NotificationCadence,
     hour: number,
     minute: number,
-    weekday: number = 1,
+    weekday = 1,
   ): Promise<void> {
     if (Platform.OS === 'web') return Promise.resolve();
-
     const generation = ++this.reminderGeneration;
-    return this.enqueueReminderUpdate(() =>
-      this.applyReminderSchedule(generation, cadence, hour, minute, weekday),
-    );
-  }
-
-  private enqueueReminderUpdate(operation: () => Promise<void>): Promise<void> {
-    const pending = this.reminderQueue.catch(() => undefined).then(operation);
+    const pending = this.reminderQueue
+      .catch(() => undefined)
+      .then(async () => {
+        if (generation !== this.reminderGeneration) return;
+        // Include legacy reminder IDs, without touching review alerts or other notification owners.
+        const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+        for (const request of scheduled) {
+          if (
+            request.identifier === REMINDER_ID ||
+            request.content.data?.type === 'journal_reminder' ||
+            (request.content.title === AppConfig.strings.settings.notifications.reminderTitle &&
+              !request.content.data?.type)
+          ) {
+            await Notifications.cancelScheduledNotificationAsync(request.identifier);
+          }
+        }
+        if (
+          generation !== this.reminderGeneration ||
+          cadence === 'none' ||
+          !(await this.checkPermissions())
+        )
+          return;
+        await this.ensureChannels();
+        if (generation !== this.reminderGeneration) return;
+        const trigger: Notifications.NotificationTriggerInput =
+          Platform.OS === 'ios'
+            ? {
+                type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+                hour,
+                minute,
+                repeats: true,
+                ...(cadence === 'weekly' ? { weekday } : {}),
+              }
+            : cadence === 'daily'
+              ? {
+                  type: Notifications.SchedulableTriggerInputTypes.DAILY,
+                  hour,
+                  minute,
+                  channelId: REMINDER_CHANNEL,
+                }
+              : {
+                  type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+                  hour,
+                  minute,
+                  weekday,
+                  channelId: REMINDER_CHANNEL,
+                };
+        await Notifications.scheduleNotificationAsync({
+          identifier: REMINDER_ID,
+          content: {
+            title: AppConfig.strings.settings.notifications.reminderTitle,
+            body: AppConfig.strings.settings.notifications.reminderBody,
+            data: { type: 'journal_reminder' },
+          },
+          trigger,
+        });
+      });
     this.reminderQueue = pending.catch(() => undefined);
     return pending;
   }
 
-  private ownsReminderGeneration(generation: number): boolean {
-    return generation === this.reminderGeneration;
-  }
-
-  private async applyReminderSchedule(
-    generation: number,
-    cadence: NotificationCadence,
-    hour: number,
-    minute: number,
-    weekday: number,
-  ): Promise<void> {
-    if (!this.ownsReminderGeneration(generation)) return;
-
-    await this.cancelScheduledNotifications();
-
-    if (!this.ownsReminderGeneration(generation)) return;
-
-    if (cadence === 'none') {
-      return;
-    }
-
-    const hasPermission = await this.checkPermissions();
-    if (!hasPermission) {
-      logger.debug('Cannot schedule notification: permissions not granted');
-      return;
-    }
-
-    if (!this.ownsReminderGeneration(generation)) return;
-
-    const title = AppConfig.strings.settings.notifications.reminderTitle;
-    const body = AppConfig.strings.settings.notifications.reminderBody;
-    const channelId = 'default';
-
-    let trigger: Notifications.NotificationTriggerInput = null;
-
-    if (Platform.OS === 'ios') {
-      const calendarTrigger: Notifications.CalendarTriggerInput = {
-        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-        hour,
-        minute,
-        repeats: true,
-      };
-
-      if (cadence === 'weekly') {
-        calendarTrigger.weekday = weekday;
-      }
-
-      trigger = calendarTrigger;
-    } else {
-      if (cadence === 'daily') {
-        trigger = {
-          type: Notifications.SchedulableTriggerInputTypes.DAILY,
-          hour,
-          minute,
-        } as Notifications.DailyTriggerInput;
-      } else {
-        trigger = {
-          type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-          weekday,
-          hour,
-          minute,
-        } as Notifications.WeeklyTriggerInput;
-      }
-    }
-
-    const content: Notifications.NotificationContentInput = {
-      title,
-      body,
-      ...(Platform.OS === 'android' ? { channelId } : {}),
-    };
-
-    await Notifications.scheduleNotificationAsync({
-      content,
-      trigger,
-    });
-
-    logger.info(
-      `Scheduled ${cadence} reminder at ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} (weekday: ${weekday})`,
-    );
-  }
-
   async sendImmediateTest(): Promise<void> {
     if (Platform.OS === 'web') return;
-    const content: Notifications.NotificationContentInput = {
-      title: AppConfig.strings.settings.notifications.testTitle,
-      body: AppConfig.strings.settings.notifications.testBody,
-      ...(Platform.OS === 'android' ? { channelId: 'default' } : {}),
-    };
-
+    await this.ensureChannels();
     await Notifications.scheduleNotificationAsync({
-      content,
-      trigger: null,
+      content: {
+        title: AppConfig.strings.settings.notifications.testTitle,
+        body: AppConfig.strings.settings.notifications.testBody,
+      },
+      trigger: Platform.OS === 'android' ? { channelId: REMINDER_CHANNEL } : null,
     });
   }
 }
-
 export const notificationService = new NotificationService();
