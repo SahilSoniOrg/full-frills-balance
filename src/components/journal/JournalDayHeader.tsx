@@ -104,8 +104,9 @@ export function JournalDayHeader({
 
 const styles = StyleSheet.create({
   container: {
+    minHeight: Size.touchTarget,
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl,
+    paddingTop: Spacing.md,
     paddingBottom: Spacing.sm,
   },
   content: {

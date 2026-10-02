@@ -12,6 +12,17 @@ import {
   JournalTimelineViewer,
 } from '@/src/types/journalTimeline';
 
+const ROUTINE_SEMANTIC_TYPES = new Set<SemanticType>([
+  SemanticType.TRANSFER,
+  SemanticType.PURCHASE,
+  SemanticType.INCOME_RECEIVED,
+]);
+const ROUTINE_DISPLAY_TYPES = new Set<JournalDisplayType>([
+  JournalDisplayType.INCOME,
+  JournalDisplayType.EXPENSE,
+  JournalDisplayType.TRANSFER,
+]);
+
 export function journalDisplayTypeChrome(displayType: JournalDisplayType): {
   typeIcon: JournalTimelineIconKey;
   amountPrefix: string;
@@ -49,8 +60,12 @@ function toTimelinePresentation(
   chrome: ReturnType<typeof journalDisplayTypeChrome>,
 ): JournalTimelinePresentation {
   const presentation = journalPresenter.getPresentation(displayType, semanticLabel, semanticType);
+  const hasSemanticType = semanticType != null && semanticType !== SemanticType.UNKNOWN;
   return {
     label: presentation.label,
+    showTypeBadge: hasSemanticType
+      ? !ROUTINE_SEMANTIC_TYPES.has(semanticType)
+      : !ROUTINE_DISPLAY_TYPES.has(displayType),
     typeColorKey: presentation.colorKey,
     typeIcon: chrome.typeIcon,
     amountPrefix: chrome.amountPrefix,

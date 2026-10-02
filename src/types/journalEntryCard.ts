@@ -17,8 +17,11 @@ export interface JournalEntryCardProps {
   amount: number;
   currencyCode: string;
   transactionDate: number | Date;
+  /** Grouped timelines already show the date in their day header. */
+  dateDisplay?: 'full' | 'time';
   presentation: {
     label: string;
+    showTypeBadge: boolean;
     typeIcon: IconName;
     typeColor: string;
     amountPrefix?: string;

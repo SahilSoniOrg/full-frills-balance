@@ -72,13 +72,15 @@ const SelectableJournalEntryCardComponent = ({
         borderColor: isSelected ? theme.primary : 'transparent',
       }}
       overlay={
-        <SelectionIndicator
-          isSelected={isSelected}
-          isActive={isSelectionModeActive}
-          color={theme.primary}
-          checkColor={theme.onPrimary}
-          border={withOpacity(theme.textTertiary, Opacity.hover)}
-        />
+        isSelected || isSelectionModeActive ? (
+          <SelectionIndicator
+            isSelected={isSelected}
+            isActive={isSelectionModeActive}
+            color={theme.primary}
+            checkColor={theme.onPrimary}
+            border={withOpacity(theme.textTertiary, Opacity.hover)}
+          />
+        ) : undefined
       }
     />
   );

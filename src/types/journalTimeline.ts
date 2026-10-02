@@ -11,6 +11,8 @@ export type JournalTimelineViewer = { accountId: AccountId };
 
 export interface JournalTimelinePresentation {
   label: string;
+  /** Routine income/expense/transfer types are already conveyed by the amount sign and icon. */
+  showTypeBadge: boolean;
   typeColorKey: string;
   typeIcon: JournalTimelineIconKey;
   amountPrefix: string;

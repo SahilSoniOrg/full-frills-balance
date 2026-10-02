@@ -72,6 +72,7 @@ function renderListItem({
   return (
     <SelectableJournalEntryCard
       {...item.cardProps!}
+      dateDisplay="time"
       onPress={item.onPress!}
       onLongPress={
         onLongPressItem && item.selectionId ? () => onLongPressItem(item.selectionId!) : undefined

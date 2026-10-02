@@ -12,6 +12,7 @@ export function mapTimelineItemToEntryCardProps(
     transactionDate: item.transactionDate,
     presentation: {
       label: item.presentation.label,
+      showTypeBadge: item.presentation.showTypeBadge,
       typeColor: item.presentation.typeColorKey,
       typeIcon: item.presentation.typeIcon,
       amountPrefix: item.presentation.amountPrefix,
