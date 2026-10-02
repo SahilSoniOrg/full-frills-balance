@@ -380,6 +380,10 @@ const styles = StyleSheet.create({
   },
   headerIconButton: {
     padding: Spacing.xs,
+    minWidth: Size.touchTarget,
+    minHeight: Size.touchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   titleWrap: {
     flex: 1,
@@ -393,6 +397,7 @@ const styles = StyleSheet.create({
   modeBadgePill: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: Size.touchTarget,
     gap: Spacing.xs,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,

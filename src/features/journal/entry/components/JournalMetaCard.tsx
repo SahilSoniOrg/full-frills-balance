@@ -442,6 +442,10 @@ const styles = StyleSheet.create({
   trailingAction: {
     padding: Spacing.xs,
     marginLeft: Spacing.xs,
+    minWidth: Size.touchTarget,
+    minHeight: Size.touchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   metaRow: {
     flexDirection: 'row',
@@ -458,6 +462,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     borderRadius: Shape.radius.full,
     minWidth: 0,
+    minHeight: Size.touchTarget,
     flexShrink: 1,
   },
   metaPillLabel: {

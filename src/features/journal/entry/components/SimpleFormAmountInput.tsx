@@ -260,8 +260,8 @@ const styles = StyleSheet.create({
     marginLeft: Spacing.sm,
   },
   iconButton: {
-    width: Size.iconLg,
-    height: Size.iconLg,
+    width: Size.touchTarget,
+    height: Size.touchTarget,
     borderRadius: Shape.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
