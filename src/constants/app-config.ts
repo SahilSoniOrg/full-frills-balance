@@ -147,7 +147,7 @@ export const AppConfig = {
 
   // Legal document versions used for local acknowledgement records
   legal: {
-    privacyPolicyVersion: '2026-09-30',
+    privacyPolicyVersion: '2026-10-04',
   },
 
   // Business Logic Constants

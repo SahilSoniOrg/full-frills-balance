@@ -9,7 +9,7 @@ export const PRIVACY_NOTICE_STRINGS = {
   acknowledgementPromptCalloutBody:
     'No bank connection. Your financial records stay on this device unless you choose to export or share them.',
   acknowledgementPromptDetails:
-    'SMS import runs only when you start it. Raw messages stay on this device while awaiting review or dismissed (so they can be restored), then are cleared once imported or auto-posted. Cleanup removes known structured SMS copies; user-written notes and other free-form historical text are left intact. Analytics does not receive transaction amounts, merchants, balances, notes, or SMS text.',
+    'If you enable automatic SMS import on Android, the app checks up to 50 recent inbox messages the first time, then checks each incoming SMS locally and catches up at startup. This includes messages it later ignores. Original transaction messages stay on this device after import or auto-posting so linked journal details can show their source. They remain until you clear the app data. Analytics does not receive transaction amounts, merchants, balances, notes, or SMS text.',
   acknowledgementPromptClose: 'Close privacy acknowledgement',
   acknowledgementPromptAction: 'Acknowledge & continue',
   subtitle: 'A plain-language summary of what Full Frills Balance stores and sends.',
@@ -25,13 +25,13 @@ export const PRIVACY_NOTICE_STRINGS = {
     'Full Frills Balance does not connect to bank accounts. You add accounts, balances, income, spending, and notes yourself, or import a file you choose.',
   localTitle: 'Financial records stay local',
   localBody:
-    'Your accounts, journals, entries, categories, and balances are stored on this device. SMS messages are read only when you start import; raw sender and message text stay local while awaiting review or dismissed (so they can be restored), then are cleared from the inbox once imported or auto-posted. Cleanup removes known structured SMS copies, while user-written notes and other free-form historical text are left intact. No login or cloud account is required.',
+    'Your accounts, journals, entries, categories, and balances are stored on this device. If you enable automatic SMS import on Android, the app checks up to 50 recent inbox messages the first time, then checks every incoming SMS locally and catches up at startup, including messages it later ignores. Original transaction messages and senders remain on this device after import, auto-posting, or dismissal so journal details can show their source. They have no automatic expiry; clearing app data or Factory Reset removes them. Privacy Mode hides the original message body in journal details. No login or cloud account is required.',
   onlineTitle: 'Limited online services',
   onlineBody:
     'The app may request exchange rates. If product analytics is enabled, it may send best-effort pseudonymous product and technical events, including the policy version you acknowledge. This telemetry is not a signed legal record. We do not intentionally send transaction amounts, merchants, balances, notes, or SMS text to analytics providers. Session replay is disabled.',
   backupTitle: 'Backups are files you control',
   backupBody:
-    'Exported backups are ZIP files saved or shared through your device. The app does not encrypt those files, so protect and delete copies you no longer need.',
+    'Exported backups are ZIP files saved or shared through your device and may include original SMS associated with exported workplace records. The app does not encrypt those files, so protect and delete copies you no longer need.',
   controlsTitle: 'Your controls',
   controlsBody:
     'Privacy Mode hides amounts in the app. App Lock and widget privacy can add device-level protection. Data export, restore, and factory reset are available from Settings.',

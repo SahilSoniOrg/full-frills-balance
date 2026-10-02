@@ -1,14 +1,14 @@
 Privacy Policy for Full Frills Balance
 
-Effective Date: September 30, 2026
+Effective Date: October 4, 2026
 
-Last Updated: September 30, 2026
+Last Updated: October 4, 2026
 
 Public copy: https://full-frills-landing.vercel.app/privacy.html
 
 Welcome to Full Frills Balance. This Privacy Policy explains how Full Frills Balance handles your information and protects your privacy.
 
-Policy update (September 30, 2026): This update clarifies local SMS review retention and that SMS scans happen only when you start an import. It also clarifies that diagnostic and analytics fields are allowlisted. The September 7 update's local-first and future-sync statements remain in force; planned sync behavior does not mean that feature is available today.
+Policy update (October 4, 2026): This update explains optional automatic SMS import on Android, including inbox checks at app startup and when new messages arrive. It also explains local retention of original transaction SMS for journal details, privacy-preserving maintenance, and allowlisted diagnostic and analytics practices. The September 7 update's local-first and future-sync statements remain in force; planned sync behavior does not mean that feature is available today.
 
 1. Overview
 
@@ -42,11 +42,13 @@ The app may also store the version of this Privacy Policy you acknowledged and t
 
 3. SMS Access and Transaction Import
 
-Full Frills Balance may request SMS permission to help import financial transactions automatically.
+On Android, Full Frills Balance may request SMS permissions to automatically check incoming messages for transaction details. Automatic SMS import is optional and starts only after you enable it in Settings.
 
 SMS access is used only to:
 
-read messages available on your device when you trigger import
+scan your inbox when you manually start an import
+
+read incoming SMS messages while automatic import is enabled
 
 detect whether a message is transaction-related
 
@@ -54,15 +56,17 @@ extract transaction details such as amount, sender, and transaction type
 
 create transaction entries inside the app
 
-SMS inbox scanning happens only when you manually start an import. Granting SMS permission or enabling SMS import does not start background or launch-time scans.
+SMS scanning and parsing happen on your device. The first time you enable automatic import, the app scans up to 50 recent inbox messages as an initial catch-up. Matching transaction messages enter the SMS import flow and may be auto-posted under rules you configured. While automatic import is enabled, the app checks every incoming SMS locally to determine whether it contains a transaction, including messages it later ignores. Android may start a short background task when an SMS arrives, even if the app is not open. The app also checks for missed messages at startup and when it returns to the foreground. Android may delay background work while the app is force-stopped or restricted; the app catches up when it can run again. Disabling automatic import stops future arrival-triggered processing.
 
-While a message is waiting for your review, or after you dismiss it, its sender and raw message body are stored locally in the SMS inbox so you can review or restore it. When the message is imported or auto-posted, the app clears that raw sender and body from the inbox. A created transaction may retain extracted details such as amount, currency, merchant, and reference number, plus a one-way deduplication digest. New SMS imports do not copy the raw message or sender into journal metadata, notes, or audit fields. A bounded local cleanup removes known raw SMS fields from existing SMS inbox records, structured journal metadata, and machine-generated audit payloads. It leaves user-written notes and other free-form historical text intact, so those may still contain text you chose to save.
+For transaction-related messages captured in the SMS inbox, the app retains the sender and original message body locally, including after review, dismissal, import, or auto-posting. Linked journal details can display that source message so you can check the transaction against the original SMS. New captures keep the original message in the shared Device inbox; workplace records and journals reference it instead of making additional raw copies. Older inbox records and journal metadata may retain existing source content. Imported financial entries also retain extracted details such as amount, currency, merchant, and reference number, plus a one-way deduplication digest. Privacy maintenance hashes older deduplication identities and removes raw SMS fields from machine-generated audit payloads; it does not erase retained source messages or user-written notes. New SMS imports do not copy raw messages into journal notes, audit fields, or analytics.
 
-SMS permission is optional, and the app remains usable without granting SMS access.
+SMS review notifications are optional and scheduled locally on your device. Their enablement and detail-preview settings apply to this device and are not included in exported backups. By default they contain a generic review prompt. You can choose detailed previews with extracted transaction information; the app hides these details while Privacy Mode or app lock is enabled. Notification routing uses local inbox and workplace identifiers rather than raw SMS content. The pending inbox is shared on the device; posting, dismissing, and rule decisions belong to each workplace.
+
+SMS permissions are optional, and the app remains usable without granting SMS access or enabling automatic import. Automatic import requires Android's SMS read and receive permissions.
 
 We do not intentionally upload full SMS content, sender details, or message bodies to external servers.
 
-Raw SMS content is retained locally in the inbox only while the item awaits review or is dismissed (so it can be restored); it is cleared from that record once the item is imported or auto-posted. The cleanup removes known structured copies, but does not rewrite user-written notes or arbitrary historical free-form text. SMS rule configuration may retain rule conditions you chose, and imported financial entries retain extracted transaction details.
+Retained SMS source content has no automatic expiry. Importing, auto-posting, dismissing a message, or disabling automatic import does not delete it. It remains until you clear the app data, use Factory Reset, or uninstall the app. Privacy Mode hides the original SMS body in journal details. Backups you explicitly export may include original SMS content associated with the exported workplace records, including older journal source fields; the shared Device pending feed is not part of a workplace backup. These files remain under your control and are not encrypted by the app. Clearing app data does not delete backup files you previously saved or shared. SMS rule configuration may retain conditions you chose.
 
 4. Analytics and Telemetry
 
@@ -77,6 +81,8 @@ onboarding completion
 journal and budget creation (event counts only, not monetary values)
 
 import and export actions (counts and formats, not row contents)
+
+SMS import setting changes (enabled or disabled) and whether an SMS rule auto-posted a transaction (boolean values only)
 
 in-app account creation events (account type and currency code only)
 
@@ -173,8 +179,6 @@ The current app does not offer account registration, online sync, or cloud backu
 
 If online sync is introduced, this Privacy Policy and the in-app disclosure will be updated before the feature is enabled. Stopping sync would stop future uploads, but it would not automatically recall data already downloaded to a device or delete a server backup unless a separate deletion process is completed.
 
-Future versions may also include optional background transaction parsing on the device. If introduced, this Privacy Policy and the in-app disclosure will be updated before release.
-
 11. Security
 
 Your financial records remain primarily on your own device.
@@ -201,6 +205,6 @@ This Privacy Policy may be updated when app features or data practices change. W
 
 Update history:
 
-- September 30, 2026 — clarified local SMS review retention, known-field cleanup limits, and allowlisted diagnostics and analytics.
+- October 4, 2026 — documented optional automatic SMS import on Android at startup and on new-message arrival; documented retention of original transaction SMS for journal details and user-controlled backups, privacy maintenance, and allowlisted diagnostics and analytics.
 - September 7, 2026 — clarified current local-first and no-bank behavior, export files, analytics and crash reporting, and planned privacy principles for optional encrypted sync. No sync feature was enabled by this update.
 - March 5, 2026 — initial policy published.
