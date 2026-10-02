@@ -134,7 +134,6 @@ describe('SafeToSpendReadModel', () => {
     (journalObserveQueries.observeStatusMeta as jest.Mock).mockReturnValue(of([]));
     (journalObserveQueries.observePlannedInRange as jest.Mock).mockReturnValue(of([]));
     (journalQueryRepository.findByIds as jest.Mock).mockResolvedValue([]);
-    (transactionObserveQueries.observeByDateRange as jest.Mock).mockImplementation(() => of([]));
     (transactionObserveQueries.observeActiveCount as jest.Mock).mockReturnValue(of(0));
     (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
     (transactionQueryRepository.findByJournals as jest.Mock).mockResolvedValue([]);

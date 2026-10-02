@@ -1,11 +1,9 @@
 import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
-import Transaction from '@/src/data/models/Transaction';
 import { observeQueryWithModelChanges } from '@/src/data/repositories/observeQueryWithModelChanges';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';
 import { distinctUntilChanged, map, of, Observable } from 'rxjs';
 import { buildAccountClauses } from './accountFilters';
@@ -41,12 +39,6 @@ export class AccountObserveQueries {
         'reconciled_at',
         'updated_at',
       ]);
-  }
-
-  observeHierarchy(workplaceId: WorkplaceId): Observable<Account[]> {
-    return this.accounts
-      .query(...buildAccountClauses({ workplaceId }))
-      .observeWithColumns(['parent_account_id', 'deleted_at', 'archived_at']);
   }
 
   observeByType(workplaceId: WorkplaceId, accountType: AccountType): Observable<Account[]> {
@@ -141,34 +133,6 @@ export class AccountObserveQueries {
         }),
         distinctUntilChanged(),
       );
-  }
-
-  /**
-   * Observe all active transactions for an account.
-   * Used for reactive in-memory balance calculation.
-   */
-  observeTransactionsForBalance(
-    workplaceId: WorkplaceId,
-    accountId: AccountId,
-  ): Observable<Transaction[]> {
-    const clauses: Q.Clause[] = [
-      Q.experimentalJoinTables(['journals']),
-      Q.where('account_id', accountId),
-      Q.where('deleted_at', Q.eq(null)),
-      Q.where('workplace_id', workplaceId),
-    ];
-    clauses.push(
-      Q.on('journals', [
-        Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-        Q.where('deleted_at', Q.eq(null)),
-        Q.where('workplace_id', workplaceId),
-      ]),
-    );
-
-    return this.db.collections
-      .get<Transaction>('transactions')
-      .query(...clauses)
-      .observe();
   }
 
   observeMetadata(workplaceId: WorkplaceId, accountId: AccountId): Observable<AccountMetadata[]> {

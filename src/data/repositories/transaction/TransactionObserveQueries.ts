@@ -62,35 +62,6 @@ export class TransactionObserveQueries {
     return this.transactions.query(...buildActiveClauses(workplaceId)).observeWithColumns(columns);
   }
 
-  /**
-   * Observe transactions within a date range.
-   * Use this instead of observeActive() when you only need a bounded window —
-   * avoids deserializing the entire transaction history across the bridge.
-   */
-  observeByDateRange(
-    workplaceId: WorkplaceId,
-    startDate: number,
-    endDate?: number,
-  ): Observable<Transaction[]> {
-    const extra: Q.Clause[] = [Q.where('transaction_date', Q.gte(startDate))];
-    if (endDate !== undefined) {
-      extra.push(Q.where('transaction_date', Q.lte(endDate)));
-    }
-
-    return this.transactions
-      .query(...buildActiveClauses(workplaceId, extra))
-      .observeWithColumns([
-        'amount',
-        'account_id',
-        'transaction_date',
-        'journal_id',
-        'currency_code',
-        'transaction_type',
-        'exchange_rate',
-        'updated_at',
-      ]);
-  }
-
   observeByAccountDateRange(
     workplaceId: WorkplaceId,
     accountId: AccountId,

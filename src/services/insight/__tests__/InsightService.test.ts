@@ -8,10 +8,7 @@ import { journalQueryRepository } from '@/src/data/repositories/journal/journalQ
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionRawPatternQueries } from '@/src/data/repositories/raw/TransactionRawPatternQueries';
 import { transactionInsightQueries } from '@/src/data/repositories/transaction/TransactionInsightQueries';
-import {
-  transactionObserveQueries,
-  transactionQueryRepository,
-} from '@/src/data/repositories/transaction';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { insightService as patternService, Insight } from '@/src/services/insight/InsightService';
 import {
   reactiveCacheCoordinator,
@@ -61,7 +58,6 @@ describe('PatternService', () => {
     // Default simple mocks
     (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of([]));
     (journalQueryRepository.findByIds as jest.Mock).mockResolvedValue([]);
-    (transactionObserveQueries.observeByDateRange as jest.Mock).mockReturnValue(of([]));
     (plannedPaymentRepository.observeActive as jest.Mock).mockReturnValue(of([]));
     (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
     (transactionQueryRepository.findByJournals as jest.Mock).mockResolvedValue([]);
