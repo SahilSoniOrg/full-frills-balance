@@ -1,9 +1,8 @@
 import { SmsMessage } from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
 import { toPlainSmsRule } from '@/src/data/models/TransactionAutoPostRule';
-import TransactionInboxRecord, {
-  toPlainInboxRecord,
-} from '@/src/data/models/TransactionInboxRecord';
+import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
+import { toPlainInboxRecord } from '@/src/data/models/TransactionInboxRecord';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
@@ -73,7 +72,7 @@ class SmsService {
   async findAllByLinkedJournalId(
     workplaceId: WorkplaceId,
     journalId: JournalId,
-  ): Promise<TransactionInboxRecord[]> {
+  ): Promise<InboxRecordSnapshot[]> {
     return transactionInboxRepository.findAllByLinkedJournalId(workplaceId, journalId);
   }
 

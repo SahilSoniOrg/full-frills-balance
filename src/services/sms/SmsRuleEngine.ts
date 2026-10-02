@@ -3,7 +3,7 @@ import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 
 import Transaction from '@/src/data/models/Transaction';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
-import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
+import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import {
@@ -126,7 +126,7 @@ export class SmsRuleEngine {
     return RuleMatcher.compileRule(definition)(data);
   }
 
-  matchesPreviewRule(data: TransactionInboxRecord, input: SmsRulePreviewInput): boolean {
+  matchesPreviewRule(data: InboxRecordSnapshot, input: SmsRulePreviewInput): boolean {
     const parsedRule: ResolvedSmsRule = {
       mode: input.mode,
       senderMatch: input.senderMatch,
@@ -153,7 +153,7 @@ export class SmsRuleEngine {
     workplaceId: WorkplaceId,
     inputOrSender: SmsRulePreviewInput | string,
     bodyMatch?: string,
-  ): Promise<TransactionInboxRecord[]> {
+  ): Promise<InboxRecordSnapshot[]> {
     const previewInput: SmsRulePreviewInput =
       typeof inputOrSender === 'string'
         ? { mode: 'regex', senderMatch: inputOrSender, bodyMatch }

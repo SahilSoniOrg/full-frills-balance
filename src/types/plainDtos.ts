@@ -164,6 +164,7 @@ export interface PlainSmsRule {
 }
 
 export interface PlainInboxRecord {
+  consumedWorkplaces?: { workplaceId: WorkplaceId; name: string }[];
   id: string;
   channel: 'sms' | 'voice';
   deviceSourceId: string;

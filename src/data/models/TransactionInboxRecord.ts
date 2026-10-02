@@ -1,3 +1,4 @@
+import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
 import Journal from '@/src/data/models/Journal';
 import { InboxParseStatus, InboxProcessingStatus, TransactionDirection } from '@/src/types/enums';
@@ -43,7 +44,7 @@ export default class TransactionInboxRecord extends BaseScopedModel {
   @relation('journals', 'linked_journal_id') linkedJournal!: Relation<Journal>;
 }
 
-export function toPlainInboxRecord(record: TransactionInboxRecord): PlainInboxRecord {
+export function toPlainInboxRecord(record: InboxRecordSnapshot): PlainInboxRecord {
   return {
     id: record.id,
     channel: record.channel,
@@ -65,5 +66,6 @@ export function toPlainInboxRecord(record: TransactionInboxRecord): PlainInboxRe
     parseConfidence: record.parseConfidence,
     parseReason: record.parseReason,
     metadataJson: record.metadataJson,
+    consumedWorkplaces: record.consumedWorkplaces,
   };
 }

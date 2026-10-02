@@ -1,5 +1,5 @@
 import Journal from '@/src/data/models/Journal';
-import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
+import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
 import { TransactionType } from '@/src/types/enums';
 import { JournalEntryLine } from '@/src/types/domainJournal';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
@@ -100,7 +100,7 @@ export class JournalService {
   async createJournal(
     data: CreateJournalData,
     workplaceId: WorkplaceId,
-    smsRecord?: TransactionInboxRecord | null,
+    smsRecord?: InboxRecordSnapshot | null,
   ): Promise<Journal> {
     this.clearSuggestionsCache(workplaceId);
     if (!smsRecord) {

@@ -1,3 +1,5 @@
+import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
+import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import ExpoSmsInbox, { SmsMessage } from '@/modules/expo-sms-inbox';
 import { database } from '@/src/data/database/Database';
@@ -17,7 +19,6 @@ import { SmsParser } from '@/src/services/ledger/SmsParser';
 import { smsSyncPipeline } from '@/src/services/sms/pipeline';
 import { computeSmsFingerprint } from '@/src/services/sms/pipeline/smsFingerprint';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { Q } from '@nozbe/watermelondb';
 import { smsMessageFromFixture, SmsFixtureKey } from './smsFixtures';
 
 export const SMS_TEST_WORKPLACE = 'wp-sms-test' as WorkplaceId;
@@ -157,16 +158,11 @@ export async function scanSmsInbox(
 export async function fetchInboxByDeviceId(
   deviceSourceId: string,
   workplaceId: WorkplaceId = SMS_TEST_WORKPLACE,
-): Promise<TransactionInboxRecord | null> {
-  const records = await database.collections
-    .get<TransactionInboxRecord>('transaction_inbox_records')
-    .query(
-      Q.where('device_source_id', deviceSourceId),
-      Q.where('workplace_id', workplaceId),
-      Q.where('channel', 'sms'),
-    )
-    .fetch();
-  return records[0] ?? null;
+): Promise<InboxRecordSnapshot | null> {
+  return (
+    (await transactionInboxRepository.findByDeviceSourceIds(workplaceId, [deviceSourceId]))[0] ??
+    null
+  );
 }
 
 export async function parseFixtureMessage(fixtureKey: SmsFixtureKey, date?: number) {

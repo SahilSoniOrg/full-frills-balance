@@ -1,10 +1,27 @@
 import { AppConfig } from '@/src/constants';
+import { deviceSmsInboxColumns } from './deviceSmsInboxSchema';
 import {
   addColumns,
   createTable,
   schemaMigrations,
   unsafeExecuteSql,
 } from '@nozbe/watermelondb/Schema/migrations';
+
+// JSON1 is unavailable on older Android system SQLite builds. Escape identity strings
+// with core SQLite functions; transaction metadata is deliberately not copied into the Device feed.
+function sqliteJsonString(column: string): string {
+  let escaped = `replace(replace(${column}, char(92), char(92) || char(92)), char(34), char(92) || char(34))`;
+  for (const [code, suffix] of [
+    [8, 'b'],
+    [9, 't'],
+    [10, 'n'],
+    [12, 'f'],
+    [13, 'r'],
+  ] as const) {
+    escaped = `replace(${escaped}, char(${code}), char(92) || '${suffix}')`;
+  }
+  return `char(34) || ${escaped} || char(34)`;
+}
 
 const defaultWorkplaceId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
   const r = (Math.random() * 16) | 0;
@@ -979,6 +996,38 @@ export const migrations = schemaMigrations({
         unsafeExecuteSql(`
           CREATE INDEX IF NOT EXISTS idx_audit_logs_workplace_correlation_timeline
           ON audit_logs (workplace_id, correlation_id, timestamp DESC, id DESC);
+        `),
+        // Schema 33 is unreleased: include Device SMS ownership in the 32 -> 33 upgrade.
+        createTable({ name: 'device_sms_inbox_records', columns: deviceSmsInboxColumns }),
+        // Keep a single Device feed, preserving the oldest identity and per-Workplace review decisions.
+        unsafeExecuteSql(`
+          INSERT INTO device_sms_inbox_records (
+            id, _status, _changed, device_source_id, sender_address, raw_body,
+            input_date, input_fingerprint, parse_status, parsed_amount, parsed_currency_code,
+            parsed_merchant, parsed_account_source, reference_number, direction,
+            parse_confidence, parse_reason, review_states_json, notification_state,
+            notification_origin, first_seen_at, last_scanned_at, created_at, updated_at
+          )
+          SELECT MIN(id), 'created', '', device_source_id, MAX(sender_address), MAX(raw_body),
+            MIN(input_date), input_fingerprint, parse_status, parsed_amount, parsed_currency_code,
+            parsed_merchant, parsed_account_source, reference_number, direction,
+            parse_confidence, parse_reason,
+            '{' || group_concat(
+              ${sqliteJsonString('workplace_id')} || ':{"processingStatus":"' ||
+              CASE WHEN processing_status IN ('imported','auto_posted','dismissed')
+                THEN 'pending' ELSE processing_status END || '","duplicateJournalId":' ||
+              CASE WHEN duplicate_journal_id IS NULL THEN 'null' ELSE ${sqliteJsonString('duplicate_journal_id')} END ||
+              ',"duplicateConfidence":' || COALESCE(duplicate_confidence, 'null') || '}',
+              ','
+            ) || '}',  'none', 'initial', MIN(first_seen_at), MAX(last_scanned_at),
+            MIN(created_at), MAX(updated_at)
+          FROM transaction_inbox_records
+          WHERE channel = 'sms' AND _status <> 'deleted'
+          GROUP BY device_source_id;
+        `),
+        unsafeExecuteSql(`
+          DELETE FROM transaction_inbox_records
+          WHERE channel = 'sms' AND processing_status NOT IN ('imported','auto_posted','dismissed');
         `),
       ],
     },

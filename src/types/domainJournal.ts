@@ -1,4 +1,5 @@
-import { AccountId, JournalId, TransactionId } from './ids';
+import type { AccountId, JournalId, TransactionId, WorkplaceId } from './ids';
+import type { AccountType, TransactionType } from './enums';
 
 export type TabType = 'expense' | 'income' | 'transfer';
 export type AccountRole = 'source' | 'destination';
@@ -31,6 +32,7 @@ export interface TransactionLinkedJournalInfo {
 export type TransactionChannel = 'sms' | 'voice';
 
 export interface TransactionInboxItem {
+  consumedWorkplaces?: { workplaceId: WorkplaceId; name: string }[];
   id: string;
   channel: TransactionChannel;
   deviceSourceId: string;
@@ -74,9 +76,9 @@ export interface JournalEntryLine {
   id: TransactionId;
   accountId: AccountId;
   accountName: string;
-  accountType: import('./enums').AccountType;
+  accountType: AccountType;
   amount: string;
-  transactionType: import('./enums').TransactionType;
+  transactionType: TransactionType;
   notes: string;
   exchangeRate: string;
   accountCurrency?: string;

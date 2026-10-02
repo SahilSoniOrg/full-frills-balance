@@ -1,10 +1,10 @@
 import { SmsMessage } from '@/modules/expo-sms-inbox';
-import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
+import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
 import type { CreateJournalData } from '@/src/types/journalWrite';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { DuplicateMatch } from '@/src/services/sms/smsDuplicateDetection';
 import { InboxProcessingStatus } from '@/src/types/enums';
-import { JournalId } from '@/src/types/ids';
+import type { AccountId, JournalId } from '@/src/types/ids';
 
 export interface SmsContentReservation {
   journalId: JournalId;
@@ -15,13 +15,17 @@ export interface SmsAnalysisResult {
   message: SmsMessage;
   parsed: ParsedTransaction;
   fingerprint: string;
-  existingRecord: TransactionInboxRecord | null;
+  existingRecord: InboxRecordSnapshot | null;
   duplicate: DuplicateMatch;
   exactJournalId?: JournalId;
   finalStatus: InboxProcessingStatus;
   autoPost?: {
     ruleId: string;
     journalData: CreateJournalData;
+  };
+  reviewRule?: {
+    sourceAccountId?: AccountId;
+    categoryAccountId?: AccountId;
   };
 }
 
@@ -31,4 +35,6 @@ export interface AutoPostRuleAnalysis {
   createData?: {
     journalData: CreateJournalData;
   };
+  sourceAccountId?: AccountId;
+  categoryAccountId?: AccountId;
 }

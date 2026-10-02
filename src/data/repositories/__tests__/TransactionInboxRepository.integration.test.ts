@@ -57,9 +57,12 @@ describe('TransactionInboxRepository integration', () => {
       lastScannedAt: 1_700_000_000_100,
     };
 
+    const legacyModel = await database
+      .get<TransactionInboxRecord>('transaction_inbox_records')
+      .find(preparedRecordId);
     await expect(
       repository.persistScanBatch(() => {
-        const prepared = repository.prepareUpsert(secondPayload, created!);
+        const prepared = repository.prepareUpsert(secondPayload, legacyModel);
         return prepared.ops;
       }),
     ).resolves.toBe(true);
@@ -95,7 +98,7 @@ describe('TransactionInboxRepository integration', () => {
       return record.id;
     };
 
-    it('keeps sender and body through dismiss and undismiss, then clears them on import', async () => {
+    it('keeps sender and body through dismiss and undismiss, and retains them after import', async () => {
       const recordId = await seed('sms-dismiss-restore');
 
       await repository.persistStatus(workplaceId, recordId, InboxProcessingStatus.DISMISSED);
@@ -117,19 +120,19 @@ describe('TransactionInboxRepository integration', () => {
         InboxProcessingStatus.IMPORTED,
       );
       const imported = await repository.find(workplaceId, recordId);
-      expect(imported?.senderAddress).toBeFalsy();
-      expect(imported?.rawBody).toBeFalsy();
+      expect(imported?.senderAddress).toBe('HDFCBK');
+      expect(imported?.rawBody).toBe('Debited INR 500 at SWIGGY');
       expect(imported?.metadataJson).not.toContain('SWIGGY');
     });
 
     it.each([InboxProcessingStatus.IMPORTED, InboxProcessingStatus.AUTO_POSTED])(
-      'clears sender and body when status becomes %s',
+      'retains sender and body when status becomes %s',
       async status => {
         const recordId = await seed(`sms-status-${status}`);
         await repository.persistStatus(workplaceId, recordId, status);
         const record = await repository.find(workplaceId, recordId);
-        expect(record?.senderAddress).toBeFalsy();
-        expect(record?.rawBody).toBeFalsy();
+        expect(record?.senderAddress).toBe('HDFCBK');
+        expect(record?.rawBody).toBe('Debited INR 500 at SWIGGY');
       },
     );
 

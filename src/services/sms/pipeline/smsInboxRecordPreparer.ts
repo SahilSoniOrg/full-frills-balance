@@ -1,7 +1,8 @@
 import { SmsMessage } from '@/modules/expo-sms-inbox';
 import Journal from '@/src/data/models/Journal';
-import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
+import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
 import { TransactionInboxRecordWriteData } from '@/src/data/repositories/TransactionInboxRepository';
+import { smsContentDigest } from '@/src/utils/smsDeliveryIdentity';
 import { generator } from '@/src/data/database/idGenerator';
 import type { AccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import type { JournalPersistenceResult } from '@/src/data/repositories/journal/JournalPersistenceRepository';
@@ -12,17 +13,21 @@ import { InboxProcessingStatus } from '@/src/types/enums';
 import { safeParseJSON } from '@/src/utils/serialization';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { AppConfig } from '@/src/constants';
-import { buildReferenceDuplicateMatch } from '@/src/services/sms/smsDuplicateDetection';
+import {
+  buildReferenceDuplicateMatch,
+  type DuplicateMatch,
+} from '@/src/services/sms/smsDuplicateDetection';
+import { preferences } from '@/src/services/preferences';
 import { logger } from '@/src/utils/logger';
 import { resolveProcessingStatus } from './smsFingerprint';
-import { clearsRawSmsContent, sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
+import { sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
 import { SmsAnalysisResult, SmsContentReservation } from './types';
 
 export function prepareUpsertInboxRecord(
   sms: SmsMessage,
   parsed: ParsedTransaction,
   fingerprint: string,
-  existingRecord: TransactionInboxRecord | null,
+  existingRecord: InboxRecordSnapshot | null,
   processingStatus: InboxProcessingStatus,
   workplaceId: WorkplaceId,
   linkedJournalId?: JournalId,
@@ -42,13 +47,16 @@ export function prepareUpsertInboxRecord(
   const rawContent =
     processingStatus === InboxProcessingStatus.DISMISSED
       ? { senderAddress: existingRecord?.senderAddress, rawBody: existingRecord?.rawBody }
-      : clearsRawSmsContent(processingStatus)
-        ? { senderAddress: undefined, rawBody: undefined }
-        : { senderAddress: sms.address, rawBody: sms.body };
+      : { senderAddress: sms.address, rawBody: sms.body };
   return {
     workplaceId,
+    deviceInboxId: existingRecord?.deviceInboxId ?? existingRecord?.id ?? generator(),
+    contentDigest: smsContentDigest(sms.address, sms.body),
+    parseConfidence: parsed.confidence,
+    parseReason: parsed.parseReason,
     channel: 'sms' as const,
-    deviceSourceId: sms.id,
+    deviceSourceId: existingRecord?.deviceSourceId ?? sms.id,
+    providerSourceId: sms.id,
     ...rawContent,
     inputDate: sms.date,
     inputFingerprint: fingerprint,
@@ -74,9 +82,9 @@ export function prepareUpsertInboxRecord(
 export async function processScanBatchItem(params: {
   session: AccountingWriteSession;
   result: SmsAnalysisResult;
-  latestRecord: TransactionInboxRecord | null;
+  latestRecord: InboxRecordSnapshot | null;
   latestJournal: Journal | null;
-  latestReferenceDuplicate?: import('@/src/services/sms/smsDuplicateDetection').DuplicateMatch;
+  latestReferenceDuplicate?: DuplicateMatch;
   latestProcessedIds: Set<string>;
   reservedDeviceIds: Set<string>;
   reservedContents: Map<string, SmsContentReservation[]>;
@@ -170,7 +178,13 @@ export async function processScanBatchItem(params: {
   let auditCorrelationId: string | undefined;
   let journalResult: JournalPersistenceResult | undefined;
 
-  if (result.autoPost && !linkedJournalId && finalStatus === InboxProcessingStatus.PENDING) {
+  if (
+    result.autoPost &&
+    preferences.device.isSmsAutoPostEnabled &&
+    !latestRecord?.consumedWorkplaces?.length &&
+    !linkedJournalId &&
+    finalStatus === InboxProcessingStatus.PENDING
+  ) {
     try {
       auditCorrelationId = generator();
       journalResult = await journalPersistenceService.putInSession(

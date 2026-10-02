@@ -2,6 +2,8 @@ import { generator } from '@/src/data/database/idGenerator';
 import { Database as WatermelonDB } from '@nozbe/watermelondb';
 import { setGenerator } from '@nozbe/watermelondb/utils/common/randomId';
 
+import DeviceSmsInboxRecord from '@/src/data/models/DeviceSmsInboxRecord';
+
 // Models
 import Account from '@/src/data/models/Account';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
@@ -31,6 +33,7 @@ if (generator) {
 export const database = new WatermelonDB({
   adapter,
   modelClasses: [
+    DeviceSmsInboxRecord,
     Account,
     AccountMetadata,
     AuditLog,
