@@ -8,6 +8,9 @@ describe('TransactionInboxRepository integration', () => {
   const repository = new TransactionInboxRepository();
   const workplaceId = 'wp-inbox-owner' as WorkplaceId;
 
+  const persistOps = (prepare: () => Parameters<typeof database.batch>[0]) =>
+    database.write(async () => database.batch(prepare()));
+
   beforeEach(async () => {
     await database.write(async () => {
       await database.unsafeResetDatabase();
@@ -35,13 +38,11 @@ describe('TransactionInboxRepository integration', () => {
     };
 
     let preparedRecordId!: string;
-    await expect(
-      repository.persistScanBatch(() => {
-        const prepared = repository.prepareUpsert(firstPayload, null);
-        preparedRecordId = prepared.record.id;
-        return prepared.ops;
-      }),
-    ).resolves.toBe(true);
+    await persistOps(() => {
+      const prepared = repository.prepareUpsert(firstPayload, null);
+      preparedRecordId = prepared.record.id;
+      return prepared.ops;
+    });
 
     const created = await repository.find(workplaceId, preparedRecordId);
     expect(created?.deviceSourceId).toBe('sms-repository-1');
@@ -60,12 +61,7 @@ describe('TransactionInboxRepository integration', () => {
     const legacyModel = await database
       .get<TransactionInboxRecord>('transaction_inbox_records')
       .find(preparedRecordId);
-    await expect(
-      repository.persistScanBatch(() => {
-        const prepared = repository.prepareUpsert(secondPayload, legacyModel);
-        return prepared.ops;
-      }),
-    ).resolves.toBe(true);
+    await persistOps(() => repository.prepareUpsert(secondPayload, legacyModel).ops);
 
     const updated = await repository.find(workplaceId, preparedRecordId);
     expect(updated?.inputFingerprint).toBe('fingerprint-2');
@@ -170,7 +166,7 @@ describe('TransactionInboxRepository integration', () => {
     };
 
     let preparedRecord!: ReturnType<typeof repository.prepareUpsert>['record'];
-    await repository.persistScanBatch(() => {
+    await persistOps(() => {
       const prepared = repository.prepareUpsert(payload, null);
       preparedRecord = prepared.record;
       return prepared.ops;
@@ -182,37 +178,5 @@ describe('TransactionInboxRepository integration', () => {
         preparedRecord,
       ),
     ).toThrow('Inbox record does not belong to the specified workplace');
-  });
-
-  it('does not persist prepared inbox rows when cancellation arrives before the real batch', async () => {
-    const controller = new AbortController();
-    const afterBatch = jest.fn();
-    const payload = {
-      workplaceId,
-      channel: 'sms' as const,
-      deviceSourceId: 'sms-repository-cancelled',
-      inputDate: 1_700_000_000_000,
-      inputFingerprint: 'fingerprint-cancelled',
-      parseStatus: InboxParseStatus.PARSED,
-      direction: TransactionDirection.DEBIT,
-      processingStatus: InboxProcessingStatus.PENDING,
-      firstSeenAt: 1_700_000_000_000,
-      lastScannedAt: 1_700_000_000_000,
-    };
-
-    await expect(
-      repository.persistScanBatch(
-        () => {
-          const prepared = repository.prepareUpsert(payload, null);
-          controller.abort();
-          return prepared.ops;
-        },
-        afterBatch,
-        controller.signal,
-      ),
-    ).resolves.toBe(false);
-
-    expect(await repository.find(workplaceId, 'sms-repository-cancelled')).toBeNull();
-    expect(afterBatch).not.toHaveBeenCalled();
   });
 });

@@ -253,7 +253,7 @@ describe('Journal ledger integration', () => {
   describe('SMS-linked manual journal creation', () => {
     async function createInboxRecord(deviceSourceId: string) {
       let recordId = '';
-      await transactionInboxRepository.persistScanBatch(() => {
+      await database.write(async () => {
         const prepared = transactionInboxRepository.prepareUpsert(
           {
             workplaceId: 'wp-1' as WorkplaceId,
@@ -270,7 +270,7 @@ describe('Journal ledger integration', () => {
           null,
         );
         recordId = prepared.record.id;
-        return prepared.ops;
+        await database.batch(prepared.ops);
       });
       return transactionInboxRepository.find('wp-1' as WorkplaceId, recordId);
     }
