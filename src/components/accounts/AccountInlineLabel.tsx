@@ -1,10 +1,11 @@
 import { useTheme } from '@/src/hooks/use-theme';
-import { AppText } from '@/src/components/core';
+import { AppIcon, AppText } from '@/src/components/core';
 import { AccountCategoryPill } from '@/src/components/accounts/AccountCategoryPill';
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
 import { useAccountColors } from '@/src/hooks/useAccountColors';
 import { isAccountArchived } from '@/src/utils/accountArchive';
-import { Spacing } from '@/src/constants';
+import { Size, Spacing } from '@/src/constants';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import { StyleSheet, View } from 'react-native';
 
 type TextVariant = 'body' | 'caption' | 'subheading';
@@ -15,6 +16,7 @@ interface AccountInlineLabelProps {
     name: string;
     accountType: string;
     color?: string | null;
+    icon?: string | null;
     archivedAt?: Date | number | null;
   } | null;
   placeholder?: string;
@@ -23,6 +25,8 @@ interface AccountInlineLabelProps {
   numberOfLines?: number;
   /** Size of the category pill. */
   pillSize?: 'sm' | 'md';
+  /** Display the account's icon instead of the category marker. */
+  showIcon?: boolean;
   /** Override the text color (defaults to the account accent color). */
   textColor?: string;
   /** Optional pre-resolved colors to avoid re-computing hook values. */
@@ -43,6 +47,7 @@ export function AccountInlineLabel({
   weight = 'medium',
   numberOfLines = 1,
   pillSize = 'md',
+  showIcon = false,
   textColor,
   colors,
 }: AccountInlineLabelProps) {
@@ -68,7 +73,11 @@ export function AccountInlineLabel({
 
   return (
     <View style={styles.row}>
-      <AccountCategoryPill color={categoryColor} size={pillSize} />
+      {showIcon ? (
+        <AppIcon name={getAccountIcon(account)} size={Size.iconXs} color={accentColor} />
+      ) : (
+        <AccountCategoryPill color={categoryColor} size={pillSize} />
+      )}
       {archived ? <ArchivedAccountIndicator emphasized /> : null}
       <AppText
         variant={variant}
@@ -87,5 +96,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
+    flexShrink: 1,
+    minWidth: 0,
   },
 });
