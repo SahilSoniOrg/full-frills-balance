@@ -197,6 +197,57 @@ describe('useJournalSuggestionApplication', () => {
     expect(result.current.session.editor.lines).toEqual(initialLines);
   });
 
+  it.each([
+    { sources: [], destinations: incomeSuggestion.route.destinations },
+    { sources: incomeSuggestion.route.sources, destinations: [] },
+    {
+      sources: [{ ...incomeSuggestion.route.sources[0], id: asAccountId('missing') }],
+      destinations: incomeSuggestion.route.destinations,
+    },
+    {
+      sources: incomeSuggestion.route.sources,
+      destinations: [{ ...incomeSuggestion.route.destinations[0], id: asAccountId('missing') }],
+    },
+  ])('leaves accounts untouched for an incomplete route %#', route => {
+    const { result } = renderSuggestionSession();
+    const initialLines = result.current.session.editor.lines;
+    act(() => result.current.applySuggestion({ ...incomeSuggestion, route }));
+    expect(result.current.session.editor.description).toBe(incomeSuggestion.description);
+    expect(result.current.session.editor.lines).toEqual(initialLines);
+  });
+
+  it('fills an existing split row without duplicating selected accounts or losing its inputs', () => {
+    const { result } = renderSuggestionSession({
+      mode: 'allocation',
+      source: asAccountId('salary'),
+      destination: asAccountId('cash'),
+    });
+    act(() => result.current.session.editor.addLine());
+    const row = result.current.session.editor.lines.at(-1)!;
+    act(() => result.current.session.editor.updateLine(row.id, { amount: '25', notes: 'Bonus' }));
+    act(() =>
+      result.current.applySuggestion({
+        ...incomeSuggestion,
+        route: {
+          ...incomeSuggestion.route,
+          destinations: [
+            { id: asAccountId('cash'), name: 'Cash', type: AccountType.ASSET },
+            ...incomeSuggestion.route.destinations,
+          ],
+        },
+      }),
+    );
+    expect(result.current.session.editor.lines).toHaveLength(3);
+    expect(result.current.session.editor.lines.find(line => line.id === row.id)).toMatchObject({
+      accountId: asAccountId('bank'),
+      accountName: 'Bank',
+      accountType: AccountType.ASSET,
+      accountCurrency: 'USD',
+      amount: '25',
+      notes: 'Bonus',
+    });
+  });
+
   it('keeps account-details income suggestions saveable without a hidden destination', async () => {
     const { journalService } = jest.requireMock('@/src/services/journal/journalDomainService');
     journalService.postPostingPlan.mockResolvedValue({ success: true, action: 'created' });
