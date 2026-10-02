@@ -221,38 +221,30 @@ export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPick
         return;
       }
 
+      const side = target.role === 'source' ? TransactionType.CREDIT : TransactionType.DEBIT;
+      let inferredType = AccountType.ASSET;
+      let returnTarget: AccountCreationReturnTarget = { kind: 'line', lineId: target.rowId };
       if (target.kind === 'batchRow') {
         const row = batchEditor?.rows.find(item => item.id === target.rowId);
         if (!row) return;
-        const side = target.role === 'source' ? TransactionType.CREDIT : TransactionType.DEBIT;
-        AppNavigation.toAccountForm(undefined, {
-          name: intent.suggestedName,
-          type: intent.type || getInferredAccountType(row.transactionType, side),
-          returnTarget: { kind: 'batchRow', rowId: target.rowId, role: target.role },
-        });
-        return;
-      }
-
-      if (target.kind === 'splitRow') {
-        const row = splitRows.find(item => item.id === target.rowId);
+        inferredType = getInferredAccountType(row.transactionType, side);
+        returnTarget = { kind: 'batchRow', rowId: target.rowId, role: target.role };
+      } else if (target.kind === 'splitRow') {
         // The source account belongs to the split entry, not to an allocation
         // row. It must remain creatable even when the last allocation row was
         // removed or an older draft loads without one.
-        if (target.role !== 'source' && !row) return;
-        const lineId = target.role === 'source' ? SPLIT_SOURCE_LINE_ID : target.rowId;
-        const side = target.role === 'source' ? TransactionType.CREDIT : TransactionType.DEBIT;
-        AppNavigation.toAccountForm(undefined, {
-          name: intent.suggestedName,
-          type: intent.type || getInferredAccountType(editor.transactionType, side),
-          returnTarget: { kind: 'line', lineId },
-        });
-        return;
+        if (target.role !== 'source' && !splitRows.some(row => row.id === target.rowId)) return;
+        inferredType = getInferredAccountType(editor.transactionType, side);
+        returnTarget = {
+          kind: 'line',
+          lineId: target.role === 'source' ? SPLIT_SOURCE_LINE_ID : target.rowId,
+        };
       }
 
       AppNavigation.toAccountForm(undefined, {
         name: intent.suggestedName,
-        type: intent.type || AccountType.ASSET,
-        returnTarget: { kind: 'line', lineId: target.rowId },
+        type: intent.type || inferredType,
+        returnTarget,
       });
     },
     [batchEditor, editor, navigateToAccountForm, splitRows],

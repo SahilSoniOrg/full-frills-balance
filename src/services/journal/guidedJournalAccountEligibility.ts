@@ -43,59 +43,31 @@ export function resolveGuidedAccountsAfterTabChange(
   sourceAccountId: AccountId,
   destinationAccountId: AccountId,
 ): { sourceAccountId: AccountId; destinationAccountId: AccountId } {
-  const balanceSheetPool: AccountId[] = [];
-
-  const considerLine = (accountId: AccountId) => {
-    if (!accountId) return;
-    const account = accountsById.get(accountId);
-    if (!account) return;
-    if (isCategoryAccountType(account.accountType)) return;
-    if (isBalanceSheetAccount(account.accountType)) {
-      balanceSheetPool.push(accountId);
-    }
+  const balanceSheetPool = [...new Set([sourceAccountId, destinationAccountId])].filter(id => {
+    const account = accountsById.get(id);
+    return id && account && isBalanceSheetAccount(account.accountType);
+  });
+  const canKeep = (id: AccountId, side: TransactionType) => {
+    const account = accountsById.get(id);
+    return (
+      account &&
+      !isCategoryAccountType(account.accountType) &&
+      isAccountAllowedOnGuidedLeg(account, newType, side)
+    );
   };
+  const tryFill = (side: TransactionType, current: AccountId, opposite: AccountId): AccountId =>
+    current ||
+    balanceSheetPool.find(id => id !== opposite && canKeep(id, side)) ||
+    EMPTY_ACCOUNT_ID;
 
-  considerLine(sourceAccountId);
-  considerLine(destinationAccountId);
-
-  const uniquePool = [...new Set(balanceSheetPool)];
-
-  let nextSource = sourceAccountId;
-  let nextDest = destinationAccountId;
-
-  const sourceAccount = accountsById.get(sourceAccountId);
-  if (
-    !sourceAccount ||
-    isCategoryAccountType(sourceAccount.accountType) ||
-    !isAccountAllowedOnGuidedLeg(sourceAccount, newType, TransactionType.CREDIT)
-  ) {
-    nextSource = EMPTY_ACCOUNT_ID;
-  }
-
-  const destAccount = accountsById.get(destinationAccountId);
-  if (
-    !destAccount ||
-    isCategoryAccountType(destAccount.accountType) ||
-    !isAccountAllowedOnGuidedLeg(destAccount, newType, TransactionType.DEBIT)
-  ) {
-    nextDest = EMPTY_ACCOUNT_ID;
-  }
-
-  const tryFill = (side: TransactionType, current: AccountId): AccountId => {
-    if (current) return current;
-    for (const id of uniquePool) {
-      const account = accountsById.get(id);
-      if (!account) continue;
-      if (!isAccountAllowedOnGuidedLeg(account, newType, side)) continue;
-      if (side === TransactionType.CREDIT && id === nextDest) continue;
-      if (side === TransactionType.DEBIT && id === nextSource) continue;
-      return id;
-    }
-    return current;
-  };
-
-  nextSource = tryFill(TransactionType.CREDIT, nextSource);
-  nextDest = tryFill(TransactionType.DEBIT, nextDest);
+  let nextSource = canKeep(sourceAccountId, TransactionType.CREDIT)
+    ? sourceAccountId
+    : EMPTY_ACCOUNT_ID;
+  let nextDest = canKeep(destinationAccountId, TransactionType.DEBIT)
+    ? destinationAccountId
+    : EMPTY_ACCOUNT_ID;
+  nextSource = tryFill(TransactionType.CREDIT, nextSource, nextDest);
+  nextDest = tryFill(TransactionType.DEBIT, nextDest, nextSource);
 
   return { sourceAccountId: nextSource, destinationAccountId: nextDest };
 }

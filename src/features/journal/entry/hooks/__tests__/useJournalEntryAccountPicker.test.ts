@@ -1,7 +1,14 @@
 import { act, renderHook } from '@testing-library/react-native';
-import { useJournalEntryAccountPicker } from '../useJournalEntryAccountPicker';
+import {
+  useJournalEntryAccountPicker,
+  type JournalAccountCreateTarget,
+} from '../useJournalEntryAccountPicker';
+import { AccountType } from '@/src/types/enums';
 import { AppNavigation } from '@/src/utils/navigation';
-import { encodeAccountCreationReturnTarget } from '@/src/utils/accountCreationReturn';
+import {
+  encodeAccountCreationReturnTarget,
+  type AccountCreationReturnTarget,
+} from '@/src/utils/accountCreationReturn';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
 
 jest.mock('@/src/utils/navigation', () => ({
@@ -62,6 +69,110 @@ describe('useJournalEntryAccountPicker', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSearchParams = {};
+  });
+
+  it.each([
+    {
+      target: { kind: 'role', role: 'source' },
+      type: AccountType.INCOME,
+      returnTarget: { kind: 'line', lineId: 'source-line' },
+    },
+    {
+      target: { kind: 'role', role: 'destination' },
+      type: AccountType.ASSET,
+      returnTarget: { kind: 'line', lineId: 'destination-line' },
+    },
+    {
+      target: { kind: 'batchRow', rowId: 'row-1', role: 'source' },
+      type: AccountType.ASSET,
+      returnTarget: { kind: 'batchRow', rowId: 'row-1', role: 'source' },
+    },
+    {
+      target: { kind: 'batchRow', rowId: 'row-1', role: 'destination' },
+      type: AccountType.EXPENSE,
+      returnTarget: { kind: 'batchRow', rowId: 'row-1', role: 'destination' },
+    },
+    {
+      target: { kind: 'splitRow', rowId: 'split-1', role: 'source' },
+      type: AccountType.INCOME,
+      returnTarget: { kind: 'line', lineId: SPLIT_SOURCE_LINE_ID },
+    },
+    {
+      target: { kind: 'splitRow', rowId: 'split-1', role: 'destination' },
+      type: AccountType.ASSET,
+      returnTarget: { kind: 'line', lineId: 'split-1' },
+    },
+    {
+      target: { kind: 'advancedRow', rowId: 'advanced-1', role: 'source' },
+      type: AccountType.ASSET,
+      returnTarget: { kind: 'line', lineId: 'advanced-1' },
+    },
+  ] satisfies {
+    target: JournalAccountCreateTarget;
+    type: AccountType;
+    returnTarget: AccountCreationReturnTarget;
+  }[])(
+    'preserves account type and return route for $target.kind $target.role',
+    ({ target, type, returnTarget }) => {
+      const editor = createEditor();
+      editor.transactionType = 'income';
+      const { result } = renderHook(() =>
+        useJournalEntryAccountPicker({
+          accounts: [],
+          editor,
+          activeMode: 'basic',
+          applyAccountToActiveLine: jest.fn(),
+          batchEditor: createBatchEditor(),
+          splitRows: [{ id: 'split-1' }],
+        }),
+      );
+      act(() => result.current.onCreateAccountForTarget(target, { suggestedName: 'New account' }));
+      expect(AppNavigation.toAccountForm).toHaveBeenCalledTimes(1);
+      expect(AppNavigation.toAccountForm).toHaveBeenCalledWith(undefined, {
+        name: 'New account',
+        type,
+        returnTarget,
+      });
+    },
+  );
+
+  it('uses an explicitly requested account type over the inferred type', () => {
+    const { result } = renderHook(() =>
+      useJournalEntryAccountPicker({
+        accounts: [],
+        editor: createEditor(),
+        activeMode: 'allocation',
+        applyAccountToActiveLine: jest.fn(),
+      }),
+    );
+    act(() =>
+      result.current.onCreateAccountForTarget(
+        { kind: 'splitRow', rowId: '', role: 'source' },
+        { suggestedName: 'New liability', type: AccountType.LIABILITY },
+      ),
+    );
+    expect(AppNavigation.toAccountForm).toHaveBeenCalledWith(
+      undefined,
+      expect.objectContaining({ type: AccountType.LIABILITY }),
+    );
+  });
+
+  it.each([
+    { kind: 'batchRow', rowId: 'missing', role: 'source' },
+    { kind: 'splitRow', rowId: 'missing', role: 'destination' },
+  ] satisfies JournalAccountCreateTarget[])('ignores removed $kind targets', target => {
+    const { result } = renderHook(() =>
+      useJournalEntryAccountPicker({
+        accounts: [],
+        editor: createEditor(),
+        activeMode: 'basic',
+        applyAccountToActiveLine: jest.fn(),
+        batchEditor: createBatchEditor(),
+        splitRows: [],
+      }),
+    );
+    act(() => result.current.onCreateAccountForTarget(target, { suggestedName: 'New account' }));
+    expect(AppNavigation.toAccountForm).not.toHaveBeenCalled();
   });
 
   it('allows source account creation without an allocation row', () => {

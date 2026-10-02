@@ -17,28 +17,26 @@ function createInitialLines({
   initialSourceId,
   initialDestinationId,
 }: UseJournalEditorLineStateProps): JournalEntryLine[] {
+  const defaults = {
+    accountName: '',
+    accountType: AccountType.ASSET,
+    amount: initialAmount || '',
+    ...(initialCurrencyCode ? { accountCurrency: initialCurrencyCode } : {}),
+    notes: '',
+    exchangeRate: '',
+  };
   return [
     {
+      ...defaults,
       id: '1' as TransactionId,
       accountId: initialDestinationId || EMPTY_ACCOUNT_ID,
-      accountName: '',
-      accountType: AccountType.ASSET,
-      amount: initialAmount || '',
-      ...(initialCurrencyCode ? { accountCurrency: initialCurrencyCode } : {}),
       transactionType: TransactionType.DEBIT,
-      notes: '',
-      exchangeRate: '',
     },
     {
+      ...defaults,
       id: '2' as TransactionId,
       accountId: initialSourceId || EMPTY_ACCOUNT_ID,
-      accountName: '',
-      accountType: AccountType.ASSET,
-      amount: initialAmount || '',
-      ...(initialCurrencyCode ? { accountCurrency: initialCurrencyCode } : {}),
       transactionType: TransactionType.CREDIT,
-      notes: '',
-      exchangeRate: '',
     },
   ];
 }

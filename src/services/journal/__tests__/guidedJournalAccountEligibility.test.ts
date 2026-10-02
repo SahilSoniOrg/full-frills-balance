@@ -1,5 +1,5 @@
 import type { AccountFields } from '@/src/types/plainDtos';
-import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
+import { AccountId, asAccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import {
   filterGuidedLegAccounts,
@@ -73,4 +73,39 @@ describe('guidedJournalAccountEligibility', () => {
     expect(result.sourceAccountId).toBe(EMPTY_ACCOUNT_ID);
     expect(result.destinationAccountId).toBe(cash.id);
   });
+
+  it.each([
+    ['income', 'cash', 'food', '', 'cash'],
+    ['expense', 'salary', 'cash', 'cash', ''],
+    ['transfer', 'cash', 'food', 'cash', ''],
+    ['income', 'cash', 'parent', '', 'parent'],
+    ['expense', 'parent', 'cash', 'parent', ''],
+    ['transfer', 'cash', 'parent', 'cash', 'parent'],
+    ['income', 'equity', 'food', '', ''],
+    ['transfer', 'equity', 'salary', 'equity', ''],
+    ['expense', 'missing', 'cash', 'cash', ''],
+    ['transfer', 'missing', 'cash', '', 'cash'],
+    ['expense', '', '', '', ''],
+    ['income', 'cash', 'cash', '', 'cash'],
+    ['transfer', 'cash', 'cash', 'cash', 'cash'],
+    ['income', 'salary', 'cash', '', 'cash'],
+  ] as const)(
+    'switches to %s with %s → %s as %s → %s',
+    (tab, source, destination, nextSource, nextDestination) => {
+      const byId = new Map(
+        [cash, food, salary, equity, parent].map(account => [account.id, account]),
+      );
+      expect(
+        resolveGuidedAccountsAfterTabChange(
+          tab,
+          byId,
+          asAccountId(source),
+          asAccountId(destination),
+        ),
+      ).toEqual({
+        sourceAccountId: nextSource,
+        destinationAccountId: nextDestination,
+      });
+    },
+  );
 });
