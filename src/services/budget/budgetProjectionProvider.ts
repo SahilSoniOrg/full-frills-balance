@@ -2,6 +2,7 @@ import { BudgetUsage } from '@/src/services/budget/types';
 import { AccountId } from '@/src/types/ids';
 import dayjs from 'dayjs';
 import { BudgetPeriodUtils } from './BudgetPeriodUtils';
+import { parseBudgetAssetAccountIds } from './budgetAssetAccountIds';
 import {
   BudgetCapacityProjection,
   BudgetCycleCapacity,
@@ -23,13 +24,8 @@ export function projectBudgetCapacities(
   const startOfSim = dayjs(context.simulationStartMs).startOf('day');
 
   const getTargetAssetAccountIds = (budget: SimulationBudget): AccountId[] => {
-    if (budget.assetAccountIds) {
-      const ids = budget.assetAccountIds
-        .split(',')
-        .map((id: string) => id.trim())
-        .filter(Boolean) as AccountId[];
-      if (ids.length > 0) return ids;
-    }
+    const ids = parseBudgetAssetAccountIds(budget.assetAccountIds);
+    if (ids.length > 0) return ids;
     return context.orderedLiquidAccountIds.length > 0 ? [context.orderedLiquidAccountIds[0]] : [];
   };
 
