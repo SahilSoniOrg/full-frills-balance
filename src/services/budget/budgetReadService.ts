@@ -96,7 +96,7 @@ export class BudgetReadService {
             }
 
             return transactionQueryRepository
-              .observeBudgetTransactions(
+              .observeBudgetTransactionsByJournalDateRange(
                 workplaceId,
                 Array.from(leafExpenseIds),
                 startOfMonth,

@@ -7,6 +7,8 @@ import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import dayjs from 'dayjs';
+import { firstValueFrom } from 'rxjs';
+import { filter, timeout } from 'rxjs/operators';
 
 describe('budgetReadService', () => {
   let expenseParentId: string;
@@ -187,6 +189,52 @@ describe('budgetReadService', () => {
     expect(lastUsage).toBeDefined();
     expect(lastUsage.spent).toBe(200);
     expect(lastUsage.remaining).toBe(300);
+  });
+
+  it('uses the journal date when legacy transaction dates belong to another period', async () => {
+    const workplaceId = 'wp-1' as WorkplaceId;
+    const budget = await budgetRepository.create(
+      workplaceId,
+      { name: 'Food', amount: 500, currencyCode: 'USD', startMonth: '2023-10' },
+      [expenseChildId as AccountId],
+    );
+    const entry = await createJournalFixture(
+      {
+        journalDate: dayjs('2023-09-15').valueOf(),
+        currencyCode: 'USD',
+        transactions: [
+          {
+            accountId: expenseChildId as AccountId,
+            amount: 42.25,
+            transactionType: TransactionType.DEBIT,
+          },
+          {
+            accountId: assetId as AccountId,
+            amount: 42.25,
+            transactionType: TransactionType.CREDIT,
+          },
+        ],
+      },
+      workplaceId,
+    );
+    await database.write(async () => {
+      await entry.update(record => {
+        record.journalDate = dayjs('2023-10-15').valueOf();
+      });
+    });
+    const usage = await firstValueFrom(
+      budgetReadService.observeBudgetUsage(workplaceId, budget.id, '2023-10').pipe(
+        filter(value => value.spent === 42.25),
+        timeout({ first: 2000 }),
+      ),
+    );
+    expect(usage.remaining).toBe(457.75);
+    const prior = await firstValueFrom(
+      budgetReadService
+        .observeBudgetUsage(workplaceId, budget.id, '2023-09')
+        .pipe(timeout({ first: 2000 })),
+    );
+    expect(prior.spent).toBe(0);
   });
 
   it('returns empty usage when budget belongs to another workplace', async () => {
