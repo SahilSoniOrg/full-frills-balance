@@ -2,6 +2,57 @@ import { Icon, IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { PlannedPaymentInterval, JournalDisplayType } from '@/src/types/enums';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
+import { PlannedPaymentObligation } from '@/src/services/planned-payment/plannedPaymentReadService';
+import { ComponentVariant } from '@/src/utils/style-helpers';
+import { formatRecurrence } from '@/src/utils/recurrenceLabels';
+import dayjs from 'dayjs';
+
+export function presentPlannedPaymentDue(
+  item: Pick<PlannedPaymentObligation, 'status' | 'nextDueOccurrence'>,
+  now: number,
+): { label: string; color: ComponentVariant; helpText?: string; days?: number } {
+  if (item.status === 'PAUSED') {
+    return {
+      label: 'Paused',
+      color: 'secondary',
+      helpText: 'Resume the schedule to record or skip an occurrence.',
+    };
+  }
+  if (item.nextDueOccurrence === undefined) {
+    return {
+      label: item.status === 'COMPLETED' ? 'Completed' : 'No upcoming occurrence',
+      color: 'secondary',
+      helpText:
+        item.status === 'COMPLETED'
+          ? 'This schedule has ended. Edit its dates to plan more occurrences.'
+          : undefined,
+    };
+  }
+  const days = dayjs(item.nextDueOccurrence).startOf('day').diff(dayjs(now).startOf('day'), 'day');
+  return {
+    label:
+      days < 0
+        ? `${Math.abs(days)} ${days === -1 ? 'day' : 'days'} overdue`
+        : days === 0
+          ? 'Due today'
+          : days === 1
+            ? 'Due tomorrow'
+            : `Due in ${days} days`,
+    color: days < 0 ? 'error' : days <= 1 ? 'warning' : 'secondary',
+    days,
+  };
+}
+
+export function groupPlannedPaymentEntries(history: EnrichedJournal[]) {
+  return {
+    scheduled: history
+      .filter(entry => entry.status === 'PLANNED' || entry.status === 'PAUSED')
+      .sort((a, b) => a.journalDate - b.journalDate),
+    recorded: history
+      .filter(entry => entry.status !== 'PLANNED' && entry.status !== 'PAUSED')
+      .sort((a, b) => b.journalDate - a.journalDate),
+  };
+}
 
 interface PlannedPaymentRecurrence {
   intervalN: number;
@@ -16,25 +67,7 @@ export function formatPlannedPaymentInterval({
   recurrenceDay,
   recurrenceMonth,
 }: PlannedPaymentRecurrence): string {
-  let baseLabel = '';
-  if (intervalN === 1) {
-    switch (intervalType) {
-      case PlannedPaymentInterval.DAILY:
-        baseLabel = AppConfig.strings.plannedPayments.everyDay;
-        break;
-      case PlannedPaymentInterval.WEEKLY:
-        baseLabel = AppConfig.strings.plannedPayments.everyWeek;
-        break;
-      case PlannedPaymentInterval.MONTHLY:
-        baseLabel = AppConfig.strings.plannedPayments.everyMonth;
-        break;
-      case PlannedPaymentInterval.YEARLY:
-        baseLabel = AppConfig.strings.plannedPayments.everyYear;
-        break;
-    }
-  } else {
-    baseLabel = AppConfig.strings.plannedPayments.everyN(intervalN, intervalType.toLowerCase());
-  }
+  const baseLabel = formatRecurrence({ intervalN, intervalType });
 
   let detailLabel = '';
   if (intervalType === PlannedPaymentInterval.WEEKLY && recurrenceDay != null) {
@@ -55,7 +88,7 @@ export function formatPlannedPaymentInterval({
 export interface PlannedPaymentHistoryPresentation {
   label: string;
   typeIcon: IconName;
-  typeColor: string;
+  typeColor: ComponentVariant;
   isOverdue: boolean;
 }
 
@@ -63,38 +96,45 @@ export function getPlannedPaymentHistoryPresentation(
   journal: EnrichedJournal,
   now: number,
 ): PlannedPaymentHistoryPresentation {
-  const dateValue = new Date(journal.journalDate).setHours(0, 0, 0, 0);
-  const today = new Date(now).setHours(0, 0, 0, 0);
-  const tomorrow = new Date(now + 86400000).setHours(0, 0, 0, 0);
+  const dateValue = dayjs(journal.journalDate).startOf('day').valueOf();
+  const today = dayjs(now).startOf('day').valueOf();
+  const tomorrow = dayjs(now).add(1, 'day').startOf('day').valueOf();
 
   const isOverdue = journal.status === 'PLANNED' && dateValue < today;
   const isDueSoon = journal.status === 'PLANNED' && (dateValue === today || dateValue === tomorrow);
 
   let label = 'Posted';
   if (journal.status === 'PLANNED') {
-    if (dateValue === today) label = 'Due Today';
+    if (isOverdue) label = 'Overdue';
+    else if (dateValue === today) label = 'Due Today';
     else if (dateValue === tomorrow) label = 'Due Tomorrow';
     else label = 'Scheduled';
   } else if (journal.status === 'SKIPPED') {
     label = 'Skipped';
   } else if (journal.status === 'PAUSED') {
     label = 'Paused';
+  } else if (journal.status === 'REVERSED') {
+    label = 'Reversed';
   }
 
-  let typeColor = 'textSecondary';
+  let typeColor: ComponentVariant = 'secondary';
   if (journal.status === 'PLANNED') {
     if (isOverdue) typeColor = 'error';
     else if (isDueSoon) typeColor = 'warning';
-    else typeColor = 'textSecondary';
-  } else if (journal.status === 'SKIPPED' || journal.status === 'PAUSED') {
-    typeColor = 'textSecondary';
+    else typeColor = 'secondary';
+  } else if (
+    journal.status === 'SKIPPED' ||
+    journal.status === 'PAUSED' ||
+    journal.status === 'REVERSED'
+  ) {
+    typeColor = 'secondary';
   } else {
     typeColor =
       journal.displayType === JournalDisplayType.INCOME
         ? 'income'
         : journal.displayType === JournalDisplayType.EXPENSE
           ? 'expense'
-          : 'transfer';
+          : 'secondary';
   }
 
   const typeIcon: IconName =

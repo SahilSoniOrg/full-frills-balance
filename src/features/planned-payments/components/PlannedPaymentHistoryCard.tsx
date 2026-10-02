@@ -1,13 +1,11 @@
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { Icon, AppIcon, AppSurface, Badge, IconName, AppText } from '@/src/components/core';
-import { Opacity, Spacing } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
-import { Box, Column, Row } from '@/src/design-system';
-import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
+import { Opacity } from '@/src/constants';
+import { Column, Row } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDate } from '@/src/utils/dateUtils';
-import { useMemo } from 'react';
 import { TouchableOpacity } from 'react-native';
+import { ComponentVariant, getVariantMainColor } from '@/src/utils/style-helpers';
 
 export interface PlannedPaymentHistoryCardProps {
   journalId: string;
@@ -15,36 +13,25 @@ export interface PlannedPaymentHistoryCardProps {
   journalAmount: number;
   currencyCode: string;
   journalDate: number | Date;
-
-  // The reference planned payment info to compare against
   plannedAmount: number;
+  plannedCurrencyCode?: string;
   plannedTitle: string;
-
-  presentation: {
-    label: string; // e.g. "Scheduled" or "Posted"
-    typeIcon: IconName; // e.g. 'arrowUp', 'arrowDown'
-    typeColor: string; // e.g. 'income', 'expense', 'textSecondary'
-  };
-
+  presentation: { label: string; typeIcon: IconName; typeColor: ComponentVariant };
   isOverdue?: boolean;
   isSelected?: boolean;
   isSelectionModeActive?: boolean;
-
   onPress?: () => void;
   onLongPress?: () => void;
 }
 
-/**
- * Custom Card designed specifically for Planned Payment History.
- * Emphasizes the Date (acting as title) and highlights if the generated journal
- * deviated from the base rule (e.g. amount changed).
- */
-export const PlannedPaymentHistoryCard = ({
+/** Show the occurrence first; keep differences from the rule readable without repeating it. */
+export function PlannedPaymentHistoryCard({
   journalTitle,
   journalAmount,
   currencyCode,
   journalDate,
   plannedAmount,
+  plannedCurrencyCode = currencyCode,
   plannedTitle,
   presentation,
   isOverdue,
@@ -52,122 +39,68 @@ export const PlannedPaymentHistoryCard = ({
   isSelectionModeActive,
   onPress,
   onLongPress,
-}: PlannedPaymentHistoryCardProps) => {
-  const { theme, themeMode } = useTheme();
-  const { resolvedHourCycle } = useHourCyclePrefs();
+}: PlannedPaymentHistoryCardProps) {
+  const { theme } = useTheme();
   const formatMoney = useMoneyFormat();
-  const formattedDate = useMemo(
-    () => formatDate(journalDate, { includeTime: true, hourCycle: resolvedHourCycle }),
-    [journalDate, resolvedHourCycle],
-  );
-
-  // Check for deviations from the base rule configuration
-  const isAmountDeviated = Math.abs(journalAmount - plannedAmount) > 0.01; // float safety
-  const isTitleDeviated = journalTitle !== plannedTitle;
-
+  const amountChanged =
+    currencyCode !== plannedCurrencyCode || Math.abs(journalAmount - plannedAmount) > 0.01;
+  const titleChanged = journalTitle !== plannedTitle;
+  const date = formatDate(journalDate);
+  const amount = formatMoney(journalAmount, currencyCode);
   const content = (
-    <Column padding="lg">
-      <Row justify="space-between" align="center" marginBottom="md">
-        <Row flex={1} marginRight="sm" align="center" gap="xs">
-          {isSelectionModeActive ? (
+    <Column padding="md" gap="sm">
+      <Row align="center" justify="space-between" gap="sm" flexWrap="wrap">
+        <Row align="center" gap="xs" flexShrink={1}>
+          {isSelectionModeActive && (
             <AppIcon
               name={isSelected ? Icon.CheckSquare : Icon.Square}
               size={18}
               color={isSelected ? theme.primary : theme.textTertiary}
             />
-          ) : null}
-          <AppText variant="subheading" weight="bold" numberOfLines={1} style={{ flexShrink: 1 }}>
-            {formattedDate}
+          )}
+          <AppText variant="body" weight="semibold">
+            {date}
           </AppText>
         </Row>
-
-        <Badge
-          variant="default"
-          size="sm"
-          backgroundColor={withOpacity(
-            theme[presentation.typeColor as keyof typeof theme] as string,
-            themeMode === 'dark' ? Opacity.muted : Opacity.soft,
-          )}
-          textColor={theme[presentation.typeColor as keyof typeof theme] as string}
-          icon={presentation.typeIcon}
-          style={{ borderRightWidth: 0 }}
-        >
+        <Badge variant={isOverdue ? 'error' : 'default'} size="sm">
           {presentation.label}
         </Badge>
       </Row>
-
-      <Box unsafe_backgroundRaw={withOpacity('#000', Opacity.ghost)} padding="md" borderRadius="md">
-        <Row gap="md">
-          <Column flex={1}>
-            <AppText variant="caption" color="secondary" style={{ marginBottom: Spacing.xs }}>
-              AMOUNT
-            </AppText>
-            <Row align="center" gap="xs">
-              <AppText
-                variant="body"
-                weight="bold"
-                style={{ color: theme[presentation.typeColor as keyof typeof theme] as string }}
-              >
-                {formatMoney(journalAmount, currencyCode)}
-              </AppText>
-              {isAmountDeviated && (
-                <Box
-                  unsafe_backgroundRaw={withOpacity(theme.warning, Opacity.soft)}
-                  padding={2}
-                  borderRadius="full"
-                >
-                  <AppIcon name={Icon.Error} size={12} color={theme.warning} />
-                </Box>
-              )}
-            </Row>
-            {isAmountDeviated && (
-              <AppText
-                variant="caption"
-                color="warning"
-                style={{ opacity: 0.8, marginTop: 2, fontSize: 10 }}
-              >
-                Originally {formatMoney(plannedAmount, currencyCode)}
-              </AppText>
-            )}
-          </Column>
-
-          <Column flex={1}>
-            <AppText variant="caption" color="secondary" style={{ marginBottom: Spacing.xs }}>
-              TITLE
-            </AppText>
-            <Row align="center" style={{ flexShrink: 1 }}>
-              <AppText variant="body" numberOfLines={1} style={{ flexShrink: 1 }}>
-                {journalTitle || 'No Title'}
-              </AppText>
-              {isTitleDeviated && (
-                <Box
-                  unsafe_backgroundRaw={withOpacity(theme.primary, Opacity.soft)}
-                  marginLeft="xs"
-                  padding={2}
-                  borderRadius="full"
-                >
-                  <AppIcon name={Icon.Edit} size={12} color={theme.primary} />
-                </Box>
-              )}
-            </Row>
-          </Column>
-        </Row>
-      </Box>
+      <Row align="center" gap="xs">
+        <AppIcon
+          name={presentation.typeIcon}
+          size={18}
+          color={getVariantMainColor(theme, presentation.typeColor)}
+        />
+        <AppText
+          variant="subheading"
+          weight="bold"
+          style={{ flexShrink: 1 }}
+          color={presentation.typeColor}
+        >
+          {amount}
+        </AppText>
+      </Row>
+      {amountChanged && (
+        <AppText variant="caption" color="secondary">
+          Scheduled amount: {formatMoney(plannedAmount, plannedCurrencyCode)}
+        </AppText>
+      )}
+      {titleChanged && (
+        <AppText variant="body" color="secondary">
+          {journalTitle}
+        </AppText>
+      )}
     </Column>
   );
-
   return (
     <AppSurface
       elevation="sm"
       padding="none"
-      radius="r3"
-      background="surface"
+      radius="r2"
       borderWidth={isSelected ? 2 : isOverdue ? 1 : undefined}
       borderColor={isSelected ? 'primary' : isOverdue ? 'error' : undefined}
-      style={{
-        marginBottom: Spacing.md,
-        overflow: 'hidden',
-      }}
+      overflow="hidden"
     >
       {onPress || onLongPress ? (
         <TouchableOpacity
@@ -175,6 +108,9 @@ export const PlannedPaymentHistoryCard = ({
           onLongPress={onLongPress}
           delayLongPress={200}
           activeOpacity={Opacity.heavy}
+          accessibilityRole="button"
+          accessibilityLabel={`${date}, ${presentation.label}, ${amount}${titleChanged ? `, ${journalTitle}` : ''}`}
+          accessibilityState={isSelectionModeActive ? { selected: !!isSelected } : undefined}
         >
           {content}
         </TouchableOpacity>
@@ -183,4 +119,4 @@ export const PlannedPaymentHistoryCard = ({
       )}
     </AppSurface>
   );
-};
+}
