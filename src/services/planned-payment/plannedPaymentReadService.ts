@@ -5,6 +5,7 @@ import { observeWorkplaceAccounts } from '@/src/services/reactive/reactiveWorkpl
 import { AccountType } from '@/src/types/enums';
 import type Account from '@/src/data/models/Account';
 import type Journal from '@/src/data/models/Journal';
+import type PlannedPayment from '@/src/data/models/PlannedPayment';
 import type { PlainPlannedPayment } from '@/src/types/plainDtos';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { combineLatest, map, Observable } from 'rxjs';
@@ -81,7 +82,7 @@ export function projectPlannedPaymentObligations(
 }
 
 export function observePlannedPaymentObligations(
-  payments$: Observable<import('@/src/data/models/PlannedPayment').default[]>,
+  payments$: Observable<PlannedPayment[]>,
   journals$: Observable<Journal[]>,
   accounts$: Observable<Account[]>,
 ) {
