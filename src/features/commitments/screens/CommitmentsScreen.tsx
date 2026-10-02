@@ -2,14 +2,14 @@ import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
 import { AppTabs } from '@/src/components/core';
-import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import { Box, Stack } from '@/src/design-system';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { BudgetListView, useBudgetListViewModel } from '@/src/features/budget';
 import { PlannedPaymentListView, usePlannedPayments } from '@/src/features/planned-payments';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 const TAB_OPTIONS = [
   { id: 'budgets' as const, label: 'Budgets' },
@@ -49,12 +49,10 @@ function PlannedPanel({ onCreate }: { onCreate: () => void }) {
 }
 
 function CommitmentsScreen() {
-  const [activeTab, setActiveTab] = useState<CommitmentsTab>('budgets');
-  const subtitle =
-    activeTab === 'budgets'
-      ? 'Monthly category limits to keep your spending comfortable.'
-      : 'Upcoming bills, rent, and subscriptions that protect your balance.';
-
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
+  const router = useRouter();
+  const activeTab: CommitmentsTab = tab === 'planned' ? 'planned' : 'budgets';
+  const setActiveTab = (nextTab: CommitmentsTab) => router.setParams({ tab: nextTab });
   const chrome = useMemo<TabScreenChrome>(
     () => ({
       screenTitle: 'Commitments',
@@ -78,7 +76,7 @@ function CommitmentsScreen() {
 
   return (
     <ScreenWithChrome chrome={chrome} scrollable={false}>
-      <Stack gap="lg">
+      <Stack gap="md">
         <Box marginTop="md">
           <AppTabs
             testID="commitments-tabs"
@@ -86,9 +84,6 @@ function CommitmentsScreen() {
             value={activeTab}
             onChange={setActiveTab}
           />
-        </Box>
-        <Box paddingHorizontal="lg">
-          <ScreenSectionHeader subtitle={subtitle} />
         </Box>
       </Stack>
 
