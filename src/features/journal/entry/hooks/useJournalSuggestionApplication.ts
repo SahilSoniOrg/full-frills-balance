@@ -81,7 +81,14 @@ export function useJournalSuggestionApplication(
             const account = unselectedSuggestions[suggestionIndex++];
             return account ? makeLine(account, transactionType, line) : line;
           });
-          while (suggestionIndex < unselectedSuggestions.length) {
+          // Preserve selected accounts and only append rows the active form can show.
+          const allowsMultipleLines =
+            activeMode === 'expert' ||
+            (activeMode === 'allocation' && transactionType === TransactionType.DEBIT);
+          while (
+            suggestionIndex < unselectedSuggestions.length &&
+            (allowsMultipleLines || merged.length === 0)
+          ) {
             merged.push(makeLine(unselectedSuggestions[suggestionIndex++], transactionType));
           }
           return merged;
