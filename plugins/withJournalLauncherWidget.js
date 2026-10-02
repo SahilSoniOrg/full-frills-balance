@@ -247,125 +247,37 @@ async function writeAndroidWidgetFiles(projectRoot, config) {
       await renderTemplate(path.join(TEMPLATE_ROOT, 'android', widget.template), replacements),
     );
   }
-  await writeFileIfChanged(
-    path.join(basePath, 'res', 'layout', 'widget_journal_launcher.xml'),
-    await fsPromises.readFile(
-      path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher.xml'),
-      'utf8',
-    ),
-  );
-  await writeFileIfChanged(
-    path.join(basePath, 'res', 'layout', 'widget_safe_to_spend.xml'),
-    await fsPromises.readFile(
-      path.join(TEMPLATE_ROOT, 'android', 'widget_safe_to_spend.xml'),
-      'utf8',
-    ),
-  );
-  await writeFileIfChanged(
-    path.join(basePath, 'res', 'layout', 'widget_safe_to_spend_actions.xml'),
-    await fsPromises.readFile(
-      path.join(TEMPLATE_ROOT, 'android', 'widget_safe_to_spend_actions.xml'),
-      'utf8',
-    ),
-  );
-  await writeFileIfChanged(
-    path.join(basePath, 'res', 'layout', 'widget_safe_to_spend_actions_square.xml'),
-    await fsPromises.readFile(
-      path.join(TEMPLATE_ROOT, 'android', 'widget_safe_to_spend_actions_square.xml'),
-      'utf8',
-    ),
-  );
-  await writeFileIfChanged(
-    path.join(basePath, 'res', 'drawable', 'widget_journal_launcher_background.xml'),
-    await fsPromises.readFile(
-      path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_background.xml'),
-      'utf8',
-    ),
-  );
-  await writeFileIfChanged(
-    path.join(basePath, 'res', 'drawable', 'widget_journal_launcher_background_ivy.xml'),
-    await fsPromises.readFile(
-      path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_background_ivy.xml'),
-      'utf8',
-    ),
-  );
-  await writeFileIfChanged(
-    path.join(basePath, 'res', 'drawable', 'widget_journal_launcher_background_light.xml'),
-    await fsPromises.readFile(
-      path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_background_light.xml'),
-      'utf8',
-    ),
-  );
-  await writeFileIfChanged(
-    path.join(basePath, 'res', 'drawable', 'widget_journal_launcher_background_ivy_light.xml'),
-    await fsPromises.readFile(
-      path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_background_ivy_light.xml'),
-      'utf8',
-    ),
-  );
-  await writeFileIfChanged(
-    path.join(basePath, 'res', 'drawable', 'widget_journal_launcher_divider.xml'),
-    await fsPromises.readFile(
-      path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_divider.xml'),
-      'utf8',
-    ),
-  );
-  await writeFileIfChanged(
-    path.join(basePath, 'res', 'drawable', 'widget_journal_launcher_income.xml'),
-    await fsPromises.readFile(
-      path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_income.xml'),
-      'utf8',
-    ),
-  );
-  await writeFileIfChanged(
-    path.join(basePath, 'res', 'drawable', 'widget_action_income_circle.xml'),
-    await fsPromises.readFile(
-      path.join(TEMPLATE_ROOT, 'android', 'widget_action_income_circle.xml'),
-      'utf8',
-    ),
-  );
-  await writeFileIfChanged(
-    path.join(basePath, 'res', 'drawable', 'widget_journal_launcher_expense.xml'),
-    await fsPromises.readFile(
-      path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_expense.xml'),
-      'utf8',
-    ),
-  );
-  await writeFileIfChanged(
-    path.join(basePath, 'res', 'drawable', 'widget_action_expense_circle.xml'),
-    await fsPromises.readFile(
-      path.join(TEMPLATE_ROOT, 'android', 'widget_action_expense_circle.xml'),
-      'utf8',
-    ),
-  );
-  await writeFileIfChanged(
-    path.join(basePath, 'res', 'drawable', 'widget_journal_launcher_transfer.xml'),
-    await fsPromises.readFile(
-      path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_transfer.xml'),
-      'utf8',
-    ),
-  );
-  await writeFileIfChanged(
-    path.join(basePath, 'res', 'drawable', 'widget_action_transfer_circle.xml'),
-    await fsPromises.readFile(
-      path.join(TEMPLATE_ROOT, 'android', 'widget_action_transfer_circle.xml'),
-      'utf8',
-    ),
-  );
-  await writeFileIfChanged(
-    path.join(basePath, 'res', 'drawable', 'widget_safe_to_spend_actions_bar.xml'),
-    await fsPromises.readFile(
-      path.join(TEMPLATE_ROOT, 'android', 'widget_safe_to_spend_actions_bar.xml'),
-      'utf8',
-    ),
-  );
-  await writeFileIfChanged(
-    path.join(basePath, 'res', 'drawable', 'widget_journal_launcher_button.xml'),
-    await fsPromises.readFile(
-      path.join(TEMPLATE_ROOT, 'android', 'widget_journal_launcher_button.xml'),
-      'utf8',
-    ),
-  );
+  const resources = {
+    layout: [
+      'widget_journal_launcher.xml',
+      'widget_safe_to_spend.xml',
+      'widget_safe_to_spend_actions.xml',
+      'widget_safe_to_spend_actions_square.xml',
+    ],
+    drawable: [
+      'widget_journal_launcher_background.xml',
+      'widget_journal_launcher_background_ivy.xml',
+      'widget_journal_launcher_background_light.xml',
+      'widget_journal_launcher_background_ivy_light.xml',
+      'widget_journal_launcher_divider.xml',
+      'widget_journal_launcher_income.xml',
+      'widget_action_income_circle.xml',
+      'widget_journal_launcher_expense.xml',
+      'widget_action_expense_circle.xml',
+      'widget_journal_launcher_transfer.xml',
+      'widget_action_transfer_circle.xml',
+      'widget_safe_to_spend_actions_bar.xml',
+      'widget_journal_launcher_button.xml',
+    ],
+  };
+  for (const [kind, names] of Object.entries(resources)) {
+    for (const name of names) {
+      await writeFileIfChanged(
+        path.join(basePath, 'res', kind, name),
+        await fsPromises.readFile(path.join(TEMPLATE_ROOT, 'android', name), 'utf8'),
+      );
+    }
+  }
   for (const widget of ANDROID_WIDGETS) {
     await writeFileIfChanged(
       path.join(basePath, 'res', 'xml', widget.infoFile),
