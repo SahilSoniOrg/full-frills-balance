@@ -286,6 +286,8 @@ describe('observability privacy boundary', () => {
     const event = {
       type: 'transaction',
       transaction: '/settings',
+      start_timestamp: 100,
+      timestamp: 102,
       spans: [
         {
           span_id: '0123456789abcdef',
@@ -298,10 +300,34 @@ describe('observability privacy boundary', () => {
           tags: { marker: PRIVATE_MARKER },
         },
       ],
-      contexts: { private: { marker: PRIVATE_MARKER } },
+      contexts: {
+        trace: {
+          trace_id: '0123456789abcdef0123456789abcdef',
+          span_id: 'fedcba9876543210',
+          parent_span_id: 'abcdef0123456789',
+          op: 'navigation',
+          status: 'ok',
+          description: PRIVATE_MARKER,
+          data: { marker: PRIVATE_MARKER },
+        },
+        private: { marker: PRIVATE_MARKER },
+      },
     } as unknown as TransactionEvent;
     const sanitized = sanitizeSentryTransactionEvent(event);
     expect(JSON.stringify(sanitized)).not.toContain(PRIVATE_MARKER);
+    expect(sanitized).toMatchObject({
+      type: 'transaction',
+      transaction: '/settings',
+      start_timestamp: 100,
+      timestamp: 102,
+    });
+    expect(sanitized.contexts?.trace).toEqual({
+      trace_id: '0123456789abcdef0123456789abcdef',
+      span_id: 'fedcba9876543210',
+      parent_span_id: 'abcdef0123456789',
+      op: 'navigation',
+      status: 'ok',
+    });
     expect(sanitized.spans?.[0]).toMatchObject({
       start_timestamp: 1,
       timestamp: 2,
@@ -309,5 +335,20 @@ describe('observability privacy boundary', () => {
       description: 'app.operation',
       data: {},
     });
+  });
+
+  it('rejects invalid trace identities and timestamps from transactions', () => {
+    const sanitized = sanitizeSentryTransactionEvent({
+      type: 'transaction',
+      transaction: '/settings',
+      start_timestamp: Number.NaN,
+      timestamp: -1,
+      contexts: {
+        trace: { trace_id: PRIVATE_MARKER, span_id: '0123456789abcdef' },
+      },
+    });
+    expect(sanitized.start_timestamp).toBeUndefined();
+    expect(sanitized.timestamp).toBeUndefined();
+    expect(sanitized.contexts?.trace).toBeUndefined();
   });
 });

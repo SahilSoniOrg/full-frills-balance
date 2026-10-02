@@ -76,53 +76,6 @@ const ENUM_VALUES: Record<string, ReadonlySet<string>> = {
   icon: new Set(['wallet', 'bank', 'cash', 'credit-card', 'home', 'briefcase', 'chart']),
 };
 
-const SAFE_ANALYTICS_EVENT_NAMES = new Set([
-  'app_opened',
-  'account_created',
-  'transaction_created',
-  'privacy_policy_acknowledged',
-  'theme_changed',
-  'notification_preference_changed',
-  'workplace_created',
-  'workplace_switched',
-  'workplace_deleted',
-  'budget_created',
-  'planned_payment_created',
-  'sms_rule_triggered',
-  'sms_import_settings_changed',
-  'chart_interacted',
-  'search_performed',
-  'integrity_issue',
-  'journal_balance_checked',
-  'unbalanced_journals_prompt_answered',
-  'unbalanced_journals_cleared',
-  'export_completed',
-  'factory_reset',
-  'entrypoint_opened',
-  'entrypoint_selected',
-  'session_start',
-  'session_end',
-  'app_error',
-  'app_cold_start',
-  'screen_leave',
-  'screen_view',
-  'user_screen_view',
-  'first_paint',
-  'conversion',
-  'performance',
-  'engagement',
-  'share_started',
-  'share_sheet_opened',
-  'share_failed',
-  'save_started',
-  'save_to_disk_completed',
-  'save_to_disk_abandoned',
-  'save_to_disk_cancelled_final',
-  'save_confirm_share',
-  'save_confirm_dismiss',
-  'save_completed',
-  'save_failed_dismissed',
-]);
 const CURRENCY_CODES = new Set(COMMON_CURRENCIES.map(currency => currency.code));
 const ACCOUNT_TYPES = new Set(Object.values(AccountType));
 const PAYMENT_INTERVALS = new Set(Object.values(PlannedPaymentInterval));
@@ -245,6 +198,8 @@ const ANALYTICS_EVENT_SCHEMAS: Record<string, EventSchema> = {
   save_completed: { format: 'token' },
   save_failed_dismissed: { reason: 'token' },
 };
+
+const SAFE_ANALYTICS_EVENT_NAMES = new Set(Object.keys(ANALYTICS_EVENT_SCHEMAS));
 
 const FEATURE_EVENT_SCHEMAS: Record<string, EventSchema> = {
   journal: { mode: 'token', type: 'token', currency: 'currency', count: 'count', source: 'token' },
@@ -867,7 +822,7 @@ function safeSentryTransactionName(value?: string): string | undefined {
   return `/${segments.map(segment => (/^\[/.test(segment) ? '[id]' : segment)).join('/')}`;
 }
 
-export function sanitizeSentryErrorEvent(event: ErrorEvent): ErrorEvent {
+function sanitizeSentryEnvelope(event: ErrorEvent | TransactionEvent) {
   const timestamp = finiteNonNegative(event.timestamp);
   const sanitized = {
     event_id: safeHexId(event.event_id, 32),
@@ -882,7 +837,7 @@ export function sanitizeSentryErrorEvent(event: ErrorEvent): ErrorEvent {
       event.environment === 'production' || event.environment === 'development'
         ? event.environment
         : undefined,
-    release: safeRelease(event.release),
+    release: safeVersion(event.release),
     dist: safeBuild(event.dist),
     transaction: safeSentryTransactionName(event.transaction),
     user: safeUserId(event.user?.id) ? { id: event.user?.id } : undefined,
@@ -891,6 +846,14 @@ export function sanitizeSentryErrorEvent(event: ErrorEvent): ErrorEvent {
     breadcrumbs: event.breadcrumbs?.map(sanitizeSentryBreadcrumb),
     sdk: sanitizeSentrySdk(event.sdk),
     debug_meta: sanitizeSentryDebugMeta(event.debug_meta),
+  };
+  return sanitized;
+}
+
+export function sanitizeSentryErrorEvent(event: ErrorEvent): ErrorEvent {
+  return {
+    ...sanitizeSentryEnvelope(event),
+    type: undefined,
     exception: event.exception?.values
       ? {
           values: event.exception.values.slice(0, 5).map(value => ({
@@ -912,7 +875,6 @@ export function sanitizeSentryErrorEvent(event: ErrorEvent): ErrorEvent {
         }
       : undefined,
   };
-  return sanitized as ErrorEvent;
 }
 
 const SAFE_BREADCRUMB_TYPES = new Set(['default', 'navigation', 'http', 'user', 'system', 'error']);
@@ -944,11 +906,12 @@ export function sanitizeSentryBreadcrumb<
 }
 
 export function sanitizeSentryTransactionEvent(event: TransactionEvent): TransactionEvent {
-  const sanitized = sanitizeSentryErrorEvent(
-    event as unknown as ErrorEvent,
-  ) as unknown as TransactionEvent;
-  sanitized.type = 'transaction';
-  sanitized.transaction = safeSentryTransactionName(event.transaction) ?? 'navigation';
+  const sanitized: TransactionEvent = {
+    ...sanitizeSentryEnvelope(event),
+    type: 'transaction',
+    start_timestamp: finiteNonNegative(event.start_timestamp),
+    transaction: safeSentryTransactionName(event.transaction) ?? 'navigation',
+  };
   sanitized.spans = event.spans?.slice(0, 200).map(span => ({
     data: {},
     span_id: safeHexId(span.span_id, 16),
@@ -1002,13 +965,6 @@ function safeUserId(value: unknown): boolean {
   return safeAnalyticsIdentity(value) !== 'anonymous';
 }
 
-function safeRelease(value: unknown): string | undefined {
-  return typeof value === 'string' &&
-    /^\d{1,4}(?:\.\d{1,4}){0,3}(?:[-+][A-Za-z0-9.-]{1,20})?$/.test(value)
-    ? value
-    : undefined;
-}
-
 function safeBuild(value: unknown): string | undefined {
   return typeof value === 'string' && /^\d{1,8}$/.test(value) ? value : undefined;
 }
@@ -1020,6 +976,18 @@ function sanitizeSentryContexts(contexts: ErrorEvent['contexts']): ErrorEvent['c
   const osName = device?.family ?? device?.os ?? device?.name;
   const safeOs = ['iOS', 'Android', 'Web'].includes(String(osName)) ? String(osName) : undefined;
   const result: NonNullable<ErrorEvent['contexts']> = {};
+  const trace = contexts.trace;
+  const traceId = safeHexId(trace?.trace_id, 32);
+  const spanId = safeHexId(trace?.span_id, 16);
+  if (traceId && spanId) {
+    result.trace = {
+      trace_id: traceId,
+      span_id: spanId,
+      parent_span_id: safeHexId(trace?.parent_span_id, 16),
+      op: SAFE_SPAN_OPS.has(String(trace?.op)) ? trace?.op : 'app.operation',
+      status: SAFE_SPAN_STATUSES.has(String(trace?.status)) ? trace?.status : undefined,
+    };
+  }
   if (app) {
     const version = safeVersion(app.app_version);
     const build = safeBuild(app.app_build);

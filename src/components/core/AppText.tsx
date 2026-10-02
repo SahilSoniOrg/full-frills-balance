@@ -96,7 +96,7 @@ export const AppText = memo(function AppText({
     if (!fontsReady || loadedFontId !== fontId) {
       // Don't spam logger too much, just once per component mount if it happens
       logger.debug(
-        `[AppText] Rendering before fonts ready! (fontsReady: ${fontsReady}, loaded: ${loadedFontId}, expected: ${fontId}, text: ${String(children).slice(0, 20)})`,
+        `[AppText] Rendering before fonts ready! (fontsReady: ${fontsReady}, loaded: ${loadedFontId}, expected: ${fontId})`,
       );
     }
 
@@ -127,7 +127,6 @@ export const AppText = memo(function AppText({
     fontsReady,
     loadedFontId,
     fontId,
-    children,
     themeMode,
   ]);
 

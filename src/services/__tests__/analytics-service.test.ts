@@ -19,8 +19,13 @@ describe('AnalyticsService', () => {
   let analytics: AnalyticsService;
 
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
     analytics = new AnalyticsService();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('should not throw when calling track', () => {
