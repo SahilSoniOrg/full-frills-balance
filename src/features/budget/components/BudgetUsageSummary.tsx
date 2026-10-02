@@ -1,11 +1,10 @@
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { Icon, AppIcon, AppText } from '@/src/components/core';
-import { AppConfig } from '@/src/constants';
-import { Box, Column, Row } from '@/src/design-system';
+import { AppText, AppIcon, Icon } from '@/src/components/core';
+import { AppConfig, Size } from '@/src/constants';
+import { Column, Row } from '@/src/design-system';
 import { presentBudgetUsage } from '@/src/features/budget/helpers/budgetCardPresentation';
 import { BudgetUsage } from '@/src/services/budget/types';
-import { useTheme } from '@/src/hooks/use-theme';
 import { BudgetProgressBar } from './BudgetProgressBar';
 import { IncompleteFxWarning } from '@/src/components/shared/IncompleteFxWarning';
 import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
@@ -13,7 +12,7 @@ import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
 interface BudgetUsageSummaryProps {
   usage: BudgetUsage;
   currencyCode: string;
-  /** List card uses a compact remaining pill; detail uses a two-column layout. */
+  /** List card uses inline amounts; detail gives remaining money emphasis. */
   variant?: 'card' | 'detail';
 }
 
@@ -22,7 +21,6 @@ export function BudgetUsageSummary({
   currencyCode,
   variant = 'detail',
 }: BudgetUsageSummaryProps) {
-  const { theme } = useTheme();
   const formatMoney = useMoneyFormat({ style: 'compact' });
   const { statusColor, isOver, progress, spent, remaining } = presentBudgetUsage(usage);
 
@@ -33,48 +31,20 @@ export function BudgetUsageSummary({
 
   if (variant === 'card') {
     return (
-      <Column gap="sm">
-        <Row justify="space-between" align="flex-end" gap="md">
-          <Column gap="xs" flex={1} style={{ minWidth: 0 }}>
-            <AppText
-              variant="caption"
-              color="secondary"
-              weight="bold"
-              style={{ letterSpacing: 0.5 }}
-            >
-              {spentLabel.toUpperCase()}
+      <Column gap="xs">
+        <Row justify="space-between" align="baseline" gap="sm" flexWrap="wrap">
+          <Row align="center" gap="xs">
+            <AppIcon name={Icon.Receipt} size={Size.iconXs} color="textSecondary" />
+            <AppText variant="caption" color="secondary">
+              {formatMoney(spent, currencyCode)}
             </AppText>
-            <MoneyText
-              amount={spent}
-              currencyCode={currencyCode}
-              formatStyle="compact"
-              variant="subheading"
-            />
-          </Column>
-
-          <Box
-            background={isOver ? 'error' : 'success'}
-            backgroundOpacity="soft"
-            paddingHorizontal="sm"
-            paddingVertical="xs"
-            borderRadius="sm"
-            style={{ flexShrink: 1, alignSelf: 'flex-end' }}
-          >
-            <Row align="center" gap="xs" flexShrink={1}>
-              {isOver && <AppIcon name={Icon.Alert} size={12} color={theme.error} />}
-              <AppText
-                variant="caption"
-                weight="bold"
-                color={isOver ? 'error' : 'success'}
-                numberOfLines={2}
-              >
-                {remainingLabel.toUpperCase()}: {formatMoney(Math.abs(remaining), currencyCode)}
-              </AppText>
-            </Row>
-          </Box>
+          </Row>
+          <AppText variant="body" weight="semibold" color={isOver ? 'error' : 'text'}>
+            {formatMoney(Math.abs(remaining), currencyCode)} {isOver ? 'over' : 'left'}
+          </AppText>
         </Row>
 
-        <BudgetProgressBar progress={progress} statusColor={statusColor} size="md" />
+        <BudgetProgressBar progress={progress} statusColor={statusColor} size="sm" />
         {usage.hasUnvaluedEntries ? (
           <IncompleteFxWarning
             message={AppConfig.strings.budget.incompleteFxWarning}
@@ -87,37 +57,33 @@ export function BudgetUsageSummary({
 
   return (
     <Column gap="md">
-      <Row justify="space-between" align="flex-end">
-        <Column gap="xs">
+      <Column gap="xs">
+        <AppText variant="caption" color="secondary">
+          {remainingLabel}
+        </AppText>
+        <MoneyText
+          amount={Math.abs(remaining)}
+          currencyCode={currencyCode}
+          variant="title"
+          color={isOver ? 'error' : 'text'}
+        />
+      </Column>
+      <BudgetProgressBar progress={progress} statusColor={statusColor} size="md" />
+      <Row justify="space-between" align="flex-start" gap="md" flexWrap="wrap">
+        <Column gap="xs" flexGrow={1} flexBasis={120}>
           <AppText variant="caption" color="secondary">
             {spentLabel}
           </AppText>
-          <MoneyText
-            amount={spent}
-            currencyCode={currencyCode}
-            formatStyle="compact"
-            variant="subheading"
-          />
+          <MoneyText amount={spent} currencyCode={currencyCode} variant="subheading" />
         </Column>
 
-        <Column align="flex-end" gap="xs">
+        <Column gap="xs" flexGrow={1} flexBasis={120}>
           <AppText variant="caption" color="secondary">
-            {remainingLabel}
+            Period limit
           </AppText>
-          <Row align="center" gap="xs">
-            {isOver && <AppIcon name={Icon.Alert} size={14} color={theme.error} />}
-            <MoneyText
-              amount={Math.abs(remaining)}
-              currencyCode={currencyCode}
-              formatStyle="compact"
-              variant="subheading"
-              color={isOver ? 'error' : 'success'}
-            />
-          </Row>
+          <MoneyText amount={usage.budgetAmount} currencyCode={currencyCode} variant="subheading" />
         </Column>
       </Row>
-
-      <BudgetProgressBar progress={progress} statusColor={statusColor} />
       {usage.hasUnvaluedEntries ? (
         <IncompleteFxWarning
           message={AppConfig.strings.budget.incompleteFxWarning}

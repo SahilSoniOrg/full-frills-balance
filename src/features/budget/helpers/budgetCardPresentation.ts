@@ -4,6 +4,7 @@ import { ColorKey } from '@/src/constants/design-tokens';
 import { BudgetPeriodInput, BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 import { BudgetUsage } from '@/src/services/budget/types';
 import dayjs from 'dayjs';
+import { formatRecurrence } from '@/src/utils/recurrenceLabels';
 
 export interface BudgetCardInput extends BudgetPeriodInput {
   name: string;
@@ -30,10 +31,11 @@ export interface BudgetListCardViewModel {
   amount: number;
   currencyCode: string;
   periodSubtitle: string;
+  intervalLabel: string;
+  cadenceLabel: string;
+  timingSummary: string;
   statusColor: ColorKey;
   previousPeriodLabel?: string;
-  previousPeriodColor: 'error' | 'success' | 'warning';
-  previousPeriodIcon: IconName;
 }
 
 export function resolveBudgetStatus(usagePercent: number): {
@@ -110,33 +112,23 @@ export function presentBudgetListCard(
       ? AppConfig.strings.budget.endsToday
       : AppConfig.strings.budget.daysLeft(daysLeft);
 
-  let previousPeriodLabel: string | undefined;
-  let previousPeriodColor: 'error' | 'success' | 'warning' = 'success';
-  let previousPeriodIcon: IconName = Icon.TrendingUp;
-
-  if (previousUsage) {
-    if (previousUsage.hasUnvaluedEntries) {
-      previousPeriodLabel = AppConfig.strings.budget.incompleteStatus;
-      previousPeriodColor = 'warning';
-      previousPeriodIcon = Icon.Alert;
-    } else {
-      const wasOver = previousUsage.remaining < 0;
-      previousPeriodLabel = wasOver
+  const previousPeriodLabel = !previousUsage
+    ? undefined
+    : previousUsage.hasUnvaluedEntries
+      ? AppConfig.strings.budget.incompleteStatus
+      : previousUsage.remaining < 0
         ? AppConfig.strings.budget.overLastPeriod
         : AppConfig.strings.budget.underLastPeriod;
-      previousPeriodColor = wasOver ? 'error' : 'success';
-      previousPeriodIcon = wasOver ? Icon.TrendingDown : Icon.TrendingUp;
-    }
-  }
 
   return {
     name: budget.name,
     amount: budget.amount,
     currencyCode: budget.currencyCode,
     periodSubtitle: `${daysLeftLabel} • ${periodLabel}`,
+    timingSummary: daysLeft === 0 ? 'Today' : `${daysLeft}d`,
+    cadenceLabel: formatRecurrence(budget, 'short'),
+    intervalLabel: formatRecurrence(budget),
     statusColor,
     previousPeriodLabel,
-    previousPeriodColor,
-    previousPeriodIcon,
   };
 }

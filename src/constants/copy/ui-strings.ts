@@ -1320,7 +1320,7 @@ export const UI_STRINGS = {
     daysLeft: (days: number) => `${days} days left`,
     overLastPeriod: 'Over last period',
     underLastPeriod: 'Under last period',
-    statusOnTrack: 'On track',
+    statusOnTrack: 'Within limit',
     statusNearLimit: 'Near limit',
     statusOverBudget: 'Over budget',
     incompleteStatus: 'Incomplete',

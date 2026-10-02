@@ -60,8 +60,22 @@ describe('presentBudgetListCard', () => {
     expect(vm.amount).toBe(500);
     expect(vm.statusColor).toBe('primary');
     expect(vm.periodSubtitle.length).toBeGreaterThan(0);
+    expect(vm.intervalLabel).toBe('Monthly');
+    expect(vm.cadenceLabel).toBe('1 mo');
     expect(vm).not.toHaveProperty('spent');
     expect(vm).not.toHaveProperty('statusBadge');
+  });
+
+  it('identifies a multi-month budget limit', () => {
+    const vm = presentBudgetListCard({ ...monthlyBudget, intervalN: 3 }, makeUsage(), undefined);
+    expect(vm.intervalLabel).toBe('Every 3 months');
+    expect(vm.cadenceLabel).toBe('3 mo');
+  });
+
+  it('shows the monthly cadence used by legacy budgets with a zero interval', () => {
+    const vm = presentBudgetListCard({ ...monthlyBudget, intervalN: 0 }, makeUsage(), undefined);
+    expect(vm.intervalLabel).toBe('Monthly');
+    expect(vm.cadenceLabel).toBe('1 mo');
   });
 
   it('derives status color for over-budget usage', () => {
@@ -82,7 +96,5 @@ describe('presentBudgetListCard', () => {
     );
 
     expect(vm.previousPeriodLabel).toBeDefined();
-    expect(vm.previousPeriodColor).toBe('error');
-    expect(vm.previousPeriodIcon).toBe('trendingDown');
   });
 });
