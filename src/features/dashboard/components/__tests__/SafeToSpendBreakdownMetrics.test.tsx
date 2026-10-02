@@ -3,7 +3,6 @@ import { fireEvent, render, screen } from '@/src/utils/test-utils';
 import { StyleSheet } from 'react-native';
 
 const defaultProps = {
-  safeToSpend: 33_580,
   committedTotal: 221_554,
   committedLiabilities: 215_716,
   currencyCode: 'INR',
@@ -18,7 +17,7 @@ describe('SafeToSpendBreakdownMetrics', () => {
     });
 
     const buttons = screen.getAllByRole('button');
-    expect(buttons).toHaveLength(3);
+    expect(buttons).toHaveLength(2);
     expect(StyleSheet.flatten(buttons[0].props.style)).toEqual(
       expect.objectContaining({ flex: 1, minWidth: 0 }),
     );
@@ -38,7 +37,7 @@ describe('SafeToSpendBreakdownMetrics', () => {
   it('names each metric button for assistive technology', () => {
     render(<SafeToSpendBreakdownMetrics {...defaultProps} onPress={jest.fn()} />);
 
-    expect(screen.getByRole('button', { name: 'Safe to Spend: ₹33,580' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Safe to Spend:/ })).toBeNull();
     expect(screen.getByRole('button', { name: 'Reserved: ₹221,554' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Upcoming: ₹215,716' })).toBeTruthy();
   });

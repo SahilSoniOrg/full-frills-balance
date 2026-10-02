@@ -1,7 +1,7 @@
 import { AppSurface, AppText } from '@/src/components/core';
+import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { AppConfig } from '@/src/constants';
 import type { SafeToSpendProjection } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
 import { IncompleteFxWarning } from '@/src/components/shared/IncompleteFxWarning';
@@ -66,7 +66,6 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
 
   const metrics = hasBreakdownData ? (
     <SafeToSpendBreakdownMetrics
-      safeToSpend={safeToSpend}
       committedTotal={committedTotal}
       committedLiabilities={committedLiabilities}
       currencyCode={currencyCode}
@@ -100,6 +99,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
         currencyCode={currencyCode}
         loading={loading}
         infoDisabled={!detailsReady}
+        forecastDays={viewModel.safeToSpendDays}
         onInfoPress={onInfoPress}
       />
     );
@@ -122,7 +122,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
                 </AppText>
               ) : null}
               <SafeToSpendForecastDetails viewModel={viewModel} />
-              {quality !== 'stale' && viewModel.hasUnvaluedEntries ? (
+              {viewModel.hasUnvaluedEntries ? (
                 <IncompleteFxWarning
                   testID="safe-to-spend-incomplete-warning"
                   message={AppConfig.strings.dashboard.safeToSpendUi.incompleteFxWarning}

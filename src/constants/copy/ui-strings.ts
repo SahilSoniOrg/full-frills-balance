@@ -112,6 +112,7 @@ export const UI_STRINGS = {
       'Upcoming bills outpace cash right now. Your accounts are fine, but spending money is on hold so you glide smoothly into payday.',
     neededForObligations: 'Set aside',
     afterObligations: 'Guilt-free to spend',
+    afterCommitmentsForDays: (days: number) => `After commitments over ${days} days`,
     insightDetails: {
       title: 'Behind This Number',
       emptyTitle: 'No activity found',

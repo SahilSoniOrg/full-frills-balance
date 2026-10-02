@@ -1,6 +1,6 @@
 import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppText, ColoredDot } from '@/src/components/core';
-import { AppConfig } from '@/src/constants';
+import { AppConfig, Size } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { ComponentVariant } from '@/src/utils/style-helpers';
@@ -20,7 +20,6 @@ export interface SafeToSpendMetric {
 }
 
 interface SafeToSpendBreakdownMetricsProps {
-  safeToSpend: number;
   committedTotal: number;
   committedLiabilities: number;
   currencyCode: string;
@@ -30,7 +29,6 @@ interface SafeToSpendBreakdownMetricsProps {
 }
 
 export function SafeToSpendBreakdownMetrics({
-  safeToSpend,
   committedTotal,
   committedLiabilities,
   currencyCode,
@@ -44,13 +42,6 @@ export function SafeToSpendBreakdownMetrics({
   const [contentWidth, setContentWidth] = useState(0);
   const useColumns = contentWidth >= METRIC_COLUMNS_MIN_WIDTH;
   const items: SafeToSpendMetric[] = [
-    {
-      key: 'safe',
-      label: labels.safePrefix,
-      value: formatSts(safeToSpend, currencyCode),
-      dotColor: theme.primary,
-      textColor: 'primary',
-    },
     {
       key: 'committed',
       label: labels.committedPrefix,
@@ -128,8 +119,12 @@ const styles = StyleSheet.create({
   columnMetric: {
     flex: 1,
     minWidth: 0,
+    minHeight: Size.touchTarget,
+    justifyContent: 'center',
   },
   compactMetric: {
     flexShrink: 1,
+    minHeight: Size.touchTarget,
+    justifyContent: 'center',
   },
 });

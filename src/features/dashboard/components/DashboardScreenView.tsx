@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: Spacing.lg,
     // Nav already separates title from content; keep a small breath only.
-    paddingTop: Spacing.sm,
+    paddingTop: Spacing.xs,
     paddingBottom: Size.buttonLg + Spacing.xl,
   },
 });

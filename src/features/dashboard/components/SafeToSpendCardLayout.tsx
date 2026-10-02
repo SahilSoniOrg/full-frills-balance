@@ -33,10 +33,10 @@ export function SafeToSpendCardLayout({
     >
       {useTwoColumns ? (
         <View testID="safe-to-spend-card-layout-wide">
-          <Column gap="lg">
+          <Column gap="md">
             <Row gap="xl" align="stretch" style={{ minHeight: 0 }}>
               <View style={{ flex: 2, minWidth: 0 }}>
-                <Column gap="lg">
+                <Column gap="md">
                   {summary}
                   {warning}
                   {breakdown}
@@ -49,17 +49,21 @@ export function SafeToSpendCardLayout({
         </View>
       ) : (
         <View testID="safe-to-spend-card-layout-stacked">
-          <Column gap="lg">
+          <Column gap="sm">
             {summary}
             {warning}
-            {breakdown}
-            {metrics}
+            {breakdown || metrics ? (
+              <Column gap="xs">
+                {breakdown}
+                {metrics}
+              </Column>
+            ) : null}
             {chart ? (
-              <>
+              <Column gap="sm">
                 {breakdown ? <Separator /> : null}
                 {chart}
                 <Separator />
-              </>
+              </Column>
             ) : null}
           </Column>
         </View>

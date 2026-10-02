@@ -1,10 +1,11 @@
 import { Icon, IconButton, AppText } from '@/src/components/core';
-import { AppConfig, ChromeMotion, Size } from '@/src/constants';
+import { AppConfig, ChromeMotion, Size, Typography } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
 import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { MotiView } from 'moti';
+import { useWindowDimensions } from 'react-native';
 
 interface SafeToSpendHeaderProps {
   isOverCommitted: boolean;
@@ -13,6 +14,7 @@ interface SafeToSpendHeaderProps {
   currencyCode: string;
   loading?: boolean;
   infoDisabled?: boolean;
+  forecastDays?: number;
   onInfoPress: () => void;
 }
 
@@ -23,30 +25,39 @@ export const SafeToSpendHeader = ({
   currencyCode,
   loading = false,
   infoDisabled = false,
+  forecastDays = AppConfig.defaults.safeToSpendDays,
   onInfoPress,
 }: SafeToSpendHeaderProps) => {
-  const { theme } = useTheme();
+  const { theme, themeMode } = useTheme();
   const strings = AppConfig.strings.dashboard;
   const formatSts = useStsMoneyFormat(loading);
   const reduceMotion = useReducedMotion();
+  const { width } = useWindowDimensions();
+  const amountFontSize = width < 360 ? Typography.sizes.jumbo : Typography.sizes.hero;
 
   const amountText = (
     <AppText
       testID="safe-to-spend-amount"
       variant="hero"
-      color={isOverCommitted ? 'error' : isPositiveSafeToSpend ? 'success' : undefined}
+      color={
+        isOverCommitted
+          ? 'error'
+          : isPositiveSafeToSpend && themeMode === 'dark'
+            ? 'success'
+            : undefined
+      }
       weight="bold"
-      numberOfLines={1}
-      adjustsFontSizeToFit
-      minimumFontScale={0.55}
-      ellipsizeMode="tail"
+      style={{
+        fontSize: amountFontSize,
+        lineHeight: Math.round(amountFontSize * Typography.lineHeights.tight),
+      }}
     >
       {formatSts(amount, currencyCode)}
     </AppText>
   );
 
   return (
-    <Column gap="xs">
+    <Column gap="none">
       <Row align="center" justify="space-between" gap="sm">
         <AppText
           variant="caption"
@@ -87,7 +98,11 @@ export const SafeToSpendHeader = ({
         numberOfLines={3}
         style={{ opacity: 0.8 }}
       >
-        {isOverCommitted ? strings.shortfallSubtitle : strings.afterObligations}
+        {isOverCommitted
+          ? strings.shortfallSubtitle
+          : forecastDays > 0
+            ? strings.afterCommitmentsForDays(forecastDays)
+            : strings.afterObligations}
       </AppText>
     </Column>
   );
