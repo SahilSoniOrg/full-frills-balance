@@ -3,18 +3,25 @@ import {
   Icon,
   AppIcon,
   AppSurface,
-  Badge,
   PressScaleTouchable,
   type IconName,
   AppText,
 } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
-import { Theme } from '@/src/constants/design-tokens';
-import { Box, Column, Row } from '@/src/design-system';
+import { Column, Row } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
-import { getSmartDateLabel } from '@/src/utils/dateUtils';
+import { PlannedPaymentStatus } from '@/src/types/enums';
+import { getNow, getSmartDateLabel } from '@/src/utils/dateUtils';
+import {
+  formatPlannedPaymentInterval,
+  presentPlannedPaymentDue,
+} from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
+import dayjs from 'dayjs';
 import type { PlannedPaymentObligation } from '@/src/services/planned-payment/plannedPaymentReadService';
+import { formatRecurrence } from '@/src/utils/recurrenceLabels';
+import { getVariantMainColor, type ComponentVariant } from '@/src/utils/style-helpers';
+import { View } from 'react-native';
+import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
 
 export interface PlannedPaymentCardProps {
   item: PlannedPaymentObligation;
@@ -28,78 +35,53 @@ export interface PlannedPaymentCardViewModel {
   amountColor: 'error' | 'success' | 'secondary';
   flowDirection: 'inflow' | 'outflow' | 'transfer' | 'unknown';
   intervalLabel: string;
-  statusBadge: {
+  intervalSummary: string;
+  fromAccountLabel: string;
+  toAccountLabel: string;
+  postingLabel: string;
+  endDateLabel?: string;
+  statusBadge?: {
     variant: 'default' | 'error' | 'warning' | 'success';
     icon: IconName;
     text: string;
   };
   dateLabel: string;
-  dateColor: string;
+  dueSummary: string;
+  dueColor: ComponentVariant;
   iconName: IconName;
-  isOverdue: boolean;
+}
+
+function getStatusBadge(
+  item: PlannedPaymentObligation,
+  days: number | undefined,
+): PlannedPaymentCardViewModel['statusBadge'] {
+  const strings = AppConfig.strings.plannedPayments;
+  if (item.status === PlannedPaymentStatus.PAUSED) {
+    return { variant: 'default', icon: Icon.Pause, text: strings.statusPaused };
+  }
+  if (days !== undefined && days < 0) {
+    return { variant: 'error', icon: Icon.Alert, text: strings.statusOverdue };
+  }
+  if (days !== undefined && days <= 1) {
+    return { variant: 'warning', icon: Icon.Clock, text: strings.statusDueSoon };
+  }
+  if (item.status === PlannedPaymentStatus.COMPLETED) {
+    return {
+      variant: 'default',
+      icon: Icon.Check,
+      text: item.nextDueOccurrence === undefined ? 'Completed' : 'Schedule ended',
+    };
+  }
+  return undefined;
 }
 
 export function presentPlannedPaymentCard(
   item: PlannedPaymentObligation,
-  theme: Theme,
+  now: number = getNow(),
 ): PlannedPaymentCardViewModel {
-  const getIntervalLabel = () => {
-    const n = item.intervalN;
-    const type = item.intervalType.toLowerCase();
-    if (n === 1) {
-      switch (item.intervalType) {
-        case PlannedPaymentInterval.DAILY:
-          return AppConfig.strings.plannedPayments.everyDay;
-        case PlannedPaymentInterval.WEEKLY:
-          return AppConfig.strings.plannedPayments.everyWeek;
-        case PlannedPaymentInterval.MONTHLY:
-          return AppConfig.strings.plannedPayments.everyMonth;
-        case PlannedPaymentInterval.YEARLY:
-          return AppConfig.strings.plannedPayments.everyYear;
-      }
-    }
-    return AppConfig.strings.plannedPayments.everyN(n, type);
-  };
-
   const nextDate = item.nextDueOccurrence;
-  const dateValue =
-    nextDate === undefined ? Number.MAX_SAFE_INTEGER : new Date(nextDate).setHours(0, 0, 0, 0);
-  const today = new Date().setHours(0, 0, 0, 0);
-  const tomorrow = new Date(Date.now() + 86400000).setHours(0, 0, 0, 0);
-  const isActive = item.status === PlannedPaymentStatus.ACTIVE;
-
-  const isOverdue = isActive && dateValue < today;
-  const isDueSoon = isActive && (dateValue === today || dateValue === tomorrow);
-
-  let dateColor = theme.textSecondary;
-  if (isOverdue) dateColor = theme.error;
-  else if (isDueSoon) dateColor = theme.warning;
-
-  let statusBadge: PlannedPaymentCardViewModel['statusBadge'] = {
-    variant: 'success',
-    icon: Icon.Calendar,
-    text: AppConfig.strings.plannedPayments.statusActive,
-  };
-
-  if (item.status === PlannedPaymentStatus.PAUSED) {
-    statusBadge = {
-      variant: 'default',
-      icon: Icon.Document,
-      text: AppConfig.strings.plannedPayments.statusPaused,
-    };
-  } else if (isOverdue) {
-    statusBadge = {
-      variant: 'error',
-      icon: Icon.Alert,
-      text: AppConfig.strings.plannedPayments.statusOverdue,
-    };
-  } else if (isDueSoon) {
-    statusBadge = {
-      variant: 'warning',
-      icon: Icon.Clock,
-      text: AppConfig.strings.plannedPayments.statusDueSoon,
-    };
-  }
+  const due = presentPlannedPaymentDue(item, now);
+  const isOverdue = due.days !== undefined && due.days < 0;
 
   return {
     name: item.name,
@@ -112,104 +94,140 @@ export function presentPlannedPaymentCard(
           ? 'success'
           : 'secondary',
     flowDirection: item.flowDirection,
-    intervalLabel: getIntervalLabel(),
-    statusBadge,
+    intervalLabel: formatPlannedPaymentInterval(item),
+    intervalSummary: formatRecurrence(item, 'short'),
+    fromAccountLabel: item.fromAccount?.name ?? 'Unavailable account',
+    toAccountLabel: item.toAccount?.name ?? 'Unavailable account',
+    postingLabel: item.isAutoPost ? 'Auto-post' : 'Manual posting',
+    endDateLabel:
+      item.endDate == null ? undefined : `Ends ${dayjs(item.endDate).format('MMM D, YYYY')}`,
+    statusBadge: getStatusBadge(item, due.days),
     dateLabel:
       nextDate === undefined
         ? AppConfig.strings.plannedPayments.noUpcomingOccurrence
-        : `Next: ${getSmartDateLabel(nextDate)}`,
-    dateColor,
+        : `${isOverdue ? 'Due' : 'Next'}: ${getSmartDateLabel(nextDate)}`,
+    dueSummary:
+      nextDate === undefined || due.days === undefined || isOverdue
+        ? due.label
+        : due.days < 7
+          ? getSmartDateLabel(nextDate)
+          : dayjs(nextDate).format(dayjs(nextDate).isSame(now, 'year') ? 'MMM D' : 'MMM D, YYYY'),
+    dueColor: due.color,
     iconName:
       item.flowDirection === 'outflow'
         ? Icon.TrendingDown
         : item.flowDirection === 'inflow'
           ? Icon.TrendingUp
           : Icon.SwapHorizontal,
-    isOverdue,
   };
 }
 
 function PlannedPaymentCardComponent({ item, onPress }: PlannedPaymentCardProps) {
   const { theme } = useTheme();
   const formatMoney = useMoneyFormat();
-  const vm = presentPlannedPaymentCard(item, theme);
+  const vm = presentPlannedPaymentCard(item);
+  const dueColor = getVariantMainColor(theme, vm.dueColor);
 
   return (
     <PressScaleTouchable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={vm.name}
-      style={{ marginBottom: Spacing.md }}
+      accessibilityLabel={[
+        vm.name,
+        vm.flowDirection === 'inflow'
+          ? 'Income'
+          : vm.flowDirection === 'outflow'
+            ? 'Expense'
+            : vm.flowDirection === 'transfer'
+              ? 'Transfer'
+              : undefined,
+        formatMoney(vm.amount, vm.currencyCode),
+        vm.intervalLabel,
+        `From ${vm.fromAccountLabel} to ${vm.toAccountLabel}`,
+        vm.statusBadge?.text,
+        vm.dateLabel,
+        vm.postingLabel,
+        vm.endDateLabel,
+      ]
+        .filter(Boolean)
+        .join('. ')}
+      accessibilityHint="Opens planned payment details"
+      style={{ marginBottom: Spacing.sm }}
     >
       <AppSurface
         elevation="sm"
-        padding="lg"
+        padding="md"
         radius="r3"
         background="surface"
         borderWidth={1}
         borderColor="surfaceSecondary"
       >
-        <Column gap="md">
-          <Row justify="space-between" align="center">
-            <Row gap="md" align="center" flex={1}>
-              <Box
-                width={Size.xl}
-                height={Size.xl}
-                borderRadius="md"
-                alignItems="center"
-                justifyContent="center"
-                background={
-                  vm.amountColor === 'error'
-                    ? 'error'
-                    : vm.amountColor === 'success'
-                      ? 'success'
-                      : 'surfaceSecondary'
-                }
-                backgroundOpacity="soft"
-              >
-                <AppIcon name={vm.iconName} color={vm.amountColor} size={Size.iconSm} />
-              </Box>
-              <Column flex={1}>
-                <AppText variant="body" weight="bold" numberOfLines={1}>
-                  {vm.name}
-                </AppText>
-                <Row align="center" gap="sm" marginTop="xs">
-                  <AppText variant="caption" color="secondary" style={{ opacity: 0.6 }}>
-                    {vm.intervalLabel}
-                  </AppText>
-                  <Badge variant={vm.statusBadge.variant} size="sm" icon={vm.statusBadge.icon}>
-                    {vm.statusBadge.text}
-                  </Badge>
-                </Row>
-              </Column>
+        <Column gap="sm">
+          <Row justify="space-between" align="flex-start" gap="sm" flexWrap="wrap">
+            <Row gap="sm" align="center" flex={1} style={{ minWidth: '40%' }}>
+              <AppIcon
+                name={vm.iconName}
+                color={getVariantMainColor(theme, vm.amountColor)}
+                size={Size.iconSm}
+              />
+              <AppText variant="body" weight="semibold" numberOfLines={2} style={{ flex: 1 }}>
+                {vm.name}
+              </AppText>
             </Row>
 
-            <Column align="flex-end">
-              <AppText variant="bodyLarge" weight="bold" color={vm.amountColor}>
-                {formatMoney(vm.amount, vm.currencyCode)}
-              </AppText>
-            </Column>
+            <AppText
+              variant="heading"
+              weight="bold"
+              style={{ flexShrink: 0, maxWidth: '100%', marginLeft: 'auto' }}
+            >
+              {formatMoney(vm.amount, vm.currencyCode)}
+            </AppText>
           </Row>
 
-          <Box height={1} background="surfaceSecondary" opacity={0.5} />
-
-          <Row justify="space-between" align="center">
-            <Row align="center" gap="xs">
-              <AppIcon
-                name={vm.isOverdue ? Icon.Alert : Icon.Calendar}
-                size={Size.xxs}
-                color={vm.dateColor}
+          <Row align="center" gap="sm">
+            <Row flexShrink={1} style={{ minWidth: 0, maxWidth: '46%' }}>
+              <AccountInlineLabel
+                account={item.fromAccount}
+                placeholder={vm.fromAccountLabel}
+                variant="caption"
+                showIcon
               />
-              <AppText variant="caption" weight="medium" style={{ color: vm.dateColor }}>
-                {vm.dateLabel}
+            </Row>
+            <AppIcon name={Icon.ArrowRight} size={Size.xxs} color="textSecondary" />
+            <Row flexShrink={1} style={{ minWidth: 0, maxWidth: '46%' }}>
+              <AccountInlineLabel
+                account={item.toAccount}
+                placeholder={vm.toAccountLabel}
+                variant="caption"
+                showIcon
+              />
+            </Row>
+          </Row>
+
+          <Row justify="space-between" align="center" gap="sm" flexWrap="wrap">
+            <Row align="center" gap="sm">
+              <Row align="center" gap="xs">
+                <AppIcon name={Icon.Repeat} size={Size.iconXs} color="textSecondary" />
+                <AppText variant="caption" color="secondary">
+                  {vm.intervalSummary}
+                </AppText>
+              </Row>
+              {item.isAutoPost && (
+                <View accessible accessibilityRole="image" accessibilityLabel={vm.postingLabel}>
+                  <AppIcon name={Icon.Zap} size={Size.iconXs} color="textSecondary" />
+                </View>
+              )}
+            </Row>
+            <Row align="center" gap="xs" style={{ flexShrink: 1, marginLeft: 'auto' }}>
+              <AppIcon
+                name={vm.statusBadge?.icon ?? Icon.Calendar}
+                size={Size.iconXs}
+                color={dueColor}
+              />
+              <AppText variant="caption" weight="medium" style={{ color: dueColor, flexShrink: 1 }}>
+                {vm.dueSummary}
               </AppText>
             </Row>
-            <AppIcon
-              name={Icon.ChevronRight}
-              size={Size.iconXs}
-              color={theme.textSecondary}
-              opacity={0.4}
-            />
           </Row>
         </Column>
       </AppSurface>
