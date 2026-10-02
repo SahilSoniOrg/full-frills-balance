@@ -99,6 +99,7 @@ const ROUTE_METADATA_MAP: Record<
 
   // SMS & Automation
   'sms-inbox': { screenType: 'automation', flowContext: 'sms_transaction_review', isModal: false },
+  'sms-settings': { screenType: 'settings', flowContext: 'sms_settings', isModal: false },
   'sms-rules': { screenType: 'automation', flowContext: 'sms_rule_management', isModal: false },
   'sms-rule-form': {
     screenType: 'automation',

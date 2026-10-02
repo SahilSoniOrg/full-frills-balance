@@ -7,6 +7,9 @@ export default function SettingsScreen() {
       onProfile={AppNavigation.toPersonalizationSettings}
       onAppearance={AppNavigation.toAppearanceSettings}
       onAutomation={AppNavigation.toAutomationSettings}
+      onSmsSettings={AppNavigation.toSmsSettings}
+      onSmsInbox={AppNavigation.toTransactionInbox}
+      onSmsRules={AppNavigation.toSmsRules}
       onPrivacy={AppNavigation.toPrivacySecuritySettings}
       onPrivacyNotice={AppNavigation.toPrivacyNotice}
       onCurrentWorkplace={AppNavigation.toCurrentWorkplaceSettings}

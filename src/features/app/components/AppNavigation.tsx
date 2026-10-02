@@ -79,6 +79,7 @@ export function NavigationStack() {
       <Stack.Screen name="privacy-notice" options={detailOptions} />
       <Stack.Screen name="current-workplace-settings" options={detailOptions} />
       <Stack.Screen name="automation-settings" options={detailOptions} />
+      <Stack.Screen name="sms-settings" options={detailOptions} />
       <Stack.Screen name="maintenance-settings" options={detailOptions} />
       <Stack.Screen name="about-support-settings" options={detailOptions} />
       <Stack.Screen name="appearance-settings" options={detailOptions} />

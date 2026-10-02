@@ -392,6 +392,11 @@ export const AppNavigation = {
     router.push(buildRoute('/automation-settings', { focus }));
   },
 
+  /** Navigate to SMS import, review, and auto-post settings. */
+  toSmsSettings: (focus?: string) => {
+    router.push(buildRoute('/sms-settings', { focus }));
+  },
+
   /**
    * Navigate to maintenance and reset settings.
    */

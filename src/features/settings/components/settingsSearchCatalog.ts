@@ -46,7 +46,11 @@ const SETTINGS_SEARCH_ICONS: Record<string, IconName> = {
   'release-notes': Icon.Document,
   'sms-inbox': Icon.MessageSquare,
   'sms-rules': Icon.Terminal,
-  'sms-import': Icon.Zap,
+  'sms-settings': Icon.MessageSquare,
+  'sms-automation-import': Icon.Zap,
+  'sms-auto-post-enabled': Icon.Terminal,
+  'sms-review-notifications': Icon.Notifications,
+  'sms-notification-details': Icon.Notifications,
 };
 
 export function getSettingsSearchIcon(id: string): IconName | undefined {
@@ -57,6 +61,9 @@ type SettingsSearchActions = {
   onProfile: (target?: string) => void;
   onAppearance: (target?: string) => void;
   onAutomation: (target?: string) => void;
+  onSmsSettings: (target?: string) => void;
+  onSmsInbox: () => void;
+  onSmsRules: () => void;
   onPrivacy: (target?: string) => void;
   onPrivacyNotice: () => void;
   onCurrentWorkplace: (target?: string) => void;
@@ -321,12 +328,53 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
   if (Platform.OS === 'android') {
     catalog.push(
       {
+        id: 'sms-settings',
+        title: AppConfig.strings.settings.personalization.smsSettingsTitle,
+        description: AppConfig.strings.settings.personalization.smsSettingsDesc,
+        section: 'Notifications & Automation',
+        keywords: ['sms', 'settings', 'import', 'notifications', 'auto post'],
+        focusId: 'sms-automation-import',
+        navigate: actions.onSmsSettings,
+      },
+      {
+        id: 'sms-automation-import',
+        title: AppConfig.strings.settings.personalization.smsImportTitle,
+        description: 'Automatically scan transaction messages on this device.',
+        section: 'Notifications & Automation',
+        keywords: ['sms', 'import', 'automatic', 'messages'],
+        navigate: actions.onSmsSettings,
+      },
+      {
+        id: 'sms-auto-post-enabled',
+        title: AppConfig.strings.settings.personalization.smsAutoPostEnabledTitle,
+        description: AppConfig.strings.settings.personalization.smsAutoPostEnabledDesc,
+        section: 'Notifications & Automation',
+        keywords: ['sms', 'auto post', 'automatic', 'rules', 'entries'],
+        navigate: actions.onSmsSettings,
+      },
+      {
+        id: 'sms-review-notifications',
+        title: AppConfig.strings.settings.personalization.smsReviewNotificationsTitle,
+        description: AppConfig.strings.settings.personalization.smsReviewNotificationsDesc,
+        section: 'Notifications & Automation',
+        keywords: ['sms', 'notification', 'review', 'alert'],
+        navigate: actions.onSmsSettings,
+      },
+      {
+        id: 'sms-notification-details',
+        title: 'Detailed SMS previews',
+        description: 'Choose whether alerts show transaction details.',
+        section: 'Notifications & Automation',
+        keywords: ['sms', 'privacy', 'preview', 'amount'],
+        navigate: actions.onSmsSettings,
+      },
+      {
         id: 'sms-inbox',
         title: AppConfig.strings.settings.personalization.smsInboxTitle,
         description: AppConfig.strings.settings.personalization.smsInboxDesc,
         section: 'Notifications & Automation',
         keywords: ['sms', 'inbox', 'messages', 'transactions'],
-        navigate: actions.onAutomation,
+        navigate: actions.onSmsInbox,
       },
       {
         id: 'sms-rules',
@@ -334,17 +382,9 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
         description: AppConfig.strings.settings.personalization.smsAutoPostDesc,
         section: 'Notifications & Automation',
         keywords: ['sms', 'rules', 'automation', 'auto post'],
-        navigate: actions.onAutomation,
+        navigate: actions.onSmsRules,
       },
     );
-    catalog.push({
-      id: 'sms-import',
-      title: AppConfig.strings.settings.personalization.smsImportTitle,
-      description: 'Automatically scan for transaction messages on this device.',
-      section: 'Devices & Sessions',
-      keywords: ['sms', 'text message', 'transaction', 'import', 'android'],
-      navigate: actions.onDeviceSettings,
-    });
   }
 
   return catalog.map(item => {

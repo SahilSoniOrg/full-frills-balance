@@ -16,6 +16,9 @@ export interface SettingsViewProps {
   onProfile: () => void;
   onAppearance: () => void;
   onAutomation: () => void;
+  onSmsSettings: (focus?: string) => void;
+  onSmsInbox: () => void;
+  onSmsRules: () => void;
   onPrivacy: () => void;
   onPrivacyNotice: () => void;
   onCurrentWorkplace: () => void;
@@ -29,6 +32,9 @@ export function SettingsView({
   onProfile,
   onAppearance,
   onAutomation,
+  onSmsSettings,
+  onSmsInbox,
+  onSmsRules,
   onPrivacy,
   onPrivacyNotice,
   onCurrentWorkplace,
@@ -45,6 +51,9 @@ export function SettingsView({
         onProfile,
         onAppearance,
         onAutomation,
+        onSmsSettings,
+        onSmsInbox,
+        onSmsRules,
         onPrivacy,
         onPrivacyNotice,
         onCurrentWorkplace,
@@ -57,6 +66,9 @@ export function SettingsView({
       onAbout,
       onAppearance,
       onAutomation,
+      onSmsSettings,
+      onSmsInbox,
+      onSmsRules,
       onCurrentWorkplace,
       onDataManagement,
       onDeviceSettings,

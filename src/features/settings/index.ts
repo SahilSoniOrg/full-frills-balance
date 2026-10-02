@@ -3,6 +3,7 @@ export { default as CurrentWorkplaceSettingsScreen } from './screens/CurrentWork
 export { default as DeviceSettingsScreen } from './screens/DeviceSettingsScreen';
 export { default as AboutSupportSettingsScreen } from './screens/AboutSupportSettingsScreen';
 export { default as AutomationSettingsScreen } from './screens/AutomationSettingsScreen';
+export { default as SmsSettingsScreen } from './screens/SmsSettingsScreen';
 export { default as DataManagementSettingsScreen } from './screens/DataManagementSettingsScreen';
 export { default as ImportSelectionScreen } from './screens/ImportSelectionScreen';
 export { default as MaintenanceSettingsScreen } from './screens/MaintenanceSettingsScreen';

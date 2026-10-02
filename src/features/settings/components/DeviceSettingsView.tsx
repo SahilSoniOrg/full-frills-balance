@@ -4,18 +4,8 @@ import { Box, Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
 import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
-import { SettingsToggleItem } from '@/src/features/settings/components/SettingsToggleItem';
-import { Platform } from 'react-native';
 
-interface DeviceSettingsViewProps {
-  isSmsImportEnabled: boolean;
-  onToggleSmsImport: (enabled: boolean) => void;
-}
-
-export function DeviceSettingsView({
-  isSmsImportEnabled,
-  onToggleSmsImport,
-}: DeviceSettingsViewProps) {
+export function DeviceSettingsView() {
   return (
     <SettingsLayout title={AppConfig.strings.settings.sections.devicesAndSessions}>
       <Stack space="xl">
@@ -29,20 +19,6 @@ export function DeviceSettingsView({
             disabled
           />
         </SettingsMenu>
-
-        {Platform.OS === 'android' && (
-          <SettingsMenu header="Device Preferences">
-            <SettingsToggleItem
-              searchId="sms-import"
-              leftIcon={Icon.Zap}
-              title={AppConfig.strings.settings.personalization.smsImportTitle}
-              description="Automatically scan for transaction messages on this device."
-              value={isSmsImportEnabled}
-              onValueChange={onToggleSmsImport}
-              testID="device-sms-import-toggle"
-            />
-          </SettingsMenu>
-        )}
 
         <SettingsMenu header="Future Sessions">
           <SettingsMenuItem

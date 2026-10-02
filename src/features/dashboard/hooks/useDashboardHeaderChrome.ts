@@ -26,7 +26,7 @@ export function useDashboardHeaderChrome(): DashboardHeaderChrome {
   const { userName } = useProfilePrefs();
   const { workplaceId } = useWorkplace();
   const { isAppReady } = useAppReady();
-  const { isSmsImportEnabled } = useSmsPrefs();
+  const { isAutomaticSmsImportEnabled } = useSmsPrefs();
   const { data: insights } = useInsightPatterns(workplaceId, { enabled: isAppReady });
   const supplementalInsights = useSupplementalInsights(workplaceId);
   const { data: unreadSmsCount } = useUnreadSmsCount(workplaceId);
@@ -42,7 +42,7 @@ export function useDashboardHeaderChrome(): DashboardHeaderChrome {
   }, [notificationCount]);
 
   const onSmsPress =
-    Platform.OS === 'android' && (isSmsImportEnabled || (unreadSmsCount || 0) > 0)
+    Platform.OS === 'android' && (isAutomaticSmsImportEnabled || (unreadSmsCount || 0) > 0)
       ? AppNavigation.toTransactionInbox
       : undefined;
 

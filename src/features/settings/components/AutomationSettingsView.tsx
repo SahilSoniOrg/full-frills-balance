@@ -10,16 +10,12 @@ import { Platform } from 'react-native';
 
 interface AutomationSettingsViewProps {
   notifications: NotificationSettingsViewModel;
-  isSmsImportEnabled: boolean;
-  onOpenInbox: () => void;
-  onOpenSmsRules: () => void;
+  onOpenSmsSettings: () => void;
 }
 
 export function AutomationSettingsView({
   notifications,
-  isSmsImportEnabled,
-  onOpenInbox,
-  onOpenSmsRules,
+  onOpenSmsSettings,
 }: AutomationSettingsViewProps) {
   const title =
     Platform.OS === 'android'
@@ -29,6 +25,19 @@ export function AutomationSettingsView({
   return (
     <SettingsLayout title={title}>
       <Stack space="xl">
+        {Platform.OS === 'android' && (
+          <SettingsMenu header={AppConfig.strings.settings.personalization.smsAutomationHeader}>
+            <SettingsMenuItem
+              searchId="sms-settings"
+              leftIcon={Icon.MessageSquare}
+              title={AppConfig.strings.settings.personalization.smsSettingsTitle}
+              description={AppConfig.strings.settings.personalization.smsSettingsDesc}
+              onPress={onOpenSmsSettings}
+              testID="settings-sms-settings"
+            />
+          </SettingsMenu>
+        )}
+
         <NotificationPreferenceView
           cadence={notifications.notificationCadence}
           hour={notifications.notificationHour}
@@ -38,30 +47,6 @@ export function AutomationSettingsView({
           onUpdateTime={notifications.onUpdateNotificationTime}
           onSendTest={notifications.onSendTestNotification}
         />
-
-        {Platform.OS === 'android' && (
-          <SettingsMenu header={AppConfig.strings.settings.personalization.smsAutomationHeader}>
-            <SettingsMenuItem
-              searchId="sms-inbox"
-              leftIcon={Icon.MessageSquare}
-              title={AppConfig.strings.settings.personalization.smsInboxTitle}
-              description={AppConfig.strings.settings.personalization.smsInboxDesc}
-              onPress={onOpenInbox}
-              testID="settings-sms-inbox"
-            />
-            {isSmsImportEnabled && (
-              <>
-                <SettingsMenuItem
-                  searchId="sms-rules"
-                  leftIcon={Icon.Terminal}
-                  title={AppConfig.strings.settings.personalization.smsAutoPostTitle}
-                  description={AppConfig.strings.settings.personalization.smsAutoPostDesc}
-                  onPress={onOpenSmsRules}
-                />
-              </>
-            )}
-          </SettingsMenu>
-        )}
       </Stack>
     </SettingsLayout>
   );

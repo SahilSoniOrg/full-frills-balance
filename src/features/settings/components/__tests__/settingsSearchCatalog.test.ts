@@ -2,11 +2,15 @@ import {
   createSettingsSearchCatalog,
   filterSettingsSearchItems,
 } from '@/src/features/settings/components/settingsSearchCatalog';
+import { Platform } from 'react-native';
 
 const actions = {
   onProfile: jest.fn(),
   onAppearance: jest.fn(),
   onAutomation: jest.fn(),
+  onSmsSettings: jest.fn(),
+  onSmsInbox: jest.fn(),
+  onSmsRules: jest.fn(),
   onPrivacy: jest.fn(),
   onPrivacyNotice: jest.fn(),
   onCurrentWorkplace: jest.fn(),
@@ -64,5 +68,23 @@ describe('settings search catalog', () => {
     expect(catalog.find(item => item.id === 'data-management')?.focusId).toBe('data-export');
     expect(catalog.find(item => item.id === 'maintenance')?.focusId).toBe('integrity');
     expect(catalog.every(item => item.focusId.length > 0)).toBe(true);
+  });
+
+  it('routes SMS preference search results into SMS settings and keeps inbox/rules shortcuts direct', () => {
+    const originalPlatformOS = Platform.OS;
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' });
+    const catalog = createSettingsSearchCatalog(actions);
+    const smsImport = catalog.find(item => item.id === 'sms-automation-import')!;
+    const smsInbox = catalog.find(item => item.id === 'sms-inbox')!;
+    const smsRules = catalog.find(item => item.id === 'sms-rules')!;
+
+    smsImport.navigate(smsImport.focusId);
+    smsInbox.navigate(smsInbox.focusId);
+    smsRules.navigate(smsRules.focusId);
+
+    expect(actions.onSmsSettings).toHaveBeenCalledWith('sms-automation-import');
+    expect(actions.onSmsInbox).toHaveBeenCalled();
+    expect(actions.onSmsRules).toHaveBeenCalled();
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatformOS });
   });
 });
