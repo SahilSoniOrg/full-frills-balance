@@ -6,6 +6,9 @@ import { AppState } from 'react-native';
 jest.mock('@/src/services/RebuildQueueService', () => ({
   rebuildQueueService: { flush: jest.fn().mockResolvedValue(undefined) },
 }));
+jest.mock('@/src/services/sms/AutomaticSmsImportService', () => ({
+  automaticSmsImportService: { processPending: jest.fn().mockResolvedValue(undefined) },
+}));
 
 describe('useAppForegroundMaintenance', () => {
   let changeHandler: (state: string) => void;

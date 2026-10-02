@@ -2,6 +2,7 @@ import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { logger } from '@/src/utils/logger';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
+import { automaticSmsImportService } from '@/src/services/sms/AutomaticSmsImportService';
 import { useEffect, useRef } from 'react';
 import { AppState, AppStateStatus, Platform } from 'react-native';
 
@@ -33,6 +34,13 @@ export function useAppForegroundMaintenance() {
         ]).catch(error =>
           logger.warn('[ForegroundMaintenance] Projection cleanup retry failed', { error }),
         );
+        if (Platform.OS === 'android') {
+          void automaticSmsImportService
+            .processPending()
+            .catch(error =>
+              logger.warn('[ForegroundMaintenance] SMS inbox catch-up failed', { error }),
+            );
+        }
       }, RESUME_FLUSH_DEBOUNCE_MS);
     };
 

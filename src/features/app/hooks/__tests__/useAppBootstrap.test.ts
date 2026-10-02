@@ -45,6 +45,9 @@ jest.mock('@/src/services/integrity', () => ({
 jest.mock('@/src/services/notification/NotificationService', () => ({
   notificationService: { scheduleReminder: jest.fn().mockResolvedValue(undefined) },
 }));
+jest.mock('@/src/services/sms/AutomaticSmsImportService', () => ({
+  automaticSmsImportService: { synchronizeOnAppStart: jest.fn().mockResolvedValue(undefined) },
+}));
 jest.mock('@/src/services/planned-payment/plannedPaymentOrchestration', () => ({
   processDuePlannedPayments: jest.fn().mockResolvedValue(undefined),
 }));

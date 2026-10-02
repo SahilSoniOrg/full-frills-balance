@@ -24,6 +24,7 @@ import { purgeLocalAiCachesOnce } from '../purgeLocalAiCaches';
 import { LatestGenerationCoordinator } from '@/src/services/LatestGenerationCoordinator';
 import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
 import { snapshotService } from '@/src/utils/SnapshotService';
+import { automaticSmsImportService } from '@/src/services/sms/AutomaticSmsImportService';
 
 /**
  * Bootstraps app-wide side effects and data hydration.
@@ -111,6 +112,11 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
               notifMinute,
               notifWeekday,
             ),
+            automaticSmsImportService
+              .synchronizeOnAppStart()
+              .catch(error =>
+                logger.warn('[Bootstrap] Automatic SMS import setup failed', { error }),
+              ),
           ]);
 
           // Runs after the batch so a full journal scan does not contend with startup work.

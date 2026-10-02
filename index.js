@@ -1,5 +1,6 @@
 // Polyfill secure randomness for libraries like PostHog (Fixes RangeError on Huawei/Hermes)
 import 'react-native-get-random-values';
+import { AppRegistry } from 'react-native';
 
 // Hold the native splash before expo-router boots. Too late and the first
 // full-screen frame is visible before safe-area insets apply (FUL-42).
@@ -9,6 +10,12 @@ import '@/src/features/app/preventSplashAutoHide';
 import { analytics } from '@/src/services/analytics';
 import '@/src/features/app/hooks/useFonts';
 import { logger } from './src/utils/logger';
+
+AppRegistry.registerHeadlessTask('AutomaticSmsImport', () => async data => {
+  const { automaticSmsImportService } =
+    await import('./src/services/sms/AutomaticSmsImportService');
+  await automaticSmsImportService.processHeadlessArrival(data?.retryWhenEmpty === true);
+});
 
 if (process.env.EXPO_OS !== 'web') {
   require('react-native-quick-crypto').install();
