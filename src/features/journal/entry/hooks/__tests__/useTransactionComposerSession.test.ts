@@ -12,9 +12,6 @@ jest.mock('@/src/data/repositories/transaction');
 jest.mock('expo-router', () => ({
   useRouter: jest.fn(() => ({ back: jest.fn() })),
 }));
-jest.mock('@/src/hooks/useAdvancedModePrefs', () => ({
-  useAdvancedModePrefs: jest.fn(() => ({ advancedMode: false, setAdvancedMode: jest.fn() })),
-}));
 jest.mock('@/src/hooks/use-currencies', () => ({
   useCurrencies: jest.fn(() => ({ currencies: [], isLoading: false })),
   useCurrencyPrecision: jest.fn(() => ({ precision: 2, isLoading: false })),

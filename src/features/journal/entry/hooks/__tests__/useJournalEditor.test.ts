@@ -28,14 +28,6 @@ jest.mock('@/src/utils/haptics', () => ({
 const mockBack = jest.fn();
 (useRouter as jest.Mock).mockReturnValue({ back: mockBack });
 
-// Mock useAdvancedModePrefs
-jest.mock('@/src/hooks/useAdvancedModePrefs', () => ({
-  useAdvancedModePrefs: jest.fn(() => ({
-    advancedMode: false,
-    setAdvancedMode: jest.fn(),
-  })),
-}));
-
 // Mock useExchangeRate
 jest.mock('@/src/hooks/useExchangeRate', () => ({
   useExchangeRate: jest.fn(() => ({
