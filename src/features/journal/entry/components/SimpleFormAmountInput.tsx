@@ -86,12 +86,16 @@ export const SimpleFormAmountInput = React.memo(function SimpleFormAmountInput({
     inputRef.current?.focus();
   }, [setAmount]);
 
-  const handleDone = useCallback(() => {
-    Keyboard.dismiss();
+  const normalizeAmount = useCallback(() => {
     if (amount.endsWith('.')) {
       setAmount(amount.slice(0, -1));
     }
   }, [amount, setAmount]);
+
+  const handleDone = useCallback(() => {
+    normalizeAmount();
+    Keyboard.dismiss();
+  }, [normalizeAmount]);
 
   const handleFocus = useCallback(() => {
     setIsFocused(true);
@@ -99,10 +103,12 @@ export const SimpleFormAmountInput = React.memo(function SimpleFormAmountInput({
 
   const handleBlur = useCallback(() => {
     setIsFocused(false);
-    handleDone();
-  }, [handleDone]);
+    // Blurring may be a move to another input; only Done should dismiss the keyboard.
+    normalizeAmount();
+  }, [normalizeAmount]);
 
   const openCalculator = useCallback(() => {
+    Keyboard.dismiss();
     setCalculatorMounted(true);
     setCalculatorVisible(true);
   }, []);
@@ -146,6 +152,7 @@ export const SimpleFormAmountInput = React.memo(function SimpleFormAmountInput({
             placeholder={isFocused ? '' : '0'}
             placeholderTextColor={withOpacity(accentColor, Opacity.medium)}
             keyboardType="decimal-pad"
+            accessibilityLabel={`Amount in ${currency}`}
             onSubmitEditing={handleDone}
             onFocus={handleFocus}
             onBlur={handleBlur}

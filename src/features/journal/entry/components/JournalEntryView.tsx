@@ -176,7 +176,7 @@ export function JournalEntryView(props: JournalEntryViewProps) {
     onVoiceInputPress: activeMode === 'basic' ? () => setIsVoiceModalVisible(true) : undefined,
     showBanner: showEditBanner,
     bannerText: editBannerText,
-    onDescriptionSubmitEditing: startGuidedAccountFlow,
+    onDescriptionSubmitEditing: activeMode === 'basic' ? startGuidedAccountFlow : undefined,
     descriptionInputRef,
   };
   const journalMetaCard = !isBatchMode ? <JournalMetaCard {...journalMetaProps} /> : null;

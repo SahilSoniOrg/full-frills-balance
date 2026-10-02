@@ -204,6 +204,7 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
             style={styles.descriptionInputSlot}
             onTouchStart={() => handleSuggestionInteractionChange(true)}
             onTouchEnd={() => handleSuggestionInteractionChange(false)}
+            onTouchCancel={() => handleSuggestionInteractionChange(false)}
           >
             <AppInput
               ref={resolvedDescriptionInputRef}
@@ -234,6 +235,8 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
                 onDescriptionSubmitEditing?.();
               }}
               placeholder={AppConfig.strings.advancedEntry.descriptionPlaceholder}
+              accessibilityLabel="Entry description"
+              returnKeyType={onDescriptionSubmitEditing ? 'next' : 'done'}
               variant="minimal"
               flex={1}
               style={styles.descriptionInput}
