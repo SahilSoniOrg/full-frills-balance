@@ -33,6 +33,7 @@ export function BudgetPeriodStepper({
         style={[styles.navButton, { backgroundColor: theme.surface }, Shape.elevation.sm]}
         activeOpacity={Opacity.heavy}
         accessibilityLabel="Previous period"
+        accessibilityRole="button"
       >
         <AppIcon name={Icon.ChevronLeft} size={Size.sm} color={theme.textSecondary} />
       </TouchableOpacity>
@@ -73,6 +74,8 @@ export function BudgetPeriodStepper({
         activeOpacity={canGoNext ? Opacity.heavy : 1}
         disabled={!canGoNext}
         accessibilityLabel="Next period"
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !canGoNext }}
       >
         <AppIcon
           name={Icon.ChevronRight}
@@ -91,8 +94,8 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   navButton: {
-    width: Size.xl,
-    height: Size.xl,
+    width: Size.buttonMd,
+    height: Size.buttonMd,
     borderRadius: Shape.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
