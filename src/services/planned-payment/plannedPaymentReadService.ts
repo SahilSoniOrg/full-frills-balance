@@ -4,9 +4,10 @@ import { journalObserveQueries } from '@/src/data/repositories/journal/JournalOb
 import { observeWorkplaceAccounts } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { AccountType } from '@/src/types/enums';
 import type Account from '@/src/data/models/Account';
+import { toPlainAccount } from '@/src/data/models/Account';
 import type Journal from '@/src/data/models/Journal';
 import type PlannedPayment from '@/src/data/models/PlannedPayment';
-import type { PlainPlannedPayment } from '@/src/types/plainDtos';
+import type { PlainAccount, PlainPlannedPayment } from '@/src/types/plainDtos';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { combineLatest, map, Observable } from 'rxjs';
 
@@ -14,6 +15,8 @@ export type PlannedPaymentObligation = PlainPlannedPayment & {
   nextDueOccurrence?: number;
   outstandingJournalId?: string;
   flowDirection: 'inflow' | 'outflow' | 'transfer' | 'unknown';
+  fromAccount?: PlainAccount;
+  toAccount?: PlainAccount;
 };
 
 export function classifyPlannedPaymentDirection(
@@ -38,7 +41,7 @@ export function projectPlannedPaymentObligations(
   journals: Journal[],
   accounts: Account[],
 ): PlannedPaymentObligation[] {
-  const accountsById = new Map(accounts.map(account => [account.id, account]));
+  const accountsById = new Map(accounts.map(account => [account.id, toPlainAccount(account)]));
   const journalsByPlan = new Map<string, Journal[]>();
   for (const journal of journals) {
     if (!journal.plannedPaymentId) continue;
@@ -68,6 +71,8 @@ export function projectPlannedPaymentObligations(
         nextDueOccurrence,
         outstandingJournalId: pendingWins ? pending.id : undefined,
         flowDirection,
+        fromAccount: from,
+        toAccount: to,
       };
     })
     .sort((a, b) => {
