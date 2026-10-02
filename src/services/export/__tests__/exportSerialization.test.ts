@@ -4,8 +4,36 @@ import {
   serializeMultiWorkplaceExport,
 } from '@/src/services/export/exportSerialization';
 import { DEFAULT_UI_PREFERENCES } from '@/src/services/preferences/types';
+import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
 
 describe('export serialization', () => {
+  it('preserves retained SMS sources in backups without exporting plain-text deduplication identities', async () => {
+    const source = {
+      id: 'source-1',
+      originalSmsSender: 'BANK',
+      originalSmsBody: 'Original transaction',
+      metadataJson: JSON.stringify({
+        rawBody: 'Original transaction',
+        smsFingerprint: 'bank::body::7',
+      }),
+    };
+    const json = await serializeExportPayloadFromSources(
+      {
+        exportDate: '2026-10-02',
+        version: '1.0.0',
+        schemaVersion: 33,
+        preferences: DEFAULT_UI_PREFERENCES,
+      },
+      [['journalMetadata', async () => [source]]],
+    );
+    const [saved] = JSON.parse(json).journalMetadata;
+    expect(saved.originalSmsSender).toBe('BANK');
+    expect(saved.originalSmsBody).toBe('Original transaction');
+    expect(JSON.parse(saved.metadataJson)).toEqual({
+      rawBody: 'Original transaction',
+      smsFingerprint: hashLegacySmsFingerprint('bank::body::7'),
+    });
+  });
   it('loads source tables sequentially and preserves the export shape', async () => {
     const events: string[] = [];
     const json = await serializeExportPayloadFromSources(

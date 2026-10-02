@@ -14,7 +14,7 @@ describe('SmsPrivacyRepository integration', () => {
     await database.write(() => database.unsafeResetDatabase());
   });
 
-  it('scrubs only imported or auto-posted SMS content, migrates old identities, preserves notes, and is idempotent', async () => {
+  it('retains SMS sources and journal metadata, hashes old identities, sanitizes audits, and is idempotent', async () => {
     await database.write(async () => {
       const inbox = database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
       const makeInbox = (id: string, channel: string, status: InboxProcessingStatus) =>
@@ -102,7 +102,7 @@ describe('SmsPrivacyRepository integration', () => {
       );
     });
 
-    await repository.scrubLegacySmsContent();
+    await repository.sanitizeLegacySmsData();
 
     const inbox = database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
     const dismissed = await inbox.find('sms-dismissed');
@@ -116,8 +116,8 @@ describe('SmsPrivacyRepository integration', () => {
       hashLegacySmsFingerprint('privatebank::privatemerchant purchase 500::19675'),
     );
     for (const terminal of [imported, autoPosted]) {
-      expect(terminal.senderAddress).toBeFalsy();
-      expect(terminal.rawBody).toBeFalsy();
+      expect(terminal.senderAddress).toBe('PrivateBank');
+      expect(terminal.rawBody).toBe('PrivateMerchant purchase 500');
       expect(terminal.inputFingerprint).toBe(
         hashLegacySmsFingerprint('privatebank::privatemerchant purchase 500::19675'),
       );
@@ -126,14 +126,14 @@ describe('SmsPrivacyRepository integration', () => {
     expect(pending.rawBody).toContain('PrivateMerchant');
     expect(voice.senderAddress).toBe('PrivateBank');
     expect(voice.rawBody).toContain('PrivateMerchant');
-    expect(dismissed.metadataJson).not.toContain('PrivateMerchant');
+    expect(dismissed.metadataJson).toContain('PrivateMerchant');
 
     const metadata = database.collections.get<JournalMetadata>('journal_metadata');
     const smsMeta = await metadata.find('sms-journal-meta');
     const voiceMeta = await metadata.find('voice-journal-meta');
-    expect(smsMeta.originalSmsSender).toBeFalsy();
-    expect(smsMeta.originalSmsBody).toBeFalsy();
-    expect(smsMeta.metadataJson).not.toContain('PrivateMerchant');
+    expect(smsMeta.originalSmsSender).toBe('PrivateBank');
+    expect(smsMeta.originalSmsBody).toBe('PrivateMerchant purchase 500');
+    expect(smsMeta.metadataJson).toContain('PrivateMerchant');
     expect(smsMeta.metadataJson).toContain('Merchant');
     expect(smsMeta.metadataJson).toContain('500');
     expect(JSON.parse(voiceMeta.metadataJson!)).toEqual({
@@ -154,7 +154,7 @@ describe('SmsPrivacyRepository integration', () => {
       audit.changes,
     ];
 
-    await repository.scrubLegacySmsContent();
+    await repository.sanitizeLegacySmsData();
     const auditAgain = await database.collections.get<AuditLog>('audit_logs').find('sms-audit');
     expect([
       dismissed.inputFingerprint,
@@ -189,7 +189,7 @@ describe('SmsPrivacyRepository integration', () => {
     });
     const batchSpy = jest.spyOn(database, 'batch');
 
-    await repository.scrubLegacySmsContent();
+    await repository.sanitizeLegacySmsData();
 
     expect(batchSpy).not.toHaveBeenCalled();
     batchSpy.mockRestore();

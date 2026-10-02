@@ -1,8 +1,29 @@
 import { computeSmsFingerprint } from '@/src/services/sms/pipeline/smsFingerprint';
 import { hashLegacySmsFingerprint, sha256Hex } from '@/src/utils/smsFingerprintHash';
-import { sanitizeSmsAuditChanges, sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
+import {
+  hashSmsMetadataFingerprints,
+  sanitizeSmsAuditChanges,
+  sanitizeSmsMetadataJson,
+} from '@/src/utils/smsPrivateMetadata';
 
 describe('SMS privacy fingerprints and metadata', () => {
+  it('hashes legacy and nested metadata identities while retaining original source content', () => {
+    const raw = JSON.stringify({
+      rawBody: 'Original transaction',
+      originalSmsSender: 'BANK',
+      metadataJson: JSON.stringify({ body: 'Keep this source', smsFingerprint: 'bank::body::7' }),
+    });
+    const hashed = hashSmsMetadataFingerprints(raw)!;
+    const data = JSON.parse(hashed);
+    expect(data.rawBody).toBe('Original transaction');
+    expect(data.originalSmsSender).toBe('BANK');
+    expect(JSON.parse(data.metadataJson)).toEqual({
+      body: 'Keep this source',
+      smsFingerprint: hashLegacySmsFingerprint('bank::body::7'),
+    });
+    expect(hashSmsMetadataFingerprints(hashed)).toBe(hashed);
+    expect(hashSmsMetadataFingerprints('{broken source')).toBe('{broken source');
+  });
   it('uses standard SHA-256 and never persists sender or message text in a fingerprint', () => {
     expect(sha256Hex('abc')).toBe(
       'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',

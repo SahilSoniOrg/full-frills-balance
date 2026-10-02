@@ -3,6 +3,7 @@ import { Section } from '@/src/components/shared/Section';
 import { Icon, AppButton, AppIcon, AppText, ListRow } from '@/src/components/core';
 import { Box, Inset, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import React, { useMemo, useState } from 'react';
 import { Pressable } from 'react-native';
 
@@ -30,6 +31,7 @@ type SmsField =
 export const JournalDetailsSmsSection = React.memo(
   ({ smsInfo, onOpenSmsInbox }: JournalDetailsSmsSectionProps) => {
     const { theme } = useTheme();
+    const isPrivacyMode = useEffectivePrivacyMode();
     const [isExpanded, setIsExpanded] = useState(false);
     const smsSections = useMemo(() => {
       return smsInfo.map(sms => {
@@ -113,7 +115,7 @@ export const JournalDetailsSmsSection = React.memo(
                       </AppText>
                       <Box marginTop="xs">
                         <AppText variant="body" color="secondary">
-                          {sms.rawBody}
+                          {isPrivacyMode ? 'Original message hidden in Privacy Mode.' : sms.rawBody}
                         </AppText>
                       </Box>
                     </Inset>

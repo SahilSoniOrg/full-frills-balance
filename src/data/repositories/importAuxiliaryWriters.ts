@@ -26,9 +26,8 @@ import { WorkplaceId } from '@/src/types/ids';
 import { Model } from '@nozbe/watermelondb';
 import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
 import {
-  clearsRawSmsContent,
   sanitizeSmsAuditChanges,
-  sanitizeSmsMetadataJson,
+  hashSmsMetadataFingerprints,
 } from '@/src/utils/smsPrivateMetadata';
 
 function readAuditPayloadString(changes: string, key: string): string | undefined {
@@ -173,12 +172,9 @@ export function prepareAuxiliaryImportRecords(
       setImportPersistenceRawField(record, 'journal_id', metadata.journalId);
       record.importSource = metadata.importSource;
       record.originalSmsId = metadata.originalSmsId;
-      record.originalSmsSender = undefined;
-      record.originalSmsBody = undefined;
-      record.metadataJson = sanitizeSmsMetadataJson(
-        metadata.metadataJson,
-        metadata.importSource === 'sms',
-      );
+      record.originalSmsSender = metadata.originalSmsSender;
+      record.originalSmsBody = metadata.originalSmsBody;
+      record.metadataJson = hashSmsMetadataFingerprints(metadata.metadataJson);
       record._raw._status = 'synced';
       setRecordTimestamps(record, { createdAt: metadata.createdAt, updatedAt: metadata.updatedAt });
     }),
@@ -210,9 +206,8 @@ export function prepareAuxiliaryImportRecords(
       record.deviceSourceId = inbox.deviceSourceId;
       const isSms = inbox.channel === 'sms';
       const processingStatus = toInboxProcessingStatus(inbox.processingStatus);
-      const clearRawSms = isSms && clearsRawSmsContent(processingStatus);
-      record.senderAddress = clearRawSms ? undefined : inbox.senderAddress;
-      record.rawBody = clearRawSms ? undefined : inbox.rawBody;
+      record.senderAddress = inbox.senderAddress;
+      record.rawBody = inbox.rawBody;
       record.inputDate = inbox.inputDate;
       record.inputFingerprint = isSms
         ? hashLegacySmsFingerprint(inbox.inputFingerprint)
@@ -230,7 +225,7 @@ export function prepareAuxiliaryImportRecords(
       record.duplicateConfidence = inbox.duplicateConfidence;
       record.parseConfidence = inbox.parseConfidence;
       record.parseReason = inbox.parseReason;
-      record.metadataJson = sanitizeSmsMetadataJson(inbox.metadataJson, isSms);
+      record.metadataJson = hashSmsMetadataFingerprints(inbox.metadataJson);
       record.firstSeenAt = inbox.firstSeenAt;
       record.lastScannedAt = inbox.lastScannedAt;
       record.processedAt = inbox.processedAt;

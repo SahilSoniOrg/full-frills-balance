@@ -1,6 +1,6 @@
 import type { UIPreferences } from '@/src/services/preferences/types';
 import type { WorkplacePreferences } from '@/src/services/preferences/workplaceTypes';
-import { sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
+import { hashSmsMetadataFingerprints } from '@/src/utils/smsPrivateMetadata';
 
 export interface ExportMetadata {
   exportDate: string;
@@ -101,9 +101,9 @@ export function serializeMultiWorkplaceExport(
 }
 
 function exportReplacer(field: string, value: unknown): unknown {
-  if (field === 'runningBalance' || field === 'originalSmsBody' || field === 'originalSmsSender')
-    return undefined;
-  if (field === 'metadataJson' && typeof value === 'string') return sanitizeSmsMetadataJson(value);
+  if (field === 'runningBalance') return undefined;
+  if (field === 'metadataJson' && typeof value === 'string')
+    return hashSmsMetadataFingerprints(value);
   return value;
 }
 

@@ -1,6 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import { asWorkplaceId } from '@/src/types/ids';
 import { ExportRepository } from '../ExportRepository';
+import { deviceSmsInboxRepository } from '../DeviceSmsInboxRepository';
 
 jest.mock('@/src/data/database/Database', () => ({
   database: {
@@ -14,6 +15,28 @@ describe('ExportRepository.fetchOrmTable', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it('bounds source lookups when exporting a large SMS history', async () => {
+    const rows = Array.from({ length: 601 }, (_, index) => ({
+      _raw: { id: `copy-${index}`, channel: 'sms', device_source_id: `source-${index}` },
+    }));
+    mockGet.mockReturnValue({ query: jest.fn(() => ({ fetch: async () => rows })) });
+    const lookup = jest.spyOn(deviceSmsInboxRepository, 'findBySourceIds').mockResolvedValue([]);
+
+    const exported = await repository.fetchOrmTable(
+      'transaction_inbox_records',
+      ['id', 'channel', 'device_source_id'],
+      asWorkplaceId('workplace-1'),
+    );
+
+    expect(exported).toHaveLength(601);
+    expect(lookup.mock.calls.map(([ids]) => ids.length)).toEqual([100, 100, 100, 100, 100, 100, 1]);
+    expect(lookup.mock.calls.flatMap(([ids]) => ids)).toEqual(
+      rows.map(row => row._raw.device_source_id),
+    );
   });
 
   it('scopes workplace-owned tables before projecting ORM rows', async () => {

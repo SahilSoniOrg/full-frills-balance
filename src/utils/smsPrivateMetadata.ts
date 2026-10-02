@@ -1,4 +1,3 @@
-import { InboxProcessingStatus } from '@/src/types/enums';
 import { hashLegacySmsFingerprint } from './smsFingerprintHash';
 
 const EXPLICIT_SMS_RAW_KEYS = new Set([
@@ -107,9 +106,30 @@ export function sanitizeSmsAuditChanges(raw: string): string | undefined {
   }
 }
 
-/** Dismissed SMS stay restorable, and the native inbox cannot re-read a single message. */
-export function clearsRawSmsContent(status: InboxProcessingStatus): boolean {
-  return status === InboxProcessingStatus.IMPORTED || status === InboxProcessingStatus.AUTO_POSTED;
+/** Hash legacy identities without discarding their locally retained source content. */
+export function hashSmsMetadataFingerprints(raw?: string | null): string | undefined {
+  if (!raw) return raw ?? undefined;
+  const hashValue = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(hashValue);
+    if (!value || typeof value !== 'object') return value;
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => {
+        const normalized = normalizedKey(key);
+        if (normalized === 'smsfingerprint' && typeof entry === 'string') {
+          return [key, hashLegacySmsFingerprint(entry)];
+        }
+        if (normalized === 'metadatajson' && typeof entry === 'string') {
+          return [key, hashSmsMetadataFingerprints(entry)];
+        }
+        return [key, hashValue(entry)];
+      }),
+    );
+  };
+  try {
+    return JSON.stringify(hashValue(JSON.parse(raw)));
+  } catch {
+    return raw;
+  }
 }
 
 export function isHashedSmsFingerprint(value: string | undefined): boolean {

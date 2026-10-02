@@ -1,12 +1,12 @@
 import { database } from '@/src/data/database/Database';
 import AuditLog from '@/src/data/models/AuditLog';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
+import DeviceSmsInboxRecord from '@/src/data/models/DeviceSmsInboxRecord';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
 import {
-  clearsRawSmsContent,
   sanitizeSmsAuditChanges,
-  sanitizeSmsMetadataJson,
+  hashSmsMetadataFingerprints,
 } from '@/src/utils/smsPrivateMetadata';
 import { Q } from '@nozbe/watermelondb';
 import type { Model } from '@nozbe/watermelondb';
@@ -29,13 +29,50 @@ function queryAfter<T extends Model>(collection: string, afterId: string | undef
  * prepareUpdate and batch() lets queued microtasks observe the pending record.
  */
 export class SmsPrivacyRepository {
-  async scrubLegacySmsContent(): Promise<void> {
-    await this.scrubInboxRecords();
-    await this.scrubJournalMetadata();
+  async sanitizeLegacySmsData(): Promise<void> {
+    await this.hashDeviceInboxIdentities();
+    await this.hashInboxIdentities();
+    await this.hashJournalMetadataIdentities();
     await this.scrubAuditPayloads();
   }
 
-  private async scrubInboxRecords(): Promise<void> {
+  private async hashDeviceInboxIdentities(): Promise<void> {
+    let cursor: string | undefined;
+    while (true) {
+      const next = await database.write(async () => {
+        const records = await queryAfter<DeviceSmsInboxRecord>(
+          'device_sms_inbox_records',
+          cursor,
+        ).fetch();
+        if (!records.length) return undefined;
+        const updates = records
+          .map(record => ({
+            record,
+            fingerprint: hashLegacySmsFingerprint(record.inputFingerprint),
+            states: hashSmsMetadataFingerprints(record.reviewStatesJson) ?? '{}',
+          }))
+          .filter(
+            update =>
+              update.fingerprint !== update.record.inputFingerprint ||
+              update.states !== update.record.reviewStatesJson,
+          );
+        if (updates.length)
+          await database.batch(
+            ...updates.map(({ record, fingerprint, states }) =>
+              record.prepareUpdate(entry => {
+                entry.inputFingerprint = fingerprint;
+                entry.reviewStatesJson = states;
+              }),
+            ),
+          );
+        return records[records.length - 1].id;
+      });
+      if (!next) return;
+      cursor = next;
+    }
+  }
+
+  private async hashInboxIdentities(): Promise<void> {
     let cursor: string | undefined;
     while (true) {
       const nextCursor = await database.write(async () => {
@@ -47,28 +84,20 @@ export class SmsPrivacyRepository {
         const updates = records.flatMap(record => {
           if (record.channel !== 'sms') return [];
           const fingerprint = hashLegacySmsFingerprint(record.inputFingerprint);
-          const metadataJson = sanitizeSmsMetadataJson(record.metadataJson, true);
-          const eraseRawContent =
-            clearsRawSmsContent(record.processingStatus) &&
-            (record.senderAddress != null || record.rawBody != null);
+          const metadataJson = hashSmsMetadataFingerprints(record.metadataJson);
           if (
             fingerprint === record.inputFingerprint &&
-            sameOptional(metadataJson, record.metadataJson) &&
-            !eraseRawContent
+            sameOptional(metadataJson, record.metadataJson)
           )
             return [];
-          return [{ record, fingerprint, metadataJson, eraseRawContent }];
+          return [{ record, fingerprint, metadataJson }];
         });
         if (updates.length) {
           await database.batch(
-            updates.map(({ record, fingerprint, metadataJson, eraseRawContent }) =>
+            updates.map(({ record, fingerprint, metadataJson }) =>
               record.prepareUpdate(current => {
                 current.inputFingerprint = fingerprint;
                 current.metadataJson = metadataJson;
-                if (eraseRawContent) {
-                  current.senderAddress = undefined;
-                  current.rawBody = undefined;
-                }
               }),
             ),
           );
@@ -80,31 +109,21 @@ export class SmsPrivacyRepository {
     }
   }
 
-  private async scrubJournalMetadata(): Promise<void> {
+  private async hashJournalMetadataIdentities(): Promise<void> {
     let cursor: string | undefined;
     while (true) {
       const nextCursor = await database.write(async () => {
         const records = await queryAfter<JournalMetadata>('journal_metadata', cursor).fetch();
         if (!records.length) return undefined;
         const updates = records.flatMap(record => {
-          const metadataJson = sanitizeSmsMetadataJson(
-            record.metadataJson,
-            record.importSource === 'sms',
-          );
-          if (
-            !record.originalSmsSender &&
-            !record.originalSmsBody &&
-            sameOptional(metadataJson, record.metadataJson)
-          )
-            return [];
+          const metadataJson = hashSmsMetadataFingerprints(record.metadataJson);
+          if (sameOptional(metadataJson, record.metadataJson)) return [];
           return [{ record, metadataJson }];
         });
         if (updates.length) {
           await database.batch(
             updates.map(({ record, metadataJson }) =>
               record.prepareUpdate(current => {
-                current.originalSmsSender = undefined;
-                current.originalSmsBody = undefined;
                 current.metadataJson = metadataJson;
               }),
             ),

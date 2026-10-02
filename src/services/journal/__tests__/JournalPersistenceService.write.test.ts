@@ -8,6 +8,7 @@ import { journalQueryRepository } from '@/src/data/repositories/journal/journalQ
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import JournalMetadata from '@/src/data/models/JournalMetadata';
 
 const workplaceId = 'wp-write' as WorkplaceId;
 
@@ -52,6 +53,43 @@ describe('JournalPersistenceService write paths', () => {
       transactionType: TransactionType.DEBIT,
     },
   ];
+
+  it('preserves legacy SMS source fields when journal metadata is updated', async () => {
+    const journal = await journalPersistenceService.put(
+      {
+        description: 'Imported',
+        journalDate: 1000,
+        currencyCode: 'USD',
+        transactions: balancedLines(),
+        metadata: {
+          importSource: 'sms',
+          originalSmsId: 'source-1',
+          originalSmsSender: 'BANK',
+          originalSmsBody: 'Original transaction',
+          metadataJson: JSON.stringify({
+            rawBody: 'Original transaction',
+            smsFingerprint: 'bank::body::7',
+          }),
+        },
+      },
+      workplaceId,
+    );
+    await journalPersistenceService.put(
+      {
+        journalId: journal.id,
+        description: 'Corrected',
+        metadata: {
+          importSource: 'sms',
+          originalSmsId: 'source-1',
+          metadataJson: JSON.stringify({ parsedAmount: 25 }),
+        },
+      },
+      workplaceId,
+    );
+    const [metadata] = await database.get<JournalMetadata>('journal_metadata').query().fetch();
+    expect(metadata.originalSmsSender).toBe('BANK');
+    expect(metadata.originalSmsBody).toBe('Original transaction');
+  });
 
   it('putMany returns an empty array without writing', async () => {
     const result = await journalPersistenceService.putMany([], workplaceId);

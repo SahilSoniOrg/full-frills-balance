@@ -5,6 +5,8 @@ import Collection from '@nozbe/watermelondb/Collection';
 import Model from '@nozbe/watermelondb/Model';
 import { projectOrmRow } from './export/ExportOrmAdapter';
 import { rawSqlExecutor } from './raw/RawSqlExecutor';
+import { deviceSmsInboxRepository } from './DeviceSmsInboxRepository';
+import { fetchSequentiallyInChunks } from './fetchSequentiallyInChunks';
 
 export interface ExportColumn {
   source: string;
@@ -41,7 +43,36 @@ export class ExportRepository {
     const sql = `SELECT ${select} FROM "${tableName}"${
       where.length > 0 ? ` WHERE ${where.join(' AND ')}` : ''
     }`;
-    return rawSqlExecutor.query<Record<string, unknown>>(sql, args);
+    const rows = await rawSqlExecutor.query<Record<string, unknown>>(sql, args);
+    return rows === null ? null : this.attachSmsSources(tableName, rows);
+  }
+
+  /** User-created backups carry sources for exported Workplace copies, not the Device pending feed. */
+  private async attachSmsSources(
+    tableName: string,
+    rows: Record<string, unknown>[],
+  ): Promise<Record<string, unknown>[]> {
+    if (tableName !== 'transaction_inbox_records') return rows;
+    const sourceIds = rows.flatMap(row =>
+      row.channel === 'sms' && typeof row.deviceSourceId === 'string' ? [row.deviceSourceId] : [],
+    );
+    const sources = await fetchSequentiallyInChunks([...new Set(sourceIds)], ids =>
+      deviceSmsInboxRepository.findBySourceIds([...ids]),
+    );
+    const bySource = new Map(sources.map(source => [source.deviceSourceId, source]));
+    return rows.map(row => {
+      const source =
+        row.channel === 'sms' && typeof row.deviceSourceId === 'string'
+          ? bySource.get(row.deviceSourceId)
+          : undefined;
+      return source
+        ? {
+            ...row,
+            senderAddress: row.senderAddress ?? source.senderAddress,
+            rawBody: row.rawBody ?? source.rawBody,
+          }
+        : row;
+    });
   }
 
   private getCollection(tableName: string): Collection<Model> | undefined {
@@ -64,7 +95,10 @@ export class ExportRepository {
       ? [Q.where('workplace_id', workplaceId)]
       : [];
     const rows = await collection.query(...clauses).fetch();
-    return rows.map(row => projectOrmRow(row, columnNames));
+    return this.attachSmsSources(
+      tableName,
+      rows.map(row => projectOrmRow(row, columnNames)),
+    );
   }
 
   async countTable(tableName: string): Promise<number> {

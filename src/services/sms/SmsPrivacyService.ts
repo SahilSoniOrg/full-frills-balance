@@ -2,28 +2,28 @@ import { smsPrivacyRepository } from '@/src/data/repositories/SmsPrivacyReposito
 import { logger } from '@/src/utils/logger';
 import { storage } from '@/src/utils/storage';
 
-const RETENTION_MIGRATION_KEY = 'sms_raw_content_cleanup_v2_complete';
+const PRIVACY_MIGRATION_KEY = 'sms_privacy_cleanup_v4_complete';
 
 class SmsPrivacyService {
   private cleanupPromise: Promise<void> | null = null;
 
   cleanupLegacyContent(force = false): Promise<void> {
     if (force) {
-      storage.remove(RETENTION_MIGRATION_KEY);
+      storage.remove(PRIVACY_MIGRATION_KEY);
       if (this.cleanupPromise) {
         return this.cleanupPromise.then(() => {
-          storage.remove(RETENTION_MIGRATION_KEY);
+          storage.remove(PRIVACY_MIGRATION_KEY);
           return this.cleanupLegacyContent();
         });
       }
     }
-    if (storage.getBoolean(RETENTION_MIGRATION_KEY)) return Promise.resolve();
+    if (storage.getBoolean(PRIVACY_MIGRATION_KEY)) return Promise.resolve();
     if (this.cleanupPromise) return this.cleanupPromise;
     this.cleanupPromise = smsPrivacyRepository
-      .scrubLegacySmsContent()
-      .then(() => storage.set(RETENTION_MIGRATION_KEY, true))
+      .sanitizeLegacySmsData()
+      .then(() => storage.set(PRIVACY_MIGRATION_KEY, true))
       .catch(error => {
-        logger.warn('[SmsPrivacyService] Legacy SMS retention cleanup failed', { error });
+        logger.warn('[SmsPrivacyService] Legacy SMS privacy cleanup failed', { error });
         throw error;
       })
       .finally(() => {
