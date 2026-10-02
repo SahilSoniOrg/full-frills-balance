@@ -1,3 +1,4 @@
+import { safeParseJSON } from '@/src/utils/serialization';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { PlainInboxRecord } from '@/src/types/plainDtos';
@@ -21,31 +22,30 @@ export async function enrichTransactionInboxRecords(
   const journalMap = new Map(journals.map(journal => [journal.id, journal]));
 
   return records.map((record): TransactionInboxItem => {
-    const metadata = record.metadataJson ? JSON.parse(record.metadataJson) : {};
+    const metadata = safeParseJSON<{ duplicateReasons?: string[] }>(record.metadataJson, {});
     const duplicateJournalRecord = record.duplicateJournalId
       ? journalMap.get(record.duplicateJournalId)
       : undefined;
-    const duplicateJournal = duplicateJournalRecord?.deletedAt
-      ? undefined
-      : duplicateJournalRecord;
+    const duplicateJournal = duplicateJournalRecord?.deletedAt ? undefined : duplicateJournalRecord;
     const duplicateCandidate: TransactionDuplicateCandidate | undefined =
       record.duplicateJournalId && duplicateJournal
-      ? {
-          journalId: record.duplicateJournalId,
-          journalDate: duplicateJournal?.journalDate || record.inputDate,
-          description: duplicateJournal?.description,
-          totalAmount: duplicateJournal?.totalAmount,
-          currencyCode: duplicateJournal?.currencyCode,
-          score: record.duplicateConfidence || 0,
-          reasons: Array.isArray(metadata.duplicateReasons) ? metadata.duplicateReasons : [],
-        }
-      : undefined;
+        ? {
+            journalId: record.duplicateJournalId,
+            journalDate: duplicateJournal?.journalDate || record.inputDate,
+            description: duplicateJournal?.description,
+            totalAmount: duplicateJournal?.totalAmount,
+            currencyCode: duplicateJournal?.currencyCode,
+            score: record.duplicateConfidence || 0,
+            reasons: Array.isArray(metadata.duplicateReasons) ? metadata.duplicateReasons : [],
+          }
+        : undefined;
     const linkedJournal = record.linkedJournalId
       ? journalMap.get(record.linkedJournalId)
       : undefined;
 
     return {
       id: record.id,
+      consumedWorkplaces: record.consumedWorkplaces,
       channel: record.channel,
       deviceSourceId: record.deviceSourceId,
       senderAddress: record.senderAddress || '',

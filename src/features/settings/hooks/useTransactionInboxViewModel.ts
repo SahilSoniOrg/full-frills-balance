@@ -1,3 +1,4 @@
+import type { SmsInboxCursor } from '@/src/types/smsInbox';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useAccounts } from '@/src/components/account-selection';
 import { enrichTransactionInboxRecords } from '@/src/features/settings/hooks/transactionInboxMapping';
@@ -27,6 +28,8 @@ export interface TransactionInboxViewModel extends TransactionInboxModals {
   isLoading: boolean;
   isLoadingMore: boolean;
   hasMore: boolean;
+  hasOlderMessages: boolean;
+  handleLoadMore: () => void;
   isRefreshing: boolean;
   isScanningOlder: boolean;
   handleRefresh: () => Promise<void>;
@@ -45,7 +48,8 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
   const handleImport = useTransactionInboxImport({ accounts, workplaceId });
 
   const [filter, setFilter] = useState<InboxFilter>('pending');
-  const [scanCursor, setScanCursor] = useState(PAGE_SIZE);
+  const [hasOlderMessages, setHasOlderMessages] = useState(false);
+  const [scanCursor, setScanCursor] = useState<SmsInboxCursor | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isScanningOlder, setIsScanningOlder] = useState(false);
 
@@ -81,6 +85,7 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
         const result = await smsService.scanRecentSmsPage(workplaceId, PAGE_SIZE * 2);
         if (isMounted) {
           setScanCursor(result.cursor);
+          setHasOlderMessages(result.hasMore);
         }
       } catch (error) {
         showErrorAlert(error, 'Transaction Inbox', true);
@@ -98,6 +103,7 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
     try {
       const result = await smsService.scanRecentSmsPage(workplaceId, PAGE_SIZE * 2);
       setScanCursor(result.cursor);
+      setHasOlderMessages(result.hasMore);
       toast.success('Transaction inbox refreshed');
     } catch (error) {
       showErrorAlert(error, 'Transaction Inbox', true);
@@ -113,6 +119,7 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
     try {
       const result = await smsService.scanOlderSmsPage(scanCursor, workplaceId, PAGE_SIZE);
       setScanCursor(result.cursor);
+      setHasOlderMessages(result.hasMore);
       loadMore();
     } catch (error) {
       showErrorAlert(error, 'Transaction Inbox', true);
@@ -182,6 +189,8 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
     isLoading,
     isLoadingMore,
     hasMore,
+    hasOlderMessages,
+    handleLoadMore: loadMore,
     isRefreshing,
     isScanningOlder,
     handleRefresh,

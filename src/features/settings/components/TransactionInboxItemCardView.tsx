@@ -119,6 +119,11 @@ export function TransactionInboxItemCardView({
         )}
       </View>
 
+      {!!item.consumedWorkplaces?.length && (
+        <AppText variant="caption" color="secondary">
+          Already handled in {item.consumedWorkplaces.map(workplace => workplace.name).join(', ')}
+        </AppText>
+      )}
       <AppText variant="body" color="secondary" style={styles.bodyPreview}>
         {item.rawBody}
       </AppText>

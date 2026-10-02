@@ -1,3 +1,4 @@
+import { deviceSmsInboxRepository } from '@/src/data/repositories/DeviceSmsInboxRepository';
 import { database } from '@/src/data/database/Database';
 import ExpoSmsInbox from '@/modules/expo-sms-inbox';
 import { smsService } from '@/src/services/sms-service';
@@ -47,6 +48,14 @@ jest.mock('@/modules/expo-sms-inbox', () => ({
   __esModule: true,
   default: {
     getSmsInbox: jest.fn(),
+  },
+}));
+
+jest.mock('@/src/data/repositories/DeviceSmsInboxRepository', () => ({
+  deviceSmsInboxRepository: {
+    findBySourceIds: jest.fn().mockResolvedValue([]),
+    findMatch: jest.fn().mockResolvedValue(null),
+    stageUpsert: jest.fn(),
   },
 }));
 
@@ -107,6 +116,14 @@ function createMockAuditCollection() {
 describe('SmsService Batching', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.mocked(deviceSmsInboxRepository.stageUpsert).mockImplementation(async (session, data) => {
+      stageModelWrite(session, [{ id: data.deviceInboxId } as Model]);
+      return {
+        id: data.deviceInboxId!,
+        deviceSourceId: data.deviceSourceId,
+        inputDate: data.inputDate,
+      };
+    });
     (ExpoSmsInbox!.getSmsInbox as jest.Mock).mockResolvedValue([]);
   });
 
@@ -157,10 +174,10 @@ describe('SmsService Batching', () => {
     const batchArgs = (database.batch as jest.Mock).mock.calls;
     const totalBatchedOps = batchArgs.reduce((acc, call) => acc + call.length, 0);
 
-    // Each message creates an inbox record and its audit entry.
-    expect(totalBatchedOps).toBe(4);
-    expect(mockInboxCollection.prepareCreate).toHaveBeenCalledTimes(2);
-    expect(mockAuditCollection.prepareCreate).toHaveBeenCalledTimes(2);
+    // Pending SMS creates Device captures without Workplace copies or consumption audit events.
+    expect(totalBatchedOps).toBe(2);
+    expect(mockInboxCollection.prepareCreate).not.toHaveBeenCalled();
+    expect(mockAuditCollection.prepareCreate).not.toHaveBeenCalled();
   });
 
   it('includes ledger operations in the same batch when auto-post is triggered', async () => {
@@ -271,7 +288,7 @@ describe('SmsService Batching', () => {
       query: jest
         .fn()
         .mockReturnValueOnce({ fetch: initialFetch })
-        .mockReturnValueOnce({ fetch: finalFetch }),
+        .mockReturnValue({ fetch: finalFetch }),
       prepareCreate: jest.fn(),
     };
     const mockRulesCollection = {
@@ -300,7 +317,7 @@ describe('SmsService Batching', () => {
     await smsService.processUnprocessedSms(workplaceId);
 
     expect(database.write).toHaveBeenCalledTimes(1);
-    expect(finalFetch).toHaveBeenCalledTimes(1);
+    expect(finalFetch).toHaveBeenCalledTimes(2);
     expect(journalPersistenceService.putInSession).not.toHaveBeenCalled();
     expect(mockInboxCollection.prepareCreate).not.toHaveBeenCalled();
     expect(existingRecord.prepareUpdate).toHaveBeenCalledTimes(1);

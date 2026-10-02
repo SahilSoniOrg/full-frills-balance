@@ -24,6 +24,8 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
     isLoading,
     isLoadingMore,
     hasMore,
+    hasOlderMessages,
+    handleLoadMore,
     isScanningOlder,
     handleLoadOlder,
     handleDismiss,
@@ -127,7 +129,7 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
               )
             }
             ListFooterComponent={
-              isAndroid && (hasMore || items.length > 0 || isLoadingMore || isScanningOlder) ? (
+              hasMore || (isAndroid && hasOlderMessages) || isLoadingMore || isScanningOlder ? (
                 <Stack space="lg" style={styles.footer}>
                   {(isLoadingMore || isScanningOlder) && (
                     <ActivityIndicator color={theme.primary} />
@@ -136,10 +138,20 @@ export function TransactionInboxView({ vm, headerActions }: TransactionInboxView
                     <AppButton
                       variant="secondary"
                       size="sm"
+                      onPress={handleLoadMore}
+                      loading={isLoadingMore}
+                    >
+                      Load more
+                    </AppButton>
+                  )}
+                  {isAndroid && hasOlderMessages && (
+                    <AppButton
+                      variant="secondary"
+                      size="sm"
                       onPress={handleLoadOlder}
                       loading={isScanningOlder}
                     >
-                      Load Older Messages
+                      Scan older SMS
                     </AppButton>
                   )}
                 </Stack>

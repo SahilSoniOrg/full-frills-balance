@@ -1,7 +1,8 @@
+import type { InboxRecordSnapshot, SmsInboxCursor } from '@/src/types/smsInbox';
+import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
 import { SmsMessage } from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
 import { toPlainSmsRule } from '@/src/data/models/TransactionAutoPostRule';
-import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
 import { toPlainInboxRecord } from '@/src/data/models/TransactionInboxRecord';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
@@ -25,7 +26,8 @@ export interface SmsInboxFilterOptions {
 }
 
 export interface SmsSyncResult {
-  cursor: number;
+  cursor: SmsInboxCursor | null;
+  hasMore: boolean;
   importedCount: number;
 }
 
@@ -39,19 +41,31 @@ class SmsService {
     pageSize: number = AppConfig.pagination.smsImportScanLimit,
   ): Promise<SmsSyncResult> {
     await smsPrivacyService.cleanupLegacyContent();
-    const importedCount = await smsSyncPipeline.scanInbox(workplaceId, pageSize);
-    return { cursor: pageSize, importedCount };
+    const messages = await smsInboxBridge.getLatestMessages(pageSize);
+    const importedCount = await smsSyncPipeline.scanMessages(workplaceId, messages);
+    const last = messages[messages.length - 1];
+    return {
+      cursor: last ? { date: last.date, id: last.id } : null,
+      importedCount,
+      hasMore: messages.length === pageSize,
+    };
   }
 
   async scanOlderSmsPage(
-    cursor: number,
+    cursor: SmsInboxCursor | null,
     workplaceId: WorkplaceId,
     pageSize: number = AppConfig.pagination.smsImportScanLimit,
   ): Promise<SmsSyncResult> {
+    if (!cursor) return { cursor: null, importedCount: 0, hasMore: false };
     await smsPrivacyService.cleanupLegacyContent();
-    const nextCursor = cursor + pageSize;
-    const importedCount = await smsSyncPipeline.scanInbox(workplaceId, nextCursor);
-    return { cursor: nextCursor, importedCount };
+    const messages = await smsInboxBridge.getOlderMessages(cursor, pageSize);
+    const importedCount = await smsSyncPipeline.scanMessages(workplaceId, messages);
+    const last = messages[messages.length - 1];
+    return {
+      cursor: last ? { date: last.date, id: last.id } : cursor,
+      importedCount,
+      hasMore: messages.length === pageSize,
+    };
   }
 
   async processUnprocessedSms(workplaceId: WorkplaceId, signal?: AbortSignal): Promise<number> {
