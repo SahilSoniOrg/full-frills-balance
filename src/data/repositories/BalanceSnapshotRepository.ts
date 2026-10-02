@@ -239,30 +239,6 @@ export class BalanceSnapshotRepository {
   }
 
   /**
-   * Deletes all snapshots for an account after a certain date.
-   * Useful when segments are invalidated.
-   */
-  async deleteAfterDate(
-    workplaceId: WorkplaceId,
-    accountId: AccountId,
-    date: number,
-  ): Promise<void> {
-    const snapshotsToDelete = await this.snapshots
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.where('account_id', accountId),
-        Q.where('transaction_date', Q.gt(date)),
-      )
-      .fetch();
-
-    if (snapshotsToDelete.length > 0) {
-      await database.write(async () => {
-        await database.batch(snapshotsToDelete.map(s => s.prepareDestroyPermanently()));
-      });
-    }
-  }
-
-  /**
    * Prepares WatermelonDB operations to delete balance snapshots for multiple accounts.
    */
   async deleteForAccountMergeInSession(

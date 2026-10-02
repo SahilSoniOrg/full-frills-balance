@@ -162,14 +162,6 @@ export class TransactionQueryRepository {
       .fetchCount();
   }
 
-  async findLatestForAccountBeforeDate(
-    workplaceId: WorkplaceId,
-    accountId: AccountId,
-    date: number,
-  ): Promise<Transaction | null> {
-    return this.findLatestForAccount(workplaceId, accountId, date, false);
-  }
-
   async findLatestForAccount(
     workplaceId: WorkplaceId,
     accountId: AccountId,

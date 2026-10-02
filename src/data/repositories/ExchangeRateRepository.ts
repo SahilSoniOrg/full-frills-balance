@@ -243,42 +243,6 @@ class ExchangeRateRepository {
       await database.batch([operation]);
     });
   }
-
-  /**
-   * Delete exchange rates older than the specified timestamp
-   */
-  async deleteOldRates(olderThan: number): Promise<number> {
-    const oldRates = await this.collection
-      .query(Q.where('effective_date', Q.lt(olderThan)))
-      .fetch();
-
-    if (oldRates.length === 0) return 0;
-
-    await database.write(async () => {
-      for (const rate of oldRates) {
-        await rate.destroyPermanently();
-      }
-    });
-
-    return oldRates.length;
-  }
-
-  /**
-   * Delete all exchange rates (for testing/reset)
-   */
-  async deleteAll(): Promise<number> {
-    const allRates = await this.collection.query().fetch();
-
-    if (allRates.length === 0) return 0;
-
-    await database.write(async () => {
-      for (const rate of allRates) {
-        await rate.destroyPermanently();
-      }
-    });
-
-    return allRates.length;
-  }
 }
 
 export const exchangeRateRepository = new ExchangeRateRepository();
