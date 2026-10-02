@@ -77,12 +77,24 @@ export function AccountCardBase({
       onPress={() => onPress(account.id)}
       onLongPress={onLongPress ? () => onLongPress(account) : undefined}
       accessibilityRole="button"
-      accessibilityLabel={account.name}
+      accessibilityLabel={[
+        account.name,
+        `level ${Math.max(account.depth, 0) + 1}`,
+        `balance ${formatMoney(account.balance, account.currencyCode)}`,
+        account.workplaceBalance !== undefined && account.currencyCode !== workplaceCurrencyCode
+          ? `approximately ${formatMoney(account.workplaceBalance, workplaceCurrencyCode)}`
+          : null,
+        account.isArchived ? 'Archived' : null,
+        reconciledDateText ? `Reconciled ${reconciledDateText}` : null,
+      ]
+        .filter(Boolean)
+        .join(', ')}
+      accessibilityState={{ selected: isSelected }}
       style={[
         styles.touchableWrapper,
         {
           marginBottom: Spacing.md,
-          marginLeft: account.depth * Spacing.lg,
+          marginLeft: Math.max(account.depth, 0) * Spacing.sm,
           opacity: account.isArchived ? Opacity.medium : account.depth > 0 ? 0.9 : 1,
         },
       ]}
@@ -102,12 +114,13 @@ export function AccountCardBase({
       >
         <Box
           unsafe_backgroundRaw={account.accountColor}
-          padding="lg"
+          paddingHorizontal="lg"
+          paddingVertical="md"
           style={{ position: 'relative', overflow: 'hidden' }}
         >
-          <Column gap="md">
+          <Column gap="sm">
             <Row align="center" justify="space-between">
-              <Row gap="md" align="center" flex={1}>
+              <Row gap="sm" align="center" flex={1} style={{ minWidth: 0 }}>
                 <View
                   style={[
                     styles.categoryIconFrame,
@@ -127,8 +140,7 @@ export function AccountCardBase({
                 <AppText
                   variant="body"
                   weight="bold"
-                  numberOfLines={1}
-                  style={{ color: resolvedTextColor, flex: 1 }}
+                  style={{ color: resolvedTextColor, flex: 1, minWidth: 0 }}
                 >
                   {account.name}
                 </AppText>
@@ -136,29 +148,12 @@ export function AccountCardBase({
               </Row>
 
               <Row gap="xs" align="center">
-                {reconciledDateText && !isSelectionModeActive && (
-                  <Row
-                    background="pureInverse"
-                    backgroundOpacity="soft"
-                    paddingHorizontal="sm"
-                    paddingVertical="xs"
-                    borderRadius="full"
-                    align="center"
-                    gap="xs"
-                  >
-                    <AppIcon name={Icon.ShieldCheck} color={resolvedTextColor} size={Size.iconXs} />
-                    <AppText
-                      weight="medium"
-                      variant="caption"
-                      style={{ opacity: 0.8, color: resolvedTextColor, lineHeight: 12 }}
-                    >
-                      {reconciledDateText}
-                    </AppText>
-                  </Row>
-                )}
                 {isSelectionModeActive && (
                   <View
                     testID="account-card-selection-indicator"
+                    accessibilityRole="checkbox"
+                    accessibilityLabel={`${account.name} selected`}
+                    accessibilityState={{ checked: isSelected }}
                     style={[
                       styles.selectionIndicator,
                       {
@@ -174,10 +169,43 @@ export function AccountCardBase({
                     )}
                   </View>
                 )}
+                {account.hasChildren && (
+                  <IconButton
+                    name={account.isExpanded ? Icon.ChevronUp : Icon.Hierarchy}
+                    size={Size.iconSm}
+                    style={styles.actionButton}
+                    variant="clear"
+                    onPress={event => {
+                      event?.stopPropagation?.();
+                      onCollapse?.(account.id);
+                    }}
+                    iconColor={resolvedTextColor}
+                    accessibilityLabel={
+                      account.isExpanded
+                        ? `Collapse sub-accounts for ${account.name}`
+                        : `Expand sub-accounts for ${account.name}`
+                    }
+                    accessibilityState={{ expanded: account.isExpanded }}
+                  />
+                )}
+                {onActionPress && !isSelectionModeActive && (
+                  <IconButton
+                    name={Icon.More}
+                    size={Size.iconSm}
+                    style={styles.actionButton}
+                    variant="clear"
+                    onPress={event => {
+                      event?.stopPropagation?.();
+                      onActionPress(account);
+                    }}
+                    iconColor={resolvedTextColor}
+                    accessibilityLabel={`Actions for ${account.name}`}
+                  />
+                )}
               </Row>
             </Row>
 
-            <Column align="center" justify="center" paddingVertical="md" gap="xs">
+            <Column align="center" justify="center" gap="xs">
               <AppText
                 variant="title"
                 weight="bold"
@@ -190,64 +218,26 @@ export function AccountCardBase({
               </AppText>
               {account.workplaceBalance !== undefined &&
                 account.currencyCode !== workplaceCurrencyCode && (
-                  <AppText
-                    variant="bodySmall"
-                    weight="medium"
-                    style={{ opacity: 0.8, color: resolvedTextColor }}
-                  >
+                  <AppText variant="bodySmall" weight="medium" style={{ color: resolvedTextColor }}>
                     ≈ {formatMoney(account.workplaceBalance, workplaceCurrencyCode)}
                   </AppText>
                 )}
             </Column>
           </Column>
-
-          {/* Bottom right actions / hierarchy */}
-          <View style={styles.bottomActionsOverlay}>
-            {account.hasChildren && (
-              <IconButton
-                name={account.isExpanded ? Icon.ChevronUp : Icon.Hierarchy}
-                size={Size.iconSm}
-                variant="clear"
-                onPress={event => {
-                  event?.stopPropagation?.();
-                  onCollapse?.(account.id);
-                }}
-                iconColor={resolvedTextColor}
-                accessibilityLabel={
-                  account.isExpanded
-                    ? `Collapse sub-accounts for ${account.name}`
-                    : `Expand sub-accounts for ${account.name}`
-                }
-              />
-            )}
-            {onActionPress && !isSelectionModeActive && (
-              <IconButton
-                name={Icon.More}
-                size={Size.iconSm}
-                variant="clear"
-                onPress={event => {
-                  event?.stopPropagation?.();
-                  onActionPress(account);
-                }}
-                iconColor={resolvedTextColor}
-                accessibilityLabel={`Actions for ${account.name}`}
-              />
-            )}
-          </View>
         </Box>
 
         {account.showMonthlyStats && (
-          <Row paddingHorizontal="lg" paddingVertical="md" align="center" justify="space-between">
+          <Row paddingHorizontal="lg" paddingVertical="sm" align="center" justify="space-between">
             <Column align="center" flex={1}>
               <AppText
                 variant="caption"
-                weight="bold"
+                weight="medium"
                 color="secondary"
-                style={{ opacity: 0.6, marginBottom: Spacing.xs, letterSpacing: 0.5 }}
+                style={{ marginBottom: Spacing.xs }}
               >
                 {stats.leftLabel}
               </AppText>
-              <AppText variant="bodySmall" weight="bold">
+              <AppText variant="bodySmall" weight="semibold">
                 {formatMoney(stats.leftAmount, account.currencyCode)}
               </AppText>
             </Column>
@@ -257,13 +247,13 @@ export function AccountCardBase({
             <Column align="center" flex={1}>
               <AppText
                 variant="caption"
-                weight="bold"
+                weight="medium"
                 color="secondary"
-                style={{ opacity: 0.6, marginBottom: Spacing.xs, letterSpacing: 0.5 }}
+                style={{ marginBottom: Spacing.xs }}
               >
                 {stats.rightLabel}
               </AppText>
-              <AppText variant="bodySmall" weight="bold">
+              <AppText variant="bodySmall" weight="semibold">
                 {formatMoney(stats.rightAmount, account.currencyCode)}
               </AppText>
             </Column>
@@ -276,7 +266,7 @@ export function AccountCardBase({
 
 const styles = StyleSheet.create({
   touchableWrapper: {
-    width: '100%',
+    alignSelf: 'stretch',
   },
   cardContainer: {
     overflow: 'hidden',
@@ -297,13 +287,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginLeft: Spacing.xs,
   },
-  bottomActionsOverlay: {
-    position: 'absolute',
-    right: Spacing.md,
-    bottom: Spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
+  actionButton: {
+    width: Size.touchTarget,
+    height: Size.touchTarget,
   },
 });
 
