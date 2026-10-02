@@ -8,6 +8,7 @@ import { UIProvider } from '@/src/contexts/UIContext';
 import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { database } from '@/src/data/database/Database';
+import { smsReviewNotificationService } from '@/src/services/sms/SmsReviewNotificationService';
 import { analytics, navigationIntegration } from '@/src/services/analytics';
 import { logger } from '@/src/utils/logger';
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
@@ -16,6 +17,10 @@ import * as Sentry from '@sentry/react-native';
 import { useNavigationContainerRef } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect, useSyncExternalStore } from 'react';
+import {
+  SmsNotificationResponseObserver,
+  SmsNotificationNavigation,
+} from './hooks/useSmsNotificationLifecycle';
 import { Platform, View, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
@@ -86,6 +91,7 @@ function RootLayout() {
               <DatabaseProvider database={database}>
                 <UIProvider>
                   <EarlyBootstrap />
+                  <SmsNotificationResponseObserver />
                   <ThemeProvider value={theme}>
                     <LaunchCoordinatorProvider setupDraft={setupDraft}>
                       <SplashOrchestrator />
@@ -94,6 +100,7 @@ function RootLayout() {
                         <LaunchCoordinatorContent gateChildren={<AppContent />}>
                           <WorkplaceBootstrap />
                           <AppLockInterceptor>
+                            <SmsNotificationNavigation />
                             <AppContent />
                           </AppLockInterceptor>
                         </LaunchCoordinatorContent>
@@ -124,6 +131,7 @@ function EarlyBootstrap() {
     void Promise.all([
       retryWidgetCleanup,
       Promise.resolve().then(() => snapshotService.retryPendingCleanup()),
+      Platform.OS === 'web' ? Promise.resolve() : smsReviewNotificationService.reconcilePrivacy(),
     ])
       .then(([_, snapshotsCleared]) => {
         if (!snapshotsCleared)

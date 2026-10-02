@@ -68,6 +68,11 @@ class SmsService {
     };
   }
 
+  async findInboxRecord(workplaceId: WorkplaceId, id: string) {
+    const record = await transactionInboxRepository.find(workplaceId, id);
+    return record ? toPlainInboxRecord(record) : null;
+  }
+
   async processUnprocessedSms(workplaceId: WorkplaceId, signal?: AbortSignal): Promise<number> {
     await smsPrivacyService.cleanupLegacyContent();
     return smsSyncPipeline.scanInbox(workplaceId, AppConfig.pagination.smsImportScanLimit, signal);

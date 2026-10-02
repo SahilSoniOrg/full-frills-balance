@@ -15,7 +15,8 @@ import { PlainInboxRecord } from '@/src/types/plainDtos';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
 import { showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 
 export type InboxFilter = 'pending' | 'processed' | 'auto_posted' | 'duplicates' | 'failed';
 
@@ -43,8 +44,10 @@ export interface TransactionInboxViewModel extends TransactionInboxModals {
 }
 
 export function useTransactionInboxViewModel(): TransactionInboxViewModel {
+  const { reviewRecordId } = useLocalSearchParams<{ reviewRecordId?: string }>();
+  const reviewing = useRef<string | null>(null);
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
-  const { accounts } = useAccounts(workplaceId);
+  const { accounts, isLoading: areAccountsLoading } = useAccounts(workplaceId);
   const handleImport = useTransactionInboxImport({ accounts, workplaceId });
 
   const [filter, setFilter] = useState<InboxFilter>('pending');
@@ -170,6 +173,31 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
     },
     [defaultCurrencyCode],
   );
+
+  useEffect(() => {
+    if (!reviewRecordId || areAccountsLoading || reviewing.current === reviewRecordId) return;
+    let cancelled = false;
+    reviewing.current = reviewRecordId;
+    void (async () => {
+      const record = await smsService.findInboxRecord(workplaceId, reviewRecordId);
+      if (cancelled) return;
+      if (record) {
+        const [item] = await enrichTransactionInboxRecords(workplaceId, [record]);
+        if (cancelled) return;
+        if (item.linkedJournal) handleOpenJournal(item);
+        else if (
+          item.processingStatus === InboxProcessingStatus.PENDING ||
+          item.processingStatus === InboxProcessingStatus.PARSE_FAILED
+        )
+          await handleImport(item);
+      }
+      if (!cancelled) router.setParams({ reviewRecordId: undefined });
+    })().catch(error => showErrorAlert(error, 'SMS review', true));
+    return () => {
+      cancelled = true;
+      reviewing.current = null;
+    };
+  }, [reviewRecordId, workplaceId, areAccountsLoading, handleImport, handleOpenJournal]);
 
   const filterButtons = useMemo(
     () => [
