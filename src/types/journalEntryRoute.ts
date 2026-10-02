@@ -18,6 +18,7 @@ export type TransactionIntentSeed = {
   sourceAccountId?: AccountId;
   destinationAccountId?: AccountId;
   amount?: string;
+  currencyCode?: string;
   description?: string;
   notes?: string;
   date?: string;
@@ -33,6 +34,7 @@ export type LegacyJournalEntryQueryParams = {
   sourceAccountId?: string;
   destinationAccountId?: string;
   amount?: string;
+  currencyCode?: string;
   description?: string;
   notes?: string;
   smsId?: string;
@@ -59,6 +61,7 @@ export function toLegacyJournalEntryQueryParams(
     sourceAccountId: seed.sourceAccountId,
     destinationAccountId: seed.destinationAccountId,
     amount: seed.amount,
+    currencyCode: seed.currencyCode,
     description: seed.description,
     notes: seed.notes,
     initialDate: seed.date,

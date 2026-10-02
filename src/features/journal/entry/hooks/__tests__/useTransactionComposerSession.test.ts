@@ -21,8 +21,8 @@ jest.mock('@/src/hooks/use-currencies', () => ({
 }));
 jest.mock('@/src/hooks/useExchangeRate', () => ({
   useExchangeRate: jest.fn(() => ({
-    fetchRate: jest.fn(),
-    fetchRequiredRate: jest.fn(),
+    fetchRate: jest.fn().mockResolvedValue(1),
+    fetchRequiredRate: jest.fn().mockResolvedValue(1),
   })),
 }));
 jest.mock('@/src/contexts/WorkplaceContext', () => ({
@@ -44,6 +44,82 @@ describe('useTransactionComposerSession', () => {
       currencyCode: 'USD',
     },
   ];
+
+  it('uses the captured currency for an SMS draft and its saved journal', async () => {
+    const { journalService } = jest.requireMock('@/src/services/journal/journalDomainService');
+    journalService.postPostingPlan.mockResolvedValue({ success: true, action: 'created' });
+    const { result } = renderHook(() =>
+      useTransactionComposerSession('wp-1' as WorkplaceId, {
+        accounts: accounts.map(account => ({ ...account, currencyCode: 'INR' })),
+        currencyCode: 'USD',
+        initialCurrencyCode: 'INR',
+        initialAmount: '418',
+        initialSourceId: asAccountId('cash'),
+        initialDestinationId: asAccountId('food'),
+        initialDate: '2026-10-01',
+        initialDescription: 'Coffee',
+      }),
+    );
+    expect(result.current.editor.valuationCurrency).toBe('INR');
+    expect(result.current.postingPlanValidation.valid).toBe(true);
+    await act(async () => {
+      await result.current.submit('editor');
+    });
+    expect(journalService.postPostingPlan).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        newJournalCurrencyCode: 'INR',
+        plan: expect.objectContaining({ currencyCode: 'INR' }),
+      }),
+    );
+  });
+
+  it('blocks reinterpretation of a captured INR amount as USD and clears it on account selection', async () => {
+    const { result } = renderHook(() =>
+      useTransactionComposerSession('wp-1' as WorkplaceId, {
+        accounts,
+        currencyCode: 'USD',
+        initialCurrencyCode: 'INR',
+        initialAmount: '418',
+        initialSourceId: asAccountId('cash'),
+        initialDestinationId: asAccountId('food'),
+        initialDate: '2026-10-01',
+        initialDescription: 'Coffee',
+      }),
+    );
+    expect(result.current.postingPlanValidation.valid).toBe(false);
+    expect(result.current.validationIssues[0].message).toContain('USD');
+    await act(async () => {
+      expect(await result.current.submit('editor')).toMatchObject({
+        success: false,
+        error: expect.stringContaining('USD'),
+      });
+    });
+    act(() =>
+      result.current.editor.updateLine('2', { accountCurrency: 'USD', accountName: 'Cash' }),
+    );
+    expect(result.current.editor.lines.find(line => line.id === '2')?.amount).toBe('');
+    expect(result.current.intent.amount).toBe('');
+    expect(result.current.postingPlan).toBeUndefined();
+  });
+
+  it('protects prefilled currency when last-used defaults or split metadata update a line', () => {
+    const { result } = renderHook(() =>
+      useTransactionComposerSession('wp-1' as WorkplaceId, {
+        accounts,
+        currencyCode: 'USD',
+        initialCurrencyCode: 'INR',
+        initialAmount: '418',
+      }),
+    );
+    act(() =>
+      result.current.editor.setLines(lines =>
+        lines.map(line => ({ ...line, accountCurrency: 'USD' })),
+      ),
+    );
+    expect(result.current.editor.lines.every(line => line.amount === '')).toBe(true);
+    act(() => result.current.editor.updateLine('2', { amount: '5' }));
+    expect(result.current.intent.amount).toBe('5');
+  });
 
   it('exposes one editable intent and derived posting plan', () => {
     const { result } = renderHook(() =>

@@ -122,8 +122,14 @@ export function buildTransactionInboxImportNavigation(
     accounts,
     matchedRule,
   );
+  const isFinancialAccount = (id?: AccountId) => {
+    const type = accounts.find(account => account.id === id)?.accountType;
+    return (
+      type === AccountType.ASSET || type === AccountType.LIABILITY || type === AccountType.EQUITY
+    );
+  };
   const type: 'expense' | 'income' | 'transfer' =
-    bankAccountId && counterpartyId
+    isFinancialAccount(bankAccountId) && isFinancialAccount(counterpartyId)
       ? 'transfer'
       : item.direction === 'credit'
         ? 'income'
@@ -131,6 +137,7 @@ export function buildTransactionInboxImportNavigation(
   const params: Record<string, string> = {
     type,
     amount: item.parsedAmount != null ? String(item.parsedAmount) : '',
+    ...(item.parsedCurrencyCode ? { currencyCode: item.parsedCurrencyCode } : {}),
     description: buildDescription(item, type, customDescription),
     notes: buildNotes(item),
     ...(options?.mode ? { mode: options.mode } : {}),

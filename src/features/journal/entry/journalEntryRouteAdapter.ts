@@ -47,6 +47,7 @@ export function toTransactionIntentSeed(route: JournalEntryRouteParams): Transac
     sourceAccountId: route.sourceAccountId,
     destinationAccountId: route.destinationAccountId,
     amount: route.amount,
+    currencyCode: route.currencyCode,
     description: route.description,
     notes: route.notes,
     date: route.initialDate,

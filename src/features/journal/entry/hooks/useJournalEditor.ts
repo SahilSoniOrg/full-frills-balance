@@ -22,6 +22,7 @@ export interface UseJournalEditorOptions {
   initialMode?: 'simple' | 'advanced';
   initialType?: 'expense' | 'income' | 'transfer';
   initialAmount?: string;
+  initialCurrencyCode?: string;
   initialDescription?: string;
   initialNotes?: string;
   initialDate?: string; // ISO string format
@@ -50,6 +51,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     initialMode,
     initialType = 'expense',
     initialAmount,
+    initialCurrencyCode,
     initialDescription,
     initialNotes,
     initialDate,
@@ -71,12 +73,15 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   const isEdit = !!journalId && !isCopy;
   const [savedJournalCurrency, setSavedJournalCurrency] = useState<string>();
   const valuationCurrency =
-    isEdit || isCopy ? savedJournalCurrency || workplaceCurrency : workplaceCurrency;
+    isEdit || isCopy
+      ? savedJournalCurrency || workplaceCurrency
+      : initialCurrencyCode || workplaceCurrency;
 
   // Advanced / Generic state
   const { lines, setLines, addLine, removeLine, updateLine, updateLines } =
     useJournalEditorLineState({
       initialAmount,
+      initialCurrencyCode,
       initialSourceId,
       initialDestinationId,
     });
@@ -139,7 +144,8 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   const { isSubmitting, submitPlan } = useJournalEditorSubmission({
     postPostingPlan,
     journalId: isEdit ? journalId : undefined,
-    newJournalCurrencyCode: isCopy ? valuationCurrency : undefined,
+    newJournalCurrencyCode:
+      !isEdit && (isCopy || initialCurrencyCode) ? valuationCurrency : undefined,
     smsId,
     smsRecordId,
     onAfterSave,
@@ -220,6 +226,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       setGuidedModeInternal,
       transactionType,
       isEdit,
+      isCopy,
       valuationCurrency,
       isLoading,
       loadState,

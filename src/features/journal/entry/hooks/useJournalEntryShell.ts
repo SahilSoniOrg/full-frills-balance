@@ -139,6 +139,7 @@ export function useJournalEntryShell(): JournalEntryShell {
       seed.editorMode === 'bulk' || seed.editorMode === 'split' ? undefined : seed.editorMode,
     initialType: seed.type,
     initialAmount: seed.amount,
+    initialCurrencyCode: seed.currencyCode,
     initialDescription: seed.description,
     initialNotes: seed.notes,
     smsId: seed.sourceContext?.smsId,

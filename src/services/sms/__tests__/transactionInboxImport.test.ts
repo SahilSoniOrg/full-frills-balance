@@ -23,6 +23,39 @@ const account = (id: string, name: string, description?: string) =>
   ({ id, name, description, accountType: 'ASSET', currencyCode: 'INR' }) as Account;
 
 describe('buildTransactionInboxImportNavigation', () => {
+  it('preserves captured currency and treats a mapped expense category as an expense', () => {
+    const navigation = buildTransactionInboxImportNavigation(
+      { ...item, parsedCurrencyCode: 'INR' },
+      [
+        account('bank-1', 'Card 1990'),
+        { ...account('food', 'Coffee Shop'), accountType: 'EXPENSE' } as Account,
+      ],
+      { sourceAccountId: 'bank-1', categoryAccountId: 'food' } as TransactionAutoPostRule,
+    );
+    expect(navigation.params).toMatchObject({
+      type: 'expense',
+      currencyCode: 'INR',
+      amount: '250',
+      sourceAccountId: 'bank-1',
+      destinationAccountId: 'food',
+    });
+  });
+
+  it('treats a mapped income category as income', () => {
+    const navigation = buildTransactionInboxImportNavigation(
+      { ...item, direction: 'credit' },
+      [
+        account('bank-1', 'Card 1990'),
+        { ...account('salary', 'Salary'), accountType: 'INCOME' } as Account,
+      ],
+      { sourceAccountId: 'bank-1', categoryAccountId: 'salary' } as TransactionAutoPostRule,
+    );
+    expect(navigation.params).toMatchObject({
+      type: 'income',
+      sourceAccountId: 'salary',
+      destinationAccountId: 'bank-1',
+    });
+  });
   it('uses rule mappings and expands description placeholders', () => {
     const navigation = buildTransactionInboxImportNavigation(
       item,
@@ -46,6 +79,7 @@ describe('buildTransactionInboxImportNavigation', () => {
     });
     expect(navigation.smsId).toBe('sms-1');
     expect(navigation.smsRecordId).toBe('inbox-1');
+    expect(JSON.stringify(navigation)).not.toContain(item.rawBody);
   });
 
   it('falls back to account heuristics and preserves income direction', () => {

@@ -6,6 +6,14 @@ import {
 import { asAccountId, asJournalId } from '@/src/types/ids';
 
 describe('journalEntryRouteAdapter', () => {
+  it('preserves the currency of a prefilled amount across navigation and rejects malformed codes', () => {
+    const seed = { amount: '418', currencyCode: 'INR' };
+    expect(parseTransactionIntentSeed(toLegacyJournalEntryQueryParams(seed))).toEqual(seed);
+    expect(parseTransactionIntentSeed({ amount: '418', currencyCode: ' inr ' })).toEqual(seed);
+    expect(parseTransactionIntentSeed({ amount: '418', currencyCode: 'wrong' })).toEqual({
+      amount: '418',
+    });
+  });
   it('maps a blank legacy route to an empty seed', () => {
     expect(parseTransactionIntentSeed({})).toEqual({});
   });

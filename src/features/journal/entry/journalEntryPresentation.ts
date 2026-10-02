@@ -27,6 +27,7 @@ export type JournalEntryRouteParams = {
   sourceAccountId?: AccountId;
   destinationAccountId?: AccountId;
   amount?: string;
+  currencyCode?: string;
   description?: string;
   notes?: string;
   smsId?: string;
@@ -57,6 +58,7 @@ export function parseJournalEntryRouteParams(params: ExpoSearchParams): JournalE
   const guidedAutopilotRaw = firstString(params.guidedAutopilot);
   const guidedAutopilot =
     guidedAutopilotRaw === 'true' || guidedAutopilotRaw === '1' ? true : undefined;
+  const currencyCode = firstString(params.currencyCode)?.trim().toUpperCase();
 
   const sourceAccountId =
     (firstString(params.sourceAccountId) as AccountId | undefined) ||
@@ -77,6 +79,7 @@ export function parseJournalEntryRouteParams(params: ExpoSearchParams): JournalE
     sourceAccountId,
     destinationAccountId,
     amount: firstString(params.amount),
+    ...(currencyCode && /^[A-Z]{3}$/.test(currencyCode) ? { currencyCode } : {}),
     description: firstString(params.description),
     notes: firstString(params.notes),
     smsId: firstString(params.smsId),

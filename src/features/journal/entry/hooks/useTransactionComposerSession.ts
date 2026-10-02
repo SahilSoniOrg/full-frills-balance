@@ -65,9 +65,9 @@ export function useTransactionComposerSession(
       description,
       amount:
         sourceLine?.amount ||
-        (destinationLines.length > 1 && allocationTotal > 0
+        (destinationLines.length > 1 && allocationTotal > 0 && !editorOptions.initialCurrencyCode
           ? String(allocationTotal)
-          : destinationLines[0]?.amount),
+          : (sourceLine?.amount ?? destinationLines[0]?.amount)),
       date: `${editor.journalDate}T${editor.journalTime || '00:00'}`,
       notes: editor.notes,
       type: editor.transactionType,
@@ -96,6 +96,7 @@ export function useTransactionComposerSession(
     editor.journalTime,
     editor.notes,
     editor.transactionType,
+    editorOptions.initialCurrencyCode,
     sourceLine,
   ]);
 
@@ -127,18 +128,39 @@ export function useTransactionComposerSession(
     postingPlan,
     valuationCurrency,
   ]);
+  const capturedCurrencyIssues = useMemo(() => {
+    if (!editorOptions.initialCurrencyCode || editor.isEdit || editor.isCopy) return [];
+    return editor.lines.flatMap(line => {
+      const account = accounts.find(candidate => candidate.id === line.accountId);
+      return account &&
+        line.amount &&
+        line.accountCurrency &&
+        line.accountCurrency !== account.currencyCode
+        ? [
+            {
+              code: 'account_metadata_mismatch' as const,
+              message: `Enter the amount in ${account.currencyCode} for ${account.name}.`,
+              lineId: line.id,
+              accountId: account.id,
+            },
+          ]
+        : [];
+    });
+  }, [accounts, editor.isCopy, editor.isEdit, editor.lines, editorOptions.initialCurrencyCode]);
   const postingPlanValidation = useMemo<PostingPlanValidationResult>(
     () =>
-      planForValidation
-        ? validatePostingPlan(planForValidation, accounts, { precisionByCurrency })
-        : { valid: false, issues: [] },
-    [accounts, planForValidation, precisionByCurrency],
+      capturedCurrencyIssues.length > 0
+        ? { valid: false, issues: capturedCurrencyIssues }
+        : planForValidation
+          ? validatePostingPlan(planForValidation, accounts, { precisionByCurrency })
+          : { valid: false, issues: [] },
+    [accounts, capturedCurrencyIssues, planForValidation, precisionByCurrency],
   );
 
   // An unresolved intent has no posting plan to validate, so its resolver
   // issues are the canonical explanation for a disabled submit action.
   const validationIssues =
-    !editor.isGuidedMode || intentResolution.resolved
+    capturedCurrencyIssues.length > 0 || !editor.isGuidedMode || intentResolution.resolved
       ? postingPlanValidation.issues
       : intentResolution.issues;
 
@@ -146,6 +168,9 @@ export function useTransactionComposerSession(
 
   const submit = useCallback(
     async (mode: 'editor' | 'allocation') => {
+      if (capturedCurrencyIssues.length > 0) {
+        return { success: false, error: capturedCurrencyIssues[0].message } as const;
+      }
       if (mode === 'allocation' && !splitValidation.valid) {
         return { success: false, error: splitValidation.error } as const;
       }
@@ -204,7 +229,16 @@ export function useTransactionComposerSession(
         mode === 'allocation' ? 'advanced' : editor.isGuidedMode ? 'simple' : 'advanced',
       );
     },
-    [accounts, destinationLines, editor, intent, sourceLine, splitValidation, valuationCurrency],
+    [
+      accounts,
+      capturedCurrencyIssues,
+      destinationLines,
+      editor,
+      intent,
+      sourceLine,
+      splitValidation,
+      valuationCurrency,
+    ],
   );
 
   return {
