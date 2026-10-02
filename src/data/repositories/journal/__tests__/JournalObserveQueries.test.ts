@@ -3,7 +3,9 @@ import Journal from '@/src/data/models/Journal';
 import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { observeAfterInitial } from '@/src/testing/observeAfterInitial';
 import { JournalDisplayType, JournalStatus } from '@/src/types/enums';
-import { WorkplaceId } from '@/src/types/ids';
+import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
+import { createJournalFixture, softDeleteJournalFixture } from '@/src/testing/journalFixtures';
+import { firstValueFrom } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 describe('JournalObserveQueries', () => {
@@ -45,5 +47,40 @@ describe('JournalObserveQueries', () => {
     });
 
     await expect(amount.nextValue).resolves.toBe(1400);
+  });
+
+  it('observes all linked occurrences, scopes workplaces, excludes deleted rows, and reacts to amount edits', async () => {
+    const workplaceId = 'wp-detail' as WorkplaceId;
+    const plannedPaymentId = 'plan' as PlannedPaymentId;
+    const create = (workplace: WorkplaceId, plan: PlannedPaymentId) =>
+      createJournalFixture(
+        {
+          journalDate: Date.now(),
+          currencyCode: 'USD',
+          totalAmount: 10,
+          plannedPaymentId: plan,
+          status: JournalStatus.PLANNED,
+          transactions: [],
+        },
+        workplace,
+      );
+    const linked: Journal[] = [];
+    for (let index = 0; index < 23; index++)
+      linked.push(await create(workplaceId, plannedPaymentId));
+    await create('other-workplace' as WorkplaceId, plannedPaymentId);
+    await create(workplaceId, 'other-plan' as PlannedPaymentId);
+    await softDeleteJournalFixture(workplaceId, linked[0].id);
+    const source = journalObserveQueries.observeByPlannedPayment(workplaceId, plannedPaymentId);
+    expect(await firstValueFrom(source)).toHaveLength(22);
+    const updated = observeAfterInitial(
+      source.pipe(map(items => items.find(item => item.id === linked[1].id)?.totalAmount)),
+    );
+    await updated.initial;
+    await database.write(async () => {
+      await linked[1].update(record => {
+        record.totalAmount = 12.5;
+      });
+    });
+    await expect(updated.nextValue).resolves.toBe(12.5);
   });
 });

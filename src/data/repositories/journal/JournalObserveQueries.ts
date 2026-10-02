@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
 import { observeQueryWithModelChanges } from '@/src/data/repositories/observeQueryWithModelChanges';
 import { JournalStatus } from '@/src/types/enums';
-import { JournalId, WorkplaceId } from '@/src/types/ids';
+import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';
 import { map, of } from 'rxjs';
@@ -45,6 +45,21 @@ const JOURNAL_LIST_OBSERVE_COLUMNS = [
 export class JournalObserveQueries {
   private get journals() {
     return database.collections.get<Journal>('journals');
+  }
+
+  /** Full linked activity for detail summaries; intentionally independent of timeline pagination. */
+  observeByPlannedPayment(workplaceId: WorkplaceId, plannedPaymentId: PlannedPaymentId) {
+    return this.journals
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('planned_payment_id', plannedPaymentId),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .observeWithColumns([
+        ...JOURNAL_LIST_OBSERVE_COLUMNS,
+        'planned_payment_id',
+        'original_journal_id',
+      ]);
   }
 
   observeTimeline({
