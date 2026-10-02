@@ -54,8 +54,6 @@ describe('journalEntryPresentation', () => {
       notes: undefined,
       smsId: undefined,
       smsRecordId: undefined,
-      smsSender: undefined,
-      rawSmsBody: undefined,
       initialDate: undefined,
       launchSource: undefined,
     });
@@ -71,8 +69,6 @@ describe('journalEntryPresentation', () => {
       notes: 'Imported from SMS: Coffee Shop',
       smsId: 'sms-1',
       smsRecordId: 'inbox-1',
-      smsSender: 'HDFCBK',
-      rawSmsBody: 'Card payment at Coffee Shop',
       initialDate: '2026-08-25T12:30:00.000Z',
       journalId: 'j1',
       description: 'Coffee Shop',

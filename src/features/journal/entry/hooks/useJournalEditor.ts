@@ -29,8 +29,6 @@ export interface UseJournalEditorOptions {
   initialDestinationId?: AccountId;
   smsId?: string;
   smsRecordId?: string;
-  smsSender?: string;
-  rawSmsBody?: string;
   /** Callback to run after a successful save. */
   onAfterSave?: (result: {
     journalId?: JournalId;
@@ -59,8 +57,6 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     initialDestinationId,
     smsId,
     smsRecordId,
-    smsSender,
-    rawSmsBody,
     onAfterSave,
     onSuccess,
   } = options;
@@ -146,8 +142,6 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     newJournalCurrencyCode: isCopy ? valuationCurrency : undefined,
     smsId,
     smsRecordId,
-    smsSender,
-    rawSmsBody,
     onAfterSave,
     onSuccess,
   });

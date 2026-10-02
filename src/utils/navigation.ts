@@ -94,8 +94,6 @@ export const AppNavigation = {
     journalId?: string;
     smsId?: string;
     smsRecordId?: string;
-    smsSender?: string;
-    rawSmsBody?: string;
     initialDate?: string;
     sourceAccountId?: string;
     destinationAccountId?: string;

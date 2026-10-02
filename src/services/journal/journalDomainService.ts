@@ -41,8 +41,6 @@ export class JournalService {
     newJournalCurrencyCode?: string;
     smsId?: string;
     smsRecordId?: string;
-    smsSender?: string;
-    rawSmsBody?: string;
     mode?: 'simple' | 'advanced' | 'import';
     workplaceId: WorkplaceId;
   }): Promise<SubmitJournalResult> {
@@ -90,8 +88,6 @@ export class JournalService {
       newJournalCurrencyCode: params.newJournalCurrencyCode,
       smsId: params.smsId,
       smsRecordId: params.smsRecordId,
-      smsSender: params.smsSender,
-      rawSmsBody: params.rawSmsBody,
       mode: params.mode,
       workplaceId: params.workplaceId,
     });
@@ -261,8 +257,6 @@ export class JournalService {
     newJournalCurrencyCode?: string;
     smsId?: string;
     smsRecordId?: string;
-    smsSender?: string;
-    rawSmsBody?: string;
     mode?: 'simple' | 'advanced' | 'import';
     workplaceId: WorkplaceId;
   }): Promise<SubmitJournalResult> {

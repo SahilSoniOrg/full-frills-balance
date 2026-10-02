@@ -31,8 +31,6 @@ export type JournalEntryRouteParams = {
   notes?: string;
   smsId?: string;
   smsRecordId?: string;
-  smsSender?: string;
-  rawSmsBody?: string;
   initialDate?: string;
   launchSource?: string;
 };
@@ -83,8 +81,6 @@ export function parseJournalEntryRouteParams(params: ExpoSearchParams): JournalE
     notes: firstString(params.notes),
     smsId: firstString(params.smsId),
     smsRecordId: firstString(params.smsRecordId),
-    smsSender: firstString(params.smsSender),
-    rawSmsBody: firstString(params.rawSmsBody),
     initialDate: firstString(params.initialDate),
     launchSource: firstString(params.source),
   };

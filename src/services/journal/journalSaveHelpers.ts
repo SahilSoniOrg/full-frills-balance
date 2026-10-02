@@ -16,8 +16,6 @@ export type JournalSaveLineInput = {
   journalTime?: string;
   smsId?: string;
   smsRecordId?: string;
-  smsSender?: string;
-  rawSmsBody?: string;
   workplaceId: WorkplaceId;
 };
 
@@ -166,7 +164,7 @@ export async function assembleCreateJournalData(
 
   const smsMetadataJson = await resolveSmsMetadataJson(params.smsRecordId, params.workplaceId);
   const metadata =
-    params.smsId || params.smsSender || params.rawSmsBody
+    params.smsId || params.smsRecordId
       ? {
           importSource: params.smsId ? 'sms' : 'manual',
           originalSmsId: params.smsId,

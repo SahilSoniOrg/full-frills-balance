@@ -15,8 +15,6 @@ type PostPostingPlanParams = {
   newJournalCurrencyCode?: string;
   smsId?: string;
   smsRecordId?: string;
-  smsSender?: string;
-  rawSmsBody?: string;
   mode?: 'simple' | 'advanced' | 'import';
 };
 

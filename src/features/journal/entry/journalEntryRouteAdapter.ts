@@ -34,8 +34,6 @@ export function toTransactionIntentSeed(route: JournalEntryRouteParams): Transac
     launchSource: route.launchSource,
     smsId: route.smsId,
     smsRecordId: route.smsRecordId,
-    smsSender: route.smsSender,
-    rawSmsBody: route.rawSmsBody,
   });
 
   const hasSourceContext = Object.keys(sourceContext).length > 0;

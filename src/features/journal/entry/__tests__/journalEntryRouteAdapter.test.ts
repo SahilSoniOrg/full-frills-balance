@@ -26,8 +26,6 @@ describe('journalEntryRouteAdapter', () => {
           launchSource: 'widget',
           smsId: 'sms-1',
           smsRecordId: 'inbox-1',
-          smsSender: 'HDFCBK',
-          rawSmsBody: 'Card payment at Coffee',
         },
       }),
     ).toEqual({
@@ -43,8 +41,6 @@ describe('journalEntryRouteAdapter', () => {
       source: 'widget',
       smsId: 'sms-1',
       smsRecordId: 'inbox-1',
-      smsSender: 'HDFCBK',
-      rawSmsBody: 'Card payment at Coffee',
     });
   });
 
@@ -104,8 +100,6 @@ describe('journalEntryRouteAdapter', () => {
       launchSource: 'dashboard',
       smsId: undefined,
       smsRecordId: undefined,
-      smsSender: undefined,
-      rawSmsBody: undefined,
     });
 
     expect(seed).toEqual({

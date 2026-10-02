@@ -7,8 +7,6 @@ export type TransactionIntentSeedSourceContext = {
   launchSource?: string;
   smsId?: string;
   smsRecordId?: string;
-  smsSender?: string;
-  rawSmsBody?: string;
 };
 
 export type TransactionIntentSeed = {
@@ -39,8 +37,6 @@ export type LegacyJournalEntryQueryParams = {
   notes?: string;
   smsId?: string;
   smsRecordId?: string;
-  smsSender?: string;
-  rawSmsBody?: string;
   initialDate?: string;
   source?: string;
 };
@@ -69,7 +65,5 @@ export function toLegacyJournalEntryQueryParams(
     source: seed.sourceContext?.launchSource,
     smsId: seed.sourceContext?.smsId,
     smsRecordId: seed.sourceContext?.smsRecordId,
-    smsSender: seed.sourceContext?.smsSender,
-    rawSmsBody: seed.sourceContext?.rawSmsBody,
   });
 }

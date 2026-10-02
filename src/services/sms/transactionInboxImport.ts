@@ -10,8 +10,6 @@ export interface TransactionInboxImportOptions {
 export interface TransactionInboxImportNavigation {
   smsId?: string;
   smsRecordId: string;
-  smsSender?: string;
-  rawSmsBody: string;
   initialDate: string;
   params: Record<string, string>;
 }
@@ -149,8 +147,6 @@ export function buildTransactionInboxImportNavigation(
   return {
     smsId: item.channel === 'sms' ? item.deviceSourceId : undefined,
     smsRecordId: item.id,
-    smsSender: item.senderAddress,
-    rawSmsBody: item.rawBody || '',
     initialDate: new Date(item.inputDate).toISOString(),
     params,
   };
