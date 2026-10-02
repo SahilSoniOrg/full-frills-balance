@@ -50,7 +50,7 @@ export const JournalEntrySubmitBar = React.memo(function JournalEntrySubmitBar({
       ]}
     >
       {disabled && missingRequirementHint ? (
-        <View style={styles.hintRow}>
+        <View style={styles.hintRow} accessibilityLiveRegion="polite">
           <AppText variant="caption" color="secondary" style={styles.hintText}>
             {missingRequirementHint}
           </AppText>
@@ -115,6 +115,7 @@ const styles = StyleSheet.create({
   },
   hintText: {
     fontSize: Typography.sizes.xs,
+    textAlign: 'center',
   },
   buttonRow: {
     flexDirection: 'row',

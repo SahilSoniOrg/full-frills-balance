@@ -666,6 +666,16 @@ export const UI_STRINGS = {
       invalidAmount: 'Enter an amount greater than zero.',
       missingSourceAccount: 'Choose a source account.',
       missingDestinationAccount: 'Choose a destination account.',
+      missingSourceAccountByType: {
+        expense: 'Choose the account you paid with.',
+        income: 'Choose where the income came from.',
+        transfer: 'Choose the account to send money from.',
+      },
+      missingDestinationAccountByType: {
+        expense: 'Choose a category for what you spent on.',
+        income: 'Choose the account that received the income.',
+        transfer: 'Choose the account to deposit money into.',
+      },
       missingAllocationAccount: 'Choose an account for each allocation.',
       invalidAllocationAmount: 'Each allocation needs an amount greater than zero.',
       allocationSumMismatch: 'Allocation amounts must add up to the total.',

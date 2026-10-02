@@ -162,6 +162,40 @@ describe('journalEntryPresentation', () => {
   });
 
   describe('resolveJournalEntryValidationHint', () => {
+    it.each([
+      ['expense', 'Choose the account you paid with.', 'Choose a category for what you spent on.'],
+      [
+        'income',
+        'Choose where the income came from.',
+        'Choose the account that received the income.',
+      ],
+      [
+        'transfer',
+        'Choose the account to send money from.',
+        'Choose the account to deposit money into.',
+      ],
+    ] as const)(
+      'uses transaction-specific account guidance for %s',
+      (simpleType, source, destination) => {
+        expect(
+          resolveJournalEntryValidationHint({
+            activeMode: 'basic',
+            simpleType,
+            validationIssues: [{ code: 'missing_source_account', message: 'A source is required' }],
+          }),
+        ).toBe(source);
+        expect(
+          resolveJournalEntryValidationHint({
+            activeMode: 'basic',
+            simpleType,
+            validationIssues: [
+              { code: 'missing_destination_account', message: 'A destination is required' },
+            ],
+          }),
+        ).toBe(destination);
+      },
+    );
+
     it('maps the first actionable unresolved intent issue', () => {
       expect(
         resolveJournalEntryValidationHint({

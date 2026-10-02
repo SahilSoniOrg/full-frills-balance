@@ -180,7 +180,10 @@ export function isJournalEntrySubmitDisabled(input: {
   );
 }
 
-function resolveValidationIssueHint(issue: JournalEntryValidationIssue): string | null {
+function resolveValidationIssueHint(
+  issue: JournalEntryValidationIssue,
+  simpleType?: TabType,
+): string | null {
   const strings = AppConfig.strings.transactionFlow.validation;
 
   switch (issue.code) {
@@ -189,9 +192,13 @@ function resolveValidationIssueHint(issue: JournalEntryValidationIssue): string 
     case 'invalid_amount':
       return strings.invalidAmount;
     case 'missing_source_account':
-      return strings.missingSourceAccount;
+      return simpleType
+        ? strings.missingSourceAccountByType[simpleType]
+        : strings.missingSourceAccount;
     case 'missing_destination_account':
-      return strings.missingDestinationAccount;
+      return simpleType
+        ? strings.missingDestinationAccountByType[simpleType]
+        : strings.missingDestinationAccount;
     case 'missing_allocation_account':
       return strings.missingAllocationAccount;
     case 'invalid_allocation_amount':
@@ -237,6 +244,7 @@ function resolveSplitValidationHint(error: SplitValidationError): string {
 /** Resolves the first actionable explanation for a disabled submit action. */
 export function resolveJournalEntryValidationHint(input: {
   activeMode: JournalEntryScreenMode;
+  simpleType?: TabType;
   validationIssues: readonly JournalEntryValidationIssue[];
   splitValidation?: SplitValidation;
 }): string | null {
@@ -249,7 +257,10 @@ export function resolveJournalEntryValidationHint(input: {
   }
 
   for (const issue of input.validationIssues) {
-    const hint = resolveValidationIssueHint(issue);
+    const hint = resolveValidationIssueHint(
+      issue,
+      input.activeMode === 'basic' ? input.simpleType : undefined,
+    );
     if (hint) return hint;
   }
 

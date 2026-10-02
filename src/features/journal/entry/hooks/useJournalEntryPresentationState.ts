@@ -20,6 +20,7 @@ export function useJournalEntryPresentationState(vm: JournalEntryShell) {
   });
   const validation = {
     activeMode: vm.activeMode,
+    simpleType: vm.editor.transactionType,
     validationIssues: vm.validationIssues,
     splitValidation: vm.splitValidation,
   };
