@@ -86,6 +86,22 @@ export class DevicePreferencesStore {
     this.update({ isSmsImportEnabled: enabled });
   }
 
+  get isAutomaticSmsImportEnabled(): boolean {
+    return this.preferences.isAutomaticSmsImportEnabled;
+  }
+
+  setAutomaticSmsImportEnabled(enabled: boolean): void {
+    this.update({ isAutomaticSmsImportEnabled: enabled });
+  }
+
+  get isSmsAutoPostEnabled(): boolean {
+    return this.preferences.isSmsAutoPostEnabled;
+  }
+
+  setSmsAutoPostEnabled(enabled: boolean): void {
+    this.update({ isSmsAutoPostEnabled: enabled });
+  }
+
   get reduceMotion(): boolean {
     return this.preferences.reduceMotion;
   }
@@ -140,6 +156,18 @@ export class DevicePreferencesStore {
         : {}),
       ...(typeof value.isSmsImportEnabled === 'boolean'
         ? { isSmsImportEnabled: value.isSmsImportEnabled }
+        : {}),
+      ...(typeof value.isAutomaticSmsImportEnabled === 'boolean'
+        ? { isAutomaticSmsImportEnabled: value.isAutomaticSmsImportEnabled }
+        : {}),
+      ...(typeof value.isSmsAutoPostEnabled === 'boolean'
+        ? { isSmsAutoPostEnabled: value.isSmsAutoPostEnabled }
+        : {}),
+      ...(typeof value.areSmsReviewNotificationsEnabled === 'boolean'
+        ? { areSmsReviewNotificationsEnabled: value.areSmsReviewNotificationsEnabled }
+        : {}),
+      ...(typeof value.showSmsNotificationDetails === 'boolean'
+        ? { showSmsNotificationDetails: value.showSmsNotificationDetails }
         : {}),
       ...(typeof value.reduceMotion === 'boolean' ? { reduceMotion: value.reduceMotion } : {}),
     };

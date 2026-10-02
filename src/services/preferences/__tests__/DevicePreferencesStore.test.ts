@@ -31,13 +31,20 @@ describe('DevicePreferencesStore', () => {
   it('sanitizes malformed persisted values', () => {
     mockMemory.set(
       'full_frills_balance_device_preferences',
-      JSON.stringify({ onboardingCompleted: 'false', activeWorkplaceId: 42 }),
+      JSON.stringify({
+        onboardingCompleted: 'false',
+        activeWorkplaceId: 42,
+        areSmsReviewNotificationsEnabled: 'false',
+        showSmsNotificationDetails: 'true',
+      }),
     );
 
     const store = new DevicePreferencesStore();
 
     expect(store.deviceRegistered).toBe(false);
     expect(store.activeWorkplaceId).toBeUndefined();
+    expect(store.getSnapshot().areSmsReviewNotificationsEnabled).toBe(true);
+    expect(store.getSnapshot().showSmsNotificationDetails).toBe(false);
   });
 
   it('resets its in-memory snapshot when persisted preferences are removed', () => {
@@ -64,6 +71,18 @@ describe('DevicePreferencesStore', () => {
     expect(store.deviceRegistered).toBe(true);
   });
 
+  it('does not treat the legacy SMS import setting as background SMS consent', () => {
+    mockMemory.set(
+      'full_frills_balance_device_preferences',
+      JSON.stringify({ isSmsImportEnabled: true }),
+    );
+
+    const store = new DevicePreferencesStore();
+
+    expect(store.isSmsImportEnabled).toBe(true);
+    expect(store.isAutomaticSmsImportEnabled).toBe(false);
+  });
+
   it('persists synthesized defaults for recovered installs', () => {
     const store = new DevicePreferencesStore();
 
@@ -74,6 +93,10 @@ describe('DevicePreferencesStore', () => {
       deviceRegistered: false,
       isAppLockEnabled: false,
       isSmsImportEnabled: false,
+      isAutomaticSmsImportEnabled: false,
+      isSmsAutoPostEnabled: true,
+      areSmsReviewNotificationsEnabled: true,
+      showSmsNotificationDetails: false,
       reduceMotion: false,
     });
   });
@@ -87,5 +110,15 @@ describe('DevicePreferencesStore', () => {
     expect(JSON.parse(mockMemory.get('full_frills_balance_device_preferences')!).reduceMotion).toBe(
       true,
     );
+  });
+
+  it('retains SMS notification choices when the device store is recreated', () => {
+    const store = new DevicePreferencesStore();
+    store.update({ areSmsReviewNotificationsEnabled: false, showSmsNotificationDetails: true });
+
+    expect(new DevicePreferencesStore().getSnapshot()).toMatchObject({
+      areSmsReviewNotificationsEnabled: false,
+      showSmsNotificationDetails: true,
+    });
   });
 });

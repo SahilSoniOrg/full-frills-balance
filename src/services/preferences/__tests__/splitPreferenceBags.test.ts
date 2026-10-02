@@ -10,16 +10,22 @@ describe('splitPreferenceBags', () => {
       activeWorkplaceId: 'wp-1',
       safeToSpendDays: 60,
       isSmsImportEnabled: true,
+      areSmsReviewNotificationsEnabled: false,
+      showSmsNotificationDetails: true,
       dismissedPatternIds: ['p1'],
     });
 
     expect(user).toEqual(expect.objectContaining({ userName: 'Sam', theme: 'dark' }));
     expect(user).not.toHaveProperty('isAppLockEnabled');
+    expect(user).not.toHaveProperty('areSmsReviewNotificationsEnabled');
+    expect(user).not.toHaveProperty('showSmsNotificationDetails');
     expect(device).toEqual(
       expect.objectContaining({
         isAppLockEnabled: true,
         activeWorkplaceId: 'wp-1',
         isSmsImportEnabled: true,
+        areSmsReviewNotificationsEnabled: false,
+        showSmsNotificationDetails: true,
       }),
     );
     expect(device).not.toHaveProperty('onboardingCompleted');
@@ -30,5 +36,7 @@ describe('splitPreferenceBags', () => {
       }),
     );
     expect(workplace).not.toHaveProperty('isSmsImportEnabled');
+    expect(workplace).not.toHaveProperty('areSmsReviewNotificationsEnabled');
+    expect(workplace).not.toHaveProperty('showSmsNotificationDetails');
   });
 });

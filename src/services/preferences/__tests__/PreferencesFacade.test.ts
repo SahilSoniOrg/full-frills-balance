@@ -79,6 +79,9 @@ describe('PreferencesFacade import restore', () => {
     expect(preferences.device.deviceRegistered).toBe(true);
     expect(preferences.device.isAppLockEnabled).toBe(true);
     expect(preferences.device.isSmsImportEnabled).toBe(true);
+    expect(preferences.device.isAutomaticSmsImportEnabled).toBe(false);
+    expect(preferences.device.getSnapshot().areSmsReviewNotificationsEnabled).toBe(true);
+    expect(preferences.device.getSnapshot().showSmsNotificationDetails).toBe(false);
     expect(preferences.device.anonymizedId).toBe('device-id');
   });
 
@@ -109,5 +112,37 @@ describe('PreferencesFacade import restore', () => {
     );
 
     expect(preferences.privacy.privacyPolicyAcknowledgement).toBeUndefined();
+  });
+
+  it('keeps SMS notification choices on the device when restoring a backup', () => {
+    const preferences = createPreferencesFacade();
+    preferences.device.update({
+      areSmsReviewNotificationsEnabled: false,
+      showSmsNotificationDetails: false,
+    });
+
+    preferences.restoreImportedPreferences(
+      {
+        areSmsReviewNotificationsEnabled: true,
+        showSmsNotificationDetails: true,
+        theme: 'dark',
+      },
+      'workplace-1' as WorkplaceId,
+      'all',
+    );
+
+    expect(preferences.device.getSnapshot()).toMatchObject({
+      areSmsReviewNotificationsEnabled: false,
+      showSmsNotificationDetails: false,
+    });
+    expect(preferences.getSnapshot().theme).toBe('dark');
+    expect(preferences.getSnapshot()).not.toHaveProperty('areSmsReviewNotificationsEnabled');
+    expect(preferences.getSnapshot()).not.toHaveProperty('showSmsNotificationDetails');
+    expect(JSON.parse(mockMemory.get(USER_PREFERENCES_KEY)!)).not.toHaveProperty(
+      'areSmsReviewNotificationsEnabled',
+    );
+    expect(JSON.parse(mockMemory.get(USER_PREFERENCES_KEY)!)).not.toHaveProperty(
+      'showSmsNotificationDetails',
+    );
   });
 });
