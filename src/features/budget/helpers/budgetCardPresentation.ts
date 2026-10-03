@@ -108,7 +108,7 @@ export function presentBudgetUsage(usage: BudgetUsage, elapsedShare = 1): Budget
         text: AppConfig.strings.budget.incompleteStatus,
       }
     : resolvedStatus.statusBadge;
-  const isOver = usage.remaining < 0;
+  const isOver = resolvedStatus.status === 'over';
   const progress = Math.min(100, Math.max(0, usage.usagePercent * 100));
 
   return {
