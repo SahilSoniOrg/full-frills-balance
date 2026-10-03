@@ -68,9 +68,12 @@ export interface EnrichedJournal {
   displayType: JournalDisplayType;
   accounts: {
     id: AccountId;
+    transactionId?: TransactionId;
+    exchangeRate?: number;
     name: string;
     accountType: string;
     icon?: string;
+    color?: string;
     role: 'SOURCE' | 'DESTINATION' | 'NEUTRAL';
     amount?: number;
     currencyCode?: string;

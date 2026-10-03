@@ -80,9 +80,55 @@ describe('enrichJournals', () => {
     expect(enriched[0].currencyCode).toBe('USD');
     expect(enriched[0].accounts[0]).toMatchObject({ amount: 10, currencyCode: 'EUR' });
   });
+
+  it('preserves posting identity and rates in stable duplicate-account order', () => {
+    const base = enrichmentRow(
+      'j-1',
+      'cash',
+      10,
+      TransactionType.CREDIT,
+      AccountType.ASSET,
+      'Cash',
+      'EUR',
+    );
+    const rows = [
+      {
+        ...base,
+        transaction_id: 'z-line' as JournalEnrichmentRow['transaction_id'],
+        exchange_rate: 1.2,
+      },
+      {
+        ...base,
+        transaction_id: 'a-line' as JournalEnrichmentRow['transaction_id'],
+        exchange_rate: 1.3,
+      },
+    ];
+    const forward = enrichJournals([journalStub('j-1')], rows);
+    const reverse = enrichJournals([journalStub('j-1')], [...rows].reverse());
+    expect(forward[0].accounts.map(leg => leg.transactionId)).toEqual(['a-line', 'z-line']);
+    expect(forward[0].accounts.map(leg => leg.exchangeRate)).toEqual([1.3, 1.2]);
+    expect(enrichedJournalsAreEqual(forward, reverse)).toBe(true);
+    const rateChanged = enrichJournals(
+      [journalStub('j-1')],
+      rows.map(row => ({ ...row, exchange_rate: 1.5 })),
+    );
+    expect(enrichedJournalsAreEqual(forward, rateChanged)).toBe(false);
+  });
 });
 
 describe('enrichedJournalsAreEqual', () => {
+  it('preserves custom account colors and emits color-only changes, including clearing a color', () => {
+    const row = enrichmentRow('j-1', 'cash', 10, TransactionType.CREDIT, AccountType.ASSET, 'Cash');
+    const original = enrichJournals([journalStub('j-1')], [{ ...row, account_color: '#CDAA6B' }]);
+    const changed = enrichJournals([journalStub('j-1')], [{ ...row, account_color: '#65C6AD' }]);
+    const cleared = enrichJournals([journalStub('j-1')], [{ ...row, account_color: null }]);
+    expect(original[0].accounts[0].color).toBe('#CDAA6B');
+    expect(changed[0].accounts[0].color).toBe('#65C6AD');
+    expect(cleared[0].accounts[0].color).toBeUndefined();
+    expect(enrichedJournalsAreEqual(original, changed)).toBe(false);
+    expect(enrichedJournalsAreEqual(changed, cleared)).toBe(false);
+  });
+
   it('returns false when a leg amount changes', () => {
     const base = enrichJournals(
       [journalStub('j-1')],

@@ -273,12 +273,15 @@ export class JournalEnrichmentQueries {
       SELECT 
         t.journal_id as journal_id, 
         t.account_id as account_id, 
+        t.id as transaction_id,
+        t.exchange_rate as exchange_rate,
         t.amount as amount, 
         a.currency_code as account_currency_code,
         t.transaction_type as transaction_type, 
         a.name as account_name, 
         a.account_type as account_type, 
-        a.icon as account_icon
+        a.icon as account_icon,
+        a.color as account_color
       FROM journals j
       JOIN transactions t ON t.journal_id = j.id
       JOIN accounts a ON t.account_id = a.id
@@ -323,12 +326,15 @@ export class JournalEnrichmentQueries {
           enriched.push({
             journal_id: journal.id,
             account_id: tx.accountId,
+            transaction_id: tx.id,
+            exchange_rate: tx.exchangeRate,
             amount: tx.amount,
             account_currency_code: account.currencyCode,
             transaction_type: tx.transactionType,
             account_name: account.name,
             account_type: account.accountType,
             account_icon: account.icon,
+            account_color: account.color,
           });
         }
       }

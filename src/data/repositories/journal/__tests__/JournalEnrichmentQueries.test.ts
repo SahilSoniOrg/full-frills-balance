@@ -41,6 +41,7 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
     const workplaceOneAccount = await accountWriteRepository.create({
       name: 'Workplace One Checking',
       accountType: AccountType.ASSET,
+      color: '#CDAA6B',
       currencyCode: 'USD',
       workplaceId: workplaceOne,
     });
@@ -126,6 +127,9 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
     expect(sql).toContain('t.workplace_id = ?');
     expect(sql).toContain('a.workplace_id = ?');
     expect(sql).toContain('a.currency_code as account_currency_code');
+    expect(sql).toContain('t.id as transaction_id');
+    expect(sql).toContain('t.exchange_rate as exchange_rate');
+    expect(sql).toContain('a.color as account_color');
     expect(args.filter(arg => arg === workplaceOne)).toHaveLength(3);
   });
 
@@ -142,6 +146,7 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
       journal_id: workplaceOneJournalId,
       account_id: workplaceOneAccountId,
       account_name: 'Workplace One Checking',
+      account_color: '#CDAA6B',
       amount: 10,
       account_currency_code: 'USD',
     });
@@ -160,6 +165,7 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
     await database.write(async () => {
       await line!.update(tx => {
         tx.currencyCode = 'EUR';
+        tx.exchangeRate = 1.25;
       });
     });
 
@@ -168,6 +174,8 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
     ]);
     expect(rows).toHaveLength(1);
     expect(rows[0].account_currency_code).toBe('USD');
+    expect(rows[0].transaction_id).toBe(line!.id);
+    expect(rows[0].exchange_rate).toBe(1.25);
   });
 
   it('scopes suggestion joins and applies the bounded three-month description query', async () => {

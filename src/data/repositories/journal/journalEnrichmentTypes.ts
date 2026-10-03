@@ -1,4 +1,4 @@
-import { AccountId, JournalId } from '@/src/types/ids';
+import { AccountId, JournalId, TransactionId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import type { JournalSuggestion } from '@/src/types/journalSuggestions';
 
@@ -12,12 +12,15 @@ export type {
 export type JournalEnrichmentRow = {
   journal_id: JournalId;
   account_id: AccountId;
+  transaction_id?: TransactionId;
+  exchange_rate?: number | null;
   amount: number;
   account_currency_code: string;
   transaction_type: TransactionType;
   account_name: string;
   account_type: AccountType;
   account_icon?: string;
+  account_color?: string | null;
 };
 
 /** @deprecated Use JournalSuggestion. */

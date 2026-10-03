@@ -7,7 +7,8 @@ import { EnrichedJournal } from '@/src/types/domainReadModels';
 function sortEnrichmentRows(rows: JournalEnrichmentRow[]): JournalEnrichmentRow[] {
   return [...rows].sort((a, b) => {
     if (a.journal_id !== b.journal_id) return a.journal_id < b.journal_id ? -1 : 1;
-    return a.account_id < b.account_id ? -1 : a.account_id > b.account_id ? 1 : 0;
+    if (a.account_id !== b.account_id) return a.account_id < b.account_id ? -1 : 1;
+    return (a.transaction_id ?? '').localeCompare(b.transaction_id ?? '');
   });
 }
 
@@ -43,11 +44,14 @@ export function enrichJournals(
 
     const enrichedAccounts = rows.map(r => ({
       id: r.account_id,
+      transactionId: r.transaction_id,
+      exchangeRate: r.exchange_rate ?? undefined,
       name: r.account_name,
       accountType: r.account_type,
       role: (r.transaction_type === TransactionType.CREDIT ? 'SOURCE' : 'DESTINATION') as
         'SOURCE' | 'DESTINATION',
       icon: r.account_icon,
+      color: r.account_color ?? undefined,
       amount: r.amount,
       currencyCode: r.account_currency_code,
     }));
@@ -104,12 +108,15 @@ export function journalEnrichmentFingerprint(journal: EnrichedJournal): string {
     plannedPaymentId: journal.plannedPaymentId ?? '',
     accounts: journal.accounts.map(a => ({
       id: a.id,
+      transactionId: a.transactionId ?? '',
+      exchangeRate: a.exchangeRate ?? null,
       role: a.role,
       amount: a.amount,
       currencyCode: a.currencyCode ?? '',
       name: a.name,
       accountType: a.accountType,
       icon: a.icon ?? '',
+      color: a.color ?? '',
     })),
   });
 }
