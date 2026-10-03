@@ -5,6 +5,7 @@ import { TransactionType, AccountType } from '@/src/types/enums';
 import { TabType } from '@/src/types/domainJournal';
 
 import { ComponentVariant } from '@/src/utils/style-helpers';
+import { getReadableColor } from '@/src/utils/color-math';
 
 export type AccountTypeColorKey = 'asset' | 'liability' | 'equity' | 'income' | 'expense' | 'text';
 
@@ -221,16 +222,18 @@ export interface AccountAppearanceColors {
   categoryColor: string;
 }
 
+/** Optional text background adjusts only the accent's shade; type color stays unchanged. */
 export function resolveAccountAppearance(
   account: { accountType: string | AccountType; color?: string | null },
   theme: Theme,
+  textBackground?: string,
 ): AccountAppearanceColors {
+  const categoryColor = getAccountAccentColor(account.accountType, theme);
+  const accentColor =
+    account.color && isValidHexColor(account.color) ? account.color : categoryColor;
   return {
-    accentColor:
-      account.color && isValidHexColor(account.color)
-        ? account.color
-        : getAccountAccentColor(account.accountType, theme),
-    categoryColor: getAccountAccentColor(account.accountType, theme),
+    accentColor: textBackground ? getReadableColor(accentColor, textBackground) : accentColor,
+    categoryColor,
   };
 }
 

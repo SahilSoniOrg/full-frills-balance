@@ -1,4 +1,7 @@
 import { AccountType } from '@/src/types/enums';
+import { getThemeColors, ThemeIds } from '@/src/constants/design-tokens';
+import { getContrastRatio, getLuminance } from '@/src/utils/color-math';
+import { getVariantColors } from '@/src/utils/style-helpers';
 import {
   countAccountsVsCategories,
   isValidHexColor,
@@ -61,6 +64,47 @@ describe('accountCategory color utilities', () => {
         accentColor: '#3B82F6',
         categoryColor: '#10B981',
       });
+    });
+
+    it.each(Object.values(ThemeIds))(
+      'resolves readable account accents and stable type colors in both %s appearances',
+      themeId => {
+        for (const mode of ['light', 'dark'] as const) {
+          const theme = getThemeColors(themeId, mode);
+          for (const accountType of [
+            'asset',
+            'liability',
+            'income',
+            'expense',
+            'equity',
+          ] as const) {
+            const background = getVariantColors(theme, () => theme.text, accountType).light;
+            const original = resolveAccountAppearance({ accountType }, theme);
+            for (const color of [undefined, '', 'bad-color', '#C99AFF', background]) {
+              const appearance = resolveAccountAppearance(
+                { accountType, color },
+                theme,
+                background,
+              );
+              expect(appearance.categoryColor).toBe(original.categoryColor);
+              expect(
+                getContrastRatio(getLuminance(appearance.accentColor), getLuminance(background)),
+              ).toBeGreaterThanOrEqual(4.5);
+            }
+          }
+        }
+      },
+    );
+
+    it('preserves a readable saved account color when a text background is supplied', () => {
+      const theme = getThemeColors(ThemeIds.DEEP_SPACE, 'dark');
+      expect(
+        resolveAccountAppearance(
+          { accountType: AccountType.ASSET, color: '#C99AFF' },
+          theme,
+          theme.assetLight,
+        ).accentColor,
+      ).toBe('#C99AFF');
     });
   });
 

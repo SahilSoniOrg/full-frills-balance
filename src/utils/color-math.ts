@@ -90,3 +90,35 @@ export function blendColors(fg: string, bg: string, alpha: number): string {
   const toHex = (n: number) => Math.max(0, Math.min(255, n)).toString(16).padStart(2, '0');
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
+
+/**
+ * Keeps an already-readable foreground; otherwise moves its shade toward black
+ * or white until it meets contrast. Blending retains the accent's hue instead
+ * of replacing it with a neutral text token. Inputs must be valid hex colors.
+ */
+export function getReadableColor(
+  foreground: string,
+  background: string,
+  minimumRatio = 4.5,
+): string {
+  const backgroundLuminance = getLuminance(background);
+  const contrast = (color: string) => getContrastRatio(getLuminance(color), backgroundLuminance);
+  if (contrast(foreground) >= minimumRatio) return foreground;
+
+  const target = getWCAGContrastColor(background, '#FFFFFF', '#000000');
+  let readable = target;
+  let lower = 0;
+  let upper = 1;
+  // Eight bisections match the blend's 8-bit channel precision; keep a passing shade.
+  for (let iteration = 0; iteration < 8; iteration++) {
+    const weight = (lower + upper) / 2;
+    const candidate = blendColors(target, foreground, weight);
+    if (contrast(candidate) >= minimumRatio) {
+      readable = candidate;
+      upper = weight;
+    } else {
+      lower = weight;
+    }
+  }
+  return readable;
+}
