@@ -14,8 +14,6 @@ export interface JournalTimelineLeg {
   accountId: AccountId;
   name: string;
   role: 'SOURCE' | 'DESTINATION' | 'NEUTRAL';
-  amount?: number;
-  currencyCode?: string;
   icon?: string | null;
   color?: string;
   fallbackIcon: string;

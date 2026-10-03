@@ -107,14 +107,12 @@ describe('JournalEntryCard', () => {
   });
 });
 
-function leg(name: string, role: JournalEntryLeg['role'], amount?: number): JournalEntryLeg {
+function leg(name: string, role: JournalEntryLeg['role']): JournalEntryLeg {
   return {
     id: name,
     accountId: asAccountId(name),
     name,
     role,
-    amount,
-    currencyCode: 'USD',
     fallbackIcon: Icon.Wallet,
     variant: 'default',
   };
@@ -125,9 +123,9 @@ const splitEntry: JournalEntryCardProps = {
   title: 'Vacation booking',
   amount: 1000,
   accountFlow: {
-    primaryAccount: leg('Checking', 'SOURCE', 600),
-    sources: [leg('Credit Card', 'SOURCE', 400)],
-    destinations: [leg('Flights', 'DESTINATION', 800), leg('Hotel', 'DESTINATION', 200)],
+    primaryAccount: leg('Checking', 'SOURCE'),
+    sources: [leg('Credit Card', 'SOURCE')],
+    destinations: [leg('Flights', 'DESTINATION'), leg('Hotel', 'DESTINATION')],
     neutral: [],
     showCurrencyCodes: false,
   },
@@ -479,10 +477,6 @@ describe('structured journal card', () => {
     const label = getByRole('button').props.accessibilityLabel;
     expect(label).toContain('1,000.00');
     expect(getByText(/1,000\.00/)).toBeTruthy();
-    for (const value of ['600.00', '400.00', '800.00', '200.00']) {
-      expect(label).not.toContain(value);
-      expect(queryByText(new RegExp(value.replace(/[.,]/g, '\\$&')))).toBeNull();
-    }
     expect(label).toContain('From Checking');
   });
 
@@ -491,17 +485,14 @@ describe('structured journal card', () => {
     act(() => preferences.privacy.setIsPrivacyMode(true));
     expect(getAllByText('••••')).toHaveLength(1);
     const label = getByRole('button').props.accessibilityLabel;
-    for (const value of ['1,000.00', '600.00', '400.00', '800.00', '200.00']) {
-      expect(label).not.toContain(value);
-      expect(queryByText(new RegExp(value.replace(/[.,]/g, '\\$&')))).toBeNull();
-    }
+    expect(label).not.toContain('1,000.00');
+    expect(queryByText(/1,000\.00/)).toBeNull();
     expect(label).toContain('From Checking');
     expect(label).toContain('From Credit Card');
     expect(label).toContain('To Flights');
     expect(label).toContain('To Hotel');
     act(() => preferences.privacy.setIsPrivacyMode(false));
     expect(getByRole('button').props.accessibilityLabel).toContain('1,000.00');
-    expect(getByRole('button').props.accessibilityLabel).not.toContain('600.00');
   });
 
   it('keeps account names and the scoped main amount in a destination-scoped card', () => {
@@ -512,8 +503,8 @@ describe('structured journal card', () => {
         presentation={{ ...entry.presentation, amountPrefix: '+ ' }}
         accountFlow={{
           ...splitEntry.accountFlow!,
-          primaryAccount: leg('Savings', 'DESTINATION', 200),
-          sources: [leg('Checking', 'SOURCE', 200)],
+          primaryAccount: leg('Savings', 'DESTINATION'),
+          sources: [leg('Checking', 'SOURCE')],
           destinations: [],
         }}
       />,
@@ -523,21 +514,18 @@ describe('structured journal card', () => {
     expect(getByRole('button').props.accessibilityLabel).toContain('To Savings');
   });
 
-  it('does not format missing leg amounts or invent a currency', () => {
-    const { getByRole, queryByText } = render(
+  it('keeps the amount and footer time when there are no account legs', () => {
+    const { getByRole, getByText, queryByTestId } = render(
       <JournalEntryCard
         {...entry}
-        accountFlow={{
-          primaryAccount: { ...leg('Checking', 'SOURCE', 100), currencyCode: undefined },
-          sources: [],
-          destinations: [leg('Dining', 'DESTINATION')],
-          neutral: [],
-          showCurrencyCodes: false,
-        }}
+        dateDisplay="time"
+        accountFlow={{ sources: [], destinations: [], neutral: [], showCurrencyCodes: false }}
       />,
     );
-    expect(getByRole('button').props.accessibilityLabel).not.toMatch(/NaN|undefined/);
-    expect(queryByText(/0\.00/)).toBeNull();
+    expect(getByText(formatClockTime(entry.transactionDate, '12-hour'))).toBeTruthy();
+    expect(getByRole('button').props.accessibilityLabel).toContain('18.50');
+    expect(queryByTestId('transaction-source-box')).toBeNull();
+    expect(queryByTestId('transaction-destination-box')).toBeNull();
   });
 
   it('renders all ten allocation legs', () => {
@@ -548,7 +536,7 @@ describe('structured journal card', () => {
           ...splitEntry.accountFlow!,
           sources: [],
           destinations: Array.from({ length: 10 }, (_, index) =>
-            leg(`Category ${index + 1}`, 'DESTINATION', 100),
+            leg(`Category ${index + 1}`, 'DESTINATION'),
           ),
         }}
       />,
@@ -582,20 +570,18 @@ describe('structured journal card', () => {
   });
 
   it('disambiguates the main currency without restoring leg amounts or codes', () => {
-    const { getByText, queryByText, getByRole } = render(
+    const { getByText } = render(
       <JournalEntryCard
         {...splitEntry}
         currencyCode="USD"
         accountFlow={{
           ...splitEntry.accountFlow!,
-          primaryAccount: { ...leg('Travel wallet', 'SOURCE', 900), currencyCode: 'EUR' },
+          primaryAccount: leg('Travel wallet', 'SOURCE'),
           showCurrencyCodes: true,
         }}
       />,
     );
     expect(getByText('USD')).toBeTruthy();
-    expect(queryByText('EUR')).toBeNull();
-    expect(getByRole('button').props.accessibilityLabel).not.toContain('900.00');
   });
 
   it('announces selection on the card and preserves gestures', () => {
@@ -626,6 +612,5 @@ describe('structured journal card', () => {
     expect(label).toContain('Credit Card');
     expect(label).toContain('Hotel');
     expect(label).toContain('••••');
-    expect(label).not.toContain('600.00');
   });
 });

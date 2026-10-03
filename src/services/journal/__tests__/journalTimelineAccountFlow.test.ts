@@ -68,12 +68,8 @@ describe('journal account flow', () => {
         'INR',
       ),
     );
-    expect(item.accountFlow?.primaryAccount).toMatchObject({
-      name: 'dollar-wallet',
-      amount: 100,
-      currencyCode: 'USD',
-    });
-    expect(item.accountFlow?.sources[0]).toMatchObject({ amount: 500, currencyCode: 'INR' });
+    expect(item.accountFlow.primaryAccount?.name).toBe('dollar-wallet');
+    expect(item.accountFlow.sources.map(leg => leg.name)).toEqual(['rupee-cash']);
     expect(item.accountFlow?.showCurrencyCodes).toBe(true);
     expect(item.currencyCode).toBe('INR');
   });
@@ -104,7 +100,7 @@ describe('journal account flow', () => {
     ).toBe('a-bank');
   });
 
-  it('preserves missing amounts and currencies instead of guessing values', () => {
+  it('uses stable ordering for missing or invalid monetary metadata', () => {
     const missingCurrency = { ...account('cash', 'SOURCE', 50), currencyCode: undefined };
     const flow = mapJournalToTimelineItem(
       journal([
@@ -114,12 +110,13 @@ describe('journal account flow', () => {
         account('unknown', 'NEUTRAL', 10),
       ]),
     ).accountFlow;
-    expect(flow?.primaryAccount?.currencyCode).toBeUndefined();
-    expect(flow?.destinations.every(leg => leg.amount === undefined)).toBe(true);
+    expect(flow.primaryAccount?.name).toBe('cash');
+    expect(flow.destinations.map(leg => leg.name)).toEqual(['bad-value', 'food']);
+    expect(flow.showCurrencyCodes).toBe(false);
     expect(flow?.neutral[0].name).toBe('unknown');
   });
 
-  it('uses the viewed source amount and retains full peer allocations', () => {
+  it('uses the viewed source amount and retains every peer account', () => {
     const item = mapJournalToTimelineItem(
       journal([
         account('checking', 'SOURCE', 600),
@@ -133,7 +130,7 @@ describe('journal account flow', () => {
     expect(item.presentation.amountPrefix).toBe('− ');
     expect(item.accountFlow?.primaryAccount?.name).toBe('credit');
     expect(item.accountFlow?.sources.map(leg => leg.name)).toEqual(['checking']);
-    expect(item.accountFlow?.destinations.map(leg => leg.amount)).toEqual([800, 200]);
+    expect(item.accountFlow.destinations.map(leg => leg.name)).toEqual(['flights', 'hotel']);
   });
 
   it('uses the destination perspective and native currency for incoming transfers', () => {
@@ -149,7 +146,7 @@ describe('journal account flow', () => {
     expect(item.currencyCode).toBe('INR');
     expect(item.presentation.amountPrefix).toBe('+ ');
     expect(item.accountFlow?.primaryAccount?.role).toBe('DESTINATION');
-    expect(item.accountFlow?.sources[0].amount).toBe(100);
+    expect(item.accountFlow.sources[0].name).toBe('dollar');
     expect(item.accountFlow?.destinations).toEqual([]);
   });
 

@@ -71,5 +71,7 @@ it('passes every structured leg through and normalizes invalid stored icons', ()
   expect(card.accountFlow?.primaryAccount?.color).toBe('#CDAA6B');
   expect(card.accountFlow?.destinations.every(leg => leg.color === '#65C6AD')).toBe(true);
   expect(card.accountFlow?.destinations.map(leg => leg.name)).toEqual(['Fees', 'Travel', 'Food']);
-  expect(card.accountFlow?.destinations.map(leg => leg.amount)).toEqual([12, 11, 10]);
+  expect(card.amount).toBe(100);
+  expect(card.accountFlow.primaryAccount).not.toHaveProperty('amount');
+  expect(card.accountFlow.primaryAccount).not.toHaveProperty('currencyCode');
 });

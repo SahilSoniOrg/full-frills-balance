@@ -112,8 +112,6 @@ function buildAccountFlow(
       accountId: account.id,
       name: account.name,
       role: account.role,
-      amount,
-      currencyCode,
       icon: account.icon,
       color: account.color,
       fallbackIcon: getAccountFallbackIcon(account.accountType),
@@ -145,7 +143,7 @@ function buildAccountFlow(
       .map(item => item.leg);
   const currencies = new Set([
     journal.currencyCode.trim().toUpperCase(),
-    ...legs.map(item => item.leg.currencyCode).filter(Boolean),
+    ...journal.accounts.map(account => account.currencyCode?.trim().toUpperCase()).filter(Boolean),
   ]);
 
   return {
