@@ -465,14 +465,16 @@ describe('structured journal card', () => {
     expect(queryByText('From: Checking')).toBeNull();
     expect(queryByText('From')).toBeNull();
     expect(queryByText('Also from')).toBeNull();
-    expect(
-      within(getByTestId('transaction-account-flow')).getByTestId('transaction-primary-account'),
-    ).toBeTruthy();
+    const sourceAccounts = within(getByTestId('transaction-source-box')).getAllByTestId(
+      'transaction-account-leg',
+    );
+    expect(within(sourceAccounts[0]).getByText('Checking')).toBeTruthy();
+    expect(within(sourceAccounts[1]).getByText('Credit Card')).toBeTruthy();
     expect(getByText('Credit Card')).toBeTruthy();
     expect(queryByText('To')).toBeNull();
     expect(getByText('Flights')).toBeTruthy();
     expect(getByText('Hotel')).toBeTruthy();
-    expect(getAllByTestId('transaction-account-leg')).toHaveLength(3);
+    expect(getAllByTestId('transaction-account-leg')).toHaveLength(4);
     expect(queryByText('+2 more')).toBeNull();
     const label = getByRole('button').props.accessibilityLabel;
     expect(label).toContain('1,000.00');
@@ -529,7 +531,7 @@ describe('structured journal card', () => {
   });
 
   it('renders all ten allocation legs', () => {
-    const { getAllByTestId, getByText } = render(
+    const { getByTestId, getByText } = render(
       <JournalEntryCard
         {...splitEntry}
         accountFlow={{
@@ -541,7 +543,9 @@ describe('structured journal card', () => {
         }}
       />,
     );
-    expect(getAllByTestId('transaction-account-leg')).toHaveLength(10);
+    expect(
+      within(getByTestId('transaction-destination-box')).getAllByTestId('transaction-account-leg'),
+    ).toHaveLength(10);
     expect(getByText('Category 10')).toBeTruthy();
   });
 

@@ -21,13 +21,11 @@ const stackedCueSpace = Size.iconXs + Spacing.xs * 2;
 
 function AccountLeg({
   leg,
-  primary,
   comma = false,
   precedingBackground,
   rowStartBackground,
 }: {
   leg: JournalEntryLeg;
-  primary: boolean;
   comma?: boolean;
   precedingBackground?: string;
   rowStartBackground?: string;
@@ -47,7 +45,7 @@ function AccountLeg({
 
   return (
     <View
-      testID={primary ? 'transaction-primary-account' : 'transaction-account-leg'}
+      testID="transaction-account-leg"
       style={[styles.leg, isSection && [styles.section, { backgroundColor: background }]]}
       onLayout={isSection ? event => setStartsRow(event.nativeEvent.layout.x < 1) : undefined}
     >
@@ -89,7 +87,6 @@ function AccountLeg({
 
 function AccountGroup({
   legs,
-  primaryId,
   role,
   stacked,
   connected,
@@ -98,7 +95,6 @@ function AccountGroup({
   onMeasure,
 }: {
   legs: JournalEntryLeg[];
-  primaryId?: string;
   role: 'SOURCE' | 'DESTINATION';
   stacked: boolean;
   connected: boolean;
@@ -143,7 +139,6 @@ function AccountGroup({
             <AccountLeg
               key={leg.id}
               leg={leg}
-              primary={leg.id === primaryId}
               precedingBackground={
                 index > 0 ? getVariantColors(legs[index - 1].variant).light : undefined
               }
@@ -158,11 +153,9 @@ function AccountGroup({
 
 export function JournalAccountFlow({
   legs,
-  primaryId,
   timestamp,
 }: {
   legs: JournalEntryLeg[];
-  primaryId?: string;
   timestamp?: string;
 }) {
   const { theme, themeMode, fonts } = useTheme();
@@ -210,7 +203,6 @@ export function JournalAccountFlow({
     sources.length > 0 ? (
       <AccountGroup
         legs={sources}
-        primaryId={primaryId}
         role="SOURCE"
         stacked={stacked}
         connected={connected}
@@ -223,7 +215,6 @@ export function JournalAccountFlow({
     destinations.length > 0 ? (
       <AccountGroup
         legs={destinations}
-        primaryId={primaryId}
         role="DESTINATION"
         stacked={stacked}
         connected={connected}
@@ -268,12 +259,7 @@ export function JournalAccountFlow({
               Other accounts:
             </AppText>
             {neutral.map((leg, index) => (
-              <AccountLeg
-                key={leg.id}
-                leg={leg}
-                primary={leg.id === primaryId}
-                comma={index < neutral.length - 1}
-              />
+              <AccountLeg key={leg.id} leg={leg} comma={index < neutral.length - 1} />
             ))}
           </Inline>
         </JournalEntryFooterRow>

@@ -170,11 +170,7 @@ const JournalEntryCardComponent = ({
             </Badge>
           )}
 
-          <JournalAccountFlow
-            legs={accountLegs}
-            primaryId={accountFlow.primaryAccount?.id}
-            timestamp={displayedDate}
-          />
+          <JournalAccountFlow legs={accountLegs} timestamp={displayedDate} />
         </Stack>
         {overlay}
       </Inset>
