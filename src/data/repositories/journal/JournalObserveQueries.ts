@@ -186,6 +186,8 @@ export class JournalObserveQueries {
       .observeWithColumns([
         'status',
         'journal_date',
+        'total_amount',
+        'currency_code',
         'deleted_at',
         'planned_payment_id',
         'updated_at',

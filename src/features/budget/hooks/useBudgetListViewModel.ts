@@ -1,3 +1,4 @@
+import { useCalendarDay } from '@/src/hooks/useCalendarDay';
 import { useObservable } from '@/src/hooks/useObservable';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
@@ -6,18 +7,19 @@ import { parseBudgetAssetAccountIds } from '@/src/services/budget/budgetAssetAcc
 import { combineLatest, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 import { BudgetItem } from '../types';
+import { sortBudgetItems, summarizeBudgetList } from '../helpers/budgetListPresentation';
 import { WorkplaceId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
-import { getNow } from '@/src/utils/dateUtils';
 import { useCallback, useMemo } from 'react';
 
-export function useBudgetListViewModel(workplaceId: WorkplaceId) {
+export function useBudgetListViewModel(workplaceId: WorkplaceId, currencyCode?: string) {
+  const today = useCalendarDay();
   const budgetsObservable = useMemo(() => {
     const items$ = budgetReadService.observeAllActive(workplaceId).pipe(
       switchMap(budgets => {
         if (budgets.length === 0) return of([]);
 
-        const now = getNow();
+        const now = today;
         const itemObservables = budgets.map(budget => {
           const { startDate } = BudgetPeriodUtils.getCurrentPeriod(budget, now);
           return combineLatest([
@@ -45,18 +47,23 @@ export function useBudgetListViewModel(workplaceId: WorkplaceId) {
         }));
       }),
     );
-  }, [workplaceId]);
+  }, [workplaceId, today]);
 
   const {
     data: items = [],
     isLoading,
     error,
     retry,
-  } = useObservable<BudgetItem[]>(() => budgetsObservable, [workplaceId], []);
+  } = useObservable<BudgetItem[]>(() => budgetsObservable, [workplaceId, today], []);
 
   const onItemPress = useCallback((item: BudgetItem) => {
     AppNavigation.toBudgetDetail(item.budget.id);
   }, []);
 
-  return { items, isLoading, error, retry, onItemPress };
+  const sortedItems = useMemo(() => sortBudgetItems(items, today), [items, today]);
+  const summary = useMemo(
+    () => (currencyCode ? summarizeBudgetList(items, currencyCode, today) : undefined),
+    [items, currencyCode, today],
+  );
+  return { items: sortedItems, summary, isLoading, error, retry, onItemPress };
 }

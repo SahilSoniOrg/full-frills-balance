@@ -6,6 +6,10 @@ import { BudgetUsage } from '@/src/services/budget/types';
 import dayjs from 'dayjs';
 import { formatRecurrence } from '@/src/utils/recurrenceLabels';
 
+export const BUDGET_NEAR_LIMIT_THRESHOLD = 0.8;
+export const BUDGET_PACE_TOLERANCE = 0.1;
+export type BudgetStatus = 'over' | 'nearLimit' | 'aheadOfPace' | 'onPace';
+
 export interface BudgetCardInput extends BudgetPeriodInput {
   name: string;
   amount: number;
@@ -13,6 +17,7 @@ export interface BudgetCardInput extends BudgetPeriodInput {
 }
 
 export interface BudgetUsageViewModel {
+  status: BudgetStatus;
   statusColor: ColorKey;
   statusBadge: {
     variant: 'default' | 'error' | 'warning' | 'success';
@@ -38,12 +43,17 @@ export interface BudgetListCardViewModel {
   previousPeriodLabel?: string;
 }
 
-export function resolveBudgetStatus(usagePercent: number): {
+export function resolveBudgetStatus(
+  usagePercent: number,
+  elapsedShare = 1,
+): {
+  status: BudgetStatus;
   statusColor: ColorKey;
   statusBadge: BudgetUsageViewModel['statusBadge'];
 } {
   if (usagePercent >= 1) {
     return {
+      status: 'over',
       statusColor: 'error',
       statusBadge: {
         variant: 'error',
@@ -53,8 +63,9 @@ export function resolveBudgetStatus(usagePercent: number): {
     };
   }
 
-  if (usagePercent >= 0.8) {
+  if (usagePercent >= BUDGET_NEAR_LIMIT_THRESHOLD) {
     return {
+      status: 'nearLimit',
       statusColor: 'warning',
       statusBadge: {
         variant: 'warning',
@@ -64,7 +75,20 @@ export function resolveBudgetStatus(usagePercent: number): {
     };
   }
 
+  if (usagePercent > Math.min(1, Math.max(0, elapsedShare)) + BUDGET_PACE_TOLERANCE) {
+    return {
+      status: 'aheadOfPace',
+      statusColor: 'warning',
+      statusBadge: {
+        variant: 'warning',
+        icon: Icon.Clock,
+        text: AppConfig.strings.budget.statusAheadOfPace,
+      },
+    };
+  }
+
   return {
+    status: 'onPace',
     statusColor: 'primary',
     statusBadge: {
       variant: 'success',
@@ -74,8 +98,8 @@ export function resolveBudgetStatus(usagePercent: number): {
   };
 }
 
-export function presentBudgetUsage(usage: BudgetUsage): BudgetUsageViewModel {
-  const resolvedStatus = resolveBudgetStatus(usage.usagePercent);
+export function presentBudgetUsage(usage: BudgetUsage, elapsedShare = 1): BudgetUsageViewModel {
+  const resolvedStatus = resolveBudgetStatus(usage.usagePercent, elapsedShare);
   const statusColor = usage.hasUnvaluedEntries ? 'warning' : resolvedStatus.statusColor;
   const statusBadge = usage.hasUnvaluedEntries
     ? {
@@ -88,6 +112,7 @@ export function presentBudgetUsage(usage: BudgetUsage): BudgetUsageViewModel {
   const progress = Math.min(100, Math.max(0, usage.usagePercent * 100));
 
   return {
+    status: resolvedStatus.status,
     statusColor,
     statusBadge,
     spent: usage.spent,

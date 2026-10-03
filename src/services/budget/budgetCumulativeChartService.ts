@@ -1,3 +1,4 @@
+import { summarizeBudgetUnvaluedEntries } from './budgetUnvaluedEntries';
 import type Journal from '@/src/data/models/Journal';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { AppConfig } from '@/src/constants/app-config';
@@ -24,6 +25,8 @@ export interface BudgetCategorySpending {
 
 export interface BudgetCumulativeChart extends BudgetCumulativeSeries {
   hasUnvaluedEntries: boolean;
+  unvaluedEntryCount?: number;
+  unvaluedCurrencyCounts?: import('./budgetUnvaluedEntries').BudgetUnvaluedCurrencyCount[];
   categories: BudgetCategorySpending[];
   entryCount: number;
   refunds: number;
@@ -155,6 +158,22 @@ export async function buildBudgetCumulativeChart({
   return {
     ...series,
     hasUnvaluedEntries: unvaluedEntries.some(Boolean),
+    ...summarizeBudgetUnvaluedEntries(
+      transactions.flatMap((tx, index) =>
+        unvaluedEntries[index]
+          ? [
+              {
+                journalId: tx.journalId,
+                currencyCode:
+                  tx.currencyCode ||
+                  accountById.get(tx.accountId)?.currencyCode ||
+                  journalById.get(tx.journalId)?.currencyCode ||
+                  '',
+              },
+            ]
+          : [],
+      ),
+    ),
     categories: [...categories.values()].sort((a, b) => b.spent - a.spent),
     entryCount: new Set(transactions.map(transaction => transaction.journalId)).size,
     refunds,

@@ -26,6 +26,28 @@ function makeUsage(overrides: Partial<BudgetUsage> = {}): BudgetUsage {
 }
 
 describe('resolveBudgetStatus', () => {
+  it.each([
+    [1, 0, 'over'],
+    [0.8, 0, 'nearLimit'],
+    [0.79, 0.2, 'aheadOfPace'],
+    [0.3, 0.2, 'onPace'],
+    [0.301, 0.2, 'aheadOfPace'],
+    [0, 0, 'onPace'],
+    [0.7, 1, 'onPace'],
+    [0.85, 1, 'nearLimit'],
+    [1.1, 1, 'over'],
+  ])('resolves %s spent at %s elapsed to %s', (spent, elapsed, expected) => {
+    expect(resolveBudgetStatus(spent, elapsed).status).toBe(expected);
+  });
+
+  it('keeps missing FX above pace presentation', () => {
+    expect(presentBudgetUsage(makeUsage({ hasUnvaluedEntries: true }), 0.1)).toMatchObject({
+      status: 'aheadOfPace',
+      statusColor: 'warning',
+      statusBadge: { text: 'Incomplete' },
+    });
+  });
+
   it('returns on track below 80%', () => {
     expect(resolveBudgetStatus(0.4).statusColor).toBe('primary');
     expect(resolveBudgetStatus(0.4).statusBadge.variant).toBe('success');

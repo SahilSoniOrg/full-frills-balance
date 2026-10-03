@@ -2,14 +2,114 @@ import { toPlainPlannedPayment } from '@/src/data/models/PlannedPayment';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { observeWorkplaceAccounts } from '@/src/services/reactive/reactiveWorkplaceObserves';
-import { AccountType } from '@/src/types/enums';
+import { AccountType, PlannedPaymentStatus } from '@/src/types/enums';
 import type Account from '@/src/data/models/Account';
 import { toPlainAccount } from '@/src/data/models/Account';
 import type Journal from '@/src/data/models/Journal';
 import type PlannedPayment from '@/src/data/models/PlannedPayment';
 import type { PlainAccount, PlainPlannedPayment } from '@/src/types/plainDtos';
-import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
+import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { combineLatest, map, Observable } from 'rxjs';
+import {
+  calculateNextOccurrence,
+  computeFirstOccurrence,
+  normalizeToStartOfDay,
+} from './plannedPaymentRecurrence';
+
+export interface PlannedPaymentSavedOccurrence {
+  plannedPaymentId: PlannedPaymentId;
+  journalId: JournalId;
+  date: number;
+  amount: number;
+  currencyCode: string;
+}
+
+export interface PlannedPaymentListData {
+  /** Legacy schedule rows; amounts remain the rule defaults. */
+  items: PlannedPaymentObligation[];
+  savedOccurrences: PlannedPaymentSavedOccurrence[];
+}
+
+export interface PlannedPaymentListOccurrence {
+  occurrenceId: string;
+  payment: PlannedPaymentObligation;
+  date: number;
+  amount: number;
+  currencyCode: string;
+  journalId?: JournalId;
+  canRecord: boolean;
+}
+
+/**
+ * All saved pending entries plus every cursor occurrence through the horizon and one
+ * later occurrence per active schedule. Saved entries override projected days, never
+ * each other. The cursor is authoritative; historical recording dates do not suppress it.
+ */
+export function projectPlannedPaymentListOccurrences(
+  { items, savedOccurrences }: PlannedPaymentListData,
+  throughDate: number,
+): PlannedPaymentListOccurrence[] {
+  const savedByPlan = new Map<PlannedPaymentId, PlannedPaymentSavedOccurrence[]>();
+  for (const occurrence of savedOccurrences) {
+    const saved = savedByPlan.get(occurrence.plannedPaymentId) ?? [];
+    saved.push(occurrence);
+    savedByPlan.set(occurrence.plannedPaymentId, saved);
+  }
+  const occurrences: PlannedPaymentListOccurrence[] = [];
+  for (const payment of items) {
+    const saved = savedByPlan.get(payment.id) ?? [];
+    const savedDays = new Set(saved.map(item => normalizeToStartOfDay(item.date)));
+    for (const item of saved) {
+      occurrences.push({
+        occurrenceId: `journal:${item.journalId}`,
+        payment,
+        date: item.date,
+        amount: item.amount,
+        currencyCode: item.currencyCode,
+        journalId: item.journalId,
+        canRecord: payment.status !== PlannedPaymentStatus.PAUSED,
+      });
+    }
+    if (
+      payment.status !== PlannedPaymentStatus.ACTIVE ||
+      !Number.isFinite(normalizeToStartOfDay(throughDate)) ||
+      !Number.isFinite(normalizeToStartOfDay(payment.startDate)) ||
+      !Number.isFinite(normalizeToStartOfDay(payment.nextOccurrence)) ||
+      (payment.endDate != null && !Number.isFinite(normalizeToStartOfDay(payment.endDate)))
+    )
+      continue;
+    // Align stale cursors directly to the valid schedule start. Legitimate overdue
+    // occurrences after that start are retained without an arbitrary generation cap.
+    let cursor =
+      payment.nextOccurrence < payment.startDate
+        ? computeFirstOccurrence(payment.startDate, payment)
+        : payment.nextOccurrence;
+    while (Number.isFinite(cursor)) {
+      if (payment.endDate != null && cursor > payment.endDate) break;
+      const day = normalizeToStartOfDay(cursor);
+      if (cursor >= payment.startDate && !savedDays.has(day)) {
+        occurrences.push({
+          occurrenceId: `plan:${payment.id}:${day}`,
+          payment,
+          date: cursor,
+          amount: payment.amount,
+          currencyCode: payment.currencyCode,
+          canRecord: true,
+        });
+      }
+      if (cursor > throughDate && cursor >= payment.startDate) break;
+      const next = calculateNextOccurrence(cursor, payment);
+      if (!Number.isFinite(next) || next <= cursor) break;
+      cursor = next;
+    }
+  }
+  return occurrences.sort(
+    (a, b) =>
+      a.date - b.date ||
+      a.payment.name.localeCompare(b.payment.name) ||
+      a.occurrenceId.localeCompare(b.occurrenceId),
+  );
+}
 
 export type PlannedPaymentObligation = PlainPlannedPayment & {
   nextDueOccurrence?: number;
@@ -98,8 +198,46 @@ export function observePlannedPaymentObligations(
   );
 }
 
+export function observePlannedPaymentListData(
+  payments$: Observable<PlannedPayment[]>,
+  journals$: Observable<Journal[]>,
+  accounts$: Observable<Account[]>,
+): Observable<PlannedPaymentListData> {
+  return combineLatest([payments$, journals$, accounts$]).pipe(
+    map(([payments, journals, accounts]) => ({
+      items: projectPlannedPaymentObligations(
+        payments.map(toPlainPlannedPayment),
+        journals,
+        accounts,
+      ),
+      // Copy model fields on every emission: amount/currency edits must produce fresh DTOs.
+      savedOccurrences: journals.flatMap(journal =>
+        journal.plannedPaymentId
+          ? [
+              {
+                plannedPaymentId: journal.plannedPaymentId,
+                journalId: journal.id,
+                date: journal.journalDate,
+                amount: journal.totalAmount,
+                currencyCode: journal.currencyCode,
+              },
+            ]
+          : [],
+      ),
+    })),
+  );
+}
+
 /** Read boundary for planned-payment feature consumers. */
 export class PlannedPaymentReadService {
+  observeListData(workplaceId: WorkplaceId) {
+    return observePlannedPaymentListData(
+      plannedPaymentRepository.observeAll(workplaceId),
+      journalObserveQueries.observeAllPlanned(workplaceId),
+      observeWorkplaceAccounts(workplaceId),
+    );
+  }
+
   observeObligations(workplaceId: WorkplaceId) {
     return observePlannedPaymentObligations(
       plannedPaymentRepository.observeAll(workplaceId),

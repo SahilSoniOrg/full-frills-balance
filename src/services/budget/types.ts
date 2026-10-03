@@ -1,3 +1,5 @@
+import type { BudgetUnvaluedCurrencyCount } from './budgetUnvaluedEntries';
+
 export interface BudgetUsage {
   spent: number;
   remaining: number;
@@ -5,4 +7,6 @@ export interface BudgetUsage {
   usagePercent: number;
   /** True when one or more journal lines could not be valued for this period. */
   hasUnvaluedEntries?: boolean;
+  unvaluedEntryCount?: number;
+  unvaluedCurrencyCounts?: BudgetUnvaluedCurrencyCount[];
 }

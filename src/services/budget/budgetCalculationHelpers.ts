@@ -1,3 +1,4 @@
+import { summarizeBudgetUnvaluedEntries } from './budgetUnvaluedEntries';
 import Account from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
@@ -131,6 +132,26 @@ export async function calculateBudgetSpendFromTransactions(
     remaining: roundToPrecision(roundedBudgetAmount - spentAmount, precision),
     budgetAmount: roundedBudgetAmount,
     usagePercent: roundedBudgetAmount > 0 ? spentAmount / roundedBudgetAmount : 0,
-    ...(unvaluedEntries.some(Boolean) ? { hasUnvaluedEntries: true } : {}),
+    ...(unvaluedEntries.some(Boolean)
+      ? {
+          hasUnvaluedEntries: true,
+          ...summarizeBudgetUnvaluedEntries(
+            transactions.flatMap((tx, index) =>
+              unvaluedEntries[index]
+                ? [
+                    {
+                      journalId: tx.journalId,
+                      currencyCode:
+                        tx.currencyCode ||
+                        accountById.get(tx.accountId)?.currencyCode ||
+                        journalById.get(tx.journalId)?.currencyCode ||
+                        '',
+                    },
+                  ]
+                : [],
+            ),
+          ),
+        }
+      : {}),
   };
 }

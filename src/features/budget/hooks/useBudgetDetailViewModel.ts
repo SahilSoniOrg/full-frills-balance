@@ -1,5 +1,7 @@
 import { AppConfig } from '@/src/constants';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
+import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
+import { getBudgetPreviousComparisonSpent } from '../helpers/budgetPreviousPeriod';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { resolveLeafExpenseAccountIds } from '@/src/services/budget/budgetCalculationHelpers';
 import { parseBudgetAssetAccountIds } from '@/src/services/budget/budgetAssetAccountIds';
@@ -14,6 +16,7 @@ import {
 } from '@/src/features/journal';
 import type { ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
 import { useObservable, useObservableWithEnrichment } from '@/src/hooks/useObservable';
+import { useCalendarDay } from '@/src/hooks/useCalendarDay';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { analytics } from '@/src/services/analytics';
 import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
@@ -21,7 +24,7 @@ import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { BudgetUsage } from '@/src/services/budget/types';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { AccountType } from '@/src/types/enums';
-import { AccountId, BudgetId, JournalId } from '@/src/types/ids';
+import { AccountId, BudgetId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { PlainAccount, PlainBudget } from '@/src/types/plainDtos';
 import { confirm } from '@/src/utils/alerts';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
@@ -30,8 +33,32 @@ import { AppNavigation } from '@/src/utils/navigation';
 import dayjs from 'dayjs';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { combineLatest, of, switchMap } from 'rxjs';
+import { combineLatest, map, of, switchMap } from 'rxjs';
 import { JournalListItem } from '@/src/types/ui';
+
+/** Journal context must stay reactive independently of Activity's filter and pagination. */
+function observeChartTransactions(
+  workplaceId: WorkplaceId,
+  accountIds: AccountId[],
+  range: { startDate: number; endDate: number } | undefined,
+) {
+  if (!range || accountIds.length === 0) return of([]);
+  return transactionQueryRepository
+    .observeBudgetTransactionsByJournalDateRange(
+      workplaceId,
+      accountIds,
+      range.startDate,
+      range.endDate,
+      ACTIVE_JOURNAL_STATUSES,
+    )
+    .pipe(
+      switchMap(transactions =>
+        journalObserveQueries
+          .observeByIds(workplaceId, [...new Set(transactions.map(tx => tx.journalId))])
+          .pipe(map(() => transactions)),
+      ),
+    );
+}
 
 export interface BudgetDetailViewModel {
   budget: PlainBudget | null;
@@ -53,6 +80,9 @@ export interface BudgetDetailViewModel {
   resetToToday: () => void;
   isCurrentMonth: boolean;
   chartData: BudgetCumulativeChart | null;
+  /** Full previous-period series in its original date domain. */
+  previousChartData: BudgetCumulativeChart | null;
+  previousComparisonSpent: number | null;
   isLoadingInsights: boolean;
   insightsError?: string;
   previousUsageError?: string;
@@ -76,6 +106,7 @@ export interface BudgetDetailViewModel {
 export function useBudgetDetailViewModel(): BudgetDetailViewModel {
   const { workplaceId } = useWorkplace();
   const { id: budgetId } = useLocalSearchParams<{ id: BudgetId }>();
+  const today = useCalendarDay();
 
   const [refTimestamp, setRefTimestamp] = useState(() => Date.now());
   const [activityCategoryId, setActivityCategoryId] = useState<AccountId | null>(null);
@@ -140,16 +171,10 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
     return { startDate, endDate };
   }, [budget, refTimestamp]);
 
-  const chartTransactions$ = useMemo(() => {
-    if (!budgetDateRange || chartAccountIds.length === 0) return of([]);
-    return transactionQueryRepository.observeBudgetTransactionsByJournalDateRange(
-      workplaceId,
-      chartAccountIds,
-      budgetDateRange.startDate,
-      budgetDateRange.endDate,
-      ACTIVE_JOURNAL_STATUSES,
-    );
-  }, [budgetDateRange, chartAccountIds, workplaceId]);
+  const chartTransactions$ = useMemo(
+    () => observeChartTransactions(workplaceId, chartAccountIds, budgetDateRange),
+    [budgetDateRange, chartAccountIds, workplaceId],
+  );
 
   const previousPeriodRange = useMemo(
     () =>
@@ -157,6 +182,10 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
         ? BudgetPeriodUtils.getCurrentPeriod(budget, budgetDateRange.startDate - 1)
         : undefined,
     [budget, budgetDateRange],
+  );
+  const previousChartTransactions$ = useMemo(
+    () => observeChartTransactions(workplaceId, chartAccountIds, previousPeriodRange),
+    [previousPeriodRange, chartAccountIds, workplaceId],
   );
   const {
     data: previousUsage,
@@ -201,16 +230,8 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
     onShareSelected: journalList.onShareSelected,
   });
 
-  const journalContextVersion = useMemo(
-    () =>
-      journalList.journals
-        .map(journal => `${journal.id}:${journal.journalDate}:${journal.currencyCode}`)
-        .join('|'),
-    [journalList.journals],
-  );
-
   const {
-    data: chartData,
+    data: loadedChartData,
     isLoading: isLoadingInsights,
     error: chartError,
     retry: retryChart,
@@ -235,16 +256,66 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
       workplaceId,
       scopeAccounts,
       expenseAccounts,
-      journalContextVersion,
     ],
     null,
     { keepPreviousData: false },
   );
+  const chartData = chartError ? null : loadedChartData;
+
+  const {
+    data: loadedPreviousChartData,
+    isLoading: isLoadingPreviousChart,
+    error: previousChartError,
+    retry: retryPreviousChart,
+  } = useObservableWithEnrichment(
+    () => previousChartTransactions$,
+    transactions => {
+      if (!budget || !previousPeriodRange) return Promise.resolve(null);
+      return buildBudgetCumulativeChart({
+        workplaceId,
+        transactions,
+        accounts: [...scopeAccounts, ...expenseAccounts],
+        targetCurrency: budget.currencyCode,
+        periodStart: previousPeriodRange.startDate,
+        periodEnd: previousPeriodRange.endDate,
+      });
+    },
+    [
+      previousChartTransactions$,
+      budget?.id,
+      budget?.currencyCode,
+      previousPeriodRange,
+      workplaceId,
+      scopeAccounts,
+      expenseAccounts,
+    ],
+    null,
+    { keepPreviousData: false },
+  );
+  const previousChartData =
+    previousChartError ||
+    isLoadingPreviousChart ||
+    loadedPreviousChartData?.hasUnvaluedEntries ||
+    loadedPreviousChartData?.domainX[0] !== previousPeriodRange?.startDate ||
+    loadedPreviousChartData?.domainX[1] !== previousPeriodRange?.endDate
+      ? null
+      : loadedPreviousChartData;
+  const previousComparisonSpent = getBudgetPreviousComparisonSpent(
+    previousChartData,
+    budgetDateRange,
+    previousPeriodRange,
+    today,
+  );
 
   const displayedUsage = useMemo(() => {
-    if (!usage || !chartData?.hasUnvaluedEntries || usage.hasUnvaluedEntries) return usage;
-    return { ...usage, hasUnvaluedEntries: true };
-  }, [chartData?.hasUnvaluedEntries, usage]);
+    if (!usage || !chartData?.hasUnvaluedEntries) return usage;
+    return {
+      ...usage,
+      hasUnvaluedEntries: true,
+      unvaluedEntryCount: chartData.unvaluedEntryCount ?? usage.unvaluedEntryCount,
+      unvaluedCurrencyCounts: chartData.unvaluedCurrencyCounts ?? usage.unvaluedCurrencyCounts,
+    };
+  }, [chartData, usage]);
 
   const nextMonth = useCallback(() => {
     if (!budget) return;
@@ -318,7 +389,8 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
   const onRetryInsights = useCallback(() => {
     retryChart();
     retryPrevious();
-  }, [retryChart, retryPrevious]);
+    retryPreviousChart();
+  }, [retryChart, retryPrevious, retryPreviousChart]);
   const onAddExpense = useCallback(() => {
     AppNavigation.toSimpleJournalEntry('expense', {
       destinationAccountId:
@@ -346,6 +418,8 @@ export function useBudgetDetailViewModel(): BudgetDetailViewModel {
     resetToToday,
     isCurrentMonth,
     chartData,
+    previousChartData,
+    previousComparisonSpent,
     isLoadingInsights: isLoadingInsights || isLoadingScopes || isLoadingScopeAccounts,
     insightsError: chartError ? 'Could not load the spending breakdown.' : undefined,
     previousUsageError: previousError ? 'Previous period spending is unavailable.' : undefined,

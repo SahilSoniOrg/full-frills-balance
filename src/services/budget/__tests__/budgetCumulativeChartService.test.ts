@@ -88,6 +88,8 @@ describe('budget detail spending breakdown', () => {
       ],
     });
     expect(chart.hasUnvaluedEntries).toBe(true);
+    expect(chart.unvaluedEntryCount).toBe(1);
+    expect(chart.unvaluedCurrencyCounts).toEqual([{ currencyCode: 'EUR', count: 1 }]);
     expect(chart.categories).toEqual([
       { accountId: food, spent: 0, refunds: 0, entryCount: 1, hasUnvaluedEntries: true },
       { accountId: dining, spent: -20, refunds: 20, entryCount: 1, hasUnvaluedEntries: false },
