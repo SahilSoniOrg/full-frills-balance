@@ -4,10 +4,17 @@ import { AccountType } from '@/src/types/enums';
 import type { AccountId } from '@/src/types/ids';
 import { preferences } from '@/src/services/preferences';
 import { AppConfig } from '@/src/constants';
+import { View } from 'react-native';
 
-const account = {
+const dining = {
   id: 'dining' as AccountId,
   name: 'Dining',
+  accountType: AccountType.EXPENSE,
+  currencyCode: 'USD',
+};
+const groceries = {
+  id: 'groceries' as AccountId,
+  name: 'Groceries',
   accountType: AccountType.EXPENSE,
   currencyCode: 'USD',
 };
@@ -16,27 +23,29 @@ const props = {
     data: [],
     domainX: [1, 2] as [number, number],
     hasUnvaluedEntries: false,
-    entryCount: 2,
+    entryCount: 7,
     refunds: 12.5,
     categories: [
       {
-        accountId: account.id,
-        spent: 67.75,
+        accountId: dining.id,
+        spent: 60,
         refunds: 12.5,
         entryCount: 2,
+        hasUnvaluedEntries: false,
+      },
+      {
+        accountId: groceries.id,
+        spent: 40,
+        refunds: 0,
+        entryCount: 5,
         hasUnvaluedEntries: false,
       },
     ],
   },
   isLoading: false,
   currencyCode: 'USD',
-  expenseAccounts: [account],
-  previousUsage: { spent: 85.95, remaining: 14.05, budgetAmount: 100, usagePercent: 0.8595 },
-  previousPeriodRange: {
-    startDate: new Date(2026, 8, 1).getTime(),
-    endDate: new Date(2026, 8, 30).getTime(),
-  },
-  onPreviousPeriod: jest.fn(),
+  expenseAccounts: [dining, groceries],
+  scopeAccounts: [dining, groceries],
   onFilterCategory: jest.fn(),
   activityCategory: null,
 };
@@ -51,31 +60,43 @@ describe('budget spending insights', () => {
     preferences.privacy.setIsPrivacyMode(false);
   });
 
-  it('provides category filtering, refunds, and explicitly labels the previous full-period total', () => {
-    const screen = render(<BudgetSpendingInsights {...props} activityCategory={account} />);
-    fireEvent.press(screen.getByRole('button', { name: 'Expand Where it went' }));
-    expect(screen.getByText('$67.75')).toBeTruthy();
+  it('opens by default, filters and clears from category rows, and shows nonzero refunds', () => {
+    const screen = render(<BudgetSpendingInsights {...props} />);
+    expect(screen.getByText('Where it went')).toBeTruthy();
+    expect(screen.getByText('$60.00')).toBeTruthy();
+    expect(screen.getByText('$40.00')).toBeTruthy();
     expect(screen.getByText('$12.50')).toBeTruthy();
-    expect(screen.getByText('$85.95')).toBeTruthy();
-    expect(screen.getByText('spent over the full period')).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Show Dining activity' }));
-    expect(props.onFilterCategory).toHaveBeenCalledWith(account.id);
-    fireEvent.press(screen.getByText('View period'));
-    expect(props.onPreviousPeriod).toHaveBeenCalledTimes(1);
+    expect(props.onFilterCategory).toHaveBeenCalledWith(dining.id);
+
+    screen.rerender(<BudgetSpendingInsights {...props} activityCategory={dining} />);
+    fireEvent.press(screen.getByRole('button', { name: 'Clear Dining activity filter' }));
+    expect(props.onFilterCategory).toHaveBeenLastCalledWith(null);
   });
 
-  it('masks every new amount and exposes partial valuation and loading errors', () => {
+  it('uses category shares of total spending and masks values while showing FX detail', () => {
     preferences.privacy.setIsPrivacyMode(true);
     const screen = render(
       <BudgetSpendingInsights
         {...props}
         chartData={{ ...props.chartData, hasUnvaluedEntries: true }}
-        error="Breakdown unavailable"
       />,
     );
-    fireEvent.press(screen.getByRole('button', { name: 'Expand Where it went' }));
+    const shareFills = screen.UNSAFE_getAllByType(View);
+    expect(
+      shareFills.find(node => node.props.testID === 'budget-category-share-dining')?.props.style,
+    ).toEqual(expect.arrayContaining([expect.objectContaining({ width: '60%' })]));
+    expect(
+      shareFills.find(node => node.props.testID === 'budget-category-share-groceries')?.props.style,
+    ).toEqual(expect.arrayContaining([expect.objectContaining({ width: '40%' })]));
     expect(screen.getAllByText(AppConfig.privacyMask)).toHaveLength(3);
     expect(screen.getByText(/Category amounts are partial/)).toBeTruthy();
-    expect(screen.getByText('Retry breakdown')).toBeTruthy();
+  });
+
+  it('hides the breakdown only when one resolved expense category exists', () => {
+    const screen = render(
+      <BudgetSpendingInsights {...props} scopeAccounts={[dining]} expenseAccounts={[dining]} />,
+    );
+    expect(screen.queryByText('Where it went')).toBeNull();
   });
 });

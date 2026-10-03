@@ -1,26 +1,23 @@
-import { AppButton, AppText, Icon } from '@/src/components/core';
-import { DetailDisclosure } from '@/src/components/shared/DetailDisclosure';
+import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
+import { AppButton, AppText } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { Column, Row, Separator } from '@/src/design-system';
+import { AppConfig, Shape, Spacing } from '@/src/constants';
+import { Column, Row } from '@/src/design-system';
+import { useTheme } from '@/src/hooks/use-theme';
 import type { BudgetCumulativeChart } from '@/src/services/budget/budgetCumulativeChartService';
-import type { BudgetUsage } from '@/src/services/budget/types';
 import type { AccountId } from '@/src/types/ids';
 import type { PlainAccount } from '@/src/types/plainDtos';
-import { formatDate } from '@/src/utils/dateUtils';
-import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 interface Props {
   chartData: BudgetCumulativeChart | null;
   isLoading: boolean;
   error?: string;
-  previousUsageError?: string;
   onRetry?: () => void;
   currencyCode: string;
   expenseAccounts: PlainAccount[];
-  previousUsage: BudgetUsage | null;
-  previousPeriodRange?: { startDate: number; endDate: number };
-  onPreviousPeriod: () => void;
-  onFilterCategory: (id: AccountId) => void;
+  scopeAccounts: PlainAccount[];
+  onFilterCategory: (id: AccountId | null) => void;
   activityCategory: PlainAccount | null;
 }
 
@@ -28,131 +25,167 @@ export function BudgetSpendingInsights({
   chartData,
   isLoading,
   error,
-  previousUsageError,
   onRetry,
   currencyCode,
   expenseAccounts,
-  previousUsage,
-  previousPeriodRange,
-  onPreviousPeriod,
+  scopeAccounts,
   onFilterCategory,
   activityCategory,
 }: Props) {
-  const [showAll, setShowAll] = useState(false);
+  const { theme } = useTheme();
+  const strings = AppConfig.strings.budgetDetailRedesign;
   const categories = chartData?.categories ?? [];
-  const visibleCategories = showAll ? categories : categories.slice(0, 5);
-  const entryCount = chartData?.entryCount ?? 0;
-  const status = error ?? (isLoading ? 'Loading spending breakdown…' : undefined);
+  const resolvedCategoryCount = getResolvedCategoryCount(scopeAccounts, expenseAccounts);
+  const totalCategorySpend = categories.reduce((total, category) => total + category.spent, 0);
+
+  if (resolvedCategoryCount === 1) return null;
+
   return (
-    <DetailDisclosure
-      title="Where it went"
-      icon={Icon.PieChart}
-      summary={status ?? `${entryCount} entries · ${categories.length} categories`}
-    >
-      <Column gap="md">
-        <AppText variant="caption" color="secondary">
-          {status ??
-            `${entryCount} recorded ${entryCount === 1 ? 'entry' : 'entries'} · net of refunds`}
+    <Column gap="sm">
+      <Row align="baseline" justify="space-between" gap="sm" flexWrap="wrap">
+        <AppText variant="heading" weight="semibold">
+          {strings.whereItWent}
         </AppText>
-        {error && (
-          <AppButton variant="secondary" onPress={onRetry}>
-            Retry breakdown
-          </AppButton>
-        )}
-        {!error && !isLoading && categories.length === 0 && (
-          <AppText color="secondary">No category spending in this period.</AppText>
-        )}
-        {visibleCategories.map(category => {
-          const account = expenseAccounts.find(item => item.id === category.accountId);
-          return (
-            <AppButton
-              key={category.accountId}
-              variant={activityCategory?.id === category.accountId ? 'secondary' : 'ghost'}
-              accessibilityLabel={`Show ${account?.name ?? 'category'} activity`}
-              accessibilityState={{ selected: activityCategory?.id === category.accountId }}
-              onPress={() => onFilterCategory(category.accountId)}
-              buttonStyle={{ alignItems: 'stretch' }}
-            >
-              <Column gap="xs" flex={1}>
-                <Row justify="space-between" align="baseline" gap="sm" flexWrap="wrap">
-                  <AppText weight="medium" style={{ flexShrink: 1 }}>
-                    {account?.name ?? 'Unavailable category'}
-                  </AppText>
-                  <MoneyText
-                    amount={category.spent}
-                    currencyCode={currencyCode}
-                    weight="semibold"
-                  />
-                </Row>
-                <AppText
-                  variant="caption"
-                  color={category.hasUnvaluedEntries ? 'warning' : 'secondary'}
-                >
-                  {category.entryCount} {category.entryCount === 1 ? 'entry' : 'entries'}
-                  {category.hasUnvaluedEntries ? ' · incomplete currency valuation' : ''}
-                </AppText>
-              </Column>
-            </AppButton>
-          );
-        })}
-        {categories.length > 5 && (
-          <AppButton variant="ghost" onPress={() => setShowAll(value => !value)}>
-            {showAll ? 'Show fewer categories' : `Show all ${categories.length} categories`}
-          </AppButton>
-        )}
-        {!!chartData?.refunds && (
-          <Row justify="space-between" align="baseline" gap="sm" flexWrap="wrap">
-            <AppText variant="caption" color="secondary">
-              Refunds and reversals included
-            </AppText>
-            <MoneyText amount={chartData.refunds} currencyCode={currencyCode} variant="body" />
-          </Row>
-        )}
-        {chartData?.hasUnvaluedEntries && (
+      </Row>
+
+      {isLoading ? (
+        <AppText variant="caption" color="secondary">
+          {AppConfig.strings.common.loading}
+        </AppText>
+      ) : error ? (
+        <View style={styles.errorState}>
           <AppText variant="caption" color="warning">
-            Some entries could not be converted. Category amounts are partial.
+            {error}
           </AppText>
-        )}
-        {previousPeriodRange && (
-          <>
-            <Separator />
-            <Row justify="space-between" align="center" gap="sm" flexWrap="wrap">
-              <AppText variant="body" weight="semibold">
-                Previous period
-              </AppText>
-              <AppButton variant="ghost" size="sm" onPress={onPreviousPeriod}>
-                View period
+          <AppButton
+            variant="secondary"
+            onPress={onRetry}
+            accessibilityLabel={strings.retryBreakdown}
+          >
+            {strings.retryBreakdown}
+          </AppButton>
+        </View>
+      ) : categories.length === 0 ? (
+        <AppText variant="caption" color="secondary">
+          {strings.noCategorySpending}
+        </AppText>
+      ) : (
+        <Column gap="xs">
+          {categories.map(category => {
+            const account = expenseAccounts.find(item => item.id === category.accountId);
+            const selected = activityCategory?.id === category.accountId;
+            const share =
+              totalCategorySpend > 0
+                ? Math.min(1, Math.max(0, category.spent / totalCategorySpend))
+                : 0;
+            const width = `${share * 100}%` as `${number}%`;
+            const accessibleName = account?.name ?? strings.unavailableCategory;
+            return (
+              <AppButton
+                key={category.accountId}
+                variant={selected ? 'secondary' : 'ghost'}
+                accessibilityLabel={
+                  selected
+                    ? strings.deselectCategoryActivity(accessibleName)
+                    : strings.showCategoryActivity(accessibleName)
+                }
+                accessibilityState={{ selected }}
+                onPress={() => onFilterCategory(selected ? null : category.accountId)}
+                buttonStyle={styles.categoryButton}
+              >
+                <Column flex={1} gap="xs">
+                  <Row align="center" justify="space-between" gap="sm" flexWrap="wrap">
+                    <View style={styles.categoryLabel}>
+                      <AccountInlineLabel
+                        account={account}
+                        placeholder={strings.unavailableCategory}
+                        variant="body"
+                        pillSize="sm"
+                      />
+                      <AppText variant="caption" color="secondary">
+                        {strings.entries(category.entryCount)}
+                      </AppText>
+                    </View>
+                    <MoneyText
+                      amount={category.spent}
+                      currencyCode={currencyCode}
+                      variant="body"
+                      weight="semibold"
+                    />
+                  </Row>
+                  <View
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
+                    style={[styles.shareTrack, { backgroundColor: theme.surfaceSecondary }]}
+                  >
+                    <View
+                      testID={`budget-category-share-${category.accountId}`}
+                      style={[styles.shareFill, { width, backgroundColor: theme.error }]}
+                    />
+                  </View>
+                  {category.hasUnvaluedEntries ? (
+                    <AppText variant="caption" color="warning">
+                      {strings.incompleteCurrencyValuation}
+                    </AppText>
+                  ) : null}
+                </Column>
               </AppButton>
-            </Row>
-            <AppText variant="caption" color="secondary">
-              {formatDate(previousPeriodRange.startDate)} –{' '}
-              {formatDate(previousPeriodRange.endDate)}
-            </AppText>
-            {previousUsageError ? (
-              <Column gap="xs">
-                <AppText color="warning">{previousUsageError}</AppText>
-                <AppButton variant="ghost" onPress={onRetry}>
-                  Retry previous period
-                </AppButton>
-              </Column>
-            ) : previousUsage ? (
-              <Row gap="xs" align="baseline" flexWrap="wrap">
-                <MoneyText amount={previousUsage.spent} currencyCode={currencyCode} variant="xl" />
-                <AppText variant="caption" color="secondary">
-                  spent over the full period
-                </AppText>
-              </Row>
-            ) : (
-              <AppText color="secondary">Loading previous period…</AppText>
-            )}
-            {previousUsage?.hasUnvaluedEntries && (
-              <AppText variant="caption" color="warning">
-                Previous spending has incomplete currency valuation.
-              </AppText>
-            )}
-          </>
-        )}
-      </Column>
-    </DetailDisclosure>
+            );
+          })}
+        </Column>
+      )}
+
+      {chartData && chartData.refunds !== 0 ? (
+        <Row justify="space-between" align="baseline" gap="sm" flexWrap="wrap">
+          <AppText variant="caption" color="secondary">
+            {strings.refundsAndReversals}
+          </AppText>
+          <MoneyText amount={chartData.refunds} currencyCode={currencyCode} variant="caption" />
+        </Row>
+      ) : null}
+      {chartData?.hasUnvaluedEntries ? (
+        <AppText variant="caption" color="warning">
+          {strings.partialCategoryAmounts}
+        </AppText>
+      ) : null}
+    </Column>
   );
 }
+
+function getResolvedCategoryCount(scopes: PlainAccount[], expenseAccounts: PlainAccount[]) {
+  const scopeIds = new Set(scopes.map(account => account.id));
+  const accountsById = new Map(expenseAccounts.map(account => [account.id, account] as const));
+  const leaves = expenseAccounts.filter(account => {
+    const hasExpenseChildren = expenseAccounts.some(child => child.parentAccountId === account.id);
+    if (hasExpenseChildren) return false;
+    let current: PlainAccount | undefined = account;
+    const visited = new Set<string>();
+    while (current && !visited.has(current.id)) {
+      if (scopeIds.has(current.id)) return true;
+      visited.add(current.id);
+      current = current.parentAccountId ? accountsById.get(current.parentAccountId) : undefined;
+    }
+    return false;
+  });
+  return leaves.length;
+}
+
+const styles = StyleSheet.create({
+  errorState: { gap: Spacing.sm, alignItems: 'flex-start' },
+  categoryButton: {
+    alignItems: 'stretch',
+    minHeight: 56,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    borderRadius: Shape.radius.md,
+  },
+  categoryLabel: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    flexShrink: 1,
+  },
+  shareTrack: { height: 4, width: '100%', overflow: 'hidden', borderRadius: Shape.radius.full },
+  shareFill: { height: '100%', borderRadius: Shape.radius.full },
+});

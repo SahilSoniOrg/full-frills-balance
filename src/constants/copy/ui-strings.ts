@@ -1,5 +1,6 @@
 /** UI copy catalog. Prefer adding new domains as `copy/domains/<name>Strings.ts` re-exported here when a section grows past ~200 lines. */
 import { commitmentsRedesignStrings } from './domains/commitmentsRedesignStrings';
+import { budgetDetailRedesignStrings } from './domains/budgetDetailRedesignStrings';
 import { plannedListRedesignStrings } from './domains/plannedListRedesignStrings';
 import type { AuditEntityType } from '@/src/types/enums';
 import type { AuditEventType } from '@/src/types/auditEvents';
@@ -13,6 +14,7 @@ function defineAuditEventLabels<T extends Record<AuditEventType, string> & Recor
 export const UI_STRINGS = {
   plannedListRedesign: plannedListRedesignStrings,
   commitmentsRedesign: commitmentsRedesignStrings,
+  budgetDetailRedesign: budgetDetailRedesignStrings,
   common: {
     loading: 'Loading…',
     loadingMore: 'Loading…',

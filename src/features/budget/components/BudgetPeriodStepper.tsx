@@ -5,6 +5,8 @@ import { Keyboard, Pressable, StyleSheet, TouchableOpacity, View } from 'react-n
 
 interface BudgetPeriodStepperProps {
   label: string;
+  periodDetail: string;
+  daysLeft?: number;
   onPrevious: () => void;
   onNext: () => void;
   canGoNext: boolean;
@@ -12,9 +14,11 @@ interface BudgetPeriodStepperProps {
   onBackToToday: () => void;
 }
 
-/** Prev/next period control for budget detail — no date-picker affordance. */
+/** Centered previous/current/next period control with accessible period context. */
 export function BudgetPeriodStepper({
   label,
+  periodDetail,
+  daysLeft,
   onPrevious,
   onNext,
   canGoNext,
@@ -22,6 +26,8 @@ export function BudgetPeriodStepper({
   onBackToToday,
 }: BudgetPeriodStepperProps) {
   const { theme, fonts } = useTheme();
+  const strings = AppConfig.strings.budgetDetailRedesign;
+  const periodLabel = strings.periodAccessibility(label, periodDetail, daysLeft);
 
   return (
     <View style={styles.wrapper}>
@@ -32,31 +38,37 @@ export function BudgetPeriodStepper({
         }}
         style={[styles.navButton, { backgroundColor: theme.surface }, Shape.elevation.sm]}
         activeOpacity={Opacity.heavy}
-        accessibilityLabel="Previous period"
+        accessibilityLabel={strings.previousPeriodButton}
         accessibilityRole="button"
       >
         <AppIcon name={Icon.ChevronLeft} size={Size.sm} color={theme.textSecondary} />
       </TouchableOpacity>
 
-      <View style={[styles.labelContainer, { backgroundColor: theme.surface }, Shape.elevation.sm]}>
+      <View style={styles.labelContainer} accessible accessibilityLabel={periodLabel}>
         <AppText
           variant="body"
-          style={[styles.label, { fontFamily: fonts.medium }]}
-          numberOfLines={1}
+          style={[styles.label, { fontFamily: fonts.semibold }]}
+          numberOfLines={2}
+          align="center"
         >
           {label}
         </AppText>
-        {showBackToToday && (
+        <AppText variant="caption" color="secondary" align="center">
+          {periodDetail}
+          {daysLeft === undefined ? '' : ` · ${strings.daysLeft(daysLeft)}`}
+        </AppText>
+        {showBackToToday ? (
           <Pressable
             onPress={onBackToToday}
+            style={styles.todayButton}
             accessibilityRole="button"
-            accessibilityLabel={AppConfig.strings.budget.backToToday}
+            accessibilityLabel={strings.backToToday}
           >
             <AppText variant="caption" color="primary" weight="bold">
-              {AppConfig.strings.budget.backToToday}
+              {strings.backToToday}
             </AppText>
           </Pressable>
-        )}
+        ) : null}
       </View>
 
       <TouchableOpacity
@@ -73,7 +85,7 @@ export function BudgetPeriodStepper({
         ]}
         activeOpacity={canGoNext ? Opacity.heavy : 1}
         disabled={!canGoNext}
-        accessibilityLabel="Next period"
+        accessibilityLabel={strings.nextPeriodButton}
         accessibilityRole="button"
         accessibilityState={{ disabled: !canGoNext }}
       >
@@ -89,8 +101,11 @@ export function BudgetPeriodStepper({
 
 const styles = StyleSheet.create({
   wrapper: {
+    width: '100%',
+    minHeight: Size.buttonMd,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: Spacing.sm,
   },
   navButton: {
@@ -101,16 +116,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   labelContainer: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: Size.buttonMd,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: Size.xl,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: Shape.radius.full,
-    gap: Spacing.xs,
-    maxWidth: 180,
+    paddingHorizontal: Spacing.xs,
   },
-  label: {
-    textAlign: 'center',
-  },
+  label: { textAlign: 'center' },
+  todayButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: Spacing.md },
 });
