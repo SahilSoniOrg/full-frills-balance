@@ -1,6 +1,6 @@
 # Commitments redesign final verification
 
-Verified 2026-10-04 03:41 IST against `8dcba1345dc0d75520019d144488bf365a620160` (`codex/commitments-redesign-layout`). HEAD was unchanged during verification.
+Verified 2026-10-04 03:41 IST against `8dcba1345dc0d75520019d144488bf365a620160`. HEAD was unchanged during verification.
 
 ## Result
 

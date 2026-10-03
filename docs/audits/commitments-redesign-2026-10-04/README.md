@@ -2,19 +2,13 @@
 
 October 4, 2026. Implements the approved brief in `docs/designs/commitments-redesign/README.md` and its four screen mockups and edge-state board. The layout follows the hierarchy rather than invented mockup pixel values.
 
-## Local PR stack
+## Local product review
 
-| Change                                     | Branch                                      | Base                                       |
-| ------------------------------------------ | ------------------------------------------- | ------------------------------------------ |
-| Data projections and shared budget status  | `codex/commitments-redesign-data`           | `main`                                     |
-| Budgets tab                                | `codex/commitments-redesign-budgets`        | `codex/commitments-redesign-data`          |
-| Planned tab                                | `codex/commitments-redesign-planned`        | `codex/commitments-redesign-budgets`       |
-| Budget detail                              | `codex/commitments-redesign-budget-detail`  | `codex/commitments-redesign-planned`       |
-| Planned-payment detail and visual evidence | `codex/commitments-redesign-planned-detail` | `codex/commitments-redesign-budget-detail` |
+The finished redesign is delivered on one local branch, `codex/commitments-redesign`, for product review. The verified application commit is `8dcba1345dc0d75520019d144488bf365a620160`; evidence commit `38c195dd` records the native audit and verification package. See [LOCAL-REVIEW.md](LOCAL-REVIEW.md) for the five preserved application commits, verification proof and local gallery. No push or pull requests are requested.
 
-Each checkpoint typechecks independently. Data was verified before the UI work: 468 suites / 2,961 tests. Final source verification: `bun run verify` passes 477 suites / 3,010 tests, coverage, architecture/privacy checks, application and E2E typechecks, and lint. Lint reports only the existing dependency warning in `useJournalSuggestions.ts`. Scoped lint and whitespace checks pass.
+Each application checkpoint typechecked independently. Data was verified before the UI work: 468 suites / 2,961 tests. Final source verification: `bun run verify` passed 477 suites / 3,010 tests, coverage, architecture/privacy checks, application and E2E typechecks, and lint. Lint reported only the existing dependency warning in `useJournalSuggestions.ts`. Scoped lint and whitespace checks passed. The exact completed run and coverage boundaries are preserved in [VERIFICATION.md](VERIFICATION.md).
 
-The [draft descriptions](pr-drafts/) are ready for publication. Nothing has been pushed or published: the user's AGENTS instructions require asking before external actions, and approval is pending.
+The local audit contains 53 files: 49 native screenshots (40 matrix, five edge-state and four scrolled captures) and four Markdown documents. All screenshot links below refer to files in this directory.
 
 ## Data and behaviour checks
 
