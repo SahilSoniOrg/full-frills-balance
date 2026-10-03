@@ -1,12 +1,13 @@
 import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
+import { accountObserveQueries } from '@/src/data/repositories/account';
 import type { JournalTimelineDateRange } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { enrichJournals, enrichedJournalsAreEqual } from '@/src/services/journal/enrichJournals';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalStatus } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
-import { distinctUntilChanged, map, Observable, switchMap } from 'rxjs';
+import { distinctUntilChanged, from, map, Observable, switchMap } from 'rxjs';
 import {
   journalsToTimelineRows,
   JournalTimelineRow,
@@ -37,16 +38,34 @@ export function observeEnrichedJournals(
   });
 
   return journalsObservable.pipe(
-    switchMap(async journals => {
+    switchMap(journals => {
       logger.debug(`observeEnrichedJournals emission: length=${journals.length}`);
-      if (journals.length === 0) return [] as EnrichedJournal[];
-
       const journalIds = journals.map(j => j.id);
-      const enrichmentData = await journalEnrichmentQueries.getEnrichmentDataRaw(
-        workplaceId,
-        journalIds,
+      return from(
+        journals.length === 0
+          ? Promise.resolve([])
+          : journalEnrichmentQueries.getEnrichmentDataRaw(workplaceId, journalIds),
+      ).pipe(
+        switchMap(enrichmentData =>
+          accountObserveQueries
+            .observeByIds(workplaceId, [...new Set(enrichmentData.map(row => row.account_id))])
+            .pipe(
+              map(accounts => {
+                // Account color edits do not modify journals; observe only the linked accounts.
+                const accountColors = new Map(accounts.map(account => [account.id, account.color]));
+                return enrichJournals(
+                  journals,
+                  enrichmentData.map(row => ({
+                    ...row,
+                    account_color: accountColors.has(row.account_id)
+                      ? accountColors.get(row.account_id)
+                      : row.account_color,
+                  })),
+                );
+              }),
+            ),
+        ),
       );
-      return enrichJournals(journals, enrichmentData);
     }),
     distinctUntilChanged(enrichedJournalsAreEqual),
   );

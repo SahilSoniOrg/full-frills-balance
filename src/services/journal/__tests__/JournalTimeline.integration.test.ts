@@ -11,6 +11,9 @@ import { journalService } from '@/src/services/journal/journalDomainService';
 import { observeEnrichedJournals } from '@/src/services/journal/journalTimelineReadModel';
 
 import { resetJournalIntegrationWorkplace } from '@/src/testing/journalFixtures';
+import { database } from '@/src/data/database/Database';
+import Account from '@/src/data/models/Account';
+import { firstValueFrom, filter, take, timeout } from 'rxjs';
 
 describe('Journal ledger integration', () => {
   let cashAccountId: string;
@@ -145,6 +148,73 @@ describe('Journal ledger integration', () => {
   });
 
   describe('observeEnrichedJournals reactive updates', () => {
+    it('refreshes saved account colors without editing the journal and stops after unsubscribe', async () => {
+      const journal = await journalPersistenceService.put(
+        {
+          description: 'Account color test',
+          journalDate: Date.now(),
+          currencyCode: 'USD',
+          transactions: [
+            {
+              accountId: cashAccountId as AccountId,
+              amount: 10,
+              transactionType: TransactionType.CREDIT,
+            },
+            {
+              accountId: expenseAccountId as AccountId,
+              amount: 10,
+              transactionType: TransactionType.DEBIT,
+            },
+          ],
+        },
+        'wp-1' as WorkplaceId,
+      );
+      const observable = observeEnrichedJournals('wp-1' as WorkplaceId, 10);
+      const states: string[] = [];
+      const subscription = observable.subscribe(journals => {
+        const entry = journals.find(entry => entry.id === journal.id);
+        if (entry)
+          states.push(entry.accounts.find(account => account.id === cashAccountId)?.color ?? '');
+      });
+      const account = await database.collections.get<Account>('accounts').find(cashAccountId);
+      try {
+        await firstValueFrom(observable.pipe(take(1), timeout(2000)));
+        for (const color of ['#CDAA6B', '#65C6AD', '']) {
+          const updated = firstValueFrom(
+            observable.pipe(
+              filter(journals =>
+                journals.some(
+                  entry =>
+                    entry.id === journal.id &&
+                    entry.accounts.some(
+                      leg => leg.id === cashAccountId && (leg.color ?? '') === color,
+                    ),
+                ),
+              ),
+              take(1),
+              timeout(2000),
+            ),
+          );
+          await database.write(() =>
+            account.update(record => {
+              record.color = color;
+            }),
+          );
+          await updated;
+        }
+        expect(states).toEqual(['', '#CDAA6B', '#65C6AD', '']);
+      } finally {
+        subscription.unsubscribe();
+      }
+      const emissionCount = states.length;
+      await database.write(() =>
+        account.update(record => {
+          record.color = '#CDAA6B';
+        }),
+      );
+      expect(states).toHaveLength(emissionCount);
+    });
+
     it('should emit updated accounts when a journal accounts are modified', async () => {
       // 1. Create a journal with account A and account B
       const journal = await journalPersistenceService.put(
