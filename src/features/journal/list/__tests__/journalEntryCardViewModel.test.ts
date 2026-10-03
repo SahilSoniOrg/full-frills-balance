@@ -4,7 +4,7 @@ import { mapTimelineItemToEntryCardProps } from '@/src/features/journal/list/jou
 import { mapJournalToTimelineItem } from '@/src/services/journal/journalTimelinePresentation';
 
 describe('journalEntryCardViewModel', () => {
-  it('preserves journal title and badge presentation', () => {
+  it('preserves journal title and account presentation', () => {
     const card = mapTimelineItemToEntryCardProps(
       mapJournalToTimelineItem({
         id: 'j1' as JournalId,
@@ -29,7 +29,7 @@ describe('journalEntryCardViewModel', () => {
     );
 
     expect(card.title).toBe('Lunch');
-    expect(card.badges?.map(badge => badge.text)).toEqual(['From: Checking']);
+    expect(card.accountFlow.primaryAccount?.name).toBe('Checking');
   });
 });
 

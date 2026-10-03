@@ -9,17 +9,16 @@ import {
   getReadableColor,
   withOpacity,
 } from '@/src/utils/color-math';
-import { Inline, Inset, Stack } from '@/src/design-system';
+import { Inset, Stack } from '@/src/design-system';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatClockTime, formatDate } from '@/src/utils/dateUtils';
 import { JournalAccountFlow } from './JournalAccountFlow';
-import { JournalEntryFooterRow } from './JournalEntryFooterRow';
 import type { JournalEntryCardProps, JournalEntryLeg } from '@/src/types/journalEntryCard';
 import { memo, useMemo } from 'react';
 import { Keyboard, StyleSheet, View, useWindowDimensions } from 'react-native';
 
-export type { JournalEntryBadge, JournalEntryCardProps } from '@/src/types/journalEntryCard';
+export type { JournalEntryCardProps } from '@/src/types/journalEntryCard';
 
 function legDirection(leg: JournalEntryLeg): string {
   return leg.role === 'SOURCE' ? 'From' : leg.role === 'DESTINATION' ? 'To' : 'Account';
@@ -44,7 +43,6 @@ const JournalEntryCardComponent = ({
   dateDisplay = 'full',
   presentation,
   accountFlow,
-  badges = [],
   isSelected,
   notes,
   onPress,
@@ -75,17 +73,13 @@ const JournalEntryCardComponent = ({
   const displayedDate =
     dateDisplay === 'time' ? formatClockTime(transactionDate, resolvedHourCycle) : formattedDate;
   const describeLeg = (leg: JournalEntryLeg) => `${legDirection(leg)} ${leg.name}`;
-  const accountLegs = accountFlow
-    ? [
-        ...(accountFlow.primaryAccount ? [accountFlow.primaryAccount] : []),
-        ...accountFlow.sources,
-        ...accountFlow.destinations,
-        ...accountFlow.neutral,
-      ]
-    : [];
-  const accountLabels = accountFlow
-    ? accountLegs.map(describeLeg)
-    : badges.map(badge => badge.text);
+  const accountLegs = [
+    ...(accountFlow.primaryAccount ? [accountFlow.primaryAccount] : []),
+    ...accountFlow.sources,
+    ...accountFlow.destinations,
+    ...accountFlow.neutral,
+  ];
+  const accountLabels = accountLegs.map(describeLeg);
   const accessibilityLabel = [
     title,
     presentation.label,
@@ -156,7 +150,7 @@ const JournalEntryCardComponent = ({
                 minimumFontScale={0.65}
                 style={{ color: amountColor, minHeight: Math.ceil(Size.lg * fontScale) }}
               />
-              {accountFlow?.showCurrencyCodes && (
+              {accountFlow.showCurrencyCodes && (
                 <AppText variant="caption" color="secondary">
                   {currencyCode}
                 </AppText>
@@ -170,44 +164,17 @@ const JournalEntryCardComponent = ({
               size="sm"
               backgroundColor={withOpacity(typeColor, typeBadgeOpacity)}
               textColor={typeBadgeTextColor}
-              style={styles.accountBadge}
+              style={styles.typeBadge}
             >
               {presentation.label}
             </Badge>
           )}
 
-          {accountFlow ? (
-            <JournalAccountFlow
-              legs={accountLegs}
-              primaryId={accountFlow.primaryAccount?.id}
-              timestamp={displayedDate}
-            />
-          ) : (
-            <JournalEntryFooterRow timestamp={displayedDate}>
-              {badges.length > 0 ? (
-                <Inline gap="xs" wrap>
-                  {badges.map((badge, index) => (
-                    <Badge
-                      key={badge.id ?? `${badge.text}-${index}`}
-                      testID="transaction-account-badge"
-                      variant={badge.variant}
-                      size="sm"
-                      icon={badge.icon}
-                      fallbackIcon={badge.fallbackIcon}
-                      backgroundColor={
-                        badge.colorKey
-                          ? (theme[badge.colorKey as keyof typeof theme] as string)
-                          : undefined
-                      }
-                      style={styles.accountBadge}
-                    >
-                      {badge.text}
-                    </Badge>
-                  ))}
-                </Inline>
-              ) : null}
-            </JournalEntryFooterRow>
-          )}
+          <JournalAccountFlow
+            legs={accountLegs}
+            primaryId={accountFlow.primaryAccount?.id}
+            timestamp={displayedDate}
+          />
         </Stack>
         {overlay}
       </Inset>
@@ -267,6 +234,6 @@ const styles = StyleSheet.create({
   headerContent: { flex: 1, minWidth: 0 },
   amountColumn: { flexShrink: 1, maxWidth: '100%', marginLeft: 'auto' },
   selectionHeader: { paddingRight: Size.md + Spacing.sm },
-  accountBadge: { maxWidth: '100%', flexShrink: 1 },
+  typeBadge: { maxWidth: '100%', flexShrink: 1 },
   shrink: { flexShrink: 1, minWidth: 0 },
 });

@@ -27,7 +27,13 @@ const entry: JournalEntryCardProps = {
     typeColor: 'error',
     amountPrefix: '− ',
   },
-  badges: [{ text: 'From: Checking' }, { text: 'To: Dining' }],
+  accountFlow: {
+    primaryAccount: leg('Checking', 'SOURCE'),
+    sources: [],
+    destinations: [leg('Dining', 'DESTINATION')],
+    neutral: [],
+    showCurrencyCodes: false,
+  },
   notes: 'Lunch with Sam',
   onPress: jest.fn(),
 };
@@ -45,8 +51,8 @@ describe('JournalEntryCard', () => {
     expect(queryByText(fullDate)).toBeNull();
     const label = getByRole('button').props.accessibilityLabel;
     expect(label).toContain(fullDate);
-    expect(label).toContain('From: Checking');
-    expect(label).toContain('To: Dining');
+    expect(label).toContain('From Checking');
+    expect(label).toContain('To Dining');
     expect(label).toContain('Lunch with Sam');
     expect(label).toContain('18.50');
   });
@@ -65,8 +71,8 @@ describe('JournalEntryCard', () => {
     const { getByText, getByRole, queryByTestId, getByTestId, rerender } = render(
       <JournalEntryCard {...entry} />,
     );
-    expect(getByText('From: Checking')).toBeTruthy();
-    expect(getByText('To: Dining')).toBeTruthy();
+    expect(getByText('Checking')).toBeTruthy();
+    expect(getByText('Dining')).toBeTruthy();
     expect(getByText('Lunch with Sam')).toBeTruthy();
     expect(queryByTestId('transaction-type-badge')).toBeNull();
 
@@ -125,7 +131,6 @@ const splitEntry: JournalEntryCardProps = {
     neutral: [],
     showCurrencyCodes: false,
   },
-  badges: [{ text: '+2 more' }],
 };
 
 function layoutFlow(

@@ -1,7 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import { counterAccountsFromJournalPeers } from '@/src/services/accounting/displayTransactionCounterAccounts';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
-import { buildTimelineAccountBadges } from '@/src/services/accounting/timelineAccountBadges';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalDisplayType, SemanticType } from '@/src/types/enums';
 import { Icon } from '@/src/types/domainIcons';
@@ -169,54 +167,30 @@ export function mapJournalToTimelineItem(
       ? AppConfig.strings.journal.transfer
       : AppConfig.strings.journal.transaction;
 
-  if (viewer) {
-    const viewerAccount = journal.accounts.find(
-      a =>
-        a.id === viewer.accountId &&
-        (!viewer.transactionId || a.transactionId === viewer.transactionId),
-    );
-    // A stale account scope must not relabel the whole journal as an account movement.
-    if (!viewerAccount) return mapJournalToTimelineItem(journal);
-    const isIncrease = viewerAccount?.role === 'DESTINATION';
-    const chrome = ledgerLineChrome(isIncrease);
-    const presentation = toTimelinePresentation(
+  // Missing account/posting scopes use the whole-journal presentation.
+  const viewerAccount = viewer
+    ? journal.accounts.find(
+        a =>
+          a.id === viewer.accountId &&
+          (!viewer.transactionId || a.transactionId === viewer.transactionId),
+      )
+    : undefined;
+  const chrome = viewerAccount
+    ? ledgerLineChrome(viewerAccount.role === 'DESTINATION')
+    : journalDisplayTypeChrome(displayType);
+
+  return {
+    title: journal.description || defaultTitle,
+    amount: viewerAccount?.amount ?? journal.totalAmount,
+    currencyCode: viewerAccount?.currencyCode || journal.currencyCode,
+    transactionDate: journal.journalDate,
+    presentation: toTimelinePresentation(
       displayType,
       journal.semanticLabel,
       journal.semanticType,
       chrome,
-    );
-    const counterAccounts = counterAccountsFromJournalPeers(journal.accounts, viewer.accountId);
-    const badges = buildTimelineAccountBadges(counterAccounts);
-
-    return {
-      title: journal.description || defaultTitle,
-      amount: viewerAccount?.amount ?? journal.totalAmount,
-      currencyCode: viewerAccount?.currencyCode || journal.currencyCode,
-      transactionDate: journal.journalDate,
-      presentation,
-      badges,
-      accountFlow: buildAccountFlow(journal, viewerAccount),
-      notes: journal.notes,
-    };
-  }
-
-  const chrome = journalDisplayTypeChrome(displayType);
-  const presentation = toTimelinePresentation(
-    displayType,
-    journal.semanticLabel,
-    journal.semanticType,
-    chrome,
-  );
-  const badges = buildTimelineAccountBadges(journal.accounts, { withFromToPrefixes: true });
-
-  return {
-    title: journal.description || defaultTitle,
-    amount: journal.totalAmount,
-    currencyCode: journal.currencyCode,
-    transactionDate: journal.journalDate,
-    presentation,
-    badges,
-    accountFlow: buildAccountFlow(journal),
+    ),
+    accountFlow: buildAccountFlow(journal, viewerAccount),
     notes: journal.notes,
   };
 }

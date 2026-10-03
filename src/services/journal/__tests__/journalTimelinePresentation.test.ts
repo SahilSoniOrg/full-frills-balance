@@ -20,7 +20,7 @@ describe('journalTimelinePresentation', () => {
     expect(chrome.amountPrefix).toBe('+ ');
   });
 
-  it('mapJournalToTimelineItem builds from/to account badges', () => {
+  it('mapJournalToTimelineItem builds source and destination account groups', () => {
     const item = mapJournalToTimelineItem({
       id: 'j1' as JournalId,
       journalDate: Date.now(),
@@ -48,7 +48,8 @@ describe('journalTimelinePresentation', () => {
       semanticLabel: 'Purchase',
     });
 
-    expect(item.badges.map(b => b.text)).toEqual(['From: Checking', 'To: Food']);
+    expect(item.accountFlow.primaryAccount?.name).toBe('Checking');
+    expect(item.accountFlow.destinations.map(leg => leg.name)).toEqual(['Food']);
     expect(item.presentation.label).toBeTruthy();
   });
 
@@ -125,7 +126,7 @@ describe('journalTimelinePresentation', () => {
     expect(scoped.currencyCode).toBe('USD');
   });
 
-  it('mapJournalToTimelineItem with viewer shows counterparty badges only', () => {
+  it('mapJournalToTimelineItem with viewer retains the viewed account and its peers', () => {
     const item = mapJournalToTimelineItem(
       {
         id: 'j1' as JournalId,
@@ -156,10 +157,9 @@ describe('journalTimelinePresentation', () => {
       { accountId: 'a1' as AccountId },
     );
 
-    expect(item.badges.map(b => b.text)).toEqual(['Food']);
-    expect(item.badges.map(b => b.text)).not.toContain('Checking');
-    expect(item.badges.map(b => b.text)).not.toContain('From: Checking');
-    expect(item.badges.map(b => b.text)).not.toContain('To: Food');
+    expect(item.accountFlow.primaryAccount?.name).toBe('Checking');
+    expect(item.accountFlow.sources).toEqual([]);
+    expect(item.accountFlow.destinations.map(leg => leg.name)).toEqual(['Food']);
   });
 
   it('mapJournalToTimelineItem with viewer uses ledger line chrome based on role', () => {

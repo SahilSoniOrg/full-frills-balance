@@ -25,22 +25,15 @@ export function mapTimelineItemToEntryCardProps(
       typeIcon: item.presentation.typeIcon,
       amountPrefix: item.presentation.amountPrefix,
     },
-    badges: item.badges.map(badge => ({
-      ...badge,
-      icon: isValidIconName(badge.icon) ? badge.icon : undefined,
-      fallbackIcon: badge.fallbackIcon ? parseIconName(badge.fallbackIcon, Icon.Wallet) : undefined,
-    })),
-    accountFlow: item.accountFlow
-      ? {
-          ...item.accountFlow,
-          primaryAccount: item.accountFlow.primaryAccount
-            ? mapLeg(item.accountFlow.primaryAccount)
-            : undefined,
-          sources: item.accountFlow.sources.map(mapLeg),
-          destinations: item.accountFlow.destinations.map(mapLeg),
-          neutral: item.accountFlow.neutral.map(mapLeg),
-        }
-      : undefined,
+    accountFlow: {
+      ...item.accountFlow,
+      primaryAccount: item.accountFlow.primaryAccount
+        ? mapLeg(item.accountFlow.primaryAccount)
+        : undefined,
+      sources: item.accountFlow.sources.map(mapLeg),
+      destinations: item.accountFlow.destinations.map(mapLeg),
+      neutral: item.accountFlow.neutral.map(mapLeg),
+    },
     notes: item.notes,
   };
 }

@@ -1,17 +1,7 @@
 import { IconName } from '@/src/types/domainIcons';
-import { ComponentVariant } from '@/src/utils/style-helpers';
 import type { JournalTimelineAccountFlow, JournalTimelineLeg } from './journalTimeline';
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-
-export interface JournalEntryBadge {
-  id?: string;
-  text: string;
-  icon?: IconName | null;
-  fallbackIcon?: IconName;
-  colorKey?: string;
-  variant?: ComponentVariant;
-}
 
 export interface JournalEntryLeg extends Omit<JournalTimelineLeg, 'icon' | 'fallbackIcon'> {
   icon?: IconName | null;
@@ -42,9 +32,7 @@ export interface JournalEntryCardProps {
     typeColor: string;
     amountPrefix?: string;
   };
-  /** Structured flow takes precedence over legacy display-only badges. */
-  accountFlow?: JournalEntryAccountFlow;
-  badges?: JournalEntryBadge[];
+  accountFlow: JournalEntryAccountFlow;
   isSelected?: boolean;
   notes?: string;
   onPress?: () => void;

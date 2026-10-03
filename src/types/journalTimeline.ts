@@ -1,5 +1,4 @@
 import { Icon } from '@/src/types/domainIcons';
-import { AccountType } from '@/src/types/enums';
 import { AccountId, TransactionId } from '@/src/types/ids';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 
@@ -41,29 +40,12 @@ export interface JournalTimelinePresentation {
   amountPrefix: string;
 }
 
-export interface TimelineAccountBadge {
-  id?: string;
-  text: string;
-  variant: ComponentVariant;
-  icon?: string | null;
-  fallbackIcon?: string;
-}
-
 export interface JournalTimelineItem {
   title: string;
   amount: number;
   currencyCode: string;
   transactionDate: number;
   presentation: JournalTimelinePresentation;
-  badges: TimelineAccountBadge[];
-  accountFlow?: JournalTimelineAccountFlow;
+  accountFlow: JournalTimelineAccountFlow;
   notes?: string;
-}
-
-export interface TransactionAccountBadgeSource {
-  id?: string;
-  name: string;
-  accountType: AccountType | string;
-  icon?: string | null;
-  role?: 'SOURCE' | 'DESTINATION' | string;
 }
