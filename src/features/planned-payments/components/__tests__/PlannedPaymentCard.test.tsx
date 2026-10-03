@@ -1,126 +1,199 @@
-import { presentPlannedPaymentCard } from '@/src/features/planned-payments/components/PlannedPaymentCard';
-import type { PlannedPaymentObligation } from '@/src/services/planned-payment/plannedPaymentReadService';
-import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
+import { PlannedPaymentCard } from '@/src/features/planned-payments/components/PlannedPaymentCard';
+import { AppConfig } from '@/src/constants';
+import { preferences } from '@/src/services/preferences';
+import {
+  AccountType,
+  PlannedPaymentInterval,
+  PlannedPaymentStatus,
+} from '@/src/types/enums';
+import type { AccountId, PlannedPaymentId } from '@/src/types/ids';
 import type { PlainAccount } from '@/src/types/plainDtos';
+import { fireEvent, render } from '@/src/utils/test-utils';
+import { StyleSheet, View } from 'react-native';
+import type { ReactTestInstance } from 'react-test-renderer';
+import type { PlannedPaymentListOccurrence } from '@/src/services/planned-payment/plannedPaymentReadService';
 
 const account = (name: string) => ({ name, accountType: AccountType.ASSET }) as PlainAccount;
+const day = (value: number) => new Date(2026, 9, value).getTime();
 
-function makeItem(status: PlannedPaymentStatus): PlannedPaymentObligation {
+function makeOccurrence(overrides: {
+  dueDay?: number;
+  amount?: number;
+  currencyCode?: string;
+  flowDirection?: PlannedPaymentListOccurrence['payment']['flowDirection'];
+  status?: PlannedPaymentStatus;
+  canRecord?: boolean;
+  isAutoPost?: boolean;
+  intervalType?: PlannedPaymentInterval;
+  intervalN?: number;
+  recurrenceDay?: number;
+  fromAccount?: PlainAccount;
+  toAccount?: PlainAccount;
+} = {}): PlannedPaymentListOccurrence {
+  const dueDate = day(overrides.dueDay ?? 10);
   return {
-    id: 'payment-1' as PlannedPaymentObligation['id'],
-    name: 'Rent',
-    amount: 1200,
-    currencyCode: 'USD',
-    fromAccountId: 'account-1' as PlannedPaymentObligation['fromAccountId'],
-    toAccountId: 'account-2' as PlannedPaymentObligation['toAccountId'],
-    intervalN: 1,
-    intervalType: PlannedPaymentInterval.MONTHLY,
-    startDate: Date.now(),
-    nextOccurrence: Date.now() + 86400000 * 10,
-    status,
-    isAutoPost: false,
-    flowDirection: 'outflow',
-    nextDueOccurrence: Date.now() + 86400000 * 10,
+    occurrenceId: `payment-1:${dueDate}`,
+    payment: {
+      id: 'payment-1' as PlannedPaymentId,
+      name: 'Rent',
+      amount: 1200,
+      currencyCode: 'USD',
+      fromAccountId: 'account-1' as AccountId,
+      toAccountId: 'account-2' as AccountId,
+      fromAccount: overrides.fromAccount,
+      toAccount: overrides.toAccount,
+      intervalN: overrides.intervalN ?? 1,
+      intervalType: overrides.intervalType ?? PlannedPaymentInterval.MONTHLY,
+      recurrenceDay: overrides.recurrenceDay,
+      startDate: day(1),
+      nextOccurrence: dueDate,
+      status: overrides.status ?? PlannedPaymentStatus.ACTIVE,
+      isAutoPost: overrides.isAutoPost ?? false,
+      flowDirection: overrides.flowDirection ?? 'outflow',
+    },
+    date: dueDate,
+    amount: overrides.amount ?? 1200,
+    currencyCode: overrides.currencyCode ?? 'USD',
+    canRecord: overrides.canRecord ?? true,
   };
 }
 
-describe('presentPlannedPaymentCard', () => {
+function renderCard(occurrence: PlannedPaymentListOccurrence, onPress = jest.fn(), onRecord = jest.fn()) {
+  return {
+    ...render(
+      <PlannedPaymentCard occurrence={occurrence} onPress={onPress} onRecord={onRecord} />,
+    ),
+    onPress,
+    onRecord,
+  };
+}
+
+function dateBlockColor(testInstance: ReactTestInstance) {
+  return StyleSheet.flatten(testInstance.props.style)?.backgroundColor;
+}
+
+describe('PlannedPaymentCard rendered row', () => {
   beforeEach(() => {
     jest.useFakeTimers();
-    jest.setSystemTime(new Date(2026, 9, 2, 12));
+    jest.setSystemTime(new Date(2026, 9, 4, 12));
+    preferences.privacy.setIsPrivacyMode(false);
   });
 
   afterEach(() => {
     jest.useRealTimers();
+    preferences.privacy.setIsPrivacyMode(false);
   });
 
-  it('shortens same-year dates and keeps the year for future years', () => {
-    const item = makeItem(PlannedPaymentStatus.ACTIVE);
-    item.nextDueOccurrence = new Date(2026, 9, 10).getTime();
-    expect(presentPlannedPaymentCard(item).dueSummary).toBe('Oct 10');
-    expect(presentPlannedPaymentCard(item).dateLabel).toContain('Oct 10, 2026');
-    item.nextDueOccurrence = new Date(2027, 2, 30).getTime();
-    expect(presentPlannedPaymentCard(item).dueSummary).toBe('Mar 30, 2027');
+  it('shows weekday and day, with error and warning urgency treatments', () => {
+    const overdue = renderCard(makeOccurrence({ dueDay: 1 }));
+    expect(overdue.getByText('Thu')).toBeTruthy();
+    expect(overdue.getByText('1')).toBeTruthy();
+    expect(overdue.getByText('3 days late')).toBeTruthy();
+    const overdueDateBlock = overdue.UNSAFE_getAllByType(View).find(
+      view => StyleSheet.flatten(view.props.style)?.width === 54,
+    );
+
+    const dueSoon = renderCard(makeOccurrence({ dueDay: 7 }));
+    expect(dueSoon.getByText('Wed')).toBeTruthy();
+    expect(dueSoon.getByText('7')).toBeTruthy();
+    const dueSoonDateBlock = dueSoon.UNSAFE_getAllByType(View).find(
+      view => StyleSheet.flatten(view.props.style)?.width === 54,
+    );
+    expect(dateBlockColor(overdueDateBlock!)).not.toBe(dateBlockColor(dueSoonDateBlock!));
   });
 
-  it('keeps nearby due dates relative', () => {
-    const item = makeItem(PlannedPaymentStatus.ACTIVE);
-    item.nextDueOccurrence = new Date(2026, 9, 5).getTime();
-    expect(presentPlannedPaymentCard(item).dueSummary).toBe('in 3 days');
-    item.nextDueOccurrence = new Date(2026, 9, 2).getTime();
-    expect(presentPlannedPaymentCard(item).dueSummary).toBe('Today');
+  it('keeps outgoing money neutral and prefixes income with plus in the income color', () => {
+    const outgoing = renderCard(makeOccurrence({ amount: 725.25, currencyCode: 'EUR' }));
+    const outgoingAmount = outgoing.getByText(/725/);
+    const outgoingStyle = StyleSheet.flatten(outgoingAmount.props.style);
+    expect(String(outgoingAmount.props.children)).not.toMatch(/^\+/);
+
+    const incoming = renderCard(
+      makeOccurrence({ amount: 725.25, currencyCode: 'EUR', flowDirection: 'inflow' }),
+    );
+    const incomingAmount = incoming.getByText(/725/);
+    const incomingStyle = StyleSheet.flatten(incomingAmount.props.style);
+    expect(String(incomingAmount.props.children)).toMatch(/^\+/);
+    expect(incomingStyle?.color).not.toBe(outgoingStyle?.color);
   });
 
-  it('shows the account route, posting mode and finite schedule', () => {
-    const item = makeItem(PlannedPaymentStatus.ACTIVE);
-    item.fromAccount = account('Checking');
-    item.toAccount = account('Housing');
-    item.isAutoPost = true;
-    item.endDate = new Date(2027, 1, 15).getTime();
-    const vm = presentPlannedPaymentCard(item);
-    expect(vm.fromAccountLabel).toBe('Checking');
-    expect(vm.toAccountLabel).toBe('Housing');
-    expect(vm.postingLabel).toBe('Auto-post');
-    expect(vm.endDateLabel).toBe('Ends Feb 15, 2027');
+  it('shows account fallback labels and an auto-post accessibility label', () => {
+    const fallback = renderCard(makeOccurrence());
+    expect(fallback.getAllByText('Unavailable account')).toHaveLength(2);
+    const accounts = renderCard(
+      makeOccurrence({ fromAccount: account('Checking'), toAccount: account('Housing') }),
+    );
+    expect(accounts.getByText('Checking')).toBeTruthy();
+    expect(accounts.getByText('Housing')).toBeTruthy();
+
+    const autoPost = renderCard(makeOccurrence({ isAutoPost: true }));
+    expect(autoPost.getByRole('button', { name: /Auto-post/ })).toBeTruthy();
   });
 
-  it('makes unavailable accounts and manual posting explicit', () => {
-    const vm = presentPlannedPaymentCard(makeItem(PlannedPaymentStatus.ACTIVE));
-    expect(vm.fromAccountLabel).toBe('Unavailable account');
-    expect(vm.toAccountLabel).toBe('Unavailable account');
-    expect(vm.postingLabel).toBe('Manual posting');
-    expect(vm.endDateLabel).toBeUndefined();
+  it('shows multi-interval cadence while omitting the ordinary monthly cadence', () => {
+    const ordinaryMonthly = renderCard(makeOccurrence());
+    expect(ordinaryMonthly.queryByText(/Every|Monthly|month/)).toBeNull();
+
+    const everyTwoMonths = renderCard(
+      makeOccurrence({ intervalType: PlannedPaymentInterval.MONTHLY, intervalN: 2 }),
+    );
+    expect(everyTwoMonths.getByText('Every 2 months')).toBeTruthy();
+
+    const everyTwoWeeks = renderCard(
+      makeOccurrence({
+        intervalType: PlannedPaymentInterval.WEEKLY,
+        intervalN: 2,
+        recurrenceDay: 5,
+      }),
+    );
+    expect(everyTwoWeeks.getByText('Every 2 weeks on Fri')).toBeTruthy();
   });
 
-  it('formats multi-week recurrence with its scheduled weekday', () => {
-    const item = makeItem(PlannedPaymentStatus.ACTIVE);
-    item.intervalN = 2;
-    item.intervalType = PlannedPaymentInterval.WEEKLY;
-    item.recurrenceDay = 5;
-    expect(presentPlannedPaymentCard(item).intervalLabel).toBe('Every 2 weeks on Fri');
-    expect(presentPlannedPaymentCard(item).intervalSummary).toBe('2 wk');
+  it('records a completed schedule’s outstanding overdue occurrence from its separate button', () => {
+    const onPress = jest.fn();
+    const onRecord = jest.fn();
+    const { getByText } = render(
+      <PlannedPaymentCard
+        occurrence={makeOccurrence({
+          dueDay: 1,
+          status: PlannedPaymentStatus.COMPLETED,
+          amount: 725.25,
+          currencyCode: 'EUR',
+        })}
+        onPress={onPress}
+        onRecord={onRecord}
+      />,
+    );
+    expect(getByText(/725/)).toBeTruthy();
+    fireEvent.press(getByText('Record'));
+    expect(onRecord).toHaveBeenCalledTimes(1);
+    expect(onPress).not.toHaveBeenCalled();
   });
 
-  it('keeps an unpaid occurrence overdue after the schedule ends', () => {
-    const item = makeItem(PlannedPaymentStatus.COMPLETED);
-    item.nextDueOccurrence = new Date(2020, 0, 1).getTime();
-    expect(presentPlannedPaymentCard(item).statusBadge?.text).toBe('Overdue');
-    expect(presentPlannedPaymentCard(item).dateLabel).toContain('Due:');
-    item.nextDueOccurrence = undefined;
-    expect(presentPlannedPaymentCard(item).statusBadge?.text).toBe('Completed');
-    expect(presentPlannedPaymentCard(item).dueSummary).toBe('Completed');
+  it('masks the amount in both the rendered row and its accessible Record label', () => {
+    preferences.privacy.setIsPrivacyMode(true);
+    const { getByRole, getAllByText, queryByText } = render(
+      <PlannedPaymentCard
+        occurrence={makeOccurrence({ dueDay: 1, amount: 725.25, currencyCode: 'EUR' })}
+        onPress={jest.fn()}
+        onRecord={jest.fn()}
+      />,
+    );
+    expect(getAllByText(AppConfig.privacyMask).length).toBeGreaterThan(0);
+    expect(queryByText(/725/)).toBeNull();
+    expect(getByRole('button', { name: /^Record Rent/ }).props.accessibilityLabel)
+      .toContain(AppConfig.privacyMask);
   });
 
-  it('omits the ordinary Active badge and preserves payment details', () => {
-    const vm = presentPlannedPaymentCard(makeItem(PlannedPaymentStatus.ACTIVE));
-
-    expect(vm.statusBadge).toBeUndefined();
-    expect(vm.intervalLabel).toBe('Monthly');
-    expect(vm.dateLabel).toContain('Next:');
-    expect(vm.amount).toBe(1200);
-    expect(vm.currencyCode).toBe('USD');
-  });
-
-  it('keeps the Paused status label', () => {
-    const vm = presentPlannedPaymentCard(makeItem(PlannedPaymentStatus.PAUSED));
-    expect(vm.statusBadge?.text).toBe('Paused');
-    expect(vm.dueSummary).toBe('Paused');
-  });
-
-  it('keeps Due Soon and Overdue labels for active payments', () => {
-    const dueSoon = makeItem(PlannedPaymentStatus.ACTIVE);
-    const tomorrow = new Date();
-    tomorrow.setHours(0, 0, 0, 0);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    dueSoon.nextDueOccurrence = tomorrow.getTime();
-    expect(presentPlannedPaymentCard(dueSoon).statusBadge?.text).toBe('Due Soon');
-
-    const overdue = makeItem(PlannedPaymentStatus.ACTIVE);
-    const yesterday = new Date();
-    yesterday.setHours(0, 0, 0, 0);
-    yesterday.setDate(yesterday.getDate() - 1);
-    overdue.nextDueOccurrence = yesterday.getTime();
-    expect(presentPlannedPaymentCard(overdue).statusBadge?.text).toBe('Overdue');
-    expect(presentPlannedPaymentCard(overdue).dueSummary).toBe('1 day overdue');
+  it('does not expose Record for an occurrence marked ineligible', () => {
+    const { queryByText } = render(
+      <PlannedPaymentCard
+        occurrence={makeOccurrence({ dueDay: 1, canRecord: false })}
+        onPress={jest.fn()}
+        onRecord={jest.fn()}
+        canRecord={false}
+      />,
+    );
+    expect(queryByText('Record')).toBeNull();
   });
 });

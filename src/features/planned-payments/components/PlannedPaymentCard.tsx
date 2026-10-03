@@ -1,238 +1,238 @@
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
-import {
-  Icon,
-  AppIcon,
-  AppSurface,
-  PressScaleTouchable,
-  type IconName,
-  AppText,
-} from '@/src/components/core';
+import { MoneyText } from '@/src/components/shared/MoneyText';
+import { Icon, AppIcon, AppSurface, PressScaleTouchable, AppText } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
-import { Column, Row } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { PlannedPaymentStatus } from '@/src/types/enums';
-import { getNow, getSmartDateLabel } from '@/src/utils/dateUtils';
-import {
-  formatPlannedPaymentInterval,
-  presentPlannedPaymentDue,
-} from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
+import { PlannedPaymentInterval } from '@/src/types/enums';
+import { formatPlannedPaymentInterval } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
 import dayjs from 'dayjs';
-import type { PlannedPaymentObligation } from '@/src/services/planned-payment/plannedPaymentReadService';
-import { formatRecurrence } from '@/src/utils/recurrenceLabels';
-import { getVariantMainColor, type ComponentVariant } from '@/src/utils/style-helpers';
-import { View } from 'react-native';
+import type { PlannedPaymentListOccurrence } from '@/src/services/planned-payment/plannedPaymentReadService';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
 
 export interface PlannedPaymentCardProps {
-  item: PlannedPaymentObligation;
+  occurrence: PlannedPaymentListOccurrence;
   onPress: () => void;
+  onRecord?: () => void;
+  canRecord?: boolean;
+  isRecording?: boolean;
+  isPlanBusy?: boolean;
+  recordError?: string;
 }
 
-export interface PlannedPaymentCardViewModel {
-  name: string;
-  amount: number;
-  currencyCode: string;
-  amountColor: 'error' | 'success' | 'secondary';
-  flowDirection: 'inflow' | 'outflow' | 'transfer' | 'unknown';
-  intervalLabel: string;
-  intervalSummary: string;
-  fromAccountLabel: string;
-  toAccountLabel: string;
-  postingLabel: string;
-  endDateLabel?: string;
-  statusBadge?: {
-    variant: 'default' | 'error' | 'warning' | 'success';
-    icon: IconName;
-    text: string;
-  };
-  dateLabel: string;
-  dueSummary: string;
-  dueColor: ComponentVariant;
-  iconName: IconName;
-}
-
-function getStatusBadge(
-  item: PlannedPaymentObligation,
-  days: number | undefined,
-): PlannedPaymentCardViewModel['statusBadge'] {
-  const strings = AppConfig.strings.plannedPayments;
-  if (item.status === PlannedPaymentStatus.PAUSED) {
-    return { variant: 'default', icon: Icon.Pause, text: strings.statusPaused };
-  }
-  if (days !== undefined && days < 0) {
-    return { variant: 'error', icon: Icon.Alert, text: strings.statusOverdue };
-  }
-  if (days !== undefined && days <= 1) {
-    return { variant: 'warning', icon: Icon.Clock, text: strings.statusDueSoon };
-  }
-  if (item.status === PlannedPaymentStatus.COMPLETED) {
-    return {
-      variant: 'default',
-      icon: Icon.Check,
-      text: item.nextDueOccurrence === undefined ? 'Completed' : 'Schedule ended',
-    };
-  }
-  return undefined;
-}
-
-export function presentPlannedPaymentCard(
-  item: PlannedPaymentObligation,
-  now: number = getNow(),
-): PlannedPaymentCardViewModel {
-  const nextDate = item.nextDueOccurrence;
-  const due = presentPlannedPaymentDue(item, now);
-  const isOverdue = due.days !== undefined && due.days < 0;
-
-  return {
-    name: item.name,
-    amount: item.amount,
-    currencyCode: item.currencyCode,
-    amountColor:
-      item.flowDirection === 'outflow'
-        ? 'error'
-        : item.flowDirection === 'inflow'
-          ? 'success'
-          : 'secondary',
-    flowDirection: item.flowDirection,
-    intervalLabel: formatPlannedPaymentInterval(item),
-    intervalSummary: formatRecurrence(item, 'short'),
-    fromAccountLabel: item.fromAccount?.name ?? 'Unavailable account',
-    toAccountLabel: item.toAccount?.name ?? 'Unavailable account',
-    postingLabel: item.isAutoPost ? 'Auto-post' : 'Manual posting',
-    endDateLabel:
-      item.endDate == null ? undefined : `Ends ${dayjs(item.endDate).format('MMM D, YYYY')}`,
-    statusBadge: getStatusBadge(item, due.days),
-    dateLabel:
-      nextDate === undefined
-        ? AppConfig.strings.plannedPayments.noUpcomingOccurrence
-        : `${isOverdue ? 'Due' : 'Next'}: ${getSmartDateLabel(nextDate)}`,
-    dueSummary:
-      nextDate === undefined || due.days === undefined || isOverdue
-        ? due.label
-        : due.days < 7
-          ? getSmartDateLabel(nextDate)
-          : dayjs(nextDate).format(dayjs(nextDate).isSame(now, 'year') ? 'MMM D' : 'MMM D, YYYY'),
-    dueColor: due.color,
-    iconName:
-      item.flowDirection === 'outflow'
-        ? Icon.TrendingDown
-        : item.flowDirection === 'inflow'
-          ? Icon.TrendingUp
-          : Icon.SwapHorizontal,
-  };
-}
-
-function PlannedPaymentCardComponent({ item, onPress }: PlannedPaymentCardProps) {
+function PlannedPaymentCardComponent({
+  occurrence,
+  onPress,
+  onRecord,
+  canRecord = occurrence.canRecord,
+  isRecording = false,
+  isPlanBusy = false,
+  recordError,
+}: PlannedPaymentCardProps) {
   const { theme } = useTheme();
   const formatMoney = useMoneyFormat();
-  const vm = presentPlannedPaymentCard(item);
-  const dueColor = getVariantMainColor(theme, vm.dueColor);
+  const strings = AppConfig.strings.plannedListRedesign;
+  const item = occurrence.payment;
+  const isOverdue = dayjs(occurrence.date).startOf('day').isBefore(dayjs().startOf('day'));
+  const daysLate = isOverdue
+    ? dayjs().startOf('day').diff(dayjs(occurrence.date).startOf('day'), 'day')
+    : 0;
+  const isDueSoon =
+    !isOverdue && dayjs(occurrence.date).startOf('day').diff(dayjs().startOf('day'), 'day') <= 3;
+  const interval =
+    item.intervalType === PlannedPaymentInterval.MONTHLY && item.intervalN === 1
+      ? undefined
+      : formatPlannedPaymentInterval(item);
+  const amountLabel = formatMoney(occurrence.amount, occurrence.currencyCode);
+  const isIncome = item.flowDirection === 'inflow';
+  const fromLabel = item.fromAccount?.name ?? strings.noAccount;
+  const toLabel = item.toAccount?.name ?? strings.noAccount;
+  const dateBlockColor = isOverdue
+    ? theme.errorLight
+    : isDueSoon
+      ? theme.warningLight
+      : theme.surfaceSecondary;
+  const dateTextColor = isOverdue ? theme.error : isDueSoon ? theme.warning : theme.textSecondary;
 
   return (
-    <PressScaleTouchable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={[
-        vm.name,
-        vm.flowDirection === 'inflow'
-          ? 'Income'
-          : vm.flowDirection === 'outflow'
-            ? 'Expense'
-            : vm.flowDirection === 'transfer'
-              ? 'Transfer'
-              : undefined,
-        formatMoney(vm.amount, vm.currencyCode),
-        vm.intervalLabel,
-        `From ${vm.fromAccountLabel} to ${vm.toAccountLabel}`,
-        vm.statusBadge?.text,
-        vm.dateLabel,
-        vm.postingLabel,
-        vm.endDateLabel,
-      ]
-        .filter(Boolean)
-        .join('. ')}
-      accessibilityHint="Opens planned payment details"
-      style={{ marginBottom: Spacing.sm }}
+    <AppSurface
+      elevation="sm"
+      padding="md"
+      radius="r3"
+      background="surface"
+      borderWidth={1}
+      borderColor="surfaceSecondary"
+      style={styles.card}
     >
-      <AppSurface
-        elevation="sm"
-        padding="md"
-        radius="r3"
-        background="surface"
-        borderWidth={1}
-        borderColor="surfaceSecondary"
-      >
-        <Column gap="sm">
-          <Row justify="space-between" align="flex-start" gap="sm" flexWrap="wrap">
-            <Row gap="sm" align="center" flex={1} style={{ minWidth: '40%' }}>
-              <AppIcon
-                name={vm.iconName}
-                color={getVariantMainColor(theme, vm.amountColor)}
-                size={Size.iconSm}
-              />
-              <AppText variant="body" weight="semibold" numberOfLines={2} style={{ flex: 1 }}>
-                {vm.name}
-              </AppText>
-            </Row>
-
-            <AppText
-              variant="heading"
-              weight="bold"
-              style={{ flexShrink: 0, maxWidth: '100%', marginLeft: 'auto' }}
-            >
-              {formatMoney(vm.amount, vm.currencyCode)}
+      <View style={styles.cardRow}>
+        <PressScaleTouchable
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel={[
+            item.name,
+            isIncome
+              ? strings.incomeRow
+              : item.flowDirection === 'transfer'
+                ? strings.transferRow
+                : strings.outgoingRow,
+            amountLabel,
+            strings.dueDateAccessibility(dayjs(occurrence.date).format('dddd, MMMM D')),
+            strings.fromTo(fromLabel, toLabel),
+            item.isAutoPost ? strings.autoPost : undefined,
+            interval,
+            isOverdue ? strings.daysLate(daysLate) : undefined,
+          ]
+            .filter(Boolean)
+            .join('. ')}
+          accessibilityHint={strings.rowAccessibilityHint}
+          style={styles.rowPress}
+          surfaceStyle={styles.rowPressSurface}
+        >
+          <View style={[styles.dateBlock, { backgroundColor: dateBlockColor }]}>
+            <AppText variant="caption" weight="semibold" style={{ color: dateTextColor }}>
+              {dayjs(occurrence.date).format('ddd')}
             </AppText>
-          </Row>
-
-          <Row align="center" gap="sm">
-            <Row flexShrink={1} style={{ minWidth: 0, maxWidth: '46%' }}>
-              <AccountInlineLabel
-                account={item.fromAccount}
-                placeholder={vm.fromAccountLabel}
-                variant="caption"
-                showIcon
-              />
-            </Row>
-            <AppIcon name={Icon.ArrowRight} size={Size.xxs} color="textSecondary" />
-            <Row flexShrink={1} style={{ minWidth: 0, maxWidth: '46%' }}>
-              <AccountInlineLabel
-                account={item.toAccount}
-                placeholder={vm.toAccountLabel}
-                variant="caption"
-                showIcon
-              />
-            </Row>
-          </Row>
-
-          <Row justify="space-between" align="center" gap="sm" flexWrap="wrap">
-            <Row align="center" gap="sm">
-              <Row align="center" gap="xs">
-                <AppIcon name={Icon.Repeat} size={Size.iconXs} color="textSecondary" />
-                <AppText variant="caption" color="secondary">
-                  {vm.intervalSummary}
-                </AppText>
-              </Row>
-              {item.isAutoPost && (
-                <View accessible accessibilityRole="image" accessibilityLabel={vm.postingLabel}>
-                  <AppIcon name={Icon.Zap} size={Size.iconXs} color="textSecondary" />
-                </View>
-              )}
-            </Row>
-            <Row align="center" gap="xs" style={{ flexShrink: 1, marginLeft: 'auto' }}>
-              <AppIcon
-                name={vm.statusBadge?.icon ?? Icon.Calendar}
-                size={Size.iconXs}
-                color={dueColor}
-              />
-              <AppText variant="caption" weight="medium" style={{ color: dueColor, flexShrink: 1 }}>
-                {vm.dueSummary}
+            <AppText variant="heading" weight="bold" style={{ color: dateTextColor }}>
+              {dayjs(occurrence.date).format('D')}
+            </AppText>
+          </View>
+          <View style={styles.details}>
+            <View style={styles.nameLine}>
+              <AppText variant="body" weight="semibold" style={styles.name}>
+                {item.name}
               </AppText>
-            </Row>
-          </Row>
-        </Column>
-      </AppSurface>
-    </PressScaleTouchable>
+              {item.isAutoPost && (
+                <AppIcon name={Icon.Zap} size={Size.iconXs} color="textSecondary" />
+              )}
+            </View>
+            {isOverdue ? (
+              <AppText variant="caption" weight="semibold" color="error">
+                {strings.daysLate(daysLate)}
+              </AppText>
+            ) : (
+              <View style={styles.flow}>
+                <AccountInlineLabel
+                  account={item.fromAccount}
+                  placeholder={fromLabel}
+                  variant="caption"
+                />
+                <AppIcon name={Icon.ArrowRight} size={Size.xxs} color="textSecondary" />
+                <AccountInlineLabel
+                  account={item.toAccount}
+                  placeholder={toLabel}
+                  variant="caption"
+                />
+              </View>
+            )}
+            {interval && (
+              <AppText variant="caption" color="secondary">
+                {interval}
+              </AppText>
+            )}
+          </View>
+        </PressScaleTouchable>
+        <View style={styles.amountColumn}>
+          <MoneyText
+            amount={occurrence.amount}
+            currencyCode={occurrence.currencyCode}
+            prefix={isIncome ? '+' : undefined}
+            variant="heading"
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.2}
+            weight="bold"
+            style={[styles.amount, { color: isIncome ? theme.income : theme.text }]}
+          />
+          {isOverdue && onRecord && canRecord && (
+            <Pressable
+              onPress={onRecord}
+              disabled={!canRecord || isRecording || isPlanBusy}
+              accessibilityRole="button"
+              accessibilityLabel={strings.recordAccessibility(item.name, amountLabel)}
+              accessibilityState={{
+                disabled: !canRecord || isRecording || isPlanBusy,
+                busy: isRecording,
+              }}
+              style={[styles.recordButton, { backgroundColor: theme.primary }]}
+            >
+              {isRecording ? (
+                <AppText
+                  variant="caption"
+                  weight="semibold"
+                  style={{ color: theme.onPrimary ?? theme.text }}
+                >
+                  {strings.recordBusy}
+                </AppText>
+              ) : (
+                <AppText
+                  variant="bodySmall"
+                  weight="semibold"
+                  style={{ color: theme.onPrimary ?? theme.text }}
+                >
+                  {strings.record}
+                </AppText>
+              )}
+            </Pressable>
+          )}
+        </View>
+      </View>
+      {recordError && (
+        <AppText
+          variant="caption"
+          color="error"
+          accessibilityRole="alert"
+          style={styles.recordError}
+        >
+          {recordError}
+        </AppText>
+      )}
+    </AppSurface>
   );
 }
 
 export const PlannedPaymentCard = PlannedPaymentCardComponent;
+
+const styles = StyleSheet.create({
+  card: { marginBottom: Spacing.sm },
+  cardRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.sm },
+  rowPress: { flexGrow: 1, flexShrink: 1, flexBasis: 190, minWidth: 180 },
+  rowPressSurface: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, minWidth: 0 },
+  dateBlock: {
+    width: 54,
+    minHeight: 56,
+    flexShrink: 0,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xs,
+  },
+  details: { flex: 1, minWidth: 0, gap: Spacing.xs },
+  nameLine: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.xs },
+  name: { flexShrink: 1 },
+  flow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    minWidth: 0,
+  },
+  amountColumn: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 112,
+    minWidth: 0,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+  },
+  amount: { textAlign: 'right', flexShrink: 1, alignSelf: 'stretch' },
+  recordButton: {
+    minHeight: 44,
+    minWidth: 88,
+    paddingHorizontal: Spacing.md,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recordError: { marginTop: Spacing.sm, marginLeft: 54 + Spacing.md },
+});
