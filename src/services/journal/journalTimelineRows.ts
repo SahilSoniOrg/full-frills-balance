@@ -24,17 +24,32 @@ export function journalsToTimelineRows(
 ): JournalTimelineRow[] {
   const { viewer, expandAccountIds } = options ?? {};
 
-  if (expandAccountIds && expandAccountIds.length > 0) {
-    const scoped = new Set(expandAccountIds);
+  const scopedAccountIds =
+    expandAccountIds && expandAccountIds.length > 0
+      ? expandAccountIds
+      : viewer && !viewer.transactionId
+        ? [viewer.accountId]
+        : undefined;
+  if (scopedAccountIds) {
+    const scoped = new Set(scopedAccountIds);
     const rows: JournalTimelineRow[] = [];
 
     for (const journal of journals) {
       const legs = journal.accounts.filter(account => scoped.has(account.id));
+      if (legs.length === 0 && viewer && !expandAccountIds?.length) {
+        rows.push({ journal, viewer, listId: journal.id, selectionId: journal.id });
+      }
       for (const leg of legs) {
         rows.push({
           journal,
-          viewer: { accountId: leg.id },
-          listId: legs.length > 1 ? (`${journal.id}_${leg.id}` as JournalListRowId) : journal.id,
+          viewer: {
+            accountId: leg.id,
+            ...(leg.transactionId ? { transactionId: leg.transactionId } : {}),
+          },
+          listId:
+            legs.length > 1
+              ? (`${journal.id}_${leg.transactionId ?? leg.id}` as JournalListRowId)
+              : journal.id,
           selectionId: journal.id,
         });
       }

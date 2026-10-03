@@ -6,16 +6,26 @@ import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalDisplayType, SemanticType } from '@/src/types/enums';
 import { Icon } from '@/src/types/domainIcons';
 import {
+  convertJournalCurrencyAmount,
+  resolveJournalFxRate,
+} from '@/src/domain/accounting/journalFx';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
+import { getAccountTypeVariant } from '@/src/utils/accountCategory';
+import {
   JournalTimelineIconKey,
   JournalTimelineItem,
   JournalTimelinePresentation,
   JournalTimelineViewer,
+  JournalTimelineLeg,
+  JournalTimelineAccountFlow,
 } from '@/src/types/journalTimeline';
 
 const ROUTINE_SEMANTIC_TYPES = new Set<SemanticType>([
   SemanticType.TRANSFER,
   SemanticType.PURCHASE,
   SemanticType.INCOME_RECEIVED,
+  SemanticType.DEBT_PAYMENT,
 ]);
 const ROUTINE_DISPLAY_TYPES = new Set<JournalDisplayType>([
   JournalDisplayType.INCOME,
@@ -72,6 +82,83 @@ function toTimelinePresentation(
   };
 }
 
+function buildAccountFlow(
+  journal: EnrichedJournal,
+  viewerAccount?: EnrichedJournal['accounts'][number],
+): JournalTimelineAccountFlow {
+  const journalPrecision = CurrencyFormatter.getPrecisionFallback(journal.currencyCode);
+  const legs = journal.accounts.map((account, index) => {
+    const currencyCode = account.currencyCode?.trim().toUpperCase();
+    const amount =
+      account.amount != null && Number.isFinite(account.amount) && account.amount >= 0
+        ? account.amount
+        : undefined;
+    const rate = currencyCode
+      ? resolveJournalFxRate({
+          accountCurrency: currencyCode,
+          journalCurrency: journal.currencyCode,
+          importedRate: account.exchangeRate,
+        }).rate
+      : undefined;
+    const journalAmount =
+      amount != null && rate != null && currencyCode
+        ? convertJournalCurrencyAmount({
+            nativeAmount: amount,
+            nativePrecision: CurrencyFormatter.getPrecisionFallback(currencyCode),
+            exchangeRate: rate,
+            journalPrecision,
+          }).journalAmount
+        : undefined;
+    const leg: JournalTimelineLeg = {
+      id: account.transactionId ?? `${account.id}:${account.role}:${index}`,
+      accountId: account.id,
+      name: account.name,
+      role: account.role,
+      amount,
+      currencyCode,
+      icon: account.icon,
+      color: account.color,
+      fallbackIcon: getAccountFallbackIcon(account.accountType),
+      variant: getAccountTypeVariant(account.accountType),
+    };
+    return { account, leg, journalAmount };
+  });
+
+  const byRole = (role: JournalTimelineLeg['role']) => {
+    const group = legs.filter(item => item.leg.role === role);
+    // Unknown historical rates cannot be compared to native amounts. Keep a stable order.
+    const allComparable = group.every(item => item.journalAmount != null);
+    return group.sort((a, b) => {
+      const amountOrder = allComparable ? b.journalAmount! - a.journalAmount! : 0;
+      return (
+        amountOrder ||
+        a.leg.accountId.localeCompare(b.leg.accountId) ||
+        a.leg.id.localeCompare(b.leg.id)
+      );
+    });
+  };
+  const sources = byRole('SOURCE');
+  const destinations = byRole('DESTINATION');
+  const neutral = byRole('NEUTRAL');
+  const primary = viewerAccount ? legs.find(item => item.account === viewerAccount) : sources[0];
+  const peers = (group: typeof legs) =>
+    group
+      .filter(item => (viewerAccount ? item.leg.accountId !== viewerAccount.id : item !== primary))
+      .map(item => item.leg);
+  const currencies = new Set([
+    journal.currencyCode.trim().toUpperCase(),
+    ...legs.map(item => item.leg.currencyCode).filter(Boolean),
+  ]);
+
+  return {
+    primaryAccount: primary?.leg,
+    sources: peers(sources),
+    destinations: peers(destinations),
+    neutral: peers(neutral),
+    showCurrencyCodes: currencies.size > 1,
+  };
+}
+
 export function mapJournalToTimelineItem(
   journal: EnrichedJournal,
   viewer?: JournalTimelineViewer,
@@ -83,7 +170,13 @@ export function mapJournalToTimelineItem(
       : AppConfig.strings.journal.transaction;
 
   if (viewer) {
-    const viewerAccount = journal.accounts.find(a => a.id === viewer.accountId);
+    const viewerAccount = journal.accounts.find(
+      a =>
+        a.id === viewer.accountId &&
+        (!viewer.transactionId || a.transactionId === viewer.transactionId),
+    );
+    // A stale account scope must not relabel the whole journal as an account movement.
+    if (!viewerAccount) return mapJournalToTimelineItem(journal);
     const isIncrease = viewerAccount?.role === 'DESTINATION';
     const chrome = ledgerLineChrome(isIncrease);
     const presentation = toTimelinePresentation(
@@ -102,6 +195,7 @@ export function mapJournalToTimelineItem(
       transactionDate: journal.journalDate,
       presentation,
       badges,
+      accountFlow: buildAccountFlow(journal, viewerAccount),
       notes: journal.notes,
     };
   }
@@ -122,6 +216,7 @@ export function mapJournalToTimelineItem(
     transactionDate: journal.journalDate,
     presentation,
     badges,
+    accountFlow: buildAccountFlow(journal),
     notes: journal.notes,
   };
 }
