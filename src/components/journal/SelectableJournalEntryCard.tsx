@@ -39,6 +39,9 @@ const SelectionIndicator = memo(
         borderRadius="full"
         alignItems="center"
         justifyContent="center"
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
         background={isSelected ? undefined : 'transparent'}
         unsafe_backgroundRaw={isSelected ? color : undefined}
         style={[
@@ -67,10 +70,14 @@ const SelectableJournalEntryCardComponent = ({
   return (
     <JournalEntryCard
       {...cardProps}
-      cardStyle={{
-        borderWidth: isSelected ? SELECTION_CARD_BORDER_WIDTH : 0,
-        borderColor: isSelected ? theme.primary : 'transparent',
-      }}
+      isSelected={isSelected}
+      cardStyle={[
+        cardProps.cardStyle,
+        {
+          borderWidth: isSelected ? SELECTION_CARD_BORDER_WIDTH : 0,
+          borderColor: isSelected ? theme.primary : 'transparent',
+        },
+      ]}
       overlay={
         isSelected || isSelectionModeActive ? (
           <SelectionIndicator
@@ -94,8 +101,7 @@ const styles = StyleSheet.create({
   selectionIndicator: {
     position: 'absolute',
     right: Spacing.md,
-    top: '50%',
-    marginTop: -SELECTION_INDICATOR_SIZE / 2,
+    top: Spacing.lg,
     zIndex: 10,
   },
 });

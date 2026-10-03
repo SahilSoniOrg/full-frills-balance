@@ -1,17 +1,40 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppCard, AppIcon, AppText, Badge, PressScaleTouchable } from '@/src/components/core';
-import { Opacity, Size, Spacing, Typography } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
-import { Box, Inline, Inset, Stack } from '@/src/design-system';
+import { Opacity, Shape, Size, Spacing } from '@/src/constants';
+import {
+  blendColors,
+  getContrastRatio,
+  getLuminance,
+  getReadableColor,
+  withOpacity,
+} from '@/src/utils/color-math';
+import { Inline, Inset, Stack } from '@/src/design-system';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatClockTime, formatDate } from '@/src/utils/dateUtils';
-import type { JournalEntryCardProps } from '@/src/types/journalEntryCard';
+import { JournalAccountFlow } from './JournalAccountFlow';
+import { JournalEntryFooterRow } from './JournalEntryFooterRow';
+import type { JournalEntryCardProps, JournalEntryLeg } from '@/src/types/journalEntryCard';
 import { memo, useMemo } from 'react';
-import { Keyboard, StyleSheet, View } from 'react-native';
+import { Keyboard, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 export type { JournalEntryBadge, JournalEntryCardProps } from '@/src/types/journalEntryCard';
+
+function legDirection(leg: JournalEntryLeg): string {
+  return leg.role === 'SOURCE' ? 'From' : leg.role === 'DESTINATION' ? 'To' : 'Account';
+}
+
+function readableColor(
+  preferred: string,
+  background: string,
+  fallback: string,
+  minimumRatio: number,
+): string {
+  return getContrastRatio(getLuminance(preferred), getLuminance(background)) >= minimumRatio
+    ? preferred
+    : fallback;
+}
 
 const JournalEntryCardComponent = ({
   title,
@@ -20,7 +43,9 @@ const JournalEntryCardComponent = ({
   transactionDate,
   dateDisplay = 'full',
   presentation,
+  accountFlow,
   badges = [],
+  isSelected,
   notes,
   onPress,
   onLongPress,
@@ -28,28 +53,50 @@ const JournalEntryCardComponent = ({
   cardStyle,
 }: JournalEntryCardProps) => {
   const { theme, themeMode } = useTheme();
+  const { fontScale } = useWindowDimensions();
   const { resolvedHourCycle } = useHourCyclePrefs();
   const formatMoney = useMoneyFormat();
   const isPressable = onPress != null || onLongPress != null;
-
   const typeColor = theme[presentation.typeColor as keyof typeof theme] as string;
-
+  const typeIconBackground = blendColors(typeColor, theme.surface, Opacity.soft);
+  const typeIconColor = getReadableColor(typeColor, typeIconBackground, 3);
+  const amountColor = readableColor(typeColor, theme.surface, theme.text, 4.5);
+  const typeBadgeOpacity = themeMode === 'dark' ? Opacity.muted : Opacity.soft;
+  const typeBadgeTextColor = readableColor(
+    typeColor,
+    blendColors(typeColor, theme.surface, typeBadgeOpacity),
+    theme.text,
+    4.5,
+  );
   const formattedDate = useMemo(
     () => formatDate(transactionDate, { includeTime: true, hourCycle: resolvedHourCycle }),
     [transactionDate, resolvedHourCycle],
   );
   const displayedDate =
     dateDisplay === 'time' ? formatClockTime(transactionDate, resolvedHourCycle) : formattedDate;
+  const describeLeg = (leg: JournalEntryLeg) => `${legDirection(leg)} ${leg.name}`;
+  const accountLegs = accountFlow
+    ? [
+        ...(accountFlow.primaryAccount ? [accountFlow.primaryAccount] : []),
+        ...accountFlow.sources,
+        ...accountFlow.destinations,
+        ...accountFlow.neutral,
+      ]
+    : [];
+  const accountLabels = accountFlow
+    ? accountLegs.map(describeLeg)
+    : badges.map(badge => badge.text);
   const accessibilityLabel = [
     title,
     presentation.label,
     formatMoney(amount, currencyCode, { prefix: presentation.amountPrefix }),
-    ...badges.map(badge => badge.text),
+    ...accountLabels,
     formattedDate,
     notes,
   ]
     .filter(Boolean)
     .join('. ');
+  const accessibilityState = isSelected == null ? undefined : { selected: isSelected };
 
   const body = (
     <AppCard
@@ -59,74 +106,43 @@ const JournalEntryCardComponent = ({
       radius="r2"
       accessible={!isPressable}
       accessibilityLabel={!isPressable ? accessibilityLabel : undefined}
+      accessibilityState={!isPressable ? accessibilityState : undefined}
       style={[styles.container, { backgroundColor: theme.surface }, cardStyle]}
     >
-      <Inset space="lg">
-        <Stack gap="md" style={overlay != null ? styles.selectionContent : undefined}>
-          {(presentation.showTypeBadge || badges.length > 0) && (
-            <Inline gap="sm" wrap>
-              {presentation.showTypeBadge && (
-                <Badge
-                  testID="transaction-type-badge"
-                  variant="default"
-                  size="sm"
-                  backgroundColor={withOpacity(
-                    typeColor,
-                    themeMode === 'dark' ? Opacity.muted : Opacity.soft,
-                  )}
-                  textColor={typeColor}
-                  icon={presentation.typeIcon}
-                >
-                  {presentation.label}
-                </Badge>
-              )}
-
-              {badges.map((b, i) => (
-                <Badge
-                  key={b.id ?? `${b.text}-${i}`}
-                  testID="transaction-account-badge"
-                  variant={b.variant}
-                  size="sm"
-                  backgroundColor={
-                    b.colorKey ? (theme[b.colorKey as keyof typeof theme] as string) : undefined
-                  }
-                  icon={b.icon}
-                  fallbackIcon={b.fallbackIcon}
-                  style={styles.accountBadge}
-                >
-                  {b.text}
-                </Badge>
-              ))}
-            </Inline>
-          )}
-
-          <Stack gap="xs">
-            <AppText variant="body" weight="bold" testID="journal-entry-card-title">
-              {title}
-            </AppText>
-
-            {notes && (
-              <AppText variant="caption" color="secondary" numberOfLines={2} style={styles.notes}>
-                {notes}
-              </AppText>
-            )}
-          </Stack>
-
-          <Inline align="center" justify="space-between" space="sm" wrap>
-            <Inline align="center" space="sm" style={styles.amountLine}>
-              <Box
-                width={Size.iconLg}
-                height={Size.iconLg}
-                borderRadius="full"
-                alignItems="center"
-                justifyContent="center"
-                unsafe_backgroundRaw={withOpacity(typeColor, Opacity.soft)}
+      <Inset horizontal="md" vertical="lg">
+        <Stack gap="md">
+          <View style={[styles.header, overlay != null ? styles.selectionHeader : undefined]}>
+            <View style={[styles.identity, fontScale > 1 ? styles.enlargedIdentity : undefined]}>
+              <View
+                style={[styles.typeIcon, { backgroundColor: typeIconBackground }]}
                 accessibilityElementsHidden
                 importantForAccessibility="no-hide-descendants"
               >
-                <AppIcon name={presentation.typeIcon} size={Size.iconXs} color={typeColor} />
-              </Box>
-
+                <AppIcon name={presentation.typeIcon} size={Size.iconSm} color={typeIconColor} />
+              </View>
+              <Stack gap="xs" style={styles.headerContent}>
+                <AppText
+                  variant="body"
+                  weight="bold"
+                  numberOfLines={2}
+                  testID="journal-entry-card-title"
+                >
+                  {title}
+                </AppText>
+                {notes ? (
+                  <AppText
+                    variant="caption"
+                    color="secondary"
+                    numberOfLines={2}
+                    style={styles.shrink}
+                  >
+                    {notes}
+                  </AppText>
+                ) : null}
+              </Stack>
+            </View>
+            <Stack gap="xs" align="flex-end" style={styles.amountColumn}>
+              {/* Buffer the line height so native fitting tolerates fractional selection frames. */}
               <MoneyText
                 amount={amount}
                 currencyCode={currencyCode}
@@ -134,16 +150,65 @@ const JournalEntryCardComponent = ({
                 variant="xl"
                 weight="bold"
                 tabular
-                style={{ color: typeColor, flexShrink: 1 }}
+                align="right"
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.65}
+                style={{ color: amountColor, minHeight: Math.ceil(Size.lg * fontScale) }}
               />
-            </Inline>
+              {accountFlow?.showCurrencyCodes && (
+                <AppText variant="caption" color="secondary">
+                  {currencyCode}
+                </AppText>
+              )}
+            </Stack>
+          </View>
+          {presentation.showTypeBadge && (
+            <Badge
+              testID="transaction-type-badge"
+              variant="default"
+              size="sm"
+              backgroundColor={withOpacity(typeColor, typeBadgeOpacity)}
+              textColor={typeBadgeTextColor}
+              style={styles.accountBadge}
+            >
+              {presentation.label}
+            </Badge>
+          )}
 
-            <AppText variant="caption" color="tertiary" style={styles.date}>
-              {displayedDate}
-            </AppText>
-          </Inline>
+          {accountFlow ? (
+            <JournalAccountFlow
+              legs={accountLegs}
+              primaryId={accountFlow.primaryAccount?.id}
+              timestamp={displayedDate}
+            />
+          ) : (
+            <JournalEntryFooterRow timestamp={displayedDate}>
+              {badges.length > 0 ? (
+                <Inline gap="xs" wrap>
+                  {badges.map((badge, index) => (
+                    <Badge
+                      key={badge.id ?? `${badge.text}-${index}`}
+                      testID="transaction-account-badge"
+                      variant={badge.variant}
+                      size="sm"
+                      icon={badge.icon}
+                      fallbackIcon={badge.fallbackIcon}
+                      backgroundColor={
+                        badge.colorKey
+                          ? (theme[badge.colorKey as keyof typeof theme] as string)
+                          : undefined
+                      }
+                      style={styles.accountBadge}
+                    >
+                      {badge.text}
+                    </Badge>
+                  ))}
+                </Inline>
+              ) : null}
+            </JournalEntryFooterRow>
+          )}
         </Stack>
-
         {overlay}
       </Inset>
     </AppCard>
@@ -163,34 +228,45 @@ const JournalEntryCardComponent = ({
         delayLongPress={350}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
+        accessibilityState={accessibilityState}
         style={styles.wrapper}
       >
         {body}
       </PressScaleTouchable>
     );
   }
-
   return <View style={styles.wrapper}>{body}</View>;
 };
 
 export const JournalEntryCard = memo(JournalEntryCardComponent);
-
 JournalEntryCard.displayName = 'JournalEntryCard';
 
 const styles = StyleSheet.create({
-  wrapper: {
-    paddingBottom: Spacing.sm,
+  wrapper: { paddingBottom: Spacing.lg },
+  container: { overflow: 'hidden' },
+  header: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: Spacing.md },
+  identity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    flexGrow: 1,
+    flexBasis: '50%',
+    minWidth: 0,
   },
-  container: {
-    overflow: 'hidden',
+  enlargedIdentity: { flexBasis: '100%' },
+  typeIcon: {
+    width: Size.lg,
+    height: Size.lg,
+    borderRadius: Shape.radius.md,
+    borderCurve: 'continuous',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    flexShrink: 0,
   },
-  notes: {
-    opacity: Opacity.heavy,
-  },
-  selectionContent: { paddingRight: Size.md },
+  headerContent: { flex: 1, minWidth: 0 },
+  amountColumn: { flexShrink: 1, maxWidth: '100%', marginLeft: 'auto' },
+  selectionHeader: { paddingRight: Size.md + Spacing.sm },
   accountBadge: { maxWidth: '100%', flexShrink: 1 },
-  amountLine: { flexShrink: 1, minWidth: 0, maxWidth: '100%' },
-  date: {
-    fontSize: Typography.sizes.xs,
-  },
+  shrink: { flexShrink: 1, minWidth: 0 },
 });
