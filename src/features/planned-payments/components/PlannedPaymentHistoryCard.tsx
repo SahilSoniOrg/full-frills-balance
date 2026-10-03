@@ -1,40 +1,54 @@
+import { TouchableOpacity, View } from 'react-native';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { Icon, AppIcon, AppSurface, Badge, IconName, AppText } from '@/src/components/core';
-import { Opacity } from '@/src/constants';
+import { MoneyText } from '@/src/components/shared/MoneyText';
+import { AppIcon, AppText, Icon, type IconName } from '@/src/components/core';
+import { AppConfig, Opacity } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDate } from '@/src/utils/dateUtils';
-import { TouchableOpacity } from 'react-native';
-import { ComponentVariant, getVariantMainColor } from '@/src/utils/style-helpers';
+import type { ComponentVariant } from '@/src/utils/style-helpers';
+import { getVariantMainColor } from '@/src/utils/style-helpers';
+import type { JournalId } from '@/src/types/ids';
+
+const copy = AppConfig.strings.plannedDetailRedesign;
 
 export interface PlannedPaymentHistoryCardProps {
-  journalId: string;
-  journalTitle: string;
+  journalId: JournalId;
   journalAmount: number;
   currencyCode: string;
   journalDate: number | Date;
-  plannedAmount: number;
-  plannedCurrencyCode?: string;
+  journalTitle: string;
   plannedTitle: string;
-  presentation: { label: string; typeIcon: IconName; typeColor: ComponentVariant };
-  isOverdue?: boolean;
+  plannedAmount: number;
+  plannedCurrencyCode: string;
+  presentation: {
+    label: string;
+    subtitle: string;
+    color: ComponentVariant;
+    dotIcon: IconName;
+    isSkipped: boolean;
+    differenceAmount?: number;
+    differenceCurrencyCode?: string;
+    differenceDirection?: 'more' | 'less';
+    expectedAmount?: number;
+    expectedCurrencyCode?: string;
+  };
   isSelected?: boolean;
   isSelectionModeActive?: boolean;
   onPress?: () => void;
   onLongPress?: () => void;
 }
 
-/** Show the occurrence first; keep differences from the rule readable without repeating it. */
 export function PlannedPaymentHistoryCard({
-  journalTitle,
+  journalId,
   journalAmount,
   currencyCode,
   journalDate,
-  plannedAmount,
-  plannedCurrencyCode = currencyCode,
+  journalTitle,
   plannedTitle,
+  plannedAmount,
+  plannedCurrencyCode,
   presentation,
-  isOverdue,
   isSelected,
   isSelectionModeActive,
   onPress,
@@ -42,81 +56,113 @@ export function PlannedPaymentHistoryCard({
 }: PlannedPaymentHistoryCardProps) {
   const { theme } = useTheme();
   const formatMoney = useMoneyFormat();
-  const amountChanged =
-    currencyCode !== plannedCurrencyCode || Math.abs(journalAmount - plannedAmount) > 0.01;
-  const titleChanged = journalTitle !== plannedTitle;
   const date = formatDate(journalDate);
-  const amount = formatMoney(journalAmount, currencyCode);
+  const formattedAmount = presentation.isSkipped ? '—' : formatMoney(journalAmount, currencyCode);
+  const expectedAmount =
+    presentation.expectedAmount ??
+    (currencyCode !== plannedCurrencyCode ? plannedAmount : undefined);
+  const expectedCurrencyCode =
+    presentation.expectedCurrencyCode ?? (expectedAmount == null ? undefined : plannedCurrencyCode);
+  const subtitle =
+    presentation.differenceAmount != null && presentation.differenceCurrencyCode
+      ? presentation.differenceDirection === 'more'
+        ? copy.paidMore(
+            formatMoney(presentation.differenceAmount, presentation.differenceCurrencyCode),
+          )
+        : copy.paidLess(
+            formatMoney(presentation.differenceAmount, presentation.differenceCurrencyCode),
+          )
+      : expectedAmount != null && expectedCurrencyCode
+        ? `${presentation.subtitle} · ${copy.usualAmount} ${formatMoney(expectedAmount, expectedCurrencyCode)}`
+        : presentation.subtitle;
+  const titleChanged = journalTitle !== plannedTitle;
+
   const content = (
-    <Column padding="md" gap="sm">
-      <Row align="center" justify="space-between" gap="sm" flexWrap="wrap">
-        <Row align="center" gap="xs" flexShrink={1}>
-          {isSelectionModeActive && (
-            <AppIcon
-              name={isSelected ? Icon.CheckSquare : Icon.Square}
-              size={18}
-              color={isSelected ? theme.primary : theme.textTertiary}
-            />
-          )}
-          <AppText variant="body" weight="semibold">
-            {date}
-          </AppText>
-        </Row>
-        <Badge variant={isOverdue ? 'error' : 'default'} size="sm">
-          {presentation.label}
-        </Badge>
-      </Row>
-      <Row align="center" gap="xs">
-        <AppIcon
-          name={presentation.typeIcon}
-          size={18}
-          color={getVariantMainColor(theme, presentation.typeColor)}
-        />
-        <AppText
-          variant="subheading"
-          weight="bold"
-          style={{ flexShrink: 1 }}
-          color={presentation.typeColor}
-        >
-          {amount}
-        </AppText>
-      </Row>
-      {amountChanged && (
-        <AppText variant="caption" color="secondary">
-          Scheduled amount: {formatMoney(plannedAmount, plannedCurrencyCode)}
-        </AppText>
-      )}
-      {titleChanged && (
-        <AppText variant="body" color="secondary">
-          {journalTitle}
-        </AppText>
-      )}
-    </Column>
-  );
-  return (
-    <AppSurface
-      elevation="sm"
-      padding="none"
-      radius="r2"
-      borderWidth={isSelected ? 2 : isOverdue ? 1 : undefined}
-      borderColor={isSelected ? 'primary' : isOverdue ? 'error' : undefined}
-      overflow="hidden"
+    <Row
+      align="center"
+      gap="sm"
+      flexWrap="wrap"
+      paddingHorizontal="md"
+      paddingVertical="sm"
+      style={{ minHeight: 64 }}
     >
-      {onPress || onLongPress ? (
-        <TouchableOpacity
-          onPress={onPress}
-          onLongPress={onLongPress}
-          delayLongPress={200}
-          activeOpacity={Opacity.heavy}
-          accessibilityRole="button"
-          accessibilityLabel={`${date}, ${presentation.label}, ${amount}${titleChanged ? `, ${journalTitle}` : ''}`}
-          accessibilityState={isSelectionModeActive ? { selected: !!isSelected } : undefined}
-        >
-          {content}
-        </TouchableOpacity>
+      {isSelectionModeActive ? (
+        <AppIcon
+          name={isSelected ? Icon.CheckSquare : Icon.Square}
+          size={20}
+          color={isSelected ? theme.primary : theme.textTertiary}
+        />
       ) : (
-        content
+        <View
+          accessible={false}
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: 11,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: theme.surfaceSecondary,
+          }}
+        >
+          <AppIcon
+            name={presentation.dotIcon}
+            size={14}
+            color={getVariantMainColor(theme, presentation.color)}
+          />
+        </View>
       )}
-    </AppSurface>
+      <Column flexGrow={1} flexShrink={1} flexBasis={120} gap="xs" style={{ minWidth: 0 }}>
+        <AppText variant="body" weight="semibold" color={presentation.color}>
+          {date}
+        </AppText>
+        <AppText
+          variant="caption"
+          color={presentation.color === 'warning' ? 'warning' : 'secondary'}
+        >
+          {subtitle}
+        </AppText>
+        {titleChanged && (
+          <AppText variant="caption" color="secondary">
+            {journalTitle}
+          </AppText>
+        )}
+      </Column>
+      {presentation.isSkipped ? (
+        <AppText variant="body" color="secondary">
+          —
+        </AppText>
+      ) : (
+        <MoneyText
+          amount={journalAmount}
+          currencyCode={currencyCode}
+          variant="body"
+          weight="semibold"
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.2}
+          style={{ maxWidth: '100%', flexShrink: 1, marginLeft: 'auto' }}
+        />
+      )}
+    </Row>
+  );
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={200}
+      activeOpacity={Opacity.heavy}
+      accessibilityRole="button"
+      accessibilityLabel={
+        titleChanged
+          ? `${copy.historyRowLabel(date, presentation.label, formattedAmount)}, ${journalTitle}`
+          : copy.historyRowLabel(date, presentation.label, formattedAmount)
+      }
+      testID={`planned-history-${journalId}`}
+      accessibilityState={isSelectionModeActive ? { selected: !!isSelected } : undefined}
+      style={isSelected ? { backgroundColor: theme.surfaceSecondary } : undefined}
+    >
+      {content}
+    </TouchableOpacity>
   );
 }

@@ -2,6 +2,7 @@
 import { commitmentsRedesignStrings } from './domains/commitmentsRedesignStrings';
 import { budgetDetailRedesignStrings } from './domains/budgetDetailRedesignStrings';
 import { plannedListRedesignStrings } from './domains/plannedListRedesignStrings';
+import { plannedDetailRedesignStrings } from './domains/plannedDetailRedesignStrings';
 import type { AuditEntityType } from '@/src/types/enums';
 import type { AuditEventType } from '@/src/types/auditEvents';
 
@@ -12,9 +13,10 @@ function defineAuditEventLabels<T extends Record<AuditEventType, string> & Recor
 }
 
 export const UI_STRINGS = {
-  plannedListRedesign: plannedListRedesignStrings,
   commitmentsRedesign: commitmentsRedesignStrings,
   budgetDetailRedesign: budgetDetailRedesignStrings,
+  plannedListRedesign: plannedListRedesignStrings,
+  plannedDetailRedesign: plannedDetailRedesignStrings,
   common: {
     loading: 'Loading…',
     loadingMore: 'Loading…',

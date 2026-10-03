@@ -1,79 +1,265 @@
-import { MoneyText } from '@/src/components/shared/MoneyText';
-import { SelectionActionBar } from '@/src/components/shared/SelectionActionBar';
+import dayjs from 'dayjs';
+import { useWindowDimensions } from 'react-native';
+import { AppConfig, Size } from '@/src/constants';
 import {
-  Icon,
   AppButton,
   AppIcon,
-  IconButton,
   AppSurface,
-  Badge,
-  IvyIcon,
   AppText,
+  Badge,
+  Icon,
   LoadingView,
 } from '@/src/components/core';
+import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
+import { MoneyText } from '@/src/components/shared/MoneyText';
+import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
+import { SelectionActionBar } from '@/src/components/shared/SelectionActionBar';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { AppConfig, Size } from '@/src/constants';
-import { Column, Row, Separator } from '@/src/design-system';
-import { PlannedPaymentHistoryCard } from './PlannedPaymentHistoryCard';
-import { PlannedPaymentActivityOverview } from './PlannedPaymentActivityOverview';
-import { DetailDisclosure } from '@/src/components/shared/DetailDisclosure';
-import {
-  getPlannedPaymentHistoryPresentation,
-  groupPlannedPaymentEntries,
-} from '../hooks/plannedPaymentDetailsPresentation';
-import { PlannedPaymentDetailsViewModel } from '../hooks/usePlannedPaymentDetailsViewModel';
 import { JournalListModals } from '@/src/features/journal';
-import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
-import { getNow } from '@/src/utils/dateUtils';
-import { getVariantMainColor } from '@/src/utils/style-helpers';
+import { Column, Row, Separator } from '@/src/design-system';
 import { PlannedPaymentStatus } from '@/src/types/enums';
-import type { EnrichedJournal } from '@/src/types/domainReadModels';
+import { getNow } from '@/src/utils/dateUtils';
+import type { PlannedPaymentDetailsViewModel } from '../hooks/usePlannedPaymentDetailsViewModel';
+import { PlannedPaymentActivityOverview } from './PlannedPaymentActivityOverview';
+import { plannedMoneyDiffers } from '../hooks/plannedPaymentDetailsPresentation';
+
+const copy = AppConfig.strings.plannedDetailRedesign;
+
+function getDaysUntil(date?: number) {
+  return date == null
+    ? undefined
+    : dayjs(date).startOf('day').diff(dayjs(getNow()).startOf('day'), 'day');
+}
 
 export function PlannedPaymentDetailsView({
   chrome,
   ...vm
 }: PlannedPaymentDetailsViewModel & { chrome: ScreenNavChrome }) {
   const { theme, history = [], selectedIds, isSelectionModeActive } = vm;
-  const { scheduled, recorded } = groupPlannedPaymentEntries(history);
+  const formatMoney = useMoneyFormat();
+  const { fontScale } = useWindowDimensions();
+  const largeText = fontScale > 1.3;
+  const pending = !!vm.pendingAction;
   const hasOccurrence = !!vm.onPost;
+  const isPaused = vm.status === PlannedPaymentStatus.PAUSED;
+  const isEnded = vm.status === PlannedPaymentStatus.COMPLETED;
+  const hasOutstanding = !!vm.outstandingJournalId || hasOccurrence;
+  const isEndedWithoutOutstanding = isEnded && !hasOutstanding;
+  const occurrence = vm.occurrenceAmount;
   const occurrenceDiffers =
-    vm.occurrenceAmount &&
-    (vm.occurrenceAmount.amount !== vm.amount ||
-      vm.occurrenceAmount.currencyCode !== vm.currencyCode);
-  const headlineOccurrence =
-    vm.status !== PlannedPaymentStatus.PAUSED && (hasOccurrence || vm.outstandingJournalId)
-      ? vm.occurrenceAmount
-      : undefined;
-  const entriesSummary = (entries: EnrichedJournal[]) =>
-    vm.isLoadingHistory
-      ? 'Loading activity…'
-      : `${entries.length} loaded ${entries.length === 1 ? 'entry' : 'entries'}${vm.hasMore ? ' · earlier entries available' : ''}`;
-  const renderEntries = (entries: EnrichedJournal[]) =>
-    entries.map(journal => {
-      const presentation = getPlannedPaymentHistoryPresentation(journal, getNow());
-      return (
-        <PlannedPaymentHistoryCard
-          key={journal.id}
-          journalId={journal.id}
-          journalTitle={journal.description || 'Transaction'}
-          journalAmount={journal.totalAmount}
-          currencyCode={journal.currencyCode}
-          journalDate={journal.journalDate}
-          plannedAmount={vm.rawAmount ?? 0}
-          plannedCurrencyCode={vm.currencyCode}
-          plannedTitle={vm.rawName ?? ''}
-          presentation={presentation}
-          isOverdue={presentation.isOverdue}
-          isSelected={selectedIds.has(journal.id)}
-          isSelectionModeActive={isSelectionModeActive}
-          onLongPress={() => vm.onLongPressItem(journal.id)}
-          onPress={() =>
-            isSelectionModeActive ? vm.toggleSelection(journal.id) : vm.onOpenJournal(journal.id)
-          }
-        />
-      );
-    });
+    !!occurrence &&
+    vm.amount != null &&
+    !!vm.currencyCode &&
+    plannedMoneyDiffers(occurrence.amount, occurrence.currencyCode, vm.amount, vm.currencyCode);
+  const daysUntil = getDaysUntil(vm.showcasedOccurrenceDate ?? vm.nextOccurrenceDate);
+  const eyebrow = isPaused
+    ? vm.pausedSinceDate == null
+      ? copy.paused
+      : copy.pausedSince(dayjs(vm.pausedSinceDate).format('MMM D'))
+    : isEndedWithoutOutstanding
+      ? vm.activitySummary?.lastRecorded
+        ? copy.lastPayment(dayjs(vm.activitySummary.lastRecorded.journalDate).format('MMM YYYY'))
+        : copy.ended
+      : daysUntil != null && daysUntil < 0
+        ? copy.missedPayment
+        : copy.nextPayment;
+  const urgency = isPaused
+    ? copy.paused
+    : isEndedWithoutOutstanding
+      ? copy.ended
+      : daysUntil == null
+        ? (vm.dueLabel ?? '')
+        : daysUntil < 0
+          ? copy.daysLate(Math.abs(daysUntil))
+          : daysUntil === 0
+            ? copy.dueToday
+            : daysUntil <= 3
+              ? daysUntil === 1
+                ? copy.dueTomorrow
+                : copy.dueInDays(daysUntil)
+              : copy.inDays(daysUntil);
+  const dueDateText = vm.showcasedOccurrenceDate ?? vm.nextOccurrenceDate;
+  const formattedDueDate = dueDateText
+    ? dayjs(dueDateText).format('dddd, MMM D')
+    : (vm.nextOccurrenceText ?? '');
+
+  const accountChip = (account: typeof vm.fromAccount, placeholder: string, label: string) => (
+    <AppButton
+      key={label}
+      variant="ghost"
+      onPress={account ? () => vm.onOpenAccount(account.id) : undefined}
+      disabled={!account}
+      accessibilityRole="button"
+      accessibilityLabel={account ? copy.openAccount(account.name) : placeholder}
+      buttonStyle={{
+        minHeight: 44,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        backgroundColor: theme.surfaceSecondary,
+        borderRadius: 18,
+      }}
+    >
+      <AccountInlineLabel
+        account={account}
+        placeholder={placeholder}
+        variant="caption"
+        weight="semibold"
+        pillSize="sm"
+        showIcon
+      />
+    </AppButton>
+  );
+
+  const actionCard = (
+    <AppSurface elevation="sm" padding="lg" radius="r2">
+      <Column gap="md">
+        <Row align="center" justify="space-between" gap="sm" flexWrap="wrap">
+          <AppText
+            variant="body"
+            weight="semibold"
+            color={isPaused || isEndedWithoutOutstanding ? 'secondary' : 'text'}
+          >
+            {eyebrow}
+          </AppText>
+          <Badge
+            variant={
+              isPaused || isEndedWithoutOutstanding
+                ? 'default'
+                : daysUntil != null && daysUntil < 0
+                  ? 'error'
+                  : daysUntil != null && daysUntil <= 3
+                    ? 'warning'
+                    : 'default'
+            }
+            size="sm"
+          >
+            {urgency}
+          </Badge>
+        </Row>
+
+        {isEndedWithoutOutstanding && vm.activitySummary ? (
+          <Column gap="xs">
+            {vm.activitySummary.recordedTotals.map(total => (
+              <MoneyText
+                key={total.currencyCode}
+                amount={total.amount}
+                currencyCode={total.currencyCode}
+                variant="title"
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.2}
+              />
+            ))}
+            <AppText variant="body" color="secondary">
+              {copy.endedPayments(vm.activitySummary.recordedCount)}
+            </AppText>
+          </Column>
+        ) : (
+          vm.amount != null &&
+          vm.currencyCode && (
+            <MoneyText
+              amount={
+                isPaused || isEndedWithoutOutstanding
+                  ? vm.amount
+                  : (occurrence?.amount ?? vm.amount)
+              }
+              currencyCode={
+                isPaused || isEndedWithoutOutstanding
+                  ? vm.currencyCode
+                  : (occurrence?.currencyCode ?? vm.currencyCode)
+              }
+              variant="title"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.2}
+              color={isPaused || isEndedWithoutOutstanding ? 'secondary' : 'text'}
+            />
+          )
+        )}
+
+        {isPaused ? (
+          <>
+            <AppText variant="body" color="secondary">
+              {vm.intervalLabel}
+            </AppText>
+            <AppText variant="body" color="secondary">
+              {copy.resumeExplanation}
+            </AppText>
+            {vm.onToggleStatus && (
+              <AppButton
+                variant="secondary"
+                onPress={vm.onToggleStatus}
+                loading={vm.pendingAction === 'toggle'}
+                disabled={pending}
+                accessibilityRole="button"
+                accessibilityLabel={copy.resumeSchedule}
+                buttonStyle={{ minHeight: 52, width: '100%' }}
+              >
+                {copy.resumeSchedule}
+              </AppButton>
+            )}
+          </>
+        ) : isEndedWithoutOutstanding ? null : (
+          <>
+            <AppText variant="body" color="secondary">
+              {occurrenceDiffers && occurrence && vm.amount != null && vm.currencyCode
+                ? copy.dateAndUsualAmount(
+                    daysUntil != null && daysUntil < 0
+                      ? copy.dueOn(formattedDueDate)
+                      : formattedDueDate,
+                    // MoneyText below keeps actual amounts privacy-aware; the catalog accepts display copy.
+                    formatMoney(vm.amount, vm.currencyCode),
+                  )
+                : daysUntil != null && daysUntil < 0
+                  ? copy.dueOn(formattedDueDate)
+                  : formattedDueDate}
+            </AppText>
+            {vm.fromAccount || vm.toAccount ? (
+              <Row align="center" gap="xs" flexWrap="wrap">
+                {accountChip(vm.fromAccount, copy.accountUnavailable, copy.from)}
+                <AppIcon name={Icon.ArrowRight} size={Size.iconSm} color="textSecondary" />
+                {accountChip(vm.toAccount, copy.accountUnavailable, copy.to)}
+              </Row>
+            ) : null}
+            {vm.scheduleHelpText && (
+              <AppText variant="caption" color="secondary">
+                {vm.scheduleHelpText}
+              </AppText>
+            )}
+            {hasOccurrence && (
+              <Row gap="sm" align="stretch" style={{ flexDirection: largeText ? 'column' : 'row' }}>
+                <AppButton
+                  variant="primary"
+                  onPress={vm.onPost}
+                  disabled={pending}
+                  loading={vm.pendingAction === 'record'}
+                  accessibilityRole="button"
+                  accessibilityLabel={copy.recordPayment}
+                  buttonStyle={{ flex: largeText ? undefined : 2, minHeight: 54 }}
+                  style={largeText ? { width: '100%' } : { flex: 2 }}
+                >
+                  {copy.recordPayment}
+                </AppButton>
+                <AppButton
+                  variant="secondary"
+                  onPress={vm.onSkip}
+                  disabled={pending}
+                  loading={vm.pendingAction === 'skip'}
+                  accessibilityRole="button"
+                  accessibilityLabel={copy.skip}
+                  buttonStyle={{ flex: largeText ? undefined : 1, minHeight: 54 }}
+                  style={largeText ? { width: '100%' } : { flex: 1 }}
+                >
+                  {copy.skip}
+                </AppButton>
+              </Row>
+            )}
+          </>
+        )}
+      </Column>
+    </AppSurface>
+  );
 
   return (
     <ScreenWithChrome
@@ -98,143 +284,20 @@ export function PlannedPaymentDetailsView({
       ) : vm.isMissing ? (
         <Column flex={1} align="center" justify="center" gap="md">
           <AppIcon name={Icon.Error} size={Size.xxl} color={theme.textSecondary} />
-          <AppText variant="subheading">Planned payment not found</AppText>
-          <AppButton variant="ghost" onPress={vm.onBack}>
-            Go back
+          <AppText variant="subheading">{copy.missingTitle}</AppText>
+          <AppButton
+            variant="ghost"
+            onPress={vm.onBack}
+            accessibilityRole="button"
+            accessibilityLabel={copy.goBack}
+          >
+            {copy.goBack}
           </AppButton>
         </Column>
       ) : (
         <>
           <Column paddingVertical="md" gap="lg">
-            <AppSurface elevation="sm" padding="lg" radius="r2">
-              <Column gap="md">
-                <Row align="center" gap="md">
-                  <IvyIcon
-                    name={vm.iconName}
-                    label={vm.nameText}
-                    color={theme[vm.typeColorKey ?? 'primary'] as string}
-                    size={Size.avatarMd}
-                    shape="circle"
-                  />
-                  <Column flex={1} gap="xs">
-                    <AppText variant="heading">{vm.nameText}</AppText>
-                    <AppText variant="caption" color="secondary">
-                      {vm.typeLabel}
-                      {vm.typeLabel && vm.currencyCode ? ' · ' : ''}
-                      {headlineOccurrence?.currencyCode ?? vm.currencyCode}
-                    </AppText>
-                  </Column>
-                </Row>
-                <Column gap="xs">
-                  <AppText variant="caption" color="secondary">
-                    {headlineOccurrence ? 'Next occurrence amount' : 'Amount per occurrence'}
-                  </AppText>
-                  {vm.amount != null && vm.currencyCode ? (
-                    <MoneyText
-                      amount={headlineOccurrence?.amount ?? vm.amount}
-                      currencyCode={headlineOccurrence?.currencyCode ?? vm.currencyCode}
-                      variant="title"
-                    />
-                  ) : (
-                    <AppText variant="xl">…</AppText>
-                  )}
-                </Column>
-                {vm.isPreview ? (
-                  <AppText color="secondary">Loading schedule and activity…</AppText>
-                ) : (
-                  <>
-                    <Separator />
-                    <Column gap="sm">
-                      <Row gap="sm" align="center" flexWrap="wrap">
-                        <AppIcon
-                          name={Icon.Calendar}
-                          size={Size.iconSm}
-                          color={getVariantMainColor(theme, vm.dueColor ?? 'secondary')}
-                        />
-                        <AppText
-                          variant="body"
-                          weight="semibold"
-                          color={vm.dueColor ?? 'secondary'}
-                        >
-                          {vm.dueLabel}
-                        </AppText>
-                        {vm.status === PlannedPaymentStatus.COMPLETED && hasOccurrence && (
-                          <Badge variant="default" size="sm">
-                            Schedule completed
-                          </Badge>
-                        )}
-                        {vm.outstandingJournalId && (
-                          <IconButton
-                            name={Icon.Receipt}
-                            variant="clear"
-                            iconColor="textSecondary"
-                            style={{ marginLeft: 'auto' }}
-                            accessibilityLabel="Review this occurrence"
-                            onPress={() => vm.onOpenJournal(vm.outstandingJournalId!)}
-                            disabled={!!vm.pendingAction}
-                          />
-                        )}
-                      </Row>
-                      <AppText variant="body" weight="medium">
-                        {vm.nextOccurrenceText}
-                      </AppText>
-                      {occurrenceDiffers &&
-                        headlineOccurrence &&
-                        vm.amount != null &&
-                        vm.currencyCode && (
-                          <Column gap="xs">
-                            <Row gap="xs" align="baseline" flexWrap="wrap">
-                              <AppText variant="caption" color="secondary">
-                                Default per occurrence
-                              </AppText>
-                              <MoneyText
-                                amount={vm.amount}
-                                currencyCode={vm.currencyCode}
-                                variant="body"
-                              />
-                            </Row>
-                            <AppText variant="caption" color="secondary">
-                              This saved occurrence has a different amount.
-                            </AppText>
-                          </Column>
-                        )}
-                      {vm.isLoadingActivity && (
-                        <AppText variant="caption" color="secondary">
-                          Checking the next occurrence…
-                        </AppText>
-                      )}
-                      {vm.scheduleHelpText && (
-                        <AppText variant="caption" color="secondary">
-                          {vm.scheduleHelpText}
-                        </AppText>
-                      )}
-                    </Column>
-                    {hasOccurrence && (
-                      <Column gap="sm">
-                        <AppButton
-                          variant="primary"
-                          accessibilityLabel="Record occurrence"
-                          onPress={vm.onPost}
-                          disabled={!!vm.pendingAction}
-                          loading={vm.pendingAction === 'record'}
-                        >
-                          Record occurrence
-                        </AppButton>
-                        <AppButton
-                          variant="ghost"
-                          accessibilityLabel="Skip this occurrence"
-                          onPress={vm.onSkip}
-                          disabled={!!vm.pendingAction}
-                          loading={vm.pendingAction === 'skip'}
-                        >
-                          Skip this occurrence
-                        </AppButton>
-                      </Column>
-                    )}
-                  </>
-                )}
-              </Column>
-            </AppSurface>
+            {actionCard}
             {vm.actionError && (
               <AppText color="error" accessibilityRole="alert">
                 {vm.actionError}
@@ -242,210 +305,135 @@ export function PlannedPaymentDetailsView({
             )}
 
             {!vm.isPreview && (
-              <>
-                <PlannedPaymentActivityOverview
-                  summary={vm.activitySummary}
-                  nextOccurrences={vm.nextOccurrences}
-                  isLoading={vm.isLoadingActivity}
-                  error={vm.activityError}
-                  onRetry={vm.onRetryActivity}
-                  onOpenJournal={vm.onOpenJournal}
-                />
-                <DetailDisclosure
-                  title="Account flow"
-                  icon={Icon.SwapHorizontal}
-                  summary={`${vm.fromAccount?.name ?? 'Unavailable account'} → ${vm.toAccount?.name ?? 'Unavailable account'}`}
-                >
-                  <Column gap="md">
-                    {[
-                      { label: 'From', account: vm.fromAccount, color: vm.fromAccountColorKey },
-                      { label: 'To', account: vm.toAccount, color: vm.toAccountColorKey },
-                    ].map(({ label, account, color }) => (
-                      <Column key={label} gap="xs">
-                        <AppText variant="caption" color="secondary">
-                          {label}
-                        </AppText>
-                        {account ? (
-                          <AppButton
-                            variant="ghost"
-                            onPress={() => vm.onOpenAccount(account.id)}
-                            accessibilityLabel={`Open ${account.name}`}
-                            buttonStyle={{ paddingHorizontal: 0, alignItems: 'stretch' }}
-                          >
-                            <Row align="center" gap="sm" flex={1}>
-                              <IvyIcon
-                                name={account.icon}
-                                fallbackIcon={getAccountFallbackIcon(account.accountType)}
-                                label={account.name}
-                                color={theme[(color ?? 'primary') as keyof typeof theme] as string}
-                                size={Size.avatarSm}
-                                shape="circle"
-                              />
-                              <Column flex={1} gap="xs">
-                                <AppText variant="body" weight="semibold">
-                                  {account.name}
-                                </AppText>
-                                <AppText variant="caption" color="secondary">
-                                  {account.currencyCode}
-                                </AppText>
-                              </Column>
-                              <AppIcon
-                                name={Icon.ChevronRight}
-                                size={Size.iconSm}
-                                color="textSecondary"
-                              />
-                            </Row>
-                          </AppButton>
-                        ) : (
-                          <AppText color="secondary">Account unavailable</AppText>
-                        )}
-                      </Column>
-                    ))}
-                  </Column>
-                </DetailDisclosure>
+              <PlannedPaymentActivityOverview
+                summary={vm.activitySummary}
+                nextOccurrences={vm.nextOccurrences}
+                showcasedOccurrenceDate={vm.showcasedOccurrenceDate}
+                cadenceLabel={vm.intervalLabel}
+                history={history}
+                reversalJournalIds={vm.reversalJournalIds}
+                historyLoading={vm.isLoadingHistory}
+                historyLoadingMore={vm.isLoadingMore}
+                hasMore={vm.hasMore}
+                startDate={vm.firstRecordedDate}
+                ruleAmount={vm.rawAmount ?? vm.amount ?? 0}
+                ruleCurrencyCode={vm.currencyCode ?? ''}
+                ruleName={vm.rawName ?? vm.nameText ?? ''}
+                isPaused={isPaused}
+                isEnded={isEnded}
+                isLoading={vm.isLoadingActivity}
+                error={vm.activityError}
+                onRetry={vm.onRetryActivity}
+                onLoadMore={vm.onLoadMore}
+                onOpenJournal={vm.onOpenJournal}
+                selectedIds={selectedIds}
+                isSelectionModeActive={isSelectionModeActive}
+                onLongPressItem={vm.onLongPressItem}
+                onToggleSelection={vm.toggleSelection}
+              />
+            )}
 
-                <DetailDisclosure
-                  title="Schedule"
-                  icon={Icon.Repeat}
-                  summary={`${vm.intervalLabel ?? ''} · ${vm.isAutoPost ? 'Automatic' : 'Manual'} · ${vm.statusText ?? ''}`}
-                >
-                  <Column gap="md">
-                    {vm.statusText && (
-                      <Row>
-                        <Badge variant={vm.statusVariant} size="sm">
-                          {vm.statusText}
-                        </Badge>
-                      </Row>
-                    )}
-                    <Column gap="xs">
-                      <AppText variant="caption" color="secondary">
-                        Repeats
-                      </AppText>
-                      <AppText variant="body" weight="semibold">
-                        {vm.intervalLabel}
-                      </AppText>
-                    </Column>
-                    <Row gap="md" flexWrap="wrap">
-                      <Column gap="xs" flexGrow={1} flexBasis={120}>
-                        <AppText variant="caption" color="secondary">
-                          Starts
-                        </AppText>
-                        <AppText variant="body">{vm.startDateText}</AppText>
-                      </Column>
-                      <Column gap="xs" flexGrow={1} flexBasis={120}>
-                        <AppText variant="caption" color="secondary">
-                          Ends
-                        </AppText>
-                        <AppText variant="body">{vm.endDateText}</AppText>
-                      </Column>
-                    </Row>
+            {!vm.isPreview && (
+              <Column gap="sm">
+                <Row justify="space-between" align="center" gap="sm" flexWrap="wrap">
+                  <AppText variant="subheading" weight="semibold">
+                    {copy.details}
+                  </AppText>
+                  {vm.headerActions?.onEdit && (
+                    <AppButton
+                      variant="ghost"
+                      onPress={vm.headerActions.onEdit}
+                      accessibilityRole="button"
+                      accessibilityLabel={copy.edit}
+                      buttonStyle={{ minHeight: 44, paddingHorizontal: 8 }}
+                    >
+                      {copy.edit}
+                    </AppButton>
+                  )}
+                </Row>
+                <AppSurface elevation="sm" padding="none" radius="r2" overflow="hidden">
+                  <Column>
+                    <DetailRow label={copy.repeats} value={vm.intervalLabel ?? ''} />
                     <Separator />
-                    <Column gap="xs">
-                      <AppText variant="caption" color="secondary">
-                        Recording
-                      </AppText>
-                      <AppText variant="body" weight="semibold">
-                        {vm.isAutoPost ? 'Automatic' : 'Manual'}
-                      </AppText>
-                      <AppText variant="caption" color="secondary">
-                        {vm.isAutoPost
-                          ? 'Due occurrences are recorded automatically when the app processes this schedule.'
-                          : 'Record each occurrence after the payment happens.'}
-                      </AppText>
-                    </Column>
-                    {vm.onToggleStatus && (
+                    <DetailRow
+                      label={copy.recording}
+                      value={vm.isAutoPost ? copy.autoPost : copy.manual}
+                    />
+                    <Separator />
+                    <DetailRow label={copy.started} value={vm.startDateText ?? ''} />
+                    <Separator />
+                    <DetailRow
+                      label={copy.ends}
+                      value={
+                        vm.endTimestamp == null
+                          ? copy.noEndDate
+                          : vm.remainingOccurrenceCount == null
+                            ? (vm.endDateText ?? '')
+                            : copy.endCount(vm.endDateText ?? '', vm.remainingOccurrenceCount)
+                      }
+                    />
+                    {vm.description?.trim() && (
                       <>
-                        {vm.status === PlannedPaymentStatus.PAUSED && (
+                        <Separator />
+                        <Column paddingHorizontal="md" paddingVertical="md" gap="xs">
                           <AppText variant="caption" color="secondary">
-                            Resuming restores upcoming paused occurrences and skips those whose
-                            dates have passed.
+                            {copy.note}
                           </AppText>
-                        )}
-                        <AppButton
-                          variant="secondary"
-                          accessibilityLabel={
-                            vm.status === PlannedPaymentStatus.ACTIVE
-                              ? 'Pause schedule'
-                              : 'Resume schedule'
-                          }
-                          onPress={vm.onToggleStatus}
-                          loading={vm.pendingAction === 'toggle'}
-                          disabled={!!vm.pendingAction}
-                        >
-                          {vm.status === PlannedPaymentStatus.ACTIVE
-                            ? 'Pause schedule'
-                            : 'Resume schedule'}
-                        </AppButton>
+                          <AppText variant="body">{vm.description}</AppText>
+                        </Column>
                       </>
                     )}
                   </Column>
-                </DetailDisclosure>
+                </AppSurface>
+              </Column>
+            )}
 
-                {vm.description?.trim() && (
-                  <DetailDisclosure
-                    title="Notes"
-                    icon={Icon.Document}
-                    summary={
-                      <AppText variant="caption" color="secondary" numberOfLines={1}>
-                        {vm.description}
-                      </AppText>
-                    }
-                  >
-                    <AppText variant="body">{vm.description}</AppText>
-                  </DetailDisclosure>
-                )}
-
-                {scheduled.length > 0 && (
-                  <DetailDisclosure
-                    title="Scheduled occurrences"
-                    icon={Icon.Calendar}
-                    summary={entriesSummary(scheduled)}
-                  >
-                    <Column gap="sm">
-                      {vm.isLoadingHistory ? (
-                        <AppText color="secondary">Loading activity…</AppText>
-                      ) : (
-                        renderEntries(scheduled)
-                      )}
-                    </Column>
-                  </DetailDisclosure>
-                )}
-                <DetailDisclosure
-                  title="History"
-                  icon={Icon.History}
-                  summary={entriesSummary(recorded)}
-                >
-                  <Column gap="sm">
-                    {vm.isLoadingHistory ? (
-                      <AppText color="secondary">Loading activity…</AppText>
-                    ) : recorded.length === 0 ? (
-                      <AppText color="secondary">
-                        {vm.hasMore
-                          ? 'No recorded entries in the loaded activity. Load earlier entries below.'
-                          : 'No recorded or skipped occurrences yet.'}
-                      </AppText>
-                    ) : (
-                      renderEntries(recorded)
-                    )}
-                    {vm.hasMore && (
-                      <AppButton
-                        variant="secondary"
-                        accessibilityLabel="Load earlier entries"
-                        onPress={vm.onLoadMore}
-                        loading={vm.isLoadingMore}
-                        disabled={vm.isLoadingMore}
-                      >
-                        Load earlier entries
-                      </AppButton>
-                    )}
-                  </Column>
-                </DetailDisclosure>
-              </>
+            {!vm.isPreview && vm.onToggleStatus && !isPaused && !isEnded && (
+              <AppButton
+                variant="ghost"
+                onPress={vm.onToggleStatus}
+                loading={vm.pendingAction === 'toggle'}
+                disabled={pending}
+                accessibilityRole="button"
+                accessibilityLabel={copy.pauseSchedule}
+                buttonStyle={{ minHeight: 44, alignSelf: 'center' }}
+              >
+                {copy.pauseSchedule}
+              </AppButton>
             )}
           </Column>
           {vm.modals ? <JournalListModals {...vm.modals} /> : null}
         </>
       )}
     </ScreenWithChrome>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  const { fontScale } = useWindowDimensions();
+  const largeText = fontScale > 1.3;
+  return (
+    <Row
+      justify="space-between"
+      align="center"
+      gap="md"
+      paddingHorizontal="md"
+      paddingVertical="md"
+      style={{
+        flexDirection: largeText ? 'column' : 'row',
+        alignItems: largeText ? 'flex-start' : 'center',
+      }}
+    >
+      <AppText variant="body" color="secondary">
+        {label}
+      </AppText>
+      <AppText
+        variant="body"
+        weight="medium"
+        style={{ flexShrink: 1, textAlign: largeText ? 'left' : 'right' }}
+      >
+        {value}
+      </AppText>
+    </Row>
   );
 }

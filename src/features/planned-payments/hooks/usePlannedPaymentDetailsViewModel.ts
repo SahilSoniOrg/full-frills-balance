@@ -30,9 +30,18 @@ import {
   type PlannedPaymentActivitySummary,
   type PlannedPaymentNextOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentDetailService';
+import { auditService } from '@/src/services/audit-service';
+import { normalizeToStartOfDay } from '@/src/services/planned-payment/plannedPaymentRecurrence';
 import type { Money } from '@/src/types/domainReadModels';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo } from 'react';
+import { of } from 'rxjs';
+import { useObservable } from '@/src/hooks/useObservable';
+import {
+  countRemainingPlannedOccurrences,
+  findFirstRecordedDate,
+  findPausedAtFromAudit,
+} from './plannedPaymentDetailsViewModelData';
 
 export interface PlannedPaymentDetailsViewModel {
   theme: Theme;
@@ -65,6 +74,15 @@ export interface PlannedPaymentDetailsViewModel {
   occurrenceAmount?: Money;
   outstandingJournalId?: JournalId;
   nextOccurrences?: PlannedPaymentNextOccurrence[];
+  nextOccurrenceDate?: number;
+  showcasedOccurrenceDate?: number;
+  dueDate?: number;
+  remainingOccurrenceCount?: number;
+  startDate?: number;
+  startTimestamp?: number;
+  endTimestamp?: number;
+  pausedSinceDate?: number;
+  firstRecordedDate?: number;
   activitySummary?: PlannedPaymentActivitySummary;
   isLoadingActivity?: boolean;
   isLoadingHistory?: boolean;
@@ -79,6 +97,7 @@ export interface PlannedPaymentDetailsViewModel {
   toAccountColorKey?: string;
 
   history?: EnrichedJournal[];
+  reversalJournalIds?: Set<JournalId>;
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
@@ -114,17 +133,32 @@ const STATUS_TEXT: Record<PlannedPaymentStatus, string> = {
   [PlannedPaymentStatus.COMPLETED]: 'Completed',
 };
 
+function getStringParam(value: string | string[] | undefined): string | undefined {
+  return typeof value === 'string' ? value : value?.[0];
+}
+
+function getFiniteNumberParam(value: string | string[] | undefined): number | undefined {
+  const parsed = Number(getStringParam(value));
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDetailsViewModel {
   const { theme } = useTheme();
   const { workplaceId } = useWorkplace();
   const isPrivacyMode = useEffectivePrivacyMode();
   const params = useLocalSearchParams();
+  const { data: statusAudit } = useObservable(
+    () => (id ? auditService.observeAuditTrail('planned_payment', id, workplaceId, 500) : of([])),
+    [id, workplaceId],
+    [],
+    { keepPreviousData: false },
+  );
 
   // Initial Data Injection: Extract preview data from params
-  const pDesc = params.pDesc as string;
-  const pAmount = params.pAmount as string;
-  const pCurrency = params.pCurrency as string;
-  const pDate = params.pDate as string;
+  const pDesc = getStringParam(params.pDesc);
+  const pAmount = getStringParam(params.pAmount);
+  const pCurrency = getStringParam(params.pCurrency);
+  const pDate = getFiniteNumberParam(params.pDate);
 
   const {
     item,
@@ -258,7 +292,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
           typeLabel: '',
           typeColorKey: 'primary',
           iconName: Icon.Document,
-          nextOccurrenceText: pDate ? new Date(parseInt(pDate)).toLocaleDateString() : '...',
+          nextOccurrenceText: pDate ? new Date(pDate).toLocaleDateString() : '...',
           isAutoPost: false,
           fromAccount: null,
           toAccount: null,
@@ -335,7 +369,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       onBack: () => AppNavigation.back(),
 
       // Core Details
-      title: 'Planned payment',
+      title: item.name,
       amount: item.amount,
       currencyCode: item.currencyCode,
       nameText: item.name,
@@ -361,14 +395,48 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       isAutoPost: item.isAutoPost,
       description: item.description,
       startDateText: formatDate(item.startDate),
-      endDateText: item.endDate == null ? 'No end date' : formatDate(item.endDate),
+      endDateText:
+        item.endDate == null
+          ? AppConfig.strings.plannedDetailRedesign.noEndDate
+          : formatDate(item.endDate),
       dueLabel: due.label,
       dueColor: due.color,
       scheduleHelpText: due.helpText,
       occurrenceAmount,
       outstandingJournalId: outstanding?.id,
       activitySummary: activity ? summarizePlannedPaymentActivity(activity, getNow()) : undefined,
-      nextOccurrences: activity ? getNextPlannedPaymentOccurrences(item, activity) : undefined,
+      nextOccurrences: activity
+        ? getNextPlannedPaymentOccurrences(item, activity, 5)
+            .filter(occurrence => {
+              const heroDate = outstanding?.journalDate ?? item.nextDueOccurrence;
+              return (
+                heroDate == null ||
+                normalizeToStartOfDay(occurrence.date) !== normalizeToStartOfDay(heroDate)
+              );
+            })
+            .slice(0, 3)
+        : undefined,
+      nextOccurrenceDate: item.nextDueOccurrence,
+      showcasedOccurrenceDate: outstanding?.journalDate ?? item.nextDueOccurrence,
+      dueDate: outstanding?.journalDate ?? item.nextDueOccurrence,
+      remainingOccurrenceCount: countRemainingPlannedOccurrences(
+        item.nextOccurrence,
+        item.endDate,
+        item,
+      ),
+      startDate: item.startDate,
+      startTimestamp: item.startDate,
+      endTimestamp: item.endDate,
+      pausedSinceDate:
+        item.status === PlannedPaymentStatus.PAUSED
+          ? findPausedAtFromAudit(statusAudit)
+          : undefined,
+      firstRecordedDate: activity ? findFirstRecordedDate(activity) : undefined,
+      reversalJournalIds: activity
+        ? new Set(
+            activity.filter(journal => !!journal.originalJournalId).map(journal => journal.id),
+          )
+        : undefined,
       isLoadingActivity,
       isLoadingHistory,
       activityError: activityError
@@ -409,6 +477,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
     item,
     history,
     activity,
+    statusAudit,
     isLoadingActivity,
     isLoadingHistory,
     activityError,
