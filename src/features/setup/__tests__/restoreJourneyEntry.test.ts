@@ -18,7 +18,7 @@ describe('restore journey entry', () => {
   it('routes picker and Settings import into restore journeys', () => {
     expect(source('../../app/LaunchCoordinator.tsx')).toContain("journey: 'picker_restore'");
     expect(source('../../app/LaunchCoordinator.tsx')).toContain("journey: 'create_workplace'");
-    expect(source('../../settings/hooks/useDataManagementViewModel.ts')).toContain(
+    expect(source('../../settings/components/DataManagementSettingsView.tsx')).toContain(
       "toSetupJourney('settings_restore')",
     );
   });

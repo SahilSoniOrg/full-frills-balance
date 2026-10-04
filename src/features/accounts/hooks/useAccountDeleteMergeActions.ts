@@ -1,6 +1,5 @@
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { ScreenHeaderActionItem } from '@/src/components/shared/ScreenHeaderActions';
-import type { AccountMergePickerModalProps } from '@/src/features/accounts/components/AccountFormEditModals';
 import { AccountId } from '@/src/types/ids';
 import { PlainAccount } from '@/src/types/plainDtos';
 import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
@@ -11,6 +10,14 @@ import { useCallback, useMemo, useState } from 'react';
 import { Icon } from '@/src/types/domainIcons';
 
 export type DeleteMergeEntityLabel = 'Account' | 'Category';
+
+export type AccountMergePickerModalProps = {
+  visible: boolean;
+  onClose: () => void;
+  accounts: (AccountFields | PlainAccount)[];
+  onSelect: (targetAccountId: AccountId) => void;
+  title: string;
+};
 
 export interface UseAccountDeleteMergeActionsOptions {
   accountId?: AccountId;

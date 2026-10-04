@@ -12,7 +12,8 @@ import { SelectionPickerSheet } from '@/src/components/filters/SelectionPickerSh
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { Size, Spacing, Typography } from '@/src/constants';
-import { Box, FadeIn, Inline, Stack, usePageKeyboard } from '@/src/design-system';
+import { Box, Inline, Stack, usePageKeyboard } from '@/src/design-system';
+import { OnboardingFadePanel } from './OnboardingFadePanel';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Icon, type IconName } from '@/src/types/domainIcons';
@@ -27,10 +28,6 @@ export interface ConversationOption {
   readonly id: string;
   readonly label: string;
   readonly icon?: IconName;
-}
-
-function ConversationPanel({ children }: { readonly children: ReactNode }) {
-  return <FadeIn fromY={8}>{children}</FadeIn>;
 }
 
 export function ConversationStep({
@@ -101,7 +98,7 @@ export function ConversationStep({
         scrollsChildToFocus={false}
         nestedScrollEnabled
       >
-        <ConversationPanel>
+        <OnboardingFadePanel>
           <Stack gap="lg" paddingTop={title ? 'xl' : 'sm'}>
             {title ? (
               <Stack gap="sm" align="center">
@@ -123,7 +120,7 @@ export function ConversationStep({
             ) : null}
             {children}
           </Stack>
-        </ConversationPanel>
+        </OnboardingFadePanel>
       </ScrollView>
       {!isKeyboardVisible ? (
         <Box

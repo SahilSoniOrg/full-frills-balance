@@ -3,7 +3,8 @@ import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel
 import type { AccountFields } from '@/src/types/plainDtos';
 import { Box } from '@/src/design-system/Box';
 import { useTheme } from '@/src/hooks/use-theme';
-import { resolveAccountChipColors } from '@/src/utils/accountChipColors';
+import { resolveAccountAppearance } from '@/src/utils/accountCategory';
+import { withOpacity } from '@/src/utils/color-math';
 import { useMemo } from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
 
@@ -61,7 +62,12 @@ export function AccountSelectionRow({
     return (
       <Box flexDirection="row" flexWrap="wrap" gap="xs" marginTop="xs">
         {resolvedAccounts.map(acc => {
-          const chipColors = resolveAccountChipColors(acc, theme);
+          const { accentColor } = resolveAccountAppearance(acc, theme);
+          const chipColors = {
+            text: accentColor,
+            bg: withOpacity(accentColor, 0.12),
+            border: accentColor,
+          };
           return (
             <Box
               key={acc.id}

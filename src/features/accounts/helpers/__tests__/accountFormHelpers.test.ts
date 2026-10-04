@@ -30,7 +30,6 @@ describe('accountFormHelpers', () => {
       accountType: AccountType.EXPENSE,
       hasExistingAccounts: true,
     });
-    expect(categoryNew.heroSubtitle).toBe('');
     expect(categoryNew.saveLabel).toContain('Category');
 
     const accountFirst = resolveAccountFormHeroCopy({

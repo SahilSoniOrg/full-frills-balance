@@ -1,9 +1,14 @@
 import { useArchiveScopedAccounts } from '@/src/contexts/ArchiveVisibilityScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
+  AccountsListInflowPeriod,
+  aggregateLeafPeriodIncomeExpense,
+  AccountsListTab,
   filterAccountsBySearch,
   filterAccountSectionsForTab,
   filterAccountsForListTab,
+  resolveInflowReportDateRange,
+  resolveInflowTotals,
 } from '@/src/features/accounts/helpers/accountsListHelpers';
 import type {
   AccountsListActiveModal,
@@ -12,9 +17,7 @@ import type {
 } from '@/src/features/accounts/hooks/accountsListTypes';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { useAccountsBulkOperations } from '@/src/features/accounts/hooks/useAccountsBulkOperations';
-import { useAccountsInflowSummary } from '@/src/features/accounts/hooks/useAccountsInflowSummary';
 import { useAccountsListActions } from '@/src/features/accounts/hooks/useAccountsListActions';
-import { useAccountsListUiState } from '@/src/features/accounts/hooks/useAccountsListUiState';
 import {
   AccountCardViewModel,
   AccountSectionViewModel,
@@ -25,6 +28,7 @@ import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
 import { useObservable } from '@/src/hooks/useObservable';
 import { useSelection } from '@/src/hooks/useSelection';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
+import { reportService } from '@/src/services/report-service';
 import { AccountId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -44,6 +48,48 @@ export function useAccountsListViewModel(): AccountsListViewModel {
 
   const [activeModal, setActiveModal] = useState<AccountsListActiveModal>(null);
   const selection = useSelection<AccountId>();
+  const [activeTab, setActiveTab] = useState<AccountsListTab>('accounts');
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
+    () => new Set(['Equity']),
+  );
+  const [expandedAccountIds, setExpandedAccountIds] = useState<Set<AccountId>>(() => new Set());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [inflowPeriod, setInflowPeriodState] = useState<AccountsListInflowPeriod>('overall');
+  const [rollingPeriodTotals, setRollingPeriodTotals] = useState<{
+    income: number;
+    expense: number;
+    hasUnvaluedEntries?: boolean;
+  } | null>(null);
+  const [isPeriodLoading, setIsPeriodLoading] = useState(false);
+
+  const onToggleSection = useCallback((title: string) => {
+    setCollapsedSections(previous => {
+      const next = new Set(previous);
+      if (next.has(title)) next.delete(title);
+      else next.add(title);
+      return next;
+    });
+  }, []);
+
+  const onCollapseAccount = useCallback((accountId: AccountId) => {
+    setExpandedAccountIds(previous => {
+      const next = new Set(previous);
+      if (next.has(accountId)) {
+        next.delete(accountId);
+      } else {
+        next.add(accountId);
+      }
+      return next;
+    });
+  }, []);
+
+  const setInflowPeriod = useCallback((period: AccountsListInflowPeriod) => {
+    setInflowPeriodState(period);
+    if (period !== '30days') {
+      setRollingPeriodTotals(null);
+    }
+  }, []);
 
   const mountTimeRef = useRef<number>(0);
   useEffect(() => {
@@ -111,41 +157,73 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   const { netWorth, totalAssets, totalLiabilities, totalEquity, totalIncome, totalExpense } =
     dashboardData.wealthSummary;
 
-  const {
-    activeTab,
-    setActiveTab,
-    collapsedSections,
-    expandedAccountIds,
-    setExpandedAccountIds,
-    searchQuery,
-    setSearchQuery,
-    isSearching,
-    setIsSearching,
-    onToggleSection,
-    onCollapseAccount,
-  } = useAccountsListUiState();
+  const monthPeriodTotals = useMemo(() => {
+    if (inflowPeriod !== 'month') return null;
+    return aggregateLeafPeriodIncomeExpense(accounts, dashboardData.balances);
+  }, [inflowPeriod, accounts, dashboardData.balances]);
+
+  useEffect(() => {
+    if (!workplaceId || inflowPeriod !== '30days') {
+      return;
+    }
+
+    let isMounted = true;
+    Promise.resolve().then(() => {
+      if (isMounted) {
+        setIsPeriodLoading(true);
+      }
+    });
+
+    const fetchTotals = async () => {
+      try {
+        const range = resolveInflowReportDateRange(inflowPeriod);
+        if (!range) return;
+
+        const { startDate, endDate } = range;
+        const totals = await reportService.getIncomeVsExpense(
+          workplaceId,
+          startDate,
+          endDate,
+          workplaceCurrency,
+        );
+
+        if (isMounted) {
+          setRollingPeriodTotals(totals);
+          setIsPeriodLoading(false);
+        }
+      } catch (err) {
+        logger.error('Failed to fetch period totals:', err);
+        if (isMounted) {
+          setIsPeriodLoading(false);
+        }
+      }
+    };
+
+    fetchTotals();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [inflowPeriod, workplaceId, workplaceCurrency, version]);
+
+  const periodTotals = inflowPeriod === 'month' ? monthPeriodTotals : rollingPeriodTotals;
+  const { inflowIncome, inflowExpense } = useMemo(
+    () =>
+      resolveInflowTotals({
+        inflowPeriod,
+        totalIncome,
+        totalExpense,
+        periodTotals,
+      }),
+    [inflowPeriod, totalIncome, totalExpense, periodTotals],
+  );
+  const hasUnvaluedEntries =
+    inflowPeriod === '30days' && rollingPeriodTotals?.hasUnvaluedEntries === true;
 
   const accountsForArchiveToggle = useMemo(
     () => filterAccountsForListTab(accounts, activeTab),
     [accounts, activeTab],
   );
-
-  const {
-    inflowPeriod,
-    setInflowPeriod,
-    inflowIncome,
-    inflowExpense,
-    isPeriodLoading,
-    hasUnvaluedEntries,
-  } = useAccountsInflowSummary({
-    workplaceId,
-    workplaceCurrency,
-    accounts,
-    balances: dashboardData.balances,
-    totalIncome,
-    totalExpense,
-    dataVersion: version,
-  });
 
   const { applyArchiveChanges } = useAccountActions(workplaceId);
 

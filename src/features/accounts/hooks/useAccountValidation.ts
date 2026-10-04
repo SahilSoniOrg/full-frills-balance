@@ -1,12 +1,25 @@
 import type { AccountFields } from '@/src/types/plainDtos';
-import { findDuplicateAccountNameError } from '@/src/features/accounts/services/accountFormValidationPolicy';
-import { validateAccountName } from '@/src/utils/validation';
+import { sanitizeInput } from '@/src/utils/validation';
 import { useEffect, useState } from 'react';
 
 export interface UseAccountValidationResult {
   formError: string | null;
-  validateName: (name: string) => { isValid: boolean; error?: string };
-  checkForDuplicates: (name: string) => boolean;
+}
+
+function findDuplicateAccountNameError(
+  accountName: string,
+  accounts: AccountFields[],
+  currentAccountId?: string,
+): string | null {
+  const trimmed = accountName.trim();
+  if (!trimmed) return null;
+
+  const sanitizedName = sanitizeInput(accountName);
+  const existing = accounts.find(a => a.name.toLowerCase() === sanitizedName.toLowerCase());
+  if (existing && existing.id !== currentAccountId) {
+    return `Account with name "${sanitizedName}" already exists`;
+  }
+  return null;
 }
 
 export function useAccountValidation(
@@ -30,17 +43,7 @@ export function useAccountValidation(
     }
   }, [accountName, accounts, currentAccountId]);
 
-  const validateName = (name: string) => {
-    return validateAccountName(name);
-  };
-
-  const checkForDuplicates = (name: string): boolean => {
-    return findDuplicateAccountNameError(name, accounts, currentAccountId) !== null;
-  };
-
   return {
     formError,
-    validateName,
-    checkForDuplicates,
   };
 }

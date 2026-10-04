@@ -11,8 +11,6 @@ import {
 } from '@/src/utils/accountCategory';
 import { getAccountIcon } from '@/src/utils/accountIcon';
 import { isAccountArchived, getVisibleRoots } from '@/src/utils/accountArchive';
-import { logger } from '@/src/utils/logger';
-
 import { Opacity } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 
@@ -101,10 +99,6 @@ export function transformAccountsToSections(
   accounts: PlainAccount[],
   options: TransformOptions,
 ): AccountSectionViewModel[] {
-  const startTime = Date.now();
-  let cacheHits = 0;
-  let totalAccounts = 0;
-
   if (!accounts.length) return [];
 
   const {
@@ -148,7 +142,6 @@ export function transformAccountsToSections(
     const flattenedData: AccountCardViewModel[] = [];
 
     const flatten = (account: AccountFields, depth: number) => {
-      totalAccounts++;
       const balanceData = balancesByAccountId.get(account.id) || null;
       const balance = balanceData?.balance || 0;
       const workplaceBalance = balanceData?.workplaceBalance;
@@ -186,7 +179,6 @@ export function transformAccountsToSections(
       let viewModel = currentBucket.get(stateKey) || oldBucket.get(stateKey);
 
       if (viewModel) {
-        cacheHits++;
         // If found in old bucket, migrate to current (promote)
         if (!currentBucket.has(stateKey)) {
           if (currentBucket.size >= BUCKET_LIMIT) {
@@ -286,13 +278,6 @@ export function transformAccountsToSections(
       accountIds: typeAccounts.map(a => a.id),
       type: section.type,
     };
-  });
-
-  const duration = Date.now() - startTime;
-  logger.debug(`[Trace] transformAccountsToSections: ${duration}ms`, {
-    accounts: totalAccounts,
-    cacheHits,
-    hitRate: totalAccounts > 0 ? `${((cacheHits / totalAccounts) * 100).toFixed(1)}%` : '0%',
   });
 
   return sections;

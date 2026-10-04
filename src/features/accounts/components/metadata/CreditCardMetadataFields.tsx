@@ -3,7 +3,7 @@ import { AppTabs } from '@/src/components/core/AppTabs';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { accountFormStrings as copy } from '@/src/constants/copy/domains/accountFormStrings';
 import { Spacing } from '@/src/constants/design-tokens';
-import type { AccountMetadataFormModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
+import type { AccountMetadataFormModel } from '@/src/features/accounts/hooks/form/useAccountFormMetadata';
 import { useTheme } from '@/src/hooks/use-theme';
 import { View } from 'react-native';
 
@@ -18,7 +18,6 @@ export function CreditCardMetadataFields({
   return (
     <View style={{ gap: Spacing.lg }}>
       <CalculatorAmountInput
-        variant="minimal"
         label={copy.creditLimit}
         placeholder={copy.creditLimitPlaceholder}
         value={metadata.creditLimitAmount}
@@ -53,7 +52,6 @@ export function CreditCardMetadataFields({
         {copy.repaymentHelp}
       </AppText>
       <CalculatorAmountInput
-        variant="minimal"
         label={copy.minAmount}
         placeholder={copy.minAmountPlaceholder}
         value={metadata.minimumPaymentAmount}

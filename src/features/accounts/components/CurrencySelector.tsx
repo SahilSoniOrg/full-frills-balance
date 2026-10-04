@@ -1,4 +1,4 @@
-import { CurrencyPickerSheet } from '@/src/components/filters/CurrencyPickerSheet';
+import { SelectionPickerSheet } from '@/src/components/filters/SelectionPickerSheet';
 import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import type { PlainCurrency } from '@/src/types/plainDtos';
@@ -75,13 +75,18 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
         )}
       </TouchableOpacity>
 
-      <CurrencyPickerSheet
+      <SelectionPickerSheet
         visible={showModal}
         title={title}
-        currencies={currencies}
-        selectedCode={selectedCurrency}
+        options={currencies.map(currency => ({
+          id: currency.code,
+          label: currency.name,
+          description: `${currency.code} · ${currency.symbol}`,
+        }))}
+        selectedValue={selectedCurrency}
         selectedBackgroundColor={selectedBackgroundColor ?? theme.primaryLight}
         searchPlaceholder={AppConfig.strings.common.searchPlaceholder}
+        showSearch
         onClose={() => setShowModal(false)}
         onSelect={handleSelect}
       />

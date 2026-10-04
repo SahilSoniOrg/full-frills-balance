@@ -1,17 +1,16 @@
 import { AccountPickerModal } from '@/src/components/account-selection/AccountPickerModal';
 import { AppearancePickerModal } from '@/src/components/overlays/AppearancePickerModal';
-import { CurrencyPickerSheet } from '@/src/components/filters/CurrencyPickerSheet';
-import { AppButton, AppText } from '@/src/components/core';
+import { SelectionPickerSheet } from '@/src/components/filters/SelectionPickerSheet';
+import { AppButton, AppInput, AppText } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { AppConfig } from '@/src/constants/app-config';
 import { accountFormStrings as copy } from '@/src/constants/copy/domains/accountFormStrings';
+import { AccountArchiveCascadeModal } from '@/src/features/accounts/components/AccountArchiveCascadeModal';
 import type { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { AccountKindsSheet } from './AccountKindsSheet';
-import { AccountFormEditModals } from './AccountFormEditModals';
 import { BalanceChangeClassifySheet } from './BalanceChangeClassifySheet';
-import { NotesMetadataField } from './metadata/NotesMetadataField';
 
 export function AccountFormOverlays(vm: AccountFormViewModel) {
   const close = () => vm.setActiveSheet(null);
@@ -33,11 +32,17 @@ export function AccountFormOverlays(vm: AccountFormViewModel) {
         selectedColor={vm.selectedColor}
         accountType={vm.accountType}
       />
-      <CurrencyPickerSheet
+      <SelectionPickerSheet
         visible={vm.activeSheet === 'currency'}
         title={AppConfig.strings.accounts.selectCurrency}
-        currencies={vm.currencies}
-        selectedCode={vm.selectedCurrency}
+        options={vm.currencies.map(currency => ({
+          id: currency.code,
+          label: currency.name,
+          description: `${currency.code} · ${currency.symbol}`,
+        }))}
+        selectedValue={vm.selectedCurrency}
+        searchPlaceholder={AppConfig.strings.common.searchPlaceholder}
+        showSearch
         onClose={close}
         onSelect={code => {
           vm.setSelectedCurrency(code);
@@ -96,18 +101,24 @@ export function AccountFormOverlays(vm: AccountFormViewModel) {
           </AppButton>
         }
       >
-        <NotesMetadataField
-          notes={vm.metadata.notes}
-          setNotes={vm.metadata.setNotes}
+        <AppInput
           label={copy.note}
+          value={vm.metadata.notes}
+          onChangeText={vm.metadata.setNotes}
+          placeholder={copy.notePlaceholder}
           testID="account-note-input"
+          multiline
+          numberOfLines={3}
+          containerStyle={{ marginBottom: 0 }}
         />
       </ModalSurface>
       {vm.balanceClassify ? <BalanceChangeClassifySheet {...vm.balanceClassify} /> : null}
-      <AccountFormEditModals
-        archiveCascadeModal={vm.formChrome.archiveCascadeModal}
-        mergePickerModal={vm.formChrome.mergePickerModal}
-      />
+      {vm.formChrome.archiveCascadeModal ? (
+        <AccountArchiveCascadeModal {...vm.formChrome.archiveCascadeModal} />
+      ) : null}
+      {vm.formChrome.mergePickerModal ? (
+        <AccountPickerModal {...vm.formChrome.mergePickerModal} />
+      ) : null}
     </>
   );
 }

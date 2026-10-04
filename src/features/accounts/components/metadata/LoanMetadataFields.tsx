@@ -2,7 +2,7 @@ import { AppInput } from '@/src/components/core';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { accountFormStrings as copy } from '@/src/constants/copy/domains/accountFormStrings';
 import { Spacing } from '@/src/constants/design-tokens';
-import type { AccountMetadataFormModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
+import type { AccountMetadataFormModel } from '@/src/features/accounts/hooks/form/useAccountFormMetadata';
 import { useTheme } from '@/src/hooks/use-theme';
 import { View } from 'react-native';
 
@@ -39,7 +39,6 @@ export function LoanMetadataFields({
         />
       </View>
       <CalculatorAmountInput
-        variant="minimal"
         label={copy.emiAmount}
         placeholder={copy.emiAmountPlaceholder}
         value={metadata.minimumPaymentAmount}

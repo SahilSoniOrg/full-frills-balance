@@ -12,7 +12,6 @@ import {
   filterPayFromAccountOptions,
   filterPotentialParentAccounts,
   resolveAccountFormHeroCopy,
-  resolveAllowedAccountTypes,
 } from '@/src/features/accounts/helpers/accountFormHelpers';
 import { useAccountFormBalanceClassify } from '@/src/features/accounts/hooks/form/useAccountFormBalanceClassify';
 import { useAccountFormCore } from '@/src/features/accounts/hooks/form/useAccountFormCore';
@@ -36,8 +35,11 @@ import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { BalanceChangeCounterparty } from '@/src/services/accounts/balanceChangeClassification';
-import { useAccountFormHeaderActions } from '@/src/features/accounts/hooks/useAccountFormHeaderActions';
-import type { AccountFormChromeState } from '@/src/features/accounts/hooks/useAccountFormHeaderActions';
+import { useAccountArchiveAction } from '@/src/features/accounts/hooks/useAccountArchiveAction';
+import { useAccountDeleteMergeActions } from '@/src/features/accounts/hooks/useAccountDeleteMergeActions';
+import type { AccountMergePickerModalProps } from '@/src/features/accounts/hooks/useAccountDeleteMergeActions';
+import type { AccountArchiveCascadeModalProps } from '@/src/features/accounts/components/AccountArchiveCascadeModal';
+import type { ScreenHeaderActionItem } from '@/src/components/shared/ScreenHeaderActions';
 import { useLocalSearchParams, usePathname } from 'expo-router';
 import { Keyboard } from 'react-native';
 import { useCallback, useMemo, useState } from 'react';
@@ -48,24 +50,24 @@ import {
 } from '@/src/features/accounts/hooks/form/useAccountFormKind';
 import { of } from 'rxjs';
 
-export type { AccountMetadataFormModel };
+export type AccountFormChromeState = {
+  headerActionItems: ScreenHeaderActionItem[];
+  archiveCascadeModal: AccountArchiveCascadeModalProps | null;
+  mergePickerModal: AccountMergePickerModalProps | null;
+};
 
 export interface AccountFormViewModel extends AccountFormKindApi {
   activeSheet: 'kinds' | 'currency' | 'currency-info' | 'note' | null;
   setActiveSheet: (sheet: AccountFormViewModel['activeSheet']) => void;
   currencyPrecision: number;
   heroTitle: string;
-  heroSubtitle: string;
   isEditMode: boolean;
   isCategory: boolean;
   accountName: string;
   setAccountName: (value: string) => void;
   accountType: AccountType;
-  setAccountType: (value: AccountType) => void;
   accountSubtype: AccountSubtype;
   setAccountSubtype: (value: AccountSubtype) => void;
-  availableSubtypes: readonly AccountSubtype[];
-  allowedAccountTypes?: readonly AccountType[];
   selectedCurrency: string;
   currencies: PlainCurrency[];
   setSelectedCurrency: (value: string) => void;
@@ -82,8 +84,6 @@ export interface AccountFormViewModel extends AccountFormKindApi {
   leaveAfterSave: (() => void) | null;
   formError: string | null;
   onSave: () => void;
-  saveLabel: string;
-  currencyLabel: string;
   showInitialBalance: boolean;
   isSaveDisabled: boolean;
   parentAccountId: AccountId;
@@ -94,7 +94,6 @@ export interface AccountFormViewModel extends AccountFormKindApi {
   isParentPickerVisible: boolean;
   setIsParentPickerVisible: (visible: boolean) => void;
   isParent: boolean;
-  showCurrency: boolean;
   metadata: AccountMetadataFormModel;
   isLoading: boolean;
   balanceClassify: {
@@ -112,11 +111,6 @@ export interface AccountFormViewModel extends AccountFormKindApi {
   formChrome: AccountFormChromeState;
 }
 
-/**
- * AccountFields create/edit form composer.
- * Draft is id-keyed (`useAccountFormDraft`); field concerns live in
- * core / metadata / pickers / balanceClassify hooks.
- */
 export function useAccountFormViewModel(): AccountFormViewModel {
   const params = useLocalSearchParams<{
     accountId: AccountId;
@@ -226,18 +220,37 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const transactionCount = balanceData?.transactionCount ?? 0;
   const isDeleted = Boolean(existingAccount?.deletedAt);
 
-  const formChrome = useAccountFormHeaderActions({
+  const archive = useAccountArchiveAction({
     enabled: isEditMode,
+    accountId,
+    account: existingAccount ?? null,
+    accounts,
+  });
+  const deleteMerge = useAccountDeleteMergeActions({
     accountId,
     account: existingAccount ?? null,
     accounts,
     transactionCount,
     isDeleted,
+    enabled: isEditMode,
     entityLabel: core.isCategory ? 'Category' : 'Account',
     deleteAccount,
     recoverAction: recoverAccount,
     mergeAccounts,
   });
+  const formChrome = useMemo(
+    (): AccountFormChromeState => ({
+      headerActionItems: [...archive.headerActionItems, ...deleteMerge.headerActionItems],
+      archiveCascadeModal: archive.archiveCascadeModal,
+      mergePickerModal: deleteMerge.mergePickerModal,
+    }),
+    [
+      archive.archiveCascadeModal,
+      archive.headerActionItems,
+      deleteMerge.headerActionItems,
+      deleteMerge.mergePickerModal,
+    ],
+  );
 
   const { balanceClassify, onSave } = useAccountFormBalanceClassify({
     dispatch,
@@ -253,16 +266,11 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   });
 
   const hasExistingAccounts = accounts.length > 0;
-  const { heroTitle, heroSubtitle, saveLabel } = resolveAccountFormHeroCopy({
+  const { heroTitle, saveLabel } = resolveAccountFormHeroCopy({
     isEditMode,
     accountType: core.accountType,
     hasExistingAccounts,
   });
-
-  const currencyLabel = useMemo(
-    () => `Currency${isEditMode ? ' (cannot be changed)' : ''}`,
-    [isEditMode],
-  );
 
   const potentialParents = useMemo(
     () =>
@@ -288,16 +296,9 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     [accounts, accountId],
   );
 
-  // Categories are currency-scoped too, so currency is selectable during
   // creation for both accounts and categories. Existing entities remain locked.
-  const showCurrency = true;
   const showBalance = !core.isCategory && !isParent;
   const formError = validation.formError || draft.localFormError;
-
-  const allowedAccountTypes = useMemo(
-    () => resolveAllowedAccountTypes({ isEditMode, isCategory: core.isCategory }),
-    [isEditMode, core.isCategory],
-  );
 
   return {
     ...kind,
@@ -310,17 +311,13 @@ export function useAccountFormViewModel(): AccountFormViewModel {
       !core.isCategory && !isEditMode && kind.kindLabel
         ? copy.newKind(kind.kindLabel.toLowerCase())
         : heroTitle,
-    heroSubtitle,
     isEditMode,
     isCategory: core.isCategory,
     accountName: core.accountName,
     setAccountName: core.setAccountName,
     accountType: core.accountType,
-    setAccountType: core.setAccountType,
     accountSubtype: core.accountSubtype,
     setAccountSubtype: core.setAccountSubtype,
-    availableSubtypes: core.availableSubtypes,
-    allowedAccountTypes,
     selectedCurrency: core.selectedCurrency,
     currencies,
     setSelectedCurrency: core.setSelectedCurrency,
@@ -337,8 +334,6 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     leaveAfterSave: persistence.leaveAfterSave,
     formError,
     onSave,
-    saveLabel,
-    currencyLabel,
     showInitialBalance: showBalance,
     isSaveDisabled:
       !core.accountName.trim() ||
@@ -353,7 +348,6 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     isParentPickerVisible: pickers.isParentPickerVisible,
     setIsParentPickerVisible: pickers.setIsParentPickerVisible,
     isParent,
-    showCurrency,
     metadata,
     isLoading: isAccountLoading || isBalanceLoading || isMetadataLoading,
     balanceClassify,

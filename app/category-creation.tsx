@@ -1,2 +1,2 @@
-import { CategoryCreationScreen } from '@/src/features/accounts';
-export default CategoryCreationScreen;
+import { AccountCreationScreen } from '@/src/features/accounts';
+export default AccountCreationScreen;

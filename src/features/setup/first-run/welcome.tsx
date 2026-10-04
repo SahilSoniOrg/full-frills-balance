@@ -3,14 +3,11 @@ import { PrivacyAcknowledgementSheet } from '@/src/components/legal/PrivacyAckno
 import { AppConfig, Spacing, Typography } from '@/src/constants';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoticeStrings';
-import { Box, FadeIn, Stack } from '@/src/design-system';
-import { triggerHaptic } from '@/src/utils/haptics';
-import { type ReactNode, useState } from 'react';
+import { Box, Stack } from '@/src/design-system';
+import { OnboardingFadePanel } from './OnboardingFadePanel';
 import { Keyboard, Platform, ScrollView, StyleSheet } from 'react-native';
-
-function WelcomePanel({ children }: { readonly children: ReactNode }) {
-  return <FadeIn fromY={8}>{children}</FadeIn>;
-}
+import { triggerHaptic } from '@/src/utils/haptics';
+import { useState } from 'react';
 
 export function WelcomeScene({
   name,
@@ -91,7 +88,7 @@ export function WelcomeScene({
           keyboardShouldPersistTaps="handled"
         >
           <Stack flexGrow={1} justify="center" gap="xxxl" paddingVertical="md">
-            <WelcomePanel>
+            <OnboardingFadePanel>
               <Stack gap="xxxl" align="center">
                 <Stack gap="md" align="center" paddingHorizontal="md">
                   <AppText
@@ -135,7 +132,7 @@ export function WelcomeScene({
                   </AppButton>
                 </Stack>
               </Stack>
-            </WelcomePanel>
+            </OnboardingFadePanel>
 
             {trustActions}
           </Stack>

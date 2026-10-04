@@ -2,11 +2,11 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { AppIcon, AppText } from '@/src/components/core';
 import { AccountCategoryPill } from '@/src/components/accounts/AccountCategoryPill';
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
-import { useAccountColors } from '@/src/hooks/useAccountColors';
 import { isAccountArchived } from '@/src/utils/accountArchive';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { getAccountIcon } from '@/src/utils/accountIcon';
 import { getAccountTypeVariant, resolveAccountAppearance } from '@/src/utils/accountCategory';
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 type TextVariant = 'body' | 'caption' | 'subheading';
@@ -56,7 +56,10 @@ export function AccountInlineLabel({
   colors,
 }: AccountInlineLabelProps) {
   const { theme, getVariantColors } = useTheme();
-  const fallbackColors = useAccountColors(account ?? { accountType: '' });
+  const fallbackColors = useMemo(
+    () => resolveAccountAppearance(account ?? { accountType: '' }, theme),
+    [account, theme],
+  );
 
   if (!account) {
     return (

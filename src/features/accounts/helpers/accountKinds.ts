@@ -7,7 +7,7 @@ import {
   isAccountSubtype,
   isSubtypeAllowedForType,
 } from '@/src/types/accountSubtype';
-import { isLiquidLiabilitySubtype, isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
+import { isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
 
 export interface SuggestedAccountKind {
   type: AccountType;
@@ -182,15 +182,6 @@ export function resolveAccountKindPresentation(
     submitLabel: isEditMode
       ? copy.saveChanges
       : copy.addKind((kind?.label ?? formatAccountSubtypeLabel(subtype)).toLowerCase()),
-    typeTone: kind?.tone ?? 'neutral',
-    detailsSection:
-      type !== AccountType.LIABILITY
-        ? null
-        : isLiquidLiabilitySubtype(subtype)
-          ? 'credit_card'
-          : isLoanSubtype(subtype)
-            ? 'loan'
-            : null,
   } as const;
 }
 

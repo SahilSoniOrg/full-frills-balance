@@ -123,14 +123,6 @@ function matchesAccountAuditSnapshotState(
   return fields.length > 0;
 }
 
-function currentSnapshotValue(
-  field: string,
-  account: NonNullable<Awaited<ReturnType<typeof accountQueryRepository.findWithDeleted>>>,
-  metadata: AccountMetadata | null,
-): unknown {
-  return currentFieldValue(field, account, metadata);
-}
-
 /**
  * Restores only fields changed by this event, checks that those fields have not since
  * changed, and writes the compensating audit entry in the same database batch.
@@ -156,7 +148,7 @@ export async function revertAccountFromAuditState(
   const expectedAfter = options.expectedAfter ?? {};
   for (const field of changedFields) {
     if (!Object.prototype.hasOwnProperty.call(expectedAfter, field)) continue;
-    if (!matchesExpected(currentSnapshotValue(field, account, metadata), expectedAfter[field])) {
+    if (!matchesExpected(currentFieldValue(field, account, metadata), expectedAfter[field])) {
       throw new Error(
         'This account changed after the selected history entry. Refresh and review the latest change.',
       );
@@ -214,7 +206,7 @@ export async function revertAccountFromAuditState(
         if (
           Object.prototype.hasOwnProperty.call(expectedAfter, field) &&
           !matchesExpected(
-            currentSnapshotValue(field, currentAccount, currentMetadata),
+            currentFieldValue(field, currentAccount, currentMetadata),
             expectedAfter[field],
           )
         ) {

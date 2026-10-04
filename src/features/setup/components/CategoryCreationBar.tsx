@@ -30,9 +30,7 @@ export const CategoryCreationBar: React.FC<CategoryCreationBarProps> = ({
 }) => {
   const { theme } = useTheme();
   const [customName, setCustomName] = useState('');
-  const [customType, setCustomType] = useState<CreationItemType>(
-    defaultType ?? (showTypeToggle ? 'EXPENSE' : 'EXPENSE'),
-  );
+  const [customType, setCustomType] = useState<CreationItemType>(defaultType ?? 'EXPENSE');
   const [selectedIcon, setSelectedIcon] = useState<IconName>(defaultIcon);
   const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);
 

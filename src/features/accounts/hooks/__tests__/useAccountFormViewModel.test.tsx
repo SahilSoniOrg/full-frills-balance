@@ -84,8 +84,11 @@ jest.mock('@/src/features/accounts/hooks/useAccountPersistence', () => ({
 jest.mock('@/src/features/accounts/hooks/useAccountValidation', () => ({
   useAccountValidation: () => ({ formError: null }),
 }));
-jest.mock('@/src/features/accounts/hooks/useAccountFormHeaderActions', () => ({
-  useAccountFormHeaderActions: () => ({}),
+jest.mock('@/src/features/accounts/hooks/useAccountArchiveAction', () => ({
+  useAccountArchiveAction: () => ({ headerActionItems: [], archiveCascadeModal: null }),
+}));
+jest.mock('@/src/features/accounts/hooks/useAccountDeleteMergeActions', () => ({
+  useAccountDeleteMergeActions: () => ({ headerActionItems: [], mergePickerModal: null }),
 }));
 jest.mock('@/src/features/accounts/hooks/form/useAccountFormBalanceClassify', () => ({
   useAccountFormBalanceClassify: () => ({ balanceClassify: null, onSave: mockOnSave }),
@@ -128,10 +131,8 @@ describe('account kind view model with the real draft reducer', () => {
     expect(result.current.accountSubtype).toBe(AccountSubtype.CREDIT_CARD);
     expect(result.current.selectedKindKey).toBe('credit_card');
     expect(result.current.selectedIcon).toBe(Icon.CreditCard);
-    expect(result.current.typeTone).toBe('liability');
     expect(result.current.balanceLabel).toBe('Amount owed today');
     expect(result.current.submitLabel).toBe('Add credit card');
-    expect(result.current.detailsSection).toBe('credit_card');
     expect(result.current.initialBalance).toBe('100');
     expect(result.current.metadata.notes).toBe('Keep this note');
   });
@@ -181,14 +182,11 @@ describe('account kind view model with the real draft reducer', () => {
     act(() =>
       result.current.setAccountKind({ type: AccountType.LIABILITY, subtype: AccountSubtype.LOAN }),
     );
-    expect(result.current.detailsSection).toBe('loan');
     expect(result.current.submitLabel).toBe('Add loan');
     act(() =>
       result.current.setAccountKind({ type: AccountType.ASSET, subtype: AccountSubtype.WALLET }),
     );
-    expect(result.current.detailsSection).toBeNull();
     expect(result.current.balanceLabel).toBe('Balance right now');
-    expect(result.current.typeTone).toBe('asset');
     expect(result.current.selectedIcon).toBe(Icon.Wallet);
   });
 

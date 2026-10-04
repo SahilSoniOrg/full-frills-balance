@@ -6,7 +6,7 @@ import { accountFormStrings as copy } from '@/src/constants/copy/domains/account
 import { AccountType, type AccountSubtype } from '@/src/types/enums';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { Spacing } from '@/src/constants/design-tokens';
-import type { AccountMetadataFormModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
+import type { AccountMetadataFormModel } from '@/src/features/accounts/hooks/form/useAccountFormMetadata';
 import { isLiquidLiabilitySubtype, isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
 import { CreditCardMetadataFields } from './CreditCardMetadataFields';
 import { LoanMetadataFields } from './LoanMetadataFields';

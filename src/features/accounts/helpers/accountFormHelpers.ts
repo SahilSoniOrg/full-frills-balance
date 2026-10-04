@@ -46,7 +46,6 @@ export function resolveInitialAccountType(input: {
 
 export interface AccountFormHeroCopy {
   heroTitle: string;
-  heroSubtitle: string;
   saveLabel: string;
 }
 
@@ -67,14 +66,6 @@ export function resolveAccountFormHeroCopy(input: {
         ? 'Create New Account'
         : 'Create Your First Account';
 
-  const heroSubtitle = isCategory
-    ? ''
-    : input.isEditMode
-      ? 'Update your account details'
-      : input.hasExistingAccounts
-        ? 'Add another source of funds'
-        : 'Start tracking your finances';
-
   const saveLabel = input.isEditMode
     ? isCategory
       ? AppConfig.strings.accounts.categoryForm.saveChanges
@@ -83,7 +74,7 @@ export function resolveAccountFormHeroCopy(input: {
       ? AppConfig.strings.accounts.categoryForm.createCategory
       : 'Create Account';
 
-  return { heroTitle, heroSubtitle, saveLabel };
+  return { heroTitle, saveLabel };
 }
 
 export function filterPotentialParentAccounts(

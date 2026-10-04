@@ -17,20 +17,23 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ accountId: 'account-1' as AccountId }),
 }));
 
-jest.mock('@/src/features/accounts/hooks/useAccountDashboard', () => ({
-  useAccountDashboard: () => ({
-    account: {
-      id: 'account-1',
-      name: 'Checking',
-      accountType: 'ASSET',
-      currencyCode: 'USD',
-      deletedAt: undefined,
-    },
-    balanceData: null,
-    subAccounts: [],
-    allAccounts: [],
-    isLoading: false,
-  }),
+jest.mock('@/src/services/ReactiveDataService', () => ({
+  reactiveDataService: {
+    observeAccountDashboard: jest.fn(() =>
+      mockOf({
+        account: {
+          id: 'account-1',
+          name: 'Checking',
+          accountType: 'ASSET',
+          currencyCode: 'USD',
+          deletedAt: undefined,
+        },
+        balance: null,
+        subAccounts: [],
+        allAccounts: [],
+      }),
+    ),
+  },
 }));
 
 jest.mock('@/src/services/accounts/accountQueries', () => ({

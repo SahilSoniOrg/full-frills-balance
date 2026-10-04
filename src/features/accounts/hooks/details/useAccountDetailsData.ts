@@ -1,10 +1,10 @@
 import { parseIconName, type IconName } from '@/src/types/domainIcons';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { useAccountDashboard } from '@/src/features/accounts/hooks/useAccountDashboard';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
 import { useObservable } from '@/src/hooks/useObservable';
 import { observeUnreconciledMetrics } from '@/src/services/accounts/accountDerivedReads';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
+import { AccountDashboardData, reactiveDataService } from '@/src/services/ReactiveDataService';
 import { formatAccountSubtypeLabel, isAccountType } from '@/src/types/accountSubtype';
 import { AccountBalance } from '@/src/types/domainReadModels';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
@@ -106,12 +106,21 @@ export function useAccountDetailsData(): AccountDetailsData {
   });
 
   const {
-    account: dbAccount,
-    balanceData: dbBalanceData,
-    subAccounts: rawSubBalances,
-    allAccounts: accounts,
+    data: dashboardData,
     isLoading: dashboardLoading,
-  } = useAccountDashboard(workplaceId, accountId, workplaceCurrency);
+  } = useObservable(
+    () =>
+      accountId && workplaceId
+        ? reactiveDataService.observeAccountDashboard(accountId, workplaceCurrency, workplaceId)
+        : of(null),
+    [accountId, workplaceCurrency, workplaceId],
+    null as AccountDashboardData | null,
+  );
+
+  const dbAccount = dashboardData?.account || null;
+  const dbBalanceData = dashboardData?.balance || null;
+  const rawSubBalances = dashboardData?.subAccounts || [];
+  const accounts = dashboardData?.allAccounts || [];
 
   const pName = params.pName;
   const pBalance = params.pBalance;

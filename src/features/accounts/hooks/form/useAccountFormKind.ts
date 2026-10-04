@@ -25,8 +25,6 @@ export interface AccountFormKindApi {
   selectedKindKey: string | null;
   balanceLabel: string;
   submitLabel: string;
-  typeTone: AccountKind['tone'] | 'neutral';
-  detailsSection: 'credit_card' | 'loan' | null;
 }
 
 /** Account-kind logic shares the existing draft's seeding and reset lifecycle. */

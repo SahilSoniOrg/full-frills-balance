@@ -1,21 +1,18 @@
 import { IconName } from '@/src/components/core';
-import { getAccountSubtypesForType } from '@/src/types/accountSubtype';
 import { AccountFormCoreDraft } from '@/src/features/accounts/hooks/accountFormDraft';
 import { AccountFormDraftDispatch } from '@/src/features/accounts/hooks/form/useAccountFormDraft';
 import { isCarouselAccountType } from '@/src/features/accounts/helpers/accountKinds';
 import { isCategoryAccountType } from '@/src/features/accounts/helpers/accountFormHelpers';
 import { AccountId } from '@/src/types/ids';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 
 export interface AccountFormCoreApi {
   accountName: string;
   setAccountName: (value: string) => void;
   accountType: AccountType;
-  setAccountType: (value: AccountType) => void;
   accountSubtype: AccountSubtype;
   setAccountSubtype: (value: AccountSubtype) => void;
-  availableSubtypes: readonly AccountSubtype[];
   selectedCurrency: string;
   setSelectedCurrency: (value: string) => void;
   selectedIcon: IconName;
@@ -47,10 +44,6 @@ export function useAccountFormCore(
 
   const setAccountName = useCallback(
     (value: string) => dispatch({ type: 'PATCH_CORE', patch: { accountName: value } }),
-    [dispatch],
-  );
-  const setAccountType = useCallback(
-    (value: AccountType) => dispatch({ type: 'SET_ACCOUNT_TYPE', accountType: value }),
     [dispatch],
   );
   const setAccountSubtype = useCallback(
@@ -87,17 +80,14 @@ export function useAccountFormCore(
     [dispatch, accountType],
   );
 
-  const availableSubtypes = useMemo(() => getAccountSubtypesForType(accountType), [accountType]);
   const isCategory = isCategoryAccountType(accountType);
 
   return {
     accountName,
     setAccountName,
     accountType,
-    setAccountType,
     accountSubtype,
     setAccountSubtype,
-    availableSubtypes,
     selectedCurrency,
     setSelectedCurrency,
     selectedIcon,

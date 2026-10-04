@@ -14,7 +14,7 @@ import { ColorKey } from '@/src/constants/design-tokens';
 import { Box, Column, Row } from '@/src/design-system';
 import { AccountId } from '@/src/types/ids';
 
-import { getAccountStatsConfig } from '@/src/features/accounts/helpers/accountCardStatsConfig';
+import { getAccountStatsConfig } from '@/src/features/accounts/helpers/accountFlowLabels';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -36,7 +36,7 @@ interface AccountCardProps {
   isSelectionModeActive?: boolean;
 }
 
-export function AccountCardBase({
+function AccountCardBase({
   account,
   isLoading = false,
   onPress,
