@@ -2,7 +2,9 @@
 
 Review the finished redesign on the single local branch `codex/commitments-redesign`. Delivery is local: no push or pull requests are requested.
 
-The latest [density pass](DENSITY-REVIEW.md) tightens all four screens and fixes saved Coming up tile layout. It includes 12 native previews with long-content fixtures; final verification passed 478 suites / 3,022 tests.
+The latest follow-up restores the shared underline tabs from Accounts and the Hub, keeping count badges and tab routes. The [updated review](DENSITY-REVIEW.md#follow-up-shared-tabs) links three fresh native list previews.
+
+The [density pass](DENSITY-REVIEW.md) tightens all four screens and fixes saved Coming up tile layout. It includes 12 native previews with long-content fixtures; final verification passed 478 suites / 3,022 tests.
 
 The five feature commits below remain in the branch history. Commit `18aacf59` applies the requested visual polish. The full `bun run verify` passed after that commit with 478 suites and 3,021 tests; the post-polish result is recorded in [VERIFICATION.md](VERIFICATION.md). The earlier native audit and verification evidence are recorded in commit `38c195dd`.
 

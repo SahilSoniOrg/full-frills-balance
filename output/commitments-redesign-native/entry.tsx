@@ -6,7 +6,7 @@ import { ThemeOverride } from '@/src/contexts/UIContext';
 import { WorkplaceContext } from '@/src/contexts/WorkplaceContext';
 import { AppReadyContext } from '@/src/contexts/app-shell/appReady';
 import { PrivacyScopeProvider, usePrivacyScope } from '@/src/contexts/PrivacyScope';
-import { FontIds, Size, Spacing, ThemeIds, getThemeColors } from '@/src/constants/design-tokens';
+import { FontIds, Spacing, ThemeIds, getThemeColors } from '@/src/constants/design-tokens';
 import { ensureFontSetLoaded } from '@/src/utils/loadFontSet';
 import { LaunchArguments } from 'react-native-launch-arguments';
 import { BudgetListView } from '@/src/features/budget/components/BudgetListView';
@@ -15,7 +15,7 @@ import { BudgetDetailView } from '@/src/features/budget/components/BudgetDetailV
 import { PlannedPaymentDetailsView } from '@/src/features/planned-payments/components/PlannedPaymentDetailsView';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome, TabScreenChrome } from '@/src/components/layout/screenChrome';
-import { AppSegmentedControl } from '@/src/components/core';
+import { AppTabs } from '@/src/components/core';
 import { CommitmentDetailHeaderActions } from '@/src/components/shared/CommitmentDetailHeaderActions';
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
 import { AppConfig } from '@/src/constants';
@@ -322,8 +322,8 @@ function Harness() {
   const isList = screen === 'budgets' || screen === 'planned';
   const activeTab = screen === 'planned' ? 'planned' : 'budgets';
   const tabOptions = [
-    { id: 'budgets' as const, label: `${copy.budgets} ${budgetListFixture.items.length}` },
-    { id: 'planned' as const, label: `${copy.planned} ${plannedFixtureCount}` },
+    { id: 'budgets' as const, label: copy.budgets, badge: budgetListFixture.items.length },
+    { id: 'planned' as const, label: copy.planned, badge: plannedFixtureCount },
   ];
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
@@ -355,18 +355,12 @@ function Harness() {
                   <View style={[styles.viewport, { width: width ?? '100%' }]}>
                     {isList ? (
                       <ScreenWithChrome chrome={listChrome} scrollable={false}>
-                        <View style={styles.segmentedWrap}>
-                          <AppSegmentedControl
+                        <View style={styles.tabsWrap}>
+                          <AppTabs
                             testID="commitments-tabs"
                             options={tabOptions}
                             value={activeTab}
                             onChange={next => setScreen(next)}
-                            flex
-                            itemHeight={Size.buttonMd}
-                            trackColor="surface"
-                            pillColor="surfaceSecondary"
-                            activeTextColor="text"
-                            inactiveTextColor="textSecondary"
                           />
                         </View>
                         <View style={styles.listContent}>
@@ -400,10 +394,8 @@ function Harness() {
 const styles = StyleSheet.create({
   root: { flex: 1, alignItems: 'center' },
   viewport: { flex: 1, maxWidth: '100%' },
-  segmentedWrap: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.xs,
+  tabsWrap: {
+    paddingTop: Spacing.md,
   },
   listContent: { flex: 1 },
   controlPanel: {

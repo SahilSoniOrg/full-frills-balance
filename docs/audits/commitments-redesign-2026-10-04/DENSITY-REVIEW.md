@@ -2,12 +2,18 @@
 
 This pass addresses the oversized layout shown in the user's daily-simulator captures. The hierarchy and financial behavior remain intact; the changes use the app's existing spacing and typography tokens.
 
-- The segmented control is 44pt tall, with tighter surrounding gaps.
+- The initial density pass reduced the segmented control to 44pt; the subsequent user decision replaces it with the shared underline tabs described below.
 - Budget names use body type. Summary padding, card gaps and detail section spacing are smaller; the chart plot remains 156pt tall.
 - Planned rows put name and amount above a wider account-flow row. Normal date tiles are 44pt wide; large text gets 64pt tiles. Long chip names truncate visually and remain complete in the row's accessible label.
 - Overdue Record stays a separate 44pt target beside the late label at normal text sizes. Large text places it below the row.
 - Detail Record, Skip and Resume use 44pt minimum heights and smaller vertical padding; native text can enlarge them.
 - Saved and projected Coming up dates share equal-width tiles. Saved tiles fill their touchable containers without the shared button's extra padding. An edited saved occurrence retains its own precise amount.
+
+## Follow-up: shared tabs
+
+The user's October 4 follow-up overrides the original segmented-control brief. Commitments now uses the same `AppTabs` component as Accounts and the Hub, with count badges, the animated underline, selected-tab accessibility state, haptics and reduced-motion support. Tab routes and the matching create action remain intact. The surrounding top spacing matches Accounts; `AppTabs` supplies its own horizontal padding.
+
+Fresh fixture-driven native previews: [Budgets, dark 390pt](../../../output/commitments-redesign-native/tabs-budgets-dark-390.png), [Planned, light 320pt with privacy](../../../output/commitments-redesign-native/tabs-planned-light-320-privacy.png), and [Planned, dark 320pt with accessibility-large text](../../../output/commitments-redesign-native/tabs-planned-dark-320-large.png). These replace the list-tab appearance in the earlier gallery; detail screens are unchanged by this follow-up. The harness uses the shared tabs but still does not mount the actual Commitments database hooks. At accessibility-large text, the strip scrolls horizontally to keep the selected tab visible. Full verification passed again after this follow-up: 478 suites / 3,022 tests; see [VERIFICATION.md](VERIFICATION.md#shared-tabs-follow-up-verification).
 
 ## Verification
 

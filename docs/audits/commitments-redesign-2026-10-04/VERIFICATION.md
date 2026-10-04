@@ -1,5 +1,11 @@
 # Commitments redesign final verification
 
+## Shared-tabs follow-up verification
+
+After replacing the Commitments segmented control with the shared Accounts/Hub `AppTabs`, `bun run verify` exited 0: **478/478 suites and 3,022/3,022 tests**, architecture/privacy checks, both typechecks, coverage and lint. Lint has zero errors and the existing warning at `src/features/journal/hooks/useJournalSuggestions.ts:78`. Log: `/tmp/commitments-tabs-verify.log`. The focused shared-tabs and Commitments screen run passed 7 tests, covering tab changes in both directions, unknown-route fallback, direct Planned entry, zero-count badges and the matching create actions. Whitespace checks passed.
+
+Three fresh native fixture captures show Budgets at dark 390pt, Planned at light 320pt with privacy, and Planned at dark 320pt with accessibility-large text. At large text the tab strip scrolls horizontally to keep the selected tab visible; the preceding tab may be partly outside the viewport. These are linked in the [updated review](DENSITY-REVIEW.md#follow-up-shared-tabs), with the existing harness limits.
+
 ## Density-pass verification
 
 After the final density and large-text adjustments, `bun run verify` exited 0: **478/478 suites and 3,022/3,022 tests**, architecture/privacy checks, both typechecks, coverage and lint. Lint has zero errors and the existing warning at `src/features/journal/hooks/useJournalSuggestions.ts:78`. The run is recorded locally at `/tmp/commitments-density-verify-complete.log`. The [density review](DENSITY-REVIEW.md) links the 12 refreshed native previews and records their coverage limits.

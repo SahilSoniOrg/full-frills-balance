@@ -1,9 +1,9 @@
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
-import { AppSegmentedControl } from '@/src/components/core';
+import { AppTabs } from '@/src/components/core';
 import { Box } from '@/src/design-system';
-import { AppConfig, Size } from '@/src/constants';
+import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { BudgetListView, useBudgetListViewModel } from '@/src/features/budget';
 import { PlannedPaymentListView, usePlannedPayments } from '@/src/features/planned-payments';
@@ -23,8 +23,8 @@ function CommitmentsScreen() {
   const activeTab: CommitmentsTab = tab === 'planned' ? 'planned' : 'budgets';
   const strings = AppConfig.strings.commitmentsRedesign;
   const options = [
-    { id: 'budgets' as const, label: `${strings.budgets} ${budgets.items.length}` },
-    { id: 'planned' as const, label: `${strings.planned} ${planned.items.length}` },
+    { id: 'budgets' as const, label: strings.budgets, badge: budgets.items.length },
+    { id: 'planned' as const, label: strings.planned, badge: planned.items.length },
   ];
   const chrome = useMemo<TabScreenChrome>(
     () => ({
@@ -44,18 +44,12 @@ function CommitmentsScreen() {
   );
   return (
     <ScreenWithChrome chrome={chrome} scrollable={false}>
-      <Box marginHorizontal="lg" marginTop="sm" marginBottom="xs">
-        <AppSegmentedControl
+      <Box marginTop="md">
+        <AppTabs
           testID="commitments-tabs"
           options={options}
           value={activeTab}
           onChange={(next: CommitmentsTab) => router.setParams({ tab: next })}
-          flex
-          itemHeight={Size.buttonMd}
-          trackColor="surface"
-          pillColor="surfaceSecondary"
-          activeTextColor="text"
-          inactiveTextColor="textSecondary"
         />
       </Box>
       <Box flex={1}>
