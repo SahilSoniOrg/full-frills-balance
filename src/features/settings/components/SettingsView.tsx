@@ -3,8 +3,8 @@ import { AppConfig } from '@/src/constants';
 import { WorkplaceSwitcher } from '@/src/components/workplace/WorkplaceSwitcher';
 import { Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
-import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
-import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
+import { SettingsMenuSection } from '@/src/features/settings/components/SettingsMenuSection';
+import { SettingsSearchMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import { useOptionalWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
 import { Platform, TextInput } from 'react-native';
@@ -105,8 +105,8 @@ export function SettingsView({
         />
         {!searchQuery.trim() && (
           <>
-            <SettingsMenu header="Your Account">
-              <SettingsMenuItem
+            <SettingsMenuSection header="Your Account">
+              <SettingsSearchMenuItem
                 searchId="profile"
                 leftIcon={Icon.User}
                 title={AppConfig.strings.settings.sections.profile}
@@ -114,10 +114,10 @@ export function SettingsView({
                 onPress={onProfile}
                 testID="settings-profile"
               />
-            </SettingsMenu>
+            </SettingsMenuSection>
 
-            <SettingsMenu header="Workplaces">
-              <SettingsMenuItem
+            <SettingsMenuSection header="Workplaces">
+              <SettingsSearchMenuItem
                 searchId="workplace"
                 leftIcon={currentWorkplace?.icon ?? Icon.Briefcase}
                 title={
@@ -127,10 +127,10 @@ export function SettingsView({
                 onPress={onCurrentWorkplace}
                 testID="settings-current-workplace"
               />
-            </SettingsMenu>
+            </SettingsMenuSection>
 
-            <SettingsMenu header="Preferences">
-              <SettingsMenuItem
+            <SettingsMenuSection header="Preferences">
+              <SettingsSearchMenuItem
                 searchId="notifications"
                 leftIcon={Icon.Notifications}
                 title={notificationTitle}
@@ -138,14 +138,14 @@ export function SettingsView({
                 onPress={onAutomation}
                 testID="settings-automation"
               />
-              <SettingsMenuItem
+              <SettingsSearchMenuItem
                 searchId="appearance"
                 leftIcon={Icon.Palette}
                 title={AppConfig.strings.settings.sections.appearance}
                 onPress={onAppearance}
                 testID="settings-appearance"
               />
-              <SettingsMenuItem
+              <SettingsSearchMenuItem
                 searchId="privacy-security"
                 leftIcon={Icon.ShieldCheck}
                 title={AppConfig.strings.settings.sections.privacyAndSecurity}
@@ -153,10 +153,10 @@ export function SettingsView({
                 onPress={onPrivacy}
                 testID="settings-privacy-security"
               />
-            </SettingsMenu>
+            </SettingsMenuSection>
 
-            <SettingsMenu header="Data">
-              <SettingsMenuItem
+            <SettingsMenuSection header="Data">
+              <SettingsSearchMenuItem
                 searchId="data-management"
                 leftIcon={Icon.Database}
                 title={AppConfig.strings.settings.sections.dataManagement}
@@ -164,7 +164,7 @@ export function SettingsView({
                 onPress={onDataManagement}
                 testID="settings-data-management"
               />
-              <SettingsMenuItem
+              <SettingsSearchMenuItem
                 searchId="maintenance"
                 leftIcon={Icon.Wrench}
                 title={AppConfig.strings.settings.sections.maintenanceAndReset}
@@ -172,10 +172,10 @@ export function SettingsView({
                 onPress={onMaintenance}
                 testID="settings-maintenance"
               />
-            </SettingsMenu>
+            </SettingsMenuSection>
 
-            <SettingsMenu header="Support">
-              <SettingsMenuItem
+            <SettingsMenuSection header="Support">
+              <SettingsSearchMenuItem
                 searchId="about-support"
                 leftIcon={Icon.Info}
                 title={AppConfig.strings.settings.sections.aboutAndSupport}
@@ -184,7 +184,7 @@ export function SettingsView({
                 prominent
                 testID="settings-about-support"
               />
-            </SettingsMenu>
+            </SettingsMenuSection>
           </>
         )}
       </Stack>

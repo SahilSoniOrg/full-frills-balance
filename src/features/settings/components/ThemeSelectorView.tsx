@@ -2,7 +2,7 @@ import { AppConfig, ThemeId, ThemeIds, ThemeSchemes, Opacity } from '@/src/const
 import { Icon, AppText } from '@/src/components/core';
 import { SettingsSelectionIndicator } from '@/src/components/settings/SettingsSelectionIndicator';
 import { Box, Stack } from '@/src/design-system';
-import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
+import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { withOpacity } from '@/src/utils/color-math';

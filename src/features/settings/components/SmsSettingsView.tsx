@@ -2,8 +2,8 @@ import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
-import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
-import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
+import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
+import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import { SettingsToggleItem } from '@/src/features/settings/components/SettingsToggleItem';
 
 interface SmsSettingsViewProps {

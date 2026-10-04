@@ -4,8 +4,8 @@ import { AppConfig } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import { DataExportSection } from '@/src/features/settings/components/DataExportSection';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
-import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
-import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
+import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
+import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import type { DataManagementViewModel } from '@/src/features/settings/hooks/useDataManagementViewModel';
 import { ShareFormat } from '@/src/types/sharing';
 

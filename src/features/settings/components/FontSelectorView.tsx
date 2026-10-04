@@ -2,7 +2,7 @@ import { AppConfig, FontId, FontIds, FontSchemes, Opacity } from '@/src/constant
 import { AppText } from '@/src/components/core';
 import { SettingsSelectionIndicator } from '@/src/components/settings/SettingsSelectionIndicator';
 import { Box, Stack } from '@/src/design-system';
-import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
+import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import { useTheme } from '@/src/hooks/use-theme';
 import { logger } from '@/src/utils/logger';
 import { ensureAllFontSetsLoaded } from '@/src/utils/loadFontSet';

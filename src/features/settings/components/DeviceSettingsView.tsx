@@ -2,8 +2,8 @@ import { Icon, AppText } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
-import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
-import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
+import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
+import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 
 export function DeviceSettingsView() {
   return (

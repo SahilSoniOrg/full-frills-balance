@@ -4,12 +4,12 @@ import {
 } from '@/src/components/settings/SettingsMenuItem';
 import { getSettingsSearchIcon } from '@/src/features/settings/components/settingsSearchCatalog';
 
-export type SettingsMenuItemProps = CommonSettingsMenuItemProps & {
+export type SettingsSearchMenuItemProps = CommonSettingsMenuItemProps & {
   /** Required for every settings row so search can navigate and focus it. */
   searchId: string;
 };
 
-export function SettingsMenuItem({ searchId, ...props }: SettingsMenuItemProps) {
+export function SettingsSearchMenuItem({ searchId, ...props }: SettingsSearchMenuItemProps) {
   const registeredIcon = getSettingsSearchIcon(searchId);
 
   return (

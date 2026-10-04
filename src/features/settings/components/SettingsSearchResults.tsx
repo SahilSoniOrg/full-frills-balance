@@ -1,6 +1,6 @@
 import { Icon, AppIcon, AppInput, AppText } from '@/src/components/core';
 import { Box, Stack } from '@/src/design-system';
-import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
+import { SettingsMenuSection } from '@/src/features/settings/components/SettingsMenuSection';
 import { SettingsMenuItem } from '@/src/components/settings/SettingsMenuItem';
 import type { SettingsSearchItem } from '@/src/features/settings/components/settingsSearchCatalog';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -68,7 +68,7 @@ export function SettingsSearchResults({
           </AppText>
         </Box>
       ) : (
-        <SettingsMenu header="Search results">
+        <SettingsMenuSection header="Search results">
           {results.map(item => (
             <SettingsMenuItem
               key={item.id}
@@ -80,7 +80,7 @@ export function SettingsSearchResults({
               testID={`settings-search-result-${item.id}`}
             />
           ))}
-        </SettingsMenu>
+        </SettingsMenuSection>
       )}
     </Stack>
   );

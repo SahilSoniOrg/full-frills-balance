@@ -3,6 +3,6 @@ import {
   type SettingsMenuProps as CommonSettingsMenuProps,
 } from '@/src/components/settings/SettingsMenu';
 
-export function SettingsMenu(props: CommonSettingsMenuProps) {
+export function SettingsMenuSection(props: CommonSettingsMenuProps) {
   return <CommonSettingsMenu {...props} variant={props.variant ?? 'flat'} />;
 }

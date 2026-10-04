@@ -5,7 +5,7 @@ import { Stack } from '@/src/design-system';
 import { FontSelectorView } from '@/src/features/settings/components/FontSelectorView';
 import { HourCycleSelectorView } from '@/src/features/settings/components/HourCycleSelectorView';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
-import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
+import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
 import { SettingsToggleItem } from '@/src/features/settings/components/SettingsToggleItem';
 import { ThemeSelectorView } from '@/src/features/settings/components/ThemeSelectorView';
 import type { AppearanceSettingsViewModel } from '@/src/features/settings/hooks/useAppearanceSettingsViewModel';

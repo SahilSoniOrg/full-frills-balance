@@ -1,8 +1,8 @@
 import { AppToggle } from '@/src/components/core';
 import {
-  SettingsMenuItem,
-  type SettingsMenuItemProps,
-} from '@/src/features/settings/components/SettingsMenuItem';
+  SettingsSearchMenuItem as SettingsMenuItem,
+  type SettingsSearchMenuItemProps as SettingsMenuItemProps,
+} from '@/src/features/settings/components/SettingsSearchMenuItem';
 
 export type SettingsToggleItemProps = Omit<
   SettingsMenuItemProps,

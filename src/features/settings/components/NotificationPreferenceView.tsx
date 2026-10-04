@@ -2,7 +2,7 @@ import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModa
 import { Icon, AppIcon, AppSegmentedControl, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
-import { SettingsMenuItem } from '@/src/features/settings/components/SettingsMenuItem';
+import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import { NotificationCadence } from '@/src/services/notification/NotificationService';
 import dayjs from 'dayjs';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';

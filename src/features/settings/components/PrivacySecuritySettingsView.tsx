@@ -1,7 +1,7 @@
 import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
-import { SettingsMenu } from '@/src/features/settings/components/SettingsMenu';
+import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
 import { SettingsToggleItem } from '@/src/features/settings/components/SettingsToggleItem';
 import type { PrivacySettingsViewModel } from '@/src/features/settings/hooks/usePrivacySettingsViewModel';
 
