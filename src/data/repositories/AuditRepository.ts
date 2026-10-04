@@ -8,7 +8,6 @@ import {
   AuditEventType,
   createAuditEventPayload,
 } from '@/src/types/auditEvents';
-import { preferences } from '@/src/services/preferences';
 import { getLocalAuditActorId } from '@/src/services/audit-identity';
 import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
@@ -122,12 +121,10 @@ export class AuditRepository {
     if (source !== undefined && source !== 'app' && source !== 'import') {
       return { type: 'unknown' };
     }
-    const label = preferences.userName?.trim();
     const id = getLocalAuditActorId();
     return {
       type: 'user',
       ...(id ? { id, idScope: 'local-install' } : {}),
-      ...(label ? { label } : {}),
     };
   }
 

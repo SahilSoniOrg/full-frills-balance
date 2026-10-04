@@ -6,8 +6,10 @@ import {
   auditRepository,
 } from '@/src/data/repositories/AuditRepository';
 import { revertRegistry } from '@/src/services/revert-registry';
+import { preferences } from '@/src/services/preferences';
 import { AuditEntityType } from '@/src/types/enums';
-import type { AuditEventSource, AuditEventType } from '@/src/types/auditEvents';
+import type { AuditActor, AuditEventSource, AuditEventType } from '@/src/types/auditEvents';
+import { getLocalAuditActorId } from '@/src/services/audit-identity';
 import { WorkplaceId } from '@/src/types/ids';
 import { PlainAuditLog } from '@/src/types/plainDtos';
 import { map } from 'rxjs';
@@ -27,11 +29,32 @@ function toSupportedPlainAuditLog(log: AuditLog): PlainAuditLog {
  * Thin wrapper around AuditRepository for logging and retrieving audit entries.
  */
 export class AuditService {
+  constructor(
+    private readonly preferenceSource: Pick<typeof preferences, 'userName'> = preferences,
+  ) {}
+
+  private getDefaultActor(source?: AuditEventSource): AuditActor {
+    if (source === 'system' || source === 'repair') return { type: 'system' };
+    if (source !== undefined && source !== 'app' && source !== 'import') {
+      return { type: 'unknown' };
+    }
+    const label = this.preferenceSource.userName?.trim();
+    const id = getLocalAuditActorId();
+    return {
+      type: 'user',
+      ...(id ? { id, idScope: 'local-install' } : {}),
+      ...(label ? { label } : {}),
+    };
+  }
+
   /**
    * Log an audit entry
    */
   async log<T>(entry: AuditEntry<T>, workplaceId: WorkplaceId): Promise<void> {
-    return auditRepository.log(entry, workplaceId);
+    return auditRepository.log(
+      { ...entry, actor: entry.actor ?? this.getDefaultActor(entry.source) },
+      workplaceId,
+    );
   }
 
   /**

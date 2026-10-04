@@ -4,7 +4,7 @@ import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { deleteAccount, recoverAccount } from '@/src/services/accounts/accountDeleteCommands';
 import { revertAccountFromAuditState } from '@/src/services/accounts/accountAuditCommands';
 import { journalService } from '@/src/services/journal/journalDomainService';
-import { auditService } from '@/src/services/audit-service';
+import { AuditService, auditService } from '@/src/services/audit-service';
 
 import { revertRegistry } from '@/src/services/revert-registry';
 
@@ -86,9 +86,18 @@ describe('AuditService', () => {
         changes: { name: 'New Name' },
       };
 
-      await auditService.log(entry, 'wp-1' as WorkplaceId);
+      await new AuditService({ userName: 'Sahil' }).log(entry, 'wp-1' as WorkplaceId);
 
-      expect(auditRepository.log).toHaveBeenCalledWith(entry, 'wp-1');
+      expect(auditRepository.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ...entry,
+          actor: expect.objectContaining({
+            type: 'user',
+            label: 'Sahil',
+          }),
+        }),
+        'wp-1',
+      );
     });
   });
 
