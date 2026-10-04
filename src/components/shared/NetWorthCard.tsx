@@ -1,6 +1,7 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppCard, AppText } from '@/src/components/core';
 import { Shape, Spacing, Typography } from '@/src/constants';
+import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
 
@@ -61,7 +62,7 @@ export const NetWorthCard = ({
           </View>
         </View>
 
-        <View style={[styles.divider, { backgroundColor: theme.divider }]} />
+        <Separator vertical background="divider" style={styles.divider} />
 
         <View style={styles.breakdownItem}>
           <View style={[styles.dot, { backgroundColor: theme.liability }]} />
@@ -115,8 +116,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs + 2,
   },
   divider: {
-    width: 1,
-    height: '100%',
     marginHorizontal: Spacing.md,
   },
 });

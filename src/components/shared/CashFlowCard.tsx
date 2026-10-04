@@ -1,6 +1,7 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppCard, AppText, AppSegmentedControl } from '@/src/components/core';
 import { Shape, Spacing, Typography } from '@/src/constants';
+import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
 import { IncompleteFxWarning } from './IncompleteFxWarning';
@@ -87,7 +88,7 @@ export const CashFlowCard = ({
           </View>
         </View>
 
-        <View style={[styles.divider, { backgroundColor: theme.divider }]} />
+        <Separator vertical background="divider" style={styles.divider} />
 
         <View style={styles.breakdownItem}>
           <View style={[styles.dot, { backgroundColor: theme.expense }]} />
@@ -153,8 +154,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs + 2,
   },
   divider: {
-    width: 1,
-    height: '100%',
     marginHorizontal: Spacing.md,
   },
   warning: {

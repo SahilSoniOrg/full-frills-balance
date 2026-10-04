@@ -1,5 +1,6 @@
 import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing, Typography } from '@/src/constants';
+import { Separator } from '@/src/design-system';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
@@ -20,7 +21,7 @@ export function ReconciledMarker({ date }: ReconciledMarkerProps) {
     <View
       style={[styles.container, styles.reconciledContainer, { backgroundColor: theme.background }]}
     >
-      <View style={[styles.reconciledLine, { backgroundColor: theme.income }]} />
+      <Separator background="income" style={styles.reconciledLine} />
       <View style={styles.reconciledContent}>
         <AppIcon name={Icon.Shield} size={14} color={theme.income} />
         <AppText
@@ -33,7 +34,7 @@ export function ReconciledMarker({ date }: ReconciledMarkerProps) {
           {label.toUpperCase()}
         </AppText>
       </View>
-      <View style={[styles.reconciledLine, { backgroundColor: theme.income }]} />
+      <Separator background="income" style={styles.reconciledLine} />
     </View>
   );
 }
@@ -52,7 +53,6 @@ const styles = StyleSheet.create({
   },
   reconciledLine: {
     flex: 1,
-    height: 1,
     opacity: Opacity.muted,
   },
   reconciledContent: {
