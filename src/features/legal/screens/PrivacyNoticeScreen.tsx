@@ -1,7 +1,7 @@
 import { Icon, AppButton, AppCard, AppIcon, AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout/ScreenWithChrome';
 import { AppConfig, Size, Spacing } from '@/src/constants';
-import { Box, Inset, Separator, Stack } from '@/src/design-system';
+import { Box, Separator, Stack } from '@/src/design-system';
 import type { IconName } from '@/src/types/domainIcons';
 import {
   acknowledgeCurrentPrivacyPolicy,
@@ -100,7 +100,7 @@ export default function PrivacyNoticeScreen() {
       }}
       scrollable
     >
-      <Inset horizontal="lg" vertical="md">
+      <Box paddingHorizontal="lg" paddingVertical="md">
         <Stack space="xxl">
           <Stack space="sm">
             <AppText variant="title">{copy.heroTitle}</AppText>
@@ -201,7 +201,7 @@ export default function PrivacyNoticeScreen() {
             </AppText>
           </Stack>
         </Stack>
-      </Inset>
+      </Box>
     </ScreenWithChrome>
   );
 }

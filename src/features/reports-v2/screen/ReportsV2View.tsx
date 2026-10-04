@@ -5,7 +5,7 @@ import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig } from '@/src/constants';
 import { Spacing } from '@/src/constants/design-tokens';
-import { Inset } from '@/src/design-system';
+import { Box } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { ReportsV2QueryEngine } from '@/src/services/reports-v2/reportQueryEngine';
 import { asAccountId, asWorkplaceId } from '@/src/types/ids';
@@ -106,7 +106,7 @@ export function ReportsV2View({ engine, workplaceId, targetCurrency, chrome }: R
   return (
     <>
       <ScreenWithChrome chrome={chrome} scrollable={false}>
-        <Inset space="md" vertical="md" flex={1}>
+        <Box padding="md" paddingVertical="md" flex={1}>
           <ScrollView
             contentContainerStyle={styles.content}
             refreshControl={
@@ -172,7 +172,7 @@ export function ReportsV2View({ engine, workplaceId, targetCurrency, chrome }: R
               />
             ) : null}
           </ScrollView>
-        </Inset>
+        </Box>
       </ScreenWithChrome>
       <MultiAccountPickerModal
         visible={isAccountPickerVisible}

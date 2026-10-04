@@ -1,7 +1,7 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { Section } from '@/src/components/shared/Section';
 import { Icon, AppButton, AppIcon, AppText, ListRow } from '@/src/components/core';
-import { Box, Inset, Stack } from '@/src/design-system';
+import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import React, { useMemo, useState } from 'react';
@@ -109,7 +109,7 @@ export const JournalDetailsSmsSection = React.memo(
 
                 {sms.rawBody && (
                   <Section title="SMS Raw Body">
-                    <Inset horizontal="md" vertical="md">
+                    <Box paddingHorizontal="md" paddingVertical="md">
                       <AppText variant="caption" color="secondary">
                         RAW SMS
                       </AppText>
@@ -118,18 +118,18 @@ export const JournalDetailsSmsSection = React.memo(
                           {isPrivacyMode ? 'Original message hidden in Privacy Mode.' : sms.rawBody}
                         </AppText>
                       </Box>
-                    </Inset>
+                    </Box>
                   </Section>
                 )}
               </Stack>
             ))}
 
             {onOpenSmsInbox && (
-              <Inset horizontal="md" vertical="md">
+              <Box paddingHorizontal="md" paddingVertical="md">
                 <AppButton variant="ghost" onPress={onOpenSmsInbox} style={{ width: '100%' }}>
                   Open SMS Inbox
                 </AppButton>
-              </Inset>
+              </Box>
             )}
           </Stack>
         )}

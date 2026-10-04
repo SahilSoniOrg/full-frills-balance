@@ -1,6 +1,6 @@
 import { AppText } from '@/src/components/core/AppText';
 import { Spacing } from '@/src/constants';
-import { Inset, Separator, Stack } from '@/src/design-system';
+import { Box, Separator, Stack } from '@/src/design-system';
 import React from 'react';
 import { ScreenSectionHeader } from './ScreenSectionHeader';
 
@@ -40,11 +40,11 @@ export function Section<T>({
       <ScreenSectionHeader title={title} style={{ paddingHorizontal: Spacing.xs }} />
       <Stack space="none">
         {Array.isArray(items) && items.length === 0 && (
-          <Inset horizontal="xs" vertical="sm">
+          <Box paddingHorizontal="xs" paddingVertical="sm">
             <AppText variant="body" color="secondary">
               {emptyText}
             </AppText>
-          </Inset>
+          </Box>
         )}
 
         {isListMode &&

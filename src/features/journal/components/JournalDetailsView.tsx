@@ -3,7 +3,7 @@ import { LoadingView } from '@/src/components/shared/LoadingView';
 import { Icon, AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { Inset, Separator, Stack } from '@/src/design-system';
+import { Box, Separator, Stack } from '@/src/design-system';
 import { JournalDetailsViewModel } from '@/src/features/journal/hooks/useJournalDetailsViewModel';
 import React from 'react';
 import { JournalDetailsActions } from './details/JournalDetailsActions';
@@ -45,7 +45,7 @@ export function JournalDetailsView({
     case 'ready': {
       const readyVm = state.data;
       body = (
-        <Inset space="md" vertical="md">
+        <Box padding="md" paddingVertical="md">
           <Stack space="xl">
             <JournalDetailsHero
               displayIcon={readyVm.displayIcon}
@@ -94,7 +94,7 @@ export function JournalDetailsView({
               revertButtonLabel={readyVm.revertButtonLabel}
             />
           </Stack>
-        </Inset>
+        </Box>
       );
       break;
     }

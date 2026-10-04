@@ -3,6 +3,23 @@ import { render, screen } from '@/src/utils/test-utils';
 import { Pressable } from 'react-native';
 
 describe('Box', () => {
+  it('supports the padding props used by the removed Inset wrapper', () => {
+    render(
+      <Box testID="padded-box" paddingHorizontal="md" paddingVertical="sm">
+        child
+      </Box>,
+    );
+
+    expect(screen.getByTestId('padded-box').props.style).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          paddingHorizontal: expect.any(Number),
+          paddingVertical: expect.any(Number),
+        }),
+      ]),
+    );
+  });
+
   it('preserves Pressable callback styles', () => {
     const pressableStyle = jest.fn(({ pressed }) => ({ opacity: pressed ? 0.5 : 1 }));
 

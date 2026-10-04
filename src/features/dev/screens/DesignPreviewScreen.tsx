@@ -42,7 +42,7 @@ import {
 import { ListRow } from '@/src/components/core/ListRow';
 import { Shape, Size, Spacing, ThemeMode } from '@/src/constants';
 import { ThemeOverride } from '@/src/contexts/UIContext';
-import { Box, Inline, Inset, Page, Separator, Skeleton, Stack } from '@/src/design-system';
+import { Box, Inline, Page, Separator, Skeleton, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PeriodFilter } from '@/src/utils/dateUtils';
 import { Redirect } from 'expo-router';
@@ -131,7 +131,7 @@ export default function DesignPreviewScreen() {
         scrollable
         background="background"
         header={
-          <Inset horizontal="lg" vertical="md">
+          <Box paddingHorizontal="lg" paddingVertical="md">
             <Inline justifyContent="space-between" alignItems="center">
               <AppText variant="title">Design System Preview</AppText>
               <Inline space="sm" alignItems="center">
@@ -139,10 +139,10 @@ export default function DesignPreviewScreen() {
                 <Switch value={isDarkMode} onValueChange={setIsDarkMode} />
               </Inline>
             </Inline>
-          </Inset>
+          </Box>
         }
       >
-        <Inset horizontal="lg" vertical="xl">
+        <Box paddingHorizontal="lg" paddingVertical="xl">
           <Stack space="xl">
             {/* Typography Section */}
             <AppCard elevation="sm" paddingSize="lg">
@@ -603,7 +603,7 @@ export default function DesignPreviewScreen() {
               </AppText>
             </Box>
           </Stack>
-        </Inset>
+        </Box>
 
         <DateRangePicker
           visible={isDatePickerVisible}

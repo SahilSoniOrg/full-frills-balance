@@ -9,7 +9,7 @@ import {
   getReadableColor,
   withOpacity,
 } from '@/src/utils/color-math';
-import { Inset, Stack } from '@/src/design-system';
+import { Box, Stack } from '@/src/design-system';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatClockTime, formatDate } from '@/src/utils/dateUtils';
@@ -103,7 +103,7 @@ const JournalEntryCardComponent = ({
       accessibilityState={!isPressable ? accessibilityState : undefined}
       style={[styles.container, { backgroundColor: theme.surface }, cardStyle]}
     >
-      <Inset horizontal="md" vertical="lg">
+      <Box paddingHorizontal="md" paddingVertical="lg">
         <Stack gap="md">
           <View style={[styles.header, overlay != null ? styles.selectionHeader : undefined]}>
             <View style={[styles.identity, fontScale > 1 ? styles.enlargedIdentity : undefined]}>
@@ -173,7 +173,7 @@ const JournalEntryCardComponent = ({
           <JournalAccountFlow legs={accountLegs} timestamp={displayedDate} />
         </Stack>
         {overlay}
-      </Inset>
+      </Box>
     </AppCard>
   );
 

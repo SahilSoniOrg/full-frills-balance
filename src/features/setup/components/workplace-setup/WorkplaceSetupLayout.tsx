@@ -1,6 +1,6 @@
 import { AppButton } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
-import { Box, Inset, Page } from '@/src/design-system';
+import { Box, Page } from '@/src/design-system';
 import { StepIndicator } from '@/src/features/setup/components/StepIndicator';
 import React from 'react';
 
@@ -28,7 +28,7 @@ export function WorkplaceSetupLayout({
   return (
     <Page testID={testID} edges={edges} keyboardAvoiding={keyboardAvoiding}>
       <Box flex={1}>
-        <Inset horizontal="lg" top={0} bottom="sm" flex={1}>
+        <Box paddingHorizontal="lg" paddingTop={0} paddingBottom="sm" flex={1}>
           <Box
             maxWidth={AppConfig.layout.maxContentWidth}
             width="100%"
@@ -43,7 +43,7 @@ export function WorkplaceSetupLayout({
               </AppButton>
             ) : null}
           </Box>
-        </Inset>
+        </Box>
       </Box>
     </Page>
   );

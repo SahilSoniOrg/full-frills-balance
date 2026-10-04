@@ -6,7 +6,7 @@ import type {
 } from '@/src/components/layout/screenChrome';
 import { SettingsFocusProvider } from '@/src/components/settings/SettingsFocusTarget';
 import { Size, Spacing } from '@/src/constants';
-import { Inset, Stack } from '@/src/design-system';
+import { Box, Stack } from '@/src/design-system';
 import { SettingsFooter } from '@/src/features/settings/components/SettingsFooter';
 import { Icon } from '@/src/types/domainIcons';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -83,12 +83,12 @@ export function SettingsLayout({
         }}
         scrollViewRef={scrollViewRef}
       >
-        <Inset space="lg" vertical="md" flex={scrollable ? undefined : 1}>
+        <Box padding="lg" paddingVertical="md" flex={scrollable ? undefined : 1}>
           <Stack space="xl" flex={scrollable ? undefined : 1}>
             {children}
             {!hideFooter && <SettingsFooter />}
           </Stack>
-        </Inset>
+        </Box>
       </ScreenWithChrome>
     </SettingsFocusProvider>
   );

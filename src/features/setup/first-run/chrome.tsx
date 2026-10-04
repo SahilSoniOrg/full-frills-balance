@@ -2,7 +2,7 @@ import { AppText } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, ChromeMotion, Spacing } from '@/src/constants';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
-import { Box, Inline, Inset, Page, Stack, usePageKeyboard } from '@/src/design-system';
+import { Box, Inline, Page, Stack, usePageKeyboard } from '@/src/design-system';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { MotiView } from 'moti';
 import type { ReactNode } from 'react';
@@ -32,7 +32,7 @@ export function OnboardingChrome({
   return (
     <Page testID={testID} edges={['top', 'bottom']} keyboardAvoiding>
       <Box flex={1} minHeight={0}>
-        <Inset horizontal="lg" top={0} bottom="sm" flex={1}>
+        <Box paddingHorizontal="lg" paddingTop={0} paddingBottom="sm" flex={1}>
           <Box
             maxWidth={AppConfig.layout.maxContentWidth}
             width="100%"
@@ -72,7 +72,7 @@ export function OnboardingChrome({
               {children}
             </Box>
           </Box>
-        </Inset>
+        </Box>
       </Box>
     </Page>
   );

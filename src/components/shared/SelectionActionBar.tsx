@@ -3,7 +3,7 @@ import { Icon, AppIcon, AppText, IconButton, type IconName } from '@/src/compone
 import type { IconButtonProps } from '@/src/components/core/IconButton';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
-import { Box, Inline, Inset } from '@/src/design-system';
+import { Box, Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AnimatePresence, MotiView } from 'moti';
 import { useMemo, useState } from 'react';
@@ -181,7 +181,7 @@ export const SelectionActionBar = ({
                 },
               ]}
             >
-              <Inset horizontal="md" vertical="xs">
+              <Box paddingHorizontal="md" paddingVertical="xs">
                 <Inline align="center" justify="space-between" gap="xs">
                   {/* LEFT: Exit & Count */}
                   <Inline align="center" gap="xs">
@@ -244,7 +244,7 @@ export const SelectionActionBar = ({
                     )}
                   </Inline>
                 </Inline>
-              </Inset>
+              </Box>
             </View>
           </MotiView>
         )}

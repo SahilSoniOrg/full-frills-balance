@@ -4,7 +4,7 @@ import type { JournalEntryListRef } from '@/src/components/journal/JournalEntryL
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { Size, Spacing } from '@/src/constants';
-import { Inset } from '@/src/design-system';
+import { Box } from '@/src/design-system';
 import { DashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
 import type {
   SafeToSpendDashboard,
@@ -181,9 +181,9 @@ export function DashboardScreenView({
                   onItemPress={plannedOccurrences.onItemPress}
                 />
               </View>
-              <Inset horizontal="lg" vertical="lg">
+              <Box paddingHorizontal="lg" paddingVertical="lg">
                 <ScreenSectionHeader title={journalSectionTitle} />
-              </Inset>
+              </Box>
             </View>
           }
         />
