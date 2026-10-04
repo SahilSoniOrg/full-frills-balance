@@ -9,7 +9,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { useCalendarDay } from '@/src/hooks/useCalendarDay';
 import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 import { BudgetItem } from '../types';
-import { BudgetProgressBar } from './BudgetProgressBar';
+import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
 import { View } from 'react-native';
 import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
 import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';

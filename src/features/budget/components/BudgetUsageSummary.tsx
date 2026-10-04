@@ -5,7 +5,7 @@ import { AppConfig, Size } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
 import { presentBudgetUsage } from '@/src/features/budget/helpers/budgetCardPresentation';
 import { BudgetUsage } from '@/src/services/budget/types';
-import { BudgetProgressBar } from './BudgetProgressBar';
+import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
 import { IncompleteFxWarning } from '@/src/components/shared/IncompleteFxWarning';
 import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
 

@@ -1,4 +1,4 @@
-import { ProgressBar } from '@/src/components/shared/ProgressBar';
+import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
 import { Icon, AppIcon, AppText, type IconName } from '@/src/components/core';
 import { Opacity, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
@@ -35,7 +35,13 @@ export function SettingsMaintenanceOverlay({
             {title}
           </AppText>
           <View style={styles.spinnerContainer}>
-            <ProgressBar progress={progress} label={progressMessage} style={styles.progressBar} />
+            <BudgetProgressBar
+              progress={progress * 100}
+              statusColor="primary"
+              label={progressMessage}
+              showPercentage
+              style={styles.progressBar}
+            />
           </View>
           {hint && (
             <AppText variant="caption" color="secondary" style={styles.modalHint}>

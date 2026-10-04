@@ -1,37 +1,66 @@
+import { AppText } from '@/src/components/core';
 import { AppConfig, ColorKey, Opacity, Spacing } from '@/src/constants';
 import { Box } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
-import { StyleSheet, View } from 'react-native';
+import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
-interface BudgetProgressBarProps {
+export interface BudgetProgressBarProps {
   /** Unclamped percentage: values beyond 100 render a striped overspend segment. */
   progress: number;
-  statusColor: ColorKey;
+  statusColor?: ColorKey;
   size?: 'sm' | 'md';
   elapsedShare?: number;
   accessibilityLabel?: string;
+  label?: string;
+  showPercentage?: boolean;
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
 }
 
 export function BudgetProgressBar({
   progress,
-  statusColor,
+  statusColor = 'primary',
   size = 'sm',
   elapsedShare,
   accessibilityLabel,
+  label,
+  showPercentage = false,
+  style,
+  testID,
 }: BudgetProgressBarProps) {
   const { theme } = useTheme();
   const privateMode = useEffectivePrivacyMode();
   const clampedProgress = Math.min(100, Math.max(0, progress));
   const stripeShare = Math.min(25, Math.max(0, progress - 100));
   const height = size === 'md' ? Spacing.md : Spacing.sm;
-  const label =
+  const accessibilityLabelValue =
     accessibilityLabel ??
     AppConfig.strings.commitmentsRedesign.progressAccessibility(
       privateMode ? AppConfig.privacyMask : `${Math.round(progress)}%`,
     );
   return (
-    <View accessible accessibilityRole="image" accessibilityLabel={label} style={styles.wrapper}>
+    <View
+      testID={testID}
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={accessibilityLabelValue}
+      style={[styles.wrapper, style]}
+    >
+      {(label || showPercentage) && (
+        <View style={styles.header}>
+          {label ? (
+            <AppText variant="caption" color="secondary" style={styles.label} numberOfLines={1}>
+              {label}
+            </AppText>
+          ) : null}
+          {showPercentage ? (
+            <AppText variant="caption" color="secondary" style={styles.percentage}>
+              {Math.round(progress)}%
+            </AppText>
+          ) : null}
+        </View>
+      )}
       <Box height={height} background="surfaceSecondary" borderRadius="full" overflow="hidden">
         <Box
           height="100%"
@@ -75,6 +104,14 @@ export function BudgetProgressBar({
 }
 const styles = StyleSheet.create({
   wrapper: { position: 'relative', paddingVertical: Spacing.xs },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.xs,
+  },
+  label: { flex: 1 },
+  percentage: { marginLeft: Spacing.sm, fontVariant: ['tabular-nums'] },
   marker: { position: 'absolute', top: 0, width: 2, marginLeft: -1, borderRadius: 1 },
   stripes: {
     position: 'absolute',

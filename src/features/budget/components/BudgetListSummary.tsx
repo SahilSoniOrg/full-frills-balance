@@ -3,7 +3,7 @@ import { AppSurface, AppText, Badge } from '@/src/components/core';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { Column, Row } from '@/src/design-system';
-import { BudgetProgressBar } from './BudgetProgressBar';
+import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
 import { presentBudgetUsage } from '../helpers/budgetCardPresentation';
 import { summarizeBudgetList } from '../helpers/budgetListPresentation';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';

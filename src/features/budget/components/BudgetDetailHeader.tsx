@@ -1,7 +1,7 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { IncompleteFxWarning } from '@/src/components/shared/IncompleteFxWarning';
 import { AppCard, AppText, Badge } from '@/src/components/core';
-import { BudgetProgressBar } from './BudgetProgressBar';
+import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
 import { BudgetPeriodStepper } from './BudgetPeriodStepper';
 import { AppConfig, Shape, Spacing } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';

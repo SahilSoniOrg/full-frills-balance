@@ -1,7 +1,7 @@
 import { render, fireEvent, cleanup } from '@/src/utils/test-utils';
 import { BudgetCard } from '../BudgetCard';
 import { BudgetListSummary } from '../BudgetListSummary';
-import { BudgetProgressBar } from '../BudgetProgressBar';
+import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
 import { summarizeBudgetList } from '../../helpers/budgetListPresentation';
 import { preferences } from '@/src/services/preferences';
 import { AppConfig } from '@/src/constants';
