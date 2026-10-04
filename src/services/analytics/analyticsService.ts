@@ -148,7 +148,12 @@ export class AnalyticsService {
   track(eventName: string, props?: AnalyticsProperties): boolean {
     if (!this._posthog) return false;
     const safeProperties = sanitizeAnalyticsProperties(eventName, props);
-    if (safeProperties === null) return false;
+    if (safeProperties === null) {
+      if (__DEV__) {
+        logger.warn(`[Analytics] Dropped undeclared or invalid event: ${eventName}`);
+      }
+      return false;
+    }
 
     try {
       this._posthog.capture(eventName, safeProperties);

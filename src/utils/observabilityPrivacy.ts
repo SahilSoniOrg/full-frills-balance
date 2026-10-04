@@ -1,6 +1,8 @@
 import type { ErrorEvent, TransactionEvent } from '@sentry/react-native';
 import { COMMON_CURRENCIES } from '@/src/constants/currency-definitions';
 import { FontIds, ThemeIds } from '@/src/constants/design-tokens';
+import { ROUTE_MANIFEST } from '@/src/navigation/routeManifest';
+import { FEATURE_EVENT_CATALOG } from '@/src/services/analytics/featureEventCatalog';
 import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 
 type PropertyKind = 'boolean' | 'count' | 'duration' | 'currency' | 'token' | 'version';
@@ -22,8 +24,6 @@ const ENUM_VALUES: Record<string, ReadonlySet<string>> = {
   ]),
   mode: new Set(['simple', 'advanced', 'import', 'web', 'file']),
   theme: new Set(['light', 'dark', 'system', 'ocean', 'forest', 'sunset', 'midnight']),
-  themeId: new Set(['default', 'ocean', 'forest', 'sunset', 'midnight']),
-  fontId: new Set(['system', 'inter', 'roboto', 'open-sans']),
   cadence: new Set(['daily', 'weekly', 'monthly', 'never']),
   interval: new Set(['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly']),
   choice: new Set(['fix_now', 'later', 'dismissed']),
@@ -85,7 +85,13 @@ const FONT_IDS = new Set(Object.values(FontIds));
 const SAFE_TO_SPEND_SECTIONS = new Set(['assets', 'income', 'committed', 'debts']);
 const SAFE_TO_SPEND_LEGENDS = new Set(['safe', 'committed', 'debts']);
 
-const ANALYTICS_ENUM_VALUES: Record<string, Readonly<Record<string, ReadonlySet<string>>>> = {
+const ENUM_VALUES_WITH_DESIGN_TOKENS: Record<string, ReadonlySet<string>> = {
+  ...ENUM_VALUES,
+  themeId: THEME_IDS,
+  fontId: FONT_IDS,
+};
+
+const ANALYTICS_EVENT_FIELD_ENUMS: Record<string, Readonly<Record<string, ReadonlySet<string>>>> = {
   account_created: { type: ACCOUNT_TYPES },
   transaction_created: {
     mode: new Set(['simple', 'advanced', 'import']),
@@ -102,7 +108,7 @@ const ANALYTICS_ENUM_VALUES: Record<string, Readonly<Record<string, ReadonlySet<
   },
 };
 
-const FEATURE_ENUM_VALUES: Record<string, Readonly<Record<string, ReadonlySet<string>>>> = {
+const FEATURE_FIELD_ENUMS: Record<string, Readonly<Record<string, ReadonlySet<string>>>> = {
   account: { account_type: ACCOUNT_TYPES },
   planned_payment: { status: PAYMENT_STATUSES },
   safe_to_spend: {
@@ -201,231 +207,39 @@ const ANALYTICS_EVENT_SCHEMAS: Record<string, EventSchema> = {
 
 const SAFE_ANALYTICS_EVENT_NAMES = new Set(Object.keys(ANALYTICS_EVENT_SCHEMAS));
 
-const FEATURE_EVENT_SCHEMAS: Record<string, EventSchema> = {
-  journal: { mode: 'token', type: 'token', currency: 'currency', count: 'count', source: 'token' },
-  account: {
-    type: 'token',
-    account_type: 'token',
-    currency: 'currency',
-    count: 'count',
-    source: 'token',
-  },
-  import: { format: 'token', reason: 'token', count: 'count', source: 'token' },
-  audit: { entity_type: 'token', success: 'boolean', reason: 'token' },
-  hub: { tab: 'token', action: 'token' },
-  reports: { tab: 'token', timeframe: 'token', count: 'count', source: 'token' },
-  voice_journal: { status: 'token', mode: 'token', duration_ms: 'duration' },
-  sms: { mode: 'token', status: 'token', count: 'count', success: 'boolean' },
-  budget: { currency: 'currency', count: 'count', threshold: 'token' },
-  planned_payment: { status: 'token', count: 'count', source: 'token' },
-  data_management: { format: 'token', count: 'count', success: 'boolean', table: 'token' },
-  dashboard: { visible: 'boolean', action: 'token' },
-  safe_to_spend: { section: 'token', item: 'token', slice: 'token', isOverCommitted: 'boolean' },
-  search: { scope: 'token', count: 'count', query_length: 'count' },
-  settings: {
-    enabled: 'boolean',
-    visible: 'boolean',
-    theme: 'token',
-    font: 'token',
-    cadence: 'token',
-    hour: 'count',
-    minute: 'count',
-    weekday: 'count',
-    currency_code: 'currency',
-    days: 'count',
-    icon: 'token',
-  },
-  onboarding: { step: 'token', count: 'count' },
-  ai: { status: 'token', mode: 'token', duration_ms: 'duration', success: 'boolean' },
-  journal_search: { scope: 'token', count: 'count', query_length: 'count' },
-};
+const FEATURE_EVENT_SCHEMAS: Record<string, EventSchema> = Object.fromEntries(
+  Object.entries(FEATURE_EVENT_CATALOG).map(([feature, definition]) => [
+    feature,
+    definition.schema,
+  ]),
+);
 
-const FEATURE_ACTIONS: Record<string, ReadonlySet<string>> = {
-  journal: new Set([
-    'create',
-    'update',
-    'delete',
-    'recover',
-    'post',
-    'revert_to_planned',
-    'duplicate',
-    'reversal',
-    'bulk_create',
-    'suggestion_accepted',
+const FEATURE_ACTIONS: Record<string, ReadonlySet<string>> = Object.fromEntries(
+  Object.entries(FEATURE_EVENT_CATALOG).map(([feature, definition]) => [
+    feature,
+    new Set(definition.actions),
   ]),
-  account: new Set([
-    'create',
-    'update',
-    'delete',
-    'recover',
-    'merge',
-    'reconcile',
-    'reorder',
-    'archive',
-    'unarchive',
-    'convert_type',
-    'bulk_archive',
-    'bulk_rename',
-    'bulk_appearance',
-    'bulk_move_hierarchy',
-  ]),
-  import: new Set([
-    'file_selected',
-    'format_mismatch',
-    'cancelled',
-    'failed',
-    'picker_cancelled',
-    'picker_error',
-    'completed',
-  ]),
-  audit: new Set(['view_entity', 'revert_initiated', 'revert_success', 'revert_failed']),
-  hub: new Set(['change_tab', 'dismiss_insight', 'restore_insight']),
-  reports: new Set([
-    'change_tab',
-    'change_timeframe',
-    'drilldown_transactions',
-    'drilldown_category',
-  ]),
-  voice_journal: new Set([
-    'record_started',
-    'permission_denied',
-    'speech_error',
-    'template_selected',
-    'parsed',
-    'parse_failed',
-    'applied',
-  ]),
-  sms: new Set([
-    'rule_create',
-    'rule_update',
-    'rule_delete',
-    'rule_toggle',
-    'rule_test',
-    'inbox_accept',
-    'inbox_dismiss',
-    'inbox_bulk_sync',
-  ]),
-  budget: new Set(['create', 'update', 'delete', 'threshold_warning', 'drilldown']),
-  planned_payment: new Set([
-    'create',
-    'update',
-    'delete',
-    'pause',
-    'resume',
-    'toggle_status',
-    'post_now',
-    'skip',
-    'occurrence_paid',
-    'occurrence_skipped',
-  ]),
-  data_management: new Set([
-    'export_initiated',
-    'export_completed',
-    'database_vacuum',
-    'integrity_check',
-    'journal_balance_audit',
-    'factory_reset_initiated',
-    'factory_reset_completed',
-  ]),
-  dashboard: new Set(['safe_to_spend_toggle', 'quick_action', 'networth_visibility_toggle']),
-  safe_to_spend: new Set([
-    'opened',
-    'closed',
-    'section_expanded',
-    'legend_pressed',
-    'chart_point_selected',
-    'planned_payment_viewed',
-    'account_viewed',
-    'legend_to_explanation',
-  ]),
-  search: new Set(['query_executed', 'filters_applied', 'result_selected']),
-  settings: new Set([
-    'change_theme',
-    'change_theme_preference',
-    'change_font',
-    'change_hour_cycle',
-    'toggle_monthly_stats',
-    'toggle_compact_account_picker',
-    'toggle_privacy_mode',
-    'toggle_widget_privacy',
-    'toggle_app_lock',
-    'switch_workplace',
-    'create_workplace',
-    'update_workplace_icon',
-    'change_notification_cadence',
-    'change_notification_time',
-    'toggle_sms_import',
-    'export_data',
-    'integrity_check',
-    'cleanup_database',
-    'seed_mock_data',
-    'open_telegram',
-    'open_play_store',
-    'open_github',
-    'share_bug_report',
-    'save_bug_report',
-    'change_name',
-    'change_currency',
-    'change_safe_to_spend_days',
-    'toggle_safe_to_spend_chart',
-    'toggle_reduce_motion',
-    'toggle_reports_v2',
-  ]),
-  onboarding: new Set(['completed', 'step_continue']),
-  ai: new Set([
-    'model_load_success',
-    'model_load_failure',
-    'inference_completed',
-    'inference_failed',
-  ]),
-  journal_search: new Set(['query_details']),
-};
+);
 
-const SAFE_SCREEN_SEGMENTS = new Set([
-  '(tabs)',
-  'index',
-  'settings',
-  'commitments',
-  'activity',
-  'accounts',
-  'journal',
-  'journal-details',
-  'journal-entry',
-  'journal-search',
-  'account-details',
-  'account-creation',
-  'account-management',
-  'budget-details',
-  'budget-edit',
-  'planned-payment-details',
-  'planned-payment-form',
-  'reports',
-  'reports-v2',
-  'hub',
-  'insight-details',
-  'audit-log',
-  'workplace-settings',
-  'current-workplace-settings',
-  'device-settings',
-  'appearance-settings',
-  'privacy-security-settings',
-  'personalization-settings',
-  'maintenance-settings',
-  'data-management-settings',
-  'automation-settings',
-  'sms-inbox',
-  'sms-rules',
-  'sms-rule-form',
-  'import-selection',
-  'onboarding',
-  'privacy-notice',
-  'journal-balance-review',
-  'category-creation',
-  'about-support-settings',
-  '(_layout)',
-  '_layout',
-  '_design-preview',
-]);
+for (const [feature, schema] of Object.entries(FEATURE_EVENT_SCHEMAS)) {
+  for (const key of Object.keys(schema)) {
+    if (FEATURE_FIELD_ENUMS[feature]?.[key] || !ENUM_VALUES_WITH_DESIGN_TOKENS[key]) continue;
+    FEATURE_FIELD_ENUMS[feature] = {
+      ...FEATURE_FIELD_ENUMS[feature],
+      [key]: ENUM_VALUES_WITH_DESIGN_TOKENS[key],
+    };
+  }
+}
+
+const SAFE_SCREEN_SEGMENTS = (() => {
+  const segments = new Set<string>(['index', '_layout', '(_layout)']);
+  for (const route of ROUTE_MANIFEST) {
+    for (const part of route.name.split('/')) {
+      if (part) segments.add(part);
+    }
+  }
+  return segments;
+})();
 
 function sanitizeScreenName(value: string): string {
   const segments = value.split('/').filter(Boolean);
@@ -453,11 +267,13 @@ function validProperty(
   if (kind === 'currency') return /^[A-Z]{3}$/.test(value) && CURRENCY_CODES.has(value);
   if (kind === 'version') return safeVersion(value) !== undefined;
   if (['fromId', 'toId'].includes(key)) return safeGeneratedId(value);
-  const eventValues = ANALYTICS_ENUM_VALUES[eventName]?.[key];
+  const eventValues = ANALYTICS_EVENT_FIELD_ENUMS[eventName]?.[key];
   if (eventValues) return eventValues.has(value);
-  const featureValues = featureName ? FEATURE_ENUM_VALUES[featureName]?.[key] : undefined;
-  if (featureValues) return featureValues.has(value);
-  return ENUM_VALUES[key]?.has(value) ?? false;
+  if (featureName) {
+    const featureValues = FEATURE_FIELD_ENUMS[featureName]?.[key];
+    return featureValues ? featureValues.has(value) : false;
+  }
+  return ENUM_VALUES_WITH_DESIGN_TOKENS[key]?.has(value) ?? false;
 }
 
 function safeGeneratedId(value: unknown): value is string {
@@ -646,21 +462,6 @@ function safeCodeFramePath(value: string): string | undefined {
   return `${appScheme}${kept.join('/')}`;
 }
 
-function safeCodeFrameFunction(value?: string): string | undefined {
-  if (!value) return undefined;
-  const name = value.replace(/\s*\[as\s+[^\]]+\]/g, '').trim();
-  return /^[A-Za-z_$?<][\w$.<>?-]{0,127}$/.test(name) ? name : '?';
-}
-
-export function safeDiagnosticError(error: unknown): Error {
-  const source = error instanceof Error ? error : undefined;
-  const safe = new Error('Application error');
-  safe.name = safeErrorName(source?.name);
-  const frames = safeStackFrames(source?.stack);
-  if (frames) safe.stack = `${safe.name}: Application error\n${frames}`;
-  return safe;
-}
-
 const SAFE_LOG_SITES = new Set([
   'Analytics',
   'AppReadyProvider',
@@ -709,6 +510,21 @@ const SAFE_LOG_SITES = new Set([
   'TransactionQueryRepository',
   'SimulationDataPrefetcher',
 ]);
+
+function safeCodeFrameFunction(value?: string): string | undefined {
+  if (!value) return undefined;
+  const name = value.replace(/\s*\[as\s+[^\]]+\]/g, '').trim();
+  return /^[A-Za-z_$?<][\w$.<>?-]{0,127}$/.test(name) ? name : '?';
+}
+
+export function safeDiagnosticError(error: unknown): Error {
+  const source = error instanceof Error ? error : undefined;
+  const safe = new Error('Application error');
+  safe.name = safeErrorName(source?.name);
+  const frames = safeStackFrames(source?.stack);
+  if (frames) safe.stack = `${safe.name}: Application error\n${frames}`;
+  return safe;
+}
 
 export function sanitizeLogMessage(message: unknown): string {
   if (message instanceof Error) return `${safeErrorName(message.name)}: Application error`;

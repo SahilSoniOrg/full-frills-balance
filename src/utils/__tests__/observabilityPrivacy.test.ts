@@ -13,7 +13,44 @@ import type { ErrorEvent, TransactionEvent } from '@sentry/react-native';
 const PRIVATE_MARKER = 'PrivateMerchant';
 
 describe('observability privacy boundary', () => {
-  it('allows only finite analytics enums and derives feature/action from the event name', () => {
+  it('allows theme tokens from design system enums', () => {
+    expect(
+      sanitizeAnalyticsProperties('theme_changed', {
+        theme: 'light',
+        themeId: 'deep-space',
+        fontId: 'deep-space',
+      }),
+    ).toEqual({ theme: 'light', themeId: 'deep-space', fontId: 'deep-space' });
+    expect(
+      sanitizeAnalyticsProperties('theme_changed', {
+        theme: 'light',
+        themeId: 'roboto',
+        fontId: 'open-sans',
+      }),
+    ).toEqual({ theme: 'light' });
+  });
+
+  it.each([
+    ['account_created', { type: 'ASSET', currency: 'USD' }, { type: 'ASSET', currency: 'USD' }],
+    [
+      'planned_payment_created',
+      { interval: 'MONTHLY', type: 'auto' },
+      { interval: 'MONTHLY', type: 'auto' },
+    ],
+    [
+      'feature_journal_search_query_details',
+      { scope: 'journal', count: 1 },
+      { feature: 'journal_search', action: 'query_details', scope: 'journal', count: 1 },
+    ],
+    ['not_registered_event', { count: 1 }, null],
+  ] as const)(
+    'sanitizes analytics payload for %s',
+    (eventName, input, expected) => {
+      expect(sanitizeAnalyticsProperties(eventName, input)).toEqual(expected);
+    },
+  );
+
+  it('redacts private markers from declared analytics events', () => {
     expect(
       sanitizeAnalyticsProperties('account_created', {
         type: PRIVATE_MARKER,
