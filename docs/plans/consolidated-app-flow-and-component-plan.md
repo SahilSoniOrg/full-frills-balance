@@ -323,8 +323,8 @@ Work through this sequence commit-by-commit. Run `bun run verify` (or `bun test`
   - Guard the remaining runtime animation paths, including `VoiceInputModal`'s visualizer,
     `SettingsFocusTarget`, `SwipeToRemove`, `Toast`, and account-tree drop feedback.
   - `ProgressBar` was consolidated in Step 14, and `chrome-motion.ts` contains motion tokens only.
-- [ ] **Step 31:** `chore(architecture): add report-only check-design-system-primitives script`
-  - Track raw primitive usage in CI without failing builds.
+- [x] **Step 31:** `chore(architecture): add report-only check-design-system-primitives script`
+  - Track raw `View`/`Text` usage in CI without failing builds.
 
 ---
 
