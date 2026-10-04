@@ -71,12 +71,13 @@ describe('PlannedPaymentMonthStrip', () => {
       <PlannedPaymentMonthStrip listData={listData} monthName="October" />,
     );
     expect(
-      getByLabelText('October: 4 payments remaining, largest remaining day Oct 10').props.accessibilityRole,
+      getByLabelText('October: 4 payments remaining, largest remaining day Oct 10').props
+        .accessibilityRole,
     ).toBe('image');
     const barHeights = UNSAFE_getAllByType(View)
       .map(view => StyleSheet.flatten(view.props.style)?.height)
       .filter((height): height is number => typeof height === 'number');
-    expect(barHeights).toContain(4); // outgoing 20 / outgoing maximum 20
+    expect(barHeights).toContain(6); // positive amounts keep a visible minimum
     expect(barHeights).toContain(12); // incoming 100 / incoming maximum 100
   });
 });
@@ -89,6 +90,7 @@ describe('PlannedPaymentMonthSummary', () => {
     expect(getByText('coming in · 2 payments')).toBeTruthy();
     expect(getAllByText('+ 2 in other currencies')).toHaveLength(2);
     expect(queryByText('EUR')).toBeNull();
+    expect(queryByText(/\.00/)).toBeNull();
   });
 
   it('hides the complete incoming block when there are no incoming occurrences', () => {

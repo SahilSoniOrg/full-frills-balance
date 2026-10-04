@@ -1,5 +1,5 @@
 import { PlannedPaymentListView } from '@/src/features/planned-payments/components/PlannedPaymentListView';
-import { AppConfig } from '@/src/constants';
+import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
 import { preferences } from '@/src/services/preferences';
 import { buildPlannedPaymentListPresentation } from '@/src/features/planned-payments/hooks/plannedPaymentListPresentation';
 import type {
@@ -24,13 +24,20 @@ jest.mock('@shopify/flash-list', () => {
   const ReactActual = jest.requireActual<typeof import('react')>('react');
   const { View } = jest.requireActual<typeof import('react-native')>('react-native');
   return {
-    FlashList: ({ data, renderItem, ListHeaderComponent, ListEmptyComponent, contentContainerStyle }: {
+    FlashList: ({
+      data,
+      renderItem,
+      ListHeaderComponent,
+      ListEmptyComponent,
+      contentContainerStyle,
+    }: {
       data: unknown[];
       renderItem: (info: { item: unknown; index: number }) => import('react').ReactNode;
       ListHeaderComponent?: import('react').ReactNode;
       ListEmptyComponent?: import('react').ReactNode;
       contentContainerStyle?: import('react-native').StyleProp<import('react-native').ViewStyle>;
-    }) => ReactActual.createElement(
+    }) =>
+      ReactActual.createElement(
         View,
         { style: contentContainerStyle },
         ListHeaderComponent,
@@ -69,13 +76,12 @@ const saved = (planId: PlannedPaymentId, due: number): PlannedPaymentSavedOccurr
   currencyCode: 'EUR',
 });
 
-function renderList(items: PlannedPaymentObligation[], savedOccurrences: PlannedPaymentSavedOccurrence[] = []) {
+function renderList(
+  items: PlannedPaymentObligation[],
+  savedOccurrences: PlannedPaymentSavedOccurrence[] = [],
+) {
   const now = date(4);
-  const listData = buildPlannedPaymentListPresentation(
-    { items, savedOccurrences },
-    'USD',
-    now,
-  );
+  const listData = buildPlannedPaymentListPresentation({ items, savedOccurrences }, 'USD', now);
   return render(
     <PlannedPaymentListView
       listData={listData}
@@ -98,7 +104,9 @@ describe('PlannedPaymentListView disclosure and privacy', () => {
   it('hides the Paused / Ended disclosure when that group is empty', () => {
     const { queryByRole, getByText } = renderList([]);
     expect(getByText(AppConfig.strings.plannedPayments.emptyTitle)).toBeTruthy();
-    expect(queryByRole('button', { name: AppConfig.strings.plannedListRedesign.expandPausedEnded })).toBeNull();
+    expect(
+      queryByRole('button', { name: AppConfig.strings.plannedListRedesign.expandPausedEnded }),
+    ).toBeNull();
   });
 
   it('keeps paused and ended schedules behind the collapsed disclosure', () => {
@@ -123,7 +131,9 @@ describe('PlannedPaymentListView disclosure and privacy', () => {
   it('reserves the floating action button footprint after the last row', () => {
     const { UNSAFE_getAllByType } = renderList([]);
     const listContainer = UNSAFE_getAllByType(View).find(
-      view => StyleSheet.flatten(view.props.style)?.paddingBottom === 128,
+      view =>
+        StyleSheet.flatten(view.props.style)?.paddingBottom >=
+        Size.fab + Spacing.xxxxl + Size.buttonMd,
     );
     expect(listContainer).toBeTruthy();
   });
@@ -136,8 +146,20 @@ describe('PlannedPaymentListView disclosure and privacy', () => {
     );
     expect(getAllByText(AppConfig.privacyMask).length).toBeGreaterThan(0);
     expect(queryByText(/725/)).toBeNull();
-    expect(
-      getByRole('button', { name: /^Record Rent/ }).props.accessibilityLabel,
-    ).toContain(AppConfig.privacyMask);
+    expect(getByRole('button', { name: /^Record Rent/ }).props.accessibilityLabel).toContain(
+      AppConfig.privacyMask,
+    );
+  });
+
+  it('uses compact secondary group labels and whole units throughout the list', () => {
+    const { getByRole, getByText, queryByText } = renderList([
+      payment(PlannedPaymentStatus.ACTIVE),
+    ]);
+    const overdue = getByText('Overdue');
+    expect(StyleSheet.flatten(overdue.props.style)?.fontSize).toBe(Typography.sizes.sm);
+    expect(queryByText(/\.25/)).toBeNull();
+    expect(getByRole('button', { name: /^Record Rent/ }).props.accessibilityLabel).not.toMatch(
+      /\.25/,
+    );
   });
 });

@@ -33,6 +33,7 @@ export function PlannedPaymentMonthSummary({ listData }: SummaryProps) {
             <MoneyText
               amount={incoming.mainCurrency.amount}
               currencyCode={incoming.mainCurrency.currencyCode}
+              formatStyle="compact"
               prefix="+"
               variant="heading"
               numberOfLines={1}
@@ -56,6 +57,7 @@ export function PlannedPaymentMonthSummary({ listData }: SummaryProps) {
         <MoneyText
           amount={outgoing.mainCurrency.amount}
           currencyCode={outgoing.mainCurrency.currencyCode}
+          formatStyle="compact"
           variant="title"
           numberOfLines={1}
           adjustsFontSizeToFit
@@ -181,7 +183,7 @@ function bucketFor(amount: number, largest: number) {
 }
 
 function bucketHeight(bucket: number) {
-  return bucket === 1 ? 4 : bucket === 2 ? 8 : bucket === 3 ? 12 : 0;
+  return bucket === 1 ? 6 : bucket === 2 ? 9 : bucket === 3 ? 12 : 0;
 }
 
 const styles = StyleSheet.create({

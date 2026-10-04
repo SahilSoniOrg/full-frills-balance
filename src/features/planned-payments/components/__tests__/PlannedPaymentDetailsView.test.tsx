@@ -8,6 +8,7 @@ import { Icon } from '@/src/types/domainIcons';
 import { preferences } from '@/src/services/preferences';
 import { AppConfig } from '@/src/constants';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
+import { StyleSheet } from 'react-native';
 
 jest.mock('@/src/features/journal', () => ({ JournalListModals: () => null }));
 
@@ -136,6 +137,15 @@ describe('PlannedPaymentDetailsView', () => {
     expect(screen.getByText(/edited, usually \$1,250\.45/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Record payment' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Skip' })).toBeTruthy();
+    const accountLabels = screen.getAllByTestId('account-flow-label');
+    expect(accountLabels).toHaveLength(2);
+    for (const label of accountLabels) {
+      const style = StyleSheet.flatten(label.props.style);
+      expect(style.backgroundColor).toBeTruthy();
+      expect(style.borderRadius).toBeTruthy();
+    }
+    expect(within(accountLabels[0]).getByText('Checking').props.numberOfLines).toBe(1);
+    expect(within(accountLabels[1]).getByText('Housing').props.numberOfLines).toBe(1);
     fireEvent.press(screen.getByRole('button', { name: 'Open Checking' }));
     expect(vm.onOpenAccount).toHaveBeenCalledWith('checking');
   });
@@ -194,7 +204,7 @@ describe('PlannedPaymentDetailsView', () => {
     ).toBeTruthy();
   });
 
-  it('keeps a changed journal title in the subtitle and accessible selection context', () => {
+  it('keeps a changed paid journal title accessible without adding a third row line', () => {
     const changedTitle = {
       ...row('renamed', 'POSTED', day(5)),
       description: 'Rent payment adjusted',
@@ -202,10 +212,36 @@ describe('PlannedPaymentDetailsView', () => {
     const screen = render(
       <PlannedPaymentDetailsView {...vm} chrome={chrome} history={[changedTitle]} />,
     );
-    expect(screen.getByText('Rent payment adjusted')).toBeTruthy();
+    expect(screen.queryByText('Rent payment adjusted')).toBeNull();
     expect(screen.getByTestId('planned-history-renamed').props.accessibilityLabel).toContain(
       'Rent payment adjusted',
     );
+  });
+
+  it('does not repeat journal descriptions as a third line for skipped history rows', () => {
+    const skippedWithDescription = {
+      ...row('skipped-described', 'SKIPPED', day(5)),
+      description: 'Rent payment skipped',
+    };
+    const screen = render(
+      <PlannedPaymentDetailsView {...vm} chrome={chrome} history={[skippedWithDescription]} />,
+    );
+    expect(screen.queryByText('Rent payment skipped')).toBeNull();
+    expect(
+      screen.getByTestId('planned-history-skipped-described').props.accessibilityLabel,
+    ).toContain('Rent payment skipped');
+  });
+
+  it('keeps a different-amount paid date neutral and puts the warning on its subtitle', () => {
+    const changedAmount = { ...row('amount-changed', 'POSTED', day(5), 1400) };
+    const screen = render(
+      <PlannedPaymentDetailsView {...vm} chrome={chrome} history={[changedAmount]} />,
+    );
+    const historyRow = screen.getByTestId('planned-history-amount-changed');
+    expect(within(historyRow).getByText('Oct 5, 2026')).toHaveStyle({ color: vm.theme.text });
+    expect(within(historyRow).getByText(/more than planned/)).toHaveStyle({
+      color: vm.theme.warning,
+    });
   });
 
   it('uses the supplied pause timestamp, hides upcoming and settlement actions, and offers resume', () => {
@@ -315,6 +351,11 @@ describe('PlannedPaymentDetailsView', () => {
     expect(screen.getByRole('button', { name: 'Record payment' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Skip' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Pause schedule' })).toBeDisabled();
+  });
+
+  it('styles the pause schedule action as secondary text', () => {
+    const screen = render(<PlannedPaymentDetailsView {...vm} chrome={chrome} />);
+    expect(screen.getByText('Pause schedule')).toHaveStyle({ color: vm.theme.textSecondary });
   });
 
   it('exposes action failures without hiding retryable controls', () => {

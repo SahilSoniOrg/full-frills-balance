@@ -32,7 +32,7 @@ export function BudgetCard({
     today,
   );
   const vm = presentBudgetUsage(usage, period.elapsedShare);
-  const formatMoney = useMoneyFormat();
+  const formatMoney = useMoneyFormat({ style: 'compact' });
   const privateMode = useEffectivePrivacyMode();
   const headline = `${usage.hasUnvaluedEntries ? '≈ ' : ''}${vm.isOver ? strings.over(formatMoney(Math.abs(usage.remaining), budget.currencyCode)) : strings.left(formatMoney(usage.remaining, budget.currencyCode))}`;
   const spent = strings.spent(formatMoney(usage.spent, budget.currencyCode));

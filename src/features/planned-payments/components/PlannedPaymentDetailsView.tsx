@@ -94,18 +94,17 @@ export function PlannedPaymentDetailsView({
       accessibilityLabel={account ? copy.openAccount(account.name) : placeholder}
       buttonStyle={{
         minHeight: 44,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        backgroundColor: theme.surfaceSecondary,
-        borderRadius: 18,
+        paddingHorizontal: 0,
+        paddingVertical: 0,
+        backgroundColor: 'transparent',
       }}
     >
       <AccountInlineLabel
         account={account}
         placeholder={placeholder}
         variant="caption"
-        weight="semibold"
-        pillSize="sm"
+        weight="medium"
+        appearance="transactionFlow"
         showIcon
       />
     </AppButton>
@@ -218,7 +217,7 @@ export function PlannedPaymentDetailsView({
             {vm.fromAccount || vm.toAccount ? (
               <Row align="center" gap="xs" flexWrap="wrap">
                 {accountChip(vm.fromAccount, copy.accountUnavailable, copy.from)}
-                <AppIcon name={Icon.ArrowRight} size={Size.iconSm} color="textSecondary" />
+                <AppIcon name={Icon.ArrowRight} size={Size.iconXs} color="textSecondary" />
                 {accountChip(vm.toAccount, copy.accountUnavailable, copy.to)}
               </Row>
             ) : null}
@@ -398,7 +397,7 @@ export function PlannedPaymentDetailsView({
                 accessibilityLabel={copy.pauseSchedule}
                 buttonStyle={{ minHeight: 44, alignSelf: 'center' }}
               >
-                {copy.pauseSchedule}
+                <AppText color="secondary">{copy.pauseSchedule}</AppText>
               </AppButton>
             )}
           </Column>

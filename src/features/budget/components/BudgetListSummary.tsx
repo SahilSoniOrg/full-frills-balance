@@ -16,7 +16,7 @@ export function BudgetListSummary({
 }) {
   const strings = AppConfig.strings.commitmentsRedesign;
   const { usage, period, periodRange, currencyCode } = summary;
-  const formatMoney = useMoneyFormat();
+  const formatMoney = useMoneyFormat({ style: 'compact' });
   const privateMode = useEffectivePrivacyMode();
   const status = presentBudgetUsage(usage, period?.elapsedShare);
   const markerLabel = period
@@ -41,6 +41,7 @@ export function BudgetListSummary({
           <MoneyText
             amount={Math.abs(usage.remaining)}
             currencyCode={currencyCode}
+            formatStyle="compact"
             prefix={usage.hasUnvaluedEntries ? '≈ ' : undefined}
             variant="title"
             numberOfLines={1}

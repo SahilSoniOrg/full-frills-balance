@@ -102,7 +102,7 @@ export function BudgetDetailHeader({
             amount={heroAmount}
             currencyCode={budget.currencyCode}
             prefix={usage.hasUnvaluedEntries ? '≈' : undefined}
-            variant="hero"
+            variant="title"
             color={usageVm.isOver ? 'error' : 'text'}
             style={[styles.heroAmount, { fontFamily: fonts.heading }]}
             adjustsFontSizeToFit
@@ -177,15 +177,21 @@ export function BudgetDetailHeader({
             {period.isCurrent &&
             !usage.hasUnvaluedEntries &&
             period.dailyRemaining !== undefined ? (
-              <MoneyText
-                amount={period.dailyRemaining}
-                currencyCode={budget.currencyCode}
-                variant="body"
-                weight="semibold"
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.2}
-              />
+              usageVm.isOver ? (
+                <AppText variant="body" weight="semibold">
+                  —
+                </AppText>
+              ) : (
+                <MoneyText
+                  amount={period.dailyRemaining}
+                  currencyCode={budget.currencyCode}
+                  variant="body"
+                  weight="semibold"
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.2}
+                />
+              )
             ) : (
               <AppText variant="body" weight="semibold">
                 {period.periodDays}

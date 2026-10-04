@@ -4,8 +4,9 @@ import { AccountCategoryPill } from '@/src/components/accounts/AccountCategoryPi
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
 import { useAccountColors } from '@/src/hooks/useAccountColors';
 import { isAccountArchived } from '@/src/utils/accountArchive';
-import { Size, Spacing } from '@/src/constants';
+import { Shape, Size, Spacing } from '@/src/constants';
 import { getAccountIcon } from '@/src/utils/accountIcon';
+import { getAccountTypeVariant, resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { StyleSheet, View } from 'react-native';
 
 type TextVariant = 'body' | 'caption' | 'subheading';
@@ -27,6 +28,8 @@ interface AccountInlineLabelProps {
   pillSize?: 'sm' | 'md';
   /** Display the account's icon instead of the category marker. */
   showIcon?: boolean;
+  /** Match the tinted, single-line account segment used in transaction flows. */
+  appearance?: 'inline' | 'transactionFlow';
   /** Override the text color (defaults to the account accent color). */
   textColor?: string;
   /** Optional pre-resolved colors to avoid re-computing hook values. */
@@ -48,10 +51,11 @@ export function AccountInlineLabel({
   numberOfLines = 1,
   pillSize = 'md',
   showIcon = false,
+  appearance = 'inline',
   textColor,
   colors,
 }: AccountInlineLabelProps) {
-  const { theme } = useTheme();
+  const { theme, getVariantColors } = useTheme();
   const fallbackColors = useAccountColors(account ?? { accountType: '' });
 
   if (!account) {
@@ -68,13 +72,35 @@ export function AccountInlineLabel({
   }
 
   const categoryColor = colors?.categoryColor ?? fallbackColors.categoryColor;
-  const accentColor = colors?.accentColor ?? fallbackColors.accentColor;
+  const flowBackground =
+    appearance === 'transactionFlow'
+      ? getVariantColors(getAccountTypeVariant(account.accountType)).light
+      : undefined;
+  const flowColors = flowBackground
+    ? resolveAccountAppearance(account, theme, flowBackground)
+    : undefined;
+  const accentColor =
+    textColor ?? flowColors?.accentColor ?? colors?.accentColor ?? fallbackColors.accentColor;
   const archived = isAccountArchived(account);
 
   return (
-    <View style={styles.row}>
+    <View
+      testID={appearance === 'transactionFlow' ? 'account-flow-label' : undefined}
+      style={[
+        styles.row,
+        appearance === 'transactionFlow' && [styles.flowLabel, { backgroundColor: flowBackground }],
+      ]}
+    >
       {showIcon ? (
-        <AppIcon name={getAccountIcon(account)} size={Size.iconXs} color={accentColor} />
+        <AppIcon
+          name={getAccountIcon(account)}
+          size={Size.xxs}
+          color={
+            appearance === 'transactionFlow'
+              ? (flowColors?.categoryColor ?? categoryColor)
+              : accentColor
+          }
+        />
       ) : (
         <AccountCategoryPill color={categoryColor} size={pillSize} />
       )}
@@ -98,5 +124,12 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
     flexShrink: 1,
     minWidth: 0,
+  },
+  flowLabel: {
+    alignSelf: 'flex-start',
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Shape.radius.md,
+    borderCurve: 'continuous',
   },
 });

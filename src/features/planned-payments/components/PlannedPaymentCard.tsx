@@ -30,7 +30,7 @@ function PlannedPaymentCardComponent({
   recordError,
 }: PlannedPaymentCardProps) {
   const { theme } = useTheme();
-  const formatMoney = useMoneyFormat();
+  const formatMoney = useMoneyFormat({ style: 'compact' });
   const strings = AppConfig.strings.plannedListRedesign;
   const item = occurrence.payment;
   const isOverdue = dayjs(occurrence.date).startOf('day').isBefore(dayjs().startOf('day'));
@@ -115,12 +115,16 @@ function PlannedPaymentCardComponent({
                   account={item.fromAccount}
                   placeholder={fromLabel}
                   variant="caption"
+                  appearance="transactionFlow"
+                  showIcon
                 />
-                <AppIcon name={Icon.ArrowRight} size={Size.xxs} color="textSecondary" />
+                <AppIcon name={Icon.ArrowRight} size={Size.iconXs} color="textSecondary" />
                 <AccountInlineLabel
                   account={item.toAccount}
                   placeholder={toLabel}
                   variant="caption"
+                  appearance="transactionFlow"
+                  showIcon
                 />
               </View>
             )}
@@ -135,6 +139,7 @@ function PlannedPaymentCardComponent({
           <MoneyText
             amount={occurrence.amount}
             currencyCode={occurrence.currencyCode}
+            formatStyle="compact"
             prefix={isIncome ? '+' : undefined}
             variant="heading"
             numberOfLines={1}
@@ -153,25 +158,17 @@ function PlannedPaymentCardComponent({
                 disabled: !canRecord || isRecording || isPlanBusy,
                 busy: isRecording,
               }}
-              style={[styles.recordButton, { backgroundColor: theme.primary }]}
+              style={styles.recordButton}
             >
-              {isRecording ? (
+              <View style={[styles.recordPill, { backgroundColor: theme.primary }]}>
                 <AppText
                   variant="caption"
                   weight="semibold"
                   style={{ color: theme.onPrimary ?? theme.text }}
                 >
-                  {strings.recordBusy}
+                  {isRecording ? strings.recordBusy : strings.record}
                 </AppText>
-              ) : (
-                <AppText
-                  variant="bodySmall"
-                  weight="semibold"
-                  style={{ color: theme.onPrimary ?? theme.text }}
-                >
-                  {strings.record}
-                </AppText>
-              )}
+              </View>
             </Pressable>
           )}
         </View>
@@ -228,9 +225,14 @@ const styles = StyleSheet.create({
   amount: { textAlign: 'right', flexShrink: 1, alignSelf: 'stretch' },
   recordButton: {
     minHeight: 44,
-    minWidth: 88,
-    paddingHorizontal: Spacing.md,
-    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recordPill: {
+    minHeight: 30,
+    minWidth: 64,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },

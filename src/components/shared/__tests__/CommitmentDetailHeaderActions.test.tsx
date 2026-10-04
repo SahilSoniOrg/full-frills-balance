@@ -1,6 +1,7 @@
 import { render, fireEvent, act } from '@/src/utils/test-utils';
 import { CommitmentDetailHeaderActions } from '../CommitmentDetailHeaderActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
+import { IconButton } from '@/src/components/core';
 
 jest.mock('@/src/components/overlays/ModalSurface', () => {
   const { ModalSurface: ActualModalSurface } = jest.requireActual<
@@ -29,6 +30,13 @@ it('opens named actions from the overflow and preserves disabled states', () => 
   fireEvent.press(screen.getByRole('button', { name: 'Edit' }));
   expect(edit).toHaveBeenCalledTimes(1);
   expect(remove).not.toHaveBeenCalled();
+});
+
+it('gives overflow and privacy actions the same round surface treatment', () => {
+  const screen = render(<CommitmentDetailHeaderActions actions={[]} />);
+  const buttons = screen.UNSAFE_getAllByType(IconButton);
+  expect(buttons).toHaveLength(2);
+  expect(buttons.map(button => button.props.variant)).toEqual(['surface', 'surface']);
 });
 
 it('waits for the native iOS sheet to dismiss before invoking an action, once only', () => {

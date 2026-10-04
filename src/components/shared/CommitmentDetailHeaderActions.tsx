@@ -27,10 +27,12 @@ export function CommitmentDetailHeaderActions({ actions }: { actions: Commitment
   return (
     <>
       <MoneyDetailHeaderActions
+        privacyVariant="surface"
         actions={[
           {
             name: Icon.More,
             onPress: () => setOpen(true),
+            variant: 'surface',
             accessibilityLabel: strings.moreActions,
             testID: 'commitment-more-actions',
           },

@@ -5,6 +5,7 @@ import { BudgetId, AccountId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { preferences } from '@/src/services/preferences';
 import { AppConfig } from '@/src/constants';
+import { MoneyText } from '@/src/components/shared/MoneyText';
 
 const props = {
   budget: { id: 'food' as BudgetId, name: 'Food', amount: 500.75, currencyCode: 'USD' },
@@ -51,10 +52,26 @@ describe('BudgetDetailHeader', () => {
   it('shows exact totals for the selected period and disables forward navigation', () => {
     const screen = render(<BudgetDetailHeader {...props} />);
     expect(screen.getByText('$374.20')).toBeTruthy();
+    expect(
+      screen.UNSAFE_getAllByType(MoneyText).find(node => node.props.amount === 374.2)?.props
+        .variant,
+    ).toBe('title');
     expect(screen.getByText('$126.55')).toBeTruthy();
     expect(screen.getByText('$500.75')).toBeTruthy();
     expect(screen.getByLabelText(/1 Oct 2026 – 31 Oct 2026/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Next period' })).toBeDisabled();
+  });
+
+  it('does not suggest a daily allowance after the budget is over limit', () => {
+    const screen = render(
+      <BudgetDetailHeader
+        {...props}
+        usage={{ ...props.usage, spent: 600, remaining: -99.25, usagePercent: 1.198 }}
+      />,
+    );
+    expect(screen.getByText('Per day left')).toBeTruthy();
+    expect(screen.getByText('—')).toBeTruthy();
+    expect(screen.queryByText(/\$[\d,]+\.\d{2}\/day/)).toBeNull();
   });
 
   it('renders setup as one edit row using the funding-account summary', () => {

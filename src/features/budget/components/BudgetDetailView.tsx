@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
-    paddingBottom: Size.fab + Spacing.xxxl * 2,
+    paddingBottom: Size.fab + Spacing.xl + Spacing.xxxl * 2,
   },
   clearFilterButton: {
     width: Size.buttonMd,

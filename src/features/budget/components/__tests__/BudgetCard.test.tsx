@@ -56,6 +56,34 @@ describe('redesigned budget rows and summary', () => {
     expect(screen.getByTestId('budget-today-marker')).toBeTruthy();
   });
 
+  it('rounds every budget-list amount to whole currency units', () => {
+    const decimalBudget: BudgetItem = {
+      ...item,
+      budget: { ...item.budget, id: asBudgetId('decimal'), currencyCode: 'USD', amount: 9000.2 },
+      usage: { spent: 3180.25, remaining: 5819.95, budgetAmount: 9000.2, usagePercent: 0.3533 },
+    };
+    const screen = render(<BudgetCard item={decimalBudget} onPress={jest.fn()} />);
+    expect(screen.getByText('$5,820 left')).toBeTruthy();
+    expect(screen.getByText('of $9,000')).toBeTruthy();
+    expect(screen.getByText('$3,180 spent')).toBeTruthy();
+    expect(screen.queryByText(/\.\d{2}/)).toBeNull();
+  });
+
+  it('rounds summary spending, remaining and limit to whole currency units', () => {
+    const decimalBudget: BudgetItem = {
+      ...item,
+      budget: { ...item.budget, id: asBudgetId('summary-decimal'), currencyCode: 'USD' },
+      usage: { spent: 3180.25, remaining: 5819.95, budgetAmount: 9000.2, usagePercent: 0.3533 },
+    };
+    const summary = summarizeBudgetList([decimalBudget], 'USD', today);
+    const screen = render(<BudgetListSummary summary={summary} />);
+
+    expect(screen.getByText('$5,820')).toBeTruthy();
+    expect(screen.getByText('left of $9,000 limit')).toBeTruthy();
+    expect(screen.getByText('$3,180 spent')).toBeTruthy();
+    expect(screen.queryByText(/\.\d{2}/)).toBeNull();
+  });
+
   it('respects final near-limit precedence over pace and renders overspend stripes', () => {
     const near = {
       ...item,

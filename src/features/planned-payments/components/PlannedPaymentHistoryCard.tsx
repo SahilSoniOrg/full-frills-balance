@@ -76,6 +76,7 @@ export function PlannedPaymentHistoryCard({
         ? `${presentation.subtitle} · ${copy.usualAmount} ${formatMoney(expectedAmount, expectedCurrencyCode)}`
         : presentation.subtitle;
   const titleChanged = journalTitle !== plannedTitle;
+  const paidAmountWarning = presentation.label === copy.paid && presentation.color === 'warning';
 
   const content = (
     <Row
@@ -107,25 +108,24 @@ export function PlannedPaymentHistoryCard({
           <AppIcon
             name={presentation.dotIcon}
             size={14}
-            color={getVariantMainColor(theme, presentation.color)}
+            color={getVariantMainColor(theme, paidAmountWarning ? 'secondary' : presentation.color)}
           />
         </View>
       )}
       <Column flexGrow={1} flexShrink={1} flexBasis={120} gap="xs" style={{ minWidth: 0 }}>
-        <AppText variant="body" weight="semibold" color={presentation.color}>
+        <AppText
+          variant="body"
+          weight="semibold"
+          color={paidAmountWarning ? 'text' : presentation.color}
+        >
           {date}
         </AppText>
         <AppText
           variant="caption"
-          color={presentation.color === 'warning' ? 'warning' : 'secondary'}
+          color={paidAmountWarning || presentation.color === 'warning' ? 'warning' : 'secondary'}
         >
           {subtitle}
         </AppText>
-        {titleChanged && (
-          <AppText variant="caption" color="secondary">
-            {journalTitle}
-          </AppText>
-        )}
       </Column>
       {presentation.isSkipped ? (
         <AppText variant="body" color="secondary">

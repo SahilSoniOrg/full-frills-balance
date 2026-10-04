@@ -57,7 +57,7 @@ export function BudgetListView({
             {summary && <BudgetListSummary summary={summary} />}
             <Row justify="space-between" gap="sm" flexWrap="wrap">
               <AppText variant="body" color="secondary" weight="semibold">
-                {AppConfig.strings.commitmentsRedesign.budgets}
+                {AppConfig.strings.commitmentsRedesign.thisMonth}
               </AppText>
               <AppText variant="caption" color="secondary">
                 {AppConfig.strings.commitmentsRedesign.attentionFirst}
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
-    paddingBottom: Size.fab + Spacing.xxxl * 2,
+    paddingBottom: Size.fab + Spacing.xl + Spacing.xxxl * 2,
   },
   emptyState: {
     marginTop: Spacing.xxxl,

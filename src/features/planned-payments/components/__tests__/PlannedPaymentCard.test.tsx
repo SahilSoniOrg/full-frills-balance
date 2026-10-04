@@ -1,14 +1,10 @@
 import { PlannedPaymentCard } from '@/src/features/planned-payments/components/PlannedPaymentCard';
 import { AppConfig } from '@/src/constants';
 import { preferences } from '@/src/services/preferences';
-import {
-  AccountType,
-  PlannedPaymentInterval,
-  PlannedPaymentStatus,
-} from '@/src/types/enums';
+import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import type { AccountId, PlannedPaymentId } from '@/src/types/ids';
 import type { PlainAccount } from '@/src/types/plainDtos';
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { fireEvent, render, within } from '@/src/utils/test-utils';
 import { StyleSheet, View } from 'react-native';
 import type { ReactTestInstance } from 'react-test-renderer';
 import type { PlannedPaymentListOccurrence } from '@/src/services/planned-payment/plannedPaymentReadService';
@@ -16,20 +12,22 @@ import type { PlannedPaymentListOccurrence } from '@/src/services/planned-paymen
 const account = (name: string) => ({ name, accountType: AccountType.ASSET }) as PlainAccount;
 const day = (value: number) => new Date(2026, 9, value).getTime();
 
-function makeOccurrence(overrides: {
-  dueDay?: number;
-  amount?: number;
-  currencyCode?: string;
-  flowDirection?: PlannedPaymentListOccurrence['payment']['flowDirection'];
-  status?: PlannedPaymentStatus;
-  canRecord?: boolean;
-  isAutoPost?: boolean;
-  intervalType?: PlannedPaymentInterval;
-  intervalN?: number;
-  recurrenceDay?: number;
-  fromAccount?: PlainAccount;
-  toAccount?: PlainAccount;
-} = {}): PlannedPaymentListOccurrence {
+function makeOccurrence(
+  overrides: {
+    dueDay?: number;
+    amount?: number;
+    currencyCode?: string;
+    flowDirection?: PlannedPaymentListOccurrence['payment']['flowDirection'];
+    status?: PlannedPaymentStatus;
+    canRecord?: boolean;
+    isAutoPost?: boolean;
+    intervalType?: PlannedPaymentInterval;
+    intervalN?: number;
+    recurrenceDay?: number;
+    fromAccount?: PlainAccount;
+    toAccount?: PlainAccount;
+  } = {},
+): PlannedPaymentListOccurrence {
   const dueDate = day(overrides.dueDay ?? 10);
   return {
     occurrenceId: `payment-1:${dueDate}`,
@@ -58,11 +56,13 @@ function makeOccurrence(overrides: {
   };
 }
 
-function renderCard(occurrence: PlannedPaymentListOccurrence, onPress = jest.fn(), onRecord = jest.fn()) {
+function renderCard(
+  occurrence: PlannedPaymentListOccurrence,
+  onPress = jest.fn(),
+  onRecord = jest.fn(),
+) {
   return {
-    ...render(
-      <PlannedPaymentCard occurrence={occurrence} onPress={onPress} onRecord={onRecord} />,
-    ),
+    ...render(<PlannedPaymentCard occurrence={occurrence} onPress={onPress} onRecord={onRecord} />),
     onPress,
     onRecord,
   };
@@ -89,16 +89,16 @@ describe('PlannedPaymentCard rendered row', () => {
     expect(overdue.getByText('Thu')).toBeTruthy();
     expect(overdue.getByText('1')).toBeTruthy();
     expect(overdue.getByText('3 days late')).toBeTruthy();
-    const overdueDateBlock = overdue.UNSAFE_getAllByType(View).find(
-      view => StyleSheet.flatten(view.props.style)?.width === 54,
-    );
+    const overdueDateBlock = overdue
+      .UNSAFE_getAllByType(View)
+      .find(view => StyleSheet.flatten(view.props.style)?.width === 54);
 
     const dueSoon = renderCard(makeOccurrence({ dueDay: 7 }));
     expect(dueSoon.getByText('Wed')).toBeTruthy();
     expect(dueSoon.getByText('7')).toBeTruthy();
-    const dueSoonDateBlock = dueSoon.UNSAFE_getAllByType(View).find(
-      view => StyleSheet.flatten(view.props.style)?.width === 54,
-    );
+    const dueSoonDateBlock = dueSoon
+      .UNSAFE_getAllByType(View)
+      .find(view => StyleSheet.flatten(view.props.style)?.width === 54);
     expect(dateBlockColor(overdueDateBlock!)).not.toBe(dateBlockColor(dueSoonDateBlock!));
   });
 
@@ -117,6 +117,23 @@ describe('PlannedPaymentCard rendered row', () => {
     expect(incomingStyle?.color).not.toBe(outgoingStyle?.color);
   });
 
+  it('uses whole currency units in the list row and compact overdue action', () => {
+    const { getByRole, getByText } = render(
+      <PlannedPaymentCard
+        occurrence={makeOccurrence({ dueDay: 1, amount: 725.25, currencyCode: 'EUR' })}
+        onPress={jest.fn()}
+        onRecord={jest.fn()}
+      />,
+    );
+    expect(getByText(/725/).props.children).not.toMatch(/\.25/);
+    const record = getByRole('button', { name: /^Record Rent/ });
+    expect(StyleSheet.flatten(record.props.style)?.minHeight).toBeGreaterThanOrEqual(44);
+    const pill = record
+      .findAllByType(View)
+      .find(view => StyleSheet.flatten(view.props.style)?.minHeight === 30);
+    expect(pill).toBeTruthy();
+  });
+
   it('shows account fallback labels and an auto-post accessibility label', () => {
     const fallback = renderCard(makeOccurrence());
     expect(fallback.getAllByText('Unavailable account')).toHaveLength(2);
@@ -128,6 +145,21 @@ describe('PlannedPaymentCard rendered row', () => {
 
     const autoPost = renderCard(makeOccurrence({ isAutoPost: true }));
     expect(autoPost.getByRole('button', { name: /Auto-post/ })).toBeTruthy();
+  });
+
+  it('renders planned account flows with tinted single-line account labels', () => {
+    const { getAllByTestId } = renderCard(
+      makeOccurrence({ fromAccount: account('Checking'), toAccount: account('Housing') }),
+    );
+    const labels = getAllByTestId('account-flow-label');
+    expect(labels).toHaveLength(2);
+    for (const label of labels) {
+      const style = StyleSheet.flatten(label.props.style);
+      expect(style.backgroundColor).toBeTruthy();
+      expect(style.borderRadius).toBeTruthy();
+    }
+    expect(within(labels[0]).getByText('Checking').props.numberOfLines).toBe(1);
+    expect(within(labels[1]).getByText('Housing').props.numberOfLines).toBe(1);
   });
 
   it('shows multi-interval cadence while omitting the ordinary monthly cadence', () => {
@@ -181,8 +213,9 @@ describe('PlannedPaymentCard rendered row', () => {
     );
     expect(getAllByText(AppConfig.privacyMask).length).toBeGreaterThan(0);
     expect(queryByText(/725/)).toBeNull();
-    expect(getByRole('button', { name: /^Record Rent/ }).props.accessibilityLabel)
-      .toContain(AppConfig.privacyMask);
+    expect(getByRole('button', { name: /^Record Rent/ }).props.accessibilityLabel).toContain(
+      AppConfig.privacyMask,
+    );
   });
 
   it('does not expose Record for an occurrence marked ineligible', () => {

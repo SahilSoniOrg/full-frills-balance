@@ -1,4 +1,10 @@
-import { AppText, EmptyStateView, ErrorStateView, LoadingView, PressScaleTouchable } from '@/src/components/core';
+import {
+  AppText,
+  EmptyStateView,
+  ErrorStateView,
+  LoadingView,
+  PressScaleTouchable,
+} from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppConfig, Size, Spacing } from '@/src/constants';
@@ -6,8 +12,14 @@ import { PlannedPaymentCard } from '@/src/features/planned-payments/components/P
 import { PlannedPaymentMonthSummary } from '@/src/features/planned-payments/components/PlannedPaymentMonthSummary';
 import type { PlannedPaymentListPresentation } from '@/src/features/planned-payments/components/plannedPaymentListTypes';
 import { usePlannedListRecord } from '@/src/features/planned-payments/hooks/usePlannedListRecord';
-import type { PlannedPaymentObligation, PlannedPaymentListOccurrence } from '@/src/services/planned-payment/plannedPaymentReadService';
-import type { PlannedPaymentListGroup, PlannedPaymentListRow } from '@/src/features/planned-payments/hooks/plannedPaymentListPresentation';
+import type {
+  PlannedPaymentObligation,
+  PlannedPaymentListOccurrence,
+} from '@/src/services/planned-payment/plannedPaymentReadService';
+import type {
+  PlannedPaymentListGroup,
+  PlannedPaymentListRow,
+} from '@/src/features/planned-payments/hooks/plannedPaymentListPresentation';
 import { FlashList } from '@shopify/flash-list';
 import dayjs from 'dayjs';
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -53,17 +65,21 @@ function groupRows(group: PlannedPaymentListGroup): FeedRow[] {
     if (!group.rows.length) return [];
     return [
       { kind: 'header', group },
-      ...group.rows.map(row =>
-        row.kind === 'schedule' ? ({ kind: 'schedule', payment: row.payment } as const) : null,
-      ).filter((row): row is Extract<FeedRow, { kind: 'schedule' }> => row !== null),
+      ...group.rows
+        .map(row =>
+          row.kind === 'schedule' ? ({ kind: 'schedule', payment: row.payment } as const) : null,
+        )
+        .filter((row): row is Extract<FeedRow, { kind: 'schedule' }> => row !== null),
     ];
   }
   if (!group.rows.length) return [];
   return [
     { kind: 'header', group },
-    ...group.rows.map(row =>
-      row.kind === 'occurrence' ? ({ kind: 'occurrence', occurrence: row } as const) : null,
-    ).filter((row): row is Extract<FeedRow, { kind: 'occurrence' }> => row !== null),
+    ...group.rows
+      .map(row =>
+        row.kind === 'occurrence' ? ({ kind: 'occurrence', occurrence: row } as const) : null,
+      )
+      .filter((row): row is Extract<FeedRow, { kind: 'occurrence' }> => row !== null),
   ];
 }
 
@@ -77,13 +93,15 @@ export function PlannedPaymentListView({
 }: PlannedPaymentListViewProps) {
   const strings = AppConfig.strings.plannedListRedesign;
   const emptyStrings = AppConfig.strings.plannedPayments;
-  const formatMoney = useMoneyFormat();
+  const formatMoney = useMoneyFormat({ style: 'compact' });
   const [showPausedEnded, setShowPausedEnded] = useState(false);
   const currentOccurrences = useRef(new Map<string, PlannedPaymentListOccurrence>());
   useLayoutEffect(() => {
     currentOccurrences.current = new Map(
       listData.groups.flatMap(group =>
-        group.rows.flatMap(row => row.kind === 'occurrence' && row.canRecord ? [[row.occurrenceId, row] as const] : []),
+        group.rows.flatMap(row =>
+          row.kind === 'occurrence' && row.canRecord ? [[row.occurrenceId, row] as const] : [],
+        ),
       ),
     );
   }, [listData.groups]);
@@ -96,9 +114,13 @@ export function PlannedPaymentListView({
       current.journalId === occurrence.journalId,
     );
   }, []);
-  const { recordOccurrence, pendingIds, pendingPlanIds, errors } = usePlannedListRecord(isOccurrenceCurrent);
+  const { recordOccurrence, pendingIds, pendingPlanIds, errors } =
+    usePlannedListRecord(isOccurrenceCurrent);
   const rows = useMemo(
-    () => listData.groups.flatMap(group => groupRows(group)).filter(row => row.kind !== 'schedule' || showPausedEnded),
+    () =>
+      listData.groups
+        .flatMap(group => groupRows(group))
+        .filter(row => row.kind !== 'schedule' || showPausedEnded),
     [listData.groups, showPausedEnded],
   );
 
@@ -144,12 +166,14 @@ export function PlannedPaymentListView({
               <PressScaleTouchable
                 onPress={() => setShowPausedEnded(value => !value)}
                 accessibilityRole="button"
-                accessibilityLabel={showPausedEnded ? strings.collapsePausedEnded : strings.expandPausedEnded}
+                accessibilityLabel={
+                  showPausedEnded ? strings.collapsePausedEnded : strings.expandPausedEnded
+                }
                 accessibilityState={{ expanded: showPausedEnded }}
                 style={styles.disclosure}
                 surfaceStyle={styles.sectionHeading}
               >
-                <AppText variant="subheading" weight="semibold" color="secondary">
+                <AppText variant="bodySmall" weight="medium" color="secondary">
                   {groupTitle(group, listData.monthStart, listData.nextMonthStart)}
                 </AppText>
                 <AppText variant="body" color="secondary">
@@ -160,11 +184,7 @@ export function PlannedPaymentListView({
           }
           return (
             <View style={styles.sectionHeading}>
-              <AppText
-                variant="subheading"
-                weight="semibold"
-                color={group.key === 'overdue' ? 'error' : 'secondary'}
-              >
+              <AppText variant="bodySmall" weight="medium" color="secondary">
                 {groupTitle(group, listData.monthStart, listData.nextMonthStart)}
               </AppText>
               <View style={styles.subtotal}>
@@ -172,26 +192,31 @@ export function PlannedPaymentListView({
                   <MoneyText
                     amount={group.outgoing.mainCurrency.amount}
                     currencyCode={group.outgoing.mainCurrency.currencyCode}
+                    formatStyle="compact"
                     variant="bodySmall"
                     weight="semibold"
                     color="secondary"
                   />
                 )}
-                {group.outgoing.otherCurrencyCount > 0 && (
+                {group.outgoing.otherCurrencyCount > 0 &&
                   group.outgoing.perCurrency
-                    .filter(total => total.currencyCode !== group.outgoing.mainCurrency.currencyCode)
+                    .filter(
+                      total => total.currencyCode !== group.outgoing.mainCurrency.currencyCode,
+                    )
                     .map(total => (
                       <View key={total.currencyCode} style={styles.currencySubtotal}>
-                        <AppText variant="caption" color="secondary">{total.currencyCode}</AppText>
+                        <AppText variant="caption" color="secondary">
+                          {total.currencyCode}
+                        </AppText>
                         <MoneyText
                           amount={total.amount}
                           currencyCode={total.currencyCode}
+                          formatStyle="compact"
                           variant="caption"
                           color="secondary"
                         />
                       </View>
-                    ))
-                )}
+                    ))}
               </View>
             </View>
           );
@@ -201,9 +226,10 @@ export function PlannedPaymentListView({
           const payment = row.payment;
           const isPaused = payment.status === 'PAUSED';
           const status = isPaused ? strings.paused : strings.ended;
-          const cadence = payment.intervalType === 'MONTHLY' && payment.intervalN === 1
-            ? undefined
-            : formatPlannedPaymentInterval(payment);
+          const cadence =
+            payment.intervalType === 'MONTHLY' && payment.intervalN === 1
+              ? undefined
+              : formatPlannedPaymentInterval(payment);
           return (
             <PressScaleTouchable
               onPress={() => onItemPress(payment)}
@@ -223,12 +249,14 @@ export function PlannedPaymentListView({
                   {payment.name}
                 </AppText>
                 <AppText variant="caption" color="secondary">
-                  {status}{cadence ? ` · ${cadence}` : ''}
+                  {status}
+                  {cadence ? ` · ${cadence}` : ''}
                 </AppText>
               </View>
               <MoneyText
                 amount={payment.amount}
                 currencyCode={payment.currencyCode}
+                formatStyle="compact"
                 variant="heading"
                 weight="bold"
                 color="secondary"
@@ -260,16 +288,44 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
-    paddingBottom: Size.fab + Spacing.xxxl * 2,
+    paddingBottom: Size.fab + Spacing.xxxxl + Size.buttonMd,
   },
   emptyState: { marginTop: Spacing.xxxl },
-  sectionHeading: { minHeight: 44, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.sm },
+  sectionHeading: {
+    minHeight: 28,
+    marginTop: Spacing.xs,
+    marginBottom: Spacing.xs,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
   subtotal: { alignItems: 'flex-end', flexShrink: 1, flexWrap: 'wrap' },
-  currencySubtotal: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: Spacing.xs },
-  disclosure: { minHeight: 44, marginTop: Spacing.md, marginBottom: Spacing.xs },
+  currencySubtotal: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    gap: Spacing.xs,
+  },
+  disclosure: { minHeight: 44, marginTop: Spacing.xs, marginBottom: Spacing.xs },
   scheduleRow: { marginBottom: Spacing.xs },
-  scheduleSurface: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.md, padding: Spacing.md, minHeight: 76 },
-  scheduleStatus: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+  scheduleSurface: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: Spacing.md,
+    padding: Spacing.md,
+    minHeight: 76,
+  },
+  scheduleStatus: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   scheduleDetails: { flexGrow: 1, flexShrink: 1, flexBasis: 160, minWidth: 140, gap: Spacing.xs },
   scheduleAmount: { flexGrow: 1, flexShrink: 1, flexBasis: 100, textAlign: 'right' },
 });
