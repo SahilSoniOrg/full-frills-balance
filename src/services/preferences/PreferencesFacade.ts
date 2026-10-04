@@ -32,7 +32,7 @@ export type PreferencesFacade = PreferencesStore & {
   ) => void;
 };
 
-class PreferencesFacadeStore extends PreferencesStore implements PreferencesFacade {
+export class PreferencesFacadeStore extends PreferencesStore implements PreferencesFacade {
   readonly device: DevicePreferencesStore;
   readonly workplace: WorkplacePreferencesStore;
   readonly hourCycle: HourCyclePreferences;
@@ -99,9 +99,3 @@ class PreferencesFacadeStore extends PreferencesStore implements PreferencesFaca
   }
 }
 
-/**
- * Build the preference façade: shared stores plus the remaining domain modules.
- */
-export function createPreferencesFacade(): PreferencesFacade {
-  return new PreferencesFacadeStore();
-}

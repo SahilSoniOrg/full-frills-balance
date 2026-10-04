@@ -5,7 +5,11 @@ import { NotificationPreferenceView } from '@/src/features/settings/components/N
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
 import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
-import type { NotificationSettingsViewModel } from '@/src/features/settings/hooks/useNotificationSettingsViewModel';
+import {
+  useNotificationSettingsViewModel,
+  type NotificationSettingsViewModel,
+} from '@/src/features/settings/hooks/useNotificationSettingsViewModel';
+import { AppNavigation } from '@/src/utils/navigation';
 import { Platform } from 'react-native';
 
 interface AutomationSettingsViewProps {
@@ -49,5 +53,15 @@ export function AutomationSettingsView({
         />
       </Stack>
     </SettingsLayout>
+  );
+}
+
+export default function AutomationSettingsScreen() {
+  const notifications = useNotificationSettingsViewModel();
+  return (
+    <AutomationSettingsView
+      notifications={notifications}
+      onOpenSmsSettings={AppNavigation.toSmsSettings}
+    />
   );
 }

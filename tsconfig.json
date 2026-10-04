@@ -26,6 +26,7 @@
   ],
   "exclude": [
     "node_modules",
+    "output",
     "e2e/specs/**",
     "e2e/actions/**",
     "e2e/pages/**",

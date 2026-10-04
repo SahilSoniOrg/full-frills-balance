@@ -2,6 +2,8 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useReports } from '@/src/features/reports/hooks/useReports';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics';
+import { AccountId } from '@/src/types/ids';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useState } from 'react';
 import {
   ReportOverviewTabVm,
@@ -10,7 +12,6 @@ import {
   ReportWealthTabVm,
 } from './reportTabTypes';
 import { ReportFilters, useReportFilters } from './useReportFilters';
-import { useReportActions } from './useReportActions';
 import { useReportBreakdownDetails } from './useReportBreakdownDetails';
 import { useReportChartData } from './useReportChartData';
 import { calculateReportSummary } from '@/src/services/reports/reportSummary';
@@ -86,9 +87,46 @@ export function useReportsViewModel(): ReportsViewModel {
     onResetSelections: resetSelections,
   });
 
-  const actions = useReportActions({
-    dateRange,
-  });
+  const onViewTransactions = useCallback((start: number, end?: number) => {
+    analytics.trackFeatureUsage('reports', 'drilldown_transactions');
+    const startDate = new Date(start).setHours(0, 0, 0, 0);
+    const endDate = end
+      ? new Date(end).setHours(23, 59, 59, 999)
+      : new Date(start).setHours(23, 59, 59, 999);
+
+    AppNavigation.toJournalSearch({ startDate, endDate });
+  }, []);
+
+  const onViewCurrentTransactions = useCallback(
+    (accountIds: AccountId[] = []) => {
+      analytics.trackFeatureUsage('reports', 'drilldown_transactions');
+      AppNavigation.toJournalSearch({
+        ...(accountIds.length > 0 ? { accountIds } : {}),
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+      });
+    },
+    [dateRange.endDate, dateRange.startDate],
+  );
+
+  const onLegendRowPress = useCallback(
+    (accountIds: AccountId[]) => {
+      if (accountIds.length === 0) return;
+
+      analytics.trackFeatureUsage('reports', 'drilldown_category', {
+        account_count: accountIds.length,
+      });
+
+      AppNavigation.toJournalSearch({
+        accountIds,
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+      });
+    },
+    [dateRange.endDate, dateRange.startDate],
+  );
+
+  const actions = { onViewTransactions, onViewCurrentTransactions, onLegendRowPress };
 
   const summaryData = calculateReportSummary({
     incomeVsExpense,

@@ -11,9 +11,10 @@ import type {
   SafeToSpendProjection,
 } from '@/src/services/simulation/safeToSpendDashboardProjection';
 import type { AccountFields } from '@/src/types/plainDtos';
-import React from 'react';
+import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDashboardFeatureActions';
+import { mapSafeToSpendViewModel } from '@/src/features/dashboard/mappers/SafeToSpendMapper';
+import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useSafeToSpendView } from '../hooks/useSafeToSpendView';
 import { PlannedPaymentsSection } from '@/src/features/dashboard/components/PlannedPaymentsSection';
 import { JournalListModals } from '@/src/features/journal';
 import { SafeToSpendCard } from './SafeToSpendCard';
@@ -67,11 +68,15 @@ export function DashboardScreenView({
     safeToSpendDetailsReady && safeToSpendData && !('snapshotKind' in safeToSpendData)
       ? safeToSpendData
       : null;
-  const displayReport: SafeToSpendDashboard['report'] = fullSafeToSpendData
-    ? fullSafeToSpendData.report
-    : safeToSpendData
-      ? { ...safeToSpendData.report, allFlows: [] }
-      : EMPTY_REPORT;
+  const displayReport = React.useMemo<SafeToSpendDashboard['report']>(
+    () =>
+      fullSafeToSpendData
+        ? fullSafeToSpendData.report
+        : safeToSpendData
+          ? { ...safeToSpendData.report, allFlows: [] }
+          : EMPTY_REPORT,
+    [fullSafeToSpendData, safeToSpendData],
+  );
 
   const uiState = React.useMemo(
     () => ({
@@ -92,36 +97,83 @@ export function DashboardScreenView({
     ],
   );
 
-  const safeToSpendViewModel = useSafeToSpendView({
-    // Provide defaults for all required fields when data is null to avoid dangerous casting
-    summary: safeToSpendData?.summary ?? {
-      safeToSpend: 0,
-      shortfall: 0,
-      trajectoryMinBalance: 0,
-      safeDaysCount: null,
-      totalFutureInflow: 0,
-      totalPlannedInflow: 0,
-      totalPlannedOutflow: 0,
-      totalCommittedPlanned: 0,
-      firstMajorInflowDay: null,
+  const { trackInfoVisible, trackSectionExpanded, trackLegendPressed } = useDashboardFeatureActions();
+  const currencyCode = safeToSpendData?.currencyCode ?? '';
+  const propsIsLoading = !safeToSpendData;
+
+  const viewModel = useMemo(
+    () =>
+      mapSafeToSpendViewModel(
+        {
+          summary: safeToSpendData?.summary ?? {
+            safeToSpend: 0,
+            shortfall: 0,
+            trajectoryMinBalance: 0,
+            safeDaysCount: null,
+            totalFutureInflow: 0,
+            totalPlannedInflow: 0,
+            totalPlannedOutflow: 0,
+            totalCommittedPlanned: 0,
+            firstMajorInflowDay: null,
+          },
+          explanation: safeToSpendData?.explanation,
+          asOf: safeToSpendData?.asOf,
+          generatedAt: safeToSpendData?.generatedAt,
+          quality: safeToSpendData?.quality,
+          snapshotAgeMs: safeToSpendData?.snapshotAgeMs,
+          totalLiquidAssets: safeToSpendData?.totalLiquidAssets ?? 0,
+          report: displayReport,
+          accountSummaries: safeToSpendData?.accountSummaries ?? [],
+          liquidAssetSubtypes: safeToSpendData?.liquidAssetSubtypes ?? [],
+          accountMap: fullSafeToSpendData?.accountMap ?? EMPTY_ACCOUNT_MAP,
+          safeToSpendDays: safeToSpendData?.safeToSpendDays ?? 0,
+          hasUnvaluedEntries: safeToSpendData?.hasUnvaluedEntries ?? false,
+          unvaluedStartingBalances: safeToSpendData?.unvaluedStartingBalances,
+        },
+        { isLoading: propsIsLoading, currencyCode },
+      ),
+    [
+      safeToSpendData,
+      displayReport,
+      fullSafeToSpendData?.accountMap,
+      propsIsLoading,
+      currencyCode,
+    ],
+  );
+
+  const handleSetInfoVisible = useCallback(
+    (v: boolean) => {
+      uiState.setInfoVisible(v);
+      trackInfoVisible(v, viewModel.isOverCommitted);
     },
-    explanation: safeToSpendData?.explanation,
-    asOf: safeToSpendData?.asOf,
-    generatedAt: safeToSpendData?.generatedAt,
-    quality: safeToSpendData?.quality,
-    snapshotAgeMs: safeToSpendData?.snapshotAgeMs,
-    report: displayReport,
-    accountSummaries: safeToSpendData?.accountSummaries ?? [],
-    totalLiquidAssets: safeToSpendData?.totalLiquidAssets ?? 0,
-    currencyCode: safeToSpendData?.currencyCode ?? '',
-    liquidAssetSubtypes: safeToSpendData?.liquidAssetSubtypes ?? [],
-    accountMap: fullSafeToSpendData?.accountMap ?? EMPTY_ACCOUNT_MAP,
-    safeToSpendDays: safeToSpendData?.safeToSpendDays ?? 0,
-    hasUnvaluedEntries: safeToSpendData?.hasUnvaluedEntries ?? false,
-    unvaluedStartingBalances: safeToSpendData?.unvaluedStartingBalances,
-    uiState,
-    isLoading: !safeToSpendData,
-  });
+    [uiState, trackInfoVisible, viewModel.isOverCommitted],
+  );
+
+  const handleSetExpandedSection = useCallback(
+    (s: 'assets' | 'income' | 'committed' | 'debts' | null) => {
+      uiState.setExpandedSection(s);
+      if (s) trackSectionExpanded(s);
+    },
+    [uiState, trackSectionExpanded],
+  );
+
+  const handleSetSelectedLegendItem = useCallback(
+    (i: 'safe' | 'committed' | 'debts' | null) => {
+      uiState.setSelectedLegendItem(i);
+      if (i) trackLegendPressed(i);
+    },
+    [uiState, trackLegendPressed],
+  );
+
+  const safeToSpendViewModel = {
+    ...viewModel,
+    isInfoVisible: uiState.isInfoVisible,
+    setInfoVisible: handleSetInfoVisible,
+    expandedSection: uiState.expandedSection,
+    setExpandedSection: handleSetExpandedSection,
+    selectedLegendItem: uiState.selectedLegendItem,
+    setSelectedLegendItem: handleSetSelectedLegendItem,
+  };
 
   if (!hasCompletedOnboarding) {
     return null;

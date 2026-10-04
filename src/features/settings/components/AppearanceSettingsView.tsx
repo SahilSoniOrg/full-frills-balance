@@ -9,7 +9,10 @@ import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/com
 import { SettingsSearchMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import { SettingsToggleItem } from '@/src/features/settings/components/SettingsToggleItem';
 import { ThemeSelectorView } from '@/src/features/settings/components/ThemeSelectorView';
-import type { AppearanceSettingsViewModel } from '@/src/features/settings/hooks/useAppearanceSettingsViewModel';
+import {
+  useAppearanceSettingsViewModel,
+  type AppearanceSettingsViewModel,
+} from '@/src/features/settings/hooks/useAppearanceSettingsViewModel';
 import { AppNavigation } from '@/src/utils/navigation';
 
 interface AppearanceSettingsViewProps {
@@ -104,4 +107,9 @@ export function AppearanceSettingsView({ vm }: AppearanceSettingsViewProps) {
       </Stack>
     </SettingsLayout>
   );
+}
+
+export default function AppearanceSettingsScreen() {
+  const vm = useAppearanceSettingsViewModel();
+  return <AppearanceSettingsView vm={vm} />;
 }

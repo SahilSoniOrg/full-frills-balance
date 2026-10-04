@@ -1,16 +1,70 @@
 import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
+import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
 import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import { SettingsMaintenanceOverlay } from '@/src/features/settings/components/SettingsMaintenanceOverlay';
-import type { MaintenanceSettingsViewModel } from '@/src/features/settings/hooks/useMaintenanceSettingsViewModel';
+import { useDataMaintenanceActions } from '@/src/features/settings/hooks/useDataMaintenanceActions';
+import { analytics } from '@/src/services/analytics';
+import {
+  cleanupDatabase as cleanupDatabaseRecords,
+  forceRunCheck,
+  journalBalanceInsightService,
+  resetDatabase,
+} from '@/src/services/integrity';
+import { AppNavigation } from '@/src/utils/navigation';
+import { toast } from '@/src/utils/alerts';
+import { useCallback } from 'react';
 
-interface MaintenanceSettingsViewProps {
-  vm: MaintenanceSettingsViewModel;
-}
+function MaintenanceSettingsView() {
+  const { workplaceId } = useWorkplace();
+  const { requireRestart } = useAppRestart();
 
-export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
+  const runIntegrityCheck = useCallback(
+    async (onProgress?: (message: string, progress: number) => void) => {
+      return forceRunCheck(workplaceId, onProgress);
+    },
+    [workplaceId],
+  );
+
+  const findUnbalancedJournals = useCallback(
+    () => journalBalanceInsightService.refresh(workplaceId, 'maintenance'),
+    [workplaceId],
+  );
+
+  const reviewUnbalancedJournals = useCallback(() => {
+    analytics.logEntrypointSelected(
+      'settings_maintenance',
+      'balance_audit',
+      'journal_balance_review',
+    );
+    AppNavigation.toJournalBalanceReview();
+  }, []);
+
+  const cleanupDatabase = useCallback(() => cleanupDatabaseRecords(), []);
+
+  const resetApp = useCallback(async () => {
+    analytics.logFactoryReset();
+    const result = await resetDatabase();
+    if (result.warnings.length > 0) {
+      toast.warning(
+        'Your data was reset. Some cached displays could not be cleared and may need a restart.',
+      );
+    }
+    requireRestart({ type: 'RESET' });
+  }, [requireRestart]);
+
+  const vm = useDataMaintenanceActions({
+    runIntegrityCheck,
+    findUnbalancedJournals,
+    reviewUnbalancedJournals,
+    cleanupDatabase,
+    resetApp,
+    requireRestart,
+  });
+
   return (
     <SettingsLayout title={AppConfig.strings.settings.sections.maintenanceAndReset}>
       <SettingsMenu header={AppConfig.strings.settings.sections.maintenance}>
@@ -87,3 +141,5 @@ export function MaintenanceSettingsView({ vm }: MaintenanceSettingsViewProps) {
     </SettingsLayout>
   );
 }
+
+export default MaintenanceSettingsView;

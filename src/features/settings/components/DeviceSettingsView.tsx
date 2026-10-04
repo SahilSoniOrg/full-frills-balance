@@ -42,3 +42,5 @@ export function DeviceSettingsView() {
     </SettingsLayout>
   );
 }
+
+export default DeviceSettingsView;

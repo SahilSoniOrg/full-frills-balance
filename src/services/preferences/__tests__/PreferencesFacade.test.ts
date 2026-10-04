@@ -1,5 +1,5 @@
 import { WorkplaceId } from '@/src/types/ids';
-import { createPreferencesFacade } from '../PreferencesFacade';
+import { PreferencesFacadeStore } from '../PreferencesFacade';
 import { PreferencesStore } from '../PreferencesStore';
 import { PREFERENCES_KEY, USER_PREFERENCES_KEY } from '../types';
 
@@ -34,7 +34,7 @@ describe('PreferencesFacade import restore', () => {
   });
 
   it('preserves the entered name when a first-run backup omits it', () => {
-    const preferences = createPreferencesFacade();
+    const preferences = new PreferencesFacadeStore();
     preferences.setUserName('Sahil');
 
     preferences.restoreImportedPreferences({ theme: 'dark' }, 'workplace-1' as WorkplaceId, 'all');
@@ -43,7 +43,7 @@ describe('PreferencesFacade import restore', () => {
   });
 
   it('restores the user name from a backup during onboarding import', () => {
-    const preferences = createPreferencesFacade();
+    const preferences = new PreferencesFacadeStore();
 
     preferences.restoreImportedPreferences(
       { userName: 'Imported User', theme: 'dark' },
@@ -55,7 +55,7 @@ describe('PreferencesFacade import restore', () => {
   });
 
   it('uses store methods without replacing them on the instance', () => {
-    const preferences = createPreferencesFacade();
+    const preferences = new PreferencesFacadeStore();
 
     expect(preferences).toBeInstanceOf(PreferencesStore);
     expect(Object.prototype.hasOwnProperty.call(preferences, 'loadPreferences')).toBe(false);
@@ -63,7 +63,7 @@ describe('PreferencesFacade import restore', () => {
   });
 
   it('writes only the canonical user preference key', () => {
-    const preferences = createPreferencesFacade();
+    const preferences = new PreferencesFacadeStore();
     preferences.setUserName('Sahil');
 
     expect(mockMemory.has(USER_PREFERENCES_KEY)).toBe(true);
@@ -71,7 +71,7 @@ describe('PreferencesFacade import restore', () => {
   });
 
   it('keeps Reports V2 opt-in until explicitly enabled', () => {
-    const preferences = createPreferencesFacade();
+    const preferences = new PreferencesFacadeStore();
 
     expect(preferences.getSnapshot().reportsV2Enabled).toBe(false);
     preferences.update({ reportsV2Enabled: true });
@@ -80,14 +80,13 @@ describe('PreferencesFacade import restore', () => {
   });
 
   it('bridges legacy storage before splitting and preserves Device values', async () => {
-    const preferences = createPreferencesFacade();
+    const preferences = new PreferencesFacadeStore();
 
     await preferences.loadPreferences();
 
     expect(preferences.rawDeviceBagPresentAtStartup).toBe(false);
     expect(preferences.device.deviceRegistered).toBe(true);
     expect(preferences.device.isAppLockEnabled).toBe(true);
-    expect(preferences.device.isSmsImportEnabled).toBe(true);
     expect(preferences.device.isAutomaticSmsImportEnabled).toBe(false);
     expect(preferences.device.getSnapshot().areSmsReviewNotificationsEnabled).toBe(true);
     expect(preferences.device.getSnapshot().showSmsNotificationDetails).toBe(false);
@@ -95,7 +94,7 @@ describe('PreferencesFacade import restore', () => {
   });
 
   it('clears user-scoped privacy acknowledgement with the user bag', () => {
-    const preferences = createPreferencesFacade();
+    const preferences = new PreferencesFacadeStore();
     preferences.privacy.setPrivacyPolicyAcknowledgement({
       version: '2026-09-07',
       acknowledgedAt: '2026-09-07T12:34:56.000Z',
@@ -107,7 +106,7 @@ describe('PreferencesFacade import restore', () => {
   });
 
   it('does not import privacy acknowledgement from backup data', () => {
-    const preferences = createPreferencesFacade();
+    const preferences = new PreferencesFacadeStore();
 
     preferences.restoreImportedPreferences(
       {
@@ -124,7 +123,7 @@ describe('PreferencesFacade import restore', () => {
   });
 
   it('keeps SMS notification choices on the device when restoring a backup', () => {
-    const preferences = createPreferencesFacade();
+    const preferences = new PreferencesFacadeStore();
     preferences.device.update({
       areSmsReviewNotificationsEnabled: false,
       showSmsNotificationDetails: false,

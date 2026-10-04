@@ -22,8 +22,19 @@ jest.mock('@/src/contexts/app-shell/AppOnboardingProvider', () => ({
 jest.mock('@/src/hooks/useDashboardPreferences', () => ({
   useDashboardPreferences: () => ({ showSafeToSpendChart: true }),
 }));
-jest.mock('@/src/features/dashboard/hooks/useRecentJournalEntries', () => ({
-  useRecentJournalEntries: () => ({ items: [] }),
+jest.mock('@/src/features/journal', () => ({
+  useJournalEntryList: () => ({
+    items: [],
+    journals: [],
+    isLoading: false,
+    isLoadingMore: false,
+    selectedIds: new Set(),
+    isSelectionModeActive: false,
+    onLongPressItem: jest.fn(),
+    onEndReached: undefined,
+    onShareSelected: jest.fn(),
+  }),
+  useJournalsBulkOperations: () => ({ selectionChrome: {}, modals: undefined }),
 }));
 jest.mock('@/src/features/planned-payments', () => ({
   usePlannedOccurrences: () => ({ items: [] }),

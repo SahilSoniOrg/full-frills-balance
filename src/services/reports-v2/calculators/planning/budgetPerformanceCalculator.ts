@@ -8,7 +8,7 @@ import type {
 } from './planningContracts';
 import { RecurrenceEngine } from '@/src/services/forward-finance/recurrence/RecurrenceEngine';
 import type { RecurrenceRule } from '@/src/services/forward-finance/recurrence/types';
-import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
+import { getBudgetCurrentPeriod } from '@/src/services/budget/BudgetPeriodUtils';
 import {
   accountIds,
   inPeriod,
@@ -87,20 +87,20 @@ function budgetCycleCount(
     period.startDate,
     rule.startDate ?? budget.createdAt ?? period.startDate,
   );
-  let cycle = BudgetPeriodUtils.getCurrentPeriod(rule, referenceDate);
+  let cycle = getBudgetCurrentPeriod(rule, referenceDate);
   let count = 0;
   let guard = 0;
   while (cycle.endDate < period.startDate && guard < 10000) {
     const nextStart = RecurrenceEngine.getNextOccurrence(cycle.startDate, rule);
     if (nextStart <= cycle.startDate) return 0;
-    cycle = BudgetPeriodUtils.getCurrentPeriod(rule, nextStart);
+    cycle = getBudgetCurrentPeriod(rule, nextStart);
     guard += 1;
   }
   while (cycle.startDate <= period.endDate && cycle.endDate >= period.startDate && guard < 10000) {
     count += 1;
     const nextStart = RecurrenceEngine.getNextOccurrence(cycle.startDate, rule);
     if (nextStart <= cycle.startDate) break;
-    cycle = BudgetPeriodUtils.getCurrentPeriod(rule, nextStart);
+    cycle = getBudgetCurrentPeriod(rule, nextStart);
     guard += 1;
   }
   return count;

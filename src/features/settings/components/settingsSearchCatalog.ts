@@ -15,48 +15,6 @@ export type SettingsSearchItem = {
   navigate: (target: string) => void;
 };
 
-const SETTINGS_SEARCH_ICONS: Record<string, IconName> = {
-  'profile-name': Icon.User,
-  devices: Icon.Settings,
-  workplace: Icon.Briefcase,
-  currency: Icon.Bank,
-  'safe-to-spend-forecast': Icon.Safe,
-  notifications: Icon.Notifications,
-  'share-format': Icon.Share,
-  appearance: Icon.Palette,
-  'appearance-mode': Icon.Sliders,
-  typography: Icon.Sparkles,
-  'time-format': Icon.Clock,
-  'compact-account-picker': Icon.Wallet,
-  'account-statistics': Icon.BarChart,
-  'safe-to-spend-chart': Icon.TrendingUp,
-  'reduce-motion': Icon.Pause,
-  'privacy-security': Icon.Shield,
-  'widget-privacy': Icon.EyeOff,
-  'app-lock': Icon.Lock,
-  'privacy-notice': Icon.Document,
-  'data-management': Icon.Database,
-  'data-import': Icon.FolderOpen,
-  'audit-log': Icon.History,
-  maintenance: Icon.Wrench,
-  'journal-balance-audit': Icon.Scale,
-  cleanup: Icon.Delete,
-  reset: Icon.Refresh,
-  'about-support': Icon.Info,
-  'release-notes': Icon.Document,
-  'sms-inbox': Icon.MessageSquare,
-  'sms-rules': Icon.Terminal,
-  'sms-settings': Icon.MessageSquare,
-  'sms-automation-import': Icon.Zap,
-  'sms-auto-post-enabled': Icon.Terminal,
-  'sms-review-notifications': Icon.Notifications,
-  'sms-notification-details': Icon.Notifications,
-};
-
-export function getSettingsSearchIcon(id: string): IconName | undefined {
-  return SETTINGS_SEARCH_ICONS[id];
-}
-
 type SettingsSearchActions = {
   onProfile: (target?: string) => void;
   onAppearance: (target?: string) => void;
@@ -78,9 +36,10 @@ type SettingsSearchActions = {
  * intentional instead of depending on the rendered React tree.
  */
 export function createSettingsSearchCatalog(actions: SettingsSearchActions): SettingsSearchItem[] {
-  const catalog: (Omit<SettingsSearchItem, 'focusId' | 'icon'> & { focusId?: string })[] = [
+  const catalog: (Omit<SettingsSearchItem, 'focusId'> & { focusId?: string })[] = [
     {
       id: 'profile-name',
+      icon: Icon.User,
       title: AppConfig.strings.settings.personalization.yourName,
       description: AppConfig.strings.settings.personalization.yourNameDesc,
       section: 'Your Account',
@@ -89,6 +48,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'devices',
+      icon: Icon.Settings,
       title: AppConfig.strings.settings.sections.devicesAndSessions,
       description: 'This device, local preferences, and future sessions',
       section: 'Your Account',
@@ -97,6 +57,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'workplace',
+      icon: Icon.Briefcase,
       title: 'Current workplace',
       description: 'Rename this workplace or change its icon',
       section: 'Workplaces',
@@ -105,6 +66,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'currency',
+      icon: Icon.Bank,
       title: AppConfig.strings.settings.currency.title,
       description: AppConfig.strings.settings.currency.description,
       section: 'Workplaces',
@@ -113,6 +75,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'safe-to-spend-forecast',
+      icon: Icon.Safe,
       title: AppConfig.strings.settings.personalization.forecastTitle,
       description: AppConfig.strings.settings.personalization.forecastDesc,
       section: 'Workplaces',
@@ -130,6 +93,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'notifications',
+      icon: Icon.Notifications,
       title: AppConfig.strings.settings.notifications.title,
       description: AppConfig.strings.settings.notifications.description,
       section: 'Preferences',
@@ -138,6 +102,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'share-format',
+      icon: Icon.Share,
       title: AppConfig.strings.settings.data.shareFormatTitle,
       description: AppConfig.strings.settings.data.shareFormatDesc,
       section: 'Data',
@@ -146,6 +111,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'appearance',
+      icon: Icon.Palette,
       title: AppConfig.strings.settings.appearance.themeTitle,
       description: AppConfig.strings.settings.appearance.themeDesc,
       section: 'Preferences',
@@ -154,6 +120,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'appearance-mode',
+      icon: Icon.Sliders,
       focusId: 'mode',
       title: AppConfig.strings.settings.appearance.modeTitle,
       description: 'Choose how the selected theme follows your device.',
@@ -163,6 +130,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'typography',
+      icon: Icon.Sparkles,
       title: AppConfig.strings.settings.appearance.typographyTitle,
       description: AppConfig.strings.settings.appearance.typographyDesc,
       section: 'Preferences',
@@ -171,6 +139,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'time-format',
+      icon: Icon.Clock,
       title: AppConfig.strings.settings.appearance.hourCycleTitle,
       description: AppConfig.strings.settings.appearance.hourCycleDesc,
       section: 'Preferences',
@@ -179,6 +148,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'reduce-motion',
+      icon: Icon.Pause,
       title: AppConfig.strings.settings.reduceMotion.title,
       description: AppConfig.strings.settings.reduceMotion.description,
       section: 'Preferences · Display Options',
@@ -195,6 +165,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'compact-account-picker',
+      icon: Icon.Wallet,
       title: AppConfig.strings.settings.accountPicker.title,
       description: AppConfig.strings.settings.accountPicker.description,
       section: 'Preferences · Display Options',
@@ -203,6 +174,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'account-statistics',
+      icon: Icon.BarChart,
       title: AppConfig.strings.settings.stats.title,
       description: AppConfig.strings.settings.stats.description,
       section: 'Preferences · Display Options',
@@ -211,6 +183,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'safe-to-spend-chart',
+      icon: Icon.TrendingUp,
       title: AppConfig.strings.settings.stsChart.title,
       description: AppConfig.strings.settings.stsChart.description,
       section: 'Preferences · Display Options',
@@ -219,6 +192,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'privacy-security',
+      icon: Icon.Shield,
       title: AppConfig.strings.settings.privacy.title,
       description: AppConfig.strings.settings.privacy.description,
       section: 'Preferences',
@@ -227,6 +201,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'widget-privacy',
+      icon: Icon.EyeOff,
       title: AppConfig.strings.settings.privacy.widgetPrivacyTitle,
       description: AppConfig.strings.settings.privacy.widgetPrivacyDesc,
       section: 'Preferences',
@@ -235,6 +210,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'app-lock',
+      icon: Icon.Lock,
       title: AppConfig.strings.settings.privacy.appLockTitle,
       description: AppConfig.strings.settings.privacy.appLockDesc,
       section: 'Preferences',
@@ -243,6 +219,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'privacy-notice',
+      icon: Icon.Document,
       title: PRIVACY_NOTICE_STRINGS.title,
       description: PRIVACY_NOTICE_STRINGS.subtitle,
       section: `Your Account · ${AppConfig.strings.settings.sections.documents}`,
@@ -251,6 +228,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'data-management',
+      icon: Icon.Database,
       focusId: 'data-export',
       title: AppConfig.strings.settings.data.exportBtn,
       description: AppConfig.strings.settings.data.exportDesc,
@@ -260,6 +238,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'data-import',
+      icon: Icon.FolderOpen,
       title: AppConfig.strings.settings.data.importBtn,
       description: AppConfig.strings.settings.data.importDesc,
       section: 'Data',
@@ -268,6 +247,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'audit-log',
+      icon: Icon.History,
       title: AppConfig.strings.settings.data.auditBtn,
       description: AppConfig.strings.settings.data.auditDesc,
       section: 'Data',
@@ -276,6 +256,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'maintenance',
+      icon: Icon.Wrench,
       focusId: 'integrity',
       title: AppConfig.strings.settings.maintenance.integrityBtn,
       description: AppConfig.strings.settings.maintenance.integrityDesc,
@@ -285,6 +266,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'journal-balance-audit',
+      icon: Icon.Scale,
       title: AppConfig.strings.settings.maintenance.balanceAuditBtn,
       description: AppConfig.strings.settings.maintenance.balanceAuditDesc,
       section: 'Data',
@@ -293,6 +275,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'cleanup',
+      icon: Icon.Delete,
       title: AppConfig.strings.settings.danger.cleanupBtn,
       description: AppConfig.strings.settings.danger.cleanupDesc,
       section: 'Data',
@@ -301,6 +284,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'reset',
+      icon: Icon.Refresh,
       title: AppConfig.strings.settings.danger.resetBtn,
       description: AppConfig.strings.settings.danger.resetDesc,
       section: 'Data',
@@ -309,6 +293,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'about-support',
+      icon: Icon.Info,
       title: AppConfig.strings.settings.sections.aboutAndSupport,
       description: 'Community, ratings, source code, and version',
       section: 'Support',
@@ -317,6 +302,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     },
     {
       id: 'release-notes',
+      icon: Icon.Document,
       title: AppConfig.strings.settings.community.releaseNotesTitle,
       description: AppConfig.strings.settings.community.releaseNotesDesc,
       section: 'Support',
@@ -328,7 +314,8 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
   if (Platform.OS === 'android') {
     catalog.push(
       {
-        id: 'sms-settings',
+      id: 'sms-settings',
+      icon: Icon.MessageSquare,
         title: AppConfig.strings.settings.personalization.smsSettingsTitle,
         description: AppConfig.strings.settings.personalization.smsSettingsDesc,
         section: 'Notifications & Automation',
@@ -337,7 +324,8 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
         navigate: actions.onSmsSettings,
       },
       {
-        id: 'sms-automation-import',
+      id: 'sms-automation-import',
+      icon: Icon.Zap,
         title: AppConfig.strings.settings.personalization.smsImportTitle,
         description: 'Automatically scan transaction messages on this device.',
         section: 'Notifications & Automation',
@@ -345,7 +333,8 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
         navigate: actions.onSmsSettings,
       },
       {
-        id: 'sms-auto-post-enabled',
+      id: 'sms-auto-post-enabled',
+      icon: Icon.Terminal,
         title: AppConfig.strings.settings.personalization.smsAutoPostEnabledTitle,
         description: AppConfig.strings.settings.personalization.smsAutoPostEnabledDesc,
         section: 'Notifications & Automation',
@@ -353,7 +342,8 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
         navigate: actions.onSmsSettings,
       },
       {
-        id: 'sms-review-notifications',
+      id: 'sms-review-notifications',
+      icon: Icon.Notifications,
         title: AppConfig.strings.settings.personalization.smsReviewNotificationsTitle,
         description: AppConfig.strings.settings.personalization.smsReviewNotificationsDesc,
         section: 'Notifications & Automation',
@@ -361,7 +351,8 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
         navigate: actions.onSmsSettings,
       },
       {
-        id: 'sms-notification-details',
+      id: 'sms-notification-details',
+      icon: Icon.Notifications,
         title: 'Detailed SMS previews',
         description: 'Choose whether alerts show transaction details.',
         section: 'Notifications & Automation',
@@ -369,7 +360,8 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
         navigate: actions.onSmsSettings,
       },
       {
-        id: 'sms-inbox',
+      id: 'sms-inbox',
+      icon: Icon.MessageSquare,
         title: AppConfig.strings.settings.personalization.smsInboxTitle,
         description: AppConfig.strings.settings.personalization.smsInboxDesc,
         section: 'Notifications & Automation',
@@ -377,7 +369,8 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
         navigate: actions.onSmsInbox,
       },
       {
-        id: 'sms-rules',
+      id: 'sms-rules',
+      icon: Icon.Terminal,
         title: AppConfig.strings.settings.personalization.smsAutoPostTitle,
         description: AppConfig.strings.settings.personalization.smsAutoPostDesc,
         section: 'Notifications & Automation',
@@ -387,11 +380,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     );
   }
 
-  return catalog.map(item => {
-    const icon = getSettingsSearchIcon(item.id);
-    if (!icon) throw new Error(`Missing settings search icon for ${item.id}`);
-    return { ...item, focusId: item.focusId ?? item.id, icon };
-  });
+  return catalog.map(item => ({ ...item, focusId: item.focusId ?? item.id }));
 }
 
 export function filterSettingsSearchItems(

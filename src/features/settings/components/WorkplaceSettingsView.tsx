@@ -6,7 +6,10 @@ import { Box, Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
 import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
-import { WorkplaceSettingsViewModel } from '@/src/features/settings/hooks/useWorkplaceSettingsViewModel';
+import {
+  useWorkplaceSettingsViewModel,
+  WorkplaceSettingsViewModel,
+} from '@/src/features/settings/hooks/useWorkplaceSettingsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Opacity } from '@/src/constants/design-tokens';
 import { withOpacity } from '@/src/utils/color-math';
@@ -117,4 +120,9 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
       )}
     </>
   );
+}
+
+export default function WorkplaceSettingsScreen() {
+  const vm = useWorkplaceSettingsViewModel();
+  return <WorkplaceSettingsView vm={vm} />;
 }

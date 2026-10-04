@@ -3,7 +3,10 @@ import { AppConfig } from '@/src/constants';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
 import { SettingsToggleItem } from '@/src/features/settings/components/SettingsToggleItem';
-import type { PrivacySettingsViewModel } from '@/src/features/settings/hooks/usePrivacySettingsViewModel';
+import {
+  usePrivacySettingsViewModel,
+  type PrivacySettingsViewModel,
+} from '@/src/features/settings/hooks/usePrivacySettingsViewModel';
 
 interface PrivacySecuritySettingsViewProps {
   vm: PrivacySettingsViewModel;
@@ -41,4 +44,9 @@ export function PrivacySecuritySettingsView({ vm }: PrivacySecuritySettingsViewP
       </SettingsMenu>
     </SettingsLayout>
   );
+}
+
+export default function PrivacySecuritySettingsScreen() {
+  const vm = usePrivacySettingsViewModel();
+  return <PrivacySecuritySettingsView vm={vm} />;
 }

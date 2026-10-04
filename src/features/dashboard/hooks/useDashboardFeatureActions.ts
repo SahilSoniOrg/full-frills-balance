@@ -1,28 +1,23 @@
 import { analytics } from '@/src/services/analytics';
 import { AccountId, PlannedPaymentId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
 
-interface GlobalBootState {
-  __BOOT_START_TIME__?: number;
-  __HAS_MOUNTED_BEFORE__?: boolean;
-}
+type SafeToSpendFeatureAction =
+  | 'opened'
+  | 'closed'
+  | 'section_expanded'
+  | 'legend_pressed'
+  | 'chart_point_selected'
+  | 'planned_payment_viewed'
+  | 'account_viewed'
+  | 'legend_to_explanation';
 
-/** Dashboard-owned first-paint metric. Call once from DashboardScreen. */
-export function trackDashboardFirstPaint() {
-  const globalState = globalThis as unknown as GlobalBootState;
-  const startTime = globalState.__BOOT_START_TIME__;
-  if (!startTime) return;
-  const duration = performance.now() - startTime;
-  const isColdBoot = !globalState.__HAS_MOUNTED_BEFORE__;
-  globalState.__HAS_MOUNTED_BEFORE__ = true;
-  analytics.track('first_paint', {
-    duration_ms: Math.round(duration),
-    is_cold_boot: isColdBoot,
-  });
-  logger.info(`[Performance] First Paint: ${Math.round(duration)}ms (Cold: ${isColdBoot})`);
-  globalState.__BOOT_START_TIME__ = undefined;
+function trackSts(
+  action: SafeToSpendFeatureAction,
+  props?: Parameters<typeof analytics.trackFeatureUsage>[2],
+) {
+  analytics.trackFeatureUsage('safe_to_spend', action, props);
 }
 
 /** Dashboard-owned telemetry and navigation for Safe-to-Spend. */
@@ -37,7 +32,7 @@ export function useDashboardFeatureActions() {
       },
       currencyCode: string,
     ) => {
-      analytics.trackFeatureUsage('safe_to_spend', 'account_viewed', { id: account.accountId });
+      trackSts('account_viewed', { id: account.accountId });
       AppNavigation.toAccountDetails(account.accountId, {
         preview: {
           name: account.accountName,
@@ -51,38 +46,38 @@ export function useDashboardFeatureActions() {
   );
 
   const openPlannedPayment = useCallback((id: PlannedPaymentId | string, source: string) => {
-    analytics.trackFeatureUsage('safe_to_spend', 'planned_payment_viewed', { id, source });
+    trackSts('planned_payment_viewed', { id, source });
     AppNavigation.toPlannedPaymentDetails(id as PlannedPaymentId);
   }, []);
 
   const trackChartPoint = useCallback(
     (point: { dayOffset: number; isHistory: boolean; hasDetails: boolean }) => {
-      analytics.trackFeatureUsage('safe_to_spend', 'chart_point_selected', point);
+      trackSts('chart_point_selected', point);
     },
     [],
   );
 
   const trackLegendToExplanation = useCallback((slice: 'safe' | 'committed' | 'debts') => {
-    analytics.trackFeatureUsage('safe_to_spend', 'legend_to_explanation', { slice });
+    trackSts('legend_to_explanation', { slice });
   }, []);
 
   const trackInfoVisible = useCallback((visible: boolean, isOverCommitted?: boolean) => {
     if (visible) {
-      analytics.trackFeatureUsage('safe_to_spend', 'opened', { isOverCommitted });
+      trackSts('opened', { isOverCommitted });
     } else {
-      analytics.trackFeatureUsage('safe_to_spend', 'closed');
+      trackSts('closed');
     }
   }, []);
 
   const trackSectionExpanded = useCallback(
     (section: 'assets' | 'income' | 'committed' | 'debts') => {
-      analytics.trackFeatureUsage('safe_to_spend', 'section_expanded', { section });
+      trackSts('section_expanded', { section });
     },
     [],
   );
 
   const trackLegendPressed = useCallback((item: 'safe' | 'committed' | 'debts') => {
-    analytics.trackFeatureUsage('safe_to_spend', 'legend_pressed', { item });
+    trackSts('legend_pressed', { item });
   }, []);
 
   const trackExplanationVisible = useCallback((visible: boolean) => {

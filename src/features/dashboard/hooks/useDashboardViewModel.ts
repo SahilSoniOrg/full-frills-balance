@@ -3,10 +3,14 @@ import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useOnboardingSession } from '@/src/contexts/app-shell/AppOnboardingProvider';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useDashboardPreferences } from '@/src/hooks/useDashboardPreferences';
+import type { ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
 import {
-  RecentJournalEntries,
-  useRecentJournalEntries,
-} from '@/src/features/dashboard/hooks/useRecentJournalEntries';
+  useJournalEntryList,
+  useJournalsBulkOperations,
+  type JournalListModalsProps,
+} from '@/src/features/journal';
+import { JournalId } from '@/src/types/ids';
+import { JournalListItem } from '@/src/types/ui';
 import { PlannedOccurrencesResult, usePlannedOccurrences } from '@/src/features/planned-payments';
 import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDashboardFeatureActions';
 import { useObservable } from '@/src/hooks/useObservable';
@@ -21,6 +25,22 @@ import { logger as appLogger } from '@/src/utils/logger';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { EMPTY } from 'rxjs';
+
+export interface RecentJournalEntries {
+  items: JournalListItem[];
+  isLoading: boolean;
+  isLoadingMore: boolean;
+  loadingText: string;
+  loadingMoreText: string;
+  emptyTitle: string;
+  emptySubtitle: string;
+  onEndReached?: () => void;
+  selectedIds: Set<JournalId>;
+  isSelectionModeActive: boolean;
+  onLongPressItem: (id: JournalId) => void;
+  selectionChrome: ListSelectionChrome;
+  modals?: JournalListModalsProps;
+}
 
 export interface DashboardViewModel {
   hasCompletedOnboarding: boolean;
@@ -130,19 +150,54 @@ export function useDashboardViewModel(): DashboardViewModel {
 
   const { strings } = AppConfig;
 
-  const recentJournalEntries = useRecentJournalEntries({
+  const journalListCore = useJournalEntryList({
     workplaceId,
     pageSize: AppConfig.pagination.dashboardPageSize,
-    emptyTitle: strings.dashboard.emptyTitle,
-    emptySubtitle: strings.dashboard.emptySubtitle,
     initialItems: () => {
       const snapshot = snapshotService.getDashboardSnapshot<DashboardData>(workplaceId);
       const items = snapshot?.enrichedJournals || [];
-      // Progressive Mount: Only show 5 items in the very first frame
-      // to keep the view hierarchy light for the splash hide animation.
       return items.slice(0, 5);
     },
+    shareTitle: 'Transactions Report',
+    paginationPolicy: 'default',
   });
+  const journalBulk = useJournalsBulkOperations({
+    workplaceId,
+    journals: journalListCore.journals,
+    selection: journalListCore,
+    onShareSelected: journalListCore.onShareSelected,
+  });
+  const recentJournalEntries = useMemo<RecentJournalEntries>(
+    () => ({
+      items: journalListCore.items,
+      isLoading: journalListCore.isLoading,
+      isLoadingMore: journalListCore.isLoadingMore,
+      loadingText: strings.common.loading,
+      loadingMoreText: strings.common.loading,
+      emptyTitle: strings.dashboard.emptyTitle,
+      emptySubtitle: strings.dashboard.emptySubtitle,
+      onEndReached: journalListCore.onEndReached,
+      selectedIds: journalListCore.selectedIds,
+      isSelectionModeActive: journalListCore.isSelectionModeActive,
+      onLongPressItem: journalListCore.onLongPressItem,
+      selectionChrome: journalBulk.selectionChrome,
+      modals: journalBulk.modals,
+    }),
+    [
+      journalListCore.items,
+      journalListCore.isLoading,
+      journalListCore.isLoadingMore,
+      journalListCore.onEndReached,
+      journalListCore.selectedIds,
+      journalListCore.isSelectionModeActive,
+      journalListCore.onLongPressItem,
+      journalBulk.selectionChrome,
+      journalBulk.modals,
+      strings.common.loading,
+      strings.dashboard.emptyTitle,
+      strings.dashboard.emptySubtitle,
+    ],
+  );
 
   const currentReadyDashboard =
     safeToSpendDetailsReady && visibleSafeToSpendData && !('snapshotKind' in visibleSafeToSpendData)

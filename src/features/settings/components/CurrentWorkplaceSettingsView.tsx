@@ -8,7 +8,10 @@ import { CurrencySelector } from '@/src/features/accounts';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
 import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
-import type { CurrentWorkplaceSettingsViewModel } from '@/src/features/settings/hooks/useCurrentWorkplaceSettingsViewModel';
+import {
+  useCurrentWorkplaceSettingsViewModel,
+  type CurrentWorkplaceSettingsViewModel,
+} from '@/src/features/settings/hooks/useCurrentWorkplaceSettingsViewModel';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useState } from 'react';
@@ -103,4 +106,9 @@ export function CurrentWorkplaceSettingsView({ vm }: CurrentWorkplaceSettingsVie
       )}
     </>
   );
+}
+
+export default function CurrentWorkplaceSettingsScreen() {
+  const vm = useCurrentWorkplaceSettingsViewModel();
+  return <CurrentWorkplaceSettingsView vm={vm} />;
 }

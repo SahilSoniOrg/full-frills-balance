@@ -6,12 +6,9 @@ import { DataExportSection } from '@/src/features/settings/components/DataExport
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
 import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
-import type { DataManagementViewModel } from '@/src/features/settings/hooks/useDataManagementViewModel';
+import { useSharePrefs } from '@/src/hooks/useSharePrefs';
 import { ShareFormat } from '@/src/types/sharing';
-
-interface DataManagementSettingsViewProps {
-  vm: DataManagementViewModel;
-}
+import { AppNavigation } from '@/src/utils/navigation';
 
 const SHARE_FORMAT_OPTIONS = [
   { id: ShareFormat.TEXT, label: AppConfig.strings.settings.data.shareFormats.TEXT },
@@ -19,10 +16,12 @@ const SHARE_FORMAT_OPTIONS = [
   { id: ShareFormat.MARKDOWN, label: AppConfig.strings.settings.data.shareFormats.MARKDOWN },
 ] as const;
 
-export function DataManagementSettingsView({ vm }: DataManagementSettingsViewProps) {
+function DataManagementSettingsView() {
+  const { defaultShareFormat, setDefaultShareFormat } = useSharePrefs();
+
   return (
     <SettingsLayout title={AppConfig.strings.settings.sections.dataManagement}>
-      <DataExportSection onImport={vm.onImport} />
+      <DataExportSection onImport={() => AppNavigation.toSetupJourney('settings_restore')} />
 
       <Stack space="xxl">
         <SettingsMenu header="Sharing">
@@ -32,8 +31,8 @@ export function DataManagementSettingsView({ vm }: DataManagementSettingsViewPro
             title={AppConfig.strings.settings.data.shareFormatTitle}
             description={AppConfig.strings.settings.data.shareFormatDesc}
             options={SHARE_FORMAT_OPTIONS}
-            value={vm.defaultShareFormat}
-            onChange={vm.setDefaultShareFormat}
+            value={defaultShareFormat}
+            onChange={setDefaultShareFormat}
             controlTestID="share-format-control"
           />
         </SettingsMenu>
@@ -44,10 +43,12 @@ export function DataManagementSettingsView({ vm }: DataManagementSettingsViewPro
             leftIcon={Icon.History}
             title={AppConfig.strings.settings.data.auditBtn}
             description={AppConfig.strings.settings.data.auditDesc}
-            onPress={vm.onAuditLog}
+            onPress={AppNavigation.toAuditLog}
           />
         </SettingsMenu>
       </Stack>
     </SettingsLayout>
   );
 }
+
+export default DataManagementSettingsView;

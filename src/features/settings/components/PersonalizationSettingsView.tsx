@@ -4,7 +4,10 @@ import { Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
 import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
-import type { PersonalizationViewModel } from '@/src/features/settings/hooks/usePersonalizationViewModel';
+import {
+  usePersonalizationViewModel,
+  type PersonalizationViewModel,
+} from '@/src/features/settings/hooks/usePersonalizationViewModel';
 import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoticeStrings';
 import { AppNavigation } from '@/src/utils/navigation';
 import { View } from 'react-native';
@@ -65,4 +68,9 @@ export function PersonalizationSettingsView({ vm }: PersonalizationSettingsViewP
       </Stack>
     </SettingsLayout>
   );
+}
+
+export default function PersonalizationSettingsScreen() {
+  const vm = usePersonalizationViewModel();
+  return <PersonalizationSettingsView vm={vm} />;
 }

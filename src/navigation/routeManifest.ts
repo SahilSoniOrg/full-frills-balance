@@ -142,6 +142,8 @@ export const ROUTE_MANIFEST = [
 
 export type AppRouteName = (typeof ROUTE_MANIFEST)[number]['name'];
 
-export const ROUTE_MANIFEST_BY_NAME = Object.fromEntries(
-  ROUTE_MANIFEST.map(route => [route.name, route]),
-) as Record<AppRouteName, (typeof ROUTE_MANIFEST)[number]>;
+export function routeManifestEntry(name: AppRouteName) {
+  const entry = ROUTE_MANIFEST.find(route => route.name === name);
+  if (!entry) throw new Error(`Unknown route: ${name}`);
+  return entry;
+}

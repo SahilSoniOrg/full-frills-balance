@@ -4,7 +4,10 @@ import { Box, Inline } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
 import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
-import type { AboutSupportViewModel } from '@/src/features/settings/hooks/useAboutSupportViewModel';
+import {
+  useAboutSupportViewModel,
+  type AboutSupportViewModel,
+} from '@/src/features/settings/hooks/useAboutSupportViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { TouchableOpacity } from 'react-native';
 
@@ -86,4 +89,9 @@ export function AboutSupportSettingsView({ vm }: AboutSupportSettingsViewProps) 
       </SettingsMenu>
     </SettingsLayout>
   );
+}
+
+export default function AboutSupportSettingsScreen() {
+  const vm = useAboutSupportViewModel();
+  return <AboutSupportSettingsView vm={vm} />;
 }

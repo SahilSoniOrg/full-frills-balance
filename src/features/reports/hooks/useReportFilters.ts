@@ -1,8 +1,14 @@
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
-import { useCallback, useState } from 'react';
-import { useReportDateFilter } from './useReportDateFilter';
+import {
+  DateRange,
+  formatDate,
+  getEndOfDay,
+  getStartOfDay,
+  PeriodFilter,
+} from '@/src/utils/dateUtils';
+import { useCallback, useMemo, useState } from 'react';
 
 export interface ReportFilters {
   showAccountPicker: boolean;
@@ -43,14 +49,39 @@ export function useReportFilters({
   onResetSelections,
 }: UseReportFiltersProps): ReportFilters {
   const [showAccountPicker, setShowAccountPicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const dateFilter = useReportDateFilter({
-    workplaceId,
-    dateRange,
-    accountIds,
-    updateFilter,
-    onResetSelections,
-  });
+  const onDateSelect = useCallback(
+    async (range: DateRange | null, filter: PeriodFilter) => {
+      let finalRange = range;
+
+      if (filter.type === 'ALL_TIME') {
+        const earliest = await transactionQueryRepository.findEarliest(workplaceId);
+        const startTimestamp = earliest?.transactionDate ?? Date.now();
+        finalRange = {
+          startDate: getStartOfDay(startTimestamp),
+          endDate: getEndOfDay(Date.now()),
+          label: 'All Time',
+        };
+      }
+
+      if (finalRange) {
+        updateFilter(finalRange, filter, accountIds);
+      }
+      setShowDatePicker(false);
+      onResetSelections();
+    },
+    [workplaceId, updateFilter, onResetSelections, accountIds],
+  );
+
+  const onOpenDatePicker = useCallback(() => setShowDatePicker(true), []);
+  const onCloseDatePicker = useCallback(() => setShowDatePicker(false), []);
+
+  const dateLabel = useMemo(() => {
+    return (
+      dateRange.label || `${formatDate(dateRange.startDate)} - ${formatDate(dateRange.endDate)}`
+    );
+  }, [dateRange]);
 
   const onRefresh = useCallback(() => {
     onResetSelections();
@@ -72,11 +103,11 @@ export function useReportFilters({
     onCloseAccountPicker: () => setShowAccountPicker(false),
     accountIds,
     onAccountSelect,
-    showDatePicker: dateFilter.showDatePicker,
-    onOpenDatePicker: dateFilter.onOpenDatePicker,
-    onCloseDatePicker: dateFilter.onCloseDatePicker,
-    onDateSelect: dateFilter.onDateSelect,
-    dateLabel: dateFilter.dateLabel,
+    showDatePicker,
+    onOpenDatePicker,
+    onCloseDatePicker,
+    onDateSelect,
+    dateLabel,
     accounts,
     periodFilter,
     onRefresh,

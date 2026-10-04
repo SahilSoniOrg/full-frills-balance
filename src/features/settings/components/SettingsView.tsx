@@ -10,6 +10,7 @@ import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
 import { Platform, TextInput } from 'react-native';
 import { SettingsSearchResults } from '@/src/features/settings/components/SettingsSearchResults';
 import { createSettingsSearchCatalog } from '@/src/features/settings/components/settingsSearchCatalog';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useMemo, useRef, useState } from 'react';
 
 export interface SettingsViewProps {
@@ -189,5 +190,25 @@ export function SettingsView({
         )}
       </Stack>
     </SettingsLayout>
+  );
+}
+
+export default function SettingsScreen() {
+  return (
+    <SettingsView
+      onProfile={AppNavigation.toPersonalizationSettings}
+      onAppearance={AppNavigation.toAppearanceSettings}
+      onAutomation={AppNavigation.toAutomationSettings}
+      onSmsSettings={AppNavigation.toSmsSettings}
+      onSmsInbox={AppNavigation.toTransactionInbox}
+      onSmsRules={AppNavigation.toSmsRules}
+      onPrivacy={AppNavigation.toPrivacySecuritySettings}
+      onPrivacyNotice={AppNavigation.toPrivacyNotice}
+      onCurrentWorkplace={AppNavigation.toCurrentWorkplaceSettings}
+      onDataManagement={AppNavigation.toDataManagementSettings}
+      onMaintenance={AppNavigation.toMaintenanceSettings}
+      onAbout={AppNavigation.toAboutSupportSettings}
+      onDeviceSettings={AppNavigation.toDeviceSettings}
+    />
   );
 }
