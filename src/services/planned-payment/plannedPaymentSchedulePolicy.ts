@@ -17,15 +17,15 @@ export function isPlannedPaymentScheduleChange(
     existing.currencyCode !== input.currencyCode ||
     existing.fromAccountId !== input.fromAccountId ||
     existing.toAccountId !== input.toAccountId ||
-    (existing.fxMode ?? undefined) !== input.fxMode ||
-    (existing.destinationAmount ?? undefined) !== input.destinationAmount ||
-    (existing.endDate ?? undefined) !== input.endDate ||
+    (existing.fxMode ?? undefined) !== (input.fxMode ?? undefined) ||
+    (existing.destinationAmount ?? undefined) !== (input.destinationAmount ?? undefined) ||
+    (existing.endDate ?? undefined) !== (input.endDate ?? undefined) ||
     existing.isAutoPost !== input.isAutoPost ||
     existing.startDate !== input.startDate ||
     existing.intervalType !== input.intervalType ||
     existing.intervalN !== input.intervalN ||
-    (existing.recurrenceDay ?? undefined) !== input.recurrenceDay ||
-    (existing.recurrenceMonth ?? undefined) !== input.recurrenceMonth
+    (existing.recurrenceDay ?? undefined) !== (input.recurrenceDay ?? undefined) ||
+    (existing.recurrenceMonth ?? undefined) !== (input.recurrenceMonth ?? undefined)
   );
 }
 

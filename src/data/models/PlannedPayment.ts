@@ -53,11 +53,11 @@ export function toPlainPlannedPayment(pp: PlannedPayment): PlainPlannedPayment {
     intervalN: pp.intervalN,
     intervalType: pp.intervalType,
     startDate: pp.startDate,
-    endDate: pp.endDate,
+    endDate: pp.endDate ?? undefined,
     nextOccurrence: pp.nextOccurrence,
     status: pp.status,
     isAutoPost: pp.isAutoPost,
-    recurrenceDay: pp.recurrenceDay,
-    recurrenceMonth: pp.recurrenceMonth,
+    recurrenceDay: pp.recurrenceDay ?? undefined,
+    recurrenceMonth: pp.recurrenceMonth ?? undefined,
   };
 }

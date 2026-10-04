@@ -9,6 +9,8 @@ import {
 import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import Transaction from '@/src/data/models/Transaction';
 import { toPlainPlannedPayment } from '@/src/data/models/PlannedPayment';
+// eslint-disable-next-line no-restricted-imports -- Regression exercises the requested DTO-to-form-to-command boundary.
+import { mapPlannedPaymentToForm } from '@/src/features/planned-payments/hooks/plannedPaymentFormDraft';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
@@ -20,6 +22,7 @@ import {
   updatePlannedPayment,
 } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { journalService } from '@/src/services/journal/journalDomainService';
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { analytics } from '@/src/services/analytics';
 import { togglePlannedPaymentStatus } from '@/src/services/planned-payment/plannedPaymentLifecycle';
 import { Q } from '@nozbe/watermelondb';
@@ -185,6 +188,89 @@ describe('planned payment commands (integration)', () => {
 
     expect(updated.name).toBe('Rent (updated)');
     expect(updated.nextOccurrence).toBe(beforeNext);
+  });
+
+  it('keeps pending journal IDs and edited dates on a no-op native null DTO-to-form save', async () => {
+    const created = await createPlannedPayment(WP, {
+      ...baseInput(),
+      name: 'Salary Deposit',
+      intervalType: PlannedPaymentInterval.WEEKLY,
+      intervalN: 2,
+      startDate: new Date(2026, 8, 11).getTime(),
+      recurrenceDay: 5,
+    });
+    // Native nullable columns return null even when the caller omitted them.
+    expect(created.endDate).toBeNull();
+    expect(created.recurrenceMonth).toBeNull();
+    expect(created.fxMode).toBeNull();
+    expect(created.destinationAmount).toBeNull();
+    const today = new Date(2026, 9, 4).getTime();
+    const pending = (await findJournalsForPayment(created.id))
+      .filter(journal => journal.journalDate >= today)
+      .sort((left, right) => left.journalDate - right.journalDate);
+    expect(pending.map(journal => journal.journalDate)).toEqual([
+      new Date(2026, 9, 9).getTime(),
+      new Date(2026, 9, 23).getTime(),
+    ]);
+    await journalPersistenceService.put(
+      {
+        journalId: pending[0].id,
+        journalDate: new Date(2026, 9, 5).getTime(),
+      },
+      WP,
+    );
+    const snapshot = (await findJournalsForPayment(created.id))
+      .map(journal => ({ id: journal.id, date: journal.journalDate, status: journal.status }))
+      .sort((left, right) => left.id.localeCompare(right.id));
+    const cursor = created.nextOccurrence;
+    expect(cursor).toBe(new Date(2026, 10, 6).getTime());
+    const linesBefore = await database.collections
+      .get<Transaction>('transactions')
+      .query(
+        Q.where('journal_id', Q.oneOf(snapshot.map(journal => journal.id))),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .fetch();
+    const lineIds = linesBefore.map(line => line.id).sort();
+
+    const form = mapPlannedPaymentToForm(toPlainPlannedPayment(created));
+    expect(form.endDate).toBeUndefined();
+    expect(form.recurrenceMonth).toBeUndefined();
+    expect(form.fxMode).toBeUndefined();
+    expect(form.destinationAmount).toBeUndefined();
+    const removeFuture = jest.spyOn(
+      journalPersistenceRepository,
+      'deleteUnpostedByPlannedPaymentInSession',
+    );
+    await updatePlannedPayment(WP, created.id, {
+      ...form,
+      description: form.description.trim() || undefined,
+      amount: Number(form.amount),
+      destinationAmount:
+        form.fxMode !== 'automatic' && form.destinationAmount
+          ? Number(form.destinationAmount)
+          : undefined,
+    });
+
+    expect(removeFuture).not.toHaveBeenCalled();
+    expect(created.nextOccurrence).toBe(cursor);
+    expect(
+      (await findJournalsForPayment(created.id))
+        .map(journal => ({ id: journal.id, date: journal.journalDate, status: journal.status }))
+        .sort((left, right) => left.id.localeCompare(right.id)),
+    ).toEqual(snapshot);
+    expect(pending.map(journal => journal.journalDate)).toEqual([
+      new Date(2026, 9, 5).getTime(),
+      new Date(2026, 9, 23).getTime(),
+    ]);
+    const linesAfter = await database.collections
+      .get<Transaction>('transactions')
+      .query(
+        Q.where('journal_id', Q.oneOf(snapshot.map(journal => journal.id))),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .fetch();
+    expect(linesAfter.map(line => line.id).sort()).toEqual(lineIds);
   });
 
   it('persists fixed FX native amounts and derives currency from the From account', async () => {
