@@ -1,6 +1,6 @@
 import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
 import { Spacing } from '@/src/constants';
-import { AccountSubtype, AccountType } from '@/src/types/enums';
+import { AccountSubtype, type AccountType } from '@/src/types/enums';
 
 import { Separator } from '@/src/design-system';
 import { AccountMetadataFormModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
@@ -18,15 +18,12 @@ interface AccountMetadataSectionProps {
 }
 
 export const AccountMetadataSection: React.FC<AccountMetadataSectionProps> = props => {
-  const { accountType, accountSubtype, metadata } = props;
+  const { accountSubtype, metadata } = props;
   const { notes, setNotes } = metadata;
 
-  const showLiabilityFields = accountType === AccountType.LIABILITY;
   const isCreditCard = isLiquidLiabilitySubtype(accountSubtype);
   const isLoan = isLoanSubtype(accountSubtype);
   const hasSpecificMetadata = isCreditCard || isLoan;
-
-  if (!showLiabilityFields && !notes) return null;
 
   return (
     <FormSectionGroup title="Additional Info" style={styles.container}>
