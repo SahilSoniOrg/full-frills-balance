@@ -49,7 +49,7 @@ export function EntityFormScreen({
   return (
     <ScreenWithChrome
       chrome={chrome}
-      edges={edges}
+      edges={edges ?? ['top', 'left', 'right']}
       scrollable
       keyboardAvoiding
       footer={
@@ -77,7 +77,7 @@ export function EntityFormScreen({
         </View>
       }
       scrollViewProps={{
-        contentContainerStyle,
+        contentContainerStyle: [styles.content, contentContainerStyle],
         ...scrollProps,
       }}
     >
@@ -88,6 +88,10 @@ export function EntityFormScreen({
 }
 
 const styles = StyleSheet.create({
+  // Rows and hero fields own horizontal gutters; the carousel spans the width.
+  content: {
+    paddingVertical: Spacing.lg,
+  },
   footerStack: {
     backgroundColor: 'transparent',
   },

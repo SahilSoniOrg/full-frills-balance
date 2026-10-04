@@ -16,6 +16,7 @@ import {
   UnderlineNameField,
 } from '@/src/components/forms';
 import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
+import { SectionLabel } from '@/src/components/shared/SectionLabel';
 import { CurrencySelector } from '@/src/features/accounts';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
@@ -122,7 +123,6 @@ export function BudgetEditView({
     <>
       <EntityFormScreen
         chrome={formChrome}
-        edges={['top', 'bottom']}
         submitAction={{
           onPress: handleSave,
           disabled: !isFormValid || isSaving,
@@ -136,7 +136,7 @@ export function BudgetEditView({
               : 'Create Budget',
         }}
       >
-        <Stack space="lg" padding="lg">
+        <Stack space="lg" paddingHorizontal="lg">
           <UnderlineNameField
             value={name}
             onChangeText={setName}
@@ -274,26 +274,26 @@ export function BudgetEditView({
               />
             ) : null}
           </View>
-
-          <FormSectionGroup title={copy.settings} contentStyle={{ marginHorizontal: -Spacing.lg }}>
-            <ScheduleField
-              value={schedule}
-              startDate={scheduleStartDate}
-              onChange={setSchedule}
-              label={copy.resets}
-              intervalTestIDPrefix="budget-interval-type-item-"
-              testID="budget-schedule-field"
-            />
-            <FormRow
-              icon={Icon.Shield}
-              title={copy.setAsideFrom}
-              subtitle={copy.setAsideSubtitle}
-              value={fundingLabel}
-              onPress={() => setIsAssetPickerVisible(true)}
-              testID="budget-set-aside-from"
-            />
-          </FormSectionGroup>
         </Stack>
+        <View style={{ paddingHorizontal: Spacing.lg, marginTop: Spacing.xl }}>
+          <SectionLabel label={copy.settings} marginTop="none" />
+          <ScheduleField
+            value={schedule}
+            startDate={scheduleStartDate}
+            onChange={setSchedule}
+            label={copy.resets}
+            intervalTestIDPrefix="budget-interval-type-item-"
+            testID="budget-schedule-field"
+          />
+        </View>
+        <FormRow
+          icon={Icon.Shield}
+          title={copy.setAsideFrom}
+          subtitle={copy.setAsideSubtitle}
+          value={fundingLabel}
+          onPress={() => setIsAssetPickerVisible(true)}
+          testID="budget-set-aside-from"
+        />
       </EntityFormScreen>
 
       <MultiAccountPickerModal
