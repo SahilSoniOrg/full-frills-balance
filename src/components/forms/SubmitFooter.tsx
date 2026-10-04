@@ -1,6 +1,9 @@
 import { AppButton } from '@/src/components/core/AppButton';
-import { Shape, Size, Spacing } from '@/src/constants';
+import { AppText } from '@/src/components/core/AppText';
+import { ChromeMotion, Scale, Shape, Size, Spacing } from '@/src/constants';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
+import { MotiView } from 'moti';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,12 +15,24 @@ interface SubmitFooterProps {
   disabled: boolean;
   topSlot?: React.ReactNode;
   loading?: boolean;
+  requirementHint?: string | null;
+  pulseOnSave?: boolean;
 }
 
-export const SubmitFooter = ({ onPress, label, disabled, topSlot, loading }: SubmitFooterProps) => {
+export const SubmitFooter = ({
+  onPress,
+  label,
+  disabled,
+  topSlot,
+  loading,
+  requirementHint,
+  pulseOnSave = false,
+}: SubmitFooterProps) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { isKeyboardVisible } = useKeyboard();
+  const reduceMotion = useReducedMotion();
+  const showPulse = pulseOnSave && !reduceMotion;
   const bottomPadding = isKeyboardVisible
     ? Spacing.md
     : Math.max(Spacing.lg, insets.bottom + Spacing.md);
@@ -33,18 +48,28 @@ export const SubmitFooter = ({ onPress, label, disabled, topSlot, loading }: Sub
         },
       ]}
     >
+      {disabled && requirementHint ? (
+        <AppText variant="caption" color="secondary" style={styles.requirementHint}>
+          {requirementHint}
+        </AppText>
+      ) : null}
       {topSlot && <View style={styles.topSlot}>{topSlot}</View>}
-      <AppButton
-        variant="primary"
-        onPress={onPress}
-        disabled={disabled}
-        loading={loading}
-        style={styles.button}
-        buttonStyle={styles.button}
-        testID="submit-footer-button"
+      <MotiView
+        animate={{ scale: showPulse ? 1.03 : Scale.identity }}
+        transition={ChromeMotion.spring}
       >
-        {label}
-      </AppButton>
+        <AppButton
+          variant="primary"
+          onPress={onPress}
+          disabled={disabled}
+          loading={loading}
+          style={styles.button}
+          buttonStyle={styles.button}
+          testID="submit-footer-button"
+        >
+          {label}
+        </AppButton>
+      </MotiView>
     </View>
   );
 };
@@ -57,6 +82,10 @@ const styles = StyleSheet.create({
   },
   topSlot: {
     marginBottom: Spacing.md,
+  },
+  requirementHint: {
+    marginBottom: Spacing.xs,
+    textAlign: 'center',
   },
   button: {
     height: Size.buttonXl,

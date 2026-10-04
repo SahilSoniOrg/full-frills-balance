@@ -25,6 +25,7 @@ export type AppInputBaseProps = BoxBaseProps & {
   /** @deprecated use structural Box props */
   containerStyle?: StyleProp<ViewStyle>;
   calculator?: boolean;
+  calculatorEditable?: boolean;
   onCalculatorPress?: () => void;
   calculatorTestID?: string;
 };
@@ -40,6 +41,7 @@ export const AppInput = forwardRef<TextInput, AppInputProps>((initialProps, ref)
     inputStyle,
     containerStyle,
     calculator,
+    calculatorEditable = false,
     onCalculatorPress,
     calculatorTestID,
     style: textInputStyle,
@@ -62,7 +64,7 @@ export const AppInput = forwardRef<TextInput, AppInputProps>((initialProps, ref)
       {(() => {
         const inputField = (
           <View
-            pointerEvents={calculator ? 'none' : 'auto'}
+            pointerEvents={calculator && !calculatorEditable ? 'none' : 'auto'}
             style={calculator ? styles.calculatorInputField : undefined}
           >
             <AppInputField
@@ -73,12 +75,12 @@ export const AppInput = forwardRef<TextInput, AppInputProps>((initialProps, ref)
               inputStyle={[inputStyle, calculator && styles.calculatorTextInput]}
               borderColor={error ? 'error' : undefined}
               {...fieldProps}
-              editable={calculator ? false : fieldProps.editable}
+              editable={calculator && !calculatorEditable ? false : fieldProps.editable}
             />
           </View>
         );
 
-        return calculator ? (
+        return calculator && !calculatorEditable ? (
           <TouchableOpacity
             onPress={onCalculatorPress}
             testID={calculatorTestID}
@@ -92,6 +94,20 @@ export const AppInput = forwardRef<TextInput, AppInputProps>((initialProps, ref)
               <AppIcon name={Icon.Calculator} size={20} color="primary" />
             </View>
           </TouchableOpacity>
+        ) : calculator ? (
+          <View style={styles.calculatorRow}>
+            {inputField}
+            <TouchableOpacity
+              onPress={onCalculatorPress}
+              testID={calculatorTestID}
+              accessibilityRole="button"
+              accessibilityLabel="Open calculator"
+              activeOpacity={0.8}
+              style={styles.calculatorButton}
+            >
+              <AppIcon name={Icon.Calculator} size={20} color="primary" />
+            </TouchableOpacity>
+          </View>
         ) : (
           <View>{inputField}</View>
         );
