@@ -5,14 +5,19 @@ import { FormHeroSection } from '@/src/components/forms/FormHeroSection';
 import { FormField } from '@/src/components/forms/FormField';
 import { RecurrenceField } from '@/src/components/forms/RecurrenceField';
 import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
-import { Icon, AppSegmentedControl, AppToggle, ListRow } from '@/src/components/core';
+import { FormSelectorField } from '@/src/components/forms/FormSelectorField';
+import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModal';
+import { CurrencySelector } from '@/src/features/accounts';
+import { Icon, AppInput, AppSegmentedControl, AppToggle, ListRow } from '@/src/components/core';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig, Spacing } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { PlannedPaymentInterval } from '@/src/types/enums';
 import { Box, FadeIn, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useMemo } from 'react';
+import { formatDate } from '@/src/utils/dateUtils';
+import dayjs from 'dayjs';
+import { useMemo, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import type { PlannedPaymentFormScreenModel } from '@/src/features/planned-payments/hooks/usePlannedPaymentFormScreen';
 
@@ -23,8 +28,10 @@ export type PlannedPaymentFormViewProps = PlannedPaymentFormScreenModel & {
 export function PlannedPaymentFormView({
   id,
   accounts,
+  currencies,
   form,
   isValid,
+  requirementHint,
   isSubmitting,
   handleSave,
   onBack,
@@ -32,6 +39,7 @@ export function PlannedPaymentFormView({
   pickerState,
 }: PlannedPaymentFormViewProps) {
   const { theme } = useTheme();
+  const [pickingDate, setPickingDate] = useState<'start' | 'end' | null>(null);
 
   const chrome = useMemo<ScreenNavChrome>(
     () => ({
@@ -53,6 +61,7 @@ export function PlannedPaymentFormView({
           label: vmLabel(isSubmitting),
           onPress: handleSave,
           disabled: !isValid || isSubmitting,
+          requirementHint,
         }}
       >
         <Box paddingTop="md">
@@ -65,6 +74,14 @@ export function PlannedPaymentFormView({
             amountValue={form.amount}
             onAmountChange={(val: string) => setField('amount', val)}
             currencySymbol={CURRENCY_SYMBOLS[form.currencyCode] || form.currencyCode}
+            footer={
+              <CurrencySelector
+                variant="pill"
+                selectedCurrency={form.currencyCode}
+                currencies={currencies}
+                onSelect={code => setField('currencyCode', code)}
+              />
+            }
           />
         </Box>
 
@@ -99,6 +116,13 @@ export function PlannedPaymentFormView({
 
           <FormSectionGroup title={AppConfig.strings.plannedPayments.recurrenceTitle}>
             <Stack space="lg" paddingHorizontal="md">
+              <FormSelectorField
+                label="Starts"
+                value={formatDate(form.startDate)}
+                onPress={() => setPickingDate('start')}
+                testID="planned-payment-start-date"
+              />
+
               <RecurrenceField
                 intervalType={form.intervalType}
                 value={form.intervalN}
@@ -179,6 +203,15 @@ export function PlannedPaymentFormView({
                 </FadeIn>
               )}
 
+              <FormSelectorField
+                label="Ends"
+                value={form.endDate ? formatDate(form.endDate) : ''}
+                placeholder="Never"
+                onPress={() => setPickingDate('end')}
+                onClear={() => setField('endDate', undefined)}
+                testID="planned-payment-end-date"
+              />
+
               <FormField label="Automatically record entry">
                 <ListRow
                   padding="sm"
@@ -195,8 +228,38 @@ export function PlannedPaymentFormView({
               </FormField>
             </Stack>
           </FormSectionGroup>
+
+          <FormSectionGroup title="Note">
+            <Box paddingHorizontal="md">
+              <AppInput
+                value={form.description}
+                onChangeText={val => setField('description', val)}
+                placeholder="Add a note (optional)"
+                multiline
+                numberOfLines={3}
+                containerStyle={{ marginBottom: 0 }}
+                testID="planned-payment-note"
+              />
+            </Box>
+          </FormSectionGroup>
         </Stack>
       </EntityFormScreen>
+
+      <DateTimePickerModal
+        visible={pickingDate !== null}
+        hideTime
+        date={dayjs(
+          pickingDate === 'end' ? (form.endDate ?? form.startDate) : form.startDate,
+        ).format('YYYY-MM-DD')}
+        time="00:00"
+        onClose={() => setPickingDate(null)}
+        onSelect={date => {
+          const value = dayjs(date).startOf('day').valueOf();
+          if (pickingDate === 'end') setField('endDate', value);
+          else setField('startDate', value);
+          setPickingDate(null);
+        }}
+      />
 
       <AccountPickerModal
         visible={pickerState.visible}

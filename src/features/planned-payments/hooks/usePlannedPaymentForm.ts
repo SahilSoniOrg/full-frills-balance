@@ -12,9 +12,12 @@ import {
 } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { analytics } from '@/src/services/analytics';
 import { WorkplaceId } from '@/src/types/ids';
+import { formatRequirementHint } from '@/src/components/forms/requirementHint';
+import { toast } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { isValidRepeatCount } from '@/src/utils/recurrenceLabels';
+import dayjs from 'dayjs';
 import { useCallback, useMemo, useState } from 'react';
 
 export type { PlannedPaymentFormState };
@@ -43,16 +46,20 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
     setForm(createEmptyPlannedPaymentForm(workplaceCurrency));
   }
 
-  const isValid = useMemo(() => {
-    return (
-      form.name.trim().length > 0 &&
-      form.amount.length > 0 &&
-      !isNaN(Number(form.amount)) &&
-      form.fromAccountId.length > 0 &&
-      form.toAccountId.length > 0 &&
-      isValidRepeatCount(form.intervalN)
-    );
-  }, [form]);
+  const missingFields = useMemo(() => {
+    const missing: string[] = [];
+    if (form.name.trim().length === 0) missing.push('a name');
+    if (form.amount.length === 0 || isNaN(Number(form.amount))) missing.push('an amount');
+    if (form.fromAccountId.length === 0) missing.push('a From account');
+    if (form.toAccountId.length === 0) missing.push('a To account');
+    if (form.endDate != null && form.endDate < dayjs(form.startDate).startOf('day').valueOf()) {
+      missing.push('an end date on or after the start date');
+    }
+    return missing;
+  }, [form.name, form.amount, form.fromAccountId, form.toAccountId, form.startDate, form.endDate]);
+
+  const isValid = missingFields.length === 0 && isValidRepeatCount(form.intervalN);
+  const requirementHint = formatRequirementHint(missingFields);
 
   const handleSave = useCallback(async () => {
     if (!isValid) return;
@@ -60,6 +67,7 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
     try {
       const data = {
         name: form.name,
+        description: form.description.trim() || undefined,
         amount: Number(form.amount),
         currencyCode: form.currencyCode,
         fromAccountId: form.fromAccountId,
@@ -104,6 +112,7 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
       AppNavigation.back();
     } catch (error) {
       logger.error('Failed to save planned payment', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to save planned payment');
     } finally {
       setIsSubmitting(false);
     }
@@ -114,6 +123,7 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
     isHydrated: !id || seededId === id,
     setForm,
     isValid,
+    requirementHint,
     isSubmitting,
     handleSave,
   };

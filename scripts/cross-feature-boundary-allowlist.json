@@ -6,7 +6,7 @@
   "dashboard": ["journal", "planned-payments"],
   "hub": ["journal"],
   "journal": [],
-  "planned-payments": ["journal"],
+  "planned-payments": ["accounts", "journal"],
   "reports": [],
   "settings": ["accounts"],
   "setup": ["journal"]

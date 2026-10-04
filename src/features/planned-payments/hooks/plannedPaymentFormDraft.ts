@@ -4,6 +4,7 @@ import { PlannedPaymentInterval } from '@/src/types/enums';
 
 export interface PlannedPaymentFormState {
   name: string;
+  description: string;
   amount: string;
   currencyCode: string;
   fromAccountId: AccountId;
@@ -20,6 +21,7 @@ export interface PlannedPaymentFormState {
 export function createEmptyPlannedPaymentForm(currencyCode: string): PlannedPaymentFormState {
   return {
     name: '',
+    description: '',
     amount: '',
     currencyCode,
     fromAccountId: EMPTY_ACCOUNT_ID,
@@ -36,6 +38,7 @@ export function createEmptyPlannedPaymentForm(currencyCode: string): PlannedPaym
 export function mapPlannedPaymentToForm(pp: PlainPlannedPayment): PlannedPaymentFormState {
   return {
     name: pp.name,
+    description: pp.description ?? '',
     amount: pp.amount.toString(),
     currencyCode: pp.currencyCode,
     fromAccountId: pp.fromAccountId,

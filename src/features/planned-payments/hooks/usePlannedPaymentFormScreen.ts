@@ -2,6 +2,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { PlannedPaymentInterval } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
 import { useAccounts } from '@/src/components/account-selection';
+import { useCurrencies } from '@/src/hooks/use-currencies';
 import { usePlannedPaymentForm } from '@/src/features/planned-payments/hooks/usePlannedPaymentForm';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo, useState } from 'react';
@@ -10,26 +11,27 @@ export function usePlannedPaymentFormScreen(id?: string) {
   const { workplaceId } = useWorkplace();
   const vm = usePlannedPaymentForm(workplaceId, id);
   const { accounts } = useAccounts(workplaceId);
+  const { currencies } = useCurrencies();
   const [pickingAccountFor, setPickingAccountFor] = useState<'from' | 'to' | null>(null);
 
   const setField = useCallback(
     <K extends keyof typeof vm.form>(field: K, value: (typeof vm.form)[K]) => {
       vm.setForm(current => {
-        if (field !== 'intervalType' || value === current.intervalType) {
-          return { ...current, [field]: value };
-        }
-        const date = new Date(current.startDate);
+        const next = { ...current, [field]: value };
+        const scheduleAnchorChanged =
+          (field === 'intervalType' || field === 'startDate') && value !== current[field];
+        if (!scheduleAnchorChanged) return next;
+        const date = new Date(next.startDate);
         return {
-          ...current,
-          [field]: value,
+          ...next,
           recurrenceDay:
-            value === PlannedPaymentInterval.DAILY
+            next.intervalType === PlannedPaymentInterval.DAILY
               ? undefined
-              : value === PlannedPaymentInterval.WEEKLY
+              : next.intervalType === PlannedPaymentInterval.WEEKLY
                 ? date.getDay()
                 : date.getDate(),
           recurrenceMonth:
-            value === PlannedPaymentInterval.YEARLY ? date.getMonth() + 1 : undefined,
+            next.intervalType === PlannedPaymentInterval.YEARLY ? date.getMonth() + 1 : undefined,
         };
       });
     },
@@ -110,9 +112,11 @@ export function usePlannedPaymentFormScreen(id?: string) {
 
   return {
     accounts,
+    currencies,
     form: vm.form,
     isHydrated: vm.isHydrated,
     isValid: vm.isValid,
+    requirementHint: vm.requirementHint,
     isSubmitting: vm.isSubmitting,
     handleSave: vm.handleSave,
     onBack: AppNavigation.back,
