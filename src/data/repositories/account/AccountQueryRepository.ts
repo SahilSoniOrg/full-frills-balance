@@ -19,7 +19,6 @@ export class AccountQueryRepository {
     return this.db.collections.get<AccountMetadata>('account_metadata');
   }
 
-  /** Missing, deleted, and foreign-workplace rows resolve to null; query errors propagate. */
   async find(workplaceId: WorkplaceId, id: AccountId): Promise<Account | null> {
     const accounts = await this.accounts
       .query(...buildAccountClauses({ workplaceId, accountIds: [id] }))

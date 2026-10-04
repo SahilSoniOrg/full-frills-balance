@@ -7,7 +7,7 @@ import { RawAccountRow } from '@/src/data/repositories/TransactionTypes';
 import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
 import type { AccountListItemRaw } from './types';
 import { AccountBalance } from '@/src/types/domainReadModels';
-import { AccountId , WorkplaceId } from '@/src/types/ids';
+import { WorkplaceId } from '@/src/types/ids';
 import { effect, periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
 import { AccountType } from '@/src/types/enums';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
@@ -23,7 +23,6 @@ export class AccountListMetricsQueries {
     endOfMonth: number,
     workplaceId: WorkplaceId,
     includeTotalCount: boolean = false,
-    includeDeleted: boolean = false,
   ): Promise<AccountListItemRaw[] | null> {
     const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
     const statusArgs = [...ACTIVE_JOURNAL_STATUSES];
@@ -66,7 +65,7 @@ export class AccountListMetricsQueries {
           AND j.workplace_id = ?
           AND j.status IN (${placeholders})
           AND a.workplace_id = ?
-          ${!includeDeleted ? 'AND a.deleted_at IS NULL' : ''}
+          AND a.deleted_at IS NULL
           ${!includeTotalCount ? 'AND t.transaction_date >= ? AND t.transaction_date <= ?' : ''}
         GROUP BY t.account_id
       )
@@ -86,7 +85,7 @@ export class AccountListMetricsQueries {
       FROM accounts a
       LEFT JOIN LatestBalance lb ON a.id = lb.account_id
       LEFT JOIN Aggregates agg ON a.id = agg.account_id
-      WHERE ${includeDeleted ? '1=1' : 'a.deleted_at IS NULL'} AND a.workplace_id = ?
+      WHERE a.deleted_at IS NULL AND a.workplace_id = ?
       ORDER BY a.order_num ASC
     `;
 
@@ -117,24 +116,25 @@ export class AccountListMetricsQueries {
         endOfMonth,
         workplaceId,
         includeTotalCount,
-        includeDeleted,
       );
     }
 
     return results.map(row => {
-      if (!isAccountType(row.account_type)) {
+      let account_type = row.account_type;
+      let account_subtype = row.account_subtype;
+      if (!isAccountType(account_type)) {
         logger.error(
-          `[Integrity] Invalid account_type found in DB: ${row.account_type} for account ${row.id}`,
+          `[Integrity] Invalid account_type found in DB: ${account_type} for account ${row.id}`,
         );
-        row.account_type = AccountType.ASSET;
+        account_type = AccountType.ASSET;
       }
-      if (row.account_subtype && !isAccountSubtype(row.account_subtype)) {
+      if (account_subtype && !isAccountSubtype(account_subtype)) {
         logger.error(
-          `[Integrity] Invalid account_subtype found in DB: ${row.account_subtype} for account ${row.id}`,
+          `[Integrity] Invalid account_subtype found in DB: ${account_subtype} for account ${row.id}`,
         );
-        row.account_subtype = undefined;
+        account_subtype = undefined;
       }
-      return row as AccountListItemRaw;
+      return { ...row, account_type, account_subtype } as AccountListItemRaw;
     });
   }
 
@@ -143,15 +143,12 @@ export class AccountListMetricsQueries {
     endOfMonth: number,
     workplaceId: WorkplaceId,
     includeTotalCount: boolean,
-    includeDeleted: boolean,
   ): Promise<AccountListItemRaw[]> {
     const accountClauses: Q.Clause[] = [
       Q.where('workplace_id', workplaceId),
+      Q.where('deleted_at', Q.eq(null)),
       Q.sortBy('order_num', Q.asc),
     ];
-    if (!includeDeleted) {
-      accountClauses.push(Q.where('deleted_at', Q.eq(null)));
-    }
 
     const accounts = await database.collections
       .get<Account>('accounts')
@@ -232,21 +229,17 @@ export class AccountListMetricsQueries {
 
 export const accountListMetricsQueries = new AccountListMetricsQueries();
 
-type RawListRow = AccountListItemRaw | Record<string, unknown>;
-
-export function mapAccountListRowToBalance(item: RawListRow, asOfDate: number): AccountBalance {
-  const row = item as Record<string, unknown>;
-  const accountId = (item.id || row.accountId || row.account_id) as AccountId;
-  const balance = Number(item.direct_balance ?? row.directBalance ?? 0);
-  const currencyCode = (item.currency_code ?? row.currencyCode) as string;
-  const accountType = (item.account_type ?? row.accountType) as AccountType;
-  const income = Number(
-    item.periodIncrease ?? row.period_increase ?? row.monthly_income ?? row.monthlyIncome ?? 0,
-  );
-  const expenses = Number(
-    item.periodDecrease ?? row.period_decrease ?? row.monthly_expenses ?? row.monthlyExpenses ?? 0,
-  );
-  const txCount = Number(item.direct_transaction_count ?? row.directTransactionCount ?? 0);
+export function mapAccountListRowToBalance(
+  item: AccountListItemRaw,
+  asOfDate: number,
+): AccountBalance {
+  const accountId = item.id;
+  const balance = Number(item.direct_balance ?? 0);
+  const currencyCode = item.currency_code;
+  const accountType = item.account_type as AccountType;
+  const income = Number(item.periodIncrease ?? 0);
+  const expenses = Number(item.periodDecrease ?? 0);
+  const txCount = Number(item.direct_transaction_count ?? 0);
 
   return {
     accountId,

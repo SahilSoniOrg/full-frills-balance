@@ -41,10 +41,6 @@ export const accountQueries = {
     return accountObserveQueries.observeHasChildren(workplaceId, accountId);
   },
 
-  observeSubAccountCount(workplaceId: WorkplaceId, accountId: AccountId) {
-    return accountObserveQueries.observeSubAccountCount(workplaceId, accountId);
-  },
-
   observeByIdsWithDeleted(workplaceId: WorkplaceId, accountIds: AccountId[]) {
     return accountObserveQueries
       .observeByIdsWithDeleted(workplaceId, accountIds)

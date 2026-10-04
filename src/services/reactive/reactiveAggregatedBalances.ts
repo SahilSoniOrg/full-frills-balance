@@ -1,6 +1,9 @@
 import { Animation } from '@/src/constants';
 import Account from '@/src/data/models/Account';
-import { accountListMetricsQueries , mapAccountListRowToBalance } from '@/src/data/repositories/account/AccountListMetricsQueries';
+import {
+  accountListMetricsQueries,
+  mapAccountListRowToBalance,
+} from '@/src/data/repositories/account/AccountListMetricsQueries';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
 import { balanceHierarchyAggregator } from '@/src/services/balance/balanceHierarchyAggregator';
@@ -27,8 +30,6 @@ import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { startTrace } from '@/src/utils/TraceService';
 import { combineLatest, distinctUntilChanged, finalize, map, Observable, switchMap } from 'rxjs';
-
-type RawSQLRow = Record<string, unknown>;
 
 export interface AggregatedAccountBalances {
   accounts: Account[];
@@ -102,20 +103,14 @@ export function observeAggregatedAccountBalances(
               999,
             ).getTime();
 
-            const rawItemsResponse = await accountListMetricsQueries.getAccountListItemsRaw(
+            const rawItems = await accountListMetricsQueries.getAccountListItemsRaw(
               startOfMonth,
               endOfMonth,
               workplaceId,
               includeTotalCount,
-              false,
             );
 
-            const rawItems: RawSQLRow[] = Array.isArray(rawItemsResponse)
-              ? (rawItemsResponse as unknown as RawSQLRow[])
-              : (((rawItemsResponse as unknown as { rows?: RawSQLRow[] })?.rows ||
-                  []) as RawSQLRow[]);
-
-            const balances: AccountBalance[] = rawItems.map(item =>
+            const balances: AccountBalance[] = (rawItems ?? []).map(item =>
               mapAccountListRowToBalance(item, now.getTime()),
             );
 

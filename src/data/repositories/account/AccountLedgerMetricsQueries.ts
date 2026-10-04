@@ -147,14 +147,14 @@ export class AccountLedgerMetricsQueries {
     accountIds: readonly AccountId[],
     startDate: number,
     endDate: number,
-    accountType: AccountType,
+    sharedAccountType: AccountType,
   ): Observable<AccountPeriodMetrics> {
     return transactionObserveQueries.observeActiveCount(workplaceId).pipe(
       switchMap(() =>
         from(
           this.getPeriodMetricsByAccount(
             workplaceId,
-            accountIds.map(accountId => ({ accountId, accountType })),
+            accountIds.map(accountId => ({ accountId, accountType: sharedAccountType })),
             startDate,
             endDate,
           ),

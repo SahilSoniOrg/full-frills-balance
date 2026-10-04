@@ -18,14 +18,14 @@ import { Model, Q } from '@nozbe/watermelondb';
 import { accountQueryRepository } from './AccountQueryRepository';
 import type { AccountPersistenceInput } from './types';
 
-export type AccountAuditContribution = Omit<AuditEntry, 'entityType' | 'entityId'>;
+type AccountAuditContribution = Omit<AuditEntry, 'entityType' | 'entityId'>;
 
 export interface AccountMutationCommitFacts {
   balanceRebuildAccountIds: AccountId[];
 }
 
 /** Validated account-local changes plus the effects implied by committing them. */
-export interface AccountMutationPlan {
+interface AccountMutationPlan {
   workplaceId: WorkplaceId;
   account: Account;
   normalizedUpdates: Partial<AccountPersistenceInput>;
@@ -39,7 +39,7 @@ export interface AccountMutationResult {
   commitFacts: AccountMutationCommitFacts;
 }
 
-export interface PreparedAccountMutation<T> {
+interface PreparedAccountMutation<T> {
   prepareOps: () => readonly Model[];
   result: T;
 }

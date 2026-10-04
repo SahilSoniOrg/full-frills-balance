@@ -10,4 +10,4 @@ export {
   accountTreeTransactionCoordinator,
   AccountTreeTransactionCoordinator,
 } from './AccountTreeTransactionCoordinator';
-export type { AccountListItemRaw, AccountPersistenceInput } from './types';
+export type { AccountPersistenceInput } from './types';

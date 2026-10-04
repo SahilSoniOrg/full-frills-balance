@@ -170,12 +170,6 @@ export class AccountObserveQueries {
       .observe()
       .pipe(map(children => children.length > 0));
   }
-
-  observeSubAccountCount(workplaceId: WorkplaceId, accountId: AccountId): Observable<number> {
-    return this.accounts
-      .query(...buildAccountClauses({ workplaceId, parentAccountId: accountId }))
-      .observeCount();
-  }
 }
 
 export const accountObserveQueries = new AccountObserveQueries();

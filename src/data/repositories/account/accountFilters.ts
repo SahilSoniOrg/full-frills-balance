@@ -2,7 +2,6 @@ import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { Q } from '@nozbe/watermelondb';
 
-/** Shared account query criteria. Workplace scope is mandatory by construction. */
 export interface AccountFilter {
   workplaceId: WorkplaceId;
   accountIds?: readonly AccountId[];
@@ -13,7 +12,6 @@ export interface AccountFilter {
   sortByOrder?: boolean;
 }
 
-/** Build shared predicates while fetch and observe contracts stay separate. */
 export function buildAccountClauses(filter: AccountFilter): Q.Clause[] {
   const clauses: Q.Clause[] = [Q.where('workplace_id', filter.workplaceId)];
 
