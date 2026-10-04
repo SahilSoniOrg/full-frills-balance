@@ -11,7 +11,6 @@ export interface JournalTimelineDateRange {
   startDate?: number;
   endDate?: number;
   accountId?: string;
-  accountVersion?: number;
   journalIds?: string[];
   plannedPaymentId?: string;
   accountIds?: string[];

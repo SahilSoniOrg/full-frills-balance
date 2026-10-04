@@ -52,8 +52,6 @@ interface RawJournalBalanceRow {
   notes: string | null;
 }
 
-// These indexes exist on every Watermelon SQLite schema. Pin the cursor and
-// journal-line lookups so SQLite cannot choose a workplace-wide scan per page/row.
 const POSTED_JOURNAL_LINES_SQL = `
   WITH journal_page AS (
     SELECT id, currency_code, description, journal_date

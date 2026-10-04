@@ -10,14 +10,11 @@ import { AccountId, JournalId, PlannedPaymentId } from '@/src/types/ids';
 export type JournalPersistenceLine = JournalWriteLine;
 export type JournalPersistenceMetadata = JournalWriteMetadata;
 
-/** Plain input to the journal persistence boundary. Contains no WatermelonDB models. */
 export interface PutJournalInput extends JournalWriteFields {
   journalId?: JournalId;
-  /** Derived from the lines and their account types when omitted. */
   displayType?: JournalDisplayType;
 }
 
-/** Existing-journal update shape for generic sparse puts, such as a description edit. */
 export interface PutJournalPatchInput {
   journalId: JournalId;
   journalDate?: number;

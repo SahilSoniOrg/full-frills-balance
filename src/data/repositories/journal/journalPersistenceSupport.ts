@@ -158,6 +158,24 @@ export function prepareDeletedAt<T extends Model & { deletedAt?: Date; updatedAt
   });
 }
 
+export function mapJournalSnapshotForAudit(journal: {
+  description?: string;
+  notes?: string | null;
+  journalDate: number;
+  currencyCode: string;
+  status: JournalStatus;
+  totalAmount: number;
+}) {
+  return {
+    description: journal.description,
+    notes: journal.notes,
+    journalDate: journal.journalDate,
+    currencyCode: journal.currencyCode,
+    status: journal.status,
+    totalAmount: journal.totalAmount,
+  };
+}
+
 export function prepareDeleteAudit(
   journal: Journal,
   transactions: readonly Transaction[],
@@ -177,12 +195,7 @@ export function prepareDeleteAudit(
       action: AuditAction.DELETE,
       changes: {
         before: {
-          status: journal.status,
-          description: journal.description,
-          notes: journal.notes,
-          journalDate: journal.journalDate,
-          totalAmount: journal.totalAmount,
-          currencyCode: journal.currencyCode,
+          ...mapJournalSnapshotForAudit(journal),
           transactions: transactions.map(mapTransactionToAudit),
         },
         after: { deletedAt },

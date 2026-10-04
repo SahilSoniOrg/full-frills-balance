@@ -6,7 +6,6 @@ import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';
 import { fetchSequentiallyInChunks } from '../fetchSequentiallyInChunks';
 
-/** Workplace-scoped reads for persisted journals. */
 export class JournalQueryRepository {
   private get journals() {
     return database.collections.get<Journal>('journals');

@@ -12,6 +12,7 @@ import {
   fetchJournalTransactions,
   findActiveJournal,
   journalTables,
+  mapJournalSnapshotForAudit,
   toPersistenceLine,
   validateJournal,
   type ValidatedJournal,
@@ -231,46 +232,41 @@ export async function preparePutOperations(
           .then(rows => rows[0] ?? null)
       : null;
 
+  const auditedTransactions = lines.map(line =>
+    mapTransactionToAudit({
+      ...line,
+      currencyCode: balance.accountsById.get(line.accountId)?.currencyCode,
+    }),
+  );
   const auditChanges = existing
     ? {
         before: {
-          description: existing.description,
-          notes: existing.notes,
-          journalDate: existing.journalDate,
-          currencyCode: existing.currencyCode,
-          status: existing.status,
-          totalAmount: existing.totalAmount,
+          ...mapJournalSnapshotForAudit(existing),
           transactions: oldTransactions.map(mapTransactionToAudit),
         },
         after: {
-          description: put.description,
-          notes: put.notes,
-          journalDate,
-          currencyCode: put.currencyCode,
-          status,
-          totalAmount: balance.totalAmount,
-          transactions: lines.map(line =>
-            mapTransactionToAudit({
-              ...line,
-              currencyCode: balance.accountsById.get(line.accountId)?.currencyCode,
-            }),
-          ),
+          ...mapJournalSnapshotForAudit({
+            description: put.description,
+            notes: put.notes,
+            journalDate,
+            currencyCode: put.currencyCode,
+            status,
+            totalAmount: balance.totalAmount,
+          }),
+          transactions: auditedTransactions,
         },
       }
     : {
         after: {
-          description: put.description,
-          notes: put.notes,
-          journalDate,
-          currencyCode: put.currencyCode,
-          status,
-          totalAmount: balance.totalAmount,
-          transactions: lines.map(line =>
-            mapTransactionToAudit({
-              ...line,
-              currencyCode: balance.accountsById.get(line.accountId)?.currencyCode,
-            }),
-          ),
+          ...mapJournalSnapshotForAudit({
+            description: put.description,
+            notes: put.notes,
+            journalDate,
+            currencyCode: put.currencyCode,
+            status,
+            totalAmount: balance.totalAmount,
+          }),
+          transactions: auditedTransactions,
         },
       };
   const previousStatus = existing?.status;
