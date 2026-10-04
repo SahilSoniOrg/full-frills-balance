@@ -1,3 +1,4 @@
+import { isUsableExchangeRate } from '@/src/domain/accounting/usableExchangeRate';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { roundToPrecision } from '@/src/utils/money';
@@ -32,22 +33,16 @@ export type ConvertAmountResult = ConvertAmountSuccess | ConvertAmountFailure;
 export type SpotExchangeRateResult =
   { ok: true; rate: number } | { ok: false; reason: 'missing_rate' };
 
-function isValidRate(rate: number | undefined | null): rate is number {
-  return typeof rate === 'number' && Number.isFinite(rate) && rate > 0;
-}
-
-function isSilentParityRate(fromCurrency: string, toCurrency: string, rate: number): boolean {
-  return fromCurrency !== toCurrency && rate === 1.0;
-}
-
 /** True when a stored rate can be used for unlike currencies without a historical lookup. */
 export function isUsableCrossCurrencyRate(
   fromCurrency: string,
   toCurrency: string,
   rate: number | undefined | null,
 ): rate is number {
-  return isValidRate(rate) && !isSilentParityRate(fromCurrency, toCurrency, rate);
+  return isUsableExchangeRate(rate, { fromCurrency, toCurrency });
 }
+
+export { isUsableExchangeRate } from '@/src/domain/accounting/usableExchangeRate';
 
 /** Resolves an unrounded multiplier without treating money amounts as rates. */
 export async function resolveSpotExchangeRate(
@@ -60,6 +55,21 @@ export async function resolveSpotExchangeRate(
   return isUsableCrossCurrencyRate(fromCurrency, toCurrency, rate)
     ? { ok: true, rate }
     : { ok: false, reason: 'missing_rate' };
+}
+
+/** Required spot quote for posting; never uses the read-side parity fallback getter. */
+export async function resolveRequiredExchangeRate(
+  fromCurrency: string,
+  toCurrency: string,
+): Promise<SpotExchangeRateResult> {
+  if (!fromCurrency || !toCurrency) return { ok: false, reason: 'missing_rate' };
+  if (fromCurrency === toCurrency) return { ok: true, rate: 1 };
+  try {
+    const rate = await exchangeRateService.getRequiredRate(fromCurrency, toCurrency);
+    return isUsableExchangeRate(rate) ? { ok: true, rate } : { ok: false, reason: 'missing_rate' };
+  } catch {
+    return { ok: false, reason: 'missing_rate' };
+  }
 }
 
 /**
@@ -91,7 +101,7 @@ export async function convertAmount(input: ConvertAmountInput): Promise<ConvertA
 
   if (mode === 'historical') {
     let historicalRate: number | undefined;
-    if (isValidRate(storedExchangeRate)) {
+    if (isUsableExchangeRate(storedExchangeRate)) {
       historicalRate = storedExchangeRate;
     } else {
       try {
@@ -102,7 +112,7 @@ export async function convertAmount(input: ConvertAmountInput): Promise<ConvertA
         return { ok: false, reason: 'missing_rate' };
       }
     }
-    if (!isValidRate(historicalRate)) {
+    if (!isUsableExchangeRate(historicalRate)) {
       return { ok: false, reason: 'missing_rate' };
     }
     return {

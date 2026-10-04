@@ -94,42 +94,34 @@ export async function fetchPairRates(
   }
 }
 
-export interface UseCrossCurrencyRatesMapParams {
-  pairs: { sourceCurrency?: string; destCurrency?: string }[];
+export interface UseCrossCurrencyRatesParams {
+  sourceCurrency?: string;
+  destCurrency?: string;
   workplaceCurrency: string;
   journalDate?: string;
   refreshNonce?: number;
-  /** When false, no fetch runs and every pair reports idle. */
+  /** When false, no fetch runs and the pair reports idle. */
   enabled: boolean;
 }
 
-/**
- * Fetches workplace-relative market rates for several pairs, keyed by `currencyPairKey`.
- * Results are cached per (pair, currency, date, refresh) so stale responses never
- * surface for a newer request.
- */
-export function useCrossCurrencyRatesMap({
-  pairs,
+/** Fetches workplace-relative market rates for a single source/destination pair. */
+export function useCrossCurrencyRates({
+  sourceCurrency,
+  destCurrency,
   workplaceCurrency,
   journalDate,
   refreshNonce = 0,
   enabled,
-}: UseCrossCurrencyRatesMapParams): Record<string, FxFetchedRates> {
+}: UseCrossCurrencyRatesParams): FxFetchedRates {
   const { fetchRequiredRate, fetchHistoricalRate } = useExchangeRate();
   const [results, setResults] = useState<Record<string, FxFetchedRates>>({});
   const requestedRef = useRef(new Set<string>());
   const mountedRef = useRef(true);
 
+  const pairKey = currencyPairKey(sourceCurrency, destCurrency);
   const contextKey = fxOverrideKey(workplaceCurrency, journalDate, refreshNonce);
-  const signature = [
-    ...new Set(
-      pairs
-        .filter(pair => pairNeedsFetch({ ...pair, baseCurrency: workplaceCurrency }))
-        .map(pair => currencyPairKey(pair.sourceCurrency, pair.destCurrency)),
-    ),
-  ]
-    .sort()
-    .join(',');
+  const requestKey = `${contextKey}#${pairKey}`;
+  const shouldFetch = enabled && pairNeedsFetch({ sourceCurrency, destCurrency, baseCurrency: workplaceCurrency });
 
   useEffect(() => {
     mountedRef.current = true;
@@ -139,56 +131,29 @@ export function useCrossCurrencyRatesMap({
   }, []);
 
   useEffect(() => {
-    if (!enabled || !signature) return;
-    signature.split(',').forEach(pairKey => {
-      const requestKey = `${contextKey}#${pairKey}`;
-      if (requestedRef.current.has(requestKey)) return;
-      requestedRef.current.add(requestKey);
-      const [sourceCurrency, destCurrency] = pairKey.split('>');
-      void fetchPairRates(
-        { sourceCurrency, destCurrency, baseCurrency: workplaceCurrency, journalDate },
-        { fetchRequiredRate, fetchHistoricalRate },
-      ).then(rates => {
-        if (!mountedRef.current) return;
-        setResults(previous => ({ ...previous, [requestKey]: rates }));
-      });
+    if (!shouldFetch) return;
+    if (requestedRef.current.has(requestKey)) return;
+    requestedRef.current.add(requestKey);
+    void fetchPairRates(
+      { sourceCurrency, destCurrency, baseCurrency: workplaceCurrency, journalDate },
+      { fetchRequiredRate, fetchHistoricalRate },
+    ).then(rates => {
+      if (!mountedRef.current) return;
+      setResults(previous => ({ ...previous, [requestKey]: rates }));
     });
   }, [
-    contextKey,
-    enabled,
     fetchHistoricalRate,
     fetchRequiredRate,
     journalDate,
-    signature,
+    requestKey,
+    shouldFetch,
+    sourceCurrency,
+    destCurrency,
     workplaceCurrency,
   ]);
 
   return useMemo(() => {
-    const byPair: Record<string, FxFetchedRates> = {};
-    if (!enabled || !signature) return byPair;
-    signature.split(',').forEach(pairKey => {
-      byPair[pairKey] = results[`${contextKey}#${pairKey}`] ?? LOADING_RATES;
-    });
-    return byPair;
-  }, [contextKey, enabled, results, signature]);
-}
-
-export interface UseCrossCurrencyRatesParams {
-  sourceCurrency?: string;
-  destCurrency?: string;
-  workplaceCurrency: string;
-  journalDate?: string;
-  refreshNonce?: number;
-  enabled: boolean;
-}
-
-/** Fetches workplace-relative market rates for a single source/destination pair. */
-export function useCrossCurrencyRates({
-  sourceCurrency,
-  destCurrency,
-  ...params
-}: UseCrossCurrencyRatesParams): FxFetchedRates {
-  const pairs = useMemo(() => [{ sourceCurrency, destCurrency }], [sourceCurrency, destCurrency]);
-  const rates = useCrossCurrencyRatesMap({ pairs, ...params });
-  return rates[currencyPairKey(sourceCurrency, destCurrency)] ?? IDLE_RATES;
+    if (!shouldFetch) return IDLE_RATES;
+    return results[requestKey] ?? LOADING_RATES;
+  }, [requestKey, results, shouldFetch]);
 }

@@ -7,7 +7,7 @@ import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPl
 import { findJournalMetadataByJournalId } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import type { PlannedPaymentFxMode } from '@/src/types/plannedPaymentFx';
 import { currencyReadService } from '@/src/services/currency-read-service';
-import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { resolveRequiredExchangeRate } from '@/src/services/currencyConversion';
 import { requirePlannedPayment } from './plannedPaymentWorkplace';
 import { normalizeToStartOfDay } from './plannedPaymentRecurrence';
 import { normalizeCurrencyCode } from '@/src/domain/accounting/journalBalanceEvaluator';
@@ -230,17 +230,8 @@ export function plannedPaymentFxMetadata(
 
 async function fetchQuote(context: PlannedPaymentFxContext): Promise<PlannedPaymentFxQuote> {
   const { sourceCurrency, destinationCurrency } = context.review;
-  let rate: number | null = null;
-  try {
-    rate =
-      sourceCurrency === destinationCurrency
-        ? 1
-        : await exchangeRateService.getRequiredRate(sourceCurrency, destinationCurrency);
-  } catch {
-    /* Unavailable market data must never become parity. */
-  }
-  if (rate !== null && (!Number.isFinite(rate) || rate <= 0)) rate = null;
-  return { sourceCurrency, destinationCurrency, rate };
+  const spot = await resolveRequiredExchangeRate(sourceCurrency, destinationCurrency);
+  return { sourceCurrency, destinationCurrency, rate: spot.ok ? spot.rate : null };
 }
 
 /** Prefetch outside accounting sessions: the rate service may write its own cache. */

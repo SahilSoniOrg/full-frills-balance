@@ -1,8 +1,4 @@
-import {
-  currencyPairKey,
-  useCrossCurrencyRates,
-  useCrossCurrencyRatesMap,
-} from '@/src/hooks/useCrossCurrencyRates';
+import { useCrossCurrencyRates } from '@/src/hooks/useCrossCurrencyRates';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 const mockFetchRate = jest.fn();
@@ -274,37 +270,6 @@ describe('useCrossCurrencyRates', () => {
     await waitFor(() => expect(result.current.sourceBaseRate).toBe(1.1));
     rerender({ refreshNonce: 1 });
     await waitFor(() => expect(result.current.sourceBaseRate).toBe(1.2));
-    expect(mockFetchRate).toHaveBeenCalledTimes(2);
-  });
-});
-
-describe('useCrossCurrencyRatesMap', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockFetchHistoricalRate.mockReset();
-  });
-
-  it('fetches each distinct pair once and keys results by pair', async () => {
-    mockFetchRate.mockImplementation(async (from: string) => (from === 'EUR' ? 1.1 : 0.012));
-
-    const { result } = renderHook(() =>
-      useCrossCurrencyRatesMap({
-        pairs: [
-          { sourceCurrency: 'USD', destCurrency: 'EUR' },
-          { sourceCurrency: 'USD', destCurrency: 'INR' },
-          { sourceCurrency: 'USD', destCurrency: 'EUR' },
-          { sourceCurrency: 'USD', destCurrency: 'USD' },
-        ],
-        workplaceCurrency: 'USD',
-        enabled: true,
-      }),
-    );
-
-    await waitFor(() => {
-      expect(result.current[currencyPairKey('USD', 'EUR')]?.destBaseRate).toBe(1.1);
-      expect(result.current[currencyPairKey('USD', 'INR')]?.destBaseRate).toBe(0.012);
-    });
-    expect(result.current[currencyPairKey('USD', 'USD')]).toBeUndefined();
     expect(mockFetchRate).toHaveBeenCalledTimes(2);
   });
 });

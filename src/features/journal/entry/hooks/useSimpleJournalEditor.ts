@@ -25,7 +25,7 @@ import { getInferredAccountType } from '@/src/utils/accountCategory';
 import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useCrossCurrencyRates } from '@/src/hooks/useCrossCurrencyRates';
+import { useFxPairDraft } from '@/src/hooks/useFxPairDraft';
 import { useJournalEditor } from './useJournalEditor';
 import { useSimpleJournalAccountSync } from './useSimpleJournalAccountSync';
 
@@ -154,42 +154,35 @@ export function useSimpleJournalEditor({
   );
   const useSavedRates = editor.isEdit && rateRefreshNonce === 0;
 
-  const marketRates = useCrossCurrencyRates({
-    sourceCurrency,
-    destCurrency,
-    workplaceCurrency: valuationCurrency,
-    journalDate: editor.journalDate,
-    refreshNonce: rateRefreshNonce,
-    enabled: needsValuationRate && !useSavedRates,
-  });
   const numAmount = useMemo(() => parseSimpleAmountInput(amount), [amount]);
 
-  const fxInput = useMemo(
+  const fxPairInput = useMemo(
     () => ({
       sourceCurrency,
       destCurrency,
       baseCurrency: valuationCurrency,
-      fetched: useSavedRates ? null : marketRates,
-      saved: useSavedRates
-        ? { sourceRate: sourceLineExchangeRate, destRate: destinationLineExchangeRate }
-        : null,
       sourceAmount: numAmount,
+      destPrecision,
+      saved: { sourceRate: sourceLineExchangeRate, destRate: destinationLineExchangeRate },
     }),
     [
       destCurrency,
+      destPrecision,
       destinationLineExchangeRate,
-      marketRates,
       numAmount,
       sourceCurrency,
       sourceLineExchangeRate,
-      useSavedRates,
       valuationCurrency,
     ],
   );
-  const fxPair = useMemo(
-    () => resolveFxPair({ ...fxInput, override: fxOverride, destPrecision }),
-    [destPrecision, fxInput, fxOverride],
-  );
+  const { pair: fxPair, fetchedRates } = useFxPairDraft({
+    ...fxPairInput,
+    journalDate: editor.journalDate,
+    refreshNonce: rateRefreshNonce,
+    enabled: needsValuationRate,
+    useSavedRates,
+    override: fxOverride,
+  });
   const { isCrossCurrency, pairRate: exchangeRate, sourceBaseRate, destBaseRate } = fxPair;
   const convertedAmount = fxPair.convertedAmount ?? numAmount;
 
@@ -357,11 +350,16 @@ export function useSimpleJournalEditor({
       hasEditedSimpleDraft.current = true;
       setFxOverrideState(previous => {
         const current = previous.key === fxKey ? previous.override : NO_FX_OVERRIDE;
-        const pair = resolveFxPair({ ...fxInput, override: current });
+        const pair = resolveFxPair({
+          ...fxPairInput,
+          fetched: useSavedRates ? null : fetchedRates,
+          saved: useSavedRates ? fxPairInput.saved : null,
+          override: current,
+        });
         return { key: fxKey, override: withManualBaseRate(pair, role, value) };
       });
     },
-    [fxInput, fxKey],
+    [fetchedRates, fxKey, fxPairInput, useSavedRates],
   );
 
   const setConvertedAmount = useCallback(

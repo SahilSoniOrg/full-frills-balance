@@ -1,14 +1,13 @@
 import { ExchangeRateCard } from '@/src/components/forms/ExchangeRateCard';
 import {
   NO_FX_OVERRIDE,
-  resolveFxPair,
   withConvertedAmount,
   withManualBaseRate,
   type FxOverride,
 } from '@/src/domain/accounting/fxPair';
-import { useCrossCurrencyRates } from '@/src/hooks/useCrossCurrencyRates';
+import { useFxPairDraft } from '@/src/hooks/useFxPairDraft';
 import { getJournalFxDateKey, normalizeCurrencyAmount } from '@/src/domain/accounting/journalFx';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface JournalFxRateEditorProps {
   accountCurrency: string;
@@ -44,55 +43,36 @@ export function JournalFxRateEditor({
   const normalizedJournalCurrency = journalCurrency.trim().toUpperCase();
   const isCrossCurrency = normalizedAccountCurrency !== normalizedJournalCurrency;
   const journalDateKey = getJournalFxDateKey(journalDate);
-  const marketRates = useCrossCurrencyRates({
-    sourceCurrency: normalizedAccountCurrency,
-    destCurrency: normalizedJournalCurrency,
-    workplaceCurrency: normalizedJournalCurrency,
-    journalDate: journalDateKey ?? '',
-    refreshNonce,
-    enabled: isCrossCurrency,
-  });
   const parsedAmount = Number(amount);
   const sourceAmount =
     Number.isFinite(parsedAmount) && parsedAmount > 0
       ? normalizeCurrencyAmount(parsedAmount, sourcePrecision).amount
       : 0;
 
-  const pair = useMemo(
-    () =>
-      resolveFxPair({
-        sourceCurrency: normalizedAccountCurrency,
-        destCurrency: normalizedJournalCurrency,
-        baseCurrency: normalizedJournalCurrency,
-        fetched: marketRates,
-        saved: exchangeRate ? { sourceRate: exchangeRate } : null,
-        override,
-        sourceAmount: Number.isFinite(sourceAmount) ? sourceAmount : 0,
-        destPrecision: journalPrecision,
-      }),
-    [
-      exchangeRate,
-      marketRates,
-      normalizedAccountCurrency,
-      normalizedJournalCurrency,
-      override,
-      journalPrecision,
-      sourceAmount,
-    ],
-  );
-
+  const { pair } = useFxPairDraft({
+    sourceCurrency: normalizedAccountCurrency,
+    destCurrency: normalizedJournalCurrency,
+    baseCurrency: normalizedJournalCurrency,
+    journalDate: journalDateKey ?? '',
+    refreshNonce,
+    enabled: isCrossCurrency,
+    saved: exchangeRate ? { sourceRate: exchangeRate } : null,
+    override,
+    sourceAmount: Number.isFinite(sourceAmount) ? sourceAmount : 0,
+    destPrecision: journalPrecision,
+  });
   useEffect(() => {
-    if (!isCrossCurrency || marketRates.sourceBaseRate === null) return;
+    if (!isCrossCurrency || pair.sourceBaseRate === null) return;
     if (pendingMarketRateRef.current) return;
     if (exchangeRate?.trim() && Number(exchangeRate) > 0) return;
-    onExchangeRateChange(String(marketRates.sourceBaseRate), 'historical');
-  }, [exchangeRate, isCrossCurrency, marketRates.sourceBaseRate, onExchangeRateChange]);
+    onExchangeRateChange(String(pair.sourceBaseRate), 'historical');
+  }, [exchangeRate, isCrossCurrency, onExchangeRateChange, pair.sourceBaseRate]);
 
   useEffect(() => {
-    if (!pendingMarketRateRef.current || marketRates.sourceBaseRate === null) return;
+    if (!pendingMarketRateRef.current || pair.sourceBaseRate === null) return;
     pendingMarketRateRef.current = false;
-    onExchangeRateChange(String(marketRates.sourceBaseRate), 'historical');
-  }, [marketRates.sourceBaseRate, onExchangeRateChange]);
+    onExchangeRateChange(String(pair.sourceBaseRate), 'historical');
+  }, [onExchangeRateChange, pair.sourceBaseRate]);
 
   const handleConvertedAmountChange = useCallback(
     (value: string) => {
@@ -118,13 +98,13 @@ export function JournalFxRateEditor({
     setOverride(NO_FX_OVERRIDE);
     pendingMarketRateRef.current = true;
     onExchangeRateChange('', 'missing');
-    if (marketRates.sourceBaseRate !== null) {
+    if (pair.sourceBaseRate !== null) {
       pendingMarketRateRef.current = false;
-      onExchangeRateChange(String(marketRates.sourceBaseRate), 'historical');
+      onExchangeRateChange(String(pair.sourceBaseRate), 'historical');
       return;
     }
     setRefreshNonce(current => current + 1);
-  }, [marketRates.sourceBaseRate, onExchangeRateChange]);
+  }, [onExchangeRateChange, pair.sourceBaseRate]);
 
   if (!isCrossCurrency) return null;
 

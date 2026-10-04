@@ -8,8 +8,7 @@ import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { plannedPaymentFormStrings as copy } from '@/src/constants/copy/domains/plannedPaymentFormStrings';
 import { useAccount } from '@/src/hooks/useAccounts';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
-import { useCrossCurrencyRates } from '@/src/hooks/useCrossCurrencyRates';
-import { resolveFxPair, withConvertedAmount } from '@/src/domain/accounting/fxPair';
+import { useFxPairDraft } from '@/src/hooks/useFxPairDraft';
 import { registerPlannedPaymentFxReviewListener } from '@/src/services/planned-payment/plannedPaymentFxReviewRequest';
 import type {
   PlannedPaymentFxReview,
@@ -70,26 +69,18 @@ export function PlannedPaymentFxReviewSheet({
   const { precision: destinationPrecision } = useCurrencyPrecision(request.destinationCurrency);
   const { account: sourceAccount } = useAccount(request.fromAccountId, request.workplaceId);
   const { account: destinationAccount } = useAccount(request.toAccountId, request.workplaceId);
-  const rates = useCrossCurrencyRates({
-    sourceCurrency: request.sourceCurrency,
-    destCurrency: request.destinationCurrency,
-    workplaceCurrency: request.sourceCurrency,
-    enabled: request.sourceCurrency !== request.destinationCurrency,
-    refreshNonce,
-  });
-  const input = {
+  const convertedDestAmount =
+    destinationAmount && Number(destinationAmount) > 0 ? Number(destinationAmount) : undefined;
+  const { pair } = useFxPairDraft({
     sourceCurrency: request.sourceCurrency,
     destCurrency: request.destinationCurrency,
     baseCurrency: request.sourceCurrency,
     sourceAmount: Number(amount) || 0,
     destPrecision: destinationPrecision,
-    fetched: rates,
-  };
-  const estimate = resolveFxPair(input);
-  const override = destinationAmount
-    ? withConvertedAmount(estimate, Number(destinationAmount))
-    : null;
-  const pair = override ? resolveFxPair({ ...input, override }) : estimate;
+    enabled: request.sourceCurrency !== request.destinationCurrency,
+    refreshNonce,
+    convertedDestAmount,
+  });
   const received =
     request.sourceCurrency === request.destinationCurrency ? Number(amount) : pair.convertedAmount;
   const destinationDraftValid =

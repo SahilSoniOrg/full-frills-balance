@@ -15,6 +15,7 @@ import {
   fetchHistoricalRate,
   type HistoricalRate,
 } from '@/src/services/currency/historicalExchangeRateProvider';
+import { isUsableExchangeRate } from '@/src/domain/accounting/usableExchangeRate';
 import { logger } from '@/src/utils/logger';
 import { Subject, type Observable } from 'rxjs';
 
@@ -28,10 +29,6 @@ type InFlightRateRequest = {
   promise: Promise<Record<string, number>>;
   forceRefresh: boolean;
 };
-
-function isUsableRequiredRate(rate: number | undefined): rate is number {
-  return rate !== undefined && Number.isFinite(rate) && rate > 0;
-}
 
 export class ExchangeRateService {
   private memoryCache: Map<string, { rates: Record<string, number>; timestamp: number }> =
@@ -121,7 +118,7 @@ export class ExchangeRateService {
   ): Promise<number | null> {
     const rates = await this.fetchRatesForBase(fromCurrency, forceRefresh);
     const direct = rates[toCurrency];
-    if (isUsableRequiredRate(direct)) return direct;
+    if (isUsableExchangeRate(direct)) return direct;
 
     let pending = this.missingQuoteRefreshes.get(fromCurrency);
     if (
@@ -143,7 +140,7 @@ export class ExchangeRateService {
     try {
       const refreshed = await pending;
       const rate = refreshed[toCurrency];
-      return isUsableRequiredRate(rate) ? rate : null;
+      return isUsableExchangeRate(rate) ? rate : null;
     } catch {
       return null;
     }
@@ -165,7 +162,7 @@ export class ExchangeRateService {
           !rate.fromCurrency ||
           !rate.toCurrency ||
           rate.fromCurrency === rate.toCurrency ||
-          !isUsableRequiredRate(rate.rate),
+          !isUsableExchangeRate(rate.rate),
       )
     ) {
       throw new Error('A valid cross-currency rate is required');
@@ -385,8 +382,8 @@ export class ExchangeRateService {
         for (const record of cachedRecords) {
           if (
             record.source === 'manual' &&
-            !isUsableRequiredRate(rates[record.toCurrency]) &&
-            isUsableRequiredRate(record.rate)
+            !isUsableExchangeRate(rates[record.toCurrency]) &&
+            isUsableExchangeRate(record.rate)
           ) {
             rates[record.toCurrency] = record.rate;
           }
