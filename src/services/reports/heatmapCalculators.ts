@@ -29,7 +29,8 @@ export function calculateSpendingHeatmapFromTransactions(
     if (tx.transactionType !== TransactionType.DEBIT) continue;
 
     const dt = dayjs(tx.transactionDate);
-    const key = `${dt.day()}_${dt.hour()}`;
+    const mondayFirstDay = (dt.day() + 6) % 7;
+    const key = `${mondayFirstDay}_${dt.hour()}`;
     densityMap.set(key, roundToPrecision((densityMap.get(key) || 0) + tx.amount, precision));
   }
 
