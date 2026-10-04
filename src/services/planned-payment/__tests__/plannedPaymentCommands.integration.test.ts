@@ -10,6 +10,7 @@ import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
+import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import {
@@ -30,6 +31,7 @@ describe('planned payment commands (integration)', () => {
   let toAccountId: AccountId;
 
   beforeEach(async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(new Date(2026, 9, 4, 12).getTime());
     await database.write(async () => {
       await database.unsafeResetDatabase();
     });
@@ -185,8 +187,13 @@ describe('planned payment commands (integration)', () => {
     expect(updated.nextOccurrence).toBe(beforeNext);
   });
 
-  it('schedule-changing update resets nextOccurrence to startDate', async () => {
+  it('schedule-changing update rebuilds upcoming occurrences and preserves earlier entries', async () => {
     const created = await createPlannedPayment(WP, baseInput());
+    const before = await findJournalsForPayment(created.id);
+    const today = new Date(2026, 9, 4).getTime();
+    const history = before.filter(j => j.journalDate < today);
+    const oldUpcoming = before.filter(j => j.journalDate >= today);
+    expect(oldUpcoming.length).toBeGreaterThan(0);
     const newStart = new Date(2026, 5, 15).getTime();
 
     const updated = await updatePlannedPayment(WP, created.id, {
@@ -195,9 +202,73 @@ describe('planned payment commands (integration)', () => {
       intervalN: 2,
     });
 
-    expect(updated.nextOccurrence).toBe(newStart);
+    expect(updated.nextOccurrence).toBeGreaterThan(today);
     expect(updated.intervalN).toBe(2);
+    const after = await findJournalsForPayment(created.id);
+    expect(after.filter(j => j.journalDate < today).map(j => j.id)).toEqual(history.map(j => j.id));
+    expect(after.some(j => oldUpcoming.some(old => old.id === j.id))).toBe(false);
+    const upcomingDates = after
+      .filter(j => j.journalDate >= today)
+      .map(j => new Date(j.journalDate));
+    expect(upcomingDates.length).toBeGreaterThan(0);
+    expect(upcomingDates.every(date => date.getDate() === 15 && date.getMonth() % 2 === 1)).toBe(
+      true,
+    );
   });
+
+  it('keeps posted and skipped future entries when the count changes', async () => {
+    const input = {
+      ...baseInput(),
+      intervalType: PlannedPaymentInterval.WEEKLY,
+      startDate: new Date(2026, 0, 5).getTime(),
+      recurrenceDay: 1,
+    };
+    const created = await createPlannedPayment(WP, input);
+    const today = new Date(2026, 9, 4).getTime();
+    const upcoming = (await findJournalsForPayment(created.id)).filter(j => j.journalDate >= today);
+    expect(upcoming.length).toBeGreaterThanOrEqual(2);
+    await database.write(async () => {
+      await upcoming[0].update(j => {
+        j.status = JournalStatus.POSTED;
+      });
+      await upcoming[1].update(j => {
+        j.status = JournalStatus.SKIPPED;
+      });
+    });
+    await updatePlannedPayment(WP, created.id, { ...input, intervalN: 3 });
+    const after = await findJournalsForPayment(created.id);
+    expect(after.find(j => j.id === upcoming[0].id)?.status).toBe(JournalStatus.POSTED);
+    expect(after.find(j => j.id === upcoming[1].id)?.status).toBe(JournalStatus.SKIPPED);
+  });
+
+  it('leaves the count and future entries unchanged if reconciliation fails', async () => {
+    const created = await createPlannedPayment(WP, baseInput());
+    const before = (await findJournalsForPayment(created.id)).map(j => j.id);
+    const cascade = journalPersistenceRepository.deleteUnpostedByPlannedPaymentInSession.bind(
+      journalPersistenceRepository,
+    );
+    jest
+      .spyOn(journalPersistenceRepository, 'deleteUnpostedByPlannedPaymentInSession')
+      .mockImplementationOnce(async (...args) => {
+        await cascade(...args);
+        throw new Error('injected schedule failure');
+      });
+    await expect(
+      updatePlannedPayment(WP, created.id, { ...baseInput(), intervalN: 7 }),
+    ).rejects.toThrow('injected schedule failure');
+    expect((await plannedPaymentRepository.find(WP, created.id))?.intervalN).toBe(1);
+    expect((await findJournalsForPayment(created.id)).map(j => j.id)).toEqual(before);
+  });
+
+  it.each([0, -1, 1.5, Number.NaN, 10000])(
+    'rejects invalid repeat counts before creating: %s',
+    async count => {
+      await expect(createPlannedPayment(WP, { ...baseInput(), intervalN: count })).rejects.toThrow(
+        'Enter a whole number',
+      );
+      expect(await database.collections.get('planned_payments').query().fetchCount()).toBe(0);
+    },
+  );
 
   it('rejects a planned-payment replacement reference deleted before update', async () => {
     const replacement = await accountWriteRepository.create({

@@ -372,7 +372,7 @@ export class PlannedPaymentRepository {
     session: AccountingWriteSession,
     workplaceId: WorkplaceId,
     id: PlannedPaymentId,
-    updates: PlannedPaymentOccurrenceUpdate,
+    updates: PlannedPaymentScheduleUpdate | PlannedPaymentOccurrenceUpdate,
     expected?: Partial<Pick<PlannedPayment, 'status' | 'nextOccurrence'>>,
     auditOptions: {
       eventType?: AuditEventType;

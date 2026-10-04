@@ -126,17 +126,31 @@ export async function stageDeleteUnpostedByPlannedPayment(
   session: AccountingWriteSession,
   workplaceId: WorkplaceId,
   plannedPaymentId: PlannedPaymentId,
+  scheduledFrom?: number,
 ): Promise<void> {
   const journals = await journalTables.journals
     .query(
       Q.where('planned_payment_id', plannedPaymentId),
       Q.where('workplace_id', workplaceId),
-      Q.where('status', Q.oneOf([...NON_POSTED_STATUSES])),
+      Q.where(
+        'status',
+        Q.oneOf(
+          scheduledFrom === undefined
+            ? [...NON_POSTED_STATUSES]
+            : [JournalStatus.PLANNED, JournalStatus.PAUSED],
+        ),
+      ),
+      ...(scheduledFrom === undefined ? [] : [Q.where('journal_date', Q.gte(scheduledFrom))]),
       Q.where('deleted_at', Q.eq(null)),
     )
     .fetch();
   if (journals.length === 0) return;
-  await stageSoftDelete(session, workplaceId, journals);
+  await stageSoftDelete(
+    session,
+    workplaceId,
+    journals,
+    scheduledFrom === undefined ? undefined : { source: 'app', undoable: false },
+  );
 }
 
 /** Restores a deleted journal only when its posted entries still satisfy current rules. */

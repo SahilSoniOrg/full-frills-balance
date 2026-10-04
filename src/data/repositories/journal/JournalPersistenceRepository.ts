@@ -213,13 +213,19 @@ export class JournalPersistenceRepository {
     return runAccountingWriteSession(session => stageBulkDelete(session, workplaceId, journalIds));
   }
 
-  /** Stages the unposted journal cascade for a planned-payment deletion. */
+  /** Stages the unposted cascade, or only upcoming scheduled entries during a schedule edit. */
   async deleteUnpostedByPlannedPaymentInSession(
     session: AccountingWriteSession,
     workplaceId: WorkplaceId,
     plannedPaymentId: PlannedPaymentId,
+    scheduledFrom?: number,
   ): Promise<void> {
-    return stageDeleteUnpostedByPlannedPayment(session, workplaceId, plannedPaymentId);
+    return stageDeleteUnpostedByPlannedPayment(
+      session,
+      workplaceId,
+      plannedPaymentId,
+      scheduledFrom,
+    );
   }
 
   /** Restores a deleted journal only when its posted entries still satisfy current rules. */

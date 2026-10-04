@@ -7,15 +7,21 @@ import { PlannedPaymentCommandInput } from '@/src/services/planned-payment/plann
 import {
   buildCreatePersistenceInput,
   buildUpdatePersistenceInput,
+  isPlannedPaymentScheduleChange,
 } from '@/src/services/planned-payment/plannedPaymentSchedulePolicy';
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { requirePlannedPayment } from '@/src/services/planned-payment/plannedPaymentWorkplace';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
+import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
+import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
+import { normalizeToStartOfDay } from '@/src/services/planned-payment/plannedPaymentRecurrence';
+import { isValidRepeatCount } from '@/src/utils/recurrenceLabels';
 
 export async function createPlannedPayment(
   workplaceId: WorkplaceId,
   input: PlannedPaymentCommandInput,
 ): Promise<PlannedPayment> {
+  if (!isValidRepeatCount(input.intervalN)) throw new Error('Enter a whole number from 1 to 9999.');
   const persistence = buildCreatePersistenceInput(input);
   const created = await plannedPaymentRepository.create(workplaceId, persistence, () =>
     assertWritable(workplaceId, [input.fromAccountId, input.toAccountId], 'Planned payment'),
@@ -30,15 +36,31 @@ export async function updatePlannedPayment(
   id: PlannedPaymentId,
   input: PlannedPaymentCommandInput,
 ): Promise<PlannedPayment> {
-  const existing = await plannedPaymentRepository.find(workplaceId, id);
-  if (!existing) {
-    throw new Error('Planned payment not found');
-  }
-
-  const updates = buildUpdatePersistenceInput(existing, input);
-  return plannedPaymentRepository.updateSchedule(workplaceId, existing, updates, () =>
-    assertWritable(workplaceId, [input.fromAccountId, input.toAccountId], 'Planned payment'),
-  );
+  if (!isValidRepeatCount(input.intervalN)) throw new Error('Enter a whole number from 1 to 9999.');
+  const effectiveDate = normalizeToStartOfDay(Date.now());
+  let schedulingChanged = false;
+  const updated = await runAccountingWriteSession(async session => {
+    const existing = await plannedPaymentRepository.find(workplaceId, id);
+    if (!existing) throw new Error('Planned payment not found');
+    await assertWritable(workplaceId, [input.fromAccountId, input.toAccountId], 'Planned payment');
+    schedulingChanged = isPlannedPaymentScheduleChange(existing, input);
+    const updates = buildUpdatePersistenceInput(existing, input, effectiveDate);
+    await plannedPaymentRepository.updateInSession(session, workplaceId, id, updates, undefined, {
+      source: 'app',
+      undoable: !schedulingChanged,
+    });
+    if (schedulingChanged) {
+      await journalPersistenceRepository.deleteUnpostedByPlannedPaymentInSession(
+        session,
+        workplaceId,
+        id,
+        effectiveDate,
+      );
+    }
+    return existing;
+  });
+  if (schedulingChanged) await processDuePlannedPayments(workplaceId);
+  return updated;
 }
 
 export async function upsertPlannedPaymentByName(

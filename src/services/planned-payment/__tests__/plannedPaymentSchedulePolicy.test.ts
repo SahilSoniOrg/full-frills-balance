@@ -73,25 +73,37 @@ describe('plannedPaymentSchedulePolicy', () => {
     expect(result.name).toBe('Rent');
   });
 
-  it('buildUpdatePersistenceInput resets next occurrence only on schedule change', () => {
-    const nonSchedule = buildUpdatePersistenceInput(existing, {
-      ...baseInput,
-      name: 'Rent updated',
-      amount: 1100,
-    });
+  it('buildUpdatePersistenceInput recalculates next occurrence only on schedule change', () => {
+    const nonSchedule = buildUpdatePersistenceInput(
+      existing,
+      {
+        ...baseInput,
+        name: 'Rent updated',
+        amount: 1100,
+      },
+      baseInput.startDate,
+    );
     expect(nonSchedule).not.toHaveProperty('nextOccurrence');
     expect(nonSchedule.name).toBe('Rent updated');
 
-    const schedule = buildUpdatePersistenceInput(existing, {
-      ...baseInput,
-      intervalN: 2,
-    });
+    const schedule = buildUpdatePersistenceInput(
+      existing,
+      {
+        ...baseInput,
+        intervalN: 2,
+      },
+      baseInput.startDate,
+    );
     expect(schedule.nextOccurrence).toBe(baseInput.startDate);
 
-    const recurrenceChange = buildUpdatePersistenceInput(existing, {
-      ...baseInput,
-      recurrenceDay: 15,
-    });
+    const recurrenceChange = buildUpdatePersistenceInput(
+      existing,
+      {
+        ...baseInput,
+        recurrenceDay: 15,
+      },
+      baseInput.startDate,
+    );
     expect(recurrenceChange.nextOccurrence).toBe(new Date(2026, 2, 15).getTime());
   });
 });

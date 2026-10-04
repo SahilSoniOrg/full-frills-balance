@@ -14,6 +14,7 @@ import { analytics } from '@/src/services/analytics';
 import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
+import { isValidRepeatCount } from '@/src/utils/recurrenceLabels';
 import { useCallback, useMemo, useState } from 'react';
 
 export type { PlannedPaymentFormState };
@@ -49,7 +50,7 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
       !isNaN(Number(form.amount)) &&
       form.fromAccountId.length > 0 &&
       form.toAccountId.length > 0 &&
-      form.intervalN > 0
+      isValidRepeatCount(form.intervalN)
     );
   }, [form]);
 

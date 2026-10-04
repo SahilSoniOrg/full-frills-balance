@@ -14,7 +14,24 @@ export function usePlannedPaymentFormScreen(id?: string) {
 
   const setField = useCallback(
     <K extends keyof typeof vm.form>(field: K, value: (typeof vm.form)[K]) => {
-      vm.setForm(current => ({ ...current, [field]: value }));
+      vm.setForm(current => {
+        if (field !== 'intervalType' || value === current.intervalType) {
+          return { ...current, [field]: value };
+        }
+        const date = new Date(current.startDate);
+        return {
+          ...current,
+          [field]: value,
+          recurrenceDay:
+            value === PlannedPaymentInterval.DAILY
+              ? undefined
+              : value === PlannedPaymentInterval.WEEKLY
+                ? date.getDay()
+                : date.getDate(),
+          recurrenceMonth:
+            value === PlannedPaymentInterval.YEARLY ? date.getMonth() + 1 : undefined,
+        };
+      });
     },
     [vm],
   );
