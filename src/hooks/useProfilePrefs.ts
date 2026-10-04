@@ -1,5 +1,5 @@
-import { preferences } from '@/src/services/preferences';
-import { useCallback, useSyncExternalStore } from 'react';
+import { usePreference } from '@/src/hooks/usePreference';
+import { useCallback } from 'react';
 
 export type ProfilePrefsState = {
   userName: string;
@@ -10,20 +10,15 @@ export type ProfilePrefsState = {
  * Scoped profile prefs (display name) — expandable without growing UIContext.
  */
 export function useProfilePrefs(): ProfilePrefsState {
-  const userName = useSyncExternalStore(
-    onStoreChange => {
-      const sub = preferences.observe('userName').subscribe(() => {
-        onStoreChange();
-      });
-      return () => sub.unsubscribe();
-    },
-    () => preferences.userName || '',
-    () => preferences.userName || '',
-  );
+  const { value: storedUserName, setValue: setStoredUserName } = usePreference('userName');
+  const userName = storedUserName || '';
 
-  const setUserName = useCallback((name: string) => {
-    preferences.setUserName(name);
-  }, []);
+  const setUserName = useCallback(
+    (name: string) => {
+      setStoredUserName(name);
+    },
+    [setStoredUserName],
+  );
 
   return {
     userName,

@@ -1,6 +1,6 @@
 import { ShareFormat } from '@/src/types/sharing';
-import { preferences } from '@/src/services/preferences';
-import { useCallback, useSyncExternalStore } from 'react';
+import { usePreference } from '@/src/hooks/usePreference';
+import { useCallback } from 'react';
 
 export type SharePrefsState = {
   defaultShareFormat: ShareFormat;
@@ -11,20 +11,16 @@ export type SharePrefsState = {
  * Scoped share-format prefs — expandable without growing UIContext.
  */
 export function useSharePrefs(): SharePrefsState {
-  const defaultShareFormat = useSyncExternalStore(
-    onStoreChange => {
-      const sub = preferences.observe('defaultShareFormat').subscribe(() => {
-        onStoreChange();
-      });
-      return () => sub.unsubscribe();
-    },
-    () => preferences.defaultShareFormat || ShareFormat.TEXT,
-    () => preferences.defaultShareFormat || ShareFormat.TEXT,
-  );
+  const { value: storedShareFormat, setValue: setStoredShareFormat } =
+    usePreference('defaultShareFormat');
+  const defaultShareFormat = storedShareFormat || ShareFormat.TEXT;
 
-  const setDefaultShareFormat = useCallback((format: ShareFormat) => {
-    preferences.setDefaultShareFormat(format);
-  }, []);
+  const setDefaultShareFormat = useCallback(
+    (format: ShareFormat) => {
+      setStoredShareFormat(format);
+    },
+    [setStoredShareFormat],
+  );
 
   return {
     defaultShareFormat,

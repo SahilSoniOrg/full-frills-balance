@@ -1,5 +1,5 @@
-import { preferences } from '@/src/services/preferences';
-import { useCallback, useSyncExternalStore } from 'react';
+import { usePreference } from '@/src/hooks/usePreference';
+import { useCallback } from 'react';
 
 export type AccountDisplayPrefsState = {
   showAccountMonthlyStats: boolean;
@@ -12,35 +12,25 @@ export type AccountDisplayPrefsState = {
  * Scoped account-list display prefs — expandable without growing UIContext.
  */
 export function useAccountDisplayPrefs(): AccountDisplayPrefsState {
-  const showAccountMonthlyStats = useSyncExternalStore(
-    onStoreChange => {
-      const sub = preferences.observe('showAccountMonthlyStats').subscribe(() => {
-        onStoreChange();
-      });
-      return () => sub.unsubscribe();
+  const { value: showAccountMonthlyStats, setValue: setStoredAccountMonthlyStats } =
+    usePreference('showAccountMonthlyStats');
+
+  const setShowAccountMonthlyStats = useCallback(
+    (show: boolean) => {
+      setStoredAccountMonthlyStats(show);
     },
-    () => preferences.showAccountMonthlyStats,
-    () => preferences.showAccountMonthlyStats,
+    [setStoredAccountMonthlyStats],
   );
 
-  const setShowAccountMonthlyStats = useCallback((show: boolean) => {
-    preferences.setShowAccountMonthlyStats(show);
-  }, []);
+  const { value: useCompactAccountPicker, setValue: setStoredCompactAccountPicker } =
+    usePreference('useCompactAccountPicker');
 
-  const useCompactAccountPicker = useSyncExternalStore(
-    onStoreChange => {
-      const sub = preferences.observe('useCompactAccountPicker').subscribe(() => {
-        onStoreChange();
-      });
-      return () => sub.unsubscribe();
+  const setUseCompactAccountPicker = useCallback(
+    (useCompact: boolean) => {
+      setStoredCompactAccountPicker(useCompact);
     },
-    () => preferences.useCompactAccountPicker,
-    () => preferences.useCompactAccountPicker,
+    [setStoredCompactAccountPicker],
   );
-
-  const setUseCompactAccountPicker = useCallback((useCompact: boolean) => {
-    preferences.setUseCompactAccountPicker(useCompact);
-  }, []);
 
   return {
     showAccountMonthlyStats,

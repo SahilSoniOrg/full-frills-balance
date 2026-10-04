@@ -1,8 +1,8 @@
 import { FontId, FontIds, ThemeId, ThemeIds, ThemeMode } from '@/src/constants/design-tokens';
-import { preferences } from '@/src/services/preferences';
 import type { ThemeAppearance } from '@/src/services/preferences';
+import { usePreference } from '@/src/hooks/usePreference';
 import { commitFontIdAfterLoad } from '@/src/utils/loadFontSet';
-import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
 
 export type ThemePrefsState = {
@@ -22,38 +22,13 @@ export type ThemePrefsState = {
 export function useThemePrefs(): ThemePrefsState {
   const systemColorScheme = useColorScheme();
 
-  const themePreference = useSyncExternalStore(
-    onStoreChange => {
-      const sub = preferences.observe('theme').subscribe(() => {
-        onStoreChange();
-      });
-      return () => sub.unsubscribe();
-    },
-    () => preferences.getSnapshot().theme || 'system',
-    () => preferences.getSnapshot().theme || 'system',
-  );
-
-  const themeId = useSyncExternalStore(
-    onStoreChange => {
-      const sub = preferences.observe('themeId').subscribe(() => {
-        onStoreChange();
-      });
-      return () => sub.unsubscribe();
-    },
-    () => preferences.getSnapshot().themeId || ThemeIds.DEEP_SPACE,
-    () => preferences.getSnapshot().themeId || ThemeIds.DEEP_SPACE,
-  );
-
-  const fontId = useSyncExternalStore(
-    onStoreChange => {
-      const sub = preferences.observe('fontId').subscribe(() => {
-        onStoreChange();
-      });
-      return () => sub.unsubscribe();
-    },
-    () => preferences.getSnapshot().fontId || FontIds.DEEP_SPACE,
-    () => preferences.getSnapshot().fontId || FontIds.DEEP_SPACE,
-  );
+  const { value: storedThemePreference, setValue: setStoredThemePreference } =
+    usePreference('theme');
+  const { value: storedThemeId, setValue: setStoredThemeId } = usePreference('themeId');
+  const { value: storedFontId, setValue: setStoredFontId } = usePreference('fontId');
+  const themePreference = storedThemePreference || 'system';
+  const themeId = storedThemeId || ThemeIds.DEEP_SPACE;
+  const fontId = storedFontId || FontIds.DEEP_SPACE;
 
   const themeMode = useMemo<ThemeMode>(() => {
     return themePreference === 'system'
@@ -63,19 +38,28 @@ export function useThemePrefs(): ThemePrefsState {
       : themePreference;
   }, [themePreference, systemColorScheme]);
 
-  const setThemePreference = useCallback((theme: ThemeAppearance) => {
-    preferences.update({ theme });
-  }, []);
+  const setThemePreference = useCallback(
+    (theme: ThemeAppearance) => {
+      setStoredThemePreference(theme);
+    },
+    [setStoredThemePreference],
+  );
 
-  const setThemeId = useCallback((nextThemeId: ThemeId) => {
-    preferences.update({ themeId: nextThemeId });
-  }, []);
+  const setThemeId = useCallback(
+    (nextThemeId: ThemeId) => {
+      setStoredThemeId(nextThemeId);
+    },
+    [setStoredThemeId],
+  );
 
-  const setFontId = useCallback((nextFontId: FontId) => {
-    void commitFontIdAfterLoad(nextFontId, id => {
-      preferences.update({ fontId: id as FontId });
-    });
-  }, []);
+  const setFontId = useCallback(
+    (nextFontId: FontId) => {
+      void commitFontIdAfterLoad(nextFontId, id => {
+        setStoredFontId(id as FontId);
+      });
+    },
+    [setStoredFontId],
+  );
 
   return {
     themePreference,

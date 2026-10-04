@@ -1,5 +1,5 @@
-import { preferences } from '@/src/services/preferences';
-import { useCallback, useSyncExternalStore } from 'react';
+import { usePreference } from '@/src/hooks/usePreference';
+import { useCallback } from 'react';
 
 export type DashboardPreferencesState = {
   showSafeToSpendChart: boolean;
@@ -10,20 +10,15 @@ export type DashboardPreferencesState = {
  * Scoped dashboard display prefs — expandable without growing UIContext.
  */
 export function useDashboardPreferences(): DashboardPreferencesState {
-  const showSafeToSpendChart = useSyncExternalStore(
-    onStoreChange => {
-      const sub = preferences.observe('showSafeToSpendChart').subscribe(() => {
-        onStoreChange();
-      });
-      return () => sub.unsubscribe();
-    },
-    () => preferences.getSnapshot().showSafeToSpendChart,
-    () => preferences.getSnapshot().showSafeToSpendChart,
-  );
+  const { value: showSafeToSpendChart, setValue: setStoredSafeToSpendChart } =
+    usePreference('showSafeToSpendChart');
 
-  const setShowSafeToSpendChart = useCallback((show: boolean) => {
-    preferences.update({ showSafeToSpendChart: show });
-  }, []);
+  const setShowSafeToSpendChart = useCallback(
+    (show: boolean) => {
+      setStoredSafeToSpendChart(show);
+    },
+    [setStoredSafeToSpendChart],
+  );
 
   return {
     showSafeToSpendChart,
