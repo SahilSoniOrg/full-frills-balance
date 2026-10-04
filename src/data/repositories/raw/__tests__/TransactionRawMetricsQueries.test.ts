@@ -7,6 +7,8 @@ import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
+import Transaction from '@/src/data/models/Transaction';
+import { Q } from '@nozbe/watermelondb';
 
 const WORKPLACE_ONE = 'wp-metrics-isolation-1' as WorkplaceId;
 const WORKPLACE_TWO = 'wp-metrics-isolation-2' as WorkplaceId;
@@ -149,5 +151,75 @@ describe('TransactionRawMetricsQueries workplace isolation', () => {
       accountType: AccountType.ASSET,
       delta: 10,
     });
+  });
+
+  it('ranks equal timestamps identically across native SQL and ORM adapters', async () => {
+    const tieDate = DAY + 10_000;
+    await createJournalFixture(
+      {
+        description: 'Lower id tie',
+        journalDate: tieDate,
+        currencyCode: 'USD',
+        calculatedBalances: new Map([[localAccountId, 100]]),
+        transactions: [
+          { accountId: localAccountId, amount: 100, transactionType: TransactionType.DEBIT },
+        ],
+      },
+      WORKPLACE_ONE,
+    );
+    await createJournalFixture(
+      {
+        description: 'Higher id tie',
+        journalDate: tieDate,
+        currencyCode: 'USD',
+        calculatedBalances: new Map([[localAccountId, 200]]),
+        transactions: [
+          { accountId: localAccountId, amount: 200, transactionType: TransactionType.DEBIT },
+        ],
+      },
+      WORKPLACE_ONE,
+    );
+
+    const tiedTransactions = await database.collections
+      .get<Transaction>('transactions')
+      .query(Q.where('account_id', localAccountId), Q.where('transaction_date', tieDate))
+      .fetch();
+    expect(tiedTransactions).toHaveLength(2);
+
+    const highestIdTransaction = tiedTransactions.reduce((highest, transaction) =>
+      transaction.id > highest.id ? transaction : highest,
+    );
+    const sharedCreatedAt = new Date(2025, 0, 15, 12, 0, 0, 123);
+    await database.write(async () => {
+      await database.batch(
+        tiedTransactions.map(transaction =>
+          transaction.prepareUpdate(record => {
+            record.createdAt = sharedCreatedAt;
+          }),
+        ),
+      );
+    });
+
+    const nativeQuery = jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue([
+      {
+        accountId: localAccountId,
+        runningBalance: highestIdTransaction.runningBalance,
+      },
+    ]);
+    const nativeBalances = await transactionRawMetricsQueries.getLatestBalancesRaw(
+      WORKPLACE_ONE,
+      [localAccountId],
+      tieDate,
+    );
+
+    nativeQuery.mockResolvedValue(null);
+    const ormBalances = await transactionRawMetricsQueries.getLatestBalancesRaw(
+      WORKPLACE_ONE,
+      [localAccountId],
+      tieDate,
+    );
+
+    expect(ormBalances).toEqual(nativeBalances);
+    expect(ormBalances.get(localAccountId)).toBe(highestIdTransaction.runningBalance);
   });
 });
