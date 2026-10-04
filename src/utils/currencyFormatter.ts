@@ -16,6 +16,10 @@ export interface CurrencyFormatOptions {
 const FORMAT_CACHE = new Map<string, string>();
 const MAX_CACHE_SIZE = 1000;
 
+export function normalizeCurrencyCode(currencyCode: string | undefined): string {
+  return currencyCode?.trim().toUpperCase() ?? '';
+}
+
 export const CurrencyFormatter = {
   /**
    * Formats an amount with a specific currency code.
@@ -140,8 +144,9 @@ export const CurrencyFormatter = {
    * Uses CURRENCY_PRECISIONS mapping and falls back to 2.
    */
   getPrecisionFallback(currencyCode: string | undefined): number {
-    if (!currencyCode) return 2;
-    return CURRENCY_PRECISIONS[currencyCode.toUpperCase()] ?? 2;
+    const normalizedCode = normalizeCurrencyCode(currencyCode);
+    if (!normalizedCode) return 2;
+    return CURRENCY_PRECISIONS[normalizedCode] ?? 2;
   },
 };
 

@@ -124,6 +124,7 @@ describe('CurrencyFormatter', () => {
 
     it('should return 3 for KWD, BHD, OMR, JOD, TND', () => {
       expect(CurrencyFormatter.getPrecisionFallback('KWD')).toBe(3);
+      expect(CurrencyFormatter.getPrecisionFallback(' KWD ')).toBe(3);
       expect(CurrencyFormatter.getPrecisionFallback('BHD')).toBe(3);
       expect(CurrencyFormatter.getPrecisionFallback('OMR')).toBe(3);
       expect(CurrencyFormatter.getPrecisionFallback('JOD')).toBe(3);

@@ -2,7 +2,7 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { PlainCurrency } from '@/src/types/plainDtos';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { CurrencyFormatter, normalizeCurrencyCode } from '@/src/utils/currencyFormatter';
 import { logger } from '@/src/utils/logger';
 import { useEffect, useMemo } from 'react';
 
@@ -32,11 +32,12 @@ export function useCurrencyPrecision(code: string | undefined) {
   const { currencies, isLoading } = useCurrencies();
 
   const precision = useMemo(() => {
-    if (!code) return 2;
-    const currency = currencies.find(c => c.code === code);
+    const normalizedCode = normalizeCurrencyCode(code);
+    if (!normalizedCode) return 2;
+    const currency = currencies.find(c => normalizeCurrencyCode(c.code) === normalizedCode);
     if (currency) return currency.precision;
 
-    return CurrencyFormatter.getPrecisionFallback(code);
+    return CurrencyFormatter.getPrecisionFallback(normalizedCode);
   }, [currencies, code]);
 
   return { precision, isLoading };
