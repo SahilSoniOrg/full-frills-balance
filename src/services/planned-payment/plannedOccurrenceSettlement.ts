@@ -1,6 +1,18 @@
 import { AppConfig } from '@/src/constants';
 import { MetadataKeys, MetadataSources } from '@/src/constants/ledger-constants';
 import type PlannedPayment from '@/src/data/models/PlannedPayment';
+import type Journal from '@/src/data/models/Journal';
+import { assertExpectedJournalSnapshot } from '@/src/data/repositories/journal/journalAuditGuard';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
+import type { AuditEventMetadata } from '@/src/types/auditEvents';
+import {
+  readPlannedPaymentFxContext,
+  resolvePlannedPaymentFxAmounts,
+  plannedPaymentFxMetadata,
+  plannedPaymentFxMode,
+  type PlannedPaymentFxReview,
+  type PlannedPaymentFxQuote,
+} from './plannedPaymentFx';
 import type { AccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import {
   journalPersistenceRepository,
@@ -10,7 +22,10 @@ import type { PlannedOccurrenceJournals } from '@/src/data/repositories/journal/
 import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
-import { buildPlannedPaymentTransferLines } from '@/src/services/planned-payment/plannedPaymentJournalLines';
+import {
+  buildPlannedPaymentTransferLines,
+  buildPlannedPaymentFxLines,
+} from '@/src/services/planned-payment/plannedPaymentJournalLines';
 import {
   calculateNextOccurrence,
   normalizeToStartOfDay,
@@ -29,7 +44,14 @@ import { logger } from '@/src/utils/logger';
 export type PlannedOccurrenceAction =
   | { kind: 'generate'; asOf: number }
   | { kind: 'autoPostDue'; asOf: number; journalId: JournalId }
-  | { kind: 'post'; postedAt: number; journalId?: JournalId }
+  | {
+      kind: 'post';
+      postedAt: number;
+      journalId?: JournalId;
+      review?: PlannedPaymentFxReview;
+      auditMetadata?: AuditEventMetadata;
+      expectedCurrent?: Record<string, unknown>;
+    }
   | { kind: 'skip' };
 
 export interface PlannedOccurrenceSettlement {
@@ -72,6 +94,7 @@ export async function settlePlannedOccurrence(
   plannedPaymentId: PlannedPaymentId,
   occurrenceDate: number,
   action: PlannedOccurrenceAction,
+  fxQuote?: PlannedPaymentFxQuote,
 ): Promise<PlannedOccurrenceSettlement> {
   const payment = await requirePlannedPayment(workplaceId, plannedPaymentId);
   if (action.kind === 'generate' || payment.status === PlannedPaymentStatus.PAUSED) {
@@ -102,7 +125,10 @@ export async function settlePlannedOccurrence(
     occurrence,
     action,
     correlationId,
+    fxQuote,
   );
+  if (action.kind === 'autoPostDue' && !journal && plannedPaymentFxMode(payment))
+    return { journal: null, nextOccurrence: payment.nextOccurrence, completed: false };
   return {
     journal,
     ...(await advanceSchedule(session, payment, day.dayStart, correlationId)),
@@ -116,27 +142,75 @@ async function applyOccurrenceAction(
   occurrence: PlannedOccurrenceJournals,
   action: PlannedOccurrenceAction,
   correlationId: string,
+  fxQuote?: PlannedPaymentFxQuote,
 ): Promise<JournalPersistenceResult | null> {
   if (action.kind === 'generate') {
-    if (occurrence.kind !== 'none') return null;
+    if (occurrence.kind !== 'none') {
+      if (occurrence.kind === 'planned' && payment.isAutoPost && dayStart <= action.asOf) {
+        const due = occurrence.journals[0];
+        const context = await readPlannedPaymentFxContext(payment, dayStart, due);
+        if (context && context.mode !== 'manual') {
+          if (occurrence.journals.length !== 1)
+            throw new Error('Multiple planned journals for this occurrence');
+          return postScheduledJournal(
+            session,
+            payment,
+            due,
+            dayStart,
+            due.journalDate,
+            correlationId,
+            'system',
+            fxQuote,
+          );
+        }
+      }
+      return null;
+    }
     if (!payment.toAccountId) {
+      if (plannedPaymentFxMode(payment))
+        throw new Error('Explicit planned FX requires exactly two distinct accounts');
       logger.warn(
         `Planned payment ${payment.id} is missing toAccountId — advancing its schedule without creating a journal.`,
       );
       return null;
     }
+    const context = await readPlannedPaymentFxContext(payment, dayStart);
+    const posting = payment.isAutoPost && context?.mode !== 'manual' && dayStart <= action.asOf;
+    const amounts = context
+      ? await resolvePlannedPaymentFxAmounts(context, {
+          posting,
+          postedAt: dayStart,
+          quote: fxQuote,
+        })
+      : undefined;
     return journalPersistenceService.putInSession(
       session,
       {
         journalDate: dayStart,
         description: payment.name,
-        currencyCode: payment.currencyCode,
-        transactions: buildPlannedPaymentTransferLines(payment),
-        status:
-          payment.isAutoPost && dayStart <= action.asOf
-            ? JournalStatus.POSTED
-            : JournalStatus.PLANNED,
+        currencyCode: context?.review.sourceCurrency ?? payment.currencyCode,
+        transactions:
+          context && amounts
+            ? buildPlannedPaymentFxLines(
+                context.lines,
+                context.review.sourceCurrency,
+                context.review.destinationCurrency,
+                amounts.sourceAmount,
+                amounts.destinationAmount,
+              )
+            : buildPlannedPaymentTransferLines(payment),
+        status: posting ? JournalStatus.POSTED : JournalStatus.PLANNED,
         plannedPaymentId: payment.id,
+        ...(context
+          ? {
+              metadata: plannedPaymentFxMetadata(
+                context,
+                !posting && context.mode === 'automatic' && fxQuote?.rate == null
+                  ? { fxPreviewRateUnavailable: true }
+                  : {},
+              ),
+            }
+          : {}),
       },
       payment.workplaceId,
       { source: 'system', correlationId },
@@ -150,12 +224,17 @@ async function applyOccurrenceAction(
         ? occurrence.journals.find(journal => journal.id === action.journalId)
         : undefined;
     if (!due) return null;
-    return journalPersistenceService.postInSession(
+    const context = await readPlannedPaymentFxContext(payment, dayStart, due);
+    if (context?.mode === 'manual') return null;
+    return postScheduledJournal(
       session,
-      due.id,
-      payment.workplaceId,
+      payment,
+      due,
+      dayStart,
       due.journalDate,
-      { source: 'system', correlationId },
+      correlationId,
+      'system',
+      fxQuote,
     );
   }
 
@@ -180,21 +259,37 @@ async function applyOccurrenceAction(
       return null;
     }
     if (!payment.toAccountId) {
+      if (plannedPaymentFxMode(payment))
+        throw new Error('Explicit planned FX requires exactly two distinct accounts');
       logger.warn(
         `[PlannedPaymentOrchestration] skipOccurrence: payment ${payment.id} has no toAccountId — advancing schedule without creating a journal.`,
       );
       return null;
     }
+    const context = await readPlannedPaymentFxContext(payment, dayStart);
+    const amounts = context
+      ? await resolvePlannedPaymentFxAmounts(context, { posting: false })
+      : undefined;
     return journalPersistenceService.putInSession(
       session,
       {
         journalDate: dayStart,
         description: payment.name,
-        currencyCode: payment.currencyCode,
-        transactions: buildPlannedPaymentTransferLines(payment, {
-          includeNotes: false,
-          includeCurrency: false,
-        }),
+        currencyCode: context?.review.sourceCurrency ?? payment.currencyCode,
+        transactions:
+          context && amounts
+            ? buildPlannedPaymentFxLines(
+                context.lines,
+                context.review.sourceCurrency,
+                context.review.destinationCurrency,
+                amounts.sourceAmount,
+                amounts.destinationAmount,
+              ).map(line => ({ ...line, notes: undefined }))
+            : buildPlannedPaymentTransferLines(payment, {
+                includeNotes: false,
+                includeCurrency: false,
+              }),
+        ...(context ? { metadata: plannedPaymentFxMetadata(context) } : {}),
         status: JournalStatus.SKIPPED,
         plannedPaymentId: payment.id,
       },
@@ -217,33 +312,125 @@ async function applyOccurrenceAction(
     throw new Error(`Planned journal ${action.journalId} is not scheduled for this occurrence`);
   }
   if (planned.length === 1) {
-    return journalPersistenceService.postInSession(
+    return postScheduledJournal(
       session,
-      planned[0].id,
-      payment.workplaceId,
+      payment,
+      planned[0],
+      dayStart,
       action.postedAt,
-      { source: 'app', correlationId },
+      correlationId,
+      'app',
+      fxQuote,
+      action.review,
+      action.auditMetadata,
+      action.expectedCurrent,
     );
   }
   if (!payment.toAccountId) {
     throw new Error(`Planned payment ${payment.id} is missing toAccountId.`);
   }
+  const context = await readPlannedPaymentFxContext(payment, dayStart);
+  const amounts = context
+    ? await resolvePlannedPaymentFxAmounts(context, {
+        posting: true,
+        postedAt: action.postedAt,
+        quote: fxQuote,
+        review: action.review,
+      })
+    : undefined;
   return journalPersistenceService.putInSession(
     session,
     {
       journalDate: action.postedAt,
       description: payment.name,
-      currencyCode: payment.currencyCode,
-      transactions: buildPlannedPaymentTransferLines(payment),
+      currencyCode: context?.review.sourceCurrency ?? payment.currencyCode,
+      transactions:
+        context && amounts
+          ? buildPlannedPaymentFxLines(
+              context.lines,
+              context.review.sourceCurrency,
+              context.review.destinationCurrency,
+              amounts.sourceAmount,
+              amounts.destinationAmount,
+            )
+          : buildPlannedPaymentTransferLines(payment),
       status: JournalStatus.POSTED,
       plannedPaymentId: payment.id,
-      metadata: {
-        importSource: MetadataSources.MANUAL_POST,
-        metadataJson: JSON.stringify({ [MetadataKeys.ORIGINAL_PLANNED_DATE]: dayStart }),
-      },
+      metadata: context
+        ? {
+            ...plannedPaymentFxMetadata(context, {
+              [MetadataKeys.ORIGINAL_PLANNED_DATE]: dayStart,
+            }),
+            importSource: MetadataSources.MANUAL_POST,
+          }
+        : {
+            importSource: MetadataSources.MANUAL_POST,
+            metadataJson: JSON.stringify({ [MetadataKeys.ORIGINAL_PLANNED_DATE]: dayStart }),
+          },
     },
     payment.workplaceId,
     { source: 'app', correlationId },
+  );
+}
+
+/** Patch and post in one put: staged puts are not visible to a subsequent status-only post. */
+async function postScheduledJournal(
+  session: AccountingWriteSession,
+  payment: PlannedPayment,
+  journal: Journal,
+  occurrenceDate: number,
+  postedAt: number,
+  correlationId: string,
+  source: 'system' | 'app',
+  quote?: PlannedPaymentFxQuote,
+  review?: PlannedPaymentFxReview,
+  auditMetadata?: AuditEventMetadata,
+  expectedCurrent?: Record<string, unknown>,
+): Promise<JournalPersistenceResult> {
+  const context = await readPlannedPaymentFxContext(payment, occurrenceDate, journal);
+  if (!context)
+    return journalPersistenceService.postInSession(
+      session,
+      journal.id,
+      payment.workplaceId,
+      postedAt,
+      { source, correlationId },
+    );
+  if (expectedCurrent)
+    assertExpectedJournalSnapshot(
+      expectedCurrent,
+      journal,
+      await transactionQueryRepository.findByJournal(payment.workplaceId, journal.id),
+    );
+  const amounts = await resolvePlannedPaymentFxAmounts(context, {
+    posting: true,
+    postedAt,
+    quote,
+    review,
+  });
+  return journalPersistenceService.putInSession(
+    session,
+    {
+      journalId: journal.id,
+      journalDate: postedAt,
+      status: JournalStatus.POSTED,
+      transactions: buildPlannedPaymentFxLines(
+        context.lines,
+        context.review.sourceCurrency,
+        context.review.destinationCurrency,
+        amounts.sourceAmount,
+        amounts.destinationAmount,
+      ),
+      metadata: {
+        ...plannedPaymentFxMetadata(context, {
+          [MetadataKeys.ORIGINAL_PLANNED_DATE]: journal.journalDate,
+          fxPreviewRateUnavailable: false,
+        }),
+        importSource: MetadataSources.MANUAL_POST,
+      },
+    },
+    payment.workplaceId,
+    { eventType: 'journal.posted', source, correlationId, ...auditMetadata },
   );
 }
 

@@ -22,6 +22,11 @@ import {
 jest.mock('@/src/services/RebuildQueueService');
 jest.mock('@/src/data/repositories/PlannedPaymentRepository');
 jest.mock('@/src/data/repositories/journal/JournalPlannedQueries');
+jest.mock('@/src/data/repositories/journal/journalMetadataRepository', () => ({
+  journalMetadataRepository: {
+    findByJournalId: jest.fn().mockResolvedValue(null),
+  },
+}));
 jest.mock('@/src/data/repositories/journal/JournalPersistenceRepository', () => ({
   journalPersistenceRepository: {
     setNonPostedStatusesInSession: jest.fn().mockResolvedValue(undefined),

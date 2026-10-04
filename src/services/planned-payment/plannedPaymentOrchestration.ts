@@ -1,3 +1,9 @@
+import {
+  preparePlannedPaymentFxQuote,
+  PlannedPaymentFxReviewRequiredError,
+  type PlannedPaymentFxReview,
+} from './plannedPaymentFx';
+import type { AuditEventMetadata } from '@/src/types/auditEvents';
 import { AppConfig } from '@/src/constants';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
@@ -21,6 +27,12 @@ async function settleManualOccurrence(
   occurrenceDate: number,
   action: Exclude<PlannedOccurrenceAction, { kind: 'generate' }>,
 ): Promise<void> {
+  const quote = await preparePlannedPaymentFxQuote(
+    workplaceId,
+    plannedPaymentId,
+    occurrenceDate,
+    action,
+  );
   const journal = await runAccountingWriteSession(
     async session =>
       (
@@ -30,6 +42,7 @@ async function settleManualOccurrence(
           plannedPaymentId,
           occurrenceDate,
           action,
+          quote,
         )
       ).journal,
   );
@@ -43,22 +56,34 @@ async function postOccurrence(
   plannedPaymentId: PlannedPaymentId,
   occurrenceDate: number,
   journalId?: JournalId,
+  review?: PlannedPaymentFxReview,
+  options?: PlannedJournalPostOptions,
 ): Promise<void> {
-  const postedAt = Date.now();
+  const postedAt = options?.postedAt ?? Date.now();
   try {
     await settleManualOccurrence(workplaceId, plannedPaymentId, occurrenceDate, {
       kind: 'post',
       postedAt,
       journalId,
+      review,
+      auditMetadata: options?.auditMetadata,
+      expectedCurrent: options?.expectedCurrent,
     });
     logger.info(
       `Manually posted occurrence for planned payment ${plannedPaymentId} at ${new Date(postedAt).toLocaleString()}`,
     );
   } catch (error) {
+    if (error instanceof PlannedPaymentFxReviewRequiredError) throw error;
     const message = error instanceof Error ? error.message : String(error);
     logger.error(`Failed to post manual occurrence for payment ${plannedPaymentId}: ${message}`);
     throw error;
   }
+}
+
+export interface PlannedJournalPostOptions {
+  postedAt?: number;
+  auditMetadata?: AuditEventMetadata;
+  expectedCurrent?: Record<string, unknown>;
 }
 
 /** Posts the exact scheduled journal selected from a planned-occurrence list. */
@@ -67,8 +92,10 @@ export function postPlannedJournalOccurrence(
   plannedPaymentId: PlannedPaymentId,
   journalId: JournalId,
   occurrenceDate: number,
+  review?: PlannedPaymentFxReview,
+  options?: PlannedJournalPostOptions,
 ): Promise<void> {
-  return postOccurrence(workplaceId, plannedPaymentId, occurrenceDate, journalId);
+  return postOccurrence(workplaceId, plannedPaymentId, occurrenceDate, journalId, review, options);
 }
 
 /** Posts the payment's occurrence, creating a posted journal if none is scheduled yet. */
@@ -76,8 +103,9 @@ export function postPlannedPaymentOccurrence(
   workplaceId: WorkplaceId,
   plannedPaymentId: PlannedPaymentId,
   occurrenceDate: number,
+  review?: PlannedPaymentFxReview,
 ): Promise<void> {
-  return postOccurrence(workplaceId, plannedPaymentId, occurrenceDate);
+  return postOccurrence(workplaceId, plannedPaymentId, occurrenceDate, undefined, review);
 }
 
 /**
@@ -142,6 +170,13 @@ async function processDuePlannedPaymentsNow(
         if (isCancelled()) break;
         const occurrenceDate = normalizeToStartOfDay(journal.journalDate);
         if (occurrenceDate > asOf) continue;
+        const action = { kind: 'autoPostDue' as const, asOf, journalId: journal.id };
+        const quote = await preparePlannedPaymentFxQuote(
+          workplaceId,
+          payment.id,
+          occurrenceDate,
+          action,
+        );
         const posted = await runAccountingWriteSession(async session => {
           if (isCancelled()) return null;
           const settlement = await settlePlannedOccurrence(
@@ -149,7 +184,8 @@ async function processDuePlannedPaymentsNow(
             workplaceId,
             payment.id,
             occurrenceDate,
-            { kind: 'autoPostDue', asOf, journalId: journal.id },
+            action,
+            quote,
           );
           if (isCancelled())
             throw new Error('Planned occurrence settlement cancelled before commit.');

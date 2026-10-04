@@ -10,6 +10,7 @@ export interface PlannedPaymentJournalLine {
   transactionType: TransactionType;
   notes?: string;
   currencyCode?: string;
+  exchangeRate?: number;
 }
 
 export function buildPlannedPaymentTransferLines(
@@ -41,4 +42,24 @@ export function buildPlannedPaymentTransferLines(
       ...extras,
     },
   ];
+}
+
+/** Source-currency basis; the destination rate balances the rounded native amounts exactly. */
+export function buildPlannedPaymentFxLines(
+  lines: readonly PlannedPaymentJournalLine[],
+  sourceCurrency: string,
+  destinationCurrency: string,
+  sourceAmount: number,
+  destinationAmount: number,
+): PlannedPaymentJournalLine[] {
+  return lines.map(line =>
+    line.transactionType === TransactionType.CREDIT
+      ? { ...line, amount: sourceAmount, currencyCode: sourceCurrency, exchangeRate: 1 }
+      : {
+          ...line,
+          amount: destinationAmount,
+          currencyCode: destinationCurrency,
+          exchangeRate: sourceAmount / destinationAmount,
+        },
+  );
 }

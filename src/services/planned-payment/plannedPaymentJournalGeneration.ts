@@ -1,3 +1,4 @@
+import { preparePlannedPaymentFxQuote } from './plannedPaymentFx';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import {
@@ -23,6 +24,11 @@ export async function generatePlannedOccurrence(
   };
 
   assertNotCancelled();
+  const quote = await preparePlannedPaymentFxQuote(workplaceId, plannedPaymentId, occurrenceDate, {
+    kind: 'generate',
+    asOf,
+  });
+  assertNotCancelled();
   const settlement = await runAccountingWriteSession(async session => {
     assertNotCancelled();
     const result = await settlePlannedOccurrence(
@@ -31,6 +37,7 @@ export async function generatePlannedOccurrence(
       plannedPaymentId,
       occurrenceDate,
       { kind: 'generate', asOf },
+      quote,
     );
     assertNotCancelled();
     return result;

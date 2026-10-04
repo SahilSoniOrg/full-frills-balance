@@ -1,4 +1,10 @@
 import Journal from '@/src/data/models/Journal';
+import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
+import {
+  readPlannedPaymentFxContext,
+  type PlannedPaymentFxReview,
+} from '@/src/services/planned-payment/plannedPaymentFx';
+import { postPlannedJournalOccurrence } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
 import { TransactionType } from '@/src/types/enums';
 import { JournalEntryLine } from '@/src/types/domainJournal';
@@ -160,7 +166,29 @@ export class JournalService {
     postedAt?: number,
     auditMetadata?: AuditEventMetadata,
     expectedCurrent?: Record<string, unknown>,
+    review?: PlannedPaymentFxReview,
   ): Promise<Journal> {
+    const selected = await journalQueryRepository.find(workplaceId, journalId);
+    if (selected?.plannedPaymentId) {
+      const payment = await plannedPaymentRepository.find(workplaceId, selected.plannedPaymentId);
+      if (!payment) throw new Error('Linked planned payment not found');
+      const context = await readPlannedPaymentFxContext(payment, selected.journalDate, selected);
+      if (context) {
+        await postPlannedJournalOccurrence(
+          workplaceId,
+          payment.id,
+          selected.id,
+          selected.journalDate,
+          review,
+          { postedAt, auditMetadata, expectedCurrent },
+        );
+        analytics.trackFeatureUsage('journal', 'post', {
+          journal_id: journalId,
+          currency: selected.currencyCode,
+        });
+        return selected;
+      }
+    }
     const journal = await journalPersistenceService.post(
       journalId,
       workplaceId,
