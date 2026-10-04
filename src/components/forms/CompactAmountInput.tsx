@@ -75,7 +75,9 @@ export function CompactAmountInput({
           placeholder={placeholder ?? formatRoundedAmount(0, resolvedPrecision)}
           currencySymbol={resolvedCurrencySymbol}
           precision={resolvedPrecision}
-          variant="minimal"
+          variant="compact"
+          showCurrencyPrefix={false}
+          showClearButton={false}
           containerStyle={styles.inputContainer}
           inputStyle={[styles.amountInput, inputStyle]}
           testID={testID}

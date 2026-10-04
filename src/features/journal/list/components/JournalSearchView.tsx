@@ -89,6 +89,7 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
             placeholder="Min Amount"
             value={vm.minAmount}
             onChangeText={vm.setMinAmount}
+            containerStyle={{ flex: 1 }}
             testID="journal-search-min-amount"
           />
           <AppText variant="caption" style={{ color: theme.textSecondary }}>
@@ -98,6 +99,7 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
             placeholder="Max Amount"
             value={vm.maxAmount}
             onChangeText={vm.setMaxAmount}
+            containerStyle={{ flex: 1 }}
             testID="journal-search-max-amount"
           />
           {(vm.searchQuery ||

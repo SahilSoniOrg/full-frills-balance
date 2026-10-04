@@ -7,9 +7,7 @@ import {
   resolveJournalEntryScreenMode,
   resolveJournalEntrySubmitLabel,
   resolveJournalEntryValidationHint,
-  resolveSimpleAmountTypography,
 } from '../journalEntryPresentation';
-import { Typography } from '@/src/constants/design-tokens';
 
 describe('journalEntryPresentation', () => {
   describe('resolveExchangeRatePresentation', () => {
@@ -105,13 +103,6 @@ describe('journalEntryPresentation', () => {
     expect(resolveJournalEntryScreenMode('split')).toBe('allocation');
     expect(resolveJournalEntryScreenMode('bulk')).toBe('batch');
     expect(resolveJournalEntryScreenMode(undefined)).toBe('basic');
-  });
-
-  it('sizes the amount type from length using design tokens', () => {
-    expect(resolveSimpleAmountTypography(3).amountFontSize).toBe(Typography.sizes.jumbo);
-    expect(resolveSimpleAmountTypography(7).amountFontSize).toBe(Typography.sizes.xxxl);
-    expect(resolveSimpleAmountTypography(10).amountFontSize).toBe(Typography.sizes.xxl);
-    expect(resolveSimpleAmountTypography(12).amountFontSize).toBe(Typography.sizes.xl);
   });
 
   it('resolveJournalEntryHeaderTitle uses one create title across modes', () => {

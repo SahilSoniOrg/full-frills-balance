@@ -87,6 +87,7 @@ export const FormHeroSection = ({
             currencySymbol={currencySymbol}
             precision={precision}
             variant="hero"
+            containerStyle={{ width: '100%', paddingHorizontal: 0 }}
             testID="hero-amount-input"
           />
         </>
