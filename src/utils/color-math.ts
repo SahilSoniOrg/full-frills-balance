@@ -1,13 +1,3 @@
-/**
- * Color Math Utilities - The Single Source of Truth for Design System Calculations
- *
- * WCAG 2.1 Compliant formulas for contrast, luminance, and opacity.
- */
-
-/**
- * Calculates the relative luminance of a color.
- * Formula: 0.2126 * R + 0.7152 * G + 0.0722 * B
- */
 export function getLuminance(hex: string): number {
   const cleanHex = hex.replace('#', '');
   const rIdx = cleanHex.length === 3 ? 0 : 0;

@@ -17,7 +17,7 @@ const rotateRight = (value: number, amount: number) =>
   (value >>> amount) | (value << (32 - amount));
 
 /** Synchronous SHA-256 for the cross-platform SMS dedupe key (native, web, and Jest). */
-export function sha256Hex(input: string): string {
+function sha256Hex(input: string): string {
   // Fingerprint input is normalized to ASCII before it reaches this function.
   const bytes = Array.from(input, char => char.charCodeAt(0) & 0xff);
   const bitLength = bytes.length * 8;

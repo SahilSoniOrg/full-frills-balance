@@ -90,7 +90,3 @@ export const getVariantColors = (
       };
   }
 };
-
-/** Foreground color for a variant, matching what AppText renders for the same `color`. */
-export const getVariantMainColor = (theme: Theme, variant: ComponentVariant): string =>
-  getVariantColors(theme, () => theme.text, variant).main;

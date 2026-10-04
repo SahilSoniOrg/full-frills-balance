@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { of as mockOf } from 'rxjs';
 import { useBudgetEditViewModel } from '@/src/features/budget/hooks/useBudgetEditViewModel';
-import { usePlannedPaymentFormScreen } from '@/src/features/planned-payments/hooks/usePlannedPaymentFormScreen';
+import { usePlannedPaymentForm } from '@/src/features/planned-payments/hooks/usePlannedPaymentForm';
 import { useConfirmUnsavedChanges } from '../useConfirmUnsavedChanges';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { createPlannedPayment } from '@/src/services/planned-payment/plannedPaymentCommands';
@@ -87,7 +87,7 @@ function useBudgetHarness() {
 }
 
 function usePaymentHarness() {
-  const vm = usePlannedPaymentFormScreen();
+  const vm = usePlannedPaymentForm();
   const guard = useConfirmUnsavedChanges({
     fingerprint: JSON.stringify(vm.form),
     baselineReady: vm.isHydrated,

@@ -25,7 +25,7 @@ export type ConvertAmountInput = ConvertAmountBaseInput &
 export type ConvertAmountSuccess = { ok: true; amount: number };
 export type ConvertAmountFailure = {
   ok: false;
-  reason: 'missing_rate' | 'same_currency';
+  reason: 'missing_rate';
 };
 export type ConvertAmountResult = ConvertAmountSuccess | ConvertAmountFailure;
 

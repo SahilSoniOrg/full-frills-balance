@@ -1,5 +1,5 @@
 import { computeSmsFingerprint } from '@/src/services/sms/pipeline/smsFingerprint';
-import { hashLegacySmsFingerprint, sha256Hex } from '@/src/utils/smsFingerprintHash';
+import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
 import {
   hashSmsMetadataFingerprints,
   sanitizeSmsAuditChanges,
@@ -25,8 +25,8 @@ describe('SMS privacy fingerprints and metadata', () => {
     expect(hashSmsMetadataFingerprints('{broken source')).toBe('{broken source');
   });
   it('uses standard SHA-256 and never persists sender or message text in a fingerprint', () => {
-    expect(sha256Hex('abc')).toBe(
-      'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+    expect(hashLegacySmsFingerprint('abc')).toBe(
+      'sha256:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
     );
     const fingerprint = computeSmsFingerprint(
       'PrivateBank',
@@ -40,7 +40,9 @@ describe('SMS privacy fingerprints and metadata', () => {
 
   it('rehashes malformed digest-looking legacy fingerprints instead of retaining them', () => {
     const malformed = 'sha256::PrivateMerchant spent 500::7';
-    expect(hashLegacySmsFingerprint(malformed)).toBe(`sha256:${sha256Hex(malformed)}`);
+    const hashedMalformed = hashLegacySmsFingerprint(malformed);
+    expect(hashedMalformed).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(hashLegacySmsFingerprint(hashedMalformed)).toBe(hashedMalformed);
     const validDigest = `sha256:${'a'.repeat(64)}`;
     expect(hashLegacySmsFingerprint(validDigest)).toBe(validDigest);
   });

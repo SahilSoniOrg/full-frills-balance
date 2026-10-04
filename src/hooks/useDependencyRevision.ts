@@ -1,6 +1,6 @@
 import { DependencyList, useLayoutEffect, useRef, useState } from 'react';
 
-export function areDependencyListsEqual(oldDeps: DependencyList, newDeps: DependencyList): boolean {
+function areDependencyListsEqual(oldDeps: DependencyList, newDeps: DependencyList): boolean {
   if (oldDeps.length !== newDeps.length) return false;
   return oldDeps.every((dep, i) => dep === newDeps[i]);
 }
