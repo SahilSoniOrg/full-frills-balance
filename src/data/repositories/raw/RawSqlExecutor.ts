@@ -4,14 +4,14 @@ import { logger } from '@/src/utils/logger';
 
 /** Narrow adapter seam for raw reads. SQL and row types remain with feature queries. */
 export class RawSqlExecutor {
-  private readonly keyCache = new Map<string, string>();
   private readonly mappingCache = new Map<string, { original: string; camel: string }[]>();
+  private readonly camelCaseByColumn = new Map<string, string>();
 
   private toCamelCase(value: string): string {
-    const cached = this.keyCache.get(value);
+    const cached = this.camelCaseByColumn.get(value);
     if (cached) return cached;
     const result = value.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
-    this.keyCache.set(value, result);
+    this.camelCaseByColumn.set(value, result);
     return result;
   }
 

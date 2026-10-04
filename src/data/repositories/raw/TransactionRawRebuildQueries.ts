@@ -9,6 +9,40 @@ import type { RawSqlArg } from '@/src/data/database/DatabaseUtils';
 import { RebuildTransaction } from '../TransactionTypes';
 import { rawSqlExecutor } from './RawSqlExecutor';
 
+const CURSOR_TRANSACTION_DATE_SQL = `SELECT cursor_t.transaction_date
+      FROM transactions cursor_t
+      JOIN journals cursor_j ON cursor_t.journal_id = cursor_j.id
+      WHERE cursor_t.id = ?
+        AND cursor_t.workplace_id = ?
+        AND cursor_j.workplace_id = ?`;
+const CURSOR_TRANSACTION_CREATED_AT_SQL = `SELECT cursor_t.created_at
+      FROM transactions cursor_t
+      JOIN journals cursor_j ON cursor_t.journal_id = cursor_j.id
+      WHERE cursor_t.id = ?
+        AND cursor_t.workplace_id = ?
+        AND cursor_j.workplace_id = ?`;
+
+function cursorComparisonSql(
+  mode: 'upTo' | 'after',
+  dateSql: string,
+  createdAtSql: string,
+): string {
+  if (mode === 'upTo') {
+    return `AND (t.transaction_date < (${dateSql})
+                OR (t.transaction_date = (${dateSql})
+                    AND t.created_at < (${createdAtSql}))
+                OR (t.transaction_date = (${dateSql})
+                    AND t.created_at = (${createdAtSql})
+                    AND t.id <= ?))`;
+  }
+  return `AND (t.transaction_date > (${dateSql})
+                OR (t.transaction_date = (${dateSql})
+                    AND t.created_at > (${createdAtSql}))
+                OR (t.transaction_date = (${dateSql})
+                    AND t.created_at = (${createdAtSql})
+                    AND t.id > ?))`;
+}
+
 export class TransactionRawRebuildQueries {
   async getAccountSumRaw(
     workplaceId: WorkplaceId,
@@ -23,18 +57,6 @@ export class TransactionRawRebuildQueries {
       : `CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE -t.amount END`;
 
     const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
-    const cursorDateSql = `SELECT cursor_t.transaction_date
-      FROM transactions cursor_t
-      JOIN journals cursor_j ON cursor_t.journal_id = cursor_j.id
-      WHERE cursor_t.id = ?
-        AND cursor_t.workplace_id = ?
-        AND cursor_j.workplace_id = ?`;
-    const cursorCreatedAtSql = `SELECT cursor_t.created_at
-      FROM transactions cursor_t
-      JOIN journals cursor_j ON cursor_t.journal_id = cursor_j.id
-      WHERE cursor_t.id = ?
-        AND cursor_t.workplace_id = ?
-        AND cursor_j.workplace_id = ?`;
 
     const sql = `
       SELECT SUM(${multiplierSql}) as total
@@ -47,26 +69,8 @@ export class TransactionRawRebuildQueries {
         AND j.workplace_id = ?
         AND j.deleted_at IS NULL
         AND j.status IN (${placeholders})
-        ${
-          upToTransactionId
-            ? `AND (t.transaction_date < (${cursorDateSql})
-                OR (t.transaction_date = (${cursorDateSql})
-                    AND t.created_at < (${cursorCreatedAtSql}))
-                OR (t.transaction_date = (${cursorDateSql})
-                    AND t.created_at = (${cursorCreatedAtSql})
-                    AND t.id <= ?))`
-            : ''
-        }
-        ${
-          afterTransactionId
-            ? `AND (t.transaction_date > (${cursorDateSql})
-                OR (t.transaction_date = (${cursorDateSql})
-                    AND t.created_at > (${cursorCreatedAtSql}))
-                OR (t.transaction_date = (${cursorDateSql})
-                    AND t.created_at = (${cursorCreatedAtSql})
-                    AND t.id > ?))`
-            : ''
-        }
+        ${upToTransactionId ? cursorComparisonSql('upTo', CURSOR_TRANSACTION_DATE_SQL, CURSOR_TRANSACTION_CREATED_AT_SQL) : ''}
+        ${afterTransactionId ? cursorComparisonSql('after', CURSOR_TRANSACTION_DATE_SQL, CURSOR_TRANSACTION_CREATED_AT_SQL) : ''}
     `;
     const args: RawSqlArg[] = [
       accountId,
