@@ -111,6 +111,7 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
 
   return {
     form,
+    isHydrated: !id || seededId === id,
     setForm,
     isValid,
     isSubmitting,

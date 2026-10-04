@@ -111,6 +111,7 @@ export function usePlannedPaymentFormScreen(id?: string) {
   return {
     accounts,
     form: vm.form,
+    isHydrated: vm.isHydrated,
     isValid: vm.isValid,
     isSubmitting: vm.isSubmitting,
     handleSave: vm.handleSave,

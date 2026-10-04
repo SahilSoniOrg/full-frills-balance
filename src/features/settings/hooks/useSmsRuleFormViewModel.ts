@@ -59,6 +59,7 @@ export interface SmsRuleFormViewModel {
   setIsActive: (val: boolean) => void;
   pickingAccountFor: 'source' | 'category' | null;
   setPickingAccountFor: (val: 'source' | 'category' | null) => void;
+  isLoaded: boolean;
   isSubmitting: boolean;
   isValid: boolean;
   handleSave: () => Promise<void>;
@@ -78,6 +79,7 @@ type SeedInput = {
 export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleFormViewModel {
   const { workplaceId } = useWorkplace();
   const { accounts } = useAccounts(workplaceId);
+  const [isLoaded, setIsLoaded] = useState(!id);
 
   const [mode, setMode] = useState<SmsRuleMode>('builder');
   const [legacySenderMatch, setLegacySenderMatch] = useState(seed?.senderMatch || '');
@@ -132,6 +134,8 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
       } catch {
         toast.error('Failed to load rule');
         AppNavigation.back();
+      } finally {
+        setIsLoaded(true);
       }
     };
 
@@ -311,6 +315,7 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
     pickingAccountFor,
     setPickingAccountFor,
     isSubmitting,
+    isLoaded,
     isValid,
     handleSave,
     handleDelete,

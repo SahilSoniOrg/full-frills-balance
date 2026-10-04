@@ -42,6 +42,7 @@ describe('planned payment repeat count editing', () => {
 
   it('loads the count and saves seven weeks with a valid Sunday after switching units', async () => {
     const { result } = renderHook(() => usePlannedPaymentFormScreen(payment.id));
+    expect(result.current.isHydrated).toBe(true);
     expect(result.current.form.intervalN).toBe(2);
     act(() => {
       result.current.setField('intervalType', PlannedPaymentInterval.WEEKLY);
