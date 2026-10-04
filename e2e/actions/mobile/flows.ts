@@ -70,14 +70,17 @@ export async function createAssetAccount(name: string): Promise<void> {
 
 export async function openBudgetFormFromCommitments(): Promise<void> {
   await openCommitmentsTab();
-  await tapByLabel('Create a new budget');
-  await assertVisibleById(budgets.intervalItem('DAILY'));
+  await tapById('commitments-tabs-item-budgets');
+  await tapById('fab-button');
+  await assertVisibleById(budgets.nameInput);
 }
 
 export async function selectBudgetInterval(
   interval: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY',
 ): Promise<void> {
+  await tapById(budgets.scheduleField);
   await tapById(budgets.intervalItem(interval));
+  await tapByLabel('Done');
 }
 
 const SAFE_TO_SPEND_PROJECTED_GAP_COPY = 'safe-to-spend-unlocks-copy';
@@ -98,7 +101,7 @@ export { SAFE_TO_SPEND_PROJECTED_GAP_COPY };
 export async function createPlannedPayment(name: string, amount: string): Promise<void> {
   await openCommitmentsTab();
   await tapById('commitments-tabs-item-planned');
-  await tapByLabel('Add bill');
+  await tapById(plannedPayments.fab);
   await typeById(plannedPayments.heroName, name);
   await element(by.id(plannedPayments.heroName)).tapReturnKey();
   await tapById(`${plannedPayments.heroAmount}-calculator`);
@@ -111,6 +114,9 @@ export async function createPlannedPayment(name: string, amount: string): Promis
   await tapByLabel(/^Checking Account/);
   await tapById(plannedPayments.toAccount);
   await tapByLabel(/^Landlord/);
+  await tapById(plannedPayments.schedule);
+  await tapById(plannedPayments.scheduleDay(5));
+  await tapByLabel('Done');
   await tapById(plannedPayments.submitFooter);
   await assertTextVisible(name);
 }

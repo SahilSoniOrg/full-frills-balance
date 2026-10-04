@@ -49,15 +49,23 @@ export const commitments = {
 } as const;
 
 export const budgets = {
+  nameInput: 'hero-name-input',
+  scheduleField: 'budget-schedule-field',
   intervalItem: (interval: string) => `budget-interval-type-item-${interval}`,
+  categoryAdd: 'budget-category-add',
+  historyChart: 'budget-spending-history-chart',
+  categorySuggestion: (accountId: string) => `budget-category-suggestion-${accountId}`,
 } as const;
 
 export const plannedPayments = {
+  fab: 'fab-button',
   heroName: 'hero-name-input',
   heroAmount: 'hero-amount-input',
   fromAccount: 'planned-payment-from-account',
   toAccount: 'planned-payment-to-account',
   submitFooter: 'submit-footer-button',
+  schedule: 'planned-payment-repeat-count',
+  scheduleDay: (day: number) => `schedule-day-${day}`,
 } as const;
 
 export const smsInbox = {

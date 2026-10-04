@@ -1,8 +1,12 @@
 /** UI copy catalog. Prefer adding new domains as `copy/domains/<name>Strings.ts` re-exported here when a section grows past ~200 lines. */
 import { commitmentsRedesignStrings } from './domains/commitmentsRedesignStrings';
+import { accountFormStrings } from './domains/accountFormStrings';
 import { budgetDetailRedesignStrings } from './domains/budgetDetailRedesignStrings';
+import { budgetFormStrings } from './domains/budgetFormStrings';
 import { plannedListRedesignStrings } from './domains/plannedListRedesignStrings';
 import { plannedDetailRedesignStrings } from './domains/plannedDetailRedesignStrings';
+import { formPrimitivesStrings } from './domains/formPrimitivesStrings';
+import { plannedPaymentFormStrings } from './domains/plannedPaymentFormStrings';
 import type { AuditEntityType } from '@/src/types/enums';
 import type { AuditEventType } from '@/src/types/auditEvents';
 
@@ -15,8 +19,12 @@ function defineAuditEventLabels<T extends Record<AuditEventType, string> & Recor
 export const UI_STRINGS = {
   commitmentsRedesign: commitmentsRedesignStrings,
   budgetDetailRedesign: budgetDetailRedesignStrings,
+  accountForm: accountFormStrings,
+  budgetForm: budgetFormStrings,
   plannedListRedesign: plannedListRedesignStrings,
   plannedDetailRedesign: plannedDetailRedesignStrings,
+  formPrimitives: formPrimitivesStrings,
+  plannedPaymentForm: plannedPaymentFormStrings,
   common: {
     loading: 'Loading…',
     loadingMore: 'Loading…',
