@@ -1,9 +1,11 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { PlannedPaymentInterval } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
+import type { ScheduleValue } from '@/src/components/forms';
 import { useAccounts } from '@/src/components/account-selection';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { usePlannedPaymentForm } from '@/src/features/planned-payments/hooks/usePlannedPaymentForm';
+import { sortDestinationAccounts } from '@/src/features/planned-payments/helpers/sortDestinationAccounts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo, useState } from 'react';
 
@@ -13,6 +15,33 @@ export function usePlannedPaymentFormScreen(id?: string) {
   const { accounts } = useAccounts(workplaceId);
   const { currencies } = useCurrencies();
   const [pickingAccountFor, setPickingAccountFor] = useState<'from' | 'to' | null>(null);
+  const isEditMode = id !== undefined;
+  const schedule: ScheduleValue = {
+    intervalType: vm.form.intervalType,
+    intervalN: vm.form.intervalN,
+    recurrenceDay: vm.form.recurrenceDay,
+    recurrenceMonth: vm.form.recurrenceMonth,
+  };
+
+  const setSchedule = useCallback((value: ScheduleValue) => {
+    vm.setForm(current => ({
+      ...current,
+      intervalType: value.intervalType as PlannedPaymentInterval,
+      intervalN: value.intervalN,
+      recurrenceDay: value.recurrenceDay,
+      recurrenceMonth: value.recurrenceMonth,
+    }));
+  }, [vm]);
+
+  const destinationAccounts = useMemo(() => sortDestinationAccounts(accounts), [accounts]);
+
+  const swapAccounts = useCallback(() => {
+    vm.setForm(current => ({
+      ...current,
+      fromAccountId: current.toAccountId,
+      toAccountId: current.fromAccountId,
+    }));
+  }, [vm]);
 
   const setField = useCallback(
     <K extends keyof typeof vm.form>(field: K, value: (typeof vm.form)[K]) => {
@@ -102,18 +131,30 @@ export function usePlannedPaymentFormScreen(id?: string) {
     () => ({
       visible: pickingAccountFor !== null,
       target: pickingAccountFor,
+      accounts: pickingAccountFor === 'to' ? destinationAccounts : accounts,
       open: (target: 'from' | 'to') => setPickingAccountFor(target),
       close: () => setPickingAccountFor(null),
       selectedId: pickingAccountFor === 'from' ? vm.form.fromAccountId : vm.form.toAccountId,
       onSelect: handleAccountSelect,
     }),
-    [pickingAccountFor, vm.form.fromAccountId, vm.form.toAccountId, handleAccountSelect],
+    [
+      accounts,
+      destinationAccounts,
+      pickingAccountFor,
+      vm.form.fromAccountId,
+      vm.form.toAccountId,
+      handleAccountSelect,
+    ],
   );
 
   return {
     accounts,
     currencies,
     form: vm.form,
+    schedule,
+    setSchedule,
+    swapAccounts,
+    autoFocusAmount: !isEditMode,
     isHydrated: vm.isHydrated,
     isValid: vm.isValid,
     requirementHint: vm.requirementHint,
