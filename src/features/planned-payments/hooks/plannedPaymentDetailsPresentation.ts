@@ -8,6 +8,37 @@ import { formatRecurrence } from '@/src/utils/recurrenceLabels';
 import dayjs from 'dayjs';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 
+export function daysUntilPlannedOccurrence(occurrenceDate: number, now: number): number {
+  return dayjs(occurrenceDate).startOf('day').diff(dayjs(now).startOf('day'), 'day');
+}
+
+export function presentPlannedListOccurrenceTiming(occurrenceDate: number, now: number) {
+  const days = daysUntilPlannedOccurrence(occurrenceDate, now);
+  const strings = AppConfig.strings.plannedListRedesign;
+  const isOverdue = days < 0;
+  const isDueSoon = !isOverdue && days <= 3;
+  return {
+    isOverdue,
+    isDueSoon,
+    daysLate: isOverdue ? Math.abs(days) : 0,
+    daysLateLabel: isOverdue ? strings.daysLate(Math.abs(days)) : undefined,
+  };
+}
+
+export function presentPlannedPaymentDetailsUrgency(
+  occurrenceDate: number | undefined,
+  now: number,
+  fallbackLabel: string,
+): string {
+  if (occurrenceDate == null) return fallbackLabel;
+  const daysUntil = daysUntilPlannedOccurrence(occurrenceDate, now);
+  const copy = AppConfig.strings.plannedDetailRedesign;
+  if (daysUntil < 0) return copy.daysLate(Math.abs(daysUntil));
+  if (daysUntil === 0) return copy.dueToday;
+  if (daysUntil <= 3) return daysUntil === 1 ? copy.dueTomorrow : copy.dueInDays(daysUntil);
+  return copy.inDays(daysUntil);
+}
+
 export function presentPlannedPaymentDue(
   item: Pick<PlannedPaymentObligation, 'status' | 'nextDueOccurrence'>,
   now: number,
@@ -32,7 +63,7 @@ export function presentPlannedPaymentDue(
           : undefined,
     };
   }
-  const days = dayjs(item.nextDueOccurrence).startOf('day').diff(dayjs(now).startOf('day'), 'day');
+  const days = daysUntilPlannedOccurrence(item.nextDueOccurrence, now);
   return {
     label:
       days < 0
@@ -44,17 +75,6 @@ export function presentPlannedPaymentDue(
             : AppConfig.strings.plannedDetailRedesign.dueInDays(days),
     color: days < 0 ? 'error' : days <= 3 ? 'warning' : 'secondary',
     days,
-  };
-}
-
-export function groupPlannedPaymentEntries(history: EnrichedJournal[]) {
-  return {
-    scheduled: history
-      .filter(entry => entry.status === 'PLANNED' || entry.status === 'PAUSED')
-      .sort((a, b) => a.journalDate - b.journalDate),
-    recorded: history
-      .filter(entry => entry.status !== 'PLANNED' && entry.status !== 'PAUSED')
-      .sort((a, b) => b.journalDate - a.journalDate),
   };
 }
 
@@ -168,7 +188,12 @@ export function getPlannedPaymentHistoryPresentation(
         : undefined,
     differenceCurrencyCode:
       !isSkipped && !isReversed && !isWaiting && amountDiffers ? plannedCurrencyCode : undefined,
-    differenceDirection: journal.totalAmount >= plannedAmount ? 'more' : 'less',
+    differenceDirection:
+      !isSkipped && !isReversed && !isWaiting && amountDiffers
+        ? journal.totalAmount >= plannedAmount
+          ? 'more'
+          : 'less'
+        : undefined,
     expectedAmount:
       !isSkipped && !isReversed && !isWaiting && !sameCurrency ? plannedAmount : undefined,
     expectedCurrencyCode:

@@ -48,7 +48,7 @@ function PlannedPaymentDetailsScreen() {
       : [];
     const detailChrome = buildDetailNavChrome({
       phase: vm.isLoading ? 'loading' : vm.isMissing ? 'missing' : 'ready',
-      readyTitle: vm.nameText ?? vm.title ?? AppConfig.strings.plannedPayments.details.screenTitle,
+      readyTitle: vm.nameText ?? AppConfig.strings.plannedPayments.details.screenTitle,
       loadingTitle: AppConfig.strings.plannedPayments.details.screenTitle,
       onBack: vm.onBack,
       headerActions: actions.length ? (
@@ -67,7 +67,6 @@ function PlannedPaymentDetailsScreen() {
     vm.isMissing,
     vm.isSelectionModeActive,
     vm.onBack,
-    vm.title,
     vm.nameText,
     vm.status,
     vm.pendingAction,

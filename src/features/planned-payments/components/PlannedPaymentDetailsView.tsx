@@ -22,15 +22,14 @@ import { PlannedPaymentStatus } from '@/src/types/enums';
 import { getNow } from '@/src/utils/dateUtils';
 import type { PlannedPaymentDetailsViewModel } from '../hooks/usePlannedPaymentDetailsViewModel';
 import { PlannedPaymentActivityOverview } from './PlannedPaymentActivityOverview';
-import { plannedMoneyDiffers } from '../hooks/plannedPaymentDetailsPresentation';
+import {
+  daysUntilPlannedOccurrence,
+  plannedMoneyDiffers,
+  presentPlannedPaymentDetailsUrgency,
+  presentPlannedPaymentDue,
+} from '../hooks/plannedPaymentDetailsPresentation';
 
 const copy = AppConfig.strings.plannedDetailRedesign;
-
-function getDaysUntil(date?: number) {
-  return date == null
-    ? undefined
-    : dayjs(date).startOf('day').diff(dayjs(getNow()).startOf('day'), 'day');
-}
 
 export function PlannedPaymentDetailsView({
   chrome,
@@ -52,7 +51,13 @@ export function PlannedPaymentDetailsView({
     vm.amount != null &&
     !!vm.currencyCode &&
     plannedMoneyDiffers(occurrence.amount, occurrence.currencyCode, vm.amount, vm.currencyCode);
-  const daysUntil = getDaysUntil(vm.showcasedOccurrenceDate ?? vm.nextOccurrenceDate);
+  const showcasedDate = vm.showcasedOccurrenceDate ?? vm.nextOccurrenceDate;
+  const daysUntil =
+    showcasedDate == null ? undefined : daysUntilPlannedOccurrence(showcasedDate, getNow());
+  const scheduleDue = presentPlannedPaymentDue(
+    { status: vm.status ?? PlannedPaymentStatus.ACTIVE, nextDueOccurrence: showcasedDate },
+    getNow(),
+  );
   const eyebrow = isPaused
     ? vm.pausedSinceDate == null
       ? copy.paused
@@ -68,18 +73,8 @@ export function PlannedPaymentDetailsView({
     ? copy.paused
     : isEndedWithoutOutstanding
       ? copy.ended
-      : daysUntil == null
-        ? (vm.dueLabel ?? '')
-        : daysUntil < 0
-          ? copy.daysLate(Math.abs(daysUntil))
-          : daysUntil === 0
-            ? copy.dueToday
-            : daysUntil <= 3
-              ? daysUntil === 1
-                ? copy.dueTomorrow
-                : copy.dueInDays(daysUntil)
-              : copy.inDays(daysUntil);
-  const dueDateText = vm.showcasedOccurrenceDate ?? vm.nextOccurrenceDate;
+      : presentPlannedPaymentDetailsUrgency(showcasedDate, getNow(), scheduleDue.label);
+  const dueDateText = showcasedDate;
   const formattedDueDate = dueDateText
     ? dayjs(dueDateText).format('dddd, MMM D')
     : (vm.nextOccurrenceText ?? '');
@@ -225,9 +220,9 @@ export function PlannedPaymentDetailsView({
                 {accountChip(vm.toAccount, copy.accountUnavailable, copy.to)}
               </Row>
             ) : null}
-            {vm.scheduleHelpText && (
+            {scheduleDue.helpText && (
               <AppText variant="caption" color="secondary">
-                {vm.scheduleHelpText}
+                {scheduleDue.helpText}
               </AppText>
             )}
             {hasOccurrence && (
@@ -327,9 +322,9 @@ export function PlannedPaymentDetailsView({
                 historyLoadingMore={vm.isLoadingMore}
                 hasMore={vm.hasMore}
                 startDate={vm.firstRecordedDate}
-                ruleAmount={vm.rawAmount ?? vm.amount ?? 0}
+                ruleAmount={vm.amount ?? 0}
                 ruleCurrencyCode={vm.currencyCode ?? ''}
-                ruleName={vm.rawName ?? vm.nameText ?? ''}
+                ruleName={vm.nameText ?? ''}
                 isPaused={isPaused}
                 isEnded={isEnded}
                 isLoading={vm.isLoadingActivity}

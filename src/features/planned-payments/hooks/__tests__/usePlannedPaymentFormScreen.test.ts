@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react-native';
 import { usePlannedPaymentRecord } from '../usePlannedPaymentRecord';
-import { usePlannedPaymentFormScreen } from '../usePlannedPaymentFormScreen';
+import { usePlannedPaymentForm } from '../usePlannedPaymentForm';
 import { updatePlannedPayment } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { useAccounts } from '@/src/components/account-selection';
 import type { PlannedPaymentObligation } from '@/src/services/planned-payment/plannedPaymentReadService';
@@ -56,7 +56,7 @@ describe('planned payment repeat count editing', () => {
   });
 
   it('loads the count and saves seven weeks with a valid Sunday after switching units', async () => {
-    const { result } = renderHook(() => usePlannedPaymentFormScreen(payment.id));
+    const { result } = renderHook(() => usePlannedPaymentForm(payment.id));
     expect(result.current.isHydrated).toBe(true);
     expect(result.current.form.intervalN).toBe(2);
     act(() => {
@@ -78,7 +78,7 @@ describe('planned payment repeat count editing', () => {
   });
 
   it.each([0, -1, 1.5, Number.NaN, 10000])('blocks saving an invalid count: %s', async count => {
-    const { result } = renderHook(() => usePlannedPaymentFormScreen(payment.id));
+    const { result } = renderHook(() => usePlannedPaymentForm(payment.id));
     act(() => result.current.setField('intervalN', count));
     expect(result.current.isValid).toBe(false);
     await act(async () => {
@@ -88,7 +88,7 @@ describe('planned payment repeat count editing', () => {
   });
 
   it('exposes and sets the schedule as one four-field update', () => {
-    const { result } = renderHook(() => usePlannedPaymentFormScreen(payment.id));
+    const { result } = renderHook(() => usePlannedPaymentForm(payment.id));
     expect(result.current.schedule).toEqual({
       intervalType: 'MONTHLY',
       intervalN: 2,
@@ -112,14 +112,14 @@ describe('planned payment repeat count editing', () => {
   });
 
   it('swaps the From and To account IDs and focuses amount only for creation', () => {
-    const { result } = renderHook(() => usePlannedPaymentFormScreen(payment.id));
+    const { result } = renderHook(() => usePlannedPaymentForm(payment.id));
     expect(result.current.autoFocusAmount).toBe(false);
     act(() => result.current.swapAccounts());
     expect(result.current.form.fromAccountId).toBe(payment.toAccountId);
     expect(result.current.form.toAccountId).toBe(payment.fromAccountId);
 
     jest.mocked(usePlannedPaymentRecord).mockReturnValue({ item: null, isLoading: false });
-    const createModel = renderHook(() => usePlannedPaymentFormScreen());
+    const createModel = renderHook(() => usePlannedPaymentForm());
     expect(createModel.result.current.autoFocusAmount).toBe(true);
   });
 
@@ -138,7 +138,7 @@ describe('planned payment repeat count editing', () => {
       ],
     } as ReturnType<typeof useAccounts>);
 
-    const { result } = renderHook(() => usePlannedPaymentFormScreen());
+    const { result } = renderHook(() => usePlannedPaymentForm());
     act(() => result.current.pickerState.open('to'));
     expect(result.current.pickerState.accounts.map(item => item.id)).toEqual([
       asAccountId('expense'),
@@ -172,7 +172,7 @@ describe('planned payment FX policy', () => {
     });
   });
   it('shows a current automatic estimate without persisting a destination amount', async () => {
-    const { result } = renderHook(() => usePlannedPaymentFormScreen(payment.id));
+    const { result } = renderHook(() => usePlannedPaymentForm(payment.id));
     expect(result.current.fxPair.convertedAmount).toBe(8500);
     expect(result.current.form.destinationAmount).toBeUndefined();
     await act(async () => result.current.handleSave());
@@ -188,7 +188,7 @@ describe('planned payment FX policy', () => {
     );
   });
   it('saves two fixed native amounts even when the implied rate is parity', async () => {
-    const { result } = renderHook(() => usePlannedPaymentFormScreen(payment.id));
+    const { result } = renderHook(() => usePlannedPaymentForm(payment.id));
     act(() => {
       result.current.setFxMode('fixed');
       result.current.setField('destinationAmount', '100');
@@ -203,7 +203,7 @@ describe('planned payment FX policy', () => {
     );
   });
   it('retains fixed amounts when reselecting either existing account', () => {
-    const { result } = renderHook(() => usePlannedPaymentFormScreen(payment.id));
+    const { result } = renderHook(() => usePlannedPaymentForm(payment.id));
     act(() => {
       result.current.setFxMode('fixed');
       result.current.setField('destinationAmount', '100');
@@ -224,7 +224,7 @@ describe('planned payment FX policy', () => {
         item: { ...payment, currencyCode: 'EUR', toAccountId: inr.id },
         isLoading: false,
       });
-    const { result } = renderHook(() => usePlannedPaymentFormScreen(payment.id));
+    const { result } = renderHook(() => usePlannedPaymentForm(payment.id));
     act(() => result.current.selectDestination(otherInr.id));
     expect(result.current.form).toMatchObject({
       fxMode: 'automatic',
@@ -234,14 +234,14 @@ describe('planned payment FX policy', () => {
     expect(result.current.isValid).toBe(false);
   });
   it('blocks saving the same account on both sides', async () => {
-    const { result } = renderHook(() => usePlannedPaymentFormScreen(payment.id));
+    const { result } = renderHook(() => usePlannedPaymentForm(payment.id));
     act(() => result.current.selectDestination(usd.id));
     expect(result.current.isValid).toBe(false);
     await act(async () => result.current.handleSave());
     expect(updatePlannedPayment).not.toHaveBeenCalled();
   });
   it('blocks a fixed schedule with a missing destination amount', async () => {
-    const { result } = renderHook(() => usePlannedPaymentFormScreen(payment.id));
+    const { result } = renderHook(() => usePlannedPaymentForm(payment.id));
     act(() => {
       result.current.setFxMode('fixed');
       result.current.setField('destinationAmount', '');
@@ -251,7 +251,7 @@ describe('planned payment FX policy', () => {
     expect(updatePlannedPayment).not.toHaveBeenCalled();
   });
   it('manual FX turns off automatic recording in the draft and save payload', async () => {
-    const { result } = renderHook(() => usePlannedPaymentFormScreen(payment.id));
+    const { result } = renderHook(() => usePlannedPaymentForm(payment.id));
     act(() => result.current.setField('isAutoPost', true));
     act(() => result.current.setFxMode('manual'));
     expect(result.current.form.isAutoPost).toBe(false);
@@ -265,7 +265,7 @@ describe('planned payment FX policy', () => {
     );
   });
   it('swapping foreign accounts changes source currency and requires a new amount', () => {
-    const { result } = renderHook(() => usePlannedPaymentFormScreen(payment.id));
+    const { result } = renderHook(() => usePlannedPaymentForm(payment.id));
     act(() => {
       result.current.setFxMode('fixed');
       result.current.setField('destinationAmount', '100');
@@ -284,7 +284,7 @@ describe('planned payment FX policy', () => {
     jest
       .mocked(useAccounts)
       .mockReturnValue({ accounts: [usd, inr, otherUsd] } as ReturnType<typeof useAccounts>);
-    const { result } = renderHook(() => usePlannedPaymentFormScreen(payment.id));
+    const { result } = renderHook(() => usePlannedPaymentForm(payment.id));
     act(() => result.current.setFxMode('fixed'));
     act(() => result.current.selectDestination(otherUsd.id));
     expect(result.current.form.fxMode).toBe('automatic');

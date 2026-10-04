@@ -1,11 +1,8 @@
-import { withPlannedPaymentFxReview } from '@/src/services/planned-payment/plannedPaymentFxReviewRequest';
+import { recordPlannedOccurrenceWithFxReview } from '@/src/features/planned-payments/hooks/recordPlannedOccurrenceWithFxReview';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments/types/PlannedOccurrenceViewModel';
-import {
-  postPlannedJournalOccurrence,
-  skipPlannedPaymentOccurrence,
-} from '@/src/services/planned-payment/plannedPaymentOrchestration';
+import { skipPlannedPaymentOccurrence } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { analytics } from '@/src/services/analytics';
 import { WorkplaceId } from '@/src/types/ids';
 import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
@@ -59,21 +56,11 @@ export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
           destructiveCancel: true,
           onConfirm: async () => {
             try {
-              const completed = await withPlannedPaymentFxReview(review =>
-                review
-                  ? postPlannedJournalOccurrence(
-                      workplaceId,
-                      plannedPaymentId,
-                      journalId,
-                      item.occurrenceDate,
-                      review,
-                    )
-                  : postPlannedJournalOccurrence(
-                      workplaceId,
-                      plannedPaymentId,
-                      journalId,
-                      item.occurrenceDate,
-                    ),
+              const completed = await recordPlannedOccurrenceWithFxReview(
+                workplaceId,
+                plannedPaymentId,
+                item.occurrenceDate,
+                journalId,
               );
               if (!completed) return;
               analytics.trackFeatureUsage('planned_payment', 'occurrence_paid', {

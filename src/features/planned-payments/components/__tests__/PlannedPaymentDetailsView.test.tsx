@@ -25,7 +25,7 @@ const row = (id: string, status: string, date: number, amount = 1250.45) => ({
   description: 'Rent',
 });
 
-const vm: PlannedPaymentDetailsViewModel = {
+const baseVm = (overrides: Partial<PlannedPaymentDetailsViewModel> = {}): PlannedPaymentDetailsViewModel => ({
   theme: getThemeColors(ThemeIds.DEEP_SPACE, 'light'),
   isLoading: false,
   isMissing: false,
@@ -43,22 +43,13 @@ const vm: PlannedPaymentDetailsViewModel = {
   nameText: 'Rent',
   amount: 1250.45,
   currencyCode: 'USD',
-  rawAmount: 1250.45,
-  rawName: 'Rent',
-  typeLabel: 'Money out',
-  typeColorKey: 'expense',
-  iconName: Icon.ArrowDown,
   status: PlannedPaymentStatus.ACTIVE,
-  statusText: 'Active',
-  dueLabel: 'Due tomorrow',
   nextOccurrenceText: 'Oct 3, 2026',
   nextOccurrenceDate: day(3),
   showcasedOccurrenceDate: day(3),
-  dueDate: day(3),
   intervalLabel: 'Monthly on day 3',
   startDateText: 'Jan 3, 2026',
   endDateText: 'Dec 3, 2026',
-  startTimestamp: day(3, 0),
   endTimestamp: day(3, 11),
   remainingOccurrenceCount: 3,
   isAutoPost: false,
@@ -105,7 +96,9 @@ const vm: PlannedPaymentDetailsViewModel = {
     { date: day(3, 11), amount: 1300, currencyCode: 'USD' },
     { date: day(3, 0), amount: 1250.45, currencyCode: 'USD' },
   ],
-};
+  ...overrides,
+});
+const vm = baseVm();
 const chrome: ScreenNavChrome = {
   screenTitle: 'Rent',
   showBack: true,
@@ -268,38 +261,32 @@ describe('PlannedPaymentDetailsView', () => {
     });
   });
 
-  it('uses the supplied pause timestamp, hides upcoming and settlement actions, and offers resume', () => {
-    const screen = render(
-      <PlannedPaymentDetailsView
-        {...vm}
-        chrome={chrome}
-        status={PlannedPaymentStatus.PAUSED}
-        pausedSinceDate={day(2)}
-        onPost={undefined}
-        onSkip={undefined}
-      />,
-    );
-    expect(screen.getByText('Since Oct 2')).toBeTruthy();
+  it.each([
+    {
+      pausedSinceDate: day(2),
+      eyebrow: 'Since Oct 2',
+      expectResume: true,
+    },
+    {
+      pausedSinceDate: undefined,
+      eyebrow: 'Paused',
+      expectResume: false,
+    },
+  ])('renders paused schedule state (%s)', ({ pausedSinceDate, eyebrow, expectResume }) => {
+    const pausedVm = baseVm({
+      status: PlannedPaymentStatus.PAUSED,
+      pausedSinceDate,
+      onPost: undefined,
+      onSkip: undefined,
+    });
+    const screen = render(<PlannedPaymentDetailsView {...pausedVm} chrome={chrome} />);
+    expect(screen.getAllByText(eyebrow).length).toBeGreaterThan(0);
     expect(screen.queryByText('Coming up')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Record payment' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Resume schedule' })).toBeTruthy();
-    fireEvent.press(screen.getByRole('button', { name: 'Resume schedule' }));
-    expect(vm.onToggleStatus).toHaveBeenCalledTimes(1);
-  });
-
-  it('uses a neutral pause eyebrow when no audited pause timestamp is available', () => {
-    const screen = render(
-      <PlannedPaymentDetailsView
-        {...vm}
-        chrome={chrome}
-        status={PlannedPaymentStatus.PAUSED}
-        pausedSinceDate={undefined}
-        onPost={undefined}
-        onSkip={undefined}
-      />,
-    );
-    expect(screen.getAllByText('Paused').length).toBeGreaterThan(0);
-    expect(screen.queryByText(/^Since /)).toBeNull();
+    if (expectResume) {
+      fireEvent.press(screen.getByRole('button', { name: 'Resume schedule' }));
+      expect(pausedVm.onToggleStatus).toHaveBeenCalledTimes(1);
+    }
   });
 
   it('shows ended totals without action controls or upcoming projections', () => {

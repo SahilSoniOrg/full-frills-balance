@@ -4,8 +4,12 @@ import { Icon, AppIcon, AppSurface, PressScaleTouchable, AppText } from '@/src/c
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PlannedPaymentInterval } from '@/src/types/enums';
-import { formatPlannedPaymentInterval } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
+import {
+  formatPlannedPaymentInterval,
+  presentPlannedListOccurrenceTiming,
+} from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
 import dayjs from 'dayjs';
+import { getNow } from '@/src/utils/dateUtils';
 import type { PlannedPaymentListOccurrence } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
@@ -35,12 +39,10 @@ function PlannedPaymentCardComponent({
   const formatMoney = useMoneyFormat({ style: 'compact' });
   const strings = AppConfig.strings.plannedListRedesign;
   const item = occurrence.payment;
-  const isOverdue = dayjs(occurrence.date).startOf('day').isBefore(dayjs().startOf('day'));
-  const daysLate = isOverdue
-    ? dayjs().startOf('day').diff(dayjs(occurrence.date).startOf('day'), 'day')
-    : 0;
-  const isDueSoon =
-    !isOverdue && dayjs(occurrence.date).startOf('day').diff(dayjs().startOf('day'), 'day') <= 3;
+  const { isOverdue, isDueSoon, daysLateLabel } = presentPlannedListOccurrenceTiming(
+    occurrence.date,
+    getNow(),
+  );
   const interval =
     item.intervalType === PlannedPaymentInterval.MONTHLY && item.intervalN === 1
       ? undefined
@@ -82,7 +84,7 @@ function PlannedPaymentCardComponent({
             strings.fromTo(fromLabel, toLabel),
             item.isAutoPost ? strings.autoPost : undefined,
             interval,
-            isOverdue ? strings.daysLate(daysLate) : undefined,
+            daysLateLabel,
           ]
             .filter(Boolean)
             .join('. ')}
@@ -163,7 +165,7 @@ function PlannedPaymentCardComponent({
             {isOverdue && (
               <View style={[styles.overdueMeta, largeText && styles.overdueMetaLarge]}>
                 <AppText variant="caption" weight="semibold" color="error">
-                  {strings.daysLate(daysLate)}
+                  {daysLateLabel}
                 </AppText>
                 {interval && (
                   <AppText variant="caption" color="secondary" numberOfLines={1}>

@@ -1,9 +1,5 @@
-import { withPlannedPaymentFxReview } from '@/src/services/planned-payment/plannedPaymentFxReviewRequest';
+import { recordPlannedOccurrenceWithFxReview } from '@/src/features/planned-payments/hooks/recordPlannedOccurrenceWithFxReview';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import {
-  postPlannedJournalOccurrence,
-  postPlannedPaymentOccurrence,
-} from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import type { PlannedPaymentListOccurrence } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { AppConfig } from '@/src/constants';
 import type { WorkplaceId } from '@/src/types/ids';
@@ -58,27 +54,12 @@ export function usePlannedListRecord(
       });
 
       try {
-        await withPlannedPaymentFxReview(review => {
-          if (occurrence.journalId) {
-            return review
-              ? postPlannedJournalOccurrence(
-                  requestWorkplace,
-                  planId,
-                  occurrence.journalId,
-                  occurrence.date,
-                  review,
-                )
-              : postPlannedJournalOccurrence(
-                  requestWorkplace,
-                  planId,
-                  occurrence.journalId,
-                  occurrence.date,
-                );
-          }
-          return review
-            ? postPlannedPaymentOccurrence(requestWorkplace, planId, occurrence.date, review)
-            : postPlannedPaymentOccurrence(requestWorkplace, planId, occurrence.date);
-        });
+        await recordPlannedOccurrenceWithFxReview(
+          requestWorkplace,
+          planId,
+          occurrence.date,
+          occurrence.journalId,
+        );
       } catch {
         if (
           mounted.current &&

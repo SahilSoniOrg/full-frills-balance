@@ -6,14 +6,11 @@ import { AppConfig, Opacity } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDate } from '@/src/utils/dateUtils';
-import type { ComponentVariant } from '@/src/utils/style-helpers';
-import { getVariantMainColor } from '@/src/utils/style-helpers';
-import type { JournalId } from '@/src/types/ids';
-
+import { getVariantColors, type ComponentVariant } from '@/src/utils/style-helpers';
 const copy = AppConfig.strings.plannedDetailRedesign;
 
 export interface PlannedPaymentHistoryCardProps {
-  journalId: JournalId;
+  testID: string;
   journalAmount: number;
   currencyCode: string;
   journalDate: number | Date;
@@ -40,7 +37,7 @@ export interface PlannedPaymentHistoryCardProps {
 }
 
 export function PlannedPaymentHistoryCard({
-  journalId,
+  testID,
   journalAmount,
   currencyCode,
   journalDate,
@@ -108,7 +105,9 @@ export function PlannedPaymentHistoryCard({
           <AppIcon
             name={presentation.dotIcon}
             size={14}
-            color={getVariantMainColor(theme, paidAmountWarning ? 'secondary' : presentation.color)}
+            color={
+              getVariantColors(theme, () => theme.text, paidAmountWarning ? 'secondary' : presentation.color).main
+            }
           />
         </View>
       )}
@@ -158,7 +157,7 @@ export function PlannedPaymentHistoryCard({
           ? `${copy.historyRowLabel(date, presentation.label, formattedAmount)}, ${journalTitle}`
           : copy.historyRowLabel(date, presentation.label, formattedAmount)
       }
-      testID={`planned-history-${journalId}`}
+      testID={testID}
       accessibilityState={isSelectionModeActive ? { selected: !!isSelected } : undefined}
       style={isSelected ? { backgroundColor: theme.surfaceSecondary } : undefined}
     >

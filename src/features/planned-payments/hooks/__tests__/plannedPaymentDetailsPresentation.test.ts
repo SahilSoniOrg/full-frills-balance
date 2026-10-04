@@ -8,7 +8,6 @@ import { JournalId } from '@/src/types/ids';
 import {
   formatPlannedPaymentInterval,
   presentPlannedPaymentDue,
-  groupPlannedPaymentEntries,
   getPlannedPaymentHistoryPresentation,
   plannedMoneyDiffers,
 } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
@@ -111,19 +110,6 @@ describe('planned payment details context', () => {
         now,
       ).color,
     ).toBe('secondary');
-  });
-
-  it('separates pending entries from recorded history and sorts both in useful order', () => {
-    const history = [
-      entry('later', 'PLANNED', 9),
-      entry('posted', 'POSTED', 1),
-      entry('paused', 'PAUSED', 6),
-      entry('skipped', 'SKIPPED', 2),
-    ];
-    const sections = groupPlannedPaymentEntries(history);
-    expect(sections.scheduled.map(item => item.id)).toEqual(['paused', 'later']);
-    expect(sections.recorded.map(item => item.id)).toEqual(['skipped', 'posted']);
-    expect(history[0].id).toBe('later');
   });
 
   it('labels a future generated occurrence as waiting', () => {

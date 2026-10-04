@@ -10,7 +10,7 @@ import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { plannedPaymentFormStrings as copy } from '@/src/constants/copy/domains/plannedPaymentFormStrings';
 import { PlannedPaymentFxCard } from './PlannedPaymentFxCard';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
-import type { PlannedPaymentFormScreenModel } from '@/src/features/planned-payments/hooks/usePlannedPaymentFormScreen';
+import type { PlannedPaymentFormScreenModel } from '@/src/features/planned-payments/hooks/usePlannedPaymentForm';
 import { formatDate } from '@/src/utils/dateUtils';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';

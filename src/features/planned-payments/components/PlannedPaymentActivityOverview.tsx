@@ -252,7 +252,7 @@ export function PlannedPaymentActivityOverview({
                 visibleRows.map(journal => (
                   <PlannedPaymentHistoryCard
                     key={journal.id}
-                    journalId={journal.id}
+                    testID={`planned-history-${journal.id}`}
                     journalAmount={journal.totalAmount}
                     currencyCode={journal.currencyCode}
                     journalDate={journal.journalDate}
