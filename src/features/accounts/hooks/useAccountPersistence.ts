@@ -24,6 +24,7 @@ export type AccountPersistenceSaveInput = {
 
 interface PersistenceResult {
   isCreating: boolean;
+  leaveAfterSave: (() => void) | null;
   handleSave: (input: AccountPersistenceSaveInput) => Promise<void>;
   handleCancel: () => void;
 }
@@ -38,6 +39,7 @@ export function useAccountPersistence(
   const { createAccount, saveAccount, adjustBalance } = useAccountActions(workplaceId);
   const navigation = useNavigation();
   const [isCreating, setIsCreating] = useState(false);
+  const [leaveAfterSave, setLeaveAfterSave] = useState<(() => void) | null>(null);
   const isSubmitting = useRef(false);
 
   const handleCancel = () => {
@@ -91,8 +93,7 @@ export function useAccountPersistence(
         }
 
         toast.success(`"${sanitizedName}" has been updated successfully!`);
-        logger.info('[AccountPersistence] Account updated, calling back()');
-        AppNavigation.back();
+        setLeaveAfterSave(() => AppNavigation.back);
       } else {
         logger.info(`[AccountPersistence] Creating account ${sanitizedName}...`);
         const createdAccount = await createAccount({
@@ -107,21 +108,23 @@ export function useAccountPersistence(
           metadata: payload.metadata,
         });
 
-        const returnedToJournalEntry = returnCreatedAccountToJournalEntry(
-          navigation,
-          accountCreationReturnTarget,
-          createdAccount.id,
-        );
-
         toast.success(`"${sanitizedName}" has been created successfully!`);
-
-        if (returnedToJournalEntry || hasExistingAccounts) {
-          AppNavigation.back();
-        } else {
-          AppNavigation.toAccounts();
-        }
+        setLeaveAfterSave(() => () => {
+          const returnedToJournalEntry = returnCreatedAccountToJournalEntry(
+            navigation,
+            accountCreationReturnTarget,
+            createdAccount.id,
+          );
+          if (returnedToJournalEntry || hasExistingAccounts) {
+            AppNavigation.back();
+          } else {
+            AppNavigation.toAccounts();
+          }
+        });
       }
     } catch (error) {
+      setIsCreating(false);
+      isSubmitting.current = false;
       logger.error('Error saving account:', error);
       const message =
         error instanceof Error && error.message.includes('classifying') ? error.message : undefined;
@@ -130,14 +133,14 @@ export function useAccountPersistence(
         currentAccountId ? 'Failed to Update Account' : 'Failed to Create Account',
         __DEV__,
       );
-    } finally {
-      setIsCreating(false);
-      isSubmitting.current = false;
     }
+    // Successful saves stay locked until unmount. Router removal is queued,
+    // so unlocking here would rearm the dirty guard before it can leave.
   };
 
   return {
     isCreating,
+    leaveAfterSave,
     handleSave,
     handleCancel,
   };

@@ -3,6 +3,13 @@ import type { AccountFields, PlainAccountMetadata } from '@/src/types/plainDtos'
 import { getDefaultSubtypeForType } from '@/src/types/accountSubtype';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
+import {
+  DEFAULT_ACCOUNT_KIND,
+  getAccountKind,
+  isCarouselAccountType,
+  suggestAccountKind,
+  type SuggestedAccountKind,
+} from '@/src/features/accounts/helpers/accountKinds';
 import { isCategoryAccountType } from '@/src/features/accounts/helpers/accountFormHelpers';
 import {
   AccountFormDefaults,
@@ -25,6 +32,9 @@ export interface AccountFormCoreDraft {
   selectedColor: string;
   initialBalance: string;
   parentAccountId: AccountId;
+  kindTouched: boolean;
+  hasCustomIcon: boolean;
+  dismissedKindSuggestion: SuggestedAccountKind | null;
 }
 
 export interface AccountFormPickersDraft {
@@ -64,6 +74,8 @@ export type AccountFormDraftAction =
   | { type: 'SEED_METADATA'; accountId: AccountId; metadata: AccountMetadataValues }
   | { type: 'PATCH_CORE'; patch: Partial<AccountFormCoreDraft> }
   | { type: 'SET_ACCOUNT_TYPE'; accountType: AccountType }
+  | { type: 'SET_ACCOUNT_KIND'; accountType: AccountType; accountSubtype: AccountSubtype }
+  | { type: 'DISMISS_KIND_SUGGESTION'; suggestion: SuggestedAccountKind }
   | {
       type: 'PATCH_METADATA';
       key: keyof AccountMetadataValues;
@@ -95,6 +107,9 @@ export function coreFromDefaults(defaults: AccountFormDefaults): AccountFormCore
     selectedColor: defaults.selectedColor,
     initialBalance: '',
     parentAccountId: defaults.parentAccountId,
+    kindTouched: defaults.kindTouched ?? false,
+    hasCustomIcon: defaults.hasCustomIcon ?? false,
+    dismissedKindSuggestion: null,
   };
 }
 
@@ -177,6 +192,8 @@ export function accountFormDraftReducer(
           selectedIcon: action.core.selectedIcon,
           selectedColor: action.core.selectedColor,
           parentAccountId: action.core.parentAccountId,
+          kindTouched: action.core.kindTouched,
+          hasCustomIcon: action.core.hasCustomIcon,
         }),
         core: action.core,
       };
@@ -219,25 +236,67 @@ export function accountFormDraftReducer(
     }
     case 'PATCH_CORE': {
       const clearError = action.patch.initialBalance !== undefined && state.localFormError;
+      const dismissed = state.core.dismissedKindSuggestion;
+      const nextSuggestion =
+        action.patch.accountName === undefined
+          ? null
+          : suggestAccountKind(action.patch.accountName);
+      const differentSuggestion =
+        nextSuggestion &&
+        dismissed &&
+        (nextSuggestion.type !== dismissed.type || nextSuggestion.subtype !== dismissed.subtype);
       return {
         ...state,
-        core: { ...state.core, ...action.patch },
+        core: {
+          ...state.core,
+          ...action.patch,
+          hasCustomIcon: action.patch.selectedIcon !== undefined || state.core.hasCustomIcon,
+          dismissedKindSuggestion: differentSuggestion ? null : dismissed,
+        },
         localFormError: clearError ? null : state.localFormError,
       };
     }
     case 'SET_ACCOUNT_TYPE': {
       const isTargetCategory = isCategoryAccountType(action.accountType);
+      const subtype =
+        action.accountType === AccountType.ASSET
+          ? DEFAULT_ACCOUNT_KIND.subtype
+          : getDefaultSubtypeForType(action.accountType);
+      const kind = getAccountKind(action.accountType, subtype);
       return {
         ...state,
         core: {
           ...state.core,
           accountType: action.accountType,
-          accountSubtype: getDefaultSubtypeForType(action.accountType),
+          accountSubtype: subtype,
+          kindTouched: true,
+          selectedIcon: !state.core.hasCustomIcon && kind ? kind.icon : state.core.selectedIcon,
           parentAccountId: EMPTY_ACCOUNT_ID,
           initialBalance: isTargetCategory ? '' : state.core.initialBalance,
         },
       };
     }
+    case 'SET_ACCOUNT_KIND': {
+      const kind = getAccountKind(action.accountType, action.accountSubtype);
+      if (!kind || !isCarouselAccountType(state.core.accountType)) return state;
+      const kindChanged =
+        state.core.accountType !== kind.type || state.core.accountSubtype !== kind.subtype;
+      return {
+        ...state,
+        localFormError: kindChanged ? null : state.localFormError,
+        core: {
+          ...state.core,
+          accountType: kind.type,
+          accountSubtype: kind.subtype,
+          kindTouched: true,
+          selectedIcon: state.core.hasCustomIcon ? state.core.selectedIcon : kind.icon,
+          parentAccountId:
+            state.core.accountType === kind.type ? state.core.parentAccountId : EMPTY_ACCOUNT_ID,
+        },
+      };
+    }
+    case 'DISMISS_KIND_SUGGESTION':
+      return { ...state, core: { ...state.core, dismissedKindSuggestion: action.suggestion } };
     case 'PATCH_METADATA':
       return {
         ...state,

@@ -2,6 +2,7 @@ import { IconName } from '@/src/components/core';
 import { getAccountSubtypesForType } from '@/src/types/accountSubtype';
 import { AccountFormCoreDraft } from '@/src/features/accounts/hooks/accountFormDraft';
 import { AccountFormDraftDispatch } from '@/src/features/accounts/hooks/form/useAccountFormDraft';
+import { isCarouselAccountType } from '@/src/features/accounts/helpers/accountKinds';
 import { isCategoryAccountType } from '@/src/features/accounts/helpers/accountFormHelpers';
 import { AccountId } from '@/src/types/ids';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
@@ -53,8 +54,14 @@ export function useAccountFormCore(
     [dispatch],
   );
   const setAccountSubtype = useCallback(
-    (value: AccountSubtype) => dispatch({ type: 'PATCH_CORE', patch: { accountSubtype: value } }),
-    [dispatch],
+    (value: AccountSubtype) => {
+      if (isCarouselAccountType(accountType)) {
+        dispatch({ type: 'SET_ACCOUNT_KIND', accountType, accountSubtype: value });
+      } else {
+        dispatch({ type: 'PATCH_CORE', patch: { accountSubtype: value } });
+      }
+    },
+    [dispatch, accountType],
   );
   const setSelectedCurrency = useCallback(
     (value: string) => dispatch({ type: 'PATCH_CORE', patch: { selectedCurrency: value } }),

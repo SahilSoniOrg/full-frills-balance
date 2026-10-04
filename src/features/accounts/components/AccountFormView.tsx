@@ -1,342 +1,174 @@
-import { AccountPickerModal } from '@/src/components/account-selection/AccountPickerModal';
-import { AccountFormEditModals } from '@/src/features/accounts/components/AccountFormEditModals';
-import { AccountSelectionRow } from '@/src/components/accounts/AccountSelectionRow';
-import { AppearancePickerModal } from '@/src/components/overlays/AppearancePickerModal';
+import { AppIcon, AppText, Icon } from '@/src/components/core';
+import {
+  AmountHero,
+  FormRow,
+  GlyphCarousel,
+  SuggestionHint,
+  UnderlineNameField,
+} from '@/src/components/forms';
 import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
 import type { ScreenNavChrome } from '@/src/components/layout';
-import { FormHeroSection } from '@/src/components/forms/FormHeroSection';
-import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
-import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { SectionLabel } from '@/src/components/shared/SectionLabel';
-import { Icon, AppIcon, AppText, IvyIcon } from '@/src/components/core';
-import { Opacity, Shape, Size, Spacing } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
+import { accountFormStrings as copy } from '@/src/constants/copy/domains/accountFormStrings';
 import { AppConfig } from '@/src/constants/app-config';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
-import { Box, FadeIn, Inline, Stack } from '@/src/design-system';
-import { useAccountColors } from '@/src/hooks/useAccountColors';
-
-import { AccountSubtypeSelector } from '@/src/features/accounts/components/AccountSubtypeSelector';
-import { AccountTypeSelector } from '@/src/features/accounts/components/AccountTypeSelector';
-import { BalanceChangeClassifySheet } from '@/src/features/accounts/components/BalanceChangeClassifySheet';
-import { CurrencySelector } from '@/src/features/accounts/components/CurrencySelector';
-import { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
-import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
+import { Shape, Size, Spacing } from '@/src/constants/design-tokens';
+import type { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
-import { useState } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { AccountFormOverlays } from './AccountFormOverlays';
+import { CategoryAccountFormView } from './CategoryAccountFormView';
 import { AccountMetadataSection } from './metadata/AccountMetadataSection';
 
 export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavChrome }) {
   const { theme } = useTheme();
-  const [isCurrencyInfoVisible, setIsCurrencyInfoVisible] = useState(false);
-  const {
-    chrome,
-    isEditMode,
-    isCategory,
-    accountName,
-    setAccountName,
-    accountType,
-    setAccountType,
-    accountSubtype,
-    setAccountSubtype,
-    allowedAccountTypes,
-    selectedCurrency,
-    currencies,
-    setSelectedCurrency,
-    selectedIcon,
-    setSelectedIcon,
-    isAppearancePickerVisible,
-    setIsAppearancePickerVisible,
-    selectedColor,
-    setSelectedColor,
-    initialBalance,
-    onInitialBalanceChange,
-    formError,
-    onSave,
-    saveLabel,
-    isSaveDisabled,
-    parentAccountId,
-    setParentAccountId,
-    potentialParents,
-    isParent,
-    isParentPickerVisible,
-    setIsParentPickerVisible,
-    payFromAccountOptions,
-    metadata,
-    balanceClassify,
-    formChrome,
-  } = vm;
-
-  const {
-    isPayFromPickerVisible,
-    setIsPayFromPickerVisible,
-    payFromAccountId,
-    setPayFromAccountId,
-  } = metadata;
-
-  const { accentColor: effectiveAccentColor } = useAccountColors({
-    accountType,
-    color: selectedColor,
-  });
-
+  if (vm.isCategory) return <CategoryAccountFormView {...vm} />;
   return (
     <EntityFormScreen
-      chrome={chrome}
-      contentContainerStyle={{ paddingBottom: Spacing.xxxxl }}
-      submitAction={{
-        onPress: onSave,
-        label: saveLabel,
-        disabled: isSaveDisabled,
-      }}
+      chrome={vm.chrome}
+      submitAction={{ onPress: vm.onSave, label: vm.submitLabel, disabled: vm.isSaveDisabled }}
+      scrollProps={{ keyboardShouldPersistTaps: 'handled' }}
+      contentContainerStyle={{ paddingBottom: Spacing.lg }}
     >
-      <FormHeroSection
-        prefix={
-          <Inline align="center">
-            <TouchableOpacity
-              onPress={() => setIsAppearancePickerVisible(true)}
-              accessibilityLabel="Customize account appearance"
-              style={[
-                styles.iconButton,
-                {
-                  backgroundColor: withOpacity(effectiveAccentColor, Opacity.soft),
-                  borderColor: effectiveAccentColor,
-                  borderWidth: 3,
-                },
-              ]}
-            >
-              <IvyIcon
-                name={selectedIcon}
-                fallbackIcon={getAccountFallbackIcon(accountType)}
-                color={effectiveAccentColor}
-                size={Size.iconLg}
-              />
-            </TouchableOpacity>
-          </Inline>
-        }
-        nameAlign="left"
-        nameLabel={
-          isCategory
-            ? AppConfig.strings.accounts.categoryForm.categoryName
-            : AppConfig.strings.accounts.form.accountName
-        }
-        nameValue={accountName}
-        onNameChange={setAccountName}
-        namePlaceholder={
-          isCategory
-            ? AppConfig.strings.accounts.categoryForm.categoryNamePlaceholder
-            : AppConfig.strings.accounts.form.accountNamePlaceholder
-        }
-        amountLabel={
-          isEditMode
-            ? AppConfig.strings.accounts.form.currentBalance
-            : AppConfig.strings.accounts.form.initialBalance
-        }
-        amountValue={initialBalance}
-        onAmountChange={onInitialBalanceChange}
-        currencySymbol={CURRENCY_SYMBOLS[selectedCurrency] || selectedCurrency}
-        showAmount={vm.showInitialBalance}
-        footer={
-          vm.showCurrency ? (
-            <Inline align="center" space="xs">
-              {isEditMode && (
-                <Stack space="xs" align="flex-start">
-                  <TouchableOpacity
-                    onPress={() => setIsCurrencyInfoVisible(true)}
-                    style={{
-                      padding: Spacing.sm,
-                      marginRight: -Spacing.sm,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                    }}
-                    activeOpacity={Opacity.medium}
-                  >
-                    <AppText
-                      variant="caption"
-                      color="secondary"
-                      style={{ marginRight: Spacing.xs }}
-                    >
-                      {selectedCurrency} (Locked)
-                    </AppText>
-                    <AppIcon
-                      name={Icon.HelpCircle}
-                      size={Size.iconSm}
-                      color={theme.textSecondary}
-                      opacity={Opacity.heavy}
-                    />
-                  </TouchableOpacity>
-                </Stack>
-              )}
-              {!isEditMode && (
-                <CurrencySelector
-                  variant="pill"
-                  selectedCurrency={selectedCurrency}
-                  currencies={currencies}
-                  onSelect={setSelectedCurrency}
-                />
-              )}
-            </Inline>
-          ) : undefined
-        }
-      />
-
-      <Stack space="xl" padding="lg">
-        {formError ? (
-          <FadeIn duration={400}>
-            <Box
-              padding="md"
-              borderRadius="md"
-              borderWidth={1}
-              borderColor="error"
-              background="error"
-              backgroundOpacity="soft"
-            >
-              <AppText variant="body" style={{ color: theme.error }}>
-                {formError}
-              </AppText>
-            </Box>
-          </FadeIn>
-        ) : null}
-
-        <FormSectionGroup
-          title={
-            isCategory
-              ? AppConfig.strings.accounts.categoryForm.categoryType
-              : AppConfig.strings.accounts.form.accountType
-          }
+      <View>
+        {vm.selectedKindKey ? (
+          <GlyphCarousel
+            items={vm.carouselKinds}
+            selectedKey={vm.selectedKindKey}
+            onSelect={vm.selectKindKey}
+            captionAction={
+              vm.isParent
+                ? undefined
+                : { label: copy.allKinds, onPress: () => vm.setActiveSheet('kinds') }
+            }
+            testID="account-kind"
+          />
+        ) : (
+          <View style={{ alignItems: 'center', paddingVertical: Spacing.xl }}>
+            <AppIcon name={vm.selectedIcon} size={Size.iconXl} color={theme.textSecondary} />
+          </View>
+        )}
+        <Pressable
+          style={styles.pencilTarget}
+          onPress={() => vm.setIsAppearancePickerVisible(true)}
+          accessibilityRole="button"
+          accessibilityLabel={copy.appearance}
+          testID="account-appearance"
         >
-          <Stack space="lg" paddingHorizontal="md">
-            <Box>
-              <AccountTypeSelector
-                value={accountType}
-                onChange={setAccountType}
-                disabled={isParent}
-                allowedTypes={allowedAccountTypes ? [...allowedAccountTypes] : undefined}
-              />
-            </Box>
-
-            <Box>
-              <SectionLabel
-                label={
-                  isCategory
-                    ? AppConfig.strings.accounts.categoryForm.categorySubtype
-                    : AppConfig.strings.accounts.form.accountSubtype
-                }
-                marginTop="none"
-              />
-              <AccountSubtypeSelector
-                accountType={accountType}
-                value={accountSubtype}
-                onChange={setAccountSubtype}
-                disabled={isParent}
-              />
-            </Box>
-          </Stack>
-        </FormSectionGroup>
-
-        <FormSectionGroup title={isCategory ? 'Hierarchy' : undefined}>
-          <Stack space="lg" paddingHorizontal="md">
-            <AccountSelectionRow
-              title={
-                isCategory
-                  ? AppConfig.strings.accounts.categoryForm.parentCategory
-                  : AppConfig.strings.accounts.form.parentAccount
-              }
-              accounts={potentialParents}
-              selectedAccountId={parentAccountId}
-              placeholder={AppConfig.strings.common.none}
-              onPress={() => setIsParentPickerVisible(true)}
-              style={{ paddingHorizontal: 0 }}
-            />
-          </Stack>
-        </FormSectionGroup>
-
-        <AccountMetadataSection
-          accountType={accountType}
-          accountSubtype={accountSubtype}
-          metadata={metadata}
+          <View
+            style={[
+              styles.pencilBadge,
+              { backgroundColor: theme.background, borderColor: theme.border },
+            ]}
+          >
+            <AppIcon name={Icon.Edit} size={Size.iconXs} color={theme.textSecondary} />
+          </View>
+        </Pressable>
+      </View>
+      <View style={styles.name}>
+        <UnderlineNameField
+          value={vm.accountName}
+          onChangeText={vm.setAccountName}
+          placeholder={copy.namePlaceholder}
+          autoFocus={!vm.isEditMode}
+          maxLength={AppConfig.input.maxAccountNameLength}
+          testID="hero-name-input"
         />
-      </Stack>
-
-      <AppearancePickerModal
-        key={isAppearancePickerVisible ? 'appearance-open' : 'appearance-closed'}
-        visible={isAppearancePickerVisible}
-        onClose={() => setIsAppearancePickerVisible(false)}
-        onIconSelect={setSelectedIcon}
-        onColorSelect={setSelectedColor}
-        selectedIcon={selectedIcon}
-        selectedColor={selectedColor}
-        accountType={accountType}
-      />
-      <AccountPickerModal
-        visible={isParentPickerVisible}
-        accounts={potentialParents}
-        selectedId={parentAccountId}
-        allowNone
-        noneLabel="No parent"
-        onClear={() => setParentAccountId(EMPTY_ACCOUNT_ID)}
-        onClose={() => setIsParentPickerVisible(false)}
-        onSelect={id => {
-          setParentAccountId(id);
-          setIsParentPickerVisible(false);
-        }}
-      />
-      {!isCategory && (
-        <AccountPickerModal
-          visible={isPayFromPickerVisible}
-          accounts={payFromAccountOptions}
-          selectedId={payFromAccountId}
-          title={AppConfig.strings.accounts.form.selectPaymentAccount}
-          onClose={() => setIsPayFromPickerVisible(false)}
-          onSelect={id => {
-            setPayFromAccountId(id);
-            setIsPayFromPickerVisible(false);
-          }}
+        {vm.kindSuggestionMessage ? (
+          <SuggestionHint
+            message={vm.kindSuggestionMessage}
+            actionLabel={copy.switchKind}
+            onAccept={vm.acceptKindSuggestion}
+            onDismiss={vm.dismissKindSuggestion}
+            testID="account-kind-suggestion"
+          />
+        ) : null}
+      </View>
+      {vm.showInitialBalance ? (
+        <View style={styles.amount}>
+          <AmountHero
+            value={vm.initialBalance}
+            onChange={vm.onInitialBalanceChange}
+            label={vm.balanceLabel}
+            currencySymbol={CURRENCY_SYMBOLS[vm.selectedCurrency] || vm.selectedCurrency}
+            currencyCode={vm.selectedCurrency}
+            precision={vm.currencyPrecision}
+            onCurrencyPress={() => vm.setActiveSheet(vm.isEditMode ? 'currency-info' : 'currency')}
+            testID="hero-amount-input"
+          />
+        </View>
+      ) : (
+        <FormRow
+          icon={Icon.Bank}
+          title={AppConfig.strings.accounts.selectCurrency}
+          value={vm.selectedCurrency}
+          onPress={() => vm.setActiveSheet(vm.isEditMode ? 'currency-info' : 'currency')}
+          testID="account-currency"
         />
       )}
-      <InfoSheet
-        visible={isCurrencyInfoVisible}
-        title={AppConfig.strings.accounts.selectCurrency}
-        onClose={() => setIsCurrencyInfoVisible(false)}
-        fixedHeight={false}
-        primaryAction={{
-          label: AppConfig.strings.common.ok,
-          onPress: () => setIsCurrencyInfoVisible(false),
-        }}
-      >
-        <Stack space="md" padding="md">
-          <AppText variant="body" color="secondary" style={{ lineHeight: 22 }}>
-            {AppConfig.strings.accounts.form.currencyLockedTooltip}
-          </AppText>
-        </Stack>
-      </InfoSheet>
-      {balanceClassify ? (
-        <BalanceChangeClassifySheet
-          visible={balanceClassify.visible}
-          accounts={balanceClassify.accounts}
-          editedAccountId={balanceClassify.editedAccountId}
-          editedAccountName={balanceClassify.editedAccountName}
-          editedAccountType={balanceClassify.editedAccountType}
-          currencyCode={balanceClassify.currencyCode}
-          discrepancy={balanceClassify.discrepancy}
-          discrepancyLabel={balanceClassify.discrepancyLabel}
-          onClose={balanceClassify.onClose}
-          onSelect={balanceClassify.onSelect}
-        />
+      {vm.formError ? (
+        <AppText
+          variant="bodySmall"
+          style={{ color: theme.error, paddingHorizontal: Spacing.lg }}
+          accessibilityRole="alert"
+        >
+          {vm.formError}
+        </AppText>
       ) : null}
-      <AccountFormEditModals
-        archiveCascadeModal={formChrome.archiveCascadeModal}
-        mergePickerModal={formChrome.mergePickerModal}
+      <AccountMetadataSection
+        accountType={vm.accountType}
+        accountSubtype={vm.accountSubtype}
+        metadata={vm.metadata}
+        precision={vm.currencyPrecision}
       />
+      <View style={styles.section}>
+        <SectionLabel label={copy.optional} />
+      </View>
+      <FormRow
+        icon={Icon.Hierarchy}
+        title={copy.parent}
+        value={vm.parentAccountName}
+        placeholder={copy.none}
+        onPress={() => vm.setIsParentPickerVisible(true)}
+        onClear={vm.parentAccountId ? () => vm.setParentAccountId(EMPTY_ACCOUNT_ID) : undefined}
+        testID="account-parent"
+      />
+      <FormRow
+        icon={Icon.Document}
+        title={copy.note}
+        value={vm.metadata.notes || null}
+        placeholder={copy.add}
+        onPress={() => vm.setActiveSheet('note')}
+        onClear={vm.metadata.notes ? () => vm.metadata.setNotes('') : undefined}
+        showSeparator={false}
+        testID="account-note"
+      />
+      <AccountFormOverlays {...vm} />
     </EntityFormScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  iconButton: {
-    padding: Spacing.md,
+  name: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md },
+  amount: { paddingTop: Spacing.lg, paddingHorizontal: Spacing.lg },
+  section: { paddingHorizontal: Spacing.lg },
+  pencilTarget: {
+    position: 'absolute',
+    left: '50%',
+    marginLeft: Spacing.lg,
+    top: Size.touchTargetLg + Spacing.md,
+    width: Size.touchTarget,
+    height: Size.touchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pencilBadge: {
+    width: Size.iconLg,
+    height: Size.iconLg,
     borderRadius: Shape.radius.full,
-    borderWidth: 1.5,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

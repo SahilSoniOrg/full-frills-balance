@@ -39,12 +39,21 @@ import { BalanceChangeCounterparty } from '@/src/services/accounts/balanceChange
 import { useAccountFormHeaderActions } from '@/src/features/accounts/hooks/useAccountFormHeaderActions';
 import type { AccountFormChromeState } from '@/src/features/accounts/hooks/useAccountFormHeaderActions';
 import { useLocalSearchParams, usePathname } from 'expo-router';
-import { useMemo } from 'react';
+import { Keyboard } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { accountFormStrings as copy } from '@/src/constants/copy/domains/accountFormStrings';
+import {
+  useAccountFormKind,
+  type AccountFormKindApi,
+} from '@/src/features/accounts/hooks/form/useAccountFormKind';
 import { of } from 'rxjs';
 
 export type { AccountMetadataFormModel };
 
-export interface AccountFormViewModel {
+export interface AccountFormViewModel extends AccountFormKindApi {
+  activeSheet: 'kinds' | 'currency' | 'currency-info' | 'note' | null;
+  setActiveSheet: (sheet: AccountFormViewModel['activeSheet']) => void;
+  currencyPrecision: number;
   heroTitle: string;
   heroSubtitle: string;
   isEditMode: boolean;
@@ -70,6 +79,7 @@ export interface AccountFormViewModel {
   onInitialBalanceChange: (value: string) => void;
   onBack: () => void;
   isCreating: boolean;
+  leaveAfterSave: (() => void) | null;
   formError: string | null;
   onSave: () => void;
   saveLabel: string;
@@ -111,6 +121,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   const params = useLocalSearchParams<{
     accountId: AccountId;
     type: string;
+    subtype: string;
     pName: string;
     pType: string;
     pCurrency: string;
@@ -121,6 +132,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
 
   const accountId = params.accountId;
   const typeParam = params.type;
+  const subtypeParam = params.subtype;
   const isEditMode = Boolean(accountId);
 
   const { account: existingAccount, isLoading: isAccountLoading } = useAccount(
@@ -154,12 +166,13 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     () => ({
       pathname,
       typeParam,
+      subtypeParam,
       previewName: params.pName as string,
       previewType: params.pType as string,
       previewCurrency: params.pCurrency as string,
       previewIcon: params.pIcon as string,
     }),
-    [pathname, typeParam, params.pName, params.pType, params.pCurrency, params.pIcon],
+    [pathname, typeParam, subtypeParam, params.pName, params.pType, params.pCurrency, params.pIcon],
   );
 
   const createFormDefaults = useMemo(
@@ -177,7 +190,19 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     createFormDefaults,
   });
 
+  const [activeSheet, updateActiveSheet] = useState<AccountFormViewModel['activeSheet']>(null);
+  const setActiveSheet = useCallback((sheet: AccountFormViewModel['activeSheet']) => {
+    Keyboard.dismiss();
+    updateActiveSheet(sheet);
+  }, []);
   const core = useAccountFormCore(dispatch, draft.core);
+  const kind = useAccountFormKind({
+    core: draft.core,
+    dispatch,
+    isEditMode,
+    hasSubtypeRouteParam: subtypeParam !== undefined,
+    canChangeKind: !isParent,
+  });
   const pickers = useAccountFormPickers(dispatch, draft.pickers);
   const metadata = useAccountFormMetadata({
     dispatch,
@@ -275,7 +300,14 @@ export function useAccountFormViewModel(): AccountFormViewModel {
   );
 
   return {
-    heroTitle,
+    ...kind,
+    activeSheet,
+    setActiveSheet,
+    currencyPrecision:
+      currencies.find(currency => currency.code === core.selectedCurrency)?.precision ?? 2,
+    submitLabel: core.isCategory ? saveLabel : kind.submitLabel,
+    heroTitle:
+      !isEditMode && kind.kindLabel ? copy.newKind(kind.kindLabel.toLowerCase()) : heroTitle,
     heroSubtitle,
     isEditMode,
     isCategory: core.isCategory,
@@ -300,6 +332,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     onInitialBalanceChange: core.onInitialBalanceChange,
     onBack: persistence.handleCancel,
     isCreating: persistence.isCreating,
+    leaveAfterSave: persistence.leaveAfterSave,
     formError,
     onSave,
     saveLabel,

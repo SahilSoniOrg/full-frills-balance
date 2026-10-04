@@ -1,164 +1,80 @@
-import { FormSelectorField } from '@/src/components/forms/FormSelectorField';
-import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
-import { SectionLabel } from '@/src/components/shared/SectionLabel';
 import { AppInput, AppText } from '@/src/components/core';
-import { AppSegmentedControl } from '@/src/components/core/AppSegmentedControl';
-import { Spacing } from '@/src/constants';
-import { AppConfig } from '@/src/constants/app-config';
-import { AccountMetadataFormModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
-import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { AppTabs } from '@/src/components/core/AppTabs';
+import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
+import { accountFormStrings as copy } from '@/src/constants/copy/domains/accountFormStrings';
+import { Spacing } from '@/src/constants/design-tokens';
+import type { AccountMetadataFormModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
+import { useTheme } from '@/src/hooks/use-theme';
+import { View } from 'react-native';
 
-interface CreditCardMetadataFieldsProps {
+export function CreditCardMetadataFields({
+  metadata,
+  precision = 2,
+}: {
   metadata: AccountMetadataFormModel;
-}
-
-export const CreditCardMetadataFields: React.FC<CreditCardMetadataFieldsProps> = ({ metadata }) => {
-  const {
-    statementDay,
-    setStatementDay,
-    dueDay,
-    setDueDay,
-    creditLimitAmount,
-    setCreditLimitAmount,
-    apr,
-    setApr,
-    payFromAccountName,
-    setPayFromAccountId,
-    setIsPayFromPickerVisible,
-    isMinPaymentOnly,
-    setIsMinPaymentOnly,
-    minimumPaymentAmount,
-    setMinimumPaymentAmount,
-    minimumPaymentPercent,
-    setMinimumPaymentPercent,
-  } = metadata;
-
+  precision?: number;
+}) {
+  const { theme } = useTheme();
   return (
-    <>
-      <View style={styles.row}>
-        <View style={{ flex: 1 }}>
-          <AppInput
-            label="Statement Day"
-            value={statementDay}
-            onChangeText={setStatementDay}
-            placeholder="e.g. 15"
-            keyboardType="number-pad"
-            maxLength={AppConfig.input.maxDayOfMonthLength}
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <AppInput
-            label="Due Day"
-            value={dueDay}
-            onChangeText={setDueDay}
-            placeholder="e.g. 5"
-            keyboardType="number-pad"
-            maxLength={AppConfig.input.maxDayOfMonthLength}
-          />
-        </View>
-      </View>
-      <View style={styles.row}>
-        <View style={{ flex: 2 }}>
-          <CalculatorAmountInput
-            label="Credit Limit"
-            value={creditLimitAmount}
-            onChangeText={setCreditLimitAmount}
-            placeholder="Enter credit limit"
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <AppInput
-            label="APR (%)"
-            value={apr}
-            onChangeText={setApr}
-            placeholder="e.g. 15.5"
-            keyboardType="decimal-pad"
-          />
-        </View>
-      </View>
-
-      <SectionLabel label="Simulation Settings" />
-
-      <View style={styles.fieldGroup}>
-        <AppText variant="body" weight="medium" style={styles.label}>
-          Repayment Simulation
-        </AppText>
-        <AppSegmentedControl
-          flex
-          options={[
-            { id: 'FULL', label: 'Full Statement' },
-            { id: 'MIN', label: 'Minimum Payment' },
-          ]}
-          value={isMinPaymentOnly ? 'MIN' : 'FULL'}
-          onChange={id => setIsMinPaymentOnly(id === 'MIN')}
-        />
-        <AppText variant="caption" color="secondary" style={styles.helpText}>
-          Controls how much outflow is projected per cycle.
-        </AppText>
-      </View>
-
-      {isMinPaymentOnly && (
-        <View style={styles.row}>
-          <View style={{ flex: 1 }}>
-            <CalculatorAmountInput
-              label="Min Amount"
-              value={minimumPaymentAmount}
-              onChangeText={setMinimumPaymentAmount}
-              placeholder="e.g. 500"
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <AppInput
-              label="Min Percent (%)"
-              value={minimumPaymentPercent}
-              onChangeText={setMinimumPaymentPercent}
-              placeholder="e.g. 5"
-              keyboardType="decimal-pad"
-            />
-          </View>
-        </View>
-      )}
-
-      {isMinPaymentOnly && (
-        <AppText variant="caption" color="secondary" style={styles.infoBox}>
-          Simulation will use the higher of the absolute amount or percentage.
-        </AppText>
-      )}
-
-      <FormSelectorField
-        label={AppConfig.strings.accounts.form.payDebtFrom}
-        value={payFromAccountName !== AppConfig.strings.common.none ? payFromAccountName : ''}
-        placeholder={AppConfig.strings.common.none}
-        onPress={() => setIsPayFromPickerVisible(true)}
-        onClear={
-          payFromAccountName !== AppConfig.strings.common.none
-            ? () => setPayFromAccountId(EMPTY_ACCOUNT_ID)
-            : undefined
-        }
+    <View style={{ gap: Spacing.lg }}>
+      <CalculatorAmountInput
+        variant="minimal"
+        label={copy.creditLimit}
+        placeholder={copy.creditLimitPlaceholder}
+        value={metadata.creditLimitAmount}
+        onChangeText={metadata.setCreditLimitAmount}
+        precision={precision}
+        testID="account-credit-limit-input"
       />
-    </>
+      <View style={{ borderBottomWidth: 1, borderBottomColor: theme.border }}>
+        <AppInput
+          variant="minimal"
+          label={copy.apr}
+          placeholder={copy.aprPlaceholder}
+          value={metadata.apr}
+          onChangeText={metadata.setApr}
+          keyboardType="decimal-pad"
+          testID="account-apr-input"
+        />
+      </View>
+      <AppText variant="body" weight="medium">
+        {copy.repayment}
+      </AppText>
+      <AppTabs
+        options={[
+          { id: 'FULL', label: copy.payInFull },
+          { id: 'MIN', label: copy.minimumOnly },
+        ]}
+        value={metadata.isMinPaymentOnly ? 'MIN' : 'FULL'}
+        onChange={id => metadata.setIsMinPaymentOnly(id === 'MIN')}
+        testID="account-repayment-tabs"
+      />
+      <AppText variant="caption" color="secondary">
+        {copy.repaymentHelp}
+      </AppText>
+      <CalculatorAmountInput
+        variant="minimal"
+        label={copy.minAmount}
+        placeholder={copy.minAmountPlaceholder}
+        value={metadata.minimumPaymentAmount}
+        onChangeText={metadata.setMinimumPaymentAmount}
+        precision={precision}
+        testID="account-minimum-amount-input"
+      />
+      <View style={{ borderBottomWidth: 1, borderBottomColor: theme.border }}>
+        <AppInput
+          variant="minimal"
+          label={copy.minPercent}
+          placeholder={copy.minPercentPlaceholder}
+          value={metadata.minimumPaymentPercent}
+          onChangeText={metadata.setMinimumPaymentPercent}
+          keyboardType="decimal-pad"
+          testID="account-minimum-percent-input"
+        />
+      </View>
+      <AppText variant="caption" color="secondary">
+        {copy.minimumHelp}
+      </AppText>
+    </View>
   );
-};
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  label: {
-    marginBottom: Spacing.xs,
-  },
-  fieldGroup: {
-    marginBottom: Spacing.md,
-  },
-  helpText: {
-    marginTop: Spacing.xs,
-  },
-  infoBox: {
-    marginTop: -Spacing.xs,
-    marginBottom: Spacing.md,
-    fontStyle: 'italic',
-  },
-});
+}

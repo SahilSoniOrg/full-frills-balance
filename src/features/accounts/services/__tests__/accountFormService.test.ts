@@ -12,6 +12,52 @@ describe('accountFormService', () => {
   const workplaceCurrency = 'USD';
 
   describe('resolveAccountFormDefaults', () => {
+    it('defaults a new account to bank without marking it touched', () => {
+      const defaults = resolveAccountFormDefaults(
+        { pathname: '/account-creation' },
+        workplaceCurrency,
+      );
+      expect(defaults.accountType).toBe(AccountType.ASSET);
+      expect(defaults.accountSubtype).toBe(AccountSubtype.BANK_CHECKING);
+      expect(defaults.selectedIcon).toBe(Icon.Bank);
+      expect(defaults.kindTouched).toBe(false);
+    });
+
+    it.each([
+      ['asset', 'BANK_SAVINGS', AccountSubtype.BANK_SAVINGS, Icon.Safe],
+      ['liability', 'loan', AccountSubtype.LOAN, Icon.Bank],
+    ])('accepts a valid %s/%s route pair', (typeParam, subtypeParam, subtype, icon) => {
+      const defaults = resolveAccountFormDefaults(
+        { pathname: '/account-creation', typeParam, subtypeParam },
+        workplaceCurrency,
+      );
+      expect(defaults.accountSubtype).toBe(subtype);
+      expect(defaults.selectedIcon).toBe(icon);
+      expect(defaults.kindTouched).toBe(true);
+    });
+
+    it.each(['CREDIT_CARD', 'not_a_subtype'])('ignores an invalid asset/%s pair', subtypeParam => {
+      const defaults = resolveAccountFormDefaults(
+        { pathname: '/account-creation', typeParam: 'asset', subtypeParam },
+        workplaceCurrency,
+      );
+      expect(defaults.accountSubtype).toBe(AccountSubtype.BANK_CHECKING);
+      expect(defaults.kindTouched).toBe(false);
+    });
+
+    it.each([
+      [AccountType.EXPENSE, AccountSubtype.FOOD],
+      [AccountType.INCOME, AccountSubtype.SALARY],
+    ])('preserves category defaults for %s', (typeParam, subtype) => {
+      const defaults = resolveAccountFormDefaults(
+        { pathname: '/category-creation', typeParam },
+        workplaceCurrency,
+      );
+      expect(defaults.accountSubtype).toBe(subtype);
+      expect(defaults.selectedIcon).toBe(Icon.Tag);
+      expect(defaults.selectedCurrency).toBe(workplaceCurrency);
+    });
+
     it('resolves create-mode defaults from route preview and workplace currency', () => {
       const defaults = resolveAccountFormDefaults(
         {

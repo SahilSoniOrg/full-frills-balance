@@ -1,6 +1,12 @@
 import { IconName } from '@/src/components/core';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { getDefaultSubtypeForType } from '@/src/types/accountSubtype';
+import {
+  DEFAULT_ACCOUNT_KIND,
+  getAccountKind,
+  resolveAccountSubtypeParam,
+} from '@/src/features/accounts/helpers/accountKinds';
+import { isValidIconName } from '@/src/types/domainIcons';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
 import { SerializedAccountMetadataPayload } from '@/src/types/plainDtos';
@@ -18,6 +24,7 @@ import {
 export interface AccountFormRouteContext {
   pathname: string;
   typeParam?: string;
+  subtypeParam?: string;
   previewName?: string;
   previewType?: string;
   previewCurrency?: string;
@@ -33,6 +40,8 @@ export interface AccountFormDefaults {
   /** Custom accent hex ('' = auto, derived from account type). */
   selectedColor: string;
   parentAccountId: AccountId;
+  kindTouched?: boolean;
+  hasCustomIcon?: boolean;
 }
 
 export function resolveAccountFormDefaults(
@@ -48,6 +57,8 @@ export function resolveAccountFormDefaults(
 
   if (existingAccount) {
     return {
+      kindTouched: true,
+      hasCustomIcon: isValidIconName(existingAccount.icon),
       accountName: existingAccount.name,
       accountType: existingAccount.accountType,
       accountSubtype:
@@ -59,12 +70,23 @@ export function resolveAccountFormDefaults(
     };
   }
 
+  const requestedSubtype = resolveAccountSubtypeParam(initialType, route.subtypeParam);
+  const accountSubtype =
+    requestedSubtype ??
+    (initialType === AccountType.ASSET
+      ? DEFAULT_ACCOUNT_KIND.subtype
+      : getDefaultSubtypeForType(initialType));
+  const defaultIcon =
+    getAccountKind(initialType, accountSubtype)?.icon ?? resolveAccountIcon(initialType);
+
   return {
+    kindTouched: requestedSubtype !== null,
+    hasCustomIcon: isValidIconName(route.previewIcon),
     accountName: route.previewName || '',
     accountType: initialType,
-    accountSubtype: getDefaultSubtypeForType(initialType),
+    accountSubtype,
     selectedCurrency: route.previewCurrency || workplaceCurrency,
-    selectedIcon: resolveAccountIcon(initialType, route.previewIcon || null),
+    selectedIcon: isValidIconName(route.previewIcon) ? route.previewIcon : defaultIcon,
     selectedColor: '',
     parentAccountId: EMPTY_ACCOUNT_ID,
   };

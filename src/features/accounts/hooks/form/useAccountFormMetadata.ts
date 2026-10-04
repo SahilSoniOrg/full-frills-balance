@@ -1,11 +1,21 @@
+import { Keyboard } from 'react-native';
 import { AppConfig } from '@/src/constants/app-config';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountFormDraftDispatch } from '@/src/features/accounts/hooks/form/useAccountFormDraft';
 import { AccountMetadataValues } from '@/src/features/accounts/services/accountMetadataDomain';
 import { AccountId } from '@/src/types/ids';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { accountFormStrings as copy } from '@/src/constants/copy/domains/accountFormStrings';
 
 export interface AccountMetadataFormModel {
+  activeSheet: 'statementDay' | 'dueDay' | 'emiDay' | 'credit' | 'loan' | null;
+  setActiveSheet: (sheet: AccountMetadataFormModel['activeSheet']) => void;
+  statementDayLabel: string | null;
+  dueDayLabel: string | null;
+  emiDayLabel: string | null;
+  statementDayValue: number | null;
+  dueDayValue: number | null;
+  emiDayValue: number | null;
   statementDay: string;
   setStatementDay: (value: string) => void;
   dueDay: string;
@@ -51,6 +61,11 @@ export function useAccountFormMetadata(args: {
     localFormError,
   } = args;
 
+  const [activeSheet, updateActiveSheet] = useState<AccountMetadataFormModel['activeSheet']>(null);
+  const setActiveSheet = useCallback((sheet: AccountMetadataFormModel['activeSheet']) => {
+    Keyboard.dismiss();
+    updateActiveSheet(sheet);
+  }, []);
   const updateField = useCallback(
     <K extends keyof AccountMetadataValues>(key: K, value: AccountMetadataValues[K]) => {
       dispatch({ type: 'PATCH_METADATA', key, value });
@@ -67,6 +82,14 @@ export function useAccountFormMetadata(args: {
 
   return useMemo(
     (): AccountMetadataFormModel => ({
+      activeSheet,
+      setActiveSheet,
+      statementDayValue: parseDay(metadataValues.statementDay),
+      dueDayValue: parseDay(metadataValues.dueDay),
+      emiDayValue: parseDay(metadataValues.emiDay),
+      statementDayLabel: dayLabel(metadataValues.statementDay),
+      dueDayLabel: dayLabel(metadataValues.dueDay),
+      emiDayLabel: dayLabel(metadataValues.emiDay),
       statementDay: metadataValues.statementDay,
       setStatementDay: v => updateField('statementDay', v),
       dueDay: metadataValues.dueDay,
@@ -94,6 +117,8 @@ export function useAccountFormMetadata(args: {
       setIsMinPaymentOnly: v => updateField('isMinPaymentOnly', v),
     }),
     [
+      activeSheet,
+      setActiveSheet,
       metadataValues,
       updateField,
       payFromAccountName,
@@ -101,4 +126,14 @@ export function useAccountFormMetadata(args: {
       setIsPayFromPickerVisible,
     ],
   );
+}
+
+function parseDay(value: string): number | null {
+  const day = Number(value);
+  return Number.isInteger(day) && day >= 1 && day <= 31 ? day : null;
+}
+
+function dayLabel(value: string): string | null {
+  const day = parseDay(value);
+  return day === null ? null : day === 31 ? copy.lastDay : copy.day(day);
 }

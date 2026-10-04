@@ -1,75 +1,52 @@
 import { AppInput } from '@/src/components/core';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
-import { Spacing } from '@/src/constants';
-import { AppConfig } from '@/src/constants/app-config';
-import { AccountMetadataFormModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { accountFormStrings as copy } from '@/src/constants/copy/domains/accountFormStrings';
+import { Spacing } from '@/src/constants/design-tokens';
+import type { AccountMetadataFormModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
+import { useTheme } from '@/src/hooks/use-theme';
+import { View } from 'react-native';
 
-interface LoanMetadataFieldsProps {
+export function LoanMetadataFields({
+  metadata,
+  precision = 2,
+}: {
   metadata: AccountMetadataFormModel;
-}
-
-export const LoanMetadataFields: React.FC<LoanMetadataFieldsProps> = ({ metadata }) => {
-  const {
-    emiDay,
-    setEmiDay,
-    loanTenureMonths,
-    setLoanTenureMonths,
-    minimumPaymentAmount,
-    setMinimumPaymentAmount,
-    apr,
-    setApr,
-  } = metadata;
+  precision?: number;
+}) {
+  const { theme } = useTheme();
   return (
-    <>
-      <View style={styles.row}>
-        <View style={{ flex: 1 }}>
-          <AppInput
-            label="EMI Day"
-            value={emiDay}
-            onChangeText={setEmiDay}
-            placeholder="e.g. 1"
-            keyboardType="number-pad"
-            maxLength={AppConfig.input.maxDayOfMonthLength}
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <AppInput
-            label="Tenure (Months)"
-            value={loanTenureMonths}
-            onChangeText={setLoanTenureMonths}
-            placeholder="e.g. 36"
-            keyboardType="number-pad"
-          />
-        </View>
+    <View style={{ gap: Spacing.lg }}>
+      <View style={{ borderBottomWidth: 1, borderBottomColor: theme.border }}>
+        <AppInput
+          variant="minimal"
+          label={copy.apr}
+          placeholder={copy.aprPlaceholder}
+          value={metadata.apr}
+          onChangeText={metadata.setApr}
+          keyboardType="decimal-pad"
+          testID="account-apr-input"
+        />
       </View>
-      <View style={styles.row}>
-        <View style={{ flex: 2 }}>
-          <CalculatorAmountInput
-            label="Monthly EMI"
-            value={minimumPaymentAmount}
-            onChangeText={setMinimumPaymentAmount}
-            placeholder="Enter EMI amount"
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <AppInput
-            label="APR (%)"
-            value={apr}
-            onChangeText={setApr}
-            placeholder="e.g. 9.5"
-            keyboardType="decimal-pad"
-          />
-        </View>
+      <View style={{ borderBottomWidth: 1, borderBottomColor: theme.border }}>
+        <AppInput
+          variant="minimal"
+          label={copy.tenure}
+          placeholder={copy.tenurePlaceholder}
+          value={metadata.loanTenureMonths}
+          onChangeText={metadata.setLoanTenureMonths}
+          keyboardType="number-pad"
+          testID="account-tenure-input"
+        />
       </View>
-    </>
+      <CalculatorAmountInput
+        variant="minimal"
+        label={copy.emiAmount}
+        placeholder={copy.emiAmountPlaceholder}
+        value={metadata.minimumPaymentAmount}
+        onChangeText={metadata.setMinimumPaymentAmount}
+        precision={precision}
+        testID="account-emi-amount-input"
+      />
+    </View>
   );
-};
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-});
+}
