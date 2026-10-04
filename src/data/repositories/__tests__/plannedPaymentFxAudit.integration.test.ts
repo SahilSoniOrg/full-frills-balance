@@ -5,7 +5,7 @@ import { accountWriteRepository } from '@/src/data/repositories/account';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { registerAuditHandlers } from '@/src/services/audit-handlers';
-import { auditService } from '@/src/services/audit-service';
+import { revertEntry } from '@/src/services/audit-service';
 import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 
@@ -55,7 +55,7 @@ it('records new FX fields and undo restores absent mode without rewriting legacy
   )!;
   expect(log.parsedChanges?.before).toMatchObject({ fxMode: null, destinationAmount: null });
   expect(log.parsedChanges?.after).toMatchObject({ fxMode: 'fixed', destinationAmount: 90 });
-  expect(await auditService.revertEntry(log.id, WP)).toEqual({ success: true });
+  expect(await revertEntry(log.id, WP)).toEqual({ success: true });
   expect(payment.fxMode).toBeNull();
   expect(payment.destinationAmount).toBeNull();
   expect(payment.currencyCode).toBe('INR');
@@ -75,7 +75,7 @@ it('undo restores a manual destination suggestion after automatic mode clears it
     entry => entry.parsedChanges?.after?.fxMode === 'automatic',
   )!;
   expect(log.parsedChanges?.after).toMatchObject({ fxMode: 'automatic', destinationAmount: null });
-  expect(await auditService.revertEntry(log.id, WP)).toEqual({ success: true });
+  expect(await revertEntry(log.id, WP)).toEqual({ success: true });
   expect(payment.fxMode).toBe('manual');
   expect(payment.destinationAmount).toBe(90);
 });
@@ -90,7 +90,7 @@ it('rejects stale FX undo after a subsequent destination amount edit', async () 
     entry => entry.eventType === 'planned_payment.updated',
   )!;
   await plannedPaymentRepository.updateSchedule(WP, payment, { destinationAmount: 95 });
-  expect((await auditService.revertEntry(log.id, WP)).success).toBe(false);
+  expect((await revertEntry(log.id, WP)).success).toBe(false);
   expect(payment.fxMode).toBe('fixed');
   expect(payment.destinationAmount).toBe(95);
 });

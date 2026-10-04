@@ -45,7 +45,7 @@ jest.mock('@/src/features/journal', () => ({
   useJournalsBulkOperations: () => ({ actions: [], modals: {} }),
 }));
 jest.mock('@/src/services/audit-service', () => ({
-  auditService: { observeAuditTrail: () => jest.requireActual('rxjs').of([]) },
+  observeAuditTrail: () => jest.requireActual('rxjs').of([]),
 }));
 jest.mock('../usePlannedPaymentRecord', () => ({ usePlannedPaymentRecord: jest.fn() }));
 jest.mock('@/src/services/planned-payment/plannedPaymentDetailService', () => ({

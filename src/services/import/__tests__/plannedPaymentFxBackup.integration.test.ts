@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import PlannedPayment, { toPlainPlannedPayment } from '@/src/data/models/PlannedPayment';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { prepareAuxiliaryImportRecords } from '@/src/data/repositories/importAuxiliaryWriters';
+import { prepareAuxiliaryImportRecords } from '@/src/data/repositories/importWriters';
 import { fetchAndTransformTable } from '@/src/services/export/exportTableTransformer';
 import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
 import { resolveParsedImportBatchData } from '@/src/services/import/canonicalImportAdapter';

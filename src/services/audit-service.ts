@@ -97,11 +97,3 @@ export function observeRecentLogs(
     .observeRecent(limit, workplaceId, entityType, source, eventType, correlationId)
     .pipe(map(logs => logs.map(toSupportedPlainAuditLog)));
 }
-
-/** @deprecated Prefer named imports (`revertEntry`, `observeRecentLogs`, etc.). */
-export const auditService = {
-  revertEntry,
-  getOlderLogs,
-  observeAuditTrail,
-  observeRecentLogs,
-};

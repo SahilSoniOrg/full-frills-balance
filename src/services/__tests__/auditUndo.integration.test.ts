@@ -6,7 +6,7 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { registerAuditHandlers } from '@/src/services/audit-handlers';
-import { auditService } from '@/src/services/audit-service';
+import { revertEntry } from '@/src/services/audit-service';
 import { updateAccount, saveAccount } from '@/src/services/accounts/accountHierarchyCommands';
 import { deleteAccount } from '@/src/services/accounts/accountDeleteCommands';
 import {
@@ -72,7 +72,7 @@ test('account undo records the state that it changed', async () => {
   const a = await account('Original');
   await updateAccount(wp, a.id, { name: 'Edited' });
   const [log] = await auditRepository.findByEntity('account', a.id, wp);
-  expect(await auditService.revertEntry(log.id, wp)).toEqual({ success: true });
+  expect(await revertEntry(log.id, wp)).toEqual({ success: true });
   expect(a.name).toBe('Original');
   const reverted = (await auditRepository.findByEntity('account', a.id, wp)).find(
     log => log.eventType === 'account.reverted',
@@ -88,7 +88,7 @@ test('a stale account undo leaves the account and history untouched', async () =
   const [log] = await auditRepository.findByEntity('account', a.id, wp);
   await updateAccount(wp, a.id, { name: 'Latest edit' });
   const count = await auditRepository.countByWorkplace(wp);
-  expect((await auditService.revertEntry(log.id, wp)).success).toBe(false);
+  expect((await revertEntry(log.id, wp)).success).toBe(false);
   expect(a.name).toBe('Latest edit');
   expect(await auditRepository.countByWorkplace(wp)).toBe(count);
 });
@@ -107,7 +107,7 @@ test('budget amount history captures pre-edit state and undo restores it', async
   );
   expect(log.parsedChanges?.before).toMatchObject({ amount: 100 });
   expect(log.parsedChanges?.after).toMatchObject({ amount: 200 });
-  expect(await auditService.revertEntry(log.id, wp)).toEqual({ success: true });
+  expect(await revertEntry(log.id, wp)).toEqual({ success: true });
   expect((await budgetRepository.find(wp, budget.id as BudgetId))?.amount).toBe(100);
 });
 
@@ -167,7 +167,7 @@ test('budget undo restores combined scalar, scope, and funding edits', async () 
   const [log] = (await auditRepository.findByEntity('budget', budget.id, wp)).filter(
     entry => entry.eventType === 'budget.updated',
   );
-  expect(await auditService.revertEntry(log.id, wp)).toEqual({ success: true });
+  expect(await revertEntry(log.id, wp)).toEqual({ success: true });
   const restored = await budgetRepository.find(wp, budget.id as BudgetId);
   expect(restored?.name).toBe('Original');
   expect(restored?.amount).toBe(100);
@@ -190,7 +190,7 @@ test('stale budget undo rejects without changing budget or history', async () =>
   );
   await budgetRepository.update(wp, budget, { amount: 300 }, [scope.id as AccountId]);
   const count = await auditRepository.countByWorkplace(wp);
-  expect((await auditService.revertEntry(firstEdit.id, wp)).success).toBe(false);
+  expect((await revertEntry(firstEdit.id, wp)).success).toBe(false);
   expect((await budgetRepository.find(wp, budget.id as BudgetId))?.amount).toBe(300);
   expect(await auditRepository.countByWorkplace(wp)).toBe(count);
 });
@@ -199,7 +199,7 @@ test('undo form color change restores original color', async () => {
   const a = await account('Colored', '#112233');
   await saveAccount(wp, a.id, { color: '#445566' });
   const [log] = await auditRepository.findByEntity('account', a.id, wp);
-  expect(await auditService.revertEntry(log.id, wp)).toEqual({ success: true });
+  expect(await revertEntry(log.id, wp)).toEqual({ success: true });
   expect(a.color).toBe('#112233');
 });
 
@@ -237,7 +237,7 @@ test.each([
     const log = (await auditRepository.findByEntity('journal', journal.id, wp)).find(
       log => log.action === AuditAction.UPDATE,
     )!;
-    expect(await auditService.revertEntry(log.id, wp)).toEqual({ success: true });
+    expect(await revertEntry(log.id, wp)).toEqual({ success: true });
     expect(journal.status).toBe(beforeStatus);
     expect(journal.description).toBe('Old');
     expect(journal.journalDate).toBe(1700000000000);
@@ -265,13 +265,13 @@ test('posting and reverting-to-planned lifecycle events remain undoable', async 
   const post = (await auditRepository.findByEntity('journal', journal.id, wp)).find(
     log => log.eventType === 'journal.posted',
   )!;
-  expect(await auditService.revertEntry(post.id, wp)).toEqual({ success: true });
+  expect(await revertEntry(post.id, wp)).toEqual({ success: true });
   expect(journal.status).toBe(JournalStatus.PLANNED);
   expect(journal.journalDate).toBe(plannedAt);
   const revert = (await auditRepository.findByEntity('journal', journal.id, wp)).find(
     log => log.eventType === 'journal.reverted_to_planned',
   )!;
-  expect(await auditService.revertEntry(revert.id, wp)).toEqual({ success: true });
+  expect(await revertEntry(revert.id, wp)).toEqual({ success: true });
   expect(journal.status).toBe(JournalStatus.POSTED);
   expect(journal.journalDate).toBe(postedAt);
 });
@@ -290,7 +290,7 @@ test('undo metadata cannot restore a deleted payment source', async () => {
   const [log] = await auditRepository.findByEntity('account', card.id, wp);
   await deleteAccount(a.id, wp);
   expect(await accountQueryRepository.find(wp, a.id)).toBeNull();
-  const result = await auditService.revertEntry(log.id, wp);
+  const result = await revertEntry(log.id, wp);
   expect(result.success).toBe(false);
   expect(result.error).toContain('missing or deleted');
   expect((await accountQueryRepository.findMetadata(wp, card.id))?.payFromAccountId).toBe(b.id);
@@ -308,7 +308,7 @@ test('undo metadata restores a payment source that is still live', async () => {
   });
   await updateAccount(wp, card.id, { metadata: { payFromAccountId: b.id } });
   const [log] = await auditRepository.findByEntity('account', card.id, wp);
-  expect(await auditService.revertEntry(log.id, wp)).toEqual({ success: true });
+  expect(await revertEntry(log.id, wp)).toEqual({ success: true });
   expect((await accountQueryRepository.findMetadata(wp, card.id))?.payFromAccountId).toBe(a.id);
 });
 
@@ -339,6 +339,6 @@ test('journal amount undo accepts serialized null optional line fields', async (
   const log = (await auditRepository.findByEntity('journal', journal.id, wp)).find(
     log => log.action === AuditAction.UPDATE,
   )!;
-  expect(await auditService.revertEntry(log.id, wp)).toEqual({ success: true });
+  expect(await revertEntry(log.id, wp)).toEqual({ success: true });
   expect(journal.totalAmount).toBe(10);
 });

@@ -22,6 +22,7 @@ import { AccountAuditState, TransactionAuditState } from '@/src/types/audit';
 import { AccountId, BudgetId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { AuditAction, JournalStatus } from '@/src/types/enums';
 import { getAuditEventFieldDeltas, isAuditEventPayload } from '@/src/types/auditEvents';
+import { stableAuditJson } from '@/src/utils/stableAuditJson';
 
 type AuditChanges = Record<string, unknown> & {
   before?: Record<string, unknown>;
@@ -230,27 +231,13 @@ function normalizedJournalSnapshot(
   };
 }
 
-function stableJson(value: unknown): string {
-  if (Array.isArray(value)) {
-    return `[${value.map(item => stableJson(item)).join(',')}]`;
-  }
-  if (typeof value === 'object' && value !== null) {
-    const object = value as Record<string, unknown>;
-    return `{${Object.keys(object)
-      .sort()
-      .map(key => `${JSON.stringify(key)}:${stableJson(object[key])}`)
-      .join(',')}}`;
-  }
-  return JSON.stringify(value ?? null);
-}
-
 function equalAuditValue(field: string, left: unknown, right: unknown): boolean {
   if (field === 'transactions' && Array.isArray(left) && Array.isArray(right)) {
     const sortLines = (lines: unknown[]) =>
-      [...lines].sort((a, b) => stableJson(a).localeCompare(stableJson(b)));
-    return stableJson(sortLines(left)) === stableJson(sortLines(right));
+      [...lines].sort((a, b) => stableAuditJson(a).localeCompare(stableAuditJson(b)));
+    return stableAuditJson(sortLines(left)) === stableAuditJson(sortLines(right));
   }
-  return stableJson(left) === stableJson(right);
+  return stableAuditJson(left) === stableAuditJson(right);
 }
 
 function matchesCurrentJournal(changes: AuditChanges, current: Record<string, unknown>): boolean {
@@ -319,7 +306,7 @@ export function registerAuditHandlers(): void {
         }
         if (
           after?.deletedAt !== undefined &&
-          stableJson(journal.deletedAt.toISOString()) !== stableJson(after.deletedAt)
+          stableAuditJson(journal.deletedAt.toISOString()) !== stableAuditJson(after.deletedAt)
         ) {
           throw new Error(
             REVERT_CONFLICT_MESSAGE,

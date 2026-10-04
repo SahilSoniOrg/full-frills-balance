@@ -34,7 +34,7 @@ import {
   type PlannedPaymentActivitySummary,
   type PlannedPaymentNextOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentDetailService';
-import { auditService } from '@/src/services/audit-service';
+import { observeAuditTrail } from '@/src/services/audit-service';
 import { normalizeToStartOfDay } from '@/src/services/planned-payment/plannedPaymentRecurrence';
 import type { Money } from '@/src/types/domainReadModels';
 import { useLocalSearchParams } from 'expo-router';
@@ -139,7 +139,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
   const isPrivacyMode = useEffectivePrivacyMode();
   const params = useLocalSearchParams();
   const { data: statusAudit } = useObservable(
-    () => (id ? auditService.observeAuditTrail('planned_payment', id, workplaceId, 500) : of([])),
+    () => (id ? observeAuditTrail('planned_payment', id, workplaceId, 500) : of([])),
     [id, workplaceId],
     [],
     { keepPreviousData: false },

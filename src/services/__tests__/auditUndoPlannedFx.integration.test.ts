@@ -5,7 +5,7 @@ import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPl
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { registerAuditHandlers } from '@/src/services/audit-handlers';
-import { auditService } from '@/src/services/audit-service';
+import { revertEntry } from '@/src/services/audit-service';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { PlannedPaymentFxReviewRequiredError } from '@/src/services/planned-payment/plannedPaymentFx';
@@ -125,7 +125,7 @@ test.each(['manual', 'fixed', 'automatic'] as const)(
     expect(journal.status).toBe(JournalStatus.PLANNED);
     disableMarketLookups();
 
-    expect(await auditService.revertEntry(reversal.id, WORKPLACE)).toEqual({ success: true });
+    expect(await revertEntry(reversal.id, WORKPLACE)).toEqual({ success: true });
     expect(journal.status).toBe(JournalStatus.POSTED);
     expect(journal.journalDate).toBe(postedAt);
     expect(await nativeLines(journal.id)).toEqual(originalLines);
@@ -153,7 +153,7 @@ test.each(['manual', 'fixed', 'automatic'] as const)(
     expect(journal.deletedAt).toBeDefined();
     disableMarketLookups();
 
-    expect(await auditService.revertEntry(deletion.id, WORKPLACE)).toEqual({ success: true });
+    expect(await revertEntry(deletion.id, WORKPLACE)).toEqual({ success: true });
     expect(journal.deletedAt).toBeNull();
     expect(journal.status).toBe(JournalStatus.POSTED);
     expect(journal.journalDate).toBe(postedAt);

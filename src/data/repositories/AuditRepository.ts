@@ -8,7 +8,7 @@ import {
   AuditEventType,
   createAuditEventPayload,
 } from '@/src/types/auditEvents';
-import { getLocalAuditActorId } from '@/src/services/audit-identity';
+import { resolveAuditActor } from '@/src/utils/resolveAuditActor';
 import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
@@ -86,7 +86,7 @@ export class AuditRepository {
         displayName: entry.displayName,
         eventType: entry.eventType,
         source: entry.source,
-        actor: entry.actor ?? this.getDefaultActor(entry.source),
+        actor: entry.actor ?? resolveAuditActor(entry.source),
         correlationId: entry.correlationId,
         revertsLogId: entry.revertsLogId,
         undoable: entry.undoable,
@@ -101,7 +101,7 @@ export class AuditRepository {
         action: entry.action,
         eventType: entry.eventType,
         source: entry.source,
-        actor: entry.actor ?? this.getDefaultActor(entry.source),
+        actor: entry.actor ?? resolveAuditActor(entry.source),
         undoable: false,
         changes: {
           serializationError: error instanceof Error ? error.message : String(error),
@@ -114,18 +114,6 @@ export class AuditRepository {
     record.correlationId = payload.correlationId ?? null;
     record.timestamp = Date.now();
     record.createdAt = new Date();
-  }
-
-  private getDefaultActor(source?: AuditEventSource): AuditActor {
-    if (source === 'system' || source === 'repair') return { type: 'system' };
-    if (source !== undefined && source !== 'app' && source !== 'import') {
-      return { type: 'unknown' };
-    }
-    const id = getLocalAuditActorId();
-    return {
-      type: 'user',
-      ...(id ? { id, idScope: 'local-install' } : {}),
-    };
   }
 
   /** Legacy convenience API. Use fetchOlder to page past the bounded newest results. */

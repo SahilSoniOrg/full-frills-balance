@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
-import { prepareAuxiliaryImportRecords } from '@/src/data/repositories/importAuxiliaryWriters';
+import { prepareAuxiliaryImportRecords } from '@/src/data/repositories/importWriters';
 import type { BatchImportData } from '@/src/types/importContracts';
 import { InboxParseStatus, InboxProcessingStatus, TransactionDirection } from '@/src/types/enums';
 import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';

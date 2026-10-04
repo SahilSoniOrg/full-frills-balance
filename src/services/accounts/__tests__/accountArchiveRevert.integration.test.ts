@@ -5,7 +5,7 @@ import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { revertAccountFromAuditState } from '@/src/services/accounts/accountAuditCommands';
 import { serializeArchiveAuditChanges } from '@/src/services/accounts/accountArchiveCommands';
 import { collectArchiveAuditEntries } from '@/src/services/accounts/accountArchiveMutations';
-import { auditService } from '@/src/services/audit-service';
+import { revertEntry } from '@/src/services/audit-service';
 import { revertRegistry } from '@/src/services/revert-registry';
 
 jest.mock('@/src/data/repositories/AuditRepository');
@@ -59,7 +59,7 @@ describe('account archive revert integration', () => {
       parsedChanges: persistedChanges,
     });
 
-    const result = await auditService.revertEntry('log-archive', workplaceId);
+    const result = await revertEntry('log-archive', workplaceId);
 
     expect(result.success).toBe(true);
     expect(accountQueryRepository.findWithDeleted).toHaveBeenCalledWith(workplaceId, accountId);
@@ -88,7 +88,7 @@ describe('account archive revert integration', () => {
       },
     });
 
-    const result = await auditService.revertEntry('log-bad', workplaceId);
+    const result = await revertEntry('log-bad', workplaceId);
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/Invalid archivedAt in audit snapshot/);

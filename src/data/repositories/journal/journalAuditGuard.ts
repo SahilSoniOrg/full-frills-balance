@@ -1,22 +1,7 @@
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
-
-const REVERT_CONFLICT_MESSAGE =
-  'This journal changed after the selected history entry. Refresh and review the latest change.';
-
-function stableJson(value: unknown): string {
-  if (Array.isArray(value)) {
-    return `[${value.map(item => stableJson(item)).join(',')}]`;
-  }
-  if (typeof value === 'object' && value !== null) {
-    const object = value as Record<string, unknown>;
-    return `{${Object.keys(object)
-      .sort()
-      .map(key => `${JSON.stringify(key)}:${stableJson(object[key])}`)
-      .join(',')}}`;
-  }
-  return JSON.stringify(value ?? null);
-}
+import { REVERT_CONFLICT_MESSAGE } from '@/src/services/revert-registry';
+import { stableAuditJson } from '@/src/utils/stableAuditJson';
 
 /**
  * Rejects an undo if any event field no longer matches, using rows loaded from
@@ -53,11 +38,17 @@ export function assertExpectedJournalSnapshot(
     const actualValue = current[field];
     const matches =
       field === 'transactions' && Array.isArray(actualValue) && Array.isArray(expectedValue)
-        ? stableJson(
-            [...actualValue].sort((a, b) => stableJson(a).localeCompare(stableJson(b))),
+        ? stableAuditJson(
+            [...actualValue].sort((a, b) =>
+              stableAuditJson(a).localeCompare(stableAuditJson(b)),
+            ),
           ) ===
-          stableJson([...expectedValue].sort((a, b) => stableJson(a).localeCompare(stableJson(b))))
-        : stableJson(actualValue) === stableJson(expectedValue);
+          stableAuditJson(
+            [...expectedValue].sort((a, b) =>
+              stableAuditJson(a).localeCompare(stableAuditJson(b)),
+            ),
+          )
+        : stableAuditJson(actualValue) === stableAuditJson(expectedValue);
     if (!matches) throw new Error(REVERT_CONFLICT_MESSAGE);
   }
 }

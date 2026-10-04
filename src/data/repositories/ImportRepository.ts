@@ -3,8 +3,10 @@ import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import Account from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
-import { prepareAuxiliaryImportRecords } from '@/src/data/repositories/importAuxiliaryWriters';
-import { prepareCoreImportRecords } from '@/src/data/repositories/importCoreWriters';
+import {
+  prepareAuxiliaryImportRecords,
+  prepareCoreImportRecords,
+} from '@/src/data/repositories/importWriters';
 import { prepareImportedEntityAuditRecords } from '@/src/data/repositories/importAuditWriters';
 import {
   calculateImportRunningBalances,
