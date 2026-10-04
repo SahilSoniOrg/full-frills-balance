@@ -2,7 +2,6 @@ import { AccountType } from '@/src/types/enums';
 
 import {
   accountFlowLabels,
-  getAccountActivityFlowLabels,
   getAccountStatsConfig,
 } from '../accountFlowLabels';
 
@@ -60,8 +59,7 @@ describe('accountFlowLabels', () => {
     expect(getAccountStatsConfig(accountType, INCREASE, DECREASE)).toEqual(
       expectedStatsByType[accountType],
     );
-    expect(getAccountActivityFlowLabels(accountType)).toEqual(expectedActivityByType[accountType]);
-    expect(flow.increaseLabel).toBe(expectedActivityByType[accountType].increaseLabel);
+    expect(flow).toMatchObject(expectedActivityByType[accountType]);
     expect(flow.statsLeftLabel).toBe(expectedStatsByType[accountType].leftLabel);
   });
 
@@ -87,7 +85,7 @@ describe('accountFlowLabels', () => {
   });
 
   it('keeps the legacy credit-card alias on liability activity labels', () => {
-    expect(getAccountActivityFlowLabels('CREDIT_CARD')).toEqual({
+    expect(accountFlowLabels('CREDIT_CARD')).toMatchObject({
       increaseLabel: 'Total Spent',
       decreaseLabel: 'Total Paid',
     });

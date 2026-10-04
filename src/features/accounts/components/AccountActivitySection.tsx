@@ -5,7 +5,10 @@ import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader
 import { Icon, AppText, IconButton } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
-import { getAccountActivityFlowLabels } from '@/src/features/accounts/helpers/accountFlowLabels';
+import {
+  accountFlowLabels,
+  type AccountFlowLabelKey,
+} from '@/src/features/accounts/helpers/accountFlowLabels';
 import type { AccountActivitySectionModel } from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatShortDate } from '@/src/utils/dateUtils';
@@ -40,7 +43,7 @@ export function AccountActivitySection({
       : reconciledAtMs != null
         ? theme.success
         : theme.textSecondary;
-  const flowLabels = getAccountActivityFlowLabels(accountType);
+  const flowLabels = accountFlowLabels(accountType as AccountFlowLabelKey);
 
   return (
     <>

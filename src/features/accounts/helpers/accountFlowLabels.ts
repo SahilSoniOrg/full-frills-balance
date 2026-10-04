@@ -1,6 +1,6 @@
 import { AccountType } from '@/src/types/enums';
 
-type AccountFlowLabelKey = AccountType | 'CREDIT_CARD' | undefined;
+export type AccountFlowLabelKey = AccountType | 'CREDIT_CARD' | undefined;
 
 type AccountFlowLabels = {
   statsLeftLabel: string;
@@ -10,7 +10,7 @@ type AccountFlowLabels = {
   decreaseLabel: string;
 };
 
-function resolveAccountFlowLabels(accountType: AccountFlowLabelKey): AccountFlowLabels {
+export function accountFlowLabels(accountType: AccountFlowLabelKey): AccountFlowLabels {
   if (accountType === AccountType.LIABILITY || accountType === 'CREDIT_CARD') {
     return {
       statsLeftLabel: 'PAYMENTS MADE',
@@ -56,16 +56,12 @@ function resolveAccountFlowLabels(accountType: AccountFlowLabelKey): AccountFlow
   };
 }
 
-export function accountFlowLabels(accountType: AccountFlowLabelKey) {
-  return resolveAccountFlowLabels(accountType);
-}
-
 export function getAccountStatsConfig(
   accountType: AccountType | undefined,
   monthlyIncome: number,
   monthlyExpense: number,
 ) {
-  const labels = resolveAccountFlowLabels(accountType);
+  const labels = accountFlowLabels(accountType);
   if (labels.statsSwapAmounts) {
     return {
       leftLabel: labels.statsLeftLabel,
@@ -80,12 +76,4 @@ export function getAccountStatsConfig(
     rightLabel: labels.statsRightLabel,
     rightAmount: monthlyExpense,
   };
-}
-
-export function getAccountActivityFlowLabels(accountType: string): {
-  increaseLabel: string;
-  decreaseLabel: string;
-} {
-  const labels = resolveAccountFlowLabels(accountType as AccountFlowLabelKey);
-  return { increaseLabel: labels.increaseLabel, decreaseLabel: labels.decreaseLabel };
 }
