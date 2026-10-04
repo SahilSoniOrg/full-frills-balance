@@ -1,4 +1,5 @@
 import type { NotificationCadence } from '@/src/services/notification/NotificationService';
+import { DEFAULT_UI_PREFERENCES } from '@/src/services/preferences';
 import { usePreference } from '@/src/hooks/usePreference';
 import { useCallback } from 'react';
 
@@ -23,7 +24,7 @@ export function useNotificationPrefs(): NotificationPrefsState {
     usePreference('notificationMinute');
   const { value: notificationWeekday, setValue: setNotificationWeekdayValue } =
     usePreference('notificationWeekday');
-  const notificationCadence = storedCadence || 'none';
+  const notificationCadence = storedCadence ?? DEFAULT_UI_PREFERENCES.notificationCadence;
 
   const setNotificationCadence = useCallback(
     (cadence: NotificationCadence) => {

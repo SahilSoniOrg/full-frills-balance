@@ -1,4 +1,5 @@
-import { FontId, FontIds, ThemeId, ThemeIds, ThemeMode } from '@/src/constants/design-tokens';
+import { FontId, ThemeId, ThemeMode } from '@/src/constants/design-tokens';
+import { DEFAULT_UI_PREFERENCES } from '@/src/services/preferences';
 import type { ThemeAppearance } from '@/src/services/preferences';
 import { usePreference } from '@/src/hooks/usePreference';
 import { commitFontIdAfterLoad } from '@/src/utils/loadFontSet';
@@ -26,9 +27,9 @@ export function useThemePrefs(): ThemePrefsState {
     usePreference('theme');
   const { value: storedThemeId, setValue: setStoredThemeId } = usePreference('themeId');
   const { value: storedFontId, setValue: setStoredFontId } = usePreference('fontId');
-  const themePreference = storedThemePreference || 'system';
-  const themeId = storedThemeId || ThemeIds.DEEP_SPACE;
-  const fontId = storedFontId || FontIds.DEEP_SPACE;
+  const themePreference = storedThemePreference ?? DEFAULT_UI_PREFERENCES.theme;
+  const themeId = storedThemeId ?? DEFAULT_UI_PREFERENCES.themeId;
+  const fontId = storedFontId ?? DEFAULT_UI_PREFERENCES.fontId;
 
   const themeMode = useMemo<ThemeMode>(() => {
     return themePreference === 'system'

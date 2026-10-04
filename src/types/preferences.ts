@@ -15,11 +15,11 @@ export interface PrivacyPolicyAcknowledgement {
  * this aggregate shape as a domain API.
  */
 export interface UIPreferences {
-  userName?: string;
-  theme?: 'light' | 'dark' | 'system';
+  userName: string;
+  theme: 'light' | 'dark' | 'system';
   hourCyclePreference?: HourCyclePreference;
-  themeId?: ThemeId;
-  fontId?: FontId;
+  themeId: ThemeId;
+  fontId: FontId;
   isPrivacyMode: boolean;
   isWidgetPrivacyEnabled: boolean;
   privacyPolicyAcknowledgement?: PrivacyPolicyAcknowledgement;
@@ -30,7 +30,7 @@ export interface UIPreferences {
   notificationHour: number;
   notificationMinute: number;
   notificationWeekday: number;
-  defaultShareFormat?: ShareFormat;
+  defaultShareFormat: ShareFormat;
   showSafeToSpendChart: boolean;
   reportsV2Enabled: boolean;
 }

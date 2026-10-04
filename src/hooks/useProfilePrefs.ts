@@ -1,3 +1,4 @@
+import { DEFAULT_UI_PREFERENCES } from '@/src/services/preferences';
 import { usePreference } from '@/src/hooks/usePreference';
 import { useCallback } from 'react';
 
@@ -11,7 +12,7 @@ export type ProfilePrefsState = {
  */
 export function useProfilePrefs(): ProfilePrefsState {
   const { value: storedUserName, setValue: setStoredUserName } = usePreference('userName');
-  const userName = storedUserName || '';
+  const userName = storedUserName ?? DEFAULT_UI_PREFERENCES.userName;
 
   const setUserName = useCallback(
     (name: string) => {

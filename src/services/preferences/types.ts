@@ -10,6 +10,7 @@ export type {
 
 export const DEFAULT_UI_PREFERENCES: UIPreferences = {
   userName: '',
+  theme: 'system',
   isPrivacyMode: false,
   isWidgetPrivacyEnabled: false,
   privacyPolicyAcknowledgement: undefined,
