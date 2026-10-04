@@ -307,7 +307,7 @@ Work through this sequence commit-by-commit. Run `bun run verify` (or `bun test`
   - Keep Reports V1 active; expose V2 cleanly via preference or entry point.
 - [x] **Step 24:** `chore(architecture): add check-route-registry-agreement script`
   - Add CI check validating `app/` routes against `routeManifest.ts`.
-- [ ] **Step 25:** `chore(architecture): add check-query-ordering-parity script`
+- [x] **Step 25:** `chore(architecture): add check-query-ordering-parity script`
   - Add CI check validating SQLite and ORM ordering parity.
 
 ### Block 4: Phase 3 State, Services & Design System Polish (Steps 26–31)
