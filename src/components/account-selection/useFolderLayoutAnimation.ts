@@ -29,7 +29,7 @@ const REVEAL_TIMING = {
   easing: Easing.out(Easing.cubic),
 };
 
-export function buildFolderSvgPath(
+function buildFolderSvgPath(
   side: FolderSide,
   width: number,
   height: number,

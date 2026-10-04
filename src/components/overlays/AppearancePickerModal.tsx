@@ -12,7 +12,7 @@ import {
 } from '@/src/constants';
 import { AccountType } from '@/src/types/enums';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useAccountColors } from '@/src/hooks/useAccountColors';
+import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { withOpacity } from '@/src/utils/color-math';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -53,10 +53,10 @@ export const AppearancePickerModal: React.FC<AppearancePickerModalProps> = ({
   const effectiveIcon = mode === 'both' ? draftIcon : selectedIcon;
   const effectiveColor = mode === 'both' ? draftColor : selectedColor;
 
-  const { accentColor: accountColor, categoryColor } = useAccountColors({
-    accountType,
-    color: effectiveColor,
-  });
+  const { accentColor: accountColor, categoryColor } = resolveAccountAppearance(
+    { accountType, color: effectiveColor },
+    theme,
+  );
 
   const handleIconPress = async (icon: IconName) => {
     if (mode === 'both') {

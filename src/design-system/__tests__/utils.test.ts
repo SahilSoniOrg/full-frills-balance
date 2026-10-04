@@ -1,5 +1,4 @@
-import { extractBoxProps, processTextChildren, resolvePaddingSpacing } from '../utils';
-import { createElement } from 'react';
+import { extractBoxProps, resolvePaddingSpacing } from '../utils';
 
 describe('Design System Utilities', () => {
   describe('extractBoxProps', () => {
@@ -74,16 +73,4 @@ describe('Design System Utilities', () => {
     });
   });
 
-  describe('processTextChildren', () => {
-    it('preserves exact text content for native accessibility and copy checks', () => {
-      expect(processTextChildren("E2E User's Personal workplace")).toBe(
-        "E2E User's Personal workplace",
-      );
-    });
-
-    it('passes non-string children through unchanged', () => {
-      const child = createElement('strong', null);
-      expect(processTextChildren(child)).toBe(child);
-    });
-  });
 });

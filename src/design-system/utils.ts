@@ -12,18 +12,6 @@ import { withOpacity } from '@/src/utils/color-math';
 import { type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 
 /**
- * processTextChildren
- *
- * Centralized utility for text children.
- *
- * Text content must remain semantically exact across platforms. Android
- * typography safeguards belong in the Text style, not in the string value.
- */
-export function processTextChildren(children: React.ReactNode): React.ReactNode {
-  return children;
-}
-
-/**
  * Common spacing resolver (Padding cannot be 'auto' in semantics)
  */
 export function resolvePaddingSpacing(value: SpacingKey | number | undefined): number | undefined {
@@ -95,7 +83,7 @@ export function resolveStyleColors<T extends StyleProp<ViewStyle | TextStyle>>(
   return flattened as unknown as T;
 }
 
-export const BOX_PROP_KEY_LIST = [
+const BOX_PROP_KEY_LIST = [
   'padding',
   'paddingHorizontal',
   'paddingVertical',

@@ -1,6 +1,6 @@
 import { Typography } from '@/src/constants/design-tokens';
 import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
-import { processTextChildren, resolveStyleColors } from '@/src/design-system/utils';
+import { resolveStyleColors } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { logger } from '@/src/utils/logger';
@@ -40,8 +40,6 @@ export const AppText = memo(function AppText({
   const { fonts, getVariantColors, theme, themeMode } = useTheme();
   const { fontId } = useThemePrefs();
   const { fontsReady, loadedFontId } = useAppReady();
-
-  const processedChildren = useMemo(() => processTextChildren(children), [children]);
 
   const textStyle = useMemo(() => {
     const typographyStyles = (() => {
@@ -136,7 +134,7 @@ export const AppText = memo(function AppText({
       style={textStyle}
       {...props}
     >
-      {processedChildren}
+      {children}
     </Text>
   );
 });

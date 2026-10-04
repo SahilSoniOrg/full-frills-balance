@@ -1,13 +1,89 @@
 import { AccountCategoryPill } from '@/src/components/accounts/AccountCategoryPill';
 import { Icon, AppIcon, AppText } from '@/src/components/core';
 import type { IconName } from '@/src/types/domainIcons';
-import { useRevealHorizontalItem } from '@/src/components/filters/useRevealHorizontalItem';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import React from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View, type ViewStyle } from 'react-native';
+
+const MAX_SCROLL_ATTEMPTS = 5;
+const SCROLL_RETRY_MS = 50;
+
+function useRevealHorizontalItem(
+  selectedId: string,
+  itemIds: readonly string[],
+  { margin = 0, estimatedItemWidth = 140 }: { margin?: number; estimatedItemWidth?: number } = {},
+) {
+  const scrollRef = useRef<ScrollView>(null);
+  const contentRef = useRef<View>(null);
+  const itemRefs = useRef(new Map<string, View>());
+
+  const scrollToId = useCallback(
+    (id: string) => {
+      if (!id) return false;
+
+      const itemNode = itemRefs.current.get(id);
+      const contentNode = contentRef.current;
+      if (!itemNode || !contentNode || !scrollRef.current) return false;
+
+      const index = itemIds.indexOf(id);
+      const fallbackX = index >= 0 ? index * estimatedItemWidth : 0;
+
+      itemNode.measureLayout(
+        contentNode,
+        x => {
+          scrollRef.current?.scrollTo({
+            x: Math.max(0, x - margin),
+            animated: true,
+          });
+        },
+        () => {
+          scrollRef.current?.scrollTo({
+            x: Math.max(0, fallbackX - margin),
+            animated: true,
+          });
+        },
+      );
+      return true;
+    },
+    [estimatedItemWidth, itemIds, margin],
+  );
+
+  useEffect(() => {
+    if (!selectedId) return;
+
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    let attempts = 0;
+
+    const scroll = () => {
+      if (cancelled || attempts >= MAX_SCROLL_ATTEMPTS) return;
+      attempts += 1;
+      if (!scrollToId(selectedId)) {
+        retryTimer = setTimeout(scroll, SCROLL_RETRY_MS);
+      }
+    };
+
+    const frame = requestAnimationFrame(() => {
+      requestAnimationFrame(scroll);
+    });
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+      if (retryTimer) clearTimeout(retryTimer);
+    };
+  }, [scrollToId, selectedId]);
+
+  const registerItemRef = useCallback((id: string, node: View | null) => {
+    if (node) itemRefs.current.set(id, node);
+    else itemRefs.current.delete(id);
+  }, []);
+
+  return { scrollRef, contentRef, registerItemRef };
+}
 
 export interface SelectionTileProps {
   id: string;

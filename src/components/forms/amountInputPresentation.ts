@@ -1,39 +1,40 @@
 import { Size, Spacing, Typography } from '@/src/constants/design-tokens';
 
-export function resolveAmountTypography(amountLength: number): {
+type AmountTypography = {
   amountFontSize: number;
   currencyFontSize: number;
   currencyLineHeight: number;
   inputHeight: number;
-} {
-  if (amountLength > 11) {
-    return {
-      amountFontSize: Typography.sizes.xl,
-      currencyFontSize: Typography.sizes.sm,
-      currencyLineHeight: Math.round(Typography.sizes.sm * Typography.lineHeights.tight),
-      inputHeight: Math.max(Size.buttonMd, Typography.sizes.xl + Spacing.md),
-    };
-  }
-  if (amountLength > 8) {
-    return {
-      amountFontSize: Typography.sizes.xxl,
-      currencyFontSize: Typography.sizes.base,
-      currencyLineHeight: Math.round(Typography.sizes.base * Typography.lineHeights.tight),
-      inputHeight: Math.max(Size.buttonMd, Typography.sizes.xxl + Spacing.md),
-    };
-  }
-  if (amountLength > 6) {
-    return {
-      amountFontSize: Typography.sizes.xxxl,
-      currencyFontSize: Typography.sizes.lg,
-      currencyLineHeight: Math.round(Typography.sizes.lg * Typography.lineHeights.tight),
-      inputHeight: Math.max(Size.buttonMd, Typography.sizes.xxxl + Spacing.md),
-    };
-  }
+};
+
+function tier(
+  amountFontSize: number,
+  currencyFontSize: number,
+): AmountTypography {
   return {
-    amountFontSize: Typography.sizes.jumbo,
-    currencyFontSize: Typography.sizes.xxl,
-    currencyLineHeight: Math.round(Typography.sizes.xxl * Typography.lineHeights.tight),
-    inputHeight: Typography.sizes.jumbo + Spacing.md,
+    amountFontSize,
+    currencyFontSize,
+    currencyLineHeight: Math.round(currencyFontSize * Typography.lineHeights.tight),
+    inputHeight: Math.max(Size.buttonMd, amountFontSize + Spacing.md),
   };
+}
+
+const AMOUNT_TYPOGRAPHY_TIERS: { minExclusive: number; typography: AmountTypography }[] = [
+  { minExclusive: 11, typography: tier(Typography.sizes.xl, Typography.sizes.sm) },
+  { minExclusive: 8, typography: tier(Typography.sizes.xxl, Typography.sizes.base) },
+  { minExclusive: 6, typography: tier(Typography.sizes.xxxl, Typography.sizes.lg) },
+];
+
+const DEFAULT_AMOUNT_TYPOGRAPHY: AmountTypography = {
+  amountFontSize: Typography.sizes.jumbo,
+  currencyFontSize: Typography.sizes.xxl,
+  currencyLineHeight: Math.round(Typography.sizes.xxl * Typography.lineHeights.tight),
+  inputHeight: Typography.sizes.jumbo + Spacing.md,
+};
+
+export function resolveAmountTypography(amountLength: number): AmountTypography {
+  for (const { minExclusive, typography } of AMOUNT_TYPOGRAPHY_TIERS) {
+    if (amountLength > minExclusive) return typography;
+  }
+  return DEFAULT_AMOUNT_TYPOGRAPHY;
 }

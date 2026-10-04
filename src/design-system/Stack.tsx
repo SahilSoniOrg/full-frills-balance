@@ -43,5 +43,3 @@ const StackInner = forwardRef<View, StackProps>((props, ref) => {
 StackInner.displayName = 'Stack';
 
 export const Stack = StackInner;
-
-Stack.displayName = 'Stack';

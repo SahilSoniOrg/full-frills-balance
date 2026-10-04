@@ -39,7 +39,7 @@ export interface ExchangeRateCardProps {
 const RESET_HIT_SLOP = { top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm };
 
 /** Same chrome the attached exchange-rate card uses, without the rate row. */
-export function AttachedRowShell({
+function AttachedRowShell({
   children,
   style,
   testID,

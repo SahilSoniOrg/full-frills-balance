@@ -1,11 +1,19 @@
 import { AppIcon, AppText, type IconName } from '@/src/components/core';
 import { Opacity } from '@/src/constants';
+import type { Theme } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import { withOpacity } from '@/src/utils/color-math';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Box } from '@/src/design-system';
 
 export type NoticeBannerTone = 'info' | 'warning' | 'error' | 'neutral';
+
+const NOTICE_BANNER_TONE_COLOR: Record<NoticeBannerTone, keyof Theme> = {
+  error: 'error',
+  warning: 'warning',
+  info: 'primary',
+  neutral: 'textSecondary',
+};
 
 export interface NoticeBannerProps {
   message: string;
@@ -23,14 +31,7 @@ export function NoticeBanner({
   testID,
 }: NoticeBannerProps) {
   const { theme } = useTheme();
-  const color =
-    tone === 'error'
-      ? theme.error
-      : tone === 'warning'
-        ? theme.warning
-        : tone === 'info'
-          ? theme.primary
-          : theme.textSecondary;
+  const color = theme[NOTICE_BANNER_TONE_COLOR[tone]];
 
   return (
     <Box

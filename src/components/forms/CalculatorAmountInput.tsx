@@ -31,7 +31,7 @@ interface CalculatorAmountInputProps {
   precision?: number;
   placeholder?: string;
   label?: string;
-  variant?: 'default' | 'hero' | 'minimal' | 'compact';
+  variant?: 'default' | 'hero' | 'compact';
   inputStyle?: TextInputProps['style'];
   containerStyle?: StyleProp<ViewStyle>;
   testID?: string;

@@ -23,9 +23,6 @@ interface DateTimePickerModalProps {
   weekday?: number;
 }
 
-/**
- * DateTimePickerModal - A unified picker for date and time using react-native-ui-datepicker.
- */
 export function DateTimePickerModal({
   visible,
   date,

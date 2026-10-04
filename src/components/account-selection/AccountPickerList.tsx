@@ -4,14 +4,13 @@ import { ShowArchivedButton } from '@/src/components/accounts/ShowArchivedButton
 import { AppButton, AppIcon, AppInput, AppText, Icon, ListRow } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useAccountColors } from '@/src/hooks/useAccountColors';
+import { resolveAccountAppearance , AccountSection, getAccountVariant, getSectionColor } from '@/src/utils/accountCategory';
 import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
 import { AccountType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { PlainAccount } from '@/src/types/plainDtos';
 import { isAccountArchived, pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
-import { AccountSection, getAccountVariant, getSectionColor } from '@/src/utils/accountCategory';
 import { getAccountIcon } from '@/src/utils/accountIcon';
 import { withOpacity } from '@/src/utils/color-math';
 import React, { useCallback, useMemo } from 'react';
@@ -48,7 +47,7 @@ const AccountPickerRow = React.memo(
     const { theme } = useTheme();
     const archived = isAccountArchived(item);
     const subtitle = [item.accountType, item.currencyCode].filter(Boolean).join(' • ');
-    const { accentColor } = useAccountColors(item);
+    const { accentColor } = resolveAccountAppearance(item, theme);
     const { opacity, emphasizeIndicator } = getArchivedAccountPickerRowPresentation(
       archived,
       isPinnedArchived,
@@ -118,7 +117,7 @@ export const AccountPickerPill = React.memo(
   }: AccountPickerPillProps) => {
     const { theme } = useTheme();
     const archived = isAccountArchived(item);
-    const { accentColor } = useAccountColors(item);
+    const { accentColor } = resolveAccountAppearance(item, theme);
     const { opacity, emphasizeIndicator } = getArchivedAccountPickerRowPresentation(
       archived,
       isPinnedArchived,
