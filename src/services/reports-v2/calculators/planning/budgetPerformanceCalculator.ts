@@ -68,6 +68,7 @@ function recurrenceRuleFor(budget: PlanningBudget): RecurrenceRule {
     intervalType: budget.intervalType || 'MONTHLY',
     intervalN: Math.max(1, budget.intervalN || 1),
     startDate: budget.startDate,
+    createdAt: budget.createdAt,
     recurrenceDay: budget.recurrenceDay,
     recurrenceMonth: budget.recurrenceMonth,
   };
@@ -82,7 +83,10 @@ function budgetCycleCount(
   // An all-time report starts at epoch, but a budget must not accrue cycles
   // before its own anchor. For a bounded report that starts mid-cycle, using
   // the report start still preserves the overlapping active cycle.
-  const referenceDate = Math.max(period.startDate, rule.startDate ?? period.startDate);
+  const referenceDate = Math.max(
+    period.startDate,
+    rule.startDate ?? budget.createdAt ?? period.startDate,
+  );
   let cycle = BudgetPeriodUtils.getCurrentPeriod(rule, referenceDate);
   let count = 0;
   let guard = 0;

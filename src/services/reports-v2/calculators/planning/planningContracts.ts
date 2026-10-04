@@ -75,6 +75,7 @@ export type PlanningBudget = {
   intervalType?: string;
   intervalN?: number;
   startDate?: number;
+  createdAt?: number;
   recurrenceDay?: number;
   recurrenceMonth?: number;
   leafAccountIds?: readonly string[];

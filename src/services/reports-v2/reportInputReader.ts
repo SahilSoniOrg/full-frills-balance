@@ -197,7 +197,8 @@ export async function readBudgets(
     }
     const startDate =
       budget.startDate ??
-      (/^\d{4}-\d{2}$/.test(budget.startMonth)
+      ((!budget.createdAt || (budget.intervalN || 1) === 1) &&
+      /^\d{4}-\d{2}$/.test(budget.startMonth)
         ? new Date(`${budget.startMonth}-01T00:00:00`).getTime()
         : undefined);
     valuedBudgets.push({
@@ -208,6 +209,7 @@ export async function readBudgets(
       intervalType: budget.intervalType,
       intervalN: budget.intervalN,
       startDate,
+      createdAt: budget.createdAt?.getTime(),
       recurrenceDay: budget.recurrenceDay,
       recurrenceMonth: budget.recurrenceMonth,
       leafAccountIds,
