@@ -2,7 +2,8 @@ import { AmountCalculatorSheet } from '@/src/components/overlays/AmountCalculato
 import { AppInput } from '@/src/components/core/AppInput';
 import { Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useState } from 'react';
+import { hasNegativeAmountSign } from '@/src/services/journal/simpleJournalHelpers';
+import { useCallback, useState } from 'react';
 import { StyleProp, StyleSheet, TextInputProps, ViewStyle } from 'react-native';
 
 const HERO_AMOUNT_FONT_SIZE = Typography.sizes.hero / 1.5;
@@ -41,6 +42,13 @@ export function CalculatorAmountInput({
   const { theme, fonts } = useTheme();
   const [visible, setVisible] = useState(false);
   const isHero = variant === 'hero';
+  const handleAmountChange = useCallback(
+    (nextValue: string) => {
+      if (hasNegativeAmountSign(nextValue)) return;
+      onChangeText(nextValue);
+    },
+    [onChangeText],
+  );
 
   return (
     <>
@@ -62,6 +70,7 @@ export function CalculatorAmountInput({
           },
           inputStyle,
         ]}
+        onChangeText={handleAmountChange}
         calculator
         onCalculatorPress={() => setVisible(true)}
         calculatorTestID={testID ? `${testID}-calculator` : undefined}
@@ -73,7 +82,7 @@ export function CalculatorAmountInput({
         precision={precision}
         onClose={() => setVisible(false)}
         onDone={amount => {
-          onChangeText(amount);
+          handleAmountChange(amount);
           setVisible(false);
         }}
       />

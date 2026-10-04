@@ -8,7 +8,12 @@ import { filterGuidedLegAccounts } from '@/src/services/journal/guidedJournalAcc
 import { parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
 import { formatRoundedAmount } from '@/src/utils/money';
 
+export function hasNegativeAmountSign(amount: string): boolean {
+  return /[-−﹣－]/.test(amount);
+}
+
 export function parseSimpleAmountInput(amount: string): number {
+  if (hasNegativeAmountSign(amount)) return 0;
   return parseFloat(amount.replace(/[^0-9.]/g, '')) || 0;
 }
 

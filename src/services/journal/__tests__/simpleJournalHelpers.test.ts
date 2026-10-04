@@ -1,12 +1,23 @@
 import {
   buildSimpleCrossCurrencyLineUpdates,
   ensureSelectedAccountVisible,
+  hasNegativeAmountSign,
+  parseSimpleAmountInput,
   resolveSimpleHeroAmount,
 } from '@/src/services/journal/simpleJournalHelpers';
 import { AccountType } from '@/src/types/enums';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 
 describe('simpleJournalHelpers cross-currency', () => {
+  describe('parseSimpleAmountInput', () => {
+    it('rejects pasted negative signs without converting them to positive amounts', () => {
+      expect(hasNegativeAmountSign('-50')).toBe(true);
+      expect(parseSimpleAmountInput('-50')).toBe(0);
+      expect(parseSimpleAmountInput('50')).toBe(50);
+      expect(parseSimpleAmountInput('')).toBe(0);
+    });
+  });
+
   describe('resolveSimpleHeroAmount', () => {
     it('keeps an empty source amount instead of filling from the destination', () => {
       expect(resolveSimpleHeroAmount('', '0.00')).toBe('');

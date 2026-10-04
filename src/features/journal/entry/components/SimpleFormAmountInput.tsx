@@ -3,6 +3,7 @@ import { AmountCalculatorSheet } from '@/src/components/overlays/AmountCalculato
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import { resolveSimpleAmountTypography } from '@/src/features/journal/entry/journalEntryPresentation';
+import { hasNegativeAmountSign } from '@/src/services/journal/simpleJournalHelpers';
 import { withOpacity } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -72,6 +73,7 @@ export const SimpleFormAmountInput = React.memo(function SimpleFormAmountInput({
     (text: string) => {
       // Accept the decimal comma used by some locales and keyboards.
       const normalized = text.replace(/,/g, '.');
+      if (hasNegativeAmountSign(normalized)) return;
       const sanitized = normalized.replace(/[^0-9.]/g, '');
       const parts = sanitized.split('.');
       if (parts.length > 2) return;
