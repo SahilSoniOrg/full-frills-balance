@@ -6,7 +6,7 @@ Scope: production persistence primitives, privileged adapter access, cross-domai
 
 ## Repository-layer follow-up
 
-The repository-layer roadmap is implemented in [REPOSITORY_LAYER_DIRECTION.md](./REPOSITORY_LAYER_DIRECTION.md); the current owners, contracts and source-of-truth/projection distinctions are summarized in [REPOSITORY_MAP.md](./REPOSITORY_MAP.md). This follow-up does not close the separate native-device proof or Workplace-transition items tracked by this inventory.
+The current owners, contracts and source-of-truth/projection distinctions are summarized in [REPOSITORY_MAP.md](./REPOSITORY_MAP.md). This follow-up does not close the separate native-device proof or Workplace-transition items tracked by this inventory.
 
 ## Audit coverage
 

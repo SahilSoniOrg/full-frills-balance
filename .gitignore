@@ -74,3 +74,5 @@ artifacts/
 .scratch/
 
 .commandcode
+output
+.playwright-mcp/

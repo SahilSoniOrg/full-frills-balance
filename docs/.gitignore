@@ -1,0 +1,11 @@
+# Local audit runs and visual captures
+/audits/
+
+# Local design research, exploratory mocks, and prototypes
+/designs/
+
+# Local scratch and consolidation plans
+/plans/
+
+# Local research notes
+/research/
