@@ -78,14 +78,6 @@ export class DevicePreferencesStore {
     this.update({ anonymizedId: id });
   }
 
-  get isSmsImportEnabled(): boolean {
-    return this.preferences.isSmsImportEnabled;
-  }
-
-  setSmsImportEnabled(enabled: boolean): void {
-    this.update({ isSmsImportEnabled: enabled });
-  }
-
   get isAutomaticSmsImportEnabled(): boolean {
     return this.preferences.isAutomaticSmsImportEnabled;
   }
@@ -153,9 +145,6 @@ export class DevicePreferencesStore {
       ...(typeof value.anonymizedId === 'string' ? { anonymizedId: value.anonymizedId } : {}),
       ...(typeof value.activeWorkplaceId === 'string' && value.activeWorkplaceId
         ? { activeWorkplaceId: value.activeWorkplaceId as WorkplaceId }
-        : {}),
-      ...(typeof value.isSmsImportEnabled === 'boolean'
-        ? { isSmsImportEnabled: value.isSmsImportEnabled }
         : {}),
       ...(typeof value.isAutomaticSmsImportEnabled === 'boolean'
         ? { isAutomaticSmsImportEnabled: value.isAutomaticSmsImportEnabled }

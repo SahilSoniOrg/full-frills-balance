@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import { InboxProcessingStatus, JournalStatus } from '@/src/types/enums';
-import { AccountId } from '@/src/types/ids';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { database } from '@/src/data/database/Database';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
@@ -89,6 +89,20 @@ describe('SmsSyncPipeline integration', () => {
   const baseDate = 1_700_000_000_000;
   let cashId: string;
   let expenseId: string;
+
+  async function inboxStatus(deviceId: string) {
+    return (await fetchInboxByDeviceId(deviceId))?.processingStatus;
+  }
+
+  async function scanFixture(
+    fixture: Parameters<typeof smsMessageFromFixture>[0],
+    deviceId: string,
+    date: number,
+    workplaceId: WorkplaceId = SMS_TEST_WORKPLACE,
+  ) {
+    await scanSmsInbox(workplaceId, [smsMessageFromFixture(fixture, { id: deviceId, date })]);
+    return inboxStatus(deviceId);
+  }
 
   beforeEach(async () => {
     storage.clearAll();
@@ -236,77 +250,50 @@ describe('SmsSyncPipeline integration', () => {
         journalDate: baseDate,
       });
 
-      const message = smsMessageFromFixture('swiggyNoRef', {
-        id: 'sms-fuzzy-b1',
-        date: baseDate + 15 * 60 * 1000,
-      });
-      await scanSmsInbox(SMS_TEST_WORKPLACE, [message]);
-
+      expect(
+        await scanFixture('swiggyNoRef', 'sms-fuzzy-b1', baseDate + 15 * 60 * 1000),
+      ).toBe(InboxProcessingStatus.DUPLICATE_FLAGGED);
       const inbox = await fetchInboxByDeviceId('sms-fuzzy-b1');
-      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.DUPLICATE_FLAGGED);
       expect(inbox?.duplicateConfidence).toBeGreaterThanOrEqual(
         AppConfig.input.sms.duplicateDetection.scoreThreshold,
       );
     });
 
-    it('stays pending when merchant matches but outside fuzzy window', async () => {
-      const fuzzyWindowMs = AppConfig.input.sms.duplicateDetection.fuzzyWindowMs;
-      await seedExpenseJournal({
-        cashId,
-        expenseId,
-        amount: 500,
-        description: 'SWIGGY order',
-        journalDate: baseDate,
-      });
-
-      const message = smsMessageFromFixture('swiggyNoRef', {
+    it.each([
+      {
         id: 'sms-fuzzy-b2',
-        date: baseDate + fuzzyWindowMs + 60 * 1000,
-      });
-      await scanSmsInbox(SMS_TEST_WORKPLACE, [message]);
-
-      const inbox = await fetchInboxByDeviceId('sms-fuzzy-b2');
-      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
-    });
-
-    it('stays pending when time is close but merchant does not match', async () => {
-      await seedExpenseJournal({
-        cashId,
-        expenseId,
-        amount: 500,
-        description: 'Grocery run',
-        journalDate: baseDate,
-      });
-
-      const message = smsMessageFromFixture('swiggyNoRef', {
+        journalDescription: 'SWIGGY order',
+        fixture: 'swiggyNoRef' as const,
+        dateOffsetMs: AppConfig.input.sms.duplicateDetection.fuzzyWindowMs + 60 * 1000,
+      },
+      {
         id: 'sms-fuzzy-b3',
-        date: baseDate + 10 * 60 * 1000,
-      });
-      await scanSmsInbox(SMS_TEST_WORKPLACE, [message]);
-
-      const inbox = await fetchInboxByDeviceId('sms-fuzzy-b3');
-      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
-    });
-
-    it('does not flag same merchant and amount on a different day', async () => {
-      const dayMs = AppConfig.input.sms.duplicateDetection.fingerprintDayBucketMs;
-      await seedExpenseJournal({
-        cashId,
-        expenseId,
-        amount: 500,
-        description: 'SWIGGY order',
-        journalDate: baseDate - dayMs,
-      });
-
-      const message = smsMessageFromFixture('swiggyRepeatDay2', {
+        journalDescription: 'Grocery run',
+        fixture: 'swiggyNoRef' as const,
+        dateOffsetMs: 10 * 60 * 1000,
+      },
+      {
         id: 'sms-fuzzy-b4',
-        date: baseDate,
-      });
-      await scanSmsInbox(SMS_TEST_WORKPLACE, [message]);
-
-      const inbox = await fetchInboxByDeviceId('sms-fuzzy-b4');
-      expect(inbox?.processingStatus).toBe(InboxProcessingStatus.PENDING);
-    });
+        journalDescription: 'SWIGGY order',
+        fixture: 'swiggyRepeatDay2' as const,
+        dateOffsetMs: 0,
+        journalDateOffsetMs: AppConfig.input.sms.duplicateDetection.fingerprintDayBucketMs,
+      },
+    ])(
+      'stays pending for $id',
+      async ({ id, journalDescription, fixture, dateOffsetMs, journalDateOffsetMs = 0 }) => {
+        await seedExpenseJournal({
+          cashId,
+          expenseId,
+          amount: 500,
+          description: journalDescription,
+          journalDate: baseDate - journalDateOffsetMs,
+        });
+        expect(await scanFixture(fixture, id, baseDate + dateOffsetMs)).toBe(
+          InboxProcessingStatus.PENDING,
+        );
+      },
+    );
   });
 
   describe('exact identity', () => {

@@ -1,7 +1,8 @@
 import { deviceSmsInboxRepository } from '@/src/data/repositories/DeviceSmsInboxRepository';
 import { database } from '@/src/data/database/Database';
 import ExpoSmsInbox from '@/modules/expo-sms-inbox';
-import { smsService } from '@/src/services/sms-service';
+import { AppConfig } from '@/src/constants';
+import { smsSyncPipeline } from '@/src/services/sms/pipeline/smsSyncPipeline';
 import { InboxProcessingStatus, JournalStatus } from '@/src/types/enums';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import {
@@ -160,7 +161,10 @@ describe('SmsService Batching', () => {
       return null;
     });
 
-    await smsService.processUnprocessedSms(workplaceId);
+    await smsSyncPipeline.scanInbox(
+      workplaceId,
+      AppConfig.pagination.smsImportScanLimit,
+    );
 
     // Verify database.write was called once
     expect(database.write).toHaveBeenCalledTimes(1);
@@ -240,7 +244,10 @@ describe('SmsService Batching', () => {
     // Remove the incorrect mock for journalRepository.getRuleDefinition
     // since it's a private method of SmsService, not JournalRepository.
 
-    await smsService.processUnprocessedSms(workplaceId);
+    await smsSyncPipeline.scanInbox(
+      workplaceId,
+      AppConfig.pagination.smsImportScanLimit,
+    );
 
     // Verify database.batch was called
     expect(database.batch).toHaveBeenCalled();
@@ -312,7 +319,10 @@ describe('SmsService Batching', () => {
       return null;
     });
 
-    await smsService.processUnprocessedSms(workplaceId);
+    await smsSyncPipeline.scanInbox(
+      workplaceId,
+      AppConfig.pagination.smsImportScanLimit,
+    );
 
     expect(database.write).toHaveBeenCalledTimes(1);
     expect(finalFetch).toHaveBeenCalledTimes(2);

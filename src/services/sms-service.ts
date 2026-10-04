@@ -73,11 +73,6 @@ class SmsService {
     return record ? toPlainInboxRecord(record) : null;
   }
 
-  async processUnprocessedSms(workplaceId: WorkplaceId, signal?: AbortSignal): Promise<number> {
-    await smsPrivacyService.cleanupLegacyContent();
-    return smsSyncPipeline.scanInbox(workplaceId, AppConfig.pagination.smsImportScanLimit, signal);
-  }
-
   observeInbox(workplaceId: WorkplaceId, limit: number, filter?: SmsInboxFilterOptions) {
     return transactionInboxRepository
       .observeInbox(workplaceId, limit, this.getProcessingStatusesForFilter(filter?.status))

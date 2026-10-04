@@ -50,6 +50,12 @@ export class NotificationService {
     this.reviewRecordId = recordId;
   }
 
+  isSmsReviewForegroundSuppressed(recordId?: string): boolean {
+    return (
+      this.reviewVisible || (recordId !== undefined && this.reviewRecordId === recordId)
+    );
+  }
+
   private ensureChannels(): Promise<void> {
     if (Platform.OS !== 'android') return Promise.resolve();
     if (!this.channels) {

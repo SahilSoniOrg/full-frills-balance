@@ -10,6 +10,7 @@ import { ParsedTransaction, SmsParser } from '@/src/services/ledger/SmsParser';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import {
   coalesceActionableDuplicate,
+  findManyDuplicateCandidates,
   findReferenceDuplicateMatch,
 } from '@/src/services/sms/smsDuplicateDetection';
 import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
@@ -20,7 +21,6 @@ import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/services/preferences';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { analyzeAutoPost } from './smsAutoPostAnalyzer';
-import { findManyDuplicateCandidates } from './smsDuplicateMatcher';
 import {
   computeSmsFingerprint,
   isStoredRedelivery,

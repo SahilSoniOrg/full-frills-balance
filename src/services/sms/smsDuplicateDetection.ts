@@ -1,8 +1,10 @@
+import { SmsMessage } from '@/modules/expo-sms-inbox';
 import { AppConfig } from '@/src/constants';
 import Journal from '@/src/data/models/Journal';
+import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
-import { JournalId } from '@/src/types/ids';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 
 const DUPLICATE_CONFIG = AppConfig.input.sms.duplicateDetection;
 
@@ -75,14 +77,6 @@ export function findReferenceDuplicateMatch(
   return buildReferenceDuplicateMatch(journal.id, parsed.referenceNumber);
 }
 
-/** Reference tier wins over fuzzy — tiers are not compared by score. */
-export function resolveDuplicateMatch(
-  referenceDuplicate: DuplicateMatch,
-  fuzzyDuplicate: DuplicateMatch,
-): DuplicateMatch {
-  return referenceDuplicate ?? fuzzyDuplicate;
-}
-
 export function isDuplicateAboveThreshold(duplicate: DuplicateMatch): boolean {
   return duplicate != null && duplicate.score >= DUPLICATE_CONFIG.scoreThreshold;
 }
@@ -92,6 +86,62 @@ export function coalesceActionableDuplicate(
   referenceDuplicate: DuplicateMatch,
   fuzzyDuplicate: DuplicateMatch,
 ): DuplicateMatch {
-  const match = resolveDuplicateMatch(referenceDuplicate, fuzzyDuplicate);
+  const match = referenceDuplicate ?? fuzzyDuplicate;
   return isDuplicateAboveThreshold(match) ? match : null;
+}
+
+export async function findManyDuplicateCandidates(
+  parsedItems: { message: SmsMessage; parsed: ParsedTransaction }[],
+  workplaceId: WorkplaceId,
+): Promise<Map<string, DuplicateMatch>> {
+  if (parsedItems.length === 0) return new Map();
+
+  const results = new Map<string, DuplicateMatch>();
+  const amounts = Array.from(new Set(parsedItems.map(p => p.parsed.amount!)));
+  const minDate =
+    Math.min(...parsedItems.map(p => p.message.date)) - DUPLICATE_CONFIG.fuzzyWindowMs;
+  const maxDate =
+    Math.max(...parsedItems.map(p => p.message.date)) + DUPLICATE_CONFIG.fuzzyWindowMs;
+
+  const journals = await smsJournalQueries.findNearbyJournals(
+    {
+      centerDate: (minDate + maxDate) / 2,
+      windowMs: (maxDate - minDate) / 2,
+      amounts,
+      limit: 100,
+    },
+    workplaceId,
+  );
+
+  if (journals.length === 0) return results;
+
+  for (const { message, parsed } of parsedItems) {
+    const nearby = journals.filter(
+      j =>
+        Math.abs(j.journalDate - message.date) <= DUPLICATE_CONFIG.fuzzyWindowMs &&
+        j.totalAmount === parsed.amount,
+    );
+
+    if (nearby.length === 0) continue;
+
+    let best: DuplicateMatch = null;
+    for (const journal of nearby) {
+      const { score, reasons } = scoreFuzzyDuplicateMatch({
+        journalDate: journal.journalDate,
+        messageDate: message.date,
+        journalDescription: journal.description,
+        merchant: parsed.merchant,
+      });
+
+      if (!best || score > best.score) {
+        best = { journalId: journal.id, score, reasons };
+      }
+    }
+
+    if (best && isDuplicateAboveThreshold(best)) {
+      results.set(message.id, best);
+    }
+  }
+
+  return results;
 }

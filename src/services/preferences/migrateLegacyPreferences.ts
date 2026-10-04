@@ -90,7 +90,7 @@ export function migrateLegacyPreferencesIfNeeded(): boolean {
     }
 
     if (raw) storage.set(PREFERENCES_KEY, JSON.stringify(userBlob));
-    promoteSmsListenFromWorkplaceBags();
+    stripLegacySmsListenFromWorkplaceBags();
     storage.set(PREFERENCE_SPLIT_MIGRATION_KEY, 'complete');
     return true;
   } catch (error) {
@@ -110,11 +110,8 @@ export function hasRawDeviceBag(rawDeviceBag = storage.getString(DEVICE_PREFEREN
   return rawDeviceBag !== undefined;
 }
 
-/** Spec: if any Workplace had listen on, Device listen is on. Then drop the workplace key. */
-function promoteSmsListenFromWorkplaceBags(): void {
-  let listenOn = false;
-  const workplaceKeysToClean: string[] = [];
-
+/** Strip legacy workplace SMS listen keys left from pre-split preference bags. */
+function stripLegacySmsListenFromWorkplaceBags(): void {
   for (const key of storage.getAllKeys()) {
     if (!key.startsWith(WORKPLACE_PREFERENCES_KEY_PREFIX)) continue;
     const raw = storage.getString(key);
@@ -122,23 +119,12 @@ function promoteSmsListenFromWorkplaceBags(): void {
     try {
       const parsed = JSON.parse(raw) as { isSmsImportEnabled?: boolean };
       if (typeof parsed !== 'object' || parsed === null) continue;
-      if (parsed.isSmsImportEnabled === true) listenOn = true;
       if (!('isSmsImportEnabled' in parsed)) continue;
-      workplaceKeysToClean.push(key);
+      delete parsed.isSmsImportEnabled;
+      storage.set(key, JSON.stringify(parsed));
     } catch {
       /* skip corrupt workplace bag */
     }
-  }
-
-  const rawDevice = storage.getString(DEVICE_PREFERENCES_KEY);
-  const device = mergeDevicePreferences(rawDevice ? JSON.parse(rawDevice) : {});
-  if (listenOn && !device.isSmsImportEnabled) {
-    storage.set(DEVICE_PREFERENCES_KEY, JSON.stringify({ ...device, isSmsImportEnabled: true }));
-  }
-  for (const key of workplaceKeysToClean) {
-    const parsed = JSON.parse(storage.getString(key) || '{}') as Record<string, unknown>;
-    delete parsed.isSmsImportEnabled;
-    storage.set(key, JSON.stringify(parsed));
   }
 }
 

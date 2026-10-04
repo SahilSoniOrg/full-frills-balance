@@ -7,11 +7,6 @@ import { PermissionError } from '@/src/utils/errors';
 import { PermissionsAndroid, Platform } from 'react-native';
 
 export class SmsInboxBridge {
-  async hasReadPermission(): Promise<boolean> {
-    if (Platform.OS !== 'android') return false;
-    return PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.READ_SMS);
-  }
-
   async hasAutomaticImportPermissions(): Promise<boolean> {
     if (Platform.OS !== 'android') return false;
     const [canRead, canReceive] = await Promise.all([

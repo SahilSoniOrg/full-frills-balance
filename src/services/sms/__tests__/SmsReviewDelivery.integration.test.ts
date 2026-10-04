@@ -25,15 +25,29 @@ import {
 } from '@/src/testing/smsTestHarness';
 
 jest.mock('@/src/services/analytics');
-jest.mock('@/src/services/notification/NotificationService', () => ({
-  SMS_REVIEW_NOTIFICATION_TYPE: 'sms_transaction_needs_review',
-  notificationService: {
-    reconcileSmsReviews: jest.fn().mockResolvedValue(undefined),
-    canDeliverSmsReview: jest.fn().mockResolvedValue(true),
-    deliverSmsReview: jest.fn().mockResolvedValue(true),
-    setSmsReviewVisible: jest.fn(),
-  },
-}));
+jest.mock('@/src/services/notification/NotificationService', () => {
+  let reviewVisible = false;
+  let reviewRecordId: string | undefined;
+  return {
+    SMS_REVIEW_NOTIFICATION_TYPE: 'sms_transaction_needs_review',
+    notificationService: {
+      reconcileSmsReviews: jest.fn().mockResolvedValue(undefined),
+      canDeliverSmsReview: jest.fn().mockResolvedValue(true),
+      deliverSmsReview: jest.fn().mockResolvedValue(true),
+      setSmsReviewVisible: jest.fn((visible: boolean, recordId?: string) => {
+        reviewVisible = visible;
+        reviewRecordId = recordId;
+      }),
+      isSmsReviewForegroundSuppressed: jest.fn((recordId?: string) =>
+        reviewVisible || (recordId !== undefined && reviewRecordId === recordId),
+      ),
+      __resetReviewVisibility: () => {
+        reviewVisible = false;
+        reviewRecordId = undefined;
+      },
+    },
+  };
+});
 const deliver = jest.mocked(notificationService.deliverSmsReview);
 const message = (id = 'one', offset = 0) =>
   smsMessageFromFixture('swiggyNoRef', { id, date: 1_700_000_000_000 + offset });
@@ -41,6 +55,7 @@ let service: SmsReviewNotificationService;
 beforeEach(async () => {
   await resetSmsTestDb();
   service = new SmsReviewNotificationService();
+  (notificationService as { __resetReviewVisibility?: () => void }).__resetReviewVisibility?.();
   deliver.mockReset().mockResolvedValue(true);
   jest.mocked(notificationService.canDeliverSmsReview).mockResolvedValue(true);
   preferences.device.update({

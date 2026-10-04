@@ -4,11 +4,13 @@ import { accountQueryRepository } from '@/src/data/repositories/account';
 import {
   notificationService,
   SMS_REVIEW_NOTIFICATION_TYPE,
+  type SmsReviewIntent,
 } from '@/src/services/notification/NotificationService';
 import { preferences } from '@/src/services/preferences';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import type { WorkplaceId } from '@/src/types/ids';
 import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
+import { inboxDirectionToParsedType } from '@/src/services/sms/inboxDirection';
 import { formatSmsReviewNotification } from './smsReviewNotification';
 import { merge, auditTime } from 'rxjs';
 import { logger } from '@/src/utils/logger';
@@ -19,14 +21,17 @@ const actionable = (record: InboxRecordSnapshot | null) =>
     record.processingStatus,
   );
 
+type ReviewDeliveryPrefs = {
+  devicePrefs: ReturnType<typeof preferences.device.getSnapshot>;
+  detailsAllowed: boolean;
+  privatePreview: boolean;
+};
+
 /** Delivers the committed outbox, never participates in accounting commits. */
 export class SmsReviewNotificationService {
   private queue: Promise<void> = Promise.resolve();
-  private visible = false;
-  private visibleRecordId?: string;
+
   setReviewVisible(visible: boolean, recordId?: string): void {
-    this.visible = visible;
-    this.visibleRecordId = recordId;
     notificationService.setSmsReviewVisible(visible, recordId);
   }
 
@@ -49,17 +54,9 @@ export class SmsReviewNotificationService {
   /** Remove unsafe or legacy previews even while launch or unlock gates are still closed. */
   async reconcilePrivacy(): Promise<void> {
     await preferences.loadPreferences();
-    const prefs = preferences.getSnapshot();
-    const devicePrefs = preferences.device.getSnapshot();
-    const detailsAllowed =
-      devicePrefs.showSmsNotificationDetails &&
-      !prefs.isPrivacyMode &&
-      !preferences.device.isAppLockEnabled;
-    await notificationService.reconcileSmsReviews(
-      async intent =>
-        !!intent.inboxRecordId &&
-        devicePrefs.areSmsReviewNotificationsEnabled &&
-        (!intent.hasDetails || detailsAllowed),
+    const ctx = this.readReviewDeliveryPrefs();
+    await notificationService.reconcileSmsReviews(intent =>
+      Promise.resolve(this.shouldRetainReviewNotification(intent, ctx)),
     );
   }
 
@@ -69,20 +66,32 @@ export class SmsReviewNotificationService {
     return pending;
   }
 
-  private async deliverPending(): Promise<void> {
-    await preferences.loadPreferences();
+  private readReviewDeliveryPrefs(): ReviewDeliveryPrefs {
     const prefs = preferences.getSnapshot();
     const devicePrefs = preferences.device.getSnapshot();
-    const privatePreview =
-      !devicePrefs.showSmsNotificationDetails ||
-      prefs.isPrivacyMode ||
-      preferences.device.isAppLockEnabled;
+    const detailsAllowed =
+      devicePrefs.showSmsNotificationDetails &&
+      !prefs.isPrivacyMode &&
+      !preferences.device.isAppLockEnabled;
+    return { devicePrefs, detailsAllowed, privatePreview: !detailsAllowed };
+  }
+
+  private shouldRetainReviewNotification(intent: SmsReviewIntent, ctx: ReviewDeliveryPrefs): boolean {
+    return (
+      !!intent.inboxRecordId &&
+      ctx.devicePrefs.areSmsReviewNotificationsEnabled &&
+      (!intent.hasDetails || ctx.detailsAllowed)
+    );
+  }
+
+  private async deliverPending(): Promise<void> {
+    await preferences.loadPreferences();
+    const ctx = this.readReviewDeliveryPrefs();
     await notificationService.reconcileSmsReviews(async (intent, identifier) => {
+      if (!this.shouldRetainReviewNotification(intent, ctx)) return false;
       if (
-        !devicePrefs.areSmsReviewNotificationsEnabled ||
-        this.visible ||
-        intent.inboxRecordId === this.visibleRecordId ||
-        (privatePreview && intent.hasDetails)
+        notificationService.isSmsReviewForegroundSuppressed(intent.inboxRecordId) ||
+        (ctx.privatePreview && intent.hasDetails)
       )
         return false;
       if (!intent.inboxRecordId || !intent.workplaceId) return false;
@@ -117,9 +126,8 @@ export class SmsReviewNotificationService {
       );
       if (
         !actionable(record) ||
-        !devicePrefs.areSmsReviewNotificationsEnabled ||
-        this.visible ||
-        device.id === this.visibleRecordId
+        !ctx.devicePrefs.areSmsReviewNotificationsEnabled ||
+        notificationService.isSmsReviewForegroundSuppressed(device.id)
       ) {
         await deviceSmsInboxRepository.finishNotifications([device.id], 'suppressed');
       } else if (record)
@@ -139,7 +147,7 @@ export class SmsReviewNotificationService {
       let body = grouped
         ? `${group.length} SMS transactions need your review. Open the inbox to log them.`
         : 'A transaction message needs your review. Open the app to log it.';
-      if (!privatePreview && !grouped) {
+      if (!ctx.privatePreview && !grouped) {
         const hints = {
           sourceAccountId: latest.record.suggestedSourceAccountId,
           categoryAccountId: latest.record.suggestedCategoryAccountId,
@@ -157,12 +165,7 @@ export class SmsReviewNotificationService {
             currencyCode: latest.record.parsedCurrencyCode,
             merchant: latest.record.parsedMerchant,
             accountSource: latest.record.parsedAccountSource,
-            type:
-              latest.record.direction === 'debit'
-                ? 'debit'
-                : latest.record.direction === 'credit'
-                  ? 'credit'
-                  : 'unknown',
+            type: inboxDirectionToParsedType(latest.record.direction),
           },
           {
             sourceAccountName: hints.sourceAccountId ? names.get(hints.sourceAccountId) : undefined,
@@ -176,7 +179,7 @@ export class SmsReviewNotificationService {
         inboxRecordId: latest.id,
         workplaceId,
         grouped,
-        hasDetails: !privatePreview && !grouped,
+        hasDetails: !ctx.privatePreview && !grouped,
       });
       if (delivered)
         await deviceSmsInboxRepository.finishNotifications(

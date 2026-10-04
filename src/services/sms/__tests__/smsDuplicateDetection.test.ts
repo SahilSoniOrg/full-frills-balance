@@ -7,7 +7,6 @@ import {
   buildReferenceDuplicateMatch,
   coalesceActionableDuplicate,
   findReferenceDuplicateMatch,
-  resolveDuplicateMatch,
   scoreFuzzyDuplicateMatch,
 } from '../smsDuplicateDetection';
 import { resolveProcessingStatus } from '../pipeline/smsFingerprint';
@@ -105,23 +104,6 @@ describe('smsDuplicateDetection', () => {
       );
 
       expect(match).toBeNull();
-    });
-  });
-
-  describe('resolveDuplicateMatch', () => {
-    const refMatch = buildReferenceDuplicateMatch('j-ref' as JournalId, 'UTR123');
-    const fuzzyMatch = {
-      journalId: 'j-fuzzy' as JournalId,
-      score: 0.9,
-      reasons: ['Close in time'],
-    };
-
-    it('prefers reference tier even when fuzzy score is higher', () => {
-      expect(resolveDuplicateMatch(refMatch, fuzzyMatch)).toBe(refMatch);
-    });
-
-    it('falls back to fuzzy when reference tier has no match', () => {
-      expect(resolveDuplicateMatch(null, fuzzyMatch)).toBe(fuzzyMatch);
     });
   });
 

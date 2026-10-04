@@ -25,7 +25,7 @@ describe('smsRuleFormPolicy', () => {
         }),
         priority: 20,
         isActive: false,
-        sourceAccountId: EMPTY_ACCOUNT_ID,
+        sourceAccountId: 'source' as AccountId,
         categoryAccountId: 'category' as AccountId,
       } as unknown as TransactionAutoPostRule;
 

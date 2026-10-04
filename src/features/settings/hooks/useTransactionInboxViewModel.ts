@@ -9,7 +9,7 @@ import {
 } from '@/src/features/settings/hooks/useTransactionInboxModals';
 import { usePaginatedObservable } from '@/src/hooks/usePaginatedObservable';
 import { analytics } from '@/src/services/analytics';
-import { smsService } from '@/src/services/sms-service';
+import { smsService, type SmsInboxFilterStatus } from '@/src/services/sms-service';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import { PlainInboxRecord } from '@/src/types/plainDtos';
 import { TransactionInboxItem } from '@/src/types/domainJournal';
@@ -18,7 +18,7 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 
-export type InboxFilter = 'pending' | 'processed' | 'auto_posted' | 'duplicates' | 'failed';
+export type InboxFilter = SmsInboxFilterStatus;
 
 const PAGE_SIZE = 25;
 

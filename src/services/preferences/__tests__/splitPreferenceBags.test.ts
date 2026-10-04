@@ -23,11 +23,11 @@ describe('splitPreferenceBags', () => {
       expect.objectContaining({
         isAppLockEnabled: true,
         activeWorkplaceId: 'wp-1',
-        isSmsImportEnabled: true,
         areSmsReviewNotificationsEnabled: false,
         showSmsNotificationDetails: true,
       }),
     );
+    expect(device).not.toHaveProperty('isSmsImportEnabled');
     expect(device).not.toHaveProperty('onboardingCompleted');
     expect(workplace).toEqual(
       expect.objectContaining({

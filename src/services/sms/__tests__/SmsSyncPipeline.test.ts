@@ -5,7 +5,7 @@ import { AppConfig } from '@/src/constants';
 import { ParsedTransaction, toTransactionDirection } from '@/src/services/ledger/SmsParser';
 import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import { computeSmsFingerprint, resolveProcessingStatus } from '../pipeline/smsFingerprint';
-import { findManyDuplicateCandidates } from '../pipeline/smsDuplicateMatcher';
+import { findManyDuplicateCandidates } from '../smsDuplicateDetection';
 import { prepareUpsertInboxRecord } from '../pipeline/smsInboxRecordPreparer';
 
 jest.mock('@/src/data/repositories/journal/SmsJournalQueries', () => ({

@@ -1,10 +1,10 @@
 import {
-  SmsRuleActions,
   SmsRuleCondition,
   SmsRuleDisposition,
   SmsRuleMode,
 } from '@/src/utils/sms/RuleMatcher';
-import { SmsRulePreviewInput } from '@/src/services/sms/SmsRuleEngine';
+import { smsRuleEngine, SmsRulePreviewInput } from '@/src/services/sms/SmsRuleEngine';
+import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import { AccountId } from '@/src/types/ids';
 import { PlainSmsRule } from '@/src/types/plainDtos';
 
@@ -53,52 +53,16 @@ export interface SmsRuleValidationInput {
 
 type ConditionField = SmsRuleCondition['field'];
 
-export function parseSmsRuleConditions(rule: PlainSmsRule): SmsRuleCondition[] {
-  if (!rule.conditionsJson) return [];
-  try {
-    const parsed = JSON.parse(rule.conditionsJson);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-export function parseSmsRuleActions(rule: PlainSmsRule): SmsRuleActions {
-  if (rule.actionsJson) {
-    try {
-      const parsed = JSON.parse(rule.actionsJson);
-      if (parsed && typeof parsed === 'object') {
-        return {
-          disposition:
-            parsed.disposition === 'ignore' || parsed.disposition === 'review'
-              ? parsed.disposition
-              : 'auto_post',
-          sourceAccountId: parsed.sourceAccountId || rule.sourceAccountId || undefined,
-          categoryAccountId: parsed.categoryAccountId || rule.categoryAccountId || undefined,
-          journalDescription: parsed.journalDescription || undefined,
-        };
-      }
-    } catch {
-      // fallback below
-    }
-  }
-
-  return {
-    disposition: 'auto_post',
-    sourceAccountId: rule.sourceAccountId || undefined,
-    categoryAccountId: rule.categoryAccountId || undefined,
-  };
-}
-
 export function hydrateSmsRuleForm(rule: PlainSmsRule): SmsRuleFormHydration {
-  const conditions = parseSmsRuleConditions(rule);
-  const actions = parseSmsRuleActions(rule);
+  const { mode, conditions, actions } = smsRuleEngine.getRuleDefinition(
+    rule as unknown as TransactionAutoPostRule,
+  );
   const amountCondition = getSmsRuleConditionValue(conditions, 'amount');
   const directionValue = getSmsRuleConditionValue(conditions, 'direction')?.value;
   const amountOperator = amountCondition?.operator;
 
   return {
-    mode: conditions.length > 0 ? 'builder' : 'regex',
+    mode,
     legacySenderMatch: rule.senderMatch || '',
     legacyBodyMatch: rule.bodyMatch || '',
     disposition: actions.disposition,

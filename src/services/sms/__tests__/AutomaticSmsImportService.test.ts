@@ -33,10 +33,8 @@ jest.mock('@/src/services/preferences', () => ({
     getSnapshot: jest.fn().mockReturnValue({}),
     device: {
       getSnapshot: jest.fn().mockReturnValue({ areSmsReviewNotificationsEnabled: true }),
-      isSmsImportEnabled: true,
       isAutomaticSmsImportEnabled: true,
       activeWorkplaceId: 'workplace-1',
-      setSmsImportEnabled: jest.fn(),
       setAutomaticSmsImportEnabled: jest.fn(),
     },
   },
@@ -62,7 +60,6 @@ const mockedPreferences = preferences as jest.Mocked<typeof preferences>;
 const mockedStorage = storage as jest.Mocked<typeof storage>;
 const mockedNotificationService = notificationService as jest.Mocked<typeof notificationService>;
 const mutableDevicePreferences = mockedPreferences.device as unknown as {
-  isSmsImportEnabled: boolean;
   isAutomaticSmsImportEnabled: boolean;
   activeWorkplaceId: string;
 };
@@ -76,7 +73,6 @@ describe('AutomaticSmsImportService', () => {
       ...preferences.device.getSnapshot(),
       areSmsReviewNotificationsEnabled: true,
     });
-    mutableDevicePreferences.isSmsImportEnabled = true;
     mutableDevicePreferences.isAutomaticSmsImportEnabled = true;
     mutableDevicePreferences.activeWorkplaceId = 'workplace-1';
     mockedStorage.getString.mockReturnValue(undefined);

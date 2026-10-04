@@ -8,6 +8,7 @@ import {
 } from '@/src/services/sms/transactionInboxImport';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
+import { inboxDirectionToParsedType } from '@/src/services/sms/inboxDirection';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
@@ -31,12 +32,7 @@ export function useTransactionInboxImport({
           id: item.deviceSourceId,
           amount: item.parsedAmount,
           merchant: item.parsedMerchant,
-          type:
-            item.direction === 'credit'
-              ? 'credit'
-              : item.direction === 'debit'
-                ? 'debit'
-                : 'unknown',
+          type: inboxDirectionToParsedType(item.direction),
           date: item.inputDate,
           rawBody: item.rawBody || '',
           address: item.senderAddress || '',

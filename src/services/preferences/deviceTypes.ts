@@ -7,7 +7,6 @@ export interface DevicePreferences {
   /** Telemetry distinct id. Prefix encodes install kind: anon_, dev_, preview_, e2e_, sim_. */
   anonymizedId?: string;
   activeWorkplaceId?: WorkplaceId;
-  isSmsImportEnabled: boolean;
   /** Explicit opt-in for background reads of each arriving SMS. */
   isAutomaticSmsImportEnabled: boolean;
   /** Master switch for applying SMS rules that post entries without review. */
@@ -23,7 +22,6 @@ export const DEFAULT_DEVICE_PREFERENCES: DevicePreferences = {
   isAppLockEnabled: false,
   anonymizedId: undefined,
   activeWorkplaceId: undefined,
-  isSmsImportEnabled: false,
   isAutomaticSmsImportEnabled: false,
   isSmsAutoPostEnabled: true,
   areSmsReviewNotificationsEnabled: true,
@@ -36,7 +34,6 @@ export const DEVICE_PREFERENCE_KEYS = [
   'isAppLockEnabled',
   'anonymizedId',
   'activeWorkplaceId',
-  'isSmsImportEnabled',
   'isAutomaticSmsImportEnabled',
   'isSmsAutoPostEnabled',
   'areSmsReviewNotificationsEnabled',

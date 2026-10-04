@@ -71,16 +71,15 @@ describe('DevicePreferencesStore', () => {
     expect(store.deviceRegistered).toBe(true);
   });
 
-  it('does not treat the legacy SMS import setting as background SMS consent', () => {
+  it('ignores the legacy SMS import key when loading device preferences', () => {
     mockMemory.set(
       'full_frills_balance_device_preferences',
-      JSON.stringify({ isSmsImportEnabled: true }),
+      JSON.stringify({ isSmsImportEnabled: true, isAutomaticSmsImportEnabled: true }),
     );
 
     const store = new DevicePreferencesStore();
 
-    expect(store.isSmsImportEnabled).toBe(true);
-    expect(store.isAutomaticSmsImportEnabled).toBe(false);
+    expect(store.isAutomaticSmsImportEnabled).toBe(true);
   });
 
   it('persists synthesized defaults for recovered installs', () => {
@@ -92,7 +91,6 @@ describe('DevicePreferencesStore', () => {
     expect(JSON.parse(mockMemory.get('full_frills_balance_device_preferences')!)).toEqual({
       deviceRegistered: false,
       isAppLockEnabled: false,
-      isSmsImportEnabled: false,
       isAutomaticSmsImportEnabled: false,
       isSmsAutoPostEnabled: true,
       areSmsReviewNotificationsEnabled: true,
