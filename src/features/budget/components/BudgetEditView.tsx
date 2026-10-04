@@ -3,6 +3,7 @@ import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
 import { FormHeroSection } from '@/src/components/forms/FormHeroSection';
 import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
 import { FormField } from '@/src/components/forms/FormField';
+import { RecurrenceField } from '@/src/components/forms/RecurrenceField';
 import { MultiAccountPickerModal } from '@/src/components/account-selection';
 import { CurrencySelector } from '@/src/features/accounts';
 import { Icon, AppButton, AppSegmentedControl, LoadingView } from '@/src/components/core';
@@ -31,6 +32,8 @@ export function BudgetEditView({
   setAssetAccountIds,
   intervalType,
   setIntervalType,
+  intervalN,
+  setIntervalN,
   recurrenceDay,
   setRecurrenceDay,
   recurrenceMonth,
@@ -111,15 +114,7 @@ export function BudgetEditView({
           nameLabel="Budget Name"
           nameValue={name}
           onNameChange={setName}
-          amountLabel={
-            intervalType === 'DAILY'
-              ? 'Daily Amount'
-              : intervalType === 'WEEKLY'
-                ? 'Weekly Amount'
-                : intervalType === 'YEARLY'
-                  ? 'Yearly Amount'
-                  : 'Monthly Amount'
-          }
+          amountLabel="Amount per cycle"
           amountValue={amount}
           onAmountChange={setAmount}
           currencySymbol={
@@ -138,21 +133,14 @@ export function BudgetEditView({
         <Stack space="xl" padding="lg">
           <FormSectionGroup title="Schedule">
             <Stack space="lg" paddingHorizontal="md">
-              <FormField label="Interval">
-                <AppSegmentedControl
-                  scrollable
-                  variant="minimal"
-                  testID="budget-interval-type"
-                  options={[
-                    { label: 'Daily', id: 'DAILY' },
-                    { label: 'Weekly', id: 'WEEKLY' },
-                    { label: 'Monthly', id: 'MONTHLY' },
-                    { label: 'Yearly', id: 'YEARLY' },
-                  ]}
-                  value={intervalType}
-                  onChange={setIntervalType}
-                />
-              </FormField>
+              <RecurrenceField
+                intervalType={intervalType}
+                value={intervalN}
+                onChange={setIntervalN}
+                onIntervalTypeChange={setIntervalType}
+                testID="budget-repeat-count"
+                unitTestID="budget-interval-type"
+              />
 
               {intervalType === 'WEEKLY' && (
                 <FadeIn fromY={5} duration={300}>

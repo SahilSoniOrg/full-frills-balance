@@ -3,6 +3,7 @@ import { AccountSelectionRow } from '@/src/components/accounts/AccountSelectionR
 import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
 import { FormHeroSection } from '@/src/components/forms/FormHeroSection';
 import { FormField } from '@/src/components/forms/FormField';
+import { RecurrenceField } from '@/src/components/forms/RecurrenceField';
 import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
 import { Icon, AppSegmentedControl, AppToggle, ListRow } from '@/src/components/core';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
@@ -98,20 +99,13 @@ export function PlannedPaymentFormView({
 
           <FormSectionGroup title={AppConfig.strings.plannedPayments.recurrenceTitle}>
             <Stack space="lg" paddingHorizontal="md">
-              <FormField label="Interval">
-                <AppSegmentedControl
-                  flex
-                  variant="minimal"
-                  options={[
-                    { id: PlannedPaymentInterval.DAILY, label: 'Daily' },
-                    { id: PlannedPaymentInterval.WEEKLY, label: 'Weekly' },
-                    { id: PlannedPaymentInterval.MONTHLY, label: 'Monthly' },
-                    { id: PlannedPaymentInterval.YEARLY, label: 'Yearly' },
-                  ]}
-                  value={form.intervalType}
-                  onChange={val => setField('intervalType', val)}
-                />
-              </FormField>
+              <RecurrenceField
+                intervalType={form.intervalType}
+                value={form.intervalN}
+                onChange={value => setField('intervalN', value)}
+                onIntervalTypeChange={type => setField('intervalType', type)}
+                testID="planned-payment-repeat-count"
+              />
 
               {form.intervalType === PlannedPaymentInterval.WEEKLY && (
                 <FadeIn fromY={5} duration={300}>
