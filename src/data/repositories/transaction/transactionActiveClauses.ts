@@ -1,7 +1,10 @@
 import Transaction from '@/src/data/models/Transaction';
 import { WorkplaceId } from '@/src/types/ids';
+import { JournalStatus } from '@/src/types/enums';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q, Query } from '@nozbe/watermelondb';
+
+export const EDITOR_JOURNAL_STATUSES = [...ACTIVE_JOURNAL_STATUSES, JournalStatus.PLANNED] as const;
 
 /**
  * Centralized logic for defining what constitutes an "Active" (valid/non-deleted) transaction.

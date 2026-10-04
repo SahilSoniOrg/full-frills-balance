@@ -1,10 +1,9 @@
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';
 import { Observable } from 'rxjs';
-import { buildActiveClauses } from './transactionActiveClauses';
+import { buildActiveClauses, EDITOR_JOURNAL_STATUSES } from './transactionActiveClauses';
 
 export class TransactionObserveQueries {
   private get transactions() {
@@ -26,7 +25,7 @@ export class TransactionObserveQueries {
       clauses.push(Q.where('deleted_at', Q.eq(null)));
       clauses.push(
         Q.on('journals', [
-          Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES, 'PLANNED'])),
+          Q.where('status', Q.oneOf([...EDITOR_JOURNAL_STATUSES])),
           Q.where('deleted_at', Q.eq(null)),
           Q.where('workplace_id', workplaceId),
         ]),
