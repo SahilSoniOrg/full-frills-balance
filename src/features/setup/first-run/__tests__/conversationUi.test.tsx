@@ -48,6 +48,7 @@ jest.mock('@/src/design-system', () => {
   );
   return {
     Box: passthrough,
+    FadeIn: passthrough,
     Inline: passthrough,
     Stack: passthrough,
     usePageKeyboard: jest.fn(),

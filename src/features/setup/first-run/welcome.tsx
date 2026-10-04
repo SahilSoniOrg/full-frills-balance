@@ -1,27 +1,15 @@
 import { AppButton, AppInput, AppText } from '@/src/components/core';
 import { PrivacyAcknowledgementSheet } from '@/src/components/legal/PrivacyAcknowledgementSheet';
-import { AppConfig, ChromeMotion, Spacing, Typography } from '@/src/constants';
+import { AppConfig, Spacing, Typography } from '@/src/constants';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoticeStrings';
-import { Box, Stack } from '@/src/design-system';
-import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
+import { Box, FadeIn, Stack } from '@/src/design-system';
 import { triggerHaptic } from '@/src/utils/haptics';
-import { MotiView } from 'moti';
 import { type ReactNode, useState } from 'react';
 import { Keyboard, Platform, ScrollView, StyleSheet } from 'react-native';
 
 function WelcomePanel({ children }: { readonly children: ReactNode }) {
-  const reduceMotion = useReducedMotion();
-  if (reduceMotion) return <>{children}</>;
-  return (
-    <MotiView
-      from={{ opacity: 0, scale: ChromeMotion.panelFromScale, translateY: 8 }}
-      animate={{ opacity: 1, scale: 1, translateY: 0 }}
-      transition={ChromeMotion.panel}
-    >
-      {children}
-    </MotiView>
-  );
+  return <FadeIn fromY={8}>{children}</FadeIn>;
 }
 
 export function WelcomeScene({

@@ -38,6 +38,7 @@ jest.mock('@/src/design-system', () => {
 
   return {
     Box: passthrough,
+    FadeIn: passthrough,
     Stack: passthrough,
   };
 });

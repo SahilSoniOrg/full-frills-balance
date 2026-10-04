@@ -11,14 +11,13 @@ import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModa
 import { SelectionPickerSheet } from '@/src/components/filters/SelectionPickerSheet';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
-import { ChromeMotion, Size, Spacing, Typography } from '@/src/constants';
-import { Box, Inline, Stack, usePageKeyboard } from '@/src/design-system';
+import { Size, Spacing, Typography } from '@/src/constants';
+import { Box, FadeIn, Inline, Stack, usePageKeyboard } from '@/src/design-system';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Icon, type IconName } from '@/src/types/domainIcons';
 import { triggerHaptic } from '@/src/utils/haptics';
 import dayjs from 'dayjs';
-import { MotiView } from 'moti';
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Keyboard, ScrollView, StyleSheet, TextInput, type FocusEvent } from 'react-native';
 import Animated, { Easing, LinearTransition } from 'react-native-reanimated';
@@ -31,17 +30,7 @@ export interface ConversationOption {
 }
 
 function ConversationPanel({ children }: { readonly children: ReactNode }) {
-  const reduceMotion = useReducedMotion();
-  if (reduceMotion) return <>{children}</>;
-  return (
-    <MotiView
-      from={{ opacity: 0, scale: ChromeMotion.panelFromScale, translateY: 8 }}
-      animate={{ opacity: 1, scale: 1, translateY: 0 }}
-      transition={ChromeMotion.panel}
-    >
-      {children}
-    </MotiView>
-  );
+  return <FadeIn fromY={8}>{children}</FadeIn>;
 }
 
 export function ConversationStep({
