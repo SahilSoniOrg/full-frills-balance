@@ -317,7 +317,7 @@ Work through this sequence commit-by-commit. Run `bun run verify` (or `bun test`
   - Source defaults directly from preferences bag constants.
 - [x] **Step 28:** `refactor(services): fix AuditRepository to preferences layer inversion`
   - Pass preferences to audit service rather than repository importing preferences.
-- [ ] **Step 29:** `refactor(observables): route account queries through ReactiveCacheCoordinator`
+- [x] **Step 29:** `refactor(observables): route account queries through ReactiveCacheCoordinator`
   - Eliminate redundant independent subscriptions across `useAccounts`.
 - [ ] **Step 30:** `refactor(a11y): add useReducedMotion guards to 8 Animated files`
   - Guard `VoiceInputModal`, `ProgressBar`, `Toast`, etc.
