@@ -2,8 +2,6 @@ import { useCalendarDay } from '@/src/hooks/useCalendarDay';
 import { useObservable } from '@/src/hooks/useObservable';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
-import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
-import { parseBudgetAssetAccountIds } from '@/src/services/budget/budgetAssetAccountIds';
 import { combineLatest, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 import { BudgetItem } from '../types';
@@ -19,31 +17,22 @@ export function useBudgetListViewModel(workplaceId: WorkplaceId, currencyCode?: 
       switchMap(budgets => {
         if (budgets.length === 0) return of([]);
 
-        const now = today;
-        const itemObservables = budgets.map(budget => {
-          const { startDate } = BudgetPeriodUtils.getCurrentPeriod(budget, now);
-          return combineLatest([
-            budgetReadService.observeBudgetUsage(workplaceId, budget.id, now),
-            budgetReadService.observeBudgetUsage(workplaceId, budget.id, startDate - 1),
+        const itemObservables = budgets.map(budget =>
+          combineLatest([
+            budgetReadService.observeBudgetUsage(workplaceId, budget.id, today),
             budgetReadService.observeScopes(workplaceId, budget.id),
-          ]).pipe(
-            map(([usage, previousUsage, scopes]) => ({ budget, usage, previousUsage, scopes })),
-          );
-        });
+          ]).pipe(map(([usage, scopes]) => ({ budget, usage, scopes }))),
+        );
         return combineLatest(itemObservables);
       }),
     );
     return combineLatest([items$, accountQueries.observeAll(workplaceId)]).pipe(
       map(([items, accounts]): BudgetItem[] => {
         const accountsById = new Map(accounts.map(account => [String(account.id), account]));
-        return items.map(({ budget, usage, previousUsage, scopes }) => ({
+        return items.map(({ budget, usage, scopes }) => ({
           budget,
           usage,
-          previousUsage,
           scopeAccounts: scopes.map(scope => accountsById.get(scope.accountId)),
-          fundingAccounts: parseBudgetAssetAccountIds(budget.assetAccountIds).map(id =>
-            accountsById.get(id),
-          ),
         }));
       }),
     );

@@ -1,3 +1,4 @@
+import { parseBudgetAssetAccountIds } from '@/src/services/budget/budgetAssetAccountIds';
 import { AccountId, BudgetId } from '@/src/types/ids';
 import { PlainBudget, PlainBudgetScope } from '@/src/types/plainDtos';
 
@@ -52,9 +53,7 @@ export function mapBudgetToEditDraft(
     ...(intervalType === 'YEARLY' && { recurrenceMonth: budget.recurrenceMonth || 1 }),
     startDate: budget.startDate,
     selectedAccountIds: scopes.map(s => s.accountId),
-    assetAccountIds: budget.assetAccountIds
-      ? (budget.assetAccountIds.split(',') as AccountId[])
-      : [],
+    assetAccountIds: parseBudgetAssetAccountIds(budget.assetAccountIds),
   };
 }
 

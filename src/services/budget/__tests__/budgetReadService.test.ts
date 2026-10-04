@@ -122,7 +122,7 @@ describe('budgetReadService', () => {
 
     let lastUsage: any;
     const sub = budgetReadService
-      .observeBudgetUsage('wp-1' as WorkplaceId, budget.id, month)
+      .observeBudgetUsage('wp-1' as WorkplaceId, budget.id, middleOfMonth)
       .subscribe(u => {
         // We want the most recent emission.
         // It will emit several times initially as observables resolve.
@@ -143,7 +143,7 @@ describe('budgetReadService', () => {
 
   it('should allow querying an older month natively', async () => {
     const currentMonth = '2023-10';
-    const previousMonth = '2023-09';
+    const previousMonthRef = dayjs('2023-09-15').valueOf();
 
     const budget = await budgetRepository.create(
       'wp-1' as WorkplaceId,
@@ -179,7 +179,7 @@ describe('budgetReadService', () => {
 
     let lastUsage: any;
     const sub = budgetReadService
-      .observeBudgetUsage('wp-1' as WorkplaceId, budget.id, previousMonth)
+      .observeBudgetUsage('wp-1' as WorkplaceId, budget.id, previousMonthRef)
       .subscribe(u => {
         if (u && u.budgetAmount === 500) {
           lastUsage = u;
@@ -226,7 +226,7 @@ describe('budgetReadService', () => {
       });
     });
     const usage = await firstValueFrom(
-      budgetReadService.observeBudgetUsage(workplaceId, budget.id, '2023-10').pipe(
+      budgetReadService.observeBudgetUsage(workplaceId, budget.id, dayjs('2023-10-15').valueOf()).pipe(
         filter(value => value.spent === 42.25),
         timeout({ first: 2000 }),
       ),
@@ -234,7 +234,7 @@ describe('budgetReadService', () => {
     expect(usage.remaining).toBe(457.75);
     const prior = await firstValueFrom(
       budgetReadService
-        .observeBudgetUsage(workplaceId, budget.id, '2023-09')
+        .observeBudgetUsage(workplaceId, budget.id, dayjs('2023-09-15').valueOf())
         .pipe(timeout({ first: 2000 })),
     );
     expect(prior.spent).toBe(0);
@@ -254,7 +254,7 @@ describe('budgetReadService', () => {
 
     let emitted: any;
     const sub = budgetReadService
-      .observeBudgetUsage('wp-1' as WorkplaceId, foreignBudget.id, '2023-10')
+      .observeBudgetUsage('wp-1' as WorkplaceId, foreignBudget.id, dayjs('2023-10-15').valueOf())
       .subscribe(u => {
         emitted = u;
       });
@@ -307,7 +307,7 @@ describe('budgetReadService', () => {
 
     let lastUsage: any;
     const sub = budgetReadService
-      .observeBudgetUsage('wp-1' as WorkplaceId, budget.id, month)
+      .observeBudgetUsage('wp-1' as WorkplaceId, budget.id, middleOfMonth)
       .subscribe(u => {
         if (u && u.budgetAmount === 500) {
           lastUsage = u;

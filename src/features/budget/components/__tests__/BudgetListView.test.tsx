@@ -28,7 +28,6 @@ const item: BudgetItem = {
       accountType: AccountType.EXPENSE,
     },
   ],
-  fundingAccounts: [],
 };
 
 it('labels the budget section This month', () => {

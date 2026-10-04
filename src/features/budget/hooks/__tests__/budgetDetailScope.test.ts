@@ -76,41 +76,43 @@ const parent = {
 };
 const leaf = { ...parent, id: 'dining' as AccountId, name: 'Dining', parentAccountId: parent.id };
 
-describe('budget details read scope', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest.spyOn(Date, 'now').mockReturnValue(now);
-    jest.mocked(journalObserveQueries.observeByIds).mockReturnValue(of([]));
-    jest
-      .mocked(buildBudgetCumulativeChart)
-      .mockReset()
-      .mockImplementation(async input => chart(input.periodStart, input.periodEnd));
-    jest
-      .mocked(transactionQueryRepository.observeBudgetTransactionsByJournalDateRange)
-      .mockReturnValue(of([]));
-    jest.mocked(useLocalSearchParams).mockReturnValue({ id: budgetId });
-    jest.mocked(budgetReadService.observeById).mockReturnValue(
-      of({
-        id: budgetId,
-        name: 'Food',
-        amount: 500,
-        currencyCode: 'USD',
-        intervalType: 'MONTHLY',
-      }),
+function setupStandardBudgetDetailMocks() {
+  jest.clearAllMocks();
+  jest.spyOn(Date, 'now').mockReturnValue(now);
+  jest.mocked(journalObserveQueries.observeByIds).mockReturnValue(of([]));
+  jest
+    .mocked(buildBudgetCumulativeChart)
+    .mockReset()
+    .mockImplementation(async input => chart(input.periodStart, input.periodEnd));
+  jest
+    .mocked(transactionQueryRepository.observeBudgetTransactionsByJournalDateRange)
+    .mockReturnValue(of([]));
+  jest.mocked(useLocalSearchParams).mockReturnValue({ id: budgetId });
+  jest.mocked(budgetReadService.observeById).mockReturnValue(
+    of({
+      id: budgetId,
+      name: 'Food',
+      amount: 500,
+      currencyCode: 'USD',
+      intervalType: 'MONTHLY',
+    }),
+  );
+  jest
+    .mocked(budgetReadService.observeBudgetUsage)
+    .mockReturnValue(of({ spent: 150, remaining: 350, budgetAmount: 500, usagePercent: 0.3 }));
+  jest
+    .mocked(budgetReadService.observeScopes)
+    .mockReturnValue(of([{ budgetId, accountId: parent.id }]));
+  jest
+    .mocked(accountQueries.observeByIds)
+    .mockImplementation((_workplaceId: WorkplaceId, ids: AccountId[]) =>
+      of(ids.includes(parent.id) ? [parent] : []),
     );
-    jest
-      .mocked(budgetReadService.observeBudgetUsage)
-      .mockReturnValue(of({ spent: 150, remaining: 350, budgetAmount: 500, usagePercent: 0.3 }));
-    jest
-      .mocked(budgetReadService.observeScopes)
-      .mockReturnValue(of([{ budgetId, accountId: parent.id }]));
-    jest
-      .mocked(accountQueries.observeByIds)
-      .mockImplementation((_workplaceId: WorkplaceId, ids: AccountId[]) =>
-        of(ids.includes(parent.id) ? [parent] : []),
-      );
-    jest.mocked(accountQueries.observeByType).mockReturnValue(of([parent, leaf]));
-  });
+  jest.mocked(accountQueries.observeByType).mockReturnValue(of([parent, leaf]));
+}
+
+describe('budget details read scope', () => {
+  beforeEach(() => setupStandardBudgetDetailMocks());
   afterEach(() => jest.restoreAllMocks());
 
   it('queries child expense legs and posted-equivalent statuses so activity matches usage', async () => {
@@ -178,39 +180,7 @@ const chart = (start: number, end: number, sameDaySpend = 90): BudgetCumulativeC
 });
 
 describe('budget details previous-period chart', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest.spyOn(Date, 'now').mockReturnValue(now);
-    jest.mocked(useLocalSearchParams).mockReturnValue({ id: budgetId });
-    jest.mocked(budgetReadService.observeById).mockReturnValue(
-      of({
-        id: budgetId,
-        name: 'Food',
-        amount: 500,
-        currencyCode: 'USD',
-        intervalType: 'MONTHLY',
-      }),
-    );
-    jest
-      .mocked(budgetReadService.observeBudgetUsage)
-      .mockReturnValue(of({ spent: 150, remaining: 350, budgetAmount: 500, usagePercent: 0.3 }));
-    jest
-      .mocked(budgetReadService.observeScopes)
-      .mockReturnValue(of([{ budgetId, accountId: parent.id }]));
-    jest
-      .mocked(accountQueries.observeByIds)
-      .mockImplementation((_workplaceId, ids) => of(ids.includes(parent.id) ? [parent] : []));
-    jest.mocked(accountQueries.observeByType).mockReturnValue(of([parent, leaf]));
-    jest
-      .mocked(transactionQueryRepository.observeBudgetTransactionsByJournalDateRange)
-      .mockReturnValue(of([]));
-    jest.mocked(journalObserveQueries.observeByIds).mockReturnValue(of([]));
-    jest
-      .mocked(buildBudgetCumulativeChart)
-      .mockReset()
-      .mockImplementation(async input => chart(input.periodStart, input.periodEnd));
-  });
-
+  beforeEach(() => setupStandardBudgetDetailMocks());
   afterEach(() => jest.restoreAllMocks());
 
   it('uses the same full-scope journal query and chart builder for both periods', async () => {
@@ -236,7 +206,6 @@ describe('budget details previous-period chart', () => {
       });
     }
     expect(result.current.previousChartData?.domainX).toEqual([februaryStart, februaryEnd]);
-    expect(result.current.previousUsage?.spent).toBe(150);
     act(() => result.current.onFilterCategory(leaf.id));
     expect(result.current.previousComparisonSpent).toBe(90);
   });
@@ -251,7 +220,7 @@ describe('budget details previous-period chart', () => {
     const { result } = renderHook(() => useBudgetDetailViewModel());
     await waitFor(() => expect(result.current.previousComparisonSpent).toBe(90));
     act(() => result.current.prevMonth());
-    await waitFor(() => expect(result.current.isCurrentMonth).toBe(false));
+    await waitFor(() => expect(result.current.isCurrentPeriod).toBe(false));
     expect(result.current.previousChartData).toBeNull();
     expect(result.current.previousComparisonSpent).toBeNull();
     act(() => januaryTransactions.next([]));
@@ -289,7 +258,6 @@ describe('budget details previous-period chart', () => {
       expect(result.current.previousComparisonSpent).toBeNull();
       expect(result.current.chartData).not.toBeNull();
       expect(result.current.insightsError).toBeUndefined();
-      expect(result.current.previousUsage?.spent).toBe(150);
       shouldFail = false;
       previousTransactions = new BehaviorSubject<Transaction[]>([]);
       act(() => result.current.onRetryInsights());
@@ -432,7 +400,6 @@ describe('budget details previous-period chart', () => {
     expect(result.current.previousChartData).toBeNull();
     expect(result.current.previousComparisonSpent).toBeNull();
     expect(result.current.insightsError).toBeUndefined();
-    expect(result.current.previousUsage?.spent).toBe(150);
   });
 
   it('advances the comparison calendar day on foreground without rebuilding the full chart', async () => {

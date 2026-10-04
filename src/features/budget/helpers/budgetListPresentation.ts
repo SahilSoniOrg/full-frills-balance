@@ -1,4 +1,4 @@
-import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
+import { getBudgetCurrentPeriod } from '@/src/services/budget/BudgetPeriodUtils';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 import { BudgetItem } from '../types';
@@ -14,7 +14,7 @@ const STATUS_ORDER: Record<BudgetStatus, number> = {
 
 export function sortBudgetItems(items: BudgetItem[], now: number): BudgetItem[] {
   const rank = (item: BudgetItem) => {
-    const range = BudgetPeriodUtils.getCurrentPeriod(item.budget, now);
+    const range = getBudgetCurrentPeriod(item.budget, now);
     const period = presentBudgetPeriod(range, item.usage, now);
     const status = resolveBudgetStatus(item.usage.usagePercent, period.elapsedShare).status;
     return item.usage.spent <= 0 && status === 'onPace' ? 4 : STATUS_ORDER[status];
@@ -33,7 +33,7 @@ export function summarizeBudgetList(items: BudgetItem[], currencyCode: string, n
   const precision = getCurrencyPrecision(currencyCode);
   const limit = included.reduce((sum, item) => safeAdd(sum, item.usage.budgetAmount, precision), 0);
   const spent = included.reduce((sum, item) => safeAdd(sum, item.usage.spent, precision), 0);
-  const ranges = included.map(item => BudgetPeriodUtils.getCurrentPeriod(item.budget, now));
+  const ranges = included.map(item => getBudgetCurrentPeriod(item.budget, now));
   const range = ranges[0];
   // Monthly budgets can be anchored to different days. Only label a common period.
   const commonRange =

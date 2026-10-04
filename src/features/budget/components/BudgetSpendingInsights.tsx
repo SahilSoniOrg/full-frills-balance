@@ -4,8 +4,9 @@ import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, Shape, Spacing } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
+import { resolveLeafExpenseAccountIds } from '@/src/services/budget/budgetCalculationHelpers';
 import type { BudgetCumulativeChart } from '@/src/services/budget/budgetCumulativeChartService';
-import type { AccountId } from '@/src/types/ids';
+import type { AccountId, WorkplaceId } from '@/src/types/ids';
 import type { PlainAccount } from '@/src/types/plainDtos';
 import { StyleSheet, View } from 'react-native';
 
@@ -19,6 +20,7 @@ interface Props {
   scopeAccounts: PlainAccount[];
   onFilterCategory: (id: AccountId | null) => void;
   activityCategory: PlainAccount | null;
+  workplaceId: WorkplaceId;
 }
 
 export function BudgetSpendingInsights({
@@ -31,11 +33,16 @@ export function BudgetSpendingInsights({
   scopeAccounts,
   onFilterCategory,
   activityCategory,
+  workplaceId,
 }: Props) {
   const { theme } = useTheme();
   const strings = AppConfig.strings.budgetDetailRedesign;
   const categories = chartData?.categories ?? [];
-  const resolvedCategoryCount = getResolvedCategoryCount(scopeAccounts, expenseAccounts);
+  const resolvedCategoryCount = resolveLeafExpenseAccountIds(
+    scopeAccounts,
+    expenseAccounts,
+    workplaceId,
+  ).size;
   const totalCategorySpend = categories.reduce((total, category) => total + category.spent, 0);
 
   if (resolvedCategoryCount === 1) return null;
@@ -150,24 +157,6 @@ export function BudgetSpendingInsights({
       ) : null}
     </Column>
   );
-}
-
-function getResolvedCategoryCount(scopes: PlainAccount[], expenseAccounts: PlainAccount[]) {
-  const scopeIds = new Set(scopes.map(account => account.id));
-  const accountsById = new Map(expenseAccounts.map(account => [account.id, account] as const));
-  const leaves = expenseAccounts.filter(account => {
-    const hasExpenseChildren = expenseAccounts.some(child => child.parentAccountId === account.id);
-    if (hasExpenseChildren) return false;
-    let current: PlainAccount | undefined = account;
-    const visited = new Set<string>();
-    while (current && !visited.has(current.id)) {
-      if (scopeIds.has(current.id)) return true;
-      visited.add(current.id);
-      current = current.parentAccountId ? accountsById.get(current.parentAccountId) : undefined;
-    }
-    return false;
-  });
-  return leaves.length;
 }
 
 const styles = StyleSheet.create({

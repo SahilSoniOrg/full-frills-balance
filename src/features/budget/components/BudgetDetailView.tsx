@@ -12,12 +12,14 @@ import { BudgetSetupDisclosure } from './BudgetSetupDisclosure';
 import { BudgetSpendingChart } from './BudgetSpendingChart';
 import { BudgetSpendingInsights } from './BudgetSpendingInsights';
 import type { BudgetDetailViewModel } from '../hooks/useBudgetDetailViewModel';
+import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { Column, Row } from '@/src/design-system';
 
 export function BudgetDetailView({
   chrome,
   ...vm
 }: BudgetDetailViewModel & { chrome: ScreenNavChrome }) {
+  const { workplaceId } = useWorkplace();
   const { budget, usage, periodRange } = vm;
   const strings = AppConfig.strings.budgetDetailRedesign;
 
@@ -77,7 +79,7 @@ export function BudgetDetailView({
                 usage={usage}
                 periodLabel={vm.periodLabel}
                 periodRange={periodRange}
-                isCurrentMonth={vm.isCurrentMonth}
+                isCurrentPeriod={vm.isCurrentPeriod}
                 previousComparisonSpent={vm.previousComparisonSpent}
                 previousPeriodRange={vm.previousPeriodRange}
                 prevMonth={vm.prevMonth}
@@ -91,7 +93,7 @@ export function BudgetDetailView({
                 currencyCode={budget.currencyCode}
                 periodRange={periodRange}
                 previousPeriodRange={vm.previousPeriodRange}
-                isCurrentPeriod={vm.isCurrentMonth}
+                isCurrentPeriod={vm.isCurrentPeriod}
                 isLoading={vm.isLoadingInsights}
                 error={vm.insightsError}
                 onRetry={vm.onRetryInsights}
@@ -106,13 +108,11 @@ export function BudgetDetailView({
                 scopeAccounts={vm.scopeAccounts}
                 onFilterCategory={vm.onFilterCategory}
                 activityCategory={vm.activityCategory}
+                workplaceId={workplaceId}
               />
               <BudgetSetupDisclosure
                 budget={budget}
-                periodRange={periodRange}
-                scopeAccounts={vm.scopeAccounts}
                 fundingAccounts={vm.fundingAccounts}
-                isLoadingScope={vm.isLoadingScope}
                 isLoadingFunding={vm.isLoadingFunding}
                 onEdit={vm.handleEdit}
               />

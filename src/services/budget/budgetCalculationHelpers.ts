@@ -1,5 +1,4 @@
 import { summarizeBudgetUnvaluedEntries } from './budgetUnvaluedEntries';
-import Account from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { accountQueryRepository } from '@/src/data/repositories/account';
@@ -7,13 +6,100 @@ import { journalQueryRepository } from '@/src/data/repositories/journal/journalQ
 import { AppConfig } from '@/src/constants/app-config';
 import { convertJournalLineAmount } from '@/src/services/currencyConversion';
 import { resolveLeafAccountIds } from '@/src/services/forward-finance/scope/ScopeResolver';
-import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { AccountType } from '@/src/types/enums';
+import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import { AccountType, type TransactionType } from '@/src/types/enums';
 import { runTasksWithBoundedConcurrency } from '@/src/utils/asyncConcurrency';
 import { logger } from '@/src/utils/logger';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { roundToPrecision } from '@/src/utils/money';
 import { BudgetUsage } from './types';
+
+export type BudgetLineValuationTx = {
+  id: string;
+  journalId: JournalId;
+  accountId: AccountId;
+  amount: number;
+  currencyCode?: string;
+  exchangeRate?: number;
+  transactionType: TransactionType;
+};
+
+export type BudgetLineValuationAccount = {
+  id: AccountId;
+  currencyCode?: string;
+};
+
+export type ValuedBudgetLine = {
+  amount: number;
+  journalDate: number;
+  transactionType: TransactionType;
+};
+
+export async function valueBudgetLinesForCurrency(
+  workplaceId: WorkplaceId,
+  transactions: BudgetLineValuationTx[],
+  accountById: Map<AccountId, BudgetLineValuationAccount>,
+  targetCurrency: string,
+  logTag: string,
+): Promise<{
+  lines: (ValuedBudgetLine | null)[];
+  unvaluedEntries: boolean[];
+  journalById: Map<string, Journal>;
+}> {
+  const journals = await journalQueryRepository.findByIds(workplaceId, [
+    ...new Set(transactions.map(transaction => transaction.journalId)),
+  ]);
+  const journalById = new Map<string, Journal>(
+    journals.map(journal => [journal.id, journal] as const),
+  );
+  const lines: (ValuedBudgetLine | null)[] = new Array(transactions.length).fill(null);
+  const unvaluedEntries = new Array(transactions.length).fill(false);
+
+  await runTasksWithBoundedConcurrency(
+    transactions,
+    AppConfig.performance.maxConcurrentOperations,
+    async (transaction, index) => {
+      const journal = journalById.get(transaction.journalId);
+      const account = accountById.get(transaction.accountId);
+      if (!journal || !account) {
+        unvaluedEntries[index] = true;
+        logger.warn(`[${logTag}] Journal or account missing for budget valuation`, {
+          transactionId: transaction.id,
+          journalId: transaction.journalId,
+          accountId: transaction.accountId,
+        });
+        return;
+      }
+
+      const converted = await convertJournalLineAmount({
+        amount: transaction.amount,
+        lineCurrency: transaction.currencyCode || account.currencyCode || journal.currencyCode,
+        journalCurrency: journal.currencyCode,
+        targetCurrency,
+        storedLineRate: transaction.exchangeRate,
+        journalDate: journal.journalDate,
+      });
+      if (!converted.ok) {
+        unvaluedEntries[index] = true;
+        logger.warn(`[${logTag}] FX unavailable for budget valuation`, {
+          from: converted.missingRate.fromCurrency,
+          to: converted.missingRate.toCurrency,
+          journalDate: journal.journalDate,
+          transactionId: transaction.id,
+        });
+        return;
+      }
+
+      lines[index] = {
+        amount: converted.amount,
+        journalDate: journal.journalDate,
+        transactionType: transaction.transactionType,
+      };
+    },
+  );
+
+  return { lines, unvaluedEntries, journalById };
+}
 
 /** Minimal account shape for leaf resolution — models or plain DTOs. */
 export type BudgetLeafAccountInput = {
@@ -58,72 +144,29 @@ export async function calculateBudgetSpendFromTransactions(
 ): Promise<BudgetUsage> {
   const precision = getCurrencyPrecision(budgetCurrencyCode);
   const roundedBudgetAmount = roundToPrecision(budgetAmount, precision);
-  const [journals, accounts] = await Promise.all([
-    journalQueryRepository.findByIds(workplaceId, [
-      ...new Set(transactions.map(transaction => transaction.journalId)),
-    ]),
-    accountQueryRepository.findAllByIds(workplaceId, [
-      ...new Set(transactions.map(transaction => transaction.accountId)),
-    ]),
+  const accounts = await accountQueryRepository.findAllByIds(workplaceId, [
+    ...new Set(transactions.map(transaction => transaction.accountId)),
   ]);
-  const journalById = new Map<string, Journal>(
-    journals.map(journal => [journal.id, journal] as const),
-  );
-  const accountById = new Map<AccountId, Account>(
+  const accountById = new Map<AccountId, BudgetLineValuationAccount>(
     accounts.map(account => [account.id, account] as const),
   );
-  const convertedAmounts: (number | null)[] = new Array(transactions.length).fill(null);
-  const unvaluedEntries = new Array<boolean>(transactions.length).fill(false);
-
-  await runTasksWithBoundedConcurrency(
+  const { lines, unvaluedEntries, journalById } = await valueBudgetLinesForCurrency(
+    workplaceId,
     transactions,
-    AppConfig.performance.maxConcurrentOperations,
-    async (transaction, index) => {
-      const journal = journalById.get(transaction.journalId);
-      const account = accountById.get(transaction.accountId);
-      if (!journal || !account) {
-        unvaluedEntries[index] = true;
-        logger.warn('[BudgetReadService] Journal or account missing for budget valuation', {
-          transactionId: transaction.id,
-          journalId: transaction.journalId,
-          accountId: transaction.accountId,
-        });
-        return;
-      }
-
-      const converted = await convertJournalLineAmount({
-        amount: transaction.amount,
-        lineCurrency: transaction.currencyCode || account.currencyCode || journal.currencyCode,
-        journalCurrency: journal.currencyCode,
-        targetCurrency: budgetCurrencyCode,
-        storedLineRate: transaction.exchangeRate,
-        journalDate: journal.journalDate,
-      });
-      if (!converted.ok) {
-        unvaluedEntries[index] = true;
-        logger.warn('[BudgetReadService] FX unavailable for budget usage', {
-          from: converted.missingRate.fromCurrency,
-          to: converted.missingRate.toCurrency,
-          journalDate: journal.journalDate,
-          transactionId: transaction.id,
-        });
-        return;
-      }
-
-      convertedAmounts[index] = converted.amount;
-    },
+    accountById,
+    budgetCurrencyCode,
+    'BudgetReadService',
   );
 
   let spentAmount = 0;
 
-  transactions.forEach((tx, index) => {
-    const txAmount = convertedAmounts[index];
-    if (txAmount === null) return;
+  lines.forEach(line => {
+    if (!line) return;
 
-    if (tx.transactionType === 'DEBIT') {
-      spentAmount = roundToPrecision(spentAmount + txAmount, precision);
-    } else if (tx.transactionType === 'CREDIT') {
-      spentAmount = roundToPrecision(spentAmount - txAmount, precision);
+    if (line.transactionType === 'DEBIT') {
+      spentAmount = roundToPrecision(spentAmount + line.amount, precision);
+    } else if (line.transactionType === 'CREDIT') {
+      spentAmount = roundToPrecision(spentAmount - line.amount, precision);
     }
   });
 

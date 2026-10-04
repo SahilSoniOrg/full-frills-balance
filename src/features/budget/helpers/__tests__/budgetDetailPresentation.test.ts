@@ -18,19 +18,16 @@ describe('selected budget period', () => {
   it('includes today when allocating the remaining amount', () => {
     const result = presentBudgetPeriod(range, usage, new Date(2026, 9, 3, 23, 59).getTime());
     expect(result.dailyRemaining).toBe(10);
-    expect(result.timingText).toBe('29 days remaining, including today');
     expect(result.dateRangeText).toBe('1 Oct 2026 – 31 Oct 2026');
   });
 
   it('keeps the final day available instead of dividing by zero', () => {
     const result = presentBudgetPeriod(range, usage, new Date(2026, 9, 31, 23, 59).getTime());
     expect(result.dailyRemaining).toBe(290);
-    expect(result.timingText).toBe('Ends today');
   });
 
   it('does not present historical or incomplete balances as daily capacity', () => {
     expect(presentBudgetPeriod(range, usage, new Date(2026, 10, 1).getTime())).toMatchObject({
-      timingText: 'Period ended',
       dailyRemaining: undefined,
     });
     expect(

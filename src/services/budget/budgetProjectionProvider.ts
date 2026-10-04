@@ -1,7 +1,7 @@
 import { BudgetUsage } from '@/src/services/budget/types';
 import { AccountId } from '@/src/types/ids';
 import dayjs from 'dayjs';
-import { BudgetPeriodUtils } from './BudgetPeriodUtils';
+import { getBudgetCurrentPeriod } from './BudgetPeriodUtils';
 import { parseBudgetAssetAccountIds } from './budgetAssetAccountIds';
 import {
   BudgetCapacityProjection,
@@ -44,7 +44,7 @@ export function projectBudgetCapacities(
     // Generate all cycles that overlap the simulation window [simulationStartMs, simulationEndMs]
     const cycles: BudgetCycleCapacity[] = [];
 
-    let currentPeriod = BudgetPeriodUtils.getCurrentPeriod(budget, context.simulationStartMs);
+    let currentPeriod = getBudgetCurrentPeriod(budget, context.simulationStartMs);
     cycles.push({
       startDate: currentPeriod.startDate,
       endDate: currentPeriod.endDate,
@@ -55,7 +55,7 @@ export function projectBudgetCapacities(
     // Walk forward to collect future cycles within the simulation window
     while (currentPeriod.endDate < context.simulationEndMs) {
       const nextCycleRef = dayjs(currentPeriod.endDate).add(1, 'second').valueOf();
-      const nextPeriod = BudgetPeriodUtils.getCurrentPeriod(budget, nextCycleRef);
+      const nextPeriod = getBudgetCurrentPeriod(budget, nextCycleRef);
 
       // Guard against infinite loop if period doesn't advance
       if (nextPeriod.startDate <= currentPeriod.startDate) break;

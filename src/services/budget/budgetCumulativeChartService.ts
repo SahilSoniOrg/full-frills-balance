@@ -1,8 +1,5 @@
+import { valueBudgetLinesForCurrency } from './budgetCalculationHelpers';
 import { summarizeBudgetUnvaluedEntries } from './budgetUnvaluedEntries';
-import type Journal from '@/src/data/models/Journal';
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
-import { AppConfig } from '@/src/constants/app-config';
-import { convertJournalLineAmount } from '@/src/services/currencyConversion';
 import { buildBudgetCumulativeSeries } from '@/src/services/projections/buildBudgetCumulativeSeries';
 import type {
   BudgetCumulativeSeries,
@@ -11,8 +8,6 @@ import type {
 import type { TransactionType } from '@/src/types/enums';
 import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
-import { runTasksWithBoundedConcurrency } from '@/src/utils/asyncConcurrency';
-import { logger } from '@/src/utils/logger';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
 
 export interface BudgetCategorySpending {
@@ -67,56 +62,24 @@ export async function buildBudgetCumulativeChart({
   periodStart,
   periodEnd,
 }: BuildBudgetCumulativeChartInput): Promise<BudgetCumulativeChart> {
-  const journals = await journalQueryRepository.findByIds(workplaceId, [
-    ...new Set(transactions.map(transaction => transaction.journalId)),
-  ]);
-  const journalById = new Map<string, Journal>(
-    journals.map(journal => [journal.id, journal] as const),
-  );
   const accountById = new Map<AccountId, BudgetChartAccountInput>(
     accounts.map(account => [account.id, account] as const),
   );
-  const chartTransactions: (BudgetCumulativeTx | null)[] = new Array(transactions.length).fill(
-    null,
-  );
-  const unvaluedEntries = new Array<boolean>(transactions.length).fill(false);
-
-  await runTasksWithBoundedConcurrency(
+  const { lines, unvaluedEntries, journalById } = await valueBudgetLinesForCurrency(
+    workplaceId,
     transactions,
-    AppConfig.performance.maxConcurrentOperations,
-    async (transaction, index) => {
-      const journal = journalById.get(transaction.journalId);
-      const account = accountById.get(transaction.accountId);
-      if (!journal || !account) {
-        unvaluedEntries[index] = true;
-        return;
-      }
-
-      const converted = await convertJournalLineAmount({
-        amount: transaction.amount,
-        lineCurrency: transaction.currencyCode || account.currencyCode || journal.currencyCode,
-        journalCurrency: journal.currencyCode,
-        targetCurrency,
-        storedLineRate: transaction.exchangeRate,
-        journalDate: journal.journalDate,
-      });
-      if (!converted.ok) {
-        unvaluedEntries[index] = true;
-        logger.warn('[BudgetCumulativeChartService] Skipping unvalued budget chart line', {
-          transactionId: transaction.id,
-          from: converted.missingRate.fromCurrency,
-          to: converted.missingRate.toCurrency,
-          journalDate: journal.journalDate,
-        });
-        return;
-      }
-
-      chartTransactions[index] = {
-        transactionDate: journal.journalDate,
-        amount: converted.amount,
-        transactionType: transaction.transactionType,
-      };
-    },
+    accountById,
+    targetCurrency,
+    'BudgetCumulativeChartService',
+  );
+  const chartTransactions: (BudgetCumulativeTx | null)[] = lines.map(line =>
+    line
+      ? {
+          transactionDate: line.journalDate,
+          amount: line.amount,
+          transactionType: line.transactionType,
+        }
+      : null,
   );
 
   const series = buildBudgetCumulativeSeries({

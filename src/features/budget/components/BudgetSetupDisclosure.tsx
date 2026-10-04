@@ -6,10 +6,7 @@ import { formatRecurrence } from '@/src/utils/recurrenceLabels';
 
 interface Props {
   budget: PlainBudget;
-  periodRange: { startDate: number; endDate: number };
-  scopeAccounts: PlainAccount[];
   fundingAccounts: PlainAccount[];
-  isLoadingScope: boolean;
   isLoadingFunding: boolean;
   onEdit: () => void;
 }

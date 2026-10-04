@@ -2,7 +2,6 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { BehaviorSubject, of } from 'rxjs';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
-import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
 import { asAccountId, asBudgetId, asWorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import type { PlainAccount, PlainBudget } from '@/src/types/plainDtos';
@@ -23,7 +22,6 @@ jest.mock('@/src/utils/navigation', () => ({ AppNavigation: { toBudgetDetail: je
 
 const workplaceId = asWorkplaceId('workplace');
 const categoryId = asAccountId('category');
-const fundingId = asAccountId('funding');
 const budget: PlainBudget = {
   id: asBudgetId('budget'),
   name: 'Quarterly spending',
@@ -44,14 +42,6 @@ const accounts: PlainAccount[] = [
     icon: Icon.ShoppingCart,
     color: '#336699',
   },
-  {
-    id: fundingId,
-    name: 'Checking',
-    accountType: AccountType.ASSET,
-    currencyCode: 'USD',
-    icon: Icon.Bank,
-    color: '#996633',
-  },
 ];
 
 describe('useBudgetListViewModel', () => {
@@ -65,38 +55,28 @@ describe('useBudgetListViewModel', () => {
     jest.mocked(accountQueries.observeAll).mockReturnValue(of(accounts));
   });
 
-  it('compares the previous recurrence cycle instead of the previous calendar month', async () => {
+  it('observes usage once per budget for the current calendar day', async () => {
     const now = new Date(2026, 8, 20).getTime();
     jest.spyOn(Date, 'now').mockReturnValue(now);
     try {
       const { result } = renderHook(() => useBudgetListViewModel(workplaceId));
       await waitFor(() => expect(result.current.items).toHaveLength(1));
-      const { startDate } = BudgetPeriodUtils.getCurrentPeriod(budget, now);
-      expect(budgetReadService.observeBudgetUsage).toHaveBeenNthCalledWith(
-        1,
+      expect(budgetReadService.observeBudgetUsage).toHaveBeenCalledTimes(1);
+      expect(budgetReadService.observeBudgetUsage).toHaveBeenCalledWith(
         workplaceId,
         budget.id,
         now,
       );
-      expect(budgetReadService.observeBudgetUsage).toHaveBeenNthCalledWith(
-        2,
-        workplaceId,
-        budget.id,
-        startDate - 1,
-      );
-      const previous = BudgetPeriodUtils.getCurrentPeriod(budget, startDate - 1);
-      expect(previous.endDate).toBeLessThan(startDate);
     } finally {
       jest.restoreAllMocks();
     }
   });
 
-  it('updates category and funding identity reactively without resubscribing to usage', async () => {
+  it('updates category identity reactively without resubscribing to usage', async () => {
     const accountSource = new BehaviorSubject(accounts);
     jest.mocked(accountQueries.observeAll).mockReturnValue(accountSource);
     const { result } = renderHook(() => useBudgetListViewModel(workplaceId));
     await waitFor(() => expect(result.current.items[0]?.scopeAccounts).toEqual([accounts[0]]));
-    expect(result.current.items[0]?.fundingAccounts).toEqual([accounts[1], undefined]);
     act(() =>
       accountSource.next(
         accounts.map(account => ({
@@ -114,12 +94,6 @@ describe('useBudgetListViewModel', () => {
         icon: Icon.Wallet,
       }),
     );
-    expect(result.current.items[0]?.fundingAccounts?.[0]).toMatchObject({
-      name: 'Checking renamed',
-      color: '#663399',
-      icon: Icon.Wallet,
-    });
-    expect(result.current.items[0]?.fundingAccounts?.[1]).toBeUndefined();
-    expect(budgetReadService.observeBudgetUsage).toHaveBeenCalledTimes(2);
+    expect(budgetReadService.observeBudgetUsage).toHaveBeenCalledTimes(1);
   });
 });

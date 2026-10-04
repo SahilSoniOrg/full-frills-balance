@@ -21,7 +21,6 @@ function item(
     },
     usage: { spent, budgetAmount: 100, remaining: 100 - spent, usagePercent: spent / 100 },
     scopeAccounts: [],
-    fundingAccounts: [],
   };
 }
 

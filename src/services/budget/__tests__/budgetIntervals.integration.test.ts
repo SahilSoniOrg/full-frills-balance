@@ -5,7 +5,7 @@ import { readBudgets } from '@/src/services/reports-v2/reportInputReader';
 import { calculateBudgetPerformance } from '@/src/services/reports-v2/calculators/planning/budgetPerformanceCalculator';
 import { AccountType } from '@/src/types/enums';
 import { asWorkplaceId } from '@/src/types/ids';
-import { BudgetPeriodUtils } from '../BudgetPeriodUtils';
+import { getBudgetCurrentPeriod } from '../BudgetPeriodUtils';
 import { budgetWriteService } from '../budgetWriteService';
 
 const workplaceId = asWorkplaceId('budget-intervals');
@@ -49,8 +49,8 @@ describe('budget intervals across storage and reports', () => {
     );
     const reports = await readBudgets(workplaceId, 'USD', period);
     expect(reports.budgets).toHaveLength(1);
-    expect(BudgetPeriodUtils.getCurrentPeriod(reports.budgets[0], period.startDate)).toEqual(
-      BudgetPeriodUtils.getCurrentPeriod(budget, period.startDate),
+    expect(getBudgetCurrentPeriod(reports.budgets[0], period.startDate)).toEqual(
+      getBudgetCurrentPeriod(budget, period.startDate),
     );
     const result = calculateBudgetPerformance({
       budgets: reports.budgets,

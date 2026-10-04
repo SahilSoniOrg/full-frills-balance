@@ -1,19 +1,5 @@
 import { BudgetUsage } from '@/src/services/budget/types';
-import {
-  BudgetCardInput,
-  presentBudgetListCard,
-  presentBudgetUsage,
-  resolveBudgetStatus,
-} from '../budgetCardPresentation';
-
-const monthlyBudget: BudgetCardInput = {
-  name: 'Groceries',
-  amount: 500,
-  currencyCode: 'USD',
-  intervalType: 'MONTHLY',
-  intervalN: 1,
-  recurrenceDay: 1,
-};
+import { presentBudgetUsage, resolveBudgetStatus } from '../budgetCardPresentation';
 
 function makeUsage(overrides: Partial<BudgetUsage> = {}): BudgetUsage {
   return {
@@ -71,52 +57,5 @@ describe('presentBudgetUsage', () => {
     expect(vm.isOver).toBe(true);
     expect(vm.progress).toBe(100);
     expect(vm.statusBadge.variant).toBe('error');
-  });
-});
-
-describe('presentBudgetListCard', () => {
-  it('maps budget header fields without usage amounts', () => {
-    const vm = presentBudgetListCard(monthlyBudget, makeUsage(), undefined);
-
-    expect(vm.name).toBe('Groceries');
-    expect(vm.amount).toBe(500);
-    expect(vm.statusColor).toBe('primary');
-    expect(vm.periodSubtitle.length).toBeGreaterThan(0);
-    expect(vm.intervalLabel).toBe('Monthly');
-    expect(vm.cadenceLabel).toBe('1 mo');
-    expect(vm).not.toHaveProperty('spent');
-    expect(vm).not.toHaveProperty('statusBadge');
-  });
-
-  it('identifies a multi-month budget limit', () => {
-    const vm = presentBudgetListCard({ ...monthlyBudget, intervalN: 3 }, makeUsage(), undefined);
-    expect(vm.intervalLabel).toBe('Every 3 months');
-    expect(vm.cadenceLabel).toBe('3 mo');
-  });
-
-  it('shows the monthly cadence used by legacy budgets with a zero interval', () => {
-    const vm = presentBudgetListCard({ ...monthlyBudget, intervalN: 0 }, makeUsage(), undefined);
-    expect(vm.intervalLabel).toBe('Monthly');
-    expect(vm.cadenceLabel).toBe('1 mo');
-  });
-
-  it('derives status color for over-budget usage', () => {
-    const vm = presentBudgetListCard(
-      monthlyBudget,
-      makeUsage({ spent: 600, remaining: -100, usagePercent: 1.2 }),
-      undefined,
-    );
-
-    expect(vm.statusColor).toBe('error');
-  });
-
-  it('includes previous period comparison when provided', () => {
-    const vm = presentBudgetListCard(
-      monthlyBudget,
-      makeUsage(),
-      makeUsage({ remaining: -50, usagePercent: 1.1 }),
-    );
-
-    expect(vm.previousPeriodLabel).toBeDefined();
   });
 });

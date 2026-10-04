@@ -7,7 +7,7 @@ import { presentBudgetUsage } from '../helpers/budgetCardPresentation';
 import { presentBudgetPeriod } from '../helpers/budgetDetailPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCalendarDay } from '@/src/hooks/useCalendarDay';
-import { BudgetPeriodUtils } from '@/src/services/budget/BudgetPeriodUtils';
+import { getBudgetCurrentPeriod } from '@/src/services/budget/BudgetPeriodUtils';
 import { BudgetItem } from '../types';
 import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
 import { View } from 'react-native';
@@ -27,7 +27,7 @@ export function BudgetCard({
   const strings = AppConfig.strings.commitmentsRedesign;
   const today = useCalendarDay();
   const period = presentBudgetPeriod(
-    BudgetPeriodUtils.getCurrentPeriod(budget, today),
+    getBudgetCurrentPeriod(budget, today),
     usage,
     today,
   );
@@ -138,9 +138,7 @@ export function BudgetCard({
               <AppText
                 variant="caption"
                 color={
-                  usage.hasUnvaluedEntries ||
-                  vm.status === 'nearLimit' ||
-                  vm.status === 'aheadOfPace'
+                  vm.status === 'nearLimit' || vm.status === 'aheadOfPace'
                     ? 'warning'
                     : vm.status === 'over'
                       ? 'error'

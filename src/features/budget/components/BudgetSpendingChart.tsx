@@ -113,7 +113,7 @@ export function BudgetSpendingChart({
       paceLine: {
         x1: xFromOffset(0),
         y1: yFromValue(0),
-        x2: xFromOffset(geometry.evenPaceEndOffset),
+        x2: xFromOffset(periodDays),
         y2: yFromValue(usage.budgetAmount),
       },
       todayLine: { y1: CHART_TOP, y2: CHART_HEIGHT - CHART_BOTTOM },

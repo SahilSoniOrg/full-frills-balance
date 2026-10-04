@@ -25,13 +25,6 @@ export function presentBudgetPeriod(
     daysRemaining,
     elapsedShare: elapsedDays / periodDays,
     dateRangeText: `${start.format('D MMM YYYY')} – ${end.format('D MMM YYYY')}`,
-    timingText: isCurrent
-      ? daysRemaining === 1
-        ? 'Ends today'
-        : `${daysRemaining} days remaining, including today`
-      : now > range.endDate
-        ? 'Period ended'
-        : 'Period has not started',
     dailyRemaining:
       isCurrent && !usage.hasUnvaluedEntries
         ? Math.max(usage.remaining, 0) / daysRemaining

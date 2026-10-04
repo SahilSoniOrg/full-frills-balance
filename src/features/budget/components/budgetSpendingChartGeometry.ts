@@ -9,7 +9,6 @@ export interface BudgetSpendingChartGeometry {
   previousPoints: Point[];
   todayOffset: number;
   todaySpent: number;
-  evenPaceEndOffset: number;
 }
 
 /** Calendar-aligned offsets retain each posting's position within its journal day. */
@@ -73,6 +72,5 @@ export function buildBudgetSpendingChartGeometry({
     previousPoints,
     todayOffset,
     todaySpent: currentPoints.at(-1)?.y ?? 0,
-    evenPaceEndOffset: periodDays,
   };
 }

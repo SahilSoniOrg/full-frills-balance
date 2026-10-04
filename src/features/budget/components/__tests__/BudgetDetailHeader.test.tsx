@@ -11,7 +11,7 @@ const props = {
   budget: { id: 'food' as BudgetId, name: 'Food', amount: 500.75, currencyCode: 'USD' },
   usage: { spent: 126.55, remaining: 374.2, budgetAmount: 500.75, usagePercent: 0.25 },
   periodLabel: 'October 2026',
-  isCurrentMonth: true,
+  isCurrentPeriod: true,
   periodRange: {
     startDate: new Date(2026, 9, 1).getTime(),
     endDate: new Date(2026, 9, 31, 23, 59).getTime(),

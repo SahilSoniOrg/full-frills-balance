@@ -13,7 +13,6 @@ import {
 } from '@/src/features/budget/hooks/budgetEditDraft';
 import { useObservable } from '@/src/hooks/useObservable';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
-import { analytics } from '@/src/services/analytics';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { budgetFormStrings } from '@/src/constants/copy/domains/budgetFormStrings';
@@ -188,30 +187,6 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
     (currencyCode: string) => setDraft(d => ({ ...d, currencyCode })),
     [],
   );
-  const setStartMonth = useCallback(
-    (startMonth: Date) => setDraft(d => ({ ...d, startMonth })),
-    [],
-  );
-  const setIntervalType = useCallback(
-    (intervalType: string) =>
-      setDraft(d => {
-        if (d.intervalType === intervalType) return d;
-        const date = new Date(d.startDate ?? Date.now());
-        return {
-          ...d,
-          intervalType,
-          recurrenceDay:
-            intervalType === 'DAILY'
-              ? undefined
-              : intervalType === 'WEEKLY'
-                ? date.getDay()
-                : date.getDate(),
-          recurrenceMonth: intervalType === 'YEARLY' ? date.getMonth() + 1 : undefined,
-        };
-      }),
-    [],
-  );
-  const setIntervalN = useCallback((intervalN: number) => setDraft(d => ({ ...d, intervalN })), []);
   const setSchedule = useCallback(
     (value: ScheduleValue) =>
       setDraft(d => ({
@@ -221,18 +196,6 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
         recurrenceDay: value.intervalType === 'DAILY' ? undefined : value.recurrenceDay,
         recurrenceMonth: value.intervalType === 'YEARLY' ? value.recurrenceMonth : undefined,
       })),
-    [],
-  );
-  const setRecurrenceDay = useCallback(
-    (recurrenceDay: number) => setDraft(d => ({ ...d, recurrenceDay })),
-    [],
-  );
-  const setRecurrenceMonth = useCallback(
-    (recurrenceMonth: number) => setDraft(d => ({ ...d, recurrenceMonth })),
-    [],
-  );
-  const setStartDate = useCallback(
-    (startDate: number | undefined) => setDraft(d => ({ ...d, startDate })),
     [],
   );
   const setSelectedAccountIds = useCallback(
@@ -302,20 +265,8 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
           input,
           draft.selectedAccountIds,
         );
-        analytics.trackFeatureUsage('budget', 'update', {
-          currency: draft.currencyCode,
-          interval_type: draft.intervalType,
-          category_count: draft.selectedAccountIds.length,
-          asset_count: draft.assetAccountIds.length,
-        });
       } else {
         await budgetWriteService.createBudget(workplaceId, input, draft.selectedAccountIds);
-        analytics.trackFeatureUsage('budget', 'create', {
-          currency: draft.currencyCode,
-          interval_type: draft.intervalType,
-          category_count: draft.selectedAccountIds.length,
-          asset_count: draft.assetAccountIds.length,
-        });
       }
       setLeaveAfterSave(() => AppNavigation.back);
     } catch (error) {
@@ -335,11 +286,8 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
     amount: draft.amount,
     setAmount,
     startMonth: draft.startMonth,
-    setStartMonth,
     intervalType: draft.intervalType,
-    setIntervalType,
     intervalN: draft.intervalN,
-    setIntervalN,
     schedule: {
       intervalType: draft.intervalType as ScheduleValue['intervalType'],
       intervalN: draft.intervalN,
@@ -349,11 +297,8 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
     setSchedule,
     scheduleStartDate,
     recurrenceDay: draft.recurrenceDay,
-    setRecurrenceDay,
     recurrenceMonth: draft.recurrenceMonth,
-    setRecurrenceMonth,
     startDate: draft.startDate,
-    setStartDate,
     selectedAccountIds: draft.selectedAccountIds,
     setSelectedAccountIds,
     selectedCategories,

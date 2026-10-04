@@ -22,10 +22,13 @@ function CommitmentsScreen() {
   const router = useRouter();
   const activeTab: CommitmentsTab = tab === 'planned' ? 'planned' : 'budgets';
   const strings = AppConfig.strings.commitmentsRedesign;
-  const options = [
-    { id: 'budgets' as const, label: strings.budgets, badge: budgets.items.length },
-    { id: 'planned' as const, label: strings.planned, badge: planned.items.length },
-  ];
+  const options = useMemo(
+    () => [
+      { id: 'budgets' as const, label: strings.budgets, badge: budgets.items.length },
+      { id: 'planned' as const, label: strings.planned, badge: planned.items.length },
+    ],
+    [strings, budgets.items.length, planned.items.length],
+  );
   const chrome = useMemo<TabScreenChrome>(
     () => ({
       screenTitle: strings.title,

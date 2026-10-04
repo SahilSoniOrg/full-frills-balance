@@ -22,7 +22,7 @@ interface BudgetDetailHeaderProps {
   usage: BudgetUsage;
   periodLabel: string;
   periodRange: { startDate: number; endDate: number };
-  isCurrentMonth: boolean;
+  isCurrentPeriod: boolean;
   previousComparisonSpent: number | null;
   previousPeriodRange?: { startDate: number; endDate: number };
   prevMonth: () => void;
@@ -35,7 +35,7 @@ export function BudgetDetailHeader({
   usage,
   periodLabel,
   periodRange,
-  isCurrentMonth,
+  isCurrentPeriod,
   previousComparisonSpent,
   previousPeriodRange,
   prevMonth,
@@ -76,8 +76,8 @@ export function BudgetDetailHeader({
         daysLeft={period.isCurrent ? period.daysRemaining : undefined}
         onPrevious={prevMonth}
         onNext={nextMonth}
-        canGoNext={!isCurrentMonth}
-        showBackToToday={!isCurrentMonth}
+        canGoNext={!isCurrentPeriod}
+        showBackToToday={!isCurrentPeriod}
         onBackToToday={resetToToday}
       />
 

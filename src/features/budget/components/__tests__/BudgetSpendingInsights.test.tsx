@@ -1,7 +1,7 @@
 import { BudgetSpendingInsights } from '../BudgetSpendingInsights';
 import { cleanup, fireEvent, render } from '@/src/utils/test-utils';
 import { AccountType } from '@/src/types/enums';
-import type { AccountId } from '@/src/types/ids';
+import { asWorkplaceId, type AccountId } from '@/src/types/ids';
 import { preferences } from '@/src/services/preferences';
 import { AppConfig } from '@/src/constants';
 import { View } from 'react-native';
@@ -48,6 +48,7 @@ const props = {
   scopeAccounts: [dining, groceries],
   onFilterCategory: jest.fn(),
   activityCategory: null,
+  workplaceId: asWorkplaceId('workplace'),
 };
 
 describe('budget spending insights', () => {

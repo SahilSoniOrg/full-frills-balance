@@ -29,7 +29,6 @@ const item: BudgetItem = {
     currencyCode: 'INR',
     accountType: AccountType.EXPENSE,
   })),
-  fundingAccounts: [],
 };
 
 describe('redesigned budget rows and summary', () => {
