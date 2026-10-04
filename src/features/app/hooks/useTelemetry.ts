@@ -1,4 +1,5 @@
 import { analytics } from '@/src/services/analytics';
+import { ROUTE_MANIFEST, type AppRouteName } from '@/src/navigation/routeManifest';
 import type { HrefInputParams } from 'expo-router';
 import { usePathname, useSegments } from 'expo-router';
 import React from 'react';
@@ -35,7 +36,7 @@ export type AppScreenRoute = NormalizeRouteSegment<RawAppRoutePath> | '(tabs)/in
  * Exhaustive Route Metadata Dictionary.
  * Every screen in app/ MUST be declared here or TypeScript compilation will fail.
  */
-const ROUTE_METADATA_MAP: Record<
+const LEGACY_ROUTE_METADATA_MAP: Record<
   Exclude<AppScreenRoute, 'account-reorder' | 'manage-hierarchy'> | 'account-management',
   RouteMetadata
 > = {
@@ -156,6 +157,17 @@ const ROUTE_METADATA_MAP: Record<
   '_design-preview': { screenType: 'developer', flowContext: 'design_preview', isModal: false },
 };
 
+const ROUTE_METADATA_MAP = Object.fromEntries(
+  ROUTE_MANIFEST.map(route => [
+    route.name,
+    {
+      screenType: route.screenType,
+      flowContext: route.flowContext,
+      isModal: route.isModal,
+    },
+  ]),
+) as Record<AppRouteName, RouteMetadata>;
+
 type RouteMetadataKey = keyof typeof ROUTE_METADATA_MAP;
 
 function resolveRouteMetadata(screenName: string): RouteMetadata {
@@ -166,6 +178,8 @@ function resolveRouteMetadata(screenName: string): RouteMetadata {
   if (baseSegment in ROUTE_METADATA_MAP) {
     return ROUTE_METADATA_MAP[baseSegment as RouteMetadataKey];
   }
+  const legacy = LEGACY_ROUTE_METADATA_MAP[baseSegment as keyof typeof LEGACY_ROUTE_METADATA_MAP];
+  if (legacy) return legacy;
 
   const matchedKey = Object.keys(ROUTE_METADATA_MAP).find(k => screenName.includes(k));
   if (matchedKey) return ROUTE_METADATA_MAP[matchedKey as RouteMetadataKey];
