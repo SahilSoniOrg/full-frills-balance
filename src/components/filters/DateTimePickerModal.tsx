@@ -18,6 +18,7 @@ interface DateTimePickerModalProps {
   onClose: () => void;
   onSelect: (date: string, time: string, weekday?: number) => void;
   hideDate?: boolean;
+  hideTime?: boolean;
   showWeekdayPicker?: boolean;
   weekday?: number;
 }
@@ -32,6 +33,7 @@ export function DateTimePickerModal({
   onClose,
   onSelect,
   hideDate = false,
+  hideTime = false,
   showWeekdayPicker = false,
   weekday = 1,
 }: DateTimePickerModalProps) {
@@ -89,7 +91,7 @@ export function DateTimePickerModal({
             <IconButton name={Icon.Close} onPress={onClose} />
             <View style={styles.headerTitle}>
               <AppText variant="subheading" weight="bold">
-                {hideDate ? 'Select Time' : 'Date & Time'}
+                {hideDate ? 'Select Time' : hideTime ? 'Select Date' : 'Date & Time'}
               </AppText>
               <AppText variant="caption" color="secondary">
                 {hideDate
@@ -102,9 +104,11 @@ export function DateTimePickerModal({
 
           <View style={styles.pickerContainer}>
             {!hideDate && <DateView date={selectedValue} onChange={handleDateChange} />}
-            <View style={!hideDate ? { marginTop: Spacing.md } : null}>
-              <TimeView date={selectedValue} onChange={handleDateChange} />
-            </View>
+            {!hideTime && (
+              <View style={!hideDate ? { marginTop: Spacing.md } : null}>
+                <TimeView date={selectedValue} onChange={handleDateChange} />
+              </View>
+            )}
           </View>
 
           {showWeekdayPicker && (
@@ -131,7 +135,7 @@ export function DateTimePickerModal({
 
           <View style={{ paddingHorizontal: Spacing.lg }}>
             <AppButton variant="primary" onPress={handleApply}>
-              {hideDate ? 'Set Time' : 'Set Date & Time'}
+              {hideDate ? 'Set Time' : hideTime ? 'Set Date' : 'Set Date & Time'}
             </AppButton>
           </View>
         </Pressable>
