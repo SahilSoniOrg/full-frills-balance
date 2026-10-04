@@ -69,7 +69,7 @@ export function BudgetDetailHeader({
     : undefined;
 
   return (
-    <Column gap="md">
+    <Column gap="sm">
       <BudgetPeriodStepper
         label={periodLabel}
         periodDetail={period.dateRangeText}
@@ -232,12 +232,12 @@ function Stat({ label, children }: { label: string; children: React.ReactNode })
 }
 
 const styles = StyleSheet.create({
-  heroCard: { padding: Spacing.lg, borderRadius: Shape.radius.xl, gap: Spacing.md },
+  heroCard: { padding: Spacing.md, borderRadius: Shape.radius.xl, gap: Spacing.sm },
   amountLine: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'baseline',
-    columnGap: Spacing.sm,
+    columnGap: Spacing.xs,
     rowGap: Spacing.xs,
   },
   heroAmount: { flexShrink: 1, maxWidth: '100%' },
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: 'transparent',
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.sm,
   },
   stat: { flexGrow: 1, flexBasis: 82, minWidth: 74, gap: Spacing.xs, paddingRight: Spacing.sm },
 });

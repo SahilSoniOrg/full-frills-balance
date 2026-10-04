@@ -23,10 +23,10 @@ export function BudgetListSummary({
     ? strings.todayMarker(Math.round(period.elapsedShare * period.periodDays), period.periodDays)
     : undefined;
   return (
-    <AppSurface elevation="sm" padding="lg" radius="r3" background="surface">
-      <Column gap="md">
+    <AppSurface elevation="sm" padding="md" radius="r3" background="surface">
+      <Column gap="sm">
         <Row justify="space-between" align="center" gap="sm" flexWrap="wrap">
-          <AppText variant="body" color="secondary">
+          <AppText variant="caption" color="secondary" weight="medium">
             {period && periodRange
               ? strings.period(dayjs(periodRange.startDate).format('MMMM'), period.daysRemaining)
               : strings.monthlyBudgets}

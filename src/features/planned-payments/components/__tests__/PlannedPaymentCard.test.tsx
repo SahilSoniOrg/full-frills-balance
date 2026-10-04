@@ -91,14 +91,14 @@ describe('PlannedPaymentCard rendered row', () => {
     expect(overdue.getByText('3 days late')).toBeTruthy();
     const overdueDateBlock = overdue
       .UNSAFE_getAllByType(View)
-      .find(view => StyleSheet.flatten(view.props.style)?.width === 54);
+      .find(view => StyleSheet.flatten(view.props.style)?.width === 44);
 
     const dueSoon = renderCard(makeOccurrence({ dueDay: 7 }));
     expect(dueSoon.getByText('Wed')).toBeTruthy();
     expect(dueSoon.getByText('7')).toBeTruthy();
     const dueSoonDateBlock = dueSoon
       .UNSAFE_getAllByType(View)
-      .find(view => StyleSheet.flatten(view.props.style)?.width === 54);
+      .find(view => StyleSheet.flatten(view.props.style)?.width === 44);
     expect(dateBlockColor(overdueDateBlock!)).not.toBe(dateBlockColor(dueSoonDateBlock!));
   });
 
@@ -227,6 +227,7 @@ describe('PlannedPaymentCard rendered row', () => {
         canRecord={false}
       />,
     );
+    expect(queryByText('3 days late')).toBeTruthy();
     expect(queryByText('Record')).toBeNull();
   });
 });

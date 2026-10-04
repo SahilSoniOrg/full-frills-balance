@@ -3,7 +3,7 @@ import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
 import { AppSegmentedControl } from '@/src/components/core';
 import { Box } from '@/src/design-system';
-import { AppConfig } from '@/src/constants';
+import { AppConfig, Size } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { BudgetListView, useBudgetListViewModel } from '@/src/features/budget';
 import { PlannedPaymentListView, usePlannedPayments } from '@/src/features/planned-payments';
@@ -44,14 +44,14 @@ function CommitmentsScreen() {
   );
   return (
     <ScreenWithChrome chrome={chrome} scrollable={false}>
-      <Box marginHorizontal="lg" marginTop="md" marginBottom="sm">
+      <Box marginHorizontal="lg" marginTop="sm" marginBottom="xs">
         <AppSegmentedControl
           testID="commitments-tabs"
           options={options}
           value={activeTab}
           onChange={(next: CommitmentsTab) => router.setParams({ tab: next })}
           flex
-          itemHeight={52}
+          itemHeight={Size.buttonMd}
           trackColor="surface"
           pillColor="surfaceSecondary"
           activeTextColor="text"

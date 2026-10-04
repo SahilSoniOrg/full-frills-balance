@@ -28,7 +28,7 @@ For repeatable screen/theme/width/privacy setups, install once, then launch a pr
 
 The simulator passes these as native process launch arguments, so no URL confirmation prompt interrupts the capture. Dynamic Type remains the simulator's native accessibility setting.
 
-Available fixture arguments are `default`, `nothing-over` (Budgets list), `nothing-spent`, `missing-fx`, `over-limit` (Budget Detail), `paused`, and `ended` (Planned Detail). The over-limit detail uses the same ₹14,680 chart/activity as the ₹14,000 budget/usage hero. Paused and ended models clear occurrence posting and outstanding-journal actions; ended retains a typed last-recorded journal.
+Available fixture arguments are `default`, `nothing-over` (Budgets list), `nothing-spent`, `missing-fx`, `over-limit` (Budget Detail), `paused`, `ended` (Planned Detail), and `long-content`. The last fixture exercises long budget/payment/account names in the lists and mixed saved/projected Coming up tiles in Planned Detail, including a saved occurrence with an edited amount. These cases reproduce the layout pressures shown in the user's simulator captures without using their data. The over-limit detail uses the same ₹14,680 chart/activity as the ₹14,000 budget/usage hero. Paused and ended models clear occurrence posting and outstanding-journal actions; ended retains a typed last-recorded journal.
 
 Set a large Dynamic Type category directly on the same simulator with `./output/commitments-redesign-native/run.sh content-size accessibility-large` (or another category supported by `simctl ui help`).
 

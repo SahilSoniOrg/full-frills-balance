@@ -6,7 +6,7 @@ import { ThemeOverride } from '@/src/contexts/UIContext';
 import { WorkplaceContext } from '@/src/contexts/WorkplaceContext';
 import { AppReadyContext } from '@/src/contexts/app-shell/appReady';
 import { PrivacyScopeProvider, usePrivacyScope } from '@/src/contexts/PrivacyScope';
-import { FontIds, ThemeIds, getThemeColors } from '@/src/constants/design-tokens';
+import { FontIds, Size, Spacing, ThemeIds, getThemeColors } from '@/src/constants/design-tokens';
 import { ensureFontSetLoaded } from '@/src/utils/loadFontSet';
 import { LaunchArguments } from 'react-native-launch-arguments';
 import { BudgetListView } from '@/src/features/budget/components/BudgetListView';
@@ -30,13 +30,21 @@ import {
   plannedDetailEndedFixture,
   plannedDetailFixture,
   plannedDetailPausedFixture,
+  plannedDetailSavedOccurrenceFixture,
   plannedFixtureCount,
 } from './fixtures';
 
 type Screen = 'budgets' | 'planned' | 'budget-detail' | 'planned-detail';
 type Appearance = 'light' | 'dark';
 type FixtureState =
-  'default' | 'nothing-over' | 'nothing-spent' | 'missing-fx' | 'over-limit' | 'paused' | 'ended';
+  | 'default'
+  | 'nothing-over'
+  | 'nothing-spent'
+  | 'missing-fx'
+  | 'over-limit'
+  | 'paused'
+  | 'ended'
+  | 'long-content';
 type LaunchConfig = {
   screen?: Screen;
   appearance?: Appearance;
@@ -77,7 +85,8 @@ function getLaunchConfig(): LaunchConfig {
     args.fixture === 'missing-fx' ||
     args.fixture === 'over-limit' ||
     args.fixture === 'paused' ||
-    args.fixture === 'ended'
+    args.fixture === 'ended' ||
+    args.fixture === 'long-content'
       ? { fixture: args.fixture }
       : {}),
   };
@@ -235,7 +244,13 @@ function Harness() {
   const budgetListFixture =
     launchConfig.fixture === 'nothing-over'
       ? BudgetFixtures.budgetListNoOver
-      : BudgetFixtures.budgetList;
+      : launchConfig.fixture === 'long-content'
+        ? BudgetFixtures.budgetListLongNames
+        : BudgetFixtures.budgetList;
+  const plannedListFixture =
+    launchConfig.fixture === 'long-content'
+      ? BudgetFixtures.plannedListLongNames
+      : BudgetFixtures.plannedList;
   const selectedBudgetDetail =
     launchConfig.fixture === 'nothing-spent'
       ? budgetDetailNothingSpentFixture
@@ -249,7 +264,9 @@ function Harness() {
       ? plannedDetailPausedFixture
       : launchConfig.fixture === 'ended'
         ? plannedDetailEndedFixture
-        : plannedDetailFixture;
+        : launchConfig.fixture === 'long-content'
+          ? plannedDetailSavedOccurrenceFixture
+          : plannedDetailFixture;
   const listChrome: TabScreenChrome = {
     screenTitle: copy.title,
     headerActions: <PrivacyToggleButton />,
@@ -345,7 +362,7 @@ function Harness() {
                             value={activeTab}
                             onChange={next => setScreen(next)}
                             flex
-                            itemHeight={52}
+                            itemHeight={Size.buttonMd}
                             trackColor="surface"
                             pillColor="surfaceSecondary"
                             activeTextColor="text"
@@ -356,7 +373,7 @@ function Harness() {
                           {screen === 'budgets' ? (
                             <BudgetListView {...budgetListFixture} />
                           ) : (
-                            <PlannedPaymentListView {...BudgetFixtures.plannedList} />
+                            <PlannedPaymentListView {...plannedListFixture} />
                           )}
                         </View>
                       </ScreenWithChrome>
@@ -383,7 +400,11 @@ function Harness() {
 const styles = StyleSheet.create({
   root: { flex: 1, alignItems: 'center' },
   viewport: { flex: 1, maxWidth: '100%' },
-  segmentedWrap: { paddingHorizontal: 18, paddingTop: 12, paddingBottom: 8 },
+  segmentedWrap: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.xs,
+  },
   listContent: { flex: 1 },
   controlPanel: {
     width: '100%',

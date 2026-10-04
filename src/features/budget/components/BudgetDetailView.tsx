@@ -71,7 +71,7 @@ export function BudgetDetailView({
           isSelectionModeActive={vm.isSelectionModeActive}
           selectionChrome={vm.selectionChrome}
           ListHeaderComponent={
-            <Column gap="lg" marginBottom="md">
+            <Column gap="md" marginBottom="sm">
               <BudgetDetailHeader
                 budget={budget}
                 usage={usage}
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   listContent: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.sm,
     paddingBottom: Size.fab + Spacing.xl + Spacing.xxxl * 2,
   },
   clearFilterButton: {

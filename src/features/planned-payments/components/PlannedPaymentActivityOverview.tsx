@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useWindowDimensions } from 'react-native';
-import { AppButton, AppText, AppSurface } from '@/src/components/core';
+import { AppButton, AppText, AppSurface, PressScaleTouchable } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { Column, Row, Separator } from '@/src/design-system';
-import { AppConfig } from '@/src/constants';
+import { AppConfig, Size } from '@/src/constants';
 import type { EnrichedJournal } from '@/src/types/domainReadModels';
 import type {
   PlannedPaymentActivitySummary,
@@ -99,7 +99,7 @@ export function PlannedPaymentActivityOverview({
     : rows.length;
 
   return (
-    <Column gap="lg">
+    <Column gap="md">
       {!isPaused && !isEnded && upcoming.length > 0 && (
         <Column gap="sm">
           <Row justify="space-between" align="center" gap="sm" flexWrap="wrap">
@@ -124,9 +124,15 @@ export function PlannedPaymentActivityOverview({
                   key={occurrence.date}
                   testID={`planned-upcoming-${occurrence.date}`}
                   elevation="sm"
-                  padding="md"
+                  padding="sm"
                   radius="r2"
-                  style={largeText || occurrence.journalId ? { width: '100%' } : { flex: 1 }}
+                  style={
+                    largeText
+                      ? { width: '100%' }
+                      : occurrence.journalId
+                        ? { width: '100%', flex: 1 }
+                        : { flex: 1, minWidth: 0 }
+                  }
                 >
                   <Column gap="xs">
                     <AppText variant="body" weight="semibold">
@@ -146,17 +152,16 @@ export function PlannedPaymentActivityOverview({
                 </AppSurface>
               );
               return occurrence.journalId ? (
-                <AppButton
+                <PressScaleTouchable
                   key={occurrence.date}
-                  variant="ghost"
                   onPress={() => onOpenJournal(occurrence.journalId!)}
                   accessibilityRole="button"
                   accessibilityLabel={copy.occurrenceReview(label)}
-                  buttonStyle={{ minHeight: 44, padding: 0 }}
-                  style={largeText || occurrence.journalId ? { width: '100%' } : { flex: 1 }}
+                  surfaceStyle={{ minHeight: Size.buttonMd, flex: 1 }}
+                  style={largeText ? { width: '100%' } : { flex: 1, minWidth: 0 }}
                 >
                   {tile}
-                </AppButton>
+                </PressScaleTouchable>
               ) : (
                 tile
               );
@@ -208,7 +213,7 @@ export function PlannedPaymentActivityOverview({
                 align="center"
                 gap="md"
                 paddingHorizontal="md"
-                paddingVertical="md"
+                paddingVertical="sm"
               >
                 <Column flex={1} gap="xs">
                   {summary.recordedTotals.map(total => (

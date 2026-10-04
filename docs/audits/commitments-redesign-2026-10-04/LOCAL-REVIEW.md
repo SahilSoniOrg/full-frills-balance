@@ -2,6 +2,8 @@
 
 Review the finished redesign on the single local branch `codex/commitments-redesign`. Delivery is local: no push or pull requests are requested.
 
+The latest [density pass](DENSITY-REVIEW.md) tightens all four screens and fixes saved Coming up tile layout. It includes 12 native previews with long-content fixtures; final verification passed 478 suites / 3,022 tests.
+
 The five feature commits below remain in the branch history. Commit `18aacf59` applies the requested visual polish. The full `bun run verify` passed after that commit with 478 suites and 3,021 tests; the post-polish result is recorded in [VERIFICATION.md](VERIFICATION.md). The earlier native audit and verification evidence are recorded in commit `38c195dd`.
 
 ## Preserved application history
@@ -24,7 +26,7 @@ The earlier data checkpoint passed 468 suites / 2,961 tests. The verification re
 
 ## Local screenshot gallery
 
-The audit directory contains 53 files: 49 native PNGs and four Markdown documents. The images comprise [40 matrix captures](README.md#capture-matrix), [five edge-state captures and four scrolled captures](README.md#edge-state-and-scrolled-evidence). Every screenshot link is local.
+The original gallery below contains 49 native PNGs: [40 matrix captures](README.md#capture-matrix), [five edge-state captures and four scrolled captures](README.md#edge-state-and-scrolled-evidence). The latest density previews are linked separately above. Every screenshot link is local.
 
 | Screen | Dark, 390pt | Light, 390pt | Privacy, 320pt | Large type, 320pt |
 | --- | --- | --- | --- | --- |

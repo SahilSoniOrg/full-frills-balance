@@ -57,7 +57,7 @@ case "${1:-}" in
     case "$WIDTH" in 320|390) ;; *) usage;; esac
     case "$PRIVACY" in 0|1) ;; *) usage;; esac
     case "$CONTENT_SIZE" in extra-small|small|medium|large|extra-large|extra-extra-large|extra-extra-extra-large|accessibility-medium|accessibility-large|accessibility-extra-large|accessibility-extra-extra-large|accessibility-extra-extra-extra-large) ;; *) usage;; esac
-    case "$FIXTURE" in default|nothing-over|nothing-spent|missing-fx|over-limit|paused|ended) ;; *) usage;; esac
+    case "$FIXTURE" in default|nothing-over|nothing-spent|missing-fx|over-limit|paused|ended|long-content) ;; *) usage;; esac
     [ -f "$APP_PATH_FILE" ] || { echo 'Build and install first.' >&2; exit 1; }
     APP="$(cat "$APP_PATH_FILE")"
     APP_ID="$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP/Info.plist")"

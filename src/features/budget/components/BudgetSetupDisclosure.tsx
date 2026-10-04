@@ -37,9 +37,9 @@ export function BudgetSetupDisclosure({
         accessibilityRole="button"
         accessibilityLabel={`${strings.setup} · ${summary}`}
         style={{ minHeight: Size.touchTarget }}
-        surfaceStyle={{ padding: Spacing.md }}
+        surfaceStyle={{ padding: Spacing.sm }}
       >
-        <Row align="center" gap="sm">
+        <Row align="center" gap="xs">
           <AppText variant="body" weight="medium">
             {strings.setup}
           </AppText>

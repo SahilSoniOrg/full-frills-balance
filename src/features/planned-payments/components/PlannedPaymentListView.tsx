@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   listContent: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.sm,
+    paddingTop: Spacing.xs,
     paddingBottom: Size.fab + Spacing.xxxxl + Size.buttonMd,
   },
   emptyState: { marginTop: Spacing.xxxl },
@@ -314,9 +314,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
-    gap: Spacing.md,
-    padding: Spacing.md,
-    minHeight: 76,
+    gap: Spacing.sm,
+    padding: Spacing.sm,
+    minHeight: 64,
   },
   scheduleStatus: {
     width: 44,

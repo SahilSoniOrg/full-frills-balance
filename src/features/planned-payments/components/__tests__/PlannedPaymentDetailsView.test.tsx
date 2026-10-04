@@ -3,7 +3,7 @@ import type { PlannedPaymentDetailsViewModel } from '../../hooks/usePlannedPayme
 import { cleanup, fireEvent, render, within } from '@/src/utils/test-utils';
 import { getThemeColors, ThemeIds } from '@/src/constants/design-tokens';
 import { AccountType, JournalDisplayType, PlannedPaymentStatus } from '@/src/types/enums';
-import type { AccountId, JournalId } from '@/src/types/ids';
+import { asJournalId, type AccountId, type JournalId } from '@/src/types/ids';
 import { Icon } from '@/src/types/domainIcons';
 import { preferences } from '@/src/services/preferences';
 import { AppConfig } from '@/src/constants';
@@ -163,6 +163,30 @@ describe('PlannedPaymentDetailsView', () => {
     expect(
       within(screen.getByTestId(`planned-upcoming-${day(3, 11)}`)).getByText('$1,300.00'),
     ).toBeTruthy();
+  });
+
+  it('keeps saved and projected upcoming dates compact while saved dates remain tappable', () => {
+    const savedId = asJournalId('saved-upcoming');
+    const screen = render(
+      <PlannedPaymentDetailsView
+        {...vm}
+        chrome={chrome}
+        nextOccurrences={[
+          { date: day(3, 10), amount: 1250.45, currencyCode: 'USD', journalId: savedId },
+          { date: day(3, 11), amount: 1300, currencyCode: 'USD' },
+        ]}
+      />,
+    );
+
+    const savedTile = screen.getByTestId(`planned-upcoming-${day(3, 10)}`);
+    const projectedTile = screen.getByTestId(`planned-upcoming-${day(3, 11)}`);
+    const savedButton = screen.getByRole('button', { name: /Review/ });
+    expect(StyleSheet.flatten(savedButton.props.style)).toMatchObject({ flex: 1, minWidth: 0 });
+    expect(StyleSheet.flatten(savedTile.props.style)).toMatchObject({ width: '100%' });
+    expect(StyleSheet.flatten(projectedTile.props.style)).toMatchObject({ flex: 1, minWidth: 0 });
+
+    fireEvent.press(savedButton);
+    expect(vm.onOpenJournal).toHaveBeenCalledWith(savedId);
   });
 
   it('shows grouped lifetime totals, status rows, See all, pagination and selection actions', () => {

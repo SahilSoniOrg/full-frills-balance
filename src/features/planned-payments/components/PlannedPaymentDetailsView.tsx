@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import { useWindowDimensions } from 'react-native';
-import { AppConfig, Size } from '@/src/constants';
+import { AppConfig, Size, Spacing } from '@/src/constants';
 import {
   AppButton,
   AppIcon,
@@ -111,8 +111,8 @@ export function PlannedPaymentDetailsView({
   );
 
   const actionCard = (
-    <AppSurface elevation="sm" padding="lg" radius="r2">
-      <Column gap="md">
+    <AppSurface elevation="sm" padding="md" radius="r2">
+      <Column gap="sm">
         <Row align="center" justify="space-between" gap="sm" flexWrap="wrap">
           <AppText
             variant="body"
@@ -193,7 +193,11 @@ export function PlannedPaymentDetailsView({
                 disabled={pending}
                 accessibilityRole="button"
                 accessibilityLabel={copy.resumeSchedule}
-                buttonStyle={{ minHeight: 52, width: '100%' }}
+                buttonStyle={{
+                  minHeight: Size.buttonMd,
+                  paddingVertical: Spacing.sm,
+                  width: '100%',
+                }}
               >
                 {copy.resumeSchedule}
               </AppButton>
@@ -235,7 +239,11 @@ export function PlannedPaymentDetailsView({
                   loading={vm.pendingAction === 'record'}
                   accessibilityRole="button"
                   accessibilityLabel={copy.recordPayment}
-                  buttonStyle={{ flex: largeText ? undefined : 2, minHeight: 54 }}
+                  buttonStyle={{
+                    flex: largeText ? undefined : 2,
+                    minHeight: Size.buttonMd,
+                    paddingVertical: Spacing.sm,
+                  }}
                   style={largeText ? { width: '100%' } : { flex: 2 }}
                 >
                   {copy.recordPayment}
@@ -247,7 +255,11 @@ export function PlannedPaymentDetailsView({
                   loading={vm.pendingAction === 'skip'}
                   accessibilityRole="button"
                   accessibilityLabel={copy.skip}
-                  buttonStyle={{ flex: largeText ? undefined : 1, minHeight: 54 }}
+                  buttonStyle={{
+                    flex: largeText ? undefined : 1,
+                    minHeight: Size.buttonMd,
+                    paddingVertical: Spacing.sm,
+                  }}
                   style={largeText ? { width: '100%' } : { flex: 1 }}
                 >
                   {copy.skip}
@@ -295,7 +307,7 @@ export function PlannedPaymentDetailsView({
         </Column>
       ) : (
         <>
-          <Column paddingVertical="md" gap="lg">
+          <Column paddingVertical="sm" gap="md">
             {actionCard}
             {vm.actionError && (
               <AppText color="error" accessibilityRole="alert">
@@ -374,7 +386,7 @@ export function PlannedPaymentDetailsView({
                     {vm.description?.trim() && (
                       <>
                         <Separator />
-                        <Column paddingHorizontal="md" paddingVertical="md" gap="xs">
+                        <Column paddingHorizontal="md" paddingVertical="sm" gap="xs">
                           <AppText variant="caption" color="secondary">
                             {copy.note}
                           </AppText>
@@ -415,9 +427,9 @@ function DetailRow({ label, value }: { label: string; value: string }) {
     <Row
       justify="space-between"
       align="center"
-      gap="md"
+      gap="sm"
       paddingHorizontal="md"
-      paddingVertical="md"
+      paddingVertical="sm"
       style={{
         flexDirection: largeText ? 'column' : 'row',
         alignItems: largeText ? 'flex-start' : 'center',

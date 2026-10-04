@@ -25,7 +25,7 @@ export function PlannedPaymentMonthSummary({ listData }: SummaryProps) {
       style={styles.card}
     >
       <View style={styles.summaryTop}>
-        <AppText variant="subheading" weight="semibold" style={styles.summaryLabel}>
+        <AppText variant="body" weight="semibold" style={styles.summaryLabel}>
           {strings.summaryTitle(monthName)}
         </AppText>
         {incoming.count > 0 && (
@@ -65,7 +65,7 @@ export function PlannedPaymentMonthSummary({ listData }: SummaryProps) {
           style={{ color: theme.text, maxWidth: '100%', flexShrink: 1 }}
           weight="bold"
         />
-        <AppText variant="body" color="secondary">
+        <AppText variant="caption" color="secondary">
           {strings.paymentCount(outgoing.count)}
         </AppText>
       </View>
@@ -187,7 +187,7 @@ function bucketHeight(bucket: number) {
 }
 
 const styles = StyleSheet.create({
-  card: { marginBottom: Spacing.md },
+  card: { marginBottom: Spacing.sm },
   summaryTop: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   otherCurrencies: { marginTop: Spacing.xs },
-  stripWrap: { marginTop: Spacing.lg },
+  stripWrap: { marginTop: Spacing.sm },
   strip: { height: 30, flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
   dayCell: {
     flex: 1,

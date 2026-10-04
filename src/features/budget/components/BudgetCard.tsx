@@ -79,13 +79,13 @@ export function BudgetCard({
         accessibilityLabel={`${strings.remainingAccessibility(budget.name, headline, spent, limit, paceLabel)}. ${strings.categorySummary(item.scopeAccounts.map(account => account?.name ?? strings.unavailableCategory).join(', '))}`}
         accessibilityHint={strings.opensBudget}
       >
-        <Column gap="md">
+        <Column gap="sm">
           <Row justify="space-between" align="flex-start" gap="sm" flexWrap="wrap">
-            <Column gap="sm" flexGrow={1} flexBasis={120}>
-              <AppText variant="bodyLarge" weight="semibold">
+            <Column gap="xs" flexGrow={1} flexBasis={120}>
+              <AppText variant="body" weight="semibold">
                 {budget.name}
               </AppText>
-              <Row gap="sm" flexWrap="wrap">
+              <Row gap="xs" flexWrap="wrap">
                 {item.scopeAccounts.slice(0, 2).map((account, index) => (
                   <View key={account?.id ?? index} style={{ maxWidth: '100%' }}>
                     <AccountInlineLabel

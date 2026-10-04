@@ -107,7 +107,7 @@ it('defaults unknown routes to Budgets and preserves tab navigation', () => {
   jest.mocked(useLocalSearchParams).mockReturnValue({ tab: 'unknown' });
   const screen = render(<CommitmentsScreen />);
   fireEvent(screen.getByTestId('commitments-tabs'), 'layout', {
-    nativeEvent: { layout: { width: 320, height: 52, x: 0, y: 0 } },
+    nativeEvent: { layout: { width: 320, height: 44, x: 0, y: 0 } },
   });
   expect(screen.getByRole('tab', { name: 'Budgets 0' }).props.accessibilityState.selected).toBe(
     true,
@@ -123,7 +123,7 @@ it('opens Planned directly from the route and creates the matching commitment', 
   jest.mocked(useLocalSearchParams).mockReturnValue({ tab: 'planned' });
   const screen = render(<CommitmentsScreen />);
   fireEvent(screen.getByTestId('commitments-tabs'), 'layout', {
-    nativeEvent: { layout: { width: 320, height: 52, x: 0, y: 0 } },
+    nativeEvent: { layout: { width: 320, height: 44, x: 0, y: 0 } },
   });
   expect(screen.getByRole('tab', { name: 'Planned 0' }).props.accessibilityState.selected).toBe(
     true,

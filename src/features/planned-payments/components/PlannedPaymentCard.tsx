@@ -1,13 +1,13 @@
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { Icon, AppIcon, AppSurface, PressScaleTouchable, AppText } from '@/src/components/core';
-import { AppConfig, Size, Spacing } from '@/src/constants';
+import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PlannedPaymentInterval } from '@/src/types/enums';
 import { formatPlannedPaymentInterval } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
 import dayjs from 'dayjs';
 import type { PlannedPaymentListOccurrence } from '@/src/services/planned-payment/plannedPaymentReadService';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
 
 export interface PlannedPaymentCardProps {
@@ -30,6 +30,8 @@ function PlannedPaymentCardComponent({
   recordError,
 }: PlannedPaymentCardProps) {
   const { theme } = useTheme();
+  const { fontScale } = useWindowDimensions();
+  const largeText = fontScale > 1.3;
   const formatMoney = useMoneyFormat({ style: 'compact' });
   const strings = AppConfig.strings.plannedListRedesign;
   const item = occurrence.payment;
@@ -57,14 +59,14 @@ function PlannedPaymentCardComponent({
   return (
     <AppSurface
       elevation="sm"
-      padding="md"
+      padding="sm"
       radius="r3"
       background="surface"
       borderWidth={1}
       borderColor="surfaceSecondary"
       style={styles.card}
     >
-      <View style={styles.cardRow}>
+      <View style={styles.cardContent}>
         <PressScaleTouchable
           onPress={onPress}
           accessibilityRole="button"
@@ -88,7 +90,13 @@ function PlannedPaymentCardComponent({
           style={styles.rowPress}
           surfaceStyle={styles.rowPressSurface}
         >
-          <View style={[styles.dateBlock, { backgroundColor: dateBlockColor }]}>
+          <View
+            style={[
+              styles.dateBlock,
+              largeText && { width: Size.fab },
+              { backgroundColor: dateBlockColor },
+            ]}
+          >
             <AppText variant="caption" weight="semibold" style={{ color: dateTextColor }}>
               {dayjs(occurrence.date).format('ddd')}
             </AppText>
@@ -97,20 +105,39 @@ function PlannedPaymentCardComponent({
             </AppText>
           </View>
           <View style={styles.details}>
-            <View style={styles.nameLine}>
-              <AppText variant="body" weight="semibold" style={styles.name}>
-                {item.name}
-              </AppText>
-              {item.isAutoPost && (
-                <AppIcon name={Icon.Zap} size={Size.iconXs} color="textSecondary" />
-              )}
+            <View style={[styles.nameLine, largeText && styles.nameLineLarge]}>
+              <View style={styles.identity}>
+                <AppText
+                  variant="body"
+                  weight="semibold"
+                  numberOfLines={largeText ? 2 : 1}
+                  style={styles.name}
+                >
+                  {item.name}
+                </AppText>
+                {item.isAutoPost && (
+                  <AppIcon name={Icon.Zap} size={Size.iconXs} color="textSecondary" />
+                )}
+              </View>
+              <MoneyText
+                amount={occurrence.amount}
+                currencyCode={occurrence.currencyCode}
+                formatStyle="compact"
+                prefix={isIncome ? '+' : undefined}
+                variant="heading"
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.2}
+                weight="bold"
+                style={[
+                  styles.amount,
+                  largeText && styles.amountLarge,
+                  { color: isIncome ? theme.income : theme.text },
+                ]}
+              />
             </View>
-            {isOverdue ? (
-              <AppText variant="caption" weight="semibold" color="error">
-                {strings.daysLate(daysLate)}
-              </AppText>
-            ) : (
-              <View style={styles.flow}>
+            {!isOverdue && (
+              <View style={[styles.flow, largeText && styles.flowLarge]}>
                 <AccountInlineLabel
                   account={item.fromAccount}
                   placeholder={fromLabel}
@@ -128,27 +155,27 @@ function PlannedPaymentCardComponent({
                 />
               </View>
             )}
-            {interval && (
+            {!isOverdue && interval && (
               <AppText variant="caption" color="secondary">
                 {interval}
               </AppText>
             )}
+            {isOverdue && (
+              <View style={[styles.overdueMeta, largeText && styles.overdueMetaLarge]}>
+                <AppText variant="caption" weight="semibold" color="error">
+                  {strings.daysLate(daysLate)}
+                </AppText>
+                {interval && (
+                  <AppText variant="caption" color="secondary" numberOfLines={1}>
+                    {interval}
+                  </AppText>
+                )}
+              </View>
+            )}
           </View>
         </PressScaleTouchable>
-        <View style={styles.amountColumn}>
-          <MoneyText
-            amount={occurrence.amount}
-            currencyCode={occurrence.currencyCode}
-            formatStyle="compact"
-            prefix={isIncome ? '+' : undefined}
-            variant="heading"
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.2}
-            weight="bold"
-            style={[styles.amount, { color: isIncome ? theme.income : theme.text }]}
-          />
-          {isOverdue && onRecord && canRecord && (
+        {isOverdue &&
+          (onRecord && canRecord ? (
             <Pressable
               onPress={onRecord}
               disabled={!canRecord || isRecording || isPlanBusy}
@@ -158,7 +185,7 @@ function PlannedPaymentCardComponent({
                 disabled: !canRecord || isRecording || isPlanBusy,
                 busy: isRecording,
               }}
-              style={styles.recordButton}
+              style={largeText ? styles.recordButtonLarge : styles.recordButton}
             >
               <View style={[styles.recordPill, { backgroundColor: theme.primary }]}>
                 <AppText
@@ -170,8 +197,7 @@ function PlannedPaymentCardComponent({
                 </AppText>
               </View>
             </Pressable>
-          )}
-        </View>
+          ) : null)}
       </View>
       {recordError && (
         <AppText
@@ -191,50 +217,68 @@ export const PlannedPaymentCard = PlannedPaymentCardComponent;
 
 const styles = StyleSheet.create({
   card: { marginBottom: Spacing.sm },
-  cardRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.sm },
-  rowPress: { flexGrow: 1, flexShrink: 1, flexBasis: 190, minWidth: 180 },
-  rowPressSurface: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, minWidth: 0 },
+  cardContent: { gap: Spacing.xs, position: 'relative' },
+  rowPress: { flex: 1, minWidth: 0 },
+  rowPressSurface: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, minWidth: 0 },
   dateBlock: {
-    width: 54,
-    minHeight: 56,
+    width: Size.buttonMd,
+    minHeight: Size.buttonMd,
     flexShrink: 0,
-    borderRadius: 14,
+    borderRadius: Shape.radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: Spacing.xs,
   },
   details: { flex: 1, minWidth: 0, gap: Spacing.xs },
-  nameLine: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.xs },
-  name: { flexShrink: 1 },
+  nameLine: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, minWidth: 0 },
+  nameLineLarge: { flexDirection: 'column', alignItems: 'flex-start' },
+  identity: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  name: { flexShrink: 1, minWidth: 0 },
   flow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
     alignItems: 'center',
     gap: Spacing.xs,
     minWidth: 0,
   },
-  amountColumn: {
-    flexGrow: 1,
-    flexShrink: 1,
-    flexBasis: 112,
-    minWidth: 0,
-    alignItems: 'flex-end',
+  flowLarge: { flexWrap: 'wrap' },
+  amount: { textAlign: 'right', flexShrink: 0 },
+  amountLarge: { textAlign: 'left', alignSelf: 'flex-start' },
+  overdueMeta: {
+    minHeight: Size.buttonMd,
+    paddingRight: Size.buttonMd + Spacing.xl + Spacing.sm,
     justifyContent: 'center',
     gap: Spacing.xs,
   },
-  amount: { textAlign: 'right', flexShrink: 1, alignSelf: 'stretch' },
+  overdueMetaLarge: { paddingRight: 0 },
   recordButton: {
-    minHeight: 44,
+    minHeight: Size.buttonMd,
+    minWidth: Size.buttonMd,
+    paddingHorizontal: Spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+  },
+  recordButtonLarge: {
+    minHeight: Size.buttonMd,
+    minWidth: Size.buttonMd,
+    paddingHorizontal: Spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    right: undefined,
+    bottom: undefined,
+    alignSelf: 'flex-end',
   },
   recordPill: {
     minHeight: 30,
     minWidth: 64,
     paddingHorizontal: Spacing.sm,
-    borderRadius: 10,
+    borderRadius: Shape.radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  recordError: { marginTop: Spacing.sm, marginLeft: 54 + Spacing.md },
+  recordError: { marginTop: Spacing.xs, marginLeft: Size.buttonMd + Spacing.sm },
 });

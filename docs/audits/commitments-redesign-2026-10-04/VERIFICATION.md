@@ -1,5 +1,9 @@
 # Commitments redesign final verification
 
+## Density-pass verification
+
+After the final density and large-text adjustments, `bun run verify` exited 0: **478/478 suites and 3,022/3,022 tests**, architecture/privacy checks, both typechecks, coverage and lint. Lint has zero errors and the existing warning at `src/features/journal/hooks/useJournalSuggestions.ts:78`. The run is recorded locally at `/tmp/commitments-density-verify-complete.log`. The [density review](DENSITY-REVIEW.md) links the 12 refreshed native previews and records their coverage limits.
+
 ## Post-polish verification
 
 After the visual polish commit `18aacf59`, `bun run verify` passed on the final application tree: 478/478 suites and 3,021/3,021 tests, plus architecture/privacy checks, both typechecks, coverage and lint. Lint had zero errors and the existing dependency warning in `src/features/journal/hooks/useJournalSuggestions.ts:78`. The captured run is `/tmp/commitments-polish-verify.log`. The final History-row presentation test was rerun afterward: 17/17 tests passed.

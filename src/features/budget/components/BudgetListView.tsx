@@ -53,7 +53,7 @@ export function BudgetListView({
       contentContainerStyle={styles.listContent}
       ListHeaderComponent={
         items.length > 0 ? (
-          <Column gap="lg" marginBottom="md">
+          <Column gap="md" marginBottom="sm">
             {summary && <BudgetListSummary summary={summary} />}
             <Row justify="space-between" gap="sm" flexWrap="wrap">
               <AppText variant="body" color="secondary" weight="semibold">

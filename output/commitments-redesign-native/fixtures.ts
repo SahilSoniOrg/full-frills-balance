@@ -428,6 +428,36 @@ const obligations: PlannedPaymentObligation[] = [
 
 const plannedListData: PlannedPaymentListData = { items: obligations, savedOccurrences: [] };
 const plannedListPresentation = buildPlannedPaymentListPresentation(plannedListData, 'INR', day(4));
+const longBudgetItems = sortBudgetItems(
+  budgetItems.map(item => ({
+    ...item,
+    budget: {
+      ...item.budget,
+      name: `${item.budget.name} ${item.budget.intervalType === 'WEEKLY' ? 'Weekly' : 'Monthly'} Budget`,
+    },
+  })),
+  day(4),
+);
+const longPlannedItems = obligations.map(item => {
+  if (item.id === asPlannedPaymentId('fixture-payment-rent')) {
+    return {
+      ...item,
+      name: 'Netflix Subscription',
+      fromAccountId: checkingId,
+      fromAccount: { ...checking, name: 'Amex Gold Card' },
+      toAccount: { ...groceries, name: 'Subscriptions (INR)' },
+    };
+  }
+  if (item.id === asPlannedPaymentId('fixture-payment-salary')) {
+    return {
+      ...item,
+      name: 'Salary Deposit',
+      fromAccount: { ...salary, name: 'Wages/Salary (INR)' },
+      toAccount: { ...checking, name: 'Chase Checking' },
+    };
+  }
+  return item;
+});
 export const harnessWorkplace: WorkplaceContextType = {
   workplaceId: asWorkplaceId('fixture-workplace'),
   defaultCurrencyCode: 'INR',
@@ -436,6 +466,27 @@ export const harnessWorkplace: WorkplaceContextType = {
 };
 
 export const BudgetFixtures = {
+  budgetListLongNames: {
+    items: longBudgetItems,
+    summary: summarizeBudgetList(longBudgetItems, 'INR', day(4)),
+    isLoading: false,
+    error: null,
+    onRetry: () => {},
+    onItemPress: () => {},
+    onCreate: () => {},
+  },
+  plannedListLongNames: {
+    listData: buildPlannedPaymentListPresentation(
+      { items: longPlannedItems, savedOccurrences: [] },
+      'INR',
+      day(4),
+    ),
+    isLoading: false,
+    error: null,
+    onRetry: () => {},
+    onItemPress: () => {},
+    onCreate: () => {},
+  },
   budgetList: {
     items: sortedBudgetItems,
     summary: summarizeBudgetList(sortedBudgetItems, 'INR', day(4)),
@@ -690,6 +741,25 @@ export const plannedDetailFixture: PlannedPaymentDetailsViewModel = {
   clearItems: () => {},
   exitSelectionMode: () => {},
   onShareSelected: () => {},
+};
+
+export const plannedDetailSavedOccurrenceFixture: PlannedPaymentDetailsViewModel = {
+  ...plannedDetailFixture,
+  nextOccurrences: [
+    {
+      date: date(2026, 10, 3),
+      amount: 1299,
+      currencyCode: 'INR',
+      journalId: asJournalId('fixture-saved-upcoming-november'),
+    },
+    { date: date(2026, 11, 3), amount: 1299, currencyCode: 'INR' },
+    {
+      date: date(2027, 0, 3),
+      amount: 1499,
+      currencyCode: 'INR',
+      journalId: asJournalId('fixture-saved-upcoming-january'),
+    },
+  ],
 };
 
 export const plannedDetailPausedFixture: PlannedPaymentDetailsViewModel = {
