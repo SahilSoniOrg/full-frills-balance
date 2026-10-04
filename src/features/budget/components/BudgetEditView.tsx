@@ -42,6 +42,7 @@ export function BudgetEditView({
   loading,
   isSaving,
   isFormValid,
+  requirementHint,
   budget,
   onCancel,
 }: BudgetEditViewModel) {
@@ -101,6 +102,7 @@ export function BudgetEditView({
         submitAction={{
           onPress: handleSave,
           disabled: !isFormValid || isSaving,
+          requirementHint,
           label: budget
             ? isSaving
               ? 'Updating...'

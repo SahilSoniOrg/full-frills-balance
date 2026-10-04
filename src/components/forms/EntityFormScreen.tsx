@@ -12,6 +12,7 @@ type SubmitAction = {
   onPress: () => void;
   disabled: boolean;
   topSlot?: React.ReactNode;
+  requirementHint?: string | null;
 };
 
 type SecondaryAction = {
@@ -58,6 +59,7 @@ export function EntityFormScreen({
             label={submitAction.label}
             disabled={submitAction.disabled}
             topSlot={submitAction.topSlot}
+            requirementHint={submitAction.requirementHint}
           />
           {secondaryAction ? (
             <View style={styles.secondaryActionContainer}>

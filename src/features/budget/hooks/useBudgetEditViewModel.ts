@@ -1,3 +1,4 @@
+import { formatRequirementHint } from '@/src/components/forms/requirementHint';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AccountType } from '@/src/types/enums';
 import { AccountId, BudgetId } from '@/src/types/ids';
@@ -238,6 +239,13 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
       draft.amount &&
       draft.selectedAccountIds.length > 0 &&
       isValidRepeatCount(draft.intervalN),
+    ),
+    requirementHint: formatRequirementHint(
+      [
+        !draft.name.trim() && 'a name',
+        !draft.amount && 'an amount',
+        draft.selectedAccountIds.length === 0 && 'at least one category',
+      ].filter((item): item is string => Boolean(item)),
     ),
     onCancel: AppNavigation.back,
   };
