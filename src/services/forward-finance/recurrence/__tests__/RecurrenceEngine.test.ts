@@ -2,6 +2,60 @@ import dayjs from 'dayjs';
 import { RecurrenceEngine } from '../RecurrenceEngine';
 
 describe('RecurrenceEngine', () => {
+  describe('getOccurrenceOnOrAfter', () => {
+    const date = (s: string) => dayjs(s).startOf('day').valueOf();
+
+    it.each([2, 3, 7])(
+      'preserves the anchor for every %s weeks when editing an old rule',
+      count => {
+        const start = date('2026-01-05');
+        const reference = date('2026-10-04');
+        const occurrence = RecurrenceEngine.getOccurrenceOnOrAfter(
+          start,
+          {
+            intervalType: 'WEEKLY',
+            intervalN: count,
+            recurrenceDay: 1,
+          },
+          reference,
+        );
+        expect(occurrence).toBeGreaterThanOrEqual(reference);
+        expect(dayjs(occurrence).day()).toBe(1);
+        expect(dayjs(occurrence).diff(dayjs(start), 'day') % (7 * count)).toBe(0);
+        expect(dayjs(occurrence).subtract(count, 'week').valueOf()).toBeLessThan(reference);
+      },
+    );
+
+    it('keeps a three-month day-31 rule through short months', () => {
+      const rule = { intervalType: 'MONTHLY', intervalN: 3, recurrenceDay: 31 };
+      const start = date('2026-01-31');
+      expect(
+        dayjs(RecurrenceEngine.getOccurrenceOnOrAfter(start, rule, date('2026-04-30'))).format(
+          'YYYY-MM-DD',
+        ),
+      ).toBe('2026-04-30');
+      expect(
+        dayjs(RecurrenceEngine.getOccurrenceOnOrAfter(start, rule, date('2026-05-01'))).format(
+          'YYYY-MM-DD',
+        ),
+      ).toBe('2026-07-31');
+    });
+
+    it('does not move a future first occurrence backward', () => {
+      const first = date('2027-01-05');
+      expect(
+        RecurrenceEngine.getOccurrenceOnOrAfter(
+          first,
+          {
+            intervalType: 'MONTHLY',
+            intervalN: 2,
+            recurrenceDay: 5,
+          },
+          date('2026-10-04'),
+        ),
+      ).toBe(first);
+    });
+  });
   describe('getNextOccurrence', () => {
     it('handles DAILY with intervalN', () => {
       const start = new Date('2026-04-01T00:00:00Z').getTime();

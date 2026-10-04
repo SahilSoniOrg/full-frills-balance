@@ -2,6 +2,11 @@ import { AppConfig } from '@/src/constants/app-config';
 
 const strings = AppConfig.strings.plannedPayments;
 
+/** Keep schedule counts within the calendar's supported date range, including yearly rules. */
+export function isValidRepeatCount(count: number): boolean {
+  return Number.isInteger(count) && count >= 1 && count <= 9999;
+}
+
 const UNITS: Record<string, { long: string; short: string; single: string }> = {
   DAILY: { long: 'day', short: 'day', single: strings.everyDay },
   WEEKLY: { long: 'week', short: 'wk', single: strings.everyWeek },

@@ -115,6 +115,42 @@ export class RecurrenceEngine {
     }
   }
 
+  /** Finds the first occurrence on or after a date while preserving the original cycle anchor. */
+  static getOccurrenceOnOrAfter(
+    startDate: number,
+    rule: RecurrenceRule,
+    referenceDate: number,
+  ): number {
+    const first = this.computeFirstOccurrence(startDate, rule);
+    const reference = dayjs(referenceDate).startOf('day');
+    if (first >= reference.valueOf()) return first;
+
+    const unit =
+      rule.intervalType === 'DAILY'
+        ? 'day'
+        : rule.intervalType === 'WEEKLY'
+          ? 'week'
+          : rule.intervalType === 'YEARLY'
+            ? 'year'
+            : 'month';
+    const count = Math.max(1, rule.intervalN || 1);
+    const cycles = Math.floor(reference.diff(dayjs(first), unit) / count);
+    const anchoredRule = {
+      ...rule,
+      recurrenceDay:
+        rule.recurrenceDay ?? (unit === 'week' ? dayjs(first).day() : dayjs(first).date()),
+      recurrenceMonth: rule.recurrenceMonth ?? dayjs(first).month() + 1,
+    };
+    let occurrence =
+      cycles > 0
+        ? this.getNextOccurrence(first, { ...anchoredRule, intervalN: cycles * count })
+        : first;
+    while (occurrence < reference.valueOf()) {
+      occurrence = this.getNextOccurrence(occurrence, anchoredRule);
+    }
+    return occurrence;
+  }
+
   /**
    * Calculates the active cycle start and end dates containing referenceDate.
    */
