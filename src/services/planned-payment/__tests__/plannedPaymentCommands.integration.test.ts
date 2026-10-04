@@ -8,6 +8,7 @@ import {
 } from '@/src/types/enums';
 import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import Transaction from '@/src/data/models/Transaction';
+import { toPlainPlannedPayment } from '@/src/data/models/PlannedPayment';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
@@ -180,11 +181,111 @@ describe('planned payment commands (integration)', () => {
     const updated = await updatePlannedPayment(WP, created.id, {
       ...baseInput(),
       name: 'Rent (updated)',
-      amount: 1300,
     });
 
     expect(updated.name).toBe('Rent (updated)');
     expect(updated.nextOccurrence).toBe(beforeNext);
+  });
+
+  it('persists fixed FX native amounts and derives currency from the From account', async () => {
+    const created = await createPlannedPayment(WP, {
+      ...baseInput(),
+      currencyCode: 'INR',
+      fxMode: 'fixed',
+      destinationAmount: 1200,
+    });
+    expect(toPlainPlannedPayment(created)).toMatchObject({
+      fxMode: 'fixed',
+      currencyCode: 'USD',
+      amount: 1200,
+      destinationAmount: 1200,
+    });
+    const logs = await auditRepository.findByEntity('planned_payment', created.id, WP);
+    expect(
+      logs.find(log => log.eventType === 'planned_payment.created')?.parsedChanges?.after,
+    ).toMatchObject({ fxMode: 'fixed', destinationAmount: 1200 });
+    const updated = await updatePlannedPayment(WP, created.id, { ...baseInput(), name: 'Renamed' });
+    expect(updated.fxMode).toBe('fixed');
+    expect(updated.destinationAmount).toBe(1200);
+  });
+
+  it('disables auto-post for manual FX and saves its destination suggestion', async () => {
+    const created = await createPlannedPayment(WP, {
+      ...baseInput(),
+      fxMode: 'manual',
+      isAutoPost: true,
+      destinationAmount: 1200,
+    });
+    expect(created.isAutoPost).toBe(false);
+    expect(created.destinationAmount).toBe(1200);
+    const journals = await findJournalsForPayment(created.id);
+    expect(journals.length).toBeGreaterThan(0);
+    expect(journals.every(journal => journal.status === JournalStatus.PLANNED)).toBe(true);
+  });
+
+  it('rejects invalid fixed FX before publishing payment or audit', async () => {
+    const foreignDestination = await accountWriteRepository.create({
+      name: 'EUR destination',
+      accountType: AccountType.ASSET,
+      currencyCode: 'EUR',
+      workplaceId: WP,
+    });
+    const beforeAuditCount = await auditRepository.countByWorkplace(WP);
+    await expect(
+      createPlannedPayment(WP, {
+        ...baseInput(),
+        toAccountId: foreignDestination.id,
+        fxMode: 'fixed',
+      }),
+    ).rejects.toThrow(/positive destination amount/);
+    expect(await database.collections.get('planned_payments').query().fetchCount()).toBe(0);
+    expect(await auditRepository.countByWorkplace(WP)).toBe(beforeAuditCount);
+  });
+
+  it('rebuilds future unposted amounts while preserving history and posted entries', async () => {
+    const input = {
+      ...baseInput(),
+      intervalType: PlannedPaymentInterval.WEEKLY,
+      startDate: new Date(2026, 0, 5).getTime(),
+      recurrenceDay: 1,
+    };
+    const created = await createPlannedPayment(WP, input);
+    const before = await findJournalsForPayment(created.id);
+    const today = new Date(2026, 9, 4).getTime();
+    const historyIds = before
+      .filter(journal => journal.journalDate < today)
+      .map(journal => journal.id);
+    const upcoming = before.filter(journal => journal.journalDate >= today);
+    expect(upcoming.length).toBeGreaterThan(1);
+    await database.write(async () => {
+      await upcoming[0].update(journal => {
+        journal.status = JournalStatus.POSTED;
+      });
+    });
+    await updatePlannedPayment(WP, created.id, { ...input, amount: 1300 });
+    const after = await findJournalsForPayment(created.id);
+    expect(after.filter(journal => journal.journalDate < today).map(journal => journal.id)).toEqual(
+      historyIds,
+    );
+    expect(after.find(journal => journal.id === upcoming[0].id)?.status).toBe(JournalStatus.POSTED);
+    expect(after.some(journal => upcoming.slice(1).some(old => old.id === journal.id))).toBe(false);
+    const regenerated = after.filter(
+      journal => journal.journalDate >= today && journal.status === JournalStatus.PLANNED,
+    );
+    expect(regenerated.length).toBeGreaterThan(0);
+    const lines = await database.collections
+      .get<Transaction>('transactions')
+      .query(
+        Q.where('journal_id', Q.oneOf(regenerated.map(journal => journal.id))),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .fetch();
+    expect(lines.every(line => line.amount === 1300)).toBe(true);
+    const edit = (await auditRepository.findByEntity('planned_payment', created.id, WP)).find(
+      log =>
+        log.eventType === 'planned_payment.updated' && log.parsedChanges?.after?.amount === 1300,
+    );
+    expect(edit?.canRevert).toBe(false);
   });
 
   it('schedule-changing update rebuilds upcoming occurrences and preserves earlier entries', async () => {

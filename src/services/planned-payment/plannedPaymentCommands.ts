@@ -3,7 +3,10 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { analytics } from '@/src/services/analytics';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
-import { PlannedPaymentCommandInput } from '@/src/services/planned-payment/plannedPaymentCommandInputs';
+import {
+  PlannedPaymentCommandInput,
+  normalizePlannedPaymentCommandInput,
+} from '@/src/services/planned-payment/plannedPaymentCommandInputs';
 import {
   buildCreatePersistenceInput,
   buildUpdatePersistenceInput,
@@ -23,10 +26,15 @@ export async function createPlannedPayment(
 ): Promise<PlannedPayment> {
   if (!isValidRepeatCount(input.intervalN)) throw new Error('Enter a whole number from 1 to 9999.');
   const persistence = buildCreatePersistenceInput(input);
-  const created = await plannedPaymentRepository.create(workplaceId, persistence, () =>
-    assertWritable(workplaceId, [input.fromAccountId, input.toAccountId], 'Planned payment'),
-  );
-  analytics.logPlannedPaymentCreated(input.intervalType, input.isAutoPost ? 'auto' : 'manual');
+  const created = await plannedPaymentRepository.create(workplaceId, persistence, async () => {
+    const accounts = await assertWritable(
+      workplaceId,
+      [input.fromAccountId, input.toAccountId],
+      'Planned payment',
+    );
+    Object.assign(persistence, normalizePlannedPaymentCommandInput(input, accounts));
+  });
+  analytics.logPlannedPaymentCreated(created.intervalType, created.isAutoPost ? 'auto' : 'manual');
   await processDuePlannedPayments(workplaceId);
   return created;
 }
@@ -42,9 +50,14 @@ export async function updatePlannedPayment(
   const updated = await runAccountingWriteSession(async session => {
     const existing = await plannedPaymentRepository.find(workplaceId, id);
     if (!existing) throw new Error('Planned payment not found');
-    await assertWritable(workplaceId, [input.fromAccountId, input.toAccountId], 'Planned payment');
-    schedulingChanged = isPlannedPaymentScheduleChange(existing, input);
-    const updates = buildUpdatePersistenceInput(existing, input, effectiveDate);
+    const accounts = await assertWritable(
+      workplaceId,
+      [input.fromAccountId, input.toAccountId],
+      'Planned payment',
+    );
+    const normalizedInput = normalizePlannedPaymentCommandInput(input, accounts, existing);
+    schedulingChanged = isPlannedPaymentScheduleChange(existing, normalizedInput);
+    const updates = buildUpdatePersistenceInput(existing, normalizedInput, effectiveDate);
     await plannedPaymentRepository.updateInSession(session, workplaceId, id, updates, undefined, {
       source: 'app',
       undoable: !schedulingChanged,

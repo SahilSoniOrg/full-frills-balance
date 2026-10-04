@@ -21,9 +21,7 @@ describe('plannedPaymentSchedulePolicy', () => {
   };
 
   const existing = {
-    startDate: baseInput.startDate,
-    intervalType: PlannedPaymentInterval.MONTHLY,
-    intervalN: 1,
+    ...baseInput,
     nextOccurrence: new Date(2026, 3, 1).getTime(),
     recurrenceDay: 1,
   } as Parameters<typeof isPlannedPaymentScheduleChange>[0];
@@ -66,6 +64,28 @@ describe('plannedPaymentSchedulePolicy', () => {
     expect(isPlannedPaymentScheduleChange(stored, baseInput)).toBe(false);
   });
 
+  it.each([
+    { amount: 1100 },
+    { currencyCode: 'EUR' },
+    { fromAccountId: 'replacement' as AccountId },
+    { toAccountId: 'replacement' as AccountId },
+    { fxMode: 'automatic' as const },
+    { destinationAmount: 900 },
+    { endDate: new Date(2026, 10, 1).getTime() },
+    { isAutoPost: true },
+  ])('regenerates unposted future rows for occurrence changes %p', change => {
+    expect(isPlannedPaymentScheduleChange(existing, { ...baseInput, ...change })).toBe(true);
+  });
+
+  it('treats legacy null FX fields as unchanged', () => {
+    const legacy = {
+      ...existing,
+      fxMode: null,
+      destinationAmount: null,
+    } as unknown as typeof existing;
+    expect(isPlannedPaymentScheduleChange(legacy, baseInput)).toBe(false);
+  });
+
   it('buildCreatePersistenceInput assigns active status and first occurrence', () => {
     const result = buildCreatePersistenceInput(baseInput);
     expect(result.status).toBe(PlannedPaymentStatus.ACTIVE);
@@ -79,7 +99,6 @@ describe('plannedPaymentSchedulePolicy', () => {
       {
         ...baseInput,
         name: 'Rent updated',
-        amount: 1100,
       },
       baseInput.startDate,
     );

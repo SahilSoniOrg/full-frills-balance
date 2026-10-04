@@ -12,6 +12,7 @@ import {
   TransactionDirection,
 } from '@/src/types/enums';
 import type { AuditActor } from '@/src/types/auditEvents';
+import type { PlannedPaymentFxFields } from '@/src/types/plannedPaymentFx';
 
 /**
  * PlainAccount - Plain JSON object representation of an Account model.
@@ -101,7 +102,7 @@ export interface PlainBudgetScope {
   accountId: AccountId;
 }
 
-export interface PlainPlannedPayment {
+export interface PlainPlannedPayment extends PlannedPaymentFxFields {
   id: PlannedPaymentId;
   name: string;
   description?: string;

@@ -13,6 +13,14 @@ export function isPlannedPaymentScheduleChange(
   input: PlannedPaymentCommandInput,
 ): boolean {
   return (
+    existing.amount !== input.amount ||
+    existing.currencyCode !== input.currencyCode ||
+    existing.fromAccountId !== input.fromAccountId ||
+    existing.toAccountId !== input.toAccountId ||
+    (existing.fxMode ?? undefined) !== input.fxMode ||
+    (existing.destinationAmount ?? undefined) !== input.destinationAmount ||
+    (existing.endDate ?? undefined) !== input.endDate ||
+    existing.isAutoPost !== input.isAutoPost ||
     existing.startDate !== input.startDate ||
     existing.intervalType !== input.intervalType ||
     existing.intervalN !== input.intervalN ||

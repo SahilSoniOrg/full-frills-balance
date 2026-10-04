@@ -4,9 +4,9 @@ import { schema } from '../schema';
 
 /** Loki does not execute unsafe SQL migrations. Exercise the real upgrade SQL in SQLite. */
 it('upgrades schema 32 to 33 with audit backfill, Device SMS ownership, and preserved consumed copies', () => {
-  expect(schema.version).toBe(33);
-  expect(migrations.maxVersion).toBe(33);
-  const upgrades = migrations.sortedMigrations.filter(migration => migration.toVersion > 32);
+  expect(schema.version).toBe(34);
+  expect(migrations.maxVersion).toBe(34);
+  const upgrades = migrations.sortedMigrations.filter(migration => migration.toVersion === 33);
   expect(upgrades.map(migration => migration.toVersion)).toEqual([33]);
   const [upgrade] = upgrades;
   const addedAuditColumns = upgrade.steps.flatMap(step =>

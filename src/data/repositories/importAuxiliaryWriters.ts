@@ -145,6 +145,8 @@ export function prepareAuxiliaryImportRecords(
       record.description = payment.description;
       record.amount = payment.amount;
       record.currencyCode = payment.currencyCode;
+      record.fxMode = payment.fxMode;
+      record.destinationAmount = payment.destinationAmount;
       record.fromAccountId = payment.fromAccountId;
       record.toAccountId = payment.toAccountId;
       record.intervalN = payment.intervalN;

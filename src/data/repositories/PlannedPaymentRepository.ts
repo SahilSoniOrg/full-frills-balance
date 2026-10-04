@@ -9,12 +9,13 @@ import {
 import { observeQueryWithModelChanges } from '@/src/data/repositories/observeQueryWithModelChanges';
 import { AuditAction, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import type { AuditEventType } from '@/src/types/auditEvents';
+import type { PlannedPaymentFxFields, PlannedPaymentFxMode } from '@/src/types/plannedPaymentFx';
 import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 import type { Model } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
 
-export interface PlannedPaymentPersistenceInput {
+export interface PlannedPaymentPersistenceInput extends PlannedPaymentFxFields {
   name: string;
   description?: string;
   amount: number;
@@ -58,6 +59,12 @@ function auditPlannedPaymentState(
       : (payment.description ?? null),
     amount: overrides.amount ?? payment.amount,
     currencyCode: overrides.currencyCode ?? payment.currencyCode,
+    fxMode: Object.prototype.hasOwnProperty.call(overrides, 'fxMode')
+      ? (overrides.fxMode ?? null)
+      : (payment.fxMode ?? null),
+    destinationAmount: Object.prototype.hasOwnProperty.call(overrides, 'destinationAmount')
+      ? (overrides.destinationAmount ?? null)
+      : (payment.destinationAmount ?? null),
     fromAccountId: overrides.fromAccountId ?? payment.fromAccountId,
     toAccountId: overrides.toAccountId ?? payment.toAccountId,
     intervalN: overrides.intervalN ?? payment.intervalN,
@@ -242,6 +249,8 @@ export class PlannedPaymentRepository {
       'description',
       'amount',
       'currencyCode',
+      'fxMode',
+      'destinationAmount',
       'fromAccountId',
       'toAccountId',
       'intervalN',
@@ -310,6 +319,12 @@ export class PlannedPaymentRepository {
             break;
           case 'currencyCode':
             updates.currencyCode = value as string;
+            break;
+          case 'fxMode':
+            updates.fxMode = value == null ? undefined : (value as PlannedPaymentFxMode);
+            break;
+          case 'destinationAmount':
+            updates.destinationAmount = value == null ? undefined : (value as number);
             break;
           case 'fromAccountId':
             updates.fromAccountId = value as AccountId;
@@ -550,6 +565,8 @@ export class PlannedPaymentRepository {
         record.description,
         record.amount,
         record.currencyCode,
+        record.fxMode ?? null,
+        record.destinationAmount ?? null,
         sourceIds.has(record.fromAccountId) ? targetAccountId : record.fromAccountId,
         sourceIds.has(record.toAccountId) ? targetAccountId : record.toAccountId,
         record.intervalN,

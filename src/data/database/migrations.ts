@@ -1031,5 +1031,17 @@ export const migrations = schemaMigrations({
         `),
       ],
     },
+    {
+      toVersion: 34,
+      steps: [
+        addColumns({
+          table: 'planned_payments',
+          columns: [
+            { name: 'fx_mode', type: 'string', isOptional: true },
+            { name: 'destination_amount', type: 'number', isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 });

@@ -2,7 +2,7 @@ import { appSchema, tableSchema } from '@nozbe/watermelondb';
 import { deviceSmsInboxTable } from './deviceSmsInboxSchema';
 
 export const schema = appSchema({
-  version: 33,
+  version: 34,
   tables: [
     deviceSmsInboxTable,
     tableSchema({
@@ -273,6 +273,8 @@ END;`,
         { name: 'name', type: 'string' },
         { name: 'description', type: 'string', isOptional: true },
         { name: 'amount', type: 'number' },
+        { name: 'fx_mode', type: 'string', isOptional: true },
+        { name: 'destination_amount', type: 'number', isOptional: true },
         { name: 'currency_code', type: 'string', isIndexed: true },
         { name: 'from_account_id', type: 'string', isIndexed: true },
         { name: 'to_account_id', type: 'string', isOptional: true, isIndexed: true },

@@ -6,7 +6,7 @@ import { WorkplaceId } from '@/src/types/ids';
  *
  * Uses the same LokiJS adapter as integration tests (`jest.setup.js` → `adapter.ts`).
  *
- * Current strategy: boot a fresh database at the app schema (v33), assert the
+ * Current strategy: boot a fresh database at the app schema (v34), assert the
  * persisted Loki schema version and table layout match `schema.ts`, then run a
  * minimal ledger write + balance read to prove core tables work end-to-end.
  *
@@ -37,7 +37,7 @@ import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { foldBalances } from '@/src/utils/accounting/BalanceEffects';
 
 const LOKI_SCHEMA_VERSION_KEY = '_loki_schema_version';
-const EXPECTED_SCHEMA_VERSION = 33;
+const EXPECTED_SCHEMA_VERSION = 34;
 
 function assertSchemaStructureMatches(actual: AppSchema, expected: AppSchema): void {
   expect(actual.version).toBe(expected.version);

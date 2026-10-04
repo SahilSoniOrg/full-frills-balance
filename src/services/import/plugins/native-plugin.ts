@@ -368,6 +368,8 @@ export const nativePlugin: ImportPlugin = {
           description: pp.description,
           amount: pp.amount,
           currencyCode: pp.currencyCode,
+          fxMode: pp.fxMode ?? undefined,
+          destinationAmount: pp.destinationAmount ?? undefined,
           fromAccountId: requireMappedAccountId(
             accountMap,
             pp.fromAccountId,
