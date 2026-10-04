@@ -93,6 +93,25 @@ describe('transaction composer domain', () => {
   });
 
   describe('validatePostingPlan', () => {
+    it('rejects zero and negative amounts at the posting boundary', () => {
+      const resolved = resolveTransactionIntent(baseIntent, { accounts, currencyCode: 'USD' });
+      if (!resolved.resolved) throw new Error('expected a resolved plan');
+
+      for (const amount of ['0', '-50']) {
+        const invalidPlan: PostingPlan = {
+          ...resolved.plan,
+          lines: resolved.plan.lines.map(line => ({ ...line, amount })),
+        };
+
+        expect(validatePostingPlan(invalidPlan, accounts)).toMatchObject({
+          valid: false,
+          issues: expect.arrayContaining([
+            expect.objectContaining({ code: 'invalid_amount', message: expect.any(String) }),
+          ]),
+        });
+      }
+    });
+
     it('rejects an unbalanced plan and identifies the invariant', () => {
       const resolved = resolveTransactionIntent(baseIntent, { accounts, currencyCode: 'USD' });
       if (!resolved.resolved) throw new Error('expected a resolved plan');
