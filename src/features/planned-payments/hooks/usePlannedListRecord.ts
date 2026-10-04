@@ -1,3 +1,4 @@
+import { withPlannedPaymentFxReview } from '@/src/services/planned-payment/plannedPaymentFxReviewRequest';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
   postPlannedJournalOccurrence,
@@ -57,16 +58,27 @@ export function usePlannedListRecord(
       });
 
       try {
-        if (occurrence.journalId) {
-          await postPlannedJournalOccurrence(
-            requestWorkplace,
-            planId,
-            occurrence.journalId,
-            occurrence.date,
-          );
-        } else {
-          await postPlannedPaymentOccurrence(requestWorkplace, planId, occurrence.date);
-        }
+        await withPlannedPaymentFxReview(review => {
+          if (occurrence.journalId) {
+            return review
+              ? postPlannedJournalOccurrence(
+                  requestWorkplace,
+                  planId,
+                  occurrence.journalId,
+                  occurrence.date,
+                  review,
+                )
+              : postPlannedJournalOccurrence(
+                  requestWorkplace,
+                  planId,
+                  occurrence.journalId,
+                  occurrence.date,
+                );
+          }
+          return review
+            ? postPlannedPaymentOccurrence(requestWorkplace, planId, occurrence.date, review)
+            : postPlannedPaymentOccurrence(requestWorkplace, planId, occurrence.date);
+        });
       } catch {
         if (
           mounted.current &&

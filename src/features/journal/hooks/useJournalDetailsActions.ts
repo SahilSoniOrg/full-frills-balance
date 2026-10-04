@@ -1,3 +1,4 @@
+import { withPlannedPaymentFxReview } from '@/src/services/planned-payment/plannedPaymentFxReviewRequest';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
@@ -62,7 +63,10 @@ export function useJournalDetailsActions({
       `Are you sure you want to mark this planned transaction for ${displayAmount} as posted?`,
       async () => {
         try {
-          await postJournal(journalId);
+          const completed = await withPlannedPaymentFxReview(review =>
+            review ? postJournal(journalId, review) : postJournal(journalId),
+          );
+          if (!completed) return;
           toast.success('Transaction has been marked as posted.');
           AppNavigation.back();
         } catch (error) {

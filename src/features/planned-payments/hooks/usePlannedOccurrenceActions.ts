@@ -1,3 +1,4 @@
+import { withPlannedPaymentFxReview } from '@/src/services/planned-payment/plannedPaymentFxReviewRequest';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments/types/PlannedOccurrenceViewModel';
@@ -58,12 +59,23 @@ export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
           destructiveCancel: true,
           onConfirm: async () => {
             try {
-              await postPlannedJournalOccurrence(
-                workplaceId,
-                plannedPaymentId,
-                journalId,
-                item.occurrenceDate,
+              const completed = await withPlannedPaymentFxReview(review =>
+                review
+                  ? postPlannedJournalOccurrence(
+                      workplaceId,
+                      plannedPaymentId,
+                      journalId,
+                      item.occurrenceDate,
+                      review,
+                    )
+                  : postPlannedJournalOccurrence(
+                      workplaceId,
+                      plannedPaymentId,
+                      journalId,
+                      item.occurrenceDate,
+                    ),
               );
+              if (!completed) return;
               analytics.trackFeatureUsage('planned_payment', 'occurrence_paid', {
                 payment_id: plannedPaymentId,
                 currency: item.currencyCode,

@@ -2,6 +2,7 @@ import { journalService } from '@/src/services/journal/journalDomainService';
 import { JournalEntryLine } from '@/src/types/domainJournal';
 import type { PostingPlan } from '@/src/types/domainTransaction';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
+import type { PlannedPaymentFxReview } from '@/src/services/planned-payment/plannedPaymentFx';
 import { useCallback } from 'react';
 
 type SaveJournalEntryParams = Omit<
@@ -46,8 +47,17 @@ export function useJournalActions(workplaceId: WorkplaceId) {
   );
 
   const postJournal = useCallback(
-    async (journalId: JournalId) => {
-      return journalService.postJournal(journalId, workplaceId);
+    async (journalId: JournalId, review?: PlannedPaymentFxReview) => {
+      return review
+        ? journalService.postJournal(
+            journalId,
+            workplaceId,
+            undefined,
+            undefined,
+            undefined,
+            review,
+          )
+        : journalService.postJournal(journalId, workplaceId);
     },
     [workplaceId],
   );

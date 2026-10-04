@@ -1,3 +1,4 @@
+import { withPlannedPaymentFxReview } from '@/src/services/planned-payment/plannedPaymentFxReviewRequest';
 import { JournalStatus } from '@/src/types/enums';
 import { PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { useJournals } from '@/src/features/journal';
@@ -50,7 +51,7 @@ export function usePlannedPaymentDetails(id: string, workplaceId: WorkplaceId) {
   const runAction = useCallback(
     async (
       action: PendingAction,
-      operation: () => Promise<void>,
+      operation: () => Promise<void | boolean>,
       successMessage?: string,
     ) => {
       if (actionLock.current) return;
@@ -58,8 +59,8 @@ export function usePlannedPaymentDetails(id: string, workplaceId: WorkplaceId) {
       setPendingAction(action);
       setActionError(null);
       try {
-        await operation();
-        if (successMessage) toast.success(successMessage);
+        const completed = await operation();
+        if (completed !== false && successMessage) toast.success(successMessage);
       } catch {
         setActionError(ACTION_ERRORS[action]);
       } finally {
@@ -145,16 +146,28 @@ export function usePlannedPaymentDetails(id: string, workplaceId: WorkplaceId) {
     await runAction(
       'record',
       async () => {
-        if (target.journalId) {
-          await postPlannedJournalOccurrence(
-            workplaceId,
-            item.id,
-            target.journalId,
-            target.occurrenceDate,
-          );
-        } else {
-          await postPlannedPaymentOccurrence(workplaceId, item.id, target.occurrenceDate);
-        }
+        const completed = await withPlannedPaymentFxReview(review => {
+          if (target.journalId) {
+            return review
+              ? postPlannedJournalOccurrence(
+                  workplaceId,
+                  item.id,
+                  target.journalId,
+                  target.occurrenceDate,
+                  review,
+                )
+              : postPlannedJournalOccurrence(
+                  workplaceId,
+                  item.id,
+                  target.journalId,
+                  target.occurrenceDate,
+                );
+          }
+          return review
+            ? postPlannedPaymentOccurrence(workplaceId, item.id, target.occurrenceDate, review)
+            : postPlannedPaymentOccurrence(workplaceId, item.id, target.occurrenceDate);
+        });
+        if (!completed) return false;
 
         // Track Analytics
         analytics.trackFeatureUsage('planned_payment', 'post_now', {

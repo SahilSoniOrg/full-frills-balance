@@ -6,6 +6,8 @@ import { MotiView } from 'moti';
 import React from 'react';
 import {
   Modal,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -39,6 +41,7 @@ interface ModalSurfaceProps {
   contentStyle?: StyleProp<ViewStyle>;
   /** Fires after the native modal finish-dismiss animation (iOS). */
   onDismiss?: () => void;
+  keyboardAvoiding?: boolean;
 }
 
 /**
@@ -64,6 +67,7 @@ export function ModalSurface({
   animationType = 'fade',
   contentStyle,
   onDismiss,
+  keyboardAvoiding = false,
 }: ModalSurfaceProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -107,6 +111,7 @@ export function ModalSurface({
 
       {scrollable ? (
         <ScrollView
+          keyboardShouldPersistTaps={keyboardAvoiding ? 'handled' : undefined}
           testID={contentTestID}
           contentContainerStyle={styles.scrollContent}
           style={fixedHeight ? styles.scrollFixed : styles.scrollFit}
@@ -142,8 +147,12 @@ export function ModalSurface({
     </MotiView>
   );
 
+  const Overlay = keyboardAvoiding ? KeyboardAvoidingView : View;
   const content = (
-    <View
+    <Overlay
+      {...(keyboardAvoiding
+        ? { behavior: Platform.OS === 'ios' ? ('padding' as const) : undefined }
+        : {})}
       style={[
         styles.overlay,
         isBottomSheet ? styles.overlayBottomSheet : styles.overlayCenter,
@@ -158,7 +167,7 @@ export function ModalSurface({
         accessibilityLabel={accessibilityCloseLabel}
       />
       {sheet}
-    </View>
+    </Overlay>
   );
 
   if (useNativeModal) {

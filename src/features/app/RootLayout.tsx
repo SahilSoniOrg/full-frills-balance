@@ -1,4 +1,5 @@
 import { ChartInteractionProvider } from '@/src/components/charts/ChartInteractionProvider';
+import { PlannedPaymentFxReviewContainer } from '@/src/components/overlays/PlannedPaymentFxReviewContainer';
 import { AlertContainer } from '@/src/components/overlays/AlertContainer';
 import { IncompleteFxDetailsContainer } from '@/src/components/overlays/IncompleteFxDetailsContainer';
 import { ToastContainer } from '@/src/components/overlays/Toast';
@@ -106,6 +107,7 @@ function RootLayout() {
                         </LaunchCoordinatorContent>
                         <AlertContainer />
                         <IncompleteFxDetailsContainer />
+                        <PlannedPaymentFxReviewContainer />
                       </UpdateGate>
                     </LaunchCoordinatorProvider>
                   </ThemeProvider>
