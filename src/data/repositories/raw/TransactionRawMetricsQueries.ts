@@ -191,6 +191,7 @@ export class TransactionRawMetricsQueries {
           Q.where('deleted_at', Q.eq(null)),
           Q.sortBy('transaction_date', Q.desc),
           Q.sortBy('created_at', Q.desc),
+          Q.sortBy('id', Q.desc),
           Q.take(1),
         )
         .fetch();
