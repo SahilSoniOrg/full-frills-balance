@@ -305,7 +305,7 @@ Work through this sequence commit-by-commit. Run `bun run verify` (or `bun test`
   - Protect budgets, planned payments, SMS rules, and account forms from swipe-down data loss.
 - [x] **Step 23:** `feat(reports): introduce clean toggle/link for Reports V2 (preserving V1)`
   - Keep Reports V1 active; expose V2 cleanly via preference or entry point.
-- [ ] **Step 24:** `chore(architecture): add check-route-registry-agreement script`
+- [x] **Step 24:** `chore(architecture): add check-route-registry-agreement script`
   - Add CI check validating `app/` routes against `routeManifest.ts`.
 - [ ] **Step 25:** `chore(architecture): add check-query-ordering-parity script`
   - Add CI check validating SQLite and ORM ordering parity.
