@@ -39,13 +39,11 @@ export enum DebtType {
   FALLBACK = 'FALLBACK',
   BUDGET = 'BUDGET',
   PLANNED_PAYMENT = 'PLANNED_PAYMENT',
-  PLANNED_JOURNAL = 'PLANNED_JOURNAL',
 }
 
 // --- Engine Internal Types ---
 
 export type FlowMeta = {
-  tags?: string[];
   allowCascade?: boolean;
 };
 
@@ -197,7 +195,6 @@ export interface ScheduledProjection {
   label: string;
   origin: FlowSource;
   categoryId?: string;
-  tags?: string[];
   isTransfer?: boolean;
 }
 

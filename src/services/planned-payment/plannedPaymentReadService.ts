@@ -10,11 +10,8 @@ import type PlannedPayment from '@/src/data/models/PlannedPayment';
 import type { PlainAccount, PlainPlannedPayment } from '@/src/types/plainDtos';
 import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { combineLatest, map, Observable } from 'rxjs';
-import {
-  calculateNextOccurrence,
-  computeFirstOccurrence,
-  normalizeToStartOfDay,
-} from './plannedPaymentRecurrence';
+import { projectPlannedOccurrencesForHorizon } from './plannedOccurrenceHorizon';
+import { normalizeToStartOfDay } from './plannedPaymentRecurrence';
 
 export interface PlannedPaymentSavedOccurrence {
   plannedPaymentId: PlannedPaymentId;
@@ -70,37 +67,18 @@ export function projectPlannedPaymentListOccurrences(
         canRecord: payment.status !== PlannedPaymentStatus.PAUSED,
       });
     }
-    if (
-      payment.status !== PlannedPaymentStatus.ACTIVE ||
-      !Number.isFinite(normalizeToStartOfDay(throughDate)) ||
-      !Number.isFinite(normalizeToStartOfDay(payment.startDate)) ||
-      !Number.isFinite(normalizeToStartOfDay(payment.nextOccurrence)) ||
-      (payment.endDate != null && !Number.isFinite(normalizeToStartOfDay(payment.endDate)))
-    )
-      continue;
-    // Align stale cursors directly to the valid schedule start. Legitimate overdue
-    // occurrences after that start are retained without an arbitrary generation cap.
-    let cursor =
-      payment.nextOccurrence < payment.startDate
-        ? computeFirstOccurrence(payment.startDate, payment)
-        : payment.nextOccurrence;
-    while (Number.isFinite(cursor)) {
-      if (payment.endDate != null && cursor > payment.endDate) break;
-      const day = normalizeToStartOfDay(cursor);
-      if (cursor >= payment.startDate && !savedDays.has(day)) {
-        occurrences.push({
-          occurrenceId: `plan:${payment.id}:${day}`,
-          payment,
-          date: cursor,
-          amount: payment.amount,
-          currencyCode: payment.currencyCode,
-          canRecord: true,
-        });
-      }
-      if (cursor > throughDate && cursor >= payment.startDate) break;
-      const next = calculateNextOccurrence(cursor, payment);
-      if (!Number.isFinite(next) || next <= cursor) break;
-      cursor = next;
+    if (payment.status !== PlannedPaymentStatus.ACTIVE) continue;
+    const projected = projectPlannedOccurrencesForHorizon(payment, savedDays, { throughDate });
+    for (const item of projected) {
+      const day = normalizeToStartOfDay(item.date);
+      occurrences.push({
+        occurrenceId: `plan:${payment.id}:${day}`,
+        payment,
+        date: item.date,
+        amount: item.amount,
+        currencyCode: item.currencyCode,
+        canRecord: true,
+      });
     }
   }
   return occurrences.sort(
@@ -238,23 +216,12 @@ export class PlannedPaymentReadService {
     );
   }
 
-  observeObligations(workplaceId: WorkplaceId) {
+  observeObligationById(workplaceId: WorkplaceId, plannedPaymentId: PlannedPaymentId) {
     return observePlannedPaymentObligations(
       plannedPaymentRepository.observeAll(workplaceId),
       journalObserveQueries.observeAllPlanned(workplaceId),
       observeWorkplaceAccounts(workplaceId),
-    );
-  }
-
-  observeObligationById(workplaceId: WorkplaceId, plannedPaymentId: PlannedPaymentId) {
-    return this.observeObligations(workplaceId).pipe(
-      map(items => items.find(item => item.id === plannedPaymentId) ?? null),
-    );
-  }
-  observeAll(workplaceId: WorkplaceId) {
-    return plannedPaymentRepository
-      .observeAll(workplaceId)
-      .pipe(map(items => items.map(toPlainPlannedPayment)));
+    ).pipe(map(items => items.find(item => item.id === plannedPaymentId) ?? null));
   }
 
   observeActive(workplaceId: WorkplaceId) {
@@ -269,10 +236,6 @@ export class PlannedPaymentReadService {
       .pipe(map(item => (item ? toPlainPlannedPayment(item) : null)));
   }
 
-  async find(workplaceId: WorkplaceId, plannedPaymentId: PlannedPaymentId) {
-    const item = await plannedPaymentRepository.find(workplaceId, plannedPaymentId);
-    return item ? toPlainPlannedPayment(item) : undefined;
-  }
 }
 
 export const plannedPaymentReadService = new PlannedPaymentReadService();

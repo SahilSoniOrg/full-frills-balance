@@ -7,7 +7,8 @@ import type { PlainJournal, PlainPlannedPayment } from '@/src/types/plainDtos';
 import { safeAdd } from '@/src/utils/money';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { map } from 'rxjs';
-import { calculateNextOccurrence, normalizeToStartOfDay } from './plannedPaymentRecurrence';
+import { projectPlannedOccurrencesForHorizon } from './plannedOccurrenceHorizon';
+import { normalizeToStartOfDay } from './plannedPaymentRecurrence';
 
 export interface PlannedPaymentActivitySummary {
   recordedCount: number;
@@ -85,24 +86,13 @@ export function getNextPlannedPaymentOccurrences(
       });
   }
   if (payment.status === PlannedPaymentStatus.ACTIVE) {
-    let cursor = payment.nextOccurrence;
-    let added = 0;
-    // The cursor is authoritative. Posted journals use the recording date, which can differ
-    // from the scheduled date, so they must not suppress a still-due cursor occurrence.
-    for (let attempts = 0; attempts < journals.length + count && added < count; attempts++) {
-      if (!Number.isFinite(cursor) || (payment.endDate != null && cursor > payment.endDate)) break;
-      const day = normalizeToStartOfDay(cursor);
-      if (!occurrences.has(day)) {
-        occurrences.set(day, {
-          date: cursor,
-          amount: payment.amount,
-          currencyCode: payment.currencyCode,
-        });
-        added++;
-      }
-      const next = calculateNextOccurrence(cursor, payment);
-      if (next <= cursor) break;
-      cursor = next;
+    const projected = projectPlannedOccurrencesForHorizon(payment, new Set(occurrences.keys()), {
+      maxNewOccurrences: count,
+      attemptBudget: journals.length + count,
+    });
+    for (const occurrence of projected) {
+      const day = normalizeToStartOfDay(occurrence.date);
+      if (!occurrences.has(day)) occurrences.set(day, occurrence);
     }
   }
   return [...occurrences.values()].sort((a, b) => a.date - b.date).slice(0, count);

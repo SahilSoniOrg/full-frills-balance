@@ -75,7 +75,7 @@ export class PlannedFlowGenerator {
           if (dayOffset >= context.simulationDays) break;
 
           const normalizedAmount = context.convert(pp.amount, pp.currencyCode);
-          const tags = isLiquidTo && isLiquidFrom ? ['LIABILITY_PAYMENT'] : [];
+          const isLiabilityPayment = isLiquidTo && isLiquidFrom;
 
           if (isLiquidFrom && isLiquidTo) {
             projections.push({
@@ -89,7 +89,6 @@ export class PlannedFlowGenerator {
               label: pp.name || 'Planned Payment',
               origin: FlowSource.PLANNED_PAYMENT,
               categoryId: pp.toAccountId,
-              tags,
               isTransfer: true,
             });
           } else if (isLiquidFrom) {
@@ -99,14 +98,11 @@ export class PlannedFlowGenerator {
               amount: normalizedAmount,
               fromAccountId: pp.fromAccountId,
               toAccountId: pp.toAccountId,
-              category: tags.includes('LIABILITY_PAYMENT')
-                ? FlowCategory.DEBT
-                : FlowCategory.PLANNED_EXPENSE,
+              category: isLiabilityPayment ? FlowCategory.DEBT : FlowCategory.PLANNED_EXPENSE,
               timeframe: 'FUTURE',
               label: pp.name || 'Planned Payment',
               origin: FlowSource.PLANNED_PAYMENT,
               categoryId: pp.toAccountId,
-              tags,
               isTransfer: false,
             });
           } else if (isLiquidTo) {
@@ -121,7 +117,6 @@ export class PlannedFlowGenerator {
               label: pp.name || 'Planned Payment',
               origin: FlowSource.PLANNED_PAYMENT,
               categoryId: pp.fromAccountId,
-              tags,
               isTransfer: false,
             });
           }
@@ -158,10 +153,6 @@ export class PlannedFlowGenerator {
         const creditTx = liquidTxs.find(tx => tx.transactionType === TransactionType.CREDIT);
 
         if (debitTx && creditTx) {
-          const isLiabilityPayment =
-            context.liabilityAccountIds.has(debitTx.accountId) &&
-            !context.liabilityAccountIds.has(creditTx.accountId);
-
           projections.push({
             sourceId: journal.id,
             occurrenceDate: occurrenceMs,
@@ -173,7 +164,6 @@ export class PlannedFlowGenerator {
             label: journal.description || 'Planned Journal',
             origin: FlowSource.PLANNED_JOURNAL,
             categoryId: categoryId || debitTx.accountId,
-            tags: isLiabilityPayment ? ['LIABILITY_PAYMENT'] : [],
             isTransfer: true,
           });
           continue;

@@ -1,16 +1,21 @@
 import { AppConfig } from '@/src/constants';
 import { MetadataKeys, MetadataSources } from '@/src/constants/ledger-constants';
 import { database } from '@/src/data/database/Database';
+import { seedPlannedPaymentWorkplace } from '@/src/testing/plannedPaymentFixtures';
 import Journal from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import PlannedPayment from '@/src/data/models/PlannedPayment';
 import Transaction from '@/src/data/models/Transaction';
-import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
+import {
+  observePlannedPaymentObligations,
+  type PlannedPaymentObligation,
+} from '@/src/services/planned-payment/plannedPaymentReadService';
+import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
+import { observeWorkplaceAccounts } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { generatePlannedOccurrence } from '@/src/services/planned-payment/plannedPaymentJournalGeneration';
 import {
@@ -25,12 +30,7 @@ import {
   calculateNextOccurrence,
   normalizeToStartOfDay,
 } from '@/src/services/planned-payment/plannedPaymentRecurrence';
-import {
-  AccountType,
-  JournalStatus,
-  PlannedPaymentInterval,
-  PlannedPaymentStatus,
-} from '@/src/types/enums';
+import { JournalStatus, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 import { firstValueFrom, ReplaySubject } from 'rxjs';
@@ -38,30 +38,20 @@ import { filter, map, skip, tap, timeout } from 'rxjs/operators';
 
 const WORKPLACE_ID = 'wp-planned-atomic' as WorkplaceId;
 
+function observePlannedObligations(workplaceId: WorkplaceId) {
+  return observePlannedPaymentObligations(
+    plannedPaymentRepository.observeAll(workplaceId),
+    journalObserveQueries.observeAllPlanned(workplaceId),
+    observeWorkplaceAccounts(workplaceId),
+  );
+}
+
 describe('planned payment orchestration persistence', () => {
   let fromAccountId: AccountId;
   let toAccountId: AccountId;
 
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
-
-    const from = await accountWriteRepository.create({
-      name: 'Checking',
-      accountType: AccountType.ASSET,
-      currencyCode: 'USD',
-      workplaceId: WORKPLACE_ID,
-    });
-    const to = await accountWriteRepository.create({
-      name: 'Rent',
-      accountType: AccountType.EXPENSE,
-      currencyCode: 'USD',
-      workplaceId: WORKPLACE_ID,
-    });
-
-    fromAccountId = from.id;
-    toAccountId = to.id;
+    ({ fromAccountId, toAccountId } = await seedPlannedPaymentWorkplace(WORKPLACE_ID));
   }, 30000);
 
   afterAll(() => {
@@ -125,12 +115,10 @@ describe('planned payment orchestration persistence', () => {
   it('projects and settles the generated unpaid occurrence before the advanced cursor', async () => {
     const payment = await createDuePayment('Finite rent');
     const originalOccurrence = payment.nextOccurrence;
-    const projection$ = new ReplaySubject<
-      import('@/src/services/planned-payment/plannedPaymentReadService').PlannedPaymentObligation[]
-    >(1);
-    const projectionSubscription = plannedPaymentReadService
-      .observeObligations(WORKPLACE_ID)
-      .subscribe(items => projection$.next(items));
+    const projection$ = new ReplaySubject<PlannedPaymentObligation[]>(1);
+    const projectionSubscription = observePlannedObligations(WORKPLACE_ID).subscribe(items =>
+      projection$.next(items),
+    );
     const initial = await firstValueFrom(
       projection$.pipe(
         map(items => items.find(item => item.id === payment.id)),
@@ -156,7 +144,7 @@ describe('planned payment orchestration persistence', () => {
     expect(projected?.nextOccurrence).toBeGreaterThan(originalOccurrence);
 
     const otherWorkplaceItems = await firstValueFrom(
-      plannedPaymentReadService.observeObligations('wp-other' as WorkplaceId),
+      observePlannedObligations('wp-other' as WorkplaceId),
     );
     expect(otherWorkplaceItems).toEqual([]);
     const settledProjection = firstValueFrom(
@@ -195,12 +183,10 @@ describe('planned payment orchestration persistence', () => {
       status: PlannedPaymentStatus.ACTIVE,
       isAutoPost: false,
     });
-    const projected$ = new ReplaySubject<
-      import('@/src/services/planned-payment/plannedPaymentReadService').PlannedPaymentObligation[]
-    >(1);
-    const subscription = plannedPaymentReadService
-      .observeObligations(WORKPLACE_ID)
-      .subscribe(items => projected$.next(items));
+    const projected$ = new ReplaySubject<PlannedPaymentObligation[]>(1);
+    const subscription = observePlannedObligations(WORKPLACE_ID).subscribe(items =>
+      projected$.next(items),
+    );
     const initial = await firstValueFrom(
       projected$.pipe(
         map(items => items.find(item => item.id === payment.id)),

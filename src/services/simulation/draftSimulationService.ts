@@ -1,10 +1,3 @@
-import { projectBudgetCapacities } from '@/src/services/budget/budgetProjectionProvider';
-import { PlannedFlowGenerator } from './engines/PlannedFlowGenerator';
-import { LiabilityFlowGenerator } from './engines/LiabilityFlowGenerator';
-import { ProjectionComposer } from './ProjectionComposer';
-import { Simulator } from './Simulator';
-import { summarizeSimulationFlows } from './utils/simulationFlowSummary';
-import { normalizeSimulationFlows } from './utils/normalizeSimulationFlows';
 import { FlowCategory } from './types';
 import type {
   SimulationBudget,
@@ -15,6 +8,9 @@ import type {
 import type { AccountId } from '@/src/types/ids';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { roundToPrecision } from '@/src/utils/money';
+import { normalizeSimulationFlows } from './utils/normalizeSimulationFlows';
+import { summarizeSimulationFlows } from './utils/simulationFlowSummary';
+import { runCashFlowSimulationCore } from './runCashFlowSimulationCore';
 
 export interface DraftSimulationScenario {
   readonly simulationStartMs: number;
@@ -52,47 +48,30 @@ export function simulateDraftScenario(input: DraftSimulationScenario): {
     convert: (amount: number) => amount,
   };
 
-  const scheduled = PlannedFlowGenerator.generate(
-    context,
-    [...input.plannedPayments],
-    [],
-    new Set(),
-    new Map(),
-  );
+  const usages = input.budgets.map(budget => ({
+    spent: 0,
+    remaining: budget.amount,
+    budgetAmount: budget.amount,
+    usagePercent: 0,
+  }));
 
-  const capacities = projectBudgetCapacities(
+  const { simulationResult, allFlows } = runCashFlowSimulationCore({
     context,
-    [...input.budgets],
-    input.budgets.map(budget => ({
-      spent: 0,
-      remaining: budget.amount,
-      budgetAmount: budget.amount,
-      usagePercent: 0,
-    })),
-    new Map(input.budgetCategoryMap),
-  );
-
-  const resolvedSpending = ProjectionComposer.composeSpending(capacities, scheduled, context);
-  const liabilityFlows = LiabilityFlowGenerator.generate(
-    context,
-    resolvedSpending,
-    [...input.liabilityBalances],
-    new Map(),
-    new Map(),
-    new Map(),
-  );
-  const allFlows = ProjectionComposer.sortTimeline([...resolvedSpending, ...liabilityFlows]);
-  const simulation = Simulator.simulate(
-    new Map(input.startingBalances),
-    allFlows,
-    input.simulationDays,
-    liquidAccountIds,
-    liquidIds,
-    0,
-    input.simulationStartMs,
-    undefined,
+    plannedPayments: input.plannedPayments,
+    plannedJournals: [],
+    expenseAccountIds: new Set(),
+    journalTxsMap: new Map(),
+    budgets: [...input.budgets],
+    usages,
+    budgetCategoryMap: input.budgetCategoryMap,
+    liabilityBalances: [...input.liabilityBalances],
+    metadataMap: new Map(),
+    statementBalances: new Map(),
+    settledSinceStatement: new Map(),
+    startingBalances: input.startingBalances,
     precision,
-  );
+  });
+
   const normalizedFlows = normalizeSimulationFlows(allFlows);
   const budgetReserveInWindow = normalizedFlows.reduce(
     (sum, flow) =>
@@ -106,9 +85,9 @@ export function simulateDraftScenario(input: DraftSimulationScenario): {
   );
 
   return {
-    safeToSpend: simulation.summary.safeToSpend,
+    safeToSpend: simulationResult.summary.safeToSpend,
     flowSummary: summarizeSimulationFlows(normalizedFlows, liquidAccountIds, precision),
     budgetReserveInWindow: roundToPrecision(budgetReserveInWindow, precision),
-    projections: simulation.projections,
+    projections: simulationResult.projections,
   };
 }

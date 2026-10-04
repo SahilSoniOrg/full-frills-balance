@@ -12,15 +12,11 @@ import { logger } from '@/src/utils/logger';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { Trace } from '@/src/utils/TraceService';
 import dayjs from 'dayjs';
-import { projectBudgetCapacities } from '@/src/services/budget/budgetProjectionProvider';
-import { PlannedFlowGenerator } from '@/src/services/simulation/engines/PlannedFlowGenerator';
 import { keepProjectablePlannedJournals } from '@/src/services/planned-payment/projectablePlannedJournals';
-import { LiabilityFlowGenerator } from './engines/LiabilityFlowGenerator';
-import { ProjectionComposer } from './ProjectionComposer';
 import { generateAccountSummaries, generateSimulationReport } from './SimulationReportGenerator';
 
-import { Simulator } from './Simulator';
-import { TimeContext } from './TimeContext';
+import { createSimulationTimeWindow } from './TimeContext';
+import { runCashFlowSimulationCore } from './runCashFlowSimulationCore';
 import { SimulationBudget, SimulationContext, SimulationRunResult } from './types';
 import {
   fetchBudgetCategoryMap,
@@ -44,6 +40,8 @@ export type SimulationInput = {
   /** Captured by the owning read model; reused for every date-sensitive calculation. */
   asOf?: number;
   trace?: Trace;
+  /** When true, amounts are not converted across currencies (identity rates). */
+  skipFx?: boolean;
 };
 
 export class CashFlowSimulationService {
@@ -65,9 +63,10 @@ export class CashFlowSimulationService {
       simulationDays = AppConfig.defaults.safeToSpendDays,
       asOf = Date.now(),
       trace,
+      skipFx = false,
     } = input;
 
-    const time = new TimeContext(dayjs(asOf), simulationDays);
+    const time = createSimulationTimeWindow(dayjs(asOf), simulationDays);
     const resultPrecision = getCurrencyPrecision(resultCurrency);
     const simulationStartMs = time.getStartOfToday().valueOf();
     const simulationEndMs = time.getEndMs();
@@ -108,45 +107,50 @@ export class CashFlowSimulationService {
       });
     });
 
-    await Promise.all(
-      Array.from(baseCurrencies).map(base =>
-        exchangeRateService.fetchRatesForBase(base).catch(() => ({})),
-      ),
-    );
-
     const rateMap = new Map<string, number>();
     rateMap.set(resultCurrency, 1);
     let hasUnvaluedEntries = false;
-    await Promise.all(
-      Array.from(baseCurrencies).map(async from => {
-        if (from === resultCurrency) {
-          rateMap.set(from, 1);
-          return;
-        }
-        const resolvedRate = await resolveSpotExchangeRate(from, resultCurrency);
-        if (resolvedRate.ok) {
-          rateMap.set(from, resolvedRate.rate);
-        } else {
-          logger.warn(
-            `[CashFlowSimulationService] FX unavailable for ${from} -> ${resultCurrency}`,
-          );
-        }
-      }),
-    );
 
-    const convert = (amount: number, from: string) => {
-      const fromCurrency = from || resultCurrency;
-      if (fromCurrency === resultCurrency) return amount;
-      const rate = rateMap.get(fromCurrency);
-      if (rate === undefined) {
-        if (amount !== 0) hasUnvaluedEntries = true;
-        logger.warn(
-          `[CashFlowSimulationService] Skipping amount in ${fromCurrency} (no FX rate to ${resultCurrency})`,
-        );
-        return 0;
-      }
-      return amount * rate;
-    };
+    if (!skipFx) {
+      await Promise.all(
+        Array.from(baseCurrencies).map(base =>
+          exchangeRateService.fetchRatesForBase(base).catch(() => ({})),
+        ),
+      );
+
+      await Promise.all(
+        Array.from(baseCurrencies).map(async from => {
+          if (from === resultCurrency) {
+            rateMap.set(from, 1);
+            return;
+          }
+          const resolvedRate = await resolveSpotExchangeRate(from, resultCurrency);
+          if (resolvedRate.ok) {
+            rateMap.set(from, resolvedRate.rate);
+          } else {
+            logger.warn(
+              `[CashFlowSimulationService] FX unavailable for ${from} -> ${resultCurrency}`,
+            );
+          }
+        }),
+      );
+    }
+
+    const convert = skipFx
+      ? (amount: number, _from?: string) => amount
+      : (amount: number, from: string) => {
+          const fromCurrency = from || resultCurrency;
+          if (fromCurrency === resultCurrency) return amount;
+          const rate = rateMap.get(fromCurrency);
+          if (rate === undefined) {
+            if (amount !== 0) hasUnvaluedEntries = true;
+            logger.warn(
+              `[CashFlowSimulationService] Skipping amount in ${fromCurrency} (no FX rate to ${resultCurrency})`,
+            );
+            return 0;
+          }
+          return amount * rate;
+        };
 
     // Normalize and Fetch remaining dependent data in parallel
     const [statementValues, budgetCategoryMap] = await Promise.all([
@@ -228,66 +232,6 @@ export class CashFlowSimulationService {
       convert,
     };
 
-    // 3. PHASE: GENERATE RAW DOMAIN FLOWS
-    const budgetEntries = normalizedBudgets.map((budget, index) => ({
-      budget,
-      usage: normalizedUsages[index] || { remaining: 0 },
-      categories: budgetCategoryMap.get(budget.id),
-    }));
-
-    const budgetEntriesWithCategories = budgetEntries.filter(
-      entry => entry.categories && entry.categories.size > 0,
-    );
-
-    const filteredBudgets = budgetEntriesWithCategories.map(entry => entry.budget);
-    const filteredUsages = budgetEntriesWithCategories.map(entry => entry.usage);
-
-    const scheduledProjections = PlannedFlowGenerator.generate(
-      context,
-      normalizedPlannedPayments,
-      projectablePlannedJournals,
-      expenseAccountIds,
-      journalTxsMap,
-    );
-
-    const budgetCapacities = projectBudgetCapacities(
-      context,
-      filteredBudgets,
-      filteredUsages,
-      budgetCategoryMap,
-    );
-    trace?.metric('flow_gen_domain');
-
-    // 4. PHASE: COMPOSE SPENDING CONFLICTS (DELAYED DISCRETIZATION)
-    const resolvedSpendingFlows = ProjectionComposer.composeSpending(
-      budgetCapacities,
-      scheduledProjections,
-      context,
-    );
-
-    // 5. PHASE: GENERATE DERIVED LIABILITY OBLIGATIONS
-    const liabilityFlows = LiabilityFlowGenerator.generate(
-      context,
-      resolvedSpendingFlows,
-      normalizedLiabilityBalances,
-      metadataMap,
-      statementBalances,
-      settledSinceStatement,
-    );
-    trace?.metric('flow_gen_liability');
-
-    // 6. PHASE: DETERMINISTIC TIMELINE SORTING
-    const allFlows = ProjectionComposer.sortTimeline([...resolvedSpendingFlows, ...liabilityFlows]);
-
-    trace?.metric('flow_generation');
-    logger.info(
-      `[Trace] CashFlowSimulationService.simulate: Flow Generation: ${Date.now() - overallStart}ms`,
-      {
-        totalFlows: allFlows.length,
-      },
-    );
-
-    // 3. PHASE: SIMULATE
     const startingBalancesEntries = Array.from(startingBalances.entries());
     const normalizedStartingBalances = new Map(
       startingBalancesEntries.map(([id, bal]) => {
@@ -295,18 +239,31 @@ export class CashFlowSimulationService {
         return [id, convert(bal, acc?.currencyCode || resultCurrency)];
       }),
     );
-    const simulationResult = Simulator.simulate(
-      normalizedStartingBalances,
-      allFlows,
-      simulationDays,
-      liquidAccountIdsSet,
-      liquidAssetIds,
-      0,
-      simulationStartMs,
+
+    const { simulationResult, allFlows } = runCashFlowSimulationCore({
+      context,
+      plannedPayments: normalizedPlannedPayments,
+      plannedJournals: projectablePlannedJournals,
+      expenseAccountIds,
+      journalTxsMap,
+      budgets: normalizedBudgets,
+      usages: normalizedUsages,
+      budgetCategoryMap,
+      liabilityBalances: normalizedLiabilityBalances,
+      metadataMap,
+      statementBalances,
+      settledSinceStatement,
+      startingBalances: normalizedStartingBalances,
       trace,
-      resultPrecision,
+      precision: resultPrecision,
+    });
+
+    logger.info(
+      `[Trace] CashFlowSimulationService.simulate: Flow Generation: ${Date.now() - overallStart}ms`,
+      {
+        totalFlows: allFlows.length,
+      },
     );
-    trace?.metric('simulation_execution');
 
     // 4. PHASE: POST-PROCESS SUMMARIES
     const report = generateSimulationReport(

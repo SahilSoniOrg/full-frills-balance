@@ -16,7 +16,7 @@ import { roundToPrecision } from '@/src/utils/money';
 import { isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
 import { logger } from '@/src/utils/logger';
 import { toLiabilityMetadata } from './liabilityMetadata';
-import { TimeContext } from './TimeContext';
+import type { SimulationTimeWindow } from './TimeContext';
 import { resolveLeafAccountIds } from '@/src/services/forward-finance/scope/ScopeResolver';
 import { LiabilityMetadata } from './types';
 import { getCorrespondingStatementDate, getNextDueDate } from './utils/liabilityUtils';
@@ -41,7 +41,7 @@ export async function fetchMetadata(
 export async function fetchStatementValues(
   lbs: { account: Account }[],
   metadataMap: Map<string, LiabilityMetadata>,
-  time: TimeContext,
+  time: SimulationTimeWindow,
   toCurrency: string,
   rateMap: Map<string, number>,
   workplaceId: WorkplaceId,

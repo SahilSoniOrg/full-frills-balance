@@ -4,7 +4,7 @@ import { accountQueryRepository } from '@/src/data/repositories/account';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
-import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
+import { findJournalMetadataByJournalId } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import type { PlannedPaymentFxMode } from '@/src/types/plannedPaymentFx';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
@@ -18,9 +18,6 @@ import type { JournalWriteLine, JournalWriteMetadata } from '@/src/types/journal
 import { safeParseJSON } from '@/src/utils/serialization';
 import { AppConfig } from '@/src/constants';
 
-export type { PlannedPaymentFxMode } from '@/src/types/plannedPaymentFx';
-
-/** Obtain with resolvePlannedPaymentFxPreview; edit only the two amounts when reviewing. */
 export interface PlannedPaymentFxReview {
   sourceAmount: number;
   destinationAmount: number;
@@ -85,7 +82,7 @@ export async function readPlannedPaymentFxContext(
   journal?: Journal,
 ): Promise<PlannedPaymentFxContext | undefined> {
   const storedMetadata = journal
-    ? await journalMetadataRepository.findByJournalId(journal.id, payment.workplaceId)
+    ? await findJournalMetadataByJournalId(journal.id, payment.workplaceId)
     : undefined;
   const metadataJson = safeParseJSON<Record<string, unknown>>(storedMetadata?.metadataJson, {});
   const snapshot = metadataJson[FX_METADATA_KEY];
@@ -394,35 +391,3 @@ export async function resolvePlannedPaymentFxAmounts(
   return { sourceAmount: source.amount, destinationAmount: destination.amount };
 }
 
-/** Latest preview is never a locked automatic posting quote. Manual callers may edit both amounts. */
-export async function resolvePlannedPaymentFxPreview(
-  workplaceId: WorkplaceId,
-  plannedPaymentId: PlannedPaymentId,
-  occurrenceDate: number,
-  journalId?: JournalId,
-): Promise<PlannedPaymentFxReview> {
-  const payment = await requirePlannedPayment(workplaceId, plannedPaymentId);
-  const start = normalizeToStartOfDay(occurrenceDate);
-  const occurrence = await journalPlannedQueries.findOccurrenceJournals(
-    workplaceId,
-    plannedPaymentId,
-    start,
-    start + AppConfig.time.msPerDay - 1,
-  );
-  if (occurrence.kind === 'settled') throw new Error('This occurrence is already settled');
-  if (occurrence.kind === 'planned' && occurrence.journals.length !== 1)
-    throw new Error('Multiple planned journals for this occurrence');
-  const journal = occurrence.kind === 'planned' ? occurrence.journals[0] : undefined;
-  if (journalId && journal?.id !== journalId)
-    throw new Error('Journal is not scheduled for this occurrence');
-  const context = await readPlannedPaymentFxContext(payment, occurrenceDate, journal);
-  if (!context) throw new Error('This planned payment uses legacy currency semantics');
-  const quote =
-    context.mode === 'fixed' ||
-    (context.mode === 'manual' &&
-      (context.review.journalId || context.fixedDestinationAmount !== undefined))
-      ? undefined
-      : await fetchQuote(context);
-  const amounts = await resolvePlannedPaymentFxAmounts(context, { posting: false, quote });
-  return { ...context.review, ...amounts };
-}

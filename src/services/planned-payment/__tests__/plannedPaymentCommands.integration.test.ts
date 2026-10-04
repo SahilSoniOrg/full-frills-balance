@@ -27,6 +27,7 @@ import { analytics } from '@/src/services/analytics';
 import { togglePlannedPaymentStatus } from '@/src/services/planned-payment/plannedPaymentLifecycle';
 import { Q } from '@nozbe/watermelondb';
 import { deleteAccount } from '@/src/services/accounts/accountDeleteCommands';
+import { seedPlannedPaymentWorkplace } from '@/src/testing/plannedPaymentFixtures';
 
 const WP = 'wp-pp-cmd' as WorkplaceId;
 
@@ -36,24 +37,7 @@ describe('planned payment commands (integration)', () => {
 
   beforeEach(async () => {
     jest.spyOn(Date, 'now').mockReturnValue(new Date(2026, 9, 4, 12).getTime());
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
-
-    const from = await accountWriteRepository.create({
-      name: 'Checking',
-      accountType: AccountType.ASSET,
-      currencyCode: 'USD',
-      workplaceId: WP,
-    });
-    const to = await accountWriteRepository.create({
-      name: 'Rent',
-      accountType: AccountType.EXPENSE,
-      currencyCode: 'USD',
-      workplaceId: WP,
-    });
-    fromAccountId = from.id;
-    toAccountId = to.id;
+    ({ fromAccountId, toAccountId } = await seedPlannedPaymentWorkplace(WP));
   }, 15000);
 
   afterEach(() => {

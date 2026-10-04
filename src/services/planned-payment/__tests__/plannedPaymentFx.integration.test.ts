@@ -1,5 +1,9 @@
 import { database } from '@/src/data/database/Database';
 import { accountWriteRepository } from '@/src/data/repositories/account';
+import {
+  mockPlannedFxExchangeRates,
+  resetPlannedPaymentDatabase,
+} from '@/src/testing/plannedPaymentFixtures';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
@@ -16,7 +20,9 @@ import {
 } from '../plannedPaymentOrchestration';
 import {
   PlannedPaymentFxReviewRequiredError,
-  resolvePlannedPaymentFxPreview,
+  preparePlannedPaymentFxQuote,
+  readPlannedPaymentFxContext,
+  resolvePlannedPaymentFxAmounts,
   type PlannedPaymentFxReview,
 } from '../plannedPaymentFx';
 import { normalizeToStartOfDay } from '../plannedPaymentRecurrence';
@@ -41,7 +47,7 @@ describe('planned FX posting and review integration', () => {
   let today: number;
 
   beforeEach(async () => {
-    await database.write(() => database.unsafeResetDatabase());
+    await resetPlannedPaymentDatabase();
     today = normalizeToStartOfDay(Date.now());
     fromAccountId = (
       await accountWriteRepository.create({
@@ -59,10 +65,7 @@ describe('planned FX posting and review integration', () => {
         workplaceId: WORKPLACE,
       })
     ).id;
-    jest.spyOn(exchangeRateService, 'getRequiredRate').mockResolvedValue(0.9);
-    jest
-      .spyOn(exchangeRateService, 'getHistoricalRate')
-      .mockResolvedValue({ rate: 0.8, requestedDate: today, effectiveDate: today, source: 'test' });
+    mockPlannedFxExchangeRates(0.9, 0.8, today);
   });
   afterEach(() => jest.restoreAllMocks());
   afterAll(() => rebuildQueueService.stop());
@@ -113,9 +116,12 @@ describe('planned FX posting and review integration', () => {
 
   it('refreshes latest automatic preview at direct posting and keeps the source fixed', async () => {
     const plan = await payment('automatic');
-    expect(
-      (await resolvePlannedPaymentFxPreview(WORKPLACE, plan.id, today)).destinationAmount,
-    ).toBe(90);
+    const context = await readPlannedPaymentFxContext(plan, today);
+    const quote = await preparePlannedPaymentFxQuote(WORKPLACE, plan.id, today, {
+      kind: 'generate',
+    });
+    const amounts = await resolvePlannedPaymentFxAmounts(context!, { posting: false, quote });
+    expect(amounts.destinationAmount).toBe(90);
     jest.mocked(exchangeRateService.getRequiredRate).mockResolvedValue(0.75);
     await postPlannedPaymentOccurrence(WORKPLACE, plan.id, today);
     const { journal, source, destination } = await postedLines(plan);
