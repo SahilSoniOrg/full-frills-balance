@@ -28,7 +28,7 @@ import {
   formatBudgetAmountLabel,
 } from '@/src/features/budget/helpers/budgetSpendingHistory';
 import dayjs from 'dayjs';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { of } from 'rxjs';
 
 export type BudgetEditRouteParams = {
@@ -82,6 +82,8 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
     createEmptyBudgetDraft({ name: pName, amount: pAmount, currencyCode: pCurrency }),
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [leaveAfterSave, setLeaveAfterSave] = useState<(() => void) | null>(null);
+  const isSubmittingRef = useRef(false);
 
   const selectedAccountIds = draft.selectedAccountIds;
   const selectedIds = useMemo(() => new Set(selectedAccountIds), [selectedAccountIds]);
@@ -260,6 +262,7 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
   );
 
   const save = useCallback(async () => {
+    if (isSubmittingRef.current) return;
     if (!draft.name.trim() || !draft.amount || draft.selectedAccountIds.length === 0) {
       throw new Error('Please fill all required fields and select at least one account.');
     }
@@ -267,6 +270,7 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
       throw new Error('Enter a whole number from 1 to 9999.');
     }
 
+    isSubmittingRef.current = true;
     setIsSaving(true);
     try {
       const parsedAmount = parseFloat(draft.amount);
@@ -313,13 +317,16 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
           asset_count: draft.assetAccountIds.length,
         });
       }
-      AppNavigation.back();
-    } finally {
+      setLeaveAfterSave(() => AppNavigation.back);
+    } catch (error) {
+      isSubmittingRef.current = false;
       setIsSaving(false);
+      throw error;
     }
   }, [draft, observedBudget, workplaceId]);
 
   return {
+    leaveAfterSave,
     expenseAccounts,
     liquidAssetAccounts,
     budget: observedBudget,

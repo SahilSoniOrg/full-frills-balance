@@ -42,6 +42,7 @@ function BudgetEditScreen() {
     fingerprint,
     baselineReady: !vm.loading,
     disabled: vm.isSaving,
+    leaveAfterSave: vm.leaveAfterSave,
     title: 'Discard budget changes?',
   });
 

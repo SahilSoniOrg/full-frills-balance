@@ -12,6 +12,7 @@ export default function PlannedPaymentFormScreen() {
     fingerprint,
     baselineReady: vm.isHydrated,
     disabled: vm.isSubmitting,
+    leaveAfterSave: vm.leaveAfterSave,
     title: 'Discard planned payment changes?',
   });
 

@@ -18,7 +18,7 @@ import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { isValidRepeatCount } from '@/src/utils/recurrenceLabels';
 import dayjs from 'dayjs';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 export type { PlannedPaymentFormState };
 
@@ -29,6 +29,8 @@ export type { PlannedPaymentFormState };
  */
 export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [leaveAfterSave, setLeaveAfterSave] = useState<(() => void) | null>(null);
+  const isSubmittingRef = useRef(false);
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const { item } = usePlannedPaymentRecord(workplaceId, id);
 
@@ -62,7 +64,8 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
   const requirementHint = formatRequirementHint(missingFields);
 
   const handleSave = useCallback(async () => {
-    if (!isValid) return;
+    if (!isValid || isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
       const data = {
@@ -109,12 +112,13 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
           is_auto_post: data.isAutoPost,
         });
       }
-      AppNavigation.back();
+      setLeaveAfterSave(() => AppNavigation.back);
     } catch (error) {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
       logger.error('Failed to save planned payment', error);
       toast.error(error instanceof Error ? error.message : 'Failed to save planned payment');
-    } finally {
-      setIsSubmitting(false);
+
     }
   }, [form, id, isValid, item, workplaceId]);
 
@@ -125,6 +129,7 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
     isValid,
     requirementHint,
     isSubmitting,
+    leaveAfterSave,
     handleSave,
   };
 }

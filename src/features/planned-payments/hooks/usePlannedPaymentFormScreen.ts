@@ -159,6 +159,7 @@ export function usePlannedPaymentFormScreen(id?: string) {
     isValid: vm.isValid,
     requirementHint: vm.requirementHint,
     isSubmitting: vm.isSubmitting,
+    leaveAfterSave: vm.leaveAfterSave,
     handleSave: vm.handleSave,
     onBack: AppNavigation.back,
     setField,

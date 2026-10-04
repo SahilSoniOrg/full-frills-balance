@@ -2,7 +2,7 @@ import { AccountFormView } from '@/src/features/accounts/components/AccountFormV
 import { buildAccountFormScreenChrome } from '@/src/features/accounts/helpers/buildAccountFormScreenChrome';
 import { useAccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
 import { useConfirmUnsavedChanges } from '@/src/hooks/useConfirmUnsavedChanges';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 
 export default function AccountCreationScreen() {
   const vm = useAccountFormViewModel();
@@ -47,13 +47,9 @@ export default function AccountCreationScreen() {
     fingerprint,
     baselineReady: !vm.isLoading,
     disabled: vm.isCreating,
+    leaveAfterSave: vm.leaveAfterSave,
     title: vm.isCategory ? 'Discard category changes?' : 'Discard account changes?',
   });
-  const { leaveAfterSave } = vm;
-  // Dispatch only after the saving render has disabled the leave guard.
-  useEffect(() => {
-    leaveAfterSave?.();
-  }, [leaveAfterSave]);
   const chrome = useMemo(
     () => buildAccountFormScreenChrome(vm.heroTitle, vm.formChrome.headerActionItems, guard.onBack),
     [guard.onBack, vm.formChrome.headerActionItems, vm.heroTitle],

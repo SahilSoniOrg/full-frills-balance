@@ -8,6 +8,7 @@ interface UseConfirmUnsavedChangesOptions {
   fingerprint: string;
   baselineReady: boolean;
   disabled?: boolean;
+  leaveAfterSave?: (() => void) | null;
   title?: string;
 }
 
@@ -15,6 +16,7 @@ export function useConfirmUnsavedChanges({
   fingerprint,
   baselineReady,
   disabled = false,
+  leaveAfterSave = null,
   title = 'Discard changes?',
 }: UseConfirmUnsavedChangesOptions) {
   const navigation = useNavigation();
@@ -40,16 +42,9 @@ export function useConfirmUnsavedChanges({
     setIsLeaving(true);
   }, []);
 
-  useEffect(() => {
-    if (!isLeaving) return;
-    const action = pendingLeaveActionRef.current;
-    pendingLeaveActionRef.current = null;
-    action?.();
-  }, [isLeaving]);
-
   const requestLeave = useCallback(
     (action: () => void) => {
-      if (!isDirty || disabled) {
+      if (!isDirty || disabled || isLeaving || leaveAfterSave) {
         action();
         return;
       }
@@ -62,14 +57,22 @@ export function useConfirmUnsavedChanges({
         onConfirm: () => leaveWithoutPrompt(action),
       });
     },
-    [disabled, isDirty, leaveWithoutPrompt, title],
+    [disabled, isDirty, isLeaving, leaveAfterSave, leaveWithoutPrompt, title],
   );
 
   const onBack = useCallback(() => requestLeave(AppNavigation.back), [requestLeave]);
 
-  usePreventRemove(isDirty && !disabled && !isLeaving, ({ data }) => {
+  usePreventRemove(isDirty && !disabled && !isLeaving && !leaveAfterSave, ({ data }) => {
     requestLeave(() => navigation.dispatch(data.action));
   });
+
+  // Register the disabled removal guard before dispatching successful saves or
+  // confirmed discards. Router actions may be processed on a later render.
+  useEffect(() => {
+    const action = leaveAfterSave ?? (isLeaving ? pendingLeaveActionRef.current : null);
+    pendingLeaveActionRef.current = null;
+    action?.();
+  }, [isLeaving, leaveAfterSave]);
 
   return { isDirty, hasBaseline: baseline !== null, onBack };
 }
