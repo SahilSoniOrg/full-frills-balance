@@ -319,8 +319,10 @@ Work through this sequence commit-by-commit. Run `bun run verify` (or `bun test`
   - Pass preferences to audit service rather than repository importing preferences.
 - [x] **Step 29:** `refactor(observables): route account queries through ReactiveCacheCoordinator`
   - Eliminate redundant independent subscriptions across `useAccounts`.
-- [ ] **Step 30:** `refactor(a11y): add useReducedMotion guards to 8 Animated files`
-  - Guard `VoiceInputModal`, `ProgressBar`, `Toast`, etc.
+- [x] **Step 30:** `refactor(a11y): add useReducedMotion guards to 8 Animated files`
+  - Guard the remaining runtime animation paths, including `VoiceInputModal`'s visualizer,
+    `SettingsFocusTarget`, `SwipeToRemove`, `Toast`, and account-tree drop feedback.
+  - `ProgressBar` was consolidated in Step 14, and `chrome-motion.ts` contains motion tokens only.
 - [ ] **Step 31:** `chore(architecture): add report-only check-design-system-primitives script`
   - Track raw primitive usage in CI without failing builds.
 
