@@ -9,12 +9,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isDesignSystemUiSource, walkProductionSources } from './lib/source-walk.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_ROOT = path.join(SCRIPT_DIR, '..');
 const SOURCE_ROOTS = ['app', 'src/components', 'src/features'];
 const PRIMITIVES = ['View', 'Text'];
-const SOURCE_FILE_RE = /\.(?:ts|tsx)$/;
 
 function parseArgs(argv) {
   const args = { root: DEFAULT_ROOT };
@@ -26,36 +26,12 @@ function parseArgs(argv) {
   return args;
 }
 
-function normalizePath(value) {
-  return value.split(path.sep).join('/');
-}
-
-function isProductionSource(relativePath) {
-  return (
-    SOURCE_FILE_RE.test(relativePath) &&
-    !relativePath.includes('/__tests__/') &&
-    !/(?:^|\/)__mocks__\//.test(relativePath) &&
-    !/(?:^|\/)(?:test|spec)\.(?:ts|tsx)$/.test(relativePath)
-  );
-}
-
 function collectFiles(root) {
-  const files = [];
-  const walk = directory => {
-    if (!fs.existsSync(directory)) return;
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-      if (['coverage', 'dist', 'dist-e2e', 'node_modules'].includes(entry.name)) continue;
-      const absolutePath = path.join(directory, entry.name);
-      if (entry.isDirectory()) walk(absolutePath);
-      else {
-        const relativePath = normalizePath(path.relative(root, absolutePath));
-        if (isProductionSource(relativePath)) files.push({ absolutePath, relativePath });
-      }
-    }
-  };
-
-  for (const sourceRoot of SOURCE_ROOTS) walk(path.join(root, sourceRoot));
-  return files.sort((left, right) => left.relativePath.localeCompare(right.relativePath));
+  return walkProductionSources(root, {
+    sourceRoots: SOURCE_ROOTS,
+    sort: true,
+    isSource: isDesignSystemUiSource,
+  });
 }
 
 function importedPrimitives(source) {
@@ -73,7 +49,8 @@ function importedPrimitives(source) {
 }
 
 export function collectPrimitiveUsage(root = DEFAULT_ROOT) {
-  const files = collectFiles(root).flatMap(file => {
+  const scanned = collectFiles(root);
+  const files = scanned.flatMap(file => {
     const primitives = importedPrimitives(fs.readFileSync(file.absolutePath, 'utf8'));
     return primitives.length > 0 ? [{ file: file.relativePath, primitives }] : [];
   });
@@ -87,7 +64,7 @@ export function collectPrimitiveUsage(root = DEFAULT_ROOT) {
     ]),
   );
 
-  return { files, filesScanned: collectFiles(root).length, counts };
+  return { files, filesScanned: scanned.length, counts };
 }
 
 export function formatReport(report) {

@@ -27,25 +27,10 @@ export const tabs = {
   settings: 'tab-settings',
 } as const;
 
-export const journal = {
-  screen: 'journal-entry-screen',
-  amountInput: 'amount-input',
-  descriptionInput: 'journal-description-input',
-  submitFooter: 'submit-footer-button',
-  browseDestination: 'journal-browse-destination',
-  browseSource: 'journal-browse-source',
-  accountPickerSearch: 'account-picker-search-input',
-  browseForRole: (role: 'destination' | 'source') => `journal-browse-${role}`,
-} as const;
-
 export const accounts = {
   fab: 'fab-button',
   tabAccounts: 'tab-item-accounts',
   submitFooter: 'submit-footer-button',
-} as const;
-
-export const commitments = {
-  tabs: 'commitments-tabs',
 } as const;
 
 export const budgets = {

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { walkProductionSources } from './lib/source-walk.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ALLOWED_RAW_ADAPTER_FILES = new Set([
@@ -11,30 +12,8 @@ const ALLOWED_RAW_ADAPTER_FILES = new Set([
   'src/data/repositories/raw/RawSqlExecutor.ts',
 ]);
 
-function isProductionSource(relativePath) {
-  return (
-    /\.(?:ts|tsx)$/.test(relativePath) &&
-    !relativePath.includes('/__tests__/') &&
-    !/(?:\.test|\.spec)\.(?:ts|tsx)$/.test(relativePath)
-  );
-}
-
 function sourceFiles(root) {
-  const files = [];
-  const walk = directory => {
-    if (!fs.existsSync(directory)) return;
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-      if (['coverage', 'dist', 'dist-e2e', 'node_modules'].includes(entry.name)) continue;
-      const absolutePath = path.join(directory, entry.name);
-      if (entry.isDirectory()) walk(absolutePath);
-      else {
-        const relativePath = path.relative(root, absolutePath).split(path.sep).join('/');
-        if (isProductionSource(relativePath)) files.push({ absolutePath, relativePath });
-      }
-    }
-  };
-  for (const sourceRoot of ['app', 'src']) walk(path.join(root, sourceRoot));
-  return files;
+  return walkProductionSources(root);
 }
 
 function moduleBaseName(moduleName) {

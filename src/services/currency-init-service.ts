@@ -83,14 +83,6 @@ export class CurrencyInitService {
 
     return this.initPromise;
   }
-
-  /**
-   * Reset internal state for testing purposes only.
-   * @internal
-   */
-  resetForTesting() {
-    this.initPromise = null;
-  }
 }
 
 // Export singleton instance

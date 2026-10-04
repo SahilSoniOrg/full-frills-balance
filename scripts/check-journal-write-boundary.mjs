@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { walkProductionSources } from './lib/source-walk.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const REMOVED_JOURNAL_WRITE_MODULES = new Set([
@@ -23,34 +24,11 @@ const REMOVED_JOURNAL_WRITE_FILES = [
   'src/services/ledger/prepareJournalData.ts',
 ];
 
-function isSource(relativePath) {
-  return (
-    /\.(?:ts|tsx)$/.test(relativePath) &&
-    !relativePath.includes('/__tests__/') &&
-    !/(?:\.test|\.spec)\.(?:ts|tsx)$/.test(relativePath) &&
-    !/(?:TestHelpers)\.(?:ts|tsx)$/.test(relativePath) &&
-    !relativePath.startsWith('src/testing/')
-  );
-}
-
 function sourceFiles(root) {
-  const files = [];
-  for (const sourceRoot of ['app', 'src']) {
-    const walk = directory => {
-      if (!fs.existsSync(directory)) return;
-      for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-        if (['coverage', 'dist', 'dist-e2e', 'node_modules'].includes(entry.name)) continue;
-        const absolutePath = path.join(directory, entry.name);
-        if (entry.isDirectory()) walk(absolutePath);
-        else {
-          const relativePath = path.relative(root, absolutePath).split(path.sep).join('/');
-          if (isSource(relativePath)) files.push({ absolutePath, relativePath });
-        }
-      }
-    };
-    walk(path.join(root, sourceRoot));
-  }
-  return files;
+  return walkProductionSources(root, {
+    excludePrefixes: ['src/testing/'],
+    excludeTestHelperFiles: true,
+  });
 }
 
 function moduleBaseName(moduleName) {

@@ -15,6 +15,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import ts from 'typescript';
+import { walkProductionSources } from './lib/source-walk.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_ROOT = path.join(SCRIPT_DIR, '..');
@@ -86,17 +87,6 @@ function parseArgs(argv) {
   return args;
 }
 
-function normalizePath(value) {
-  return value.split(path.sep).join('/');
-}
-
-function isProductionSource(relativePath) {
-  if (!/\.(?:ts|tsx)$/.test(relativePath)) return false;
-  return !(
-    relativePath.includes('/__tests__/') || /\.(?:test|spec)\.(?:ts|tsx)$/.test(relativePath)
-  );
-}
-
 function isServiceOrCommandSource(relativePath) {
   return (
     relativePath.startsWith('src/services/') ||
@@ -110,21 +100,7 @@ function isModelAccessSeam(relativePath) {
 }
 
 function collectFiles(root) {
-  const files = [];
-  const walk = directory => {
-    if (!fs.existsSync(directory)) return;
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-      if (['coverage', 'dist', 'dist-e2e', 'node_modules'].includes(entry.name)) continue;
-      const absolutePath = path.join(directory, entry.name);
-      if (entry.isDirectory()) walk(absolutePath);
-      else {
-        const relativePath = normalizePath(path.relative(root, absolutePath));
-        if (isProductionSource(relativePath)) files.push({ absolutePath, relativePath });
-      }
-    }
-  };
-  for (const sourceRoot of SOURCE_ROOTS) walk(path.join(root, sourceRoot));
-  return files.sort((left, right) => left.relativePath.localeCompare(right.relativePath));
+  return walkProductionSources(root, { sourceRoots: SOURCE_ROOTS, sort: true });
 }
 
 function lineOf(sourceFile, node) {

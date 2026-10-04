@@ -10,20 +10,13 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { walkProductionSources } from './lib/source-walk.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const BASELINE_PATH = path.join(__dirname, 'unsafe-type-baseline.json');
 
 const SCAN_ROOTS = ['src', 'app'];
-const SKIP_DIR_NAMES = new Set([
-  '__tests__',
-  'node_modules',
-  'dist',
-  'dist-e2e',
-  'coverage',
-]);
-const SKIP_FILE_RE = /\.(test|spec)\.(ts|tsx)$/;
 
 /** Each match increments the budget by one (line may contribute multiple). */
 const PATTERNS = [
@@ -32,29 +25,6 @@ const PATTERNS = [
   { id: 'ts_ignore', re: /@ts-(?:ignore|expect-error)\b/g },
   { id: 'double_cast', re: /\bas\s+unknown\s+as\b/g },
 ];
-
-function isProductionSource(absPath) {
-  const rel = path.relative(ROOT, absPath);
-  if (!rel.endsWith('.ts') && !rel.endsWith('.tsx')) return false;
-  if (SKIP_FILE_RE.test(rel)) return false;
-  const parts = rel.split(path.sep);
-  if (parts.some(p => SKIP_DIR_NAMES.has(p))) return false;
-  return true;
-}
-
-function walk(dir, out) {
-  if (!fs.existsSync(dir)) return;
-  for (const name of fs.readdirSync(dir)) {
-    const abs = path.join(dir, name);
-    const st = fs.statSync(abs);
-    if (st.isDirectory()) {
-      if (SKIP_DIR_NAMES.has(name)) continue;
-      walk(abs, out);
-      continue;
-    }
-    if (isProductionSource(abs)) out.push(abs);
-  }
-}
 
 function countFile(filePath) {
   const text = fs.readFileSync(filePath, 'utf8');
@@ -70,10 +40,9 @@ function countFile(filePath) {
 }
 
 function collect() {
-  const files = [];
-  for (const root of SCAN_ROOTS) {
-    walk(path.join(ROOT, root), files);
-  }
+  const files = walkProductionSources(ROOT, { sourceRoots: SCAN_ROOTS }).map(
+    file => file.absolutePath,
+  );
   const byPattern = Object.fromEntries(PATTERNS.map(p => [p.id, 0]));
   const filesWithHits = [];
   let total = 0;
