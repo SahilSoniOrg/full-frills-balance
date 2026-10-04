@@ -2,7 +2,7 @@
 
 Review the finished redesign on the single local branch `codex/commitments-redesign`. Delivery is local: no push or pull requests are requested.
 
-The verified application commit is `8dcba1345dc0d75520019d144488bf365a620160`. The native audit and verification evidence are recorded in commit `38c195dd`. These identify the reviewed application and its evidence; subsequent documentation changes do not replace the verified application commit.
+The five feature commits below remain in the branch history. Commit `18aacf59` applies the requested visual polish. The full `bun run verify` passed after that commit with 478 suites and 3,021 tests; the post-polish result is recorded in [VERIFICATION.md](VERIFICATION.md). The earlier native audit and verification evidence are recorded in commit `38c195dd`.
 
 ## Preserved application history
 
@@ -18,7 +18,7 @@ All five application commits remain in the integration history, in this order:
 
 ## Recorded verification
 
-[`VERIFICATION.md`](VERIFICATION.md) records `bun run verify` exiting 0 on October 4, 2026 at the application commit above: 477/477 suites and 3,010/3,010 tests passed, along with architecture/privacy checks, app and E2E typechecks, coverage and lint. Lint reported zero errors and the existing dependency warning in `useJournalSuggestions.ts:78`. The captured run is `/tmp/commitments-luna-final-verify.log`. This document records that completed run; verification was not rerun for the local delivery update.
+[`VERIFICATION.md`](VERIFICATION.md) records both the original source verification and the post-polish `bun run verify`. The four refreshed native spot checks are available in the workspace at `output/commitments-redesign-native/polish-{budgets,planned,budget-detail,planned-detail}.png`; fixture data was used.
 
 The earlier data checkpoint passed 468 suites / 2,961 tests. The verification record retains the October 2 behavior checks and their service, hook and component coverage boundaries.
 

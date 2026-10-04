@@ -1,5 +1,9 @@
 # Commitments redesign final verification
 
+## Post-polish verification
+
+After the visual polish commit `18aacf59`, `bun run verify` passed on the final application tree: 478/478 suites and 3,021/3,021 tests, plus architecture/privacy checks, both typechecks, coverage and lint. Lint had zero errors and the existing dependency warning in `src/features/journal/hooks/useJournalSuggestions.ts:78`. The captured run is `/tmp/commitments-polish-verify.log`. The final History-row presentation test was rerun afterward: 17/17 tests passed.
+
 Verified 2026-10-04 03:41 IST against `8dcba1345dc0d75520019d144488bf365a620160`. HEAD was unchanged during verification.
 
 ## Result

@@ -6,7 +6,7 @@ October 4, 2026. Implements the approved brief in `docs/designs/commitments-rede
 
 The finished redesign is delivered on one local branch, `codex/commitments-redesign`, for product review. The verified application commit is `8dcba1345dc0d75520019d144488bf365a620160`; evidence commit `38c195dd` records the native audit and verification package. See [LOCAL-REVIEW.md](LOCAL-REVIEW.md) for the five preserved application commits, verification proof and local gallery. No push or pull requests are requested.
 
-Each application checkpoint typechecked independently. Data was verified before the UI work: 468 suites / 2,961 tests. Final source verification: `bun run verify` passed 477 suites / 3,010 tests, coverage, architecture/privacy checks, application and E2E typechecks, and lint. Lint reported only the existing dependency warning in `useJournalSuggestions.ts`. Scoped lint and whitespace checks passed. The exact completed run and coverage boundaries are preserved in [VERIFICATION.md](VERIFICATION.md).
+Each application checkpoint typechecked independently. Data was verified before the UI work: 468 suites / 2,961 tests. After the visual polish, `bun run verify` passed 478 suites / 3,021 tests, coverage, architecture/privacy checks, application and E2E typechecks, and lint. Lint reported only the existing dependency warning in `useJournalSuggestions.ts`. Scoped lint and whitespace checks passed. The exact completed run and coverage boundaries are preserved in [VERIFICATION.md](VERIFICATION.md).
 
 The local audit contains 53 files: 49 native screenshots (40 matrix, five edge-state and four scrolled captures) and four Markdown documents. All screenshot links below refer to files in this directory.
 
