@@ -303,7 +303,7 @@ Work through this sequence commit-by-commit. Run `bun run verify` (or `bun test`
   - Eliminate dead routes (`account-reorder`, `manage-hierarchy`) and register `(tabs)/*`.
 - [x] **Step 22:** `feat(forms): add usePreventRemove to 6 modal form flows`
   - Protect budgets, planned payments, SMS rules, and account forms from swipe-down data loss.
-- [ ] **Step 23:** `feat(reports): introduce clean toggle/link for Reports V2 (preserving V1)`
+- [x] **Step 23:** `feat(reports): introduce clean toggle/link for Reports V2 (preserving V1)`
   - Keep Reports V1 active; expose V2 cleanly via preference or entry point.
 - [ ] **Step 24:** `chore(architecture): add check-route-registry-agreement script`
   - Add CI check validating `app/` routes against `routeManifest.ts`.
