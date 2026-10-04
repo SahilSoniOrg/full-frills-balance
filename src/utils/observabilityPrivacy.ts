@@ -369,6 +369,7 @@ const FEATURE_ACTIONS: Record<string, ReadonlySet<string>> = {
     'change_safe_to_spend_days',
     'toggle_safe_to_spend_chart',
     'toggle_reduce_motion',
+    'toggle_reports_v2',
   ]),
   onboarding: new Set(['completed', 'step_continue']),
   ai: new Set([

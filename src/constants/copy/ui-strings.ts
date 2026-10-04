@@ -525,6 +525,11 @@ export const UI_STRINGS = {
       title: 'Safe to Spend Chart',
       description: 'Show the projection line chart on the dashboard',
     },
+    reportsV2: {
+      title: 'Reports V2 preview',
+      description: 'Show the newer reports experience and its entry point.',
+      open: 'Open Reports V2',
+    },
     reduceMotion: {
       title: 'Reduce motion',
       description: 'Minimize animations on this device. System accessibility settings still apply.',

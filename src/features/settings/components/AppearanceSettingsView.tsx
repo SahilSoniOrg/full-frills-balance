@@ -6,9 +6,11 @@ import { FontSelectorView } from '@/src/features/settings/components/FontSelecto
 import { HourCycleSelectorView } from '@/src/features/settings/components/HourCycleSelectorView';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
+import { SettingsSearchMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import { SettingsToggleItem } from '@/src/features/settings/components/SettingsToggleItem';
 import { ThemeSelectorView } from '@/src/features/settings/components/ThemeSelectorView';
 import type { AppearanceSettingsViewModel } from '@/src/features/settings/hooks/useAppearanceSettingsViewModel';
+import { AppNavigation } from '@/src/utils/navigation';
 
 interface AppearanceSettingsViewProps {
   vm: AppearanceSettingsViewModel;
@@ -80,6 +82,24 @@ export function AppearanceSettingsView({ vm }: AppearanceSettingsViewProps) {
             onValueChange={vm.onToggleSafeToSpendChart}
             testID="settings-sts-chart-toggle"
           />
+          <SettingsToggleItem
+            searchId="reports-v2-preview"
+            leftIcon={Icon.BarChart}
+            title={AppConfig.strings.settings.reportsV2.title}
+            description={AppConfig.strings.settings.reportsV2.description}
+            value={vm.reportsV2Enabled}
+            onValueChange={vm.onToggleReportsV2}
+            testID="settings-reports-v2-toggle"
+          />
+          {vm.reportsV2Enabled ? (
+            <SettingsSearchMenuItem
+              searchId="reports-v2-open"
+              leftIcon={Icon.BarChart}
+              title={AppConfig.strings.settings.reportsV2.open}
+              hasArrow
+              onPress={AppNavigation.toReportsV2}
+            />
+          ) : null}
         </SettingsMenu>
       </Stack>
     </SettingsLayout>
