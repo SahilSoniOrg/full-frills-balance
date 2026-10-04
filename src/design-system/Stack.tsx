@@ -1,13 +1,13 @@
 import { SpacingKey } from '@/src/constants/design-tokens';
 import React, { forwardRef } from 'react';
-import { Box, type BoxBaseProps } from './Box';
+import { Box, type BoxBaseProps, type BoxViewProps } from './Box';
 import { extractBoxProps } from './utils';
 import { View } from 'react-native';
 
 type StackSpacingProps =
   { space?: SpacingKey | number; gap?: never } | { gap?: SpacingKey | number; space?: never };
 
-export type StackProps = Omit<BoxBaseProps, 'gap'> &
+export type StackProps = Omit<BoxViewProps, 'gap' | 'flexDirection'> &
   StackSpacingProps & {
     align?: BoxBaseProps['alignItems'];
     justify?: BoxBaseProps['justifyContent'];
