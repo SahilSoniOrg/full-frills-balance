@@ -20,7 +20,65 @@ const actions = {
   onDeviceSettings: jest.fn(),
 };
 
+const IOS_FOCUS_TARGET_IDS = [
+  'profile-name',
+  'devices',
+  'workplace',
+  'currency',
+  'safe-to-spend-forecast',
+  'notifications',
+  'share-format',
+  'appearance',
+  'mode',
+  'typography',
+  'time-format',
+  'compact-account-picker',
+  'account-statistics',
+  'safe-to-spend-chart',
+  'reduce-motion',
+  'privacy-security',
+  'widget-privacy',
+  'app-lock',
+  'privacy-notice',
+  'data-export',
+  'data-import',
+  'audit-log',
+  'integrity',
+  'journal-balance-audit',
+  'cleanup',
+  'reset',
+  'about-support',
+  'release-notes',
+];
+
+const ANDROID_FOCUS_TARGET_IDS = [
+  ...IOS_FOCUS_TARGET_IDS,
+  'sms-automation-import',
+  'sms-auto-post-enabled',
+  'sms-review-notifications',
+  'sms-notification-details',
+  'sms-inbox',
+  'sms-rules',
+];
+
 describe('settings search catalog', () => {
+  it('enumerates every search focus id with a rendered settings target', () => {
+    const originalPlatformOS = Platform.OS;
+
+    for (const [platform, expectedFocusIds] of [
+      ['ios', IOS_FOCUS_TARGET_IDS],
+      ['android', ANDROID_FOCUS_TARGET_IDS],
+    ] as const) {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: platform });
+      const catalogFocusIds = createSettingsSearchCatalog(actions).map(item => item.focusId);
+
+      expect(new Set(catalogFocusIds).size).toBe(expectedFocusIds.length);
+      expect(new Set(catalogFocusIds)).toEqual(new Set(expectedFocusIds));
+    }
+
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatformOS });
+  });
+
   it('matches titles, descriptions, and aliases', () => {
     const catalog = createSettingsSearchCatalog(actions);
 
