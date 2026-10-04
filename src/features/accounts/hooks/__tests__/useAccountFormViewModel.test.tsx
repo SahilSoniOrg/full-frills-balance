@@ -1,5 +1,4 @@
 import { AppearancePickerModal } from '@/src/components/overlays/AppearancePickerModal';
-import { AccountSelectionRow } from '@/src/components/accounts/AccountSelectionRow';
 import { Keyboard } from 'react-native';
 import EventEmitter from 'react-native/Libraries/vendor/emitter/EventEmitter';
 import { AccountFormView } from '@/src/features/accounts/components/AccountFormView';
@@ -268,9 +267,16 @@ describe('account kind view model with the real draft reducer', () => {
     const { result } = renderHook(useAccountFormViewModel);
     act(() => result.current.setAccountName('Credit card'));
     expect(result.current.isCategory).toBe(true);
-    expect(result.current.selectedIcon).toBe(Icon.Tag);
+    expect(result.current.selectedIcon).toBe(
+      type === AccountType.INCOME ? Icon.Briefcase : Icon.Coffee,
+    );
     expect(result.current.kindSuggestion).toBeNull();
-    expect(result.current.carouselKinds).toEqual([]);
+    expect(result.current.carouselKinds.length).toBeGreaterThan(0);
+    expect(
+      result.current.carouselKinds.every(
+        kind => kind.type === AccountType.INCOME || kind.type === AccountType.EXPENSE,
+      ),
+    ).toBe(true);
     expect(result.current.submitLabel).toBe(AppConfig.strings.accounts.categoryForm.createCategory);
     act(() =>
       result.current.setAccountKind({
@@ -360,12 +366,13 @@ describe('account form UI over its view model', () => {
     expect(screen.getByText('Shared draft note')).toBeTruthy();
   });
 
-  it('renders categories through their existing selectors and notes field', () => {
+  it('renders categories through the shared carousel and compact form rows', () => {
     mockPathname = '/category-creation';
     const screen = render(<AccountFormHarness />);
     expect(screen.queryByTestId('account-kind')).toBeNull();
-    expect(screen.getByTestId('account-subtype-option-FOOD')).toBeTruthy();
-    expect(screen.getByText('Notes')).toBeTruthy();
+    expect(screen.getByTestId('category-kind')).toBeTruthy();
+    expect(screen.getByTestId('category-note')).toBeTruthy();
+    expect(screen.queryByTestId('hero-amount-input')).toBeNull();
   });
 });
 
@@ -376,29 +383,40 @@ describe('category create/edit regressions', () => {
     const screen = render(<AccountFormHarness />);
     expect(screen.queryByTestId('hero-amount-input')).toBeNull();
     expect(screen.queryByTestId('account-kind')).toBeNull();
-    expect(screen.getByTestId('account-type-option-INCOME')).toBeTruthy();
-    expect(screen.getByTestId('account-type-option-EXPENSE')).toBeTruthy();
-    expect(screen.queryByTestId('account-type-option-ASSET')).toBeNull();
+    expect(screen.getByTestId('category-kind')).toBeTruthy();
+    expect(
+      screen
+        .UNSAFE_getByType(GlyphCarousel)
+        .props.items.every(
+          (kind: { type: AccountType }) =>
+            kind.type === AccountType.INCOME || kind.type === AccountType.EXPENSE,
+        ),
+    ).toBe(true);
     fireEvent.changeText(screen.getByTestId('hero-name-input'), 'My category');
+    fireEvent.press(screen.getByTestId('category-note'));
     fireEvent.changeText(
       screen.getByPlaceholderText('Add any additional notes...'),
       'Category note',
     );
-    fireEvent.press(screen.getByText('USD $'));
+    fireEvent.press(screen.getByTestId('account-note-done'));
+    fireEvent.press(screen.getByTestId('category-currency'));
     fireEvent.press(screen.getByText('Euro'));
-    expect(screen.getByText('EUR €')).toBeTruthy();
+    expect(screen.getByText('EUR')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('category-kind-caption-action'));
     fireEvent.press(
       screen.getByTestId(
-        type === AccountType.INCOME ? 'account-type-option-EXPENSE' : 'account-type-option-INCOME',
+        type === AccountType.INCOME
+          ? 'account-all-kinds-EXPENSE-HOUSING'
+          : 'account-all-kinds-INCOME-SALARY',
       ),
     );
     expect(screen.getByTestId('hero-name-input').props.value).toBe('My category');
-    expect(screen.getByPlaceholderText('Add any additional notes...').props.value).toBe(
-      'Category note',
-    );
+    expect(screen.getByText('Category note')).toBeTruthy();
     fireEvent.press(screen.getByTestId('category-appearance'));
     fireEvent.press(screen.getByLabelText(`Select icon ${Icon.Bank}`));
     fireEvent.press(screen.getByText('Done'));
+    expect(screen.UNSAFE_getByType(AppearancePickerModal).props.selectedIcon).toBe(Icon.Bank);
+    act(() => screen.UNSAFE_getByType(GlyphCarousel).props.onSelect('expense_food'));
     expect(screen.UNSAFE_getByType(AppearancePickerModal).props.selectedIcon).toBe(Icon.Bank);
     fireEvent.press(screen.getByTestId('submit-footer-button'));
     expect(mockOnSave).toHaveBeenCalledTimes(1);
@@ -428,16 +446,16 @@ describe('category create/edit regressions', () => {
     ];
     const screen = render(<AccountFormHarness />);
     expect(screen.getByTestId('hero-name-input').props.value).toBe('Salary');
-    expect(screen.getByText('EUR (Locked)')).toBeTruthy();
-    expect(screen.queryByText('EUR €')).toBeNull();
-    fireEvent.press(screen.getByText('EUR (Locked)'));
+    expect(screen.getByText('EUR')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('category-currency'));
     expect(screen.getByText(AppConfig.strings.accounts.form.currencyLockedTooltip)).toBeTruthy();
-    fireEvent.press(screen.getByText(AppConfig.strings.common.ok));
+    fireEvent.press(screen.getByText('Done'));
     expect(screen.UNSAFE_getByType(AppearancePickerModal).props.selectedIcon).toBe(Icon.Briefcase);
-    act(() => screen.UNSAFE_getByType(AccountSelectionRow).props.onPress());
+    fireEvent.press(screen.getByTestId('category-parent'));
     fireEvent.press(screen.getByText('Parent income'));
-    expect(screen.UNSAFE_getByType(AccountSelectionRow).props.selectedAccountId).toBe(
-      asAccountId('parent'),
+    expect(screen.getByTestId('category-parent')).toHaveProp(
+      'accessibilityLabel',
+      expect.stringContaining('Parent income'),
     );
     fireEvent.changeText(screen.getByTestId('hero-name-input'), 'Updated salary');
     expect(screen.getByText(AppConfig.strings.accounts.categoryForm.saveChanges)).toBeTruthy();
@@ -462,8 +480,12 @@ it('keeps category type/subtype locked when editing a parent category', () => {
     orderNum: 0,
   };
   const screen = render(<AccountFormHarness />);
-  expect(screen.getByTestId('account-type-option-INCOME')).toBeDisabled();
-  expect(screen.getByTestId('account-subtype-option-HOUSING')).toBeDisabled();
+  expect(
+    screen.UNSAFE_getByType(GlyphCarousel).props.items.map((kind: { key: string }) => kind.key),
+  ).toEqual(['expense_food']);
+  expect(screen.queryByTestId('category-kind-caption-action')).toBeNull();
+  act(() => screen.UNSAFE_getByType(GlyphCarousel).props.onSelect('income_salary'));
+  expect(screen.UNSAFE_getByType(GlyphCarousel).props.selectedKey).toBe('expense_food');
 });
 
 it('keeps a parent account kind locked while retaining appearance customization', () => {

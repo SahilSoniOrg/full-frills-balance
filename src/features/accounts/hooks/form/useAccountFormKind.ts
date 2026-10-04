@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
+import { AccountType } from '@/src/types/enums';
 import { accountFormStrings as copy } from '@/src/constants/copy/domains/accountFormStrings';
 import {
   getAccountCarouselKinds,
   getAccountKind,
-  isCarouselAccountType,
   resolveAccountKindPresentation,
   suggestAccountKind,
   type AccountKind,
@@ -25,7 +25,7 @@ export interface AccountFormKindApi {
   selectedKindKey: string | null;
   balanceLabel: string;
   submitLabel: string;
-  typeTone: 'asset' | 'liability' | 'neutral';
+  typeTone: AccountKind['tone'] | 'neutral';
   detailsSection: 'credit_card' | 'loan' | null;
 }
 
@@ -49,7 +49,7 @@ export function useAccountFormKind(args: {
     suggestion.type === dismissedKindSuggestion.type &&
     suggestion.subtype === dismissedKindSuggestion.subtype;
   const kindSuggestion =
-    isCarouselAccountType(accountType) &&
+    (accountType === AccountType.ASSET || accountType === AccountType.LIABILITY) &&
     !kindTouched &&
     !isEditMode &&
     !hasSubtypeRouteParam &&

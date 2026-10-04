@@ -54,7 +54,9 @@ describe('accountFormService', () => {
         workplaceCurrency,
       );
       expect(defaults.accountSubtype).toBe(subtype);
-      expect(defaults.selectedIcon).toBe(Icon.Tag);
+      expect(defaults.selectedIcon).toBe(
+        typeParam === AccountType.INCOME ? Icon.Briefcase : Icon.Coffee,
+      );
       expect(defaults.selectedCurrency).toBe(workplaceCurrency);
     });
 

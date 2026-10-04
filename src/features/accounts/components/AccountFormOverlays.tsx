@@ -19,6 +19,7 @@ export function AccountFormOverlays(vm: AccountFormViewModel) {
     <>
       <AccountKindsSheet
         visible={vm.activeSheet === 'kinds'}
+        isCategory={vm.isCategory}
         onSelect={vm.setAccountKind}
         onClose={close}
       />

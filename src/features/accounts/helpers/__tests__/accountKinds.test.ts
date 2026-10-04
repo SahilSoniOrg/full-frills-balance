@@ -1,6 +1,7 @@
 import { AccountSubtype, AccountType } from '@/src/types/enums';
 import {
   ACCOUNT_KINDS,
+  CATEGORY_KINDS,
   DEFAULT_ACCOUNT_KIND,
   getAccountCarouselKinds,
   resolveAccountKindPresentation,
@@ -111,8 +112,22 @@ describe('nonstandard carousel kinds', () => {
       6,
     );
   });
-  it('does not expose kinds for category or equity forms', () => {
-    expect(getAccountCarouselKinds(AccountType.EXPENSE, AccountSubtype.FOOD)).toEqual([]);
+  it('keeps the category carousel separate from financial accounts and equity', () => {
+    expect(getAccountCarouselKinds(AccountType.EXPENSE, AccountSubtype.FOOD)).toEqual(
+      CATEGORY_KINDS,
+    );
+    expect(getAccountCarouselKinds(AccountType.INCOME, AccountSubtype.SALARY)).toEqual(
+      CATEGORY_KINDS,
+    );
+    expect(
+      CATEGORY_KINDS.every(
+        kind => kind.type === AccountType.EXPENSE || kind.type === AccountType.INCOME,
+      ),
+    ).toBe(true);
+    expect(new Set(CATEGORY_KINDS.map(kind => kind.key)).size).toBe(CATEGORY_KINDS.length);
+    expect(
+      CATEGORY_KINDS.filter(kind => kind.subtype === AccountSubtype.TAX).map(kind => kind.key),
+    ).toEqual(['expense_tax', 'income_tax']);
     expect(getAccountCarouselKinds(AccountType.EQUITY, AccountSubtype.OPENING_BALANCE)).toEqual([]);
   });
   it('uses type-specific keys for the subtype shared by assets and liabilities', () => {

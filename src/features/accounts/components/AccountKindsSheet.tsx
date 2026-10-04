@@ -13,10 +13,12 @@ export function AccountKindsSheet({
   visible,
   onSelect,
   onClose,
+  isCategory = false,
 }: {
   visible: boolean;
   onSelect: (kind: SuggestedAccountKind) => void;
   onClose: () => void;
+  isCategory?: boolean;
 }) {
   return (
     <ModalSurface
@@ -29,7 +31,10 @@ export function AccountKindsSheet({
       fixedHeight={false}
       maxHeightPercent={85}
     >
-      {[AccountType.ASSET, AccountType.LIABILITY].map(type => (
+      {(isCategory
+        ? [AccountType.EXPENSE, AccountType.INCOME]
+        : [AccountType.ASSET, AccountType.LIABILITY]
+      ).map(type => (
         <SectionGroup
           key={type}
           type={type}
@@ -53,7 +58,15 @@ function SectionGroup({
   return (
     <>
       <SectionLabel
-        label={type === AccountType.ASSET ? copy.assetCaption : copy.liabilityCaption}
+        label={
+          type === AccountType.INCOME
+            ? copy.incomeCategory
+            : type === AccountType.EXPENSE
+              ? copy.expenseCategory
+              : type === AccountType.ASSET
+                ? copy.assetCaption
+                : copy.liabilityCaption
+        }
       />
       {ACCOUNT_SUBTYPES_BY_TYPE[type].map(subtype => {
         const kind = getAccountKind(type, subtype)!;

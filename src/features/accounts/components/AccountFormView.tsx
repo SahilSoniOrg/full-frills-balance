@@ -18,18 +18,16 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AccountFormOverlays } from './AccountFormOverlays';
-import { CategoryAccountFormView } from './CategoryAccountFormView';
 import { AccountMetadataSection } from './metadata/AccountMetadataSection';
 
 export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavChrome }) {
   const { theme } = useTheme();
-  if (vm.isCategory) return <CategoryAccountFormView {...vm} />;
+  const entity = vm.isCategory ? 'category' : 'account';
   return (
     <EntityFormScreen
       chrome={vm.chrome}
       submitAction={{ onPress: vm.onSave, label: vm.submitLabel, disabled: vm.isSaveDisabled }}
       scrollProps={{ keyboardShouldPersistTaps: 'handled' }}
-      contentContainerStyle={{ paddingBottom: Spacing.lg }}
     >
       <View>
         {vm.selectedKindKey ? (
@@ -42,7 +40,8 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
                 ? undefined
                 : { label: copy.allKinds, onPress: () => vm.setActiveSheet('kinds') }
             }
-            testID="account-kind"
+            testID={`${entity}-kind`}
+            accessibilityLabel={vm.isCategory ? copy.categoryKind : undefined}
           />
         ) : (
           <View style={{ alignItems: 'center', paddingVertical: Spacing.xl }}>
@@ -53,8 +52,8 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
           style={styles.pencilTarget}
           onPress={() => vm.setIsAppearancePickerVisible(true)}
           accessibilityRole="button"
-          accessibilityLabel={copy.appearance}
-          testID="account-appearance"
+          accessibilityLabel={vm.isCategory ? copy.categoryAppearance : copy.appearance}
+          testID={`${entity}-appearance`}
         >
           <View
             style={[
@@ -70,7 +69,11 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
         <UnderlineNameField
           value={vm.accountName}
           onChangeText={vm.setAccountName}
-          placeholder={copy.namePlaceholder}
+          placeholder={
+            vm.isCategory
+              ? AppConfig.strings.accounts.categoryForm.categoryNamePlaceholder
+              : copy.namePlaceholder
+          }
           autoFocus={!vm.isEditMode}
           maxLength={AppConfig.input.maxAccountNameLength}
           testID="hero-name-input"
@@ -104,7 +107,7 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
           title={AppConfig.strings.accounts.selectCurrency}
           value={vm.selectedCurrency}
           onPress={() => vm.setActiveSheet(vm.isEditMode ? 'currency-info' : 'currency')}
-          testID="account-currency"
+          testID={`${entity}-currency`}
         />
       )}
       {vm.formError ? (
@@ -127,12 +130,12 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
       </View>
       <FormRow
         icon={Icon.Hierarchy}
-        title={copy.parent}
+        title={vm.isCategory ? copy.categoryParent : copy.parent}
         value={vm.parentAccountName}
         placeholder={copy.none}
         onPress={() => vm.setIsParentPickerVisible(true)}
         onClear={vm.parentAccountId ? () => vm.setParentAccountId(EMPTY_ACCOUNT_ID) : undefined}
-        testID="account-parent"
+        testID={`${entity}-parent`}
       />
       <FormRow
         icon={Icon.Document}
@@ -142,7 +145,7 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
         onPress={() => vm.setActiveSheet('note')}
         onClear={vm.metadata.notes ? () => vm.metadata.setNotes('') : undefined}
         showSeparator={false}
-        testID="account-note"
+        testID={`${entity}-note`}
       />
       <AccountFormOverlays {...vm} />
     </EntityFormScreen>

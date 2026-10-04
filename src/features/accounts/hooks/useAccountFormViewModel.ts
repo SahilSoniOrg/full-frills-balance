@@ -307,7 +307,9 @@ export function useAccountFormViewModel(): AccountFormViewModel {
       currencies.find(currency => currency.code === core.selectedCurrency)?.precision ?? 2,
     submitLabel: core.isCategory ? saveLabel : kind.submitLabel,
     heroTitle:
-      !isEditMode && kind.kindLabel ? copy.newKind(kind.kindLabel.toLowerCase()) : heroTitle,
+      !core.isCategory && !isEditMode && kind.kindLabel
+        ? copy.newKind(kind.kindLabel.toLowerCase())
+        : heroTitle,
     heroSubtitle,
     isEditMode,
     isCategory: core.isCategory,

@@ -18,7 +18,7 @@ export interface GlyphCarouselItem {
   icon: IconName;
   label: string;
   caption?: string;
-  tone: 'asset' | 'liability' | 'neutral';
+  tone: 'asset' | 'liability' | 'income' | 'expense' | 'neutral';
 }
 export interface GlyphCarouselProps {
   items: readonly GlyphCarouselItem[];
@@ -26,11 +26,12 @@ export interface GlyphCarouselProps {
   onSelect: (key: string) => void;
   captionAction?: { label: string; onPress: () => void };
   testID?: string;
+  accessibilityLabel?: string;
 }
 
 const ITEM_WIDTH = 100;
 const toneColor = (tone: GlyphCarouselItem['tone'], theme: ReturnType<typeof useTheme>['theme']) =>
-  tone === 'asset' ? theme.asset : tone === 'liability' ? theme.liability : theme.textSecondary;
+  tone === 'neutral' ? theme.textSecondary : theme[tone];
 
 export function GlyphCarousel({
   items,
@@ -38,6 +39,7 @@ export function GlyphCarousel({
   onSelect,
   captionAction,
   testID,
+  accessibilityLabel = copy.accountKind,
 }: GlyphCarouselProps) {
   const { theme, themeMode } = useTheme();
   const reduceMotion = useReducedMotion();
@@ -71,6 +73,7 @@ export function GlyphCarousel({
         testID={testID ? `${testID}-${item.key}` : undefined}
         accessibilityRole="button"
         accessibilityLabel={item.label}
+        accessibilityState={{ selected }}
         onPress={() => onSelect(item.key)}
         style={{
           width: ITEM_WIDTH,
@@ -101,7 +104,7 @@ export function GlyphCarousel({
         testID={testID}
         accessible
         accessibilityRole="adjustable"
-        accessibilityLabel={copy.accountKind}
+        accessibilityLabel={accessibilityLabel}
         accessibilityValue={{ text: items[index]?.label ?? '' }}
         accessibilityActions={[
           { name: 'increment', label: copy.nextItem },

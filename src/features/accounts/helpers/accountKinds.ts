@@ -2,6 +2,7 @@ import { accountFormStrings as copy } from '@/src/constants/copy/domains/account
 import { Icon, type IconName } from '@/src/types/domainIcons';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
 import {
+  ACCOUNT_SUBTYPES_BY_TYPE,
   formatAccountSubtypeLabel,
   isAccountSubtype,
   isSubtypeAllowedForType,
@@ -18,7 +19,7 @@ export interface AccountKind extends SuggestedAccountKind {
   label: string;
   icon: IconName;
   caption: string;
-  tone: 'asset' | 'liability';
+  tone: 'asset' | 'liability' | 'income' | 'expense';
 }
 
 export const ACCOUNT_KINDS: readonly AccountKind[] = [
@@ -80,8 +81,46 @@ export const ACCOUNT_KINDS: readonly AccountKind[] = [
 
 export const DEFAULT_ACCOUNT_KIND = ACCOUNT_KINDS[2];
 
+const CATEGORY_ICONS: Partial<Record<AccountSubtype, IconName>> = {
+  [AccountSubtype.FOOD]: Icon.Coffee,
+  [AccountSubtype.HOUSING]: Icon.Home,
+  [AccountSubtype.TRANSPORT]: Icon.Bus,
+  [AccountSubtype.UTILITIES]: Icon.Zap,
+  [AccountSubtype.HEALTHCARE]: Icon.Heart,
+  [AccountSubtype.EDUCATION]: Icon.Document,
+  [AccountSubtype.ENTERTAINMENT]: Icon.Film,
+  [AccountSubtype.SHOPPING]: Icon.ShoppingBag,
+  [AccountSubtype.SALARY]: Icon.Briefcase,
+  [AccountSubtype.BUSINESS_INCOME]: Icon.Bank,
+  [AccountSubtype.INTEREST_INCOME]: Icon.TrendingUp,
+  [AccountSubtype.DIVIDEND_INCOME]: Icon.TrendingUp,
+  [AccountSubtype.RENT_INCOME]: Icon.Home,
+  [AccountSubtype.TAX]: Icon.Receipt,
+  [AccountSubtype.TRANSFER]: Icon.SwapHorizontal,
+};
+
+export const CATEGORY_KINDS: readonly AccountKind[] = [
+  AccountType.EXPENSE,
+  AccountType.INCOME,
+].flatMap(type =>
+  ACCOUNT_SUBTYPES_BY_TYPE[type].map(subtype => ({
+    key: `${type.toLowerCase()}_${subtype.toLowerCase()}`,
+    type,
+    subtype,
+    label: formatAccountSubtypeLabel(subtype),
+    icon: CATEGORY_ICONS[subtype] ?? (type === AccountType.INCOME ? Icon.TrendingUp : Icon.Tag),
+    caption: type === AccountType.INCOME ? copy.incomeCategory : copy.expenseCategory,
+    tone: type === AccountType.INCOME ? ('income' as const) : ('expense' as const),
+  })),
+);
+
 export function isCarouselAccountType(type: AccountType): boolean {
-  return type === AccountType.ASSET || type === AccountType.LIABILITY;
+  return (
+    type === AccountType.ASSET ||
+    type === AccountType.LIABILITY ||
+    type === AccountType.INCOME ||
+    type === AccountType.EXPENSE
+  );
 }
 
 export function resolveAccountSubtypeParam(
@@ -96,6 +135,9 @@ export function resolveAccountSubtypeParam(
 
 export function getAccountKind(type: AccountType, subtype: AccountSubtype): AccountKind | null {
   if (!isCarouselAccountType(type) || !isSubtypeAllowedForType(type, subtype)) return null;
+  if (type === AccountType.INCOME || type === AccountType.EXPENSE) {
+    return CATEGORY_KINDS.find(kind => kind.type === type && kind.subtype === subtype) ?? null;
+  }
   const standard = ACCOUNT_KINDS.find(kind => kind.type === type && kind.subtype === subtype);
   if (standard) return standard;
   const isAsset = type === AccountType.ASSET;
@@ -117,6 +159,7 @@ export function getAccountCarouselKinds(
 ): readonly AccountKind[] {
   const selected = getAccountKind(type, subtype);
   if (!selected) return [];
+  if (type === AccountType.INCOME || type === AccountType.EXPENSE) return CATEGORY_KINDS;
   if (ACCOUNT_KINDS.some(kind => kind.key === selected.key)) return ACCOUNT_KINDS;
   const items = [...ACCOUNT_KINDS];
   const groupEnd = items.reduce((last, kind, index) => (kind.type === type ? index : last), -1);

@@ -278,7 +278,12 @@ export function accountFormDraftReducer(
     }
     case 'SET_ACCOUNT_KIND': {
       const kind = getAccountKind(action.accountType, action.accountSubtype);
-      if (!kind || !isCarouselAccountType(state.core.accountType)) return state;
+      if (
+        !kind ||
+        !isCarouselAccountType(state.core.accountType) ||
+        isCategoryAccountType(state.core.accountType) !== isCategoryAccountType(kind.type)
+      )
+        return state;
       const kindChanged =
         state.core.accountType !== kind.type || state.core.accountSubtype !== kind.subtype;
       return {
