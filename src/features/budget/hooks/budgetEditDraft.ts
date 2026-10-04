@@ -48,7 +48,7 @@ export function mapBudgetToEditDraft(
     startMonth: new Date(parseInt(year, 10), parseInt(month, 10) - 1, 1),
     intervalType: budget.intervalType || 'MONTHLY',
     intervalN: budget.intervalN || 1,
-    recurrenceDay: budget.recurrenceDay || 1,
+    recurrenceDay: budget.recurrenceDay ?? 1,
     recurrenceMonth: budget.recurrenceMonth || 1,
     startDate: budget.startDate,
     selectedAccountIds: scopes.map(s => s.accountId),

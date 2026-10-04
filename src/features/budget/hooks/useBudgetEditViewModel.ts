@@ -17,6 +17,7 @@ import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { isLiquidAssetSubtype } from '@/src/utils/accountSubtypeUtils';
 import { AppNavigation } from '@/src/utils/navigation';
+import { isValidRepeatCount } from '@/src/utils/recurrenceLabels';
 import dayjs from 'dayjs';
 import { useCallback, useState } from 'react';
 import { of } from 'rxjs';
@@ -107,7 +108,17 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
     [],
   );
   const setIntervalType = useCallback(
-    (intervalType: string) => setDraft(d => ({ ...d, intervalType })),
+    (intervalType: string) =>
+      setDraft(d => {
+        if (d.intervalType === intervalType) return d;
+        const date = new Date(d.startDate ?? Date.now());
+        return {
+          ...d,
+          intervalType,
+          recurrenceDay: intervalType === 'WEEKLY' ? date.getDay() : date.getDate(),
+          recurrenceMonth: date.getMonth() + 1,
+        };
+      }),
     [],
   );
   const setIntervalN = useCallback((intervalN: number) => setDraft(d => ({ ...d, intervalN })), []);
@@ -136,6 +147,9 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
     if (!draft.name.trim() || !draft.amount || draft.selectedAccountIds.length === 0) {
       throw new Error('Please fill all required fields and select at least one account.');
     }
+    if (!isValidRepeatCount(draft.intervalN)) {
+      throw new Error('Enter a whole number from 1 to 9999.');
+    }
 
     setIsSaving(true);
     try {
@@ -153,9 +167,9 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
         currencyCode: draft.currencyCode,
         startMonth: monthStr,
         intervalType: draft.intervalType,
-        intervalN: draft.intervalN || 1,
+        intervalN: draft.intervalN,
         startDate: resolvedStartDate,
-        recurrenceDay: draft.recurrenceDay || 1,
+        recurrenceDay: draft.recurrenceDay,
         recurrenceMonth: draft.recurrenceMonth || 1,
         active: true,
         assetAccountIds: draft.assetAccountIds,
@@ -219,7 +233,12 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
     save,
     loading,
     isSaving,
-    isFormValid: Boolean(draft.name.trim() && draft.amount && draft.selectedAccountIds.length > 0),
+    isFormValid: Boolean(
+      draft.name.trim() &&
+      draft.amount &&
+      draft.selectedAccountIds.length > 0 &&
+      isValidRepeatCount(draft.intervalN),
+    ),
     onCancel: AppNavigation.back,
   };
 }

@@ -3,6 +3,7 @@ import { BudgetInput, budgetRepository } from '@/src/data/repositories/BudgetRep
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { analytics } from '@/src/services/analytics';
 import { BudgetId, AccountId, WorkplaceId } from '@/src/types/ids';
+import { isValidRepeatCount } from '@/src/utils/recurrenceLabels';
 
 export class BudgetWriteService {
   /**
@@ -13,6 +14,9 @@ export class BudgetWriteService {
     data: BudgetInput,
     accountIds: AccountId[],
   ): Promise<Budget> {
+    if (!isValidRepeatCount(data.intervalN ?? 1)) {
+      throw new Error('Enter a whole number from 1 to 9999.');
+    }
     const budget = await budgetRepository.create(workplaceId, data, accountIds, () =>
       assertWritable(workplaceId, [...accountIds, ...(data.assetAccountIds ?? [])], 'Budget'),
     );
@@ -37,6 +41,9 @@ export class BudgetWriteService {
     data: Partial<BudgetInput>,
     accountIds: AccountId[],
   ): Promise<Budget> {
+    if (data.intervalN !== undefined && !isValidRepeatCount(data.intervalN)) {
+      throw new Error('Enter a whole number from 1 to 9999.');
+    }
     const budget = await budgetRepository.find(workplaceId, budgetId);
     if (!budget) {
       throw new Error('Budget not found');

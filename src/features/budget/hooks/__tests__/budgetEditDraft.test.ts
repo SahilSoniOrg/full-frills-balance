@@ -92,6 +92,25 @@ describe('budgetEditDraft', () => {
       expect(draft.selectedAccountIds).toEqual(['e1', 'e2']);
       expect(draft.assetAccountIds).toEqual(['a1', 'a2']);
     });
+
+    it('preserves Sunday and a seven-week repeat count when reopening a budget', () => {
+      const draft = mapBudgetToEditDraft(
+        {
+          id: 'sunday' as BudgetId,
+          name: 'Food',
+          amount: 100,
+          currencyCode: 'USD',
+          startMonth: '2026-10',
+          intervalType: 'WEEKLY',
+          intervalN: 7,
+          recurrenceDay: 0,
+        },
+        [],
+        'USD',
+      );
+      expect(draft.recurrenceDay).toBe(0);
+      expect(draft.intervalN).toBe(7);
+    });
   });
 
   describe('createEmptyBudgetDraft', () => {
