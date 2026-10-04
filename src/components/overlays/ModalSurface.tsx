@@ -24,6 +24,8 @@ interface ModalSurfaceProps {
   maxHeightPercent?: number;
   accessibilityCloseLabel?: string;
   closeTestID?: string;
+  contentTestID?: string;
+  backdropTestID?: string;
   fixedHeight?: boolean;
   scrollable?: boolean;
   /**
@@ -53,6 +55,8 @@ export function ModalSurface({
   maxHeightPercent = AppConfig.layout.popupModalHeightPercent,
   accessibilityCloseLabel = 'Close dialog',
   closeTestID,
+  contentTestID,
+  backdropTestID,
   fixedHeight = true,
   scrollable = true,
   useNativeModal = process.env.NODE_ENV !== 'test',
@@ -103,6 +107,7 @@ export function ModalSurface({
 
       {scrollable ? (
         <ScrollView
+          testID={contentTestID}
           contentContainerStyle={styles.scrollContent}
           style={fixedHeight ? styles.scrollFixed : styles.scrollFit}
           showsVerticalScrollIndicator={false}
@@ -110,7 +115,9 @@ export function ModalSurface({
           {children}
         </ScrollView>
       ) : (
-        <View style={[styles.staticContent, contentStyle]}>{children}</View>
+        <View testID={contentTestID} style={[styles.staticContent, contentStyle]}>
+          {children}
+        </View>
       )}
 
       {footer}
@@ -146,6 +153,7 @@ export function ModalSurface({
       <Pressable
         style={StyleSheet.absoluteFill}
         onPress={onClose}
+        testID={backdropTestID}
         accessibilityRole="button"
         accessibilityLabel={accessibilityCloseLabel}
       />

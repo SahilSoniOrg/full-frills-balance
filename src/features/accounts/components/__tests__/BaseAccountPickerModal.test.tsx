@@ -17,6 +17,10 @@ jest.mock('@/src/components/core', () => {
     AppText: ({ children, ...props }: { children: React.ReactNode }) =>
       mockReact.createElement(mockReactNative.Text, props, children),
     AppIcon: () => null,
+    AppCard: ({ children, ...props }: { children: React.ReactNode }) =>
+      mockReact.createElement(mockReactNative.View, props, children),
+    IconButton: ({ onPress, ...props }: { onPress: () => void }) =>
+      mockReact.createElement(mockReactNative.Pressable, { ...props, onPress }),
     Icon: mockIcon,
   };
 });
