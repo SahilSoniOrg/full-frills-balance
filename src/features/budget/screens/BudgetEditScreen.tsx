@@ -1,4 +1,5 @@
 import { BudgetEditView } from '@/src/features/budget/components/BudgetEditView';
+import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import {
   type BudgetEditRouteParams,
   useBudgetEditViewModel,
@@ -7,7 +8,7 @@ import { useConfirmUnsavedChanges } from '@/src/hooks/useConfirmUnsavedChanges';
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
 
-export default function BudgetEditScreen() {
+function BudgetEditScreen() {
   const params = useLocalSearchParams<BudgetEditRouteParams>();
   const vm = useBudgetEditViewModel(params);
   const fingerprint = useMemo(
@@ -46,3 +47,5 @@ export default function BudgetEditScreen() {
 
   return <BudgetEditView {...vm} onCancel={guard.onBack} />;
 }
+
+export default withPrivacyScope(BudgetEditScreen);

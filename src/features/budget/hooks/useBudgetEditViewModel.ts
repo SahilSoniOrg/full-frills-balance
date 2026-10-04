@@ -1,4 +1,5 @@
 import { formatRequirementHint } from '@/src/components/forms/requirementHint';
+import type { ScheduleValue } from '@/src/components/forms';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AccountType } from '@/src/types/enums';
 import { AccountId, BudgetId } from '@/src/types/ids';
@@ -15,12 +16,19 @@ import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { analytics } from '@/src/services/analytics';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
+import { budgetFormStrings } from '@/src/constants/copy/domains/budgetFormStrings';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { isLiquidAssetSubtype } from '@/src/utils/accountSubtypeUtils';
+import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
+import { roundToPrecision } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
 import { isValidRepeatCount } from '@/src/utils/recurrenceLabels';
+import {
+  calculateAverageSpend,
+  formatBudgetAmountLabel,
+} from '@/src/features/budget/helpers/budgetSpendingHistory';
 import dayjs from 'dayjs';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { of } from 'rxjs';
 
 export type BudgetEditRouteParams = {
@@ -75,6 +83,28 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
   );
   const [isSaving, setIsSaving] = useState(false);
 
+  const selectedAccountIds = draft.selectedAccountIds;
+  const selectedIds = useMemo(() => new Set(selectedAccountIds), [selectedAccountIds]);
+  const selectedCategories = useMemo(
+    () => expenseAccounts.filter(account => selectedIds.has(account.id)),
+    [expenseAccounts, selectedIds],
+  );
+  const categorySuggestions = useMemo(
+    () =>
+      expenseAccounts
+        .filter(account => !account.parentAccountId && !selectedIds.has(account.id))
+        .slice(0, 4),
+    [expenseAccounts, selectedIds],
+  );
+  const fundingLabel = useMemo(() => {
+    const selected = draft.assetAccountIds
+      .map(id => liquidAssetAccounts.find(account => account.id === id)?.name)
+      .filter((name): name is string => Boolean(name));
+    return selected.length
+      ? selected.join(', ')
+      : (liquidAssetAccounts[0]?.name ?? budgetFormStrings.automaticAccount);
+  }, [draft.assetAccountIds, liquidAssetAccounts]);
+
   const scopesReady = !budgetId || !scopesLoading;
   const canSeed = shouldSeedBudgetDraft({
     budgetId,
@@ -91,6 +121,58 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
     setSeededBudgetId(null);
     setDraft(createEmptyBudgetDraft({ name: pName, amount: pAmount, currencyCode: pCurrency }));
   }
+
+  const spendingHistory$ = useMemo(
+    () =>
+      budgetReadService.observeSpendingHistory(
+        workplaceId,
+        draft.selectedAccountIds,
+        {
+          intervalType: draft.intervalType,
+          intervalN: draft.intervalN,
+          startDate: draft.startDate ?? draft.startMonth.getTime(),
+          recurrenceDay: draft.recurrenceDay,
+          recurrenceMonth: draft.recurrenceMonth,
+        },
+        draft.currencyCode,
+      ),
+    [
+      workplaceId,
+      draft.selectedAccountIds,
+      draft.intervalType,
+      draft.intervalN,
+      draft.startDate,
+      draft.startMonth,
+      draft.recurrenceDay,
+      draft.recurrenceMonth,
+      draft.currencyCode,
+    ],
+  );
+  const { data: historyWithCounts = [] } = useObservable(
+    () => spendingHistory$,
+    [spendingHistory$],
+    [],
+    { keepPreviousData: false },
+  );
+  const spendingHistory = historyWithCounts.map(({ label, startDate, endDate, spent }) => ({
+    label,
+    startDate,
+    endDate,
+    spent,
+  }));
+  const averageSpend = calculateAverageSpend(
+    spendingHistory,
+    historyWithCounts.map(period => period.transactionCount),
+    draft.currencyCode,
+    historyWithCounts.map(period => period.hasUnvaluedEntries),
+  );
+  const useAverage = useCallback(() => {
+    if (averageSpend == null) return;
+    const precision = getCurrencyPrecision(draft.currencyCode);
+    setDraft(d => ({ ...d, amount: roundToPrecision(averageSpend, precision).toFixed(precision) }));
+  }, [averageSpend, draft.currencyCode]);
+  const amountLabel = formatBudgetAmountLabel(draft.intervalType, draft.intervalN);
+  const scheduleStartDate = draft.startDate ?? draft.startMonth.getTime();
 
   const loading =
     !!budgetId &&
@@ -116,13 +198,29 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
         return {
           ...d,
           intervalType,
-          recurrenceDay: intervalType === 'WEEKLY' ? date.getDay() : date.getDate(),
-          recurrenceMonth: date.getMonth() + 1,
+          recurrenceDay:
+            intervalType === 'DAILY'
+              ? undefined
+              : intervalType === 'WEEKLY'
+                ? date.getDay()
+                : date.getDate(),
+          recurrenceMonth: intervalType === 'YEARLY' ? date.getMonth() + 1 : undefined,
         };
       }),
     [],
   );
   const setIntervalN = useCallback((intervalN: number) => setDraft(d => ({ ...d, intervalN })), []);
+  const setSchedule = useCallback(
+    (value: ScheduleValue) =>
+      setDraft(d => ({
+        ...d,
+        intervalType: value.intervalType,
+        intervalN: value.intervalN,
+        recurrenceDay: value.intervalType === 'DAILY' ? undefined : value.recurrenceDay,
+        recurrenceMonth: value.intervalType === 'YEARLY' ? value.recurrenceMonth : undefined,
+      })),
+    [],
+  );
   const setRecurrenceDay = useCallback(
     (recurrenceDay: number) => setDraft(d => ({ ...d, recurrenceDay })),
     [],
@@ -137,6 +235,23 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
   );
   const setSelectedAccountIds = useCallback(
     (selectedAccountIds: AccountId[]) => setDraft(d => ({ ...d, selectedAccountIds })),
+    [],
+  );
+  const addCategory = useCallback(
+    (id: AccountId) =>
+      setDraft(d =>
+        d.selectedAccountIds.includes(id)
+          ? d
+          : { ...d, selectedAccountIds: [...d.selectedAccountIds, id] },
+      ),
+    [],
+  );
+  const removeCategory = useCallback(
+    (id: AccountId) =>
+      setDraft(d => ({
+        ...d,
+        selectedAccountIds: d.selectedAccountIds.filter(selectedId => selectedId !== id),
+      })),
     [],
   );
   const setAssetAccountIds = useCallback(
@@ -218,6 +333,14 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
     setIntervalType,
     intervalN: draft.intervalN,
     setIntervalN,
+    schedule: {
+      intervalType: draft.intervalType as ScheduleValue['intervalType'],
+      intervalN: draft.intervalN,
+      ...(draft.recurrenceDay !== undefined && { recurrenceDay: draft.recurrenceDay }),
+      ...(draft.recurrenceMonth !== undefined && { recurrenceMonth: draft.recurrenceMonth }),
+    },
+    setSchedule,
+    scheduleStartDate,
     recurrenceDay: draft.recurrenceDay,
     setRecurrenceDay,
     recurrenceMonth: draft.recurrenceMonth,
@@ -226,8 +349,17 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
     setStartDate,
     selectedAccountIds: draft.selectedAccountIds,
     setSelectedAccountIds,
+    selectedCategories,
+    categorySuggestions,
+    addCategory,
+    removeCategory,
     assetAccountIds: draft.assetAccountIds,
     setAssetAccountIds,
+    fundingLabel,
+    spendingHistory,
+    averageSpend,
+    useAverage,
+    amountLabel,
     currencies,
     currencyCode: draft.currencyCode,
     setCurrencyCode,

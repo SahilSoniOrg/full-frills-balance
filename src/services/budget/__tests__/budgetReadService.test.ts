@@ -5,7 +5,10 @@ import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
-import { budgetReadService } from '@/src/services/budget/budgetReadService';
+import {
+  budgetReadService,
+  type BudgetSpendingHistoryEntry,
+} from '@/src/services/budget/budgetReadService';
 import dayjs from 'dayjs';
 import { firstValueFrom } from 'rxjs';
 import { filter, timeout } from 'rxjs/operators';
@@ -318,5 +321,91 @@ describe('budgetReadService', () => {
     // wp-2 transaction should be ignored
     expect(lastUsage.spent).toBe(0);
     expect(lastUsage.remaining).toBe(500);
+  });
+
+  it('observes seven category-scoped periods, expands leaf categories, and updates with transactions', async () => {
+    const workplaceId = 'wp-1' as WorkplaceId;
+    const referenceDate = dayjs('2023-10-15').valueOf();
+    const readHistory = () =>
+      budgetReadService.observeSpendingHistory(
+        workplaceId,
+        [expenseParentId as AccountId],
+        {
+          intervalType: 'MONTHLY',
+          intervalN: 1,
+          startDate: dayjs('2023-01-01').valueOf(),
+          recurrenceDay: 1,
+        },
+        'USD',
+        referenceDate,
+      );
+
+    let initial: BudgetSpendingHistoryEntry[] | undefined;
+    const sub = readHistory().subscribe(value => {
+      if (value.length === 7) initial = value;
+    });
+    await new Promise(resolve => setTimeout(resolve, 100));
+    expect(initial).toHaveLength(7);
+    expect(initial?.[6]).toMatchObject({ spent: 0, transactionCount: 0 });
+
+    const updatedPromise = firstValueFrom(
+      readHistory().pipe(
+        filter(value => value.length === 7 && value[6].spent === 25),
+        timeout({ first: 2000 }),
+      ),
+    );
+    await createJournalFixture(
+      {
+        journalDate: referenceDate,
+        currencyCode: 'USD',
+        transactions: [
+          {
+            accountId: expenseChildId as AccountId,
+            amount: 25,
+            transactionType: TransactionType.DEBIT,
+          },
+          { accountId: assetId as AccountId, amount: 25, transactionType: TransactionType.CREDIT },
+        ],
+      },
+      workplaceId,
+    );
+
+    const updated = await updatedPromise;
+    sub.unsubscribe();
+    expect(updated[6]).toMatchObject({ spent: 25, transactionCount: 1 });
+    expect(
+      updated.slice(0, 6).every(period => period.spent === 0 && period.transactionCount === 0),
+    ).toBe(true);
+
+    const changedCategory = await firstValueFrom(
+      budgetReadService
+        .observeSpendingHistory(
+          workplaceId,
+          [assetId as AccountId],
+          {
+            intervalType: 'MONTHLY',
+            intervalN: 1,
+            startDate: dayjs('2023-01-01').valueOf(),
+            recurrenceDay: 1,
+          },
+          'USD',
+          referenceDate,
+        )
+        .pipe(timeout({ first: 2000 })),
+    );
+    expect(changedCategory).toHaveLength(7);
+    expect(changedCategory[6]).toMatchObject({ spent: 0, transactionCount: 0 });
+  });
+
+  it('returns no history for an invalid repeat count without querying recurrence ranges', async () => {
+    const history = await firstValueFrom(
+      budgetReadService.observeSpendingHistory(
+        'wp-1' as WorkplaceId,
+        [expenseParentId as AccountId],
+        { intervalType: 'MONTHLY', intervalN: 0 },
+        'USD',
+      ),
+    );
+    expect(history).toEqual([]);
   });
 });

@@ -1,19 +1,35 @@
-import { AccountSelectionRow } from '@/src/components/accounts/AccountSelectionRow';
-import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
-import { FormHeroSection } from '@/src/components/forms/FormHeroSection';
-import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
-import { FormField } from '@/src/components/forms/FormField';
-import { RecurrenceField } from '@/src/components/forms/RecurrenceField';
 import { MultiAccountPickerModal } from '@/src/components/account-selection';
+import {
+  AppButton,
+  AppIcon,
+  AppText,
+  Icon,
+  Icon as CoreIcon,
+  LoadingView,
+} from '@/src/components/core';
+import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
+import {
+  AmountHero,
+  FormRow,
+  ScheduleField,
+  SuggestionHint,
+  UnderlineNameField,
+} from '@/src/components/forms';
+import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
 import { CurrencySelector } from '@/src/features/accounts';
-import { Icon, AppButton, AppSegmentedControl, LoadingView } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { AppConfig } from '@/src/constants';
+import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
+import { IvyPalette } from '@/src/constants/design-tokens';
+import { budgetFormStrings as copy } from '@/src/constants/copy/domains/budgetFormStrings';
 import { FadeIn, Stack } from '@/src/design-system';
+import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { useTheme } from '@/src/hooks/use-theme';
+import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { toast } from '@/src/utils/alerts';
 import { useMemo, useState } from 'react';
+import { Pressable, View } from 'react-native';
+import { BudgetSpendingHistoryChart } from './BudgetSpendingHistoryChart';
 import type { BudgetEditViewModel } from '../hooks/useBudgetEditViewModel';
 
 export function BudgetEditView({
@@ -28,16 +44,20 @@ export function BudgetEditView({
   setCurrencyCode,
   selectedAccountIds,
   setSelectedAccountIds,
+  selectedCategories,
+  categorySuggestions,
+  addCategory,
+  removeCategory,
   assetAccountIds,
   setAssetAccountIds,
-  intervalType,
-  setIntervalType,
-  intervalN,
-  setIntervalN,
-  recurrenceDay,
-  setRecurrenceDay,
-  recurrenceMonth,
-  setRecurrenceMonth,
+  fundingLabel,
+  schedule,
+  scheduleStartDate,
+  setSchedule,
+  spendingHistory,
+  averageSpend,
+  useAverage,
+  amountLabel,
   save,
   loading,
   isSaving,
@@ -46,15 +66,19 @@ export function BudgetEditView({
   budget,
   onCancel,
 }: BudgetEditViewModel) {
-  const { theme } = useTheme();
+  const { theme, themeMode } = useTheme();
+  const formatMoney = useMoneyFormat();
   const [isAccountPickerVisible, setIsAccountPickerVisible] = useState(false);
   const [isAssetPickerVisible, setIsAssetPickerVisible] = useState(false);
+  const currency = currencies.find(item => item.code === currencyCode);
+  const precision = currency?.precision ?? getCurrencyPrecision(currencyCode);
+  const expenseInk = themeMode === 'light' ? IvyPalette.redDark : IvyPalette.redLight;
 
   const loadingChrome = useMemo<ScreenNavChrome>(
     () => ({
       screenTitle: AppConfig.strings.common.loading,
       showBack: true,
-      backIcon: Icon.Back,
+      backIcon: CoreIcon.Back,
       onBack: onCancel,
       headerActions: (
         <AppButton variant="ghost" onPress={onCancel}>
@@ -71,7 +95,7 @@ export function BudgetEditView({
         ? AppConfig.strings.budget.formTitleEdit
         : AppConfig.strings.budget.formTitleNew,
       showBack: true,
-      backIcon: Icon.Back,
+      backIcon: CoreIcon.Back,
       onBack: onCancel,
     }),
     [budget, onCancel],
@@ -112,136 +136,162 @@ export function BudgetEditView({
               : 'Create Budget',
         }}
       >
-        <FormHeroSection
-          nameLabel="Budget Name"
-          nameValue={name}
-          onNameChange={setName}
-          amountLabel="Amount per cycle"
-          amountValue={amount}
-          onAmountChange={setAmount}
-          currencySymbol={
-            currencies.find(currency => currency.code === currencyCode)?.symbol || currencyCode
-          }
-          footer={
+        <Stack space="lg" padding="lg">
+          <UnderlineNameField
+            value={name}
+            onChangeText={setName}
+            placeholder={copy.namePlaceholder}
+          />
+
+          <FormSectionGroup title={copy.whatCounts} contentStyle={{ gap: Spacing.sm }}>
+            {selectedCategories.length ? (
+              <View
+                testID="budget-selected-categories"
+                style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm }}
+              >
+                {selectedCategories.map(account => (
+                  <View
+                    key={account.id}
+                    testID={`budget-category-chip-${account.id}`}
+                    style={{
+                      minHeight: Size.touchTarget - Spacing.xs,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: Spacing.xs,
+                      paddingHorizontal: Spacing.sm,
+                      borderRadius: Shape.radius.full,
+                      backgroundColor: theme.errorLight,
+                    }}
+                  >
+                    <AppIcon
+                      name={account.icon ?? Icon.Tag}
+                      size={Size.iconXs}
+                      color={expenseInk}
+                    />
+                    <AppText variant="caption" weight="semibold" style={{ color: expenseInk }}>
+                      {account.name}
+                    </AppText>
+                    <Pressable
+                      testID={`budget-category-remove-${account.id}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={copy.removeCategory(account.name)}
+                      hitSlop={8}
+                      onPress={() => removeCategory(account.id)}
+                    >
+                      <AppIcon name={Icon.Close} size={Size.iconXs} color={expenseInk} />
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <>
+                <AppText variant="bodySmall" color="secondary">
+                  {copy.whatCountsHint}
+                </AppText>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm }}>
+                  {categorySuggestions.map(account => (
+                    <Pressable
+                      key={account.id}
+                      testID={`budget-category-suggestion-${account.id}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={copy.chipAccessibility(account.name)}
+                      onPress={() => addCategory(account.id)}
+                      style={{
+                        minHeight: Size.touchTarget - Spacing.xs,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: Spacing.xs,
+                        paddingHorizontal: Spacing.sm,
+                        borderRadius: Shape.radius.full,
+                        borderWidth: 1,
+                        borderColor: theme.border,
+                      }}
+                    >
+                      <AppText variant="caption" color="secondary">
+                        {account.name}
+                      </AppText>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            )}
+            <Pressable
+              testID="budget-category-add"
+              accessibilityRole="button"
+              accessibilityLabel={copy.addCategories}
+              onPress={() => setIsAccountPickerVisible(true)}
+              style={{
+                alignSelf: 'flex-start',
+                minHeight: Size.touchTarget - Spacing.xs,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: Spacing.xs,
+                paddingHorizontal: Spacing.sm,
+                borderRadius: Shape.radius.full,
+                borderWidth: 1,
+                borderColor: theme.border,
+              }}
+            >
+              <AppIcon name={Icon.Plus} size={Size.iconXs} color={theme.textSecondary} />
+              <AppText variant="caption" color="secondary">
+                {selectedCategories.length ? copy.addCategory : copy.allCategories}
+              </AppText>
+            </Pressable>
+          </FormSectionGroup>
+
+          {spendingHistory.length > 0 ? (
+            <FadeIn fromY={4} duration={180}>
+              <BudgetSpendingHistoryChart
+                periods={spendingHistory}
+                limit={Number.parseFloat(amount) || 0}
+                average={averageSpend}
+                currencyCode={currencyCode}
+              />
+            </FadeIn>
+          ) : null}
+
+          <View style={{ gap: Spacing.sm }}>
+            <AmountHero
+              value={amount}
+              onChange={setAmount}
+              label={amountLabel}
+              currencySymbol={currency?.symbol || currencyCode}
+              precision={precision}
+              testID="hero-amount-input"
+            />
             <CurrencySelector
               variant="pill"
               selectedCurrency={currencyCode}
               currencies={currencies}
               onSelect={setCurrencyCode}
             />
-          }
-        />
-
-        <Stack space="xl" padding="lg">
-          <FormSectionGroup title="Schedule">
-            <Stack space="lg" paddingHorizontal="md">
-              <RecurrenceField
-                intervalType={intervalType}
-                value={intervalN}
-                onChange={setIntervalN}
-                onIntervalTypeChange={setIntervalType}
-                testID="budget-repeat-count"
-                unitTestID="budget-interval-type"
+            {averageSpend != null ? (
+              <SuggestionHint
+                message={copy.yourAverage(formatMoney(averageSpend, currencyCode))}
+                actionLabel={copy.useAverage}
+                onAccept={useAverage}
+                testID="budget-use-average"
               />
+            ) : null}
+          </View>
 
-              {intervalType === 'WEEKLY' && (
-                <FadeIn fromY={5} duration={300}>
-                  <FormField label="Runs on">
-                    <AppSegmentedControl<number>
-                      scrollable
-                      variant="minimal"
-                      size="sm"
-                      options={AppConfig.strings.plannedPayments.dayNames.map((day, index) => ({
-                        id: index,
-                        label: day,
-                      }))}
-                      value={recurrenceDay}
-                      onChange={setRecurrenceDay}
-                    />
-                  </FormField>
-                </FadeIn>
-              )}
-
-              {intervalType === 'MONTHLY' && (
-                <FadeIn fromY={5} duration={300}>
-                  <FormField label="Runs on">
-                    <AppSegmentedControl<number>
-                      scrollable
-                      variant="minimal"
-                      size="sm"
-                      options={Array.from({ length: 31 }, (_, i) => i + 1).map(day => ({
-                        id: day,
-                        label: day.toString(),
-                      }))}
-                      value={recurrenceDay}
-                      onChange={setRecurrenceDay}
-                    />
-                  </FormField>
-                </FadeIn>
-              )}
-
-              {intervalType === 'YEARLY' && (
-                <FadeIn fromY={5} duration={300}>
-                  <Stack space="lg">
-                    <FormField label="Month">
-                      <AppSegmentedControl<number>
-                        scrollable
-                        variant="minimal"
-                        size="sm"
-                        options={AppConfig.strings.plannedPayments.monthNames.map(
-                          (month, index) => ({
-                            id: index + 1,
-                            label: month,
-                          }),
-                        )}
-                        value={recurrenceMonth}
-                        onChange={setRecurrenceMonth}
-                      />
-                    </FormField>
-
-                    <FormField label="Runs on">
-                      <AppSegmentedControl<number>
-                        scrollable
-                        variant="minimal"
-                        size="sm"
-                        options={Array.from({ length: 31 }, (_, i) => i + 1).map(day => ({
-                          id: day,
-                          label: day.toString(),
-                        }))}
-                        value={recurrenceDay}
-                        onChange={setRecurrenceDay}
-                      />
-                    </FormField>
-                  </Stack>
-                </FadeIn>
-              )}
-            </Stack>
-          </FormSectionGroup>
-
-          <FormSectionGroup title="Scope">
-            <Stack space="md" paddingHorizontal="md">
-              <AccountSelectionRow
-                title="Expense Categories"
-                accounts={expenseAccounts}
-                selectedAccountIds={selectedAccountIds}
-                placeholder="Select categories"
-                onPress={() => setIsAccountPickerVisible(true)}
-                style={{
-                  paddingHorizontal: 0,
-                  borderBottomWidth: 1,
-                  borderBottomColor: theme.border,
-                }}
-              />
-
-              <AccountSelectionRow
-                title="Accounts to Pay From"
-                accounts={liquidAssetAccounts}
-                selectedAccountIds={assetAccountIds}
-                placeholder="Select accounts"
-                onPress={() => setIsAssetPickerVisible(true)}
-                style={{ paddingHorizontal: 0 }}
-              />
-            </Stack>
+          <FormSectionGroup title={copy.settings} contentStyle={{ marginHorizontal: -Spacing.lg }}>
+            <ScheduleField
+              value={schedule}
+              startDate={scheduleStartDate}
+              onChange={setSchedule}
+              label={copy.resets}
+              intervalTestIDPrefix="budget-interval-type-item-"
+              testID="budget-schedule-field"
+            />
+            <FormRow
+              icon={Icon.Shield}
+              title={copy.setAsideFrom}
+              subtitle={copy.setAsideSubtitle}
+              value={fundingLabel}
+              onPress={() => setIsAssetPickerVisible(true)}
+              testID="budget-set-aside-from"
+            />
           </FormSectionGroup>
         </Stack>
       </EntityFormScreen>
@@ -250,7 +300,7 @@ export function BudgetEditView({
         visible={isAccountPickerVisible}
         accounts={expenseAccounts}
         selectedIds={selectedAccountIds}
-        title="Choose Categories"
+        title={copy.allCategories}
         onClose={() => setIsAccountPickerVisible(false)}
         onSelect={ids => {
           setSelectedAccountIds(ids);
@@ -262,7 +312,7 @@ export function BudgetEditView({
         visible={isAssetPickerVisible}
         accounts={liquidAssetAccounts}
         selectedIds={assetAccountIds}
-        title="Choose Accounts to Pay From"
+        title={copy.setAsideFrom}
         onClose={() => setIsAssetPickerVisible(false)}
         onSelect={ids => {
           setAssetAccountIds(ids);

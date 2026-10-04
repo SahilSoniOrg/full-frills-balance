@@ -8,8 +8,8 @@ export interface BudgetEditDraft {
   startMonth: Date;
   intervalType: string;
   intervalN: number;
-  recurrenceDay: number;
-  recurrenceMonth: number;
+  recurrenceDay?: number;
+  recurrenceMonth?: number;
   startDate: number | undefined;
   selectedAccountIds: AccountId[];
   assetAccountIds: AccountId[];
@@ -28,7 +28,6 @@ export function createEmptyBudgetDraft(preview: {
     intervalType: 'MONTHLY',
     intervalN: 1,
     recurrenceDay: 1,
-    recurrenceMonth: 1,
     startDate: undefined,
     selectedAccountIds: [],
     assetAccountIds: [],
@@ -41,15 +40,16 @@ export function mapBudgetToEditDraft(
   fallbackCurrency: string,
 ): BudgetEditDraft {
   const [year, month] = (budget.startMonth ?? '').split('-');
+  const intervalType = budget.intervalType || 'MONTHLY';
   return {
     name: budget.name,
     amount: budget.amount.toString(),
     currencyCode: budget.currencyCode || fallbackCurrency,
     startMonth: new Date(parseInt(year, 10), parseInt(month, 10) - 1, 1),
-    intervalType: budget.intervalType || 'MONTHLY',
+    intervalType,
     intervalN: budget.intervalN || 1,
-    recurrenceDay: budget.recurrenceDay ?? 1,
-    recurrenceMonth: budget.recurrenceMonth || 1,
+    ...(intervalType !== 'DAILY' && { recurrenceDay: budget.recurrenceDay ?? 1 }),
+    ...(intervalType === 'YEARLY' && { recurrenceMonth: budget.recurrenceMonth || 1 }),
     startDate: budget.startDate,
     selectedAccountIds: scopes.map(s => s.accountId),
     assetAccountIds: budget.assetAccountIds
