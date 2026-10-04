@@ -11,6 +11,7 @@ import {
 import { Animated, View, StyleSheet } from 'react-native';
 import type { ScrollView } from 'react-native-gesture-handler';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 
 type SettingsFocusContextValue = {
   registerTarget: (targetId: string, targetNode: View) => void;
@@ -112,10 +113,18 @@ export function SettingsFocusTarget({
   const targetRef = useRef<View>(null);
   const [highlightOpacity] = useState(() => new Animated.Value(0));
   const { theme } = useTheme();
+  const reduceMotion = useReducedMotion();
   const isHighlighted = context?.isHighlighted(targetId) ?? false;
 
   useEffect(() => {
-    if (!isHighlighted) return;
+    if (!isHighlighted) {
+      highlightOpacity.setValue(0);
+      return;
+    }
+    if (reduceMotion) {
+      highlightOpacity.setValue(1);
+      return;
+    }
     highlightOpacity.setValue(0);
     Animated.sequence([
       Animated.timing(highlightOpacity, { toValue: 1, duration: 160, useNativeDriver: false }),
@@ -123,7 +132,7 @@ export function SettingsFocusTarget({
       Animated.timing(highlightOpacity, { toValue: 1, duration: 160, useNativeDriver: false }),
       Animated.timing(highlightOpacity, { toValue: 0, duration: 420, useNativeDriver: false }),
     ]).start();
-  }, [highlightOpacity, isHighlighted]);
+  }, [highlightOpacity, isHighlighted, reduceMotion]);
 
   const onLayout = useCallback(() => {
     if (targetRef.current) {

@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing } from 'react-native';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 
 export function useVoiceVisualizer() {
+  const reduceMotion = useReducedMotion();
   const [isRecording, setRecording] = useState(false);
   const [animValues] = useState(() => Array.from({ length: 5 }, () => new Animated.Value(1)));
   const animLoopRef = useRef<Animated.CompositeAnimation | null>(null);
 
   const onVolumeChange = useCallback(
     (volume: number) => {
+      if (reduceMotion) return;
       const scale = Math.max(1, (volume + 2) / 3);
       animValues.forEach(anim => {
         Animated.spring(anim, {
@@ -18,11 +21,12 @@ export function useVoiceVisualizer() {
         }).start();
       });
     },
-    [animValues],
+    [animValues, reduceMotion],
   );
 
   useEffect(() => {
-    if (isRecording) {
+    animLoopRef.current?.stop();
+    if (isRecording && !reduceMotion) {
       const animations = animValues.map((anim, index) =>
         Animated.loop(
           Animated.sequence([
@@ -44,18 +48,21 @@ export function useVoiceVisualizer() {
 
       animLoopRef.current = Animated.parallel(animations);
       animLoopRef.current.start();
-    } else {
-      animLoopRef.current?.stop();
+    } else if (!isRecording || reduceMotion) {
       animValues.forEach(anim => {
-        Animated.spring(anim, {
-          toValue: 1,
-          useNativeDriver: true,
-        }).start();
+        if (reduceMotion) {
+          anim.setValue(1);
+        } else {
+          Animated.spring(anim, {
+            toValue: 1,
+            useNativeDriver: true,
+          }).start();
+        }
       });
     }
 
     return () => animLoopRef.current?.stop();
-  }, [isRecording, animValues]);
+  }, [isRecording, animValues, reduceMotion]);
 
   return { animValues, onVolumeChange, setRecording };
 }

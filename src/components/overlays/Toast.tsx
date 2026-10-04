@@ -4,6 +4,7 @@ import { AppText } from '@/src/components/core/AppText';
 import { AppConfig } from '@/src/constants';
 import { Size, Spacing, ZIndex, Typography, type Theme } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { ToastItem, useToastListener } from '@/src/hooks/useToastListener';
 import { ToastPayload } from '@/src/utils/alerts';
 import { Icon, type IconName } from '@/src/types/domainIcons';
@@ -25,10 +26,16 @@ export function ToastContainer() {
 
 function ToastItemView({ toast }: { toast: ToastItem }) {
   const { theme } = useTheme();
+  const reduceMotion = useReducedMotion();
   const [animatedValue] = useState(() => new Animated.Value(0));
   const [opacity] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
+    if (reduceMotion) {
+      animatedValue.setValue(1);
+      opacity.setValue(1);
+      return;
+    }
     Animated.parallel([
       Animated.timing(animatedValue, {
         toValue: 1,
@@ -41,7 +48,7 @@ function ToastItemView({ toast }: { toast: ToastItem }) {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [animatedValue, opacity]);
+  }, [animatedValue, opacity, reduceMotion]);
 
   const translateY = animatedValue.interpolate({
     inputRange: [0, 1],

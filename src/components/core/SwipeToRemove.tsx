@@ -3,6 +3,7 @@ import { AppText } from './AppText';
 import { Size, Spacing, type RadiusKey } from '@/src/constants';
 import { Box } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { Icon } from '@/src/types/domainIcons';
 import { type ReactNode } from 'react';
 import { StyleSheet, type LayoutChangeEvent } from 'react-native';
@@ -29,6 +30,7 @@ export function SwipeToRemove({
   readonly borderRadius?: RadiusKey | number;
 }) {
   const { theme } = useTheme();
+  const reduceMotion = useReducedMotion();
   const translateX = useSharedValue(0);
   const reveal = useSharedValue(0);
   const height = useSharedValue(0);
@@ -47,17 +49,29 @@ export function SwipeToRemove({
       if (collapsing.value === 1) return;
       const shouldRemove = event.translationX < -72 || event.velocityX < -900;
       if (!shouldRemove) {
-        translateX.value = withTiming(0, { duration: 240, easing: Easing.out(Easing.cubic) });
-        reveal.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.cubic) });
+        translateX.value = withTiming(0, {
+          duration: reduceMotion ? 0 : 240,
+          easing: Easing.out(Easing.cubic),
+        });
+        reveal.value = withTiming(0, {
+          duration: reduceMotion ? 0 : 200,
+          easing: Easing.out(Easing.cubic),
+        });
         return;
       }
       collapsing.value = 1;
       height.value = measuredHeight.value;
-      translateX.value = withTiming(-520, { duration: 220, easing: Easing.out(Easing.cubic) });
-      reveal.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.cubic) });
+      translateX.value = withTiming(-520, {
+        duration: reduceMotion ? 0 : 220,
+        easing: Easing.out(Easing.cubic),
+      });
+      reveal.value = withTiming(0, {
+        duration: reduceMotion ? 0 : 200,
+        easing: Easing.out(Easing.cubic),
+      });
       height.value = withTiming(
         0,
-        { duration: 320, easing: Easing.inOut(Easing.cubic) },
+        { duration: reduceMotion ? 0 : 320, easing: Easing.inOut(Easing.cubic) },
         finished => {
           if (finished) runOnJS(onRemove)();
         },

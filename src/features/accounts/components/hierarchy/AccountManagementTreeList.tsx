@@ -1,5 +1,6 @@
 import { AppButton, AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { FlattenedAccountTreeRow } from '@/src/services/accounts/accountTreeProjection';
 import type {
@@ -60,6 +61,7 @@ export function AccountManagementTreeList({
   onToggleOrganize,
 }: AccountManagementTreeListProps) {
   const { theme } = useTheme();
+  const reduceMotion = useReducedMotion();
   const insets = useSafeAreaInsets();
   const accountsById = useMemo(
     () => new Map(accounts.map(account => [account.id, account] as const)),
@@ -151,8 +153,8 @@ export function AccountManagementTreeList({
         {activeAccountId && dropIntent && (
           <Animated.View
             pointerEvents="none"
-            entering={FadeIn.duration(ACCOUNT_TREE_DROP_CHIP_ENTER_MS)}
-            exiting={FadeOut.duration(ACCOUNT_TREE_DROP_CHIP_EXIT_MS)}
+            entering={reduceMotion ? undefined : FadeIn.duration(ACCOUNT_TREE_DROP_CHIP_ENTER_MS)}
+            exiting={reduceMotion ? undefined : FadeOut.duration(ACCOUNT_TREE_DROP_CHIP_EXIT_MS)}
             accessibilityLiveRegion="polite"
             style={[
               styles.dropIntent,
