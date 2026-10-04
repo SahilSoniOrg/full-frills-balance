@@ -37,13 +37,6 @@ export class CurrencyRepository {
   }
 
   /**
-   * Gets all active currencies
-   */
-  async findAll(): Promise<Currency[]> {
-    return this.currencies.query(Q.where('deleted_at', Q.eq(null))).fetch();
-  }
-
-  /**
    * Gets ALL currencies including soft-deleted ones
    */
   async findAllIncludingDeleted(): Promise<Currency[]> {
@@ -55,27 +48,6 @@ export class CurrencyRepository {
    */
   observeAll() {
     return this.currencies.query(Q.where('deleted_at', Q.eq(null))).observe();
-  }
-
-  /**
-   * Get count of active currencies
-   */
-  async count(): Promise<number> {
-    return this.currencies.query(Q.where('deleted_at', Q.eq(null))).fetchCount();
-  }
-
-  /**
-   * Create a single currency
-   */
-  async create(data: CurrencyInput): Promise<Currency> {
-    return database.write(async () => {
-      return this.currencies.create(currency => {
-        currency.code = data.code;
-        currency.symbol = data.symbol;
-        currency.name = data.name;
-        currency.precision = data.precision;
-      });
-    });
   }
 
   /**
@@ -91,18 +63,6 @@ export class CurrencyRepository {
           currency.precision = currencyData.precision;
         });
       }
-    });
-  }
-
-  /**
-   * Soft delete a currency
-   */
-  async delete(currency: Currency): Promise<void> {
-    await database.write(async () => {
-      await currency.update(record => {
-        record.deletedAt = new Date();
-        record.updatedAt = new Date();
-      });
     });
   }
 

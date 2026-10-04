@@ -12,6 +12,10 @@ import { AuditAction } from '@/src/types/enums';
 import { AccountId, BudgetId, WorkplaceId } from '@/src/types/ids';
 import { Model, Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
+import {
+  restoreAuditFieldsFromRevert,
+  stableAuditJson,
+} from '@/src/data/repositories/auditRevertSupport';
 
 export interface BudgetInput {
   name: string;
@@ -67,18 +71,6 @@ const BUDGET_AUDIT_FIELDS = [
 const BUDGET_REFERENCE_FIELDS = new Set(['assetAccountIds', 'scopedAccountIds']);
 const BUDGET_REVERT_CONFLICT =
   'This budget changed after the selected history entry. Refresh and review the latest change.';
-
-function stableAuditJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(stableAuditJson).join(',')}]`;
-  if (typeof value === 'object' && value !== null) {
-    const record = value as Record<string, unknown>;
-    return `{${Object.keys(record)
-      .sort()
-      .map(key => `${JSON.stringify(key)}:${stableAuditJson(record[key])}`)
-      .join(',')}}`;
-  }
-  return JSON.stringify(value ?? null);
-}
 
 function auditBudgetFieldMatches(field: string, actual: unknown, expected: unknown): boolean {
   if (BUDGET_REFERENCE_FIELDS.has(field) && Array.isArray(actual) && Array.isArray(expected)) {
@@ -491,18 +483,15 @@ export class BudgetRepository {
         throw new Error(BUDGET_REVERT_CONFLICT);
       }
 
-      const restoredValues: Record<string, unknown> = { ...current };
-      for (const field of changedFields) {
-        if (
-          !BUDGET_AUDIT_FIELDS.includes(field as (typeof BUDGET_AUDIT_FIELDS)[number]) ||
-          !Object.prototype.hasOwnProperty.call(before, field) ||
-          !Object.prototype.hasOwnProperty.call(after, field) ||
-          !auditBudgetFieldMatches(field, current[field], after[field])
-        ) {
-          throw new Error(BUDGET_REVERT_CONFLICT);
-        }
-        restoredValues[field] = before[field];
-      }
+      const restoredValues = restoreAuditFieldsFromRevert(
+        current,
+        before,
+        after,
+        changedFields,
+        BUDGET_AUDIT_FIELDS,
+        BUDGET_REVERT_CONFLICT,
+        auditBudgetFieldMatches,
+      );
       const restoredSnapshot = readBudgetSnapshot(restoredValues);
       await this.assertBudgetReferences(workplaceId, restoredSnapshot);
 

@@ -1,7 +1,6 @@
 import { Animation } from '@/src/constants';
 import Account from '@/src/data/models/Account';
-import { accountListMetricsQueries } from '@/src/data/repositories/account/AccountListMetricsQueries';
-import { mapAccountListRowToBalance } from '@/src/data/repositories/account/accountListBalanceMapping';
+import { accountListMetricsQueries , mapAccountListRowToBalance } from '@/src/data/repositories/account/AccountListMetricsQueries';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
 import { balanceHierarchyAggregator } from '@/src/services/balance/balanceHierarchyAggregator';

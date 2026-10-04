@@ -20,7 +20,6 @@ jest.mock('@/src/data/repositories/journal/journalQueryRepository', () => ({
 }));
 jest.mock('@/src/data/repositories/transaction', () => ({
   transactionQueryRepository: {
-    findAllNonDeleted: jest.fn(),
     findByJournals: jest.fn(),
   },
 }));
@@ -91,7 +90,6 @@ describe('readReportLedger', () => {
     });
 
     expect(journals.findAll).not.toHaveBeenCalled();
-    expect(transactions.findAllNonDeleted).not.toHaveBeenCalled();
     expect(journals.findPostedInDateRange).toHaveBeenCalledWith(
       query.workplaceId,
       Date.UTC(2026, 7, 1),

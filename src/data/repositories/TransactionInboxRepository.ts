@@ -26,6 +26,10 @@ import type { InboxRecordSnapshot, TransactionInboxRecordWriteData } from '@/src
 import { runAccountingWriteSession } from './AccountingWriteSession';
 import { generator } from '@/src/data/database/idGenerator';
 import { sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
+import {
+  applyInboxWriteData,
+  inboxSnapshotFromRecord,
+} from '@/src/data/repositories/inboxRecordFields';
 
 export type { TransactionInboxRecordWriteData } from '@/src/types/smsInbox';
 
@@ -39,36 +43,6 @@ function isProcessedStatus(status: InboxProcessingStatus): boolean {
     status === InboxProcessingStatus.AUTO_POSTED ||
     status === InboxProcessingStatus.DISMISSED
   );
-}
-
-function applyInboxWrite(
-  record: TransactionInboxRecord,
-  data: TransactionInboxRecordWriteData,
-): void {
-  record.workplaceId = data.workplaceId;
-  record.channel = data.channel;
-  record.deviceSourceId = data.deviceSourceId;
-  record.senderAddress = data.senderAddress;
-  record.rawBody = data.rawBody;
-  record.inputDate = data.inputDate;
-  record.inputFingerprint = data.inputFingerprint;
-  record.parseStatus = data.parseStatus;
-  record.parsedAmount = data.parsedAmount;
-  record.parsedCurrencyCode = data.parsedCurrencyCode;
-  record.parsedMerchant = data.parsedMerchant;
-  record.parsedAccountSource = data.parsedAccountSource;
-  record.referenceNumber = data.referenceNumber;
-  record.direction = data.direction;
-  record.processingStatus = data.processingStatus;
-  record.linkedJournalId = data.linkedJournalId;
-  record.duplicateJournalId = data.duplicateJournalId;
-  record.duplicateConfidence = data.duplicateConfidence;
-  record.metadataJson = data.metadataJson;
-  record.parseConfidence = data.parseConfidence;
-  record.parseReason = data.parseReason;
-  record.firstSeenAt = data.firstSeenAt;
-  record.lastScannedAt = data.lastScannedAt;
-  record.processedAt = data.processedAt;
 }
 
 export class TransactionInboxRepository {
@@ -88,33 +62,7 @@ export class TransactionInboxRepository {
   }
 
   private snapshot(record: TransactionInboxRecord): InboxRecordSnapshot {
-    return {
-      id: record.id,
-      workplaceId: record.workplaceId,
-      channel: record.channel,
-      deviceSourceId: record.deviceSourceId,
-      senderAddress: record.senderAddress,
-      rawBody: record.rawBody,
-      inputDate: record.inputDate,
-      inputFingerprint: record.inputFingerprint,
-      parseStatus: record.parseStatus,
-      parsedAmount: record.parsedAmount,
-      parsedCurrencyCode: record.parsedCurrencyCode,
-      parsedMerchant: record.parsedMerchant,
-      parsedAccountSource: record.parsedAccountSource,
-      referenceNumber: record.referenceNumber,
-      direction: record.direction,
-      processingStatus: record.processingStatus,
-      linkedJournalId: record.linkedJournalId,
-      duplicateJournalId: record.duplicateJournalId,
-      duplicateConfidence: record.duplicateConfidence,
-      metadataJson: record.metadataJson,
-      parseConfidence: record.parseConfidence,
-      parseReason: record.parseReason,
-      firstSeenAt: record.firstSeenAt,
-      lastScannedAt: record.lastScannedAt,
-      processedAt: record.processedAt,
-    };
+    return inboxSnapshotFromRecord(record);
   }
 
   private project(
@@ -339,7 +287,7 @@ export class TransactionInboxRepository {
       return {
         ops: [
           existingRecord.prepareUpdate(record => {
-            applyInboxWrite(record, safeData);
+            applyInboxWriteData(record, safeData);
           }),
           ...(!sameInboxAuditState(before, after)
             ? [
@@ -361,7 +309,7 @@ export class TransactionInboxRepository {
     }
 
     const record = this.inbox.prepareCreate((entry: TransactionInboxRecord) => {
-      applyInboxWrite(entry, safeData);
+      applyInboxWriteData(entry, safeData);
     });
     return {
       ops: [

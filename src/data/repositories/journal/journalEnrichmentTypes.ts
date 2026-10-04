@@ -1,12 +1,5 @@
 import { AccountId, JournalId, TransactionId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
-import type { JournalSuggestion } from '@/src/types/journalSuggestions';
-
-export type {
-  JournalSuggestion,
-  JournalSuggestionAccount as JournalAutofillAccount,
-  JournalSuggestionPage,
-} from '@/src/types/journalSuggestions';
 
 /** Row shape returned by `journalEnrichmentQueries.getEnrichmentDataRaw`. */
 export type JournalEnrichmentRow = {
@@ -22,6 +15,3 @@ export type JournalEnrichmentRow = {
   account_icon?: string;
   account_color?: string | null;
 };
-
-/** @deprecated Use JournalSuggestion. */
-export type JournalAutofillSuggestion = JournalSuggestion;

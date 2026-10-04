@@ -7,7 +7,6 @@ import {
   toJournalStatus,
   toTransactionType,
 } from '@/src/data/repositories/importValueParsers';
-import { setRecordTimestamps } from '@/src/data/repositories/importPersistenceAdapter';
 import type {
   CanonicalAccount,
   CanonicalJournal,
@@ -15,6 +14,32 @@ import type {
 } from '@/src/types/importContracts';
 import { WorkplaceId } from '@/src/types/ids';
 import { Collection, Model } from '@nozbe/watermelondb';
+
+type ImportPersistenceRaw = Record<string, unknown> & {
+  id?: string;
+  created_at?: number;
+  updated_at?: number;
+  deleted_at?: number | null;
+  _status?: string;
+};
+
+function getImportPersistenceRaw(record: Model): ImportPersistenceRaw {
+  return record._raw as ImportPersistenceRaw;
+}
+
+export function setRecordTimestamps(
+  record: Model,
+  timestamps: { createdAt?: number; updatedAt?: number; deletedAt?: number | null },
+): void {
+  const raw = getImportPersistenceRaw(record);
+  if (timestamps.createdAt !== undefined) raw.created_at = timestamps.createdAt;
+  if (timestamps.updatedAt !== undefined) raw.updated_at = timestamps.updatedAt;
+  if (timestamps.deletedAt !== undefined) raw.deleted_at = timestamps.deletedAt;
+}
+
+export function setImportPersistenceRawField(record: Model, field: string, value: unknown): void {
+  getImportPersistenceRaw(record)[field] = value;
+}
 
 export function prepareCoreImportRecords(
   workplaceId: WorkplaceId,

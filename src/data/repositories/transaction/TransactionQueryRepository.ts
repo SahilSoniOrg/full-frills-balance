@@ -2,7 +2,6 @@ import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
 import { AccountId, JournalId, TransactionId, WorkplaceId } from '@/src/types/ids';
 import type { ActiveJournalStatus } from '@/src/utils/journalStatus';
-import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import { Observable, of } from 'rxjs';
 import { fetchSequentiallyInChunks } from '../fetchSequentiallyInChunks';
@@ -137,12 +136,6 @@ export class TransactionQueryRepository {
       .observeWithColumns(['amount', 'transaction_type', 'currency_code', 'exchange_rate']);
   }
 
-  async findAllNonDeleted(workplaceId: WorkplaceId): Promise<Transaction[]> {
-    return this.transactions
-      .query(Q.where('deleted_at', Q.eq(null)), Q.where('workplace_id', workplaceId))
-      .fetch();
-  }
-
   async findAllActive(workplaceId: WorkplaceId): Promise<Transaction[]> {
     return this.transactions.query(...buildActiveClauses(workplaceId)).fetch();
   }
@@ -154,12 +147,6 @@ export class TransactionQueryRepository {
         Q.where('workplace_id', workplaceId),
       )
       .fetch();
-  }
-
-  async countNonDeleted(workplaceId: WorkplaceId): Promise<number> {
-    return this.transactions
-      .query(Q.where('deleted_at', Q.eq(null)), Q.where('workplace_id', workplaceId))
-      .fetchCount();
   }
 
   async findLatestForAccount(
@@ -186,7 +173,6 @@ export class TransactionQueryRepository {
     startDate: number,
     endDate: number,
   ): Promise<Transaction[]> {
-    const start = Date.now();
     const clauses = buildActiveClauses(workplaceId, [
       Q.where('account_id', Q.oneOf(accountIds)),
       Q.where('transaction_date', Q.gte(startDate)),
@@ -229,14 +215,6 @@ export class TransactionQueryRepository {
         return b.id.localeCompare(a.id);
       });
     }
-
-    logger.info(
-      `[Trace] TransactionRepository.findByAccountsAndDateRange: ${Date.now() - start}ms`,
-      {
-        accountCount: accountIds.length,
-        resultCount: results.length,
-      },
-    );
 
     return results;
   }

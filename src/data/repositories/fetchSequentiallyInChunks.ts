@@ -9,13 +9,10 @@ export async function fetchSequentiallyInChunks<TId extends string, TRow>(
   fetchChunk: (chunk: readonly TId[]) => Promise<readonly TRow[]>,
   chunkSize = DEFAULT_QUERY_CHUNK_SIZE,
 ): Promise<TRow[]> {
-  if (!Number.isInteger(chunkSize) || chunkSize < 1) {
-    throw new RangeError('chunkSize must be a positive integer');
-  }
-
+  const size = Math.max(1, chunkSize | 0);
   const rows: TRow[] = [];
-  for (let index = 0; index < ids.length; index += chunkSize) {
-    rows.push(...(await fetchChunk(ids.slice(index, index + chunkSize))));
+  for (let index = 0; index < ids.length; index += size) {
+    rows.push(...(await fetchChunk(ids.slice(index, index + size))));
   }
   return rows;
 }

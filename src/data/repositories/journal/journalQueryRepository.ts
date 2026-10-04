@@ -3,7 +3,6 @@ import Journal from '@/src/data/models/Journal';
 import { JournalStatus } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
-import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import { fetchSequentiallyInChunks } from '../fetchSequentiallyInChunks';
 
@@ -69,10 +68,6 @@ export class JournalQueryRepository {
     ).fetch();
   }
 
-  async findAllPosted(workplaceId: WorkplaceId): Promise<Journal[]> {
-    return this.nonDeletedQuery(workplaceId, Q.where('status', JournalStatus.POSTED)).fetch();
-  }
-
   async findPostedPage(
     workplaceId: WorkplaceId,
     afterJournalId: string,
@@ -88,22 +83,12 @@ export class JournalQueryRepository {
   }
 
   async findAll(workplaceId: WorkplaceId): Promise<Journal[]> {
-    const start = Date.now();
-    const results = await this.nonDeletedQuery(
+    return this.nonDeletedQuery(
       workplaceId,
       Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
     )
       .extend(Q.sortBy('journal_date', 'desc'))
       .fetch();
-
-    logger.info(`[Trace] JournalQueryRepository.findAll: ${Date.now() - start}ms`, {
-      count: results.length,
-    });
-    return results;
-  }
-
-  async findAllPlanned(workplaceId: WorkplaceId): Promise<Journal[]> {
-    return this.nonDeletedQuery(workplaceId, Q.where('status', JournalStatus.PLANNED)).fetch();
   }
 
   private findInDateRange(
@@ -136,10 +121,6 @@ export class JournalQueryRepository {
     endDate: number,
   ): Promise<Journal[]> {
     return this.findInDateRange(workplaceId, startDate, endDate, JournalStatus.PLANNED);
-  }
-
-  async findAllNonDeleted(workplaceId: WorkplaceId): Promise<Journal[]> {
-    return this.nonDeletedQuery(workplaceId).extend(Q.sortBy('journal_date', 'desc')).fetch();
   }
 
   async countNonDeleted(workplaceId: WorkplaceId): Promise<number> {

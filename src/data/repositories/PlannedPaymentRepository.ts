@@ -14,6 +14,7 @@ import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 import type { Model } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
+import { restoreAuditFieldsFromRevert } from '@/src/data/repositories/auditRevertSupport';
 
 export interface PlannedPaymentPersistenceInput extends PlannedPaymentFxFields {
   name: string;
@@ -83,18 +84,6 @@ function auditPlannedPaymentState(
       ? (overrides.recurrenceMonth ?? null)
       : (payment.recurrenceMonth ?? null),
   };
-}
-
-function stableAuditJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(stableAuditJson).join(',')}]`;
-  if (typeof value === 'object' && value !== null) {
-    const record = value as Record<string, unknown>;
-    return `{${Object.keys(record)
-      .sort()
-      .map(key => `${JSON.stringify(key)}:${stableAuditJson(record[key])}`)
-      .join(',')}}`;
-  }
-  return JSON.stringify(value ?? null);
 }
 
 export class PlannedPaymentRepository {
@@ -277,18 +266,14 @@ export class PlannedPaymentRepository {
       }
 
       const current = auditPlannedPaymentState(record);
-      const restored: Record<string, unknown> = { ...current };
-      for (const field of changedFields) {
-        if (
-          !revertibleFields.has(field) ||
-          !Object.prototype.hasOwnProperty.call(before, field) ||
-          !Object.prototype.hasOwnProperty.call(after, field) ||
-          stableAuditJson(current[field]) !== stableAuditJson(after[field])
-        ) {
-          throw new Error(conflictMessage);
-        }
-        restored[field] = before[field];
-      }
+      const restored = restoreAuditFieldsFromRevert(
+        current,
+        before,
+        after,
+        changedFields,
+        revertibleFields,
+        conflictMessage,
+      );
 
       const accountIds = [...new Set([restored.fromAccountId, restored.toAccountId])];
       if (accountIds.some(accountId => typeof accountId !== 'string')) {

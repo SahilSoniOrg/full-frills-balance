@@ -17,7 +17,7 @@ import {
 import {
   setImportPersistenceRawField,
   setRecordTimestamps,
-} from '@/src/data/repositories/importPersistenceAdapter';
+} from '@/src/data/repositories/importCoreWriters';
 import type { BatchImportData } from '@/src/types/importContracts';
 import type { AuditEntityType } from '@/src/types/enums';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';

@@ -1,6 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import Journal from '@/src/data/models/Journal';
+import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Transaction from '@/src/data/models/Transaction';
 import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
 import type {
@@ -345,3 +346,15 @@ export class JournalEnrichmentQueries {
 }
 
 export const journalEnrichmentQueries = new JournalEnrichmentQueries();
+
+export async function findJournalMetadataByJournalId(
+  journalId: string,
+  workplaceId: WorkplaceId,
+): Promise<JournalMetadata | null> {
+  const records = await database.collections
+    .get<JournalMetadata>('journal_metadata')
+    .query(Q.where('journal_id', journalId), Q.where('workplace_id', workplaceId))
+    .fetch();
+
+  return records[0] ?? null;
+}

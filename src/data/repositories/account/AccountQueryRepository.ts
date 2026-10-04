@@ -94,10 +94,6 @@ export class AccountQueryRepository {
     return count > 0;
   }
 
-  async countNonDeleted(workplaceId: WorkplaceId): Promise<number> {
-    return this.accounts.query(...buildAccountClauses({ workplaceId })).fetchCount();
-  }
-
   queryByParentId(workplaceId: WorkplaceId, parentId: AccountId): Query<Account> {
     return this.accounts.query(
       ...buildAccountClauses({ workplaceId, parentAccountId: parentId, sortByOrder: true }),

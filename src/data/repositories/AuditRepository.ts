@@ -291,41 +291,6 @@ export class AuditRepository {
   async countByWorkplace(workplaceId: WorkplaceId): Promise<number> {
     return this.auditLogs.query(Q.where('workplace_id', workplaceId)).fetchCount();
   }
-
-  /**
-   * Cleanup legacy entity types (convert to lowercase)
-   * This is an idempotent one-time migration.
-   */
-  async normalizeLegacyEntityTypes(workplaceId: WorkplaceId): Promise<number> {
-    const pageSize = Math.max(1, AppConfig.pagination.auditRecentLimit);
-    let cursor: AuditLogCursor | undefined;
-    let normalizedCount = 0;
-
-    while (true) {
-      const page = await this.findAll(workplaceId, { cursor, limit: pageSize });
-      const uppercaseLogs = page.filter(log => log.entityType !== log.entityType.toLowerCase());
-
-      if (uppercaseLogs.length > 0) {
-        await database.write(async () => {
-          await database.batch(
-            uppercaseLogs.map(log =>
-              log.prepareUpdate(record => {
-                record.entityType = record.entityType.toLowerCase() as AuditEntityType;
-              }),
-            ),
-          );
-        });
-        normalizedCount += uppercaseLogs.length;
-      }
-
-      if (page.length < pageSize) break;
-      const oldest = page[page.length - 1];
-      if (!oldest) break;
-      cursor = { timestamp: oldest.timestamp, id: oldest.id };
-    }
-
-    return normalizedCount;
-  }
 }
 
 export const auditRepository = new AuditRepository();

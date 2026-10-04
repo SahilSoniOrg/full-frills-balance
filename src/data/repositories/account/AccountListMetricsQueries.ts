@@ -6,8 +6,9 @@ import type { RawSqlArg } from '@/src/data/database/DatabaseUtils';
 import { RawAccountRow } from '@/src/data/repositories/TransactionTypes';
 import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
 import type { AccountListItemRaw } from './types';
+import { AccountBalance } from '@/src/types/domainReadModels';
+import { AccountId , WorkplaceId } from '@/src/types/ids';
 import { effect, periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
-import { WorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
@@ -105,13 +106,7 @@ export class AccountListMetricsQueries {
     }
     args.push(workplaceId);
 
-    const start = Date.now();
     const results = await rawSqlExecutor.query<RawAccountRow>(sql, args);
-    const duration = Date.now() - start;
-
-    logger.info(`[Trace] AccountListMetricsQueries.getAccountListItemsRaw: ${duration}ms`, {
-      count: results?.length || 0,
-    });
 
     if (!results) {
       logger.warn(
@@ -236,3 +231,33 @@ export class AccountListMetricsQueries {
 }
 
 export const accountListMetricsQueries = new AccountListMetricsQueries();
+
+type RawListRow = AccountListItemRaw | Record<string, unknown>;
+
+export function mapAccountListRowToBalance(item: RawListRow, asOfDate: number): AccountBalance {
+  const row = item as Record<string, unknown>;
+  const accountId = (item.id || row.accountId || row.account_id) as AccountId;
+  const balance = Number(item.direct_balance ?? row.directBalance ?? 0);
+  const currencyCode = (item.currency_code ?? row.currencyCode) as string;
+  const accountType = (item.account_type ?? row.accountType) as AccountType;
+  const income = Number(
+    item.periodIncrease ?? row.period_increase ?? row.monthly_income ?? row.monthlyIncome ?? 0,
+  );
+  const expenses = Number(
+    item.periodDecrease ?? row.period_decrease ?? row.monthly_expenses ?? row.monthlyExpenses ?? 0,
+  );
+  const txCount = Number(item.direct_transaction_count ?? row.directTransactionCount ?? 0);
+
+  return {
+    accountId,
+    balance,
+    directBalance: balance,
+    currencyCode: String(currencyCode),
+    transactionCount: txCount,
+    directTransactionCount: txCount,
+    asOfDate,
+    accountType,
+    monthlyIncome: Math.max(0, income),
+    monthlyExpenses: Math.max(0, expenses),
+  };
+}
