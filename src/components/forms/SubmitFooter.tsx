@@ -64,10 +64,20 @@ export const SubmitFooter = ({
           disabled={disabled}
           loading={loading}
           style={styles.button}
-          buttonStyle={styles.button}
+          buttonStyle={[
+            styles.button,
+            disabled ? { backgroundColor: theme.surfaceSecondary } : undefined,
+          ]}
           testID="submit-footer-button"
+          accessibilityLabel={label}
         >
-          {label}
+          {disabled ? (
+            <AppText variant="body" weight="semibold" style={{ color: theme.text }}>
+              {label}
+            </AppText>
+          ) : (
+            label
+          )}
         </AppButton>
       </MotiView>
     </View>
@@ -89,6 +99,6 @@ const styles = StyleSheet.create({
   },
   button: {
     height: Size.buttonXl,
-    borderRadius: Shape.radius.r4,
+    borderRadius: Shape.radius.full,
   },
 });

@@ -1,10 +1,9 @@
-import { AppInput } from '@/src/components/core/AppInput';
-import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
-import { Spacing, Typography } from '@/src/constants';
+import { Spacing } from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';
-import { useTheme } from '@/src/hooks/use-theme';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { SectionLabel } from '@/src/components/shared/SectionLabel';
+import { AmountHero } from './AmountHero';
+import { FormHeroNameFieldAlignment, UnderlineNameField } from './UnderlineNameField';
 
 interface FormHeroSectionProps {
   nameValue: string;
@@ -43,8 +42,6 @@ export const FormHeroSection = ({
   currencySymbol = '$',
   precision = 2,
 }: FormHeroSectionProps) => {
-  const { theme, fonts } = useTheme();
-
   return (
     <Box padding="xl" alignItems="center" background="transparent">
       <SectionLabel
@@ -55,42 +52,27 @@ export const FormHeroSection = ({
       <Inline align="center" space="md" style={{ marginBottom: Spacing.lg, width: '100%' }}>
         {prefix && <Box>{prefix}</Box>}
         <Box flex={1}>
-          <AppInput
-            placeholder={namePlaceholder}
-            value={nameValue}
-            onChangeText={onNameChange}
-            variant="minimal"
-            testID="hero-name-input"
-            inputStyle={{
-              textAlign: nameAlign,
-              fontSize: Typography.sizes.xl,
-              fontFamily: fonts.medium,
-              color: theme.text,
-              letterSpacing: -0.5,
-            }}
-            containerStyle={{ marginBottom: 0 }}
-          />
+          <FormHeroNameFieldAlignment align={nameAlign}>
+            <UnderlineNameField
+              placeholder={namePlaceholder}
+              value={nameValue}
+              onChangeText={onNameChange}
+              testID="hero-name-input"
+            />
+          </FormHeroNameFieldAlignment>
         </Box>
       </Inline>
 
       {showAmount && (
-        <>
-          <SectionLabel
-            label={amountLabel}
-            marginTop="none"
-            style={{ marginBottom: Spacing.xs, letterSpacing: 1 }}
-          />
-          <CalculatorAmountInput
-            value={amountValue}
-            onChangeText={onAmountChange}
-            placeholder={amountPlaceholder}
-            currencySymbol={currencySymbol}
-            precision={precision}
-            variant="hero"
-            containerStyle={{ width: '100%', paddingHorizontal: 0 }}
-            testID="hero-amount-input"
-          />
-        </>
+        <AmountHero
+          value={amountValue}
+          onChange={onAmountChange}
+          label={amountLabel}
+          placeholder={amountPlaceholder}
+          currencySymbol={currencySymbol}
+          precision={precision}
+          testID="hero-amount-input"
+        />
       )}
 
       {footer && <Box marginTop="md">{footer}</Box>}

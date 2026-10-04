@@ -169,7 +169,7 @@ export function CalculatorAmountInput({
                 styles.currencyPrefix,
                 {
                   color: withOpacity(color, Opacity.heavy),
-                  fontFamily: fonts.bold,
+                  fontFamily: isHero ? Typography.fonts.heading : fonts.bold,
                   fontSize: isHero ? typography.currencyFontSize : Typography.sizes.base,
                   lineHeight: isHero ? typography.currencyLineHeight : undefined,
                 },

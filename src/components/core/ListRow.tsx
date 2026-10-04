@@ -5,6 +5,7 @@ import { Box, type BoxViewProps } from '@/src/design-system/Box';
 import { Separator } from '@/src/design-system/Separator';
 import { extractBoxProps } from '@/src/design-system/utils';
 import React from 'react';
+import { View } from 'react-native';
 import {
   StyleSheet,
   type AccessibilityState,
@@ -27,6 +28,8 @@ type ListRowPressProps = {
   pointerEvents?: BoxViewProps['pointerEvents'];
   nativeID?: string;
   accessible?: boolean;
+  trailingAction?: React.ReactNode;
+  trailingMaxWidth?: BoxViewProps['maxWidth'];
 };
 
 export type ListRowProps = BoxViewProps &
@@ -80,6 +83,8 @@ export function ListRow(initialProps: ListRowProps) {
     pointerEvents,
     nativeID,
     accessible,
+    trailingAction,
+    trailingMaxWidth,
     ...passthroughProps
   } = initialProps;
 
@@ -139,15 +144,20 @@ export function ListRow(initialProps: ListRowProps) {
           ))}
       </Box>
       {trailing && (
-        <Box marginLeft="md" alignItems="flex-end">
+        <Box
+          marginLeft="md"
+          alignItems="flex-end"
+          maxWidth={trailingMaxWidth}
+          flexShrink={trailingMaxWidth ? 1 : undefined}
+          minWidth={trailingMaxWidth ? 0 : undefined}
+        >
           {trailing}
         </Box>
       )}
-      {showSeparator && <Separator marginLeft={separatorInset} />}
     </>
   );
 
-  const row = (
+  const rowBody = (
     <Box
       flexDirection="row"
       alignItems="center"
@@ -167,8 +177,40 @@ export function ListRow(initialProps: ListRowProps) {
     </Box>
   );
 
-  if (isPressable) {
-    return (
+  let row: React.ReactElement = rowBody;
+  if (isPressable && trailingAction) {
+    row = (
+      <View style={style}>
+        <Box
+          flexDirection="row"
+          alignItems="center"
+          paddingHorizontal={paddingHorizontalToken}
+          paddingVertical={paddingVerticalToken}
+          {...rowBoxProps}
+        >
+          <PressScaleTouchable
+            style={{ flex: 1, alignSelf: 'stretch' }}
+            onPress={onPress}
+            onLongPress={onLongPress}
+            disabled={disabled}
+            hitSlop={hitSlop}
+            delayLongPress={delayLongPress}
+            accessibilityRole={accessibilityRole ?? 'button'}
+            accessibilityLabel={accessibilityLabel || defaultLabel}
+            {...hostProps}
+          >
+            <Box flex={1} flexDirection="row" alignItems="center">
+              {rowContent}
+            </Box>
+          </PressScaleTouchable>
+          <Box marginLeft="md" alignItems="flex-end">
+            {trailingAction}
+          </Box>
+        </Box>
+      </View>
+    );
+  } else if (isPressable) {
+    row = (
       <PressScaleTouchable
         style={style}
         onPress={onPress}
@@ -180,12 +222,19 @@ export function ListRow(initialProps: ListRowProps) {
         accessibilityLabel={accessibilityLabel || defaultLabel}
         {...hostProps}
       >
-        {row}
+        {rowBody}
       </PressScaleTouchable>
     );
   }
 
-  return row;
+  return showSeparator ? (
+    <View>
+      {row}
+      <Separator width="auto" marginLeft={separatorInset} />
+    </View>
+  ) : (
+    row
+  );
 }
 
 const styles = StyleSheet.create({
