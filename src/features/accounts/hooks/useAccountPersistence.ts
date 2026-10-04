@@ -107,7 +107,7 @@ export function useAccountPersistence(
           metadata: payload.metadata,
         });
 
-        returnCreatedAccountToJournalEntry(
+        const returnedToJournalEntry = returnCreatedAccountToJournalEntry(
           navigation,
           accountCreationReturnTarget,
           createdAccount.id,
@@ -115,7 +115,7 @@ export function useAccountPersistence(
 
         toast.success(`"${sanitizedName}" has been created successfully!`);
 
-        if (hasExistingAccounts) {
+        if (returnedToJournalEntry || hasExistingAccounts) {
           AppNavigation.back();
         } else {
           AppNavigation.toAccounts();
