@@ -13,7 +13,7 @@ export interface SelectionOption<T extends string | number = string> {
   icon?: IconName;
 }
 
-interface SelectionPickerSheetProps<T extends string | number> {
+export interface SelectionPickerSheetProps<T extends string | number> {
   visible: boolean;
   title: string;
   options: SelectionOption<T>[];
@@ -24,6 +24,8 @@ interface SelectionPickerSheetProps<T extends string | number> {
   actionLabel?: string;
   onAction?: () => void;
   actionTestID?: string;
+  selectedBackgroundColor?: string;
+  showSearch?: boolean;
 }
 
 export function SelectionPickerSheet<T extends string | number>({
@@ -37,6 +39,8 @@ export function SelectionPickerSheet<T extends string | number>({
   actionLabel,
   onAction,
   actionTestID,
+  selectedBackgroundColor,
+  showSearch,
 }: SelectionPickerSheetProps<T>) {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
@@ -72,7 +76,7 @@ export function SelectionPickerSheet<T extends string | number>({
       contentStyle={styles.body}
       accessibilityCloseLabel="Close selection"
     >
-      {options.length > 10 && (
+      {(showSearch ?? options.length > 10) && (
         <View style={styles.searchContainer}>
           <AppInput
             placeholder={searchPlaceholder}
@@ -113,7 +117,8 @@ export function SelectionPickerSheet<T extends string | number>({
                 styles.optionItem,
                 { borderBottomColor: theme.border },
                 isSelected && {
-                  backgroundColor: withOpacity(theme.primary, Opacity.selection),
+                  backgroundColor:
+                    selectedBackgroundColor ?? withOpacity(theme.primary, Opacity.selection),
                 },
               ]}
               onPress={() => handleSelect(item.id)}
