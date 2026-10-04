@@ -1,6 +1,7 @@
 import { ArchiveVisibilityScopeProvider } from '@/src/contexts/ArchiveVisibilityScope';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { ReactNode } from 'react';
+import { StyleSheet } from 'react-native';
 
 export interface BaseAccountPickerModalProps {
   visible: boolean;
@@ -27,6 +28,7 @@ export function BaseAccountPickerModal({
       animationType="slide"
       fixedHeight
       scrollable={false}
+      contentStyle={styles.content}
       contentTestID="account-picker-modal-content"
       backdropTestID="account-picker-modal-backdrop"
     >
@@ -34,3 +36,7 @@ export function BaseAccountPickerModal({
     </ModalSurface>
   );
 }
+
+const styles = StyleSheet.create({
+  content: { flex: 1, minHeight: 0 },
+});
