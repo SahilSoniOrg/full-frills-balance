@@ -315,7 +315,7 @@ Work through this sequence commit-by-commit. Run `bun run verify` (or `bun test`
   - Standardize preferences hooks on scoped stores; eliminate inline subscribe closures.
 - [x] **Step 27:** `refactor(preferences): eliminate duplicated per-hook defaults`
   - Source defaults directly from preferences bag constants.
-- [ ] **Step 28:** `refactor(services): fix AuditRepository to preferences layer inversion`
+- [x] **Step 28:** `refactor(services): fix AuditRepository to preferences layer inversion`
   - Pass preferences to audit service rather than repository importing preferences.
 - [ ] **Step 29:** `refactor(observables): route account queries through ReactiveCacheCoordinator`
   - Eliminate redundant independent subscriptions across `useAccounts`.
