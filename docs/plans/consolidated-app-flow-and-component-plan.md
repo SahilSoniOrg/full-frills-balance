@@ -313,7 +313,7 @@ Work through this sequence commit-by-commit. Run `bun run verify` (or `bun test`
 ### Block 4: Phase 3 State, Services & Design System Polish (Steps 26–31)
 - [x] **Step 26:** `refactor(preferences): consolidate facade into single read API`
   - Standardize preferences hooks on scoped stores; eliminate inline subscribe closures.
-- [ ] **Step 27:** `refactor(preferences): eliminate duplicated per-hook defaults`
+- [x] **Step 27:** `refactor(preferences): eliminate duplicated per-hook defaults`
   - Source defaults directly from preferences bag constants.
 - [ ] **Step 28:** `refactor(services): fix AuditRepository to preferences layer inversion`
   - Pass preferences to audit service rather than repository importing preferences.
