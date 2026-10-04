@@ -5,7 +5,7 @@ import {
   ExchangeRateCard,
   type ExchangeRateCardProps,
 } from '@/src/components/forms/ExchangeRateCard';
-import { RATE_UNAVAILABLE, resolveFxPair, type FxPairInput } from '../fxPair';
+import { RATE_UNAVAILABLE, resolveFxPair, type FxPairInput } from '@/src/domain/accounting/fxPair';
 
 const pairInput: FxPairInput = {
   sourceCurrency: 'USD',

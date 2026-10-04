@@ -1,4 +1,5 @@
-import { Icon, parseIconName, type IconName } from '@/src/types/domainIcons';
+import { isValidIconName, type IconName } from '@/src/components/core';
+import { Icon, parseIconName } from '@/src/types/domainIcons';
 import { ColorKey } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useJournal } from '@/src/features/journal/hooks/useJournal';
@@ -6,28 +7,68 @@ import { useJournalLegs } from '@/src/features/journal/hooks/useJournals';
 import { useJournalDetailsSmsInfo } from '@/src/features/journal/hooks/useJournalDetailsSmsInfo';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useObservable } from '@/src/hooks/useObservable';
-import {
-  buildJournalSplitItems,
-  JournalSplitItemViewModel,
-} from '@/src/features/journal/hooks/journalDetailsSplitItems';
+import { getAccountFallbackIcon } from '@/src/components/account-selection';
 import { useJournalDetailsActions } from '@/src/features/journal/hooks/useJournalDetailsActions';
 import { ORPHANED_PLANNED_JOURNAL_NOTICE } from '@/src/services/planned-payment/projectablePlannedJournals';
 import { plannedPaymentReadService } from '@/src/services/planned-payment/plannedPaymentReadService';
 import {
   JournalStatusChipVariant,
+  mapJournalLegSplitPresentation,
   resolveJournalDetailsInfo,
   resolveJournalStatusChipVariant,
   resolveRevertPlannedActionLabels,
   resolveJournalAmountPresentation,
 } from '@/src/services/journal/journalDetailsHelpers';
 import { inferSimpleTabTypeFromTwoLegs } from '@/src/services/journal/journalEditorHelpers';
-import { JournalId } from '@/src/types/ids';
+import { AccountId, type JournalId } from '@/src/types/ids';
 import { TransactionType } from '@/src/types/enums';
 import { formatDate, getNow } from '@/src/utils/dateUtils';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { of } from 'rxjs';
+import { DisplayTransaction } from '@/src/types/domainReadModels';
+
+export interface JournalSplitItemViewModel {
+  id: string;
+  accountId: AccountId;
+  accountName: string;
+  transactionType: string;
+  amount: number;
+  currencyCode: string;
+  amountPrefix: '+' | '-';
+  amountColor: ColorKey;
+  iconName: IconName | null;
+  fallbackIcon?: IconName;
+  iconColor: ColorKey;
+  iconBackground: ColorKey;
+  onPress: () => void;
+}
+
+export function buildJournalSplitItems(
+  transactions: DisplayTransaction[],
+  onAccountPress: (accountId: AccountId) => void,
+): JournalSplitItemViewModel[] {
+  return transactions.map(item => {
+    const presentation = mapJournalLegSplitPresentation(item);
+
+    return {
+      id: item.id,
+      accountId: item.accountId,
+      accountName: item.accountName || 'Unknown Account',
+      transactionType: presentation.transactionTypeLabel,
+      amount: presentation.amount,
+      currencyCode: presentation.currencyCode,
+      amountPrefix: presentation.amountPrefix,
+      amountColor: presentation.amountColor,
+      iconName: isValidIconName(item.icon) ? item.icon : null,
+      fallbackIcon: getAccountFallbackIcon(item.accountType),
+      iconColor: presentation.iconColor,
+      iconBackground: presentation.iconBackground,
+      onPress: () => onAccountPress(item.accountId),
+    };
+  });
+}
 
 export interface JournalDetailsViewModel {
   isLoading: boolean;

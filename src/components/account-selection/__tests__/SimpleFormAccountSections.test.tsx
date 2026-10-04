@@ -1,5 +1,5 @@
-import { SimpleFormAccountSections } from '../components/SimpleFormAccountSections';
-import { AccountPickerNode } from '../components/AccountPickerPanel.parts';
+import { SimpleFormAccountSections } from '../SimpleFormAccountSections';
+import { AccountPickerNode } from '../AccountPickerPanel.parts';
 import { ArchiveVisibilityScopeProvider } from '@/src/contexts/ArchiveVisibilityScope';
 import { AppConfig } from '@/src/constants';
 import { AccountType } from '@/src/types/enums';
@@ -9,7 +9,7 @@ import * as accountCategory from '@/src/utils/accountCategory';
 import { act, fireEvent, render, screen, within } from '@/src/utils/test-utils';
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import type { AccountPickerListItem } from '../components/accountPickerRows';
+import type { AccountPickerListItem } from '../accountPickerRows';
 
 jest.mock('@shopify/flash-list', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports

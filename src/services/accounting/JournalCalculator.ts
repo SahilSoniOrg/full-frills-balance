@@ -19,80 +19,78 @@ function roundAmount(amount: number): number {
   return Math.round((amount + Number.EPSILON) * 100) / 100;
 }
 
-export class JournalCalculator {
-  /**
-   * Checks if the journal is balanced (delegates to BalanceEffects.checkJournal).
-   */
-  static isBalanced(lines: JournalLineInput[], baseCurrency: string): boolean {
-    const normalizedBaseCurrency = baseCurrency.trim().toUpperCase();
-    const forCheck: JournalLineForCheck[] = lines.map(line => {
-      const currency = line.accountCurrency?.trim().toUpperCase();
-      const rate = Number(line.exchangeRate);
-      const isForeignCurrencyLine = Boolean(
-        currency && currency !== normalizedBaseCurrency && Number.isFinite(rate) && rate > 0,
-      );
+/**
+ * Checks if the journal is balanced (delegates to BalanceEffects.checkJournal).
+ */
+export function isJournalBalanced(lines: JournalLineInput[], baseCurrency: string): boolean {
+  const normalizedBaseCurrency = baseCurrency.trim().toUpperCase();
+  const forCheck: JournalLineForCheck[] = lines.map(line => {
+    const currency = line.accountCurrency?.trim().toUpperCase();
+    const rate = Number(line.exchangeRate);
+    const isForeignCurrencyLine = Boolean(
+      currency && currency !== normalizedBaseCurrency && Number.isFinite(rate) && rate > 0,
+    );
 
-      return {
-        amount: typeof line.amount === 'string' ? (sanitizeAmount(line.amount) ?? 0) : line.amount,
-        type: line.type,
-        exchangeRate: isForeignCurrencyLine ? rate : 1,
-      };
-    });
-    const hasForeignCurrencyLine = lines.some(line => {
-      const currency = line.accountCurrency?.trim().toUpperCase();
-      const rate = Number(line.exchangeRate);
-      return Boolean(
-        currency && currency !== normalizedBaseCurrency && Number.isFinite(rate) && rate !== 1,
-      );
-    });
-    return checkJournal(forCheck, AppConfig.constants.precision, {
-      allowExchangeRateRounding: hasForeignCurrencyLine,
-    }).isValid;
+    return {
+      amount: typeof line.amount === 'string' ? (sanitizeAmount(line.amount) ?? 0) : line.amount,
+      type: line.type,
+      exchangeRate: isForeignCurrencyLine ? rate : 1,
+    };
+  });
+  const hasForeignCurrencyLine = lines.some(line => {
+    const currency = line.accountCurrency?.trim().toUpperCase();
+    const rate = Number(line.exchangeRate);
+    return Boolean(
+      currency && currency !== normalizedBaseCurrency && Number.isFinite(rate) && rate !== 1,
+    );
+  });
+  return checkJournal(forCheck, AppConfig.constants.precision, {
+    allowExchangeRateRounding: hasForeignCurrencyLine,
+  }).isValid;
+}
+
+/**
+ * Calculates the base amount for a journal line, considering exchange rates.
+ * Follows Rule 11 (Business rules in services).
+ */
+export function getJournalLineBaseAmount(
+  line: { amount: string | number; exchangeRate?: string | number; accountCurrency?: string },
+  baseCurrency: string,
+): number {
+  if (line.amount == null) {
+    return 0;
   }
 
-  /**
-   * Calculates the base amount for a journal line, considering exchange rates.
-   * Follows Rule 11 (Business rules in services).
-   */
-  static getLineBaseAmount(
-    line: { amount: string | number; exchangeRate?: string | number; accountCurrency?: string },
-    baseCurrency: string,
-  ): number {
-    if (line.amount == null) {
+  let amount: number;
+  if (typeof line.amount === 'string') {
+    const sanitized = sanitizeAmount(line.amount);
+    if (sanitized === null || isNaN(sanitized)) {
       return 0;
     }
-
-    let amount: number;
-    if (typeof line.amount === 'string') {
-      const sanitized = sanitizeAmount(line.amount);
-      if (sanitized === null || isNaN(sanitized)) {
-        return 0;
-      }
-      amount = sanitized;
-    } else {
-      amount = line.amount;
-    }
-
-    const finalAmount = amount || 0;
-
-    let rate = 1;
-    if (line.exchangeRate != null) {
-      const rateStr = line.exchangeRate.toString();
-      const parsedRate = parseFloat(rateStr);
-      if (!isNaN(parsedRate) && parsedRate > 0) {
-        rate = parsedRate;
-      }
-    }
-
-    const normalizedLineCurrency = line.accountCurrency?.trim().toUpperCase();
-    const normalizedBaseCurrency = baseCurrency.trim().toUpperCase();
-    if (!normalizedLineCurrency || normalizedLineCurrency === normalizedBaseCurrency) {
-      // Even for base currency, ensure we round to the currency precision
-      // to avoid 10.100000000002 issues from manual entry or calculations
-      return roundAmount(finalAmount);
-    }
-
-    const baseAmount = finalAmount * rate;
-    return roundAmount(baseAmount);
+    amount = sanitized;
+  } else {
+    amount = line.amount;
   }
+
+  const finalAmount = amount || 0;
+
+  let rate = 1;
+  if (line.exchangeRate != null) {
+    const rateStr = line.exchangeRate.toString();
+    const parsedRate = parseFloat(rateStr);
+    if (!isNaN(parsedRate) && parsedRate > 0) {
+      rate = parsedRate;
+    }
+  }
+
+  const normalizedLineCurrency = line.accountCurrency?.trim().toUpperCase();
+  const normalizedBaseCurrency = baseCurrency.trim().toUpperCase();
+  if (!normalizedLineCurrency || normalizedLineCurrency === normalizedBaseCurrency) {
+    // Even for base currency, ensure we round to the currency precision
+    // to avoid 10.100000000002 issues from manual entry or calculations
+    return roundAmount(finalAmount);
+  }
+
+  const baseAmount = finalAmount * rate;
+  return roundAmount(baseAmount);
 }

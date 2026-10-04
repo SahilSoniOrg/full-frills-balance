@@ -2,7 +2,7 @@ import { AccountType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
 import { DisplayTransaction } from '@/src/types/domainReadModels';
 
-import { buildJournalSplitItems } from '../journalDetailsSplitItems';
+import { buildJournalSplitItems } from '../useJournalDetailsViewModel';
 import { Icon } from '@/src/types/domainIcons';
 
 describe('journalDetailsSplitItems', () => {

@@ -4,10 +4,15 @@ import { EmptyStateView } from '@/src/components/shared/EmptyStateView';
 import { AppConfig } from '@/src/constants';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { Page } from '@/src/design-system';
-import { useJournalEntryPresentationState } from '@/src/features/journal/entry/hooks/useJournalEntryPresentationState';
 import { JournalEntryShell } from '@/src/features/journal/entry/hooks/useJournalEntryShell';
 import { JOURNAL_ENTRY_MODE_OPTIONS } from '@/src/features/journal/entry/journalEntryMode';
-import { type JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
+import {
+  isJournalEntrySubmitDisabled,
+  resolveJournalEntryValidationHint,
+  resolveJournalEntrySubmitLabel,
+  type JournalEntryScreenMode,
+} from '@/src/features/journal/entry/journalEntryPresentation';
+import type { JournalSuggestion } from '@/src/types/journalSuggestions';
 import { AdvancedModePanel } from '@/src/features/journal/entry/modes/advanced/AdvancedModePanel';
 import { BatchModePanel } from '@/src/features/journal/entry/modes/batch/BatchModePanel';
 import { SimpleModePanel } from '@/src/features/journal/entry/modes/simple/SimpleModePanel';
@@ -44,20 +49,47 @@ export function JournalEntryView(props: JournalEntryViewProps) {
   }, []);
   const accountFlowRef = useRef<AccountFlowHandle | null>(null);
 
-  const presentation = useJournalEntryPresentationState(props);
-  const {
+  const [hideSuggestions, setHideSuggestions] = useState(false);
+  const { editor, loadSuggestions, onSelectSuggestion: applySuggestion } = props;
+  const isSubmitting = editor.isSubmitting;
+  const isBatchMode = props.activeMode === 'batch';
+  const submitLabel = resolveJournalEntrySubmitLabel({
+    activeMode: props.activeMode,
+    simpleType: editor.transactionType,
+    isEdit: editor.isEdit,
     isSubmitting,
-    isBatchMode,
-    submitLabel,
-    isSubmitDisabled,
-    missingRequirementHint,
-    batchSubmitDisabled,
-    hideSuggestions,
-    onDescriptionFocus,
-    onScrollBeginDrag: onPresentationScrollBeginDrag,
-    setDescription,
-    onSelectSuggestion,
-  } = presentation;
+  });
+  const validation = {
+    activeMode: props.activeMode,
+    simpleType: editor.transactionType,
+    validationIssues: props.validationIssues,
+    splitValidation: props.splitValidation,
+  };
+  const isSubmitDisabled = isJournalEntrySubmitDisabled(validation);
+  const missingRequirementHint = isSubmitDisabled
+    ? resolveJournalEntryValidationHint(validation)
+    : null;
+  const batchSubmitDisabled = !props.batchEditor.isValid || props.batchEditor.isSubmitting;
+  const onPresentationScrollBeginDrag = useCallback(() => setHideSuggestions(true), []);
+  const onDescriptionFocus = useCallback(() => {
+    setHideSuggestions(false);
+    loadSuggestions();
+  }, [loadSuggestions]);
+  const setDescription = useCallback(
+    (desc: string) => {
+      setHideSuggestions(false);
+      loadSuggestions();
+      editor.setDescription(desc);
+    },
+    [editor, loadSuggestions],
+  );
+  const onSelectSuggestion = useCallback(
+    (suggestion: JournalSuggestion) => {
+      setHideSuggestions(false);
+      return applySuggestion(suggestion);
+    },
+    [applySuggestion],
+  );
   const dismissDescriptionOnScroll = useCallback(() => {
     if (isInteractingWithSuggestionsRef.current) return;
     descriptionInputRef.current?.blur();
@@ -102,7 +134,6 @@ export function JournalEntryView(props: JournalEntryViewProps) {
     activeMode,
     onToggleMode,
     accounts,
-    editor,
     workplaceId,
     workplaceCurrency,
     guidedAutopilot,

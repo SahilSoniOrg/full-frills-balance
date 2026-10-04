@@ -208,19 +208,4 @@ export const journalPresenter = {
     return SEMANTIC_MATRIX[sourceType]?.[destType] ?? SemanticType.UNKNOWN;
   },
 
-  /**
-   * Simple icon label for the Ivy-style UI
-   */
-  getIconLabel(type: JournalDisplayType): string {
-    switch (type) {
-      case JournalDisplayType.INCOME:
-        return 'I';
-      case JournalDisplayType.EXPENSE:
-        return 'E';
-      case JournalDisplayType.TRANSFER:
-        return 'T';
-      default:
-        return 'J';
-    }
-  },
 };

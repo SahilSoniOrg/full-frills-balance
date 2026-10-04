@@ -5,7 +5,7 @@ import {
   withConvertedAmount,
   withManualBaseRate,
   type FxFetchedRates,
-} from '@/src/features/journal/entry/fxPair';
+} from '@/src/domain/accounting/fxPair';
 
 const fetched = (
   sourceBaseRate: number | null,

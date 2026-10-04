@@ -6,7 +6,7 @@ import {
   isJournalEntrySubmitDisabled,
   type JournalEntryScreenMode,
 } from '../../journalEntryPresentation';
-import { useJournalSuggestionApplication } from '../useJournalSuggestionApplication';
+import { applyJournalSuggestion } from '../applyJournalSuggestion';
 import { useJournalEntryModeState } from '../useJournalEntryModeState';
 import { useSimpleJournalEditor } from '../useSimpleJournalEditor';
 import { useTransactionComposerSession } from '../useTransactionComposerSession';
@@ -68,7 +68,7 @@ const incomeSuggestion: JournalSuggestion = {
   history: { count: 1, lastUsedAt: 1 },
 };
 
-describe('useJournalSuggestionApplication', () => {
+describe('applyJournalSuggestion', () => {
   function renderSuggestionSession(
     options: {
       source?: AccountId;
@@ -86,11 +86,9 @@ describe('useJournalSuggestionApplication', () => {
         initialAmount: '100',
         initialDate: '2026-10-02',
       });
-      const applySuggestion = useJournalSuggestionApplication(
-        session.editor,
-        accounts,
-        options.mode ?? 'basic',
-      );
+      const mode = options.mode ?? 'basic';
+      const applySuggestion = (suggestion: JournalSuggestion) =>
+        applyJournalSuggestion(session.editor, accounts, mode, suggestion);
       return { session, applySuggestion };
     });
   }
@@ -264,11 +262,8 @@ describe('useJournalSuggestionApplication', () => {
         onSelectAccountRequest: jest.fn(),
       });
       const modeState = useJournalEntryModeState(session.editor);
-      const applySuggestion = useJournalSuggestionApplication(
-        session.editor,
-        accounts,
-        modeState.activeMode,
-      );
+      const applySuggestion = (suggestion: JournalSuggestion) =>
+        applyJournalSuggestion(session.editor, accounts, modeState.activeMode, suggestion);
       return { session, simple, modeState, applySuggestion };
     });
 

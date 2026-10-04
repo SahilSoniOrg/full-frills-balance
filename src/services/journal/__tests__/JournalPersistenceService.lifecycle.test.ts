@@ -7,7 +7,7 @@ import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Journal from '@/src/data/models/Journal';
 
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
+import { findJournalMetadataByJournalId } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 
@@ -227,7 +227,7 @@ describe('JournalPersistenceService lifecycle', () => {
 
       await database.write(async () => {
         const now = new Date();
-        const metadata = await journalMetadataRepository.findByJournalId(
+        const metadata = await findJournalMetadataByJournalId(
           journal.id as JournalId,
           workplaceId,
         );
@@ -282,7 +282,7 @@ describe('JournalPersistenceService lifecycle', () => {
       );
 
       await database.write(async () => {
-        const meta = await journalMetadataRepository.findByJournalId(
+        const meta = await findJournalMetadataByJournalId(
           journal.id as JournalId,
           workplaceId,
         );

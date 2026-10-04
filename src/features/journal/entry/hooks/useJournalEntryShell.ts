@@ -14,9 +14,9 @@ import { applyJournalLineAccountSelection } from '@/src/features/journal/entry/j
 import type { AutopilotAppliedAccount } from '@/src/features/journal/entry/components/useSimpleFormExpansion';
 import {
   JournalEntryScreenMode,
+  parseTransactionIntentSeed,
   resolveJournalEntryHeaderTitle,
 } from '@/src/features/journal/entry/journalEntryPresentation';
-import { parseTransactionIntentSeed } from '@/src/features/journal/entry/journalEntryRouteAdapter';
 import { useJournalEntryModeState } from '@/src/features/journal/entry/hooks/useJournalEntryModeState';
 import {
   createJournalDraftFingerprint,
@@ -26,7 +26,7 @@ import { useTransactionComposerSession } from '@/src/features/journal/entry/hook
 import { useBatchJournalSession } from '@/src/features/journal/entry/hooks/useBatchJournalSession';
 import type { useBulkJournalEditor } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
 import type { SavedJournalSummary } from '@/src/features/journal/entry/types/bulkJournal';
-import { useJournalSuggestionApplication } from '@/src/features/journal/entry/hooks/useJournalSuggestionApplication';
+import { applyJournalSuggestion } from '@/src/features/journal/entry/hooks/applyJournalSuggestion';
 import {
   JournalSuggestionState,
   JournalSuggestionPage,
@@ -245,7 +245,11 @@ export function useJournalEntryShell(): JournalEntryShell {
     batchEditor,
   });
 
-  const onSelectSuggestion = useJournalSuggestionApplication(editor, accounts, activeMode);
+  const onSelectSuggestion = useCallback(
+    (suggestion: JournalSuggestion) =>
+      applyJournalSuggestion(editor, accounts, activeMode, suggestion),
+    [editor, accounts, activeMode],
+  );
 
   const headerTitle = useMemo(
     () => resolveJournalEntryHeaderTitle({ isEdit: editor.isEdit, isCopy: editor.isCopy }),

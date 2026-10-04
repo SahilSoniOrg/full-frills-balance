@@ -9,11 +9,17 @@ import type { SplitValidationError } from '@/src/services/journal/splitJournalHe
 import type {
   JournalEntryRouteEditorMode,
   JournalEntrySimpleType,
+  TransactionIntentSeed,
+  TransactionIntentSeedSourceContext,
 } from '@/src/types/journalEntryRoute';
 export type {
   JournalEntryRouteEditorMode,
   JournalEntrySimpleType,
+  LegacyJournalEntryQueryParams,
+  TransactionIntentSeed,
+  TransactionIntentSeedSourceContext,
 } from '@/src/types/journalEntryRoute';
+export { toLegacyJournalEntryQueryParams } from '@/src/types/journalEntryRoute';
 
 /** Internal composer views. Legacy route names are translated at the adapter boundary below. */
 export type JournalEntryScreenMode = 'basic' | 'allocation' | 'expert' | 'batch';
@@ -277,4 +283,61 @@ export function allocationStatusColor(
   if (tone === 'over') return theme.error;
   if (tone === 'even') return theme.primary;
   return theme.textSecondary;
+}
+
+function compactTransactionIntentContext(
+  context: TransactionIntentSeedSourceContext,
+): TransactionIntentSeedSourceContext {
+  return Object.fromEntries(
+    Object.entries(context).filter(([, value]) => value !== undefined && value !== ''),
+  ) as TransactionIntentSeedSourceContext;
+}
+
+function compactTransactionIntentSeed(seed: TransactionIntentSeed): TransactionIntentSeed {
+  return Object.fromEntries(
+    Object.entries(seed).filter(([, value]) => value !== undefined && value !== ''),
+  ) as TransactionIntentSeed;
+}
+
+/** Converts the normalized legacy parser output into the canonical seed. */
+export function toTransactionIntentSeed(route: JournalEntryRouteParams): TransactionIntentSeed {
+  const sourceContext = compactTransactionIntentContext({
+    launchSource: route.launchSource,
+    smsId: route.smsId,
+    smsRecordId: route.smsRecordId,
+  });
+
+  const hasSourceContext = Object.keys(sourceContext).length > 0;
+
+  return compactTransactionIntentSeed({
+    editorMode: route.mode,
+    type: route.type,
+    guidedAutopilot: route.guidedAutopilot,
+    journalId: route.journalId,
+    copyFromJournalId: route.copyFromJournalId,
+    sourceAccountId: route.sourceAccountId,
+    destinationAccountId: route.destinationAccountId,
+    amount: route.amount,
+    currencyCode: route.currencyCode,
+    description: route.description,
+    notes: route.notes,
+    date: route.initialDate,
+    ...(hasSourceContext
+      ? {
+          sourceContext: {
+            ...sourceContext,
+          },
+        }
+      : {}),
+  });
+}
+
+/**
+ * Parses all currently supported route aliases before creating a seed.
+ * This is the compatibility boundary for deep links and old launchers.
+ */
+export function parseTransactionIntentSeed(
+  params: Record<string, string | string[] | undefined>,
+): TransactionIntentSeed {
+  return toTransactionIntentSeed(parseJournalEntryRouteParams(params));
 }

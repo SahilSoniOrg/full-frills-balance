@@ -214,21 +214,6 @@ describe('JournalPresenter', () => {
     });
   });
 
-  describe('getIconLabel', () => {
-    it('returns I for INCOME', () => {
-      expect(journalPresenter.getIconLabel(JournalDisplayType.INCOME)).toBe('I');
-    });
-    it('returns E for EXPENSE', () => {
-      expect(journalPresenter.getIconLabel(JournalDisplayType.EXPENSE)).toBe('E');
-    });
-    it('returns T for TRANSFER', () => {
-      expect(journalPresenter.getIconLabel(JournalDisplayType.TRANSFER)).toBe('T');
-    });
-    it('returns J for MIXED', () => {
-      expect(journalPresenter.getIconLabel(JournalDisplayType.MIXED)).toBe('J');
-    });
-  });
-
   describe('getPresentation', () => {
     it('presents MIXED journals as a split without a semantic type', () => {
       expect(journalPresenter.getPresentation(JournalDisplayType.MIXED)).toEqual({

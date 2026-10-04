@@ -2,7 +2,7 @@ import {
   parseTransactionIntentSeed,
   toLegacyJournalEntryQueryParams,
   toTransactionIntentSeed,
-} from '../journalEntryRouteAdapter';
+} from '../journalEntryPresentation';
 import { asAccountId, asJournalId } from '@/src/types/ids';
 
 describe('journalEntryRouteAdapter', () => {

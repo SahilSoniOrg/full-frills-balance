@@ -1,5 +1,5 @@
 import { ArchiveVisibilityScopeProvider } from '@/src/contexts/ArchiveVisibilityScope';
-import { resolveFxPair } from '@/src/features/journal/entry/fxPair';
+import { resolveFxPair } from '@/src/domain/accounting/fxPair';
 import type { RowFx } from '@/src/features/journal/entry/hooks/workplaceRowFx';
 import { AccountType } from '@/src/types/enums';
 import { asAccountId } from '@/src/types/ids';

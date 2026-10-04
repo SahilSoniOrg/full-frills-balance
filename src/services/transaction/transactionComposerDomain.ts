@@ -1,4 +1,4 @@
-import { JournalCalculator } from '@/src/services/accounting/JournalCalculator';
+import { getJournalLineBaseAmount } from '@/src/services/accounting/JournalCalculator';
 import { parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { sanitizeAmount } from '@/src/utils/validation';
@@ -209,7 +209,7 @@ export function resolveTransactionIntent(
     const allAllocationAccountsResolved = destinations.length === rawAllocations.length;
     const amountInBaseCurrency =
       source && amount !== null && allAllocationAccountsResolved
-        ? JournalCalculator.getLineBaseAmount(
+        ? getJournalLineBaseAmount(
             {
               amount,
               accountCurrency: source.currencyCode,
@@ -223,7 +223,7 @@ export function resolveTransactionIntent(
         ? destinations.reduce(
             (sum, destination) =>
               sum +
-              JournalCalculator.getLineBaseAmount(
+              getJournalLineBaseAmount(
                 {
                   amount: destination.amount,
                   accountCurrency: destination.account.currencyCode,

@@ -3,7 +3,7 @@ import { Section } from '@/src/components/shared/Section';
 import { Icon, AppIcon, ListRow } from '@/src/components/core';
 import { Size, Typography } from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';
-import { JournalSplitItemViewModel } from '@/src/features/journal/hooks/journalDetailsSplitItems';
+import { JournalSplitItemViewModel } from '@/src/features/journal/hooks/useJournalDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { ComponentVariant } from '@/src/utils/style-helpers';
 import React, { useMemo } from 'react';

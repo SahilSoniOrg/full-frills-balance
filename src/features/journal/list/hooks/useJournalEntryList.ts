@@ -3,7 +3,6 @@ import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useJournals } from '@/src/features/journal/hooks/useJournals';
 import { buildTimelineGroupingOptions } from '@/src/features/journal/list/hooks/journalDayNetGrouping';
-import { mapTimelineItemToEntryCardProps } from '@/src/features/journal/list/journalEntryCardViewModel';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useJournalListGrouping } from '@/src/hooks/useJournalListGrouping';
@@ -12,7 +11,7 @@ import { useSharePrefs } from '@/src/hooks/useSharePrefs';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { shareJournalEntries } from '@/src/services/sharing/JournalShareProvider';
 import type { JournalTimelineRow } from '@/src/services/journal/journalTimelineRows';
-import { mapJournalToTimelineItem } from '@/src/services/journal/journalTimelinePresentation';
+import { mapJournalToEntryCardProps } from '@/src/services/journal/journalTimelinePresentation';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalStatus } from '@/src/types/enums';
@@ -136,9 +135,7 @@ export function useJournalEntryList({
         return;
       }
 
-      const cardProps = mapTimelineItemToEntryCardProps(
-        mapJournalToTimelineItem(row.journal, row.viewer),
-      );
+      const cardProps = mapJournalToEntryCardProps(row.journal, row.viewer);
       AppNavigation.toJournalDetails(row.journal.id, {
         title: cardProps.title,
         amount: cardProps.amount,

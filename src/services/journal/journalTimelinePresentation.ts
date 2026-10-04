@@ -2,7 +2,7 @@ import { AppConfig } from '@/src/constants';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalDisplayType, SemanticType } from '@/src/types/enums';
-import { Icon } from '@/src/types/domainIcons';
+import { Icon, isValidIconName, parseIconName } from '@/src/types/domainIcons';
 import {
   convertJournalCurrencyAmount,
   resolveJournalFxRate,
@@ -10,6 +10,7 @@ import {
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { getAccountTypeVariant } from '@/src/utils/accountCategory';
+import { JournalEntryCardProps, JournalEntryLeg } from '@/src/types/journalEntryCard';
 import {
   JournalTimelineIconKey,
   JournalTimelineItem,
@@ -152,6 +153,50 @@ function buildAccountFlow(
     destinations: peers(destinations),
     neutral: peers(neutral),
     showCurrencyCodes: currencies.size > 1,
+  };
+}
+
+function mapTimelineLegToEntryCardLeg(leg: JournalTimelineLeg): JournalEntryLeg {
+  return {
+    ...leg,
+    icon: isValidIconName(leg.icon) ? leg.icon : undefined,
+    fallbackIcon: parseIconName(leg.fallbackIcon, Icon.Wallet),
+  };
+}
+
+function mapTimelineAccountFlowToEntryCard(
+  accountFlow: JournalTimelineAccountFlow,
+): JournalEntryCardProps['accountFlow'] {
+  return {
+    ...accountFlow,
+    primaryAccount: accountFlow.primaryAccount
+      ? mapTimelineLegToEntryCardLeg(accountFlow.primaryAccount)
+      : undefined,
+    sources: accountFlow.sources.map(mapTimelineLegToEntryCardLeg),
+    destinations: accountFlow.destinations.map(mapTimelineLegToEntryCardLeg),
+    neutral: accountFlow.neutral.map(mapTimelineLegToEntryCardLeg),
+  };
+}
+
+export function mapJournalToEntryCardProps(
+  journal: EnrichedJournal,
+  viewer?: JournalTimelineViewer,
+): Omit<JournalEntryCardProps, 'onPress'> {
+  const item = mapJournalToTimelineItem(journal, viewer);
+  return {
+    title: item.title,
+    amount: item.amount,
+    currencyCode: item.currencyCode,
+    transactionDate: item.transactionDate,
+    presentation: {
+      label: item.presentation.label,
+      showTypeBadge: item.presentation.showTypeBadge,
+      typeColor: item.presentation.typeColorKey,
+      typeIcon: item.presentation.typeIcon,
+      amountPrefix: item.presentation.amountPrefix,
+    },
+    accountFlow: mapTimelineAccountFlowToEntryCard(item.accountFlow),
+    notes: item.notes,
   };
 }
 

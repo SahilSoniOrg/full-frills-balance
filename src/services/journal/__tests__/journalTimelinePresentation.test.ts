@@ -4,6 +4,7 @@ import { AccountId, JournalId } from '@/src/types/ids';
 import {
   journalDisplayTypeChrome,
   ledgerLineChrome,
+  mapJournalToEntryCardProps,
   mapJournalToTimelineItem,
 } from '@/src/services/journal/journalTimelinePresentation';
 
@@ -222,5 +223,72 @@ describe('journalTimelinePresentation', () => {
 
     expect(incomeToDestination.presentation.typeIcon).toBe('arrowUp');
     expect(incomeToDestination.presentation.amountPrefix).toBe('+ ');
+  });
+
+  it('mapJournalToEntryCardProps preserves journal title and account presentation', () => {
+    const card = mapJournalToEntryCardProps({
+      id: 'j1' as JournalId,
+      journalDate: Date.now(),
+      description: 'Lunch',
+      currencyCode: 'USD',
+      status: 'POSTED',
+      totalAmount: 25,
+      transactionCount: 2,
+      displayType: JournalDisplayType.EXPENSE,
+      accounts: [
+        {
+          id: 'a1' as AccountId,
+          name: 'Checking',
+          accountType: AccountType.ASSET,
+          role: 'SOURCE',
+        },
+      ],
+      semanticType: SemanticType.PURCHASE,
+      semanticLabel: 'Purchase',
+    });
+
+    expect(card.title).toBe('Lunch');
+    expect(card.accountFlow?.primaryAccount?.name).toBe('Checking');
+  });
+
+  it('mapJournalToEntryCardProps normalizes invalid stored icons on structured legs', () => {
+    const card = mapJournalToEntryCardProps({
+      id: 'j1' as JournalId,
+      journalDate: Date.now(),
+      currencyCode: 'USD',
+      status: 'POSTED',
+      totalAmount: 100,
+      transactionCount: 4,
+      displayType: JournalDisplayType.EXPENSE,
+      accounts: [
+        {
+          id: 'bank' as AccountId,
+          name: 'Bank',
+          accountType: AccountType.ASSET,
+          role: 'SOURCE',
+          amount: 100,
+          currencyCode: 'USD',
+          icon: 'invalid-stored-icon',
+          color: '#CDAA6B',
+        },
+        ...['Food', 'Travel', 'Fees'].map((name, index) => ({
+          id: name as AccountId,
+          name,
+          accountType: AccountType.EXPENSE,
+          role: 'DESTINATION' as const,
+          amount: 10 + index,
+          currencyCode: 'USD',
+          color: '#65C6AD',
+        })),
+      ],
+    });
+    expect(card.accountFlow?.primaryAccount?.icon).toBeUndefined();
+    expect(card.accountFlow?.primaryAccount?.fallbackIcon).toBeDefined();
+    expect(card.accountFlow?.primaryAccount?.color).toBe('#CDAA6B');
+    expect(card.accountFlow?.destinations.every(leg => leg.color === '#65C6AD')).toBe(true);
+    expect(card.accountFlow?.destinations.map(leg => leg.name)).toEqual(['Fees', 'Travel', 'Food']);
+    expect(card.amount).toBe(100);
+    expect(card.accountFlow?.primaryAccount).not.toHaveProperty('amount');
+    expect(card.accountFlow?.primaryAccount).not.toHaveProperty('currencyCode');
   });
 });

@@ -3,7 +3,7 @@ import { AccountType, TransactionType } from '@/src/types/enums';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { render, screen } from '@/src/utils/test-utils';
 import { AdvancedForm } from '../components/AdvancedForm';
-import { resolveFxPair } from '../fxPair';
+import { resolveFxPair } from '@/src/domain/accounting/fxPair';
 import type { AdvancedJournalFormController } from '../hooks/useAdvancedJournalForm';
 import { Text as MockText } from 'react-native';
 

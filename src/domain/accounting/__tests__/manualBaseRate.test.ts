@@ -1,24 +1,35 @@
 import {
   formatManualBaseRate,
   hasManualBaseRateDraft,
-  parseManualBaseRate,
   resolveManualWorkplaceRates,
   resolveWorkplaceRatesFromConvertedAmount,
-} from '@/src/features/journal/entry/manualBaseRate';
+} from '@/src/domain/accounting/manualBaseRate';
 
-describe('parseManualBaseRate', () => {
+describe('resolveManualWorkplaceRates draft parsing', () => {
   it('rejects empty, trailing-dot, and non-positive drafts', () => {
-    expect(parseManualBaseRate('')).toBeNull();
-    expect(parseManualBaseRate('1.')).toBeNull();
-    expect(parseManualBaseRate('.')).toBeNull();
-    expect(parseManualBaseRate('0')).toBeNull();
-    expect(parseManualBaseRate('1.2.3')).toBeNull();
+    expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '', '')).toBeNull();
+    expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '1.', '')).toBeNull();
+    expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '.', '')).toBeNull();
+    expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '0', '')).toBeNull();
+    expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '1.2.3', '')).toBeNull();
   });
 
   it('accepts finished positive rates', () => {
-    expect(parseManualBaseRate('1')).toBe(1);
-    expect(parseManualBaseRate('1.25')).toBe(1.25);
-    expect(parseManualBaseRate('.5')).toBe(0.5);
+    expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '1', '')).toEqual({
+      sourceBaseRate: 1,
+      destBaseRate: 1,
+      exchangeRate: 1,
+    });
+    expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '1.25', '')).toEqual({
+      sourceBaseRate: 1.25,
+      destBaseRate: 1,
+      exchangeRate: 1.25,
+    });
+    expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '.5', '')).toEqual({
+      sourceBaseRate: 0.5,
+      destBaseRate: 1,
+      exchangeRate: 0.5,
+    });
   });
 });
 
@@ -120,6 +131,8 @@ describe('resolveWorkplaceRatesFromConvertedAmount', () => {
   });
 
   it('formats manual rates the way the rate hook parses them', () => {
-    expect(parseManualBaseRate(formatManualBaseRate(95.9546))).toBeCloseTo(95.9546);
+    expect(
+      resolveManualWorkplaceRates('EUR', 'USD', 'USD', formatManualBaseRate(95.9546), '')?.sourceBaseRate,
+    ).toBeCloseTo(95.9546);
   });
 });

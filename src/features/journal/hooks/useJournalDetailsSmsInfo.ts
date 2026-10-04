@@ -1,4 +1,4 @@
-import { journalMetadataRepository } from '@/src/data/repositories/journal/journalMetadataRepository';
+import { findJournalMetadataByJournalId } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import { useObservable } from '@/src/hooks/useObservable';
 import {
   mapSmsJournalMetadataDisplay,
@@ -17,7 +17,7 @@ export function useJournalDetailsSmsInfo(
     () => {
       if (!journalId) return of(undefined);
 
-      return from(journalMetadataRepository.findByJournalId(journalId, workplaceId)).pipe(
+      return from(findJournalMetadataByJournalId(journalId, workplaceId)).pipe(
         switchMap(metadata =>
           from(smsService.findAllByLinkedJournalId(workplaceId, journalId)).pipe(
             map(inboxRecords => {
