@@ -195,6 +195,7 @@ export class TransactionRawRebuildQueries {
         Q.where('deleted_at', Q.eq(null)),
         Q.sortBy('transaction_date', Q.asc),
         Q.sortBy('created_at', Q.asc),
+        Q.sortBy('id', Q.asc),
       )
       .fetch();
 
