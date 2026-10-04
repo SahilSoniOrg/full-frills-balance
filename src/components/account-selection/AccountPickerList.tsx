@@ -453,6 +453,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
           ]}
         >
           <AppButton
+            testID="account-picker-apply-selection"
             onPress={() => {
               Keyboard.dismiss();
               onApply(selectedIds);

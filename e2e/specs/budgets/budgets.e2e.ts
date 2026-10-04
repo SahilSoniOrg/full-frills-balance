@@ -10,6 +10,7 @@ import {
   openSafeToSpendExplanation,
   selectBudgetInterval,
 } from '../../actions/mobile/flows';
+import { scrollToId, tapByText } from '../../actions/mobile/elementActions';
 
 jest.setTimeout(300000);
 
@@ -20,20 +21,23 @@ describe('Budgets and Safe to Spend', () => {
 
   it('shows daily and monthly amount labels on the budget form', async () => {
     await openBudgetFormFromCommitments();
+    await scrollToId('budget-schedule-field');
     await selectBudgetInterval('DAILY');
     await expect(element(by.text(/Limit each day/i))).toBeVisible();
+    await scrollToId('budget-schedule-field');
     await selectBudgetInterval('MONTHLY');
     await expect(element(by.text(/Limit each month/i))).toBeVisible();
   });
 
   it('loads selected-category spending history in the budget form', async () => {
-    await launchOnboardedApp({ seedProfile: 'journal-ready', newInstance: true });
+    await launchOnboardedApp({ seedProfile: 'journal-suggestions', newInstance: true });
     await openBudgetFormFromCommitments();
-    await element(by.id('budget-category-add')).tap();
-    // Detox orders the picker row before the background selected-category chip.
-    await element(by.label('Groceries')).atIndex(0).tap();
-    await element(by.text('Apply Selection (1)')).tap();
+    await tapByText('All categories');
+    await element(by.label('Groceries')).atIndex(1).tap();
+    await element(by.id('account-picker-apply-selection')).tap();
+    await scrollToId('budget-spending-history-chart');
     await expect(element(by.id('budget-spending-history-chart'))).toBeVisible();
+    await scrollToId('budget-set-aside-from');
     await expect(element(by.id('budget-set-aside-from'))).toBeVisible();
   });
 
