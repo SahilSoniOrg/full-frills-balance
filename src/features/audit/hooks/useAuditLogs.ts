@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants';
-import { AuditLogEntry } from '@/src/features/audit/auditLogTypes';
+import { AuditLogEntry, mergeAuditLogsById } from '@/src/features/audit/auditLogTypes';
 import { useObservable } from '@/src/hooks/useObservable';
-import { auditService } from '@/src/services/audit-service';
+import { observeAuditTrail, observeRecentLogs } from '@/src/services/audit-service';
 import { AuditEntityType } from '@/src/types/enums';
 import { PlainAuditLog } from '@/src/types/plainDtos';
 import { WorkplaceId } from '@/src/types/ids';
@@ -11,23 +11,6 @@ import { useMemo } from 'react';
 
 const EMPTY_AUDIT_LOGS: PlainAuditLog[] = [];
 const OBSERVED_AUDIT_PAGE_BUFFER = 3;
-
-function mergeObservedAuditLogs(
-  previouslySeen: PlainAuditLog[],
-  latestPage: PlainAuditLog[],
-  maxEntries: number,
-): PlainAuditLog[] {
-  const byId = new Map<string, PlainAuditLog>();
-  for (const log of previouslySeen) byId.set(log.id, log);
-  for (const log of latestPage) byId.set(log.id, log);
-  return [...byId.values()]
-    .sort((left, right) => {
-      if (left.timestamp !== right.timestamp) return right.timestamp - left.timestamp;
-      if (left.id === right.id) return 0;
-      return left.id < right.id ? 1 : -1;
-    })
-    .slice(0, maxEntries);
-}
 
 export function toAuditLogEntry(log: PlainAuditLog): AuditLogEntry {
   return {
@@ -81,8 +64,8 @@ export function useAuditLogs(params: {
   const { data, isLoading, error, retry, version } = useObservable(
     () =>
       (isFiltered
-        ? auditService.observeAuditTrail(entityType!, entityId!, workplaceId, limit)
-        : auditService.observeRecentLogs(
+        ? observeAuditTrail(entityType!, entityId!, workplaceId, limit)
+        : observeRecentLogs(
             limit,
             workplaceId,
             entityFilter,
@@ -94,9 +77,8 @@ export function useAuditLogs(params: {
         scan(
           (previous, latestPage) => ({
             queryKey,
-            logs: mergeObservedAuditLogs(
-              previous.logs,
-              latestPage,
+            logs: mergeAuditLogsById(previous.logs, latestPage).slice(
+              0,
               Math.max(limit, limit * OBSERVED_AUDIT_PAGE_BUFFER),
             ),
           }),

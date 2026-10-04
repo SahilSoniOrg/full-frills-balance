@@ -5,16 +5,8 @@ import { budgetDetailRedesignStrings } from './domains/budgetDetailRedesignStrin
 import { budgetFormStrings } from './domains/budgetFormStrings';
 import { plannedListRedesignStrings } from './domains/plannedListRedesignStrings';
 import { plannedDetailRedesignStrings } from './domains/plannedDetailRedesignStrings';
-import { formPrimitivesStrings } from './domains/formPrimitivesStrings';
 import { plannedPaymentFormStrings } from './domains/plannedPaymentFormStrings';
 import type { AuditEntityType } from '@/src/types/enums';
-import type { AuditEventType } from '@/src/types/auditEvents';
-
-function defineAuditEventLabels<T extends Record<AuditEventType, string> & Record<string, string>>(
-  labels: T,
-): T & Record<string, string> {
-  return labels;
-}
 
 export const UI_STRINGS = {
   commitmentsRedesign: commitmentsRedesignStrings,
@@ -23,7 +15,6 @@ export const UI_STRINGS = {
   budgetForm: budgetFormStrings,
   plannedListRedesign: plannedListRedesignStrings,
   plannedDetailRedesign: plannedDetailRedesignStrings,
-  formPrimitives: formPrimitivesStrings,
   plannedPaymentForm: plannedPaymentFormStrings,
   common: {
     loading: 'Loading…',
@@ -1124,10 +1115,7 @@ export const UI_STRINGS = {
       importPluginId: 'Import source',
       sourceFormatVersion: 'Source format version',
     } as Record<string, string>,
-    eventLabels: defineAuditEventLabels({
-      'account.create': 'Created',
-      'account.update': 'Updated',
-      'account.delete': 'Deleted',
+    eventLabels: {
       'account.created': 'Created',
       'account.imported': 'Imported',
       'account.updated': 'Updated',
@@ -1142,9 +1130,6 @@ export const UI_STRINGS = {
       'account.payment_source_retargeted': 'Payment source updated',
       'account.reconciled': 'Reconciled',
       'account.balance_repaired': 'Balance repaired',
-      'journal.create': 'Created',
-      'journal.update': 'Updated',
-      'journal.delete': 'Deleted',
       'journal.created': 'Created',
       'journal.sms_auto_posted': 'Posted from SMS rule',
       'journal.imported': 'Imported',
@@ -1162,9 +1147,6 @@ export const UI_STRINGS = {
       'journal.reverted_to_planned': 'Moved to planned',
       'journal.status_changed': 'Status changed',
       'journal.accounts_retargeted': 'Accounts updated',
-      'budget.create': 'Created',
-      'budget.update': 'Updated',
-      'budget.delete': 'Deleted',
       'budget.created': 'Created',
       'budget.imported': 'Imported',
       'budget.updated': 'Updated',
@@ -1172,9 +1154,6 @@ export const UI_STRINGS = {
       'budget.restored': 'Restored',
       'budget.reverted': 'Undo applied',
       'budget.accounts_retargeted': 'Accounts updated',
-      'planned_payment.create': 'Created',
-      'planned_payment.update': 'Updated',
-      'planned_payment.delete': 'Deleted',
       'planned_payment.created': 'Created',
       'planned_payment.imported': 'Imported',
       'planned_payment.deleted': 'Deleted',
@@ -1191,9 +1170,6 @@ export const UI_STRINGS = {
       'exchange_rate.update': 'Rate updated',
       'exchange_rate.delete': 'Rate deleted',
       'exchange_rate.manual_set': 'Manual rate set',
-      'transaction_auto_post_rule.create': 'Rule created',
-      'transaction_auto_post_rule.update': 'Rule updated',
-      'transaction_auto_post_rule.delete': 'Rule deleted',
       'transaction_auto_post_rule.created': 'Created',
       'transaction_auto_post_rule.imported': 'Imported',
       'transaction_inbox_record.created': 'Scanned',
@@ -1201,21 +1177,15 @@ export const UI_STRINGS = {
       'transaction_inbox_record.linked': 'Linked to entry',
       'transaction_inbox_record.status_changed': 'Status changed',
       'transaction_inbox_record.imported': 'Imported',
-      'transaction_inbox_record.create': 'Inbox record added',
-      'transaction_inbox_record.update': 'Inbox record updated',
-      'transaction_inbox_record.delete': 'Inbox record deleted',
       'transaction_auto_post_rule.updated': 'Updated',
       'transaction_auto_post_rule.deleted': 'Deleted',
       'transaction_auto_post_rule.accounts_retargeted': 'Accounts updated',
       'workplace.restored': 'Backup restored',
-      'workplace.create': 'Workplace created',
-      'workplace.update': 'Workplace updated',
-      'workplace.delete': 'Workplace deleted',
       'workplace.created': 'Created',
       'workplace.updated': 'Updated',
       'workplace.currency_migrated': 'Currency migrated',
       'workplace.reverted': 'Undo applied',
-    }),
+    } as Record<string, string>,
     sourceLabels: {
       app: 'In app',
       system: 'Automatic',
@@ -1229,13 +1199,9 @@ export const UI_STRINGS = {
     } as Record<string, string>,
     byActor: (actor: string) => `By ${actor}`,
     revertsLabel: (id: string) => `Undo of change ${id.substring(0, 8)}`,
-    tables: ['journals', 'transactions', 'accounts'],
     errors: {
       notFound: (id: string) => `No audit record found for ${id}`,
-      loadFailed: 'Could not load change history.',
       revertFailed: 'Failed to undo change',
-      journalDeleteRevertNotSupported:
-        'Restoring deleted journals is not yet supported via audit logs. Please use a backup.',
       revertTypeNotSupported: (type: string) => `Reverting ${type} is not supported yet`,
     },
   },

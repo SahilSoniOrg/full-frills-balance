@@ -23,6 +23,18 @@ export function getLocalAuditActorId(): string | undefined {
   }
 }
 
+export function resolveAuditDisplayName(
+  ...records: (Record<string, unknown> | undefined)[]
+): string | undefined {
+  for (const record of records) {
+    if (!record) continue;
+    for (const key of ['name', 'description', 'accountName']) {
+      if (typeof record[key] === 'string') return record[key] as string;
+    }
+  }
+  return undefined;
+}
+
 /** Forget the identity when the local database is factory-reset. */
 export function clearLocalAuditActorId(): void {
   try {

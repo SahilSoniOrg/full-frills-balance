@@ -3,7 +3,6 @@
  * Kept separate from balance verification and orchestration.
  */
 
-import { AppConfig } from '@/src/constants/app-config';
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { WorkplaceId } from '@/src/types/ids';
@@ -121,11 +120,13 @@ export async function resetDatabase(): Promise<{
   return { status: warnings.length ? 'committed_with_warnings' : 'committed', warnings };
 }
 
+const INTEGRITY_CLEANUP_TABLES = ['journals', 'transactions', 'accounts'] as const;
+
 export async function cleanupDatabase(): Promise<{ deletedCount: number }> {
   logger.info('[IntegrityMaintenance] Starting database cleanup...');
   try {
     const totalDeleted = await databaseRepository.cleanupDeletedRecords([
-      ...AppConfig.strings.audit.tables,
+      ...INTEGRITY_CLEANUP_TABLES,
     ]);
     logger.info(`[IntegrityMaintenance] Cleanup complete. Removed ${totalDeleted} records.`);
     return { deletedCount: totalDeleted };

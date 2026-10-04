@@ -6,9 +6,9 @@ import {
 } from '@/src/types/auditEntityCapabilities';
 import { useAuditAccounts, useAuditEntityStatus } from '@/src/features/audit/hooks/useAuditData';
 import { toAuditLogEntry, useAuditLogs } from '@/src/features/audit/hooks/useAuditLogs';
-import type { AuditLogEntry } from '@/src/features/audit/auditLogTypes';
+import { mergeAuditLogsById, type AuditLogEntry } from '@/src/features/audit/auditLogTypes';
 import { analytics } from '@/src/services/analytics';
-import { auditService } from '@/src/services/audit-service';
+import { getOlderLogs, revertEntry } from '@/src/services/audit-service';
 import { exportAuditHistoryArchive } from '@/src/services/export';
 import { AccountId, BudgetId, JournalId, PlannedPaymentId } from '@/src/types/ids';
 import { AuditEntityType } from '@/src/types/enums';
@@ -17,7 +17,7 @@ import * as Alerts from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { logger } from '@/src/utils/logger';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 export interface AuditLogViewModel {
   logs: ReturnType<typeof useAuditLogs>['logs'];
@@ -64,34 +64,12 @@ interface AuditLogPageState {
 
 const EMPTY_AUDIT_ENTRIES: AuditLogEntry[] = [];
 
-function mergeAuditLogEntries(...groups: readonly AuditLogEntry[][]): AuditLogEntry[] {
-  const byId = new Map<string, AuditLogEntry>();
-  for (const group of groups) {
-    for (const entry of group) byId.set(entry.id, entry);
-  }
-  return [...byId.values()].sort((left, right) => {
-    if (left.timestamp !== right.timestamp) return right.timestamp - left.timestamp;
-    if (left.id === right.id) return 0;
-    return left.id < right.id ? 1 : -1;
-  });
-}
-
 export function useAuditLogViewModel(): AuditLogViewModel {
   const { entityType, entityId } = useLocalSearchParams<{
     entityType?: AuditEntityType;
     entityId?: string;
   }>();
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
-
-  const mountTimeRef = useRef<number>(0);
-  useEffect(() => {
-    mountTimeRef.current = performance.now();
-  }, []);
-
-  // Log UI Mount
-  useEffect(() => {
-    logger.info('[AuditLog] Screen Mounted');
-  }, []);
 
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [pageState, setPageState] = useState<AuditLogPageState>({
@@ -148,18 +126,7 @@ export function useAuditLogViewModel(): AuditLogViewModel {
 
   const activePageState = pageState.key === queryKey ? pageState : null;
   const cachedLogs = activePageState?.logs ?? EMPTY_AUDIT_ENTRIES;
-  const logs = useMemo(() => mergeAuditLogEntries(cachedLogs, liveLogs), [cachedLogs, liveLogs]);
-
-  const hasData = logs.length > 0;
-
-  // Log Data Arrival
-  useEffect(() => {
-    if (hasData) {
-      const duration = Math.round(performance.now() - (mountTimeRef.current || 0));
-      logger.info(`[AuditLog] Data Loaded in ${duration}ms`);
-      logger.metric('AuditLog.DataLoaded', duration);
-    }
-  }, [hasData]);
+  const logs = useMemo(() => mergeAuditLogsById(cachedLogs, liveLogs), [cachedLogs, liveLogs]);
 
   const idsByEntityType = useMemo(() => {
     const groups: Record<AuditStatusLookupType, Set<string>> = {
@@ -213,14 +180,14 @@ export function useAuditLogViewModel(): AuditLogViewModel {
             };
       return {
         ...base,
-        logs: mergeAuditLogEntries(base.logs, logs),
+        logs: mergeAuditLogsById(base.logs, logs),
         isLoadingMore: true,
         hasError: false,
       };
     });
 
     try {
-      const olderLogs = await auditService.getOlderLogs(
+      const olderLogs = await getOlderLogs(
         { timestamp: oldest.timestamp, id: oldest.id },
         AppConfig.pagination.auditScreenLimit,
         workplaceId,
@@ -247,7 +214,7 @@ export function useAuditLogViewModel(): AuditLogViewModel {
               };
         return {
           ...base,
-          logs: mergeAuditLogEntries(base.logs, olderEntries, logs),
+          logs: mergeAuditLogsById(base.logs, olderEntries, logs),
           hasMore: olderLogs.length >= AppConfig.pagination.auditScreenLimit,
           isLoadingMore: false,
           hasError: false,
@@ -357,7 +324,7 @@ export function useAuditLogViewModel(): AuditLogViewModel {
         AppConfig.strings.audit.revertConfirmMessage,
         async () => {
           analytics.trackFeatureUsage('audit', 'revert_initiated', { log_id: logId });
-          const result = await auditService.revertEntry(logId, workplaceId);
+          const result = await revertEntry(logId, workplaceId);
           if (result.success) {
             analytics.trackFeatureUsage('audit', 'revert_success', { log_id: logId });
             Alerts.toast.success(AppConfig.strings.audit.revertSuccess);

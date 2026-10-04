@@ -1,3 +1,4 @@
+import { resolveAuditDisplayName } from '@/src/services/audit-identity';
 import { AuditAction } from '@/src/types/enums';
 import { getAuditEntityCapabilities } from '@/src/types/auditEntityCapabilities';
 import { AccountId } from '@/src/types/ids';
@@ -70,6 +71,20 @@ export function parseAuditChanges(changes: string): ParsedChanges | null {
   }
 }
 
+export function mergeAuditLogsById<T extends { id: string; timestamp: number }>(
+  ...groups: readonly T[][]
+): T[] {
+  const byId = new Map<string, T>();
+  for (const group of groups) {
+    for (const entry of group) byId.set(entry.id, entry);
+  }
+  return [...byId.values()].sort((left, right) => {
+    if (left.timestamp !== right.timestamp) return right.timestamp - left.timestamp;
+    if (left.id === right.id) return 0;
+    return left.id < right.id ? 1 : -1;
+  });
+}
+
 export function getEntityDisplayName(parsed: ParsedChanges | null): string {
   if (!parsed) return '';
   if (isAuditEventPayload(parsed) && parsed.displayName) return parsed.displayName;
@@ -80,12 +95,7 @@ export function getEntityDisplayName(parsed: ParsedChanges | null): string {
         ...('before' in parsed && isAuditChangeRecord(parsed.before) ? [parsed.before] : []),
         parsed as AuditChangeRecord,
       ];
-  for (const record of records) {
-    if (typeof record.name === 'string') return record.name;
-    if (typeof record.description === 'string') return record.description;
-    if (typeof record.accountName === 'string') return record.accountName;
-  }
-  return '';
+  return resolveAuditDisplayName(...records) ?? '';
 }
 
 export function getAuditFieldDiff(

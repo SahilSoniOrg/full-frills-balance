@@ -1,3 +1,4 @@
+import { resolveAuditDisplayName } from '@/src/services/audit-identity';
 import { AUDIT_ENTITY_TYPES, AuditAction } from '@/src/types/enums';
 import type { AuditEntityType } from '@/src/types/enums';
 
@@ -212,18 +213,6 @@ function projectAuditSnapshot(
   ) as AuditJsonObject;
 }
 
-function findAuditDisplayName(
-  ...records: (Record<string, unknown> | undefined)[]
-): string | undefined {
-  for (const record of records) {
-    if (!record) continue;
-    for (const key of ['name', 'description', 'accountName']) {
-      if (typeof record[key] === 'string') return record[key] as string;
-    }
-  }
-  return undefined;
-}
-
 /** Rebuilds field deltas from snapshots. UPDATE snapshots may have a sparse `after` patch. */
 export function deriveAuditFieldDeltas(
   action: AuditAction,
@@ -292,7 +281,7 @@ export function createAuditEventPayload(input: AuditEventInput): AuditEventPaylo
     details,
   };
 
-  const displayName = input.displayName ?? findAuditDisplayName(details, stateAfter, before);
+  const displayName = input.displayName ?? resolveAuditDisplayName(details, stateAfter, before);
   if (displayName) payload.displayName = displayName;
   const currencyCode = stateAfter?.currencyCode ?? before?.currencyCode;
   if (typeof currencyCode === 'string') payload.currencyCode = currencyCode;

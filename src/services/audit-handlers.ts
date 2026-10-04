@@ -11,7 +11,13 @@ import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { AUDIT_ENTITY_CAPABILITIES } from '@/src/types/auditEntityCapabilities';
-import { revertRegistry, type RevertCapability } from '@/src/services/revert-registry';
+import {
+  ACCOUNT_REVERT_CONFLICT_MESSAGE,
+  REVERT_CONFLICT_MESSAGE,
+  WORKPLACE_REVERT_CONFLICT_MESSAGE,
+  revertRegistry,
+  type RevertCapability,
+} from '@/src/services/revert-registry';
 import { AccountAuditState, TransactionAuditState } from '@/src/types/audit';
 import { AccountId, BudgetId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { AuditAction, JournalStatus } from '@/src/types/enums';
@@ -288,7 +294,7 @@ export function registerAuditHandlers(): void {
           !matchesSnapshot(expected, normalizedJournalSnapshot(journal, transactions))
         ) {
           throw new Error(
-            'This journal changed after the selected history entry. Refresh and review the latest change.',
+            REVERT_CONFLICT_MESSAGE,
           );
         }
         await journalService.deleteJournal(
@@ -308,7 +314,7 @@ export function registerAuditHandlers(): void {
         const journal = await journalQueryRepository.findWithDeleted(workplaceId, journalId);
         if (!before || !journal?.deletedAt) {
           throw new Error(
-            'This journal changed after the selected history entry. Refresh and review the latest change.',
+            REVERT_CONFLICT_MESSAGE,
           );
         }
         if (
@@ -316,7 +322,7 @@ export function registerAuditHandlers(): void {
           stableJson(journal.deletedAt.toISOString()) !== stableJson(after.deletedAt)
         ) {
           throw new Error(
-            'This journal changed after the selected history entry. Refresh and review the latest change.',
+            REVERT_CONFLICT_MESSAGE,
           );
         }
         const deletedTransactions = (
@@ -324,7 +330,7 @@ export function registerAuditHandlers(): void {
         ).filter(transaction => transaction.deletedAt?.getTime() === journal.deletedAt!.getTime());
         if (!matchesSnapshot(before, normalizedJournalSnapshot(journal, deletedTransactions))) {
           throw new Error(
-            'This journal changed after the selected history entry. Refresh and review the latest change.',
+            REVERT_CONFLICT_MESSAGE,
           );
         }
         await journalService.recoverJournal(
@@ -348,7 +354,7 @@ export function registerAuditHandlers(): void {
           (typeof restoredAt === 'string' && restoredJournal.updatedAt.toISOString() !== restoredAt)
         ) {
           throw new Error(
-            'This journal changed after the selected history entry. Refresh and review the latest change.',
+            REVERT_CONFLICT_MESSAGE,
           );
         }
         await journalService.deleteJournal(
@@ -374,7 +380,7 @@ export function registerAuditHandlers(): void {
       const current = normalizedJournalSnapshot(currentJournal, currentTransactions);
       if (!matchesCurrentJournal(changes, current)) {
         throw new Error(
-          'This journal changed after the selected history entry. Refresh and review the latest change.',
+          REVERT_CONFLICT_MESSAGE,
         );
       }
       const expectedCurrent = expectedJournalFields(changes);
@@ -475,7 +481,7 @@ export function registerAuditHandlers(): void {
           ))
         ) {
           throw new Error(
-            'This account changed after the selected history entry. Refresh and review the latest change.',
+            ACCOUNT_REVERT_CONFLICT_MESSAGE,
           );
         }
         await deleteAccount(accountId, workplaceId, {
@@ -495,7 +501,7 @@ export function registerAuditHandlers(): void {
           !(await accountMatchesAuditSnapshot(workplaceId, accountId, after))
         ) {
           throw new Error(
-            'This account changed after the selected history entry. Refresh and review the latest change.',
+            ACCOUNT_REVERT_CONFLICT_MESSAGE,
           );
         }
         await recoverAccount(accountId, workplaceId, {
@@ -511,7 +517,7 @@ export function registerAuditHandlers(): void {
           !(await accountMatchesAuditSnapshot(workplaceId, accountId, changes.after))
         ) {
           throw new Error(
-            'This account changed after the selected history entry. Refresh and review the latest change.',
+            ACCOUNT_REVERT_CONFLICT_MESSAGE,
           );
         }
         await deleteAccount(accountId, workplaceId, {
@@ -588,7 +594,7 @@ export function registerAuditHandlers(): void {
       const workplace = await workplaceRepository.find(entityId as WorkplaceId);
       if (!before || !after || !workplace || workplace.id !== workplaceId) {
         throw new Error(
-          'This Workplace changed after the selected history entry. Refresh and review the latest change.',
+          WORKPLACE_REVERT_CONFLICT_MESSAGE,
         );
       }
 
@@ -604,7 +610,7 @@ export function registerAuditHandlers(): void {
         const expectedValue = after[field];
         if (typeof previous !== 'string' || typeof expectedValue !== 'string') {
           throw new Error(
-            'This Workplace changed after the selected history entry. Refresh and review the latest change.',
+            WORKPLACE_REVERT_CONFLICT_MESSAGE,
           );
         }
         patch[field as keyof typeof patch] = previous;
