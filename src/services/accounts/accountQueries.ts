@@ -1,7 +1,8 @@
 import { AccountType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 
-import { accountObserveQueries, accountQueryRepository } from '@/src/data/repositories/account';
+import { accountQueryRepository, accountObserveQueries } from '@/src/data/repositories/account';
+import { observeWorkplaceAccounts } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { map } from 'rxjs';
 import { toPlainAccount, toPlainAccountMetadata, toPlainAccounts } from '@/src/data/models/Account';
 
@@ -11,7 +12,7 @@ import { toPlainAccount, toPlainAccountMetadata, toPlainAccounts } from '@/src/d
  */
 export const accountQueries = {
   observeAll(workplaceId: WorkplaceId) {
-    return accountObserveQueries.observeAll(workplaceId).pipe(map(toPlainAccounts));
+    return observeWorkplaceAccounts(workplaceId).pipe(map(toPlainAccounts));
   },
 
   observeById(workplaceId: WorkplaceId, accountId: AccountId) {
