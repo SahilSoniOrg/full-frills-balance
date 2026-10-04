@@ -4,6 +4,7 @@ import {
   revertAccountFromAuditState,
 } from '@/src/services/accounts/accountAuditCommands';
 import { journalService } from '@/src/services/journal/journalDomainService';
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
@@ -108,6 +109,8 @@ const plannedPaymentRevertibleFields = new Set([
   'description',
   'amount',
   'currencyCode',
+  'fxMode',
+  'destinationAmount',
   'fromAccountId',
   'toAccountId',
   'intervalN',
@@ -403,7 +406,9 @@ export function registerAuditHandlers(): void {
         (changes.eventType === 'journal.reverted_to_planned' ||
           (legacyStatusChange && currentJournal.status === JournalStatus.PLANNED))
       ) {
-        await journalService.postJournal(
+        // Undo restores the recorded posting; it must retain native lines and saved FX,
+        // rather than apply a new occurrence's review policy or fetch today's market rate.
+        await journalPersistenceService.post(
           journalId,
           workplaceId,
           typeof before.journalDate === 'number' ? before.journalDate : undefined,
