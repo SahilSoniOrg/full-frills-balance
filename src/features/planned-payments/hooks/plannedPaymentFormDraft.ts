@@ -1,5 +1,6 @@
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { PlainPlannedPayment } from '@/src/types/plainDtos';
+import type { PlannedPaymentFxMode } from '@/src/types/plannedPaymentFx';
 import { PlannedPaymentInterval } from '@/src/types/enums';
 
 export interface PlannedPaymentFormState {
@@ -7,6 +8,8 @@ export interface PlannedPaymentFormState {
   description: string;
   amount: string;
   currencyCode: string;
+  fxMode?: PlannedPaymentFxMode;
+  destinationAmount?: string;
   fromAccountId: AccountId;
   toAccountId: AccountId;
   intervalN: number;
@@ -24,6 +27,7 @@ export function createEmptyPlannedPaymentForm(currencyCode: string): PlannedPaym
     description: '',
     amount: '',
     currencyCode,
+    fxMode: 'automatic',
     fromAccountId: EMPTY_ACCOUNT_ID,
     toAccountId: EMPTY_ACCOUNT_ID,
     intervalN: 1,
@@ -41,6 +45,8 @@ export function mapPlannedPaymentToForm(pp: PlainPlannedPayment): PlannedPayment
     description: pp.description ?? '',
     amount: pp.amount.toString(),
     currencyCode: pp.currencyCode,
+    fxMode: pp.fxMode,
+    destinationAmount: pp.destinationAmount?.toString(),
     fromAccountId: pp.fromAccountId,
     toAccountId: pp.toAccountId || EMPTY_ACCOUNT_ID,
     intervalN: pp.intervalN,

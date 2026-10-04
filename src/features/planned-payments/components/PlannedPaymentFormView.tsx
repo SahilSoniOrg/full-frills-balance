@@ -1,22 +1,20 @@
-import { AccountPickerModal } from '@/src/components/account-selection';
-import { CurrencyPickerSheet } from '@/src/components/filters/CurrencyPickerSheet';
+import { SimpleFormAccountSections } from '@/src/components/account-selection/SimpleFormAccountSections';
 import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModal';
 import { AmountHero, FormRow, ScheduleField, UnderlineNameField } from '@/src/components/forms';
 import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { AppButton, AppIcon, AppInput, AppToggle, Icon } from '@/src/components/core';
+import { AppButton, AppInput, AppToggle, Icon } from '@/src/components/core';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { AppConfig, Size, Spacing } from '@/src/constants';
+import { Spacing } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { plannedPaymentFormStrings as copy } from '@/src/constants/copy/domains/plannedPaymentFormStrings';
-import { PlannedPaymentDestinationPicker } from '@/src/features/planned-payments/components/PlannedPaymentDestinationPicker';
+import { PlannedPaymentFxCard } from './PlannedPaymentFxCard';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import type { PlannedPaymentFormScreenModel } from '@/src/features/planned-payments/hooks/usePlannedPaymentFormScreen';
-import { useTheme } from '@/src/hooks/use-theme';
-import { getAccountIcon } from '@/src/utils/accountIcon';
 import { formatDate } from '@/src/utils/dateUtils';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 export type PlannedPaymentFormViewProps = PlannedPaymentFormScreenModel & {
   id?: string;
@@ -37,14 +35,19 @@ export function PlannedPaymentFormView({
   setField,
   setSchedule,
   swapAccounts,
-  pickerState,
+  sourceAccount,
+  destinationAccount,
+  destinationPrecision,
+  fxPair,
+  setFxMode,
+  refreshFx,
+  expansionPosition,
+  toggleAccountExpansion,
+  selectSource,
+  selectDestination,
 }: PlannedPaymentFormViewProps) {
-  const { theme } = useTheme();
   const [pickingDate, setPickingDate] = useState<'start' | 'end' | null>(null);
-  const [currencyPickerVisible, setCurrencyPickerVisible] = useState(false);
   const [noteVisible, setNoteVisible] = useState(false);
-  const fromAccount = accounts.find(account => account.id === form.fromAccountId);
-  const toAccount = accounts.find(account => account.id === form.toAccountId);
 
   const chrome = useMemo<ScreenNavChrome>(
     () => ({
@@ -67,16 +70,20 @@ export function PlannedPaymentFormView({
           requirementHint,
         }}
       >
-        <View style={styles.formContent}>
-          <AmountHero
-            value={form.amount}
-            onChange={value => setField('amount', value)}
-            currencySymbol={CURRENCY_SYMBOLS[form.currencyCode] || form.currencyCode}
-            currencyCode={form.currencyCode}
-            onCurrencyPress={() => setCurrencyPickerVisible(true)}
-            autoFocus={autoFocusAmount}
-            precision={currencies.find(currency => currency.code === form.currencyCode)?.precision}
-          />
+        <View>
+          <View style={styles.amountField}>
+            <AmountHero
+              value={form.amount}
+              onChange={value => setField('amount', value)}
+              currencySymbol={CURRENCY_SYMBOLS[form.currencyCode] || form.currencyCode}
+              label={form.currencyCode}
+              autoFocus={autoFocusAmount}
+              precision={
+                currencies.find(currency => currency.code === form.currencyCode)?.precision ??
+                CurrencyFormatter.getPrecisionFallback(form.currencyCode)
+              }
+            />
+          </View>
 
           <View style={styles.nameField}>
             <UnderlineNameField
@@ -86,33 +93,36 @@ export function PlannedPaymentFormView({
             />
           </View>
 
-          <FormRow
-            icon={fromAccount ? getAccountIcon(fromAccount) : Icon.Wallet}
-            title={copy.from}
-            value={fromAccount?.name}
-            placeholder={copy.selectAccount}
-            onPress={() => pickerState.open('from')}
-            testID="planned-payment-from-account"
+          <PlannedPaymentFxCard
+            key={`${form.fromAccountId}:${form.toAccountId}:${form.fxMode ?? 'legacy'}`}
+            pair={fxPair}
+            destinationAmount={form.destinationAmount}
+            mode={form.fxMode}
+            onModeChange={setFxMode}
+            onAmountChange={value => setField('destinationAmount', value)}
+            onRefresh={() => {
+              setField('destinationAmount', undefined);
+              refreshFx();
+            }}
+            precision={destinationPrecision}
           />
-          <View style={styles.swapRow}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={copy.swapAccounts}
-              testID="planned-payment-swap"
-              onPress={swapAccounts}
-              style={styles.swapButton}
-              hitSlop={8}
-            >
-              <AppIcon name={Icon.SwapHorizontal} size={20} color={theme.textSecondary} />
-            </Pressable>
-          </View>
-          <FormRow
-            icon={toAccount ? getAccountIcon(toAccount) : Icon.Tag}
-            title={copy.to}
-            value={toAccount?.name}
-            placeholder={copy.selectAccount}
-            onPress={() => pickerState.open('to')}
-            testID="planned-payment-to-account"
+          <SimpleFormAccountSections
+            sourceLabel={copy.from}
+            sourceAccount={sourceAccount}
+            sourceAccounts={accounts}
+            onSelectSource={selectSource}
+            destLabel={copy.to}
+            destAccount={destinationAccount}
+            destAccounts={accounts}
+            onSelectDestination={selectDestination}
+            destEmptyPrompt={copy.selectAccount}
+            expansionPosition={expansionPosition}
+            onToggleExpansion={toggleAccountExpansion}
+            type="transfer"
+            onSwapAccounts={swapAccounts}
+            allAccounts={accounts}
+            lazyDropdown
+            testIDPrefix="planned-payment"
           />
 
           <View style={styles.scheduleField}>
@@ -144,10 +154,11 @@ export function PlannedPaymentFormView({
           <FormRow
             icon={Icon.Refresh}
             title={copy.recordAutomatically}
-            subtitle={copy.automaticDescription}
+            subtitle={form.fxMode === 'manual' ? copy.fxManualRecording : copy.automaticDescription}
             trailing={
               <AppToggle
-                value={form.isAutoPost}
+                value={form.fxMode === 'manual' ? false : form.isAutoPost}
+                disabled={form.fxMode === 'manual'}
                 onValueChange={value => setField('isAutoPost', value)}
                 accessibilityLabel={copy.recordAutomatically}
               />
@@ -182,36 +193,6 @@ export function PlannedPaymentFormView({
         }}
       />
 
-      <AccountPickerModal
-        visible={pickerState.visible && pickerState.target === 'from'}
-        accounts={pickerState.accounts}
-        selectedId={pickerState.selectedId}
-        onClose={pickerState.close}
-        onSelect={pickerState.onSelect}
-      />
-
-      <PlannedPaymentDestinationPicker
-        visible={pickerState.visible && pickerState.target === 'to'}
-        accounts={pickerState.accounts}
-        selectedId={form.toAccountId}
-        onClose={pickerState.close}
-        onSelect={pickerState.onSelect}
-      />
-
-      <CurrencyPickerSheet
-        visible={currencyPickerVisible}
-        title={AppConfig.strings.accounts.selectCurrency}
-        currencies={currencies}
-        selectedCode={form.currencyCode}
-        selectedBackgroundColor={theme.primaryLight}
-        searchPlaceholder={AppConfig.strings.common.searchPlaceholder}
-        onClose={() => setCurrencyPickerVisible(false)}
-        onSelect={code => {
-          setField('currencyCode', code);
-          setCurrencyPickerVisible(false);
-        }}
-      />
-
       <ModalSurface
         visible={noteVisible}
         title={copy.editNote}
@@ -240,29 +221,14 @@ export function PlannedPaymentFormView({
 }
 
 const styles = StyleSheet.create({
-  formContent: {
-    paddingTop: Spacing.xs,
+  amountField: {
+    paddingHorizontal: Spacing.lg,
   },
   nameField: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.xs,
   },
-  swapRow: {
-    height: Size.touchTarget,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    paddingRight: Spacing.xl,
-  },
-  swapButton: {
-    width: Size.touchTarget,
-    height: Size.touchTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scheduleField: {
-    paddingHorizontal: Spacing.xl,
-    paddingBottom: Spacing.xs,
-  },
+  scheduleField: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
   noteFooter: {
     paddingTop: Spacing.md,
   },

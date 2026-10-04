@@ -1,6 +1,7 @@
 import { PlannedPaymentFormView } from '@/src/features/planned-payments/components/PlannedPaymentFormView';
 import { usePlannedPaymentFormScreen } from '@/src/features/planned-payments/hooks/usePlannedPaymentFormScreen';
 import { useConfirmUnsavedChanges } from '@/src/hooks/useConfirmUnsavedChanges';
+import { ArchiveVisibilityScopeProvider } from '@/src/contexts/ArchiveVisibilityScope';
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
 
@@ -16,5 +17,9 @@ export default function PlannedPaymentFormScreen() {
     title: 'Discard planned payment changes?',
   });
 
-  return <PlannedPaymentFormView id={id} {...vm} onBack={guard.onBack} />;
+  return (
+    <ArchiveVisibilityScopeProvider>
+      <PlannedPaymentFormView id={id} {...vm} onBack={guard.onBack} />
+    </ArchiveVisibilityScopeProvider>
+  );
 }

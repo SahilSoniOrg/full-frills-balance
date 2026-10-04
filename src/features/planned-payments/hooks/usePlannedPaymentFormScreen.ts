@@ -4,10 +4,14 @@ import { AccountId } from '@/src/types/ids';
 import type { ScheduleValue } from '@/src/components/forms';
 import { useAccounts } from '@/src/components/account-selection';
 import { useCurrencies } from '@/src/hooks/use-currencies';
+import type { PlannedPaymentFxMode } from '@/src/types/plannedPaymentFx';
+import { formatRoundedAmount } from '@/src/utils/money';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { usePlannedPaymentFx } from './usePlannedPaymentFx';
 import { usePlannedPaymentForm } from '@/src/features/planned-payments/hooks/usePlannedPaymentForm';
 import { sortDestinationAccounts } from '@/src/features/planned-payments/helpers/sortDestinationAccounts';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export function usePlannedPaymentFormScreen(id?: string) {
   const { workplaceId } = useWorkplace();
@@ -16,6 +20,50 @@ export function usePlannedPaymentFormScreen(id?: string) {
   const { currencies } = useCurrencies();
   const [pickingAccountFor, setPickingAccountFor] = useState<'from' | 'to' | null>(null);
   const isEditMode = id !== undefined;
+  const sourceAccount = accounts.find(account => account.id === vm.form.fromAccountId);
+  const destinationAccount = accounts.find(account => account.id === vm.form.toAccountId);
+  const destinationPrecision =
+    currencies.find(currency => currency.code === destinationAccount?.currencyCode)?.precision ??
+    CurrencyFormatter.getPrecisionFallback(destinationAccount?.currencyCode ?? '');
+  const fx = usePlannedPaymentFx(vm.form, sourceAccount, destinationAccount, destinationPrecision);
+  const [expansionPosition, setExpansionPosition] = useState<'left' | 'right' | null>(null);
+  const { setForm } = vm;
+  const { fxMode, destinationAmount } = vm.form;
+  useEffect(() => {
+    // Seed once when a quote arrives or after refresh. An explicitly cleared draft stays empty.
+    const estimate = fx.pair.convertedAmount;
+    if (fxMode === 'fixed' && destinationAmount === undefined && estimate != null) {
+      setForm(current =>
+        current.fxMode === 'fixed' && current.destinationAmount === undefined
+          ? { ...current, destinationAmount: formatRoundedAmount(estimate, destinationPrecision) }
+          : current,
+      );
+    }
+  }, [fxMode, destinationAmount, setForm, fx.pair.convertedAmount, destinationPrecision]);
+  const setFxMode = useCallback(
+    (mode: PlannedPaymentFxMode) => {
+      vm.setForm(current => {
+        const currencyChanged = Boolean(
+          sourceAccount && current.currencyCode !== sourceAccount.currencyCode,
+        );
+        return {
+          ...current,
+          fxMode: mode,
+          currencyCode: sourceAccount?.currencyCode ?? current.currencyCode,
+          amount: currencyChanged ? '' : current.amount,
+          destinationAmount:
+            mode === 'automatic' || currencyChanged
+              ? undefined
+              : (current.destinationAmount ??
+                (fx.pair.convertedAmount != null
+                  ? formatRoundedAmount(fx.pair.convertedAmount, destinationPrecision)
+                  : undefined)),
+          isAutoPost: mode === 'manual' ? false : current.isAutoPost,
+        };
+      });
+    },
+    [vm, sourceAccount, fx.pair.convertedAmount, destinationPrecision],
+  );
   const schedule: ScheduleValue = {
     intervalType: vm.form.intervalType,
     intervalN: vm.form.intervalN,
@@ -23,25 +71,42 @@ export function usePlannedPaymentFormScreen(id?: string) {
     recurrenceMonth: vm.form.recurrenceMonth,
   };
 
-  const setSchedule = useCallback((value: ScheduleValue) => {
-    vm.setForm(current => ({
-      ...current,
-      intervalType: value.intervalType as PlannedPaymentInterval,
-      intervalN: value.intervalN,
-      recurrenceDay: value.recurrenceDay,
-      recurrenceMonth: value.recurrenceMonth,
-    }));
-  }, [vm]);
+  const setSchedule = useCallback(
+    (value: ScheduleValue) => {
+      vm.setForm(current => ({
+        ...current,
+        intervalType: value.intervalType as PlannedPaymentInterval,
+        intervalN: value.intervalN,
+        recurrenceDay: value.recurrenceDay,
+        recurrenceMonth: value.recurrenceMonth,
+      }));
+    },
+    [vm],
+  );
 
   const destinationAccounts = useMemo(() => sortDestinationAccounts(accounts), [accounts]);
 
   const swapAccounts = useCallback(() => {
-    vm.setForm(current => ({
-      ...current,
-      fromAccountId: current.toAccountId,
-      toAccountId: current.fromAccountId,
-    }));
-  }, [vm]);
+    vm.setForm(current => {
+      const nextSource = accounts.find(account => account.id === current.toAccountId);
+      const currencyChanged = Boolean(
+        nextSource && nextSource.currencyCode !== current.currencyCode,
+      );
+      return {
+        ...current,
+        fromAccountId: current.toAccountId,
+        toAccountId: current.fromAccountId,
+        currencyCode: nextSource?.currencyCode ?? current.currencyCode,
+        amount: currencyChanged ? '' : current.amount,
+        destinationAmount: undefined,
+        fxMode:
+          nextSource?.currencyCode ===
+          accounts.find(account => account.id === current.fromAccountId)?.currencyCode
+            ? 'automatic'
+            : (current.fxMode ?? 'automatic'),
+      };
+    });
+  }, [vm, accounts]);
 
   const setField = useCallback(
     <K extends keyof typeof vm.form>(field: K, value: (typeof vm.form)[K]) => {
@@ -115,16 +180,39 @@ export function usePlannedPaymentFormScreen(id?: string) {
     }));
   }, [vm]);
 
+  const selectAccount = useCallback(
+    (role: 'from' | 'to', accountId: AccountId) => {
+      vm.setForm(current => {
+        if (accountId === (role === 'from' ? current.fromAccountId : current.toAccountId)) return current;
+        const account = accounts.find(candidate => candidate.id === accountId);
+        const opposite = accounts.find(
+          candidate =>
+            candidate.id === (role === 'from' ? current.toAccountId : current.fromAccountId),
+        );
+        const nextSource = role === 'from' ? account : opposite;
+        const currencyCode = nextSource?.currencyCode ?? current.currencyCode;
+        return {
+          ...current,
+          [role === 'from' ? 'fromAccountId' : 'toAccountId']: accountId,
+          currencyCode,
+          amount: currencyCode !== current.currencyCode ? '' : current.amount,
+          destinationAmount: undefined,
+          fxMode:
+            account && opposite && account.currencyCode === opposite.currencyCode
+              ? 'automatic'
+              : (current.fxMode ?? 'automatic'),
+        };
+      });
+      setPickingAccountFor(null);
+      setExpansionPosition(null);
+    },
+    [vm, accounts],
+  );
   const handleAccountSelect = useCallback(
     (accountId: AccountId) => {
-      if (pickingAccountFor === 'from') {
-        vm.setForm(current => ({ ...current, fromAccountId: accountId }));
-      } else if (pickingAccountFor === 'to') {
-        vm.setForm(current => ({ ...current, toAccountId: accountId }));
-      }
-      setPickingAccountFor(null);
+      if (pickingAccountFor) selectAccount(pickingAccountFor, accountId);
     },
-    [pickingAccountFor, vm],
+    [pickingAccountFor, selectAccount],
   );
 
   const pickerState = useMemo(
@@ -150,6 +238,19 @@ export function usePlannedPaymentFormScreen(id?: string) {
   return {
     accounts,
     currencies,
+    sourceAccount,
+    destinationAccount,
+    destinationPrecision,
+    fxPair: fx.pair,
+    refreshFx: fx.refresh,
+    setFxMode,
+    expansionPosition,
+    toggleAccountExpansion: (side: 'left' | 'right') => {
+      setExpansionPosition(current => (current === side ? null : side));
+      setPickingAccountFor(side === 'left' ? 'from' : 'to');
+    },
+    selectSource: (accountId: AccountId) => selectAccount('from', accountId),
+    selectDestination: (accountId: AccountId) => selectAccount('to', accountId),
     form: vm.form,
     schedule,
     setSchedule,

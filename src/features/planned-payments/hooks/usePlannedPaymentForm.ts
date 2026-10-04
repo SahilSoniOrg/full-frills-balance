@@ -51,14 +51,30 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
   const missingFields = useMemo(() => {
     const missing: string[] = [];
     if (form.name.trim().length === 0) missing.push('a name');
-    if (form.amount.length === 0 || isNaN(Number(form.amount))) missing.push('an amount');
+    if (!Number.isFinite(Number(form.amount)) || Number(form.amount) <= 0)
+      missing.push('an amount');
+    if (
+      form.fxMode === 'fixed' &&
+      (!Number.isFinite(Number(form.destinationAmount)) || Number(form.destinationAmount) <= 0)
+    )
+      missing.push('a received amount');
     if (form.fromAccountId.length === 0) missing.push('a From account');
     if (form.toAccountId.length === 0) missing.push('a To account');
+    if (form.fromAccountId.length > 0 && form.fromAccountId === form.toAccountId) missing.push('different From and To accounts');
     if (form.endDate != null && form.endDate < dayjs(form.startDate).startOf('day').valueOf()) {
       missing.push('an end date on or after the start date');
     }
     return missing;
-  }, [form.name, form.amount, form.fromAccountId, form.toAccountId, form.startDate, form.endDate]);
+  }, [
+    form.name,
+    form.amount,
+    form.destinationAmount,
+    form.fxMode,
+    form.fromAccountId,
+    form.toAccountId,
+    form.startDate,
+    form.endDate,
+  ]);
 
   const isValid = missingFields.length === 0 && isValidRepeatCount(form.intervalN);
   const requirementHint = formatRequirementHint(missingFields);
@@ -73,13 +89,18 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
         description: form.description.trim() || undefined,
         amount: Number(form.amount),
         currencyCode: form.currencyCode,
+        fxMode: form.fxMode,
+        destinationAmount:
+          form.fxMode !== 'automatic' && form.destinationAmount
+            ? Number(form.destinationAmount)
+            : undefined,
         fromAccountId: form.fromAccountId,
         toAccountId: form.toAccountId,
         intervalN: form.intervalN,
         intervalType: form.intervalType,
         startDate: form.startDate,
         endDate: form.endDate,
-        isAutoPost: form.isAutoPost,
+        isAutoPost: form.fxMode === 'manual' ? false : form.isAutoPost,
         recurrenceDay: form.recurrenceDay,
         recurrenceMonth: form.recurrenceMonth,
       };
@@ -118,7 +139,6 @@ export function usePlannedPaymentForm(workplaceId: WorkplaceId, id?: string) {
       setIsSubmitting(false);
       logger.error('Failed to save planned payment', error);
       toast.error(error instanceof Error ? error.message : 'Failed to save planned payment');
-
     }
   }, [form, id, isValid, item, workplaceId]);
 
