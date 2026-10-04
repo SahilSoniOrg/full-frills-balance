@@ -311,7 +311,7 @@ Work through this sequence commit-by-commit. Run `bun run verify` (or `bun test`
   - Add CI check validating SQLite and ORM ordering parity.
 
 ### Block 4: Phase 3 State, Services & Design System Polish (Steps 26–31)
-- [ ] **Step 26:** `refactor(preferences): consolidate facade into single read API`
+- [x] **Step 26:** `refactor(preferences): consolidate facade into single read API`
   - Standardize preferences hooks on scoped stores; eliminate inline subscribe closures.
 - [ ] **Step 27:** `refactor(preferences): eliminate duplicated per-hook defaults`
   - Source defaults directly from preferences bag constants.
