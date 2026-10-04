@@ -2,7 +2,7 @@ import { CompactAmountInput } from '@/src/components/forms/CompactAmountInput';
 import type { CreateAccountIntent } from '@/src/components/account-selection';
 import { AppConfig } from '@/src/constants';
 import { Spacing } from '@/src/constants/design-tokens';
-import type { FxPair } from '@/src/features/journal/entry/fxPair';
+import type { FxPair } from '@/src/domain/accounting/fxPair';
 import { resolveAccountLeg } from '@/src/services/journal/simpleJournalHelpers';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { AccountRole, TabType } from '@/src/types/domainJournal';
@@ -10,11 +10,11 @@ import type { AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet, View } from 'react-native';
-import type { ExpansionPosition } from './AccountPickerPanel';
-import { ExchangeRateCard } from './ExchangeRateCard';
+import type { ExpansionPosition } from '@/src/components/account-selection/AccountPickerPanel';
+import { ExchangeRateCard } from '@/src/components/forms/ExchangeRateCard';
 import { JournalMetaCard, type JournalMetaCardProps } from './JournalMetaCard';
 import { SimpleFormAmountInput } from './SimpleFormAmountInput';
-import { SimpleFormAccountSections } from './SimpleFormAccountSections';
+import { SimpleFormAccountSections } from '@/src/components/account-selection/SimpleFormAccountSections';
 import { TransactionTypeSegmentedControl } from './TransactionTypeSegmentedControl';
 
 export type EntryTransactionSection = {

@@ -14,7 +14,7 @@ import {
   withConvertedAmount,
   withManualBaseRate,
   type FxOverride,
-} from '@/src/features/journal/entry/fxPair';
+} from '@/src/domain/accounting/fxPair';
 import {
   buildSimpleCrossCurrencyLineUpdates,
   buildSimpleFormAccountSections,
@@ -25,7 +25,7 @@ import { getInferredAccountType } from '@/src/utils/accountCategory';
 import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useCrossCurrencyRates } from './useCrossCurrencyRates';
+import { useCrossCurrencyRates } from '@/src/hooks/useCrossCurrencyRates';
 import { useJournalEditor } from './useJournalEditor';
 import { useSimpleJournalAccountSync } from './useSimpleJournalAccountSync';
 

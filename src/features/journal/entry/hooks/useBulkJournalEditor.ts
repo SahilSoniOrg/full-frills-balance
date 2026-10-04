@@ -12,8 +12,8 @@ import {
   withManualBaseRate,
   type FxFetchedRates,
   type FxPair,
-} from '@/src/features/journal/entry/fxPair';
-import { fetchPairRates } from '@/src/features/journal/entry/hooks/useCrossCurrencyRates';
+} from '@/src/domain/accounting/fxPair';
+import { fetchPairRates } from '@/src/hooks/useCrossCurrencyRates';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { logger } from '@/src/utils/logger';

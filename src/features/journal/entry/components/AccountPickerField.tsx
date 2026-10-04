@@ -1,13 +1,13 @@
 import type { CreateAccountIntent } from '@/src/components/account-selection';
-import type { FxPair } from '@/src/features/journal/entry/fxPair';
+import type { FxPair } from '@/src/domain/accounting/fxPair';
 import type { AccountRole } from '@/src/types/domainJournal';
 import type { AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { type ReactNode } from 'react';
 import { Keyboard, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
-import { AccountPickerPanel } from './AccountPickerPanel';
-import { AccountPickerNode } from './AccountPickerPanel.parts';
-import { ExchangeRateCard } from './ExchangeRateCard';
+import { AccountPickerPanel } from '@/src/components/account-selection/AccountPickerPanel';
+import { AccountPickerNode } from '@/src/components/account-selection/AccountPickerPanel.parts';
+import { ExchangeRateCard } from '@/src/components/forms/ExchangeRateCard';
 
 /** Workplace rate for this account. The field shows it when the account currency is not the workplace currency. */
 export interface AccountPickerExchangeRate {

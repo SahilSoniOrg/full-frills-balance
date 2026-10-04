@@ -1,12 +1,12 @@
-import { ExchangeRateCard } from '@/src/features/journal/entry/components/ExchangeRateCard';
+import { ExchangeRateCard } from '@/src/components/forms/ExchangeRateCard';
 import {
   NO_FX_OVERRIDE,
   resolveFxPair,
   withConvertedAmount,
   withManualBaseRate,
   type FxOverride,
-} from '@/src/features/journal/entry/fxPair';
-import { useCrossCurrencyRates } from '@/src/features/journal/entry/hooks/useCrossCurrencyRates';
+} from '@/src/domain/accounting/fxPair';
+import { useCrossCurrencyRates } from '@/src/hooks/useCrossCurrencyRates';
 import { getJournalFxDateKey, normalizeCurrencyAmount } from '@/src/domain/accounting/journalFx';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 

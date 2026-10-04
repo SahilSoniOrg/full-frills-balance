@@ -9,7 +9,7 @@ import type { AccountRole } from '@/src/types/domainJournal';
 import type { CreateAccountIntent } from '@/src/components/account-selection';
 import { EntryInlineError } from './EntryInlineError';
 import { EntryTransactionCard } from './EntryTransactionCard';
-import type { ExpansionPosition } from './AccountPickerPanel';
+import type { ExpansionPosition } from '@/src/components/account-selection/AccountPickerPanel';
 import { getBulkJournalRowError } from '../hooks/bulkJournalHelpers';
 import { resolveBulkRowFxPair } from '../hooks/useBulkJournalEditor';
 import { buildSimpleFormAccountSections } from '@/src/services/journal/simpleJournalHelpers';

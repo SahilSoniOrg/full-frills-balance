@@ -2,7 +2,7 @@ import { AccountFields } from '@/src/types/plainDtos';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import type { TabType } from '@/src/types/domainJournal';
 import type { JournalSuggestion } from '@/src/types/journalSuggestions';
-import type { FxFetchedRates, FxOverride } from '@/src/features/journal/entry/fxPair';
+import type { FxFetchedRates, FxOverride } from '@/src/domain/accounting/fxPair';
 
 /** User-authored values and rate inputs kept by the batch editor. */
 export interface BulkJournalDraft {

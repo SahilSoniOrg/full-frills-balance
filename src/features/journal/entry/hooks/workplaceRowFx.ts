@@ -3,8 +3,8 @@ import {
   withConvertedAmount,
   resolveFxPair,
   type FxPair,
-} from '@/src/features/journal/entry/fxPair';
-import { formatManualBaseRate } from '@/src/features/journal/entry/manualBaseRate';
+} from '@/src/domain/accounting/fxPair';
+import { formatManualBaseRate } from '@/src/domain/accounting/manualBaseRate';
 import { parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
 import { getSplitCurrencyPrecision } from '@/src/services/journal/splitJournalHelpers';
 import type { JournalEntryLine } from '@/src/types/domainJournal';

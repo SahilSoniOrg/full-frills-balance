@@ -1,7 +1,10 @@
 import { AppConfig, Spacing } from '@/src/constants';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
-import { StyleSheet } from 'react-native';
-import { ExchangeRateCard, type ExchangeRateCardProps } from '../components/ExchangeRateCard';
+import { StyleSheet, Text } from 'react-native';
+import {
+  ExchangeRateCard,
+  type ExchangeRateCardProps,
+} from '@/src/components/forms/ExchangeRateCard';
 import { RATE_UNAVAILABLE, resolveFxPair, type FxPairInput } from '../fxPair';
 
 const pairInput: FxPairInput = {
@@ -35,6 +38,88 @@ function renderCard(
 }
 
 describe('ExchangeRateCard', () => {
+  it.each(['card', 'attached'] as const)(
+    'renders a read-only %s preview with slots and a working refresh control',
+    variant => {
+      const onResetToApiRate = jest.fn();
+      renderCard({
+        variant,
+        editableConvertedAmount: false,
+        onConvertedAmountChange: undefined,
+        onResetToApiRate,
+        header: <Text>Currency conversion</Text>,
+        footer: <Text>Preview caption</Text>,
+        precision: 3,
+      });
+
+      expect(screen.getByText('Currency conversion')).toBeTruthy();
+      expect(screen.getByText('Preview caption')).toBeTruthy();
+      expect(screen.getByText('1 USD = 1.2500 EUR')).toBeTruthy();
+      expect(screen.getByTestId('exchange-rate-converted-amount-preview')).toHaveTextContent(
+        '12.500',
+      );
+      expect(screen.queryByTestId('exchange-rate-converted-amount-input')).toBeNull();
+      expect(screen.queryByTestId('exchange-rate-converted-amount-measure')).toBeNull();
+      fireEvent.press(screen.getByTestId('exchange-rate-reset-fx-rate-button'));
+      expect(onResetToApiRate).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('keeps slots visible while fetching and shows an unavailable preview as text', () => {
+    const view = renderCard(
+      {
+        editableConvertedAmount: false,
+        header: <Text>Currency conversion</Text>,
+        footer: <Text>Preview caption</Text>,
+      },
+      {
+        fetched: {
+          sourceBaseRate: null,
+          destBaseRate: null,
+          isLoading: true,
+          error: null,
+        },
+      },
+    );
+
+    expect(screen.getByText('Currency conversion')).toBeTruthy();
+    expect(screen.getByText('Preview caption')).toBeTruthy();
+    expect(screen.getByText(AppConfig.strings.transactionFlow.fetchingRate)).toBeTruthy();
+
+    view.rerender(
+      <ExchangeRateCard
+        {...baseProps}
+        editableConvertedAmount={false}
+        pair={resolveFxPair({ ...pairInput, fetched: undefined })}
+      />,
+    );
+
+    expect(screen.getByTestId('exchange-rate-converted-amount-preview')).toHaveTextContent('—');
+    expect(screen.queryByTestId('exchange-rate-converted-amount-input')).toBeNull();
+    expect(screen.getByTestId('exchange-rate-reset-fx-rate-button')).toBeTruthy();
+  });
+
+  it('preserves an unfinished converted draft across header and market-rate updates', () => {
+    const view = renderCard();
+    const input = screen.getByTestId('exchange-rate-converted-amount-input');
+    fireEvent(input, 'focus');
+    fireEvent.changeText(input, '99.');
+
+    view.rerender(
+      <ExchangeRateCard
+        {...baseProps}
+        header={<Text>Currency conversion</Text>}
+        pair={resolveFxPair({
+          ...pairInput,
+          fetched: { sourceBaseRate: 1, destBaseRate: 0.5, isLoading: false, error: null },
+        })}
+      />,
+    );
+
+    expect(screen.getByTestId('exchange-rate-converted-amount-input')).toHaveProp('value', '99.');
+    expect(screen.getByText('1 USD = 2.0000 EUR')).toBeTruthy();
+  });
+
   it('renders the market rate for a resolved pair', () => {
     renderCard();
 
