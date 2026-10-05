@@ -1,13 +1,8 @@
-import type {
-  BatchImportData,
-  CanonicalAccount,
-  CanonicalImport,
-} from '@/src/types/importContracts';
+import type { BatchImportData, CanonicalAccount } from '@/src/types/importContracts';
 import {
   MissingImportedAccountRef,
   missingImportedAccountRefs,
 } from '@/src/services/accounts/accountReferenceGraph';
-import { batchImportDataFromCanonical } from '@/src/services/import/canonicalImportAdapter';
 import { accountImportBatchFromSources } from '@/src/services/import/plugins/nativeImportAccountRemap';
 
 function assertUniqueIds(tableName: string, records: { id: string }[]): void {
@@ -169,11 +164,6 @@ function validateStructuralRules(data: BatchImportData): void {
       );
     }
   }
-}
-
-/** Validates structural integrity on canonical plugin output before persistence. */
-export function validateCanonicalImport(canonical: CanonicalImport): void {
-  validateImportedData(batchImportDataFromCanonical(canonical));
 }
 
 /**
