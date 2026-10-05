@@ -43,7 +43,7 @@ export function markIntegrityCheckComplete(workplaceId: WorkplaceId): void {
 }
 
 /**
- * Forces a full balance verification and repair, regardless of crash flag or schema version.
+ * Forces a full balance verification and repair, regardless of stored schema version.
  * Use this for **manual** invocations (e.g. the Settings "Fix Integrity Issues" button).
  * Unlike runStartupCheck(), this always scans every account.
  */
@@ -169,10 +169,8 @@ export async function forceRunCheck(
 /**
  * Runs startup integrity check and seeds defaults if database is empty.
  *
- * H-6 fix: The full balance verification is expensive (O(accounts × transactions)).
- * We only run it when truly necessary:
- *  - On first launch (no stored schema version → could be corrupted fresh install).
- *  - When a crash flag was written by the previous session.
+ * The full balance verification is expensive (O(accounts × transactions)).
+ * We only run it when the stored schema version differs from the current schema.
  * Normal warm starts skip it entirely.
  */
 export async function runStartupCheck(
@@ -218,9 +216,7 @@ export async function runStartupCheck(
 
   const shouldRun = shouldRunIntegrityCheck(workplaceId);
   if (!shouldRun) {
-    logger.info(
-      '[IntegrityOrchestrator] Skipping balance verification (no crash flag, schema unchanged).',
-    );
+    logger.info('[IntegrityOrchestrator] Skipping balance verification (schema unchanged).');
     return {
       totalAccounts: 0,
       accountsChecked: 0,

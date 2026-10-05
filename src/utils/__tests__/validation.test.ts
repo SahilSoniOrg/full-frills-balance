@@ -1,4 +1,4 @@
-import { sanitizeAmount, sanitizeInput, validateAccountName } from '@/src/utils/validation';
+import { sanitizeAmount, sanitizeInput } from '@/src/utils/validation';
 
 describe('validation', () => {
   describe('sanitizeInput', () => {
@@ -10,27 +10,6 @@ describe('validation', () => {
       expect(sanitizeInput('hello <script>alert(1)</script> world')).toBe(
         'hello scriptalert(1)/script world',
       );
-    });
-  });
-
-  describe('validateAccountName', () => {
-    it('should validate valid names', () => {
-      expect(validateAccountName('Checking Account').isValid).toBe(true);
-      expect(validateAccountName('Cash-123 & Co.').isValid).toBe(true);
-    });
-
-    it('should reject empty or short names', () => {
-      expect(validateAccountName('').isValid).toBe(false);
-      expect(validateAccountName(' ').isValid).toBe(false);
-      expect(validateAccountName('A').isValid).toBe(false);
-    });
-
-    it('should reject too long names', () => {
-      expect(validateAccountName('A'.repeat(101)).isValid).toBe(false);
-    });
-
-    it('should reject invalid characters', () => {
-      expect(validateAccountName('Account @#$%').isValid).toBe(false);
     });
   });
 

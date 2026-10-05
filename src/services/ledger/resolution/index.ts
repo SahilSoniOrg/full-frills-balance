@@ -43,7 +43,6 @@ export async function resolveAccount(params: ResolutionParams): Promise<Resoluti
   const primarySourceHint = sourceHint || destinationHint;
   if (primarySourceHint && assetAccounts.length > 0) {
     const bestSource = fuzzyMatch(primarySourceHint, assetAccounts);
-    // If using the fallback hint (destinationHint), require a slightly more conservative threshold (e.g. >= 0.70)
     const threshold = sourceHint ? 0.85 : 0.7;
     if (bestSource && bestSource.score >= threshold) {
       resolvedSourceId = bestSource.account.id;
@@ -57,7 +56,6 @@ export async function resolveAccount(params: ResolutionParams): Promise<Resoluti
   const candidateCategoryAccounts = targetCategoryAccounts;
   if (primaryCategoryHint && candidateCategoryAccounts.length > 0) {
     const bestCategory = fuzzyMatch(primaryCategoryHint, candidateCategoryAccounts);
-    // If using the fallback hint (sourceHint), require a slightly more conservative threshold (e.g. >= 0.70)
     const threshold = destinationHint ? 0.85 : 0.7;
     if (bestCategory && bestCategory.score >= threshold) {
       resolvedCategoryId = bestCategory.account.id;

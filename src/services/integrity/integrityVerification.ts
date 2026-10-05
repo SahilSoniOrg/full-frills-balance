@@ -19,9 +19,7 @@ export async function scanForNullAccountTransactions(workplaceId: WorkplaceId): 
 
   if (nullAccountTxs.length > 0) {
     const sample = nullAccountTxs[0];
-    const errorMsg =
-      `CRITICAL INTEGRITY FAILURE: ${nullAccountTxs.length} transactions found with NULL accountId! (Workplace: ${workplaceId})` +
-      ` Sample ID: ${sample.id}, Date: ${new Date(sample.transactionDate).toISOString()}`;
+    const errorMsg = `CRITICAL INTEGRITY FAILURE: ${nullAccountTxs.length} transactions found with NULL accountId! (Workplace: ${workplaceId}) Sample ID: ${sample.id}, Date: ${new Date(sample.transactionDate).toISOString()}`;
 
     logger.error(`[IntegrityVerification] ${errorMsg}`, undefined, {
       count: nullAccountTxs.length,
@@ -108,7 +106,6 @@ export async function verifyAccountBalance(
   workplaceId: WorkplaceId,
   cutoffDate: number = Number.MAX_SAFE_INTEGER,
 ): Promise<BalanceVerificationResult> {
-  const start = Date.now();
   const account = await accountQueryRepository.find(workplaceId, accountId);
   if (!account) {
     throw new Error(`Account ${accountId} not found`);
@@ -163,14 +160,6 @@ export async function verifyAccountBalance(
     discrepancy,
     snapshotCorrupted,
   };
-
-  logger.info(
-    `[Trace] IntegrityVerification.verifyAccountBalance (${account.name}): ${Date.now() - start}ms`,
-    {
-      matches,
-      discrepancy,
-    },
-  );
 
   return result;
 }
