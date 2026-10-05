@@ -5,7 +5,6 @@ import { StyleProp, ViewStyle } from 'react-native';
 
 interface ScreenSectionHeaderProps {
   title?: string;
-  subtitle?: string;
   action?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }
@@ -14,7 +13,7 @@ interface ScreenSectionHeaderProps {
  * ScreenSectionHeader - A modernized header for screen sections.
  * Uses design-system primitives for layout and spacing.
  */
-export function ScreenSectionHeader({ title, subtitle, action, style }: ScreenSectionHeaderProps) {
+export function ScreenSectionHeader({ title, action, style }: ScreenSectionHeaderProps) {
   return (
     <Box
       flexDirection="row"
@@ -27,11 +26,6 @@ export function ScreenSectionHeader({ title, subtitle, action, style }: ScreenSe
         {title ? (
           <AppText variant="subheading" weight="bold">
             {title}
-          </AppText>
-        ) : null}
-        {subtitle ? (
-          <AppText variant="caption" color="secondary">
-            {subtitle}
           </AppText>
         ) : null}
       </Stack>
