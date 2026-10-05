@@ -12,8 +12,7 @@ function sortEnrichmentRows(rows: JournalEnrichmentRow[]): JournalEnrichmentRow[
   });
 }
 
-/** Map enrichment SQL rows by journal id for a single enrichment pass. */
-export function groupEnrichmentRowsByJournalId(
+function groupEnrichmentRowsByJournalId(
   rows: JournalEnrichmentRow[],
 ): Map<string, JournalEnrichmentRow[]> {
   const sorted = sortEnrichmentRows(rows);

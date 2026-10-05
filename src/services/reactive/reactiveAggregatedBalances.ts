@@ -37,7 +37,7 @@ export interface AggregatedAccountBalances {
   wealthSummary: WealthSummary;
 }
 
-export type AccountObservationSnapshot = {
+type AccountObservationSnapshot = {
   accounts: Account[];
   signature: string;
 };

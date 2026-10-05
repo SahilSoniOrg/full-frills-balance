@@ -7,7 +7,7 @@ import { JournalEntryLine } from '@/src/types/domainJournal';
 import { WorkplaceId } from '@/src/types/ids';
 import { sanitizeAmount } from '@/src/utils/validation';
 
-export type JournalSaveLineInput = {
+type JournalSaveLineInput = {
   lines: JournalEntryLine[];
   description: string;
   notes?: string;
@@ -21,10 +21,6 @@ export type JournalSaveLineInput = {
 export type JournalSaveValidationError = { success: false; error: string };
 export type JournalSaveAssembled = { success: true; journalData: CreateJournalData };
 
-/**
- * Shared structural validation for single + bulk journal saves.
- * Does not check balance (callers may need currency/domain lines first).
- */
 export function validateJournalEntryStructure(params: {
   lines: JournalEntryLine[];
   description: string;
@@ -50,7 +46,7 @@ export function validateJournalEntryStructure(params: {
   return null;
 }
 
-export function resolveJournalTimestamp(
+function resolveJournalTimestamp(
   journalDate: string | number,
   journalTime?: string,
 ): { ok: true; timestamp: number } | { ok: false; error: string } {
@@ -70,7 +66,7 @@ export function resolveJournalTimestamp(
   return { ok: true, timestamp: combinedTimestamp };
 }
 
-export function mapLinesToCreateTransactions(
+function mapLinesToCreateTransactions(
   lines: JournalEntryLine[],
 ): CreateJournalData['transactions'] {
   return lines.map(l => ({
@@ -106,10 +102,6 @@ async function resolveSmsMetadataJson(
   }
 }
 
-/**
- * Validate structure and assemble CreateJournalData for a single entry.
- * The journal persistence repository is the authority for monetary balance and precision.
- */
 export async function assembleCreateJournalData(
   params: JournalSaveLineInput & { currencyCode?: string },
 ): Promise<JournalSaveValidationError | JournalSaveAssembled> {

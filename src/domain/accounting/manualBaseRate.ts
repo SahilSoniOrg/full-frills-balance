@@ -1,7 +1,6 @@
 import { parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
 
-/** True when the string is a finished positive rate, not a mid-keystroke draft. */
-export function parseManualBaseRate(value: string | undefined): number | null {
+function parseManualBaseRate(value: string | undefined): number | null {
   const trimmed = value?.trim() ?? '';
   if (!/^\d*\.?\d+$/.test(trimmed)) return null;
   return parsePositiveRate(trimmed);
@@ -33,7 +32,7 @@ export function resolveManualWorkplaceRates(
   workplaceCurrency: string,
   manualSourceBaseRate?: string,
   manualDestBaseRate?: string,
-): { sourceBaseRate: number; destBaseRate: number; exchangeRate: number } | null {
+): { sourceBaseRate: number; destBaseRate: number } | null {
   const sourceRate =
     sourceCurrency === workplaceCurrency ? 1 : parseManualBaseRate(manualSourceBaseRate);
   const destinationRate =
@@ -47,7 +46,6 @@ export function resolveManualWorkplaceRates(
   return {
     sourceBaseRate: sourceRate,
     destBaseRate: destinationRate,
-    exchangeRate: sourceRate / destinationRate,
   };
 }
 
@@ -55,10 +53,6 @@ export function formatManualBaseRate(rate: number): string {
   return rate.toFixed(6);
 }
 
-/**
- * Derives workplace-relative rates from a user-edited destination amount.
- * The implied source→dest rate is what gets saved; API rates only seed the initial conversion.
- */
 export function resolveWorkplaceRatesFromConvertedAmount(input: {
   sourceAmount: number;
   convertedAmount: number;
@@ -67,7 +61,7 @@ export function resolveWorkplaceRatesFromConvertedAmount(input: {
   workplaceCurrency: string;
   existingSourceBaseRate?: number | null;
   existingDestBaseRate?: number | null;
-}): { sourceBaseRate: number; destBaseRate: number; exchangeRate: number } | null {
+}): { sourceBaseRate: number; destBaseRate: number } | null {
   const { sourceAmount, convertedAmount, sourceCurrency, destCurrency, workplaceCurrency } = input;
   if (sourceCurrency === destCurrency) return null;
   if (!(sourceAmount > 0) || !(convertedAmount > 0)) return null;
@@ -77,10 +71,10 @@ export function resolveWorkplaceRatesFromConvertedAmount(input: {
   if (exchangeRate === null) return null;
 
   if (destCurrency === workplaceCurrency) {
-    return { sourceBaseRate: exchangeRate, destBaseRate: 1, exchangeRate };
+    return { sourceBaseRate: exchangeRate, destBaseRate: 1 };
   }
   if (sourceCurrency === workplaceCurrency) {
-    return { sourceBaseRate: 1, destBaseRate: 1 / exchangeRate, exchangeRate };
+    return { sourceBaseRate: 1, destBaseRate: 1 / exchangeRate };
   }
 
   const destBase = parsePositiveRate(input.existingDestBaseRate);
@@ -90,14 +84,12 @@ export function resolveWorkplaceRatesFromConvertedAmount(input: {
     return {
       sourceBaseRate: destBase * exchangeRate,
       destBaseRate: destBase,
-      exchangeRate,
     };
   }
   if (sourceBase != null) {
     return {
       sourceBaseRate: sourceBase,
       destBaseRate: sourceBase / exchangeRate,
-      exchangeRate,
     };
   }
   return null;

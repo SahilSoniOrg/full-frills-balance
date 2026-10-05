@@ -9,17 +9,11 @@ import { normalizeCurrencyAmount } from '@/src/domain/accounting/journalFx';
 
 export const RATE_UNAVAILABLE = 'Rate unavailable';
 
-/** Rates that convert one unit of each leg's currency into the base (workplace) currency. */
 export interface FxBaseRates {
   sourceBaseRate: number;
   destBaseRate: number;
 }
 
-/**
- * User input that replaces market rates for one pair. Callers scope an override to a
- * (pair, date) key so choosing other accounts or another date falls back to `none`.
- * `lastResolved` keeps the previous rates while a manual draft is mid-keystroke.
- */
 export type FxOverride =
   | { kind: 'none' }
   | { kind: 'manualBase'; source: string; dest: string; lastResolved: FxBaseRates | null }
@@ -34,7 +28,6 @@ export interface FxFetchedRates {
   error: string | null;
 }
 
-/** Base rates already stored on the journal lines (saved journal or earlier write). */
 export interface FxSavedRates {
   sourceRate?: string | number | null;
   destRate?: string | number | null;
@@ -48,7 +41,6 @@ export interface FxPairInput {
   saved?: FxSavedRates | null;
   override?: FxOverride;
   sourceAmount?: number;
-  /** Destination precision. When set, the pair rate is the one that ties the rounded amount. */
   destPrecision?: number;
 }
 
@@ -62,7 +54,6 @@ export interface FxPair {
   needsBaseRate: boolean;
   sourceBaseRate: number | null;
   destBaseRate: number | null;
-  /** Source-to-destination rate: one source unit equals `pairRate` destination units. */
   pairRate: number | null;
   sourceAmount: number;
   convertedAmount: number | null;
@@ -77,7 +68,6 @@ export interface FxPair {
 
 type FxCurrencies = Pick<FxPairInput, 'sourceCurrency' | 'destCurrency' | 'baseCurrency'>;
 
-/** Rounded destination amount, with the rate adjusted so it converts back to the source amount. */
 export function tieDestinationAmount(
   sourceAmount: number,
   sourceBaseRate: number,
@@ -137,10 +127,6 @@ function resolveOverrideRates(currencies: FxCurrencies, override: FxOverride): F
     : override.lastResolved;
 }
 
-/**
- * Resolves one cross-currency pair. Precedence per leg: override, then saved line
- * rates, then fetched market rates. Legs already in the base currency are always 1.
- */
 export function resolveFxPair(input: FxPairInput): FxPair {
   const { sourceCurrency, destCurrency, baseCurrency, fetched, saved } = input;
   const override = input.override ?? NO_FX_OVERRIDE;
@@ -223,7 +209,6 @@ export function resolveFxPair(input: FxPairInput): FxPair {
   };
 }
 
-/** Override after the user edits one manual base-rate field. */
 export function withManualBaseRate(
   pair: FxPair,
   role: 'source' | 'destination',
@@ -237,10 +222,6 @@ export function withManualBaseRate(
   return { kind: 'manualBase', source, dest, lastResolved };
 }
 
-/**
- * Override implied by a user-edited destination amount, or null when no rate can be
- * implied (no source amount, or both legs foreign without an anchor rate).
- */
 export function withConvertedAmount(pair: FxPair, convertedAmount: number): FxOverride | null {
   if (!pair.sourceCurrency || !pair.destCurrency) return null;
   const rates = resolveWorkplaceRatesFromConvertedAmount({

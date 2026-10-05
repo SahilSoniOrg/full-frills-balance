@@ -84,10 +84,6 @@ export const SEMANTIC_TYPE_LABELS: Record<SemanticType, string> = {
 
   [SemanticType.UNKNOWN]: 'Transaction',
 };
-/**
- * Minimal interface for transaction data needed for journal type classification.
- * Allows both WatermelonDB Transaction models and plain DTOs to be used.
- */
 export interface TransactionLike {
   accountId: AccountId;
   amount?: number;
@@ -153,9 +149,6 @@ export const journalPresenter = {
 
   getSourceAndDestTypes,
 
-  /**
-   * Returns a human-readable specific label based on semantic analysis.
-   */
   getJournalSemanticLabel(txs: TransactionLike[], accountTypes: Map<string, AccountType>): string {
     // Special case: Multiple income/expense legs without a single dominant pattern
     const hasIncome = txs.some(tx => accountTypes.get(tx.accountId) === AccountType.INCOME);
@@ -169,9 +162,6 @@ export const journalPresenter = {
     return label; // SemanticType enum has user-friendly strings (e.g. "Debt Payment")
   },
 
-  /**
-   * Returns display properties for a journal type
-   */
   getPresentation(
     type: JournalDisplayType,
     semanticLabel?: string,
@@ -200,12 +190,7 @@ export const journalPresenter = {
     }
   },
 
-  /**
-   * Implements the 5x5 Semantic Matrix
-   * Source (Credit) -> Destination (Debit)
-   */
   getSemanticType(sourceType: AccountType, destType: AccountType): SemanticType {
     return SEMANTIC_MATRIX[sourceType]?.[destType] ?? SemanticType.UNKNOWN;
   },
-
 };

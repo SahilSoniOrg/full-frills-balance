@@ -6,7 +6,6 @@ import { enrichJournals, enrichedJournalsAreEqual } from '@/src/services/journal
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalStatus } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
 import { distinctUntilChanged, from, map, Observable, switchMap } from 'rxjs';
 import {
   journalsToTimelineRows,
@@ -14,10 +13,6 @@ import {
   JournalTimelineRowsOptions,
 } from '@/src/services/journal/journalTimelineRows';
 
-/**
- * Journal timeline read model: observe journals, enrich once, emit EnrichedJournal[].
- * Row expansion and card presentation live in journalTimelineRows and journalTimelinePresentation.
- */
 export function observeEnrichedJournals(
   workplaceId: WorkplaceId,
   limit: number,
@@ -39,7 +34,6 @@ export function observeEnrichedJournals(
 
   return journalsObservable.pipe(
     switchMap(journals => {
-      logger.debug(`observeEnrichedJournals emission: length=${journals.length}`);
       const journalIds = journals.map(j => j.id);
       return from(
         journals.length === 0

@@ -511,7 +511,6 @@ export class JournalService {
     const boundedLimit = limit === 0 ? 0 : Math.max(1, Math.min(50, limit));
     const cacheKey = [
       workplaceId,
-      'route-v3',
       page,
       transactionType ?? 'all',
       normalizedQuery,

@@ -18,17 +18,14 @@ describe('resolveManualWorkplaceRates draft parsing', () => {
     expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '1', '')).toEqual({
       sourceBaseRate: 1,
       destBaseRate: 1,
-      exchangeRate: 1,
     });
     expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '1.25', '')).toEqual({
       sourceBaseRate: 1.25,
       destBaseRate: 1,
-      exchangeRate: 1.25,
     });
     expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '.5', '')).toEqual({
       sourceBaseRate: 0.5,
       destBaseRate: 1,
-      exchangeRate: 0.5,
     });
   });
 });
@@ -38,7 +35,6 @@ describe('resolveManualWorkplaceRates', () => {
     expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '1.25', '')).toEqual({
       sourceBaseRate: 1.25,
       destBaseRate: 1,
-      exchangeRate: 1.25,
     });
   });
 
@@ -46,7 +42,6 @@ describe('resolveManualWorkplaceRates', () => {
     expect(resolveManualWorkplaceRates('EUR', 'EUR', 'USD', '1.1', 'ignored')).toEqual({
       sourceBaseRate: 1.1,
       destBaseRate: 1.1,
-      exchangeRate: 1,
     });
   });
 });
@@ -71,7 +66,6 @@ describe('resolveWorkplaceRatesFromConvertedAmount', () => {
     ).toEqual({
       sourceBaseRate: 4797.73 / 50,
       destBaseRate: 1,
-      exchangeRate: 4797.73 / 50,
     });
   });
 
@@ -87,7 +81,6 @@ describe('resolveWorkplaceRatesFromConvertedAmount', () => {
     ).toEqual({
       sourceBaseRate: 1,
       destBaseRate: 1 / 0.8,
-      exchangeRate: 0.8,
     });
   });
 
@@ -105,7 +98,6 @@ describe('resolveWorkplaceRatesFromConvertedAmount', () => {
     ).toEqual({
       sourceBaseRate: 1.25 * 0.9,
       destBaseRate: 1.25,
-      exchangeRate: 0.9,
     });
   });
 
@@ -132,7 +124,8 @@ describe('resolveWorkplaceRatesFromConvertedAmount', () => {
 
   it('formats manual rates the way the rate hook parses them', () => {
     expect(
-      resolveManualWorkplaceRates('EUR', 'USD', 'USD', formatManualBaseRate(95.9546), '')?.sourceBaseRate,
+      resolveManualWorkplaceRates('EUR', 'USD', 'USD', formatManualBaseRate(95.9546), '')
+        ?.sourceBaseRate,
     ).toBeCloseTo(95.9546);
   });
 });

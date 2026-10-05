@@ -4,24 +4,17 @@ import { TransactionType } from '@/src/types/enums';
 import { checkJournal, JournalLineForCheck } from '@/src/utils/accounting/BalanceEffects';
 import { sanitizeAmount } from '@/src/utils/validation';
 
-export interface JournalLineInput {
+interface JournalLineInput {
   amount: number | string;
   type: TransactionType;
   exchangeRate?: number | string;
   accountCurrency?: string;
 }
 
-/**
- * Standard rounding for financial amounts (2 decimal places).
- * Uses EPSILON to avoid floating point precision errors.
- */
 function roundAmount(amount: number): number {
   return Math.round((amount + Number.EPSILON) * 100) / 100;
 }
 
-/**
- * Checks if the journal is balanced (delegates to BalanceEffects.checkJournal).
- */
 export function isJournalBalanced(lines: JournalLineInput[], baseCurrency: string): boolean {
   const normalizedBaseCurrency = baseCurrency.trim().toUpperCase();
   const forCheck: JournalLineForCheck[] = lines.map(line => {
@@ -49,10 +42,6 @@ export function isJournalBalanced(lines: JournalLineInput[], baseCurrency: strin
   }).isValid;
 }
 
-/**
- * Calculates the base amount for a journal line, considering exchange rates.
- * Follows Rule 11 (Business rules in services).
- */
 export function getJournalLineBaseAmount(
   line: { amount: string | number; exchangeRate?: string | number; accountCurrency?: string },
   baseCurrency: string,
