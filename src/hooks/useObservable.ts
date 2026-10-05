@@ -14,7 +14,31 @@
  */
 import { DependencyList, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Observable } from 'rxjs';
-import { useDependencyRevision } from '@/src/hooks/useDependencyRevision';
+
+function areDependencyListsEqual(oldDeps: DependencyList, newDeps: DependencyList): boolean {
+  if (oldDeps.length !== newDeps.length) return false;
+  return oldDeps.every((dep, i) => dep === newDeps[i]);
+}
+
+function useDependencyRevision(deps: DependencyList, onRevision?: () => void): number {
+  const depsRef = useRef(deps);
+  const [revision, setRevision] = useState(0);
+  const onRevisionRef = useRef(onRevision);
+  useLayoutEffect(() => {
+    onRevisionRef.current = onRevision;
+  });
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => {
+    if (!areDependencyListsEqual(depsRef.current, deps)) {
+      depsRef.current = deps;
+      setRevision(r => r + 1);
+      onRevisionRef.current?.();
+    }
+  });
+
+  return revision;
+}
 
 export interface UseObservableResult<T> {
   data: T;

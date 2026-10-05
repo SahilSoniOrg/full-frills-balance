@@ -1,10 +1,10 @@
 import { MultiAccountPickerModal } from '@/src/components/account-selection';
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { AppConfig } from '@/src/constants';
-import type { useReportFilters } from '@/src/features/reports/hooks/useReportFilters';
+import type { ReportsViewModel } from '@/src/features/reports/hooks/useReportsViewModel';
 
 interface ReportFilterChromeProps {
-  filters: ReturnType<typeof useReportFilters>;
+  filters: ReportsViewModel['filters'];
 }
 
 export function ReportFilterChrome({ filters }: ReportFilterChromeProps) {

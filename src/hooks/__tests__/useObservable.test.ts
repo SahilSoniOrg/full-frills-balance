@@ -129,6 +129,27 @@ describe('useObservable', () => {
     expect(result.current.data).toBe('B');
   });
 
+  it('resubscribes when deps change', async () => {
+    const subject1 = new BehaviorSubject('A');
+    const subject2 = new BehaviorSubject('B');
+    let factory = () => subject1;
+    const { result, rerender } = renderHook(
+      ({ f, deps }: { f: () => BehaviorSubject<string>; deps: unknown[] }) =>
+        useObservable(f, deps, 'init'),
+      { initialProps: { f: factory, deps: [1] } },
+    );
+
+    expect(result.current.version).toBe(1);
+
+    factory = () => subject2;
+    rerender({ f: factory, deps: [2] });
+
+    await waitFor(() => {
+      expect(result.current.data).toBe('B');
+      expect(result.current.version).toBe(2);
+    });
+  });
+
   it('keeps a cache-hit object from flipping back to loading on subscribe', async () => {
     const cached = { safeToSpend: 12 };
     const subject = new Subject<typeof cached>();

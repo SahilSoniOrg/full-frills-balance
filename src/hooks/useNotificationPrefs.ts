@@ -26,13 +26,6 @@ export function useNotificationPrefs(): NotificationPrefsState {
     usePreference('notificationWeekday');
   const notificationCadence = storedCadence ?? DEFAULT_UI_PREFERENCES.notificationCadence;
 
-  const setNotificationCadence = useCallback(
-    (cadence: NotificationCadence) => {
-      setStoredCadence(cadence);
-    },
-    [setStoredCadence],
-  );
-
   const setNotificationTime = useCallback(
     (hour: number, minute: number) => {
       setNotificationHour(hour);
@@ -41,20 +34,13 @@ export function useNotificationPrefs(): NotificationPrefsState {
     [setNotificationHour, setNotificationMinute],
   );
 
-  const setNotificationWeekday = useCallback(
-    (weekday: number) => {
-      setNotificationWeekdayValue(weekday);
-    },
-    [setNotificationWeekdayValue],
-  );
-
   return {
     notificationCadence,
     notificationHour,
     notificationMinute,
     notificationWeekday,
-    setNotificationCadence,
+    setNotificationCadence: setStoredCadence,
     setNotificationTime,
-    setNotificationWeekday,
+    setNotificationWeekday: setNotificationWeekdayValue,
   };
 }
