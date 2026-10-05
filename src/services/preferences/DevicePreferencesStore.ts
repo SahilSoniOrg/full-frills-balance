@@ -22,7 +22,6 @@ export class DevicePreferencesStore {
     this.reloadFromStorage();
   }
 
-  /** Persist the current snapshot when recovery had to synthesize the bag. */
   persist(): void {
     this.save(this.preferences);
     this.subject.next(this.preferences);

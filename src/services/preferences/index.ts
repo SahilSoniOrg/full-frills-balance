@@ -2,18 +2,6 @@ import { PreferencesFacadeStore } from './PreferencesFacade';
 
 export type { PrivacyPolicyAcknowledgement, ThemeAppearance, UIPreferences } from './types';
 export { DEFAULT_UI_PREFERENCES } from './types';
-export type { PrivacyPrefs } from './domains/PrivacyPreferences';
-export type { DevicePreferences } from './deviceTypes';
-export type { WorkplacePreferences } from './workplaceTypes';
-
-export { PreferencesStore } from './PreferencesStore';
-export { PreferencesFacadeStore } from './PreferencesFacade';
-export type { PreferencesFacade } from './PreferencesFacade';
-export { InsightPreferences } from './domains/InsightPreferences';
-export { JournalNavigationPreferences } from './domains/JournalNavigationPreferences';
-export { PrivacyPreferences } from './domains/PrivacyPreferences';
-export { StsPreferences } from './domains/StsPreferences';
-export { HourCyclePreferences } from './domains/HourCyclePreferences';
 
 export const preferences = new PreferencesFacadeStore();
 

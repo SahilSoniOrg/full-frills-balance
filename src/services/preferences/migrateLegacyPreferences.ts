@@ -17,10 +17,6 @@ import {
 } from './types';
 import { WORKPLACE_PREFERENCES_KEY_PREFIX, workplacePreferencesStorageKey } from './workplaceTypes';
 
-/**
- * One-time split of the combined MMKV prefs blob into User, Device, and Workplace keys.
- * Also lifts workplace-scoped SMS listen onto Device (Device SMS listen).
- */
 export function migrateLegacyPreferencesIfNeeded(): boolean {
   try {
     if (isPreferenceSplitMigrationComplete()) return true;
@@ -33,9 +29,6 @@ export function migrateLegacyPreferencesIfNeeded(): boolean {
         ? (parsed as Record<string, unknown>)
         : {};
 
-    // Before the preference split, onboardingCompleted was the install-level
-    // claim flag. Seed the new launch gate from it when migrating the legacy
-    // combined blob; an explicit new-format deviceRegistered value wins.
     const legacyDeviceRegistered =
       typeof device.deviceRegistered === 'boolean'
         ? device.deviceRegistered
@@ -46,12 +39,8 @@ export function migrateLegacyPreferencesIfNeeded(): boolean {
     const userBlob: UIPreferences = { ...DEFAULT_UI_PREFERENCES, ...user };
     const existingUserRaw = storage.getString(USER_PREFERENCES_KEY);
     if (raw && existingUserRaw === undefined) {
-      // Keep legacy currency available until WorkplaceService can apply it to
-      // the migrated Workplace rows and acknowledge the migration.
       storage.set(USER_PREFERENCES_KEY, JSON.stringify({ ...userBlob, ...legacyCurrency }));
     } else if (raw && existingUserRaw && Object.keys(legacyCurrency).length > 0) {
-      // A previous attempt may have created the User bag before failing. Do
-      // not lose legacy currency just because that partial bag already exists.
       try {
         const existingUser = JSON.parse(existingUserRaw);
         if (
@@ -69,7 +58,7 @@ export function migrateLegacyPreferencesIfNeeded(): boolean {
           if (changed) storage.set(USER_PREFERENCES_KEY, JSON.stringify(mergedUser));
         }
       } catch {
-        // The canonical User bag will be recovered from the legacy blob below.
+        /* partial user bag merge failed */
       }
     }
 
