@@ -144,7 +144,8 @@ export function SplitAllocationRow({
           onChangeText={onChangeNotes}
           placeholder={notesPlaceholder}
           variant="minimal"
-          containerStyle={styles.notes}
+          paddingHorizontal="md"
+          paddingBottom="xs"
           inputStyle={styles.notesInput}
           testID={`${testIDPrefix}-notes-${row.id}`}
         />
@@ -177,10 +178,6 @@ const styles = StyleSheet.create({
   },
   categoryPicker: {
     marginHorizontal: 0,
-  },
-  notes: {
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.xs,
   },
   notesInput: {
     minHeight: 0,

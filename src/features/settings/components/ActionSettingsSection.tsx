@@ -83,7 +83,7 @@ export function ActionSettingsSection({ vm }: { vm: SmsRuleFormViewModel }) {
               value={journalDescription}
               onChangeText={setJournalDescription}
               placeholder="e.g. Bought coffee from {merchant} ({ref})"
-              containerStyle={{ marginTop: Spacing.sm }}
+              marginTop="sm"
             />
             <View
               style={[

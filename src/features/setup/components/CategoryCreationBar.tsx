@@ -77,7 +77,8 @@ export const CategoryCreationBar: React.FC<CategoryCreationBarProps> = ({
           placeholder={placeholder}
           value={customName}
           onChangeText={setCustomName}
-          containerStyle={{ flex: 1, marginBottom: 0 }}
+          flex={1}
+          marginBottom={0}
           accessibilityLabel="Custom item name"
           onSubmitEditing={handleAddCustom}
         />

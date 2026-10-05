@@ -15,7 +15,6 @@ export type { ScheduleSheetProps } from './schedule/ScheduleSheet';
 export { DayOfMonthSheet } from './schedule/DayOfMonthSheet';
 export type { DayOfMonthSheetProps } from './schedule/DayOfMonthSheet';
 export { formatScheduleSentence, previewOccurrences } from './schedule/formatSchedule';
-export type { ScheduleSentencePart } from './schedule/formatSchedule';
 export type { ScheduleValue } from './schedule/types';
 export { ExchangeRateCard } from './ExchangeRateCard';
 export type { ExchangeRateCardProps } from './ExchangeRateCard';

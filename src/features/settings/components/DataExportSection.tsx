@@ -77,7 +77,8 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
               placeholder={AppConfig.strings.settings.data.exportFilenamePlaceholder}
               value={vm.exportFilename}
               onChangeText={vm.setExportFilename}
-              containerStyle={{ width: '100%', marginBottom: Spacing.xl }}
+              width="100%"
+              marginBottom="xl"
               leftIcon={Icon.Document}
               autoFocus
             />

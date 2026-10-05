@@ -24,7 +24,8 @@ export function ManualBaseRateField({
         placeholder="Rate"
         keyboardType="decimal-pad"
         variant="minimal"
-        containerStyle={styles.inputContainer}
+        width={Size.fieldNarrow}
+        minHeight={0}
         style={styles.input}
       />
       <AppText variant="caption" color="secondary">
@@ -39,10 +40,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-  },
-  inputContainer: {
-    width: Size.fieldNarrow,
-    minHeight: 0,
   },
   input: {
     fontSize: Typography.sizes.xs,

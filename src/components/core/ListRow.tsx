@@ -1,4 +1,4 @@
-import { AppText, type AppTextProps } from '@/src/components/core/AppText';
+import { AppText } from '@/src/components/core/AppText';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { Spacing, SpacingKey } from '@/src/constants/design-tokens';
 import { Box, type BoxViewProps } from '@/src/design-system/Box';
@@ -28,7 +28,6 @@ type ListRowPressProps = {
   pointerEvents?: BoxViewProps['pointerEvents'];
   nativeID?: string;
   accessible?: boolean;
-  trailingAction?: React.ReactNode;
   trailingMaxWidth?: BoxViewProps['maxWidth'];
 };
 
@@ -41,9 +40,6 @@ export type ListRowProps = BoxViewProps &
     showSeparator?: boolean;
     padding?: 'sm' | 'md' | 'lg';
     leadingWidth?: number;
-    titleVariant?: AppTextProps['variant'];
-    subtitleVariant?: AppTextProps['variant'];
-    titleColor?: string;
   };
 
 const PADDING_HORIZONTAL_MAP: Record<NonNullable<ListRowProps['padding']>, SpacingKey> = {
@@ -66,9 +62,6 @@ export function ListRow(initialProps: ListRowProps) {
     showSeparator = false,
     padding = 'md',
     leadingWidth,
-    titleVariant = 'body',
-    subtitleVariant = 'caption',
-    titleColor = 'primary',
     onPress,
     onLongPress,
     disabled,
@@ -83,7 +76,6 @@ export function ListRow(initialProps: ListRowProps) {
     pointerEvents,
     nativeID,
     accessible,
-    trailingAction,
     trailingMaxWidth,
     ...passthroughProps
   } = initialProps;
@@ -118,12 +110,7 @@ export function ListRow(initialProps: ListRowProps) {
       )}
       <Box flex={1} justifyContent="center">
         {typeof title === 'string' ? (
-          <AppText
-            variant={titleVariant}
-            color={titleColor as AppTextProps['color']}
-            numberOfLines={1}
-            style={styles.title}
-          >
+          <AppText variant="body" numberOfLines={1} style={styles.title}>
             {title}
           </AppText>
         ) : (
@@ -131,12 +118,7 @@ export function ListRow(initialProps: ListRowProps) {
         )}
         {subtitle &&
           (typeof subtitle === 'string' ? (
-            <AppText
-              variant={subtitleVariant}
-              color="secondary"
-              numberOfLines={1}
-              style={styles.subtitle}
-            >
+            <AppText variant="caption" color="secondary" numberOfLines={1} style={styles.subtitle}>
               {subtitle}
             </AppText>
           ) : (
@@ -178,38 +160,7 @@ export function ListRow(initialProps: ListRowProps) {
   );
 
   let row: React.ReactElement = rowBody;
-  if (isPressable && trailingAction) {
-    row = (
-      <View style={style}>
-        <Box
-          flexDirection="row"
-          alignItems="center"
-          paddingHorizontal={paddingHorizontalToken}
-          paddingVertical={paddingVerticalToken}
-          {...rowBoxProps}
-        >
-          <PressScaleTouchable
-            style={{ flex: 1, alignSelf: 'stretch' }}
-            onPress={onPress}
-            onLongPress={onLongPress}
-            disabled={disabled}
-            hitSlop={hitSlop}
-            delayLongPress={delayLongPress}
-            accessibilityRole={accessibilityRole ?? 'button'}
-            accessibilityLabel={accessibilityLabel || defaultLabel}
-            {...hostProps}
-          >
-            <Box flex={1} flexDirection="row" alignItems="center">
-              {rowContent}
-            </Box>
-          </PressScaleTouchable>
-          <Box marginLeft="md" alignItems="flex-end">
-            {trailingAction}
-          </Box>
-        </Box>
-      </View>
-    );
-  } else if (isPressable) {
+  if (isPressable) {
     row = (
       <PressScaleTouchable
         style={style}

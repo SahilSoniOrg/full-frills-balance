@@ -4,7 +4,12 @@ import { ShowArchivedButton } from '@/src/components/accounts/ShowArchivedButton
 import { AppButton, AppIcon, AppInput, AppText, Icon, ListRow } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { resolveAccountAppearance , AccountSection, getAccountVariant, getSectionColor } from '@/src/utils/accountCategory';
+import {
+  resolveAccountAppearance,
+  AccountSection,
+  getAccountVariant,
+  getSectionColor,
+} from '@/src/utils/accountCategory';
 import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
 import { AccountType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
@@ -55,10 +60,13 @@ const AccountPickerRow = React.memo(
 
     return (
       <ListRow
-        title={item.name}
+        title={
+          <AppText variant="body" color={getAccountVariant(item.accountType)} numberOfLines={1}>
+            {item.name}
+          </AppText>
+        }
         accessibilityLabel={item.name}
         testID={`account-picker-option-${item.id}`}
-        titleColor={getAccountVariant(item.accountType)}
         subtitle={subtitle}
         onPress={onPress}
         background={isSelected ? 'surfaceSecondary' : 'transparent'}

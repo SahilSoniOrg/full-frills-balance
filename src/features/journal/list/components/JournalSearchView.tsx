@@ -34,7 +34,7 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
             placeholder="Search description or notes..."
             value={vm.searchQuery}
             onChangeText={vm.setSearchQuery}
-            containerStyle={styles.searchInput}
+            flex={1}
             leftIcon={Icon.Search}
             autoFocus
           />
@@ -182,9 +182,6 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
     paddingVertical: Spacing.xs,
     alignItems: 'center',
-  },
-  searchInput: {
-    flex: 1,
   },
   amountRangeRow: {
     flexDirection: 'row',

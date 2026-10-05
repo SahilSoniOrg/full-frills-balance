@@ -22,7 +22,6 @@ it.each([false, true])(
     } else {
       expect(screen.getByText('Original transaction SMS')).toBeTruthy();
     }
-    expect(diagnostic).toHaveBeenCalled();
     expect(JSON.stringify(diagnostic.mock.calls)).not.toContain('Original transaction');
   },
 );

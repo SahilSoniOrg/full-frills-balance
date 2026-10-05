@@ -1,9 +1,6 @@
 import { Typography } from '@/src/constants/design-tokens';
-import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
 import { resolveStyleColors } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
-import { useThemePrefs } from '@/src/hooks/useThemePrefs';
-import { logger } from '@/src/utils/logger';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 import { memo, useMemo } from 'react';
 import { StyleSheet, Text, type TextProps, type TextStyle } from 'react-native';
@@ -38,8 +35,6 @@ export const AppText = memo(function AppText({
   ...props
 }: AppTextProps) {
   const { fonts, getVariantColors, theme, themeMode } = useTheme();
-  const { fontId } = useThemePrefs();
-  const { fontsReady, loadedFontId } = useAppReady();
 
   const textStyle = useMemo(() => {
     const typographyStyles = (() => {
@@ -90,14 +85,6 @@ export const AppText = memo(function AppText({
       return fonts[compensatedWeight] || fonts.regular;
     })();
 
-    // Safety: If fonts are not ready, log it to help diagnose rendering issues
-    if (!fontsReady || loadedFontId !== fontId) {
-      // Don't spam logger too much, just once per component mount if it happens
-      logger.debug(
-        `[AppText] Rendering before fonts ready! (fontsReady: ${fontsReady}, loaded: ${loadedFontId}, expected: ${fontId})`,
-      );
-    }
-
     const variantColors = getVariantColors(color);
 
     const baseStyle = {
@@ -122,9 +109,6 @@ export const AppText = memo(function AppText({
     italic,
     tabular,
     style,
-    fontsReady,
-    loadedFontId,
-    fontId,
     themeMode,
   ]);
 

@@ -1,8 +1,3 @@
-/**
- * IconButton - Consistent circular button with icon
- * Encodes visual identity for navigation and action buttons
- */
-
 import { AppIcon } from '@/src/components/core/AppIcon';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { Shape, Size, Spacing } from '@/src/constants/design-tokens';

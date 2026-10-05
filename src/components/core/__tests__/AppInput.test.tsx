@@ -1,6 +1,5 @@
 import { Icon } from '@/src/types/domainIcons';
 import { AppInput } from '@/src/components/core/AppInput';
-import { Spacing } from '@/src/constants';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
 import { StyleSheet } from 'react-native';
 
@@ -37,7 +36,7 @@ describe('AppInput', () => {
         error="Required"
         variant="minimal"
         leftIcon={Icon.Search}
-        containerStyle={{ marginTop: 12 }}
+        marginTop="md"
         inputStyle={{ fontSize: 20 }}
         placeholder="Find"
       />,
@@ -49,7 +48,6 @@ describe('AppInput', () => {
     expect(input.props.error).toBeUndefined();
     expect(input.props.variant).toBeUndefined();
     expect(input.props.leftIcon).toBeUndefined();
-    expect(input.props.containerStyle).toBeUndefined();
     expect(input.props.inputStyle).toBeUndefined();
     expect(StyleSheet.flatten(input.props.style).fontSize).toBe(20);
   });
@@ -61,33 +59,5 @@ describe('AppInput', () => {
     const flattenedStyle = StyleSheet.flatten(input.props.style);
 
     expect(flattenedStyle.textAlignVertical).toBe('top');
-  });
-
-  it('reserves space for the calculator icon without dropping custom input styles', () => {
-    render(
-      <AppInput calculator inputStyle={{ paddingRight: 4, fontSize: 18 }} placeholder="Amount" />,
-    );
-
-    const input = screen.getByPlaceholderText('Amount');
-    const flattenedStyle = StyleSheet.flatten(input.props.style);
-
-    expect(flattenedStyle.paddingRight).toBe(Spacing.xxxl + Spacing.sm);
-    expect(flattenedStyle.fontSize).toBe(18);
-  });
-
-  it('gives calculator inputs the full available row width', () => {
-    render(
-      <AppInput
-        calculator
-        testID="amount"
-        calculatorTestID="amount-calculator"
-        placeholder="Amount"
-      />,
-    );
-
-    const calculatorButton = screen.getByTestId('amount-calculator');
-    const calculatorRowStyle = StyleSheet.flatten(calculatorButton.parent?.props.style);
-
-    expect(calculatorRowStyle.width).toBe('100%');
   });
 });

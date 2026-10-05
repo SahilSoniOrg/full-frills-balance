@@ -1,33 +1,18 @@
-import { Icon, type IconName } from '@/src/types/domainIcons';
-import { AppIcon } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
+import type { IconName } from '@/src/types/domainIcons';
 import { Spacing } from '@/src/constants/design-tokens';
 import { Box, BoxBaseProps } from '@/src/design-system/Box';
 import { extractBoxProps } from '@/src/design-system/utils';
 import { forwardRef } from 'react';
-import {
-  StyleProp,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  type TextInputProps,
-  View,
-  ViewStyle,
-} from 'react-native';
+import { StyleSheet, TextInput, type TextInputProps, View } from 'react-native';
 import { AppInputField } from './AppInputField';
 
 export type AppInputBaseProps = BoxBaseProps & {
   label?: string;
   error?: string;
-  variant?: 'default' | 'hero' | 'minimal';
+  variant?: 'default' | 'minimal';
   leftIcon?: IconName;
   inputStyle?: TextInputProps['style'];
-  /** @deprecated use structural Box props */
-  containerStyle?: StyleProp<ViewStyle>;
-  calculator?: boolean;
-  calculatorEditable?: boolean;
-  onCalculatorPress?: () => void;
-  calculatorTestID?: string;
 };
 
 export type AppInputProps = AppInputBaseProps & TextInputProps;
@@ -39,11 +24,6 @@ export const AppInput = forwardRef<TextInput, AppInputProps>((initialProps, ref)
     variant,
     leftIcon,
     inputStyle,
-    containerStyle,
-    calculator,
-    calculatorEditable = false,
-    onCalculatorPress,
-    calculatorTestID,
     style: textInputStyle,
     ...propsWithoutInputProps
   } = initialProps;
@@ -54,64 +34,24 @@ export const AppInput = forwardRef<TextInput, AppInputProps>((initialProps, ref)
   const containerProps = boxProps;
 
   return (
-    <Box width="100%" style={containerStyle} {...containerProps}>
+    <Box width="100%" {...containerProps}>
       {label && (
         <AppText variant="body" weight="medium" style={styles.label}>
           {label}
         </AppText>
       )}
 
-      {(() => {
-        const inputField = (
-          <View
-            pointerEvents={calculator && !calculatorEditable ? 'none' : 'auto'}
-            style={calculator ? styles.calculatorInputField : undefined}
-          >
-            <AppInputField
-              ref={ref}
-              variant={variant}
-              leftIcon={leftIcon}
-              style={textInputStyle}
-              inputStyle={[inputStyle, calculator && styles.calculatorTextInput]}
-              borderColor={error ? 'error' : undefined}
-              {...fieldProps}
-              editable={calculator && !calculatorEditable ? false : fieldProps.editable}
-            />
-          </View>
-        );
-
-        return calculator && !calculatorEditable ? (
-          <TouchableOpacity
-            onPress={onCalculatorPress}
-            testID={calculatorTestID}
-            accessibilityRole="button"
-            accessibilityLabel="Open calculator"
-            activeOpacity={0.8}
-            style={styles.calculatorRow}
-          >
-            {inputField}
-            <View pointerEvents="none" style={styles.calculatorButton}>
-              <AppIcon name={Icon.Calculator} size={20} color="primary" />
-            </View>
-          </TouchableOpacity>
-        ) : calculator ? (
-          <View style={styles.calculatorRow}>
-            {inputField}
-            <TouchableOpacity
-              onPress={onCalculatorPress}
-              testID={calculatorTestID}
-              accessibilityRole="button"
-              accessibilityLabel="Open calculator"
-              activeOpacity={0.8}
-              style={styles.calculatorButton}
-            >
-              <AppIcon name={Icon.Calculator} size={20} color="primary" />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View>{inputField}</View>
-        );
-      })()}
+      <View>
+        <AppInputField
+          ref={ref}
+          variant={variant}
+          leftIcon={leftIcon}
+          style={textInputStyle}
+          inputStyle={inputStyle}
+          borderColor={error ? 'error' : undefined}
+          {...fieldProps}
+        />
+      </View>
 
       {error && (
         <AppText variant="caption" color="error" style={styles.error}>
@@ -130,25 +70,5 @@ const styles = StyleSheet.create({
   },
   error: {
     marginTop: Spacing.xs,
-  },
-  calculatorButton: {
-    position: 'absolute',
-    right: Spacing.xs,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.sm,
-  },
-  calculatorRow: {
-    position: 'relative',
-    width: '100%',
-  },
-  calculatorInputField: {
-    width: '100%',
-  },
-  calculatorTextInput: {
-    // Keep right-aligned values clear of the 20px icon and its hit area.
-    paddingRight: Spacing.xxxl + Spacing.sm,
   },
 });

@@ -109,7 +109,7 @@ export function AccountFormOverlays(vm: AccountFormViewModel) {
           testID="account-note-input"
           multiline
           numberOfLines={3}
-          containerStyle={{ marginBottom: 0 }}
+          marginBottom={0}
         />
       </ModalSurface>
       {vm.balanceClassify ? <BalanceChangeClassifySheet {...vm.balanceClassify} /> : null}
