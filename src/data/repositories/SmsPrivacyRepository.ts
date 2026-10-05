@@ -13,10 +13,6 @@ import type { Model } from '@nozbe/watermelondb';
 
 const BATCH_SIZE = 100;
 
-function sameOptional(a: string | null | undefined, b: string | null | undefined): boolean {
-  return (a ?? null) === (b ?? null);
-}
-
 function queryAfter<T extends Model>(collection: string, afterId: string | undefined) {
   const clauses: Q.Clause[] = [];
   if (afterId) clauses.push(Q.where('id', Q.gt(afterId)));
@@ -87,7 +83,7 @@ export class SmsPrivacyRepository {
           const metadataJson = hashSmsMetadataFingerprints(record.metadataJson);
           if (
             fingerprint === record.inputFingerprint &&
-            sameOptional(metadataJson, record.metadataJson)
+            (metadataJson ?? null) === (record.metadataJson ?? null)
           )
             return [];
           return [{ record, fingerprint, metadataJson }];
@@ -117,7 +113,7 @@ export class SmsPrivacyRepository {
         if (!records.length) return undefined;
         const updates = records.flatMap(record => {
           const metadataJson = hashSmsMetadataFingerprints(record.metadataJson);
-          if (sameOptional(metadataJson, record.metadataJson)) return [];
+          if ((metadataJson ?? null) === (record.metadataJson ?? null)) return [];
           return [{ record, metadataJson }];
         });
         if (updates.length) {

@@ -5,7 +5,7 @@ import type { AuditActor } from '@/src/types/auditEvents';
 import { PlainAuditLog } from '@/src/types/plainDtos';
 import { date, field } from '@nozbe/watermelondb/decorators';
 
-export type ParsedAuditChanges = {
+type ParsedAuditChanges = {
   before?: Record<string, unknown>;
   after?: Record<string, unknown>;
   schemaVersion?: number;
@@ -34,7 +34,6 @@ export default class AuditLog extends BaseScopedModel {
 
   @date('created_at') createdAt!: Date;
 
-  // Helper to parse changes JSON
   get parsedChanges(): ParsedAuditChanges | null {
     try {
       const parsed: unknown = JSON.parse(this.changes);
@@ -52,8 +51,7 @@ export default class AuditLog extends BaseScopedModel {
 
     if ('schemaVersion' in changes) {
       return (
-        (changes.schemaVersion === 1 ||
-          changes.schemaVersion === AUDIT_EVENT_SCHEMA_VERSION) &&
+        (changes.schemaVersion === 1 || changes.schemaVersion === AUDIT_EVENT_SCHEMA_VERSION) &&
         changes.undoable === true
       );
     }

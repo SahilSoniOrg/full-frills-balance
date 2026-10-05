@@ -24,7 +24,6 @@ import Workplace from '@/src/data/models/Workplace';
 // Adapter (platform-specific resolution handled by Metro)
 import adapter from '@/src/data/database/adapter';
 
-// Use Native Crypto for IDs (58x faster)
 // Use Native Crypto for IDs (58x faster) if available
 if (generator) {
   setGenerator(generator);

@@ -1,10 +1,3 @@
-/**
- * ExchangeRateRepository
- *
- * Handles all database operations for exchange rates.
- * This repository is the single point of truth for exchange rate persistence.
- */
-
 import { database } from '@/src/data/database/Database';
 import ExchangeRate from '@/src/data/models/ExchangeRate';
 import { observeQueryWithModelChanges } from '@/src/data/repositories/observeQueryWithModelChanges';
@@ -14,12 +7,12 @@ import type { WorkplaceId } from '@/src/types/ids';
 import type { Model } from '@nozbe/watermelondb';
 import { Q } from '@nozbe/watermelondb';
 
-export interface ExchangeRateCacheInput {
+interface ExchangeRateCacheInput {
   toCurrency: string;
   rate: number;
 }
 
-export interface HistoricalExchangeRateInput {
+interface HistoricalExchangeRateInput {
   fromCurrency: string;
   toCurrency: string;
   rate: number;
@@ -33,9 +26,6 @@ class ExchangeRateRepository {
     return database.collections.get<ExchangeRate>('exchange_rates');
   }
 
-  /**
-   * Get the most recent cached rate for a currency pair
-   */
   async getCachedRate(fromCurrency: string, toCurrency: string): Promise<ExchangeRate | null> {
     const rates = await this.collection
       .query(
@@ -81,30 +71,18 @@ class ExchangeRateRepository {
     return legacyRates[0] || null;
   }
 
-  /**
-   * Get all cached rates for a base currency
-   */
   async getAllRatesForBase(fromCurrency: string): Promise<ExchangeRate[]> {
     return this.collection.query(Q.where('from_currency', fromCurrency)).fetch();
   }
 
-  /**
-   * Get all rates newer than a specific timestamp
-   */
   async getAllRecentRates(cutoff: number): Promise<ExchangeRate[]> {
     return this.collection.query(Q.where('effective_date', Q.gte(cutoff))).fetch();
   }
 
-  /**
-   * Observe all exchange rate changes
-   */
   observeAll() {
     return observeQueryWithModelChanges(this.collection.query());
   }
 
-  /**
-   * Observe the latest rates for a base currency
-   */
   observeLatestRates(fromCurrency: string) {
     return observeQueryWithModelChanges(
       this.collection.query(
@@ -115,10 +93,6 @@ class ExchangeRateRepository {
     );
   }
 
-  /**
-   * Batch cache multiple exchange rates for a single base currency.
-   * Significantly reduces IO overhead by performing all writes in a single transaction.
-   */
   async cacheRatesBatch(
     fromCurrency: string,
     rates: readonly ExchangeRateCacheInput[],

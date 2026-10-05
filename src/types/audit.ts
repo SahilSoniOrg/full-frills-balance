@@ -15,18 +15,6 @@ export interface TransactionAuditState {
   currencyCode?: string;
 }
 
-export interface JournalAuditState {
-  description?: string;
-  notes?: string | null;
-  journalDate?: number;
-  currencyCode?: string;
-  status?: string;
-  totalAmount?: number;
-  transactions?: TransactionAuditState[];
-  deletedAt?: Date;
-  restoredAt?: Date;
-}
-
 export interface AccountAuditState {
   name?: string;
   accountType?: AccountType;

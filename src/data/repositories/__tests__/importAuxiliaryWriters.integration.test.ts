@@ -1,7 +1,7 @@
 import { database } from '@/src/data/database/Database';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
-import { prepareAuxiliaryImportRecords } from '@/src/data/repositories/importWriters';
+import { importRepository } from '@/src/data/repositories/ImportRepository';
 import type { BatchImportData } from '@/src/types/importContracts';
 import { InboxParseStatus, InboxProcessingStatus, TransactionDirection } from '@/src/types/enums';
 import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
@@ -76,9 +76,7 @@ describe('import inbox privacy integration', () => {
       ],
     };
 
-    await database.write(async () => {
-      await database.batch(...prepareAuxiliaryImportRecords(WORKPLACE, data));
-    });
+    await importRepository.batchInsert(WORKPLACE, data);
 
     const records = database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
     const voice = await records.find('voice-imported');

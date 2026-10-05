@@ -31,8 +31,6 @@ export interface BudgetInput {
   assetAccountIds?: AccountId[];
 }
 
-export type BudgetPatch = Partial<BudgetInput>;
-
 export type BudgetMergeRecords = {
   scopes: BudgetScope[];
   budgets: Budget[];
@@ -265,7 +263,7 @@ export class BudgetRepository {
   async update(
     workplaceId: WorkplaceId,
     budget: Budget,
-    updates: BudgetPatch,
+    updates: Partial<BudgetInput>,
     accountIds: AccountId[],
     validateReferences?: () => Promise<unknown>,
   ): Promise<Budget> {

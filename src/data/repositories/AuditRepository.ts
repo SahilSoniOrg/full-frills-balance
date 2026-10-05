@@ -51,9 +51,6 @@ export class AuditRepository {
     return records[0] ?? null;
   }
 
-  /**
-   * Log an audit entry
-   */
   async log<T>(entry: AuditEntry<T>, workplaceId: WorkplaceId): Promise<void> {
     await database.write(async () => {
       await this.auditLogs.create((record: AuditLog) => {
@@ -63,9 +60,6 @@ export class AuditRepository {
     });
   }
 
-  /**
-   * Prepare an audit entry (does not write to DB)
-   */
   prepareLog<T>(entry: AuditEntry<T>, workplaceId: WorkplaceId): AuditLog {
     return this.auditLogs.prepareCreate((record: AuditLog) => {
       this.applyEntryToRecord(record, entry);
@@ -116,7 +110,6 @@ export class AuditRepository {
     record.createdAt = new Date();
   }
 
-  /** Legacy convenience API. Use fetchOlder to page past the bounded newest results. */
   async findByEntity(
     entityType: AuditEntityType,
     entityId: string,
@@ -135,9 +128,6 @@ export class AuditRepository {
       .fetch();
   }
 
-  /**
-   * Observe audit logs for a specific entity
-   */
   observeByEntity(
     entityType: AuditEntityType,
     entityId: string,
@@ -182,9 +172,6 @@ export class AuditRepository {
       .observe();
   }
 
-  /**
-   * Fetch recent audit logs
-   */
   async fetchRecent(
     limit: number = AppConfig.pagination.auditRecentLimit,
     workplaceId: WorkplaceId,

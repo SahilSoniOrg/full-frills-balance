@@ -1,14 +1,6 @@
 import { AccountId, JournalId, TransactionId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
 
-/**
- * Shared types and DTOs for transaction-related data.
- * These are primarily used for high-performance raw SQL queries.
- */
-
-/**
- * Minimal transaction data required for running balance rebuilds.
- */
 export interface RebuildTransaction {
   id: TransactionId;
   amount: number;
@@ -18,9 +10,6 @@ export interface RebuildTransaction {
   createdAt: number;
 }
 
-/**
- * Daily net balance change data.
- */
 export interface DailyDelta {
   dayStart: number;
   currencyCode: string;
@@ -32,12 +21,6 @@ export interface DailyDelta {
   exchangeRate?: number | null;
 }
 
-/**
- * Account-level net balance change data.
- */
-/**
- * Recurring transaction pattern candidate.
- */
 export interface RecurringPattern {
   amount: number;
   accountId: AccountId;
@@ -50,9 +33,6 @@ export interface RecurringPattern {
   lastDate: number;
 }
 
-/**
- * Minimal transaction projection used by insight calculations.
- */
 export interface TransactionMetadata {
   id: TransactionId;
   journalId: JournalId;
@@ -72,9 +52,6 @@ export interface AccountTransactionBoundary {
   afterTransactionCreatedAt?: number;
 }
 
-/**
- * Internal interface for raw account query results matching the SQL schema.
- */
 export interface RawAccountRow {
   id: AccountId;
   name: string;

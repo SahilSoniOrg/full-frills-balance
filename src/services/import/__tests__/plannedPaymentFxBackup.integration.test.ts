@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import PlannedPayment, { toPlainPlannedPayment } from '@/src/data/models/PlannedPayment';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { prepareAuxiliaryImportRecords } from '@/src/data/repositories/importWriters';
+import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { fetchAndTransformTable } from '@/src/services/export/exportTableTransformer';
 import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
 import { resolveParsedImportBatchData } from '@/src/services/import/canonicalImportAdapter';
@@ -75,9 +75,7 @@ it.each([undefined, 'automatic', 'fixed', 'manual'] as const)(
     const imported = data.plannedPayments![0];
     expect(imported.fromAccountId).not.toBe(from.id);
     expect(imported.toAccountId).not.toBe(to.id);
-    await database.write(async () => {
-      await database.batch(...prepareAuxiliaryImportRecords(RESTORED_WP, data));
-    });
+    await importRepository.batchInsert(RESTORED_WP, data);
     const restored = await database.collections
       .get<PlannedPayment>('planned_payments')
       .find(imported.id);

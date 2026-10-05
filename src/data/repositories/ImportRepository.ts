@@ -14,7 +14,6 @@ import {
 } from '@/src/data/repositories/importBalanceCalculator';
 import type { BatchImportData } from '@/src/types/importContracts';
 import { WorkplaceId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
 import Workplace from '@/src/data/models/Workplace';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { Model } from '@nozbe/watermelondb';
@@ -146,9 +145,6 @@ export class ImportRepository {
       return;
     }
     const chunkSize = 5000;
-    logger.info(
-      `[ImportRepository] Starting batch insert of ${operations.length} operations in chunks of ${chunkSize}...`,
-    );
     for (let index = 0; index < operations.length; index += chunkSize) {
       const chunk = operations.slice(index, index + chunkSize);
       const currentCount = index + chunk.length;
@@ -160,7 +156,6 @@ export class ImportRepository {
       await new Promise(resolve => setTimeout(resolve, 0));
     }
     onProgress?.('Saving records complete.', 1);
-    logger.info('[ImportRepository] Batch insert complete.');
   }
 
   async batchInsert(

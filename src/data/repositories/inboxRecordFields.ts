@@ -1,7 +1,7 @@
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import type { InboxRecordSnapshot, TransactionInboxRecordWriteData } from '@/src/types/smsInbox';
 
-export type InboxRecordPersistedFields = Omit<
+type InboxRecordPersistedFields = Omit<
   InboxRecordSnapshot,
   | 'id'
   | 'deviceInboxId'
@@ -41,7 +41,7 @@ export function inboxFieldsFromWriteData(
   };
 }
 
-export function inboxFieldsFromRecord(record: TransactionInboxRecord): InboxRecordPersistedFields {
+function inboxFieldsFromRecord(record: TransactionInboxRecord): InboxRecordPersistedFields {
   return {
     workplaceId: record.workplaceId,
     channel: record.channel,

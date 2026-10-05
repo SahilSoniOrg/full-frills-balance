@@ -14,7 +14,7 @@ import type { BatchImportData } from '@/src/types/importContracts';
 import { WorkplaceId } from '@/src/types/ids';
 import { mapTransactionToAudit } from '@/src/types/audit';
 
-export interface ImportedAuditContext {
+interface ImportedAuditContext {
   correlationId: string;
   importPluginId?: string;
   sourceFormatVersion?: string;
@@ -87,10 +87,7 @@ function buildImportedAuditContext(data: BatchImportData): ImportedAuditBuildCon
     accountIds.push(scope.accountId);
     budgetScopesById.set(scope.budgetId, accountIds);
   }
-  const transactionsByJournalId = new Map<
-    string,
-    ReturnType<typeof mapTransactionToAudit>[]
-  >();
+  const transactionsByJournalId = new Map<string, ReturnType<typeof mapTransactionToAudit>[]>();
   for (const transaction of data.transactions) {
     if (transaction.deletedAt != null) continue;
     const snapshots = transactionsByJournalId.get(transaction.journalId) ?? [];
@@ -273,8 +270,10 @@ export function prepareImportedEntityAuditRecords(
 ): AuditLog[] {
   const buildContext = buildImportedAuditContext(data);
   return IMPORTED_AUDIT_SPECS.flatMap(spec =>
-    spec.collect(data, buildContext).map(row =>
-      importedEntry(spec.entityType, row.id, spec.eventType, row.after, workplaceId, context),
-    ),
+    spec
+      .collect(data, buildContext)
+      .map(row =>
+        importedEntry(spec.entityType, row.id, spec.eventType, row.after, workplaceId, context),
+      ),
   );
 }

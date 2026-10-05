@@ -50,7 +50,7 @@ function getImportPersistenceRaw(record: Model): ImportPersistenceRaw {
   return record._raw as ImportPersistenceRaw;
 }
 
-export function setRecordTimestamps(
+function setRecordTimestamps(
   record: Model,
   timestamps: { createdAt?: number; updatedAt?: number; deletedAt?: number | null },
 ): void {
@@ -60,7 +60,7 @@ export function setRecordTimestamps(
   if (timestamps.deletedAt !== undefined) raw.deleted_at = timestamps.deletedAt;
 }
 
-export function setImportPersistenceRawField(record: Model, field: string, value: unknown): void {
+function setImportPersistenceRawField(record: Model, field: string, value: unknown): void {
   getImportPersistenceRaw(record)[field] = value;
 }
 

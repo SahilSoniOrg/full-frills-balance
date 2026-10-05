@@ -1,18 +1,13 @@
 import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
 import BaseScopedModel from '@/src/data/models/BaseScopedModel';
-import Journal from '@/src/data/models/Journal';
 import { InboxParseStatus, InboxProcessingStatus, TransactionDirection } from '@/src/types/enums';
 import { JournalId } from '@/src/types/ids';
 import { PlainInboxRecord } from '@/src/types/plainDtos';
 import { TransactionChannel } from '@/src/types/domainJournal';
-import { Relation } from '@nozbe/watermelondb';
-import { date, field, readonly, relation } from '@nozbe/watermelondb/decorators';
+import { date, field, readonly } from '@nozbe/watermelondb/decorators';
 
 export default class TransactionInboxRecord extends BaseScopedModel {
   static table = 'transaction_inbox_records';
-  static associations = {
-    journals: { type: 'belongs_to', key: 'linked_journal_id' },
-  } as const;
 
   @field('channel') channel!: TransactionChannel;
   @field('device_source_id') deviceSourceId!: string;
@@ -40,8 +35,6 @@ export default class TransactionInboxRecord extends BaseScopedModel {
 
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;
-
-  @relation('journals', 'linked_journal_id') linkedJournal!: Relation<Journal>;
 }
 
 export function toPlainInboxRecord(record: InboxRecordSnapshot): PlainInboxRecord {

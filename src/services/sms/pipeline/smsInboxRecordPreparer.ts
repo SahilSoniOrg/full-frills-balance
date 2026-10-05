@@ -1,7 +1,6 @@
 import { SmsMessage } from '@/modules/expo-sms-inbox';
 import Journal from '@/src/data/models/Journal';
-import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
-import { TransactionInboxRecordWriteData } from '@/src/data/repositories/TransactionInboxRepository';
+import type { InboxRecordSnapshot, TransactionInboxRecordWriteData } from '@/src/types/smsInbox';
 import { smsContentDigest } from '@/src/utils/smsDeliveryIdentity';
 import { generator } from '@/src/data/database/idGenerator';
 import type { AccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';

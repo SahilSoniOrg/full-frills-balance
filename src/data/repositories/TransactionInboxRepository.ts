@@ -31,9 +31,7 @@ import {
   inboxSnapshotFromRecord,
 } from '@/src/data/repositories/inboxRecordFields';
 
-export type { TransactionInboxRecordWriteData } from '@/src/types/smsInbox';
-
-export interface InboxAuditContext {
+interface InboxAuditContext {
   correlationId?: string;
 }
 
@@ -61,10 +59,6 @@ export class TransactionInboxRepository {
     return database.collections.get<TransactionInboxRecord>('transaction_inbox_records');
   }
 
-  private snapshot(record: TransactionInboxRecord): InboxRecordSnapshot {
-    return inboxSnapshotFromRecord(record);
-  }
-
   private project(
     workplaceId: WorkplaceId,
     devices: DeviceSmsInboxRecord[],
@@ -83,7 +77,7 @@ export class TransactionInboxRepository {
         const consumed = copiesBySource.get(device.deviceSourceId) ?? [];
         const local = consumed.find(copy => copy.workplaceId === workplaceId);
         return {
-          ...(local ? this.snapshot(local) : deviceSmsSnapshot(device, workplaceId)),
+          ...(local ? inboxSnapshotFromRecord(local) : deviceSmsSnapshot(device, workplaceId)),
           senderAddress: local?.senderAddress ?? device.senderAddress,
           rawBody: local?.rawBody ?? device.rawBody,
           id: device.id,
@@ -100,7 +94,7 @@ export class TransactionInboxRepository {
       }),
       ...copies
         .filter(copy => copy.workplaceId === workplaceId && !sourceIds.has(copy.deviceSourceId))
-        .map(copy => this.snapshot(copy)),
+        .map(copy => inboxSnapshotFromRecord(copy)),
     ].sort((a, b) => b.inputDate - a.inputDate);
   }
 
@@ -122,7 +116,7 @@ export class TransactionInboxRepository {
     const records = await this.inbox
       .query(Q.where('id', id), Q.where('workplace_id', workplaceId))
       .fetch();
-    return records[0] ? this.snapshot(records[0]) : null;
+    return records[0] ? inboxSnapshotFromRecord(records[0]) : null;
   }
 
   async findByDeviceSourceIds(

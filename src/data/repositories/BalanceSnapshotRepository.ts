@@ -10,18 +10,11 @@ import { Q } from '@nozbe/watermelondb';
 import Transaction from '@/src/data/models/Transaction';
 import { rawSqlExecutor } from './raw/RawSqlExecutor';
 
-/**
- * Repository for Balance Snapshots.
- * Snapshots are point-in-time balances that accelerate rebuilding and reporting.
- */
 export class BalanceSnapshotRepository {
   private get snapshots() {
     return database.collections.get<BalanceSnapshot>('balance_snapshots');
   }
 
-  /**
-   * Finds the latest snapshot for an account as of a given date.
-   */
   async findLatestForAccount(
     workplaceId: WorkplaceId,
     accountId: AccountId,
@@ -39,9 +32,6 @@ export class BalanceSnapshotRepository {
     return snapshots[0] || null;
   }
 
-  /**
-   * Creates a new balance snapshot.
-   */
   async create(
     workplaceId: WorkplaceId,
     data: {
@@ -64,9 +54,6 @@ export class BalanceSnapshotRepository {
     });
   }
 
-  /**
-   * Prepares a new balance snapshot record.
-   */
   prepareCreate(
     workplaceId: WorkplaceId,
     data: {
@@ -103,9 +90,6 @@ export class BalanceSnapshotRepository {
     return snapshot.prepareDestroyPermanently();
   }
 
-  /**
-   * Finds all snapshots after a given date for invalidation.
-   */
   async findAfterDate(
     workplaceId: WorkplaceId,
     accountId: AccountId,
@@ -120,10 +104,6 @@ export class BalanceSnapshotRepository {
       .fetch();
   }
 
-  /**
-   * Finds the latest snapshots for multiple accounts as of a given date.
-   * Returns a Map of accountId -> SnapshotData.
-   */
   async findLatestForAccountsRaw(
     workplaceId: WorkplaceId,
     accountIds: string[],
