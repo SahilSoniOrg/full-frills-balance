@@ -7,10 +7,8 @@ import type Transaction from '@/src/data/models/Transaction';
 import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { convertJournalLineAmount } from '@/src/services/currencyConversion';
-import {
-  buildBudgetCumulativeChart,
-  type BudgetCumulativeChart,
-} from '@/src/services/budget/budgetCumulativeChartService';
+import { buildBudgetCumulativeChart } from '@/src/services/budget/budgetCumulativeChartService';
+import { budgetCumulativeChartFixture } from '@/src/features/budget/testing/budgetChartTestFixtures';
 import { useBudgetDetailViewModel } from '../useBudgetDetailViewModel';
 import { useJournalEntryList } from '@/src/features/journal';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
@@ -83,7 +81,9 @@ function setupStandardBudgetDetailMocks() {
   jest
     .mocked(buildBudgetCumulativeChart)
     .mockReset()
-    .mockImplementation(async input => chart(input.periodStart, input.periodEnd));
+    .mockImplementation(async input =>
+      budgetCumulativeChartFixture(input.periodStart, input.periodEnd),
+    );
   jest
     .mocked(transactionQueryRepository.observeBudgetTransactionsByJournalDateRange)
     .mockReturnValue(of([]));
@@ -165,20 +165,6 @@ const marchStart = dayjs(now).startOf('month').valueOf();
 const marchEnd = dayjs(now).endOf('month').valueOf();
 const februaryStart = dayjs(now).subtract(1, 'month').startOf('month').valueOf();
 const februaryEnd = dayjs(now).subtract(1, 'month').endOf('month').valueOf();
-const chart = (start: number, end: number, sameDaySpend = 90): BudgetCumulativeChart => ({
-  domainX: [start, end],
-  data: [
-    { x: start, y: 0 },
-    { x: dayjs(start).add(2, 'day').endOf('day').valueOf(), y: sameDaySpend },
-    { x: dayjs(start).add(3, 'day').valueOf(), y: 120 },
-    { x: end, y: 300 },
-  ],
-  categories: [],
-  entryCount: 2,
-  refunds: 0,
-  hasUnvaluedEntries: false,
-});
-
 describe('budget details previous-period chart', () => {
   beforeEach(() => setupStandardBudgetDetailMocks());
   afterEach(() => jest.restoreAllMocks());
@@ -242,7 +228,7 @@ describe('budget details previous-period chart', () => {
         );
       jest.mocked(buildBudgetCumulativeChart).mockImplementation(async input => {
         if (shouldFail && input.periodStart === februaryStart) throw new Error('Unavailable');
-        return chart(input.periodStart, input.periodEnd);
+        return budgetCumulativeChartFixture(input.periodStart, input.periodEnd);
       });
       const { result } = renderHook(() => useBudgetDetailViewModel());
       await waitFor(() => expect(result.current.scopeAccounts).toEqual([parent]));
@@ -282,7 +268,9 @@ describe('budget details previous-period chart', () => {
     let sameDaySpend = 90;
     jest
       .mocked(buildBudgetCumulativeChart)
-      .mockImplementation(async input => chart(input.periodStart, input.periodEnd, sameDaySpend));
+      .mockImplementation(async input =>
+        budgetCumulativeChartFixture(input.periodStart, input.periodEnd, sameDaySpend),
+      );
     const { result } = renderHook(() => useBudgetDetailViewModel());
     await waitFor(() =>
       expect(journalObserveQueries.observeByIds).toHaveBeenCalledWith('workplace', [journalId]),
@@ -342,6 +330,7 @@ describe('budget details previous-period chart', () => {
       ok: true,
       amount: input.amount * (input.storedLineRate ?? 1),
     }));
+    // One integration case uses the real chart builder to exercise FX valuation.
     const realBuilder = jest.requireActual<
       typeof import('@/src/services/budget/budgetCumulativeChartService')
     >('@/src/services/budget/budgetCumulativeChartService').buildBudgetCumulativeChart;
@@ -374,7 +363,7 @@ describe('budget details previous-period chart', () => {
         }),
       );
       jest.mocked(buildBudgetCumulativeChart).mockImplementation(async input => ({
-        ...chart(input.periodStart, input.periodEnd),
+        ...budgetCumulativeChartFixture(input.periodStart, input.periodEnd),
         hasUnvaluedEntries: true,
         unvaluedEntryCount: 2,
         unvaluedCurrencyCounts: [{ currencyCode: 'EUR', count: 2 }],
@@ -391,7 +380,7 @@ describe('budget details previous-period chart', () => {
 
   it('hides the previous chart and comparison when historical valuation is incomplete', async () => {
     jest.mocked(buildBudgetCumulativeChart).mockImplementation(async input => ({
-      ...chart(input.periodStart, input.periodEnd),
+      ...budgetCumulativeChartFixture(input.periodStart, input.periodEnd),
       hasUnvaluedEntries: input.periodStart === februaryStart,
       unvaluedEntryCount: input.periodStart === februaryStart ? 1 : 0,
     }));

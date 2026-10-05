@@ -1,0 +1,43 @@
+import type { BudgetEditViewModel } from '@/src/features/budget/hooks/useBudgetEditViewModel';
+
+export function minimalBudgetEditViewModel(
+  overrides: Partial<BudgetEditViewModel> = {},
+): BudgetEditViewModel {
+  return {
+    expenseAccounts: [],
+    liquidAssetAccounts: [],
+    budget: null,
+    name: '',
+    setName: jest.fn(),
+    amount: '',
+    setAmount: jest.fn(),
+    startMonth: new Date(2026, 9, 1),
+    schedule: { intervalType: 'MONTHLY', intervalN: 1 },
+    scheduleStartDate: new Date(2026, 9, 1).getTime(),
+    setSchedule: jest.fn(),
+    selectedAccountIds: [],
+    setSelectedAccountIds: jest.fn(),
+    selectedCategories: [],
+    categorySuggestions: [],
+    addCategory: jest.fn(),
+    removeCategory: jest.fn(),
+    assetAccountIds: [],
+    setAssetAccountIds: jest.fn(),
+    fundingLabel: 'Automatic',
+    spendingHistory: [],
+    averageSpend: null,
+    useAverage: jest.fn(),
+    amountLabel: 'Limit each month',
+    currencies: [],
+    currencyCode: 'USD',
+    setCurrencyCode: jest.fn(),
+    save: jest.fn(),
+    loading: false,
+    isSaving: false,
+    isFormValid: false,
+    requirementHint: 'Add a name, an amount, and one category.',
+    onCancel: jest.fn(),
+    leaveAfterSave: jest.fn(),
+    ...overrides,
+  } as BudgetEditViewModel;
+}

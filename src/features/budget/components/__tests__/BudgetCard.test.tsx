@@ -1,8 +1,8 @@
 import { render, fireEvent, cleanup } from '@/src/utils/test-utils';
 import { BudgetCard } from '../BudgetCard';
 import { BudgetListSummary } from '../BudgetListSummary';
-import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
 import { summarizeBudgetList } from '../../helpers/budgetListPresentation';
+import { BudgetListView } from '../BudgetListView';
 import { preferences } from '@/src/services/preferences';
 import { AppConfig } from '@/src/constants';
 import { asBudgetId, asAccountId } from '@/src/types/ids';
@@ -11,6 +11,10 @@ import type { BudgetItem } from '../../types';
 import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
 
 jest.mock('@/src/utils/incompleteFxDetails', () => ({ showIncompleteFxDetails: jest.fn() }));
+jest.mock('@shopify/flash-list', () => {
+  const { FlatList } = jest.requireActual<typeof import('react-native')>('react-native');
+  return { FlashList: FlatList };
+});
 const today = new Date(2026, 9, 18, 12).getTime();
 const item: BudgetItem = {
   budget: {
@@ -188,15 +192,16 @@ describe('redesigned budget rows and summary', () => {
     expect(screen.queryByTestId('budget-today-marker')).toBeNull();
   });
 
-  it('only renders the today marker when requested and explains the bar accessibly', () => {
+  it('labels the budget section This month', () => {
     const screen = render(
-      <BudgetProgressBar
-        progress={108}
-        statusColor="error"
-        accessibilityLabel="Over, 108% spent"
+      <BudgetListView
+        items={[item]}
+        isLoading={false}
+        error={null}
+        onRetry={jest.fn()}
+        onItemPress={jest.fn()}
       />,
     );
-    expect(screen.queryByTestId('budget-today-marker')).toBeNull();
-    expect(screen.getByRole('image', { name: 'Over, 108% spent' })).toBeTruthy();
+    expect(screen.getByText('This month')).toBeTruthy();
   });
 });

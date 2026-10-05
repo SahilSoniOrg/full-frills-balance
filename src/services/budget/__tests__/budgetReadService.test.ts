@@ -1,9 +1,8 @@
-import { database } from '@/src/data/database/Database';
-import { AccountType, TransactionType } from '@/src/types/enums';
+import { TransactionType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-
-import { accountWriteRepository } from '@/src/data/repositories/account';
+import { database } from '@/src/data/database/Database';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
+import { resetBudgetReadServiceDatabase } from './budgetReadService.harness';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
 import {
   budgetReadService,
@@ -19,33 +18,10 @@ describe('budgetReadService', () => {
   let assetId: string;
 
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
-    const asset = await accountWriteRepository.create({
-      name: 'Checking',
-      accountType: AccountType.ASSET,
-      currencyCode: 'USD',
-      workplaceId: 'wp-1' as WorkplaceId,
-    });
-    assetId = asset.id;
-
-    const parent = await accountWriteRepository.create({
-      name: 'Food',
-      accountType: AccountType.EXPENSE,
-      currencyCode: 'USD',
-      workplaceId: 'wp-1' as WorkplaceId,
-    });
-    expenseParentId = parent.id;
-
-    const child = await accountWriteRepository.create({
-      name: 'Groceries',
-      accountType: AccountType.EXPENSE,
-      currencyCode: 'USD',
-      parentAccountId: parent.id,
-      workplaceId: 'wp-1' as WorkplaceId,
-    });
-    expenseChildId = child.id;
+    const ids = await resetBudgetReadServiceDatabase();
+    assetId = ids.assetId;
+    expenseParentId = ids.expenseParentId;
+    expenseChildId = ids.expenseChildId;
   });
 
   it('should compute budget usage recursively and apply refunds correctly', async () => {
@@ -226,10 +202,12 @@ describe('budgetReadService', () => {
       });
     });
     const usage = await firstValueFrom(
-      budgetReadService.observeBudgetUsage(workplaceId, budget.id, dayjs('2023-10-15').valueOf()).pipe(
-        filter(value => value.spent === 42.25),
-        timeout({ first: 2000 }),
-      ),
+      budgetReadService
+        .observeBudgetUsage(workplaceId, budget.id, dayjs('2023-10-15').valueOf())
+        .pipe(
+          filter(value => value.spent === 42.25),
+          timeout({ first: 2000 }),
+        ),
     );
     expect(usage.remaining).toBe(457.75);
     const prior = await firstValueFrom(

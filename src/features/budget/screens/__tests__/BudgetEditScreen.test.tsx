@@ -3,8 +3,8 @@ import { render } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppShellTestProvider, type AppShellValue } from '@/src/contexts/UIContext';
 import { useBudgetEditViewModel } from '@/src/features/budget/hooks/useBudgetEditViewModel';
-import type { BudgetEditViewModel } from '@/src/features/budget/hooks/useBudgetEditViewModel';
 import BudgetEditScreen from '../BudgetEditScreen';
+import { minimalBudgetEditViewModel } from './budgetEditScreen.fixtures';
 
 jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({}) }));
 jest.mock('@/src/features/accounts', () => ({ CurrencySelector: () => null }));
@@ -42,42 +42,6 @@ const shellValue: AppShellValue = {
   requireRestart: () => {},
 };
 
-const viewModel = {
-  expenseAccounts: [],
-  liquidAssetAccounts: [],
-  budget: null,
-  name: '',
-  setName: jest.fn(),
-  amount: '',
-  setAmount: jest.fn(),
-  startMonth: new Date(2026, 9, 1),
-  schedule: { intervalType: 'MONTHLY', intervalN: 1 },
-  scheduleStartDate: new Date(2026, 9, 1).getTime(),
-  setSchedule: jest.fn(),
-  selectedAccountIds: [],
-  setSelectedAccountIds: jest.fn(),
-  selectedCategories: [],
-  categorySuggestions: [],
-  addCategory: jest.fn(),
-  removeCategory: jest.fn(),
-  assetAccountIds: [],
-  setAssetAccountIds: jest.fn(),
-  fundingLabel: 'Automatic',
-  spendingHistory: [],
-  averageSpend: null,
-  useAverage: jest.fn(),
-  amountLabel: 'Limit each month',
-  currencies: [],
-  currencyCode: 'USD',
-  setCurrencyCode: jest.fn(),
-  save: jest.fn(),
-  loading: false,
-  isSaving: false,
-  isFormValid: false,
-  requirementHint: 'Add a name, an amount, and one category.',
-  onCancel: jest.fn(),
-} as unknown as BudgetEditViewModel;
-
 function ProvidersWithoutPrivacyScope({ children }: { children: React.ReactNode }) {
   return (
     <SafeAreaProvider
@@ -93,7 +57,7 @@ function ProvidersWithoutPrivacyScope({ children }: { children: React.ReactNode 
 
 describe('BudgetEditScreen privacy scope', () => {
   it('renders the new-budget route with the real privacy-aware money hook', () => {
-    jest.mocked(useBudgetEditViewModel).mockReturnValue(viewModel);
+    jest.mocked(useBudgetEditViewModel).mockReturnValue(minimalBudgetEditViewModel());
 
     const screen = render(<BudgetEditScreen />, { wrapper: ProvidersWithoutPrivacyScope });
 

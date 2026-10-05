@@ -6,7 +6,22 @@ import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { asAccountId, asBudgetId } from '@/src/types/ids';
 import type { PlainBudget } from '@/src/types/plainDtos';
+import type { BudgetSpendingHistoryEntry } from '@/src/services/budget/budgetReadService';
 import { useBudgetEditViewModel } from '../useBudgetEditViewModel';
+
+function historyPeriods(
+  entries: (Pick<BudgetSpendingHistoryEntry, 'label' | 'spent'> &
+    Partial<Pick<BudgetSpendingHistoryEntry, 'startDate' | 'endDate' | 'transactionCount'>>)[],
+): BudgetSpendingHistoryEntry[] {
+  return entries.map((entry, index) => ({
+    label: entry.label,
+    startDate: entry.startDate ?? index * 2 + 1,
+    endDate: entry.endDate ?? index * 2 + 2,
+    spent: entry.spent,
+    transactionCount: entry.transactionCount ?? (entry.spent > 0 ? 1 : 0),
+    hasUnvaluedEntries: false,
+  }));
+}
 
 jest.mock('@/src/contexts/WorkplaceContext', () => ({
   useWorkplace: () => ({ workplaceId: 'wp', defaultCurrencyCode: 'USD' }),
@@ -130,64 +145,17 @@ describe('budget repeat count editing', () => {
 
   it('passes changing category selections to the observable history read and uses its average', () => {
     jest.mocked(budgetReadService.observeSpendingHistory).mockReturnValue(
-      mockOf([
-        {
-          label: 'May',
-          startDate: 1,
-          endDate: 2,
-          spent: 30,
-          transactionCount: 1,
-          hasUnvaluedEntries: false,
-        },
-        {
-          label: 'Jun',
-          startDate: 3,
-          endDate: 4,
-          spent: 0,
-          transactionCount: 0,
-          hasUnvaluedEntries: false,
-        },
-        {
-          label: 'Jul',
-          startDate: 5,
-          endDate: 6,
-          spent: 10,
-          transactionCount: 1,
-          hasUnvaluedEntries: false,
-        },
-        {
-          label: 'Aug',
-          startDate: 7,
-          endDate: 8,
-          spent: 0,
-          transactionCount: 0,
-          hasUnvaluedEntries: false,
-        },
-        {
-          label: 'Sep',
-          startDate: 9,
-          endDate: 10,
-          spent: 0,
-          transactionCount: 0,
-          hasUnvaluedEntries: false,
-        },
-        {
-          label: 'Oct',
-          startDate: 11,
-          endDate: 12,
-          spent: 0,
-          transactionCount: 0,
-          hasUnvaluedEntries: false,
-        },
-        {
-          label: 'Now',
-          startDate: 13,
-          endDate: 14,
-          spent: 99,
-          transactionCount: 2,
-          hasUnvaluedEntries: false,
-        },
-      ]),
+      mockOf(
+        historyPeriods([
+          { label: 'May', spent: 30 },
+          { label: 'Jun', spent: 0, transactionCount: 0 },
+          { label: 'Jul', spent: 10 },
+          { label: 'Aug', spent: 0, transactionCount: 0 },
+          { label: 'Sep', spent: 0, transactionCount: 0 },
+          { label: 'Oct', spent: 0, transactionCount: 0 },
+          { label: 'Now', spent: 99, transactionCount: 2 },
+        ]),
+      ),
     );
     const { result } = renderHook(() => useBudgetEditViewModel({ id: budget.id }));
     expect(result.current.averageSpend).toBe(20);

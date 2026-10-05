@@ -1,8 +1,6 @@
 import { BudgetDetailHeader } from '../BudgetDetailHeader';
-import { BudgetSetupDisclosure } from '../BudgetSetupDisclosure';
-import { render, fireEvent, cleanup } from '@/src/utils/test-utils';
-import { BudgetId, AccountId } from '@/src/types/ids';
-import { AccountType } from '@/src/types/enums';
+import { render, cleanup } from '@/src/utils/test-utils';
+import { BudgetId } from '@/src/types/ids';
 import { preferences } from '@/src/services/preferences';
 import { AppConfig } from '@/src/constants';
 import { MoneyText } from '@/src/components/shared/MoneyText';
@@ -20,22 +18,6 @@ const props = {
   prevMonth: jest.fn(),
   nextMonth: jest.fn(),
   resetToToday: jest.fn(),
-};
-
-const setupProps = {
-  budget: props.budget,
-  periodRange: props.periodRange,
-  scopeAccounts: [
-    {
-      id: 'dining' as AccountId,
-      name: 'Dining out',
-      accountType: AccountType.EXPENSE,
-      currencyCode: 'USD',
-    },
-  ],
-  fundingAccounts: [],
-  isLoadingFunding: false,
-  onEdit: jest.fn(),
 };
 
 describe('BudgetDetailHeader', () => {
@@ -71,16 +53,6 @@ describe('BudgetDetailHeader', () => {
     expect(screen.getByText('Per day left')).toBeTruthy();
     expect(screen.getByText('—')).toBeTruthy();
     expect(screen.queryByText(/\$[\d,]+\.\d{2}\/day/)).toBeNull();
-  });
-
-  it('renders setup as one edit row using the funding-account summary', () => {
-    const screen = render(<BudgetSetupDisclosure {...setupProps} />);
-    const setup = screen.getByRole('button', {
-      name: /Setup · Monthly · from Automatic account selection/,
-    });
-    fireEvent.press(setup);
-    expect(setupProps.onEdit).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText('Expense categories')).toBeNull();
   });
 
   it('masks every money amount in privacy mode', () => {

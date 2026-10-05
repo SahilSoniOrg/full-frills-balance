@@ -11,13 +11,12 @@ import { Icon } from '@/src/types/domainIcons';
 jest.mock('@/src/services/accounts/accountQueries', () => ({
   accountQueries: { observeAll: jest.fn() },
 }));
-jest.mock('@/src/services/budget/budgetReadService', () => ({
-  budgetReadService: {
-    observeAllActive: jest.fn(),
-    observeBudgetUsage: jest.fn(),
-    observeScopes: jest.fn(),
-  },
-}));
+jest.mock('@/src/services/budget/budgetReadService', () => {
+  const { budgetReadServiceJestModule } = jest.requireActual<
+    typeof import('@/src/features/budget/testing/mockBudgetReadService')
+  >('@/src/features/budget/testing/mockBudgetReadService');
+  return budgetReadServiceJestModule;
+});
 jest.mock('@/src/utils/navigation', () => ({ AppNavigation: { toBudgetDetail: jest.fn() } }));
 
 const workplaceId = asWorkplaceId('workplace');

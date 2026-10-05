@@ -1,7 +1,9 @@
+import { asJournalId } from '@/src/types/ids';
 import {
   buildBudgetCumulativeChart,
   type BudgetChartTransactionInput,
 } from '../budgetCumulativeChartService';
+import { summarizeBudgetUnvaluedEntries } from '../budgetUnvaluedEntries';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { convertJournalLineAmount } from '@/src/services/currencyConversion';
 import type Journal from '@/src/data/models/Journal';
@@ -31,6 +33,25 @@ const transaction = (
   currencyCode: 'EUR',
   exchangeRate: 1.2,
   ...overrides,
+});
+
+describe('budget unvalued entry rollup', () => {
+  it('counts missing currency valuations by unique entries rather than split legs', () => {
+    expect(
+      summarizeBudgetUnvaluedEntries([
+        { journalId: asJournalId('one'), currencyCode: 'JPY' },
+        { journalId: asJournalId('one'), currencyCode: 'JPY' },
+        { journalId: asJournalId('two'), currencyCode: 'JPY' },
+        { journalId: asJournalId('one'), currencyCode: 'EUR' },
+      ]),
+    ).toEqual({
+      unvaluedEntryCount: 2,
+      unvaluedCurrencyCounts: [
+        { currencyCode: 'EUR', count: 1 },
+        { currencyCode: 'JPY', count: 2 },
+      ],
+    });
+  });
 });
 
 describe('budget detail spending breakdown', () => {

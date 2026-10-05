@@ -2,19 +2,8 @@ import {
   buildBudgetSpendingChartGeometry,
   getFractionalCalendarOffset,
 } from '../budgetSpendingChartGeometry';
-import type { BudgetCumulativeChart } from '@/src/services/budget/budgetCumulativeChartService';
+import { budgetCumulativeChartFromData } from '@/src/features/budget/testing/budgetChartTestFixtures';
 import dayjs from 'dayjs';
-
-function chart(data: BudgetCumulativeChart['data']): BudgetCumulativeChart {
-  return {
-    data,
-    domainX: [data[0]?.x ?? 0, data.at(-1)?.x ?? 0],
-    hasUnvaluedEntries: false,
-    categories: [],
-    entryCount: 0,
-    refunds: 0,
-  };
-}
 
 describe('budget spending chart geometry', () => {
   it('retains fractional positions for transactions posted on the same day', () => {
@@ -38,7 +27,7 @@ describe('budget spending chart geometry', () => {
     const today = dayjs('2026-01-02T12:00').valueOf();
     const firstPosting = dayjs('2026-01-02T08:00').valueOf();
     const secondPosting = dayjs('2026-01-02T18:00').valueOf();
-    const current = chart([
+    const current = budgetCumulativeChartFromData([
       { x: currentStart, y: 0 },
       { x: firstPosting, y: 0 },
       { x: firstPosting, y: 10 },
@@ -46,7 +35,7 @@ describe('budget spending chart geometry', () => {
       { x: secondPosting, y: 20 },
       { x: currentEnd, y: 35 },
     ]);
-    const previous = chart([
+    const previous = budgetCumulativeChartFromData([
       { x: previousStart, y: 0 },
       { x: dayjs('2025-12-02').endOf('day').valueOf(), y: 15 },
       { x: previousEnd, y: 30 },

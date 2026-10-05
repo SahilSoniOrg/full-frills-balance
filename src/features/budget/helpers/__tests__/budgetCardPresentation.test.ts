@@ -13,18 +13,25 @@ function makeUsage(overrides: Partial<BudgetUsage> = {}): BudgetUsage {
 
 describe('resolveBudgetStatus', () => {
   it.each([
-    [1, 0, 'over'],
-    [0.8, 0, 'nearLimit'],
-    [0.79, 0.2, 'aheadOfPace'],
-    [0.3, 0.2, 'onPace'],
-    [0.301, 0.2, 'aheadOfPace'],
-    [0, 0, 'onPace'],
-    [0.7, 1, 'onPace'],
-    [0.85, 1, 'nearLimit'],
-    [1.1, 1, 'over'],
-  ])('resolves %s spent at %s elapsed to %s', (spent, elapsed, expected) => {
-    expect(resolveBudgetStatus(spent, elapsed).status).toBe(expected);
-  });
+    [1, 0, 'over', 'error', 'error'],
+    [0.8, 0, 'nearLimit', 'warning', 'warning'],
+    [0.79, 0.2, 'aheadOfPace', 'warning', 'warning'],
+    [0.3, 0.2, 'onPace', 'primary', 'success'],
+    [0.301, 0.2, 'aheadOfPace', 'warning', 'warning'],
+    [0, 0, 'onPace', 'primary', 'success'],
+    [0.7, 1, 'onPace', 'primary', 'success'],
+    [0.85, 1, 'nearLimit', 'warning', 'warning'],
+    [1.1, 1, 'over', 'error', 'error'],
+    [0.4, 1, 'onPace', 'primary', 'success'],
+  ])(
+    'resolves %s spent at %s elapsed to %s',
+    (spent, elapsed, expectedStatus, expectedColor, expectedVariant) => {
+      const result = resolveBudgetStatus(spent, elapsed);
+      expect(result.status).toBe(expectedStatus);
+      expect(result.statusColor).toBe(expectedColor);
+      expect(result.statusBadge.variant).toBe(expectedVariant);
+    },
+  );
 
   it('keeps missing FX above pace presentation', () => {
     expect(presentBudgetUsage(makeUsage({ hasUnvaluedEntries: true }), 0.1)).toMatchObject({
@@ -32,21 +39,6 @@ describe('resolveBudgetStatus', () => {
       statusColor: 'warning',
       statusBadge: { text: 'Incomplete' },
     });
-  });
-
-  it('returns on track below 80%', () => {
-    expect(resolveBudgetStatus(0.4).statusColor).toBe('primary');
-    expect(resolveBudgetStatus(0.4).statusBadge.variant).toBe('success');
-  });
-
-  it('returns warning between 80% and 100%', () => {
-    expect(resolveBudgetStatus(0.85).statusColor).toBe('warning');
-    expect(resolveBudgetStatus(0.85).statusBadge.variant).toBe('warning');
-  });
-
-  it('returns error at or above 100%', () => {
-    expect(resolveBudgetStatus(1).statusColor).toBe('error');
-    expect(resolveBudgetStatus(1).statusBadge.variant).toBe('error');
   });
 });
 
