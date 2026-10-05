@@ -1,7 +1,7 @@
 import { AppConfig } from '@/src/constants/app-config';
 import dayjs from 'dayjs';
 import { PlannedFlowGenerator } from '../engines/PlannedFlowGenerator';
-import { ProjectionComposer } from '../ProjectionComposer';
+import { materializeScheduledProjections } from '../ProjectionComposer';
 import { AccountId } from '@/src/types/ids';
 
 describe('PlannedFlowGenerator May 5th Regression', () => {
@@ -48,7 +48,7 @@ describe('PlannedFlowGenerator May 5th Regression', () => {
       new Map(),
     );
 
-    const flows = ProjectionComposer.materializeScheduledProjections(projections, mockContext);
+    const flows = materializeScheduledProjections(projections, mockContext);
 
     // We expect TWO flows in 30-day window:
     // 1. One for the overdue April 5th payment (pulled to Day 0)
@@ -85,7 +85,7 @@ describe('PlannedFlowGenerator May 5th Regression', () => {
       new Map(),
     );
 
-    const flows = ProjectionComposer.materializeScheduledProjections(projections, mockContext);
+    const flows = materializeScheduledProjections(projections, mockContext);
 
     const may5Flow = flows.find(f => f.dayOffset === 27);
     expect(may5Flow).toBeDefined();

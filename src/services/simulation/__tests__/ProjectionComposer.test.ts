@@ -1,4 +1,4 @@
-import { ProjectionComposer } from '@/src/services/simulation/ProjectionComposer';
+import { composeSpending } from '@/src/services/simulation/ProjectionComposer';
 import {
   BudgetCapacityProjection,
   FlowCategory,
@@ -79,11 +79,7 @@ describe('ProjectionComposer', () => {
       },
     ];
 
-    const composed = ProjectionComposer.composeSpending(
-      budgetCapacities,
-      scheduledProjections,
-      context,
-    );
+    const composed = composeSpending(budgetCapacities, scheduledProjections, context);
 
     const totalComposed = composed.reduce((sum, f) => sum + f.amount, 0);
     expect(totalComposed).toBe(100);

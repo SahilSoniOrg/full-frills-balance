@@ -208,7 +208,6 @@ export interface SimulationEngineResult {
     firstMajorInflowDay: number | null;
   };
   safeToSpendExplanation: SafeToSpendExplanation;
-  accountSummaries: AccountSimulationSummary[];
   projections: {
     timestamp: number;
     dayOffset: number;

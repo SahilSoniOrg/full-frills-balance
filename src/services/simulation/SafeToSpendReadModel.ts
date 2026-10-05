@@ -1,6 +1,8 @@
-import { createEmptySafeToSpendDashboard } from '@/src/services/simulation/safeToSpendDashboardProjection';
+import {
+  createEmptySafeToSpendDashboard,
+  projectSafeToSpendDashboardFromSnapshot,
+} from '@/src/services/simulation/safeToSpendDashboardProjection';
 import { observeSafeToSpendInputSnapshot } from '@/src/services/simulation/safeToSpendInputAcquisition';
-import { projectSafeToSpendDashboardFromSnapshot } from '@/src/services/simulation/safeToSpendProjection';
 import { persistSafeToSpendSnapshot } from '@/src/services/simulation/safeToSpendSnapshotWriter';
 import {
   reactiveCacheCoordinator,

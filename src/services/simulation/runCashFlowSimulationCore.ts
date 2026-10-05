@@ -51,16 +51,14 @@ export function runCashFlowSimulationCore(input: {
     precision,
   } = input;
 
-  const budgetEntries = budgets.map((budget, index) => ({
-    budget,
-    usage: usages[index] || { remaining: 0 },
-    categories: budgetCategoryMap.get(budget.id),
-  }));
-  const budgetEntriesWithCategories = budgetEntries.filter(
-    entry => entry.categories && entry.categories.size > 0,
-  );
-  const filteredBudgets = budgetEntriesWithCategories.map(entry => entry.budget);
-  const filteredUsages = budgetEntriesWithCategories.map(entry => entry.usage);
+  const filteredBudgets: SimulationBudget[] = [];
+  const filteredUsages: BudgetUsage[] = [];
+  budgets.forEach((budget, index) => {
+    const categories = budgetCategoryMap.get(budget.id);
+    if (!categories || categories.size === 0) return;
+    filteredBudgets.push(budget);
+    filteredUsages.push(usages[index] || { remaining: 0 });
+  });
 
   const scheduledProjections = PlannedFlowGenerator.generate(
     context,
@@ -78,11 +76,7 @@ export function runCashFlowSimulationCore(input: {
   );
   trace?.metric('flow_gen_domain');
 
-  const resolvedSpendingFlows = composeSpending(
-    budgetCapacities,
-    scheduledProjections,
-    context,
-  );
+  const resolvedSpendingFlows = composeSpending(budgetCapacities, scheduledProjections, context);
 
   const liabilityFlows = LiabilityFlowGenerator.generate(
     context,

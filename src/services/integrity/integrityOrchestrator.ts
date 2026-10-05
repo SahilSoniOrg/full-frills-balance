@@ -6,15 +6,12 @@ import { logger } from '@/src/utils/logger';
 import { storage } from '@/src/utils/storage';
 import { repairAccountBalance } from './integrityRepair';
 import { backfillAccountSnapshotsIfNeeded } from './accountSnapshotBackfill';
-import {
-  scanForNullAccountTransactions,
-  verifyAccountBalance,
-  verifyAllAccountBalances,
-} from './integrityVerification';
+import { scanForNullAccountTransactions, verifyAllAccountBalances } from './integrityVerification';
 import {
   BalanceVerificationResult,
   IntegrityCheckResult,
   IntegrityProgressCallback,
+  IntegrityRepairTrigger,
 } from './types';
 
 const SCHEMA_VERSION_KEY = '@integrity_schema_version';
@@ -42,6 +39,74 @@ export function markIntegrityCheckComplete(workplaceId: WorkplaceId): void {
   storage.set(key, String(schema.version));
 }
 
+async function repairDiscrepancies(
+  workplaceId: WorkplaceId,
+  discrepancies: BalanceVerificationResult[],
+  trigger: IntegrityRepairTrigger,
+  options: {
+    signal?: AbortSignal;
+    onProgress?: IntegrityProgressCallback;
+    manualBatchRefresh?: boolean;
+  },
+): Promise<{ repairsAttempted: number; repairsSuccessful: number }> {
+  let repairsAttempted = 0;
+  let repairsSuccessful = 0;
+  const repairedAccountIds: AccountId[] = [];
+
+  for (let i = 0; i < discrepancies.length; i++) {
+    const discrepancy = discrepancies[i];
+    if (options.signal?.aborted) {
+      logger.info('[IntegrityOrchestrator] Startup check aborted before completing all repairs.');
+      break;
+    }
+    logger.warn(
+      `[IntegrityOrchestrator] Balance discrepancy for ${discrepancy.accountName}: ` +
+        `cached=${discrepancy.cachedBalance}, computed=${discrepancy.computedBalance}` +
+        (discrepancy.snapshotCorrupted ? ' [snapshot corrupted]' : ''),
+    );
+
+    repairsAttempted++;
+    if (trigger === 'startup') {
+      analytics.logIntegrityIssue(
+        'accounts',
+        `discrepancy_${discrepancy.snapshotCorrupted ? 'corrupted_snapshot' : 'running_balance'}`,
+      );
+    } else {
+      const repairProgress = 0.7 + (i / discrepancies.length) * 0.25;
+      options.onProgress?.(
+        `Repairing balance for ${discrepancy.accountName} (${i + 1}/${discrepancies.length})`,
+        repairProgress,
+      );
+    }
+
+    const repairSucceeded = await repairAccountBalance(
+      workplaceId,
+      discrepancy.accountId,
+      discrepancy,
+      trigger,
+      options.signal,
+    );
+
+    if (repairSucceeded) {
+      repairsSuccessful++;
+      if (options.manualBatchRefresh) {
+        repairedAccountIds.push(discrepancy.accountId);
+      }
+    }
+
+    if (trigger === 'manual') {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+  }
+
+  if (options.manualBatchRefresh && repairedAccountIds.length > 0) {
+    options.onProgress?.('Updating database snapshots...', 0.96);
+    await accountWriteRepository.refreshAccounts(workplaceId, repairedAccountIds);
+  }
+
+  return { repairsAttempted, repairsSuccessful };
+}
+
 /**
  * Forces a full balance verification and repair, regardless of stored schema version.
  * Use this for **manual** invocations (e.g. the Settings "Fix Integrity Issues" button).
@@ -64,30 +129,15 @@ export async function forceRunCheck(
     onProgress?.(`Rebuilding account checkpoints: ${completed}/${total}`, backfillProgress);
   });
 
-  const accounts = await accountQueryRepository.findAll(workplaceId);
-  const total = accounts.length;
-  const results: BalanceVerificationResult[] = [];
-  const verificationFailures: AccountId[] = [];
-
-  let checkedCount = 0;
-  await Promise.all(
-    accounts.map(async account => {
-      try {
-        const result = await verifyAccountBalance(account.id, workplaceId);
-        results.push(result);
-      } catch (error) {
-        verificationFailures.push(account.id);
-        logger.error(`[IntegrityOrchestrator] Failed to verify account ${account.id}`, error);
-      } finally {
-        checkedCount++;
-        const verifyProgress = total > 0 ? (checkedCount / total) * 0.7 : 0.05;
-        onProgress?.(
-          `Checking account balances: ${account.name} (${checkedCount}/${total})`,
-          verifyProgress,
-        );
-      }
-    }),
-  );
+  const results = await verifyAllAccountBalances(workplaceId, {
+    onAccountChecked: (account, checkedCount, total) => {
+      const verifyProgress = total > 0 ? (checkedCount / total) * 0.7 : 0.05;
+      onProgress?.(
+        `Checking account balances: ${account.name} (${checkedCount}/${total})`,
+        verifyProgress,
+      );
+    },
+  });
 
   onProgress?.('Verification phase complete. Analyzing results...', 0.7);
   const discrepancies = results.filter(r => !r.matches || r.snapshotCorrupted);
@@ -96,47 +146,12 @@ export async function forceRunCheck(
   let repairsSuccessful = 0;
 
   if (discrepancies.length > 0) {
-    const repairedAccountIds: AccountId[] = [];
-
-    for (let i = 0; i < discrepancies.length; i++) {
-      const discrepancy = discrepancies[i];
-      logger.warn(
-        `[IntegrityOrchestrator] Balance discrepancy for ${discrepancy.accountName}: ` +
-          `cached=${discrepancy.cachedBalance}, computed=${discrepancy.computedBalance}` +
-          (discrepancy.snapshotCorrupted ? ' [snapshot corrupted]' : ''),
-      );
-      repairsAttempted++;
-
-      // Repair phase uses 0.7 to 0.95 range
-      const repairProgress = 0.7 + (i / discrepancies.length) * 0.25;
-      onProgress?.(
-        `Repairing balance for ${discrepancy.accountName} (${i + 1}/${discrepancies.length})`,
-        repairProgress,
-      );
-
-      // Perform repair in its own transaction and yield to JS event loop
-      // This prevents UI lockup and allows reactive system to breathe
-      const repairSucceeded = await repairAccountBalance(
-        workplaceId,
-        discrepancy.accountId,
-        discrepancy,
-        'manual',
-      );
-
-      if (repairSucceeded) {
-        repairsSuccessful++;
-        repairedAccountIds.push(discrepancy.accountId);
-      }
-
-      // CRITICAL: Yield to allow bridge events (taps) to process
-      await new Promise(resolve => setTimeout(resolve, 0));
-    }
-
-    // Perform ONE single unified refresh for all repaired accounts at the very end
-    if (repairedAccountIds.length > 0) {
-      onProgress?.('Updating database snapshots...', 0.96);
-      await accountWriteRepository.refreshAccounts(workplaceId, repairedAccountIds);
-    }
+    const repairTotals = await repairDiscrepancies(workplaceId, discrepancies, 'manual', {
+      onProgress,
+      manualBatchRefresh: true,
+    });
+    repairsAttempted = repairTotals.repairsAttempted;
+    repairsSuccessful = repairTotals.repairsSuccessful;
   } else {
     onProgress?.('No discrepancies found. All balances correct.', 0.9);
     await new Promise(resolve => setTimeout(resolve, 500)); // Brief pause for user to see the success message
@@ -149,12 +164,6 @@ export async function forceRunCheck(
     totalAccounts: results.length,
     discrepancies: discrepancies.length,
   });
-
-  if (verificationFailures.length > 0) {
-    throw new Error(
-      `Integrity verification failed for ${verificationFailures.length} account(s): ${verificationFailures.join(', ')}`,
-    );
-  }
 
   return {
     totalAccounts: results.length,
@@ -243,36 +252,12 @@ export async function runStartupCheck(
 
   const discrepancies = results.filter(r => !r.matches || r.snapshotCorrupted);
 
-  let repairsAttempted = 0;
-  let repairsSuccessful = 0;
-
-  for (const discrepancy of discrepancies) {
-    if (signal?.aborted) {
-      logger.info('[IntegrityOrchestrator] Startup check aborted before completing all repairs.');
-      break;
-    }
-    logger.warn(
-      `[IntegrityOrchestrator] Balance discrepancy for ${discrepancy.accountName}: ` +
-        `cached=${discrepancy.cachedBalance}, computed=${discrepancy.computedBalance}` +
-        (discrepancy.snapshotCorrupted ? ' [snapshot corrupted]' : ''),
-    );
-
-    repairsAttempted++;
-    analytics.logIntegrityIssue(
-      'accounts',
-      `discrepancy_${discrepancy.snapshotCorrupted ? 'corrupted_snapshot' : 'running_balance'}`,
-    );
-    const success = await repairAccountBalance(
-      workplaceId,
-      discrepancy.accountId,
-      discrepancy,
-      'startup',
-      signal,
-    );
-    if (success) {
-      repairsSuccessful++;
-    }
-  }
+  const { repairsAttempted, repairsSuccessful } = await repairDiscrepancies(
+    workplaceId,
+    discrepancies,
+    'startup',
+    { signal },
+  );
 
   const repairsComplete =
     repairsAttempted === discrepancies.length && repairsSuccessful === repairsAttempted;

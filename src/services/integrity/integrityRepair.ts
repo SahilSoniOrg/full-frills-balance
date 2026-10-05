@@ -10,7 +10,7 @@ import { verifyAccountBalance } from './integrityVerification';
 /**
  * Prepares a successful running-balance integrity repair for the same writer as the rebuild.
  */
-export function prepareRunningBalanceRepair(
+function prepareRunningBalanceRepair(
   workplaceId: WorkplaceId,
   discrepancy: BalanceVerificationResult,
   trigger: IntegrityRepairTrigger,

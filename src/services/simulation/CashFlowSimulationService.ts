@@ -15,15 +15,15 @@ import dayjs from 'dayjs';
 import { keepProjectablePlannedJournals } from '@/src/services/planned-payment/projectablePlannedJournals';
 import { generateAccountSummaries, generateSimulationReport } from './SimulationReportGenerator';
 
-import { createSimulationTimeWindow } from './TimeContext';
 import { runCashFlowSimulationCore } from './runCashFlowSimulationCore';
-import { SimulationBudget, SimulationContext, SimulationRunResult } from './types';
 import {
+  makeSimulationRateConverter,
   fetchBudgetCategoryMap,
   fetchJournalTransactions,
   fetchMetadata,
   fetchStatementValues,
 } from './simulationDataPrefetcher';
+import { SimulationBudget, SimulationContext, SimulationRunResult } from './types';
 
 export type SimulationInput = {
   startingBalances: Map<AccountId, number>;
@@ -40,8 +40,6 @@ export type SimulationInput = {
   /** Captured by the owning read model; reused for every date-sensitive calculation. */
   asOf?: number;
   trace?: Trace;
-  /** When true, amounts are not converted across currencies (identity rates). */
-  skipFx?: boolean;
 };
 
 export class CashFlowSimulationService {
@@ -63,13 +61,12 @@ export class CashFlowSimulationService {
       simulationDays = AppConfig.defaults.safeToSpendDays,
       asOf = Date.now(),
       trace,
-      skipFx = false,
     } = input;
 
-    const time = createSimulationTimeWindow(dayjs(asOf), simulationDays);
+    const startOfToday = dayjs(asOf).startOf('day');
     const resultPrecision = getCurrencyPrecision(resultCurrency);
-    const simulationStartMs = time.getStartOfToday().valueOf();
-    const simulationEndMs = time.getEndMs();
+    const simulationStartMs = startOfToday.valueOf();
+    const simulationEndMs = startOfToday.add(simulationDays, 'day').valueOf();
 
     const liquidAccountIdsSet = new Set(liquidAssetIds);
     const liabilityAccountIdsSet = new Set(liabilityAccountBalances.map(lb => lb.account.id));
@@ -108,53 +105,43 @@ export class CashFlowSimulationService {
     rateMap.set(resultCurrency, 1);
     let hasUnvaluedEntries = false;
 
-    if (!skipFx) {
-      await Promise.all(
-        Array.from(baseCurrencies).map(base =>
-          exchangeRateService.fetchRatesForBase(base).catch(() => ({})),
-        ),
-      );
+    await Promise.all(
+      Array.from(baseCurrencies).map(base =>
+        exchangeRateService.fetchRatesForBase(base).catch(() => ({})),
+      ),
+    );
 
-      await Promise.all(
-        Array.from(baseCurrencies).map(async from => {
-          if (from === resultCurrency) {
-            rateMap.set(from, 1);
-            return;
-          }
-          const resolvedRate = await resolveSpotExchangeRate(from, resultCurrency);
-          if (resolvedRate.ok) {
-            rateMap.set(from, resolvedRate.rate);
-          } else {
-            logger.warn(
-              `[CashFlowSimulationService] FX unavailable for ${from} -> ${resultCurrency}`,
-            );
-          }
-        }),
-      );
-    }
+    await Promise.all(
+      Array.from(baseCurrencies).map(async from => {
+        if (from === resultCurrency) {
+          rateMap.set(from, 1);
+          return;
+        }
+        const resolvedRate = await resolveSpotExchangeRate(from, resultCurrency);
+        if (resolvedRate.ok) {
+          rateMap.set(from, resolvedRate.rate);
+        } else {
+          logger.warn(
+            `[CashFlowSimulationService] FX unavailable for ${from} -> ${resultCurrency}`,
+          );
+        }
+      }),
+    );
 
-    const convert = skipFx
-      ? (amount: number, _from?: string) => amount
-      : (amount: number, from: string) => {
-          const fromCurrency = from || resultCurrency;
-          if (fromCurrency === resultCurrency) return amount;
-          const rate = rateMap.get(fromCurrency);
-          if (rate === undefined) {
-            if (amount !== 0) hasUnvaluedEntries = true;
-            logger.warn(
-              `[CashFlowSimulationService] Skipping amount in ${fromCurrency} (no FX rate to ${resultCurrency})`,
-            );
-            return 0;
-          }
-          return amount * rate;
-        };
+    const convert = makeSimulationRateConverter(resultCurrency, rateMap, {
+      siteLabel: 'CashFlowSimulationService',
+      unvaluedSubject: 'amount',
+      onUnvalued: () => {
+        hasUnvaluedEntries = true;
+      },
+    });
 
     // Normalize and Fetch remaining dependent data in parallel
     const [statementValues, budgetCategoryMap] = await Promise.all([
       fetchStatementValues(
         liabilityAccountBalances,
         metadataMap,
-        time,
+        startOfToday,
         resultCurrency,
         rateMap, // Pass rateMap to avoid extra fetches
         workplaceId,

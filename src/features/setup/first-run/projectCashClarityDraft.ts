@@ -1,7 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { simulateDraftScenario } from '@/src/services/simulation/draftSimulationService';
-import { createSimulationTimeWindow } from '@/src/services/simulation/TimeContext';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { roundToPrecision } from '@/src/utils/money';
 import { buildOnboardingIncomeRecurrence } from './incomeRecurrence';
@@ -94,8 +93,7 @@ export function projectCashClarityDraft(
   now: Dayjs = dayjs(),
 ): CashClarityProjection {
   const windowDays = AppConfig.defaults.safeToSpendDays;
-  const time = createSimulationTimeWindow(now, windowDays);
-  const start = time.getStartOfToday();
+  const start = now.startOf('day');
   const currency = draft.currency;
   const precision = getCurrencyPrecision(currency);
   const omitted: string[] = [];

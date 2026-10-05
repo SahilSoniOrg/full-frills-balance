@@ -5,7 +5,6 @@ export type {
   IntegrityRepairTrigger,
 } from './types';
 export {
-  computeBalanceFromTransactions,
   scanForNullAccountTransactions,
   verifyAccountBalance,
   verifyAllAccountBalances,

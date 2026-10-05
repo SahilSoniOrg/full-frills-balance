@@ -105,9 +105,3 @@ export function materializeScheduledProjections(
 export function sortTimeline(flows: Flow[]): Flow[] {
   return [...flows].sort((a, b) => a.dayOffset - b.dayOffset);
 }
-
-export const ProjectionComposer = {
-  composeSpending,
-  materializeScheduledProjections,
-  sortTimeline,
-};

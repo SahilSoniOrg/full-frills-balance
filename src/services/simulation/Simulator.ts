@@ -208,7 +208,6 @@ export class Simulator {
           firstMajorInflowDay,
         },
         safeToSpendExplanation,
-        accountSummaries: [], // Will be populated by the orchestrator
         projections,
         allFlows: flows,
       };

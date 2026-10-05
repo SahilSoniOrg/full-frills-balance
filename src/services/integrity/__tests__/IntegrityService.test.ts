@@ -448,16 +448,34 @@ describe('Integrity checks', () => {
       const scanSpy = jest
         .spyOn(integrityVerification, 'scanForNullAccountTransactions')
         .mockResolvedValue();
-      const verifySpy = jest
-        .spyOn(integrityVerification, 'verifyAccountBalance')
-        .mockImplementation(async accountId => ({
-          accountId,
-          accountName: 'Needs repair',
-          cachedBalance: 999,
-          computedBalance: 100,
-          matches: false,
-          discrepancy: 899,
-        }));
+      const verifyAllSpy = jest
+        .spyOn(integrityVerification, 'verifyAllAccountBalances')
+        .mockResolvedValue([
+          {
+            accountId: cashAccountId as AccountId,
+            accountName: 'Needs repair',
+            cachedBalance: 999,
+            computedBalance: 100,
+            matches: false,
+            discrepancy: 899,
+          },
+          {
+            accountId: secondAccount.id,
+            accountName: 'Needs repair',
+            cachedBalance: 999,
+            computedBalance: 100,
+            matches: false,
+            discrepancy: 899,
+          },
+          {
+            accountId: equityAccountId as AccountId,
+            accountName: 'Needs repair',
+            cachedBalance: 999,
+            computedBalance: 100,
+            matches: false,
+            discrepancy: 899,
+          },
+        ]);
       const rebuildSpy = jest
         .spyOn(accountingRebuildService, 'rebuildAccountBalances')
         .mockResolvedValue();
@@ -467,7 +485,7 @@ describe('Integrity checks', () => {
         await forceRunCheck('wp-1' as WorkplaceId);
 
         expect(scanSpy).toHaveBeenCalledWith('wp-1');
-        expect(verifySpy).toHaveBeenCalledTimes(3);
+        expect(verifyAllSpy).toHaveBeenCalledWith('wp-1', expect.anything());
         expect(rebuildSpy).toHaveBeenCalledTimes(6);
         expect(batchSpy).toHaveBeenCalledTimes(1);
         expect(batchSpy.mock.calls[0][0]).toHaveLength(3);
@@ -475,7 +493,7 @@ describe('Integrity checks', () => {
       } finally {
         batchSpy.mockRestore();
         rebuildSpy.mockRestore();
-        verifySpy.mockRestore();
+        verifyAllSpy.mockRestore();
         scanSpy.mockRestore();
       }
     });
@@ -498,26 +516,31 @@ describe('Integrity checks', () => {
       });
 
       jest
-        .spyOn(integrityVerification, 'verifyAccountBalance')
-        .mockImplementation(async accountId => {
-          if (accountId === cashAccountId) {
-            return {
-              accountId: foreignAccount.id,
-              accountName: foreignAccount.name,
-              cachedBalance: 999,
-              computedBalance: 100,
-              matches: false,
-              discrepancy: 899,
-            };
-          }
-          return {
-            accountId,
-            accountName: 'Equity',
-            cachedBalance: 0,
-            computedBalance: 0,
-            matches: true,
-            discrepancy: 0,
-          };
+        .spyOn(integrityVerification, 'verifyAllAccountBalances')
+        .mockImplementation(async workplaceId => {
+          const accounts = await accountQueryRepository.findAll(workplaceId);
+          return Promise.all(
+            accounts.map(async account => {
+              if (account.id === cashAccountId) {
+                return {
+                  accountId: foreignAccount.id,
+                  accountName: foreignAccount.name,
+                  cachedBalance: 999,
+                  computedBalance: 100,
+                  matches: false,
+                  discrepancy: 899,
+                };
+              }
+              return {
+                accountId: account.id,
+                accountName: account.name,
+                cachedBalance: 0,
+                computedBalance: 0,
+                matches: true,
+                discrepancy: 0,
+              };
+            }),
+          );
         });
       jest.spyOn(accountingRebuildService, 'rebuildAccountBalancesInternal').mockResolvedValue();
 

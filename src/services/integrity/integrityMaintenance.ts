@@ -18,6 +18,20 @@ import { reactiveCacheCoordinator } from '@/src/services/reactive/ReactiveCacheC
 import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
 import { snapshotService } from '@/src/utils/SnapshotService';
 
+function runPostResetCleanup(
+  warnings: string[],
+  steps: { label: string; failureLog: string; run: () => void }[],
+): void {
+  for (const step of steps) {
+    try {
+      step.run();
+    } catch (error) {
+      logger.warn(`[IntegrityMaintenance] ${step.failureLog}`, { error });
+      warnings.push(step.label);
+    }
+  }
+}
+
 const RESETTABLE_DRAFT_KEYS = [
   'onboarding_resume_state_v1',
   'onboarding_draft_v1',
@@ -44,29 +58,35 @@ export async function resetWorkplace(
   }
   const warnings: string[] = [];
   const activeWorkplaceId = preferences.device.activeWorkplaceId;
-  const cleanup = (label: string, operation: () => void) => {
-    try {
-      operation();
-    } catch (error) {
-      logger.warn(`[IntegrityMaintenance] ${label} failed after publication`, { error });
-      warnings.push(label);
-    }
-  };
-  cleanup('Reactive projection cleanup', () => {
-    reactiveCacheCoordinator.clearAll(workplaceId);
-  });
+  runPostResetCleanup(warnings, [
+    {
+      label: 'Reactive projection cleanup',
+      failureLog: 'Reactive projection cleanup failed after publication',
+      run: () => reactiveCacheCoordinator.clearAll(workplaceId),
+    },
+    ...(keepWorkplaceRecord || activeWorkplaceId !== workplaceId
+      ? []
+      : [
+          {
+            label: 'Active Workplace pointer cleanup',
+            failureLog: 'Active Workplace pointer cleanup failed after publication',
+            run: () => preferences.device.setActiveWorkplaceId(undefined),
+          },
+        ]),
+    ...(keepWorkplaceRecord
+      ? []
+      : [
+          {
+            label: 'Workplace preference cleanup',
+            failureLog: 'Workplace preference cleanup failed after publication',
+            run: () => preferences.workplace.clear(workplaceId),
+          },
+        ]),
+  ]);
   if (!snapshotService.clearSnapshotsForWorkplace(workplaceId)) {
     warnings.push('Snapshot cleanup');
   }
   if (keepWorkplaceRecord) snapshotService.resumeSnapshotsForWorkplace(workplaceId);
-  if (!keepWorkplaceRecord && activeWorkplaceId === workplaceId) {
-    cleanup('Active Workplace pointer cleanup', () =>
-      preferences.device.setActiveWorkplaceId(undefined),
-    );
-  }
-  if (!keepWorkplaceRecord) {
-    cleanup('Workplace preference cleanup', () => preferences.workplace.clear(workplaceId));
-  }
   try {
     await widgetProjectionService.clearWorkplace(
       workplaceId,
@@ -91,24 +111,32 @@ export async function resetDatabase(): Promise<{
     throw error;
   }
   const warnings: string[] = [];
-  const cleanup = (label: string, operation: () => void) => {
-    try {
-      operation();
-    } catch (error) {
-      logger.warn(`[IntegrityMaintenance] ${label} failed after factory reset`, { error });
-      warnings.push(label);
-    }
-  };
-  cleanup('Preference cleanup', () => preferences.clearPreferences());
-  cleanup('Audit identity cleanup', () => clearLocalAuditActorId());
-  cleanup('Setup draft cleanup', () => {
-    RESETTABLE_DRAFT_KEYS.forEach(key => storage.remove(key));
-    storage.remove(SETUP_DRAFT_KEY);
-    restorePublicationClaims.clearAll();
-  });
-  cleanup('Reactive projection cleanup', () => {
-    reactiveCacheCoordinator.clearAll();
-  });
+  runPostResetCleanup(warnings, [
+    {
+      label: 'Preference cleanup',
+      failureLog: 'Preference cleanup failed after factory reset',
+      run: () => preferences.clearPreferences(),
+    },
+    {
+      label: 'Audit identity cleanup',
+      failureLog: 'Audit identity cleanup failed after factory reset',
+      run: () => clearLocalAuditActorId(),
+    },
+    {
+      label: 'Setup draft cleanup',
+      failureLog: 'Setup draft cleanup failed after factory reset',
+      run: () => {
+        RESETTABLE_DRAFT_KEYS.forEach(key => storage.remove(key));
+        storage.remove(SETUP_DRAFT_KEY);
+        restorePublicationClaims.clearAll();
+      },
+    },
+    {
+      label: 'Reactive projection cleanup',
+      failureLog: 'Reactive projection cleanup failed after factory reset',
+      run: () => reactiveCacheCoordinator.clearAll(),
+    },
+  ]);
   if (!snapshotService.clearSnapshots()) warnings.push('Snapshot cleanup');
   try {
     await widgetProjectionService.clearAll();

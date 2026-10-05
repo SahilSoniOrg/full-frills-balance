@@ -14,12 +14,42 @@ import { WorkplaceId } from '@/src/types/ids';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { roundToPrecision } from '@/src/utils/money';
 import { isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
-import { logger } from '@/src/utils/logger';
 import { toLiabilityMetadata } from './liabilityMetadata';
-import type { SimulationTimeWindow } from './TimeContext';
+import dayjs from 'dayjs';
 import { resolveLeafAccountIds } from '@/src/services/forward-finance/scope/ScopeResolver';
+import { logger } from '@/src/utils/logger';
 import { LiabilityMetadata } from './types';
 import { getCorrespondingStatementDate, getNextDueDate } from './utils/liabilityUtils';
+
+export function makeSimulationRateConverter(
+  toCurrency: string,
+  rateMap: Map<string, number>,
+  options: {
+    siteLabel: string;
+    unvaluedSubject: string;
+    formatAmount?: (amount: number) => number;
+    onUnvalued?: () => void;
+  },
+): (amount: number, from?: string) => number {
+  const format = options.formatAmount ?? (amount => amount);
+  return (amount: number, from?: string) => {
+    const fromCurrency = from || toCurrency;
+    if (fromCurrency === toCurrency) {
+      return format(amount);
+    }
+    const rate = rateMap.get(fromCurrency);
+    if (rate === undefined) {
+      if (amount !== 0) {
+        options.onUnvalued?.();
+      }
+      logger.warn(
+        `[${options.siteLabel}] Skipping ${options.unvaluedSubject} in ${fromCurrency} (no FX rate to ${toCurrency})`,
+      );
+      return 0;
+    }
+    return format(amount * rate);
+  };
+}
 
 export async function fetchMetadata(
   lbs: { account: Account }[],
@@ -41,7 +71,7 @@ export async function fetchMetadata(
 export async function fetchStatementValues(
   lbs: { account: Account }[],
   metadataMap: Map<string, LiabilityMetadata>,
-  time: SimulationTimeWindow,
+  startOfToday: dayjs.Dayjs,
   toCurrency: string,
   rateMap: Map<string, number>,
   workplaceId: WorkplaceId,
@@ -55,27 +85,19 @@ export async function fetchStatementValues(
   const settledAmounts = new Map<string, number>();
   let hasUnvaluedEntries = false;
 
-  const convert = (amount: number, from: string) => {
-    const fromCurrency = from || toCurrency;
-    if (fromCurrency === toCurrency) {
-      return roundToPrecision(amount, precision);
-    }
-    const rate = rateMap.get(fromCurrency);
-    if (rate === undefined) {
-      if (amount !== 0) hasUnvaluedEntries = true;
-      logger.warn(
-        `[SimulationDataPrefetcher] Skipping statement value in ${fromCurrency} (no FX rate to ${toCurrency})`,
-      );
-      return 0;
-    }
-    const val = amount * rate;
-    return roundToPrecision(val, precision);
-  };
+  const convert = makeSimulationRateConverter(toCurrency, rateMap, {
+    siteLabel: 'SimulationDataPrefetcher',
+    unvaluedSubject: 'statement value',
+    formatAmount: amount => roundToPrecision(amount, precision),
+    onUnvalued: () => {
+      hasUnvaluedEntries = true;
+    },
+  });
 
   await Promise.all(
     lbs.map(async lb => {
       const metadata = metadataMap.get(lb.account.id);
-      const now = time.getStartOfToday();
+      const now = startOfToday;
 
       if (lb.account.accountSubtype === 'CREDIT_CARD' && metadata?.statementDay) {
         const dueDay = metadata.dueDay || AppConfig.insights.liabilityDefaultDueDay;
