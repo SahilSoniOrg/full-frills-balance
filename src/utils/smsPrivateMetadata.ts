@@ -131,7 +131,3 @@ export function hashSmsMetadataFingerprints(raw?: string | null): string | undef
     return raw;
   }
 }
-
-export function isHashedSmsFingerprint(value: string | undefined): boolean {
-  return !!value && /^sha256:[a-f\d]{64}$/i.test(value);
-}
