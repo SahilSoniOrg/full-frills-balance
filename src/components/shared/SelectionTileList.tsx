@@ -11,11 +11,7 @@ import { ScrollView, StyleSheet, TouchableOpacity, View, type ViewStyle } from '
 const MAX_SCROLL_ATTEMPTS = 5;
 const SCROLL_RETRY_MS = 50;
 
-function useRevealHorizontalItem(
-  selectedId: string,
-  itemIds: readonly string[],
-  { margin = 0, estimatedItemWidth = 140 }: { margin?: number; estimatedItemWidth?: number } = {},
-) {
+function useRevealHorizontalItem(selectedId: string, itemIds: readonly string[]) {
   const scrollRef = useRef<ScrollView>(null);
   const contentRef = useRef<View>(null);
   const itemRefs = useRef(new Map<string, View>());
@@ -29,26 +25,26 @@ function useRevealHorizontalItem(
       if (!itemNode || !contentNode || !scrollRef.current) return false;
 
       const index = itemIds.indexOf(id);
-      const fallbackX = index >= 0 ? index * estimatedItemWidth : 0;
+      const fallbackX = index >= 0 ? index * TILE_ESTIMATED_WIDTH : 0;
 
       itemNode.measureLayout(
         contentNode,
         x => {
           scrollRef.current?.scrollTo({
-            x: Math.max(0, x - margin),
+            x: Math.max(0, x - Spacing.lg),
             animated: true,
           });
         },
         () => {
           scrollRef.current?.scrollTo({
-            x: Math.max(0, fallbackX - margin),
+            x: Math.max(0, fallbackX - Spacing.lg),
             animated: true,
           });
         },
       );
       return true;
     },
-    [estimatedItemWidth, itemIds, margin],
+    [itemIds],
   );
 
   useEffect(() => {
@@ -98,8 +94,6 @@ export interface SelectionTileListProps {
   items: SelectionTileProps[];
   selectedId: string;
   onSelect: (id: string) => void;
-  disabled?: boolean;
-  testIDPrefix?: string;
   allowDeselect?: boolean;
 }
 
@@ -108,18 +102,14 @@ const TILE_ESTIMATED_WIDTH = 140;
 type SelectionTileRowProps = {
   item: SelectionTileProps;
   isSelected: boolean;
-  disabled: boolean;
   allowDeselect: boolean;
-  testIDPrefix: string;
   onSelect: (id: string) => void;
 };
 
 const SelectionTileRow = React.memo(function SelectionTileRow({
   item,
   isSelected,
-  disabled,
   allowDeselect,
-  testIDPrefix,
   onSelect,
 }: SelectionTileRowProps) {
   const { theme } = useTheme();
@@ -142,10 +132,9 @@ const SelectionTileRow = React.memo(function SelectionTileRow({
 
   return (
     <TouchableOpacity
-      testID={`${testIDPrefix}-${item.id}`}
+      testID={`selection-tile-${item.id}`}
       style={[styles.tile, tileStyle]}
       onPress={() => onSelect(isSelected && allowDeselect ? '' : item.id)}
-      disabled={disabled}
     >
       <Inline align="center" space="sm">
         <AccountCategoryPill
@@ -188,15 +177,10 @@ export const SelectionTileList: React.FC<SelectionTileListProps> = ({
   items,
   selectedId,
   onSelect,
-  disabled = false,
-  testIDPrefix = 'selection-tile',
   allowDeselect = false,
 }) => {
   const itemIds = items.map(item => item.id);
-  const { scrollRef, contentRef, registerItemRef } = useRevealHorizontalItem(selectedId, itemIds, {
-    margin: Spacing.lg,
-    estimatedItemWidth: TILE_ESTIMATED_WIDTH,
-  });
+  const { scrollRef, contentRef, registerItemRef } = useRevealHorizontalItem(selectedId, itemIds);
 
   if (items.length === 0) {
     return null;
@@ -217,9 +201,7 @@ export const SelectionTileList: React.FC<SelectionTileListProps> = ({
                 <SelectionTileRow
                   item={item}
                   isSelected={isSelected}
-                  disabled={disabled}
                   allowDeselect={allowDeselect}
-                  testIDPrefix={testIDPrefix}
                   onSelect={onSelect}
                 />
               </View>
