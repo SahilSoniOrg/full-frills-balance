@@ -105,11 +105,6 @@ function buildDescription(
   return `${type.charAt(0).toUpperCase() + type.slice(1)} via SMS`;
 }
 
-function buildNotes(item: TransactionInboxItem): string {
-  if (item.channel === 'voice') return `Spoken transcript: ${item.rawBody}`;
-  return `Imported from ${item.channel}: ${item.parsedMerchant || item.senderAddress}\n\n${(item.rawBody || '').substring(0, 100)}...`;
-}
-
 export function buildTransactionInboxImportNavigation(
   item: TransactionInboxItem,
   accounts: AccountFields[],
@@ -138,7 +133,12 @@ export function buildTransactionInboxImportNavigation(
     amount: item.parsedAmount != null ? String(item.parsedAmount) : '',
     ...(item.parsedCurrencyCode ? { currencyCode: item.parsedCurrencyCode } : {}),
     description: buildDescription(item, type, customDescription),
-    notes: item.channel === 'sms' ? '' : buildNotes(item),
+    notes:
+      item.channel === 'sms'
+        ? ''
+        : item.channel === 'voice'
+          ? `Spoken transcript: ${item.rawBody}`
+          : `Imported from ${item.channel}: ${item.parsedMerchant || item.senderAddress}\n\n${(item.rawBody || '').substring(0, 100)}...`,
     ...(options?.mode ? { mode: options.mode } : {}),
   };
 

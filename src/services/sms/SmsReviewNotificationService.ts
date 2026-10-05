@@ -27,13 +27,8 @@ type ReviewDeliveryPrefs = {
   privatePreview: boolean;
 };
 
-/** Delivers the committed outbox, never participates in accounting commits. */
 export class SmsReviewNotificationService {
   private queue: Promise<void> = Promise.resolve();
-
-  setReviewVisible(visible: boolean, recordId?: string): void {
-    notificationService.setSmsReviewVisible(visible, recordId);
-  }
 
   observeForegroundChanges(): () => void {
     const subscription = merge(
@@ -76,7 +71,10 @@ export class SmsReviewNotificationService {
     return { devicePrefs, detailsAllowed, privatePreview: !detailsAllowed };
   }
 
-  private shouldRetainReviewNotification(intent: SmsReviewIntent, ctx: ReviewDeliveryPrefs): boolean {
+  private shouldRetainReviewNotification(
+    intent: SmsReviewIntent,
+    ctx: ReviewDeliveryPrefs,
+  ): boolean {
     return (
       !!intent.inboxRecordId &&
       ctx.devicePrefs.areSmsReviewNotificationsEnabled &&

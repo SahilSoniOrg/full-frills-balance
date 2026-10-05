@@ -31,10 +31,6 @@ export interface SmsSyncResult {
   importedCount: number;
 }
 
-/**
- * Inbox query / link Module. Scan, parse, and rules live on
- * SmsSyncPipeline / SmsParser / SmsRuleEngine — import those directly.
- */
 class SmsService {
   async scanRecentSmsPage(
     workplaceId: WorkplaceId,

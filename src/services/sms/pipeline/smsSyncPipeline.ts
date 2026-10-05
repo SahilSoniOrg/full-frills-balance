@@ -17,7 +17,6 @@ import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
 import { smsRuleEngine } from '@/src/services/sms/SmsRuleEngine';
 import type { JournalId, WorkplaceId } from '@/src/types/ids';
 import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
-import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/services/preferences';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { analyzeAutoPost } from './smsAutoPostAnalyzer';
@@ -122,7 +121,6 @@ export class SmsSyncPipeline {
     origin: SmsScanOrigin = 'manual',
   ): Promise<number> {
     if (signal?.aborted) return 0;
-    const start = Date.now();
     if (messages.length === 0 || signal?.aborted) {
       return 0;
     }
@@ -171,7 +169,6 @@ export class SmsSyncPipeline {
 
     const allCandidateJournals = await findManyDuplicateCandidates(parsedForFuzzy, workplaceId);
 
-    // --- Phase 1: Parallel Async Analysis ---
     const candidateMessages = parsedMessages.filter(
       item => item.parsed.parseStatus !== InboxParseStatus.IGNORED,
     );
@@ -260,9 +257,7 @@ export class SmsSyncPipeline {
       }),
     );
 
-    // --- Phase 2: Synchronous Batching ---
     let importedCount = 0;
-    let totalOps = 0;
     const triggeredRuleIds: string[] = [];
 
     if (analysisResults.length > 0 && !signal?.aborted) {
@@ -273,13 +268,10 @@ export class SmsSyncPipeline {
       const reservedReferences = new Map<string, JournalId>();
 
       let stagedImportedCount = 0;
-      let stagedOperationCount = 0;
       let journalResults: JournalPersistenceResult[] = [];
       let committed = false;
       try {
         journalResults = await runAccountingWriteSession(async session => {
-          // These reads occur after acquiring the owning writer, so persisted duplicates
-          // cannot slip between the final check and publication.
           const [latestRecords, latestJournalsById, latestRedeliveredJournals, latestByReference] =
             await Promise.all([
               transactionInboxRepository.findByDeviceSourceIds(workplaceId, messageIds),
@@ -353,13 +345,6 @@ export class SmsSyncPipeline {
             );
             if (item.autoPosted) stagedImportedCount += 1;
             if (item.journalResult) journalResults.push(item.journalResult);
-            stagedOperationCount += 1;
-            if (item.autoPosted && result.autoPost) {
-              stagedOperationCount +=
-                result.autoPost.journalData.transactions.length +
-                (result.autoPost.journalData.metadata ? 1 : 0) +
-                2;
-            }
           }
           if (signal?.aborted) throw new SmsScanCancelledError();
           return journalResults;
@@ -371,17 +356,10 @@ export class SmsSyncPipeline {
 
       if (committed) {
         importedCount = stagedImportedCount;
-        totalOps = stagedOperationCount;
         journalPersistenceService.afterAtomicWriteCommit(journalResults, workplaceId);
         triggeredRuleIds.forEach(ruleId => analytics.logSmsRuleTriggered(ruleId, true));
       }
     }
-
-    logger.info(`[Trace] SmsSyncPipeline.scanInbox: ${Date.now() - start}ms`, {
-      scannedMessages: messages.length,
-      importedCount,
-      totalOps,
-    });
 
     return importedCount;
   }

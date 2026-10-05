@@ -38,8 +38,9 @@ jest.mock('@/src/services/notification/NotificationService', () => {
         reviewVisible = visible;
         reviewRecordId = recordId;
       }),
-      isSmsReviewForegroundSuppressed: jest.fn((recordId?: string) =>
-        reviewVisible || (recordId !== undefined && reviewRecordId === recordId),
+      isSmsReviewForegroundSuppressed: jest.fn(
+        (recordId?: string) =>
+          reviewVisible || (recordId !== undefined && reviewRecordId === recordId),
       ),
       __resetReviewVisibility: () => {
         reviewVisible = false;
@@ -226,7 +227,7 @@ it.each(['default', 'privacy', 'lock'] as const)(
 it('does not alert again while the inbox or that SMS composer is visible', async () => {
   await capture();
   const [record] = await deviceSmsInboxRepository.pendingNotifications();
-  service.setReviewVisible(false, record.id);
+  notificationService.setSmsReviewVisible(false, record.id);
   await service.flush();
   expect(deliver).not.toHaveBeenCalled();
   expect((await deviceSmsInboxRepository.find(record.id))?.notificationState).toBe('suppressed');

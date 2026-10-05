@@ -21,6 +21,7 @@ jest.mock('expo-router', () => ({
   useRootNavigationState: () => ({ key: mockNavigationKey }),
 }));
 jest.mock('expo-notifications', () => ({
+  setNotificationHandler: jest.fn(),
   clearLastNotificationResponseAsync: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('@/src/contexts/app-shell/AppReadyProvider', () => ({
@@ -35,7 +36,6 @@ jest.mock('@/src/contexts/WorkplaceContext', () => ({
 jest.mock('@/src/services/sms/SmsReviewNotificationService', () => ({
   smsReviewNotificationService: {
     observeForegroundChanges: () => () => {},
-    setReviewVisible: jest.fn(),
     refresh: jest.fn().mockResolvedValue(undefined),
   },
 }));

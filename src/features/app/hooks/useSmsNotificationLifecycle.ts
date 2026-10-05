@@ -7,6 +7,7 @@ import { useAppLock } from '@/src/contexts/app-shell/AppLockProvider';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { smsNotificationIntentStore } from '@/src/services/sms/SmsNotificationIntentStore';
 import { smsReviewNotificationService } from '@/src/services/sms/SmsReviewNotificationService';
+import { notificationService } from '@/src/services/notification/NotificationService';
 import { logger } from '@/src/utils/logger';
 
 /** Mounted above launch gates, so cold-start responses cannot be lost. */
@@ -45,14 +46,14 @@ export function SmsNotificationNavigation() {
   }, []);
   useEffect(() => {
     const foreground = !isAppCurrentlyLocked && appState === 'active';
-    smsReviewNotificationService.setReviewVisible(
+    notificationService.setSmsReviewVisible(
       foreground && pathname === '/sms-inbox',
       foreground && pathname === '/journal-entry' && typeof smsRecordId === 'string'
         ? smsRecordId
         : undefined,
     );
     void smsReviewNotificationService.refresh();
-    return () => smsReviewNotificationService.setReviewVisible(false);
+    return () => notificationService.setSmsReviewVisible(false);
   }, [appState, isAppCurrentlyLocked, pathname, smsRecordId]);
 
   useEffect(() => {

@@ -16,7 +16,6 @@ export interface SmsReviewIntent {
   hasDetails?: boolean;
 }
 
-/** OS adapter. Eligibility, previews, persistence, and navigation live with their owners. */
 export class NotificationService {
   private channels: Promise<void> | null = null;
   private reminderGeneration = 0;
@@ -51,9 +50,7 @@ export class NotificationService {
   }
 
   isSmsReviewForegroundSuppressed(recordId?: string): boolean {
-    return (
-      this.reviewVisible || (recordId !== undefined && this.reviewRecordId === recordId)
-    );
+    return this.reviewVisible || (recordId !== undefined && this.reviewRecordId === recordId);
   }
 
   private ensureChannels(): Promise<void> {
