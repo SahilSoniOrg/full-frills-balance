@@ -16,7 +16,11 @@ import type {
   TransactionId,
 } from '@/src/types/ids';
 import type { UIPreferences } from '@/src/types/preferences';
-import type { PlannedPaymentFxFields } from '@/src/types/plainDtos';
+import type {
+  PlainAccount,
+  PlainAccountMetadata,
+  PlannedPaymentFxFields,
+} from '@/src/types/plainDtos';
 
 /** Discriminant for the canonical import contract; extend with new versions as unions. */
 export const CANONICAL_IMPORT_VERSION_V1 = 'canonical-import.v1' as const;
@@ -54,23 +58,15 @@ export interface CanonicalImportMetadata {
   pluginId?: string;
 }
 
-export interface CanonicalAccount {
+export type CanonicalAccount = Omit<
+  PlainAccount,
+  'id' | 'accountType' | 'accountSubtype' | 'icon'
+> & {
   id: string;
-  name: string;
   accountType: AccountType | string;
   accountSubtype?: AccountSubtype | string;
-  currencyCode: string;
-  parentAccountId?: AccountId;
-  description?: string;
   icon?: string;
-  color?: string;
-  orderNum?: number;
-  reconciledAt?: number;
-  archivedAt?: number;
-  createdAt?: number;
-  updatedAt?: number;
-  deletedAt?: number;
-}
+};
 
 export interface CanonicalJournal {
   id: string;
@@ -163,26 +159,11 @@ export interface CanonicalExchangeRate {
   updatedAt?: number;
 }
 
-export interface CanonicalAccountMetadata {
+export type CanonicalAccountMetadata = PlainAccountMetadata & {
   id: string;
-  accountId: AccountId;
-  statementDay?: number;
-  dueDay?: number;
-  minimumPaymentAmount?: number;
-  minimumBalanceAmount?: number;
-  creditLimitAmount?: number;
-  aprBps?: number;
-  emiDay?: number;
-  loanTenureMonths?: number;
-  autopayEnabled?: boolean;
-  gracePeriodDays?: number;
-  payFromAccountId?: AccountId;
-  minPaymentOnly?: boolean;
-  minimumPaymentPercent?: number;
-  notes?: string;
   createdAt?: number;
   updatedAt?: number;
-}
+};
 
 export interface CanonicalPlannedPayment extends PlannedPaymentFxFields {
   id: string;

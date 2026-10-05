@@ -22,28 +22,6 @@ export interface PlannedPaymentFxFields {
   destinationAmount?: number;
 }
 
-/**
- * PlainAccount - Plain JSON object representation of an Account model.
- * Used for high-performance snapshot serialization (MMKV) and type safety.
- */
-export interface AccountFields {
-  id: AccountId;
-  name: string;
-  accountType: AccountType;
-  accountSubtype?: AccountSubtype;
-  currencyCode: string;
-  parentAccountId?: AccountId;
-  description?: string;
-  icon?: string;
-  color?: string;
-  orderNum?: number;
-  reconciledAt?: Date | number;
-  createdAt?: Date | number;
-  updatedAt?: Date | number;
-  deletedAt?: Date | number;
-  archivedAt?: Date | number;
-}
-
 export interface PlainAccount {
   id: AccountId;
   name: string;
@@ -61,6 +39,18 @@ export interface PlainAccount {
   deletedAt?: number;
   archivedAt?: number;
 }
+
+export type AccountFields = Omit<
+  PlainAccount,
+  'icon' | 'reconciledAt' | 'createdAt' | 'updatedAt' | 'deletedAt' | 'archivedAt'
+> & {
+  icon?: string;
+  reconciledAt?: Date | number;
+  createdAt?: Date | number;
+  updatedAt?: Date | number;
+  deletedAt?: Date | number;
+  archivedAt?: Date | number;
+};
 
 export interface PlainAccountMetadata {
   accountId: AccountId;
