@@ -10,15 +10,12 @@ import {
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { getAccountTypeVariant } from '@/src/utils/accountCategory';
-import { JournalEntryCardProps, JournalEntryLeg } from '@/src/types/journalEntryCard';
 import {
-  JournalTimelineIconKey,
-  JournalTimelineItem,
-  JournalTimelinePresentation,
-  JournalTimelineViewer,
-  JournalTimelineLeg,
-  JournalTimelineAccountFlow,
-} from '@/src/types/journalTimeline';
+  JournalEntryAccountFlow,
+  JournalEntryCardProps,
+  JournalEntryLeg,
+} from '@/src/types/journalEntryCard';
+import { JournalTimelineIconKey, JournalTimelineViewer } from '@/src/types/journalTimeline';
 
 const ROUTINE_SEMANTIC_TYPES = new Set<SemanticType>([
   SemanticType.TRANSFER,
@@ -62,12 +59,12 @@ export function ledgerLineChrome(isIncrease: boolean): {
   };
 }
 
-function toTimelinePresentation(
+function toCardPresentation(
   displayType: JournalDisplayType,
   semanticLabel: string | undefined,
   semanticType: SemanticType | undefined,
   chrome: ReturnType<typeof journalDisplayTypeChrome>,
-): JournalTimelinePresentation {
+): JournalEntryCardProps['presentation'] {
   const presentation = journalPresenter.getPresentation(displayType, semanticLabel, semanticType);
   const hasSemanticType = semanticType != null && semanticType !== SemanticType.UNKNOWN;
   return {
@@ -75,7 +72,7 @@ function toTimelinePresentation(
     showTypeBadge: hasSemanticType
       ? !ROUTINE_SEMANTIC_TYPES.has(semanticType)
       : !ROUTINE_DISPLAY_TYPES.has(displayType),
-    typeColorKey: presentation.colorKey,
+    typeColor: presentation.colorKey,
     typeIcon: chrome.typeIcon,
     amountPrefix: chrome.amountPrefix,
   };
@@ -84,7 +81,7 @@ function toTimelinePresentation(
 function buildAccountFlow(
   journal: EnrichedJournal,
   viewerAccount?: EnrichedJournal['accounts'][number],
-): JournalTimelineAccountFlow {
+): JournalEntryAccountFlow {
   const journalPrecision = CurrencyFormatter.getPrecisionFallback(journal.currencyCode);
   const legs = journal.accounts.map((account, index) => {
     const currencyCode = account.currencyCode?.trim().toUpperCase();
@@ -108,20 +105,20 @@ function buildAccountFlow(
             journalPrecision,
           }).journalAmount
         : undefined;
-    const leg: JournalTimelineLeg = {
+    const leg: JournalEntryLeg = {
       id: account.transactionId ?? `${account.id}:${account.role}:${index}`,
       accountId: account.id,
       name: account.name,
       role: account.role,
-      icon: account.icon,
+      icon: isValidIconName(account.icon) ? account.icon : undefined,
       color: account.color,
-      fallbackIcon: getAccountFallbackIcon(account.accountType),
+      fallbackIcon: parseIconName(getAccountFallbackIcon(account.accountType), Icon.Wallet),
       variant: getAccountTypeVariant(account.accountType),
     };
     return { account, leg, journalAmount };
   });
 
-  const byRole = (role: JournalTimelineLeg['role']) => {
+  const byRole = (role: JournalEntryLeg['role']) => {
     const group = legs.filter(item => item.leg.role === role);
     // Unknown historical rates cannot be compared to native amounts. Keep a stable order.
     const allComparable = group.every(item => item.journalAmount != null);
@@ -156,54 +153,10 @@ function buildAccountFlow(
   };
 }
 
-function mapTimelineLegToEntryCardLeg(leg: JournalTimelineLeg): JournalEntryLeg {
-  return {
-    ...leg,
-    icon: isValidIconName(leg.icon) ? leg.icon : undefined,
-    fallbackIcon: parseIconName(leg.fallbackIcon, Icon.Wallet),
-  };
-}
-
-function mapTimelineAccountFlowToEntryCard(
-  accountFlow: JournalTimelineAccountFlow,
-): JournalEntryCardProps['accountFlow'] {
-  return {
-    ...accountFlow,
-    primaryAccount: accountFlow.primaryAccount
-      ? mapTimelineLegToEntryCardLeg(accountFlow.primaryAccount)
-      : undefined,
-    sources: accountFlow.sources.map(mapTimelineLegToEntryCardLeg),
-    destinations: accountFlow.destinations.map(mapTimelineLegToEntryCardLeg),
-    neutral: accountFlow.neutral.map(mapTimelineLegToEntryCardLeg),
-  };
-}
-
 export function mapJournalToEntryCardProps(
   journal: EnrichedJournal,
   viewer?: JournalTimelineViewer,
 ): Omit<JournalEntryCardProps, 'onPress'> {
-  const item = mapJournalToTimelineItem(journal, viewer);
-  return {
-    title: item.title,
-    amount: item.amount,
-    currencyCode: item.currencyCode,
-    transactionDate: item.transactionDate,
-    presentation: {
-      label: item.presentation.label,
-      showTypeBadge: item.presentation.showTypeBadge,
-      typeColor: item.presentation.typeColorKey,
-      typeIcon: item.presentation.typeIcon,
-      amountPrefix: item.presentation.amountPrefix,
-    },
-    accountFlow: mapTimelineAccountFlowToEntryCard(item.accountFlow),
-    notes: item.notes,
-  };
-}
-
-export function mapJournalToTimelineItem(
-  journal: EnrichedJournal,
-  viewer?: JournalTimelineViewer,
-): JournalTimelineItem {
   const displayType = journal.displayType as JournalDisplayType;
   const defaultTitle =
     displayType === JournalDisplayType.TRANSFER
@@ -213,9 +166,9 @@ export function mapJournalToTimelineItem(
   // Missing account/posting scopes use the whole-journal presentation.
   const viewerAccount = viewer
     ? journal.accounts.find(
-        a =>
-          a.id === viewer.accountId &&
-          (!viewer.transactionId || a.transactionId === viewer.transactionId),
+        account =>
+          account.id === viewer.accountId &&
+          (!viewer.transactionId || account.transactionId === viewer.transactionId),
       )
     : undefined;
   const chrome = viewerAccount
@@ -227,7 +180,7 @@ export function mapJournalToTimelineItem(
     amount: viewerAccount?.amount ?? journal.totalAmount,
     currencyCode: viewerAccount?.currencyCode || journal.currencyCode,
     transactionDate: journal.journalDate,
-    presentation: toTimelinePresentation(
+    presentation: toCardPresentation(
       displayType,
       journal.semanticLabel,
       journal.semanticType,

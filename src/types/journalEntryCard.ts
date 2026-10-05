@@ -1,21 +1,28 @@
 import { IconName } from '@/src/types/domainIcons';
-import type { JournalTimelineAccountFlow, JournalTimelineLeg } from './journalTimeline';
+import { AccountId } from '@/src/types/ids';
+import type { ComponentVariant } from '@/src/utils/style-helpers';
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 
-export interface JournalEntryLeg extends Omit<JournalTimelineLeg, 'icon' | 'fallbackIcon'> {
+/** One posting line; identity is distinct from the account it references. */
+export interface JournalEntryLeg {
+  id: string;
+  accountId: AccountId;
+  name: string;
+  role: 'SOURCE' | 'DESTINATION' | 'NEUTRAL';
   icon?: IconName | null;
+  color?: string;
   fallbackIcon: IconName;
+  variant: ComponentVariant;
 }
 
-export interface JournalEntryAccountFlow extends Omit<
-  JournalTimelineAccountFlow,
-  'primaryAccount' | 'sources' | 'destinations' | 'neutral'
-> {
+export interface JournalEntryAccountFlow {
   primaryAccount?: JournalEntryLeg;
   sources: JournalEntryLeg[];
   destinations: JournalEntryLeg[];
   neutral: JournalEntryLeg[];
+  /** Disambiguate the main amount when legs use different currencies. */
+  showCurrencyCodes: boolean;
 }
 
 export interface JournalEntryCardProps {

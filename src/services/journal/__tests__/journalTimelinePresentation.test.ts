@@ -6,7 +6,6 @@ import {
   journalDisplayTypeChrome,
   ledgerLineChrome,
   mapJournalToEntryCardProps,
-  mapJournalToTimelineItem,
 } from '@/src/services/journal/journalTimelinePresentation';
 import { journalsToTimelineRows } from '@/src/services/journal/journalTimelineRows';
 import {
@@ -27,8 +26,8 @@ describe('journalTimelinePresentation', () => {
     expect(chrome.amountPrefix).toBe('+ ');
   });
 
-  it('mapJournalToTimelineItem builds source and destination account groups', () => {
-    const item = mapJournalToTimelineItem({
+  it('mapJournalToEntryCardProps builds source and destination account groups', () => {
+    const item = mapJournalToEntryCardProps({
       id: 'j1' as JournalId,
       journalDate: Date.now(),
       description: 'Lunch',
@@ -60,8 +59,8 @@ describe('journalTimelinePresentation', () => {
     expect(item.presentation.label).toBeTruthy();
   });
 
-  it('mapJournalToTimelineItem with viewer uses leg amount not total', () => {
-    const item = mapJournalToTimelineItem(
+  it('mapJournalToEntryCardProps with viewer uses leg amount not total', () => {
+    const item = mapJournalToEntryCardProps(
       {
         id: 'j1' as JournalId,
         journalDate: Date.now(),
@@ -126,15 +125,15 @@ describe('journalTimelinePresentation', () => {
       ],
     };
 
-    expect(mapJournalToTimelineItem(journal).amount).toBe(800);
-    expect(mapJournalToTimelineItem(journal).currencyCode).toBe('INR');
-    const scoped = mapJournalToTimelineItem(journal, { accountId: 'usd' as AccountId });
+    expect(mapJournalToEntryCardProps(journal).amount).toBe(800);
+    expect(mapJournalToEntryCardProps(journal).currencyCode).toBe('INR');
+    const scoped = mapJournalToEntryCardProps(journal, { accountId: 'usd' as AccountId });
     expect(scoped.amount).toBe(10);
     expect(scoped.currencyCode).toBe('USD');
   });
 
-  it('mapJournalToTimelineItem with viewer retains the viewed account and its peers', () => {
-    const item = mapJournalToTimelineItem(
+  it('mapJournalToEntryCardProps with viewer retains the viewed account and its peers', () => {
+    const item = mapJournalToEntryCardProps(
       {
         id: 'j1' as JournalId,
         journalDate: Date.now(),
@@ -169,8 +168,8 @@ describe('journalTimelinePresentation', () => {
     expect(item.accountFlow.destinations.map(leg => leg.name)).toEqual(['Food']);
   });
 
-  it('mapJournalToTimelineItem with viewer uses ledger line chrome based on role', () => {
-    const expenseFromSource = mapJournalToTimelineItem(
+  it('mapJournalToEntryCardProps with viewer uses ledger line chrome based on role', () => {
+    const expenseFromSource = mapJournalToEntryCardProps(
       {
         id: 'j1' as JournalId,
         journalDate: Date.now(),
@@ -200,7 +199,7 @@ describe('journalTimelinePresentation', () => {
     expect(expenseFromSource.presentation.typeIcon).toBe('arrowDown');
     expect(expenseFromSource.presentation.amountPrefix).toBe('− ');
 
-    const incomeToDestination = mapJournalToTimelineItem(
+    const incomeToDestination = mapJournalToEntryCardProps(
       {
         id: 'j2' as JournalId,
         journalDate: Date.now(),
@@ -299,7 +298,7 @@ describe('journalTimelinePresentation', () => {
   });
 });
 
-describe('mapJournalToTimelineItem account flow', () => {
+describe('mapJournalToEntryCardProps account flow', () => {
   it('selects the largest source and retains every source and destination', () => {
     const original = timelineJournal([
       timelineAccount('cash', 'SOURCE', 200),
@@ -308,7 +307,7 @@ describe('mapJournalToTimelineItem account flow', () => {
       timelineAccount('flights', 'DESTINATION', 700),
       timelineAccount('fees', 'DESTINATION', 100),
     ]);
-    const item = mapJournalToTimelineItem(original);
+    const item = mapJournalToEntryCardProps(original);
     expect(item.accountFlow?.primaryAccount?.name).toBe('checking');
     expect(item.accountFlow?.sources.map(leg => leg.name)).toEqual(['cash']);
     expect(item.accountFlow?.destinations.map(leg => leg.name)).toEqual([
@@ -320,7 +319,7 @@ describe('mapJournalToTimelineItem account flow', () => {
   });
 
   it('ranks contributions using saved FX rather than raw currency units', () => {
-    const item = mapJournalToTimelineItem(
+    const item = mapJournalToEntryCardProps(
       timelineJournal(
         [
           timelineAccount('rupee-cash', 'SOURCE', 500, 'INR'),
@@ -343,8 +342,8 @@ describe('mapJournalToTimelineItem account flow', () => {
         timelineAccount('z-dollar', 'SOURCE', 100, 'USD', rate),
         timelineAccount('a-rupee', 'SOURCE', 500, 'INR'),
       ];
-      const forward = mapJournalToTimelineItem(timelineJournal(accounts, 'INR')).accountFlow;
-      const reversed = mapJournalToTimelineItem(
+      const forward = mapJournalToEntryCardProps(timelineJournal(accounts, 'INR')).accountFlow;
+      const reversed = mapJournalToEntryCardProps(
         timelineJournal([...accounts].reverse(), 'INR'),
       ).accountFlow;
       expect(forward?.primaryAccount?.name).toBe('a-rupee');
@@ -354,18 +353,18 @@ describe('mapJournalToTimelineItem account flow', () => {
 
   it('breaks equal contribution ties by account and posting identity', () => {
     const legs = [timelineAccount('z-cash', 'SOURCE', 50), timelineAccount('a-bank', 'SOURCE', 50)];
-    expect(mapJournalToTimelineItem(timelineJournal(legs)).accountFlow?.primaryAccount?.name).toBe(
-      'a-bank',
-    );
     expect(
-      mapJournalToTimelineItem(timelineJournal([...legs].reverse())).accountFlow?.primaryAccount
+      mapJournalToEntryCardProps(timelineJournal(legs)).accountFlow?.primaryAccount?.name,
+    ).toBe('a-bank');
+    expect(
+      mapJournalToEntryCardProps(timelineJournal([...legs].reverse())).accountFlow?.primaryAccount
         ?.name,
     ).toBe('a-bank');
   });
 
   it('uses stable ordering for missing or invalid monetary metadata', () => {
     const missingCurrency = { ...timelineAccount('cash', 'SOURCE', 50), currencyCode: undefined };
-    const flow = mapJournalToTimelineItem(
+    const flow = mapJournalToEntryCardProps(
       timelineJournal([
         missingCurrency,
         timelineAccount('food', 'DESTINATION'),
@@ -380,7 +379,7 @@ describe('mapJournalToTimelineItem account flow', () => {
   });
 
   it('uses the viewed source amount and retains every peer account', () => {
-    const item = mapJournalToTimelineItem(
+    const item = mapJournalToEntryCardProps(
       timelineJournal([
         timelineAccount('checking', 'SOURCE', 600),
         timelineAccount('credit', 'SOURCE', 400),
@@ -407,7 +406,7 @@ describe('mapJournalToTimelineItem account flow', () => {
       ),
       displayType: JournalDisplayType.TRANSFER,
     };
-    const item = mapJournalToTimelineItem(original, { accountId: asAccountId('rupee') });
+    const item = mapJournalToEntryCardProps(original, { accountId: asAccountId('rupee') });
     expect(item.amount).toBe(8000);
     expect(item.currencyCode).toBe('INR');
     expect(item.presentation.amountPrefix).toBe('+ ');
@@ -426,7 +425,7 @@ describe('mapJournalToTimelineItem account flow', () => {
     const rows = journalsToTimelineRows([original], { viewer: { accountId: first.id } });
     expect(rows).toHaveLength(2);
     expect(new Set(rows.map(row => row.listId)).size).toBe(2);
-    expect(rows.map(row => mapJournalToTimelineItem(row.journal, row.viewer).amount)).toEqual([
+    expect(rows.map(row => mapJournalToEntryCardProps(row.journal, row.viewer).amount)).toEqual([
       40, 60,
     ]);
     expect(rows.every(row => row.selectionId === original.id)).toBe(true);
@@ -437,15 +436,15 @@ describe('mapJournalToTimelineItem account flow', () => {
       timelineAccount('checking', 'SOURCE', 100),
       timelineAccount('food', 'DESTINATION', 100),
     ]);
-    expect(mapJournalToTimelineItem(original, { accountId: asAccountId('missing') })).toEqual(
-      mapJournalToTimelineItem(original),
+    expect(mapJournalToEntryCardProps(original, { accountId: asAccountId('missing') })).toEqual(
+      mapJournalToEntryCardProps(original),
     );
     expect(
-      mapJournalToTimelineItem(original, {
+      mapJournalToEntryCardProps(original, {
         accountId: asAccountId('checking'),
         transactionId: asTransactionId('missing'),
       }),
-    ).toEqual(mapJournalToTimelineItem(original));
+    ).toEqual(mapJournalToEntryCardProps(original));
   });
 
   it('keeps debt payment semantics without a redundant visible badge', () => {
@@ -456,7 +455,7 @@ describe('mapJournalToTimelineItem account flow', () => {
       ]),
       semanticType: SemanticType.DEBT_PAYMENT,
     };
-    const item = mapJournalToTimelineItem(original);
+    const item = mapJournalToEntryCardProps(original);
     expect(item.presentation.showTypeBadge).toBe(false);
     expect(item.presentation.label).toBe('Debt Payment');
   });
