@@ -4,7 +4,11 @@ import Transaction from '@/src/data/models/Transaction';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { effect, periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import {
+  ACTIVE_JOURNAL_STATUSES,
+  activeJournalStatusSqlPlaceholders,
+} from '@/src/utils/journalStatus';
+import { activeJournalLegClauses } from '../transaction/transactionActiveClauses';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 import { from, map, Observable } from 'rxjs';
@@ -53,7 +57,7 @@ export class AccountLedgerMetricsQueries {
 
     const accountIds = accountConfigs.map(config => config.accountId);
     const accountPlaceholders = accountIds.map(() => '?').join(',');
-    const statusPlaceholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
+    const statusPlaceholders = activeJournalStatusSqlPlaceholders();
     const { increaseCase, decreaseCase } = periodFlowSQL();
     const sql = `
       SELECT
@@ -103,11 +107,8 @@ export class AccountLedgerMetricsQueries {
           database.collections
             .get<Transaction>('transactions')
             .query(
-              Q.where('workplace_id', workplaceId),
+              ...activeJournalLegClauses(workplaceId),
               Q.on('accounts', 'workplace_id', Q.eq(workplaceId)),
-              Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
-              Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-              Q.on('journals', 'deleted_at', Q.eq(null)),
               Q.where('account_id', Q.oneOf(accountIds)),
               Q.where('transaction_date', Q.gte(startDate)),
               Q.where('transaction_date', Q.lte(endDate)),
@@ -189,7 +190,7 @@ export class AccountLedgerMetricsQueries {
     reconciledAt: number | null,
     accountType: AccountType,
   ): Observable<{ count: number; total: number }> {
-    const statuses = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
+    const statuses = activeJournalStatusSqlPlaceholders();
     const { increaseCase, decreaseCase } = periodFlowSQL();
     return transactionObserveQueries.observeActiveCount(workplaceId).pipe(
       switchMap(async () => {
@@ -227,12 +228,9 @@ export class AccountLedgerMetricsQueries {
         const transactions = await database.collections
           .get<Transaction>('transactions')
           .query(
-            Q.where('workplace_id', workplaceId),
+            ...activeJournalLegClauses(workplaceId),
             Q.on('accounts', 'workplace_id', Q.eq(workplaceId)),
             Q.on('accounts', 'account_type', accountType),
-            Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
-            Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-            Q.on('journals', 'deleted_at', Q.eq(null)),
             Q.where('account_id', accountId),
             ...dateClauses,
             Q.where('deleted_at', Q.eq(null)),

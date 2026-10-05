@@ -1,7 +1,11 @@
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
 import { AccountId, JournalId, TransactionId, WorkplaceId } from '@/src/types/ids';
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import {
+  ACTIVE_JOURNAL_STATUSES,
+  activeJournalStatusSqlPlaceholders,
+} from '@/src/utils/journalStatus';
+import { activeJournalLegClauses } from '../transaction/transactionActiveClauses';
 import { Q } from '@nozbe/watermelondb';
 import type { TransactionMetadata } from '../TransactionTypes';
 import { rawSqlExecutor } from '../raw/RawSqlExecutor';
@@ -26,7 +30,7 @@ export async function findActiveTransactionMetadata(
   if (accountIds.length === 0) return [];
 
   const accountPlaceholders = accountIds.map(() => '?').join(',');
-  const statusPlaceholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
+  const statusPlaceholders = activeJournalStatusSqlPlaceholders();
   const sql = `
       SELECT
         t.id,
@@ -71,11 +75,8 @@ export async function findActiveTransactionMetadata(
   const transactions = await database.collections
     .get<Transaction>('transactions')
     .query(
-      Q.where('workplace_id', workplaceId),
+      ...activeJournalLegClauses(workplaceId),
       Q.on('accounts', 'workplace_id', Q.eq(workplaceId)),
-      Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
-      Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-      Q.on('journals', 'deleted_at', Q.eq(null)),
       Q.where('account_id', Q.oneOf([...accountIds])),
       Q.where('transaction_date', Q.gte(startDate)),
       Q.where('transaction_date', Q.lte(endDate)),

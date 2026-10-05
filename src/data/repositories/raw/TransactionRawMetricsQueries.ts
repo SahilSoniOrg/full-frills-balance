@@ -1,7 +1,11 @@
 import { database } from '@/src/data/database/Database';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { effect, periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import {
+  ACTIVE_JOURNAL_STATUSES,
+  activeJournalStatusSqlPlaceholders,
+} from '@/src/utils/journalStatus';
+import { activeJournalLegClauses } from '../transaction/transactionActiveClauses';
 import { Q } from '@nozbe/watermelondb';
 import dayjs from 'dayjs';
 import Account from '../../models/Account';
@@ -43,7 +47,7 @@ export class TransactionRawMetricsQueries {
     );
     for (let index = 0; index < accountBoundaries.length; index += 100) {
       const chunk = accountBoundaries.slice(index, index + 100);
-      const statusPlaceholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
+      const statusPlaceholders = activeJournalStatusSqlPlaceholders();
       const values: (string | number)[] = [];
       const boundaryRows = chunk.map(boundary => {
         values.push(
@@ -94,10 +98,7 @@ export class TransactionRawMetricsQueries {
       const transactions = await database.collections
         .get<Transaction>('transactions')
         .query(
-          Q.where('workplace_id', workplaceId),
-          Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
-          Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-          Q.on('journals', 'deleted_at', Q.eq(null)),
+          ...activeJournalLegClauses(workplaceId),
           Q.where('account_id', Q.oneOf(chunk.map(boundary => boundary.accountId))),
           Q.where('transaction_date', Q.gte(minimumDate)),
           Q.where('transaction_date', Q.lte(endDate)),
@@ -135,7 +136,7 @@ export class TransactionRawMetricsQueries {
     if (accountIds.length === 0) return new Map();
 
     const accountPlaceholders = accountIds.map(() => '?').join(',');
-    const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
+    const placeholders = activeJournalStatusSqlPlaceholders();
 
     const sql = `
       WITH RankedTransactions AS (
@@ -181,11 +182,8 @@ export class TransactionRawMetricsQueries {
       const txs = await database.collections
         .get<Transaction>('transactions')
         .query(
-          Q.where('workplace_id', workplaceId),
+          ...activeJournalLegClauses(workplaceId),
           Q.on('accounts', 'workplace_id', Q.eq(workplaceId)),
-          Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
-          Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-          Q.on('journals', 'deleted_at', Q.eq(null)),
           Q.where('account_id', accountId),
           Q.where('transaction_date', Q.lte(cutoffDate)),
           Q.where('deleted_at', Q.eq(null)),
@@ -209,7 +207,7 @@ export class TransactionRawMetricsQueries {
     if (accountIds.length === 0) return [];
 
     const accountPlaceholders = accountIds.map(() => '?').join(',');
-    const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
+    const placeholders = activeJournalStatusSqlPlaceholders();
 
     const { increaseCase, decreaseCase } = periodFlowSQL();
     const sql = `
@@ -259,11 +257,8 @@ export class TransactionRawMetricsQueries {
       database.collections
         .get<Transaction>('transactions')
         .query(
-          Q.where('workplace_id', workplaceId),
+          ...activeJournalLegClauses(workplaceId),
           Q.on('accounts', 'workplace_id', Q.eq(workplaceId)),
-          Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
-          Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-          Q.on('journals', 'deleted_at', Q.eq(null)),
           Q.where('account_id', Q.oneOf(accountIds)),
           Q.where('transaction_date', Q.gte(startDate)),
           Q.where('transaction_date', Q.lte(endDate)),

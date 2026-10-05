@@ -1,6 +1,10 @@
 import { database } from '@/src/data/database/Database';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import {
+  ACTIVE_JOURNAL_STATUSES,
+  activeJournalStatusSqlPlaceholders,
+} from '@/src/utils/journalStatus';
+import { activeJournalLegClauses } from '../transaction/transactionActiveClauses';
 import { Q } from '@nozbe/watermelondb';
 import Journal from '../../models/Journal';
 import Transaction from '../../models/Transaction';
@@ -13,7 +17,7 @@ export class TransactionRawPatternQueries {
     startDate: number,
     minCount: number,
   ): Promise<RecurringPattern[]> {
-    const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
+    const placeholders = activeJournalStatusSqlPlaceholders();
 
     const sql = `
       SELECT
@@ -51,10 +55,7 @@ export class TransactionRawPatternQueries {
     const txs = await database.collections
       .get<Transaction>('transactions')
       .query(
-        Q.where('workplace_id', workplaceId),
-        Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-        Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
-        Q.on('journals', 'deleted_at', Q.eq(null)),
+        ...activeJournalLegClauses(workplaceId),
         Q.where('transaction_date', Q.gte(startDate)),
         Q.where('deleted_at', Q.eq(null)),
       )

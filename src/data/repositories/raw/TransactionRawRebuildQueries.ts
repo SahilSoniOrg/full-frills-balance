@@ -2,7 +2,11 @@ import { database } from '@/src/data/database/Database';
 import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { effect } from '@/src/utils/accounting/BalanceEffects';
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import {
+  ACTIVE_JOURNAL_STATUSES,
+  activeJournalStatusSqlPlaceholders,
+} from '@/src/utils/journalStatus';
+import { activeJournalLegClauses } from '../transaction/transactionActiveClauses';
 import { Q } from '@nozbe/watermelondb';
 import Transaction from '../../models/Transaction';
 import type { RawSqlArg } from '@/src/data/database/DatabaseUtils';
@@ -56,7 +60,7 @@ export class TransactionRawRebuildQueries {
       ? `CASE WHEN t.transaction_type = '${TransactionType.DEBIT}' THEN t.amount ELSE -t.amount END`
       : `CASE WHEN t.transaction_type = '${TransactionType.CREDIT}' THEN t.amount ELSE -t.amount END`;
 
-    const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
+    const placeholders = activeJournalStatusSqlPlaceholders();
 
     const sql = `
       SELECT SUM(${multiplierSql}) as total
@@ -96,10 +100,7 @@ export class TransactionRawRebuildQueries {
     if (raws !== null) return raws[0]?.total || 0;
 
     const filterClauses: Q.Clause[] = [
-      Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-      Q.on('journals', 'deleted_at', Q.eq(null)),
-      Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
-      Q.where('workplace_id', workplaceId),
+      ...activeJournalLegClauses(workplaceId),
       Q.where('account_id', accountId),
       Q.where('transaction_date', Q.lte(cutoffDate)),
       Q.where('deleted_at', Q.eq(null)),
@@ -156,7 +157,7 @@ export class TransactionRawRebuildQueries {
     accountId: AccountId,
     startDate: number,
   ): Promise<RebuildTransaction[]> {
-    const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
+    const placeholders = activeJournalStatusSqlPlaceholders();
 
     const sql = `
       SELECT
@@ -190,10 +191,7 @@ export class TransactionRawRebuildQueries {
     const txs = await database.collections
       .get<Transaction>('transactions')
       .query(
-        Q.where('workplace_id', workplaceId),
-        Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
-        Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-        Q.on('journals', 'deleted_at', Q.eq(null)),
+        ...activeJournalLegClauses(workplaceId),
         Q.where('account_id', accountId),
         Q.where('transaction_date', Q.gte(startDate)),
         Q.where('deleted_at', Q.eq(null)),

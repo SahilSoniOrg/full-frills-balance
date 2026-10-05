@@ -10,7 +10,11 @@ import { AccountBalance } from '@/src/types/domainReadModels';
 import { WorkplaceId } from '@/src/types/ids';
 import { effect, periodFlowSQL } from '@/src/utils/accounting/BalanceEffects';
 import { AccountType } from '@/src/types/enums';
-import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
+import {
+  ACTIVE_JOURNAL_STATUSES,
+  activeJournalStatusSqlPlaceholders,
+} from '@/src/utils/journalStatus';
+import { activeJournalLegClauses } from '../transaction/transactionActiveClauses';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
 
@@ -24,7 +28,7 @@ export class AccountListMetricsQueries {
     workplaceId: WorkplaceId,
     includeTotalCount: boolean = false,
   ): Promise<AccountListItemRaw[] | null> {
-    const placeholders = ACTIVE_JOURNAL_STATUSES.map(() => '?').join(',');
+    const placeholders = activeJournalStatusSqlPlaceholders();
     const statusArgs = [...ACTIVE_JOURNAL_STATUSES];
     const { increaseCase, decreaseCase } = periodFlowSQL();
 
@@ -158,11 +162,8 @@ export class AccountListMetricsQueries {
 
     const accountIds = accounts.map(account => account.id);
     const transactionClauses: Q.Clause[] = [
-      Q.where('workplace_id', workplaceId),
+      ...activeJournalLegClauses(workplaceId),
       Q.on('accounts', 'workplace_id', Q.eq(workplaceId)),
-      Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
-      Q.on('journals', 'deleted_at', Q.eq(null)),
-      Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
       Q.where('account_id', Q.oneOf(accountIds)),
       Q.where('deleted_at', Q.eq(null)),
     ];

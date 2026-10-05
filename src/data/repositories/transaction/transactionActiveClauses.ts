@@ -6,6 +6,18 @@ import { Q, Query } from '@nozbe/watermelondb';
 
 export const EDITOR_JOURNAL_STATUSES = [...ACTIVE_JOURNAL_STATUSES, JournalStatus.PLANNED] as const;
 
+export function activeJournalOnClauses(workplaceId: WorkplaceId): Q.Clause[] {
+  return [
+    Q.on('journals', 'workplace_id', Q.eq(workplaceId)),
+    Q.on('journals', 'status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
+    Q.on('journals', 'deleted_at', Q.eq(null)),
+  ];
+}
+
+export function activeJournalLegClauses(workplaceId: WorkplaceId): Q.Clause[] {
+  return [Q.where('workplace_id', workplaceId), ...activeJournalOnClauses(workplaceId)];
+}
+
 /**
  * Centralized logic for defining what constitutes an "Active" (valid/non-deleted) transaction.
  * Prevents logic divergence across repositories and query modules.
@@ -18,11 +30,7 @@ export function buildActiveClauses(
     Q.experimentalJoinTables(['journals']),
     Q.where('workplace_id', workplaceId),
     Q.where('deleted_at', Q.eq(null)),
-    Q.on('journals', [
-      Q.where('workplace_id', workplaceId),
-      Q.where('status', Q.oneOf([...ACTIVE_JOURNAL_STATUSES])),
-      Q.where('deleted_at', Q.eq(null)),
-    ]),
+    ...activeJournalOnClauses(workplaceId),
     ...extraClauses,
   ];
 }
