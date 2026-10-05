@@ -1,236 +1,182 @@
-import { AuditAction, JournalStatus } from '@/src/types/enums';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
-import { deleteAccount, recoverAccount } from '@/src/services/accounts/accountDeleteCommands';
-import { revertAccountFromAuditState } from '@/src/services/accounts/accountAuditCommands';
-import { journalService } from '@/src/services/journal/journalDomainService';
 import { revertEntry } from '@/src/services/audit-service';
-import { revertRegistry } from '@/src/services/revert-registry';
+import { revertRegistry, RevertHandler } from '@/src/services/revert-registry';
+import { AuditAction } from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 
-// Mock dependencies
 jest.mock('@/src/data/repositories/AuditRepository');
-jest.mock('@/src/data/database/Database', () => ({
-  database: {
-    write: jest.fn(callback => callback()),
-    batch: jest.fn(),
-  },
-}));
 
-jest.mock('@/src/services/accounts/accountDeleteCommands', () => ({
-  deleteAccount: jest.fn(),
-  recoverAccount: jest.fn(),
-}));
+describe('revertEntry dispatch contract', () => {
+  const logId = 'log-1';
+  const workplaceId = 'wp-1' as WorkplaceId;
+  const changes = { before: { name: 'Before' }, after: { name: 'After' } };
 
-jest.mock('@/src/services/accounts/accountAuditCommands', () => ({
-  revertAccountFromAuditState: jest.fn(),
-}));
-
-jest.mock('@/src/services/journal/journalDomainService', () => ({
-  journalService: {
-    deleteJournal: jest.fn(),
-    recoverJournal: jest.fn(),
-    updateJournal: jest.fn(),
-    revertToPlanned: jest.fn(),
-    postJournal: jest.fn(),
-  },
-}));
-
-describe('AuditService', () => {
-  beforeAll(() => {
-    jest.spyOn(revertRegistry, 'getHandler').mockImplementation(entityType => {
-      switch (entityType.toLowerCase()) {
-        case 'account':
-          return async (id, changes, action, workplaceId) => {
-            if (action === AuditAction.CREATE) await deleteAccount(id as AccountId, workplaceId);
-            else if (action === AuditAction.DELETE)
-              await recoverAccount(id as AccountId, workplaceId);
-            else if (action === AuditAction.UPDATE && changes.before) {
-              if (changes.before.deletedAt) await deleteAccount(id as AccountId, workplaceId);
-              else await revertAccountFromAuditState(workplaceId, id as AccountId, changes.before);
-            }
-          };
-        case 'journal':
-          return async (id, changes, action, workplaceId) => {
-            if (action === AuditAction.CREATE)
-              await journalService.deleteJournal(id as JournalId, workplaceId);
-            else if (action === AuditAction.DELETE)
-              await journalService.recoverJournal(id as JournalId, workplaceId);
-            else if (action === AuditAction.UPDATE && changes.before) {
-              if (changes.before.deletedAt)
-                await journalService.deleteJournal(id as JournalId, workplaceId);
-              else if (changes.before.status === JournalStatus.PLANNED)
-                await journalService.revertToPlanned(id as JournalId, workplaceId);
-              else if (changes.before.status === JournalStatus.POSTED)
-                await journalService.postJournal(id as JournalId, workplaceId);
-              else
-                await journalService.updateJournal(
-                  id as JournalId,
-                  changes.before as Parameters<typeof journalService.updateJournal>[1],
-                  workplaceId,
-                );
-            }
-          };
-        default:
-          return undefined;
-      }
-    });
-    jest.spyOn(revertRegistry, 'supports').mockImplementation((entityType, action, changes) => {
-      if (entityType.toLowerCase() === 'transaction') return false;
-      return (
-        action === AuditAction.CREATE || action === AuditAction.DELETE || Boolean(changes.before)
-      );
-    });
+  const mockLog = (overrides: Record<string, unknown> = {}) => ({
+    id: logId,
+    entityId: 'entity-1',
+    entityType: 'account',
+    action: AuditAction.UPDATE,
+    canRevert: true,
+    parsedChanges: changes,
+    ...overrides,
   });
 
-  afterAll(() => {
-    jest.restoreAllMocks();
-  });
+  let getHandler: jest.SpyInstance;
+  let supports: jest.SpyInstance;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    getHandler = jest.spyOn(revertRegistry, 'getHandler').mockReturnValue(undefined);
+    supports = jest.spyOn(revertRegistry, 'supports').mockReturnValue(false);
   });
 
-  describe('revertEntry', () => {
-    const mockLog = (overrides: any) => ({
-      id: 'log1',
-      entityId: 'ent1',
-      canRevert: true,
-      ...overrides,
-      parsedChanges: overrides.changes || {},
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('returns the not-found outcome without consulting the registry', async () => {
+    (auditRepository.find as jest.Mock).mockResolvedValue(null);
+
+    const result = await revertEntry(logId, workplaceId);
+
+    expect(result).toEqual({
+      success: false,
+      error: expect.stringMatching(/No audit record found/i),
     });
+    expect(auditRepository.find).toHaveBeenCalledWith(logId, workplaceId);
+    expect(getHandler).not.toHaveBeenCalled();
+    expect(supports).not.toHaveBeenCalled();
+  });
 
-    it('should return error if log is not found', async () => {
-      (auditRepository.find as jest.Mock).mockResolvedValue(null);
-      const res = await revertEntry('log1', 'wp-1' as WorkplaceId);
-      expect(res.success).toBe(false);
-      expect(res.error).toMatch(/No audit record found/i);
+  it('rejects a record marked non-revertible before dispatch', async () => {
+    (auditRepository.find as jest.Mock).mockResolvedValue(mockLog({ canRevert: false }));
+
+    const result = await revertEntry(logId, workplaceId);
+
+    expect(result).toEqual({
+      success: false,
+      error: expect.stringMatching(/Failed to undo change/i),
     });
+    expect(getHandler).not.toHaveBeenCalled();
+    expect(supports).not.toHaveBeenCalled();
+  });
 
-    it('should return error if log cannot be reverted', async () => {
-      (auditRepository.find as jest.Mock).mockResolvedValue(mockLog({ canRevert: false }));
-      const res = await revertEntry('log1', 'wp-1' as WorkplaceId);
-      expect(res.success).toBe(false);
-      expect(res.error).toMatch(/Failed to undo change/i);
+  it('rejects a record without parsed changes before dispatch', async () => {
+    (auditRepository.find as jest.Mock).mockResolvedValue(mockLog({ parsedChanges: null }));
+
+    const result = await revertEntry(logId, workplaceId);
+
+    expect(result).toEqual({
+      success: false,
+      error: expect.stringMatching(/Failed to undo change/i),
     });
+    expect(getHandler).not.toHaveBeenCalled();
+    expect(supports).not.toHaveBeenCalled();
+  });
 
-    it('should return error for unsupported entity type', async () => {
-      (auditRepository.find as jest.Mock).mockResolvedValue(mockLog({ entityType: 'transaction' }));
-      const res = await revertEntry('log1', 'wp-1' as WorkplaceId);
-      expect(res.success).toBe(false);
-      expect(res.error).toMatch(/is not supported yet/i);
+  it('returns unsupported when the entity has no registered handler', async () => {
+    (auditRepository.find as jest.Mock).mockResolvedValue(mockLog({ entityType: 'transaction' }));
+
+    const result = await revertEntry(logId, workplaceId);
+
+    expect(result).toEqual({
+      success: false,
+      error: expect.stringMatching(/is not supported yet/i),
     });
+    expect(getHandler).toHaveBeenCalledWith('transaction');
+    expect(supports).not.toHaveBeenCalled();
+  });
 
-    describe('Account Entity', () => {
-      it('should revert CREATE by deleting account', async () => {
-        (auditRepository.find as jest.Mock).mockResolvedValue(
-          mockLog({ entityType: 'account', action: AuditAction.CREATE }),
-        );
-        await revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(deleteAccount).toHaveBeenCalledWith('ent1' as AccountId, 'wp-1' as WorkplaceId);
-      });
+  it('returns unsupported when a registered handler rejects the action and changes', async () => {
+    const handler = jest.fn<ReturnType<RevertHandler>, Parameters<RevertHandler>>();
+    getHandler.mockReturnValue(handler);
+    (auditRepository.find as jest.Mock).mockResolvedValue(mockLog());
 
-      it('should revert DELETE by recovering account', async () => {
-        (auditRepository.find as jest.Mock).mockResolvedValue(
-          mockLog({ entityType: 'account', action: AuditAction.DELETE }),
-        );
-        await revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(recoverAccount).toHaveBeenCalledWith('ent1' as AccountId, 'wp-1' as WorkplaceId);
-      });
+    const result = await revertEntry(logId, workplaceId);
 
-      it('should revert UPDATE by restoring previous state', async () => {
-        const changes = { before: { name: 'Old Name' } };
-        (auditRepository.find as jest.Mock).mockResolvedValue(
-          mockLog({ entityType: 'account', action: AuditAction.UPDATE, changes }),
-        );
-        await revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(revertAccountFromAuditState).toHaveBeenCalledWith(
-          'wp-1' as WorkplaceId,
-          'ent1' as AccountId,
-          changes.before,
-        );
-      });
-
-      it('should revert UPDATE (undelete) by deleting account', async () => {
-        const changes = { before: { deletedAt: '2024-01-01' } };
-        (auditRepository.find as jest.Mock).mockResolvedValue(
-          mockLog({ entityType: 'account', action: AuditAction.UPDATE, changes }),
-        );
-        await revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(deleteAccount).toHaveBeenCalledWith('ent1' as AccountId, 'wp-1' as WorkplaceId);
-      });
+    expect(result).toEqual({
+      success: false,
+      error: expect.stringMatching(/is not supported yet/i),
     });
+    expect(supports).toHaveBeenCalledWith('account', AuditAction.UPDATE, changes);
+    expect(handler).not.toHaveBeenCalled();
+  });
 
-    describe('Journal Entity', () => {
-      it('should revert CREATE by deleting journal', async () => {
-        (auditRepository.find as jest.Mock).mockResolvedValue(
-          mockLog({ entityType: 'journal', action: AuditAction.CREATE }),
-        );
-        await revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(journalService.deleteJournal).toHaveBeenCalledWith(
-          'ent1' as JournalId,
-          'wp-1' as WorkplaceId,
-        );
-      });
+  it.each(
+    (['account', 'journal'] as const).flatMap(entityType =>
+      ([AuditAction.CREATE, AuditAction.UPDATE, AuditAction.DELETE] as const).map(
+        action => [entityType, action] as const,
+      ),
+    ),
+  )(
+    'dispatches %s %s with the original changes and stored audit id',
+    async (entityType, action) => {
+      const entityId = `${entityType}-entity`;
+      const storedLogId = 'stored-log-id';
+      const handler = jest.fn<ReturnType<RevertHandler>, Parameters<RevertHandler>>();
+      const recordChanges = { before: { marker: 'before' }, after: { marker: 'after' } };
+      getHandler.mockReturnValue(handler);
+      supports.mockReturnValue(true);
+      (auditRepository.find as jest.Mock).mockResolvedValue(
+        mockLog({ id: storedLogId, entityId, entityType, action, parsedChanges: recordChanges }),
+      );
 
-      it('should revert DELETE by recovering journal', async () => {
-        (auditRepository.find as jest.Mock).mockResolvedValue(
-          mockLog({ entityType: 'journal', action: AuditAction.DELETE }),
-        );
-        await revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(journalService.recoverJournal).toHaveBeenCalledWith(
-          'ent1' as JournalId,
-          'wp-1' as WorkplaceId,
-        );
-      });
+      const result = await revertEntry(logId, workplaceId);
 
-      it('should revert UPDATE by restoring previous state', async () => {
-        const changes = { before: { description: 'Old Desc', transactions: [] } };
-        (auditRepository.find as jest.Mock).mockResolvedValue(
-          mockLog({ entityType: 'journal', action: AuditAction.UPDATE, changes }),
-        );
-        await revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(journalService.updateJournal).toHaveBeenCalledWith(
-          'ent1' as JournalId,
-          changes.before,
-          'wp-1' as WorkplaceId,
-        );
+      expect(result).toEqual({ success: true });
+      expect(auditRepository.find).toHaveBeenCalledWith(logId, workplaceId);
+      expect(supports).toHaveBeenCalledWith(entityType, action, recordChanges);
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler).toHaveBeenCalledWith(entityId, recordChanges, action, workplaceId, {
+        auditLogId: storedLogId,
       });
+      expect(handler.mock.calls[0][1]).toBe(recordChanges);
+    },
+  );
 
-      it('should revert UPDATE (undelete) by deleting journal', async () => {
-        const changes = { before: { deletedAt: '2024-01-01' } };
-        (auditRepository.find as jest.Mock).mockResolvedValue(
-          mockLog({ entityType: 'journal', action: AuditAction.UPDATE, changes }),
-        );
-        await revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(journalService.deleteJournal).toHaveBeenCalledWith(
-          'ent1' as JournalId,
-          'wp-1' as WorkplaceId,
-        );
-      });
+  it('returns a handler error message when dispatch throws', async () => {
+    const handler = jest.fn<ReturnType<RevertHandler>, Parameters<RevertHandler>>();
+    handler.mockRejectedValue(new Error('Undo conflict'));
+    getHandler.mockReturnValue(handler);
+    supports.mockReturnValue(true);
+    (auditRepository.find as jest.Mock).mockResolvedValue(mockLog());
 
-      it('should revert UPDATE transitioning to POSTED by reverting to PLANNED', async () => {
-        const changes = { before: { status: JournalStatus.PLANNED } };
-        (auditRepository.find as jest.Mock).mockResolvedValue(
-          mockLog({ entityType: 'journal', action: AuditAction.UPDATE, changes }),
-        );
-        await revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(journalService.revertToPlanned).toHaveBeenCalledWith(
-          'ent1' as JournalId,
-          'wp-1' as WorkplaceId,
-        );
-      });
+    await expect(revertEntry(logId, workplaceId)).resolves.toEqual({
+      success: false,
+      error: 'Undo conflict',
+    });
+    expect(handler).toHaveBeenCalledWith('entity-1', changes, AuditAction.UPDATE, workplaceId, {
+      auditLogId: logId,
+    });
+  });
 
-      it('should revert UPDATE transitioning to PLANNED by posting journal', async () => {
-        const changes = { before: { status: JournalStatus.POSTED } };
-        (auditRepository.find as jest.Mock).mockResolvedValue(
-          mockLog({ entityType: 'journal', action: AuditAction.UPDATE, changes }),
-        );
-        await revertEntry('log1', 'wp-1' as WorkplaceId);
-        expect(journalService.postJournal).toHaveBeenCalledWith(
-          'ent1' as JournalId,
-          'wp-1' as WorkplaceId,
-        );
-      });
+  it('uses the generic failure message when a handler throws a non-Error value', async () => {
+    const handler = jest.fn<ReturnType<RevertHandler>, Parameters<RevertHandler>>();
+    handler.mockRejectedValue('unexpected failure');
+    getHandler.mockReturnValue(handler);
+    supports.mockReturnValue(true);
+    (auditRepository.find as jest.Mock).mockResolvedValue(mockLog());
+
+    const result = await revertEntry(logId, workplaceId);
+
+    expect(result).toEqual({
+      success: false,
+      error: expect.stringMatching(/Failed to undo change/i),
+    });
+  });
+
+  it('converts a handler false result into a failed undo outcome', async () => {
+    const handler = jest.fn<ReturnType<RevertHandler>, Parameters<RevertHandler>>();
+    handler.mockResolvedValue(false);
+    getHandler.mockReturnValue(handler);
+    supports.mockReturnValue(true);
+    (auditRepository.find as jest.Mock).mockResolvedValue(mockLog());
+
+    const result = await revertEntry(logId, workplaceId);
+
+    expect(result).toEqual({
+      success: false,
+      error: expect.stringMatching(/Failed to undo change/i),
     });
   });
 });
