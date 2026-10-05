@@ -1,27 +1,29 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { walkDirectory } from './lib/source-walk.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-function collectRouteFiles(directory, prefix = '') {
+function collectRouteFiles(appDirectory) {
   const routes = [];
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    if (entry.name.startsWith('.')) continue;
-    const absolutePath = path.join(directory, entry.name);
-    const relativePath = path.join(prefix, entry.name);
-    if (entry.isDirectory()) {
-      routes.push(...collectRouteFiles(absolutePath, relativePath));
-      if (fs.existsSync(path.join(absolutePath, '_layout.tsx')) && relativePath) {
-        routes.push(relativePath.split(path.sep).join('/'));
+  walkDirectory(
+    appDirectory,
+    (absolutePath, entry) => {
+      const relativePath = path.relative(appDirectory, absolutePath);
+      if (entry.isDirectory()) {
+        if (relativePath && fs.existsSync(path.join(absolutePath, '_layout.tsx'))) {
+          routes.push(relativePath.split(path.sep).join('/'));
+        }
+        return;
       }
-      continue;
-    }
-    if (!/\.(?:tsx?|jsx?)$/.test(entry.name)) continue;
-    const routePath = relativePath.replace(/\.(?:tsx?|jsx?)$/, '').split(path.sep).join('/');
-    if (routePath === '_layout' || routePath.endsWith('/_layout')) continue;
-    routes.push(routePath);
-  }
+      if (!/\.(?:tsx?|jsx?)$/.test(entry.name)) return;
+      const routePath = relativePath.replace(/\.(?:tsx?|jsx?)$/, '').split(path.sep).join('/');
+      if (routePath === '_layout' || routePath.endsWith('/_layout')) return;
+      routes.push(routePath);
+    },
+    { skipDotEntries: true },
+  );
   return routes.sort();
 }
 

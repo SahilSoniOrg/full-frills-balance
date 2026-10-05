@@ -1,6 +1,7 @@
 import { assertTextVisible, assertVisibleById } from '../../actions/assertions';
 import { launchOnboardedApp } from '../../actions/launch';
 import { replaceById, tapById, tapByLabel } from '../../actions/mobile/elementActions';
+import { E2E_DEFAULT_WORKPLACE_LABEL } from '@/src/testing/e2eConstants';
 import { tabs } from '../../screens';
 import { by, element } from 'detox';
 
@@ -8,7 +9,7 @@ jest.setTimeout(180000);
 
 describe('Workplace lifecycle', () => {
   it('deletes the last Workplace and returns to setup', async () => {
-    const workplaceName = "E2E User's Personal workplace";
+    const workplaceName = E2E_DEFAULT_WORKPLACE_LABEL;
 
     await launchOnboardedApp({ seedProfile: 'onboarded' });
     await tapById(tabs.settings);

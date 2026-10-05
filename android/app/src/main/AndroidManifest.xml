@@ -19,8 +19,6 @@
       <category android:name="android.intent.category.BROWSABLE"/>
       <data android:scheme="https"/>
     </intent>
-  </queries>
-  <queries>
     <package android:name="com.google.android.googlequicksearchbox"/>
     <intent>
       <action android:name="android.speech.RecognitionService"/>

@@ -93,17 +93,6 @@ bun run e2e:test:android:device
 
 The attached-device lane reuses the release APK and the same critical specs as the emulator lane.
 
-## Layout (one-mobile style)
-
-```text
-e2e/
-  specs/           # *.e2e.ts — Detox specs only
-  screens/         # testID constants
-  actions/         # launch, onboarding, mobile flows
-  constants/
-  utils/
-```
-
 ## E2E seed profiles
 
 Most specs use **programmatic onboarding** via Detox `launchArgs` (see [the E2E architecture notes](../docs/architecture/MOBILE_E2E.md)). The dedicated `onboarding.e2e.ts` exercises the UI flow.

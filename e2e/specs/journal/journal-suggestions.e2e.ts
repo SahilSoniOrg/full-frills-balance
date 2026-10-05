@@ -5,6 +5,7 @@
  */
 import { by, device, element, waitFor } from 'detox';
 import { launchOnboardedApp } from '../../actions/launch';
+import { enterAmount } from '../../actions/mobile/enterAmount';
 import { tabs } from '../../screens';
 
 jest.setTimeout(300000);
@@ -128,11 +129,3 @@ describe(':ios: journal suggestions', () => {
     }
   });
 });
-
-async function enterAmount(digits: string): Promise<void> {
-  await element(by.label('Open math calculator')).tap();
-  for (const digit of digits) {
-    await element(by.id(`amount-calculator-key-${digit}`)).tap();
-  }
-  await element(by.id('amount-calculator-done')).tap();
-}

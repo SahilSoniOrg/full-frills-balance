@@ -21,11 +21,21 @@ export function isProductionSource(relativePath, options = {}) {
 
 export function isDesignSystemUiSource(relativePath) {
   return (
-    /\.(?:ts|tsx)$/.test(relativePath) &&
-    !relativePath.includes('/__tests__/') &&
-    !/(?:^|\/)__mocks__\//.test(relativePath) &&
+    isProductionSource(relativePath, { excludeMocks: true }) &&
     !/(?:^|\/)(?:test|spec)\.(?:ts|tsx)$/.test(relativePath)
   );
+}
+
+export function walkDirectory(directory, visit, options = {}) {
+  const { skipDirNames = DEFAULT_SKIP_DIR_NAMES, skipDotEntries = false } = options;
+  if (!fs.existsSync(directory)) return;
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    if (skipDotEntries && entry.name.startsWith('.')) continue;
+    if (skipDirNames.has(entry.name)) continue;
+    const absolutePath = path.join(directory, entry.name);
+    visit(absolutePath, entry);
+    if (entry.isDirectory()) walkDirectory(absolutePath, visit, options);
+  }
 }
 
 export function walkProductionSources(root, options = {}) {
@@ -36,16 +46,10 @@ export function walkProductionSources(root, options = {}) {
   } = options;
   const files = [];
   const walk = directory => {
-    if (!fs.existsSync(directory)) return;
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-      if (DEFAULT_SKIP_DIR_NAMES.has(entry.name)) continue;
-      const absolutePath = path.join(directory, entry.name);
-      if (entry.isDirectory()) walk(absolutePath);
-      else {
-        const relativePath = normalizePath(path.relative(root, absolutePath));
-        if (isSource(relativePath)) files.push({ absolutePath, relativePath });
-      }
-    }
+    walkDirectory(directory, absolutePath => {
+      const relativePath = normalizePath(path.relative(root, absolutePath));
+      if (isSource(relativePath)) files.push({ absolutePath, relativePath });
+    });
   };
   for (const sourceRoot of sourceRoots) walk(path.join(root, sourceRoot));
   if (sort) files.sort((left, right) => left.relativePath.localeCompare(right.relativePath));

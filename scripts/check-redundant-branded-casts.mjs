@@ -2,6 +2,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import ts from 'typescript';
+import { parseRootArg } from './lib/parse-root-arg.mjs';
 import { isProductionSource, normalizePath } from './lib/source-walk.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -19,10 +20,10 @@ const BRAND_TYPE_RE = new RegExp(
 );
 
 function parseArgs(argv) {
-  const args = { root: DEFAULT_ROOT, listRemaining: false };
+  const args = { root: parseRootArg(argv, DEFAULT_ROOT), listRemaining: false };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
-    if (argument === '--root') args.root = path.resolve(argv[++index]);
+    if (argument === '--root') index += 1;
     else if (argument === '--list-remaining') args.listRemaining = true;
     else throw new Error(`Unknown argument: ${argument}`);
   }

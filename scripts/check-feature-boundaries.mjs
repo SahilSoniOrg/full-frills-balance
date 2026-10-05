@@ -2,6 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { walkDirectory } from './lib/source-walk.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -29,12 +30,9 @@ function isExcludedNeutralFixture(relativePath) {
 }
 
 function walk(directory, visit) {
-  if (!fs.existsSync(directory)) return;
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    const absolutePath = path.join(directory, entry.name);
-    if (entry.isDirectory()) walk(absolutePath, visit);
-    else if (SOURCE_FILE_RE.test(entry.name)) visit(absolutePath);
-  }
+  walkDirectory(directory, absolutePath => {
+    if (SOURCE_FILE_RE.test(path.basename(absolutePath))) visit(absolutePath);
+  });
 }
 
 function getSourceKind(relativePath, neutralRoots) {

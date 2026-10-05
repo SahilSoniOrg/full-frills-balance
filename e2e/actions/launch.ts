@@ -77,6 +77,23 @@ export async function launchWithUpdateGate(mode: E2eUpdateGateMode): Promise<voi
   });
 }
 
+export async function launchSeedProfileApp(
+  seedProfile: E2eSeedProfile,
+  options: {
+    disableSynchronization?: boolean;
+    newInstance?: boolean;
+    delete?: boolean;
+  } = {},
+): Promise<void> {
+  await device.launchApp({
+    newInstance: options.newInstance ?? true,
+    delete: options.delete ?? true,
+    permissions: { notifications: 'YES' },
+    launchArgs: e2eLaunchArgs(seedProfile),
+  });
+  if (options.disableSynchronization) await device.disableSynchronization();
+}
+
 export async function launchOnboardedApp(options: LaunchOnboardedOptions = {}): Promise<void> {
   const seedProfile = options.seedProfile ?? 'journal-ready';
   await device.launchApp({
@@ -130,6 +147,14 @@ export async function relaunchPreservingData(): Promise<void> {
   });
   // Startup can legitimately keep native work pending; callers explicitly wait for their slice.
   await device.disableSynchronization();
+}
+
+export async function relaunchSameInstance(): Promise<void> {
+  await device.terminateApp();
+  await device.launchApp({
+    newInstance: false,
+    launchArgs: { e2eAuth: E2E_AUTH_TOKEN },
+  });
 }
 
 export async function openWorkplaceCreation(): Promise<void> {

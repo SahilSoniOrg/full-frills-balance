@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { moduleBaseName } from './lib/module-base-name.mjs';
 import { walkProductionSources } from './lib/source-walk.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -29,10 +30,6 @@ function sourceFiles(root) {
     excludePrefixes: ['src/testing/'],
     excludeTestHelperFiles: true,
   });
-}
-
-function moduleBaseName(moduleName) {
-  return path.posix.basename(moduleName).replace(/\.(?:mjs|cjs|js|tsx?|jsx?)$/, '');
 }
 
 export function collectJournalWriteBoundaryFindings(root = ROOT) {

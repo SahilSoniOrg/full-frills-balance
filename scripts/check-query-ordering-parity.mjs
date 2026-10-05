@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { walkDirectory } from './lib/source-walk.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ORDER_TERM_PATTERN = /(?:[A-Za-z_][\w]*\.)?([A-Za-z_][\w]*)\s+(ASC|DESC)/gi;
@@ -33,15 +34,13 @@ export function collectQueryOrderingParityFindings(root = ROOT) {
   const findings = [];
   if (!fs.existsSync(rawDirectory)) return findings;
 
-  for (const entry of fs.readdirSync(rawDirectory, { withFileTypes: true })) {
-    if (!entry.isFile() || !entry.name.endsWith('.ts') || entry.name.includes('.test.')) continue;
-    const relativePath = path
-      .relative(root, path.join(rawDirectory, entry.name))
-      .split(path.sep)
-      .join('/');
-    const source = fs.readFileSync(path.join(rawDirectory, entry.name), 'utf8');
+  walkDirectory(rawDirectory, absolutePath => {
+    const entryName = path.basename(absolutePath);
+    if (!entryName.endsWith('.ts') || entryName.includes('.test.')) return;
+    const relativePath = path.relative(root, absolutePath).split(path.sep).join('/');
+    const source = fs.readFileSync(absolutePath, 'utf8');
     const rawOrderings = extractRawOrdering(source);
-    if (rawOrderings.length === 0) continue;
+    if (rawOrderings.length === 0) return;
     const ormOrdering = extractOrmOrdering(source);
 
     for (const expected of rawOrderings) {
@@ -52,7 +51,7 @@ export function collectQueryOrderingParityFindings(root = ROOT) {
         });
       }
     }
-  }
+  });
 
   return findings.sort((left, right) => left.file.localeCompare(right.file));
 }

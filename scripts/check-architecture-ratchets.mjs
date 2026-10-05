@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import ts from 'typescript';
+import { parseRootArg } from './lib/parse-root-arg.mjs';
 import { walkProductionSources } from './lib/source-walk.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -64,10 +65,14 @@ const RULES = [
 ];
 
 function parseArgs(argv) {
-  const args = { root: DEFAULT_ROOT, baseline: DEFAULT_BASELINE, writeBaseline: false };
+  const args = {
+    root: parseRootArg(argv, DEFAULT_ROOT),
+    baseline: DEFAULT_BASELINE,
+    writeBaseline: false,
+  };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
-    if (argument === '--root') args.root = path.resolve(argv[++index]);
+    if (argument === '--root') index += 1;
     else if (argument === '--baseline') args.baseline = path.resolve(argv[++index]);
     else if (argument === '--write-baseline') args.writeBaseline = true;
     else throw new Error(`Unknown argument: ${argument}`);

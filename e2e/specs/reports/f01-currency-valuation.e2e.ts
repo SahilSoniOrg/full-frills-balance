@@ -1,5 +1,7 @@
 import { by, device, element, expect, waitFor } from 'detox';
 import { launchOnboardedApp } from '../../actions/launch';
+import { enterAmount } from '../../actions/mobile/enterAmount';
+import { createFxSplitExpense } from '../../actions/mobile/journalFxSplitExpense';
 import { tapById, tapByLabel, tapByText } from '../../actions/mobile/elementActions';
 import { tabs } from '../../screens';
 
@@ -8,7 +10,7 @@ jest.setTimeout(300000);
 describe(':ios: F-01 historical currency valuation review', () => {
   it('shows a converted foreign expense in reports, budget details, and Safe to Spend', async () => {
     await launchOnboardedApp({ seedProfile: 'fx-demo' });
-    await createForeignExpense();
+    await createFxSplitExpense('F01 Euro market purchase');
 
     await tapById(tabs.activity);
     await tapByLabel('View Analytics');
@@ -54,38 +56,10 @@ describe(':ios: F-01 historical currency valuation review', () => {
   });
 });
 
-async function createForeignExpense(): Promise<void> {
-  await tapById(tabs.activity);
-  await tapByLabel('Open new entry options');
-  await tapById('journal-entry-fab-expense');
-  await waitFor(element(by.id('journal-entry-screen')))
-    .toExist()
-    .withTimeout(30000);
-  await element(by.id('hero-amount-input')).tapReturnKey();
-  await tapById('journal-entry-mode-selector-trigger');
-  await tapById('journal-entry-mode-allocation');
-  await element(by.id('journal-description-input')).typeText('F01 Euro market purchase');
-
-  await tapById('split-source-picker-source-node');
-  await tapByText('Euro Wallet', 15000);
-  await tapById('split-category-picker-1-source-node');
-  await tapByText('Food & Drink', 15000);
-
-  await enterAmount('split-total-amount-input', '10');
-  await enterAmount('split-amount-input-1', '11');
-  const convertedAmount = element(by.id('split-source-fx-converted-amount-input'));
-  await waitFor(convertedAmount).toBeVisible().withTimeout(30000);
-
-  await tapById('submit-footer-button');
-  await waitFor(element(by.text('F01 Euro market purchase')))
-    .toBeVisible()
-    .withTimeout(30000);
-}
-
 async function createFoodBudget(): Promise<void> {
   await element(by.id('hero-name-input')).typeText('F01 Food Budget');
   await element(by.id('hero-name-input')).tapReturnKey();
-  await enterAmount('hero-amount-input', '150');
+  await enterAmount('150', 'hero-amount-input');
   await tapByText('Select categories', 15000);
   await tapByText('Food & Drink', 15000);
   await tapByText('Apply Selection (1)', 15000);
@@ -93,12 +67,4 @@ async function createFoodBudget(): Promise<void> {
   await waitFor(element(by.label('F01 Food Budget')))
     .toBeVisible()
     .withTimeout(30000);
-}
-
-async function enterAmount(testID: string, digits: string): Promise<void> {
-  await tapById(`${testID}-calculator`);
-  for (const digit of digits) {
-    await tapById(`amount-calculator-key-${digit}`);
-  }
-  await tapById('amount-calculator-done');
 }

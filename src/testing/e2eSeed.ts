@@ -28,7 +28,7 @@ import { preferences } from '@/src/services/preferences';
 import { acknowledgeCurrentPrivacyPolicy } from '@/src/services/legal/privacyPolicyAcceptance';
 import { storage } from '@/src/utils/storage';
 import { setE2eSmsInboxMessages } from './e2eSmsInject';
-import { E2eSeedProfile } from './e2eConstants';
+import { E2eSeedProfile, E2E_DEFAULT_SEED_USER_NAME } from './e2eConstants';
 import { smsMessageFromFixture } from './smsFixtures';
 import { files } from '@/src/utils/files';
 import { extractIfZip, decodeContent, sanitizeContent } from '@/src/services/import/orchestrator';
@@ -45,13 +45,11 @@ import { assertE2eHarnessEnabled } from './e2eRuntimeGate';
 export const E2E_DESTRUCTIVE_BOOTSTRAP_MARKER = '__FFB_E2E_DESTRUCTIVE_BOOTSTRAP__';
 
 const DEFAULT_SEED = {
-  name: 'E2E User',
+  name: E2E_DEFAULT_SEED_USER_NAME,
   selectedCurrency: 'USD',
   selectedAccounts: ['Cash', 'Bank'],
   selectedCategories: ['Salary', 'Food & Drink', 'Groceries', 'Bills'],
 };
-
-const LEGACY_ONBOARDING_DRAFT_KEY = 'onboarding_draft_v1';
 
 async function clearAppStorage(): Promise<void> {
   try {
@@ -59,7 +57,6 @@ async function clearAppStorage(): Promise<void> {
     // The draft is a resumable flow artifact. Explicitly remove it so a
     // clean-install E2E launch cannot inherit a prior interrupted setup.
     storage.remove(SETUP_DRAFT_KEY);
-    storage.remove(LEGACY_ONBOARDING_DRAFT_KEY);
   } catch (error) {
     logger.warn('[E2E] MMKV clearAll failed', { error });
   }

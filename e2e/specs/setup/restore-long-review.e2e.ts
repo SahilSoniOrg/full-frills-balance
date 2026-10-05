@@ -4,7 +4,7 @@
  * @platform mobile
  */
 import { by, device, element, expect, waitFor } from 'detox';
-import { E2E_AUTH_TOKEN } from '@/src/testing/e2eConstants';
+import { launchSeedProfileApp } from '../../actions/launch';
 
 jest.setTimeout(240000);
 
@@ -14,17 +14,7 @@ const invalidJournalId = (index: number) =>
     : `restore-invalid-same-currency-journal-${index}`;
 
 it('preserves review scroll and keeps the restore action reachable for a long report', async () => {
-  await device.launchApp({
-    newInstance: true,
-    delete: true,
-    permissions: { notifications: 'YES' },
-    launchArgs: {
-      e2eAuth: E2E_AUTH_TOKEN,
-      e2eReset: '1',
-      e2eSeedProfile: 'bulk-restore-long-review',
-    },
-  });
-  await device.disableSynchronization();
+  await launchSeedProfileApp('bulk-restore-long-review', { disableSynchronization: true });
 
   await waitFor(element(by.id('restore-summary-continue')))
     .toExist()

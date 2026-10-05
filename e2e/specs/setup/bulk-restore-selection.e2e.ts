@@ -1,24 +1,10 @@
-/**
- * @owner mobile
- * @dataSource e2e
- * @platform mobile
- */
 import { by, device, element, expect } from 'detox';
-import { E2E_AUTH_TOKEN } from '@/src/testing/e2eConstants';
+import { launchSeedProfileApp } from '../../actions/launch';
 
 jest.setTimeout(180000);
 
 it('shows the multi-workplace restore selector', async () => {
-  await device.launchApp({
-    newInstance: true,
-    delete: true,
-    permissions: { notifications: 'YES' },
-    launchArgs: {
-      e2eAuth: E2E_AUTH_TOKEN,
-      e2eReset: '1',
-      e2eSeedProfile: 'bulk-restore-selection',
-    },
-  });
+  await launchSeedProfileApp('bulk-restore-selection');
 
   await expect(element(by.text('Restore workplaces'))).toBeVisible();
   await expect(element(by.text('Personal'))).toExist();

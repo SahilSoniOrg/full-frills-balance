@@ -42,10 +42,6 @@ function configFromArgs(args: Record<string, unknown>): E2eLaunchConfig | null {
   };
 }
 
-function configFromQueryRecord(query: Record<string, string>): E2eLaunchConfig | null {
-  return configFromArgs(query);
-}
-
 function configFromScriptUrl(): E2eLaunchConfig | null {
   const scriptURL: string | undefined = NativeModules?.SourceCode?.scriptURL;
   if (!scriptURL) {
@@ -57,7 +53,7 @@ function configFromScriptUrl(): E2eLaunchConfig | null {
     params.forEach((value, key) => {
       query[key] = value;
     });
-    return configFromQueryRecord(query);
+    return configFromArgs(query);
   } catch {
     return null;
   }

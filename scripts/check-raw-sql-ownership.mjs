@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { moduleBaseName } from './lib/module-base-name.mjs';
 import { walkProductionSources } from './lib/source-walk.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -14,10 +15,6 @@ const ALLOWED_RAW_ADAPTER_FILES = new Set([
 
 function sourceFiles(root) {
   return walkProductionSources(root);
-}
-
-function moduleBaseName(moduleName) {
-  return path.posix.basename(moduleName).replace(/\.(?:mjs|cjs|js|tsx?|jsx?)$/, '');
 }
 
 export function collectRawSqlOwnershipFindings(root = ROOT) {

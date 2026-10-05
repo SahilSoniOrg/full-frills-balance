@@ -1,21 +1,11 @@
 import { by, device, element, expect, waitFor } from 'detox';
-import { E2E_AUTH_TOKEN } from '@/src/testing/e2eConstants';
+import { launchSeedProfileApp } from '../../actions/launch';
 import { scrollToId, tapByText } from '../../actions/mobile/elementActions';
 
 jest.setTimeout(180000);
 
 it('offers a uniquely implied FX rate and keeps imported account amounts during restore', async () => {
-  await device.launchApp({
-    newInstance: true,
-    delete: true,
-    permissions: { notifications: 'YES' },
-    launchArgs: {
-      e2eAuth: E2E_AUTH_TOKEN,
-      e2eReset: '1',
-      e2eSeedProfile: 'first-run-restore-fx-recovery',
-    },
-  });
-  await device.disableSynchronization();
+  await launchSeedProfileApp('first-run-restore-fx-recovery', { disableSynchronization: true });
 
   await waitFor(element(by.id('restore-summary-continue')))
     .toExist()
