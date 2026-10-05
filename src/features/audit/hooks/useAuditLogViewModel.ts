@@ -324,16 +324,13 @@ export function useAuditLogViewModel(): AuditLogViewModel {
         AppConfig.strings.audit.revertConfirmTitle,
         AppConfig.strings.audit.revertConfirmMessage,
         async () => {
-          analytics.trackFeatureUsage('audit', 'revert_initiated', { log_id: logId });
+          analytics.trackFeatureUsage('audit', 'revert_initiated');
           const result = await revertEntry(logId, workplaceId);
           if (result.success) {
-            analytics.trackFeatureUsage('audit', 'revert_success', { log_id: logId });
+            analytics.trackFeatureUsage('audit', 'revert_success');
             Alerts.toast.success(AppConfig.strings.audit.revertSuccess);
           } else {
-            analytics.trackFeatureUsage('audit', 'revert_failed', {
-              log_id: logId,
-              error: result.error,
-            });
+            analytics.trackFeatureUsage('audit', 'revert_failed');
             Alerts.showErrorAlert(result.error || AppConfig.strings.audit.errors.revertFailed);
           }
         },
