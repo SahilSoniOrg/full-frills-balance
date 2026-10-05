@@ -7,6 +7,7 @@ import { analytics } from '@/src/services/analytics';
 import { WorkplaceId } from '@/src/types/ids';
 import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
+import { inferSimpleJournalTypeFromAccounts } from '@/src/services/planned-payment/inferSimpleJournalTypeFromAccounts';
 import { useCallback } from 'react';
 
 /**
@@ -21,17 +22,11 @@ export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
       const sourceAcc = item.accounts.find(a => a.role === 'SOURCE');
       const destAcc = item.accounts.find(a => a.role === 'DESTINATION');
 
-      let type: 'expense' | 'income' | 'transfer' = 'expense';
-      if (destAcc?.accountType === 'LIABILITY' || destAcc?.accountType === 'ASSET') {
-        type = 'transfer';
-      } else if (sourceAcc?.accountType === 'INCOME') {
-        type = 'income';
-      } else if (destAcc?.accountType === 'EXPENSE') {
-        type = 'expense';
-      } else {
-        type = (String(item.displayType).toLowerCase() || 'expense') as
-          'expense' | 'income' | 'transfer';
-      }
+      const type = inferSimpleJournalTypeFromAccounts({
+        sourceAccountType: sourceAcc?.accountType,
+        destinationAccountType: destAcc?.accountType,
+        displayTypeFallback: item.displayType,
+      });
 
       const displayAmount = formatMoneyAmount(item.amount, item.currencyCode, isPrivacyMode);
       const displayTitle = item.title;

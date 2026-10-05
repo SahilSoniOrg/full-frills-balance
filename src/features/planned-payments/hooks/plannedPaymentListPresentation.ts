@@ -48,8 +48,6 @@ export interface PlannedPaymentMonthDay {
   /** Raw main-currency amounts; consumers must use privacy-aware money rendering. */
   outgoingAmount: number;
   incomingAmount: number;
-  outgoing: PlannedPaymentListTotals;
-  incoming: PlannedPaymentListTotals;
 }
 
 /** Transfers are outgoing commitments; unknown account directions are excluded. */
@@ -170,8 +168,6 @@ export function buildPlannedPaymentListPresentation(
         isToday: date === today.valueOf(),
         outgoingAmount: dayOutgoing.mainCurrency.amount,
         incomingAmount: dayIncoming.mainCurrency.amount,
-        outgoing: dayOutgoing,
-        incoming: dayIncoming,
       };
     },
   );

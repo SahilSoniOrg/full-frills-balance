@@ -93,7 +93,6 @@ export async function readPlannedPaymentFxContext(
           destinationAmount?: number;
         })
       : undefined;
-  // A pending legacy journal must not inherit a later template FX-mode edit.
   const mode = journal ? policy?.mode : plannedPaymentFxMode(payment);
   if (!mode) return undefined;
   if (!['automatic', 'fixed', 'manual'].includes(mode))
@@ -248,7 +247,6 @@ export async function preparePlannedPaymentFxQuote(
 ): Promise<PlannedPaymentFxQuote | undefined> {
   if (action.kind === 'skip') return undefined;
   const payment = await requirePlannedPayment(workplaceId, plannedPaymentId);
-  // Keep legacy generation/posting's query and write behavior unchanged.
   if (!plannedPaymentFxMode(payment) && !action.journalId) return undefined;
   const start = normalizeToStartOfDay(occurrenceDate);
   let journal: Journal | undefined;
@@ -277,7 +275,7 @@ export async function preparePlannedPaymentFxQuote(
   return fetchQuote(context);
 }
 
-export function assertPlannedPaymentFxReview(
+function assertPlannedPaymentFxReview(
   context: PlannedPaymentFxContext,
   review?: PlannedPaymentFxReview,
 ): asserts review is PlannedPaymentFxReview {
@@ -381,4 +379,3 @@ export async function resolvePlannedPaymentFxAmounts(
   if (source.amount !== sourceAmount) throw new Error('Source amount exceeds currency precision');
   return { sourceAmount: source.amount, destinationAmount: destination.amount };
 }
-

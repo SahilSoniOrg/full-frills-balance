@@ -9,7 +9,11 @@ import {
   resolvePlannedPaymentActionTarget,
 } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsActions';
 import { useAccount } from '@/src/hooks/useAccounts';
-import { useJournals, useJournalsBulkOperations, type JournalListModalsProps } from '@/src/features/journal';
+import {
+  useJournals,
+  useJournalsBulkOperations,
+  type JournalListModalsProps,
+} from '@/src/features/journal';
 import { formatPlannedPaymentInterval } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
 import { recordPlannedOccurrenceWithFxReview } from '@/src/features/planned-payments/hooks/recordPlannedOccurrenceWithFxReview';
 import { usePlannedPaymentRecord } from '@/src/features/planned-payments/hooks/usePlannedPaymentRecord';
@@ -106,8 +110,6 @@ export interface PlannedPaymentDetailsViewModel {
   };
   onPost?: () => void;
   onSkip?: () => void;
-  handlePostNow?: () => Promise<void>;
-  handleSkip?: () => Promise<void>;
   onToggleStatus?: () => void;
   onOpenJournal: (journalId: JournalId) => void;
   onOpenAccount: (accountId: AccountId) => void;
@@ -527,8 +529,6 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       headerActions,
       onPost,
       onSkip,
-      handlePostNow,
-      handleSkip,
       onToggleStatus,
 
       ...selectionProps,

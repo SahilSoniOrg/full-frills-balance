@@ -229,13 +229,6 @@ export class PlannedPaymentReadService {
       .observeActive(workplaceId)
       .pipe(map(items => items.map(toPlainPlannedPayment)));
   }
-
-  observeById(workplaceId: WorkplaceId, plannedPaymentId: PlannedPaymentId) {
-    return plannedPaymentRepository
-      .observeById(workplaceId, plannedPaymentId)
-      .pipe(map(item => (item ? toPlainPlannedPayment(item) : null)));
-  }
-
 }
 
 export const plannedPaymentReadService = new PlannedPaymentReadService();

@@ -10,7 +10,7 @@ import type { PlannedPaymentObligation } from '@/src/services/planned-payment/pl
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import type { AccountId, PlannedPaymentId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
-import { toast } from '@/src/utils/alerts';
+import { confirm, toast } from '@/src/utils/alerts';
 
 jest.mock('@/src/hooks/use-theme', () => ({
   useTheme: () => ({ theme: { primary: '#000' } }),
@@ -49,7 +49,9 @@ jest.mock('@/src/services/audit-service', () => ({
 }));
 jest.mock('../usePlannedPaymentRecord', () => ({ usePlannedPaymentRecord: jest.fn() }));
 jest.mock('@/src/services/planned-payment/plannedPaymentDetailService', () => ({
-  plannedPaymentDetailService: { observeActivity: jest.fn(() => jest.requireActual('rxjs').of([])) },
+  plannedPaymentDetailService: {
+    observeActivity: jest.fn(() => jest.requireActual('rxjs').of([])),
+  },
   summarizePlannedPaymentActivity: jest.fn(),
   getNextPlannedPaymentOccurrences: jest.fn(() => []),
 }));
@@ -74,7 +76,10 @@ jest.mock('@/src/services/planned-payment/plannedPaymentFxReviewRequest', () => 
     return true;
   },
 }));
-jest.mock('@/src/utils/alerts', () => ({ toast: { success: jest.fn() }, confirm: { show: jest.fn() } }));
+jest.mock('@/src/utils/alerts', () => ({
+  toast: { success: jest.fn() },
+  confirm: { show: jest.fn() },
+}));
 
 const item: PlannedPaymentObligation = {
   id: 'plan' as PlannedPaymentId,
@@ -94,38 +99,68 @@ const item: PlannedPaymentObligation = {
   flowDirection: 'outflow',
 };
 
+async function confirmLatestAction(action?: () => void) {
+  expect(action).toBeDefined();
+  act(() => {
+    action!();
+  });
+  const confirmCall = jest.mocked(confirm.show).mock.calls.at(-1)?.[0];
+  expect(confirmCall?.onConfirm).toBeDefined();
+  await act(async () => {
+    await confirmCall!.onConfirm!();
+  });
+}
+
+const plannedJournal = {
+  id: 'unpaid',
+  status: 'PLANNED',
+  journalDate: 100,
+  totalAmount: 100,
+  currencyCode: 'USD',
+};
+
 describe('planned payment detail actions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.mocked(usePlannedPaymentRecord).mockReturnValue({ item, isLoading: false });
     jest
       .mocked(plannedPaymentDetailService.observeActivity)
-      .mockReturnValue(jest.requireActual('rxjs').of([]));
+      .mockReturnValue(jest.requireActual('rxjs').of([plannedJournal]));
     jest.mocked(postPlannedJournalOccurrence).mockResolvedValue(undefined);
     jest.mocked(skipPlannedPaymentOccurrence).mockResolvedValue(undefined);
   });
 
   it('locks concurrent actions and keeps the page open after recording', async () => {
     let finish!: () => void;
-    jest.mocked(postPlannedJournalOccurrence).mockImplementation(
-      () =>
-        new Promise<void>(resolve => {
-          finish = resolve;
-        }),
-    );
+    const postPromise = new Promise<void>(resolve => {
+      finish = resolve;
+    });
+    jest.mocked(postPlannedJournalOccurrence).mockReturnValue(postPromise);
     const { result } = renderHook(() => usePlannedPaymentDetailsViewModel(item.id));
     await waitFor(() => expect(result.current.isLoadingActivity).toBe(false));
-    let recording!: Promise<void>;
+
     act(() => {
-      recording = result.current.handlePostNow!();
-      void result.current.handleSkip!();
+      result.current.onPost!();
     });
+    const postConfirm = jest.mocked(confirm.show).mock.calls[0][0];
+    act(() => {
+      void postConfirm.onConfirm!();
+    });
+
+    act(() => {
+      result.current.onSkip!();
+    });
+    const skipConfirm = jest.mocked(confirm.show).mock.calls[1][0];
+    act(() => {
+      void skipConfirm.onConfirm!();
+    });
+
     expect(result.current.pendingAction).toBe('record');
     expect(skipPlannedPaymentOccurrence).not.toHaveBeenCalled();
     expect(postPlannedJournalOccurrence).toHaveBeenCalledWith('workplace', 'plan', 'unpaid', 100);
     await act(async () => {
       finish();
-      await recording;
+      await postPromise;
     });
     expect(result.current.pendingAction).toBeNull();
     expect(toast.success).toHaveBeenCalledWith('Occurrence recorded');
@@ -135,14 +170,10 @@ describe('planned payment detail actions', () => {
   it('surfaces a settlement failure and permits retry instead of silently leaving the user stuck', async () => {
     jest.mocked(postPlannedJournalOccurrence).mockRejectedValueOnce(new Error('write failed'));
     const { result } = renderHook(() => usePlannedPaymentDetailsViewModel(item.id));
-    await act(async () => {
-      await result.current.handlePostNow!();
-    });
+    await confirmLatestAction(result.current.onPost);
     expect(result.current.actionError).toBe('Could not record this occurrence. Try again.');
     expect(result.current.pendingAction).toBeNull();
-    await act(async () => {
-      await result.current.handlePostNow!();
-    });
+    await confirmLatestAction(result.current.onPost);
     expect(result.current.actionError).toBeNull();
     expect(postPlannedJournalOccurrence).toHaveBeenCalledTimes(2);
   });

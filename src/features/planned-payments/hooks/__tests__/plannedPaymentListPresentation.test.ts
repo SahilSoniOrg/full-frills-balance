@@ -127,7 +127,6 @@ describe('planned list presentation', () => {
     expect(list.monthStrip[2]).toMatchObject({
       outgoingAmount: 50,
       incomingAmount: 100,
-      outgoing: { otherCurrencyCount: 1 },
     });
     const eurList = build({
       items: [payment('foreign', { currencyCode: 'EUR' })],

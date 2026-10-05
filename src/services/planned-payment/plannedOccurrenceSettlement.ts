@@ -82,12 +82,6 @@ function occurrenceSettledError(plannedPaymentId: PlannedPaymentId, journalId: J
   );
 }
 
-/**
- * Settles one occurrence inside the caller's write session: re-reads the payment, resolves the
- * occurrence's journals, applies the action and advances the schedule, so a rejection leaves
- * the journal and schedule unchanged together. Paused payments are never settled; completed
- * payments may only settle journals that were already scheduled.
- */
 export async function settlePlannedOccurrence(
   session: AccountingWriteSession,
   workplaceId: WorkplaceId,

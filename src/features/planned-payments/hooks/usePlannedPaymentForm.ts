@@ -365,7 +365,6 @@ export function usePlannedPaymentForm(id?: string) {
 
   const pickerState = useMemo(
     () => ({
-      visible: pickingAccountFor !== null,
       target: pickingAccountFor,
       accounts: pickingAccountFor === 'to' ? destinationAccounts : accounts,
       open: (target: 'from' | 'to') => setPickingAccountFor(target),
@@ -416,7 +415,6 @@ export function usePlannedPaymentForm(id?: string) {
     setRecurrenceDayFromInput,
     cycleRecurrenceMonth,
     pickerState,
-    setForm,
   };
 }
 

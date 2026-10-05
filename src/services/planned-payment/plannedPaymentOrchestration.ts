@@ -69,9 +69,6 @@ async function postOccurrence(
       auditMetadata: options?.auditMetadata,
       expectedCurrent: options?.expectedCurrent,
     });
-    logger.info(
-      `Manually posted occurrence for planned payment ${plannedPaymentId} at ${new Date(postedAt).toLocaleString()}`,
-    );
   } catch (error) {
     if (error instanceof PlannedPaymentFxReviewRequiredError) throw error;
     const message = error instanceof Error ? error.message : String(error);
@@ -118,9 +115,6 @@ export async function skipPlannedPaymentOccurrence(
 ): Promise<void> {
   try {
     await settleManualOccurrence(workplaceId, plannedPaymentId, occurrenceDate, { kind: 'skip' });
-    logger.info(
-      `Skipped occurrence for planned payment ${plannedPaymentId} at ${new Date(normalizeToStartOfDay(occurrenceDate)).toLocaleDateString()}`,
-    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error(`Failed to skip occurrence for payment ${plannedPaymentId}: ${message}`);
@@ -208,7 +202,6 @@ async function processDuePlannedPaymentsNow(
 
   for (const pp of activePayments) {
     if (isCancelled()) {
-      logger.info('[PlannedPaymentOrchestration] Processing aborted due to signal.');
       break;
     }
 
