@@ -67,10 +67,6 @@ export const ACCOUNT_DEFAULT_SUBTYPE_BY_TYPE: Record<AccountType, AccountSubtype
   [AccountType.EXPENSE]: AccountSubtype.FOOD,
 };
 
-export function getAccountSubtypesForType(accountType: AccountType): readonly AccountSubtype[] {
-  return ACCOUNT_SUBTYPES_BY_TYPE[accountType];
-}
-
 export function getDefaultSubtypeForType(accountType: AccountType): AccountSubtype {
   return ACCOUNT_DEFAULT_SUBTYPE_BY_TYPE[accountType] ?? AccountSubtype.OTHER;
 }
