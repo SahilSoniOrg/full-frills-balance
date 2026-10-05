@@ -38,34 +38,6 @@ export interface ExchangeRateCardProps {
 
 const RESET_HIT_SLOP = { top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm };
 
-/** Same chrome the attached exchange-rate card uses, without the rate row. */
-function AttachedRowShell({
-  children,
-  style,
-  testID,
-}: {
-  children: ReactNode;
-  style?: StyleProp<ViewStyle>;
-  testID?: string;
-}) {
-  const { theme } = useTheme();
-  return (
-    <View
-      testID={testID}
-      style={[
-        styles.attachedCard,
-        {
-          backgroundColor: withOpacity(theme.primary, Opacity.selection),
-          borderColor: withOpacity(theme.primary, Opacity.active),
-        },
-        style,
-      ]}
-    >
-      {children}
-    </View>
-  );
-}
-
 export function ExchangeRateCard({
   pair,
   onConvertedAmountChange,
@@ -237,7 +209,7 @@ export function ExchangeRateCard({
 
   if (isAttached) {
     return (
-      <AttachedRowShell style={containerStyle} testID={cardTestID}>
+      <View testID={cardTestID} style={[styles.attachedCard, cardColors, containerStyle]}>
         {header != null && <View style={styles.attachedSlot}>{header}</View>}
         <View style={styles.attachedHeader}>
           <View style={styles.attachedRateBlock}>{rateSummary}</View>
@@ -251,7 +223,7 @@ export function ExchangeRateCard({
         </View>
         {children}
         {footer != null && <View style={styles.attachedSlot}>{footer}</View>}
-      </AttachedRowShell>
+      </View>
     );
   }
 
