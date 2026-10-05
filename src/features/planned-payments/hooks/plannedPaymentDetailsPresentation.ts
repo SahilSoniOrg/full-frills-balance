@@ -37,7 +37,6 @@ export function presentPlannedListOccurrenceTiming(occurrenceDate: number, now: 
   return {
     isOverdue,
     isDueSoon,
-    daysLate: isOverdue ? Math.abs(days) : 0,
     daysLateLabel: isOverdue ? strings.daysLate(Math.abs(days)) : undefined,
   };
 }

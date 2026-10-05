@@ -7,6 +7,7 @@ import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalId } from '@/src/types/ids';
 import {
   formatPlannedPaymentInterval,
+  presentPlannedListOccurrenceTiming,
   presentPlannedPaymentDue,
   getPlannedPaymentHistoryPresentation,
   plannedMoneyDiffers,
@@ -61,6 +62,14 @@ describe('planned payment details context', () => {
     transactionCount: 2,
     displayType: JournalDisplayType.EXPENSE,
     accounts: [],
+  });
+
+  it('keeps list urgency flags and the overdue label without exposing a numeric day count', () => {
+    expect(presentPlannedListOccurrenceTiming(new Date(2026, 9, 1).getTime(), now)).toEqual({
+      isOverdue: true,
+      isDueSoon: false,
+      daysLateLabel: '1 day late',
+    });
   });
 
   it('uses calendar days for urgency and shows overdue completed obligations', () => {
