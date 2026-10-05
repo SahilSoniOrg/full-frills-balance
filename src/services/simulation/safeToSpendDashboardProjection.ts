@@ -277,7 +277,6 @@ export async function projectSafeToSpendDashboardFromSnapshot(
   const {
     workplaceId,
     asOf,
-    horizonDays,
     defaultCurrencyCode,
     safeToSpendDays,
     allAccounts,
@@ -309,7 +308,7 @@ export async function projectSafeToSpendDashboardFromSnapshot(
     allAccounts,
     resultCurrency: defaultCurrencyCode,
     workplaceId,
-    simulationDays: horizonDays,
+    simulationDays: safeToSpendDays,
     asOf,
     trace,
   });
@@ -351,7 +350,7 @@ export async function projectSafeToSpendDashboardFromSnapshot(
     asOf,
     generatedAt,
     defaultCurrencyCode,
-    safeToSpendDays: horizonDays,
+    safeToSpendDays,
     totalLiquidAssets: totalLiquidMoney.amount,
     historyPoints,
     projectionPoints,

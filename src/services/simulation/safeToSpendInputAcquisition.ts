@@ -60,7 +60,6 @@ export type SafeToSpendInputSnapshot = {
   startOfToday: dayjs.Dayjs;
   lookbackDate: number;
   asOf: number;
-  horizonDays: number;
 };
 
 export type SafeToSpendInputOutcome =
@@ -369,7 +368,6 @@ export function observeSafeToSpendInputSnapshot(
             startOfToday,
             lookbackDate,
             asOf,
-            horizonDays: mapped.safeToSpendDays,
           };
 
           return { kind: 'ready' as const, snapshot };
