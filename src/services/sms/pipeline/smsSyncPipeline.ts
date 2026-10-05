@@ -357,7 +357,9 @@ export class SmsSyncPipeline {
       if (committed) {
         importedCount = stagedImportedCount;
         journalPersistenceService.afterAtomicWriteCommit(journalResults, workplaceId);
-        triggeredRuleIds.forEach(ruleId => analytics.logSmsRuleTriggered(ruleId, true));
+        triggeredRuleIds.forEach(() =>
+          analytics.trackFeatureUsage('sms', 'rule_triggered', { is_auto_posted: true }),
+        );
       }
     }
 

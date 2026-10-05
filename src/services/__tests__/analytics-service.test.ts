@@ -64,7 +64,9 @@ describe('AnalyticsService', () => {
   });
 
   it('does not initialize PostHog for pre-bootstrap privacy acknowledgement telemetry', () => {
-    expect(analytics.logPrivacyPolicyAcknowledged('2026-09-07')).toBe(false);
+    expect(analytics.track('privacy_policy_acknowledged', { policy_version: '2026-09-07' })).toBe(
+      false,
+    );
   });
 
   it('sends real safe domain enums while stripping private markers from allowed slots', () => {
@@ -78,34 +80,38 @@ describe('AnalyticsService', () => {
     };
     (analytics as unknown as { _posthog: typeof client })._posthog = client;
 
-    expect(
-      analytics.track('account_created', {
-        type: 'ASSET',
-        currency: 'USD',
-        account_name: 'PrivateMerchant',
-      }),
-    ).toBe(true);
-    expect(
-      analytics.track('planned_payment_created', {
-        interval: 'WEEKLY',
-        type: 'manual',
-      }),
-    ).toBe(true);
-    expect(
-      analytics.track('transaction_created', {
-        type: 'create',
-        mode: 'simple',
-        currency: 'INR',
-      }),
-    ).toBe(true);
+    analytics.trackFeatureUsage('account', 'create', {
+      account_type: 'ASSET',
+      currency: 'USD',
+      account_name: 'PrivateMerchant',
+    });
+    analytics.trackFeatureUsage('journal', 'create', {
+      type: 'create',
+      mode: 'simple',
+      currency: 'INR',
+    });
     analytics.trackFeatureUsage('safe_to_spend', 'section_expanded', { section: 'assets' });
     analytics.trackFeatureUsage('safe_to_spend', 'legend_pressed', { item: 'safe' });
-    analytics.track('account_created', { type: 'PrivateMerchant', currency: 'USD' });
+    analytics.trackFeatureUsage('account', 'create', {
+      account_type: 'PrivateMerchant',
+      currency: 'USD',
+    });
 
     expect(capture.mock.calls).toEqual([
-      ['account_created', { type: 'ASSET', currency: 'USD' }],
-      ['planned_payment_created', { interval: 'WEEKLY', type: 'manual' }],
-      ['transaction_created', { type: 'create', mode: 'simple', currency: 'INR' }],
+      [
+        'feature_account_create',
+        { feature: 'account', action: 'create', account_type: 'ASSET', currency: 'USD' },
+      ],
+      [
+        'feature_journal_create',
+        {
+          feature: 'journal',
+          action: 'create',
+          type: 'create',
+          mode: 'simple',
+          currency: 'INR',
+        },
+      ],
       [
         'feature_safe_to_spend_section_expanded',
         {
@@ -122,7 +128,7 @@ describe('AnalyticsService', () => {
           item: 'safe',
         },
       ],
-      ['account_created', { currency: 'USD' }],
+      ['feature_account_create', { feature: 'account', action: 'create', currency: 'USD' }],
     ]);
   });
 
@@ -167,7 +173,7 @@ describe('AnalyticsService', () => {
         beforeSend: (event: Sentry.ErrorEvent) => Sentry.ErrorEvent;
       };
       const privateError = new TypeError('Paid PrivateMerchant 450.00');
-      analytics.logError(privateError);
+      analytics.captureAppError(privateError);
       const captured = capture.mock.calls[0][0] as Error;
 
       const payload = beforeSend({

@@ -322,7 +322,6 @@ export class JournalService {
 
       if (journalId) {
         const updatedJournal = await this.updateJournal(journalId, journalData, workplaceId);
-        analytics.logTransactionCreated(mode, 'update', currencyCode);
         analytics.trackFeatureUsage('journal', 'update', {
           mode,
           currency: currencyCode,
@@ -335,7 +334,6 @@ export class JournalService {
         ? await transactionInboxRepository.find(workplaceId, params.smsRecordId)
         : null;
       const createdJournal = await this.createJournal(journalData, workplaceId, smsRecord);
-      analytics.logTransactionCreated(mode, 'create', currencyCode);
       analytics.trackFeatureUsage('journal', 'create', {
         mode,
         currency: currencyCode,
@@ -436,10 +434,7 @@ export class JournalService {
         workplaceId,
       );
 
-      for (const p of preparedItems) {
-        analytics.logTransactionCreated('simple', 'create', p.currency);
-        analytics.trackConversion('transaction_created');
-      }
+      preparedItems.forEach(() => analytics.trackConversion('transaction_created'));
 
       analytics.trackFeatureUsage('journal', 'bulk_create', {
         count: preparedItems.length,

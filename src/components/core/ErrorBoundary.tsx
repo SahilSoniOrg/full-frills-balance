@@ -39,7 +39,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     logger.error('Uncaught error in component tree', error, {
       componentStack: errorInfo.componentStack,
     });
-    analytics.logError(error, errorInfo.componentStack || undefined);
+    analytics.captureAppError(error, errorInfo.componentStack || undefined);
   }
 
   handleReset = () => {

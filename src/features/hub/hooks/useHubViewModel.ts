@@ -87,7 +87,11 @@ export function useHubViewModel(): HubViewModel {
 
   const onOpenInsight = useCallback((insight: Insight) => {
     if (insight.type === 'unbalanced-journals') {
-      analytics.logEntrypointSelected('hub', 'notification', 'journal_balance_review');
+      analytics.track('entrypoint_selected', {
+        screen: 'hub',
+        entrypoint: 'notification',
+        target: 'journal_balance_review',
+      });
       AppNavigation.toJournalBalanceReview();
       return;
     }

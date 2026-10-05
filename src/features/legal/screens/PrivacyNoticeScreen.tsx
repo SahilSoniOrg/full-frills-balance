@@ -80,7 +80,9 @@ export default function PrivacyNoticeScreen() {
 
   const acknowledgePrivacyPolicy = () => {
     acknowledgeCurrentPrivacyPolicy();
-    analytics.logPrivacyPolicyAcknowledged(AppConfig.legal.privacyPolicyVersion);
+    analytics.track('privacy_policy_acknowledged', {
+      policy_version: AppConfig.legal.privacyPolicyVersion,
+    });
     AppNavigation.back();
   };
 

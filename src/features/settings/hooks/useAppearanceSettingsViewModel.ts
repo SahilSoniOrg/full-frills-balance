@@ -52,34 +52,31 @@ export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
   const handleSetThemePreference = useCallback(
     (value: 'system' | 'light' | 'dark') => {
       setThemePreference(value);
-      analytics.logThemeChanged(value, themeId, fontId);
       analytics.trackFeatureUsage('settings', 'change_theme_preference', {
         preference: value,
       });
     },
-    [setThemePreference, themeId, fontId],
+    [setThemePreference],
   );
 
   const handleSetThemeId = useCallback(
     (value: ThemeId) => {
       setThemeId(value);
-      analytics.logThemeChanged(themePreference, value, fontId);
       analytics.trackFeatureUsage('settings', 'change_theme', {
         theme_id: value,
       });
     },
-    [setThemeId, themePreference, fontId],
+    [setThemeId],
   );
 
   const handleSetFontId = useCallback(
     (value: FontId) => {
       setFontId(value);
-      analytics.logThemeChanged(themePreference, themeId, value);
       analytics.trackFeatureUsage('settings', 'change_font', {
         font_id: value,
       });
     },
-    [setFontId, themePreference, themeId],
+    [setFontId],
   );
 
   const onToggleAccountMonthlyStats = useCallback(() => {

@@ -20,7 +20,6 @@ export async function createBudget(
     assertWritable(workplaceId, [...accountIds, ...(data.assetAccountIds ?? [])], 'Budget'),
   );
 
-  analytics.logBudgetCreated(data.amount, data.currencyCode);
   analytics.trackFeatureUsage('budget', 'create', {
     amount: data.amount,
     currency: data.currencyCode,

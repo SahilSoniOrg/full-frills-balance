@@ -20,7 +20,7 @@ jest.mock('@/src/utils/storage', () => ({
   },
 }));
 jest.mock('@/src/services/analytics', () => ({
-  analytics: { logUnbalancedJournalsCleared: (...args: unknown[]) => mockCleared(...args) },
+  analytics: { track: (...args: unknown[]) => mockCleared(...args) },
 }));
 
 const workplaceId = 'wp-insight' as WorkplaceId;
@@ -74,7 +74,11 @@ describe('journalBalanceInsightService', () => {
     await journalBalanceInsightService.refresh(workplaceId, 'startup');
 
     expect(mockCleared).toHaveBeenCalledTimes(1);
-    expect(mockCleared).toHaveBeenCalledWith(3, 3, 'review_fx_suggestions');
+    expect(mockCleared).toHaveBeenCalledWith('unbalanced_journals_cleared', {
+      peak_count: 3,
+      days_open: 3,
+      source: 'review_fx_suggestions',
+    });
   });
 
   it('reports a cleanup noticed only on the next launch', async () => {
@@ -90,7 +94,11 @@ describe('journalBalanceInsightService', () => {
 
     expect(mockFind).toHaveBeenCalledTimes(1);
     expect(mockFindByIds).toHaveBeenCalledWith(workplaceId, ['j1']);
-    expect(mockCleared).toHaveBeenCalledWith(1, 0, 'startup');
+    expect(mockCleared).toHaveBeenCalledWith('unbalanced_journals_cleared', {
+      peak_count: 1,
+      days_open: 0,
+      source: 'startup',
+    });
   });
 
   it('runs the full audit once, then only checks the persisted finding set', async () => {

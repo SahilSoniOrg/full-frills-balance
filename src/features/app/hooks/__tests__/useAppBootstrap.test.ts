@@ -22,7 +22,7 @@ jest.mock('@/src/services/analytics', () => ({
   analytics: {
     delayedInitializePostHog: jest.fn(),
     identify: jest.fn(),
-    logAppOpened: jest.fn(),
+    track: jest.fn(),
     syncActiveWorkplace: jest.fn(),
   },
 }));

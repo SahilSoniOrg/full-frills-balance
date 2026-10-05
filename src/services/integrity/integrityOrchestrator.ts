@@ -67,10 +67,10 @@ async function repairDiscrepancies(
 
     repairsAttempted++;
     if (trigger === 'startup') {
-      analytics.logIntegrityIssue(
-        'accounts',
-        `discrepancy_${discrepancy.snapshotCorrupted ? 'corrupted_snapshot' : 'running_balance'}`,
-      );
+      analytics.track('integrity_issue', {
+        table: 'accounts',
+        issueType: `discrepancy_${discrepancy.snapshotCorrupted ? 'corrupted_snapshot' : 'running_balance'}`,
+      });
     } else {
       const repairProgress = 0.7 + (i / discrepancies.length) * 0.25;
       options.onProgress?.(

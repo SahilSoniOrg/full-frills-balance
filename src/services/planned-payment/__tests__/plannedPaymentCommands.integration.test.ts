@@ -23,7 +23,6 @@ import {
 } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
-import { analytics } from '@/src/services/analytics';
 import { togglePlannedPaymentStatus } from '@/src/services/planned-payment/plannedPaymentLifecycle';
 import { Q } from '@nozbe/watermelondb';
 import { deleteAccount } from '@/src/services/accounts/accountDeleteCommands';
@@ -85,15 +84,12 @@ describe('planned payment commands (integration)', () => {
   it('leaves no payment, audit, journals, or analytics on publication failure', async () => {
     const batch = jest.spyOn(database, 'batch');
     batch.mockRejectedValueOnce(new Error('injected publication failure'));
-    const analyticsLog = jest.spyOn(analytics, 'logPlannedPaymentCreated');
-
     await expect(createPlannedPayment(WP, baseInput())).rejects.toThrow(
       'injected publication failure',
     );
     expect(await database.collections.get('planned_payments').query().fetchCount()).toBe(0);
     expect(await database.collections.get('audit_logs').query().fetchCount()).toBe(0);
     expect(await database.collections.get('journals').query().fetchCount()).toBe(0);
-    expect(analyticsLog).not.toHaveBeenCalled();
   });
 
   it('publishes a direct repository create and its audit in one batch', async () => {

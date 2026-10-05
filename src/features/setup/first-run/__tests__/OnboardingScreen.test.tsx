@@ -23,7 +23,7 @@ jest.mock('@/src/components/shared/MoneyText', () => {
 
 jest.mock('../../SetupCoordinator', () => ({ startFirstRunRestoreFromDeviceName: jest.fn() }));
 jest.mock('@/src/services/analytics', () => ({
-  analytics: { logPrivacyPolicyAcknowledged: jest.fn() },
+  analytics: { track: jest.fn() },
 }));
 jest.mock('@/src/services/legal/privacyPolicyAcceptance', () => ({
   acknowledgeCurrentPrivacyPolicy: jest.fn(),

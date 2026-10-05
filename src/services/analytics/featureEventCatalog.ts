@@ -63,7 +63,12 @@ export const FEATURE_EVENT_CATALOG = {
     >,
   },
   reports: {
-    actions: ['change_tab', 'drilldown_transactions', 'drilldown_category'] as const,
+    actions: [
+      'change_tab',
+      'drilldown_transactions',
+      'drilldown_category',
+      'net_worth_point_select',
+    ] as const,
     schema: {
       tab: 'token',
       timeframe: 'token',
@@ -92,6 +97,7 @@ export const FEATURE_EVENT_CATALOG = {
       'rule_create',
       'rule_update',
       'rule_delete',
+      'rule_triggered',
       'inbox_accept',
       'inbox_dismiss',
       'inbox_bulk_sync',
@@ -101,6 +107,22 @@ export const FEATURE_EVENT_CATALOG = {
       status: 'token',
       count: 'count',
       success: 'boolean',
+      is_auto_posted: 'boolean',
+    } as const satisfies Record<string, AnalyticsPropertyKind>,
+  },
+  transaction_ingestion: {
+    actions: [
+      'deterministic_success',
+      'reversal_detected',
+      'amount_missing',
+      'ai_fallback_triggered',
+      'ai_forced',
+      'ai_timeout',
+      'ai_failure',
+      'ai_success',
+    ] as const,
+    schema: {
+      latency_ms: 'duration',
     } as const satisfies Record<string, AnalyticsPropertyKind>,
   },
   budget: {
@@ -155,6 +177,8 @@ export const FEATURE_EVENT_CATALOG = {
       'planned_payment_viewed',
       'account_viewed',
       'legend_to_explanation',
+      'explanation_open',
+      'explanation_section_expand',
     ] as const,
     schema: {
       section: 'token',
@@ -199,12 +223,18 @@ export const FEATURE_EVENT_CATALOG = {
       'toggle_safe_to_spend_chart',
       'toggle_reduce_motion',
       'toggle_reports_v2',
+      'workplace_created',
+      'workplace_switched',
+      'workplace_deleted',
     ] as const,
     schema: {
       enabled: 'boolean',
       visible: 'boolean',
       theme: 'token',
       font: 'token',
+      theme_id: 'token',
+      font_id: 'token',
+      preference: 'token',
       cadence: 'token',
       hour: 'count',
       minute: 'count',
@@ -212,6 +242,9 @@ export const FEATURE_EVENT_CATALOG = {
       currency_code: 'currency',
       days: 'count',
       icon: 'token',
+      name_length: 'count',
+      fromId: 'token',
+      toId: 'token',
     } as const satisfies Record<string, AnalyticsPropertyKind>,
   },
   journal_search: {

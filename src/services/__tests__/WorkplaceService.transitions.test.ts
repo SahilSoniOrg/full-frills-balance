@@ -26,11 +26,7 @@ jest.mock('@/src/data/repositories/account', () => ({
 }));
 
 jest.mock('@/src/services/analytics', () => ({
-  analytics: {
-    logWorkplaceDeleted: jest.fn(),
-    logWorkplaceSwitched: jest.fn(),
-    logWorkplaceCreated: jest.fn(),
-  },
+  analytics: { trackFeatureUsage: jest.fn() },
 }));
 
 jest.mock('@/src/services/preferences', () => ({
@@ -122,7 +118,7 @@ describe('WorkplaceService transitions', () => {
 
   it('does not turn committed deletion into failure when analytics throws', async () => {
     mockWorkplaces.findAll.mockResolvedValue([{ id: 'other-wp' } as any]);
-    (analytics.logWorkplaceDeleted as jest.Mock).mockImplementationOnce(() => {
+    (analytics.trackFeatureUsage as jest.Mock).mockImplementationOnce(() => {
       throw new Error('Analytics unavailable');
     });
 
@@ -140,7 +136,7 @@ describe('WorkplaceService transitions', () => {
       'Workplace not found: missing-wp',
     );
     expect(preferences.device.setActiveWorkplaceId).not.toHaveBeenCalled();
-    expect(analytics.logWorkplaceSwitched).not.toHaveBeenCalled();
+    expect(analytics.trackFeatureUsage).not.toHaveBeenCalled();
   });
 
   it('reuses a workplace published by a concurrent creation retry', async () => {

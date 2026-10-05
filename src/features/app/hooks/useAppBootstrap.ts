@@ -1,5 +1,7 @@
+import { AppConfig } from '@/src/constants/app-config';
 import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { analytics } from '@/src/services/analytics';
+import * as Application from 'expo-application';
 import { ensureAnonymizedId } from '@/src/services/analytics/anonymizedIdentity';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { currencyReadService } from '@/src/services/currency-read-service';
@@ -78,7 +80,12 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
 
           // 3. Lazy Analytics & Identity
           analytics.delayedInitializePostHog();
-          analytics.logAppOpened();
+          analytics.track('app_opened', {
+            version: Application.nativeApplicationVersion || AppConfig.appVersion,
+            app_version: Application.nativeApplicationVersion || AppConfig.appVersion,
+            build: Application.nativeBuildVersion || '1',
+            app_build: Application.nativeBuildVersion || '1',
+          });
 
           const anonId = ensureAnonymizedId(preferences.device.anonymizedId);
           if (anonId !== preferences.device.anonymizedId) {

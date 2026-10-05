@@ -74,7 +74,6 @@ export function useJournalSearchFilters(params: JournalSearchFilterParams) {
       const queryKey = `${searchQuery}:${accountIds.join(',')}:${minAmount}:${maxAmount}:${displayType}:${dateRange?.startDate}`;
       if (queryKey === lastTrackedQueryRef.current) return;
       lastTrackedQueryRef.current = queryKey;
-      analytics.logSearchPerformed('journal', searchQuery.length);
       analytics.trackFeatureUsage('journal_search', 'query_details', {
         query_length: searchQuery.length,
         has_account_filter: accountIds.length > 0,

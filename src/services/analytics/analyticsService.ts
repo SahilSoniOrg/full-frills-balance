@@ -10,7 +10,6 @@ import {
   sanitizeSentryTransactionEvent,
 } from '@/src/utils/observabilityPrivacy';
 import * as Sentry from '@sentry/react-native';
-import * as Application from 'expo-application';
 import PostHog from 'posthog-react-native';
 import {
   getGlobalProperties,
@@ -204,137 +203,8 @@ export class AnalyticsService {
     }
   }
 
-  /**
-   * Specialized events
-   */
-  logAppOpened() {
-    this.track('app_opened', {
-      version: Application.nativeApplicationVersion || AppConfig.appVersion,
-      app_version: Application.nativeApplicationVersion || AppConfig.appVersion,
-      build: Application.nativeBuildVersion || '1',
-      app_build: Application.nativeBuildVersion || '1',
-    });
-  }
-
-  logAccountCreated(type: string, currency: string) {
-    this.track('account_created', { type, currency });
-  }
-
-  logTransactionCreated(mode: 'simple' | 'advanced' | 'import', type: string, currency: string) {
-    this.track('transaction_created', { mode, type, currency });
-  }
-
-  /** Product telemetry only. The local MMKV acknowledgement is authoritative. */
-  logPrivacyPolicyAcknowledged(policyVersion: string): boolean {
-    // This event follows the same pre-bootstrap policy as every other event:
-    // it is best-effort and is dropped until the central bootstrap initializes PostHog.
-    return this.track('privacy_policy_acknowledged', {
-      policy_version: policyVersion,
-    });
-  }
-
-  logThemeChanged(theme: string, themeId: string, fontId: string) {
-    this.track('theme_changed', { theme, themeId, fontId });
-  }
-
-  logNotificationPreferenceChanged(cadence: string, hour: number) {
-    this.track('notification_preference_changed', { cadence, hour });
-  }
-
-  logWorkplaceCreated(name: string, icon: string) {
-    this.track('workplace_created', { name_length: name.length, icon });
-  }
-
-  logWorkplaceSwitched(fromId: string, toId: string) {
-    this.track('workplace_switched', { fromId, toId });
-  }
-
-  logWorkplaceDeleted() {
-    this.track('workplace_deleted');
-  }
-
-  logBudgetCreated(_amount: number, currency: string) {
-    this.track('budget_created', { currency });
-  }
-
-  logPlannedPaymentCreated(interval: string, type: string) {
-    this.track('planned_payment_created', { interval, type });
-  }
-
-  logSmsRuleTriggered(ruleId: string, isAutoPosted: boolean) {
-    this.track('sms_rule_triggered', { ruleId, isAutoPosted });
-  }
-
-  logSmsImportSettingsChanged(enabled: boolean) {
-    this.track('sms_import_settings_changed', { enabled });
-  }
-
-  logChartInteracted(chartName: string, interactionType: string) {
-    this.track('chart_interacted', { chartName, interactionType });
-  }
-
-  logSearchPerformed(scope: string, queryLength: number) {
-    this.track('search_performed', { scope, queryLength });
-  }
-
-  logIntegrityIssue(table: string, issueType: string) {
-    this.track('integrity_issue', { table, issueType });
-  }
-
-  logJournalBalanceChecked(unbalancedCount: number, journalsChecked: number) {
-    this.track('journal_balance_checked', {
-      unbalanced_count: unbalancedCount,
-      journals_checked: journalsChecked,
-    });
-  }
-
-  logUnbalancedJournalsPromptAnswered(choice: 'fix_now' | 'later' | 'dismissed') {
-    this.track('unbalanced_journals_prompt_answered', { choice });
-  }
-
-  logUnbalancedJournalsCleared(peakCount: number, daysOpen: number, source: string) {
-    this.track('unbalanced_journals_cleared', {
-      peak_count: peakCount,
-      days_open: daysOpen,
-      source,
-    });
-  }
-
-  logExportCompleted(format: string) {
-    this.track('export_completed', { format });
-  }
-
-  logAiIngestion(
-    event:
-      | 'deterministic_success'
-      | 'ai_fallback_triggered'
-      | 'ai_forced'
-      | 'ai_timeout'
-      | 'ai_failure'
-      | 'ai_success'
-      | 'reversal_detected'
-      | 'amount_missing',
-    properties?: AnalyticsProperties,
-  ) {
-    this.track(`parse_${event}`, properties);
-  }
-
-  logFactoryReset() {
-    this.track('factory_reset');
-  }
-
-  logEntrypointOpened(screen: string, entrypoint: string) {
-    this.track('entrypoint_opened', { screen, entrypoint });
-  }
-
-  logEntrypointSelected(screen: string, entrypoint: string, target: string) {
-    this.track('entrypoint_selected', { screen, entrypoint, target });
-  }
-
-  logError(error: Error, componentStack?: string) {
+  captureAppError(error: Error, componentStack?: string) {
     this.track('app_error', { name: error.name });
-
-    // Report to Sentry with component stack
     Sentry.captureException(safeDiagnosticError(error));
     void componentStack;
   }

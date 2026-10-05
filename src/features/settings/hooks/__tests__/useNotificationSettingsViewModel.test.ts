@@ -18,7 +18,6 @@ jest.mock('@/src/hooks/useNotificationPrefs', () => ({
 
 jest.mock('@/src/services/analytics', () => ({
   analytics: {
-    logNotificationPreferenceChanged: jest.fn(),
     trackFeatureUsage: jest.fn(),
   },
 }));

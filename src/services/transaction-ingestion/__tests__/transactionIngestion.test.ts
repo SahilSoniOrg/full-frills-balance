@@ -5,7 +5,7 @@ import { asAccountId, asWorkplaceId } from '@/src/types/ids';
 import { ingestTransaction } from '../TransactionIngestionService';
 
 jest.mock('@/src/services/analytics', () => ({
-  analytics: { logAiIngestion: jest.fn() },
+  analytics: { trackFeatureUsage: jest.fn() },
 }));
 jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: { getCurrency: jest.fn() },
@@ -48,7 +48,10 @@ describe('voice transaction ingestion', () => {
       provider: 'deterministic',
     });
     expect(resolve).not.toHaveBeenCalled();
-    expect(analytics.logAiIngestion).toHaveBeenCalledWith('amount_missing');
+    expect(analytics.trackFeatureUsage).toHaveBeenCalledWith(
+      'transaction_ingestion',
+      'amount_missing',
+    );
   });
 
   it.each([
@@ -120,7 +123,10 @@ describe('voice transaction ingestion', () => {
       semanticTag: 'REFUND',
     });
     expect(resolve).toHaveBeenCalledWith(expect.objectContaining({ isReversal: true }));
-    expect(analytics.logAiIngestion).toHaveBeenCalledWith('reversal_detected');
+    expect(analytics.trackFeatureUsage).toHaveBeenCalledWith(
+      'transaction_ingestion',
+      'reversal_detected',
+    );
   });
 
   it('surfaces account-resolution failures to the existing confirmation UI', async () => {

@@ -35,18 +35,18 @@ function MaintenanceSettingsView() {
   );
 
   const reviewUnbalancedJournals = useCallback(() => {
-    analytics.logEntrypointSelected(
-      'settings_maintenance',
-      'balance_audit',
-      'journal_balance_review',
-    );
+    analytics.track('entrypoint_selected', {
+      screen: 'settings_maintenance',
+      entrypoint: 'balance_audit',
+      target: 'journal_balance_review',
+    });
     AppNavigation.toJournalBalanceReview();
   }, []);
 
   const cleanupDatabase = useCallback(() => cleanupDatabaseRecords(), []);
 
   const resetApp = useCallback(async () => {
-    analytics.logFactoryReset();
+    analytics.track('factory_reset');
     const result = await resetDatabase();
     if (result.warnings.length > 0) {
       toast.warning(

@@ -170,16 +170,7 @@ export function usePlannedPaymentForm(id?: string) {
           });
         }
       } else {
-        const newPayment = await createPlannedPayment(workplaceId, data);
-
-        analytics.trackFeatureUsage('planned_payment', 'create', {
-          payment_id: newPayment.id,
-          amount: data.amount,
-          currency: data.currencyCode,
-          interval_type: data.intervalType,
-          interval_n: data.intervalN,
-          is_auto_post: data.isAutoPost,
-        });
+        await createPlannedPayment(workplaceId, data);
       }
       setLeaveAfterSave(() => AppNavigation.back);
     } catch (error) {

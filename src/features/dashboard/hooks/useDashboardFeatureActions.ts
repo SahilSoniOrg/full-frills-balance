@@ -11,7 +11,9 @@ type SafeToSpendFeatureAction =
   | 'chart_point_selected'
   | 'planned_payment_viewed'
   | 'account_viewed'
-  | 'legend_to_explanation';
+  | 'legend_to_explanation'
+  | 'explanation_open'
+  | 'explanation_section_expand';
 
 function trackSts(
   action: SafeToSpendFeatureAction,
@@ -81,12 +83,12 @@ export function useDashboardFeatureActions() {
   }, []);
 
   const trackExplanationVisible = useCallback((visible: boolean) => {
-    if (visible) analytics.logChartInteracted('safe_to_spend', 'explanation_open');
+    if (visible) trackSts('explanation_open');
   }, []);
 
   const trackExplanationSection = useCallback(
     (section: 'assets' | 'income' | 'committed' | 'debts') => {
-      analytics.logChartInteracted('safe_to_spend', `explanation_expand_${section}`);
+      trackSts('explanation_section_expand', { section });
     },
     [],
   );

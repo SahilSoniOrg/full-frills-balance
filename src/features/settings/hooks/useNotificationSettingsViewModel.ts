@@ -36,7 +36,6 @@ export function useNotificationSettingsViewModel(): NotificationSettingsViewMode
         if (!granted || generation !== notificationUpdateGenerationRef.current) return;
       }
       setNotificationCadence(cadence);
-      analytics.logNotificationPreferenceChanged(cadence, notificationHour);
       await notificationService.scheduleReminder(
         cadence,
         notificationHour,

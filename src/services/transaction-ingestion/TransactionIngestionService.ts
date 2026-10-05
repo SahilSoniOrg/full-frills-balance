@@ -21,10 +21,10 @@ export async function ingestTransaction(
     metadata: { defaultCurrencyCode: defaultCurrency },
   });
 
-  if (parsed.isReversal) analytics.logAiIngestion('reversal_detected');
+  if (parsed.isReversal) analytics.trackFeatureUsage('transaction_ingestion', 'reversal_detected');
 
   if (!parsed.amount) {
-    analytics.logAiIngestion('amount_missing');
+    analytics.trackFeatureUsage('transaction_ingestion', 'amount_missing');
     return {
       transactions: [
         {
@@ -54,7 +54,9 @@ export async function ingestTransaction(
   const processTimeMs = Date.now() - startTime;
   const isHighConfidence = resolved.confidence >= 0.9;
   if (isHighConfidence) {
-    analytics.logAiIngestion('deterministic_success', { latency_ms: processTimeMs });
+    analytics.trackFeatureUsage('transaction_ingestion', 'deterministic_success', {
+      latency_ms: processTimeMs,
+    });
   }
 
   return {

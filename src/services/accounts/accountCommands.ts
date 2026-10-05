@@ -141,7 +141,10 @@ export async function createAccount(
     journalPersistenceService.afterAtomicWriteCommit([openingJournal], workplaceId);
   }
 
-  analytics.logAccountCreated(account.accountType, account.currencyCode);
+  analytics.trackFeatureUsage('account', 'create', {
+    account_type: account.accountType,
+    currency: account.currencyCode,
+  });
 
   return account;
 }

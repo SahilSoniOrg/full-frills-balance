@@ -193,7 +193,11 @@ class JournalBalanceInsightService {
     if (!open) return;
     storage.remove(key);
     const daysOpen = Math.max(0, Math.floor((Date.now() - open.firstDetectedAt) / DAY_MS));
-    analytics.logUnbalancedJournalsCleared(open.peakCount, daysOpen, source);
+    analytics.track('unbalanced_journals_cleared', {
+      peak_count: open.peakCount,
+      days_open: daysOpen,
+      source,
+    });
   }
 }
 

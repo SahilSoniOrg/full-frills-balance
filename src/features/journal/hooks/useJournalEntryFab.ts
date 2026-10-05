@@ -13,7 +13,11 @@ export function useJournalEntryFab(screen: JournalEntryFabScreen): ScreenFabChro
   return useMemo(() => {
     const strings = AppConfig.strings.journal;
     const openEntry = (type: TabType) => {
-      analytics.logEntrypointSelected(screen, 'bottom_action', 'journal_entry');
+      analytics.track('entrypoint_selected', {
+        screen,
+        entrypoint: 'bottom_action',
+        target: 'journal_entry',
+      });
       AppNavigation.toSimpleJournalEntry(type, { guidedAutopilot: true });
     };
 
@@ -22,7 +26,7 @@ export function useJournalEntryFab(screen: JournalEntryFabScreen): ScreenFabChro
       placement: 'end',
       accessibilityLabel: strings.newEntryFab.openOptions,
       closeAccessibilityLabel: strings.newEntryFab.closeOptions,
-      onExpand: () => analytics.logEntrypointOpened(screen, 'bottom_action'),
+      onExpand: () => analytics.track('entrypoint_opened', { screen, entrypoint: 'bottom_action' }),
       actions: [
         {
           id: 'expense',

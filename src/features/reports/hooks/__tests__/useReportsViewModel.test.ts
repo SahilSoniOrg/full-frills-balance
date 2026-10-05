@@ -7,7 +7,7 @@ import { AccountId } from '@/src/types/ids';
 jest.mock('../useReports');
 
 jest.mock('@/src/services/analytics', () => ({
-  analytics: { trackFeatureUsage: jest.fn(), logChartInteracted: jest.fn() },
+  analytics: { trackFeatureUsage: jest.fn() },
 }));
 
 jest.mock('@/src/contexts/WorkplaceContext', () => ({

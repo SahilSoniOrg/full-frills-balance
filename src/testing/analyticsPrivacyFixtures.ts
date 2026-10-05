@@ -1,9 +1,8 @@
 export const ANALYTICS_SANITIZE_CASES = [
-  ['account_created', { type: 'ASSET', currency: 'USD' }, { type: 'ASSET', currency: 'USD' }],
   [
-    'planned_payment_created',
-    { interval: 'MONTHLY', type: 'auto' },
-    { interval: 'MONTHLY', type: 'auto' },
+    'feature_account_create',
+    { feature: 'account', action: 'create', account_type: 'ASSET', currency: 'USD' },
+    { feature: 'account', action: 'create', account_type: 'ASSET', currency: 'USD' },
   ],
   [
     'feature_journal_search_query_details',

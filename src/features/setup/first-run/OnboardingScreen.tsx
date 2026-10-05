@@ -154,7 +154,9 @@ export function OnboardingScreen() {
         privacyAcknowledged={privacyAcknowledged}
         onAcknowledgePrivacy={() => {
           acknowledgeCurrentPrivacyPolicy();
-          analytics.logPrivacyPolicyAcknowledged(AppConfig.legal.privacyPolicyVersion);
+          analytics.track('privacy_policy_acknowledged', {
+            policy_version: AppConfig.legal.privacyPolicyVersion,
+          });
         }}
         onPrivacyNotice={AppNavigation.toPrivacyNotice}
         onStart={() => {

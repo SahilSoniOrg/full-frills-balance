@@ -9,11 +9,7 @@ jest.mock('@/src/services/integrity', () => ({
   journalBalanceInsightService: { refresh: jest.fn(), claimPrompt: jest.fn() },
 }));
 jest.mock('@/src/services/analytics', () => ({
-  analytics: {
-    logJournalBalanceChecked: jest.fn(),
-    logUnbalancedJournalsPromptAnswered: jest.fn(),
-    logEntrypointSelected: jest.fn(),
-  },
+  analytics: { track: jest.fn() },
 }));
 jest.mock('@/src/utils/alerts', () => ({ confirm: { show: jest.fn() } }));
 jest.mock('@/src/utils/navigation', () => ({
@@ -44,12 +40,14 @@ describe('checkJournalBalancesOnStartup', () => {
     expect(options.message).toMatch(/2 posted entries/);
     options.onConfirm();
     expect(AppNavigation.toJournalBalanceReview).toHaveBeenCalled();
-    expect(analytics.logUnbalancedJournalsPromptAnswered).toHaveBeenCalledWith('fix_now');
-    expect(analytics.logEntrypointSelected).toHaveBeenCalledWith(
-      'app_start',
-      'startup_prompt',
-      'journal_balance_review',
-    );
+    expect(analytics.track).toHaveBeenCalledWith('unbalanced_journals_prompt_answered', {
+      choice: 'fix_now',
+    });
+    expect(analytics.track).toHaveBeenCalledWith('entrypoint_selected', {
+      screen: 'app_start',
+      entrypoint: 'startup_prompt',
+      target: 'journal_balance_review',
+    });
   });
 
   it('records Later and a dismissed popup separately', async () => {
@@ -58,8 +56,12 @@ describe('checkJournalBalancesOnStartup', () => {
     options.onCancel();
     options.onClose();
 
-    expect(analytics.logUnbalancedJournalsPromptAnswered).toHaveBeenNthCalledWith(1, 'later');
-    expect(analytics.logUnbalancedJournalsPromptAnswered).toHaveBeenNthCalledWith(2, 'dismissed');
+    expect(analytics.track).toHaveBeenCalledWith('unbalanced_journals_prompt_answered', {
+      choice: 'later',
+    });
+    expect(analytics.track).toHaveBeenCalledWith('unbalanced_journals_prompt_answered', {
+      choice: 'dismissed',
+    });
     expect(AppNavigation.toJournalBalanceReview).not.toHaveBeenCalled();
   });
 
@@ -69,7 +71,10 @@ describe('checkJournalBalancesOnStartup', () => {
     await checkJournalBalancesOnStartup(workplaceId, new AbortController().signal);
 
     expect(mockRefresh).toHaveBeenCalledWith(workplaceId, 'startup');
-    expect(analytics.logJournalBalanceChecked).toHaveBeenCalledWith(1, 5);
+    expect(analytics.track).toHaveBeenCalledWith('journal_balance_checked', {
+      unbalanced_count: 1,
+      journals_checked: 5,
+    });
     expect(mockConfirm).not.toHaveBeenCalled();
   });
 
@@ -79,7 +84,10 @@ describe('checkJournalBalancesOnStartup', () => {
 
     await checkJournalBalancesOnStartup(workplaceId, new AbortController().signal);
 
-    expect(analytics.logJournalBalanceChecked).toHaveBeenCalledWith(0, 5);
+    expect(analytics.track).toHaveBeenCalledWith('journal_balance_checked', {
+      unbalanced_count: 0,
+      journals_checked: 5,
+    });
   });
 
   it('does not prompt after the workplace session is cancelled', async () => {

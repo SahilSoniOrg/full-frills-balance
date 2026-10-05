@@ -43,7 +43,7 @@ export function NetWorthTrendWidget({
       setSelectedIndex(prev => (prev === index ? undefined : index));
       if (index !== undefined && index !== -1) {
         const point = series[index];
-        if (point) analytics.logChartInteracted('net_worth', 'point_select');
+        if (point) analytics.trackFeatureUsage('reports', 'net_worth_point_select');
       }
     },
     [series],

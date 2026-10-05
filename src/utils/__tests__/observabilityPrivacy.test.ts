@@ -14,21 +14,28 @@ import type { ErrorEvent, TransactionEvent } from '@sentry/react-native';
 const PRIVATE_MARKER = 'PrivateMerchant';
 
 describe('observability privacy boundary', () => {
-  it('allows theme tokens from design system enums', () => {
+  it('allows theme and font ids from design tokens on settings feature events', () => {
     expect(
-      sanitizeAnalyticsProperties('theme_changed', {
-        theme: 'light',
-        themeId: 'deep-space',
-        fontId: 'deep-space',
+      sanitizeAnalyticsProperties('feature_settings_change_theme', {
+        feature: 'settings',
+        action: 'change_theme',
+        theme_id: 'deep-space',
+        font_id: 'deep-space',
       }),
-    ).toEqual({ theme: 'light', themeId: 'deep-space', fontId: 'deep-space' });
+    ).toEqual({
+      feature: 'settings',
+      action: 'change_theme',
+      theme_id: 'deep-space',
+      font_id: 'deep-space',
+    });
     expect(
-      sanitizeAnalyticsProperties('theme_changed', {
-        theme: 'light',
-        themeId: 'roboto',
-        fontId: 'open-sans',
+      sanitizeAnalyticsProperties('feature_settings_change_font', {
+        feature: 'settings',
+        action: 'change_font',
+        theme_id: 'roboto',
+        font_id: 'open-sans',
       }),
-    ).toEqual({ theme: 'light' });
+    ).toEqual({ feature: 'settings', action: 'change_font' });
   });
 
   it.each(ANALYTICS_SANITIZE_CASES)(
@@ -40,12 +47,14 @@ describe('observability privacy boundary', () => {
 
   it('redacts private markers from declared analytics events', () => {
     expect(
-      sanitizeAnalyticsProperties('account_created', {
-        type: PRIVATE_MARKER,
+      sanitizeAnalyticsProperties('feature_account_create', {
+        feature: 'account',
+        action: 'create',
+        account_type: PRIVATE_MARKER,
         currency: 'USD',
         malicious: PRIVATE_MARKER,
       }),
-    ).toEqual({ currency: 'USD' });
+    ).toEqual({ feature: 'account', action: 'create', currency: 'USD' });
 
     expect(sanitizeAnalyticsProperties('app_error', { name: PRIVATE_MARKER })).toEqual({
       name: 'ApplicationError',

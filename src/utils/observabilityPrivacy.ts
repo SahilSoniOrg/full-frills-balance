@@ -92,26 +92,21 @@ const ENUM_VALUES_WITH_DESIGN_TOKENS: Record<string, ReadonlySet<string>> = {
   fontId: FONT_IDS,
 };
 
-const ANALYTICS_EVENT_FIELD_ENUMS: Record<string, Readonly<Record<string, ReadonlySet<string>>>> = {
-  account_created: { type: ACCOUNT_TYPES },
-  transaction_created: {
-    mode: new Set(['simple', 'advanced', 'import']),
-    type: new Set(['create', 'update']),
-  },
-  planned_payment_created: {
-    interval: PAYMENT_INTERVALS,
-    type: new Set(['auto', 'manual']),
-  },
-  theme_changed: {
-    theme: new Set(['light', 'dark', 'system']),
-    themeId: THEME_IDS,
-    fontId: FONT_IDS,
-  },
-};
+const THEME_PREFERENCES = new Set(['light', 'dark', 'system']);
 
 const FEATURE_FIELD_ENUMS: Record<string, Readonly<Record<string, ReadonlySet<string>>>> = {
-  account: { account_type: ACCOUNT_TYPES },
-  planned_payment: { status: PAYMENT_STATUSES },
+  account: { account_type: ACCOUNT_TYPES, type: ACCOUNT_TYPES },
+  journal: {
+    type: new Set(['create', 'update']),
+    mode: new Set(['simple', 'advanced', 'import']),
+  },
+  planned_payment: { status: PAYMENT_STATUSES, interval_type: PAYMENT_INTERVALS },
+  settings: {
+    theme_id: THEME_IDS,
+    font_id: FONT_IDS,
+    preference: THEME_PREFERENCES,
+    cadence: ENUM_VALUES.cadence,
+  },
   safe_to_spend: {
     section: SAFE_TO_SPEND_SECTIONS,
     item: SAFE_TO_SPEND_LEGENDS,
@@ -126,25 +121,11 @@ const ANALYTICS_EVENT_SCHEMAS: Record<string, EventSchema> = {
     build: 'version',
     app_build: 'version',
   },
-  account_created: { type: 'token', currency: 'currency' },
-  transaction_created: { mode: 'token', type: 'token', currency: 'currency' },
   privacy_policy_acknowledged: { policy_version: 'version' },
-  theme_changed: { theme: 'token', themeId: 'token', fontId: 'token' },
-  notification_preference_changed: { cadence: 'token', hour: 'count' },
-  workplace_created: { name_length: 'count', icon: 'token' },
-  workplace_switched: { fromId: 'token', toId: 'token' },
-  workplace_deleted: {},
-  budget_created: { currency: 'currency' },
-  planned_payment_created: { interval: 'token', type: 'token' },
-  sms_rule_triggered: { isAutoPosted: 'boolean' },
-  sms_import_settings_changed: { enabled: 'boolean' },
-  chart_interacted: { chartName: 'token', interactionType: 'token' },
-  search_performed: { scope: 'token', queryLength: 'count' },
   integrity_issue: { table: 'token', issueType: 'token' },
   journal_balance_checked: { unbalanced_count: 'count', journals_checked: 'count' },
   unbalanced_journals_prompt_answered: { choice: 'token' },
   unbalanced_journals_cleared: { peak_count: 'count', days_open: 'count', source: 'token' },
-  export_completed: { format: 'token' },
   factory_reset: {},
   entrypoint_opened: { screen: 'token', entrypoint: 'token' },
   entrypoint_selected: { screen: 'token', entrypoint: 'token', target: 'token' },
@@ -257,7 +238,7 @@ function validProperty(
   key: string,
   value: unknown,
   kind: AnalyticsPropertyKind,
-  eventName: string,
+  _eventName: string,
   featureName?: string,
 ): value is string | number | boolean {
   if (kind === 'boolean') return typeof value === 'boolean';
@@ -268,8 +249,6 @@ function validProperty(
   if (kind === 'currency') return /^[A-Z]{3}$/.test(value) && CURRENCY_CODES.has(value);
   if (kind === 'version') return safeVersion(value) !== undefined;
   if (['fromId', 'toId'].includes(key)) return safeGeneratedId(value);
-  const eventValues = ANALYTICS_EVENT_FIELD_ENUMS[eventName]?.[key];
-  if (eventValues) return eventValues.has(value);
   if (featureName) {
     const featureValues = FEATURE_FIELD_ENUMS[featureName]?.[key];
     return featureValues ? featureValues.has(value) : false;

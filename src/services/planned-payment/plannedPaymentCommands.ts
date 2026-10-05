@@ -34,8 +34,15 @@ export async function createPlannedPayment(
     );
     Object.assign(persistence, normalizePlannedPaymentCommandInput(input, accounts));
   });
-  analytics.logPlannedPaymentCreated(created.intervalType, created.isAutoPost ? 'auto' : 'manual');
   await processDuePlannedPayments(workplaceId);
+  analytics.trackFeatureUsage('planned_payment', 'create', {
+    payment_id: created.id,
+    amount: input.amount,
+    currency: input.currencyCode,
+    interval_type: input.intervalType,
+    interval_n: input.intervalN,
+    is_auto_post: input.isAutoPost,
+  });
   return created;
 }
 

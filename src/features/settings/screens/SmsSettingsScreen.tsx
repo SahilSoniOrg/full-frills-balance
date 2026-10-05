@@ -82,7 +82,6 @@ export default function SmsSettingsScreen() {
         }
         return;
       }
-      analytics.logSmsImportSettingsChanged(enabled);
       analytics.trackFeatureUsage('settings', 'toggle_sms_import', { enabled });
     },
     [smsAlerts],

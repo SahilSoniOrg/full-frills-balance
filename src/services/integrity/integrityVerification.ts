@@ -27,7 +27,7 @@ export async function scanForNullAccountTransactions(workplaceId: WorkplaceId): 
       sampleId: sample.id,
     });
 
-    analytics.logIntegrityIssue('transactions', 'null_account_id');
+    analytics.track('integrity_issue', { table: 'transactions', issueType: 'null_account_id' });
     throw new Error(errorMsg);
   }
 }

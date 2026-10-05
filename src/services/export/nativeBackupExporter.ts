@@ -1,7 +1,6 @@
 import { schema } from '@/src/data/database/schema';
 import { exportRepository } from '@/src/data/repositories/ExportRepository';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
-import { analytics } from '@/src/services/analytics';
 import {
   serializeExportPayloadFromSources,
   serializeMultiWorkplaceExport,
@@ -118,8 +117,6 @@ export async function exportToJSON(
         onProgress?.(message, 0.54 + serializationProgress * 0.21),
     );
     onProgress?.('Preparing ZIP archive...', 0.6);
-    analytics.logExportCompleted('ZIP');
-
     logger.info('[ExportService] Export complete', {
       ...Object.fromEntries(tableTasks.map(task => [task.table, tableCounts.get(task.table) ?? 0])),
     });
@@ -146,7 +143,6 @@ export async function exportToJSON(
     }
 
     onProgress?.('Export complete!', 1.0);
-    analytics.logExportCompleted('ZIP');
     return base64Data;
   } catch (error) {
     onProgress?.('Export failed', 0.0);

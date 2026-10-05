@@ -16,7 +16,10 @@ export async function checkJournalBalancesOnStartup(
     workplaceId,
     'startup',
   );
-  analytics.logJournalBalanceChecked(unbalanced.length, journalsChecked);
+  analytics.track('journal_balance_checked', {
+    unbalanced_count: unbalanced.length,
+    journals_checked: journalsChecked,
+  });
   if (signal.aborted) return;
 
   const insight = journalBalanceInsightService.claimPrompt(workplaceId);
@@ -29,11 +32,15 @@ export async function checkJournalBalancesOnStartup(
     confirmText: 'Fix Now',
     cancelText: 'Later',
     onConfirm: () => {
-      analytics.logUnbalancedJournalsPromptAnswered('fix_now');
-      analytics.logEntrypointSelected('app_start', 'startup_prompt', 'journal_balance_review');
+      analytics.track('unbalanced_journals_prompt_answered', { choice: 'fix_now' });
+      analytics.track('entrypoint_selected', {
+        screen: 'app_start',
+        entrypoint: 'startup_prompt',
+        target: 'journal_balance_review',
+      });
       AppNavigation.toJournalBalanceReview();
     },
-    onCancel: () => analytics.logUnbalancedJournalsPromptAnswered('later'),
-    onClose: () => analytics.logUnbalancedJournalsPromptAnswered('dismissed'),
+    onCancel: () => analytics.track('unbalanced_journals_prompt_answered', { choice: 'later' }),
+    onClose: () => analytics.track('unbalanced_journals_prompt_answered', { choice: 'dismissed' }),
   });
 }

@@ -73,7 +73,10 @@ export class WorkplaceService {
     }
     snapshotService.resumeSnapshotsForWorkplace(workplaceId);
     widgetProjectionService.resumeWorkplace(workplaceId);
-    analytics.logWorkplaceCreated(name, icon);
+    analytics.trackFeatureUsage('settings', 'workplace_created', {
+      name_length: name.length,
+      icon,
+    });
     return workplace;
   }
 
@@ -88,7 +91,12 @@ export class WorkplaceService {
       const previousId = preferences.device.activeWorkplaceId;
       if (previousId === id) return;
       this.publishActiveWorkplace(id);
-      if (previousId) analytics.logWorkplaceSwitched(previousId, id);
+      if (previousId) {
+        analytics.trackFeatureUsage('settings', 'workplace_switched', {
+          fromId: previousId,
+          toId: id,
+        });
+      }
     });
   }
 
@@ -173,7 +181,7 @@ export class WorkplaceService {
         warnings.push('Workplace preference cleanup failed');
       }
       try {
-        analytics.logWorkplaceDeleted();
+        analytics.trackFeatureUsage('settings', 'workplace_deleted');
       } catch (error) {
         logger.warn('[WorkplaceService] Workplace deletion analytics failed', { error });
         warnings.push('Workplace deletion analytics failed');
