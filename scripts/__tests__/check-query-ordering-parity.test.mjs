@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { collectQueryOrderingParityFindings } from '../check-query-ordering-parity.mjs';
+import { createTempFixtureRoot } from './temp-fixture.mjs';
 
 function fixtureRoot(t, source) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'query-ordering-parity-'));
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const root = createTempFixtureRoot(t, 'query-ordering-parity-');
   const directory = path.join(root, 'src/data/repositories/raw');
   fs.mkdirSync(directory, { recursive: true });
   fs.writeFileSync(path.join(directory, 'FixtureQueries.ts'), source);

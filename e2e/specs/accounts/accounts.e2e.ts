@@ -2,9 +2,13 @@ import { launchOnboardedApp } from '../../actions/launch';
 import { element, by, waitFor } from 'detox';
 import { accounts, tabs } from '../../screens';
 import { assertTextVisible } from '../../actions/assertions';
-import { tapById, tapByLabel, typeById } from '../../actions/mobile/elementActions';
+import { tapById, typeById } from '../../actions/mobile/elementActions';
 import { LONG_TIMEOUT_MS } from '../../constants/timeouts';
-import { createAssetAccount, openAccountsTab } from '../../actions/mobile/flows';
+import {
+  assertAccountNameOnList,
+  createAssetAccount,
+  openAccountsTab,
+} from '../../actions/mobile/flows';
 
 jest.setTimeout(300000);
 
@@ -38,12 +42,7 @@ describe('Accounts', () => {
     await waitFor(element(by.id('hero-name-input')))
       .not.toExist()
       .withTimeout(LONG_TIMEOUT_MS);
-    try {
-      await assertTextVisible(name, 15000);
-    } catch {
-      await tapByLabel(/Liabilities section/);
-      await assertTextVisible(name, LONG_TIMEOUT_MS);
-    }
+    await assertAccountNameOnList(name, /Liabilities section/);
   });
 
   it('creates a new asset account', async () => {

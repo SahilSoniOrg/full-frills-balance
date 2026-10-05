@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { collectRawSqlOwnershipFindings } from '../check-raw-sql-ownership.mjs';
+import { createTempFixtureRoot } from './temp-fixture.mjs';
 
 function fixtureRoot(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'raw-sql-ownership-'));
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const root = createTempFixtureRoot(t, 'raw-sql-ownership-');
   fs.mkdirSync(path.join(root, 'src/data/repositories/raw'), { recursive: true });
   return root;
 }

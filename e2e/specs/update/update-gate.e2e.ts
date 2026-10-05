@@ -1,21 +1,11 @@
-import { by, device, element, expect, waitFor } from 'detox';
-import { E2E_AUTH_TOKEN } from '@/src/testing/e2eConstants';
+import { by, element, expect, waitFor } from 'detox';
+import { launchWithUpdateGate } from '../../actions/launch';
 
 jest.setTimeout(180000);
 
 describe('Mandatory update gate', () => {
   it('renders the blocking update screen with a backup option', async () => {
-    await device.launchApp({
-      newInstance: true,
-      delete: true,
-      permissions: { notifications: 'YES' },
-      launchArgs: {
-        e2eAuth: E2E_AUTH_TOKEN,
-        e2eReset: '1',
-        e2eSeedProfile: 'onboarded',
-        e2eUpdateGateMode: 'required',
-      },
-    });
+    await launchWithUpdateGate('required');
 
     await waitFor(element(by.id('update-required-title')))
       .toBeVisible()
@@ -37,17 +27,7 @@ describe('Mandatory update gate', () => {
 
 describe('Available update notice', () => {
   it('moves the update notice into Hub when swiped away', async () => {
-    await device.launchApp({
-      newInstance: true,
-      delete: true,
-      permissions: { notifications: 'YES' },
-      launchArgs: {
-        e2eAuth: E2E_AUTH_TOKEN,
-        e2eReset: '1',
-        e2eSeedProfile: 'onboarded',
-        e2eUpdateGateMode: 'available',
-      },
-    });
+    await launchWithUpdateGate('available');
 
     await waitFor(element(by.text('A newer version of Full Frills Balance is available.')))
       .toBeVisible()

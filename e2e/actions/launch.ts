@@ -61,6 +61,22 @@ export async function waitForDashboard(timeoutMs = 120000): Promise<void> {
   }
 }
 
+export type E2eUpdateGateMode = 'required' | 'available';
+
+export async function launchWithUpdateGate(mode: E2eUpdateGateMode): Promise<void> {
+  await device.launchApp({
+    newInstance: true,
+    delete: true,
+    permissions: { notifications: 'YES' },
+    launchArgs: {
+      e2eAuth: E2E_AUTH_TOKEN,
+      e2eReset: '1',
+      e2eSeedProfile: 'onboarded',
+      e2eUpdateGateMode: mode,
+    },
+  });
+}
+
 export async function launchOnboardedApp(options: LaunchOnboardedOptions = {}): Promise<void> {
   const seedProfile = options.seedProfile ?? 'journal-ready';
   await device.launchApp({

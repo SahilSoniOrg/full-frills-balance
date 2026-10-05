@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { collectJournalWriteBoundaryFindings } from '../check-journal-write-boundary.mjs';
+import { createTempFixtureRoot } from './temp-fixture.mjs';
 
 function fixtureRoot(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'journal-write-boundary-'));
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const root = createTempFixtureRoot(t, 'journal-write-boundary-');
   fs.mkdirSync(path.join(root, 'src/services/journal/bulk'), { recursive: true });
   return root;
 }

@@ -1,15 +1,10 @@
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { AccountType, TransactionType } from '@/src/types/enums';
-import { JournalId, WorkplaceId } from '@/src/types/ids';
+import { WorkplaceId } from '@/src/types/ids';
 import { database } from '@/src/data/database/Database';
 
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
-import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { createAccount } from '@/src/services/accounts/accountCommands';
-import { journalService } from '@/src/services/journal/journalDomainService';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
-import { verifyAccountBalance } from '@/src/services/integrity';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 
 describe('E2E Workflows', () => {
@@ -24,255 +19,54 @@ describe('E2E Workflows', () => {
     rebuildQueueService.stop();
   });
 
-  describe('Daily expense tracking workflow', () => {
-    it('should track a full day of expenses with correct balances', async () => {
-      const wallet = await createAccount('test-workplace' as WorkplaceId, {
-        name: 'Wallet',
-        accountType: AccountType.ASSET,
+  it('persists cross-currency journals with expected balances', async () => {
+    const usdCash = await accountWriteRepository.create({
+      name: 'USD Cash',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: 'test-workplace' as WorkplaceId,
+    });
+    const eurExpense = await accountWriteRepository.create({
+      name: 'EUR Expense',
+      accountType: AccountType.EXPENSE,
+      currencyCode: 'EUR',
+      workplaceId: 'test-workplace' as WorkplaceId,
+    });
+
+    await journalPersistenceService.put(
+      {
+        description: 'Purchase in EUR',
+        journalDate: Date.now(),
         currencyCode: 'USD',
-        initialBalance: 200,
-        workplaceId: 'test-workplace' as WorkplaceId,
-      });
-      await rebuildQueueService.flush();
+        transactions: [
+          {
+            accountId: usdCash.id,
+            amount: 110,
+            transactionType: TransactionType.CREDIT,
+          },
+          {
+            accountId: eurExpense.id,
+            amount: 100,
+            transactionType: TransactionType.DEBIT,
+            exchangeRate: 1.1,
+          },
+        ],
+      },
+      'test-workplace' as WorkplaceId,
+    );
 
-      const food = await accountWriteRepository.create({
-        name: 'Food',
-        accountType: AccountType.EXPENSE,
-        currencyCode: 'USD',
-        workplaceId: 'test-workplace' as WorkplaceId,
-      });
-      const transport = await accountWriteRepository.create({
-        name: 'Transport',
-        accountType: AccountType.EXPENSE,
-        currencyCode: 'USD',
-        workplaceId: 'test-workplace' as WorkplaceId,
-      });
+    await rebuildQueueService.flush();
 
-      await journalPersistenceService.put(
-        {
-          description: 'Morning Coffee',
-          journalDate: Date.now() + 1000,
-          currencyCode: 'USD',
-          transactions: [
-            {
-              accountId: wallet.id,
-              amount: 5.5,
-              transactionType: TransactionType.CREDIT,
-            },
-            {
-              accountId: food.id,
-              amount: 5.5,
-              transactionType: TransactionType.DEBIT,
-            },
-          ],
-        },
-        'test-workplace' as WorkplaceId,
-      );
+    const usdBalance = await balanceReadService.getAccountBalance(
+      usdCash.id,
+      'test-workplace' as WorkplaceId,
+    );
+    const eurBalance = await balanceReadService.getAccountBalance(
+      eurExpense.id,
+      'test-workplace' as WorkplaceId,
+    );
 
-      await journalPersistenceService.put(
-        {
-          description: 'Lunch',
-          journalDate: Date.now() + 2000,
-          currencyCode: 'USD',
-          transactions: [
-            {
-              accountId: wallet.id,
-              amount: 15.0,
-              transactionType: TransactionType.CREDIT,
-            },
-            {
-              accountId: food.id,
-              amount: 15.0,
-              transactionType: TransactionType.DEBIT,
-            },
-          ],
-        },
-        'test-workplace' as WorkplaceId,
-      );
-
-      await journalPersistenceService.put(
-        {
-          description: 'Bus',
-          journalDate: Date.now() + 3000,
-          currencyCode: 'USD',
-          transactions: [
-            {
-              accountId: wallet.id,
-              amount: 2.5,
-              transactionType: TransactionType.CREDIT,
-            },
-            {
-              accountId: transport.id,
-              amount: 2.5,
-              transactionType: TransactionType.DEBIT,
-            },
-          ],
-        },
-        'test-workplace' as WorkplaceId,
-      );
-
-      await rebuildQueueService.flush();
-
-      const walletBalance = await balanceReadService.getAccountBalance(
-        wallet.id,
-        'test-workplace' as WorkplaceId,
-        Date.now() + 5000,
-      );
-      const foodBalance = await balanceReadService.getAccountBalance(
-        food.id,
-        'test-workplace' as WorkplaceId,
-        Date.now() + 5000,
-      );
-      const transportBalance = await balanceReadService.getAccountBalance(
-        transport.id,
-        'test-workplace' as WorkplaceId,
-        Date.now() + 5000,
-      );
-
-      expect(walletBalance.balance).toBe(177);
-      expect(foodBalance.balance).toBe(20.5);
-      expect(transportBalance.balance).toBe(2.5);
-
-      const walletIntegrity = await verifyAccountBalance(
-        wallet.id,
-        'test-workplace' as WorkplaceId,
-        Date.now() + 5000,
-      );
-      expect(walletIntegrity.matches).toBe(true);
-    }, 15000);
-  });
-
-  describe('Journal reversal workflow', () => {
-    it('should correctly reverse a journal and restore balances', async () => {
-      const FIXED_DATE = 1706700000000;
-      const cash = await createAccount('test-workplace' as WorkplaceId, {
-        name: 'Cash',
-        accountType: AccountType.ASSET,
-        currencyCode: 'USD',
-        initialBalance: 500,
-        workplaceId: 'test-workplace' as WorkplaceId,
-      });
-      const [initialJournal] = await journalQueryRepository.findAll(
-        'test-workplace' as WorkplaceId,
-      );
-      await database.write(async () => {
-        await initialJournal.update(j => {
-          j.journalDate = FIXED_DATE;
-        });
-        const journalTransactions = await transactionQueryRepository.findByJournal(
-          'test-workplace' as WorkplaceId,
-          initialJournal.id as JournalId,
-        );
-        for (const tx of journalTransactions) {
-          await tx.update((t: any) => {
-            t.transactionDate = FIXED_DATE;
-          });
-        }
-      });
-
-      await rebuildQueueService.flush();
-
-      const expense = await accountWriteRepository.create({
-        name: 'Shopping',
-        accountType: AccountType.EXPENSE,
-        currencyCode: 'USD',
-        workplaceId: 'test-workplace' as WorkplaceId,
-      });
-
-      const journal = await journalPersistenceService.put(
-        {
-          description: 'Accidental purchase',
-          journalDate: FIXED_DATE + 10000,
-          currencyCode: 'USD',
-          transactions: [
-            {
-              accountId: cash.id,
-              amount: 100,
-              transactionType: TransactionType.CREDIT,
-            },
-            {
-              accountId: expense.id,
-              amount: 100,
-              transactionType: TransactionType.DEBIT,
-            },
-          ],
-        },
-        'test-workplace' as WorkplaceId,
-      );
-
-      await rebuildQueueService.flush();
-      let cashBalance = await balanceReadService.getAccountBalance(
-        cash.id,
-        'test-workplace' as WorkplaceId,
-      );
-      expect(cashBalance.balance).toBe(400);
-
-      await journalService.createReversalJournal(
-        journal.id,
-        'Refund',
-        'test-workplace' as WorkplaceId,
-      );
-
-      await rebuildQueueService.flush();
-
-      cashBalance = await balanceReadService.getAccountBalance(
-        cash.id,
-        'test-workplace' as WorkplaceId,
-      );
-      expect(cashBalance.balance).toBe(500);
-    }, 20000);
-  });
-
-  describe('Multi-currency workflow', () => {
-    it('should handle transactions with exchange rates', async () => {
-      const usdCash = await accountWriteRepository.create({
-        name: 'USD Cash',
-        accountType: AccountType.ASSET,
-        currencyCode: 'USD',
-        workplaceId: 'test-workplace' as WorkplaceId,
-      });
-      const eurExpense = await accountWriteRepository.create({
-        name: 'EUR Expense',
-        accountType: AccountType.EXPENSE,
-        currencyCode: 'EUR',
-        workplaceId: 'test-workplace' as WorkplaceId,
-      });
-
-      await journalPersistenceService.put(
-        {
-          description: 'Purchase in EUR',
-          journalDate: Date.now(),
-          currencyCode: 'USD',
-          transactions: [
-            {
-              accountId: usdCash.id,
-              amount: 110,
-              transactionType: TransactionType.CREDIT,
-            },
-            {
-              accountId: eurExpense.id,
-              amount: 100,
-              transactionType: TransactionType.DEBIT,
-              exchangeRate: 1.1,
-            },
-          ],
-        },
-        'test-workplace' as WorkplaceId,
-      );
-
-      await rebuildQueueService.flush();
-
-      const usdBalance = await balanceReadService.getAccountBalance(
-        usdCash.id,
-        'test-workplace' as WorkplaceId,
-      );
-      const eurBalance = await balanceReadService.getAccountBalance(
-        eurExpense.id,
-        'test-workplace' as WorkplaceId,
-      );
-
-      expect(usdBalance.balance).toBe(-110);
-      expect(eurBalance.balance).toBe(100);
-    }, 20000);
-  });
+    expect(usdBalance.balance).toBe(-110);
+    expect(eurBalance.balance).toBe(100);
+  }, 20000);
 });

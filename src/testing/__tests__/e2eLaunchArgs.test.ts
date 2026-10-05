@@ -21,7 +21,9 @@ describe('readE2eLaunchConfig', () => {
   beforeEach(() => {
     valueMock.mockReset();
     process.env.EXPO_PUBLIC_E2E = '0';
-    (Constants.expoConfig as { extra?: Record<string, unknown> }).extra = {};
+    (Constants.expoConfig as { extra: Record<string, unknown> }).extra = {
+      e2eHarnessEnabled: true,
+    };
   });
 
   afterAll(() => {
@@ -33,9 +35,6 @@ describe('readE2eLaunchConfig', () => {
   });
 
   it('ignores valid launch arguments when the production gate is off', () => {
-    (Constants.expoConfig as { extra: Record<string, unknown> }).extra = {
-      e2eHarnessEnabled: true,
-    };
     valueMock.mockReturnValue({
       e2eAuth: E2E_AUTH_TOKEN,
       e2eSeedProfile: 'onboarded',
@@ -45,18 +44,12 @@ describe('readE2eLaunchConfig', () => {
 
   it('returns null without auth token in an enabled E2E build', () => {
     process.env.EXPO_PUBLIC_E2E = '1';
-    (Constants.expoConfig as { extra: Record<string, unknown> }).extra = {
-      e2eHarnessEnabled: true,
-    };
     valueMock.mockReturnValue({ e2eSeedProfile: 'onboarded' });
     expect(readE2eLaunchConfig()).toBeNull();
   });
 
   it('parses seed profile when both gates and auth are present', () => {
     process.env.EXPO_PUBLIC_E2E = '1';
-    (Constants.expoConfig as { extra: Record<string, unknown> }).extra = {
-      e2eHarnessEnabled: true,
-    };
     valueMock.mockReturnValue({
       e2eAuth: E2E_AUTH_TOKEN,
       e2eSeedProfile: 'journal-ready',
@@ -69,9 +62,6 @@ describe('readE2eLaunchConfig', () => {
 
   it('parses an update-gate mode only with the authenticated E2E launch', () => {
     process.env.EXPO_PUBLIC_E2E = '1';
-    (Constants.expoConfig as { extra: Record<string, unknown> }).extra = {
-      e2eHarnessEnabled: true,
-    };
     valueMock.mockReturnValue({
       e2eAuth: E2E_AUTH_TOKEN,
       e2eUpdateGateMode: 'required',
@@ -82,9 +72,6 @@ describe('readE2eLaunchConfig', () => {
 
   it('ignores an unknown update-gate mode', () => {
     process.env.EXPO_PUBLIC_E2E = '1';
-    (Constants.expoConfig as { extra: Record<string, unknown> }).extra = {
-      e2eHarnessEnabled: true,
-    };
     valueMock.mockReturnValue({
       e2eAuth: E2E_AUTH_TOKEN,
       e2eUpdateGateMode: 'skip',

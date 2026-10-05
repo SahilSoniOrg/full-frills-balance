@@ -10,12 +10,15 @@ async function waitForAccountsHub(timeoutMs = LONG_TIMEOUT_MS): Promise<void> {
     .withTimeout(timeoutMs);
 }
 
-async function assertAccountNameOnList(name: string): Promise<void> {
+export async function assertAccountNameOnList(
+  name: string,
+  sectionFallback: RegExp = /Assets section/,
+): Promise<void> {
   try {
     await assertTextVisible(name, 15000);
     return;
   } catch {
-    await tapByLabel(/Assets section/);
+    await tapByLabel(sectionFallback);
     await assertTextVisible(name, LONG_TIMEOUT_MS);
   }
 }

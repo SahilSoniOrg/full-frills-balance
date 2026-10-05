@@ -1,20 +1,14 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 import test from 'node:test';
 import {
   collectArchitectureFindings,
   compareWithBaseline,
 } from '../check-architecture-ratchets.mjs';
+import { createTempFixtureRoot, writeFixtureTree } from './temp-fixture.mjs';
 
-function fixture(files) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'architecture-ratchet-'));
-  for (const [relativePath, source] of Object.entries(files)) {
-    const target = path.join(root, relativePath);
-    fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.writeFileSync(target, source);
-  }
+function fixture(t, files) {
+  const root = createTempFixtureRoot(t, 'architecture-ratchet-');
+  writeFixtureTree(root, files);
   return root;
 }
 
@@ -31,7 +25,7 @@ function emptyBaseline() {
 }
 
 test('reports each new violation with an actionable file and line', t => {
-  const root = fixture({
+  const root = fixture(t, {
     'src/features/accounts/view.ts':
       "import Account from '@/src/data/models/Account';\nexport const value = Account;\n",
     'src/data/repositories/UnsafeQueries.ts':
@@ -39,8 +33,6 @@ test('reports each new violation with an actionable file and line', t => {
     'src/services/unsafeWrite.ts':
       "import { database as db } from '@/src/data/database/Database';\nexport const save = () => db.write(async () => {});\nexport const read = () => db.collections.get('transactions');\n",
   });
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-
   const findings = collectArchitectureFindings(root);
   const { failures } = compareWithBaseline(findings, emptyBaseline());
 
@@ -49,7 +41,7 @@ test('reports each new violation with an actionable file and line', t => {
 });
 
 test('detects unscoped static raw SQL and accepts workplace-scoped SQL', t => {
-  const root = fixture({
+  const root = fixture(t, {
     'src/data/repositories/raw/Queries.ts': `
       export async function unsafe(adapter: any) {
         const sql = \`SELECT * FROM transactions WHERE deleted_at IS NULL\`;
@@ -60,8 +52,6 @@ test('detects unscoped static raw SQL and accepts workplace-scoped SQL', t => {
       }
     `,
   });
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-
   const findings = collectArchitectureFindings(root).filter(
     finding => finding.rule === 'unscoped_raw_query',
   );
@@ -70,19 +60,17 @@ test('detects unscoped static raw SQL and accepts workplace-scoped SQL', t => {
 });
 
 test('ignores tests and approved persistence seams', t => {
-  const root = fixture({
+  const root = fixture(t, {
     'src/features/accounts/__tests__/view.test.ts':
       "import Account from '@/src/data/models/Account';\nvoid Account;\n",
     'src/data/repositories/Allowed.ts':
       "import { database } from '@/src/data/database/Database';\nconst { collections } = database;\nexport const save = () => database.batch([]);\nexport const read = () => collections.get('transactions');\n",
   });
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-
   assert.deepEqual(collectArchitectureFindings(root), []);
 });
 
 test('ratchets service model preparation, update, and private raw access', t => {
-  const root = fixture({
+  const root = fixture(t, {
     'src/services/unsafeMutations.ts': `
       import Account from '@/src/data/models/Account';
       export function unsafe(account: Account) {
@@ -104,8 +92,6 @@ test('ratchets service model preparation, update, and private raw access', t => 
       }
     `,
   });
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-
   const findings = collectArchitectureFindings(root).filter(
     finding => finding.rule === 'service_model_persistence_access',
   );
@@ -123,7 +109,7 @@ test('ratchets service model preparation, update, and private raw access', t => 
 });
 
 test('rejects direct service database collection access, including aliases and bracket notation', t => {
-  const root = fixture({
+  const root = fixture(t, {
     'src/services/unsafeReads.ts': `
       import { database as db } from '@/src/data/database/Database';
       export const one = () => db.collections.get('transactions');
@@ -150,8 +136,6 @@ test('rejects direct service database collection access, including aliases and b
       export const records = config.database.collections.get('transactions');
     `,
   });
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-
   const findings = collectArchitectureFindings(root).filter(
     finding => finding.rule === 'service_database_collection_access',
   );
@@ -161,7 +145,7 @@ test('rejects direct service database collection access, including aliases and b
 });
 
 test('preserves import, migration, testing, and repository model seams', t => {
-  const root = fixture({
+  const root = fixture(t, {
     'src/services/import/importWriter.ts': `
       export function write(record: any) {
         record.prepareCreate(() => {});
@@ -187,8 +171,6 @@ test('preserves import, migration, testing, and repository model seams', t => {
       }
     `,
   });
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-
   assert.deepEqual(
     collectArchitectureFindings(root).filter(
       finding => finding.rule === 'service_model_persistence_access',
