@@ -1,6 +1,10 @@
 import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/types/enums';
-import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { AccountId } from '@/src/types/ids';
+import {
+  ACCOUNT_MERGE_WORKPLACE_ID,
+  resetAccountsIntegrationDatabase,
+} from '@/src/services/accounts/__tests__/accountIntegrationDb.harness';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
@@ -19,14 +23,12 @@ jest.mock('@/src/services/accounts/accountReferenceGraph', () => ({
 }));
 
 describe('mergeAccounts command', () => {
-  const workplaceId = 'test-wp' as WorkplaceId;
+  const workplaceId = ACCOUNT_MERGE_WORKPLACE_ID;
 
   beforeEach(async () => {
     jest.restoreAllMocks();
     (assertNoLiveAccountReferences as jest.Mock).mockResolvedValue(undefined);
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetAccountsIntegrationDatabase();
   });
 
   it('deduplicates sources and routes each reference group through its typed session method', async () => {

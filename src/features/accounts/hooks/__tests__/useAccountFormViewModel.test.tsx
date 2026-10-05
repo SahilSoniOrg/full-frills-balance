@@ -1,6 +1,5 @@
+import './useAccountFormViewModel.test.setup';
 import { AppearancePickerModal } from '@/src/components/overlays/AppearancePickerModal';
-import { Keyboard } from 'react-native';
-import EventEmitter from 'react-native/Libraries/vendor/emitter/EventEmitter';
 import { AccountFormView } from '@/src/features/accounts/components/AccountFormView';
 import { GlyphCarousel } from '@/src/components/forms';
 import { fireEvent, render } from '@/src/utils/test-utils';
@@ -8,107 +7,15 @@ import { act, renderHook } from '@testing-library/react-native';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
 import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants/app-config';
-import type { AccountFields } from '@/src/types/plainDtos';
 import { asAccountId } from '@/src/types/ids';
 import { useAccountFormViewModel } from '../useAccountFormViewModel';
+import {
+  mockAccountFormVmState,
+  mockOnSave,
+  resetAccountFormViewModelTestState,
+} from './useAccountFormViewModel.test.state';
 
-let mockParams: { type?: string; subtype?: string; accountId?: string; pIcon?: string } = {};
-let mockExistingAccount: AccountFields | null = null;
-const mockOnSave = jest.fn();
-let mockAccounts: AccountFields[] = [];
-let mockIsParent = false;
-let mockPathname = '/account-creation';
-
-jest.mock('react-native/Libraries/Animated/NativeAnimatedModule', () => {
-  const { NativeModules } = jest.requireActual<typeof import('react-native')>('react-native');
-  return {
-    __esModule: true,
-    default: {
-      ...NativeModules.NativeAnimatedModule,
-      connectAnimatedNodeToShadowNodeFamily: jest.fn(),
-    },
-  };
-});
-
-jest.mock('react-native/Libraries/Modal/Modal', () => {
-  const React = jest.requireActual<typeof import('react')>('react');
-  return {
-    __esModule: true,
-    default: ({ visible, children }: import('react-native').ModalProps) =>
-      visible ? React.createElement(React.Fragment, null, children) : null,
-  };
-});
-
-jest.mock('expo-router', () => ({
-  useLocalSearchParams: () => mockParams,
-  usePathname: () => mockPathname,
-}));
-jest.mock('@/src/contexts/WorkplaceContext', () => ({
-  useWorkplace: () => ({ workplaceId: 'workplace', defaultCurrencyCode: 'USD' }),
-}));
-jest.mock('@/src/hooks/useAccounts', () => ({
-  useAccount: () => ({ account: mockExistingAccount, isLoading: false }),
-  useAccountBalance: () => ({ balanceData: null, isLoading: false }),
-  useAccountBalances: () => ({
-    balancesByAccountId: new Map(
-      mockAccounts.map(account => [account.id, { directTransactionCount: 0 }]),
-    ),
-  }),
-  useAccounts: () => ({ accounts: mockAccounts }),
-}));
-jest.mock('@/src/hooks/use-currencies', () => ({
-  useCurrencies: () => ({
-    currencies: [
-      { id: 'usd', code: 'USD', symbol: '$', name: 'US Dollar', precision: 2 },
-      { id: 'eur', code: 'EUR', symbol: '€', name: 'Euro', precision: 2 },
-    ],
-  }),
-}));
-jest.mock('@/src/hooks/useObservable', () => ({
-  useObservable: (_factory: unknown, _deps: unknown, initial: unknown) => ({
-    data: typeof initial === 'boolean' ? mockIsParent : initial,
-    isLoading: false,
-  }),
-}));
-jest.mock('@/src/services/accounts/accountQueries', () => ({ accountQueries: {} }));
-jest.mock('@/src/features/accounts/hooks/useAccountActions', () => ({
-  useAccountActions: () => ({}),
-}));
-jest.mock('@/src/features/accounts/hooks/useAccountPersistence', () => ({
-  useAccountPersistence: () => ({
-    isCreating: false,
-    handleCancel: jest.fn(),
-    handleSave: jest.fn(),
-  }),
-}));
-jest.mock('@/src/features/accounts/hooks/useAccountValidation', () => ({
-  useAccountValidation: () => ({ formError: null }),
-}));
-jest.mock('@/src/features/accounts/hooks/useAccountArchiveAction', () => ({
-  useAccountArchiveAction: () => ({ headerActionItems: [], archiveCascadeModal: null }),
-}));
-jest.mock('@/src/features/accounts/hooks/useAccountDeleteMergeActions', () => ({
-  useAccountDeleteMergeActions: () => ({ headerActionItems: [], mergePickerModal: null }),
-}));
-jest.mock('@/src/features/accounts/hooks/form/useAccountFormBalanceClassify', () => ({
-  useAccountFormBalanceClassify: () => ({ balanceClassify: null, onSave: mockOnSave }),
-}));
-
-jest.mock('@/src/hooks/use-reduced-motion', () => ({ useReducedMotion: () => true }));
-
-beforeEach(() => {
-  const keyboardEmitter = new EventEmitter();
-  jest
-    .spyOn(Keyboard, 'addListener')
-    .mockImplementation((event, listener) => keyboardEmitter.addListener(event, listener));
-  mockParams = {};
-  mockExistingAccount = null;
-  mockAccounts = [];
-  mockIsParent = false;
-  mockOnSave.mockClear();
-  mockPathname = '/account-creation';
-});
-
+beforeEach(() => resetAccountFormViewModelTestState());
 afterEach(() => jest.restoreAllMocks());
 
 describe('account kind view model with the real draft reducer', () => {
@@ -200,7 +107,7 @@ describe('account kind view model with the real draft reducer', () => {
   });
 
   it('preserves custom preview icons across kind changes', () => {
-    mockParams = { pIcon: Icon.Bank };
+    mockAccountFormVmState.mockParams = { pIcon: Icon.Bank };
     const { result } = renderHook(useAccountFormViewModel);
     act(() =>
       result.current.setAccountKind({
@@ -215,7 +122,7 @@ describe('account kind view model with the real draft reducer', () => {
   });
 
   it('gates a valid subtype param and counts it as touched', () => {
-    mockParams = { type: 'liability', subtype: 'LOAN' };
+    mockAccountFormVmState.mockParams = { type: 'liability', subtype: 'LOAN' };
     const { result } = renderHook(useAccountFormViewModel);
     act(() => result.current.setAccountName('Card'));
     expect(result.current.accountSubtype).toBe(AccountSubtype.LOAN);
@@ -223,7 +130,7 @@ describe('account kind view model with the real draft reducer', () => {
   });
 
   it('uses the default and leaves touched false for an invalid pair', () => {
-    mockParams = { type: 'asset', subtype: 'LOAN' };
+    mockAccountFormVmState.mockParams = { type: 'asset', subtype: 'LOAN' };
     const { result } = renderHook(useAccountFormViewModel);
     expect(result.current.accountSubtype).toBe(AccountSubtype.BANK_CHECKING);
     act(() => result.current.setAccountName('Card'));
@@ -231,8 +138,8 @@ describe('account kind view model with the real draft reducer', () => {
   });
 
   it('shows the current kind with no suggestion in edit mode and resets on returning to create', () => {
-    mockParams = { accountId: 'existing' };
-    mockExistingAccount = {
+    mockAccountFormVmState.mockParams = { accountId: 'existing' };
+    mockAccountFormVmState.mockExistingAccount = {
       id: asAccountId('existing'),
       name: 'Savings card',
       accountType: AccountType.ASSET,
@@ -246,8 +153,8 @@ describe('account kind view model with the real draft reducer', () => {
     expect(result.current.kindSuggestionMessage).toBeNull();
     expect(result.current.balanceLabel).toBe('Current balance');
     expect(result.current.submitLabel).toBe('Save Changes');
-    mockParams = {};
-    mockExistingAccount = null;
+    mockAccountFormVmState.mockParams = {};
+    mockAccountFormVmState.mockExistingAccount = null;
     rerender({});
     expect(result.current.accountSubtype).toBe(AccountSubtype.BANK_CHECKING);
     act(() => result.current.setAccountName('Card'));
@@ -255,8 +162,8 @@ describe('account kind view model with the real draft reducer', () => {
   });
 
   it.each([AccountType.INCOME, AccountType.EXPENSE])('keeps category behavior for %s', type => {
-    mockPathname = '/category-creation';
-    mockParams = { type };
+    mockAccountFormVmState.mockPathname = '/category-creation';
+    mockAccountFormVmState.mockParams = { type };
     const { result } = renderHook(useAccountFormViewModel);
     act(() => result.current.setAccountName('Credit card'));
     expect(result.current.isCategory).toBe(true);
@@ -313,7 +220,7 @@ describe('account form UI over its view model', () => {
   });
 
   it('edits card metadata through day and finance sheets without losing the draft', () => {
-    mockParams = { type: 'liability', subtype: 'CREDIT_CARD' };
+    mockAccountFormVmState.mockParams = { type: 'liability', subtype: 'CREDIT_CARD' };
     const screen = render(<AccountFormHarness />);
     fireEvent.press(screen.getByTestId('account-statement-day'));
     fireEvent.press(screen.getByTestId('account-statement-day-grid-15'));
@@ -360,7 +267,7 @@ describe('account form UI over its view model', () => {
   });
 
   it('renders categories through the shared carousel and compact form rows', () => {
-    mockPathname = '/category-creation';
+    mockAccountFormVmState.mockPathname = '/category-creation';
     const screen = render(<AccountFormHarness />);
     expect(screen.queryByTestId('account-kind')).toBeNull();
     expect(screen.getByTestId('category-kind')).toBeTruthy();
@@ -371,8 +278,8 @@ describe('account form UI over its view model', () => {
 
 describe('category create/edit regressions', () => {
   it.each([AccountType.INCOME, AccountType.EXPENSE])('retains creation controls for %s', type => {
-    mockPathname = '/category-creation';
-    mockParams = { type };
+    mockAccountFormVmState.mockPathname = '/category-creation';
+    mockAccountFormVmState.mockParams = { type };
     const screen = render(<AccountFormHarness />);
     expect(screen.queryByTestId('hero-amount-input')).toBeNull();
     expect(screen.queryByTestId('account-kind')).toBeNull();
@@ -416,9 +323,9 @@ describe('category create/edit regressions', () => {
   });
 
   it('keeps edit currency locked, category hierarchy, appearance and edit submission', () => {
-    mockPathname = '/category-creation';
-    mockParams = { accountId: 'category' };
-    mockExistingAccount = {
+    mockAccountFormVmState.mockPathname = '/category-creation';
+    mockAccountFormVmState.mockParams = { accountId: 'category' };
+    mockAccountFormVmState.mockExistingAccount = {
       id: asAccountId('category'),
       name: 'Salary',
       accountType: AccountType.INCOME,
@@ -427,7 +334,7 @@ describe('category create/edit regressions', () => {
       icon: Icon.Briefcase,
       orderNum: 0,
     };
-    mockAccounts = [
+    mockAccountFormVmState.mockAccounts = [
       {
         id: asAccountId('parent'),
         name: 'Parent income',
@@ -460,10 +367,10 @@ describe('category create/edit regressions', () => {
 });
 
 it('keeps category type/subtype locked when editing a parent category', () => {
-  mockPathname = '/category-creation';
-  mockParams = { accountId: 'parent-category' };
-  mockIsParent = true;
-  mockExistingAccount = {
+  mockAccountFormVmState.mockPathname = '/category-creation';
+  mockAccountFormVmState.mockParams = { accountId: 'parent-category' };
+  mockAccountFormVmState.mockIsParent = true;
+  mockAccountFormVmState.mockExistingAccount = {
     id: asAccountId('parent-category'),
     name: 'Food parent',
     accountType: AccountType.EXPENSE,
@@ -482,9 +389,9 @@ it('keeps category type/subtype locked when editing a parent category', () => {
 });
 
 it('keeps a parent account kind locked while retaining appearance customization', () => {
-  mockParams = { accountId: 'parent-account' };
-  mockIsParent = true;
-  mockExistingAccount = {
+  mockAccountFormVmState.mockParams = { accountId: 'parent-account' };
+  mockAccountFormVmState.mockIsParent = true;
+  mockAccountFormVmState.mockExistingAccount = {
     id: asAccountId('parent-account'),
     name: 'Bank parent',
     accountType: AccountType.ASSET,

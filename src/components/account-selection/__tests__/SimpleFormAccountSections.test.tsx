@@ -37,10 +37,6 @@ jest.mock('@/src/hooks/use-reduced-motion', () => ({
   useReducedMotion: () => true,
 }));
 
-function renderWithScope(ui: React.ReactElement) {
-  return render(<ArchiveVisibilityScopeProvider>{ui}</ArchiveVisibilityScopeProvider>);
-}
-
 const mockAccounts: AccountFields[] = [
   {
     id: asAccountId('acc-cash'),
@@ -56,6 +52,55 @@ const mockAccounts: AccountFields[] = [
   } as AccountFields,
 ];
 
+type SectionsProps = React.ComponentProps<typeof SimpleFormAccountSections>;
+
+function renderWithScope(ui: React.ReactElement) {
+  return render(<ArchiveVisibilityScopeProvider>{ui}</ArchiveVisibilityScopeProvider>);
+}
+
+function renderSections(overrides: Partial<SectionsProps> = {}) {
+  const onSelectSource = overrides.onSelectSource ?? jest.fn();
+  const onSelectDestination = overrides.onSelectDestination ?? jest.fn();
+  const onToggleExpansion = overrides.onToggleExpansion ?? jest.fn();
+  return renderWithScope(
+    <SimpleFormAccountSections
+      expansionPosition="left"
+      onToggleExpansion={onToggleExpansion}
+      sourceLabel="Paid with"
+      sourceAccounts={mockAccounts}
+      onSelectSource={onSelectSource}
+      destLabel="Spend on"
+      destAccounts={mockAccounts}
+      onSelectDestination={onSelectDestination}
+      {...overrides}
+    />,
+  );
+}
+
+function rerenderSections(
+  view: ReturnType<typeof renderWithScope>,
+  overrides: Partial<SectionsProps> = {},
+) {
+  const onSelectSource = overrides.onSelectSource ?? jest.fn();
+  const onSelectDestination = overrides.onSelectDestination ?? jest.fn();
+  const onToggleExpansion = overrides.onToggleExpansion ?? jest.fn();
+  view.rerender(
+    <ArchiveVisibilityScopeProvider>
+      <SimpleFormAccountSections
+        expansionPosition="left"
+        onToggleExpansion={onToggleExpansion}
+        sourceLabel="Paid with"
+        sourceAccounts={mockAccounts}
+        onSelectSource={onSelectSource}
+        destLabel="Spend on"
+        destAccounts={mockAccounts}
+        onSelectDestination={onSelectDestination}
+        {...overrides}
+      />
+    </ArchiveVisibilityScopeProvider>,
+  );
+}
+
 function pillHasWrappingAncestor(accountId: string): boolean {
   const pill = screen.getByTestId(`account-picker-option-${accountId}`);
   let ancestor: typeof pill | null = pill.parent;
@@ -69,46 +114,27 @@ function pillHasWrappingAncestor(accountId: string): boolean {
 describe('SimpleFormAccountSections selection and clear', () => {
   afterEach(() => jest.restoreAllMocks());
 
-  it('keeps the original flowing pills for a typical account list', () => {
-    renderWithScope(
-      <SimpleFormAccountSections
-        expansionPosition="left"
-        onToggleExpansion={jest.fn()}
-        sourceLabel="Paid with"
-        sourceAccounts={mockAccounts}
-        onSelectSource={jest.fn()}
-        destLabel="Spend on"
-        destAccounts={mockAccounts}
-        onSelectDestination={jest.fn()}
-      />,
-    );
-
-    expect(screen.queryByTestId('journal-account-folder-list')).toBeNull();
-    expect(pillHasWrappingAncestor('acc-cash')).toBe(true);
-    expect(screen.queryByTestId('show-archived-button')).toBeNull();
-  });
-
-  it('keeps flowing pills when a large account list is recycled', () => {
-    const manyAccounts = Array.from({ length: 40 }, (_, index) => ({
-      ...mockAccounts[0],
-      id: asAccountId(`large-${index}`),
-      name: `Account ${index}`,
-    }));
-    renderWithScope(
-      <SimpleFormAccountSections
-        expansionPosition="left"
-        onToggleExpansion={jest.fn()}
-        sourceLabel="Paid with"
-        sourceAccounts={manyAccounts}
-        onSelectSource={jest.fn()}
-        destLabel="Spend on"
-        destAccounts={manyAccounts}
-        onSelectDestination={jest.fn()}
-      />,
-    );
-
-    expect(screen.getByTestId('journal-account-folder-list')).toBeTruthy();
-    expect(pillHasWrappingAncestor('large-0')).toBe(true);
+  it.each([
+    ['typical list', mockAccounts, 'acc-cash', false],
+    [
+      'large recycled list',
+      Array.from({ length: 40 }, (_, index) => ({
+        ...mockAccounts[0],
+        id: asAccountId(`large-${index}`),
+        name: `Account ${index}`,
+      })),
+      'large-0',
+      true,
+    ],
+  ] as const)('keeps flowing pills for a %s', (_label, accounts, sampleId, recycled) => {
+    renderSections({ sourceAccounts: accounts, destAccounts: accounts });
+    if (recycled) {
+      expect(screen.getByTestId('journal-account-folder-list')).toBeTruthy();
+    } else {
+      expect(screen.queryByTestId('journal-account-folder-list')).toBeNull();
+      expect(screen.queryByTestId('show-archived-button')).toBeNull();
+    }
+    expect(pillHasWrappingAncestor(sampleId)).toBe(true);
   });
 
   it('keeps the chevron in the standard header and removes it in compact mode', () => {
@@ -146,85 +172,32 @@ describe('SimpleFormAccountSections selection and clear', () => {
     ).toBeNull();
   });
 
-  it('keeps the account selected when tapping the already-selected pill', () => {
+  it('keeps the original selection when tapping the already-selected pill', () => {
     const onSelectSource = jest.fn();
-    const onSelectDestination = jest.fn();
-    const onToggleExpansion = jest.fn();
+    renderSections({ sourceAccount: mockAccounts[0], onSelectSource });
 
-    renderWithScope(
-      <SimpleFormAccountSections
-        expansionPosition="left"
-        onToggleExpansion={onToggleExpansion}
-        sourceLabel="Paid with"
-        sourceAccount={mockAccounts[0]}
-        sourceAccounts={mockAccounts}
-        onSelectSource={onSelectSource}
-        destLabel="Spend on"
-        destAccount={undefined}
-        destAccounts={mockAccounts}
-        onSelectDestination={onSelectDestination}
-      />,
-    );
-
-    // Reconfirming an account must not erase the selection.
-    const selectedPill = screen.getByTestId('account-picker-option-acc-cash');
     act(() => {
-      fireEvent.press(selectedPill);
+      fireEvent.press(screen.getByTestId('account-picker-option-acc-cash'));
     });
 
     expect(onSelectSource).toHaveBeenCalledWith(mockAccounts[0].id);
   });
 
-  it('renders Clear button when an account is selected and clears to EMPTY_ACCOUNT_ID on press', () => {
+  it.each([
+    ['selected', mockAccounts[0], true],
+    ['unselected', undefined, false],
+  ] as const)('renders Clear only when an account is %s', (_label, sourceAccount, visible) => {
     const onSelectSource = jest.fn();
-    const onSelectDestination = jest.fn();
-    const onToggleExpansion = jest.fn();
+    renderSections({ sourceAccount, onSelectSource });
 
-    renderWithScope(
-      <SimpleFormAccountSections
-        expansionPosition="left"
-        onToggleExpansion={onToggleExpansion}
-        sourceLabel="Paid with"
-        sourceAccount={mockAccounts[0]}
-        sourceAccounts={mockAccounts}
-        onSelectSource={onSelectSource}
-        destLabel="Spend on"
-        destAccount={undefined}
-        destAccounts={mockAccounts}
-        onSelectDestination={onSelectDestination}
-      />,
-    );
-
-    const clearButton = screen.getByTestId('clear-selected-account-button');
-    expect(clearButton).toBeTruthy();
-
-    act(() => {
-      fireEvent.press(clearButton);
-    });
-    expect(onSelectSource).toHaveBeenCalledWith(EMPTY_ACCOUNT_ID);
-  });
-
-  it('does not render Clear button when no account is selected', () => {
-    const onSelectSource = jest.fn();
-    const onSelectDestination = jest.fn();
-    const onToggleExpansion = jest.fn();
-
-    renderWithScope(
-      <SimpleFormAccountSections
-        expansionPosition="left"
-        onToggleExpansion={onToggleExpansion}
-        sourceLabel="Paid with"
-        sourceAccount={undefined}
-        sourceAccounts={mockAccounts}
-        onSelectSource={onSelectSource}
-        destLabel="Spend on"
-        destAccount={undefined}
-        destAccounts={mockAccounts}
-        onSelectDestination={onSelectDestination}
-      />,
-    );
-
-    expect(screen.queryByTestId('clear-selected-account-button')).toBeNull();
+    if (visible) {
+      act(() => {
+        fireEvent.press(screen.getByTestId('clear-selected-account-button'));
+      });
+      expect(onSelectSource).toHaveBeenCalledWith(EMPTY_ACCOUNT_ID);
+    } else {
+      expect(screen.queryByTestId('clear-selected-account-button')).toBeNull();
+    }
   });
 
   it('keeps the selected archived account visible while archived accounts are hidden', () => {
@@ -234,54 +207,29 @@ describe('SimpleFormAccountSections selection and clear', () => {
       archivedAt: new Date(),
     } as AccountFields;
 
-    renderWithScope(
-      <SimpleFormAccountSections
-        expansionPosition="left"
-        onToggleExpansion={jest.fn()}
-        sourceLabel="Paid with"
-        sourceAccount={archivedAccount}
-        sourceAccounts={[archivedAccount]}
-        onSelectSource={jest.fn()}
-        destLabel="Spend on"
-        destAccounts={mockAccounts}
-        onSelectDestination={jest.fn()}
-      />,
-    );
+    renderSections({
+      sourceAccount: archivedAccount,
+      sourceAccounts: [archivedAccount],
+    });
 
     expect(screen.getByTestId('account-picker-option-acc-archived')).toBeTruthy();
   });
 
   it('clears the destination explicitly and keeps it selected when reconfirmed', () => {
-    const onSelectSource = jest.fn();
     const onSelectDestination = jest.fn();
-    const onToggleExpansion = jest.fn();
+    renderSections({
+      expansionPosition: 'right',
+      destAccount: mockAccounts[1],
+      onSelectDestination,
+    });
 
-    renderWithScope(
-      <SimpleFormAccountSections
-        expansionPosition="right"
-        onToggleExpansion={onToggleExpansion}
-        sourceLabel="Paid with"
-        sourceAccount={undefined}
-        sourceAccounts={mockAccounts}
-        onSelectSource={onSelectSource}
-        destLabel="Spend on"
-        destAccount={mockAccounts[1]}
-        destAccounts={mockAccounts}
-        onSelectDestination={onSelectDestination}
-      />,
-    );
-
-    // Tapping clear button on destination side
-    const clearButton = screen.getByTestId('clear-selected-account-button');
     act(() => {
-      fireEvent.press(clearButton);
+      fireEvent.press(screen.getByTestId('clear-selected-account-button'));
     });
     expect(onSelectDestination).toHaveBeenCalledWith(EMPTY_ACCOUNT_ID);
 
-    // Choosing the destination again keeps it selected.
-    const bankPill = screen.getByTestId('account-picker-option-acc-bank');
     act(() => {
-      fireEvent.press(bankPill);
+      fireEvent.press(screen.getByTestId('account-picker-option-acc-bank'));
     });
     expect(onSelectDestination).toHaveBeenLastCalledWith(mockAccounts[1].id);
   });
@@ -291,19 +239,7 @@ describe('SimpleFormAccountSections selection and clear', () => {
     ['income', AppConfig.strings.transactionFlow.simpleEntry.chooseAccount],
     ['transfer', AppConfig.strings.transactionFlow.simpleEntry.chooseAccount],
   ] as const)('uses the configured destination prompt for %s entries', (type, prompt) => {
-    renderWithScope(
-      <SimpleFormAccountSections
-        expansionPosition="right"
-        onToggleExpansion={jest.fn()}
-        sourceLabel="Paid with"
-        sourceAccounts={mockAccounts}
-        onSelectSource={jest.fn()}
-        destLabel="Spend on"
-        destAccounts={mockAccounts}
-        onSelectDestination={jest.fn()}
-        type={type}
-      />,
-    );
+    renderSections({ expansionPosition: 'right', type });
 
     expect(
       within(screen.getByTestId('journal-route-destination-node')).getByText(prompt),
@@ -315,20 +251,7 @@ describe('SimpleFormAccountSections selection and clear', () => {
     ['right', 'destination'],
   ] as const)('preserves the active %s role when creating an account', (side, role) => {
     const onCreateAccountRequest = jest.fn();
-
-    renderWithScope(
-      <SimpleFormAccountSections
-        expansionPosition={side}
-        onToggleExpansion={jest.fn()}
-        sourceLabel="Paid with"
-        sourceAccounts={mockAccounts}
-        onSelectSource={jest.fn()}
-        destLabel="Spend on"
-        destAccounts={mockAccounts}
-        onSelectDestination={jest.fn()}
-        onCreateAccountRequest={onCreateAccountRequest}
-      />,
-    );
+    renderSections({ expansionPosition: side, onCreateAccountRequest });
 
     act(() => {
       fireEvent.press(screen.getByTestId('header-create-account-button'));
@@ -337,39 +260,13 @@ describe('SimpleFormAccountSections selection and clear', () => {
   });
 
   it('keeps the selected pill filled while the folder is closing', () => {
-    const view = renderWithScope(
-      <SimpleFormAccountSections
-        expansionPosition="left"
-        onToggleExpansion={jest.fn()}
-        sourceLabel="Paid with"
-        sourceAccount={mockAccounts[0]}
-        sourceAccounts={mockAccounts}
-        onSelectSource={jest.fn()}
-        destLabel="Spend on"
-        destAccounts={mockAccounts}
-        onSelectDestination={jest.fn()}
-      />,
-    );
+    const view = renderSections({ sourceAccount: mockAccounts[0] });
 
     expect(screen.getByTestId('account-picker-option-acc-cash')).toHaveProp('accessibilityState', {
       selected: true,
     });
 
-    view.rerender(
-      <ArchiveVisibilityScopeProvider>
-        <SimpleFormAccountSections
-          expansionPosition={null}
-          onToggleExpansion={jest.fn()}
-          sourceLabel="Paid with"
-          sourceAccount={mockAccounts[0]}
-          sourceAccounts={mockAccounts}
-          onSelectSource={jest.fn()}
-          destLabel="Spend on"
-          destAccounts={mockAccounts}
-          onSelectDestination={jest.fn()}
-        />
-      </ArchiveVisibilityScopeProvider>,
-    );
+    rerenderSections(view, { expansionPosition: null, sourceAccount: mockAccounts[0] });
 
     expect(
       screen.getByTestId('account-picker-option-acc-cash', { includeHiddenElements: true }),
@@ -380,63 +277,40 @@ describe('SimpleFormAccountSections selection and clear', () => {
 
   it('can lazily mount an embedded dropdown with row-specific test IDs', () => {
     const groupAccounts = jest.spyOn(accountCategory, 'getAccountSections');
-    const view = renderWithScope(
-      <SimpleFormAccountSections
-        expansionPosition={null}
-        onToggleExpansion={jest.fn()}
-        sourceLabel="Money from"
-        sourceAccounts={mockAccounts}
-        onSelectSource={jest.fn()}
-        destLabel="Money to"
-        destAccounts={mockAccounts}
-        onSelectDestination={jest.fn()}
-        lazyDropdown
-        testIDPrefix="bulk-route-row-1"
-      />,
-    );
+    const view = renderSections({
+      expansionPosition: null,
+      sourceLabel: 'Money from',
+      destLabel: 'Money to',
+      lazyDropdown: true,
+      testIDPrefix: 'bulk-route-row-1',
+    });
 
     expect(screen.getByTestId('bulk-route-row-1-source-node')).toBeTruthy();
     expect(screen.queryByTestId('bulk-route-row-1-source-dropdown')).toBeNull();
     expect(groupAccounts).not.toHaveBeenCalled();
 
-    view.rerender(
-      <ArchiveVisibilityScopeProvider>
-        <SimpleFormAccountSections
-          expansionPosition="left"
-          onToggleExpansion={jest.fn()}
-          sourceLabel="Money from"
-          sourceAccounts={mockAccounts}
-          onSelectSource={jest.fn()}
-          destLabel="Money to"
-          destAccounts={mockAccounts}
-          onSelectDestination={jest.fn()}
-          lazyDropdown
-          testIDPrefix="bulk-route-row-1"
-        />
-      </ArchiveVisibilityScopeProvider>,
-    );
+    rerenderSections(view, {
+      expansionPosition: 'left',
+      sourceLabel: 'Money from',
+      destLabel: 'Money to',
+      lazyDropdown: true,
+      testIDPrefix: 'bulk-route-row-1',
+    });
 
     expect(screen.getByTestId('bulk-route-row-1-source-dropdown')).toBeTruthy();
     expect(groupAccounts).toHaveBeenCalled();
   });
 
   it('hides compact node labels in collapsed and expanded states', () => {
-    const view = renderWithScope(
-      <SimpleFormAccountSections
-        expansionPosition={null}
-        onToggleExpansion={jest.fn()}
-        sourceLabel="Send from"
-        sourceAccount={mockAccounts[0]}
-        sourceAccounts={mockAccounts}
-        onSelectSource={jest.fn()}
-        destLabel="Deposit into"
-        destAccount={mockAccounts[1]}
-        destAccounts={mockAccounts}
-        onSelectDestination={jest.fn()}
-        displayMode="compact"
-        lazyDropdown
-      />,
-    );
+    const view = renderSections({
+      expansionPosition: null,
+      sourceLabel: 'Send from',
+      sourceAccount: mockAccounts[0],
+      destLabel: 'Deposit into',
+      destAccount: mockAccounts[1],
+      displayMode: 'compact',
+      lazyDropdown: true,
+    });
 
     expect(
       within(screen.getByTestId('journal-route-source-node')).queryByText('Send from'),
@@ -445,24 +319,15 @@ describe('SimpleFormAccountSections selection and clear', () => {
       within(screen.getByTestId('journal-route-destination-node')).queryByText('Deposit into'),
     ).toBeNull();
 
-    view.rerender(
-      <ArchiveVisibilityScopeProvider>
-        <SimpleFormAccountSections
-          expansionPosition="left"
-          onToggleExpansion={jest.fn()}
-          sourceLabel="Send from"
-          sourceAccount={mockAccounts[0]}
-          sourceAccounts={mockAccounts}
-          onSelectSource={jest.fn()}
-          destLabel="Deposit into"
-          destAccount={mockAccounts[1]}
-          destAccounts={mockAccounts}
-          onSelectDestination={jest.fn()}
-          displayMode="compact"
-          lazyDropdown
-        />
-      </ArchiveVisibilityScopeProvider>,
-    );
+    rerenderSections(view, {
+      expansionPosition: 'left',
+      sourceLabel: 'Send from',
+      sourceAccount: mockAccounts[0],
+      destLabel: 'Deposit into',
+      destAccount: mockAccounts[1],
+      displayMode: 'compact',
+      lazyDropdown: true,
+    });
 
     expect(
       within(screen.getByTestId('journal-route-source-node')).queryByText('Send from'),
@@ -475,44 +340,28 @@ describe('SimpleFormAccountSections selection and clear', () => {
 
   it('uses the transfer flow arrow as the swap action', () => {
     const onSwapAccounts = jest.fn();
-    const view = renderWithScope(
-      <SimpleFormAccountSections
-        expansionPosition={null}
-        onToggleExpansion={jest.fn()}
-        sourceLabel="Send from"
-        sourceAccounts={mockAccounts}
-        onSelectSource={jest.fn()}
-        destLabel="Deposit into"
-        destAccounts={mockAccounts}
-        onSelectDestination={jest.fn()}
-        type="transfer"
-        onSwapAccounts={onSwapAccounts}
-        displayMode="compact"
-        lazyDropdown
-      />,
-    );
+    const view = renderSections({
+      expansionPosition: null,
+      sourceLabel: 'Send from',
+      destLabel: 'Deposit into',
+      type: 'transfer',
+      onSwapAccounts,
+      displayMode: 'compact',
+      lazyDropdown: true,
+    });
 
     expect(screen.getByTestId('route-flow-arrow')).toBeTruthy();
     fireEvent.press(screen.getByTestId('route-flow-arrow'));
     expect(onSwapAccounts).toHaveBeenCalledTimes(1);
 
-    view.rerender(
-      <ArchiveVisibilityScopeProvider>
-        <SimpleFormAccountSections
-          expansionPosition={null}
-          onToggleExpansion={jest.fn()}
-          sourceLabel="Paid with"
-          sourceAccounts={mockAccounts}
-          onSelectSource={jest.fn()}
-          destLabel="Spend on"
-          destAccounts={mockAccounts}
-          onSelectDestination={jest.fn()}
-          type="expense"
-          displayMode="compact"
-          lazyDropdown
-        />
-      </ArchiveVisibilityScopeProvider>,
-    );
+    rerenderSections(view, {
+      expansionPosition: null,
+      sourceLabel: 'Paid with',
+      destLabel: 'Spend on',
+      type: 'expense',
+      displayMode: 'compact',
+      lazyDropdown: true,
+    });
 
     expect(screen.getByTestId('route-flow-arrow')).toBeTruthy();
     expect(screen.queryByTestId('route-swap-accounts-button')).toBeNull();

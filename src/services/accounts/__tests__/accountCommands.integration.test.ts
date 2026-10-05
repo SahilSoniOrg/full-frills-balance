@@ -5,11 +5,14 @@ import {
   JournalDisplayType,
   AuditAction,
 } from '@/src/types/enums';
-import { WorkplaceId } from '@/src/types/ids';
 /**
  * Account command lifecycle (integration).
  */
 
+import {
+  ACCOUNT_CMD_WORKPLACE_ID,
+  resetAccountsIntegrationDatabase,
+} from './accountIntegrationDb.harness';
 import { database } from '@/src/data/database/Database';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { getBalanceCorrectionAccountInput } from '@/src/data/repositories/account/accountSystemAccountInputs';
@@ -24,13 +27,11 @@ import { createAccount } from '@/src/services/accounts/accountCommands';
 import { reconcileAccount } from '@/src/services/accounts/accountReconcileCommands';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 
-const WP = 'wp-acct-cmd' as WorkplaceId;
+const WP = ACCOUNT_CMD_WORKPLACE_ID;
 
 describe('account commands (integration)', () => {
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetAccountsIntegrationDatabase();
   }, 15000);
 
   afterEach(() => {

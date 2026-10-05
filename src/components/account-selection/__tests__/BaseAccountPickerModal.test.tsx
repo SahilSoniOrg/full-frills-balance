@@ -1,4 +1,4 @@
-import { BaseAccountPickerModal } from '@/src/components/account-selection/BaseAccountPickerModal';
+import { BaseAccountPickerModal } from '../BaseAccountPickerModal';
 import { fireEvent, render } from '@/src/utils/test-utils';
 import React from 'react';
 import { Text } from 'react-native';

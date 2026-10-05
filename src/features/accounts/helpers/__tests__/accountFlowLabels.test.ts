@@ -1,9 +1,6 @@
 import { AccountType } from '@/src/types/enums';
 
-import {
-  accountFlowLabels,
-  getAccountStatsConfig,
-} from '../accountFlowLabels';
+import { accountFlowLabels, getAccountStatsConfig } from '../accountFlowLabels';
 
 const INCREASE = 10;
 const DECREASE = 3;
@@ -44,14 +41,16 @@ const expectedStatsByType: Record<
   },
 };
 
-const expectedActivityByType: Record<AccountType, { increaseLabel: string; decreaseLabel: string }> =
-  {
-    [AccountType.ASSET]: { increaseLabel: 'Total In', decreaseLabel: 'Total Out' },
-    [AccountType.LIABILITY]: { increaseLabel: 'Total Spent', decreaseLabel: 'Total Paid' },
-    [AccountType.EQUITY]: { increaseLabel: 'Total In', decreaseLabel: 'Total Out' },
-    [AccountType.INCOME]: { increaseLabel: 'Total In', decreaseLabel: 'Total Out' },
-    [AccountType.EXPENSE]: { increaseLabel: 'Month Spent', decreaseLabel: 'Refunds / Credits' },
-  };
+const expectedActivityByType: Record<
+  AccountType,
+  { increaseLabel: string; decreaseLabel: string }
+> = {
+  [AccountType.ASSET]: { increaseLabel: 'Total In', decreaseLabel: 'Total Out' },
+  [AccountType.LIABILITY]: { increaseLabel: 'Total Spent', decreaseLabel: 'Total Paid' },
+  [AccountType.EQUITY]: { increaseLabel: 'Total In', decreaseLabel: 'Total Out' },
+  [AccountType.INCOME]: { increaseLabel: 'Total In', decreaseLabel: 'Total Out' },
+  [AccountType.EXPENSE]: { increaseLabel: 'Month Spent', decreaseLabel: 'Refunds / Credits' },
+};
 
 describe('accountFlowLabels', () => {
   it.each(Object.values(AccountType))('exposes stats and activity labels for %s', accountType => {
@@ -63,20 +62,20 @@ describe('accountFlowLabels', () => {
     expect(flow.statsLeftLabel).toBe(expectedStatsByType[accountType].leftLabel);
   });
 
-  it('maps expense debits and credits to distinct stat sides', () => {
-    expect(getAccountStatsConfig(AccountType.EXPENSE, 1341, 0)).toEqual({
-      leftLabel: 'MONTH SPENT',
-      leftAmount: 1341,
-      rightLabel: 'REFUNDS / CREDITS',
-      rightAmount: 0,
-    });
-    expect(getAccountStatsConfig(AccountType.EXPENSE, 1341, 50)).toEqual({
-      leftLabel: 'MONTH SPENT',
-      leftAmount: 1341,
-      rightLabel: 'REFUNDS / CREDITS',
-      rightAmount: 50,
-    });
-  });
+  it.each([
+    [1341, 0],
+    [1341, 50],
+  ] as const)(
+    'maps expense debits and credits to distinct stat sides (%s / %s)',
+    (spent, refunds) => {
+      expect(getAccountStatsConfig(AccountType.EXPENSE, spent, refunds)).toEqual({
+        leftLabel: 'MONTH SPENT',
+        leftAmount: spent,
+        rightLabel: 'REFUNDS / CREDITS',
+        rightAmount: refunds,
+      });
+    },
+  );
 
   it('treats an unknown type like an asset for stats', () => {
     expect(getAccountStatsConfig(undefined, INCREASE, DECREASE)).toEqual(

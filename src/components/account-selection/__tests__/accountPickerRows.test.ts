@@ -13,7 +13,7 @@ const accounts = Array.from({ length: 250 }, (_, index) => ({
 describe('buildAccountPickerRows', () => {
   const sections = [{ key: 'assets', title: 'Assets', type: AccountType.ASSET, data: accounts }];
 
-  it('keeps every account accessible through bounded wrapping groups', () => {
+  it('chunks accounts for recycling and preserves collapsed section headers', () => {
     const rows = buildAccountPickerRows(sections, new Set());
     expect(rows).toHaveLength(12);
     expect(rows[0]).toMatchObject({
@@ -28,9 +28,7 @@ describe('buildAccountPickerRows', () => {
     expect(
       rows.flatMap(row => (row.kind === 'accounts' ? row.accounts.map(account => account.id) : [])),
     ).toEqual(accounts.map(account => account.id));
-  });
 
-  it('keeps section headers available while collapsed', () => {
     expect(buildAccountPickerRows(sections, new Set(['assets']))).toEqual([
       { key: 'assets', kind: 'section', section: sections[0], sectionIndex: 0, collapsed: true },
     ]);

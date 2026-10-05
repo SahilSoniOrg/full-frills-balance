@@ -5,13 +5,10 @@ import {
   TransactionType,
   JournalDisplayType,
 } from '@/src/types/enums';
-import { WorkplaceId } from '@/src/types/ids';
-/**
- * Integration tests for AccountRepository
- * Tests account creation, balance calculations, and precision handling
- */
-
-import { database } from '@/src/data/database/Database';
+import {
+  ACCOUNT_REPO_WORKPLACE_ID,
+  resetAccountsIntegrationDatabase,
+} from './accountIntegrationDb.harness';
 
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
@@ -21,12 +18,10 @@ import { deleteAccount } from '@/src/services/accounts/accountDeleteCommands';
 import { applyAccountArchiveChanges } from '@/src/services/accounts/accountArchiveCommands';
 
 describe('AccountRepository', () => {
-  const workplaceId = 'test-wp-1' as WorkplaceId;
+  const workplaceId = ACCOUNT_REPO_WORKPLACE_ID;
 
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetAccountsIntegrationDatabase();
   });
 
   describe('create', () => {
