@@ -1,4 +1,4 @@
-import { SmsSyncPipeline } from '../pipeline';
+import { SmsSyncPipeline } from '../pipeline/smsSyncPipeline';
 import { WorkplaceId } from '@/src/types/ids';
 
 describe('SmsSyncPipeline', () => {

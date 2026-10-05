@@ -14,8 +14,8 @@ import {
   SmsRulePreviewInput,
   SmsRuleSuggestion,
 } from '@/src/services/sms/SmsRuleEngine';
-import { smsSyncPipeline } from '@/src/services/sms/pipeline';
 import { smsPrivacyService } from '@/src/services/sms/SmsPrivacyService';
+import { smsSyncPipeline } from '@/src/services/sms/pipeline/smsSyncPipeline';
 import { map, Observable } from 'rxjs';
 
 export type SmsInboxFilterStatus =
@@ -30,6 +30,15 @@ export interface SmsSyncResult {
   hasMore: boolean;
   importedCount: number;
 }
+
+const FILTER_STATUSES: Record<SmsInboxFilterStatus | 'all', InboxProcessingStatus[]> = {
+  all: [],
+  pending: [InboxProcessingStatus.PENDING],
+  processed: [InboxProcessingStatus.IMPORTED, InboxProcessingStatus.AUTO_POSTED],
+  auto_posted: [InboxProcessingStatus.AUTO_POSTED],
+  duplicates: [InboxProcessingStatus.DUPLICATE_FLAGGED],
+  failed: [InboxProcessingStatus.PARSE_FAILED],
+};
 
 class SmsService {
   async scanRecentSmsPage(
@@ -124,8 +133,8 @@ class SmsService {
     return smsRuleEngine.getRuleSuggestions(workplaceId);
   }
 
-  async parseTransactionMessageAsync(sms: SmsMessage): Promise<ParsedTransaction> {
-    return SmsParser.parse(sms);
+  parseTransactionMessageAsync(sms: SmsMessage): Promise<ParsedTransaction> {
+    return Promise.resolve(SmsParser.parse(sms));
   }
 
   async saveAutoPostRule(data: SmsRuleDraftInput, workplaceId: WorkplaceId) {
@@ -149,20 +158,7 @@ class SmsService {
   private getProcessingStatusesForFilter(
     statusFilter?: SmsInboxFilterStatus,
   ): InboxProcessingStatus[] {
-    switch (statusFilter) {
-      case 'pending':
-        return [InboxProcessingStatus.PENDING];
-      case 'processed':
-        return [InboxProcessingStatus.IMPORTED, InboxProcessingStatus.AUTO_POSTED];
-      case 'auto_posted':
-        return [InboxProcessingStatus.AUTO_POSTED];
-      case 'duplicates':
-        return [InboxProcessingStatus.DUPLICATE_FLAGGED];
-      case 'failed':
-        return [InboxProcessingStatus.PARSE_FAILED];
-      default:
-        return [];
-    }
+    return FILTER_STATUSES[statusFilter ?? 'all'] ?? [];
   }
 }
 

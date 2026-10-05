@@ -5,29 +5,37 @@ import type { CreateJournalData } from '@/src/types/journalWrite';
 import { ParsedTransaction, toTransactionDirection } from '@/src/services/ledger/SmsParser';
 import { smsRuleEngine } from '@/src/services/sms/SmsRuleEngine';
 import { JournalStatus, TransactionType } from '@/src/types/enums';
-import { SmsMatchData } from '@/src/utils/sms/RuleMatcher';
+import type { AccountId } from '@/src/types/ids';
+import { buildSmsMatchData, RuleMatcher } from '@/src/utils/sms/RuleMatcher';
 import { computeSmsFingerprint } from './smsFingerprint';
-import { AutoPostRuleAnalysis } from './types';
 
-export async function analyzeAutoPost(
+export interface AutoPostRuleAnalysis {
+  disposition: 'auto_post' | 'review' | 'ignore';
+  ruleId: string;
+  createData?: {
+    journalData: CreateJournalData;
+  };
+  sourceAccountId?: AccountId;
+  categoryAccountId?: AccountId;
+}
+
+export function analyzeAutoPost(
   message: SmsMessage,
   parsed: ParsedTransaction,
   activeRules: TransactionAutoPostRule[],
   allowAutoPost = true,
-): Promise<AutoPostRuleAnalysis | null> {
-  const matchData: SmsMatchData = {
-    senderAddress: message.address,
-    rawBody: message.body,
+): AutoPostRuleAnalysis | null {
+  const matchData = buildSmsMatchData(message.address, message.body, {
     parsedMerchant: parsed.merchant,
     parsedAccountSource: parsed.accountSource,
     direction: toTransactionDirection(parsed.type),
     parsedCurrencyCode: parsed.currencyCode,
     parsedAmount: parsed.amount,
-  };
+  });
 
   for (const rule of activeRules) {
     const definition = smsRuleEngine.getRuleDefinition(rule);
-    if (smsRuleEngine.matchesResolvedRule(matchData, definition)) {
+    if (RuleMatcher.compileRule(definition)(matchData)) {
       if (definition.actions.disposition === 'ignore') {
         return { disposition: 'ignore', ruleId: rule.id };
       }

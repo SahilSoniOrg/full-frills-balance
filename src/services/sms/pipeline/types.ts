@@ -28,13 +28,3 @@ export interface SmsAnalysisResult {
     categoryAccountId?: AccountId;
   };
 }
-
-export interface AutoPostRuleAnalysis {
-  disposition: 'auto_post' | 'review' | 'ignore';
-  ruleId: string;
-  createData?: {
-    journalData: CreateJournalData;
-  };
-  sourceAccountId?: AccountId;
-  categoryAccountId?: AccountId;
-}

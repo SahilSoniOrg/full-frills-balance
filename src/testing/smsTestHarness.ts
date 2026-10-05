@@ -8,14 +8,13 @@ import {
   InboxParseStatus,
   InboxProcessingStatus,
   TransactionDirection,
-  AccountType,
   TransactionType,
 } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
-import { accountWriteRepository } from '@/src/data/repositories/account';
+import { seedBasicAssetExpenseAccounts } from '@/src/testing/accountTestFixtures';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { SmsParser } from '@/src/services/ledger/SmsParser';
-import { smsSyncPipeline } from '@/src/services/sms/pipeline';
+import { smsSyncPipeline } from '@/src/services/sms/pipeline/smsSyncPipeline';
 import { computeSmsFingerprint } from '@/src/services/sms/pipeline/smsFingerprint';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { smsMessageFromFixture, SmsFixtureKey } from './smsFixtures';
@@ -33,19 +32,12 @@ export async function seedSmsTestAccounts(workplaceId: WorkplaceId = SMS_TEST_WO
   cashId: string;
   expenseId: string;
 }> {
-  const cash = await accountWriteRepository.create({
-    name: 'Cash',
-    accountType: AccountType.ASSET,
+  const { assetId, expenseId } = await seedBasicAssetExpenseAccounts(workplaceId, {
+    assetName: 'Cash',
+    expenseName: 'Food',
     currencyCode: 'INR',
-    workplaceId,
   });
-  const expense = await accountWriteRepository.create({
-    name: 'Food',
-    accountType: AccountType.EXPENSE,
-    currencyCode: 'INR',
-    workplaceId,
-  });
-  return { cashId: cash.id, expenseId: expense.id };
+  return { cashId: assetId, expenseId };
 }
 
 export async function seedExpenseJournal(params: {

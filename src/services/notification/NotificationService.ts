@@ -16,6 +16,31 @@ export interface SmsReviewIntent {
   hasDetails?: boolean;
 }
 
+function parseSmsReviewIntent(data: Record<string, unknown> | undefined): SmsReviewIntent | null {
+  if (data?.type !== SMS_REVIEW_NOTIFICATION_TYPE) return null;
+  return {
+    type: SMS_REVIEW_NOTIFICATION_TYPE,
+    inboxRecordId: typeof data.inboxRecordId === 'string' ? data.inboxRecordId : '',
+    workplaceId: typeof data.workplaceId === 'string' ? data.workplaceId : undefined,
+    grouped: data.grouped === true,
+    hasDetails: data.hasDetails === true,
+  };
+}
+
+async function cancelLegacyJournalReminders(): Promise<void> {
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+  for (const request of scheduled) {
+    if (
+      request.identifier === REMINDER_ID ||
+      request.content.data?.type === 'journal_reminder' ||
+      (request.content.title === AppConfig.strings.settings.notifications.reminderTitle &&
+        !request.content.data?.type)
+    ) {
+      await Notifications.cancelScheduledNotificationAsync(request.identifier);
+    }
+  }
+}
+
 export class NotificationService {
   private channels: Promise<void> | null = null;
   private reminderGeneration = 0;
@@ -131,15 +156,10 @@ export class NotificationService {
       ...scheduled.map(request => [request.identifier, request] as const),
     ]);
     for (const request of requests.values()) {
-      const data = request.content.data;
-      if (data?.type !== SMS_REVIEW_NOTIFICATION_TYPE) continue;
-      const intent: SmsReviewIntent = {
-        type: SMS_REVIEW_NOTIFICATION_TYPE,
-        inboxRecordId: typeof data.inboxRecordId === 'string' ? data.inboxRecordId : '',
-        workplaceId: typeof data.workplaceId === 'string' ? data.workplaceId : undefined,
-        grouped: data.grouped === true,
-        hasDetails: data.hasDetails === true,
-      };
+      const intent = parseSmsReviewIntent(
+        request.content.data as Record<string, unknown> | undefined,
+      );
+      if (!intent) continue;
       if (await keep(intent, request.identifier)) continue;
       await Notifications.cancelScheduledNotificationAsync(request.identifier);
       await Notifications.dismissNotificationAsync(request.identifier);
@@ -158,18 +178,7 @@ export class NotificationService {
       .catch(() => undefined)
       .then(async () => {
         if (generation !== this.reminderGeneration) return;
-        // Include legacy reminder IDs, without touching review alerts or other notification owners.
-        const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-        for (const request of scheduled) {
-          if (
-            request.identifier === REMINDER_ID ||
-            request.content.data?.type === 'journal_reminder' ||
-            (request.content.title === AppConfig.strings.settings.notifications.reminderTitle &&
-              !request.content.data?.type)
-          ) {
-            await Notifications.cancelScheduledNotificationAsync(request.identifier);
-          }
-        }
+        await cancelLegacyJournalReminders();
         if (
           generation !== this.reminderGeneration ||
           cadence === 'none' ||

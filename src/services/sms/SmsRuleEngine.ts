@@ -12,9 +12,11 @@ import {
 } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { ParsedTransaction, toTransactionDirection } from '@/src/services/ledger/SmsParser';
 import {
+  buildSmsMatchData,
+  buildSmsMatchDataFromInbox,
+  isMeaningfulSmsRuleCondition,
   ResolvedSmsRule,
   RuleMatcher,
-  SmsMatchData,
   SmsRuleActions,
   SmsRuleCondition,
   SmsRuleMode,
@@ -44,19 +46,6 @@ export interface SmsRulePreviewInput {
 }
 
 export class SmsRuleEngine {
-  isMeaningfulCondition(
-    condition: Partial<SmsRuleCondition> | null | undefined,
-  ): condition is SmsRuleCondition {
-    if (!condition?.field || !condition.operator) return false;
-    if (condition.field === 'amount') {
-      if (condition.operator === 'between') {
-        return typeof condition.minValue === 'number' && typeof condition.maxValue === 'number';
-      }
-      return typeof condition.minValue === 'number';
-    }
-    return !!condition.value?.trim();
-  }
-
   getRulePriority(rule: TransactionAutoPostRule): number {
     return typeof rule.priority === 'number' ? rule.priority : 100;
   }
@@ -73,7 +62,7 @@ export class SmsRuleEngine {
     if (rule.conditionsJson) {
       const parsed = safeParseJSON<any[]>(rule.conditionsJson, []);
       if (Array.isArray(parsed)) {
-        conditions = parsed.filter(condition => this.isMeaningfulCondition(condition));
+        conditions = parsed.filter(condition => isMeaningfulSmsRuleCondition(condition));
         if (conditions.length > 0) {
           mode = 'builder';
         }
@@ -122,31 +111,18 @@ export class SmsRuleEngine {
     };
   }
 
-  matchesResolvedRule(data: SmsMatchData, definition: ResolvedSmsRule): boolean {
-    return RuleMatcher.compileRule(definition)(data);
-  }
-
   matchesPreviewRule(data: InboxRecordSnapshot, input: SmsRulePreviewInput): boolean {
     const parsedRule: ResolvedSmsRule = {
       mode: input.mode,
       senderMatch: input.senderMatch,
       bodyMatch: input.bodyMatch,
       conditions: (input.conditions || []).filter(condition =>
-        this.isMeaningfulCondition(condition),
+        isMeaningfulSmsRuleCondition(condition),
       ),
       actions: { disposition: 'review' },
       priority: 100,
     };
-    const matchData: SmsMatchData = {
-      senderAddress: data.senderAddress || '',
-      rawBody: data.rawBody || '',
-      parsedMerchant: data.parsedMerchant || undefined,
-      parsedAccountSource: data.parsedAccountSource || undefined,
-      direction: data.direction,
-      parsedCurrencyCode: data.parsedCurrencyCode || undefined,
-      parsedAmount: data.parsedAmount || undefined,
-    };
-    return RuleMatcher.compileRule(parsedRule)(matchData);
+    return RuleMatcher.compileRule(parsedRule)(buildSmsMatchDataFromInbox(data));
   }
 
   async previewRuleMatches(
@@ -173,19 +149,17 @@ export class SmsRuleEngine {
       await transactionAutoPostRuleRepository.findActiveByWorkplace(workplaceId)
     ).sort((a, b) => this.getRulePriority(b) - this.getRulePriority(a));
 
-    const matchData: SmsMatchData = {
-      senderAddress: address,
-      rawBody: body,
+    const matchData = buildSmsMatchData(address, body, {
       parsedMerchant: parsed.merchant,
       parsedAccountSource: parsed.accountSource,
       direction: toTransactionDirection(parsed.type),
       parsedCurrencyCode: parsed.currencyCode,
       parsedAmount: parsed.amount,
-    };
+    });
 
     for (const rule of activeRules) {
       const definition = this.getRuleDefinition(rule);
-      if (this.matchesResolvedRule(matchData, definition)) {
+      if (RuleMatcher.compileRule(definition)(matchData)) {
         return rule;
       }
     }

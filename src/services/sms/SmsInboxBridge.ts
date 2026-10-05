@@ -6,6 +6,11 @@ import { confirm } from '@/src/utils/alerts';
 import { PermissionError } from '@/src/utils/errors';
 import { PermissionsAndroid, Platform } from 'react-native';
 
+function requireSmsModule() {
+  if (!ExpoSmsInboxModule) throw new Error('ExpoSmsInbox module is not available');
+  return ExpoSmsInboxModule;
+}
+
 export class SmsInboxBridge {
   async hasAutomaticImportPermissions(): Promise<boolean> {
     if (Platform.OS !== 'android') return false;
@@ -99,10 +104,6 @@ export class SmsInboxBridge {
       throw new PermissionError('READ_SMS permission is required to scan SMS messages.');
     }
 
-    if (!ExpoSmsInboxModule) {
-      throw new Error('ExpoSmsInbox module is not available');
-    }
-
     const e2eConfig = readE2eLaunchConfig();
     if (e2eConfig) {
       const injected = getE2eSmsInboxMessages();
@@ -111,19 +112,17 @@ export class SmsInboxBridge {
       }
     }
 
-    return ExpoSmsInboxModule.getSmsInbox(limit);
+    return requireSmsModule().getSmsInbox(limit);
   }
 
   async getLatestSmsId(): Promise<string | null> {
     await this.assertAndroidReadPermission();
-    if (!ExpoSmsInboxModule) throw new Error('ExpoSmsInbox module is not available');
-    return ExpoSmsInboxModule.getLatestSmsId();
+    return requireSmsModule().getLatestSmsId();
   }
 
   async getMessagesAfterId(afterId: string, limit: number): Promise<SmsMessage[]> {
     await this.assertAndroidReadPermission();
-    if (!ExpoSmsInboxModule) throw new Error('ExpoSmsInbox module is not available');
-    return ExpoSmsInboxModule.getSmsInboxAfterId(afterId, limit);
+    return requireSmsModule().getSmsInboxAfterId(afterId, limit);
   }
 
   async getOlderMessages(
@@ -131,14 +130,12 @@ export class SmsInboxBridge {
     limit: number,
   ): Promise<SmsMessage[]> {
     await this.assertAndroidReadPermission();
-    if (!ExpoSmsInboxModule) throw new Error('ExpoSmsInbox module is not available');
-    return ExpoSmsInboxModule.getSmsInboxBefore(before.date, before.id, limit);
+    return requireSmsModule().getSmsInboxBefore(before.date, before.id, limit);
   }
 
   async setAutomaticImportEnabled(enabled: boolean): Promise<void> {
     if (Platform.OS !== 'android') return;
-    if (!ExpoSmsInboxModule) throw new Error('ExpoSmsInbox module is not available');
-    await ExpoSmsInboxModule.setAutomaticImportEnabled(enabled);
+    await requireSmsModule().setAutomaticImportEnabled(enabled);
   }
 
   private async assertAndroidReadPermission(): Promise<void> {

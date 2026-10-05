@@ -1,6 +1,6 @@
 import { automaticSmsImportService } from '@/src/services/sms/AutomaticSmsImportService';
 import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
-import { smsSyncPipeline } from '@/src/services/sms/pipeline';
+import { smsSyncPipeline } from '@/src/services/sms/pipeline/smsSyncPipeline';
 import { preferences } from '@/src/services/preferences';
 import { storage } from '@/src/utils/storage';
 import { smsReviewNotificationService } from '@/src/services/sms/SmsReviewNotificationService';
@@ -20,7 +20,7 @@ jest.mock('@/src/services/sms/SmsInboxBridge', () => ({
   },
 }));
 
-jest.mock('@/src/services/sms/pipeline', () => ({
+jest.mock('@/src/services/sms/pipeline/smsSyncPipeline', () => ({
   smsSyncPipeline: {
     scanInbox: jest.fn().mockResolvedValue(0),
     scanMessages: jest.fn().mockResolvedValue(0),

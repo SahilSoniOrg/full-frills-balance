@@ -1,6 +1,7 @@
 import { TransactionDirection } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
 import { AppConfig } from '@/src/constants/app-config';
+import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
 
 export interface SmsMatchData {
   senderAddress: string;
@@ -154,4 +155,41 @@ export class RuleMatcher {
       return !!senderOk && bodyOk;
     };
   }
+}
+
+export function isMeaningfulSmsRuleCondition(
+  condition: Partial<SmsRuleCondition> | null | undefined,
+): condition is SmsRuleCondition {
+  if (!condition?.field || !condition.operator) return false;
+  if (condition.field === 'amount') {
+    if (condition.operator === 'between') {
+      return typeof condition.minValue === 'number' && typeof condition.maxValue === 'number';
+    }
+    return typeof condition.minValue === 'number';
+  }
+  return !!condition.value?.trim();
+}
+
+export function buildSmsMatchData(
+  senderAddress: string,
+  rawBody: string,
+  fields: {
+    parsedMerchant?: string;
+    parsedAccountSource?: string;
+    direction: TransactionDirection;
+    parsedCurrencyCode?: string;
+    parsedAmount?: number;
+  },
+): SmsMatchData {
+  return { senderAddress, rawBody, ...fields };
+}
+
+export function buildSmsMatchDataFromInbox(record: InboxRecordSnapshot): SmsMatchData {
+  return buildSmsMatchData(record.senderAddress || '', record.rawBody || '', {
+    parsedMerchant: record.parsedMerchant || undefined,
+    parsedAccountSource: record.parsedAccountSource || undefined,
+    direction: record.direction,
+    parsedCurrencyCode: record.parsedCurrencyCode || undefined,
+    parsedAmount: record.parsedAmount || undefined,
+  });
 }

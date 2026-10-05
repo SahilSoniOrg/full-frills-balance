@@ -13,7 +13,7 @@ import { transactionInboxRepository } from '@/src/data/repositories/TransactionI
 import { createJournalFixture } from '@/src/testing/journalFixtures';
 import ExpoSmsInbox from '@/modules/expo-sms-inbox';
 import { smsService } from '@/src/services/sms-service';
-import { smsSyncPipeline } from '@/src/services/sms/pipeline';
+import { smsSyncPipeline } from '@/src/services/sms/pipeline/smsSyncPipeline';
 import { database } from '@/src/data/database/Database';
 import { PermissionsAndroid, Platform } from 'react-native';
 import { resetDatabase } from '@/src/testing/resetDatabase';
@@ -22,7 +22,7 @@ jest.mock('@/modules/expo-sms-inbox', () => ({
   __esModule: true,
   default: { getSmsInbox: jest.fn(), getSmsInboxBefore: jest.fn() },
 }));
-jest.mock('@/src/services/sms/pipeline', () => ({
+jest.mock('@/src/services/sms/pipeline/smsSyncPipeline', () => ({
   smsSyncPipeline: { scanMessages: jest.fn().mockResolvedValue(0) },
 }));
 jest.mock('@/src/services/sms/SmsPrivacyService', () => ({

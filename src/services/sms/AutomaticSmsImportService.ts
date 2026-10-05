@@ -1,5 +1,5 @@
 import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
-import { smsSyncPipeline } from '@/src/services/sms/pipeline';
+import { smsSyncPipeline } from '@/src/services/sms/pipeline/smsSyncPipeline';
 import { preferences } from '@/src/services/preferences';
 import { storage } from '@/src/utils/storage';
 import { AppConfig } from '@/src/constants';

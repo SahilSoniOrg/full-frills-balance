@@ -9,7 +9,12 @@ import { observeQueryWithModelChanges } from '@/src/data/repositories/observeQue
 import { AccountId, EMPTY_ACCOUNT_ID, WorkplaceId } from '@/src/types/ids';
 import { Model, Q } from '@nozbe/watermelondb';
 import { Observable } from 'rxjs';
-import { SmsRuleActions, SmsRuleCondition, SmsRuleMode } from '@/src/utils/sms/RuleMatcher';
+import {
+  isMeaningfulSmsRuleCondition,
+  SmsRuleActions,
+  SmsRuleCondition,
+  SmsRuleMode,
+} from '@/src/utils/sms/RuleMatcher';
 import { syncRuleActionsFromColumns } from '@/src/utils/sms/ruleActionsAccountIds';
 import { AuditAction } from '@/src/types/enums';
 
@@ -98,9 +103,7 @@ export class TransactionAutoPostRuleRepository {
   }
 
   async save(data: SmsRuleDraftInput, workplaceId: WorkplaceId): Promise<TransactionAutoPostRule> {
-    const normalizedConditions = (data.conditions || []).filter(condition =>
-      this.isMeaningfulCondition(condition),
-    );
+    const normalizedConditions = (data.conditions || []).filter(isMeaningfulSmsRuleCondition);
     const sourceAccountId = data.actions.sourceAccountId || undefined;
     const categoryAccountId = data.actions.categoryAccountId || undefined;
     const actionsJson = syncRuleActionsFromColumns(
@@ -272,19 +275,6 @@ export class TransactionAutoPostRuleRepository {
         ),
       ];
     });
-  }
-
-  private isMeaningfulCondition(
-    condition: Partial<SmsRuleCondition> | null | undefined,
-  ): condition is SmsRuleCondition {
-    if (!condition?.field || !condition.operator) return false;
-    if (condition.field === 'amount') {
-      if (condition.operator === 'between') {
-        return typeof condition.minValue === 'number' && typeof condition.maxValue === 'number';
-      }
-      return typeof condition.minValue === 'number';
-    }
-    return !!condition.value?.trim();
   }
 }
 

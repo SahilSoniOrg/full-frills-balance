@@ -8,7 +8,7 @@ import { transactionAutoPostRuleRepository } from '@/src/data/repositories/Trans
 import { notificationService } from '@/src/services/notification/NotificationService';
 import { preferences } from '@/src/services/preferences';
 import { SmsReviewNotificationService } from '../SmsReviewNotificationService';
-import { smsSyncPipeline } from '../pipeline';
+import { smsSyncPipeline } from '../pipeline/smsSyncPipeline';
 import { smsService } from '@/src/services/sms-service';
 import { smsPrivacyService } from '../SmsPrivacyService';
 import { exportRepository } from '@/src/data/repositories/ExportRepository';
