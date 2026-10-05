@@ -1,3 +1,4 @@
+import { AppConfig } from '@/src/constants';
 import { SmsSettingsView } from '@/src/features/settings/components/SmsSettingsView';
 import { useSmsPrefs } from '@/src/hooks/useSmsPrefs';
 import { analytics } from '@/src/services/analytics';
@@ -10,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Linking } from 'react-native';
 
 export default function SmsSettingsScreen() {
+  const smsAlerts = AppConfig.strings.settings.smsAlerts;
   const {
     isAutomaticSmsImportEnabled,
     isSmsAutoPostEnabled,
@@ -44,40 +46,47 @@ export default function SmsSettingsScreen() {
     };
   }, [areSmsReviewNotificationsEnabled]);
 
-  const setAutomaticSmsImportEnabled = useCallback(async (enabled: boolean) => {
-    let result: 'enabled' | 'denied' | 'never_ask_again' | 'cancelled';
-    try {
-      result = await automaticSmsImportService.setEnabledFromSettings(enabled);
-    } catch {
-      alert.show({
-        title: 'Could not update SMS import',
-        message: 'Try again after reopening the app.',
-        type: 'error',
-      });
-      return;
-    }
-    if (result === 'cancelled') return;
-    if (result !== 'enabled') {
-      const message =
-        result === 'never_ask_again'
-          ? 'To enable automatic SMS import, allow SMS access in Android Settings. Messages are checked on this device while the feature is on.'
-          : 'Automatic SMS import stays off until you allow SMS access. Messages are checked on this device while the feature is on.';
-      if (result === 'never_ask_again') {
-        confirm.show({
-          title: 'SMS permission required',
-          message,
-          confirmText: 'Open Settings',
-          cancelText: 'Cancel',
-          onConfirm: () => void Linking.openSettings(),
+  const setAutomaticSmsImportEnabled = useCallback(
+    async (enabled: boolean) => {
+      let result: 'enabled' | 'denied' | 'never_ask_again' | 'cancelled';
+      try {
+        result = await automaticSmsImportService.setEnabledFromSettings(enabled);
+      } catch {
+        alert.show({
+          title: smsAlerts.updateImportErrorTitle,
+          message: smsAlerts.updateImportErrorMessage,
+          type: 'error',
         });
-      } else {
-        alert.show({ title: 'SMS permission required', message, type: 'warning' });
+        return;
       }
-      return;
-    }
-    analytics.logSmsImportSettingsChanged(enabled);
-    analytics.trackFeatureUsage('settings', 'toggle_sms_import', { enabled });
-  }, []);
+      if (result === 'cancelled') return;
+      if (result !== 'enabled') {
+        const message =
+          result === 'never_ask_again'
+            ? smsAlerts.smsPermissionNeverAskMessage
+            : smsAlerts.smsPermissionDeniedMessage;
+        if (result === 'never_ask_again') {
+          confirm.show({
+            title: smsAlerts.smsPermissionRequiredTitle,
+            message,
+            confirmText: smsAlerts.openSettings,
+            cancelText: smsAlerts.cancel,
+            onConfirm: () => void Linking.openSettings(),
+          });
+        } else {
+          alert.show({
+            title: smsAlerts.smsPermissionRequiredTitle,
+            message,
+            type: 'warning',
+          });
+        }
+        return;
+      }
+      analytics.logSmsImportSettingsChanged(enabled);
+      analytics.trackFeatureUsage('settings', 'toggle_sms_import', { enabled });
+    },
+    [smsAlerts],
+  );
 
   const setSmsReviewNotificationsEnabledHandler = useCallback(
     async (enabled: boolean) => {
@@ -92,23 +101,23 @@ export default function SmsSettingsScreen() {
         setNotificationsBlocked(enabled && !allowed);
         if (!allowed) {
           confirm.show({
-            title: 'Notifications are blocked',
-            message: 'Allow notifications and the SMS to review channel in system settings.',
-            confirmText: 'Open Settings',
-            cancelText: 'Cancel',
+            title: smsAlerts.notificationsBlockedTitle,
+            message: smsAlerts.notificationsBlockedMessage,
+            confirmText: smsAlerts.openSettings,
+            cancelText: smsAlerts.cancel,
             onConfirm: () => void Linking.openSettings(),
           });
         }
         await smsReviewNotificationService.refresh();
       } catch {
         alert.show({
-          title: 'Could not update SMS alerts',
-          message: 'Try again after reopening the app.',
+          title: smsAlerts.updateAlertsErrorTitle,
+          message: smsAlerts.updateAlertsErrorMessage,
           type: 'error',
         });
       }
     },
-    [setSmsReviewNotificationsEnabled],
+    [setSmsReviewNotificationsEnabled, smsAlerts],
   );
 
   return (

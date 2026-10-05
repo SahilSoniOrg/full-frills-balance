@@ -1,4 +1,5 @@
 import { RestartOptions } from '@/src/contexts/app-shell/AppRestartProvider';
+import { AppConfig } from '@/src/constants';
 import { analytics } from '@/src/services/analytics';
 import { alert, confirm, toast } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
@@ -205,14 +206,16 @@ export function useDataMaintenanceActions({
     isResetting,
     onFixIntegrity,
     integrityProgress,
-    integrityProgressMessage,
+    integrityProgressMessage:
+      integrityProgressMessage || AppConfig.strings.settings.maintenance.integrityWait,
     isAuditingBalances,
     onAuditJournalBalances,
     onCleanup,
     onFactoryReset,
     isSeeding,
     seedingProgress,
-    seedingProgressMessage,
+    seedingProgressMessage:
+      seedingProgressMessage || AppConfig.strings.settings.maintenance.seedMockWait,
     onSeedMockData,
   };
 }

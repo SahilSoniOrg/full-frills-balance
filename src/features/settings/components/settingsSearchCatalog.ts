@@ -31,10 +31,6 @@ type SettingsSearchActions = {
   onDeviceSettings: (target?: string) => void;
 };
 
-/**
- * Searchable leaf settings. Keep this explicit so aliases and platform-specific entries stay
- * intentional instead of depending on the rendered React tree.
- */
 export function createSettingsSearchCatalog(actions: SettingsSearchActions): SettingsSearchItem[] {
   const catalog: (Omit<SettingsSearchItem, 'focusId'> & { focusId?: string })[] = [
     {
@@ -314,18 +310,8 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
   if (Platform.OS === 'android') {
     catalog.push(
       {
-      id: 'sms-settings',
-      icon: Icon.MessageSquare,
-        title: AppConfig.strings.settings.personalization.smsSettingsTitle,
-        description: AppConfig.strings.settings.personalization.smsSettingsDesc,
-        section: 'Notifications & Automation',
-        keywords: ['sms', 'settings', 'import', 'notifications', 'auto post'],
-        focusId: 'sms-automation-import',
-        navigate: actions.onSmsSettings,
-      },
-      {
-      id: 'sms-automation-import',
-      icon: Icon.Zap,
+        id: 'sms-automation-import',
+        icon: Icon.Zap,
         title: AppConfig.strings.settings.personalization.smsImportTitle,
         description: 'Automatically scan transaction messages on this device.',
         section: 'Notifications & Automation',
@@ -333,8 +319,8 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
         navigate: actions.onSmsSettings,
       },
       {
-      id: 'sms-auto-post-enabled',
-      icon: Icon.Terminal,
+        id: 'sms-auto-post-enabled',
+        icon: Icon.Terminal,
         title: AppConfig.strings.settings.personalization.smsAutoPostEnabledTitle,
         description: AppConfig.strings.settings.personalization.smsAutoPostEnabledDesc,
         section: 'Notifications & Automation',
@@ -342,8 +328,8 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
         navigate: actions.onSmsSettings,
       },
       {
-      id: 'sms-review-notifications',
-      icon: Icon.Notifications,
+        id: 'sms-review-notifications',
+        icon: Icon.Notifications,
         title: AppConfig.strings.settings.personalization.smsReviewNotificationsTitle,
         description: AppConfig.strings.settings.personalization.smsReviewNotificationsDesc,
         section: 'Notifications & Automation',
@@ -351,8 +337,8 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
         navigate: actions.onSmsSettings,
       },
       {
-      id: 'sms-notification-details',
-      icon: Icon.Notifications,
+        id: 'sms-notification-details',
+        icon: Icon.Notifications,
         title: 'Detailed SMS previews',
         description: 'Choose whether alerts show transaction details.',
         section: 'Notifications & Automation',
@@ -360,8 +346,8 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
         navigate: actions.onSmsSettings,
       },
       {
-      id: 'sms-inbox',
-      icon: Icon.MessageSquare,
+        id: 'sms-inbox',
+        icon: Icon.MessageSquare,
         title: AppConfig.strings.settings.personalization.smsInboxTitle,
         description: AppConfig.strings.settings.personalization.smsInboxDesc,
         section: 'Notifications & Automation',
@@ -369,8 +355,8 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
         navigate: actions.onSmsInbox,
       },
       {
-      id: 'sms-rules',
-      icon: Icon.Terminal,
+        id: 'sms-rules',
+        icon: Icon.Terminal,
         title: AppConfig.strings.settings.personalization.smsAutoPostTitle,
         description: AppConfig.strings.settings.personalization.smsAutoPostDesc,
         section: 'Notifications & Automation',

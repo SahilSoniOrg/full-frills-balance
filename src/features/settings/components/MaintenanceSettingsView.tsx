@@ -121,9 +121,7 @@ function MaintenanceSettingsView() {
         isVisible={vm.isMaintenanceMode}
         title={AppConfig.strings.settings.maintenance.integrityTitle}
         progress={vm.integrityProgress}
-        progressMessage={
-          vm.integrityProgressMessage || AppConfig.strings.settings.maintenance.integrityWait
-        }
+        progressMessage={vm.integrityProgressMessage}
         hint={AppConfig.strings.settings.maintenance.integrityHint}
         icon={Icon.Search}
       />
@@ -132,9 +130,7 @@ function MaintenanceSettingsView() {
         isVisible={vm.isSeeding}
         title={AppConfig.strings.settings.maintenance.seedMockTitle}
         progress={vm.seedingProgress}
-        progressMessage={
-          vm.seedingProgressMessage || AppConfig.strings.settings.maintenance.seedMockWait
-        }
+        progressMessage={vm.seedingProgressMessage}
         hint={AppConfig.strings.settings.maintenance.seedMockHint}
         icon={Icon.Database}
       />

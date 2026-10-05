@@ -25,7 +25,6 @@ export function PrivacyAcknowledgementSheet({
       visible={visible}
       title={copy.acknowledgementPromptTitle}
       onClose={onClose}
-      // Detox stalls with the native modal during iOS setup navigation. Production stays native.
       useNativeModal={process.env.EXPO_PUBLIC_E2E !== '1'}
       maxHeightPercent={70}
       fixedHeight={false}

@@ -13,7 +13,7 @@ import { createSettingsSearchCatalog } from '@/src/features/settings/components/
 import { AppNavigation } from '@/src/utils/navigation';
 import { useMemo, useRef, useState } from 'react';
 
-export interface SettingsViewProps {
+interface SettingsViewProps {
   onProfile: () => void;
   onAppearance: () => void;
   onAutomation: () => void;

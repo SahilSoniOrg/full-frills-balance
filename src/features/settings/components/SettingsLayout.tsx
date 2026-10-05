@@ -20,7 +20,6 @@ interface SettingsLayoutProps {
   title: string;
   headerActions?: React.ReactNode;
   fab?: ScreenFabChrome;
-  /** Tab root: false. Sub-screens: true (default). */
   showBack?: boolean;
   backIcon?: NavBackIcon;
   scrollable?: boolean;
@@ -30,9 +29,6 @@ interface SettingsLayoutProps {
   scrollViewProps?: ScrollViewProps;
 }
 
-/**
- * Settings shell: builds default nav chrome from title + optional actions/FAB.
- */
 export function SettingsLayout({
   title,
   headerActions,

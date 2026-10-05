@@ -13,8 +13,6 @@ import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback } from 'react';
 
-export type { TransactionInboxImportOptions };
-
 interface UseTransactionInboxImportProps {
   accounts: AccountFields[];
   workplaceId: WorkplaceId;
