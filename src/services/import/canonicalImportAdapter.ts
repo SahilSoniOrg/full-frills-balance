@@ -6,7 +6,6 @@ import type {
   CanonicalImportV1,
 } from '@/src/types/importContracts';
 
-/** Maps canonical plugin output to the persistence batch shape (commit 29 will narrow this path). */
 export function batchImportDataFromCanonical(canonical: CanonicalImport): BatchImportData {
   if (canonical.version !== CANONICAL_IMPORT_VERSION_V1) {
     throw new Error(`Unsupported canonical import version: ${canonical.version}`);

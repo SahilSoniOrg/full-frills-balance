@@ -12,9 +12,6 @@ import { ShareFormat } from '@/src/types/sharing';
 import type { ShareProvider } from '@/src/types/sharing';
 import type { AnalyticsProperties } from './analytics/analyticsConfig';
 
-export { ShareFormat };
-export type { ShareProvider };
-
 const MAX_INLINE_SHARE = 50_000; // ~50KB characters (WhatsApp truncation guard)
 
 class SharingService {

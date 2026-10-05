@@ -61,7 +61,7 @@ export function useAuditLogs(params: {
     limit,
   ]);
 
-  const { data, isLoading, error, retry, version } = useObservable(
+  const { data, isLoading, error, retry } = useObservable(
     () =>
       (isFiltered
         ? observeAuditTrail(entityType!, entityId!, workplaceId, limit)
@@ -103,5 +103,5 @@ export function useAuditLogs(params: {
   const rawLogs = data?.queryKey === queryKey ? data.logs : EMPTY_AUDIT_LOGS;
   const logs: AuditLogEntry[] = useMemo(() => rawLogs.map(toAuditLogEntry), [rawLogs]);
 
-  return { logs, isLoading: isLoading || data?.queryKey !== queryKey, error, retry, version };
+  return { logs, isLoading: isLoading || data?.queryKey !== queryKey, error, retry };
 }

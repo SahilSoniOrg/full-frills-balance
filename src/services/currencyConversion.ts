@@ -33,8 +33,6 @@ export type ConvertAmountResult = ConvertAmountSuccess | ConvertAmountFailure;
 export type SpotExchangeRateResult =
   { ok: true; rate: number } | { ok: false; reason: 'missing_rate' };
 
-export { isUsableExchangeRate } from '@/src/domain/accounting/usableExchangeRate';
-
 /** Resolves an unrounded multiplier without treating money amounts as rates. */
 export async function resolveSpotExchangeRate(
   fromCurrency: string,

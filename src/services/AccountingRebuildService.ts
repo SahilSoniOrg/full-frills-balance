@@ -22,7 +22,7 @@ import { storage } from '@/src/utils/storage';
 const CHECKPOINT_INTERVAL = AppConfig.performance.rebuild.checkpointInterval;
 const REBUILD_LOCK_PREFIX = 'rebuild_lock_';
 
-export type RebuildCurrentCheck = () => boolean;
+type RebuildCurrentCheck = () => boolean;
 
 function isRebuildCancelled(signal?: AbortSignal, isCurrent?: RebuildCurrentCheck): boolean {
   return signal?.aborted === true || isCurrent?.() === false;

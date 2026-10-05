@@ -2,29 +2,22 @@ import type { UIPreferences } from '@/src/services/preferences/types';
 import type { WorkplacePreferences } from '@/src/services/preferences/workplaceTypes';
 import { hashSmsMetadataFingerprints } from '@/src/utils/smsPrivateMetadata';
 
-export interface ExportMetadata {
-  exportDate: string;
-  version: string;
-  schemaVersion: number;
-  preferences: UIPreferences;
-  workplacePreferences?: WorkplacePreferences;
-  workplace?: {
-    id: string;
-    name: string;
-    icon: string;
-    defaultCurrencyCode: string;
-    createdAt: string;
-    updatedAt: string;
-  };
-}
-
-export interface ExportWorkplaceMetadata {
+export type ExportWorkplaceMetadata = {
   id: string;
   name: string;
   icon: string;
   defaultCurrencyCode: string;
   createdAt: string;
   updatedAt: string;
+};
+
+export interface ExportMetadata {
+  exportDate: string;
+  version: string;
+  schemaVersion: number;
+  preferences: UIPreferences;
+  workplacePreferences?: WorkplacePreferences;
+  workplace?: ExportWorkplaceMetadata;
 }
 
 export interface MultiWorkplaceExportEntry {
@@ -42,12 +35,9 @@ export interface MultiWorkplaceExportMetadata {
   workplaces: readonly MultiWorkplaceExportEntry[];
 }
 
-export type ExportTableSource = readonly [key: string, load: () => Promise<readonly unknown[]>];
-
-/** Serialize tables on demand so fetched table arrays do not accumulate. */
 export async function serializeExportPayloadFromSources(
   metadata: ExportMetadata,
-  tables: readonly ExportTableSource[],
+  tables: readonly (readonly [key: string, load: () => Promise<readonly unknown[]>])[],
   onProgress?: (message: string, progress: number) => void,
 ): Promise<string> {
   const tableCount = tables.length;

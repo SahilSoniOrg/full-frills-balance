@@ -19,7 +19,7 @@ import {
   POSTHOG_HOST,
   type AnalyticsProperties,
 } from './analyticsConfig';
-import { FeatureEventMap, KnownFeature } from './types';
+import { FeatureEventMap, KnownFeature } from './featureEventCatalog';
 
 export class AnalyticsService {
   private _posthog: PostHog | null = null;

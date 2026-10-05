@@ -1,10 +1,3 @@
-/**
- * Native Import Plugin
- *
- * Handles import of Full Frills Balance native backup format.
- * Refactored from import-service.ts to implement ImportPlugin interface.
- */
-
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { AccountId, BudgetId, JournalId, PlannedPaymentId, TransactionId } from '@/src/types/ids';
 import {

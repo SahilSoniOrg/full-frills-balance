@@ -1,11 +1,4 @@
-/**
- * Exchange Rate Service
- *
- * Handles currency conversion with caching and API integration.
- * Uses exchangerate-api.com free tier (1500 requests/month).
- *
- * All database operations are delegated to ExchangeRateRepository.
- */
+/** Exchange rates: API integration and repository-backed cache. */
 
 import { AppConfig } from '@/src/constants/app-config';
 import { generator } from '@/src/data/database/idGenerator';

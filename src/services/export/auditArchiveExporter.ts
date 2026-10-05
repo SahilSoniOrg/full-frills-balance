@@ -1,6 +1,7 @@
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import AuditLog from '@/src/data/models/AuditLog';
-import { sharingService, ShareFormat } from '@/src/services/SharingService';
+import { sharingService } from '@/src/services/SharingService';
+import { ShareFormat } from '@/src/types/sharing';
 import type { WorkplaceId } from '@/src/types/ids';
 import { File, Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
@@ -63,15 +64,17 @@ function requestBrowserWriter(filename: string): Promise<BrowserArchiveWritable>
   if (typeof window === 'undefined') return null;
   const savePicker = (window as WindowWithSavePicker).showSaveFilePicker;
   if (!savePicker) return null;
-  return savePicker.call(window, {
-    suggestedName: filename,
-    types: [
-      {
-        description: 'Audit history archive',
-        accept: { [ARCHIVE_MIME_TYPE]: ['.jsonl'] },
-      },
-    ],
-  }).then(handle => handle.createWritable());
+  return savePicker
+    .call(window, {
+      suggestedName: filename,
+      types: [
+        {
+          description: 'Audit history archive',
+          accept: { [ARCHIVE_MIME_TYPE]: ['.jsonl'] },
+        },
+      ],
+    })
+    .then(handle => handle.createWritable());
 }
 
 /** Writes the complete current-workplace history as a versioned, read-only JSONL archive. */
@@ -81,10 +84,8 @@ export async function exportAuditHistoryArchive(
 ): Promise<void> {
   const requestedAt = Date.now();
   const filename = archiveFilename(requestedAt);
-  const nativeFile =
-    Platform.OS === 'web' ? null : new File(Paths.cache, filename);
-  const browserWriterPromise =
-    Platform.OS === 'web' ? requestBrowserWriter(filename) : null;
+  const nativeFile = Platform.OS === 'web' ? null : new File(Paths.cache, filename);
+  const browserWriterPromise = Platform.OS === 'web' ? requestBrowserWriter(filename) : null;
   const webChunks: string[] = [];
   let browserWriter: BrowserArchiveWritable | undefined;
   let exportedCount = 0;

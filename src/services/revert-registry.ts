@@ -31,11 +31,6 @@ interface RevertRegistration {
 class RevertRegistry {
   private handlers = new Map<string, RevertRegistration>();
 
-  /**
-   * Register a reversion handler for a specific entity type.
-   * This allows features to provide reversion logic without AuditService
-   * needing to import the feature services directly.
-   */
   register(entityType: string, handler: RevertHandler, canRevert?: RevertCapability) {
     this.handlers.set(entityType.toLowerCase(), {
       handler,
@@ -46,9 +41,6 @@ class RevertRegistry {
     });
   }
 
-  /**
-   * Get the handler for an entity type.
-   */
   getHandler(entityType: string): RevertHandler | undefined {
     return this.handlers.get(entityType.toLowerCase())?.handler;
   }

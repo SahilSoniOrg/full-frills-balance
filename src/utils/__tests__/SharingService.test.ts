@@ -1,4 +1,5 @@
-import { sharingService, ShareFormat } from '../../services/SharingService';
+import { sharingService } from '../../services/SharingService';
+import { ShareFormat } from '../../types/sharing';
 import {
   JournalShareProvider,
   ShareableJournalEntry,

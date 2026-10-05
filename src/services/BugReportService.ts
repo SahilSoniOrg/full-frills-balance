@@ -6,7 +6,8 @@ import { compression } from '../utils/compression';
 import { logger } from '../utils/logger';
 import { safeDiagnosticError } from '../utils/observabilityPrivacy';
 import { analytics } from './analytics';
-import { ShareFormat, sharingService } from './SharingService';
+import { ShareFormat } from '@/src/types/sharing';
+import { sharingService } from './SharingService';
 
 export class BugReportService {
   /**
