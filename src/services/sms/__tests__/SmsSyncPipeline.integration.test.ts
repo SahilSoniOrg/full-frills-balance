@@ -28,19 +28,21 @@ import {
 } from '@/src/testing/smsTestHarness';
 
 jest.mock('@/src/utils/storage', () =>
-  require('@/src/testing/smsIntegrationMocks').createSmsIntegrationStorageMock(),
+  jest.requireActual('@/src/testing/smsIntegrationMocks').createSmsIntegrationStorageMock(),
 );
 
 jest.mock('@/modules/expo-sms-inbox', () =>
-  require('@/src/testing/smsIntegrationMocks').createSmsIntegrationExpoInboxMock(),
+  jest.requireActual('@/src/testing/smsIntegrationMocks').createSmsIntegrationExpoInboxMock(),
 );
 
 jest.mock('react-native/Libraries/Utilities/Platform', () =>
-  require('@/src/testing/smsIntegrationMocks').createSmsIntegrationPlatformMock(),
+  jest.requireActual('@/src/testing/smsIntegrationMocks').createSmsIntegrationPlatformMock(),
 );
 
 jest.mock('react-native/Libraries/PermissionsAndroid/PermissionsAndroid', () =>
-  require('@/src/testing/smsIntegrationMocks').createSmsIntegrationPermissionsAndroidMock(),
+  jest
+    .requireActual('@/src/testing/smsIntegrationMocks')
+    .createSmsIntegrationPermissionsAndroidMock(),
 );
 
 jest.mock('@/src/services/analytics');

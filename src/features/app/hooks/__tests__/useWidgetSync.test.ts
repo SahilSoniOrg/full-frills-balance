@@ -21,7 +21,7 @@ jest.mock('@/src/hooks/useThemePrefs', () => ({ useThemePrefs: jest.fn() }));
 jest.mock('@/src/hooks/use-theme', () => ({ useTheme: jest.fn() }));
 jest.mock('@/src/hooks/useObservable', () => ({ useObservable: jest.fn() }));
 jest.mock('@/src/services/widgets/nativeWidgetAdapter', () =>
-  require('@/src/testing/mockNativeWidgets').nativeWidgetAdapterModuleMock(),
+  jest.requireActual('@/src/testing/mockNativeWidgets').nativeWidgetAdapterModuleMock(),
 );
 jest.mock('@/modules/expo-widgets', () => ({
   __esModule: true,

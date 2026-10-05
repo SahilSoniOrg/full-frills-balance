@@ -12,7 +12,7 @@ async function flushUntilStarted(started: () => boolean): Promise<void> {
 const nativeWidgets = createNativeWidgetsStub();
 
 jest.mock('../nativeWidgetAdapter', () =>
-  require('@/src/testing/mockNativeWidgets').nativeWidgetAdapterModuleMock(),
+  jest.requireActual('@/src/testing/mockNativeWidgets').nativeWidgetAdapterModuleMock(),
 );
 jest.mock('@/src/utils/logger', () => ({
   logger: { warn: jest.fn() },
