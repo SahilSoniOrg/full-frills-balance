@@ -3,10 +3,12 @@ import { AccountId } from '@/src/types/ids';
 import {
   AuditLogEntry,
   computeCanRevert,
+  getAuditFieldDiff,
   getEntityDisplayName,
   hasBeforeAfterChanges,
   parseAuditChanges,
 } from '@/src/features/audit/auditLogTypes';
+import { createAuditEventPayload, getAuditEventFieldDeltas } from '@/src/types/auditEvents';
 
 describe('auditLogTypes', () => {
   describe('parseAuditChanges', () => {
@@ -85,6 +87,31 @@ describe('auditLogTypes', () => {
       const entry = { ...baseEntry, action: AuditAction.CREATE };
       expect(computeCanRevert(entry, { 'j-1': { exists: true, isDeleted: false } })).toBe(true);
       expect(computeCanRevert(entry, { 'j-1': { exists: true, isDeleted: true } })).toBe(false);
+    });
+  });
+
+  describe('getAuditFieldDiff', () => {
+    it('supplies unchanged currency as display context without an undo field', () => {
+      const changes = createAuditEventPayload({
+        entityType: 'budget',
+        action: AuditAction.UPDATE,
+        changes: { before: { amount: 100, currencyCode: 'INR' }, after: { amount: 200 } },
+      });
+      expect(getAuditEventFieldDeltas(changes)).toEqual({ amount: { before: 100, after: 200 } });
+      expect(getAuditFieldDiff(changes)).toEqual({
+        before: { amount: 100, currencyCode: 'INR' },
+        after: { amount: 200, currencyCode: 'INR' },
+      });
+    });
+
+    it('returns null when currency context is the only would-be change', () => {
+      const changes = createAuditEventPayload({
+        entityType: 'budget',
+        action: AuditAction.UPDATE,
+        changes: { before: { amount: 100, currencyCode: 'INR' }, after: { amount: 100 } },
+      });
+      expect(getAuditFieldDiff(changes)).toBeNull();
+      expect(changes.undoable).toBe(false);
     });
   });
 

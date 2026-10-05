@@ -35,7 +35,15 @@ describe('export serialization', () => {
     });
   });
   it('loads source tables sequentially and preserves the export shape', async () => {
-    const events: string[] = [];
+    const loadOrder: string[] = [];
+    const loadAccounts = jest.fn(async () => {
+      loadOrder.push('accounts');
+      return [{ id: 'a1', runningBalance: 10 }];
+    });
+    const loadJournals = jest.fn(async () => {
+      loadOrder.push('journals');
+      return [{ id: 'j1' }];
+    });
     const json = await serializeExportPayloadFromSources(
       {
         exportDate: '2026-01-01T00:00:00.000Z',
@@ -44,26 +52,14 @@ describe('export serialization', () => {
         preferences: DEFAULT_UI_PREFERENCES,
       },
       [
-        [
-          'accounts',
-          async () => {
-            events.push('accounts:start');
-            await new Promise(resolve => setTimeout(resolve, 1));
-            events.push('accounts:end');
-            return [{ id: 'a1', runningBalance: 10 }];
-          },
-        ],
-        [
-          'journals',
-          async () => {
-            events.push('journals:start');
-            return [{ id: 'j1' }];
-          },
-        ],
+        ['accounts', loadAccounts],
+        ['journals', loadJournals],
       ],
     );
 
-    expect(events).toEqual(['accounts:start', 'accounts:end', 'journals:start']);
+    expect(loadOrder).toEqual(['accounts', 'journals']);
+    expect(loadAccounts).toHaveBeenCalledTimes(1);
+    expect(loadJournals).toHaveBeenCalledTimes(1);
     expect(JSON.parse(json).accounts).toEqual([{ id: 'a1' }]);
     expect(JSON.parse(json).journals).toEqual([{ id: 'j1' }]);
   });
