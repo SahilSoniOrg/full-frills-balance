@@ -43,10 +43,6 @@ export async function openDashboardTab(): Promise<void> {
   await assertVisibleById(dashboard.screen);
 }
 
-export async function openActivityTab(): Promise<void> {
-  await tapById(tabs.activity);
-}
-
 export async function openAccountsTab(): Promise<void> {
   await tapById(tabs.accounts);
 }
@@ -95,8 +91,6 @@ export async function openSafeToSpendExplanation(options?: {
   await assertTextVisible('How Safe to Spend Works');
   await assertVisibleById(SAFE_TO_SPEND_PROJECTED_GAP_COPY, LONG_TIMEOUT_MS);
 }
-
-export { SAFE_TO_SPEND_PROJECTED_GAP_COPY };
 
 export async function createPlannedPayment(name: string, amount: string): Promise<void> {
   await openCommitmentsTab();

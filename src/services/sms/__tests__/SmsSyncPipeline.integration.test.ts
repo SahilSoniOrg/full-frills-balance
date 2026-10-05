@@ -12,6 +12,7 @@ import type TransactionInboxRecord from '@/src/data/models/TransactionInboxRecor
 import { Q } from '@nozbe/watermelondb';
 import { smsMessageFromFixture } from '@/src/testing/smsFixtures';
 import { storage } from '@/src/utils/storage';
+import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import {
   fetchInboxByDeviceId,
   fingerprintForMessage,
@@ -24,7 +25,6 @@ import {
   seedSmsTestAccounts,
   SMS_TEST_WORKPLACE,
   SMS_TEST_WORKPLACE_B,
-  smsJournalQueries,
 } from '@/src/testing/smsTestHarness';
 
 jest.mock('@/src/utils/storage', () => {
@@ -250,9 +250,9 @@ describe('SmsSyncPipeline integration', () => {
         journalDate: baseDate,
       });
 
-      expect(
-        await scanFixture('swiggyNoRef', 'sms-fuzzy-b1', baseDate + 15 * 60 * 1000),
-      ).toBe(InboxProcessingStatus.DUPLICATE_FLAGGED);
+      expect(await scanFixture('swiggyNoRef', 'sms-fuzzy-b1', baseDate + 15 * 60 * 1000)).toBe(
+        InboxProcessingStatus.DUPLICATE_FLAGGED,
+      );
       const inbox = await fetchInboxByDeviceId('sms-fuzzy-b1');
       expect(inbox?.duplicateConfidence).toBeGreaterThanOrEqual(
         AppConfig.input.sms.duplicateDetection.scoreThreshold,

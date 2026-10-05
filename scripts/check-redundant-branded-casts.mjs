@@ -1,13 +1,4 @@
 #!/usr/bin/env node
-/**
- * Fails when production code asserts a branded ID type that the expression
- * already has. Brand strings once at an untyped boundary (route params,
- * generateId, Object.keys, raw SQL, MMKV) via asJournalId / asAccountId / etc.
- *
- * Usage:
- *   node scripts/check-redundant-branded-casts.mjs
- *   node scripts/check-redundant-branded-casts.mjs --list-remaining
- */
 import path from 'path';
 import { fileURLToPath } from 'url';
 import ts from 'typescript';

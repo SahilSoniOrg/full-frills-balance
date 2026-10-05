@@ -22,7 +22,6 @@
     "check:privacy-policy": "node scripts/check-privacy-policy-version.mjs",
     "check:route-registry": "node scripts/check-route-registry-agreement.mjs",
     "check:query-ordering": "node scripts/check-query-ordering-parity.mjs",
-    "check:design-system-primitives": "node scripts/check-design-system-primitives.mjs",
     "check:architecture-ratchets": "node scripts/check-architecture-ratchets.mjs",
     "check:raw-sql-ownership": "node scripts/check-raw-sql-ownership.mjs",
     "check:branded-casts": "node scripts/check-redundant-branded-casts.mjs",

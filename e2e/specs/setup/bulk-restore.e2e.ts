@@ -4,7 +4,7 @@
  * @platform mobile
  */
 import { by, device, element, expect } from 'detox';
-import { E2E_AUTH_TOKEN } from '../../utils/launchArgs';
+import { E2E_AUTH_TOKEN } from '@/src/testing/e2eConstants';
 
 jest.setTimeout(180000);
 

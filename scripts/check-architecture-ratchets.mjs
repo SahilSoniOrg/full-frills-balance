@@ -1,16 +1,4 @@
 #!/usr/bin/env node
-/**
- * Ratchets three architecture debts without pretending they are already zero:
- *   - raw repository APIs / static raw SQL that omit workplace scope;
- *   - presentation and feature imports of WatermelonDB models;
- *   - direct database write/batch/action calls outside persistence seams;
- *   - direct database collection access from service/command code;
- *   - service/command model preparation, update, and private raw access.
- *
- * The baseline is per rule and file. A new occurrence fails with file:line;
- * removing an occurrence makes the baseline stale and also fails until the
- * baseline is deliberately reduced.
- */
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';

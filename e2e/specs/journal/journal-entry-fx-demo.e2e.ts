@@ -1,8 +1,3 @@
-/**
- * @owner mobile
- * @dataSource e2e
- * @platform ios
- */
 import { by, device, element, waitFor } from 'detox';
 import { launchOnboardedApp } from '../../actions/launch';
 import { tabs } from '../../screens';

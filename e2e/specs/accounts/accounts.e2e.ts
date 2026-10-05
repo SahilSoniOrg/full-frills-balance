@@ -1,8 +1,3 @@
-/**
- * @owner mobile
- * @dataSource e2e
- * @platform mobile
- */
 import { launchOnboardedApp } from '../../actions/launch';
 import { element, by, waitFor } from 'detox';
 import { accounts, tabs } from '../../screens';

@@ -1,23 +1,4 @@
 #!/usr/bin/env node
-/**
- * Ensures the broad JournalRepository migration façade stays deleted.
- *
- * The all-purpose gateway was removed (plan commit 21). Journal persistence is
- * now accessed by intent through modules under src/data/repositories/journal/:
- *   - journalQueryRepository            (scoped list / by-id / date-range reads)
- *   - JournalObserveQueries             (reactive read models)
- *   - JournalEnrichmentQueries           (timeline / suggestion enrichment)
- *   - JournalPersistenceRepository      (journal writes and lifecycle commands)
- *   - JournalPlannedQueries             (planned-payment scheduling lookups)
- *   - SmsJournalQueries                 (SMS-dedup lookups)
- *   - journalMetadataRepository         (metadata lookup / patch)
- *
- * This check fails if the façade file returns or if any module imports it,
- * preventing the gateway pattern from reappearing under the same name.
- *
- * Usage:
- *   node scripts/check-journal-repository-facade.mjs
- */
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';

@@ -1,11 +1,6 @@
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
-/**
- * End-to-End Workflow Tests
- * Tests complete user workflows across multiple repositories
- */
-
 import { database } from '@/src/data/database/Database';
 
 import { accountWriteRepository } from '@/src/data/repositories/account';
@@ -31,7 +26,6 @@ describe('E2E Workflows', () => {
 
   describe('Daily expense tracking workflow', () => {
     it('should track a full day of expenses with correct balances', async () => {
-      // Setup: Create accounts
       const wallet = await createAccount('test-workplace' as WorkplaceId, {
         name: 'Wallet',
         accountType: AccountType.ASSET,
@@ -39,7 +33,6 @@ describe('E2E Workflows', () => {
         initialBalance: 200,
         workplaceId: 'test-workplace' as WorkplaceId,
       });
-      // Flush the initial balance journal creation
       await rebuildQueueService.flush();
 
       const food = await accountWriteRepository.create({
@@ -55,7 +48,6 @@ describe('E2E Workflows', () => {
         workplaceId: 'test-workplace' as WorkplaceId,
       });
 
-      // Morning: Coffee
       await journalPersistenceService.put(
         {
           description: 'Morning Coffee',
@@ -77,7 +69,6 @@ describe('E2E Workflows', () => {
         'test-workplace' as WorkplaceId,
       );
 
-      // Lunch
       await journalPersistenceService.put(
         {
           description: 'Lunch',
@@ -99,7 +90,6 @@ describe('E2E Workflows', () => {
         'test-workplace' as WorkplaceId,
       );
 
-      // Bus ride
       await journalPersistenceService.put(
         {
           description: 'Bus',
@@ -121,10 +111,8 @@ describe('E2E Workflows', () => {
         'test-workplace' as WorkplaceId,
       );
 
-      // Ensure all rebuilds complete
       await rebuildQueueService.flush();
 
-      // Verify balances
       const walletBalance = await balanceReadService.getAccountBalance(
         wallet.id,
         'test-workplace' as WorkplaceId,
@@ -141,12 +129,10 @@ describe('E2E Workflows', () => {
         Date.now() + 5000,
       );
 
-      // 200 - 5.50 - 15.00 - 2.50 = 177.00
       expect(walletBalance.balance).toBe(177);
       expect(foodBalance.balance).toBe(20.5);
       expect(transportBalance.balance).toBe(2.5);
 
-      // Verify integrity
       const walletIntegrity = await verifyAccountBalance(
         wallet.id,
         'test-workplace' as WorkplaceId,
@@ -158,7 +144,7 @@ describe('E2E Workflows', () => {
 
   describe('Journal reversal workflow', () => {
     it('should correctly reverse a journal and restore balances', async () => {
-      const FIXED_DATE = 1706700000000; // Fixed date for test
+      const FIXED_DATE = 1706700000000;
       const cash = await createAccount('test-workplace' as WorkplaceId, {
         name: 'Cash',
         accountType: AccountType.ASSET,
@@ -166,7 +152,6 @@ describe('E2E Workflows', () => {
         initialBalance: 500,
         workplaceId: 'test-workplace' as WorkplaceId,
       });
-      // Reset the date of the initial balance to be in the past
       const [initialJournal] = await journalQueryRepository.findAll(
         'test-workplace' as WorkplaceId,
       );
@@ -185,7 +170,6 @@ describe('E2E Workflows', () => {
         }
       });
 
-      // Flush the initial balance journal creation
       await rebuildQueueService.flush();
 
       const expense = await accountWriteRepository.create({
@@ -195,7 +179,6 @@ describe('E2E Workflows', () => {
         workplaceId: 'test-workplace' as WorkplaceId,
       });
 
-      // Make a purchase
       const journal = await journalPersistenceService.put(
         {
           description: 'Accidental purchase',
@@ -217,7 +200,6 @@ describe('E2E Workflows', () => {
         'test-workplace' as WorkplaceId,
       );
 
-      // Verify balance after purchase
       await rebuildQueueService.flush();
       let cashBalance = await balanceReadService.getAccountBalance(
         cash.id,
@@ -225,17 +207,14 @@ describe('E2E Workflows', () => {
       );
       expect(cashBalance.balance).toBe(400);
 
-      // Reverse the journal
       await journalService.createReversalJournal(
         journal.id,
         'Refund',
         'test-workplace' as WorkplaceId,
       );
 
-      // Ensure rebuilds complete
       await rebuildQueueService.flush();
 
-      // Verify balance is restored
       cashBalance = await balanceReadService.getAccountBalance(
         cash.id,
         'test-workplace' as WorkplaceId,
@@ -259,7 +238,6 @@ describe('E2E Workflows', () => {
         workplaceId: 'test-workplace' as WorkplaceId,
       });
 
-      // Spend 100 EUR at 1.10 USD/EUR rate (= 110 USD in journal currency)
       await journalPersistenceService.put(
         {
           description: 'Purchase in EUR',
@@ -282,7 +260,6 @@ describe('E2E Workflows', () => {
         'test-workplace' as WorkplaceId,
       );
 
-      // Ensure rebuilds complete
       await rebuildQueueService.flush();
 
       const usdBalance = await balanceReadService.getAccountBalance(

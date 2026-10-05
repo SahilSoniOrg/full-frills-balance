@@ -8,7 +8,7 @@ import { execFileSync } from 'node:child_process';
 import { copyFileSync, mkdirSync } from 'node:fs';
 import { basename } from 'node:path';
 import { launchOnboardedApp, waitForDashboard } from '../../actions/launch';
-import { E2E_AUTH_TOKEN } from '../../utils/launchArgs';
+import { E2E_AUTH_TOKEN } from '@/src/testing/e2eConstants';
 
 jest.setTimeout(180000);
 

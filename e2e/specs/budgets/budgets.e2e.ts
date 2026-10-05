@@ -1,8 +1,3 @@
-/**
- * @owner mobile
- * @dataSource e2e
- * @platform mobile
- */
 import { element, by, expect } from 'detox';
 import { launchOnboardedApp } from '../../actions/launch';
 import {

@@ -1,9 +1,6 @@
 import { database } from '@/src/data/database/Database';
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import {
-  mockPlannedFxExchangeRates,
-  resetPlannedPaymentDatabase,
-} from '@/src/testing/plannedPaymentFixtures';
+import { resetPlannedPaymentDatabase } from '@/src/testing/plannedPaymentFixtures';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
@@ -40,6 +37,16 @@ import { AppConfig } from '@/src/constants';
 
 const WORKPLACE = 'planned-fx-integration' as WorkplaceId;
 const DAY = AppConfig.time.msPerDay;
+
+function mockPlannedFxExchangeRates(spotRate = 0.9, historicalRate = 0.8, asOf?: number) {
+  jest.spyOn(exchangeRateService, 'getRequiredRate').mockResolvedValue(spotRate);
+  jest.spyOn(exchangeRateService, 'getHistoricalRate').mockResolvedValue({
+    rate: historicalRate,
+    requestedDate: asOf ?? Date.now(),
+    effectiveDate: asOf ?? Date.now(),
+    source: 'test',
+  });
+}
 
 describe('planned FX posting and review integration', () => {
   let fromAccountId: AccountId;

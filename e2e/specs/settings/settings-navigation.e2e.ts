@@ -1,8 +1,3 @@
-/**
- * @owner mobile
- * @dataSource e2e
- * @platform mobile
- */
 import { device, element, by, expect } from 'detox';
 import { assertTextVisible, assertVisibleById } from '../../actions/assertions';
 import { launchOnboardedApp } from '../../actions/launch';

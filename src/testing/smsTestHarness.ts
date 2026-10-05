@@ -13,7 +13,6 @@ import {
 } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
 import { SmsParser } from '@/src/services/ledger/SmsParser';
 import { smsSyncPipeline } from '@/src/services/sms/pipeline';
@@ -172,5 +171,3 @@ export async function parseFixtureMessage(fixtureKey: SmsFixtureKey, date?: numb
 export function fingerprintForMessage(message: SmsMessage): string {
   return computeSmsFingerprint(message.address, message.body, message.date);
 }
-
-export { smsJournalQueries, smsSyncPipeline };

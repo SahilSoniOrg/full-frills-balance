@@ -6,7 +6,6 @@ import { AppRegistry } from 'react-native';
 // full-screen frame is visible before safe-area insets apply (FUL-42).
 import '@/src/features/app/preventSplashAutoHide';
 
-// Stage 1: Early Bootstrap (Critical Error Tracking)
 import { analytics } from '@/src/services/analytics';
 import '@/src/features/app/hooks/useFonts';
 import { logger } from './src/utils/logger';

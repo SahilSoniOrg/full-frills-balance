@@ -3,10 +3,8 @@ export const onboarding = {
   nameInput: 'onboarding-name-input',
   start: 'onboarding-start',
   skip: 'onboarding-skip',
-  continue: 'onboarding-continue-button',
   gridContinue: 'selectable-grid-continue-button',
   finishButton: 'onboarding-finish-button',
-  workplaceIdentityContinue: 'workplace-basic-info-continue-button',
   workplaceNameInput: 'workplace-name-input',
   summary: 'onboarding-summary-step',
   restoreButton: 'onboarding-restore-button',
@@ -37,9 +35,6 @@ export const budgets = {
   nameInput: 'hero-name-input',
   scheduleField: 'budget-schedule-field',
   intervalItem: (interval: string) => `budget-interval-type-item-${interval}`,
-  categoryAdd: 'budget-category-add',
-  historyChart: 'budget-spending-history-chart',
-  categorySuggestion: (accountId: string) => `budget-category-suggestion-${accountId}`,
 } as const;
 
 export const plannedPayments = {

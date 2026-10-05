@@ -1,8 +1,3 @@
-/**
- * @owner mobile
- * @dataSource e2e
- * @platform mobile
- */
 import { assertTextVisible, assertVisibleById } from '../../actions/assertions';
 import { launchOnboardedApp } from '../../actions/launch';
 import { replaceById, tapById, tapByLabel } from '../../actions/mobile/elementActions';

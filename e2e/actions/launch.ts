@@ -1,6 +1,6 @@
 import { device, element, by, waitFor } from 'detox';
-import type { E2eSeedProfile } from '../utils/launchArgs';
-import { E2E_AUTH_TOKEN } from '../utils/launchArgs';
+import type { E2eSeedProfile } from '@/src/testing/e2eConstants';
+import { E2E_AUTH_TOKEN } from '@/src/testing/e2eConstants';
 
 export type LaunchOnboardedOptions = {
   seedProfile?: E2eSeedProfile;
