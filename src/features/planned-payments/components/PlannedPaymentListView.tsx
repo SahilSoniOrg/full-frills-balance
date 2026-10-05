@@ -10,16 +10,16 @@ import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { PlannedPaymentCard } from '@/src/features/planned-payments/components/PlannedPaymentCard';
 import { PlannedPaymentMonthSummary } from '@/src/features/planned-payments/components/PlannedPaymentMonthSummary';
-import type { PlannedPaymentListPresentation } from '@/src/features/planned-payments/components/plannedPaymentListTypes';
+import type {
+  PlannedPaymentListPresentation,
+  PlannedPaymentListGroup,
+  PlannedPaymentListRow,
+} from '@/src/features/planned-payments/hooks/plannedPaymentListPresentation';
 import { usePlannedListRecord } from '@/src/features/planned-payments/hooks/usePlannedListRecord';
 import type {
   PlannedPaymentObligation,
   PlannedPaymentListOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentReadService';
-import type {
-  PlannedPaymentListGroup,
-  PlannedPaymentListRow,
-} from '@/src/features/planned-payments/hooks/plannedPaymentListPresentation';
 import { FlashList } from '@shopify/flash-list';
 import dayjs from 'dayjs';
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';

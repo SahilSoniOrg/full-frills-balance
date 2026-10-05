@@ -1,4 +1,4 @@
-import { recordPlannedOccurrenceWithFxReview } from '@/src/features/planned-payments/hooks/recordPlannedOccurrenceWithFxReview';
+import { recordPlannedOccurrenceWithFxReview } from '@/src/services/planned-payment/recordPlannedOccurrenceWithFxReview';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import type { PlannedOccurrenceViewModel } from '@/src/features/planned-payments/types/PlannedOccurrenceViewModel';

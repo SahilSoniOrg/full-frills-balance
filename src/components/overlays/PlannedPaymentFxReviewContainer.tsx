@@ -8,7 +8,7 @@ import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { plannedPaymentFormStrings as copy } from '@/src/constants/copy/domains/plannedPaymentFormStrings';
 import { useAccount } from '@/src/hooks/useAccounts';
 import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
-import { useFxPairDraft } from '@/src/hooks/useFxPairDraft';
+import { usePlannedPaymentFx } from '@/src/hooks/usePlannedPaymentFx';
 import { registerPlannedPaymentFxReviewListener } from '@/src/services/planned-payment/plannedPaymentFxReviewRequest';
 import type {
   PlannedPaymentFxReview,
@@ -64,23 +64,22 @@ export function PlannedPaymentFxReviewSheet({
   const [destinationAmount, setDestinationAmount] = useState<string | undefined>(
     request.destinationAmount?.toString(),
   );
-  const [refreshNonce, setRefreshNonce] = useState(0);
   const { precision: sourcePrecision } = useCurrencyPrecision(request.sourceCurrency);
   const { precision: destinationPrecision } = useCurrencyPrecision(request.destinationCurrency);
   const { account: sourceAccount } = useAccount(request.fromAccountId, request.workplaceId);
   const { account: destinationAccount } = useAccount(request.toAccountId, request.workplaceId);
-  const convertedDestAmount =
-    destinationAmount && Number(destinationAmount) > 0 ? Number(destinationAmount) : undefined;
-  const { pair } = useFxPairDraft({
-    sourceCurrency: request.sourceCurrency,
-    destCurrency: request.destinationCurrency,
-    baseCurrency: request.sourceCurrency,
-    sourceAmount: Number(amount) || 0,
-    destPrecision: destinationPrecision,
-    enabled: request.sourceCurrency !== request.destinationCurrency,
-    refreshNonce,
-    convertedDestAmount,
-  });
+  const { pair, refresh } = usePlannedPaymentFx(
+    {
+      amount,
+      currencyCode: request.sourceCurrency,
+      fxMode: 'manual',
+      destinationAmount,
+    },
+    sourceAccount ?? undefined,
+    destinationAccount ?? undefined,
+    destinationPrecision,
+    { source: request.sourceCurrency, dest: request.destinationCurrency },
+  );
   const received =
     request.sourceCurrency === request.destinationCurrency ? Number(amount) : pair.convertedAmount;
   const destinationDraftValid =
@@ -140,7 +139,7 @@ export function PlannedPaymentFxReviewSheet({
           convertedAmountValue={destinationAmount}
           onResetToApiRate={() => {
             setDestinationAmount(undefined);
-            setRefreshNonce(current => current + 1);
+            refresh();
           }}
           containerStyle={styles.fx}
           testIDPrefix="planned-payment-review-fx"

@@ -23,10 +23,8 @@ import { getNow } from '@/src/utils/dateUtils';
 import type { PlannedPaymentDetailsViewModel } from '../hooks/usePlannedPaymentDetailsViewModel';
 import { PlannedPaymentActivityOverview } from './PlannedPaymentActivityOverview';
 import {
-  daysUntilPlannedOccurrence,
   plannedMoneyDiffers,
-  presentPlannedPaymentDetailsUrgency,
-  presentPlannedPaymentDue,
+  presentPlannedPaymentDetailsHeader,
 } from '../hooks/plannedPaymentDetailsPresentation';
 
 const copy = AppConfig.strings.plannedDetailRedesign;
@@ -52,28 +50,15 @@ export function PlannedPaymentDetailsView({
     !!vm.currencyCode &&
     plannedMoneyDiffers(occurrence.amount, occurrence.currencyCode, vm.amount, vm.currencyCode);
   const showcasedDate = vm.showcasedOccurrenceDate ?? vm.nextOccurrenceDate;
-  const daysUntil =
-    showcasedDate == null ? undefined : daysUntilPlannedOccurrence(showcasedDate, getNow());
-  const scheduleDue = presentPlannedPaymentDue(
-    { status: vm.status ?? PlannedPaymentStatus.ACTIVE, nextDueOccurrence: showcasedDate },
-    getNow(),
-  );
-  const eyebrow = isPaused
-    ? vm.pausedSinceDate == null
-      ? copy.paused
-      : copy.pausedSince(dayjs(vm.pausedSinceDate).format('MMM D'))
-    : isEndedWithoutOutstanding
-      ? vm.activitySummary?.lastRecorded
-        ? copy.lastPayment(dayjs(vm.activitySummary.lastRecorded.journalDate).format('MMM YYYY'))
-        : copy.ended
-      : daysUntil != null && daysUntil < 0
-        ? copy.missedPayment
-        : copy.nextPayment;
-  const urgency = isPaused
-    ? copy.paused
-    : isEndedWithoutOutstanding
-      ? copy.ended
-      : presentPlannedPaymentDetailsUrgency(showcasedDate, getNow(), scheduleDue.label);
+  const { eyebrow, urgency, daysUntil, scheduleDue } = presentPlannedPaymentDetailsHeader({
+    status: vm.status ?? PlannedPaymentStatus.ACTIVE,
+    showcasedDate,
+    pausedSinceDate: vm.pausedSinceDate,
+    isPaused,
+    isEndedWithoutOutstanding,
+    lastRecordedJournalDate: vm.activitySummary?.lastRecorded?.journalDate,
+    now: getNow(),
+  });
   const dueDateText = showcasedDate;
   const formattedDueDate = dueDateText
     ? dayjs(dueDateText).format('dddd, MMM D')

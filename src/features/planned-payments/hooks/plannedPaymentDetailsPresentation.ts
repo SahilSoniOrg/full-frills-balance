@@ -1,6 +1,6 @@
 import { Icon, IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
-import { PlannedPaymentInterval } from '@/src/types/enums';
+import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { PlannedPaymentObligation } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { ComponentVariant } from '@/src/utils/style-helpers';
@@ -10,6 +10,23 @@ import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 
 export function daysUntilPlannedOccurrence(occurrenceDate: number, now: number): number {
   return dayjs(occurrenceDate).startOf('day').diff(dayjs(now).startOf('day'), 'day');
+}
+
+function detailScheduleLabel(days: number): string {
+  const copy = AppConfig.strings.plannedDetailRedesign;
+  if (days < 0) return copy.daysLate(Math.abs(days));
+  if (days === 0) return copy.dueToday;
+  if (days === 1) return copy.dueTomorrow;
+  return copy.dueInDays(days);
+}
+
+function detailUrgencyLabel(days: number): string {
+  const copy = AppConfig.strings.plannedDetailRedesign;
+  if (days < 0) return copy.daysLate(Math.abs(days));
+  if (days === 0) return copy.dueToday;
+  if (days === 1) return copy.dueTomorrow;
+  if (days <= 3) return copy.dueInDays(days);
+  return copy.inDays(days);
 }
 
 export function presentPlannedListOccurrenceTiming(occurrenceDate: number, now: number) {
@@ -31,12 +48,7 @@ export function presentPlannedPaymentDetailsUrgency(
   fallbackLabel: string,
 ): string {
   if (occurrenceDate == null) return fallbackLabel;
-  const daysUntil = daysUntilPlannedOccurrence(occurrenceDate, now);
-  const copy = AppConfig.strings.plannedDetailRedesign;
-  if (daysUntil < 0) return copy.daysLate(Math.abs(daysUntil));
-  if (daysUntil === 0) return copy.dueToday;
-  if (daysUntil <= 3) return daysUntil === 1 ? copy.dueTomorrow : copy.dueInDays(daysUntil);
-  return copy.inDays(daysUntil);
+  return detailUrgencyLabel(daysUntilPlannedOccurrence(occurrenceDate, now));
 }
 
 export function presentPlannedPaymentDue(
@@ -65,17 +77,47 @@ export function presentPlannedPaymentDue(
   }
   const days = daysUntilPlannedOccurrence(item.nextDueOccurrence, now);
   return {
-    label:
-      days < 0
-        ? AppConfig.strings.plannedDetailRedesign.daysLate(Math.abs(days))
-        : days === 0
-          ? AppConfig.strings.plannedDetailRedesign.dueToday
-          : days === 1
-            ? AppConfig.strings.plannedDetailRedesign.dueTomorrow
-            : AppConfig.strings.plannedDetailRedesign.dueInDays(days),
+    label: detailScheduleLabel(days),
     color: days < 0 ? 'error' : days <= 3 ? 'warning' : 'secondary',
     days,
   };
+}
+
+export function presentPlannedPaymentDetailsHeader(input: {
+  status: PlannedPaymentStatus;
+  showcasedDate?: number;
+  pausedSinceDate?: number;
+  isPaused: boolean;
+  isEndedWithoutOutstanding: boolean;
+  lastRecordedJournalDate?: number;
+  now: number;
+}) {
+  const copy = AppConfig.strings.plannedDetailRedesign;
+  const scheduleDue = presentPlannedPaymentDue(
+    { status: input.status, nextDueOccurrence: input.showcasedDate },
+    input.now,
+  );
+  const daysUntil =
+    input.showcasedDate == null
+      ? undefined
+      : daysUntilPlannedOccurrence(input.showcasedDate, input.now);
+  const eyebrow = input.isPaused
+    ? input.pausedSinceDate == null
+      ? copy.paused
+      : copy.pausedSince(dayjs(input.pausedSinceDate).format('MMM D'))
+    : input.isEndedWithoutOutstanding
+      ? input.lastRecordedJournalDate != null
+        ? copy.lastPayment(dayjs(input.lastRecordedJournalDate).format('MMM YYYY'))
+        : copy.ended
+      : daysUntil != null && daysUntil < 0
+        ? copy.missedPayment
+        : copy.nextPayment;
+  const urgency = input.isPaused
+    ? copy.paused
+    : input.isEndedWithoutOutstanding
+      ? copy.ended
+      : presentPlannedPaymentDetailsUrgency(input.showcasedDate, input.now, scheduleDue.label);
+  return { eyebrow, urgency, daysUntil, scheduleDue };
 }
 
 interface PlannedPaymentRecurrence {
@@ -152,24 +194,21 @@ export function getPlannedPaymentHistoryPresentation(
       plannedCurrencyCode,
     );
   const copy = AppConfig.strings.plannedDetailRedesign;
-  const subtitle = isSkipped
-    ? copy.skipped
+  const statusCopy = isSkipped
+    ? { label: copy.skipped, subtitle: copy.skipped }
     : isReversed
-      ? copy.reversed
+      ? { label: copy.reversed, subtitle: copy.reversed }
       : isWaiting
-        ? copy.waiting
-        : sameCurrency
-          ? copy.paidAsPlanned
-          : copy.paidDifferentCurrency(journal.currencyCode);
+        ? { label: copy.waiting, subtitle: copy.waiting }
+        : {
+            label: copy.paid,
+            subtitle: sameCurrency
+              ? copy.paidAsPlanned
+              : copy.paidDifferentCurrency(journal.currencyCode),
+          };
   return {
-    label: isSkipped
-      ? copy.skipped
-      : isReversed
-        ? copy.reversed
-        : isWaiting
-          ? copy.waiting
-          : copy.paid,
-    subtitle,
+    label: statusCopy.label,
+    subtitle: statusCopy.subtitle,
     color:
       !isSkipped && !isReversed && !isWaiting && (!sameCurrency || amountDiffers)
         ? 'warning'

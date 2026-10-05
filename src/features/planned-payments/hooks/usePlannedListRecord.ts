@@ -1,9 +1,9 @@
-import { recordPlannedOccurrenceWithFxReview } from '@/src/features/planned-payments/hooks/recordPlannedOccurrenceWithFxReview';
+import { recordPlannedOccurrenceWithFxReview } from '@/src/services/planned-payment/recordPlannedOccurrenceWithFxReview';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { PlannedPaymentListOccurrence } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { AppConfig } from '@/src/constants';
 import type { WorkplaceId } from '@/src/types/ids';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 /** Inline list recording state. A plan lock prevents two visible occurrences advancing one cursor. */
 export function usePlannedListRecord(
@@ -13,21 +13,13 @@ export function usePlannedListRecord(
   const lockedPlans = useRef(new Set<string>());
   const currentWorkplace = useRef<WorkplaceId>(workplaceId);
   const previousWorkplace = useRef<WorkplaceId>(workplaceId);
-  const generation = useRef(0);
-  const mounted = useRef(true);
+  const requestGeneration = useRef(0);
   const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
   const [pendingPlanIds, setPendingPlanIds] = useState<Set<string>>(() => new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
-  useEffect(() => {
-    mounted.current = true;
-    generation.current++;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
   useLayoutEffect(() => {
     currentWorkplace.current = workplaceId;
-    generation.current++;
+    requestGeneration.current++;
     if (previousWorkplace.current !== workplaceId) {
       previousWorkplace.current = workplaceId;
       setPendingIds(new Set());
@@ -40,7 +32,7 @@ export function usePlannedListRecord(
       const planId = occurrence.payment.id;
       if (!occurrence.canRecord || !isOccurrenceCurrent(occurrence)) return;
       const requestWorkplace = workplaceId;
-      const requestGeneration = generation.current;
+      const generation = requestGeneration.current;
       if (currentWorkplace.current !== requestWorkplace) return;
       const lockKey = `${requestWorkplace}:${planId}`;
       if (lockedPlans.current.has(lockKey)) return;
@@ -62,9 +54,8 @@ export function usePlannedListRecord(
         );
       } catch {
         if (
-          mounted.current &&
           currentWorkplace.current === requestWorkplace &&
-          generation.current === requestGeneration &&
+          requestGeneration.current === generation &&
           isOccurrenceCurrent(occurrence)
         ) {
           setErrors(current => ({
@@ -75,9 +66,8 @@ export function usePlannedListRecord(
       } finally {
         lockedPlans.current.delete(lockKey);
         if (
-          mounted.current &&
           currentWorkplace.current === requestWorkplace &&
-          generation.current === requestGeneration
+          requestGeneration.current === generation
         ) {
           setPendingIds(current => {
             const next = new Set(current);

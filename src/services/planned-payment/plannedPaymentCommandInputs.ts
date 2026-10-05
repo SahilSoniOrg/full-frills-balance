@@ -1,6 +1,6 @@
 import { AccountId } from '@/src/types/ids';
 import { PlannedPaymentInterval } from '@/src/types/enums';
-import type { PlannedPaymentFxFields } from '@/src/types/plannedPaymentFx';
+import type { PlannedPaymentFxFields } from '@/src/types/plainDtos';
 import type Account from '@/src/data/models/Account';
 
 /** Caller-owned fields for creating or updating a planned payment (form data only). */

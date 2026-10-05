@@ -2,7 +2,7 @@ import { AppSurface, AppText } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import type { PlannedPaymentListPresentation } from './plannedPaymentListTypes';
+import type { PlannedPaymentListPresentation } from '@/src/features/planned-payments/hooks/plannedPaymentListPresentation';
 import dayjs from 'dayjs';
 import { StyleSheet, View } from 'react-native';
 

@@ -8,7 +8,7 @@ import {
   PlannedPaymentFormState,
   shouldSeedPlannedPaymentDraft,
 } from '@/src/features/planned-payments/hooks/plannedPaymentFormDraft';
-import { usePlannedPaymentFx } from '@/src/features/planned-payments/hooks/usePlannedPaymentFx';
+import { usePlannedPaymentFx } from '@/src/hooks/usePlannedPaymentFx';
 import { usePlannedPaymentRecord } from '@/src/features/planned-payments/hooks/usePlannedPaymentRecord';
 import { useCurrencies } from '@/src/hooks/use-currencies';
 import { analytics } from '@/src/services/analytics';
@@ -17,9 +17,8 @@ import {
   updatePlannedPayment,
 } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { AccountType, PlannedPaymentInterval } from '@/src/types/enums';
-import type { PlannedPaymentFxMode } from '@/src/types/plannedPaymentFx';
+import type { PlannedPaymentFxMode, PlainAccount } from '@/src/types/plainDtos';
 import { AccountId } from '@/src/types/ids';
-import type { PlainAccount } from '@/src/types/plainDtos';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { toast } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';

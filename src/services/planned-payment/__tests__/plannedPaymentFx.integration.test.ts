@@ -32,7 +32,7 @@ import {
   TransactionType,
 } from '@/src/types/enums';
 import type { AccountId, WorkplaceId } from '@/src/types/ids';
-import type { PlannedPaymentFxMode } from '@/src/types/plannedPaymentFx';
+import type { PlannedPaymentFxMode } from '@/src/types/plainDtos';
 import type PlannedPayment from '@/src/data/models/PlannedPayment';
 import { AppConfig } from '@/src/constants';
 

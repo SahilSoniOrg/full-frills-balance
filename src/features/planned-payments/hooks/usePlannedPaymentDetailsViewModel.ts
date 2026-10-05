@@ -15,7 +15,7 @@ import {
   type JournalListModalsProps,
 } from '@/src/features/journal';
 import { formatPlannedPaymentInterval } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
-import { recordPlannedOccurrenceWithFxReview } from '@/src/features/planned-payments/hooks/recordPlannedOccurrenceWithFxReview';
+import { recordPlannedOccurrenceWithFxReview } from '@/src/services/planned-payment/recordPlannedOccurrenceWithFxReview';
 import { usePlannedPaymentRecord } from '@/src/features/planned-payments/hooks/usePlannedPaymentRecord';
 import { useSelection } from '@/src/hooks/useSelection';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -39,7 +39,6 @@ import {
   type PlannedPaymentNextOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentDetailService';
 import { observeAuditTrail } from '@/src/services/audit-service';
-import { normalizeToStartOfDay } from '@/src/services/planned-payment/plannedPaymentRecurrence';
 import type { Money } from '@/src/types/domainReadModels';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -147,7 +146,6 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
     { keepPreviousData: false },
   );
 
-  // Initial Data Injection: Extract preview data from params
   const pDesc = getStringParam(params.pDesc);
   const pAmount = getStringParam(params.pAmount);
   const pCurrency = getStringParam(params.pCurrency);
@@ -477,17 +475,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       occurrenceAmount,
       outstandingJournalId: outstanding?.id,
       activitySummary: activity ? summarizePlannedPaymentActivity(activity, getNow()) : undefined,
-      nextOccurrences: activity
-        ? getNextPlannedPaymentOccurrences(item, activity, 5)
-            .filter(occurrence => {
-              const heroDate = outstanding?.journalDate ?? item.nextDueOccurrence;
-              return (
-                heroDate == null ||
-                normalizeToStartOfDay(occurrence.date) !== normalizeToStartOfDay(heroDate)
-              );
-            })
-            .slice(0, 3)
-        : undefined,
+      nextOccurrences: activity ? getNextPlannedPaymentOccurrences(item, activity, 5) : undefined,
       nextOccurrenceDate: item.nextDueOccurrence,
       showcasedOccurrenceDate: outstanding?.journalDate ?? item.nextDueOccurrence,
       remainingOccurrenceCount: countRemainingPlannedOccurrences(

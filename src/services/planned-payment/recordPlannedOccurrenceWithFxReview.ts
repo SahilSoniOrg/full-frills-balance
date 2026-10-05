@@ -1,3 +1,4 @@
+import type { PlannedPaymentFxReview } from '@/src/services/planned-payment/plannedPaymentFx';
 import { withPlannedPaymentFxReview } from '@/src/services/planned-payment/plannedPaymentFxReviewRequest';
 import {
   postPlannedJournalOccurrence,
@@ -11,14 +12,13 @@ export async function recordPlannedOccurrenceWithFxReview(
   occurrenceDate: number,
   journalId?: JournalId,
 ): Promise<boolean | void> {
-  return withPlannedPaymentFxReview(review => {
-    if (journalId) {
-      return review
+  const post = (review?: PlannedPaymentFxReview) =>
+    journalId
+      ? review
         ? postPlannedJournalOccurrence(workplaceId, planId, journalId, occurrenceDate, review)
-        : postPlannedJournalOccurrence(workplaceId, planId, journalId, occurrenceDate);
-    }
-    return review
-      ? postPlannedPaymentOccurrence(workplaceId, planId, occurrenceDate, review)
-      : postPlannedPaymentOccurrence(workplaceId, planId, occurrenceDate);
-  });
+        : postPlannedJournalOccurrence(workplaceId, planId, journalId, occurrenceDate)
+      : review
+        ? postPlannedPaymentOccurrence(workplaceId, planId, occurrenceDate, review)
+        : postPlannedPaymentOccurrence(workplaceId, planId, occurrenceDate);
+  return withPlannedPaymentFxReview(post);
 }

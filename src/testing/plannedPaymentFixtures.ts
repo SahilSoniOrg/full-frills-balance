@@ -7,25 +7,18 @@ import type {
 } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import type { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
-import type { PlannedPaymentFxMode } from '@/src/types/plannedPaymentFx';
+import type { PlannedPaymentFxMode } from '@/src/types/plainDtos';
 import type PlannedPayment from '@/src/data/models/PlannedPayment';
+import { seedBasicAssetExpenseAccounts } from '@/src/testing/accountTestFixtures';
 import { resetDatabase } from '@/src/testing/resetDatabase';
 
 export async function seedPlannedPaymentWorkplace(workplaceId: WorkplaceId) {
   await resetDatabase();
-  const from = await accountWriteRepository.create({
-    name: 'Checking',
-    accountType: AccountType.ASSET,
-    currencyCode: 'USD',
-    workplaceId,
+  const { assetId, expenseId } = await seedBasicAssetExpenseAccounts(workplaceId, {
+    assetName: 'Checking',
+    expenseName: 'Rent',
   });
-  const to = await accountWriteRepository.create({
-    name: 'Rent',
-    accountType: AccountType.EXPENSE,
-    currencyCode: 'USD',
-    workplaceId,
-  });
-  return { fromAccountId: from.id, toAccountId: to.id };
+  return { fromAccountId: assetId, toAccountId: expenseId };
 }
 
 export async function seedPlannedPaymentFxWorkplace(workplaceId: WorkplaceId) {

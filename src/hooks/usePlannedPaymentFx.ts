@@ -1,18 +1,25 @@
-import type { AccountFields } from '@/src/types/plainDtos';
-import type { PlannedPaymentFormState } from './plannedPaymentFormDraft';
+import type { AccountFields, PlannedPaymentFxMode } from '@/src/types/plainDtos';
 import { useFxPairDraft } from '@/src/hooks/useFxPairDraft';
 import { useMemo, useState } from 'react';
 
+export type PlannedPaymentFxDraft = {
+  amount: string;
+  currencyCode: string;
+  fxMode?: PlannedPaymentFxMode;
+  destinationAmount?: string;
+};
+
 /** A current estimate is presentation only. Posting resolves its own conversion. */
 export function usePlannedPaymentFx(
-  form: Pick<PlannedPaymentFormState, 'amount' | 'currencyCode' | 'fxMode' | 'destinationAmount'>,
+  form: PlannedPaymentFxDraft,
   sourceAccount: AccountFields | undefined,
   destinationAccount: AccountFields | undefined,
   destinationPrecision: number,
+  currencies?: { source?: string; dest?: string },
 ) {
   const [refreshNonce, setRefreshNonce] = useState(0);
-  const sourceCurrency = sourceAccount?.currencyCode;
-  const destCurrency = destinationAccount?.currencyCode;
+  const sourceCurrency = currencies?.source ?? sourceAccount?.currencyCode;
+  const destCurrency = currencies?.dest ?? destinationAccount?.currencyCode;
   const baseCurrency = sourceCurrency ?? form.currencyCode;
   const legacyCurrencyMismatch = !form.fxMode && form.currencyCode !== sourceCurrency;
   const sourceAmount = legacyCurrencyMismatch ? 0 : Number(form.amount) || 0;

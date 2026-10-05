@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@/src/utils/test-utils';
 import { usePlannedPaymentDetailsViewModel } from '../usePlannedPaymentDetailsViewModel';
 import { usePlannedPaymentRecord } from '../usePlannedPaymentRecord';
-import { recordPlannedOccurrenceWithFxReview } from '../recordPlannedOccurrenceWithFxReview';
+import { recordPlannedOccurrenceWithFxReview } from '@/src/services/planned-payment/recordPlannedOccurrenceWithFxReview';
 import { plannedPaymentDetailService } from '@/src/services/planned-payment/plannedPaymentDetailService';
 import type { PlannedPaymentObligation } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
@@ -45,7 +45,7 @@ jest.mock('@/src/services/audit-service', () => ({
   observeAuditTrail: () => jest.requireActual('rxjs').of([]),
 }));
 jest.mock('../usePlannedPaymentRecord', () => ({ usePlannedPaymentRecord: jest.fn() }));
-jest.mock('../recordPlannedOccurrenceWithFxReview', () => ({
+jest.mock('@/src/services/planned-payment/recordPlannedOccurrenceWithFxReview', () => ({
   recordPlannedOccurrenceWithFxReview: jest.fn(),
 }));
 jest.mock('@/src/services/planned-payment/plannedPaymentDetailService', () => ({

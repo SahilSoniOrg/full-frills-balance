@@ -1,13 +1,13 @@
 import { act, renderHook } from '@/src/utils/test-utils';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { recordPlannedOccurrenceWithFxReview } from '../recordPlannedOccurrenceWithFxReview';
+import { recordPlannedOccurrenceWithFxReview } from '@/src/services/planned-payment/recordPlannedOccurrenceWithFxReview';
 import type { PlannedPaymentListOccurrence } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { PlannedPaymentInterval } from '@/src/types/enums';
 import type { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { usePlannedListRecord } from '../usePlannedListRecord';
 
 jest.mock('@/src/contexts/WorkplaceContext', () => ({ useWorkplace: jest.fn() }));
-jest.mock('../recordPlannedOccurrenceWithFxReview', () => ({
+jest.mock('@/src/services/planned-payment/recordPlannedOccurrenceWithFxReview', () => ({
   recordPlannedOccurrenceWithFxReview: jest.fn(),
 }));
 

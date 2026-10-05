@@ -184,3 +184,5 @@ export function buildPlannedPaymentListPresentation(
     monthStrip,
   };
 }
+
+export type PlannedPaymentListPresentation = ReturnType<typeof buildPlannedPaymentListPresentation>;

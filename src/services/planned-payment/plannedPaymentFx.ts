@@ -5,7 +5,7 @@ import { transactionQueryRepository } from '@/src/data/repositories/transaction'
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { findJournalMetadataByJournalId } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
-import type { PlannedPaymentFxMode } from '@/src/types/plannedPaymentFx';
+import type { PlannedPaymentFxMode } from '@/src/types/plainDtos';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { resolveRequiredExchangeRate } from '@/src/services/currencyConversion';
 import { requirePlannedPayment } from './plannedPaymentWorkplace';
@@ -227,12 +227,6 @@ export function plannedPaymentFxMetadata(
   };
 }
 
-async function fetchQuote(context: PlannedPaymentFxContext): Promise<PlannedPaymentFxQuote> {
-  const { sourceCurrency, destinationCurrency } = context.review;
-  const spot = await resolveRequiredExchangeRate(sourceCurrency, destinationCurrency);
-  return { sourceCurrency, destinationCurrency, rate: spot.ok ? spot.rate : null };
-}
-
 /** Prefetch outside accounting sessions: the rate service may write its own cache. */
 export async function preparePlannedPaymentFxQuote(
   workplaceId: WorkplaceId,
@@ -272,7 +266,9 @@ export async function preparePlannedPaymentFxQuote(
         context.review.journalId !== undefined))
   )
     return undefined;
-  return fetchQuote(context);
+  const { sourceCurrency, destinationCurrency } = context.review;
+  const spot = await resolveRequiredExchangeRate(sourceCurrency, destinationCurrency);
+  return { sourceCurrency, destinationCurrency, rate: spot.ok ? spot.rate : null };
 }
 
 function assertPlannedPaymentFxReview(

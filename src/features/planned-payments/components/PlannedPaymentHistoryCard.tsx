@@ -43,8 +43,6 @@ export function PlannedPaymentHistoryCard({
   journalDate,
   journalTitle,
   plannedTitle,
-  plannedAmount,
-  plannedCurrencyCode,
   presentation,
   isSelected,
   isSelectionModeActive,
@@ -55,11 +53,8 @@ export function PlannedPaymentHistoryCard({
   const formatMoney = useMoneyFormat();
   const date = formatDate(journalDate);
   const formattedAmount = presentation.isSkipped ? '—' : formatMoney(journalAmount, currencyCode);
-  const expectedAmount =
-    presentation.expectedAmount ??
-    (currencyCode !== plannedCurrencyCode ? plannedAmount : undefined);
-  const expectedCurrencyCode =
-    presentation.expectedCurrencyCode ?? (expectedAmount == null ? undefined : plannedCurrencyCode);
+  const expectedAmount = presentation.expectedAmount;
+  const expectedCurrencyCode = presentation.expectedCurrencyCode;
   const subtitle =
     presentation.differenceAmount != null && presentation.differenceCurrencyCode
       ? presentation.differenceDirection === 'more'
@@ -106,7 +101,11 @@ export function PlannedPaymentHistoryCard({
             name={presentation.dotIcon}
             size={14}
             color={
-              getVariantColors(theme, () => theme.text, paidAmountWarning ? 'secondary' : presentation.color).main
+              getVariantColors(
+                theme,
+                () => theme.text,
+                paidAmountWarning ? 'secondary' : presentation.color,
+              ).main
             }
           />
         </View>

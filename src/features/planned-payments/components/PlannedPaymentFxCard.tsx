@@ -3,7 +3,7 @@ import { ExchangeRateCard } from '@/src/components/forms/ExchangeRateCard';
 import { Spacing } from '@/src/constants';
 import { plannedPaymentFormStrings as copy } from '@/src/constants/copy/domains/plannedPaymentFormStrings';
 import type { FxPair } from '@/src/domain/accounting/fxPair';
-import type { PlannedPaymentFxMode } from '@/src/types/plannedPaymentFx';
+import type { PlannedPaymentFxMode } from '@/src/types/plainDtos';
 import { StyleSheet, View } from 'react-native';
 
 const MODES = [

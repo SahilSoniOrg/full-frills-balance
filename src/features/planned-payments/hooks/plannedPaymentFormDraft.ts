@@ -1,6 +1,6 @@
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { PlainPlannedPayment } from '@/src/types/plainDtos';
-import type { PlannedPaymentFxMode } from '@/src/types/plannedPaymentFx';
+import type { PlannedPaymentFxMode } from '@/src/types/plainDtos';
 import { PlannedPaymentInterval } from '@/src/types/enums';
 
 export interface PlannedPaymentFormState {

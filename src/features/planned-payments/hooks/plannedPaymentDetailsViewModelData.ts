@@ -1,6 +1,8 @@
 import { PlannedPaymentStatus } from '@/src/types/enums';
-import type { PlainAuditLog, PlainJournal } from '@/src/types/plainDtos';
+import type { PlainAuditLog, PlainJournal, PlainPlannedPayment } from '@/src/types/plainDtos';
+import { AccountId, PlannedPaymentId } from '@/src/types/ids';
 import { calculateNextOccurrence } from '@/src/services/planned-payment/plannedPaymentRecurrence';
+import { projectPlannedOccurrencesForHorizon } from '@/src/services/planned-payment/plannedOccurrenceHorizon';
 
 export function countRemainingPlannedOccurrences(
   nextOccurrence: number,
@@ -9,35 +11,40 @@ export function countRemainingPlannedOccurrences(
 ): number | undefined {
   if (endDate == null) return undefined;
   if (!Number.isFinite(nextOccurrence) || !Number.isFinite(endDate)) return 0;
-  let cursor = nextOccurrence;
-  let count = 0;
-  while (cursor <= endDate && count < 10000) {
-    count++;
-    const next = calculateNextOccurrence(cursor, payment);
-    if (next <= cursor) break;
-    cursor = next;
-  }
-  return cursor <= endDate ? undefined : count;
+  const projected = projectPlannedOccurrencesForHorizon(
+    {
+      id: 'count' as PlannedPaymentId,
+      name: '',
+      fromAccountId: 'from' as AccountId,
+      toAccountId: 'to' as AccountId,
+      isAutoPost: false,
+      status: PlannedPaymentStatus.ACTIVE,
+      startDate: nextOccurrence,
+      nextOccurrence,
+      endDate,
+      amount: 0,
+      currencyCode: 'USD',
+      ...payment,
+    } satisfies PlainPlannedPayment,
+    new Set(),
+    { throughDate: endDate },
+  );
+  return projected.length >= 10000 ? undefined : projected.length;
 }
 
-/** Uses only the audited ACTIVE → PAUSED transition timestamp, never a scheduled journal date. */
 export function findPausedAtFromAudit(logs: PlainAuditLog[]): number | undefined {
   let latestPauseTimestamp: number | undefined;
   for (const log of logs) {
     if (log.eventType !== 'planned_payment.status_changed' || !Number.isFinite(log.timestamp))
       continue;
     try {
-      const changes: unknown = JSON.parse(log.changes);
-      if (typeof changes !== 'object' || changes === null || Array.isArray(changes)) continue;
-      const after = Reflect.get(changes, 'after');
-      const before = Reflect.get(changes, 'before');
+      const changes = JSON.parse(log.changes) as {
+        before?: { status?: string };
+        after?: { status?: string };
+      };
       if (
-        typeof after === 'object' &&
-        after !== null &&
-        Reflect.get(after, 'status') === PlannedPaymentStatus.PAUSED &&
-        typeof before === 'object' &&
-        before !== null &&
-        Reflect.get(before, 'status') === PlannedPaymentStatus.ACTIVE
+        changes.after?.status === PlannedPaymentStatus.PAUSED &&
+        changes.before?.status === PlannedPaymentStatus.ACTIVE
       ) {
         latestPauseTimestamp = Math.max(latestPauseTimestamp ?? log.timestamp, log.timestamp);
       }
