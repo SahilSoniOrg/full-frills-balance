@@ -31,8 +31,5 @@ const UNSUPPORTED_AUDIT_ENTITY: AuditEntityCapabilities = {
 };
 
 export function getAuditEntityCapabilities(entityType: string): AuditEntityCapabilities {
-  if (!Object.prototype.hasOwnProperty.call(AUDIT_ENTITY_CAPABILITIES, entityType)) {
-    return UNSUPPORTED_AUDIT_ENTITY;
-  }
-  return AUDIT_ENTITY_CAPABILITIES[entityType as AuditEntityType];
+  return AUDIT_ENTITY_CAPABILITIES[entityType as AuditEntityType] ?? UNSUPPORTED_AUDIT_ENTITY;
 }

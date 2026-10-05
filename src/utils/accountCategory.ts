@@ -44,17 +44,10 @@ const ACCOUNT_TYPE_ALIASES: Record<string, AccountType> = {
   expenses: AccountType.EXPENSE,
 };
 
-const ACCOUNT_TYPE_CACHE = new Map<string, AccountType | null>();
-
 export function toAccountType(input: string | AccountType | null | undefined): AccountType | null {
   if (!input) return null;
-  const key = String(input);
-  if (ACCOUNT_TYPE_CACHE.has(key)) return ACCOUNT_TYPE_CACHE.get(key)!;
-
-  const normalized = key.trim().toLowerCase();
-  const result = ACCOUNT_TYPE_ALIASES[normalized] || null;
-  ACCOUNT_TYPE_CACHE.set(key, result);
-  return result;
+  const normalized = String(input).trim().toLowerCase();
+  return ACCOUNT_TYPE_ALIASES[normalized] ?? null;
 }
 
 export function getAccountTypeSectionTitle(type: AccountType): string {

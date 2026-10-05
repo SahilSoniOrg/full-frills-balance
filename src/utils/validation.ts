@@ -13,9 +13,9 @@ export const sanitizeAmount = (
   precision = AppConfig.constants.precision,
 ): number | null => {
   const numAmount =
-    typeof amount === 'string' ? parseFloat(amount.replace(/[^0-9.-]/g, '')) : amount;
+    typeof amount === 'string' ? Number.parseFloat(amount.replace(/[^0-9.-]/g, '')) : amount;
 
-  if (isNaN(numAmount) || !isFinite(numAmount)) {
+  if (!Number.isFinite(numAmount)) {
     return null;
   }
 

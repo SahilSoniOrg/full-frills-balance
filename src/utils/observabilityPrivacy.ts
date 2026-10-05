@@ -2,12 +2,13 @@ import type { ErrorEvent, TransactionEvent } from '@sentry/react-native';
 import { COMMON_CURRENCIES } from '@/src/constants/currency-definitions';
 import { FontIds, ThemeIds } from '@/src/constants/design-tokens';
 import { ROUTE_MANIFEST } from '@/src/navigation/routeManifest';
-import { FEATURE_EVENT_CATALOG } from '@/src/services/analytics/featureEventCatalog';
+import {
+  FEATURE_EVENT_CATALOG,
+  type AnalyticsPropertyKind,
+} from '@/src/services/analytics/featureEventCatalog';
 import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 
-type PropertyKind = 'boolean' | 'count' | 'duration' | 'currency' | 'token' | 'version';
-
-type EventSchema = Record<string, PropertyKind>;
+type EventSchema = Record<string, AnalyticsPropertyKind>;
 
 const ENUM_VALUES: Record<string, ReadonlySet<string>> = {
   type: new Set([
@@ -255,7 +256,7 @@ function sanitizeScreenName(value: string): string {
 function validProperty(
   key: string,
   value: unknown,
-  kind: PropertyKind,
+  kind: AnalyticsPropertyKind,
   eventName: string,
   featureName?: string,
 ): value is string | number | boolean {
@@ -330,6 +331,8 @@ export function sanitizeAnalyticsProperties(
   return result;
 }
 
+const APP_BUILD_VARIANTS = new Set(['production', 'development', 'preview']);
+
 export function sanitizeGlobalAnalyticsProperties(
   properties: Record<string, unknown>,
 ): Record<string, string | number | boolean> {
@@ -357,15 +360,9 @@ export function sanitizeGlobalAnalyticsProperties(
     } else if (key === '$os_version' && safeVersion(value)) result[key] = safeVersion(value)!;
     else if (key === 'active_currency' && typeof value === 'string' && CURRENCY_CODES.has(value))
       result[key] = value;
-    else if (
-      key === '$app_variant' &&
-      ['production', 'development', 'preview'].includes(String(value))
-    )
+    else if (key === '$app_variant' && APP_BUILD_VARIANTS.has(String(value)))
       result[key] = String(value);
-    else if (
-      key === '$build_type' &&
-      ['production', 'development', 'preview'].includes(String(value))
-    )
+    else if (key === '$build_type' && APP_BUILD_VARIANTS.has(String(value)))
       result[key] = String(value);
     else if (key === '$app_version' && safeVersion(value)) result[key] = safeVersion(value)!;
     else if (['$app_build', '$app_build_number'].includes(key) && safeVersion(value))
