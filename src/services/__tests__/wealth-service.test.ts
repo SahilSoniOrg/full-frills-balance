@@ -1,5 +1,5 @@
 import { AccountType, TransactionType } from '@/src/types/enums';
-import { WorkplaceId } from '@/src/types/ids';
+import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
@@ -7,7 +7,23 @@ import { transactionQueryRepository } from '@/src/data/repositories/transaction'
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { convertAmount, resolveSpotExchangeRate } from '@/src/services/currencyConversion';
 import { selectBalancesForWealthSummary, wealthService } from '@/src/services/wealth-service';
+import { AccountBalance } from '@/src/types/domainReadModels';
 import dayjs from 'dayjs';
+
+function wealthSummaryBalance(
+  partial: Pick<AccountBalance, 'accountId' | 'accountType' | 'balance' | 'currencyCode'> &
+    Partial<AccountBalance>,
+): AccountBalance {
+  return {
+    directBalance: partial.directBalance ?? partial.balance,
+    transactionCount: 0,
+    directTransactionCount: 0,
+    asOfDate: 0,
+    monthlyIncome: 0,
+    monthlyExpenses: 0,
+    ...partial,
+  };
+}
 jest.mock('@/src/data/repositories/raw/TransactionRawMetricsQueries', () => ({
   transactionRawMetricsQueries: { getDailyDeltasGroupedRaw: jest.fn() },
 }));
@@ -45,44 +61,39 @@ describe('WealthService', () => {
   describe('calculateSummary', () => {
     it('should calculate net worth and category totals', async () => {
       const balances = [
-        {
-          accountId: '1',
+        wealthSummaryBalance({
+          accountId: '1' as AccountId,
           accountType: AccountType.ASSET,
           balance: 1000,
           currencyCode: 'USD',
-          name: 'A',
-        },
-        {
-          accountId: '2',
+        }),
+        wealthSummaryBalance({
+          accountId: '2' as AccountId,
           accountType: AccountType.LIABILITY,
           balance: 500,
           currencyCode: 'USD',
-          name: 'L',
-        },
-        {
-          accountId: '3',
+        }),
+        wealthSummaryBalance({
+          accountId: '3' as AccountId,
           accountType: AccountType.EQUITY,
           balance: 200,
           currencyCode: 'USD',
-          name: 'E',
-        },
-        {
-          accountId: '4',
+        }),
+        wealthSummaryBalance({
+          accountId: '4' as AccountId,
           accountType: AccountType.INCOME,
           balance: 300,
           currencyCode: 'USD',
-          name: 'I',
-        },
-        {
-          accountId: '5',
+        }),
+        wealthSummaryBalance({
+          accountId: '5' as AccountId,
           accountType: AccountType.EXPENSE,
           balance: 100,
           currencyCode: 'USD',
-          name: 'Exp',
-        },
+        }),
       ];
 
-      const summary = await wealthService.calculateSummary(balances as any, 'USD');
+      const summary = await wealthService.calculateSummary(balances, 'USD');
 
       expect(summary.totalAssets).toBe(1000);
       expect(summary.totalLiabilities).toBe(500);
@@ -106,16 +117,15 @@ describe('WealthService', () => {
       );
 
       const balances = [
-        {
-          accountId: '1',
+        wealthSummaryBalance({
+          accountId: '1' as AccountId,
           accountType: AccountType.ASSET,
           balance: 100,
           currencyCode: 'EUR',
-          name: 'Euro Asset',
-        },
+        }),
       ];
 
-      const summary = await wealthService.calculateSummary(balances as any, 'USD');
+      const summary = await wealthService.calculateSummary(balances, 'USD');
       expect(summary.totalAssets).toBeCloseTo(110, 2); // 100 * 1.1
     });
 
@@ -134,21 +144,21 @@ describe('WealthService', () => {
 
       const selected = selectBalancesForWealthSummary(
         [
-          {
-            accountId: 'parent',
+          wealthSummaryBalance({
+            accountId: 'parent' as AccountId,
             accountType: AccountType.ASSET,
             balance: 500.76,
             directBalance: 500.76,
             currencyCode: 'INR',
-          },
-          {
-            accountId: 'child',
+          }),
+          wealthSummaryBalance({
+            accountId: 'child' as AccountId,
             accountType: AccountType.ASSET,
             balance: 40,
             directBalance: 40,
             currencyCode: 'EUR',
-          },
-        ] as any,
+          }),
+        ],
         new Map([
           ['parent', 'HKD'],
           ['child', 'EUR'],

@@ -57,54 +57,46 @@ describe('RecurrenceEngine', () => {
     });
   });
   describe('getNextOccurrence', () => {
-    it('handles DAILY with intervalN', () => {
-      const start = new Date('2026-04-01T00:00:00Z').getTime();
-      const next = RecurrenceEngine.getNextOccurrence(start, {
-        intervalType: 'DAILY',
-        intervalN: 3,
-      });
-      expect(dayjs(next).format('YYYY-MM-DD')).toBe('2026-04-04');
+    it.each([
+      [
+        'DAILY with intervalN',
+        '2026-04-01T00:00:00Z',
+        { intervalType: 'DAILY' as const, intervalN: 3 },
+        '2026-04-04',
+      ],
+      [
+        'WEEKLY with target recurrenceDay',
+        '2026-04-01T00:00:00Z',
+        { intervalType: 'WEEKLY' as const, intervalN: 1, recurrenceDay: 5 },
+        '2026-04-10',
+      ],
+      [
+        'YEARLY recurrence',
+        '2026-05-15T00:00:00Z',
+        {
+          intervalType: 'YEARLY' as const,
+          intervalN: 1,
+          recurrenceDay: 15,
+          recurrenceMonth: 5,
+        },
+        '2027-05-15',
+      ],
+    ])('%s', (_label, startIso, rule, expectedDate) => {
+      const start = new Date(startIso).getTime();
+      const next = RecurrenceEngine.getNextOccurrence(start, rule);
+      expect(dayjs(next).format('YYYY-MM-DD')).toBe(expectedDate);
     });
 
-    it('handles WEEKLY with target recurrenceDay', () => {
-      // 2026-04-01 is a Wednesday (day 3).
-      // target recurrenceDay: 5 (Friday).
-      const start = new Date('2026-04-01T00:00:00Z').getTime();
-      const next = RecurrenceEngine.getNextOccurrence(start, {
-        intervalType: 'WEEKLY',
-        intervalN: 1,
-        recurrenceDay: 5,
-      });
-      expect(dayjs(next).format('YYYY-MM-DD')).toBe('2026-04-10');
-    });
-
-    it('handles MONTHLY with 31st anchor clipped to 30-day month', () => {
-      const jan31 = new Date('2026-01-31T00:00:00Z').getTime();
-      const feb = RecurrenceEngine.getNextOccurrence(jan31, {
+    it.each([
+      ['2026-01-31T00:00:00Z', '2026-02-28'],
+      ['2026-03-31T00:00:00Z', '2026-04-30'],
+    ])('clips MONTHLY 31st anchor from %s to %s', (startIso, expectedDate) => {
+      const next = RecurrenceEngine.getNextOccurrence(new Date(startIso).getTime(), {
         intervalType: 'MONTHLY',
         intervalN: 1,
         recurrenceDay: 31,
       });
-      expect(dayjs(feb).format('YYYY-MM-DD')).toBe('2026-02-28');
-
-      const apr30 = new Date('2026-03-31T00:00:00Z').getTime();
-      const apr = RecurrenceEngine.getNextOccurrence(apr30, {
-        intervalType: 'MONTHLY',
-        intervalN: 1,
-        recurrenceDay: 31,
-      });
-      expect(dayjs(apr).format('YYYY-MM-DD')).toBe('2026-04-30');
-    });
-
-    it('handles YEARLY recurrence', () => {
-      const start = new Date('2026-05-15T00:00:00Z').getTime();
-      const next = RecurrenceEngine.getNextOccurrence(start, {
-        intervalType: 'YEARLY',
-        intervalN: 1,
-        recurrenceDay: 15,
-        recurrenceMonth: 5,
-      });
-      expect(dayjs(next).format('YYYY-MM-DD')).toBe('2027-05-15');
+      expect(dayjs(next).format('YYYY-MM-DD')).toBe(expectedDate);
     });
   });
 

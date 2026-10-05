@@ -1,17 +1,12 @@
 import { database } from '@/src/data/database/Database';
-import { accountWriteRepository } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
+import { createAuditMergeAccount } from '@/src/testing/auditMergeFixtures';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { mergeAccounts } from '@/src/services/accounts/accountMergeCommands';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
-import {
-  AccountType,
-  PlannedPaymentInterval,
-  PlannedPaymentStatus,
-  TransactionType,
-} from '@/src/types/enums';
-import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { PlannedPaymentInterval, PlannedPaymentStatus, TransactionType } from '@/src/types/enums';
+import { WorkplaceId } from '@/src/types/ids';
 
 const workplaceId = 'wp-audit-merge' as WorkplaceId;
 beforeEach(async () => {
@@ -20,21 +15,10 @@ beforeEach(async () => {
   });
 });
 
-async function createAccount(name: string, parentAccountId?: AccountId, orderNum?: number) {
-  return accountWriteRepository.create({
-    name,
-    accountType: AccountType.ASSET,
-    currencyCode: 'USD',
-    workplaceId,
-    parentAccountId,
-    orderNum,
-  });
-}
-
 test('account merge audits retain the original journal, payment, and budget references', async () => {
-  const source = await createAccount('Source');
-  const target = await createAccount('Target');
-  const other = await createAccount('Other');
+  const source = await createAuditMergeAccount(workplaceId, 'Source');
+  const target = await createAuditMergeAccount(workplaceId, 'Target');
+  const other = await createAuditMergeAccount(workplaceId, 'Other');
   const journal = await journalPersistenceService.put(
     {
       journalDate: 1700000000000,
@@ -101,10 +85,10 @@ test('account merge audits retain the original journal, payment, and budget refe
 });
 
 test('parent account merge audits retain the original child placement', async () => {
-  const source = await createAccount('Source parent');
-  const target = await createAccount('Target parent');
-  const moved = await createAccount('Moved child', source.id, 3);
-  await createAccount('Existing child', target.id, 9);
+  const source = await createAuditMergeAccount(workplaceId, 'Source parent');
+  const target = await createAuditMergeAccount(workplaceId, 'Target parent');
+  const moved = await createAuditMergeAccount(workplaceId, 'Moved child', source.id, 3);
+  await createAuditMergeAccount(workplaceId, 'Existing child', target.id, 9);
   await mergeAccounts(workplaceId, target.id, [source.id]);
   const log = (await auditRepository.findByEntity('account', moved.id, workplaceId)).find(
     log => log.eventType === 'account.hierarchy_retargeted',

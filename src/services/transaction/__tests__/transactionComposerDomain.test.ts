@@ -32,20 +32,26 @@ const baseIntent: TransactionIntent = {
   destinationAccountId: asAccountId('food'),
 };
 
+type ComposerContext = { accounts: typeof accounts; currencyCode: string };
+
+function resolveAndValidate(intent: TransactionIntent, context: ComposerContext) {
+  const result = resolveTransactionIntent(intent, context);
+  expect(result.resolved).toBe(true);
+  if (!result.resolved) {
+    throw new Error('expected a resolved plan');
+  }
+  expect(validatePostingPlan(result.plan, context.accounts).valid).toBe(true);
+  return result.plan;
+}
+
 describe('transaction composer domain', () => {
   describe('resolveTransactionIntent', () => {
     it('resolves a basic expense into one credit and one debit', () => {
-      const result = resolveTransactionIntent(baseIntent, { accounts, currencyCode: 'USD' });
-
-      expect(result.resolved).toBe(true);
-      if (!result.resolved) return;
-      expect(
-        result.plan.lines.map(line => [line.accountId, line.transactionType, line.amount]),
-      ).toEqual([
+      const plan = resolveAndValidate(baseIntent, { accounts, currencyCode: 'USD' });
+      expect(plan.lines.map(line => [line.accountId, line.transactionType, line.amount])).toEqual([
         [asAccountId('bank'), TransactionType.CREDIT, '50.00'],
         [asAccountId('food'), TransactionType.DEBIT, '50.00'],
       ]);
-      expect(validatePostingPlan(result.plan, accounts).valid).toBe(true);
     });
 
     it('resolves allocations and derives the total when the intent omits it', () => {
@@ -286,10 +292,7 @@ describe('transaction composer domain', () => {
       expect(resolved.resolved).toBe(true);
       if (!resolved.resolved) return;
       expect(resolved.plan.lines.map(line => line.amount)).toEqual(['500', '173.01']);
-      expect(validatePostingPlan(resolved.plan, fxAccounts)).toEqual({
-        valid: true,
-        issues: [],
-      });
+      expect(validatePostingPlan(resolved.plan, fxAccounts)).toEqual({ valid: true, issues: [] });
     });
 
     it('balances cross-currency allocations using converted values instead of nominal sums', () => {
@@ -302,7 +305,7 @@ describe('transaction composer domain', () => {
           currencyCode: 'INR',
         },
       ];
-      const resolved = resolveTransactionIntent(
+      resolveAndValidate(
         {
           description: 'Cross-currency groceries',
           amount: '100',
@@ -314,13 +317,6 @@ describe('transaction composer domain', () => {
         },
         { accounts: fxAccounts, currencyCode: 'USD' },
       );
-
-      expect(resolved.resolved).toBe(true);
-      if (!resolved.resolved) return;
-      expect(validatePostingPlan(resolved.plan, fxAccounts)).toEqual({
-        valid: true,
-        issues: [],
-      });
     });
 
     it('rejects higher-rate foreign amounts whose conversion misses the base amount', () => {

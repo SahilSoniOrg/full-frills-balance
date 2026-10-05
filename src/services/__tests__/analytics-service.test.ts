@@ -1,6 +1,8 @@
+import { ANALYTICS_SANITIZE_CASES } from '@/src/testing/analyticsPrivacyFixtures';
 import { AnalyticsService } from '../analytics/analyticsService';
 import * as Sentry from '@sentry/react-native';
 import { AppConfig } from '@/src/constants/app-config';
+import { sanitizeAnalyticsProperties } from '@/src/utils/observabilityPrivacy';
 
 // Mock PostHog
 jest.mock('posthog-react-native', () => {
@@ -28,23 +30,28 @@ describe('AnalyticsService', () => {
     jest.useRealTimers();
   });
 
-  it('should not throw when calling track', () => {
-    expect(() => analytics.track('test_event', { foo: 'bar' })).not.toThrow();
-  });
+  it.each(ANALYTICS_SANITIZE_CASES)(
+    'track applies the same analytics sanitization as observabilityPrivacy for %s',
+    (eventName, input, expected) => {
+      const capture = jest.fn();
+      const client = {
+        capture,
+        getDistinctId: () => 'anon_123e4567-e89b-42d3-a456-426614174000',
+        identify: jest.fn(),
+        screen: jest.fn(),
+        setPersonProperties: jest.fn(),
+      };
+      (analytics as unknown as { _posthog: typeof client })._posthog = client;
 
-  it('should not throw when calling identify', () => {
-    expect(() => analytics.identify('test_user')).not.toThrow();
-  });
-
-  it('should not throw when calling screen', () => {
-    expect(() => analytics.screen('HomeScreen', { source: 'onboarding' })).not.toThrow();
-  });
-
-  it('should not throw when calling specialized events', () => {
-    expect(() => analytics.logAccountCreated('Checking', 'USD')).not.toThrow();
-    expect(() => analytics.logPrivacyPolicyAcknowledged('2026-09-07')).not.toThrow();
-    expect(() => analytics.logFactoryReset()).not.toThrow();
-  });
+      expect(analytics.track(eventName, input)).toBe(expected !== null);
+      if (expected === null) {
+        expect(capture).not.toHaveBeenCalled();
+      } else {
+        expect(capture).toHaveBeenCalledWith(eventName, expected);
+      }
+      expect(sanitizeAnalyticsProperties(eventName, input)).toEqual(expected);
+    },
+  );
 
   it('does not schedule session tracking before PostHog initializes', () => {
     jest.useFakeTimers();

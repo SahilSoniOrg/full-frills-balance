@@ -5,7 +5,6 @@ import { deleteAccount, recoverAccount } from '@/src/services/accounts/accountDe
 import { revertAccountFromAuditState } from '@/src/services/accounts/accountAuditCommands';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { revertEntry } from '@/src/services/audit-service';
-
 import { revertRegistry } from '@/src/services/revert-registry';
 
 // Mock dependencies
@@ -38,39 +37,53 @@ jest.mock('@/src/services/journal/journalDomainService', () => ({
 
 describe('AuditService', () => {
   beforeAll(() => {
-    // Manually register handlers since mocks don't run constructors
-    revertRegistry.register('account', async (id, changes, action) => {
-      if (action === AuditAction.CREATE)
-        await deleteAccount(id as AccountId, 'wp-1' as WorkplaceId);
-      else if (action === AuditAction.DELETE)
-        await recoverAccount(id as AccountId, 'wp-1' as WorkplaceId);
-      else if (action === AuditAction.UPDATE && changes.before) {
-        if (changes.before.deletedAt) await deleteAccount(id as AccountId, 'wp-1' as WorkplaceId);
-        else
-          await revertAccountFromAuditState('wp-1' as WorkplaceId, id as AccountId, changes.before);
+    jest.spyOn(revertRegistry, 'getHandler').mockImplementation(entityType => {
+      switch (entityType.toLowerCase()) {
+        case 'account':
+          return async (id, changes, action, workplaceId) => {
+            if (action === AuditAction.CREATE) await deleteAccount(id as AccountId, workplaceId);
+            else if (action === AuditAction.DELETE)
+              await recoverAccount(id as AccountId, workplaceId);
+            else if (action === AuditAction.UPDATE && changes.before) {
+              if (changes.before.deletedAt) await deleteAccount(id as AccountId, workplaceId);
+              else await revertAccountFromAuditState(workplaceId, id as AccountId, changes.before);
+            }
+          };
+        case 'journal':
+          return async (id, changes, action, workplaceId) => {
+            if (action === AuditAction.CREATE)
+              await journalService.deleteJournal(id as JournalId, workplaceId);
+            else if (action === AuditAction.DELETE)
+              await journalService.recoverJournal(id as JournalId, workplaceId);
+            else if (action === AuditAction.UPDATE && changes.before) {
+              if (changes.before.deletedAt)
+                await journalService.deleteJournal(id as JournalId, workplaceId);
+              else if (changes.before.status === JournalStatus.PLANNED)
+                await journalService.revertToPlanned(id as JournalId, workplaceId);
+              else if (changes.before.status === JournalStatus.POSTED)
+                await journalService.postJournal(id as JournalId, workplaceId);
+              else
+                await journalService.updateJournal(
+                  id as JournalId,
+                  changes.before as Parameters<typeof journalService.updateJournal>[1],
+                  workplaceId,
+                );
+            }
+          };
+        default:
+          return undefined;
       }
     });
+    jest.spyOn(revertRegistry, 'supports').mockImplementation((entityType, action, changes) => {
+      if (entityType.toLowerCase() === 'transaction') return false;
+      return (
+        action === AuditAction.CREATE || action === AuditAction.DELETE || Boolean(changes.before)
+      );
+    });
+  });
 
-    revertRegistry.register('journal', async (id, changes, action) => {
-      if (action === AuditAction.CREATE)
-        await journalService.deleteJournal(id as JournalId, 'wp-1' as WorkplaceId);
-      else if (action === AuditAction.DELETE)
-        await journalService.recoverJournal(id as JournalId, 'wp-1' as WorkplaceId);
-      else if (action === AuditAction.UPDATE && changes.before) {
-        if (changes.before.deletedAt)
-          await journalService.deleteJournal(id as JournalId, 'wp-1' as WorkplaceId);
-        else if (changes.before.status === JournalStatus.PLANNED)
-          await journalService.revertToPlanned(id as JournalId, 'wp-1' as WorkplaceId);
-        else if (changes.before.status === JournalStatus.POSTED)
-          await journalService.postJournal(id as JournalId, 'wp-1' as WorkplaceId);
-        else
-          await journalService.updateJournal(
-            id as JournalId,
-            changes.before as any,
-            'wp-1' as WorkplaceId,
-          );
-      }
-    });
+  afterAll(() => {
+    jest.restoreAllMocks();
   });
 
   beforeEach(() => {
@@ -112,8 +125,7 @@ describe('AuditService', () => {
         (auditRepository.find as jest.Mock).mockResolvedValue(
           mockLog({ entityType: 'account', action: AuditAction.CREATE }),
         );
-        const res = await revertEntry('log1', 'wp-1' as WorkplaceId);
-        console.log('Result:', res);
+        await revertEntry('log1', 'wp-1' as WorkplaceId);
         expect(deleteAccount).toHaveBeenCalledWith('ent1' as AccountId, 'wp-1' as WorkplaceId);
       });
 
