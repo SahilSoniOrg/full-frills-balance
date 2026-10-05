@@ -1,6 +1,6 @@
-import { spawnSync } from 'node:child_process';
 import { migrations } from '../migrations';
 import { schema } from '../schema';
+import { runMigrationSqlFixture } from './migrationSqlHarness';
 
 /** Loki does not execute unsafe SQL migrations. Exercise the real upgrade SQL in SQLite. */
 it('upgrades schema 32 to 33 with audit backfill, Device SMS ownership, and preserved consumed copies', () => {
@@ -15,20 +15,10 @@ it('upgrades schema 32 to 33 with audit backfill, Device SMS ownership, and pres
       : [],
   );
   const sql = upgrade?.steps.flatMap(step => (step.type === 'sql' ? [step.sql] : []));
-  const result = spawnSync(
-    'python3',
-    [
-      '-c',
-      `
-import json, sqlite3, sys
-payload = json.load(sys.stdin)
-db = sqlite3.connect(':memory:')
-def column_sql(column):
-    return column['name'] + (' TEXT' if column['type'] == 'string' else ' REAL')
-def create_table(name, columns):
-    fields = ['id TEXT PRIMARY KEY', '_status TEXT', '_changed TEXT'] + [column['name'] + (' TEXT' if column['type'] == 'string' else ' REAL') for column in columns]
-    db.execute('CREATE TABLE ' + name + ' (' + ','.join(fields) + ')')
-for name, columns in payload['tables'].items(): create_table(name, columns)
+  const result = runMigrationSqlFixture(
+    `
+for name, columns in payload['tables'].items():
+    create_table(name, columns)
 db.execute("INSERT INTO audit_logs (id, entity_type, entity_id, action, changes, timestamp, created_at, workplace_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", ('audit-valid', 'JOURNAL', 'journal-b', 'CREATE', json.dumps(dict(source='system', eventType='journal.sms_auto_posted', correlationId='correlation-1')), 1000, 1000, 'B'))
 db.execute("INSERT INTO audit_logs (id, entity_type, entity_id, action, changes, timestamp, created_at, workplace_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", ('audit-invalid', 'ACCOUNT', 'account-a', 'UPDATE', '{broken', 1000, 1000, 'A'))
 def insert(id, workplace, source, status, raw, metadata='{}', channel='sms', deleted=False):
@@ -43,27 +33,18 @@ insert('pending-only', 'A', 'pending', 'parse_failed', 'needs review', '{broken'
 insert('dismissed', 'B', 'dismissed', 'dismissed', 'restorable')
 insert('voice', 'A', 'voice', 'pending', 'spoken', channel='voice')
 insert('deleted', 'A', 'deleted', 'pending', 'deleted body', deleted=True)
-for step in payload['steps']:
-    if step['type'] == 'create_table': create_table(step['schema']['name'], step['schema']['columnArray'])
-    elif step['type'] == 'add_columns':
-        for column in step['columns']: db.execute('ALTER TABLE ' + step['table'] + ' ADD COLUMN ' + column_sql(column))
-    elif step['type'] == 'sql': db.executescript(step['sql'])
-    else: raise ValueError('Unhandled migration step: ' + step['type'])
+apply_steps(payload['steps'])
 db.row_factory = sqlite3.Row
-print(json.dumps(dict(devices=[dict(row) for row in db.execute('SELECT * FROM device_sms_inbox_records')], copies=[dict(row) for row in db.execute('SELECT * FROM transaction_inbox_records')], audits=[dict(row) for row in db.execute('SELECT * FROM audit_logs')])) )
+print(json.dumps(dict(devices=[dict(row) for row in db.execute('SELECT * FROM device_sms_inbox_records')], copies=[dict(row) for row in db.execute('SELECT * FROM transaction_inbox_records')], audits=[dict(row) for row in db.execute('SELECT * FROM audit_logs')])))
 `,
-    ],
     {
-      input: JSON.stringify({
-        steps: upgrade.steps,
-        tables: {
-          transaction_inbox_records: schema.tables.transaction_inbox_records.columnArray,
-          audit_logs: schema.tables.audit_logs.columnArray.filter(
-            column => !addedAuditColumns.includes(column.name),
-          ),
-        },
-      }),
-      encoding: 'utf8',
+      steps: upgrade.steps,
+      tables: {
+        transaction_inbox_records: schema.tables.transaction_inbox_records.columnArray,
+        audit_logs: schema.tables.audit_logs.columnArray.filter(
+          column => !addedAuditColumns.includes(column.name),
+        ),
+      },
     },
   );
   expect(

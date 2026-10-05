@@ -1,6 +1,6 @@
-import { spawnSync } from 'node:child_process';
 import { migrations } from '../migrations';
 import { schema } from '../schema';
+import { runMigrationSqlFixture } from './migrationSqlHarness';
 
 it('upgrades v33 planned payments with nullable FX fields and preserves legacy third currency', () => {
   const upgrade = migrations.sortedMigrations.find(migration => migration.toVersion === 34);
@@ -16,33 +16,19 @@ it('upgrades v33 planned payments with nullable FX fields and preserves legacy t
       ],
     }),
   ]);
-  const result = spawnSync(
-    'python3',
-    [
-      '-c',
-      `
-import json, sqlite3, sys
-payload = json.load(sys.stdin)
-db = sqlite3.connect(':memory:')
-columns = payload['columns']
-fields = ['id TEXT PRIMARY KEY', '_status TEXT', '_changed TEXT'] + [column['name'] + (' TEXT' if column['type'] == 'string' else ' REAL') for column in columns]
-db.execute('CREATE TABLE planned_payments (' + ','.join(fields) + ')')
+  const result = runMigrationSqlFixture(
+    `
+create_table('planned_payments', payload['columns'])
 db.execute("INSERT INTO planned_payments (id, name, amount, currency_code, from_account_id, to_account_id, is_auto_post) VALUES ('legacy', 'Third currency', 100, 'INR', 'usd-account', 'eur-account', 1)")
-for step in payload['steps']:
-    for column in step['columns']:
-        db.execute('ALTER TABLE planned_payments ADD COLUMN ' + column['name'] + (' TEXT' if column['type'] == 'string' else ' REAL'))
+apply_steps(payload['steps'])
 db.row_factory = sqlite3.Row
 print(json.dumps(dict(db.execute('SELECT * FROM planned_payments').fetchone())))
 `,
-    ],
     {
-      input: JSON.stringify({
-        steps: upgrade?.steps,
-        columns: schema.tables.planned_payments.columnArray.filter(
-          column => column.name !== 'fx_mode' && column.name !== 'destination_amount',
-        ),
-      }),
-      encoding: 'utf8',
+      steps: upgrade?.steps,
+      columns: schema.tables.planned_payments.columnArray.filter(
+        column => column.name !== 'fx_mode' && column.name !== 'destination_amount',
+      ),
     },
   );
   expect(result.status).toBe(0);

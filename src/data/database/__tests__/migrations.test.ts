@@ -1,27 +1,6 @@
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
-/**
- * Migration regression harness (Phase 3.3).
- *
- * Uses the same LokiJS adapter as integration tests (`jest.setup.js` → `adapter.ts`).
- *
- * Current strategy: boot a fresh database at the app schema (v34), assert the
- * persisted Loki schema version and table layout match `schema.ts`, then run a
- * minimal ledger write + balance read to prove core tables work end-to-end.
- *
- * Extending with a v32 → v33 fixture later:
- * 1. Check out the commit immediately before the v33 migration landed.
- * 2. In a one-off script or dev build, populate representative rows (accounts,
- *    journals, transactions) and export the Loki DB (adapter `_driver` /
- *    `testClone` serialization, or a documented export helper).
- * 3. Save the export under `src/data/database/__tests__/fixtures/loki-v32.json`.
- * 4. Add a test that constructs a `LokiJSAdapter` with `schema` at v32,
- *    loads the fixture, then swaps to the current `schema` + `migrations` and
- *    calls `setUp()` / opens the DB so Watermelon runs migrations to v33.
- * 5. Assert row counts, spot-check migrated columns, and re-run the journal +
- *    balance smoke below on migrated data.
- */
 
 import type { AppSchema } from '@nozbe/watermelondb';
 import { database } from '@/src/data/database/Database';
