@@ -2,6 +2,7 @@ import { database } from '@/src/data/database/Database';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { Q } from '@nozbe/watermelondb';
+import Journal from '../../models/Journal';
 import Transaction from '../../models/Transaction';
 import { RecurringPattern } from '../TransactionTypes';
 import { rawSqlExecutor } from './RawSqlExecutor';
@@ -58,6 +59,14 @@ export class TransactionRawPatternQueries {
         Q.where('deleted_at', Q.eq(null)),
       )
       .fetch();
+    const journalIds = [...new Set(txs.map(tx => tx.journalId))];
+    const journals = journalIds.length
+      ? await database.collections
+          .get<Journal>('journals')
+          .query(Q.where('workplace_id', workplaceId), Q.where('id', Q.oneOf(journalIds)))
+          .fetch()
+      : [];
+    const descriptionByJournalId = new Map(journals.map(j => [j.id, j.description]));
 
     const grouped = new Map<
       string,
@@ -65,6 +74,7 @@ export class TransactionRawPatternQueries {
         amount: number;
         accountId: AccountId;
         currencyCode: string;
+        description?: string;
         occurrenceCount: number;
         journalIds: Set<string>;
         transactionDates: number[];
@@ -74,7 +84,8 @@ export class TransactionRawPatternQueries {
     >();
 
     for (const tx of txs) {
-      const key = `${tx.amount}|${tx.accountId}|${tx.currencyCode}`;
+      const description = descriptionByJournalId.get(tx.journalId) ?? undefined;
+      const key = JSON.stringify([tx.amount, tx.accountId, tx.currencyCode, description ?? null]);
       const existing = grouped.get(key);
 
       if (existing) {
@@ -88,6 +99,7 @@ export class TransactionRawPatternQueries {
           amount: tx.amount,
           accountId: tx.accountId,
           currencyCode: tx.currencyCode,
+          description,
           occurrenceCount: 1,
           journalIds: new Set([tx.journalId]),
           transactionDates: [tx.transactionDate],
@@ -104,6 +116,7 @@ export class TransactionRawPatternQueries {
         amount: g.amount,
         accountId: g.accountId,
         currencyCode: g.currencyCode,
+        description: g.description,
         occurrenceCount: g.occurrenceCount,
         journalIds: Array.from(g.journalIds).join(','),
         transactionDates: g.transactionDates.join(','),

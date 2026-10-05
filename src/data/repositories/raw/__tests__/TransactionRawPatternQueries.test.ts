@@ -103,4 +103,32 @@ describe('TransactionRawPatternQueries workplace isolation', () => {
       journalIds: localJournalId,
     });
   });
+
+  it('groups ORM fallback patterns by journal description like the SQL path', async () => {
+    jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue(null);
+    for (const description of ['Local recurring payment', 'Different payee']) {
+      await createJournalFixture(
+        {
+          description,
+          journalDate: startDate + 1,
+          currencyCode: 'USD',
+          transactions: [
+            { accountId: localAccountId, amount: 10, transactionType: TransactionType.DEBIT },
+          ],
+        },
+        workplaceOne,
+      );
+    }
+
+    const patterns = await transactionRawPatternQueries.getRecurringPatternsRaw(
+      workplaceOne,
+      startDate,
+      1,
+    );
+
+    expect(patterns.map(p => [p.description, p.occurrenceCount])).toEqual([
+      ['Local recurring payment', 2],
+      ['Different payee', 1],
+    ]);
+  });
 });
