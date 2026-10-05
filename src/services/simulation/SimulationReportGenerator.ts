@@ -56,9 +56,9 @@ function generateBudgetSummary(
 
   for (const flow of allFlows) {
     if (flow.timeframe === 'PAST') continue;
-    if (flow.category === FlowCategory.BUDGET && flow.kind === 'OUTFLOW') {
-      nextMonthProjected += flow.amount;
-    }
+    if (flow.category !== FlowCategory.BUDGET || flow.kind !== 'OUTFLOW') continue;
+    if (flow.dayOffset < daysLeftInMonth) currentMonthRemaining += flow.amount;
+    else nextMonthProjected += flow.amount;
   }
 
   return {

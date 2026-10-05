@@ -180,4 +180,35 @@ describe('SimulationReportGenerator', () => {
     // The Manual Rebalancing should be ignored.
     expect(report.summary.totalCommittedPlanned).toBe(200);
   });
+
+  it('splits budget outflows between the rest of this month and next month', () => {
+    const budgetFlow = (amount: number, dayOffset: number): Flow => ({
+      kind: 'OUTFLOW',
+      accountId: 'checking' as AccountId,
+      amount,
+      dayOffset,
+      category: FlowCategory.BUDGET,
+      timeframe: 'FUTURE',
+      label: 'Groceries',
+      origin: FlowSource.BUDGET,
+      referenceId: `b-groceries-${dayOffset}`,
+    });
+    const jan29 = new Date(2026, 0, 29, 12).getTime();
+
+    const report = generateSimulationReport(
+      [budgetFlow(40, 0), budgetFlow(15, 2), budgetFlow(60, 3)],
+      accountMap,
+      [],
+      liquidAccountIdsSet,
+      2,
+      jan29,
+      30,
+    );
+
+    expect(report.budget).toEqual({
+      currentMonthRemaining: 55,
+      nextMonthProjected: 60,
+      nextMonthDays: 27,
+    });
+  });
 });
