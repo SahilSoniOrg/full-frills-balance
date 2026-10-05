@@ -8,14 +8,6 @@ const isDevelopmentBuild =
 const enableAnalyticsInDev = process.env.EXPO_PUBLIC_ENABLE_ANALYTICS_IN_DEV === '1';
 const analyticsEnabled = !isDevelopmentBuild || enableAnalyticsInDev;
 
-/**
- * App Configuration - Behavior defaults and app-wide settings
- *
- * This file contains values that affect BEHAVIOR, not visual appearance or presentation copy.
- * Visual tokens belong in design-tokens.ts.
- * Presentation UI copy strings belong in src/constants/copy/ui-strings.ts.
- */
-
 export const AppConfig = {
   // Default currency for new accounts
   defaultCurrency: 'USD' as const,
@@ -88,16 +80,11 @@ export const AppConfig = {
     smsImportSheetLimit: 200,
   },
 
-  // Feature toggles
   features: {
-    enableAnalytics: true, // Analytics collection
-    enableSentry: analyticsEnabled, // Error tracking
-    // Keep deterministic E2E performance runs free of analytics network work.
-    enablePostHog: analyticsEnabled && process.env.EXPO_PUBLIC_E2E !== '1', // Product analytics
-    enableDebugMode: false, // Debug logging
-    enableExperimentalFeatures: false,
+    enableAnalytics: true,
+    enableSentry: analyticsEnabled,
+    enablePostHog: analyticsEnabled && process.env.EXPO_PUBLIC_E2E !== '1',
     debug: {
-      safeToSpendLogs: false,
       tracePerformance: true,
     },
   },
@@ -156,7 +143,6 @@ export const AppConfig = {
     validation: {
       minAccountNameLength: 2,
       maxAccountNameLength: 100,
-      maxTrimLength: 500,
       minDayOfMonth: 1,
       maxDayOfMonth: 31,
       minAprPercent: 0,
