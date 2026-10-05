@@ -9,6 +9,7 @@ import {
 import { observeQueryWithModelChanges } from '@/src/data/repositories/observeQueryWithModelChanges';
 import { AuditAction, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import type { AuditEventType } from '@/src/types/auditEvents';
+import type { CanonicalPlannedPayment } from '@/src/types/importContracts';
 import type { PlannedPaymentFxFields } from '@/src/types/plainDtos';
 import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
@@ -49,8 +50,8 @@ export type PlannedPaymentMergeRecords = {
   targetTo: PlannedPayment[];
 };
 
-function auditPlannedPaymentState(
-  payment: PlannedPayment,
+export function plannedPaymentAuditSnapshot(
+  payment: Omit<CanonicalPlannedPayment, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>,
   overrides: Partial<PlannedPaymentPersistenceInput> = {},
 ): Record<string, unknown> {
   return {
@@ -180,7 +181,7 @@ export class PlannedPaymentRepository {
             entityId: created.id,
             eventType: 'planned_payment.created',
             action: AuditAction.CREATE,
-            changes: { after: auditPlannedPaymentState(created) },
+            changes: { after: plannedPaymentAuditSnapshot(created) },
             undoable: false,
           },
           workplaceId,
@@ -201,8 +202,8 @@ export class PlannedPaymentRepository {
       await validateReferences?.();
       const record = await this.find(workplaceId, pp.id);
       if (!record) throw new Error('Planned payment not found');
-      const before = auditPlannedPaymentState(record);
-      const after = auditPlannedPaymentState(record, updates);
+      const before = plannedPaymentAuditSnapshot(record);
+      const after = plannedPaymentAuditSnapshot(record, updates);
       const update = record.prepareUpdate(current => {
         Object.assign(current, updates);
         current.updatedAt = new Date();
@@ -265,7 +266,7 @@ export class PlannedPaymentRepository {
         throw new Error(conflictMessage);
       }
 
-      const current = auditPlannedPaymentState(record);
+      const current = plannedPaymentAuditSnapshot(record);
       const restored = restoreAuditFieldsFromRevert(
         current,
         before,
@@ -304,7 +305,7 @@ export class PlannedPaymentRepository {
           optionalUndefinedFields.has(field) && value == null ? undefined : value;
       }
 
-      const restoredState = auditPlannedPaymentState(record, updates);
+      const restoredState = plannedPaymentAuditSnapshot(record, updates);
       const now = new Date();
       await this.db.batch(
         record.prepareUpdate(currentRecord => {
@@ -353,8 +354,8 @@ export class PlannedPaymentRepository {
     }
 
     stageModelWrite(session, () => {
-      const before = auditPlannedPaymentState(record);
-      const after = auditPlannedPaymentState(record, updates);
+      const before = plannedPaymentAuditSnapshot(record);
+      const after = plannedPaymentAuditSnapshot(record, updates);
       return [
         this.prepareUpdate(workplaceId, record, updates),
         auditRepository.prepareLog(
@@ -391,7 +392,10 @@ export class PlannedPaymentRepository {
           eventType: 'planned_payment.deleted',
           source: 'app',
           action: AuditAction.DELETE,
-          changes: { before: auditPlannedPaymentState(record), after: { deletedAt: new Date() } },
+          changes: {
+            before: plannedPaymentAuditSnapshot(record),
+            after: { deletedAt: new Date() },
+          },
           undoable: false,
         },
         workplaceId,
@@ -545,8 +549,8 @@ export class PlannedPaymentRepository {
         toAccountId: sourceIds.has(record.toAccountId) ? targetAccountId : record.toAccountId,
         ...(pausedSourceIds.has(record.id) ? { status: PlannedPaymentStatus.PAUSED } : {}),
       };
-      const before = auditPlannedPaymentState(record);
-      const after = auditPlannedPaymentState(record, updates);
+      const before = plannedPaymentAuditSnapshot(record);
+      const after = plannedPaymentAuditSnapshot(record, updates);
       return [
         this.prepareUpdate(record.workplaceId, record, updates),
         auditRepository.prepareLog(

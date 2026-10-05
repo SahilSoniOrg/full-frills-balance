@@ -7,6 +7,8 @@ import {
   toJournalStatus,
   toTransactionType,
 } from '@/src/data/repositories/importValueParsers';
+import { plannedPaymentAuditSnapshot } from '@/src/data/repositories/PlannedPaymentRepository';
+import { autoPostRuleAuditSnapshot } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { AuditAction } from '@/src/types/enums';
 import type { AuditEntityType } from '@/src/types/enums';
 import type { AuditEventType } from '@/src/types/auditEvents';
@@ -214,23 +216,7 @@ const IMPORTED_AUDIT_SPECS: ImportedAuditSpec[] = [
       (data.plannedPayments ?? []).map(payment => ({
         id: payment.id,
         after: {
-          name: payment.name,
-          description: payment.description ?? null,
-          amount: payment.amount,
-          currencyCode: payment.currencyCode,
-          fxMode: payment.fxMode ?? null,
-          destinationAmount: payment.destinationAmount ?? null,
-          fromAccountId: payment.fromAccountId,
-          toAccountId: payment.toAccountId,
-          intervalN: payment.intervalN,
-          intervalType: payment.intervalType,
-          startDate: payment.startDate,
-          endDate: payment.endDate ?? null,
-          nextOccurrence: payment.nextOccurrence,
-          status: payment.status,
-          isAutoPost: payment.isAutoPost,
-          recurrenceDay: payment.recurrenceDay ?? null,
-          recurrenceMonth: payment.recurrenceMonth ?? null,
+          ...plannedPaymentAuditSnapshot(payment),
           deletedAt: isoDate(payment.deletedAt),
         },
       })),
@@ -241,17 +227,7 @@ const IMPORTED_AUDIT_SPECS: ImportedAuditSpec[] = [
     collect: data =>
       (data.transactionAutoPostRules ?? []).map(rule => ({
         id: rule.id,
-        after: {
-          channelsJson: rule.channelsJson ?? null,
-          senderMatch: rule.senderMatch ?? null,
-          bodyMatch: rule.bodyMatch ?? null,
-          conditionsJson: rule.conditionsJson ?? null,
-          actionsJson: rule.actionsJson ?? null,
-          priority: rule.priority ?? null,
-          sourceAccountId: rule.sourceAccountId,
-          categoryAccountId: rule.categoryAccountId,
-          isActive: rule.isActive,
-        },
+        after: autoPostRuleAuditSnapshot(rule),
       })),
   },
   {

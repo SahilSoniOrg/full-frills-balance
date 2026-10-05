@@ -17,6 +17,7 @@ import {
 } from '@/src/utils/sms/RuleMatcher';
 import { syncRuleActionsFromColumns } from '@/src/utils/sms/ruleActionsAccountIds';
 import { AuditAction } from '@/src/types/enums';
+import type { CanonicalTransactionAutoPostRule } from '@/src/types/importContracts';
 
 export interface SmsRuleDraftInput {
   id?: string;
@@ -29,8 +30,8 @@ export interface SmsRuleDraftInput {
   priority?: number;
 }
 
-function auditRuleState(
-  rule: TransactionAutoPostRule,
+export function autoPostRuleAuditSnapshot(
+  rule: Omit<CanonicalTransactionAutoPostRule, 'id' | 'createdAt' | 'updatedAt'>,
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown> {
   const fields = [
@@ -93,7 +94,7 @@ export class TransactionAutoPostRuleRepository {
             eventType: 'transaction_auto_post_rule.deleted',
             action: AuditAction.DELETE,
             source: 'app',
-            changes: { before: auditRuleState(rule) },
+            changes: { before: autoPostRuleAuditSnapshot(rule) },
             undoable: false,
           },
           workplaceId,
@@ -127,7 +128,7 @@ export class TransactionAutoPostRuleRepository {
       if (data.id) {
         const rule = await this.find(workplaceId, data.id);
         if (!rule) throw new Error('SMS rule not found in workplace');
-        const before = auditRuleState(rule);
+        const before = autoPostRuleAuditSnapshot(rule);
         await rule.update(record => {
           record.channelsJson = JSON.stringify(['sms']);
           record.senderMatch = senderFallback;
@@ -148,7 +149,7 @@ export class TransactionAutoPostRuleRepository {
               eventType: 'transaction_auto_post_rule.updated',
               action: AuditAction.UPDATE,
               source: 'app',
-              changes: { before, after: auditRuleState(rule) },
+              changes: { before, after: autoPostRuleAuditSnapshot(rule) },
               undoable: false,
             },
             workplaceId,
@@ -177,7 +178,7 @@ export class TransactionAutoPostRuleRepository {
               eventType: 'transaction_auto_post_rule.created',
               action: AuditAction.CREATE,
               source: 'app',
-              changes: { after: auditRuleState(rule) },
+              changes: { after: autoPostRuleAuditSnapshot(rule) },
               undoable: false,
             },
             workplaceId,
@@ -248,8 +249,8 @@ export class TransactionAutoPostRuleRepository {
         sourceAccountId: source ?? record.sourceAccountId,
         categoryAccountId: category ?? record.categoryAccountId,
       });
-      const before = auditRuleState(record);
-      const after = auditRuleState(record, {
+      const before = autoPostRuleAuditSnapshot(record);
+      const after = autoPostRuleAuditSnapshot(record, {
         sourceAccountId: nextSource,
         categoryAccountId: nextCategory,
         actionsJson: nextActions,
