@@ -1,7 +1,7 @@
-import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 import { accountWriteRepository } from '@/src/data/repositories/account';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 export type BudgetReadServiceHarnessIds = {
   assetId: string;
@@ -10,9 +10,7 @@ export type BudgetReadServiceHarnessIds = {
 };
 
 export async function resetBudgetReadServiceDatabase(): Promise<BudgetReadServiceHarnessIds> {
-  await database.write(async () => {
-    await database.unsafeResetDatabase();
-  });
+  await resetDatabase();
   const asset = await accountWriteRepository.create({
     name: 'Checking',
     accountType: AccountType.ASSET,

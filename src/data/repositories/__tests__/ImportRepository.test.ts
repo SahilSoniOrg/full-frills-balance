@@ -14,12 +14,11 @@ import Account from '@/src/data/models/Account';
 import Workplace from '@/src/data/models/Workplace';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { importRepository } from '@/src/data/repositories/ImportRepository';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 describe('ImportRepository', () => {
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
   });
 
   describe('batchInsert account subtype defaults', () => {

@@ -3,15 +3,14 @@ import { accountWriteRepository } from '@/src/data/repositories/account';
 import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 describe('resolveAccount', () => {
   const workplaceId = 'test-workplace-id' as WorkplaceId;
 
   beforeEach(async () => {
     // Reset database state before each test
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
   });
 
   it('handles empty training data for Bayes classifier gracefully without NaN/Infinity', async () => {

@@ -15,6 +15,7 @@ import {
   loadJournalBalanceReview,
   saveJournalBalanceEdits,
 } from '../journalBalanceReview';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const workplaceId = 'wp-review' as WorkplaceId;
 
@@ -32,9 +33,7 @@ describe('journal balance review', () => {
   });
 
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
     const create = (name: string, accountType: AccountType, currencyCode: string) =>
       accountWriteRepository.create({ name, accountType, currencyCode, workplaceId });
     cashId = (await create('Cash', AccountType.ASSET, 'USD')).id as AccountId;

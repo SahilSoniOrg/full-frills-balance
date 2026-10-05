@@ -10,6 +10,7 @@ import { accountWriteRepository } from '@/src/data/repositories/account';
 import { findJournalMetadataByJournalId } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const workplaceId = 'wp-1' as WorkplaceId;
 
@@ -18,9 +19,7 @@ describe('JournalPersistenceService lifecycle', () => {
   let expenseAccountId: AccountId;
 
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
 
     const cash = await accountWriteRepository.create({
       name: 'Cash',
@@ -227,10 +226,7 @@ describe('JournalPersistenceService lifecycle', () => {
 
       await database.write(async () => {
         const now = new Date();
-        const metadata = await findJournalMetadataByJournalId(
-          journal.id as JournalId,
-          workplaceId,
-        );
+        const metadata = await findJournalMetadataByJournalId(journal.id as JournalId, workplaceId);
         if (metadata) {
           await metadata.update(record => {
             record.metadataJson = JSON.stringify({ note: 'no planned date here' });
@@ -282,10 +278,7 @@ describe('JournalPersistenceService lifecycle', () => {
       );
 
       await database.write(async () => {
-        const meta = await findJournalMetadataByJournalId(
-          journal.id as JournalId,
-          workplaceId,
-        );
+        const meta = await findJournalMetadataByJournalId(journal.id as JournalId, workplaceId);
         if (meta) {
           await meta.update((record: JournalMetadata) => {
             record.metadataJson = '{not-json';

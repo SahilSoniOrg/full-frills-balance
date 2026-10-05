@@ -11,12 +11,11 @@ import {
 } from '@/src/testing/journalFixtures';
 import { firstValueFrom } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 describe('JournalObserveQueries', () => {
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
   });
 
   it('re-emits planned journal projections when a planned journal is edited', async () => {

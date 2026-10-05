@@ -7,12 +7,13 @@ import {
   smsImportPrivacyBatch,
 } from '@/src/testing/smsImportPrivacyFixture';
 import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const WORKPLACE = 'wp-import-inbox-privacy' as never;
 
 describe('import inbox privacy integration', () => {
   beforeEach(async () => {
-    await database.write(() => database.unsafeResetDatabase());
+    await resetDatabase();
   });
 
   it('retains imported SMS source content and hashes only SMS identities', async () => {

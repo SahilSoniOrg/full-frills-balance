@@ -3,6 +3,7 @@ import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { TransactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { InboxParseStatus, InboxProcessingStatus, TransactionDirection } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 describe('TransactionInboxRepository integration', () => {
   const repository = new TransactionInboxRepository();
@@ -12,9 +13,7 @@ describe('TransactionInboxRepository integration', () => {
     database.write(async () => database.batch(prepare()));
 
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
   });
 
   it('commits repository-prepared create and update operations to the database', async () => {

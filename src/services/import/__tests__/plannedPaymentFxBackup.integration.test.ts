@@ -10,12 +10,13 @@ import { validateImportedData } from '@/src/services/import/validateImportedData
 import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 import type { PlannedPaymentFxMode } from '@/src/types/plannedPaymentFx';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const WP = 'wp-fx-backup' as WorkplaceId;
 const RESTORED_WP = 'wp-fx-restored' as WorkplaceId;
 
 beforeEach(async () => {
-  await database.write(() => database.unsafeResetDatabase());
+  await resetDatabase();
 });
 
 it.each([undefined, 'automatic', 'fixed', 'manual'] as const)(

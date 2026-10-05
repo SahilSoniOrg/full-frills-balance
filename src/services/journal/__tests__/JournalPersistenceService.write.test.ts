@@ -10,6 +10,7 @@ import { journalPersistenceRepository } from '@/src/data/repositories/journal/Jo
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const workplaceId = 'wp-write' as WorkplaceId;
 
@@ -18,9 +19,7 @@ describe('JournalPersistenceService write paths', () => {
   let expenseAccountId: AccountId;
 
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
 
     const cash = await accountWriteRepository.create({
       name: 'Cash',

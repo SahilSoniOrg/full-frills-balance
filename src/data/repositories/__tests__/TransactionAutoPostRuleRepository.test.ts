@@ -1,14 +1,12 @@
-import { database } from '@/src/data/database/Database';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { map } from 'rxjs/operators';
 import { observeAfterInitial } from '@/src/testing/observeAfterInitial';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 describe('TransactionAutoPostRuleRepository', () => {
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
   });
 
   it('creates, finds, updates and deletes a rule', async () => {

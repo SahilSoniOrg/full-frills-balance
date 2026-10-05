@@ -9,6 +9,7 @@ import {
 } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { assembleCreateJournalData } from '@/src/services/journal/journalSaveHelpers';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {
@@ -99,9 +100,7 @@ describe('journalSaveHelpers workplace isolation', () => {
   describe('database integration', () => {
     beforeEach(async () => {
       jest.restoreAllMocks();
-      await database.write(async () => {
-        await database.unsafeResetDatabase();
-      });
+      await resetDatabase();
     });
 
     it('loads inbox metadata from a persisted record', async () => {

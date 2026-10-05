@@ -10,6 +10,7 @@ import {
   findUnbalancedJournalsByIds,
   type JournalBalanceAuditResult,
 } from '../journalBalanceAudit';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const workplaceId = 'wp-1' as WorkplaceId;
 
@@ -30,9 +31,7 @@ describe('findUnbalancedJournals', () => {
   ];
 
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
     const create = (name: string, accountType: AccountType, currencyCode: string) =>
       accountWriteRepository.create({ name, accountType, currencyCode, workplaceId });
     cashId = (await create('Cash', AccountType.ASSET, 'USD')).id as AccountId;

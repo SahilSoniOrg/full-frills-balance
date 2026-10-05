@@ -1,10 +1,10 @@
-import { database } from '@/src/data/database/Database';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { accountLedgerMetricsQueries } from '@/src/data/repositories/account/AccountLedgerMetricsQueries';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { firstValueFrom } from 'rxjs';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 describe('AccountLedgerMetricsQueries period metrics', () => {
   const workplaceId = '00000000-0000-4000-8000-000000000001' as WorkplaceId;
@@ -15,9 +15,7 @@ describe('AccountLedgerMetricsQueries period metrics', () => {
   let parentAccountId: AccountId;
 
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
 
     const parent = await accountWriteRepository.create({
       name: 'Parent',

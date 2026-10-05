@@ -3,12 +3,11 @@ import ExchangeRate from '@/src/data/models/ExchangeRate';
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
 import { map } from 'rxjs/operators';
 import { observeAfterInitial } from '@/src/testing/observeAfterInitial';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 describe('ExchangeRateRepository historical rates', () => {
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
   });
 
   it('reads by requested date and upserts the historical record', async () => {

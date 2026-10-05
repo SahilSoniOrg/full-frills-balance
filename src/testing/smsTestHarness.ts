@@ -19,15 +19,14 @@ import { smsSyncPipeline } from '@/src/services/sms/pipeline';
 import { computeSmsFingerprint } from '@/src/services/sms/pipeline/smsFingerprint';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { smsMessageFromFixture, SmsFixtureKey } from './smsFixtures';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 export const SMS_TEST_WORKPLACE = 'wp-sms-test' as WorkplaceId;
 export const SMS_TEST_WORKPLACE_B = 'wp-sms-test-b' as WorkplaceId;
 
 export async function resetSmsTestDb(): Promise<void> {
   rebuildQueueService.stop();
-  await database.write(async () => {
-    await database.unsafeResetDatabase();
-  });
+  await resetDatabase();
 }
 
 export async function seedSmsTestAccounts(workplaceId: WorkplaceId = SMS_TEST_WORKPLACE): Promise<{

@@ -11,12 +11,11 @@ import type { CreateJournalData } from '@/src/types/journalWrite';
 import { referenceNumberFromMetadataJson } from '@/src/utils/sms/SmsReferenceExtractor';
 import type { Model } from '@nozbe/watermelondb';
 import { Q } from '@nozbe/watermelondb';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 export async function resetJournalIntegrationWorkplace() {
   rebuildQueueService.stop();
-  await database.write(async () => {
-    await database.unsafeResetDatabase();
-  });
+  await resetDatabase();
   await workplaceRepository.create({
     id: 'wp-1' as WorkplaceId,
     name: 'Test Workplace',

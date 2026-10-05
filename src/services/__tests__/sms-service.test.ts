@@ -16,6 +16,7 @@ import { smsService } from '@/src/services/sms-service';
 import { smsSyncPipeline } from '@/src/services/sms/pipeline';
 import { database } from '@/src/data/database/Database';
 import { PermissionsAndroid, Platform } from 'react-native';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 jest.mock('@/modules/expo-sms-inbox', () => ({
   __esModule: true,
@@ -143,9 +144,7 @@ describe('smsService.getMatchingRule', () => {
 
 describe('smsService workplace isolation', () => {
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
   });
 
   it('limits preview, record-id, and linked-journal reads to the requested workplace', async () => {

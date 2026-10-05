@@ -1,4 +1,3 @@
-import { database } from '@/src/data/database/Database';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { createAuditMergeAccount } from '@/src/testing/auditMergeFixtures';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
@@ -7,12 +6,11 @@ import { mergeAccounts } from '@/src/services/accounts/accountMergeCommands';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { PlannedPaymentInterval, PlannedPaymentStatus, TransactionType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const workplaceId = 'wp-audit-merge' as WorkplaceId;
 beforeEach(async () => {
-  await database.write(async () => {
-    await database.unsafeResetDatabase();
-  });
+  await resetDatabase();
 });
 
 test('account merge audits retain the original journal, payment, and budget references', async () => {

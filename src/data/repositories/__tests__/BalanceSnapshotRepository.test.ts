@@ -6,12 +6,11 @@ import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapsh
 import Transaction from '@/src/data/models/Transaction';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { Q } from '@nozbe/watermelondb';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 describe('BalanceSnapshotRepository', () => {
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
   });
 
   it('finds latest snapshot for accounts and respects workplace isolation in ORM and raw fallback', async () => {

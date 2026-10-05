@@ -2,6 +2,7 @@ import { database } from '@/src/data/database/Database';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { AccountType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 describe('AccountWriteRepository refresh operations', () => {
   const localWorkplace = 'wp-account-refresh-local' as WorkplaceId;
@@ -9,9 +10,7 @@ describe('AccountWriteRepository refresh operations', () => {
 
   beforeEach(async () => {
     jest.restoreAllMocks();
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
   });
 
   it('refreshes only requested live accounts in the workplace', async () => {
@@ -69,9 +68,7 @@ describe('AccountWriteRepository currency immutability', () => {
 
   beforeEach(async () => {
     jest.restoreAllMocks();
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
   });
 
   it('rejects a changed currency before updating an account', async () => {

@@ -1,4 +1,3 @@
-import { database } from '@/src/data/database/Database';
 import { AccountType, TransactionType, JournalStatus } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 
@@ -8,15 +7,14 @@ import { transactionQueryRepository } from '@/src/data/repositories/transaction'
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 describe('TransactionRepository', () => {
   let accountId: string;
   let equityAccountId: string;
 
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
     const account = await accountWriteRepository.create({
       name: 'Test Account',
       accountType: AccountType.ASSET,

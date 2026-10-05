@@ -6,6 +6,7 @@ import { database } from '@/src/data/database/Database';
 import Currency from '@/src/data/models/Currency';
 import { Q } from '@nozbe/watermelondb';
 import { CurrencyInitService } from '@/src/services/currency-init-service';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const activeCurrencies = () =>
   database.get<Currency>('currencies').query(Q.where('deleted_at', null)).fetch();
@@ -14,9 +15,7 @@ describe('CurrencyInitService', () => {
   let service: CurrencyInitService;
 
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
     service = new CurrencyInitService();
   });
 

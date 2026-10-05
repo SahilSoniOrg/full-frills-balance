@@ -1,10 +1,10 @@
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { firstValueFrom, take } from 'rxjs';
-import { database } from '@/src/data/database/Database';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { asAccountId, asJournalId, asWorkplaceId } from '@/src/types/ids';
 import { transactionService } from '../TransactionService';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const workplaceId = asWorkplaceId('wp-1');
 
@@ -13,9 +13,7 @@ describe('TransactionService observable reads', () => {
   let equityAccountId: ReturnType<typeof asAccountId>;
 
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
 
     const asset = await accountWriteRepository.create({
       name: 'Checking',

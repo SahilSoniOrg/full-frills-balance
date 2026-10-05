@@ -1,4 +1,3 @@
-import { database } from '@/src/data/database/Database';
 import { AuditAction, AccountSubtype, AccountType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 import { accountQueryRepository } from '@/src/data/repositories/account';
@@ -9,14 +8,13 @@ import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { filterAccountsForDisplay } from '@/src/utils/accountArchive';
 import { firstValueFrom } from 'rxjs';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const WP = 'wp-archive-cmd' as WorkplaceId;
 
 describe('applyAccountArchiveChanges (integration)', () => {
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
   }, 15000);
 
   it('returns false when no account ids are provided', async () => {

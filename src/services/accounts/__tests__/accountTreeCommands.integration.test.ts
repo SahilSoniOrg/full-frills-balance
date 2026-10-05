@@ -1,4 +1,3 @@
-import { database } from '@/src/data/database/Database';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { AccountType } from '@/src/types/enums';
@@ -11,12 +10,13 @@ import {
   saveAccount,
 } from '../accountHierarchyCommands';
 import { planAccountTreeMove } from '../accountTree';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const workplaceId = 'tree-command-workplace' as WorkplaceId;
 
 describe('moveAccount', () => {
   beforeEach(async () => {
-    await database.write(async () => database.unsafeResetDatabase());
+    await resetDatabase();
   }, 15_000);
 
   it('persists a cross-parent move and normalizes both sibling lists in one command', async () => {
@@ -238,7 +238,7 @@ describe('moveAccount', () => {
 
 describe('saveAccountTreeDraft', () => {
   beforeEach(async () => {
-    await database.write(async () => database.unsafeResetDatabase());
+    await resetDatabase();
   }, 15_000);
 
   it('persists composed placements atomically from a complete baseline', async () => {
@@ -463,7 +463,7 @@ describe('saveAccountTreeDraft', () => {
 
 describe('saveAccount', () => {
   beforeEach(async () => {
-    await database.write(async () => database.unsafeResetDatabase());
+    await resetDatabase();
   }, 15_000);
 
   it('atomically saves details, parent placement, and sibling normalization', async () => {

@@ -10,11 +10,8 @@ import {
   transactionWriteRepository,
 } from '@/src/data/repositories/transaction';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
-import {
-  resetDatabaseForIsolationTests,
-  WORKPLACE_ISOLATION_ONE,
-  WORKPLACE_ISOLATION_TWO,
-} from '@/src/testing/workplaceIsolation';
+import { WORKPLACE_ISOLATION_ONE, WORKPLACE_ISOLATION_TWO } from '@/src/testing/workplaceIsolation';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 import { AccountId, TransactionId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { storage } from '@/src/utils/storage';
@@ -26,7 +23,7 @@ const WORKPLACE_TWO = WORKPLACE_ISOLATION_TWO;
 describe('AccountingRebuildService workplace isolation', () => {
   beforeEach(async () => {
     jest.restoreAllMocks();
-    await resetDatabaseForIsolationTests();
+    await resetDatabase();
   });
 
   it('does not update foreign transactions or delete foreign snapshots from scoped repair data', async () => {

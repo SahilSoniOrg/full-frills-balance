@@ -5,13 +5,14 @@ import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { SmsPrivacyRepository } from '@/src/data/repositories/SmsPrivacyRepository';
 import { InboxParseStatus, InboxProcessingStatus, TransactionDirection } from '@/src/types/enums';
 import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const WORKPLACE = 'wp-sms-privacy' as never;
 const repository = new SmsPrivacyRepository();
 
 describe('SmsPrivacyRepository integration', () => {
   beforeEach(async () => {
-    await database.write(() => database.unsafeResetDatabase());
+    await resetDatabase();
   });
 
   it('retains SMS sources and journal metadata, hashes old identities, sanitizes audits, and is idempotent', async () => {

@@ -1,18 +1,16 @@
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
-import { database } from '@/src/data/database/Database';
 
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 describe('E2E Workflows', () => {
   beforeEach(async () => {
     rebuildQueueService.stop();
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
   }, 30000);
 
   afterAll(() => {

@@ -1,4 +1,3 @@
-import { database } from '@/src/data/database/Database';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
@@ -21,12 +20,13 @@ import {
 } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 import type { PlannedPaymentFxMode } from '@/src/types/plannedPaymentFx';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const WP = 'wp-fx-audit' as WorkplaceId;
 registerAuditHandlers();
 
 beforeEach(async () => {
-  await database.write(() => database.unsafeResetDatabase());
+  await resetDatabase();
 });
 
 async function createPayment() {
@@ -151,7 +151,7 @@ describe('posted planned-payment FX journal undo', () => {
   const workplace = 'audit-undo-planned-fx' as WorkplaceId;
 
   beforeEach(async () => {
-    await database.write(() => database.unsafeResetDatabase());
+    await resetDatabase();
     jest.spyOn(exchangeRateService, 'getRequiredRate').mockResolvedValue(0.9);
     jest.spyOn(exchangeRateService, 'getHistoricalRate');
   });

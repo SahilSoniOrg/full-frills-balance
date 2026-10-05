@@ -14,6 +14,7 @@ import { prepareAccountFieldUpdate } from '@/src/services/accounts/accountHierar
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { foldBalances } from '@/src/utils/accounting/BalanceEffects';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const LOKI_SCHEMA_VERSION_KEY = '_loki_schema_version';
 const EXPECTED_SCHEMA_VERSION = 34;
@@ -33,9 +34,7 @@ describe('database migrations (LokiJS)', () => {
   const workplaceId = 'wp-migration-test' as WorkplaceId;
 
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
   }, 30000);
 
   afterAll(() => {

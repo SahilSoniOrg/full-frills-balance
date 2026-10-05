@@ -7,7 +7,7 @@ import Transaction from '@/src/data/models/Transaction';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { balanceSnapshotRepository } from '@/src/data/repositories/BalanceSnapshotRepository';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
-import { resetDatabaseForIsolationTests } from '@/src/testing/workplaceIsolation';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
 import { repairAccountBalance } from '@/src/services/integrity/integrityRepair';
 import * as integrityVerification from '@/src/services/integrity/integrityVerification';
@@ -21,7 +21,7 @@ describe('Integrity checks', () => {
   beforeEach(async () => {
     jest.restoreAllMocks();
     jest.clearAllMocks();
-    await resetDatabaseForIsolationTests();
+    await resetDatabase();
 
     const cash = await accountWriteRepository.create({
       name: 'Cash',

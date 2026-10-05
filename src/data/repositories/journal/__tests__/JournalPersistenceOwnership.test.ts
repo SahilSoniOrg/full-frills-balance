@@ -13,15 +13,14 @@ import {
   seedWorkplaceJournalOwnershipFixtures,
   type WorkplaceJournalOwnershipFixtures,
 } from './journalPersistenceTest.helpers';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 describe('journal write workplace ownership', () => {
   let fixtures: WorkplaceJournalOwnershipFixtures;
 
   beforeEach(async () => {
     jest.restoreAllMocks();
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
     fixtures = await seedWorkplaceJournalOwnershipFixtures();
   });
 

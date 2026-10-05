@@ -7,12 +7,11 @@ import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 export async function resetRawQueryIsolationDatabase(): Promise<void> {
   jest.restoreAllMocks();
-  await database.write(async () => {
-    await database.unsafeResetDatabase();
-  });
+  await resetDatabase();
 }
 
 export async function createRawQueryIsolationWorkplaces(

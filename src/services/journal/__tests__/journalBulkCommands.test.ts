@@ -26,6 +26,7 @@ import {
   TransactionType,
 } from '@/src/types/enums';
 import { Q } from '@nozbe/watermelondb';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const WP = 'wp-bulk-cmd' as WorkplaceId;
 
@@ -35,9 +36,7 @@ describe('journalBulkCommands', () => {
   let newExpenseAccId: AccountId;
 
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
 
     const assetAcc = await accountWriteRepository.create({
       workplaceId: WP,

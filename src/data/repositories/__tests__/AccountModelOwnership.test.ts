@@ -1,14 +1,12 @@
-import { database } from '@/src/data/database/Database';
 import { AccountType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { ValidationError } from '@/src/utils/errors';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 describe('Account Model Ownership Hardening (WP-1Q)', () => {
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
   });
 
   it('rejects account creation without workplaceId', async () => {

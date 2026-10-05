@@ -31,14 +31,13 @@ import { applyAccountArchiveChanges } from '@/src/services/accounts/accountArchi
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { mergeAccounts } from '@/src/services/accounts/accountMergeCommands';
 import { assertNoLiveAccountReferences } from '@/src/services/accounts/accountReferenceGraph';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const WP = 'wp-acct-cmd' as WorkplaceId;
 
 describe('account commands (integration)', () => {
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
   }, 15000);
 
   afterEach(() => {

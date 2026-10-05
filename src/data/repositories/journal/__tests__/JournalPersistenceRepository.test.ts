@@ -15,6 +15,7 @@ import {
   seedJournalPersistenceWriteFixtures,
   type JournalPersistenceWriteFixtures,
 } from './journalPersistenceTest.helpers';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const WORKPLACE_ID = JOURNAL_PERSISTENCE_WORKPLACE;
 
@@ -25,9 +26,7 @@ describe('JournalPersistenceRepository', () => {
   let putInput: JournalPersistenceWriteFixtures['putInput'];
 
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
     ({ debitAccountId, creditAccountId, lines, putInput } =
       await seedJournalPersistenceWriteFixtures());
   });

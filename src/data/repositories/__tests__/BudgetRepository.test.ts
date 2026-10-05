@@ -11,15 +11,14 @@ import { observeAfterInitial } from '@/src/testing/observeAfterInitial';
 import { deleteAccount } from '@/src/services/accounts/accountDeleteCommands';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 describe('BudgetRepository', () => {
   let accountId1: string;
   let accountId2: string;
 
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
     const a1 = await accountWriteRepository.create({
       name: 'Groceries',
       accountType: AccountType.EXPENSE,

@@ -7,6 +7,7 @@ import { AccountType } from '@/src/types/enums';
 import { asWorkplaceId } from '@/src/types/ids';
 import { getBudgetCurrentPeriod } from '../BudgetPeriodUtils';
 import { budgetWriteService } from '../budgetWriteService';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const workplaceId = asWorkplaceId('budget-intervals');
 const creationDate = new Date(2026, 9, 7).getTime();
@@ -18,7 +19,7 @@ const period = {
 
 describe('budget intervals across storage and reports', () => {
   beforeEach(async () => {
-    await database.write(() => database.unsafeResetDatabase());
+    await resetDatabase();
   });
 
   it.each([

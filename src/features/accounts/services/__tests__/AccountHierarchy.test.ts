@@ -1,6 +1,5 @@
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { Icon } from '@/src/types/domainIcons';
-import { database } from '@/src/data/database/Database';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 
@@ -8,14 +7,13 @@ import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { saveAccount, updateAccount } from '@/src/services/accounts/accountHierarchyCommands';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 describe('Account Hierarchy Integration', () => {
   const workplaceId = 'test-wp-1' as WorkplaceId;
 
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
     await workplaceRepository.create({
       id: workplaceId,
       name: 'Test Workplace',

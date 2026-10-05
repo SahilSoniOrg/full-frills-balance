@@ -6,12 +6,11 @@ import { expectObserveEmitsAfterUpdate } from '@/src/testing/observeAfterInitial
 import { AccountType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 import { map } from 'rxjs/operators';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 describe('AccountObserveQueries', () => {
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
   });
 
   it('re-emits account metadata when an existing metadata row is edited', async () => {

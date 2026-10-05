@@ -1,4 +1,3 @@
-import { database } from '@/src/data/database/Database';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { normalizeToStartOfDay } from '@/src/services/planned-payment/plannedPaymentRecurrence';
@@ -10,15 +9,10 @@ import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src
 import type { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import type { PlannedPaymentFxMode } from '@/src/types/plannedPaymentFx';
 import type PlannedPayment from '@/src/data/models/PlannedPayment';
-
-export async function resetPlannedPaymentDatabase() {
-  await database.write(async () => {
-    await database.unsafeResetDatabase();
-  });
-}
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 export async function seedPlannedPaymentWorkplace(workplaceId: WorkplaceId) {
-  await resetPlannedPaymentDatabase();
+  await resetDatabase();
   const from = await accountWriteRepository.create({
     name: 'Checking',
     accountType: AccountType.ASSET,
@@ -35,7 +29,7 @@ export async function seedPlannedPaymentWorkplace(workplaceId: WorkplaceId) {
 }
 
 export async function seedPlannedPaymentFxWorkplace(workplaceId: WorkplaceId) {
-  await resetPlannedPaymentDatabase();
+  await resetDatabase();
   const from = await accountWriteRepository.create({
     name: 'USD source',
     accountType: AccountType.ASSET,

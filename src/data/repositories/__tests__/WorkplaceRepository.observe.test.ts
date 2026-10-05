@@ -1,14 +1,12 @@
 import { Icon } from '@/src/types/domainIcons';
-import { database } from '@/src/data/database/Database';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { WorkplaceId } from '@/src/types/ids';
 import { waitFor } from '@testing-library/react-native';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 describe('WorkplaceRepository observation', () => {
   beforeEach(async () => {
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
+    await resetDatabase();
   }, 15000);
 
   it('re-emits observeById when name or icon changes', async () => {

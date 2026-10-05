@@ -6,6 +6,7 @@ import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository
 import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 
 export const TWO_WORKPLACE_LEDGER_ONE = 'wp-raw-isolation-1' as WorkplaceId;
 export const TWO_WORKPLACE_LEDGER_TWO = 'wp-raw-isolation-2' as WorkplaceId;
@@ -40,9 +41,7 @@ export async function createMalformedLedgerTransaction(input: {
 }
 
 export async function setupTwoWorkplaceLedgerFixture(): Promise<TwoWorkplaceLedgerFixture> {
-  await database.write(async () => {
-    await database.unsafeResetDatabase();
-  });
+  await resetDatabase();
 
   await workplaceRepository.create({
     id: TWO_WORKPLACE_LEDGER_ONE,
