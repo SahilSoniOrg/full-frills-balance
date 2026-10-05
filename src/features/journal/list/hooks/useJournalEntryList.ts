@@ -53,13 +53,11 @@ export interface JournalEntryListCore {
   isLoading: boolean;
   isLoadingMore: boolean;
   hasMore: boolean;
-  loadMore: () => void;
   onEndReached?: () => void;
   selectedIds: Set<JournalId>;
   isSelectionModeActive: boolean;
   onLongPressItem: (id: JournalId) => void;
   toggleSelection: (id: JournalId) => void;
-  toggleMultiple: (ids: JournalId[]) => void;
   selectAll: () => void;
   clearItems: () => void;
   exitSelectionMode: () => void;
@@ -121,7 +119,6 @@ export function useJournalEntryList({
     selectedIds,
     isSelectionModeActive,
     toggleSelection,
-    toggleMultiple,
     onLongPressItem,
     clearItems,
     exitSelectionMode,
@@ -256,13 +253,11 @@ export function useJournalEntryList({
     isLoading,
     isLoadingMore,
     hasMore,
-    loadMore,
     onEndReached,
     selectedIds,
     isSelectionModeActive,
     onLongPressItem,
     toggleSelection,
-    toggleMultiple,
     selectAll,
     clearItems,
     exitSelectionMode,

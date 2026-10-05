@@ -127,7 +127,6 @@ export const BulkEntryRow = React.memo(
               ? (role, intent) => onCreateAccountRequest(row.id, role, intent)
               : undefined
           }
-          lazyDropdown
           accountTestIDPrefix={`bulk-route-${row.id}`}
           meta={{
             description: row.description,

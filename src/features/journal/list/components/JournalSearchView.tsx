@@ -128,7 +128,6 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
           items: vm.items,
           isLoading: vm.isLoading,
           isLoadingMore: vm.isLoadingMore,
-          loadingText: AppConfig.strings.common.loading,
           loadingMoreText: AppConfig.strings.common.loading,
           emptyTitle: 'No entries found',
           emptySubtitle: 'Try adjusting your filters or search terms',

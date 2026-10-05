@@ -57,10 +57,6 @@ export interface UseJournalEntryAccountPickerOptions {
   batchEditor?: ReturnType<typeof useBulkJournalEditor>;
 }
 
-/**
- * AccountFields picker UI state — mode-agnostic.
- * Account application is injected by the composer shell; this hook owns only picker UI state.
- */
 export function useJournalEntryAccountPicker(options: UseJournalEntryAccountPickerOptions) {
   const {
     accounts,

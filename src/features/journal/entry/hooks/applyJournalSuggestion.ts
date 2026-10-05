@@ -17,7 +17,6 @@ export function applyJournalSuggestion(
 ): AutopilotAppliedAccount | undefined {
   analytics.trackFeatureUsage('journal', 'suggestion_accepted', {
     has_target_account: suggestion.route.sources.length + suggestion.route.destinations.length > 0,
-    target_account_type: 'route',
     mode: activeMode,
   });
   editor.setDescription(suggestion.description);

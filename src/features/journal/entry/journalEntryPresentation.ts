@@ -15,13 +15,10 @@ import type {
 export type {
   JournalEntryRouteEditorMode,
   JournalEntrySimpleType,
-  LegacyJournalEntryQueryParams,
   TransactionIntentSeed,
   TransactionIntentSeedSourceContext,
 } from '@/src/types/journalEntryRoute';
-export { toLegacyJournalEntryQueryParams } from '@/src/types/journalEntryRoute';
 
-/** Internal composer views. Legacy route names are translated at the adapter boundary below. */
 export type JournalEntryScreenMode = 'basic' | 'allocation' | 'expert' | 'batch';
 
 export type JournalEntryRouteParams = {
@@ -122,8 +119,6 @@ export function resolveSimpleTypeAccentColor(
   if (type === 'income') return theme.income;
   return theme.transfer;
 }
-
-export { resolveExchangeRatePresentation } from '@/src/utils/exchangeRatePresentation';
 
 export function resolveJournalEntrySubmitLabel(input: {
   activeMode: JournalEntryScreenMode;

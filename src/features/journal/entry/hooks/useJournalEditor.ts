@@ -38,10 +38,6 @@ export interface UseJournalEditorOptions {
   onSuccess?: () => void;
 }
 
-/**
- * useJournalEditor - Controller hook for the Journal Entry screen.
- * Consolidates state management and business logic for both simple and advanced modes.
- */
 export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEditorOptions = {}) {
   const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const { postPostingPlan } = useJournalActions(workplaceId);

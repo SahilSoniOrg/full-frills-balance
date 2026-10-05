@@ -39,10 +39,6 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-/**
- * Shell-facing contract for journal entry.
- * Owns the composer view, canonical drafts, submit state, and account-picker routing.
- */
 export interface JournalEntryShell {
   editor: ReturnType<typeof useJournalEditor>;
   guidedAutopilot: boolean;
@@ -91,10 +87,6 @@ export interface JournalEntryShell {
   saveSuccessPulse: boolean;
 }
 
-/**
- * Journal entry shell: screen mode SSOT, shared editor, account picker.
- * Panels are projections over the session-owned editor draft.
- */
 export function useJournalEntryShell(): JournalEntryShell {
   const params = useLocalSearchParams();
   const seed = parseTransactionIntentSeed(params);

@@ -257,8 +257,6 @@ describe('useBulkJournalEditor', () => {
     expect(result.current.rows[0]).toMatchObject({
       sourceId: 'acc2',
       destinationId: 'acc1',
-      sourceBaseRateInput: '',
-      destBaseRateInput: '',
     });
   });
 
@@ -552,7 +550,6 @@ describe('useBulkJournalEditor', () => {
     expect(result.current.rows[0]).toMatchObject({
       exchangeRate: '1.200000',
       sourceBaseRate: 1.2,
-      sourceBaseRateInput: '1.2',
       convertedAmount: 120,
       rateError: undefined,
     });
@@ -624,8 +621,6 @@ describe('useBulkJournalEditor', () => {
     });
 
     expect(result.current.rows[0]).toMatchObject({
-      sourceBaseRateInput: '',
-      destBaseRateInput: '',
       exchangeRate: '1.100000',
       sourceBaseRate: 1.1,
       destBaseRate: 1,
@@ -659,20 +654,23 @@ describe('useBulkJournalEditor', () => {
     act(() => {
       result.current.rowActions.setManualBaseRate(result.current.rows[0].id, 'source', '1');
     });
-    expect(result.current.rows[0].sourceBaseRateInput).toBe('1');
+    expect(resolveBulkRowFxPair(result.current.rows[0], accounts, 'USD').manualSourceBaseRate).toBe(
+      '1',
+    );
     expect(result.current.rows[0].exchangeRate).toBe('1.000000');
 
     act(() => {
       result.current.rowActions.setManualBaseRate(result.current.rows[0].id, 'source', '1.');
     });
-    expect(result.current.rows[0].sourceBaseRateInput).toBe('1.');
+    expect(resolveBulkRowFxPair(result.current.rows[0], accounts, 'USD').manualSourceBaseRate).toBe(
+      '1.',
+    );
     expect(result.current.rows[0].exchangeRate).toBe('1.000000');
 
     act(() => {
       result.current.rowActions.setManualBaseRate(result.current.rows[0].id, 'source', '1.25');
     });
     expect(result.current.rows[0]).toMatchObject({
-      sourceBaseRateInput: '1.25',
       sourceBaseRate: 1.25,
       exchangeRate: '1.250000',
       convertedAmount: 125,
@@ -920,7 +918,6 @@ describe('useBulkJournalEditor', () => {
     expect(result.current.rows[0]).toMatchObject({
       exchangeRate: '1.200000',
       convertedAmount: 120,
-      sourceBaseRateInput: '',
     });
 
     const callsBeforeTimeEdit = mockFetchHistoricalRate.mock.calls.length;

@@ -18,6 +18,7 @@ import {
   resolveJournalStatusChipVariant,
   resolveRevertPlannedActionLabels,
   resolveJournalAmountPresentation,
+  type SmsJournalInfoDisplay,
 } from '@/src/services/journal/journalDetailsHelpers';
 import { inferSimpleTabTypeFromTwoLegs } from '@/src/services/journal/journalEditorHelpers';
 import { AccountId, type JournalId } from '@/src/types/ids';
@@ -74,7 +75,6 @@ export interface JournalDetailsViewModel {
   isLoading: boolean;
   isMissing: boolean;
   title: string;
-  backIcon: typeof Icon.Close;
   headerActions: {
     onCopy: () => void;
     onEdit: () => void;
@@ -92,19 +92,8 @@ export interface JournalDetailsViewModel {
   displayTypeLabel?: string;
   statusNotice?: string;
   formattedDate: string;
-  journalIdShort: string;
   onHistoryPress: () => void;
-  smsInfo?: {
-    sender?: string;
-    rawBody?: string;
-    amount?: number;
-    currencyCode?: string;
-    referenceNumber?: string;
-    accountSource?: string;
-    parseReason?: string;
-    smsDate?: string;
-    inboxRecordId?: string;
-  }[];
+  smsInfo?: SmsJournalInfoDisplay[];
   onOpenSmsInbox?: () => void;
   onPost?: () => void;
   onRevertToScheduled?: () => void;
@@ -253,7 +242,7 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
   const { data: linkedPlannedPayment, isLoading: isLoadingPP } = useObservable(
     () =>
       journalInfo?.plannedPaymentId
-        ? plannedPaymentReadService.observeById(workplaceId, journalInfo.plannedPaymentId)
+        ? plannedPaymentReadService.observeObligationById(workplaceId, journalInfo.plannedPaymentId)
         : of(null),
     [workplaceId, journalInfo?.plannedPaymentId],
     null,
@@ -288,7 +277,6 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
     isLoading,
     isMissing: !isLoading && !journalInfo,
     title: 'Journal details',
-    backIcon: Icon.Close,
     headerActions: {
       onCopy: handleCopy,
       onEdit: handleEdit,
@@ -305,7 +293,6 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
     statusVariant,
     displayTypeLabel: journalInfo?.displayType,
     formattedDate,
-    journalIdShort: journalId?.substring(0, 8) || '...',
     onHistoryPress,
     smsInfo,
     onOpenSmsInbox: smsInfo?.some(item => item.inboxRecordId)

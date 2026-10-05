@@ -1,5 +1,5 @@
-import { JournalEntryCard, type JournalEntryCardProps } from '../JournalEntryCard';
-import type { JournalEntryLeg } from '@/src/types/journalEntryCard';
+import { JournalEntryCard } from '../JournalEntryCard';
+import type { JournalEntryCardProps, JournalEntryLeg } from '@/src/types/journalEntryCard';
 import { asAccountId } from '@/src/types/ids';
 import { Icon } from '@/src/types/domainIcons';
 import { preferences } from '@/src/services/preferences';
@@ -112,4 +112,3 @@ describe('JournalEntryCard', () => {
     expect(onLongPress).toHaveBeenCalledTimes(1);
   });
 });
-

@@ -20,7 +20,6 @@ function JournalScreen() {
         title: AppConfig.strings.journal.emptyTitle,
         subtitle: AppConfig.strings.journal.emptySubtitle,
       },
-      loadingText: AppConfig.strings.common.loading,
       loadingMoreText: AppConfig.strings.common.loading,
     },
     workplaceId,

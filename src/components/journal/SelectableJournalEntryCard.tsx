@@ -5,7 +5,8 @@ import { Box } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { memo } from 'react';
 import { StyleSheet } from 'react-native';
-import { JournalEntryCard, type JournalEntryCardProps } from './JournalEntryCard';
+import { JournalEntryCard } from './JournalEntryCard';
+import type { JournalEntryCardProps } from '@/src/types/journalEntryCard';
 
 export type SelectableJournalEntryCardProps = JournalEntryCardProps & {
   isSelected?: boolean;

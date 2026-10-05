@@ -1,8 +1,8 @@
+import { resolveExchangeRatePresentation } from '@/src/utils/exchangeRatePresentation';
 import {
   resolveAllocationStatus,
   isJournalEntrySubmitDisabled,
   parseJournalEntryRouteParams,
-  resolveExchangeRatePresentation,
   resolveJournalEntryHeaderTitle,
   resolveJournalEntryScreenMode,
   resolveJournalEntrySubmitLabel,

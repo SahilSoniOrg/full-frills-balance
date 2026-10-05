@@ -27,9 +27,7 @@ import { JournalEntrySubmitBar } from './JournalEntrySubmitBar';
 import { JournalMetaCard, type JournalMetaCardProps } from './JournalMetaCard';
 import type { AccountFlowHandle, AutopilotAppliedAccount } from './useSimpleFormExpansion';
 
-export type JournalEntryViewProps = JournalEntryShell;
-
-export function JournalEntryView(props: JournalEntryViewProps) {
+export function JournalEntryView(props: JournalEntryShell) {
   const { theme, fonts } = useTheme();
   const [helpMode, setHelpMode] = useState<JournalEntryScreenMode | null>(null);
   const notesAdded =

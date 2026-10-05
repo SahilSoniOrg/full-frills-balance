@@ -27,7 +27,6 @@ export interface AccountPickerFieldProps {
   emptyPrompt: string;
   isExpanded: boolean;
   label: string;
-  lazyDropdown?: boolean;
   onCreateAccountRequest?: (role: AccountRole, intent: CreateAccountIntent) => void;
   onSelect: (id: AccountId) => void;
   onToggle: () => void;
@@ -48,7 +47,6 @@ export function AccountPickerField({
   emptyPrompt,
   isExpanded,
   label,
-  lazyDropdown = false,
   onCreateAccountRequest,
   onSelect,
   onToggle,
@@ -69,7 +67,7 @@ export function AccountPickerField({
       containerStyle={visibleRate ? styles.flush : containerStyle}
       dropdownTestID={`${testIDPrefix}-source-dropdown`}
       expansionPosition={isExpanded ? 'left' : null}
-      lazyDropdown={lazyDropdown}
+      lazyDropdown
       onCreateAccountRequest={onCreateAccountRequest}
       renderNodes={({ visualSide, onLeftTabWrapperLayout }) => (
         <>

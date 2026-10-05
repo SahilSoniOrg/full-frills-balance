@@ -105,8 +105,6 @@ function AccountGroup({
   const { theme, getVariantColors } = useTheme();
   const isSource = role === 'SOURCE';
   const cueSpace = stacked && connected && !isSource ? stackedCueSpace : 0;
-  // Measure account contents before reserving the cue; otherwise native intrinsic sizing
-  // can subtract its width from the account row instead of adding it to the box.
   const showCue = cueSpace > 0 && width != null;
   const groupWidth =
     width == null ? undefined : Math.min(width + (showCue ? cueSpace : 0), maxWidth ?? Infinity);

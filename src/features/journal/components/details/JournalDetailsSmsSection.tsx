@@ -4,23 +4,12 @@ import { Icon, AppButton, AppIcon, AppText, ListRow } from '@/src/components/cor
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
+import type { SmsJournalInfoDisplay } from '@/src/services/journal/journalDetailsHelpers';
 import React, { useMemo, useState } from 'react';
 import { Pressable } from 'react-native';
 
-export interface SmsInfo {
-  sender?: string;
-  smsDate?: string;
-  amount?: number;
-  currencyCode?: string;
-  referenceNumber?: string;
-  accountSource?: string;
-  parseReason?: string;
-  rawBody?: string;
-  inboxRecordId?: string;
-}
-
 interface JournalDetailsSmsSectionProps {
-  smsInfo: SmsInfo[];
+  smsInfo: SmsJournalInfoDisplay[];
   onOpenSmsInbox?: () => void;
 }
 

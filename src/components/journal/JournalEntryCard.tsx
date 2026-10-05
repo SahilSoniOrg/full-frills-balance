@@ -18,8 +18,6 @@ import type { JournalEntryCardProps, JournalEntryLeg } from '@/src/types/journal
 import { memo, useMemo } from 'react';
 import { Keyboard, StyleSheet, View, useWindowDimensions } from 'react-native';
 
-export type { JournalEntryCardProps } from '@/src/types/journalEntryCard';
-
 function legDirection(leg: JournalEntryLeg): string {
   return leg.role === 'SOURCE' ? 'From' : leg.role === 'DESTINATION' ? 'To' : 'Account';
 }
@@ -136,7 +134,6 @@ const JournalEntryCardComponent = ({
               </Stack>
             </View>
             <Stack gap="xs" align="flex-end" style={styles.amountColumn}>
-              {/* Buffer the line height so native fitting tolerates fractional selection frames. */}
               <MoneyText
                 amount={amount}
                 currencyCode={currencyCode}

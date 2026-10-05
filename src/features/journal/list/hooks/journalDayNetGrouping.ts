@@ -23,7 +23,7 @@ function warnIfMissingFxRate(
  * Signed journal amount in workplace base currency for day-net headers.
  * Income +, expense −, transfer 0.
  */
-export function getJournalSignedBaseAmount(
+function getJournalSignedBaseAmount(
   journal: EnrichedJournal,
   baseCurrency: string,
   exchangeRateMap: Record<string, number>,

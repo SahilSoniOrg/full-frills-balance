@@ -20,7 +20,6 @@ interface JournalEntryListViewProps {
   items: JournalListItem[];
   isLoading?: boolean;
   isLoadingMore?: boolean;
-  loadingText?: string;
   loadingMoreText?: string;
   emptyTitle?: string;
   emptySubtitle?: string;

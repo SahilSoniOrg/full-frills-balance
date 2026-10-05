@@ -23,7 +23,6 @@ export type JournalListEmptyState = {
 export type UseJournalListParams = {
   pageSize?: number;
   emptyState: JournalListEmptyState;
-  loadingText?: string;
   loadingMoreText?: string;
   initialDateRange?: DateRange | null;
   defaultToCurrentMonth?: boolean;
@@ -48,7 +47,6 @@ export function useJournalList(
   {
     pageSize = AppConfig.defaults.journalPageSize,
     emptyState,
-    loadingText = AppConfig.strings.common.loading,
     loadingMoreText = AppConfig.strings.common.loading,
     initialDateRange,
     defaultToCurrentMonth = true,
@@ -107,7 +105,6 @@ export function useJournalList(
       items: core.items,
       isLoading: core.isLoading,
       isLoadingMore: core.isLoadingMore,
-      loadingText,
       loadingMoreText,
       emptyTitle: emptyState.title,
       emptySubtitle: emptyState.subtitle,
@@ -118,7 +115,6 @@ export function useJournalList(
       core.isLoading,
       core.isLoadingMore,
       core.onEndReached,
-      loadingText,
       loadingMoreText,
       emptyState.title,
       emptyState.subtitle,

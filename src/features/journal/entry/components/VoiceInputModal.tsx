@@ -27,11 +27,6 @@ const PREDEFINED_TEMPLATES = [
   '450 usd for iphone using chase card',
 ];
 
-/**
- * Voice capture sheet. Uses ModalSurface Moti enter; keeps RN Animated for the
- * waveform (volume bars) — that path is not Moti and stays outside Moti nesting
- * that would re-drive the visualizer.
- */
 export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: VoiceInputModalProps) {
   const { theme } = useTheme();
 

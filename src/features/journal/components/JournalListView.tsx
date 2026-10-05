@@ -18,7 +18,6 @@ export type JournalListBundle = {
   items: JournalListItem[];
   isLoading: boolean;
   isLoadingMore: boolean;
-  loadingText: string;
   loadingMoreText: string;
   emptyTitle: string;
   emptySubtitle: string;
@@ -82,7 +81,6 @@ export function JournalListView(props: JournalListViewProps) {
           items={list.items}
           isLoading={list.isLoading}
           isLoadingMore={list.isLoadingMore}
-          loadingText={list.loadingText}
           loadingMoreText={list.loadingMoreText}
           emptyTitle={list.emptyTitle}
           emptySubtitle={list.emptySubtitle}

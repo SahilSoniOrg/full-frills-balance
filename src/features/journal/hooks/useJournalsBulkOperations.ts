@@ -23,10 +23,17 @@ import { confirm, showErrorAlert, toast } from '@/src/utils/alerts';
 import { useCallback, useMemo } from 'react';
 import { Icon } from '@/src/types/domainIcons';
 
+type JournalListBulkSelection = Pick<
+  UseSelectionResult<JournalId>,
+  'selectedIds' | 'exitSelectionMode' | 'clearItems'
+> & {
+  selectAll: (allIds: JournalId[]) => void;
+};
+
 interface UseJournalsBulkOperationsInput {
   workplaceId?: WorkplaceId;
   journals: EnrichedJournal[];
-  selection: UseSelectionResult<JournalId>;
+  selection: JournalListBulkSelection;
   onShareSelected: () => void;
 }
 
@@ -45,7 +52,7 @@ export function useJournalsBulkOperations({
     buildActions,
   } = useListSelection<EnrichedJournal, JournalId, JournalActiveModal>({
     items: journals,
-    selection,
+    selection: selection as UseSelectionResult<JournalId>,
   });
 
   // 1. Bulk Rename
