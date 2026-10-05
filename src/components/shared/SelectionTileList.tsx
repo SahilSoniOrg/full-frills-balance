@@ -94,15 +94,6 @@ export interface SelectionTileProps {
   categoryColor?: string;
 }
 
-export type SelectionTilePresentation = {
-  borderStyle?: 'solid' | 'dashed';
-  borderWidth?: number;
-  borderColor?: string;
-  showSelectedFill?: boolean;
-  showCheckmark?: boolean;
-  opacity?: number;
-};
-
 export interface SelectionTileListProps {
   items: SelectionTileProps[];
   selectedId: string;
@@ -110,11 +101,6 @@ export interface SelectionTileListProps {
   disabled?: boolean;
   testIDPrefix?: string;
   allowDeselect?: boolean;
-  getTilePresentation?: (
-    item: SelectionTileProps,
-    isSelected: boolean,
-  ) => SelectionTilePresentation | undefined;
-  renderAccessory?: (item: SelectionTileProps, isSelected: boolean) => React.ReactNode;
 }
 
 const TILE_ESTIMATED_WIDTH = 140;
@@ -126,8 +112,6 @@ type SelectionTileRowProps = {
   allowDeselect: boolean;
   testIDPrefix: string;
   onSelect: (id: string) => void;
-  presentation?: SelectionTilePresentation;
-  accessory?: React.ReactNode;
 };
 
 const SelectionTileRow = React.memo(function SelectionTileRow({
@@ -137,20 +121,18 @@ const SelectionTileRow = React.memo(function SelectionTileRow({
   allowDeselect,
   testIDPrefix,
   onSelect,
-  presentation,
-  accessory,
 }: SelectionTileRowProps) {
   const { theme } = useTheme();
   const defaultBorderColor = withOpacity(theme.textSecondary, Opacity.muted);
-  const showSelectedFill = isSelected && (presentation?.showSelectedFill ?? true);
-  const showCheckmark = isSelected && (presentation?.showCheckmark ?? true);
+  const showSelectedFill = isSelected;
+  const showCheckmark = isSelected;
 
   const tileStyle: ViewStyle = {
     backgroundColor: theme.surface,
-    borderColor: presentation?.borderColor ?? defaultBorderColor,
-    borderStyle: presentation?.borderStyle ?? 'solid',
-    borderWidth: presentation?.borderWidth ?? 1,
-    opacity: presentation?.opacity ?? 1,
+    borderColor: defaultBorderColor,
+    borderStyle: 'solid',
+    borderWidth: 1,
+    opacity: 1,
   };
 
   if (showSelectedFill) {
@@ -170,7 +152,6 @@ const SelectionTileRow = React.memo(function SelectionTileRow({
           color={(item.categoryColor ?? item.color) as string}
           opacity={isSelected ? 1 : Opacity.soft}
         />
-        {accessory}
         {item.icon ? (
           <AppIcon
             name={item.icon}
@@ -210,8 +191,6 @@ export const SelectionTileList: React.FC<SelectionTileListProps> = ({
   disabled = false,
   testIDPrefix = 'selection-tile',
   allowDeselect = false,
-  getTilePresentation,
-  renderAccessory,
 }) => {
   const itemIds = items.map(item => item.id);
   const { scrollRef, contentRef, registerItemRef } = useRevealHorizontalItem(selectedId, itemIds, {
@@ -242,8 +221,6 @@ export const SelectionTileList: React.FC<SelectionTileListProps> = ({
                   allowDeselect={allowDeselect}
                   testIDPrefix={testIDPrefix}
                   onSelect={onSelect}
-                  presentation={getTilePresentation?.(item, isSelected)}
-                  accessory={renderAccessory?.(item, isSelected)}
                 />
               </View>
             );

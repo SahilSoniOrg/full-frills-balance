@@ -1,5 +1,5 @@
 import { DetailDisclosure } from '../DetailDisclosure';
-import { AppButton, AppText, Icon, IconButton } from '@/src/components/core';
+import { AppButton, AppText, Icon } from '@/src/components/core';
 import { fireEvent, render } from '@/src/utils/test-utils';
 
 describe('detail disclosures', () => {
@@ -24,21 +24,5 @@ describe('detail disclosures', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
     fireEvent.press(screen.getByRole('button', { name: 'Collapse History' }));
     expect(screen.queryByText('Payment totals')).toBeNull();
-  });
-
-  it('lets a labeled icon action operate without opening or closing the section', () => {
-    const onEdit = jest.fn();
-    const screen = render(
-      <DetailDisclosure
-        title="Setup"
-        icon={Icon.Sliders}
-        action={<IconButton name={Icon.Edit} onPress={onEdit} accessibilityLabel="Edit setup" />}
-      >
-        <AppText>Funding accounts</AppText>
-      </DetailDisclosure>,
-    );
-    fireEvent.press(screen.getByRole('button', { name: 'Edit setup' }));
-    expect(onEdit).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText('Funding accounts')).toBeNull();
   });
 });

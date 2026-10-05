@@ -1,10 +1,11 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppCard, AppText, AppSegmentedControl } from '@/src/components/core';
-import { Shape, Spacing, Typography } from '@/src/constants';
+import { Spacing, Typography } from '@/src/constants';
 import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
 import { IncompleteFxWarning } from './IncompleteFxWarning';
+import { MetricBreakdownRow } from './MetricBreakdownRow';
 
 interface CashFlowCardProps {
   totalIncome: number;
@@ -71,41 +72,25 @@ export const CashFlowCard = ({
       </View>
 
       <View style={styles.breakdownContainer}>
-        <View style={styles.breakdownItem}>
-          <View style={[styles.dot, { backgroundColor: theme.income }]} />
-          <View>
-            <AppText variant="caption" color="secondary">
-              Total Income
-            </AppText>
-            <MoneyText
-              amount={totalIncome}
-              currencyCode={currencyCode}
-              formatStyle="compact"
-              loading={isLoading}
-              variant="heading"
-              color="income"
-            />
-          </View>
-        </View>
+        <MetricBreakdownRow
+          dotColor={theme.income}
+          label="Total Income"
+          amount={totalIncome}
+          currencyCode={currencyCode}
+          isLoading={isLoading}
+          moneyColor="income"
+        />
 
         <Separator vertical background="divider" style={styles.divider} />
 
-        <View style={styles.breakdownItem}>
-          <View style={[styles.dot, { backgroundColor: theme.expense }]} />
-          <View>
-            <AppText variant="caption" color="secondary">
-              Total Expenses
-            </AppText>
-            <MoneyText
-              amount={totalExpense}
-              currencyCode={currencyCode}
-              formatStyle="compact"
-              loading={isLoading}
-              variant="heading"
-              color="expense"
-            />
-          </View>
-        </View>
+        <MetricBreakdownRow
+          dotColor={theme.expense}
+          label="Total Expenses"
+          amount={totalExpense}
+          currencyCode={currencyCode}
+          isLoading={isLoading}
+          moneyColor="expense"
+        />
       </View>
       {warning && onWarningPress ? (
         <View style={styles.warning}>
@@ -141,17 +126,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-  },
-  breakdownItem: {
-    flex: 1,
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  dot: {
-    width: Spacing.sm,
-    height: Spacing.sm,
-    borderRadius: Shape.radius.full,
-    marginTop: Spacing.xs + 2,
   },
   divider: {
     marginHorizontal: Spacing.md,

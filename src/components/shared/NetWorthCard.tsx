@@ -1,8 +1,9 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppCard, AppText } from '@/src/components/core';
-import { Shape, Spacing, Typography } from '@/src/constants';
+import { Spacing, Typography } from '@/src/constants';
 import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
+import { MetricBreakdownRow } from './MetricBreakdownRow';
 import { StyleSheet, View } from 'react-native';
 
 interface NetWorthCardProps {
@@ -45,41 +46,25 @@ export const NetWorthCard = ({
       />
 
       <View style={styles.breakdownContainer}>
-        <View style={styles.breakdownItem}>
-          <View style={[styles.dot, { backgroundColor: theme.asset }]} />
-          <View>
-            <AppText variant="caption" color="secondary">
-              Assets
-            </AppText>
-            <MoneyText
-              amount={totalAssets}
-              currencyCode={currencyCode}
-              formatStyle="compact"
-              loading={isLoading}
-              variant="heading"
-              color="asset"
-            />
-          </View>
-        </View>
+        <MetricBreakdownRow
+          dotColor={theme.asset}
+          label="Assets"
+          amount={totalAssets}
+          currencyCode={currencyCode}
+          isLoading={isLoading}
+          moneyColor="asset"
+        />
 
         <Separator vertical background="divider" style={styles.divider} />
 
-        <View style={styles.breakdownItem}>
-          <View style={[styles.dot, { backgroundColor: theme.liability }]} />
-          <View>
-            <AppText variant="caption" color="secondary">
-              Liabilities
-            </AppText>
-            <MoneyText
-              amount={totalLiabilities}
-              currencyCode={currencyCode}
-              formatStyle="compact"
-              loading={isLoading}
-              variant="heading"
-              color="liability"
-            />
-          </View>
-        </View>
+        <MetricBreakdownRow
+          dotColor={theme.liability}
+          label="Liabilities"
+          amount={totalLiabilities}
+          currencyCode={currencyCode}
+          isLoading={isLoading}
+          moneyColor="liability"
+        />
       </View>
     </AppCard>
   );
@@ -103,17 +88,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-  },
-  breakdownItem: {
-    flex: 1,
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  dot: {
-    width: Spacing.sm,
-    height: Spacing.sm,
-    borderRadius: Shape.radius.full,
-    marginTop: Spacing.xs + 2,
   },
   divider: {
     marginHorizontal: Spacing.md,

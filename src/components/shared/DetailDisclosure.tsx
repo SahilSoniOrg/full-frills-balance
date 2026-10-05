@@ -10,7 +10,6 @@ interface Props {
   icon: IconName;
   summary?: ReactNode;
   children: ReactNode;
-  action?: ReactNode;
   defaultExpanded?: boolean;
   variant?: 'card' | 'plain';
 }
@@ -21,7 +20,6 @@ export function DetailDisclosure({
   icon,
   summary,
   children,
-  action,
   defaultExpanded = false,
   variant = 'card',
 }: Props) {
@@ -59,7 +57,6 @@ export function DetailDisclosure({
             />
           </Row>
         </AppButton>
-        {action}
       </Row>
       {expanded && children}
     </Column>

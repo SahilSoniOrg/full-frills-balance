@@ -63,7 +63,6 @@ export function CommitmentDetailHeaderActions({ actions }: { actions: Commitment
               buttonStyle={{ minHeight: Size.touchTarget, alignItems: 'stretch' }}
               onPress={() => {
                 setOpen(false);
-                // iOS must dismiss this sheet before presenting a confirmation or pushing a page.
                 if (Platform.OS === 'ios' && process.env.NODE_ENV !== 'test') {
                   pendingAction.current = action.onPress;
                 } else {
