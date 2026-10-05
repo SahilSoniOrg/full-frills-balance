@@ -19,24 +19,43 @@ describe('ExportRepository.fetchOrmTable', () => {
 
   afterEach(() => jest.restoreAllMocks());
 
-  it('bounds source lookups when exporting a large SMS history', async () => {
-    const rows = Array.from({ length: 601 }, (_, index) => ({
-      _raw: { id: `copy-${index}`, channel: 'sms', device_source_id: `source-${index}` },
-    }));
+  it('attaches device SMS sources when exporting inbox copies', async () => {
+    const rows = [
+      { _raw: { id: 'copy-1', channel: 'sms', device_source_id: 'source-1' } },
+      { _raw: { id: 'copy-2', channel: 'voice', device_source_id: 'source-2' } },
+    ];
     mockGet.mockReturnValue({ query: jest.fn(() => ({ fetch: async () => rows })) });
-    const lookup = jest.spyOn(deviceSmsInboxRepository, 'findBySourceIds').mockResolvedValue([]);
+    const lookup = jest.spyOn(deviceSmsInboxRepository, 'findBySourceIds').mockResolvedValue([
+      {
+        deviceSourceId: 'source-1',
+        senderAddress: 'Bank',
+        rawBody: 'Device body',
+      } as never,
+    ]);
 
     const exported = await repository.fetchOrmTable(
       'transaction_inbox_records',
-      ['id', 'channel', 'device_source_id'],
+      ['id', 'channel', 'device_source_id', 'senderAddress', 'rawBody'],
       asWorkplaceId('workplace-1'),
     );
 
-    expect(exported).toHaveLength(601);
-    expect(lookup.mock.calls.map(([ids]) => ids.length)).toEqual([100, 100, 100, 100, 100, 100, 1]);
-    expect(lookup.mock.calls.flatMap(([ids]) => ids)).toEqual(
-      rows.map(row => row._raw.device_source_id),
-    );
+    expect(exported).toEqual([
+      {
+        id: 'copy-1',
+        channel: 'sms',
+        deviceSourceId: 'source-1',
+        senderAddress: 'Bank',
+        rawBody: 'Device body',
+      },
+      {
+        id: 'copy-2',
+        channel: 'voice',
+        deviceSourceId: 'source-2',
+        senderAddress: undefined,
+        rawBody: undefined,
+      },
+    ]);
+    expect(lookup).toHaveBeenCalledWith(['source-1']);
   });
 
   it('scopes workplace-owned tables before projecting ORM rows', async () => {

@@ -6,7 +6,7 @@ import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Transaction from '@/src/data/models/Transaction';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { AccountType, JournalDisplayType, JournalStatus, TransactionType } from '@/src/types/enums';
-import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import type { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import type { CreateJournalData } from '@/src/types/journalWrite';
 import { referenceNumberFromMetadataJson } from '@/src/utils/sms/SmsReferenceExtractor';
 import type { Model } from '@nozbe/watermelondb';
@@ -136,6 +136,30 @@ export async function createJournalFixture(
     await database.batch(operations);
   });
   return journal;
+}
+
+export async function createPlannedJournalsForPayment(
+  workplaceId: WorkplaceId,
+  plannedPaymentId: PlannedPaymentId,
+  count: number,
+): Promise<Journal[]> {
+  const journals: Journal[] = [];
+  for (let index = 0; index < count; index++) {
+    journals.push(
+      await createJournalFixture(
+        {
+          journalDate: Date.now(),
+          currencyCode: 'USD',
+          totalAmount: 10,
+          plannedPaymentId,
+          status: JournalStatus.PLANNED,
+          transactions: [],
+        },
+        workplaceId,
+      ),
+    );
+  }
+  return journals;
 }
 
 /** Soft-deletes a raw fixture and its lines without invoking accounting side effects. */

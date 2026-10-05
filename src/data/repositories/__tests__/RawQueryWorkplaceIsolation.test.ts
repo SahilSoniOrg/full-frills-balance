@@ -1,148 +1,32 @@
-import { Icon } from '@/src/types/domainIcons';
-import { database } from '@/src/data/database/Database';
-import Transaction from '@/src/data/models/Transaction';
-import { accountWriteRepository } from '@/src/data/repositories/account';
-import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { accountLedgerMetricsQueries } from '@/src/data/repositories/account/AccountLedgerMetricsQueries';
 import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
 import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { transactionRawRebuildQueries } from '@/src/data/repositories/raw/TransactionRawRebuildQueries';
 import { transactionInsightQueries } from '@/src/data/repositories/transaction/TransactionInsightQueries';
 import { transactionObserveQueries } from '@/src/data/repositories/transaction';
-import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
+import {
+  setupTwoWorkplaceLedgerFixture,
+  TWO_WORKPLACE_LEDGER_ONE,
+} from '@/src/testing/twoWorkplaceLedgerFixture';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
-import { AccountId, JournalId, TransactionId, WorkplaceId } from '@/src/types/ids';
-import { AccountType, TransactionType } from '@/src/types/enums';
+import { AccountId, TransactionId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 import { firstValueFrom, of, take } from 'rxjs';
-
-const WORKPLACE_ONE = 'wp-raw-isolation-1' as WorkplaceId;
-const WORKPLACE_TWO = 'wp-raw-isolation-2' as WorkplaceId;
 
 describe('named raw-query workplace isolation', () => {
   let accountId: AccountId;
   let foreignAccountId: AccountId;
 
-  async function createMalformedTransaction({
-    workplaceId,
-    journalId,
-    transactionAccountId,
-    amount,
-    transactionDate,
-  }: {
-    workplaceId: WorkplaceId;
-    journalId: JournalId;
-    transactionAccountId: AccountId;
-    amount: number;
-    transactionDate: number;
-  }): Promise<void> {
-    await database.write(async () => {
-      await database.collections.get<Transaction>('transactions').create(transaction => {
-        transaction.workplaceId = workplaceId;
-        transaction.journalId = journalId;
-        transaction.accountId = transactionAccountId;
-        transaction.amount = amount;
-        transaction.transactionType = TransactionType.DEBIT;
-        transaction.currencyCode = 'USD';
-        transaction.transactionDate = transactionDate;
-        transaction.createdAt = new Date(transactionDate);
-        transaction.updatedAt = new Date(transactionDate);
-      });
-    });
-  }
-
   beforeEach(async () => {
     jest.restoreAllMocks();
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
-
-    await workplaceRepository.create({
-      id: WORKPLACE_ONE,
-      name: 'Workplace One',
-      icon: Icon.Home,
-      defaultCurrencyCode: 'USD',
-    });
-    await workplaceRepository.create({
-      id: WORKPLACE_TWO,
-      name: 'Workplace Two',
-      icon: Icon.Briefcase,
-      defaultCurrencyCode: 'USD',
-    });
-
-    const account = await accountWriteRepository.create({
-      name: 'Shared legacy account reference',
-      accountType: AccountType.ASSET,
-      currencyCode: 'USD',
-      workplaceId: WORKPLACE_ONE,
-    });
-    accountId = account.id;
-    const foreignAccount = await accountWriteRepository.create({
-      name: 'Foreign account',
-      accountType: AccountType.ASSET,
-      currencyCode: 'USD',
-      workplaceId: WORKPLACE_TWO,
-    });
-    foreignAccountId = foreignAccount.id;
-
-    await createJournalFixture(
-      {
-        description: 'Workplace one transaction',
-        journalDate: 1_000,
-        currencyCode: 'USD',
-        transactions: [{ accountId, amount: 10, transactionType: TransactionType.DEBIT }],
-      },
-      WORKPLACE_ONE,
-    );
-
-    const localJournal = await createJournalFixture(
-      {
-        description: 'Local malformed-link host',
-        journalDate: 2_000,
-        currencyCode: 'USD',
-        transactions: [],
-      },
-      WORKPLACE_ONE,
-    );
-    const foreignJournal = await createJournalFixture(
-      {
-        description: 'Foreign malformed-link host',
-        journalDate: 3_000,
-        currencyCode: 'USD',
-        transactions: [],
-      },
-      WORKPLACE_TWO,
-    );
-
-    // Simulate independently malformed legacy/imported links. A safe read must
-    // reject each row even when its other two ownership edges look local.
-    await createMalformedTransaction({
-      workplaceId: WORKPLACE_TWO,
-      journalId: localJournal.id,
-      transactionAccountId: accountId,
-      amount: 100,
-      transactionDate: 2_000,
-    });
-    await createMalformedTransaction({
-      workplaceId: WORKPLACE_ONE,
-      journalId: foreignJournal.id,
-      transactionAccountId: accountId,
-      amount: 200,
-      transactionDate: 3_000,
-    });
-    await createMalformedTransaction({
-      workplaceId: WORKPLACE_ONE,
-      journalId: localJournal.id,
-      transactionAccountId: foreignAccountId,
-      amount: 400,
-      transactionDate: 4_000,
-    });
+    ({ accountId, foreignAccountId } = await setupTwoWorkplaceLedgerFixture());
   });
 
   it('scopes transaction-count SQL to both transaction and journal workplace', async () => {
     const queryRaw = jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue([]);
 
     await transactionRawMetricsQueries.getAccountTransactionCounts(
-      WORKPLACE_ONE,
+      TWO_WORKPLACE_LEDGER_ONE,
       [{ accountId, startDate: 0 }],
       Number.MAX_SAFE_INTEGER,
     );
@@ -150,14 +34,14 @@ describe('named raw-query workplace isolation', () => {
     const [sql, args = []] = queryRaw.mock.calls[0];
     expect(sql).toContain('t.workplace_id = ?');
     expect(sql).toContain('j.workplace_id = ?');
-    expect(args.filter(arg => arg === WORKPLACE_ONE)).toHaveLength(2);
+    expect(args.filter(arg => arg === TWO_WORKPLACE_LEDGER_ONE)).toHaveLength(2);
   });
 
   it('isolates transaction counts by workplace in the ORM fallback', async () => {
     jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue(null);
 
     const counts = await transactionRawMetricsQueries.getAccountTransactionCounts(
-      WORKPLACE_ONE,
+      TWO_WORKPLACE_LEDGER_ONE,
       [{ accountId, startDate: 0 }],
       Number.MAX_SAFE_INTEGER,
     );
@@ -168,19 +52,19 @@ describe('named raw-query workplace isolation', () => {
   it('scopes rebuild SQL to both transaction and journal workplace', async () => {
     const queryRaw = jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue([]);
 
-    await transactionRawRebuildQueries.getRebuildDataRaw(WORKPLACE_ONE, accountId, 0);
+    await transactionRawRebuildQueries.getRebuildDataRaw(TWO_WORKPLACE_LEDGER_ONE, accountId, 0);
 
     const [sql, args = []] = queryRaw.mock.calls[0];
     expect(sql).toContain('t.workplace_id = ?');
     expect(sql).toContain('j.workplace_id = ?');
-    expect(args.filter(arg => arg === WORKPLACE_ONE)).toHaveLength(2);
+    expect(args.filter(arg => arg === TWO_WORKPLACE_LEDGER_ONE)).toHaveLength(2);
   });
 
   it('isolates rebuild data by workplace in the ORM fallback', async () => {
     jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue(null);
 
     const transactions = await transactionRawRebuildQueries.getRebuildDataRaw(
-      WORKPLACE_ONE,
+      TWO_WORKPLACE_LEDGER_ONE,
       accountId,
       0,
     );
@@ -193,7 +77,7 @@ describe('named raw-query workplace isolation', () => {
     const queryRaw = jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue([]);
 
     await transactionRawRebuildQueries.getAccountSumRaw(
-      WORKPLACE_ONE,
+      TWO_WORKPLACE_LEDGER_ONE,
       accountId,
       Number.MAX_SAFE_INTEGER,
       AccountType.ASSET,
@@ -206,7 +90,7 @@ describe('named raw-query workplace isolation', () => {
     expect(sql).toContain('j.workplace_id = ?');
     expect(sql).toContain('cursor_t.workplace_id = ?');
     expect(sql).toContain('cursor_j.workplace_id = ?');
-    expect(args.filter(arg => arg === WORKPLACE_ONE)).toHaveLength(22);
+    expect(args.filter(arg => arg === TWO_WORKPLACE_LEDGER_ONE)).toHaveLength(22);
     expect(args).toHaveLength(4 + ACTIVE_JOURNAL_STATUSES.length + 32);
     expect(sql.match(/\?/g) ?? []).toHaveLength(args.length);
   });
@@ -215,7 +99,7 @@ describe('named raw-query workplace isolation', () => {
     jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue(null);
 
     const sum = await transactionRawRebuildQueries.getAccountSumRaw(
-      WORKPLACE_ONE,
+      TWO_WORKPLACE_LEDGER_ONE,
       accountId,
       Number.MAX_SAFE_INTEGER,
       AccountType.ASSET,
@@ -228,7 +112,7 @@ describe('named raw-query workplace isolation', () => {
     const queryRaw = jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue([]);
 
     await transactionInsightQueries.findActiveMetadata(
-      WORKPLACE_ONE,
+      TWO_WORKPLACE_LEDGER_ONE,
       [accountId, foreignAccountId],
       0,
       5_000,
@@ -238,15 +122,19 @@ describe('named raw-query workplace isolation', () => {
     expect(sql).toContain('t.workplace_id = ?');
     expect(sql).toContain('a.workplace_id = ?');
     expect(sql).toContain('j.workplace_id = ?');
-    expect(args.filter(arg => arg === WORKPLACE_ONE)).toHaveLength(3);
-    expect(args.slice(4, 7)).toEqual([WORKPLACE_ONE, WORKPLACE_ONE, WORKPLACE_ONE]);
+    expect(args.filter(arg => arg === TWO_WORKPLACE_LEDGER_ONE)).toHaveLength(3);
+    expect(args.slice(4, 7)).toEqual([
+      TWO_WORKPLACE_LEDGER_ONE,
+      TWO_WORKPLACE_LEDGER_ONE,
+      TWO_WORKPLACE_LEDGER_ONE,
+    ]);
   });
 
   it('isolates metadata in the ORM fallback despite malformed cross-workplace links', async () => {
     jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue(null);
 
     const metadata = await transactionInsightQueries.findActiveMetadata(
-      WORKPLACE_ONE,
+      TWO_WORKPLACE_LEDGER_ONE,
       [accountId, foreignAccountId],
       0,
       5_000,
@@ -260,7 +148,7 @@ describe('named raw-query workplace isolation', () => {
     const queryRaw = jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue([]);
 
     await accountLedgerMetricsQueries.getPeriodMetricsByAccount(
-      WORKPLACE_ONE,
+      TWO_WORKPLACE_LEDGER_ONE,
       [
         { accountId, accountType: AccountType.ASSET },
         { accountId: foreignAccountId, accountType: AccountType.ASSET },
@@ -273,15 +161,19 @@ describe('named raw-query workplace isolation', () => {
     expect(sql).toContain('t.workplace_id = ?');
     expect(sql).toContain('a.workplace_id = ?');
     expect(sql).toContain('j.workplace_id = ?');
-    expect(args.filter(arg => arg === WORKPLACE_ONE)).toHaveLength(3);
-    expect(args.slice(0, 3)).toEqual([WORKPLACE_ONE, WORKPLACE_ONE, WORKPLACE_ONE]);
+    expect(args.filter(arg => arg === TWO_WORKPLACE_LEDGER_ONE)).toHaveLength(3);
+    expect(args.slice(0, 3)).toEqual([
+      TWO_WORKPLACE_LEDGER_ONE,
+      TWO_WORKPLACE_LEDGER_ONE,
+      TWO_WORKPLACE_LEDGER_ONE,
+    ]);
   });
 
   it('keeps bulk period fallback metrics isolated despite malformed links', async () => {
     jest.spyOn(rawSqlExecutor, 'query').mockResolvedValue(null);
 
     const metrics = await accountLedgerMetricsQueries.getPeriodMetricsByAccount(
-      WORKPLACE_ONE,
+      TWO_WORKPLACE_LEDGER_ONE,
       [
         { accountId, accountType: AccountType.ASSET },
         { accountId: foreignAccountId, accountType: AccountType.ASSET },
@@ -300,7 +192,7 @@ describe('named raw-query workplace isolation', () => {
 
     await firstValueFrom(
       accountLedgerMetricsQueries
-        .observeUnreconciledMetrics(WORKPLACE_ONE, accountId, null, AccountType.ASSET)
+        .observeUnreconciledMetrics(TWO_WORKPLACE_LEDGER_ONE, accountId, null, AccountType.ASSET)
         .pipe(take(1)),
     );
 
@@ -308,13 +200,13 @@ describe('named raw-query workplace isolation', () => {
     expect(sql).toContain('t.workplace_id = ?');
     expect(sql).toContain('a.workplace_id = ?');
     expect(sql).toContain('j.workplace_id = ?');
-    expect(args.filter(arg => arg === WORKPLACE_ONE)).toHaveLength(3);
+    expect(args.filter(arg => arg === TWO_WORKPLACE_LEDGER_ONE)).toHaveLength(3);
     expect(args.slice(2)).toEqual([
       0,
       null,
-      WORKPLACE_ONE,
-      WORKPLACE_ONE,
-      WORKPLACE_ONE,
+      TWO_WORKPLACE_LEDGER_ONE,
+      TWO_WORKPLACE_LEDGER_ONE,
+      TWO_WORKPLACE_LEDGER_ONE,
       'POSTED',
       'REVERSED',
     ]);
@@ -326,12 +218,17 @@ describe('named raw-query workplace isolation', () => {
 
     const localMetrics = await firstValueFrom(
       accountLedgerMetricsQueries
-        .observeUnreconciledMetrics(WORKPLACE_ONE, accountId, null, AccountType.ASSET)
+        .observeUnreconciledMetrics(TWO_WORKPLACE_LEDGER_ONE, accountId, null, AccountType.ASSET)
         .pipe(take(1)),
     );
     const foreignMetrics = await firstValueFrom(
       accountLedgerMetricsQueries
-        .observeUnreconciledMetrics(WORKPLACE_ONE, foreignAccountId, null, AccountType.ASSET)
+        .observeUnreconciledMetrics(
+          TWO_WORKPLACE_LEDGER_ONE,
+          foreignAccountId,
+          null,
+          AccountType.ASSET,
+        )
         .pipe(take(1)),
     );
 

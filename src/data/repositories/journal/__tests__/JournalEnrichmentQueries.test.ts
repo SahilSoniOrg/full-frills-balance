@@ -1,11 +1,14 @@
-import { Icon } from '@/src/types/domainIcons';
 import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
-import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
+import {
+  createMalformedCrossAccountTransaction,
+  createRawQueryIsolationWorkplaces,
+  resetRawQueryIsolationDatabase,
+} from '@/src/testing/rawQueryWorkplaceIsolationHarness';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
 
@@ -20,22 +23,10 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
   const recentJournalDate = () => Date.now();
 
   beforeEach(async () => {
-    jest.restoreAllMocks();
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
-
-    await workplaceRepository.create({
-      id: workplaceOne,
-      name: 'Workplace One',
-      icon: Icon.Home,
-      defaultCurrencyCode: 'USD',
-    });
-    await workplaceRepository.create({
-      id: workplaceTwo,
-      name: 'Workplace Two',
-      icon: Icon.Briefcase,
-      defaultCurrencyCode: 'USD',
+    await resetRawQueryIsolationDatabase();
+    await createRawQueryIsolationWorkplaces(workplaceOne, workplaceTwo, {
+      one: 'Workplace One',
+      two: 'Workplace Two',
     });
 
     const workplaceOneAccount = await accountWriteRepository.create({
@@ -87,30 +78,19 @@ describe('JournalEnrichmentQueries workplace isolation', () => {
     workplaceOneJournalId = workplaceOneJournal.id;
     workplaceTwoJournalId = workplaceTwoJournal.id;
 
-    const transactions = database.collections.get<Transaction>('transactions');
-    await database.write(async () => {
-      await transactions.create(transaction => {
-        transaction.journalId = workplaceOneJournalId;
-        transaction.accountId = workplaceTwoAccountId;
-        transaction.amount = 30;
-        transaction.transactionType = TransactionType.DEBIT;
-        transaction.currencyCode = 'USD';
-        transaction.transactionDate = 2_000;
-        transaction.workplaceId = workplaceTwo;
-        transaction.createdAt = new Date();
-        transaction.updatedAt = new Date();
-      });
-      await transactions.create(transaction => {
-        transaction.journalId = workplaceOneJournalId;
-        transaction.accountId = workplaceTwoAccountId;
-        transaction.amount = 40;
-        transaction.transactionType = TransactionType.DEBIT;
-        transaction.currencyCode = 'USD';
-        transaction.transactionDate = 2_000;
-        transaction.workplaceId = workplaceOne;
-        transaction.createdAt = new Date();
-        transaction.updatedAt = new Date();
-      });
+    await createMalformedCrossAccountTransaction({
+      workplaceId: workplaceTwo,
+      journalId: workplaceOneJournalId,
+      accountId: workplaceTwoAccountId,
+      amount: 30,
+      transactionDate: 2_000,
+    });
+    await createMalformedCrossAccountTransaction({
+      workplaceId: workplaceOne,
+      journalId: workplaceOneJournalId,
+      accountId: workplaceTwoAccountId,
+      amount: 40,
+      transactionDate: 2_000,
     });
   });
 

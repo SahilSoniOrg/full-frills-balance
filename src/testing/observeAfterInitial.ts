@@ -11,3 +11,14 @@ export function observeAfterInitial<T>(source: Observable<T>, timeoutMs = 2000) 
   );
   return { initial, nextValue };
 }
+
+export async function expectObserveEmitsAfterUpdate<T>(
+  source: Observable<T>,
+  applyUpdate: () => Promise<void>,
+  expected: T,
+): Promise<void> {
+  const observed = observeAfterInitial(source);
+  await observed.initial;
+  await applyUpdate();
+  await expect(observed.nextValue).resolves.toBe(expected);
+}

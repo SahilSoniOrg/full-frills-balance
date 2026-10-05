@@ -1,102 +1,39 @@
 import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
-import { accountWriteRepository } from '@/src/data/repositories/account';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { bulkRenameJournals } from '@/src/services/journal/bulk';
-import { createJournalFixture } from '@/src/testing/journalFixtures';
-import { AccountType, JournalStatus, TransactionType } from '@/src/types/enums';
-import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
-import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-
-const WORKPLACE_ONE = 'wp-journal-owner-one' as WorkplaceId;
-const WORKPLACE_TWO = 'wp-journal-owner-two' as WorkplaceId;
+import { JournalStatus, TransactionType } from '@/src/types/enums';
+import type { JournalId } from '@/src/types/ids';
+import {
+  JOURNAL_OWNERSHIP_WORKPLACE_ONE,
+  JOURNAL_OWNERSHIP_WORKPLACE_TWO,
+  seedWorkplaceJournalOwnershipFixtures,
+  type WorkplaceJournalOwnershipFixtures,
+} from './journalPersistenceTest.helpers';
 
 describe('journal write workplace ownership', () => {
-  let workplaceOneJournal: Journal;
-  let workplaceTwoJournal: Journal;
-  let workplaceTwoTransaction: Transaction;
-  let workplaceOneAccountId: AccountId;
-  let workplaceOneReplacementAccountId: AccountId;
+  let fixtures: WorkplaceJournalOwnershipFixtures;
 
   beforeEach(async () => {
     jest.restoreAllMocks();
     await database.write(async () => {
       await database.unsafeResetDatabase();
     });
-
-    const workplaceOneAccount = await accountWriteRepository.create({
-      workplaceId: WORKPLACE_ONE,
-      name: 'Workplace One Account',
-      accountType: AccountType.ASSET,
-      currencyCode: 'USD',
-    });
-    const workplaceOneReplacementAccount = await accountWriteRepository.create({
-      workplaceId: WORKPLACE_ONE,
-      name: 'Workplace One Replacement',
-      accountType: AccountType.EXPENSE,
-      currencyCode: 'USD',
-    });
-    const workplaceTwoAccount = await accountWriteRepository.create({
-      workplaceId: WORKPLACE_TWO,
-      name: 'Workplace Two Account',
-      accountType: AccountType.ASSET,
-      currencyCode: 'USD',
-    });
-    workplaceOneAccountId = workplaceOneAccount.id;
-    workplaceOneReplacementAccountId = workplaceOneReplacementAccount.id;
-
-    workplaceOneJournal = await createJournalFixture(
-      {
-        journalDate: 1_000,
-        description: 'Workplace One Journal',
-        currencyCode: 'USD',
-        status: JournalStatus.PLANNED,
-        transactions: [
-          {
-            accountId: workplaceOneAccount.id,
-            amount: 10,
-            transactionType: TransactionType.DEBIT,
-          },
-          {
-            accountId: workplaceOneReplacementAccount.id,
-            amount: 10,
-            transactionType: TransactionType.CREDIT,
-          },
-        ],
-      },
-      WORKPLACE_ONE,
-    );
-    workplaceTwoJournal = await createJournalFixture(
-      {
-        journalDate: 2_000,
-        description: 'Workplace Two Journal',
-        currencyCode: 'USD',
-        transactions: [
-          {
-            accountId: workplaceTwoAccount.id,
-            amount: 20,
-            transactionType: TransactionType.DEBIT,
-          },
-        ],
-      },
-      WORKPLACE_TWO,
-    );
-
-    [workplaceTwoTransaction] = await transactionQueryRepository.findByJournal(
-      WORKPLACE_TWO,
-      workplaceTwoJournal.id,
-    );
+    fixtures = await seedWorkplaceJournalOwnershipFixtures();
   });
 
   it('rejects planned-status updates for a journal owned by another workplace', async () => {
+    const { workplaceTwoJournal } = fixtures;
     await expect(
       runAccountingWriteSession(session =>
-        journalPersistenceRepository.setNonPostedStatusesInSession(session, WORKPLACE_ONE, [
-          { journalId: workplaceTwoJournal.id, status: JournalStatus.SKIPPED },
-        ]),
+        journalPersistenceRepository.setNonPostedStatusesInSession(
+          session,
+          JOURNAL_OWNERSHIP_WORKPLACE_ONE,
+          [{ journalId: workplaceTwoJournal.id, status: JournalStatus.SKIPPED }],
+        ),
       ),
     ).rejects.toThrow(`Journal ${workplaceTwoJournal.id} not found`);
 
@@ -107,6 +44,13 @@ describe('journal write workplace ownership', () => {
   });
 
   it('scopes ID-based journal, rename, and account-reassignment writes to the workplace', async () => {
+    const {
+      workplaceTwoJournal,
+      workplaceTwoTransaction,
+      workplaceOneAccountId,
+      workplaceOneReplacementAccountId,
+    } = fixtures;
+
     await expect(
       journalPersistenceService.put(
         {
@@ -127,7 +71,7 @@ describe('journal write workplace ownership', () => {
             },
           ],
         },
-        WORKPLACE_ONE,
+        JOURNAL_OWNERSHIP_WORKPLACE_ONE,
       ),
     ).rejects.toThrow('Journal not found');
 
@@ -138,16 +82,16 @@ describe('journal write workplace ownership', () => {
             [workplaceTwoTransaction.id, workplaceOneReplacementAccountId],
           ]),
         },
-        WORKPLACE_ONE,
+        JOURNAL_OWNERSHIP_WORKPLACE_ONE,
       ),
     ).rejects.toThrow('Some transactions could not be found for account reassignment.');
 
-    const renameResult = await bulkRenameJournals(WORKPLACE_ONE, {
+    const renameResult = await bulkRenameJournals(JOURNAL_OWNERSHIP_WORKPLACE_ONE, {
       [workplaceTwoJournal.id]: 'Foreign rename',
     });
     expect(renameResult).toEqual({ renamedCount: 0, inverseRenames: {} });
 
-    await journalPersistenceService.delete(workplaceTwoJournal.id, WORKPLACE_ONE);
+    await journalPersistenceService.delete(workplaceTwoJournal.id, JOURNAL_OWNERSHIP_WORKPLACE_ONE);
 
     const reloadedJournal = await database.collections
       .get<Journal>('journals')
@@ -155,24 +99,29 @@ describe('journal write workplace ownership', () => {
     const reloadedTransaction = await database.collections
       .get<Transaction>('transactions')
       .find(workplaceTwoTransaction.id);
-    expect(reloadedJournal.workplaceId).toBe(WORKPLACE_TWO);
+    expect(reloadedJournal.workplaceId).toBe(JOURNAL_OWNERSHIP_WORKPLACE_TWO);
     expect(reloadedJournal.description).toBe('Workplace Two Journal');
     expect(reloadedJournal.deletedAt).toBeFalsy();
-    expect(reloadedTransaction.workplaceId).toBe(WORKPLACE_TWO);
+    expect(reloadedTransaction.workplaceId).toBe(JOURNAL_OWNERSHIP_WORKPLACE_TWO);
     expect(reloadedTransaction.accountId).toBe(workplaceTwoTransaction.accountId);
   });
 
   it('preserves valid planned-status and journal renames for owned rows', async () => {
+    const { workplaceOneJournal } = fixtures;
     await runAccountingWriteSession(session =>
-      journalPersistenceRepository.setNonPostedStatusesInSession(session, WORKPLACE_ONE, [
-        {
-          journalId: workplaceOneJournal.id,
-          status: JournalStatus.SKIPPED,
-          expectedStatus: JournalStatus.PLANNED,
-        },
-      ]),
+      journalPersistenceRepository.setNonPostedStatusesInSession(
+        session,
+        JOURNAL_OWNERSHIP_WORKPLACE_ONE,
+        [
+          {
+            journalId: workplaceOneJournal.id,
+            status: JournalStatus.SKIPPED,
+            expectedStatus: JournalStatus.PLANNED,
+          },
+        ],
+      ),
     );
-    const rename = await bulkRenameJournals(WORKPLACE_ONE, {
+    const rename = await bulkRenameJournals(JOURNAL_OWNERSHIP_WORKPLACE_ONE, {
       [workplaceOneJournal.id]: 'Owned rename',
     });
 
@@ -184,7 +133,7 @@ describe('journal write workplace ownership', () => {
       inverseRenames: { [workplaceOneJournal.id]: 'Workplace One Journal' },
     });
     expect(reloadedJournal).toMatchObject({
-      workplaceId: WORKPLACE_ONE,
+      workplaceId: JOURNAL_OWNERSHIP_WORKPLACE_ONE,
       status: JournalStatus.SKIPPED,
       description: 'Owned rename',
     });

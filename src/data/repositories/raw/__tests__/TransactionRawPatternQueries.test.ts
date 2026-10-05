@@ -1,13 +1,15 @@
-import { Icon } from '@/src/types/domainIcons';
-import { database } from '@/src/data/database/Database';
-import Transaction from '@/src/data/models/Transaction';
-import { accountWriteRepository } from '@/src/data/repositories/account';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { transactionRawPatternQueries } from '@/src/data/repositories/raw/TransactionRawPatternQueries';
 import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
-import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
+import {
+  createIsolationAssetAccounts,
+  createMalformedCrossAccountTransaction,
+  createRawQueryIsolationWorkplaces,
+  resetRawQueryIsolationDatabase,
+} from '@/src/testing/rawQueryWorkplaceIsolationHarness';
+import { expectRawSqlPlaceholderArity, lastRawSqlCall } from '@/src/testing/rawSqlTestHelpers';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
-import { AccountType, TransactionType } from '@/src/types/enums';
+import { TransactionType } from '@/src/types/enums';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 
 describe('TransactionRawPatternQueries workplace isolation', () => {
@@ -20,38 +22,15 @@ describe('TransactionRawPatternQueries workplace isolation', () => {
   let foreignJournalId: JournalId;
 
   beforeEach(async () => {
-    jest.restoreAllMocks();
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
+    await resetRawQueryIsolationDatabase();
+    await createRawQueryIsolationWorkplaces(workplaceOne, workplaceTwo, {
+      one: 'Pattern Workplace One',
+      two: 'Pattern Workplace Two',
     });
-
-    await workplaceRepository.create({
-      id: workplaceOne,
-      name: 'Pattern Workplace One',
-      icon: Icon.Home,
-      defaultCurrencyCode: 'USD',
-    });
-    await workplaceRepository.create({
-      id: workplaceTwo,
-      name: 'Pattern Workplace Two',
-      icon: Icon.Briefcase,
-      defaultCurrencyCode: 'USD',
-    });
-
-    const localAccount = await accountWriteRepository.create({
-      name: 'Local account',
-      accountType: AccountType.ASSET,
-      currencyCode: 'USD',
-      workplaceId: workplaceOne,
-    });
-    const foreignAccount = await accountWriteRepository.create({
-      name: 'Foreign account',
-      accountType: AccountType.ASSET,
-      currencyCode: 'USD',
-      workplaceId: workplaceTwo,
-    });
-    localAccountId = localAccount.id;
-    foreignAccountId = foreignAccount.id;
+    ({ localAccountId, foreignAccountId } = await createIsolationAssetAccounts(
+      workplaceOne,
+      workplaceTwo,
+    ));
 
     const localJournal = await createJournalFixture(
       {
@@ -78,30 +57,19 @@ describe('TransactionRawPatternQueries workplace isolation', () => {
     localJournalId = localJournal.id;
     foreignJournalId = foreignJournal.id;
 
-    const transactions = database.collections.get<Transaction>('transactions');
-    await database.write(async () => {
-      await transactions.create(transaction => {
-        transaction.journalId = localJournalId;
-        transaction.accountId = foreignAccountId;
-        transaction.amount = 30;
-        transaction.transactionType = TransactionType.DEBIT;
-        transaction.currencyCode = 'USD';
-        transaction.transactionDate = startDate;
-        transaction.workplaceId = workplaceTwo;
-        transaction.createdAt = new Date();
-        transaction.updatedAt = new Date();
-      });
-      await transactions.create(transaction => {
-        transaction.journalId = foreignJournalId;
-        transaction.accountId = localAccountId;
-        transaction.amount = 40;
-        transaction.transactionType = TransactionType.DEBIT;
-        transaction.currencyCode = 'USD';
-        transaction.transactionDate = startDate;
-        transaction.workplaceId = workplaceOne;
-        transaction.createdAt = new Date();
-        transaction.updatedAt = new Date();
-      });
+    await createMalformedCrossAccountTransaction({
+      workplaceId: workplaceTwo,
+      journalId: localJournalId,
+      accountId: foreignAccountId,
+      amount: 30,
+      transactionDate: startDate,
+    });
+    await createMalformedCrossAccountTransaction({
+      workplaceId: workplaceOne,
+      journalId: foreignJournalId,
+      accountId: localAccountId,
+      amount: 40,
+      transactionDate: startDate,
     });
   });
 
@@ -110,11 +78,11 @@ describe('TransactionRawPatternQueries workplace isolation', () => {
 
     await transactionRawPatternQueries.getRecurringPatternsRaw(workplaceOne, startDate, 3);
 
-    const [sql, args = []] = queryRaw.mock.calls[0];
+    const [sql, args] = lastRawSqlCall(queryRaw);
     expect(sql).toContain('t.workplace_id = ?');
     expect(sql).toContain('j.workplace_id = ?');
     expect(args).toEqual([startDate, workplaceOne, workplaceOne, ...ACTIVE_JOURNAL_STATUSES, 3]);
-    expect(sql.match(/\?/g) ?? []).toHaveLength(args.length);
+    expectRawSqlPlaceholderArity(sql, args);
   });
 
   it('rejects both malformed cross-workplace join directions in the ORM fallback', async () => {

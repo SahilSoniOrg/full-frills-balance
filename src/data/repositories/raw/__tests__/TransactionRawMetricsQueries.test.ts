@@ -1,13 +1,12 @@
-import { Icon } from '@/src/types/domainIcons';
 import { database } from '@/src/data/database/Database';
-import { accountWriteRepository } from '@/src/data/repositories/account';
+import Transaction from '@/src/data/models/Transaction';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
 import { rawSqlExecutor } from '@/src/data/repositories/raw/RawSqlExecutor';
-import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
+import { seedTransactionRawMetricsWorkplaceIsolation } from '@/src/testing/rawQueryWorkplaceIsolationHarness';
+import { expectWorkplaceScopedRawSql } from '@/src/testing/rawSqlTestHelpers';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
-import Transaction from '@/src/data/models/Transaction';
 import { Q } from '@nozbe/watermelondb';
 
 const WORKPLACE_ONE = 'wp-metrics-isolation-1' as WorkplaceId;
@@ -19,81 +18,11 @@ describe('TransactionRawMetricsQueries workplace isolation', () => {
   let foreignAccountId: AccountId;
 
   beforeEach(async () => {
-    jest.restoreAllMocks();
-    await database.write(async () => {
-      await database.unsafeResetDatabase();
-    });
-
-    await workplaceRepository.create({
-      id: WORKPLACE_ONE,
-      name: 'Metrics Workplace One',
-      icon: Icon.Home,
-      defaultCurrencyCode: 'USD',
-    });
-    await workplaceRepository.create({
-      id: WORKPLACE_TWO,
-      name: 'Metrics Workplace Two',
-      icon: Icon.Briefcase,
-      defaultCurrencyCode: 'USD',
-    });
-
-    const localAccount = await accountWriteRepository.create({
-      name: 'Local account',
-      accountType: AccountType.ASSET,
-      currencyCode: 'USD',
-      workplaceId: WORKPLACE_ONE,
-    });
-    const foreignAccount = await accountWriteRepository.create({
-      name: 'Foreign account',
-      accountType: AccountType.ASSET,
-      currencyCode: 'USD',
-      workplaceId: WORKPLACE_TWO,
-    });
-    localAccountId = localAccount.id;
-    foreignAccountId = foreignAccount.id;
-
-    await createJournalFixture(
-      {
-        description: 'Valid local transaction',
-        journalDate: DAY,
-        currencyCode: 'USD',
-        calculatedBalances: new Map([[localAccountId, 10]]),
-        transactions: [
-          { accountId: localAccountId, amount: 10, transactionType: TransactionType.DEBIT },
-        ],
-      },
+    ({ localAccountId, foreignAccountId } = await seedTransactionRawMetricsWorkplaceIsolation(
       WORKPLACE_ONE,
-    );
-
-    // Malformed imported relation: a workplace-one transaction points at a
-    // workplace-two account. Metrics must reject the joined foreign account.
-    await createJournalFixture(
-      {
-        description: 'Foreign account link',
-        journalDate: DAY + 1_000,
-        currencyCode: 'USD',
-        calculatedBalances: new Map([[foreignAccountId, 20]]),
-        transactions: [
-          { accountId: foreignAccountId, amount: 20, transactionType: TransactionType.DEBIT },
-        ],
-      },
-      WORKPLACE_ONE,
-    );
-
-    // Malformed imported relation in the opposite direction: a workplace-two
-    // transaction points at the workplace-one account.
-    await createJournalFixture(
-      {
-        description: 'Foreign transaction link',
-        journalDate: DAY + 2_000,
-        currencyCode: 'USD',
-        calculatedBalances: new Map([[localAccountId, 30]]),
-        transactions: [
-          { accountId: localAccountId, amount: 30, transactionType: TransactionType.DEBIT },
-        ],
-      },
       WORKPLACE_TWO,
-    );
+      DAY,
+    ));
   });
 
   it('scopes every workplace-owned SQL table for all metrics queries', async () => {
@@ -114,10 +43,7 @@ describe('TransactionRawMetricsQueries workplace isolation', () => {
 
     expect(queryRaw).toHaveBeenCalledTimes(2);
     for (const [sql, args = []] of queryRaw.mock.calls) {
-      expect(sql).toContain('t.workplace_id = ?');
-      expect(sql).toContain('a.workplace_id = ?');
-      expect(sql).toContain('j.workplace_id = ?');
-      expect(args.filter(arg => arg === WORKPLACE_ONE)).toHaveLength(3);
+      expectWorkplaceScopedRawSql(sql, args, WORKPLACE_ONE, ['t', 'a', 'j']);
     }
   });
 

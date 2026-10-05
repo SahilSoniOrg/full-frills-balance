@@ -1,5 +1,4 @@
 import { database } from '@/src/data/database/Database';
-import { toPlainPlannedPayment } from '@/src/data/models/PlannedPayment';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
@@ -118,19 +117,18 @@ it('keeps different FX policies distinct when merging account references', async
     currencyCode: 'USD',
     workplaceId: WP,
   });
-  const snapshot = toPlainPlannedPayment(payment);
   const duplicate = await plannedPaymentRepository.create(WP, {
-    name: snapshot.name,
-    amount: snapshot.amount,
-    currencyCode: snapshot.currencyCode,
+    name: 'Transfer',
+    amount: 100,
+    currencyCode: 'INR',
     fromAccountId: target.id,
-    toAccountId: snapshot.toAccountId,
-    intervalN: snapshot.intervalN,
-    intervalType: snapshot.intervalType,
-    startDate: snapshot.startDate,
-    nextOccurrence: snapshot.nextOccurrence,
-    status: snapshot.status,
-    isAutoPost: snapshot.isAutoPost,
+    toAccountId: payment.toAccountId,
+    intervalN: 1,
+    intervalType: PlannedPaymentInterval.MONTHLY,
+    startDate: 1000,
+    nextOccurrence: 1000,
+    status: PlannedPaymentStatus.ACTIVE,
+    isAutoPost: false,
     fxMode: 'fixed',
     destinationAmount: 90,
   });

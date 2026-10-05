@@ -5,73 +5,35 @@ import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
-import {
-  journalPersistenceRepository,
-  type PutJournalInput,
-} from '@/src/data/repositories/journal/JournalPersistenceRepository';
+import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { AccountType, JournalDisplayType, JournalStatus, TransactionType } from '@/src/types/enums';
-import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import { AccountId, JournalId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
+import {
+  JOURNAL_PERSISTENCE_WORKPLACE,
+  activeJournalTransactions,
+  seedJournalPersistenceWriteFixtures,
+  type JournalPersistenceWriteFixtures,
+} from './journalPersistenceTest.helpers';
 
-const WORKPLACE_ID = 'wp-journal-persistence' as WorkplaceId;
+const WORKPLACE_ID = JOURNAL_PERSISTENCE_WORKPLACE;
 
 describe('JournalPersistenceRepository', () => {
   let debitAccountId: AccountId;
   let creditAccountId: AccountId;
+  let lines: JournalPersistenceWriteFixtures['lines'];
+  let putInput: JournalPersistenceWriteFixtures['putInput'];
 
   beforeEach(async () => {
     await database.write(async () => {
       await database.unsafeResetDatabase();
     });
-
-    const debitAccount = await accountWriteRepository.create({
-      workplaceId: WORKPLACE_ID,
-      name: 'Cash',
-      accountType: AccountType.ASSET,
-      currencyCode: 'USD',
-    });
-    const creditAccount = await accountWriteRepository.create({
-      workplaceId: WORKPLACE_ID,
-      name: 'Expense',
-      accountType: AccountType.EXPENSE,
-      currencyCode: 'USD',
-    });
-    debitAccountId = debitAccount.id;
-    creditAccountId = creditAccount.id;
+    ({ debitAccountId, creditAccountId, lines, putInput } =
+      await seedJournalPersistenceWriteFixtures());
   });
 
-  const lines = (debit = 10, credit = 10) => [
-    {
-      accountId: debitAccountId,
-      amount: debit,
-      transactionType: TransactionType.DEBIT,
-    },
-    {
-      accountId: creditAccountId,
-      amount: credit,
-      transactionType: TransactionType.CREDIT,
-    },
-  ];
-
-  const putInput = (overrides: Partial<PutJournalInput> = {}) => ({
-    journalDate: 1_000,
-    description: 'Journal',
-    currencyCode: 'USD',
-    displayType: JournalDisplayType.TRANSFER,
-    transactions: lines(),
-    ...overrides,
-  });
-
-  async function activeTransactions(journalId: JournalId): Promise<Transaction[]> {
-    return database.collections
-      .get<Transaction>('transactions')
-      .query(
-        Q.where('journal_id', journalId),
-        Q.where('workplace_id', WORKPLACE_ID),
-        Q.where('deleted_at', Q.eq(null)),
-      )
-      .fetch();
-  }
+  const activeTransactions = (journalId: JournalId) =>
+    activeJournalTransactions(WORKPLACE_ID, journalId);
 
   async function auditChanges(entityId: string): Promise<unknown[]> {
     const audits = await database.collections

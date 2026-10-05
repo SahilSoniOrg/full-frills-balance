@@ -68,6 +68,7 @@ describe('AccountWriteRepository currency immutability', () => {
   const workplaceId = 'wp-account-currency' as WorkplaceId;
 
   beforeEach(async () => {
+    jest.restoreAllMocks();
     await database.write(async () => {
       await database.unsafeResetDatabase();
     });

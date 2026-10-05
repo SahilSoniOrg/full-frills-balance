@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import { accountObserveQueries } from '@/src/data/repositories/account/AccountObserveQueries';
 import { accountWriteRepository } from '@/src/data/repositories/account/AccountWriteRepository';
-import { observeAfterInitial } from '@/src/testing/observeAfterInitial';
+import { expectObserveEmitsAfterUpdate } from '@/src/testing/observeAfterInitial';
 import { AccountType } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
 import { map } from 'rxjs/operators';
@@ -23,24 +23,24 @@ describe('AccountObserveQueries', () => {
       workplaceId,
       metadata: { notes: 'Before' },
     });
-    const notes = observeAfterInitial(
+
+    await expectObserveEmitsAfterUpdate(
       accountObserveQueries
         .observeMetadata(workplaceId, account.id)
         .pipe(map(records => records[0]?.notes)),
+      async () => {
+        const [metadata] = await database.collections
+          .get<AccountMetadata>('account_metadata')
+          .query()
+          .fetch();
+        await database.write(async () => {
+          await metadata.update(record => {
+            record.notes = 'After';
+            record.updatedAt = new Date();
+          });
+        });
+      },
+      'After',
     );
-
-    await notes.initial;
-    const [metadata] = await database.collections
-      .get<AccountMetadata>('account_metadata')
-      .query()
-      .fetch();
-    await database.write(async () => {
-      await metadata.update(record => {
-        record.notes = 'After';
-        record.updatedAt = new Date();
-      });
-    });
-
-    await expect(notes.nextValue).resolves.toBe('After');
   });
 });
