@@ -154,14 +154,26 @@ export function prepareCoreImportRecords(
   return [...accountPrepares, ...journalPrepares, ...transactionPrepares];
 }
 
-function readAuditPayloadString(changes: string, key: string): string | undefined {
+function readAuditPayloadFields(changes: string): {
+  source?: string;
+  eventType?: string;
+  correlationId?: string;
+} {
   try {
     const value: unknown = JSON.parse(changes);
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
-    const field = (value as Record<string, unknown>)[key];
-    return typeof field === 'string' ? field : undefined;
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
+    const payload = value as Record<string, unknown>;
+    const read = (key: string) => {
+      const field = payload[key];
+      return typeof field === 'string' ? field : undefined;
+    };
+    return {
+      source: read('source'),
+      eventType: read('eventType'),
+      correlationId: read('correlationId'),
+    };
   } catch {
-    return undefined;
+    return {};
   }
 }
 
@@ -193,11 +205,10 @@ export function prepareAuxiliaryImportRecords(
       record.action = toAuditAction(log.action);
       record.changes = sanitizeSmsAuditChanges(log.changes) ?? log.changes;
       record.timestamp = log.timestamp;
-      record.source = readAuditPayloadString(log.changes, 'source') ?? 'app';
-      record.eventType =
-        readAuditPayloadString(log.changes, 'eventType') ??
-        `${entityType}.${log.action.toLowerCase()}`;
-      record.correlationId = readAuditPayloadString(log.changes, 'correlationId') ?? null;
+      const auditPayload = readAuditPayloadFields(log.changes);
+      record.source = auditPayload.source ?? 'app';
+      record.eventType = auditPayload.eventType ?? `${entityType}.${log.action.toLowerCase()}`;
+      record.correlationId = auditPayload.correlationId ?? null;
       record._raw._status = 'synced';
       setRecordTimestamps(record, { createdAt: log.createdAt });
     }),

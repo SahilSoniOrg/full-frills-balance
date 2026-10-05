@@ -9,7 +9,7 @@ import {
 import { observeQueryWithModelChanges } from '@/src/data/repositories/observeQueryWithModelChanges';
 import { AuditAction, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import type { AuditEventType } from '@/src/types/auditEvents';
-import type { PlannedPaymentFxFields, PlannedPaymentFxMode } from '@/src/types/plainDtos';
+import type { PlannedPaymentFxFields } from '@/src/types/plainDtos';
 import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 import type { Model } from '@nozbe/watermelondb';
@@ -289,59 +289,19 @@ export class PlannedPaymentRepository {
         .fetch();
       if (accounts.length !== accountIds.length) throw new Error(conflictMessage);
 
+      const optionalUndefinedFields = new Set([
+        'description',
+        'fxMode',
+        'destinationAmount',
+        'endDate',
+        'recurrenceDay',
+        'recurrenceMonth',
+      ]);
       const updates: Partial<PlannedPaymentPersistenceInput> = {};
       for (const field of changedFields) {
         const value = restored[field];
-        switch (field) {
-          case 'name':
-            updates.name = value as string;
-            break;
-          case 'description':
-            updates.description = value == null ? undefined : (value as string);
-            break;
-          case 'amount':
-            updates.amount = value as number;
-            break;
-          case 'currencyCode':
-            updates.currencyCode = value as string;
-            break;
-          case 'fxMode':
-            updates.fxMode = value == null ? undefined : (value as PlannedPaymentFxMode);
-            break;
-          case 'destinationAmount':
-            updates.destinationAmount = value == null ? undefined : (value as number);
-            break;
-          case 'fromAccountId':
-            updates.fromAccountId = value as AccountId;
-            break;
-          case 'toAccountId':
-            updates.toAccountId = value as AccountId;
-            break;
-          case 'intervalN':
-            updates.intervalN = value as number;
-            break;
-          case 'intervalType':
-            updates.intervalType = value as PlannedPaymentInterval;
-            break;
-          case 'startDate':
-            updates.startDate = value as number;
-            break;
-          case 'endDate':
-            updates.endDate = value == null ? undefined : (value as number);
-            break;
-          case 'nextOccurrence':
-            updates.nextOccurrence = value as number;
-            break;
-          case 'isAutoPost':
-            updates.isAutoPost = value as boolean;
-            break;
-          case 'recurrenceDay':
-            updates.recurrenceDay = value == null ? undefined : (value as number);
-            break;
-          case 'recurrenceMonth':
-            updates.recurrenceMonth = value == null ? undefined : (value as number);
-            break;
-        }
+        (updates as Record<string, unknown>)[field] =
+          optionalUndefinedFields.has(field) && value == null ? undefined : value;
       }
 
       const restoredState = auditPlannedPaymentState(record, updates);

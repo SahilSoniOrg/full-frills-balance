@@ -1,7 +1,5 @@
 import { stableAuditJson } from '@/src/utils/stableAuditJson';
 
-export { stableAuditJson };
-
 export function restoreAuditFieldsFromRevert(
   current: Record<string, unknown>,
   before: Record<string, unknown>,

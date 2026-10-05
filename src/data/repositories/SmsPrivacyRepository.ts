@@ -20,10 +20,35 @@ function queryAfter<T extends Model>(collection: string, afterId: string | undef
   return database.collections.get<T>(collection).query(...clauses);
 }
 
+type CollectionUpdate<T extends Model> = {
+  record: T;
+  apply: (entry: T) => void;
+};
+
 /**
  * Each page decides every update before preparing any: on device, work between a
  * prepareUpdate and batch() lets queued microtasks observe the pending record.
  */
+async function paginateCollection<T extends Model>(
+  collection: string,
+  toUpdates: (records: readonly T[]) => CollectionUpdate<T>[],
+): Promise<void> {
+  let cursor: string | undefined;
+  while (true) {
+    const nextCursor = await database.write(async () => {
+      const records = await queryAfter<T>(collection, cursor).fetch();
+      if (!records.length) return undefined;
+      const updates = toUpdates(records);
+      if (updates.length) {
+        await database.batch(...updates.map(({ record, apply }) => record.prepareUpdate(apply)));
+      }
+      return records[records.length - 1].id;
+    });
+    if (!nextCursor) return;
+    cursor = nextCursor;
+  }
+}
+
 export class SmsPrivacyRepository {
   async sanitizeLegacySmsData(): Promise<void> {
     await this.hashDeviceInboxIdentities();
@@ -33,129 +58,85 @@ export class SmsPrivacyRepository {
   }
 
   private async hashDeviceInboxIdentities(): Promise<void> {
-    let cursor: string | undefined;
-    while (true) {
-      const next = await database.write(async () => {
-        const records = await queryAfter<DeviceSmsInboxRecord>(
-          'device_sms_inbox_records',
-          cursor,
-        ).fetch();
-        if (!records.length) return undefined;
-        const updates = records
-          .map(record => ({
-            record,
-            fingerprint: hashLegacySmsFingerprint(record.inputFingerprint),
-            states: hashSmsMetadataFingerprints(record.reviewStatesJson) ?? '{}',
-          }))
-          .filter(
-            update =>
-              update.fingerprint !== update.record.inputFingerprint ||
-              update.states !== update.record.reviewStatesJson,
-          );
-        if (updates.length)
-          await database.batch(
-            ...updates.map(({ record, fingerprint, states }) =>
-              record.prepareUpdate(entry => {
-                entry.inputFingerprint = fingerprint;
-                entry.reviewStatesJson = states;
-              }),
-            ),
-          );
-        return records[records.length - 1].id;
-      });
-      if (!next) return;
-      cursor = next;
-    }
+    await paginateCollection<DeviceSmsInboxRecord>('device_sms_inbox_records', records =>
+      records
+        .map(record => ({
+          record,
+          fingerprint: hashLegacySmsFingerprint(record.inputFingerprint),
+          states: hashSmsMetadataFingerprints(record.reviewStatesJson) ?? '{}',
+        }))
+        .filter(
+          update =>
+            update.fingerprint !== update.record.inputFingerprint ||
+            update.states !== update.record.reviewStatesJson,
+        )
+        .map(({ record, fingerprint, states }) => ({
+          record,
+          apply: (entry: DeviceSmsInboxRecord) => {
+            entry.inputFingerprint = fingerprint;
+            entry.reviewStatesJson = states;
+          },
+        })),
+    );
   }
 
   private async hashInboxIdentities(): Promise<void> {
-    let cursor: string | undefined;
-    while (true) {
-      const nextCursor = await database.write(async () => {
-        const records = await queryAfter<TransactionInboxRecord>(
-          'transaction_inbox_records',
-          cursor,
-        ).fetch();
-        if (!records.length) return undefined;
-        const updates = records.flatMap(record => {
-          if (record.channel !== 'sms') return [];
-          const fingerprint = hashLegacySmsFingerprint(record.inputFingerprint);
-          const metadataJson = hashSmsMetadataFingerprints(record.metadataJson);
-          if (
-            fingerprint === record.inputFingerprint &&
-            (metadataJson ?? null) === (record.metadataJson ?? null)
-          )
-            return [];
-          return [{ record, fingerprint, metadataJson }];
-        });
-        if (updates.length) {
-          await database.batch(
-            updates.map(({ record, fingerprint, metadataJson }) =>
-              record.prepareUpdate(current => {
-                current.inputFingerprint = fingerprint;
-                current.metadataJson = metadataJson;
-              }),
-            ),
-          );
-        }
-        return records[records.length - 1].id;
-      });
-      if (!nextCursor) return;
-      cursor = nextCursor;
-    }
+    await paginateCollection<TransactionInboxRecord>('transaction_inbox_records', records =>
+      records.flatMap(record => {
+        if (record.channel !== 'sms') return [];
+        const fingerprint = hashLegacySmsFingerprint(record.inputFingerprint);
+        const metadataJson = hashSmsMetadataFingerprints(record.metadataJson);
+        if (
+          fingerprint === record.inputFingerprint &&
+          (metadataJson ?? null) === (record.metadataJson ?? null)
+        )
+          return [];
+        return [
+          {
+            record,
+            apply: (current: TransactionInboxRecord) => {
+              current.inputFingerprint = fingerprint;
+              current.metadataJson = metadataJson;
+            },
+          },
+        ];
+      }),
+    );
   }
 
   private async hashJournalMetadataIdentities(): Promise<void> {
-    let cursor: string | undefined;
-    while (true) {
-      const nextCursor = await database.write(async () => {
-        const records = await queryAfter<JournalMetadata>('journal_metadata', cursor).fetch();
-        if (!records.length) return undefined;
-        const updates = records.flatMap(record => {
-          const metadataJson = hashSmsMetadataFingerprints(record.metadataJson);
-          if ((metadataJson ?? null) === (record.metadataJson ?? null)) return [];
-          return [{ record, metadataJson }];
-        });
-        if (updates.length) {
-          await database.batch(
-            updates.map(({ record, metadataJson }) =>
-              record.prepareUpdate(current => {
-                current.metadataJson = metadataJson;
-              }),
-            ),
-          );
-        }
-        return records[records.length - 1].id;
-      });
-      if (!nextCursor) return;
-      cursor = nextCursor;
-    }
+    await paginateCollection<JournalMetadata>('journal_metadata', records =>
+      records.flatMap(record => {
+        const metadataJson = hashSmsMetadataFingerprints(record.metadataJson);
+        if ((metadataJson ?? null) === (record.metadataJson ?? null)) return [];
+        return [
+          {
+            record,
+            apply: (current: JournalMetadata) => {
+              current.metadataJson = metadataJson;
+            },
+          },
+        ];
+      }),
+    );
   }
 
   private async scrubAuditPayloads(): Promise<void> {
-    let cursor: string | undefined;
-    while (true) {
-      const nextCursor = await database.write(async () => {
-        const records = await queryAfter<AuditLog>('audit_logs', cursor).fetch();
-        if (!records.length) return undefined;
-        const updates = records.flatMap(record => {
-          const changes = sanitizeSmsAuditChanges(record.changes);
-          return changes && changes !== record.changes ? [{ record, changes }] : [];
-        });
-        if (updates.length) {
-          await database.batch(
-            updates.map(({ record, changes }) =>
-              record.prepareUpdate(current => {
-                current.changes = changes;
-              }),
-            ),
-          );
-        }
-        return records[records.length - 1].id;
-      });
-      if (!nextCursor) return;
-      cursor = nextCursor;
-    }
+    await paginateCollection<AuditLog>('audit_logs', records =>
+      records.flatMap(record => {
+        const changes = sanitizeSmsAuditChanges(record.changes);
+        return changes && changes !== record.changes
+          ? [
+              {
+                record,
+                apply: (current: AuditLog) => {
+                  current.changes = changes;
+                },
+              },
+            ]
+          : [];
+      }),
+    );
   }
 }
 

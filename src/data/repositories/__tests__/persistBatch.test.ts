@@ -32,7 +32,7 @@ describe('persistBatch', () => {
     });
 
     const afterBatch = jest.fn();
-    const persistPromise = persistBatch(['prepared-op'] as any[], afterBatch);
+    const persistPromise = persistBatch(() => ['prepared-op'] as any[], afterBatch);
 
     await Promise.resolve();
     expect(mockDatabase.batch).toHaveBeenCalledWith(['prepared-op']);
@@ -49,7 +49,7 @@ describe('persistBatch', () => {
     mockDatabase.batch.mockRejectedValue(error);
     const afterBatch = jest.fn();
 
-    await expect(persistBatch(['prepared-op'] as any[], afterBatch)).rejects.toBe(error);
+    await expect(persistBatch(() => ['prepared-op'] as any[], afterBatch)).rejects.toBe(error);
 
     expect(afterBatch).not.toHaveBeenCalled();
   });
@@ -57,7 +57,7 @@ describe('persistBatch', () => {
   it('does not run afterBatch for an empty batch', async () => {
     const afterBatch = jest.fn();
 
-    await persistBatch([], afterBatch);
+    await persistBatch(() => [], afterBatch);
 
     expect(mockDatabase.batch).not.toHaveBeenCalled();
     expect(afterBatch).not.toHaveBeenCalled();

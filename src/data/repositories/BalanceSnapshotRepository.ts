@@ -43,14 +43,9 @@ export class BalanceSnapshotRepository {
     },
   ): Promise<BalanceSnapshot> {
     return database.write(async () => {
-      return this.snapshots.create(snapshot => {
-        snapshot.workplaceId = workplaceId;
-        snapshot.accountId = data.accountId;
-        snapshot.transactionId = data.transactionId;
-        snapshot.transactionDate = data.transactionDate;
-        snapshot.absoluteBalance = data.absoluteBalance;
-        snapshot.transactionCount = data.transactionCount;
-      });
+      const snapshot = this.prepareCreate(workplaceId, data);
+      await database.batch(snapshot);
+      return snapshot;
     });
   }
 
@@ -244,7 +239,7 @@ export class BalanceSnapshotRepository {
 /**
  * Plain object representing a balance snapshot data.
  */
-export interface SnapshotData {
+interface SnapshotData {
   id: string;
   accountId: AccountId;
   transactionId: TransactionId;

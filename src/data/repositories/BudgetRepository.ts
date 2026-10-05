@@ -12,10 +12,8 @@ import { AuditAction } from '@/src/types/enums';
 import { AccountId, BudgetId, WorkplaceId } from '@/src/types/ids';
 import { Model, Q } from '@nozbe/watermelondb';
 import { map } from 'rxjs/operators';
-import {
-  restoreAuditFieldsFromRevert,
-  stableAuditJson,
-} from '@/src/data/repositories/auditRevertSupport';
+import { restoreAuditFieldsFromRevert } from '@/src/data/repositories/auditRevertSupport';
+import { stableAuditJson } from '@/src/utils/stableAuditJson';
 
 export interface BudgetInput {
   name: string;

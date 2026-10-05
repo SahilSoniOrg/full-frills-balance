@@ -8,7 +8,7 @@ import { rawSqlExecutor } from './raw/RawSqlExecutor';
 import { deviceSmsInboxRepository } from './DeviceSmsInboxRepository';
 import { fetchSequentiallyInChunks } from './fetchSequentiallyInChunks';
 
-export interface ExportColumn {
+interface ExportColumn {
   source: string;
   alias: string;
 }
