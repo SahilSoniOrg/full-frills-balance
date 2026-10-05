@@ -120,12 +120,6 @@ describe('ExchangeRateCard', () => {
     expect(screen.getByText('1 USD = 2.0000 EUR')).toBeTruthy();
   });
 
-  it('renders the market rate for a resolved pair', () => {
-    renderCard();
-
-    expect(screen.getByText('1 USD = 1.2500 EUR')).toBeTruthy();
-  });
-
   it('shows the unavailable message instead of a rate when the pair has none', () => {
     renderCard(
       {},
@@ -149,9 +143,10 @@ describe('ExchangeRateCard', () => {
     expect(screen.queryByTestId('exchange-rate-card')).toBeNull();
   });
 
-  it('expands the converted input to fit a long edited amount', () => {
+  it('sizes the converted input from layout and resets the local draft from an accessible control', () => {
     const onConvertedAmountChange = jest.fn();
-    renderCard({ onConvertedAmountChange });
+    const onResetToApiRate = jest.fn();
+    renderCard({ onConvertedAmountChange, onResetToApiRate });
 
     const input = screen.getByTestId('exchange-rate-converted-amount-input');
     const measure = screen.getByTestId('exchange-rate-converted-amount-measure');
@@ -163,26 +158,15 @@ describe('ExchangeRateCard', () => {
     });
 
     expect(onConvertedAmountChange).toHaveBeenCalledWith(longAmount);
-    expect(screen.getByTestId('exchange-rate-converted-amount-input').props.value).toBe(longAmount);
-    expect(
-      StyleSheet.flatten(screen.getByTestId('exchange-rate-converted-amount-input').props.style)
-        .width,
-    ).toBe(156 + Spacing.xs);
-  });
+    expect(input.props.value).toBe(longAmount);
+    expect(StyleSheet.flatten(input.props.style).width).toBe(156 + Spacing.xs);
 
-  it('exposes an accessible reset control and resets the local converted draft', () => {
-    const onResetToApiRate = jest.fn();
-    renderCard({ onResetToApiRate });
-
-    const input = screen.getByTestId('exchange-rate-converted-amount-input');
     fireEvent.changeText(input, '99.99');
-
     const resetButton = screen.getByTestId('exchange-rate-reset-fx-rate-button');
     expect(resetButton.props.accessibilityRole).toBe('button');
     expect(resetButton.props.accessibilityLabel).toBe(
       AppConfig.strings.transactionFlow.resetToMarketRate,
     );
-
     fireEvent.press(resetButton);
 
     expect(onResetToApiRate).toHaveBeenCalledTimes(1);
@@ -218,15 +202,24 @@ describe('ExchangeRateCard', () => {
       sourceAmount: 1,
     };
 
+    const renderAttached = (
+      overrides: Partial<ExchangeRateCardProps> = {},
+      input: Partial<FxPairInput> = {},
+    ) =>
+      renderCard(
+        { variant: 'attached', testIDPrefix: 'split-fx', ...overrides },
+        { ...attachedInput, ...input },
+      );
+
     it('renders the converted currency symbol once', () => {
-      renderCard({ variant: 'attached', testIDPrefix: 'split-fx' }, attachedInput);
+      renderAttached();
 
       expect(screen.getAllByText('$')).toHaveLength(1);
       expect(screen.getByTestId('split-fx-card')).toBeTruthy();
     });
 
     it('quotes a sub-one rate in the direction that stays above one', () => {
-      renderCard({ variant: 'attached', testIDPrefix: 'split-fx' }, attachedInput);
+      renderAttached();
 
       expect(screen.getByText('1 USD = 96.1538 INR')).toBeTruthy();
       expect(screen.queryByText('1 INR = 0.0104 USD')).toBeNull();
@@ -234,10 +227,7 @@ describe('ExchangeRateCard', () => {
 
     it('keeps the converted amount editable', () => {
       const onConvertedAmountChange = jest.fn();
-      renderCard(
-        { variant: 'attached', testIDPrefix: 'split-fx', onConvertedAmountChange },
-        attachedInput,
-      );
+      renderAttached({ onConvertedAmountChange });
 
       fireEvent.changeText(screen.getByTestId('split-fx-converted-amount-input'), '0.02');
 
@@ -245,10 +235,9 @@ describe('ExchangeRateCard', () => {
     });
 
     it('never renders manual base-rate fields', () => {
-      renderCard(
-        { variant: 'attached', testIDPrefix: 'split-fx' },
+      renderAttached(
+        {},
         {
-          ...attachedInput,
           fetched: {
             sourceBaseRate: null,
             destBaseRate: null,

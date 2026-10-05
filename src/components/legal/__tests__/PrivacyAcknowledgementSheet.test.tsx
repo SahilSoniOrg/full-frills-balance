@@ -18,8 +18,11 @@ describe('PrivacyAcknowledgementSheet presentation', () => {
     else process.env.EXPO_PUBLIC_E2E = originalE2eFlag;
   });
 
-  it('uses the native modal outside the Detox build', () => {
-    process.env.EXPO_PUBLIC_E2E = '0';
+  it.each([
+    { e2e: '0', testId: 'native-privacy-modal' },
+    { e2e: '1', testId: 'e2e-privacy-overlay' },
+  ])('uses $testId when EXPO_PUBLIC_E2E is $e2e', ({ e2e, testId }) => {
+    process.env.EXPO_PUBLIC_E2E = e2e;
 
     render(
       <PrivacyAcknowledgementSheet
@@ -30,21 +33,6 @@ describe('PrivacyAcknowledgementSheet presentation', () => {
       />,
     );
 
-    expect(screen.getByTestId('native-privacy-modal')).toBeOnTheScreen();
-  });
-
-  it('uses the in-tree overlay in Detox to avoid the iOS modal transition stall', () => {
-    process.env.EXPO_PUBLIC_E2E = '1';
-
-    render(
-      <PrivacyAcknowledgementSheet
-        visible
-        onClose={() => {}}
-        onOpenFullPolicy={() => {}}
-        onAcknowledge={() => {}}
-      />,
-    );
-
-    expect(screen.getByTestId('e2e-privacy-overlay')).toBeOnTheScreen();
+    expect(screen.getByTestId(testId)).toBeOnTheScreen();
   });
 });

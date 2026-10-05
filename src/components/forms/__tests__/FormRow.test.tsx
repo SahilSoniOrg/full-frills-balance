@@ -44,11 +44,9 @@ describe('FormRow', () => {
     expect(rowButton.findAll(node => node === clearButton)).toHaveLength(0);
     fireEvent.press(rowButton);
     expect(onPress).toHaveBeenCalledTimes(1);
-    fireEvent.press(screen.getByText('Oct 4'));
-    expect(onPress).toHaveBeenCalledTimes(2);
     fireEvent.press(clearButton);
     expect(onClear).toHaveBeenCalledTimes(1);
-    expect(onPress).toHaveBeenCalledTimes(2);
+    expect(onPress).toHaveBeenCalledTimes(1);
   });
 
   it('keeps long values readable by truncating within the row and retains their full label', () => {

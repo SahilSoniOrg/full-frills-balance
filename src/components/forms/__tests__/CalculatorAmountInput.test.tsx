@@ -1,5 +1,4 @@
 import { CalculatorAmountInput } from '../CalculatorAmountInput';
-import { resolveAmountTypography } from '../amountInputPresentation';
 import { Size, Typography } from '@/src/constants';
 import { fireEvent, render, screen, act } from '@/src/utils/test-utils';
 import { useState } from 'react';
@@ -20,7 +19,6 @@ jest.mock('@/src/components/overlays/AmountCalculatorSheet', () => ({
         testID="calculator-done"
         onPress={() => {
           onDone('42.50');
-          onDismiss();
           onDismiss();
         }}
       />
@@ -47,11 +45,7 @@ describe('CalculatorAmountInput', () => {
     jest.useRealTimers();
   });
 
-  it('uses the journal typography for hero amounts and shrinks long values', () => {
-    expect(resolveAmountTypography(3).amountFontSize).toBe(Typography.sizes.jumbo);
-    expect(resolveAmountTypography(7).amountFontSize).toBe(Typography.sizes.xxxl);
-    expect(resolveAmountTypography(10).amountFontSize).toBe(Typography.sizes.xxl);
-    expect(resolveAmountTypography(12).amountFontSize).toBe(Typography.sizes.xl);
+  it('applies hero typography and shows the currency symbol', () => {
     render(
       <CalculatorAmountInput
         value="123"

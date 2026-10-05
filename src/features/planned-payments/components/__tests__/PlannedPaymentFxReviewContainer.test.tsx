@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
-import { PlannedPaymentFxReviewSheet } from './PlannedPaymentFxReviewContainer';
+import { PlannedPaymentFxReviewSheet } from '@/src/components/overlays/PlannedPaymentFxReviewContainer';
 import type { PlannedPaymentFxReviewRequest } from '@/src/services/planned-payment/plannedPaymentFx';
 import { asAccountId, asPlannedPaymentId, asWorkplaceId } from '@/src/types/ids';
 jest.mock('react-native/Libraries/Components/Keyboard/KeyboardAvoidingView', () => ({
