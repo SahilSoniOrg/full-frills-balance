@@ -3,17 +3,14 @@ import {
   ScreenHeaderActions,
   type ScreenHeaderActionItem,
 } from '@/src/components/shared/ScreenHeaderActions';
-import type { Theme } from '@/src/constants/design-tokens';
 import { Typography } from '@/src/constants';
 import type { ComponentProps } from 'react';
-import { Icon } from '@/src/types/domainIcons';
 
 type PrivacyToggleProps = ComponentProps<typeof PrivacyToggleButton>;
 
 export type MoneyDetailHeaderActionsProps = {
   actions: ScreenHeaderActionItem[];
   privacyVariant?: PrivacyToggleProps['variant'];
-  privacySize?: PrivacyToggleProps['size'];
 };
 
 /**
@@ -23,35 +20,11 @@ export type MoneyDetailHeaderActionsProps = {
 export function MoneyDetailHeaderActions({
   actions,
   privacyVariant = 'clear',
-  privacySize = Typography.sizes.xl,
 }: MoneyDetailHeaderActionsProps) {
   return (
     <ScreenHeaderActions
       actions={actions}
-      trailing={<PrivacyToggleButton variant={privacyVariant} size={privacySize} />}
+      trailing={<PrivacyToggleButton variant={privacyVariant} size={Typography.sizes.xl} />}
     />
   );
-}
-
-export function moneyDetailEditDeleteActions(
-  onEdit: () => void,
-  onDelete: () => void,
-  theme: Theme,
-): ScreenHeaderActionItem[] {
-  return [
-    {
-      name: Icon.Edit,
-      onPress: onEdit,
-      iconColor: theme.text,
-      size: Typography.sizes.xl,
-      testID: 'edit-button',
-    },
-    {
-      name: Icon.Delete,
-      onPress: onDelete,
-      iconColor: theme.error,
-      size: Typography.sizes.xl,
-      testID: 'delete-button',
-    },
-  ];
 }
