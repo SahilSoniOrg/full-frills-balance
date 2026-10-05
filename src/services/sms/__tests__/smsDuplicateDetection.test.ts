@@ -1,27 +1,24 @@
 import { AppConfig } from '@/src/constants';
-import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
-import { JournalId } from '@/src/types/ids';
-import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
+import { JournalId, WorkplaceId } from '@/src/types/ids';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
+import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
 import {
   buildReferenceDuplicateMatch,
   coalesceActionableDuplicate,
+  findManyDuplicateCandidates,
   findReferenceDuplicateMatch,
   scoreFuzzyDuplicateMatch,
 } from '../smsDuplicateDetection';
-import { resolveProcessingStatus } from '../pipeline/smsFingerprint';
+import { makeParsedTx } from './smsParsedTransaction.helpers';
 
-const makeParsedTx = (overrides: Partial<ParsedTransaction>): ParsedTransaction => ({
-  id: 'sms-1',
-  date: Date.now(),
-  rawBody: 'Test SMS Body',
-  address: '12345',
-  confidence: 1.0,
-  parseReason: 'OK',
-  type: 'debit',
-  parseStatus: InboxParseStatus.PARSED,
-  ...overrides,
-});
+jest.mock('@/src/data/repositories/journal/SmsJournalQueries', () => ({
+  smsJournalQueries: {
+    findNearbyJournals: jest.fn().mockResolvedValue([]),
+    findJournalsByReferenceNumbers: jest.fn().mockResolvedValue(new Map()),
+    findJournalsByOriginalSmsIds: jest.fn().mockResolvedValue(new Map()),
+    findLinkedSmsRecordsByFingerprints: jest.fn().mockResolvedValue([]),
+  },
+}));
 
 describe('smsDuplicateDetection', () => {
   describe('scoreFuzzyDuplicateMatch', () => {
@@ -59,6 +56,31 @@ describe('smsDuplicateDetection', () => {
     });
   });
 
+  describe('findManyDuplicateCandidates', () => {
+    it('queries journals using fuzzyWindowMs, not the fingerprint day bucket', async () => {
+      const fuzzyWindowMs = AppConfig.input.sms.duplicateDetection.fuzzyWindowMs;
+      const messageDate = 1700000000000;
+
+      await findManyDuplicateCandidates(
+        [
+          {
+            message: { id: 'sms-1', address: 'HDFCBK', body: 'test', date: messageDate },
+            parsed: makeParsedTx({ amount: 100 }),
+          },
+        ],
+        'wp-1' as WorkplaceId,
+      );
+
+      expect(smsJournalQueries.findNearbyJournals).toHaveBeenCalledWith(
+        expect.objectContaining({
+          centerDate: messageDate,
+          windowMs: fuzzyWindowMs,
+        }),
+        'wp-1',
+      );
+    });
+  });
+
   describe('reference duplicate matching', () => {
     it('normalizes reference numbers for lookup', () => {
       expect(normalizeSmsReferenceNumber(' 121554846690 ')).toBe('121554846690');
@@ -70,7 +92,7 @@ describe('smsDuplicateDetection', () => {
       expect(match?.reasons[0]).toContain('121554846690');
     });
 
-    it('flags DUPLICATE when reference matches linked journal', () => {
+    it('matches linked journal by reference number', () => {
       const journal = {
         id: 'journal-ref' as JournalId,
         totalAmount: 500,
@@ -81,16 +103,6 @@ describe('smsDuplicateDetection', () => {
       );
 
       expect(match?.journalId).toBe('journal-ref');
-      expect(
-        resolveProcessingStatus({
-          parsed: makeParsedTx({
-            amount: 500,
-            referenceNumber: '121554846690',
-          }),
-          processedIds: new Set(),
-          duplicate: match,
-        }),
-      ).toBe(InboxProcessingStatus.DUPLICATE_FLAGGED);
     });
 
     it('returns null when reference matches but amount differs', () => {

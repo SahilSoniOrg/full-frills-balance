@@ -27,61 +27,21 @@ import {
   SMS_TEST_WORKPLACE_B,
 } from '@/src/testing/smsTestHarness';
 
-jest.mock('@/src/utils/storage', () => {
-  const store = new Map<string, string>();
-  return {
-    storage: {
-      getString: (key: string) => store.get(key),
-      set: (key: string, value: string) => {
-        store.set(key, value);
-      },
-      remove: (key: string) => {
-        store.delete(key);
-      },
-      getBoolean: jest.fn(),
-      getNumber: jest.fn(),
-      contains: jest.fn((key: string) => store.has(key)),
-      getAllKeys: jest.fn(() => Array.from(store.keys())),
-      clearAll: jest.fn(() => store.clear()),
-    },
-    migrateFromAsyncStorage: jest.fn().mockResolvedValue(false),
-  };
-});
+jest.mock('@/src/utils/storage', () =>
+  require('@/src/testing/smsIntegrationMocks').createSmsIntegrationStorageMock(),
+);
 
-jest.mock('@/modules/expo-sms-inbox', () => ({
-  __esModule: true,
-  default: {
-    getSmsInbox: jest.fn(),
-  },
-}));
+jest.mock('@/modules/expo-sms-inbox', () =>
+  require('@/src/testing/smsIntegrationMocks').createSmsIntegrationExpoInboxMock(),
+);
 
-jest.mock('react-native/Libraries/Utilities/Platform', () => ({
-  __esModule: true,
-  default: {
-    OS: 'android',
-    Version: '30',
-    select: jest.fn((obj: Record<string, unknown>) => obj.android || obj.default),
-    constants: {
-      getConstants: () => ({
-        isTesting: true,
-        osVersion: '30',
-        systemName: 'Android',
-      }),
-    },
-    isPad: false,
-    isTVOS: false,
-  },
-}));
+jest.mock('react-native/Libraries/Utilities/Platform', () =>
+  require('@/src/testing/smsIntegrationMocks').createSmsIntegrationPlatformMock(),
+);
 
-jest.mock('react-native/Libraries/PermissionsAndroid/PermissionsAndroid', () => ({
-  __esModule: true,
-  default: {
-    check: jest.fn().mockResolvedValue(true),
-    request: jest.fn().mockResolvedValue('granted'),
-    RESULTS: { GRANTED: 'granted' },
-    PERMISSIONS: { READ_SMS: 'android.permission.READ_SMS' },
-  },
-}));
+jest.mock('react-native/Libraries/PermissionsAndroid/PermissionsAndroid', () =>
+  require('@/src/testing/smsIntegrationMocks').createSmsIntegrationPermissionsAndroidMock(),
+);
 
 jest.mock('@/src/services/analytics');
 

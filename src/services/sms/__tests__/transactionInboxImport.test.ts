@@ -23,39 +23,46 @@ const account = (id: string, name: string, description?: string) =>
   ({ id, name, description, accountType: 'ASSET', currencyCode: 'INR' }) as Account;
 
 describe('buildTransactionInboxImportNavigation', () => {
-  it('preserves captured currency and treats a mapped expense category as an expense', () => {
-    const navigation = buildTransactionInboxImportNavigation(
-      { ...item, parsedCurrencyCode: 'INR' },
-      [
+  it.each([
+    {
+      label: 'mapped expense category',
+      inbox: { ...item, parsedCurrencyCode: 'INR' as const },
+      accounts: [
         account('bank-1', 'Card 1990'),
         { ...account('food', 'Coffee Shop'), accountType: 'EXPENSE' } as Account,
       ],
-      { sourceAccountId: 'bank-1', categoryAccountId: 'food' } as TransactionAutoPostRule,
-    );
-    expect(navigation.params).toMatchObject({
-      type: 'expense',
-      currencyCode: 'INR',
-      amount: '250',
-      sourceAccountId: 'bank-1',
-      destinationAccountId: 'food',
-    });
-  });
-
-  it('treats a mapped income category as income', () => {
-    const navigation = buildTransactionInboxImportNavigation(
-      { ...item, direction: 'credit' },
-      [
+      rule: { sourceAccountId: 'bank-1', categoryAccountId: 'food' } as TransactionAutoPostRule,
+      expected: {
+        type: 'expense',
+        currencyCode: 'INR',
+        amount: '250',
+        sourceAccountId: 'bank-1',
+        destinationAccountId: 'food',
+      },
+    },
+    {
+      label: 'mapped income category',
+      inbox: { ...item, direction: 'credit' as const },
+      accounts: [
         account('bank-1', 'Card 1990'),
         { ...account('salary', 'Salary'), accountType: 'INCOME' } as Account,
       ],
-      { sourceAccountId: 'bank-1', categoryAccountId: 'salary' } as TransactionAutoPostRule,
-    );
-    expect(navigation.params).toMatchObject({
-      type: 'income',
-      sourceAccountId: 'salary',
-      destinationAccountId: 'bank-1',
-    });
-  });
+      rule: { sourceAccountId: 'bank-1', categoryAccountId: 'salary' } as TransactionAutoPostRule,
+      expected: {
+        type: 'income',
+        sourceAccountId: 'salary',
+        destinationAccountId: 'bank-1',
+      },
+    },
+  ])(
+    'preserves currency and treats a $label as the journal type',
+    ({ inbox, accounts, rule, expected }) => {
+      expect(buildTransactionInboxImportNavigation(inbox, accounts, rule).params).toMatchObject(
+        expected,
+      );
+    },
+  );
+
   it('uses rule mappings and expands description placeholders', () => {
     const navigation = buildTransactionInboxImportNavigation(
       item,
@@ -82,34 +89,38 @@ describe('buildTransactionInboxImportNavigation', () => {
     expect(JSON.stringify(navigation)).not.toContain(item.rawBody);
   });
 
-  it('falls back to account heuristics and preserves income direction', () => {
-    const navigation = buildTransactionInboxImportNavigation(
-      { ...item, direction: 'credit', parsedAccountSource: 'Salary', parsedMerchant: 'Acme' },
-      [account('salary', 'Salary', 'Salary account')],
-      null,
-    );
-
-    expect(navigation.params.type).toBe('income');
-    expect(navigation.params.description).toBe('Acme');
-    expect(navigation.params.destinationAccountId).toBe('salary');
-    expect(navigation.params.notes).toBe('');
-  });
-
-  it('leaves notes empty on SMS import', () => {
-    const navigation = buildTransactionInboxImportNavigation(item, [], null);
-
-    expect(navigation.params.description).toBe('Coffee Shop');
-    expect(navigation.params.notes).toBe('');
-  });
-
-  it('does not copy an unparsed SMS sender into the automatic description fallback', () => {
-    const navigation = buildTransactionInboxImportNavigation(
-      { ...item, parsedMerchant: undefined, senderAddress: 'PrivateBankSender' },
-      [],
-      null,
-    );
-    expect(navigation.params.description).toBe('Expense via SMS');
-    expect(navigation.params.notes).toBe('');
+  it.each([
+    {
+      label: 'heuristic income direction',
+      inbox: {
+        ...item,
+        direction: 'credit' as const,
+        parsedAccountSource: 'Salary',
+        parsedMerchant: 'Acme',
+      },
+      accounts: [account('salary', 'Salary', 'Salary account')],
+      expected: {
+        type: 'income',
+        description: 'Acme',
+        destinationAccountId: 'salary',
+        notes: '',
+      },
+    },
+    {
+      label: 'empty notes on SMS import',
+      inbox: item,
+      accounts: [] as Account[],
+      expected: { description: 'Coffee Shop', notes: '' },
+    },
+    {
+      label: 'automatic description fallback without merchant',
+      inbox: { ...item, parsedMerchant: undefined, senderAddress: 'PrivateBankSender' },
+      accounts: [] as Account[],
+      expected: { description: 'Expense via SMS', notes: '' },
+    },
+  ])('falls back for $label', ({ inbox, accounts, expected }) => {
+    const navigation = buildTransactionInboxImportNavigation(inbox, accounts, null);
+    expect(navigation.params).toMatchObject(expected);
   });
 
   it('passes mode option when provided', () => {
@@ -149,7 +160,6 @@ describe('buildTransactionInboxImportNavigation', () => {
 
     const navigation = buildTransactionInboxImportNavigation(expenseItem, accounts, null);
 
-    // Counterparty must NOT be the income account 'inc-interest'
     expect(navigation.params.destinationAccountId).not.toBe('inc-interest');
     expect(navigation.params.type).toBe('expense');
   });

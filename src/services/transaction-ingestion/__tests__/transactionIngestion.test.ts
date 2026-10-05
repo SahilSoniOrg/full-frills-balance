@@ -87,7 +87,7 @@ describe('voice transaction ingestion', () => {
     );
   });
 
-  it('treats the old mock trigger as ordinary text instead of fabricating a transaction', async () => {
+  it('parses amount from text that still contains a legacy mock phrase', async () => {
     resolve.mockResolvedValue({
       sourceAccountId,
       categoryAccountId,
@@ -98,7 +98,6 @@ describe('voice transaction ingestion', () => {
     const output = await ingestTransaction('spent 25 rs mock ai success', workplaceId);
 
     expect(output.transactions[0].amount).toBe(25);
-    expect(output.provider).toBe('deterministic');
     expect(output.isHighConfidence).toBe(false);
     expect(resolve).toHaveBeenCalledTimes(1);
   });

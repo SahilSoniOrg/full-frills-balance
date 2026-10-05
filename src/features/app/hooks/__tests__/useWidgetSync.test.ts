@@ -6,7 +6,7 @@ import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useObservable } from '@/src/hooks/useObservable';
-import { WorkplaceId } from '@/src/types/ids';
+import { asWorkplaceId, WorkplaceId } from '@/src/types/ids';
 import { act, renderHook } from '@testing-library/react-native';
 import expoWidgetsModule from '@/modules/expo-widgets';
 
@@ -20,13 +20,23 @@ jest.mock('@/src/hooks/usePrivacyPrefs', () => ({ usePrivacyPrefs: jest.fn() }))
 jest.mock('@/src/hooks/useThemePrefs', () => ({ useThemePrefs: jest.fn() }));
 jest.mock('@/src/hooks/use-theme', () => ({ useTheme: jest.fn() }));
 jest.mock('@/src/hooks/useObservable', () => ({ useObservable: jest.fn() }));
-jest.mock('@/src/services/widgets/nativeWidgetAdapter', () => ({
-  loadNativeWidgetAdapter: jest.fn(),
-}));
+jest.mock('@/src/services/widgets/nativeWidgetAdapter', () =>
+  require('@/src/testing/mockNativeWidgets').nativeWidgetAdapterModuleMock(),
+);
 jest.mock('@/modules/expo-widgets', () => ({
   __esModule: true,
   default: { syncWidgetData: jest.fn() },
 }));
+jest.mock('react-native/Libraries/Utilities/Platform', () => ({
+  __esModule: true,
+  default: {
+    OS: 'android',
+    Version: '30',
+    select: (items: Record<string, unknown>) => items.android ?? items.default,
+  },
+}));
+
+const mockSyncWidgetData = expoWidgetsModule.syncWidgetData as jest.Mock;
 
 describe('useWidgetSync generation ordering', () => {
   beforeEach(() => {
@@ -108,10 +118,8 @@ describe('useWidgetSync generation ordering', () => {
       await Promise.resolve();
     });
 
-    expect(expoWidgetsModule.syncWidgetData).toHaveBeenCalledTimes(1);
-    expect(
-      (expoWidgetsModule.syncWidgetData as jest.Mock).mock.calls[0][0].safeToSpend,
-    ).toMatchObject({
+    expect(mockSyncWidgetData).toHaveBeenCalledTimes(1);
+    expect(mockSyncWidgetData.mock.calls[0][0].safeToSpend).toMatchObject({
       amount: 200,
       currencyCode: 'EUR',
       updatedAt: 1_759_200_000_100,
@@ -139,8 +147,70 @@ describe('useWidgetSync generation ordering', () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    expect(
-      (expoWidgetsModule.syncWidgetData as jest.Mock).mock.calls.at(-1)?.[0].safeToSpend,
-    ).toBeUndefined();
+    expect(mockSyncWidgetData.mock.calls.at(-1)?.[0].safeToSpend).toBeUndefined();
   });
+});
+
+describe('useWidgetSync availability', () => {
+  const readyHeadline = {
+    quality: 'ready' as const,
+    workplaceId: asWorkplaceId('widget-test'),
+    asOf: 1_759_200_000_000,
+    generatedAt: 1_759_200_000_100,
+    horizonDays: 60,
+    currencyCode: 'USD',
+    safeToSpend: 250,
+    shortfall: 0,
+    trajectoryMinBalance: 250,
+    firstMajorInflowDay: null,
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    (useAppLock as jest.Mock).mockReturnValue({ isAppCurrentlyLocked: false });
+    (useAppReady as jest.Mock).mockReturnValue({ isAppReady: true });
+    (usePrivacyPrefs as jest.Mock).mockReturnValue({ isWidgetPrivacyEnabled: false });
+    (useThemePrefs as jest.Mock).mockReturnValue({ themeId: 'test-theme' });
+    (useTheme as jest.Mock).mockReturnValue({
+      themeMode: 'dark',
+      theme: {
+        surface: '#111111',
+        primary: '#eeeeee',
+        primaryLight: '#cccccc',
+        pure: '#ffffff',
+        text: '#ffffff',
+        textSecondary: '#bbbbbb',
+        income: '#00ff00',
+        expense: '#ff0000',
+        transfer: '#0000ff',
+      },
+    });
+    (loadNativeWidgetAdapter as jest.Mock).mockResolvedValue(expoWidgetsModule);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it.each(['unavailable', 'stale'] as const)(
+    'clears the widget value when a projection becomes %s',
+    async quality => {
+      (useObservable as jest.Mock).mockImplementation(() => ({ data: readyHeadline }));
+      const { rerender } = renderHook(() => useWidgetSync(asWorkplaceId('widget-test'), 'USD'));
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(600);
+      });
+      expect(mockSyncWidgetData.mock.calls.at(-1)?.[0].safeToSpend.amount).toBe(250);
+
+      (useObservable as jest.Mock).mockImplementation(() => ({
+        data: { ...readyHeadline, quality, safeToSpend: 0, trajectoryMinBalance: 0 },
+      }));
+      rerender({});
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(600);
+      });
+      expect(mockSyncWidgetData.mock.calls.at(-1)?.[0].safeToSpend).toBeUndefined();
+    },
+  );
 });

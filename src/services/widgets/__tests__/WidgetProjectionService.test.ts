@@ -2,20 +2,18 @@ import { WidgetProjectionService } from '../WidgetProjectionService';
 import { loadNativeWidgetAdapter } from '../nativeWidgetAdapter';
 import { logger } from '@/src/utils/logger';
 import { storage } from '@/src/utils/storage';
+import { createNativeWidgetsStub } from '@/src/testing/mockNativeWidgets';
 
 async function flushUntilStarted(started: () => boolean): Promise<void> {
   for (let attempt = 0; attempt < 20 && !started(); attempt += 1) await Promise.resolve();
   if (!started()) throw new Error('Expected native widget operation to start');
 }
 
-const nativeWidgets = {
-  syncWidgetData: jest.fn<Promise<void>, [unknown]>(),
-  clearWidgetData: jest.fn<Promise<void>, []>(),
-};
+const nativeWidgets = createNativeWidgetsStub();
 
-jest.mock('../nativeWidgetAdapter', () => ({
-  loadNativeWidgetAdapter: jest.fn(),
-}));
+jest.mock('../nativeWidgetAdapter', () =>
+  require('@/src/testing/mockNativeWidgets').nativeWidgetAdapterModuleMock(),
+);
 jest.mock('@/src/utils/logger', () => ({
   logger: { warn: jest.fn() },
 }));
@@ -87,22 +85,35 @@ describe('WidgetProjectionService', () => {
     expect(nativeWidgets.clearWidgetData).not.toHaveBeenCalled();
   });
 
-  it('retries a scoped pending cleanup without clearing a newer owner', async () => {
-    (storage.getAllKeys as jest.Mock).mockReturnValue(['widget_cleanup_owner_pending_v1_wp-a']);
-    (storage.getString as jest.Mock).mockImplementation((key: string) =>
-      key === 'widget_native_owner_v1' ? 'wp-b' : undefined,
-    );
-    service = new WidgetProjectionService();
-    await service.recoverPendingCleanup();
-    expect(nativeWidgets.clearWidgetData).not.toHaveBeenCalled();
-    expect(storage.remove).toHaveBeenCalledWith('widget_cleanup_owner_pending_v1_wp-a');
-  });
-
-  it('recovers a pending factory-reset clear without a workplace publication', async () => {
-    (storage.getBoolean as jest.Mock).mockReturnValue(true);
-    service = new WidgetProjectionService();
-    await service.recoverPendingCleanup();
-    expect(nativeWidgets.clearWidgetData).toHaveBeenCalledTimes(1);
+  it.each([
+    {
+      label: 'scoped owner cleanup',
+      setup: () => {
+        (storage.getAllKeys as jest.Mock).mockReturnValue(['widget_cleanup_owner_pending_v1_wp-a']);
+        (storage.getString as jest.Mock).mockImplementation((key: string) =>
+          key === 'widget_native_owner_v1' ? 'wp-b' : undefined,
+        );
+      },
+      assert: async (service: WidgetProjectionService) => {
+        await service.recoverPendingCleanup();
+        expect(nativeWidgets.clearWidgetData).not.toHaveBeenCalled();
+        expect(storage.remove).toHaveBeenCalledWith('widget_cleanup_owner_pending_v1_wp-a');
+      },
+    },
+    {
+      label: 'factory-reset marker',
+      setup: () => {
+        (storage.getBoolean as jest.Mock).mockReturnValue(true);
+      },
+      assert: async (service: WidgetProjectionService) => {
+        await service.recoverPendingCleanup();
+        expect(nativeWidgets.clearWidgetData).toHaveBeenCalledTimes(1);
+      },
+    },
+  ])('recovers pending cleanup for $label', async ({ setup, assert }) => {
+    setup();
+    const service = new WidgetProjectionService();
+    await assert(service);
   });
 
   it('falls back to an empty snapshot when the installed native bridge lacks clear support', async () => {

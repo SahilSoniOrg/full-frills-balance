@@ -1,0 +1,326 @@
+import { deviceSmsInboxRepository } from '@/src/data/repositories/DeviceSmsInboxRepository';
+import { database } from '@/src/data/database/Database';
+import ExpoSmsInbox from '@/modules/expo-sms-inbox';
+import { AppConfig } from '@/src/constants';
+import { smsSyncPipeline } from '@/src/services/sms/pipeline/smsSyncPipeline';
+import { InboxProcessingStatus, JournalStatus } from '@/src/types/enums';
+import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
+import {
+  stageModelWrite,
+  type AccountingWriteSession,
+} from '@/src/data/repositories/AccountingWriteSession';
+import type Journal from '@/src/data/models/Journal';
+import type { JournalPersistenceResult } from '@/src/data/repositories/journal/JournalPersistenceRepository';
+import type { Model } from '@nozbe/watermelondb';
+
+jest.mock('react-native/Libraries/Utilities/Platform', () => ({
+  __esModule: true,
+  default: {
+    OS: 'android',
+    Version: '30',
+    select: jest.fn(obj => obj.android || obj.default),
+    constants: {
+      getConstants: () => ({
+        isTesting: true,
+        osVersion: '30',
+        systemName: 'Android',
+      }),
+    },
+    isPad: false,
+    isTVOS: false,
+  },
+}));
+
+jest.mock('react-native/Libraries/PermissionsAndroid/PermissionsAndroid', () => ({
+  __esModule: true,
+  default: {
+    check: jest.fn().mockResolvedValue(true),
+    request: jest.fn().mockResolvedValue('granted'),
+    RESULTS: {
+      GRANTED: 'granted',
+    },
+    PERMISSIONS: {
+      READ_SMS: 'android.permission.READ_SMS',
+    },
+  },
+}));
+
+jest.mock('@/modules/expo-sms-inbox', () => ({
+  __esModule: true,
+  default: {
+    getSmsInbox: jest.fn(),
+  },
+}));
+
+jest.mock('@/src/data/repositories/DeviceSmsInboxRepository', () => ({
+  deviceSmsInboxRepository: {
+    findBySourceIds: jest.fn().mockResolvedValue([]),
+    findMatch: jest.fn().mockResolvedValue(null),
+    stageUpsert: jest.fn(),
+  },
+}));
+
+jest.mock('@/src/data/database/Database', () => ({
+  database: {
+    write: jest.fn(fn => fn()),
+    batch: jest.fn(),
+    collections: {
+      get: jest.fn(),
+    },
+  },
+}));
+
+jest.mock('@/src/data/repositories/account', () => ({
+  ...jest.requireActual('@/src/data/repositories/account'),
+  accountQueryRepository: {
+    find: jest.fn().mockImplementation(async (_workplaceId: string, id: string) => ({
+      id,
+      name: `Account ${id}`,
+    })),
+  },
+}));
+
+jest.mock('@/src/services/analytics');
+jest.mock('@/src/services/RebuildQueueService');
+jest.mock('@/src/services/WorkplaceService', () => ({
+  workplaceService: {
+    getCurrency: jest.fn().mockResolvedValue('INR'),
+  },
+}));
+// SmsSyncPipeline reads journal lookups from the SMS-dedup intent module, not via
+// the JournalRepository facade.
+jest.mock('@/src/data/repositories/journal/SmsJournalQueries', () => ({
+  smsJournalQueries: {
+    findJournalsByOriginalSmsIds: jest.fn().mockResolvedValue(new Map()),
+    findLinkedSmsRecordsByFingerprints: jest.fn().mockResolvedValue([]),
+    findJournalsByReferenceNumbers: jest.fn().mockResolvedValue(new Map()),
+    findNearbyJournals: jest.fn().mockResolvedValue([]),
+  },
+}));
+jest.mock('@/src/utils/logger');
+jest.mock('@/src/services/sms/SmsPrivacyService', () => ({
+  smsPrivacyService: { cleanupLegacyContent: jest.fn().mockResolvedValue(undefined) },
+}));
+
+function createMockAuditCollection() {
+  return {
+    prepareCreate: jest.fn(fn => {
+      const record = {};
+      fn(record);
+      return record;
+    }),
+  };
+}
+
+describe('SmsService Batching', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.mocked(deviceSmsInboxRepository.stageUpsert).mockImplementation(async (session, data) => {
+      stageModelWrite(session, [{ id: data.deviceInboxId } as Model]);
+      return {
+        id: data.deviceInboxId!,
+        deviceSourceId: data.deviceSourceId,
+        inputDate: data.inputDate,
+      };
+    });
+    (ExpoSmsInbox!.getSmsInbox as jest.Mock).mockResolvedValue([]);
+  });
+
+  it('collects all operations and calls batch exactly once per chunk within a single write', async () => {
+    const workplaceId = 'wp-1' as any;
+
+    // Mock messages
+    const messages = [
+      { id: '1', address: 'BANK', body: 'Spent 100', date: Date.now() },
+      { id: '2', address: 'BANK', body: 'Spent 200', date: Date.now() },
+    ];
+    (ExpoSmsInbox!.getSmsInbox as jest.Mock).mockResolvedValue(messages);
+
+    // Mock collections
+    const mockInboxCollection = {
+      query: jest.fn().mockReturnValue({
+        fetch: jest.fn().mockResolvedValue([]),
+      }),
+      prepareCreate: jest.fn(fn => {
+        const obj = { workplaceId: '', deviceSmsId: '' };
+        fn(obj);
+        return obj;
+      }),
+    };
+    const mockRulesCollection = {
+      query: jest.fn().mockReturnValue({
+        fetch: jest.fn().mockResolvedValue([]),
+      }),
+    };
+    const mockAuditCollection = createMockAuditCollection();
+
+    (database.collections.get as jest.Mock).mockImplementation(name => {
+      if (name === 'transaction_inbox_records') return mockInboxCollection;
+      if (name === 'transaction_auto_post_rules') return mockRulesCollection;
+      if (name === 'audit_logs') return mockAuditCollection;
+      return null;
+    });
+
+    await smsSyncPipeline.scanInbox(workplaceId, AppConfig.pagination.smsImportScanLimit);
+
+    // Verify database.write was called once
+    expect(database.write).toHaveBeenCalledTimes(1);
+
+    // Verify database.batch was called
+    expect(database.batch).toHaveBeenCalled();
+
+    // Check that batch was called with collected ops
+    const batchArgs = (database.batch as jest.Mock).mock.calls;
+    const totalBatchedOps = batchArgs.reduce((acc, call) => acc + call.length, 0);
+
+    // Pending SMS creates Device captures without Workplace copies or consumption audit events.
+    expect(totalBatchedOps).toBe(2);
+    expect(mockInboxCollection.prepareCreate).not.toHaveBeenCalled();
+    expect(mockAuditCollection.prepareCreate).not.toHaveBeenCalled();
+  });
+
+  it('includes ledger operations in the same batch when auto-post is triggered', async () => {
+    const workplaceId = 'wp-1' as any;
+
+    const messages = [{ id: '1', address: 'BANK', body: 'Spent 100', date: Date.now() }];
+    (ExpoSmsInbox!.getSmsInbox as jest.Mock).mockResolvedValue(messages);
+
+    const mockInboxCollection = {
+      query: jest.fn().mockReturnValue({
+        fetch: jest.fn().mockResolvedValue([]),
+      }),
+      prepareCreate: jest.fn(fn => {
+        const obj = { id: 'new-inbox-record', workplaceId: '', deviceSmsId: '1' };
+        fn(obj);
+        return obj;
+      }),
+    };
+
+    // Mock a rule that matches
+    const mockRulesCollection = {
+      query: jest.fn().mockReturnValue({
+        fetch: jest.fn().mockResolvedValue([
+          {
+            id: 'rule-1',
+            senderMatch: 'BANK',
+            isActive: true,
+            sourceAccountId: 'acc-1',
+            categoryAccountId: 'cat-1',
+            prepareUpdate: jest.fn(),
+          },
+        ]),
+      }),
+    };
+    const mockAuditCollection = createMockAuditCollection();
+
+    (database.collections.get as jest.Mock).mockImplementation(name => {
+      if (name === 'transaction_inbox_records') return mockInboxCollection;
+      if (name === 'transaction_auto_post_rules') return mockRulesCollection;
+      if (name === 'audit_logs') return mockAuditCollection;
+      return null;
+    });
+
+    const journalResult: JournalPersistenceResult = {
+      journal: { id: 'journal-1' } as Journal,
+      affectedAccountIds: new Set(),
+      rebuildFromDate: Date.now(),
+      status: JournalStatus.POSTED,
+    };
+    jest
+      .spyOn(journalPersistenceService, 'putInSession')
+      .mockImplementation(
+        async (session: AccountingWriteSession): Promise<JournalPersistenceResult> => {
+          stageModelWrite(session, [
+            { id: 'journal-op' } as Model,
+            { id: 'transaction-op' } as Model,
+          ]);
+          return journalResult;
+        },
+      );
+
+    // Remove the incorrect mock for journalRepository.getRuleDefinition
+    // since it's a private method of SmsService, not JournalRepository.
+
+    await smsSyncPipeline.scanInbox(workplaceId, AppConfig.pagination.smsImportScanLimit);
+
+    // Verify database.batch was called
+    expect(database.batch).toHaveBeenCalled();
+    const batchArgs = (database.batch as jest.Mock).mock.calls;
+    const totalBatchedOps = batchArgs.reduce((acc, call) => acc + call.length, 0);
+
+    // Inbox record + its audit entry + 2 ledger operations.
+    expect(totalBatchedOps).toBeGreaterThanOrEqual(4);
+    expect(journalPersistenceService.putInSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('rechecks the scoped inbox state inside the final write before auto-posting', async () => {
+    const workplaceId = 'wp-1' as any;
+    const messages = [{ id: '1', address: 'BANK', body: 'Spent 100', date: Date.now() }];
+    (ExpoSmsInbox!.getSmsInbox as jest.Mock).mockResolvedValue(messages);
+
+    type MockInboxRecord = {
+      id: string;
+      workplaceId: string;
+      deviceSourceId: string;
+      processingStatus: InboxProcessingStatus;
+      linkedJournalId: string;
+      firstSeenAt: number;
+      metadataJson: string;
+      prepareUpdate: jest.Mock<MockInboxRecord, [(record: MockInboxRecord) => void]>;
+    };
+    const existingRecord: MockInboxRecord = {
+      id: 'existing-inbox-record',
+      workplaceId,
+      deviceSourceId: '1',
+      processingStatus: InboxProcessingStatus.AUTO_POSTED,
+      linkedJournalId: 'journal-already-created',
+      firstSeenAt: Date.now() - 1_000,
+      metadataJson: '{}',
+      prepareUpdate: jest.fn((fn: (record: MockInboxRecord) => void): MockInboxRecord => {
+        fn(existingRecord);
+        return existingRecord;
+      }),
+    };
+    const initialFetch = jest.fn().mockResolvedValue([]);
+    const finalFetch = jest.fn().mockResolvedValue([existingRecord]);
+    const mockInboxCollection = {
+      query: jest
+        .fn()
+        .mockReturnValueOnce({ fetch: initialFetch })
+        .mockReturnValue({ fetch: finalFetch }),
+      prepareCreate: jest.fn(),
+    };
+    const mockRulesCollection = {
+      query: jest.fn().mockReturnValue({
+        fetch: jest.fn().mockResolvedValue([
+          {
+            id: 'rule-1',
+            senderMatch: 'BANK',
+            isActive: true,
+            sourceAccountId: 'acc-1',
+            categoryAccountId: 'cat-1',
+            prepareUpdate: jest.fn(),
+          },
+        ]),
+      }),
+    };
+    const mockAuditCollection = createMockAuditCollection();
+
+    (database.collections.get as jest.Mock).mockImplementation(name => {
+      if (name === 'transaction_inbox_records') return mockInboxCollection;
+      if (name === 'transaction_auto_post_rules') return mockRulesCollection;
+      if (name === 'audit_logs') return mockAuditCollection;
+      return null;
+    });
+
+    await smsSyncPipeline.scanInbox(workplaceId, AppConfig.pagination.smsImportScanLimit);
+
+    expect(database.write).toHaveBeenCalledTimes(1);
+    expect(finalFetch).toHaveBeenCalledTimes(2);
+    expect(journalPersistenceService.putInSession).not.toHaveBeenCalled();
+    expect(mockInboxCollection.prepareCreate).not.toHaveBeenCalled();
+    expect(existingRecord.prepareUpdate).toHaveBeenCalledTimes(1);
+    expect(existingRecord.processingStatus).toBe(InboxProcessingStatus.AUTO_POSTED);
+    expect(existingRecord.linkedJournalId).toBe('journal-already-created');
+  });
+});

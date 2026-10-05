@@ -49,7 +49,6 @@ jest.mock('@/src/utils/storage', () => ({
 
 jest.mock('@/src/services/notification/NotificationService', () => ({
   notificationService: {
-    checkPermissions: jest.fn().mockResolvedValue(true),
     requestPermissions: jest.fn().mockResolvedValue(false),
   },
 }));
@@ -83,7 +82,6 @@ describe('AutomaticSmsImportService', () => {
     bridge.requestAutomaticImportPermissions.mockResolvedValue('granted');
     pipeline.scanInbox.mockResolvedValue(0);
     pipeline.scanMessages.mockResolvedValue(0);
-    mockedNotificationService.checkPermissions.mockResolvedValue(true);
     mockedNotificationService.requestPermissions.mockResolvedValue(false);
   });
 
@@ -149,9 +147,7 @@ describe('AutomaticSmsImportService', () => {
     expect(pipeline.scanInbox).not.toHaveBeenCalled();
   });
 
-  it('does not prompt again at app startup for previously enabled SMS import', async () => {
-    mockedNotificationService.checkPermissions.mockResolvedValue(false);
-
+  it('does not request notification permission during app startup sync', async () => {
     await automaticSmsImportService.synchronizeOnAppStart();
 
     expect(mockedNotificationService.requestPermissions).not.toHaveBeenCalled();

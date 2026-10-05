@@ -35,29 +35,34 @@ const permission = (status: 'granted' | 'denied') =>
     expires: 'never',
   }) as Notifications.NotificationPermissionsStatus;
 
+const mockAndroidChannel = (
+  overrides: Partial<Notifications.NotificationChannel> = {},
+): Notifications.NotificationChannel => ({
+  id: SMS_REVIEW_CHANNEL,
+  name: 'SMS',
+  importance: 5,
+  bypassDnd: false,
+  description: null,
+  lightColor: '',
+  lockscreenVisibility: 2,
+  showBadge: false,
+  sound: null,
+  vibrationPattern: null,
+  enableLights: false,
+  enableVibrate: false,
+  audioAttributes: {
+    usage: 5,
+    contentType: 4,
+    flags: { enforceAudibility: false, requestHardwareAudioVideoSynchronization: false },
+  },
+  ...overrides,
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
   permissions.mockResolvedValue(permission('granted'));
   jest.mocked(Notifications.getAllScheduledNotificationsAsync).mockResolvedValue([]);
-  jest.mocked(Notifications.getNotificationChannelAsync).mockResolvedValue({
-    id: SMS_REVIEW_CHANNEL,
-    name: 'SMS',
-    importance: 5,
-    bypassDnd: false,
-    description: null,
-    lightColor: '',
-    lockscreenVisibility: 2,
-    showBadge: false,
-    sound: null,
-    vibrationPattern: null,
-    enableLights: false,
-    enableVibrate: false,
-    audioAttributes: {
-      usage: 5,
-      contentType: 4,
-      flags: { enforceAudibility: false, requestHardwareAudioVideoSynchronization: false },
-    },
-  });
+  jest.mocked(Notifications.getNotificationChannelAsync).mockResolvedValue(mockAndroidChannel());
 });
 
 it('keeps a newer reminder when an older permission check completes late', async () => {
