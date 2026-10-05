@@ -15,8 +15,6 @@ export const plannedPaymentFormStrings = {
   to: 'To',
   selectAccount: 'Choose an account',
   selectDestination: 'Choose where it goes',
-  searchAccounts: 'Search accounts',
-  noMatchingAccounts: 'No matching accounts',
   selected: 'Selected',
   swapAccounts: 'Swap From and To accounts',
   repeats: 'Repeats',

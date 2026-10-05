@@ -22,7 +22,6 @@ export const commitmentsRedesignStrings = {
   budgetsLoadError: 'We could not load budgets.',
   nothingSpent: 'nothing spent yet',
   unavailableCategory: 'Unavailable category',
-  noCategories: 'No categories',
   opensBudget: 'Opens budget details',
   left: (money: string) => `${money} left`,
   over: (money: string) => `${money} over`,

@@ -1,21 +1,15 @@
-/** UI copy catalog. Prefer adding new domains as `copy/domains/<name>Strings.ts` re-exported here when a section grows past ~200 lines. */
+/** UI copy catalog. Add large domains under `copy/domains/<name>Strings.ts` and import them at call sites. */
 import { commitmentsRedesignStrings } from './domains/commitmentsRedesignStrings';
-import { accountFormStrings } from './domains/accountFormStrings';
 import { budgetDetailRedesignStrings } from './domains/budgetDetailRedesignStrings';
-import { budgetFormStrings } from './domains/budgetFormStrings';
 import { plannedListRedesignStrings } from './domains/plannedListRedesignStrings';
 import { plannedDetailRedesignStrings } from './domains/plannedDetailRedesignStrings';
-import { plannedPaymentFormStrings } from './domains/plannedPaymentFormStrings';
 import type { AuditEntityType } from '@/src/types/enums';
 
 export const UI_STRINGS = {
   commitmentsRedesign: commitmentsRedesignStrings,
   budgetDetailRedesign: budgetDetailRedesignStrings,
-  accountForm: accountFormStrings,
-  budgetForm: budgetFormStrings,
   plannedListRedesign: plannedListRedesignStrings,
   plannedDetailRedesign: plannedDetailRedesignStrings,
-  plannedPaymentForm: plannedPaymentFormStrings,
   common: {
     loading: 'Loading…',
     loadingMore: 'Loading…',
@@ -396,7 +390,6 @@ export const UI_STRINGS = {
     fetchMissingRatesFailed: 'Could not fetch historical rates. Try again when you are online.',
   },
   settings: {
-    title: 'Settings',
     workplacePicker: {
       title: 'Choose a workplace',
       subtitle: 'Select which books to open.',
@@ -427,26 +420,18 @@ export const UI_STRINGS = {
       deleteConfirm: 'Delete workplace',
     },
     sections: {
-      personalization: 'Profile & Money Defaults',
       profile: 'Profile',
       documents: 'Documents',
       currentWorkplace: 'Current Workplace',
       devicesAndSessions: 'Devices & Sessions',
       forecasting: 'Forecasting',
       moneyDefaults: 'Money Defaults',
-      moneySetup: 'Money Setup',
-      experience: 'Experience',
-      protection: 'Protection',
-      ledgerData: 'Ledger Data',
-      app: 'App',
       privacyAndSecurity: 'Privacy & Security',
       aboutAndSupport: 'About & Support',
       maintenanceAndReset: 'Maintenance',
       displayOptions: 'Display Options',
       protectFinancialDetails: 'Protect Financial Details',
-      preferences: 'Preferences',
       communitySupport: 'Community',
-      general: 'General',
       appearance: 'Appearance',
       dataManagement: 'Data & Backup',
       maintenance: 'Maintenance',
@@ -495,8 +480,6 @@ export const UI_STRINGS = {
         label: 'Classic Serif',
         desc: 'Readable serif with versatile sans',
       },
-      customize: 'Customize',
-      preview: 'Aa',
     },
     accountPicker: {
       title: 'Compact account picker',
@@ -505,16 +488,10 @@ export const UI_STRINGS = {
     privacy: {
       title: 'Privacy Mode',
       description: 'Hide balances across the app',
-      on: 'On',
-      off: 'Off',
       widgetPrivacyTitle: 'Widget Privacy',
       widgetPrivacyDesc: 'Hide balances on home screen widgets',
       appLockTitle: 'App Lock',
       appLockDesc: 'Require biometric or passcode authentication to open the app',
-    },
-    advancedMode: {
-      title: 'Advanced Mode',
-      description: 'Use multi-line journal entries and choose every account directly.',
     },
     stats: {
       title: 'Account Stats',
@@ -581,10 +558,7 @@ export const UI_STRINGS = {
     version: (v: string) => `Full Frills Balance v${v}`,
     personalization: {
       yourName: 'Your Name',
-      yourNamePlaceholder: 'Enter your name',
       yourNameDesc: 'Used for personalized greetings',
-      themeTypographyTitle: 'Theme & Typography',
-      themeTypographyDesc: 'Colors, fonts, dark mode',
       smsAutoPostTitle: 'SMS Auto-Post',
       smsAutoPostDesc:
         'Rules that match transaction messages and decide whether to post, ignore, or review them.',
@@ -618,9 +592,6 @@ export const UI_STRINGS = {
     importTitle: 'Import',
     importIntro: 'Choose a backup format to replace the data on this device.',
     importNote: 'Restore creates a new Workplace. Existing Workplaces are not changed.',
-    newWorkplaceImportIntro:
-      'Create a new Workplace from this backup. Existing Workplaces will not be changed.',
-    newWorkplaceImportNote: 'The restored books will become a new Workplace.',
     selectFile: (name: string) => `Select ${name} File`,
     currency: {
       title: 'Default Currency',
@@ -632,7 +603,6 @@ export const UI_STRINGS = {
       description: 'Scheduled reminders to review recent activity',
       automationTitle: 'Notifications & Automation',
       automationDescription: 'Reminder schedules and SMS settings',
-      cadenceLabel: 'Cadence',
       none: 'None',
       daily: 'Daily',
       weekly: 'Weekly',
@@ -640,6 +610,22 @@ export const UI_STRINGS = {
       reminderBody: 'Add any recent spending to keep your Safe to Spend balance fresh.',
       testTitle: 'Test Reminder',
       testBody: 'This is a test notification from Full Frills Balance.',
+    },
+    smsAlerts: {
+      updateImportErrorTitle: 'Could not update SMS import',
+      updateImportErrorMessage: 'Try again after reopening the app.',
+      smsPermissionRequiredTitle: 'SMS permission required',
+      smsPermissionDeniedMessage:
+        'Automatic SMS import stays off until you allow SMS access. Messages are checked on this device while the feature is on.',
+      smsPermissionNeverAskMessage:
+        'To enable automatic SMS import, allow SMS access in Android Settings. Messages are checked on this device while the feature is on.',
+      openSettings: 'Open Settings',
+      cancel: 'Cancel',
+      notificationsBlockedTitle: 'Notifications are blocked',
+      notificationsBlockedMessage:
+        'Allow notifications and the SMS to review channel in system settings.',
+      updateAlertsErrorTitle: 'Could not update SMS alerts',
+      updateAlertsErrorMessage: 'Try again after reopening the app.',
     },
   },
   transactionFlow: {

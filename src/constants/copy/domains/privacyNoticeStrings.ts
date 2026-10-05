@@ -38,7 +38,6 @@ export const PRIVACY_NOTICE_STRINGS = {
   limitsTitle: 'What this app is not',
   limitsBody:
     'Safe to Spend is an estimate based on the entries you provide. Full Frills Balance is a record-keeping tool, not a bank, tax service, investment service, or financial adviser.',
-  contactTitle: 'Questions or requests',
   contactBody: 'For privacy questions or data requests, contact',
   contactEmail: 'sscsps@gmail.com',
   contactAction: 'Email privacy support',

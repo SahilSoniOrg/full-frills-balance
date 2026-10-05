@@ -8,8 +8,6 @@ export const plannedListRedesignStrings = {
   loadError: 'We could not load planned payments.',
   monthStripAccessibility: (month: string, count: number, largestDay?: string) =>
     `${month}: ${count} ${count === 1 ? 'payment' : 'payments'} remaining${largestDay ? `, largest remaining day ${largestDay}` : ''}`,
-  monthStripDay: (day: number, outgoing: number, incoming: number) =>
-    `Day ${day}: ${outgoing ? 'outgoing payment' : ''}${outgoing && incoming ? ' and ' : ''}${incoming ? 'incoming payment' : ''}`,
   today: 'Today',
   groupOverdue: 'Overdue',
   groupThisWeek: 'This week',
@@ -24,7 +22,6 @@ export const plannedListRedesignStrings = {
   recordAccessibility: (name: string, amount: string) => `Record ${name}, ${amount}`,
   recordBusy: 'Recording…',
   recordError: 'Could not record this occurrence. Try again.',
-  overdueSchedule: (date: string) => `Due ${date}`,
   paused: 'Paused',
   ended: 'Ended',
   expandPausedEnded: 'Show paused and ended schedules',

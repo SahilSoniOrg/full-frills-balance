@@ -61,10 +61,6 @@ export const accountFormStrings = {
   emiAmountPlaceholder: 'Enter EMI amount',
   note: 'Note',
   notePlaceholder: 'Add any additional notes...',
-  legacyNotes: 'Notes',
-  legacyAdditionalInfo: 'Additional Info',
-  categoryHierarchy: 'Hierarchy',
-  lockedCurrency: (code: string) => `${code} (Locked)`,
   day: (day: number) => {
     const lastTwo = day % 100;
     const suffix =

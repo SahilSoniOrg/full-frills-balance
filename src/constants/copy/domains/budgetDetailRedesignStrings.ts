@@ -28,7 +28,6 @@ export const budgetDetailRedesignStrings = {
   entries: (count: number) => `${count} ${count === 1 ? 'entry' : 'entries'}`,
   refundsAndReversals: 'Refunds and reversals',
   retryBreakdown: 'Retry breakdown',
-  breakdownUnavailable: 'Spending breakdown unavailable.',
   noCategorySpending: 'No category spending in this period.',
   incompleteCurrencyValuation: 'Incomplete currency valuation',
   partialCategoryAmounts: 'Some entries could not be converted. Category amounts are partial.',
@@ -37,18 +36,11 @@ export const budgetDetailRedesignStrings = {
   loadingAccounts: 'Loading accounts…',
   noFundingAccounts: 'Automatic account selection',
   selectedAccountsUnavailable: 'Selected accounts are unavailable',
-  noExpenseCategories: 'No expense categories selected',
   activity: 'Activity',
   allActivityCount: (count: number) => `All ${count}`,
   categoryActivityCount: (name: string, count: number) => `${name} · ${count} ×`,
   clearActivityFilter: 'Clear category activity filter',
-  recordedEntriesFor: (name: string) => `Recorded entries for ${name}`,
-  recordedEntriesInPeriod: 'Recorded entries in the selected period',
   previousPeriod: 'Previous period',
-  retryPreviousPeriod: 'Retry previous period',
-  previousPeriodUnavailable: 'Previous period spending is unavailable.',
-  previousPeriodIncomplete: 'Previous spending has incomplete currency valuation.',
-  spentOverFullPeriod: 'spent over the full period',
   chartAccessibilityLabel: (status: string, amount: string, elapsed: number) =>
     `${status}, ${amount}, ${elapsed}% of period elapsed`,
   status: {
@@ -66,8 +58,6 @@ export const budgetDetailRedesignStrings = {
   backToToday: 'Back to today',
   chartStartDate: (date: string) => date,
   chartEndDate: (limit: string, date: string) => `Limit ${limit} · ${date}`,
-  addExpense: '+ Expense',
-  addExpenseAccessibility: 'Add expense',
   missingFxEntries: (count: number, currencyCode: string) =>
     `${count} ${currencyCode} ${count === 1 ? 'entry' : 'entries'} without a rate · tap to fix`,
 } as const;
