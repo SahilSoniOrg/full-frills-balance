@@ -353,14 +353,6 @@ export function makeBuckets(
   return buckets;
 }
 
-export function bucketForDate(
-  buckets: readonly ReportBucket[],
-  timestamp: number,
-): ReportBucket | undefined {
-  const index = bucketIndexForDate(buckets, timestamp);
-  return index < 0 ? undefined : buckets[index];
-}
-
 export function bucketIndexForDate(buckets: readonly ReportBucket[], timestamp: number): number {
   let low = 0;
   let high = buckets.length - 1;
