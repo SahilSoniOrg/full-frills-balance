@@ -1,4 +1,4 @@
-import { AppButton, AppIcon, AppSurface, AppText } from '@/src/components/core';
+import { AppButton, AppIcon, AppText } from '@/src/components/core';
 import type { IconName } from '@/src/types/domainIcons';
 import { Icon } from '@/src/types/domainIcons';
 import { Size } from '@/src/constants';
@@ -8,23 +8,13 @@ import { useState, type ReactNode } from 'react';
 interface Props {
   title: string;
   icon: IconName;
-  summary?: ReactNode;
   children: ReactNode;
-  defaultExpanded?: boolean;
-  variant?: 'card' | 'plain';
 }
 
-/** Detail pages expose a short summary first, with labeled, accessible disclosure controls. */
-export function DetailDisclosure({
-  title,
-  icon,
-  summary,
-  children,
-  defaultExpanded = false,
-  variant = 'card',
-}: Props) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
-  const content = (
+/** Detail pages can reveal deeper content with a labeled, accessible disclosure control. */
+export function DetailDisclosure({ title, icon, children }: Props) {
+  const [expanded, setExpanded] = useState(false);
+  return (
     <Column gap={expanded ? 'md' : 'none'}>
       <Row align="center" gap="xs">
         <AppButton
@@ -41,14 +31,6 @@ export function DetailDisclosure({
               <AppText variant="body" weight="semibold">
                 {title}
               </AppText>
-              {summary != null &&
-                (typeof summary === 'string' ? (
-                  <AppText variant="caption" color="secondary" numberOfLines={2}>
-                    {summary}
-                  </AppText>
-                ) : (
-                  summary
-                ))}
             </Column>
             <AppIcon
               name={expanded ? Icon.ChevronUp : Icon.ChevronDown}
@@ -60,12 +42,5 @@ export function DetailDisclosure({
       </Row>
       {expanded && children}
     </Column>
-  );
-  return variant === 'plain' ? (
-    content
-  ) : (
-    <AppSurface elevation="sm" padding="md" radius="r2">
-      {content}
-    </AppSurface>
   );
 }

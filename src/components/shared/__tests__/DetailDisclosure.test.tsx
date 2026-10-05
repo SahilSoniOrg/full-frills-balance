@@ -6,12 +6,12 @@ describe('detail disclosures', () => {
   it('keeps deeper content hidden until expanded and reports its state to accessibility', () => {
     const onPress = jest.fn();
     const screen = render(
-      <DetailDisclosure title="History" icon={Icon.History} summary="25 recorded · 2 skipped">
+      <DetailDisclosure title="History" icon={Icon.History}>
         <AppText>Payment totals</AppText>
         <AppButton onPress={onPress}>Open last payment</AppButton>
       </DetailDisclosure>,
     );
-    expect(screen.getByText('25 recorded · 2 skipped')).toBeTruthy();
+    expect(screen.getByText('History')).toBeTruthy();
     expect(screen.queryByText('Payment totals')).toBeNull();
     expect(
       screen.getByRole('button', { name: 'Expand History' }).props.accessibilityState.expanded,

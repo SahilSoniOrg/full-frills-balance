@@ -38,7 +38,7 @@ export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionP
         onViewTransactions={onViewTransactions}
       />
 
-      <DetailDisclosure title="Income, expense & money flow" icon={Icon.BarChart} variant="plain">
+      <DetailDisclosure title="Income, expense & money flow" icon={Icon.BarChart}>
         <Column gap="xl">
           <IncomeExpenseBalanceWidget
             incomeBarFlex={incomeBarFlex}
@@ -57,4 +57,3 @@ export function ReportOverviewSection({ vm, chartWidth }: ReportOverviewSectionP
     </>
   );
 }
-
