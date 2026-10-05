@@ -64,7 +64,6 @@ export interface SelectionActionBarProps {
   onShare?: () => void;
   actions?: SelectionAction[];
   isVisible: boolean;
-  bottomOffset?: number;
 }
 
 /**
@@ -80,10 +79,8 @@ export const SelectionActionBar = ({
   onShare,
   actions,
   isVisible,
-  bottomOffset,
 }: SelectionActionBarProps) => {
   const { theme } = useTheme();
-  const bottom = bottomOffset ?? Spacing.md;
   const [isOverflowOpen, setIsOverflowOpen] = useState(false);
   const isBarActive = isVisible && selectedCount > 0;
   const isModalVisible = isOverflowOpen && isBarActive;
@@ -113,22 +110,12 @@ export const SelectionActionBar = ({
   );
 
   // --- Selection State Logic
-  const selectionState = useMemo(() => {
-    if (selectedCount === 0) return 'none';
-    if (selectedCount === totalCount && totalCount > 0) return 'all';
-    return 'partial';
-  }, [selectedCount, totalCount]);
-
-  const selectIcon = useMemo(() => {
-    switch (selectionState) {
-      case 'all':
-        return Icon.CheckSquare;
-      case 'partial':
-        return Icon.MinusSquare;
-      default:
-        return Icon.Square;
-    }
-  }, [selectionState]);
+  const allSelected = totalCount > 0 && selectedCount === totalCount;
+  const selectIcon = allSelected
+    ? Icon.CheckSquare
+    : selectedCount > 0
+      ? Icon.MinusSquare
+      : Icon.Square;
 
   const handleClear = () => {
     setIsOverflowOpen(false);
@@ -142,7 +129,7 @@ export const SelectionActionBar = ({
 
   const handleSelectToggle = () => {
     if (totalCount === 0) return;
-    if (selectionState === 'all') {
+    if (allSelected) {
       handleDeselectAll();
     } else {
       onSelectAll();
@@ -161,7 +148,7 @@ export const SelectionActionBar = ({
               type: 'timing',
               duration: 150,
             }}
-            style={[styles.wrapper, { bottom }]}
+            style={[styles.wrapper, { bottom: Spacing.md }]}
           >
             <View
               style={[
