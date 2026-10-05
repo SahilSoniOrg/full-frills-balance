@@ -1,5 +1,5 @@
 import { AccountCategoryPill } from '@/src/components/accounts/AccountCategoryPill';
-import { AccountPickerPill, type CreateAccountIntent } from './AccountPickerList';
+import type { CreateAccountIntent } from './AccountPickerList';
 import { getAccountIcon } from '@/src/utils/accountIcon';
 import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
@@ -9,12 +9,16 @@ import { useTheme } from '@/src/hooks/use-theme';
 import type { AccountRole } from '@/src/types/domainJournal';
 import { EMPTY_ACCOUNT_ID, type AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
-import { getSectionColor, resolveAccountAppearance } from '@/src/utils/accountCategory';
+import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { withOpacity } from '@/src/utils/color-math';
 import { MotiView } from 'moti';
 import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { Platform, type LayoutChangeEvent, View } from 'react-native';
-import { AccountPickerRecycledList } from './AccountPickerRecycledList';
+import {
+  AccountPickerPillGrid,
+  AccountPickerRecycledList,
+  AccountPickerSection,
+} from './AccountPickerRecycledList';
 import type { AccountPickerSections } from './accountPickerRows';
 import { accountPickerStyles as styles } from './AccountPickerPanel.styles';
 
@@ -299,77 +303,21 @@ export function AccountPickerDropdown({
         sections.map((section, index) => {
           const isSectionCollapsed = collapsedSections.has(section.key);
           return (
-            <View
+            <AccountPickerSection
               key={section.key}
-              style={[
-                styles.sectionBlock,
-                index > 0 && [
-                  styles.sectionDivider,
-                  { borderTopColor: withOpacity(theme.border, Opacity.active) },
-                ],
-              ]}
+              section={section}
+              index={index}
+              collapsed={isSectionCollapsed}
+              toggleSection={toggleSection}
             >
-              <PressScaleTouchable
-                onPress={() => toggleSection(section.key)}
-                style={styles.sectionTouchable}
-                surfaceStyle={styles.sectionToggle}
-                accessibilityRole="button"
-                accessibilityLabel={`${section.title}, ${section.data.length} accounts, ${isSectionCollapsed ? 'collapsed' : 'expanded'}`}
-              >
-                <View style={styles.sectionTitleRow}>
-                  <View
-                    style={[
-                      styles.sectionDot,
-                      { backgroundColor: getSectionColor(section.type ?? section.title, theme) },
-                    ]}
-                  />
-                  <AppText
-                    variant="caption"
-                    weight="bold"
-                    color="secondary"
-                    style={styles.sectionTitleText}
-                  >
-                    {section.title}
-                  </AppText>
-                  <View
-                    style={[
-                      styles.countBadge,
-                      { backgroundColor: withOpacity(theme.surfaceSecondary, Opacity.heavy) },
-                    ]}
-                  >
-                    <AppText
-                      variant="caption"
-                      weight="semibold"
-                      color="tertiary"
-                      style={styles.countText}
-                    >
-                      {section.data.length}
-                    </AppText>
-                  </View>
-                </View>
-                <AppIcon
-                  name={isSectionCollapsed ? Icon.ChevronDown : Icon.ChevronUp}
-                  size={Size.xxs}
-                  color={theme.textTertiary}
-                />
-              </PressScaleTouchable>
-
               {!isSectionCollapsed && (
-                <View style={styles.compactPillGrid}>
-                  {section.data.map(account => (
-                    <AccountPickerPill
-                      key={account.id}
-                      item={account}
-                      isSelected={
-                        Boolean(selectedAccountId && selectedAccountId !== EMPTY_ACCOUNT_ID) &&
-                        selectedAccountId === account.id
-                      }
-                      onSelectId={handleAccountPress}
-                    />
-                  ))}
-                </View>
+                <AccountPickerPillGrid
+                  accounts={section.data}
+                  selectedAccountId={selectedAccountId}
+                  onSelect={handleAccountPress}
+                />
               )}
-            </View>
+            </AccountPickerSection>
           );
         })
       )}
