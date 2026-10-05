@@ -3,20 +3,19 @@ import { WorkplaceId } from '@/src/types/ids';
 import { AppConfig } from '@/src/constants';
 
 import { accountObserveQueries } from '@/src/data/repositories/account';
-import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
-import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { transactionRawPatternQueries } from '@/src/data/repositories/raw/TransactionRawPatternQueries';
 import { transactionInsightQueries } from '@/src/data/repositories/transaction/TransactionInsightQueries';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { insightService as patternService } from '@/src/services/insight/InsightService';
 import type { Insight } from '@/src/services/insight/insightTypes';
-import {
-  reactiveCacheCoordinator,
-  REACTIVE_CACHE_NAMESPACES,
-} from '@/src/services/reactive/ReactiveCacheCoordinator';
 import { firstValueFrom, of } from 'rxjs';
 import { take } from 'rxjs/operators';
+import {
+  emergencyFundAssetAccounts,
+  resetInsightServiceTestState,
+} from './insightServiceTestSetup';
+
 jest.mock('@/src/data/repositories/raw/TransactionRawPatternQueries', () => ({
   transactionRawPatternQueries: { getRecurringPatternsRaw: jest.fn() },
 }));
@@ -24,7 +23,6 @@ jest.mock('@/src/data/repositories/transaction/TransactionInsightQueries', () =>
   transactionInsightQueries: { findActiveMetadata: jest.fn() },
 }));
 
-// Mock dependencies
 jest.mock('@/src/data/repositories/account');
 jest.mock('@/src/data/repositories/journal/JournalObserveQueries');
 jest.mock('@/src/data/repositories/journal/journalQueryRepository');
@@ -48,25 +46,7 @@ describe('PatternService', () => {
   });
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    reactiveCacheCoordinator.clearNamespaces([
-      REACTIVE_CACHE_NAMESPACES.workplaceAccounts,
-      REACTIVE_CACHE_NAMESPACES.workplaceJournalMeta,
-      REACTIVE_CACHE_NAMESPACES.workplaceActiveCount,
-    ]);
-    patternService.clearCache();
-
-    // Default simple mocks
-    (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of([]));
-    (journalQueryRepository.findByIds as jest.Mock).mockResolvedValue([]);
-    (plannedPaymentRepository.observeActive as jest.Mock).mockReturnValue(of([]));
-    (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
-    (transactionQueryRepository.findByJournals as jest.Mock).mockResolvedValue([]);
-    (journalObserveQueries.observeStatusMeta as jest.Mock).mockReturnValue(
-      of({ count: 1, lastUpdatedAt: new Date() }),
-    );
-    (transactionRawPatternQueries.getRecurringPatternsRaw as jest.Mock).mockResolvedValue([]);
-    (transactionInsightQueries.findActiveMetadata as jest.Mock).mockResolvedValue([]);
+    resetInsightServiceTestState();
   });
 
   describe('observePatterns', () => {
@@ -186,7 +166,7 @@ describe('PatternService', () => {
       ).toBe(false);
     });
 
-    it('should group slow leak expenses by subcategory instead of account id', done => {
+    it('should group slow leak expenses by subcategory instead of account id', async () => {
       const mockAccounts = [
         {
           id: 'acc1',
@@ -250,49 +230,58 @@ describe('PatternService', () => {
         mockTransactions,
       );
 
-      patternService
-        .observePatterns('test-wp' as WorkplaceId)
-        .pipe(take(1))
-        .subscribe((patterns: Insight[]) => {
-          expect(patterns).toContainEqual(
-            expect.objectContaining({
-              id: 'leak_test-wp_FOOD',
-              type: 'slow-leak',
-            }),
-          );
+      const patterns = await firstValueFrom(
+        patternService.observePatterns('test-wp' as WorkplaceId).pipe(take(1)),
+      );
 
-          const leakPattern = patterns.find((p: Insight) => p.id === 'leak_test-wp_FOOD');
-          expect(leakPattern?.journalIds).toContain('j3');
-          expect(leakPattern?.journalIds).toContain('j4');
-          done();
-        });
+      expect(patterns).toContainEqual(
+        expect.objectContaining({
+          id: 'leak_test-wp_FOOD',
+          type: 'slow-leak',
+        }),
+      );
+
+      const leakPattern = patterns.find((p: Insight) => p.id === 'leak_test-wp_FOOD');
+      expect(leakPattern?.journalIds).toContain('j3');
+      expect(leakPattern?.journalIds).toContain('j4');
     });
 
-    it('should detect No Emergency Fund pattern', done => {
-      const mockAccounts = [
-        { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.BANK_CHECKING },
-        { id: 'a2', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.RETIREMENT },
-        { id: 'a3', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.INVESTMENT },
-        { id: 'a4', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.INVESTMENT },
-      ];
-
+    it.each([
+      [
+        'detects',
+        emergencyFundAssetAccounts,
+        expect.objectContaining({
+          id: 'no_emergency_fund_test-wp',
+          type: 'lifestyle-drift',
+        }),
+      ],
+      [
+        'does not detect',
+        [
+          ...emergencyFundAssetAccounts,
+          {
+            id: 'a5',
+            accountType: AccountType.ASSET,
+            accountSubtype: AccountSubtype.EMERGENCY_FUND,
+          },
+        ],
+        undefined,
+      ],
+    ])('%s No Emergency Fund pattern', async (_label, mockAccounts, expected) => {
       (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));
 
-      patternService
-        .observePatterns('test-wp' as WorkplaceId)
-        .pipe(take(1))
-        .subscribe((patterns: Insight[]) => {
-          expect(patterns).toContainEqual(
-            expect.objectContaining({
-              id: 'no_emergency_fund_test-wp',
-              type: 'lifestyle-drift',
-            }),
-          );
-          done();
-        });
+      const patterns = await firstValueFrom(
+        patternService.observePatterns('test-wp' as WorkplaceId).pipe(take(1)),
+      );
+
+      if (expected) {
+        expect(patterns).toContainEqual(expected);
+      } else {
+        expect(patterns.find((p: Insight) => p.id === 'no_emergency_fund_test-wp')).toBeUndefined();
+      }
     });
 
-    it('should detect multiple subscriptions with same amount and account by grouping by description', done => {
+    it('should detect multiple subscriptions with same amount and account by grouping by description', async () => {
       const mockAccounts = [
         {
           id: 'acc1',
@@ -306,12 +295,11 @@ describe('PatternService', () => {
       const oneMonthAgo = now - 30 * 24 * 60 * 60 * 1000;
       const twoMonthsAgo = now - 60 * 24 * 60 * 60 * 1000;
 
-      // Two subscriptions of $10: Netflix and Spotify
       const mockTransactions = [
         { id: 't1', accountId: 'acc1', amount: 10, transactionDate: now, journalId: 'j1' },
         { id: 't2', accountId: 'acc1', amount: 10, transactionDate: oneMonthAgo, journalId: 'j2' },
         { id: 't3', accountId: 'acc1', amount: 10, transactionDate: twoMonthsAgo, journalId: 'j3' },
-        { id: 't4', accountId: 'acc1', amount: 10, transactionDate: now - 5000, journalId: 'j4' }, // Interleaved
+        { id: 't4', accountId: 'acc1', amount: 10, transactionDate: now - 5000, journalId: 'j4' },
         {
           id: 't5',
           accountId: 'acc1',
@@ -364,40 +352,16 @@ describe('PatternService', () => {
       );
       (transactionInsightQueries.findActiveMetadata as jest.Mock).mockResolvedValue([]);
 
-      patternService
-        .observePatterns('wp1' as WorkplaceId)
-        .pipe(take(1))
-        .subscribe(patterns => {
-          const netflixPattern = patterns.find((p: Insight) => p.description.includes('Netflix'));
-          const spotifyPattern = patterns.find((p: Insight) => p.description.includes('Spotify'));
+      const patterns = await firstValueFrom(
+        patternService.observePatterns('wp1' as WorkplaceId).pipe(take(1)),
+      );
 
-          expect(netflixPattern).toBeDefined();
-          expect(spotifyPattern).toBeDefined();
-          expect(netflixPattern?.id).not.toBe(spotifyPattern?.id);
-          done();
-        });
-    });
+      const netflixPattern = patterns.find((p: Insight) => p.description.includes('Netflix'));
+      const spotifyPattern = patterns.find((p: Insight) => p.description.includes('Spotify'));
 
-    it('should NOT detect No Emergency Fund pattern if they have one', done => {
-      const mockAccounts = [
-        { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.BANK_CHECKING },
-        { id: 'a2', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.RETIREMENT },
-        { id: 'a3', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.INVESTMENT },
-        { id: 'a4', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.EMERGENCY_FUND },
-      ];
-
-      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAccounts));
-
-      patternService
-        .observePatterns('test-wp' as WorkplaceId)
-        .pipe(take(1))
-        .subscribe((patterns: Insight[]) => {
-          const emergencyPattern = patterns.find(
-            (p: Insight) => p.id === 'no_emergency_fund_test-wp',
-          );
-          expect(emergencyPattern).toBeUndefined();
-          done();
-        });
+      expect(netflixPattern).toBeDefined();
+      expect(spotifyPattern).toBeDefined();
+      expect(netflixPattern?.id).not.toBe(spotifyPattern?.id);
     });
   });
 });

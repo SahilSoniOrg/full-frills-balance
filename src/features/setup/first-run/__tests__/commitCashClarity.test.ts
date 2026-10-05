@@ -1,12 +1,16 @@
 import { finishDeviceSetup } from '../../setupFinishers';
 import { AccountType, PlannedPaymentInterval } from '@/src/types/enums';
-import { asWorkplaceId } from '@/src/types/ids';
-import { createInitialDraft, type CashClarityDraft } from '../draft';
 import { commitCashClarity } from '../commitCashClarity';
 import { draftAccountId, starterCategoryId } from '../mapToWorkplaceOutput';
 import dayjs from 'dayjs';
 import { calculateNextOccurrence } from '@/src/services/planned-payment/plannedPaymentRecurrence';
 import { projectCashClarityDraft } from '../projectCashClarityDraft';
+import {
+  cashClarityAccount as account,
+  cashClarityCommitDraft as draft,
+  cashClaritySalaryIncome as salaryIncome,
+  cashClarityWorkplaceId as WORKPLACE_ID,
+} from './cashClarityTestFixtures';
 
 const mockFindAll = jest.fn();
 const mockUpsertPayment = jest.fn();
@@ -17,8 +21,6 @@ const mockAdjustBalance = jest.fn();
 const mockClearPending = jest.fn();
 const mockGetWorkplace = jest.fn();
 const mockDeleteWorkplace = jest.fn();
-const WORKPLACE_ID = asWorkplaceId('workplace-op');
-
 jest.mock('@/src/services/accounts/accountQueries', () => ({
   accountQueries: { findAll: (...args: unknown[]) => mockFindAll(...args) },
 }));
@@ -70,32 +72,6 @@ jest.mock('../pendingWorkplace', () => ({
   cashClarityWorkplaceId: () => 'workplace-op',
   clearPendingCashClarityWorkplaceId: () => mockClearPending(),
 }));
-
-function draft(overrides: Partial<CashClarityDraft> = {}): CashClarityDraft {
-  return {
-    ...createInitialDraft('INR', 'Personal'),
-    displayName: 'Sahil',
-    accounts: [{ id: 'main', kind: 'bank', name: 'Bank', balance: 0 }],
-    income: { kind: 'skipped' },
-    commitment: { kind: 'skipped' },
-    budget: { kind: 'skipped' },
-    ...overrides,
-  };
-}
-
-function account(id: string, name: string, accountType: AccountType) {
-  return { id, name, accountType, accountSubtype: 'BANK_CHECKING', currencyCode: 'INR' };
-}
-
-const salaryIncome = {
-  id: 'pay',
-  name: 'Salary',
-  source: 'salary' as const,
-  amount: 40000,
-  interval: PlannedPaymentInterval.WEEKLY,
-  intervalN: 2,
-  nextDate: Date.parse('2026-09-25'),
-};
 
 describe('commitCashClarity', () => {
   beforeEach(() => {

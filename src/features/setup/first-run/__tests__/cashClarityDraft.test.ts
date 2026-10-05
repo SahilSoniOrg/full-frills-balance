@@ -1,29 +1,10 @@
 import { PlannedPaymentInterval } from '@/src/types/enums';
 import dayjs from 'dayjs';
-import {
-  createInitialDraft,
-  incomeRecurrence,
-  isMoneyReady,
-  isSpendableAccount,
-  nextDateOnDayOfMonth,
-  type CashClarityDraft,
-} from '../draft';
+import { incomeRecurrence, isMoneyReady, isSpendableAccount, nextDateOnDayOfMonth } from '../draft';
 import { projectCashClarityDraft, findSafeToSpendChartPoint } from '../projectCashClarityDraft';
 import { mapDraftToWorkplaceOutput } from '../mapToWorkplaceOutput';
 import { confirmIncome, confirmMoney, confirmPayments } from '../spokenConfirm';
-
-const now = dayjs('2026-09-14T10:00:00');
-
-function draft(overrides: Partial<CashClarityDraft> = {}): CashClarityDraft {
-  return {
-    ...createInitialDraft('INR', 'Personal'),
-    accounts: [{ id: 'main', kind: 'bank', name: 'Bank', balance: 50000 }],
-    income: { kind: 'skipped' },
-    commitment: { kind: 'skipped' },
-    budget: { kind: 'skipped' },
-    ...overrides,
-  };
-}
+import { cashClarityDraft as draft, cashClarityNow as now } from './cashClarityTestFixtures';
 
 describe('projectCashClarityDraft', () => {
   it('uses liquid cash as Safe to Spend when nothing else is reserved', () => {
@@ -393,14 +374,14 @@ describe('onboarding date and amount helpers', () => {
     expect(nextDateOnDayOfMonth(25, dayjs('2026-09-26')).format('YYYY-MM-DD')).toBe('2026-10-25');
   });
 
-  it('stores every-two-weeks income as weekly with interval 2', () => {
-    expect(incomeRecurrence('BIWEEKLY')).toEqual({
-      interval: PlannedPaymentInterval.WEEKLY,
-      intervalN: 2,
-    });
-    expect(incomeRecurrence('MONTHLY')).toEqual({
-      interval: PlannedPaymentInterval.MONTHLY,
-      intervalN: 1,
-    });
-  });
+  it.each([
+    ['BIWEEKLY', PlannedPaymentInterval.WEEKLY, 2],
+    ['MONTHLY', PlannedPaymentInterval.MONTHLY, 1],
+    ['WEEKLY', PlannedPaymentInterval.WEEKLY, 1],
+  ] as const)(
+    'maps %s income cadence to planned-payment interval fields',
+    (cadence, interval, intervalN) => {
+      expect(incomeRecurrence(cadence)).toEqual({ interval, intervalN });
+    },
+  );
 });

@@ -39,11 +39,8 @@ jest.mock('@/src/features/journal', () => ({
 jest.mock('@/src/features/planned-payments', () => ({
   usePlannedOccurrences: () => ({ items: [] }),
 }));
-jest.mock('@/src/features/dashboard/hooks/useDashboardFeatureActions', () => ({
-  useDashboardFeatureActions: () => ({
-    trackExplanationVisible: jest.fn(),
-    trackExplanationSection: jest.fn(),
-  }),
+jest.mock('@/src/services/analytics', () => ({
+  analytics: { trackFeatureUsage: jest.fn() },
 }));
 jest.mock('@/src/hooks/useObservable', () => ({
   useObservable: (_factory: unknown, _deps: unknown, initial: unknown) => ({

@@ -11,6 +11,13 @@ jest.mock('@/src/hooks/useExchangeRate', () => ({
   }),
 }));
 
+const idleRates = {
+  sourceBaseRate: null,
+  destBaseRate: null,
+  isLoading: false,
+  error: null,
+};
+
 describe('useCrossCurrencyRates', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -45,11 +52,22 @@ describe('useCrossCurrencyRates', () => {
     });
   });
 
-  it('reports idle rates when disabled or same-currency', async () => {
+  it.each([
+    {
+      label: 'both currencies match the workplace',
+      next: { sourceCurrency: 'USD', destCurrency: 'USD', enabled: true },
+      expectIdle: true,
+    },
+    {
+      label: 'fetching is disabled',
+      next: { sourceCurrency: 'EUR', destCurrency: 'USD', enabled: false },
+      expectIdle: false,
+    },
+  ])('returns idle rates when $label', async ({ next, expectIdle }) => {
     mockFetchRate.mockResolvedValue(1.1);
 
     const { result, rerender } = renderHook(
-      (props: { sourceCurrency?: string; destCurrency?: string; enabled: boolean }) =>
+      (props: { sourceCurrency: string; destCurrency: string; enabled: boolean }) =>
         useCrossCurrencyRates({
           sourceCurrency: props.sourceCurrency,
           destCurrency: props.destCurrency,
@@ -65,19 +83,13 @@ describe('useCrossCurrencyRates', () => {
       },
     );
 
-    await waitFor(() => {
-      expect(result.current.sourceBaseRate).toBe(1.1);
-    });
+    await waitFor(() => expect(result.current.sourceBaseRate).toBe(1.1));
+    rerender(next);
 
-    rerender({ sourceCurrency: 'USD', destCurrency: 'USD', enabled: true });
-    expect(result.current).toEqual({
-      sourceBaseRate: null,
-      destBaseRate: null,
-      isLoading: false,
-      error: null,
-    });
-
-    rerender({ sourceCurrency: 'EUR', destCurrency: 'USD', enabled: false });
+    if (expectIdle) {
+      expect(result.current).toEqual(idleRates);
+      return;
+    }
     expect(result.current.sourceBaseRate).toBeNull();
   });
 
@@ -216,9 +228,7 @@ describe('useCrossCurrencyRates', () => {
 
     await waitFor(() => {
       expect(result.current).toEqual({
-        sourceBaseRate: null,
-        destBaseRate: null,
-        isLoading: false,
+        ...idleRates,
         error: 'Rate unavailable',
       });
     });
