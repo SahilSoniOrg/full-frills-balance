@@ -53,7 +53,7 @@ describe('redesigned budget rows and summary', () => {
     expect(screen.getByText(/5,820.*left/)).toBeTruthy();
     expect(screen.getByText('+1')).toBeTruthy();
     expect(screen.queryByText('Coffee')).toBeNull();
-    expect(screen.getByText(/On pace.*\/day/)).toBeTruthy();
+    expect(screen.getByText(/\/day/)).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: /Food.*left/ }));
     expect(onPress).toHaveBeenCalledWith(item);
     expect(screen.getByTestId('budget-today-marker')).toBeTruthy();
@@ -68,7 +68,7 @@ describe('redesigned budget rows and summary', () => {
     const screen = render(<BudgetCard item={decimalBudget} onPress={jest.fn()} />);
     expect(screen.getByText('$5,820 left')).toBeTruthy();
     expect(screen.getByText('of $9,000')).toBeTruthy();
-    expect(screen.getByText('$3,180 spent')).toBeTruthy();
+    expect(screen.getByText('$3,180')).toBeTruthy();
     expect(screen.queryByText(/\.\d{2}/)).toBeNull();
   });
 
@@ -93,7 +93,8 @@ describe('redesigned budget rows and summary', () => {
       usage: { ...item.usage, spent: 7740, remaining: 1260, usagePercent: 0.86 },
     };
     const screen = render(<BudgetCard item={near} onPress={jest.fn()} />);
-    expect(screen.getByText(/Near limit.*\/day/)).toBeTruthy();
+    expect(screen.queryByText(/Near limit/)).toBeNull();
+    expect(screen.getByText(/\/day/)).toBeTruthy();
     screen.rerender(
       <BudgetCard
         item={{
@@ -142,7 +143,8 @@ describe('redesigned budget rows and summary', () => {
       />,
     );
     expect(screen.getByText(/0.*over/)).toBeTruthy();
-    expect(screen.getByText('Over by 0%')).toBeTruthy();
+    expect(screen.queryByText('Over by 0%')).toBeNull();
+    expect(screen.getByText('0%')).toBeTruthy();
   });
 
   it('keeps zero-spent budgets free of pace wording', () => {

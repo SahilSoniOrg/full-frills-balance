@@ -1,5 +1,12 @@
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { AppButton, AppSurface, PressScaleTouchable, AppText } from '@/src/components/core';
+import {
+  AppButton,
+  AppIcon,
+  AppSurface,
+  Icon,
+  PressScaleTouchable,
+  AppText,
+} from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
@@ -14,6 +21,19 @@ import { View } from 'react-native';
 import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
 import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
 import { formatRecurrence } from '@/src/utils/recurrenceLabels';
+import type { BudgetStatus } from '../helpers/budgetCardPresentation';
+
+function statusIcon(status: BudgetStatus) {
+  switch (status) {
+    case 'over':
+      return Icon.TrendingUp;
+    case 'nearLimit':
+    case 'aheadOfPace':
+      return Icon.Alert;
+    default:
+      return Icon.Activity;
+  }
+}
 
 export function BudgetCard({
   item,
@@ -26,16 +46,13 @@ export function BudgetCard({
   const { budget, usage } = item;
   const strings = AppConfig.strings.commitmentsRedesign;
   const today = useCalendarDay();
-  const period = presentBudgetPeriod(
-    getBudgetCurrentPeriod(budget, today),
-    usage,
-    today,
-  );
+  const period = presentBudgetPeriod(getBudgetCurrentPeriod(budget, today), usage, today);
   const vm = presentBudgetUsage(usage, period.elapsedShare);
   const formatMoney = useMoneyFormat({ style: 'compact' });
   const privateMode = useEffectivePrivacyMode();
   const headline = `${usage.hasUnvaluedEntries ? '≈ ' : ''}${vm.isOver ? strings.over(formatMoney(Math.abs(usage.remaining), budget.currencyCode)) : strings.left(formatMoney(usage.remaining, budget.currencyCode))}`;
-  const spent = strings.spent(formatMoney(usage.spent, budget.currencyCode));
+  const spentAmount = formatMoney(usage.spent, budget.currencyCode);
+  const spent = strings.spent(spentAmount);
   const limit = strings.ofLimit(formatMoney(usage.budgetAmount, budget.currencyCode));
   const paceLabel = strings.paceAccessibility(
     vm.statusBadge.text,
@@ -49,6 +66,12 @@ export function BudgetCard({
       .filter(Boolean)
       .join(', '),
   );
+  const statusColor =
+    vm.status === 'nearLimit' || vm.status === 'aheadOfPace'
+      ? 'warning'
+      : vm.status === 'over'
+        ? 'error'
+        : 'secondary';
   const statusLine = usage.hasUnvaluedEntries
     ? fxMessage
     : usage.spent <= 0
@@ -63,12 +86,20 @@ export function BudgetCard({
             vm.statusBadge.text,
             formatMoney(period.dailyRemaining ?? 0, budget.currencyCode),
           );
+  const statusDisplay =
+    usage.hasUnvaluedEntries || usage.spent <= 0
+      ? statusLine
+      : vm.status === 'over'
+        ? privateMode
+          ? AppConfig.privacyMask
+          : `${Math.round(Math.max(0, usage.usagePercent - 1) * 100)}%`
+        : `${formatMoney(period.dailyRemaining ?? 0, budget.currencyCode)}/day`;
   const isMonthly =
     (!budget.intervalType || budget.intervalType === 'MONTHLY') && (budget.intervalN || 1) === 1;
   return (
     <AppSurface
       elevation="sm"
-      padding="md"
+      padding="sm"
       radius="r3"
       background="surface"
       style={{ marginBottom: Spacing.sm }}
@@ -85,7 +116,7 @@ export function BudgetCard({
               <AppText variant="body" weight="semibold">
                 {budget.name}
               </AppText>
-              <Row gap="xs" flexWrap="wrap">
+              <Row gap="xs" flexWrap="wrap" align="center">
                 {item.scopeAccounts.slice(0, 2).map((account, index) => (
                   <View key={account?.id ?? index} style={{ maxWidth: '100%' }}>
                     <AccountInlineLabel
@@ -97,15 +128,21 @@ export function BudgetCard({
                   </View>
                 ))}
                 {item.scopeAccounts.length > 2 && (
-                  <AppText variant="caption" color="secondary">
-                    +{item.scopeAccounts.length - 2}
-                  </AppText>
+                  <Row gap="xs" align="center">
+                    <AppIcon name={Icon.FolderOpen} size={Size.iconXs} color="textSecondary" />
+                    <AppText variant="caption" color="secondary">
+                      +{item.scopeAccounts.length - 2}
+                    </AppText>
+                  </Row>
                 )}
               </Row>
               {!isMonthly && (
-                <AppText variant="caption" color="secondary">
-                  {formatRecurrence(budget)}
-                </AppText>
+                <Row gap="xs" align="center">
+                  <AppIcon name={Icon.Repeat} size={Size.iconXs} color="textSecondary" />
+                  <AppText variant="caption" color="secondary" numberOfLines={1}>
+                    {formatRecurrence(budget)}
+                  </AppText>
+                </Row>
               )}
             </Column>
             <Column gap="xs" style={{ alignItems: 'flex-end', flexShrink: 1, marginLeft: 'auto' }}>
@@ -130,23 +167,25 @@ export function BudgetCard({
             elapsedShare={period.elapsedShare}
             accessibilityLabel={paceLabel}
           />
-          <Row justify="space-between" align="baseline" gap="sm" flexWrap="wrap">
-            <AppText variant="caption" color="secondary">
-              {spent}
-            </AppText>
-            {!usage.hasUnvaluedEntries && (
-              <AppText
-                variant="caption"
-                color={
-                  vm.status === 'nearLimit' || vm.status === 'aheadOfPace'
-                    ? 'warning'
-                    : vm.status === 'over'
-                      ? 'error'
-                      : 'secondary'
-                }
-              >
-                {statusLine}
+          <Row justify="space-between" align="center" gap="sm" flexWrap="wrap">
+            <Row gap="xs" align="center">
+              <AppIcon name={Icon.Receipt} size={Size.iconXs} color="textSecondary" />
+              <AppText variant="caption" color="secondary" testID="budget-card-spent">
+                {spentAmount}
               </AppText>
+            </Row>
+            {!usage.hasUnvaluedEntries && (
+              <Row gap="xs" align="center">
+                {usage.spent > 0 && (
+                  <AppIcon name={statusIcon(vm.status)} size={Size.iconXs} color={statusColor} />
+                )}
+                {usage.spent <= 0 ? (
+                  <AppIcon name={Icon.Clock} size={Size.iconXs} color="textSecondary" />
+                ) : null}
+                <AppText variant="caption" color={usage.spent <= 0 ? 'secondary' : statusColor}>
+                  {statusDisplay}
+                </AppText>
+              </Row>
             )}
           </Row>
         </Column>
@@ -161,9 +200,12 @@ export function BudgetCard({
             showIncompleteFxDetails({ context: 'budget', currencyCode: budget.currencyCode })
           }
         >
-          <AppText variant="caption" color="warning">
-            {strings.fixFx(fxMessage)}
-          </AppText>
+          <Row gap="xs" align="center">
+            <AppIcon name={Icon.Alert} size={Size.iconXs} color="warning" />
+            <AppText variant="caption" color="warning" numberOfLines={2} style={{ flexShrink: 1 }}>
+              {strings.fixFx(fxMessage)}
+            </AppText>
+          </Row>
         </AppButton>
       )}
     </AppSurface>
