@@ -44,7 +44,6 @@ function sampleDashboard(): SafeToSpendDashboard {
       trajectoryMinBalance: 4000,
       safeDaysCount: 12,
       totalFutureInflow: 100,
-      totalPlannedInflow: 100,
       totalCommittedPlanned: 50,
       totalPlannedOutflow: 50,
       firstMajorInflowDay: 3,
@@ -63,7 +62,6 @@ function sampleDashboard(): SafeToSpendDashboard {
       summary: {
         firstMajorInflowDay: 3,
         totalFutureInflow: 100,
-        totalPlannedInflow: 100,
         totalPlannedOutflow: 50,
         totalCommittedPlanned: 50,
       },

@@ -35,7 +35,6 @@ const EMPTY_REPORT: SafeToSpendDashboard['report'] = {
   summary: {
     firstMajorInflowDay: null,
     totalFutureInflow: 0,
-    totalPlannedInflow: 0,
     totalPlannedOutflow: 0,
     totalCommittedPlanned: 0,
   },
@@ -97,7 +96,8 @@ export function DashboardScreenView({
     ],
   );
 
-  const { trackInfoVisible, trackSectionExpanded, trackLegendPressed } = useDashboardFeatureActions();
+  const { trackInfoVisible, trackSectionExpanded, trackLegendPressed } =
+    useDashboardFeatureActions();
   const currencyCode = safeToSpendData?.currencyCode ?? '';
   const propsIsLoading = !safeToSpendData;
 
@@ -111,7 +111,6 @@ export function DashboardScreenView({
             trajectoryMinBalance: 0,
             safeDaysCount: null,
             totalFutureInflow: 0,
-            totalPlannedInflow: 0,
             totalPlannedOutflow: 0,
             totalCommittedPlanned: 0,
             firstMajorInflowDay: null,
@@ -132,13 +131,7 @@ export function DashboardScreenView({
         },
         { isLoading: propsIsLoading, currencyCode },
       ),
-    [
-      safeToSpendData,
-      displayReport,
-      fullSafeToSpendData?.accountMap,
-      propsIsLoading,
-      currencyCode,
-    ],
+    [safeToSpendData, displayReport, fullSafeToSpendData?.accountMap, propsIsLoading, currencyCode],
   );
 
   const handleSetInfoVisible = useCallback(
@@ -183,7 +176,6 @@ export function DashboardScreenView({
     items,
     isLoading,
     isLoadingMore,
-    loadingText,
     loadingMoreText,
     emptyTitle,
     emptySubtitle,
@@ -202,7 +194,6 @@ export function DashboardScreenView({
           items={items}
           isLoading={isLoading}
           isLoadingMore={isLoadingMore}
-          loadingText={loadingText}
           loadingMoreText={loadingMoreText}
           emptyTitle={emptyTitle}
           emptySubtitle={emptySubtitle}

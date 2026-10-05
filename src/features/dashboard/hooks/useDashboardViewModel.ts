@@ -30,7 +30,6 @@ export interface RecentJournalEntries {
   items: JournalListItem[];
   isLoading: boolean;
   isLoadingMore: boolean;
-  loadingText: string;
   loadingMoreText: string;
   emptyTitle: string;
   emptySubtitle: string;
@@ -172,7 +171,6 @@ export function useDashboardViewModel(): DashboardViewModel {
       items: journalListCore.items,
       isLoading: journalListCore.isLoading,
       isLoadingMore: journalListCore.isLoadingMore,
-      loadingText: strings.common.loading,
       loadingMoreText: strings.common.loading,
       emptyTitle: strings.dashboard.emptyTitle,
       emptySubtitle: strings.dashboard.emptySubtitle,

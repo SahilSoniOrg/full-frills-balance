@@ -8,7 +8,6 @@ import type {
 import type { AccountId } from '@/src/types/ids';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { roundToPrecision } from '@/src/utils/money';
-import { normalizeSimulationFlows } from './utils/normalizeSimulationFlows';
 import { summarizeSimulationFlows } from './utils/simulationFlowSummary';
 import { runCashFlowSimulationCore } from './runCashFlowSimulationCore';
 
@@ -72,8 +71,7 @@ export function simulateDraftScenario(input: DraftSimulationScenario): {
     precision,
   });
 
-  const normalizedFlows = normalizeSimulationFlows(allFlows);
-  const budgetReserveInWindow = normalizedFlows.reduce(
+  const budgetReserveInWindow = allFlows.reduce(
     (sum, flow) =>
       sum +
       (flow.timeframe === 'FUTURE' &&
@@ -86,7 +84,7 @@ export function simulateDraftScenario(input: DraftSimulationScenario): {
 
   return {
     safeToSpend: simulationResult.summary.safeToSpend,
-    flowSummary: summarizeSimulationFlows(normalizedFlows, liquidAccountIds, precision),
+    flowSummary: summarizeSimulationFlows(allFlows, liquidAccountIds, precision),
     budgetReserveInWindow: roundToPrecision(budgetReserveInWindow, precision),
     projections: simulationResult.projections,
   };

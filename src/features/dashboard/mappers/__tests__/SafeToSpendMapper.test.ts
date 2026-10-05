@@ -25,7 +25,6 @@ describe('SafeToSpendMapper', () => {
       trajectoryMinBalance: 500,
       safeDaysCount: 30,
       totalFutureInflow: 2000,
-      totalPlannedInflow: 2000,
       totalPlannedOutflow: 500,
       totalCommittedPlanned: 400,
       firstMajorInflowDay: 15,
@@ -34,7 +33,6 @@ describe('SafeToSpendMapper', () => {
       summary: {
         firstMajorInflowDay: 15,
         totalFutureInflow: 2000,
-        totalPlannedInflow: 2000,
         totalPlannedOutflow: 500,
         totalCommittedPlanned: 400,
       },

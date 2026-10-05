@@ -277,7 +277,6 @@ export interface SimulationReport {
   summary: {
     firstMajorInflowDay: number | null;
     totalFutureInflow: number;
-    totalPlannedInflow: number;
     totalPlannedOutflow: number;
     totalCommittedPlanned: number;
   };

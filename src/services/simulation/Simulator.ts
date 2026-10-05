@@ -8,10 +8,6 @@ import { assertValidSimulationInputs } from './utils/SimulationInputInvariants';
 import { roundToPrecision } from '@/src/utils/money';
 
 export class Simulator {
-  /**
-   * Stupid simple simulation engine.
-   * "Generate truth -> simulate once -> read results"
-   */
   static simulate(
     startingBalances: Map<string, number>,
     flows: Flow[],

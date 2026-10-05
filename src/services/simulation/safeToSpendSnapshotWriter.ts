@@ -75,7 +75,7 @@ export function persistSafeToSpendSnapshot(
   try {
     const paint = toSafeToSpendPaintSnapshot(dashboard);
     snapshotService.saveCustomSnapshot(workplaceId, STS_SNAPSHOT_KEY, paint);
-    logger.info(
+    logger.debug(
       `[SafeToSpend] paint snapshot saved for ${workplaceId} (sts=${paint.summary.safeToSpend})`,
     );
   } catch (error) {

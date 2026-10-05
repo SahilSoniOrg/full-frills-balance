@@ -6,7 +6,6 @@ import { roundToPrecision } from '@/src/utils/money';
 import dayjs from 'dayjs';
 import { AccountSimulationSummary, Flow, FlowCategory, SimulationReport } from './types';
 import { findFirstMajorInflowDay } from './utils/FlowPolicy';
-import { normalizeSimulationFlows } from './utils/normalizeSimulationFlows';
 import { summarizeSimulationFlows } from './utils/simulationFlowSummary';
 
 export function generateSimulationReport(
@@ -18,20 +17,13 @@ export function generateSimulationReport(
   asOf = Date.now(),
   horizonDays = AppConfig.defaults.safeToSpendDays,
 ): SimulationReport {
-  const normalizedFlows = normalizeSimulationFlows(allFlows);
-
   const now = dayjs(asOf).startOf('day');
 
   return {
-    summary: generateSummary(normalizedFlows, liquidAccountIdsSet, precision),
-    allFlows: normalizedFlows,
-    budget: generateBudgetSummary(normalizedFlows, now, precision, horizonDays),
-    liabilities: generateLiabilities(
-      normalizedFlows,
-      accountMap,
-      liabilityAccountBalances,
-      precision,
-    ),
+    summary: generateSummary(allFlows, liquidAccountIdsSet, precision),
+    allFlows,
+    budget: generateBudgetSummary(allFlows, now, precision, horizonDays),
+    liabilities: generateLiabilities(allFlows, accountMap, liabilityAccountBalances, precision),
   };
 }
 
@@ -47,7 +39,6 @@ function generateSummary(allFlows: Flow[], liquidAccountIdsSet: Set<string>, pre
   return {
     firstMajorInflowDay,
     totalFutureInflow: summary.totalFutureInflow,
-    totalPlannedInflow: summary.totalFutureInflow,
     totalPlannedOutflow: summary.totalPlannedOutflow,
     totalCommittedPlanned: summary.totalCommittedPlanned,
   };

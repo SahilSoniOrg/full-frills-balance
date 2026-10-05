@@ -99,7 +99,6 @@ const emptySimResult = {
   report: {
     summary: {
       totalFutureInflow: 0,
-      totalPlannedInflow: 0,
       totalPlannedOutflow: 0,
       totalCommittedPlanned: 0,
     },
@@ -624,7 +623,6 @@ describe('SafeToSpendReadModel', () => {
         report: {
           summary: {
             totalFutureInflow: 0,
-            totalPlannedInflow: 0,
             totalPlannedOutflow: 0,
             totalCommittedPlanned: 0,
           },
@@ -728,7 +726,6 @@ describe('SafeToSpendReadModel', () => {
             ...emptySimResult.report,
             summary: {
               totalFutureInflow: 0,
-              totalPlannedInflow: 0,
               totalPlannedOutflow: 0,
               totalCommittedPlanned: 0,
             },
@@ -789,7 +786,6 @@ describe('SafeToSpendReadModel', () => {
         report: {
           summary: {
             totalFutureInflow: 0,
-            totalPlannedInflow: 0,
             totalPlannedOutflow: 0,
             totalCommittedPlanned: 0,
             firstMajorInflowDay: 3,

@@ -133,13 +133,6 @@ describe('liability flow issue', () => {
       simulationDays: 60,
     });
 
-    console.log(
-      'liability flows',
-      result.allFlows!.filter(f => f.origin === 'LIABILITY'),
-    );
-    console.log('account summaries', result.accountSummaries!);
-
-    console.log('summary', result.simulationResult.summary);
     expect(result.simulationResult.summary.safeToSpend).toBeDefined();
   });
 });

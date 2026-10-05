@@ -71,9 +71,6 @@ export class CashFlowSimulationService {
     const simulationStartMs = time.getStartOfToday().valueOf();
     const simulationEndMs = time.getEndMs();
 
-    const overallStart = Date.now();
-
-    // 1. PHASE: NORMALIZE & PRE-FETCH
     const liquidAccountIdsSet = new Set(liquidAssetIds);
     const liabilityAccountIdsSet = new Set(liabilityAccountBalances.map(lb => lb.account.id));
     const accountMap = new Map(allAccounts.map(a => [a.id, a]));
@@ -215,11 +212,7 @@ export class CashFlowSimulationService {
     );
 
     trace?.metric('normalization_and_fetch');
-    logger.info(
-      `[Trace] CashFlowSimulationService.simulate: Normalization & Pre-fetch: ${Date.now() - overallStart}ms`,
-    );
 
-    // 2. PHASE: BUILD CONTEXT
     const context: SimulationContext = {
       simulationStartMs,
       simulationDays,
@@ -258,14 +251,6 @@ export class CashFlowSimulationService {
       precision: resultPrecision,
     });
 
-    logger.info(
-      `[Trace] CashFlowSimulationService.simulate: Flow Generation: ${Date.now() - overallStart}ms`,
-      {
-        totalFlows: allFlows.length,
-      },
-    );
-
-    // 4. PHASE: POST-PROCESS SUMMARIES
     const report = generateSimulationReport(
       allFlows,
       accountMap,
@@ -302,14 +287,6 @@ export class CashFlowSimulationService {
     };
 
     trace?.metric('total_duration');
-    logger.info(
-      `[Trace] CashFlowSimulationService.simulate: TOTAL: ${Date.now() - overallStart}ms`,
-      {
-        days: simulationDays,
-        accounts: allAccounts.length,
-        flows: allFlows.length,
-      },
-    );
 
     return result;
   }

@@ -60,7 +60,6 @@ describe('SafeToSpendExplanationModal dated explanation', () => {
       summary: {
         firstMajorInflowDay: null,
         totalFutureInflow: 1500,
-        totalPlannedInflow: 1500,
         totalPlannedOutflow: 800,
         totalCommittedPlanned: 800,
       },
@@ -80,7 +79,6 @@ describe('SafeToSpendExplanationModal dated explanation', () => {
           ...engine.summary,
           safeDaysCount: null,
           totalFutureInflow: 1500,
-          totalPlannedInflow: 1500,
           totalPlannedOutflow: 800,
           totalCommittedPlanned: 800,
         },

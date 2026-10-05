@@ -42,7 +42,7 @@ type SafeToSpendSummary = Pick<
 > &
   Pick<
     SimulationReport['summary'],
-    'totalFutureInflow' | 'totalPlannedInflow' | 'totalPlannedOutflow' | 'totalCommittedPlanned'
+    'totalFutureInflow' | 'totalPlannedOutflow' | 'totalCommittedPlanned'
   > & {
     safeDaysCount: number | null | undefined;
   };
@@ -296,7 +296,6 @@ export function createEmptySafeToSpendDashboard(
       trajectoryMinBalance: 0,
       safeDaysCount: null,
       totalFutureInflow: 0,
-      totalPlannedInflow: 0,
       totalPlannedOutflow: 0,
       totalCommittedPlanned: 0,
       firstMajorInflowDay: null,
@@ -319,7 +318,6 @@ export function createEmptySafeToSpendDashboard(
       summary: {
         firstMajorInflowDay: null,
         totalFutureInflow: 0,
-        totalPlannedInflow: 0,
         totalPlannedOutflow: 0,
         totalCommittedPlanned: 0,
       },

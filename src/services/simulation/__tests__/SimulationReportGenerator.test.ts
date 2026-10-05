@@ -68,7 +68,6 @@ describe('SimulationReportGenerator', () => {
     const report = generateSimulationReport(flows, accountMap, [], liquidAccountIdsSet);
 
     expect(report.summary.totalFutureInflow).toBe(2000);
-    expect(report.summary.totalPlannedInflow).toBe(2000);
     expect(report.summary.totalPlannedOutflow).toBe(100);
     expect(report.summary.totalCommittedPlanned).toBe(150);
   });
