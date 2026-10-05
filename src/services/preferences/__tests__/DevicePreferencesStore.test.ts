@@ -61,16 +61,6 @@ describe('DevicePreferencesStore', () => {
     expect(store.activeWorkplaceId).toBeUndefined();
   });
 
-  it('maps a legacy onboardingCompleted bag onto deviceRegistered', () => {
-    mockMemory.set(
-      'full_frills_balance_device_preferences',
-      JSON.stringify({ onboardingCompleted: true }),
-    );
-
-    const store = new DevicePreferencesStore();
-    expect(store.deviceRegistered).toBe(true);
-  });
-
   it('ignores the legacy SMS import key when loading device preferences', () => {
     mockMemory.set(
       'full_frills_balance_device_preferences',

@@ -52,6 +52,34 @@ describe('transactionInboxMapping integration', () => {
     return { record, journalId: journal.id };
   }
 
+  it('carries canonical linked-journal preview fields instead of SMS values', async () => {
+    const journal = await seedExpenseJournal({
+      cashId,
+      expenseId,
+      amount: 999,
+      description: 'Actual journal description',
+      journalDate: 1_700_000_000_000,
+    });
+
+    const record = await seedInboxRecord({
+      deviceSourceId: 'linked-mapping-1',
+      linkedJournalId: journal.id,
+      processingStatus: InboxProcessingStatus.IMPORTED,
+      parsedAmount: 12,
+      rawBody: 'INR 12.00 debited',
+      inputFingerprint: 'linked-mapping-fp',
+    });
+
+    const [item] = await enrichTransactionInboxRecords(workplaceId, [record]);
+
+    expect(item.linkedJournal).toMatchObject({
+      journalId: journal.id,
+      totalAmount: 999,
+      currencyCode: 'INR',
+      description: 'Actual journal description',
+    });
+  });
+
   it('builds duplicateCandidate from persisted inbox fields', async () => {
     const { record, journalId } = await seedDuplicateInboxRecord();
 
