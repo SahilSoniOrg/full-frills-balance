@@ -1,4 +1,3 @@
-import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountId, asAccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import {
@@ -6,16 +5,7 @@ import {
   filterToLeafAccounts,
   resolveGuidedAccountsAfterTabChange,
 } from '@/src/services/journal/guidedJournalAccountEligibility';
-
-function acct(
-  partial: Partial<AccountFields> & Pick<AccountFields, 'id' | 'name' | 'accountType'>,
-): AccountFields {
-  return {
-    currencyCode: 'USD',
-    parentAccountId: null,
-    ...partial,
-  } as AccountFields;
-}
+import { testAccountFields as acct } from '@/src/testing/journalAccountTestFixtures';
 
 describe('guidedJournalAccountEligibility', () => {
   const cash = acct({ id: 'cash' as AccountId, name: 'Cash', accountType: AccountType.ASSET });

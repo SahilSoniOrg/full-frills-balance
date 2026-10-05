@@ -5,32 +5,19 @@ import {
   resolveWorkplaceRatesFromConvertedAmount,
 } from '@/src/domain/accounting/manualBaseRate';
 
-describe('resolveManualWorkplaceRates draft parsing', () => {
-  it('rejects empty, trailing-dot, and non-positive drafts', () => {
-    expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '', '')).toBeNull();
-    expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '1.', '')).toBeNull();
-    expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '.', '')).toBeNull();
-    expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '0', '')).toBeNull();
-    expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '1.2.3', '')).toBeNull();
-  });
-
-  it('accepts finished positive rates', () => {
-    expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '1', '')).toEqual({
-      sourceBaseRate: 1,
-      destBaseRate: 1,
-    });
-    expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '1.25', '')).toEqual({
-      sourceBaseRate: 1.25,
-      destBaseRate: 1,
-    });
-    expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '.5', '')).toEqual({
-      sourceBaseRate: 0.5,
-      destBaseRate: 1,
-    });
-  });
-});
-
 describe('resolveManualWorkplaceRates', () => {
+  it.each(['', '1.', '.', '0', '1.2.3'])('rejects invalid draft %s', draft => {
+    expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', draft, '')).toBeNull();
+  });
+
+  it.each([
+    ['1', { sourceBaseRate: 1, destBaseRate: 1 }],
+    ['1.25', { sourceBaseRate: 1.25, destBaseRate: 1 }],
+    ['.5', { sourceBaseRate: 0.5, destBaseRate: 1 }],
+  ])('accepts finished positive rate %s', (draft, expected) => {
+    expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', draft, '')).toEqual(expected);
+  });
+
   it('uses one foreign rate when destination is workplace currency', () => {
     expect(resolveManualWorkplaceRates('EUR', 'USD', 'USD', '1.25', '')).toEqual({
       sourceBaseRate: 1.25,

@@ -1,5 +1,6 @@
 import { AccountType, JournalDisplayType, SemanticType } from '@/src/types/enums';
-import { AccountId, JournalId } from '@/src/types/ids';
+import { AccountId, JournalId, asAccountId, asTransactionId } from '@/src/types/ids';
+import type { EnrichedJournal } from '@/src/types/domainReadModels';
 
 import {
   journalDisplayTypeChrome,
@@ -7,6 +8,11 @@ import {
   mapJournalToEntryCardProps,
   mapJournalToTimelineItem,
 } from '@/src/services/journal/journalTimelinePresentation';
+import { journalsToTimelineRows } from '@/src/services/journal/journalTimelineRows';
+import {
+  timelineAccount,
+  timelineJournal,
+} from '@/src/services/journal/__tests__/journalTimelinePresentation.test.helpers';
 
 describe('journalTimelinePresentation', () => {
   it('journalDisplayTypeChrome maps expense to down arrow', () => {
@@ -290,5 +296,224 @@ describe('journalTimelinePresentation', () => {
     expect(card.amount).toBe(100);
     expect(card.accountFlow?.primaryAccount).not.toHaveProperty('amount');
     expect(card.accountFlow?.primaryAccount).not.toHaveProperty('currencyCode');
+  });
+});
+
+describe('mapJournalToTimelineItem account flow', () => {
+  it('selects the largest source and retains every source and destination', () => {
+    const original = timelineJournal([
+      timelineAccount('cash', 'SOURCE', 200),
+      timelineAccount('hotel', 'DESTINATION', 200),
+      timelineAccount('checking', 'SOURCE', 800),
+      timelineAccount('flights', 'DESTINATION', 700),
+      timelineAccount('fees', 'DESTINATION', 100),
+    ]);
+    const item = mapJournalToTimelineItem(original);
+    expect(item.accountFlow?.primaryAccount?.name).toBe('checking');
+    expect(item.accountFlow?.sources.map(leg => leg.name)).toEqual(['cash']);
+    expect(item.accountFlow?.destinations.map(leg => leg.name)).toEqual([
+      'flights',
+      'hotel',
+      'fees',
+    ]);
+    expect(original.accounts[0].name).toBe('cash');
+  });
+
+  it('ranks contributions using saved FX rather than raw currency units', () => {
+    const item = mapJournalToTimelineItem(
+      timelineJournal(
+        [
+          timelineAccount('rupee-cash', 'SOURCE', 500, 'INR'),
+          timelineAccount('dollar-wallet', 'SOURCE', 100, 'USD', 80),
+          timelineAccount('food', 'DESTINATION', 8500, 'INR'),
+        ],
+        'INR',
+      ),
+    );
+    expect(item.accountFlow.primaryAccount?.name).toBe('dollar-wallet');
+    expect(item.accountFlow.sources.map(leg => leg.name)).toEqual(['rupee-cash']);
+    expect(item.accountFlow?.showCurrencyCodes).toBe(true);
+    expect(item.currencyCode).toBe('INR');
+  });
+
+  it.each([undefined, 0, -1, Number.NaN])(
+    'uses stable identity order for an unavailable foreign rate (%s)',
+    rate => {
+      const accounts = [
+        timelineAccount('z-dollar', 'SOURCE', 100, 'USD', rate),
+        timelineAccount('a-rupee', 'SOURCE', 500, 'INR'),
+      ];
+      const forward = mapJournalToTimelineItem(timelineJournal(accounts, 'INR')).accountFlow;
+      const reversed = mapJournalToTimelineItem(
+        timelineJournal([...accounts].reverse(), 'INR'),
+      ).accountFlow;
+      expect(forward?.primaryAccount?.name).toBe('a-rupee');
+      expect(forward).toEqual(reversed);
+    },
+  );
+
+  it('breaks equal contribution ties by account and posting identity', () => {
+    const legs = [timelineAccount('z-cash', 'SOURCE', 50), timelineAccount('a-bank', 'SOURCE', 50)];
+    expect(mapJournalToTimelineItem(timelineJournal(legs)).accountFlow?.primaryAccount?.name).toBe(
+      'a-bank',
+    );
+    expect(
+      mapJournalToTimelineItem(timelineJournal([...legs].reverse())).accountFlow?.primaryAccount
+        ?.name,
+    ).toBe('a-bank');
+  });
+
+  it('uses stable ordering for missing or invalid monetary metadata', () => {
+    const missingCurrency = { ...timelineAccount('cash', 'SOURCE', 50), currencyCode: undefined };
+    const flow = mapJournalToTimelineItem(
+      timelineJournal([
+        missingCurrency,
+        timelineAccount('food', 'DESTINATION'),
+        timelineAccount('bad-value', 'DESTINATION', Number.NaN),
+        timelineAccount('unknown', 'NEUTRAL', 10),
+      ]),
+    ).accountFlow;
+    expect(flow.primaryAccount?.name).toBe('cash');
+    expect(flow.destinations.map(leg => leg.name)).toEqual(['bad-value', 'food']);
+    expect(flow.showCurrencyCodes).toBe(false);
+    expect(flow?.neutral[0].name).toBe('unknown');
+  });
+
+  it('uses the viewed source amount and retains every peer account', () => {
+    const item = mapJournalToTimelineItem(
+      timelineJournal([
+        timelineAccount('checking', 'SOURCE', 600),
+        timelineAccount('credit', 'SOURCE', 400),
+        timelineAccount('flights', 'DESTINATION', 800),
+        timelineAccount('hotel', 'DESTINATION', 200),
+      ]),
+      { accountId: asAccountId('credit') },
+    );
+    expect(item.amount).toBe(400);
+    expect(item.presentation.amountPrefix).toBe('− ');
+    expect(item.accountFlow?.primaryAccount?.name).toBe('credit');
+    expect(item.accountFlow?.sources.map(leg => leg.name)).toEqual(['checking']);
+    expect(item.accountFlow.destinations.map(leg => leg.name)).toEqual(['flights', 'hotel']);
+  });
+
+  it('uses the destination perspective and native currency for incoming transfers', () => {
+    const original = {
+      ...timelineJournal(
+        [
+          timelineAccount('dollar', 'SOURCE', 100, 'USD', 80),
+          timelineAccount('rupee', 'DESTINATION', 8000, 'INR'),
+        ],
+        'INR',
+      ),
+      displayType: JournalDisplayType.TRANSFER,
+    };
+    const item = mapJournalToTimelineItem(original, { accountId: asAccountId('rupee') });
+    expect(item.amount).toBe(8000);
+    expect(item.currencyCode).toBe('INR');
+    expect(item.presentation.amountPrefix).toBe('+ ');
+    expect(item.accountFlow?.primaryAccount?.role).toBe('DESTINATION');
+    expect(item.accountFlow.sources[0].name).toBe('dollar');
+    expect(item.accountFlow?.destinations).toEqual([]);
+  });
+
+  it('selects the exact posting when an account occurs more than once', () => {
+    const first = timelineAccount('checking', 'SOURCE', 40);
+    const second = {
+      ...timelineAccount('checking', 'SOURCE', 60),
+      transactionId: asTransactionId('second'),
+    };
+    const original = timelineJournal([first, second, timelineAccount('food', 'DESTINATION', 100)]);
+    const rows = journalsToTimelineRows([original], { viewer: { accountId: first.id } });
+    expect(rows).toHaveLength(2);
+    expect(new Set(rows.map(row => row.listId)).size).toBe(2);
+    expect(rows.map(row => mapJournalToTimelineItem(row.journal, row.viewer).amount)).toEqual([
+      40, 60,
+    ]);
+    expect(rows.every(row => row.selectionId === original.id)).toBe(true);
+  });
+
+  it('falls back to whole-journal context for a stale account or posting scope', () => {
+    const original = timelineJournal([
+      timelineAccount('checking', 'SOURCE', 100),
+      timelineAccount('food', 'DESTINATION', 100),
+    ]);
+    expect(mapJournalToTimelineItem(original, { accountId: asAccountId('missing') })).toEqual(
+      mapJournalToTimelineItem(original),
+    );
+    expect(
+      mapJournalToTimelineItem(original, {
+        accountId: asAccountId('checking'),
+        transactionId: asTransactionId('missing'),
+      }),
+    ).toEqual(mapJournalToTimelineItem(original));
+  });
+
+  it('keeps debt payment semantics without a redundant visible badge', () => {
+    const original = {
+      ...timelineJournal([
+        timelineAccount('checking', 'SOURCE', 100),
+        timelineAccount('loan', 'DESTINATION', 100),
+      ]),
+      semanticType: SemanticType.DEBT_PAYMENT,
+    };
+    const item = mapJournalToTimelineItem(original);
+    expect(item.presentation.showTypeBadge).toBe(false);
+    expect(item.presentation.label).toBe('Debt Payment');
+  });
+});
+
+describe('journalsToTimelineRows expandAccountIds', () => {
+  const journal: EnrichedJournal = {
+    id: 'j1' as JournalId,
+    journalDate: 1,
+    description: 'Split lunch',
+    currencyCode: 'USD',
+    status: 'POSTED',
+    totalAmount: 100,
+    transactionCount: 3,
+    displayType: JournalDisplayType.EXPENSE,
+    accounts: [
+      {
+        id: 'cash' as AccountId,
+        name: 'Cash',
+        accountType: AccountType.ASSET,
+        role: 'SOURCE',
+        amount: 100,
+      },
+      {
+        id: 'food' as AccountId,
+        name: 'Food',
+        accountType: AccountType.EXPENSE,
+        role: 'DESTINATION',
+        amount: 60,
+      },
+      {
+        id: 'transport' as AccountId,
+        name: 'Transport',
+        accountType: AccountType.EXPENSE,
+        role: 'DESTINATION',
+        amount: 40,
+      },
+    ],
+  };
+
+  it('creates one row per scoped leg with composite list ids when multiple legs match', () => {
+    const rows = journalsToTimelineRows([journal], {
+      expandAccountIds: ['food' as AccountId, 'transport' as AccountId],
+    });
+    expect(rows).toHaveLength(2);
+    expect(rows[0].listId).toBe('j1_food');
+    expect(rows[1].listId).toBe('j1_transport');
+    expect(rows[0].selectionId).toBe('j1');
+    expect(rows[0].viewer?.accountId).toBe('food');
+  });
+
+  it('uses journal id as list id when only one scoped leg matches', () => {
+    const rows = journalsToTimelineRows([journal], {
+      expandAccountIds: ['food' as AccountId],
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].listId).toBe('j1');
+    expect(rows[0].selectionId).toBe('j1');
   });
 });

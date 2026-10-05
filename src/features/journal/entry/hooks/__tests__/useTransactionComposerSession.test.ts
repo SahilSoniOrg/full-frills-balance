@@ -1,46 +1,13 @@
+import './transactionComposerSession.test-setup';
+
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { asAccountId, JournalId, WorkplaceId } from '@/src/types/ids';
+import { composerCashFoodAccounts } from './transactionComposerSession.fixtures';
 import { useTransactionComposerSession } from '../useTransactionComposerSession';
 
-jest.mock('@/src/services/journal/journalDomainService');
-jest.mock('@/src/services/journal/journalReadService', () => ({
-  journalReadService: { find: jest.fn(), getJournalForEditor: jest.fn() },
-}));
-jest.mock('@/src/services/transaction-ingestion');
-jest.mock('@/src/data/repositories/transaction');
-jest.mock('expo-router', () => ({
-  useRouter: jest.fn(() => ({ back: jest.fn() })),
-}));
-jest.mock('@/src/hooks/use-currencies', () => ({
-  useCurrencies: jest.fn(() => ({ currencies: [], isLoading: false })),
-  useCurrencyPrecision: jest.fn(() => ({ precision: 2, isLoading: false })),
-}));
-jest.mock('@/src/hooks/useExchangeRate', () => ({
-  useExchangeRate: jest.fn(() => ({
-    fetchRate: jest.fn().mockResolvedValue(1),
-    fetchRequiredRate: jest.fn().mockResolvedValue(1),
-  })),
-}));
-jest.mock('@/src/contexts/WorkplaceContext', () => ({
-  useWorkplace: jest.fn(() => ({ workplaceId: 'wp-1', defaultCurrencyCode: 'USD' })),
-}));
-
 describe('useTransactionComposerSession', () => {
-  const accounts = [
-    {
-      id: asAccountId('cash'),
-      name: 'Cash',
-      accountType: AccountType.ASSET,
-      currencyCode: 'USD',
-    },
-    {
-      id: asAccountId('food'),
-      name: 'Food',
-      accountType: AccountType.EXPENSE,
-      currencyCode: 'USD',
-    },
-  ];
+  const accounts = composerCashFoodAccounts;
 
   it('uses the captured currency for an SMS draft and its saved journal', async () => {
     const { journalService } = jest.requireMock('@/src/services/journal/journalDomainService');

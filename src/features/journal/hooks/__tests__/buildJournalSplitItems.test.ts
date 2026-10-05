@@ -5,7 +5,7 @@ import { DisplayTransaction } from '@/src/types/domainReadModels';
 import { buildJournalSplitItems } from '../useJournalDetailsViewModel';
 import { Icon } from '@/src/types/domainIcons';
 
-describe('journalDetailsSplitItems', () => {
+describe('buildJournalSplitItems', () => {
   it('maps split lines and delegates account navigation', () => {
     const onAccountPress = jest.fn();
     const accountId = 'cash' as AccountId;

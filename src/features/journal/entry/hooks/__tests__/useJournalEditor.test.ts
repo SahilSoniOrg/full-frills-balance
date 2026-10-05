@@ -1,3 +1,5 @@
+import './useJournalEditor.test-setup';
+
 import { journalReadService } from '@/src/services/journal/journalReadService';
 import { useJournalEditor } from '@/src/features/journal/entry/hooks/useJournalEditor';
 import { journalService } from '@/src/services/journal/journalDomainService';
@@ -8,41 +10,8 @@ import dayjs from 'dayjs';
 import { useRouter } from 'expo-router';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 
-// Mock dependencies
-jest.mock('@/src/services/journal/journalDomainService');
-jest.mock('@/src/services/transaction-ingestion');
-jest.mock('@/src/services/journal/journalReadService', () => ({
-  journalReadService: { find: jest.fn(), getJournalForEditor: jest.fn() },
-}));
-jest.mock('@/src/data/repositories/transaction');
-jest.mock('expo-router', () => ({
-  useRouter: jest.fn(),
-}));
-jest.mock('@/src/utils/alerts', () => ({
-  showErrorAlert: jest.fn(),
-}));
-jest.mock('@/src/utils/haptics', () => ({
-  triggerSaveOutcomeHaptic: jest.fn(),
-}));
-
 const mockBack = jest.fn();
 (useRouter as jest.Mock).mockReturnValue({ back: mockBack });
-
-// Mock useExchangeRate
-jest.mock('@/src/hooks/useExchangeRate', () => ({
-  useExchangeRate: jest.fn(() => ({
-    fetchRate: jest.fn(),
-    fetchRequiredRate: jest.fn(),
-  })),
-}));
-
-// Mock useWorkplace
-jest.mock('@/src/contexts/WorkplaceContext', () => ({
-  useWorkplace: jest.fn(() => ({
-    workplaceId: 'test-workplace',
-    defaultCurrencyCode: 'USD',
-  })),
-}));
 
 describe('useJournalEditor', () => {
   beforeEach(() => {

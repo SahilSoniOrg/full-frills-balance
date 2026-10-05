@@ -62,6 +62,20 @@ const splitEntry: JournalEntryCardProps = {
   },
 };
 
+function cardProps(overrides: Partial<JournalEntryCardProps> = {}): JournalEntryCardProps {
+  return { ...entry, ...overrides, accountFlow: overrides.accountFlow ?? entry.accountFlow };
+}
+
+function oneToOneExpenseFlow() {
+  return {
+    primaryAccount: leg('Checking', 'SOURCE'),
+    sources: [],
+    destinations: [leg('Dining', 'DESTINATION')],
+    neutral: [],
+    showCurrencyCodes: false,
+  };
+}
+
 function layoutFlow(
   { getByTestId }: Pick<RenderAPI, 'getByTestId'>,
   availableWidth: number,
@@ -80,32 +94,67 @@ describe('JournalAccountFlow via JournalEntryCard', () => {
   beforeEach(() => act(() => preferences.privacy.setIsPrivacyMode(false)));
   afterEach(() => act(() => preferences.privacy.setIsPrivacyMode(false)));
 
-  it('keeps unequal one-to-one account boxes inline when their combined size fits', () => {
-    const screen = render(
-      <JournalEntryCard
-        {...entry}
-        accountFlow={{
-          primaryAccount: leg('Checking', 'SOURCE'),
-          sources: [],
-          destinations: [leg('Dining', 'DESTINATION')],
-          neutral: [],
-          showCurrencyCodes: false,
-        }}
-      />,
-    );
-    layoutFlow(screen, 320, 190, 94);
-    const { getByTestId, queryByTestId } = screen;
-    expect(within(getByTestId('transaction-source-box')).getByText('Checking')).toBeTruthy();
-    expect(within(getByTestId('transaction-destination-box')).getByText('Dining')).toBeTruthy();
-    expect(getByTestId('transaction-flow-inline')).toBeTruthy();
-    expect(
-      getByTestId('transaction-flow-arrow', { includeHiddenElements: true }).props
-        .accessibilityElementsHidden,
-    ).toBe(true);
-    expect(queryByTestId('transaction-flow-stacked')).toBeNull();
-    expect(
-      queryByTestId('transaction-destination-cue', { includeHiddenElements: true }),
-    ).toBeNull();
+  it.each([
+    {
+      label: 'fits at default scale',
+      fontScale: 1,
+      widths: [320, 190, 94] as const,
+      inline: true,
+      checkA11y: false,
+    },
+    {
+      label: 'stacks at enlarged text',
+      fontScale: 2,
+      widths: [320, 200, 150] as const,
+      inline: false,
+      checkA11y: true,
+    },
+  ])('$label for a simple expense flow', ({ fontScale, widths, inline, checkA11y }) => {
+    const dimensions =
+      fontScale === 1
+        ? null
+        : jest.spyOn(Dimensions, 'get').mockReturnValue({
+            width: 320,
+            height: 640,
+            scale: 2,
+            fontScale,
+          });
+    try {
+      const screen = render(
+        <JournalEntryCard {...cardProps({ accountFlow: oneToOneExpenseFlow() })} />,
+      );
+      layoutFlow(screen, widths[0], widths[1], widths[2]);
+      const { getByTestId, queryByTestId, getByRole } = screen;
+      expect(within(getByTestId('transaction-source-box')).getByText('Checking')).toBeTruthy();
+      expect(within(getByTestId('transaction-destination-box')).getByText('Dining')).toBeTruthy();
+      if (inline) {
+        expect(getByTestId('transaction-flow-inline')).toBeTruthy();
+        expect(
+          getByTestId('transaction-flow-arrow', { includeHiddenElements: true }).props
+            .accessibilityElementsHidden,
+        ).toBe(true);
+        expect(queryByTestId('transaction-flow-stacked')).toBeNull();
+        expect(
+          queryByTestId('transaction-destination-cue', { includeHiddenElements: true }),
+        ).toBeNull();
+      } else {
+        expect(getByTestId('transaction-flow-stacked')).toBeTruthy();
+        expect(
+          within(getByTestId('transaction-destination-box')).getByTestId(
+            'transaction-destination-cue',
+            { includeHiddenElements: true },
+          ),
+        ).toBeTruthy();
+        expect(queryByTestId('transaction-flow-arrow', { includeHiddenElements: true })).toBeNull();
+        if (checkA11y) {
+          const label = getByRole('button').props.accessibilityLabel;
+          expect(label).toContain('From Checking');
+          expect(label).toContain('To Dining');
+        }
+      }
+    } finally {
+      dimensions?.mockRestore();
+    }
   });
 
   it('adapts multi-leg groups to available width and preserves every account in its role', () => {
@@ -233,59 +282,20 @@ describe('JournalAccountFlow via JournalEntryCard', () => {
     expect(screen.queryByTestId('transaction-flow-stacked')).toBeNull();
   });
 
-  it('stacks a simple flow at enlarged text when the account boxes no longer fit', () => {
-    const dimensions = jest.spyOn(Dimensions, 'get').mockReturnValue({
-      width: 320,
-      height: 640,
-      scale: 2,
-      fontScale: 2,
-    });
-    try {
-      const { getByTestId, getByRole, queryByTestId } = render(
-        <JournalEntryCard
-          {...entry}
-          accountFlow={{
-            primaryAccount: leg('Checking', 'SOURCE'),
-            sources: [],
-            destinations: [leg('Dining', 'DESTINATION')],
-            neutral: [],
-            showCurrencyCodes: false,
-          }}
-        />,
-      );
-      layoutFlow({ getByTestId }, 320, 200, 150);
-      expect(getByTestId('transaction-flow-stacked')).toBeTruthy();
-      expect(
-        within(getByTestId('transaction-destination-box')).getByTestId(
-          'transaction-destination-cue',
-          {
-            includeHiddenElements: true,
-          },
-        ),
-      ).toBeTruthy();
-      expect(queryByTestId('transaction-flow-arrow', { includeHiddenElements: true })).toBeNull();
-      expect(within(getByTestId('transaction-source-box')).getByText('Checking')).toBeTruthy();
-      expect(within(getByTestId('transaction-destination-box')).getByText('Dining')).toBeTruthy();
-      expect(getByRole('button').props.accessibilityLabel).toContain('From Checking');
-      expect(getByRole('button').props.accessibilityLabel).toContain('To Dining');
-    } finally {
-      dimensions.mockRestore();
-    }
-  });
-
   it.each(['SOURCE', 'DESTINATION', 'NEUTRAL'] as const)(
     'does not draw a flow connector when only %s accounts exist',
     role => {
       const { queryByTestId, getByRole } = render(
         <JournalEntryCard
-          {...entry}
-          accountFlow={{
-            primaryAccount: leg('Only account', role),
-            sources: role === 'SOURCE' ? [leg('Peer source', role)] : [],
-            destinations: role === 'DESTINATION' ? [leg('Peer destination', role)] : [],
-            neutral: [],
-            showCurrencyCodes: false,
-          }}
+          {...cardProps({
+            accountFlow: {
+              primaryAccount: leg('Only account', role),
+              sources: role === 'SOURCE' ? [leg('Peer source', role)] : [],
+              destinations: role === 'DESTINATION' ? [leg('Peer destination', role)] : [],
+              neutral: [],
+              showCurrencyCodes: false,
+            },
+          })}
         />,
       );
       expect(queryByTestId('transaction-flow-arrow', { includeHiddenElements: true })).toBeNull();

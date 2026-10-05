@@ -2,7 +2,7 @@ import { parseTransactionIntentSeed, toTransactionIntentSeed } from '../journalE
 import { toLegacyJournalEntryQueryParams } from '@/src/types/journalEntryRoute';
 import { asAccountId, asJournalId } from '@/src/types/ids';
 
-describe('journalEntryRouteAdapter', () => {
+describe('journalEntryRouteParams', () => {
   it('preserves the currency of a prefilled amount across navigation and rejects malformed codes', () => {
     const seed = { amount: '418', currencyCode: 'INR' };
     expect(parseTransactionIntentSeed(toLegacyJournalEntryQueryParams(seed))).toEqual(seed);
@@ -142,7 +142,7 @@ describe('journalEntryRouteAdapter', () => {
     'duplicate',
     'edit',
     'planned-payment',
-  ])('preserves %s launch context at the adapter boundary', launchSource => {
+  ])('preserves %s launch context at the route boundary', launchSource => {
     expect(
       parseTransactionIntentSeed({ source: launchSource, amount: '10', description: 'Coffee' }),
     ).toMatchObject({

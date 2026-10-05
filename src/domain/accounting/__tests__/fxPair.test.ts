@@ -4,20 +4,8 @@ import {
   resolveFxPair,
   withConvertedAmount,
   withManualBaseRate,
-  type FxFetchedRates,
 } from '@/src/domain/accounting/fxPair';
-
-const fetched = (
-  sourceBaseRate: number | null,
-  destBaseRate: number | null,
-  overrides: Partial<FxFetchedRates> = {},
-): FxFetchedRates => ({
-  sourceBaseRate,
-  destBaseRate,
-  isLoading: false,
-  error: null,
-  ...overrides,
-});
+import { fxFetchedRates as fetched } from '@/src/domain/accounting/__tests__/fxPairTestFixtures';
 
 describe('resolveFxPair', () => {
   it('derives the pair rate and converted amount from fetched base rates', () => {
@@ -148,24 +136,21 @@ describe('manual base-rate override', () => {
     });
   });
 
-  it('keeps the previous rate while a draft is mid-keystroke', () => {
+  it('keeps the previous rate while a draft is mid-keystroke and clears back to fetch errors', () => {
     let pair = resolveFxPair(unavailable);
     pair = resolveFxPair({ ...unavailable, override: withManualBaseRate(pair, 'source', '1') });
     pair = resolveFxPair({ ...unavailable, override: withManualBaseRate(pair, 'source', '1.') });
-
     expect(pair).toMatchObject({ pairRate: 1, manualSourceBaseRate: '1.', rateError: null });
 
     pair = resolveFxPair({ ...unavailable, override: withManualBaseRate(pair, 'source', '1.25') });
     expect(pair.pairRate).toBe(1.25);
-  });
 
-  it('falls back to fetched rates once every draft is cleared', () => {
-    const pair = resolveFxPair({
-      ...unavailable,
-      override: { kind: 'manualBase', source: '', dest: '', lastResolved: null },
-    });
-
-    expect(pair).toMatchObject({ pairRate: null, rateError: RATE_UNAVAILABLE });
+    expect(
+      resolveFxPair({
+        ...unavailable,
+        override: { kind: 'manualBase', source: '', dest: '', lastResolved: null },
+      }),
+    ).toMatchObject({ pairRate: null, rateError: RATE_UNAVAILABLE });
   });
 });
 

@@ -3,6 +3,10 @@ import { EMPTY_ACCOUNT_ID, TransactionId } from '@/src/types/ids';
 import { JournalEntryLine } from '@/src/types/domainJournal';
 
 import {
+  makeBlankLine,
+  makeJournalEntryLine,
+} from '@/src/services/journal/__tests__/journalEditorHelpers.test.helpers';
+import {
   inferSimpleTabTypeFromTwoLegs,
   isSimpleModeDisabledByLines,
   isSplitModeDisabledByLines,
@@ -29,26 +33,20 @@ describe('journalEditorHelpers', () => {
   describe('normalizeJournalLinesForGuidedMode', () => {
     it('orders credit then debit with stable ids', () => {
       const lines: JournalEntryLine[] = [
-        {
+        makeJournalEntryLine({
           id: 'x' as TransactionId,
           accountId: 'a1' as any,
           accountName: 'D',
           accountType: AccountType.EXPENSE,
-          amount: '10',
           transactionType: TransactionType.DEBIT,
-          notes: '',
-          exchangeRate: '',
-        },
-        {
+        }),
+        makeJournalEntryLine({
           id: 'y' as TransactionId,
           accountId: 'a2' as any,
           accountName: 'C',
           accountType: AccountType.ASSET,
-          amount: '10',
           transactionType: TransactionType.CREDIT,
-          notes: '',
-          exchangeRate: '',
-        },
+        }),
       ];
 
       const normalized = normalizeJournalLinesForGuidedMode(lines);
@@ -61,16 +59,13 @@ describe('journalEditorHelpers', () => {
 
     it('forces advanced mode when credit or debit leg is missing', () => {
       const lines: JournalEntryLine[] = [
-        {
+        makeJournalEntryLine({
           id: 'x' as TransactionId,
           accountId: 'a1' as any,
           accountName: 'D',
           accountType: AccountType.EXPENSE,
-          amount: '10',
           transactionType: TransactionType.DEBIT,
-          notes: '',
-          exchangeRate: '',
-        },
+        }),
       ];
 
       const normalized = normalizeJournalLinesForGuidedMode(lines);
@@ -171,16 +166,15 @@ describe('journalEditorHelpers', () => {
   });
 
   describe('isSimpleModeDisabledByLines', () => {
-    const emptyLine = (id: string, type: TransactionType): JournalEntryLine => ({
-      id: id as TransactionId,
-      accountId: EMPTY_ACCOUNT_ID,
-      accountName: '',
-      accountType: AccountType.EXPENSE,
-      amount: '',
-      transactionType: type,
-      notes: '',
-      exchangeRate: '',
-    });
+    const emptyLine = (id: string, type: TransactionType): JournalEntryLine =>
+      makeJournalEntryLine({
+        id: id as TransactionId,
+        accountId: EMPTY_ACCOUNT_ID,
+        accountName: '',
+        accountType: AccountType.EXPENSE,
+        amount: '',
+        transactionType: type,
+      });
 
     it('allows simple mode for empty split scaffolding (3+ blank legs)', () => {
       const lines = [
@@ -222,16 +216,7 @@ describe('journalEditorHelpers', () => {
   });
 
   describe('isSplitModeDisabledByLines', () => {
-    const line = (id: string, type: TransactionType): JournalEntryLine => ({
-      id: id as TransactionId,
-      accountId: 'account' as any,
-      accountName: 'Account',
-      accountType: AccountType.ASSET,
-      amount: '10',
-      transactionType: type,
-      notes: '',
-      exchangeRate: '',
-    });
+    const line = (id: string, type: TransactionType) => makeBlankLine(id, type);
 
     it('allows one source credit with multiple debit allocations', () => {
       expect(

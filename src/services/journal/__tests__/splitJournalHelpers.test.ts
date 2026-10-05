@@ -15,6 +15,10 @@ const singleCurrency = (currency: string, precision = 2) => ({
 
 const usd = singleCurrency('USD');
 
+function expectValidSplit(params: Parameters<typeof validateSplitState>[0]) {
+  expect(validateSplitState(params)).toEqual({ valid: true });
+}
+
 describe('splitJournalHelpers', () => {
   describe('computeSplitTotals', () => {
     it('computes remaining amount for partial allocation', () => {
@@ -316,14 +320,12 @@ describe('splitJournalHelpers', () => {
       ];
       const result = equalizeSplitAmounts('100', splits, 2, currency);
 
-      expect(
-        validateSplitState({
-          sourceAccountId: 'source' as AccountId,
-          totalAmount: '100',
-          splits: result,
-          currency,
-        }),
-      ).toEqual({ valid: true });
+      expectValidSplit({
+        sourceAccountId: 'source' as AccountId,
+        totalAmount: '100',
+        splits: result,
+        currency,
+      });
     });
 
     it('uses each allocation currency precision when the source has zero decimals', () => {
@@ -351,15 +353,13 @@ describe('splitJournalHelpers', () => {
       const result = equalizeSplitAmounts('1000', splits, 0, currency);
 
       expect(result.map(split => split.amount)).toEqual(['3.35', '3.35']);
-      expect(
-        validateSplitState({
-          sourceAccountId: 'source' as AccountId,
-          totalAmount: '1000',
-          precision: 0,
-          splits: result,
-          currency,
-        }),
-      ).toEqual({ valid: true });
+      expectValidSplit({
+        sourceAccountId: 'source' as AccountId,
+        totalAmount: '1000',
+        precision: 0,
+        splits: result,
+        currency,
+      });
     });
 
     it('reconciles cross-currency rows after distributing an empty remainder', () => {
@@ -389,14 +389,12 @@ describe('splitJournalHelpers', () => {
         currency,
       );
 
-      expect(
-        validateSplitState({
-          sourceAccountId: 'source' as AccountId,
-          totalAmount: '100',
-          splits: result,
-          currency,
-        }),
-      ).toEqual({ valid: true });
+      expectValidSplit({
+        sourceAccountId: 'source' as AccountId,
+        totalAmount: '100',
+        splits: result,
+        currency,
+      });
     });
 
     it('reconciles cross-currency rows after proportional distribution', () => {
@@ -426,14 +424,12 @@ describe('splitJournalHelpers', () => {
         currency,
       );
 
-      expect(
-        validateSplitState({
-          sourceAccountId: 'source' as AccountId,
-          totalAmount: '100',
-          splits: result,
-          currency,
-        }),
-      ).toEqual({ valid: true });
+      expectValidSplit({
+        sourceAccountId: 'source' as AccountId,
+        totalAmount: '100',
+        splits: result,
+        currency,
+      });
     });
 
     it('reconciles proportional distribution against the base total when source and base precision differ', () => {
@@ -466,15 +462,13 @@ describe('splitJournalHelpers', () => {
       );
 
       expect(result.map(split => split.amount)).toEqual(['3.35', '3.35']);
-      expect(
-        validateSplitState({
-          sourceAccountId: 'source' as AccountId,
-          totalAmount: '1000',
-          precision: 0,
-          splits: result,
-          currency,
-        }),
-      ).toEqual({ valid: true });
+      expectValidSplit({
+        sourceAccountId: 'source' as AccountId,
+        totalAmount: '1000',
+        precision: 0,
+        splits: result,
+        currency,
+      });
     });
   });
 });

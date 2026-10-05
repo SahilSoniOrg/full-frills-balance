@@ -5,9 +5,9 @@ import Journal from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Transaction from '@/src/data/models/Transaction';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
-import { AccountType, JournalDisplayType, JournalStatus } from '@/src/types/enums';
+import { AccountType, JournalDisplayType, JournalStatus, TransactionType } from '@/src/types/enums';
+import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import type { CreateJournalData } from '@/src/types/journalWrite';
-import type { JournalId, WorkplaceId } from '@/src/types/ids';
 import { referenceNumberFromMetadataJson } from '@/src/utils/sms/SmsReferenceExtractor';
 import type { Model } from '@nozbe/watermelondb';
 import { Q } from '@nozbe/watermelondb';
@@ -44,6 +44,25 @@ export async function resetJournalIntegrationWorkplace() {
   });
 
   return { cashAccountId: cash.id, expenseAccountId: expense.id, incomeAccountId: income.id };
+}
+
+export function balancedUsdExpenseTransactions(
+  cashAccountId: AccountId | string,
+  expenseAccountId: AccountId | string,
+  amount: number,
+) {
+  return [
+    {
+      accountId: cashAccountId as AccountId,
+      amount,
+      transactionType: TransactionType.CREDIT,
+    },
+    {
+      accountId: expenseAccountId as AccountId,
+      amount,
+      transactionType: TransactionType.DEBIT,
+    },
+  ];
 }
 
 /** Extra persisted fields accepted when a test needs to construct legacy or malformed rows. */

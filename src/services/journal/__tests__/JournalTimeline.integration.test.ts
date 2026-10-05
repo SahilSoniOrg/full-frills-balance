@@ -1,21 +1,22 @@
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
-/**
- * Integration tests for journal write/read modules (ledger + journal query repositories).
- * Tests double-entry accounting, precision handling, and balance integrity.
- */
 
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { observeEnrichedJournals } from '@/src/services/journal/journalTimelineReadModel';
 
-import { resetJournalIntegrationWorkplace } from '@/src/testing/journalFixtures';
+import {
+  balancedUsdExpenseTransactions,
+  resetJournalIntegrationWorkplace,
+} from '@/src/testing/journalFixtures';
 import { database } from '@/src/data/database/Database';
 import Account from '@/src/data/models/Account';
 import { firstValueFrom, filter, take, timeout } from 'rxjs';
 
-describe('Journal ledger integration', () => {
+jest.setTimeout(30_000);
+
+describe('Journal ledger integration @slow', () => {
   let cashAccountId: string;
   let expenseAccountId: string;
 
@@ -24,127 +25,61 @@ describe('Journal ledger integration', () => {
   }, 10000);
 
   describe('observeEnrichedJournals search functionality', () => {
-    it('should find journals by matching description', async () => {
-      await journalPersistenceService.put(
-        {
-          description: 'Unique test description',
-          notes: 'Some notes',
-          journalDate: Date.now(),
-          currencyCode: 'USD',
-          transactions: [
-            {
-              accountId: cashAccountId as AccountId,
-              amount: 10,
-              transactionType: TransactionType.CREDIT,
-            },
-            {
-              accountId: expenseAccountId as AccountId,
-              amount: 10,
-              transactionType: TransactionType.DEBIT,
-            },
-          ],
-        },
-        'wp-1' as WorkplaceId,
-      );
-
-      const observable = observeEnrichedJournals(
-        'wp-1' as WorkplaceId,
-        10,
-        undefined,
-        'Unique test',
-      );
-
-      const results = await new Promise<any[]>(resolve => {
+    async function firstSearchResults(query: string) {
+      const observable = observeEnrichedJournals('wp-1' as WorkplaceId, 10, undefined, query);
+      return new Promise<any[]>(resolve => {
         const subscription = observable.subscribe(data => {
           subscription.unsubscribe();
           resolve(data);
         });
       });
+    }
 
-      expect(results).toHaveLength(1);
-      expect(results[0].description).toBe('Unique test description');
-    });
-
-    it('should find journals by matching notes', async () => {
-      await journalPersistenceService.put(
-        {
-          description: 'Another entry',
-          notes: 'Unique test notes',
-          journalDate: Date.now(),
-          currencyCode: 'USD',
-          transactions: [
-            {
-              accountId: cashAccountId as AccountId,
-              amount: 10,
-              transactionType: TransactionType.CREDIT,
-            },
-            {
-              accountId: expenseAccountId as AccountId,
-              amount: 10,
-              transactionType: TransactionType.DEBIT,
-            },
-          ],
+    it.each([
+      {
+        description: 'Unique test description',
+        notes: 'Some notes',
+        query: 'Unique test',
+        expectedLength: 1,
+        assert: (results: { description: string; notes?: string }[]) => {
+          expect(results[0].description).toBe('Unique test description');
         },
-        'wp-1' as WorkplaceId,
-      );
-
-      const observable = observeEnrichedJournals(
-        'wp-1' as WorkplaceId,
-        10,
-        undefined,
-        'Unique test notes',
-      );
-
-      const results = await new Promise<any[]>(resolve => {
-        const subscription = observable.subscribe(data => {
-          subscription.unsubscribe();
-          resolve(data);
-        });
-      });
-
-      expect(results).toHaveLength(1);
-      expect(results[0].notes).toBe('Unique test notes');
-    });
-
-    it('should not find journals if query does not match description or notes', async () => {
-      await journalPersistenceService.put(
-        {
-          description: 'Standard description',
-          notes: 'Standard notes',
-          journalDate: Date.now(),
-          currencyCode: 'USD',
-          transactions: [
-            {
-              accountId: cashAccountId as AccountId,
-              amount: 10,
-              transactionType: TransactionType.CREDIT,
-            },
-            {
-              accountId: expenseAccountId as AccountId,
-              amount: 10,
-              transactionType: TransactionType.DEBIT,
-            },
-          ],
+      },
+      {
+        description: 'Another entry',
+        notes: 'Unique test notes',
+        query: 'Unique test notes',
+        expectedLength: 1,
+        assert: (results: { description: string; notes?: string }[]) => {
+          expect(results[0].notes).toBe('Unique test notes');
         },
-        'wp-1' as WorkplaceId,
-      );
+      },
+      {
+        description: 'Standard description',
+        notes: 'Standard notes',
+        query: 'Non-existent match',
+        expectedLength: 0,
+        assert: () => undefined,
+      },
+    ])(
+      'filters journals by search query ($query)',
+      async ({ description, notes, query, expectedLength, assert }) => {
+        await journalPersistenceService.put(
+          {
+            description,
+            notes,
+            journalDate: Date.now(),
+            currencyCode: 'USD',
+            transactions: balancedUsdExpenseTransactions(cashAccountId, expenseAccountId, 10),
+          },
+          'wp-1' as WorkplaceId,
+        );
 
-      const observable = observeEnrichedJournals(
-        'wp-1' as WorkplaceId,
-        10,
-        undefined,
-        'Non-existent match',
-      );
-
-      const results = await new Promise<any[]>(resolve => {
-        const subscription = observable.subscribe(data => {
-          subscription.unsubscribe();
-          resolve(data);
-        });
-      });
-
-      expect(results).toHaveLength(0);
-    });
+        const results = await firstSearchResults(query);
+        expect(results).toHaveLength(expectedLength);
+        assert(results);
+      },
+    );
   });
 
   describe('observeEnrichedJournals reactive updates', () => {

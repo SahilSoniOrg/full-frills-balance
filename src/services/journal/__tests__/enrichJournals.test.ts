@@ -114,85 +114,94 @@ describe('enrichJournals', () => {
     );
     expect(enrichedJournalsAreEqual(forward, rateChanged)).toBe(false);
   });
-});
 
-describe('enrichedJournalsAreEqual', () => {
-  it('preserves custom account colors and emits color-only changes, including clearing a color', () => {
-    const row = enrichmentRow('j-1', 'cash', 10, TransactionType.CREDIT, AccountType.ASSET, 'Cash');
-    const original = enrichJournals([journalStub('j-1')], [{ ...row, account_color: '#CDAA6B' }]);
-    const changed = enrichJournals([journalStub('j-1')], [{ ...row, account_color: '#65C6AD' }]);
-    const cleared = enrichJournals([journalStub('j-1')], [{ ...row, account_color: null }]);
-    expect(original[0].accounts[0].color).toBe('#CDAA6B');
-    expect(changed[0].accounts[0].color).toBe('#65C6AD');
-    expect(cleared[0].accounts[0].color).toBeUndefined();
-    expect(enrichedJournalsAreEqual(original, changed)).toBe(false);
-    expect(enrichedJournalsAreEqual(changed, cleared)).toBe(false);
-  });
+  describe('enrichedJournalsAreEqual', () => {
+    it('preserves custom account colors and emits color-only changes, including clearing a color', () => {
+      const row = enrichmentRow(
+        'j-1',
+        'cash',
+        10,
+        TransactionType.CREDIT,
+        AccountType.ASSET,
+        'Cash',
+      );
+      const original = enrichJournals([journalStub('j-1')], [{ ...row, account_color: '#CDAA6B' }]);
+      const changed = enrichJournals([journalStub('j-1')], [{ ...row, account_color: '#65C6AD' }]);
+      const cleared = enrichJournals([journalStub('j-1')], [{ ...row, account_color: null }]);
+      expect(original[0].accounts[0].color).toBe('#CDAA6B');
+      expect(changed[0].accounts[0].color).toBe('#65C6AD');
+      expect(cleared[0].accounts[0].color).toBeUndefined();
+      expect(enrichedJournalsAreEqual(original, changed)).toBe(false);
+      expect(enrichedJournalsAreEqual(changed, cleared)).toBe(false);
+    });
 
-  it('returns false when a leg amount changes', () => {
-    const base = enrichJournals(
-      [journalStub('j-1')],
-      [
+    it.each([
+      {
+        label: 'leg amount',
+        baseRows: [
+          enrichmentRow('j-1', 'cash', 10, TransactionType.CREDIT, AccountType.ASSET, 'Cash'),
+          enrichmentRow('j-1', 'food', 10, TransactionType.DEBIT, AccountType.EXPENSE, 'Food'),
+        ],
+        changedRows: [
+          enrichmentRow('j-1', 'cash', 10, TransactionType.CREDIT, AccountType.ASSET, 'Cash'),
+          enrichmentRow('j-1', 'food', 15, TransactionType.DEBIT, AccountType.EXPENSE, 'Food'),
+        ],
+      },
+      {
+        label: 'account currency',
+        baseRows: [
+          enrichmentRow('j-1', 'cash', 10, TransactionType.CREDIT, AccountType.ASSET, 'Cash'),
+        ],
+        changedRows: [
+          enrichmentRow(
+            'j-1',
+            'cash',
+            10,
+            TransactionType.CREDIT,
+            AccountType.ASSET,
+            'Cash',
+            'EUR',
+          ),
+        ],
+      },
+    ])('returns false when $label changes', ({ baseRows, changedRows }) => {
+      const base = enrichJournals([journalStub('j-1')], baseRows);
+      const updated = enrichJournals([journalStub('j-1')], changedRows);
+      expect(enrichedJournalsAreEqual(base, updated)).toBe(false);
+    });
+
+    it('returns true when snapshots match', () => {
+      const rows = [
         enrichmentRow('j-1', 'cash', 10, TransactionType.CREDIT, AccountType.ASSET, 'Cash'),
         enrichmentRow('j-1', 'food', 10, TransactionType.DEBIT, AccountType.EXPENSE, 'Food'),
-      ],
-    );
-    const updated = enrichJournals(
-      [journalStub('j-1')],
-      [
-        enrichmentRow('j-1', 'cash', 10, TransactionType.CREDIT, AccountType.ASSET, 'Cash'),
-        enrichmentRow('j-1', 'food', 15, TransactionType.DEBIT, AccountType.EXPENSE, 'Food'),
-      ],
-    );
+      ];
+      const a = enrichJournals([journalStub('j-1')], rows);
+      const b = enrichJournals([journalStub('j-1')], rows);
 
-    expect(enrichedJournalsAreEqual(base, updated)).toBe(false);
-  });
+      expect(enrichedJournalsAreEqual(a, b)).toBe(true);
+    });
 
-  it('returns false when only an account currency changes', () => {
-    const journal = journalStub('j-1');
-    const usd = enrichJournals(
-      [journal],
-      [enrichmentRow('j-1', 'cash', 10, TransactionType.CREDIT, AccountType.ASSET, 'Cash')],
-    );
-    const eur = enrichJournals(
-      [journal],
-      [enrichmentRow('j-1', 'cash', 10, TransactionType.CREDIT, AccountType.ASSET, 'Cash', 'EUR')],
-    );
+    it('returns true when enrichment row order differs but legs are identical', () => {
+      const journal = journalStub('j-1');
+      const ordered = enrichJournals(
+        [journal],
+        [
+          enrichmentRow('j-1', 'cash', 10, TransactionType.CREDIT, AccountType.ASSET, 'Cash'),
+          enrichmentRow('j-1', 'food', 10, TransactionType.DEBIT, AccountType.EXPENSE, 'Food'),
+        ],
+      );
+      const reversedInput = enrichJournals(
+        [journal],
+        [
+          enrichmentRow('j-1', 'food', 10, TransactionType.DEBIT, AccountType.EXPENSE, 'Food'),
+          enrichmentRow('j-1', 'cash', 10, TransactionType.CREDIT, AccountType.ASSET, 'Cash'),
+        ],
+      );
 
-    expect(enrichedJournalsAreEqual(usd, eur)).toBe(false);
-  });
-
-  it('returns true when snapshots match', () => {
-    const rows = [
-      enrichmentRow('j-1', 'cash', 10, TransactionType.CREDIT, AccountType.ASSET, 'Cash'),
-      enrichmentRow('j-1', 'food', 10, TransactionType.DEBIT, AccountType.EXPENSE, 'Food'),
-    ];
-    const a = enrichJournals([journalStub('j-1')], rows);
-    const b = enrichJournals([journalStub('j-1')], rows);
-
-    expect(enrichedJournalsAreEqual(a, b)).toBe(true);
-  });
-
-  it('returns true when enrichment row order differs but legs are identical', () => {
-    const journal = journalStub('j-1');
-    const ordered = enrichJournals(
-      [journal],
-      [
-        enrichmentRow('j-1', 'cash', 10, TransactionType.CREDIT, AccountType.ASSET, 'Cash'),
-        enrichmentRow('j-1', 'food', 10, TransactionType.DEBIT, AccountType.EXPENSE, 'Food'),
-      ],
-    );
-    const reversedInput = enrichJournals(
-      [journal],
-      [
-        enrichmentRow('j-1', 'food', 10, TransactionType.DEBIT, AccountType.EXPENSE, 'Food'),
-        enrichmentRow('j-1', 'cash', 10, TransactionType.CREDIT, AccountType.ASSET, 'Cash'),
-      ],
-    );
-
-    expect(enrichedJournalsAreEqual(ordered, reversedInput)).toBe(true);
-    expect(journalEnrichmentFingerprint(ordered[0])).toBe(
-      journalEnrichmentFingerprint(reversedInput[0]),
-    );
+      expect(enrichedJournalsAreEqual(ordered, reversedInput)).toBe(true);
+      expect(journalEnrichmentFingerprint(ordered[0])).toBe(
+        journalEnrichmentFingerprint(reversedInput[0]),
+      );
+    });
   });
 });

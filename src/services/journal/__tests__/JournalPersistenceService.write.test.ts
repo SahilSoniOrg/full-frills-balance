@@ -1,8 +1,9 @@
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { database } from '@/src/data/database/Database';
-import { AccountType, JournalDisplayType, TransactionType, JournalStatus } from '@/src/types/enums';
+import { AccountType, JournalDisplayType, JournalStatus, TransactionType } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 
+import { balancedUsdExpenseTransactions } from '@/src/testing/journalFixtures';
 import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
@@ -41,18 +42,7 @@ describe('JournalPersistenceService write paths', () => {
     rebuildQueueService.stop();
   });
 
-  const balancedLines = () => [
-    {
-      accountId: cashAccountId,
-      amount: 25,
-      transactionType: TransactionType.CREDIT,
-    },
-    {
-      accountId: expenseAccountId,
-      amount: 25,
-      transactionType: TransactionType.DEBIT,
-    },
-  ];
+  const balancedLines = () => balancedUsdExpenseTransactions(cashAccountId, expenseAccountId, 25);
 
   it('preserves legacy SMS source fields when journal metadata is updated', async () => {
     const journal = await journalPersistenceService.put(

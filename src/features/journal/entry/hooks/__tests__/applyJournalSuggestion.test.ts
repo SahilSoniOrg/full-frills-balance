@@ -1,3 +1,5 @@
+import './transactionComposerSession.test-setup';
+
 import { act, renderHook } from '@testing-library/react-native';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { asAccountId, asWorkplaceId, type AccountId } from '@/src/types/ids';
@@ -10,31 +12,13 @@ import { applyJournalSuggestion } from '../applyJournalSuggestion';
 import { useJournalEntryModeState } from '../useJournalEntryModeState';
 import { useSimpleJournalEditor } from '../useSimpleJournalEditor';
 import { useTransactionComposerSession } from '../useTransactionComposerSession';
+import {
+  composerSessionAccounts as accounts,
+  incomeJournalSuggestion as incomeSuggestion,
+} from './transactionComposerSession.fixtures';
 
-jest.mock('@/src/services/journal/journalDomainService');
-jest.mock('@/src/services/journal/journalReadService', () => ({
-  journalReadService: { find: jest.fn(), getJournalForEditor: jest.fn() },
-}));
-jest.mock('@/src/services/transaction-ingestion');
-jest.mock('@/src/data/repositories/transaction');
 jest.mock('@/src/services/analytics', () => ({
   analytics: { trackFeatureUsage: jest.fn() },
-}));
-jest.mock('expo-router', () => ({
-  useRouter: jest.fn(() => ({ back: jest.fn() })),
-}));
-jest.mock('@/src/hooks/use-currencies', () => ({
-  useCurrencies: () => ({ currencies: [], isLoading: false }),
-  useCurrencyPrecision: () => ({ precision: 2, isLoading: false }),
-}));
-jest.mock('@/src/hooks/useExchangeRate', () => ({
-  useExchangeRate: () => ({
-    fetchRate: jest.fn().mockResolvedValue(1),
-    fetchRequiredRate: jest.fn().mockResolvedValue(1),
-  }),
-}));
-jest.mock('@/src/contexts/WorkplaceContext', () => ({
-  useWorkplace: () => ({ workplaceId: 'wp-1', defaultCurrencyCode: 'USD' }),
 }));
 jest.mock('@/src/services/preferences', () => ({
   preferences: {
@@ -46,27 +30,6 @@ jest.mock('@/src/services/preferences', () => ({
     },
   },
 }));
-
-const accounts = [
-  { id: asAccountId('cash'), name: 'Cash', accountType: AccountType.ASSET, currencyCode: 'USD' },
-  { id: asAccountId('bank'), name: 'Bank', accountType: AccountType.ASSET, currencyCode: 'USD' },
-  {
-    id: asAccountId('salary'),
-    name: 'Salary',
-    accountType: AccountType.INCOME,
-    currencyCode: 'USD',
-  },
-  { id: asAccountId('bonus'), name: 'Bonus', accountType: AccountType.INCOME, currencyCode: 'USD' },
-];
-const incomeSuggestion: JournalSuggestion = {
-  key: 'salary-to-bank',
-  description: 'Salary payment',
-  route: {
-    sources: [{ id: asAccountId('salary'), name: 'Salary', type: AccountType.INCOME }],
-    destinations: [{ id: asAccountId('bank'), name: 'Bank', type: AccountType.ASSET }],
-  },
-  history: { count: 1, lastUsedAt: 1 },
-};
 
 describe('applyJournalSuggestion', () => {
   function renderSuggestionSession(
