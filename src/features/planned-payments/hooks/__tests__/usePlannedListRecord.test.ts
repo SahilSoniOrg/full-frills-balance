@@ -1,18 +1,14 @@
 import { act, renderHook } from '@/src/utils/test-utils';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import {
-  postPlannedJournalOccurrence,
-  postPlannedPaymentOccurrence,
-} from '@/src/services/planned-payment/plannedPaymentOrchestration';
+import { recordPlannedOccurrenceWithFxReview } from '../recordPlannedOccurrenceWithFxReview';
 import type { PlannedPaymentListOccurrence } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { PlannedPaymentInterval } from '@/src/types/enums';
 import type { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { usePlannedListRecord } from '../usePlannedListRecord';
 
 jest.mock('@/src/contexts/WorkplaceContext', () => ({ useWorkplace: jest.fn() }));
-jest.mock('@/src/services/planned-payment/plannedPaymentOrchestration', () => ({
-  postPlannedJournalOccurrence: jest.fn(),
-  postPlannedPaymentOccurrence: jest.fn(),
+jest.mock('../recordPlannedOccurrenceWithFxReview', () => ({
+  recordPlannedOccurrenceWithFxReview: jest.fn(),
 }));
 
 const workplaceId = 'workplace-a' as WorkplaceId;
@@ -60,39 +56,45 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
+function renderListRecordHook(
+  workplace: WorkplaceId,
+  isCurrent: (occurrence: PlannedPaymentListOccurrence) => boolean = () => true,
+) {
+  setWorkplace(workplace);
+  return renderHook(() => usePlannedListRecord(isCurrent));
+}
+
 describe('usePlannedListRecord', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     setWorkplace(workplaceId);
-    jest.mocked(postPlannedJournalOccurrence).mockResolvedValue(undefined);
-    jest.mocked(postPlannedPaymentOccurrence).mockResolvedValue(undefined);
+    jest.mocked(recordPlannedOccurrenceWithFxReview).mockResolvedValue(true);
   });
 
   it('posts the displayed saved journal occurrence with its own date and currency-specific saved row', async () => {
-    const { result } = renderHook(() => usePlannedListRecord(() => true));
+    const { result } = renderListRecordHook(workplaceId);
     await act(async () => result.current.recordOccurrence(occurrence));
-    expect(postPlannedJournalOccurrence).toHaveBeenCalledWith(
+    expect(recordPlannedOccurrenceWithFxReview).toHaveBeenCalledWith(
       workplaceId,
       occurrence.payment.id,
-      occurrence.journalId,
       occurrence.date,
+      occurrence.journalId,
     );
-    expect(postPlannedPaymentOccurrence).not.toHaveBeenCalled();
   });
 
   it('blocks occurrences that cannot record or are no longer in the live list', async () => {
     const isCurrent = jest.fn(() => false);
-    const { result } = renderHook(() => usePlannedListRecord(isCurrent));
+    const { result } = renderListRecordHook(workplaceId, isCurrent);
     await act(async () => result.current.recordOccurrence(occurrence));
     await act(async () => result.current.recordOccurrence({ ...occurrence, canRecord: false }));
     expect(isCurrent).toHaveBeenCalledTimes(1);
-    expect(postPlannedJournalOccurrence).not.toHaveBeenCalled();
+    expect(recordPlannedOccurrenceWithFxReview).not.toHaveBeenCalled();
   });
 
   it('locks all visible rows for a plan until its write settles', async () => {
     const pending = deferred();
-    jest.mocked(postPlannedJournalOccurrence).mockReturnValue(pending.promise);
-    const { result } = renderHook(() => usePlannedListRecord(() => true));
+    jest.mocked(recordPlannedOccurrenceWithFxReview).mockReturnValue(pending.promise);
+    const { result } = renderListRecordHook(workplaceId);
     act(() => {
       void result.current.recordOccurrence(occurrence);
     });
@@ -104,22 +106,23 @@ describe('usePlannedListRecord', () => {
         journalId: 'second-journal' as JournalId,
       });
     });
-    expect(postPlannedJournalOccurrence).toHaveBeenCalledTimes(1);
+    expect(recordPlannedOccurrenceWithFxReview).toHaveBeenCalledTimes(1);
     expect(result.current.pendingPlanIds.has(occurrence.payment.id)).toBe(true);
     await act(async () => pending.resolve());
     expect(result.current.pendingPlanIds.has(occurrence.payment.id)).toBe(false);
   });
 
   it('shows an inline retryable error and clears it on retry', async () => {
-    jest.mocked(postPlannedJournalOccurrence)
+    jest
+      .mocked(recordPlannedOccurrenceWithFxReview)
       .mockRejectedValueOnce(new Error('write failed'))
-      .mockResolvedValueOnce(undefined);
-    const { result } = renderHook(() => usePlannedListRecord(() => true));
+      .mockResolvedValueOnce(true);
+    const { result } = renderListRecordHook(workplaceId);
     await act(async () => result.current.recordOccurrence(occurrence));
     expect(result.current.errors[occurrence.occurrenceId]).toBeTruthy();
     await act(async () => result.current.recordOccurrence(occurrence));
     expect(result.current.errors[occurrence.occurrenceId]).toBeUndefined();
-    expect(postPlannedJournalOccurrence).toHaveBeenCalledTimes(2);
+    expect(recordPlannedOccurrenceWithFxReview).toHaveBeenCalledTimes(2);
   });
 
   it('does not start a stale row action after its workplace changes', async () => {
@@ -135,12 +138,13 @@ describe('usePlannedListRecord', () => {
     const nextWorkplace = 'workplace-b' as WorkplaceId;
     rerender({ id: nextWorkplace });
     await act(async () => oldAction(occurrence));
-    expect(postPlannedJournalOccurrence).not.toHaveBeenCalled();
+    expect(recordPlannedOccurrenceWithFxReview).not.toHaveBeenCalled();
   });
 
   it('clears pending and error UI when switching away and back while an old request finishes', async () => {
     const pending = deferred();
-    jest.mocked(postPlannedJournalOccurrence)
+    jest
+      .mocked(recordPlannedOccurrenceWithFxReview)
       .mockRejectedValueOnce(new Error('old error'))
       .mockReturnValueOnce(pending.promise);
     const otherPlanOccurrence = {

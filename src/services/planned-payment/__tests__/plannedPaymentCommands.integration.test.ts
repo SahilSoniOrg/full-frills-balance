@@ -551,6 +551,24 @@ describe('planned payment commands (integration)', () => {
     expect(reloaded.status).toBe(JournalStatus.POSTED);
   });
 
+  it('rejects toggle and delete when the planned payment is missing', async () => {
+    const missing = 'pp-missing' as PlannedPaymentId;
+    await expect(togglePlannedPaymentStatus(WP, missing)).rejects.toThrow(
+      'This planned payment was deleted.',
+    );
+    await expect(deletePlannedPayment(WP, missing)).rejects.toThrow(
+      'This planned payment was deleted.',
+    );
+  });
+
+  it('propagates persistence failures during delete', async () => {
+    const created = await createPlannedPayment(WP, baseInput());
+    jest
+      .spyOn(journalPersistenceService, 'deletePlannedPayment')
+      .mockRejectedValueOnce(new Error('atomic delete failed'));
+    await expect(deletePlannedPayment(WP, created.id)).rejects.toThrow('atomic delete failed');
+  });
+
   it('pause and resume go through service façade', async () => {
     const created = await createPlannedPayment(WP, baseInput());
     const writeSpy = jest.spyOn(database, 'write');

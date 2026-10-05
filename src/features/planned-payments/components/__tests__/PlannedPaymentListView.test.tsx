@@ -6,8 +6,12 @@ import type {
   PlannedPaymentObligation,
   PlannedPaymentSavedOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentReadService';
-import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
-import type { AccountId, JournalId, PlannedPaymentId } from '@/src/types/ids';
+import { PlannedPaymentStatus } from '@/src/types/enums';
+import {
+  fixturePlannedPaymentDate as date,
+  fixturePlannedPaymentObligation,
+  fixturePlannedPaymentSavedForPlan as saved,
+} from '@/src/testing/plannedPaymentFixtures';
 import { fireEvent, render } from '@/src/utils/test-utils';
 import { StyleSheet, View } from 'react-native';
 
@@ -48,39 +52,25 @@ jest.mock('@shopify/flash-list', () => {
   };
 });
 
-const date = (day: number) => new Date(2026, 9, day).getTime();
 const payment = (
   status: PlannedPaymentStatus,
   overrides: Partial<PlannedPaymentObligation> = {},
-): PlannedPaymentObligation => ({
-  id: 'plan' as PlannedPaymentId,
-  name: 'Rent',
-  amount: 725.25,
-  currencyCode: 'EUR',
-  fromAccountId: 'cash' as AccountId,
-  toAccountId: 'rent' as AccountId,
-  intervalN: 1,
-  intervalType: PlannedPaymentInterval.MONTHLY,
-  startDate: date(1),
-  nextOccurrence: date(1),
-  status,
-  isAutoPost: false,
-  flowDirection: 'outflow',
-  ...overrides,
-});
-const saved = (planId: PlannedPaymentId, due: number): PlannedPaymentSavedOccurrence => ({
-  journalId: 'saved-rent' as JournalId,
-  plannedPaymentId: planId,
-  date: due,
-  amount: 725.25,
-  currencyCode: 'EUR',
-});
+): PlannedPaymentObligation =>
+  fixturePlannedPaymentObligation({
+    amount: 725.25,
+    currencyCode: 'EUR',
+    recurrenceDay: undefined,
+    startDate: date(10, 1),
+    nextOccurrence: date(10, 1),
+    status,
+    ...overrides,
+  });
 
 function renderList(
   items: PlannedPaymentObligation[],
   savedOccurrences: PlannedPaymentSavedOccurrence[] = [],
 ) {
-  const now = date(4);
+  const now = date(10, 4);
   const listData = buildPlannedPaymentListPresentation({ items, savedOccurrences }, 'USD', now);
   return render(
     <PlannedPaymentListView
@@ -142,7 +132,7 @@ describe('PlannedPaymentListView disclosure and privacy', () => {
     preferences.privacy.setIsPrivacyMode(true);
     const { getAllByText, getByRole, queryByText } = renderList(
       [payment(PlannedPaymentStatus.COMPLETED)],
-      [saved('plan' as PlannedPaymentId, date(1))],
+      [saved('saved-rent', 'plan', date(10, 1), 725.25, 'EUR')],
     );
     expect(getAllByText(AppConfig.privacyMask).length).toBeGreaterThan(0);
     expect(queryByText(/725/)).toBeNull();

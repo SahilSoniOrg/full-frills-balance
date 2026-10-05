@@ -1,10 +1,12 @@
 import { AppConfig } from '@/src/constants';
 import { MetadataKeys, MetadataSources } from '@/src/constants/ledger-constants';
 import { database } from '@/src/data/database/Database';
-import { seedPlannedPaymentWorkplace } from '@/src/testing/plannedPaymentFixtures';
+import {
+  createDuePlannedPayment,
+  seedPlannedPaymentWorkplace,
+} from '@/src/testing/plannedPaymentFixtures';
 import Journal from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
-import PlannedPayment from '@/src/data/models/PlannedPayment';
 import Transaction from '@/src/data/models/Transaction';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
@@ -25,6 +27,7 @@ import {
   skipPlannedPaymentOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import { buildPlannedPaymentTransferLines } from '@/src/services/planned-payment/plannedPaymentJournalLines';
+import { deletePlannedPayment } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { togglePlannedPaymentStatus } from '@/src/services/planned-payment/plannedPaymentLifecycle';
 import {
   calculateNextOccurrence,
@@ -62,23 +65,8 @@ describe('planned payment orchestration persistence', () => {
     jest.restoreAllMocks();
   });
 
-  async function createDuePayment(name = 'Rent'): Promise<PlannedPayment> {
-    const occurrence = normalizeToStartOfDay(Date.now());
-    return plannedPaymentRepository.create(WORKPLACE_ID, {
-      name,
-      amount: 1200,
-      currencyCode: 'USD',
-      fromAccountId,
-      toAccountId,
-      intervalN: 1,
-      intervalType: PlannedPaymentInterval.DAILY,
-      startDate: occurrence,
-      endDate: occurrence,
-      nextOccurrence: occurrence,
-      status: PlannedPaymentStatus.ACTIVE,
-      isAutoPost: false,
-    });
-  }
+  const createDuePayment = (name = 'Rent') =>
+    createDuePlannedPayment(WORKPLACE_ID, fromAccountId, toAccountId, { name });
 
   async function findJournalsForPayments(
     workplaceId: WorkplaceId,
@@ -910,6 +898,18 @@ describe('planned payment orchestration persistence', () => {
     expect(reloaded?.nextOccurrence).toBe(calculateNextOccurrence(occurrenceDate, payment));
     expect(reloaded?.status).toBe(PlannedPaymentStatus.COMPLETED);
   }, 30000);
+
+  it('rejects post and skip when the planned payment no longer exists', async () => {
+    const payment = await createDuePayment();
+    const occurrenceDate = payment.nextOccurrence;
+    await deletePlannedPayment(WORKPLACE_ID, payment.id);
+    await expect(
+      postPlannedPaymentOccurrence(WORKPLACE_ID, payment.id, occurrenceDate),
+    ).rejects.toThrow('This planned payment was deleted.');
+    await expect(
+      skipPlannedPaymentOccurrence(WORKPLACE_ID, payment.id, occurrenceDate),
+    ).rejects.toThrow('This planned payment was deleted.');
+  });
 
   it('rejects posting an occurrence of a paused payment', async () => {
     const payment = await createDuePayment();

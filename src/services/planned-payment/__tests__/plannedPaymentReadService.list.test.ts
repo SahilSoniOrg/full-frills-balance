@@ -2,45 +2,18 @@ import type Account from '@/src/data/models/Account';
 import type Journal from '@/src/data/models/Journal';
 import type PlannedPayment from '@/src/data/models/PlannedPayment';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
-import type { AccountId, JournalId, PlannedPaymentId } from '@/src/types/ids';
+import type { JournalId } from '@/src/types/ids';
+import {
+  fixturePlannedPaymentDate as date,
+  fixturePlannedPaymentObligation as payment,
+  fixturePlannedPaymentSaved as saved,
+} from '@/src/testing/plannedPaymentFixtures';
 import { BehaviorSubject } from 'rxjs';
 import {
   observePlannedPaymentListData,
   projectPlannedPaymentListOccurrences,
   type PlannedPaymentListData,
-  type PlannedPaymentObligation,
-  type PlannedPaymentSavedOccurrence,
 } from '../plannedPaymentReadService';
-
-const date = (month: number, day: number, year = 2026) => new Date(year, month - 1, day).getTime();
-const payment = (overrides: Partial<PlannedPaymentObligation> = {}): PlannedPaymentObligation => ({
-  id: 'plan' as PlannedPaymentId,
-  name: 'Rent',
-  amount: 100,
-  currencyCode: 'USD',
-  fromAccountId: 'cash' as AccountId,
-  toAccountId: 'rent' as AccountId,
-  intervalN: 1,
-  intervalType: PlannedPaymentInterval.MONTHLY,
-  recurrenceDay: 31,
-  startDate: date(1, 31),
-  nextOccurrence: date(1, 31),
-  status: PlannedPaymentStatus.ACTIVE,
-  isAutoPost: false,
-  flowDirection: 'outflow',
-  ...overrides,
-});
-const saved = (
-  day: number,
-  overrides: Partial<PlannedPaymentSavedOccurrence> = {},
-): PlannedPaymentSavedOccurrence => ({
-  plannedPaymentId: 'plan' as PlannedPaymentId,
-  journalId: `entry-${day}` as JournalId,
-  date: date(1, day),
-  amount: 75,
-  currencyCode: 'EUR',
-  ...overrides,
-});
 
 describe('planned list occurrence projection', () => {
   it('includes every occurrence through the horizon plus one later, using month-end recurrence', () => {

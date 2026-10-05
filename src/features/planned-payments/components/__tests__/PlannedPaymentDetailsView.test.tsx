@@ -25,7 +25,9 @@ const row = (id: string, status: string, date: number, amount = 1250.45) => ({
   description: 'Rent',
 });
 
-const baseVm = (overrides: Partial<PlannedPaymentDetailsViewModel> = {}): PlannedPaymentDetailsViewModel => ({
+const makeDetailsVm = (
+  overrides: Partial<PlannedPaymentDetailsViewModel> = {},
+): PlannedPaymentDetailsViewModel => ({
   theme: getThemeColors(ThemeIds.DEEP_SPACE, 'light'),
   isLoading: false,
   isMissing: false,
@@ -98,7 +100,7 @@ const baseVm = (overrides: Partial<PlannedPaymentDetailsViewModel> = {}): Planne
   ],
   ...overrides,
 });
-const vm = baseVm();
+const vm = makeDetailsVm();
 const chrome: ScreenNavChrome = {
   screenTitle: 'Rent',
   showBack: true,
@@ -273,7 +275,7 @@ describe('PlannedPaymentDetailsView', () => {
       expectResume: false,
     },
   ])('renders paused schedule state (%s)', ({ pausedSinceDate, eyebrow, expectResume }) => {
-    const pausedVm = baseVm({
+    const pausedVm = makeDetailsVm({
       status: PlannedPaymentStatus.PAUSED,
       pausedSinceDate,
       onPost: undefined,

@@ -25,29 +25,7 @@ jest.mock('@/src/features/planned-payments', () => ({
   },
 }));
 jest.mock('@/src/components/layout', () => ({
-  ScreenWithChrome: ({
-    chrome,
-    children,
-  }: {
-    chrome: import('@/src/components/layout/screenChrome').TabScreenChrome;
-    children: import('react').ReactNode;
-  }) => {
-    const { View, Text, Pressable } =
-      jest.requireActual<typeof import('react-native')>('react-native');
-    return (
-      <View>
-        <Text>{chrome.screenTitle}</Text>
-        {children}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={chrome.fab?.accessibilityLabel}
-          onPress={chrome.fab?.onPress}
-        >
-          <Text>{chrome.fab?.label}</Text>
-        </Pressable>
-      </View>
-    );
-  },
+  ScreenWithChrome: jest.requireActual('@/src/testing/mockTabScreenChrome').MockTabScreenWithChrome,
 }));
 jest.mock('expo-router', () => ({ useLocalSearchParams: jest.fn(), useRouter: jest.fn() }));
 jest.mock('@/src/utils/navigation', () => ({

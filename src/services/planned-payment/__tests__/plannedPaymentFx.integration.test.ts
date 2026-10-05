@@ -1,7 +1,9 @@
 import { database } from '@/src/data/database/Database';
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import { resetPlannedPaymentDatabase } from '@/src/testing/plannedPaymentFixtures';
-import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
+import {
+  createPlannedFxPayment,
+  seedPlannedPaymentFxWorkplace,
+} from '@/src/testing/plannedPaymentFixtures';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
@@ -26,7 +28,6 @@ import { normalizeToStartOfDay } from '../plannedPaymentRecurrence';
 import {
   AccountType,
   JournalStatus,
-  PlannedPaymentInterval,
   PlannedPaymentStatus,
   TransactionType,
 } from '@/src/types/enums';
@@ -54,51 +55,21 @@ describe('planned FX posting and review integration', () => {
   let today: number;
 
   beforeEach(async () => {
-    await resetPlannedPaymentDatabase();
+    ({ fromAccountId, toAccountId } = await seedPlannedPaymentFxWorkplace(WORKPLACE));
     today = normalizeToStartOfDay(Date.now());
-    fromAccountId = (
-      await accountWriteRepository.create({
-        name: 'USD source',
-        accountType: AccountType.ASSET,
-        currencyCode: 'USD',
-        workplaceId: WORKPLACE,
-      })
-    ).id;
-    toAccountId = (
-      await accountWriteRepository.create({
-        name: 'EUR destination',
-        accountType: AccountType.ASSET,
-        currencyCode: 'EUR',
-        workplaceId: WORKPLACE,
-      })
-    ).id;
     mockPlannedFxExchangeRates(0.9, 0.8, today);
   });
   afterEach(() => jest.restoreAllMocks());
   afterAll(() => rebuildQueueService.stop());
 
-  async function payment(
+  const payment = (
     mode?: PlannedPaymentFxMode,
     options: { auto?: boolean; amount?: number; destinationAmount?: number; date?: number } = {},
-  ) {
-    const date = options.date ?? today;
-    return plannedPaymentRepository.create(WORKPLACE, {
-      name: 'FX transfer',
-      amount: options.amount ?? 100,
-      currencyCode: 'USD',
-      fxMode: mode,
-      destinationAmount: options.destinationAmount,
-      fromAccountId,
-      toAccountId,
-      intervalN: 1,
-      intervalType: PlannedPaymentInterval.DAILY,
-      startDate: date,
-      endDate: date,
-      nextOccurrence: date,
-      status: PlannedPaymentStatus.ACTIVE,
-      isAutoPost: options.auto ?? false,
+  ) =>
+    createPlannedFxPayment(WORKPLACE, fromAccountId, toAccountId, mode, {
+      ...options,
+      date: options.date ?? today,
     });
-  }
   const journals = (plan: PlannedPayment, status: JournalStatus) =>
     journalPlannedQueries.findByPlannedPaymentAndStatus(WORKPLACE, plan.id, status);
   async function postedLines(plan: PlannedPayment) {

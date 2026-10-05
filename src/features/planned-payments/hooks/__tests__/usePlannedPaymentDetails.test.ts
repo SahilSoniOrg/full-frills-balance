@@ -1,11 +1,8 @@
 import { act, renderHook, waitFor } from '@/src/utils/test-utils';
 import { usePlannedPaymentDetailsViewModel } from '../usePlannedPaymentDetailsViewModel';
 import { usePlannedPaymentRecord } from '../usePlannedPaymentRecord';
+import { recordPlannedOccurrenceWithFxReview } from '../recordPlannedOccurrenceWithFxReview';
 import { plannedPaymentDetailService } from '@/src/services/planned-payment/plannedPaymentDetailService';
-import {
-  postPlannedJournalOccurrence,
-  skipPlannedPaymentOccurrence,
-} from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import type { PlannedPaymentObligation } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import type { AccountId, PlannedPaymentId } from '@/src/types/ids';
@@ -48,17 +45,15 @@ jest.mock('@/src/services/audit-service', () => ({
   observeAuditTrail: () => jest.requireActual('rxjs').of([]),
 }));
 jest.mock('../usePlannedPaymentRecord', () => ({ usePlannedPaymentRecord: jest.fn() }));
+jest.mock('../recordPlannedOccurrenceWithFxReview', () => ({
+  recordPlannedOccurrenceWithFxReview: jest.fn(),
+}));
 jest.mock('@/src/services/planned-payment/plannedPaymentDetailService', () => ({
   plannedPaymentDetailService: {
     observeActivity: jest.fn(() => jest.requireActual('rxjs').of([])),
   },
   summarizePlannedPaymentActivity: jest.fn(),
   getNextPlannedPaymentOccurrences: jest.fn(() => []),
-}));
-jest.mock('@/src/services/planned-payment/plannedPaymentOrchestration', () => ({
-  postPlannedJournalOccurrence: jest.fn(),
-  postPlannedPaymentOccurrence: jest.fn(),
-  skipPlannedPaymentOccurrence: jest.fn(),
 }));
 jest.mock('@/src/services/planned-payment/plannedPaymentLifecycle', () => ({
   togglePlannedPaymentStatus: jest.fn(),
@@ -69,12 +64,6 @@ jest.mock('@/src/services/planned-payment/plannedPaymentCommands', () => ({
 jest.mock('@/src/services/analytics', () => ({ analytics: { trackFeatureUsage: jest.fn() } }));
 jest.mock('@/src/utils/navigation', () => ({
   AppNavigation: { back: jest.fn(), toPlannedPaymentForm: jest.fn() },
-}));
-jest.mock('@/src/services/planned-payment/plannedPaymentFxReviewRequest', () => ({
-  withPlannedPaymentFxReview: async (run: (review?: unknown) => Promise<unknown>) => {
-    await run();
-    return true;
-  },
 }));
 jest.mock('@/src/utils/alerts', () => ({
   toast: { success: jest.fn() },
@@ -126,16 +115,15 @@ describe('planned payment detail actions', () => {
     jest
       .mocked(plannedPaymentDetailService.observeActivity)
       .mockReturnValue(jest.requireActual('rxjs').of([plannedJournal]));
-    jest.mocked(postPlannedJournalOccurrence).mockResolvedValue(undefined);
-    jest.mocked(skipPlannedPaymentOccurrence).mockResolvedValue(undefined);
+    jest.mocked(recordPlannedOccurrenceWithFxReview).mockResolvedValue(true);
   });
 
   it('locks concurrent actions and keeps the page open after recording', async () => {
     let finish!: () => void;
-    const postPromise = new Promise<void>(resolve => {
-      finish = resolve;
+    const postPromise = new Promise<boolean | void>(resolve => {
+      finish = () => resolve(true);
     });
-    jest.mocked(postPlannedJournalOccurrence).mockReturnValue(postPromise);
+    jest.mocked(recordPlannedOccurrenceWithFxReview).mockReturnValue(postPromise);
     const { result } = renderHook(() => usePlannedPaymentDetailsViewModel(item.id));
     await waitFor(() => expect(result.current.isLoadingActivity).toBe(false));
 
@@ -156,8 +144,13 @@ describe('planned payment detail actions', () => {
     });
 
     expect(result.current.pendingAction).toBe('record');
-    expect(skipPlannedPaymentOccurrence).not.toHaveBeenCalled();
-    expect(postPlannedJournalOccurrence).toHaveBeenCalledWith('workplace', 'plan', 'unpaid', 100);
+    expect(recordPlannedOccurrenceWithFxReview).toHaveBeenCalledTimes(1);
+    expect(recordPlannedOccurrenceWithFxReview).toHaveBeenCalledWith(
+      'workplace',
+      'plan',
+      100,
+      'unpaid',
+    );
     await act(async () => {
       finish();
       await postPromise;
@@ -168,13 +161,15 @@ describe('planned payment detail actions', () => {
   });
 
   it('surfaces a settlement failure and permits retry instead of silently leaving the user stuck', async () => {
-    jest.mocked(postPlannedJournalOccurrence).mockRejectedValueOnce(new Error('write failed'));
+    jest
+      .mocked(recordPlannedOccurrenceWithFxReview)
+      .mockRejectedValueOnce(new Error('write failed'));
     const { result } = renderHook(() => usePlannedPaymentDetailsViewModel(item.id));
     await confirmLatestAction(result.current.onPost);
     expect(result.current.actionError).toBe('Could not record this occurrence. Try again.');
     expect(result.current.pendingAction).toBeNull();
     await confirmLatestAction(result.current.onPost);
     expect(result.current.actionError).toBeNull();
-    expect(postPlannedJournalOccurrence).toHaveBeenCalledTimes(2);
+    expect(recordPlannedOccurrenceWithFxReview).toHaveBeenCalledTimes(2);
   });
 });

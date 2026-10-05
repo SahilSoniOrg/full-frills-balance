@@ -1,47 +1,22 @@
-import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
-import type { AccountId, JournalId, PlannedPaymentId } from '@/src/types/ids';
 import type {
   PlannedPaymentListData,
   PlannedPaymentObligation,
-  PlannedPaymentSavedOccurrence,
 } from '@/src/services/planned-payment/plannedPaymentReadService';
+import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
+import {
+  fixturePlannedPaymentDate as date,
+  fixturePlannedPaymentObligationWithId,
+  fixturePlannedPaymentSavedForPlan as saved,
+} from '@/src/testing/plannedPaymentFixtures';
 import { buildPlannedPaymentListPresentation } from '../plannedPaymentListPresentation';
 
-const date = (month: number, day: number, year = 2026, hour = 0) =>
-  new Date(year, month - 1, day, hour).getTime();
-const payment = (
-  id: string,
-  overrides: Partial<PlannedPaymentObligation> = {},
-): PlannedPaymentObligation => ({
-  id: id as PlannedPaymentId,
-  name: id,
-  amount: 100,
-  currencyCode: 'USD',
-  fromAccountId: 'cash' as AccountId,
-  toAccountId: 'rent' as AccountId,
-  intervalN: 1,
-  intervalType: PlannedPaymentInterval.MONTHLY,
-  recurrenceDay: 3,
-  startDate: date(10, 3),
-  nextOccurrence: date(10, 3),
-  status: PlannedPaymentStatus.ACTIVE,
-  isAutoPost: false,
-  flowDirection: 'outflow',
-  ...overrides,
-});
-const saved = (
-  id: string,
-  plan: string,
-  due: number,
-  amount = 100,
-  currencyCode = 'USD',
-): PlannedPaymentSavedOccurrence => ({
-  journalId: id as JournalId,
-  plannedPaymentId: plan as PlannedPaymentId,
-  date: due,
-  amount,
-  currencyCode,
-});
+const payment = (id: string, overrides: Partial<PlannedPaymentObligation> = {}) =>
+  fixturePlannedPaymentObligationWithId(id, {
+    recurrenceDay: 3,
+    startDate: date(10, 3),
+    nextOccurrence: date(10, 3),
+    ...overrides,
+  });
 const build = (data: PlannedPaymentListData, now = date(10, 3), currency = 'USD') =>
   buildPlannedPaymentListPresentation(data, currency, now);
 
