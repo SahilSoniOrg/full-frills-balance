@@ -12,7 +12,8 @@ import {
   selectSplitDraftLines,
   useSplitDraftProjection,
 } from '@/src/features/journal/entry/modes/split/splitDraftProjection';
-import { lineAccountPatch, parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
+import { parsePositiveRate } from '@/src/domain/accounting/parsePositiveRate';
+import { lineAccountPatch } from '@/src/services/journal/journalEditorHelpers';
 import { parseSimpleAmountInput } from '@/src/services/journal/simpleJournalHelpers';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { TabType } from '@/src/types/domainJournal';

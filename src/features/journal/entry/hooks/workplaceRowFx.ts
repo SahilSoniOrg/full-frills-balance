@@ -5,7 +5,7 @@ import {
   type FxPair,
 } from '@/src/domain/accounting/fxPair';
 import { formatManualBaseRate } from '@/src/domain/accounting/manualBaseRate';
-import { parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
+import { parsePositiveRate } from '@/src/domain/accounting/parsePositiveRate';
 import { getSplitCurrencyPrecision } from '@/src/services/journal/splitJournalHelpers';
 import type { JournalEntryLine } from '@/src/types/domainJournal';
 import { useCallback } from 'react';

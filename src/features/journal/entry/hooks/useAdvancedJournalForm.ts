@@ -10,7 +10,8 @@ import {
   getJournalLineBaseAmount,
   isJournalBalanced,
 } from '@/src/services/accounting/JournalCalculator';
-import { lineAccountPatch, parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
+import { parsePositiveRate } from '@/src/domain/accounting/parsePositiveRate';
+import { lineAccountPatch } from '@/src/services/journal/journalEditorHelpers';
 import {
   distributeSplitRemainder,
   equalizeSplitAmounts,
@@ -124,18 +125,11 @@ export function useAdvancedJournalForm({
 
   const fromTotal = useMemo(
     () =>
-      fromLines.reduce(
-        (sum, line) => sum + getJournalLineBaseAmount(line, workplaceCurrency),
-        0,
-      ),
+      fromLines.reduce((sum, line) => sum + getJournalLineBaseAmount(line, workplaceCurrency), 0),
     [fromLines, workplaceCurrency],
   );
   const toTotal = useMemo(
-    () =>
-      toLines.reduce(
-        (sum, line) => sum + getJournalLineBaseAmount(line, workplaceCurrency),
-        0,
-      ),
+    () => toLines.reduce((sum, line) => sum + getJournalLineBaseAmount(line, workplaceCurrency), 0),
     [toLines, workplaceCurrency],
   );
 

@@ -231,7 +231,7 @@ export class JournalService {
     const duplicated = await this.createJournal(
       {
         journalDate: Date.now(),
-        description: journal.description ? `${journal.description}` : undefined,
+        description: journal.description || undefined,
         currencyCode: journal.currencyCode,
         transactions: transactions.map(tx => ({
           accountId: tx.accountId,

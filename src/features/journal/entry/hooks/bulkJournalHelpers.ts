@@ -4,7 +4,7 @@ import { JournalEntryLine } from '@/src/types/domainJournal';
 import { WorkplaceId, EMPTY_ACCOUNT_ID, TransactionId } from '@/src/types/ids';
 
 import { generator as generateId } from '@/src/data/database/idGenerator';
-import { parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
+import { parsePositiveRate } from '@/src/domain/accounting/parsePositiveRate';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { formatManualBaseRate } from '@/src/domain/accounting/manualBaseRate';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';

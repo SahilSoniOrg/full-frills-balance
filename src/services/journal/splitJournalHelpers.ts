@@ -1,6 +1,6 @@
 import { AccountId, EMPTY_ACCOUNT_ID, TransactionId } from '@/src/types/ids';
 
-import { parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
+import { parsePositiveRate } from '@/src/domain/accounting/parsePositiveRate';
 import { parseSimpleAmountInput } from '@/src/services/journal/simpleJournalHelpers';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import {

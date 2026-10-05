@@ -1,5 +1,6 @@
 import { getJournalLineBaseAmount } from '@/src/services/accounting/JournalCalculator';
-import { parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
+import { parsePositiveRate } from '@/src/domain/accounting/parsePositiveRate';
+import { validateDistinctAccounts } from '@/src/services/accounting/JournalValidation';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { TransactionType } from '@/src/types/enums';
@@ -330,7 +331,6 @@ export function validatePostingPlan(
 
   let debitCount = 0;
   let creditCount = 0;
-  const distinctAccounts = new Set<AccountId>();
   for (const line of plan.lines) {
     if (lineIds.has(line.id))
       issues.push({
@@ -348,7 +348,6 @@ export function validatePostingPlan(
       });
       continue;
     }
-    distinctAccounts.add(line.accountId);
     const account = accountMap.get(line.accountId);
     if (!account) {
       issues.push({
@@ -402,7 +401,7 @@ export function validatePostingPlan(
     issues.push({ code: 'missing_debit', message: 'A posting plan needs a debit line' });
   if (creditCount === 0)
     issues.push({ code: 'missing_credit', message: 'A posting plan needs a credit line' });
-  if (distinctAccounts.size < 2)
+  if (!validateDistinctAccounts(plan.lines.map(line => line.accountId)).isValid)
     issues.push({ code: 'missing_account', message: 'A posting plan needs two distinct accounts' });
 
   if (issues.length === 0) {

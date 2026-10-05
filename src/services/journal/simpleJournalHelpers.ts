@@ -5,7 +5,8 @@ import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
 
 import { filterGuidedLegAccounts } from '@/src/services/journal/guidedJournalAccountEligibility';
-import { parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
+import { formatManualBaseRate } from '@/src/domain/accounting/manualBaseRate';
+import { parsePositiveRate } from '@/src/domain/accounting/parsePositiveRate';
 import { formatRoundedAmount } from '@/src/utils/money';
 
 export function hasNegativeAmountSign(amount: string): boolean {
@@ -72,7 +73,7 @@ export function buildSimpleCrossCurrencyLineUpdates(
     const formattedConverted = formatRoundedAmount(convertedAmount, destPrecision);
 
     if (sourceCurrency !== baseCurrency && sourceBaseRate) {
-      const srcRateStr = sourceBaseRate.toFixed(6);
+      const srcRateStr = formatManualBaseRate(sourceBaseRate);
       if (sourceLine.exchangeRate !== srcRateStr) {
         updates[sourceLine.id] = { exchangeRate: srcRateStr };
       }
@@ -81,7 +82,7 @@ export function buildSimpleCrossCurrencyLineUpdates(
     }
 
     if (destCurrency !== baseCurrency && destBaseRate) {
-      const dstRateStr = destBaseRate.toFixed(6);
+      const dstRateStr = formatManualBaseRate(destBaseRate);
       if (destinationLine.exchangeRate !== dstRateStr) {
         updates[destinationLine.id] = { exchangeRate: dstRateStr };
       }
@@ -134,10 +135,8 @@ export function ensureSelectedAccountVisible(
   return selected ? [selected, ...sectionAccounts] : sectionAccounts;
 }
 
-export function resolveAccountLeg<
-  T extends Pick<SimpleFormSectionConfig, 'title' | 'accounts' | 'role'>,
->(
-  sections: T[],
+export function resolveAccountLeg(
+  sections: Pick<SimpleFormSectionConfig, 'title' | 'accounts' | 'role'>[],
   role: AccountRole,
   selectedId: AccountId | undefined,
   accounts: AccountFields[],

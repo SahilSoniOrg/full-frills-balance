@@ -3,12 +3,6 @@ import { AccountId, EMPTY_ACCOUNT_ID, TransactionId } from '@/src/types/ids';
 import { JournalEntryLine, TabType } from '@/src/types/domainJournal';
 import type { AccountFields } from '@/src/types/plainDtos';
 
-/** A finite rate greater than zero, or null for blank, malformed, zero, or negative input. */
-export function parsePositiveRate(value: string | number | null | undefined): number | null {
-  const rate = Number(value);
-  return Number.isFinite(rate) && rate > 0 ? rate : null;
-}
-
 export type LineAccountPatch = Pick<
   JournalEntryLine,
   'accountId' | 'accountName' | 'accountType' | 'accountCurrency'

@@ -2,6 +2,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import { TransactionType } from '@/src/types/enums';
 
 import { checkJournal, JournalLineForCheck } from '@/src/utils/accounting/BalanceEffects';
+import { roundToPrecision } from '@/src/utils/money';
 import { sanitizeAmount } from '@/src/utils/validation';
 
 interface JournalLineInput {
@@ -9,10 +10,6 @@ interface JournalLineInput {
   type: TransactionType;
   exchangeRate?: number | string;
   accountCurrency?: string;
-}
-
-function roundAmount(amount: number): number {
-  return Math.round((amount + Number.EPSILON) * 100) / 100;
 }
 
 export function isJournalBalanced(lines: JournalLineInput[], baseCurrency: string): boolean {
@@ -23,7 +20,6 @@ export function isJournalBalanced(lines: JournalLineInput[], baseCurrency: strin
     const isForeignCurrencyLine = Boolean(
       currency && currency !== normalizedBaseCurrency && Number.isFinite(rate) && rate > 0,
     );
-
     return {
       amount: typeof line.amount === 'string' ? (sanitizeAmount(line.amount) ?? 0) : line.amount,
       type: line.type,
@@ -77,9 +73,9 @@ export function getJournalLineBaseAmount(
   if (!normalizedLineCurrency || normalizedLineCurrency === normalizedBaseCurrency) {
     // Even for base currency, ensure we round to the currency precision
     // to avoid 10.100000000002 issues from manual entry or calculations
-    return roundAmount(finalAmount);
+    return roundToPrecision(finalAmount, 2);
   }
 
   const baseAmount = finalAmount * rate;
-  return roundAmount(baseAmount);
+  return roundToPrecision(baseAmount, 2);
 }

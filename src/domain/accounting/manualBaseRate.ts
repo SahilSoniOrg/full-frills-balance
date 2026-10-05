@@ -1,4 +1,4 @@
-import { parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
+import { parsePositiveRate } from '@/src/domain/accounting/parsePositiveRate';
 
 function parseManualBaseRate(value: string | undefined): number | null {
   const trimmed = value?.trim() ?? '';
