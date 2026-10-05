@@ -115,7 +115,7 @@ describe('PlannedPaymentListView disclosure and privacy', () => {
     expect(getByText('Rent')).toBeTruthy();
     expect(getByText('Extended schedule')).toBeTruthy();
     expect(getByText('Paused')).toBeTruthy();
-    expect(getByText('Ended · Every 2 months')).toBeTruthy();
+    expect(getByText('Every 2 months')).toBeTruthy();
   });
 
   it('reserves the floating action button footprint after the last row', () => {

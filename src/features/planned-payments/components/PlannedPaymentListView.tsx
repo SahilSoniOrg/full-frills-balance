@@ -1,7 +1,9 @@
 import {
   AppText,
+  AppIcon,
   EmptyStateView,
   ErrorStateView,
+  Icon,
   LoadingView,
   PressScaleTouchable,
 } from '@/src/components/core';
@@ -25,6 +27,7 @@ import dayjs from 'dayjs';
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { formatPlannedPaymentInterval } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
+import { useTheme } from '@/src/hooks/use-theme';
 
 export type PlannedPaymentListViewProps = {
   listData: PlannedPaymentListPresentation;
@@ -39,6 +42,19 @@ type FeedRow =
   | { kind: 'header'; group: PlannedPaymentListGroup }
   | { kind: 'occurrence'; occurrence: Extract<PlannedPaymentListRow, { kind: 'occurrence' }> }
   | { kind: 'schedule'; payment: PlannedPaymentObligation };
+
+function groupHeaderIcon(key: PlannedPaymentListGroup['key']) {
+  switch (key) {
+    case 'overdue':
+      return Icon.Alert;
+    case 'next7Days':
+      return Icon.Calendar;
+    case 'pausedEnded':
+      return Icon.Pause;
+    default:
+      return Icon.Clock;
+  }
+}
 
 function groupTitle(group: PlannedPaymentListGroup, monthStart: number, nextMonthStart: number) {
   const strings = AppConfig.strings.plannedListRedesign;
@@ -91,6 +107,7 @@ export function PlannedPaymentListView({
   onItemPress,
   onCreate,
 }: PlannedPaymentListViewProps) {
+  const { theme } = useTheme();
   const strings = AppConfig.strings.plannedListRedesign;
   const emptyStrings = AppConfig.strings.plannedPayments;
   const formatMoney = useMoneyFormat({ style: 'compact' });
@@ -173,20 +190,36 @@ export function PlannedPaymentListView({
                 style={styles.disclosure}
                 surfaceStyle={styles.sectionHeading}
               >
-                <AppText variant="bodySmall" weight="medium" color="secondary">
-                  {groupTitle(group, listData.monthStart, listData.nextMonthStart)}
-                </AppText>
-                <AppText variant="body" color="secondary">
-                  {showPausedEnded ? '−' : '+'}
-                </AppText>
+                <View style={styles.sectionTitle}>
+                  <AppIcon
+                    name={groupHeaderIcon(group.key)}
+                    size={Size.iconXs}
+                    color="textSecondary"
+                  />
+                  <AppText variant="bodySmall" weight="medium" color="secondary">
+                    {groupTitle(group, listData.monthStart, listData.nextMonthStart)}
+                  </AppText>
+                </View>
+                <AppIcon
+                  name={showPausedEnded ? Icon.ChevronUp : Icon.ChevronDown}
+                  size={Size.iconSm}
+                  color="textSecondary"
+                />
               </PressScaleTouchable>
             );
           }
           return (
             <View style={styles.sectionHeading}>
-              <AppText variant="bodySmall" weight="medium" color="secondary">
-                {groupTitle(group, listData.monthStart, listData.nextMonthStart)}
-              </AppText>
+              <View style={styles.sectionTitle}>
+                <AppIcon
+                  name={groupHeaderIcon(group.key)}
+                  size={Size.iconXs}
+                  color="textSecondary"
+                />
+                <AppText variant="bodySmall" weight="medium" color="secondary">
+                  {groupTitle(group, listData.monthStart, listData.nextMonthStart)}
+                </AppText>
+              </View>
               <View style={styles.subtotal}>
                 {group.outgoing.mainCurrency.count > 0 && (
                   <MoneyText
@@ -239,19 +272,29 @@ export function PlannedPaymentListView({
               style={styles.scheduleRow}
               surfaceStyle={styles.scheduleSurface}
             >
-              <View style={styles.scheduleStatus}>
-                <AppText variant="caption" weight="semibold" color="secondary">
-                  {isPaused ? 'Ⅱ' : '✓'}
-                </AppText>
+              <View style={[styles.scheduleStatus, { backgroundColor: theme.surfaceSecondary }]}>
+                <AppIcon
+                  name={isPaused ? Icon.Pause : Icon.CheckCircle}
+                  size={Size.iconSm}
+                  color="textSecondary"
+                />
               </View>
               <View style={styles.scheduleDetails}>
                 <AppText variant="body" weight="semibold">
                   {payment.name}
                 </AppText>
-                <AppText variant="caption" color="secondary">
-                  {status}
-                  {cadence ? ` · ${cadence}` : ''}
-                </AppText>
+                {cadence ? (
+                  <View style={styles.scheduleCadence}>
+                    <AppIcon name={Icon.Repeat} size={Size.iconXs} color="textSecondary" />
+                    <AppText variant="caption" color="secondary" numberOfLines={1}>
+                      {cadence}
+                    </AppText>
+                  </View>
+                ) : (
+                  <AppText variant="caption" color="secondary">
+                    {status}
+                  </AppText>
+                )}
               </View>
               <MoneyText
                 amount={payment.amount}
@@ -309,6 +352,19 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   disclosure: { minHeight: 44, marginTop: Spacing.xs, marginBottom: Spacing.xs },
+  sectionTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  scheduleCadence: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    minWidth: 0,
+  },
   scheduleRow: { marginBottom: Spacing.xs },
   scheduleSurface: {
     flexDirection: 'row',
@@ -322,7 +378,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
