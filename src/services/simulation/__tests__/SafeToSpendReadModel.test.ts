@@ -3,19 +3,10 @@ import { WorkplaceId } from '@/src/types/ids';
 
 import { accountObserveQueries } from '@/src/data/repositories/account';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
-import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
-import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
-import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
-import { transactionRawPatternQueries } from '@/src/data/repositories/raw/TransactionRawPatternQueries';
-import {
-  transactionObserveQueries,
-  transactionQueryRepository,
-} from '@/src/data/repositories/transaction';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
-import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { cashFlowSimulationService } from '@/src/services/simulation/CashFlowSimulationService';
 import {
@@ -26,12 +17,21 @@ import { safeToSpendReadModel } from '@/src/services/simulation/SafeToSpendReadM
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { observeSafeToSpendInputSnapshot } from '@/src/services/simulation/safeToSpendInputAcquisition';
 import * as forecastDateBasis from '@/src/services/simulation/forecastDateBasis';
-import type {
-  ForecastDateBasis,
-  ForecastDateBasisDependencies,
+import {
+  observeForecastDateBasis,
+  type ForecastDateBasis,
 } from '@/src/services/simulation/forecastDateBasis';
+import {
+  STS_TEST_WORKPLACE,
+  createForecastDateBasisTestHarness,
+  createPassiveForecastDateBasisDependencies,
+  emptySimResult,
+  installStsMocks,
+  mockCashAssetRow,
+  mockLiquidCashAsset,
+} from './stsReadModelFixtures';
 import { BehaviorSubject, defer, firstValueFrom, of, Subject, throwError } from 'rxjs';
-import { filter, timeout } from 'rxjs/operators';
+import { filter, take, timeout } from 'rxjs/operators';
 import { afterEach } from '@jest/globals';
 import dayjs from 'dayjs';
 jest.mock('@/src/data/repositories/raw/TransactionRawMetricsQueries', () => ({
@@ -91,24 +91,6 @@ jest.mock('@/src/services/preferences', () => {
   };
 });
 
-const emptySimResult = {
-  simulationResult: {
-    summary: { safeToSpend: 0, shortfall: 0, trajectoryMinBalance: 0 },
-    projections: [],
-  },
-  report: {
-    summary: {
-      totalFutureInflow: 0,
-      totalPlannedOutflow: 0,
-      totalCommittedPlanned: 0,
-    },
-    budget: { currentMonthRemaining: 0, nextMonthProjected: 0, nextMonthDays: 30 },
-  },
-  accountSummaries: [],
-  accountMap: new Map(),
-  normalizedStartingBalances: new Map<string, number>(),
-};
-
 describe('SafeToSpendReadModel', () => {
   afterEach(() => {
     safeToSpendReadModel.clearCache();
@@ -124,67 +106,18 @@ describe('SafeToSpendReadModel', () => {
       REACTIVE_CACHE_NAMESPACES.workplaceActiveCount,
     ]);
     safeToSpendReadModel.clearCache();
-
-    (accountObserveQueries.observeByType as jest.Mock).mockReturnValue(of([]));
-    (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of([]));
-    (budgetRepository.observeAllActive as jest.Mock).mockReturnValue(of([]));
-    (plannedPaymentRepository.observeAll as jest.Mock).mockReturnValue(of([]));
-    (plannedPaymentRepository.observeActive as jest.Mock).mockReturnValue(of([]));
-    (journalObserveQueries.observeStatusMeta as jest.Mock).mockReturnValue(of([]));
-    (journalObserveQueries.observePlannedInRange as jest.Mock).mockReturnValue(of([]));
-    (journalQueryRepository.findByIds as jest.Mock).mockResolvedValue([]);
-    (transactionObserveQueries.observeActiveCount as jest.Mock).mockReturnValue(of(0));
-    (transactionQueryRepository.findByAccountsAndDateRange as jest.Mock).mockResolvedValue([]);
-    (transactionQueryRepository.findByJournals as jest.Mock).mockResolvedValue([]);
-    (transactionRawPatternQueries.getRecurringPatternsRaw as jest.Mock).mockResolvedValue([]);
-    (transactionRawMetricsQueries.getDailyDeltasGroupedRaw as jest.Mock).mockResolvedValue([]);
-    (transactionRawMetricsQueries.getLatestBalancesRaw as jest.Mock).mockResolvedValue(new Map());
-    (exchangeRateService.fetchRatesForBase as jest.Mock).mockResolvedValue({});
-    (exchangeRateService.observeSpotRateUpdates as jest.Mock).mockReturnValue(of(''));
-    (budgetReadService.observeBudgetUsage as jest.Mock).mockReturnValue(
-      of({ remaining: 0, spent: 0 }),
-    );
-    (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([]);
-    (workplaceRepository.observeById as jest.Mock).mockReturnValue(
-      of({ defaultCurrencyCode: 'USD' }),
-    );
-    (cashFlowSimulationService.simulate as jest.Mock).mockResolvedValue(emptySimResult);
+    installStsMocks();
   });
 
   describe('forWorkplace().watch()', () => {
     it('recovers a failed balance acquisition on a same-day foreground resume without ledger edits', async () => {
-      let clock = new Date(2026, 8, 30, 9).getTime();
-      jest.spyOn(Date, 'now').mockImplementation(() => clock);
-      let foreground: (() => void) | undefined;
-      let nextTimer = 0;
-      const timers = new Map<number, () => void>();
-      const dependencies: ForecastDateBasisDependencies = {
-        now: () => clock,
-        setTimer: callback => {
-          const id = ++nextTimer;
-          timers.set(id, callback);
-          return id as unknown as ReturnType<typeof setTimeout>;
-        },
-        clearTimer: timer => {
-          timers.delete(timer as unknown as number);
-        },
-        observeForeground: listener => {
-          foreground = listener;
-          return () => {
-            foreground = undefined;
-          };
-        },
-      };
+      const basisHarness = createForecastDateBasisTestHarness();
+      jest.spyOn(Date, 'now').mockImplementation(() => basisHarness.dependencies.now());
       const realObserveDateBasis = forecastDateBasis.observeForecastDateBasis;
       jest
         .spyOn(forecastDateBasis, 'observeForecastDateBasis')
-        .mockImplementation(() => realObserveDateBasis(dependencies));
-      const cash = {
-        id: 'cash',
-        accountType: AccountType.ASSET,
-        accountSubtype: AccountSubtype.CASH,
-        currencyCode: 'USD',
-      };
+        .mockImplementation(() => realObserveDateBasis(basisHarness.dependencies));
+      const cash = mockLiquidCashAsset();
       (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of([cash]));
       (balanceReadService.getAccountBalances as jest.Mock)
         .mockRejectedValueOnce(new Error('temporary balance read failure'))
@@ -201,7 +134,7 @@ describe('SafeToSpendReadModel', () => {
           };
         },
       );
-      const stream = safeToSpendReadModel.forWorkplace('test-wp' as WorkplaceId).watch();
+      const stream = safeToSpendReadModel.forWorkplace(STS_TEST_WORKPLACE).watch();
       try {
         const failed = await firstValueFrom(
           stream.pipe(
@@ -211,27 +144,27 @@ describe('SafeToSpendReadModel', () => {
         );
         expect(failed.projectionError).toBe('Input unavailable');
         expect(balanceReadService.getAccountBalances).toHaveBeenCalledTimes(1);
-        expect(timers.size).toBe(1);
+        expect(basisHarness.timers.size).toBe(1);
 
-        clock += 60 * 60 * 1000;
+        basisHarness.advanceNow(60 * 60 * 1000);
         const recovered = firstValueFrom(
           stream.pipe(
             filter(result => result.quality === 'ready'),
             timeout({ first: 1000 }),
           ),
         );
-        foreground?.();
+        basisHarness.invokeForeground();
         const ready = await recovered;
         expect(ready.summary.safeToSpend).toBe(1000);
         expect(ready.totalLiquidAssets).toBe(1000);
-        expect(ready.asOf).toBe(clock);
+        expect(ready.asOf).toBe(basisHarness.dependencies.now());
         expect(balanceReadService.getAccountBalances).toHaveBeenCalledTimes(2);
-        expect(timers.size).toBe(1);
+        expect(basisHarness.timers.size).toBe(1);
       } finally {
         safeToSpendReadModel.clearCache();
       }
-      expect(timers.size).toBe(0);
-      expect(foreground).toBeUndefined();
+      expect(basisHarness.timers.size).toBe(0);
+      expect(basisHarness.foregroundActive()).toBe(false);
     });
 
     it('invalidates the previous currency before a deferred replacement acquisition completes', done => {
@@ -276,7 +209,7 @@ describe('SafeToSpendReadModel', () => {
 
       let readySeen = false;
       const sub = safeToSpendReadModel
-        .forWorkplace('test-wp' as WorkplaceId)
+        .forWorkplace(STS_TEST_WORKPLACE)
         .watch()
         .subscribe(result => {
           if (result.quality === 'ready' && result.currencyCode === 'USD') {
@@ -322,7 +255,7 @@ describe('SafeToSpendReadModel', () => {
       const basis$ = new Subject<ForecastDateBasis>();
       let readyCount = 0;
       const subscription = observeSafeToSpendInputSnapshot(
-        'test-wp' as WorkplaceId,
+        STS_TEST_WORKPLACE,
         'USD',
         basis$,
       ).subscribe(outcome => {
@@ -336,12 +269,12 @@ describe('SafeToSpendReadModel', () => {
           expect(outcome.snapshot.asOf).toBe(dayTwo);
           expect(outcome.snapshot.startOfToday.valueOf()).toBe(new Date(2026, 9, 1).getTime());
           expect(journalObserveQueries.observePlannedInRange).toHaveBeenLastCalledWith(
-            'test-wp',
+            STS_TEST_WORKPLACE,
             new Date(2026, 7, 2).getTime(),
             new Date(2026, 10, 30, 23, 59, 59, 999).getTime(),
           );
           expect(budgetReadService.observeBudgetUsage).toHaveBeenLastCalledWith(
-            'test-wp',
+            STS_TEST_WORKPLACE,
             'budget-1',
             dayTwo,
           );
@@ -377,7 +310,7 @@ describe('SafeToSpendReadModel', () => {
       });
       let readyCount = 0;
       const subscription = observeSafeToSpendInputSnapshot(
-        'test-wp' as WorkplaceId,
+        STS_TEST_WORKPLACE,
         'USD',
         basis$,
       ).subscribe(outcome => {
@@ -408,7 +341,7 @@ describe('SafeToSpendReadModel', () => {
         startOfToday: dayjs().startOf('day').valueOf(),
       });
       const subscription = observeSafeToSpendInputSnapshot(
-        'test-wp' as WorkplaceId,
+        STS_TEST_WORKPLACE,
         'USD',
         basis$,
       ).subscribe({
@@ -457,7 +390,7 @@ describe('SafeToSpendReadModel', () => {
 
       let readyCount = 0;
       const sub = safeToSpendReadModel
-        .forWorkplace('test-wp' as WorkplaceId)
+        .forWorkplace(STS_TEST_WORKPLACE)
         .watch()
         .subscribe(result => {
           if (result.quality !== 'ready') return;
@@ -520,7 +453,7 @@ describe('SafeToSpendReadModel', () => {
       });
 
       safeToSpendReadModel
-        .forWorkplace('test-wp' as WorkplaceId)
+        .forWorkplace(STS_TEST_WORKPLACE)
         .watch()
         .subscribe(result => {
           expect(convertAmount).toHaveBeenCalledWith(
@@ -576,7 +509,7 @@ describe('SafeToSpendReadModel', () => {
       });
 
       safeToSpendReadModel
-        .forWorkplace('test-wp' as WorkplaceId)
+        .forWorkplace(STS_TEST_WORKPLACE)
         .watch()
         .subscribe(result => {
           expect(result.totalLiquidAssets).toBe(5);
@@ -643,7 +576,7 @@ describe('SafeToSpendReadModel', () => {
       });
 
       safeToSpendReadModel
-        .forWorkplace('test-wp' as WorkplaceId)
+        .forWorkplace(STS_TEST_WORKPLACE)
         .watch()
         .subscribe(result => {
           expect(result.totalLiquidAssets).toBe(5000);
@@ -655,12 +588,10 @@ describe('SafeToSpendReadModel', () => {
 
   describe('forWorkplace cache policy', () => {
     it('reuses one workplace-keyed observable for watch and watchHeadline', () => {
-      const handle = safeToSpendReadModel.forWorkplace('test-wp' as WorkplaceId);
+      const handle = safeToSpendReadModel.forWorkplace(STS_TEST_WORKPLACE);
       const watchA = handle.watch();
       const watchB = handle.watch();
-      const watchFromSecondHandle = safeToSpendReadModel
-        .forWorkplace('test-wp' as WorkplaceId)
-        .watch();
+      const watchFromSecondHandle = safeToSpendReadModel.forWorkplace(STS_TEST_WORKPLACE).watch();
 
       expect(watchA).toBe(watchB);
       expect(watchA).toBe(watchFromSecondHandle);
@@ -693,7 +624,7 @@ describe('SafeToSpendReadModel', () => {
       (cashFlowSimulationService.simulate as jest.Mock).mockReturnValue(simulationPromise);
       const simulate = cashFlowSimulationService.simulate as jest.Mock;
 
-      const preWarmPromise = safeToSpendReadModel.forWorkplace('test-wp' as WorkplaceId).preWarm();
+      const preWarmPromise = safeToSpendReadModel.forWorkplace(STS_TEST_WORKPLACE).preWarm();
       for (let i = 0; i < 20 && !simulate.mock.calls.length; i += 1) {
         await Promise.resolve();
       }
@@ -750,7 +681,7 @@ describe('SafeToSpendReadModel', () => {
 
       const currencies: string[] = [];
       const sub = safeToSpendReadModel
-        .forWorkplace('test-wp' as WorkplaceId)
+        .forWorkplace(STS_TEST_WORKPLACE)
         .watch()
         .subscribe(result => {
           currencies.push(result.currencyCode);
@@ -807,7 +738,7 @@ describe('SafeToSpendReadModel', () => {
       });
 
       safeToSpendReadModel
-        .forWorkplace('test-wp' as WorkplaceId)
+        .forWorkplace(STS_TEST_WORKPLACE)
         .watchHeadline()
         .subscribe(headline => {
           expect(headline.currencyCode).toBe('USD');
@@ -826,7 +757,7 @@ describe('SafeToSpendReadModel', () => {
       (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(nonLiquidAssets));
 
       safeToSpendReadModel
-        .forWorkplace('test-wp' as WorkplaceId)
+        .forWorkplace(STS_TEST_WORKPLACE)
         .watch()
         .subscribe(result => {
           expect(result.summary.safeToSpend).toBe(0);
@@ -835,29 +766,30 @@ describe('SafeToSpendReadModel', () => {
         });
     });
 
-    it('marks projection failure unavailable instead of a valid zero', done => {
-      const mockAssets = [
-        { id: 'a1', accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH },
-      ];
-      (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of(mockAssets));
-      (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([
-        { accountId: 'a1', balance: 100 },
-      ]);
-      (cashFlowSimulationService.simulate as jest.Mock).mockRejectedValue(
-        new Error('[SimulationInputInvariant] starting balance for a must be finite'),
-      );
+    it.each([
+      new Error('[SimulationInputInvariant] starting balance for a must be finite'),
+      new Error('projection failed'),
+    ])(
+      'marks projection failure unavailable instead of a valid zero (%s)',
+      (simulateError, done) => {
+        (accountObserveQueries.observeAll as jest.Mock).mockReturnValue(of([mockCashAssetRow()]));
+        (balanceReadService.getAccountBalances as jest.Mock).mockResolvedValue([
+          { accountId: 'a1', balance: 100 },
+        ]);
+        (cashFlowSimulationService.simulate as jest.Mock).mockRejectedValue(simulateError);
 
-      safeToSpendReadModel
-        .forWorkplace('test-wp' as WorkplaceId)
-        .watch()
-        .subscribe(result => {
-          expect(result.summary.safeToSpend).toBe(0);
-          expect(result.quality).toBe('unavailable');
-          expect(result.projectionError).toBeTruthy();
-          expect(snapshotService.saveCustomSnapshot).not.toHaveBeenCalled();
-          done();
-        });
-    });
+        safeToSpendReadModel
+          .forWorkplace(STS_TEST_WORKPLACE)
+          .watch()
+          .subscribe(result => {
+            expect(result.summary.safeToSpend).toBe(0);
+            expect(result.quality).toBe('unavailable');
+            expect(result.projectionError).toBeTruthy();
+            expect(snapshotService.saveCustomSnapshot).not.toHaveBeenCalled();
+            done();
+          });
+      },
+    );
 
     it('keeps observing inputs after projection failure and recovers on a new input', done => {
       const assets = [
@@ -882,7 +814,7 @@ describe('SafeToSpendReadModel', () => {
         });
       const seen: string[] = [];
       const sub = safeToSpendReadModel
-        .forWorkplace('test-wp' as WorkplaceId)
+        .forWorkplace(STS_TEST_WORKPLACE)
         .watch()
         .subscribe(result => {
           seen.push(result.quality ?? 'ready');
@@ -929,7 +861,7 @@ describe('SafeToSpendReadModel', () => {
         .mockRejectedValueOnce(new Error('refresh failed'))
         .mockRejectedValueOnce(new Error('recovery failed'));
       const sub = safeToSpendReadModel
-        .forWorkplace('test-wp' as WorkplaceId)
+        .forWorkplace(STS_TEST_WORKPLACE)
         .watch()
         .subscribe(result => {
           if (result.quality === 'ready' && result.summary.safeToSpend === 88) {
@@ -942,7 +874,7 @@ describe('SafeToSpendReadModel', () => {
             sub.unsubscribe();
             accounts$.next(liquid);
             safeToSpendReadModel
-              .forWorkplace('test-wp' as WorkplaceId)
+              .forWorkplace(STS_TEST_WORKPLACE)
               .watch()
               .subscribe(next => {
                 expect(next.quality).toBe('unavailable');
@@ -970,7 +902,7 @@ describe('SafeToSpendReadModel', () => {
         },
       });
       const sub = safeToSpendReadModel
-        .forWorkplace('test-wp' as WorkplaceId)
+        .forWorkplace(STS_TEST_WORKPLACE)
         .watch()
         .subscribe(result => {
           if (result.quality === 'unavailable') {
@@ -1007,7 +939,7 @@ describe('SafeToSpendReadModel', () => {
       });
 
       safeToSpendReadModel
-        .forWorkplace('test-wp' as WorkplaceId)
+        .forWorkplace(STS_TEST_WORKPLACE)
         .watch()
         .subscribe(result => {
           expect(result.summary.safeToSpend).toBe(1234);
@@ -1049,7 +981,7 @@ describe('SafeToSpendReadModel', () => {
 
       const seen: number[] = [];
       const sub = safeToSpendReadModel
-        .forWorkplace('test-wp' as WorkplaceId)
+        .forWorkplace(STS_TEST_WORKPLACE)
         .watch()
         .subscribe(result => {
           if (result.quality !== 'ready') return;
@@ -1064,6 +996,47 @@ describe('SafeToSpendReadModel', () => {
             done();
           }
         });
+    });
+  });
+
+  describe('observeForecastDateBasis', () => {
+    it('reschedules one midnight timer on repeated foreground and clears it on unsubscribe', () => {
+      const harness = createForecastDateBasisTestHarness(new Date(2026, 8, 30, 23, 50).getTime());
+      const values: number[] = [];
+      const subscription = observeForecastDateBasis(harness.dependencies).subscribe(value =>
+        values.push(value.startOfToday),
+      );
+
+      expect(harness.timers.size).toBe(1);
+      harness.advanceNow(5 * 60 * 1000);
+      harness.invokeForeground();
+      harness.invokeForeground();
+      expect(harness.timers.size).toBe(1);
+      expect(values).toEqual(Array(3).fill(new Date(2026, 8, 30).getTime()));
+
+      harness.setNow(new Date(2026, 9, 1, 0, 10).getTime());
+      harness.invokeForeground();
+      harness.invokeForeground();
+      expect(values).toEqual([
+        ...Array(3).fill(new Date(2026, 8, 30).getTime()),
+        ...Array(2).fill(new Date(2026, 9, 1).getTime()),
+      ]);
+      expect(harness.timers.size).toBe(1);
+
+      harness.setNow(new Date(2026, 9, 2, 0, 0, 0, 5).getTime());
+      [...harness.timers.values()][0]();
+      expect(values[5]).toBe(new Date(2026, 9, 2).getTime());
+      expect(harness.timers.size).toBe(1);
+
+      subscription.unsubscribe();
+      expect(harness.timers.size).toBe(0);
+      expect(harness.foregroundActive()).toBe(false);
+    });
+
+    it('does not schedule a timer when a synchronous consumer takes only the initial basis', () => {
+      const { dependencies, timers } = createPassiveForecastDateBasisDependencies();
+      observeForecastDateBasis(dependencies).pipe(take(1)).subscribe();
+      expect(timers.size).toBe(0);
     });
   });
 });

@@ -1,132 +1,25 @@
 import Account from '@/src/data/models/Account';
 import { BudgetUsage } from '@/src/services/budget/types';
-import { resolveSpotExchangeRate } from '@/src/services/currencyConversion';
-import { accountQueryRepository } from '@/src/data/repositories/account';
-import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
-import { transactionRawMetricsQueries } from '@/src/data/repositories/raw/TransactionRawMetricsQueries';
-import { AccountId, BudgetId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
-import { AccountSubtype, AccountType } from '@/src/types/enums';
-import dayjs from 'dayjs';
-import { cashFlowSimulationService, SimulationInput } from '../CashFlowSimulationService';
+import { AccountId, BudgetId, PlannedPaymentId } from '@/src/types/ids';
 import { FlowSource } from '../types';
-jest.mock('@/src/data/repositories/raw/TransactionRawMetricsQueries', () => ({
-  transactionRawMetricsQueries: { getLatestBalancesRaw: jest.fn() },
-}));
-
-jest.mock('@/src/utils/logger', () => ({
-  logger: {
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    metric: jest.fn(),
-  },
-}));
-
-jest.mock('@/src/data/repositories/account', () => ({
-  accountQueryRepository: {
-    findMetadataByAccountIds: jest.fn().mockResolvedValue([]),
-  },
-  accountRawRepository: {
-    findManyByIdsRaw: jest.fn().mockResolvedValue([]),
-  },
-}));
-
-jest.mock('@/src/data/repositories/BudgetRepository', () => ({
-  budgetRepository: {
-    getScopes: jest.fn().mockResolvedValue([]),
-    getScopesByBudgetIds: jest.fn().mockResolvedValue([]),
-  },
-}));
-
-jest.mock('@/src/data/repositories/PlannedPaymentRepository', () => ({
-  plannedPaymentRepository: {
-    findManyByIds: jest.fn().mockResolvedValue([]),
-  },
-}));
-
-jest.mock('@/src/services/currencyConversion', () => ({
-  resolveSpotExchangeRate: jest.fn().mockResolvedValue({ ok: true, rate: 1 }),
-}));
+import {
+  accountQueryRepository,
+  budgetRepository,
+  buildPipelineAccounts,
+  buildPipelineSimulate,
+  installCashFlowSimulationTestHooks,
+  resolveSpotExchangeRate,
+  transactionRawMetricsQueries,
+} from './cashFlowSimulationTestHarness';
 
 describe('CashFlowSimulationService - End-to-End Backend Pipeline', () => {
-  const workplaceId = 'wp-1' as WorkplaceId;
-  const baseDate = dayjs('2026-04-01T00:00:00Z');
+  const accounts = buildPipelineAccounts();
+  const { baseDate, cash, bank, creditCard, groceriesCategory, diningCategory, incomeCategory } =
+    accounts;
+  const simulate = (overrides: Parameters<typeof buildPipelineSimulate>[1]) =>
+    buildPipelineSimulate(accounts, overrides);
 
-  // Mock accounts
-  const cash = {
-    id: 'acc-cash' as AccountId,
-    name: 'Cash',
-    accountType: AccountType.ASSET,
-    accountSubtype: AccountSubtype.BANK_CHECKING,
-    currencyCode: 'USD',
-  } as Account;
-  const bank = {
-    id: 'acc-bank' as AccountId,
-    name: 'Bank Checking',
-    accountType: AccountType.ASSET,
-    accountSubtype: AccountSubtype.BANK_CHECKING,
-    currencyCode: 'USD',
-  } as Account;
-  const creditCard = {
-    id: 'acc-cc' as AccountId,
-    name: 'Credit Card',
-    accountType: AccountType.LIABILITY,
-    accountSubtype: AccountSubtype.CREDIT_CARD,
-    currencyCode: 'USD',
-    metadataRecords: {
-      fetch: jest
-        .fn()
-        .mockResolvedValue([
-          { statementDay: 1, dueDay: 15, gracePeriodDays: 14, payFromAccountId: bank.id },
-        ]),
-    },
-  } as any;
-  const groceriesCategory = {
-    id: 'exp-groceries' as AccountId,
-    name: 'Groceries',
-    accountType: AccountType.EXPENSE,
-    currencyCode: 'USD',
-  } as Account;
-  const diningCategory = {
-    id: 'exp-dining' as AccountId,
-    name: 'Dining Out',
-    accountType: AccountType.EXPENSE,
-    currencyCode: 'USD',
-  } as Account;
-  const incomeCategory = {
-    id: 'inc-salary' as AccountId,
-    name: 'Salary',
-    accountType: AccountType.INCOME,
-    currencyCode: 'USD',
-  } as Account;
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest.useFakeTimers();
-    jest.setSystemTime(new Date('2026-04-01T00:00:00Z'));
-    (resolveSpotExchangeRate as jest.Mock).mockResolvedValue({ ok: true, rate: 1 });
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
-  const simulate = (overrides: Partial<SimulationInput>) => {
-    return cashFlowSimulationService.simulate({
-      startingBalances: new Map([[cash.id, 5000]]),
-      plannedPayments: [],
-      plannedJournals: [],
-      liquidAssetIds: [cash.id, bank.id],
-      liabilityAccountBalances: [],
-      budgets: [],
-      usages: [],
-      allAccounts: [cash, bank, creditCard, groceriesCategory, diningCategory, incomeCategory],
-      resultCurrency: 'USD',
-      workplaceId,
-      simulationDays: 30,
-      ...overrides,
-    });
-  };
+  installCashFlowSimulationTestHooks();
 
   describe('Delayed Discretization Across Multi-Cycle Windows (60 & 90 days)', () => {
     it('handles varying planned expense burdens across consecutive monthly cycles', async () => {
@@ -169,12 +62,10 @@ describe('CashFlowSimulationService - End-to-End Backend Pipeline', () => {
       const allFlows = result.allFlows!;
       expect(allFlows.length).toBeGreaterThan(0);
 
-      // Verify all flows are strictly timeline-ordered
       for (let i = 1; i < allFlows.length; i++) {
         expect(allFlows[i].dayOffset).toBeGreaterThanOrEqual(allFlows[i - 1].dayOffset);
       }
 
-      // Check composed spending across both 30-day windows
       const aprilFlows = allFlows.filter(f => f.dayOffset < 30);
       const mayFlows = allFlows.filter(f => f.dayOffset >= 30);
 
@@ -186,8 +77,6 @@ describe('CashFlowSimulationService - End-to-End Backend Pipeline', () => {
 
       expect(aprilSpend).toBeCloseTo(600, 0);
       expect(maySpend).toBeCloseTo(585, 0);
-
-      // Total safe to spend accounts for both months: 5000 - 1185 = 3815
       expect(result.simulationResult.summary.safeToSpend).toBeCloseTo(
         5000 - (aprilSpend + maySpend),
         0,
@@ -197,7 +86,6 @@ describe('CashFlowSimulationService - End-to-End Backend Pipeline', () => {
 
   describe('Multi-Account Liquid Asset Distribution', () => {
     it('distributes budget burn across multiple liquid funding accounts and tracks independent min balances', async () => {
-      // Budget funded by Cash and Bank ($600 total over 30 days = 20/day -> split = 10 each)
       (budgetRepository.getScopesByBudgetIds as jest.Mock).mockResolvedValue([
         { budgetId: 'b-shared', accountId: groceriesCategory.id, account: groceriesCategory },
       ]);
@@ -224,13 +112,11 @@ describe('CashFlowSimulationService - End-to-End Backend Pipeline', () => {
       const cashFlows = flows.filter(f => f.kind === 'OUTFLOW' && f.accountId === cash.id);
       const bankFlows = flows.filter(f => f.kind === 'OUTFLOW' && f.accountId === bank.id);
 
-      // Both accounts should receive equal half of the daily burn
       expect(cashFlows.length).toBe(30);
       expect(bankFlows.length).toBe(30);
-      expect(cashFlows[0].amount).toBeCloseTo(10, 2); // 600 / 30 / 2 = 10
+      expect(cashFlows[0].amount).toBeCloseTo(10, 2);
       expect(bankFlows[0].amount).toBeCloseTo(10, 2);
 
-      // Verify individual account trajectory minimums
       const accountMins = result.simulationResult.summary.accountMinBalances;
       expect(accountMins.get(cash.id)).toBeCloseTo(2000 - 300, 1);
       expect(accountMins.get(bank.id)).toBeCloseTo(3000 - 300, 1);
@@ -262,7 +148,6 @@ describe('CashFlowSimulationService - End-to-End Backend Pipeline', () => {
           [bank.id, 4000],
         ]),
         liabilityAccountBalances: [{ account: creditCard, balance: 0 }],
-        // 1. Salary Inflow (+$3500 on the 10th into Bank)
         plannedPayments: [
           {
             id: 'pp-salary' as PlannedPaymentId,
@@ -274,7 +159,6 @@ describe('CashFlowSimulationService - End-to-End Backend Pipeline', () => {
             intervalType: 'MONTHLY',
             currencyCode: 'USD',
           } as any,
-          // 2. Loan EMI (-$400 on the 5th from Bank)
           {
             id: 'pp-loan-emi' as PlannedPaymentId,
             name: 'Car Loan EMI',
@@ -285,7 +169,6 @@ describe('CashFlowSimulationService - End-to-End Backend Pipeline', () => {
             intervalType: 'MONTHLY',
             currencyCode: 'USD',
           } as any,
-          // 3. Credit Card Spending (-$200 on the 5th, settled from Bank on May 15th)
           {
             id: 'pp-cc-spend' as PlannedPaymentId,
             name: 'Credit Card Dine Out',
@@ -297,7 +180,6 @@ describe('CashFlowSimulationService - End-to-End Backend Pipeline', () => {
             currencyCode: 'USD',
           } as any,
         ],
-        // 4. Dining Budget ($300/mo from Cash)
         budgets: [
           {
             id: 'b-dining' as BudgetId,
@@ -312,16 +194,9 @@ describe('CashFlowSimulationService - End-to-End Backend Pipeline', () => {
       });
 
       const summary = result.simulationResult.summary;
-
-      // Salary on day 10 should be detected as first major inflow
       expect(summary.firstMajorInflowDay).toBe(10);
-
-      // Verify no shortfalls
       expect(summary.shortfall).toBe(0);
 
-      // Total liquid flows over 60 days:
-      // Inflow: 2 salary occurrences = $7000
-      // Outflows: 2 loan EMIs ($800) + 1 CC bill on May 15 ($200) + Dining Budget ($600) = $1600
       const totalOutflows = result
         .allFlows!.filter(f => f.kind === 'OUTFLOW')
         .reduce((sum, f) => sum + f.amount, 0);
@@ -331,8 +206,6 @@ describe('CashFlowSimulationService - End-to-End Backend Pipeline', () => {
 
       expect(totalInflows).toBe(7000);
       expect(totalOutflows).toBeCloseTo(1597, 0);
-
-      // Safe to spend reflects starting liquid balance ($5000) + net forward cash
       expect(summary.safeToSpend).toBeGreaterThan(0);
     });
   });
@@ -392,14 +265,11 @@ describe('CashFlowSimulationService - End-to-End Backend Pipeline', () => {
         ],
       });
 
-      // Overdue payment should be clamped to day 0
       const day0Planned = result.allFlows!.find(
         f => f.dayOffset === 0 && f.origin === FlowSource.PLANNED_PAYMENT,
       );
       expect(day0Planned).toBeDefined();
       expect(day0Planned?.amount).toBe(100);
-
-      // Remaining budget capacity ($500) burned over cycle: total spend = 600 -> Safe to spend = 1400
       expect(result.simulationResult.summary.safeToSpend).toBeCloseTo(1400, 0);
     });
   });
