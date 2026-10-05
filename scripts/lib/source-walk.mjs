@@ -19,13 +19,6 @@ export function isProductionSource(relativePath, options = {}) {
   return true;
 }
 
-export function isDesignSystemUiSource(relativePath) {
-  return (
-    isProductionSource(relativePath, { excludeMocks: true }) &&
-    !/(?:^|\/)(?:test|spec)\.(?:ts|tsx)$/.test(relativePath)
-  );
-}
-
 export function walkDirectory(directory, visit, options = {}) {
   const { skipDirNames = DEFAULT_SKIP_DIR_NAMES, skipDotEntries = false } = options;
   if (!fs.existsSync(directory)) return;
