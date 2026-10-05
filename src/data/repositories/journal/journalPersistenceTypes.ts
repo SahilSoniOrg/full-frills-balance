@@ -1,4 +1,5 @@
 import type Journal from '@/src/data/models/Journal';
+import type Account from '@/src/data/models/Account';
 import type {
   JournalWriteFields,
   JournalWriteLine,
@@ -6,9 +7,6 @@ import type {
 } from '@/src/types/journalWrite';
 import { JournalDisplayType, JournalStatus } from '@/src/types/enums';
 import { AccountId, JournalId, PlannedPaymentId } from '@/src/types/ids';
-
-export type JournalPersistenceLine = JournalWriteLine;
-export type JournalPersistenceMetadata = JournalWriteMetadata;
 
 export interface PutJournalInput extends JournalWriteFields {
   journalId?: JournalId;
@@ -25,8 +23,8 @@ export interface PutJournalPatchInput {
   originalJournalId?: JournalId;
   plannedPaymentId?: PlannedPaymentId;
   displayType?: JournalDisplayType;
-  transactions?: JournalPersistenceLine[];
-  metadata?: JournalPersistenceMetadata;
+  transactions?: JournalWriteLine[];
+  metadata?: JournalWriteMetadata;
 }
 
 export type PutJournalRequest = PutJournalInput | PutJournalPatchInput;
@@ -56,4 +54,12 @@ export interface JournalPersistenceResult extends JournalRebuildImpact {
   journal: Journal;
   previousStatus?: JournalStatus;
   status: JournalStatus;
+}
+
+export interface ValidatedJournal {
+  lines: readonly JournalWriteLine[];
+  totalAmount: number;
+  accountsById: ReadonlyMap<AccountId, Account>;
+  precisionByAccountId: ReadonlyMap<AccountId, number>;
+  displayType: JournalDisplayType;
 }

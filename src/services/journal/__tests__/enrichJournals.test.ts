@@ -1,4 +1,4 @@
-import type { JournalEnrichmentRow } from '@/src/data/repositories/journal/journalEnrichmentTypes';
+import type { JournalEnrichmentRow } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import { AccountType, JournalDisplayType, SemanticType, TransactionType } from '@/src/types/enums';
 import {
   enrichJournals,

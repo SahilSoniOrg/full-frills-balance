@@ -4,10 +4,10 @@ import type Account from '@/src/data/models/Account';
 import type { WorkplaceId } from '@/src/types/ids';
 import type { Model } from '@nozbe/watermelondb';
 
-export interface AccountTreeTransactionPlan<T> {
+type AccountTreeTransactionPlan<T> = {
   prepareOps: () => readonly Model[];
   result: T;
-}
+};
 
 export class AccountTreeTransactionCoordinator {
   async run<T>(

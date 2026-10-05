@@ -18,7 +18,7 @@ export function buildAccountClauses(filter: AccountFilter): Q.Clause[] {
   if (filter.accountIds) clauses.push(Q.where('id', Q.oneOf([...filter.accountIds])));
   if (filter.accountType) clauses.push(Q.where('account_type', filter.accountType));
   if (filter.name !== undefined) clauses.push(Q.where('name', filter.name));
-  if (Object.prototype.hasOwnProperty.call(filter, 'parentAccountId')) {
+  if ('parentAccountId' in filter) {
     clauses.push(
       Q.where(
         'parent_account_id',

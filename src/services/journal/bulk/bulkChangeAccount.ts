@@ -3,7 +3,7 @@ import { journalPersistenceService } from '@/src/services/journal/JournalPersist
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { TransactionType } from '@/src/types/enums';
-import { groupTransactionsByJournal } from './bulkHelpers';
+import { groupTransactionsByJournal } from '@/src/data/repositories/journal/journalPersistenceSupport';
 
 export interface JournalAccountEditEligibility {
   canEditDebit: boolean;

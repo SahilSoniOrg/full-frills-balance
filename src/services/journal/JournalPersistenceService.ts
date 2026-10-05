@@ -11,7 +11,7 @@ import type {
   PutJournalInput,
   PutJournalPatchInput,
   ReassignJournalAccountsInput,
-} from '@/src/data/repositories/journal/JournalPersistenceRepository';
+} from '@/src/data/repositories/journal/journalPersistenceTypes';
 import type { AccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { InboxProcessingStatus } from '@/src/types/enums';

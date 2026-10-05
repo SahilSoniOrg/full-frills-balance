@@ -4,7 +4,7 @@ import type { InboxRecordSnapshot, TransactionInboxRecordWriteData } from '@/src
 import { smsContentDigest } from '@/src/utils/smsDeliveryIdentity';
 import { generator } from '@/src/data/database/idGenerator';
 import type { AccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
-import type { JournalPersistenceResult } from '@/src/data/repositories/journal/JournalPersistenceRepository';
+import type { JournalPersistenceResult } from '@/src/data/repositories/journal/journalPersistenceTypes';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { ParsedTransaction, toTransactionDirection } from '@/src/services/ledger/SmsParser';
 import { JournalId, WorkplaceId } from '@/src/types/ids';

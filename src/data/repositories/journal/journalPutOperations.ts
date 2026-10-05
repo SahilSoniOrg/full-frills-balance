@@ -15,15 +15,14 @@ import {
   mapJournalSnapshotForAudit,
   toPersistenceLine,
   validateJournal,
-  type ValidatedJournal,
 } from '@/src/data/repositories/journal/journalPersistenceSupport';
 import type {
-  JournalPersistenceLine,
-  JournalPersistenceMetadata,
   JournalPersistenceResult,
   PutJournalRequest,
   ReverseJournalOptions,
+  ValidatedJournal,
 } from '@/src/data/repositories/journal/journalPersistenceTypes';
+import type { JournalWriteLine, JournalWriteMetadata } from '@/src/types/journalWrite';
 import { transactionRawRebuildQueries } from '@/src/data/repositories/raw/TransactionRawRebuildQueries';
 import { assertExpectedJournalSnapshot } from '@/src/data/repositories/journal/journalAuditGuard';
 import { JournalBalanceError } from '@/src/domain/accounting/journalBalanceEvaluator';
@@ -47,7 +46,7 @@ export interface PreparedJournalWrite {
 interface ResolvedPut {
   existing: Journal | null;
   oldTransactions: readonly Transaction[];
-  lines: readonly JournalPersistenceLine[];
+  lines: readonly JournalWriteLine[];
   replacesLines: boolean;
   journalDate: number;
   description?: string;
@@ -112,11 +111,7 @@ async function resolvePut(
   return resolveUpdate(input, existing, oldTransactions);
 }
 
-function assignMetadata(
-  record: JournalMetadata,
-  metadata: JournalPersistenceMetadata,
-  now: Date,
-): void {
+function assignMetadata(record: JournalMetadata, metadata: JournalWriteMetadata, now: Date): void {
   record.importSource = metadata.importSource;
   record.originalSmsId = metadata.originalSmsId;
   if ('originalSmsSender' in metadata) record.originalSmsSender = metadata.originalSmsSender;
@@ -489,7 +484,7 @@ export async function stagePost(
   };
 }
 
-function toReversalLine(transaction: Transaction): JournalPersistenceLine {
+function toReversalLine(transaction: Transaction): JournalWriteLine {
   return {
     ...toPersistenceLine(transaction),
     transactionType:

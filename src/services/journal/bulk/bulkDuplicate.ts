@@ -3,7 +3,7 @@ import { journalQueryRepository } from '@/src/data/repositories/journal/journalQ
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { TransactionType } from '@/src/types/enums';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
-import { groupTransactionsByJournal } from './bulkHelpers';
+import { groupTransactionsByJournal } from '@/src/data/repositories/journal/journalPersistenceSupport';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 
 /**
@@ -24,7 +24,7 @@ export async function bulkDuplicateJournals(
     const txs = txByJournal.get(journal.id) ?? [];
     return {
       journalDate: now,
-      description: journal.description ? `${journal.description}` : undefined,
+      description: journal.description || undefined,
       currencyCode: journal.currencyCode,
       transactions: txs.map(tx => ({
         accountId: tx.accountId,

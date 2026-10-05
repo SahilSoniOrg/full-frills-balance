@@ -14,10 +14,8 @@ import {
   type PlannedPaymentFxQuote,
 } from './plannedPaymentFx';
 import type { AccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
-import {
-  journalPersistenceRepository,
-  type JournalPersistenceResult,
-} from '@/src/data/repositories/journal/JournalPersistenceRepository';
+import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
+import type { JournalPersistenceResult } from '@/src/data/repositories/journal/journalPersistenceTypes';
 import type { PlannedOccurrenceJournals } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { journalPlannedQueries } from '@/src/data/repositories/journal/JournalPlannedQueries';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';

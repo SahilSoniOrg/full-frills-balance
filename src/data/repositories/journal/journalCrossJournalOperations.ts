@@ -15,7 +15,6 @@ import {
   rebuildImpactFor,
   toPersistenceLine,
   validateJournal,
-  type ValidatedJournal,
 } from '@/src/data/repositories/journal/journalPersistenceSupport';
 import { preparePutOperations } from '@/src/data/repositories/journal/journalPutOperations';
 import type {
@@ -23,6 +22,7 @@ import type {
   JournalRebuildImpact,
   MergeJournalsInput,
   ReassignJournalAccountsInput,
+  ValidatedJournal,
 } from '@/src/data/repositories/journal/journalPersistenceTypes';
 import { AuditAction, JournalDisplayType, JournalStatus } from '@/src/types/enums';
 import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';

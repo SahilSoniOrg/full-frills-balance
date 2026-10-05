@@ -37,18 +37,6 @@ import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types
 import type { BulkDeleteUndoToken } from '@/src/types/domainJournal';
 import type { AuditEventMetadata } from '@/src/types/auditEvents';
 
-export type {
-  JournalPersistenceLine,
-  JournalPersistenceMetadata,
-  JournalPersistenceResult,
-  JournalRebuildImpact,
-  MergeJournalsInput,
-  PutJournalInput,
-  PutJournalPatchInput,
-  PutJournalRequest,
-  ReassignJournalAccountsInput,
-  ReverseJournalOptions,
-} from '@/src/data/repositories/journal/journalPersistenceTypes';
 export type { BulkDeleteResult };
 
 /**

@@ -2,7 +2,7 @@ import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQue
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
-import type { JournalPersistenceResult } from '@/src/data/repositories/journal/JournalPersistenceRepository';
+import type { JournalPersistenceResult } from '@/src/data/repositories/journal/journalPersistenceTypes';
 import type { SmsMessage } from '@/modules/expo-sms-inbox';
 import type Journal from '@/src/data/models/Journal';
 import { analytics } from '@/src/services/analytics';

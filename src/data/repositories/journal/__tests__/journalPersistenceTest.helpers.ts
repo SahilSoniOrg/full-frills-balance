@@ -2,7 +2,7 @@ import { database } from '@/src/data/database/Database';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { accountWriteRepository } from '@/src/data/repositories/account';
-import type { PutJournalInput } from '@/src/data/repositories/journal/JournalPersistenceRepository';
+import type { PutJournalInput } from '@/src/data/repositories/journal/journalPersistenceTypes';
 import { createJournalFixture } from '@/src/testing/journalFixtures';
 import { AccountType, JournalDisplayType, JournalStatus, TransactionType } from '@/src/types/enums';
 import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';

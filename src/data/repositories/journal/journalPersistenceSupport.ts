@@ -12,28 +12,21 @@ import Transaction from '@/src/data/models/Transaction';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import type {
-  JournalPersistenceLine,
   JournalRebuildImpact,
+  ValidatedJournal,
 } from '@/src/data/repositories/journal/journalPersistenceTypes';
+import type { JournalWriteLine } from '@/src/types/journalWrite';
 import {
   evaluateJournalLines,
   JournalBalanceError,
 } from '@/src/domain/accounting/journalBalanceEvaluator';
 import { deriveJournalDisplayType } from '@/src/domain/accounting/journalDisplayType';
-import { AuditAction, JournalDisplayType, JournalStatus, TransactionType } from '@/src/types/enums';
+import { AuditAction, JournalStatus, TransactionType } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { mapTransactionToAudit } from '@/src/types/audit';
 import type { AuditEventMetadata } from '@/src/types/auditEvents';
 import { fromMinorUnits, toMinorUnits } from '@/src/utils/money';
 import { Model, Q } from '@nozbe/watermelondb';
-
-export interface ValidatedJournal {
-  lines: readonly JournalPersistenceLine[];
-  totalAmount: number;
-  accountsById: ReadonlyMap<AccountId, Account>;
-  precisionByAccountId: ReadonlyMap<AccountId, number>;
-  displayType: JournalDisplayType;
-}
 
 export const journalTables = {
   get journals() {
@@ -84,7 +77,7 @@ export function rebuildImpactFor(
   };
 }
 
-export function toPersistenceLine(transaction: Transaction): JournalPersistenceLine {
+export function toPersistenceLine(transaction: Transaction): JournalWriteLine {
   return {
     accountId: transaction.accountId,
     amount: transaction.amount,
@@ -239,7 +232,7 @@ export async function validateJournal(params: {
   currencyCode: string;
   status: JournalStatus;
   workplaceId: WorkplaceId;
-  transactions: readonly JournalPersistenceLine[];
+  transactions: readonly JournalWriteLine[];
   session: AccountingWriteSession;
   roundAmounts?: boolean;
 }): Promise<ValidatedJournal> {

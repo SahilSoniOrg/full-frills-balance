@@ -5,7 +5,7 @@ import { SerializedAccountMetadataPayload } from '@/src/types/plainDtos';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { getOpeningBalancesAccountInput } from '@/src/data/repositories/account/accountSystemAccountInputs';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
-import type { JournalPersistenceResult } from '@/src/data/repositories/journal/JournalPersistenceRepository';
+import type { JournalPersistenceResult } from '@/src/data/repositories/journal/journalPersistenceTypes';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { analytics } from '@/src/services/analytics';

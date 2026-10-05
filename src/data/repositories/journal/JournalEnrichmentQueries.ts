@@ -9,17 +9,31 @@ import type {
   JournalSuggestionPage,
   JournalSuggestionAccount,
 } from '@/src/types/journalSuggestions';
-import type { JournalEnrichmentRow } from '@/src/data/repositories/journal/journalEnrichmentTypes';
 import {
   isSuggestionPageCompatible,
   isSuggestionTransactionCompatible,
 } from '@/src/domain/journal/journalSuggestionRules';
-import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { AccountId, JournalId, TransactionId, WorkplaceId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import type { TabType } from '@/src/types/domainJournal';
 import { ACTIVE_JOURNAL_STATUSES } from '@/src/utils/journalStatus';
 import { logger } from '@/src/utils/logger';
 import { Q } from '@nozbe/watermelondb';
+
+/** Row shape returned by `getEnrichmentDataRaw`. */
+export type JournalEnrichmentRow = {
+  journal_id: JournalId;
+  account_id: AccountId;
+  transaction_id?: TransactionId;
+  exchange_rate?: number | null;
+  amount: number;
+  account_currency_code: string;
+  transaction_type: TransactionType;
+  account_name: string;
+  account_type: AccountType;
+  account_icon?: string;
+  account_color?: string | null;
+};
 
 type JournalSuggestionRouteRow = {
   description: string;

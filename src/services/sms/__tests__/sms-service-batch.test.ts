@@ -10,7 +10,7 @@ import {
   type AccountingWriteSession,
 } from '@/src/data/repositories/AccountingWriteSession';
 import type Journal from '@/src/data/models/Journal';
-import type { JournalPersistenceResult } from '@/src/data/repositories/journal/JournalPersistenceRepository';
+import type { JournalPersistenceResult } from '@/src/data/repositories/journal/journalPersistenceTypes';
 import type { Model } from '@nozbe/watermelondb';
 
 jest.mock('react-native/Libraries/Utilities/Platform', () => ({
