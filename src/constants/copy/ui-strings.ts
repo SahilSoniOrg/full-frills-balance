@@ -390,6 +390,19 @@ export const UI_STRINGS = {
     fetchMissingRatesFailed: 'Could not fetch historical rates. Try again when you are online.',
   },
   settings: {
+    title: 'Settings',
+    hub: {
+      profileDescription: 'Your name, documents, and device settings',
+      currentWorkplaceDescription: 'Current workplace · Currency, Safe-to-Spend, and books',
+      privacySecurityDescription: 'Hide balances, protect widgets, and lock the app',
+      dataManagementDescription: 'Back up, restore, share, and review workplace data',
+      maintenanceDescription: 'Verify books, purge deleted records, or reset the app',
+      aboutSupportDescription: 'Community, ratings, source code, and version',
+      devicesDescription: 'This device, local preferences, and future sessions',
+      smsAutoImportSearchDescription: 'Automatically scan transaction messages on this device.',
+      smsNotificationDetailsTitle: 'Detailed SMS previews',
+      smsNotificationDetailsSearchDescription: 'Choose whether alerts show transaction details.',
+    },
     workplacePicker: {
       title: 'Choose a workplace',
       subtitle: 'Select which books to open.',
@@ -1186,6 +1199,7 @@ export const UI_STRINGS = {
     byActor: (actor: string) => `By ${actor}`,
     revertsLabel: (id: string) => `Undo of change ${id.substring(0, 8)}`,
     errors: {
+      loadFailed: 'We could not load audit history.',
       notFound: (id: string) => `No audit record found for ${id}`,
       revertFailed: 'Failed to undo change',
       revertTypeNotSupported: (type: string) => `Reverting ${type} is not supported yet`,

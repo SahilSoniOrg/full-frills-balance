@@ -12,8 +12,6 @@ export const AppConfig = {
   // Default currency for new accounts
   defaultCurrency: 'USD' as const,
 
-  // Default currency precision (decimal places)
-  defaultCurrencyPrecision: 2,
   // Default locale for formatting
   defaultLocale: 'en-IN',
 
@@ -46,7 +44,6 @@ export const AppConfig = {
 
   // Input constraints
   input: {
-    maxAccountNameLength: 100,
     maxDescriptionLength: 255,
     maxNotesLength: 500,
     maxDayOfMonthLength: 2,

@@ -162,7 +162,7 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
           </View>
         )}
         {error && logs.length === 0 ? (
-          <ErrorStateView message="We could not load audit history." onRetry={retry} />
+          <ErrorStateView message={AppConfig.strings.audit.errors.loadFailed} onRetry={retry} />
         ) : isLoading ? (
           <LoadingView loading={isLoading} />
         ) : logs.length === 0 &&

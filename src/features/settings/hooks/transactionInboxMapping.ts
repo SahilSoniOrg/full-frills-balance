@@ -8,15 +8,14 @@ export async function enrichTransactionInboxRecords(
   workplaceId: WorkplaceId,
   records: PlainInboxRecord[],
 ): Promise<TransactionInboxItem[]> {
-  const linkedIds = Array.from(
-    new Set(records.map(record => record.linkedJournalId).filter(Boolean) as JournalId[]),
-  );
-  const duplicateIds = Array.from(
-    new Set(records.map(record => record.duplicateJournalId).filter(Boolean) as JournalId[]),
-  );
+  const journalIds = new Set<JournalId>();
+  for (const record of records) {
+    if (record.linkedJournalId) journalIds.add(record.linkedJournalId);
+    if (record.duplicateJournalId) journalIds.add(record.duplicateJournalId);
+  }
   const journals = await journalQueryRepository.findWithDeletedByIds(
     workplaceId,
-    Array.from(new Set([...linkedIds, ...duplicateIds])),
+    Array.from(journalIds),
   );
   const journalMap = new Map(journals.map(journal => [journal.id, journal]));
 

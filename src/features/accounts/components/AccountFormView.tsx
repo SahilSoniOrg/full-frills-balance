@@ -75,7 +75,7 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
               : copy.namePlaceholder
           }
           autoFocus={!vm.isEditMode}
-          maxLength={AppConfig.input.maxAccountNameLength}
+          maxLength={AppConfig.constants.validation.maxAccountNameLength}
           testID="hero-name-input"
         />
         {vm.kindSuggestionMessage ? (

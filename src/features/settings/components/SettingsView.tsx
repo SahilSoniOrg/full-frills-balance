@@ -89,10 +89,11 @@ export function SettingsView({
     Platform.OS === 'android'
       ? AppConfig.strings.settings.notifications.automationDescription
       : AppConfig.strings.settings.notifications.description;
+  const hub = AppConfig.strings.settings.hub;
 
   return (
     <SettingsLayout
-      title="Settings"
+      title={AppConfig.strings.settings.title}
       showBack={false}
       headerActions={<WorkplaceSwitcher />}
       scrollViewProps={{ onScrollBeginDrag: () => searchInputRef.current?.blur() }}
@@ -111,7 +112,7 @@ export function SettingsView({
                 searchId="profile"
                 leftIcon={Icon.User}
                 title={AppConfig.strings.settings.sections.profile}
-                description="Your name, documents, and device settings"
+                description={hub.profileDescription}
                 onPress={onProfile}
                 testID="settings-profile"
               />
@@ -124,7 +125,7 @@ export function SettingsView({
                 title={
                   currentWorkplace?.name ?? AppConfig.strings.settings.sections.currentWorkplace
                 }
-                description="Current workplace · Currency, Safe-to-Spend, and books"
+                description={hub.currentWorkplaceDescription}
                 onPress={onCurrentWorkplace}
                 testID="settings-current-workplace"
               />
@@ -150,7 +151,7 @@ export function SettingsView({
                 searchId="privacy-security"
                 leftIcon={Icon.ShieldCheck}
                 title={AppConfig.strings.settings.sections.privacyAndSecurity}
-                description="Hide balances, protect widgets, and lock the app"
+                description={hub.privacySecurityDescription}
                 onPress={onPrivacy}
                 testID="settings-privacy-security"
               />
@@ -161,7 +162,7 @@ export function SettingsView({
                 searchId="data-management"
                 leftIcon={Icon.Database}
                 title={AppConfig.strings.settings.sections.dataManagement}
-                description="Back up, restore, share, and review workplace data"
+                description={hub.dataManagementDescription}
                 onPress={onDataManagement}
                 testID="settings-data-management"
               />
@@ -169,7 +170,7 @@ export function SettingsView({
                 searchId="maintenance"
                 leftIcon={Icon.Wrench}
                 title={AppConfig.strings.settings.sections.maintenanceAndReset}
-                description="Verify books, purge deleted records, or reset the app"
+                description={hub.maintenanceDescription}
                 onPress={onMaintenance}
                 testID="settings-maintenance"
               />
@@ -180,7 +181,7 @@ export function SettingsView({
                 searchId="about-support"
                 leftIcon={Icon.Info}
                 title={AppConfig.strings.settings.sections.aboutAndSupport}
-                description="Community, ratings, source code, and version"
+                description={hub.aboutSupportDescription}
                 onPress={onAbout}
                 prominent
                 testID="settings-about-support"

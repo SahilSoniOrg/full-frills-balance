@@ -104,7 +104,7 @@ export class BalanceHierarchyAggregator {
           const parentCurrency = parentStaged.currencyCode;
           const childCurrency = myStaged.currencyCode;
           const precision =
-            currencyPrecisionMap.get(parentCurrency) ?? AppConfig.defaultCurrencyPrecision;
+            currencyPrecisionMap.get(parentCurrency) ?? AppConfig.constants.precision;
 
           let convertedBalance = Money.from(myStaged.balance, childCurrency);
           let convertedIncome = Money.from(myStaged.monthlyIncome, childCurrency);
@@ -147,7 +147,7 @@ export class BalanceHierarchyAggregator {
             const existing = parentStaged.childBalancesMap.get(childCurrency);
             if (existing) {
               const childPrecision =
-                currencyPrecisionMap.get(childCurrency) ?? AppConfig.defaultCurrencyPrecision;
+                currencyPrecisionMap.get(childCurrency) ?? AppConfig.constants.precision;
               existing.balance = Money.from(existing.balance, childCurrency)
                 .add(Money.from(myStaged.balance, childCurrency))
                 .round(childPrecision).amount;

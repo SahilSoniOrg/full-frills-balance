@@ -34,7 +34,7 @@ export function PersonalizationSettingsView({ vm }: PersonalizationSettingsViewP
                   onChangeText={vm.setDraftName}
                   onBlur={vm.commitName}
                   onSubmitEditing={vm.commitName}
-                  placeholder="Your Name"
+                  placeholder={AppConfig.strings.settings.personalization.yourName}
                   variant="minimal"
                   textAlign="right"
                 />
@@ -59,7 +59,7 @@ export function PersonalizationSettingsView({ vm }: PersonalizationSettingsViewP
             searchId="devices"
             leftIcon={Icon.Settings}
             title={AppConfig.strings.settings.sections.devicesAndSessions}
-            description="This device, local preferences, and future sessions"
+            description={AppConfig.strings.settings.hub.devicesDescription}
             onPress={AppNavigation.toDeviceSettings}
             prominent
             testID="profile-devices-sessions"

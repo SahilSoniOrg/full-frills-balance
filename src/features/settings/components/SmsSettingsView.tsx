@@ -64,7 +64,7 @@ export function SmsSettingsView({
           <SettingsToggleItem
             leftIcon={Icon.Notifications}
             searchId="sms-notification-details"
-            title="Detailed SMS previews"
+            title={AppConfig.strings.settings.hub.smsNotificationDetailsTitle}
             description="Show amounts and transaction details in notifications. Hidden while Privacy Mode or app lock is enabled."
             value={showSmsNotificationDetails}
             onValueChange={onToggleSmsNotificationDetails}

@@ -13,6 +13,7 @@ export type SettingsSearchItem = {
   section: string;
   keywords: string[];
   navigate: (target: string) => void;
+  searchableText: string;
 };
 
 type SettingsSearchActions = {
@@ -32,7 +33,10 @@ type SettingsSearchActions = {
 };
 
 export function createSettingsSearchCatalog(actions: SettingsSearchActions): SettingsSearchItem[] {
-  const catalog: (Omit<SettingsSearchItem, 'focusId'> & { focusId?: string })[] = [
+  const hub = AppConfig.strings.settings.hub;
+  const catalog: (Omit<SettingsSearchItem, 'focusId' | 'searchableText'> & {
+    focusId?: string;
+  })[] = [
     {
       id: 'profile-name',
       icon: Icon.User,
@@ -46,7 +50,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       id: 'devices',
       icon: Icon.Settings,
       title: AppConfig.strings.settings.sections.devicesAndSessions,
-      description: 'This device, local preferences, and future sessions',
+      description: hub.devicesDescription,
       section: 'Your Account',
       keywords: ['device', 'session', 'sms import', 'android'],
       navigate: actions.onDeviceSettings,
@@ -291,7 +295,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
       id: 'about-support',
       icon: Icon.Info,
       title: AppConfig.strings.settings.sections.aboutAndSupport,
-      description: 'Community, ratings, source code, and version',
+      description: hub.aboutSupportDescription,
       section: 'Support',
       keywords: ['about', 'support', 'help', 'community', 'github', 'version', 'bug'],
       navigate: actions.onAbout,
@@ -308,15 +312,16 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
   ];
 
   if (Platform.OS === 'android') {
+    const goSms = actions.onSmsSettings;
     catalog.push(
       {
         id: 'sms-automation-import',
         icon: Icon.Zap,
         title: AppConfig.strings.settings.personalization.smsImportTitle,
-        description: 'Automatically scan transaction messages on this device.',
+        description: hub.smsAutoImportSearchDescription,
         section: 'Notifications & Automation',
         keywords: ['sms', 'import', 'automatic', 'messages'],
-        navigate: actions.onSmsSettings,
+        navigate: goSms,
       },
       {
         id: 'sms-auto-post-enabled',
@@ -325,7 +330,7 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
         description: AppConfig.strings.settings.personalization.smsAutoPostEnabledDesc,
         section: 'Notifications & Automation',
         keywords: ['sms', 'auto post', 'automatic', 'rules', 'entries'],
-        navigate: actions.onSmsSettings,
+        navigate: goSms,
       },
       {
         id: 'sms-review-notifications',
@@ -334,16 +339,16 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
         description: AppConfig.strings.settings.personalization.smsReviewNotificationsDesc,
         section: 'Notifications & Automation',
         keywords: ['sms', 'notification', 'review', 'alert'],
-        navigate: actions.onSmsSettings,
+        navigate: goSms,
       },
       {
         id: 'sms-notification-details',
         icon: Icon.Notifications,
-        title: 'Detailed SMS previews',
-        description: 'Choose whether alerts show transaction details.',
+        title: hub.smsNotificationDetailsTitle,
+        description: hub.smsNotificationDetailsSearchDescription,
         section: 'Notifications & Automation',
         keywords: ['sms', 'privacy', 'preview', 'amount'],
-        navigate: actions.onSmsSettings,
+        navigate: goSms,
       },
       {
         id: 'sms-inbox',
@@ -366,7 +371,13 @@ export function createSettingsSearchCatalog(actions: SettingsSearchActions): Set
     );
   }
 
-  return catalog.map(item => ({ ...item, focusId: item.focusId ?? item.id }));
+  return catalog.map(item => {
+    const focusId = item.focusId ?? item.id;
+    const searchableText = [item.title, item.description, item.section, ...item.keywords]
+      .join(' ')
+      .toLocaleLowerCase();
+    return { ...item, focusId, searchableText };
+  });
 }
 
 export function filterSettingsSearchItems(
@@ -376,10 +387,5 @@ export function filterSettingsSearchItems(
   const queryTerms = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
   if (queryTerms.length === 0) return [];
 
-  return items.filter(item => {
-    const searchableText = [item.title, item.description, item.section, ...item.keywords]
-      .join(' ')
-      .toLocaleLowerCase();
-    return queryTerms.every(term => searchableText.includes(term));
-  });
+  return items.filter(item => queryTerms.every(term => item.searchableText.includes(term)));
 }

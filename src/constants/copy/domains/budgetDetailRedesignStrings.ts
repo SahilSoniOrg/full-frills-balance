@@ -50,9 +50,9 @@ export const budgetDetailRedesignStrings = {
     over: 'Over',
     incomplete: 'Incomplete',
   },
-  periodAccessibility: (label: string, range: string, daysLeft?: number) =>
-    `${label}, ${range}${daysLeft === undefined ? '' : `, ${daysLeftLabel(daysLeft)}`}`,
   daysLeft: (count: number) => `${count} ${count === 1 ? 'day' : 'days'} left`,
+  periodAccessibility: (label: string, range: string, daysLeft?: number) =>
+    `${label}, ${range}${daysLeft === undefined ? '' : `, ${budgetDetailRedesignStrings.daysLeft(daysLeft)}`}`,
   previousPeriodButton: 'Previous period',
   nextPeriodButton: 'Next period',
   backToToday: 'Back to today',
@@ -61,7 +61,3 @@ export const budgetDetailRedesignStrings = {
   missingFxEntries: (count: number, currencyCode: string) =>
     `${count} ${currencyCode} ${count === 1 ? 'entry' : 'entries'} without a rate · tap to fix`,
 } as const;
-
-function daysLeftLabel(count: number) {
-  return `${count} ${count === 1 ? 'day' : 'days'} left`;
-}

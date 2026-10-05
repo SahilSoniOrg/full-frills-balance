@@ -1,3 +1,4 @@
+import { AppConfig } from '@/src/constants/app-config';
 import { FontIds, ThemeIds } from '@/src/constants/design-tokens';
 import { ShareFormat } from '@/src/types/sharing';
 import type { PrivacyPolicyAcknowledgement, UIPreferences } from '@/src/types/preferences';
@@ -21,9 +22,9 @@ export const DEFAULT_UI_PREFERENCES: UIPreferences = {
   fontId: FontIds.DEEP_SPACE,
   hourCyclePreference: 'system',
   notificationCadence: 'none',
-  notificationHour: 10,
-  notificationMinute: 0,
-  notificationWeekday: 1, // Monday
+  notificationHour: AppConfig.defaults.notifications.defaultHour,
+  notificationMinute: AppConfig.defaults.notifications.defaultMinute,
+  notificationWeekday: AppConfig.defaults.notifications.defaultWeekday,
   defaultShareFormat: ShareFormat.TEXT,
   showSafeToSpendChart: true,
   reportsV2Enabled: false,
