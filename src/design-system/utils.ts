@@ -176,9 +176,3 @@ export function extractBoxProps<T extends object>(
     restProps: restProps as ExtractedRestProps<T>,
   };
 }
-
-/**
- * Splits a style object into two buckets:
- * 1. Layout styles (margin, flex, width, position)
- * 2. Decoration styles (padding, background, border)
- */

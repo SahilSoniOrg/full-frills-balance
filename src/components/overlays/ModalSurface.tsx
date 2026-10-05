@@ -30,10 +30,6 @@ interface ModalSurfaceProps {
   backdropTestID?: string;
   fixedHeight?: boolean;
   scrollable?: boolean;
-  /**
-   * If false, renders as a standard absolute-positioned View instead of a native Modal.
-   * Useful for avoiding iOS native Modal deadlocks during transitions.
-   */
   useNativeModal?: boolean;
   position?: 'center' | 'bottomSheet';
   /** Native Modal animation for overlay enter/exit. Moti owns the card spring. */
@@ -44,11 +40,6 @@ interface ModalSurfaceProps {
   keyboardAvoiding?: boolean;
 }
 
-/**
- * Shared modal / bottom-sheet chrome.
- * Moti springs the card in; overlay stays a plain View so native Modal owns
- * overlay fade. Reduce motion → plain Views (native fade only).
- */
 export function ModalSurface({
   visible,
   title,

@@ -94,7 +94,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
     paddingTop: Spacing.md,
     borderTopWidth: 1,
-    borderTopColor: 'transparent',
     flexDirection: 'row',
     gap: Spacing.sm,
   },
