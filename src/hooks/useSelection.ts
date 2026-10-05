@@ -3,12 +3,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { BackHandler } from 'react-native';
 import { useNavigation } from 'expo-router';
 
-export interface UseSelectionOptions<T> {
-  onSelectionChange?: (selectedIds: Set<T>) => void;
-  onEnterSelectionMode?: () => void;
-  onExitSelectionMode?: () => void;
-}
-
 export interface UseSelectionResult<T> {
   selectedIds: Set<T>;
   isSelectionModeActive: boolean;
@@ -24,30 +18,22 @@ export interface UseSelectionResult<T> {
 /**
  * useSelection - Standardized multi-selection hook with explicit mode and haptics
  */
-const DEFAULT_OPTIONS = {};
-
-export function useSelection<T>(
-  options: UseSelectionOptions<T> = DEFAULT_OPTIONS as UseSelectionOptions<T>,
-): UseSelectionResult<T> {
+export function useSelection<T>(): UseSelectionResult<T> {
   const [selectedIds, setSelectedIds] = useState<Set<T>>(new Set());
   const [isSelectionModeActive, setSelectionModeActive] = useState(false);
 
-  const toggleSelection = useCallback(
-    (id: T) => {
-      setSelectedIds(prev => {
-        const next = new Set(prev);
-        if (next.has(id)) {
-          next.delete(id);
-        } else {
-          next.add(id);
-        }
+  const toggleSelection = useCallback((id: T) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
 
-        options.onSelectionChange?.(next);
-        return next;
-      });
-    },
-    [options],
-  );
+      return next;
+    });
+  }, []);
 
   const toggleMultiple = useCallback(
     (ids: T[]) => {
@@ -68,16 +54,14 @@ export function useSelection<T>(
           }
         }
 
-        options.onSelectionChange?.(next);
         return next;
       });
 
       if (!isSelectionModeActive) {
         setSelectionModeActive(true);
-        options.onEnterSelectionMode?.();
       }
     },
-    [isSelectionModeActive, options],
+    [isSelectionModeActive],
   );
 
   const onLongPressItem = useCallback(
@@ -87,34 +71,26 @@ export function useSelection<T>(
 
       if (!isSelectionModeActive) {
         setSelectionModeActive(true);
-        options.onEnterSelectionMode?.();
       }
     },
-    [isSelectionModeActive, toggleSelection, options],
+    [isSelectionModeActive, toggleSelection],
   );
 
-  const selectAll = useCallback(
-    (allIds: T[]) => {
-      const next = new Set(allIds);
-      setSelectedIds(next);
-      setSelectionModeActive(true);
-      options.onSelectionChange?.(next);
-    },
-    [options],
-  );
+  const selectAll = useCallback((allIds: T[]) => {
+    const next = new Set(allIds);
+    setSelectedIds(next);
+    setSelectionModeActive(true);
+  }, []);
 
   const clearItems = useCallback(() => {
     const next = new Set<T>();
     setSelectedIds(next);
-    options.onSelectionChange?.(next);
-  }, [options]);
+  }, []);
 
   const exitSelectionMode = useCallback(() => {
     setSelectedIds(new Set());
     setSelectionModeActive(false);
-    options.onExitSelectionMode?.();
-    options.onSelectionChange?.(new Set());
-  }, [options]);
+  }, []);
 
   const navigation = useNavigation();
 
