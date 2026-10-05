@@ -1,7 +1,5 @@
 /* global jest, afterEach */
 // Mock Platform before any other imports
-import '@testing-library/jest-native/extend-expect';
-
 // WatermelonDB's development-only queue warning timer is diagnostic and must
 // not keep the Jest process alive after a concurrent writer test completes.
 const jestSetTimeout = globalThis.setTimeout;
