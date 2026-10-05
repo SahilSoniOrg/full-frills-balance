@@ -1,8 +1,8 @@
 import { NativeModule, requireOptionalNativeModule } from 'expo';
 
-import { ExpoSmsInboxModuleEvents, SmsMessage } from './ExpoSmsInbox.types';
+import { SmsMessage } from './ExpoSmsInbox.types';
 
-declare class ExpoSmsInboxModule extends NativeModule<ExpoSmsInboxModuleEvents> {
+declare class ExpoSmsInboxModule extends NativeModule {
   getSmsInbox(limit: number): Promise<SmsMessage[]>;
   getSmsInboxAfterId(afterId: string, limit: number): Promise<SmsMessage[]>;
   getSmsInboxBefore(beforeDate: number, beforeId: string, limit: number): Promise<SmsMessage[]>;
@@ -10,5 +10,4 @@ declare class ExpoSmsInboxModule extends NativeModule<ExpoSmsInboxModuleEvents> 
   setAutomaticImportEnabled(enabled: boolean): Promise<void>;
 }
 
-// This call loads the native module object from the JSI.
 export default requireOptionalNativeModule<ExpoSmsInboxModule>('ExpoSmsInbox');

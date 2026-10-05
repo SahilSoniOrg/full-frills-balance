@@ -4,5 +4,3 @@ export type SmsMessage = {
   body: string;
   date: number;
 };
-
-export type ExpoSmsInboxModuleEvents = {};
