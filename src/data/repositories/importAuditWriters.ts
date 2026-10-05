@@ -218,6 +218,8 @@ const IMPORTED_AUDIT_SPECS: ImportedAuditSpec[] = [
           description: payment.description ?? null,
           amount: payment.amount,
           currencyCode: payment.currencyCode,
+          fxMode: payment.fxMode ?? null,
+          destinationAmount: payment.destinationAmount ?? null,
           fromAccountId: payment.fromAccountId,
           toAccountId: payment.toAccountId,
           intervalN: payment.intervalN,
