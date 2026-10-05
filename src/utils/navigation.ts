@@ -121,11 +121,6 @@ export const AppNavigation = {
     router.push(href);
   },
 
-  /** Open Batch inside the shared journal-entry composer. */
-  toBulkJournalEntry: () => {
-    router.push('/journal-entry?mode=bulk');
-  },
-
   /**
    * Navigate to the journal editor in simple mode with a preselected type.
    */
@@ -150,24 +145,6 @@ export const AppNavigation = {
           ? { destinationAccountId: options.destinationAccountId }
           : {}),
         ...(options?.amount ? { amount: options.amount } : {}),
-      },
-    });
-  },
-
-  /**
-   * Navigate to the journal editor in advanced mode.
-   */
-  toAdvancedJournalEntry: (options?: {
-    sourceAccountId?: string;
-    destinationAccountId?: string;
-  }) => {
-    AppNavigation.toJournalEntry({
-      sourceAccountId: options?.sourceAccountId,
-      params: {
-        mode: 'advanced',
-        ...(options?.destinationAccountId
-          ? { destinationAccountId: options.destinationAccountId }
-          : {}),
       },
     });
   },

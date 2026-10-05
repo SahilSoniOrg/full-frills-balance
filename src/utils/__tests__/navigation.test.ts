@@ -114,12 +114,6 @@ describe('journal-entry navigation', () => {
     expect(router.push).toHaveBeenNthCalledWith(2, '/journal-entry?mode=simple&type=income');
   });
 
-  it('opens Batch inside the shared journal composer', () => {
-    AppNavigation.toBulkJournalEntry();
-
-    expect(router.push).toHaveBeenCalledWith('/journal-entry?mode=bulk');
-  });
-
   it('preserves prefilled, edit/copy, and planned-entry route data', () => {
     AppNavigation.toJournalEntry({
       journalId: 'planned-copy-1',
@@ -155,9 +149,9 @@ describe('journal-entry navigation', () => {
   });
 
   it('supports advanced and split editor entry modes', () => {
-    AppNavigation.toAdvancedJournalEntry({
+    AppNavigation.toJournalEntry({
       sourceAccountId: 'cash',
-      destinationAccountId: 'food',
+      params: { mode: 'advanced', destinationAccountId: 'food' },
     });
     AppNavigation.toJournalEntry({ params: { mode: 'split' } });
 
