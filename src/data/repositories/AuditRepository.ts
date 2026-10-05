@@ -51,15 +51,6 @@ export class AuditRepository {
     return records[0] ?? null;
   }
 
-  async log<T>(entry: AuditEntry<T>, workplaceId: WorkplaceId): Promise<void> {
-    await database.write(async () => {
-      await this.auditLogs.create((record: AuditLog) => {
-        this.applyEntryToRecord(record, entry);
-        record.workplaceId = workplaceId;
-      });
-    });
-  }
-
   prepareLog<T>(entry: AuditEntry<T>, workplaceId: WorkplaceId): AuditLog {
     return this.auditLogs.prepareCreate((record: AuditLog) => {
       this.applyEntryToRecord(record, entry);
@@ -170,20 +161,6 @@ export class AuditRepository {
         Q.take(normalizeAuditPageSize(limit)),
       )
       .observe();
-  }
-
-  async fetchRecent(
-    limit: number = AppConfig.pagination.auditRecentLimit,
-    workplaceId: WorkplaceId,
-  ): Promise<AuditLog[]> {
-    return this.auditLogs
-      .query(
-        Q.where('workplace_id', workplaceId),
-        Q.sortBy('timestamp', Q.desc),
-        Q.sortBy('id', Q.desc),
-        Q.take(normalizeAuditPageSize(limit)),
-      )
-      .fetch();
   }
 
   async fetchOlder(
