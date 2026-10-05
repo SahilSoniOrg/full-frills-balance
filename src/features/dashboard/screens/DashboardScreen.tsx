@@ -15,8 +15,6 @@ import { useInsightPatterns } from '@/src/hooks/useInsightPatterns';
 import { useSupplementalInsights } from '@/src/hooks/useSupplementalInsights';
 import { useUnreadSmsCount } from '@/src/hooks/useUnreadSmsCount';
 import { analytics } from '@/src/services/analytics';
-import { getPerfNow } from '@/src/utils/dateUtils';
-import { logger as appLogger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useScrollToTop } from 'expo-router/react-navigation';
 import { useEffect, useMemo, useRef } from 'react';
@@ -38,7 +36,6 @@ function trackDashboardFirstPaint() {
     duration_ms: Math.round(duration),
     is_cold_boot: isColdBoot,
   });
-  appLogger.info(`[Performance] First Paint: ${Math.round(duration)}ms (Cold: ${isColdBoot})`);
   globalState.__BOOT_START_TIME__ = undefined;
 }
 
@@ -51,17 +48,9 @@ function DashboardScreen() {
   const { data: insights } = useInsightPatterns(workplaceId, { enabled: isAppReady });
   const supplementalInsights = useSupplementalInsights(workplaceId);
   const { data: unreadSmsCount } = useUnreadSmsCount(workplaceId);
-  const headerMountTimeRef = useRef(getPerfNow());
   const listRef = useRef<JournalEntryListRef>(null);
 
   const notificationCount = (insights?.length || 0) + supplementalInsights.length;
-
-  useEffect(() => {
-    if (notificationCount > 0) {
-      const duration = Math.round(performance.now() - headerMountTimeRef.current);
-      appLogger.info(`[Dashboard] Insights Loaded in ${duration}ms`);
-    }
-  }, [notificationCount]);
 
   const onSmsPress =
     Platform.OS === 'android' && (isAutomaticSmsImportEnabled || (unreadSmsCount || 0) > 0)
@@ -96,7 +85,14 @@ function DashboardScreen() {
           fab,
         },
       ),
-    [fab, notificationCount, onSmsPress, unreadSmsCount, userName, vm.recentJournalEntries.isSelectionModeActive],
+    [
+      fab,
+      notificationCount,
+      onSmsPress,
+      unreadSmsCount,
+      userName,
+      vm.recentJournalEntries.isSelectionModeActive,
+    ],
   );
 
   return <DashboardScreenView {...vm} listRef={listRef} chrome={chrome} />;

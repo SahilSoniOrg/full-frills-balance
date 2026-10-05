@@ -3,7 +3,7 @@ import { PlannedPaymentInterval } from '@/src/types/enums';
 import dayjs from 'dayjs';
 import type { RecurringIncome } from './draft';
 
-export interface OnboardingIncomeRecurrence {
+interface OnboardingIncomeRecurrence {
   readonly intervalType: PlannedPaymentInterval;
   readonly intervalN: number;
   readonly recurrenceDay?: number;
@@ -11,7 +11,6 @@ export interface OnboardingIncomeRecurrence {
   readonly firstOccurrence: number;
 }
 
-/** Derives the persisted recurrence and first visible date from one onboarding selection. */
 export function buildOnboardingIncomeRecurrence(
   item: Pick<RecurringIncome, 'interval' | 'intervalN' | 'nextDate'>,
 ): OnboardingIncomeRecurrence {

@@ -229,19 +229,19 @@ export function ChoiceChips({
 
 export type CadenceId = 'MONTHLY' | 'BIWEEKLY' | 'WEEKLY';
 
-export type CollectedCadence = {
+type CollectedCadence = {
   readonly intervals?: readonly { id: CadenceId; label: string }[];
   readonly selectedInterval?: CadenceId;
   readonly date: number;
   readonly dateLabel: string;
 };
 
-export type CollectedChoice = {
+type CollectedChoice = {
   readonly options: readonly { id: string; label: string }[];
   readonly selectedId?: string;
 };
 
-export type CollectedPaymentPlan = {
+type CollectedPaymentPlan = {
   readonly amount: number;
   readonly date: number;
   readonly dateLabel: string;

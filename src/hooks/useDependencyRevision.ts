@@ -5,10 +5,6 @@ function areDependencyListsEqual(oldDeps: DependencyList, newDeps: DependencyLis
   return oldDeps.every((dep, i) => dep === newDeps[i]);
 }
 
-/**
- * Bumps a revision when `deps` change (by reference equality per slot).
- * Updates run in useLayoutEffect so we never setState during render.
- */
 export function useDependencyRevision(deps: DependencyList, onRevision?: () => void): number {
   const depsRef = useRef(deps);
   const [revision, setRevision] = useState(0);

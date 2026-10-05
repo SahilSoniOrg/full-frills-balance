@@ -121,9 +121,6 @@ function RootLayout() {
   );
 }
 
-/**
- * Stage 1: UI Readiness (Fonts, Telemetry)
- */
 function EarlyBootstrap() {
   useFonts();
   useTelemetry();
@@ -144,9 +141,6 @@ function EarlyBootstrap() {
   return null;
 }
 
-/**
- * Stage 2: Data Readiness (Bootstrap, Widgets)
- */
 function WorkplaceBootstrap() {
   const { workplaceId, defaultCurrencyCode } = useWorkplace();
   useAppBootstrap(workplaceId, defaultCurrencyCode);
@@ -155,9 +149,6 @@ function WorkplaceBootstrap() {
   return null;
 }
 
-/**
- * Manages the transition from Native Splash to application UI.
- */
 function SplashOrchestrator() {
   const { isAppReady, isDataHydrated } = useAppReady();
   const launch = useLaunchCoordinator();

@@ -12,7 +12,7 @@ import { getHistoricalFxTimestamp } from '@/src/domain/accounting/journalFx';
 import { logger } from '@/src/utils/logger';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-export interface RateFetchers {
+interface RateFetchers {
   fetchRequiredRate: (fromCurrency: string, toCurrency: string) => Promise<number | null>;
   fetchHistoricalRate?: (
     fromCurrency: string,
@@ -21,7 +21,7 @@ export interface RateFetchers {
   ) => Promise<{ rate: number | null }>;
 }
 
-export interface CurrencyPairRequest {
+interface CurrencyPairRequest {
   sourceCurrency?: string;
   destCurrency?: string;
   baseCurrency: string;
@@ -71,7 +71,6 @@ function fetchPairBaseRates(
   return fetchCrossCurrencyRates(sourceCurrency, destCurrency, baseCurrency, fetchRate);
 }
 
-/** Fetches market base rates for one pair; failures resolve to `Rate unavailable`. */
 export async function fetchPairRates(
   request: CurrencyPairRequest,
   fetchers: RateFetchers,
@@ -104,7 +103,6 @@ export interface UseCrossCurrencyRatesParams {
   enabled: boolean;
 }
 
-/** Fetches workplace-relative market rates for a single source/destination pair. */
 export function useCrossCurrencyRates({
   sourceCurrency,
   destCurrency,
@@ -121,7 +119,8 @@ export function useCrossCurrencyRates({
   const pairKey = currencyPairKey(sourceCurrency, destCurrency);
   const contextKey = fxOverrideKey(workplaceCurrency, journalDate, refreshNonce);
   const requestKey = `${contextKey}#${pairKey}`;
-  const shouldFetch = enabled && pairNeedsFetch({ sourceCurrency, destCurrency, baseCurrency: workplaceCurrency });
+  const shouldFetch =
+    enabled && pairNeedsFetch({ sourceCurrency, destCurrency, baseCurrency: workplaceCurrency });
 
   useEffect(() => {
     mountedRef.current = true;

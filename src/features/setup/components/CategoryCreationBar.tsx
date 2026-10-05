@@ -7,7 +7,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback, useState } from 'react';
 import { TouchableOpacity } from 'react-native';
 import { Box, Inline, Stack } from '@/src/design-system';
-export type CreationItemType = 'INCOME' | 'EXPENSE' | 'ASSET' | 'LIABILITY';
+type CreationItemType = 'INCOME' | 'EXPENSE' | 'ASSET' | 'LIABILITY';
 
 export interface CategoryCreationBarProps {
   placeholder: string;

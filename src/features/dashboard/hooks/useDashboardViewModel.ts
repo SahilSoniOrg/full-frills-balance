@@ -75,14 +75,6 @@ export function useDashboardViewModel(): DashboardViewModel {
     mountTimeRef.current = performance.now();
   }, []);
 
-  // Log UI Initialization (Prefs Loaded)
-  useEffect(() => {
-    if (isInitialized) {
-      const duration = Math.round(performance.now() - (mountTimeRef.current || 0));
-      appLogger.info(`[Dashboard] UI Initialized (Prefs Loaded) in ${duration}ms`);
-    }
-  }, [isInitialized]);
-
   const { data: safeToSpendData } = useObservable<
     SafeToSpendDashboard | SafeToSpendPaintSnapshot | null
   >(
@@ -92,7 +84,6 @@ export function useDashboardViewModel(): DashboardViewModel {
       const cached = snapshotService.getCustomSnapshotWithMetadata<
         SafeToSpendPaintSnapshot | SafeToSpendDashboard
       >(workplaceId, 'safe_to_spend');
-      appLogger.info(`[Dashboard] STS snapshot ${cached ? 'hit' : 'miss'}`);
       return cached ? restoreSafeToSpendPaintSnapshot(cached.data, cached) : null;
     },
   );
@@ -109,14 +100,6 @@ export function useDashboardViewModel(): DashboardViewModel {
     !('snapshotKind' in visibleSafeToSpendData) &&
     visibleSafeToSpendData.quality === 'ready' &&
     visibleSafeToSpendData.currencyCode === defaultCurrencyCode;
-  // Log Safe To Spend Data arrival
-  useEffect(() => {
-    if (hasSafeToSpendData) {
-      const duration = Math.round(performance.now() - (mountTimeRef.current || 0));
-      appLogger.info(`[Dashboard] SafeToSpend Data Loaded in ${duration}ms`);
-    }
-  }, [hasSafeToSpendData]);
-
   const [isExplanationVisible, setExplanationVisible] = useState(false);
   const [expandedSection, setExpandedSection] = useState<DashboardExplanationSection | null>(null);
   const [selectedLegendItem, setSelectedLegendItem] = useState<DashboardLegendItem | null>(null);
@@ -209,19 +192,9 @@ export function useDashboardViewModel(): DashboardViewModel {
   });
 
   const hasJournalItems = recentJournalEntries.items.length > 0;
-  // Log Journal List arrival
-  useEffect(() => {
-    if (hasJournalItems) {
-      const duration = Math.round(performance.now() - (mountTimeRef.current || 0));
-      appLogger.info(`[Dashboard] Journal List Items Loaded in ${duration}ms`);
-    }
-  }, [hasJournalItems]);
-
-  // Log "Fully Ready" state
   useEffect(() => {
     if (isInitialized && hasSafeToSpendData && hasJournalItems) {
       const duration = Math.round(performance.now() - (mountTimeRef.current || 0));
-      appLogger.info(`[Dashboard] Fully Ready in ${duration}ms`);
       appLogger.metric('Dashboard.FullyReady', duration);
     }
   }, [isInitialized, hasSafeToSpendData, hasJournalItems]);

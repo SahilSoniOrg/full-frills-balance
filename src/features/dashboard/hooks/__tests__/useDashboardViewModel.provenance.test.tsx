@@ -135,6 +135,7 @@ describe('dashboard forecast ownership and snapshot provenance', () => {
         safeToSpendDays: stale.safeToSpendDays,
         explanation: stale.explanation,
         asOf: stale.asOf,
+        quality: stale.quality,
         snapshotAgeMs: stale.snapshotAgeMs,
       },
       { isLoading: false, currencyCode: stale.currencyCode },
@@ -143,7 +144,6 @@ describe('dashboard forecast ownership and snapshot provenance', () => {
       <SafeToSpendCard
         projection={stale.projection}
         viewModel={vm}
-        quality="stale"
         detailsReady={false}
         onInfoPress={() => undefined}
         onLegendPress={() => undefined}

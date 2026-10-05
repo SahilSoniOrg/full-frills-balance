@@ -4,7 +4,8 @@ import { useInsightPatterns, useDismissedInsightPatterns } from '@/src/hooks/use
 import { useSupplementalInsights } from '@/src/hooks/useSupplementalInsights';
 import { useUnreadSmsCount } from '@/src/hooks/useUnreadSmsCount';
 import { analytics } from '@/src/services/analytics';
-import { insightService, Insight } from '@/src/services/insight/InsightService';
+import { insightService } from '@/src/services/insight/InsightService';
+import type { Insight } from '@/src/services/insight/insightTypes';
 import { journalBalanceInsightService } from '@/src/services/integrity';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';

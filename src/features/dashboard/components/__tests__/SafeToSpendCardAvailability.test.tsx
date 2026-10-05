@@ -35,9 +35,8 @@ describe('SafeToSpendCard availability', () => {
   it('hides zero-valued financial output when projection is unavailable', () => {
     render(
       <SafeToSpendCard
-        quality="unavailable"
         projection={{ history: [], projection: [], safeDaysCount: null, safeToSpend: 0 }}
-        viewModel={{ ...viewModel, safeToSpend: 0, effectiveTotal: 0 }}
+        viewModel={{ ...viewModel, safeToSpend: 0, effectiveTotal: 0, quality: 'unavailable' }}
         onInfoPress={() => undefined}
         onLegendPress={() => undefined}
       />,
@@ -70,9 +69,13 @@ describe('SafeToSpendCard availability', () => {
   it('keeps stale and incomplete valuation warnings alongside the breakdown', () => {
     render(
       <SafeToSpendCard
-        quality="stale"
         projection={projection}
-        viewModel={{ ...viewModel, hasUnvaluedEntries: true, asOf: Date.UTC(2026, 9, 2) }}
+        viewModel={{
+          ...viewModel,
+          quality: 'stale',
+          hasUnvaluedEntries: true,
+          asOf: Date.UTC(2026, 9, 2),
+        }}
         onInfoPress={jest.fn()}
         onLegendPress={jest.fn()}
       />,
@@ -100,9 +103,8 @@ describe('SafeToSpendCard availability', () => {
   it('hides the graph when forecast data is unavailable', () => {
     render(
       <SafeToSpendCard
-        quality="unavailable"
         projection={populatedProjection}
-        viewModel={viewModel}
+        viewModel={{ ...viewModel, quality: 'unavailable' }}
         onInfoPress={jest.fn()}
         onLegendPress={jest.fn()}
       />,

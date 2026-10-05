@@ -1,16 +1,13 @@
 import { usePreference } from '@/src/hooks/usePreference';
 import { useCallback } from 'react';
 
-export type AccountDisplayPrefsState = {
+type AccountDisplayPrefsState = {
   showAccountMonthlyStats: boolean;
   setShowAccountMonthlyStats: (show: boolean) => void;
   useCompactAccountPicker: boolean;
   setUseCompactAccountPicker: (useCompact: boolean) => void;
 };
 
-/**
- * Scoped account-list display prefs — expandable without growing UIContext.
- */
 export function useAccountDisplayPrefs(): AccountDisplayPrefsState {
   const { value: showAccountMonthlyStats, setValue: setStoredAccountMonthlyStats } =
     usePreference('showAccountMonthlyStats');

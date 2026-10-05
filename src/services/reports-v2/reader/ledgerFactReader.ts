@@ -28,7 +28,7 @@ export interface ReadReportLedgerOptions {
   readonly factPeriod?: ReportPeriod;
 }
 
-export function accountPathFor(
+function accountPathFor(
   account: AccountModel,
   byId: ReadonlyMap<string, AccountModel>,
 ): AccountId[] {

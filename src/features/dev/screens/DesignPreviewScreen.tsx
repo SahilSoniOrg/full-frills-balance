@@ -1,21 +1,3 @@
-/**
- * Design Preview - Living visual reference for the design system
- * Your visual truth, regression detector, and theme alignment check
- *
- * ========================================
- * RULES FOR THIS FILE:
- * ========================================
- * - No imports from app screens
- * - No business logic
- * - No state beyond theme toggling
- * - No new components created for preview convenience
- * - Only render components that are part of the design system
- * - Preview helper components must be local and not exported
- * - Must consume the design system exactly like the app does
- * - ZERO hardcoded colors or magic numbers
- * - If it looks wrong here, it is wrong everywhere
- * ========================================
- */
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { DateRangeTrigger } from '@/src/components/filters/DateRangeTrigger';
 import {
@@ -60,8 +42,6 @@ const PREVIEW_SEGMENT_OPTIONS = [
   { id: 'year', label: 'Year' },
 ] as const;
 
-// Preview-only helper - demonstrates patterns, does not create new components
-// This is the ONLY preview-only component allowed in this file
 const TokenBox = ({ size, radius }: { size: number; radius: number }) => {
   return <Box width={size} height={size} borderRadius={radius} background="primary" />;
 };

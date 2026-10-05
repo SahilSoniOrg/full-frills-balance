@@ -7,7 +7,7 @@ import { HubWidget } from '@/src/features/hub/components/HubWidget';
 import { insightTypePresentation } from '@/src/features/hub/helpers/insightTypePresentation';
 import type { HubViewModel } from '@/src/features/hub/hooks/useHubViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import { Insight } from '@/src/services/insight/InsightService';
+import type { Insight } from '@/src/services/insight/insightTypes';
 
 export function HubView({
   activeTab,

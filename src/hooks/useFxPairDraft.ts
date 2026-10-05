@@ -26,7 +26,6 @@ export interface UseFxPairDraftInput {
   convertedDestAmount?: number;
 }
 
-/** Composes market rates, `resolveFxPair`, and optional converted-amount override. */
 export function useFxPairDraft({
   sourceCurrency,
   destCurrency,

@@ -214,7 +214,6 @@ export function DashboardScreenView({
                   onLegendPress={safeToSpendViewModel.setSelectedLegendItem}
                   isLoading={!safeToSpendData}
                   detailsReady={safeToSpendDetailsReady && safeToSpendData?.quality === 'ready'}
-                  quality={safeToSpendData?.quality ?? 'ready'}
                   showChart={showSafeToSpendChart}
                 />
               </View>

@@ -50,9 +50,6 @@ function buildBreakdownViewState({
   };
 }
 
-/**
- * Manages breakdown donut view state and legend expansion for the Spending tab.
- */
 export function useReportBreakdownDetails({
   globalExpenses,
   expenseCategories,

@@ -8,10 +8,6 @@ import { AppState, AppStateStatus, Platform } from 'react-native';
 
 const RESUME_FLUSH_DEBOUNCE_MS = 500;
 
-/**
- * Flushes pending running-balance rebuilds when the app returns to the foreground
- * so account balances catch up after background writes or interrupted batches.
- */
 export function useAppForegroundMaintenance() {
   const appStateRef = useRef(AppState.currentState);
   const flushTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);

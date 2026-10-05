@@ -1,5 +1,6 @@
 import { useObservable } from '@/src/hooks/useObservable';
-import { Insight, insightService } from '@/src/services/insight/InsightService';
+import { insightService } from '@/src/services/insight/InsightService';
+import type { Insight } from '@/src/services/insight/insightTypes';
 import { WorkplaceId } from '@/src/types/ids';
 import { EMPTY } from 'rxjs';
 

@@ -9,9 +9,9 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 const METRIC_COLUMNS_MIN_WIDTH = 560;
 
-export type SafeToSpendMetricKey = 'safe' | 'committed' | 'debts';
+type SafeToSpendMetricKey = 'committed' | 'debts';
 
-export interface SafeToSpendMetric {
+interface SafeToSpendMetric {
   key: SafeToSpendMetricKey;
   label: string;
   value: string;

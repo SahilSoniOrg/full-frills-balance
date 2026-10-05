@@ -5,7 +5,7 @@ import { withOpacity } from '@/src/utils/color-math';
 import { resolveInsightSeverityPresentation } from '@/src/features/hub/helpers/insightSeverityChrome';
 import { insightTypePresentation } from '@/src/features/hub/helpers/insightTypePresentation';
 import { useTheme } from '@/src/hooks/use-theme';
-import { Insight } from '@/src/services/insight/InsightService';
+import type { Insight } from '@/src/services/insight/insightTypes';
 import React from 'react';
 import { Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { EmergencyFundPopupModal } from './EmergencyFundPopupModal';

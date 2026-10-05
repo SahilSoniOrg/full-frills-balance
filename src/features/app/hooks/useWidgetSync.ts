@@ -17,7 +17,6 @@ import { logger } from '@/src/utils/logger';
 import { Platform } from 'react-native';
 import { EMPTY } from 'rxjs';
 
-// Use the types from the module
 import { WorkplaceId } from '@/src/types/ids';
 import type {
   WidgetDataSnapshot,

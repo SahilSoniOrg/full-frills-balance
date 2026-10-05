@@ -10,7 +10,7 @@ import {
 } from '@/src/utils/dateUtils';
 import { useCallback, useMemo, useState } from 'react';
 
-export interface ReportFilters {
+interface ReportFilters {
   showAccountPicker: boolean;
   onOpenAccountPicker: () => void;
   onCloseAccountPicker: () => void;
@@ -36,9 +36,6 @@ interface UseReportFiltersProps {
   onResetSelections: () => void;
 }
 
-/**
- * Owns report date/account filter pickers and filter→reset side effects.
- */
 export function useReportFilters({
   accounts,
   workplaceId,

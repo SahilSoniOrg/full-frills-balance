@@ -9,7 +9,8 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { transactionRawPatternQueries } from '@/src/data/repositories/raw/TransactionRawPatternQueries';
 import { transactionInsightQueries } from '@/src/data/repositories/transaction/TransactionInsightQueries';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
-import { insightService as patternService, Insight } from '@/src/services/insight/InsightService';
+import { insightService as patternService } from '@/src/services/insight/InsightService';
+import type { Insight } from '@/src/services/insight/insightTypes';
 import {
   reactiveCacheCoordinator,
   REACTIVE_CACHE_NAMESPACES,

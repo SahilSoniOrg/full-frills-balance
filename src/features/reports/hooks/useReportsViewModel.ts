@@ -11,13 +11,13 @@ import {
   ReportTab,
   ReportWealthTabVm,
 } from './reportTabTypes';
-import { ReportFilters, useReportFilters } from './useReportFilters';
+import { useReportFilters } from './useReportFilters';
 import { useReportBreakdownDetails } from './useReportBreakdownDetails';
 import { useReportChartData } from './useReportChartData';
 import { calculateReportSummary } from '@/src/services/reports/reportSummary';
 
 export interface ReportsViewModel {
-  filters: ReportFilters;
+  filters: ReturnType<typeof useReportFilters>;
   activeTab: ReportTab;
   setActiveTab: (tab: ReportTab) => void;
   loading: boolean;

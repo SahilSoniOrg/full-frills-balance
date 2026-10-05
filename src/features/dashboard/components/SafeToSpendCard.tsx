@@ -22,7 +22,6 @@ export interface SafeToSpendCardProps {
   viewModel: SafeToSpendViewModel;
   /** When false, hides the projection chart; amount and breakdown stay. Default true. */
   showChart?: boolean;
-  quality?: 'ready' | 'stale' | 'unavailable';
 }
 
 export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
@@ -34,7 +33,6 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     onInfoPress,
     onLegendPress,
     showChart = true,
-    quality = 'ready',
   } = props;
   const formatMoney = useMoneyFormat();
   const { workplaceId } = useWorkplace();
@@ -49,6 +47,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     currencyCode,
     isLoading: vmLoading,
   } = viewModel;
+  const quality = viewModel.quality ?? 'ready';
 
   const loading = isLoading ?? vmLoading;
   const hasBreakdownData = effectiveTotal > 0;

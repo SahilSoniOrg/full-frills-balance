@@ -21,8 +21,6 @@ import {
 import { calculateInsights } from './insightCalculator';
 import { Insight } from './insightTypes';
 
-export type { Insight };
-
 export class InsightService {
   private refreshTrigger = new BehaviorSubject<void>(undefined);
 

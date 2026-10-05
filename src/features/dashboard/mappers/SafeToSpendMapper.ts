@@ -7,12 +7,12 @@ import { selectDebtEntries } from '@/src/services/simulation/selectors/debt';
 import { selectIncomeEntries } from '@/src/services/simulation/selectors/income';
 import { ResolvedCopy, SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
 
-export interface MapperOptions {
+interface MapperOptions {
   isLoading: boolean;
   currencyCode: string;
 }
 
-export interface SafeToSpendMapperInput {
+interface SafeToSpendMapperInput {
   explanation?: SafeToSpendDashboard['explanation'];
   asOf?: number;
   generatedAt?: number;
@@ -40,7 +40,6 @@ export function mapSafeToSpendViewModel(
   const { isLoading, currencyCode } = options;
 
   if (!result.report) {
-    // Fallback for missing report (prevents component crash)
     return {
       currencyCode: options.currencyCode,
       safeToSpend: 0,

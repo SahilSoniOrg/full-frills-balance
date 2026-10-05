@@ -14,8 +14,6 @@ export function AppContent() {
     return <RestartRequiredScreen />;
   }
 
-  // We render the same stack, expo-router handles the path matching
-  // but we can add path-gating here if needed in the future.
   return <NavigationStack />;
 }
 

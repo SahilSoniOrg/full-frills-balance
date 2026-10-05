@@ -3,7 +3,7 @@ import { ROUTE_MANIFEST, type AppRouteName } from '@/src/navigation/routeManifes
 import { usePathname, useSegments } from 'expo-router';
 import React from 'react';
 
-export interface RouteMetadata {
+interface RouteMetadata {
   screenType: string;
   flowContext: string | null;
   isModal: boolean;
@@ -53,9 +53,6 @@ function resolveRouteMetadata(screenName: string): RouteMetadata {
   };
 }
 
-/**
- * Hook that listens to navigation changes and reports to analytics.
- */
 export function useTelemetry() {
   const pathname = usePathname();
   const segments = useSegments();

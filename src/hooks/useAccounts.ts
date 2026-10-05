@@ -1,7 +1,3 @@
-/**
- * Reactive read hooks for accounts (entity observe + targeted balance).
- * Mutations: `useAccountActions`. Details composite: `useAccountDashboard`.
- */
 import { Animation } from '@/src/constants';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import {
