@@ -7,7 +7,10 @@ import {
   LoadingView,
 } from '@/src/components/core';
 import { ScreenWithChrome, type ScreenNavChrome } from '@/src/components/layout';
-import { SelectionPickerSheet, type SelectionOption } from '@/src/components/filters/SelectionPickerSheet';
+import {
+  SelectionPickerSheet,
+  type SelectionOption,
+} from '@/src/components/filters/SelectionPickerSheet';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { AuditLogItem } from '@/src/features/audit/components/AuditLogItem';
 import { AuditLogViewModel } from '@/src/features/audit/hooks/useAuditLogViewModel';
@@ -20,13 +23,7 @@ import { AUDIT_EVENT_TYPES } from '@/src/types/auditEvents';
 import { useTheme } from '@/src/hooks/use-theme';
 import { FlashList } from '@shopify/flash-list';
 import { useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 const ENTITY_FILTERS: AuditEntityFilter[] = [
   'all',
@@ -61,7 +58,6 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
   const {
     chrome,
     logs,
-    visibleLogs,
     hasMore,
     loadMore,
     isLoadingMore,
@@ -320,7 +316,7 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
               onClose={() => setEventPickerVisible(false)}
               onSelect={onEventFilterChange}
             />
-            {visibleLogs.length === 0 ? (
+            {logs.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <AppIcon name={Icon.Document} size={Size.fab} color={theme.textSecondary} />
                 <EmptyStateView
@@ -331,7 +327,7 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
               </View>
             ) : (
               <FlashList
-                data={visibleLogs}
+                data={logs}
                 renderItem={({ item }) => (
                   <AuditLogItem
                     item={item}

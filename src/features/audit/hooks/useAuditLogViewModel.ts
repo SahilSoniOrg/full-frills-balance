@@ -21,7 +21,6 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 export interface AuditLogViewModel {
   logs: ReturnType<typeof useAuditLogs>['logs'];
-  visibleLogs: ReturnType<typeof useAuditLogs>['logs'];
   accountMap: ReturnType<typeof useAuditAccounts>['accountMap'];
   entityStatusMap: ReturnType<typeof useAuditEntityStatus>;
   workplaceCurrency: string;
@@ -254,7 +253,6 @@ export function useAuditLogViewModel(): AuditLogViewModel {
     queryKey,
     workplaceId,
   ]);
-  const visibleLogs = logs;
 
   const onToggleExpanded = useCallback((id: string) => {
     setExpandedIds(prev => {
@@ -294,7 +292,10 @@ export function useAuditLogViewModel(): AuditLogViewModel {
       Alerts.toast.success(AppConfig.strings.audit.exportHistoryComplete);
     } catch (error) {
       const wasCancelled =
-        typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError';
+        typeof error === 'object' &&
+        error !== null &&
+        'name' in error &&
+        error.name === 'AbortError';
       if (!wasCancelled) {
         logger.error('[AuditLog] Failed to export audit archive', error);
         Alerts.showErrorAlert(AppConfig.strings.audit.exportHistoryFailed);
@@ -343,7 +344,6 @@ export function useAuditLogViewModel(): AuditLogViewModel {
 
   return {
     logs,
-    visibleLogs,
     accountMap,
     entityStatusMap,
     workplaceCurrency,
