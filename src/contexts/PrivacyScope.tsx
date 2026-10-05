@@ -78,11 +78,6 @@ export function useEffectivePrivacyMode(): boolean {
   return scope?.isPrivacyMode ?? globalPrivacyMode;
 }
 
-/** Optional access to the nearest privacy scope (null outside a provider). */
-export function usePrivacyScopeOptional(): PrivacyScopeValue | null {
-  return useContext(PrivacyScopeContext);
-}
-
 /** Screen-local privacy toggle; must be used under PrivacyScopeProvider. */
 export function usePrivacyScope(): PrivacyScopeValue {
   const scope = useContext(PrivacyScopeContext);
