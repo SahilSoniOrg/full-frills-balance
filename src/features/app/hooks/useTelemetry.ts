@@ -1,56 +1,24 @@
 import { analytics } from '@/src/services/analytics';
-import { ROUTE_MANIFEST, type AppRouteName } from '@/src/navigation/routeManifest';
+import { ROUTE_MANIFEST, type RouteManifestEntry } from '@/src/navigation/routeManifest';
 import { usePathname, useSegments } from 'expo-router';
 import React from 'react';
 
-interface RouteMetadata {
-  screenType: string;
-  flowContext: string | null;
-  isModal: boolean;
-}
+type RouteMetadata = Pick<RouteManifestEntry, 'screenType' | 'flowContext' | 'isModal'>;
 
-const ROUTE_METADATA_MAP = Object.fromEntries(
-  ROUTE_MANIFEST.map(route => [
-    route.name,
-    {
-      screenType: route.screenType,
-      flowContext: route.flowContext,
-      isModal: route.isModal,
-    },
-  ]),
-) as Record<AppRouteName, RouteMetadata>;
-
-type RouteMetadataKey = keyof typeof ROUTE_METADATA_MAP;
-
-const SHORT_TAB_ROUTE_ALIASES: Record<string, AppRouteName> = {
-  accounts: '(tabs)/accounts',
-  activity: '(tabs)/activity',
-  commitments: '(tabs)/commitments',
-  settings: '(tabs)/settings',
-};
+const findRoute = (name: string) => ROUTE_MANIFEST.find(route => route.name === name);
 
 function resolveRouteMetadata(screenName: string): RouteMetadata {
-  const direct = ROUTE_METADATA_MAP[screenName as RouteMetadataKey];
-  if (direct) return direct;
-
   const baseSegment = screenName.split('/').pop() || screenName;
-  const alias = SHORT_TAB_ROUTE_ALIASES[baseSegment];
-  if (alias) {
-    return ROUTE_METADATA_MAP[alias];
-  }
-
-  if (baseSegment in ROUTE_METADATA_MAP) {
-    return ROUTE_METADATA_MAP[baseSegment as RouteMetadataKey];
-  }
-
-  const matchedKey = Object.keys(ROUTE_METADATA_MAP).find(k => screenName.includes(k));
-  if (matchedKey) return ROUTE_METADATA_MAP[matchedKey as RouteMetadataKey];
-
-  return {
-    screenType: 'other',
-    flowContext: null,
-    isModal: /entry|creation|edit|form|modal/.test(screenName),
-  };
+  return (
+    findRoute(screenName) ??
+    findRoute(baseSegment) ??
+    findRoute(`(tabs)/${baseSegment}`) ??
+    ROUTE_MANIFEST.find(route => screenName.includes(route.name)) ?? {
+      screenType: 'other',
+      flowContext: null,
+      isModal: /entry|creation|edit|form|modal/.test(screenName),
+    }
+  );
 }
 
 export function useTelemetry() {
