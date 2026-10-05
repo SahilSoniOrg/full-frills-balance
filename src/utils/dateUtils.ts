@@ -123,22 +123,6 @@ export const formatShortDate = (value: number | Date): string => {
   });
 };
 
-/** Calendar-relative label for upcoming/past dates (Today, Tomorrow, in N days, …). */
-export function getSmartDateLabel(date: Date | string | number): string {
-  const d = dayjs(date);
-  const now = dayjs().startOf('day');
-  const target = d.startOf('day');
-  const diffDays = target.diff(now, 'day');
-
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Tomorrow';
-  if (diffDays === -1) return 'Yesterday';
-  if (diffDays > 1 && diffDays < 7) return `in ${diffDays} days`;
-  if (diffDays < -1 && diffDays > -7) return `${Math.abs(diffDays)} days ago`;
-
-  return d.format('MMM D, YYYY');
-}
-
 /** Named clock so render paths pass react-hooks/purity (Date.now is banned there). */
 export const getNow = () => Date.now();
 

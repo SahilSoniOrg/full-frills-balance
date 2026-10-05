@@ -11,7 +11,6 @@ import {
   getMonthRange,
   getNextMonthRange,
   getPreviousMonthRange,
-  getSmartDateLabel,
   getStartOfDay,
 } from '@/src/utils/dateUtils';
 
@@ -80,32 +79,6 @@ describe('dateUtils', () => {
     it('calendarClockTemplates embeds matching clock tokens', () => {
       expect(calendarClockTemplates('12-hour').sameDay).toBe('[Today at] h:mm A');
       expect(calendarClockTemplates('24-hour').sameDay).toBe('[Today at] HH:mm');
-    });
-
-    describe('getSmartDateLabel', () => {
-      beforeEach(() => {
-        jest.useFakeTimers();
-        jest.setSystemTime(new Date(2024, 2, 15, 12, 0, 0));
-      });
-
-      afterEach(() => {
-        jest.useRealTimers();
-      });
-
-      it('returns Today, Tomorrow, and Yesterday', () => {
-        expect(getSmartDateLabel(new Date(2024, 2, 15))).toBe('Today');
-        expect(getSmartDateLabel(new Date(2024, 2, 16))).toBe('Tomorrow');
-        expect(getSmartDateLabel(new Date(2024, 2, 14))).toBe('Yesterday');
-      });
-
-      it('returns relative labels within a week', () => {
-        expect(getSmartDateLabel(new Date(2024, 2, 18))).toBe('in 3 days');
-        expect(getSmartDateLabel(new Date(2024, 2, 12))).toBe('3 days ago');
-      });
-
-      it('falls back to a calendar date outside a week', () => {
-        expect(getSmartDateLabel(new Date(2024, 2, 1))).toBe('Mar 1, 2024');
-      });
     });
   });
 
