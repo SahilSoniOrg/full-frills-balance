@@ -9,7 +9,7 @@ import {
 import { observeQueryWithModelChanges } from '@/src/data/repositories/observeQueryWithModelChanges';
 import { AuditAction, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import type { AuditEventType } from '@/src/types/auditEvents';
-import type { PlannedPaymentFxFields, PlannedPaymentFxMode } from '@/src/types/plannedPaymentFx';
+import type { PlannedPaymentFxFields, PlannedPaymentFxMode } from '@/src/types/plainDtos';
 import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 import type { Model } from '@nozbe/watermelondb';

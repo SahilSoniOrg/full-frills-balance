@@ -16,7 +16,7 @@ import type {
   TransactionId,
 } from '@/src/types/ids';
 import type { UIPreferences } from '@/src/types/preferences';
-import type { PlannedPaymentFxFields } from '@/src/types/plannedPaymentFx';
+import type { PlannedPaymentFxFields } from '@/src/types/plainDtos';
 
 /** Discriminant for the canonical import contract; extend with new versions as unions. */
 export const CANONICAL_IMPORT_VERSION_V1 = 'canonical-import.v1' as const;

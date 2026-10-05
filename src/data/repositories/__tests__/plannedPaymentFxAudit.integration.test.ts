@@ -19,7 +19,7 @@ import {
   PlannedPaymentStatus,
 } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
-import type { PlannedPaymentFxMode } from '@/src/types/plannedPaymentFx';
+import type { PlannedPaymentFxMode } from '@/src/types/plainDtos';
 import { resetDatabase } from '@/src/testing/resetDatabase';
 
 const WP = 'wp-fx-audit' as WorkplaceId;

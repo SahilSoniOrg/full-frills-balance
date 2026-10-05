@@ -4,7 +4,7 @@ import { date, field } from '@nozbe/watermelondb/decorators';
 import { AccountId, PlannedPaymentId } from '@/src/types/ids';
 import { PlainPlannedPayment } from '@/src/types/plainDtos';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
-import type { PlannedPaymentFxMode } from '@/src/types/plannedPaymentFx';
+import type { PlannedPaymentFxMode } from '@/src/types/plainDtos';
 
 export default class PlannedPayment extends BaseScopedModel<PlannedPaymentId> {
   static table = 'planned_payments';
