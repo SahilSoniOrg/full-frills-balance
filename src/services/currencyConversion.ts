@@ -33,15 +33,6 @@ export type ConvertAmountResult = ConvertAmountSuccess | ConvertAmountFailure;
 export type SpotExchangeRateResult =
   { ok: true; rate: number } | { ok: false; reason: 'missing_rate' };
 
-/** True when a stored rate can be used for unlike currencies without a historical lookup. */
-export function isUsableCrossCurrencyRate(
-  fromCurrency: string,
-  toCurrency: string,
-  rate: number | undefined | null,
-): rate is number {
-  return isUsableExchangeRate(rate, { fromCurrency, toCurrency });
-}
-
 export { isUsableExchangeRate } from '@/src/domain/accounting/usableExchangeRate';
 
 /** Resolves an unrounded multiplier without treating money amounts as rates. */
@@ -52,7 +43,7 @@ export async function resolveSpotExchangeRate(
   if (!fromCurrency || !toCurrency) return { ok: false, reason: 'missing_rate' };
   if (fromCurrency === toCurrency) return { ok: true, rate: 1 };
   const rate = await exchangeRateService.getRate(fromCurrency, toCurrency);
-  return isUsableCrossCurrencyRate(fromCurrency, toCurrency, rate)
+  return isUsableExchangeRate(rate, { fromCurrency, toCurrency })
     ? { ok: true, rate }
     : { ok: false, reason: 'missing_rate' };
 }
