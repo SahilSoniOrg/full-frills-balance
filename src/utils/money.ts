@@ -27,6 +27,14 @@ export const formatRoundedAmount = (amount: number, precision: number): string =
   return roundToPrecision(amount, precision).toFixed(precision);
 };
 
+/** Comma→dot, digits and one decimal point, capped at `precision`. Null if rejected. */
+export function sanitizeDecimalInput(text: string, precision: number): string | null {
+  const sanitized = text.replace(/,/g, '.').replace(/[^0-9.]/g, '');
+  const parts = sanitized.split('.');
+  if (parts.length > 2 || (parts[1] && parts[1].length > precision)) return null;
+  return sanitized;
+}
+
 /**
  * Returns dynamic epsilon for zero-balance checks based on precision.
  * e.g., for precision 2, epsilon is 0.001.

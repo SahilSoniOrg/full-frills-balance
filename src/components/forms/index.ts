@@ -2,8 +2,6 @@ export { FormRow } from './FormRow';
 export type { FormRowProps } from './FormRow';
 export { UnderlineNameField } from './UnderlineNameField';
 export type { UnderlineNameFieldProps } from './UnderlineNameField';
-export { AmountHero } from './AmountHero';
-export type { AmountHeroProps } from './AmountHero';
 export { SuggestionHint } from './SuggestionHint';
 export type { SuggestionHintProps } from './SuggestionHint';
 export { GlyphCarousel } from './GlyphCarousel';

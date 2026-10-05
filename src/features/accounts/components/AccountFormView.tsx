@@ -1,11 +1,6 @@
 import { AppIcon, AppText, Icon } from '@/src/components/core';
-import {
-  AmountHero,
-  FormRow,
-  GlyphCarousel,
-  SuggestionHint,
-  UnderlineNameField,
-} from '@/src/components/forms';
+import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
+import { FormRow, GlyphCarousel, SuggestionHint, UnderlineNameField } from '@/src/components/forms';
 import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
 import type { ScreenNavChrome } from '@/src/components/layout';
 import { SectionLabel } from '@/src/components/shared/SectionLabel';
@@ -90,9 +85,10 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
       </View>
       {vm.showInitialBalance ? (
         <View style={styles.amount}>
-          <AmountHero
+          <CalculatorAmountInput
+            variant="centered"
             value={vm.initialBalance}
-            onChange={vm.onInitialBalanceChange}
+            onChangeText={vm.onInitialBalanceChange}
             label={vm.balanceLabel}
             currencySymbol={CURRENCY_SYMBOLS[vm.selectedCurrency] || vm.selectedCurrency}
             currencyCode={vm.selectedCurrency}

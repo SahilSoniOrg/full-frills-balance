@@ -1,6 +1,6 @@
 import type { CreateAccountIntent } from '@/src/components/account-selection';
 import { AppIcon, AppInput, PressScaleTouchable, SwipeToRemove } from '@/src/components/core';
-import { CompactAmountInput } from '@/src/components/forms/CompactAmountInput';
+import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import type { RowFx } from '@/src/features/journal/entry/hooks/workplaceRowFx';
@@ -112,7 +112,8 @@ export function SplitAllocationRow({
         testIDPrefix={`${testIDPrefix}-category-picker-${row.id}`}
         trailing={
           <View style={styles.trailing}>
-            <CompactAmountInput
+            <CalculatorAmountInput
+              variant="compact"
               value={inputAmount}
               onChangeText={onChangeAmount}
               currency={inputCurrency}

@@ -1,14 +1,19 @@
 import { AppIcon } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
 import { AmountCalculatorSheet } from '@/src/components/overlays/AmountCalculatorSheet';
+import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
+import { formPrimitivesStrings as copy } from '@/src/constants/copy/domains/formPrimitivesStrings';
 import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
+import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useTheme } from '@/src/hooks/use-theme';
 import { hasNegativeAmountSign } from '@/src/services/journal/simpleJournalHelpers';
 import { Icon } from '@/src/types/domainIcons';
 import { withOpacity } from '@/src/utils/color-math';
+import { formatRoundedAmount, sanitizeDecimalInput } from '@/src/utils/money';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Keyboard,
+  Pressable,
   StyleProp,
   StyleSheet,
   TextInput,
@@ -24,6 +29,8 @@ interface CalculatorAmountInputProps {
   onChangeText: (value: string) => void;
   currencySymbol?: string;
   currency?: string;
+  currencyCode?: string;
+  onCurrencyPress?: () => void;
   accentColor?: string;
   showCurrencyPrefix?: boolean;
   showClearButton?: boolean;
@@ -31,7 +38,7 @@ interface CalculatorAmountInputProps {
   precision?: number;
   placeholder?: string;
   label?: string;
-  variant?: 'default' | 'hero' | 'compact';
+  variant?: 'default' | 'hero' | 'compact' | 'centered';
   inputStyle?: TextInputProps['style'];
   containerStyle?: StyleProp<ViewStyle>;
   testID?: string;
@@ -45,7 +52,129 @@ interface CalculatorAmountInputProps {
 }
 
 /** Shared amount field with the journal's typography and calculator controls. */
-export function CalculatorAmountInput({
+export function CalculatorAmountInput(props: CalculatorAmountInputProps) {
+  if (props.variant === 'compact') return <CompactAmountField {...props} />;
+  if (props.variant === 'centered') return <CenteredAmountField {...props} />;
+  return <AmountField {...props} />;
+}
+
+function CompactAmountField({
+  value,
+  currency = '',
+  currencySymbol,
+  onChangeText,
+  precision,
+  placeholder,
+  label,
+  containerStyle,
+  inputStyle,
+  testID,
+}: CalculatorAmountInputProps) {
+  const { theme } = useTheme();
+  const normalizedCurrency = currency.trim().toUpperCase();
+  const { precision: currencyPrecision } = useCurrencyPrecision(normalizedCurrency);
+  const resolvedPrecision = precision ?? currencyPrecision;
+  const resolvedCurrencySymbol =
+    currencySymbol || CURRENCY_SYMBOLS[normalizedCurrency] || normalizedCurrency || '$';
+
+  return (
+    <View
+      style={[
+        styles.compactWrapper,
+        label && styles.compactWrapperWithLabel,
+        { backgroundColor: 'transparent', borderColor: theme.border },
+        containerStyle,
+      ]}
+    >
+      {label && (
+        <AppText
+          variant="caption"
+          color="tertiary"
+          weight="bold"
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={styles.compactLabel}
+        >
+          {label}
+        </AppText>
+      )}
+      <View style={styles.compactInputRow}>
+        <AppText
+          variant="caption"
+          weight="bold"
+          style={[styles.compactCurrencyPrefix, { color: theme.textTertiary }]}
+        >
+          {resolvedCurrencySymbol}
+        </AppText>
+        <AmountField
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder ?? formatRoundedAmount(0, resolvedPrecision)}
+          currencySymbol={resolvedCurrencySymbol}
+          precision={resolvedPrecision}
+          variant="compact"
+          showCurrencyPrefix={false}
+          showClearButton={false}
+          containerStyle={styles.compactInputContainer}
+          inputStyle={[styles.compactAmountInput, inputStyle]}
+          testID={testID}
+        />
+      </View>
+    </View>
+  );
+}
+
+function CenteredAmountField({
+  value,
+  onChangeText,
+  label,
+  currencySymbol = '',
+  precision = 2,
+  currencyCode,
+  onCurrencyPress,
+  autoFocus,
+  placeholder,
+  testID = 'hero-amount-input',
+}: CalculatorAmountInputProps) {
+  const { theme } = useTheme();
+  return (
+    <View style={styles.centeredWrap}>
+      {label ? (
+        <AppText variant="caption" weight="semibold" color="secondary" style={styles.centeredLabel}>
+          {label}
+        </AppText>
+      ) : null}
+      <AmountField
+        value={value}
+        onChangeText={onChangeText}
+        currencySymbol={currencySymbol}
+        precision={precision}
+        placeholder={placeholder}
+        variant="hero"
+        autoFocus={autoFocus}
+        testID={testID}
+        containerStyle={styles.centeredInputContainer}
+        inputStyle={styles.centeredInput}
+      />
+      {currencyCode ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={copy.currencyAccessibility(currencyCode)}
+          onPress={onCurrencyPress}
+          disabled={!onCurrencyPress}
+          style={[styles.currencyChip, { borderColor: theme.border }]}
+        >
+          <AppText variant="caption" weight="semibold" color="secondary">
+            {currencyCode}
+          </AppText>
+          <AppIcon name={Icon.ChevronDown} size={Size.iconXs} color={theme.textSecondary} />
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+function AmountField({
   value,
   onChangeText,
   currencySymbol = '',
@@ -113,11 +242,9 @@ export function CalculatorAmountInput({
 
   const handleAmountChange = useCallback(
     (text: string) => {
-      const normalized = text.replace(/,/g, '.');
-      if (hasNegativeAmountSign(normalized)) return;
-      const sanitized = normalized.replace(/[^0-9.]/g, '');
-      const parts = sanitized.split('.');
-      if (parts.length > 2 || (parts[1] && parts[1].length > precision)) return;
+      if (hasNegativeAmountSign(text.replace(/,/g, '.'))) return;
+      const sanitized = sanitizeDecimalInput(text, precision);
+      if (sanitized == null) return;
       onChangeText(sanitized);
     },
     [onChangeText, precision],
@@ -317,4 +444,61 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   compactButton: { width: Size.controlCompact - 2, height: Size.controlCompact - 2 },
+  compactWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: Size.controlCompact,
+    borderRadius: Shape.radius.lg,
+    borderWidth: 1,
+  },
+  compactWrapperWithLabel: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    justifyContent: 'center',
+    height: 'auto',
+    paddingVertical: Spacing.xs,
+    gap: Spacing.xs,
+  },
+  compactLabel: {
+    flexShrink: 1,
+    paddingHorizontal: Spacing.md,
+  },
+  compactInputRow: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: Spacing.sm,
+    paddingRight: Spacing.none,
+  },
+  compactCurrencyPrefix: {
+    fontSize: Typography.sizes.xs,
+    marginRight: Spacing.xs,
+  },
+  compactInputContainer: {
+    flex: 1,
+    minHeight: 0,
+  },
+  compactAmountInput: {
+    height: 28,
+    minHeight: 0,
+    textAlign: 'right',
+    flex: 1,
+    paddingVertical: 0,
+    paddingRight: Spacing.sm,
+  },
+  centeredWrap: { alignItems: 'center', width: '100%' },
+  centeredLabel: { marginBottom: Spacing.xs, letterSpacing: Typography.letterSpacing.wide },
+  centeredInputContainer: { width: '100%', paddingHorizontal: 0 },
+  centeredInput: { fontFamily: Typography.fonts.heading },
+  currencyChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    borderWidth: 1,
+    borderRadius: Size.touchTarget,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+  },
 });

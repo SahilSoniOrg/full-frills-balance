@@ -6,7 +6,7 @@ import type { FxPair } from '@/src/domain/accounting/fxPair';
 import { resolveExchangeRatePresentation } from '@/src/utils/exchangeRatePresentation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { withOpacity } from '@/src/utils/color-math';
-import { formatRoundedAmount } from '@/src/utils/money';
+import { formatRoundedAmount, sanitizeDecimalInput } from '@/src/utils/money';
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { type StyleProp, StyleSheet, Text, TextInput, View, type ViewStyle } from 'react-native';
 import { ManualBaseRateField } from './ManualBaseRateField';
@@ -106,10 +106,8 @@ export function ExchangeRateCard({
 
   const handleConvertedChange = useCallback(
     (text: string) => {
-      const sanitized = text.replace(/,/g, '.').replace(/[^0-9.]/g, '');
-      const parts = sanitized.split('.');
-      if (parts.length > 2) return;
-      if (parts[1] && parts[1].length > precision) return;
+      const sanitized = sanitizeDecimalInput(text, precision);
+      if (sanitized == null) return;
       setConvertedDraft(sanitized);
       onConvertedAmountDraftChange?.(sanitized);
       if (parseFloat(sanitized) > 0) onConvertedAmountChange?.(sanitized);

@@ -1,6 +1,7 @@
 import { SimpleFormAccountSections } from '@/src/components/account-selection/SimpleFormAccountSections';
 import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModal';
-import { AmountHero, FormRow, ScheduleField, UnderlineNameField } from '@/src/components/forms';
+import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
+import { FormRow, ScheduleField, UnderlineNameField } from '@/src/components/forms';
 import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { AppButton, AppInput, AppToggle, Icon } from '@/src/components/core';
@@ -72,9 +73,10 @@ export function PlannedPaymentFormView({
       >
         <View>
           <View style={styles.amountField}>
-            <AmountHero
+            <CalculatorAmountInput
+              variant="centered"
               value={form.amount}
-              onChange={value => setField('amount', value)}
+              onChangeText={value => setField('amount', value)}
               currencySymbol={CURRENCY_SYMBOLS[form.currencyCode] || form.currencyCode}
               label={form.currencyCode}
               autoFocus={autoFocusAmount}

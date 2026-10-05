@@ -1,5 +1,5 @@
 import { AppButton, AppText } from '@/src/components/core';
-import { AmountHero } from '@/src/components/forms';
+import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { ExchangeRateCard } from '@/src/components/forms/ExchangeRateCard';
 import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
 import { ModalSurface } from './ModalSurface';
@@ -122,10 +122,11 @@ export function PlannedPaymentFxReviewSheet({
           {copy.reviewDescription}
         </AppText>
         <AccountInlineLabel account={sourceAccount} placeholder={copy.from} showIcon />
-        <AmountHero
+        <CalculatorAmountInput
+          variant="centered"
           label={`${copy.from} · ${request.sourceCurrency}`}
           value={amount}
-          onChange={setAmount}
+          onChangeText={setAmount}
           currencySymbol={CURRENCY_SYMBOLS[request.sourceCurrency] ?? request.sourceCurrency}
           precision={sourcePrecision}
           testID="planned-payment-review-source-amount"

@@ -8,13 +8,8 @@ import {
   LoadingView,
 } from '@/src/components/core';
 import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
-import {
-  AmountHero,
-  FormRow,
-  ScheduleField,
-  SuggestionHint,
-  UnderlineNameField,
-} from '@/src/components/forms';
+import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
+import { FormRow, ScheduleField, SuggestionHint, UnderlineNameField } from '@/src/components/forms';
 import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
 import { SectionLabel } from '@/src/components/shared/SectionLabel';
 import { CurrencySelector } from '@/src/features/accounts';
@@ -251,9 +246,10 @@ export function BudgetEditView({
           ) : null}
 
           <View style={{ gap: Spacing.sm }}>
-            <AmountHero
+            <CalculatorAmountInput
+              variant="centered"
               value={amount}
-              onChange={setAmount}
+              onChangeText={setAmount}
               label={amountLabel}
               currencySymbol={currency?.symbol || currencyCode}
               precision={precision}

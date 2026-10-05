@@ -1,6 +1,6 @@
 import type { CreateAccountIntent } from '@/src/components/account-selection';
 import { AppText } from '@/src/components/core';
-import { CompactAmountInput } from '@/src/components/forms/CompactAmountInput';
+import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { AppConfig, Spacing } from '@/src/constants';
 import {
   AllocationActions,
@@ -205,7 +205,8 @@ export function SplitForm({
           role="source"
           testIDPrefix="split-source-picker"
           trailing={
-            <CompactAmountInput
+            <CalculatorAmountInput
+              variant="compact"
               value={totalAmount}
               onChangeText={setTotalAmount}
               currency={currencyCode}

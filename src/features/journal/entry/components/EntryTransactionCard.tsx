@@ -1,4 +1,4 @@
-import { CompactAmountInput } from '@/src/components/forms/CompactAmountInput';
+import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import type { CreateAccountIntent } from '@/src/components/account-selection';
 import { AppConfig } from '@/src/constants';
 import { Spacing } from '@/src/constants/design-tokens';
@@ -144,7 +144,8 @@ export function EntryTransactionCard({
             accentColor={accentColor}
             variant="compact"
           />
-          <CompactAmountInput
+          <CalculatorAmountInput
+            variant="compact"
             value={amount}
             onChangeText={onChangeAmount}
             currency={amountCurrency}
