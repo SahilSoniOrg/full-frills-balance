@@ -22,8 +22,7 @@ const PERSISTENCE_SEAMS = [
   'src/data/database/',
   'src/data/models/',
   'src/data/repositories/',
-  'src/testing/journalFixtures.ts',
-  'src/testing/plannedPaymentFixtures.ts',
+  'src/testing/',
 ];
 const MODEL_ACCESS_SEAMS = [
   'src/data/database/',

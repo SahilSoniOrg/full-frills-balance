@@ -3,10 +3,7 @@
   "rules": {
     "unscoped_raw_query": {},
     "presentation_model_import": {},
-    "direct_database_write": {
-      "src/testing/e2eSeed.ts": 1,
-      "src/testing/smsTestHarness.ts": 2
-    },
+    "direct_database_write": {},
     "service_database_collection_access": {},
     "service_model_persistence_access": {}
   }
