@@ -1,8 +1,4 @@
-import {
-  SmsRuleCondition,
-  SmsRuleDisposition,
-  SmsRuleMode,
-} from '@/src/utils/sms/RuleMatcher';
+import { SmsRuleCondition, SmsRuleDisposition, SmsRuleMode } from '@/src/utils/sms/RuleMatcher';
 import { smsRuleEngine, SmsRulePreviewInput } from '@/src/services/sms/SmsRuleEngine';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import { AccountId } from '@/src/types/ids';
@@ -146,11 +142,7 @@ export function buildStructuredSmsRuleConditions(
       value: fields.currencyCode.trim().toUpperCase(),
     });
   }
-  if (
-    amountOperatorIsSet(fields.amountOperator) &&
-    amountNumber !== undefined &&
-    !Number.isNaN(amountNumber)
-  ) {
+  if (fields.amountOperator !== '' && amountNumber !== undefined && !Number.isNaN(amountNumber)) {
     conditions.push({
       field: 'amount',
       operator: fields.amountOperator,
@@ -165,10 +157,6 @@ export function buildStructuredSmsRuleConditions(
   }
 
   return conditions;
-}
-
-function amountOperatorIsSet(op: SmsRuleAmountOperator): op is Exclude<SmsRuleAmountOperator, ''> {
-  return op !== '';
 }
 
 export function validateSmsRuleRegexPatterns(senderMatch: string, bodyMatch?: string): boolean {
