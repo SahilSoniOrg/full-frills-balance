@@ -4,6 +4,7 @@ import type { AccountPersistenceInput } from '@/src/data/repositories/account/ty
 import AccountMetadata from '@/src/data/models/AccountMetadata';
 import { normalizeAccountAuditState } from '@/src/services/accounts/accountAuditState';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
+import { accountMetadataAuditState } from '@/src/utils/accountMetadataAuditState';
 import { AccountAuditState } from '@/src/types/audit';
 import { AuditAction } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
@@ -14,33 +15,13 @@ export interface RevertAccountAuditOptions {
   auditLogId?: string;
 }
 
-function metadataSnapshot(metadata: AccountMetadata | null): Record<string, unknown> | null {
-  if (!metadata) return null;
-  return {
-    statementDay: metadata.statementDay ?? null,
-    dueDay: metadata.dueDay ?? null,
-    minimumPaymentAmount: metadata.minimumPaymentAmount ?? null,
-    minimumBalanceAmount: metadata.minimumBalanceAmount ?? null,
-    creditLimitAmount: metadata.creditLimitAmount ?? null,
-    aprBps: metadata.aprBps ?? null,
-    emiDay: metadata.emiDay ?? null,
-    loanTenureMonths: metadata.loanTenureMonths ?? null,
-    autopayEnabled: metadata.autopayEnabled ?? null,
-    gracePeriodDays: metadata.gracePeriodDays ?? null,
-    payFromAccountId: metadata.payFromAccountId ?? null,
-    minPaymentOnly: metadata.minPaymentOnly ?? null,
-    minimumPaymentPercent: metadata.minimumPaymentPercent ?? null,
-    notes: metadata.notes ?? null,
-  };
-}
-
 function currentFieldValue(
   field: string,
   account: Awaited<ReturnType<typeof accountQueryRepository.findWithDeleted>> & {},
   metadata: AccountMetadata | null,
 ): unknown {
   if (!account) return undefined;
-  if (field === 'metadata') return metadataSnapshot(metadata);
+  if (field === 'metadata') return metadata ? accountMetadataAuditState(metadata) : null;
   if (field === 'parentAccountId') return account.parentAccountId ?? null;
   if (field === 'archivedAt') return account.archivedAt?.toISOString() ?? null;
   if (field === 'deletedAt') return account.deletedAt?.toISOString() ?? null;

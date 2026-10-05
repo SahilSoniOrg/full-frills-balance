@@ -3,12 +3,64 @@ import type AuditLog from '@/src/data/models/AuditLog';
 import { prepareImportedEntityAuditRecords } from '@/src/data/repositories/importAuditWriters';
 import { resetDatabase } from '@/src/testing/resetDatabase';
 import type { AccountId, WorkplaceId } from '@/src/types/ids';
+import { AccountType } from '@/src/types/enums';
 
 const WORKPLACE = 'wp-import-audit' as WorkplaceId;
 
 describe('prepareImportedEntityAuditRecords', () => {
   beforeEach(async () => {
     await resetDatabase();
+  });
+
+  it('preserves metadata snapshot order, falsy values and missing-record nulls on import', async () => {
+    let logs: AuditLog[] = [];
+    await database.write(async () => {
+      logs = prepareImportedEntityAuditRecords(
+        WORKPLACE,
+        {
+          accounts: ['with-metadata', 'without-metadata'].map(id => ({
+            id: id as AccountId,
+            name: id,
+            accountType: AccountType.ASSET,
+            currencyCode: 'USD',
+          })),
+          accountMetadata: [
+            {
+              id: 'metadata-1',
+              accountId: 'with-metadata' as AccountId,
+              minimumPaymentAmount: 0,
+              autopayEnabled: false,
+              minPaymentOnly: false,
+              notes: '',
+            },
+          ],
+          journals: [],
+          transactions: [],
+        },
+        { correlationId: 'metadata-import' },
+      );
+      await database.batch(logs);
+    });
+    const [withMetadata, withoutMetadata] = logs.map(log => JSON.parse(log.changes).after.metadata);
+    expect(JSON.stringify(withMetadata)).toBe(
+      JSON.stringify({
+        statementDay: null,
+        dueDay: null,
+        minimumPaymentAmount: 0,
+        minimumBalanceAmount: null,
+        creditLimitAmount: null,
+        aprBps: null,
+        emiDay: null,
+        loanTenureMonths: null,
+        autopayEnabled: false,
+        gracePeriodDays: null,
+        payFromAccountId: null,
+        minPaymentOnly: false,
+        minimumPaymentPercent: null,
+        notes: '',
+      }),
+    );
+    expect(withoutMetadata).toBeNull();
   });
 
   it('pins planned-payment and auto-post-rule import audit after payloads', async () => {

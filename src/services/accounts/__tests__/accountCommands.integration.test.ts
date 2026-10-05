@@ -24,6 +24,7 @@ import { transactionQueryRepository } from '@/src/data/repositories/transaction'
 import { transactionRawRebuildQueries } from '@/src/data/repositories/raw/TransactionRawRebuildQueries';
 import { adjustAccountBalance } from '@/src/services/accounts/accountAdjustCommands';
 import { createAccount } from '@/src/services/accounts/accountCommands';
+import { updateAccount } from '@/src/services/accounts/accountHierarchyCommands';
 import { reconcileAccount } from '@/src/services/accounts/accountReconcileCommands';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 
@@ -55,6 +56,9 @@ describe('account commands (integration)', () => {
 
     const audits = await auditRepository.findByEntity('account', created.id, WP);
     expect(audits.some(a => a.action === AuditAction.CREATE)).toBe(true);
+    expect(
+      JSON.parse(audits.find(a => a.action === AuditAction.CREATE)!.changes).after.metadata,
+    ).toBeNull();
 
     const journals = await journalQueryRepository.findAll(WP);
     expect(journals.some(j => j.description?.includes('Initial Balance'))).toBe(true);
@@ -119,12 +123,72 @@ describe('account commands (integration)', () => {
       accountSubtype: AccountSubtype.CREDIT_CARD,
       currencyCode: 'USD',
       workplaceId: WP,
-      metadata: { creditLimitAmount: 10_000, statementDay: 15 },
+      metadata: {
+        creditLimitAmount: 10_000,
+        statementDay: 15,
+        minimumPaymentAmount: 0,
+        autopayEnabled: false,
+        minPaymentOnly: false,
+        notes: '',
+      },
     });
 
     const meta = await accountQueryRepository.findMetadata(WP, created.id);
     expect(meta?.creditLimitAmount).toBe(10_000);
     expect(meta?.statementDay).toBe(15);
+    const audits = await auditRepository.findByEntity('account', created.id, WP);
+    const createdAudit = audits.find(a => a.action === AuditAction.CREATE)!;
+    expect(JSON.stringify(JSON.parse(createdAudit.changes).after.metadata)).toBe(
+      JSON.stringify({
+        statementDay: 15,
+        dueDay: null,
+        minimumPaymentAmount: 0,
+        minimumBalanceAmount: null,
+        creditLimitAmount: 10_000,
+        aprBps: null,
+        emiDay: null,
+        loanTenureMonths: null,
+        autopayEnabled: false,
+        gracePeriodDays: null,
+        payFromAccountId: null,
+        minPaymentOnly: false,
+        minimumPaymentPercent: null,
+        notes: '',
+      }),
+    );
+  });
+
+  it('audits a metadata patch on an account without previous metadata', async () => {
+    const account = await createAccount(WP, {
+      name: 'New metadata',
+      accountType: AccountType.LIABILITY,
+      accountSubtype: AccountSubtype.CREDIT_CARD,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    await updateAccount(WP, account.id, {
+      metadata: { minimumPaymentAmount: 0, autopayEnabled: false },
+    });
+    const audits = await auditRepository.findByEntity('account', account.id, WP);
+    const updatedAudit = audits.find(a => a.action === AuditAction.UPDATE)!;
+    const { before, after } = JSON.parse(updatedAudit.changes);
+    expect(before.metadata).toBeNull();
+    expect(after.metadata).toEqual({
+      statementDay: null,
+      dueDay: null,
+      minimumPaymentAmount: 0,
+      minimumBalanceAmount: null,
+      creditLimitAmount: null,
+      aprBps: null,
+      emiDay: null,
+      loanTenureMonths: null,
+      autopayEnabled: false,
+      gracePeriodDays: null,
+      payFromAccountId: null,
+      minPaymentOnly: null,
+      minimumPaymentPercent: null,
+      notes: null,
+    });
   });
 
   it('assigns omitted sibling positions inside the write owner', async () => {

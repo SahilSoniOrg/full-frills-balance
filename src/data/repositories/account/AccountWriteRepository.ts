@@ -13,6 +13,7 @@ import { auditRepository, type AuditEntry } from '@/src/data/repositories/AuditR
 import { getDefaultSubtypeForType, isSubtypeAllowedForType } from '@/src/types/accountSubtype';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountSubtype, AccountType, AuditAction } from '@/src/types/enums';
+import { accountMetadataAuditState } from '@/src/utils/accountMetadataAuditState';
 import { ValidationError } from '@/src/utils/errors';
 import { Model, Q } from '@nozbe/watermelondb';
 import { accountQueryRepository } from './AccountQueryRepository';
@@ -57,25 +58,6 @@ type AccountMergeWriteOperations = {
   metadata: AccountMetadata[];
   audits: AuditLog[];
 };
-
-function metadataAuditState(record: AccountMetadata): Record<string, unknown> {
-  return {
-    statementDay: record.statementDay ?? null,
-    dueDay: record.dueDay ?? null,
-    minimumPaymentAmount: record.minimumPaymentAmount ?? null,
-    minimumBalanceAmount: record.minimumBalanceAmount ?? null,
-    creditLimitAmount: record.creditLimitAmount ?? null,
-    aprBps: record.aprBps ?? null,
-    emiDay: record.emiDay ?? null,
-    loanTenureMonths: record.loanTenureMonths ?? null,
-    autopayEnabled: record.autopayEnabled ?? null,
-    gracePeriodDays: record.gracePeriodDays ?? null,
-    payFromAccountId: record.payFromAccountId ?? null,
-    minPaymentOnly: record.minPaymentOnly ?? null,
-    minimumPaymentPercent: record.minimumPaymentPercent ?? null,
-    notes: record.notes ?? null,
-  };
-}
 
 export class AccountWriteRepository {
   private assertCurrencyUnchanged(
@@ -233,24 +215,7 @@ export class AccountWriteRepository {
             color: account.color,
             orderNum: account.orderNum,
             parentAccountId: account.parentAccountId,
-            metadata: metadata
-              ? {
-                  statementDay: metadata.statementDay ?? null,
-                  dueDay: metadata.dueDay ?? null,
-                  minimumPaymentAmount: metadata.minimumPaymentAmount ?? null,
-                  minimumBalanceAmount: metadata.minimumBalanceAmount ?? null,
-                  creditLimitAmount: metadata.creditLimitAmount ?? null,
-                  aprBps: metadata.aprBps ?? null,
-                  emiDay: metadata.emiDay ?? null,
-                  loanTenureMonths: metadata.loanTenureMonths ?? null,
-                  autopayEnabled: metadata.autopayEnabled ?? null,
-                  gracePeriodDays: metadata.gracePeriodDays ?? null,
-                  payFromAccountId: metadata.payFromAccountId ?? null,
-                  minPaymentOnly: metadata.minPaymentOnly ?? null,
-                  minimumPaymentPercent: metadata.minimumPaymentPercent ?? null,
-                  notes: metadata.notes ?? null,
-                }
-              : null,
+            metadata: metadata ? accountMetadataAuditState(metadata) : null,
             initialBalance,
           },
         },
@@ -798,7 +763,7 @@ export class AccountWriteRepository {
               before: {
                 name: record.name,
                 deletedAt: null,
-                ...(sourceMetadata ? { metadata: metadataAuditState(sourceMetadata) } : {}),
+                ...(sourceMetadata ? { metadata: accountMetadataAuditState(sourceMetadata) } : {}),
               },
               after: {
                 name: record.name,
@@ -816,7 +781,7 @@ export class AccountWriteRepository {
     records.metadataToRetarget
       .filter(record => !sourceIds.has(record.accountId))
       .forEach(record => {
-        const before = metadataAuditState(record);
+        const before = accountMetadataAuditState(record);
         const after = { ...before, payFromAccountId: targetAccountId };
         metadata.push(
           record.prepareUpdate(updated => {

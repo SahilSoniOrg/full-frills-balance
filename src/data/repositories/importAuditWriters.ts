@@ -14,6 +14,7 @@ import type { AuditEntityType } from '@/src/types/enums';
 import type { AuditEventType } from '@/src/types/auditEvents';
 import type { BatchImportData } from '@/src/types/importContracts';
 import { WorkplaceId } from '@/src/types/ids';
+import { accountMetadataAuditState } from '@/src/utils/accountMetadataAuditState';
 import { mapTransactionToAudit } from '@/src/types/audit';
 
 interface ImportedAuditContext {
@@ -135,24 +136,7 @@ const IMPORTED_AUDIT_SPECS: ImportedAuditSpec[] = [
             reconciledAt: isoDate(account.reconciledAt),
             archivedAt: isoDate(account.archivedAt),
             deletedAt: isoDate(account.deletedAt),
-            metadata: metadata
-              ? {
-                  statementDay: metadata.statementDay ?? null,
-                  dueDay: metadata.dueDay ?? null,
-                  minimumPaymentAmount: metadata.minimumPaymentAmount ?? null,
-                  minimumBalanceAmount: metadata.minimumBalanceAmount ?? null,
-                  creditLimitAmount: metadata.creditLimitAmount ?? null,
-                  aprBps: metadata.aprBps ?? null,
-                  emiDay: metadata.emiDay ?? null,
-                  loanTenureMonths: metadata.loanTenureMonths ?? null,
-                  autopayEnabled: metadata.autopayEnabled ?? null,
-                  gracePeriodDays: metadata.gracePeriodDays ?? null,
-                  payFromAccountId: metadata.payFromAccountId ?? null,
-                  minPaymentOnly: metadata.minPaymentOnly ?? null,
-                  minimumPaymentPercent: metadata.minimumPaymentPercent ?? null,
-                  notes: metadata.notes ?? null,
-                }
-              : null,
+            metadata: metadata ? accountMetadataAuditState(metadata) : null,
           },
         };
       }),

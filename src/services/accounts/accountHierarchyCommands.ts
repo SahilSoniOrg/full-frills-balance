@@ -19,6 +19,8 @@ import {
 } from '@/src/services/accounts/accountRules';
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
+import type { PlainAccountMetadata } from '@/src/types/plainDtos';
+import { accountMetadataAuditState } from '@/src/utils/accountMetadataAuditState';
 import { ValidationError } from '@/src/utils/errors';
 import { isValidHexColor } from '@/src/utils/accountCategory';
 import {
@@ -179,7 +181,7 @@ function assertAccountTreeDraftBaseline(
 async function getPlainMetadata(
   accountId: AccountId,
   workplaceId: WorkplaceId,
-): Promise<Record<string, unknown> | undefined> {
+): Promise<Omit<PlainAccountMetadata, 'accountId'> | undefined> {
   const meta = await accountQueryRepository.findMetadata(workplaceId, accountId);
   if (!meta) return undefined;
 
@@ -199,31 +201,6 @@ async function getPlainMetadata(
     minimumPaymentPercent: meta.minimumPaymentPercent,
     notes: meta.notes,
   };
-}
-
-const ACCOUNT_METADATA_AUDIT_FIELDS = [
-  'statementDay',
-  'dueDay',
-  'minimumPaymentAmount',
-  'minimumBalanceAmount',
-  'creditLimitAmount',
-  'aprBps',
-  'emiDay',
-  'loanTenureMonths',
-  'autopayEnabled',
-  'gracePeriodDays',
-  'payFromAccountId',
-  'minPaymentOnly',
-  'minimumPaymentPercent',
-  'notes',
-] as const;
-
-function completeMetadataAuditState(
-  metadata: Record<string, unknown> | null | undefined,
-): Record<string, unknown> {
-  return Object.fromEntries(
-    ACCOUNT_METADATA_AUDIT_FIELDS.map(field => [field, metadata?.[field] ?? null]),
-  );
 }
 
 function buildAccountDetailPayload(
@@ -270,7 +247,7 @@ export type AccountFieldUpdateContext = {
     description?: string;
     color?: string;
   };
-  beforeMetadata: Record<string, unknown> | undefined;
+  beforeMetadata: Omit<PlainAccountMetadata, 'accountId'> | undefined;
 };
 
 function buildAccountUpdateAuditChanges(
@@ -283,7 +260,7 @@ function buildAccountUpdateAuditChanges(
       after.metadata === null
         ? null
         : {
-            ...completeMetadataAuditState(context.beforeMetadata),
+            ...accountMetadataAuditState(context.beforeMetadata ?? {}),
             ...after.metadata,
           };
   }
@@ -297,7 +274,7 @@ function buildAccountUpdateAuditChanges(
       color: context.beforeState.color,
       icon: context.account.icon,
       parentAccountId: context.account.parentAccountId,
-      metadata: context.beforeMetadata ? completeMetadataAuditState(context.beforeMetadata) : null,
+      metadata: context.beforeMetadata ? accountMetadataAuditState(context.beforeMetadata) : null,
     },
     after: auditAfter,
   };
