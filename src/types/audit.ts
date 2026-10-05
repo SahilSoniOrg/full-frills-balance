@@ -34,21 +34,9 @@ export interface AccountAuditState {
 }
 
 /**
- * TransactionLike - Minimal interface for mapping transactions to audit state.
- */
-export interface TransactionLike {
-  accountId: AccountId;
-  amount: number;
-  transactionType: TransactionType;
-  notes?: string;
-  exchangeRate?: number;
-  currencyCode?: string;
-}
-
-/**
  * Maps a Transaction model or object to a TransactionAuditState for logging.
  */
-export function mapTransactionToAudit(t: TransactionLike): TransactionAuditState {
+export function mapTransactionToAudit(t: TransactionAuditState): TransactionAuditState {
   return {
     accountId: t.accountId,
     amount: t.amount,

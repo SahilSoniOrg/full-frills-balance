@@ -1,8 +1,8 @@
-import { AccountType, TransactionType, JournalDisplayType, SemanticType } from '@/src/types/enums';
-import { AccountId } from '@/src/types/ids';
+import { AccountType, JournalDisplayType, SemanticType } from '@/src/types/enums';
 import {
   deriveJournalDisplayType,
   getSourceAndDestTypes,
+  type DisplayTypeLine,
 } from '@/src/domain/accounting/journalDisplayType';
 
 const SEMANTIC_MATRIX: Record<AccountType, Record<AccountType, SemanticType>> = {
@@ -84,12 +84,6 @@ export const SEMANTIC_TYPE_LABELS: Record<SemanticType, string> = {
 
   [SemanticType.UNKNOWN]: 'Transaction',
 };
-export interface TransactionLike {
-  accountId: AccountId;
-  amount?: number;
-  transactionType?: TransactionType;
-}
-
 export interface JournalPresentation {
   type: JournalDisplayType;
   label: string;
@@ -149,7 +143,7 @@ export const journalPresenter = {
 
   getSourceAndDestTypes,
 
-  getJournalSemanticLabel(txs: TransactionLike[], accountTypes: Map<string, AccountType>): string {
+  getJournalSemanticLabel(txs: DisplayTypeLine[], accountTypes: Map<string, AccountType>): string {
     // Special case: Multiple income/expense legs without a single dominant pattern
     const hasIncome = txs.some(tx => accountTypes.get(tx.accountId) === AccountType.INCOME);
     const hasExpense = txs.some(tx => accountTypes.get(tx.accountId) === AccountType.EXPENSE);
