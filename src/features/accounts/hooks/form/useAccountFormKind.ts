@@ -13,11 +13,9 @@ import type { AccountFormCoreDraft } from '@/src/features/accounts/hooks/account
 import type { AccountFormDraftDispatch } from './useAccountFormDraft';
 
 export interface AccountFormKindApi {
-  kindTouched: boolean;
   selectKindKey: (key: string) => void;
   kindSuggestionMessage: string | null;
   kindLabel: string | null;
-  kindSuggestion: SuggestedAccountKind | null;
   setAccountKind: (value: SuggestedAccountKind) => void;
   acceptKindSuggestion: () => void;
   dismissKindSuggestion: () => void;
@@ -27,7 +25,6 @@ export interface AccountFormKindApi {
   submitLabel: string;
 }
 
-/** Account-kind logic shares the existing draft's seeding and reset lifecycle. */
 export function useAccountFormKind(args: {
   core: AccountFormCoreDraft;
   dispatch: AccountFormDraftDispatch;
@@ -87,7 +84,6 @@ export function useAccountFormKind(args: {
   );
 
   return {
-    kindTouched,
     selectKindKey,
     kindLabel: selectedKind?.label ?? null,
     kindSuggestionMessage: kindSuggestion
@@ -95,7 +91,6 @@ export function useAccountFormKind(args: {
           getAccountKind(kindSuggestion.type, kindSuggestion.subtype)!.label.toLowerCase(),
         )
       : null,
-    kindSuggestion,
     setAccountKind,
     acceptKindSuggestion,
     dismissKindSuggestion,

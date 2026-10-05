@@ -11,7 +11,6 @@ import {
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { JournalStatus } from '@/src/types/enums';
-import { logger } from '@/src/utils/logger';
 import { roundToPrecision } from '@/src/utils/money';
 
 /**
@@ -89,14 +88,8 @@ export async function adjustAccountBalance(
   });
 
   if (!outcome.journal) {
-    logger.info(
-      `[AccountAdjustCommand] No adjustment needed for account ${outcome.targetAccount.name}. Discrepancy within epsilon.`,
-    );
     return;
   }
 
-  logger.info(
-    `[AccountAdjustCommand] Adjusting balance for ${outcome.targetAccount.name}: ${outcome.currentBalance} -> ${targetBalance} (diff: ${outcome.discrepancy}, counterparty: ${counterparty.kind})`,
-  );
   journalPersistenceService.afterAtomicWriteCommit([outcome.journal], workplaceId);
 }

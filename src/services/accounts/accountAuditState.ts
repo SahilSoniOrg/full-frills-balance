@@ -11,8 +11,7 @@ export function toPersistedIsoDate(value: Date | null | undefined): string | nul
   return value.toISOString();
 }
 
-/** Lenient parse for non-archive audit fields (undefined when unparseable). */
-export function parsePersistedAuditDate(value: unknown): Date | null | undefined {
+function parsePersistedAuditDate(value: unknown): Date | null | undefined {
   if (value === undefined) return undefined;
   if (value === null) return null;
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? undefined : value;

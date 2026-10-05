@@ -64,7 +64,6 @@ interface TransformOptions {
   balancesByAccountId: Map<string, BalancesByAccountId | null>;
   defaultCurrency: string;
   showAccountMonthlyStats: boolean;
-  isLoading: boolean;
   collapsedSections: Set<string>;
   theme: Theme;
   totalAssets: number;
@@ -76,8 +75,6 @@ interface TransformOptions {
   onContrast: (color: string) => string;
 }
 
-// OPTIMIZATION: Multi-layer caching to minimize re-renders and re-computations.
-// 1. Static Metadata Cache (Name, Icons, Colors - invariant for account lifecycle)
 const STATIC_META_CACHE = new Map<
   string,
   {
@@ -85,12 +82,9 @@ const STATIC_META_CACHE = new Map<
     categoryIconBg: string;
     accountColor: string;
     textColor: string;
-    contrastColor: string;
   }
 >();
 
-// 2. State-Based ViewModel Cache (Financial values, UI states)
-// Using a two-generation "Bucket Cache" to provide smooth LRU-lite aging without full-wipe spikes.
 let currentBucket = new Map<string, AccountCardViewModel>();
 let oldBucket = new Map<string, AccountCardViewModel>();
 const BUCKET_LIMIT = 1000;
@@ -150,23 +144,17 @@ export function transformAccountsToSections(
       const isExpanded = expandedAccountIds.has(account.id);
       const children = accountsByParent.get(account.id) || [];
 
-      // CACHE KEY: account identity + record version + rendered fields + volatile UI flags.
-      // updatedAt covers WatermelonDB model mutations; name+icon+color cover PlainAccount snapshots
-      // that may reconstruct fields without bumping updatedAt.
-      // Privacy is intentionally excluded — leaves format from a screen-level flag.
       const updatedAtTs =
         account.updatedAt instanceof Date
           ? account.updatedAt.getTime()
           : account.updatedAt
             ? new Date(account.updatedAt).getTime()
             : 0;
-      // Round financial values to 2dp to avoid fp drift causing phantom cache misses.
       const roundedBalance = Math.round(balance * 100) / 100;
       const roundedWorkplaceBalance =
         workplaceBalance === undefined ? '' : Math.round(workplaceBalance * 100) / 100;
       const roundedIncome = Math.round(monthlyIncome * 100) / 100;
       const roundedExpenses = Math.round(monthlyExpenses * 100) / 100;
-      // hasChildren is keyed explicitly: child writes don't bump this account's updatedAt.
       const archivedAtTs =
         account.archivedAt instanceof Date
           ? account.archivedAt.getTime()
@@ -175,11 +163,9 @@ export function transformAccountsToSections(
             : 0;
       const stateKey = `${account.id}:${updatedAtTs}:${archivedAtTs}:${account.name}:${account.icon ?? ''}:${account.color ?? ''}:${depth}:${children.length > 0}:${isExpanded}:${showAccountMonthlyStats}:${defaultCurrency}:${roundedBalance}:${roundedWorkplaceBalance}:${roundedIncome}:${roundedExpenses}`;
 
-      // Try current bucket then old bucket (aging)
       let viewModel = currentBucket.get(stateKey) || oldBucket.get(stateKey);
 
       if (viewModel) {
-        // If found in old bucket, migrate to current (promote)
         if (!currentBucket.has(stateKey)) {
           if (currentBucket.size >= BUCKET_LIMIT) {
             oldBucket = currentBucket;
@@ -195,7 +181,6 @@ export function transformAccountsToSections(
         return;
       }
 
-      // LAYER 1: Static Metadata (Colors/Icons)
       const themeKey = (theme as unknown as { mode?: string }).mode ?? theme.background;
       const metaKey = `${account.id}:${account.accountType}:${account.color ?? ''}:${themeKey}`;
       let meta = STATIC_META_CACHE.get(metaKey);
@@ -214,7 +199,6 @@ export function transformAccountsToSections(
           categoryIconBg,
           accountColor,
           textColor,
-          contrastColor: textColor,
         };
         STATIC_META_CACHE.set(metaKey, meta);
       }
@@ -250,7 +234,6 @@ export function transformAccountsToSections(
 
       viewModel = createdViewModel;
 
-      // Bucket Management (Aging)
       if (currentBucket.size >= BUCKET_LIMIT) {
         oldBucket = currentBucket;
         currentBucket = new Map();

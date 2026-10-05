@@ -31,7 +31,7 @@ import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { reportService } from '@/src/services/report-service';
 import { AccountId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { of } from 'rxjs';
 
 export type {
@@ -91,12 +91,6 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     }
   }, []);
 
-  const mountTimeRef = useRef<number>(0);
-  useEffect(() => {
-    mountTimeRef.current = performance.now();
-    logger.info('[AccountsList] Screen Mounted');
-  }, []);
-
   const targetCurrency = workplaceCurrency;
 
   const {
@@ -136,16 +130,6 @@ export function useAccountsListViewModel(): AccountsListViewModel {
         },
       },
   );
-
-  const hasData = !!(dashboardData.accounts.length > 0 || dashboardData.balances.length > 0);
-
-  useEffect(() => {
-    if (hasData) {
-      const duration = Math.round(performance.now() - (mountTimeRef.current || 0));
-      logger.info(`[AccountsList] Data Loaded in ${duration}ms`);
-      logger.metric('AccountsList.DataLoaded', duration);
-    }
-  }, [hasData]);
 
   const accounts = dashboardData.accounts;
 
@@ -288,7 +272,6 @@ export function useAccountsListViewModel(): AccountsListViewModel {
       balancesByAccountId,
       defaultCurrency: workplaceCurrency,
       showAccountMonthlyStats,
-      isLoading,
       collapsedSections,
       expandedAccountIds,
       theme,
@@ -303,7 +286,6 @@ export function useAccountsListViewModel(): AccountsListViewModel {
       balancesByAccountId,
       workplaceCurrency,
       showAccountMonthlyStats,
-      isLoading,
       collapsedSections,
       expandedAccountIds,
       theme,

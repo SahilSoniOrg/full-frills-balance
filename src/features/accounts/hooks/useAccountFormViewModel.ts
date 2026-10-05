@@ -67,7 +67,6 @@ export interface AccountFormViewModel extends AccountFormKindApi {
   setAccountName: (value: string) => void;
   accountType: AccountType;
   accountSubtype: AccountSubtype;
-  setAccountSubtype: (value: AccountSubtype) => void;
   selectedCurrency: string;
   currencies: PlainCurrency[];
   setSelectedCurrency: (value: string) => void;
@@ -79,7 +78,6 @@ export interface AccountFormViewModel extends AccountFormKindApi {
   setIsAppearancePickerVisible: (value: boolean) => void;
   initialBalance: string;
   onInitialBalanceChange: (value: string) => void;
-  onBack: () => void;
   isCreating: boolean;
   leaveAfterSave: (() => void) | null;
   formError: string | null;
@@ -317,7 +315,6 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     setAccountName: core.setAccountName,
     accountType: core.accountType,
     accountSubtype: core.accountSubtype,
-    setAccountSubtype: core.setAccountSubtype,
     selectedCurrency: core.selectedCurrency,
     currencies,
     setSelectedCurrency: core.setSelectedCurrency,
@@ -329,7 +326,6 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     setIsAppearancePickerVisible: pickers.setIsAppearancePickerVisible,
     initialBalance: core.initialBalance,
     onInitialBalanceChange: core.onInitialBalanceChange,
-    onBack: persistence.handleCancel,
     isCreating: persistence.isCreating,
     leaveAfterSave: persistence.leaveAfterSave,
     formError,

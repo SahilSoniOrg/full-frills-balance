@@ -1,14 +1,6 @@
 import { AccountType } from '@/src/types/enums';
 import { AccountBalance } from '@/src/types/domainReadModels';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
-/**
- * Account derived reads — balance, unreconciled, period metrics, chart feeds.
- * Not a pass-through of `accountQueries` (entity observe/find). See docs/ACCOUNTS.md.
- *
- * Note: account *details* header balance/sub-accounts use
- * `reactiveDataService.observeAccountDashboard` via `useAccountDashboard` — a composite
- * read. This module is the targeted/single-account derived path (and details metrics).
- */
 import { Animation } from '@/src/constants';
 import Transaction from '@/src/data/models/Transaction';
 

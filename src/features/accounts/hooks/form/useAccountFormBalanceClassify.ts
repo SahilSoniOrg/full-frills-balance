@@ -15,7 +15,6 @@ import {
 import { showErrorAlert } from '@/src/utils/alerts';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { ValidationError } from '@/src/utils/errors';
-import { logger } from '@/src/utils/logger';
 import { useCallback, useMemo } from 'react';
 
 export type AccountFormBalanceClassifyVm = {
@@ -73,8 +72,6 @@ export function useAccountFormBalanceClassify(args: {
 
   const commitSave = useCallback(
     async (balanceChange?: BalanceChangeCounterparty) => {
-      logger.info(`Saving account: ${accountName} (ID: ${accountId || 'new'})`);
-
       const saveResult = buildAccountSavePayload({
         accountName,
         accountType,
@@ -126,7 +123,6 @@ export function useAccountFormBalanceClassify(args: {
     },
     [
       accountName,
-      accountId,
       accountType,
       accountSubtype,
       selectedCurrency,

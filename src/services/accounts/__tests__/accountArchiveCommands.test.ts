@@ -4,7 +4,6 @@ import {
 } from '@/src/services/accounts/accountArchiveCommands';
 import {
   normalizeAccountAuditState,
-  parsePersistedAuditDate,
   toPersistedIsoDate,
 } from '@/src/services/accounts/accountAuditState';
 import { collectArchiveAuditEntries } from '@/src/services/accounts/accountArchiveMutations';
@@ -40,7 +39,6 @@ describe('accountArchiveCommands', () => {
   });
 
   it('parses null archivedAt as explicitly unarchived', () => {
-    expect(parsePersistedAuditDate(null)).toBeNull();
     expect(normalizeAccountAuditState({ archivedAt: null }).archivedAt).toBeNull();
   });
 

@@ -20,7 +20,6 @@ import {
 import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { ValidationError } from '@/src/utils/errors';
-import { logger } from '@/src/utils/logger';
 import { isValidHexColor } from '@/src/utils/accountCategory';
 import {
   createAccountTreeSnapshot,
@@ -357,11 +356,6 @@ export async function prepareAccountFieldUpdate(
     }
     updatePayload.metadata = updates.metadata;
   }
-
-  logger.info('[AccountHierarchyCommand] updateAccount payload prepared', {
-    accountId,
-    updatePayload,
-  });
 
   const beforeMetadata = await getPlainMetadata(accountId, workplaceId);
 

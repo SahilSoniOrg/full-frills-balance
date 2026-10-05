@@ -91,15 +91,8 @@ export async function mergeAccounts(
   targetAccountId: AccountId,
   sourceAccountIds: AccountId[],
 ): Promise<void> {
-  logger.info('[AccountMergeCommand] mergeAccounts requested', {
-    workplaceId,
-    targetAccountId,
-    sourceAccountIds,
-  });
-
   const filteredSourceIds = dedupeMergeSourceAccountIds(targetAccountId, sourceAccountIds);
   if (filteredSourceIds.length === 0) {
-    logger.info('[AccountMergeCommand] No valid source accounts to merge.');
     return;
   }
 
@@ -206,10 +199,5 @@ export async function mergeAccounts(
   analytics.trackFeatureUsage('account', 'merge', {
     source_count: filteredSourceIds.length,
     account_type: targetAccountType,
-  });
-
-  logger.info('[AccountMergeCommand] mergeAccounts completed successfully', {
-    targetAccountId,
-    movedCount: filteredSourceIds.length,
   });
 }

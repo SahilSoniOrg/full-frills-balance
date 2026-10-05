@@ -48,7 +48,7 @@ export function AccountPickerNode({
         : { accentColor: theme.textSecondary, categoryColor: theme.textSecondary },
     [account, theme],
   );
-  const icon = useMemo(() => (account ? getAccountIcon(account) : undefined), [account]);
+  const icon = account ? getAccountIcon(account) : undefined;
   const hasAccount = Boolean(account && account.id !== EMPTY_ACCOUNT_ID);
 
   return (

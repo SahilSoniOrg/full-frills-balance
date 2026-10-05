@@ -6,7 +6,6 @@ import {
   filterPotentialParentAccounts,
   isCategoryAccountType,
   resolveAccountFormHeroCopy,
-  resolveAllowedAccountTypes,
   resolveInitialAccountType,
 } from '../accountFormHelpers';
 
@@ -89,27 +88,5 @@ describe('accountFormHelpers', () => {
       accounts[3],
     ]);
     expect(isCategoryAccountType(AccountType.INCOME)).toBe(true);
-  });
-
-  describe('resolveAllowedAccountTypes', () => {
-    it('returns undefined in edit mode so all types are accessible', () => {
-      expect(resolveAllowedAccountTypes({ isEditMode: true, isCategory: false })).toBeUndefined();
-      expect(resolveAllowedAccountTypes({ isEditMode: true, isCategory: true })).toBeUndefined();
-    });
-
-    it('returns category types for new category creation', () => {
-      expect(resolveAllowedAccountTypes({ isEditMode: false, isCategory: true })).toEqual([
-        AccountType.EXPENSE,
-        AccountType.INCOME,
-      ]);
-    });
-
-    it('returns balance sheet account types for new account creation', () => {
-      expect(resolveAllowedAccountTypes({ isEditMode: false, isCategory: false })).toEqual([
-        AccountType.ASSET,
-        AccountType.LIABILITY,
-        AccountType.EQUITY,
-      ]);
-    });
   });
 });

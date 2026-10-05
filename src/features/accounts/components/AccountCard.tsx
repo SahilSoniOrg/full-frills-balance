@@ -56,10 +56,10 @@ function AccountCardBase({
   // from the account surface rather than the category marker.
   const resolvedTextColor = account.textColor;
 
-  const stats = useMemo(
-    () =>
-      getAccountStatsConfig(account.accountType, account.monthlyIncome, account.monthlyExpenses),
-    [account.accountType, account.monthlyIncome, account.monthlyExpenses],
+  const stats = getAccountStatsConfig(
+    account.accountType,
+    account.monthlyIncome,
+    account.monthlyExpenses,
   );
 
   const categoryIconBg = account.categoryIconBg || withOpacity(account.categoryColor, Opacity.soft);

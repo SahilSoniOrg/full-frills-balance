@@ -88,14 +88,12 @@ export function useAccountPersistence(
         });
 
         if (adjustment.shouldAdjust) {
-          logger.info(`[AccountPersistence] Triggering balance adjustment for ${sanitizedName}`);
           await adjustBalance(updatedAccount, targetBalance, adjustment.balanceChange);
         }
 
         toast.success(`"${sanitizedName}" has been updated successfully!`);
         setLeaveAfterSave(() => AppNavigation.back);
       } else {
-        logger.info(`[AccountPersistence] Creating account ${sanitizedName}...`);
         const createdAccount = await createAccount({
           name: sanitizedName,
           accountType: payload.accountType,

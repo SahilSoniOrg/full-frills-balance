@@ -16,10 +16,6 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-/**
- * useAccountPickerList - Logic for the account picker.
- * Handles searching, grouping, section collapse state, and archive visibility.
- */
 export function useAccountPickerList({
   accounts,
   excludeParentAccounts,

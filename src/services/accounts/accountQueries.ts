@@ -6,10 +6,6 @@ import { observeWorkplaceAccounts } from '@/src/services/reactive/reactiveWorkpl
 import { map } from 'rxjs';
 import { toPlainAccount, toPlainAccountMetadata, toPlainAccounts } from '@/src/data/models/Account';
 
-/**
- * Curated reactive/read entry points for feature hooks.
- * Add methods only when a production feature hook needs them.
- */
 export const accountQueries = {
   observeAll(workplaceId: WorkplaceId) {
     return observeWorkplaceAccounts(workplaceId).pipe(map(toPlainAccounts));

@@ -120,13 +120,9 @@ describe('account kind view model with the real draft reducer', () => {
       result.current.metadata.setNotes('Keep this note');
     });
     expect(result.current.accountSubtype).toBe(AccountSubtype.BANK_CHECKING);
-    expect(result.current.kindSuggestion).toEqual({
-      type: AccountType.LIABILITY,
-      subtype: AccountSubtype.CREDIT_CARD,
-    });
+    expect(result.current.kindSuggestionMessage).toBe('Looks like a credit card.');
     act(() => result.current.acceptKindSuggestion());
-    expect(result.current.kindTouched).toBe(true);
-    expect(result.current.kindSuggestion).toBeNull();
+    expect(result.current.kindSuggestionMessage).toBeNull();
     expect(result.current.accountType).toBe(AccountType.LIABILITY);
     expect(result.current.accountSubtype).toBe(AccountSubtype.CREDIT_CARD);
     expect(result.current.selectedKindKey).toBe('credit_card');
@@ -141,16 +137,15 @@ describe('account kind view model with the real draft reducer', () => {
     const { result } = renderHook(useAccountFormViewModel);
     act(() => result.current.setAccountName('HDFC card'));
     act(() => result.current.dismissKindSuggestion());
-    expect(result.current.kindTouched).toBe(false);
     act(() => result.current.setAccountName('Another credit card'));
-    expect(result.current.kindSuggestion).toBeNull();
+    expect(result.current.kindSuggestionMessage).toBeNull();
     act(() => result.current.setAccountName('Nothing matches'));
     act(() => result.current.setAccountName('Card'));
-    expect(result.current.kindSuggestion).toBeNull();
+    expect(result.current.kindSuggestionMessage).toBeNull();
     act(() => result.current.setAccountName('Savings'));
-    expect(result.current.kindSuggestion?.subtype).toBe(AccountSubtype.BANK_SAVINGS);
+    expect(result.current.kindSuggestionMessage).toBe('Looks like a savings.');
     act(() => result.current.setAccountName('Card'));
-    expect(result.current.kindSuggestion?.subtype).toBe(AccountSubtype.CREDIT_CARD);
+    expect(result.current.kindSuggestionMessage).toBe('Looks like a credit card.');
   });
 
   it('never suggests after manual kind selection, including choosing the current kind', () => {
@@ -162,19 +157,22 @@ describe('account kind view model with the real draft reducer', () => {
       }),
     );
     act(() => result.current.setAccountName('Credit card'));
-    expect(result.current.kindTouched).toBe(true);
-    expect(result.current.kindSuggestion).toBeNull();
+    expect(result.current.kindSuggestionMessage).toBeNull();
     act(() => result.current.acceptKindSuggestion());
     expect(result.current.accountSubtype).toBe(AccountSubtype.BANK_CHECKING);
   });
 
   it('marks All kinds and legacy subtype choices as touched and exposes the extra item', () => {
     const { result } = renderHook(useAccountFormViewModel);
-    act(() => result.current.setAccountSubtype(AccountSubtype.FIXED_DEPOSIT));
-    expect(result.current.kindTouched).toBe(true);
+    act(() =>
+      result.current.setAccountKind({
+        type: AccountType.ASSET,
+        subtype: AccountSubtype.FIXED_DEPOSIT,
+      }),
+    );
     expect(result.current.carouselKinds[4].subtype).toBe(AccountSubtype.FIXED_DEPOSIT);
     act(() => result.current.setAccountName('Card'));
-    expect(result.current.kindSuggestion).toBeNull();
+    expect(result.current.kindSuggestionMessage).toBeNull();
   });
 
   it('updates loan presentation and then asset presentation on manual selection', () => {
@@ -221,17 +219,15 @@ describe('account kind view model with the real draft reducer', () => {
     const { result } = renderHook(useAccountFormViewModel);
     act(() => result.current.setAccountName('Card'));
     expect(result.current.accountSubtype).toBe(AccountSubtype.LOAN);
-    expect(result.current.kindTouched).toBe(true);
-    expect(result.current.kindSuggestion).toBeNull();
+    expect(result.current.kindSuggestionMessage).toBeNull();
   });
 
   it('uses the default and leaves touched false for an invalid pair', () => {
     mockParams = { type: 'asset', subtype: 'LOAN' };
     const { result } = renderHook(useAccountFormViewModel);
     expect(result.current.accountSubtype).toBe(AccountSubtype.BANK_CHECKING);
-    expect(result.current.kindTouched).toBe(false);
     act(() => result.current.setAccountName('Card'));
-    expect(result.current.kindSuggestion).toBeNull(); // A subtype param was still supplied.
+    expect(result.current.kindSuggestionMessage).toBeNull();
   });
 
   it('shows the current kind with no suggestion in edit mode and resets on returning to create', () => {
@@ -247,16 +243,15 @@ describe('account kind view model with the real draft reducer', () => {
     };
     const { result, rerender } = renderHook(useAccountFormViewModel);
     expect(result.current.selectedKindKey).toBe('savings');
-    expect(result.current.kindSuggestion).toBeNull();
+    expect(result.current.kindSuggestionMessage).toBeNull();
     expect(result.current.balanceLabel).toBe('Current balance');
     expect(result.current.submitLabel).toBe('Save Changes');
     mockParams = {};
     mockExistingAccount = null;
     rerender({});
-    expect(result.current.kindTouched).toBe(false);
     expect(result.current.accountSubtype).toBe(AccountSubtype.BANK_CHECKING);
     act(() => result.current.setAccountName('Card'));
-    expect(result.current.kindSuggestion?.subtype).toBe(AccountSubtype.CREDIT_CARD);
+    expect(result.current.kindSuggestionMessage).toBe('Looks like a credit card.');
   });
 
   it.each([AccountType.INCOME, AccountType.EXPENSE])('keeps category behavior for %s', type => {
@@ -268,7 +263,7 @@ describe('account kind view model with the real draft reducer', () => {
     expect(result.current.selectedIcon).toBe(
       type === AccountType.INCOME ? Icon.Briefcase : Icon.Coffee,
     );
-    expect(result.current.kindSuggestion).toBeNull();
+    expect(result.current.kindSuggestionMessage).toBeNull();
     expect(result.current.carouselKinds.length).toBeGreaterThan(0);
     expect(
       result.current.carouselKinds.every(
