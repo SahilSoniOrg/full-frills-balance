@@ -161,8 +161,6 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
                   ? AppConfig.strings.dashboard.safeToSpendUi.incompleteFxWarning
                   : AppConfig.strings.dashboard.afterObligations,
               updatedAt: headline?.generatedAt ?? 0,
-              asOf: headline?.asOf,
-              horizonDays: headline?.horizonDays,
             }
           : undefined,
         theme: buildWidgetThemeSnapshot(themeId, themeMode, theme),
@@ -205,9 +203,7 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
     trajectoryMinBalance,
     firstMajorInflowDayFromData,
     headline?.generatedAt,
-    headline?.asOf,
     headline?.workplaceId,
-    headline?.horizonDays,
     hasUnvaluedEntries,
     currencyCode,
     isDataPresent,

@@ -63,12 +63,6 @@ public final class ExpoWidgetsModule: Module {
       }
     }
 
-    AsyncFunction("refreshWidgets") {
-      if #available(iOS 14.0, *) {
-        WidgetCenter.shared.reloadAllTimelines()
-      }
-    }
-
     AsyncFunction("clearWidgetData") {
       // Without the app group, sync cannot have stored anything for the widget to read.
       guard let defaults = UserDefaults(suiteName: self.appGroupId) else {

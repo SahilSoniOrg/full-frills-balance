@@ -115,8 +115,6 @@ describe('useWidgetSync generation ordering', () => {
       amount: 200,
       currencyCode: 'EUR',
       updatedAt: 1_759_200_000_100,
-      asOf: 1_759_200_000_000,
-      horizonDays: 60,
     });
   });
 

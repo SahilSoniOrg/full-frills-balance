@@ -106,12 +106,8 @@ export class WidgetProjectionService {
     const nativeModule = await loadNativeWidgetAdapter();
     if (!isCurrent()) return false;
     await syncNativeWidgetData(nativeModule, workplaceId, snapshot);
-    // Native writes are uncancellable; reflect the actual last completed owner even
-    // if a reset/deletion invalidated this request while it was in flight.
     this.nativeOwner = workplaceId;
     if (!isCurrent()) return false;
-    // Native sync rewrites or removes every widget key, so a publication that is still
-    // current after its write leaves nothing a pending clear would need to remove.
     this.pendingGlobalClear = false;
     this.pendingWorkplaceClears.clear();
     storage.remove(WIDGET_CLEANUP_PENDING_ALL_KEY);
@@ -174,8 +170,6 @@ export class WidgetProjectionService {
     workplaceId: WorkplaceId,
     activeWorkplaceId?: WorkplaceId,
   ): Promise<void> {
-    // A single native widget slot is owned by the last completed publisher.
-    // Clear it only when that slot still contains this deleted workplace.
     const forceClearActive = activeWorkplaceId === workplaceId && this.nativeOwner === null;
     if (this.nativeOwner !== workplaceId && !forceClearActive) {
       this.pendingWorkplaceClears.delete(workplaceId);

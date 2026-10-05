@@ -19,11 +19,6 @@ class ExpoWidgetsModule : Module() {
       refreshWidgetProviders(context)
     }
 
-    AsyncFunction("refreshWidgets") {
-      val context: Context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
-      refreshWidgetProviders(context)
-    }
-
     AsyncFunction("clearWidgetData") {
       val context: Context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
       val cleared = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().clear().commit()
