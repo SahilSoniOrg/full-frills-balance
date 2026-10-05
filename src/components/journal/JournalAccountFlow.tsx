@@ -2,12 +2,12 @@ import { AppIcon, AppText, Icon } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import type { JournalEntryLeg } from '@/src/types/journalEntryCard';
+import type { JournalEntryLeg, JournalEntryAccountFlow } from '@/src/types/journalEntryCard';
 import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { useId, useState } from 'react';
 import { StyleSheet, View, useWindowDimensions, type LayoutChangeEvent } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
-import { JournalEntryFooterRow } from './JournalEntryFooterRow';
+import type { ReactNode } from 'react';
 
 type FlowLayout = {
   key: string;
@@ -149,21 +149,52 @@ function AccountGroup({
   );
 }
 
-export function JournalAccountFlow({
-  legs,
+function JournalEntryFooterRow({
+  children,
   timestamp,
 }: {
-  legs: JournalEntryLeg[];
+  children?: ReactNode;
+  timestamp?: string;
+}) {
+  return (
+    <View style={footerStyles.row}>
+      {children != null && <View style={footerStyles.content}>{children}</View>}
+      {timestamp != null && (
+        <View style={footerStyles.timestamp}>
+          <AppText variant="caption" color="secondary" align="right">
+            {timestamp}
+          </AppText>
+        </View>
+      )}
+    </View>
+  );
+}
+
+export function JournalAccountFlow({
+  accountFlow,
+  timestamp,
+}: {
+  accountFlow: JournalEntryAccountFlow;
   timestamp?: string;
 }) {
   const { theme, themeMode, fonts } = useTheme();
   const { fontScale } = useWindowDimensions();
   const [availableWidth, setAvailableWidth] = useState<number>();
   const [layout, setLayout] = useState<FlowLayout | null>(null);
+  const legs = [
+    ...(accountFlow.primaryAccount ? [accountFlow.primaryAccount] : []),
+    ...accountFlow.sources,
+    ...accountFlow.destinations,
+    ...accountFlow.neutral,
+  ];
   if (legs.length === 0 && timestamp == null) return null;
-  const sources = legs.filter(leg => leg.role === 'SOURCE');
-  const destinations = legs.filter(leg => leg.role === 'DESTINATION');
-  const neutral = legs.filter(leg => leg.role === 'NEUTRAL');
+  const primary = accountFlow.primaryAccount;
+  const sources = [...(primary?.role === 'SOURCE' ? [primary] : []), ...accountFlow.sources];
+  const destinations = [
+    ...(primary?.role === 'DESTINATION' ? [primary] : []),
+    ...accountFlow.destinations,
+  ];
+  const neutral = [...(primary?.role === 'NEUTRAL' ? [primary] : []), ...accountFlow.neutral];
   const connected = sources.length > 0 && destinations.length > 0;
   const layoutKey = JSON.stringify([
     availableWidth,
@@ -317,4 +348,20 @@ const styles = StyleSheet.create({
     width: Spacing.lg,
   },
   name: { flexShrink: 1, minWidth: 0 },
+});
+
+const footerStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'flex-end',
+    columnGap: Spacing.sm,
+    rowGap: Spacing.xs,
+  },
+  content: { maxWidth: '100%', flexShrink: 0 },
+  timestamp: {
+    marginLeft: 'auto',
+    maxWidth: '100%',
+    paddingVertical: Spacing.xs,
+  },
 });

@@ -1,7 +1,6 @@
 import { JournalEntryCard } from '../JournalEntryCard';
 import type { JournalEntryCardProps, JournalEntryLeg } from '@/src/types/journalEntryCard';
 import { asAccountId } from '@/src/types/ids';
-import { SelectableJournalEntryCard } from '../SelectableJournalEntryCard';
 import { Icon } from '@/src/types/domainIcons';
 import { preferences } from '@/src/services/preferences';
 import { act, fireEvent, render, within, type RenderAPI } from '@/src/utils/test-utils';
@@ -533,7 +532,7 @@ describe('JournalAccountFlow via JournalEntryCard', () => {
     const onPress = jest.fn();
     const onLongPress = jest.fn();
     const { getByRole } = render(
-      <SelectableJournalEntryCard
+      <JournalEntryCard
         {...splitEntry}
         isSelected
         isSelectionModeActive

@@ -6,7 +6,7 @@ import { Box, Inline } from '@/src/design-system';
 import { JournalSplitItemViewModel } from '@/src/features/journal/hooks/useJournalDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { ComponentVariant } from '@/src/utils/style-helpers';
-import React, { useMemo } from 'react';
+import React from 'react';
 
 interface JournalBreakdownListProps {
   splitItems: JournalSplitItemViewModel[];
@@ -15,33 +15,16 @@ interface JournalBreakdownListProps {
 export const JournalBreakdownList = React.memo(({ splitItems }: JournalBreakdownListProps) => {
   const { theme } = useTheme();
 
-  const displayItems = useMemo(() => {
-    return splitItems.map(item => ({
-      id: item.id,
-      title: item.accountName,
-      subtitle: item.transactionType,
-      amount: item.amount,
-      currencyCode: item.currencyCode,
-      amountPrefix: item.amountPrefix,
-      amountColor: item.amountColor,
-      iconName: item.iconName,
-      fallbackIcon: item.fallbackIcon,
-      iconColor: item.iconColor,
-      iconBackground: item.iconBackground,
-      onPress: item.onPress,
-    }));
-  }, [splitItems]);
-
   return (
     <Section
       title="Breakdown"
-      items={displayItems}
+      items={splitItems}
       emptyText="No line items recorded."
       keyExtractor={item => item.id}
       renderItem={item => (
         <ListRow
-          title={item.title}
-          subtitle={item.subtitle}
+          title={item.accountName}
+          subtitle={item.transactionType}
           leading={
             <Box
               background={item.iconBackground}

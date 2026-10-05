@@ -65,7 +65,10 @@ export function buildTimelineGroupingOptions(
   baseCurrency: string,
   precision: number,
   exchangeRateMap: Record<string, number>,
-  onPress: (row: JournalTimelineRow) => void,
+  onPress: (
+    row: JournalTimelineRow,
+    cardProps: ReturnType<typeof mapJournalToEntryCardProps>,
+  ) => void,
 ): GroupingOptions<JournalTimelineRow> {
   return {
     items: rows,
@@ -77,13 +80,16 @@ export function buildTimelineGroupingOptions(
           ? getJournalViewerSignedAmount(row.journal, row.viewer, baseCurrency, exchangeRateMap)
           : getJournalSignedBaseAmount(row.journal, baseCurrency, exchangeRateMap),
       ),
-    renderItem: row => ({
-      id: row.listId,
-      selectionId: row.selectionId,
-      type: 'journal' as const,
-      date: row.journal.journalDate,
-      onPress: () => onPress(row),
-      cardProps: mapJournalToEntryCardProps(row.journal, row.viewer),
-    }),
+    renderItem: row => {
+      const cardProps = mapJournalToEntryCardProps(row.journal, row.viewer);
+      return {
+        id: row.listId,
+        selectionId: row.selectionId,
+        type: 'journal' as const,
+        date: row.journal.journalDate,
+        onPress: () => onPress(row, cardProps),
+        cardProps,
+      };
+    },
   };
 }

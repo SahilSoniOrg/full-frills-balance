@@ -4,7 +4,10 @@ import { ColorKey } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useJournal } from '@/src/features/journal/hooks/useJournal';
 import { useJournalLegs } from '@/src/features/journal/hooks/useJournals';
-import { useJournalDetailsSmsInfo } from '@/src/features/journal/hooks/useJournalDetailsSmsInfo';
+import { findJournalMetadataByJournalId } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
+import { smsService } from '@/src/services/sms-service';
+import { from, of } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useObservable } from '@/src/hooks/useObservable';
 import { getAccountFallbackIcon } from '@/src/components/account-selection';
@@ -14,6 +17,7 @@ import { plannedPaymentReadService } from '@/src/services/planned-payment/planne
 import {
   JournalStatusChipVariant,
   mapJournalLegSplitPresentation,
+  mapSmsJournalMetadataDisplay,
   resolveJournalDetailsInfo,
   resolveJournalStatusChipVariant,
   resolveRevertPlannedActionLabels,
@@ -27,7 +31,6 @@ import { formatDate, getNow } from '@/src/utils/dateUtils';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo } from 'react';
-import { of } from 'rxjs';
 import { DisplayTransaction } from '@/src/types/domainReadModels';
 
 export interface JournalSplitItemViewModel {
@@ -137,7 +140,32 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
     version,
   } = useJournal(workplaceId, journalId, true);
 
-  const smsInfo = useJournalDetailsSmsInfo(workplaceId, journalId);
+  const { data: smsInfo } = useObservable<SmsJournalInfoDisplay[] | undefined>(
+    () => {
+      if (!journalId) return of(undefined);
+
+      return from(findJournalMetadataByJournalId(journalId, workplaceId)).pipe(
+        switchMap(metadata =>
+          from(smsService.findAllByLinkedJournalId(workplaceId, journalId)).pipe(
+            map(inboxRecords => {
+              if (!metadata && inboxRecords.length === 0) return undefined;
+              const records = inboxRecords.length > 0 ? inboxRecords : [null];
+              return records.map((inboxRecord, index) =>
+                mapSmsJournalMetadataDisplay({
+                  originalSmsSender: index === 0 ? metadata?.originalSmsSender : undefined,
+                  originalSmsBody: index === 0 ? metadata?.originalSmsBody : undefined,
+                  metadataJson: index === 0 ? metadata?.metadataJson : undefined,
+                  inboxRecord,
+                }),
+              );
+            }),
+          ),
+        ),
+      );
+    },
+    [journalId, workplaceId],
+    undefined,
+  );
 
   const journalInfo = useMemo(
     () =>

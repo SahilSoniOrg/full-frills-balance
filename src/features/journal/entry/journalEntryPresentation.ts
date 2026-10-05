@@ -280,31 +280,23 @@ export function allocationStatusColor(
   return theme.textSecondary;
 }
 
-function compactTransactionIntentContext(
-  context: TransactionIntentSeedSourceContext,
-): TransactionIntentSeedSourceContext {
+function pickDefined<T extends Record<string, unknown>>(value: T): Partial<T> {
   return Object.fromEntries(
-    Object.entries(context).filter(([, value]) => value !== undefined && value !== ''),
-  ) as TransactionIntentSeedSourceContext;
-}
-
-function compactTransactionIntentSeed(seed: TransactionIntentSeed): TransactionIntentSeed {
-  return Object.fromEntries(
-    Object.entries(seed).filter(([, value]) => value !== undefined && value !== ''),
-  ) as TransactionIntentSeed;
+    Object.entries(value).filter(([, entry]) => entry !== undefined && entry !== ''),
+  ) as Partial<T>;
 }
 
 /** Converts the normalized legacy parser output into the canonical seed. */
 export function toTransactionIntentSeed(route: JournalEntryRouteParams): TransactionIntentSeed {
-  const sourceContext = compactTransactionIntentContext({
+  const sourceContext = pickDefined({
     launchSource: route.launchSource,
     smsId: route.smsId,
     smsRecordId: route.smsRecordId,
-  });
+  }) as TransactionIntentSeedSourceContext;
 
   const hasSourceContext = Object.keys(sourceContext).length > 0;
 
-  return compactTransactionIntentSeed({
+  return pickDefined({
     editorMode: route.mode,
     type: route.type,
     guidedAutopilot: route.guidedAutopilot,
@@ -324,7 +316,7 @@ export function toTransactionIntentSeed(route: JournalEntryRouteParams): Transac
           },
         }
       : {}),
-  });
+  }) as TransactionIntentSeed;
 }
 
 /**

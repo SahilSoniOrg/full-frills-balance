@@ -1,6 +1,7 @@
 import { render } from '@/src/utils/test-utils';
 import { AccountType } from '@/src/types/enums';
 import { asAccountId, asWorkplaceId } from '@/src/types/ids';
+import { NO_FX_OVERRIDE } from '@/src/domain/accounting/fxPair';
 import type { BulkJournalRow, BulkJournalRowActions } from '../types/bulkJournal';
 import { BulkEntryRow } from '../components/BulkEntryRow';
 import { Spacing } from '@/src/constants/design-tokens';
@@ -55,6 +56,23 @@ const row: BulkJournalRow = {
   isCrossCurrency: false,
   convertedAmount: 0,
   isLoadingRate: false,
+  pair: {
+    baseCurrency: 'USD',
+    isCrossCurrency: false,
+    needsBaseRate: false,
+    sourceBaseRate: null,
+    destBaseRate: null,
+    pairRate: null,
+    sourceAmount: 0,
+    convertedAmount: null,
+    status: 'idle',
+    isLoading: false,
+    rateError: null,
+    needsManualRates: false,
+    manualSourceBaseRate: '',
+    manualDestBaseRate: '',
+    override: NO_FX_OVERRIDE,
+  },
 };
 
 const accounts = [

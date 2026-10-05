@@ -18,9 +18,7 @@ export function ReconciledMarker({ date }: ReconciledMarkerProps) {
   );
 
   return (
-    <View
-      style={[styles.container, styles.reconciledContainer, { backgroundColor: theme.background }]}
-    >
+    <View style={[styles.reconciledContainer, { backgroundColor: theme.background }]}>
       <Separator background="income" style={styles.reconciledLine} />
       <View style={styles.reconciledContent}>
         <AppIcon name={Icon.Shield} size={14} color={theme.income} />
@@ -40,15 +38,12 @@ export function ReconciledMarker({ date }: ReconciledMarkerProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing.sm,
-  },
   reconciledContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.sm,
     gap: Spacing.md,
   },
   reconciledLine: {

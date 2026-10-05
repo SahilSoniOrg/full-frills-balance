@@ -9,7 +9,7 @@ import React from 'react';
 import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { JournalDayHeader } from './JournalDayHeader';
 import { ReconciledMarker } from './ReconciledMarker';
-import { SelectableJournalEntryCard } from './SelectableJournalEntryCard';
+import { JournalEntryCard } from './JournalEntryCard';
 import {
   SelectionActionBar,
   type ListSelectionChrome,
@@ -69,7 +69,7 @@ function renderListItem({
   }
 
   return (
-    <SelectableJournalEntryCard
+    <JournalEntryCard
       {...item.cardProps!}
       dateDisplay="time"
       onPress={item.onPress!}

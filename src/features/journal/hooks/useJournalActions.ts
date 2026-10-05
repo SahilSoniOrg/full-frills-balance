@@ -1,5 +1,4 @@
 import { journalService } from '@/src/services/journal/journalDomainService';
-import { JournalEntryLine } from '@/src/types/domainJournal';
 import type { PostingPlan } from '@/src/types/domainTransaction';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 import type { PlannedPaymentFxReview } from '@/src/services/planned-payment/plannedPaymentFx';
@@ -19,14 +18,6 @@ type PostPostingPlanParams = {
   mode?: 'simple' | 'advanced' | 'import';
 };
 
-type BulkJournalEntry = {
-  lines: JournalEntryLine[];
-  description: string;
-  notes?: string;
-  journalDate: number;
-  workplaceId: WorkplaceId;
-};
-
 /**
  * Feature write gateway for journals. Editors and details actions go through here;
  * journalService still owns orchestration and delegates persist/audit/rebuild to the ledger services.
@@ -35,13 +26,6 @@ export function useJournalActions(workplaceId: WorkplaceId) {
   const deleteJournal = useCallback(
     async (journalId: JournalId) => {
       return journalService.deleteJournal(journalId, workplaceId);
-    },
-    [workplaceId],
-  );
-
-  const duplicateJournal = useCallback(
-    async (journalId: JournalId) => {
-      return journalService.duplicateJournal(journalId, workplaceId);
     },
     [workplaceId],
   );
@@ -83,17 +67,11 @@ export function useJournalActions(workplaceId: WorkplaceId) {
     [workplaceId],
   );
 
-  const saveBulkJournalEntries = useCallback(async (entries: BulkJournalEntry[]) => {
-    return journalService.saveBulkJournalEntries(entries);
-  }, []);
-
   return {
     deleteJournal,
-    duplicateJournal,
     postJournal,
     revertToPlanned,
     saveJournalEntry,
     postPostingPlan,
-    saveBulkJournalEntries,
   };
 }

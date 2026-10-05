@@ -3,6 +3,7 @@ import { AppConfig } from '@/src/constants';
 import { AccountType } from '@/src/types/enums';
 import { asAccountId, asWorkplaceId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
+import { NO_FX_OVERRIDE } from '@/src/domain/accounting/fxPair';
 import type { BulkJournalRow, BulkJournalRowActions } from '../types/bulkJournal';
 import { BulkEntryGrid } from '../components/BulkEntryGrid';
 import type { ReactNode } from 'react';
@@ -110,6 +111,24 @@ function makeRow(overrides: Partial<BulkJournalRow> = {}): BulkJournalRow {
     isCrossCurrency: false,
     convertedAmount: 0,
     isLoadingRate: false,
+    pair: {
+      baseCurrency: 'USD',
+      isCrossCurrency: false,
+      needsBaseRate: false,
+      sourceBaseRate: null,
+      destBaseRate: null,
+      pairRate: null,
+      sourceAmount: 0,
+      convertedAmount: null,
+      status: 'idle',
+      isLoading: false,
+      rateError: null,
+      needsManualRates: false,
+      manualSourceBaseRate: '',
+      manualDestBaseRate: '',
+      override: NO_FX_OVERRIDE,
+      ...overrides.pair,
+    },
     ...overrides,
   };
 }

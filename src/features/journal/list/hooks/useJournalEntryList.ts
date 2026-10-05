@@ -126,13 +126,12 @@ export function useJournalEntryList({
   } = selectionControl;
 
   const handleRowPress = useCallback(
-    (row: JournalTimelineRow) => {
+    (row: JournalTimelineRow, cardProps: ReturnType<typeof mapJournalToEntryCardProps>) => {
       if (isSelectionModeActive) {
         toggleSelection(row.selectionId);
         return;
       }
 
-      const cardProps = mapJournalToEntryCardProps(row.journal, row.viewer);
       AppNavigation.toJournalDetails(row.journal.id, {
         title: cardProps.title,
         amount: cardProps.amount,

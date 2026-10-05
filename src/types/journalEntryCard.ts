@@ -34,6 +34,7 @@ export interface JournalEntryCardProps {
   };
   accountFlow: JournalEntryAccountFlow;
   isSelected?: boolean;
+  isSelectionModeActive?: boolean;
   notes?: string;
   onPress?: () => void;
   onLongPress?: () => void;

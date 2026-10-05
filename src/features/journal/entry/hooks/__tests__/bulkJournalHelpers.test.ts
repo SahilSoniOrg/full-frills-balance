@@ -8,6 +8,7 @@ import {
   getBulkJournalRowError,
   validateBulkJournalRow,
 } from '@/src/features/journal/entry/hooks/bulkJournalHelpers';
+import { NO_FX_OVERRIDE } from '@/src/domain/accounting/fxPair';
 import type { BulkJournalRow } from '@/src/features/journal/entry/types/bulkJournal';
 
 const accounts = [
@@ -39,6 +40,24 @@ function makeRow(overrides: Partial<BulkJournalRow> = {}): BulkJournalRow {
     isCrossCurrency: false,
     convertedAmount: 0,
     isLoadingRate: false,
+    pair: {
+      baseCurrency: 'USD',
+      isCrossCurrency: false,
+      needsBaseRate: false,
+      sourceBaseRate: null,
+      destBaseRate: null,
+      pairRate: null,
+      sourceAmount: 0,
+      convertedAmount: null,
+      status: 'idle',
+      isLoading: false,
+      rateError: null,
+      needsManualRates: false,
+      manualSourceBaseRate: '',
+      manualDestBaseRate: '',
+      override: NO_FX_OVERRIDE,
+      ...overrides.pair,
+    },
     ...overrides,
   };
 }

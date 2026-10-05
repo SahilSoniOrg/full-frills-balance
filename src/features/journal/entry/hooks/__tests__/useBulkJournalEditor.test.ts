@@ -2,10 +2,8 @@ import { AccountType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
 
-import {
-  resolveBulkRowFxPair,
-  useBulkJournalEditor,
-} from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
+import { useBulkJournalEditor } from '@/src/features/journal/entry/hooks/useBulkJournalEditor';
+import { buildFxPairDraft } from '@/src/hooks/useFxPairDraft';
 import { journalService } from '@/src/services/journal/journalDomainService';
 import { triggerSaveOutcomeHaptic } from '@/src/utils/haptics';
 import { act, renderHook } from '@testing-library/react-native';
@@ -57,24 +55,13 @@ describe('useBulkJournalEditor', () => {
   });
 
   it('ties a rounded destination amount back to the source amount', () => {
-    const pair = resolveBulkRowFxPair(
-      {
-        id: 'row',
-        description: '',
-        notes: '',
-        transactionType: 'transfer',
-        amount: '600',
-        sourceId: 'inr' as AccountId,
-        destinationId: 'usd' as AccountId,
-        journalDate: 0,
-        fxRates: { sourceBaseRate: 1, destBaseRate: 95.96, isLoading: false, error: null },
-      },
-      [
-        { id: 'inr', currencyCode: 'INR' },
-        { id: 'usd', currencyCode: 'USD' },
-      ] as any,
-      'INR',
-    );
+    const pair = buildFxPairDraft({
+      sourceCurrency: 'INR',
+      destCurrency: 'USD',
+      baseCurrency: 'INR',
+      sourceAmount: 600,
+      fetchedRates: { sourceBaseRate: 1, destBaseRate: 95.96, isLoading: false, error: null },
+    });
 
     expect(pair.convertedAmount).toBeCloseTo(6.25, 2);
     expect(pair.convertedAmount! * pair.destBaseRate!).toBeCloseTo(600, 2);
@@ -654,17 +641,13 @@ describe('useBulkJournalEditor', () => {
     act(() => {
       result.current.rowActions.setManualBaseRate(result.current.rows[0].id, 'source', '1');
     });
-    expect(resolveBulkRowFxPair(result.current.rows[0], accounts, 'USD').manualSourceBaseRate).toBe(
-      '1',
-    );
+    expect(result.current.rows[0].pair.manualSourceBaseRate).toBe('1');
     expect(result.current.rows[0].exchangeRate).toBe('1.000000');
 
     act(() => {
       result.current.rowActions.setManualBaseRate(result.current.rows[0].id, 'source', '1.');
     });
-    expect(resolveBulkRowFxPair(result.current.rows[0], accounts, 'USD').manualSourceBaseRate).toBe(
-      '1.',
-    );
+    expect(result.current.rows[0].pair.manualSourceBaseRate).toBe('1.');
     expect(result.current.rows[0].exchangeRate).toBe('1.000000');
 
     act(() => {

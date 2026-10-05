@@ -1,3 +1,4 @@
+import { recordPlannedOccurrenceWithFxReview } from '@/src/services/planned-payment/recordPlannedOccurrenceWithFxReview';
 import { withPlannedPaymentFxReview } from '@/src/services/planned-payment/plannedPaymentFxReviewRequest';
 import { formatMoneyAmount } from '@/src/utils/currencyFormatter';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
@@ -63,9 +64,17 @@ export function useJournalDetailsActions({
       `Are you sure you want to mark this planned transaction for ${displayAmount} as posted?`,
       async () => {
         try {
-          const completed = await withPlannedPaymentFxReview(review =>
-            review ? postJournal(journalId, review) : postJournal(journalId),
-          );
+          const completed =
+            plannedPaymentId && journalDate !== undefined
+              ? await recordPlannedOccurrenceWithFxReview(
+                  workplaceId,
+                  plannedPaymentId,
+                  journalDate,
+                  journalId,
+                )
+              : await withPlannedPaymentFxReview(review =>
+                  review ? postJournal(journalId, review) : postJournal(journalId),
+                );
           if (!completed) return;
           toast.success('Transaction has been marked as posted.');
           AppNavigation.back();
@@ -76,7 +85,7 @@ export function useJournalDetailsActions({
         }
       },
     );
-  }, [displayAmount, journalId, postJournal, status]);
+  }, [displayAmount, journalDate, journalId, plannedPaymentId, postJournal, status, workplaceId]);
 
   const handleRevertToScheduled = useCallback(async () => {
     const { actionLabel, statusLabel } = resolveRevertPlannedActionLabels(status || '');

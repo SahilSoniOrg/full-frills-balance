@@ -4,16 +4,17 @@ import { generator as generateId } from '@/src/data/database/idGenerator';
 import { useExchangeRate } from '@/src/hooks/useExchangeRate';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants/ledger-constants';
-import { useJournalActions } from '@/src/features/journal/hooks/useJournalActions';
+import { formatManualBaseRate } from '@/src/domain/accounting/manualBaseRate';
 import {
   NO_FX_OVERRIDE,
-  resolveFxPair,
   withConvertedAmount,
   withManualBaseRate,
   type FxFetchedRates,
   type FxPair,
 } from '@/src/domain/accounting/fxPair';
+import { buildFxPairDraft } from '@/src/hooks/useFxPairDraft';
 import { fetchPairRates } from '@/src/hooks/useCrossCurrencyRates';
+import { journalService } from '@/src/services/journal/journalDomainService';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { logger } from '@/src/utils/logger';
@@ -44,6 +45,12 @@ const LOADING_RATES: FxFetchedRates = {
   isLoading: true,
   error: null,
 };
+const IDLE_RATES: FxFetchedRates = {
+  sourceBaseRate: null,
+  destBaseRate: null,
+  isLoading: false,
+  error: null,
+};
 
 function reconcileVisibleValidation(
   previousRow: BulkJournalDraft,
@@ -72,18 +79,17 @@ function rowJournalDay(journalDate: number): string {
   return dayjs(journalDate).format('YYYY-MM-DD');
 }
 
-/** FX pair for one bulk row, resolved from the row's accounts, fetched rates, and override. */
-export function resolveBulkRowFxPair(
+function resolveBulkRowFxPair(
   row: BulkJournalDraft,
   accounts: AccountFields[],
   workplaceCurrency: string,
 ): FxPair {
   const destCurrency = accounts.find(account => account.id === row.destinationId)?.currencyCode;
-  return resolveFxPair({
+  return buildFxPairDraft({
     sourceCurrency: accounts.find(account => account.id === row.sourceId)?.currencyCode,
     destCurrency,
     baseCurrency: workplaceCurrency,
-    fetched: row.fxRates ?? null,
+    fetchedRates: row.fxRates ?? IDLE_RATES,
     override: row.fxOverride,
     sourceAmount: sanitizeAmount(row.amount) || 0,
     destPrecision: CurrencyFormatter.getPrecisionFallback(destCurrency),
@@ -101,11 +107,13 @@ function projectRowFx(row: BulkJournalDraft, pair: FxPair): BulkJournalRow {
       convertedAmount: 0,
       isLoadingRate: false,
       rateError: undefined,
+      pair,
     };
   }
   return {
     ...row,
-    exchangeRate: pair.pairRate ? pair.pairRate.toFixed(6) : '',
+    exchangeRate: pair.pairRate ? formatManualBaseRate(pair.pairRate) : '',
+    pair,
     sourceBaseRate: pair.sourceBaseRate ?? undefined,
     destBaseRate: pair.destBaseRate ?? undefined,
     isCrossCurrency: true,
@@ -126,7 +134,6 @@ export function useBulkJournalEditor({
   onSaveSuccess,
 }: UseBulkJournalEditorProps) {
   const { fetchRequiredRate, fetchHistoricalRate } = useExchangeRate();
-  const { saveBulkJournalEntries } = useJournalActions(workplaceId);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submissionInFlightRef = useRef(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -502,7 +509,7 @@ export function useBulkJournalEditor({
         workplaceId,
       );
 
-      const result = await saveBulkJournalEntries(entries);
+      const result = await journalService.saveBulkJournalEntries(entries);
 
       if (!result.success) {
         triggerSaveOutcomeHaptic(false);
@@ -522,15 +529,7 @@ export function useBulkJournalEditor({
       submissionInFlightRef.current = false;
       setIsSubmitting(false);
     }
-  }, [
-    accounts,
-    clearValidationTimer,
-    commitRows,
-    workplaceId,
-    workplaceCurrency,
-    onSaveSuccess,
-    saveBulkJournalEntries,
-  ]);
+  }, [accounts, clearValidationTimer, commitRows, workplaceId, workplaceCurrency, onSaveSuccess]);
 
   return {
     rows,

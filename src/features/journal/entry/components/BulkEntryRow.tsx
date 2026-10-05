@@ -7,11 +7,11 @@ import type { BulkJournalRow, BulkJournalRowActions } from '../types/bulkJournal
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { AccountRole } from '@/src/types/domainJournal';
 import type { CreateAccountIntent } from '@/src/components/account-selection';
-import { EntryInlineError } from './EntryInlineError';
+import { NoticeBanner } from '@/src/components/shared/NoticeBanner';
+import { Icon as DomainIcon } from '@/src/types/domainIcons';
 import { EntryTransactionCard } from './EntryTransactionCard';
 import type { ExpansionPosition } from '@/src/components/account-selection/AccountPickerPanel';
 import { getBulkJournalRowError } from '../hooks/bulkJournalHelpers';
-import { resolveBulkRowFxPair } from '../hooks/useBulkJournalEditor';
 import { buildSimpleFormAccountSections } from '@/src/services/journal/simpleJournalHelpers';
 import { filterToLeafAccounts } from '@/src/services/journal/guidedJournalAccountEligibility';
 import { resolveSimpleTypeAccentColor } from '../journalEntryPresentation';
@@ -44,7 +44,6 @@ export const BulkEntryRow = React.memo(
     row,
     index,
     accounts,
-    workplaceCurrency,
     workplaceId,
     rowActions,
     onRemove,
@@ -74,11 +73,6 @@ export const BulkEntryRow = React.memo(
         }),
       [accounts, leafAccounts, row.destinationId, row.sourceId, row.transactionType],
     );
-    const fxPair = useMemo(
-      () => resolveBulkRowFxPair(row, accounts, workplaceCurrency),
-      [accounts, row, workplaceCurrency],
-    );
-
     const rowDate = useMemo(() => dayjs(row.journalDate).format('YYYY-MM-DD'), [row.journalDate]);
     const rowTime = useMemo(() => dayjs(row.journalDate).format('HH:mm'), [row.journalDate]);
     const rowError = getBulkJournalRowError(row);
@@ -95,7 +89,7 @@ export const BulkEntryRow = React.memo(
           amount={row.amount}
           onChangeAmount={value => rowActions.setAmount(row.id, value)}
           amountTestID={`bulk-amount-${row.id}`}
-          pair={fxPair}
+          pair={row.pair}
           onManualBaseRateChange={(role, value) =>
             rowActions.setManualBaseRate(row.id, role, value)
           }
@@ -183,7 +177,14 @@ export const BulkEntryRow = React.memo(
         />
 
         {/* Validation error — shown below all content */}
-        {rowError ? <EntryInlineError message={rowError} /> : null}
+        {rowError ? (
+          <NoticeBanner
+            message={rowError}
+            tone="error"
+            icon={DomainIcon.Error}
+            style={{ marginTop: Spacing.sm }}
+          />
+        ) : null}
       </View>
     );
   },

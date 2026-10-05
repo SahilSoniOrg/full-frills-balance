@@ -5,15 +5,11 @@ import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Box, Separator, Stack } from '@/src/design-system';
 import { JournalDetailsViewModel } from '@/src/features/journal/hooks/useJournalDetailsViewModel';
-import React from 'react';
 import { JournalDetailsActions } from './details/JournalDetailsActions';
 import { JournalBreakdownList } from './details/JournalBreakdownList';
 import { JournalDetailsHero } from './details/JournalDetailsHero';
 import { JournalDetailsMetadata } from './details/JournalDetailsMetadata';
 import { JournalDetailsSmsSection } from './details/JournalDetailsSmsSection';
-
-type ScreenState =
-  { type: 'loading' } | { type: 'missing' } | { type: 'ready'; data: JournalDetailsViewModel };
 
 export function JournalDetailsView({
   chrome,
@@ -21,88 +17,76 @@ export function JournalDetailsView({
 }: JournalDetailsViewModel & { chrome: ScreenNavChrome }) {
   const { isLoading, isMissing, onBack } = vm;
 
-  const state: ScreenState = React.useMemo(() => {
-    if (isLoading) return { type: 'loading' };
-    if (isMissing) return { type: 'missing' };
-    return { type: 'ready', data: vm };
-  }, [isLoading, isMissing, vm]);
+  if (isLoading) {
+    return (
+      <ScreenWithChrome chrome={chrome} scrollable={false}>
+        <LoadingView loading={true} />
+      </ScreenWithChrome>
+    );
+  }
 
-  let body: React.ReactNode;
-  switch (state.type) {
-    case 'loading':
-      body = <LoadingView loading={true} />;
-      break;
-    case 'missing':
-      body = (
+  if (isMissing) {
+    return (
+      <ScreenWithChrome chrome={chrome} scrollable={false}>
         <EmptyStateView
           title="Transaction not found"
           icon={Icon.Error}
           primaryActionLabel="Go Back"
           onPrimaryAction={onBack}
         />
-      );
-      break;
-    case 'ready': {
-      const readyVm = state.data;
-      body = (
-        <Box padding="md" paddingVertical="md">
-          <Stack space="xl">
-            <JournalDetailsHero
-              displayIcon={readyVm.displayIcon}
-              amountColor={readyVm.amountColor}
-              amount={readyVm.amount}
-              currencyCode={readyVm.currencyCode}
-              amountPrefix={readyVm.amountPrefix}
-              descriptionText={readyVm.descriptionText}
-              statusLabel={readyVm.statusLabel}
-              statusVariant={readyVm.statusVariant}
-              displayTypeLabel={readyVm.displayTypeLabel}
-            />
-
-            <Separator />
-
-            <JournalBreakdownList splitItems={readyVm.splitItems} />
-
-            <Separator />
-
-            <JournalDetailsMetadata
-              formattedDate={readyVm.formattedDate}
-              notesText={readyVm.notesText}
-              onHistoryPress={readyVm.onHistoryPress}
-            />
-
-            {readyVm.smsInfo?.length ? (
-              <>
-                <Separator />
-                <JournalDetailsSmsSection
-                  smsInfo={readyVm.smsInfo}
-                  onOpenSmsInbox={readyVm.onOpenSmsInbox}
-                />
-              </>
-            ) : null}
-
-            {readyVm.statusNotice && (
-              <AppText variant="caption" color="warning">
-                {readyVm.statusNotice}
-              </AppText>
-            )}
-
-            <JournalDetailsActions
-              onPost={readyVm.onPost}
-              onSkip={readyVm.onSkip}
-              onRevertToScheduled={readyVm.onRevertToScheduled}
-              revertButtonLabel={readyVm.revertButtonLabel}
-            />
-          </Stack>
-        </Box>
-      );
-      break;
-    }
+      </ScreenWithChrome>
+    );
   }
 
   return (
-    <ScreenWithChrome chrome={chrome} scrollable={state.type === 'ready'}>
-      {body}
+    <ScreenWithChrome chrome={chrome} scrollable>
+      <Box padding="md" paddingVertical="md">
+        <Stack space="xl">
+          <JournalDetailsHero
+            displayIcon={vm.displayIcon}
+            amountColor={vm.amountColor}
+            amount={vm.amount}
+            currencyCode={vm.currencyCode}
+            amountPrefix={vm.amountPrefix}
+            descriptionText={vm.descriptionText}
+            statusLabel={vm.statusLabel}
+            statusVariant={vm.statusVariant}
+            displayTypeLabel={vm.displayTypeLabel}
+          />
+
+          <Separator />
+
+          <JournalBreakdownList splitItems={vm.splitItems} />
+
+          <Separator />
+
+          <JournalDetailsMetadata
+            formattedDate={vm.formattedDate}
+            notesText={vm.notesText}
+            onHistoryPress={vm.onHistoryPress}
+          />
+
+          {vm.smsInfo?.length ? (
+            <>
+              <Separator />
+              <JournalDetailsSmsSection smsInfo={vm.smsInfo} onOpenSmsInbox={vm.onOpenSmsInbox} />
+            </>
+          ) : null}
+
+          {vm.statusNotice && (
+            <AppText variant="caption" color="warning">
+              {vm.statusNotice}
+            </AppText>
+          )}
+
+          <JournalDetailsActions
+            onPost={vm.onPost}
+            onSkip={vm.onSkip}
+            onRevertToScheduled={vm.onRevertToScheduled}
+            revertButtonLabel={vm.revertButtonLabel}
+          />
+        </Stack>
+      </Box>
     </ScreenWithChrome>
   );
 }

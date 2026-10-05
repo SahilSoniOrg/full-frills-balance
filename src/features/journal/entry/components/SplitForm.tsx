@@ -19,7 +19,8 @@ import type { AccountRole, TabType } from '@/src/types/domainJournal';
 import type { AccountId } from '@/src/types/ids';
 import { formatRoundedAmount } from '@/src/utils/money';
 import { AccountPickerField } from '@/src/features/journal/entry/components/AccountPickerField';
-import { EntryInlineError } from '@/src/features/journal/entry/components/EntryInlineError';
+import { NoticeBanner } from '@/src/components/shared/NoticeBanner';
+import { Icon } from '@/src/types/domainIcons';
 import {
   allocationAmountStyles,
   formatAmountPlaceholder,
@@ -237,7 +238,9 @@ export function SplitForm({
           />
         }
         footer={
-          validationMessage && hasTotal ? <EntryInlineError message={validationMessage} /> : null
+          validationMessage && hasTotal ? (
+            <NoticeBanner message={validationMessage} tone="error" icon={Icon.Error} />
+          ) : null
         }
         onAdd={addSplitRow}
         addLabel={strings.addSplit}

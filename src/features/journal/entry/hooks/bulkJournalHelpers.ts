@@ -6,6 +6,7 @@ import { WorkplaceId, EMPTY_ACCOUNT_ID, TransactionId } from '@/src/types/ids';
 import { generator as generateId } from '@/src/data/database/idGenerator';
 import { parsePositiveRate } from '@/src/services/journal/journalEditorHelpers';
 import { sanitizeAmount } from '@/src/utils/validation';
+import { formatManualBaseRate } from '@/src/domain/accounting/manualBaseRate';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatRoundedAmount } from '@/src/utils/money';
 import type { BulkJournalRow } from '../types/bulkJournal';
@@ -74,7 +75,7 @@ export function buildBulkJournalEntries(
           : row.amount,
         transactionType: TransactionType.DEBIT,
         notes: '',
-        exchangeRate: isCross && row.destBaseRate ? row.destBaseRate.toFixed(6) : '',
+        exchangeRate: isCross && row.destBaseRate ? formatManualBaseRate(row.destBaseRate) : '',
         accountCurrency: destCurrency,
       },
       {
@@ -85,7 +86,7 @@ export function buildBulkJournalEntries(
         amount: row.amount,
         transactionType: TransactionType.CREDIT,
         notes: '',
-        exchangeRate: isCross && row.sourceBaseRate ? row.sourceBaseRate.toFixed(6) : '',
+        exchangeRate: isCross && row.sourceBaseRate ? formatManualBaseRate(row.sourceBaseRate) : '',
         accountCurrency: sourceCurrency,
       },
     ];

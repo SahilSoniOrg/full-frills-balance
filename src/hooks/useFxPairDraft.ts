@@ -26,6 +26,40 @@ export interface UseFxPairDraftInput {
   convertedDestAmount?: number;
 }
 
+export type BuildFxPairDraftInput = Omit<UseFxPairDraftInput, 'enabled' | 'refreshNonce'> & {
+  fetchedRates: FxFetchedRates;
+};
+
+export function buildFxPairDraft({
+  sourceCurrency,
+  destCurrency,
+  baseCurrency,
+  sourceAmount,
+  destPrecision,
+  saved,
+  useSavedRates = false,
+  override,
+  convertedDestAmount,
+  fetchedRates,
+}: BuildFxPairDraftInput): FxPair {
+  const input = {
+    sourceCurrency,
+    destCurrency,
+    baseCurrency,
+    fetched: useSavedRates ? null : fetchedRates,
+    saved: useSavedRates ? saved : null,
+    override,
+    sourceAmount,
+    destPrecision,
+  };
+  const estimate = resolveFxPair(input);
+  if (convertedDestAmount !== undefined && convertedDestAmount > 0) {
+    const nextOverride = withConvertedAmount(estimate, convertedDestAmount);
+    if (nextOverride) return resolveFxPair({ ...input, override: nextOverride });
+  }
+  return estimate;
+}
+
 export function useFxPairDraft({
   sourceCurrency,
   destCurrency,
@@ -49,35 +83,33 @@ export function useFxPairDraft({
     enabled: enabled && !useSavedRates,
   });
 
-  const pair = useMemo(() => {
-    const input = {
-      sourceCurrency,
-      destCurrency,
+  const pair = useMemo(
+    () =>
+      buildFxPairDraft({
+        sourceCurrency,
+        destCurrency,
+        baseCurrency,
+        sourceAmount,
+        destPrecision,
+        saved,
+        useSavedRates,
+        override,
+        convertedDestAmount,
+        fetchedRates,
+      }),
+    [
       baseCurrency,
-      fetched: useSavedRates ? null : fetchedRates,
-      saved: useSavedRates ? saved : null,
-      override,
-      sourceAmount,
+      convertedDestAmount,
+      destCurrency,
       destPrecision,
-    };
-    const estimate = resolveFxPair(input);
-    if (convertedDestAmount !== undefined && convertedDestAmount > 0) {
-      const nextOverride = withConvertedAmount(estimate, convertedDestAmount);
-      if (nextOverride) return resolveFxPair({ ...input, override: nextOverride });
-    }
-    return estimate;
-  }, [
-    baseCurrency,
-    convertedDestAmount,
-    destCurrency,
-    destPrecision,
-    fetchedRates,
-    override,
-    saved,
-    sourceAmount,
-    sourceCurrency,
-    useSavedRates,
-  ]);
+      fetchedRates,
+      override,
+      saved,
+      sourceAmount,
+      sourceCurrency,
+      useSavedRates,
+    ],
+  );
 
   return { pair, fetchedRates };
 }
