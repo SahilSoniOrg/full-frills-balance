@@ -170,7 +170,7 @@ export class AnalyticsService {
   /**
    * Identify the user/device with enhanced properties
    */
-  identify(distinctId: string, properties?: Record<string, string | number | boolean>) {
+  identify(distinctId: string) {
     const safeId = safeAnalyticsIdentity(distinctId);
     Sentry.setUser({ id: safeId });
     if (!this._posthog) return;
@@ -183,7 +183,6 @@ export class AnalyticsService {
     } catch (error) {
       logger.error('[Analytics] Failed to identify anonymous device', error);
     }
-    void properties;
   }
 
   /**
@@ -451,19 +450,6 @@ export class AnalyticsService {
       unit,
       timestamp: Date.now(),
       traceId: context?.traceId,
-    });
-  }
-
-  /**
-   * Track user engagement and retention
-   */
-  trackEngagement(type: string, properties?: AnalyticsProperties) {
-    const sessionDuration = Date.now() - this.sessionStartTime;
-    this.track('engagement', {
-      engagement_type: type,
-      session_duration_ms: sessionDuration,
-      session_duration_min: Math.round(sessionDuration / (1000 * 60)),
-      ...properties,
     });
   }
 }

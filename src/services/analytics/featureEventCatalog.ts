@@ -1,10 +1,5 @@
 export type AnalyticsPropertyKind =
-  | 'boolean'
-  | 'count'
-  | 'duration'
-  | 'currency'
-  | 'token'
-  | 'version';
+  'boolean' | 'count' | 'duration' | 'currency' | 'token' | 'version';
 
 export const FEATURE_EVENT_CATALOG = {
   journal: {
@@ -36,7 +31,6 @@ export const FEATURE_EVENT_CATALOG = {
       'recover',
       'merge',
       'reconcile',
-      'reorder',
       'archive',
       'unarchive',
       'convert_type',
@@ -49,23 +43,6 @@ export const FEATURE_EVENT_CATALOG = {
       type: 'token',
       account_type: 'token',
       currency: 'currency',
-      count: 'count',
-      source: 'token',
-    } as const satisfies Record<string, AnalyticsPropertyKind>,
-  },
-  import: {
-    actions: [
-      'file_selected',
-      'format_mismatch',
-      'cancelled',
-      'failed',
-      'picker_cancelled',
-      'picker_error',
-      'completed',
-    ] as const,
-    schema: {
-      format: 'token',
-      reason: 'token',
       count: 'count',
       source: 'token',
     } as const satisfies Record<string, AnalyticsPropertyKind>,
@@ -86,12 +63,7 @@ export const FEATURE_EVENT_CATALOG = {
     >,
   },
   reports: {
-    actions: [
-      'change_tab',
-      'change_timeframe',
-      'drilldown_transactions',
-      'drilldown_category',
-    ] as const,
+    actions: ['change_tab', 'drilldown_transactions', 'drilldown_category'] as const,
     schema: {
       tab: 'token',
       timeframe: 'token',
@@ -120,8 +92,6 @@ export const FEATURE_EVENT_CATALOG = {
       'rule_create',
       'rule_update',
       'rule_delete',
-      'rule_toggle',
-      'rule_test',
       'inbox_accept',
       'inbox_dismiss',
       'inbox_bulk_sync',
@@ -134,7 +104,7 @@ export const FEATURE_EVENT_CATALOG = {
     } as const satisfies Record<string, AnalyticsPropertyKind>,
   },
   budget: {
-    actions: ['create', 'update', 'delete', 'threshold_warning', 'drilldown'] as const,
+    actions: ['create', 'update', 'delete'] as const,
     schema: {
       currency: 'currency',
       count: 'count',
@@ -146,8 +116,6 @@ export const FEATURE_EVENT_CATALOG = {
       'create',
       'update',
       'delete',
-      'pause',
-      'resume',
       'toggle_status',
       'post_now',
       'skip',
@@ -177,13 +145,6 @@ export const FEATURE_EVENT_CATALOG = {
       table: 'token',
     } as const satisfies Record<string, AnalyticsPropertyKind>,
   },
-  dashboard: {
-    actions: ['safe_to_spend_toggle', 'quick_action', 'networth_visibility_toggle'] as const,
-    schema: { visible: 'boolean', action: 'token' } as const satisfies Record<
-      string,
-      AnalyticsPropertyKind
-    >,
-  },
   safe_to_spend: {
     actions: [
       'opened',
@@ -203,7 +164,7 @@ export const FEATURE_EVENT_CATALOG = {
     } as const satisfies Record<string, AnalyticsPropertyKind>,
   },
   search: {
-    actions: ['query_executed', 'filters_applied', 'result_selected'] as const,
+    actions: ['query_executed'] as const,
     schema: {
       scope: 'token',
       count: 'count',
@@ -222,14 +183,10 @@ export const FEATURE_EVENT_CATALOG = {
       'toggle_widget_privacy',
       'toggle_app_lock',
       'switch_workplace',
-      'create_workplace',
       'update_workplace_icon',
       'change_notification_cadence',
       'change_notification_time',
       'toggle_sms_import',
-      'export_data',
-      'integrity_check',
-      'cleanup_database',
       'seed_mock_data',
       'open_telegram',
       'open_play_store',
@@ -257,27 +214,6 @@ export const FEATURE_EVENT_CATALOG = {
       icon: 'token',
     } as const satisfies Record<string, AnalyticsPropertyKind>,
   },
-  onboarding: {
-    actions: ['completed', 'step_continue'] as const,
-    schema: { step: 'token', count: 'count' } as const satisfies Record<
-      string,
-      AnalyticsPropertyKind
-    >,
-  },
-  ai: {
-    actions: [
-      'model_load_success',
-      'model_load_failure',
-      'inference_completed',
-      'inference_failed',
-    ] as const,
-    schema: {
-      status: 'token',
-      mode: 'token',
-      duration_ms: 'duration',
-      success: 'boolean',
-    } as const satisfies Record<string, AnalyticsPropertyKind>,
-  },
   journal_search: {
     actions: ['query_details'] as const,
     schema: {
@@ -289,7 +225,9 @@ export const FEATURE_EVENT_CATALOG = {
 } as const;
 
 export type FeatureEventMap = {
-  [Feature in keyof typeof FEATURE_EVENT_CATALOG]: (typeof FEATURE_EVENT_CATALOG)[Feature]['actions'][number];
+  [
+    Feature in keyof typeof FEATURE_EVENT_CATALOG
+  ]: (typeof FEATURE_EVENT_CATALOG)[Feature]['actions'][number];
 };
 
 export type KnownFeature = keyof FeatureEventMap;

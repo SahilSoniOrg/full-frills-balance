@@ -33,7 +33,7 @@ describe('AnalyticsService', () => {
   });
 
   it('should not throw when calling identify', () => {
-    expect(() => analytics.identify('test_user', { name: 'Test' })).not.toThrow();
+    expect(() => analytics.identify('test_user')).not.toThrow();
   });
 
   it('should not throw when calling screen', () => {
