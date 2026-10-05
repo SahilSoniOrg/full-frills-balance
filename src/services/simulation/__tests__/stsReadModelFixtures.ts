@@ -39,21 +39,6 @@ export const emptySimResult = {
   normalizedStartingBalances: new Map<string, number>(),
 };
 
-export function mockSimRunResult(
-  safeToSpend: number,
-  overrides: Partial<typeof emptySimResult> = {},
-) {
-  return {
-    ...emptySimResult,
-    ...overrides,
-    simulationResult: {
-      summary: { safeToSpend, shortfall: 0, trajectoryMinBalance: safeToSpend },
-      projections: [],
-      ...(overrides.simulationResult ?? {}),
-    },
-  };
-}
-
 export function mockLiquidCashAsset(id = 'cash', currencyCode = 'USD') {
   return {
     id,
@@ -65,21 +50,6 @@ export function mockLiquidCashAsset(id = 'cash', currencyCode = 'USD') {
 
 export function mockCashAssetRow(id = 'a1') {
   return { id, accountType: AccountType.ASSET, accountSubtype: AccountSubtype.CASH };
-}
-
-export function mockReportWithLiabilities() {
-  return {
-    ...emptySimResult.report,
-    allFlows: [],
-    liabilities: {
-      total: 0,
-      totalCreditCard: 0,
-      totalOther: 0,
-      committed: 0,
-      committedCreditCard: 0,
-      committedOther: 0,
-    },
-  };
 }
 
 export type ForecastDateBasisTestHarness = {
