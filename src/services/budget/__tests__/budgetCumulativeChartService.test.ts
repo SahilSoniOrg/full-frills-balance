@@ -1,8 +1,6 @@
 import { asJournalId } from '@/src/types/ids';
-import {
-  buildBudgetCumulativeChart,
-  type BudgetChartTransactionInput,
-} from '../budgetCumulativeChartService';
+import { type BudgetLineValuationTx } from '../budgetCalculationHelpers';
+import { buildBudgetCumulativeChart } from '../budgetCumulativeChartService';
 import { summarizeBudgetUnvaluedEntries } from '../budgetUnvaluedEntries';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { convertJournalLineAmount } from '@/src/services/currencyConversion';
@@ -22,9 +20,7 @@ const posted = 'posted' as JournalId;
 const refund = 'refund' as JournalId;
 const periodStart = new Date(2026, 9, 1).getTime();
 const periodEnd = new Date(2026, 9, 31, 23, 59, 59).getTime();
-const transaction = (
-  overrides: Partial<BudgetChartTransactionInput> = {},
-): BudgetChartTransactionInput => ({
+const transaction = (overrides: Partial<BudgetLineValuationTx> = {}): BudgetLineValuationTx => ({
   id: 'tx',
   accountId: dining,
   journalId: posted,

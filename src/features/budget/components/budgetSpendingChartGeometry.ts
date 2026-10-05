@@ -1,7 +1,7 @@
 import type { BudgetCumulativeChart } from '@/src/services/budget/budgetCumulativeChartService';
+import type { BudgetCumulativeSeries } from '@/src/services/projections/buildBudgetCumulativeSeries';
+import type { DateRange } from '@/src/services/budget/BudgetPeriodUtils';
 import dayjs from 'dayjs';
-
-type PeriodRange = { startDate: number; endDate: number };
 type Point = { x: number; y: number };
 
 export interface BudgetSpendingChartGeometry {
@@ -36,8 +36,8 @@ export function buildBudgetSpendingChartGeometry({
 }: {
   chartData: BudgetCumulativeChart;
   previousChartData: BudgetCumulativeChart | null;
-  currentPeriod: PeriodRange;
-  previousPeriod?: PeriodRange;
+  currentPeriod: DateRange;
+  previousPeriod?: DateRange;
   periodDays: number;
   elapsedShare: number;
   isCurrentPeriod: boolean;
@@ -73,4 +73,28 @@ export function buildBudgetSpendingChartGeometry({
     todayOffset,
     todaySpent: currentPoints.at(-1)?.y ?? 0,
   };
+}
+
+/** Read converted net spend through the equivalent calendar day, including that whole day. */
+export function getBudgetPreviousComparisonSpent(
+  chart: BudgetCumulativeSeries | null,
+  currentPeriod: DateRange | undefined,
+  previousPeriod: DateRange | undefined,
+  now: number,
+): number | null {
+  if (!chart || !currentPeriod || !previousPeriod || now < currentPeriod.startDate) return null;
+
+  const dayOffset = dayjs(now)
+    .startOf('day')
+    .diff(dayjs(currentPeriod.startDate).startOf('day'), 'day');
+  const cutoff =
+    now > currentPeriod.endDate
+      ? previousPeriod.endDate
+      : Math.min(
+          dayjs(previousPeriod.startDate).add(dayOffset, 'day').endOf('day').valueOf(),
+          previousPeriod.endDate,
+        );
+
+  const point = chart.data.findLast(entry => entry.x <= cutoff);
+  return point ? point.y : 0;
 }

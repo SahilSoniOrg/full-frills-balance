@@ -6,13 +6,12 @@ import { BudgetPeriodStepper } from './BudgetPeriodStepper';
 import { AppConfig, Shape, Spacing } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
 import { presentBudgetUsage } from '../helpers/budgetCardPresentation';
-import { presentBudgetPeriod } from '../helpers/budgetDetailPresentation';
+import type { BudgetPeriodPresentation } from '../helpers/budgetDetailPresentation';
 import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import type { BudgetUsage } from '@/src/services/budget/types';
 import type { PlainBudget } from '@/src/types/plainDtos';
-import { getNow } from '@/src/utils/dateUtils';
 import dayjs from 'dayjs';
 import React from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -21,7 +20,7 @@ interface BudgetDetailHeaderProps {
   budget: PlainBudget;
   usage: BudgetUsage;
   periodLabel: string;
-  periodRange: { startDate: number; endDate: number };
+  period: BudgetPeriodPresentation;
   isCurrentPeriod: boolean;
   previousComparisonSpent: number | null;
   previousPeriodRange?: { startDate: number; endDate: number };
@@ -34,7 +33,7 @@ export function BudgetDetailHeader({
   budget,
   usage,
   periodLabel,
-  periodRange,
+  period,
   isCurrentPeriod,
   previousComparisonSpent,
   previousPeriodRange,
@@ -45,17 +44,10 @@ export function BudgetDetailHeader({
   const { fonts } = useTheme();
   const isPrivate = useEffectivePrivacyMode();
   const strings = AppConfig.strings.budgetDetailRedesign;
-  const period = presentBudgetPeriod(periodRange, usage, getNow());
   const usageVm = presentBudgetUsage(usage, period.elapsedShare);
   const statusText = usage.hasUnvaluedEntries
     ? strings.status.incomplete
-    : usageVm.status === 'over'
-      ? strings.status.over
-      : usageVm.status === 'nearLimit'
-        ? strings.status.nearLimit
-        : usageVm.status === 'aheadOfPace'
-          ? strings.status.aheadOfPace
-          : strings.status.onPace;
+    : strings.status[usageVm.status];
   const overByPercent = isPrivate
     ? AppConfig.privacyMask
     : Math.round((Math.abs(usage.remaining) / Math.max(usage.budgetAmount, 1)) * 100);

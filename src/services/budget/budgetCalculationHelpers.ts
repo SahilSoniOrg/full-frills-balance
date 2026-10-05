@@ -1,4 +1,4 @@
-import { summarizeBudgetUnvaluedEntries } from './budgetUnvaluedEntries';
+import { budgetUnvaluedJournalRows } from './budgetUnvaluedEntries';
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { accountQueryRepository } from '@/src/data/repositories/account';
@@ -175,22 +175,7 @@ export async function calculateBudgetSpendFromTransactions(
     ...(unvaluedEntries.some(Boolean)
       ? {
           hasUnvaluedEntries: true,
-          ...summarizeBudgetUnvaluedEntries(
-            transactions.flatMap((tx, index) =>
-              unvaluedEntries[index]
-                ? [
-                    {
-                      journalId: tx.journalId,
-                      currencyCode:
-                        tx.currencyCode ||
-                        accountById.get(tx.accountId)?.currencyCode ||
-                        journalById.get(tx.journalId)?.currencyCode ||
-                        '',
-                    },
-                  ]
-                : [],
-            ),
-          ),
+          ...budgetUnvaluedJournalRows(transactions, unvaluedEntries, accountById, journalById),
         }
       : {}),
   };

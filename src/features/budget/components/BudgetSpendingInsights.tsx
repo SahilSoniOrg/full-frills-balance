@@ -1,12 +1,12 @@
 import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
 import { AppButton, AppText } from '@/src/components/core';
+import { BudgetInsightsError } from './BudgetInsightsError';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, Shape, Spacing } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { resolveLeafExpenseAccountIds } from '@/src/services/budget/budgetCalculationHelpers';
 import type { BudgetCumulativeChart } from '@/src/services/budget/budgetCumulativeChartService';
-import type { AccountId, WorkplaceId } from '@/src/types/ids';
+import type { AccountId } from '@/src/types/ids';
 import type { PlainAccount } from '@/src/types/plainDtos';
 import { StyleSheet, View } from 'react-native';
 
@@ -17,10 +17,9 @@ interface Props {
   onRetry?: () => void;
   currencyCode: string;
   expenseAccounts: PlainAccount[];
-  scopeAccounts: PlainAccount[];
+  resolvedLeafCategoryCount: number;
   onFilterCategory: (id: AccountId | null) => void;
   activityCategory: PlainAccount | null;
-  workplaceId: WorkplaceId;
 }
 
 export function BudgetSpendingInsights({
@@ -30,22 +29,16 @@ export function BudgetSpendingInsights({
   onRetry,
   currencyCode,
   expenseAccounts,
-  scopeAccounts,
+  resolvedLeafCategoryCount,
   onFilterCategory,
   activityCategory,
-  workplaceId,
 }: Props) {
   const { theme } = useTheme();
   const strings = AppConfig.strings.budgetDetailRedesign;
   const categories = chartData?.categories ?? [];
-  const resolvedCategoryCount = resolveLeafExpenseAccountIds(
-    scopeAccounts,
-    expenseAccounts,
-    workplaceId,
-  ).size;
   const totalCategorySpend = categories.reduce((total, category) => total + category.spent, 0);
 
-  if (resolvedCategoryCount === 1) return null;
+  if (resolvedLeafCategoryCount === 1) return null;
 
   return (
     <Column gap="sm">
@@ -60,18 +53,7 @@ export function BudgetSpendingInsights({
           {AppConfig.strings.common.loading}
         </AppText>
       ) : error ? (
-        <View style={styles.errorState}>
-          <AppText variant="caption" color="warning">
-            {error}
-          </AppText>
-          <AppButton
-            variant="secondary"
-            onPress={onRetry}
-            accessibilityLabel={strings.retryBreakdown}
-          >
-            {strings.retryBreakdown}
-          </AppButton>
-        </View>
+        <BudgetInsightsError message={error} onRetry={onRetry} />
       ) : categories.length === 0 ? (
         <AppText variant="caption" color="secondary">
           {strings.noCategorySpending}
@@ -160,7 +142,6 @@ export function BudgetSpendingInsights({
 }
 
 const styles = StyleSheet.create({
-  errorState: { gap: Spacing.sm, alignItems: 'flex-start' },
   categoryButton: {
     alignItems: 'stretch',
     minHeight: 56,

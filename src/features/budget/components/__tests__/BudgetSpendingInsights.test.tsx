@@ -1,7 +1,7 @@
 import { BudgetSpendingInsights } from '../BudgetSpendingInsights';
 import { cleanup, fireEvent, render } from '@/src/utils/test-utils';
 import { AccountType } from '@/src/types/enums';
-import { asWorkplaceId, type AccountId } from '@/src/types/ids';
+import type { AccountId } from '@/src/types/ids';
 import { preferences } from '@/src/services/preferences';
 import { AppConfig } from '@/src/constants';
 import { View } from 'react-native';
@@ -45,10 +45,9 @@ const props = {
   isLoading: false,
   currencyCode: 'USD',
   expenseAccounts: [dining, groceries],
-  scopeAccounts: [dining, groceries],
+  resolvedLeafCategoryCount: 2,
   onFilterCategory: jest.fn(),
   activityCategory: null,
-  workplaceId: asWorkplaceId('workplace'),
 };
 
 describe('budget spending insights', () => {
@@ -96,7 +95,11 @@ describe('budget spending insights', () => {
 
   it('hides the breakdown only when one resolved expense category exists', () => {
     const screen = render(
-      <BudgetSpendingInsights {...props} scopeAccounts={[dining]} expenseAccounts={[dining]} />,
+      <BudgetSpendingInsights
+        {...props}
+        resolvedLeafCategoryCount={1}
+        expenseAccounts={[dining]}
+      />,
     );
     expect(screen.queryByText('Where it went')).toBeNull();
   });

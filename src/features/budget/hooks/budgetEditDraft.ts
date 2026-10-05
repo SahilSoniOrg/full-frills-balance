@@ -1,6 +1,52 @@
+import { budgetFormStrings } from '@/src/constants/copy/domains/budgetFormStrings';
 import { parseBudgetAssetAccountIds } from '@/src/services/budget/budgetAssetAccountIds';
+import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
+import { roundToPrecision } from '@/src/utils/money';
 import { AccountId, BudgetId } from '@/src/types/ids';
 import { PlainBudget, PlainBudgetScope } from '@/src/types/plainDtos';
+
+const DEFAULT_BUDGET_SCHEDULE = {
+  intervalType: 'MONTHLY',
+  intervalN: 1,
+  recurrenceDay: 1,
+} as const;
+
+export type BudgetSpendingPeriod = {
+  label: string;
+  startDate: number;
+  endDate: number;
+  spent: number;
+};
+
+export function formatBudgetAmountLabel(intervalType: string, intervalN: number): string {
+  const unit =
+    intervalType === 'DAILY'
+      ? budgetFormStrings.intervalUnits.day
+      : intervalType === 'WEEKLY'
+        ? budgetFormStrings.intervalUnits.week
+        : intervalType === 'YEARLY'
+          ? budgetFormStrings.intervalUnits.year
+          : budgetFormStrings.intervalUnits.month;
+  return intervalN > 1
+    ? budgetFormStrings.limitEvery(intervalN, unit)
+    : budgetFormStrings.limitEach(unit);
+}
+
+export function calculateAverageSpend(
+  periods: BudgetSpendingPeriod[],
+  transactionCounts: number[],
+  currencyCode: string,
+  unvaluedPeriods: boolean[] = [],
+) {
+  if (unvaluedPeriods.slice(0, -1).some(Boolean)) return null;
+  const completed = periods.slice(0, -1).filter((_, index) => transactionCounts[index] > 0);
+  if (completed.length === 0) return null;
+  const precision = getCurrencyPrecision(currencyCode);
+  return roundToPrecision(
+    completed.reduce((sum, period) => sum + period.spent, 0) / completed.length,
+    precision,
+  );
+}
 
 export interface BudgetEditDraft {
   name: string;
@@ -26,9 +72,7 @@ export function createEmptyBudgetDraft(preview: {
     amount: preview.amount || '',
     currencyCode: preview.currencyCode,
     startMonth: new Date(),
-    intervalType: 'MONTHLY',
-    intervalN: 1,
-    recurrenceDay: 1,
+    ...DEFAULT_BUDGET_SCHEDULE,
     startDate: undefined,
     selectedAccountIds: [],
     assetAccountIds: [],
@@ -41,15 +85,17 @@ export function mapBudgetToEditDraft(
   fallbackCurrency: string,
 ): BudgetEditDraft {
   const [year, month] = (budget.startMonth ?? '').split('-');
-  const intervalType = budget.intervalType || 'MONTHLY';
+  const intervalType = budget.intervalType || DEFAULT_BUDGET_SCHEDULE.intervalType;
   return {
     name: budget.name,
     amount: budget.amount.toString(),
     currencyCode: budget.currencyCode || fallbackCurrency,
     startMonth: new Date(parseInt(year, 10), parseInt(month, 10) - 1, 1),
     intervalType,
-    intervalN: budget.intervalN || 1,
-    ...(intervalType !== 'DAILY' && { recurrenceDay: budget.recurrenceDay ?? 1 }),
+    intervalN: budget.intervalN || DEFAULT_BUDGET_SCHEDULE.intervalN,
+    ...(intervalType !== 'DAILY' && {
+      recurrenceDay: budget.recurrenceDay ?? DEFAULT_BUDGET_SCHEDULE.recurrenceDay,
+    }),
     ...(intervalType === 'YEARLY' && { recurrenceMonth: budget.recurrenceMonth || 1 }),
     startDate: budget.startDate,
     selectedAccountIds: scopes.map(s => s.accountId),

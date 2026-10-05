@@ -1,4 +1,5 @@
-import type { JournalId } from '@/src/types/ids';
+import type { AccountId, JournalId } from '@/src/types/ids';
+import type Journal from '@/src/data/models/Journal';
 
 export interface BudgetUnvaluedCurrencyCount {
   currencyCode: string;
@@ -21,4 +22,34 @@ export function summarizeBudgetUnvaluedEntries(
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([currencyCode, ids]) => ({ currencyCode, count: ids.size })),
   };
+}
+
+type BudgetUnvaluedTx = {
+  journalId: JournalId;
+  accountId: AccountId;
+  currencyCode?: string;
+};
+
+export function budgetUnvaluedJournalRows(
+  transactions: BudgetUnvaluedTx[],
+  unvaluedEntries: boolean[],
+  accountById: Map<AccountId, { currencyCode?: string }>,
+  journalById: Map<string, Journal>,
+) {
+  return summarizeBudgetUnvaluedEntries(
+    transactions.flatMap((tx, index) =>
+      unvaluedEntries[index]
+        ? [
+            {
+              journalId: tx.journalId,
+              currencyCode:
+                tx.currencyCode ||
+                accountById.get(tx.accountId)?.currencyCode ||
+                journalById.get(tx.journalId)?.currencyCode ||
+                '',
+            },
+          ]
+        : [],
+    ),
+  );
 }

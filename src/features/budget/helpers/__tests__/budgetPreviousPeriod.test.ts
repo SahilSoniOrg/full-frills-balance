@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import { buildBudgetCumulativeSeries } from '@/src/services/projections/buildBudgetCumulativeSeries';
-import { getBudgetPreviousComparisonSpent } from '../budgetPreviousPeriod';
+import { getBudgetPreviousComparisonSpent } from '../../components/budgetSpendingChartGeometry';
 
 const month = (date: string) => ({
   startDate: dayjs(date).startOf('month').valueOf(),

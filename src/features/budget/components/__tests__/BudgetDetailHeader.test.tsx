@@ -1,19 +1,22 @@
 import { BudgetDetailHeader } from '../BudgetDetailHeader';
+import { presentBudgetPeriod } from '../../helpers/budgetDetailPresentation';
 import { render, cleanup } from '@/src/utils/test-utils';
 import { BudgetId } from '@/src/types/ids';
 import { preferences } from '@/src/services/preferences';
 import { AppConfig } from '@/src/constants';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 
+const periodRange = {
+  startDate: new Date(2026, 9, 1).getTime(),
+  endDate: new Date(2026, 9, 31, 23, 59).getTime(),
+};
+const usage = { spent: 126.55, remaining: 374.2, budgetAmount: 500.75, usagePercent: 0.25 };
 const props = {
   budget: { id: 'food' as BudgetId, name: 'Food', amount: 500.75, currencyCode: 'USD' },
-  usage: { spent: 126.55, remaining: 374.2, budgetAmount: 500.75, usagePercent: 0.25 },
+  usage,
   periodLabel: 'October 2026',
   isCurrentPeriod: true,
-  periodRange: {
-    startDate: new Date(2026, 9, 1).getTime(),
-    endDate: new Date(2026, 9, 31, 23, 59).getTime(),
-  },
+  period: presentBudgetPeriod(periodRange, usage, new Date(2026, 9, 15).getTime()),
   previousComparisonSpent: null,
   prevMonth: jest.fn(),
   nextMonth: jest.fn(),

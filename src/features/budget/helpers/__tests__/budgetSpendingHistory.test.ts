@@ -1,4 +1,4 @@
-import { calculateAverageSpend, formatBudgetAmountLabel } from '../budgetSpendingHistory';
+import { calculateAverageSpend, formatBudgetAmountLabel } from '../../hooks/budgetEditDraft';
 
 describe('budgetSpendingHistory', () => {
   it('averages completed periods with transactions and ignores empty periods', () => {

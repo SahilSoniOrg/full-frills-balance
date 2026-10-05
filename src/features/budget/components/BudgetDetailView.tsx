@@ -12,14 +12,14 @@ import { BudgetSetupDisclosure } from './BudgetSetupDisclosure';
 import { BudgetSpendingChart } from './BudgetSpendingChart';
 import { BudgetSpendingInsights } from './BudgetSpendingInsights';
 import type { BudgetDetailViewModel } from '../hooks/useBudgetDetailViewModel';
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
+import { presentBudgetPeriod } from '../helpers/budgetDetailPresentation';
+import { getNow } from '@/src/utils/dateUtils';
 import { Column, Row } from '@/src/design-system';
 
 export function BudgetDetailView({
   chrome,
   ...vm
 }: BudgetDetailViewModel & { chrome: ScreenNavChrome }) {
-  const { workplaceId } = useWorkplace();
   const { budget, usage, periodRange } = vm;
   const strings = AppConfig.strings.budgetDetailRedesign;
 
@@ -51,6 +51,8 @@ export function BudgetDetailView({
     ? vm.chartData?.categories.find(category => category.accountId === vm.activityCategory?.id)
         ?.entryCount
     : vm.chartData?.entryCount;
+  const now = getNow();
+  const period = presentBudgetPeriod(periodRange, usage, now);
   const activityCountLabel =
     activityCount === undefined
       ? undefined
@@ -78,7 +80,7 @@ export function BudgetDetailView({
                 budget={budget}
                 usage={usage}
                 periodLabel={vm.periodLabel}
-                periodRange={periodRange}
+                period={period}
                 isCurrentPeriod={vm.isCurrentPeriod}
                 previousComparisonSpent={vm.previousComparisonSpent}
                 previousPeriodRange={vm.previousPeriodRange}
@@ -92,6 +94,8 @@ export function BudgetDetailView({
                 usage={usage}
                 currencyCode={budget.currencyCode}
                 periodRange={periodRange}
+                period={period}
+                now={now}
                 previousPeriodRange={vm.previousPeriodRange}
                 isCurrentPeriod={vm.isCurrentPeriod}
                 isLoading={vm.isLoadingInsights}
@@ -105,10 +109,9 @@ export function BudgetDetailView({
                 onRetry={vm.onRetryInsights}
                 currencyCode={budget.currencyCode}
                 expenseAccounts={vm.expenseAccounts}
-                scopeAccounts={vm.scopeAccounts}
+                resolvedLeafCategoryCount={vm.resolvedLeafCategoryCount}
                 onFilterCategory={vm.onFilterCategory}
                 activityCategory={vm.activityCategory}
-                workplaceId={workplaceId}
               />
               <BudgetSetupDisclosure
                 budget={budget}

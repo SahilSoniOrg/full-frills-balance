@@ -1,8 +1,9 @@
-import { AppButton, AppCard, AppText } from '@/src/components/core';
+import { AppCard, AppText } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppConfig, Shape, Spacing } from '@/src/constants';
-import { presentBudgetPeriod } from '../helpers/budgetDetailPresentation';
+import type { BudgetPeriodPresentation } from '../helpers/budgetDetailPresentation';
+import { BudgetInsightsError } from './BudgetInsightsError';
 import { resolveBudgetStatus } from '../helpers/budgetCardPresentation';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { buildBudgetSpendingChartGeometry } from './budgetSpendingChartGeometry';
@@ -10,7 +11,6 @@ import type { BudgetCumulativeChart } from '@/src/services/budget/budgetCumulati
 import type { BudgetUsage } from '@/src/services/budget/types';
 import { useTheme } from '@/src/hooks/use-theme';
 import { resolveThemeColor } from '@/src/design-system/utils';
-import { getNow } from '@/src/utils/dateUtils';
 import dayjs from 'dayjs';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -22,6 +22,8 @@ interface Props {
   usage: BudgetUsage;
   currencyCode: string;
   periodRange: { startDate: number; endDate: number };
+  period: BudgetPeriodPresentation;
+  now: number;
   previousPeriodRange?: { startDate: number; endDate: number };
   isCurrentPeriod: boolean;
   isLoading: boolean;
@@ -40,6 +42,8 @@ export function BudgetSpendingChart({
   usage,
   currencyCode,
   periodRange,
+  period,
+  now,
   previousPeriodRange,
   isCurrentPeriod,
   isLoading,
@@ -51,8 +55,6 @@ export function BudgetSpendingChart({
   const formatMoney = useMoneyFormat();
   const [width, setWidth] = React.useState(0);
   const strings = AppConfig.strings.budgetDetailRedesign;
-  const now = getNow();
-  const period = presentBudgetPeriod(periodRange, usage, now);
   const periodDays = period.periodDays;
   const geometry = chartData
     ? buildBudgetSpendingChartGeometry({
@@ -156,18 +158,7 @@ export function BudgetSpendingChart({
             {AppConfig.strings.common.loading}
           </AppText>
         ) : error ? (
-          <View style={styles.errorState}>
-            <AppText variant="caption" color="warning">
-              {error}
-            </AppText>
-            <AppButton
-              variant="secondary"
-              onPress={onRetry}
-              accessibilityLabel={strings.retryBreakdown}
-            >
-              {strings.retryBreakdown}
-            </AppButton>
-          </View>
+          <BudgetInsightsError message={error} onRetry={onRetry} />
         ) : chartData && paths ? (
           <View accessibilityRole="image" accessibilityLabel={chartAccessibilityLabel}>
             <Svg width={width} height={CHART_HEIGHT}>
@@ -292,7 +283,6 @@ const styles = StyleSheet.create({
   },
   headingTitle: { flexShrink: 1 },
   paceValue: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', flexShrink: 1 },
-  errorState: { gap: Spacing.sm, alignItems: 'flex-start' },
   chartWrap: { marginTop: Spacing.sm, width: '100%', minHeight: CHART_HEIGHT },
   axisLabels: {
     flexDirection: 'row',

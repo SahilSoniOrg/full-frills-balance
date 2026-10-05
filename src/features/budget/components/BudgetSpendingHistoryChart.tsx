@@ -3,7 +3,7 @@ import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { Spacing } from '@/src/constants/design-tokens';
 import { budgetFormStrings as copy } from '@/src/constants/copy/domains/budgetFormStrings';
 import { useTheme } from '@/src/hooks/use-theme';
-import type { BudgetSpendingPeriod } from '../helpers/budgetSpendingHistory';
+import type { BudgetSpendingPeriod } from '../hooks/budgetEditDraft';
 import { View } from 'react-native';
 
 const CHART_HEIGHT = 72;

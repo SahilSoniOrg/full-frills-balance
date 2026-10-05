@@ -7,7 +7,9 @@ import { PlainBudget, PlainBudgetScope } from '@/src/types/plainDtos';
 
 import {
   BudgetEditDraft,
+  calculateAverageSpend,
   createEmptyBudgetDraft,
+  formatBudgetAmountLabel,
   mapBudgetToEditDraft,
   shouldSeedBudgetDraft,
 } from '@/src/features/budget/hooks/budgetEditDraft';
@@ -22,10 +24,7 @@ import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { roundToPrecision } from '@/src/utils/money';
 import { AppNavigation } from '@/src/utils/navigation';
 import { isValidRepeatCount } from '@/src/utils/recurrenceLabels';
-import {
-  calculateAverageSpend,
-  formatBudgetAmountLabel,
-} from '@/src/features/budget/helpers/budgetSpendingHistory';
+import type { BudgetSpendingHistoryEntry } from '@/src/services/budget/budgetReadService';
 import dayjs from 'dayjs';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { of } from 'rxjs';
@@ -149,23 +148,17 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
       draft.currencyCode,
     ],
   );
-  const { data: historyWithCounts = [] } = useObservable(
+  const { data: spendingHistory = [] } = useObservable<BudgetSpendingHistoryEntry[]>(
     () => spendingHistory$,
     [spendingHistory$],
     [],
     { keepPreviousData: false },
   );
-  const spendingHistory = historyWithCounts.map(({ label, startDate, endDate, spent }) => ({
-    label,
-    startDate,
-    endDate,
-    spent,
-  }));
   const averageSpend = calculateAverageSpend(
     spendingHistory,
-    historyWithCounts.map(period => period.transactionCount),
+    spendingHistory.map(period => period.transactionCount),
     draft.currencyCode,
-    historyWithCounts.map(period => period.hasUnvaluedEntries),
+    spendingHistory.map(period => period.hasUnvaluedEntries),
   );
   const useAverage = useCallback(() => {
     if (averageSpend == null) return;

@@ -1,11 +1,14 @@
-import { valueBudgetLinesForCurrency } from './budgetCalculationHelpers';
-import { summarizeBudgetUnvaluedEntries } from './budgetUnvaluedEntries';
+import {
+  type BudgetLineValuationAccount,
+  type BudgetLineValuationTx,
+  valueBudgetLinesForCurrency,
+} from './budgetCalculationHelpers';
+import { budgetUnvaluedJournalRows } from './budgetUnvaluedEntries';
 import { buildBudgetCumulativeSeries } from '@/src/services/projections/buildBudgetCumulativeSeries';
 import type {
   BudgetCumulativeSeries,
   BudgetCumulativeTx,
 } from '@/src/services/projections/buildBudgetCumulativeSeries';
-import type { TransactionType } from '@/src/types/enums';
 import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { safeAdd, safeSubtract } from '@/src/utils/money';
@@ -27,27 +30,10 @@ export interface BudgetCumulativeChart extends BudgetCumulativeSeries {
   refunds: number;
 }
 
-/** Chart account fields — models or plain DTOs. */
-export type BudgetChartAccountInput = {
-  id: AccountId;
-  currencyCode?: string;
-};
-
-/** Chart transaction fields — models or plain DTOs. */
-export type BudgetChartTransactionInput = {
-  id: string;
-  journalId: JournalId;
-  accountId: AccountId;
-  amount: number;
-  currencyCode?: string;
-  exchangeRate?: number;
-  transactionType: TransactionType;
-};
-
 export interface BuildBudgetCumulativeChartInput {
   workplaceId: WorkplaceId;
-  transactions: BudgetChartTransactionInput[];
-  accounts: BudgetChartAccountInput[];
+  transactions: BudgetLineValuationTx[];
+  accounts: BudgetLineValuationAccount[];
   targetCurrency: string;
   periodStart: number;
   periodEnd: number;
@@ -62,7 +48,7 @@ export async function buildBudgetCumulativeChart({
   periodStart,
   periodEnd,
 }: BuildBudgetCumulativeChartInput): Promise<BudgetCumulativeChart> {
-  const accountById = new Map<AccountId, BudgetChartAccountInput>(
+  const accountById = new Map<AccountId, BudgetLineValuationAccount>(
     accounts.map(account => [account.id, account] as const),
   );
   const { lines, unvaluedEntries, journalById } = await valueBudgetLinesForCurrency(
@@ -121,22 +107,7 @@ export async function buildBudgetCumulativeChart({
   return {
     ...series,
     hasUnvaluedEntries: unvaluedEntries.some(Boolean),
-    ...summarizeBudgetUnvaluedEntries(
-      transactions.flatMap((tx, index) =>
-        unvaluedEntries[index]
-          ? [
-              {
-                journalId: tx.journalId,
-                currencyCode:
-                  tx.currencyCode ||
-                  accountById.get(tx.accountId)?.currencyCode ||
-                  journalById.get(tx.journalId)?.currencyCode ||
-                  '',
-              },
-            ]
-          : [],
-      ),
-    ),
+    ...budgetUnvaluedJournalRows(transactions, unvaluedEntries, accountById, journalById),
     categories: [...categories.values()].sort((a, b) => b.spent - a.spent),
     entryCount: new Set(transactions.map(transaction => transaction.journalId)).size,
     refunds,

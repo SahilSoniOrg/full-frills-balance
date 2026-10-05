@@ -1,11 +1,15 @@
 import { AppConfig } from '@/src/constants';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
-import { getBudgetPreviousComparisonSpent } from '../helpers/budgetPreviousPeriod';
+import { getBudgetPreviousComparisonSpent } from '../components/budgetSpendingChartGeometry';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { resolveLeafExpenseAccountIds } from '@/src/services/budget/budgetCalculationHelpers';
 import { parseBudgetAssetAccountIds } from '@/src/services/budget/budgetAssetAccountIds';
-import { buildBudgetCumulativeChart } from '@/src/services/budget/budgetCumulativeChartService';
+import {
+  buildBudgetCumulativeChart,
+  type BudgetCumulativeChart,
+} from '@/src/services/budget/budgetCumulativeChartService';
+import type { DateRange } from '@/src/services/budget/BudgetPeriodUtils';
 import { useJournalEntryList, useJournalsBulkOperations } from '@/src/features/journal';
 import { useObservable, useObservableWithEnrichment } from '@/src/hooks/useObservable';
 import { useCalendarDay } from '@/src/hooks/useCalendarDay';
@@ -26,7 +30,9 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { combineLatest, map, of, switchMap } from 'rxjs';
-/** Journal context must stay reactive independently of Activity's filter and pagination. */
+import type { PlainAccount } from '@/src/types/plainDtos';
+import type { BudgetLineValuationTx } from '@/src/services/budget/budgetCalculationHelpers';
+
 function observeChartTransactions(
   workplaceId: WorkplaceId,
   accountIds: AccountId[],
@@ -48,6 +54,38 @@ function observeChartTransactions(
           .pipe(map(() => transactions)),
       ),
     );
+}
+
+function enrichBudgetPeriodChart(
+  workplaceId: WorkplaceId,
+  transactions: BudgetLineValuationTx[],
+  accounts: PlainAccount[],
+  budget: PlainBudget,
+  periodRange: DateRange,
+) {
+  return buildBudgetCumulativeChart({
+    workplaceId,
+    transactions,
+    accounts,
+    targetCurrency: budget.currencyCode,
+    periodStart: periodRange.startDate,
+    periodEnd: periodRange.endDate,
+  });
+}
+
+function shouldHidePreviousChart(
+  error: unknown,
+  isLoading: boolean,
+  data: BudgetCumulativeChart | null,
+  expectedRange: DateRange | undefined,
+) {
+  return (
+    !!error ||
+    isLoading ||
+    !!data?.hasUnvaluedEntries ||
+    data?.domainX[0] !== expectedRange?.startDate ||
+    data?.domainX[1] !== expectedRange?.endDate
+  );
 }
 
 export function useBudgetDetailViewModel() {
@@ -169,14 +207,13 @@ export function useBudgetDetailViewModel() {
     () => chartTransactions$,
     transactions => {
       if (!budget || !budgetDateRange) return Promise.resolve(null);
-      return buildBudgetCumulativeChart({
+      return enrichBudgetPeriodChart(
         workplaceId,
         transactions,
-        accounts: [...scopeAccounts, ...expenseAccounts],
-        targetCurrency: budget.currencyCode,
-        periodStart: budgetDateRange.startDate,
-        periodEnd: budgetDateRange.endDate,
-      });
+        [...scopeAccounts, ...expenseAccounts],
+        budget,
+        budgetDateRange,
+      );
     },
     [
       chartTransactions$,
@@ -201,14 +238,13 @@ export function useBudgetDetailViewModel() {
     () => previousChartTransactions$,
     transactions => {
       if (!budget || !previousPeriodRange) return Promise.resolve(null);
-      return buildBudgetCumulativeChart({
+      return enrichBudgetPeriodChart(
         workplaceId,
         transactions,
-        accounts: [...scopeAccounts, ...expenseAccounts],
-        targetCurrency: budget.currencyCode,
-        periodStart: previousPeriodRange.startDate,
-        periodEnd: previousPeriodRange.endDate,
-      });
+        [...scopeAccounts, ...expenseAccounts],
+        budget,
+        previousPeriodRange,
+      );
     },
     [
       previousChartTransactions$,
@@ -222,14 +258,14 @@ export function useBudgetDetailViewModel() {
     null,
     { keepPreviousData: false },
   );
-  const previousChartData =
-    previousChartError ||
-    isLoadingPreviousChart ||
-    loadedPreviousChartData?.hasUnvaluedEntries ||
-    loadedPreviousChartData?.domainX[0] !== previousPeriodRange?.startDate ||
-    loadedPreviousChartData?.domainX[1] !== previousPeriodRange?.endDate
-      ? null
-      : loadedPreviousChartData;
+  const previousChartData = shouldHidePreviousChart(
+    previousChartError,
+    isLoadingPreviousChart,
+    loadedPreviousChartData,
+    previousPeriodRange,
+  )
+    ? null
+    : loadedPreviousChartData;
   const previousComparisonSpent = getBudgetPreviousComparisonSpent(
     previousChartData,
     budgetDateRange,
@@ -250,10 +286,8 @@ export function useBudgetDetailViewModel() {
   const nextMonth = useCallback(() => {
     if (!budget) return;
     const { startDate: nowStart } = getBudgetCurrentPeriod(budget);
-    const { startDate: refStart } = getBudgetCurrentPeriod(budget, refTimestamp);
+    const { startDate: refStart, endDate } = getBudgetCurrentPeriod(budget, refTimestamp);
     if (nowStart === refStart) return;
-
-    const { endDate } = getBudgetCurrentPeriod(budget, refTimestamp);
     setRefTimestamp(endDate + 1);
   }, [budget, refTimestamp]);
 
@@ -348,6 +382,7 @@ export function useBudgetDetailViewModel() {
     onRetryInsights,
     previousPeriodRange,
     expenseAccounts,
+    resolvedLeafCategoryCount: chartAccountIds.length,
     activityCategory,
     onFilterCategory,
     onAddExpense,

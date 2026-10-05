@@ -2,7 +2,7 @@ import { BudgetSpendingHistoryChart } from '../BudgetSpendingHistoryChart';
 import { cleanup, render } from '@/src/utils/test-utils';
 import { preferences } from '@/src/services/preferences';
 import { AppConfig } from '@/src/constants';
-import type { BudgetSpendingPeriod } from '../../helpers/budgetSpendingHistory';
+import type { BudgetSpendingPeriod } from '../../hooks/budgetEditDraft';
 
 const periods: BudgetSpendingPeriod[] = [
   { label: 'May', startDate: 1, endDate: 2, spent: 40 },

@@ -1,9 +1,14 @@
 import { BudgetSpendingChart } from '../BudgetSpendingChart';
+import { presentBudgetPeriod } from '../../helpers/budgetDetailPresentation';
 import { cleanup, fireEvent, render } from '@/src/utils/test-utils';
 import type { BudgetCumulativeChart } from '@/src/services/budget/budgetCumulativeChartService';
 
 const startDate = new Date(2026, 9, 1).getTime();
 const endDate = new Date(2026, 9, 31, 23, 59, 59, 999).getTime();
+const periodRange = { startDate, endDate };
+const chartUsage = { spent: 25, remaining: 75, budgetAmount: 100, usagePercent: 0.25 };
+const chartNow = new Date(2026, 9, 15).getTime();
+const chartPeriod = presentBudgetPeriod(periodRange, chartUsage, chartNow);
 const chartData: BudgetCumulativeChart = {
   data: [
     { x: startDate, y: 0 },
@@ -26,9 +31,11 @@ describe('BudgetSpendingChart', () => {
       <BudgetSpendingChart
         chartData={chartData}
         previousChartData={null}
-        usage={{ spent: 25, remaining: 75, budgetAmount: 100, usagePercent: 0.25 }}
+        usage={chartUsage}
         currencyCode="USD"
-        periodRange={{ startDate, endDate }}
+        periodRange={periodRange}
+        period={chartPeriod}
+        now={chartNow}
         isCurrentPeriod
         isLoading={false}
         onRetry={jest.fn()}
@@ -54,7 +61,13 @@ describe('BudgetSpendingChart', () => {
         previousChartData={null}
         usage={{ spent: -25, remaining: 125, budgetAmount: 100, usagePercent: -0.25 }}
         currencyCode="USD"
-        periodRange={{ startDate, endDate }}
+        periodRange={periodRange}
+        period={presentBudgetPeriod(
+          periodRange,
+          { spent: -25, remaining: 125, budgetAmount: 100, usagePercent: -0.25 },
+          chartNow,
+        )}
+        now={chartNow}
         isCurrentPeriod
         isLoading={false}
         onRetry={jest.fn()}
@@ -85,9 +98,11 @@ describe('BudgetSpendingChart', () => {
       <BudgetSpendingChart
         chartData={chartData}
         previousChartData={null}
-        usage={{ spent: 25, remaining: 75, budgetAmount: 100, usagePercent: 0.25 }}
+        usage={chartUsage}
         currencyCode="USD"
-        periodRange={{ startDate, endDate }}
+        periodRange={periodRange}
+        period={chartPeriod}
+        now={chartNow}
         isCurrentPeriod
         isLoading={false}
         onRetry={jest.fn()}

@@ -1,7 +1,6 @@
 import { BudgetUsage } from '@/src/services/budget/types';
 import dayjs from 'dayjs';
 
-/** Calendar-day allowance, including today. Never infer capacity from incomplete FX. */
 export function presentBudgetPeriod(
   range: { startDate: number; endDate: number },
   usage: BudgetUsage,
@@ -31,3 +30,5 @@ export function presentBudgetPeriod(
         : undefined,
   };
 }
+
+export type BudgetPeriodPresentation = ReturnType<typeof presentBudgetPeriod>;
