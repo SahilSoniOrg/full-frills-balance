@@ -1,5 +1,5 @@
 import { PlannedPaymentCard } from '@/src/features/planned-payments/components/PlannedPaymentCard';
-import { AppConfig } from '@/src/constants';
+import { AppConfig, Shape } from '@/src/constants';
 import { preferences } from '@/src/services/preferences';
 import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import type { AccountId, PlannedPaymentId } from '@/src/types/ids';
@@ -88,7 +88,7 @@ describe('PlannedPaymentCard rendered row', () => {
     const overdue = renderCard(makeOccurrence({ dueDay: 1 }));
     expect(overdue.getByText('Thu')).toBeTruthy();
     expect(overdue.getByText('1')).toBeTruthy();
-    expect(overdue.getByText('3 days late')).toBeTruthy();
+    expect(overdue.getByText('3d late')).toBeTruthy();
     const overdueDateBlock = overdue
       .UNSAFE_getAllByType(View)
       .find(view => StyleSheet.flatten(view.props.style)?.width === 44);
@@ -130,7 +130,7 @@ describe('PlannedPaymentCard rendered row', () => {
     expect(StyleSheet.flatten(record.props.style)?.minHeight).toBeGreaterThanOrEqual(44);
     const pill = record
       .findAllByType(View)
-      .find(view => StyleSheet.flatten(view.props.style)?.minHeight === 30);
+      .find(view => StyleSheet.flatten(view.props.style)?.borderRadius === Shape.radius.full);
     expect(pill).toBeTruthy();
   });
 
@@ -184,7 +184,7 @@ describe('PlannedPaymentCard rendered row', () => {
   it('records a completed schedule’s outstanding overdue occurrence from its separate button', () => {
     const onPress = jest.fn();
     const onRecord = jest.fn();
-    const { getByText } = render(
+    const { getByText, getByRole } = render(
       <PlannedPaymentCard
         occurrence={makeOccurrence({
           dueDay: 1,
@@ -197,7 +197,7 @@ describe('PlannedPaymentCard rendered row', () => {
       />,
     );
     expect(getByText(/725/)).toBeTruthy();
-    fireEvent.press(getByText('Record'));
+    fireEvent.press(getByRole('button', { name: /^Record Rent/ }));
     expect(onRecord).toHaveBeenCalledTimes(1);
     expect(onPress).not.toHaveBeenCalled();
   });
@@ -227,7 +227,7 @@ describe('PlannedPaymentCard rendered row', () => {
         canRecord={false}
       />,
     );
-    expect(queryByText('3 days late')).toBeTruthy();
+    expect(queryByText('3d late')).toBeTruthy();
     expect(queryByText('Record')).toBeNull();
   });
 });

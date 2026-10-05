@@ -39,10 +39,13 @@ function PlannedPaymentCardComponent({
   const formatMoney = useMoneyFormat({ style: 'compact' });
   const strings = AppConfig.strings.plannedListRedesign;
   const item = occurrence.payment;
-  const { isOverdue, isDueSoon, daysLateLabel } = presentPlannedListOccurrenceTiming(
-    occurrence.date,
-    getNow(),
-  );
+  const now = getNow();
+  const { isOverdue, isDueSoon } = presentPlannedListOccurrenceTiming(occurrence.date, now);
+  const daysLate = isOverdue
+    ? Math.abs(dayjs(occurrence.date).startOf('day').diff(dayjs(now).startOf('day'), 'day'))
+    : 0;
+  const daysLateLabel = isOverdue ? strings.daysLateCompact(daysLate) : undefined;
+  const daysLateAccessibility = isOverdue ? strings.daysLate(daysLate) : undefined;
   const interval =
     item.intervalType === PlannedPaymentInterval.MONTHLY && item.intervalN === 1
       ? undefined
@@ -84,7 +87,7 @@ function PlannedPaymentCardComponent({
             strings.fromTo(fromLabel, toLabel),
             item.isAutoPost ? strings.autoPost : undefined,
             interval,
-            daysLateLabel,
+            daysLateAccessibility,
           ]
             .filter(Boolean)
             .join('. ')}
@@ -158,19 +161,38 @@ function PlannedPaymentCardComponent({
               </View>
             )}
             {!isOverdue && interval && (
-              <AppText variant="caption" color="secondary">
-                {interval}
-              </AppText>
+              <View style={styles.metaRow}>
+                <AppIcon name={Icon.Repeat} size={Size.iconXs} color="textSecondary" />
+                <AppText
+                  variant="caption"
+                  color="secondary"
+                  numberOfLines={1}
+                  style={styles.metaText}
+                >
+                  {interval}
+                </AppText>
+              </View>
             )}
             {isOverdue && (
               <View style={[styles.overdueMeta, largeText && styles.overdueMetaLarge]}>
-                <AppText variant="caption" weight="semibold" color="error">
-                  {daysLateLabel}
-                </AppText>
-                {interval && (
-                  <AppText variant="caption" color="secondary" numberOfLines={1}>
-                    {interval}
+                <View style={styles.metaRow}>
+                  <AppIcon name={Icon.Clock} size={Size.iconXs} color={theme.error} />
+                  <AppText variant="caption" weight="semibold" color="error">
+                    {daysLateLabel}
                   </AppText>
+                </View>
+                {interval && (
+                  <View style={styles.metaRow}>
+                    <AppIcon name={Icon.Repeat} size={Size.iconXs} color="textSecondary" />
+                    <AppText
+                      variant="caption"
+                      color="secondary"
+                      numberOfLines={1}
+                      style={styles.metaText}
+                    >
+                      {interval}
+                    </AppText>
+                  </View>
                 )}
               </View>
             )}
@@ -182,7 +204,11 @@ function PlannedPaymentCardComponent({
               onPress={onRecord}
               disabled={!canRecord || isRecording || isPlanBusy}
               accessibilityRole="button"
-              accessibilityLabel={strings.recordAccessibility(item.name, amountLabel)}
+              accessibilityLabel={
+                isRecording
+                  ? strings.recordBusy
+                  : strings.recordAccessibility(item.name, amountLabel)
+              }
               accessibilityState={{
                 disabled: !canRecord || isRecording || isPlanBusy,
                 busy: isRecording,
@@ -190,13 +216,11 @@ function PlannedPaymentCardComponent({
               style={largeText ? styles.recordButtonLarge : styles.recordButton}
             >
               <View style={[styles.recordPill, { backgroundColor: theme.primary }]}>
-                <AppText
-                  variant="caption"
-                  weight="semibold"
-                  style={{ color: theme.onPrimary ?? theme.text }}
-                >
-                  {isRecording ? strings.recordBusy : strings.record}
-                </AppText>
+                <AppIcon
+                  name={Icon.Check}
+                  size={Size.iconSm}
+                  color={theme.onPrimary ?? theme.text}
+                />
               </View>
             </Pressable>
           ) : null)}
@@ -244,6 +268,8 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   flowLarge: { flexWrap: 'wrap' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, minWidth: 0 },
+  metaText: { flexShrink: 1, minWidth: 0 },
   amount: { textAlign: 'right', flexShrink: 0 },
   amountLarge: { textAlign: 'left', alignSelf: 'flex-start' },
   overdueMeta: {
@@ -275,10 +301,9 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
   },
   recordPill: {
-    minHeight: 30,
-    minWidth: 64,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: Shape.radius.md,
+    minHeight: Size.touchTarget,
+    minWidth: Size.touchTarget,
+    borderRadius: Shape.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },

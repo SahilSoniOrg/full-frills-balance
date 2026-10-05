@@ -16,6 +16,7 @@ export const plannedListRedesignStrings = {
   groupLater: 'Later',
   groupPausedEnded: (count: number) => `Paused / Ended · ${count}`,
   daysLate: (days: number) => `${days} ${days === 1 ? 'day' : 'days'} late`,
+  daysLateCompact: (days: number) => `${days}d late`,
   record: 'Record',
   autoPost: 'Auto-post',
   dueDateAccessibility: (date: string) => `Due ${date}`,
