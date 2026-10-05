@@ -145,7 +145,7 @@ export function BudgetDetailView({
           }
           contentContainerStyle={styles.listContent}
         />
-        {vm.modals ? <JournalListModals {...vm.modals} /> : null}
+        <JournalListModals {...vm.modals} />
       </View>
     </ScreenWithChrome>
   );

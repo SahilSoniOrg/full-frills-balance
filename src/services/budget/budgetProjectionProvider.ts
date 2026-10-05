@@ -10,10 +10,6 @@ import {
   SimulationContext,
 } from '@/src/services/simulation/types';
 
-/**
- * Projects high-level semantic budget capacity across cycle periods.
- * Delayed discretization: Emits explicit cycles without premature discretization into daily flows.
- */
 export function projectBudgetCapacities(
   context: SimulationContext,
   budgets: SimulationBudget[],

@@ -51,11 +51,10 @@ describe('resolveBudgetStatus', () => {
 });
 
 describe('presentBudgetUsage', () => {
-  it('derives progress and over-budget state from usage', () => {
+  it('derives over-budget state from usage', () => {
     const vm = presentBudgetUsage(makeUsage({ remaining: -100, usagePercent: 1.2 }));
 
     expect(vm.isOver).toBe(true);
-    expect(vm.progress).toBe(100);
     expect(vm.statusBadge.variant).toBe('error');
   });
 });

@@ -34,7 +34,6 @@ const setupProps = {
     },
   ],
   fundingAccounts: [],
-  isLoadingScope: false,
   isLoadingFunding: false,
   onEdit: jest.fn(),
 };

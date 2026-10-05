@@ -133,9 +133,6 @@ export function resolveLeafExpenseAccountIds(
   return resolveLeafAccountIds(rootExpenseIds, workplaceExpenses);
 }
 
-/**
- * Calculate multi-currency spend across transactions for a target budget.
- */
 export async function calculateBudgetSpendFromTransactions(
   workplaceId: WorkplaceId,
   transactions: Transaction[],

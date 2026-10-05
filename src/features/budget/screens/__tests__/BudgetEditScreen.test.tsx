@@ -51,8 +51,6 @@ const viewModel = {
   amount: '',
   setAmount: jest.fn(),
   startMonth: new Date(2026, 9, 1),
-  intervalType: 'MONTHLY',
-  intervalN: 1,
   schedule: { intervalType: 'MONTHLY', intervalN: 1 },
   scheduleStartDate: new Date(2026, 9, 1).getTime(),
   setSchedule: jest.fn(),

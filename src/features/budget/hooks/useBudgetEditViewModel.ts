@@ -286,8 +286,6 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
     amount: draft.amount,
     setAmount,
     startMonth: draft.startMonth,
-    intervalType: draft.intervalType,
-    intervalN: draft.intervalN,
     schedule: {
       intervalType: draft.intervalType as ScheduleValue['intervalType'],
       intervalN: draft.intervalN,
@@ -296,9 +294,6 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
     },
     setSchedule,
     scheduleStartDate,
-    recurrenceDay: draft.recurrenceDay,
-    recurrenceMonth: draft.recurrenceMonth,
-    startDate: draft.startDate,
     selectedAccountIds: draft.selectedAccountIds,
     setSelectedAccountIds,
     selectedCategories,

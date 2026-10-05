@@ -6,14 +6,14 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { resolveLeafExpenseAccountIds } from '@/src/services/budget/budgetCalculationHelpers';
 import { parseBudgetAssetAccountIds } from '@/src/services/budget/budgetAssetAccountIds';
 import { buildBudgetCumulativeChart } from '@/src/services/budget/budgetCumulativeChartService';
-import {
-  useJournalEntryList,
-  useJournalsBulkOperations,
-} from '@/src/features/journal';
+import { useJournalEntryList, useJournalsBulkOperations } from '@/src/features/journal';
 import { useObservable, useObservableWithEnrichment } from '@/src/hooks/useObservable';
 import { useCalendarDay } from '@/src/hooks/useCalendarDay';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
-import { getBudgetCurrentPeriod, getBudgetPeriodLabel } from '@/src/services/budget/BudgetPeriodUtils';
+import {
+  getBudgetCurrentPeriod,
+  getBudgetPeriodLabel,
+} from '@/src/services/budget/BudgetPeriodUtils';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { AccountType } from '@/src/types/enums';
@@ -335,7 +335,6 @@ export function useBudgetDetailViewModel() {
     periodRange: budgetDateRange,
     scopeAccounts,
     fundingAccounts,
-    isLoadingScope: isLoadingScopes || isLoadingScopeAccounts,
     isLoadingFunding,
     nextMonth,
     prevMonth,

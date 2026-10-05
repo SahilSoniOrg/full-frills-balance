@@ -67,7 +67,6 @@ describe('budget list data', () => {
     );
     expect(summary).toMatchObject({
       currencyCode: 'USD',
-      budgetCount: 2,
       otherCurrencyCount: 1,
       excludedCadenceCount: 2,
       overCount: 1,

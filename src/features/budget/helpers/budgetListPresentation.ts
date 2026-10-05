@@ -51,7 +51,6 @@ export function summarizeBudgetList(items: BudgetItem[], currencyCode: string, n
   return {
     currencyCode,
     usage,
-    budgetCount: included.length,
     otherCurrencyCount: monthly.length - included.length,
     excludedCadenceCount: items.length - monthly.length,
     overCount: included.filter(item => item.usage.spent >= item.usage.budgetAmount).length,

@@ -56,11 +56,11 @@ describe('budget repeat count editing', () => {
 
   it('loads the saved count, preserves Sunday on save, and switches units to a valid day', async () => {
     const { result } = renderHook(() => useBudgetEditViewModel({ id: budget.id }));
-    expect(result.current.intervalN).toBe(3);
+    expect(result.current.schedule.intervalN).toBe(3);
     act(() => {
       result.current.setSchedule({ intervalType: 'WEEKLY', intervalN: 7, recurrenceDay: 0 });
     });
-    expect(result.current.recurrenceDay).toBe(0);
+    expect(result.current.schedule.recurrenceDay).toBe(0);
     await act(async () => {
       await result.current.save();
     });
@@ -70,14 +70,18 @@ describe('budget repeat count editing', () => {
       expect.objectContaining({ intervalN: 7, intervalType: 'WEEKLY', recurrenceDay: 0 }),
       [asAccountId('food-category')],
     );
-    act(() => result.current.setSchedule({ intervalType: 'MONTHLY', intervalN: 7, recurrenceDay: 4 }));
-    expect(result.current.recurrenceDay).toBe(4);
-    expect(result.current.intervalN).toBe(7);
+    act(() =>
+      result.current.setSchedule({ intervalType: 'MONTHLY', intervalN: 7, recurrenceDay: 4 }),
+    );
+    expect(result.current.schedule.recurrenceDay).toBe(4);
+    expect(result.current.schedule.intervalN).toBe(7);
   });
 
   it.each([0, -1, 1.5, Number.NaN, 10000])('blocks saving an invalid count: %s', async count => {
     const { result } = renderHook(() => useBudgetEditViewModel({ id: budget.id }));
-    act(() => result.current.setSchedule({ intervalType: 'MONTHLY', intervalN: count, recurrenceDay: 31 }));
+    act(() =>
+      result.current.setSchedule({ intervalType: 'MONTHLY', intervalN: count, recurrenceDay: 31 }),
+    );
     expect(result.current.isFormValid).toBe(false);
     await expect(result.current.save()).rejects.toThrow('Enter a whole number');
     expect(budgetWriteService.updateBudget).not.toHaveBeenCalled();
