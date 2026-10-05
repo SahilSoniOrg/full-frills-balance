@@ -9,15 +9,10 @@ export interface SelectionActionDefinition<TCount extends number = number> {
   isEnabled?: (selectedCount: TCount) => boolean;
 }
 
-export interface UseListSelectionInput<
-  TItem extends { id: TId },
-  TId extends string | number,
-  TModal = string | null,
-> {
+export interface UseListSelectionInput<TItem extends { id: TId }, TId extends string | number> {
   items: TItem[];
   selection: UseSelectionResult<TId>;
   onCloseModal?: () => void;
-  initialModal?: TModal;
 }
 
 /**
@@ -79,9 +74,8 @@ export function useListSelection<
   items,
   selection,
   onCloseModal,
-  initialModal,
-}: UseListSelectionInput<TItem, TId, TModal>): UseListSelectionResult<TItem, TId, TModal> {
-  const [activeModal, setActiveModal] = useState<TModal>(initialModal ?? (null as TModal));
+}: UseListSelectionInput<TItem, TId>): UseListSelectionResult<TItem, TId, TModal> {
+  const [activeModal, setActiveModal] = useState<TModal>(null as TModal);
   const { itemsById, selectedItems } = useSelectedItemMap(items, selection);
   const closeModal = useCallback(() => {
     setActiveModal(null as TModal);
