@@ -81,7 +81,7 @@ const JournalEntryCardComponent = ({
 }: JournalEntryCardProps) => {
   const { theme, themeMode } = useTheme();
   const { resolvedHourCycle } = useHourCyclePrefs();
-  const formatMoney = useMoneyFormat();
+  const formatMoney = useMoneyFormat({ style: 'trimmed' });
   const isPressable = onPress != null || onLongPress != null;
   const typeColor = theme[presentation.typeColor as keyof typeof theme] as string;
   const typeIconBackground = blendColors(typeColor, theme.surface, Opacity.soft);

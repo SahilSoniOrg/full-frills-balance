@@ -18,7 +18,7 @@ export function EntryCardLayout({
   amount,
   currencyCode,
   amountPrefix,
-  amountFormatStyle,
+  amountFormatStyle = 'trimmed',
   amountColor,
   amountCaption,
   badge,

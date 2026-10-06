@@ -417,8 +417,8 @@ describe('JournalAccountFlow via JournalEntryCard', () => {
     expect(getAllByTestId('transaction-account-leg')).toHaveLength(4);
     expect(queryByText('+2 more')).toBeNull();
     const label = getByRole('button').props.accessibilityLabel;
-    expect(label).toContain('1,000.00');
-    expect(getByText(/1,000\.00/)).toBeTruthy();
+    expect(label).toContain('$1,000');
+    expect(getByText('− $1,000')).toBeTruthy();
     expect(label).toContain('From Checking');
   });
 
@@ -427,14 +427,14 @@ describe('JournalAccountFlow via JournalEntryCard', () => {
     act(() => preferences.privacy.setIsPrivacyMode(true));
     expect(getAllByText('••••')).toHaveLength(1);
     const label = getByRole('button').props.accessibilityLabel;
-    expect(label).not.toContain('1,000.00');
-    expect(queryByText(/1,000\.00/)).toBeNull();
+    expect(label).not.toContain('1,000');
+    expect(queryByText(/1,000/)).toBeNull();
     expect(label).toContain('From Checking');
     expect(label).toContain('From Credit Card');
     expect(label).toContain('To Flights');
     expect(label).toContain('To Hotel');
     act(() => preferences.privacy.setIsPrivacyMode(false));
-    expect(getByRole('button').props.accessibilityLabel).toContain('1,000.00');
+    expect(getByRole('button').props.accessibilityLabel).toContain('$1,000');
   });
 
   it('keeps account names and the scoped main amount in a destination-scoped card', () => {
