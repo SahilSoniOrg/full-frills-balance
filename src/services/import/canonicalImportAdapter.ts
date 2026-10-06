@@ -7,29 +7,11 @@ import type {
 } from '@/src/types/importContracts';
 
 export function batchImportDataFromCanonical(canonical: CanonicalImport): BatchImportData {
-  if (canonical.version !== CANONICAL_IMPORT_VERSION_V1) {
-    throw new Error(`Unsupported canonical import version: ${canonical.version}`);
+  const { version, ...data } = canonical;
+  if (version !== CANONICAL_IMPORT_VERSION_V1) {
+    throw new Error(`Unsupported canonical import version: ${version}`);
   }
-
-  const v1 = canonical as CanonicalImportV1;
-  return {
-    sourceFormatVersion: v1.sourceFormatVersion,
-    importMetadata: v1.importMetadata,
-    accounts: v1.accounts,
-    journals: v1.journals,
-    transactions: v1.transactions,
-    budgets: v1.budgets,
-    budgetScopes: v1.budgetScopes,
-    auditLogs: v1.auditLogs,
-    currencies: v1.currencies,
-    exchangeRates: v1.exchangeRates,
-    accountMetadata: v1.accountMetadata,
-    plannedPayments: v1.plannedPayments,
-    journalMetadata: v1.journalMetadata,
-    transactionAutoPostRules: v1.transactionAutoPostRules,
-    transactionInboxRecords: v1.transactionInboxRecords,
-    balanceSnapshots: v1.balanceSnapshots,
-  };
+  return data;
 }
 
 export function canonicalImportFromBatchImportData(
@@ -40,31 +22,9 @@ export function canonicalImportFromBatchImportData(
   } = {},
 ): CanonicalImportV1 {
   return {
+    ...data,
     version: CANONICAL_IMPORT_VERSION_V1,
     sourceFormatVersion: options.sourceFormatVersion ?? data.sourceFormatVersion,
-    accounts: data.accounts,
-    journals: data.journals,
-    transactions: data.transactions,
-    budgets: data.budgets,
-    budgetScopes: data.budgetScopes,
-    auditLogs: data.auditLogs,
-    currencies: data.currencies,
-    exchangeRates: data.exchangeRates,
-    accountMetadata: data.accountMetadata,
-    plannedPayments: data.plannedPayments,
-    journalMetadata: data.journalMetadata,
-    transactionAutoPostRules: data.transactionAutoPostRules,
-    transactionInboxRecords: data.transactionInboxRecords,
-    balanceSnapshots: data.balanceSnapshots,
     importMetadata: options.importMetadata ?? data.importMetadata,
   };
-}
-
-export function resolveParsedImportBatchData(parsed: {
-  canonical?: CanonicalImport;
-}): BatchImportData {
-  if (parsed.canonical) {
-    return batchImportDataFromCanonical(parsed.canonical);
-  }
-  throw new Error('Parsed import result missing canonical data');
 }

@@ -1,6 +1,6 @@
 import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
 import { ImportFileContext } from '@/src/services/import/types';
-import { resolveParsedImportBatchData } from '@/src/services/import/canonicalImportAdapter';
+import { batchImportDataFromCanonical } from '@/src/services/import/canonicalImportAdapter';
 import { validateImportedData } from '@/src/services/import/validateImportedData';
 
 // Mock ID generator
@@ -13,7 +13,7 @@ describe('NativeImportPlugin', () => {
 
   async function parseImport(context: ImportFileContext) {
     const parsed = await nativePlugin.parse(context, { defaultCurrency: 'USD' });
-    lastBatch = resolveParsedImportBatchData(parsed);
+    lastBatch = batchImportDataFromCanonical(parsed.canonical!);
     validateImportedData(lastBatch);
     return parsed.stats;
   }

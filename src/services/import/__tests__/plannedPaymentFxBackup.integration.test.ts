@@ -5,7 +5,7 @@ import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPayment
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { fetchAndTransformTable } from '@/src/services/export/exportTableTransformer';
 import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
-import { resolveParsedImportBatchData } from '@/src/services/import/canonicalImportAdapter';
+import { batchImportDataFromCanonical } from '@/src/services/import/canonicalImportAdapter';
 import { validateImportedData } from '@/src/services/import/validateImportedData';
 import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
 import { WorkplaceId } from '@/src/types/ids';
@@ -71,7 +71,7 @@ it.each([undefined, 'automatic', 'fixed', 'manual'] as const)(
       },
       { defaultCurrency: 'USD' },
     );
-    const data = resolveParsedImportBatchData(parsed);
+    const data = batchImportDataFromCanonical(parsed.canonical!);
     validateImportedData(data);
     const imported = data.plannedPayments![0];
     expect(imported.fromAccountId).not.toBe(from.id);

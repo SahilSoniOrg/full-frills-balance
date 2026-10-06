@@ -5,7 +5,7 @@ import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { currencyInitService } from '@/src/services/currency-init-service';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { rebuildAllAccountBalancesAfterImport } from '@/src/services/import/importAccountBalanceRebuild';
-import { resolveParsedImportBatchData } from '@/src/services/import/canonicalImportAdapter';
+import { batchImportDataFromCanonical } from '@/src/services/import/canonicalImportAdapter';
 import { backfillHistoricalExchangeRates } from '@/src/services/import/historicalExchangeRateBackfill';
 import { forceRunCheck } from '@/src/services/integrity';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
@@ -174,7 +174,7 @@ export async function publishRestore(
     assertOperationMatch(existing, normalizedCorrections);
     report(onProgress, 'Restore already published; verifying Workplace...', 0.72);
   } else {
-    const sourceData = resolveParsedImportBatchData({ canonical: prepared.canonicalData });
+    const sourceData = batchImportDataFromCanonical(prepared.canonicalData);
     const postedJournalIds = new Set(
       sourceData.journals
         .filter(
@@ -241,7 +241,7 @@ export async function publishRestore(
     preferences.workplace?.replace(operationId, workplacePreferences);
   }
 
-  const data = resolveParsedImportBatchData({ canonical: prepared.canonicalData });
+  const data = batchImportDataFromCanonical(prepared.canonicalData);
   await runPostPublicationChecks(
     operationId,
     data,

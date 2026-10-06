@@ -1,7 +1,7 @@
 import { ivyPlugin } from '@/src/services/import/plugins/ivy-plugin';
 import { ImportFileContext } from '@/src/services/import/types';
 import { CANONICAL_IMPORT_VERSION_V1 } from '@/src/types/importContracts';
-import { resolveParsedImportBatchData } from '@/src/services/import/canonicalImportAdapter';
+import { batchImportDataFromCanonical } from '@/src/services/import/canonicalImportAdapter';
 import { validateImportedData } from '@/src/services/import/validateImportedData';
 import { Icon } from '@/src/types/domainIcons';
 
@@ -15,7 +15,7 @@ describe('IvyImportPlugin', () => {
 
   async function parseImport(context: ImportFileContext) {
     const parsed = await ivyPlugin.parse(context, { defaultCurrency: 'USD' });
-    lastBatch = resolveParsedImportBatchData(parsed);
+    lastBatch = batchImportDataFromCanonical(parsed.canonical!);
     validateImportedData(lastBatch);
     return parsed.stats;
   }

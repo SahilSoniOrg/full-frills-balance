@@ -1,6 +1,6 @@
 import { AppConfig } from '@/src/constants/app-config';
 import { ThemeIds, FontIds } from '@/src/constants/design-tokens';
-import { resolveParsedImportBatchData } from '@/src/services/import/canonicalImportAdapter';
+import { batchImportDataFromCanonical } from '@/src/services/import/canonicalImportAdapter';
 import { validateImportedData } from '@/src/services/import/validateImportedData';
 import type {
   ImportFileContext,
@@ -122,7 +122,7 @@ export async function prepareRestore(
 
   if (!parsed.canonical) throw new Error('Restore preparation failed: canonical data is required');
   // Resolve and validate the exact graph that publishRestore will persist.
-  validateImportedData(resolveParsedImportBatchData(parsed));
+  validateImportedData(batchImportDataFromCanonical(parsed.canonical));
   options.onProgress?.('Restore source validated.', 1);
 
   return {
