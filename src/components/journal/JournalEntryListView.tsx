@@ -172,6 +172,7 @@ export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProp
         getItemType={(item: JournalListItem) => item.type}
         contentContainerStyle={contentContainerStyle}
         ListHeaderComponent={ListHeaderComponent}
+        ListHeaderComponentStyle={styles.header}
         ListEmptyComponent={listEmpty}
         ListFooterComponent={listFooter}
         onEndReached={onEndReached}
@@ -198,6 +199,12 @@ export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProp
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    // Header tooltips can extend over rows; raise the native header wrapper,
+    // since a descendant's zIndex cannot escape its parent's stacking order.
+    zIndex: 1,
+    overflow: 'visible',
   },
   dismissFooter: {
     height: Spacing.lg,
