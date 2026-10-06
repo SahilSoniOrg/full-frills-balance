@@ -43,19 +43,6 @@ type FeedRow =
   | { kind: 'occurrence'; occurrence: Extract<PlannedPaymentListRow, { kind: 'occurrence' }> }
   | { kind: 'schedule'; payment: PlannedPaymentObligation };
 
-function groupHeaderIcon(key: PlannedPaymentListGroup['key']) {
-  switch (key) {
-    case 'overdue':
-      return Icon.Alert;
-    case 'next7Days':
-      return Icon.Calendar;
-    case 'pausedEnded':
-      return Icon.Pause;
-    default:
-      return Icon.Clock;
-  }
-}
-
 function groupTitle(group: PlannedPaymentListGroup, monthStart: number, nextMonthStart: number) {
   const strings = AppConfig.strings.plannedListRedesign;
   const month = dayjs(monthStart).format('MMMM');
@@ -191,11 +178,6 @@ export function PlannedPaymentListView({
                 surfaceStyle={styles.sectionHeading}
               >
                 <View style={styles.sectionTitle}>
-                  <AppIcon
-                    name={groupHeaderIcon(group.key)}
-                    size={Size.iconXs}
-                    color="textSecondary"
-                  />
                   <AppText variant="bodySmall" weight="medium" color="secondary">
                     {groupTitle(group, listData.monthStart, listData.nextMonthStart)}
                   </AppText>
@@ -211,11 +193,9 @@ export function PlannedPaymentListView({
           return (
             <View style={styles.sectionHeading}>
               <View style={styles.sectionTitle}>
-                <AppIcon
-                  name={groupHeaderIcon(group.key)}
-                  size={Size.iconXs}
-                  color="textSecondary"
-                />
+                {group.key === 'overdue' && (
+                  <AppIcon name={Icon.Alert} size={Size.iconXs} color="textSecondary" />
+                )}
                 <AppText variant="bodySmall" weight="medium" color="secondary">
                   {groupTitle(group, listData.monthStart, listData.nextMonthStart)}
                 </AppText>
