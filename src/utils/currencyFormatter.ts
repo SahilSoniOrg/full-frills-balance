@@ -152,8 +152,11 @@ export const CurrencyFormatter = {
 
 export const FORMAT_AMOUNT_LOADING = '---';
 
-/** Display styles for money amounts. `sts` = Safe-to-Spend (<0.5 thresholds). */
-export type MoneyFormatStyle = 'default' | 'short' | 'compact' | 'sts';
+/**
+ * Display styles for money amounts. `sts` = Safe-to-Spend (<0.5 thresholds).
+ * `trimmed` drops the fraction only when the amount is whole at the currency's precision.
+ */
+export type MoneyFormatStyle = 'default' | 'short' | 'compact' | 'sts' | 'trimmed';
 
 export type FormatMoneyOptions = {
   style?: MoneyFormatStyle;
@@ -207,6 +210,17 @@ export function formatMoneyAmount(
     case 'sts':
       formatted = formatStsAmount(amount, currencyCode);
       break;
+    case 'trimmed': {
+      const factor = 10 ** CurrencyFormatter.getPrecisionFallback(currencyCode);
+      formatted =
+        Math.round(amount * factor) % factor === 0
+          ? CurrencyFormatter.format(amount, currencyCode, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 0,
+            })
+          : CurrencyFormatter.format(amount, currencyCode);
+      break;
+    }
     default:
       formatted = CurrencyFormatter.format(amount, currencyCode);
   }

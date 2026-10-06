@@ -47,4 +47,20 @@ describe('formatStsAmount / formatMoneyAmount', () => {
   it('omits prefix when empty string', () => {
     expect(formatMoneyAmount(100, 'USD', false, { prefix: '' })).toBe('$100.00');
   });
+
+  it.each([
+    [180, 'USD', '$180'],
+    [6301.51, 'USD', '$6,301.51'],
+    [6301.5, 'USD', '$6,301.50'],
+    [180.0000001, 'USD', '$180'],
+    [179.996, 'USD', '$180'],
+    [-24, 'USD', '-$24'],
+  ])('trims whole amounts only: %p %s → %s', (amount, currency, expected) => {
+    expect(formatMoneyAmount(amount, currency, false, { style: 'trimmed' })).toBe(expected);
+  });
+
+  it('trims zero-precision currencies and keeps the sign prefix', () => {
+    expect(formatMoneyAmount(1500, 'JPY', false, { style: 'trimmed' })).not.toMatch(/\./);
+    expect(formatMoneyAmount(180, 'USD', false, { style: 'trimmed', prefix: '− ' })).toBe('− $180');
+  });
 });
