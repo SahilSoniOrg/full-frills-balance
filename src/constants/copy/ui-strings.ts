@@ -393,6 +393,7 @@ export const UI_STRINGS = {
     title: 'Settings',
     hub: {
       profileDescription: 'Your name, documents, and device settings',
+      appearanceDescription: 'Theme, typography, time, and display options',
       currentWorkplaceDescription: 'Current workplace · Currency, Safe-to-Spend, and books',
       privacySecurityDescription: 'Hide balances, protect widgets, and lock the app',
       dataManagementDescription: 'Back up, restore, share, and review workplace data',

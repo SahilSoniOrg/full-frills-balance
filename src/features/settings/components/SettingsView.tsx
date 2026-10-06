@@ -144,6 +144,7 @@ export function SettingsView({
                 searchId="appearance"
                 leftIcon={Icon.Palette}
                 title={AppConfig.strings.settings.sections.appearance}
+                description={hub.appearanceDescription}
                 onPress={onAppearance}
                 testID="settings-appearance"
               />
