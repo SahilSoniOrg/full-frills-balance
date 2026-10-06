@@ -27,9 +27,8 @@ import { logger } from '@/src/utils/logger';
 import { convertAmount } from '@/src/services/currencyConversion';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { firstFastDebounce } from '@/src/utils/rxjs-operators';
-import { snapshotService } from '@/src/utils/SnapshotService';
 import { startTrace } from '@/src/utils/TraceService';
-import { combineLatest, distinctUntilChanged, finalize, map, Observable, switchMap } from 'rxjs';
+import { combineLatest, distinctUntilChanged, map, Observable, switchMap } from 'rxjs';
 
 export interface AggregatedAccountBalances {
   accounts: Account[];
@@ -67,8 +66,6 @@ export function observeAggregatedAccountBalances(
     key: `${targetCurrency}_${workplaceId}_${includeTotalCount ? 'with-count' : 'period-only'}`,
     workplaceId,
     createSource: () => {
-      let disposed = false;
-
       return combineLatest([
         // WatermelonDB reuses mutable model instances between emissions. Snapshot
         // the fields used by distinctUntilChanged before comparing, otherwise the
@@ -158,10 +155,6 @@ export function observeAggregatedAccountBalances(
               targetCurrency,
             );
 
-            if (!disposed) {
-              snapshotService.deferWealthSnapshot(workplaceId, wealthSummary);
-            }
-
             return { accounts, balancesMap, wealthSummary };
           } catch (error) {
             logger.error('Failed to calculate shared balances:', error);
@@ -173,9 +166,6 @@ export function observeAggregatedAccountBalances(
           } finally {
             trace.end();
           }
-        }),
-        finalize(() => {
-          disposed = true;
         }),
       );
     },

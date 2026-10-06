@@ -2,7 +2,6 @@ import { logger } from '@/src/utils/logger';
 import { storage } from './storage';
 
 const DASHBOARD_SNAPSHOT_KEY = 'dashboard_data_snapshot';
-const WEALTH_SNAPSHOT_KEY = 'wealth_summary_snapshot';
 const SNAPSHOT_CLEANUP_PENDING_ALL = 'snapshot_cleanup_pending_all_v1';
 const SNAPSHOT_CLEANUP_PENDING_WORKPLACE = 'snapshot_cleanup_pending_workplace_v1_';
 
@@ -45,10 +44,6 @@ class SnapshotService {
     if (SnapshotService.isRecord(value)) {
       if (SnapshotService.isRecord(value._raw)) {
         return value._raw;
-      }
-      if (value.asOfDate && value.accountId && value.balance !== undefined) {
-        // Handle AccountBalance-like structures if they contain models
-        return value;
       }
     }
 
@@ -97,20 +92,6 @@ class SnapshotService {
    */
   getDashboardSnapshot<T = unknown>(workplaceId: string): T | null {
     return this.getValidatedSnapshot<T>(`${DASHBOARD_SNAPSHOT_KEY}_${workplaceId}`, workplaceId);
-  }
-
-  /**
-   * Persists a wealth summary snapshot.
-   */
-  saveWealthSnapshot<T>(workplaceId: string, data: T): void {
-    this.saveSnapshot(`${WEALTH_SNAPSHOT_KEY}_${workplaceId}`, workplaceId, data, 'wealth');
-  }
-
-  /**
-   * Retrieves the last saved wealth summary for a specific workplace.
-   */
-  getWealthSnapshot<T = unknown>(workplaceId: string): T | null {
-    return this.getValidatedSnapshot<T>(`${WEALTH_SNAPSHOT_KEY}_${workplaceId}`, workplaceId);
   }
 
   /**
@@ -164,12 +145,6 @@ class SnapshotService {
   deferDashboardSnapshot<T>(workplaceId: string, data: T): void {
     this.deferWrite(`${DASHBOARD_SNAPSHOT_KEY}_${workplaceId}`, () =>
       this.saveDashboardSnapshot(workplaceId, data),
-    );
-  }
-
-  deferWealthSnapshot<T>(workplaceId: string, data: T): void {
-    this.deferWrite(`${WEALTH_SNAPSHOT_KEY}_${workplaceId}`, () =>
-      this.saveWealthSnapshot(workplaceId, data),
     );
   }
 
@@ -255,7 +230,6 @@ class SnapshotService {
       for (const key of keys) {
         if (
           key.startsWith(DASHBOARD_SNAPSHOT_KEY) ||
-          key.startsWith(WEALTH_SNAPSHOT_KEY) ||
           key.includes('_snapshot_') ||
           key.startsWith('safe_to_spend_')
         ) {
@@ -294,7 +268,6 @@ class SnapshotService {
         if (
           (key.endsWith(suffix) &&
             (key.startsWith(DASHBOARD_SNAPSHOT_KEY) ||
-              key.startsWith(WEALTH_SNAPSHOT_KEY) ||
               key.includes('_snapshot_') ||
               key.startsWith('safe_to_spend_'))) ||
           key === `safe_to_spend_${workplaceId}`

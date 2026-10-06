@@ -12,7 +12,6 @@ import {
 } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { wealthService } from '@/src/services/wealth-service';
 import { WorkplaceId } from '@/src/types/ids';
-import { snapshotService } from '@/src/utils/SnapshotService';
 import {
   reactiveCacheCoordinator,
   REACTIVE_CACHE_NAMESPACES,
@@ -39,10 +38,6 @@ jest.mock('@/src/services/wealth-service', () => ({
   selectBalancesForWealthSummary: (balances: readonly unknown[]) => balances,
   wealthService: { calculateSummary: jest.fn() },
 }));
-jest.mock('@/src/utils/SnapshotService', () => ({
-  snapshotService: { deferWealthSnapshot: jest.fn() },
-}));
-
 describe('reactiveAggregatedBalances lifecycle', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -88,7 +83,7 @@ describe('reactiveAggregatedBalances lifecycle', () => {
     expect(secondTeardown).toHaveBeenCalledTimes(1);
   });
 
-  it('does not persist wealth when an async balance calculation is disposed', async () => {
+  it('does not emit a stale balance result when disposed during an async calculation', async () => {
     const workplaceId = 'workplace-one' as WorkplaceId;
     const accounts$ = new Subject<[]>();
     let resolveWealth: ((summary: unknown) => void) | undefined;
@@ -103,7 +98,8 @@ describe('reactiveAggregatedBalances lifecycle', () => {
     (wealthService.calculateSummary as jest.Mock).mockReturnValue(wealthPromise);
     const calculateSummary = wealthService.calculateSummary as jest.Mock;
 
-    observeAggregatedAccountBalances('USD', workplaceId).subscribe();
+    const next = jest.fn();
+    observeAggregatedAccountBalances('USD', workplaceId).subscribe({ next });
     accounts$.next([]);
     for (let attempts = 0; attempts < 20 && !calculateSummary.mock.calls.length; attempts += 1) {
       await Promise.resolve();
@@ -118,6 +114,6 @@ describe('reactiveAggregatedBalances lifecycle', () => {
     await wealthPromise;
     await Promise.resolve();
 
-    expect(snapshotService.deferWealthSnapshot).not.toHaveBeenCalled();
+    expect(next).not.toHaveBeenCalled();
   });
 });
