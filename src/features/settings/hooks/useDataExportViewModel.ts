@@ -2,7 +2,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useObservable } from '@/src/hooks/useObservable';
 import { analytics } from '@/src/services/analytics';
 import { sharingService } from '@/src/services/SharingService';
-import { exportService, type BackupScope } from '@/src/services/export';
+import { exportWorkplacesToJSON, type BackupScope } from '@/src/services/export';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import type { WorkplaceId } from '@/src/types/ids';
 import { ShareFormat } from '@/src/types/sharing';
@@ -67,7 +67,7 @@ export function useDataExportViewModel(): DataExportViewModel {
           : backupScope === 'active'
             ? [workplaceId]
             : selectedWorkplaceIds.map(id => id as WorkplaceId);
-      const jsonData = await exportService.exportWorkplacesToJSON(
+      const jsonData = await exportWorkplacesToJSON(
         ids,
         backupScope === 'all' ? 'all' : 'selected',
         (message, progress) => {

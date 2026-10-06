@@ -1,13 +1,10 @@
 import { Icon } from '@/src/types/domainIcons';
-import {
-  serializeExportPayloadFromSources,
-  serializeMultiWorkplaceExport,
-} from '@/src/services/export/exportSerialization';
+import { serializeMultiWorkplaceExport } from '@/src/services/export/exportSerialization';
 import { DEFAULT_UI_PREFERENCES } from '@/src/services/preferences/types';
 import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
 
 describe('export serialization', () => {
-  it('preserves retained SMS sources in backups without exporting plain-text deduplication identities', async () => {
+  it('preserves retained SMS sources without exporting plain-text deduplication identities', () => {
     const source = {
       id: 'source-1',
       originalSmsSender: 'BANK',
@@ -17,16 +14,27 @@ describe('export serialization', () => {
         smsFingerprint: 'bank::body::7',
       }),
     };
-    const json = await serializeExportPayloadFromSources(
-      {
-        exportDate: '2026-10-02',
-        version: '1.0.0',
-        schemaVersion: 33,
-        preferences: DEFAULT_UI_PREFERENCES,
-      },
-      [['journalMetadata', async () => [source]]],
-    );
-    const [saved] = JSON.parse(json).journalMetadata;
+    const json = serializeMultiWorkplaceExport({
+      format: 'full-frills-backup',
+      formatVersion: 2,
+      exportDate: '2026-10-02',
+      exportScope: 'selected',
+      preferences: DEFAULT_UI_PREFERENCES,
+      workplaces: [
+        {
+          workplace: {
+            id: 'home',
+            name: 'Home',
+            icon: Icon.Wallet,
+            defaultCurrencyCode: 'USD',
+            createdAt: '2026-10-02T00:00:00.000Z',
+            updatedAt: '2026-10-02T00:00:00.000Z',
+          },
+          data: { journalMetadata: [source] },
+        },
+      ],
+    });
+    const [saved] = JSON.parse(json).workplaces[0].data.journalMetadata;
     expect(saved.originalSmsSender).toBe('BANK');
     expect(saved.originalSmsBody).toBe('Original transaction');
     expect(JSON.parse(saved.metadataJson)).toEqual({
@@ -34,36 +42,6 @@ describe('export serialization', () => {
       smsFingerprint: hashLegacySmsFingerprint('bank::body::7'),
     });
   });
-  it('loads source tables sequentially and preserves the export shape', async () => {
-    const loadOrder: string[] = [];
-    const loadAccounts = jest.fn(async () => {
-      loadOrder.push('accounts');
-      return [{ id: 'a1', runningBalance: 10 }];
-    });
-    const loadJournals = jest.fn(async () => {
-      loadOrder.push('journals');
-      return [{ id: 'j1' }];
-    });
-    const json = await serializeExportPayloadFromSources(
-      {
-        exportDate: '2026-01-01T00:00:00.000Z',
-        version: '1.4.0',
-        schemaVersion: 1,
-        preferences: DEFAULT_UI_PREFERENCES,
-      },
-      [
-        ['accounts', loadAccounts],
-        ['journals', loadJournals],
-      ],
-    );
-
-    expect(loadOrder).toEqual(['accounts', 'journals']);
-    expect(loadAccounts).toHaveBeenCalledTimes(1);
-    expect(loadJournals).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(json).accounts).toEqual([{ id: 'a1' }]);
-    expect(JSON.parse(json).journals).toEqual([{ id: 'j1' }]);
-  });
-
   it('serializes v2 data grouped by workplace', () => {
     const json = serializeMultiWorkplaceExport({
       format: 'full-frills-backup',

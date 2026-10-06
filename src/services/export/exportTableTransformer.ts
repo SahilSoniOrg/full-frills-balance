@@ -1,14 +1,9 @@
 import { exportRepository } from '@/src/data/repositories/ExportRepository';
+import { schema } from '@/src/data/database/schema';
 import { WorkplaceId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
 import { snakeToCamel } from '@/src/utils/serialization';
-import {
-  DATE_COLUMN_NAMES,
-  EXPORT_OMIT_SOFT_DELETED_TABLES,
-  getTableSchema,
-  toIsoDate,
-  typeSafeColumns,
-} from './exportSchemaUtils';
+import { DATE_COLUMN_NAMES, EXPORT_OMIT_SOFT_DELETED_TABLES, toIsoDate } from './exportSchemaUtils';
 
 /**
  * Universal fetch and transform helper derived from database schema.
@@ -19,10 +14,10 @@ export async function fetchAndTransformTable<T extends object>(
   tableName: string,
   onProgress?: (processed: number, total: number) => void,
 ): Promise<T[]> {
-  const tableSchema = getTableSchema(tableName);
+  const tableSchema = schema.tables[tableName];
   if (!tableSchema) throw new Error(`Missing schema for table: ${tableName}`);
 
-  const columns = typeSafeColumns(tableSchema);
+  const columns = tableSchema.columnArray;
   const columnNames = ['id', ...columns.map(column => column.name)];
 
   // Identify Boolean and Date fields from schema
@@ -55,7 +50,7 @@ export async function fetchAndTransformTable<T extends object>(
 
   if (useFallback) {
     logger.warn(
-      `[ExportService] fetchAndTransformTable(${tableName}) falling back to ORM loop. Performance risk.`,
+      `[Export] fetchAndTransformTable(${tableName}) falling back to ORM loop. Performance risk.`,
     );
     raws = await exportRepository.fetchOrmTable(tableName, columnNames, workplaceId);
   }

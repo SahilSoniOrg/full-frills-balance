@@ -11,15 +11,6 @@ export type ExportWorkplaceMetadata = {
   updatedAt: string;
 };
 
-export interface ExportMetadata {
-  exportDate: string;
-  version: string;
-  schemaVersion: number;
-  preferences: UIPreferences;
-  workplacePreferences?: WorkplacePreferences;
-  workplace?: ExportWorkplaceMetadata;
-}
-
 export interface MultiWorkplaceExportEntry {
   workplace: ExportWorkplaceMetadata;
   workplacePreferences?: WorkplacePreferences;
@@ -33,36 +24,6 @@ export interface MultiWorkplaceExportMetadata {
   exportScope: 'all' | 'selected';
   preferences: UIPreferences;
   workplaces: readonly MultiWorkplaceExportEntry[];
-}
-
-export async function serializeExportPayloadFromSources(
-  metadata: ExportMetadata,
-  tables: readonly (readonly [key: string, load: () => Promise<readonly unknown[]>])[],
-  onProgress?: (message: string, progress: number) => void,
-): Promise<string> {
-  const tableCount = tables.length;
-  const report = (message: string, progress: number) => onProgress?.(message, progress);
-
-  report('Optimizing data structure...', 0);
-  await yieldToEventLoop();
-  report('Serializing metadata...', tableCount === 0 ? 1 : 0.05);
-  await yieldToEventLoop(16);
-
-  const chunks = [JSON.stringify(metadata).slice(0, -1)];
-  for (const [index, [key, load]] of tables.entries()) {
-    const progress = tableCount === 0 ? 1 : 0.05 + ((index + 1) / tableCount) * 0.95;
-    report(`Serializing ${key}...`, progress);
-    let data: readonly unknown[] | undefined = await load();
-    try {
-      await yieldToEventLoop();
-      chunks.push(`,${JSON.stringify(key)}:${JSON.stringify(data, exportReplacer)}`);
-    } finally {
-      data = undefined;
-    }
-  }
-
-  await yieldToEventLoop(10);
-  return `${chunks.join('')}}`;
 }
 
 export function serializeMultiWorkplaceExport(
@@ -80,8 +41,4 @@ function exportReplacer(field: string, value: unknown): unknown {
   if (field === 'metadataJson' && typeof value === 'string')
     return hashSmsMetadataFingerprints(value);
   return value;
-}
-
-function yieldToEventLoop(delayMs = 0): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, delayMs));
 }
