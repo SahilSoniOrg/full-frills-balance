@@ -39,6 +39,9 @@ const AppInputFieldInner = forwardRef<TextInput, AppInputFieldProps>((initialPro
 
   const isHero = variant === 'hero';
   const isMinimal = variant === 'minimal';
+  const isNumeric =
+    isHero || ['decimal-pad', 'number-pad', 'numeric'].includes(textInputProps.keyboardType ?? '');
+  const numericFonts = fonts.numeric ?? fonts;
 
   return (
     <Box
@@ -62,7 +65,12 @@ const AppInputFieldInner = forwardRef<TextInput, AppInputFieldProps>((initialPro
         ref={ref}
         style={[
           styles.input,
-          isHero && [styles.heroInput, { fontFamily: fonts.bold }],
+          {
+            fontFamily: isNumeric ? numericFonts.regular : fonts.regular,
+            fontVariant: isNumeric ? ['tabular-nums', 'lining-nums'] : undefined,
+            ...Typography.androidDefaults,
+          },
+          isHero && [styles.heroInput, { fontFamily: numericFonts.bold }],
           multiline && styles.multilineInput,
           { color: theme.text },
           textInputStyle,

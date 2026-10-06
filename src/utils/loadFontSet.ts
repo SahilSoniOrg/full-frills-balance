@@ -1,7 +1,6 @@
 import { FontIds } from '@/src/constants/design-tokens';
 import { logger } from '@/src/utils/logger';
 import { CrimsonText_400Regular } from '@expo-google-fonts/crimson-text/400Regular';
-import { CrimsonText_700Bold } from '@expo-google-fonts/crimson-text/700Bold';
 import { DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display/400Regular';
 import { InstrumentSans_400Regular } from '@expo-google-fonts/instrument-sans/400Regular';
 import { InstrumentSans_500Medium } from '@expo-google-fonts/instrument-sans/500Medium';
@@ -32,6 +31,10 @@ const FONT_MAP: Record<string, FontMap> = {
     'Raleway-Medium': Raleway_500Medium,
     'Raleway-SemiBold': Raleway_600SemiBold,
     'Raleway-Bold': Raleway_700Bold,
+    'Inter-Regular': Inter_400Regular,
+    'Inter-Medium': Inter_500Medium,
+    'Inter-SemiBold': Inter_600SemiBold,
+    'Inter-Bold': Inter_700Bold,
   },
   [FontIds.EDITORIAL]: {
     'Inter-Regular': Inter_400Regular,
@@ -39,7 +42,6 @@ const FONT_MAP: Record<string, FontMap> = {
     'Inter-SemiBold': Inter_600SemiBold,
     'Inter-Bold': Inter_700Bold,
     'CrimsonText-Regular': CrimsonText_400Regular,
-    'CrimsonText-Bold': CrimsonText_700Bold,
   },
 };
 

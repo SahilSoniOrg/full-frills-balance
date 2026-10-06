@@ -21,8 +21,15 @@ export function MoneyText({
   formatStyle,
   loading,
   prefix,
+  fontRole = 'numeric',
+  weight = 'semibold',
+  tabular = true,
   ...textProps
 }: MoneyTextProps) {
   const formatMoney = useMoneyFormat({ style: formatStyle, loading, prefix });
-  return <AppText {...textProps}>{formatMoney(amount, currencyCode)}</AppText>;
+  return (
+    <AppText fontRole={fontRole} weight={weight} tabular={tabular} {...textProps}>
+      {formatMoney(amount, currencyCode)}
+    </AppText>
+  );
 }

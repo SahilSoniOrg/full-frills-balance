@@ -246,7 +246,7 @@ export const Typography = {
     semibold: 'InstrumentSans-SemiBold',
     bold: 'InstrumentSans-Bold',
     heading: 'DMSerifDisplay-Regular',
-    subheading: 'InstrumentSans-Bold', // Use Bold Sans for subheadings instead of Serif if preferred, or DMSerifDisplay-Regular
+    subheading: 'InstrumentSans-SemiBold',
   },
 
   // Font sizes
@@ -280,6 +280,20 @@ export const Typography = {
     wide: 0.5,
   },
 
+  // Stable role metrics across themes. Display faces carry titles;
+  // the selected sans carries sections, controls, and financial data.
+  roles: {
+    caption: { fontSize: 12, lineHeight: 16, letterSpacing: 0 },
+    bodySmall: { fontSize: 14, lineHeight: 20, letterSpacing: 0 },
+    body: { fontSize: 16, lineHeight: 24, letterSpacing: 0 },
+    bodyLarge: { fontSize: 18, lineHeight: 26, letterSpacing: 0 },
+    subheading: { fontSize: 18, lineHeight: 24, letterSpacing: -0.2 },
+    heading: { fontSize: 20, lineHeight: 26, letterSpacing: -0.3 },
+    xl: { fontSize: 24, lineHeight: 32, letterSpacing: -0.3 },
+    title: { fontSize: 32, lineHeight: 40, letterSpacing: -0.4 },
+    hero: { fontSize: 72, lineHeight: 86, letterSpacing: -0.8 },
+  },
+
   // Android-specific fixes for custom fonts
   androidDefaults: Platform.select({
     android: {
@@ -291,7 +305,6 @@ export const Typography = {
 } as const;
 
 // === FONT SCHEMES ===
-// === FONT SCHEMES ===
 
 export interface FontTheme {
   regular: string;
@@ -300,6 +313,8 @@ export interface FontTheme {
   bold: string;
   heading: string;
   subheading: string;
+  /** Optional data family when the UI face lacks tabular figures. */
+  numeric?: Pick<FontTheme, 'regular' | 'medium' | 'semibold' | 'bold'>;
 }
 
 const DeepSpaceFonts: FontTheme = {
@@ -308,7 +323,7 @@ const DeepSpaceFonts: FontTheme = {
   semibold: 'InstrumentSans-SemiBold',
   bold: 'InstrumentSans-Bold',
   heading: 'DMSerifDisplay-Regular',
-  subheading: 'InstrumentSans-Bold',
+  subheading: 'InstrumentSans-SemiBold',
 };
 
 const IvyFonts: FontTheme = {
@@ -318,6 +333,12 @@ const IvyFonts: FontTheme = {
   bold: 'Raleway-Bold',
   heading: 'Raleway-Bold', // Ivy uses Sans for headings too
   subheading: 'Raleway-SemiBold',
+  numeric: {
+    regular: 'Inter-Regular',
+    medium: 'Inter-Medium',
+    semibold: 'Inter-SemiBold',
+    bold: 'Inter-Bold',
+  },
 };
 
 const EditorialFonts: FontTheme = {
@@ -326,7 +347,7 @@ const EditorialFonts: FontTheme = {
   semibold: 'Inter-SemiBold',
   bold: 'Inter-Bold',
   heading: 'CrimsonText-Regular',
-  subheading: 'CrimsonText-Bold',
+  subheading: 'Inter-SemiBold',
 };
 
 export const FontSchemes: Record<FontId, FontTheme> = {
