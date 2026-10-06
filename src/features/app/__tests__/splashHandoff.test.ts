@@ -43,7 +43,7 @@ describe('shouldHideNativeSplash', () => {
   const ready = {
     isAppReady: true,
     isDataHydrated: true,
-    hasCompletedOnboarding: true,
+    launchState: 'open' as const,
     hasSafeAreaInsets: true,
   };
 
@@ -57,16 +57,6 @@ describe('shouldHideNativeSplash', () => {
 
   it('waits for data hydration when onboarding is already complete', () => {
     expect(shouldHideNativeSplash({ ...ready, isDataHydrated: false })).toBe(false);
-  });
-
-  it('does not wait for data hydration during onboarding', () => {
-    expect(
-      shouldHideNativeSplash({
-        ...ready,
-        hasCompletedOnboarding: false,
-        isDataHydrated: false,
-      }),
-    ).toBe(true);
   });
 
   it('hides for a resolved non-books gate without data hydration', () => {
