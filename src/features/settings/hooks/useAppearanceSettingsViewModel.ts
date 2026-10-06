@@ -6,7 +6,7 @@ import {
   useSetDeviceReduceMotion,
 } from '@/src/hooks/useDeviceMotionPrefs';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
-import { useReportsPreferences } from '@/src/hooks/useReportsPreferences';
+import { usePreference } from '@/src/hooks/usePreference';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { analytics } from '@/src/services/analytics';
 import type { HourCyclePreference, ResolvedHourCycle } from '@/src/utils/hourCycle';
@@ -47,7 +47,8 @@ export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
   const { showSafeToSpendChart, setShowSafeToSpendChart } = useDashboardPreferences();
   const reduceMotion = useDeviceReduceMotionPreference();
   const setReduceMotion = useSetDeviceReduceMotion();
-  const { reportsV2Enabled, setReportsV2Enabled } = useReportsPreferences();
+  const { value: reportsV2Enabled, setValue: setReportsV2Enabled } =
+    usePreference('reportsV2Enabled');
 
   const handleSetThemePreference = useCallback(
     (value: 'system' | 'light' | 'dark') => {

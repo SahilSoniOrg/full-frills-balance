@@ -4,10 +4,6 @@ import { useAccountManagementViewModel } from '@/src/features/accounts/hooks/use
 import { Icon } from '@/src/types/domainIcons';
 
 export function AccountManagementScreen() {
-  return <AccountManagementScreenContent />;
-}
-
-function AccountManagementScreenContent() {
   const vm = useAccountManagementViewModel();
 
   const chrome: ScreenNavChrome = {
