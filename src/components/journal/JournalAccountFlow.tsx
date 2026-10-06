@@ -151,31 +151,25 @@ function AccountGroup({
 
 function JournalEntryFooterRow({
   children,
-  timestamp,
+  trailing,
 }: {
   children?: ReactNode;
-  timestamp?: string;
+  trailing?: ReactNode;
 }) {
   return (
     <View style={footerStyles.row}>
       {children != null && <View style={footerStyles.content}>{children}</View>}
-      {timestamp != null && (
-        <View style={footerStyles.timestamp}>
-          <AppText variant="caption" color="secondary" align="right">
-            {timestamp}
-          </AppText>
-        </View>
-      )}
+      {trailing != null && <View style={footerStyles.trailing}>{trailing}</View>}
     </View>
   );
 }
 
 export function JournalAccountFlow({
   accountFlow,
-  timestamp,
+  trailing,
 }: {
   accountFlow: JournalEntryAccountFlow;
-  timestamp?: string;
+  trailing?: ReactNode;
 }) {
   const { theme, themeMode, fonts } = useTheme();
   const { fontScale } = useWindowDimensions();
@@ -187,7 +181,7 @@ export function JournalAccountFlow({
     ...accountFlow.destinations,
     ...accountFlow.neutral,
   ];
-  if (legs.length === 0 && timestamp == null) return null;
+  if (legs.length === 0 && trailing == null) return null;
   const primary = accountFlow.primaryAccount;
   const sources = [...(primary?.role === 'SOURCE' ? [primary] : []), ...accountFlow.sources];
   const destinations = [
@@ -263,7 +257,7 @@ export function JournalAccountFlow({
           style={styles.flow}
         >
           {stacked && sourceGroup}
-          <JournalEntryFooterRow timestamp={neutral.length === 0 ? timestamp : undefined}>
+          <JournalEntryFooterRow trailing={neutral.length === 0 ? trailing : undefined}>
             <View style={styles.inline}>
               {!stacked && sourceGroup}
               {!stacked && connected && (
@@ -282,7 +276,7 @@ export function JournalAccountFlow({
         </View>
       )}
       {neutral.length > 0 && (
-        <JournalEntryFooterRow timestamp={timestamp}>
+        <JournalEntryFooterRow trailing={trailing}>
           <Inline gap="xs" wrap>
             <AppText variant="caption" color="secondary">
               Other accounts:
@@ -293,7 +287,7 @@ export function JournalAccountFlow({
           </Inline>
         </JournalEntryFooterRow>
       )}
-      {legs.length === 0 && <JournalEntryFooterRow timestamp={timestamp} />}
+      {legs.length === 0 && <JournalEntryFooterRow trailing={trailing} />}
     </View>
   );
 }
@@ -359,7 +353,7 @@ const footerStyles = StyleSheet.create({
     rowGap: Spacing.xs,
   },
   content: { maxWidth: '100%', flexShrink: 0 },
-  timestamp: {
+  trailing: {
     marginLeft: 'auto',
     maxWidth: '100%',
     paddingVertical: Spacing.xs,

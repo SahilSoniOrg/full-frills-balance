@@ -1,16 +1,16 @@
-import { MoneyText } from '@/src/components/shared/MoneyText';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppCard, AppIcon, AppText, Badge, Icon, PressScaleTouchable } from '@/src/components/core';
 import { BorderWidth, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { blendColors, getReadableColor, withOpacity } from '@/src/utils/color-math';
-import { Box, Stack } from '@/src/design-system';
+import { Box } from '@/src/design-system';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatClockTime, formatDate } from '@/src/utils/dateUtils';
+import { EntryCardLayout } from './EntryCardLayout';
 import { JournalAccountFlow } from './JournalAccountFlow';
 import type { JournalEntryCardProps, JournalEntryLeg } from '@/src/types/journalEntryCard';
 import { memo, useMemo } from 'react';
-import { Keyboard, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Keyboard, StyleSheet, View } from 'react-native';
 
 const SELECTION_INDICATOR_SIZE = Size.md;
 const SELECTION_CARD_BORDER_WIDTH = 1.5;
@@ -80,7 +80,6 @@ const JournalEntryCardComponent = ({
   cardStyle,
 }: JournalEntryCardProps) => {
   const { theme, themeMode } = useTheme();
-  const { fontScale } = useWindowDimensions();
   const { resolvedHourCycle } = useHourCyclePrefs();
   const formatMoney = useMoneyFormat();
   const isPressable = onPress != null || onLongPress != null;
@@ -154,62 +153,31 @@ const JournalEntryCardComponent = ({
       accessibilityState={!isPressable ? accessibilityState : undefined}
       style={[styles.container, { backgroundColor: theme.surface }, resolvedCardStyle]}
     >
-      <Box paddingHorizontal="md" paddingVertical="lg">
-        <Stack gap="md">
+      <EntryCardLayout
+        leading={
           <View
-            style={[styles.header, selectionOverlay != null ? styles.selectionHeader : undefined]}
+            style={[styles.typeIcon, { backgroundColor: typeIconBackground }]}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
           >
-            <View style={[styles.identity, fontScale > 1 ? styles.enlargedIdentity : undefined]}>
-              <View
-                style={[styles.typeIcon, { backgroundColor: typeIconBackground }]}
-                accessibilityElementsHidden
-                importantForAccessibility="no-hide-descendants"
-              >
-                <AppIcon name={presentation.typeIcon} size={Size.iconSm} color={typeIconColor} />
-              </View>
-              <Stack gap="xs" style={styles.headerContent}>
-                <AppText
-                  variant="body"
-                  weight="bold"
-                  numberOfLines={2}
-                  testID="journal-entry-card-title"
-                >
-                  {title}
-                </AppText>
-                {notes ? (
-                  <AppText
-                    variant="caption"
-                    color="secondary"
-                    numberOfLines={2}
-                    style={styles.shrink}
-                  >
-                    {notes}
-                  </AppText>
-                ) : null}
-              </Stack>
-            </View>
-            <Stack gap="xs" align="flex-end" style={styles.amountColumn}>
-              <MoneyText
-                amount={amount}
-                currencyCode={currencyCode}
-                prefix={presentation.amountPrefix}
-                variant="xl"
-                weight="bold"
-                tabular
-                align="right"
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.65}
-                style={{ color: amountColor, minHeight: Math.ceil(Size.lg * fontScale) }}
-              />
-              {accountFlow.showCurrencyCodes && (
-                <AppText variant="caption" color="secondary">
-                  {currencyCode}
-                </AppText>
-              )}
-            </Stack>
+            <AppIcon name={presentation.typeIcon} size={Size.iconSm} color={typeIconColor} />
           </View>
-          {presentation.showTypeBadge && (
+        }
+        title={title}
+        subtitle={notes}
+        amount={amount}
+        currencyCode={currencyCode}
+        amountPrefix={presentation.amountPrefix}
+        amountColor={amountColor}
+        amountCaption={
+          accountFlow.showCurrencyCodes ? (
+            <AppText variant="caption" color="secondary">
+              {currencyCode}
+            </AppText>
+          ) : undefined
+        }
+        badge={
+          presentation.showTypeBadge ? (
             <Badge
               testID="transaction-type-badge"
               variant="default"
@@ -220,12 +188,20 @@ const JournalEntryCardComponent = ({
             >
               {presentation.label}
             </Badge>
-          )}
-
-          <JournalAccountFlow accountFlow={accountFlow} timestamp={displayedDate} />
-        </Stack>
-        {selectionOverlay}
-      </Box>
+          ) : undefined
+        }
+        footer={
+          <JournalAccountFlow
+            accountFlow={accountFlow}
+            trailing={
+              <AppText variant="caption" color="secondary" align="right">
+                {displayedDate}
+              </AppText>
+            }
+          />
+        }
+        overlay={selectionOverlay}
+      />
     </AppCard>
   );
 
@@ -259,16 +235,6 @@ JournalEntryCard.displayName = 'JournalEntryCard';
 const styles = StyleSheet.create({
   wrapper: { paddingBottom: Spacing.lg },
   container: { overflow: 'hidden' },
-  header: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: Spacing.md },
-  identity: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    flexGrow: 1,
-    flexBasis: '50%',
-    minWidth: 0,
-  },
-  enlargedIdentity: { flexBasis: '100%' },
   typeIcon: {
     width: Size.lg,
     height: Size.lg,
@@ -279,9 +245,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     flexShrink: 0,
   },
-  headerContent: { flex: 1, minWidth: 0 },
-  amountColumn: { flexShrink: 1, maxWidth: '100%', marginLeft: 'auto' },
-  selectionHeader: { paddingRight: Size.md + Spacing.sm },
   selectionIndicator: {
     position: 'absolute',
     right: Spacing.md,
@@ -289,5 +252,4 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   typeBadge: { maxWidth: '100%', flexShrink: 1 },
-  shrink: { flexShrink: 1, minWidth: 0 },
 });
