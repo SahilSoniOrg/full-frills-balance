@@ -1,5 +1,10 @@
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { MoneyText } from '@/src/components/shared/MoneyText';
+import { EntryCardLayout } from '@/src/components/journal/EntryCardLayout';
+import { JournalAccountFlow } from '@/src/components/journal/JournalAccountFlow';
+import { accountEntryLeg } from '@/src/services/journal/journalTimelinePresentation';
+import { asAccountId } from '@/src/types/ids';
+import type { JournalEntryLeg } from '@/src/types/journalEntryCard';
+import type { PlainAccount } from '@/src/types/plainDtos';
 import { Icon, AppIcon, AppSurface, PressScaleTouchable, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -12,7 +17,6 @@ import dayjs from 'dayjs';
 import { getNow } from '@/src/utils/dateUtils';
 import type { PlannedPaymentListOccurrence } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
 
 export interface PlannedPaymentCardProps {
   occurrence: PlannedPaymentListOccurrence;
@@ -22,6 +26,23 @@ export interface PlannedPaymentCardProps {
   isRecording?: boolean;
   isPlanBusy?: boolean;
   recordError?: string;
+}
+
+function plannedLeg(
+  account: PlainAccount | undefined,
+  role: JournalEntryLeg['role'],
+  placeholder: string,
+): JournalEntryLeg {
+  return account
+    ? accountEntryLeg(account, role, `${account.id}:${role}`)
+    : {
+        id: role,
+        accountId: asAccountId(''),
+        name: placeholder,
+        role,
+        fallbackIcon: Icon.Wallet,
+        variant: 'default',
+      };
 }
 
 function PlannedPaymentCardComponent({
@@ -60,171 +81,109 @@ function PlannedPaymentCardComponent({
       ? theme.warningLight
       : theme.surfaceSecondary;
   const dateTextColor = isOverdue ? theme.error : isDueSoon ? theme.warning : theme.textSecondary;
+  const showRecord = isOverdue && onRecord != null && canRecord;
+
+  const intervalMeta = interval ? (
+    <View style={styles.metaRow}>
+      <AppIcon name={Icon.Repeat} size={Size.iconXs} color="textSecondary" />
+      <AppText variant="caption" color="secondary" numberOfLines={1} style={styles.metaText}>
+        {interval}
+      </AppText>
+    </View>
+  ) : null;
 
   return (
-    <AppSurface
-      elevation="sm"
-      padding="sm"
-      radius="r3"
-      background="surface"
-      borderWidth={1}
-      borderColor="surfaceSecondary"
-      style={styles.card}
-    >
-      <View style={styles.cardContent}>
-        <PressScaleTouchable
-          onPress={onPress}
-          accessibilityRole="button"
-          accessibilityLabel={[
-            item.name,
-            isIncome
-              ? strings.incomeRow
-              : item.flowDirection === 'transfer'
-                ? strings.transferRow
-                : strings.outgoingRow,
-            amountLabel,
-            strings.dueDateAccessibility(dayjs(occurrence.date).format('dddd, MMMM D')),
-            strings.fromTo(fromLabel, toLabel),
-            item.isAutoPost ? strings.autoPost : undefined,
-            interval,
-            daysLateAccessibility,
-          ]
-            .filter(Boolean)
-            .join('. ')}
-          accessibilityHint={strings.rowAccessibilityHint}
-          style={styles.rowPress}
-          surfaceStyle={styles.rowPressSurface}
-        >
-          <View
-            style={[
-              styles.dateBlock,
-              largeText && { width: Size.fab },
-              { backgroundColor: dateBlockColor },
-            ]}
-          >
-            <AppText variant="caption" weight="semibold" style={{ color: dateTextColor }}>
-              {dayjs(occurrence.date).format('ddd')}
-            </AppText>
-            <AppText variant="heading" weight="bold" style={{ color: dateTextColor }}>
-              {dayjs(occurrence.date).format('D')}
-            </AppText>
-          </View>
-          <View style={styles.details}>
-            <View style={[styles.nameLine, largeText && styles.nameLineLarge]}>
-              <View style={styles.identity}>
-                <AppText
-                  variant="body"
-                  weight="semibold"
-                  numberOfLines={largeText ? 2 : 1}
-                  style={styles.name}
-                >
-                  {item.name}
-                </AppText>
-                {item.isAutoPost && (
-                  <AppIcon name={Icon.Zap} size={Size.iconXs} color="textSecondary" />
-                )}
-              </View>
-              <MoneyText
-                amount={occurrence.amount}
-                currencyCode={occurrence.currencyCode}
-                formatStyle="compact"
-                prefix={isIncome ? '+' : undefined}
-                variant="heading"
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.2}
-                weight="bold"
-                style={[
-                  styles.amount,
-                  largeText && styles.amountLarge,
-                  { color: isIncome ? theme.income : theme.text },
-                ]}
-              />
+    <AppSurface elevation="sm" radius="r2" background="surface" style={styles.card}>
+      <PressScaleTouchable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={[
+          item.name,
+          isIncome
+            ? strings.incomeRow
+            : item.flowDirection === 'transfer'
+              ? strings.transferRow
+              : strings.outgoingRow,
+          amountLabel,
+          strings.dueDateAccessibility(dayjs(occurrence.date).format('dddd, MMMM D')),
+          strings.fromTo(fromLabel, toLabel),
+          item.isAutoPost ? strings.autoPost : undefined,
+          interval,
+          daysLateAccessibility,
+        ]
+          .filter(Boolean)
+          .join('. ')}
+        accessibilityHint={strings.rowAccessibilityHint}
+      >
+        <EntryCardLayout
+          leading={
+            <View
+              style={[
+                styles.dateBlock,
+                largeText && { width: Size.fab },
+                { backgroundColor: dateBlockColor },
+              ]}
+            >
+              <AppText variant="caption" weight="semibold" style={{ color: dateTextColor }}>
+                {dayjs(occurrence.date).format('ddd')}
+              </AppText>
+              <AppText variant="heading" weight="bold" style={{ color: dateTextColor }}>
+                {dayjs(occurrence.date).format('D')}
+              </AppText>
             </View>
-            {!isOverdue && (
-              <View style={[styles.flow, largeText && styles.flowLarge]}>
-                <AccountInlineLabel
-                  account={item.fromAccount}
-                  placeholder={fromLabel}
-                  variant="caption"
-                  appearance="transactionFlow"
-                  showIcon
-                />
-                <AppIcon name={Icon.ArrowRight} size={Size.iconXs} color="textSecondary" />
-                <AccountInlineLabel
-                  account={item.toAccount}
-                  placeholder={toLabel}
-                  variant="caption"
-                  appearance="transactionFlow"
-                  showIcon
-                />
-              </View>
-            )}
-            {!isOverdue && interval && (
-              <View style={styles.metaRow}>
-                <AppIcon name={Icon.Repeat} size={Size.iconXs} color="textSecondary" />
-                <AppText
-                  variant="caption"
-                  color="secondary"
-                  numberOfLines={1}
-                  style={styles.metaText}
-                >
-                  {interval}
-                </AppText>
-              </View>
-            )}
-            {isOverdue && (
-              <View style={[styles.overdueMeta, largeText && styles.overdueMetaLarge]}>
+          }
+          title={item.name}
+          titleAccessory={
+            item.isAutoPost ? (
+              <AppIcon name={Icon.Zap} size={Size.iconXs} color="textSecondary" />
+            ) : undefined
+          }
+          amount={occurrence.amount}
+          currencyCode={occurrence.currencyCode}
+          amountFormatStyle="compact"
+          amountPrefix={isIncome ? '+' : undefined}
+          amountColor={isIncome ? theme.income : theme.text}
+          footer={
+            isOverdue ? (
+              <View style={[styles.footer, showRecord && !largeText && styles.footerWithAction]}>
                 <View style={styles.metaRow}>
                   <AppIcon name={Icon.Clock} size={Size.iconXs} color={theme.error} />
                   <AppText variant="caption" weight="semibold" color="error">
                     {daysLateLabel}
                   </AppText>
                 </View>
-                {interval && (
-                  <View style={styles.metaRow}>
-                    <AppIcon name={Icon.Repeat} size={Size.iconXs} color="textSecondary" />
-                    <AppText
-                      variant="caption"
-                      color="secondary"
-                      numberOfLines={1}
-                      style={styles.metaText}
-                    >
-                      {interval}
-                    </AppText>
-                  </View>
-                )}
+                {intervalMeta}
               </View>
-            )}
+            ) : (
+              <JournalAccountFlow
+                accountFlow={{
+                  sources: [plannedLeg(item.fromAccount, 'SOURCE', fromLabel)],
+                  destinations: [plannedLeg(item.toAccount, 'DESTINATION', toLabel)],
+                  neutral: [],
+                  showCurrencyCodes: false,
+                }}
+                trailing={intervalMeta ?? undefined}
+              />
+            )
+          }
+        />
+      </PressScaleTouchable>
+      {showRecord && (
+        <Pressable
+          onPress={onRecord}
+          disabled={isRecording || isPlanBusy}
+          accessibilityRole="button"
+          accessibilityLabel={
+            isRecording ? strings.recordBusy : strings.recordAccessibility(item.name, amountLabel)
+          }
+          accessibilityState={{ disabled: isRecording || isPlanBusy, busy: isRecording }}
+          style={largeText ? styles.recordButtonLarge : styles.recordButton}
+        >
+          <View style={[styles.recordPill, { backgroundColor: theme.primary }]}>
+            <AppIcon name={Icon.Check} size={Size.iconSm} color={theme.onPrimary ?? theme.text} />
           </View>
-        </PressScaleTouchable>
-        {isOverdue &&
-          (onRecord && canRecord ? (
-            <Pressable
-              onPress={onRecord}
-              disabled={!canRecord || isRecording || isPlanBusy}
-              accessibilityRole="button"
-              accessibilityLabel={
-                isRecording
-                  ? strings.recordBusy
-                  : strings.recordAccessibility(item.name, amountLabel)
-              }
-              accessibilityState={{
-                disabled: !canRecord || isRecording || isPlanBusy,
-                busy: isRecording,
-              }}
-              style={largeText ? styles.recordButtonLarge : styles.recordButton}
-            >
-              <View style={[styles.recordPill, { backgroundColor: theme.primary }]}>
-                <AppIcon
-                  name={Icon.Check}
-                  size={Size.iconSm}
-                  color={theme.onPrimary ?? theme.text}
-                />
-              </View>
-            </Pressable>
-          ) : null)}
-      </View>
+        </Pressable>
+      )}
       {recordError && (
         <AppText
           variant="caption"
@@ -242,63 +201,44 @@ function PlannedPaymentCardComponent({
 export const PlannedPaymentCard = PlannedPaymentCardComponent;
 
 const styles = StyleSheet.create({
-  card: { marginBottom: Spacing.sm },
-  cardContent: { gap: Spacing.xs, position: 'relative' },
-  rowPress: { flex: 1, minWidth: 0 },
-  rowPressSurface: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, minWidth: 0 },
+  card: { marginBottom: Spacing.lg },
   dateBlock: {
     width: Size.buttonMd,
     minHeight: Size.buttonMd,
     flexShrink: 0,
     borderRadius: Shape.radius.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: Spacing.xs,
   },
-  details: { flex: 1, minWidth: 0, gap: Spacing.xs },
-  nameLine: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, minWidth: 0 },
-  nameLineLarge: { flexDirection: 'column', alignItems: 'flex-start' },
-  identity: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  name: { flexShrink: 1, minWidth: 0 },
-  flow: {
+  footer: {
     flexDirection: 'row',
-    flexWrap: 'nowrap',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    gap: Spacing.xs,
-    minWidth: 0,
+    columnGap: Spacing.sm,
+    rowGap: Spacing.xs,
   },
-  flowLarge: { flexWrap: 'wrap' },
+  footerWithAction: { minHeight: Size.buttonMd, paddingRight: Size.buttonMd + Spacing.sm },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, minWidth: 0 },
   metaText: { flexShrink: 1, minWidth: 0 },
-  amount: { textAlign: 'right', flexShrink: 0 },
-  amountLarge: { textAlign: 'left', alignSelf: 'flex-start' },
-  overdueMeta: {
-    minHeight: Size.buttonMd,
-    paddingRight: Size.buttonMd + Spacing.xl + Spacing.sm,
-    justifyContent: 'center',
-    gap: Spacing.xs,
-  },
-  overdueMetaLarge: { paddingRight: 0 },
   recordButton: {
     minHeight: Size.buttonMd,
     minWidth: Size.buttonMd,
-    paddingHorizontal: Spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'absolute',
-    right: 0,
-    bottom: 0,
+    right: Spacing.md,
+    bottom: Spacing.lg,
   },
   recordButtonLarge: {
     minHeight: Size.buttonMd,
     minWidth: Size.buttonMd,
-    paddingHorizontal: Spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-    right: undefined,
-    bottom: undefined,
     alignSelf: 'flex-end',
+    marginRight: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   recordPill: {
     minHeight: Size.touchTarget,
@@ -307,5 +247,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  recordError: { marginTop: Spacing.xs, marginLeft: Size.buttonMd + Spacing.sm },
+  recordError: {
+    marginTop: -Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.lg,
+  },
 });

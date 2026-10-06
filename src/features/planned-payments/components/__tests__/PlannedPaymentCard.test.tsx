@@ -147,19 +147,19 @@ describe('PlannedPaymentCard rendered row', () => {
     expect(autoPost.getByRole('button', { name: /Auto-post/ })).toBeTruthy();
   });
 
-  it('renders planned account flows with tinted single-line account labels', () => {
-    const { getAllByTestId } = renderCard(
+  it('renders planned accounts with the shared tinted journal account flow', () => {
+    const { getByTestId } = renderCard(
       makeOccurrence({ fromAccount: account('Checking'), toAccount: account('Housing') }),
     );
-    const labels = getAllByTestId('account-flow-label');
-    expect(labels).toHaveLength(2);
-    for (const label of labels) {
-      const style = StyleSheet.flatten(label.props.style);
-      expect(style.backgroundColor).toBeTruthy();
-      expect(style.borderRadius).toBeTruthy();
-    }
-    expect(within(labels[0]).getByText('Checking').props.numberOfLines).toBe(1);
-    expect(within(labels[1]).getByText('Housing').props.numberOfLines).toBe(1);
+    const source = within(getByTestId('transaction-source-box')).getByTestId(
+      'transaction-account-leg',
+    );
+    const destination = within(getByTestId('transaction-destination-box')).getByTestId(
+      'transaction-account-leg',
+    );
+    expect(within(source).getByText('Checking')).toBeTruthy();
+    expect(within(destination).getByText('Housing')).toBeTruthy();
+    expect(StyleSheet.flatten(source.props.style).backgroundColor).toBeTruthy();
   });
 
   it('shows multi-interval cadence while omitting the ordinary monthly cadence', () => {
