@@ -24,12 +24,3 @@ export function expectWorkplaceScopedRawSql(
     tablePrefixes.length,
   );
 }
-
-export function expectWorkplaceScopedInLastRawSql(
-  querySpy: jest.SpyInstance,
-  workplaceId: string,
-  tablePrefixes: string[],
-): void {
-  const [sql, args] = lastRawSqlCall(querySpy);
-  expectWorkplaceScopedRawSql(sql, args, workplaceId, tablePrefixes);
-}

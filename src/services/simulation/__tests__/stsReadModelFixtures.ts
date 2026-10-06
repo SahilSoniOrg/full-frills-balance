@@ -124,20 +124,3 @@ export function installStsMocks() {
   );
   (cashFlowSimulationService.simulate as jest.Mock).mockResolvedValue(emptySimResult);
 }
-
-export function createPassiveForecastDateBasisDependencies(
-  at = new Date(2026, 8, 30, 12).getTime(),
-) {
-  const timers = new Map<number, () => void>();
-  const dependencies: ForecastDateBasisDependencies = {
-    now: () => at,
-    setTimer: callback => {
-      const id = timers.size + 1;
-      timers.set(id, callback);
-      return id as unknown as ReturnType<typeof setTimeout>;
-    },
-    clearTimer: timer => timers.delete(timer as unknown as number),
-    observeForeground: () => () => undefined,
-  };
-  return { dependencies, timers };
-}

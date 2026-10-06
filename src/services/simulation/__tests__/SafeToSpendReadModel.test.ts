@@ -24,7 +24,6 @@ import {
 import {
   STS_TEST_WORKPLACE,
   createForecastDateBasisTestHarness,
-  createPassiveForecastDateBasisDependencies,
   emptySimResult,
   installStsMocks,
   mockCashAssetRow,
@@ -1034,9 +1033,9 @@ describe('SafeToSpendReadModel', () => {
     });
 
     it('does not schedule a timer when a synchronous consumer takes only the initial basis', () => {
-      const { dependencies, timers } = createPassiveForecastDateBasisDependencies();
-      observeForecastDateBasis(dependencies).pipe(take(1)).subscribe();
-      expect(timers.size).toBe(0);
+      const harness = createForecastDateBasisTestHarness();
+      observeForecastDateBasis(harness.dependencies).pipe(take(1)).subscribe();
+      expect(harness.timers.size).toBe(0);
     });
   });
 });

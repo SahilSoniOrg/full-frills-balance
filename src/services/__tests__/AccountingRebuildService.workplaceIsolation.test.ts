@@ -10,15 +10,14 @@ import {
   transactionWriteRepository,
 } from '@/src/data/repositories/transaction';
 import { accountingRebuildService } from '@/src/services/AccountingRebuildService';
-import { WORKPLACE_ISOLATION_ONE, WORKPLACE_ISOLATION_TWO } from '@/src/testing/workplaceIsolation';
 import { resetDatabase } from '@/src/testing/resetDatabase';
-import { AccountId, TransactionId } from '@/src/types/ids';
+import { AccountId, TransactionId, WorkplaceId } from '@/src/types/ids';
 import { AccountType, TransactionType } from '@/src/types/enums';
 import { storage } from '@/src/utils/storage';
 import { Q, Model } from '@nozbe/watermelondb';
 
-const WORKPLACE_ONE = WORKPLACE_ISOLATION_ONE;
-const WORKPLACE_TWO = WORKPLACE_ISOLATION_TWO;
+const WORKPLACE_ONE = 'wp-rebuild-isolation-1' as WorkplaceId;
+const WORKPLACE_TWO = 'wp-rebuild-isolation-2' as WorkplaceId;
 
 describe('AccountingRebuildService workplace isolation', () => {
   beforeEach(async () => {

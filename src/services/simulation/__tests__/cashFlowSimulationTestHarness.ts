@@ -51,20 +51,7 @@ jest.mock('@/src/services/exchange-rate-service', () => ({
   },
 }));
 jest.mock('@/src/services/currencyConversion', () => ({
-  convertAmount: jest.fn(
-    async ({
-      amount,
-      fromCurrency,
-      toCurrency,
-    }: {
-      amount: number;
-      fromCurrency: string;
-      toCurrency: string;
-    }) => ({
-      ok: true,
-      amount: fromCurrency === toCurrency ? amount : amount,
-    }),
-  ),
+  convertAmount: jest.fn(async ({ amount }: { amount: number }) => ({ ok: true, amount })),
   resolveSpotExchangeRate: jest.fn(async (fromCurrency: string) => ({
     ok: true,
     rate: fromCurrency === 'EUR' ? 2 : 1,
@@ -108,20 +95,10 @@ export function resetCashFlowSimulationMocks(): void {
     ok: true,
     rate: fromCurrency === 'EUR' ? 2 : 1,
   }));
-  (convertAmount as jest.Mock).mockImplementation(
-    async ({
-      amount,
-      fromCurrency,
-      toCurrency,
-    }: {
-      amount: number;
-      fromCurrency: string;
-      toCurrency: string;
-    }) => ({
-      ok: true,
-      amount: fromCurrency === toCurrency ? amount : amount,
-    }),
-  );
+  (convertAmount as jest.Mock).mockImplementation(async ({ amount }: { amount: number }) => ({
+    ok: true,
+    amount,
+  }));
 }
 
 export function installCashFlowSimulationTestHooks(): void {

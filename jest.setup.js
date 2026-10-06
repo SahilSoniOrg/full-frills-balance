@@ -298,7 +298,6 @@ jest.mock('react-native/Libraries/ReactNative/I18nManager', () => ({
 
 // Mock Reanimated
 jest.mock('react-native-reanimated', () => {
-  const React = require('react');
   const { View } = require('react-native');
   const Animated = {
     call: jest.fn(),
@@ -344,7 +343,6 @@ jest.mock('react-native-reanimated', () => {
 
 // Mock Moti
 jest.mock('moti', () => {
-  const React = require('react');
   const { View } = require('react-native');
   return {
     View,
@@ -361,7 +359,6 @@ jest.mock('moti', () => {
 
 // Mock Gesture Handler
 jest.mock('react-native-gesture-handler', () => {
-  const React = require('react');
   const { View, ScrollView } = require('react-native');
   return {
     Swipeable: View,

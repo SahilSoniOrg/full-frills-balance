@@ -25,13 +25,7 @@ const PERSISTENCE_SEAMS = [
   'src/data/repositories/',
   'src/testing/',
 ];
-const MODEL_ACCESS_SEAMS = [
-  'src/data/database/',
-  'src/data/models/',
-  'src/data/repositories/',
-  'src/services/import/',
-  'src/testing/',
-];
+const MODEL_ACCESS_SEAMS = [...PERSISTENCE_SEAMS, 'src/services/import/'];
 const WORKPLACE_TABLES = new Set([
   'account_metadata',
   'accounts',
