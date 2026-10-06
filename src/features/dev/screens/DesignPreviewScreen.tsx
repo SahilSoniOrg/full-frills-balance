@@ -22,13 +22,16 @@ import {
   LoadingView,
 } from '@/src/components/core';
 import { ListRow } from '@/src/components/core/ListRow';
-import { Shape, Size, Spacing, ThemeMode } from '@/src/constants';
+import { FontId, FontIds, Shape, Size, Spacing, ThemeMode } from '@/src/constants';
 import { ThemeOverride } from '@/src/contexts/UIContext';
 import { Box, Inline, Page, Separator, Skeleton, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useThemePrefs } from '@/src/hooks/useThemePrefs';
+import { ensureAllFontSetsLoaded } from '@/src/utils/loadFontSet';
+import { logger } from '@/src/utils/logger';
 import { PeriodFilter } from '@/src/utils/dateUtils';
 import { Redirect } from 'expo-router';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { Switch, useColorScheme } from 'react-native';
 
 const PREVIEW_TAB_OPTIONS = [
@@ -40,6 +43,12 @@ const PREVIEW_SEGMENT_OPTIONS = [
   { id: 'week', label: 'Week' },
   { id: 'month', label: 'Month', icon: Icon.Calendar },
   { id: 'year', label: 'Year' },
+] as const;
+
+const PREVIEW_FONT_OPTIONS = [
+  { id: FontIds.DEEP_SPACE, label: 'Serif & Sans' },
+  { id: FontIds.IVY, label: 'Geometric' },
+  { id: FontIds.EDITORIAL, label: 'Classic Serif' },
 ] as const;
 
 const TokenBox = ({ size, radius }: { size: number; radius: number }) => {
@@ -88,6 +97,9 @@ function SemanticColoredDots() {
 
 export default function DesignPreviewScreen() {
   const systemColorScheme = useColorScheme();
+  const { fontId: savedFontId } = useThemePrefs();
+  const [fontId, setFontId] = useState<FontId>(savedFontId);
+  const [fontsReady, setFontsReady] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(systemColorScheme === 'dark');
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>({ type: 'ALL_TIME' });
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
@@ -100,20 +112,33 @@ export default function DesignPreviewScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const themeMode: ThemeMode = isDarkMode ? 'dark' : 'light';
 
+  useEffect(() => {
+    if (!__DEV__) return;
+    let active = true;
+    void ensureAllFontSetsLoaded()
+      .then(() => {
+        if (active) setFontsReady(true);
+      })
+      .catch(error => logger.error('[Fonts] Failed to load design preview fonts', error));
+    return () => {
+      active = false;
+    };
+  }, []);
+
   // Gate this screen to development only
   if (!__DEV__) {
     return <Redirect href="/(tabs)" />;
   }
 
   return (
-    <ThemeOverride mode={themeMode}>
+    <ThemeOverride mode={themeMode} fontId={fontId}>
       <Page
         scrollable
         background="background"
         header={
           <Box paddingHorizontal="lg" paddingVertical="md">
-            <Inline justifyContent="space-between" alignItems="center">
-              <AppText variant="title">Design System Preview</AppText>
+            <Inline justifyContent="space-between" alignItems="center" flexWrap="wrap" gap="sm">
+              <AppText variant="xl">Design System Preview</AppText>
               <Inline space="sm" alignItems="center">
                 <AppText variant="body">Dark Mode:</AppText>
                 <Switch value={isDarkMode} onValueChange={setIsDarkMode} />
@@ -128,14 +153,51 @@ export default function DesignPreviewScreen() {
             <AppCard elevation="sm" paddingSize="lg">
               <Stack space="md">
                 <AppText variant="heading">Typography</AppText>
+                <AppSegmentedControl
+                  options={PREVIEW_FONT_OPTIONS}
+                  value={fontId}
+                  onChange={setFontId}
+                  disabled={!fontsReady}
+                  size="sm"
+                  flex
+                />
                 <Separator />
 
-                <AppText variant="hero">$12,345</AppText>
-                <AppText variant="title">Title</AppText>
-                <AppText variant="heading">Heading</AppText>
-                <AppText variant="subheading">Subheading</AppText>
-                <AppText variant="body">Body</AppText>
-                <AppText variant="caption">Caption</AppText>
+                <AppText variant="title">Your financial picture</AppText>
+                <AppText variant="heading">Monthly spending</AppText>
+                <AppText variant="subheading">Recent activity</AppText>
+                <AppText variant="body">Balances, budgets, and transactions in one place.</AppText>
+                <AppText variant="bodySmall" color="secondary">
+                  After commitments over 30 days
+                </AppText>
+                <AppText variant="caption" color="secondary">
+                  Updated today
+                </AppText>
+                <AppText
+                  variant="hero"
+                  fontRole="numeric"
+                  weight="semibold"
+                  tabular
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.65}
+                >
+                  ₹12,345
+                </AppText>
+                <Stack space="xs">
+                  <Inline justifyContent="space-between">
+                    <AppText variant="bodySmall">Income</AppText>
+                    <AppText variant="bodySmall" weight="semibold" tabular>
+                      ₹11,111.00
+                    </AppText>
+                  </Inline>
+                  <Inline justifyContent="space-between">
+                    <AppText variant="bodySmall">Expenses</AppText>
+                    <AppText variant="bodySmall" weight="semibold" tabular>
+                      ₹88,888.00
+                    </AppText>
+                  </Inline>
+                </Stack>
 
                 <Separator />
 

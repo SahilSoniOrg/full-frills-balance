@@ -5,8 +5,8 @@ import { Box, Stack } from '@/src/design-system';
 import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import { useTheme } from '@/src/hooks/use-theme';
 import { logger } from '@/src/utils/logger';
-import { ensureAllFontSetsLoaded } from '@/src/utils/loadFontSet';
-import { useEffect } from 'react';
+import { ensureAllFontSetsLoaded, isFontSetLoaded } from '@/src/utils/loadFontSet';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 type FontSelectorProps = {
@@ -33,12 +33,23 @@ const FONT_OPTIONS = [
 ] as const;
 
 export function FontSelectorView({ fontId, setFontId }: FontSelectorProps) {
-  const { theme } = useTheme();
+  const { theme, fonts } = useTheme();
+  const [previewsReady, setPreviewsReady] = useState(() =>
+    FONT_OPTIONS.every(option => isFontSetLoaded(option.id)),
+  );
 
   useEffect(() => {
-    void ensureAllFontSetsLoaded().catch(error => {
-      logger.error('[Fonts] Failed to preload settings font schemes', error);
-    });
+    let active = true;
+    void ensureAllFontSetsLoaded()
+      .then(() => {
+        if (active) setPreviewsReady(true);
+      })
+      .catch(error => {
+        logger.error('[Fonts] Failed to preload settings font schemes', error);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (
@@ -79,19 +90,39 @@ export function FontSelectorView({ fontId, setFontId }: FontSelectorProps) {
                   <AppText
                     variant="heading"
                     style={{
-                      fontFamily: font.heading,
+                      fontFamily: previewsReady ? font.heading : fonts.heading,
                       color: selected ? theme.primary : theme.text,
                     }}
                   >
                     Aa
                   </AppText>
+                  <AppText
+                    variant="caption"
+                    tabular
+                    color="secondary"
+                    style={{
+                      fontFamily: previewsReady
+                        ? (font.numeric ?? font).semibold
+                        : (fonts.numeric ?? fonts).semibold,
+                    }}
+                  >
+                    1,234
+                  </AppText>
                 </View>
 
                 <View style={styles.copy}>
-                  <AppText variant="body" weight="semibold">
+                  <AppText
+                    variant="body"
+                    weight="semibold"
+                    style={{ fontFamily: previewsReady ? font.semibold : fonts.semibold }}
+                  >
                     {option.label}
                   </AppText>
-                  <AppText variant="caption" color="secondary" numberOfLines={1}>
+                  <AppText
+                    variant="caption"
+                    color="secondary"
+                    style={{ fontFamily: previewsReady ? font.regular : fonts.regular }}
+                  >
                     {option.desc}
                   </AppText>
                 </View>
@@ -121,8 +152,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   preview: {
-    width: 48,
-    height: 48,
+    width: 56,
+    minHeight: 56,
+    paddingVertical: 6,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
