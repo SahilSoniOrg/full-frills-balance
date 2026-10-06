@@ -1,5 +1,4 @@
 import {
-  collectAccountDescendantIds,
   createAccountTreeSnapshot,
   isUndeletedAccount,
   planAccountTreeBulkMove,
@@ -41,7 +40,7 @@ describe('planAccountTreeMove', () => {
   });
 
   it('keeps descendants intact and exposes them for cycle validation', () => {
-    expect(collectAccountDescendantIds(accounts, 'root-a' as never)).toEqual(
+    expect(createAccountTreeSnapshot(accounts).getDescendants('root-a' as never)).toEqual(
       new Set(['child-a', 'child-b']),
     );
   });

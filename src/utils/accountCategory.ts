@@ -192,10 +192,6 @@ export function getAccountSections(accounts: AccountFields[]): AccountSection[] 
   return sections;
 }
 
-export function getAccountVariant(typeOrTitle: string | AccountType): ComponentVariant {
-  return getAccountTypeVariant(typeOrTitle);
-}
-
 export function getSectionColor(title: string | AccountType, theme: Theme): string {
   return theme[getAccountTypeColorKey(title)];
 }

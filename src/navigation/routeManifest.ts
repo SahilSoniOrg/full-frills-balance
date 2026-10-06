@@ -119,9 +119,3 @@ export const ROUTE_MANIFEST = [
 ] as const satisfies readonly RouteManifestEntry[];
 
 export type AppRouteName = (typeof ROUTE_MANIFEST)[number]['name'];
-
-export function routeManifestEntry(name: AppRouteName) {
-  const entry = ROUTE_MANIFEST.find(route => route.name === name);
-  if (!entry) throw new Error(`Unknown route: ${name}`);
-  return entry;
-}

@@ -19,19 +19,12 @@ export function isSystemAccount(account: { name: string }): boolean {
   return balanceCorrections.legacyNames.some(name => lower === name.toLowerCase());
 }
 
-export async function findAccountByName(
-  workplaceId: WorkplaceId,
-  name: string,
-): Promise<import('@/src/data/models/Account').default | null> {
-  return accountQueryRepository.findByName(workplaceId, name);
-}
-
 export async function getOpeningBalancesAccountId(
   currencyCode: string,
   workplaceId: WorkplaceId,
 ): Promise<AccountId> {
   const input = getOpeningBalancesAccountInput(currencyCode, workplaceId);
-  const existing = await findAccountByName(workplaceId, input.name);
+  const existing = await accountQueryRepository.findByName(workplaceId, input.name);
   if (existing) return existing.id;
 
   return (await accountWriteRepository.create(input)).id;
@@ -60,14 +53,14 @@ async function findBalanceCorrectionAccount(
   const targetCurrency = currencyCode || (await workplaceService.getCurrency(workplaceId));
 
   for (const legacyName of balanceCorrections.legacyNames) {
-    const legacy = await findAccountByName(workplaceId, legacyName);
+    const legacy = await accountQueryRepository.findByName(workplaceId, legacyName);
     if (legacy && (legacy.currencyCode === targetCurrency || !legacy.currencyCode)) {
       return legacy;
     }
   }
 
   const input = getBalanceCorrectionAccountInput(targetCurrency, workplaceId);
-  const existing = await findAccountByName(workplaceId, input.name);
+  const existing = await accountQueryRepository.findByName(workplaceId, input.name);
   if (existing) return existing;
 
   const allAccounts = await accountQueryRepository.findAll(workplaceId);

@@ -7,7 +7,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import {
   resolveAccountAppearance,
   AccountSection,
-  getAccountVariant,
+  getAccountTypeVariant,
   getSectionColor,
 } from '@/src/utils/accountCategory';
 import { useAccountDisplayPrefs } from '@/src/hooks/useAccountDisplayPrefs';
@@ -61,7 +61,7 @@ const AccountPickerRow = React.memo(
     return (
       <ListRow
         title={
-          <AppText variant="body" color={getAccountVariant(item.accountType)} numberOfLines={1}>
+          <AppText variant="body" color={getAccountTypeVariant(item.accountType)} numberOfLines={1}>
             {item.name}
           </AppText>
         }

@@ -380,13 +380,6 @@ export function planAccountTreeMove<T extends OrderedAccount>(
   return planAccountTreeBulkMove(accounts, [move.accountId], move);
 }
 
-export function collectAccountDescendantIds<T extends OrderedAccount>(
-  accounts: readonly T[],
-  accountId: AccountId,
-): Set<AccountId> {
-  return new Set(createAccountTreeSnapshot(accounts).getDescendants(accountId));
-}
-
 /** Validate the complete parent forest after composing multiple draft operations. */
 export function validateAccountTreeStructure<T extends OrderedAccount>(
   accounts: readonly T[],
