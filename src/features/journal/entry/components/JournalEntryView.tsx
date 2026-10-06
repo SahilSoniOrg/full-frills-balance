@@ -28,7 +28,7 @@ import { JournalMetaCard, type JournalMetaCardProps } from './JournalMetaCard';
 import type { AccountFlowHandle, AutopilotAppliedAccount } from './useSimpleFormExpansion';
 
 export function JournalEntryView(props: JournalEntryShell) {
-  const { theme, fonts } = useTheme();
+  const { theme } = useTheme();
   const [helpMode, setHelpMode] = useState<JournalEntryScreenMode | null>(null);
   const notesAdded =
     props.editor.notes.trim() !== '' || props.editor.lines.some(line => line.notes.trim() !== '');
@@ -241,11 +241,7 @@ export function JournalEntryView(props: JournalEntryShell) {
             </TouchableOpacity>
 
             <View style={styles.titleWrap}>
-              <AppText
-                variant="heading"
-                style={[styles.headerTitle, { fontFamily: fonts.bold }]}
-                numberOfLines={1}
-              >
+              <AppText variant="heading" style={styles.headerTitle} numberOfLines={1}>
                 {headerTitle}
               </AppText>
             </View>

@@ -39,6 +39,11 @@ export const SafeToSpendHeader = ({
     <AppText
       testID="safe-to-spend-amount"
       variant="hero"
+      fontRole="numeric"
+      tabular
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.65}
       color={
         isOverCommitted
           ? 'error'
@@ -46,7 +51,7 @@ export const SafeToSpendHeader = ({
             ? 'success'
             : undefined
       }
-      weight="bold"
+      weight="semibold"
       style={{
         fontSize: amountFontSize,
         lineHeight: Math.round(amountFontSize * Typography.lineHeights.tight),

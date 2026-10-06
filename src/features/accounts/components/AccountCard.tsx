@@ -48,7 +48,7 @@ function AccountCardBase({
   isSelected = false,
   isSelectionModeActive = false,
 }: AccountCardProps) {
-  const { fonts, theme } = useTheme();
+  const { theme } = useTheme();
   const { resolvedHourCycle } = useHourCyclePrefs();
   const formatMoney = useMoneyFormat({ loading: isLoading });
   const workplaceCurrencyCode = account.workplaceCurrencyCode ?? account.currencyCode;
@@ -208,10 +208,14 @@ function AccountCardBase({
             <Column align="center" justify="center" gap="xs">
               <AppText
                 variant="title"
-                weight="bold"
+                fontRole="numeric"
+                weight="semibold"
+                tabular
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.65}
                 style={{
                   color: resolvedTextColor,
-                  fontFamily: fonts.bold,
                 }}
               >
                 {formatMoney(account.balance, account.currencyCode)}

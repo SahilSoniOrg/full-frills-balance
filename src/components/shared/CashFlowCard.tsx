@@ -1,6 +1,6 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppCard, AppText, AppSegmentedControl } from '@/src/components/core';
-import { Spacing, Typography } from '@/src/constants';
+import { Spacing } from '@/src/constants';
 import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
@@ -28,7 +28,7 @@ export const CashFlowCard = ({
   warning,
   onWarningPress,
 }: CashFlowCardProps) => {
-  const { theme, fonts } = useTheme();
+  const { theme } = useTheme();
 
   const netCashFlow = totalIncome - totalExpense;
 
@@ -51,10 +51,7 @@ export const CashFlowCard = ({
         formatStyle="compact"
         loading={isLoading}
         variant="title"
-        style={[
-          styles.netAmount,
-          { fontFamily: fonts.bold, color: netCashFlow >= 0 ? theme.income : theme.expense },
-        ]}
+        style={[styles.netAmount, { color: netCashFlow >= 0 ? theme.income : theme.expense }]}
       />
 
       <View style={styles.periodToggleContainer}>
@@ -116,7 +113,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   netAmount: {
-    fontSize: Typography.sizes.xxxl,
     marginBottom: Spacing.sm,
   },
   periodToggleContainer: {

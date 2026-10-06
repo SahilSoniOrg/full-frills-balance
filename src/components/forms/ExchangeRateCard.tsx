@@ -197,7 +197,11 @@ export function ExchangeRateCard({
         styles.convertedInput,
         isAttached ? styles.attachedConvertedInput : { width: convertedInputWidth },
         isConvertedFocused && { borderBottomWidth: 1, borderBottomColor: theme.primary },
-        { color: theme.text, fontFamily: fonts.bold },
+        {
+          color: theme.text,
+          fontFamily: (fonts.numeric ?? fonts).bold,
+          fontVariant: ['tabular-nums', 'lining-nums'],
+        },
       ]}
     />
   );
@@ -267,7 +271,11 @@ export function ExchangeRateCard({
                       testID={testID('converted-amount-measure')}
                       style={[
                         styles.convertedMeasure,
-                        { fontFamily: fonts.bold, color: withOpacity(theme.text, Opacity.none) },
+                        {
+                          fontFamily: (fonts.numeric ?? fonts).bold,
+                          fontVariant: ['tabular-nums', 'lining-nums'],
+                          color: withOpacity(theme.text, Opacity.none),
+                        },
                       ]}
                     >
                       {convertedInputValue || '0'}
@@ -360,7 +368,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.none,
     margin: 0,
     fontSize: Typography.sizes.base,
-    fontWeight: '700',
     textAlign: 'right',
   },
   convertedPreview: {
@@ -376,7 +383,6 @@ const styles = StyleSheet.create({
     left: -10000,
     top: 0,
     fontSize: Typography.sizes.base,
-    fontWeight: '700',
     padding: 0,
     margin: 0,
   },

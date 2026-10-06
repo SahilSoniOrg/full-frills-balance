@@ -23,11 +23,7 @@ export function ScreenSectionHeader({ title, action, style }: ScreenSectionHeade
       style={style}
     >
       <Stack gap="xs" flex={1}>
-        {title ? (
-          <AppText variant="subheading" weight="bold">
-            {title}
-          </AppText>
-        ) : null}
+        {title ? <AppText variant="subheading">{title}</AppText> : null}
       </Stack>
       {action ? <Box flexShrink={0}>{action}</Box> : null}
     </Box>

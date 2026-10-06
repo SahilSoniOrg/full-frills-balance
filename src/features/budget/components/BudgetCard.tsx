@@ -12,7 +12,6 @@ import { Column, Row } from '@/src/design-system';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { presentBudgetUsage } from '../helpers/budgetCardPresentation';
 import { presentBudgetPeriod } from '../helpers/budgetDetailPresentation';
-import { useTheme } from '@/src/hooks/use-theme';
 import { useCalendarDay } from '@/src/hooks/useCalendarDay';
 import { getBudgetCurrentPeriod } from '@/src/services/budget/BudgetPeriodUtils';
 import { BudgetItem } from '../types';
@@ -42,7 +41,6 @@ export function BudgetCard({
   item: BudgetItem;
   onPress: (item: BudgetItem) => void;
 }) {
-  const { fonts } = useTheme();
   const { budget, usage } = item;
   const strings = AppConfig.strings.commitmentsRedesign;
   const today = useCalendarDay();
@@ -132,11 +130,12 @@ export function BudgetCard({
             </Column>
             <AppText
               variant="heading"
+              tabular
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.2}
               color={vm.isOver ? 'error' : 'text'}
-              style={{ fontFamily: fonts.heading, flexShrink: 1, marginLeft: 'auto' }}
+              style={{ flexShrink: 1, marginLeft: 'auto' }}
             >
               {headline}
             </AppText>

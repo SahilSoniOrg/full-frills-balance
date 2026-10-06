@@ -282,7 +282,10 @@ export function DateRangeMenuContent({
             ]}
           >
             <TextInput
-              style={[styles.numberInput, { color: theme.text, fontFamily: fonts.bold }]}
+              style={[
+                styles.numberInput,
+                { color: theme.text, fontFamily: (fonts.numeric ?? fonts).bold },
+              ]}
               value={lastNValue}
               onChangeText={text => onUpdateLastN(text, lastNUnit)}
               keyboardType="number-pad"

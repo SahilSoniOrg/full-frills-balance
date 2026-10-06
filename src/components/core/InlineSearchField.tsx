@@ -65,7 +65,7 @@ export const InlineSearchField = ({
   placeholder = AppConfig.strings.common.searchPlaceholder,
   onExpandChange,
 }: InlineSearchFieldProps) => {
-  const { theme } = useTheme();
+  const { theme, fonts } = useTheme();
   const { isExpanded, handleExpand, handleCollapse, handleClear, inputRef } = useExpandableSearch({
     value,
     onChangeText,
@@ -101,7 +101,7 @@ export const InlineSearchField = ({
       <AppIcon name={Icon.Search} size={Size.sm} color={theme.textSecondary} style={styles.icon} />
       <TextInput
         ref={inputRef}
-        style={[styles.input, { color: theme.text }]}
+        style={[styles.input, { color: theme.text, fontFamily: fonts.regular }]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}

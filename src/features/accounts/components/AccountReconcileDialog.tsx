@@ -48,16 +48,16 @@ export function AccountReconcileDialog({
 
       {unreconciledCount > 0 ? (
         <View style={[styles.summaryCard, { backgroundColor: theme.surfaceSecondary }]}>
-          <AppText style={{ color: theme.text, fontWeight: '600', marginBottom: 4 }}>
+          <AppText weight="semibold" style={{ color: theme.text, marginBottom: 4 }}>
             {AppConfig.strings.accounts.reconciliation.alert.matchingBalance(balanceText)}
           </AppText>
-          <AppText style={{ color: theme.textSecondary, fontSize: 13 }}>
+          <AppText variant="bodySmall" color="secondary">
             {AppConfig.strings.accounts.reconciliation.alert.pendingTransactions(unreconciledCount)}
           </AppText>
         </View>
       ) : null}
 
-      <AppText style={{ color: theme.textSecondary, fontSize: 13, fontStyle: 'italic' }}>
+      <AppText variant="bodySmall" color="secondary" italic>
         {AppConfig.strings.accounts.reconciliation.alert.guide}
       </AppText>
     </ConfirmDialog>

@@ -1,3 +1,4 @@
+import { useTheme } from '@/src/hooks/use-theme';
 import { AppConfig } from '@/src/constants/app-config';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
@@ -54,6 +55,7 @@ export const LineChartGrid = React.memo(function LineChartGrid({
   markedPoint,
   primaryMaxPoint,
 }: LineChartGridProps) {
+  const { fonts } = useTheme();
   const formatMoneyShort = useMoneyFormat({ style: 'short' });
 
   return (
@@ -75,6 +77,7 @@ export const LineChartGrid = React.memo(function LineChartGrid({
               opacity={REPORT_CHART_LAYOUT.lineChartGridOpacity}
             />
             <SvgText
+              fontFamily={(fonts.numeric ?? fonts).medium}
               x={paddingLeft - REPORT_CHART_LAYOUT.lineChartYLabelOffsetX}
               y={y + REPORT_CHART_LAYOUT.lineChartYLabelOffsetY}
               fontSize={REPORT_CHART_LAYOUT.lineChartYLabelFontSize}
@@ -107,6 +110,7 @@ export const LineChartGrid = React.memo(function LineChartGrid({
                 opacity={REPORT_CHART_LAYOUT.lineChartGridOpacity}
               />
               <SvgText
+                fontFamily={(fonts.numeric ?? fonts).medium}
                 x={x}
                 y={height - Math.max(0, paddingVertical - 20)}
                 fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
@@ -137,6 +141,7 @@ export const LineChartGrid = React.memo(function LineChartGrid({
                 opacity={0.6}
               />
               <SvgText
+                fontFamily={(fonts.numeric ?? fonts).medium}
                 x={x + 4}
                 y={paddingVertical + 10}
                 fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
@@ -165,10 +170,10 @@ export const LineChartGrid = React.memo(function LineChartGrid({
                         strokeWidth={1}
                       />
                       <SvgText
+                        fontFamily={(fonts.numeric ?? fonts).bold}
                         x={x + 4}
                         y={y - 8}
                         fontSize={11}
-                        fontWeight="bold"
                         fill={chartColor}
                         textAnchor="start"
                       >
@@ -204,12 +209,12 @@ export const LineChartGrid = React.memo(function LineChartGrid({
             />
             {line.label && (
               <SvgText
+                fontFamily={(fonts.numeric ?? fonts).bold}
                 x={chartWidth - paddingRight - 4}
                 y={y - 6}
                 fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
                 fill={lineColor}
                 textAnchor="end"
-                fontWeight="bold"
                 opacity={0.9}
               >
                 {line.label}
@@ -253,10 +258,10 @@ export const LineChartGrid = React.memo(function LineChartGrid({
                 />
                 {markedPoint.label ? (
                   <SvgText
+                    fontFamily={(fonts.numeric ?? fonts).bold}
                     x={labelX}
                     y={y - 16}
                     fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
-                    fontWeight="bold"
                     fill={chartColor}
                     textAnchor={anchor}
                   >
@@ -265,6 +270,7 @@ export const LineChartGrid = React.memo(function LineChartGrid({
                 ) : null}
                 {markedPoint.caption ? (
                   <SvgText
+                    fontFamily={(fonts.numeric ?? fonts).medium}
                     x={labelX}
                     y={y - 4}
                     fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
@@ -299,10 +305,10 @@ export const LineChartGrid = React.memo(function LineChartGrid({
                 opacity={0.8}
               />
               <SvgText
+                fontFamily={(fonts.numeric ?? fonts).bold}
                 x={x}
                 y={y - REPORT_CHART_LAYOUT.lineChartMaxLabelOffsetY}
                 fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
-                fontWeight="bold"
                 fill={chartColor}
                 textAnchor="middle"
               >

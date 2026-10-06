@@ -31,7 +31,7 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
   tooltipWidth,
   tooltipHeight,
 }) => {
-  const { theme, blend } = useTheme();
+  const { theme, fonts, blend } = useTheme();
   const [selectedPoint, setSelectedPoint] = useState<HeatmapPoint | null>(null);
   const windowWidth = Dimensions.get('window').width;
   const CHART_WIDTH = customWidth || windowWidth - Spacing.lg * 2;
@@ -124,11 +124,11 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
               const y = PADDING_TOP + hour * cellHeight + cellHeight / 2;
               return (
                 <SvgText
+                  fontFamily={(fonts.numeric ?? fonts).semibold}
                   key={h}
                   x={PADDING_LEFT - 8}
                   y={y + 3}
                   fontSize={8}
-                  fontWeight="600"
                   fill={theme.textSecondary}
                   textAnchor="end"
                 >
@@ -142,11 +142,11 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
               const x = PADDING_LEFT + i * cellWidth + cellWidth / 2;
               return (
                 <SvgText
+                  fontFamily={(fonts.numeric ?? fonts).bold}
                   key={i}
                   x={x}
                   y={height - 32}
                   fontSize={10}
-                  fontWeight="700"
                   fill={theme.textSecondary}
                   textAnchor="middle"
                 >
@@ -179,6 +179,7 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
 
             {/* Legend - Centered at bottom */}
             <SvgText
+              fontFamily={(fonts.numeric ?? fonts).medium}
               x={PADDING_LEFT}
               y={height - 10}
               fontSize={8}
@@ -200,6 +201,7 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
               />
             ))}
             <SvgText
+              fontFamily={(fonts.numeric ?? fonts).medium}
               x={CHART_WIDTH - 10}
               y={height - 10}
               fontSize={8}
@@ -237,7 +239,8 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
                     <View style={styles.tooltipHeader}>
                       <AppText
                         variant="caption"
-                        style={{ fontWeight: '700', color: theme.textSecondary }}
+                        weight="semibold"
+                        style={{ color: theme.textSecondary }}
                       >
                         {DAYS_SHORT[selectedPoint.x]} • {selectedPoint.y}:00
                       </AppText>
@@ -245,8 +248,8 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
                     <MoneyText
                       amount={selectedPoint.value}
                       currencyCode={currency}
-                      variant="title"
-                      style={{ fontWeight: '800', color: theme.text, marginTop: 2 }}
+                      variant="heading"
+                      style={{ color: theme.text, marginTop: 2 }}
                     />
                   </View>
                 )}

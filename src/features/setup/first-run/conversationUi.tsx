@@ -333,7 +333,7 @@ function CollectedRow({
   readonly onPaymentAmountChange?: (id: string, amount: number) => void;
   readonly onPaymentDateChange?: (id: string, date: number) => void;
 }) {
-  const { theme, tokens } = useTheme();
+  const { theme, tokens, fonts } = useTheme();
   const [name, setName] = useState(item.title);
   const [amountText, setAmountText] = useState(item.amount === 0 ? '' : String(item.amount));
   const [payText, setPayText] = useState(
@@ -380,7 +380,11 @@ function CollectedRow({
                 }}
                 accessibilityLabel={item.title}
                 testID={`onboarding-name-${item.id}`}
-                style={[styles.rowInput, styles.nameInput, { color: theme.text }]}
+                style={[
+                  styles.rowInput,
+                  styles.nameInput,
+                  { color: theme.text, fontFamily: fonts.regular },
+                ]}
               />
               <Box style={styles.amountHit}>
                 <Inline align="center" gap="xs">
@@ -398,7 +402,15 @@ function CollectedRow({
                     placeholderTextColor={tokens.input.placeholder}
                     accessibilityLabel={copy.currentBalance}
                     testID={`onboarding-amount-${item.id}`}
-                    style={[styles.rowInput, styles.amountInput, { color: theme.text }]}
+                    style={[
+                      styles.rowInput,
+                      styles.amountInput,
+                      {
+                        color: theme.text,
+                        fontFamily: (fonts.numeric ?? fonts).semibold,
+                        fontVariant: ['tabular-nums', 'lining-nums'],
+                      },
+                    ]}
                   />
                 </Inline>
               </Box>
@@ -439,7 +451,11 @@ function CollectedRow({
                       styles.rowInput,
                       styles.amountInput,
                       styles.payInput,
-                      { color: theme.text },
+                      {
+                        color: theme.text,
+                        fontFamily: (fonts.numeric ?? fonts).semibold,
+                        fontVariant: ['tabular-nums', 'lining-nums'],
+                      },
                     ]}
                   />
                 </Inline>

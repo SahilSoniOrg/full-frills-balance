@@ -1,5 +1,6 @@
 import { AppInput, AppText } from '@/src/components/core';
 import { Size, Spacing, Typography } from '@/src/constants';
+import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
 
 export function ManualBaseRateField({
@@ -13,6 +14,7 @@ export function ManualBaseRateField({
   value: string;
   onChangeText: (value: string) => void;
 }) {
+  const { fonts } = useTheme();
   return (
     <View style={styles.container}>
       <AppText variant="caption" color="secondary">
@@ -26,7 +28,13 @@ export function ManualBaseRateField({
         variant="minimal"
         width={Size.fieldNarrow}
         minHeight={0}
-        style={styles.input}
+        style={[
+          styles.input,
+          {
+            fontFamily: (fonts.numeric ?? fonts).semibold,
+            fontVariant: ['tabular-nums', 'lining-nums'],
+          },
+        ]}
       />
       <AppText variant="caption" color="secondary">
         {workplaceCurrency}
@@ -44,6 +52,5 @@ const styles = StyleSheet.create({
   input: {
     fontSize: Typography.sizes.xs,
     textAlign: 'right',
-    fontWeight: '700',
   },
 });

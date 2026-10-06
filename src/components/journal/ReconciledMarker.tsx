@@ -24,10 +24,8 @@ export function ReconciledMarker({ date }: ReconciledMarkerProps) {
         <AppIcon name={Icon.Shield} size={14} color={theme.income} />
         <AppText
           variant="caption"
-          style={[
-            styles.reconciledText,
-            { color: theme.income, fontFamily: Typography.fonts.bold },
-          ]}
+          weight="semibold"
+          style={[styles.reconciledText, { color: theme.income }]}
         >
           {label.toUpperCase()}
         </AppText>

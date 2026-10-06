@@ -49,11 +49,7 @@ export function JournalDayHeader({
     >
       <View style={styles.content}>
         <View style={styles.leftContent}>
-          <AppText
-            variant="caption"
-            color="secondary"
-            style={[styles.text, { fontFamily: Typography.fonts.semibold }]}
-          >
+          <AppText variant="caption" color="secondary" weight="semibold" style={styles.text}>
             {label.toUpperCase()}
           </AppText>
           <View style={styles.subLabelRow}>
@@ -79,6 +75,7 @@ export function JournalDayHeader({
               currencyCode={currencyCode}
               prefix={isPositive ? '+' : undefined}
               variant="caption"
+              weight="semibold"
               style={[
                 styles.netAmount,
                 {
@@ -131,7 +128,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs / 2,
   },
   netAmount: {
-    fontFamily: Typography.fonts.semibold,
     fontSize: Typography.sizes.xs,
   },
   subLabelRow: {

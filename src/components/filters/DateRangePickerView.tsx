@@ -48,7 +48,7 @@ export function DateRangePickerView({
   handleDateSelect,
   handleApply,
 }: DateRangePickerViewProps) {
-  const { theme, fonts } = useTheme();
+  const { theme } = useTheme();
 
   return (
     <Modal
@@ -85,9 +85,7 @@ export function DateRangePickerView({
 
               <View style={styles.header}>
                 <View style={styles.headerCopy}>
-                  <AppText variant="heading" style={{ fontFamily: fonts.bold }}>
-                    Choose Range
-                  </AppText>
+                  <AppText variant="heading">Choose Range</AppText>
                   <AppText variant="caption" color="secondary" style={styles.headerSubtitle}>
                     Pick a month, custom dates, or a rolling window.
                   </AppText>

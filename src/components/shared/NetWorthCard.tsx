@@ -1,6 +1,6 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppCard, AppText } from '@/src/components/core';
-import { Spacing, Typography } from '@/src/constants';
+import { Spacing } from '@/src/constants';
 import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { MetricBreakdownRow } from './MetricBreakdownRow';
@@ -21,7 +21,7 @@ export const NetWorthCard = ({
   currencyCode,
   isLoading = false,
 }: NetWorthCardProps) => {
-  const { theme, fonts } = useTheme();
+  const { theme } = useTheme();
 
   return (
     <AppCard
@@ -42,7 +42,7 @@ export const NetWorthCard = ({
         formatStyle="compact"
         loading={isLoading}
         variant="title"
-        style={[styles.netWorthAmount, { fontFamily: fonts.bold }]}
+        style={styles.netWorthAmount}
       />
 
       <View style={styles.breakdownContainer}>
@@ -81,7 +81,6 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   netWorthAmount: {
-    fontSize: Typography.sizes.xxxl,
     marginBottom: Spacing.xl,
   },
   breakdownContainer: {

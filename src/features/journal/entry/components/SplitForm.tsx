@@ -109,7 +109,7 @@ export function SplitForm({
   precision,
   onCreateAccountRequestForRow,
 }: SplitFormProps) {
-  const { theme } = useTheme();
+  const { theme, fonts } = useTheme();
   const strings = AppConfig.strings.transactionFlow.splitEntry;
   const { isExpanded, toggle, close, closeIf } = useExclusivePicker();
   const typeCopy = resolveSplitTypeCopy(transactionType);
@@ -214,7 +214,10 @@ export function SplitForm({
               precision={precision}
               placeholder={formatAmountPlaceholder(precision)}
               containerStyle={allocationAmountStyles.container}
-              inputStyle={[allocationAmountStyles.text, { color: theme.text }]}
+              inputStyle={[
+                allocationAmountStyles.text,
+                { color: theme.text, fontFamily: (fonts.numeric ?? fonts).semibold },
+              ]}
               testID="split-total-amount-input"
             />
           }

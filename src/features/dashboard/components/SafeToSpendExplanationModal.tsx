@@ -320,7 +320,7 @@ export const SafeToSpendExplanationModal = ({
               {labels.remainingCashBuffer}
             </AppText>
           </View>
-          <AppText variant="title" color="primary" tabular>
+          <AppText variant="title" fontRole="numeric" weight="semibold" color="primary" tabular>
             {formatSts(safeToSpend, currencyCode)}
           </AppText>
         </View>

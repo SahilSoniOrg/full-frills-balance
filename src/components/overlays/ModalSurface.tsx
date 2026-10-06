@@ -87,7 +87,7 @@ export function ModalSurface({
       ]}
     >
       <View style={styles.header}>
-        <AppText variant="subheading" weight="bold">
+        <AppText variant="heading" fontRole="display">
           {title}
         </AppText>
         <IconButton

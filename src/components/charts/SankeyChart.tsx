@@ -48,7 +48,7 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({
   width,
   height: customHeight,
 }) => {
-  const { theme } = useTheme();
+  const { theme, fonts } = useTheme();
   const sideRows = useMemo(() => countSankeySideRows(nodes, links), [nodes, links]);
   const chartHeight = customHeight ?? resolveSankeyChartHeight(sideRows);
   const minLinkWidth = REPORT_CHART_LAYOUT.sankeyMinLinkWidth;
@@ -121,10 +121,10 @@ export const SankeyChart: React.FC<SankeyChartProps> = ({
               />
               {showLabel ? (
                 <SvgText
+                  fontFamily={(fonts.numeric ?? fonts).bold}
                   x={label.x}
                   y={label.y}
                   fontSize={labelFontSize}
-                  fontWeight="700"
                   fill={theme.text}
                   textAnchor={label.textAnchor}
                 >

@@ -19,7 +19,7 @@ export function DateRangeCalendarStep({
   onBack,
   onSelect,
 }: DateRangeCalendarStepProps) {
-  const { theme, fonts } = useTheme();
+  const { theme } = useTheme();
 
   return (
     <View style={styles.container}>
@@ -31,9 +31,7 @@ export function DateRangeCalendarStep({
           iconColor={theme.textSecondary}
         />
         <View style={styles.headerCopy}>
-          <AppText variant="heading" style={{ fontFamily: fonts.bold }}>
-            {mode === 'START_DATE' ? 'Start Date' : 'End Date'}
-          </AppText>
+          <AppText variant="heading">{mode === 'START_DATE' ? 'Start Date' : 'End Date'}</AppText>
           <AppText variant="caption" color="secondary">
             {mode === 'START_DATE'
               ? 'Choose where the range begins.'
@@ -53,7 +51,7 @@ export function DateRangeCalendarStep({
         ]}
       >
         <AppIcon name={Icon.Calendar} size={16} color={theme.primary} />
-        <AppText variant="body" style={{ fontFamily: fonts.semibold }}>
+        <AppText variant="body" weight="semibold">
           {(date || dayjs()).format('DD MMM YYYY')}
         </AppText>
       </View>

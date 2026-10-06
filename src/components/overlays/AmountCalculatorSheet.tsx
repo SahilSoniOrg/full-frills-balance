@@ -100,7 +100,7 @@ export function AmountCalculatorSheet({
   onDone,
   onDismiss,
 }: AmountCalculatorSheetProps) {
-  const { theme } = useTheme();
+  const { theme, fonts } = useTheme();
   const expressionInputRef = useRef<TextInput>(null);
   const [expression, setExpression] = useState('');
   const [detailsExpanded, setDetailsExpanded] = useState(false);
@@ -258,7 +258,14 @@ export function AmountCalculatorSheet({
           contextMenuHidden
           placeholder="Enter amount"
           placeholderTextColor={theme.textTertiary}
-          style={[styles.expression, { color: theme.textSecondary }]}
+          style={[
+            styles.expression,
+            {
+              color: theme.textSecondary,
+              fontFamily: (fonts.numeric ?? fonts).regular,
+              fontVariant: ['tabular-nums', 'lining-nums'],
+            },
+          ]}
           numberOfLines={1}
           textAlign="right"
           accessibilityLabel={`Expression${expression ? ` ${displayExpression(expression)}` : ''}`}
@@ -276,7 +283,9 @@ export function AmountCalculatorSheet({
           </AppText>
           <AppText
             variant="hero"
-            weight="bold"
+            fontRole="numeric"
+            tabular
+            weight="semibold"
             style={[styles.resultAmount, { color: resultColor }]}
             numberOfLines={1}
             adjustsFontSizeToFit

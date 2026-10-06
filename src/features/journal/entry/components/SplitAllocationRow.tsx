@@ -72,7 +72,7 @@ export function SplitAllocationRow({
   removeLabel,
   row,
 }: SplitAllocationRowProps) {
-  const { theme } = useTheme();
+  const { theme, fonts } = useTheme();
   const category = allocationAccounts.find(account => account.id === row.accountId);
   const { pair, inputAmount, inputCurrency, inputPrecision, rowPrecision } = fx;
 
@@ -121,7 +121,10 @@ export function SplitAllocationRow({
               precision={inputPrecision}
               placeholder={formatAmountPlaceholder(inputPrecision)}
               containerStyle={allocationAmountStyles.container}
-              inputStyle={[allocationAmountStyles.text, { color: theme.text }]}
+              inputStyle={[
+                allocationAmountStyles.text,
+                { color: theme.text, fontFamily: (fonts.numeric ?? fonts).semibold },
+              ]}
               testID={`${testIDPrefix}-amount-input-${row.id}`}
             />
             {onMove ? (
@@ -197,7 +200,6 @@ export const allocationAmountStyles = StyleSheet.create({
     minWidth: 0,
     flexShrink: 1,
     fontSize: Typography.sizes.base,
-    fontWeight: '700',
     textAlign: 'right',
     paddingHorizontal: 0,
   },

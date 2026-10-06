@@ -55,10 +55,10 @@ export const IvyIcon = ({
         <AppIcon name={fallbackIcon} size={iconSize} color={textColor} />
       ) : label ? (
         <AppText
+          weight="bold"
           style={{
             color: textColor,
             fontSize: labelSize,
-            fontWeight: 'bold',
             lineHeight: size, // Center vertically
           }}
           align="center"

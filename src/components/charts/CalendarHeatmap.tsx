@@ -38,7 +38,7 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
   tooltipWidth,
   tooltipHeight,
 }) => {
-  const { theme, onContrast, blend } = useTheme();
+  const { theme, fonts, onContrast, blend } = useTheme();
   const [selectedPoint, setSelectedPoint] = useState<HeatmapPoint | null>(null);
 
   const windowWidth = Dimensions.get('window').width;
@@ -119,9 +119,9 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
       <View style={{ marginBottom: Spacing.sm }}>
         <AppText
           variant="caption"
+          weight="semibold"
           style={{
             color: theme.text,
-            fontWeight: '700',
             textTransform: 'uppercase',
             letterSpacing: 1.2,
             opacity: Opacity.strong,
@@ -137,11 +137,11 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
             {/* Day Labels (X-Axis) */}
             {DAYS.map((d, i) => (
               <SvgText
+                fontFamily={(fonts.numeric ?? fonts).bold}
                 key={i}
                 x={PADDING_LEFT + i * (cellWidth + CELL_SPACING) + cellWidth / 2}
                 y={DAY_LABEL_HEIGHT}
                 fontSize={10}
-                fontWeight="800"
                 fill={theme.text}
                 opacity={Opacity.strong}
                 textAnchor="middle"
@@ -175,10 +175,10 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
                   {/* Month Label on the left of the start of a month */}
                   {p.monthLabel && (
                     <SvgText
+                      fontFamily={(fonts.numeric ?? fonts).bold}
                       x={PADDING_LEFT - 8}
                       y={y + CELL_HEIGHT / 2 + 4}
                       fontSize={10}
-                      fontWeight="800"
                       fill={theme.text}
                       opacity={Opacity.strong}
                       textAnchor="end"
@@ -197,10 +197,10 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
                   />
                   {p.label && (
                     <SvgText
+                      fontFamily={(fonts.numeric ?? fonts).bold}
                       x={x + cellWidth / 2}
                       y={y + CELL_HEIGHT / 2 + 3}
                       fontSize={8}
-                      fontWeight="700"
                       fill={contentColor}
                       textAnchor="middle"
                       opacity={contentOpacity}
@@ -215,6 +215,7 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
 
             {/* Legend - Positioned at the very bottom */}
             <SvgText
+              fontFamily={(fonts.numeric ?? fonts).medium}
               x={CHART_WIDTH - 65}
               y={totalHeight - 25}
               fontSize={9}
@@ -237,6 +238,7 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
               />
             ))}
             <SvgText
+              fontFamily={(fonts.numeric ?? fonts).medium}
               x={CHART_WIDTH}
               y={totalHeight - 25}
               fontSize={9}
@@ -276,7 +278,8 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
                     <View style={styles.tooltipHeader}>
                       <AppText
                         variant="caption"
-                        style={{ fontWeight: '700', color: theme.textSecondary }}
+                        weight="semibold"
+                        style={{ color: theme.textSecondary }}
                       >
                         {selectedPoint.timestamp
                           ? dayjs(selectedPoint.timestamp).format('MMM D, YYYY')
@@ -293,7 +296,8 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
                         >
                           <AppText
                             variant="caption"
-                            style={{ color: theme.primary, fontWeight: '800', fontSize: 10 }}
+                            weight="semibold"
+                            style={{ color: theme.primary }}
                           >
                             VIEW
                           </AppText>
@@ -304,8 +308,8 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
                     <MoneyText
                       amount={selectedPoint.value}
                       currencyCode={currency}
-                      variant="title"
-                      style={{ fontWeight: '800', color: theme.text, marginTop: 2 }}
+                      variant="heading"
+                      style={{ color: theme.text, marginTop: 2 }}
                     />
                   </View>
                 )}

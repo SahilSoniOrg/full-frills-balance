@@ -102,7 +102,7 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
   descriptionTestID = 'journal-description-input',
   descriptionClearTestID = 'clear-description-button',
 }: JournalMetaCardProps) {
-  const { theme } = useTheme();
+  const { theme, fonts } = useTheme();
   const { resolvedHourCycle } = useHourCyclePrefs();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const isNotesControlled = showNotesProp !== undefined;
@@ -239,7 +239,7 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
               returnKeyType={onDescriptionSubmitEditing ? 'next' : 'done'}
               variant="minimal"
               flex={1}
-              style={styles.descriptionInput}
+              style={[styles.descriptionInput, { fontFamily: fonts.medium }]}
               testID={descriptionTestID}
             />
           </View>
@@ -434,7 +434,6 @@ const styles = StyleSheet.create({
   },
   descriptionInput: {
     fontSize: Typography.sizes.base,
-    fontWeight: '500',
   },
   descriptionInputSlot: {
     flex: 1,
@@ -477,7 +476,6 @@ const styles = StyleSheet.create({
   },
   notesInput: {
     fontSize: Typography.sizes.sm,
-    fontWeight: '400',
     minHeight: Size.xl,
     textAlignVertical: 'top',
   },

@@ -51,7 +51,7 @@ export const JournalDetailsHero = React.memo(
           prefix={amountPrefix || undefined}
           variant="title"
           color={amountColor as ComponentVariant}
-          style={{ fontSize: 32, fontWeight: '700', marginBottom: Spacing.xs }}
+          style={{ marginBottom: Spacing.xs }}
         />
 
         <AppText

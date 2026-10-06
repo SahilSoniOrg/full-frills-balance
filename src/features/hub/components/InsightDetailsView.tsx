@@ -24,7 +24,7 @@ export function InsightDetailsView({
   selectionChrome,
   modals,
 }: InsightDetailsViewModel & { chrome: ScreenNavChrome }) {
-  const { theme, fonts } = useTheme();
+  const { theme } = useTheme();
 
   const listHeader = (
     <View style={styles.headerContainer}>
@@ -56,7 +56,7 @@ export function InsightDetailsView({
         >
           <AppIcon name={header.iconName} size={Size.md} color={header.severityColor} />
         </View>
-        <AppText variant="title" style={{ fontFamily: fonts.bold, marginTop: Spacing.md }}>
+        <AppText variant="title" style={{ marginTop: Spacing.md }}>
           {header.message}
         </AppText>
         {header.amount !== null ? (
@@ -73,7 +73,7 @@ export function InsightDetailsView({
               amount={header.amount}
               currencyCode={header.currencyCode}
               variant="title"
-              style={{ color: header.severityColor, fontFamily: fonts.bold }}
+              style={{ color: header.severityColor }}
             />
           </View>
         ) : null}

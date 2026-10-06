@@ -296,7 +296,7 @@ function AmountField({
                 styles.currencyPrefix,
                 {
                   color: withOpacity(color, Opacity.heavy),
-                  fontFamily: isHero ? Typography.fonts.heading : fonts.bold,
+                  fontFamily: (fonts.numeric ?? fonts).bold,
                   fontSize: isHero ? typography.currencyFontSize : Typography.sizes.base,
                   lineHeight: isHero ? typography.currencyLineHeight : undefined,
                 },
@@ -334,7 +334,13 @@ function AmountField({
             selectionColor={withOpacity(color, Opacity.muted)}
             style={[
               styles.input,
-              { color, fontFamily: isHero ? fonts.bold : fonts.medium },
+              { fontVariant: ['tabular-nums', 'lining-nums'] },
+              {
+                color,
+                fontFamily: isHero
+                  ? (fonts.numeric ?? fonts).bold
+                  : (fonts.numeric ?? fonts).medium,
+              },
               isHero && {
                 fontSize: typography.amountFontSize,
                 lineHeight: Math.max(Size.buttonMd, typography.amountFontSize + Spacing.md),
@@ -491,7 +497,7 @@ const styles = StyleSheet.create({
   centeredWrap: { alignItems: 'center', width: '100%' },
   centeredLabel: { marginBottom: Spacing.xs, letterSpacing: Typography.letterSpacing.wide },
   centeredInputContainer: { width: '100%', paddingHorizontal: 0 },
-  centeredInput: { fontFamily: Typography.fonts.heading },
+  centeredInput: { textAlign: 'center' },
   currencyChip: {
     flexDirection: 'row',
     alignItems: 'center',

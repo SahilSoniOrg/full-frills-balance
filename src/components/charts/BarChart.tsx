@@ -76,6 +76,7 @@ const BarChartSvg = React.memo(function BarChartSvg({
   onPress,
   stacked = false,
 }: BarChartSvgProps) {
+  const { fonts } = useTheme();
   return (
     <Svg height={height} width={svgWidth}>
       <Rect
@@ -156,6 +157,7 @@ const BarChartSvg = React.memo(function BarChartSvg({
               );
             })}
             <SvgText
+              fontFamily={(fonts.numeric ?? fonts).medium}
               x={xGroupCenter}
               y={labelStartY}
               fontSize={REPORT_CHART_LAYOUT.barChartXAxisLabelFontSize}

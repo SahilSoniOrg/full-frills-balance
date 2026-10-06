@@ -360,7 +360,7 @@ function BeforeAfterChangesView({
                   >
                     :
                   </AppText>
-                  <AppText variant="caption" style={{ color, fontWeight: 'bold' }}>
+                  <AppText variant="caption" weight="bold" style={{ color }}>
                     {diffPrefix}
                     {CurrencyFormatter.format(diff, currency)}
                   </AppText>

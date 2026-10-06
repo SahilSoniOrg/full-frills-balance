@@ -54,7 +54,8 @@ export function NavigationBar({
       {!isSearchActive ? (
         <View style={[styles.center, alignTitle === 'left' && styles.centerLeft]}>
           <AppText
-            variant="subheading"
+            variant={showBack ? 'heading' : 'xl'}
+            fontRole="display"
             style={[styles.title, alignTitle === 'left' && styles.titleLeft]}
             numberOfLines={1}
             ellipsizeMode="tail"
@@ -95,7 +96,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
-    height: 64,
+    minHeight: 64,
   },
   side: {
     flexShrink: 0,

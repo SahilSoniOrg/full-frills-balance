@@ -8,7 +8,6 @@ import { Column, Row } from '@/src/design-system';
 import { presentBudgetUsage } from '../helpers/budgetCardPresentation';
 import type { BudgetPeriodPresentation } from '../helpers/budgetDetailPresentation';
 import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
-import { useTheme } from '@/src/hooks/use-theme';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import type { BudgetUsage } from '@/src/services/budget/types';
 import type { PlainBudget } from '@/src/types/plainDtos';
@@ -41,7 +40,6 @@ export function BudgetDetailHeader({
   nextMonth,
   resetToToday,
 }: BudgetDetailHeaderProps) {
-  const { fonts } = useTheme();
   const isPrivate = useEffectivePrivacyMode();
   const strings = AppConfig.strings.budgetDetailRedesign;
   const usageVm = presentBudgetUsage(usage, period.elapsedShare);
@@ -96,7 +94,7 @@ export function BudgetDetailHeader({
             prefix={usage.hasUnvaluedEntries ? '≈' : undefined}
             variant="title"
             color={usageVm.isOver ? 'error' : 'text'}
-            style={[styles.heroAmount, { fontFamily: fonts.heading }]}
+            style={styles.heroAmount}
             adjustsFontSizeToFit
             numberOfLines={1}
             minimumFontScale={0.2}

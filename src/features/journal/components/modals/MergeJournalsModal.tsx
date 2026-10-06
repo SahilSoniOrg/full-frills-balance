@@ -139,7 +139,7 @@ function MergeJournalsModalContent({
               <MoneyText
                 amount={preview.totalDebit}
                 currencyCode={preview.currencyCode}
-                style={[styles.totalAmount, { fontFamily: fonts.bold, color: theme.text }]}
+                style={[styles.totalAmount, { color: theme.text }]}
               />
             </View>
           </View>
@@ -175,7 +175,7 @@ function MergeJournalsModalContent({
               <MoneyText
                 amount={line.amount}
                 currencyCode={preview.currencyCode}
-                style={[styles.legAmount, { fontFamily: fonts.semibold, color: theme.text }]}
+                style={[styles.legAmount, { color: theme.text }]}
               />
             </View>
           ))}
@@ -208,7 +208,7 @@ function MergeJournalsModalContent({
               <MoneyText
                 amount={j.totalAmount}
                 currencyCode={j.currencyCode}
-                style={[styles.sourceAmount, { fontFamily: fonts.semibold, color: theme.text }]}
+                style={[styles.sourceAmount, { color: theme.text }]}
               />
             </View>
           ))}

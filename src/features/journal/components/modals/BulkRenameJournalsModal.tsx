@@ -31,7 +31,7 @@ function BulkRenameJournalsModalContent({
   onClose,
   onSave,
 }: Omit<BulkRenameJournalsModalProps, 'visible'>) {
-  const { theme, fonts } = useTheme();
+  const { theme } = useTheme();
   const [names, setNames] = useState<Record<JournalId, string>>(() => buildInitialNames(journals));
   const [isSaving, setIsSaving] = useState(false);
 
@@ -85,7 +85,7 @@ function BulkRenameJournalsModalContent({
               <MoneyText
                 amount={journal.totalAmount}
                 currencyCode={journal.currencyCode}
-                style={[styles.amountText, { fontFamily: fonts.semibold, color: theme.text }]}
+                style={[styles.amountText, { color: theme.text }]}
               />
             </View>
 
