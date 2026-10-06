@@ -8,7 +8,7 @@ import { currencyReadService } from '@/src/services/currency-read-service';
 import { logger } from '@/src/utils/logger';
 import { preferences } from '@/src/services/preferences';
 import { runAfterInteractions } from '@/src/utils/scheduler';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 
 // Cache Warmup Imports
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
@@ -23,7 +23,6 @@ import { WorkplaceId } from '@/src/types/ids';
 import { runAppBootstrapSideEffects } from '../bootstrap';
 import { checkJournalBalancesOnStartup } from '../journalBalanceStartupCheck';
 import { purgeLocalAiCachesOnce } from '../purgeLocalAiCaches';
-import { LatestGenerationCoordinator } from '@/src/services/LatestGenerationCoordinator';
 import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { automaticSmsImportService } from '@/src/services/sms/AutomaticSmsImportService';
@@ -34,9 +33,6 @@ import { automaticSmsImportService } from '@/src/services/sms/AutomaticSmsImport
  */
 export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: string) {
   const { isAppReady, setDataHydrated } = useAppReady();
-  const stabilizationCoordinatorRef = useRef<LatestGenerationCoordinator | null>(null);
-
-  stabilizationCoordinatorRef.current ??= new LatestGenerationCoordinator();
 
   // Register audit revert handlers once on cold start (idempotent).
   runAppBootstrapSideEffects();
@@ -60,11 +56,11 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
   useEffect(() => {
     if (!isAppReady) return;
 
-    const lease = stabilizationCoordinatorRef.current!.begin();
+    const controller = new AbortController();
     let stabilizationTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
     runAfterInteractions(() => {
-      if (!lease.isCurrent()) {
+      if (controller.signal.aborted) {
         logger.info('[Bootstrap] Stabilization cancelled (workspace changed or unmounted)');
         return;
       }
@@ -72,7 +68,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
       // Keep the delay cancellable so a workplace switch cannot leave a stale timer behind.
       stabilizationTimeoutId = setTimeout(() => {
         void (async () => {
-          if (!lease.isCurrent()) return;
+          if (controller.signal.aborted) return;
 
           logger.info(
             `[Bootstrap] Running delayed background tasks for workplace ${workplaceId}...`,
@@ -107,9 +103,9 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
             currencyReadService.getAllPrecisions(),
             reactiveDataService.preWarm(defaultCurrencyCode, workplaceId),
             insightService.preWarm(workplaceId),
-            runStartupCheck(workplaceId, lease.signal),
+            runStartupCheck(workplaceId, controller.signal),
             cleanupGhostWorkplaces(),
-            processDuePlannedPayments(workplaceId, lease.signal),
+            processDuePlannedPayments(workplaceId, controller.signal),
             smsPrivacyService.cleanupLegacyContent(),
             sharingService.init(),
             exchangeRateService.preWarmCache(defaultCurrencyCode),
@@ -127,13 +123,13 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
           ]);
 
           // Runs after the batch so a full journal scan does not contend with startup work.
-          if (lease.isCurrent()) {
-            await checkJournalBalancesOnStartup(workplaceId, lease.signal).catch(error =>
+          if (!controller.signal.aborted) {
+            await checkJournalBalancesOnStartup(workplaceId, controller.signal).catch(error =>
               logger.warn('[Bootstrap] Journal balance check failed', { error }),
             );
           }
 
-          if (lease.isCurrent()) {
+          if (!controller.signal.aborted) {
             logger.info(`[Bootstrap] Workplace ${workplaceId} fully stabilized.`);
           }
         })();
@@ -141,7 +137,7 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
     });
 
     return () => {
-      lease.cancel();
+      controller.abort();
       if (stabilizationTimeoutId) clearTimeout(stabilizationTimeoutId);
     };
   }, [isAppReady, workplaceId, defaultCurrencyCode]);
