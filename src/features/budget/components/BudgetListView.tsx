@@ -6,7 +6,7 @@ import { BudgetItem } from '../types';
 import { BudgetCard } from './BudgetCard';
 import { BudgetListSummary } from './BudgetListSummary';
 import { summarizeBudgetList } from '../helpers/budgetListPresentation';
-import { Column, Row } from '@/src/design-system';
+import { Column } from '@/src/design-system';
 
 export type BudgetListViewProps = {
   items: BudgetItem[];
@@ -55,14 +55,9 @@ export function BudgetListView({
         items.length > 0 ? (
           <Column gap="md" marginBottom="sm">
             {summary && <BudgetListSummary summary={summary} />}
-            <Row justify="space-between" gap="sm" flexWrap="wrap">
-              <AppText variant="body" color="secondary" weight="semibold">
-                {AppConfig.strings.commitmentsRedesign.thisMonth}
-              </AppText>
-              <AppText variant="caption" color="secondary">
-                {AppConfig.strings.commitmentsRedesign.attentionFirst}
-              </AppText>
-            </Row>
+            <AppText variant="body" color="secondary" weight="semibold">
+              {AppConfig.strings.commitmentsRedesign.thisMonth}
+            </AppText>
           </Column>
         ) : undefined
       }

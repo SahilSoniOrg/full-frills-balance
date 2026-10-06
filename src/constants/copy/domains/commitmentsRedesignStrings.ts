@@ -18,7 +18,6 @@ export const commitmentsRedesignStrings = {
   resume: 'Resume schedule',
   openPending: 'Open pending entry',
   monthlyBudgets: 'Monthly budgets',
-  attentionFirst: 'Needs attention first',
   budgetsLoadError: 'We could not load budgets.',
   unavailableCategory: 'Unavailable category',
   opensBudget: 'Opens budget details',
