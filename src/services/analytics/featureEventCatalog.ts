@@ -222,7 +222,6 @@ export const FEATURE_EVENT_CATALOG = {
       'change_safe_to_spend_days',
       'toggle_safe_to_spend_chart',
       'toggle_reduce_motion',
-      'toggle_reports_v2',
       'workplace_created',
       'workplace_switched',
       'workplace_deleted',

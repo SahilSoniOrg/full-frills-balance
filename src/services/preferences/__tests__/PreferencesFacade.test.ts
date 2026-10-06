@@ -70,15 +70,6 @@ describe('PreferencesFacade import restore', () => {
     expect(mockMemory.has(PREFERENCES_KEY)).toBe(false);
   });
 
-  it('keeps Reports V2 opt-in until explicitly enabled', () => {
-    const preferences = new PreferencesFacadeStore();
-
-    expect(preferences.getSnapshot().reportsV2Enabled).toBe(false);
-    preferences.update({ reportsV2Enabled: true });
-
-    expect(preferences.getSnapshot().reportsV2Enabled).toBe(true);
-  });
-
   it('bridges legacy storage before splitting and preserves Device values', async () => {
     const preferences = new PreferencesFacadeStore();
 

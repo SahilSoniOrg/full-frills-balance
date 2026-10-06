@@ -6,7 +6,6 @@ import {
   useSetDeviceReduceMotion,
 } from '@/src/hooks/useDeviceMotionPrefs';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
-import { usePreference } from '@/src/hooks/usePreference';
 import { useThemePrefs } from '@/src/hooks/useThemePrefs';
 import { analytics } from '@/src/services/analytics';
 import type { HourCyclePreference, ResolvedHourCycle } from '@/src/utils/hourCycle';
@@ -30,8 +29,6 @@ export interface AppearanceSettingsViewModel {
   onToggleSafeToSpendChart: () => void;
   reduceMotion: boolean;
   onToggleReduceMotion: () => void;
-  reportsV2Enabled: boolean;
-  onToggleReportsV2: () => void;
 }
 
 export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
@@ -47,8 +44,6 @@ export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
   const { showSafeToSpendChart, setShowSafeToSpendChart } = useDashboardPreferences();
   const reduceMotion = useDeviceReduceMotionPreference();
   const setReduceMotion = useSetDeviceReduceMotion();
-  const { value: reportsV2Enabled, setValue: setReportsV2Enabled } =
-    usePreference('reportsV2Enabled');
 
   const handleSetThemePreference = useCallback(
     (value: 'system' | 'light' | 'dark') => {
@@ -108,13 +103,6 @@ export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
     });
   }, [setReduceMotion, reduceMotion]);
 
-  const onToggleReportsV2 = useCallback(() => {
-    setReportsV2Enabled(!reportsV2Enabled);
-    analytics.trackFeatureUsage('settings', 'toggle_reports_v2', {
-      new_state: !reportsV2Enabled,
-    });
-  }, [reportsV2Enabled, setReportsV2Enabled]);
-
   const handleSetHourCyclePreference = useCallback(
     (value: HourCyclePreference) => {
       setHourCyclePreference(value);
@@ -143,7 +131,5 @@ export function useAppearanceSettingsViewModel(): AppearanceSettingsViewModel {
     onToggleSafeToSpendChart,
     reduceMotion,
     onToggleReduceMotion,
-    reportsV2Enabled,
-    onToggleReportsV2,
   };
 }
