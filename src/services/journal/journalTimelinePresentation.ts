@@ -16,6 +16,7 @@ import {
   JournalEntryLeg,
 } from '@/src/types/journalEntryCard';
 import { JournalTimelineIconKey, JournalTimelineViewer } from '@/src/types/journalTimeline';
+import type { AccountId } from '@/src/types/ids';
 
 const ROUTINE_SEMANTIC_TYPES = new Set<SemanticType>([
   SemanticType.TRANSFER,
@@ -78,6 +79,29 @@ function toCardPresentation(
   };
 }
 
+export function accountEntryLeg(
+  account: {
+    id: AccountId;
+    name: string;
+    accountType: string;
+    icon?: string | null;
+    color?: string;
+  },
+  role: JournalEntryLeg['role'],
+  id: string,
+): JournalEntryLeg {
+  return {
+    id,
+    accountId: account.id,
+    name: account.name,
+    role,
+    icon: isValidIconName(account.icon) ? account.icon : undefined,
+    color: account.color,
+    fallbackIcon: parseIconName(getAccountFallbackIcon(account.accountType), Icon.Wallet),
+    variant: getAccountTypeVariant(account.accountType),
+  };
+}
+
 function buildAccountFlow(
   journal: EnrichedJournal,
   viewerAccount?: EnrichedJournal['accounts'][number],
@@ -105,16 +129,11 @@ function buildAccountFlow(
             journalPrecision,
           }).journalAmount
         : undefined;
-    const leg: JournalEntryLeg = {
-      id: account.transactionId ?? `${account.id}:${account.role}:${index}`,
-      accountId: account.id,
-      name: account.name,
-      role: account.role,
-      icon: isValidIconName(account.icon) ? account.icon : undefined,
-      color: account.color,
-      fallbackIcon: parseIconName(getAccountFallbackIcon(account.accountType), Icon.Wallet),
-      variant: getAccountTypeVariant(account.accountType),
-    };
+    const leg = accountEntryLeg(
+      account,
+      account.role,
+      account.transactionId ?? `${account.id}:${account.role}:${index}`,
+    );
     return { account, leg, journalAmount };
   });
 
