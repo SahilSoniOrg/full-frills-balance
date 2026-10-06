@@ -72,28 +72,13 @@ export function BudgetCard({
       : vm.status === 'over'
         ? 'error'
         : 'secondary';
-  const statusLine = usage.hasUnvaluedEntries
-    ? fxMessage
-    : usage.spent <= 0
-      ? strings.nothingSpent
-      : vm.status === 'over'
-        ? strings.overPercent(
-            privateMode
-              ? AppConfig.privacyMask
-              : `${Math.round(Math.max(0, usage.usagePercent - 1) * 100)}%`,
-          )
-        : strings.daily(
-            vm.statusBadge.text,
-            formatMoney(period.dailyRemaining ?? 0, budget.currencyCode),
-          );
+  const hasSpent = usage.spent > 0;
   const statusDisplay =
-    usage.hasUnvaluedEntries || usage.spent <= 0
-      ? statusLine
-      : vm.status === 'over'
-        ? privateMode
-          ? AppConfig.privacyMask
-          : `${Math.round(Math.max(0, usage.usagePercent - 1) * 100)}%`
-        : `${formatMoney(period.dailyRemaining ?? 0, budget.currencyCode)}/day`;
+    vm.status === 'over'
+      ? privateMode
+        ? AppConfig.privacyMask
+        : `${Math.round(Math.max(0, usage.usagePercent - 1) * 100)}%`
+      : `${formatMoney(period.dailyRemaining ?? 0, budget.currencyCode)}/day`;
   const isMonthly =
     (!budget.intervalType || budget.intervalType === 'MONTHLY') && (budget.intervalN || 1) === 1;
   return (
@@ -145,21 +130,16 @@ export function BudgetCard({
                 </Row>
               )}
             </Column>
-            <Column gap="xs" style={{ alignItems: 'flex-end', flexShrink: 1, marginLeft: 'auto' }}>
-              <AppText
-                variant="heading"
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.2}
-                color={vm.isOver ? 'error' : 'text'}
-                style={{ fontFamily: fonts.heading }}
-              >
-                {headline}
-              </AppText>
-              <AppText variant="caption" color="secondary">
-                {limit}
-              </AppText>
-            </Column>
+            <AppText
+              variant="heading"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.2}
+              color={vm.isOver ? 'error' : 'text'}
+              style={{ fontFamily: fonts.heading, flexShrink: 1, marginLeft: 'auto' }}
+            >
+              {headline}
+            </AppText>
           </Row>
           <BudgetProgressBar
             progress={usage.usagePercent * 100}
@@ -167,27 +147,21 @@ export function BudgetCard({
             elapsedShare={period.elapsedShare}
             accessibilityLabel={paceLabel}
           />
-          <Row justify="space-between" align="center" gap="sm" flexWrap="wrap">
-            <Row gap="xs" align="center">
-              <AppIcon name={Icon.Receipt} size={Size.iconXs} color="textSecondary" />
+          {(hasSpent || usage.hasUnvaluedEntries) && (
+            <Row justify="space-between" align="center" gap="sm" flexWrap="wrap">
               <AppText variant="caption" color="secondary" testID="budget-card-spent">
-                {spentAmount}
+                {`${spent} ${limit}`}
               </AppText>
-            </Row>
-            {!usage.hasUnvaluedEntries && (
-              <Row gap="xs" align="center">
-                {usage.spent > 0 && (
+              {hasSpent && !usage.hasUnvaluedEntries && (
+                <Row gap="xs" align="center">
                   <AppIcon name={statusIcon(vm.status)} size={Size.iconXs} color={statusColor} />
-                )}
-                {usage.spent <= 0 ? (
-                  <AppIcon name={Icon.Clock} size={Size.iconXs} color="textSecondary" />
-                ) : null}
-                <AppText variant="caption" color={usage.spent <= 0 ? 'secondary' : statusColor}>
-                  {statusDisplay}
-                </AppText>
-              </Row>
-            )}
-          </Row>
+                  <AppText variant="caption" color={statusColor}>
+                    {statusDisplay}
+                  </AppText>
+                </Row>
+              )}
+            </Row>
+          )}
         </Column>
       </PressScaleTouchable>
       {usage.hasUnvaluedEntries && (

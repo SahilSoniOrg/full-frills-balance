@@ -67,8 +67,7 @@ describe('redesigned budget rows and summary', () => {
     };
     const screen = render(<BudgetCard item={decimalBudget} onPress={jest.fn()} />);
     expect(screen.getByText('$5,820 left')).toBeTruthy();
-    expect(screen.getByText('of $9,000')).toBeTruthy();
-    expect(screen.getByText('$3,180')).toBeTruthy();
+    expect(screen.getByText('$3,180 spent of $9,000')).toBeTruthy();
     expect(screen.queryByText(/\.\d{2}/)).toBeNull();
   });
 
@@ -147,7 +146,7 @@ describe('redesigned budget rows and summary', () => {
     expect(screen.getByText('0%')).toBeTruthy();
   });
 
-  it('keeps zero-spent budgets free of pace wording', () => {
+  it('drops the spent and pace row for zero-spent budgets', () => {
     const screen = render(
       <BudgetCard
         item={{
@@ -157,7 +156,8 @@ describe('redesigned budget rows and summary', () => {
         onPress={jest.fn()}
       />,
     );
-    expect(screen.getByText('nothing spent yet')).toBeTruthy();
+    expect(screen.getByText(/9,000.*left/)).toBeTruthy();
+    expect(screen.queryByTestId('budget-card-spent')).toBeNull();
     expect(screen.queryByText(/\/day/)).toBeNull();
   });
 
