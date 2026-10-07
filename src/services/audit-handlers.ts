@@ -7,6 +7,7 @@ import { journalService } from '@/src/services/journal/journalDomainService';
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import { transactionQueryRepository } from '@/src/data/repositories/transaction';
+import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
@@ -280,9 +281,7 @@ export function registerAuditHandlers(): void {
           !journal ||
           !matchesSnapshot(expected, normalizedJournalSnapshot(journal, transactions))
         ) {
-          throw new Error(
-            REVERT_CONFLICT_MESSAGE,
-          );
+          throw new Error(REVERT_CONFLICT_MESSAGE);
         }
         await journalService.deleteJournal(
           journalId,
@@ -300,25 +299,19 @@ export function registerAuditHandlers(): void {
         const after = asRecord(changes.after);
         const journal = await journalQueryRepository.findWithDeleted(workplaceId, journalId);
         if (!before || !journal?.deletedAt) {
-          throw new Error(
-            REVERT_CONFLICT_MESSAGE,
-          );
+          throw new Error(REVERT_CONFLICT_MESSAGE);
         }
         if (
           after?.deletedAt !== undefined &&
           stableAuditJson(journal.deletedAt.toISOString()) !== stableAuditJson(after.deletedAt)
         ) {
-          throw new Error(
-            REVERT_CONFLICT_MESSAGE,
-          );
+          throw new Error(REVERT_CONFLICT_MESSAGE);
         }
         const deletedTransactions = (
           await transactionQueryRepository.findByJournalIncludingDeleted(workplaceId, journalId)
         ).filter(transaction => transaction.deletedAt?.getTime() === journal.deletedAt!.getTime());
         if (!matchesSnapshot(before, normalizedJournalSnapshot(journal, deletedTransactions))) {
-          throw new Error(
-            REVERT_CONFLICT_MESSAGE,
-          );
+          throw new Error(REVERT_CONFLICT_MESSAGE);
         }
         await journalService.recoverJournal(
           journalId,
@@ -340,9 +333,7 @@ export function registerAuditHandlers(): void {
           !restoredJournal ||
           (typeof restoredAt === 'string' && restoredJournal.updatedAt.toISOString() !== restoredAt)
         ) {
-          throw new Error(
-            REVERT_CONFLICT_MESSAGE,
-          );
+          throw new Error(REVERT_CONFLICT_MESSAGE);
         }
         await journalService.deleteJournal(
           journalId,
@@ -365,12 +356,47 @@ export function registerAuditHandlers(): void {
         journalId,
       );
       const current = normalizedJournalSnapshot(currentJournal, currentTransactions);
+      let expectedCurrent = expectedJournalFields(changes);
       if (!matchesCurrentJournal(changes, current)) {
-        throw new Error(
-          REVERT_CONFLICT_MESSAGE,
-        );
+        // Restore/import history entries describe the imported baseline; they are not later
+        // journal edits. Allow the selected edit to revert only when that baseline exactly
+        // matches the current journal and no real journal event followed the selected edit.
+        const logs = await auditRepository.findByEntity('journal', journalId, workplaceId);
+        const selectedIndex = logs.findIndex(log => log.id === context?.auditLogId);
+        const laterLogs = selectedIndex < 0 ? [] : logs.slice(0, selectedIndex);
+        const isImportedMarker = (log: (typeof logs)[number]) =>
+          log.eventType === 'journal.imported' &&
+          log.action === AuditAction.CREATE &&
+          log.source === 'import';
+        const importedAfter =
+          laterLogs.length > 0 && laterLogs.every(isImportedMarker)
+            ? asRecord(asRecord(laterLogs[0].parsedChanges)?.after)
+            : undefined;
+        const snapshotFields = [
+          'description',
+          'notes',
+          'journalDate',
+          'currencyCode',
+          'status',
+          'totalAmount',
+          'transactions',
+        ];
+        const importedSnapshot = importedAfter
+          ? Object.fromEntries(
+              snapshotFields
+                .filter(field => Object.prototype.hasOwnProperty.call(importedAfter, field))
+                .map(field => [field, importedAfter[field]]),
+            )
+          : undefined;
+        if (
+          !importedSnapshot ||
+          Object.keys(importedSnapshot).length !== snapshotFields.length ||
+          !matchesCurrentJournal({ after: importedSnapshot }, current)
+        ) {
+          throw new Error(REVERT_CONFLICT_MESSAGE);
+        }
+        expectedCurrent = importedSnapshot;
       }
-      const expectedCurrent = expectedJournalFields(changes);
 
       const statusOnlyChange = eventFieldNames(changes).every(
         field => field === 'status' || field === 'journalDate',
@@ -467,9 +493,7 @@ export function registerAuditHandlers(): void {
             ['initialBalance'],
           ))
         ) {
-          throw new Error(
-            ACCOUNT_REVERT_CONFLICT_MESSAGE,
-          );
+          throw new Error(ACCOUNT_REVERT_CONFLICT_MESSAGE);
         }
         await deleteAccount(accountId, workplaceId, {
           revertsLogId: context?.auditLogId,
@@ -487,9 +511,7 @@ export function registerAuditHandlers(): void {
           !(await accountMatchesAuditSnapshot(workplaceId, accountId, before, ['deletedAt'])) ||
           !(await accountMatchesAuditSnapshot(workplaceId, accountId, after))
         ) {
-          throw new Error(
-            ACCOUNT_REVERT_CONFLICT_MESSAGE,
-          );
+          throw new Error(ACCOUNT_REVERT_CONFLICT_MESSAGE);
         }
         await recoverAccount(accountId, workplaceId, {
           revertsLogId: context?.auditLogId,
@@ -503,9 +525,7 @@ export function registerAuditHandlers(): void {
           !changes.after ||
           !(await accountMatchesAuditSnapshot(workplaceId, accountId, changes.after))
         ) {
-          throw new Error(
-            ACCOUNT_REVERT_CONFLICT_MESSAGE,
-          );
+          throw new Error(ACCOUNT_REVERT_CONFLICT_MESSAGE);
         }
         await deleteAccount(accountId, workplaceId, {
           revertsLogId: context?.auditLogId,
@@ -580,9 +600,7 @@ export function registerAuditHandlers(): void {
       const fields = eventFieldNames(changes);
       const workplace = await workplaceRepository.find(entityId as WorkplaceId);
       if (!before || !after || !workplace || workplace.id !== workplaceId) {
-        throw new Error(
-          WORKPLACE_REVERT_CONFLICT_MESSAGE,
-        );
+        throw new Error(WORKPLACE_REVERT_CONFLICT_MESSAGE);
       }
 
       const patch: Partial<{
@@ -596,9 +614,7 @@ export function registerAuditHandlers(): void {
         const previous = before[field];
         const expectedValue = after[field];
         if (typeof previous !== 'string' || typeof expectedValue !== 'string') {
-          throw new Error(
-            WORKPLACE_REVERT_CONFLICT_MESSAGE,
-          );
+          throw new Error(WORKPLACE_REVERT_CONFLICT_MESSAGE);
         }
         patch[field as keyof typeof patch] = previous;
         expectedCurrent[field as keyof typeof expectedCurrent] = expectedValue;

@@ -1,5 +1,7 @@
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
+import { database } from '@/src/data/database/Database';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { budgetRepository } from '@/src/data/repositories/BudgetRepository';
 import { plannedPaymentRepository } from '@/src/data/repositories/PlannedPaymentRepository';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
@@ -338,5 +340,112 @@ test('journal amount undo accepts serialized null optional line fields', async (
     log => log.action === AuditAction.UPDATE,
   )!;
   expect(await revertEntry(log.id, wp)).toEqual({ success: true });
+  expect(journal.totalAmount).toBe(10);
+});
+
+test('journal edits undo one at a time, newest first', async () => {
+  const a = await account('Stack cash');
+  const b = await account('Stack other');
+  const lines = (amount: number) => [
+    { accountId: a.id, amount, transactionType: TransactionType.DEBIT },
+    { accountId: b.id, amount, transactionType: TransactionType.CREDIT },
+  ];
+  const journal = await journalPersistenceService.put(
+    { journalDate: 1700000000000, currencyCode: 'USD', transactions: lines(10) },
+    wp,
+  );
+  const updates = async () =>
+    (await auditRepository.findByEntity('journal', journal.id, wp)).filter(
+      log => log.action === AuditAction.UPDATE,
+    );
+  await journalPersistenceService.put({ journalId: journal.id, transactions: lines(20) }, wp);
+  const [first] = await updates();
+  await journalPersistenceService.put({ journalId: journal.id, transactions: lines(30) }, wp);
+  const second = (await updates()).find(log => log.id !== first.id)!;
+
+  expect(await revertEntry(second.id, wp)).toEqual({ success: true });
+  expect(journal.totalAmount).toBe(20);
+  expect(await revertEntry(first.id, wp)).toEqual({ success: true });
+  expect(journal.totalAmount).toBe(10);
+});
+
+test('journal edit undo can cross an indicative import marker when it still matches current data', async () => {
+  const a = await account('Imported cash');
+  const b = await account('Imported category');
+  const journalDate = 1700000000000;
+  const journal = await journalPersistenceService.put(
+    {
+      journalDate,
+      currencyCode: 'USD',
+      description: 'Imported state',
+      transactions: [
+        { accountId: a.id, amount: 30, transactionType: TransactionType.DEBIT },
+        { accountId: b.id, amount: 30, transactionType: TransactionType.CREDIT },
+      ],
+    },
+    wp,
+  );
+  const currentLines = await transactionQueryRepository.findByJournal(wp, journal.id);
+  const importedSnapshot = {
+    description: journal.description,
+    notes: journal.notes ?? null,
+    journalDate,
+    currencyCode: journal.currencyCode,
+    status: journal.status,
+    totalAmount: journal.totalAmount,
+    transactions: currentLines.map(line => ({
+      accountId: line.accountId,
+      amount: line.amount,
+      transactionType: line.transactionType,
+      notes: line.notes ?? undefined,
+      exchangeRate: line.exchangeRate ?? undefined,
+      currencyCode: line.currencyCode ?? undefined,
+    })),
+  };
+  const oldSnapshot = (amount: number, description: string) => ({
+    ...importedSnapshot,
+    description,
+    totalAmount: amount,
+    transactions: importedSnapshot.transactions.map(line => ({ ...line, amount })),
+  });
+  const edited = auditRepository.prepareLog(
+    {
+      entityType: 'journal',
+      entityId: journal.id,
+      action: AuditAction.UPDATE,
+      eventType: 'journal.updated',
+      changes: { before: oldSnapshot(10, 'Original'), after: oldSnapshot(20, 'Edited') },
+      undoable: true,
+    },
+    wp,
+  );
+  const imported = auditRepository.prepareLog(
+    {
+      entityType: 'journal',
+      entityId: journal.id,
+      action: AuditAction.CREATE,
+      eventType: 'journal.imported',
+      source: 'import',
+      changes: { after: importedSnapshot },
+      undoable: false,
+    },
+    wp,
+  );
+  await database.write(() => database.batch(edited, imported));
+  const [created] = await auditRepository
+    .findByEntity('journal', journal.id, wp, 10)
+    .then(logs => logs.filter(log => log.id !== edited.id && log.id !== imported.id));
+  // Same-millisecond logs sort by random id, so the creation log could land after the edit.
+  await database.write(async () => {
+    await edited.update(record => {
+      record.timestamp = created.timestamp + 1;
+    });
+    await imported.update(record => {
+      record.timestamp = created.timestamp + 2;
+    });
+  });
+
+  expect(await revertEntry(edited.id, wp)).toEqual({ success: true });
+  expect(journal.description).toBe('Original');
   expect(journal.totalAmount).toBe(10);
 });
