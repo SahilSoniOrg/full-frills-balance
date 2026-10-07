@@ -3,12 +3,12 @@ PODS:
     - ExpoModulesCore
   - EXApplication (57.0.3):
     - ExpoModulesCore
-  - EXConstants (57.0.20):
+  - EXConstants (57.0.19):
     - ExpoModulesCore
   - EXJSONUtils (57.0.2)
   - EXManifests (57.0.2):
     - ExpoModulesCore
-  - Expo (57.0.26):
+  - Expo (57.0.25):
     - ExpoModulesCore
     - ExpoModulesJSI
     - hermes-engine
@@ -184,9 +184,11 @@ PODS:
     - Yoga
   - ExpoAsset (57.0.18):
     - ExpoModulesCore
+  - ExpoClipboard (57.0.2):
+    - ExpoModulesCore
   - ExpoDevice (57.0.2):
     - ExpoModulesCore
-  - ExpoDocumentPicker (57.0.3):
+  - ExpoDocumentPicker (57.0.2):
     - ExpoModulesCore
   - ExpoDomWebView (57.0.1):
     - ExpoModulesCore
@@ -210,7 +212,7 @@ PODS:
     - ExpoModulesCore
   - ExpoLogBox (57.0.4):
     - React-Core
-  - ExpoModulesCore (57.0.20):
+  - ExpoModulesCore (57.0.19):
     - ExpoModulesJSI
     - hermes-engine
     - RCTRequired
@@ -237,17 +239,17 @@ PODS:
   - ExpoModulesJSI (57.1.1):
     - React-Core
     - ReactCommon
-  - ExpoModulesWorklets (57.0.20):
+  - ExpoModulesWorklets (57.0.19):
     - ExpoModulesCore
     - ExpoModulesJSI
-  - ExpoModulesWorkletsAdapter (57.0.20):
+  - ExpoModulesWorkletsAdapter (57.0.19):
     - ExpoModulesCore
     - ExpoModulesJSI
     - ExpoModulesWorklets
     - RNWorklets
   - ExpoNotifications (57.0.21):
     - ExpoModulesCore
-  - ExpoRouter (57.0.24):
+  - ExpoRouter (57.0.23):
     - ExpoModulesCore
     - RNScreens
   - ExpoScreenCapture (57.0.3):
@@ -264,7 +266,7 @@ PODS:
     - ExpoModulesCore
   - ExpoSystemUI (57.0.4):
     - ExpoModulesCore
-  - ExpoUI (57.0.21):
+  - ExpoUI (57.0.20):
     - ExpoModulesCore
     - ExpoModulesWorklets
     - React-RCTFabric
@@ -273,7 +275,7 @@ PODS:
   - ExpoWidgets (1.0.0):
     - ExpoModulesCore
   - EXStructuredHeaders (57.0.1)
-  - EXUpdates (57.0.24):
+  - EXUpdates (57.0.23):
     - EASClient
     - EXManifests
     - ExpoModulesCore
@@ -2715,6 +2717,7 @@ DEPENDENCIES:
   - expo-dev-menu (from `../node_modules/expo-dev-menu`)
   - expo-dev-menu-interface (from `../node_modules/expo-dev-menu-interface/ios`)
   - ExpoAsset (from `../node_modules/expo-asset/ios`)
+  - ExpoClipboard (from `../node_modules/expo-clipboard/ios`)
   - ExpoDevice (from `../node_modules/expo-device/ios`)
   - ExpoDocumentPicker (from `../node_modules/expo-document-picker/ios`)
   - "ExpoDomWebView (from `../node_modules/@expo/dom-webview/ios`)"
@@ -2874,6 +2877,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-dev-menu-interface/ios"
   ExpoAsset:
     :path: "../node_modules/expo-asset/ios"
+  ExpoClipboard:
+    :path: "../node_modules/expo-clipboard/ios"
   ExpoDevice:
     :path: "../node_modules/expo-device/ios"
   ExpoDocumentPicker:
@@ -3131,17 +3136,18 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   EASClient: 0a37063ccb7acd90d4a490e804b16c9bf709d34a
   EXApplication: a727f05eb8592f0bc764f6ab8d51eacc158652ec
-  EXConstants: fdc6f92b1559e5bd69df9e684e8c7ba5d912890e
+  EXConstants: 2dc4473aff5574eccaccb9f3eefe6d95247e5d38
   EXJSONUtils: a49e3ef80dff762108e5690c7b2f360675dcf7f6
   EXManifests: 4c53b2602e03ccf44d0b4ff9c5d655b2c5acba3f
-  Expo: 404a8f48f74f2d062911f965440380d98bfa879b
+  Expo: 467b8a6845b753adca743c1d2e3d0b93af904db9
   expo-dev-client: 9cd43bb07fb625c51b436d4cb23be2fc932f8d26
   expo-dev-launcher: 05c72f3a22b4c742b06bd36fa391a30a990556a0
   expo-dev-menu: 272e23ced973a0e401c2b9a679595ea6c7c05d78
   expo-dev-menu-interface: 7a59e803916fbfd1b96c75ff91ea8dddac7e722f
   ExpoAsset: a917b756b2e4fe12cef1ac3bca5fd849ddb2b919
+  ExpoClipboard: 15b8cc88075d7c50af165ed8fca0a76915903bba
   ExpoDevice: 5c638e530304a51992263ab5c1cab726f992b9dc
-  ExpoDocumentPicker: 3cb0c283969538c03ced2b405e519c91abf39f8e
+  ExpoDocumentPicker: fe03a24855e39af0f9b5aee17e7eb4813f6e44a6
   ExpoDomWebView: beaec034e51bd028428b98bb1f2633ab79c6d095
   ExpoFileSystem: 28778f942725170102f7c6cf4dee05a526ddacd0
   ExpoFont: f8198a952ba2ff53c9b393b5269ea435f232cfc3
@@ -3153,12 +3159,12 @@ SPEC CHECKSUMS:
   ExpoLocalAuthentication: 1e4aef156a3a1f953f8278b8d8309f6118919640
   ExpoLocalization: f204d4ca963bfcea932068a978247878f664f5a4
   ExpoLogBox: 80957303325cd4439137765c90a87d7f22aaf2ff
-  ExpoModulesCore: 4dcfd39ef2a8271b0d4d2559ee2ea6883a817c95
+  ExpoModulesCore: 05cdac63222339cdf25845fef151303943ff29b7
   ExpoModulesJSI: 383849017851b1ebacbd78cfaa32b18b6152585e
-  ExpoModulesWorklets: 40d29262efc034e4357f2713e6037a41a27218d6
-  ExpoModulesWorkletsAdapter: ea5b8916e2fdf8647e8543dbcd81a665e070e74a
+  ExpoModulesWorklets: 8c9a7e3572a420e3e7f93f98453da9c9175edf88
+  ExpoModulesWorkletsAdapter: 06948bf7cd8f2946f78f69a4c872863abca3d42f
   ExpoNotifications: d432d5b2904f700a6a2dc29eca52e531c4cc1611
-  ExpoRouter: fa0e119f32bdc83dcccfa2b08859e8e582c233d2
+  ExpoRouter: e94e22e9806d0a731d8636bddd882ac2039e4f74
   ExpoScreenCapture: bd0a12b12fb7f487d8d2ce7b7c780145d308d420
   ExpoSharing: 5cc46810cfba71e331f649d947660213082094c1
   ExpoSpeechRecognition: 4d0b77cae54a51c092fe6d2ed9fa6a47bd4fbcba
@@ -3166,11 +3172,11 @@ SPEC CHECKSUMS:
   ExpoSQLite: 72e6ada0504a27cd043eb1bf172db70485a761b6
   ExpoSymbols: 37a3a6e5847edb08b83a5ee04d3b46525e205f00
   ExpoSystemUI: 05ee8d4aaba1b6af330f3621e19b39ff9f21e718
-  ExpoUI: 9cc4762adb625c875850b69a66451dd9c6bb7767
+  ExpoUI: d99ab879624d247bf4e19659a3b3c3e01bd3b428
   ExpoWebBrowser: a4d7c382116fbe33c1ec7f60293f02b7e97042e4
   ExpoWidgets: a8bb2516b590674c21705db120332032f12741e4
   EXStructuredHeaders: 07c88ee9f7dfcbafeaaab0e78ea276dfe0eb332e
-  EXUpdates: 3b0a69685dabd87e6388e8f41b9cc24ec0a12949
+  EXUpdates: 0b001ff17e727d89c7dc832b080a2a675268eb9c
   EXUpdatesInterface: 4c96533f11c8cefe879bd506564cc2d537f56804
   FBLazyVector: 2138c6c2ab66c31bf5754dc18097fbc498a49c7f
   hermes-engine: 63c5db7d529c36335fada6582fd293ae2a105d77
