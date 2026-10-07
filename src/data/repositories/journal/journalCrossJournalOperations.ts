@@ -5,12 +5,14 @@ import {
 import Journal from '@/src/data/models/Journal';
 import Transaction from '@/src/data/models/Transaction';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
+import { generator } from '@/src/data/database/idGenerator';
 import {
   fetchActiveJournals,
   fetchJournalTransactions,
   groupTransactionsByJournal,
   journalTables,
   mapJournalSnapshotForAudit,
+  prepareDeleteAudit,
   prepareDeletedAt,
   rebuildImpactFor,
   toPersistenceLine,
@@ -27,6 +29,7 @@ import type {
 import { AuditAction, JournalDisplayType, JournalStatus } from '@/src/types/enums';
 import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { mapTransactionToAudit } from '@/src/types/audit';
+import type { AuditEventMetadata } from '@/src/types/auditEvents';
 import { Q } from '@nozbe/watermelondb';
 
 /** Validates each journal as it would read after moving lines to other accounts. */
@@ -132,6 +135,12 @@ export async function stageMerge(
     input.description ||
     (descriptions.length > 0 ? `Merged: ${descriptions.join(', ')}` : 'Merged Transaction');
   const transactions = sourceTransactions.map(toPersistenceLine);
+  // A merge can only be undone as a whole; reverting one history row would change balances.
+  const auditMetadata: AuditEventMetadata = {
+    eventType: 'journal.created',
+    correlationId: generator(),
+    undoable: false,
+  };
 
   const prepared = await preparePutOperations(
     {
@@ -145,15 +154,23 @@ export async function stageMerge(
     },
     workplaceId,
     session,
+    auditMetadata,
   );
   const mergedJournalId = prepared.result.journal.id;
 
   const now = new Date();
+  const transactionsByJournal = groupTransactionsByJournal(sourceTransactions);
   const sourceIds = new Set<JournalId>(sourceJournalIds);
   stageModelWrite(session, () => [
     ...prepared.ops(),
     ...orderedJournals.map(journal => prepareDeletedAt(journal, now, now)),
     ...sourceTransactions.map(transaction => prepareDeletedAt(transaction, now, now)),
+    ...orderedJournals.map(journal =>
+      prepareDeleteAudit(journal, transactionsByJournal.get(journal.id) ?? [], now, workplaceId, {
+        ...auditMetadata,
+        eventType: 'journal.deleted',
+      }),
+    ),
     ...sourceMetadata.map(metadata =>
       metadata.prepareUpdate(record => {
         record.journalId = mergedJournalId;

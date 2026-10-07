@@ -1,5 +1,6 @@
 import { journalPersistenceService } from '@/src/services/journal/JournalPersistenceService';
 import { database } from '@/src/data/database/Database';
+import AuditLog from '@/src/data/models/AuditLog';
 import Journal from '@/src/data/models/Journal';
 import JournalMetadata from '@/src/data/models/JournalMetadata';
 import Transaction from '@/src/data/models/Transaction';
@@ -19,6 +20,7 @@ import {
 import { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import {
   AccountType,
+  AuditAction,
   InboxParseStatus,
   InboxProcessingStatus,
   JournalDisplayType,
@@ -253,6 +255,48 @@ describe('journalBulkCommands', () => {
     const reloaded2 = await database.collections.get<Journal>('journals').find(j2.id);
     expect(reloaded1.deletedAt).toBeTruthy();
     expect(reloaded2.deletedAt).toBeTruthy();
+
+    const deletionLogs = await database.collections
+      .get<AuditLog>('audit_logs')
+      .query(
+        Q.where('workplace_id', WP),
+        Q.where('entity_type', 'journal'),
+        Q.where('entity_id', Q.oneOf([j1.id, j2.id])),
+        Q.where('action', AuditAction.DELETE),
+      )
+      .fetch();
+    expect(deletionLogs).toHaveLength(2);
+    const creationLogs = await database.collections
+      .get<AuditLog>('audit_logs')
+      .query(Q.where('workplace_id', WP), Q.where('entity_id', merged.id))
+      .fetch();
+    expect(creationLogs).toHaveLength(1);
+    const creationLog = creationLogs[0];
+    expect(creationLog.eventType).toBe('journal.created');
+    expect(creationLog.correlationId).toBeTruthy();
+    expect(creationLog.canRevert).toBe(false);
+    for (const [journal, amount] of [
+      [reloaded1, 10],
+      [reloaded2, 20],
+    ] as const) {
+      const log = deletionLogs.find(entry => entry.entityId === journal.id)!;
+      expect(log.eventType).toBe('journal.deleted');
+      expect(log.correlationId).toBe(creationLog.correlationId);
+      expect(log.canRevert).toBe(false);
+      expect(log.parsedChanges?.before).toMatchObject({
+        description: journal.description,
+        journalDate: journal.journalDate,
+        currencyCode: 'USD',
+        totalAmount: amount,
+        transactions: expect.arrayContaining([
+          expect.objectContaining({ accountId: expenseAccId, amount }),
+          expect.objectContaining({ accountId: assetAccId, amount }),
+        ]),
+      });
+      expect(log.parsedChanges?.after).toMatchObject({
+        deletedAt: journal.deletedAt!.toISOString(),
+      });
+    }
   });
 
   it('merge preserves foreign-currency line amounts and rates in one batch', async () => {
@@ -333,12 +377,23 @@ describe('journalBulkCommands', () => {
         transaction.amount += 1;
       }),
     );
+    const auditLogsBeforeMerge = await database.collections
+      .get<AuditLog>('audit_logs')
+      .query()
+      .fetch();
     const batchSpy = jest.spyOn(database, 'batch');
 
     await expect(mergeJournals(WP, [j1.id, j2.id])).rejects.toThrow(/differ by 1\.00 USD/);
 
     expect(batchSpy).not.toHaveBeenCalled();
     batchSpy.mockRestore();
+    const auditLogsAfterMerge = await database.collections
+      .get<AuditLog>('audit_logs')
+      .query()
+      .fetch();
+    expect(auditLogsAfterMerge.map(log => log.id).sort()).toEqual(
+      auditLogsBeforeMerge.map(log => log.id).sort(),
+    );
     const activeJournals = await database.collections
       .get<Journal>('journals')
       .query(Q.where('workplace_id', WP), Q.where('deleted_at', Q.eq(null)))
