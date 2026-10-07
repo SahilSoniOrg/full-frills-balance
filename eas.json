@@ -36,7 +36,8 @@
       },
       "env": {
         "APP_VARIANT": "production",
-        "EXPO_PUBLIC_E2E": "0"
+        "EXPO_PUBLIC_E2E": "0",
+        "EXPO_PUBLIC_VERSION_POLICY_URL": "https://raw.githubusercontent.com/SahilSoniOrg/full-frills-balance-configs/main/version-policy.json"
       }
     },
     "production-test": {
