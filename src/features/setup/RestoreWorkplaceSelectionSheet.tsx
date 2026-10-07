@@ -1,9 +1,9 @@
-import { Icon, AppButton, AppIcon, AppText } from '@/src/components/core';
+import { AppButton, AppText } from '@/src/components/core';
+import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Box, Stack } from '@/src/design-system';
 import { Size, Spacing } from '@/src/constants';
 import { TouchableOpacity } from 'react-native';
-import { useTheme } from '@/src/hooks/use-theme';
 
 export interface RestoreWorkplaceCandidate {
   readonly name: string;
@@ -28,7 +28,6 @@ export function RestoreWorkplaceSelectionSheet({
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  const { theme } = useTheme();
   const allSelected = selectedIndexes.length === workplaces.length;
   return (
     <ModalSurface
@@ -48,13 +47,14 @@ export function RestoreWorkplaceSelectionSheet({
           onPress={() => onChange(allSelected ? [] : workplaces.map((_, index) => index))}
           accessibilityRole="checkbox"
           accessibilityLabel="Select all workplaces"
-          accessibilityState={{ checked: allSelected }}
+          accessibilityState={{
+            checked: allSelected ? true : selectedIndexes.length > 0 ? 'mixed' : false,
+          }}
         >
           <Box flexDirection="row" alignItems="center" padding="sm" gap="md">
-            <AppIcon
-              name={allSelected ? Icon.CheckSquare : Icon.Square}
+            <SelectionIndicator
+              selected={allSelected ? true : selectedIndexes.length > 0 ? 'mixed' : false}
               size={Size.iconSm}
-              color={allSelected ? theme.primary : theme.textSecondary}
             />
             <AppText weight="semibold">Select all</AppText>
           </Box>
@@ -78,11 +78,7 @@ export function RestoreWorkplaceSelectionSheet({
                 testID={`restore-workplace-option-${index}`}
               >
                 <Box flexDirection="row" alignItems="center" padding="sm" gap="md">
-                  <AppIcon
-                    name={selected ? Icon.CheckSquare : Icon.Square}
-                    size={Size.iconSm}
-                    color={selected ? theme.primary : theme.textSecondary}
-                  />
+                  <SelectionIndicator selected={selected} size={Size.iconSm} />
                   <Stack gap="xs" flex={1}>
                     <AppText>{entry.name}</AppText>
                     {entry.currency ? (

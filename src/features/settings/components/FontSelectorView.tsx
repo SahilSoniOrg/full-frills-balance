@@ -1,6 +1,6 @@
 import { AppConfig, FontId, FontIds, FontSchemes, Opacity } from '@/src/constants';
 import { AppText } from '@/src/components/core';
-import { SettingsSelectionIndicator } from '@/src/components/settings/SettingsSelectionIndicator';
+import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -127,7 +127,7 @@ export function FontSelectorView({ fontId, setFontId }: FontSelectorProps) {
                   </AppText>
                 </View>
 
-                <SettingsSelectionIndicator selected={selected} />
+                <SelectionIndicator selected={selected} size={22} />
               </Pressable>
             );
           })}

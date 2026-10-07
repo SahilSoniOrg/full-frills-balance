@@ -1,6 +1,6 @@
 import { AppConfig, ThemeId, ThemeIds, ThemeSchemes, Opacity } from '@/src/constants';
 import { Icon, AppText } from '@/src/components/core';
-import { SettingsSelectionIndicator } from '@/src/components/settings/SettingsSelectionIndicator';
+import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -108,7 +108,7 @@ export function ThemeSelectorView({ themeId, setThemeId }: ThemeSelectorViewProp
                 </View>
 
                 <View style={styles.check}>
-                  <SettingsSelectionIndicator selected={selected} />
+                  <SelectionIndicator selected={selected} size={22} />
                 </View>
               </Pressable>
             );

@@ -1,4 +1,5 @@
-import { Icon, AppButton, AppIcon, AppText } from '@/src/components/core';
+import { AppButton, AppIcon, AppText } from '@/src/components/core';
+import { SelectionCheckmark } from '@/src/components/shared/SelectionIndicator';
 import type { IconName } from '@/src/types/domainIcons';
 import { Layout, Opacity, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
@@ -130,9 +131,7 @@ const SelectableGridItem = React.memo(
                 </AppText>
               ) : null}
             </Box>
-            {isSelected && (
-              <AppIcon name={Icon.CheckCircle} size={Size.iconMd} color={accentColor} />
-            )}
+            <SelectionCheckmark selected={isSelected} size={Size.iconMd} color={accentColor} />
           </Inline>
 
           <Stack space="xs">

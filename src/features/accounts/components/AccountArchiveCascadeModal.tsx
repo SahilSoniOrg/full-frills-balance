@@ -1,5 +1,6 @@
-import { Icon, AppIcon, AppText, ListRow } from '@/src/components/core';
-import { AppConfig, Layout, Size, Spacing } from '@/src/constants';
+import { AppText, ListRow } from '@/src/components/core';
+import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
+import { AppConfig, Layout, Spacing } from '@/src/constants';
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountId } from '@/src/types/ids';
@@ -9,7 +10,6 @@ import {
   buildArchiveCascadeNodes,
   defaultCascadeSelection,
 } from '@/src/utils/accountArchive';
-import { useTheme } from '@/src/hooks/use-theme';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
@@ -37,7 +37,6 @@ function CascadeSelectionEditor({
   onConfirm,
   title,
 }: CascadeSelectionEditorProps) {
-  const { theme } = useTheme();
   const [selectedIds, setSelectedIds] = useState<Set<AccountId>>(() =>
     defaultCascadeSelection(nodes, archiving),
   );
@@ -80,15 +79,11 @@ function CascadeSelectionEditor({
             <View key={account.id} style={{ paddingLeft: depth * Spacing.lg }}>
               <ListRow
                 title={account.name}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: isSelected }}
                 onPress={() => toggleId(account.id)}
                 padding="md"
-                leading={
-                  <AppIcon
-                    name={isSelected ? Icon.CheckSquare : Icon.Square}
-                    size={Size.iconMd}
-                    color={isSelected ? theme.primary : theme.textTertiary}
-                  />
-                }
+                leading={<SelectionIndicator selected={isSelected} />}
               />
             </View>
           );
