@@ -129,15 +129,16 @@ export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProp
       <EmptyStateView title={emptyTitle} subtitle={emptySubtitle} />
     );
 
-  const dismissFooter = selectionActive ? (
+  const dismissFooter = (
     <View
+      testID="journal-list-selection-dismiss-area"
       onStartShouldSetResponder={() => {
-        selectionChrome.exitSelectionMode();
+        if (selectionActive) selectionChrome.exitSelectionMode();
         return false;
       }}
       style={styles.dismissFooter}
     />
-  ) : null;
+  );
 
   const listFooter = (
     <Stack>

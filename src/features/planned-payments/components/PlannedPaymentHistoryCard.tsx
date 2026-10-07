@@ -2,7 +2,8 @@ import { LIST_SELECTION_LONG_PRESS_MS } from '@/src/constants/gesture-constants'
 import { TouchableOpacity, View } from 'react-native';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { AppIcon, AppText, Icon, type IconName } from '@/src/components/core';
+import { AppIcon, AppText, type IconName } from '@/src/components/core';
+import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { AppConfig, Opacity } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -80,24 +81,20 @@ export function PlannedPaymentHistoryCard({
       paddingVertical="sm"
       style={{ minHeight: 64 }}
     >
-      {isSelectionModeActive ? (
-        <AppIcon
-          name={isSelected ? Icon.CheckSquare : Icon.Square}
-          size={20}
-          color={isSelected ? theme.primary : theme.textTertiary}
-        />
-      ) : (
-        <View
-          accessible={false}
-          style={{
-            width: 22,
-            height: 22,
-            borderRadius: 11,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: theme.surfaceSecondary,
-          }}
-        >
+      <View
+        accessible={false}
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: 11,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: theme.surfaceSecondary,
+        }}
+      >
+        {isSelectionModeActive ? (
+          <SelectionIndicator selected={!!isSelected} size={22} />
+        ) : (
           <AppIcon
             name={presentation.dotIcon}
             size={14}
@@ -109,8 +106,8 @@ export function PlannedPaymentHistoryCard({
               ).main
             }
           />
-        </View>
-      )}
+        )}
+      </View>
       <Column flexGrow={1} flexShrink={1} flexBasis={120} gap="xs" style={{ minWidth: 0 }}>
         <AppText
           variant="body"

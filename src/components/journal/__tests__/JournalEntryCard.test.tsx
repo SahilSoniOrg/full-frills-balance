@@ -6,6 +6,8 @@ import { preferences } from '@/src/services/preferences';
 import { act, fireEvent, render } from '@/src/utils/test-utils';
 import { formatClockTime, formatDate } from '@/src/utils/dateUtils';
 
+import { getLayoutPath as contentLayout } from '@/src/testing/layoutAssertions';
+
 jest.mock('@/src/hooks/useHourCyclePrefs', () => ({
   useHourCyclePrefs: () => ({ resolvedHourCycle: '12-hour' }),
 }));
@@ -111,4 +113,39 @@ describe('JournalEntryCard', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
     expect(onLongPress).toHaveBeenCalledTimes(1);
   });
+
+  it.each([false, true])(
+    'keeps content geometry stable when entering selection mode (selected: %s)',
+    isSelected => {
+      const { getByTestId, queryByTestId, rerender } = render(<JournalEntryCard {...entry} />);
+      const titleLayout = contentLayout(getByTestId('journal-entry-card-title'));
+      const accountFlowLayout = contentLayout(getByTestId('transaction-account-flow'));
+
+      rerender(<JournalEntryCard {...entry} isSelectionModeActive isSelected={isSelected} />);
+      expect(contentLayout(getByTestId('journal-entry-card-title'))).toEqual(titleLayout);
+      expect(contentLayout(getByTestId('transaction-account-flow'))).toEqual(accountFlowLayout);
+      if (isSelected) {
+        expect(
+          getByTestId('journal-entry-card-selection-outline', { includeHiddenElements: true }),
+        ).toHaveStyle({
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0,
+        });
+      } else {
+        expect(
+          queryByTestId('journal-entry-card-selection-outline', { includeHiddenElements: true }),
+        ).toBeNull();
+      }
+
+      rerender(<JournalEntryCard {...entry} />);
+      expect(contentLayout(getByTestId('journal-entry-card-title'))).toEqual(titleLayout);
+      expect(contentLayout(getByTestId('transaction-account-flow'))).toEqual(accountFlowLayout);
+      expect(
+        queryByTestId('journal-entry-card-selection-outline', { includeHiddenElements: true }),
+      ).toBeNull();
+    },
+  );
 });

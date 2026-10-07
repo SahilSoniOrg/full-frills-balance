@@ -1,9 +1,9 @@
 import { LIST_SELECTION_LONG_PRESS_MS } from '@/src/constants/gesture-constants';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { AppCard, AppIcon, AppText, Badge, Icon, PressScaleTouchable } from '@/src/components/core';
-import { BorderWidth, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
+import { AppCard, AppIcon, AppText, Badge, PressScaleTouchable } from '@/src/components/core';
+import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { blendColors, getReadableColor, withOpacity } from '@/src/utils/color-math';
-import { Box } from '@/src/design-system';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatClockTime, formatDate } from '@/src/utils/dateUtils';
@@ -13,56 +13,11 @@ import type { JournalEntryCardProps, JournalEntryLeg } from '@/src/types/journal
 import { memo, useMemo } from 'react';
 import { Keyboard, StyleSheet, View } from 'react-native';
 
-const SELECTION_INDICATOR_SIZE = Size.md;
 const SELECTION_CARD_BORDER_WIDTH = 1.5;
 
 function legDirection(leg: JournalEntryLeg): string {
   return leg.role === 'SOURCE' ? 'From' : leg.role === 'DESTINATION' ? 'To' : 'Account';
 }
-
-const SelectionIndicator = memo(
-  ({
-    isSelected,
-    isActive,
-    color,
-    checkColor,
-    border,
-  }: {
-    isSelected?: boolean;
-    isActive?: boolean;
-    color: string;
-    checkColor: string;
-    border: string;
-  }) => {
-    if (!isSelected && !isActive) return null;
-
-    return (
-      <Box
-        width={SELECTION_INDICATOR_SIZE}
-        height={SELECTION_INDICATOR_SIZE}
-        borderRadius="full"
-        alignItems="center"
-        justifyContent="center"
-        pointerEvents="none"
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        background={isSelected ? undefined : 'transparent'}
-        unsafe_backgroundRaw={isSelected ? color : undefined}
-        style={[
-          styles.selectionIndicator,
-          {
-            borderWidth: isSelected ? 0 : BorderWidth.medium,
-            borderColor: isSelected ? 'transparent' : border,
-            opacity: isSelected ? Opacity.high : Opacity.medium,
-          },
-        ]}
-      >
-        {isSelected && <AppIcon name={Icon.Check} size={Size.xxs} color={checkColor} />}
-      </Box>
-    );
-  },
-);
-SelectionIndicator.displayName = 'SelectionIndicator';
 
 const JournalEntryCardComponent = ({
   title,
@@ -122,26 +77,7 @@ const JournalEntryCardComponent = ({
     .filter(Boolean)
     .join('. ');
   const accessibilityState = isSelected == null ? undefined : { selected: isSelected };
-  const selectionOverlay =
-    overlay ??
-    (isSelected || isSelectionModeActive ? (
-      <SelectionIndicator
-        isSelected={isSelected}
-        isActive={isSelectionModeActive}
-        color={theme.primary}
-        checkColor={theme.onPrimary}
-        border={withOpacity(theme.textTertiary, Opacity.hover)}
-      />
-    ) : undefined);
-  const resolvedCardStyle = [
-    cardStyle,
-    isSelected
-      ? {
-          borderWidth: SELECTION_CARD_BORDER_WIDTH,
-          borderColor: theme.primary,
-        }
-      : undefined,
-  ];
+  const showSelectionIndicator = overlay == null && (isSelected || isSelectionModeActive);
 
   const body = (
     <AppCard
@@ -152,7 +88,7 @@ const JournalEntryCardComponent = ({
       accessible={!isPressable}
       accessibilityLabel={!isPressable ? accessibilityLabel : undefined}
       accessibilityState={!isPressable ? accessibilityState : undefined}
-      style={[styles.container, { backgroundColor: theme.surface }, resolvedCardStyle]}
+      style={[styles.container, { backgroundColor: theme.surface }, cardStyle]}
     >
       <EntryCardLayout
         leading={
@@ -161,7 +97,11 @@ const JournalEntryCardComponent = ({
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
           >
-            <AppIcon name={presentation.typeIcon} size={Size.iconSm} color={typeIconColor} />
+            {showSelectionIndicator ? (
+              <SelectionIndicator selected={!!isSelected} borderColor={theme.textTertiary} />
+            ) : (
+              <AppIcon name={presentation.typeIcon} size={Size.iconSm} color={typeIconColor} />
+            )}
           </View>
         }
         title={title}
@@ -201,8 +141,17 @@ const JournalEntryCardComponent = ({
             }
           />
         }
-        overlay={selectionOverlay}
+        overlay={overlay}
       />
+      {isSelected ? (
+        <View
+          testID="journal-entry-card-selection-outline"
+          pointerEvents="none"
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          style={[styles.selectionOutline, { borderColor: theme.primary }]}
+        />
+      ) : null}
     </AppCard>
   );
 
@@ -246,10 +195,15 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     flexShrink: 0,
   },
-  selectionIndicator: {
+  selectionOutline: {
     position: 'absolute',
-    right: Spacing.md,
-    top: Spacing.lg,
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    borderWidth: SELECTION_CARD_BORDER_WIDTH,
+    borderRadius: Shape.radius.r2,
+    borderCurve: 'continuous',
     zIndex: 10,
   },
   typeBadge: { maxWidth: '100%', flexShrink: 1 },
