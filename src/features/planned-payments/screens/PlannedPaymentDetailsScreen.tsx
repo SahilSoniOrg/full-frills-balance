@@ -1,7 +1,7 @@
 import {
-  CommitmentDetailHeaderActions,
-  type CommitmentMenuAction,
-} from '@/src/components/shared/CommitmentDetailHeaderActions';
+  DetailHeaderMenuActions,
+  type DetailMenuAction,
+} from '@/src/components/shared/DetailHeaderMenuActions';
 import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
@@ -19,7 +19,7 @@ function PlannedPaymentDetailsScreen() {
   const { outstandingJournalId, onOpenJournal } = vm;
   const strings = AppConfig.strings.commitmentsRedesign;
   const chrome = useMemo<ScreenNavChrome>(() => {
-    const actions: CommitmentMenuAction[] = vm.headerActions
+    const actions: DetailMenuAction[] = vm.headerActions
       ? [
           { label: strings.edit, onPress: vm.headerActions.onEdit, testID: 'edit-button' },
           ...(vm.onToggleStatus
@@ -51,9 +51,7 @@ function PlannedPaymentDetailsScreen() {
       readyTitle: vm.nameText ?? AppConfig.strings.plannedPayments.details.screenTitle,
       loadingTitle: AppConfig.strings.plannedPayments.details.screenTitle,
       onBack: vm.onBack,
-      headerActions: actions.length ? (
-        <CommitmentDetailHeaderActions actions={actions} />
-      ) : undefined,
+      headerActions: actions.length ? <DetailHeaderMenuActions actions={actions} /> : undefined,
     });
     return applySelectionChrome(detailChrome, {
       active: vm.isSelectionModeActive,

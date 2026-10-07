@@ -1,5 +1,5 @@
 import { render, fireEvent, act } from '@/src/utils/test-utils';
-import { CommitmentDetailHeaderActions } from '../CommitmentDetailHeaderActions';
+import { DetailHeaderMenuActions } from '../DetailHeaderMenuActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { IconButton } from '@/src/components/core';
 
@@ -18,7 +18,7 @@ it('opens named actions from the overflow and preserves disabled states', () => 
   const edit = jest.fn();
   const remove = jest.fn();
   const screen = render(
-    <CommitmentDetailHeaderActions
+    <DetailHeaderMenuActions
       actions={[
         { label: 'Edit', onPress: edit },
         { label: 'Delete', onPress: remove, destructive: true, disabled: true },
@@ -33,7 +33,7 @@ it('opens named actions from the overflow and preserves disabled states', () => 
 });
 
 it('gives overflow and privacy actions the same round surface treatment', () => {
-  const screen = render(<CommitmentDetailHeaderActions actions={[]} />);
+  const screen = render(<DetailHeaderMenuActions actions={[]} />);
   const buttons = screen.UNSAFE_getAllByType(IconButton);
   expect(buttons).toHaveLength(2);
   expect(buttons.map(button => button.props.variant)).toEqual(['surface', 'surface']);
@@ -44,9 +44,7 @@ it('waits for the native iOS sheet to dismiss before invoking an action, once on
   process.env.NODE_ENV = 'production';
   try {
     const edit = jest.fn();
-    const screen = render(
-      <CommitmentDetailHeaderActions actions={[{ label: 'Edit', onPress: edit }]} />,
-    );
+    const screen = render(<DetailHeaderMenuActions actions={[{ label: 'Edit', onPress: edit }]} />);
     fireEvent.press(screen.getByRole('button', { name: 'More actions' }));
     fireEvent.press(screen.getByRole('button', { name: 'Edit' }));
     expect(edit).not.toHaveBeenCalled();
@@ -63,9 +61,7 @@ it('waits for the native iOS sheet to dismiss before invoking an action, once on
 
 it('closing the menu dismisses it without invoking an action', () => {
   const edit = jest.fn();
-  const screen = render(
-    <CommitmentDetailHeaderActions actions={[{ label: 'Edit', onPress: edit }]} />,
-  );
+  const screen = render(<DetailHeaderMenuActions actions={[{ label: 'Edit', onPress: edit }]} />);
   fireEvent.press(screen.getByRole('button', { name: 'More actions' }));
   fireEvent.press(screen.getAllByRole('button', { name: 'Close actions' })[0]);
   expect(screen.UNSAFE_getByType(ModalSurface).props.visible).toBe(false);

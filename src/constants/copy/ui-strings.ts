@@ -25,6 +25,9 @@ export const UI_STRINGS = {
     allTime: 'All Time',
     searchPlaceholder: 'Search…',
     none: 'None',
+    actions: 'Actions',
+    moreActions: 'More actions',
+    closeActions: 'Close actions',
     incompleteFx: {
       reviewDetails: 'Review details',
       detailsTitle: 'Why these figures are incomplete',

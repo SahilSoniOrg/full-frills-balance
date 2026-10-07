@@ -1,4 +1,4 @@
-import { CommitmentDetailHeaderActions } from '@/src/components/shared/CommitmentDetailHeaderActions';
+import { DetailHeaderMenuActions } from '@/src/components/shared/DetailHeaderMenuActions';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig } from '@/src/constants';
@@ -19,7 +19,7 @@ function BudgetDetailScreenInner() {
         loadingTitle: AppConfig.strings.budget.details.screenTitle,
         onBack: AppNavigation.back,
         headerActions: (
-          <CommitmentDetailHeaderActions
+          <DetailHeaderMenuActions
             actions={[
               { label: strings.edit, onPress: vm.handleEdit, testID: 'edit-button' },
               {

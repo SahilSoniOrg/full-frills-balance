@@ -18,13 +18,15 @@ export interface ScreenHeaderActionItem {
 
 interface ScreenHeaderActionsProps {
   actions: ScreenHeaderActionItem[];
+  leading?: ReactNode;
   /** Always last (rightmost). Use for PrivacyToggleButton. */
   trailing?: ReactNode;
 }
 
-export function ScreenHeaderActions({ actions, trailing }: ScreenHeaderActionsProps) {
+export function ScreenHeaderActions({ actions, leading, trailing }: ScreenHeaderActionsProps) {
   return (
     <View style={styles.container}>
+      {leading}
       {actions.map((action, index) => (
         <IconButton
           key={`${action.name}-${index}`}

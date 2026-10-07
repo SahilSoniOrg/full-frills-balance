@@ -1,12 +1,13 @@
 import { AppButton, AppText, Icon } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
+import { useAfterDismiss } from '@/src/components/overlays/useAfterDismiss';
 import { MoneyDetailHeaderActions } from './MoneyDetailHeaderActions';
+import type { ScreenHeaderActionItem } from './ScreenHeaderActions';
 import { AppConfig, Size } from '@/src/constants';
 import { Column } from '@/src/design-system';
-import { useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { useState } from 'react';
 
-export interface CommitmentMenuAction {
+export interface DetailMenuAction {
   label: string;
   onPress: () => void;
   destructive?: boolean;
@@ -15,38 +16,43 @@ export interface CommitmentMenuAction {
 }
 
 /** Keep the established privacy slot and move secondary detail actions into one menu. */
-export function CommitmentDetailHeaderActions({ actions }: { actions: CommitmentMenuAction[] }) {
+export function DetailHeaderMenuActions({
+  actions,
+  leadingActions = [],
+  privacyPosition = 'trailing',
+}: {
+  actions: DetailMenuAction[];
+  leadingActions?: ScreenHeaderActionItem[];
+  privacyPosition?: 'leading' | 'trailing';
+}) {
   const [open, setOpen] = useState(false);
-  const pendingAction = useRef<(() => void) | null>(null);
-  const finishDismiss = () => {
-    const action = pendingAction.current;
-    pendingAction.current = null;
-    action?.();
-  };
-  const strings = AppConfig.strings.commitmentsRedesign;
+  const afterDismiss = useAfterDismiss();
+  const strings = AppConfig.strings.common;
   return (
     <>
       <MoneyDetailHeaderActions
         privacyVariant="surface"
+        privacyPosition={privacyPosition}
         actions={[
+          ...leadingActions,
           {
             name: Icon.More,
             onPress: () => setOpen(true),
             variant: 'surface',
             accessibilityLabel: strings.moreActions,
-            testID: 'commitment-more-actions',
+            testID: 'detail-more-actions',
           },
         ]}
       />
       <ModalSurface
         visible={open}
-        title={strings.menuTitle}
+        title={strings.actions}
         onClose={() => {
-          pendingAction.current = null;
+          afterDismiss.cancel();
           setOpen(false);
         }}
-        onDismiss={finishDismiss}
-        accessibilityCloseLabel={strings.closeMenu}
+        onDismiss={afterDismiss.onDismiss}
+        accessibilityCloseLabel={strings.closeActions}
         position="bottomSheet"
         fixedHeight={false}
         scrollable={false}
@@ -63,11 +69,7 @@ export function CommitmentDetailHeaderActions({ actions }: { actions: Commitment
               buttonStyle={{ minHeight: Size.touchTarget, alignItems: 'stretch' }}
               onPress={() => {
                 setOpen(false);
-                if (Platform.OS === 'ios' && process.env.NODE_ENV !== 'test') {
-                  pendingAction.current = action.onPress;
-                } else {
-                  action.onPress();
-                }
+                afterDismiss.run(action.onPress);
               }}
             >
               <AppText color={action.destructive ? 'error' : 'text'}>{action.label}</AppText>

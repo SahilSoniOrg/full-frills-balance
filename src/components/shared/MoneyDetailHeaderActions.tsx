@@ -11,20 +11,24 @@ type PrivacyToggleProps = ComponentProps<typeof PrivacyToggleButton>;
 export type MoneyDetailHeaderActionsProps = {
   actions: ScreenHeaderActionItem[];
   privacyVariant?: PrivacyToggleProps['variant'];
+  privacyPosition?: 'leading' | 'trailing';
 };
 
 /**
  * Route actions + privacy eye.
- * Privacy is always trailing (rightmost) — same slot as privacy-only screens.
+ * Privacy defaults to trailing (rightmost) — same slot as privacy-only screens.
  */
 export function MoneyDetailHeaderActions({
   actions,
   privacyVariant = 'clear',
+  privacyPosition = 'trailing',
 }: MoneyDetailHeaderActionsProps) {
+  const privacy = <PrivacyToggleButton variant={privacyVariant} size={Typography.sizes.xl} />;
   return (
     <ScreenHeaderActions
       actions={actions}
-      trailing={<PrivacyToggleButton variant={privacyVariant} size={Typography.sizes.xl} />}
+      leading={privacyPosition === 'leading' ? privacy : undefined}
+      trailing={privacyPosition === 'trailing' ? privacy : undefined}
     />
   );
 }
