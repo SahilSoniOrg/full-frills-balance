@@ -16,6 +16,7 @@ interface InfoSheetProps {
   visible: boolean;
   title: string;
   onClose: () => void;
+  onDismiss?: () => void;
   children: React.ReactNode;
   accessibilityCloseLabel?: string;
   maxHeightPercent?: number;
@@ -31,6 +32,7 @@ export function InfoSheet({
   visible,
   title,
   onClose,
+  onDismiss,
   children,
   accessibilityCloseLabel,
   maxHeightPercent,
@@ -76,6 +78,7 @@ export function InfoSheet({
       visible={visible}
       title={title}
       onClose={onClose}
+      onDismiss={onDismiss}
       accessibilityCloseLabel={accessibilityCloseLabel}
       maxHeightPercent={maxHeightPercent}
       fixedHeight={fixedHeight}
