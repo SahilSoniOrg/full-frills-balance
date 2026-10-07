@@ -6,18 +6,18 @@ import {
   EmptyStateView,
   ErrorStateView,
   Icon,
-  AppIcon,
+  IconButton,
   AppTabs,
   AppText,
   PressScaleTouchable,
 } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
-import { AppConfig, BorderWidth, Opacity, Shape, Size, Spacing } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
+import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { AccountCard } from '@/src/features/accounts/components/AccountCard';
 import { AccountsListModals } from '@/src/features/accounts/components/AccountsListModals';
 import { SelectionActionBar } from '@/src/components/shared/SelectionActionBar';
+import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { AccountsListViewModel } from '@/src/features/accounts/hooks/useAccountsListViewModel';
 import {
   AccountCardViewModel,
@@ -150,62 +150,47 @@ export function AccountsListView({
                   weight="bold"
                   style={{ color: section.totalColor }}
                 />
-                <AppIcon
-                  name={section.isCollapsed ? Icon.ChevronRight : Icon.ChevronDown}
-                  size={Size.iconSm}
-                  color={theme.textSecondary}
-                />
               </View>
             </View>
           </PressScaleTouchable>
 
-          {isSelectionModeActive && sectionAccountIds.length > 0 && (
-            <PressScaleTouchable
-              onPress={() => onToggleSectionSelect(sectionAccountIds)}
-              hitSlop={{
-                top: Spacing.sm,
-                bottom: Spacing.sm,
-                left: Spacing.sm,
-                right: Spacing.sm,
-              }}
-              style={styles.sectionSelectButton}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: isAllSectionSelected }}
-              accessibilityLabel={`Select all ${section.title} accounts`}
-              testID={`section-select-${section.title.toLowerCase()}`}
-            >
-              <View
-                style={[
-                  styles.sectionSelectionIndicator,
-                  {
-                    borderColor:
-                      isAllSectionSelected || isSomeSectionSelected
-                        ? theme.primary
-                        : withOpacity(theme.textSecondary, Opacity.medium),
-                    backgroundColor: isAllSectionSelected
-                      ? theme.primary
-                      : isSomeSectionSelected
-                        ? withOpacity(theme.primary, Opacity.soft)
-                        : 'transparent',
-                  },
-                ]}
+          <View
+            style={styles.sectionSelectButton}
+            testID={`section-control-${section.title.toLowerCase()}`}
+          >
+            {isSelectionModeActive && sectionAccountIds.length > 0 ? (
+              <PressScaleTouchable
+                onPress={() => onToggleSectionSelect(sectionAccountIds)}
+                hitSlop={{
+                  top: Spacing.sm,
+                  bottom: Spacing.sm,
+                  left: Spacing.sm,
+                  right: Spacing.sm,
+                }}
+                style={styles.sectionSelectButton}
+                accessibilityRole="checkbox"
+                accessibilityState={{
+                  checked: isAllSectionSelected ? true : isSomeSectionSelected ? 'mixed' : false,
+                }}
+                accessibilityLabel={`Select all ${section.title} accounts`}
+                testID={`section-select-${section.title.toLowerCase()}`}
               >
-                {isAllSectionSelected && (
-                  <AppIcon name={Icon.Check} size={Size.xxs} color={theme.onPrimary} />
-                )}
-                {isSomeSectionSelected && (
-                  <View
-                    style={{
-                      width: Spacing.sm,
-                      height: BorderWidth.medium,
-                      backgroundColor: theme.primary,
-                      borderRadius: BorderWidth.thin,
-                    }}
-                  />
-                )}
-              </View>
-            </PressScaleTouchable>
-          )}
+                <SelectionIndicator
+                  selected={isAllSectionSelected ? true : isSomeSectionSelected ? 'mixed' : false}
+                />
+              </PressScaleTouchable>
+            ) : (
+              <IconButton
+                name={section.isCollapsed ? Icon.ChevronRight : Icon.ChevronDown}
+                size={Size.iconSm}
+                style={styles.sectionSelectButton}
+                variant="clear"
+                iconColor={theme.textSecondary}
+                onPress={() => handleToggleSection(section.title)}
+                accessibilityLabel={`${section.isCollapsed ? 'Expand' : 'Collapse'} ${section.title} section`}
+              />
+            )}
+          </View>
         </View>
       );
     },
@@ -215,8 +200,6 @@ export function AccountsListView({
       isSelectionModeActive,
       onToggleSectionSelect,
       selectedAccountIds,
-      theme.onPrimary,
-      theme.primary,
       theme.surfaceSecondary,
       theme.textSecondary,
     ],
@@ -388,15 +371,6 @@ const styles = StyleSheet.create({
     minHeight: Size.touchTarget,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  sectionSelectionIndicator: {
-    width: Size.md,
-    height: Size.md,
-    borderRadius: Shape.radius.full,
-    borderWidth: BorderWidth.medium,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: Spacing.sm,
   },
   countBadge: {
     paddingHorizontal: Spacing.xs,

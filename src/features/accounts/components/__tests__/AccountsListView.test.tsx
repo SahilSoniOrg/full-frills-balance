@@ -4,6 +4,7 @@ import { AccountSectionViewModel, AccountCardViewModel } from '../../utils/trans
 import { AccountType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
 import { fireEvent, render } from '@/src/utils/test-utils';
+import { StyleSheet } from 'react-native';
 
 const mockAccount: AccountCardViewModel = {
   id: 'acc-1' as AccountId,
@@ -164,11 +165,12 @@ describe('AccountsListView', () => {
 
   it('renders section selection checkbox in selection mode and triggers onToggleSectionSelect on press', () => {
     const onToggleSectionSelect = jest.fn();
+    const onToggleSection = jest.fn();
 
-    const { getByTestId } = render(
+    const view = (isSelectionModeActive: boolean) => (
       <AccountsListView
         sections={mockSections}
-        onToggleSection={jest.fn()}
+        onToggleSection={onToggleSection}
         onAccountPress={jest.fn()}
         onAccountLongPress={jest.fn()}
         onCollapseAccount={jest.fn()}
@@ -195,18 +197,40 @@ describe('AccountsListView', () => {
         setIsSearching={jest.fn()}
         accountsForArchiveToggle={[]}
         {...requiredViewProps}
-        isSelectionModeActive={true}
+        isSelectionModeActive={isSelectionModeActive}
         selectedAccountIds={new Set(['acc-1' as AccountId])}
         onToggleSectionSelect={onToggleSectionSelect}
         totalSelectableAccounts={1}
         chrome={mockChrome as any}
-      />,
+      />
+    );
+    const { getByTestId, getByLabelText, queryByTestId, rerender } = render(view(false));
+    const originalControlStyle = StyleSheet.flatten(
+      getByTestId('section-control-asset').props.style,
+    );
+    const originalHeaderStyle = StyleSheet.flatten(
+      getByTestId('section-control-asset').parent!.props.style,
+    );
+    fireEvent.press(getByLabelText('Collapse Asset section'));
+    expect(onToggleSection).toHaveBeenCalledWith('Asset');
+
+    rerender(view(true));
+    expect(StyleSheet.flatten(getByTestId('section-control-asset').props.style)).toEqual(
+      originalControlStyle,
+    );
+    expect(StyleSheet.flatten(getByTestId('section-control-asset').parent!.props.style)).toEqual(
+      originalHeaderStyle,
     );
 
     const sectionSelectButton = getByTestId('section-select-asset');
     expect(sectionSelectButton).toBeTruthy();
     fireEvent.press(sectionSelectButton);
     expect(onToggleSectionSelect).toHaveBeenCalledWith(['acc-1']);
+    rerender(view(false));
+    expect(StyleSheet.flatten(getByTestId('section-control-asset').props.style)).toEqual(
+      originalControlStyle,
+    );
+    expect(queryByTestId('section-select-asset')).toBeNull();
   });
 
   it('renders SelectionActionBar and selection indicators when isSelectionModeActive is true', () => {

@@ -8,6 +8,9 @@ import { AppConfig } from '@/src/constants';
 import { preferences } from '@/src/services/preferences';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
 import type { ComponentProps } from 'react';
+import { StyleSheet } from 'react-native';
+
+import { getLayoutPath as layoutPath } from '@/src/testing/layoutAssertions';
 
 const mockAccount: AccountCardViewModel = {
   id: 'acc-1' as AccountId,
@@ -169,6 +172,55 @@ describe('AccountCard', () => {
     expect(onCollapse).toHaveBeenCalledWith(mockAccount.id);
     expect(onActionPress).not.toHaveBeenCalled();
   });
+
+  it.each([false, true])(
+    'keeps card geometry stable during selection (hierarchy: %s)',
+    hasChildren => {
+      const account = { ...mockAccount, hasChildren };
+      const props = {
+        account,
+        onPress: jest.fn(),
+        onActionPress: jest.fn(),
+        dividerColor: 'divider' as const,
+        surfaceColor: 'surface' as const,
+      };
+      const screen = render(<AccountCard {...props} />);
+      const originalTitleLayout = layoutPath(screen.getByText(account.name));
+      const originalBalanceLayout = layoutPath(screen.getByText('$1,500.00'));
+      const actionFootprints = () =>
+        screen
+          .getByTestId('account-card-header-actions')
+          .children.map(child =>
+            typeof child === 'string' ? child : StyleSheet.flatten(child.props.style),
+          );
+      const originalActions = actionFootprints();
+
+      for (const isSelected of [false, true, false]) {
+        screen.rerender(<AccountCard {...props} isSelectionModeActive isSelected={isSelected} />);
+        expect(layoutPath(screen.getByText(account.name))).toEqual(originalTitleLayout);
+        expect(layoutPath(screen.getByText('$1,500.00'))).toEqual(originalBalanceLayout);
+        expect(actionFootprints()).toEqual(originalActions);
+        const outline = screen.queryByTestId('account-card-selection-outline', {
+          includeHiddenElements: true,
+        });
+        if (isSelected) {
+          expect(outline).toHaveStyle({
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            left: 0,
+          });
+        } else {
+          expect(outline).toBeNull();
+        }
+      }
+      screen.rerender(<AccountCard {...props} />);
+      expect(layoutPath(screen.getByText(account.name))).toEqual(originalTitleLayout);
+      expect(layoutPath(screen.getByText('$1,500.00'))).toEqual(originalBalanceLayout);
+      expect(actionFootprints()).toEqual(originalActions);
+    },
+  );
 
   it('renders MONEY IN and MONEY OUT for an asset account', () => {
     const screen = renderCard();

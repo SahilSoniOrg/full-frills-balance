@@ -1,9 +1,9 @@
 import { LIST_SELECTION_LONG_PRESS_MS } from '@/src/constants/gesture-constants';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
+import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import {
   Icon,
   AppCard,
-  AppIcon,
   IconButton,
   IvyIcon,
   PressScaleTouchable,
@@ -102,17 +102,12 @@ function AccountCardBase({
       ]}
     >
       <AppCard
+        testID="account-card"
         elevation="sm"
         paddingSize="none"
         radius="r2"
         background={surfaceColor}
-        style={[
-          styles.cardContainer,
-          {
-            borderWidth: isSelected ? BorderWidth.medium : 0,
-            borderColor: isSelected ? theme.primary : 'transparent',
-          },
-        ]}
+        style={styles.cardContainer}
       >
         <Box
           unsafe_backgroundRaw={account.accountColor}
@@ -132,12 +127,25 @@ function AccountCardBase({
                     },
                   ]}
                 >
-                  <IvyIcon
-                    name={account.icon}
-                    label={account.name}
-                    color={account.textColor}
-                    size={Size.avatarSm}
-                  />
+                  <View style={styles.identityIcon}>
+                    {isSelectionModeActive || isSelected ? (
+                      <View
+                        testID="account-card-selection-indicator"
+                        accessibilityRole="checkbox"
+                        accessibilityLabel={`${account.name} selected`}
+                        accessibilityState={{ checked: isSelected }}
+                      >
+                        <SelectionIndicator selected={isSelected} borderColor={resolvedTextColor} />
+                      </View>
+                    ) : (
+                      <IvyIcon
+                        name={account.icon}
+                        label={account.name}
+                        color={account.textColor}
+                        size={Size.avatarSm}
+                      />
+                    )}
+                  </View>
                 </View>
                 <AppText
                   variant="body"
@@ -149,28 +157,7 @@ function AccountCardBase({
                 {account.isArchived ? <ArchivedAccountIndicator /> : null}
               </Row>
 
-              <Row gap="xs" align="center">
-                {isSelectionModeActive && (
-                  <View
-                    testID="account-card-selection-indicator"
-                    accessibilityRole="checkbox"
-                    accessibilityLabel={`${account.name} selected`}
-                    accessibilityState={{ checked: isSelected }}
-                    style={[
-                      styles.selectionIndicator,
-                      {
-                        borderColor: isSelected
-                          ? theme.primary
-                          : withOpacity(resolvedTextColor, Opacity.medium),
-                        backgroundColor: isSelected ? theme.primary : 'transparent',
-                      },
-                    ]}
-                  >
-                    {isSelected && (
-                      <AppIcon name={Icon.Check} size={Size.xxs} color={theme.onPrimary} />
-                    )}
-                  </View>
-                )}
+              <Row gap="xs" align="center" testID="account-card-header-actions">
                 {account.hasChildren && (
                   <IconButton
                     name={account.isExpanded ? Icon.ChevronUp : Icon.Hierarchy}
@@ -190,19 +177,23 @@ function AccountCardBase({
                     accessibilityState={{ expanded: account.isExpanded }}
                   />
                 )}
-                {onActionPress && !isSelectionModeActive && (
-                  <IconButton
-                    name={Icon.More}
-                    size={Size.iconSm}
-                    style={styles.actionButton}
-                    variant="clear"
-                    onPress={event => {
-                      event?.stopPropagation?.();
-                      onActionPress(account);
-                    }}
-                    iconColor={resolvedTextColor}
-                    accessibilityLabel={`Actions for ${account.name}`}
-                  />
+                {onActionPress && (
+                  <View style={styles.actionButton}>
+                    {!isSelectionModeActive && (
+                      <IconButton
+                        name={Icon.More}
+                        size={Size.iconSm}
+                        style={styles.actionButton}
+                        variant="clear"
+                        onPress={event => {
+                          event?.stopPropagation?.();
+                          onActionPress(account);
+                        }}
+                        iconColor={resolvedTextColor}
+                        accessibilityLabel={`Actions for ${account.name}`}
+                      />
+                    )}
+                  </View>
                 )}
               </Row>
             </Row>
@@ -265,6 +256,15 @@ function AccountCardBase({
             </Column>
           </Row>
         )}
+        {isSelected ? (
+          <View
+            testID="account-card-selection-outline"
+            pointerEvents="none"
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={[styles.selectionOutline, { borderColor: theme.primary }]}
+          />
+        ) : null}
       </AppCard>
     </PressScaleTouchable>
   );
@@ -284,14 +284,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  selectionIndicator: {
-    width: Size.md,
-    height: Size.md,
-    borderRadius: Shape.radius.full,
-    borderWidth: BorderWidth.medium,
+  identityIcon: {
+    width: Size.avatarSm,
+    height: Size.avatarSm,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: Spacing.xs,
+  },
+  selectionOutline: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    borderWidth: BorderWidth.medium,
+    borderRadius: Shape.radius.r2,
+    borderCurve: 'continuous',
+    zIndex: 10,
   },
   actionButton: {
     width: Size.touchTarget,
