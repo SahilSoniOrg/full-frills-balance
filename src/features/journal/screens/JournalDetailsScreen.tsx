@@ -1,7 +1,7 @@
-import { MoneyDetailHeaderActions } from '@/src/components/shared/MoneyDetailHeaderActions';
+import { DetailHeaderMenuActions } from '@/src/components/shared/DetailHeaderMenuActions';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { Typography } from '@/src/constants';
+import { AppConfig, Typography } from '@/src/constants';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { JournalDetailsView } from '@/src/features/journal/components/JournalDetailsView';
 import { useJournalDetailsViewModel } from '@/src/features/journal/hooks/useJournalDetailsViewModel';
@@ -12,54 +12,54 @@ import { Icon } from '@/src/types/domainIcons';
 function JournalDetailsScreen() {
   const vm = useJournalDetailsViewModel();
   const { theme } = useTheme();
+  const phase = vm.isLoading ? 'loading' : vm.details ? 'ready' : 'missing';
 
-  const chrome = useMemo<ScreenNavChrome>(() => {
-    const phase = vm.isLoading ? 'loading' : vm.isMissing ? 'missing' : 'ready';
-
-    return buildDetailNavChrome({
+  const chrome = useMemo<ScreenNavChrome>(
+    () =>
+      buildDetailNavChrome({
+        phase,
+        readyTitle: AppConfig.strings.journalDetails.title,
+        missingBackIcon: Icon.Close,
+        onBack: vm.onBack,
+        headerActions: (
+          <DetailHeaderMenuActions
+            privacyPosition="leading"
+            leadingActions={[
+              {
+                name: Icon.Edit,
+                onPress: vm.headerActions.onEdit,
+                variant: 'surface',
+                iconColor: theme.text,
+                size: Typography.sizes.xl,
+                testID: 'edit-button',
+                accessibilityLabel: AppConfig.strings.journalDetails.edit,
+              },
+            ]}
+            actions={[
+              {
+                label: AppConfig.strings.journalDetails.duplicate,
+                onPress: vm.headerActions.onCopy,
+                testID: 'copy-button',
+              },
+              {
+                label: AppConfig.strings.journalDetails.delete,
+                onPress: vm.headerActions.onDelete,
+                testID: 'delete-button',
+                destructive: true,
+              },
+            ]}
+          />
+        ),
+      }),
+    [
       phase,
-      readyTitle: vm.title,
-      missingBackIcon: Icon.Close,
-      onBack: vm.onBack,
-      headerActions: (
-        <MoneyDetailHeaderActions
-          actions={[
-            {
-              name: Icon.Copy,
-              onPress: vm.headerActions.onCopy,
-              iconColor: theme.text,
-              size: Typography.sizes.xl,
-              testID: 'copy-button',
-            },
-            {
-              name: Icon.Edit,
-              onPress: vm.headerActions.onEdit,
-              iconColor: theme.text,
-              size: Typography.sizes.xl,
-              testID: 'edit-button',
-            },
-            {
-              name: Icon.Delete,
-              onPress: vm.headerActions.onDelete,
-              iconColor: theme.error,
-              size: Typography.sizes.xl,
-              testID: 'delete-button',
-            },
-          ]}
-        />
-      ),
-    });
-  }, [
-    theme.error,
-    theme.text,
-    vm.headerActions.onCopy,
-    vm.headerActions.onDelete,
-    vm.headerActions.onEdit,
-    vm.isLoading,
-    vm.isMissing,
-    vm.onBack,
-    vm.title,
-  ]);
+      theme.text,
+      vm.headerActions.onCopy,
+      vm.headerActions.onDelete,
+      vm.headerActions.onEdit,
+      vm.onBack,
+    ],
+  );
 
   return <JournalDetailsView {...vm} chrome={chrome} />;
 }

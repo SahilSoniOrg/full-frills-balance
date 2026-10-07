@@ -1,8 +1,8 @@
-import { AccountType } from '@/src/types/enums';
+import { AccountType, TransactionType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
 import { DisplayTransaction } from '@/src/types/domainReadModels';
 
-import { buildJournalSplitItems } from '../useJournalDetailsViewModel';
+import { buildJournalSplitItems } from '../journalDetailsPresentation';
 import { Icon } from '@/src/types/domainIcons';
 
 describe('buildJournalSplitItems', () => {
@@ -15,7 +15,8 @@ describe('buildJournalSplitItems', () => {
         accountId,
         accountName: '',
         accountType: AccountType.ASSET,
-        transactionType: 'DEBIT',
+        accountColor: '#3366FF',
+        transactionType: TransactionType.DEBIT,
         amount: 25,
         currencyCode: 'USD',
       },
@@ -27,12 +28,12 @@ describe('buildJournalSplitItems', () => {
       id: 'tx-1',
       accountId,
       accountName: 'Unknown Account',
-      transactionType: 'To • DEBIT',
+      accountColor: '#3366FF',
+      transactionType: TransactionType.DEBIT,
       amount: 25,
       currencyCode: 'USD',
-      amountPrefix: '+',
-      fallbackIcon: Icon.Wallet,
-      iconColor: 'income',
+      icon: Icon.Wallet,
+      tint: 'asset',
     });
 
     item.onPress();

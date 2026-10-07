@@ -1,11 +1,13 @@
 /** UI copy catalog. Add large domains under `copy/domains/<name>Strings.ts` and import them at call sites. */
 import { commitmentsRedesignStrings } from './domains/commitmentsRedesignStrings';
+import { journalDetailsStrings } from './domains/journalDetailsStrings';
 import { budgetDetailRedesignStrings } from './domains/budgetDetailRedesignStrings';
 import { plannedListRedesignStrings } from './domains/plannedListRedesignStrings';
 import { plannedDetailRedesignStrings } from './domains/plannedDetailRedesignStrings';
 import type { AuditEntityType } from '@/src/types/enums';
 
 export const UI_STRINGS = {
+  journalDetails: journalDetailsStrings,
   commitmentsRedesign: commitmentsRedesignStrings,
   budgetDetailRedesign: budgetDetailRedesignStrings,
   plannedListRedesign: plannedListRedesignStrings,

@@ -8,7 +8,7 @@ import { JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { showConfirmationAlert, showErrorAlert, toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { logger } from '@/src/utils/logger';
-import { useCallback } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { resolveRevertPlannedActionLabels } from '@/src/services/journal/journalDetailsHelpers';
 
 interface UseTransactionDetailsActionsProps {
@@ -33,6 +33,20 @@ export function useJournalDetailsActions({
   const { deleteJournal, postJournal, revertToPlanned } = useJournalActions(workplaceId);
   const isPrivacyMode = useEffectivePrivacyMode();
   const displayAmount = formatMoneyAmount(amount, currencyCode, isPrivacyMode);
+  const [pendingAction, setPendingAction] = useState<'post' | 'skip' | null>(null);
+  const actionLock = useRef(false);
+
+  const runExclusive = useCallback(async (action: 'post' | 'skip', work: () => Promise<void>) => {
+    if (actionLock.current) return;
+    actionLock.current = true;
+    setPendingAction(action);
+    try {
+      await work();
+    } finally {
+      actionLock.current = false;
+      setPendingAction(null);
+    }
+  }, []);
 
   const handleDelete = useCallback(() => {
     showConfirmationAlert(
@@ -57,35 +71,45 @@ export function useJournalDetailsActions({
   }, [journalId]);
 
   const handlePost = useCallback(async () => {
-    if (status !== 'PLANNED') return;
+    if (status !== 'PLANNED' || actionLock.current) return;
 
     showConfirmationAlert(
       'Post Transaction',
       `Are you sure you want to mark this planned transaction for ${displayAmount} as posted?`,
-      async () => {
-        try {
-          const completed =
-            plannedPaymentId && journalDate !== undefined
-              ? await recordPlannedOccurrenceWithFxReview(
-                  workplaceId,
-                  plannedPaymentId,
-                  journalDate,
-                  journalId,
-                )
-              : await withPlannedPaymentFxReview(review =>
-                  review ? postJournal(journalId, review) : postJournal(journalId),
-                );
-          if (!completed) return;
-          toast.success('Transaction has been marked as posted.');
-          AppNavigation.back();
-        } catch (error) {
-          logger.error('Failed to post transaction:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          showErrorAlert(`Could not post transaction: ${errorMessage}`);
-        }
-      },
+      () =>
+        runExclusive('post', async () => {
+          try {
+            const completed =
+              plannedPaymentId && journalDate !== undefined
+                ? await recordPlannedOccurrenceWithFxReview(
+                    workplaceId,
+                    plannedPaymentId,
+                    journalDate,
+                    journalId,
+                  )
+                : await withPlannedPaymentFxReview(review =>
+                    review ? postJournal(journalId, review) : postJournal(journalId),
+                  );
+            if (!completed) return;
+            toast.success('Transaction has been marked as posted.');
+            AppNavigation.back();
+          } catch (error) {
+            logger.error('Failed to post transaction:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            showErrorAlert(`Could not post transaction: ${errorMessage}`);
+          }
+        }),
     );
-  }, [displayAmount, journalDate, journalId, plannedPaymentId, postJournal, status, workplaceId]);
+  }, [
+    displayAmount,
+    journalDate,
+    journalId,
+    plannedPaymentId,
+    postJournal,
+    runExclusive,
+    status,
+    workplaceId,
+  ]);
 
   const handleRevertToScheduled = useCallback(async () => {
     const { actionLabel, statusLabel } = resolveRevertPlannedActionLabels(status || '');
@@ -109,24 +133,38 @@ export function useJournalDetailsActions({
   }, [displayAmount, journalId, revertToPlanned, status]);
 
   const handleSkip = useCallback(async () => {
-    if (status !== 'PLANNED' || !plannedPaymentId || journalDate === undefined) return;
+    if (
+      status !== 'PLANNED' ||
+      !plannedPaymentId ||
+      journalDate === undefined ||
+      actionLock.current
+    )
+      return;
 
     showConfirmationAlert(
       'Skip Transaction',
       `Are you sure you want to skip this planned transaction for ${displayAmount}? The schedule will advance to the next occurrence.`,
-      async () => {
-        try {
-          await skipPlannedPaymentOccurrence(workplaceId, plannedPaymentId, journalDate);
-          toast.success('Transaction has been skipped.');
-          AppNavigation.back();
-        } catch (error) {
-          logger.error('Failed to skip transaction:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          showErrorAlert(`Could not skip transaction: ${errorMessage}`);
-        }
-      },
+      () =>
+        runExclusive('skip', async () => {
+          try {
+            await skipPlannedPaymentOccurrence(workplaceId, plannedPaymentId, journalDate);
+            toast.success('Transaction has been skipped.');
+            AppNavigation.back();
+          } catch (error) {
+            logger.error('Failed to skip transaction:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            showErrorAlert(`Could not skip transaction: ${errorMessage}`);
+          }
+        }),
     );
-  }, [displayAmount, journalDate, plannedPaymentId, status, workplaceId]);
+  }, [displayAmount, journalDate, plannedPaymentId, runExclusive, status, workplaceId]);
 
-  return { handleDelete, handleCopy, handlePost, handleRevertToScheduled, handleSkip };
+  return {
+    handleDelete,
+    handleCopy,
+    handlePost,
+    handleRevertToScheduled,
+    handleSkip,
+    pendingAction,
+  };
 }
