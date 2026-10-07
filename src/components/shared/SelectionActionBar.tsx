@@ -5,6 +5,7 @@ import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { Box, Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { AnimatePresence, MotiView } from 'moti';
 import { useMemo, useState } from 'react';
 import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -35,13 +36,13 @@ export interface SelectionActionPartition {
 }
 
 export function partitionSelectionActions(actions: SelectionAction[]): SelectionActionPartition {
-  const applicableActions = actions.filter(action => !action.disabled);
-  if (applicableActions.length <= 3) {
-    return { barActions: applicableActions, overflowActions: [] };
+  // Availability changes paint and interaction, never an action's position.
+  if (actions.length <= 3) {
+    return { barActions: actions, overflowActions: [] };
   }
 
-  const primaries = applicableActions.filter(action => action.isPrimary);
-  const secondaries = applicableActions.filter(action => !action.isPrimary);
+  const primaries = actions.filter(action => action.isPrimary);
+  const secondaries = actions.filter(action => !action.isPrimary);
   if (primaries.length > 0) {
     return {
       barActions: primaries.slice(0, 3),
@@ -50,8 +51,8 @@ export function partitionSelectionActions(actions: SelectionAction[]): Selection
   }
 
   return {
-    barActions: applicableActions.slice(0, 3),
-    overflowActions: applicableActions.slice(3),
+    barActions: actions.slice(0, 3),
+    overflowActions: actions.slice(3),
   };
 }
 
@@ -81,6 +82,7 @@ export const SelectionActionBar = ({
   isVisible,
 }: SelectionActionBarProps) => {
   const { theme } = useTheme();
+  const reduceMotion = useReducedMotion();
   const [isOverflowOpen, setIsOverflowOpen] = useState(false);
   const isBarActive = isVisible && selectedCount > 0;
   const isModalVisible = isOverflowOpen && isBarActive;
@@ -141,9 +143,9 @@ export const SelectionActionBar = ({
       <AnimatePresence>
         {isVisible && (
           <MotiView
-            from={{ opacity: 0, scale: 0.92, translateY: 24 }}
+            from={{ opacity: 0, scale: reduceMotion ? 1 : 0.92, translateY: reduceMotion ? 0 : 24 }}
             animate={{ opacity: 1, scale: 1, translateY: 0 }}
-            exit={{ opacity: 0, scale: 0.92, translateY: 24 }}
+            exit={{ opacity: 0, scale: reduceMotion ? 1 : 0.92, translateY: reduceMotion ? 0 : 24 }}
             transition={{
               type: 'timing',
               duration: 150,
@@ -194,6 +196,10 @@ export const SelectionActionBar = ({
                       size={Size.iconSm}
                       disabled={totalCount === 0}
                       accessibilityLabel="Toggle all"
+                      accessibilityRole="checkbox"
+                      accessibilityState={{
+                        checked: allSelected ? true : selectedCount > 0 ? 'mixed' : false,
+                      }}
                     />
 
                     {barActions.map((action, index) => (
@@ -204,7 +210,7 @@ export const SelectionActionBar = ({
                         size={Size.iconSm}
                         iconColor={action.iconColor}
                         onPress={action.onPress}
-                        disabled={action.disabled ?? selectedCount === 0}
+                        disabled={selectedCount === 0 || !!action.disabled}
                         accessibilityLabel={action.accessibilityLabel || action.label}
                         testID={action.testID}
                       />
@@ -240,7 +246,7 @@ export const SelectionActionBar = ({
           <View style={styles.sheetContent}>
             {overflowActions.map((action, index) => {
               const isDestructive = action.variant === 'error';
-              const isDisabled = action.disabled ?? selectedCount === 0;
+              const isDisabled = selectedCount === 0 || !!action.disabled;
               const itemColor = isDisabled
                 ? theme.textTertiary
                 : isDestructive

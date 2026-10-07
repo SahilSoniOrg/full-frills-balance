@@ -73,7 +73,7 @@ export function IconButton({
       surfaceStyle={[styles.button, { backgroundColor: config.backgroundColor }, config.elevation]}
       hitSlop={{ top: Spacing.sm, bottom: Spacing.sm, left: Spacing.sm, right: Spacing.sm }}
       disabled={disabled}
-      accessibilityRole="button"
+      accessibilityRole={props.accessibilityRole ?? 'button'}
       accessibilityState={{ ...props.accessibilityState, disabled }}
     >
       <AppIcon name={name} size={size} color={finalIconColor} />

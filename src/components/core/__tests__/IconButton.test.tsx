@@ -3,6 +3,19 @@ import { Icon } from '@/src/types/domainIcons';
 import { fireEvent, render } from '@/src/utils/test-utils';
 
 describe('IconButton accessibility', () => {
+  it('honors an explicit checkbox role and mixed selection state', () => {
+    const { getByRole } = render(
+      <IconButton
+        name={Icon.MinusSquare}
+        accessibilityRole="checkbox"
+        accessibilityLabel="Select all"
+        accessibilityState={{ checked: 'mixed' }}
+      />,
+    );
+    expect(getByRole('checkbox', { name: 'Select all' }).props.accessibilityState.checked).toBe(
+      'mixed',
+    );
+  });
   it('announces the supplied expansion state while retaining its press action', () => {
     const onPress = jest.fn();
     const { getByRole } = render(

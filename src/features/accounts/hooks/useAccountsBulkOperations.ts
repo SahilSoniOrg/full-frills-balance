@@ -6,7 +6,7 @@ import {
 } from '@/src/features/accounts/helpers/bulkHierarchyCandidates';
 import type { AccountsListActiveModal } from '@/src/features/accounts/hooks/accountsListTypes';
 import type { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
-import { useListSelection } from '@/src/hooks/useListSelection';
+import { buildListSelectionActions, useListSelection } from '@/src/hooks/useListSelection';
 import type { UseSelectionResult } from '@/src/hooks/useSelection';
 import { useTheme } from '@/src/hooks/use-theme';
 import { analytics } from '@/src/services/analytics';
@@ -306,7 +306,7 @@ export function useAccountsBulkOperations({
           onPress: () => openModal({ type: 'bulkHierarchy' }),
           accessibilityLabel: 'Move accounts hierarchy',
         },
-        isVisible: (selectedCount: number) => selectedCount > 0 && !isMixedAccountTypes,
+        isEnabled: (selectedCount: number) => selectedCount > 0 && !isMixedAccountTypes,
       },
       {
         action: {
@@ -321,12 +321,7 @@ export function useAccountsBulkOperations({
       },
     ];
 
-    return definitions
-      .filter(({ isVisible }) => isVisible?.(count) ?? true)
-      .map(({ action, isEnabled }) => ({
-        ...action,
-        disabled: !(isEnabled?.(count) ?? true),
-      }));
+    return buildListSelectionActions(definitions, count);
   }, [handleBulkArchive, isMixedAccountTypes, openModal, selection.selectedIds.size]);
 
   return {

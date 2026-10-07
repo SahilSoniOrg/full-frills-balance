@@ -34,14 +34,21 @@ describe('partitionSelectionActions', () => {
     expect(result.overflowActions.map(item => item.name)).toEqual(['edit', 'copy']);
   });
 
-  it('hides disabled actions before partitioning', () => {
+  it('keeps disabled actions in place so enabling them cannot move other controls', () => {
     const result = partitionSelectionActions([
       action(Icon.Edit),
       action(Icon.Merge, { disabled: true }),
       action(Icon.Delete, { isPrimary: true }),
     ]);
 
-    expect(result.barActions.map(item => item.name)).toEqual(['edit', 'delete']);
+    expect(result.barActions.map(item => item.name)).toEqual(['edit', 'merge', 'delete']);
+    expect(result.barActions[1].disabled).toBe(true);
     expect(result.overflowActions).toEqual([]);
+    const enabled = partitionSelectionActions(
+      result.barActions.map(item => ({ ...item, disabled: false })),
+    );
+    expect(enabled.barActions.map(item => item.name)).toEqual(
+      result.barActions.map(item => item.name),
+    );
   });
 });

@@ -224,7 +224,7 @@ export function useJournalsBulkOperations({
             variant: 'surface',
             accessibilityLabel: 'Merge selected transactions',
           },
-          isVisible: count => count >= 2,
+          isEnabled: count => count >= 2,
         },
         {
           action: {
