@@ -18,6 +18,7 @@ import type {
 import type { JournalWriteLine } from '@/src/types/journalWrite';
 import {
   evaluateJournalLines,
+  getValuationIssues,
   JournalBalanceError,
 } from '@/src/domain/accounting/journalBalanceEvaluator';
 import { deriveJournalDisplayType } from '@/src/domain/accounting/journalDisplayType';
@@ -271,9 +272,8 @@ export async function validateJournal(params: {
     getPrecision: code => currencyRepository.getPrecision(code),
   });
 
-  const invalidIssue = evaluation.issues.find(
-    issue => issue.code !== 'unbalanced' || status === JournalStatus.POSTED,
-  );
+  const [invalidIssue] =
+    status === JournalStatus.POSTED ? evaluation.issues : getValuationIssues(evaluation);
   if (invalidIssue) throw new JournalBalanceError(invalidIssue.message);
 
   if (transactions.some(line => !Object.values(TransactionType).includes(line.transactionType))) {

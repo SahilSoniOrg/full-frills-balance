@@ -2,6 +2,7 @@ import { AppButton, AppInput, AppText } from '@/src/components/core';
 import { Box, Stack } from '@/src/design-system';
 import {
   evaluateJournalBalance,
+  getValuationIssues,
   normalizeCurrencyCode as normalize,
   type JournalBalanceEvaluation,
   type UniqueJournalFxRateProposal,
@@ -31,7 +32,7 @@ type JournalLineDraft = JournalBalanceLineEdit & { rateSource: BalanceRateSource
 
 function balanceMessage(evaluation: JournalBalanceEvaluation): string {
   if (evaluation.isBalanced) return 'Debits and credits match.';
-  const blockingIssue = evaluation.issues.find(issue => issue.code !== 'unbalanced');
+  const [blockingIssue] = getValuationIssues(evaluation);
   if (blockingIssue) return blockingIssue.message;
   return `Out by ${formatRoundedAmount(
     fromMinorUnits(Math.abs(evaluation.differenceMinorUnits), evaluation.journalPrecision),

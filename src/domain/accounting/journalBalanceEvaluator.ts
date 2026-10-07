@@ -272,6 +272,15 @@ export function evaluateJournalBalance({
   };
 }
 
+/** Issues that stop the journal from being valued at all, as opposed to merely not balancing. */
+export function getValuationIssues(evaluation: JournalBalanceEvaluation): JournalBalanceIssue[] {
+  return evaluation.issues.filter(issue => issue.code !== 'unbalanced');
+}
+
+export function isJournalFullyValued(evaluation: JournalBalanceEvaluation): boolean {
+  return getValuationIssues(evaluation).length === 0;
+}
+
 export interface UniqueJournalFxRateProposal {
   readonly transactionId: string;
   readonly exchangeRate: number;
@@ -306,7 +315,7 @@ export function proposeUniqueJournalFxRate(
 
   const candidateAtUnitRate = evaluate(1);
   if (
-    candidateAtUnitRate.issues.some(issue => issue.code !== 'unbalanced') ||
+    !isJournalFullyValued(candidateAtUnitRate) ||
     candidateAtUnitRate.lineValues.length !== input.lines.length
   ) {
     return undefined;
