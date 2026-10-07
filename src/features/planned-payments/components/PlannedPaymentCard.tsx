@@ -1,16 +1,13 @@
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { EntryCardLayout } from '@/src/components/journal/EntryCardLayout';
 import { JournalAccountFlow } from '@/src/components/journal/JournalAccountFlow';
-import { accountEntryLeg } from '@/src/services/journal/journalTimelinePresentation';
-import { asAccountId } from '@/src/types/ids';
-import type { JournalEntryLeg } from '@/src/types/journalEntryCard';
-import type { PlainAccount } from '@/src/types/plainDtos';
 import { Icon, AppIcon, AppSurface, PressScaleTouchable, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PlannedPaymentInterval } from '@/src/types/enums';
 import {
   formatPlannedPaymentInterval,
+  plannedAccountLeg,
   presentPlannedListOccurrenceTiming,
 } from '@/src/features/planned-payments/hooks/plannedPaymentDetailsPresentation';
 import dayjs from 'dayjs';
@@ -27,24 +24,6 @@ export interface PlannedPaymentCardProps {
   isPlanBusy?: boolean;
   recordError?: string;
 }
-
-function plannedLeg(
-  account: PlainAccount | undefined,
-  role: JournalEntryLeg['role'],
-  placeholder: string,
-): JournalEntryLeg {
-  return account
-    ? accountEntryLeg(account, role, `${account.id}:${role}`)
-    : {
-        id: role,
-        accountId: asAccountId(''),
-        name: placeholder,
-        role,
-        fallbackIcon: Icon.Wallet,
-        variant: 'default',
-      };
-}
-
 function PlannedPaymentCardComponent({
   occurrence,
   onPress,
@@ -157,8 +136,8 @@ function PlannedPaymentCardComponent({
             ) : (
               <JournalAccountFlow
                 accountFlow={{
-                  sources: [plannedLeg(item.fromAccount, 'SOURCE', fromLabel)],
-                  destinations: [plannedLeg(item.toAccount, 'DESTINATION', toLabel)],
+                  sources: [plannedAccountLeg(item.fromAccount, 'SOURCE', fromLabel)],
+                  destinations: [plannedAccountLeg(item.toAccount, 'DESTINATION', toLabel)],
                   neutral: [],
                   showCurrencyCodes: false,
                 }}

@@ -7,6 +7,27 @@ import { ComponentVariant } from '@/src/utils/style-helpers';
 import { formatRecurrence } from '@/src/utils/recurrenceLabels';
 import dayjs from 'dayjs';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
+import { accountEntryLeg } from '@/src/services/journal/journalTimelinePresentation';
+import { asAccountId } from '@/src/types/ids';
+import type { JournalEntryLeg } from '@/src/types/journalEntryCard';
+
+/** A schedule account as a transaction-flow leg, or a placeholder leg when the account is missing. */
+export function plannedAccountLeg(
+  account: Parameters<typeof accountEntryLeg>[0] | null | undefined,
+  role: JournalEntryLeg['role'],
+  placeholder: string,
+): JournalEntryLeg {
+  return account
+    ? accountEntryLeg(account, role, `${account.id}:${role}`)
+    : {
+        id: role,
+        accountId: asAccountId(''),
+        name: placeholder,
+        role,
+        fallbackIcon: Icon.Wallet,
+        variant: 'default',
+      };
+}
 
 export function daysUntilPlannedOccurrence(occurrenceDate: number, now: number): number {
   return dayjs(occurrenceDate).startOf('day').diff(dayjs(now).startOf('day'), 'day');

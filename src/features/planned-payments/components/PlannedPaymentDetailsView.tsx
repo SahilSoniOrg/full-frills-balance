@@ -1,5 +1,4 @@
 import dayjs from 'dayjs';
-import { useWindowDimensions } from 'react-native';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import {
   AppButton,
@@ -10,7 +9,12 @@ import {
   Icon,
   LoadingView,
 } from '@/src/components/core';
-import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
+import {
+  JournalAccountFlow,
+  type JournalAccountFlowLegAction,
+} from '@/src/components/journal/JournalAccountFlow';
+import { ActionButtonPair } from '@/src/components/shared/ActionButtonPair';
+import { DetailRow } from '@/src/components/shared/DetailRow';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { SelectionActionBar } from '@/src/components/shared/SelectionActionBar';
@@ -23,6 +27,7 @@ import { getNow } from '@/src/utils/dateUtils';
 import type { PlannedPaymentDetailsViewModel } from '../hooks/usePlannedPaymentDetailsViewModel';
 import { PlannedPaymentActivityOverview } from './PlannedPaymentActivityOverview';
 import {
+  plannedAccountLeg,
   plannedMoneyDiffers,
   presentPlannedPaymentDetailsHeader,
 } from '../hooks/plannedPaymentDetailsPresentation';
@@ -35,8 +40,6 @@ export function PlannedPaymentDetailsView({
 }: PlannedPaymentDetailsViewModel & { chrome: ScreenNavChrome }) {
   const { theme, history = [], selectedIds, isSelectionModeActive } = vm;
   const formatMoney = useMoneyFormat();
-  const { fontScale } = useWindowDimensions();
-  const largeText = fontScale > 1.3;
   const pending = !!vm.pendingAction;
   const hasOccurrence = !!vm.onPost;
   const isPaused = vm.status === PlannedPaymentStatus.PAUSED;
@@ -64,31 +67,13 @@ export function PlannedPaymentDetailsView({
     ? dayjs(dueDateText).format('dddd, MMM D')
     : (vm.nextOccurrenceText ?? '');
 
-  const accountChip = (account: typeof vm.fromAccount, placeholder: string, label: string) => (
-    <AppButton
-      key={label}
-      variant="ghost"
-      onPress={account ? () => vm.onOpenAccount(account.id) : undefined}
-      disabled={!account}
-      accessibilityRole="button"
-      accessibilityLabel={account ? copy.openAccount(account.name) : placeholder}
-      buttonStyle={{
-        minHeight: 44,
-        paddingHorizontal: 0,
-        paddingVertical: 0,
-        backgroundColor: 'transparent',
-      }}
-    >
-      <AccountInlineLabel
-        account={account}
-        placeholder={placeholder}
-        variant="caption"
-        weight="medium"
-        appearance="transactionFlow"
-        showIcon
-      />
-    </AppButton>
-  );
+  const openAccount: JournalAccountFlowLegAction = leg =>
+    leg.accountId
+      ? {
+          onPress: () => vm.onOpenAccount(leg.accountId),
+          accessibilityLabel: copy.openAccount(leg.name),
+        }
+      : undefined;
 
   const actionCard = (
     <AppSurface elevation="sm" padding="md" radius="r2">
@@ -199,11 +184,17 @@ export function PlannedPaymentDetailsView({
                   : formattedDueDate}
             </AppText>
             {vm.fromAccount || vm.toAccount ? (
-              <Row align="center" gap="xs" flexWrap="wrap">
-                {accountChip(vm.fromAccount, copy.accountUnavailable, copy.from)}
-                <AppIcon name={Icon.ArrowRight} size={Size.iconXs} color="textSecondary" />
-                {accountChip(vm.toAccount, copy.accountUnavailable, copy.to)}
-              </Row>
+              <JournalAccountFlow
+                accountFlow={{
+                  sources: [plannedAccountLeg(vm.fromAccount, 'SOURCE', copy.accountUnavailable)],
+                  destinations: [
+                    plannedAccountLeg(vm.toAccount, 'DESTINATION', copy.accountUnavailable),
+                  ],
+                  neutral: [],
+                  showCurrencyCodes: false,
+                }}
+                legAction={openAccount}
+              />
             ) : null}
             {scheduleDue.helpText && (
               <AppText variant="caption" color="secondary">
@@ -211,40 +202,19 @@ export function PlannedPaymentDetailsView({
               </AppText>
             )}
             {hasOccurrence && (
-              <Row gap="sm" align="stretch" style={{ flexDirection: largeText ? 'column' : 'row' }}>
-                <AppButton
-                  variant="primary"
-                  onPress={vm.onPost}
-                  disabled={pending}
-                  loading={vm.pendingAction === 'record'}
-                  accessibilityRole="button"
-                  accessibilityLabel={copy.recordPayment}
-                  buttonStyle={{
-                    flex: largeText ? undefined : 2,
-                    minHeight: Size.buttonMd,
-                    paddingVertical: Spacing.sm,
-                  }}
-                  style={largeText ? { width: '100%' } : { flex: 2 }}
-                >
-                  {copy.recordPayment}
-                </AppButton>
-                <AppButton
-                  variant="secondary"
-                  onPress={vm.onSkip}
-                  disabled={pending}
-                  loading={vm.pendingAction === 'skip'}
-                  accessibilityRole="button"
-                  accessibilityLabel={copy.skip}
-                  buttonStyle={{
-                    flex: largeText ? undefined : 1,
-                    minHeight: Size.buttonMd,
-                    paddingVertical: Spacing.sm,
-                  }}
-                  style={largeText ? { width: '100%' } : { flex: 1 }}
-                >
-                  {copy.skip}
-                </AppButton>
-              </Row>
+              <ActionButtonPair
+                disabled={pending}
+                primary={{
+                  label: copy.recordPayment,
+                  onPress: vm.onPost,
+                  loading: vm.pendingAction === 'record',
+                }}
+                secondary={{
+                  label: copy.skip,
+                  onPress: vm.onSkip,
+                  loading: vm.pendingAction === 'skip',
+                }}
+              />
             )}
           </>
         )}
@@ -366,7 +336,7 @@ export function PlannedPaymentDetailsView({
                     {vm.description?.trim() && (
                       <>
                         <Separator />
-                        <Column paddingHorizontal="md" paddingVertical="sm" gap="xs">
+                        <Column paddingHorizontal="lg" paddingVertical="sm" gap="xs">
                           <AppText variant="caption" color="secondary">
                             {copy.note}
                           </AppText>
@@ -397,34 +367,5 @@ export function PlannedPaymentDetailsView({
         </>
       )}
     </ScreenWithChrome>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  const { fontScale } = useWindowDimensions();
-  const largeText = fontScale > 1.3;
-  return (
-    <Row
-      justify="space-between"
-      align="center"
-      gap="sm"
-      paddingHorizontal="md"
-      paddingVertical="sm"
-      style={{
-        flexDirection: largeText ? 'column' : 'row',
-        alignItems: largeText ? 'flex-start' : 'center',
-      }}
-    >
-      <AppText variant="body" color="secondary">
-        {label}
-      </AppText>
-      <AppText
-        variant="body"
-        weight="medium"
-        style={{ flexShrink: 1, textAlign: largeText ? 'left' : 'right' }}
-      >
-        {value}
-      </AppText>
-    </Row>
   );
 }

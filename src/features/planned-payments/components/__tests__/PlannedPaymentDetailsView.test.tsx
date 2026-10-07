@@ -132,15 +132,10 @@ describe('PlannedPaymentDetailsView', () => {
     expect(screen.getByText(/edited, usually \$1,250\.45/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Record payment' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Skip' })).toBeTruthy();
-    const accountLabels = screen.getAllByTestId('account-flow-label');
-    expect(accountLabels).toHaveLength(2);
-    for (const label of accountLabels) {
-      const style = StyleSheet.flatten(label.props.style);
-      expect(style.backgroundColor).toBeTruthy();
-      expect(style.borderRadius).toBeTruthy();
-    }
-    expect(within(accountLabels[0]).getByText('Checking').props.numberOfLines).toBe(1);
-    expect(within(accountLabels[1]).getByText('Housing').props.numberOfLines).toBe(1);
+    const accountLegs = screen.getAllByTestId('transaction-account-leg');
+    expect(accountLegs).toHaveLength(2);
+    expect(within(accountLegs[0]).getByText('Checking')).toBeTruthy();
+    expect(within(accountLegs[1]).getByText('Housing')).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Open Checking' }));
     expect(vm.onOpenAccount).toHaveBeenCalledWith('checking');
   });
