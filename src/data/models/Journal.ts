@@ -53,5 +53,7 @@ export function toPlainJournal(journal: Journal): PlainJournal {
     totalAmount: journal.totalAmount,
     transactionCount: journal.transactionCount,
     displayType: journal.displayType,
+    createdAt: journal.createdAt?.getTime(),
+    updatedAt: journal.updatedAt?.getTime(),
   };
 }

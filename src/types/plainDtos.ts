@@ -199,6 +199,8 @@ export interface PlainJournal {
   totalAmount: number;
   transactionCount: number;
   displayType: JournalDisplayType;
+  createdAt?: number;
+  updatedAt?: number;
 }
 
 export interface SerializedAccountMetadataPayload {

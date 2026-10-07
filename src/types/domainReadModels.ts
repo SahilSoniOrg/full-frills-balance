@@ -42,6 +42,7 @@ export interface DisplayTransaction {
   journalDescription?: string;
   accountName?: string;
   accountType?: AccountType;
+  accountColor?: string;
   counterAccounts?: DisplayCounterAccount[];
   displayTitle: string;
   displayType?: JournalDisplayType;

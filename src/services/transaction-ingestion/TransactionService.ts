@@ -6,6 +6,7 @@ import { DisplayTransaction } from '@/src/types/domainReadModels';
 import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { transactionObserveQueries } from '@/src/data/repositories/transaction';
 import { effect } from '@/src/utils/accounting/BalanceEffects';
+import { getAccountIcon } from '@/src/utils/accountIcon';
 import { combineLatest, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 
 export class TransactionService {
@@ -57,8 +58,11 @@ export class TransactionService {
             notes: tx.notes,
             accountId: tx.accountId,
             exchangeRate: tx.exchangeRate,
+            runningBalance: tx.runningBalance ?? undefined,
             accountName: account?.name || 'Unknown Account',
             accountType: account?.accountType,
+            accountColor: account?.color,
+            icon: account ? getAccountIcon(account) : undefined,
             flowDirection: bal.flow,
             balanceImpact: bal.isIncrease ? 'INCREASE' : 'DECREASE',
             createdAt: tx.createdAt,
