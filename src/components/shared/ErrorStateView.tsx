@@ -6,30 +6,51 @@ import { StyleSheet, View } from 'react-native';
 
 export interface ErrorStateViewProps {
   message: string;
-  onRetry: () => void;
+  onRetry?: () => void;
+  retryLabel?: string;
+  /** `inline` sits inside a card or section instead of filling the screen. */
+  variant?: 'screen' | 'inline';
   style?: StyleProp<ViewStyle>;
 }
 
-export function ErrorStateView({ message, onRetry, style }: ErrorStateViewProps) {
+export function ErrorStateView({
+  message,
+  onRetry,
+  retryLabel = 'Try again',
+  variant = 'screen',
+  style,
+}: ErrorStateViewProps) {
+  const inline = variant === 'inline';
   return (
-    <View style={[styles.container, style]} accessibilityRole="alert">
-      <AppText variant="body" color="error" style={styles.message}>
+    <View style={[inline ? styles.inline : styles.screen, style]} accessibilityRole="alert">
+      <AppText
+        variant="body"
+        color={inline ? 'warning' : 'error'}
+        style={inline ? undefined : styles.centered}
+      >
         {message}
       </AppText>
-      <AppButton onPress={onRetry}>Try again</AppButton>
+      {onRetry ? (
+        <AppButton
+          variant={inline ? 'secondary' : 'primary'}
+          size={inline ? 'sm' : 'md'}
+          onPress={onRetry}
+        >
+          {retryLabel}
+        </AppButton>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     gap: Spacing.md,
     padding: Spacing.xl,
   },
-  message: {
-    textAlign: 'center',
-  },
+  inline: { gap: Spacing.sm, alignItems: 'flex-start' },
+  centered: { textAlign: 'center' },
 });

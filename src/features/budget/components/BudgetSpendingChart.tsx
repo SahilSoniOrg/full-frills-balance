@@ -1,9 +1,8 @@
-import { AppCard, AppText } from '@/src/components/core';
+import { AppCard, AppText, ErrorStateView } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppConfig, Shape, Spacing } from '@/src/constants';
 import type { BudgetPeriodPresentation } from '../helpers/budgetDetailPresentation';
-import { BudgetInsightsError } from './BudgetInsightsError';
 import { resolveBudgetStatus } from '../helpers/budgetCardPresentation';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { buildBudgetSpendingChartGeometry } from './budgetSpendingChartGeometry';
@@ -158,7 +157,12 @@ export function BudgetSpendingChart({
             {AppConfig.strings.common.loading}
           </AppText>
         ) : error ? (
-          <BudgetInsightsError message={error} onRetry={onRetry} />
+          <ErrorStateView
+            variant="inline"
+            message={error}
+            retryLabel={AppConfig.strings.budgetDetailRedesign.retryBreakdown}
+            onRetry={onRetry}
+          />
         ) : chartData && paths ? (
           <View accessibilityRole="image" accessibilityLabel={chartAccessibilityLabel}>
             <Svg width={width} height={CHART_HEIGHT}>

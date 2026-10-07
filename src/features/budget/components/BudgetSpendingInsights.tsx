@@ -1,6 +1,5 @@
 import { AccountInlineLabel } from '@/src/components/accounts/AccountInlineLabel';
-import { AppButton, AppText } from '@/src/components/core';
-import { BudgetInsightsError } from './BudgetInsightsError';
+import { AppButton, AppText, ErrorStateView } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, Shape, Spacing } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
@@ -53,7 +52,12 @@ export function BudgetSpendingInsights({
           {AppConfig.strings.common.loading}
         </AppText>
       ) : error ? (
-        <BudgetInsightsError message={error} onRetry={onRetry} />
+        <ErrorStateView
+          variant="inline"
+          message={error}
+          retryLabel={AppConfig.strings.budgetDetailRedesign.retryBreakdown}
+          onRetry={onRetry}
+        />
       ) : categories.length === 0 ? (
         <AppText variant="caption" color="secondary">
           {strings.noCategorySpending}
