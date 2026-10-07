@@ -76,3 +76,5 @@ artifacts/
 .commandcode
 output
 .playwright-mcp/
+
+.impeccable
