@@ -85,6 +85,29 @@ export function mergeAuditLogsById<T extends { id: string; timestamp: number }>(
   });
 }
 
+const PAST_TENSE_CRUD: Record<string, string> = {
+  create: 'created',
+  update: 'updated',
+  delete: 'deleted',
+};
+
+/**
+ * The domain event a log records. Generic `<entity>.create` names and rows written before event
+ * types existed map onto the `<entity>.created`-style domain events.
+ */
+export function resolveAuditEventType(
+  log: Pick<AuditLogEntry, 'entityType' | 'action' | 'eventType'>,
+  parsed: ParsedChanges | null,
+): string {
+  const raw =
+    log.eventType ??
+    (parsed && isAuditEventPayload(parsed)
+      ? parsed.eventType
+      : `${log.entityType}.${log.action.toLowerCase()}`);
+  const [entity, verb] = raw.split('.');
+  return PAST_TENSE_CRUD[verb] ? `${entity}.${PAST_TENSE_CRUD[verb]}` : raw;
+}
+
 export function getEntityDisplayName(parsed: ParsedChanges | null): string {
   if (!parsed) return '';
   if (isAuditEventPayload(parsed) && parsed.displayName) return parsed.displayName;
