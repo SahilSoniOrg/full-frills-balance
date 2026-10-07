@@ -1,0 +1,31 @@
+Major release 🚀
+
+The journal, budgets and planned payments have new layouts that put money movement, spending limits and upcoming bills first.
+
+This release also adds automatic SMS importing on Android, expands Change History, makes Safe to Spend easier to understand, and adds better support for scheduled payments across currencies.
+
+---
+
+Also in this update:
+
+* Journal: Entries now show every account involved, with its amount, currency, icon and colour. Open an entry to see resulting balances, budget impact, conversion issues and change history. Scheduled entries also show what the next posting will do, with options to post or skip it.
+* Budgets: The new Commitments view shows what is left, what is over budget and how spending compares with time elapsed. Budget details now include spending trends, daily remaining allowance, previous-period comparisons and category breakdowns. When creating a budget, you can also review past spending and use your average as the limit.
+* Planned payments: See what is still due this month, including overdue and upcoming payments. Record payments directly, review payment and skip history, and compare planned amounts with what you actually paid.
+* Scheduled currency conversions: Cross-currency payments can now convert automatically when posted, repeat two fixed amounts, or ask you to review the conversion each time.
+* Automatic SMS import on Android: Transaction messages can now be checked as they arrive and when you reopen the app. Matching rules can post entries automatically, while messages that need attention can notify you and open directly in the inbox.
+* Original SMS in journal entries: Open the source message from journal details, with detected transaction information highlighted. Linked messages are included in backups. Privacy Mode hides the original message body, and notification details stay hidden unless you enable detailed previews.
+* Change History: History now covers budgets, planned payments, exchange rates, SMS rules, inbox records and workplaces, in addition to accounts and journal entries. Filter, follow related changes, export history, and undo supported changes.
+* Safe to Spend: Forecasts now explain what limits your spending amount, including bills due before your next paycheck. See the forecast date, how far ahead it looks and the lowest projected balance. If a refresh fails, the app identifies whether you are seeing a saved estimate or the forecast is unavailable.
+* Creating and editing: Account, category, budget and planned-payment forms have cleaner layouts, shared calculator inputs and better validation. New repeat controls make schedules such as every two weeks easier to set, and unsaved changes are protected before you leave.
+
+---
+
+Automatic SMS import requires a fresh opt-in:
+
+After updating, open SMS settings, enable Automatic SMS import, and allow Android SMS access.
+
+This is required even if you previously used SMS importing.
+
+You can also choose whether matching rules post entries automatically and whether review notifications show transaction details.
+
+Messages are processed on your device.
