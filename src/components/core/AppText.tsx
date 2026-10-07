@@ -1,6 +1,7 @@
 import { Typography } from '@/src/constants/design-tokens';
 import { resolveStyleColors } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
+import { getReadableColor } from '@/src/utils/color-math';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 import { memo, useMemo } from 'react';
 import { Text, type TextProps, type TextStyle } from 'react-native';
@@ -10,6 +11,8 @@ export type AppTextProps = TextProps & {
   /** Override the role's family, for example UI numerals at title size. */
   fontRole?: 'ui' | 'display' | 'numeric';
   color?: ComponentVariant;
+  /** Hex background behind the text; shifts `color` until it meets AA contrast. */
+  contrastOn?: string;
   align?: 'auto' | 'left' | 'right' | 'center' | 'justify';
   weight?: 'regular' | 'medium' | 'semibold' | 'bold';
   italic?: boolean;
@@ -19,6 +22,7 @@ export type AppTextProps = TextProps & {
 export const AppText = memo(function AppText({
   variant = 'body',
   color = 'text',
+  contrastOn,
   align = 'auto',
   weight,
   fontRole,
@@ -51,7 +55,7 @@ export const AppText = memo(function AppText({
 
     const baseStyle = {
       ...Typography.roles[variant],
-      color: variantColors.main,
+      color: contrastOn ? getReadableColor(variantColors.main, contrastOn) : variantColors.main,
       textAlign: align,
       fontFamily: resolvedFontFamily,
       fontStyle: (italic ? 'italic' : 'normal') as 'italic' | 'normal',
@@ -67,6 +71,7 @@ export const AppText = memo(function AppText({
     weight,
     fontRole,
     color,
+    contrastOn,
     getVariantColors,
     theme,
     fonts,
