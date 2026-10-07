@@ -50,9 +50,11 @@ module.exports = {
   devices: {
     simulator: {
       type: 'ios.simulator',
-      device: {
-        type: process.env.DETOX_IOS_DEVICE || 'iPhone 17',
-      },
+      device: process.env.DETOX_IOS_SIMULATOR_UDID
+        ? { id: process.env.DETOX_IOS_SIMULATOR_UDID }
+        : {
+            type: process.env.DETOX_IOS_DEVICE || 'iPhone 17',
+          },
     },
     emulator: {
       type: 'android.emulator',
