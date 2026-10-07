@@ -4,7 +4,7 @@ import { withOpacity } from '@/src/utils/color-math';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { AuditLogChangesView } from '@/src/features/audit/components/AuditLogChangesView';
 import { getAuditEntityCapabilities } from '@/src/types/auditEntityCapabilities';
-import { AuditLogEntry, EntityStatus } from '@/src/features/audit/auditLogTypes';
+import { AuditLogEntry, EntityStatus } from '@/src/services/audit/auditLogTypes';
 import { useAuditLogItemMeta } from '@/src/features/audit/hooks/useAuditLogItemMeta';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, TouchableOpacity } from 'react-native';

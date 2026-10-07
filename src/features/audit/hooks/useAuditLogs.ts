@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import { AuditLogEntry, mergeAuditLogsById } from '@/src/features/audit/auditLogTypes';
+import { AuditLogEntry, mergeAuditLogsById } from '@/src/services/audit/auditLogTypes';
 import { useObservable } from '@/src/hooks/useObservable';
 import { observeAuditTrail, observeRecentLogs } from '@/src/services/audit-service';
 import { AuditEntityType } from '@/src/types/enums';

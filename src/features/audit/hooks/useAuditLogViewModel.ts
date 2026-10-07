@@ -6,7 +6,7 @@ import {
 } from '@/src/types/auditEntityCapabilities';
 import { useAuditAccounts, useAuditEntityStatus } from '@/src/features/audit/hooks/useAuditData';
 import { toAuditLogEntry, useAuditLogs } from '@/src/features/audit/hooks/useAuditLogs';
-import { mergeAuditLogsById, type AuditLogEntry } from '@/src/features/audit/auditLogTypes';
+import { mergeAuditLogsById, type AuditLogEntry } from '@/src/services/audit/auditLogTypes';
 import { analytics } from '@/src/services/analytics';
 import { getOlderLogs, revertEntry } from '@/src/services/audit-service';
 import { exportAuditHistoryArchive } from '@/src/services/export';

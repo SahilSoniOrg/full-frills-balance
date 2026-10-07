@@ -3,7 +3,7 @@ import {
   collectTransactionAccountIds,
   formatAuditAccountLabel,
   shouldHideUnchangedTransactionLeg,
-} from '@/src/features/audit/auditLogDiffDisplay';
+} from '@/src/services/audit/auditLogDiffDisplay';
 import { AccountId } from '@/src/types/ids';
 
 describe('auditLogDiffDisplay', () => {

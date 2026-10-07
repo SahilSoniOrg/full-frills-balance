@@ -1,6 +1,6 @@
 import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import type { AuditStatusLookupType } from '@/src/types/auditEntityCapabilities';
-import { EntityStatus } from '@/src/features/audit/auditLogTypes';
+import { EntityStatus } from '@/src/services/audit/auditLogTypes';
 import { useObservable } from '@/src/hooks/useObservable';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';

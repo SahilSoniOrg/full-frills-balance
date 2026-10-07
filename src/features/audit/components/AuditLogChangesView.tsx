@@ -1,7 +1,7 @@
 import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { Theme } from '@/src/constants/design-tokens';
-import { AuditAccountMap, asTransactionSnapshots } from '@/src/features/audit/auditLogDiffDisplay';
+import { AuditAccountMap, asTransactionSnapshots } from '@/src/services/audit/auditLogDiffDisplay';
 import {
   AuditTransactionsFieldDiff,
   AuditTransactionSnapshotStack,
@@ -15,7 +15,7 @@ import {
   getChangeField,
   hasBeforeAfterChanges,
   isAuditChangeRecord,
-} from '@/src/features/audit/auditLogTypes';
+} from '@/src/services/audit/auditLogTypes';
 import { isAuditEventPayload } from '@/src/types/auditEvents';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';

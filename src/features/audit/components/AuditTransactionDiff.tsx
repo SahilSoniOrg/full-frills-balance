@@ -8,8 +8,8 @@ import {
   formatAuditAccountLabel,
   resolveSnapshotCurrency,
   shouldHideUnchangedTransactionLeg,
-} from '@/src/features/audit/auditLogDiffDisplay';
-import { AuditChangeValue, AuditTransactionSnapshot } from '@/src/features/audit/auditLogTypes';
+} from '@/src/services/audit/auditLogDiffDisplay';
+import { AuditChangeValue, AuditTransactionSnapshot } from '@/src/services/audit/auditLogTypes';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { View } from 'react-native';
 

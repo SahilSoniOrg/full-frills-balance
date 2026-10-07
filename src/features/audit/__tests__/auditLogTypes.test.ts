@@ -7,7 +7,7 @@ import {
   getEntityDisplayName,
   hasBeforeAfterChanges,
   parseAuditChanges,
-} from '@/src/features/audit/auditLogTypes';
+} from '@/src/services/audit/auditLogTypes';
 import { createAuditEventPayload, getAuditEventFieldDeltas } from '@/src/types/auditEvents';
 
 describe('auditLogTypes', () => {

@@ -3,7 +3,7 @@ import {
   AuditChangeValue,
   AuditTransactionSnapshot,
   isTransactionSnapshot,
-} from '@/src/features/audit/auditLogTypes';
+} from '@/src/services/audit/auditLogTypes';
 
 export const AUDIT_ACCOUNT_ID_SHORT_LEN = 6;
 

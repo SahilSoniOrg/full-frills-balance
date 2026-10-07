@@ -7,7 +7,7 @@ import {
   computeCanRevert,
   getEntityDisplayName,
   parseAuditChanges,
-} from '@/src/features/audit/auditLogTypes';
+} from '@/src/services/audit/auditLogTypes';
 import { formatDate } from '@/src/utils/dateUtils';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useMemo } from 'react';
