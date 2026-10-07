@@ -18,6 +18,7 @@ export const SectionLabel = ({ label, marginTop = 'lg', style }: SectionLabelPro
       variant="caption"
       weight="bold"
       color="secondary"
+      accessibilityRole="header"
       style={[
         {
           letterSpacing: 0.5,
