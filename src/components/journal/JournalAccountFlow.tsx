@@ -1,11 +1,17 @@
 import { AppIcon, AppText, Icon } from '@/src/components/core';
-import { Shape, Size, Spacing } from '@/src/constants';
+import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { JournalEntryLeg, JournalEntryAccountFlow } from '@/src/types/journalEntryCard';
 import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { useId, useState } from 'react';
-import { StyleSheet, View, useWindowDimensions, type LayoutChangeEvent } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+  type LayoutChangeEvent,
+} from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import type { ReactNode } from 'react';
 
@@ -16,6 +22,11 @@ type FlowLayout = {
 };
 
 type FlowLayoutField = Exclude<keyof FlowLayout, 'key'>;
+
+/** Makes a leg tappable; return `undefined` to keep it static. */
+export type JournalAccountFlowLegAction = (
+  leg: JournalEntryLeg,
+) => { onPress: () => void; accessibilityLabel: string } | undefined;
 const inlineConnectorSpace = Size.iconXs + Spacing.xs * 2;
 const stackedCueSpace = Size.iconXs + Spacing.xs * 2;
 
@@ -24,11 +35,13 @@ function AccountLeg({
   comma = false,
   precedingBackground,
   rowStartBackground,
+  legAction,
 }: {
   leg: JournalEntryLeg;
   comma?: boolean;
   precedingBackground?: string;
   rowStartBackground?: string;
+  legAction?: JournalAccountFlowLegAction;
 }) {
   const { getVariantColors, theme } = useTheme();
   const gradientId = useId();
@@ -42,13 +55,13 @@ function AccountLeg({
     theme,
     background,
   );
-
-  return (
-    <View
-      testID="transaction-account-leg"
-      style={[styles.leg, isSection && [styles.section, { backgroundColor: background }]]}
-      onLayout={isSection ? event => setStartsRow(event.nativeEvent.layout.x < 1) : undefined}
-    >
+  const action = legAction?.(leg);
+  const legStyle = [styles.leg, isSection && [styles.section, { backgroundColor: background }]];
+  const onLayout = isSection
+    ? (event: LayoutChangeEvent) => setStartsRow(event.nativeEvent.layout.x < 1)
+    : undefined;
+  const content = (
+    <>
       {isSection && leadingBackground && leadingBackground !== background && (
         <View
           style={styles.colorTransition}
@@ -81,6 +94,24 @@ function AccountLeg({
         {leg.name}
         {comma ? ',' : ''}
       </AppText>
+    </>
+  );
+
+  return action ? (
+    <Pressable
+      testID="transaction-account-leg"
+      style={({ pressed }) => [legStyle, pressed && { opacity: Opacity.heavy }]}
+      onLayout={onLayout}
+      onPress={action.onPress}
+      accessibilityRole="button"
+      accessibilityLabel={action.accessibilityLabel}
+      hitSlop={{ top: Spacing.sm, bottom: Spacing.sm }}
+    >
+      {content}
+    </Pressable>
+  ) : (
+    <View testID="transaction-account-leg" style={legStyle} onLayout={onLayout}>
+      {content}
     </View>
   );
 }
@@ -93,6 +124,7 @@ function AccountGroup({
   width,
   maxWidth,
   onMeasure,
+  legAction,
 }: {
   legs: JournalEntryLeg[];
   role: 'SOURCE' | 'DESTINATION';
@@ -101,6 +133,7 @@ function AccountGroup({
   width?: number;
   maxWidth?: number;
   onMeasure: (width: number) => void;
+  legAction?: JournalAccountFlowLegAction;
 }) {
   const { theme, getVariantColors } = useTheme();
   const isSource = role === 'SOURCE';
@@ -141,6 +174,7 @@ function AccountGroup({
                 index > 0 ? getVariantColors(legs[index - 1].variant).light : undefined
               }
               rowStartBackground={cueSpace > 0 ? theme.surfaceSecondary : undefined}
+              legAction={legAction}
             />
           ))}
         </View>
@@ -167,9 +201,11 @@ function JournalEntryFooterRow({
 export function JournalAccountFlow({
   accountFlow,
   trailing,
+  legAction,
 }: {
   accountFlow: JournalEntryAccountFlow;
   trailing?: ReactNode;
+  legAction?: JournalAccountFlowLegAction;
 }) {
   const { theme, themeMode, fonts } = useTheme();
   const { fontScale } = useWindowDimensions();
@@ -232,6 +268,7 @@ export function JournalAccountFlow({
         width={currentLayout?.sourceWidth}
         maxWidth={availableWidth}
         onMeasure={width => measure('sourceWidth', width)}
+        legAction={legAction}
       />
     ) : null;
   const destinationGroup =
@@ -244,6 +281,7 @@ export function JournalAccountFlow({
         width={currentLayout?.destinationWidth}
         maxWidth={availableWidth}
         onMeasure={width => measure('destinationWidth', width)}
+        legAction={legAction}
       />
     ) : null;
 
@@ -282,7 +320,12 @@ export function JournalAccountFlow({
               Other accounts:
             </AppText>
             {neutral.map((leg, index) => (
-              <AccountLeg key={leg.id} leg={leg} comma={index < neutral.length - 1} />
+              <AccountLeg
+                key={leg.id}
+                leg={leg}
+                comma={index < neutral.length - 1}
+                legAction={legAction}
+              />
             ))}
           </Inline>
         </JournalEntryFooterRow>
