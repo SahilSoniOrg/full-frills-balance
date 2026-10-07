@@ -7,6 +7,7 @@ import {
   LoadingView,
 } from '@/src/components/core';
 import { ScreenWithChrome, type ScreenNavChrome } from '@/src/components/layout';
+import { RevertChangeDialog } from '@/src/components/overlays/RevertChangeDialog';
 import {
   SelectionPickerSheet,
   type SelectionOption,
@@ -84,6 +85,9 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
     onToggleExpanded,
     onView,
     onRevert,
+    revertRequest,
+    onCloseRevert,
+    workplaceId,
   } = vm;
   const [isEventPickerVisible, setEventPickerVisible] = useState(false);
   const eventFilterOptions = useMemo(
@@ -350,6 +354,12 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
           </>
         )}
       </View>
+      <RevertChangeDialog
+        request={revertRequest}
+        workplaceId={workplaceId}
+        surface="audit_log"
+        onClose={onCloseRevert}
+      />
     </ScreenWithChrome>
   );
 }

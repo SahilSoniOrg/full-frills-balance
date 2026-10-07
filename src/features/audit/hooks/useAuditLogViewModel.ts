@@ -8,9 +8,16 @@ import { useAuditAccounts, useAuditEntityStatus } from '@/src/features/audit/hoo
 import { toAuditLogEntry, useAuditLogs } from '@/src/features/audit/hooks/useAuditLogs';
 import { mergeAuditLogsById, type AuditLogEntry } from '@/src/services/audit/auditLogTypes';
 import { analytics } from '@/src/services/analytics';
-import { getOlderLogs, revertEntry } from '@/src/services/audit-service';
+import type { RevertChangeRequest } from '@/src/components/overlays/RevertChangeDialog';
+import { getOlderLogs } from '@/src/services/audit-service';
 import { exportAuditHistoryArchive } from '@/src/services/export';
-import { AccountId, BudgetId, JournalId, PlannedPaymentId } from '@/src/types/ids';
+import {
+  AccountId,
+  BudgetId,
+  JournalId,
+  PlannedPaymentId,
+  type WorkplaceId,
+} from '@/src/types/ids';
 import { AuditEntityType } from '@/src/types/enums';
 import type { AuditEventSource, AuditEventType } from '@/src/types/auditEvents';
 import * as Alerts from '@/src/utils/alerts';
@@ -47,6 +54,9 @@ export interface AuditLogViewModel {
   onToggleExpanded: (id: string) => void;
   onView: (entityType: string, entityId: string, name?: string) => void;
   onRevert: (logId: string) => void;
+  revertRequest: RevertChangeRequest | null;
+  onCloseRevert: () => void;
+  workplaceId: WorkplaceId;
 }
 
 export type AuditEntityFilter = AuditEntityType | 'all';
@@ -310,7 +320,7 @@ export function useAuditLogViewModel(): AuditLogViewModel {
     if (type === 'account') {
       AppNavigation.toAccountDetails(id as AccountId, { preview: { name } });
     } else if (type === 'journal') {
-      AppNavigation.toJournalDetails(id as JournalId, { title: name });
+      AppNavigation.toJournalDetails(id as JournalId);
     } else if (type === 'budget') {
       AppNavigation.toBudgetDetail(id as BudgetId);
     } else if (type === 'planned_payment') {
@@ -318,26 +328,17 @@ export function useAuditLogViewModel(): AuditLogViewModel {
     }
   }, []);
 
-  const onRevert = useCallback(
-    (logId: string) => {
-      Alerts.showConfirmationAlert(
-        AppConfig.strings.audit.revertConfirmTitle,
-        AppConfig.strings.audit.revertConfirmMessage,
-        async () => {
-          analytics.trackFeatureUsage('audit', 'revert_initiated');
-          const result = await revertEntry(logId, workplaceId);
-          if (result.success) {
-            analytics.trackFeatureUsage('audit', 'revert_success');
-            Alerts.toast.success(AppConfig.strings.audit.revertSuccess);
-          } else {
-            analytics.trackFeatureUsage('audit', 'revert_failed');
-            Alerts.showErrorAlert(result.error || AppConfig.strings.audit.errors.revertFailed);
-          }
-        },
-      );
-    },
-    [workplaceId],
-  );
+  const [revertRequest, setRevertRequest] = useState<RevertChangeRequest | null>(null);
+  const onRevert = useCallback((logId: string) => {
+    const strings = AppConfig.strings.audit;
+    setRevertRequest({
+      logId,
+      title: strings.revertConfirmTitle,
+      message: strings.revertConfirmMessage,
+      confirmLabel: strings.revertCta,
+    });
+  }, []);
+  const onCloseRevert = useCallback(() => setRevertRequest(null), []);
 
   return {
     logs,
@@ -367,5 +368,8 @@ export function useAuditLogViewModel(): AuditLogViewModel {
     onToggleExpanded,
     onView,
     onRevert,
+    revertRequest,
+    onCloseRevert,
+    workplaceId,
   };
 }
