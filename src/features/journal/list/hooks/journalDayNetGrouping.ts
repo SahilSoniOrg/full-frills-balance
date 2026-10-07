@@ -65,10 +65,7 @@ export function buildTimelineGroupingOptions(
   baseCurrency: string,
   precision: number,
   exchangeRateMap: Record<string, number>,
-  onPress: (
-    row: JournalTimelineRow,
-    cardProps: ReturnType<typeof mapJournalToEntryCardProps>,
-  ) => void,
+  onPress: (row: JournalTimelineRow) => void,
 ): GroupingOptions<JournalTimelineRow> {
   return {
     items: rows,
@@ -87,7 +84,7 @@ export function buildTimelineGroupingOptions(
         selectionId: row.selectionId,
         type: 'journal' as const,
         date: row.journal.journalDate,
-        onPress: () => onPress(row, cardProps),
+        onPress: () => onPress(row),
         cardProps,
       };
     },

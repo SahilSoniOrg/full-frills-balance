@@ -9,7 +9,6 @@ import { showErrorAlert, toast } from '@/src/utils/alerts';
 
 interface UseTransactionInboxModalsProps {
   workplaceId: WorkplaceId;
-  defaultCurrencyCode: string;
   handleImport: (item: TransactionInboxItem, options?: TransactionInboxImportOptions) => void;
 }
 
@@ -28,7 +27,6 @@ export interface TransactionInboxModals {
 
 export function useTransactionInboxModals({
   workplaceId,
-  defaultCurrencyCode,
   handleImport,
 }: UseTransactionInboxModalsProps): TransactionInboxModals {
   const [selectedDuplicateItem, setSelectedDuplicateItem] = useState<TransactionInboxItem | null>(
@@ -96,21 +94,10 @@ export function useTransactionInboxModals({
     [handleImport],
   );
 
-  const handleViewJournalFromDuplicate = useCallback(
-    (item: TransactionInboxItem) => {
-      if (!item.duplicateCandidate) return;
-      AppNavigation.toJournalDetails(item.duplicateCandidate.journalId, {
-        title:
-          item.duplicateCandidate.description || item.parsedMerchant || item.senderAddress || '',
-        amount: item.duplicateCandidate.totalAmount || item.parsedAmount || 0,
-        currencyCode:
-          item.duplicateCandidate.currencyCode || item.parsedCurrencyCode || defaultCurrencyCode,
-        date: item.duplicateCandidate.journalDate,
-        displayType: item.direction === 'credit' ? 'INCOME' : 'EXPENSE',
-      });
-    },
-    [defaultCurrencyCode],
-  );
+  const handleViewJournalFromDuplicate = useCallback((item: TransactionInboxItem) => {
+    if (!item.duplicateCandidate) return;
+    AppNavigation.toJournalDetails(item.duplicateCandidate.journalId);
+  }, []);
 
   return {
     selectedDuplicateItem,

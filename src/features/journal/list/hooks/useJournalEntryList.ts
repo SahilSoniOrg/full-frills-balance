@@ -11,7 +11,6 @@ import { useSharePrefs } from '@/src/hooks/useSharePrefs';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { shareJournalEntries } from '@/src/services/sharing/JournalShareProvider';
 import type { JournalTimelineRow } from '@/src/services/journal/journalTimelineRows';
-import { mapJournalToEntryCardProps } from '@/src/services/journal/journalTimelinePresentation';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalStatus } from '@/src/types/enums';
@@ -126,24 +125,13 @@ export function useJournalEntryList({
   } = selectionControl;
 
   const handleRowPress = useCallback(
-    (row: JournalTimelineRow, cardProps: ReturnType<typeof mapJournalToEntryCardProps>) => {
+    (row: JournalTimelineRow) => {
       if (isSelectionModeActive) {
         toggleSelection(row.selectionId);
         return;
       }
 
-      AppNavigation.toJournalDetails(row.journal.id, {
-        title: cardProps.title,
-        amount: cardProps.amount,
-        currencyCode: cardProps.currencyCode,
-        date:
-          typeof cardProps.transactionDate === 'number'
-            ? cardProps.transactionDate
-            : cardProps.transactionDate.getTime(),
-        typeColor: cardProps.presentation.typeColor,
-        typeIcon: cardProps.presentation.typeIcon,
-        displayType: row.journal.displayType,
-      });
+      AppNavigation.toJournalDetails(row.journal.id);
     },
     [isSelectionModeActive, toggleSelection],
   );

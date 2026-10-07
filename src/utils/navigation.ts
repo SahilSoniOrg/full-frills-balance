@@ -151,32 +151,9 @@ export const AppNavigation = {
 
   /**
    * Navigate to the Journal Details screen.
-   * Supports optional preview data for immediate rendering while the full record loads.
    */
-  toJournalDetails: (
-    journalId: string,
-    preview?: {
-      title?: string;
-      amount?: number;
-      currencyCode?: string;
-      date?: number;
-      typeColor?: string;
-      typeIcon?: string;
-      displayType?: string;
-    },
-  ) => {
-    router.push(
-      buildRoute('/journal-details', {
-        journalId,
-        title: preview?.title,
-        amount: preview?.amount,
-        currencyCode: preview?.currencyCode,
-        date: preview?.date,
-        typeColor: preview?.typeColor,
-        typeIcon: preview?.typeIcon,
-        displayType: preview?.displayType,
-      }),
-    );
+  toJournalDetails: (journalId: string) => {
+    router.push(buildRoute('/journal-details', { journalId }));
   },
 
   /**

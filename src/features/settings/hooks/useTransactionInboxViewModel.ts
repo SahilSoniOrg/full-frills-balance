@@ -58,7 +58,6 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
 
   const modals = useTransactionInboxModals({
     workplaceId,
-    defaultCurrencyCode,
     handleImport,
   });
 
@@ -155,24 +154,13 @@ export function useTransactionInboxViewModel(): TransactionInboxViewModel {
     [workplaceId],
   );
 
-  const handleOpenJournal = useCallback(
-    (item: TransactionInboxItem) => {
-      if (!item.linkedJournal) return;
-      analytics.trackFeatureUsage('sms', 'inbox_accept', {
-        channel: item.channel,
-      });
-      AppNavigation.toJournalDetails(item.linkedJournal.journalId, {
-        title: item.linkedJournal.description || item.parsedMerchant || item.senderAddress || '',
-        amount: item.linkedJournal.totalAmount ?? item.parsedAmount ?? 0,
-        currencyCode:
-          item.linkedJournal.currencyCode || item.parsedCurrencyCode || defaultCurrencyCode,
-        date: item.linkedJournal.journalDate,
-        displayType:
-          item.linkedJournal.displayType || (item.direction === 'credit' ? 'INCOME' : 'EXPENSE'),
-      });
-    },
-    [defaultCurrencyCode],
-  );
+  const handleOpenJournal = useCallback((item: TransactionInboxItem) => {
+    if (!item.linkedJournal) return;
+    analytics.trackFeatureUsage('sms', 'inbox_accept', {
+      channel: item.channel,
+    });
+    AppNavigation.toJournalDetails(item.linkedJournal.journalId);
+  }, []);
 
   useEffect(() => {
     if (!reviewRecordId || areAccountsLoading || reviewing.current === reviewRecordId) return;

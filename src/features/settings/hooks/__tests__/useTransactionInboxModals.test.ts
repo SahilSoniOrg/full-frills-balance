@@ -66,7 +66,6 @@ describe('useTransactionInboxModals', () => {
     const { result } = renderHook(() =>
       useTransactionInboxModals({
         workplaceId: mockWorkplaceId,
-        defaultCurrencyCode: 'INR',
         handleImport: mockHandleImport,
       }),
     );
@@ -88,7 +87,6 @@ describe('useTransactionInboxModals', () => {
     const { result } = renderHook(() =>
       useTransactionInboxModals({
         workplaceId: mockWorkplaceId,
-        defaultCurrencyCode: 'INR',
         handleImport: mockHandleImport,
       }),
     );
@@ -110,7 +108,6 @@ describe('useTransactionInboxModals', () => {
     const { result } = renderHook(() =>
       useTransactionInboxModals({
         workplaceId: mockWorkplaceId,
-        defaultCurrencyCode: 'INR',
         handleImport: mockHandleImport,
       }),
     );
@@ -126,7 +123,6 @@ describe('useTransactionInboxModals', () => {
     const { result } = renderHook(() =>
       useTransactionInboxModals({
         workplaceId: mockWorkplaceId,
-        defaultCurrencyCode: 'INR',
         handleImport: mockHandleImport,
       }),
     );
@@ -145,7 +141,6 @@ describe('useTransactionInboxModals', () => {
     const { result } = renderHook(() =>
       useTransactionInboxModals({
         workplaceId: mockWorkplaceId,
-        defaultCurrencyCode: 'INR',
         handleImport: mockHandleImport,
       }),
     );
@@ -161,7 +156,6 @@ describe('useTransactionInboxModals', () => {
     const { result } = renderHook(() =>
       useTransactionInboxModals({
         workplaceId: mockWorkplaceId,
-        defaultCurrencyCode: 'INR',
         handleImport: mockHandleImport,
       }),
     );
@@ -170,12 +164,6 @@ describe('useTransactionInboxModals', () => {
       result.current.handleViewJournalFromDuplicate(mockItem);
     });
 
-    expect(AppNavigation.toJournalDetails).toHaveBeenCalledWith('j-dup-1', {
-      title: 'Cafe Coffee',
-      amount: 500,
-      currencyCode: 'INR',
-      date: 1786800000000,
-      displayType: 'EXPENSE',
-    });
+    expect(AppNavigation.toJournalDetails).toHaveBeenCalledWith('j-dup-1');
   });
 });
