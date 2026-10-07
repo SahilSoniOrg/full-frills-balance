@@ -42,7 +42,7 @@ export function NavigationStack() {
               ? {
                   presentation: 'card' as const,
                   animation: reduceMotion ? ('none' as const) : ('slide_from_bottom' as const),
-                  gestureEnabled: !reduceMotion,
+                  gestureEnabled: true,
                   gestureDirection: 'vertical' as const,
                 }
               : route.presentation === 'detail'

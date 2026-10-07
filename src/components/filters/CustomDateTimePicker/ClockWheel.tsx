@@ -2,14 +2,13 @@ import { AppText } from '@/src/components/core';
 import { ChromeMotion, Opacity, Shape, Spacing } from '@/src/constants';
 import { animateValue } from '@/src/hooks/reduced-motion-animation';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
+import { useScrollSettlement } from '@/src/hooks/useScrollSettlement';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Keyboard,
   LayoutChangeEvent,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -145,20 +144,18 @@ export function ClockWheel<T extends string>({
     ],
   );
 
-  const handleScrollEnd = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      settleFromOffset(event.nativeEvent.contentOffset.y);
-    },
-    [settleFromOffset],
+  const { cancel: cancelScrollSettlement, scrollProps } = useScrollSettlement(offset =>
+    settleFromOffset(offset.y),
   );
 
   const handlePress = useCallback(
     (index: number, id: T) => {
       Keyboard.dismiss();
+      cancelScrollSettlement();
       setCursor(index);
       onChange(id);
     },
-    [onChange],
+    [onChange, cancelScrollSettlement],
   );
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
@@ -179,13 +176,14 @@ export function ClockWheel<T extends string>({
   return (
     <View style={styles.fill} onLayout={handleLayout} testID={testID}>
       <ScrollView
+        {...scrollProps}
         ref={scrollViewRef}
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
         snapToInterval={itemHeight}
         decelerationRate="fast"
         keyboardShouldPersistTaps="handled"
-        onMomentumScrollEnd={handleScrollEnd}
+        scrollEventThrottle={16}
         contentContainerStyle={{ paddingVertical }}
       >
         <View style={{ height: itemHeight * displayOptions.length, width: '100%' }}>

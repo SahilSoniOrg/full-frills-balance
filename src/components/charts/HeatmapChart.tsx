@@ -76,10 +76,8 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
     return 0.12 + (Math.sqrt(value) / Math.sqrt(maxValue)) * 0.88;
   };
 
-  const { chartRef, onLayout, gesture } = useChartInteraction({
-    gestureConfig: {
-      type: 'simultaneous',
-    },
+  const { chartRef, gesture } = useChartInteraction({
+    panActivation: 'hold',
     getInteractionFromTouch: useCallback(
       (x: number, y: number) => {
         if (data.length === 0) return { type: 'none' };
@@ -112,7 +110,6 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
     <View
       style={{ height, width: CHART_WIDTH, overflow: 'visible' }}
       ref={chartRef}
-      onLayout={onLayout}
       collapsable={false}
     >
       <GestureDetector gesture={gesture}>

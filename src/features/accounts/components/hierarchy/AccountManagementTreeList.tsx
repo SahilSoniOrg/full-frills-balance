@@ -9,6 +9,8 @@ import type {
 } from '@/src/services/accounts/accountTreeTargets';
 import type { AccountFields } from '@/src/types/plainDtos';
 import type { AccountId } from '@/src/types/ids';
+import { createAccountTreeSnapshot } from '@/src/services/accounts/accountTree';
+import { getAccountTreeSiblingMoveTargets } from '@/src/services/accounts/accountTreeTargets';
 import { FlashList } from '@shopify/flash-list';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -67,6 +69,10 @@ export function AccountManagementTreeList({
     () => new Map(accounts.map(account => [account.id, account] as const)),
     [accounts],
   );
+  const siblingMoves = useMemo(
+    () => getAccountTreeSiblingMoveTargets(createAccountTreeSnapshot(accounts)),
+    [accounts],
+  );
   const {
     activeAccountId,
     flashAccountId,
@@ -117,11 +123,18 @@ export function AccountManagementTreeList({
           renderItem={({ item }) => {
             const account = accountsById.get(item.accountId);
             if (!account) return null;
+            const moves = siblingMoves.get(account.id);
+            const canMove = !isSavingDraft && activeAccountId === null;
             return (
               <AccountManagementTreeRow
                 row={item}
                 account={account}
                 isOrganizing={isOrganizing}
+                interactionDisabled={
+                  isSavingDraft || (activeAccountId !== null && activeAccountId !== account.id)
+                }
+                onMoveUp={canMove && moves?.up ? () => onDrop(moves.up!) : undefined}
+                onMoveDown={canMove && moves?.down ? () => onDrop(moves.down!) : undefined}
                 isPending={pendingAccountIds.has(account.id)}
                 pendingPreview={pendingPreviews.get(account.id)}
                 isActive={activeAccountId === account.id}
@@ -137,6 +150,7 @@ export function AccountManagementTreeList({
                 onUpdate={updateDrag}
                 onFinish={finishDrag}
                 onCancel={cancelDrag}
+                onChooseGroup={() => onSelectAccount(account.id)}
                 onLayout={onRowLayout}
                 onPress={() =>
                   item.childCount > 0 ? onToggleExpand(account.id) : onSelectAccount(account.id)

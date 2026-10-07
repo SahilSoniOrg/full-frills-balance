@@ -112,11 +112,7 @@ export const LineChart = <T extends DataPoint>({
   const isControlled = selectedIndex !== undefined;
   const activeIndex = isControlled ? selectedIndex : internalSelectedIndex;
 
-  const { chartRef, onLayout, gesture } = useChartInteraction({
-    gestureConfig: {
-      activeOffsetX: REPORT_CHART_LAYOUT.gestureSensitivity,
-      type: 'exclusive',
-    },
+  const { chartRef, gesture } = useChartInteraction({
     getInteractionFromTouch: useCallback(
       (x: number, _y: number) => {
         if (visibleData.length === 0) return { type: 'none' };
@@ -203,7 +199,6 @@ export const LineChart = <T extends DataPoint>({
       style={{ height, width: chartWidth, overflow: 'visible' }}
       ref={chartRef}
       collapsable={false}
-      onLayout={onLayout}
     >
       <View style={{ width: chartWidth, height, overflow: 'visible', zIndex: 0 }}>
         <GestureDetector gesture={gesture}>

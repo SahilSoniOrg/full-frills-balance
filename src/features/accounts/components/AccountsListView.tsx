@@ -1,3 +1,4 @@
+import { LIST_SELECTION_LONG_PRESS_MS } from '@/src/constants/gesture-constants';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { CashFlowCard } from '@/src/components/shared/CashFlowCard';
 import { NetWorthCard } from '@/src/components/shared/NetWorthCard';
@@ -122,6 +123,7 @@ export function AccountsListView({
           <PressScaleTouchable
             onPress={() => handleToggleSection(section.title)}
             onLongPress={() => onToggleSectionSelect(sectionAccountIds)}
+            delayLongPress={LIST_SELECTION_LONG_PRESS_MS}
             style={styles.sectionHeaderPressable}
             accessibilityLabel={`${section.title} section, ${section.count} accounts`}
             accessibilityHint={section.isCollapsed ? 'Expand section' : 'Collapse section'}

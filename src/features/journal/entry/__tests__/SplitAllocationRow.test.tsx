@@ -22,6 +22,7 @@ jest.mock('react-native-gesture-handler', () => ({
         failOffsetY: () => gesture,
         onUpdate: () => gesture,
         onEnd: () => gesture,
+        onFinalize: () => gesture,
       };
       return gesture;
     },

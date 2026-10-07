@@ -127,11 +127,7 @@ export const AreaChart: React.FC<AreaChartProps> = ({
     return getX(series[0][activeIndex].x);
   }, [activeIndex, series, getX]);
 
-  const { chartRef, onLayout, gesture } = useChartInteraction({
-    gestureConfig: {
-      type: 'exclusive',
-      activeOffsetX: REPORT_CHART_LAYOUT.gestureSensitivity,
-    },
+  const { chartRef, gesture } = useChartInteraction({
     getInteractionFromTouch: useCallback(
       (x: number, _y: number) => {
         const dataLength = data.length;
@@ -161,7 +157,6 @@ export const AreaChart: React.FC<AreaChartProps> = ({
     <View
       style={{ width: CHART_WIDTH, height, overflow: 'visible' }}
       ref={chartRef}
-      onLayout={onLayout}
       collapsable={false}
     >
       <GestureDetector gesture={gesture}>

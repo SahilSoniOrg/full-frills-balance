@@ -8,6 +8,7 @@ import type {
 } from 'react-native';
 import {
   runOnJS,
+  cancelAnimation,
   useSharedValue,
   withSpring,
   withTiming,
@@ -23,6 +24,7 @@ import type { AccountFields } from '@/src/types/plainDtos';
 import type { AccountId } from '@/src/types/ids';
 import { isAccountArchived } from '@/src/utils/accountArchive';
 import { triggerHaptic } from '@/src/utils/haptics';
+import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import {
   ACCOUNT_TREE_ROW_MIN_HEIGHT,
   ACCOUNT_TREE_SECTION_HEADER_HEIGHT,
@@ -77,6 +79,7 @@ export function useAccountTreeDragController({
   balancesByAccountId,
   onDrop,
 }: UseAccountTreeDragControllerOptions) {
+  const reduceMotion = useReducedMotion();
   const [activeAccountId, setActiveAccountId] = useState<AccountId | null>(null);
   const [hover, setHover] = useState<AccountTreeHoverState | null>(null);
   const [flashAccountId, setFlashAccountId] = useState<AccountId | null>(null);
@@ -184,7 +187,7 @@ export function useAccountTreeDragController({
       pointerYRef.current = null;
       resetMotionValues({ translationY: 0, scrollDelta: 0 });
       // eslint-disable-next-line react-hooks/immutability
-      liftProgress.value = withSpring(1, DRAG_LIFT_SPRING);
+      liftProgress.value = reduceMotion ? 1 : withSpring(1, DRAG_LIFT_SPRING);
       setActiveAccountId(accountId);
       clearHover();
       void triggerHaptic('medium');
@@ -192,7 +195,7 @@ export function useAccountTreeDragController({
         viewportRef.current = { top: y, height };
       });
     },
-    [clearHover, liftProgress, resetMotionValues],
+    [clearHover, liftProgress, resetMotionValues, reduceMotion],
   );
 
   const updateHover = useCallback(
@@ -375,6 +378,11 @@ export function useAccountTreeDragController({
       pointerYRef.current = null;
       activeAccountIdRef.current = null;
       writeShared(scrollDelta, 0);
+      if (reduceMotion) {
+        resetMotionValues({ liftProgress: 0, translationY: toValue });
+        onSettled();
+        return;
+      }
       // eslint-disable-next-line react-hooks/immutability
       liftProgress.value = withTiming(0, {
         duration:
@@ -385,7 +393,7 @@ export function useAccountTreeDragController({
         if (finished) runOnJS(onSettled)();
       });
     },
-    [liftProgress, scrollDelta, translationY],
+    [liftProgress, scrollDelta, translationY, reduceMotion, resetMotionValues],
   );
 
   const cancelDrag = useCallback(() => {
@@ -417,6 +425,13 @@ export function useAccountTreeDragController({
   }, [cancelDrag, flashDroppedAccount, onDrop, settleTranslation, stopAutoScroll]);
 
   useEffect(() => stopAutoScroll, [stopAutoScroll]);
+  useEffect(
+    () => () => {
+      cancelAnimation(translationY);
+      cancelAnimation(liftProgress);
+    },
+    [translationY, liftProgress],
+  );
   useEffect(
     () => () => {
       if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);

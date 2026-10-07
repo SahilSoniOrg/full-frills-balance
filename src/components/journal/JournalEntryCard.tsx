@@ -1,3 +1,4 @@
+import { LIST_SELECTION_LONG_PRESS_MS } from '@/src/constants/gesture-constants';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppCard, AppIcon, AppText, Badge, Icon, PressScaleTouchable } from '@/src/components/core';
 import { BorderWidth, Opacity, Shape, Size, Spacing } from '@/src/constants';
@@ -216,7 +217,7 @@ const JournalEntryCardComponent = ({
           Keyboard.dismiss();
           onLongPress?.();
         }}
-        delayLongPress={350}
+        delayLongPress={LIST_SELECTION_LONG_PRESS_MS}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         accessibilityState={accessibilityState}

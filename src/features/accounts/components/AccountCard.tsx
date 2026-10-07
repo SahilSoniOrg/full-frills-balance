@@ -1,3 +1,4 @@
+import { LIST_SELECTION_LONG_PRESS_MS } from '@/src/constants/gesture-constants';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import {
   Icon,
@@ -76,6 +77,7 @@ function AccountCardBase({
     <PressScaleTouchable
       onPress={() => onPress(account.id)}
       onLongPress={onLongPress ? () => onLongPress(account) : undefined}
+      delayLongPress={LIST_SELECTION_LONG_PRESS_MS}
       accessibilityRole="button"
       accessibilityLabel={[
         account.name,

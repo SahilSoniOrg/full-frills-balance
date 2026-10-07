@@ -50,7 +50,6 @@ interface BarChartSvgProps {
   barSpacing: number;
   startXOffset: number;
   selectedIndex?: number;
-  onPress?: (index: number) => void;
   stacked?: boolean;
 }
 
@@ -73,20 +72,12 @@ const BarChartSvg = React.memo(function BarChartSvg({
   barSpacing,
   startXOffset,
   selectedIndex,
-  onPress,
   stacked = false,
 }: BarChartSvgProps) {
   const { fonts } = useTheme();
   return (
     <Svg height={height} width={svgWidth}>
-      <Rect
-        x={0}
-        y={0}
-        width={svgWidth}
-        height={height}
-        fill="transparent"
-        onPress={() => onPress?.(-1)}
-      />
+      <Rect x={0} y={0} width={svgWidth} height={height} fill="transparent" />
       {REPORT_CHART_LAYOUT.yAxisTicks.map(t => {
         const y = yForValue(domainMin + t * (domainMax - domainMin));
         return (
@@ -143,7 +134,6 @@ const BarChartSvg = React.memo(function BarChartSvg({
                       REPORT_CHART_LAYOUT.barChartBarCornerRadius,
                     )}
                     opacity={opacity}
-                    onPress={() => onPress?.(index)}
                   />
                   <Rect
                     x={x - barSpacing}
@@ -151,7 +141,6 @@ const BarChartSvg = React.memo(function BarChartSvg({
                     width={barWidth + barSpacing * 2}
                     height={height}
                     fill="transparent"
-                    onPress={() => onPress?.(index)}
                   />
                 </React.Fragment>
               );
@@ -274,11 +263,8 @@ export const BarChart = ({
     renderTooltipContent,
   ]);
 
-  const { chartRef, onLayout, gesture } = useChartInteraction({
-    gestureConfig: {
-      type: 'simultaneous',
-      activateAfterLongPress: 150,
-    },
+  const { chartRef, gesture, resetInteraction } = useChartInteraction({
+    panActivation: 'hold',
     getInteractionFromTouch: useCallback(
       (x: number, _y: number) => {
         if (data.length === 0) return { type: 'none' };
@@ -314,12 +300,7 @@ export const BarChart = ({
   }
 
   return (
-    <View
-      style={{ height, width: containerWidth }}
-      ref={chartRef}
-      collapsable={false}
-      onLayout={onLayout}
-    >
+    <View style={{ height, width: containerWidth }} ref={chartRef} collapsable={false}>
       <View style={styles.chartRow}>
         <View style={[styles.yAxisColumn, { width: Y_AXIS_WIDTH }]}>
           {REPORT_CHART_LAYOUT.yAxisTicks.map(t => {
@@ -347,7 +328,7 @@ export const BarChart = ({
             horizontal
             showsHorizontalScrollIndicator={false}
             onScroll={event => setScrollX(event.nativeEvent.contentOffset.x)}
-            onScrollBeginDrag={() => onPress?.(-1)}
+            onScrollBeginDrag={() => resetInteraction()}
             scrollEventThrottle={16}
           >
             <View>
@@ -368,7 +349,6 @@ export const BarChart = ({
                 barSpacing={BAR_SPACING}
                 startXOffset={startXOffset}
                 selectedIndex={selectedIndex}
-                onPress={onPress}
                 stacked={stacked}
               />
             </View>

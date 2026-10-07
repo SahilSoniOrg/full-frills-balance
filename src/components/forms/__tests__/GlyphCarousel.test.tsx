@@ -1,5 +1,5 @@
 import { FlatList } from 'react-native';
-import { fireEvent, render } from '@/src/utils/test-utils';
+import { act, fireEvent, render } from '@/src/utils/test-utils';
 import { GlyphCarousel } from '../GlyphCarousel';
 import type { GlyphCarouselItem } from '../GlyphCarousel';
 import { Icon } from '@/src/components/core';
@@ -44,7 +44,9 @@ describe('GlyphCarousel', () => {
     const screen = render(
       <GlyphCarousel items={items} selectedKey="bank" onSelect={onSelect} testID="account-kind" />,
     );
-    fireEvent(screen.getByTestId('account-kind-list'), 'scrollBeginDrag');
+    fireEvent(screen.getByTestId('account-kind-list'), 'scrollBeginDrag', {
+      nativeEvent: { contentOffset: { x: 100, y: 0 } },
+    });
     expect(onSelect).toHaveBeenCalledWith('bank');
   });
 
@@ -63,5 +65,20 @@ describe('GlyphCarousel', () => {
     expect(scrollToIndex).toHaveBeenLastCalledWith(
       expect.objectContaining({ index: 2, viewPosition: 0.5 }),
     );
+  });
+
+  it('selects the snapped item after a slow drag without momentum', () => {
+    jest.useFakeTimers();
+    const onSelect = jest.fn();
+    const screen = render(
+      <GlyphCarousel items={items} selectedKey="bank" onSelect={onSelect} testID="account-kind" />,
+    );
+    const list = screen.getByTestId('account-kind-list');
+    fireEvent(list, 'scrollBeginDrag', { nativeEvent: { contentOffset: { x: 100, y: 0 } } });
+    fireEvent(list, 'scrollEndDrag', { nativeEvent: { contentOffset: { x: 200, y: 0 } } });
+    act(() => jest.advanceTimersByTime(120));
+    expect(onSelect).toHaveBeenLastCalledWith('card');
+    screen.unmount();
+    jest.useRealTimers();
   });
 });

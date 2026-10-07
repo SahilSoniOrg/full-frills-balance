@@ -1,3 +1,4 @@
+import { LIST_SELECTION_LONG_PRESS_MS } from '@/src/constants/gesture-constants';
 import { TouchableOpacity, View } from 'react-native';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { MoneyText } from '@/src/components/shared/MoneyText';
@@ -148,7 +149,7 @@ export function PlannedPaymentHistoryCard({
     <TouchableOpacity
       onPress={onPress}
       onLongPress={onLongPress}
-      delayLongPress={200}
+      delayLongPress={LIST_SELECTION_LONG_PRESS_MS}
       activeOpacity={Opacity.heavy}
       accessibilityRole="button"
       accessibilityLabel={

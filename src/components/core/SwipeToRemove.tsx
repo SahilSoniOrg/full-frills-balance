@@ -37,46 +37,49 @@ export function SwipeToRemove({
   const measuredHeight = useSharedValue(0);
   const collapsing = useSharedValue(0);
 
+  const remove = () => {
+    'worklet';
+    if (collapsing.value === 1) return;
+    collapsing.value = 1;
+    height.value = measuredHeight.value;
+    translateX.value = withTiming(-520, {
+      duration: reduceMotion ? 0 : 220,
+      easing: Easing.out(Easing.cubic),
+    });
+    reveal.value = withTiming(0, { duration: reduceMotion ? 0 : 200 });
+    height.value = withTiming(
+      0,
+      { duration: reduceMotion ? 0 : 320, easing: Easing.inOut(Easing.cubic) },
+      finished => {
+        if (finished) runOnJS(onRemove)();
+      },
+    );
+  };
+  const reset = () => {
+    'worklet';
+    if (collapsing.value === 1) return;
+    translateX.value = withTiming(0, {
+      duration: reduceMotion ? 0 : 240,
+      easing: Easing.out(Easing.cubic),
+    });
+    reveal.value = withTiming(0, { duration: reduceMotion ? 0 : 200 });
+  };
+
   const gesture = Gesture.Pan()
-    .activeOffsetX([-20, 20])
+    .activeOffsetX(-20)
     .failOffsetY([-16, 16])
     .onUpdate(event => {
       if (collapsing.value === 1) return;
       translateX.value = Math.min(0, event.translationX);
       reveal.value = interpolate(translateX.value, [-96, -8], [1, 0], Extrapolation.CLAMP);
     })
-    .onEnd(event => {
+    .onEnd((event, success) => {
       if (collapsing.value === 1) return;
-      const shouldRemove = event.translationX < -72 || event.velocityX < -900;
-      if (!shouldRemove) {
-        translateX.value = withTiming(0, {
-          duration: reduceMotion ? 0 : 240,
-          easing: Easing.out(Easing.cubic),
-        });
-        reveal.value = withTiming(0, {
-          duration: reduceMotion ? 0 : 200,
-          easing: Easing.out(Easing.cubic),
-        });
-        return;
-      }
-      collapsing.value = 1;
-      height.value = measuredHeight.value;
-      translateX.value = withTiming(-520, {
-        duration: reduceMotion ? 0 : 220,
-        easing: Easing.out(Easing.cubic),
-      });
-      reveal.value = withTiming(0, {
-        duration: reduceMotion ? 0 : 200,
-        easing: Easing.out(Easing.cubic),
-      });
-      height.value = withTiming(
-        0,
-        { duration: reduceMotion ? 0 : 320, easing: Easing.inOut(Easing.cubic) },
-        finished => {
-          if (finished) runOnJS(onRemove)();
-        },
-      );
-    });
+      const shouldRemove =
+        event.translationX < 0 && (event.translationX < -72 || event.velocityX < -900);
+      if (success && shouldRemove) remove();
+    })
+    .onFinalize(reset);
   const sheetStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
   }));

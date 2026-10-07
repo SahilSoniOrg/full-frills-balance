@@ -61,6 +61,7 @@ jest.mock('@/src/hooks/use-theme', () => ({
   useTheme: () => ({
     theme: { text: '#000', textSecondary: '#666', border: '#ddd', background: '#fff' },
     tokens: { input: { placeholder: '#999' } },
+    fonts: { regular: 'System', medium: 'System', semibold: 'System', bold: 'System' },
   }),
 }));
 

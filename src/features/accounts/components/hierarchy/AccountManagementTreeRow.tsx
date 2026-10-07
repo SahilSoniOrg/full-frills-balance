@@ -58,6 +58,9 @@ interface AccountManagementTreeRowProps {
   row: FlattenedAccountTreeRow;
   account: AccountFields;
   isOrganizing: boolean;
+  interactionDisabled?: boolean;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
   isPending: boolean;
   pendingPreview?: string;
   isActive: boolean;
@@ -72,6 +75,7 @@ interface AccountManagementTreeRowProps {
   onFinish: () => void;
   onCancel: () => void;
   onPress: () => void;
+  onChooseGroup: () => void;
   onToggleTypeSection: (accountType: string) => void;
   onLayout: (accountId: AccountId, height: number) => void;
 }
@@ -115,6 +119,9 @@ export function AccountManagementTreeRow({
   row,
   account,
   isOrganizing,
+  interactionDisabled = false,
+  onMoveUp,
+  onMoveDown,
   isPending,
   pendingPreview,
   isActive,
@@ -129,11 +136,13 @@ export function AccountManagementTreeRow({
   onFinish,
   onCancel,
   onPress,
+  onChooseGroup,
   onToggleTypeSection,
   onLayout,
 }: AccountManagementTreeRowProps) {
   const reduceMotion = useReducedMotion();
   const intentProgress = useSharedValue(0);
+  const dragStarted = useSharedValue(false);
   const flashProgress = useSharedValue(0);
   const makeRoomY = useSharedValue(0);
   const lastDispatchedDragUpdate = useSharedValue<{
@@ -220,8 +229,11 @@ export function AccountManagementTreeRow({
   ]);
 
   const gesture = Gesture.Pan()
+    .enabled(isOrganizing && !interactionDisabled)
+    .maxPointers(1)
     .activateAfterLongPress(ACCOUNT_TREE_DRAG_LONG_PRESS_MS)
     .onStart(() => {
+      dragStarted.value = true;
       lastDispatchedDragUpdate.value = null;
       // eslint-disable-next-line react-hooks/immutability
       dragTranslationY.value = 0;
@@ -235,9 +247,12 @@ export function AccountManagementTreeRow({
       lastDispatchedDragUpdate.value = next;
       runOnJS(onUpdate)(account.id, event.translationY, event.absoluteY);
     })
-    .onEnd(() => runOnJS(onFinish)())
+    .onEnd((_event, success) => {
+      if (success) runOnJS(onFinish)();
+    })
     .onFinalize((_event, success) => {
-      if (!success) runOnJS(onCancel)();
+      if (!success && dragStarted.value) runOnJS(onCancel)();
+      dragStarted.value = false;
     });
   const { accentColor } = resolveAccountAppearance(account, theme);
   const recordLayout = (event: LayoutChangeEvent) =>
@@ -297,6 +312,7 @@ export function AccountManagementTreeRow({
               />
               <Pressable
                 onPress={onPress}
+                disabled={interactionDisabled}
                 accessibilityRole="button"
                 accessibilityState={{ expanded: row.childCount > 0 ? row.isExpanded : undefined }}
                 style={styles.rowPress}
@@ -310,8 +326,13 @@ export function AccountManagementTreeRow({
                   <GestureDetector gesture={gesture}>
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={`Drag ${account.name}`}
-                      accessibilityHint="Drag to reorder or change this account's parent"
+                      accessibilityLabel={`Organize ${account.name}`}
+                      accessibilityHint="Hold and drag to reorder, or tap to choose a group"
+                      disabled={interactionDisabled}
+                      onPress={event => {
+                        event.stopPropagation();
+                        onChooseGroup();
+                      }}
                       style={styles.handle}
                     >
                       <Text style={[styles.handleText, { color: theme.textTertiary }]}>⠿</Text>
@@ -364,6 +385,38 @@ export function AccountManagementTreeRow({
                   />
                 )}
               </Pressable>
+              {isOrganizing && (
+                <View style={styles.orderControls}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Move ${account.name} up`}
+                    accessibilityHint="Changes are staged until saved"
+                    disabled={!onMoveUp}
+                    onPress={onMoveUp}
+                    style={styles.orderButton}
+                  >
+                    <AppIcon
+                      name={Icon.ChevronUp}
+                      size={Size.iconXs}
+                      color={onMoveUp ? theme.text : theme.textTertiary}
+                    />
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Move ${account.name} down`}
+                    accessibilityHint="Changes are staged until saved"
+                    disabled={!onMoveDown}
+                    onPress={onMoveDown}
+                    style={styles.orderButton}
+                  >
+                    <AppIcon
+                      name={Icon.ChevronDown}
+                      size={Size.iconXs}
+                      color={onMoveDown ? theme.text : theme.textTertiary}
+                    />
+                  </Pressable>
+                </View>
+              )}
             </Animated.View>
           </Animated.View>
         </View>
@@ -373,6 +426,8 @@ export function AccountManagementTreeRow({
 }
 
 const styles = StyleSheet.create({
+  orderControls: { flexDirection: 'row' },
+  orderButton: { minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' },
   row: {
     minHeight: ACCOUNT_TREE_ROW_MIN_HEIGHT,
     flexDirection: 'row',

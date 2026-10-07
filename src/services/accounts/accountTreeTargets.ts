@@ -1,5 +1,9 @@
 import type { AccountId } from '@/src/types/ids';
-import { createAccountTreeSnapshot, type OrderedAccount } from './accountTree';
+import {
+  createAccountTreeSnapshot,
+  type AccountTreeSnapshot,
+  type OrderedAccount,
+} from './accountTree';
 
 export type AccountTreeDropKind = 'sibling-before' | 'sibling-after' | 'outside' | 'child';
 
@@ -29,6 +33,40 @@ export interface ResolveAccountTreeDropTargetOptions<T extends OrderedAccount> {
 export interface AccountTreeDropResolution {
   target: AccountTreeDropTarget | null;
   reason?: AccountTreeDropRejectionReason;
+}
+
+/** Button/accessibility moves use the same complete placements as a drag-and-drop. */
+export function getAccountTreeSiblingMoveTargets(
+  snapshot: AccountTreeSnapshot,
+): ReadonlyMap<
+  AccountId,
+  { up: AccountTreeDropTarget | null; down: AccountTreeDropTarget | null }
+> {
+  const moves = new Map<
+    AccountId,
+    { up: AccountTreeDropTarget | null; down: AccountTreeDropTarget | null }
+  >();
+  for (const ids of [...snapshot.rootsByType.values(), ...snapshot.childrenByParent.values()]) {
+    ids.forEach((id, index) => {
+      const account = snapshot.accountsById.get(id);
+      if (!account || hasValue(account.deletedAt)) return;
+      const target = (direction: -1 | 1): AccountTreeDropTarget | null => {
+        const anchorId = ids[index + direction];
+        const anchor = anchorId ? snapshot.accountsById.get(anchorId) : undefined;
+        if (!anchor || hasValue(anchor.deletedAt) || anchor.accountType !== account.accountType)
+          return null;
+        return {
+          accountId: id,
+          parentId: account.parentAccountId || null,
+          siblingIndex: index + direction,
+          kind: direction === -1 ? 'sibling-before' : 'sibling-after',
+          anchorAccountId: anchor.id,
+        };
+      };
+      moves.set(id, { up: target(-1), down: target(1) });
+    });
+  }
+  return moves;
 }
 
 function hasValue(value: unknown): boolean {

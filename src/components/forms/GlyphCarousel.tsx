@@ -2,6 +2,7 @@ import { AppIcon, AppText, type IconName } from '@/src/components/core';
 import { IvyPalette, Opacity, Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import { formPrimitivesStrings as copy } from '@/src/constants/copy/domains/formPrimitivesStrings';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
+import { useScrollSettlement } from '@/src/hooks/useScrollSettlement';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -50,6 +51,10 @@ export function GlyphCarousel({
     items.findIndex(item => item.key === selectedKey),
   );
   const sidePadding = useMemo(() => Math.max(0, (viewportWidth - ITEM_WIDTH) / 2), [viewportWidth]);
+  const { cancel: cancelScrollSettlement, scrollProps } = useScrollSettlement(offset => {
+    const next = Math.round(offset.x / ITEM_WIDTH);
+    if (items[next] && items[next].key !== selectedKey) onSelect(items[next].key);
+  });
   const measureViewport = (event: LayoutChangeEvent) =>
     setViewportWidth(event.nativeEvent.layout.width);
   useEffect(() => {
@@ -60,9 +65,10 @@ export function GlyphCarousel({
   const changeIndex = useCallback(
     (delta: number) => {
       const next = Math.min(items.length - 1, Math.max(0, index + delta));
+      cancelScrollSettlement();
       if (next !== index) onSelect(items[next].key);
     },
-    [index, items, onSelect],
+    [index, items, onSelect, cancelScrollSettlement],
   );
   const renderItem = ({ item, index: itemIndex }: ListRenderItemInfo<GlyphCarouselItem>) => {
     const selected = itemIndex === index;
@@ -74,7 +80,10 @@ export function GlyphCarousel({
         accessibilityRole="button"
         accessibilityLabel={item.label}
         accessibilityState={{ selected }}
-        onPress={() => onSelect(item.key)}
+        onPress={() => {
+          cancelScrollSettlement();
+          onSelect(item.key);
+        }}
         style={{
           width: ITEM_WIDTH,
           alignItems: 'center',
@@ -116,6 +125,7 @@ export function GlyphCarousel({
         onLayout={measureViewport}
       >
         <FlatList
+          {...scrollProps}
           ref={listRef}
           testID={testID ? `${testID}-list` : undefined}
           horizontal
@@ -131,10 +141,10 @@ export function GlyphCarousel({
             offset: ITEM_WIDTH * itemIndex + sidePadding,
             index: itemIndex,
           })}
-          onScrollBeginDrag={() => onSelect(selectedKey)}
-          onMomentumScrollEnd={event => {
-            const next = Math.round(event.nativeEvent.contentOffset.x / ITEM_WIDTH);
-            if (items[next] && items[next].key !== selectedKey) onSelect(items[next].key);
+          scrollEventThrottle={16}
+          onScrollBeginDrag={event => {
+            scrollProps.onScrollBeginDrag(event);
+            onSelect(selectedKey);
           }}
         />
         <AppText variant="bodyLarge" weight="semibold" align="center">

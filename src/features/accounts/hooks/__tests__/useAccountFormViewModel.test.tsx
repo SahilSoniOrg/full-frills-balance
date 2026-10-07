@@ -213,7 +213,9 @@ describe('account form UI over its view model', () => {
 
   it('suppresses later suggestions after a manual drag that snaps back to bank', () => {
     const screen = render(<AccountFormHarness />);
-    fireEvent(screen.getByTestId('account-kind-list'), 'scrollBeginDrag');
+    fireEvent(screen.getByTestId('account-kind-list'), 'scrollBeginDrag', {
+      nativeEvent: { contentOffset: { x: 0, y: 0 } },
+    });
     fireEvent.changeText(screen.getByTestId('hero-name-input'), 'HDFC card');
     expect(screen.queryByTestId('account-kind-suggestion')).toBeNull();
     expect(screen.UNSAFE_getByType(GlyphCarousel).props.selectedKey).toBe('bank');

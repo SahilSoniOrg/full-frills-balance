@@ -77,10 +77,8 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
     return 0.15 + (Math.sqrt(value) / Math.sqrt(maxValue)) * 0.85;
   };
 
-  const { chartRef, onLayout, gesture } = useChartInteraction({
-    gestureConfig: {
-      type: 'simultaneous',
-    },
+  const { chartRef, gesture } = useChartInteraction({
+    panActivation: 'hold',
     getInteractionFromTouch: useCallback(
       (x: number, y: number) => {
         if (data.length === 0) return { type: 'none' };
@@ -113,7 +111,6 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
     <View
       style={{ height: totalHeight, width: CHART_WIDTH, overflow: 'visible' }}
       ref={chartRef}
-      onLayout={onLayout}
       collapsable={false}
     >
       <View style={{ marginBottom: Spacing.sm }}>

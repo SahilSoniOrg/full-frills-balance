@@ -6,7 +6,8 @@ type ResetFn = (x?: number, y?: number) => void;
 interface ChartInteractionContextValue {
   registerChart: (fn: ResetFn) => () => void;
   resetAllCharts: (pageX?: number, pageY?: number) => void;
-  setIsInteracting: (value: boolean) => void;
+  beginInteraction: (owner: symbol) => void;
+  endInteraction: (owner: symbol) => void;
   isInteracting: () => boolean;
 }
 
@@ -14,7 +15,7 @@ const ChartInteractionContext = createContext<ChartInteractionContextValue | nul
 
 export function ChartInteractionProvider({ children }: { children: React.ReactNode }) {
   const listenersRef = useRef(new Set<ResetFn>());
-  const isInteractingRef = useRef(false);
+  const ownersRef = useRef(new Set<symbol>());
 
   const registerChart = useCallback((fn: ResetFn) => {
     listenersRef.current.add(fn);
@@ -27,20 +28,24 @@ export function ChartInteractionProvider({ children }: { children: React.ReactNo
     listenersRef.current.forEach(listener => listener(pageX, pageY));
   }, []);
 
-  const setIsInteracting = useCallback((value: boolean) => {
-    isInteractingRef.current = value;
+  const beginInteraction = useCallback((owner: symbol) => {
+    ownersRef.current.add(owner);
+  }, []);
+  const endInteraction = useCallback((owner: symbol) => {
+    ownersRef.current.delete(owner);
   }, []);
 
-  const isInteracting = useCallback(() => isInteractingRef.current, []);
+  const isInteracting = useCallback(() => ownersRef.current.size > 0, []);
 
   const value = useMemo(
     () => ({
       registerChart,
       resetAllCharts,
-      setIsInteracting,
+      beginInteraction,
+      endInteraction,
       isInteracting,
     }),
-    [registerChart, resetAllCharts, setIsInteracting, isInteracting],
+    [registerChart, resetAllCharts, beginInteraction, endInteraction, isInteracting],
   );
 
   return (
