@@ -6,6 +6,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { getAccountFallbackIcon, getAccountIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
+import { SelectionCheckmark } from '@/src/components/shared/SelectionIndicator';
 import { AccountId } from '@/src/types/ids';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
@@ -71,9 +72,7 @@ export function HierarchyMoveModal({
           <AppText variant="body" style={styles.destinationLabel}>
             Top level (no group)
           </AppText>
-          {!selectedAccount?.parentAccountId && (
-            <AppIcon name={Icon.Check} size={Size.iconSm} color={theme.success} />
-          )}
+          <SelectionCheckmark selected={!selectedAccount?.parentAccountId} color={theme.success} />
         </PressScaleTouchable>
         {parentCandidates.map(candidate => (
           <PressScaleTouchable
@@ -96,9 +95,10 @@ export function HierarchyMoveModal({
             <AppText variant="body" style={styles.destinationLabel}>
               {candidate.name}
             </AppText>
-            {selectedAccount?.parentAccountId === candidate.id && (
-              <AppIcon name={Icon.Check} size={Size.iconSm} color={theme.success} />
-            )}
+            <SelectionCheckmark
+              selected={selectedAccount?.parentAccountId === candidate.id}
+              color={theme.success}
+            />
           </PressScaleTouchable>
         ))}
       </View>

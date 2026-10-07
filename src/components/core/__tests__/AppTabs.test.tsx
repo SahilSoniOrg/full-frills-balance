@@ -4,6 +4,7 @@ import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
 import { ScrollView } from 'react-native';
+import { getLayoutPath } from '@/src/testing/layoutAssertions';
 
 jest.mock('@/src/utils/haptics', () => ({
   triggerHaptic: jest.fn(),
@@ -32,6 +33,15 @@ describe('AppTabs', () => {
 
     expect(triggerHaptic).toHaveBeenCalledWith('light');
     expect(onChange).toHaveBeenCalledWith('bills');
+  });
+
+  it('keeps tab text geometry stable as the active tab changes', () => {
+    const view = render(<AppTabs options={OPTIONS} value="budgets" onChange={jest.fn()} />);
+    const budgets = getLayoutPath(view.getByText('Budgets'));
+    const bills = getLayoutPath(view.getByText('Bills'));
+    view.rerender(<AppTabs options={OPTIONS} value="bills" onChange={jest.fn()} />);
+    expect(getLayoutPath(view.getByText('Budgets'))).toEqual(budgets);
+    expect(getLayoutPath(view.getByText('Bills'))).toEqual(bills);
   });
 
   it('does not haptic or onChange when pressing the selected tab', () => {

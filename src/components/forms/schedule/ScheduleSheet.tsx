@@ -123,13 +123,13 @@ export function ScheduleSheet({
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: selected ? theme.primary : 'transparent',
-        borderWidth: selected ? 0 : 1,
-        borderColor: theme.border,
+        borderWidth: 1,
+        borderColor: selected ? theme.primary : theme.border,
       }}
     >
       <AppText
         variant="bodySmall"
-        weight={selected ? 'semibold' : 'regular'}
+        weight="semibold"
         style={{ color: selected ? theme.onPrimary : theme.text }}
       >
         {label}
@@ -178,8 +178,8 @@ export function ScheduleSheet({
                 flex: 1,
                 alignItems: 'center',
                 paddingVertical: Spacing.sm,
-                borderBottomWidth: draft.intervalType === tab.id ? 2 : 0,
-                borderBottomColor: theme.primary,
+                borderBottomWidth: 2,
+                borderBottomColor: draft.intervalType === tab.id ? theme.primary : 'transparent',
               }}
             >
               <AppText

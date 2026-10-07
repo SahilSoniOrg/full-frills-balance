@@ -4,7 +4,8 @@ import { asAccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
 import { SectionList } from 'react-native';
-import { AccountPickerList } from '../AccountPickerList';
+import { AccountPickerList, AccountPickerPill } from '../AccountPickerList';
+import { getLayoutPath } from '@/src/testing/layoutAssertions';
 
 jest.mock('@/src/hooks/useAccountDisplayPrefs', () => ({
   useAccountDisplayPrefs: () => ({ useCompactAccountPicker: true }),
@@ -42,4 +43,14 @@ it('virtualizes compact modal pills in bounded groups without losing accounts or
 
   fireEvent.press(screen.getByTestId('account-picker-option-account-0'));
   expect(onSelect).toHaveBeenCalledWith(accounts[0].id);
+});
+
+it('keeps a single-select pill footprint unchanged when its checkmark appears', () => {
+  const item = accounts[0];
+  const view = render(<AccountPickerPill item={item} isSelected={false} />);
+  const originalLayout = getLayoutPath(view.getByText(item.name));
+  const originalSlots = view.getByTestId(`account-picker-option-${item.id}`).children.length;
+  view.rerender(<AccountPickerPill item={item} isSelected />);
+  expect(getLayoutPath(view.getByText(item.name))).toEqual(originalLayout);
+  expect(view.getByTestId(`account-picker-option-${item.id}`).children).toHaveLength(originalSlots);
 });

@@ -3,6 +3,7 @@ import { AppInputField } from '@/src/components/core/AppInputField';
 import { fireEvent, render } from '@/src/utils/test-utils';
 import { ScheduleSheet } from '../schedule/ScheduleSheet';
 import type { ScheduleValue } from '../schedule/types';
+import { getLayoutPath } from '@/src/testing/layoutAssertions';
 
 jest.mock('@/src/hooks/use-reduced-motion', () => ({ useReducedMotion: () => true }));
 
@@ -78,6 +79,15 @@ function setup(value = initial) {
 }
 
 describe('ScheduleSheet draft behavior', () => {
+  it('keeps schedule day labels and tab borders stable when selection changes', () => {
+    const { screen } = setup();
+    const day = getLayoutPath(screen.getByText('5'));
+    const month = getLayoutPath(screen.getByText('Month'));
+    fireEvent.press(screen.getByTestId('schedule-day-5'));
+    expect(getLayoutPath(screen.getByText('5'))).toEqual(day);
+    fireEvent.press(screen.getByTestId('schedule-interval-type-item-WEEKLY'));
+    expect(getLayoutPath(screen.getByText('Month'))).toEqual(month);
+  });
   it('commits a changed schedule only after Done', () => {
     const { screen, onDone } = setup();
     fireEvent.press(screen.getByTestId('schedule-day-5'));

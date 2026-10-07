@@ -3,6 +3,7 @@ import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAcco
 import { ShowArchivedButton } from '@/src/components/accounts/ShowArchivedButton';
 import { AppButton, AppIcon, AppInput, AppText, Icon, ListRow } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { SelectionCheckmark, SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { useTheme } from '@/src/hooks/use-theme';
 import {
   resolveAccountAppearance,
@@ -66,6 +67,8 @@ const AccountPickerRow = React.memo(
           </AppText>
         }
         accessibilityLabel={item.name}
+        accessibilityRole={isMultiple ? 'checkbox' : 'button'}
+        accessibilityState={isMultiple ? { checked: isSelected } : { selected: isSelected }}
         testID={`account-picker-option-${item.id}`}
         subtitle={subtitle}
         onPress={onPress}
@@ -84,14 +87,10 @@ const AccountPickerRow = React.memo(
           <View style={styles.trailing}>
             {archived ? <ArchivedAccountIndicator emphasized={emphasizeIndicator} /> : null}
             {isMultiple ? (
-              <AppIcon
-                name={isSelected ? Icon.CheckCircle : Icon.Circle}
-                size={Size.iconMd}
-                color={isSelected ? theme.primary : theme.textTertiary}
-              />
-            ) : isSelected ? (
-              <AppIcon name={Icon.Check} size={Size.iconMd} color={theme.primary} />
-            ) : undefined}
+              <SelectionIndicator selected={isSelected} />
+            ) : (
+              <SelectionCheckmark selected={isSelected} size={Size.iconMd} />
+            )}
           </View>
         }
       />
@@ -144,9 +143,9 @@ export const AccountPickerPill = React.memo(
 
     return (
       <TouchableOpacity
-        accessibilityRole="button"
+        accessibilityRole={isMultiple ? 'checkbox' : 'button'}
         accessibilityLabel={item.name}
-        accessibilityState={{ selected: isSelected }}
+        accessibilityState={isMultiple ? { checked: isSelected } : { selected: isSelected }}
         testID={testID ?? `account-picker-option-${item.id}`}
         onPress={handlePress}
         activeOpacity={Opacity.heavy}
@@ -184,14 +183,10 @@ export const AccountPickerPill = React.memo(
         </AppText>
         {archived ? <ArchivedAccountIndicator emphasized={emphasizeIndicator} /> : null}
         {isMultiple ? (
-          <AppIcon
-            name={isSelected ? Icon.CheckCircle : Icon.Circle}
-            size={Size.iconXs}
-            color={isSelected ? theme.onPrimary : theme.textTertiary}
-          />
-        ) : isSelected ? (
-          <AppIcon name={Icon.Check} size={Size.xxs} color={theme.onPrimary} />
-        ) : null}
+          <SelectionIndicator selected={isSelected} size={Size.iconXs} color={contentColor} />
+        ) : (
+          <SelectionCheckmark selected={isSelected} size={Size.xxs} color={theme.onPrimary} />
+        )}
       </TouchableOpacity>
     );
   },

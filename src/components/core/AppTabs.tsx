@@ -135,7 +135,7 @@ function AppTabsComponent<T extends string | number>({
                 <Box flexDirection="row" alignItems="center" gap="xs">
                   <AppText
                     variant="body"
-                    weight={isSelected ? 'bold' : 'medium'}
+                    weight="semibold"
                     style={{ color: isSelected ? theme.primary : theme.textSecondary }}
                   >
                     {option.label}

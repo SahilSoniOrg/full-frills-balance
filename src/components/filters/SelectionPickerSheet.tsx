@@ -3,6 +3,7 @@ import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
+import { SelectionCheckmark } from '@/src/components/shared/SelectionIndicator';
 import { useMemo, useState } from 'react';
 import { FlatList, Keyboard, StyleSheet, TouchableOpacity, View } from 'react-native';
 
@@ -113,6 +114,8 @@ export function SelectionPickerSheet<T extends string | number>({
           const isSelected = selectedValue === item.id;
           return (
             <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityState={{ selected: isSelected }}
               style={[
                 styles.optionItem,
                 { borderBottomColor: theme.border },
@@ -132,7 +135,7 @@ export function SelectionPickerSheet<T extends string | number>({
                 />
               )}
               <View style={{ flex: 1 }}>
-                <AppText variant="body" weight={isSelected ? 'bold' : 'medium'}>
+                <AppText variant="body" weight="semibold">
                   {item.label}
                 </AppText>
                 {item.description && (
@@ -141,7 +144,7 @@ export function SelectionPickerSheet<T extends string | number>({
                   </AppText>
                 )}
               </View>
-              {isSelected && <AppIcon name={Icon.CheckCircle} size={18} color={theme.primary} />}
+              <SelectionCheckmark selected={isSelected} size={18} />
             </TouchableOpacity>
           );
         }}

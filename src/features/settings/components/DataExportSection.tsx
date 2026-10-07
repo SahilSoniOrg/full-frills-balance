@@ -7,6 +7,7 @@ import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/com
 import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import { useDataExportViewModel } from '@/src/features/settings/hooks/useDataExportViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
+import { SelectionCheckmark, SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
 import type { BackupScope } from '@/src/services/export';
@@ -158,6 +159,8 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
               return (
                 <TouchableOpacity
                   key={scope}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
                   style={[styles.scopeOption, { borderBottomColor: theme.border }]}
                   onPress={() => {
                     vm.setBackupScope(scope);
@@ -165,14 +168,12 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
                   }}
                 >
                   <View style={styles.scopeCopy}>
-                    <AppText weight={selected ? 'bold' : 'medium'}>{label}</AppText>
+                    <AppText weight="semibold">{label}</AppText>
                     <AppText variant="caption" color="secondary">
                       {description}
                     </AppText>
                   </View>
-                  {selected && (
-                    <AppIcon name={Icon.CheckCircle} size={Size.iconSm} color={theme.primary} />
-                  )}
+                  <SelectionCheckmark selected={selected} />
                 </TouchableOpacity>
               );
             })}
@@ -183,6 +184,8 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
                   return (
                     <TouchableOpacity
                       key={workplace.id}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: selected }}
                       style={[styles.scopeOption, { borderBottomColor: theme.border }]}
                       onPress={() =>
                         vm.setSelectedWorkplaceIds(
@@ -192,10 +195,8 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
                         )
                       }
                     >
-                      <AppText>{workplace.name}</AppText>
-                      {selected && (
-                        <AppIcon name={Icon.Check} size={Size.iconSm} color={theme.primary} />
-                      )}
+                      <AppText style={{ flex: 1, minWidth: 0 }}>{workplace.name}</AppText>
+                      <SelectionIndicator selected={selected} />
                     </TouchableOpacity>
                   );
                 })}

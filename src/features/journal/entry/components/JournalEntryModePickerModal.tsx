@@ -6,6 +6,7 @@ import { JOURNAL_ENTRY_MODE_OPTIONS } from '@/src/features/journal/entry/journal
 import type { JournalEntryScreenMode } from '@/src/features/journal/entry/journalEntryPresentation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { withOpacity } from '@/src/utils/color-math';
+import { SelectionCheckmark } from '@/src/components/shared/SelectionIndicator';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -103,30 +104,14 @@ export const JournalEntryModePickerModal = React.memo(function JournalEntryModeP
                   <View style={styles.labelRow}>
                     <AppText
                       variant="body"
-                      weight={isSelected ? 'bold' : 'semibold'}
+                      weight="semibold"
                       style={{
                         color: isSelected ? theme.primary : theme.text,
                       }}
                     >
                       {opt.label}
                     </AppText>
-                    {isSelected && (
-                      <View
-                        style={[
-                          styles.currentBadge,
-                          { backgroundColor: withOpacity(theme.primary, Opacity.medium) },
-                        ]}
-                      >
-                        <AppText
-                          variant="caption"
-                          weight="semibold"
-                          style={{ color: theme.primary }}
-                        >
-                          Active
-                        </AppText>
-                      </View>
-                    )}
-                    {opt.recommended && !isSelected && (
+                    {opt.recommended && (
                       <View
                         style={[
                           styles.recommendedBadge,
@@ -164,9 +149,7 @@ export const JournalEntryModePickerModal = React.memo(function JournalEntryModeP
                   )}
                 </View>
 
-                {isSelected && (
-                  <AppIcon name={Icon.Check} size={Size.iconSm} color={theme.primary} />
-                )}
+                <SelectionCheckmark selected={isSelected} />
               </PressScaleTouchable>
 
               <PressScaleTouchable
@@ -257,13 +240,9 @@ const styles = StyleSheet.create({
   },
   labelRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: Spacing.xs,
-  },
-  currentBadge: {
-    paddingHorizontal: Spacing.xs,
-    paddingVertical: Spacing.none,
-    borderRadius: Shape.radius.full,
   },
   recommendedBadge: {
     paddingHorizontal: Spacing.xs,

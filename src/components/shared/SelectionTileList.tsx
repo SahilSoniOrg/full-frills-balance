@@ -1,4 +1,5 @@
 import { AccountCategoryPill } from '@/src/components/accounts/AccountCategoryPill';
+import { SelectionCheckmark } from './SelectionIndicator';
 import { Icon, AppIcon, AppText } from '@/src/components/core';
 import type { IconName } from '@/src/types/domainIcons';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
@@ -153,7 +154,7 @@ const SelectionTileRow = React.memo(function SelectionTileRow({
         )}
         <AppText
           variant="body"
-          weight={isSelected ? 'semibold' : 'regular'}
+          weight="semibold"
           style={{
             color: theme.text,
             flexShrink: 1,
@@ -163,11 +164,7 @@ const SelectionTileRow = React.memo(function SelectionTileRow({
         >
           {item.label}
         </AppText>
-        <View style={styles.checkmarkSlot}>
-          {showCheckmark ? (
-            <AppIcon name={Icon.CheckCircle} size={Size.iconSm} color={item.color} />
-          ) : null}
-        </View>
+        <SelectionCheckmark selected={showCheckmark} color={item.color} />
       </Inline>
     </TouchableOpacity>
   );
@@ -232,9 +229,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     minWidth: 100,
     maxWidth: 240,
-  },
-  checkmarkSlot: {
-    width: Size.iconSm,
-    alignItems: 'center',
   },
 });
