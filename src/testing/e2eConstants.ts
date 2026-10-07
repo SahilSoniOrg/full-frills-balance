@@ -8,6 +8,7 @@ export const E2E_DEFAULT_WORKPLACE_LABEL = `${E2E_DEFAULT_SEED_USER_NAME}'s Pers
 export type E2eUpdateGateMode = 'available' | 'required';
 
 export const E2E_SEED_PROFILES = [
+  'journal-details-redesign',
   'onboarded',
   'journal-ready',
   'journal-suggestions',

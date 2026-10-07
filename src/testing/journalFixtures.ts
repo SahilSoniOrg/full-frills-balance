@@ -66,6 +66,7 @@ export function balancedUsdExpenseTransactions(
 
 /** Extra persisted fields accepted when a test needs to construct legacy or malformed rows. */
 export interface RawJournalFixtureData extends CreateJournalData {
+  id?: JournalId;
   totalAmount?: number;
   displayType?: JournalDisplayType;
   calculatedBalances?: ReadonlyMap<string, number | null>;
@@ -81,6 +82,7 @@ export async function createJournalFixture(
 ): Promise<Journal> {
   const now = new Date();
   const journal = database.collections.get<Journal>('journals').prepareCreate(record => {
+    if (data.id) record._raw.id = data.id;
     record.journalDate = data.journalDate;
     record.description = data.description;
     record.notes = data.notes;

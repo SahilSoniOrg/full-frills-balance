@@ -41,6 +41,7 @@ import {
   prepareFirstRunRestoreFixture,
 } from './fixtures/firstRunRestoreBackup';
 import { assertE2eHarnessEnabled } from './e2eRuntimeGate';
+import { seedJournalDetailsRedesign } from './journalDetailsSeed';
 
 export const E2E_DESTRUCTIVE_BOOTSTRAP_MARKER = '__FFB_E2E_DESTRUCTIVE_BOOTSTRAP__';
 
@@ -576,6 +577,10 @@ export async function runE2eSeedProfile(profile: E2eSeedProfile): Promise<Workpl
   }
 
   const workplaceId = await seedOnboarded(profile);
+
+  if (profile === 'journal-details-redesign') {
+    await seedJournalDetailsRedesign(workplaceId);
+  }
 
   if (profile === 'journal-suggestions') {
     await seedJournalSuggestions(workplaceId);
