@@ -38,6 +38,8 @@ export type { BadgeProps } from './Badge';
 export { AppIcon } from './AppIcon';
 export { Icon, isValidIconName, parseIconName } from '@/src/types/domainIcons';
 export type { IconName } from '@/src/types/domainIcons';
+export { IconTile } from './IconTile';
+export type { IconTileProps } from './IconTile';
 export { ColoredDot } from './ColoredDot';
 export type { ColoredDotProps } from './ColoredDot';
 export { ErrorBoundary } from './ErrorBoundary';

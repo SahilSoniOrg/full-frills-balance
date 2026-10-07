@@ -1,7 +1,7 @@
-import { Icon, AppCard, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppCard, AppIcon, AppText, IconTile } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
-import { Box, Inline, Stack } from '@/src/design-system';
+import { Inline, Stack } from '@/src/design-system';
 import { AuditLogChangesView } from '@/src/features/audit/components/AuditLogChangesView';
 import { getAuditEntityCapabilities } from '@/src/types/auditEntityCapabilities';
 import { AuditLogEntry, EntityStatus } from '@/src/services/audit/auditLogTypes';
@@ -62,17 +62,7 @@ export const AuditLogItem = ({
         activeOpacity={Opacity.heavy}
       >
         <Inline gap="md" align="center">
-          <Box
-            width={Size.xl}
-            height={Size.xl}
-            borderRadius="full"
-            alignItems="center"
-            justifyContent="center"
-            background={actionColor}
-            backgroundOpacity="soft"
-          >
-            <AppIcon name={actionIcon} size={Size.sm} color={theme[actionColor]} />
-          </Box>
+          <IconTile icon={actionIcon} tint={actionColor} size="lg" shape="circle" />
           <Stack flex={1} gap="xs">
             <Inline justify="space-between" align="baseline" gap="sm">
               <AppText variant="body" weight="semibold">
