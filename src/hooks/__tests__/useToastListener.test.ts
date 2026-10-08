@@ -89,4 +89,39 @@ describe('useToastListener', () => {
 
     clearTimeoutSpy.mockRestore();
   });
+
+  it('replaces a keyed notice without dismissal and gives its successor a fresh lifetime', () => {
+    const { result } = renderHook(() => useToastListener());
+    const listener = jest.mocked(setToastListener).mock.calls[0][0];
+    const oldDismissed = jest.fn();
+    const newDismissed = jest.fn();
+    act(() => {
+      listener({
+        key: 'app-update',
+        message: 'Available',
+        type: 'info',
+        duration: 1000,
+        onDismiss: oldDismissed,
+      });
+      listener({ message: 'Saved', type: 'success', duration: 5000 });
+    });
+    const oldNotice = result.current.toasts[0];
+    act(() => {
+      jest.advanceTimersByTime(800);
+      listener({
+        key: 'app-update',
+        message: 'Downloaded',
+        type: 'info',
+        duration: 2000,
+        onDismiss: newDismissed,
+      });
+      oldNotice.dismiss();
+      jest.advanceTimersByTime(300);
+    });
+    expect(result.current.toasts.map(t => t.message)).toEqual(['Saved', 'Downloaded']);
+    expect(oldDismissed).not.toHaveBeenCalled();
+    act(() => result.current.toasts[1].dismiss());
+    expect(newDismissed).toHaveBeenCalledTimes(1);
+    expect(result.current.toasts.map(t => t.message)).toEqual(['Saved']);
+  });
 });

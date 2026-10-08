@@ -80,11 +80,7 @@ function ToastItemView({ toast }: { toast: ToastItem }) {
       <View style={[styles.toast, { backgroundColor: colors.background }]}>
         <View style={styles.contentContainer}>
           <AppIcon name={icon} size={Size.iconSm} color={colors.icon} />
-          <AppText
-            variant="body"
-            style={[styles.message, { color: colors.text }]}
-            numberOfLines={2}
-          >
+          <AppText variant="body" style={[styles.message, { color: colors.text }]}>
             {toast.message}
           </AppText>
         </View>
@@ -92,6 +88,8 @@ function ToastItemView({ toast }: { toast: ToastItem }) {
         {toast.action && (
           <TouchableOpacity
             style={styles.actionButton}
+            accessibilityRole="button"
+            accessibilityLabel={toast.action.label}
             onPress={() => {
               toast.action?.onPress();
             }}
@@ -171,13 +169,11 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   toast: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: 'stretch',
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
     borderRadius: 12,
-    gap: Spacing.md,
+    gap: Spacing.xs,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
@@ -186,7 +182,6 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   contentContainer: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
@@ -196,12 +191,16 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.sm,
   },
   actionButton: {
+    alignSelf: 'flex-end',
+    minHeight: 48,
+    justifyContent: 'center',
+    maxWidth: '100%',
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
-    marginLeft: -Spacing.xs,
   },
   actionText: {
     fontSize: Typography.sizes.xs,
     letterSpacing: 0.5,
+    textAlign: 'right',
   },
 });

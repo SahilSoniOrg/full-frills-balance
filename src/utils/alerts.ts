@@ -27,6 +27,8 @@ export interface ToastAction {
 }
 
 export interface ToastOptions {
+  /** Replace an existing notice about the same subject without treating it as dismissed. */
+  key?: string;
   duration?: number; // milliseconds, default AppConfig.timing.toastDurationMs
   type?: ToastType;
   action?: ToastAction;
@@ -35,6 +37,7 @@ export interface ToastOptions {
 }
 
 export interface ToastPayload {
+  key?: string;
   message: string;
   type: ToastType;
   duration: number;
@@ -121,6 +124,7 @@ export const toast = {
       options?.action,
       options?.onDismiss,
       options?.dismissible,
+      options?.key,
     );
   },
 
@@ -132,6 +136,7 @@ export const toast = {
       options?.action,
       options?.onDismiss,
       options?.dismissible,
+      options?.key,
     );
   },
 
@@ -143,6 +148,7 @@ export const toast = {
       options?.action,
       options?.onDismiss,
       options?.dismissible,
+      options?.key,
     );
   },
 
@@ -154,6 +160,7 @@ export const toast = {
       options?.action,
       options?.onDismiss,
       options?.dismissible,
+      options?.key,
     );
   },
 };
@@ -165,12 +172,14 @@ function showToast(
   action?: ToastAction,
   onDismiss?: () => void,
   dismissible?: boolean,
+  key?: string,
 ) {
   const resolvedDuration = duration ?? AppConfig.timing.toastDurationMs;
 
   // Emit to registered listener (ToastProvider)
   if (toastListener) {
     toastListener({
+      key,
       message,
       type,
       duration: resolvedDuration,
