@@ -34,7 +34,10 @@ describe('Available update notice', () => {
       .withTimeout(120000);
     await expect(element(by.text('UPDATE NOW'))).toBeVisible();
 
-    await element(by.text('A newer version of Full Frills Balance is available.')).swipe('up');
+    // Swipe the toast surface that owns the dismiss pan responder, not the
+    // inner text. A short swipe does not travel far enough to cross the
+    // dismiss threshold.
+    await element(by.id('app-toast')).swipe('up', 'slow', 0.9);
     await expect(
       element(by.text('A newer version of Full Frills Balance is available.')),
     ).not.toBeVisible();

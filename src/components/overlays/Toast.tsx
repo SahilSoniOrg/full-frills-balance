@@ -69,6 +69,7 @@ function ToastItemView({ toast }: { toast: ToastItem }) {
   return (
     <Animated.View
       {...(dismissGesture?.panHandlers ?? {})}
+      testID="app-toast"
       style={[
         styles.toastWrapper,
         {

@@ -79,7 +79,7 @@ export async function selectBudgetInterval(
 ): Promise<void> {
   await tapById(budgets.scheduleField);
   await tapById(budgets.intervalItem(interval));
-  await tapByLabel('Done');
+  await tapById('schedule-sheet-done');
 }
 
 const SAFE_TO_SPEND_PROJECTED_GAP_COPY = 'safe-to-spend-unlocks-copy';
@@ -113,7 +113,7 @@ export async function createPlannedPayment(name: string, amount: string): Promis
   await tapByLabel(/^Landlord/);
   await tapById(plannedPayments.schedule);
   await tapById(plannedPayments.scheduleDay(5));
-  await tapByLabel('Done');
+  await tapById('schedule-sheet-done');
   await tapById(plannedPayments.submitFooter);
   await assertTextVisible(name);
 }

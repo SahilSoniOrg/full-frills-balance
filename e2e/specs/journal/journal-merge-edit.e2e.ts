@@ -33,7 +33,7 @@ describe(':android: merged journal edit', () => {
     await element(by.label('More bulk actions')).tap();
     await element(by.label('Merge selected transactions')).tap();
 
-    await waitFor(element(by.text('Consolidated Legs (4)')))
+    await waitFor(element(by.text('Consolidated Accounts (4)')))
       .toBeVisible()
       .withTimeout(LONG_TIMEOUT_MS);
     await element(by.id('merge-journals-modal-confirm')).tap();

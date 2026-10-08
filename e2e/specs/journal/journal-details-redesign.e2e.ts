@@ -1,5 +1,6 @@
 import { device, element, by, waitFor, expect } from 'detox';
-import { execFileSync } from 'node:child_process';
+import { readClipboard, setAppearance, setContentSize } from '../../actions/deviceChrome';
+import { launchAppToleratingIdleTimeout } from '../../actions/launch';
 import { E2E_AUTH_TOKEN } from '../../../src/testing/e2eConstants';
 
 const openJournal = async (state: string) => {
@@ -16,7 +17,7 @@ const openJournal = async (state: string) => {
 
 describe('journal details redesign', () => {
   beforeAll(async () => {
-    await device.launchApp({
+    await launchAppToleratingIdleTimeout({
       newInstance: true,
       launchArgs: {
         e2eAuth: E2E_AUTH_TOKEN,
@@ -37,7 +38,7 @@ describe('journal details redesign', () => {
 
   it('captures the five reference states in light and dark', async () => {
     for (const appearance of ['light', 'dark'] as const) {
-      execFileSync('xcrun', ['simctl', 'ui', device.id, 'appearance', appearance]);
+      setAppearance(appearance);
       await openJournal('simple');
       await expect(element(by.id('journal-after-balances'))).toExist();
       await expect(element(by.id('journal-accounting-issues'))).not.toExist();
@@ -95,13 +96,13 @@ describe('journal details redesign', () => {
   });
 
   it('captures long content at an accessibility text size', async () => {
-    execFileSync('xcrun', ['simctl', 'ui', device.id, 'appearance', 'light']);
-    execFileSync('xcrun', ['simctl', 'ui', device.id, 'content_size', 'accessibility-large']);
+    setAppearance('light');
+    setContentSize('accessibility-large');
     try {
       await openJournal('long');
       await device.takeScreenshot('journal-large-text');
     } finally {
-      execFileSync('xcrun', ['simctl', 'ui', device.id, 'content_size', 'large']);
+      setContentSize('large');
     }
   });
 
@@ -112,7 +113,7 @@ describe('journal details redesign', () => {
     await waitFor(element(by.text('Journal ID copied')))
       .toBeVisible()
       .withTimeout(10000);
-    const copied = execFileSync('xcrun', ['simctl', 'pbpaste', device.id], { encoding: 'utf8' });
+    const copied = readClipboard();
     if (copied.trim() !== 'qa-journal-simple')
       throw new Error('The full journal ID was not copied');
     await element(by.id('journal-revert-change')).tap();
