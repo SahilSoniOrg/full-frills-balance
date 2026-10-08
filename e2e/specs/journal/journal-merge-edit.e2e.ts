@@ -46,7 +46,7 @@ describe(':android: merged journal edit', () => {
       .withTimeout(LONG_TIMEOUT_MS);
     await element(by.id('edit-button')).tap();
 
-    await waitFor(element(by.text('Journal Lines')))
+    await waitFor(element(by.id('journal-description-input')))
       .toBeVisible()
       .withTimeout(LONG_TIMEOUT_MS);
     await element(by.id('journal-description-input')).replaceText('Merged SMS expenses');

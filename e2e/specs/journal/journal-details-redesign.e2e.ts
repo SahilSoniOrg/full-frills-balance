@@ -38,7 +38,7 @@ describe('journal details redesign', () => {
 
   it('captures the five reference states in light and dark', async () => {
     for (const appearance of ['light', 'dark'] as const) {
-      setAppearance(appearance);
+      await setAppearance(appearance);
       await openJournal('simple');
       await expect(element(by.id('journal-after-balances'))).toExist();
       await expect(element(by.id('journal-accounting-issues'))).not.toExist();
@@ -96,13 +96,13 @@ describe('journal details redesign', () => {
   });
 
   it('captures long content at an accessibility text size', async () => {
-    setAppearance('light');
-    setContentSize('accessibility-large');
+    await setAppearance('light');
+    await setContentSize('accessibility-large');
     try {
       await openJournal('long');
       await device.takeScreenshot('journal-large-text');
     } finally {
-      setContentSize('large');
+      await setContentSize('large');
     }
   });
 

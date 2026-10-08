@@ -63,12 +63,10 @@ async function enterCashClarityName(name: string): Promise<void> {
 
 async function acknowledgePrivacy(): Promise<void> {
   const privacySheetLink = element(by.id('privacy-acknowledgement-full-policy-button'));
-  try {
-    await waitFor(privacySheetLink).toBeVisible().withTimeout(8000);
-  } catch {
-    await scrollToId('privacy-acknowledgement-full-policy-button', ONBOARDING_TIMEOUT_MS);
-  }
-  await waitFor(privacySheetLink).toBeVisible().withTimeout(ONBOARDING_TIMEOUT_MS);
+  await waitFor(privacySheetLink)
+    .toBeVisible()
+    .whileElement(by.id('privacy-acknowledgement-scroll'))
+    .scroll(250, 'down');
   await tapById('privacy-acknowledgement-continue-button', ONBOARDING_TIMEOUT_MS);
   await waitFor(privacySheetLink).not.toExist().withTimeout(10000);
 }
