@@ -4,6 +4,36 @@ import type { DateRange } from '@/src/services/budget/BudgetPeriodUtils';
 import dayjs from 'dayjs';
 type Point = { x: number; y: number };
 
+/** End-of-day cumulative values, retaining refunds and days without postings. */
+export function buildBudgetSpendingDailyPoints(
+  chart: BudgetCumulativeChart | null,
+  period: DateRange | undefined,
+  cutoff?: number,
+): { date: number; offset: number; spent: number }[] {
+  if (!chart || !period) return [];
+  const lastDate = Math.min(period.endDate, cutoff ?? period.endDate);
+  const points = [];
+  let cursor = 0;
+  let spent = 0;
+  for (
+    let day = dayjs(period.startDate).startOf('day');
+    day.valueOf() <= lastDate;
+    day = day.add(1, 'day')
+  ) {
+    const dayEnd = Math.min(day.endOf('day').valueOf(), lastDate);
+    while (cursor < chart.data.length && chart.data[cursor].x <= dayEnd) {
+      spent = chart.data[cursor].y;
+      cursor += 1;
+    }
+    points.push({
+      date: day.valueOf(),
+      offset: getFractionalCalendarOffset(dayEnd, period.startDate),
+      spent,
+    });
+  }
+  return points;
+}
+
 export interface BudgetSpendingChartGeometry {
   currentPoints: Point[];
   previousPoints: Point[];

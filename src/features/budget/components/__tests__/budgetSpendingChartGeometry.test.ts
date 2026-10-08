@@ -1,11 +1,44 @@
 import {
   buildBudgetSpendingChartGeometry,
+  buildBudgetSpendingDailyPoints,
   getFractionalCalendarOffset,
 } from '../budgetSpendingChartGeometry';
 import { budgetCumulativeChartFromData } from '@/src/features/budget/testing/budgetChartTestFixtures';
 import dayjs from 'dayjs';
 
 describe('budget spending chart geometry', () => {
+  it('builds daily tooltip totals including refunds, duplicate posting timestamps, and quiet days', () => {
+    const startDate = dayjs('2026-01-01').startOf('day').valueOf();
+    const endDate = dayjs('2026-01-05').endOf('day').valueOf();
+    const timestamp = dayjs('2026-01-02T12:00').valueOf();
+    const chart = budgetCumulativeChartFromData([
+      { x: startDate, y: 0 },
+      { x: timestamp, y: 0 },
+      { x: timestamp, y: 25 },
+      { x: dayjs('2026-01-03T12:00').valueOf(), y: -5 },
+      { x: endDate, y: 100 },
+    ]);
+    const days = buildBudgetSpendingDailyPoints(
+      chart,
+      { startDate, endDate },
+      dayjs('2026-01-04').endOf('day').valueOf(),
+    );
+    expect(days.map(day => day.spent)).toEqual([0, 25, -5, -5]);
+    expect(days.map(day => day.offset)).toEqual([1, 2, 3, 4]);
+  });
+
+  it('keeps midnight postings in the following calendar day', () => {
+    const startDate = dayjs('2026-01-01').startOf('day').valueOf();
+    const endDate = dayjs('2026-01-02').endOf('day').valueOf();
+    const days = buildBudgetSpendingDailyPoints(
+      budgetCumulativeChartFromData([
+        { x: startDate, y: 0 },
+        { x: dayjs('2026-01-02').startOf('day').valueOf(), y: 25 },
+      ]),
+      { startDate, endDate },
+    );
+    expect(days.map(day => day.spent)).toEqual([0, 25]);
+  });
   it('retains fractional positions for transactions posted on the same day', () => {
     const start = dayjs('2026-01-01').startOf('day').valueOf();
     const morning = dayjs('2026-01-02T08:00').valueOf();
