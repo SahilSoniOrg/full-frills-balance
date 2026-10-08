@@ -42,22 +42,25 @@ android_ensure_kvm() {
 # The committed Gradle file asks for an 8g heap, which does not fit a 16GB cloud VM.
 android_ensure_gradle_heap() {
   local mem_kb gradle_home props
-  mem_kb="$(awk '/MemTotal/ {print $1}' /proc/meminfo 2>/dev/null || echo 0)"
+  mem_kb="$(awk '/MemTotal:/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)"
   if [[ "$mem_kb" -eq 0 || "$mem_kb" -ge 24000000 ]]; then
     return 0
   fi
   gradle_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
   props="$gradle_home/gradle.properties"
   mkdir -p "$gradle_home"
-  if [[ -f "$props" ]] && grep -q '^org.gradle.jvmargs=.*-Xmx3072m' "$props"; then
+  if [[ -f "$props" ]] && grep -q '^org.gradle.jvmargs=.*-XX:MaxMetaspaceSize=1536m' "$props"; then
     return 0
   fi
   # User-level gradle.properties outranks the project file.
+  # R8 on this app exhausts a 512m metaspace. Keep the heap under the 16GB VM
+  # and run one worker so lint and minify do not stack.
   cat >"$props" <<'EOF'
-org.gradle.jvmargs=-Xmx3072m -XX:MaxMetaspaceSize=512m -XX:+UseParallelGC -Dfile.encoding=UTF-8
-org.gradle.parallel=true
-org.gradle.workers.max=2
+org.gradle.jvmargs=-Xmx2560m -XX:MaxMetaspaceSize=1536m -XX:+UseParallelGC -Dfile.encoding=UTF-8
+org.gradle.parallel=false
+org.gradle.workers.max=1
 org.gradle.daemon=true
 org.gradle.caching=true
+android.lint.checkReleaseBuilds=false
 EOF
 }

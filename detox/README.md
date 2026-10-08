@@ -86,7 +86,7 @@ bun run e2e:build:android
 bun run e2e:test:android
 ```
 
-KVM (`/dev/kvm`) is used when the device node is readable. Without it the emulator falls back to software emulation and the suite is much slower. The setup script grants access with `chmod 666 /dev/kvm` when passwordless sudo is available. Gradle on machines under 24GB RAM is capped at a 3GB heap in the user `gradle.properties`, because the committed project file requests 8GB.
+KVM (`/dev/kvm`) is used when the device node is readable. Without it the emulator falls back to software emulation and the suite is much slower. The setup script grants access with `chmod 666 /dev/kvm` when passwordless sudo is available. Gradle on machines under 24GB RAM uses a 2.5GB heap and 1.5GB metaspace in the user `gradle.properties` (the committed project file requests 8GB / 2GB, and R8 runs out of metaspace at 512MB). Release lint is turned off in that user file so it does not run beside minify.
 
 Use an existing AVD:
 
