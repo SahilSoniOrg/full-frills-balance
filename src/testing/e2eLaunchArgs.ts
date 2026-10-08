@@ -6,6 +6,8 @@ import {
   E2E_SEED_PROFILES,
   E2eSeedProfile,
   E2eUpdateGateMode,
+  E2E_UPDATE_FLOWS,
+  E2eUpdateFlow,
 } from './e2eConstants';
 import { isE2eHarnessEnabled } from './e2eRuntimeGate';
 
@@ -14,6 +16,7 @@ export type E2eLaunchConfig = {
   seedProfile?: E2eSeedProfile;
   backupPath?: string;
   updateGateMode?: E2eUpdateGateMode;
+  updateFlow?: E2eUpdateFlow;
 };
 
 function isSeedProfile(value: unknown): value is E2eSeedProfile {
@@ -34,11 +37,17 @@ function configFromArgs(args: Record<string, unknown>): E2eLaunchConfig | null {
   const updateGateMode = isUpdateGateMode(args.e2eUpdateGateMode)
     ? args.e2eUpdateGateMode
     : undefined;
+  const updateFlow =
+    typeof args.e2eUpdateFlow === 'string' &&
+    (E2E_UPDATE_FLOWS as readonly string[]).includes(args.e2eUpdateFlow)
+      ? (args.e2eUpdateFlow as E2eUpdateFlow)
+      : undefined;
   return {
     reset: reset || Boolean(seedProfile),
     seedProfile,
     backupPath,
     ...(updateGateMode ? { updateGateMode } : {}),
+    ...(updateFlow ? { updateFlow } : {}),
   };
 }
 

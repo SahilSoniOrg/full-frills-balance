@@ -322,7 +322,14 @@ const realDependencies: AppUpdateDependencies = {
   },
 };
 
+// The mock transport is reachable only in an authenticated, E2E-capable build.
+const e2eDependencies: AppUpdateDependencies | null =
+  process.env.EXPO_PUBLIC_E2E === '1'
+    ? // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('@/src/testing/e2eAppUpdates').createE2eAppUpdateDependencies()
+    : null;
+
 export const appUpdateService = new AppUpdateService(
-  realDependencies,
-  Platform.OS !== 'web' && isVersionPolicyConfigured(),
+  e2eDependencies ?? realDependencies,
+  Boolean(e2eDependencies) || (Platform.OS !== 'web' && isVersionPolicyConfigured()),
 );

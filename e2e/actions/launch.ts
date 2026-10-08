@@ -1,5 +1,5 @@
 import { device, element, by, waitFor } from 'detox';
-import type { E2eSeedProfile } from '@/src/testing/e2eConstants';
+import type { E2eSeedProfile, E2eUpdateFlow } from '@/src/testing/e2eConstants';
 import { E2E_AUTH_TOKEN } from '@/src/testing/e2eConstants';
 
 export type LaunchOnboardedOptions = {
@@ -63,7 +63,13 @@ export async function waitForDashboard(timeoutMs = 120000): Promise<void> {
 
 export type E2eUpdateGateMode = 'required' | 'available';
 
-export async function launchWithUpdateGate(mode: E2eUpdateGateMode): Promise<void> {
+export async function launchWithUpdateGate(
+  mode: E2eUpdateGateMode,
+  options: {
+    flow?: E2eUpdateFlow;
+    seedProfile?: E2eSeedProfile;
+  } = {},
+): Promise<void> {
   await device.launchApp({
     newInstance: true,
     delete: true,
@@ -71,8 +77,9 @@ export async function launchWithUpdateGate(mode: E2eUpdateGateMode): Promise<voi
     launchArgs: {
       e2eAuth: E2E_AUTH_TOKEN,
       e2eReset: '1',
-      e2eSeedProfile: 'onboarded',
+      e2eSeedProfile: options.seedProfile ?? 'onboarded',
       e2eUpdateGateMode: mode,
+      ...(options.flow ? { e2eUpdateFlow: options.flow } : {}),
     },
   });
 }

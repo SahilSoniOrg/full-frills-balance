@@ -1,6 +1,7 @@
 /** @type {import('@jest/types').Config.InitialOptions} */
 module.exports = {
   rootDir: '.',
+  moduleNameMapper: { '^@/(.*)$': '<rootDir>/$1' },
   testMatch: ['<rootDir>/e2e/specs/**/*.e2e.ts'],
   testTimeout: 300000,
   maxWorkers: 1,

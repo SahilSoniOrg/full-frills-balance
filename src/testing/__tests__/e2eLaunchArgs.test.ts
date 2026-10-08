@@ -79,4 +79,21 @@ describe('readE2eLaunchConfig', () => {
 
     expect(readE2eLaunchConfig()).toEqual({ reset: false });
   });
+
+  it('accepts update transport fixtures only in an authenticated E2E build', () => {
+    valueMock.mockReturnValue({
+      e2eAuth: E2E_AUTH_TOKEN,
+      e2eUpdateGateMode: 'available',
+      e2eUpdateFlow: 'download',
+    });
+    expect(readE2eLaunchConfig()).toBeNull();
+    process.env.EXPO_PUBLIC_E2E = '1';
+    expect(readE2eLaunchConfig()).toEqual({
+      reset: false,
+      updateGateMode: 'available',
+      updateFlow: 'download',
+    });
+    valueMock.mockReturnValue({ e2eAuth: 'wrong', e2eUpdateFlow: 'download' });
+    expect(readE2eLaunchConfig()).toBeNull();
+  });
 });
