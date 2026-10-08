@@ -76,6 +76,16 @@ export async function tapByText(
   await target.tap();
 }
 
+/** Visible text that Android may render as more than one TextView. */
+export async function waitForVisibleText(
+  text: string,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<void> {
+  await waitFor(element(by.text(text)).atIndex(0))
+    .toBeVisible()
+    .withTimeout(timeoutMs);
+}
+
 export async function scrollToId(testId: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<void> {
   const target = element(by.id(testId));
   for (const scrollMatcher of SCROLL_VIEW_MATCHERS) {

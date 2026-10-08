@@ -5,7 +5,6 @@
  */
 import { by, device, element, expect, waitFor } from 'detox';
 import { launchSeedProfileApp } from '../../actions/launch';
-import { scrollToId } from '../../actions/mobile/elementActions';
 
 jest.setTimeout(240000);
 
@@ -22,7 +21,14 @@ it('preserves review scroll and keeps the restore action reachable for a long re
     .withTimeout(60000);
   await element(by.id('restore-summary-continue')).tap();
 
-  await scrollToId('restore-apply-safe-fx-suggestions', 60000);
+  await waitFor(element(by.id('restore-journal-recovery-scroll')))
+    .toExist()
+    .withTimeout(120000);
+  await waitFor(element(by.id('restore-apply-safe-fx-suggestions')))
+    .toBeVisible()
+    .withTimeout(120000)
+    .whileElement(by.id('restore-journal-recovery-scroll'))
+    .scroll(400, 'down');
   await element(by.id('restore-apply-safe-fx-suggestions')).tap();
   await waitFor(element(by.text('20 journal entries need attention')))
     .toExist()

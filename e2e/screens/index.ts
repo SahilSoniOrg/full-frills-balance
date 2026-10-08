@@ -41,8 +41,8 @@ export const plannedPayments = {
   fab: 'fab-button',
   heroName: 'hero-name-input',
   heroAmount: 'hero-amount-input',
-  fromAccount: 'planned-payment-from-account',
-  toAccount: 'planned-payment-to-account',
+  fromAccount: 'planned-payment-source-node',
+  toAccount: 'planned-payment-destination-node',
   submitFooter: 'submit-footer-button',
   schedule: 'planned-payment-repeat-count',
   scheduleDay: (day: number) => `schedule-day-${day}`,
@@ -51,6 +51,7 @@ export const plannedPayments = {
 export const smsInbox = {
   screen: 'transaction-inbox-screen',
   settingsAutomation: 'settings-automation',
+  settingsSmsSettings: 'settings-sms-settings',
   settingsSmsInbox: 'settings-sms-inbox',
   filterDuplicates: 'inbox-filter-duplicates',
   filterPending: 'inbox-filter-pending',

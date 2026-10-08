@@ -1,4 +1,4 @@
-import { by, element, expect, waitFor } from 'detox';
+import { by, device, element, expect, waitFor } from 'detox';
 import { onboarding as setupIds } from '../screens';
 import { ONBOARDING_TIMEOUT_MS } from '../constants/timeouts';
 import { scrollToId, tapById } from './mobile/elementActions';
@@ -59,14 +59,27 @@ async function enterCashClarityName(name: string): Promise<void> {
   const input = element(by.id(setupIds.nameInput));
   await input.tap();
   await input.replaceText(name);
+  // The keyboard covers the start and restore actions on a short Android window.
+  if (device.getPlatform() === 'android') {
+    await device.pressBack();
+  }
 }
 
 async function acknowledgePrivacy(): Promise<void> {
+  // Synchronization is off for these journeys, so the sheet is not in the
+  // hierarchy on the line after the tap that opens it.
+  await waitFor(element(by.id('privacy-acknowledgement-scroll')))
+    .toExist()
+    .withTimeout(ONBOARDING_TIMEOUT_MS);
   const privacySheetLink = element(by.id('privacy-acknowledgement-full-policy-button'));
-  await waitFor(privacySheetLink)
-    .toBeVisible()
-    .whileElement(by.id('privacy-acknowledgement-scroll'))
-    .scroll(250, 'down');
+  try {
+    await waitFor(privacySheetLink).toBeVisible().withTimeout(5000);
+  } catch {
+    await waitFor(privacySheetLink)
+      .toBeVisible()
+      .whileElement(by.id('privacy-acknowledgement-scroll'))
+      .scroll(250, 'down');
+  }
   await tapById('privacy-acknowledgement-continue-button', ONBOARDING_TIMEOUT_MS);
   await waitFor(privacySheetLink).not.toExist().withTimeout(10000);
 }

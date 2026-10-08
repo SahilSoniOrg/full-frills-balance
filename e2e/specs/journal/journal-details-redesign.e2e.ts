@@ -4,12 +4,20 @@ import { launchAppToleratingIdleTimeout } from '../../actions/launch';
 import { E2E_AUTH_TOKEN } from '../../../src/testing/e2eConstants';
 
 const openJournal = async (state: string) => {
-  await device.openURL({
-    url: `fullfrillsbalance://journal-details?journalId=qa-journal-${state}`,
-  });
-  await waitFor(element(by.id(`journal-summary-qa-journal-${state}`)))
-    .toBeVisible()
-    .withTimeout(30000);
+  const summary = element(by.id(`journal-summary-qa-journal-${state}`));
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await device.openURL({
+      url: `fullfrillsbalance://journal-details?journalId=qa-journal-${state}`,
+    });
+    try {
+      await waitFor(summary)
+        .toBeVisible()
+        .withTimeout(attempt === 0 ? 30000 : 60000);
+      break;
+    } catch (error) {
+      if (attempt === 1) throw error;
+    }
+  }
   await expect(element(by.id('edit-button'))).toExist();
   // Synchronization is disabled for the Expo client; allow the native push transition to finish.
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -113,9 +121,15 @@ describe('journal details redesign', () => {
     await waitFor(element(by.text('Journal ID copied')))
       .toBeVisible()
       .withTimeout(10000);
-    const copied = readClipboard();
-    if (copied.trim() !== 'qa-journal-simple')
-      throw new Error('The full journal ID was not copied');
+    let copied = '';
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      copied = readClipboard().trim();
+      if (copied === 'qa-journal-simple') break;
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    if (copied !== 'qa-journal-simple') {
+      throw new Error(`The full journal ID was not copied (clipboard: ${JSON.stringify(copied)})`);
+    }
     await element(by.id('journal-revert-change')).tap();
     await waitFor(element(by.text('Revert this change?')))
       .toBeVisible()

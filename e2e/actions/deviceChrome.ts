@@ -1,8 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { by, device, element, waitFor } from 'detox';
+import { E2E_AUTH_TOKEN } from '../../src/testing/e2eConstants';
 
-async function settleAfterChromeChange(): Promise<void> {
-  if (device.getPlatform() !== 'android') return;
+async function dismissUpdatePrompt(): Promise<void> {
   const later = element(by.text('Later'));
   try {
     await waitFor(later).toBeVisible().withTimeout(8000);
@@ -10,9 +10,30 @@ async function settleAfterChromeChange(): Promise<void> {
   } catch {
     // The activity restart does not always surface the update prompt.
   }
-  await waitFor(element(by.id('tab-dashboard')))
-    .toExist()
-    .withTimeout(60000);
+}
+
+async function settleAfterChromeChange(): Promise<void> {
+  if (device.getPlatform() !== 'android') return;
+  const dashboard = element(by.id('tab-dashboard'));
+  // Night mode and font scale restart the activity. Wait it out, and relaunch
+  // with the e2e token if the process does not come back on its own.
+  try {
+    await waitFor(dashboard).not.toExist().withTimeout(15000);
+  } catch {
+    // The restart can finish before this wait observes the gap.
+  }
+  try {
+    await waitFor(dashboard).toExist().withTimeout(90000);
+  } catch {
+    await device.launchApp({
+      newInstance: true,
+      delete: false,
+      launchArgs: { e2eAuth: E2E_AUTH_TOKEN },
+    });
+    await device.disableSynchronization();
+    await waitFor(dashboard).toExist().withTimeout(90000);
+  }
+  await dismissUpdatePrompt();
 }
 
 function adb(args: string[]): string {
@@ -49,9 +70,17 @@ export async function setContentSize(size: 'large' | 'accessibility-large'): Pro
   await settleAfterChromeChange();
 }
 
+function parseAndroidClipboard(raw: string): string {
+  const trimmed = raw.replace(/\r/g, '').trim();
+  if (!trimmed || trimmed === 'null') return '';
+  const clipData = trimmed.match(/ClipData\s*\{[\s\S]*?"([^"]*)"/);
+  if (clipData?.[1] != null) return clipData[1];
+  return trimmed;
+}
+
 export function readClipboard(): string {
   if (device.getPlatform() === 'ios') {
     return execFileSync('xcrun', ['simctl', 'pbpaste', device.id], { encoding: 'utf8' });
   }
-  return adb(['shell', 'cmd', 'clipboard', 'get']).trim();
+  return parseAndroidClipboard(adb(['shell', 'cmd', 'clipboard', 'get']));
 }

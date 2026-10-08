@@ -5,6 +5,7 @@
  */
 import { by, element, waitFor } from 'detox';
 import { launchOnboardedApp } from '../../actions/launch';
+import { waitForVisibleText } from '../../actions/mobile/elementActions';
 import { LONG_TIMEOUT_MS } from '../../constants/timeouts';
 import { tabs } from '../../screens';
 
@@ -55,17 +56,9 @@ describe(':android: merged journal edit', () => {
     await waitFor(element(by.text('Merged SMS expenses')))
       .toBeVisible()
       .withTimeout(LONG_TIMEOUT_MS);
-    await waitFor(element(by.text('Bank')))
-      .toBeVisible()
-      .withTimeout(LONG_TIMEOUT_MS);
-    await waitFor(element(by.text('Food & Drink')))
-      .toBeVisible()
-      .withTimeout(LONG_TIMEOUT_MS);
-    await waitFor(element(by.text('Groceries')))
-      .toBeVisible()
-      .withTimeout(LONG_TIMEOUT_MS);
-    await waitFor(element(by.text('Sports')))
-      .toBeVisible()
-      .withTimeout(LONG_TIMEOUT_MS);
+    await waitForVisibleText('Bank', LONG_TIMEOUT_MS);
+    await waitForVisibleText('Food & Drink', LONG_TIMEOUT_MS);
+    await waitForVisibleText('Groceries', LONG_TIMEOUT_MS);
+    await waitForVisibleText('Sports', LONG_TIMEOUT_MS);
   });
 });

@@ -2,10 +2,16 @@ import { element, by, expect, waitFor } from 'detox';
 import { DEFAULT_TIMEOUT_MS } from '../constants/timeouts';
 
 const SCROLL_VIEW_MATCHERS = [
+  by.type('scrollview'),
   by.type('UIScrollView'),
   by.type('RCTScrollView'),
   by.type('RCTScrollViewComponentView'),
 ];
+
+function isAmbiguousMatch(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /matches \d+ views/.test(message);
+}
 
 async function scrollUntilTextVisible(
   target: ReturnType<typeof element>,
@@ -47,7 +53,15 @@ export async function assertTextVisible(
   try {
     await waitFor(target).toBeVisible().withTimeout(Math.min(timeoutMs, 20000));
     return;
-  } catch {
+  } catch (error) {
+    // Android exposes the same label on more than one TextView (header plus
+    // tab, or a field label plus its title). One visible match is the check.
+    if (isAmbiguousMatch(error)) {
+      await waitFor(element(by.text(text)).atIndex(0))
+        .toBeVisible()
+        .withTimeout(Math.min(timeoutMs, 20000));
+      return;
+    }
     try {
       await scrollUntilTextVisible(target);
       await waitFor(target).toBeVisible().withTimeout(Math.min(timeoutMs, 20000));

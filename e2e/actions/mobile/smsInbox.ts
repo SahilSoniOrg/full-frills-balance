@@ -9,6 +9,7 @@ export async function openSmsInboxFromSettings(): Promise<void> {
   await openDashboardTab();
   await tapById(tabs.settings, LONG_TIMEOUT_MS);
   await tapById(smsInbox.settingsAutomation, LONG_TIMEOUT_MS);
+  await tapById(smsInbox.settingsSmsSettings, LONG_TIMEOUT_MS);
   await tapById(smsInbox.settingsSmsInbox, LONG_TIMEOUT_MS);
   await assertVisibleById(smsInbox.screen, LONG_TIMEOUT_MS);
 }
