@@ -1,0 +1,270 @@
+diff --git a/node_modules/sp-react-native-in-app-updates/.bun-tag-2ad79d172719f8aa b/.bun-tag-2ad79d172719f8aa
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/sp-react-native-in-app-updates/.bun-tag-6a9ae2a360dc5608 b/.bun-tag-6a9ae2a360dc5608
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/sp-react-native-in-app-updates/.bun-tag-f317c5365f50a34e b/.bun-tag-f317c5365f50a34e
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/android/src/main/java/com/sudoplz/rninappupdates/SpReactNativeInAppUpdatesModule.java b/android/src/main/java/com/sudoplz/rninappupdates/SpReactNativeInAppUpdatesModule.java
+index ebb39026d07a17a3d166ef92d34fcf7516921a69..79af390133a8ab94197954ee435fa5a9a6998a7d 100644
+--- a/android/src/main/java/com/sudoplz/rninappupdates/SpReactNativeInAppUpdatesModule.java
++++ b/android/src/main/java/com/sudoplz/rninappupdates/SpReactNativeInAppUpdatesModule.java
+@@ -53,6 +53,14 @@ public class SpReactNativeInAppUpdatesModule extends NativeSpInAppUpdatesSpec im
+         reactContext.addActivityEventListener(this);
+     }
+ 
++    @Override
++    public void invalidate() {
++        subscribedToUpdateStatuses = false;
++        appUpdateManager.unregisterListener(this);
++        getReactApplicationContext().removeActivityEventListener(this);
++        super.invalidate();
++    }
++
+     @Override
+     @NonNull
+     public String getName() {
+@@ -105,6 +113,7 @@ public class SpReactNativeInAppUpdatesModule extends NativeSpInAppUpdatesSpec im
+             WritableMap map = Arguments.createMap();
+             int availability = appUpdateInfo.updateAvailability();
+             map.putInt("updateAvailability", availability);
++            map.putInt("installStatus", appUpdateInfo.installStatus());
+             map.putBoolean("isImmediateUpdateAllowed", appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE));
+             map.putBoolean("isFlexibleUpdateAllowed", appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE));
+             map.putInt("updatePriority", appUpdateInfo.updatePriority());
+@@ -139,13 +148,17 @@ public class SpReactNativeInAppUpdatesModule extends NativeSpInAppUpdatesSpec im
+ 
+         // Checks that the platform will allow the specified type of update.
+         appUpdateInfoTask.addOnSuccessListener(appUpdateInfo -> {
+-            if (appUpdateInfo.updateAvailability() != UpdateAvailability.UPDATE_AVAILABLE) {
++            if (getCurrentActivity() == null) {
++                resolutionPromise.reject("Error", "No foreground activity available");
++            } else if (appUpdateInfo.updateAvailability() != UpdateAvailability.UPDATE_AVAILABLE
++                && !(resolvedUpdateType == AppUpdateType.IMMEDIATE
++                    && appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS)) {
+                 resolutionPromise.reject("Error", "Update unavailable, check checkNeedsUpdate.updateAvailability first");
+             } else if (!appUpdateInfo.isUpdateTypeAllowed(resolvedUpdateType)) {
+                 resolutionPromise.reject("Error", "Update type unavailable, check checkNeedsUpdate.isImmediateUpdateAllowed or checkNeedsUpdate.isFlexibleUpdateAllowed first.");
+             } else {
+                 try {
+-                    appUpdateManager.startUpdateFlowForResult(
++                    boolean started = appUpdateManager.startUpdateFlowForResult(
+                         // Pass the intent that is returned by 'getAppUpdateInfo()'.
+                         appUpdateInfo,
+                         // 'AppUpdateType.IMMEDIATE' Or 'AppUpdateType.FLEXIBLE'
+@@ -155,7 +168,8 @@ public class SpReactNativeInAppUpdatesModule extends NativeSpInAppUpdatesSpec im
+                         // Include a request code to later monitor this update request.
+                         IN_APP_UPDATE_REQUEST_CODE
+                     );
+-                    resolutionPromise.resolve("Done");
++                    if (started) resolutionPromise.resolve(null);
++                    else resolutionPromise.reject("UpdateStartError", "Google Play could not start the update flow");
+                 } catch (IntentSender.SendIntentException e) {
+                     resolutionPromise.reject("SendIntentException","Error while starting the update flow: "+e.toString());
+                 }
+@@ -165,8 +179,10 @@ public class SpReactNativeInAppUpdatesModule extends NativeSpInAppUpdatesSpec im
+ 
+     @Override
+     @ReactMethod
+-    public void installUpdate() {
+-        appUpdateManager.completeUpdate();
++    public void installUpdate(Promise promise) {
++        appUpdateManager.completeUpdate()
++            .addOnSuccessListener(result -> promise.resolve(null))
++            .addOnFailureListener(error -> promise.reject("InstallUpdateError", error));
+     }
+ 
+     @Override
+@@ -200,7 +216,8 @@ public class SpReactNativeInAppUpdatesModule extends NativeSpInAppUpdatesSpec im
+         if (requestCode != IN_APP_UPDATE_REQUEST_CODE) {
+             return;
+         }
+-        emitToJS(IN_APP_UPDATE_RESULT_KEY, String.valueOf(resultCode == RESULT_OK ? InstallStatus.INSTALLED : InstallStatus.CANCELED));
++        emitToJS(IN_APP_UPDATE_RESULT_KEY, String.valueOf(resultCode == RESULT_OK ? InstallStatus.INSTALLED
++            : resultCode == Activity.RESULT_CANCELED ? InstallStatus.CANCELED : InstallStatus.FAILED));
+     }
+ 
+     @Override
+diff --git a/lib/commonjs/InAppUpdates.android.js b/lib/commonjs/InAppUpdates.android.js
+index 3e35bb52081b154143048698108a19aaa9794a36..f610088f22f4e0945219196275e17c7e8b784e97 100644
+--- a/lib/commonjs/InAppUpdates.android.js
++++ b/lib/commonjs/InAppUpdates.android.js
+@@ -132,11 +132,17 @@ class InAppUpdates extends _InAppUpdatesBase.default {
+       });
+     });
+     _defineProperty(this, "installUpdate", () => {
+-      _NativeSpInAppUpdates.default.installUpdate();
++      return _NativeSpInAppUpdates.default.installUpdate();
+     });
++    this.subscriptions = [];
++    this.dispose = () => {
++      _NativeSpInAppUpdates.default.setStatusUpdateSubscription(false);
++      this.subscriptions.forEach(subscription => subscription.remove());
++      this.subscriptions = [];
++    };
+     this.eventEmitter = new _reactNative.NativeEventEmitter(_NativeSpInAppUpdates.default);
+-    this.eventEmitter.addListener(_types.AndroidOther.IN_APP_UPDATE_STATUS_KEY, this.onIncomingNativeStatusUpdate);
+-    this.eventEmitter.addListener(_types.AndroidOther.IN_APP_UPDATE_RESULT_KEY, this.onIncomingNativeResult);
++    this.subscriptions.push(this.eventEmitter.addListener(_types.AndroidOther.IN_APP_UPDATE_STATUS_KEY, this.onIncomingNativeStatusUpdate));
++    this.subscriptions.push(this.eventEmitter.addListener(_types.AndroidOther.IN_APP_UPDATE_RESULT_KEY, this.onIncomingNativeResult));
+   }
+ 
+   /**
+diff --git a/lib/typescript/InAppUpdates.android.d.ts b/lib/typescript/InAppUpdates.android.d.ts
+index a5df859fe39c12072cd0d0f8c6f2417daa60ecaf..c0452cb186642bef942fe859b3fc3ae8e9842b91 100644
+--- a/lib/typescript/InAppUpdates.android.d.ts
++++ b/lib/typescript/InAppUpdates.android.d.ts
+@@ -17,5 +17,6 @@ export default class InAppUpdates extends InAppUpdatesBase {
+      * Shows pop-up asking user if they want to update, giving them the option to download said update.
+      */
+     startUpdate: (updateOptions: AndroidStartUpdateOptions) => Promise<void>;
+-    installUpdate: () => void;
++    dispose: () => void;
++    installUpdate: () => Promise<void>;
+ }
+diff --git a/lib/typescript/NativeSpInAppUpdates.d.ts b/lib/typescript/NativeSpInAppUpdates.d.ts
+index 8e96d9eb9fe3888fef3f15dcc6be788acc121fc6..96df1929f7ba19dc20383648bf14bb728ce591f7 100644
+--- a/lib/typescript/NativeSpInAppUpdates.d.ts
++++ b/lib/typescript/NativeSpInAppUpdates.d.ts
+@@ -3,6 +3,7 @@ export interface Spec extends TurboModule {
+     setStatusUpdateSubscription(active: boolean): void;
+     checkNeedsUpdate(): Promise<{
+         updateAvailability: number;
++    installStatus: number;
+         isImmediateUpdateAllowed: boolean;
+         isFlexibleUpdateAllowed: boolean;
+         updatePriority: number;
+@@ -12,7 +13,7 @@ export interface Spec extends TurboModule {
+         totalBytes?: number;
+     }>;
+     startUpdate(updateType: number): Promise<void>;
+-    installUpdate(): void;
++    installUpdate(): Promise<void>;
+     addListener(eventType: string): void;
+     removeListeners(count: number): void;
+ }
+diff --git a/lib/typescript/types.d.ts b/lib/typescript/types.d.ts
+index bd403931eefeb4bd23f2ed04678ccbd2ad26f08e..2cd673af99ab10da61c07ccd7af217268c124510 100644
+--- a/lib/typescript/types.d.ts
++++ b/lib/typescript/types.d.ts
+@@ -8,7 +8,8 @@ export declare enum AndroidInstallStatus {
+     CANCELED = 6,
+     DOWNLOADED = 11
+ }
+-export type InstallationResult = AndroidInstallStatus.INSTALLED | AndroidInstallStatus.CANCELED;
++export type InstallationResult = AndroidInstallStatus.INSTALLED | AndroidInstallStatus.CANCELED
++  | AndroidInstallStatus.FAILED;
+ export type StatusUpdateEvent = {
+     bytesDownloaded: any;
+     totalBytesToDownload: any;
+@@ -70,6 +71,7 @@ export declare enum AndroidUpdateType {
+ export type AndroidInAppUpdateExtras = {
+     updateAvailability: AndroidAvailabilityStatus;
+     versionCode: SemverVersionCode;
++  installStatus: AndroidInstallStatus;
+     isFlexibleUpdateAllowed: boolean;
+     isImmediateUpdateAllowed: boolean;
+     packageName?: string;
+diff --git a/src/InAppUpdates.android.ts b/src/InAppUpdates.android.ts
+index 9ddf575e6e41377b5f28e2a64386f42cd0e78b1b..67041b863b06b42891c09de31d14c7e4c50dff8e 100644
+--- a/src/InAppUpdates.android.ts
++++ b/src/InAppUpdates.android.ts
+@@ -19,17 +19,25 @@ import InAppUpdatesBase from './InAppUpdatesBase';
+ import SpInAppUpdates from './NativeSpInAppUpdates';
+ 
+ export default class InAppUpdates extends InAppUpdatesBase {
++  private subscriptions: Array<{ remove(): void }> = [];
++
++  public dispose = (): void => {
++    SpInAppUpdates.setStatusUpdateSubscription(false);
++    this.subscriptions.forEach(subscription => subscription.remove());
++    this.subscriptions = [];
++  };
++
+   constructor() {
+     super();
+     this.eventEmitter = new NativeEventEmitter(SpInAppUpdates);
+-    this.eventEmitter.addListener(
++    this.subscriptions.push(this.eventEmitter.addListener(
+       AndroidOther.IN_APP_UPDATE_STATUS_KEY,
+       this.onIncomingNativeStatusUpdate
+-    );
+-    this.eventEmitter.addListener(
++    ));
++    this.subscriptions.push(this.eventEmitter.addListener(
+       AndroidOther.IN_APP_UPDATE_RESULT_KEY,
+       this.onIncomingNativeResult
+-    );
++    ));
+   }
+ 
+   protected onIncomingNativeResult = (event: InstallationResult) => {
+@@ -181,7 +189,7 @@ export default class InAppUpdates extends InAppUpdatesBase {
+     });
+   };
+ 
+-  public installUpdate = (): void => {
+-    SpInAppUpdates.installUpdate();
++  public installUpdate = (): Promise<void> => {
++    return SpInAppUpdates.installUpdate();
+   };
+ }
+diff --git a/src/NativeSpInAppUpdates.ts b/src/NativeSpInAppUpdates.ts
+index b6a81c8b864897e763889aee57f4777994e3ec2e..4a7c70aff3dd947bde908839229cdf50700a4a17 100644
+--- a/src/NativeSpInAppUpdates.ts
++++ b/src/NativeSpInAppUpdates.ts
+@@ -6,6 +6,7 @@ export interface Spec extends TurboModule {
+ 
+   checkNeedsUpdate(): Promise<{
+     updateAvailability: number;
++    installStatus: number;
+     isImmediateUpdateAllowed: boolean;
+     isFlexibleUpdateAllowed: boolean;
+     updatePriority: number;
+@@ -17,7 +18,7 @@ export interface Spec extends TurboModule {
+ 
+   startUpdate(updateType: number): Promise<void>;
+ 
+-  installUpdate(): void;
++  installUpdate(): Promise<void>;
+ 
+   addListener(eventType: string): void;
+   removeListeners(count: number): void;
+diff --git a/src/index.d.ts b/src/index.d.ts
+index b8e68ab4c7b569b512c6af56a72ed96b27037e8e..acc7af17f41ff9a30260f8bb799172748ee05eb2 100644
+--- a/src/index.d.ts
++++ b/src/index.d.ts
+@@ -24,7 +24,8 @@ declare class SpInAppUpdates {
+ 
+   public startUpdate(updateOptions: StartUpdateOptions): Promise<void>;
+ 
+-  public installUpdate(): void;
++  public dispose(): void;
++  public installUpdate(): Promise<void>;
+ 
+   public addStatusUpdateListener(callback: AndroidStatusEventListener): void;
+   public removeStatusUpdateListener(callback: AndroidStatusEventListener): void;
+diff --git a/src/types.ts b/src/types.ts
+index 979740f7605402d5ca6a421c8b206668f9db599e..a59fe1e84ca1829431bd8f3ece5d584eb72789ec 100644
+--- a/src/types.ts
++++ b/src/types.ts
+@@ -11,7 +11,8 @@ export enum AndroidInstallStatus {
+ 
+ export type InstallationResult =
+   | AndroidInstallStatus.INSTALLED
+-  | AndroidInstallStatus.CANCELED;
++  | AndroidInstallStatus.CANCELED
++  | AndroidInstallStatus.FAILED;
+ 
+ export type StatusUpdateEvent = {
+   bytesDownloaded: any;
+@@ -92,6 +93,7 @@ export enum AndroidUpdateType {
+ export type AndroidInAppUpdateExtras = {
+   updateAvailability: AndroidAvailabilityStatus;
+   versionCode: SemverVersionCode;
++  installStatus: AndroidInstallStatus;
+   isFlexibleUpdateAllowed: boolean;
+   isImmediateUpdateAllowed: boolean;
+   packageName?: string;
