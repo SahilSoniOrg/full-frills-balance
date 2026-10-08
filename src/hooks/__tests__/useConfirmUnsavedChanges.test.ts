@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { confirm } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useConfirmUnsavedChanges } from '../useConfirmUnsavedChanges';
+import { isUpdateRestartBlocked } from '@/src/services/update/updateRestartGuard';
 
 const mockDispatch = jest.fn();
 let mockPreventRemove = false;
@@ -24,7 +25,7 @@ describe('useConfirmUnsavedChanges', () => {
   });
 
   it('prompts before leaving a changed hydrated form', async () => {
-    const { result, rerender } = renderHook(
+    const { result, rerender, unmount } = renderHook(
       ({ fingerprint }: { fingerprint: string }) =>
         useConfirmUnsavedChanges({ fingerprint, baselineReady: true }),
       { initialProps: { fingerprint: 'initial' } },
@@ -34,11 +35,14 @@ describe('useConfirmUnsavedChanges', () => {
     rerender({ fingerprint: 'changed' });
     await waitFor(() => expect(result.current.isDirty).toBe(true));
     expect(mockPreventRemove).toBe(true);
+    expect(isUpdateRestartBlocked()).toBe(true);
 
     act(() => result.current.onBack());
     expect(AppNavigation.back).not.toHaveBeenCalled();
     expect(confirm.show).toHaveBeenCalledWith(
       expect.objectContaining({ confirmText: 'Discard changes' }),
     );
+    unmount();
+    expect(isUpdateRestartBlocked()).toBe(false);
   });
 });

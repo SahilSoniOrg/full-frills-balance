@@ -7,6 +7,7 @@ import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { createPlannedPayment } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { asAccountId } from '@/src/types/ids';
 import { confirm } from '@/src/utils/alerts';
+import { isUpdateRestartBlocked } from '@/src/services/update/updateRestartGuard';
 import type Budget from '@/src/data/models/Budget';
 import type PlannedPayment from '@/src/data/models/PlannedPayment';
 
@@ -115,9 +116,25 @@ beforeEach(() => {
 });
 
 describe.each([
-  ['budget', useBudgetHarness, () => jest.mocked(budgetWriteService.createBudget)],
-  ['planned payment', usePaymentHarness, () => jest.mocked(createPlannedPayment)],
-] as const)('%s save navigation', (_name, useHarness, command) => {
+  [
+    'budget',
+    useBudgetHarness,
+    () => jest.mocked(budgetWriteService.createBudget),
+    (write: Promise<void>) =>
+      jest
+        .mocked(budgetWriteService.createBudget)
+        .mockReturnValueOnce(write.then(() => ({}) as Budget)),
+  ],
+  [
+    'planned payment',
+    usePaymentHarness,
+    () => jest.mocked(createPlannedPayment),
+    (write: Promise<void>) =>
+      jest
+        .mocked(createPlannedPayment)
+        .mockReturnValueOnce(write.then(() => ({ id: 'rent' }) as PlannedPayment)),
+  ],
+] as const)('%s save navigation', (_name, useHarness, command, holdWrite) => {
   async function dirtyForm() {
     const hook = renderHook(useHarness);
     await waitFor(() => expect(hook.result.current.guard.hasBaseline).toBe(true));
@@ -137,6 +154,28 @@ describe.each([
     expect(confirm.show).not.toHaveBeenCalled();
     expect(mockLeft).toHaveBeenCalledTimes(1);
     expect(mockGuardAtNavigation).toHaveBeenCalledWith(false);
+    expect(isUpdateRestartBlocked()).toBe(false);
+  });
+
+  it('blocks update restarts while persistence is pending, then releases after success', async () => {
+    let finishWrite = () => {};
+    holdWrite(
+      new Promise<void>(resolve => {
+        finishWrite = resolve;
+      }),
+    );
+    const { result } = await dirtyForm();
+    let saving: Promise<void>;
+    act(() => {
+      saving = result.current.save();
+    });
+    expect(mockPreventRemove).toBe(false);
+    expect(isUpdateRestartBlocked()).toBe(true);
+    await act(async () => {
+      finishWrite();
+      await saving;
+    });
+    expect(isUpdateRestartBlocked()).toBe(false);
   });
 
   it('keeps failed saves guarded and retryable', async () => {
@@ -146,6 +185,7 @@ describe.each([
       await result.current.save().catch(() => undefined);
     });
     expect(mockQueuedLeave).toBeUndefined();
+    expect(isUpdateRestartBlocked()).toBe(true);
     act(() => result.current.guard.onBack());
     expect(confirm.show).toHaveBeenCalledTimes(1);
     await act(async () => {

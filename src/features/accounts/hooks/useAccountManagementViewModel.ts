@@ -24,6 +24,7 @@ import {
 import { saveAccountTreeDraft } from '@/src/services/accounts/accountHierarchyCommands';
 import type { AccountTreeDropTarget } from '@/src/services/accounts/accountTreeTargets';
 import { flattenAccountTree } from '@/src/services/accounts/accountTreeProjection';
+import { useUpdateRestartGuard } from '@/src/hooks/useUpdateRestartGuard';
 
 function toBaselineRows(accounts: readonly AccountFields[]): AccountTreeRowState[] {
   return accounts.map(account => ({
@@ -116,6 +117,7 @@ export function useAccountManagementViewModel() {
     return { pendingAccountIds, pendingPreviews };
   }, [draft.operations, draft.placementChanges, treeSnapshot]);
   const isDraftDirty = isAccountTreeDraftDirty(draft);
+  useUpdateRestartGuard(isDraftDirty || isSavingDraft);
 
   useEffect(() => {
     if (!initialFocusedId || allModeAccounts.length === 0) return;

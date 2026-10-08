@@ -3,6 +3,7 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { useNavigation } from 'expo-router';
 import { usePreventRemove } from 'expo-router/react-navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useUpdateRestartGuard } from './useUpdateRestartGuard';
 
 interface UseConfirmUnsavedChangesOptions {
   fingerprint: string;
@@ -36,6 +37,8 @@ export function useConfirmUnsavedChanges({
   }, [baseline, baselineReady]);
 
   const isDirty = baseline !== null && fingerprint !== baseline;
+  // Navigation prompts are disabled during persistence; restarting must remain blocked.
+  useUpdateRestartGuard((isDirty || disabled) && !isLeaving && !leaveAfterSave);
 
   const leaveWithoutPrompt = useCallback((action: () => void) => {
     pendingLeaveActionRef.current = action;

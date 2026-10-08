@@ -5,6 +5,7 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { useNavigation } from 'expo-router';
 import { usePreventRemove } from 'expo-router/react-navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useUpdateRestartGuard } from '@/src/hooks/useUpdateRestartGuard';
 
 export type JournalDraftFingerprintInput = {
   description: string;
@@ -62,6 +63,7 @@ export function useJournalEntryLeaveGuard(input: { fingerprint: string; baseline
   }, [baseline, baselineReady]);
 
   const isDirty = baseline !== null && fingerprint !== baseline;
+  useUpdateRestartGuard(isDirty && !isLeaving);
 
   const leaveWithoutPrompt = useCallback((action: () => void) => {
     pendingLeaveActionRef.current = action;
