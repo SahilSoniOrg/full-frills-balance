@@ -67,10 +67,23 @@ PY
     fi
   fi
   if [[ "$(cat "$cache")" == "on" ]]; then
+    export DETOX_EMULATOR_ACCEL_ARGS="-accel on"
     export DETOX_EMULATOR_BOOT_ARGS="-accel on"
   else
+    export DETOX_EMULATOR_ACCEL_ARGS="-accel off"
     export DETOX_EMULATOR_BOOT_ARGS="-accel off"
     echo "KVM cannot create a vCPU on this kernel. Android emulator will use software emulation (-accel off), which is much slower than KVM." >&2
+  fi
+}
+
+# Only `-accel on|off`. Never forward snapshot flags from DETOX_EMULATOR_BOOT_ARGS:
+# `-no-snapshot-save` makes `adb emu avd snapshot save` a no-op.
+android_emulator_accel_token() {
+  local raw="${DETOX_EMULATOR_ACCEL_ARGS:-} ${DETOX_EMULATOR_BOOT_ARGS:-}"
+  if [[ "$raw" == *"-accel on"* && "$raw" != *"-accel off"* ]]; then
+    printf '%s\n' "-accel on"
+  else
+    printf '%s\n' "-accel off"
   fi
 }
 
@@ -98,51 +111,42 @@ android_emulator_services_ready() {
   return 0
 }
 
-android_boot_emulator_for_detox() {
-  local avd adb emu boot_args snap_args i snap
+android_start_emulator() {
+  local mode="$1"
+  local avd adb emu boot_args snap_args
   avd="${DETOX_AVD_NAME:-Pixel_2_API_36_Fast}"
   adb="$ANDROID_HOME/platform-tools/adb"
   emu="$ANDROID_HOME/emulator/emulator"
-  snap="$(android_snapshot_dir "$avd")"
-  boot_args=()
-  if [[ -n "${DETOX_EMULATOR_BOOT_ARGS:-}" ]]; then
-    # shellcheck disable=SC2206
-    boot_args=(${DETOX_EMULATOR_BOOT_ARGS})
-  fi
-  # Guest software GLES. Host swiftshader left the main thread in
-  # IGraphicsStats.requestBufferForProcess long enough for Detox's 5s ANR watchdog.
-  # `-gpu software` is last so it wins over an earlier Detox/AVD gpu flag.
-  snap_args=(-no-snapshot-load -no-snapshot-save)
-  if [[ -d "$snap" ]]; then
+  # Accel token only. Snapshot flags are chosen below so a failed load cannot
+  # leave `-no-snapshot-save` on a boot that still needs to write a snapshot.
+  # shellcheck disable=SC2206
+  boot_args=($(android_emulator_accel_token))
+  if [[ "$mode" == "load" ]]; then
     echo "Loading booted snapshot detox-ready"
     snap_args=(-snapshot detox-ready -no-snapshot-save)
-  fi
-
-  "$adb" start-server >/dev/null
-  if android_emulator_services_ready; then
-    echo "Android emulator is already booted (package and settings services are up)."
-  elif pgrep -f 'qemu-system-x86_64' >/dev/null 2>&1; then
-    echo "QEMU is already running for ${avd}; waiting for package and settings services."
   else
-    echo "Booting AVD ${avd} (${DETOX_EMULATOR_BOOT_ARGS:-default accel}, software GPU)..."
-    nohup "$emu" -avd "$avd" -port 5554 -no-window -no-audio -no-boot-anim -no-metrics \
-      -memory 3072 -cores 4 \
-      "${boot_args[@]}" "${snap_args[@]}" -gpu software \
-      >"${HOME}/.android/emulator-detox.log" 2>&1 &
-    echo $! >"${HOME}/.android/emulator-detox.pid"
+    echo "Cold-booting ${avd} so a snapshot can be saved"
+    snap_args=(-no-snapshot-load)
   fi
+  echo "Booting AVD ${avd} (${mode}, software GPU)..."
+  nohup "$emu" -avd "$avd" -port 5554 -no-window -no-audio -no-boot-anim -no-metrics \
+    -memory 3072 -cores 4 \
+    "${boot_args[@]}" "${snap_args[@]}" -gpu software \
+    >"${HOME}/.android/emulator-detox.log" 2>&1 &
+  echo $! >"${HOME}/.android/emulator-detox.pid"
+}
 
+android_wait_for_emulator_services() {
+  local adb i
+  adb="$ANDROID_HOME/platform-tools/adb"
   "$adb" wait-for-device
   for i in $(seq 1 90); do
     if android_emulator_services_ready; then
       "$adb" shell settings put global window_animation_scale 0 >/dev/null
       "$adb" shell settings put global transition_animation_scale 0 >/dev/null
       "$adb" shell settings put global animator_duration_scale 0 >/dev/null
+      "$adb" shell wm dismiss-keyguard >/dev/null 2>&1 || true
       echo "Android package and settings services are up."
-      # A Detox relaunch should resume this snapshot instead of cold-booting.
-      if [[ -d "$snap" ]]; then
-        export DETOX_EMULATOR_BOOT_ARGS="${DETOX_EMULATOR_BOOT_ARGS:-} -snapshot detox-ready -no-snapshot-save -gpu software"
-      fi
       return 0
     fi
     sleep 10
@@ -150,6 +154,68 @@ android_boot_emulator_for_detox() {
   echo "Android package/settings services did not start. Emulator log tail:" >&2
   tail -n 40 "${HOME}/.android/emulator-detox.log" >&2 || true
   return 1
+}
+
+android_boot_emulator_for_detox() {
+  local avd adb snap marker mode
+  avd="${DETOX_AVD_NAME:-Pixel_2_API_36_Fast}"
+  adb="$ANDROID_HOME/platform-tools/adb"
+  snap="$(android_snapshot_dir "$avd")"
+  marker="${HOME}/.android/avd/${avd}.avd/detox-ready-marker"
+  export DETOX_EMULATOR_ACCEL_ARGS="$(android_emulator_accel_token)"
+
+  "$adb" start-server >/dev/null
+  if android_emulator_services_ready; then
+    echo "Android emulator is already booted (package and settings services are up)."
+    return 0
+  fi
+  if pgrep -f 'qemu-system-x86_64' >/dev/null 2>&1; then
+    echo "QEMU is already running for ${avd}; waiting for package and settings services."
+    android_wait_for_emulator_services
+    return $?
+  fi
+
+  mode="fresh"
+  if [[ -d "$snap" && -f "$marker" ]]; then
+    mode="load"
+  fi
+  android_start_emulator "$mode"
+  if [[ "$mode" == "load" ]]; then
+    # A corrupt snapshot fails in the first seconds, then cold-boots with
+    # `-no-snapshot-save` so the replacement save is ignored. Bail out before
+    # that throwaway boot finishes.
+    local i
+    for i in $(seq 1 12); do
+      if grep -q "Failed to load snapshot" "${HOME}/.android/emulator-detox.log"; then
+        echo "Snapshot detox-ready did not load. Deleting it and cold-booting."
+        pkill -f 'qemu-system-x86_64' >/dev/null 2>&1 || true
+        sleep 2
+        rm -rf "$snap" "$marker"
+        android_start_emulator fresh
+        break
+      fi
+      if android_emulator_services_ready; then
+        break
+      fi
+      sleep 5
+    done
+  fi
+  local services_up=0
+  if android_wait_for_emulator_services; then
+    services_up=1
+  fi
+  # A failed load can outlive the short poll above. Recover even if that boot
+  # never became ready, because it was started with `-no-snapshot-save`.
+  if grep -q "Failed to load snapshot" "${HOME}/.android/emulator-detox.log"; then
+    echo "Snapshot detox-ready did not load. Deleting it and cold-booting."
+    pkill -f 'qemu-system-x86_64' >/dev/null 2>&1 || true
+    sleep 2
+    rm -rf "$snap" "$marker"
+    android_start_emulator fresh
+    android_wait_for_emulator_services
+    return $?
+  fi
+  [[ "$services_up" == "1" ]]
 }
 
 # Install the release APKs once, AOT-compile them, warm a process, then snapshot.
@@ -171,7 +237,7 @@ android_install_detox_apks_and_snapshot() {
     if "$adb" shell pm path in.sahilsoni.fullfrillsbalance >/dev/null 2>&1 \
       && "$adb" shell pm path in.sahilsoni.fullfrillsbalance.test >/dev/null 2>&1; then
       echo "Reusing snapshotted Detox install."
-      export DETOX_EMULATOR_BOOT_ARGS="${DETOX_EMULATOR_BOOT_ARGS:-} -snapshot detox-ready -no-snapshot-save -gpu software"
+      export DETOX_EMULATOR_BOOT_ARGS="$(android_emulator_accel_token) -snapshot detox-ready -no-snapshot-save -gpu software"
       return 0
     fi
   fi
@@ -200,8 +266,12 @@ android_install_detox_apks_and_snapshot() {
   "$adb" shell am force-stop in.sahilsoni.fullfrillsbalance >/dev/null 2>&1 || true
   echo "Saving booted snapshot detox-ready..."
   "$adb" emu avd snapshot save detox-ready
+  if grep -q "save request is ignored" "${HOME}/.android/emulator-detox.log"; then
+    echo "Emulator refused to save detox-ready because snapshots are disabled on this boot." >&2
+    return 1
+  fi
   touch "$marker"
-  export DETOX_EMULATOR_BOOT_ARGS="${DETOX_EMULATOR_BOOT_ARGS:-} -snapshot detox-ready -no-snapshot-save -gpu software"
+  export DETOX_EMULATOR_BOOT_ARGS="${DETOX_EMULATOR_ACCEL_ARGS:--accel off} -snapshot detox-ready -no-snapshot-save -gpu software"
 }
 
 # Detox kills `adb install` after 60s. A 65MB release APK on software emulation
