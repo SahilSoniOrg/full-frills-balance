@@ -40,6 +40,7 @@ fi
 # Boot first and wait until that service answers so Detox can reuse the emulator.
 if [[ "$(uname)" == "Linux" ]]; then
   android_boot_emulator_for_detox
+  android_relax_detox_adb_timeouts "$ROOT"
 fi
 
 exec bunx detox test --configuration android.emu.release e2e/specs --runInBand

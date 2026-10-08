@@ -107,6 +107,26 @@ android_boot_emulator_for_detox() {
   return 1
 }
 
+# Detox kills `adb install` after 60s. A 65MB release APK on software emulation
+# does not finish that quickly, and the killed install fails the suite.
+android_relax_detox_adb_timeouts() {
+  local root="${1:-.}"
+  local adb_js="$root/node_modules/detox/src/devices/common/drivers/android/exec/ADB.js"
+  if [[ ! -f "$adb_js" ]]; then
+    return 0
+  fi
+  python3 - "$adb_js" <<'PY'
+import pathlib, sys
+path = pathlib.Path(sys.argv[1])
+text = path.read_text()
+old = "const DEFAULT_INSTALL_OPTIONS = {\n  timeout: 60000,\n  retries: 3,\n};"
+new = "const DEFAULT_INSTALL_OPTIONS = {\n  timeout: 600000,\n  retries: 3,\n};"
+if old in text:
+    path.write_text(text.replace(old, new, 1))
+    print("Raised Detox adb install timeout from 60s to 600s for slow emulation.")
+PY
+}
+
 android_ensure_gradle_heap() {
   local mem_kb gradle_home props
   mem_kb="$(awk '/MemTotal:/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)"
