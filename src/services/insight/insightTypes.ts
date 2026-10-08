@@ -31,6 +31,7 @@ export interface Insight {
   accountSubtype?: AccountSubtype;
   accountName?: string;
   storeUrl?: string;
+  updateReady?: boolean;
 }
 
 export interface CalculationInput {

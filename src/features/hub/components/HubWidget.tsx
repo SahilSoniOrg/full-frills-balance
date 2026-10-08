@@ -100,6 +100,8 @@ export const HubWidget = ({
         <View style={styles.listContent}>
           {insights.map(insight => {
             const presentation = insightTypePresentation(insight.type);
+            if (insight.type === 'app-update' && insight.updateReady)
+              presentation.actionLabel = AppConfig.strings.update.restart;
             const severity = resolveInsightSeverityPresentation(
               insight.severity,
               theme,

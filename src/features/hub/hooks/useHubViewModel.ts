@@ -10,6 +10,7 @@ import { journalBalanceInsightService } from '@/src/services/integrity';
 import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { updateInsightService } from '@/src/services/update/updateInsightService';
+import { appUpdateService } from '@/src/services/update/appUpdateService';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 
@@ -86,6 +87,10 @@ export function useHubViewModel(): HubViewModel {
   }, []);
 
   const onOpenInsight = useCallback((insight: Insight) => {
+    if (insight.type === 'app-update') {
+      void appUpdateService.update();
+      return;
+    }
     if (insight.type === 'unbalanced-journals') {
       analytics.track('entrypoint_selected', {
         screen: 'hub',

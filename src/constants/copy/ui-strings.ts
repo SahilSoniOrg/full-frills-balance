@@ -81,6 +81,16 @@ export const UI_STRINGS = {
       'This version of Full Frills is no longer supported. Update the app to keep using your books.',
     availableMessage: 'A newer version of Full Frills Balance is available.',
     updateNow: 'Update now',
+    ready: 'Update downloaded. Restart when you’re ready.',
+    restart: 'Restart to update',
+    later: 'Later',
+    downloading: (progress?: number) =>
+      progress === undefined
+        ? 'Downloading update…'
+        : `Downloading update… ${Math.round(progress * 100)}%`,
+    installing: 'Installing update…',
+    installFailed: 'The update could not be installed. Try again.',
+    finishEditing: 'Save or discard your changes before restarting to update.',
     retry: 'Check again',
     unavailable: 'We could not open the app store. Check your connection and try again.',
     exportBackup: 'Export a backup first',

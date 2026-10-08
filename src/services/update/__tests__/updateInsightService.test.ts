@@ -72,6 +72,23 @@ describe('updateInsightService', () => {
     expect(updateInsightService.observe('workplace-3' as WorkplaceId, false)).toEqual([]);
   });
 
+  it('preserves availability dismissal across publishing and treats readiness as a new notice', () => {
+    const workplaceId = 'workplace-ready' as WorkplaceId;
+    updateInsightService.dismissAvailableUpdate(policy);
+    updateInsightService.publishAvailableUpdate(policy);
+    expect(updateInsightService.isNoticeDismissed(policy)).toBe(true);
+    const before = updateInsightService.observe(workplaceId, false);
+    updateInsightService.publishAvailableUpdate(policy, true);
+    expect(updateInsightService.isNoticeDismissed(policy, true)).toBe(false);
+    updateInsightService.dismissAvailableUpdate(policy, true);
+    const ready = updateInsightService.observe(workplaceId, false);
+    expect(ready[0].updateReady).toBe(true);
+    expect(ready[0].message).not.toBe(before[0].message);
+    expect(updateInsightService.isNoticeDismissed({ ...policy, latestBuild: 13 }, true)).toBe(
+      false,
+    );
+  });
+
   it('delegates dismissal and restore to workplace preferences', () => {
     const workplaceId = 'workplace-4' as WorkplaceId;
 

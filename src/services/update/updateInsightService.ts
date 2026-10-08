@@ -10,16 +10,22 @@ const DISMISSED_KEY = 'full_frills_balance_update_notice_dismissed_v1';
 class UpdateInsightService {
   private readonly listeners = new Set<Listener>();
   private readonly snapshots = new Map<string, Insight[]>();
-  private current: { policy: VersionPolicy; dismissed: boolean } | null = null;
+  private current: { policy: VersionPolicy; dismissed: boolean; ready: boolean } | null = null;
 
   observe(workplaceId: WorkplaceId, dismissed: boolean): Insight[] {
     const key = `${workplaceId}:${dismissed}`;
     const current = this.current;
-    const insight = current?.dismissed ? this.buildInsight(current.policy) : null;
+    const insight = current?.dismissed ? this.buildInsight(current.policy, current.ready) : null;
     const dismissedIds = preferences.insights.dismissedPatternIds(workplaceId);
     const result = insight && dismissedIds.includes(insight.id) === dismissed ? [insight] : [];
     const previous = this.snapshots.get(key);
-    if (!previous || previous.length !== result.length || previous[0]?.id !== result[0]?.id) {
+    if (
+      !previous ||
+      previous.length !== result.length ||
+      previous[0]?.id !== result[0]?.id ||
+      previous[0]?.updateReady !== result[0]?.updateReady ||
+      previous[0]?.message !== result[0]?.message
+    ) {
       this.snapshots.set(key, result);
       return result;
     }
@@ -41,10 +47,15 @@ class UpdateInsightService {
     return () => this.listeners.delete(listener);
   }
 
-  publishAvailableUpdate(policy: VersionPolicy): void {
+  isNoticeDismissed(policy: VersionPolicy, ready = false): boolean {
+    return storage.getString(DISMISSED_KEY) === this.policyKey(policy, ready);
+  }
+
+  publishAvailableUpdate(policy: VersionPolicy, ready = false): void {
     this.current = {
       policy,
-      dismissed: storage.getString(DISMISSED_KEY) === this.policyKey(policy),
+      dismissed: this.isNoticeDismissed(policy, ready),
+      ready,
     };
     this.notify();
   }
@@ -54,27 +65,32 @@ class UpdateInsightService {
     this.notify();
   }
 
-  dismissAvailableUpdate(policy: VersionPolicy): void {
-    storage.set(DISMISSED_KEY, this.policyKey(policy));
-    this.current = { policy, dismissed: true };
+  dismissAvailableUpdate(policy: VersionPolicy, ready = false): void {
+    storage.set(DISMISSED_KEY, this.policyKey(policy, ready));
+    this.current = { policy, dismissed: true, ready };
     this.notify();
   }
 
-  private buildInsight(policy: VersionPolicy): Insight {
+  private buildInsight(policy: VersionPolicy, ready: boolean): Insight {
     return {
       id: `app-update-${policy.latestBuild}`,
       type: 'app-update',
       severity: 'low',
-      message: policy.availableMessage ?? 'A newer version is available.',
-      description: 'A newer version of Full Frills Balance is ready to install.',
-      suggestion: 'Update the app from your app store.',
+      message: ready
+        ? 'Update downloaded. Restart when you’re ready.'
+        : (policy.availableMessage ?? 'A newer version is available.'),
+      description: ready
+        ? 'The update has finished downloading.'
+        : 'A newer version of Full Frills Balance is available.',
+      suggestion: ready ? 'Restart to update.' : 'Update the app.',
+      updateReady: ready,
       journalIds: [],
       storeUrl: policy.storeUrl,
     };
   }
 
-  private policyKey(policy: VersionPolicy): string {
-    return `${policy.latestBuild ?? ''}:${policy.storeUrl}`;
+  private policyKey(policy: VersionPolicy, ready = false): string {
+    return `${policy.latestBuild ?? ''}:${policy.storeUrl}${ready ? ':ready' : ''}`;
   }
 
   private notify(): void {

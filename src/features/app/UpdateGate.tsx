@@ -10,18 +10,15 @@ import { workplaceService } from '@/src/services/WorkplaceService';
 import type { BackupScope } from '@/src/services/export';
 import { preferences } from '@/src/services/preferences';
 import type { WorkplaceId } from '@/src/types/ids';
-import {
-  checkVersion,
-  isVersionPolicyConfigured,
-} from '@/src/services/update/versionPolicyService';
+import { appUpdateService } from '@/src/services/update/appUpdateService';
 import { exportUpdateBackup } from '@/src/services/export';
-import type { VersionPolicy } from '@/src/services/update/types';
 import { updateInsightService } from '@/src/services/update/updateInsightService';
 import { toast } from '@/src/utils/alerts';
 import { readE2eLaunchConfig } from '@/src/testing/e2eLaunchArgs';
-import { AppState, Linking, Platform, StyleSheet, TouchableOpacity } from 'react-native';
+import { AppState, StyleSheet, TouchableOpacity } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function isE2eAvailableNotice(): boolean {
   return (
@@ -31,18 +28,15 @@ function isE2eAvailableNotice(): boolean {
   );
 }
 
-type GateState =
-  | { kind: 'checking' }
-  | { kind: 'allowed'; available?: VersionPolicy }
-  | { kind: 'required'; policy: VersionPolicy }
-  | { kind: 'error'; policy: VersionPolicy };
-
 export function UpdateGate({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<GateState>(() =>
-    Platform.OS === 'web' || !isVersionPolicyConfigured()
-      ? { kind: 'allowed' }
-      : { kind: 'checking' },
+  const state = useSyncExternalStore(
+    appUpdateService.subscribe,
+    appUpdateService.getSnapshot,
+    appUpdateService.getSnapshot,
   );
+  const check = appUpdateService.check;
+  const [hiddenProgressTarget, setHiddenProgressTarget] = useState<number | null>(null);
+  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const [isExporting, setIsExporting] = useState(false);
   const [exportFailed, setExportFailed] = useState(false);
@@ -57,48 +51,24 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
   );
   const notifiedAvailableUpdate = useRef<string | null>(null);
 
-  const check = useCallback(async () => {
-    if (Platform.OS === 'web' || !isVersionPolicyConfigured()) {
-      setState({ kind: 'allowed' });
-      return;
-    }
-    setState(previous =>
-      previous.kind === 'required' || previous.kind === 'error' ? previous : { kind: 'checking' },
-    );
-    try {
-      const result = await checkVersion();
-      setState(
-        result.kind === 'required'
-          ? { kind: 'required', policy: result.policy }
-          : { kind: 'allowed', available: result.available },
-      );
-      if (result.kind === 'allowed' && result.available)
-        updateInsightService.publishAvailableUpdate(result.available);
-      else updateInsightService.clearAvailableUpdate();
-    } catch {
-      // A network outage must not brick a device that has never received a policy.
-      setState(previous => (previous.kind === 'required' ? previous : { kind: 'allowed' }));
-    }
+  const update = useCallback(() => {
+    void appUpdateService.update();
   }, []);
 
-  const openStore = useCallback(
-    async (policy: VersionPolicy) => {
-      try {
-        const canOpen = await Linking.canOpenURL(policy.storeUrl);
-        if (!canOpen) throw new Error('Store URL cannot be opened');
-        await Linking.openURL(policy.storeUrl);
-      } catch {
-        if (state.kind === 'required' || state.kind === 'error') {
-          setState({ kind: 'error', policy });
-        } else {
-          toast.error(AppConfig.strings.update.unavailable);
-        }
-      }
-    },
-    [state.kind],
-  );
+  useEffect(() => {
+    if (!state.error) return;
+    const strings = AppConfig.strings.update;
+    toast.error(
+      state.error === 'unsaved'
+        ? strings.finishEditing
+        : state.error === 'install'
+          ? strings.installFailed
+          : strings.unavailable,
+    );
+  }, [state.error]);
 
   useEffect(() => {
+    const disconnect = appUpdateService.connect();
     const initialCheck = setTimeout(() => void check(), 0);
     const subscription = AppState.addEventListener('change', nextState => {
       if (nextState === 'active') void check();
@@ -106,35 +76,47 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
     return () => {
       clearTimeout(initialCheck);
       subscription.remove();
+      disconnect();
     };
   }, [check]);
 
+  const ready = state.phase === 'downloaded';
   useEffect(() => {
-    if (state.kind !== 'allowed' || !state.available?.latestBuild) return;
-    const noticeKey = `${state.available.latestBuild}:${state.available.storeUrl}`;
-    if (notifiedAvailableUpdate.current === noticeKey) return;
-    notifiedAvailableUpdate.current = noticeKey;
-
-    const notice = state.available;
+    const notice = state.notice;
+    if (state.access !== 'allowed' || !notice?.latestBuild || (state.phase !== 'idle' && !ready))
+      return;
+    updateInsightService.publishAvailableUpdate(notice, ready);
+    const noticeKey = `${notice.latestBuild}:${ready ? 'ready' : 'available'}`;
+    if (
+      notifiedAvailableUpdate.current === noticeKey ||
+      updateInsightService.isNoticeDismissed(notice, ready)
+    )
+      return;
     const timeoutId = setTimeout(() => {
-      toast.info(notice.availableMessage ?? AppConfig.strings.update.availableMessage, {
-        duration: isE2eAvailableNotice() ? 120000 : undefined,
-        dismissible: true,
-        action: {
-          label: AppConfig.strings.update.updateNow,
-          onPress: () => void openStore(notice),
+      notifiedAvailableUpdate.current = noticeKey;
+      toast.info(
+        ready
+          ? AppConfig.strings.update.ready
+          : (notice.availableMessage ?? AppConfig.strings.update.availableMessage),
+        {
+          key: 'app-update',
+          duration: isE2eAvailableNotice() ? 120000 : undefined,
+          dismissible: true,
+          action: {
+            label: ready ? AppConfig.strings.update.restart : AppConfig.strings.update.updateNow,
+            onPress: update,
+          },
+          onDismiss: () => updateInsightService.dismissAvailableUpdate(notice, ready),
         },
-        onDismiss: () => updateInsightService.dismissAvailableUpdate(notice),
-      });
+      );
     }, 0);
     return () => clearTimeout(timeoutId);
-  }, [openStore, state]);
+  }, [ready, state.access, state.notice, state.phase, update]);
 
   useEffect(() => {
-    if (state.kind === 'required' || state.kind === 'error') {
-      void SplashScreen.hideAsync();
-    }
-  }, [state.kind]);
+    if (!state.notice || state.access === 'required') updateInsightService.clearAvailableUpdate();
+    if (state.access === 'required') void SplashScreen.hideAsync();
+  }, [state.access, state.notice, state.phase]);
 
   const exportBackup = async () => {
     setExportFailed(false);
@@ -158,9 +140,50 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
     setIsBackupScopeVisible(true);
   };
 
-  if (state.kind === 'allowed') return <>{children}</>;
+  if (state.access === 'allowed') {
+    return (
+      <Box flex={1}>
+        {children}
+        {hiddenProgressTarget !== state.notice?.latestBuild &&
+          (ready || state.phase === 'downloading' || state.phase === 'installing') && (
+            <Box
+              padding="md"
+              style={{ paddingBottom: Math.max(insets.bottom, 16) }}
+              background="surfaceSecondary"
+              testID="update-download-status"
+            >
+              <AppText>
+                {ready
+                  ? AppConfig.strings.update.ready
+                  : state.phase === 'installing'
+                    ? AppConfig.strings.update.installing
+                    : AppConfig.strings.update.downloading(state.progress)}
+              </AppText>
+              {ready && (
+                <Stack gap="sm">
+                  <AppButton testID="update-restart" onPress={update}>
+                    {AppConfig.strings.update.restart}
+                  </AppButton>
+                  <AppButton
+                    testID="update-later"
+                    variant="ghost"
+                    onPress={() => {
+                      setHiddenProgressTarget(state.notice?.latestBuild ?? null);
+                      if (state.notice)
+                        updateInsightService.dismissAvailableUpdate(state.notice, true);
+                    }}
+                  >
+                    {AppConfig.strings.update.later}
+                  </AppButton>
+                </Stack>
+              )}
+            </Box>
+          )}
+      </Box>
+    );
+  }
 
-  if (state.kind === 'checking') {
+  if (state.access === 'checking') {
     return (
       <Box flex={1} background="background" justifyContent="center" alignItems="center">
         <AppText variant="body" color="secondary">
@@ -169,6 +192,9 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
       </Box>
     );
   }
+
+  const policy = state.policy;
+  if (!policy) return <>{children}</>;
 
   return (
     <Box flex={1} background="background" justifyContent="center" alignItems="center" padding="xl">
@@ -196,11 +222,26 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
               {AppConfig.strings.update.requiredTitle}
             </AppText>
             <AppText variant="body" color="secondary" align="center">
-              {state.policy.message || AppConfig.strings.update.requiredSubtitle}
+              {policy.message || AppConfig.strings.update.requiredSubtitle}
             </AppText>
           </Stack>
 
-          {!!state.policy.changelog?.length && (
+          {state.phase !== 'idle' && (
+            <AppText
+              testID="update-download-status"
+              variant="caption"
+              color="secondary"
+              align="center"
+            >
+              {ready
+                ? AppConfig.strings.update.ready
+                : state.phase === 'installing'
+                  ? AppConfig.strings.update.installing
+                  : AppConfig.strings.update.downloading(state.progress)}
+            </AppText>
+          )}
+
+          {!!policy.changelog?.length && (
             <Box
               as={TouchableOpacity}
               testID="update-view-changelog"
@@ -219,8 +260,8 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
               <Stack gap="xs" flex={1}>
                 <AppText weight="semibold">{AppConfig.strings.update.viewChangelog}</AppText>
                 <AppText variant="caption" color="secondary">
-                  {state.policy.changelog.length} update highlight
-                  {state.policy.changelog.length === 1 ? '' : 's'}
+                  {policy.changelog.length} update highlight
+                  {policy.changelog.length === 1 ? '' : 's'}
                 </AppText>
               </Stack>
               <AppIcon name={Icon.ArrowRight} size={Size.iconSm} color={theme.textSecondary} />
@@ -228,8 +269,14 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
           )}
 
           <Stack gap="md" width="100%">
-            <AppButton testID="update-now" size="lg" onPress={() => void openStore(state.policy)}>
-              {AppConfig.strings.update.updateNow}
+            <AppButton
+              testID="update-now"
+              size="lg"
+              loading={state.phase === 'starting' || state.phase === 'installing'}
+              disabled={state.phase === 'downloading'}
+              onPress={update}
+            >
+              {ready ? AppConfig.strings.update.restart : AppConfig.strings.update.updateNow}
             </AppButton>
             <AppButton
               testID="update-export-backup"
@@ -258,14 +305,16 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
             </AppButton>
           </Stack>
 
-          {state.kind === 'error' && (
+          {state.error && (
             <AppText
               variant="caption"
               color="secondary"
               align="center"
               style={{ color: theme.textSecondary }}
             >
-              {AppConfig.strings.update.unavailable}
+              {state.error === 'install'
+                ? AppConfig.strings.update.installFailed
+                : AppConfig.strings.update.unavailable}
             </AppText>
           )}
         </Stack>
@@ -280,7 +329,7 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
         closeTestID="update-close-changelog"
       >
         <Stack gap="md">
-          {state.policy.changelog?.map((item, index) => (
+          {policy.changelog?.map((item, index) => (
             <AppText
               key={`${index}-${item}`}
               testID={`update-changelog-item-${index}`}
