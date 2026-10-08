@@ -21,6 +21,7 @@ if [[ ! -f .env.local && -f .env.e2e.example ]]; then
 fi
 
 android_ensure_kvm
+android_resolve_emulator_accel
 android_ensure_gradle_heap
 
 if [[ ! -f android/local.properties && -d "$ANDROID_HOME" ]]; then

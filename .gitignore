@@ -69,6 +69,9 @@ dist-analysis*
 .env.local
 artifacts/
 
+# Android emulator verbose log (Detox starts the emulator with cwd = repo root)
+/Pixel_*.log
+
 # Local agent artifacts (not product source)
 .gstack/
 .scratch/

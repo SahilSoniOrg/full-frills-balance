@@ -39,6 +39,39 @@ android_ensure_kvm() {
   echo "KVM is present at /dev/kvm but this user cannot read it. The emulator will fall back to slow software emulation, or fail." >&2
 }
 
+# `emulator -accel-check` only checks that /dev/kvm opens. Nested cloud kernels
+# can still BUG in kvm_arch_vcpu_create. Cache the result: the failing probe
+# segfaults and dirties the kernel log.
+android_resolve_emulator_accel() {
+  if [[ "$(uname)" != "Linux" ]]; then
+    return 0
+  fi
+  if [[ -n "${DETOX_EMULATOR_BOOT_ARGS:-}" ]]; then
+    return 0
+  fi
+  local cache="${HOME}/.android/kvm-vcpu-probe"
+  mkdir -p "${HOME}/.android"
+  if [[ ! -f "$cache" ]]; then
+    if python3 - <<'PY'
+import fcntl, os, sys
+fd = os.open("/dev/kvm", os.O_RDWR)
+vm = fcntl.ioctl(fd, 0xAE01, 0)  # KVM_CREATE_VM
+fcntl.ioctl(vm, 0xAE41, 0)  # KVM_CREATE_VCPU
+PY
+    then
+      echo on >"$cache"
+    else
+      echo off >"$cache"
+    fi
+  fi
+  if [[ "$(cat "$cache")" == "on" ]]; then
+    export DETOX_EMULATOR_BOOT_ARGS="-accel on"
+  else
+    export DETOX_EMULATOR_BOOT_ARGS="-accel off"
+    echo "KVM cannot create a vCPU on this kernel. Android emulator will use software emulation (-accel off), which is much slower than KVM." >&2
+  fi
+}
+
 # The committed Gradle file asks for an 8g heap, which does not fit a 16GB cloud VM.
 android_ensure_gradle_heap() {
   local mem_kb gradle_home props

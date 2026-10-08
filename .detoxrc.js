@@ -76,7 +76,8 @@ module.exports = {
         ? {
             headless: true,
             gpuMode: 'swiftshader_indirect',
-            bootArgs: '-accel on',
+            // Set by scripts/android-env.sh. Default off: -accel-check can pass while vCPU creation hangs.
+            bootArgs: process.env.DETOX_EMULATOR_BOOT_ARGS || '-accel off',
           }
         : {}),
       device: {
