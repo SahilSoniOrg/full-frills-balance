@@ -152,31 +152,55 @@ android_boot_emulator_for_detox() {
   return 1
 }
 
-# Install the release APKs once, then snapshot. Later files use `pm clear`
-# (DETOX_REUSE_INSTALLED_APP) instead of uninstall/reinstall + dex2oat.
+# Install the release APKs once, AOT-compile them, warm a process, then snapshot.
+# Later files use `pm clear` (DETOX_REUSE_INSTALLED_APP) instead of reinstalling.
+# The first cold start otherwise misses AndroidX's 45s startActivitySync idle wait.
 android_install_detox_apks_and_snapshot() {
-  local adb avd snap app test_apk
+  local adb avd snap app test_apk marker pkg
   adb="$ANDROID_HOME/platform-tools/adb"
   avd="${DETOX_AVD_NAME:-Pixel_2_API_36_Fast}"
   snap="$(android_snapshot_dir "$avd")"
+  marker="${HOME}/.android/avd/${avd}.avd/detox-ready-marker"
   app="${1:-android/app/build/outputs/apk/release/app-release.apk}"
   test_apk="${2:-android/app/build/outputs/apk/androidTest/release/app-release-androidTest.apk}"
   if [[ ! -f "$app" || ! -f "$test_apk" ]]; then
     echo "Missing Detox APKs. Run bun run e2e:build:android first." >&2
     return 1
   fi
-  if [[ -d "$snap" && "$snap" -nt "$app" && "$snap" -nt "$test_apk" ]]; then
+  if [[ -d "$snap" && -f "$marker" && "$marker" -nt "$app" && "$marker" -nt "$test_apk" ]]; then
     if "$adb" shell pm path in.sahilsoni.fullfrillsbalance >/dev/null 2>&1 \
       && "$adb" shell pm path in.sahilsoni.fullfrillsbalance.test >/dev/null 2>&1; then
       echo "Reusing snapshotted Detox install."
+      export DETOX_EMULATOR_BOOT_ARGS="${DETOX_EMULATOR_BOOT_ARGS:-} -snapshot detox-ready -no-snapshot-save -gpu software"
       return 0
     fi
   fi
-  echo "Installing Detox APKs (one time for this snapshot)..."
-  "$adb" install -r -t -g "$app"
-  "$adb" install -r -t -g "$test_apk"
+  if ! "$adb" shell pm path in.sahilsoni.fullfrillsbalance >/dev/null 2>&1 \
+    || ! "$adb" shell pm path in.sahilsoni.fullfrillsbalance.test >/dev/null 2>&1 \
+    || [[ "$app" -nt "$snap" || "$test_apk" -nt "$snap" || ! -d "$snap" ]]; then
+    echo "Installing Detox APKs (one time for this snapshot)..."
+    "$adb" install -r -t -g "$app"
+    "$adb" install -r -t -g "$test_apk"
+  fi
+  echo "AOT-compiling Detox APKs so the first launch can go idle within 45s..."
+  for pkg in in.sahilsoni.fullfrillsbalance in.sahilsoni.fullfrillsbalance.test; do
+    "$adb" shell cmd package compile -m speed -f "$pkg" || true
+  done
+  echo "Warming the app process once before the snapshot..."
+  "$adb" shell am force-stop in.sahilsoni.fullfrillsbalance >/dev/null 2>&1 || true
+  "$adb" shell am start -n in.sahilsoni.fullfrillsbalance/.MainActivity >/dev/null 2>&1 || true
+  local i
+  for i in $(seq 1 30); do
+    if "$adb" shell pidof in.sahilsoni.fullfrillsbalance >/dev/null 2>&1; then
+      break
+    fi
+    sleep 2
+  done
+  sleep 20
+  "$adb" shell am force-stop in.sahilsoni.fullfrillsbalance >/dev/null 2>&1 || true
   echo "Saving booted snapshot detox-ready..."
   "$adb" emu avd snapshot save detox-ready
+  touch "$marker"
   export DETOX_EMULATOR_BOOT_ARGS="${DETOX_EMULATOR_BOOT_ARGS:-} -snapshot detox-ready -no-snapshot-save -gpu software"
 }
 
