@@ -64,7 +64,10 @@ bun run e2e:clean:ios
 
 ## Android (local Detox)
 
-Prerequisites: Android SDK, a running or bootable Android 16 ARM64 AVD (default name `Pixel_2_API_36_Fast`).
+Prerequisites: Android SDK, a running or bootable Android 16 AVD (default name `Pixel_2_API_36_Fast`).
+
+- macOS: ARM64 system image (Apple Silicon). Native ABIs stay `arm64-v8a,armeabi-v7a` from `android/gradle.properties`.
+- Linux x86_64 (cloud agents): the same AVD name, with `system-images;android-36;google_apis;x86_64`. `.detoxrc.js` adds `-PreactNativeArchitectures=x86_64` and boots the emulator headless (`swiftshader_indirect`, `-accel on` when KVM is available).
 
 Uses **release + embedded bundle** (`android.emu.release`) — no Metro, no dev launcher.
 
@@ -74,6 +77,16 @@ cp .env.e2e.example .env.local         # optional: EXPO_PUBLIC_E2E=1
 bun run e2e:build:android
 bun run e2e:test:android
 ```
+
+Linux cloud agents install the toolchain once per environment build via `.cursor/environment.json` (`scripts/android-cloud-setup.sh`). On a fresh VM:
+
+```bash
+bun run e2e:setup:android
+bun run e2e:build:android
+bun run e2e:test:android
+```
+
+KVM (`/dev/kvm`) is used when the device node is readable. Without it the emulator falls back to software emulation and the suite is much slower. The setup script grants access with `chmod 666 /dev/kvm` when passwordless sudo is available. Gradle on machines under 24GB RAM is capped at a 3GB heap in the user `gradle.properties`, because the committed project file requests 8GB.
 
 Use an existing AVD:
 
