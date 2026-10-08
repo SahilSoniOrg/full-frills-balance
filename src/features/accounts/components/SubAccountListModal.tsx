@@ -1,11 +1,11 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { AppButton, AppText, Badge, IvyIcon } from '@/src/components/core';
-import { Opacity, Spacing } from '@/src/constants';
+import { AppText, IvyIcon } from '@/src/components/core';
+import { Opacity, Size, Spacing } from '@/src/constants';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { withOpacity } from '@/src/utils/color-math';
+import { getReadableColor, withOpacity } from '@/src/utils/color-math';
 import { SubAccountViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import { StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 interface SubAccountListModalProps {
   visible: boolean;
@@ -23,6 +23,9 @@ export function SubAccountListModal({
   isLoading,
 }: SubAccountListModalProps) {
   const { theme } = useTheme();
+  const { width, fontScale } = useWindowDimensions();
+  const stackBalances = width / fontScale < 320;
+  const hasMultipleCurrencies = new Set(subAccounts.map(account => account.currencyCode)).size > 1;
 
   return (
     <ModalSurface
@@ -33,19 +36,21 @@ export function SubAccountListModal({
       animationType="fade"
       maxHeightPercent={70}
       fixedHeight={false}
-      footer={
-        <View style={styles.footer}>
-          <AppButton onPress={onClose} variant="ghost">
-            Close
-          </AppButton>
-        </View>
-      }
+      accessibilityCloseLabel="Close sub-accounts"
     >
-      <AppText variant="caption" color="secondary">
-        Details for &quot;{parentName}&quot;
-      </AppText>
+      <View style={styles.summary}>
+        <AppText variant="body" weight="medium">
+          {parentName}
+        </AppText>
+        {!isLoading && (
+          <AppText variant="caption" color="secondary">
+            {subAccounts.length} {subAccounts.length === 1 ? 'sub-account' : 'sub-accounts'}
+          </AppText>
+        )}
+      </View>
       {isLoading ? (
         <View style={styles.emptyContainer}>
+          <ActivityIndicator color={theme.textSecondary} />
           <AppText variant="body" color="secondary">
             Loading sub-accounts...
           </AppText>
@@ -57,93 +62,116 @@ export function SubAccountListModal({
           </AppText>
         </View>
       ) : (
-        subAccounts.map((account, index) => (
-          <View
-            key={`${account.id}-${index}`}
-            style={[styles.accountRow, { borderBottomColor: theme.divider }]}
-          >
-            {account.level > 0 &&
-              Array.from({ length: account.level }).map((_, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.indentation,
-                    {
-                      width: Spacing.lg,
-                      borderLeftWidth: 1,
-                      borderLeftColor: withOpacity(theme.textTertiary, Opacity.hover),
-                    },
-                  ]}
+        <View>
+          {subAccounts.map((account, index) => (
+            <View
+              key={account.id}
+              style={[styles.accountRow, { paddingLeft: Math.min(account.level, 3) * Spacing.md }]}
+            >
+              <View style={styles.icon}>
+                <IvyIcon
+                  name={account.icon}
+                  fallbackIcon={account.icon || 'wallet'}
+                  label={account.name}
+                  color={withOpacity(account.accountColor, Opacity.soft)}
+                  iconColor={getReadableColor(account.accountColor, theme.surface)}
+                  size={Size.xl}
+                  shape="square"
                 />
-              ))}
-            <View style={styles.accountLeft}>
-              <IvyIcon
-                name={account.icon}
-                fallbackIcon={account.icon || 'wallet'}
-                label={account.name}
-                color={account.accountColor}
-                size={36}
-                shape="square"
-              />
-              <AppText variant="body" weight="medium" style={styles.accountName} numberOfLines={1}>
-                {account.name}
-              </AppText>
-              {account.isGroup && (
-                <Badge
-                  variant="primary"
-                  size="sm"
-                  style={styles.badge}
-                  backgroundColor={withOpacity(account.categoryColor, Opacity.hover)}
-                  textColor={account.categoryColor}
-                >
-                  Group
-                </Badge>
-              )}
+              </View>
+              <View style={styles.accountContent}>
+                <View style={[styles.accountDetails, stackBalances && styles.stackedDetails]}>
+                  <View style={styles.accountName}>
+                    <AppText variant="body" weight="medium" numberOfLines={2}>
+                      {account.name}
+                    </AppText>
+                    {account.isGroup && (
+                      <AppText variant="caption" color="secondary">
+                        Group
+                      </AppText>
+                    )}
+                  </View>
+                  <View style={[styles.balance, stackBalances && styles.stackedBalance]}>
+                    <MoneyText
+                      amount={account.balanceAmount}
+                      currencyCode={account.currencyCode}
+                      variant="body"
+                      weight="semibold"
+                      align={stackBalances ? 'left' : 'right'}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.85}
+                    />
+                    {hasMultipleCurrencies && (
+                      <AppText
+                        variant="caption"
+                        color="secondary"
+                        align={stackBalances ? 'left' : 'right'}
+                      >
+                        {account.currencyCode}
+                      </AppText>
+                    )}
+                  </View>
+                </View>
+                {index < subAccounts.length - 1 && (
+                  <View style={[styles.separator, { backgroundColor: theme.divider }]} />
+                )}
+              </View>
             </View>
-            <MoneyText
-              amount={account.balanceAmount}
-              currencyCode={account.currencyCode}
-              variant="body"
-              weight="bold"
-            />
-          </View>
-        ))
+          ))}
+        </View>
       )}
     </ModalSurface>
   );
 }
 
 const styles = StyleSheet.create({
+  summary: {
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
   accountRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: Spacing.md,
   },
-  accountLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  icon: {
+    paddingTop: Spacing.md,
+  },
+  accountContent: {
     flex: 1,
+    minWidth: 0,
+  },
+  accountDetails: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    alignItems: 'center',
+    minHeight: Size.xl + Spacing.md * 2,
+    paddingVertical: Spacing.lg,
+  },
+  stackedDetails: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: Spacing.xs,
   },
   accountName: {
-    maxWidth: '50%',
-    marginRight: Spacing.xs,
+    flex: 1,
+    minWidth: 0,
+    gap: Spacing.xs,
   },
-  badge: {
-    marginLeft: 0,
-    alignSelf: 'center',
+  balance: {
+    maxWidth: '45%',
+    flexShrink: 1,
+    gap: Spacing.xs,
   },
-  indentation: {
-    height: 24,
-    alignSelf: 'center',
+  stackedBalance: {
+    maxWidth: '100%',
+  },
+  separator: {
+    height: StyleSheet.hairlineWidth,
   },
   emptyContainer: {
-    padding: Spacing.xxl,
+    paddingVertical: Spacing.xxl,
+    gap: Spacing.md,
     alignItems: 'center',
-  },
-  footer: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
   },
 });
