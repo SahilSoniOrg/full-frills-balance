@@ -1,6 +1,7 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { Icon, AppCard, AppText, Badge, IconButton, IvyIcon } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { AccountParentPath } from '@/src/features/accounts/components/AccountParentPath';
 import type { AccountSummaryCardModel } from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
 import { getAccountFallbackIcon } from '@/src/utils/accountIcon';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
@@ -22,6 +23,8 @@ export function AccountSummaryCard({
   accountTypeVariant,
   accountColor,
   isParent,
+  ancestorPath,
+  onOpenAncestor,
   isDeleted,
   isArchived,
   subAccountCount,
@@ -62,6 +65,7 @@ export function AccountSummaryCard({
           />
         </View>
         <View style={styles.titleInfo}>
+          <AccountParentPath ancestors={ancestorPath} onOpen={onOpenAncestor} />
           <AppText variant="title">{accountName}</AppText>
           <View style={styles.badgesRow}>
             <Badge variant={accountTypeVariant}>{accountType}</Badge>

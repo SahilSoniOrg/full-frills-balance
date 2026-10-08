@@ -34,6 +34,7 @@ export function AccountDetailsView({
     subAccountsLoading,
     isSubAccountsModalVisible,
     onHideSubAccounts,
+    onOpenSubAccount,
     selectedIds,
     isSelectionModeActive,
     onLongPressItem,
@@ -83,7 +84,15 @@ export function AccountDetailsView({
           <SubAccountListModal
             visible={isSubAccountsModalVisible}
             onClose={onHideSubAccounts}
-            parentName={listHeader.summary.accountName}
+            onOpenAccount={onOpenSubAccount}
+            parent={{
+              name: listHeader.summary.accountName,
+              icon: listHeader.summary.accountIcon,
+              accountType: listHeader.summary.accountType,
+              color: listHeader.summary.accountColor,
+              balanceAmount: vm.balanceAmount,
+              currencyCode: vm.currencyCode,
+            }}
             subAccounts={subAccounts}
             isLoading={subAccountsLoading}
           />

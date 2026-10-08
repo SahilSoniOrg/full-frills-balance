@@ -4,13 +4,16 @@ import { AccountBalance } from '@/src/types/domainReadModels';
 import { AccountId } from '@/src/types/ids';
 import { PlainAccount } from '@/src/types/plainDtos';
 import { isUndeletedAccount, type AccountTreeSnapshot } from '@/src/services/accounts/accountTree';
+import { isAccountArchived } from '@/src/utils/accountArchive';
 import { getAccountAccentColor, resolveAccountAccentColor } from '@/src/utils/accountCategory';
 import { getAccountIcon } from '@/src/utils/accountIcon';
+import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo, useState } from 'react';
 
 export interface SubAccountViewModel {
-  id: string;
+  id: AccountId;
   name: string;
+  accountType: string;
   icon: IconName;
   balanceAmount: number;
   currencyCode: string;
@@ -18,6 +21,12 @@ export interface SubAccountViewModel {
   accountColor: string;
   level: number;
   isGroup: boolean;
+}
+
+export interface AncestorAccountViewModel {
+  id: AccountId;
+  name: string;
+  isArchived: boolean;
 }
 
 export interface UseAccountHierarchyTreeOptions {
@@ -79,6 +88,7 @@ export function useAccountHierarchyTree(options: UseAccountHierarchyTreeOptions)
       return {
         id: child.id,
         name: child.name,
+        accountType: child.accountType,
         icon: getAccountIcon(child),
         balanceAmount: subBalance?.balance ?? 0,
         currencyCode,
@@ -90,8 +100,60 @@ export function useAccountHierarchyTree(options: UseAccountHierarchyTreeOptions)
     });
   }, [descendants, subBalances, workplaceCurrency, theme, treeSnapshot]);
 
+  const ancestors = useMemo(() => {
+    const path: PlainAccount[] = [];
+    const seen = new Set<AccountId>([accountId]);
+    let parentId = treeSnapshot.parentByAccount.get(accountId) ?? null;
+    while (parentId && !seen.has(parentId)) {
+      seen.add(parentId);
+      const parent = treeSnapshot.accountsById.get(parentId);
+      if (!parent) break;
+      path.unshift(parent);
+      parentId = treeSnapshot.parentByAccount.get(parentId) ?? null;
+    }
+    return path;
+  }, [accountId, treeSnapshot]);
+
+  const ancestorPath = useMemo<AncestorAccountViewModel[]>(
+    () =>
+      ancestors.map(ancestor => ({
+        id: ancestor.id,
+        name: ancestor.name,
+        isArchived: isAccountArchived(ancestor),
+      })),
+    [ancestors],
+  );
+
+  const onOpenAncestor = useCallback(
+    (ancestorId: AccountId) => {
+      const ancestor = ancestors.find(candidate => candidate.id === ancestorId);
+      if (!ancestor) return;
+      AppNavigation.toAccountDetails(ancestor.id, {
+        preview: {
+          name: ancestor.name,
+          currency: ancestor.currencyCode,
+          icon: getAccountIcon(ancestor),
+          type: ancestor.accountType,
+        },
+      });
+    },
+    [ancestors],
+  );
+
   const onShowSubAccounts = useCallback(() => setIsSubAccountsModalVisible(true), []);
   const onHideSubAccounts = useCallback(() => setIsSubAccountsModalVisible(false), []);
+  const onOpenSubAccount = useCallback((subAccount: SubAccountViewModel) => {
+    setIsSubAccountsModalVisible(false);
+    AppNavigation.toAccountDetails(subAccount.id, {
+      preview: {
+        name: subAccount.name,
+        balance: subAccount.balanceAmount,
+        currency: subAccount.currencyCode,
+        icon: subAccount.icon,
+        type: subAccount.accountType,
+      },
+    });
+  }, []);
 
   return {
     isParent,
@@ -101,5 +163,8 @@ export function useAccountHierarchyTree(options: UseAccountHierarchyTreeOptions)
     isSubAccountsModalVisible,
     onShowSubAccounts,
     onHideSubAccounts,
+    onOpenSubAccount,
+    ancestorPath,
+    onOpenAncestor,
   };
 }

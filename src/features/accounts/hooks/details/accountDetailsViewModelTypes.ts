@@ -2,14 +2,17 @@ import type { JournalListModalsProps } from '@/src/features/journal';
 import type { ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
 import { IconName } from '@/src/components/core';
 import { PeriodMetrics } from '@/src/features/accounts/hooks/details/useAccountDetailsMetrics';
-import { SubAccountViewModel } from '@/src/features/accounts/hooks/details/useAccountHierarchyTree';
+import {
+  AncestorAccountViewModel,
+  SubAccountViewModel,
+} from '@/src/features/accounts/hooks/details/useAccountHierarchyTree';
 import { AccountType } from '@/src/types/enums';
-import { JournalId } from '@/src/types/ids';
+import { AccountId, JournalId } from '@/src/types/ids';
 import { JournalListItem } from '@/src/types/ui';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 
-export type { PeriodMetrics, SubAccountViewModel };
+export type { AncestorAccountViewModel, PeriodMetrics, SubAccountViewModel };
 
 export interface AccountSummaryCardModel {
   accountName: string;
@@ -21,6 +24,9 @@ export interface AccountSummaryCardModel {
   /** Custom per-account color (hex, '' = auto/derive from type). */
   accountColor?: string;
   isParent: boolean;
+  /** Outermost first; empty for top-level accounts. */
+  ancestorPath: AncestorAccountViewModel[];
+  onOpenAncestor: (ancestorId: AccountId) => void;
   isDeleted: boolean;
   isArchived: boolean;
   subAccountCount: number;
@@ -81,6 +87,7 @@ export interface AccountDetailsViewModel {
   subAccountsLoading: boolean;
   isSubAccountsModalVisible: boolean;
   onHideSubAccounts: () => void;
+  onOpenSubAccount: (subAccount: SubAccountViewModel) => void;
   isReconcileModalVisible: boolean;
   setIsReconcileModalVisible: (visible: boolean) => void;
   onConfirmReconcile: () => void;
