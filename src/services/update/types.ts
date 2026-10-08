@@ -16,5 +16,5 @@ export type VersionPolicyManifest = {
 };
 
 export type VersionCheckResult =
-  | { kind: 'allowed'; source: 'remote' | 'cache'; available?: VersionPolicy }
+  | { kind: 'allowed'; source: 'remote' | 'cache'; available?: VersionPolicy; disabled?: boolean }
   | { kind: 'required'; policy: VersionPolicy; source: 'remote' | 'cache' };

@@ -4,6 +4,7 @@ import { AppConfig } from '@/src/constants/app-config';
 import { storage } from '@/src/utils/storage';
 import { readE2eLaunchConfig } from '@/src/testing/e2eLaunchArgs';
 import type { VersionCheckResult, VersionPolicy, VersionPolicyManifest } from './types';
+import { parseBuild } from './playUpdateTypes';
 
 const CACHE_KEY = 'full_frills_balance_version_policy_v2';
 const REQUEST_TIMEOUT_MS = 5000;
@@ -56,8 +57,7 @@ function isValidManifest(value: unknown): value is VersionPolicyManifest {
 }
 
 export function getCurrentBuild(): number | null {
-  const build = Number.parseInt(Application.nativeBuildVersion ?? '', 10);
-  return Number.isInteger(build) && build >= 0 ? build : null;
+  return parseBuild(Application.nativeBuildVersion);
 }
 
 export function readCachedVersionPolicy(): VersionPolicyManifest | null {
@@ -121,7 +121,8 @@ export function evaluateVersionPolicy(
   currentBuild = getCurrentBuild(),
   source: 'remote' | 'cache' = 'remote',
 ): VersionCheckResult {
-  if (policy.enabled === false || currentBuild === null) {
+  if (policy.enabled === false) return { kind: 'allowed', source, disabled: true };
+  if (currentBuild === null) {
     return { kind: 'allowed', source };
   }
   if (currentBuild >= policy.minimumBuild) {

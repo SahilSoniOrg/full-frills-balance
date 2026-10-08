@@ -71,6 +71,7 @@ describe('versionPolicyService', () => {
     expect(evaluateVersionPolicy({ ...policy, enabled: false }, 1)).toEqual({
       kind: 'allowed',
       source: 'remote',
+      disabled: true,
     });
   });
 
