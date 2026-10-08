@@ -103,11 +103,21 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
   );
 
   const status = journal?.status;
+  // keepPreviousData can still hold the previous journal's obligation while the
+  // next journal's id is already on screen. That stale row must not enable Skip.
+  const linkedPayment =
+    linkedPlannedPayment && linkedPlannedPayment.id === journal?.plannedPaymentId
+      ? linkedPlannedPayment
+      : null;
+  const plannedPaymentPending =
+    !!journal?.plannedPaymentId &&
+    (isLoadingPlannedPayment ||
+      (linkedPlannedPayment != null && linkedPlannedPayment.id !== journal.plannedPaymentId));
   const isOrphaned =
     status === JournalStatus.PLANNED &&
     !!journal?.plannedPaymentId &&
-    linkedPlannedPayment === null &&
-    !isLoadingPlannedPayment;
+    !plannedPaymentPending &&
+    linkedPayment === null;
 
   const {
     handleDelete,
@@ -220,7 +230,7 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
               ),
               onPost: handlePost,
               onSkip:
-                journal.plannedPaymentId && !isOrphaned && !isLoadingPlannedPayment
+                journal.plannedPaymentId && !isOrphaned && !plannedPaymentPending
                   ? handleSkip
                   : undefined,
               pending: pendingAction ?? undefined,
@@ -229,9 +239,9 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
       entries,
       balanceEvaluation,
       budget,
-      schedule: linkedPlannedPayment
-        ? buildJournalSchedule(linkedPlannedPayment, journal.journalDate, {
-            onPress: () => AppNavigation.toPlannedPaymentDetails(linkedPlannedPayment.id),
+      schedule: linkedPayment
+        ? buildJournalSchedule(linkedPayment, journal.journalDate, {
+            onPress: () => AppNavigation.toPlannedPaymentDetails(linkedPayment.id),
             onRevert:
               status === JournalStatus.POSTED || status === JournalStatus.SKIPPED
                 ? handleRevertToScheduled
@@ -259,8 +269,8 @@ export function useJournalDetailsViewModel(): JournalDetailsViewModel {
     today,
     resolvedHourCycle,
     isOrphaned,
-    isLoadingPlannedPayment,
-    linkedPlannedPayment,
+    plannedPaymentPending,
+    linkedPayment,
     entries,
     budget,
     source,
