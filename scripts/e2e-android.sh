@@ -35,4 +35,11 @@ if [[ "$mode" == "build" ]]; then
   exec bunx detox build --configuration android.emu.release
 fi
 
+# Software emulation reports boot-complete before the settings service exists.
+# Detox then fails the suite on `settings put global window_animation_scale`.
+# Boot first and wait until that service answers so Detox can reuse the emulator.
+if [[ "$(uname)" == "Linux" ]]; then
+  android_boot_emulator_for_detox
+fi
+
 exec bunx detox test --configuration android.emu.release e2e/specs --runInBand

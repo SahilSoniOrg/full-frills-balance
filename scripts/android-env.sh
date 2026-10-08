@@ -73,6 +73,40 @@ PY
 }
 
 # The committed Gradle file asks for an 8g heap, which does not fit a 16GB cloud VM.
+# Launch the Detox AVD if needed and block until `settings` works.
+# Detox reuses an already-running emulator whose AVD name matches.
+android_boot_emulator_for_detox() {
+  local avd adb emu boot_args i
+  avd="${DETOX_AVD_NAME:-Pixel_2_API_36_Fast}"
+  adb="$ANDROID_HOME/platform-tools/adb"
+  emu="$ANDROID_HOME/emulator/emulator"
+  boot_args=()
+  if [[ -n "${DETOX_EMULATOR_BOOT_ARGS:-}" ]]; then
+    # shellcheck disable=SC2206
+    boot_args=(${DETOX_EMULATOR_BOOT_ARGS})
+  fi
+
+  "$adb" start-server >/dev/null
+  if ! "$adb" devices | awk 'NR>1 && $1 ~ /^emulator-/ && $2=="device" {found=1} END {exit found?0:1}'; then
+    echo "Booting AVD ${avd} (${DETOX_EMULATOR_BOOT_ARGS:-default accel})..."
+    nohup "$emu" -avd "$avd" -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect "${boot_args[@]}" -port 5554 \
+      >"${HOME}/.android/emulator-detox.log" 2>&1 &
+    echo $! >"${HOME}/.android/emulator-detox.pid"
+  fi
+
+  "$adb" wait-for-device
+  for i in $(seq 1 90); do
+    if "$adb" shell settings get global window_animation_scale >/dev/null 2>"${HOME}/.android/emulator-settings.err"; then
+      echo "Android settings service is up."
+      return 0
+    fi
+    sleep 10
+  done
+  echo "Android settings service did not start. Last adb error:" >&2
+  cat "${HOME}/.android/emulator-settings.err" >&2 || true
+  return 1
+}
+
 android_ensure_gradle_heap() {
   local mem_kb gradle_home props
   mem_kb="$(awk '/MemTotal:/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)"
