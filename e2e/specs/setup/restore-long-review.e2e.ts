@@ -26,7 +26,6 @@ it('preserves review scroll and keeps the restore action reachable for a long re
     .withTimeout(120000);
   await waitFor(element(by.id('restore-apply-safe-fx-suggestions')))
     .toBeVisible()
-    .withTimeout(120000)
     .whileElement(by.id('restore-journal-recovery-scroll'))
     .scroll(400, 'down');
   await element(by.id('restore-apply-safe-fx-suggestions')).tap();

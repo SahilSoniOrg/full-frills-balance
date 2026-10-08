@@ -93,7 +93,14 @@ describe('journal details redesign', () => {
       if (state === 'missing-fx' || state === 'unbalanced') {
         await expect(element(by.id('journal-accounting-issues'))).toExist();
       }
-      if (state === 'orphaned') await expect(element(by.id('journal-skip'))).not.toExist();
+      if (state === 'orphaned') {
+        await waitFor(element(by.text(/planned payment was deleted/i)))
+          .toBeVisible()
+          .withTimeout(20000);
+        await waitFor(element(by.id('journal-skip')))
+          .not.toBeVisible()
+          .withTimeout(10000);
+      }
       await device.takeScreenshot(`journal-${state}`);
     }
     await openJournal('simple');

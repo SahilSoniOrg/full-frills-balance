@@ -27,6 +27,7 @@ export async function waitForInboxItem(deviceSourceId: string): Promise<void> {
 
 export async function tapCompareDuplicate(deviceSourceId: string): Promise<void> {
   await tapById(smsInbox.compareDuplicate(deviceSourceId), LONG_TIMEOUT_MS);
+  await tapById('duplicate-modal-view-journal-btn', LONG_TIMEOUT_MS);
 }
 
 export async function refreshSmsInbox(): Promise<void> {

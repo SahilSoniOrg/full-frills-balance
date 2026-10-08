@@ -73,8 +73,11 @@ export async function setContentSize(size: 'large' | 'accessibility-large'): Pro
 function parseAndroidClipboard(raw: string): string {
   const trimmed = raw.replace(/\r/g, '').trim();
   if (!trimmed || trimmed === 'null') return '';
-  const clipData = trimmed.match(/ClipData\s*\{[\s\S]*?"([^"]*)"/);
-  if (clipData?.[1] != null) return clipData[1];
+  const clips = [...trimmed.matchAll(/ClipData\s*\{[^}]*?"([^"]*)"/g)];
+  const quoted = clips.at(-1)?.[1];
+  if (quoted) return quoted;
+  // dumpsys clipboard is a large dump. Don't treat that whole dump as the clip.
+  if (trimmed.includes('ClipboardService') || trimmed.length > 500) return '';
   return trimmed;
 }
 
@@ -82,5 +85,9 @@ export function readClipboard(): string {
   if (device.getPlatform() === 'ios') {
     return execFileSync('xcrun', ['simctl', 'pbpaste', device.id], { encoding: 'utf8' });
   }
-  return parseAndroidClipboard(adb(['shell', 'cmd', 'clipboard', 'get']));
+  const direct = parseAndroidClipboard(adb(['shell', 'cmd', 'clipboard', 'get']));
+  if (direct) return direct;
+  // `cmd clipboard get` is empty when the shell is not the focused app.
+  // dumpsys still prints the primary clip on the emulator.
+  return parseAndroidClipboard(adb(['shell', 'dumpsys', 'clipboard']));
 }

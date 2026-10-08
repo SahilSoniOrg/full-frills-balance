@@ -29,11 +29,12 @@ it('offers a uniquely implied FX rate and keeps imported account amounts during 
   await expect(element(by.text('Debit 5791.12 · Credit 5791.12 INR'))).toExist();
   await device.takeScreenshot('restore-implied-fx-preview');
 
-  await waitFor(element(by.id('restore-review-suggested-fx-j1')))
+  const reviewRate = element(by.label('Review or edit this rate'));
+  await waitFor(reviewRate)
     .toBeVisible()
     .whileElement(by.id('restore-journal-recovery-scroll'))
     .scroll(250, 'down');
-  await element(by.id('restore-review-suggested-fx-j1')).tap();
+  await reviewRate.tap();
   await waitFor(element(by.text('Review journal entry')))
     .toExist()
     .withTimeout(30000);
