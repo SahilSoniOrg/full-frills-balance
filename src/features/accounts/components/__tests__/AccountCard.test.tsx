@@ -4,11 +4,14 @@ import { AccountCardViewModel } from '../../utils/transformAccounts';
 import { AccountType } from '@/src/types/enums';
 import { AccountId } from '@/src/types/ids';
 import { fireEvent, render } from '@/src/utils/test-utils';
-import { AppConfig } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Spacing, Typography } from '@/src/constants';
 import { preferences } from '@/src/services/preferences';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
 import type { ComponentProps } from 'react';
 import { StyleSheet } from 'react-native';
+import { getThemeColors, ThemeIds } from '@/src/constants/design-tokens';
+import { ThemeOverride } from '@/src/contexts/UIContext';
+import { withOpacity } from '@/src/utils/color-math';
 
 import { getLayoutPath as layoutPath } from '@/src/testing/layoutAssertions';
 
@@ -57,6 +60,67 @@ describe('AccountCard', () => {
     expect(renderCard().getByText('Checking Account')).toBeTruthy();
   });
 
+  it('shows the reconciliation badge and removes it when reconciliation is cleared', () => {
+    const reconciledAt = new Date(2026, 8, 30, 13, 48);
+    const screen = renderCard({ account: { ...mockAccount, reconciledAt } });
+    expect(screen.getByTestId('account-card-reconciled-badge')).toBeTruthy();
+    const date = screen.getByText(formatRelativeReconciledDate(reconciledAt));
+    expect(date).toHaveStyle({
+      opacity: Opacity.heavy,
+      color: mockAccount.textColor,
+      fontSize: Typography.sizes.xs,
+      lineHeight: 12,
+    });
+    expect(screen.getByTestId('account-card-reconciled-badge')).toHaveStyle({
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 2,
+      borderRadius: Shape.radius.sm,
+    });
+    expect(screen.getByTestId('account-card-header-actions').findAllByType(date.type)).toContain(
+      date,
+    );
+    screen.rerender(
+      <AccountCard
+        account={mockAccount}
+        onPress={jest.fn()}
+        dividerColor="divider"
+        surfaceColor="surface"
+      />,
+    );
+    expect(screen.queryByTestId('account-card-reconciled-badge')).toBeNull();
+  });
+
+  it('hides the historical header badge during selection mode', () => {
+    const screen = renderCard({
+      account: { ...mockAccount, reconciledAt: new Date(2026, 8, 30, 13, 48) },
+      isSelectionModeActive: true,
+    });
+    expect(screen.queryByTestId('account-card-reconciled-badge')).toBeNull();
+  });
+
+  it.each(['light', 'dark'] as const)(
+    'retains the original translucent background in %s mode',
+    mode => {
+      const screen = render(
+        <ThemeOverride mode={mode} themeId={ThemeIds.DEEP_SPACE}>
+          <AccountCard
+            account={{ ...mockAccount, reconciledAt: new Date(2026, 8, 30) }}
+            onPress={jest.fn()}
+            dividerColor="divider"
+            surfaceColor="surface"
+          />
+        </ThemeOverride>,
+      );
+      expect(screen.getByTestId('account-card-reconciled-badge')).toHaveStyle({
+        backgroundColor: withOpacity(
+          getThemeColors(ThemeIds.DEEP_SPACE, mode).pureInverse,
+          Opacity.soft,
+        ),
+        borderRadius: Shape.radius.sm,
+      });
+    },
+  );
+
   it('calls onPress when tapped', () => {
     const onPressMock = jest.fn();
     fireEvent.press(renderCard({ onPress: onPressMock }).getByText('Checking Account'));
@@ -80,6 +144,26 @@ describe('AccountCard', () => {
       ),
     );
     expect(onActionPressMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('places the overflow action on the amount row, with stable space on both sides', () => {
+    const screen = renderCard({ onActionPress: jest.fn() });
+    const action = screen.getByLabelText('Actions for Checking Account');
+    const row = screen.getByTestId('account-card-amount-row');
+    expect(row).toHaveStyle({ flexDirection: 'row', alignItems: 'center' });
+    expect(row.findAllByType(action.type)).toContain(action);
+    expect(row.findAllByType(screen.getByText('$1,500.00').type)).toContain(
+      screen.getByText('$1,500.00'),
+    );
+    expect(
+      screen.getByTestId('account-card-amount-action-spacer', { includeHiddenElements: true }),
+    ).toHaveStyle({
+      width: 44,
+      height: 44,
+    });
+    expect(
+      screen.getByTestId('account-card-header-actions').findAllByType(action.type),
+    ).not.toContain(action);
   });
 
   it('exposes the account name, hierarchy level, balance, and reconciliation date to accessibility', () => {
@@ -154,6 +238,28 @@ describe('AccountCard', () => {
       ),
     );
     expect(onCollapse).toHaveBeenCalledWith(mockAccount.id);
+  });
+
+  it.each([false, true])(
+    'retains the parent toggle with expanded=%s and calls the hierarchy handler',
+    isExpanded => {
+      const onCollapse = jest.fn();
+      const screen = renderCard({
+        account: { ...mockAccount, hasChildren: true, isExpanded },
+        onCollapse,
+      });
+      const toggle = screen.getByLabelText(
+        `${isExpanded ? 'Collapse' : 'Expand'} sub-accounts for Checking Account`,
+      );
+      expect(toggle.props.accessibilityState).toMatchObject({ expanded: isExpanded });
+      fireEvent.press(toggle);
+      expect(onCollapse).toHaveBeenCalledWith(mockAccount.id);
+    },
+  );
+
+  it('does not show the hierarchy toggle for a leaf account', () => {
+    const screen = renderCard();
+    expect(screen.queryByLabelText(/sub-accounts for Checking Account/)).toBeNull();
   });
 
   it('keeps hierarchy expansion available in selection mode and hides overflow actions', () => {

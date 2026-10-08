@@ -4,13 +4,14 @@ import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import {
   Icon,
   AppCard,
+  AppIcon,
   IconButton,
   IvyIcon,
   PressScaleTouchable,
   AppText,
 } from '@/src/components/core';
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
-import { BorderWidth, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { BorderWidth, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { ColorKey } from '@/src/constants/design-tokens';
 import { Box, Column, Row } from '@/src/design-system';
 import { AccountId } from '@/src/types/ids';
@@ -158,6 +159,28 @@ function AccountCardBase({
               </Row>
 
               <Row gap="xs" align="center" testID="account-card-header-actions">
+                {reconciledDateText && !isSelectionModeActive && (
+                  <View
+                    testID="account-card-reconciled-badge"
+                    style={[
+                      styles.reconciledBadge,
+                      { backgroundColor: withOpacity(theme.pureInverse, Opacity.soft) },
+                    ]}
+                  >
+                    <AppIcon name={Icon.ShieldCheck} color={resolvedTextColor} size={Size.iconXs} />
+                    <AppText
+                      variant="caption"
+                      style={{
+                        opacity: Opacity.heavy,
+                        color: resolvedTextColor,
+                        fontSize: Typography.sizes.xs,
+                        lineHeight: 12,
+                      }}
+                    >
+                      {reconciledDateText}
+                    </AppText>
+                  </View>
+                )}
                 {account.hasChildren && (
                   <IconButton
                     name={account.isExpanded ? Icon.ChevronUp : Icon.Hierarchy}
@@ -177,8 +200,39 @@ function AccountCardBase({
                     accessibilityState={{ expanded: account.isExpanded }}
                   />
                 )}
-                {onActionPress && (
-                  <View style={styles.actionButton}>
+              </Row>
+            </Row>
+
+            <Column align="center" justify="center" gap="xs">
+              <Row testID="account-card-amount-row" align="center" style={styles.amountRow}>
+                {onActionPress ? (
+                  <View
+                    testID="account-card-amount-action-spacer"
+                    pointerEvents="none"
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
+                    style={styles.actionButton}
+                  />
+                ) : null}
+                <AppText
+                  variant="title"
+                  fontRole="numeric"
+                  weight="semibold"
+                  tabular
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.65}
+                  style={{
+                    color: resolvedTextColor,
+                    flex: 1,
+                    minWidth: 0,
+                    textAlign: 'center',
+                  }}
+                >
+                  {formatMoney(account.balance, account.currencyCode)}
+                </AppText>
+                {onActionPress ? (
+                  <View testID="account-card-amount-actions" style={styles.actionButton}>
                     {!isSelectionModeActive && (
                       <IconButton
                         name={Icon.More}
@@ -194,25 +248,8 @@ function AccountCardBase({
                       />
                     )}
                   </View>
-                )}
+                ) : null}
               </Row>
-            </Row>
-
-            <Column align="center" justify="center" gap="xs">
-              <AppText
-                variant="title"
-                fontRole="numeric"
-                weight="semibold"
-                tabular
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.65}
-                style={{
-                  color: resolvedTextColor,
-                }}
-              >
-                {formatMoney(account.balance, account.currencyCode)}
-              </AppText>
               {account.workplaceBalance !== undefined &&
                 account.currencyCode !== workplaceCurrencyCode && (
                   <AppText variant="bodySmall" weight="medium" style={{ color: resolvedTextColor }}>
@@ -304,6 +341,17 @@ const styles = StyleSheet.create({
   actionButton: {
     width: Size.touchTarget,
     height: Size.touchTarget,
+  },
+  amountRow: {
+    width: '100%',
+  },
+  reconciledBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: Shape.radius.sm,
   },
 });
 
