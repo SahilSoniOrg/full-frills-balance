@@ -62,6 +62,9 @@ function toTimestampMs(value: Date | number | null | undefined): number | null {
   return value instanceof Date ? value.getTime() : typeof value === 'number' ? value : null;
 }
 
+const EMPTY_ACCOUNTS: PlainAccount[] = [];
+const EMPTY_BALANCES: AccountBalance[] = [];
+
 export function useAccountDetailsData(): AccountDetailsData {
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const params = useLocalSearchParams<{
@@ -105,10 +108,7 @@ export function useAccountDetailsData(): AccountDetailsData {
     initialDateRange,
   });
 
-  const {
-    data: dashboardData,
-    isLoading: dashboardLoading,
-  } = useObservable(
+  const { data: dashboardData, isLoading: dashboardLoading } = useObservable(
     () =>
       accountId && workplaceId
         ? reactiveDataService.observeAccountDashboard(accountId, workplaceCurrency, workplaceId)
@@ -119,8 +119,8 @@ export function useAccountDetailsData(): AccountDetailsData {
 
   const dbAccount = dashboardData?.account || null;
   const dbBalanceData = dashboardData?.balance || null;
-  const rawSubBalances = dashboardData?.subAccounts || [];
-  const accounts = dashboardData?.allAccounts || [];
+  const rawSubBalances = dashboardData?.subAccounts ?? EMPTY_BALANCES;
+  const accounts = dashboardData?.allAccounts ?? EMPTY_ACCOUNTS;
 
   const pName = params.pName;
   const pBalance = params.pBalance;

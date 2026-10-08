@@ -1,8 +1,16 @@
-import { AppConfig } from '@/src/constants';
+import { Animation, AppConfig } from '@/src/constants';
 import { toPlainAccount, toPlainAccounts } from '@/src/data/models/Account';
 import { observeAggregatedAccountBalances } from '@/src/services/reactive/reactiveAggregatedBalances';
-import { clearReactiveWorkplaceAccountsAndJournalMetaCache } from '@/src/services/reactive/reactiveWorkplaceObserves';
-import { getAccountDescendants } from '@/src/services/accounts/accountDescendants';
+import {
+  clearReactiveWorkplaceAccountsAndJournalMetaCache,
+  observeWorkplaceAccounts,
+  observeWorkplaceJournalMeta,
+  observeWorkplaceActiveTransactionCount,
+} from '@/src/services/reactive/reactiveWorkplaceObserves';
+import { createAccountTreeSnapshot } from '@/src/services/accounts/accountTree';
+import { balanceReadService } from '@/src/services/balance/balanceReadService';
+import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
+import { firstFastDebounce } from '@/src/utils/rxjs-operators';
 import { observeEnrichedJournals } from '@/src/services/journal/journalTimelineReadModel';
 import { WealthSummary } from '@/src/services/wealth-service';
 import { accountQueryRepository } from '@/src/data/repositories/account';
@@ -238,9 +246,16 @@ class ReactiveDataService {
       key: cacheKey,
       workplaceId,
       createSource: () =>
-        observeAggregatedAccountBalances(targetCurrency, workplaceId, true).pipe(
-          switchMap(async ({ accounts, balancesMap }) => {
-            const plainAccounts = toPlainAccounts(accounts);
+        combineLatest([
+          // Snapshot model values before crossing async boundaries: WatermelonDB
+          // mutates the same model objects on later emissions.
+          observeWorkplaceAccounts(workplaceId).pipe(map(toPlainAccounts)),
+          observeWorkplaceJournalMeta(workplaceId),
+          observeWorkplaceActiveTransactionCount(workplaceId),
+          exchangeRateRepository.observeAll(),
+        ]).pipe(
+          firstFastDebounce(Animation.dataRefreshDebounce),
+          switchMap(async ([plainAccounts]) => {
             const targetAccount = plainAccounts.find(a => a.id === accountId);
             if (!targetAccount) {
               const deletedAccount = await accountQueryRepository.findWithDeleted(
@@ -255,12 +270,19 @@ class ReactiveDataService {
               };
             }
 
-            const balance = balancesMap.get(accountId) || null;
-
-            const descendants = getAccountDescendants(accounts, accountId);
-            const subBalances = descendants
-              .map(d => balancesMap.get(d.id))
-              .filter((b): b is AccountBalance => !!b);
+            // Detail hydration needs this subtree's balances and lifetime counts;
+            // it must not recount every account or calculate workplace wealth.
+            const descendants = createAccountTreeSnapshot(plainAccounts).getDescendants(accountId);
+            const scopedIds = [accountId, ...descendants];
+            const balances = await balanceReadService.getAccountBalances(
+              workplaceId,
+              undefined,
+              targetCurrency,
+              undefined,
+              scopedIds,
+            );
+            const balance = balances.find(item => item.accountId === accountId) ?? null;
+            const subBalances = balances.filter(item => descendants.has(item.accountId));
 
             return {
               account: targetAccount,

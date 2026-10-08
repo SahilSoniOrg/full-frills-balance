@@ -1,8 +1,9 @@
 import { act, renderHook } from '@testing-library/react-native';
-import { BehaviorSubject, of as mockOf } from 'rxjs';
+import { BehaviorSubject, NEVER, of as mockOf } from 'rxjs';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 import { useAccountDetailsData } from '@/src/features/accounts/hooks/details/useAccountDetailsData';
+import { reactiveDataService } from '@/src/services/ReactiveDataService';
 
 const mockArchivedAt$ = new BehaviorSubject<number | null>(null);
 
@@ -63,6 +64,17 @@ jest.mock('@/src/hooks/useDateRangeFilter', () => ({
 describe('useAccountDetailsData archive state', () => {
   beforeEach(() => {
     mockArchivedAt$.next(null);
+  });
+
+  it('keeps empty hierarchy inputs stable during hydration to avoid restarting dependent queries', () => {
+    jest.mocked(reactiveDataService.observeAccountDashboard).mockReturnValueOnce(NEVER);
+    const { result, rerender } = renderHook(() => useAccountDetailsData());
+    const accounts = result.current.accounts;
+    const balances = result.current.rawSubBalances;
+    expect(result.current.dashboardLoading).toBe(true);
+    rerender(undefined);
+    expect(result.current.accounts).toBe(accounts);
+    expect(result.current.rawSubBalances).toBe(balances);
   });
 
   it('updates isArchived when the account is archived and unarchived', () => {
