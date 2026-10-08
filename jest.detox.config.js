@@ -10,6 +10,7 @@ module.exports = {
   reporters: ['detox/runners/jest/reporter'],
   testEnvironment: 'detox/runners/jest/testEnvironment',
   verbose: true,
+  setupFilesAfterEnv: ['<rootDir>/e2e/support/slowEmulatorTimeout.js'],
   moduleNameMapper: {
     // Same `@/` root alias as tsconfig paths. The Detox Jest config does not use jest-expo.
     '^@/(.*)$': '<rootDir>/$1',

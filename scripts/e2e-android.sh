@@ -12,9 +12,10 @@ source "$ROOT/scripts/android-env.sh"
 
 mode="${1:-}"
 if [[ "$mode" != "build" && "$mode" != "test" ]]; then
-  echo "usage: $0 build|test" >&2
+  echo "usage: $0 build|test [spec paths...]" >&2
   exit 2
 fi
+shift || true
 
 if [[ ! -f .env.local && -f .env.e2e.example ]]; then
   cp .env.e2e.example .env.local
@@ -35,12 +36,21 @@ if [[ "$mode" == "build" ]]; then
   exec bunx detox build --configuration android.emu.release
 fi
 
-# Software emulation reports boot-complete before the settings service exists.
-# Detox then fails the suite on `settings put global window_animation_scale`.
-# Boot first and wait until that service answers so Detox can reuse the emulator.
+# Software emulation reports boot-complete before package/settings exist.
+# Boot first, install the APKs once, and snapshot that state so Detox reuses it.
+# DETOX_REUSE_INSTALLED_APP makes launch helpers `pm clear` instead of reinstalling.
 if [[ "$(uname)" == "Linux" ]]; then
   android_boot_emulator_for_detox
+  android_install_detox_apks_and_snapshot
   android_relax_detox_adb_timeouts "$ROOT"
+  export DETOX_REUSE_INSTALLED_APP=1
+  export DETOX_JEST_TIMEOUT_MS="${DETOX_JEST_TIMEOUT_MS:-600000}"
+  rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/Detox/device.registry.json"
 fi
 
-exec bunx detox test --configuration android.emu.release e2e/specs --runInBand
+specs=("$@")
+if [[ ${#specs[@]} -eq 0 ]]; then
+  specs=(e2e/specs)
+fi
+
+exec bunx detox test --configuration android.emu.release "${specs[@]}" --runInBand

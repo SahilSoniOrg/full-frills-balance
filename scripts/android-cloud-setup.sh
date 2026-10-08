@@ -18,7 +18,10 @@ source "$ROOT/scripts/android-env.sh"
 CMDLINE_REV="13114758"
 CMDLINE_URL="https://dl.google.com/android/repository/commandlinetools-linux-${CMDLINE_REV}_latest.zip"
 AVD_NAME="${DETOX_AVD_NAME:-Pixel_2_API_36_Fast}"
-SYSTEM_IMAGE="system-images;android-36;google_apis;x86_64"
+# AOSP ATD is the headless CI image at the same API level. google_apis API 36
+# kept system_server busy enough that package/settings and HardwareRenderer stalled.
+SYSTEM_IMAGE="system-images;android-36;aosp_atd;x86_64"
+SYSTEM_IMAGE_DIR="system-images/android-36/aosp_atd/x86_64/"
 SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
 
 sudo_n() {
@@ -82,6 +85,13 @@ if [[ ! -f android/local.properties ]]; then
   printf 'sdk.dir=%s\n' "$ANDROID_HOME" >android/local.properties
 fi
 
+avd_ini="$HOME/.android/avd/${AVD_NAME}.avd/config.ini"
+if "$ANDROID_HOME/emulator/emulator" -list-avds | grep -qx "$AVD_NAME"; then
+  if [[ ! -f "$avd_ini" ]] || ! grep -Eq "image\\.sysdir\\.1[[:space:]]*=[[:space:]]*${SYSTEM_IMAGE_DIR}" "$avd_ini"; then
+    echo "Replacing AVD ${AVD_NAME} so it uses ${SYSTEM_IMAGE}."
+    "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" delete avd --name "$AVD_NAME" || true
+  fi
+fi
 if ! "$ANDROID_HOME/emulator/emulator" -list-avds | grep -qx "$AVD_NAME"; then
   echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd \
     --name "$AVD_NAME" \
@@ -90,19 +100,18 @@ if ! "$ANDROID_HOME/emulator/emulator" -list-avds | grep -qx "$AVD_NAME"; then
     --force
 fi
 
-avd_ini="$HOME/.android/avd/${AVD_NAME}.avd/config.ini"
 if [[ -f "$avd_ini" ]]; then
   python3 - "$avd_ini" <<'PY'
 import sys
 from pathlib import Path
 path = Path(sys.argv[1])
 updates = {
-    "hw.ramSize": "2048",
-    "vm.heapSize": "256",
-    "hw.cpu.ncore": "2",
+    "hw.ramSize": "3072",
+    "vm.heapSize": "512",
+    "hw.cpu.ncore": "4",
     "hw.keyboard": "yes",
     "hw.gpu.enabled": "yes",
-    "hw.gpu.mode": "swiftshader_indirect",
+    "hw.gpu.mode": "software",
     "disk.dataPartition.size": "2048M",
 }
 text = path.read_text().splitlines()

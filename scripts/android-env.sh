@@ -40,8 +40,10 @@ android_ensure_kvm() {
 }
 
 # `emulator -accel-check` only checks that /dev/kvm opens. Nested cloud kernels
-# can still BUG in kvm_arch_vcpu_create. Cache the result: the failing probe
-# segfaults and dirties the kernel log.
+# can still BUG in kvm_arch_vcpu_create (seen on 6.12: kernel BUG at
+# arch/x86/kvm/x86.c kvm_arch_vcpu_create). Every emulator build issues
+# KVM_CREATE_VCPU for `-accel on`; a different binary or flag cannot skip that
+# ioctl. Cache the result: the failing probe segfaults and dirties the kernel log.
 android_resolve_emulator_accel() {
   if [[ "$(uname)" != "Linux" ]]; then
     return 0
@@ -72,39 +74,110 @@ PY
   fi
 }
 
-# The committed Gradle file asks for an 8g heap, which does not fit a 16GB cloud VM.
-# Launch the Detox AVD if needed and block until `settings` works.
-# Detox reuses an already-running emulator whose AVD name matches.
+# Launch the Detox AVD if needed and block until package + settings services answer.
+# Detox reuses a running emulator whose `adb emu avd name` matches. Do not start a
+# second one while QEMU is already up: a read-only sibling drops those services.
+android_snapshot_dir() {
+  local avd="${1:-${DETOX_AVD_NAME:-Pixel_2_API_36_Fast}}"
+  echo "${HOME}/.android/avd/${avd}.avd/snapshots/detox-ready"
+}
+
+android_emulator_services_ready() {
+  local adb="$ANDROID_HOME/platform-tools/adb"
+  local avd boot pkg settings name
+  avd="${DETOX_AVD_NAME:-Pixel_2_API_36_Fast}"
+  boot="$("$adb" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+  [[ "$boot" == "1" ]] || return 1
+  pkg="$("$adb" shell service check package 2>/dev/null | tr -d '\r')"
+  [[ "$pkg" == *"found"* ]] || return 1
+  settings="$("$adb" shell service check settings 2>/dev/null | tr -d '\r')"
+  [[ "$settings" == *"found"* ]] || return 1
+  "$adb" shell cmd package list packages android >/dev/null 2>&1 || return 1
+  name="$("$adb" emu avd name 2>/dev/null | tr -d '\r' | head -n 1)"
+  [[ "$name" == "$avd" ]] || return 1
+  return 0
+}
+
 android_boot_emulator_for_detox() {
-  local avd adb emu boot_args i
+  local avd adb emu boot_args snap_args i snap
   avd="${DETOX_AVD_NAME:-Pixel_2_API_36_Fast}"
   adb="$ANDROID_HOME/platform-tools/adb"
   emu="$ANDROID_HOME/emulator/emulator"
+  snap="$(android_snapshot_dir "$avd")"
   boot_args=()
   if [[ -n "${DETOX_EMULATOR_BOOT_ARGS:-}" ]]; then
     # shellcheck disable=SC2206
     boot_args=(${DETOX_EMULATOR_BOOT_ARGS})
   fi
+  # Guest software GLES. Host swiftshader left the main thread in
+  # IGraphicsStats.requestBufferForProcess long enough for Detox's 5s ANR watchdog.
+  # `-gpu software` is last so it wins over an earlier Detox/AVD gpu flag.
+  snap_args=(-no-snapshot-load -no-snapshot-save)
+  if [[ -d "$snap" ]]; then
+    echo "Loading booted snapshot detox-ready"
+    snap_args=(-snapshot detox-ready -no-snapshot-save)
+  fi
 
   "$adb" start-server >/dev/null
-  if ! "$adb" devices | awk 'NR>1 && $1 ~ /^emulator-/ && $2=="device" {found=1} END {exit found?0:1}'; then
-    echo "Booting AVD ${avd} (${DETOX_EMULATOR_BOOT_ARGS:-default accel})..."
-    nohup "$emu" -avd "$avd" -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect "${boot_args[@]}" -port 5554 \
+  if android_emulator_services_ready; then
+    echo "Android emulator is already booted (package and settings services are up)."
+  elif pgrep -f 'qemu-system-x86_64' >/dev/null 2>&1; then
+    echo "QEMU is already running for ${avd}; waiting for package and settings services."
+  else
+    echo "Booting AVD ${avd} (${DETOX_EMULATOR_BOOT_ARGS:-default accel}, software GPU)..."
+    nohup "$emu" -avd "$avd" -port 5554 -no-window -no-audio -no-boot-anim -no-metrics \
+      -memory 3072 -cores 4 \
+      "${boot_args[@]}" "${snap_args[@]}" -gpu software \
       >"${HOME}/.android/emulator-detox.log" 2>&1 &
     echo $! >"${HOME}/.android/emulator-detox.pid"
   fi
 
   "$adb" wait-for-device
   for i in $(seq 1 90); do
-    if "$adb" shell settings get global window_animation_scale >/dev/null 2>"${HOME}/.android/emulator-settings.err"; then
-      echo "Android settings service is up."
+    if android_emulator_services_ready; then
+      "$adb" shell settings put global window_animation_scale 0 >/dev/null
+      "$adb" shell settings put global transition_animation_scale 0 >/dev/null
+      "$adb" shell settings put global animator_duration_scale 0 >/dev/null
+      echo "Android package and settings services are up."
+      # A Detox relaunch should resume this snapshot instead of cold-booting.
+      if [[ -d "$snap" ]]; then
+        export DETOX_EMULATOR_BOOT_ARGS="${DETOX_EMULATOR_BOOT_ARGS:-} -snapshot detox-ready -no-snapshot-save -gpu software"
+      fi
       return 0
     fi
     sleep 10
   done
-  echo "Android settings service did not start. Last adb error:" >&2
-  cat "${HOME}/.android/emulator-settings.err" >&2 || true
+  echo "Android package/settings services did not start. Emulator log tail:" >&2
+  tail -n 40 "${HOME}/.android/emulator-detox.log" >&2 || true
   return 1
+}
+
+# Install the release APKs once, then snapshot. Later files use `pm clear`
+# (DETOX_REUSE_INSTALLED_APP) instead of uninstall/reinstall + dex2oat.
+android_install_detox_apks_and_snapshot() {
+  local adb avd snap app test_apk
+  adb="$ANDROID_HOME/platform-tools/adb"
+  avd="${DETOX_AVD_NAME:-Pixel_2_API_36_Fast}"
+  snap="$(android_snapshot_dir "$avd")"
+  app="${1:-android/app/build/outputs/apk/release/app-release.apk}"
+  test_apk="${2:-android/app/build/outputs/apk/androidTest/release/app-release-androidTest.apk}"
+  if [[ ! -f "$app" || ! -f "$test_apk" ]]; then
+    echo "Missing Detox APKs. Run bun run e2e:build:android first." >&2
+    return 1
+  fi
+  if [[ -d "$snap" && "$snap" -nt "$app" && "$snap" -nt "$test_apk" ]]; then
+    if "$adb" shell pm path in.sahilsoni.fullfrillsbalance >/dev/null 2>&1 \
+      && "$adb" shell pm path in.sahilsoni.fullfrillsbalance.test >/dev/null 2>&1; then
+      echo "Reusing snapshotted Detox install."
+      return 0
+    fi
+  fi
+  echo "Installing Detox APKs (one time for this snapshot)..."
+  "$adb" install -r -t -g "$app"
+  "$adb" install -r -t -g "$test_apk"
+  echo "Saving booted snapshot detox-ready..."
+  "$adb" emu avd snapshot save detox-ready
+  export DETOX_EMULATOR_BOOT_ARGS="${DETOX_EMULATOR_BOOT_ARGS:-} -snapshot detox-ready -no-snapshot-save -gpu software"
 }
 
 # Detox kills `adb install` after 60s. A 65MB release APK on software emulation

@@ -10,6 +10,17 @@ export type LaunchOnboardedOptions = {
   disableSynchronization?: boolean;
 };
 
+/** Linux cloud runs set this so a slow emulator `pm clear`s instead of reinstalling. */
+function dataResetOptions(preserveData = false): { delete: boolean; resetAppState?: boolean } {
+  if (preserveData) {
+    return { delete: false };
+  }
+  if (process.env.DETOX_REUSE_INSTALLED_APP === '1') {
+    return { delete: false, resetAppState: true };
+  }
+  return { delete: true };
+}
+
 function e2eLaunchArgs(seedProfile?: E2eSeedProfile, backupPath?: string): Record<string, string> {
   const args: Record<string, string> = {
     e2eAuth: E2E_AUTH_TOKEN,
@@ -32,7 +43,7 @@ export async function launchFreshApp(
   }
   await device.launchApp({
     newInstance: true,
-    delete: true,
+    ...dataResetOptions(),
     permissions: { notifications: 'YES' },
     launchArgs: {
       e2eAuth: E2E_AUTH_TOKEN,
@@ -72,7 +83,7 @@ export async function launchWithUpdateGate(
 ): Promise<void> {
   await device.launchApp({
     newInstance: true,
-    delete: true,
+    ...dataResetOptions(),
     permissions: { notifications: 'YES' },
     launchArgs: {
       e2eAuth: E2E_AUTH_TOKEN,
@@ -94,7 +105,7 @@ export async function launchSeedProfileApp(
 ): Promise<void> {
   await device.launchApp({
     newInstance: options.newInstance ?? true,
-    delete: options.delete ?? true,
+    ...(options.delete === false ? { delete: false as const } : dataResetOptions()),
     permissions: { notifications: 'YES' },
     launchArgs: e2eLaunchArgs(seedProfile),
   });
@@ -105,7 +116,7 @@ export async function launchOnboardedApp(options: LaunchOnboardedOptions = {}): 
   const seedProfile = options.seedProfile ?? 'journal-ready';
   await device.launchApp({
     newInstance: options.newInstance ?? true,
-    delete: !options.preserveData,
+    ...dataResetOptions(Boolean(options.preserveData)),
     permissions: { notifications: 'YES' },
     launchArgs: e2eLaunchArgs(seedProfile, options.backupPath),
   });
@@ -118,7 +129,7 @@ export async function launchOnboardedApp(options: LaunchOnboardedOptions = {}): 
 export async function launchPickerApp(): Promise<void> {
   await device.launchApp({
     newInstance: true,
-    delete: true,
+    ...dataResetOptions(),
     permissions: { notifications: 'YES' },
     launchArgs: e2eLaunchArgs('picker-ready'),
   });
@@ -137,7 +148,7 @@ export async function launchRestoreResumeApp(
   }
   await device.launchApp({
     newInstance: true,
-    delete: true,
+    ...dataResetOptions(),
     permissions: { notifications: 'YES' },
     launchArgs: e2eLaunchArgs('first-run-restore'),
   });

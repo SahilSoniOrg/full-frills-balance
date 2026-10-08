@@ -23,9 +23,20 @@ module.exports = {
       config: 'jest.detox.config.js',
     },
     jest: {
-      setupTimeout: 120000,
+      setupTimeout: linuxX64 ? 300000 : 120000,
     },
   },
+  // Linux cloud agents install the APKs once in scripts/e2e-android.sh.
+  // Reinstalling at worker start repeats dex2oat on software emulation.
+  ...(linuxX64
+    ? {
+        behavior: {
+          init: {
+            reinstallApp: false,
+          },
+        },
+      }
+    : {}),
   apps: {
     'ios.debug': {
       type: 'ios.app',
@@ -75,9 +86,14 @@ module.exports = {
       ...(linuxX64
         ? {
             headless: true,
-            gpuMode: 'swiftshader_indirect',
+            // Writable so a Detox-launched fallback cannot start a second -read-only emulator
+            // beside the one scripts/e2e-android.sh already booted.
+            readonly: false,
+            // Detox only accepts this enum. scripts/android-env.sh appends `-gpu software`,
+            // which the emulator applies last and which avoids the host swiftshader ANR path.
+            gpuMode: 'off',
             // Set by scripts/android-env.sh. Default off: -accel-check can pass while vCPU creation hangs.
-            bootArgs: process.env.DETOX_EMULATOR_BOOT_ARGS || '-accel off',
+            bootArgs: process.env.DETOX_EMULATOR_BOOT_ARGS || '-accel off -gpu software',
           }
         : {}),
       device: {
