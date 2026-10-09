@@ -90,13 +90,19 @@ describe('AccountCard', () => {
     expect(screen.queryByTestId('account-card-reconciled-badge')).toBeNull();
   });
 
-  it('hides the historical header badge during selection mode', () => {
-    const screen = renderCard({
-      account: { ...mockAccount, reconciledAt: new Date(2026, 8, 30, 13, 48) },
-      isSelectionModeActive: true,
-    });
-    expect(screen.queryByTestId('account-card-reconciled-badge')).toBeNull();
-  });
+  it.each([false, true])(
+    'keeps the reconciliation date in selection mode (selected: %s)',
+    isSelected => {
+      const reconciledAt = new Date(2026, 8, 30, 13, 48);
+      const screen = renderCard({
+        account: { ...mockAccount, reconciledAt },
+        isSelectionModeActive: true,
+        isSelected,
+      });
+      expect(screen.getByTestId('account-card-reconciled-badge')).toBeTruthy();
+      expect(screen.getByText(formatRelativeReconciledDate(reconciledAt))).toBeTruthy();
+    },
+  );
 
   it.each(['light', 'dark'] as const)(
     'retains the original translucent background in %s mode',
@@ -282,7 +288,7 @@ describe('AccountCard', () => {
   it.each([false, true])(
     'keeps card geometry stable during selection (hierarchy: %s)',
     hasChildren => {
-      const account = { ...mockAccount, hasChildren };
+      const account = { ...mockAccount, hasChildren, reconciledAt: new Date(2026, 8, 30, 13, 48) };
       const props = {
         account,
         onPress: jest.fn(),

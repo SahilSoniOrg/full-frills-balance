@@ -159,7 +159,7 @@ function AccountCardBase({
               </Row>
 
               <Row gap="xs" align="center" testID="account-card-header-actions">
-                {reconciledDateText && !isSelectionModeActive && (
+                {reconciledDateText && (
                   <View
                     testID="account-card-reconciled-badge"
                     style={[
