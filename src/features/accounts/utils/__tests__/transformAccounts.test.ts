@@ -5,6 +5,7 @@ import { AccountId } from '@/src/types/ids';
 import { PlainAccount } from '@/src/types/plainDtos';
 
 import { transformAccountsToSections } from '../transformAccounts';
+import { filterAccountsBySearch } from '@/src/features/accounts/helpers/accountsListHelpers';
 
 describe('transformAccountsToSections', () => {
   const defaultOptions = {
@@ -22,6 +23,46 @@ describe('transformAccountsToSections', () => {
     expandedAccountIds: new Set<string>(),
     onContrast: () => '#000000',
   };
+
+  it('keeps a searched parent expandable and shows its full subtree on expansion', () => {
+    const parent: PlainAccount = {
+      id: 'search-parent' as AccountId,
+      name: 'All accounts',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+    };
+    const child: PlainAccount = {
+      ...parent,
+      id: 'search-child' as AccountId,
+      name: 'Bank group',
+      parentAccountId: parent.id,
+    };
+    const leaf: PlainAccount = {
+      ...parent,
+      id: 'search-leaf' as AccountId,
+      name: 'Savings',
+      parentAccountId: child.id,
+    };
+    const unrelated: PlainAccount = { ...parent, id: 'search-other' as AccountId, name: 'Cash' };
+    const accounts = [parent, child, leaf, unrelated];
+    const filtered = filterAccountsBySearch(accounts, 'all');
+    const collapsed = transformAccountsToSections(filtered, defaultOptions)[0].data;
+    expect(collapsed.map(a => a.id)).toEqual([parent.id]);
+    expect(collapsed[0].hasChildren).toBe(true);
+    const expanded = transformAccountsToSections(filtered, {
+      ...defaultOptions,
+      expandedAccountIds: new Set([parent.id, child.id]),
+    })[0].data;
+    expect(expanded.map(a => [a.id, a.depth])).toEqual([
+      [parent.id, 0],
+      [child.id, 1],
+      [leaf.id, 2],
+    ]);
+    expect(expanded[0].isExpanded).toBe(true);
+    const recollapsed = transformAccountsToSections(filtered, defaultOptions)[0].data;
+    expect(recollapsed).toHaveLength(1);
+    expect(recollapsed[0].hasChildren).toBe(true);
+  });
 
   it('updates the view model icon when the account icon changes', () => {
     const accountV1: PlainAccount = {

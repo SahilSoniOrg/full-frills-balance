@@ -6,6 +6,7 @@ import { AccountType } from '@/src/types/enums';
 import { getCurrentMonthRange, getLastNRange } from '@/src/utils/dateUtils';
 import { roundToPrecision } from '@/src/utils/money';
 import { AppConfig } from '@/src/constants/app-config';
+import { createAccountTreeSnapshot } from '@/src/services/accounts/accountTree';
 
 export type AccountsListInflowPeriod = 'overall' | 'month' | '30days';
 export type AccountsListTab = 'accounts' | 'categories';
@@ -18,13 +19,19 @@ export function resolveInflowReportDateRange(
   return getLastNRange(30, 'days');
 }
 
-export function filterAccountsBySearch<T extends { name: string }>(
-  accounts: T[],
-  searchQuery: string,
-): T[] {
-  if (!searchQuery) return accounts;
-  const lowercaseQuery = searchQuery.toLowerCase();
-  return accounts.filter(a => a.name.toLowerCase().includes(lowercaseQuery));
+export function filterAccountsBySearch<
+  T extends Pick<AccountFields, 'id' | 'name' | 'parentAccountId'>,
+>(accounts: T[], searchQuery: string): T[] {
+  const lowercaseQuery = searchQuery.trim().toLowerCase();
+  if (!lowercaseQuery) return accounts;
+  const matches = accounts.filter(a => a.name.toLowerCase().includes(lowercaseQuery));
+  if (matches.length === 0) return [];
+  if (matches.length === accounts.length) return accounts;
+
+  // A matching group remains a group: retain its subtree so expansion still works.
+  const tree = createAccountTreeSnapshot(accounts);
+  const includedIds = new Set(matches.flatMap(a => [a.id, ...tree.getDescendants(a.id)]));
+  return accounts.filter(a => includedIds.has(a.id));
 }
 
 export function isCategoryAccount(account: Pick<AccountFields, 'accountType'>): boolean {

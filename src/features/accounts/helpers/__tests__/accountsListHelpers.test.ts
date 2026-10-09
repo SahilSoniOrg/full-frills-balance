@@ -17,8 +17,14 @@ describe('accountsListHelpers', () => {
   ] as any[];
 
   it('filterAccountsBySearch is case-insensitive', () => {
-    expect(filterAccountsBySearch(accounts, 'cash')).toHaveLength(1);
+    expect(filterAccountsBySearch(accounts, ' CASH ').map(a => a.name)).toEqual(['Cash', 'Wallet']);
     expect(filterAccountsBySearch(accounts, '')).toHaveLength(3);
+  });
+
+  it('keeps leaf searches precise and excludes unrelated siblings', () => {
+    expect(filterAccountsBySearch(accounts, 'wallet').map(a => a.name)).toEqual(['Wallet']);
+    expect(filterAccountsBySearch(accounts, 'missing')).toEqual([]);
+    expect(filterAccountsBySearch(accounts, '   ')).toBe(accounts);
   });
 
   it('filterAccountsForListTab splits categories vs accounts', () => {

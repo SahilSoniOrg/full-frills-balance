@@ -229,6 +229,7 @@ export function AccountsListView({
         </View>
 
         <SectionList
+          keyboardShouldPersistTaps="handled"
           sections={sections}
           keyExtractor={keyExtractor}
           renderSectionHeader={renderSectionHeader}

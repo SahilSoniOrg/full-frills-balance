@@ -228,12 +228,11 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     applyArchiveChanges,
   });
 
-  const filteredAccounts = useMemo(
-    () => filterAccountsBySearch(accounts, searchQuery),
-    [accounts, searchQuery],
+  const { visibleAccounts } = useArchiveScopedAccounts(accounts);
+  const displayAccounts = useMemo(
+    () => filterAccountsBySearch(visibleAccounts, searchQuery),
+    [visibleAccounts, searchQuery],
   );
-
-  const { visibleAccounts: displayAccounts } = useArchiveScopedAccounts(filteredAccounts);
 
   const allSelectableAccountIds = useMemo(() => {
     const tabAccounts = filterAccountsForListTab(displayAccounts, activeTab);
