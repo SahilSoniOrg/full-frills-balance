@@ -83,4 +83,87 @@ describe('buildAccountRollingBalanceSeries', () => {
     expect(result.xTicks[0]).toBe(Date.UTC(2024, 0, 1));
     expect(result.xTicks[3]).toBe(Date.UTC(2024, 0, 1) + 7 * MS_PER_DAY);
   });
+
+  it('stops plotting at dataEnd while ticks still span the whole window', () => {
+    const start = new Date(2024, 0, 1).getTime();
+    const end = new Date(2024, 0, 31, 23, 59).getTime();
+    const today = new Date(2024, 0, 10, 12).getTime();
+
+    const result = buildAccountRollingBalanceSeries({
+      transactions: [{ transactionDate: new Date(2024, 0, 2, 9).getTime(), runningBalance: 50 }],
+      visibleStart: start,
+      visibleEnd: end,
+      paddingDays: 0,
+      dataEnd: today,
+      msPerDay: MS_PER_DAY,
+      tickCount: 2,
+    });
+
+    expect(Math.max(...result.chartData.map(point => point.x))).toBe(
+      new Date(2024, 0, 10).getTime(),
+    );
+    expect(result.xTicks.at(-1)).toBe(end);
+  });
+
+  it('seeds sparse category history at the period opening and preserves its full change', () => {
+    const start = new Date(2024, 8, 1).getTime();
+    const end = new Date(2024, 8, 30, 23, 59, 59, 999).getTime();
+    const result = buildAccountRollingBalanceSeries({
+      transactions: [
+        { transactionDate: new Date(2024, 7, 10).getTime(), runningBalance: 100 },
+        { transactionDate: new Date(2024, 8, 5).getTime(), runningBalance: 130 },
+        { transactionDate: new Date(2024, 8, 12).getTime(), runningBalance: 175 },
+      ],
+      visibleStart: start,
+      visibleEnd: end,
+      openingBalance: 100,
+      msPerDay: MS_PER_DAY,
+      paddingDays: 0,
+    });
+
+    expect(result.chartData).toHaveLength(30);
+    expect(result.chartData[0]).toEqual({ x: start, y: 0 });
+    expect(result.chartData[4].y).toBe(30);
+    expect(result.chartData.at(-1)?.y).toBe(75);
+    expect(result.rollingAverageData).toEqual([]);
+  });
+
+  it('includes opening-day entries and forward-fills unresolved running balances', () => {
+    const start = new Date(2024, 8, 1).getTime();
+    const result = buildAccountRollingBalanceSeries({
+      transactions: [
+        { transactionDate: new Date(2024, 8, 1, 9).getTime(), runningBalance: 130 },
+        { transactionDate: new Date(2024, 8, 2, 9).getTime(), runningBalance: null },
+        { transactionDate: new Date(2024, 8, 3, 9).getTime(), runningBalance: 175 },
+      ],
+      visibleStart: start,
+      visibleEnd: new Date(2024, 8, 3, 23, 59, 59, 999).getTime(),
+      openingBalance: 100,
+      msPerDay: MS_PER_DAY,
+      paddingDays: 0,
+    });
+
+    expect(result.chartData.map(point => point.y)).toEqual([30, 30, 75]);
+  });
+
+  it('keeps an empty seeded period at zero and stops at today', () => {
+    const start = new Date(2024, 8, 1).getTime();
+    const end = new Date(2024, 8, 30, 23, 59, 59, 999).getTime();
+    const result = buildAccountRollingBalanceSeries({
+      transactions: [],
+      visibleStart: start,
+      visibleEnd: end,
+      openingBalance: 0,
+      dataEnd: new Date(2024, 8, 3, 12).getTime(),
+      msPerDay: MS_PER_DAY,
+      paddingDays: 0,
+    });
+
+    expect(result.chartData).toEqual([
+      { x: start, y: 0 },
+      { x: start + MS_PER_DAY, y: 0 },
+      { x: start + 2 * MS_PER_DAY, y: 0 },
+    ]);
+    expect(result.xTicks.at(-1)).toBe(end);
+  });
 });

@@ -2,8 +2,12 @@ import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
-import { Observable } from 'rxjs';
-import { buildActiveClauses, EDITOR_JOURNAL_STATUSES } from './transactionActiveClauses';
+import { Observable, map } from 'rxjs';
+import {
+  buildActiveClauses,
+  deterministicSort,
+  EDITOR_JOURNAL_STATUSES,
+} from './transactionActiveClauses';
 
 export class TransactionObserveQueries {
   private get transactions() {
@@ -67,16 +71,36 @@ export class TransactionObserveQueries {
     startDate: number,
     endDate: number,
   ): Observable<Transaction[]> {
-    return this.transactions
-      .query(
+    return deterministicSort(
+      this.transactions.query(
         ...buildActiveClauses(workplaceId, [
           Q.where('account_id', accountId),
           Q.where('transaction_date', Q.gte(startDate)),
           Q.where('transaction_date', Q.lte(endDate)),
         ]),
-        Q.sortBy('transaction_date', Q.asc),
-      )
-      .observeWithColumns(['running_balance', 'transaction_date']);
+      ),
+      Q.asc,
+    ).observeWithColumns(['running_balance', 'transaction_date', 'created_at']);
+  }
+
+  /** Running balance after the account's last leg dated before `beforeDate`; 0 when there is none. */
+  observeBalanceBefore(
+    workplaceId: WorkplaceId,
+    accountId: AccountId,
+    beforeDate: number,
+  ): Observable<number> {
+    return deterministicSort(
+      this.transactions.query(
+        ...buildActiveClauses(workplaceId, [
+          Q.where('account_id', accountId),
+          Q.where('transaction_date', Q.lt(beforeDate)),
+          Q.where('running_balance', Q.notEq(null)),
+        ]),
+        Q.take(1),
+      ),
+    )
+      .observeWithColumns(['running_balance', 'transaction_date', 'created_at'])
+      .pipe(map(([latest]) => latest?.runningBalance ?? 0));
   }
 }
 

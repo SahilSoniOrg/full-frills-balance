@@ -87,3 +87,13 @@ export function observeAccountChartTransactions(
   if (!accountId || !workplaceId) return of([]);
   return transactionObserveQueries.observeByAccountDateRange(workplaceId, accountId, start, end);
 }
+
+/** The account's own running balance just before `date`, where a period's chart starts. */
+export function observeAccountOpeningBalance(
+  workplaceId: WorkplaceId,
+  accountId: AccountId | null,
+  date: number,
+): Observable<number> {
+  if (!accountId || !workplaceId) return of(0);
+  return transactionObserveQueries.observeBalanceBefore(workplaceId, accountId, date);
+}
