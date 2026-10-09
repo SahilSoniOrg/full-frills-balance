@@ -1,5 +1,5 @@
 import { AppIcon, AppText, type IconName } from '@/src/components/core';
-import { IvyPalette, Opacity, Size, Spacing, Typography } from '@/src/constants/design-tokens';
+import { Opacity, Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import { formPrimitivesStrings as copy } from '@/src/constants/copy/domains/formPrimitivesStrings';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useScrollSettlement } from '@/src/hooks/useScrollSettlement';
@@ -12,7 +12,7 @@ import {
   type LayoutChangeEvent,
   type ListRenderItemInfo,
 } from 'react-native';
-import { withOpacity } from '@/src/utils/color-math';
+import { getReadableColor, withOpacity } from '@/src/utils/color-math';
 
 export interface GlyphCarouselItem {
   key: string;
@@ -42,7 +42,7 @@ export function GlyphCarousel({
   testID,
   accessibilityLabel = copy.accountKind,
 }: GlyphCarouselProps) {
-  const { theme, themeMode } = useTheme();
+  const { theme } = useTheme();
   const reduceMotion = useReducedMotion();
   const [viewportWidth, setViewportWidth] = useState(0);
   const listRef = useRef<FlatList<GlyphCarouselItem>>(null);
@@ -196,7 +196,7 @@ export function GlyphCarousel({
           >
             <AppText
               variant="caption"
-              style={{ color: themeMode === 'light' ? IvyPalette.greenDark : theme.primary }}
+              style={{ color: getReadableColor(theme.primary, theme.surfaceSecondary) }}
             >
               {captionAction.label}
             </AppText>

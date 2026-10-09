@@ -1,6 +1,6 @@
 import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { Icon, AppIcon, AppText, Badge, IconName } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Spacing } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Spacing, Typography } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { formatAccountSubtypeLabel } from '@/src/types/accountSubtype';
 import { Stack } from '@/src/design-system';
@@ -33,12 +33,7 @@ export const SafeToSpendLedger = ({
   return (
     <Stack gap="md">
       <Stack gap="sm">
-        <AppText
-          variant="caption"
-          weight="bold"
-          color="secondary"
-          style={{ textTransform: 'uppercase', letterSpacing: 1.5, fontSize: 10 }}
-        >
+        <AppText variant="caption" weight="bold" color="secondary" style={styles.overline}>
           {labels.categoriesUsed}
         </AppText>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs }}>
@@ -62,12 +57,7 @@ export const SafeToSpendLedger = ({
       </Stack>
 
       <View style={{ gap: Spacing.sm, marginTop: Spacing.xs }}>
-        <AppText
-          variant="caption"
-          weight="bold"
-          color="secondary"
-          style={{ textTransform: 'uppercase', letterSpacing: 1.5, fontSize: 10 }}
-        >
+        <AppText variant="caption" weight="bold" color="secondary" style={styles.overline}>
           {labels.accountsUsed}
         </AppText>
         <View style={{ gap: Spacing.xs }}>
@@ -95,10 +85,13 @@ export const SafeToSpendLedger = ({
                     style={[
                       styles.breakdownRow,
                       {
-                        backgroundColor: withOpacity(
-                          isShortfall ? theme.error : theme.surfaceSecondary,
-                          isZero ? Opacity.hover : Opacity.muted,
-                        ),
+                        // errorLight is a token tint that keeps red and secondary text >= 4.5:1.
+                        backgroundColor: isShortfall
+                          ? theme.errorLight
+                          : withOpacity(
+                              theme.surfaceSecondary,
+                              isZero ? Opacity.hover : Opacity.muted,
+                            ),
                         paddingHorizontal: Spacing.sm,
                         paddingVertical: Spacing.xs,
                         borderRadius: Shape.radius.sm,
@@ -117,25 +110,22 @@ export const SafeToSpendLedger = ({
                         <AppText variant="caption" weight="bold">
                           {acc.accountName}
                         </AppText>
-                        <AppIcon
-                          name={Icon.ChevronRight}
-                          size={10}
-                          color={theme.textSecondary}
-                          style={{ opacity: Opacity.medium }}
-                        />
+                        <AppIcon name={Icon.ChevronRight} size={12} color={theme.textSecondary} />
                       </View>
-                      <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
-                        <AppText variant="caption" color="secondary" style={{ fontSize: 9 }}>
+                      <View
+                        style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: Spacing.xs }}
+                      >
+                        <AppText variant="caption" color="secondary">
                           Current: {formatSts(acc.startingBalance, currencyCode)}
                         </AppText>
                         <AppText
                           variant="caption"
                           color="secondary"
-                          style={{ fontSize: 9, opacity: Opacity.medium }}
+                          style={{ opacity: Opacity.medium }}
                         >
                           •
                         </AppText>
-                        <AppText variant="caption" color="secondary" style={{ fontSize: 9 }}>
+                        <AppText variant="caption" color="secondary">
                           Floor: {formatSts(acc.minBalance, currencyCode)}
                         </AppText>
                       </View>
@@ -153,7 +143,7 @@ export const SafeToSpendLedger = ({
                       <AppText
                         variant="caption"
                         color="secondary"
-                        style={{ fontSize: 8, textTransform: 'uppercase' }}
+                        style={[styles.overline, { textAlign: 'right' }]}
                       >
                         {isShortfall
                           ? AppConfig.strings.dashboard.shortfall
@@ -186,7 +176,6 @@ export const SafeToSpendLedger = ({
                                 flexDirection: 'row',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
-                                opacity: Opacity.heavy,
                               }}
                             >
                               <TouchableOpacity
@@ -206,47 +195,31 @@ export const SafeToSpendLedger = ({
                               >
                                 <AppIcon
                                   name={icon}
-                                  size={11}
+                                  size={12}
                                   color={theme.textSecondary}
-                                  strokeWidth={1.2}
+                                  strokeWidth={1.5}
                                 />
                                 <View
                                   style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                                 >
-                                  <AppText
-                                    style={{
-                                      fontSize: 9,
-                                      color: theme.textSecondary,
-                                      letterSpacing: 0.1,
-                                    }}
-                                    numberOfLines={1}
-                                  >
+                                  <AppText variant="caption" color="secondary" numberOfLines={1}>
                                     {item.name}
                                   </AppText>
                                   {item.id && item.source === 'PLANNED_PAYMENT' && (
                                     <AppIcon
                                       name={Icon.ChevronRight}
-                                      size={8}
+                                      size={12}
                                       color={theme.textSecondary}
-                                      style={{ opacity: Opacity.muted }}
                                     />
                                   )}
                                   {item.isPostIncome && (
-                                    <AppText
-                                      style={{ fontSize: 8.5, color: theme.primary }}
-                                      weight="bold"
-                                    >
+                                    <AppText variant="caption" color="primary" weight="bold">
                                       (Post-payday)
                                     </AppText>
                                   )}
                                 </View>
                               </TouchableOpacity>
-                              <AppText
-                                variant="caption"
-                                color="secondary"
-                                tabular
-                                style={{ fontSize: 9 }}
-                              >
+                              <AppText variant="caption" color="secondary" tabular>
                                 {formatSts(item.amount, currencyCode, { prefix: '-' })}
                               </AppText>
                             </View>
@@ -259,7 +232,6 @@ export const SafeToSpendLedger = ({
                               flexDirection: 'row',
                               justifyContent: 'space-between',
                               alignItems: 'center',
-                              opacity: Opacity.heavy,
                             }}
                           >
                             <View
@@ -272,37 +244,22 @@ export const SafeToSpendLedger = ({
                             >
                               <AppIcon
                                 name={Icon.TrendingUp}
-                                size={11}
+                                size={12}
                                 color={theme.textSecondary}
-                                strokeWidth={1.2}
+                                strokeWidth={1.5}
                               />
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                <AppText
-                                  style={{
-                                    fontSize: 9,
-                                    color: theme.textSecondary,
-                                    letterSpacing: 0.1,
-                                  }}
-                                  numberOfLines={1}
-                                >
+                                <AppText variant="caption" color="secondary" numberOfLines={1}>
                                   {item.name}
                                 </AppText>
                                 {item.isPostIncome && (
-                                  <AppText
-                                    style={{ fontSize: 8.5, color: theme.primary }}
-                                    weight="bold"
-                                  >
+                                  <AppText variant="caption" color="primary" weight="bold">
                                     (Payday)
                                   </AppText>
                                 )}
                               </View>
                             </View>
-                            <AppText
-                              variant="caption"
-                              color="secondary"
-                              tabular
-                              style={{ fontSize: 9 }}
-                            >
+                            <AppText variant="caption" color="secondary" tabular>
                               {formatSts(item.amount, currencyCode, { prefix: '+' })}
                             </AppText>
                           </View>
@@ -320,6 +277,13 @@ export const SafeToSpendLedger = ({
 };
 
 const styles = StyleSheet.create({
+  // Uppercase labels sit one step under caption; 11pt is the readability floor.
+  overline: {
+    fontSize: Typography.sizes.xs - 1,
+    lineHeight: 14,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
   breakdownRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

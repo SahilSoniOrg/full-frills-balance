@@ -1,6 +1,7 @@
 import { AppButton, AppInputField, AppText, Icon, AppIcon } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { IvyPalette, Size, Spacing } from '@/src/constants/design-tokens';
+import { Size, Spacing } from '@/src/constants/design-tokens';
+import { getReadableColor } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
 import { RecurrenceEngine } from '@/src/services/forward-finance/recurrence/RecurrenceEngine';
 import type { RecurrenceInterval } from '@/src/services/forward-finance/recurrence/types';
@@ -69,8 +70,9 @@ export function ScheduleSheet({
   } else if (previousProps.visible !== visible) {
     setPreviousProps({ visible, value });
   }
-  const { theme, themeMode } = useTheme();
-  const accent = themeMode === 'light' ? IvyPalette.greenDark : theme.primary;
+  const { theme } = useTheme();
+  // Tokens are readable in Deep Space; the guard keeps other themes' accents legible.
+  const accent = getReadableColor(theme.primary, theme.surfaceSecondary);
   const update = (patch: Partial<ScheduleValue>) => setDraft(current => ({ ...current, ...patch }));
   const updateInterval = (intervalType: RecurrenceInterval) =>
     setDraft(current => {

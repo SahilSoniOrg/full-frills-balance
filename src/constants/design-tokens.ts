@@ -432,6 +432,17 @@ export const DeepSpacePalette = {
   blueDim: '#1F2C3D', // Muted Blue (Backgrounds)
   orange: '#F2994A', // Liability/Warning
   purple: '#BB6BD9', // Transfer
+  redDimDeep: '#351616', // Dark error tint: keeps red text at >= 4.5:1
+
+  // Light-mode inks: the same hues, deep enough for >= 4.5:1 text on
+  // background, surface and surfaceSecondary (see deepSpaceContrast.test.ts).
+  mintInk: '#16734C',
+  mintTint: '#E3F5EC',
+  redInk: '#B83232',
+  redTint: '#FDECEC',
+  orangeInk: '#A34D00',
+  blueInk: '#1D5FAD',
+  purpleInk: '#7E3AA8',
 
   // Standard
   white: '#FFFFFF',
@@ -584,35 +595,37 @@ export interface Theme {
 // === SEMANTIC THEME DEFINITIONS ===
 
 const DeepSpaceTheme: { light: Theme; dark: Theme } = {
+  // Light mode uses deep inks of the Deep Space hues. Raw mint (#7DD3A8) is
+  // 1.79:1 on white, so it is reserved for dark mode where it reads at 10:1.
   light: {
-    primary: DeepSpacePalette.mint,
-    primaryLight: DeepSpacePalette.mintDim,
-    success: DeepSpacePalette.mint,
-    successLight: DeepSpacePalette.mintDim,
-    warning: DeepSpacePalette.orange,
+    primary: DeepSpacePalette.mintInk,
+    primaryLight: DeepSpacePalette.mintTint,
+    success: DeepSpacePalette.mintInk,
+    successLight: DeepSpacePalette.mintTint,
+    warning: DeepSpacePalette.orangeInk,
     warningLight: '#FFF5E5',
-    error: DeepSpacePalette.red,
-    errorLight: '#FFE5E5',
-    asset: DeepSpacePalette.blue,
+    error: DeepSpacePalette.redInk,
+    errorLight: DeepSpacePalette.redTint,
+    asset: DeepSpacePalette.blueInk,
     assetLight: '#E8F2FF', // Light blue for light mode
-    liability: DeepSpacePalette.orange,
-    equity: DeepSpacePalette.mint,
-    income: DeepSpacePalette.mint,
-    expense: DeepSpacePalette.red,
-    transfer: DeepSpacePalette.purple,
+    liability: DeepSpacePalette.orangeInk,
+    equity: DeepSpacePalette.mintInk,
+    income: DeepSpacePalette.mintInk,
+    expense: DeepSpacePalette.redInk,
+    transfer: DeepSpacePalette.purpleInk,
     background: '#F5F5FA',
     surface: '#FFFFFF',
     surfaceSecondary: '#EBEBF0',
     border: '#E1E1E6',
     text: '#1A1A1E',
-    textSecondary: '#6E6E73',
-    textTertiary: '#9E9EA3',
-    icon: '#6E6E73',
+    textSecondary: '#5E5E64',
+    textTertiary: '#68686D',
+    icon: '#5E5E64',
     overlay: withOpacity('#0A0A0C', Opacity.medium),
     divider: '#E1E1E6',
     pure: '#FFFFFF',
     pureInverse: '#000000',
-    onPrimary: '#0A0A0C',
+    onPrimary: '#FFFFFF',
     onHighContrastSurface: '#FAFAFA',
     onLowContrastSurface: '#111114',
   },
@@ -624,7 +637,7 @@ const DeepSpaceTheme: { light: Theme; dark: Theme } = {
     warning: DeepSpacePalette.orange,
     warningLight: '#3D2A1A',
     error: DeepSpacePalette.red,
-    errorLight: '#3D1A1A',
+    errorLight: DeepSpacePalette.redDimDeep,
     asset: DeepSpacePalette.blue,
     assetLight: DeepSpacePalette.blueDim, // Dark blue for dark mode
     liability: DeepSpacePalette.orange,
@@ -638,7 +651,7 @@ const DeepSpaceTheme: { light: Theme; dark: Theme } = {
     border: DeepSpacePalette.surfaceHighlight,
     text: DeepSpacePalette.textPrimary,
     textSecondary: DeepSpacePalette.textSecondary,
-    textTertiary: '#797979',
+    textTertiary: '#888888',
     icon: DeepSpacePalette.textSecondary,
     overlay: withOpacity('#000000', Opacity.heavy),
     divider: DeepSpacePalette.surfaceHighlight,

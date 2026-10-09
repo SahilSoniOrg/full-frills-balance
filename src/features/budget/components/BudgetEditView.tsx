@@ -16,12 +16,12 @@ import { CurrencySelector } from '@/src/features/accounts';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
-import { IvyPalette } from '@/src/constants/design-tokens';
 import { budgetFormStrings as copy } from '@/src/constants/copy/domains/budgetFormStrings';
 import { FadeIn, Stack } from '@/src/design-system';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { useTheme } from '@/src/hooks/use-theme';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
+import { getReadableColor } from '@/src/utils/color-math';
 import { toast } from '@/src/utils/alerts';
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -62,13 +62,13 @@ export function BudgetEditView({
   budget,
   onCancel,
 }: BudgetEditViewModel) {
-  const { theme, themeMode } = useTheme();
+  const { theme } = useTheme();
   const formatMoney = useMoneyFormat();
   const [isAccountPickerVisible, setIsAccountPickerVisible] = useState(false);
   const [isAssetPickerVisible, setIsAssetPickerVisible] = useState(false);
   const currency = currencies.find(item => item.code === currencyCode);
   const precision = currency?.precision ?? getCurrencyPrecision(currencyCode);
-  const expenseInk = themeMode === 'light' ? IvyPalette.redDark : IvyPalette.redLight;
+  const expenseInk = getReadableColor(theme.expense, theme.errorLight);
 
   const loadingChrome = useMemo<ScreenNavChrome>(
     () => ({

@@ -1,5 +1,6 @@
 import { AppIcon, AppText, Icon } from '@/src/components/core';
-import { IvyPalette, Spacing } from '@/src/constants/design-tokens';
+import { Spacing } from '@/src/constants/design-tokens';
+import { getReadableColor } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formPrimitivesStrings as copy } from '@/src/constants/copy/domains/formPrimitivesStrings';
 import { Pressable, View } from 'react-native';
@@ -19,8 +20,9 @@ export function SuggestionHint({
   onDismiss,
   testID,
 }: SuggestionHintProps) {
-  const { theme, themeMode } = useTheme();
-  const accent = themeMode === 'light' ? IvyPalette.greenDark : theme.primary;
+  const { theme } = useTheme();
+  // Tokens are readable in Deep Space; the guard keeps other themes' accents legible.
+  const accent = getReadableColor(theme.primary, theme.surfaceSecondary);
   return (
     <View
       testID={testID}

@@ -112,7 +112,7 @@ export const SafeToSpendChart = ({
                 size={12}
                 color={theme.success}
               />
-              <AppText variant="caption" weight="bold" color="success" style={{ fontSize: 10 }}>
+              <AppText variant="caption" weight="bold" color="success">
                 Safe for{' '}
                 {projection.safeDaysCount > AppConfig.defaults.safeToSpendDaysCap
                   ? `${AppConfig.defaults.safeToSpendDaysCap}+`
@@ -141,7 +141,7 @@ export const SafeToSpendChart = ({
               size={12}
               color={theme.success}
             />
-            <AppText variant="caption" weight="bold" color="success" style={{ fontSize: 10 }}>
+            <AppText variant="caption" weight="bold" color="success">
               {labels.financiallySecure}
             </AppText>
           </View>
@@ -210,7 +210,7 @@ export const SafeToSpendChart = ({
               return (
                 <Stack gap="xs">
                   <Inline justifyContent="space-between" alignItems="center">
-                    <AppText variant="caption" color="secondary" style={{ fontSize: 10 }}>
+                    <AppText variant="caption" color="secondary">
                       {dayjs(point.x).format('MMM D, YYYY')}
                     </AppText>
                     {!point.isHistory && (
@@ -242,13 +242,8 @@ export const SafeToSpendChart = ({
                           }}
                         >
                           <Inline gap="xs" alignItems="center">
-                            <AppIcon name={Icon.Flame} size={10} color={theme.error} />
-                            <AppText
-                              variant="caption"
-                              weight="bold"
-                              color="error"
-                              style={{ fontSize: 10 }}
-                            >
+                            <AppIcon name={Icon.Flame} size={12} color={theme.error} />
+                            <AppText variant="caption" weight="bold" color="error">
                               Daily Burn: {formatSts(point.dailyBurn!, currencyCode)}
                             </AppText>
                           </Inline>
@@ -268,13 +263,8 @@ export const SafeToSpendChart = ({
                         >
                           {plannedInflowTotal > 0 && (
                             <Inline gap="xs" alignItems="center">
-                              <AppIcon name={Icon.Calendar} size={10} color={theme.success} />
-                              <AppText
-                                variant="caption"
-                                weight="bold"
-                                color="success"
-                                style={{ fontSize: 10 }}
-                              >
+                              <AppIcon name={Icon.Calendar} size={12} color={theme.success} />
+                              <AppText variant="caption" weight="bold" color="success">
                                 Planned Inflow:{' '}
                                 {formatSts(plannedInflowTotal, currencyCode, { prefix: '+' })}
                               </AppText>
@@ -282,13 +272,8 @@ export const SafeToSpendChart = ({
                           )}
                           {toBeSpentTotal > 0 && (
                             <Inline gap="xs" alignItems="center">
-                              <AppIcon name={Icon.CreditCard} size={10} color={theme.error} />
-                              <AppText
-                                variant="caption"
-                                weight="bold"
-                                color="error"
-                                style={{ fontSize: 10 }}
-                              >
+                              <AppIcon name={Icon.CreditCard} size={12} color={theme.error} />
+                              <AppText variant="caption" weight="bold" color="error">
                                 To Be Spent:{' '}
                                 {formatSts(toBeSpentTotal, currencyCode, { prefix: '-' })}
                               </AppText>
@@ -336,13 +321,8 @@ export const SafeToSpendChart = ({
                               alignItems="center"
                             >
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                <AppIcon name={iconName} size={10} color={color} />
-                                <AppText
-                                  variant="caption"
-                                  color="secondary"
-                                  numberOfLines={1}
-                                  style={{ fontSize: 10, opacity: Opacity.high }}
-                                >
+                                <AppIcon name={iconName} size={12} color={color} />
+                                <AppText variant="caption" color="secondary" numberOfLines={1}>
                                   {detail.name}
                                 </AppText>
                               </View>
@@ -351,7 +331,6 @@ export const SafeToSpendChart = ({
                                   variant="caption"
                                   weight="bold"
                                   color={isInflow ? 'success' : 'error'}
-                                  style={{ fontSize: 10 }}
                                 >
                                   {formatSts(Math.abs(detail.amount), currencyCode, {
                                     prefix: isInflow ? '+' : '-',
@@ -362,11 +341,7 @@ export const SafeToSpendChart = ({
                           );
                         })}
                       {(point.details?.length || 0) > AppConfig.defaults.maxTooltipDetails && (
-                        <AppText
-                          variant="caption"
-                          color="secondary"
-                          style={{ fontSize: 9, marginLeft: 14 }}
-                        >
+                        <AppText variant="caption" color="secondary" style={{ marginLeft: 14 }}>
                           + {point.details!.length - AppConfig.defaults.maxTooltipDetails} more
                         </AppText>
                       )}
