@@ -208,6 +208,116 @@ describe('account form navigation', () => {
   });
 });
 
+describe('navigation after account removal', () => {
+  const removedId = asAccountId('removed-group');
+  const list = {
+    key: 'list',
+    name: '(tabs)',
+    state: { index: 1, routes: [{ name: 'index' }, { name: 'accounts' }] },
+  };
+  const details = { key: 'details', name: 'account-details', params: { accountId: removedId } };
+  const form = { key: 'form', name: 'account-creation', params: { accountId: removedId } };
+  function navigationFor(routes: { key: string; name: string; params?: object; state?: object }[]) {
+    return {
+      getState: () => ({ key: 'root', index: routes.length - 1, routes }),
+      dispatch: jest.fn(),
+    };
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    router.canGoBack.mockReturnValue(true);
+  });
+
+  it('pops directly back to the existing list instead of replacing the current page', () => {
+    const navigation = navigationFor([list, details]);
+    AppNavigation.afterAccountRemoval(removedId, navigation);
+    expect(router.back).toHaveBeenCalledTimes(1);
+    expect(router.replace).not.toHaveBeenCalled();
+    expect(navigation.dispatch).not.toHaveBeenCalled();
+  });
+
+  it('returns to a different parent account as a valid previous destination', () => {
+    const parent = {
+      ...details,
+      key: 'parent',
+      params: { accountId: asAccountId('enclosing-group') },
+    };
+    const navigation = navigationFor([list, parent, details]);
+    AppNavigation.afterAccountRemoval(removedId, navigation);
+    expect(router.back).toHaveBeenCalledTimes(1);
+    expect(navigation.dispatch).not.toHaveBeenCalled();
+  });
+
+  it.each(['account-creation', 'category-creation'])(
+    'skips removed details underneath the %s form',
+    name => {
+      const navigation = navigationFor([list, details, { ...form, name }]);
+      AppNavigation.afterAccountRemoval(removedId, navigation);
+      expect(navigation.dispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'RESET',
+          target: 'root',
+          payload: { ...navigation.getState(), index: 0, routes: [list] },
+        }),
+      );
+      expect(router.back).not.toHaveBeenCalled();
+      expect(router.replace).not.toHaveBeenCalled();
+    },
+  );
+
+  it('removes older pages for the group even when the nearest previous page is valid', () => {
+    const search = { key: 'search', name: 'journal-search', params: { q: 'coffee' } };
+    const navigation = navigationFor([
+      list,
+      details,
+      search,
+      { ...details, key: 'second-details' },
+    ]);
+    AppNavigation.afterAccountRemoval(removedId, navigation);
+    expect(navigation.dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'RESET',
+        payload: { ...navigation.getState(), index: 1, routes: [list, search] },
+      }),
+    );
+  });
+
+  it.each([[details], [details, form]])(
+    'resets to the account list when history contains no valid target (%j)',
+    (...routes) => {
+      const navigation = navigationFor(routes);
+      AppNavigation.afterAccountRemoval(removedId, navigation);
+      expect(navigation.dispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'RESET',
+          payload: {
+            index: 0,
+            routes: [{ name: '(tabs)', state: { index: 0, routes: [{ name: 'accounts' }] } }],
+          },
+        }),
+      );
+      expect(router.back).not.toHaveBeenCalled();
+      expect(router.replace).not.toHaveBeenCalled();
+    },
+  );
+
+  it('uses the account list fallback when back navigation is unavailable', () => {
+    router.canGoBack.mockReturnValue(false);
+    const navigation = navigationFor([list, details]);
+    AppNavigation.afterAccountRemoval(removedId, navigation);
+    expect(navigation.dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: 'RESET' }));
+    expect(router.back).not.toHaveBeenCalled();
+  });
+
+  it('does not navigate again if the user left while the command was pending', () => {
+    const navigation = navigationFor([list]);
+    AppNavigation.afterAccountRemoval(removedId, navigation);
+    expect(navigation.dispatch).not.toHaveBeenCalled();
+    expect(router.back).not.toHaveBeenCalled();
+  });
+});
+
 describe('settings navigation', () => {
   beforeEach(() => {
     jest.clearAllMocks();

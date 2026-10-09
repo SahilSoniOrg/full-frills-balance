@@ -1,4 +1,5 @@
 import { Href, router } from 'expo-router';
+import { CommonActions, type NavigationAction } from 'expo-router/react-navigation';
 import type { TransactionIntentSeed } from '@/src/types/journalEntryRoute';
 import { toLegacyJournalEntryQueryParams } from '@/src/types/journalEntryRoute';
 import type { SetupJourneyId } from '@/src/services/setup/setupDraftIdentity';
@@ -13,6 +14,27 @@ import {
 const JOURNAL_ENTRY_NAVIGATION_DEDUPE_MS = 750;
 const MAX_INLINE_JOURNAL_IDS = 100;
 let lastJournalEntryNavigation: { href: string; timestamp: number } | null = null;
+
+export type AccountRemovalNavigation = {
+  getState: () =>
+    | {
+        key: string;
+        index: number;
+        routes: readonly { key?: string; name: string; params?: object }[];
+      }
+    | undefined;
+  dispatch: (action: NavigationAction) => void;
+};
+
+function isRemovedAccountRoute(
+  route: { name: string; params?: object },
+  accountId: AccountId,
+): boolean {
+  if (!['account-details', 'account-creation', 'category-creation'].includes(route.name))
+    return false;
+  const id = route.params && 'accountId' in route.params ? route.params.accountId : undefined;
+  return id === accountId || (Array.isArray(id) && id.includes(accountId));
+}
 
 /**
  * Builds a route with query parameters, filtering out null, undefined, and empty string values.
@@ -76,6 +98,38 @@ export const AppNavigation = {
    */
   toAccounts: () => {
     router.replace('/(tabs)/accounts');
+  },
+
+  /** Return after removal, preserving valid history and discarding pages for the removed account. */
+  afterAccountRemoval: (accountId: AccountId, navigation: AccountRemovalNavigation): void => {
+    lastJournalEntryNavigation = null;
+    const state = navigation.getState();
+    const current = state?.routes[state.index];
+    // A pending command may finish after the user has already left this account.
+    if (current && !isRemovedAccountRoute(current, accountId)) return;
+    const history =
+      state?.routes
+        .slice(0, state.index)
+        .filter(route => !isRemovedAccountRoute(route, accountId)) ?? [];
+    if (state && history.length > 0 && router.canGoBack()) {
+      if (history.length === state.index) {
+        router.back();
+      } else {
+        navigation.dispatch({
+          ...CommonActions.reset({ ...state, routes: history, index: history.length - 1 }),
+          target: state.key,
+        });
+      }
+      return;
+    }
+    // Reset instead of replacing the form: replacement would leave removed detail pages underneath.
+    navigation.dispatch({
+      ...CommonActions.reset({
+        index: 0,
+        routes: [{ name: '(tabs)', state: { index: 0, routes: [{ name: 'accounts' }] } }],
+      }),
+      ...(state ? { target: state.key } : {}),
+    });
   },
 
   /**
