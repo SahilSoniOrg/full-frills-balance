@@ -7,6 +7,11 @@ import { useAccountDetailsActions } from '@/src/features/accounts/hooks/details/
 import { useAccountDetailsData } from '@/src/features/accounts/hooks/details/useAccountDetailsData';
 import { useAccountDetailsMetrics } from '@/src/features/accounts/hooks/details/useAccountDetailsMetrics';
 import { useAccountHierarchyTree } from '@/src/features/accounts/hooks/details/useAccountHierarchyTree';
+import { useAccountArchiveAction } from '@/src/features/accounts/hooks/useAccountArchiveAction';
+import { useAccountDeleteMergeActions } from '@/src/features/accounts/hooks/useAccountDeleteMergeActions';
+import { accountDetailsCopy } from '@/src/features/accounts/helpers/accountFlowLabels';
+import { buildAccountDetailsHeaderActions } from '@/src/features/accounts/helpers/buildAccountDetailsHeaderActions';
+import { useTheme } from '@/src/hooks/use-theme';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { injectReconciledMarkersIntoJournalList } from '@/src/features/accounts/mappers/accountJournalListPresentation';
 import { useJournalEntryList, useJournalsBulkOperations } from '@/src/features/journal';
@@ -16,6 +21,7 @@ import { useMemo } from 'react';
 export type { AccountDetailsViewModel, PeriodMetrics, SubAccountViewModel };
 
 export function useAccountDetailsViewModel(): AccountDetailsViewModel {
+  const { theme } = useTheme();
   const data = useAccountDetailsData();
   const {
     workplaceId,
@@ -35,7 +41,6 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     accountSubtypeLabel,
     accountTypeVariant,
     accountIcon,
-    accountTypeColorKey,
     accountColor,
     isArchived,
     balanceAmount,
@@ -50,7 +55,13 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     unreconciledCount,
   } = data;
 
-  const { recoverAccount: recoverAction, reconcileAccount } = useAccountActions(workplaceId);
+  const {
+    recoverAccount: recoverAction,
+    reconcileAccount,
+    deleteAccount: deleteAccountAction,
+    mergeAccounts,
+    disbandGroup,
+  } = useAccountActions(workplaceId);
 
   const accountTreeSnapshot = useMemo(() => createAccountTreeSnapshot(accounts), [accounts]);
   const accountDetailsScope = useMemo(() => {
@@ -116,10 +127,56 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     reconcileAccount,
   });
 
+  // Only offer management actions once the persisted account and its counts have loaded.
+  const managementEnabled = !!account && !dashboardLoading && !isDeleted;
+  const archive = useAccountArchiveAction({
+    enabled: managementEnabled,
+    workplaceId,
+    accountId,
+    account,
+    accounts,
+  });
+  const deleteMerge = useAccountDeleteMergeActions({
+    enabled: managementEnabled,
+    accountId,
+    account,
+    accounts,
+    tree: accountTreeSnapshot,
+    directTransactionCount: balanceData?.directTransactionCount ?? 0,
+    isDeleted,
+    entityLabel: accountDetailsCopy(accountType).entity,
+    deleteAccount: deleteAccountAction,
+    recoverAction,
+    mergeAccounts,
+    disbandGroup,
+  });
+  const headerActions = useMemo(
+    () =>
+      buildAccountDetailsHeaderActions(
+        {
+          accountType,
+          isDeleted,
+          onRecover: actions.onRecover,
+          onSearch: actions.onSearch,
+          onEdit: actions.onEdit,
+          managementActions: [...archive.actions, ...deleteMerge.actions],
+        },
+        theme,
+      ),
+    [
+      accountType,
+      isDeleted,
+      actions.onRecover,
+      actions.onSearch,
+      actions.onEdit,
+      archive.actions,
+      deleteMerge.actions,
+      theme,
+    ],
+  );
+
   const listHeader = useMemo(
     () => ({
-      accountType,
-      reconciledAtMs,
       currencyCode: balanceCurrency,
       summary: {
         accountName,
@@ -127,7 +184,6 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         accountType,
         accountSubtypeLabel,
         accountTypeVariant,
-        accountTypeColorKey,
         accountColor,
         isParent: hierarchy.isParent,
         ancestorPath: hierarchy.ancestorPath,
@@ -139,7 +195,10 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         balanceAmount,
         secondaryBalances: metrics.secondaryBalances,
         transactionCountText,
+        reconciledAtMs,
         onAuditPress: actions.onAuditPress,
+        onReconcile: actions.onReconcile,
+        unreconciledCount,
       },
       activity: {
         dateRange,
@@ -150,8 +209,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         rollingAverageData: metrics.rollingAverageData,
         xTicks: metrics.xTicks,
         periodMetrics: metrics.periodMetrics,
-        onReconcile: actions.onReconcile,
-        unreconciledCount,
+        previousPeriod: metrics.previousPeriod,
       },
     }),
     [
@@ -162,7 +220,6 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
       accountType,
       accountSubtypeLabel,
       accountTypeVariant,
-      accountTypeColorKey,
       accountColor,
       hierarchy.isParent,
       hierarchy.ancestorPath,
@@ -183,20 +240,25 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
       metrics.rollingAverageData,
       metrics.xTicks,
       metrics.periodMetrics,
+      metrics.previousPeriod,
       actions.onReconcile,
       unreconciledCount,
     ],
   );
 
   return {
+    accountName,
     accountLoading: data.accountLoading,
     accountMissing: data.accountMissing,
     accountType,
     isParent: hierarchy.isParent,
     isDeleted,
-    headerActions: actions.headerActions,
+    isArchived,
+    headerActions,
     onAddPress: actions.onAddPress,
     onBack: actions.onBack,
+    archiveCascadeModal: archive.archiveCascadeModal,
+    mergePickerModal: deleteMerge.mergePickerModal,
     listHeader,
     isDatePickerVisible,
     hideDatePicker: hidePicker,

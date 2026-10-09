@@ -823,6 +823,7 @@ export const UI_STRINGS = {
       income: 'Income',
       expense: 'Expense',
     },
+    entryCount: (count: number) => `${count.toLocaleString()} ${count === 1 ? 'entry' : 'entries'}`,
     selectCurrency: 'Currency',
     form: {
       accountName: 'Account Name',

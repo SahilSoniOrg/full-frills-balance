@@ -1,47 +1,41 @@
-import { Icon } from '@/src/types/domainIcons';
 import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
-import { MoneyDetailHeaderActions } from '@/src/components/shared/MoneyDetailHeaderActions';
+import { DetailHeaderMenuActions } from '@/src/components/shared/DetailHeaderMenuActions';
 import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChrome';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { AccountDetailsView } from '@/src/features/accounts/components/AccountDetailsView';
-import {
-  accountDetailsScreenTitle,
-  buildAccountDetailsHeaderActions,
-} from '@/src/features/accounts/helpers/buildAccountDetailsHeaderActions';
+import { accountDetailsCopy } from '@/src/features/accounts/helpers/accountFlowLabels';
 import { useAccountDetailsViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
-import { useTheme } from '@/src/hooks/use-theme';
+import { Icon } from '@/src/types/domainIcons';
 import { useMemo } from 'react';
 
 function AccountDetailsScreen() {
   const vm = useAccountDetailsViewModel();
-  const { theme } = useTheme();
   const {
+    accountName,
     accountLoading,
     accountMissing,
     accountType,
     headerActions,
     isDeleted,
-    isParent,
-    isSelectionModeActive,
     onAddPress,
+    isSelectionModeActive,
     selectionChrome,
   } = vm;
 
   const chrome = useMemo<ScreenNavChrome>(() => {
     const phase = accountLoading ? 'loading' : accountMissing ? 'missing' : 'ready';
-    const titleVm = { isParent, accountType };
-
     return applySelectionChrome(
       buildDetailNavChrome({
         phase,
-        readyTitle: accountDetailsScreenTitle(titleVm),
+        readyTitle: accountName || `${accountDetailsCopy(accountType).entity} Details`,
         loadingTitle: 'Account Details',
         onBack: vm.onBack,
         headerActions: (
-          <MoneyDetailHeaderActions
-            privacyVariant="surface"
-            actions={buildAccountDetailsHeaderActions(headerActions, theme)}
+          <DetailHeaderMenuActions
+            privacyPosition="leading"
+            leadingActions={headerActions.leading}
+            actions={headerActions.menu}
           />
         ),
         fab: isDeleted
@@ -49,7 +43,7 @@ function AccountDetailsScreen() {
           : {
               onPress: onAddPress,
               label: 'Add Transaction',
-              icon: Icon.PlusCircle,
+              icon: Icon.Plus,
               placement: 'end',
               accessibilityLabel: 'Add transaction for this account',
             },
@@ -60,15 +54,14 @@ function AccountDetailsScreen() {
       },
     );
   }, [
-    theme,
+    accountName,
     accountLoading,
     accountMissing,
     accountType,
     headerActions,
     isDeleted,
-    isParent,
-    isSelectionModeActive,
     onAddPress,
+    isSelectionModeActive,
     selectionChrome.exitSelectionMode,
     vm.onBack,
   ]);

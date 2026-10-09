@@ -1,4 +1,32 @@
 import { AccountType } from '@/src/types/enums';
+import { isCategoryAccountType } from '@/src/utils/accountCategory';
+
+/** Account details copy: categories accumulate spending or earnings rather than holding a balance. */
+export function accountDetailsCopy(accountType: AccountType) {
+  const entity = isCategoryAccountType(accountType) ? ('Category' as const) : ('Account' as const);
+  if (accountType === AccountType.EXPENSE) {
+    return {
+      entity,
+      balanceLabel: 'Spent all time',
+      chartTitle: 'Spending so far',
+      chartLine: 'Spent',
+    };
+  }
+  if (accountType === AccountType.INCOME) {
+    return {
+      entity,
+      balanceLabel: 'Earned all time',
+      chartTitle: 'Earnings so far',
+      chartLine: 'Earned',
+    };
+  }
+  return {
+    entity,
+    balanceLabel: 'Current balance',
+    chartTitle: 'Balance over time',
+    chartLine: 'Balance',
+  };
+}
 
 export type AccountFlowLabelKey = AccountType | 'CREDIT_CARD' | undefined;
 
@@ -6,8 +34,6 @@ type AccountFlowLabels = {
   statsLeftLabel: string;
   statsRightLabel: string;
   statsSwapAmounts: boolean;
-  increaseLabel: string;
-  decreaseLabel: string;
 };
 
 export function accountFlowLabels(accountType: AccountFlowLabelKey): AccountFlowLabels {
@@ -16,8 +42,6 @@ export function accountFlowLabels(accountType: AccountFlowLabelKey): AccountFlow
       statsLeftLabel: 'PAYMENTS MADE',
       statsRightLabel: 'NEW CHARGES',
       statsSwapAmounts: true,
-      increaseLabel: 'Total Spent',
-      decreaseLabel: 'Total Paid',
     };
   }
   if (accountType === AccountType.EXPENSE) {
@@ -25,8 +49,6 @@ export function accountFlowLabels(accountType: AccountFlowLabelKey): AccountFlow
       statsLeftLabel: 'MONTH SPENT',
       statsRightLabel: 'REFUNDS / CREDITS',
       statsSwapAmounts: false,
-      increaseLabel: 'Month Spent',
-      decreaseLabel: 'Refunds / Credits',
     };
   }
   if (accountType === AccountType.INCOME) {
@@ -34,8 +56,6 @@ export function accountFlowLabels(accountType: AccountFlowLabelKey): AccountFlow
       statsLeftLabel: 'MONTH EARNED',
       statsRightLabel: 'ADJUSTMENTS',
       statsSwapAmounts: false,
-      increaseLabel: 'Total In',
-      decreaseLabel: 'Total Out',
     };
   }
   if (accountType === AccountType.EQUITY) {
@@ -43,16 +63,12 @@ export function accountFlowLabels(accountType: AccountFlowLabelKey): AccountFlow
       statsLeftLabel: 'ADDITIONS',
       statsRightLabel: 'REDUCTIONS',
       statsSwapAmounts: false,
-      increaseLabel: 'Total In',
-      decreaseLabel: 'Total Out',
     };
   }
   return {
     statsLeftLabel: 'MONEY IN',
     statsRightLabel: 'MONEY OUT',
     statsSwapAmounts: false,
-    increaseLabel: 'Total In',
-    decreaseLabel: 'Total Out',
   };
 }
 

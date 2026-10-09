@@ -1,7 +1,14 @@
+import type { DetailMenuAction } from '@/src/components/shared/DetailHeaderMenuActions';
+import type { AccountArchiveCascadeModalProps } from '@/src/features/accounts/components/AccountArchiveCascadeModal';
+import type { AccountMergePickerModalProps } from '@/src/features/accounts/hooks/useAccountDeleteMergeActions';
 import type { JournalListModalsProps } from '@/src/features/journal';
 import type { ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
+import type { ScreenHeaderActionItem } from '@/src/components/shared/ScreenHeaderActions';
 import { IconName } from '@/src/components/core';
-import { PeriodMetrics } from '@/src/features/accounts/hooks/details/useAccountDetailsMetrics';
+import {
+  PeriodMetrics,
+  PreviousPeriodMetrics,
+} from '@/src/features/accounts/hooks/details/useAccountDetailsMetrics';
 import {
   AncestorAccountViewModel,
   SubAccountViewModel,
@@ -17,10 +24,9 @@ export type { AncestorAccountViewModel, PeriodMetrics, SubAccountViewModel };
 export interface AccountSummaryCardModel {
   accountName: string;
   accountIcon: IconName | null;
-  accountType: string;
+  accountType: AccountType;
   accountSubtypeLabel: string;
   accountTypeVariant: ComponentVariant;
-  accountTypeColorKey: string;
   /** Custom per-account color (hex, '' = auto/derive from type). */
   accountColor?: string;
   isParent: boolean;
@@ -34,7 +40,11 @@ export interface AccountSummaryCardModel {
   balanceAmount: number | null;
   secondaryBalances: { currencyCode: string; amount: number }[];
   transactionCountText: string;
+  reconciledAtMs: number | null;
   onAuditPress: () => void;
+  /** Absent for categories and deleted accounts, which can't be matched to a statement. */
+  onReconcile?: () => void;
+  unreconciledCount: number;
 }
 
 export interface AccountActivitySectionModel {
@@ -46,34 +56,33 @@ export interface AccountActivitySectionModel {
   rollingAverageData: { x: number; y: number }[];
   xTicks: number[];
   periodMetrics: PeriodMetrics;
-  onReconcile?: () => void;
-  unreconciledCount: number;
+  previousPeriod: PreviousPeriodMetrics | null;
 }
 
 export type AccountDetailsListHeaderModel = {
-  accountType: string;
-  reconciledAtMs: number | null;
   currencyCode: string;
   summary: AccountSummaryCardModel;
   activity: AccountActivitySectionModel;
 };
 
 export interface AccountDetailsHeaderActions {
-  canRecover: boolean;
-  onRecover: () => void;
-  onEdit: () => void;
-  onSearch?: () => void;
+  leading: ScreenHeaderActionItem[];
+  menu: DetailMenuAction[];
 }
 
 export interface AccountDetailsViewModel {
+  accountName: string;
   accountLoading: boolean;
   accountMissing: boolean;
   accountType: AccountType;
   isParent: boolean;
   isDeleted: boolean;
+  isArchived: boolean;
   headerActions: AccountDetailsHeaderActions;
   onAddPress: () => void;
   onBack: () => void;
+  archiveCascadeModal: AccountArchiveCascadeModalProps | null;
+  mergePickerModal: AccountMergePickerModalProps | null;
   listHeader: AccountDetailsListHeaderModel;
   isDatePickerVisible: boolean;
   hideDatePicker: () => void;

@@ -41,25 +41,14 @@ const expectedStatsByType: Record<
   },
 };
 
-const expectedActivityByType: Record<
-  AccountType,
-  { increaseLabel: string; decreaseLabel: string }
-> = {
-  [AccountType.ASSET]: { increaseLabel: 'Total In', decreaseLabel: 'Total Out' },
-  [AccountType.LIABILITY]: { increaseLabel: 'Total Spent', decreaseLabel: 'Total Paid' },
-  [AccountType.EQUITY]: { increaseLabel: 'Total In', decreaseLabel: 'Total Out' },
-  [AccountType.INCOME]: { increaseLabel: 'Total In', decreaseLabel: 'Total Out' },
-  [AccountType.EXPENSE]: { increaseLabel: 'Month Spent', decreaseLabel: 'Refunds / Credits' },
-};
-
 describe('accountFlowLabels', () => {
-  it.each(Object.values(AccountType))('exposes stats and activity labels for %s', accountType => {
-    const flow = accountFlowLabels(accountType);
+  it.each(Object.values(AccountType))('exposes stats labels for %s', accountType => {
     expect(getAccountStatsConfig(accountType, INCREASE, DECREASE)).toEqual(
       expectedStatsByType[accountType],
     );
-    expect(flow).toMatchObject(expectedActivityByType[accountType]);
-    expect(flow.statsLeftLabel).toBe(expectedStatsByType[accountType].leftLabel);
+    expect(accountFlowLabels(accountType).statsLeftLabel).toBe(
+      expectedStatsByType[accountType].leftLabel,
+    );
   });
 
   it.each([
@@ -83,10 +72,10 @@ describe('accountFlowLabels', () => {
     );
   });
 
-  it('keeps the legacy credit-card alias on liability activity labels', () => {
+  it('keeps the legacy credit-card alias on liability stats labels', () => {
     expect(accountFlowLabels('CREDIT_CARD')).toMatchObject({
-      increaseLabel: 'Total Spent',
-      decreaseLabel: 'Total Paid',
+      statsLeftLabel: 'PAYMENTS MADE',
+      statsRightLabel: 'NEW CHARGES',
     });
   });
 });

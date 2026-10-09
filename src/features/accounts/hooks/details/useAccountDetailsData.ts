@@ -1,3 +1,4 @@
+import { AppConfig } from '@/src/constants';
 import { parseIconName, type IconName } from '@/src/types/domainIcons';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useDateRangeFilter } from '@/src/hooks/useDateRangeFilter';
@@ -11,7 +12,7 @@ import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountType } from '@/src/types/enums';
 import { PlainAccount } from '@/src/types/plainDtos';
 import { getAccountFallbackIcon, getAccountIcon } from '@/src/utils/accountIcon';
-import { getAccountTypeColorKey, getAccountTypeVariant } from '@/src/utils/accountCategory';
+import { getAccountTypeVariant } from '@/src/utils/accountCategory';
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
 import { ComponentVariant } from '@/src/utils/style-helpers';
 import { useLocalSearchParams } from 'expo-router';
@@ -34,7 +35,6 @@ export interface AccountDetailsData {
   accountSubtypeLabel: string;
   accountTypeVariant: ComponentVariant;
   accountIcon: IconName | null;
-  accountTypeColorKey: string;
   /** Custom per-account color (hex, '' = auto/derive from type). */
   accountColor: string;
   isDeleted: boolean;
@@ -202,9 +202,8 @@ export function useAccountDetailsData(): AccountDetailsData {
     ? formatAccountSubtypeLabel(account.accountSubtype)
     : '';
   const accountTypeVariant = getAccountTypeVariant(accountType);
-  const accountTypeColorKey = getAccountTypeColorKey(accountType);
   const balanceAmount = account ? balance : null;
-  const transactionCountText = String(transactionCount);
+  const transactionCountText = AppConfig.strings.accounts.entryCount(transactionCount);
 
   const onDateSelect = useCallback(
     (range: DateRange | null, filter: PeriodFilter) => {
@@ -236,7 +235,6 @@ export function useAccountDetailsData(): AccountDetailsData {
     accountSubtypeLabel,
     accountTypeVariant,
     accountIcon: account ? getAccountIcon(account) : null,
-    accountTypeColorKey,
     accountColor: account?.color || '',
     isDeleted,
     isArchived,

@@ -1,9 +1,11 @@
+import { AccountPickerModal } from '@/src/components/account-selection/AccountPickerModal';
+import { AccountArchiveCascadeModal } from '@/src/features/accounts/components/AccountArchiveCascadeModal';
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { JournalEntryListView } from '@/src/components/journal/JournalEntryListView';
 import { AppButton, AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
-import { Spacing } from '@/src/constants';
+import { Size, Spacing } from '@/src/constants';
 import { AccountDetailsListHeader } from '@/src/features/accounts/components/AccountDetailsListHeader';
 import { AccountReconcileDialog } from '@/src/features/accounts/components/AccountReconcileDialog';
 import { SubAccountListModal } from '@/src/features/accounts/components/SubAccountListModal';
@@ -106,6 +108,11 @@ export function AccountDetailsView({
             unreconciledCount={vm.unreconciledCount}
           />
 
+          {vm.archiveCascadeModal ? (
+            <AccountArchiveCascadeModal {...vm.archiveCascadeModal} />
+          ) : null}
+          {vm.mergePickerModal ? <AccountPickerModal {...vm.mergePickerModal} /> : null}
+
           {vm.modals ? <JournalListModals {...vm.modals} /> : null}
         </>
       )}
@@ -131,6 +138,6 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xxxxl,
+    paddingBottom: Size.fab + Spacing.xxxxl + Spacing.lg,
   },
 });

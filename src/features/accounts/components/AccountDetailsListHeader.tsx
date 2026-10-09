@@ -5,23 +5,17 @@ import { Spacing } from '@/src/constants';
 import { StyleSheet, View } from 'react-native';
 
 export function AccountDetailsListHeader({
-  accountType,
   summary,
   activity,
-  reconciledAtMs,
   currencyCode,
 }: AccountDetailsListHeaderModel) {
   return (
     <View style={styles.headerListRegion}>
-      <AccountSummaryCard
-        {...summary}
-        reconciledAtMs={reconciledAtMs}
-        currencyCode={currencyCode}
-      />
+      <AccountSummaryCard {...summary} currencyCode={currencyCode} />
       <AccountActivitySection
         {...activity}
-        accountType={accountType}
-        reconciledAtMs={reconciledAtMs}
+        accountType={summary.accountType}
+        accountColor={summary.accountColor}
         currencyCode={currencyCode}
       />
     </View>

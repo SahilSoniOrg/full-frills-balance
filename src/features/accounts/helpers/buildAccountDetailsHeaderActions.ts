@@ -1,60 +1,60 @@
-import type { ScreenHeaderActionItem } from '@/src/components/shared/ScreenHeaderActions';
-import type { AccountDetailsViewModel } from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
 import type { Theme } from '@/src/constants/design-tokens';
-import { isCategoryAccountType } from '@/src/utils/accountCategory';
-import { AccountType } from '@/src/types/enums';
+import { accountDetailsCopy } from '@/src/features/accounts/helpers/accountFlowLabels';
+import {
+  toMenuActions,
+  type AccountManagementAction,
+} from '@/src/features/accounts/helpers/accountManagementActions';
+import type { AccountDetailsHeaderActions } from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
 import { Icon } from '@/src/types/domainIcons';
+import { AccountType } from '@/src/types/enums';
 
-type AccountDetailsHeaderActions = AccountDetailsViewModel['headerActions'];
-
+/** A deleted account offers only recovery; a live one gets search up front and the rest in a menu. */
 export function buildAccountDetailsHeaderActions(
-  headerActions: AccountDetailsHeaderActions,
+  input: {
+    accountType: AccountType;
+    isDeleted: boolean;
+    onRecover: () => void;
+    onSearch: () => void;
+    onEdit: () => void;
+    managementActions: AccountManagementAction[];
+  },
   theme: Theme,
-): ScreenHeaderActionItem[] {
-  const surface = 'surface' as const;
+): AccountDetailsHeaderActions {
+  if (input.isDeleted) {
+    return {
+      leading: [
+        {
+          name: Icon.Refresh,
+          onPress: input.onRecover,
+          variant: 'surface',
+          iconColor: theme.income,
+          testID: 'recover-button',
+          accessibilityLabel: 'Recover account',
+        },
+      ],
+      menu: [],
+    };
+  }
 
-  if (headerActions.canRecover) {
-    return [
+  return {
+    leading: [
       {
-        name: Icon.Refresh,
-        onPress: headerActions.onRecover,
-        variant: surface,
-        iconColor: theme.income,
+        name: Icon.Search,
+        onPress: input.onSearch,
+        variant: 'surface',
+        iconColor: theme.text,
+        testID: 'search-button',
+        accessibilityLabel: 'Search transactions',
       },
-    ];
-  }
-
-  const actions: ScreenHeaderActionItem[] = [];
-
-  if (headerActions.onSearch) {
-    actions.push({
-      name: Icon.Search,
-      onPress: headerActions.onSearch,
-      variant: surface,
-      iconColor: theme.text,
-      testID: 'search-button',
-      accessibilityLabel: 'Search transactions',
-    });
-  }
-
-  actions.push({
-    name: Icon.Edit,
-    onPress: headerActions.onEdit,
-    variant: surface,
-    iconColor: theme.text,
-    testID: 'edit-button',
-  });
-
-  return actions;
-}
-
-export function accountDetailsScreenTitle(vm: {
-  isParent: boolean;
-  accountType: string | AccountType;
-}): string {
-  const isCategory = isCategoryAccountType(vm.accountType as AccountType);
-  if (vm.isParent) {
-    return isCategory ? 'Group Category' : 'Group Account';
-  }
-  return isCategory ? 'Category Details' : 'Account Details';
+    ],
+    menu: [
+      {
+        label: `Edit ${accountDetailsCopy(input.accountType).entity}`,
+        icon: Icon.Edit,
+        onPress: input.onEdit,
+        testID: 'edit-button',
+      },
+      ...toMenuActions(input.managementActions),
+    ],
+  };
 }
