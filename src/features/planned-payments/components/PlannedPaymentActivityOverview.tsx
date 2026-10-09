@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useWindowDimensions } from 'react-native';
-import { AppButton, AppText, AppSurface, PressScaleTouchable } from '@/src/components/core';
+import { AppButton, AppText, AppCard, PressScaleTouchable } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { Column, Row, Separator } from '@/src/design-system';
 import { AppConfig, Size } from '@/src/constants';
@@ -120,7 +120,8 @@ export function PlannedPaymentActivityOverview({
               );
               const label = formatDate(occurrence.date);
               const tile = (
-                <AppSurface
+                <AppCard
+                  overflow="visible"
                   key={occurrence.date}
                   testID={`planned-upcoming-${occurrence.date}`}
                   elevation="sm"
@@ -149,7 +150,7 @@ export function PlannedPaymentActivityOverview({
                       />
                     )}
                   </Column>
-                </AppSurface>
+                </AppCard>
               );
               return occurrence.journalId ? (
                 <PressScaleTouchable
@@ -188,7 +189,7 @@ export function PlannedPaymentActivityOverview({
           )}
         </Row>
         {error ? (
-          <AppSurface elevation="sm" padding="md" radius="r2">
+          <AppCard overflow="visible" elevation="sm" padding="md" radius="r2">
             <Column gap="sm">
               <AppText color="warning" accessibilityRole="alert">
                 {error}
@@ -202,11 +203,11 @@ export function PlannedPaymentActivityOverview({
                 {copy.retryActivity}
               </AppButton>
             </Column>
-          </AppSurface>
+          </AppCard>
         ) : isLoading || !summary ? (
           <AppText color="secondary">{copy.loadingActivity}</AppText>
         ) : (
-          <AppSurface elevation="sm" padding="none" radius="r2" overflow="hidden">
+          <AppCard elevation="sm" padding="none" radius="r2" overflow="hidden">
             <Column>
               <Row
                 justify="space-between"
@@ -295,7 +296,7 @@ export function PlannedPaymentActivityOverview({
                 </AppButton>
               )}
             </Column>
-          </AppSurface>
+          </AppCard>
         )}
       </Column>
     </Column>

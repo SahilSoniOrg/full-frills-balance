@@ -1,7 +1,7 @@
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { EntryCardLayout } from '@/src/components/journal/EntryCardLayout';
 import { JournalAccountFlow } from '@/src/components/journal/JournalAccountFlow';
-import { Icon, AppIcon, AppSurface, PressScaleTouchable, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppCard, PressScaleTouchable, AppText } from '@/src/components/core';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PlannedPaymentInterval } from '@/src/types/enums';
@@ -72,7 +72,14 @@ function PlannedPaymentCardComponent({
   ) : null;
 
   return (
-    <AppSurface elevation="sm" radius="r2" background="surface" style={styles.card}>
+    <AppCard
+      paddingSize="none"
+      overflow="visible"
+      elevation="sm"
+      radius="r2"
+      background="surface"
+      style={styles.card}
+    >
       <PressScaleTouchable
         onPress={onPress}
         accessibilityRole="button"
@@ -173,7 +180,7 @@ function PlannedPaymentCardComponent({
           {recordError}
         </AppText>
       )}
-    </AppSurface>
+    </AppCard>
   );
 }
 

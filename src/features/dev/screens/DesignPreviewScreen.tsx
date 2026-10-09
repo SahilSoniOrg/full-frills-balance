@@ -8,7 +8,6 @@ import {
   AppInput,
   AppInputField,
   AppSegmentedControl,
-  AppSurface,
   AppTabs,
   AppText,
   AppToggle,
@@ -438,11 +437,11 @@ export default function DesignPreviewScreen() {
                     Ghost card
                   </AppText>
                 </AppCard>
-                <AppSurface padding="lg" elevation="md">
+                <AppCard overflow="visible" padding="lg" elevation="md">
                   <AppText variant="caption" color="secondary">
-                    AppSurface (elevation md)
+                    AppCard (elevation md)
                   </AppText>
-                </AppSurface>
+                </AppCard>
               </Stack>
             </PreviewSectionCard>
 

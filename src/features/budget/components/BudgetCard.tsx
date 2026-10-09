@@ -2,7 +2,7 @@ import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import {
   AppButton,
   AppIcon,
-  AppSurface,
+  AppCard,
   Icon,
   PressScaleTouchable,
   AppText,
@@ -80,7 +80,8 @@ export function BudgetCard({
   const isMonthly =
     (!budget.intervalType || budget.intervalType === 'MONTHLY') && (budget.intervalN || 1) === 1;
   return (
-    <AppSurface
+    <AppCard
+      overflow="visible"
       elevation="sm"
       padding="sm"
       radius="r3"
@@ -181,6 +182,6 @@ export function BudgetCard({
           </Row>
         </AppButton>
       )}
-    </AppSurface>
+    </AppCard>
   );
 }

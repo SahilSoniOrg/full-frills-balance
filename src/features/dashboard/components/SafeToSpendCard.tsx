@@ -1,4 +1,4 @@
-import { AppSurface, AppText } from '@/src/components/core';
+import { AppCard, AppText } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
@@ -104,12 +104,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
     );
 
   return (
-    <AppSurface
-      elevation="none"
-      background="transparent"
-      paddingHorizontal="none"
-      paddingVertical="none"
-    >
+    <AppCard overflow="visible" elevation="none" background="transparent" paddingSize="none">
       <SafeToSpendCardLayout
         summary={header}
         warning={
@@ -150,6 +145,6 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
         metrics={quality === 'unavailable' ? null : metrics}
         chart={quality === 'unavailable' ? null : chart}
       />
-    </AppSurface>
+    </AppCard>
   );
 };

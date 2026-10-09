@@ -1,4 +1,4 @@
-import { AppSurface, AppText } from '@/src/components/core';
+import { AppCard, AppText } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -15,7 +15,8 @@ export function PlannedPaymentMonthSummary({ listData }: SummaryProps) {
   const outgoing = listData.summary.outgoing;
   const incoming = listData.summary.incoming;
   return (
-    <AppSurface
+    <AppCard
+      overflow="visible"
       elevation="sm"
       padding="md"
       radius="r3"
@@ -80,7 +81,7 @@ export function PlannedPaymentMonthSummary({ listData }: SummaryProps) {
         </AppText>
       )}
       <PlannedPaymentMonthStrip listData={listData} monthName={monthName} />
-    </AppSurface>
+    </AppCard>
   );
 }
 
