@@ -152,20 +152,24 @@ describe('AccountCard', () => {
     expect(onActionPressMock).toHaveBeenCalledTimes(1);
   });
 
-  it('places the overflow action on the amount row, with stable space on both sides', () => {
+  it('anchors the overflow action inside the colored panel without changing the amount layout', () => {
     const screen = renderCard({ onActionPress: jest.fn() });
     const action = screen.getByLabelText('Actions for Checking Account');
     const row = screen.getByTestId('account-card-amount-row');
     expect(row).toHaveStyle({ flexDirection: 'row', alignItems: 'center' });
-    expect(row.findAllByType(action.type)).toContain(action);
+    expect(screen.getByTestId('account-card-primary-panel').findAllByType(action.type)).toContain(
+      action,
+    );
+    expect(row.findAllByType(action.type)).not.toContain(action);
     expect(row.findAllByType(screen.getByText('$1,500.00').type)).toContain(
       screen.getByText('$1,500.00'),
     );
-    expect(
-      screen.getByTestId('account-card-amount-action-spacer', { includeHiddenElements: true }),
-    ).toHaveStyle({
+    expect(screen.getByTestId('account-card-amount-actions')).toHaveStyle({
       width: 44,
       height: 44,
+      position: 'absolute',
+      right: Spacing.xs,
+      bottom: Spacing.xs,
     });
     expect(
       screen.getByTestId('account-card-header-actions').findAllByType(action.type),

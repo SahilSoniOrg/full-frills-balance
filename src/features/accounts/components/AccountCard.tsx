@@ -111,9 +111,11 @@ function AccountCardBase({
         style={styles.cardContainer}
       >
         <Box
+          testID="account-card-primary-panel"
           unsafe_backgroundRaw={account.accountColor}
           paddingHorizontal="lg"
-          paddingVertical="md"
+          paddingTop="md"
+          paddingBottom="sm"
           style={{ position: 'relative', overflow: 'hidden' }}
         >
           <Column gap="sm">
@@ -203,17 +205,12 @@ function AccountCardBase({
               </Row>
             </Row>
 
-            <Column align="center" justify="center" gap="xs">
-              <Row testID="account-card-amount-row" align="center" style={styles.amountRow}>
-                {onActionPress ? (
-                  <View
-                    testID="account-card-amount-action-spacer"
-                    pointerEvents="none"
-                    accessibilityElementsHidden
-                    importantForAccessibility="no-hide-descendants"
-                    style={styles.actionButton}
-                  />
-                ) : null}
+            <Row
+              testID="account-card-amount-row"
+              align="center"
+              style={[styles.amountRow, onActionPress && styles.amountWithActions]}
+            >
+              <Column align="center" justify="center" gap="xs" flex={1} style={{ minWidth: 0 }}>
                 <AppText
                   variant="title"
                   fontRole="numeric"
@@ -224,40 +221,45 @@ function AccountCardBase({
                   minimumFontScale={0.65}
                   style={{
                     color: resolvedTextColor,
-                    flex: 1,
+                    width: '100%',
                     minWidth: 0,
                     textAlign: 'center',
                   }}
                 >
                   {formatMoney(account.balance, account.currencyCode)}
                 </AppText>
-                {onActionPress ? (
-                  <View testID="account-card-amount-actions" style={styles.actionButton}>
-                    {!isSelectionModeActive && (
-                      <IconButton
-                        name={Icon.More}
-                        size={Size.iconSm}
-                        style={styles.actionButton}
-                        variant="clear"
-                        onPress={event => {
-                          event?.stopPropagation?.();
-                          onActionPress(account);
-                        }}
-                        iconColor={resolvedTextColor}
-                        accessibilityLabel={`Actions for ${account.name}`}
-                      />
-                    )}
-                  </View>
-                ) : null}
-              </Row>
-              {account.workplaceBalance !== undefined &&
-                account.currencyCode !== workplaceCurrencyCode && (
-                  <AppText variant="bodySmall" weight="medium" style={{ color: resolvedTextColor }}>
-                    ≈ {formatMoney(account.workplaceBalance, workplaceCurrencyCode)}
-                  </AppText>
-                )}
-            </Column>
+                {account.workplaceBalance !== undefined &&
+                  account.currencyCode !== workplaceCurrencyCode && (
+                    <AppText
+                      variant="bodySmall"
+                      weight="medium"
+                      style={{ color: resolvedTextColor }}
+                    >
+                      ≈ {formatMoney(account.workplaceBalance, workplaceCurrencyCode)}
+                    </AppText>
+                  )}
+              </Column>
+            </Row>
           </Column>
+          {onActionPress && !isSelectionModeActive ? (
+            <View
+              testID="account-card-amount-actions"
+              style={[styles.actionButton, styles.overflowAction]}
+            >
+              <IconButton
+                name={Icon.More}
+                size={Size.iconSm}
+                style={styles.actionButton}
+                variant="clear"
+                onPress={event => {
+                  event?.stopPropagation?.();
+                  onActionPress(account);
+                }}
+                iconColor={resolvedTextColor}
+                accessibilityLabel={`Actions for ${account.name}`}
+              />
+            </View>
+          ) : null}
         </Box>
 
         {account.showMonthlyStats && (
@@ -344,6 +346,15 @@ const styles = StyleSheet.create({
   },
   amountRow: {
     width: '100%',
+  },
+  amountWithActions: {
+    minHeight: Size.touchTarget,
+    paddingHorizontal: Size.touchTarget,
+  },
+  overflowAction: {
+    position: 'absolute',
+    right: Spacing.xs,
+    bottom: Spacing.xs,
   },
   reconciledBadge: {
     flexDirection: 'row',
