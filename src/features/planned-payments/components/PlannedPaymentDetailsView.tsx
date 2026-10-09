@@ -3,7 +3,7 @@ import { AppConfig, Size, Spacing } from '@/src/constants';
 import {
   AppButton,
   AppIcon,
-  AppSurface,
+  AppCard,
   AppText,
   Badge,
   Icon,
@@ -76,7 +76,7 @@ export function PlannedPaymentDetailsView({
       : undefined;
 
   const actionCard = (
-    <AppSurface elevation="sm" padding="md" radius="r2">
+    <AppCard overflow="visible" elevation="sm" padding="md" radius="r2">
       <Column gap="sm">
         <Row align="center" justify="space-between" gap="sm" flexWrap="wrap">
           <AppText
@@ -219,7 +219,7 @@ export function PlannedPaymentDetailsView({
           </>
         )}
       </Column>
-    </AppSurface>
+    </AppCard>
   );
 
   return (
@@ -312,7 +312,7 @@ export function PlannedPaymentDetailsView({
                     </AppButton>
                   )}
                 </Row>
-                <AppSurface elevation="sm" padding="none" radius="r2" overflow="hidden">
+                <AppCard elevation="sm" padding="none" radius="r2" overflow="hidden">
                   <Column>
                     <DetailRow label={copy.repeats} value={vm.intervalLabel ?? ''} />
                     <Separator />
@@ -345,7 +345,7 @@ export function PlannedPaymentDetailsView({
                       </>
                     )}
                   </Column>
-                </AppSurface>
+                </AppCard>
               </Column>
             )}
 

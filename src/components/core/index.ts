@@ -17,9 +17,6 @@ export type { AppTextProps } from './AppText';
 export { AppCard } from './AppCard';
 export type { AppCardProps } from './AppCard';
 
-export { AppSurface } from './AppSurface';
-export type { AppSurfaceProps } from './AppSurface';
-
 export { AppButton } from './AppButton';
 export type { AppButtonProps } from './AppButton';
 

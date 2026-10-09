@@ -1,4 +1,4 @@
-import { AppSurface, AppText, AppIcon, Icon, PressScaleTouchable } from '@/src/components/core';
+import { AppCard, AppText, AppIcon, Icon, PressScaleTouchable } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Row } from '@/src/design-system';
 import type { PlainAccount, PlainBudget } from '@/src/types/plainDtos';
@@ -28,7 +28,7 @@ export function BudgetSetupDisclosure({
         : strings.noFundingAccounts;
   const summary = strings.setupSummary(formatRecurrence(budget), accounts);
   return (
-    <AppSurface padding="none" radius="r3" background="surface">
+    <AppCard overflow="visible" padding="none" radius="r3" background="surface">
       <PressScaleTouchable
         onPress={onEdit}
         accessibilityRole="button"
@@ -46,6 +46,6 @@ export function BudgetSetupDisclosure({
           <AppIcon name={Icon.ChevronRight} size={Size.iconSm} color="secondary" />
         </Row>
       </PressScaleTouchable>
-    </AppSurface>
+    </AppCard>
   );
 }

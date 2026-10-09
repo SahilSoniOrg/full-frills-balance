@@ -1,5 +1,5 @@
 import { AppText } from '@/src/components/core';
-import { AppSurface } from '@/src/components/core/AppSurface';
+import { AppCard } from '@/src/components/core/AppCard';
 import { SettingsFocusTarget } from '@/src/components/settings/SettingsFocusTarget';
 import { SETTINGS_SEPARATOR_INSET } from '@/src/components/settings/settingsTokens';
 import { Box, Separator, Stack } from '@/src/design-system';
@@ -49,9 +49,9 @@ export function SettingsMenu({
         </Box>
       )}
       {variant === 'surface' ? (
-        <AppSurface radius="r2" elevation="none" style={{ overflow: 'hidden' }}>
+        <AppCard paddingSize="none" radius="r2" elevation="none">
           {content}
-        </AppSurface>
+        </AppCard>
       ) : (
         content
       )}

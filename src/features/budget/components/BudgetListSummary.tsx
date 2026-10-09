@@ -1,5 +1,5 @@
 import { AppConfig } from '@/src/constants';
-import { AppSurface, AppText, Badge } from '@/src/components/core';
+import { AppCard, AppText, Badge } from '@/src/components/core';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { Column, Row } from '@/src/design-system';
@@ -23,7 +23,7 @@ export function BudgetListSummary({
     ? strings.todayMarker(Math.round(period.elapsedShare * period.periodDays), period.periodDays)
     : undefined;
   return (
-    <AppSurface elevation="sm" padding="md" radius="r3" background="surface">
+    <AppCard overflow="visible" elevation="sm" padding="md" radius="r3" background="surface">
       <Column gap="sm">
         <Row justify="space-between" align="center" gap="sm" flexWrap="wrap">
           <AppText variant="caption" color="secondary" weight="medium">
@@ -92,6 +92,6 @@ export function BudgetListSummary({
           </AppText>
         )}
       </Column>
-    </AppSurface>
+    </AppCard>
   );
 }
