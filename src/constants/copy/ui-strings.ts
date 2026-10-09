@@ -1140,6 +1140,7 @@ export const UI_STRINGS = {
       'account.imported': 'Imported',
       'account.updated': 'Updated',
       'account.deleted': 'Deleted',
+      'account.group_disbanded': 'Disbanded group',
       'account.restored': 'Restored',
       'account.reverted': 'Undo applied',
       'account.archived': 'Archived',

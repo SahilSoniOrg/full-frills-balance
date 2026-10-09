@@ -22,6 +22,7 @@ import {
   moveAccount as moveAccountCommand,
 } from '@/src/services/accounts/accountHierarchyCommands';
 import { mergeAccounts as mergeAccountsCommand } from '@/src/services/accounts/accountMergeCommands';
+import { disbandAccountGroup } from '@/src/services/accounts/accountGroupCommands';
 import { AccountArchiveChanges } from '@/src/utils/accountArchive';
 import { useCallback } from 'react';
 
@@ -68,6 +69,11 @@ export function useAccountActions(workplaceId: WorkplaceId) {
     async (accountId: AccountId) => {
       return deleteAccountCommand(accountId, workplaceId);
     },
+    [workplaceId],
+  );
+
+  const disbandGroup = useCallback(
+    (accountId: AccountId) => disbandAccountGroup(workplaceId, accountId),
     [workplaceId],
   );
 
@@ -121,6 +127,7 @@ export function useAccountActions(workplaceId: WorkplaceId) {
     deleteAccount,
     recoverAccount,
     moveAccount,
+    disbandGroup,
     adjustBalance,
     reconcileAccount,
     mergeAccounts,

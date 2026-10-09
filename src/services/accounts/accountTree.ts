@@ -246,7 +246,8 @@ export function validateAccountTreeMove<T extends OrderedAccount>(
   }
 }
 
-function planFromSiblingLists<T extends OrderedAccount>(
+/** Placements needed to make each listed sibling list match its final order. */
+export function planFromSiblingLists<T extends OrderedAccount>(
   accounts: readonly T[],
   finalLists: ReadonlyMap<string, readonly T[]>,
   touchedKeys?: ReadonlySet<string>,

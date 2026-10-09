@@ -106,6 +106,39 @@ describe('account commands (integration)', () => {
     expect((await accountQueryRepository.find(WP, target.id))?.parentAccountId).toBe(source.id);
   });
 
+  it('rejects merging parents with leaves in either direction without writing', async () => {
+    const parent = await createAccount(WP, {
+      name: 'Group',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    const child = await createAccount(WP, {
+      name: 'Group child',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+      parentAccountId: parent.id,
+    });
+    const leaf = await createAccount(WP, {
+      name: 'Standalone leaf',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId: WP,
+    });
+    const batchSpy = jest.spyOn(database, 'batch');
+    await expect(mergeAccounts(WP, leaf.id, [parent.id])).rejects.toThrow(
+      'Parent accounts can only',
+    );
+    await expect(mergeAccounts(WP, parent.id, [leaf.id])).rejects.toThrow(
+      'Parent accounts can only',
+    );
+    expect(batchSpy).not.toHaveBeenCalled();
+    expect((await accountQueryRepository.find(WP, child.id))?.parentAccountId).toBe(parent.id);
+    expect(await accountQueryRepository.find(WP, parent.id)).toBeTruthy();
+    expect(await accountQueryRepository.find(WP, leaf.id)).toBeTruthy();
+  });
+
   it('reindexes moved children after existing target children', async () => {
     const target = await createAccount(WP, {
       name: 'Target parent',

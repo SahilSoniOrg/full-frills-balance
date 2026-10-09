@@ -15,6 +15,7 @@ export const AUDIT_DOMAIN_EVENT_TYPES = [
   'account.imported',
   'account.updated',
   'account.deleted',
+  'account.group_disbanded',
   'account.restored',
   'account.reverted',
   'account.archived',
