@@ -33,8 +33,9 @@ export function AccountParentPath({ ancestors, onOpen }: AccountParentPathProps)
           {separator}
         </>
       ) : null}
-      {visible.map(ancestor => (
+      {visible.map((ancestor, index) => (
         <Fragment key={ancestor.id}>
+          {index > 0 ? separator : null}
           <Pressable
             onPress={() => onOpen(ancestor.id)}
             hitSlop={HIT_SLOP}
@@ -47,7 +48,6 @@ export function AccountParentPath({ ancestors, onOpen }: AccountParentPathProps)
             </AppText>
             {ancestor.isArchived ? <ArchivedAccountIndicator /> : null}
           </Pressable>
-          {separator}
         </Fragment>
       ))}
     </View>
