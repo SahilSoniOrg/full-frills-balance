@@ -230,7 +230,7 @@ export function PlannedPaymentActivityOverview({
                   ))}
                   <AppText variant="caption" color="secondary">
                     {copy.paidIn(summary.recordedCount)}
-                    {startDate == null
+                    {startDate == null || summary.recordedCount === 0
                       ? ''
                       : ` ${copy.paidSince(dayjs(startDate).format('MMM YYYY'))}`}
                   </AppText>
@@ -255,6 +255,7 @@ export function PlannedPaymentActivityOverview({
                     key={journal.id}
                     testID={`planned-history-${journal.id}`}
                     journalAmount={journal.totalAmount}
+                    displayType={journal.displayType}
                     currencyCode={journal.currencyCode}
                     journalDate={journal.journalDate}
                     journalTitle={journal.description || journal.semanticLabel || ruleName}

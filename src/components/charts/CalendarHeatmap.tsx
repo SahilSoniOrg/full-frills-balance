@@ -114,16 +114,7 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
       collapsable={false}
     >
       <View style={{ marginBottom: Spacing.sm }}>
-        <AppText
-          variant="caption"
-          weight="semibold"
-          style={{
-            color: theme.text,
-            textTransform: 'uppercase',
-            letterSpacing: 1.2,
-            opacity: Opacity.strong,
-          }}
-        >
+        <AppText variant="overline" weight="semibold" color="secondary">
           {title}
         </AppText>
       </View>

@@ -1,6 +1,6 @@
 import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { Icon, AppIcon, AppText, Badge, IconName } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Spacing, Typography } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { formatAccountSubtypeLabel } from '@/src/types/accountSubtype';
 import { Stack } from '@/src/design-system';
@@ -33,7 +33,7 @@ export const SafeToSpendLedger = ({
   return (
     <Stack gap="md">
       <Stack gap="sm">
-        <AppText variant="caption" weight="bold" color="secondary" style={styles.overline}>
+        <AppText variant="overline" color="secondary">
           {labels.categoriesUsed}
         </AppText>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs }}>
@@ -57,7 +57,7 @@ export const SafeToSpendLedger = ({
       </Stack>
 
       <View style={{ gap: Spacing.sm, marginTop: Spacing.xs }}>
-        <AppText variant="caption" weight="bold" color="secondary" style={styles.overline}>
+        <AppText variant="overline" color="secondary">
           {labels.accountsUsed}
         </AppText>
         <View style={{ gap: Spacing.xs }}>
@@ -140,11 +140,7 @@ export const SafeToSpendLedger = ({
                         {isShortfall ? '-' : ''}
                         {formatSts(displayAmount, currencyCode)}
                       </AppText>
-                      <AppText
-                        variant="caption"
-                        color="secondary"
-                        style={[styles.overline, { textAlign: 'right' }]}
-                      >
+                      <AppText variant="overline" weight="regular" color="secondary" align="right">
                         {isShortfall
                           ? AppConfig.strings.dashboard.shortfall
                           : AppConfig.strings.dashboard.safeToSpendTitle}
@@ -277,13 +273,6 @@ export const SafeToSpendLedger = ({
 };
 
 const styles = StyleSheet.create({
-  // Uppercase labels sit one step under caption; 11pt is the readability floor.
-  overline: {
-    fontSize: Typography.sizes.xs - 1,
-    lineHeight: 14,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
   breakdownRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

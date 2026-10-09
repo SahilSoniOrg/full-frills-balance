@@ -118,7 +118,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
       <Separator style={styles.divider} />
 
       <View style={styles.section}>
-        <AppText variant="caption" weight="bold" color="secondary" style={styles.sectionLabel}>
+        <AppText variant="overline" color="secondary" style={styles.sectionLabel}>
           Voice Transcript
         </AppText>
         <View style={styles.inputContainer}>
@@ -153,7 +153,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
           </View>
         </View>
 
-        <AppText variant="caption" weight="bold" color="secondary" style={styles.sectionLabel}>
+        <AppText variant="overline" color="secondary" style={styles.sectionLabel}>
           Try These Templates
         </AppText>
         <View style={styles.templateList}>
@@ -370,7 +370,6 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     marginLeft: Spacing.xs,
-    textTransform: 'uppercase',
   },
   inputContainer: {
     flexDirection: 'row',

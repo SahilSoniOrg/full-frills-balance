@@ -38,8 +38,8 @@ describe('SafeToSpendBreakdownMetrics', () => {
     render(<SafeToSpendBreakdownMetrics {...defaultProps} onPress={jest.fn()} />);
 
     expect(screen.queryByRole('button', { name: /Safe to Spend:/ })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Reserved: ₹221,554' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Upcoming: ₹215,716' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Reserved: ₹2,21,554' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Upcoming: ₹2,15,716' })).toBeTruthy();
   });
 
   it('reports the selected metric through its interface', () => {

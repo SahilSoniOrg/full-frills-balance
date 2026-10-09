@@ -8,12 +8,15 @@ import { AppConfig, Opacity } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDate } from '@/src/utils/dateUtils';
+import { JournalDisplayType } from '@/src/types/enums';
 import { getVariantColors, type ComponentVariant } from '@/src/utils/style-helpers';
 const copy = AppConfig.strings.plannedDetailRedesign;
 
 export interface PlannedPaymentHistoryCardProps {
   testID: string;
   journalAmount: number;
+  /** Journal flow; income amounts render green and expense amounts red, as elsewhere. */
+  displayType?: JournalDisplayType | string;
   currencyCode: string;
   journalDate: number | Date;
   journalTitle: string;
@@ -41,6 +44,7 @@ export interface PlannedPaymentHistoryCardProps {
 export function PlannedPaymentHistoryCard({
   testID,
   journalAmount,
+  displayType,
   currencyCode,
   journalDate,
   journalTitle,
@@ -69,6 +73,12 @@ export function PlannedPaymentHistoryCard({
       : expectedAmount != null && expectedCurrencyCode
         ? `${presentation.subtitle} · ${copy.usualAmount} ${formatMoney(expectedAmount, expectedCurrencyCode)}`
         : presentation.subtitle;
+  const amountColor: ComponentVariant =
+    displayType === JournalDisplayType.INCOME
+      ? 'income'
+      : displayType === JournalDisplayType.EXPENSE
+        ? 'expense'
+        : 'text';
   const titleChanged = journalTitle !== plannedTitle;
   const paidAmountWarning = presentation.label === copy.paid && presentation.color === 'warning';
 
@@ -133,6 +143,7 @@ export function PlannedPaymentHistoryCard({
           currencyCode={currencyCode}
           variant="body"
           weight="semibold"
+          color={amountColor}
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.2}

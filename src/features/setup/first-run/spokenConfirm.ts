@@ -1,5 +1,6 @@
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
+import { groupIndianDigits, usesIndianGrouping } from '@/src/utils/currencyFormatter';
 import dayjs from 'dayjs';
 import {
   incomeItemName,
@@ -15,7 +16,9 @@ export function formatDraftAmount(amount: number, currency: string): string {
   const value = Number.isInteger(amount)
     ? amount.toLocaleString('en-US')
     : amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return `${symbol}${value}`;
+  if (!usesIndianGrouping(currency)) return `${symbol}${value}`;
+  const sign = amount < 0 ? '-' : '';
+  return `${sign}${symbol}${groupIndianDigits(value.replace(/[-,]/g, ''))}`;
 }
 
 function andList(items: readonly string[]): string {

@@ -16,6 +16,43 @@ export interface CurrencyFormatOptions {
 const FORMAT_CACHE = new Map<string, string>();
 const MAX_CACHE_SIZE = 1000;
 
+/**
+ * Currencies whose convention groups digits as lakh/crore (3 then 2s: 9,87,65,432.50).
+ * Applied deterministically so it does not depend on the device locale or engine ICU data.
+ */
+const INDIAN_GROUPING_CURRENCIES = new Set(['INR']);
+
+export function usesIndianGrouping(currencyCode: string | undefined): boolean {
+  return INDIAN_GROUPING_CURRENCIES.has(normalizeCurrencyCode(currencyCode));
+}
+
+/** Groups a non-negative decimal string (e.g. "98765432.50") as 9,87,65,432.50. */
+export function groupIndianDigits(plain: string): string {
+  const [intPart, fraction] = plain.split('.');
+  const lastThree = intPart.slice(-3);
+  const rest = intPart.slice(0, -3);
+  const grouped = rest ? `${rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',')},${lastThree}` : lastThree;
+  return fraction ? `${grouped}.${fraction}` : grouped;
+}
+
+function formatIndianGrouped(
+  amount: number,
+  currencyCode: string,
+  includeSymbol: boolean,
+  minimumFractionDigits: number,
+  maximumFractionDigits: number,
+): string {
+  const plain = Math.abs(amount).toLocaleString('en-US', {
+    useGrouping: false,
+    minimumFractionDigits,
+    maximumFractionDigits,
+  });
+  const isZero = Number(plain) === 0;
+  const sign = amount < 0 && !isZero ? '-' : '';
+  const symbol = includeSymbol ? (CURRENCY_SYMBOLS[normalizeCurrencyCode(currencyCode)] ?? '') : '';
+  return `${sign}${symbol}${groupIndianDigits(plain)}`;
+}
+
 export function normalizeCurrencyCode(currencyCode: string | undefined): string {
   return currencyCode?.trim().toUpperCase() ?? '';
 }
@@ -36,6 +73,22 @@ export const CurrencyFormatter = {
     } = options;
 
     try {
+      if (usesIndianGrouping(currencyCode)) {
+        const indian = formatIndianGrouped(
+          amount,
+          currencyCode,
+          includeSymbol,
+          minimumFractionDigits,
+          maximumFractionDigits,
+        );
+        if (FORMAT_CACHE.size >= MAX_CACHE_SIZE) {
+          const firstKey = FORMAT_CACHE.keys().next().value;
+          if (firstKey !== undefined) FORMAT_CACHE.delete(firstKey);
+        }
+        FORMAT_CACHE.set(cacheKey, indian);
+        return indian;
+      }
+
       const formatted = amount.toLocaleString(undefined, {
         style: includeSymbol ? 'currency' : 'decimal',
         currency: currencyCode,

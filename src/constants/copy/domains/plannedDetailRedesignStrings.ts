@@ -28,7 +28,10 @@ export const plannedDetailRedesignStrings = {
   loadingHistory: 'Loading history…',
   loadingActivity: 'Loading payment activity…',
   retryActivity: 'Retry activity',
-  paidIn: (count: number) => `paid in ${count} ${count === 1 ? 'payment' : 'payments'}`,
+  paidIn: (count: number) =>
+    count === 0
+      ? 'No payments recorded yet'
+      : `paid in ${count} ${count === 1 ? 'payment' : 'payments'}`,
   paidSince: (month: string) => `since ${month}`,
   skipped: 'Skipped',
   reversed: 'Reversed',
@@ -54,7 +57,10 @@ export const plannedDetailRedesignStrings = {
   resumeExplanation:
     'Resuming restores upcoming occurrences. Occurrences that fell during the pause are skipped.',
   pausedExplanation: 'No payments will be scheduled while this is paused.',
-  endedPayments: (count: number) => `paid in ${count} ${count === 1 ? 'payment' : 'payments'}`,
+  endedPayments: (count: number) =>
+    count === 0
+      ? 'Ended before any payments were recorded'
+      : `paid in ${count} ${count === 1 ? 'payment' : 'payments'}`,
   dueOn: (date: string) => `Was due ${date}`,
   dueTomorrow: 'Due tomorrow',
   dateAndUsualAmount: (date: string, amount: string) => `${date} · edited, usually ${amount}`,

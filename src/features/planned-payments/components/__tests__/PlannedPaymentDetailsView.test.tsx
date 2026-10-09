@@ -195,6 +195,32 @@ describe('PlannedPaymentDetailsView', () => {
     expect(vm.onLongPressItem).toHaveBeenCalledWith('paid');
   });
 
+  it('colours history amounts by flow and hides "since" when nothing was paid', () => {
+    const theme = getThemeColors(ThemeIds.DEEP_SPACE, 'light');
+    const income = {
+      ...row('salary', 'POSTED', day(5), 777.77),
+      displayType: JournalDisplayType.INCOME,
+    };
+    const expense = row('rent', 'POSTED', day(6), 888.88);
+    const screen = render(
+      <PlannedPaymentDetailsView {...vm} chrome={chrome} history={[income, expense]} />,
+    );
+    const incomeAmount = within(screen.getByTestId('planned-history-salary')).getByText('$777.77');
+    const expenseAmount = within(screen.getByTestId('planned-history-rent')).getByText('$888.88');
+    expect(StyleSheet.flatten(incomeAmount.props.style).color).toBe(theme.income);
+    expect(StyleSheet.flatten(expenseAmount.props.style).color).toBe(theme.expense);
+    screen.rerender(
+      <PlannedPaymentDetailsView
+        {...vm}
+        chrome={chrome}
+        history={[]}
+        activitySummary={{ ...vm.activitySummary!, recordedCount: 0, recordedTotals: [] }}
+      />,
+    );
+    expect(screen.getByText('No payments recorded yet')).toBeTruthy();
+    expect(screen.queryByText(/since/)).toBeNull();
+  });
+
   it('shows the rule amount in its original currency when a payment used another currency', () => {
     const foreignPayment = { ...row('foreign-payment', 'POSTED', day(5), 90), currencyCode: 'EUR' };
     const screen = render(
