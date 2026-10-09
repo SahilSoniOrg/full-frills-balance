@@ -70,13 +70,8 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
 
           {incomeBreakdown.length > 0 && (
             <View style={{ marginBottom: Spacing.lg }}>
-              <AppText
-                variant="caption"
-                weight="bold"
-                color="secondary"
-                style={{ textTransform: 'uppercase', letterSpacing: 1, marginBottom: Spacing.md }}
-              >
-                {labels.upcomingIncome.toUpperCase()}
+              <AppText variant="overline" color="secondary" style={{ marginBottom: Spacing.md }}>
+                {labels.upcomingIncome}
               </AppText>
               <View style={{ gap: Spacing.md }}>
                 {incomeBreakdown
@@ -145,12 +140,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
                 return (
                   <View key={title} style={{ marginBottom: Spacing.xl }}>
                     <View style={[styles.breakdownRow, { marginBottom: Spacing.sm }]}>
-                      <AppText
-                        variant="caption"
-                        weight="bold"
-                        color="secondary"
-                        style={{ textTransform: 'uppercase', letterSpacing: 1 }}
-                      >
+                      <AppText variant="overline" color="secondary">
                         {title}
                       </AppText>
                       <AppText variant="caption" weight="bold" color="warning">
@@ -251,12 +241,7 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
                 return (
                   <View key={title} style={{ marginBottom: Spacing.xl }}>
                     <View style={[styles.breakdownRow, { marginBottom: Spacing.sm }]}>
-                      <AppText
-                        variant="caption"
-                        weight="bold"
-                        color="secondary"
-                        style={{ textTransform: 'uppercase', letterSpacing: 1 }}
-                      >
+                      <AppText variant="overline" color="secondary">
                         {title}
                       </AppText>
                       <AppText variant="caption" weight="bold" color="error">
@@ -313,8 +298,8 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
             </View>
             <Separator marginVertical="md" opacity={Opacity.muted} />
             <View style={styles.breakdownRow}>
-              <AppText variant="caption" color="secondary" weight="bold">
-                {labels.totalBalanceInfo.toUpperCase()}
+              <AppText variant="overline" color="secondary">
+                {labels.totalBalanceInfo}
               </AppText>
               <AppText variant="body" color="secondary" weight="bold">
                 {formatSts(totalLiabilities, currencyCode)}

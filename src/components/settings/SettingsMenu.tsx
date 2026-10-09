@@ -38,12 +38,7 @@ export function SettingsMenu({
     <Stack space="sm">
       {header && (
         <Box paddingHorizontal="md" marginBottom="xs">
-          <AppText
-            variant="caption"
-            color="secondary"
-            weight="bold"
-            style={{ letterSpacing: 1, textTransform: 'uppercase' }}
-          >
+          <AppText variant="overline" color="secondary">
             {header}
           </AppText>
         </Box>

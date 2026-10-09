@@ -59,10 +59,9 @@ export const SafeToSpendHeader = ({
     <Column gap="none">
       <Row align="center" justify="space-between" gap="sm">
         <AppText
-          variant="caption"
-          weight="bold"
+          variant="overline"
           color={isOverCommitted ? 'error' : 'secondary'}
-          style={{ letterSpacing: 1.2, textTransform: 'uppercase', flex: 1 }}
+          style={{ flex: 1 }}
           numberOfLines={1}
           adjustsFontSizeToFit
         >

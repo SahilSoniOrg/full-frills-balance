@@ -1,4 +1,8 @@
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import {
+  CurrencyFormatter,
+  formatMoneyAmount,
+  groupIndianDigits,
+} from '@/src/utils/currencyFormatter';
 // Mock preferences to avoid AsyncStorage issues
 jest.mock('@/src/services/preferences', () => ({
   preferences: {
@@ -129,6 +133,51 @@ describe('CurrencyFormatter', () => {
       expect(CurrencyFormatter.getPrecisionFallback('OMR')).toBe(3);
       expect(CurrencyFormatter.getPrecisionFallback('JOD')).toBe(3);
       expect(CurrencyFormatter.getPrecisionFallback('TND')).toBe(3);
+    });
+  });
+
+  describe('Indian digit grouping', () => {
+    it('groups INR amounts as lakh/crore', () => {
+      expect(CurrencyFormatter.format(98765432.5, 'INR')).toBe('₹9,87,65,432.50');
+      expect(CurrencyFormatter.format(123456, 'INR')).toBe('₹1,23,456.00');
+      expect(CurrencyFormatter.format(1000, 'INR')).toBe('₹1,000.00');
+      expect(CurrencyFormatter.format(999, 'INR')).toBe('₹999.00');
+      expect(CurrencyFormatter.format(0, 'INR')).toBe('₹0.00');
+    });
+
+    it('handles negatives, symbol-less output and lowercase codes', () => {
+      expect(CurrencyFormatter.format(-1234567.89, 'INR')).toBe('-₹12,34,567.89');
+      expect(CurrencyFormatter.format(-0.001, 'INR')).toBe('₹0.00');
+      expect(CurrencyFormatter.format(12345678, 'INR', { includeSymbol: false })).toBe(
+        '1,23,45,678.00',
+      );
+      expect(CurrencyFormatter.format(1234567, 'inr')).toBe('₹12,34,567.00');
+    });
+
+    it('respects fraction options for INR', () => {
+      expect(
+        CurrencyFormatter.format(98765432.5, 'INR', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        }),
+      ).toBe('₹9,87,65,433');
+      expect(formatMoneyAmount(98765432.5, 'INR', false, { style: 'compact' })).toBe(
+        '₹9,87,65,433',
+      );
+      expect(formatMoneyAmount(150000, 'INR', false, { style: 'trimmed' })).toBe('₹1,50,000');
+    });
+
+    it('keeps western grouping for other currencies', () => {
+      expect(CurrencyFormatter.format(98765432.5, 'USD')).toBe('$98,765,432.50');
+      expect(CurrencyFormatter.format(98765432.5, 'USD', { includeSymbol: false })).toBe(
+        '98,765,432.50',
+      );
+    });
+
+    it('groupIndianDigits splits after the last three digits', () => {
+      expect(groupIndianDigits('1')).toBe('1');
+      expect(groupIndianDigits('12345')).toBe('12,345');
+      expect(groupIndianDigits('1234567890.5')).toBe('1,23,45,67,890.5');
     });
   });
 });

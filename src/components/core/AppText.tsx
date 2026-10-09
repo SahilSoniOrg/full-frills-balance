@@ -39,7 +39,8 @@ export const AppText = memo(function AppText({
     const resolvedRole =
       fontRole ??
       (tabular ? 'numeric' : ['title', 'xl', 'hero'].includes(variant) ? 'display' : 'ui');
-    const resolvedWeight = weight ?? (isSection ? 'semibold' : 'regular');
+    const resolvedWeight =
+      weight ?? (isSection ? 'semibold' : variant === 'overline' ? 'bold' : 'regular');
     // Serif display families ship a regular face, so never synthesize bold.
     // The single-family Raleway theme can use its actual weight files.
     const resolvedFontFamily =

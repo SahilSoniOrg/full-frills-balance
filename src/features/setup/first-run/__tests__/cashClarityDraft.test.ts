@@ -310,7 +310,7 @@ describe('spoken confirmations', () => {
         ],
         'INR',
       ),
-    ).toBe('Got it. ₹130,000 you have in banks and savings.');
+    ).toBe('Got it. ₹1,30,000 you have in banks and savings.');
   });
 
   it('keeps skipped income from sounding like a forecast', () => {

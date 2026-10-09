@@ -284,6 +284,8 @@ export const Typography = {
   // the selected sans carries sections, controls, and financial data.
   roles: {
     caption: { fontSize: 12, lineHeight: 16, letterSpacing: 0 },
+    // Uppercase section label: caption size (above the 11pt floor) with open tracking.
+    overline: { fontSize: 12, lineHeight: 16, letterSpacing: 1, textTransform: 'uppercase' },
     bodySmall: { fontSize: 14, lineHeight: 20, letterSpacing: 0 },
     body: { fontSize: 16, lineHeight: 24, letterSpacing: 0 },
     bodyLarge: { fontSize: 18, lineHeight: 26, letterSpacing: 0 },

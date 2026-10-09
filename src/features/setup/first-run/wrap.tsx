@@ -83,12 +83,7 @@ export function ClarityScene({
             <Stack gap="md">
               <Inline align="center" justify="space-between" gap="md">
                 <Stack gap="xs" flex={1}>
-                  <AppText
-                    variant="caption"
-                    color="secondary"
-                    weight="bold"
-                    style={styles.stageLabel}
-                  >
+                  <AppText variant="overline" color="secondary">
                     {copy.safeToSpend}
                   </AppText>
                   <AppText variant="caption" color="secondary">
@@ -506,10 +501,6 @@ const styles = StyleSheet.create({
   proseCopy: {
     textAlign: 'left',
     lineHeight: Typography.sizes.base * Typography.lineHeights.normal,
-  },
-  stageLabel: {
-    letterSpacing: Typography.letterSpacing.wide,
-    textTransform: 'uppercase',
   },
   figureCopy: {
     flex: 1,
