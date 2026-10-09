@@ -33,10 +33,15 @@ export function useAccountDetailsActions(options: UseAccountDetailsActionsOption
     [accountId],
   );
 
-  const onAddPress = useCallback(
-    () => AppNavigation.toJournalEntry({ sourceAccountId: accountId }),
-    [accountId],
-  );
+  const onAddPress = useCallback(() => {
+    if (accountType === AccountType.EXPENSE) {
+      AppNavigation.toSimpleJournalEntry('expense', { destinationAccountId: accountId });
+    } else if (accountType === AccountType.INCOME) {
+      AppNavigation.toSimpleJournalEntry('income', { sourceAccountId: accountId });
+    } else {
+      AppNavigation.toJournalEntry({ sourceAccountId: accountId });
+    }
+  }, [accountId, accountType]);
 
   const onSearch = useCallback(
     () =>
