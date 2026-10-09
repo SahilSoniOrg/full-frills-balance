@@ -133,6 +133,47 @@ describe('AccountCard', () => {
     expect(onPressMock).toHaveBeenCalledTimes(1);
   });
 
+  it('uses the new account content and action targets when a mounted card is recycled', () => {
+    const onPress = jest.fn();
+    const onLongPress = jest.fn();
+    const onActionPress = jest.fn();
+    const foreignAccount = {
+      ...mockAccount,
+      workplaceBalance: 120000,
+      workplaceCurrencyCode: 'INR',
+      reconciledAt: new Date(2026, 8, 30),
+    };
+    const nextAccount = {
+      ...mockAccount,
+      id: 'acc-2' as AccountId,
+      name: 'Credit Card',
+      accountType: AccountType.LIABILITY,
+      currencyCode: 'INR',
+      balance: 42,
+    };
+    const props = {
+      onPress,
+      onLongPress,
+      onActionPress,
+      dividerColor: 'divider' as const,
+      surfaceColor: 'surface' as const,
+    };
+    const screen = render(<AccountCard {...props} account={foreignAccount} />);
+    screen.rerender(<AccountCard {...props} account={nextAccount} />);
+
+    expect(screen.queryByText(mockAccount.name)).toBeNull();
+    expect(screen.queryByTestId('account-card-reconciled-badge')).toBeNull();
+    expect(screen.queryByText(/≈/)).toBeNull();
+    expect(screen.getByText('PAYMENTS MADE')).toBeTruthy();
+    expect(screen.queryByText('MONEY IN')).toBeNull();
+    fireEvent.press(screen.getByText(nextAccount.name));
+    fireEvent(screen.getByText(nextAccount.name), 'longPress');
+    fireEvent.press(screen.getByLabelText(`Actions for ${nextAccount.name}`));
+    expect(onPress).toHaveBeenCalledWith(nextAccount.id);
+    expect(onLongPress).toHaveBeenCalledWith(nextAccount);
+    expect(onActionPress).toHaveBeenCalledWith(nextAccount);
+  });
+
   it('calls onLongPress when long-pressed', () => {
     const onLongPressMock = jest.fn();
     fireEvent(

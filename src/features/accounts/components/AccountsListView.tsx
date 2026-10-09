@@ -23,10 +23,14 @@ import {
   AccountCardViewModel,
   AccountSectionViewModel,
 } from '@/src/features/accounts/utils/transformAccounts';
-import { useEaseInLayoutAnimation } from '@/src/hooks/useEaseInLayoutAnimation';
+import { FlashList } from '@shopify/flash-list';
+import {
+  buildAccountListRows,
+  type AccountListRow,
+} from '@/src/features/accounts/helpers/accountListRows';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useMemo } from 'react';
-import { ActivityIndicator, SectionList, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { showIncompleteFxDetails } from '@/src/utils/incompleteFxDetails';
 
 const TAB_OPTIONS = [
@@ -66,16 +70,16 @@ export function AccountsListView({
   chrome,
 }: AccountsListViewModel & { chrome: TabScreenChrome }) {
   const { theme } = useTheme();
-  const prepareLayoutAnimation = useEaseInLayoutAnimation();
 
-  const keyExtractor = useCallback((item: AccountCardViewModel) => item.id, []);
+  const rows = useMemo(() => buildAccountListRows(sections), [sections]);
+  const keyExtractor = useCallback((item: AccountListRow) => item.key, []);
 
   const handleToggleSection = useCallback(
     (title: string) => {
-      prepareLayoutAnimation();
+      // LayoutAnimation requires disabling recycling, recreating cards on every toggle.
       onToggleSection(title);
     },
-    [onToggleSection, prepareLayoutAnimation],
+    [onToggleSection],
   );
 
   const renderItem = useCallback(
@@ -205,6 +209,14 @@ export function AccountsListView({
     ],
   );
 
+  const renderRow = useCallback(
+    ({ item }: { item: AccountListRow }) =>
+      item.kind === 'section'
+        ? renderSectionHeader({ section: item.section })
+        : renderItem({ item: item.account, section: item.section }),
+    [renderItem, renderSectionHeader],
+  );
+
   const extraData = useMemo(
     () => ({
       selectedAccountIds,
@@ -228,19 +240,14 @@ export function AccountsListView({
           <AppTabs options={TAB_OPTIONS} value={activeTab} onChange={setActiveTab} />
         </View>
 
-        <SectionList
+        <FlashList
           keyboardShouldPersistTaps="handled"
-          sections={sections}
+          data={rows}
           keyExtractor={keyExtractor}
-          renderSectionHeader={renderSectionHeader}
-          renderItem={renderItem}
+          renderItem={renderRow}
+          getItemType={item => item.kind}
+          maintainVisibleContentPosition={{ disabled: true }}
           extraData={extraData}
-          // Account cards are deliberately tall. Keep initial render fast and avoid Android clipping bugs.
-          initialNumToRender={8}
-          maxToRenderPerBatch={10}
-          windowSize={5}
-          removeClippedSubviews={false}
-          updateCellsBatchingPeriod={30}
           ListHeaderComponent={
             <View>
               {activeTab === 'accounts' ? (
@@ -309,7 +316,6 @@ export function AccountsListView({
             </View>
           }
           contentContainerStyle={styles.listContainer}
-          stickySectionHeadersEnabled={false}
         />
 
         <SelectionActionBar

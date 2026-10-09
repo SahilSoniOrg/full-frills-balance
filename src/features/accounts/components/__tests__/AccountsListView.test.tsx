@@ -6,6 +6,11 @@ import { AccountId } from '@/src/types/ids';
 import { fireEvent, render } from '@/src/utils/test-utils';
 import { StyleSheet } from 'react-native';
 
+jest.mock('@shopify/flash-list', () => {
+  const { FlatList } = jest.requireActual<typeof import('react-native')>('react-native');
+  return { FlashList: FlatList };
+});
+
 const mockAccount: AccountCardViewModel = {
   id: 'acc-1' as AccountId,
   name: 'Checking Account',
