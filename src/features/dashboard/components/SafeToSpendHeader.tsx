@@ -28,7 +28,7 @@ export const SafeToSpendHeader = ({
   forecastDays = AppConfig.defaults.safeToSpendDays,
   onInfoPress,
 }: SafeToSpendHeaderProps) => {
-  const { theme, themeMode } = useTheme();
+  const { theme } = useTheme();
   const strings = AppConfig.strings.dashboard;
   const formatSts = useStsMoneyFormat(loading);
   const reduceMotion = useReducedMotion();
@@ -44,13 +44,7 @@ export const SafeToSpendHeader = ({
       numberOfLines={1}
       adjustsFontSizeToFit
       minimumFontScale={0.65}
-      color={
-        isOverCommitted
-          ? 'error'
-          : isPositiveSafeToSpend && themeMode === 'dark'
-            ? 'success'
-            : undefined
-      }
+      color={isOverCommitted ? 'error' : isPositiveSafeToSpend ? 'success' : undefined}
       weight="semibold"
       style={{
         fontSize: amountFontSize,
@@ -97,12 +91,7 @@ export const SafeToSpendHeader = ({
         amountText
       )}
 
-      <AppText
-        variant="caption"
-        color={isOverCommitted ? 'error' : 'secondary'}
-        numberOfLines={3}
-        style={{ opacity: 0.8 }}
-      >
+      <AppText variant="caption" color={isOverCommitted ? 'error' : 'secondary'} numberOfLines={3}>
         {isOverCommitted
           ? strings.shortfallSubtitle
           : forecastDays > 0

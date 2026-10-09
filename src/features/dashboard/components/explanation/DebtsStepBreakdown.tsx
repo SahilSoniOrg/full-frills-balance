@@ -33,7 +33,6 @@ export const DebtsStepBreakdown = ({
         },
         hintText: {
           marginBottom: Spacing.md,
-          opacity: Opacity.heavy,
           fontStyle: 'italic',
         },
         debtRow: {

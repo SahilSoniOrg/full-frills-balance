@@ -1,6 +1,6 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { Icon, AppIcon, AppText, Badge, PressScaleTouchable } from '@/src/components/core';
-import { AppConfig, Opacity, Size, Spacing, Typography } from '@/src/constants';
+import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
 import { useEaseInLayoutAnimation } from '@/src/hooks/useEaseInLayoutAnimation';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -124,7 +124,6 @@ const styles = StyleSheet.create({
   },
   statCount: {
     fontSize: Typography.sizes.xs,
-    opacity: Opacity.heavy,
     marginTop: Spacing.xs / 2,
   },
   netAmount: {
