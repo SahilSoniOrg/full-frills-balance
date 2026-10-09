@@ -201,6 +201,24 @@ export const getPreviousMonthRange = (currentMonth: number, currentYear: number)
 export const getNextMonthRange = (currentMonth: number, currentYear: number) =>
   shiftedMonthRange(currentMonth, currentYear, 1);
 
+export type PeriodRangeFacts = ReturnType<typeof describePeriodRange>;
+
+/** Whole-calendar-day facts about a range as seen on `now`; both ends count as full days. */
+export function describePeriodRange(range: DateRange, now: number) {
+  const start = dayjs(range.startDate);
+  const end = dayjs(range.endDate);
+  const today = dayjs(now).startOf('day');
+  const isCurrent = now >= range.startDate && now <= range.endDate;
+  const periodDays = end.startOf('day').diff(start.startOf('day'), 'day') + 1;
+  return {
+    isCurrent,
+    periodDays,
+    daysRemaining: isCurrent ? end.startOf('day').diff(today, 'day') + 1 : 0,
+    elapsedDays: Math.min(periodDays, Math.max(0, today.diff(start.startOf('day'), 'day') + 1)),
+    dateRangeText: `${start.format('D MMM YYYY')} – ${end.format('D MMM YYYY')}`,
+  };
+}
+
 /**
  * Helper to get a formatted label for a month range (e.g. "Jan 2024")
  */

@@ -14,8 +14,6 @@ export const budgetDetailRedesignStrings = {
   nothingSpent: 'Nothing spent yet',
   perDayLeft: 'Per day left',
   days: 'Days',
-  sameDay: (period: string) => `${period}, same day`,
-  total: (period: string) => `${period} total`,
   overPace: 'over pace',
   underPace: 'under pace',
   spendingSoFar: 'Spending so far',
@@ -50,12 +48,6 @@ export const budgetDetailRedesignStrings = {
     over: 'Over',
     incomplete: 'Incomplete',
   },
-  daysLeft: (count: number) => `${count} ${count === 1 ? 'day' : 'days'} left`,
-  periodAccessibility: (label: string, range: string, daysLeft?: number) =>
-    `${label}, ${range}${daysLeft === undefined ? '' : `, ${budgetDetailRedesignStrings.daysLeft(daysLeft)}`}`,
-  previousPeriodButton: 'Previous period',
-  nextPeriodButton: 'Next period',
-  backToToday: 'Back to today',
   chartStartDate: (date: string) => date,
   chartEndDate: (limit: string, date: string) => `Limit ${limit} · ${date}`,
   missingFxEntries: (count: number, currencyCode: string) =>

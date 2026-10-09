@@ -2,7 +2,7 @@ import { MoneyText } from '@/src/components/shared/MoneyText';
 import { IncompleteFxWarning } from '@/src/components/shared/IncompleteFxWarning';
 import { AppCard, AppText, Badge } from '@/src/components/core';
 import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
-import { BudgetPeriodStepper } from './BudgetPeriodStepper';
+import { PeriodStepper } from '@/src/components/shared/PeriodStepper';
 import { AppConfig, Shape, Spacing } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
 import { presentBudgetUsage } from '../helpers/budgetCardPresentation';
@@ -52,18 +52,18 @@ export function BudgetDetailHeader({
   const heroAmount = usageVm.isOver ? Math.abs(usage.remaining) : usage.remaining;
   const isHistorical = !period.isCurrent;
   const hasNothingSpent = usage.spent === 0 && !usage.hasUnvaluedEntries;
+  const periodStrings = AppConfig.strings.common.period;
   const comparisonLabel = previousPeriodRange
     ? isHistorical
-      ? strings.total(dayjs(previousPeriodRange.startDate).format('MMM'))
-      : strings.sameDay(dayjs(previousPeriodRange.startDate).format('MMM'))
+      ? periodStrings.total(dayjs(previousPeriodRange.startDate).format('MMM'))
+      : periodStrings.sameDay(dayjs(previousPeriodRange.startDate).format('MMM'))
     : undefined;
 
   return (
     <Column gap="sm">
-      <BudgetPeriodStepper
+      <PeriodStepper
         label={periodLabel}
-        periodDetail={period.dateRangeText}
-        daysLeft={period.isCurrent ? period.daysRemaining : undefined}
+        period={period}
         onPrevious={prevMonth}
         onNext={nextMonth}
         canGoNext={!isCurrentPeriod}
