@@ -26,6 +26,7 @@ export function PrivacyAcknowledgementSheet({
       title={copy.acknowledgementPromptTitle}
       onClose={onClose}
       useNativeModal={process.env.EXPO_PUBLIC_E2E !== '1'}
+      contentTestID="privacy-acknowledgement-scroll"
       maxHeightPercent={70}
       fixedHeight={false}
       accessibilityCloseLabel={copy.acknowledgementPromptClose}

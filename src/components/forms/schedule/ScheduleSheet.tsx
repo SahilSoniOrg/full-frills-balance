@@ -152,6 +152,7 @@ export function ScheduleSheet({
             onPress={() => valid && onDone(draft)}
             disabled={!valid}
             accessibilityLabel={copy.doneAccessibility}
+            testID="schedule-sheet-done"
           >
             {copy.done}
           </AppButton>

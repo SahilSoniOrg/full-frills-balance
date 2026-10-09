@@ -3,7 +3,11 @@ import { DEFAULT_TIMEOUT_MS } from '../../constants/timeouts';
 
 export async function tapById(testId: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<void> {
   const target = element(by.id(testId));
-  await waitFor(target).toBeVisible().withTimeout(timeoutMs);
+  try {
+    await waitFor(target).toBeVisible().withTimeout(Math.min(timeoutMs, 8000));
+  } catch {
+    await scrollToId(testId, timeoutMs);
+  }
   await target.tap();
 }
 
@@ -39,11 +43,10 @@ export async function tapByLabel(
   await target.tap();
 }
 
-const SCROLL_VIEW_MATCHERS = [
-  by.type('UIScrollView'),
-  by.type('RCTScrollView'),
-  by.type('RCTScrollViewComponentView'),
-];
+// Detox maps this semantic type to UIScrollView on iOS and Android ScrollView /
+// ReactScrollView. Raw iOS class names do not match on Android, so off-screen
+// rows never scrolled into view.
+const SCROLL_VIEW_MATCHERS = [by.type('scrollview')];
 
 async function scrollUntilTextVisible(
   target: ReturnType<typeof element>,
@@ -71,6 +74,16 @@ export async function tapByText(
     await waitFor(target).toBeVisible().withTimeout(timeoutMs);
   }
   await target.tap();
+}
+
+/** Visible text that Android may render as more than one TextView. */
+export async function waitForVisibleText(
+  text: string,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<void> {
+  await waitFor(element(by.text(text)).atIndex(0))
+    .toBeVisible()
+    .withTimeout(timeoutMs);
 }
 
 export async function scrollToId(testId: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<void> {

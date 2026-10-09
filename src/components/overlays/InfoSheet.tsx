@@ -26,6 +26,7 @@ interface InfoSheetProps {
   primaryAction?: InfoSheetAction;
   secondaryAction?: InfoSheetAction;
   useNativeModal?: boolean;
+  contentTestID?: string;
 }
 
 export function InfoSheet({
@@ -42,6 +43,7 @@ export function InfoSheet({
   primaryAction,
   secondaryAction,
   useNativeModal = true,
+  contentTestID,
 }: InfoSheetProps) {
   const footer =
     primaryAction || secondaryAction ? (
@@ -86,6 +88,7 @@ export function InfoSheet({
       position={position}
       footer={footer}
       useNativeModal={useNativeModal}
+      contentTestID={contentTestID}
     >
       {children}
     </ModalSurface>

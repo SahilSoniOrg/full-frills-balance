@@ -64,7 +64,10 @@ bun run e2e:clean:ios
 
 ## Android (local Detox)
 
-Prerequisites: Android SDK, a running or bootable Android 16 ARM64 AVD (default name `Pixel_2_API_36_Fast`).
+Prerequisites: Android SDK, a running or bootable Android 16 AVD (default name `Pixel_2_API_36_Fast`).
+
+- macOS: ARM64 system image (Apple Silicon). Native ABIs stay `arm64-v8a,armeabi-v7a` from `android/gradle.properties`.
+- Linux x86_64 (cloud agents): the same AVD name, with `system-images;android-36;aosp_atd;x86_64` (AOSP Automated Test Device, API 36). `.detoxrc.js` adds `-PreactNativeArchitectures=x86_64` and boots the emulator headless.
 
 Uses **release + embedded bundle** (`android.emu.release`) — no Metro, no dev launcher.
 
@@ -74,6 +77,16 @@ cp .env.e2e.example .env.local         # optional: EXPO_PUBLIC_E2E=1
 bun run e2e:build:android
 bun run e2e:test:android
 ```
+
+Linux cloud agents install the toolchain once per environment build via `.cursor/environment.json` (`scripts/android-cloud-setup.sh`). On a fresh VM:
+
+```bash
+bun run e2e:setup:android
+bun run e2e:build:android
+bun run e2e:test:android
+```
+
+`scripts/android-env.sh` probes `KVM_CREATE_VCPU` and passes `-accel on` only when that succeeds. Opening `/dev/kvm` is not enough: `emulator -accel-check` can pass on a nested cloud kernel that then BUGS in `kvm_arch_vcpu_create`. A different emulator version still issues that ioctl, so software emulation (`-accel off`) is the fallback. The probe result is cached in `~/.android/kvm-vcpu-probe`. The AVD uses 4 cores, 3GB RAM, and `-gpu software` (host SwiftShader left the app main thread in `HardwareRenderer` long enough to trip Detox's 5s ANR watchdog). `bun run e2e:test:android` waits until `sys.boot_completed` is `1` and both `package` and `settings` answer, installs the release APKs once, and saves a `detox-ready` snapshot so the next boot is not a cold boot. Detox is pointed at that already-running emulator (`readonly: false` so it does not start a second `-read-only` emulator). On Linux the launch helpers clear app data with `pm clear` instead of uninstall/reinstall, and Jest timeouts are floored by `DETOX_JEST_TIMEOUT_MS` (default 10 minutes) without changing assertions. The script also raises Detox's `adb install` timeout from 60 seconds to 10 minutes in the local `node_modules` copy. The setup script grants `/dev/kvm` access with `chmod 666` when passwordless sudo is available. Gradle on machines under 24GB RAM uses a 2.5GB heap and 1.5GB metaspace in the user `gradle.properties` (the committed project file requests 8GB / 2GB, and R8 runs out of metaspace at 512MB). Release lint is turned off in that user file so it does not run beside minify.
 
 Use an existing AVD:
 

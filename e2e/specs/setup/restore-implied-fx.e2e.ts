@@ -1,6 +1,6 @@
 import { by, device, element, expect, waitFor } from 'detox';
 import { launchSeedProfileApp } from '../../actions/launch';
-import { scrollToId, tapByText } from '../../actions/mobile/elementActions';
+import { scrollToId } from '../../actions/mobile/elementActions';
 
 jest.setTimeout(180000);
 
@@ -29,8 +29,15 @@ it('offers a uniquely implied FX rate and keeps imported account amounts during 
   await expect(element(by.text('Debit 5791.12 · Credit 5791.12 INR'))).toExist();
   await device.takeScreenshot('restore-implied-fx-preview');
 
-  await tapByText('Review or edit this rate');
-  await expect(element(by.text('Review journal entry'))).toExist();
+  const reviewRate = element(by.label('Review or edit this rate'));
+  await waitFor(reviewRate)
+    .toBeVisible()
+    .whileElement(by.id('restore-journal-recovery-scroll'))
+    .scroll(250, 'down');
+  await reviewRate.tap();
+  await waitFor(element(by.text('Review journal entry')))
+    .toExist()
+    .withTimeout(30000);
   await scrollToId('restore-journal-edit');
   await element(by.id('restore-journal-edit')).tap();
   await expect(

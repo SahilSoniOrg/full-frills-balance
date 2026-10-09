@@ -1,0 +1,4 @@
+{
+  "name": "Full Frills Balance",
+  "install": "bash scripts/android-cloud-setup.sh"
+}

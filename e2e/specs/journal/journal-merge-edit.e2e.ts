@@ -5,6 +5,7 @@
  */
 import { by, element, waitFor } from 'detox';
 import { launchOnboardedApp } from '../../actions/launch';
+import { waitForVisibleText } from '../../actions/mobile/elementActions';
 import { LONG_TIMEOUT_MS } from '../../constants/timeouts';
 import { tabs } from '../../screens';
 
@@ -33,7 +34,7 @@ describe(':android: merged journal edit', () => {
     await element(by.label('More bulk actions')).tap();
     await element(by.label('Merge selected transactions')).tap();
 
-    await waitFor(element(by.text('Consolidated Legs (4)')))
+    await waitFor(element(by.text('Consolidated Accounts (4)')))
       .toBeVisible()
       .withTimeout(LONG_TIMEOUT_MS);
     await element(by.id('merge-journals-modal-confirm')).tap();
@@ -46,7 +47,7 @@ describe(':android: merged journal edit', () => {
       .withTimeout(LONG_TIMEOUT_MS);
     await element(by.id('edit-button')).tap();
 
-    await waitFor(element(by.text('Journal Lines')))
+    await waitFor(element(by.id('journal-description-input')))
       .toBeVisible()
       .withTimeout(LONG_TIMEOUT_MS);
     await element(by.id('journal-description-input')).replaceText('Merged SMS expenses');
@@ -55,17 +56,9 @@ describe(':android: merged journal edit', () => {
     await waitFor(element(by.text('Merged SMS expenses')))
       .toBeVisible()
       .withTimeout(LONG_TIMEOUT_MS);
-    await waitFor(element(by.text('Bank')))
-      .toBeVisible()
-      .withTimeout(LONG_TIMEOUT_MS);
-    await waitFor(element(by.text('Food & Drink')))
-      .toBeVisible()
-      .withTimeout(LONG_TIMEOUT_MS);
-    await waitFor(element(by.text('Groceries')))
-      .toBeVisible()
-      .withTimeout(LONG_TIMEOUT_MS);
-    await waitFor(element(by.text('Sports')))
-      .toBeVisible()
-      .withTimeout(LONG_TIMEOUT_MS);
+    await waitForVisibleText('Bank', LONG_TIMEOUT_MS);
+    await waitForVisibleText('Food & Drink', LONG_TIMEOUT_MS);
+    await waitForVisibleText('Groceries', LONG_TIMEOUT_MS);
+    await waitForVisibleText('Sports', LONG_TIMEOUT_MS);
   });
 });

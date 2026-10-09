@@ -5,7 +5,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
+# shellcheck disable=SC1091
+source "$ROOT/scripts/android-env.sh"
 export EXPO_PUBLIC_E2E=1
 
 if [[ ! -f .env.local ]]; then

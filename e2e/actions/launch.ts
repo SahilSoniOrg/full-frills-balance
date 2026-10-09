@@ -10,6 +10,46 @@ export type LaunchOnboardedOptions = {
   disableSynchronization?: boolean;
 };
 
+/** Linux cloud runs set this so a slow emulator `pm clear`s instead of reinstalling. */
+function dataResetOptions(preserveData = false): { delete: boolean; resetAppState?: boolean } {
+  if (preserveData) {
+    return { delete: false };
+  }
+  if (process.env.DETOX_REUSE_INSTALLED_APP === '1') {
+    return { delete: false, resetAppState: true };
+  }
+  return { delete: true };
+}
+
+function isActivityIdleTimeout(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('within 45000 milliseconds') || message.includes('has not gone idle');
+}
+
+/**
+ * AndroidX startActivitySync gives the main thread 45s to go idle.
+ * Software emulation can miss that on a cold start even when the next
+ * launch of the same process succeeds. The retry keeps the same launch
+ * args and does not clear data again.
+ */
+export async function launchAppToleratingIdleTimeout(
+  params: Parameters<typeof device.launchApp>[0],
+): Promise<void> {
+  try {
+    await device.launchApp(params);
+  } catch (error) {
+    if (device.getPlatform() !== 'android' || !isActivityIdleTimeout(error)) {
+      throw error;
+    }
+    await device.launchApp({
+      ...params,
+      newInstance: true,
+      delete: false,
+      resetAppState: false,
+    });
+  }
+}
+
 function e2eLaunchArgs(seedProfile?: E2eSeedProfile, backupPath?: string): Record<string, string> {
   const args: Record<string, string> = {
     e2eAuth: E2E_AUTH_TOKEN,
@@ -30,9 +70,9 @@ export async function launchFreshApp(
   } catch {
     // app may not be running
   }
-  await device.launchApp({
+  await launchAppToleratingIdleTimeout({
     newInstance: true,
-    delete: true,
+    ...dataResetOptions(),
     permissions: { notifications: 'YES' },
     launchArgs: {
       e2eAuth: E2E_AUTH_TOKEN,
@@ -70,9 +110,9 @@ export async function launchWithUpdateGate(
     seedProfile?: E2eSeedProfile;
   } = {},
 ): Promise<void> {
-  await device.launchApp({
+  await launchAppToleratingIdleTimeout({
     newInstance: true,
-    delete: true,
+    ...dataResetOptions(),
     permissions: { notifications: 'YES' },
     launchArgs: {
       e2eAuth: E2E_AUTH_TOKEN,
@@ -92,9 +132,9 @@ export async function launchSeedProfileApp(
     delete?: boolean;
   } = {},
 ): Promise<void> {
-  await device.launchApp({
+  await launchAppToleratingIdleTimeout({
     newInstance: options.newInstance ?? true,
-    delete: options.delete ?? true,
+    ...(options.delete === false ? { delete: false as const } : dataResetOptions()),
     permissions: { notifications: 'YES' },
     launchArgs: e2eLaunchArgs(seedProfile),
   });
@@ -103,9 +143,9 @@ export async function launchSeedProfileApp(
 
 export async function launchOnboardedApp(options: LaunchOnboardedOptions = {}): Promise<void> {
   const seedProfile = options.seedProfile ?? 'journal-ready';
-  await device.launchApp({
+  await launchAppToleratingIdleTimeout({
     newInstance: options.newInstance ?? true,
-    delete: !options.preserveData,
+    ...dataResetOptions(Boolean(options.preserveData)),
     permissions: { notifications: 'YES' },
     launchArgs: e2eLaunchArgs(seedProfile, options.backupPath),
   });
@@ -116,9 +156,9 @@ export async function launchOnboardedApp(options: LaunchOnboardedOptions = {}): 
 }
 
 export async function launchPickerApp(): Promise<void> {
-  await device.launchApp({
+  await launchAppToleratingIdleTimeout({
     newInstance: true,
-    delete: true,
+    ...dataResetOptions(),
     permissions: { notifications: 'YES' },
     launchArgs: e2eLaunchArgs('picker-ready'),
   });
@@ -135,9 +175,9 @@ export async function launchRestoreResumeApp(
   } catch {
     // app may not be running
   }
-  await device.launchApp({
+  await launchAppToleratingIdleTimeout({
     newInstance: true,
-    delete: true,
+    ...dataResetOptions(),
     permissions: { notifications: 'YES' },
     launchArgs: e2eLaunchArgs('first-run-restore'),
   });
@@ -146,7 +186,7 @@ export async function launchRestoreResumeApp(
 
 export async function relaunchPreservingData(): Promise<void> {
   await device.terminateApp();
-  await device.launchApp({
+  await launchAppToleratingIdleTimeout({
     newInstance: true,
     delete: false,
     permissions: { notifications: 'YES' },
@@ -158,7 +198,7 @@ export async function relaunchPreservingData(): Promise<void> {
 
 export async function relaunchSameInstance(): Promise<void> {
   await device.terminateApp();
-  await device.launchApp({
+  await launchAppToleratingIdleTimeout({
     newInstance: false,
     launchArgs: { e2eAuth: E2E_AUTH_TOKEN },
   });
