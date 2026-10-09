@@ -69,10 +69,10 @@ jest.mock('@/src/features/accounts/hooks/useAccountValidation', () => ({
   useAccountValidation: () => ({ formError: null }),
 }));
 jest.mock('@/src/features/accounts/hooks/useAccountArchiveAction', () => ({
-  useAccountArchiveAction: () => ({ headerActionItems: [], archiveCascadeModal: null }),
+  useAccountArchiveAction: () => ({ actions: [], archiveCascadeModal: null }),
 }));
 jest.mock('@/src/features/accounts/hooks/useAccountDeleteMergeActions', () => ({
-  useAccountDeleteMergeActions: () => ({ headerActionItems: [], mergePickerModal: null }),
+  useAccountDeleteMergeActions: () => ({ actions: [], mergePickerModal: null }),
 }));
 jest.mock('@/src/features/accounts/hooks/form/useAccountFormBalanceClassify', () => ({
   useAccountFormBalanceClassify: () => ({ balanceClassify: null, onSave: mockOnSave }),

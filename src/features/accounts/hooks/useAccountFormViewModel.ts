@@ -39,7 +39,8 @@ import { useAccountArchiveAction } from '@/src/features/accounts/hooks/useAccoun
 import { useAccountDeleteMergeActions } from '@/src/features/accounts/hooks/useAccountDeleteMergeActions';
 import type { AccountMergePickerModalProps } from '@/src/features/accounts/hooks/useAccountDeleteMergeActions';
 import type { AccountArchiveCascadeModalProps } from '@/src/features/accounts/components/AccountArchiveCascadeModal';
-import type { ScreenHeaderActionItem } from '@/src/components/shared/ScreenHeaderActions';
+import type { AccountManagementAction } from '@/src/features/accounts/helpers/accountManagementActions';
+import { createAccountTreeSnapshot } from '@/src/services/accounts/accountTree';
 import { useLocalSearchParams, usePathname } from 'expo-router';
 import { Keyboard } from 'react-native';
 import { useCallback, useMemo, useState } from 'react';
@@ -51,7 +52,7 @@ import {
 import { of } from 'rxjs';
 
 export type AccountFormChromeState = {
-  headerActionItems: ScreenHeaderActionItem[];
+  managementActions: AccountManagementAction[];
   archiveCascadeModal: AccountArchiveCascadeModalProps | null;
   mergePickerModal: AccountMergePickerModalProps | null;
 };
@@ -214,8 +215,11 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     params.returnTarget,
   );
 
-  const { deleteAccount, recoverAccount, mergeAccounts } = useAccountActions(workplaceId);
-  const transactionCount = balanceData?.transactionCount ?? 0;
+  const { deleteAccount, recoverAccount, mergeAccounts, disbandGroup } =
+    useAccountActions(workplaceId);
+  const [leaveAfterRemoval, setLeaveAfterRemoval] = useState<(() => void) | null>(null);
+  const accountTree = useMemo(() => createAccountTreeSnapshot(accounts), [accounts]);
+  const directTransactionCount = balanceData?.directTransactionCount ?? 0;
   const isDeleted = Boolean(existingAccount?.deletedAt);
 
   const archive = useAccountArchiveAction({
@@ -228,24 +232,27 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     accountId,
     account: existingAccount ?? null,
     accounts,
-    transactionCount,
+    tree: accountTree,
+    directTransactionCount,
     isDeleted,
     enabled: isEditMode,
     entityLabel: core.isCategory ? 'Category' : 'Account',
     deleteAccount,
     recoverAction: recoverAccount,
     mergeAccounts,
+    disbandGroup,
+    onRemoved: leave => setLeaveAfterRemoval(() => leave),
   });
   const formChrome = useMemo(
     (): AccountFormChromeState => ({
-      headerActionItems: [...archive.headerActionItems, ...deleteMerge.headerActionItems],
+      managementActions: [...archive.actions, ...deleteMerge.actions],
       archiveCascadeModal: archive.archiveCascadeModal,
       mergePickerModal: deleteMerge.mergePickerModal,
     }),
     [
       archive.archiveCascadeModal,
-      archive.headerActionItems,
-      deleteMerge.headerActionItems,
+      archive.actions,
+      deleteMerge.actions,
       deleteMerge.mergePickerModal,
     ],
   );
@@ -327,7 +334,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     initialBalance: core.initialBalance,
     onInitialBalanceChange: core.onInitialBalanceChange,
     isCreating: persistence.isCreating,
-    leaveAfterSave: persistence.leaveAfterSave,
+    leaveAfterSave: leaveAfterRemoval ?? persistence.leaveAfterSave,
     formError,
     onSave,
     showInitialBalance: showBalance,

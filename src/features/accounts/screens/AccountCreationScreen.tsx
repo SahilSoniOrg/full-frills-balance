@@ -1,10 +1,9 @@
-import {
-  ScreenHeaderActions,
-  type ScreenHeaderActionItem,
-} from '@/src/components/shared/ScreenHeaderActions';
+import { ScreenHeaderActions } from '@/src/components/shared/ScreenHeaderActions';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AccountFormView } from '@/src/features/accounts/components/AccountFormView';
+import { toHeaderIconButtons } from '@/src/features/accounts/helpers/accountManagementActions';
 import { useAccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
+import { useTheme } from '@/src/hooks/use-theme';
 import { useConfirmUnsavedChanges } from '@/src/hooks/useConfirmUnsavedChanges';
 import { Icon } from '@/src/types/domainIcons';
 import { useMemo } from 'react';
@@ -55,8 +54,9 @@ export default function AccountCreationScreen() {
     leaveAfterSave: vm.leaveAfterSave,
     title: vm.isCategory ? 'Discard category changes?' : 'Discard account changes?',
   });
+  const { theme } = useTheme();
   const chrome = useMemo((): ScreenNavChrome => {
-    const headerActionItems: ScreenHeaderActionItem[] = vm.formChrome.headerActionItems;
+    const headerActionItems = toHeaderIconButtons(vm.formChrome.managementActions, theme);
     return {
       screenTitle: vm.heroTitle,
       showBack: true,
@@ -67,6 +67,6 @@ export default function AccountCreationScreen() {
           <ScreenHeaderActions actions={headerActionItems} />
         ) : undefined,
     };
-  }, [guard.onBack, vm.formChrome.headerActionItems, vm.heroTitle]);
+  }, [guard.onBack, vm.formChrome.managementActions, vm.heroTitle, theme]);
   return <AccountFormView {...vm} chrome={chrome} />;
 }

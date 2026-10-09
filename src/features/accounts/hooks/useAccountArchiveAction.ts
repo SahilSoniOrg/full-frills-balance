@@ -1,11 +1,10 @@
-import type { ScreenHeaderActionItem } from '@/src/components/shared/ScreenHeaderActions';
 import type { AccountArchiveCascadeModalProps } from '@/src/features/accounts/components/AccountArchiveCascadeModal';
 import { runArchiveIntentWithConfirmation } from '@/src/features/accounts/helpers/accountArchiveConfirm';
+import type { AccountManagementAction } from '@/src/features/accounts/helpers/accountManagementActions';
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useAccountActions } from '@/src/features/accounts/hooks/useAccountActions';
 import { isSystemAccount } from '@/src/services/accounts/accountSystemAccounts';
-import { useTheme } from '@/src/hooks/use-theme';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import {
@@ -34,7 +33,6 @@ export function useAccountArchiveAction({
 }: UseAccountArchiveActionArgs) {
   const { workplaceId: contextWorkplaceId } = useWorkplace();
   const workplaceId = workplaceIdProp ?? contextWorkplaceId;
-  const { theme } = useTheme();
   const { applyArchiveChanges } = useAccountActions(workplaceId);
   const [isApplying, setIsApplying] = useState(false);
   const [cascadeState, setCascadeState] = useState<{
@@ -120,23 +118,22 @@ export function useAccountArchiveAction({
     runArchiveIntent(!isArchived);
   }, [isArchived, runArchiveIntent]);
 
-  const headerActionItems = useMemo((): ScreenHeaderActionItem[] => {
+  const actions = useMemo((): AccountManagementAction[] => {
     if (!isActive) return [];
 
     return [
       {
-        name: Icon.Archive,
-        onPress,
-        variant: 'surface',
-        iconColor: isArchived ? theme.primary : theme.textSecondary,
-        disabled: isApplying,
-        testID: 'archive-account-button',
-        accessibilityLabel: isArchived
+        label: isArchived
           ? AppConfig.strings.accounts.archive.unarchiveAccount
           : AppConfig.strings.accounts.archive.archiveAccount,
+        icon: Icon.Archive,
+        onPress,
+        tone: isArchived ? 'active' : 'neutral',
+        disabled: isApplying,
+        testID: 'archive-account-button',
       },
     ];
-  }, [isActive, isApplying, isArchived, onPress, theme.primary, theme.textSecondary]);
+  }, [isActive, isApplying, isArchived, onPress]);
 
   const archiveCascadeModal = useMemo((): AccountArchiveCascadeModalProps | null => {
     if (cascadeState == null) return null;
@@ -155,7 +152,7 @@ export function useAccountArchiveAction({
   }, [accounts, cascadeState, closeCascade, commitArchive]);
 
   return {
-    headerActionItems,
+    actions,
     archiveCascadeModal,
     runArchiveIntent,
     isSystemAccount: account ? isSystemAccount(account) : false,

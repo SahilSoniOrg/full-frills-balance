@@ -8,6 +8,7 @@ import type { AccountSavePayload } from '@/src/features/accounts/services/accoun
 import { Icon } from '@/src/types/domainIcons';
 import { confirm, showErrorAlert } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
+import { AllTheProviders } from '@/src/utils/test-utils';
 
 const mockCreateAccount = jest.fn();
 const mockWorkplaceId = asWorkplaceId('workplace');
@@ -94,7 +95,7 @@ jest.mock('@/src/features/accounts/hooks/useAccountFormViewModel', () => ({
       isCategory: false,
       isLoading: false,
       metadata: {},
-      formChrome: { headerActionItems: [] },
+      formChrome: { managementActions: [] },
       heroTitle: 'New account',
     };
   },
@@ -118,7 +119,7 @@ const payload: AccountSavePayload = {
 };
 
 async function renderDirtyScreen() {
-  renderHook(AccountCreationScreen);
+  renderHook(AccountCreationScreen, { wrapper: AllTheProviders });
   await waitFor(() => expect(mockPreventRemove).toBe(false));
   // Wait for the shared guard's deferred baseline to capture the empty draft.
   await act(async () => {
