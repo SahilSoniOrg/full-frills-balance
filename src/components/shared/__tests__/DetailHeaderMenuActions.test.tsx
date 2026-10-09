@@ -33,10 +33,18 @@ it('opens named actions from the overflow and preserves disabled states', () => 
 });
 
 it('gives overflow and privacy actions the same round surface treatment', () => {
-  const screen = render(<DetailHeaderMenuActions actions={[]} />);
+  const screen = render(
+    <DetailHeaderMenuActions actions={[{ label: 'Edit', onPress: jest.fn() }]} />,
+  );
   const buttons = screen.UNSAFE_getAllByType(IconButton);
   expect(buttons).toHaveLength(2);
   expect(buttons.map(button => button.props.variant)).toEqual(['surface', 'surface']);
+});
+
+it('omits the overflow button when there is nothing to put in it', () => {
+  const screen = render(<DetailHeaderMenuActions actions={[]} />);
+  expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();
+  expect(screen.UNSAFE_getAllByType(IconButton)).toHaveLength(1);
 });
 
 it('waits for the native iOS sheet to dismiss before invoking an action, once only', () => {

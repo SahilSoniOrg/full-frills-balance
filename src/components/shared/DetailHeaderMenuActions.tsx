@@ -1,14 +1,16 @@
-import { AppButton, AppText, Icon } from '@/src/components/core';
+import { AppButton, AppIcon, AppText, Icon, type IconName } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { useAfterDismiss } from '@/src/components/overlays/useAfterDismiss';
 import { MoneyDetailHeaderActions } from './MoneyDetailHeaderActions';
 import type { ScreenHeaderActionItem } from './ScreenHeaderActions';
-import { AppConfig, Size } from '@/src/constants';
+import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Column } from '@/src/design-system';
 import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 export interface DetailMenuAction {
   label: string;
+  icon?: IconName;
   onPress: () => void;
   destructive?: boolean;
   disabled?: boolean;
@@ -35,13 +37,17 @@ export function DetailHeaderMenuActions({
         privacyPosition={privacyPosition}
         actions={[
           ...leadingActions,
-          {
-            name: Icon.More,
-            onPress: () => setOpen(true),
-            variant: 'surface',
-            accessibilityLabel: strings.moreActions,
-            testID: 'detail-more-actions',
-          },
+          ...(actions.length > 0
+            ? [
+                {
+                  name: Icon.More,
+                  onPress: () => setOpen(true),
+                  variant: 'surface' as const,
+                  accessibilityLabel: strings.moreActions,
+                  testID: 'detail-more-actions',
+                },
+              ]
+            : []),
         ]}
       />
       <ModalSurface
@@ -72,7 +78,18 @@ export function DetailHeaderMenuActions({
                 afterDismiss.run(action.onPress);
               }}
             >
-              <AppText color={action.destructive ? 'error' : 'text'}>{action.label}</AppText>
+              <View style={styles.actionRow}>
+                {action.icon ? (
+                  <AppIcon
+                    name={action.icon}
+                    size={Size.iconSm}
+                    color={action.destructive ? 'error' : 'textSecondary'}
+                  />
+                ) : null}
+                <AppText style={styles.actionLabel} color={action.destructive ? 'error' : 'text'}>
+                  {action.label}
+                </AppText>
+              </View>
             </AppButton>
           ))}
         </Column>
@@ -80,3 +97,14 @@ export function DetailHeaderMenuActions({
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  actionLabel: {
+    flex: 1,
+  },
+});
