@@ -129,6 +129,18 @@ export const LineChartGrid = React.memo(function LineChartGrid({
           const normalizedX = maxX === minX ? 0.5 : (todayX - minX) / (maxX - minX);
           if (normalizedX < 0 || normalizedX > 1) return null;
           const x = paddingLeft + normalizedX * plotWidth;
+          const pointY = todayDataPoint
+            ? height -
+              paddingVertical -
+              ((todayDataPoint.y - displayMinY) / displayRange) * (height - paddingVertical * 2)
+            : undefined;
+          // Keep the day label on a separate baseline from the point's amount.
+          const todayLabelY =
+            pointY === undefined
+              ? paddingVertical + 10
+              : pointY > height - paddingVertical - 20
+                ? pointY - 28
+                : pointY + 18;
           return (
             <React.Fragment>
               <Line
@@ -143,7 +155,7 @@ export const LineChartGrid = React.memo(function LineChartGrid({
               <SvgText
                 fontFamily={(fonts.numeric ?? fonts).medium}
                 x={x + 4}
-                y={paddingVertical + 10}
+                y={todayLabelY}
                 fontSize={REPORT_CHART_LAYOUT.lineChartMaxLabelFontSize}
                 fill={theme.textSecondary}
                 textAnchor="start"
@@ -151,37 +163,28 @@ export const LineChartGrid = React.memo(function LineChartGrid({
               >
                 {AppConfig.strings.reports.today}
               </SvgText>
-              {todayDataPoint &&
-                (() => {
-                  const y =
-                    height -
-                    paddingVertical -
-                    ((todayDataPoint.y - displayMinY) / displayRange) *
-                      (height - paddingVertical * 2);
-
-                  return (
-                    <React.Fragment>
-                      <Circle
-                        cx={x}
-                        cy={y}
-                        r={4}
-                        fill={chartColor}
-                        stroke={theme.surface}
-                        strokeWidth={1}
-                      />
-                      <SvgText
-                        fontFamily={(fonts.numeric ?? fonts).bold}
-                        x={x + 4}
-                        y={y - 8}
-                        fontSize={11}
-                        fill={chartColor}
-                        textAnchor="start"
-                      >
-                        {formatMoneyShort(todayDataPoint.y, currencyCode)}
-                      </SvgText>
-                    </React.Fragment>
-                  );
-                })()}
+              {todayDataPoint && pointY !== undefined && (
+                <React.Fragment>
+                  <Circle
+                    cx={x}
+                    cy={pointY}
+                    r={4}
+                    fill={chartColor}
+                    stroke={theme.surface}
+                    strokeWidth={1}
+                  />
+                  <SvgText
+                    fontFamily={(fonts.numeric ?? fonts).bold}
+                    x={x + 4}
+                    y={pointY - 8}
+                    fontSize={11}
+                    fill={chartColor}
+                    textAnchor="start"
+                  >
+                    {formatMoneyShort(todayDataPoint.y, currencyCode)}
+                  </SvgText>
+                </React.Fragment>
+              )}
             </React.Fragment>
           );
         })()}
