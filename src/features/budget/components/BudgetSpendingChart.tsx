@@ -9,6 +9,7 @@ import {
   buildBudgetSpendingChartGeometry,
   buildBudgetSpendingDailyPoints,
 } from './budgetSpendingChartGeometry';
+import { ChartLegendItem } from '@/src/components/charts/ChartLegendItem';
 import { ChartTooltip } from '@/src/components/charts/ChartTooltip';
 import { useChartInteraction } from '@/src/hooks/useChartInteraction';
 import type { BudgetCumulativeChart } from '@/src/services/budget/budgetCumulativeChartService';
@@ -359,17 +360,17 @@ export function BudgetSpendingChart({
               </AppText>
             </View>
             <View style={styles.legend}>
-              <Legend
+              <ChartLegendItem
                 color={resolveThemeColor(theme, 'primary') ?? theme.primary}
                 label={strings.spendingSoFar}
               />
-              <Legend
+              <ChartLegendItem
                 color={resolveThemeColor(theme, 'textSecondary') ?? theme.textSecondary}
                 dashed
                 label={strings.evenPace}
               />
               {previousChartData ? (
-                <Legend
+                <ChartLegendItem
                   color={resolveThemeColor(theme, 'textTertiary') ?? theme.textTertiary}
                   label={strings.previousPeriod}
                 />
@@ -379,25 +380,6 @@ export function BudgetSpendingChart({
         ) : null}
       </View>
     </AppCard>
-  );
-}
-
-function Legend({
-  color,
-  label,
-  dashed = false,
-}: {
-  color: string;
-  label: string;
-  dashed?: boolean;
-}) {
-  return (
-    <View style={styles.legendItem}>
-      <View style={[styles.legendLine, { borderColor: color }, dashed && styles.dashedLegend]} />
-      <AppText variant="caption" color="secondary">
-        {label}
-      </AppText>
-    </View>
   );
 }
 
@@ -426,7 +408,4 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     marginTop: Spacing.sm,
   },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, minHeight: 24 },
-  legendLine: { width: 16, borderTopWidth: 2 },
-  dashedLegend: { borderStyle: 'dashed' },
 });
