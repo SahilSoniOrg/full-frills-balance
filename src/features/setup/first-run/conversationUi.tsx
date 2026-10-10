@@ -17,7 +17,6 @@ import { OnboardingFadePanel } from './OnboardingFadePanel';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Icon, type IconName } from '@/src/types/domainIcons';
-import { triggerHaptic } from '@/src/utils/haptics';
 import dayjs from 'dayjs';
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Keyboard, ScrollView, StyleSheet, TextInput, type FocusEvent } from 'react-native';
@@ -137,15 +136,7 @@ export function ConversationStep({
         >
           <Stack space="xs">
             {onSkip ? (
-              <AppButton
-                variant="ghost"
-                size="md"
-                onPress={() => {
-                  void triggerHaptic('light');
-                  onSkip();
-                }}
-                testID="onboarding-skip"
-              >
+              <AppButton variant="ghost" size="md" onPress={onSkip} testID="onboarding-skip">
                 {skipLabel ?? copy.addLater}
               </AppButton>
             ) : null}
@@ -155,7 +146,6 @@ export function ConversationStep({
                 size="lg"
                 onPress={() => {
                   Keyboard.dismiss();
-                  void triggerHaptic('light');
                   onPrimary();
                 }}
                 disabled={primaryDisabled || primaryLoading}
@@ -472,10 +462,8 @@ function CollectedRow({
               <Inline align="center" justify="space-between" gap="sm">
                 {cadence.intervals && onIntervalChange ? (
                   <PressScaleTouchable
-                    onPress={() => {
-                      void triggerHaptic('light');
-                      setPickingInterval(true);
-                    }}
+                    haptic="selection"
+                    onPress={() => setPickingInterval(true)}
                     accessibilityRole="button"
                     accessibilityLabel={copy.salaryOften}
                     testID={`onboarding-interval-${item.id}`}

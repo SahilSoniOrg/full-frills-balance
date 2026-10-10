@@ -6,7 +6,6 @@ import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoti
 import { Box, Stack } from '@/src/design-system';
 import { OnboardingFadePanel } from './OnboardingFadePanel';
 import { Keyboard, Platform, ScrollView, StyleSheet } from 'react-native';
-import { triggerHaptic } from '@/src/utils/haptics';
 import { useState } from 'react';
 
 export function WelcomeScene({
@@ -39,7 +38,6 @@ export function WelcomeScene({
       setPrompt(true);
       return;
     }
-    void triggerHaptic('light');
     if (action === 'start') onStart();
     else onRestore();
   };
@@ -150,7 +148,6 @@ export function WelcomeScene({
           onPrivacyNotice();
         }}
         onAcknowledge={() => {
-          void triggerHaptic('light');
           onAcknowledgePrivacy();
           setPrompt(false);
           const action = pending;
