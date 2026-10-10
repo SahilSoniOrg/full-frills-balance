@@ -1,7 +1,7 @@
-import { Icon, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 interface FormulaStepRowProps {
   title: string;
@@ -23,7 +23,8 @@ export const FormulaStepRow = ({
   const { theme } = useTheme();
 
   return (
-    <TouchableOpacity
+    <PressScaleTouchable
+      pressScale="subtle"
       onPress={onToggle}
       accessibilityRole="button"
       accessibilityState={{ expanded: isExpanded }}
@@ -46,7 +47,7 @@ export const FormulaStepRow = ({
           color={theme.textSecondary}
         />
       </View>
-    </TouchableOpacity>
+    </PressScaleTouchable>
   );
 };
 

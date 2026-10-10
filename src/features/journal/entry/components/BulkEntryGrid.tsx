@@ -1,15 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
-import {
-  Keyboard,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Keyboard, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { AppButton, AppIcon, AppText, Icon } from '@/src/components/core';
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppConfig, Spacing, Shape, Size } from '@/src/constants';
 import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants/ledger-constants';
 import { usePageKeyboard } from '@/src/design-system';
@@ -259,14 +252,14 @@ export const BulkEntryGrid = React.memo(
                 </AppText>
               )}
             </View>
-            <TouchableOpacity
+            <PressScaleTouchable
               onPress={handleClearRows}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <AppText variant="caption" color="primary" weight="semibold">
                 Clear All
               </AppText>
-            </TouchableOpacity>
+            </PressScaleTouchable>
           </View>
         )}
 

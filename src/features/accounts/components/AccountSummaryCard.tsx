@@ -1,3 +1,4 @@
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import {
   Icon,
@@ -18,7 +19,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
 import { isCategoryAccountType, resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { getReadableColor, withOpacity } from '@/src/utils/color-math';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 // Old minimumFontScale was 0.6; same floor, now honoured on web too.
 const TITLE_BALANCE_FIT = {
@@ -64,17 +65,13 @@ function SummaryAction({
 }) {
   const { theme } = useTheme();
   return (
-    <Pressable
+    <PressScaleTouchable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
       testID={testID}
-      style={({ pressed }) => [
-        styles.summaryAction,
-        { backgroundColor: withOpacity(iconColor, Opacity.soft) },
-        pressed && styles.pressed,
-      ]}
+      style={[styles.summaryAction, { backgroundColor: withOpacity(iconColor, Opacity.soft) }]}
     >
       <AppIcon
         name={icon}
@@ -90,7 +87,7 @@ function SummaryAction({
         </AppText>
       ) : null}
       <AppIcon name={Icon.ChevronRight} size={Size.iconXs} color={theme.textTertiary} />
-    </Pressable>
+    </PressScaleTouchable>
   );
 }
 
@@ -340,8 +337,5 @@ const styles = StyleSheet.create({
   actionLabel: {
     flexShrink: 1,
     minWidth: 0,
-  },
-  pressed: {
-    opacity: Opacity.medium,
   },
 });

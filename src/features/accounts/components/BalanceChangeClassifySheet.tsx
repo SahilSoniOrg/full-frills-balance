@@ -1,7 +1,13 @@
 import { AccountPickerList } from '@/src/components/account-selection/AccountPickerList';
 import { BaseAccountPickerModal } from '@/src/components/account-selection/BaseAccountPickerModal';
 import { ConfirmDialog } from '@/src/components/overlays/ConfirmDialog';
-import { Icon, AppIcon, AppSegmentedControl, AppText } from '@/src/components/core';
+import {
+  Icon,
+  AppIcon,
+  AppSegmentedControl,
+  AppText,
+  PressScaleTouchable,
+} from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import type { AccountFields } from '@/src/types/plainDtos';
@@ -17,7 +23,7 @@ import {
   getBalanceChangeJournalLabel,
 } from '@/src/services/accounts/balanceChangeClassification';
 import { useMemo, useState } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 type PickerMode = 'suggested' | 'all';
 
@@ -154,7 +160,7 @@ export function BalanceChangeClassifySheet({
             testID="balance-classify-mode"
           />
 
-          <TouchableOpacity
+          <PressScaleTouchable
             onPress={handleAdjustment}
             style={[styles.adjustmentRow, { borderBottomColor: theme.border }]}
             accessibilityRole="button"
@@ -178,7 +184,7 @@ export function BalanceChangeClassifySheet({
                 {copy.adjustmentSubtitle}
               </AppText>
             </View>
-          </TouchableOpacity>
+          </PressScaleTouchable>
         </Stack>
 
         {listAccounts.length === 0 ? (

@@ -6,11 +6,12 @@ import {
   AppText,
   IconButton,
   IconName,
+  PressScaleTouchable,
 } from '@/src/components/core';
 import { Typography } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { Keyboard, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { Keyboard, ScrollView, StyleSheet } from 'react-native';
 import type { ReactNode } from 'react';
 
 interface WorkplaceBasicInfoStepProps {
@@ -66,7 +67,7 @@ export function WorkplaceBasicInfoStep({
           <Stack gap="xl" paddingHorizontal="md">
             {onIconPress && icon && (
               <Stack align="center" gap="md">
-                <TouchableOpacity
+                <PressScaleTouchable
                   onPress={onIconPress}
                   style={[
                     styles.iconContainer,
@@ -84,7 +85,7 @@ export function WorkplaceBasicInfoStep({
                   >
                     <AppIcon name={Icon.Edit} size={14} color={theme.surface} />
                   </Box>
-                </TouchableOpacity>
+                </PressScaleTouchable>
               </Stack>
             )}
 

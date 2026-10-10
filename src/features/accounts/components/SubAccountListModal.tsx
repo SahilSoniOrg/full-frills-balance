@@ -1,3 +1,4 @@
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppText, Icon, IconButton, IvyIcon, type IconName } from '@/src/components/core';
 import { BorderWidth, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
@@ -9,7 +10,7 @@ import { getReadableColor, withOpacity } from '@/src/utils/color-math';
 import { SubAccountViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { memo, useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 // Balances shrink at most to ~0.75x (the old 0.85 floor could still truncate crore amounts).
 const BODY_BALANCE_FIT = {
@@ -161,7 +162,6 @@ const SubAccountTreeRow = memo(function SubAccountTreeRow({
   isExpanded,
   lineColor,
   trackColor,
-  pressedColor,
   toggleColor,
   iconColor,
   iconBackground,
@@ -176,7 +176,6 @@ const SubAccountTreeRow = memo(function SubAccountTreeRow({
   isExpanded: boolean;
   lineColor: string;
   trackColor: string;
-  pressedColor: string;
   toggleColor: string;
   iconColor: string;
   iconBackground: string;
@@ -200,13 +199,14 @@ const SubAccountTreeRow = memo(function SubAccountTreeRow({
     .join(', ');
 
   return (
-    <Pressable
+    <PressScaleTouchable
+      pressScale="subtle"
       onPress={() => onOpen(account)}
       accessibilityRole="button"
       accessibilityLabel={rowLabel}
       accessibilityHint="Opens this account"
       testID={`sub-account-row-${account.id}`}
-      style={({ pressed }) => [styles.row, pressed && { backgroundColor: pressedColor }]}
+      style={styles.row}
     >
       <View style={styles.rail} testID={`sub-account-rail-${account.id}`}>
         {Array.from({ length: depth }, (_, column) => {
@@ -294,7 +294,7 @@ const SubAccountTreeRow = memo(function SubAccountTreeRow({
           </View>
         ) : null}
       </View>
-    </Pressable>
+    </PressScaleTouchable>
   );
 });
 
@@ -328,7 +328,6 @@ export function SubAccountListModal({
   );
   const lineColor = withOpacity(theme.textTertiary, Opacity.medium);
   const trackColor = withOpacity(theme.textTertiary, Opacity.active);
-  const pressedColor = withOpacity(theme.text, Opacity.selection);
   const hasTree = !isLoading && tree.length > 0;
 
   return (
@@ -410,7 +409,6 @@ export function SubAccountListModal({
                 isExpanded={expandedIds.has(account.id)}
                 lineColor={lineColor}
                 trackColor={trackColor}
-                pressedColor={pressedColor}
                 toggleColor={theme.textSecondary}
                 iconColor={getReadableColor(account.accountColor, theme.surface)}
                 iconBackground={withOpacity(account.accountColor, Opacity.soft)}

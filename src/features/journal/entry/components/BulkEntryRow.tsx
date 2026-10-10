@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Icon, AppIcon, AppText } from '@/src/components/core';
+import { StyleSheet, View } from 'react-native';
+import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { Spacing, Shape, Size } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { BulkJournalRow, BulkJournalRowActions } from '../types/bulkJournal';
@@ -152,7 +152,7 @@ export const BulkEntryRow = React.memo(
               </AppText>
             ),
             trailingAction: (
-              <TouchableOpacity
+              <PressScaleTouchable
                 onPress={() => onRemove(row.id)}
                 style={styles.deleteButton}
                 hitSlop={{
@@ -166,7 +166,7 @@ export const BulkEntryRow = React.memo(
                 testID={`bulk-delete-${row.id}`}
               >
                 <AppIcon name={Icon.Delete} size={Size.iconXs} color={theme.textSecondary} />
-              </TouchableOpacity>
+              </PressScaleTouchable>
             ),
             descriptionTestID: `bulk-description-${index + 1}`,
             descriptionClearTestID: `bulk-clear-description-${index + 1}`,

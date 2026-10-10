@@ -1,3 +1,4 @@
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { JournalEntryListView } from '@/src/components/journal/JournalEntryListView';
 import { AppButton, AppText, EmptyStateView, LoadingView } from '@/src/components/core';
 import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
@@ -6,7 +7,7 @@ import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { JournalListModals } from '@/src/features/journal';
 import { AppNavigation } from '@/src/utils/navigation';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { BudgetDetailHeader } from './BudgetDetailHeader';
 import { BudgetSetupDisclosure } from './BudgetSetupDisclosure';
 import { BudgetSpendingChart } from './BudgetSpendingChart';
@@ -129,7 +130,7 @@ export function BudgetDetailView({
                       </AppText>
                     ) : null}
                     {vm.activityCategory ? (
-                      <Pressable
+                      <PressScaleTouchable
                         onPress={() => vm.onFilterCategory(null)}
                         accessibilityRole="button"
                         accessibilityLabel={strings.clearActivityFilter}
@@ -139,7 +140,7 @@ export function BudgetDetailView({
                         <AppText variant="body" color="secondary" weight="semibold">
                           ×
                         </AppText>
-                      </Pressable>
+                      </PressScaleTouchable>
                     ) : null}
                   </Row>
                 }

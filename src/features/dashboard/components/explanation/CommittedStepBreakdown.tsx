@@ -1,9 +1,9 @@
-import { Icon, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { Opacity, Size, Spacing } from '@/src/constants';
 import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDashboardFeatureActions';
 import { SafeToSpendViewModel } from '@/src/features/dashboard/types/SafeToSpendViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 interface CommittedStepBreakdownProps {
   committed: SafeToSpendViewModel['committed'];
@@ -54,7 +54,7 @@ export const CommittedStepBreakdown = ({
                       : 'Transfer';
 
                 return (
-                  <TouchableOpacity
+                  <PressScaleTouchable
                     key={di}
                     style={styles.detailRow}
                     onPress={() => {
@@ -96,7 +96,7 @@ export const CommittedStepBreakdown = ({
                     <AppText variant="caption" color="secondary" tabular>
                       {formatSts(det.amount, currencyCode)}
                     </AppText>
-                  </TouchableOpacity>
+                  </PressScaleTouchable>
                 );
               })}
           </View>

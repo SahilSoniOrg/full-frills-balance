@@ -1,5 +1,12 @@
 import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModal';
-import { Icon, AppIcon, AppInput, AppText, IconButton } from '@/src/components/core';
+import {
+  Icon,
+  AppIcon,
+  AppInput,
+  AppText,
+  IconButton,
+  PressScaleTouchable,
+} from '@/src/components/core';
 import { EntryEditBanner } from '@/src/features/journal/entry/components/EntryEditBanner';
 import {
   JournalSuggestionsDropdown,
@@ -27,7 +34,6 @@ import {
   Keyboard,
   StyleSheet,
   TextInput,
-  TouchableOpacity,
   type StyleProp,
   View,
   type ViewStyle,
@@ -251,7 +257,7 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
               onTouchEnd={() => handleSuggestionInteractionChange(false)}
               onTouchCancel={() => handleSuggestionInteractionChange(false)}
             >
-              <TouchableOpacity
+              <PressScaleTouchable
                 onPress={() => {
                   setDescription('');
                   resolvedDescriptionInputRef.current?.focus();
@@ -262,7 +268,7 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
                 testID={descriptionClearTestID}
               >
                 <AppIcon name={Icon.Close} size={Size.xs} color={theme.textTertiary} />
-              </TouchableOpacity>
+              </PressScaleTouchable>
             </View>
           ) : null}
 
@@ -296,7 +302,7 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
       {/* Date & Notes Pill Row */}
       <View style={styles.metaRow}>
         {/* Date Picker Pill */}
-        <TouchableOpacity
+        <PressScaleTouchable
           onPress={() => {
             Keyboard.dismiss();
             if (onDateTimePickerRequest) {
@@ -323,11 +329,11 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
             {formattedDateTime}
           </AppText>
           <AppIcon name={Icon.ChevronDown} size={Size.xxs} color={theme.textTertiary} />
-        </TouchableOpacity>
+        </PressScaleTouchable>
 
         {/* Notes Disclosure Toggle */}
         {setNotes && (
-          <TouchableOpacity
+          <PressScaleTouchable
             onPress={() => setShowNotes(!showNotes)}
             style={[
               styles.metaPill,
@@ -360,7 +366,7 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
             >
               {showNotes ? 'Hide notes' : notes || notesAdded ? 'Notes added' : 'Add notes'}
             </AppText>
-          </TouchableOpacity>
+          </PressScaleTouchable>
         )}
       </View>
 

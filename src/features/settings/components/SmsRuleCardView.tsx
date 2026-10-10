@@ -1,11 +1,11 @@
-import { Icon, AppCard, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppCard, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { Opacity, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { PlainSmsRule } from '@/src/types/plainDtos';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SmsRuleCondition } from '@/src/utils/sms/RuleMatcher';
 import { useMemo } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 interface SmsRuleCardViewProps {
   item: PlainSmsRule;
@@ -87,7 +87,11 @@ export function SmsRuleCardView({ item, accountMap, onPress }: SmsRuleCardViewPr
   );
 
   return (
-    <TouchableOpacity activeOpacity={Opacity.heavy} onPress={() => onPress(item)}>
+    <PressScaleTouchable
+      pressScale="subtle"
+      activeOpacity={Opacity.heavy}
+      onPress={() => onPress(item)}
+    >
       <AppCard elevation="sm" style={styles.card}>
         <View style={styles.cardHeader}>
           <AppText variant="subheading" weight="semibold">
@@ -134,7 +138,7 @@ export function SmsRuleCardView({ item, accountMap, onPress }: SmsRuleCardViewPr
           </View>
         ) : null}
       </AppCard>
-    </TouchableOpacity>
+    </PressScaleTouchable>
   );
 }
 

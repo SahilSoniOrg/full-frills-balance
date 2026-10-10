@@ -1,12 +1,12 @@
 import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
-import { AppCard, AppText, EmptyStateView } from '@/src/components/core';
+import { AppCard, AppText, EmptyStateView, PressScaleTouchable } from '@/src/components/core';
 import type { ScreenFabChrome } from '@/src/components/layout/screenChrome';
 import { Opacity, Spacing } from '@/src/constants';
 import { PlainSmsRule } from '@/src/types/plainDtos';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { SmsRuleCardView } from '@/src/features/settings/components/SmsRuleCardView';
 import type { SmsRuleSuggestion } from '@/src/services/sms/SmsRuleEngine';
-import { FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 
 interface SmsRulesViewProps {
   rules: PlainSmsRule[];
@@ -32,7 +32,7 @@ export function SmsRulesView({
       <View style={styles.suggestionsSection}>
         <ScreenSectionHeader title="Suggested Rules" style={styles.suggestionsTitle} />
         {suggestions.map(suggestion => (
-          <TouchableOpacity
+          <PressScaleTouchable
             key={JSON.stringify([
               suggestion.senderMatch,
               suggestion.bodyMatch ?? '',
@@ -56,7 +56,7 @@ export function SmsRulesView({
                 Based on {suggestion.sampleCount} imported messages
               </AppText>
             </AppCard>
-          </TouchableOpacity>
+          </PressScaleTouchable>
         ))}
       </View>
     );

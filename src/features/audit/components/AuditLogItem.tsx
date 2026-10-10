@@ -1,4 +1,11 @@
-import { Icon, AppCard, AppIcon, AppText, IconTile } from '@/src/components/core';
+import {
+  Icon,
+  AppCard,
+  AppIcon,
+  AppText,
+  IconTile,
+  PressScaleTouchable,
+} from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { Inline, Stack } from '@/src/design-system';
@@ -7,7 +14,7 @@ import { getAuditEntityCapabilities } from '@/src/types/auditEntityCapabilities'
 import { AuditLogEntry, EntityStatus } from '@/src/services/audit/auditLogTypes';
 import { useAuditLogItemMeta } from '@/src/features/audit/hooks/useAuditLogItemMeta';
 import { useTheme } from '@/src/hooks/use-theme';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 interface AuditLogItemProps {
   item: AuditLogEntry;
@@ -54,7 +61,8 @@ export const AuditLogItem = ({
 
   return (
     <AppCard paddingSize="md" elevation="sm" radius="r2" style={styles.card}>
-      <TouchableOpacity
+      <PressScaleTouchable
+        pressScale="subtle"
         onPress={onToggle}
         accessibilityLabel={isExpanded ? 'Hide audit details' : AppConfig.strings.audit.viewDetails}
         accessibilityRole="button"
@@ -100,7 +108,7 @@ export const AuditLogItem = ({
             color={theme.textSecondary}
           />
         </Inline>
-      </TouchableOpacity>
+      </PressScaleTouchable>
 
       {isExpanded && parsedChanges && (
         <Stack gap="md" style={styles.expandedContent}>
@@ -112,7 +120,8 @@ export const AuditLogItem = ({
 
           <Inline justify="flex-end" gap="sm">
             {onShowRelated && item.correlationId && (
-              <TouchableOpacity
+              <PressScaleTouchable
+                pressScale="subtle"
                 style={[styles.actionButton, { backgroundColor: theme.surfaceSecondary }]}
                 onPress={() => onShowRelated(item.correlationId!)}
                 accessibilityRole="button"
@@ -122,10 +131,11 @@ export const AuditLogItem = ({
                 <AppText variant="caption" weight="semibold">
                   {AppConfig.strings.audit.relatedChangesCta}
                 </AppText>
-              </TouchableOpacity>
+              </PressScaleTouchable>
             )}
             {onView && canViewEntity && (
-              <TouchableOpacity
+              <PressScaleTouchable
+                pressScale="subtle"
                 style={[styles.actionButton, { backgroundColor: theme.surfaceSecondary }]}
                 onPress={() =>
                   onView(item.entityType, item.entityId, entityDisplayName || undefined)
@@ -137,10 +147,11 @@ export const AuditLogItem = ({
                 <AppText variant="caption" weight="semibold">
                   {AppConfig.strings.audit.viewCta}
                 </AppText>
-              </TouchableOpacity>
+              </PressScaleTouchable>
             )}
             {onRevert && canRevert && (
-              <TouchableOpacity
+              <PressScaleTouchable
+                pressScale="subtle"
                 style={[
                   styles.actionButton,
                   { backgroundColor: withOpacity(theme.warning, Opacity.soft) },
@@ -153,7 +164,7 @@ export const AuditLogItem = ({
                 <AppText variant="caption" weight="semibold">
                   {AppConfig.strings.audit.revertCta}
                 </AppText>
-              </TouchableOpacity>
+              </PressScaleTouchable>
             )}
           </Inline>
         </Stack>

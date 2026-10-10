@@ -1,10 +1,11 @@
 import { SelectionPickerSheet } from '@/src/components/filters/SelectionPickerSheet';
 import { Icon, AppIcon, AppText } from '@/src/components/core';
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import type { PlainCurrency } from '@/src/types/plainDtos';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useState } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 interface CurrencySelectorProps {
   selectedCurrency: string;
@@ -39,7 +40,8 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
 
   return (
     <>
-      <TouchableOpacity
+      <PressScaleTouchable
+        haptic="selection"
         style={[
           styles.input,
           {
@@ -73,7 +75,7 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
             style={{ marginLeft: Spacing.xs }}
           />
         )}
-      </TouchableOpacity>
+      </PressScaleTouchable>
 
       <SelectionPickerSheet
         visible={showModal}

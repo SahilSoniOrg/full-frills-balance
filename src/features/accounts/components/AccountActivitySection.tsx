@@ -1,3 +1,4 @@
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
 import { ChartLegendItem } from '@/src/components/charts/ChartLegendItem';
@@ -5,7 +6,7 @@ import { LineChart } from '@/src/components/charts/LineChart';
 import { PeriodStepper } from '@/src/components/shared/PeriodStepper';
 import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import { AppIcon, AppText, Badge, Icon } from '@/src/components/core';
-import { Opacity, Size, Spacing } from '@/src/constants';
+import { Size, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { accountDetailsCopy } from '@/src/features/accounts/helpers/accountFlowLabels';
 import {
@@ -21,7 +22,7 @@ import { getReadableColor } from '@/src/utils/color-math';
 import { AccountType } from '@/src/types/enums';
 import dayjs from 'dayjs';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
 
 export type AccountActivitySectionProps = AccountActivitySectionModel & {
   accountType: AccountType;
@@ -187,13 +188,13 @@ export function AccountActivitySection({
 
         {chartData.length > 0 ? (
           <View>
-            <Pressable
+            <PressScaleTouchable
               onPress={() => setChartExpanded(expanded => !expanded)}
               accessibilityRole="button"
               accessibilityLabel={`${chartExpanded ? 'Hide' : 'Show'} ${chartTitle.toLowerCase()} chart`}
               accessibilityState={{ expanded: chartExpanded }}
               testID="account-trend-toggle"
-              style={({ pressed }) => [styles.chartToggle, pressed && { opacity: Opacity.medium }]}
+              style={styles.chartToggle}
             >
               <AppText variant="bodySmall" weight="medium" style={styles.trendTitle}>
                 {chartTitle}
@@ -206,7 +207,7 @@ export function AccountActivitySection({
                 size={Size.iconXs}
                 color={theme.textSecondary}
               />
-            </Pressable>
+            </PressScaleTouchable>
             {chartExpanded ? (
               <View testID="account-trend-chart">
                 {rollingAverageData.length > 0 ? (

@@ -1,9 +1,10 @@
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppButton, AppCard, AppIcon, AppText, EmptyStateView, Icon } from '@/src/components/core';
 import { Spacing } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { ReportSection } from '@/src/services/reports-v2/types/result';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { MeasureText } from './ReportsV2MetricGrid';
 
 function measureNumber(measure: NonNullable<ReportSection['rows']>[number]['value']): number {
@@ -51,7 +52,8 @@ export function ReportsV2Breakdown({
         </AppText>
       </View>
       {(expanded ? section.rows : section.rows.slice(0, 12)).map((item, index) => (
-        <Pressable
+        <PressScaleTouchable
+          pressScale="subtle"
           key={item.id}
           onPress={() => {
             if (!interactive) return;
@@ -101,7 +103,7 @@ export function ReportsV2Breakdown({
             ) : null}
           </View>
           <AppIcon name={Icon.ChevronRight} size={17} color="textTertiary" />
-        </Pressable>
+        </PressScaleTouchable>
       ))}
       {section.rows.length > 12 ? (
         <AppButton

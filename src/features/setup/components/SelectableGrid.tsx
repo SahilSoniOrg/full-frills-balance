@@ -1,4 +1,4 @@
-import { AppButton, AppIcon, AppText } from '@/src/components/core';
+import { AppButton, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { SelectionCheckmark } from '@/src/components/shared/SelectionIndicator';
 import type { IconName } from '@/src/types/domainIcons';
 import { Layout, Opacity, Size, Spacing } from '@/src/constants';
@@ -6,7 +6,7 @@ import { withOpacity } from '@/src/utils/color-math';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback } from 'react';
-import { FlatList, Keyboard, SectionList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { FlatList, Keyboard, SectionList, StyleSheet, View } from 'react-native';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { MotiView } from 'moti';
@@ -81,7 +81,7 @@ const SelectableGridItem = React.memo(
     const { id, name, icon, symbol, subtitle } = item;
 
     const content = (
-      <TouchableOpacity
+      <PressScaleTouchable
         onPress={() => onToggle(id)}
         disabled={isAtMax}
         activeOpacity={Opacity.heavy}
@@ -158,7 +158,7 @@ const SelectableGridItem = React.memo(
             ) : null}
           </Stack>
         </Box>
-      </TouchableOpacity>
+      </PressScaleTouchable>
     );
 
     if (disableAnimation) {

@@ -1,9 +1,9 @@
-import { Icon, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { Opacity, Size, Spacing } from '@/src/constants';
 import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDashboardFeatureActions';
 import { SafeToSpendViewModel } from '@/src/features/dashboard/types/SafeToSpendViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 interface IncomeStepBreakdownProps {
   income: SafeToSpendViewModel['income'];
@@ -27,7 +27,7 @@ export const IncomeStepBreakdown = ({
     <View style={styles.container}>
       {activeIncome.length > 0 ? (
         activeIncome.map((inc, i) => (
-          <TouchableOpacity
+          <PressScaleTouchable
             key={i}
             style={styles.row}
             onPress={() => {
@@ -57,7 +57,7 @@ export const IncomeStepBreakdown = ({
             <AppText variant="caption" weight="bold" color="success" tabular>
               {formatSts(inc.amount, currencyCode, { prefix: '+' })}
             </AppText>
-          </TouchableOpacity>
+          </PressScaleTouchable>
         ))
       ) : (
         <AppText variant="caption" color="secondary" italic>
