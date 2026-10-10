@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AppText, AppIcon, Icon, IconTile, ListRow, ListGroup } from '@/src/components/core';
+import { AppText, Icon, IconTile, ListRow, ListGroup } from '@/src/components/core';
 import { RevertChangeDialog } from '@/src/components/overlays/RevertChangeDialog';
 import { DetailCaptionLink } from '@/src/components/shared/DetailCaptionLink';
 import { DetailRow } from '@/src/components/shared/DetailRow';
@@ -180,7 +180,7 @@ export function JournalHistory({ history }: { history: JournalHistoryModel }) {
             title={link.label}
             minHeight={Size.touchTargetLg}
             onPress={link.onPress}
-            trailing={<AppIcon name={Icon.ChevronRight} size={Size.iconXs} color="textSecondary" />}
+            chevron
           />
         ))}
       </ListGroup>

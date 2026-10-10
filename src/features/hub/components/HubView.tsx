@@ -1,8 +1,16 @@
-import { Icon, AppButton, AppIcon, AppTabs, EmptyStateView, ListRow } from '@/src/components/core';
+import {
+  Icon,
+  AppButton,
+  AppIcon,
+  AppTabs,
+  EmptyStateView,
+  ListGroup,
+  ListRow,
+} from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Size, Spacing } from '@/src/constants';
-import { Box, Stack } from '@/src/design-system';
+import { Box } from '@/src/design-system';
 import { HubWidget } from '@/src/features/hub/components/HubWidget';
 import { insightTypePresentation } from '@/src/features/hub/helpers/insightTypePresentation';
 import type { HubViewModel } from '@/src/features/hub/hooks/useHubViewModel';
@@ -35,20 +43,17 @@ export function HubView({
 
       <Box padding="lg" flex={1}>
         {unreadSmsCount > 0 && activeTab === 'active' ? (
-          <ListRow
-            onPress={onOpenInbox}
-            leading={<AppIcon name={Icon.Notifications} size={Size.md} color={theme.primary} />}
-            title={strings.unreadSmsTitle(unreadSmsCount)}
-            subtitle={strings.unreadSmsSubtitle}
-            trailing={
-              <AppIcon name={Icon.ChevronRight} size={Size.sm} color={theme.textTertiary} />
-            }
-            background="surfaceSecondary"
-            borderRadius="lg"
-            borderWidth={1}
-            borderColor="border"
-            marginBottom="md"
-          />
+          <Box marginBottom="md">
+            <ListGroup>
+              <ListRow
+                onPress={onOpenInbox}
+                icon={Icon.Notifications}
+                title={strings.unreadSmsTitle(unreadSmsCount)}
+                subtitle={strings.unreadSmsSubtitle}
+                chevron
+              />
+            </ListGroup>
+          </Box>
         ) : null}
 
         {activeTab === 'active' ? (
@@ -69,14 +74,10 @@ export function HubView({
             />
           ) : null
         ) : dismissedInsights.length > 0 ? (
-          <Stack gap="sm">
+          <ListGroup>
             {dismissedInsights.map((item: Insight) => (
               <ListRow
                 key={item.id}
-                background="surface"
-                borderRadius="lg"
-                borderWidth={1}
-                borderColor="border"
                 leading={
                   <AppIcon
                     name={insightTypePresentation(item.type).icon}
@@ -97,7 +98,7 @@ export function HubView({
                 }
               />
             ))}
-          </Stack>
+          </ListGroup>
         ) : (
           <EmptyStateView
             icon={Icon.Info}

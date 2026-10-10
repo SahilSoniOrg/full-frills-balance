@@ -1,8 +1,7 @@
-import { AppText, AppIcon, Icon, ListRow, ListGroup } from '@/src/components/core';
+import { AppText, ListRow, ListGroup } from '@/src/components/core';
 import { DetailCaptionLink } from '@/src/components/shared/DetailCaptionLink';
 import { DetailRow } from '@/src/components/shared/DetailRow';
 import { AppConfig, Size, Spacing } from '@/src/constants';
-import { Inline } from '@/src/design-system';
 import type { JournalScheduleModel } from '../../journalDetailsPresentation';
 
 export function JournalSchedule({ schedule }: { schedule: JournalScheduleModel }) {
@@ -20,14 +19,8 @@ export function JournalSchedule({ schedule }: { schedule: JournalScheduleModel }
     >
       <ListRow
         title={<AppText weight="semibold">{schedule.name}</AppText>}
-        trailing={
-          <Inline space="xs" alignItems="center">
-            <AppText color="secondary" style={{ flexShrink: 1 }}>
-              {schedule.recurrence}
-            </AppText>
-            <AppIcon name={Icon.ChevronRight} size={Size.iconXs} color="textSecondary" />
-          </Inline>
-        }
+        trailing={<ListRow.Value>{schedule.recurrence}</ListRow.Value>}
+        chevron
         onPress={schedule.onPress}
         accessibilityLabel={schedule.name}
         minHeight={Size.touchTargetLg}
