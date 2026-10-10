@@ -1,5 +1,5 @@
 import { Icon, AppCard, AppIcon, AppInput, AppText } from '@/src/components/core';
-import { AccountSelectionRow } from '@/src/components/accounts/AccountSelectionRow';
+import { AccountSelectionRow } from './AccountSelectionRow';
 import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
 import { SelectionTileList } from '@/src/components/shared/SelectionTileList';
 import { useTheme } from '@/src/hooks/use-theme';
