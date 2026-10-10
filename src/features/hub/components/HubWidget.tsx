@@ -191,19 +191,14 @@ export const HubWidget = ({
                   {insight.context ? (
                     <View style={styles.contextRow}>
                       {insight.context.basis?.kind === 'lookback' ? (
-                        <AppText
-                          variant="caption"
-                          color="secondary"
-                          numberOfLines={1}
-                          style={styles.contextText}
-                        >
+                        <AppText variant="caption" color="secondary" numberOfLines={1}>
                           {AppConfig.strings.dashboard.notifications.basedOnLastDays(
                             insight.context.basis.days,
                           )}
                         </AppText>
                       ) : null}
                       {insight.context.triggersCount ? (
-                        <AppText variant="caption" color="secondary" style={styles.contextText}>
+                        <AppText variant="caption" color="secondary">
                           {AppConfig.strings.dashboard.notifications.triggersCount(
                             insight.context.triggersCount,
                           )}
@@ -254,7 +249,7 @@ export const HubWidget = ({
                   <AppText
                     variant="caption"
                     color="secondary"
-                    numberOfLines={1}
+                    numberOfLines={2}
                     style={styles.tipText}
                   >
                     {AppConfig.strings.dashboard.notifications.nextStep}
@@ -362,7 +357,6 @@ const styles = StyleSheet.create({
   },
   reason: {
     marginBottom: Spacing.sm,
-    opacity: Opacity.medium,
   },
   contextRow: {
     flexDirection: 'row',
@@ -370,12 +364,8 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     marginBottom: Spacing.sm,
   },
-  contextText: {
-    opacity: Opacity.medium,
-  },
   tipText: {
     marginTop: Spacing.sm,
-    opacity: Opacity.medium,
   },
   footer: {
     borderTopWidth: 1,
