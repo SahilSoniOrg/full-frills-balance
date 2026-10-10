@@ -1,4 +1,4 @@
-import { Icon, AppButton, AppCard, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppButton, AppCard, AppIcon, AppText, IconTile } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { BackupScopeSheet } from '@/src/features/app/BackupScopeSheet';
 import { Box, Stack } from '@/src/design-system';
@@ -200,22 +200,7 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
     <Box flex={1} background="background" justifyContent="center" alignItems="center" padding="xl">
       <AppCard paddingSize="lg" radius="r3" elevation="md" style={styles.card}>
         <Stack gap="xl" alignItems="center">
-          <Box
-            width={72}
-            height={72}
-            borderRadius="full"
-            background="primary"
-            backgroundOpacity="soft"
-            alignItems="center"
-            justifyContent="center"
-          >
-            <AppIcon
-              name={Icon.Sparkles}
-              size={Size.iconLg}
-              color={theme.primary}
-              strokeWidth={1.8}
-            />
-          </Box>
+          <IconTile icon={Icon.Sparkles} tint="primary" size="xl" shape="circle" />
 
           <Stack gap="sm" alignItems="center">
             <AppText testID="update-required-title" variant="heading" align="center">
