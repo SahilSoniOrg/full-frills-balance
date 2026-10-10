@@ -4,7 +4,7 @@ import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountIn
 import { FormRow, ScheduleField, UnderlineNameField } from '@/src/components/forms';
 import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { AppButton, AppInput, AppToggle, Icon } from '@/src/components/core';
+import { AppButton, AppInput, AppToggle, Icon, ListGroup } from '@/src/components/core';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { Spacing } from '@/src/constants';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
@@ -137,45 +137,47 @@ export function PlannedPaymentFormView({
             />
           </View>
 
-          <FormRow
-            icon={Icon.Calendar}
-            title={copy.starts}
-            value={formatDate(form.startDate)}
-            onPress={() => setPickingDate('start')}
-            testID="planned-payment-start-date"
-          />
-          <FormRow
-            icon={Icon.Repeat}
-            title={copy.ends}
-            value={form.endDate ? formatDate(form.endDate) : undefined}
-            placeholder={copy.never}
-            onPress={() => setPickingDate('end')}
-            onClear={() => setField('endDate', undefined)}
-            testID="planned-payment-end-date"
-          />
-          <FormRow
-            icon={Icon.Refresh}
-            title={copy.recordAutomatically}
-            subtitle={form.fxMode === 'manual' ? copy.fxManualRecording : copy.automaticDescription}
-            trailing={
-              <AppToggle
-                value={form.fxMode === 'manual' ? false : form.isAutoPost}
-                disabled={form.fxMode === 'manual'}
-                onValueChange={value => setField('isAutoPost', value)}
-                accessibilityLabel={copy.recordAutomatically}
-              />
-            }
-            showSeparator
-          />
-          <FormRow
-            icon={Icon.Document}
-            title={copy.note}
-            value={form.description.trim() || undefined}
-            placeholder={copy.addNote}
-            onPress={() => setNoteVisible(true)}
-            testID="planned-payment-note"
-            showSeparator={false}
-          />
+          <ListGroup variant="plain">
+            <FormRow
+              icon={Icon.Calendar}
+              title={copy.starts}
+              value={formatDate(form.startDate)}
+              onPress={() => setPickingDate('start')}
+              testID="planned-payment-start-date"
+            />
+            <FormRow
+              icon={Icon.Repeat}
+              title={copy.ends}
+              value={form.endDate ? formatDate(form.endDate) : undefined}
+              placeholder={copy.never}
+              onPress={() => setPickingDate('end')}
+              onClear={() => setField('endDate', undefined)}
+              testID="planned-payment-end-date"
+            />
+            <FormRow
+              icon={Icon.Refresh}
+              title={copy.recordAutomatically}
+              subtitle={
+                form.fxMode === 'manual' ? copy.fxManualRecording : copy.automaticDescription
+              }
+              trailing={
+                <AppToggle
+                  value={form.fxMode === 'manual' ? false : form.isAutoPost}
+                  disabled={form.fxMode === 'manual'}
+                  onValueChange={value => setField('isAutoPost', value)}
+                  accessibilityLabel={copy.recordAutomatically}
+                />
+              }
+            />
+            <FormRow
+              icon={Icon.Document}
+              title={copy.note}
+              value={form.description.trim() || undefined}
+              placeholder={copy.addNote}
+              onPress={() => setNoteVisible(true)}
+              testID="planned-payment-note"
+            />
+          </ListGroup>
         </View>
       </EntityFormScreen>
 

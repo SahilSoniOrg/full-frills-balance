@@ -26,8 +26,8 @@ const PADDING: Record<ListVariant, SpacingKey> = { card: 'lg', plain: 'md' };
 const ICON_SLOT = Size.lg;
 
 /** Left inset that lines a divider up with the row text. */
-export function listRowTextInset(variant: ListVariant = 'card', leadingWidth: number = ICON_SLOT) {
-  return Spacing[PADDING[variant]] + leadingWidth + Spacing.md;
+export function listRowTextInset(variant: ListVariant = 'card') {
+  return Spacing[PADDING[variant]] + ICON_SLOT + Spacing.md;
 }
 
 /** Horizontal padding of a row in this variant (group headers align to it). */
@@ -159,7 +159,6 @@ function ListRowBase(initialProps: ListRowProps) {
   const plain = variant === 'plain';
   const paddingH = PADDING[variant];
   const leading = icon !== undefined ? <RowIcon name={icon} /> : leadingProp;
-  const leadingSlotWidth = icon !== undefined || plain ? ICON_SLOT : Spacing.xl;
 
   const toggle =
     isValidElement<React.ComponentProps<typeof RowToggle>>(trailing) && trailing.type === RowToggle
@@ -187,7 +186,7 @@ function ListRowBase(initialProps: ListRowProps) {
   const rowContent = (
     <>
       {leading && (
-        <Box minWidth={leadingSlotWidth} marginRight="md" alignItems="center">
+        <Box minWidth={ICON_SLOT} marginRight="md" alignItems="center">
           {leading}
         </Box>
       )}

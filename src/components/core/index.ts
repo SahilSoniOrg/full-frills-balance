@@ -28,7 +28,6 @@ export type { AppInputFieldProps } from './AppInputField';
 
 export { ListRow } from './ListRow';
 export type { ListRowProps, ListVariant } from './ListRow';
-export { listRowTextInset } from './ListRow';
 export { ListGroup } from './ListGroup';
 export type { ListGroupProps, ListRowItem } from './ListGroup';
 
