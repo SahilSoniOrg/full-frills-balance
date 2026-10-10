@@ -1,10 +1,11 @@
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppConfig, ThemeId, ThemeIds, ThemeSchemes, Opacity } from '@/src/constants';
 import { Icon, AppText } from '@/src/components/core';
 import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import { useTheme } from '@/src/hooks/use-theme';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { withOpacity } from '@/src/utils/color-math';
 
 type ThemeSelectorViewProps = {
@@ -58,17 +59,17 @@ export function ThemeSelectorView({ themeId, setThemeId }: ThemeSelectorViewProp
             const textColor = onContrast(bg);
 
             return (
-              <Pressable
+              <PressScaleTouchable
+                haptic="selection"
                 key={option.id}
                 onPress={() => setThemeId(option.id)}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
-                style={({ pressed }) => [
+                style={[
                   styles.tile,
                   {
                     backgroundColor: bg,
                     borderColor: selected ? theme.primary : theme.border,
-                    opacity: pressed ? Opacity.heavy : 1,
                   },
                 ]}
               >
@@ -110,7 +111,7 @@ export function ThemeSelectorView({ themeId, setThemeId }: ThemeSelectorViewProp
                 <View style={styles.check}>
                   <SelectionIndicator selected={selected} size={22} />
                 </View>
-              </Pressable>
+              </PressScaleTouchable>
             );
           })}
         </View>

@@ -1,11 +1,11 @@
 import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { AppText, ColoredDot } from '@/src/components/core';
+import { AppText, ColoredDot, PressScaleTouchable } from '@/src/components/core';
 import { AppConfig, Size } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { ComponentVariant } from '@/src/utils/style-helpers';
 import { useState } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 const METRIC_COLUMNS_MIN_WIDTH = 560;
 
@@ -69,7 +69,7 @@ export function SafeToSpendBreakdownMetrics({
     >
       <Row gap={useColumns ? 'xl' : 'sm'} wrap={useColumns ? undefined : 'wrap'}>
         {items.map(item => (
-          <TouchableOpacity
+          <PressScaleTouchable
             key={item.key}
             onPress={() => onPress(item.key)}
             disabled={!detailsReady}
@@ -105,7 +105,7 @@ export function SafeToSpendBreakdownMetrics({
                 </AppText>
               </Row>
             )}
-          </TouchableOpacity>
+          </PressScaleTouchable>
         ))}
       </Row>
     </View>

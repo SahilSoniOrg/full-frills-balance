@@ -13,7 +13,7 @@ import {
 import dayjs from 'dayjs';
 import { getNow } from '@/src/utils/dateUtils';
 import type { PlannedPaymentListOccurrence } from '@/src/services/planned-payment/plannedPaymentReadService';
-import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
 
 export interface PlannedPaymentCardProps {
   occurrence: PlannedPaymentListOccurrence;
@@ -155,7 +155,7 @@ function PlannedPaymentCardComponent({
         />
       </PressScaleTouchable>
       {showRecord && (
-        <Pressable
+        <PressScaleTouchable
           onPress={onRecord}
           disabled={isRecording || isPlanBusy}
           accessibilityRole="button"
@@ -168,7 +168,7 @@ function PlannedPaymentCardComponent({
           <View style={[styles.recordPill, { backgroundColor: theme.primary }]}>
             <AppIcon name={Icon.Check} size={Size.iconSm} color={theme.onPrimary ?? theme.text} />
           </View>
-        </Pressable>
+        </PressScaleTouchable>
       )}
       {recordError && (
         <AppText

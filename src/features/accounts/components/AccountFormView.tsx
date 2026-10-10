@@ -1,3 +1,4 @@
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppIcon, AppText, Icon } from '@/src/components/core';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { FormRow, GlyphCarousel, SuggestionHint, UnderlineNameField } from '@/src/components/forms';
@@ -11,7 +12,7 @@ import { Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import type { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { AccountFormOverlays } from './AccountFormOverlays';
 import { AccountMetadataSection } from './metadata/AccountMetadataSection';
 
@@ -43,7 +44,7 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
             <AppIcon name={vm.selectedIcon} size={Size.iconXl} color={theme.textSecondary} />
           </View>
         )}
-        <Pressable
+        <PressScaleTouchable
           style={styles.pencilTarget}
           onPress={() => vm.setIsAppearancePickerVisible(true)}
           accessibilityRole="button"
@@ -58,7 +59,7 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
           >
             <AppIcon name={Icon.Edit} size={Size.iconXs} color={theme.textSecondary} />
           </View>
-        </Pressable>
+        </PressScaleTouchable>
       </View>
       <View style={styles.name}>
         <UnderlineNameField

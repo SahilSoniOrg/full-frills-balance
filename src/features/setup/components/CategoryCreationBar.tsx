@@ -1,11 +1,10 @@
 import { IconPickerModal } from '@/src/components/overlays/IconPickerModal';
-import { Icon, AppIcon, AppInput, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppInput, AppText, PressScaleTouchable } from '@/src/components/core';
 import type { IconName } from '@/src/types/domainIcons';
 import { Opacity, Size } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback, useState } from 'react';
-import { TouchableOpacity } from 'react-native';
 import { Box, Inline, Stack } from '@/src/design-system';
 type CreationItemType = 'INCOME' | 'EXPENSE' | 'ASSET' | 'LIABILITY';
 
@@ -55,7 +54,7 @@ export const CategoryCreationBar: React.FC<CategoryCreationBarProps> = ({
   return (
     <Stack space="sm">
       <Inline align="center" space="sm">
-        <TouchableOpacity
+        <PressScaleTouchable
           onPress={() => setIsIconPickerVisible(true)}
           accessibilityLabel="Select icon"
           accessibilityRole="button"
@@ -71,7 +70,7 @@ export const CategoryCreationBar: React.FC<CategoryCreationBarProps> = ({
           >
             <AppIcon name={selectedIcon} size={Size.sm} color={theme.primary} />
           </Box>
-        </TouchableOpacity>
+        </PressScaleTouchable>
 
         <AppInput
           placeholder={placeholder}
@@ -83,7 +82,7 @@ export const CategoryCreationBar: React.FC<CategoryCreationBarProps> = ({
           onSubmitEditing={handleAddCustom}
         />
 
-        <TouchableOpacity
+        <PressScaleTouchable
           onPress={handleAddCustom}
           disabled={!customName.trim()}
           accessibilityLabel="Add item"
@@ -99,7 +98,7 @@ export const CategoryCreationBar: React.FC<CategoryCreationBarProps> = ({
           >
             <AppIcon name={Icon.Add} size={Size.sm} color={theme.surface} />
           </Box>
-        </TouchableOpacity>
+        </PressScaleTouchable>
       </Inline>
 
       {showTypeToggle && (
@@ -118,7 +117,7 @@ export const CategoryCreationBar: React.FC<CategoryCreationBarProps> = ({
               },
             ]
           ).map(option => (
-            <TouchableOpacity
+            <PressScaleTouchable
               key={option.type}
               onPress={() => handleTypeChange(option.type)}
               accessibilityRole="radio"
@@ -147,7 +146,7 @@ export const CategoryCreationBar: React.FC<CategoryCreationBarProps> = ({
                   {option.label}
                 </AppText>
               </Box>
-            </TouchableOpacity>
+            </PressScaleTouchable>
           ))}
         </Inline>
       )}

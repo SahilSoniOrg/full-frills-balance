@@ -1,4 +1,5 @@
-import { AppConfig, FontId, FontIds, FontSchemes, Opacity } from '@/src/constants';
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
+import { AppConfig, FontId, FontIds, FontSchemes } from '@/src/constants';
 import { AppText } from '@/src/components/core';
 import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { Box, Stack } from '@/src/design-system';
@@ -7,7 +8,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { logger } from '@/src/utils/logger';
 import { ensureAllFontSetsLoaded, isFontSetLoaded } from '@/src/utils/loadFontSet';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 type FontSelectorProps = {
   fontId: FontId;
@@ -72,18 +73,19 @@ export function FontSelectorView({ fontId, setFontId }: FontSelectorProps) {
             const font = FontSchemes[option.id];
 
             return (
-              <Pressable
+              <PressScaleTouchable
+                pressScale="subtle"
+                haptic="selection"
                 key={option.id}
                 onPress={() => setFontId(option.id)}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
-                style={({ pressed }) => [
+                style={[
                   styles.row,
                   index < FONT_OPTIONS.length - 1 && {
                     borderBottomColor: theme.border,
                     borderBottomWidth: 1,
                   },
-                  pressed && { opacity: Opacity.heavy },
                 ]}
               >
                 <View style={[styles.preview, { backgroundColor: theme.surfaceSecondary }]}>
@@ -128,7 +130,7 @@ export function FontSelectorView({ fontId, setFontId }: FontSelectorProps) {
                 </View>
 
                 <SelectionIndicator selected={selected} size={22} />
-              </Pressable>
+              </PressScaleTouchable>
             );
           })}
         </View>

@@ -1,8 +1,9 @@
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppIcon, AppText, Icon } from '@/src/components/core';
 import { Shape, Spacing } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { ReportWarning } from '@/src/services/reports-v2/types/result';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 export function ReportsV2QualityBanner({
   warnings,
@@ -48,7 +49,7 @@ export function ReportsV2QualityBanner({
           : 'No data quality issues found in this period';
 
   return (
-    <Pressable
+    <PressScaleTouchable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel="Open report health"
@@ -70,7 +71,7 @@ export function ReportsV2QualityBanner({
         </AppText>
       </View>
       <AppIcon name={Icon.ChevronRight} size={18} color="textSecondary" />
-    </Pressable>
+    </PressScaleTouchable>
   );
 }
 

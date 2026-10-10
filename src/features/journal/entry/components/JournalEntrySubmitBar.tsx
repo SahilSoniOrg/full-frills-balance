@@ -1,4 +1,4 @@
-import { AppButton, AppIcon, AppText, Icon } from '@/src/components/core';
+import { AppButton, AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
 import { ChromeMotion, Scale } from '@/src/constants';
 import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import { useKeyboard } from '@/src/design-system/Keyboard';
@@ -7,7 +7,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { withOpacity } from '@/src/utils/color-math';
 import { MotiView } from 'moti';
 import React from 'react';
-import { Keyboard, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Keyboard, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export interface JournalEntrySubmitBarProps {
@@ -78,7 +78,7 @@ export const JournalEntrySubmitBar = React.memo(function JournalEntrySubmitBar({
         </View>
 
         {isKeyboardVisible && (
-          <TouchableOpacity
+          <PressScaleTouchable
             onPress={() => Keyboard.dismiss()}
             style={[
               styles.doneButton,
@@ -96,7 +96,7 @@ export const JournalEntrySubmitBar = React.memo(function JournalEntrySubmitBar({
             <AppText variant="body" weight="bold" color="primary" style={styles.doneText}>
               Done
             </AppText>
-          </TouchableOpacity>
+          </PressScaleTouchable>
         )}
       </View>
     </View>

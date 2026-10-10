@@ -5,6 +5,7 @@ import {
   Icon,
   AppIcon,
   LoadingView,
+  PressScaleTouchable,
 } from '@/src/components/core';
 import { ScreenWithChrome, type ScreenNavChrome } from '@/src/components/layout';
 import { RevertChangeDialog } from '@/src/components/overlays/RevertChangeDialog';
@@ -24,7 +25,7 @@ import { AUDIT_EVENT_TYPES } from '@/src/types/auditEvents';
 import { useTheme } from '@/src/hooks/use-theme';
 import { FlashList } from '@shopify/flash-list';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 
 const ENTITY_FILTERS: AuditEntityFilter[] = [
   'all',
@@ -109,7 +110,7 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
           {AppConfig.strings.audit.loadOlderFailed}
         </AppText>
       )}
-      <TouchableOpacity
+      <PressScaleTouchable
         onPress={loadMore}
         disabled={isLoadingMore}
         accessibilityRole="button"
@@ -121,7 +122,7 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
             ? AppConfig.strings.audit.loadOlderLoading
             : AppConfig.strings.audit.loadOlder}
         </AppText>
-      </TouchableOpacity>
+      </PressScaleTouchable>
     </View>
   );
 
@@ -133,7 +134,7 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
             <AppText variant="caption" color="secondary" style={styles.archiveHelp}>
               {AppConfig.strings.audit.exportHistoryHelp}
             </AppText>
-            <TouchableOpacity
+            <PressScaleTouchable
               onPress={onExportHistory}
               disabled={isExportingHistory}
               accessibilityRole="button"
@@ -162,7 +163,7 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
                     : AppConfig.strings.audit.exportingHistory
                   : AppConfig.strings.audit.exportHistory}
               </AppText>
-            </TouchableOpacity>
+            </PressScaleTouchable>
           </View>
         )}
         {error && logs.length === 0 ? (
@@ -203,7 +204,7 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
                           ? AppConfig.strings.audit.filters.all
                           : AppConfig.strings.audit.filters[filter];
                       return (
-                        <TouchableOpacity
+                        <PressScaleTouchable
                           key={filter}
                           onPress={() => onEntityFilterChange(filter)}
                           accessibilityRole="button"
@@ -222,7 +223,7 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
                           >
                             {label}
                           </AppText>
-                        </TouchableOpacity>
+                        </PressScaleTouchable>
                       );
                     })}
                   </ScrollView>
@@ -237,7 +238,7 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
                     {SOURCE_FILTERS.map(filter => {
                       const selected = sourceFilter === filter.id;
                       return (
-                        <TouchableOpacity
+                        <PressScaleTouchable
                           key={filter.id ?? 'all-sources'}
                           onPress={() => onSourceFilterChange(filter.id)}
                           accessibilityRole="button"
@@ -256,7 +257,7 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
                           >
                             {filter.label}
                           </AppText>
-                        </TouchableOpacity>
+                        </PressScaleTouchable>
                       );
                     })}
                   </ScrollView>
@@ -264,7 +265,7 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
                     <AppText variant="caption" color="secondary">
                       {AppConfig.strings.audit.eventFilterLabel}
                     </AppText>
-                    <TouchableOpacity
+                    <PressScaleTouchable
                       onPress={() => setEventPickerVisible(true)}
                       accessibilityRole="button"
                       accessibilityLabel={`${AppConfig.strings.audit.eventFilterLabel}: ${selectedEventLabel}`}
@@ -290,14 +291,14 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
                         size={Size.xs}
                         color={eventFilter !== 'all' ? theme.onPrimary : theme.textSecondary}
                       />
-                    </TouchableOpacity>
+                    </PressScaleTouchable>
                   </View>
                   {correlationFilter && (
                     <View style={styles.operationFilterRow}>
                       <AppText variant="caption" color="secondary">
                         {AppConfig.strings.audit.correlationLabel(correlationFilter)}
                       </AppText>
-                      <TouchableOpacity
+                      <PressScaleTouchable
                         onPress={() => onCorrelationFilterChange(null)}
                         accessibilityRole="button"
                         accessibilityLabel={AppConfig.strings.audit.clearCorrelationFilter}
@@ -307,7 +308,7 @@ export function AuditLogView(vm: AuditLogViewModel & { chrome: ScreenNavChrome }
                         <AppText variant="caption" color="secondary">
                           {AppConfig.strings.audit.clearCorrelationFilter}
                         </AppText>
-                      </TouchableOpacity>
+                      </PressScaleTouchable>
                     </View>
                   )}
                 </View>

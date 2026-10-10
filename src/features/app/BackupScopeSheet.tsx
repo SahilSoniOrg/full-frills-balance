@@ -1,10 +1,9 @@
-import { Icon, AppButton, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppButton, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Box, Stack } from '@/src/design-system';
 import { Size, Spacing } from '@/src/constants';
 import type { BackupScope } from '@/src/services/export';
 import type { PlainWorkplace } from '@/src/types/plainDtos';
-import { TouchableOpacity } from 'react-native';
 
 export function BackupScopeSheet({
   visible,
@@ -50,7 +49,8 @@ export function BackupScopeSheet({
     >
       <Stack gap="sm">
         {options.map(option => (
-          <TouchableOpacity
+          <PressScaleTouchable
+            pressScale="subtle"
             key={option.scope}
             onPress={() => onScopeChange(option.scope)}
             accessibilityRole="radio"
@@ -75,7 +75,7 @@ export function BackupScopeSheet({
                 <AppIcon name={Icon.CheckCircle} size={Size.iconSm} color="primary" />
               )}
             </Box>
-          </TouchableOpacity>
+          </PressScaleTouchable>
         ))}
 
         {scope === 'selected' && (
@@ -83,7 +83,8 @@ export function BackupScopeSheet({
             {workplaces.map(workplace => {
               const selected = selectedWorkplaceIds.includes(workplace.id);
               return (
-                <TouchableOpacity
+                <PressScaleTouchable
+                  pressScale="subtle"
                   key={workplace.id}
                   onPress={() =>
                     onSelectedWorkplaceIdsChange(
@@ -101,7 +102,7 @@ export function BackupScopeSheet({
                     />
                     <AppText>{workplace.name}</AppText>
                   </Box>
-                </TouchableOpacity>
+                </PressScaleTouchable>
               );
             })}
           </Stack>

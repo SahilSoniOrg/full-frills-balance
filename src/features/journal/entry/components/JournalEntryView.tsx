@@ -1,5 +1,5 @@
 import { AccountPickerModal } from '@/src/components/account-selection';
-import { AppIcon, AppText, Icon } from '@/src/components/core';
+import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
 import { EmptyStateView } from '@/src/components/shared/EmptyStateView';
 import { AppConfig } from '@/src/constants';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens';
@@ -20,7 +20,7 @@ import { SplitModePanel } from '@/src/features/journal/entry/modes/split/SplitMo
 import { useTheme } from '@/src/hooks/use-theme';
 import { withOpacity } from '@/src/utils/color-math';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
 import { JournalEntryModeInfoModal } from './JournalEntryModeInfoModal';
 import { JournalEntryModePickerModal } from './JournalEntryModePickerModal';
 import { JournalEntrySubmitBar } from './JournalEntrySubmitBar';
@@ -231,14 +231,14 @@ export function JournalEntryView(props: JournalEntryShell) {
         <View style={[styles.headerContainer, { backgroundColor: theme.background }]}>
           {/* Top Bar: Close, title, and mode selector */}
           <View style={styles.topNavRow}>
-            <TouchableOpacity
+            <PressScaleTouchable
               onPress={onClose}
               style={styles.headerIconButton}
               accessibilityLabel={AppConfig.strings.common.cancel}
               accessibilityRole="button"
             >
               <AppIcon name={Icon.Close} size={Size.iconMd} color={theme.text} />
-            </TouchableOpacity>
+            </PressScaleTouchable>
 
             <View style={styles.titleWrap}>
               <AppText variant="heading" style={styles.headerTitle} numberOfLines={1}>
@@ -247,7 +247,7 @@ export function JournalEntryView(props: JournalEntryShell) {
             </View>
 
             <View style={styles.headerActions}>
-              <TouchableOpacity
+              <PressScaleTouchable
                 onPress={() => setIsModePickerVisible(true)}
                 style={[
                   styles.modeBadgePill,
@@ -270,7 +270,7 @@ export function JournalEntryView(props: JournalEntryShell) {
                   {currentModeOption.label}
                 </AppText>
                 <AppIcon name={Icon.ChevronDown} size={Size.xxs} color={theme.primary} />
-              </TouchableOpacity>
+              </PressScaleTouchable>
             </View>
           </View>
         </View>

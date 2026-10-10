@@ -1,5 +1,5 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { Icon, AppCard, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppCard, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { AppConfig, Opacity, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { resolveInsightSeverityPresentation } from '@/src/features/hub/helpers/insightSeverityChrome';
@@ -7,7 +7,7 @@ import { insightTypePresentation } from '@/src/features/hub/helpers/insightTypeP
 import { useTheme } from '@/src/hooks/use-theme';
 import type { Insight } from '@/src/services/insight/insightTypes';
 import React from 'react';
-import { Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { EmergencyFundPopupModal } from './EmergencyFundPopupModal';
 
 interface HubWidgetProps {
@@ -84,7 +84,8 @@ export const HubWidget = ({
             </View>
           </View>
           {!hideManageDismissed && (
-            <TouchableOpacity
+            <PressScaleTouchable
+              pressScale="subtle"
               onPress={handleManageDismissed}
               style={[styles.managePill, { backgroundColor: theme.surfaceSecondary }]}
               accessibilityRole="button"
@@ -94,7 +95,7 @@ export const HubWidget = ({
               <AppText variant="caption" color="secondary">
                 {AppConfig.strings.dashboard.manageDismissed}
               </AppText>
-            </TouchableOpacity>
+            </PressScaleTouchable>
           )}
         </View>
         <View style={styles.listContent}>
@@ -120,10 +121,10 @@ export const HubWidget = ({
                   },
                 ]}
               >
-                <Pressable
+                <PressScaleTouchable
+                  pressScale="subtle"
                   onPress={() => handlePress(insight)}
                   style={styles.cardPressable}
-                  android_ripple={{ color: withOpacity(theme.primary, Opacity.soft) }}
                 >
                   <View style={styles.metaRow}>
                     <View style={[styles.severityChip, { backgroundColor: severity.chipBg }]}>
@@ -212,7 +213,8 @@ export const HubWidget = ({
                   ) : null}
 
                   <View style={[styles.footer, { borderTopColor: theme.border }]}>
-                    <TouchableOpacity
+                    <PressScaleTouchable
+                      pressScale="subtle"
                       onPress={e => {
                         e.stopPropagation();
                         handlePress(insight);
@@ -228,10 +230,11 @@ export const HubWidget = ({
                         {presentation.actionLabel}
                       </AppText>
                       <AppIcon name={Icon.ChevronRight} size={14} color={severity.color} />
-                    </TouchableOpacity>
+                    </PressScaleTouchable>
 
                     {presentation.dismissible ? (
-                      <TouchableOpacity
+                      <PressScaleTouchable
+                        pressScale="subtle"
                         onPress={e => {
                           e.stopPropagation();
                           onDismiss(insight.id);
@@ -244,7 +247,7 @@ export const HubWidget = ({
                         <AppText variant="caption" color="secondary">
                           {AppConfig.strings.dashboard.hub.dismiss}
                         </AppText>
-                      </TouchableOpacity>
+                      </PressScaleTouchable>
                     ) : null}
                   </View>
 
@@ -257,7 +260,7 @@ export const HubWidget = ({
                     {AppConfig.strings.dashboard.notifications.nextStep}
                     {insight.suggestion}
                   </AppText>
-                </Pressable>
+                </PressScaleTouchable>
               </AppCard>
             );
           })}

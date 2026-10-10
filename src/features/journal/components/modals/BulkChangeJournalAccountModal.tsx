@@ -1,5 +1,5 @@
 import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
-import { Icon, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { Shape, Spacing, Typography } from '@/src/constants/design-tokens';
 import { AccountPickerModal, useAccounts } from '@/src/components/account-selection';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -9,7 +9,7 @@ import {
 } from '@/src/services/journal/bulk';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 export interface BulkChangeJournalAccountModalProps {
   visible: boolean;
@@ -95,7 +95,7 @@ function BulkChangeJournalAccountModalContent({
             </AppText>
 
             {/* Destination Account (Debit) Option */}
-            <TouchableOpacity
+            <PressScaleTouchable
               disabled={!eligibility.canEditDebit}
               onPress={() => setActiveLegForPicker('debit')}
               style={[
@@ -132,10 +132,10 @@ function BulkChangeJournalAccountModalContent({
                   </AppText>
                 </View>
               </View>
-            </TouchableOpacity>
+            </PressScaleTouchable>
 
             {/* Source Account (Credit) Option */}
-            <TouchableOpacity
+            <PressScaleTouchable
               disabled={!eligibility.canEditCredit}
               onPress={() => setActiveLegForPicker('credit')}
               style={[
@@ -172,7 +172,7 @@ function BulkChangeJournalAccountModalContent({
                   </AppText>
                 </View>
               </View>
-            </TouchableOpacity>
+            </PressScaleTouchable>
           </View>
         )}
       </BulkActionModalSurface>

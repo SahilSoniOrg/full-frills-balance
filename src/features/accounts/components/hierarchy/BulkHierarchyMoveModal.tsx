@@ -1,11 +1,11 @@
 import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
-import { Icon, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { getAccountFallbackIcon, getAccountIcon } from '@/src/utils/accountIcon';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/ids';
 import { useState } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import type { HierarchyCandidateAccount } from '@/src/features/accounts/helpers/bulkHierarchyCandidates';
 
 export interface BulkHierarchyMoveModalProps {
@@ -55,7 +55,8 @@ export function BulkHierarchyMoveModal({
         }.`}
       </AppText>
 
-      <TouchableOpacity
+      <PressScaleTouchable
+        pressScale="subtle"
         style={[styles.destinationItem, { borderBottomColor: theme.divider }]}
         onPress={() => void assignParent(null)}
         disabled={isAssigning}
@@ -68,7 +69,7 @@ export function BulkHierarchyMoveModal({
         <AppText variant="body" weight="medium" style={styles.itemText}>
           None (Root Level)
         </AppText>
-      </TouchableOpacity>
+      </PressScaleTouchable>
 
       {parentCandidates.length === 0 && (
         <AppText variant="caption" color="secondary" style={styles.emptyNote}>
@@ -77,7 +78,8 @@ export function BulkHierarchyMoveModal({
       )}
 
       {parentCandidates.map(candidate => (
-        <TouchableOpacity
+        <PressScaleTouchable
+          pressScale="subtle"
           key={candidate.id}
           style={[styles.destinationItem, { borderBottomColor: theme.divider }]}
           onPress={() => void assignParent(candidate.id)}
@@ -94,7 +96,7 @@ export function BulkHierarchyMoveModal({
           <AppText variant="body" style={styles.itemText}>
             {candidate.name}
           </AppText>
-        </TouchableOpacity>
+        </PressScaleTouchable>
       ))}
     </BulkActionModalSurface>
   );

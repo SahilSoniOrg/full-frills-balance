@@ -1,9 +1,17 @@
-import { Icon, AppButton, AppCard, AppIcon, AppText, IconName } from '@/src/components/core';
+import {
+  Icon,
+  AppButton,
+  AppCard,
+  AppIcon,
+  AppText,
+  IconName,
+  PressScaleTouchable,
+} from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { RestoreSummaryView } from './setupFinishers';
-import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 
 interface SetupReviewStepProps {
   name: string;
@@ -59,7 +67,7 @@ function ReviewRow({
         </Stack>
       </Inline>
       {editable && (
-        <TouchableOpacity
+        <PressScaleTouchable
           onPress={onChange}
           accessibilityRole="button"
           accessibilityLabel={`${AppConfig.strings.onboarding.review.change} ${label}`}
@@ -68,7 +76,7 @@ function ReviewRow({
           <AppText variant="caption" weight="semibold" style={{ color: theme.primary }}>
             {AppConfig.strings.onboarding.review.change}
           </AppText>
-        </TouchableOpacity>
+        </PressScaleTouchable>
       )}
     </Inline>
   );
@@ -87,7 +95,7 @@ function ReviewMetric({
 }) {
   const { theme } = useTheme();
   return (
-    <TouchableOpacity
+    <PressScaleTouchable
       onPress={onChange}
       disabled={!editable}
       accessibilityRole={editable ? 'button' : undefined}
@@ -107,7 +115,7 @@ function ReviewMetric({
           {AppConfig.strings.onboarding.review.change}
         </AppText>
       )}
-    </TouchableOpacity>
+    </PressScaleTouchable>
   );
 }
 

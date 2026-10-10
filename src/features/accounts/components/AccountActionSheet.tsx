@@ -1,5 +1,12 @@
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Icon, AppIcon, AppText, IvyIcon, type IconName } from '@/src/components/core';
+import { StyleSheet, View } from 'react-native';
+import {
+  Icon,
+  AppIcon,
+  AppText,
+  IvyIcon,
+  type IconName,
+  PressScaleTouchable,
+} from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
@@ -140,7 +147,7 @@ export function AccountActionSheet({
           {actions.map(action => {
             const itemColor = action.destructive ? theme.error : theme.text;
             return (
-              <TouchableOpacity
+              <PressScaleTouchable
                 key={action.id}
                 onPress={action.onPress}
                 activeOpacity={Opacity.heavy}
@@ -163,7 +170,7 @@ export function AccountActionSheet({
                   </AppText>
                 </View>
                 <AppIcon name={Icon.ChevronRight} size={Size.iconSm} color={theme.textSecondary} />
-              </TouchableOpacity>
+              </PressScaleTouchable>
             );
           })}
         </View>

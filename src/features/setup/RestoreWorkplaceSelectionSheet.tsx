@@ -1,9 +1,8 @@
-import { AppButton, AppText } from '@/src/components/core';
+import { AppButton, AppText, PressScaleTouchable } from '@/src/components/core';
 import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Box, Stack } from '@/src/design-system';
 import { Size, Spacing } from '@/src/constants';
-import { TouchableOpacity } from 'react-native';
 
 export interface RestoreWorkplaceCandidate {
   readonly name: string;
@@ -43,7 +42,8 @@ export function RestoreWorkplaceSelectionSheet({
         <AppText variant="caption" color="secondary">
           Choose which validated workplaces to save. Unselected workplaces will be discarded.
         </AppText>
-        <TouchableOpacity
+        <PressScaleTouchable
+          pressScale="subtle"
           onPress={() => onChange(allSelected ? [] : workplaces.map((_, index) => index))}
           accessibilityRole="checkbox"
           accessibilityLabel="Select all workplaces"
@@ -58,12 +58,13 @@ export function RestoreWorkplaceSelectionSheet({
             />
             <AppText weight="semibold">Select all</AppText>
           </Box>
-        </TouchableOpacity>
+        </PressScaleTouchable>
         <Stack gap="xs" style={{ marginTop: Spacing.xs }}>
           {workplaces.map((entry, index) => {
             const selected = selectedIndexes.includes(index);
             return (
-              <TouchableOpacity
+              <PressScaleTouchable
+                pressScale="subtle"
                 key={`${entry.name}-${index}`}
                 onPress={() =>
                   onChange(
@@ -94,7 +95,7 @@ export function RestoreWorkplaceSelectionSheet({
                     ) : null}
                   </Stack>
                 </Box>
-              </TouchableOpacity>
+              </PressScaleTouchable>
             );
           })}
         </Stack>

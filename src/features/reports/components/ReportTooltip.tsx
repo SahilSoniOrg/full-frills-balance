@@ -1,10 +1,10 @@
-import { Icon, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, Shape, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDate } from '@/src/utils/dateUtils';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 interface NetWorthTooltipContentProps {
   date: number | Date;
@@ -82,7 +82,7 @@ export const NetWorthTooltipContent = ({
         </View>
       </View>
 
-      <TouchableOpacity
+      <PressScaleTouchable
         style={[styles.detailsButton, { backgroundColor: contrastColor + '10' }]}
         onPress={onViewTransactions}
       >
@@ -90,7 +90,7 @@ export const NetWorthTooltipContent = ({
           {AppConfig.strings.reports.viewDetails}
         </AppText>
         <AppIcon name={Icon.ArrowRight} size={10} color={contrastColor} style={{ marginLeft: 4 }} />
-      </TouchableOpacity>
+      </PressScaleTouchable>
     </View>
   );
 };
@@ -159,7 +159,7 @@ export const IncomeExpenseTooltipContent = ({
         </View>
       </View>
 
-      <TouchableOpacity
+      <PressScaleTouchable
         style={[styles.detailsButton, { backgroundColor: contrastColor + '10' }]}
         onPress={onViewTransactions}
       >
@@ -167,7 +167,7 @@ export const IncomeExpenseTooltipContent = ({
           {AppConfig.strings.reports.viewDetails}
         </AppText>
         <AppIcon name={Icon.ArrowRight} size={10} color={contrastColor} style={{ marginLeft: 4 }} />
-      </TouchableOpacity>
+      </PressScaleTouchable>
     </View>
   );
 };

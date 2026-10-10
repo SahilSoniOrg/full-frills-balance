@@ -1,9 +1,16 @@
 import { Typography, AppConfig, Opacity } from '@/src/constants';
 import { LIST_SELECTION_LONG_PRESS_MS } from '@/src/constants/gesture-constants';
-import { TouchableOpacity, View } from 'react-native';
+import { View } from 'react-native';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { AppIcon, AppText, Badge, Icon, type IconName } from '@/src/components/core';
+import {
+  AppIcon,
+  AppText,
+  Badge,
+  Icon,
+  type IconName,
+  PressScaleTouchable,
+} from '@/src/components/core';
 import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { Column, Row } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -184,7 +191,8 @@ export function PlannedPaymentHistoryCard({
   );
 
   return (
-    <TouchableOpacity
+    <PressScaleTouchable
+      pressScale="subtle"
       onPress={onPress}
       onLongPress={onLongPress}
       delayLongPress={LIST_SELECTION_LONG_PRESS_MS}
@@ -200,6 +208,6 @@ export function PlannedPaymentHistoryCard({
       style={isSelected ? { backgroundColor: theme.surfaceSecondary } : undefined}
     >
       {content}
-    </TouchableOpacity>
+    </PressScaleTouchable>
   );
 }

@@ -1,6 +1,6 @@
 import { DonutChart } from '@/src/components/charts/DonutChart';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { AppText, ColoredDot } from '@/src/components/core';
+import { AppText, ColoredDot, PressScaleTouchable } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
@@ -8,7 +8,7 @@ import { resolveThemeColor } from '@/src/design-system/utils';
 import { ReportLegendRow } from '@/src/features/reports/hooks/reportTabTypes';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountId } from '@/src/types/ids';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 interface BreakdownDonutCardProps {
   donutData: { value: number; color: string; label: string }[];
@@ -45,7 +45,7 @@ export function BreakdownDonutCard({
       <DonutChart data={donutData} size={donutSize} strokeWidth={donutStrokeWidth} />
       <View style={styles.legend}>
         {legendRows.map(row => (
-          <TouchableOpacity
+          <PressScaleTouchable
             key={row.id}
             style={styles.legendItem}
             onPress={() => onLegendRowPress(row.accountIds)}
@@ -69,16 +69,16 @@ export function BreakdownDonutCard({
                 style={styles.amountText}
               />
             </View>
-          </TouchableOpacity>
+          </PressScaleTouchable>
         ))}
         {showExpansionButton && (
-          <TouchableOpacity onPress={onToggleExpansion} style={styles.showMoreButton}>
+          <PressScaleTouchable onPress={onToggleExpansion} style={styles.showMoreButton}>
             <AppText variant="caption" color="primary">
               {expanded
                 ? AppConfig.strings.reports.showLess
                 : AppConfig.strings.reports.showAll(totalCount)}
             </AppText>
-          </TouchableOpacity>
+          </PressScaleTouchable>
         )}
       </View>
     </View>

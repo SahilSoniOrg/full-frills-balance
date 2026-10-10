@@ -1,4 +1,11 @@
-import { Icon, AppButton, AppIcon, AppInput, AppText } from '@/src/components/core';
+import {
+  Icon,
+  AppButton,
+  AppIcon,
+  AppInput,
+  AppText,
+  PressScaleTouchable,
+} from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { Separator } from '@/src/design-system';
@@ -10,7 +17,7 @@ import { useVoiceVisualizer } from '@/src/features/journal/entry/hooks/useVoiceV
 import { useTheme } from '@/src/hooks/use-theme';
 import { WorkplaceId } from '@/src/types/ids';
 import { useEffect } from 'react';
-import { ActivityIndicator, Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, StyleSheet, View } from 'react-native';
 
 interface VoiceInputModalProps {
   visible: boolean;
@@ -84,7 +91,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
       <View style={styles.visualizerContainer}>
         <View style={[styles.visualizerBacking, { backgroundColor: theme.surfaceSecondary }]}>
           {isRecording ? (
-            <TouchableOpacity onPress={stopRecording} style={styles.barGroup}>
+            <PressScaleTouchable onPress={stopRecording} style={styles.barGroup}>
               {animValues.map((anim, idx) => (
                 <Animated.View
                   key={idx}
@@ -97,14 +104,14 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                   ]}
                 />
               ))}
-            </TouchableOpacity>
+            </PressScaleTouchable>
           ) : (
-            <TouchableOpacity
+            <PressScaleTouchable
               onPress={startRecording}
               style={[styles.micIconTouch, { backgroundColor: theme.primary }]}
             >
               <AppIcon name={Icon.Mic} size={28} color={theme.onPrimary} />
-            </TouchableOpacity>
+            </PressScaleTouchable>
           )}
         </View>
 
@@ -133,7 +140,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
           />
           <View style={styles.parseActionsGroup}>
             {transcription.trim().length > 0 && (
-              <TouchableOpacity
+              <PressScaleTouchable
                 onPress={() => void parseTranscription(transcription)}
                 disabled={isParsing}
                 style={[
@@ -148,7 +155,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
                 <AppText variant="caption" weight="bold" color="primary">
                   {isParsing ? '...' : 'Auto'}
                 </AppText>
-              </TouchableOpacity>
+              </PressScaleTouchable>
             )}
           </View>
         </View>
@@ -158,7 +165,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
         </AppText>
         <View style={styles.templateList}>
           {PREDEFINED_TEMPLATES.map((item, idx) => (
-            <TouchableOpacity
+            <PressScaleTouchable
               key={idx}
               onPress={() => selectTemplate(item)}
               style={[
@@ -178,7 +185,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
               >
                 &quot;{item}&quot;
               </AppText>
-            </TouchableOpacity>
+            </PressScaleTouchable>
           ))}
         </View>
       </View>

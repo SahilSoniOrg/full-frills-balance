@@ -1,5 +1,12 @@
 import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { Icon, AppIcon, AppText, Badge, IconName } from '@/src/components/core';
+import {
+  Icon,
+  AppIcon,
+  AppText,
+  Badge,
+  IconName,
+  PressScaleTouchable,
+} from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { formatAccountSubtypeLabel } from '@/src/types/accountSubtype';
@@ -8,7 +15,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDashboardFeatureActions';
 import { AccountSimulationSummary } from '@/src/services/simulation/types';
 import { AccountSubtype } from '@/src/types/enums';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { SafeToSpendLabels } from '../types/SafeToSpendViewModel';
 
 interface SafeToSpendLedgerProps {
@@ -101,7 +108,7 @@ export const SafeToSpendLedger = ({
                       },
                     ]}
                   >
-                    <TouchableOpacity
+                    <PressScaleTouchable
                       style={{ flex: 1 }}
                       onPress={() => openAccount(acc, currencyCode)}
                       activeOpacity={Opacity.heavy}
@@ -129,7 +136,7 @@ export const SafeToSpendLedger = ({
                           Floor: {formatSts(acc.minBalance, currencyCode)}
                         </AppText>
                       </View>
-                    </TouchableOpacity>
+                    </PressScaleTouchable>
                     <View style={{ alignItems: 'flex-end' }}>
                       <AppText
                         variant="caption"
@@ -174,7 +181,7 @@ export const SafeToSpendLedger = ({
                                 alignItems: 'center',
                               }}
                             >
-                              <TouchableOpacity
+                              <PressScaleTouchable
                                 style={{
                                   flexDirection: 'row',
                                   alignItems: 'center',
@@ -214,7 +221,7 @@ export const SafeToSpendLedger = ({
                                     </AppText>
                                   )}
                                 </View>
-                              </TouchableOpacity>
+                              </PressScaleTouchable>
                               <AppText variant="caption" color="secondary" tabular>
                                 {formatSts(item.amount, currencyCode, { prefix: '-' })}
                               </AppText>

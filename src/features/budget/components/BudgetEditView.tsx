@@ -1,3 +1,4 @@
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { MultiAccountPickerModal } from '@/src/components/account-selection';
 import {
   AppButton,
@@ -24,7 +25,7 @@ import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { getReadableColor } from '@/src/utils/color-math';
 import { toast } from '@/src/utils/alerts';
 import { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { BudgetSpendingHistoryChart } from './BudgetSpendingHistoryChart';
 import type { BudgetEditViewModel } from '../hooks/useBudgetEditViewModel';
 
@@ -166,7 +167,7 @@ export function BudgetEditView({
                     <AppText variant="caption" weight="semibold" style={{ color: expenseInk }}>
                       {account.name}
                     </AppText>
-                    <Pressable
+                    <PressScaleTouchable
                       testID={`budget-category-remove-${account.id}`}
                       accessibilityRole="button"
                       accessibilityLabel={copy.removeCategory(account.name)}
@@ -174,7 +175,7 @@ export function BudgetEditView({
                       onPress={() => removeCategory(account.id)}
                     >
                       <AppIcon name={Icon.Close} size={Size.iconXs} color={expenseInk} />
-                    </Pressable>
+                    </PressScaleTouchable>
                   </View>
                 ))}
               </View>
@@ -185,7 +186,7 @@ export function BudgetEditView({
                 </AppText>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm }}>
                   {categorySuggestions.map(account => (
-                    <Pressable
+                    <PressScaleTouchable
                       key={account.id}
                       testID={`budget-category-suggestion-${account.id}`}
                       accessibilityRole="button"
@@ -205,12 +206,12 @@ export function BudgetEditView({
                       <AppText variant="caption" color="secondary">
                         {account.name}
                       </AppText>
-                    </Pressable>
+                    </PressScaleTouchable>
                   ))}
                 </View>
               </>
             )}
-            <Pressable
+            <PressScaleTouchable
               testID="budget-category-add"
               accessibilityRole="button"
               accessibilityLabel={copy.addCategories}
@@ -231,7 +232,7 @@ export function BudgetEditView({
               <AppText variant="caption" color="secondary">
                 {selectedCategories.length ? copy.addCategory : copy.allCategories}
               </AppText>
-            </Pressable>
+            </PressScaleTouchable>
           </FormSectionGroup>
 
           {spendingHistory.length > 0 ? (

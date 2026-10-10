@@ -1,4 +1,4 @@
-import { Icon, AppIcon, AppInput, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppInput, AppText, PressScaleTouchable } from '@/src/components/core';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsMenuSection } from '@/src/features/settings/components/SettingsMenuSection';
 import { SettingsMenuItem } from '@/src/components/settings/SettingsMenuItem';
@@ -6,7 +6,7 @@ import type { SettingsSearchItem } from '@/src/features/settings/components/sett
 import { useTheme } from '@/src/hooks/use-theme';
 import { filterSettingsSearchItems } from '@/src/features/settings/components/settingsSearchCatalog';
 import { useMemo, type RefObject } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 
 type SettingsSearchResultsProps = {
   query: string;
@@ -41,7 +41,8 @@ export function SettingsSearchResults({
           ref={inputRef}
         />
         {hasQuery && (
-          <TouchableOpacity
+          <PressScaleTouchable
+            pressScale="subtle"
             onPress={() => {
               onQueryChange('');
               inputRef?.current?.focus();
@@ -53,7 +54,7 @@ export function SettingsSearchResults({
             hitSlop={8}
           >
             <AppIcon name={Icon.Close} size={18} color={theme.textSecondary} />
-          </TouchableOpacity>
+          </PressScaleTouchable>
         )}
       </View>
 
