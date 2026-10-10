@@ -72,13 +72,9 @@ function RowToggle({
   );
 }
 
-/** Trailing secondary text. */
-function RowValue({ children }: { children: React.ReactNode }) {
-  return (
-    <AppText color="secondary" align="right">
-      {children}
-    </AppText>
-  );
+/** Trailing secondary text; takes AppText props. */
+function RowValue(props: React.ComponentProps<typeof AppText>) {
+  return <AppText color="secondary" align="right" {...props} />;
 }
 
 function RowSpinner() {
@@ -125,11 +121,13 @@ export type ListRowProps = BoxViewProps &
     subtitle?: string | React.ReactNode;
     /** Any node, or ListRow.Toggle / .Value / .Spinner / .Chevron. */
     trailing?: React.ReactNode;
-    /** Show a chevron after `trailing`. Defaults to on for pressable rows in `plain` groups. */
+    /** Chevron after `trailing`; defaults on for pressable rows with no trailing or a ListRow.Value. */
     chevron?: boolean;
     destructive?: boolean;
     /** Search/scroll focus target id. */
     focusId?: string;
+    /** Card rows: let string title/subtitle wrap instead of truncating. */
+    wrap?: boolean;
     /** Extra content under the row, aligned with the row padding (e.g. a segmented control). */
     children?: React.ReactNode;
   };
@@ -147,6 +145,7 @@ function ListRowBase(initialProps: ListRowProps) {
     trailing,
     chevron,
     destructive = false,
+    wrap = false,
     focusId,
     children,
     onPress: onPressProp,
@@ -181,13 +180,13 @@ function ListRowBase(initialProps: ListRowProps) {
       : null;
   const onPress = toggle ? () => toggle.onValueChange(!toggle.value) : onPressProp;
   const isPressable = onPress != null || onLongPress != null;
-  const showChevron = chevron ?? (plain && onPressProp != null && !trailing);
-  const lines = plain ? undefined : 1;
-
-  const valueText =
+  const value =
     isValidElement<{ children?: React.ReactNode }>(trailing) && trailing.type === RowValue
-      ? textOf(trailing.props.children)
-      : undefined;
+      ? trailing
+      : null;
+  const showChevron = chevron ?? (onPressProp != null && (!trailing || value != null));
+  const lines = plain || wrap ? undefined : 1;
+  const valueText = value ? textOf(value.props.children) : undefined;
   const defaultLabel =
     [textOf(title), textOf(subtitle), valueText].filter(Boolean).join(', ') || undefined;
   const label = accessibilityLabel ?? defaultLabel;
@@ -219,20 +218,19 @@ function ListRowBase(initialProps: ListRowProps) {
         ) : (
           title
         )}
-        {subtitle &&
-          (typeof subtitle === 'string' ? (
-            <AppText
-              variant="caption"
-              color="secondary"
-              weight={plain ? 'medium' : undefined}
-              numberOfLines={lines}
-              style={styles.subtitle}
-            >
-              {subtitle}
-            </AppText>
-          ) : (
-            subtitle
-          ))}
+        {!subtitle ? null : typeof subtitle === 'string' ? (
+          <AppText
+            variant="caption"
+            color="secondary"
+            weight={plain ? 'medium' : undefined}
+            numberOfLines={lines}
+            style={styles.subtitle}
+          >
+            {subtitle}
+          </AppText>
+        ) : (
+          subtitle
+        )}
       </Box>
       {(trailing || showChevron) && (
         <Box

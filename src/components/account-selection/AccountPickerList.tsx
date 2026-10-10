@@ -73,7 +73,6 @@ const AccountPickerRow = React.memo(
         subtitle={subtitle}
         onPress={onPress}
         background={isSelected ? 'surfaceSecondary' : 'transparent'}
-        padding="md"
         style={{ opacity }}
         leading={
           <AppIcon

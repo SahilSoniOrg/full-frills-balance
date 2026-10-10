@@ -50,7 +50,6 @@ export function HubView({
                 icon={Icon.Notifications}
                 title={strings.unreadSmsTitle(unreadSmsCount)}
                 subtitle={strings.unreadSmsSubtitle}
-                chevron
               />
             </ListGroup>
           </Box>
