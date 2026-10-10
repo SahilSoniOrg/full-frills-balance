@@ -115,7 +115,8 @@ export const ONBOARDING_STRINGS = {
   clarityTitle: 'Here is your cash clarity.',
   clarityDefinition:
     'Safe to Spend is the cash you can use today without putting planned needs at risk.',
-  clarityCalculation: 'Cash now + expected income − planned payments − boundaries = Safe to Spend',
+  clarityCalculation:
+    'Safe to Spend = the lowest your cash is projected to reach. Later income can’t cover earlier bills.',
   clarityExplainAction: 'How this works',
   clarityExplainTitle: 'How Safe to Spend works',
   overNextDays: (days: number) => `over the next ${days} days`,

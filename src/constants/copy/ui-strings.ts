@@ -158,7 +158,7 @@ export const UI_STRINGS = {
     safeToSpendExplanation: {
       title: 'How Safe to Spend Works',
       intro:
-        'Safe to Spend is the lower of your cash today and the lowest dated liquid balance in the forecast.',
+        'Safe to Spend is the lower of your cash today and the lowest dated liquid balance in the forecast. If that low point is below zero, it shows as Holding Back for Bills. Income only helps from the day it arrives.',
       unlocks:
         'The number is cautious on purpose. If money is spoken for soon, it won’t show up as free to spend. Even if your bank balance looks high, upcoming bills are quietly protected.',
       formulaTitle: 'Forecast inputs',
@@ -169,9 +169,9 @@ export const UI_STRINGS = {
         (days: number) =>
           `Money set aside: bills, rent, subscriptions, and budgets over the next ${days} days.`,
         'Card balances: money owed soon that is already protected in your reserves.',
-        'Safe to Spend: what’s left over to spend completely guilt-free.',
+        'Safe to Spend: the lowest your balance is projected to reach.',
       ],
-      bucketTitle: 'Supporting forecast inputs',
+      bucketTitle: 'Forecast inputs (dated, not a simple sum)',
       exampleTitle: 'Current Picture',
       benefitsTitle: 'Why it keeps you safe',
       benefits: [
@@ -212,12 +212,7 @@ export const UI_STRINGS = {
       categoriesUsed: 'Categories used',
       accountsUsed: 'Accounts used',
       noneDetectedYet: 'None found',
-      projectedLiquidity: 'Available cash + incoming money:',
-      committedLine: 'Money set aside (budgets + bills):',
-      debtsLine: 'Card balances & loans:',
       safeToSpendLine: 'Safe to Spend:',
-      calculationTitle: 'How it adds up',
-      calculationFormula: "Today's cash vs lowest projected balance before next payday",
       plannedPayments: 'Upcoming bills',
       plannedJournals: 'Planned transfers',
       activeBudgets: (days: number) => `Budget reserves (${days} days)`,
@@ -229,7 +224,7 @@ export const UI_STRINGS = {
       upcomingIncome: 'Money coming in',
       emptyAccounts: 'No accounts in this group',
       noFutureIncome: 'No upcoming money scheduled',
-      remainingCashBuffer: 'Safety cushion',
+      remainingCashBuffer: 'Lowest projected balance',
       unplannedBalance: 'Free to spend',
       scheduledCommitment: 'Scheduled amount',
       waitingForIncome: 'Waiting on payday',
