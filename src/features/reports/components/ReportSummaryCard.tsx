@@ -1,4 +1,4 @@
-import { AppButton, AppCard, AppText } from '@/src/components/core';
+import { AppCard, AppText, ListGroup, ListRow } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, Spacing } from '@/src/constants';
 import type { ReportSummaryVm } from '@/src/features/reports/hooks/reportTabTypes';
@@ -24,31 +24,33 @@ export function ReportSummaryCard({ summary, currencyCode }: ReportSummaryCardPr
       </AppText>
 
       <View style={styles.metricGrid}>
-        <SummaryMetric
-          testID="report-summary-income"
-          label={AppConfig.strings.reports.totalIncome}
-          amount={summary.income}
-          currencyCode={currencyCode}
-          color="success"
-          onPress={summary.income !== 0 ? summary.onViewIncomeTransactions : undefined}
-        />
-        <SummaryMetric
-          testID="report-summary-expense"
-          label={AppConfig.strings.reports.totalExpense}
-          amount={summary.expense}
-          currencyCode={currencyCode}
-          color="error"
-          onPress={summary.expense !== 0 ? summary.onViewExpenseTransactions : undefined}
-        />
-        <SummaryMetric
-          testID="report-summary-net-flow"
-          label={AppConfig.strings.reports.netFlow}
-          amount={summary.netFlow}
-          currencyCode={currencyCode}
-          color={summary.netFlow >= 0 ? 'success' : 'error'}
-          prefix={getSignPrefix(summary.netFlow)}
-          onPress={canViewNetFlowTransactions ? summary.onViewNetFlowTransactions : undefined}
-        />
+        <ListGroup variant="plain">
+          <SummaryMetric
+            testID="report-summary-income"
+            label={AppConfig.strings.reports.totalIncome}
+            amount={summary.income}
+            currencyCode={currencyCode}
+            color="success"
+            onPress={summary.income !== 0 ? summary.onViewIncomeTransactions : undefined}
+          />
+          <SummaryMetric
+            testID="report-summary-expense"
+            label={AppConfig.strings.reports.totalExpense}
+            amount={summary.expense}
+            currencyCode={currencyCode}
+            color="error"
+            onPress={summary.expense !== 0 ? summary.onViewExpenseTransactions : undefined}
+          />
+          <SummaryMetric
+            testID="report-summary-net-flow"
+            label={AppConfig.strings.reports.netFlow}
+            amount={summary.netFlow}
+            currencyCode={currencyCode}
+            color={summary.netFlow >= 0 ? 'success' : 'error'}
+            prefix={getSignPrefix(summary.netFlow)}
+            onPress={canViewNetFlowTransactions ? summary.onViewNetFlowTransactions : undefined}
+          />
+        </ListGroup>
       </View>
 
       <View style={[styles.comparison, { borderTopColor: theme.border }]}>
@@ -84,33 +86,34 @@ export function ReportSummaryCard({ summary, currencyCode }: ReportSummaryCardPr
       </View>
 
       <View style={styles.highlights}>
-        <AppText variant="caption" color="secondary">
-          {AppConfig.strings.reports.summaryHighlights}
-        </AppText>
-        <HighlightRow
-          testID="report-summary-largest-category"
-          label={AppConfig.strings.reports.largestSpendingCategory}
-          value={
-            largestSpendingCategory
-              ? formatCategoryLabel(largestSpendingCategory.category)
-              : AppConfig.strings.reports.noData
-          }
-          amount={largestSpendingCategory?.amount}
-          currencyCode={currencyCode}
-          onPress={largestSpendingCategory ? summary.onViewLargestCategoryTransactions : undefined}
-        />
-        <HighlightRow
-          testID="report-summary-highest-day"
-          label={AppConfig.strings.reports.highestSpendingDay}
-          value={
-            highestSpendingDay
-              ? formatDate(highestSpendingDay.date)
-              : AppConfig.strings.reports.noData
-          }
-          amount={highestSpendingDay?.amount}
-          currencyCode={currencyCode}
-          onPress={highestSpendingDay ? summary.onViewHighestSpendingDayTransactions : undefined}
-        />
+        <ListGroup variant="plain" header={AppConfig.strings.reports.summaryHighlights}>
+          <HighlightRow
+            testID="report-summary-largest-category"
+            label={AppConfig.strings.reports.largestSpendingCategory}
+            value={
+              largestSpendingCategory
+                ? formatCategoryLabel(largestSpendingCategory.category)
+                : AppConfig.strings.reports.noData
+            }
+            amount={largestSpendingCategory?.amount}
+            currencyCode={currencyCode}
+            onPress={
+              largestSpendingCategory ? summary.onViewLargestCategoryTransactions : undefined
+            }
+          />
+          <HighlightRow
+            testID="report-summary-highest-day"
+            label={AppConfig.strings.reports.highestSpendingDay}
+            value={
+              highestSpendingDay
+                ? formatDate(highestSpendingDay.date)
+                : AppConfig.strings.reports.noData
+            }
+            amount={highestSpendingDay?.amount}
+            currencyCode={currencyCode}
+            onPress={highestSpendingDay ? summary.onViewHighestSpendingDayTransactions : undefined}
+          />
+        </ListGroup>
       </View>
     </AppCard>
   );
@@ -134,21 +137,21 @@ function SummaryMetric({
   onPress?: () => void;
 }) {
   return (
-    <View testID={testID} style={styles.metric}>
-      <AppText variant="caption" color="secondary">
-        {label}
-      </AppText>
-      <MoneyText
-        amount={prefix ? Math.abs(amount) : amount}
-        currencyCode={currencyCode}
-        variant="subheading"
-        color={color}
-        prefix={prefix}
-      />
-      {onPress ? (
-        <ViewTransactionsButton testID={`${testID}-view-transactions`} onPress={onPress} />
-      ) : null}
-    </View>
+    <ListRow
+      testID={testID}
+      title={label}
+      trailing={
+        <MoneyText
+          amount={prefix ? Math.abs(amount) : amount}
+          currencyCode={currencyCode}
+          variant="subheading"
+          color={color}
+          prefix={prefix}
+        />
+      }
+      chevron={!!onPress}
+      onPress={onPress}
+    />
   );
 }
 
@@ -196,44 +199,23 @@ function HighlightRow({
   onPress?: () => void;
 }) {
   return (
-    <View testID={testID} style={styles.highlightRow}>
-      <View style={styles.highlightCopy}>
-        <AppText variant="caption" color="secondary">
-          {label}
-        </AppText>
-        <View style={styles.highlightValue}>
-          <AppText variant="body" weight="semibold" numberOfLines={1}>
-            {value}
-          </AppText>
-          {amount !== undefined ? (
-            <MoneyText
-              amount={amount}
-              currencyCode={currencyCode}
-              variant="caption"
-              color="secondary"
-            />
-          ) : null}
-        </View>
-      </View>
-      {onPress ? (
-        <ViewTransactionsButton testID={`${testID}-view-transactions`} onPress={onPress} />
-      ) : null}
-    </View>
-  );
-}
-
-function ViewTransactionsButton({ testID, onPress }: { testID: string; onPress: () => void }) {
-  return (
-    <AppButton
+    <ListRow
       testID={testID}
-      variant="secondary"
-      size="sm"
+      title={value}
+      subtitle={label}
+      trailing={
+        amount !== undefined ? (
+          <MoneyText
+            amount={amount}
+            currencyCode={currencyCode}
+            variant="caption"
+            color="secondary"
+          />
+        ) : undefined
+      }
+      chevron={!!onPress}
       onPress={onPress}
-      style={styles.viewButton}
-      accessibilityLabel={AppConfig.strings.reports.viewTransactions}
-    >
-      {AppConfig.strings.reports.viewTransactions}
-    </AppButton>
+    />
   );
 }
 
@@ -256,16 +238,10 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: Spacing.xl,
   },
+  // ponytail: cancel the plain rows' own padding so they line up with the card content.
   metricGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.md,
-    marginTop: Spacing.lg,
-  },
-  metric: {
-    flexGrow: 1,
-    flexBasis: 240,
-    minWidth: 0,
+    marginHorizontal: -Spacing.md,
+    marginTop: Spacing.md,
   },
   comparison: {
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -285,25 +261,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   highlights: {
-    gap: Spacing.md,
+    marginHorizontal: -Spacing.md,
     marginTop: Spacing.lg,
-  },
-  highlightRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  highlightCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  highlightValue: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: Spacing.sm,
-    marginTop: Spacing.xs,
-  },
-  viewButton: {
-    alignSelf: 'flex-start',
   },
 });
