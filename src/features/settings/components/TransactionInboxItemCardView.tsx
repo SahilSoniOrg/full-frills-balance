@@ -1,5 +1,16 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { Icon, AppButton, AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
+import {
+  Icon,
+  AppButton,
+  AppCard,
+  AppIcon,
+  AppText,
+  Badge,
+  ListGroup,
+  type ListRowItem,
+} from '@/src/components/core';
+import { ModalSurface } from '@/src/components/overlays/ModalSurface';
+import { useState } from 'react';
 import { Opacity, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { InboxProcessingStatus } from '@/src/types/enums';
@@ -39,6 +50,7 @@ export function TransactionInboxItemCardView({
 }: TransactionInboxItemCardViewProps) {
   const { theme } = useTheme();
   const { resolvedHourCycle } = useHourCyclePrefs();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const channelIcon = item.channel === 'voice' ? Icon.Mic : Icon.MessageSquare;
   const channelLabel = item.channel === 'voice' ? 'Spoken' : 'SMS';
@@ -52,6 +64,89 @@ export function TransactionInboxItemCardView({
         ? 'unavailable journal'
         : 'linked journal';
 
+  const id = item.deviceSourceId;
+  const dismissed = item.processingStatus === InboxProcessingStatus.DISMISSED;
+  const sms = item.channel === 'sms';
+  const title =
+    item.channel === 'voice'
+      ? 'Spoken Draft'
+      : item.parsedMerchant || item.senderAddress || 'Unknown Origin';
+  const run = (fn: (item: TransactionInboxItem) => unknown) => () => {
+    setMenuOpen(false);
+    void fn(item);
+  };
+  // ponytail: first applicable action is the primary button; the rest go in the More sheet.
+  const [primary, ...more] = (
+    [
+      item.linkedJournal &&
+        !linkedJournalUnavailable && {
+          id: 'open',
+          title: 'Open Journal',
+          icon: Icon.Document,
+          onPress: run(onOpenJournal),
+        },
+      dismissed && {
+        id: 'undo',
+        title: 'Undo Dismiss',
+        icon: Icon.History,
+        onPress: run(handleUndismiss),
+      },
+      !item.linkedJournal &&
+        item.duplicateCandidate && {
+          id: 'compare',
+          title: 'Compare duplicate',
+          icon: Icon.Merge,
+          onPress: run(onCompareDuplicate),
+          testID: `inbox-compare-duplicate-${id}`,
+        },
+      !item.linkedJournal &&
+        item.processingStatus !== InboxProcessingStatus.PARSE_FAILED && {
+          id: 'import',
+          title: 'Import / Review',
+          icon: Icon.Check,
+          onPress: run(handleImport),
+        },
+      sms &&
+        !item.linkedJournal && {
+          id: 'reparse',
+          title: 'Edit & Re-parse',
+          icon: Icon.Edit,
+          onPress: run(onEditReparse),
+          testID: `inbox-edit-reparse-btn-${id}`,
+        },
+      !item.linkedJournal &&
+        !!item.parsedAmount && {
+          id: 'split',
+          title: 'Split',
+          icon: Icon.SwapHorizontal,
+          onPress: run(onSplitImport),
+          testID: `inbox-split-btn-${id}`,
+        },
+      !dismissed && { id: 'dismiss', title: 'Dismiss', icon: Icon.X, onPress: run(handleDismiss) },
+      sms && {
+        id: 'rule',
+        title: 'Create Rule',
+        icon: Icon.Zap,
+        onPress: run(onCreateRule),
+        testID: `inbox-create-rule-btn-${id}`,
+      },
+      {
+        id: 'raw',
+        title: 'View Raw',
+        icon: Icon.MessageSquare,
+        onPress: run(() =>
+          alert.show({
+            title:
+              item.channel === 'voice'
+                ? 'Raw Voice Transcript'
+                : item.senderAddress || 'Raw Message',
+            message: item.rawBody || '',
+          }),
+        ),
+      },
+    ] as (ListRowItem | false | null | undefined)[]
+  ).filter((a): a is ListRowItem => !!a) as [ListRowItem, ...ListRowItem[]];
+
   return (
     <AppCard style={styles.card} testID={testID}>
       <View style={styles.cardTop}>
@@ -62,11 +157,7 @@ export function TransactionInboxItemCardView({
               {channelLabel}
             </AppText>
           </View>
-          <AppText variant="subheading">
-            {item.channel === 'voice'
-              ? 'Spoken Draft'
-              : item.parsedMerchant || item.senderAddress || 'Unknown Origin'}
-          </AppText>
+          <AppText variant="subheading">{title}</AppText>
           <AppText variant="caption" color="secondary">
             {formatDateKeepingPattern(item.inputDate, 'MMM D, YYYY', resolvedHourCycle, ' ')}
           </AppText>
@@ -134,94 +225,31 @@ export function TransactionInboxItemCardView({
         </AppText>
       )}
 
-      {item.duplicateCandidate && (
-        <AppButton
-          variant="ghost"
-          size="sm"
-          style={styles.inlineButton}
-          onPress={() => onCompareDuplicate(item)}
-          testID={`inbox-compare-duplicate-${item.deviceSourceId}`}
-        >
-          Compare duplicate
-        </AppButton>
-      )}
-
       <View style={styles.actions}>
-        {item.linkedJournal && !linkedJournalUnavailable ? (
-          <AppButton size="sm" variant="outline" onPress={() => onOpenJournal(item)}>
-            Open Journal
-          </AppButton>
-        ) : item.linkedJournal ? null : (
-          <>
-            <AppButton
-              size="sm"
-              onPress={() => handleImport(item)}
-              disabled={item.processingStatus === InboxProcessingStatus.PARSE_FAILED}
-            >
-              Import / Review
-            </AppButton>
-
-            {item.parsedAmount ? (
-              <AppButton
-                size="sm"
-                variant="outline"
-                onPress={() => onSplitImport(item)}
-                testID={`inbox-split-btn-${item.deviceSourceId}`}
-              >
-                Split
-              </AppButton>
-            ) : null}
-          </>
-        )}
-
-        {item.processingStatus === InboxProcessingStatus.DISMISSED ? (
-          <AppButton size="sm" variant="secondary" onPress={() => handleUndismiss(item)}>
-            Undo
-          </AppButton>
-        ) : (
-          <AppButton size="sm" variant="secondary" onPress={() => handleDismiss(item)}>
-            Dismiss
-          </AppButton>
-        )}
-
-        {item.channel === 'sms' ? (
-          <AppButton
-            size="sm"
-            variant="ghost"
-            onPress={() => onCreateRule(item)}
-            testID={`inbox-create-rule-btn-${item.deviceSourceId}`}
-          >
-            Create Rule
-          </AppButton>
-        ) : null}
-
-        {item.channel === 'sms' && !item.linkedJournal ? (
-          <AppButton
-            size="sm"
-            variant="ghost"
-            onPress={() => onEditReparse(item)}
-            testID={`inbox-edit-reparse-btn-${item.deviceSourceId}`}
-          >
-            Edit & Re-parse
-          </AppButton>
-        ) : null}
-
-        <AppButton
-          size="sm"
-          variant="ghost"
-          onPress={() =>
-            alert.show({
-              title:
-                item.channel === 'voice'
-                  ? 'Raw Voice Transcript'
-                  : item.senderAddress || 'Raw Message',
-              message: item.rawBody || '',
-            })
-          }
-        >
-          View Raw
+        <AppButton size="sm" onPress={primary.onPress} testID={primary.testID}>
+          {primary.title}
         </AppButton>
+        {more.length > 0 ? (
+          <AppButton
+            size="sm"
+            variant="secondary"
+            onPress={() => setMenuOpen(true)}
+            testID={`inbox-more-${item.deviceSourceId}`}
+          >
+            More
+          </AppButton>
+        ) : null}
       </View>
+      <ModalSurface
+        visible={menuOpen}
+        title={title}
+        onClose={() => setMenuOpen(false)}
+        position="bottomSheet"
+        fixedHeight={false}
+        scrollable={false}
+      >
+        <ListGroup items={more} />
+      </ModalSurface>
     </AppCard>
   );
 }
@@ -261,9 +289,5 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: Spacing.sm,
     marginTop: Spacing.md,
-  },
-  inlineButton: {
-    alignSelf: 'flex-start',
-    marginBottom: Spacing.sm,
   },
 });
