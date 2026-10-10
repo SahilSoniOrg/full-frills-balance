@@ -1,5 +1,5 @@
-import { Icon, AppIcon } from '@/src/components/core';
-import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
+import { Icon } from '@/src/components/core';
+import { IconButton } from '@/src/components/core/IconButton';
 import {
   SelectionPickerSheet,
   type SelectionOption,
@@ -11,14 +11,11 @@ import { workplaceService } from '@/src/services/WorkplaceService';
 import type { WorkplaceId } from '@/src/types/ids';
 import { toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet } from 'react-native';
 
 /** Compact, persistent workplace switcher used by the app's shared header. */
 export function WorkplaceSwitcher() {
   const workplace = useOptionalWorkplace();
-  const { theme } = useTheme();
   const [visible, setVisible] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
   const { data: currentWorkplace } = useWorkplaceSnapshot(workplace?.workplaceId);
@@ -60,25 +57,14 @@ export function WorkplaceSwitcher() {
 
   return (
     <>
-      <PressScaleTouchable
+      <IconButton
+        name={isSwitching ? Icon.Refresh : (currentWorkplace?.icon ?? Icon.Briefcase)}
         onPress={() => setVisible(true)}
         disabled={isSwitching}
-        accessibilityRole="button"
         accessibilityLabel={`Current workplace: ${currentWorkplace?.name ?? 'Unknown'}`}
         accessibilityHint="Choose a different workplace"
         testID="header-workplace-switcher"
-        style={[styles.trigger, { backgroundColor: theme.surfaceSecondary }]}
-      >
-        {isSwitching ? (
-          <AppIcon name={Icon.Refresh} size={21} color={theme.primary} />
-        ) : (
-          <AppIcon
-            name={currentWorkplace?.icon ?? Icon.Briefcase}
-            size={21}
-            color={theme.primary}
-          />
-        )}
-      </PressScaleTouchable>
+      />
       <SelectionPickerSheet
         visible={visible}
         title="Switch workplace"
@@ -96,14 +82,3 @@ export function WorkplaceSwitcher() {
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  trigger: {
-    width: 40,
-    height: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
-  },
-});
