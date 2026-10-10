@@ -1,6 +1,12 @@
 import { MultiAccountPickerModal, useAccounts } from '@/src/components/account-selection';
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
-import { AppTabs, EmptyStateView, LoadingView, type TabOption } from '@/src/components/core';
+import {
+  AppButton,
+  AppTabs,
+  EmptyStateView,
+  LoadingView,
+  type TabOption,
+} from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig } from '@/src/constants';
@@ -21,7 +27,6 @@ import type { ReportsV2SectionId } from '../types';
 import { ReportsV2Filters } from './components/ReportsV2Filters';
 import { ReportsV2QualityBanner } from './components/ReportsV2QualityBanner';
 import { ReportsV2SectionContent } from './components/ReportsV2SectionContent';
-import { ReportsV2MissingRatesAction } from './components/ReportsV2MissingRatesAction';
 import { ReportsV2StatusNotice } from './components/ReportsV2StatusNotice';
 
 interface ReportsV2ViewProps {
@@ -165,11 +170,17 @@ export function ReportsV2View({ engine, workplaceId, targetCurrency, chrome }: R
               />
             ) : null}
             {vm.activeSection === 'health' && vm.canFetchMissingRates ? (
-              <ReportsV2MissingRatesAction
+              <AppButton
+                variant="secondary"
                 onPress={vm.onFetchMissingRates}
                 loading={vm.isFetchingMissingRates}
-                disabled={vm.state === 'refreshing' || vm.state === 'error'}
-              />
+                disabled={
+                  vm.state === 'refreshing' || vm.state === 'error' || vm.isFetchingMissingRates
+                }
+                accessibilityLabel={AppConfig.strings.reportsV2.fetchMissingRates}
+              >
+                {AppConfig.strings.reportsV2.fetchMissingRates}
+              </AppButton>
             ) : null}
           </ScrollView>
         </Box>
