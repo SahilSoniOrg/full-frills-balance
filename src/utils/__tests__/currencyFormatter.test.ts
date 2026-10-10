@@ -109,6 +109,37 @@ describe('CurrencyFormatter', () => {
       expect(CurrencyFormatter.formatShort(-1500, 'USD')).toBe('-1.5K');
     });
 
+    it('uses en-IN compact for INR (lakh/crore) and en-US for others', () => {
+      expect(CurrencyFormatter.formatShort(45000, 'INR')).toBe('45K');
+      expect(CurrencyFormatter.formatShort(2500000, 'INR')).toBe('25L');
+      expect(CurrencyFormatter.formatShort(98765432, 'INR')).toBe('9.9Cr');
+      expect(CurrencyFormatter.formatShort(-150000, 'INR')).toBe('-1.5L');
+      expect(CurrencyFormatter.formatShort(3.2e9, 'USD')).toBe('3.2B');
+      expect(CurrencyFormatter.formatShort(1.5e12, 'USD')).toBe('1.5T');
+    });
+
+    it('falls back to suffixes when Intl ignores compact notation (Hermes iOS)', () => {
+      jest.isolateModules(() => {
+        const Orig = Intl.NumberFormat;
+        const spy = jest
+          .spyOn(Intl, 'NumberFormat')
+          .mockImplementation(
+            ((locale: string, opts: Intl.NumberFormatOptions) =>
+              new Orig(locale, { ...opts, notation: 'standard' })) as never,
+          );
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const { CurrencyFormatter: F } = require('@/src/utils/currencyFormatter');
+          expect(F.formatShort(150000, 'INR')).toBe('1.5L');
+          expect(F.formatShort(98765432, 'INR')).toBe('9.9Cr');
+          expect(F.formatShort(2500000, 'USD')).toBe('2.5M');
+          expect(F.formatShort(-1500, 'USD')).toBe('-1.5K');
+        } finally {
+          spy.mockRestore();
+        }
+      });
+    });
+
     it('returns exact amount without decimals if below 1000', () => {
       expect(CurrencyFormatter.formatShort(500, 'USD')).toMatch(/\$500/);
     });
