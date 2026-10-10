@@ -50,15 +50,21 @@ describe('TransactionInboxItemCardView', () => {
 
     expect(getByText('Zomato')).toBeTruthy();
     expect(getByText('likely duplicate')).toBeTruthy();
+    // Duplicate is the primary action; the rest live behind More.
+    expect(getByTestId('inbox-compare-duplicate-sms-card-1')).toBeTruthy();
+    fireEvent.press(getByTestId('inbox-more-sms-card-1'));
+    expect(getByText('Import / Review')).toBeTruthy();
+    expect(getByText('Dismiss')).toBeTruthy();
+    expect(getByText('View Raw')).toBeTruthy();
     expect(getByTestId('inbox-split-btn-sms-card-1')).toBeTruthy();
     expect(getByTestId('inbox-create-rule-btn-sms-card-1')).toBeTruthy();
     expect(getByTestId('inbox-edit-reparse-btn-sms-card-1')).toBeTruthy();
-    expect(getByTestId('inbox-compare-duplicate-sms-card-1')).toBeTruthy();
   });
 
   it('triggers onSplitImport when Split button is pressed', () => {
     const { getByTestId } = render(<TransactionInboxItemCardView {...defaultProps} />);
 
+    fireEvent.press(getByTestId('inbox-more-sms-card-1'));
     fireEvent.press(getByTestId('inbox-split-btn-sms-card-1'));
     expect(defaultProps.onSplitImport).toHaveBeenCalledWith(mockItem);
   });
@@ -66,6 +72,7 @@ describe('TransactionInboxItemCardView', () => {
   it('triggers onCreateRule when Create Rule button is pressed', () => {
     const { getByTestId } = render(<TransactionInboxItemCardView {...defaultProps} />);
 
+    fireEvent.press(getByTestId('inbox-more-sms-card-1'));
     fireEvent.press(getByTestId('inbox-create-rule-btn-sms-card-1'));
     expect(defaultProps.onCreateRule).toHaveBeenCalledWith(mockItem);
   });
@@ -73,6 +80,7 @@ describe('TransactionInboxItemCardView', () => {
   it('triggers onEditReparse when Edit & Re-parse button is pressed', () => {
     const { getByTestId } = render(<TransactionInboxItemCardView {...defaultProps} />);
 
+    fireEvent.press(getByTestId('inbox-more-sms-card-1'));
     fireEvent.press(getByTestId('inbox-edit-reparse-btn-sms-card-1'));
     expect(defaultProps.onEditReparse).toHaveBeenCalledWith(mockItem);
   });
