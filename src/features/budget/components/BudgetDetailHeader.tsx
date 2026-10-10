@@ -3,7 +3,7 @@ import { IncompleteFxWarning } from '@/src/components/shared/IncompleteFxWarning
 import { AppCard, AppText, Badge } from '@/src/components/core';
 import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
 import { PeriodStepper } from '@/src/components/shared/PeriodStepper';
-import { AppConfig, Shape, Spacing } from '@/src/constants';
+import { AppConfig, Shape, Spacing, Typography } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
 import { presentBudgetUsage } from '../helpers/budgetCardPresentation';
 import type { BudgetPeriodPresentation } from '../helpers/budgetDetailPresentation';
@@ -94,10 +94,12 @@ export function BudgetDetailHeader({
             prefix={usage.hasUnvaluedEntries ? '≈' : undefined}
             variant="title"
             color={usageVm.isOver ? 'error' : 'text'}
-            style={styles.heroAmount}
-            adjustsFontSizeToFit
-            numberOfLines={1}
-            minimumFontScale={0.2}
+            fit={{
+              maxFontSize: Typography.roles.title.fontSize,
+              minFontSize: Typography.sizes.xl,
+              lineHeightRatio: Typography.roles.title.lineHeight / Typography.roles.title.fontSize,
+              hug: true,
+            }}
           />
           <View style={styles.limitLine}>
             <AppText variant="caption" color="secondary">
@@ -154,9 +156,7 @@ export function BudgetDetailHeader({
               currencyCode={budget.currencyCode}
               variant="body"
               weight="semibold"
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.2}
+              fit={STAT_FIT}
             />
           </Stat>
           <Stat
@@ -177,9 +177,7 @@ export function BudgetDetailHeader({
                   currencyCode={budget.currencyCode}
                   variant="body"
                   weight="semibold"
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.2}
+                  fit={STAT_FIT}
                 />
               )
             ) : (
@@ -195,9 +193,7 @@ export function BudgetDetailHeader({
                 currencyCode={budget.currencyCode}
                 variant="body"
                 weight="semibold"
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.2}
+                fit={STAT_FIT}
               />
             </Stat>
           ) : null}
@@ -206,6 +202,12 @@ export function BudgetDetailHeader({
     </Column>
   );
 }
+
+const STAT_FIT = {
+  maxFontSize: Typography.roles.body.fontSize,
+  minFontSize: Typography.sizes.xs - 1,
+  lineHeightRatio: Typography.roles.body.lineHeight / Typography.roles.body.fontSize,
+};
 
 function Stat({ label, children }: { label: string; children: React.ReactNode }) {
   const { fontScale } = useWindowDimensions();
@@ -230,7 +232,6 @@ const styles = StyleSheet.create({
     columnGap: Spacing.xs,
     rowGap: Spacing.xs,
   },
-  heroAmount: { flexShrink: 1, maxWidth: '100%' },
   limitLine: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: Spacing.xs },
   stats: {
     flexDirection: 'row',

@@ -1,10 +1,10 @@
+import { Typography, AppConfig, Opacity } from '@/src/constants';
 import { LIST_SELECTION_LONG_PRESS_MS } from '@/src/constants/gesture-constants';
 import { TouchableOpacity, View } from 'react-native';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppIcon, AppText, Badge, Icon, type IconName } from '@/src/components/core';
 import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
-import { AppConfig, Opacity } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formatDate } from '@/src/utils/dateUtils';
@@ -170,10 +170,14 @@ export function PlannedPaymentHistoryCard({
           variant="body"
           weight={isPending ? 'regular' : 'semibold'}
           color={amountColor}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.2}
-          style={{ maxWidth: '100%', flexShrink: 1, marginLeft: 'auto' }}
+          align="right"
+          fit={{
+            maxFontSize: Typography.roles.body.fontSize,
+            minFontSize: Typography.sizes.xs - 1,
+            lineHeightRatio: Typography.roles.body.lineHeight / Typography.roles.body.fontSize,
+            hug: true,
+            containerStyle: { marginLeft: 'auto' },
+          }}
         />
       )}
     </Row>

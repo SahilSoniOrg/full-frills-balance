@@ -1,3 +1,4 @@
+import { FitText } from '@/src/components/shared/FitText';
 import { AppButton, AppText, PressScaleTouchable } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Shape, Size, Spacing, Typography } from '@/src/constants';
@@ -9,6 +10,9 @@ import {
 import { triggerHaptic } from '@/src/utils/haptics';
 import { useEffect, useMemo, useRef, useState, type SetStateAction } from 'react';
 import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+
+const RESULT_FONT_SIZE = Typography.sizes.hero + Spacing.sm;
+const RESULT_LINE_HEIGHT = Typography.sizes.hero + Spacing.xxxl;
 
 type CalculatorKeyType = 'utility' | 'digit' | 'decimal' | 'operator' | 'backspace' | 'equals';
 
@@ -281,19 +285,21 @@ export function AmountCalculatorSheet({
           >
             {currencySymbol}
           </AppText>
-          <AppText
+          <FitText
             variant="hero"
             fontRole="numeric"
             tabular
             weight="semibold"
+            align="right"
+            hug
+            maxFontSize={RESULT_FONT_SIZE}
+            minFontSize={Math.round(RESULT_FONT_SIZE * 0.45)}
+            lineHeightRatio={RESULT_LINE_HEIGHT / RESULT_FONT_SIZE}
             style={[styles.resultAmount, { color: resultColor }]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.65}
             accessibilityLabel={`Calculated amount ${currencySymbol}${resultDisplay}`}
           >
             {resultDisplay}
-          </AppText>
+          </FitText>
         </View>
 
         {showError && (
@@ -447,8 +453,6 @@ const styles = StyleSheet.create({
   },
   resultAmount: {
     flexShrink: 1,
-    fontSize: Typography.sizes.hero + Spacing.sm,
-    lineHeight: Typography.sizes.hero + Spacing.xxxl,
     includeFontPadding: true,
     textAlign: 'right',
   },

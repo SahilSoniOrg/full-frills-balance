@@ -1,6 +1,6 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppText } from '@/src/components/core';
-import { Size, Spacing } from '@/src/constants';
+import { Size, Spacing, Typography } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import type { MoneyFormatStyle } from '@/src/utils/currencyFormatter';
 import type { ReactNode } from 'react';
@@ -82,9 +82,12 @@ export function EntryCardLayout({
               weight="bold"
               tabular
               align="right"
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.65}
+              fit={{
+                maxFontSize: Typography.roles.xl.fontSize,
+                minFontSize: Math.round(Typography.roles.xl.fontSize * 0.65),
+                lineHeightRatio: Typography.roles.xl.lineHeight / Typography.roles.xl.fontSize,
+                hug: true,
+              }}
               style={{ color: amountColor, minHeight: Math.ceil(Size.lg * fontScale) }}
             />
             {amountCaption}

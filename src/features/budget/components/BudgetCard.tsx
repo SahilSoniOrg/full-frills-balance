@@ -1,3 +1,4 @@
+import { FitText } from '@/src/components/shared/FitText';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import {
   AppButton,
@@ -7,7 +8,7 @@ import {
   PressScaleTouchable,
   AppText,
 } from '@/src/components/core';
-import { AppConfig, Size, Spacing } from '@/src/constants';
+import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { presentBudgetUsage } from '../helpers/budgetCardPresentation';
@@ -129,17 +130,21 @@ export function BudgetCard({
                 </Row>
               )}
             </Column>
-            <AppText
+            <FitText
               variant="heading"
               tabular
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.2}
+              maxFontSize={Typography.roles.heading.fontSize}
+              minFontSize={Typography.sizes.xs}
+              lineHeightRatio={
+                Typography.roles.heading.lineHeight / Typography.roles.heading.fontSize
+              }
+              hug
+              align="right"
+              containerStyle={{ marginLeft: 'auto' }}
               color={vm.isOver ? 'error' : 'text'}
-              style={{ flexShrink: 1, marginLeft: 'auto' }}
             >
               {headline}
-            </AppText>
+            </FitText>
           </Row>
           <BudgetProgressBar
             progress={usage.usagePercent * 100}

@@ -1,6 +1,6 @@
 import { AppCard, AppText } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { AppConfig, Spacing } from '@/src/constants';
+import { AppConfig, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { PlannedPaymentListPresentation } from '@/src/features/planned-payments/hooks/plannedPaymentListPresentation';
 import dayjs from 'dayjs';
@@ -37,9 +37,13 @@ export function PlannedPaymentMonthSummary({ listData }: SummaryProps) {
               formatStyle="compact"
               prefix="+"
               variant="heading"
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.2}
+              fit={{
+                maxFontSize: Typography.roles.heading.fontSize,
+                minFontSize: Typography.sizes.xs,
+                lineHeightRatio:
+                  Typography.roles.heading.lineHeight / Typography.roles.heading.fontSize,
+                hug: true,
+              }}
               weight="semibold"
               color="income"
             />
@@ -60,10 +64,13 @@ export function PlannedPaymentMonthSummary({ listData }: SummaryProps) {
           currencyCode={outgoing.mainCurrency.currencyCode}
           formatStyle="compact"
           variant="title"
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.2}
-          style={{ color: theme.text, maxWidth: '100%', flexShrink: 1 }}
+          fit={{
+            maxFontSize: Typography.roles.title.fontSize,
+            minFontSize: Typography.sizes.xl,
+            lineHeightRatio: Typography.roles.title.lineHeight / Typography.roles.title.fontSize,
+            hug: true,
+          }}
+          style={{ color: theme.text }}
           weight="bold"
         />
         <AppText variant="caption" color="secondary">
