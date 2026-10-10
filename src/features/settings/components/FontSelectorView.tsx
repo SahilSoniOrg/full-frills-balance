@@ -1,9 +1,8 @@
+import { ListRow, AppText, ListGroup } from '@/src/components/core';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppConfig, FontId, FontIds, FontSchemes } from '@/src/constants';
-import { AppText } from '@/src/components/core';
 import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { Box, Stack } from '@/src/design-system';
-import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import { useTheme } from '@/src/hooks/use-theme';
 import { logger } from '@/src/utils/logger';
 import { ensureAllFontSetsLoaded, isFontSetLoaded } from '@/src/utils/loadFontSet';
@@ -54,88 +53,92 @@ export function FontSelectorView({ fontId, setFontId }: FontSelectorProps) {
   }, []);
 
   return (
-    <Stack space={0}>
-      <SettingsMenuItem
-        searchId="typography"
-        leftIcon={
-          <AppText variant="body" weight="bold" style={{ color: theme.primary }}>
-            Aa
-          </AppText>
-        }
-        title={AppConfig.strings.settings.appearance.typographyTitle}
-        description={AppConfig.strings.settings.appearance.typographyDesc}
-        hasArrow={false}
-      />
-      <Box paddingHorizontal="md" marginTop="md">
-        <View style={[styles.list, { borderColor: theme.border, backgroundColor: theme.surface }]}>
-          {FONT_OPTIONS.map((option, index) => {
-            const selected = fontId === option.id;
-            const font = FontSchemes[option.id];
+    <ListGroup variant="plain">
+      <Stack space={0}>
+        <ListRow
+          focusId="typography"
+          leading={
+            <AppText variant="body" weight="bold" style={{ color: theme.primary }}>
+              Aa
+            </AppText>
+          }
+          title={AppConfig.strings.settings.appearance.typographyTitle}
+          subtitle={AppConfig.strings.settings.appearance.typographyDesc}
+          chevron={false}
+        />
+        <Box paddingHorizontal="md" marginTop="md">
+          <View
+            style={[styles.list, { borderColor: theme.border, backgroundColor: theme.surface }]}
+          >
+            {FONT_OPTIONS.map((option, index) => {
+              const selected = fontId === option.id;
+              const font = FontSchemes[option.id];
 
-            return (
-              <PressScaleTouchable
-                pressScale="subtle"
-                haptic="selection"
-                key={option.id}
-                onPress={() => setFontId(option.id)}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                style={[
-                  styles.row,
-                  index < FONT_OPTIONS.length - 1 && {
-                    borderBottomColor: theme.border,
-                    borderBottomWidth: 1,
-                  },
-                ]}
-              >
-                <View style={[styles.preview, { backgroundColor: theme.surfaceSecondary }]}>
-                  <AppText
-                    variant="heading"
-                    style={{
-                      fontFamily: previewsReady ? font.heading : fonts.heading,
-                      color: selected ? theme.primary : theme.text,
-                    }}
-                  >
-                    Aa
-                  </AppText>
-                  <AppText
-                    variant="caption"
-                    tabular
-                    color="secondary"
-                    style={{
-                      fontFamily: previewsReady
-                        ? (font.numeric ?? font).semibold
-                        : (fonts.numeric ?? fonts).semibold,
-                    }}
-                  >
-                    1,234
-                  </AppText>
-                </View>
+              return (
+                <PressScaleTouchable
+                  pressScale="subtle"
+                  haptic="selection"
+                  key={option.id}
+                  onPress={() => setFontId(option.id)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  style={[
+                    styles.row,
+                    index < FONT_OPTIONS.length - 1 && {
+                      borderBottomColor: theme.border,
+                      borderBottomWidth: 1,
+                    },
+                  ]}
+                >
+                  <View style={[styles.preview, { backgroundColor: theme.surfaceSecondary }]}>
+                    <AppText
+                      variant="heading"
+                      style={{
+                        fontFamily: previewsReady ? font.heading : fonts.heading,
+                        color: selected ? theme.primary : theme.text,
+                      }}
+                    >
+                      Aa
+                    </AppText>
+                    <AppText
+                      variant="caption"
+                      tabular
+                      color="secondary"
+                      style={{
+                        fontFamily: previewsReady
+                          ? (font.numeric ?? font).semibold
+                          : (fonts.numeric ?? fonts).semibold,
+                      }}
+                    >
+                      1,234
+                    </AppText>
+                  </View>
 
-                <View style={styles.copy}>
-                  <AppText
-                    variant="body"
-                    weight="semibold"
-                    style={{ fontFamily: previewsReady ? font.semibold : fonts.semibold }}
-                  >
-                    {option.label}
-                  </AppText>
-                  <AppText
-                    variant="caption"
-                    color="secondary"
-                    style={{ fontFamily: previewsReady ? font.regular : fonts.regular }}
-                  >
-                    {option.desc}
-                  </AppText>
-                </View>
+                  <View style={styles.copy}>
+                    <AppText
+                      variant="body"
+                      weight="semibold"
+                      style={{ fontFamily: previewsReady ? font.semibold : fonts.semibold }}
+                    >
+                      {option.label}
+                    </AppText>
+                    <AppText
+                      variant="caption"
+                      color="secondary"
+                      style={{ fontFamily: previewsReady ? font.regular : fonts.regular }}
+                    >
+                      {option.desc}
+                    </AppText>
+                  </View>
 
-                <SelectionIndicator selected={selected} size={22} />
-              </PressScaleTouchable>
-            );
-          })}
-        </View>
-      </Box>
-    </Stack>
+                  <SelectionIndicator selected={selected} size={22} />
+                </PressScaleTouchable>
+              );
+            })}
+          </View>
+        </Box>
+      </Stack>
+    </ListGroup>
   );
 }
 

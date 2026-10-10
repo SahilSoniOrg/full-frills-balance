@@ -1,8 +1,14 @@
+import {
+  ListRow,
+  Icon,
+  AppIcon,
+  AppSegmentedControl,
+  AppText,
+  ListGroup,
+} from '@/src/components/core';
 import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModal';
-import { Icon, AppIcon, AppSegmentedControl, AppText } from '@/src/components/core';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
-import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import { NotificationCadence } from '@/src/services/notification/NotificationService';
 import dayjs from 'dayjs';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
@@ -51,82 +57,89 @@ export const NotificationPreferenceView = ({
   const displayTime = formatClockTime(dayjs().hour(hour).minute(minute), resolvedHourCycle);
 
   return (
-    <Stack space={0}>
-      <SettingsMenuItem
-        searchId="notifications"
-        leftIcon={Icon.Notifications}
-        title={AppConfig.strings.settings.notifications.title}
-        description={AppConfig.strings.settings.notifications.description}
-        hasArrow={false}
-      />
-      <Box paddingHorizontal="md" marginTop="md">
-        <AppSegmentedControl
-          options={options}
-          value={cadence}
-          onChange={onUpdateCadence}
-          flex
-          size="md"
+    <ListGroup variant="plain">
+      <Stack space={0}>
+        <ListRow
+          focusId="notifications"
+          icon={Icon.Notifications}
+          title={AppConfig.strings.settings.notifications.title}
+          subtitle={AppConfig.strings.settings.notifications.description}
+          chevron={false}
         />
+        <Box paddingHorizontal="md" marginTop="md">
+          <AppSegmentedControl
+            options={options}
+            value={cadence}
+            onChange={onUpdateCadence}
+            flex
+            size="md"
+          />
 
-        <Box marginTop="md" flexDirection="row" alignItems="center" justifyContent="space-between">
-          <AppText variant="caption" color="secondary">
-            Reminder time
-          </AppText>
-          <TouchableOpacity
-            onPress={() => cadence !== 'none' && setShowTimePicker(true)}
-            activeOpacity={cadence === 'none' ? 1 : Opacity.heavy}
-            disabled={cadence === 'none'}
+          <Box
+            marginTop="md"
+            flexDirection="row"
+            alignItems="center"
+            justifyContent="space-between"
           >
-            <Box
-              flexDirection="row"
-              alignItems="center"
-              paddingHorizontal="md"
-              paddingVertical="sm"
-              borderRadius="full"
-              background="surfaceSecondary"
-              style={{ opacity: cadence === 'none' ? Opacity.muted : 1 }}
+            <AppText variant="caption" color="secondary">
+              Reminder time
+            </AppText>
+            <TouchableOpacity
+              onPress={() => cadence !== 'none' && setShowTimePicker(true)}
+              activeOpacity={cadence === 'none' ? 1 : Opacity.heavy}
+              disabled={cadence === 'none'}
             >
-              <AppText variant="caption" weight="semibold" color="text">
-                {displayTime}
-              </AppText>
-              <AppIcon
-                name={Icon.Clock}
-                size={14}
-                color={theme.textSecondary}
-                style={{ marginLeft: Spacing.xs, opacity: Opacity.heavy }}
-              />
-            </Box>
-          </TouchableOpacity>
+              <Box
+                flexDirection="row"
+                alignItems="center"
+                paddingHorizontal="md"
+                paddingVertical="sm"
+                borderRadius="full"
+                background="surfaceSecondary"
+                style={{ opacity: cadence === 'none' ? Opacity.muted : 1 }}
+              >
+                <AppText variant="caption" weight="semibold" color="text">
+                  {displayTime}
+                </AppText>
+                <AppIcon
+                  name={Icon.Clock}
+                  size={14}
+                  color={theme.textSecondary}
+                  style={{ marginLeft: Spacing.xs, opacity: Opacity.heavy }}
+                />
+              </Box>
+            </TouchableOpacity>
+          </Box>
+
+          {cadence !== 'none' && (
+            <TouchableOpacity onPress={onSendTest} style={styles.testButton}>
+              <Box
+                paddingVertical="xs"
+                paddingHorizontal="md"
+                borderRadius="sm"
+                style={{ borderWidth: 1, borderColor: theme.border }}
+                alignSelf="flex-start"
+              >
+                <AppText variant="caption" color="secondary">
+                  Send Test Notification (Now)
+                </AppText>
+              </Box>
+            </TouchableOpacity>
+          )}
         </Box>
 
-        {cadence !== 'none' && (
-          <TouchableOpacity onPress={onSendTest} style={styles.testButton}>
-            <Box
-              paddingVertical="xs"
-              paddingHorizontal="md"
-              borderRadius="sm"
-              style={{ borderWidth: 1, borderColor: theme.border }}
-              alignSelf="flex-start"
-            >
-              <AppText variant="caption" color="secondary">
-                Send Test Notification (Now)
-              </AppText>
-            </Box>
-          </TouchableOpacity>
-        )}
-      </Box>
-
-      <DateTimePickerModal
-        visible={showTimePicker}
-        date={dayjs().format('YYYY-MM-DD')}
-        time={formattedTime}
-        weekday={weekday}
-        showWeekdayPicker={cadence === 'weekly'}
-        onClose={() => setShowTimePicker(false)}
-        onSelect={handleSelectTime}
-        hideDate
-      />
-    </Stack>
+        <DateTimePickerModal
+          visible={showTimePicker}
+          date={dayjs().format('YYYY-MM-DD')}
+          time={formattedTime}
+          weekday={weekday}
+          showWeekdayPicker={cadence === 'weekly'}
+          onClose={() => setShowTimePicker(false)}
+          onSelect={handleSelectTime}
+          hideDate
+        />
+      </Stack>
+    </ListGroup>
   );
 };
 

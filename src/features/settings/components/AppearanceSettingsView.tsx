@@ -1,12 +1,10 @@
+import { AppSegmentedControl, ListGroup, ListRow } from '@/src/components/core';
 import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
-import { SettingsSegmentedControl } from '@/src/components/settings/SettingsSegmentedControl';
 import { Stack } from '@/src/design-system';
 import { FontSelectorView } from '@/src/features/settings/components/FontSelectorView';
 import { HourCycleSelectorView } from '@/src/features/settings/components/HourCycleSelectorView';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
-import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
-import { SettingsToggleItem } from '@/src/features/settings/components/SettingsToggleItem';
 import { ThemeSelectorView } from '@/src/features/settings/components/ThemeSelectorView';
 import {
   useAppearanceSettingsViewModel,
@@ -29,15 +27,22 @@ export function AppearanceSettingsView({ vm }: AppearanceSettingsViewProps) {
       <Stack space="xl">
         <ThemeSelectorView themeId={vm.themeId} setThemeId={vm.setThemeId} />
 
-        <SettingsSegmentedControl
-          leftIcon={Icon.Sliders}
-          focusId="mode"
-          title={AppConfig.strings.settings.appearance.modeTitle}
-          description="Choose how the selected theme follows your device."
-          options={MODE_OPTIONS}
-          value={vm.themePreference}
-          onChange={vm.setThemePreference}
-        />
+        <ListGroup variant="plain">
+          <ListRow
+            icon={Icon.Sliders}
+            focusId="mode"
+            title={AppConfig.strings.settings.appearance.modeTitle}
+            subtitle="Choose how the selected theme follows your device."
+          >
+            <AppSegmentedControl
+              options={MODE_OPTIONS}
+              value={vm.themePreference}
+              onChange={vm.setThemePreference}
+              flex
+              size="md"
+            />
+          </ListRow>
+        </ListGroup>
 
         <HourCycleSelectorView
           hourCyclePreference={vm.hourCyclePreference}
@@ -48,42 +53,55 @@ export function AppearanceSettingsView({ vm }: AppearanceSettingsViewProps) {
 
         <FontSelectorView fontId={vm.fontId} setFontId={vm.setFontId} />
 
-        <SettingsMenu header={AppConfig.strings.settings.sections.displayOptions}>
-          <SettingsToggleItem
-            searchId="reduce-motion"
-            leftIcon={Icon.Pause}
+        <ListGroup variant="plain" header={AppConfig.strings.settings.sections.displayOptions}>
+          <ListRow
+            focusId="reduce-motion"
+            icon={Icon.Pause}
             title={AppConfig.strings.settings.reduceMotion.title}
-            description={AppConfig.strings.settings.reduceMotion.description}
-            value={vm.reduceMotion}
-            onValueChange={vm.onToggleReduceMotion}
+            subtitle={AppConfig.strings.settings.reduceMotion.description}
             testID="settings-reduce-motion-toggle"
+            trailing={
+              <ListRow.Toggle value={vm.reduceMotion} onValueChange={vm.onToggleReduceMotion} />
+            }
           />
-          <SettingsToggleItem
-            searchId="compact-account-picker"
-            leftIcon={Icon.Wallet}
+          <ListRow
+            focusId="compact-account-picker"
+            icon={Icon.Wallet}
             title={AppConfig.strings.settings.accountPicker.title}
-            description={AppConfig.strings.settings.accountPicker.description}
-            value={vm.useCompactAccountPicker}
-            onValueChange={vm.onToggleCompactAccountPicker}
+            subtitle={AppConfig.strings.settings.accountPicker.description}
+            trailing={
+              <ListRow.Toggle
+                value={vm.useCompactAccountPicker}
+                onValueChange={vm.onToggleCompactAccountPicker}
+              />
+            }
           />
-          <SettingsToggleItem
-            searchId="account-statistics"
-            leftIcon={Icon.BarChart}
+          <ListRow
+            focusId="account-statistics"
+            icon={Icon.BarChart}
             title={AppConfig.strings.settings.stats.title}
-            description={AppConfig.strings.settings.stats.description}
-            value={vm.showAccountMonthlyStats}
-            onValueChange={vm.onToggleAccountMonthlyStats}
+            subtitle={AppConfig.strings.settings.stats.description}
+            trailing={
+              <ListRow.Toggle
+                value={vm.showAccountMonthlyStats}
+                onValueChange={vm.onToggleAccountMonthlyStats}
+              />
+            }
           />
-          <SettingsToggleItem
-            searchId="safe-to-spend-chart"
-            leftIcon={Icon.TrendingUp}
+          <ListRow
+            focusId="safe-to-spend-chart"
+            icon={Icon.TrendingUp}
             title={AppConfig.strings.settings.stsChart.title}
-            description={AppConfig.strings.settings.stsChart.description}
-            value={vm.showSafeToSpendChart}
-            onValueChange={vm.onToggleSafeToSpendChart}
+            subtitle={AppConfig.strings.settings.stsChart.description}
             testID="settings-sts-chart-toggle"
+            trailing={
+              <ListRow.Toggle
+                value={vm.showSafeToSpendChart}
+                onValueChange={vm.onToggleSafeToSpendChart}
+              />
+            }
           />
-        </SettingsMenu>
+        </ListGroup>
       </Stack>
     </SettingsLayout>
   );

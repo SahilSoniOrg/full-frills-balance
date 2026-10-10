@@ -4,7 +4,7 @@ import type {
   ScreenChrome,
   ScreenFabChrome,
 } from '@/src/components/layout/screenChrome';
-import { SettingsFocusProvider } from '@/src/components/settings/SettingsFocusTarget';
+import { FocusProvider } from '@/src/components/shared/FocusTarget';
 import { Size, Spacing } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsFooter } from '@/src/features/settings/components/SettingsFooter';
@@ -56,11 +56,7 @@ export function SettingsLayout({
     : { screenTitle: title, showBack: false, headerActions, fab };
 
   return (
-    <SettingsFocusProvider
-      targetId={focus}
-      scrollViewRef={scrollViewRef}
-      scrollOffsetRef={scrollOffsetRef}
-    >
+    <FocusProvider targetId={focus} scrollViewRef={scrollViewRef} scrollOffsetRef={scrollOffsetRef}>
       <ScreenWithChrome
         chrome={chrome}
         scrollable={scrollable}
@@ -86,6 +82,6 @@ export function SettingsLayout({
           </Stack>
         </Box>
       </ScreenWithChrome>
-    </SettingsFocusProvider>
+    </FocusProvider>
   );
 }

@@ -204,6 +204,8 @@ export const Size = {
   // Touch targets (minimum 44pt for accessibility)
   touchTarget: 44,
   touchTargetLg: 48,
+  /** Minimum height of a tappable list row (ListRow). */
+  rowMin: 40,
 
   // Header/Navigation
   headerHeight: 64,

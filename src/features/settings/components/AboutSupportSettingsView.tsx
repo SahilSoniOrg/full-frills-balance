@@ -1,9 +1,7 @@
-import { Icon, AppIcon } from '@/src/components/core';
+import { ListGroup, ListRow, Icon, AppIcon } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Box, Inline } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
-import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
-import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import {
   useAboutSupportViewModel,
   type AboutSupportViewModel,
@@ -20,52 +18,48 @@ export function AboutSupportSettingsView({ vm }: AboutSupportSettingsViewProps) 
 
   return (
     <SettingsLayout title={AppConfig.strings.settings.sections.aboutAndSupport}>
-      <SettingsMenu
+      <ListGroup
+        variant="plain"
         header={AppConfig.strings.settings.sections.communitySupport}
         focusId="about-support"
       >
-        <SettingsMenuItem
-          searchId="telegram"
-          leftIcon={Icon.MessageCircle}
-          iconColor
+        <ListRow
+          focusId="telegram"
+          icon={Icon.MessageCircle}
           title={AppConfig.strings.settings.community.telegramTitle}
-          description={AppConfig.strings.settings.community.telegramDesc}
+          subtitle={AppConfig.strings.settings.community.telegramDesc}
           onPress={vm.onOpenTelegram}
         />
-        <SettingsMenuItem
-          searchId="release-notes"
-          leftIcon={Icon.Document}
-          iconColor
+        <ListRow
+          focusId="release-notes"
+          icon={Icon.Document}
           title={AppConfig.strings.settings.community.releaseNotesTitle}
-          description={AppConfig.strings.settings.community.releaseNotesDesc}
+          subtitle={AppConfig.strings.settings.community.releaseNotesDesc}
           onPress={vm.onOpenReleaseNotes}
           testID="settings-release-notes"
         />
-        <SettingsMenuItem
-          searchId="play-store"
-          leftIcon={Icon.Star}
-          iconColor
+        <ListRow
+          focusId="play-store"
+          icon={Icon.Star}
           title={AppConfig.strings.settings.community.playStoreTitle}
-          description={AppConfig.strings.settings.community.playStoreDesc}
+          subtitle={AppConfig.strings.settings.community.playStoreDesc}
           onPress={vm.onOpenPlayStore}
         />
-        <SettingsMenuItem
-          searchId="github"
-          leftIcon={Icon.Github}
-          iconColor
+        <ListRow
+          focusId="github"
+          icon={Icon.Github}
           title={AppConfig.strings.settings.community.githubTitle}
-          description={AppConfig.strings.settings.community.githubDesc}
+          subtitle={AppConfig.strings.settings.community.githubDesc}
           onPress={vm.onOpenGithub}
         />
-        <SettingsMenuItem
-          searchId="report-bug"
-          leftIcon={Icon.Bug}
-          iconColor
+        <ListRow
+          focusId="report-bug"
+          icon={Icon.Bug}
           title="Report a Bug"
-          description="Share app logs and device info to help fix issues"
+          subtitle="Share app logs and device info to help fix issues"
           onPress={vm.onShareBugReport}
-          hasArrow={false}
-          rightContent={
+          chevron={false}
+          trailing={
             <Inline space="md">
               <TouchableOpacity
                 onPress={vm.onShareBugReport}
@@ -86,7 +80,7 @@ export function AboutSupportSettingsView({ vm }: AboutSupportSettingsViewProps) 
             </Inline>
           }
         />
-      </SettingsMenu>
+      </ListGroup>
     </SettingsLayout>
   );
 }

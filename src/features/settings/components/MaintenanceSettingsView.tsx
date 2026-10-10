@@ -1,10 +1,9 @@
+import { ListGroup, ListRow } from '@/src/components/core';
 import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
-import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
-import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import { SettingsMaintenanceOverlay } from '@/src/features/settings/components/SettingsMaintenanceOverlay';
 import { useDataMaintenanceActions } from '@/src/features/settings/hooks/useDataMaintenanceActions';
 import { analytics } from '@/src/services/analytics';
@@ -67,55 +66,55 @@ function MaintenanceSettingsView() {
 
   return (
     <SettingsLayout title={AppConfig.strings.settings.sections.maintenanceAndReset}>
-      <SettingsMenu header={AppConfig.strings.settings.sections.maintenance}>
-        <SettingsMenuItem
-          searchId="integrity"
-          leftIcon={Icon.Search}
+      <ListGroup variant="plain" header={AppConfig.strings.settings.sections.maintenance}>
+        <ListRow
+          focusId="integrity"
+          icon={Icon.Search}
           title={AppConfig.strings.settings.maintenance.integrityBtn}
-          description={AppConfig.strings.settings.maintenance.integrityDesc}
+          subtitle={AppConfig.strings.settings.maintenance.integrityDesc}
           onPress={vm.onFixIntegrity}
-          loading={vm.isMaintenanceMode}
+          trailing={vm.isMaintenanceMode && <ListRow.Spinner />}
         />
-        <SettingsMenuItem
-          searchId="journal-balance-audit"
-          leftIcon={Icon.Scale}
+        <ListRow
+          focusId="journal-balance-audit"
+          icon={Icon.Scale}
           title={AppConfig.strings.settings.maintenance.balanceAuditBtn}
-          description={AppConfig.strings.settings.maintenance.balanceAuditDesc}
+          subtitle={AppConfig.strings.settings.maintenance.balanceAuditDesc}
           onPress={vm.onAuditJournalBalances}
-          loading={vm.isAuditingBalances}
+          trailing={vm.isAuditingBalances && <ListRow.Spinner />}
         />
         {__DEV__ && (
-          <SettingsMenuItem
-            searchId="seed-mock-data"
-            leftIcon={Icon.Database}
+          <ListRow
+            focusId="seed-mock-data"
+            icon={Icon.Database}
             title={AppConfig.strings.settings.maintenance.seedMockBtn}
-            description={AppConfig.strings.settings.maintenance.seedMockDesc}
+            subtitle={AppConfig.strings.settings.maintenance.seedMockDesc}
             onPress={vm.onSeedMockData}
-            loading={vm.isSeeding}
+            trailing={vm.isSeeding && <ListRow.Spinner />}
           />
         )}
-        <SettingsMenuItem
-          searchId="cleanup"
-          leftIcon={Icon.Delete}
+        <ListRow
+          focusId="cleanup"
+          icon={Icon.Delete}
           title={AppConfig.strings.settings.danger.cleanupBtn}
-          description={AppConfig.strings.settings.danger.cleanupDesc}
+          subtitle={AppConfig.strings.settings.danger.cleanupDesc}
           onPress={vm.onCleanup}
-          loading={vm.isCleaning}
+          trailing={vm.isCleaning && <ListRow.Spinner />}
         />
-      </SettingsMenu>
+      </ListGroup>
 
-      <SettingsMenu header={AppConfig.strings.settings.sections.dangerZone}>
-        <SettingsMenuItem
-          searchId="reset"
-          leftIcon={Icon.Alert}
+      <ListGroup variant="plain" header={AppConfig.strings.settings.sections.dangerZone}>
+        <ListRow
+          focusId="reset"
+          icon={Icon.Alert}
           title={AppConfig.strings.settings.danger.resetBtn}
-          description={AppConfig.strings.settings.danger.resetDesc}
+          subtitle={AppConfig.strings.settings.danger.resetDesc}
           onPress={vm.onFactoryReset}
-          loading={vm.isResetting}
+          trailing={vm.isResetting && <ListRow.Spinner />}
           testID="factory-reset-button"
-          danger
+          destructive
         />
-      </SettingsMenu>
+      </ListGroup>
 
       <SettingsMaintenanceOverlay
         isVisible={vm.isMaintenanceMode}

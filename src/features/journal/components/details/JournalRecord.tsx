@@ -1,5 +1,5 @@
 import { setStringAsync } from 'expo-clipboard';
-import { DetailGroup } from '@/src/components/shared/DetailGroup';
+import { ListGroup } from '@/src/components/core';
 import { DetailRow } from '@/src/components/shared/DetailRow';
 import { AppConfig, JOURNAL_DETAILS_LIMITS } from '@/src/constants';
 import { toast } from '@/src/utils/alerts';
@@ -13,7 +13,7 @@ export function JournalRecord({ journalId }: { journalId: string }) {
       : short;
   const strings = AppConfig.strings.journalDetails;
   return (
-    <DetailGroup title={strings.record}>
+    <ListGroup header={strings.record} dividerInset="none">
       <DetailRow
         label={strings.journalNumber}
         value={label}
@@ -29,6 +29,6 @@ export function JournalRecord({ journalId }: { journalId: string }) {
           }
         }}
       />
-    </DetailGroup>
+    </ListGroup>
   );
 }

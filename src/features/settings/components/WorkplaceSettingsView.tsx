@@ -1,11 +1,9 @@
+import { ListGroup, ListRow, Icon, AppIcon, IconButton } from '@/src/components/core';
 import { EmptyStateView } from '@/src/components/shared/EmptyStateView';
 import { WorkplaceEditorModal } from '@/src/components/workplace/WorkplaceEditorModal';
-import { Icon, AppIcon, IconButton } from '@/src/components/core';
 import { PlainWorkplace } from '@/src/types/plainDtos';
-import { Box, Stack } from '@/src/design-system';
+import { Box, Inline, Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
-import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
-import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import {
   useWorkplaceSettingsViewModel,
   WorkplaceSettingsViewModel,
@@ -29,59 +27,24 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
     <>
       <SettingsLayout title="Workplaces" headerActions={headerActions}>
         <Stack space="xl">
-          <SettingsMenu header="Workplace Actions">
-            <SettingsMenuItem
-              searchId="create-workplace"
-              leftIcon={Icon.Plus}
+          <ListGroup variant="plain" header="Workplace Actions">
+            <ListRow
+              focusId="create-workplace"
+              icon={Icon.Plus}
               title="Create Workplace"
-              description="Start a new set of books and preferences"
+              subtitle="Start a new set of books and preferences"
               onPress={vm.startCreateWorkplace}
-              prominent
               testID="create-workplace"
             />
-          </SettingsMenu>
+          </ListGroup>
           {vm.workplaces.length > 0 ? (
-            <SettingsMenu header="Available Workplaces">
+            <ListGroup variant="plain" header="Available Workplaces">
               {vm.workplaces.map((workplace: PlainWorkplace) => {
                 const isActive = vm.activeWorkplace?.id === workplace.id;
                 return (
-                  <SettingsMenuItem
-                    searchId={`workplace-${workplace.id}`}
+                  <Inline
                     key={workplace.id}
-                    title={workplace.name}
-                    description={isActive ? 'Current active Workplace' : undefined}
-                    onPress={() => {
-                      if (!isActive) {
-                        vm.setActiveWorkplace(workplace);
-                      }
-                    }}
-                    leftIcon={workplace.icon}
-                    rightContent={
-                      isActive ? (
-                        <AppIcon name={Icon.Check} color={theme.success} size={20} />
-                      ) : null
-                    }
-                    rightAction={
-                      <Box flexDirection="row" alignItems="center">
-                        <IconButton
-                          name={Icon.Edit}
-                          variant="clear"
-                          accessibilityLabel={`Edit ${workplace.name}`}
-                          testID={`workplace-edit-${workplace.id}`}
-                          onPress={() => setEditingWorkplace(workplace)}
-                        />
-                        <IconButton
-                          name={Icon.Delete}
-                          variant="clear"
-                          iconColor={theme.error}
-                          accessibilityLabel={`Delete ${workplace.name}`}
-                          testID={`workplace-delete-${workplace.id}`}
-                          disabled={vm.deletingWorkplaceId !== null}
-                          onPress={() => vm.deleteWorkplace(workplace)}
-                        />
-                      </Box>
-                    }
-                    hasArrow={false}
+                    align="center"
                     style={
                       isActive
                         ? {
@@ -90,10 +53,44 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
                           }
                         : undefined
                     }
-                  />
+                  >
+                    <Box flex={1}>
+                      <ListRow
+                        focusId={`workplace-${workplace.id}`}
+                        title={workplace.name}
+                        subtitle={isActive ? 'Current active Workplace' : undefined}
+                        onPress={() => {
+                          if (!isActive) vm.setActiveWorkplace(workplace);
+                        }}
+                        icon={workplace.icon}
+                        trailing={
+                          isActive ? (
+                            <AppIcon name={Icon.Check} color={theme.success} size={20} />
+                          ) : null
+                        }
+                        chevron={false}
+                      />
+                    </Box>
+                    <IconButton
+                      name={Icon.Edit}
+                      variant="clear"
+                      accessibilityLabel={`Edit ${workplace.name}`}
+                      testID={`workplace-edit-${workplace.id}`}
+                      onPress={() => setEditingWorkplace(workplace)}
+                    />
+                    <IconButton
+                      name={Icon.Delete}
+                      variant="clear"
+                      iconColor={theme.error}
+                      accessibilityLabel={`Delete ${workplace.name}`}
+                      testID={`workplace-delete-${workplace.id}`}
+                      disabled={vm.deletingWorkplaceId !== null}
+                      onPress={() => vm.deleteWorkplace(workplace)}
+                    />
+                  </Inline>
                 );
               })}
-            </SettingsMenu>
+            </ListGroup>
           ) : (
             <EmptyStateView
               icon={Icon.Briefcase}

@@ -1,7 +1,7 @@
 import {
   createSettingsSearchCatalog,
   filterSettingsSearchItems,
-} from '@/src/features/settings/components/settingsSearchCatalog';
+} from '@/src/features/settings/components/settingsSections';
 import { Platform } from 'react-native';
 
 const actions = {

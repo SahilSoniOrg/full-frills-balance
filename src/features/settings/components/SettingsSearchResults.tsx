@@ -1,10 +1,16 @@
-import { Icon, AppIcon, AppInput, AppText, PressScaleTouchable } from '@/src/components/core';
+import {
+  ListGroup,
+  ListRow,
+  Icon,
+  AppIcon,
+  AppInput,
+  AppText,
+  PressScaleTouchable,
+} from '@/src/components/core';
 import { Box, Stack } from '@/src/design-system';
-import { SettingsMenuSection } from '@/src/features/settings/components/SettingsMenuSection';
-import { SettingsMenuItem } from '@/src/components/settings/SettingsMenuItem';
-import type { SettingsSearchItem } from '@/src/features/settings/components/settingsSearchCatalog';
+import type { SettingsSearchItem } from '@/src/features/settings/components/settingsSections';
 import { useTheme } from '@/src/hooks/use-theme';
-import { filterSettingsSearchItems } from '@/src/features/settings/components/settingsSearchCatalog';
+import { filterSettingsSearchItems } from '@/src/features/settings/components/settingsSections';
 import { useMemo, type RefObject } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
@@ -69,19 +75,18 @@ export function SettingsSearchResults({
           </AppText>
         </Box>
       ) : (
-        <SettingsMenuSection header="Search results">
+        <ListGroup variant="plain" header="Search results">
           {results.map(item => (
-            <SettingsMenuItem
+            <ListRow
               key={item.id}
-              leftIcon={item.icon}
-              iconBackground={false}
+              icon={item.icon}
               title={item.title}
-              description={`${item.section} · ${item.description}`}
+              subtitle={`${item.section} · ${item.description}`}
               onPress={() => item.navigate(item.focusId)}
               testID={`settings-search-result-${item.id}`}
             />
           ))}
-        </SettingsMenuSection>
+        </ListGroup>
       )}
     </Stack>
   );

@@ -1,9 +1,7 @@
-import { Icon, AppInput } from '@/src/components/core';
+import { ListGroup, ListRow, Icon, AppInput } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
-import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
-import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import {
   usePersonalizationViewModel,
   type PersonalizationViewModel,
@@ -20,14 +18,14 @@ export function PersonalizationSettingsView({ vm }: PersonalizationSettingsViewP
   return (
     <SettingsLayout title={AppConfig.strings.settings.sections.profile}>
       <Stack space="xl">
-        <SettingsMenu header={AppConfig.strings.settings.sections.profile}>
-          <SettingsMenuItem
-            searchId="profile-name"
-            leftIcon={Icon.User}
+        <ListGroup variant="plain" header={AppConfig.strings.settings.sections.profile}>
+          <ListRow
+            focusId="profile-name"
+            icon={Icon.User}
             title={AppConfig.strings.settings.personalization.yourName}
-            description={AppConfig.strings.settings.personalization.yourNameDesc}
-            hasArrow={false}
-            rightContent={
+            subtitle={AppConfig.strings.settings.personalization.yourNameDesc}
+            chevron={false}
+            trailing={
               <View style={{ width: 140 }}>
                 <AppInput
                   value={vm.draftName}
@@ -41,30 +39,29 @@ export function PersonalizationSettingsView({ vm }: PersonalizationSettingsViewP
               </View>
             }
           />
-        </SettingsMenu>
+        </ListGroup>
 
-        <SettingsMenu header={AppConfig.strings.settings.sections.documents}>
-          <SettingsMenuItem
-            searchId="privacy-notice"
-            leftIcon={Icon.Document}
+        <ListGroup variant="plain" header={AppConfig.strings.settings.sections.documents}>
+          <ListRow
+            focusId="privacy-notice"
+            icon={Icon.Document}
             title={PRIVACY_NOTICE_STRINGS.title}
-            description={PRIVACY_NOTICE_STRINGS.subtitle}
+            subtitle={PRIVACY_NOTICE_STRINGS.subtitle}
             onPress={vm.onOpenPrivacyNotice}
             testID="settings-privacy-notice"
           />
-        </SettingsMenu>
+        </ListGroup>
 
-        <SettingsMenu header={AppConfig.strings.settings.sections.devicesAndSessions}>
-          <SettingsMenuItem
-            searchId="devices"
-            leftIcon={Icon.Settings}
+        <ListGroup variant="plain" header={AppConfig.strings.settings.sections.devicesAndSessions}>
+          <ListRow
+            focusId="devices"
+            icon={Icon.Settings}
             title={AppConfig.strings.settings.sections.devicesAndSessions}
-            description={AppConfig.strings.settings.hub.devicesDescription}
+            subtitle={AppConfig.strings.settings.hub.devicesDescription}
             onPress={AppNavigation.toDeviceSettings}
-            prominent
             testID="profile-devices-sessions"
           />
-        </SettingsMenu>
+        </ListGroup>
       </Stack>
     </SettingsLayout>
   );

@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { AppButton, AppText, PressScaleTouchable } from '@/src/components/core';
+import { AppButton, AppText, PressScaleTouchable, ListGroup } from '@/src/components/core';
 import { BudgetProgressBar } from '@/src/components/budget/BudgetProgressBar';
-import { DetailGroup } from '@/src/components/shared/DetailGroup';
 import { ErrorStateView } from '@/src/components/shared/ErrorStateView';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
@@ -21,7 +20,7 @@ export function JournalBudgetImpact({
   const strings = AppConfig.strings.journalDetails;
   if (error)
     return (
-      <DetailGroup title={strings.budget}>
+      <ListGroup header={strings.budget} dividerInset="none">
         <ErrorStateView
           variant="inline"
           message={strings.budgetsUnavailable}
@@ -29,11 +28,11 @@ export function JournalBudgetImpact({
           onRetry={onRetry}
           style={{ padding: Spacing.lg }}
         />
-      </DetailGroup>
+      </ListGroup>
     );
   if (budgets.length === 0) return null;
   return (
-    <DetailGroup title={strings.budget} testID="journal-budget-impact">
+    <ListGroup header={strings.budget} testID="journal-budget-impact" dividerInset="none">
       {(expanded ? budgets : budgets.slice(0, JOURNAL_DETAILS_LIMITS.budgetPreview)).map(budget => {
         const { usage } = budget;
         const over = usage.remaining < 0;
@@ -90,6 +89,6 @@ export function JournalBudgetImpact({
           {strings.more(budgets.length - JOURNAL_DETAILS_LIMITS.budgetPreview)}
         </AppButton>
       ) : null}
-    </DetailGroup>
+    </ListGroup>
   );
 }

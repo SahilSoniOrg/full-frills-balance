@@ -1,6 +1,7 @@
+import { AppSegmentedControl, AppText, ListRow, ListGroup } from '@/src/components/core';
+import { Inline } from '@/src/design-system';
 import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
-import { SettingsSegmentedControl } from '@/src/components/settings/SettingsSegmentedControl';
 import {
   HOUR_CYCLE_PREFERENCES,
   type HourCyclePreference,
@@ -40,15 +41,30 @@ export function HourCycleSelectorView({
   focusId,
 }: HourCycleSelectorProps) {
   return (
-    <SettingsSegmentedControl
-      leftIcon={Icon.Clock}
-      focusId={focusId}
-      title={AppConfig.strings.settings.appearance.hourCycleTitle}
-      description={AppConfig.strings.settings.appearance.hourCycleDesc}
-      titleMeta={hourCycleHint(hourCyclePreference, resolvedHourCycle)}
-      options={HOUR_CYCLE_OPTIONS}
-      value={hourCyclePreference}
-      onChange={setHourCyclePreference}
-    />
+    <ListGroup variant="plain">
+      <ListRow
+        icon={Icon.Clock}
+        focusId={focusId}
+        title={
+          <Inline align="center" space="sm">
+            <AppText variant="body" weight="semibold">
+              {AppConfig.strings.settings.appearance.hourCycleTitle}
+            </AppText>
+            <AppText variant="caption" color="secondary">
+              {hourCycleHint(hourCyclePreference, resolvedHourCycle)}
+            </AppText>
+          </Inline>
+        }
+        subtitle={AppConfig.strings.settings.appearance.hourCycleDesc}
+      >
+        <AppSegmentedControl
+          options={HOUR_CYCLE_OPTIONS}
+          value={hourCyclePreference}
+          onChange={setHourCyclePreference}
+          flex
+          size="md"
+        />
+      </ListRow>
+    </ListGroup>
   );
 }

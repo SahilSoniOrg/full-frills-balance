@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { AppText, AppIcon, Icon, IconTile, ListRow } from '@/src/components/core';
-import { DetailGroup } from '@/src/components/shared/DetailGroup';
+import { AppText, AppIcon, Icon, IconTile, ListRow, ListGroup } from '@/src/components/core';
 import { ErrorStateView } from '@/src/components/shared/ErrorStateView';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import type { JournalSourceModel } from '../../journalDetailsPresentation';
@@ -11,7 +10,7 @@ export function JournalSource({ source }: { source: JournalSourceModel }) {
   const strings = AppConfig.strings.journalDetails;
   if (source.error)
     return (
-      <DetailGroup title={strings.source}>
+      <ListGroup header={strings.source} dividerInset="none">
         <ErrorStateView
           variant="inline"
           message={strings.sourceUnavailable}
@@ -19,7 +18,7 @@ export function JournalSource({ source }: { source: JournalSourceModel }) {
           onRetry={source.onRetry}
           style={{ padding: Spacing.lg }}
         />
-      </DetailGroup>
+      </ListGroup>
     );
   const sms = source.sms?.[0];
   const imported = source.import;
@@ -37,7 +36,7 @@ export function JournalSource({ source }: { source: JournalSourceModel }) {
     : imported?.date;
   return (
     <>
-      <DetailGroup title={strings.source} testID="journal-source">
+      <ListGroup header={strings.source} testID="journal-source" dividerInset="none">
         <ListRow
           minHeight={Size.touchTargetLg}
           title={<AppText weight="semibold">{title}</AppText>}
@@ -58,7 +57,7 @@ export function JournalSource({ source }: { source: JournalSourceModel }) {
           }
           testID="journal-source-row"
         />
-      </DetailGroup>
+      </ListGroup>
       {source.sms ? (
         <JournalSmsSheet
           visible={open}

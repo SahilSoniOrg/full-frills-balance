@@ -1,10 +1,9 @@
+import { ListGroup, ListRow } from '@/src/components/core';
 import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import { NotificationPreferenceView } from '@/src/features/settings/components/NotificationPreferenceView';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
-import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
-import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import {
   useNotificationSettingsViewModel,
   type NotificationSettingsViewModel,
@@ -30,16 +29,19 @@ export function AutomationSettingsView({
     <SettingsLayout title={title}>
       <Stack space="xl">
         {Platform.OS === 'android' && (
-          <SettingsMenu header={AppConfig.strings.settings.personalization.smsAutomationHeader}>
-            <SettingsMenuItem
-              searchId="sms-settings"
-              leftIcon={Icon.MessageSquare}
+          <ListGroup
+            variant="plain"
+            header={AppConfig.strings.settings.personalization.smsAutomationHeader}
+          >
+            <ListRow
+              focusId="sms-settings"
+              icon={Icon.MessageSquare}
               title={AppConfig.strings.settings.personalization.smsSettingsTitle}
-              description={AppConfig.strings.settings.personalization.smsSettingsDesc}
+              subtitle={AppConfig.strings.settings.personalization.smsSettingsDesc}
               onPress={onOpenSmsSettings}
               testID="settings-sms-settings"
             />
-          </SettingsMenu>
+          </ListGroup>
         )}
 
         <NotificationPreferenceView
