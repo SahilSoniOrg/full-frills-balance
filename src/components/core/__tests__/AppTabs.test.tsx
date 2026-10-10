@@ -1,13 +1,13 @@
 import { AppTabs } from '@/src/components/core/AppTabs';
 import { Spacing } from '@/src/constants';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
-import { triggerHaptic } from '@/src/utils/haptics';
+import { triggerPressHaptic } from '@/src/utils/haptics';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
 import { ScrollView } from 'react-native';
 import { getLayoutPath } from '@/src/testing/layoutAssertions';
 
 jest.mock('@/src/utils/haptics', () => ({
-  triggerHaptic: jest.fn(),
+  triggerPressHaptic: jest.fn(),
 }));
 
 jest.mock('@/src/hooks/use-reduced-motion', () => ({
@@ -25,13 +25,13 @@ describe('AppTabs', () => {
     jest.mocked(useReducedMotion).mockReturnValue(false);
   });
 
-  it('renders tabs and calls onChange with light haptic when selection changes', () => {
+  it('renders tabs and calls onChange with selection haptic when selection changes', () => {
     const onChange = jest.fn();
     render(<AppTabs options={OPTIONS} value="budgets" onChange={onChange} testID="commitments" />);
 
     fireEvent.press(screen.getByTestId('commitments-item-bills'));
 
-    expect(triggerHaptic).toHaveBeenCalledWith('light');
+    expect(triggerPressHaptic).toHaveBeenCalledWith('selection');
     expect(onChange).toHaveBeenCalledWith('bills');
   });
 
@@ -50,7 +50,7 @@ describe('AppTabs', () => {
 
     fireEvent.press(screen.getByTestId('commitments-item-budgets'));
 
-    expect(triggerHaptic).not.toHaveBeenCalled();
+    expect(triggerPressHaptic).not.toHaveBeenCalled();
     expect(onChange).not.toHaveBeenCalled();
   });
 

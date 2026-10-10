@@ -1,9 +1,9 @@
 import { FloatingActionButton } from '@/src/components/core/FloatingActionButton';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
-import { triggerHaptic } from '@/src/utils/haptics';
+import { triggerPressHaptic } from '@/src/utils/haptics';
 
 jest.mock('@/src/utils/haptics', () => ({
-  triggerHaptic: jest.fn(),
+  triggerPressHaptic: jest.fn(),
 }));
 
 jest.mock('@/src/hooks/use-reduced-motion', () => ({
@@ -11,13 +11,13 @@ jest.mock('@/src/hooks/use-reduced-motion', () => ({
 }));
 
 describe('FloatingActionButton', () => {
-  it('triggers a light haptic and calls onPress', () => {
+  it('triggers a primary haptic and calls onPress', () => {
     const onPress = jest.fn();
     render(<FloatingActionButton onPress={onPress} />);
 
     fireEvent.press(screen.getByTestId('fab-button'));
 
-    expect(triggerHaptic).toHaveBeenCalledWith('light');
+    expect(triggerPressHaptic).toHaveBeenCalledWith('primary');
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 

@@ -310,7 +310,14 @@ jest.mock('react-native-reanimated', () => {
   return {
     __esModule: true,
     default: Animated,
-    useSharedValue: jest.fn(val => ({ value: val })),
+    useSharedValue: jest.fn(val => {
+      const shared = { value: val };
+      shared.get = () => shared.value;
+      shared.set = next => {
+        shared.value = typeof next === 'function' ? next(shared.value) : next;
+      };
+      return shared;
+    }),
     useAnimatedStyle: jest.fn(fn => {
       try {
         return typeof fn === 'function' ? fn() : {};

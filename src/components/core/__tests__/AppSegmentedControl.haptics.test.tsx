@@ -1,9 +1,9 @@
 import { AppSegmentedControl } from '@/src/components/core/AppSegmentedControl';
-import { triggerHaptic } from '@/src/utils/haptics';
+import { triggerPressHaptic } from '@/src/utils/haptics';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
 
 jest.mock('@/src/utils/haptics', () => ({
-  triggerHaptic: jest.fn(),
+  triggerPressHaptic: jest.fn(),
 }));
 
 const OPTIONS = [
@@ -16,7 +16,7 @@ describe('AppSegmentedControl haptics', () => {
     jest.clearAllMocks();
   });
 
-  it('fires light haptic when selection changes', () => {
+  it('fires selection haptic when selection changes', () => {
     const onChange = jest.fn();
     render(
       <AppSegmentedControl options={OPTIONS} value="simple" onChange={onChange} testID="mode" />,
@@ -24,7 +24,7 @@ describe('AppSegmentedControl haptics', () => {
 
     fireEvent.press(screen.getByTestId('mode-item-split'));
 
-    expect(triggerHaptic).toHaveBeenCalledWith('light');
+    expect(triggerPressHaptic).toHaveBeenCalledWith('selection');
     expect(onChange).toHaveBeenCalledWith('split');
   });
 
@@ -36,7 +36,7 @@ describe('AppSegmentedControl haptics', () => {
 
     fireEvent.press(screen.getByTestId('mode-item-simple'));
 
-    expect(triggerHaptic).not.toHaveBeenCalled();
+    expect(triggerPressHaptic).not.toHaveBeenCalled();
     expect(onChange).not.toHaveBeenCalled();
   });
 });

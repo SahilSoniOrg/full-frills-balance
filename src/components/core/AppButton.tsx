@@ -166,6 +166,13 @@ export function AppButton({
       surfaceStyle={[buttonCombinedStyle, buttonStyle]}
       disabled={disabled || loading}
       onPress={onPress}
+      haptic={
+        variant === 'primary'
+          ? 'primary'
+          : variant === 'destructive' || variant === 'destructive-outline'
+            ? 'destructive'
+            : 'none'
+      }
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{

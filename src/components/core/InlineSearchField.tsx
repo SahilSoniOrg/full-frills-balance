@@ -1,8 +1,9 @@
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { Icon } from '@/src/types/domainIcons';
 import { AppIcon } from '@/src/components/core/AppIcon';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
-import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 import { useEaseInLayoutAnimation } from '@/src/hooks/useEaseInLayoutAnimation';
 import { useCallback, useRef, useState } from 'react';
 
@@ -74,7 +75,7 @@ export const InlineSearchField = ({
 
   if (!isExpanded) {
     return (
-      <TouchableOpacity
+      <PressScaleTouchable
         onPress={handleExpand}
         style={[styles.iconButton, { backgroundColor: theme.surface }, Shape.elevation.sm]}
         hitSlop={Spacing.sm}
@@ -83,7 +84,7 @@ export const InlineSearchField = ({
         accessibilityLabel={placeholder}
       >
         <AppIcon name={Icon.Search} size={Size.sm} color={theme.text} />
-      </TouchableOpacity>
+      </PressScaleTouchable>
     );
   }
 
@@ -109,7 +110,7 @@ export const InlineSearchField = ({
         selectionColor={theme.primary}
         autoFocus
       />
-      <TouchableOpacity
+      <PressScaleTouchable
         onPress={value.length > 0 ? handleClear : handleCollapse}
         style={styles.clearButton}
         hitSlop={Spacing.sm}
@@ -117,7 +118,7 @@ export const InlineSearchField = ({
         accessibilityLabel={value.length > 0 ? 'Clear search' : 'Collapse search'}
       >
         <AppIcon name={Icon.Close} size={Size.sm} color={theme.textSecondary} />
-      </TouchableOpacity>
+      </PressScaleTouchable>
     </View>
   );
 };
