@@ -1,7 +1,34 @@
 import { render, fireEvent, act } from '@/src/utils/test-utils';
 import { DetailHeaderMenuActions } from '../DetailHeaderMenuActions';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { IconButton } from '@/src/components/core';
+import { Icon, IconButton } from '@/src/components/core';
+import { Typography } from '@/src/constants';
+
+it.each(['leading', 'trailing'] as const)(
+  'keeps the privacy toggle in the %s position and toggles screen privacy',
+  privacyPosition => {
+    const screen = render(
+      <DetailHeaderMenuActions
+        privacyPosition={privacyPosition}
+        leadingActions={[{ name: Icon.Edit, onPress: jest.fn(), testID: 'edit-action' }]}
+        actions={[{ label: 'Delete', onPress: jest.fn() }]}
+      />,
+    );
+    const buttons = screen.UNSAFE_getAllByType(IconButton);
+    expect(buttons.map(button => button.props.testID)).toEqual(
+      privacyPosition === 'leading'
+        ? ['privacy-toggle', 'edit-action', 'detail-more-actions']
+        : ['edit-action', 'detail-more-actions', 'privacy-toggle'],
+    );
+    const privacy = buttons.find(button => button.props.testID === 'privacy-toggle');
+    expect(privacy?.props.size).toBe(Typography.sizes.xl);
+    expect(privacy?.props.variant).toBe('surface');
+    const toggle = screen.getByTestId('privacy-toggle');
+    const initialLabel = toggle.props.accessibilityLabel;
+    fireEvent.press(toggle);
+    expect(screen.getByTestId('privacy-toggle').props.accessibilityLabel).not.toBe(initialLabel);
+  },
+);
 
 jest.mock('@/src/components/overlays/ModalSurface', () => {
   const { ModalSurface: ActualModalSurface } = jest.requireActual<

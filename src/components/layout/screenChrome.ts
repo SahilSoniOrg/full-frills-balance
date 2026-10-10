@@ -28,7 +28,7 @@ type ScreenChromeShared = {
  * - Privacy eye is always the trailing (rightmost) header action when present.
  *
  * Header actions:
- * - Simple icon rows → `ScreenHeaderActions` (+ `MoneyDetailHeaderActions` for privacy).
+ * - Simple icon rows → `ScreenHeaderActions` (privacy uses its leading/trailing slots).
  * - Badges, inline search, text buttons → feature `*HeaderActions` (still trailing privacy).
  *
  * Title alignment is derived in NavigationBar (not set here):
