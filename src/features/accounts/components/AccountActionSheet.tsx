@@ -1,17 +1,9 @@
 import { StyleSheet, View } from 'react-native';
-import {
-  Icon,
-  AppIcon,
-  AppText,
-  IvyIcon,
-  type IconName,
-  PressScaleTouchable,
-} from '@/src/components/core';
+import { Icon, AppText, IvyIcon, type IconName, ListGroup, ListRow } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { AccountCardViewModel } from '@/src/features/accounts/utils/transformAccounts';
-import { useTheme } from '@/src/hooks/use-theme';
 
 export interface AccountActionSheetProps {
   visible: boolean;
@@ -44,8 +36,6 @@ export function AccountActionSheet({
   onToggleArchive,
   onDelete,
 }: AccountActionSheetProps) {
-  const { theme } = useTheme();
-
   if (!account) return null;
 
   const actions: ActionItem[] = [
@@ -142,38 +132,19 @@ export function AccountActionSheet({
           </AppText>
         </View>
 
-        {/* Action items list */}
-        <View style={styles.actionsList}>
-          {actions.map(action => {
-            const itemColor = action.destructive ? theme.error : theme.text;
-            return (
-              <PressScaleTouchable
-                key={action.id}
-                onPress={action.onPress}
-                activeOpacity={Opacity.heavy}
-                style={[styles.actionRow, { borderBottomColor: theme.border }]}
-                accessibilityRole="button"
-                accessibilityLabel={action.label}
-              >
-                <View style={styles.actionLeft}>
-                  <AppIcon
-                    name={action.icon}
-                    size={Size.iconMd}
-                    color={action.destructive ? theme.error : theme.primary}
-                  />
-                  <AppText
-                    variant="body"
-                    weight="medium"
-                    style={{ color: itemColor, marginLeft: Spacing.md }}
-                  >
-                    {action.label}
-                  </AppText>
-                </View>
-                <AppIcon name={Icon.ChevronRight} size={Size.iconSm} color={theme.textSecondary} />
-              </PressScaleTouchable>
-            );
-          })}
-        </View>
+        <ListGroup>
+          {actions.map(action => (
+            <ListRow
+              key={action.id}
+              icon={action.icon}
+              title={action.label}
+              destructive={action.destructive}
+              onPress={action.onPress}
+              accessibilityLabel={action.label}
+              chevron
+            />
+          ))}
+        </ListGroup>
       </View>
     </ModalSurface>
   );
@@ -191,20 +162,5 @@ const styles = StyleSheet.create({
     borderRadius: Shape.radius.md,
     borderWidth: 1,
     marginBottom: Spacing.xs,
-  },
-  actionsList: {
-    gap: Spacing.xs,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  actionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
 });

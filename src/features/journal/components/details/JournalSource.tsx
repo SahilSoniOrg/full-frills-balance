@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AppText, AppIcon, Icon, IconTile, ListRow, ListGroup } from '@/src/components/core';
+import { AppText, Icon, IconTile, ListRow, ListGroup } from '@/src/components/core';
 import { ErrorStateView } from '@/src/components/shared/ErrorStateView';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import type { JournalSourceModel } from '../../journalDetailsPresentation';
@@ -50,11 +50,7 @@ export function JournalSource({ source }: { source: JournalSourceModel }) {
           leading={<IconTile icon={sms ? Icon.MessageSquare : Icon.Document} tint="asset" />}
           onPress={sms ? () => setOpen(true) : undefined}
           accessibilityLabel={title}
-          trailing={
-            sms ? (
-              <AppIcon name={Icon.ChevronRight} size={Size.iconXs} color="textSecondary" />
-            ) : undefined
-          }
+          chevron={Boolean(sms)}
           testID="journal-source-row"
         />
       </ListGroup>

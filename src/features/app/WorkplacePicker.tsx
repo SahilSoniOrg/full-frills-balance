@@ -7,6 +7,7 @@ import {
   ListRow,
   LoadingView,
   parseIconName,
+  type IconName,
 } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { Spacing } from '@/src/constants/design-tokens';
@@ -33,6 +34,9 @@ export function WorkplacePicker({
 }) {
   const copy = AppConfig.strings.settings.workplacePicker;
   const { theme } = useTheme();
+  const tile = (icon: IconName) => (
+    <IconTile icon={icon} tint={isTransitioning ? 'textSecondary' : 'primary'} />
+  );
 
   return (
     <Page
@@ -65,18 +69,13 @@ export function WorkplacePicker({
       )}
       {isTransitioning && <LoadingView loading text={copy.opening} size="small" />}
       {workplaces.length > 0 && (
-        <ListGroup variant="plain" header="Available Workplaces">
+        <ListGroup variant="plain" header={copy.available}>
           {workplaces.map(workplace => (
             <ListRow
               key={workplace.id}
-              leading={
-                <IconTile
-                  icon={parseIconName(workplace.icon, Icon.Briefcase)}
-                  tint={isTransitioning ? 'textSecondary' : 'primary'}
-                />
-              }
+              leading={tile(parseIconName(workplace.icon, Icon.Briefcase))}
               title={workplace.name}
-              subtitle="Open this workplace"
+              subtitle={copy.openThis}
               onPress={() => onSelect(workplace.id)}
               disabled={isTransitioning}
               testID={`workplace-picker-option-${workplace.id}`}
@@ -85,26 +84,19 @@ export function WorkplacePicker({
         </ListGroup>
       )}
       <View style={styles.startAnother}>
-        <ListGroup variant="plain" header="Start another">
+        <ListGroup variant="plain" header={copy.startAnother}>
           <ListRow
-            leading={
-              <IconTile icon={Icon.Plus} tint={isTransitioning ? 'textSecondary' : 'primary'} />
-            }
+            leading={tile(Icon.Plus)}
             title={copy.create}
-            subtitle="Set up a new set of books"
+            subtitle={copy.createSubtitle}
             onPress={onCreate}
             disabled={isTransitioning}
             testID="workplace-picker-create"
           />
           <ListRow
-            leading={
-              <IconTile
-                icon={Icon.FolderOpen}
-                tint={isTransitioning ? 'textSecondary' : 'primary'}
-              />
-            }
+            leading={tile(Icon.FolderOpen)}
             title={copy.import}
-            subtitle="Restore books from a backup"
+            subtitle={copy.importSubtitle}
             onPress={onImport}
             disabled={isTransitioning}
             testID="workplace-picker-import"

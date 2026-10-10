@@ -1,6 +1,5 @@
-import { AppCard, AppText, AppIcon, Icon, PressScaleTouchable } from '@/src/components/core';
-import { AppConfig, Size, Spacing } from '@/src/constants';
-import { Row } from '@/src/design-system';
+import { AppText, ListGroup, ListRow } from '@/src/components/core';
+import { AppConfig } from '@/src/constants';
 import type { PlainAccount, PlainBudget } from '@/src/types/plainDtos';
 import { formatRecurrence } from '@/src/utils/recurrenceLabels';
 
@@ -28,24 +27,22 @@ export function BudgetSetupDisclosure({
         : strings.noFundingAccounts;
   const summary = strings.setupSummary(formatRecurrence(budget), accounts);
   return (
-    <AppCard overflow="visible" padding="none" radius="r3" background="surface">
-      <PressScaleTouchable
-        onPress={onEdit}
-        accessibilityRole="button"
-        accessibilityLabel={`${strings.setup} · ${summary}`}
-        style={{ minHeight: Size.touchTarget }}
-        surfaceStyle={{ padding: Spacing.sm }}
-      >
-        <Row align="center" gap="xs">
+    <ListGroup>
+      <ListRow
+        title={
           <AppText variant="body" weight="medium">
             {strings.setup}
           </AppText>
-          <AppText variant="caption" color="secondary" style={{ flex: 1 }}>
+        }
+        subtitle={
+          <AppText variant="caption" color="secondary">
             {summary}
           </AppText>
-          <AppIcon name={Icon.ChevronRight} size={Size.iconSm} color="secondary" />
-        </Row>
-      </PressScaleTouchable>
-    </AppCard>
+        }
+        onPress={onEdit}
+        accessibilityLabel={`${strings.setup} · ${summary}`}
+        chevron
+      />
+    </ListGroup>
   );
 }
