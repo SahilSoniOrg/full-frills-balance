@@ -2,13 +2,9 @@ import { AppCard, AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { StyleSheet } from 'react-native';
 
-interface ReportNoDataProps {
-  zIndex?: number;
-}
-
-export function ReportNoData({ zIndex }: ReportNoDataProps) {
+export function ReportNoData() {
   return (
-    <AppCard paddingSize="lg" style={[styles.card, { zIndex, overflow: 'visible' }]}>
+    <AppCard paddingSize="lg" style={styles.card}>
       <AppText variant="body" color="secondary" style={styles.text}>
         {AppConfig.strings.reports.noData}
       </AppText>
@@ -19,6 +15,7 @@ export function ReportNoData({ zIndex }: ReportNoDataProps) {
 const styles = StyleSheet.create({
   card: {
     marginBottom: Spacing.xl,
+    overflow: 'visible',
   },
   text: {
     textAlign: 'center',
