@@ -35,4 +35,12 @@ describe('SafeToSpendHeader', () => {
     render(<SafeToSpendHeader {...props} loading />);
     expect(screen.getByTestId('safe-to-spend-amount')).toBeTruthy();
   });
+
+  it('marks the amount approximate when some balances could not be converted', () => {
+    const { rerender } = render(<SafeToSpendHeader {...props} />);
+    const text = () => JSON.stringify(screen.getByTestId('safe-to-spend-amount').props.children);
+    expect(text()).not.toContain('≈');
+    rerender(<SafeToSpendHeader {...props} incomplete />);
+    expect(text()).toContain('≈');
+  });
 });
