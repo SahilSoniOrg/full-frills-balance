@@ -186,7 +186,7 @@ describe('PlannedPaymentDetailsView', () => {
     expect(screen.getByText(/paid in 2 payments since Aug 2026/)).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'See all 5' }));
     expect(screen.getAllByText('Skipped').length).toBeGreaterThan(0);
-    expect(screen.getByText('Waiting')).toBeTruthy();
+    expect(screen.getByText('Not posted yet')).toBeTruthy();
     expect(screen.getByText('Reversed')).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Load earlier entries' }));
     expect(vm.onLoadMore).toHaveBeenCalledTimes(1);

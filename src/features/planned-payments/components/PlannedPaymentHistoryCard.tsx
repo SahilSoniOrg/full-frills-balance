@@ -2,7 +2,7 @@ import { LIST_SELECTION_LONG_PRESS_MS } from '@/src/constants/gesture-constants'
 import { TouchableOpacity, View } from 'react-native';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { AppIcon, AppText, type IconName } from '@/src/components/core';
+import { AppIcon, AppText, Badge, Icon, type IconName } from '@/src/components/core';
 import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { AppConfig, Opacity } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
@@ -29,6 +29,8 @@ export interface PlannedPaymentHistoryCardProps {
     color: ComponentVariant;
     dotIcon: IconName;
     isSkipped: boolean;
+    /** Not posted yet: neutral amount and an outlined "Not posted yet" pill. */
+    isPending?: boolean;
     differenceAmount?: number;
     differenceCurrencyCode?: string;
     differenceDirection?: 'more' | 'less';
@@ -73,8 +75,11 @@ export function PlannedPaymentHistoryCard({
       : expectedAmount != null && expectedCurrencyCode
         ? `${presentation.subtitle} · ${copy.usualAmount} ${formatMoney(expectedAmount, expectedCurrencyCode)}`
         : presentation.subtitle;
-  const amountColor: ComponentVariant =
-    displayType === JournalDisplayType.INCOME
+  const isPending = !!presentation.isPending;
+  // Only posted money is income/expense; pending rows stay neutral so they never read as moved.
+  const amountColor: ComponentVariant = isPending
+    ? 'secondary'
+    : displayType === JournalDisplayType.INCOME
       ? 'income'
       : displayType === JournalDisplayType.EXPENSE
         ? 'expense'
@@ -99,7 +104,10 @@ export function PlannedPaymentHistoryCard({
           borderRadius: 11,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: theme.surfaceSecondary,
+          backgroundColor: isPending ? 'transparent' : theme.surfaceSecondary,
+          borderWidth: isPending ? 1 : 0,
+          borderStyle: 'dashed',
+          borderColor: theme.textSecondary,
         }}
       >
         {isSelectionModeActive ? (
@@ -121,17 +129,35 @@ export function PlannedPaymentHistoryCard({
       <Column flexGrow={1} flexShrink={1} flexBasis={120} gap="xs" style={{ minWidth: 0 }}>
         <AppText
           variant="body"
-          weight="semibold"
-          color={paidAmountWarning ? 'text' : presentation.color}
+          weight={isPending ? 'medium' : 'semibold'}
+          color={isPending ? 'secondary' : paidAmountWarning ? 'text' : presentation.color}
         >
           {date}
         </AppText>
-        <AppText
-          variant="caption"
-          color={paidAmountWarning || presentation.color === 'warning' ? 'warning' : 'secondary'}
-        >
-          {subtitle}
-        </AppText>
+        {isPending ? (
+          <Badge
+            size="sm"
+            icon={Icon.Clock}
+            backgroundColor="transparent"
+            textColor={theme.textSecondary}
+            testID={`${testID}-pending`}
+            style={{
+              alignSelf: 'flex-start',
+              borderWidth: 1,
+              borderStyle: 'dashed',
+              borderColor: theme.textSecondary,
+            }}
+          >
+            {copy.notPosted}
+          </Badge>
+        ) : (
+          <AppText
+            variant="caption"
+            color={paidAmountWarning || presentation.color === 'warning' ? 'warning' : 'secondary'}
+          >
+            {subtitle}
+          </AppText>
+        )}
       </Column>
       {presentation.isSkipped ? (
         <AppText variant="body" color="secondary">
@@ -142,7 +168,7 @@ export function PlannedPaymentHistoryCard({
           amount={journalAmount}
           currencyCode={currencyCode}
           variant="body"
-          weight="semibold"
+          weight={isPending ? 'regular' : 'semibold'}
           color={amountColor}
           numberOfLines={1}
           adjustsFontSizeToFit

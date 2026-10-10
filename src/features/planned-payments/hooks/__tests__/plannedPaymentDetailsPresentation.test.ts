@@ -129,7 +129,11 @@ describe('planned payment details context', () => {
       subtitle: 'Waiting',
       color: 'secondary',
       isSkipped: false,
+      isPending: true,
     });
+    expect(
+      getPlannedPaymentHistoryPresentation(entry('paid', 'POSTED', 1), 150, 'USD').isPending,
+    ).toBe(false);
   });
 
   it('reports planned-payment amount differences at the currency precision', () => {
