@@ -5,13 +5,14 @@ import {
   AppSegmentedControl,
   AppText,
   type IconName,
+  PressScaleTouchable,
 } from '@/src/components/core';
 import { Layout, Opacity, Shape, Spacing, Typography } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
 import { PeriodFilter } from '@/src/utils/dateUtils';
 import dayjs, { Dayjs } from 'dayjs';
-import { ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 interface DateRangeMenuContentProps {
   draftFilter: PeriodFilter;
@@ -102,9 +103,15 @@ function DatePanelHeader({
   );
 
   return onPress ? (
-    <TouchableOpacity style={styles.panelHeader} onPress={onPress} activeOpacity={0.7}>
+    <PressScaleTouchable
+      pressScale="subtle"
+      haptic="selection"
+      style={styles.panelHeader}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
       {content}
-    </TouchableOpacity>
+    </PressScaleTouchable>
   ) : (
     <View style={styles.panelHeader}>{content}</View>
   );
@@ -205,7 +212,9 @@ export function DateRangeMenuContent({
         />
 
         <View style={styles.customRangeRow}>
-          <TouchableOpacity
+          <PressScaleTouchable
+            pressScale="subtle"
+            haptic="selection"
             style={[
               styles.inputButton,
               {
@@ -225,9 +234,11 @@ export function DateRangeMenuContent({
             <AppText variant="body" style={{ fontFamily: fonts.bold }}>
               {customRange.startDate ? customRange.startDate.format('DD MMM YYYY') : 'Choose date'}
             </AppText>
-          </TouchableOpacity>
+          </PressScaleTouchable>
 
-          <TouchableOpacity
+          <PressScaleTouchable
+            pressScale="subtle"
+            haptic="selection"
             style={[
               styles.inputButton,
               {
@@ -247,7 +258,7 @@ export function DateRangeMenuContent({
             <AppText variant="body" style={{ fontFamily: fonts.bold }}>
               {customRange.endDate ? customRange.endDate.format('DD MMM YYYY') : 'Now'}
             </AppText>
-          </TouchableOpacity>
+          </PressScaleTouchable>
         </View>
       </View>
 

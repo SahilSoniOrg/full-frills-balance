@@ -1,3 +1,4 @@
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import {
   AppCard,
   AppIcon,
@@ -12,7 +13,7 @@ import { useEaseInLayoutAnimation } from '@/src/hooks/useEaseInLayoutAnimation';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { IconName } from '@/src/types/domainIcons';
 import { useCallback } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 export interface FilterChipConfig {
   label: string;
@@ -93,13 +94,13 @@ export function FilterDisclosure({
 
   return (
     <AppCard variant="ghost" paddingSize="md">
-      <Pressable
+      <PressScaleTouchable
         onPress={handleToggle}
         accessibilityRole="button"
         accessibilityLabel={`${isExpanded ? 'Collapse' : 'Expand'} report filters`}
         accessibilityState={{ expanded: isExpanded }}
         testID={testID}
-        style={({ pressed }) => [styles.disclosure, pressed && styles.disclosurePressed]}
+        style={styles.disclosure}
       >
         <View style={[styles.disclosureIcon, { backgroundColor: theme.primaryLight }]}>
           <AppIcon name={Icon.Sliders} size={17} color="primary" />
@@ -119,7 +120,7 @@ export function FilterDisclosure({
           size={18}
           color="textSecondary"
         />
-      </Pressable>
+      </PressScaleTouchable>
 
       {isExpanded ? (
         <Stack gap="md" style={[styles.filterPanel, { borderTopColor: theme.divider }]}>
@@ -139,7 +140,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.md,
   },
-  disclosurePressed: { opacity: 0.78 },
   disclosureIcon: {
     width: 36,
     height: 36,

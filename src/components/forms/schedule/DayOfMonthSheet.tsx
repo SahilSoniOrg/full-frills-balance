@@ -1,9 +1,10 @@
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppButton, AppText } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Size, Spacing } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formPrimitivesStrings as copy } from '@/src/constants/copy/domains/formPrimitivesStrings';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
 export interface DayOfMonthSheetProps {
   visible: boolean;
@@ -47,7 +48,8 @@ export function DayOfMonthSheet({
       <View testID={testID} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         {Array.from({ length: 31 }, (_, index) => index + 1).map(day => (
           <View key={day} style={{ width: '14.285%' }}>
-            <Pressable
+            <PressScaleTouchable
+              haptic="selection"
               testID={testID ? `${testID}-${day}` : undefined}
               accessibilityRole="button"
               accessibilityState={{ selected: value === day }}
@@ -71,7 +73,7 @@ export function DayOfMonthSheet({
               >
                 {day === 31 ? copy.lastDay : day}
               </AppText>
-            </Pressable>
+            </PressScaleTouchable>
           </View>
         ))}
       </View>

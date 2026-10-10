@@ -1,10 +1,17 @@
-import { Icon, AppButton, AppInput, AppIcon, AppText } from '@/src/components/core';
+import {
+  Icon,
+  AppButton,
+  AppInput,
+  AppIcon,
+  AppText,
+  PressScaleTouchable,
+} from '@/src/components/core';
 import { IconPickerModal } from '@/src/components/overlays/IconPickerModal';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Size, Spacing } from '@/src/constants';
 import type { IconName } from '@/src/types/domainIcons';
 import { useState } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 
@@ -69,7 +76,7 @@ export function WorkplaceEditorModal({
           <AppText variant="body" weight="medium">
             Icon
           </AppText>
-          <TouchableOpacity
+          <PressScaleTouchable
             onPress={() => setIconPickerVisible(true)}
             accessibilityRole="button"
             accessibilityLabel="Change workplace icon"
@@ -102,7 +109,7 @@ export function WorkplaceEditorModal({
                 Change icon
               </AppText>
             </Stack>
-          </TouchableOpacity>
+          </PressScaleTouchable>
         </Stack>
       </ModalSurface>
       <IconPickerModal
