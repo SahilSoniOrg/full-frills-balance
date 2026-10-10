@@ -1,8 +1,10 @@
 import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
-import { AppConfig } from '@/src/constants';
+import { AppConfig, Size } from '@/src/constants';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
-import { JournalListHeaderActions } from '@/src/features/journal/components/JournalListHeaderActions';
+import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
+import { ScreenHeaderActions } from '@/src/components/shared/ScreenHeaderActions';
+import { Icon } from '@/src/types/domainIcons';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
 import { useJournalEntryFab } from '@/src/features/journal/hooks/useJournalEntryFab';
 import { useJournalList } from '@/src/features/journal/hooks/useJournalList';
@@ -34,9 +36,24 @@ function JournalScreen() {
           screenTitle: AppConfig.strings.journal.transactions,
           showBack: false,
           headerActions: (
-            <JournalListHeaderActions
-              onOpenReports={AppNavigation.toReports}
-              onOpenSearch={() => AppNavigation.toJournalSearch()}
+            <ScreenHeaderActions
+              actions={[
+                {
+                  name: Icon.Reports,
+                  size: Size.iconSm,
+                  variant: 'surface',
+                  onPress: AppNavigation.toReports,
+                  accessibilityLabel: 'View Analytics',
+                },
+                {
+                  name: Icon.Search,
+                  size: Size.iconSm,
+                  variant: 'surface',
+                  onPress: () => AppNavigation.toJournalSearch(),
+                  accessibilityLabel: 'Search and Filter',
+                },
+              ]}
+              trailing={<PrivacyToggleButton />}
             />
           ),
         },
