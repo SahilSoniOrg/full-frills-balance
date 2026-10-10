@@ -52,9 +52,14 @@ export const getVariantColors = (
         light: theme.surfaceSecondary,
         contrast: theme.text,
       };
+    case 'income':
+      return {
+        main: theme.income,
+        light: theme.successLight,
+        contrast: resolveContrast(theme.income),
+      };
     case 'success':
     case 'equity':
-    case 'income':
       return {
         main: theme.success,
         light: theme.successLight,

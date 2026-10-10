@@ -432,6 +432,7 @@ export const DeepSpacePalette = {
   mintDim: '#2A4A3D', // Muted Mint (Backgrounds)
 
   // Semantic
+  green: '#5CD66B', // Income amounts: a true green, distinct from brand mint
   red: '#EB5757', // Error/Expense
   redDim: '#4A2A2A', // Muted Red
   blue: '#5D9CEC', // Asset
@@ -444,6 +445,7 @@ export const DeepSpacePalette = {
   // background, surface and surfaceSecondary (see deepSpaceContrast.test.ts).
   mintInk: '#16734C',
   mintTint: '#E3F5EC',
+  greenInk: '#256B2B',
   redInk: '#B83232',
   redTint: '#FDECEC',
   orangeInk: '#A34D00',
@@ -616,7 +618,7 @@ const DeepSpaceTheme: { light: Theme; dark: Theme } = {
     assetLight: '#E8F2FF', // Light blue for light mode
     liability: DeepSpacePalette.orangeInk,
     equity: DeepSpacePalette.mintInk,
-    income: DeepSpacePalette.mintInk,
+    income: DeepSpacePalette.greenInk,
     expense: DeepSpacePalette.redInk,
     transfer: DeepSpacePalette.purpleInk,
     background: '#F5F5FA',
@@ -648,7 +650,7 @@ const DeepSpaceTheme: { light: Theme; dark: Theme } = {
     assetLight: DeepSpacePalette.blueDim, // Dark blue for dark mode
     liability: DeepSpacePalette.orange,
     equity: DeepSpacePalette.mint,
-    income: DeepSpacePalette.mint,
+    income: DeepSpacePalette.green,
     expense: DeepSpacePalette.red,
     transfer: DeepSpacePalette.purple,
     background: DeepSpacePalette.background,
