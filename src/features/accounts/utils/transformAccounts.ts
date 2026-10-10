@@ -38,6 +38,8 @@ export interface AccountCardViewModel {
   isExpanded: boolean;
   reconciledAt?: Date;
   isArchived: boolean;
+  /** Parent account name for sub-accounts. */
+  parentName?: string;
 }
 
 export interface AccountSectionViewModel {
@@ -230,6 +232,7 @@ export function transformAccountsToSections(
             : new Date(account.reconciledAt)
           : undefined,
         isArchived: isAccountArchived(account),
+        parentName: typeAccounts.find(p => p.id === account.parentAccountId)?.name,
       };
 
       viewModel = createdViewModel;
