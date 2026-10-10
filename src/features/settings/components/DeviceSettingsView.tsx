@@ -1,36 +1,34 @@
-import { Icon, AppText } from '@/src/components/core';
+import { ListGroup, ListRow, Icon, AppText } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
-import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
-import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 
 export function DeviceSettingsView() {
   return (
     <SettingsLayout title={AppConfig.strings.settings.sections.devicesAndSessions}>
       <Stack space="xl">
-        <SettingsMenu header="This Device" focusId="devices">
-          <SettingsMenuItem
-            searchId="local-device"
-            leftIcon={Icon.Settings}
+        <ListGroup variant="plain" header="This Device" focusId="devices">
+          <ListRow
+            focusId="local-device"
+            icon={Icon.Settings}
             title="Local device"
-            description="Preferences here apply only to this installation."
-            hasArrow={false}
+            subtitle="Preferences here apply only to this installation."
+            chevron={false}
             disabled
           />
-        </SettingsMenu>
+        </ListGroup>
 
-        <SettingsMenu header="Future Sessions">
-          <SettingsMenuItem
-            searchId="other-devices"
-            leftIcon={Icon.Briefcase}
+        <ListGroup variant="plain" header="Future Sessions">
+          <ListRow
+            focusId="other-devices"
+            icon={Icon.Briefcase}
             title="Other devices"
-            description="Remote sessions and sync will appear here when multi-device support is available."
-            hasArrow={false}
+            subtitle="Remote sessions and sync will appear here when multi-device support is available."
+            chevron={false}
             disabled
             testID="device-other-devices-placeholder"
           />
-        </SettingsMenu>
+        </ListGroup>
 
         <Box paddingHorizontal="md">
           <AppText variant="caption" color="secondary">

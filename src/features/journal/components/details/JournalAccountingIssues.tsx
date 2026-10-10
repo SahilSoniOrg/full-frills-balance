@@ -1,5 +1,4 @@
-import { AppText, Badge } from '@/src/components/core';
-import { DetailGroup } from '@/src/components/shared/DetailGroup';
+import { AppText, Badge, ListGroup } from '@/src/components/core';
 import { DetailRow } from '@/src/components/shared/DetailRow';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppConfig, Spacing } from '@/src/constants';
@@ -17,11 +16,11 @@ export function JournalAccountingIssues({ evaluation }: { evaluation?: JournalBa
   const incomplete = valuationIssues.length > 0;
   const messages = [...new Set(valuationIssues.map(issue => issue.message))];
   return (
-    <DetailGroup
-      title={strings.accounting}
+    <ListGroup
+      header={strings.accounting}
       testID="journal-accounting-issues"
-      separatorInset={Spacing.lg}
-      accessory={
+      dividerInset={Spacing.lg}
+      headerAccessory={
         <Badge size="sm" variant="warning">
           {incomplete ? strings.needsReview : strings.unbalanced}
         </Badge>
@@ -58,6 +57,6 @@ export function JournalAccountingIssues({ evaluation }: { evaluation?: JournalBa
           ))}
         </Stack>
       ) : null}
-    </DetailGroup>
+    </ListGroup>
   );
 }

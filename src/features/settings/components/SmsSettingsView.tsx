@@ -1,10 +1,8 @@
+import { ListGroup, ListRow } from '@/src/components/core';
 import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
-import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
-import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
-import { SettingsToggleItem } from '@/src/features/settings/components/SettingsToggleItem';
 
 interface SmsSettingsViewProps {
   isAutomaticSmsImportEnabled: boolean;
@@ -38,67 +36,80 @@ export function SmsSettingsView({
   return (
     <SettingsLayout title={strings.smsSettingsTitle}>
       <Stack space="xl">
-        <SettingsMenu header={strings.smsAutomationHeader}>
-          <SettingsToggleItem
-            searchId="sms-automation-import"
-            leftIcon={Icon.Zap}
+        <ListGroup variant="plain" header={strings.smsAutomationHeader}>
+          <ListRow
+            focusId="sms-automation-import"
+            icon={Icon.Zap}
             title={strings.smsImportTitle}
-            description="Scan transaction messages on this device at app start and when each SMS arrives."
-            value={isAutomaticSmsImportEnabled}
-            onValueChange={onToggleSmsImport}
+            subtitle="Scan transaction messages on this device at app start and when each SMS arrives."
             testID="automation-sms-import-toggle"
+            trailing={
+              <ListRow.Toggle
+                value={isAutomaticSmsImportEnabled}
+                onValueChange={onToggleSmsImport}
+              />
+            }
           />
-          <SettingsToggleItem
-            searchId="sms-review-notifications"
-            leftIcon={Icon.Notifications}
+          <ListRow
+            focusId="sms-review-notifications"
+            icon={Icon.Notifications}
             title={strings.smsReviewNotificationsTitle}
-            description={
+            subtitle={
               notificationsBlocked
                 ? 'Blocked by system settings. Enable app notifications and the SMS to review channel.'
                 : strings.smsReviewNotificationsDesc
             }
-            value={areSmsReviewNotificationsEnabled}
-            onValueChange={onToggleSmsReviewNotifications}
             testID="automation-sms-review-notifications-toggle"
+            trailing={
+              <ListRow.Toggle
+                value={areSmsReviewNotificationsEnabled}
+                onValueChange={onToggleSmsReviewNotifications}
+              />
+            }
           />
-          <SettingsToggleItem
-            leftIcon={Icon.Notifications}
-            searchId="sms-notification-details"
+          <ListRow
+            icon={Icon.Notifications}
+            focusId="sms-notification-details"
             title={AppConfig.strings.settings.hub.smsNotificationDetailsTitle}
-            description="Show amounts and transaction details in notifications. Hidden while Privacy Mode or app lock is enabled."
-            value={showSmsNotificationDetails}
-            onValueChange={onToggleSmsNotificationDetails}
+            subtitle="Show amounts and transaction details in notifications. Hidden while Privacy Mode or app lock is enabled."
             disabled={!areSmsReviewNotificationsEnabled}
             testID="sms-notification-details-toggle"
+            trailing={
+              <ListRow.Toggle
+                value={showSmsNotificationDetails}
+                onValueChange={onToggleSmsNotificationDetails}
+              />
+            }
           />
-          <SettingsToggleItem
-            searchId="sms-auto-post-enabled"
-            leftIcon={Icon.Terminal}
+          <ListRow
+            focusId="sms-auto-post-enabled"
+            icon={Icon.Terminal}
             title={strings.smsAutoPostEnabledTitle}
-            description={strings.smsAutoPostEnabledDesc}
-            value={isSmsAutoPostEnabled}
-            onValueChange={onToggleSmsAutoPost}
+            subtitle={strings.smsAutoPostEnabledDesc}
             testID="automation-sms-auto-post-toggle"
+            trailing={
+              <ListRow.Toggle value={isSmsAutoPostEnabled} onValueChange={onToggleSmsAutoPost} />
+            }
           />
-        </SettingsMenu>
+        </ListGroup>
 
-        <SettingsMenu header={strings.smsManagementHeader}>
-          <SettingsMenuItem
-            searchId="sms-inbox"
-            leftIcon={Icon.MessageSquare}
+        <ListGroup variant="plain" header={strings.smsManagementHeader}>
+          <ListRow
+            focusId="sms-inbox"
+            icon={Icon.MessageSquare}
             title={strings.smsInboxTitle}
-            description={strings.smsInboxDesc}
+            subtitle={strings.smsInboxDesc}
             onPress={onOpenInbox}
             testID="settings-sms-inbox"
           />
-          <SettingsMenuItem
-            searchId="sms-rules"
-            leftIcon={Icon.Terminal}
+          <ListRow
+            focusId="sms-rules"
+            icon={Icon.Terminal}
             title={strings.smsAutoPostTitle}
-            description={strings.smsAutoPostDesc}
+            subtitle={strings.smsAutoPostDesc}
             onPress={onOpenSmsRules}
           />
-        </SettingsMenu>
+        </ListGroup>
       </Stack>
     </SettingsLayout>
   );

@@ -1,0 +1,158 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`settings screens keep their e2e testIDs and search focus targets about 1`] = `
+{
+  "focusIds": [
+    "about-support",
+    "github",
+    "play-store",
+    "release-notes",
+    "report-bug",
+    "telegram",
+  ],
+  "testIDs": [
+    "nav-back-button",
+    "settings-release-notes",
+  ],
+}
+`;
+
+exports[`settings screens keep their e2e testIDs and search focus targets appearance 1`] = `
+{
+  "focusIds": [
+    "account-statistics",
+    "appearance",
+    "compact-account-picker",
+    "mode",
+    "reduce-motion",
+    "safe-to-spend-chart",
+    "time-format",
+    "typography",
+  ],
+  "testIDs": [
+    "nav-back-button",
+    "settings-reduce-motion-toggle",
+    "settings-sts-chart-toggle",
+  ],
+}
+`;
+
+exports[`settings screens keep their e2e testIDs and search focus targets automation 1`] = `
+{
+  "focusIds": [
+    "notifications",
+    "sms-settings",
+  ],
+  "testIDs": [
+    "nav-back-button",
+    "settings-sms-settings",
+  ],
+}
+`;
+
+exports[`settings screens keep their e2e testIDs and search focus targets devices 1`] = `
+{
+  "focusIds": [
+    "devices",
+    "local-device",
+    "other-devices",
+  ],
+  "testIDs": [
+    "device-other-devices-placeholder",
+    "nav-back-button",
+  ],
+}
+`;
+
+exports[`settings screens keep their e2e testIDs and search focus targets hub 1`] = `
+{
+  "focusIds": [
+    "about-support",
+    "appearance",
+    "data-management",
+    "maintenance",
+    "notifications",
+    "privacy-security",
+    "profile",
+    "workplace",
+  ],
+  "testIDs": [
+    "settings-about-support",
+    "settings-appearance",
+    "settings-automation",
+    "settings-current-workplace",
+    "settings-data-management",
+    "settings-maintenance",
+    "settings-privacy-security",
+    "settings-profile",
+    "settings-search-input",
+  ],
+}
+`;
+
+exports[`settings screens keep their e2e testIDs and search focus targets privacy 1`] = `
+{
+  "focusIds": [
+    "app-lock",
+    "privacy-security",
+    "widget-privacy",
+  ],
+  "testIDs": [
+    "nav-back-button",
+    "settings-app-lock-toggle",
+  ],
+}
+`;
+
+exports[`settings screens keep their e2e testIDs and search focus targets profile 1`] = `
+{
+  "focusIds": [
+    "devices",
+    "privacy-notice",
+    "profile-name",
+  ],
+  "testIDs": [
+    "nav-back-button",
+    "profile-devices-sessions",
+    "settings-privacy-notice",
+  ],
+}
+`;
+
+exports[`settings screens keep their e2e testIDs and search focus targets sms 1`] = `
+{
+  "focusIds": [
+    "sms-auto-post-enabled",
+    "sms-automation-import",
+    "sms-inbox",
+    "sms-notification-details",
+    "sms-review-notifications",
+    "sms-rules",
+  ],
+  "testIDs": [
+    "automation-sms-auto-post-toggle",
+    "automation-sms-import-toggle",
+    "automation-sms-review-notifications-toggle",
+    "nav-back-button",
+    "settings-sms-inbox",
+    "sms-notification-details-toggle",
+  ],
+}
+`;
+
+exports[`settings screens keep their e2e testIDs and search focus targets workplace 1`] = `
+{
+  "focusIds": [
+    "currency",
+    "manage-workplaces",
+    "safe-to-spend-forecast",
+    "workplace",
+  ],
+  "testIDs": [
+    "current-workplace-edit",
+    "current-workplace-workplaces",
+    "nav-back-button",
+    "safe-to-spend-horizon",
+  ],
+}
+`;

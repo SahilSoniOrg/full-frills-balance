@@ -13,7 +13,7 @@ import type { ScrollView } from 'react-native-gesture-handler';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 
-type SettingsFocusContextValue = {
+type FocusContextValue = {
   registerTarget: (targetId: string, targetNode: View) => void;
   isHighlighted: (targetId: string) => boolean;
 };
@@ -26,9 +26,9 @@ type MeasurableScrollView = {
   scrollTo: (options: { y: number; animated: boolean }) => void;
 };
 
-const SettingsFocusContext = createContext<SettingsFocusContextValue | null>(null);
+const FocusContext = createContext<FocusContextValue | null>(null);
 
-export function SettingsFocusProvider({
+export function FocusProvider({
   targetId,
   scrollViewRef,
   scrollOffsetRef,
@@ -90,7 +90,7 @@ export function SettingsFocusProvider({
   }, [targetId]);
 
   return (
-    <SettingsFocusContext.Provider
+    <FocusContext.Provider
       value={{
         registerTarget,
         isHighlighted: registeredTargetId =>
@@ -98,18 +98,12 @@ export function SettingsFocusProvider({
       }}
     >
       {children}
-    </SettingsFocusContext.Provider>
+    </FocusContext.Provider>
   );
 }
 
-export function SettingsFocusTarget({
-  targetId,
-  children,
-}: {
-  targetId: string;
-  children: ReactNode;
-}) {
-  const context = useContext(SettingsFocusContext);
+export function FocusTarget({ targetId, children }: { targetId: string; children: ReactNode }) {
+  const context = useContext(FocusContext);
   const targetRef = useRef<View>(null);
   const [highlightOpacity] = useState(() => new Animated.Value(0));
   const { theme } = useTheme();

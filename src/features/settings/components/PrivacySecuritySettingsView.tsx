@@ -1,8 +1,7 @@
+import { ListGroup, ListRow } from '@/src/components/core';
 import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
-import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
-import { SettingsToggleItem } from '@/src/features/settings/components/SettingsToggleItem';
 import {
   usePrivacySettingsViewModel,
   type PrivacySettingsViewModel,
@@ -15,33 +14,40 @@ interface PrivacySecuritySettingsViewProps {
 export function PrivacySecuritySettingsView({ vm }: PrivacySecuritySettingsViewProps) {
   return (
     <SettingsLayout title={AppConfig.strings.settings.sections.privacyAndSecurity}>
-      <SettingsMenu header={AppConfig.strings.settings.sections.protectFinancialDetails}>
-        <SettingsToggleItem
-          searchId="privacy-security"
-          leftIcon={Icon.Shield}
+      <ListGroup
+        variant="plain"
+        header={AppConfig.strings.settings.sections.protectFinancialDetails}
+      >
+        <ListRow
+          focusId="privacy-security"
+          icon={Icon.Shield}
           title={AppConfig.strings.settings.privacy.title}
-          description={AppConfig.strings.settings.privacy.description}
-          value={vm.isPrivacyMode}
-          onValueChange={vm.onTogglePrivacy}
+          subtitle={AppConfig.strings.settings.privacy.description}
+          trailing={<ListRow.Toggle value={vm.isPrivacyMode} onValueChange={vm.onTogglePrivacy} />}
         />
-        <SettingsToggleItem
-          searchId="widget-privacy"
-          leftIcon={Icon.EyeOff}
+        <ListRow
+          focusId="widget-privacy"
+          icon={Icon.EyeOff}
           title={AppConfig.strings.settings.privacy.widgetPrivacyTitle}
-          description={AppConfig.strings.settings.privacy.widgetPrivacyDesc}
-          value={vm.isWidgetPrivacyEnabled}
-          onValueChange={vm.onToggleWidgetPrivacy}
+          subtitle={AppConfig.strings.settings.privacy.widgetPrivacyDesc}
+          trailing={
+            <ListRow.Toggle
+              value={vm.isWidgetPrivacyEnabled}
+              onValueChange={vm.onToggleWidgetPrivacy}
+            />
+          }
         />
-        <SettingsToggleItem
-          searchId="app-lock"
-          leftIcon={Icon.Lock}
+        <ListRow
+          focusId="app-lock"
+          icon={Icon.Lock}
           title={AppConfig.strings.settings.privacy.appLockTitle}
-          description={AppConfig.strings.settings.privacy.appLockDesc}
-          value={vm.isAppLockEnabled}
-          onValueChange={vm.onToggleAppLock}
+          subtitle={AppConfig.strings.settings.privacy.appLockDesc}
           testID="settings-app-lock-toggle"
+          trailing={
+            <ListRow.Toggle value={vm.isAppLockEnabled} onValueChange={vm.onToggleAppLock} />
+          }
         />
-      </SettingsMenu>
+      </ListGroup>
     </SettingsLayout>
   );
 }

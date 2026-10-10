@@ -1,10 +1,16 @@
-import { Icon, AppButton, AppIcon, AppInput, AppText } from '@/src/components/core';
+import {
+  ListGroup,
+  ListRow,
+  Icon,
+  AppButton,
+  AppIcon,
+  AppInput,
+  AppText,
+} from '@/src/components/core';
 import { AppConfig, Opacity, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { Stack } from '@/src/design-system';
 import { SettingsMaintenanceOverlay } from '@/src/features/settings/components/SettingsMaintenanceOverlay';
-import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
-import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import { useDataExportViewModel } from '@/src/features/settings/hooks/useDataExportViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SelectionCheckmark, SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
@@ -29,25 +35,25 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
 
   return (
     <Stack space="xxl">
-      <SettingsMenu header={AppConfig.strings.settings.data.backupRestoreHeader}>
-        <SettingsMenuItem
-          searchId="data-export"
+      <ListGroup variant="plain" header={AppConfig.strings.settings.data.backupRestoreHeader}>
+        <ListRow
+          focusId="data-export"
           testID="data-export"
-          leftIcon={Icon.Document}
+          icon={Icon.Document}
           title={AppConfig.strings.settings.data.exportBtn}
-          description={AppConfig.strings.settings.data.exportDesc}
+          subtitle={AppConfig.strings.settings.data.exportDesc}
           onPress={vm.onExport}
-          loading={vm.isExporting}
+          trailing={vm.isExporting && <ListRow.Spinner />}
         />
-        <SettingsMenuItem
-          searchId="data-import"
+        <ListRow
+          focusId="data-import"
           testID="data-import"
-          leftIcon={Icon.Refresh}
+          icon={Icon.Refresh}
           title={AppConfig.strings.settings.data.importBtn}
-          description={AppConfig.strings.settings.data.importDesc}
+          subtitle={AppConfig.strings.settings.data.importDesc}
           onPress={onImport}
         />
-      </SettingsMenu>
+      </ListGroup>
 
       <SettingsMaintenanceOverlay
         isVisible={vm.isExporting}

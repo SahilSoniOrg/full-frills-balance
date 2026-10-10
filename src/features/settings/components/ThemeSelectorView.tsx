@@ -1,9 +1,8 @@
+import { ListRow, Icon, AppText, ListGroup } from '@/src/components/core';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppConfig, ThemeId, ThemeIds, ThemeSchemes, Opacity } from '@/src/constants';
-import { Icon, AppText } from '@/src/components/core';
 import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { Box, Stack } from '@/src/design-system';
-import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
 import { withOpacity } from '@/src/utils/color-math';
@@ -40,83 +39,85 @@ export function ThemeSelectorView({ themeId, setThemeId }: ThemeSelectorViewProp
   const { theme, onContrast } = useTheme();
 
   return (
-    <Stack space={0}>
-      <SettingsMenuItem
-        searchId="appearance"
-        leftIcon={Icon.Palette}
-        title={AppConfig.strings.settings.appearance.themeTitle}
-        description={AppConfig.strings.settings.appearance.themeDesc}
-        hasArrow={false}
-      />
-      <Box paddingHorizontal="md" marginTop="md">
-        <View style={styles.grid}>
-          {THEME_OPTIONS.map(option => {
-            const selected = themeId === option.id;
-            const light = ThemeSchemes[option.id].light;
-            const dark = ThemeSchemes[option.id].dark;
+    <ListGroup variant="plain">
+      <Stack space={0}>
+        <ListRow
+          focusId="appearance"
+          icon={Icon.Palette}
+          title={AppConfig.strings.settings.appearance.themeTitle}
+          subtitle={AppConfig.strings.settings.appearance.themeDesc}
+          chevron={false}
+        />
+        <Box paddingHorizontal="md" marginTop="md">
+          <View style={styles.grid}>
+            {THEME_OPTIONS.map(option => {
+              const selected = themeId === option.id;
+              const light = ThemeSchemes[option.id].light;
+              const dark = ThemeSchemes[option.id].dark;
 
-            const bg = selected ? light.primaryLight : theme.surface;
-            const textColor = onContrast(bg);
+              const bg = selected ? light.primaryLight : theme.surface;
+              const textColor = onContrast(bg);
 
-            return (
-              <PressScaleTouchable
-                haptic="selection"
-                key={option.id}
-                onPress={() => setThemeId(option.id)}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                style={[
-                  styles.tile,
-                  {
-                    backgroundColor: bg,
-                    borderColor: selected ? theme.primary : theme.border,
-                  },
-                ]}
-              >
-                <View style={styles.swatchRail}>
-                  {[dark.background, dark.surface, dark.primary, light.background].map(
-                    (color, index) => (
-                      <View
-                        key={`${option.id}-${index}`}
-                        style={[
-                          styles.swatch,
-                          {
-                            backgroundColor: color,
-                            borderColor: theme.border,
-                          },
-                        ]}
-                      />
-                    ),
-                  )}
-                </View>
+              return (
+                <PressScaleTouchable
+                  haptic="selection"
+                  key={option.id}
+                  onPress={() => setThemeId(option.id)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  style={[
+                    styles.tile,
+                    {
+                      backgroundColor: bg,
+                      borderColor: selected ? theme.primary : theme.border,
+                    },
+                  ]}
+                >
+                  <View style={styles.swatchRail}>
+                    {[dark.background, dark.surface, dark.primary, light.background].map(
+                      (color, index) => (
+                        <View
+                          key={`${option.id}-${index}`}
+                          style={[
+                            styles.swatch,
+                            {
+                              backgroundColor: color,
+                              borderColor: theme.border,
+                            },
+                          ]}
+                        />
+                      ),
+                    )}
+                  </View>
 
-                <View style={styles.tileText}>
-                  <AppText
-                    variant="body"
-                    weight="semibold"
-                    numberOfLines={1}
-                    style={{ color: textColor }}
-                  >
-                    {option.label}
-                  </AppText>
-                  <AppText
-                    variant="caption"
-                    numberOfLines={1}
-                    style={{ color: withOpacity(textColor, Opacity.heavy) }}
-                  >
-                    {option.desc}
-                  </AppText>
-                </View>
+                  <View style={styles.tileText}>
+                    <AppText
+                      variant="body"
+                      weight="semibold"
+                      numberOfLines={1}
+                      style={{ color: textColor }}
+                    >
+                      {option.label}
+                    </AppText>
+                    <AppText
+                      variant="caption"
+                      numberOfLines={1}
+                      style={{ color: withOpacity(textColor, Opacity.heavy) }}
+                    >
+                      {option.desc}
+                    </AppText>
+                  </View>
 
-                <View style={styles.check}>
-                  <SelectionIndicator selected={selected} size={22} />
-                </View>
-              </PressScaleTouchable>
-            );
-          })}
-        </View>
-      </Box>
-    </Stack>
+                  <View style={styles.check}>
+                    <SelectionIndicator selected={selected} size={22} />
+                  </View>
+                </PressScaleTouchable>
+              );
+            })}
+          </View>
+        </Box>
+      </Stack>
+    </ListGroup>
   );
 }
 

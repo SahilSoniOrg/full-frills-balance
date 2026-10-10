@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { AppText, AppIcon, Icon, IconTile, ListRow } from '@/src/components/core';
+import { AppText, AppIcon, Icon, IconTile, ListRow, ListGroup } from '@/src/components/core';
 import { RevertChangeDialog } from '@/src/components/overlays/RevertChangeDialog';
-import { DetailCaptionLink, DetailGroup } from '@/src/components/shared/DetailGroup';
+import { DetailCaptionLink } from '@/src/components/shared/DetailCaptionLink';
 import { DetailRow } from '@/src/components/shared/DetailRow';
 import { ErrorStateView } from '@/src/components/shared/ErrorStateView';
 import { MoneyText } from '@/src/components/shared/MoneyText';
@@ -55,10 +55,13 @@ export function JournalHistory({ history }: { history: JournalHistoryModel }) {
     .join('; ');
   return (
     <>
-      <DetailGroup
-        title={strings.history}
+      <ListGroup
+        header={strings.history}
         testID="journal-history"
-        accessory={<DetailCaptionLink label={strings.fullLog} onPress={history.onOpenFullLog} />}
+        headerAccessory={
+          <DetailCaptionLink label={strings.fullLog} onPress={history.onOpenFullLog} />
+        }
+        dividerInset="none"
       >
         {history.loading ? (
           <Box padding="md">
@@ -180,7 +183,7 @@ export function JournalHistory({ history }: { history: JournalHistoryModel }) {
             trailing={<AppIcon name={Icon.ChevronRight} size={Size.iconXs} color="textSecondary" />}
           />
         ))}
-      </DetailGroup>
+      </ListGroup>
       <RevertChangeDialog
         request={
           pending && {

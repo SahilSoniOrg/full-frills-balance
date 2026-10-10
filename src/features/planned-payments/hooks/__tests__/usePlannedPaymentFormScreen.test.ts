@@ -218,12 +218,10 @@ describe('planned payment FX policy', () => {
     jest
       .mocked(useAccounts)
       .mockReturnValue({ accounts: [usd, inr, otherInr] } as ReturnType<typeof useAccounts>);
-    jest
-      .mocked(usePlannedPaymentRecord)
-      .mockReturnValue({
-        item: { ...payment, currencyCode: 'EUR', toAccountId: inr.id },
-        isLoading: false,
-      });
+    jest.mocked(usePlannedPaymentRecord).mockReturnValue({
+      item: { ...payment, currencyCode: 'EUR', toAccountId: inr.id },
+      isLoading: false,
+    });
     const { result } = renderHook(() => usePlannedPaymentForm(payment.id));
     act(() => result.current.selectDestination(otherInr.id));
     expect(result.current.form).toMatchObject({

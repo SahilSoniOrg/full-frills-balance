@@ -1,5 +1,11 @@
-import { AppText, AppIcon, Icon, IconTile, PressScaleTouchable } from '@/src/components/core';
-import { DetailGroup } from '@/src/components/shared/DetailGroup';
+import {
+  AppText,
+  AppIcon,
+  Icon,
+  IconTile,
+  PressScaleTouchable,
+  ListGroup,
+} from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
@@ -129,28 +135,28 @@ export function JournalEntries({ entries }: { entries: JournalEntriesPresentatio
   if (entries.shape === 'one-to-one') {
     if (entries.balanceItems.length === 0) return null;
     return (
-      <DetailGroup
-        title={strings.afterJournal}
-        accessory={entries.balanced ? <Balanced /> : undefined}
-        separatorInset={ENTRY_TEXT_INSET}
+      <ListGroup
+        header={strings.afterJournal}
+        headerAccessory={entries.balanced ? <Balanced /> : undefined}
+        dividerInset={ENTRY_TEXT_INSET}
         testID="journal-after-balances"
       >
         {entries.balanceItems.map(item => (
           <EntryRow key={item.id} item={item} currencyCode={currencyCode} balanceOnly posted />
         ))}
-      </DetailGroup>
+      </ListGroup>
     );
   }
   return (
     <Stack space="lg" testID="journal-split">
       {entries.groups.map((group, groupIndex) => (
-        <DetailGroup
+        <ListGroup
           key={group.label}
-          title={`${group.label} · ${group.total === undefined ? strings.totalUnavailable : formatMoney(group.total, currencyCode)}`}
-          accessory={
+          header={`${group.label} · ${group.total === undefined ? strings.totalUnavailable : formatMoney(group.total, currencyCode)}`}
+          headerAccessory={
             groupIndex === 0 && entries.balanced ? <Balanced currency={currencyCode} /> : undefined
           }
-          separatorInset={ENTRY_TEXT_INSET}
+          dividerInset={ENTRY_TEXT_INSET}
         >
           {group.items.map(item => (
             <EntryRow
@@ -161,7 +167,7 @@ export function JournalEntries({ entries }: { entries: JournalEntriesPresentatio
               posted={entries.posted}
             />
           ))}
-        </DetailGroup>
+        </ListGroup>
       ))}
     </Stack>
   );

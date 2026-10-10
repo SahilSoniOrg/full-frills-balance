@@ -1,6 +1,13 @@
-import { Icon, AppIcon, AppText, LoadingView } from '@/src/components/core';
-import { SettingsMenu } from '@/src/components/settings/SettingsMenu';
-import { SettingsMenuItem } from '@/src/components/settings/SettingsMenuItem';
+import {
+  Icon,
+  AppIcon,
+  AppText,
+  IconTile,
+  ListGroup,
+  ListRow,
+  LoadingView,
+  parseIconName,
+} from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { Spacing } from '@/src/constants/design-tokens';
 import { Page } from '@/src/design-system';
@@ -32,7 +39,10 @@ export function WorkplacePicker({
       background="background"
       scrollable
       edges={['top', 'bottom']}
-      scrollViewProps={{ contentContainerStyle: styles.content, testID: 'workplace-picker-screen' }}
+      scrollViewProps={{
+        contentContainerStyle: styles.content,
+        testID: 'workplace-picker-screen',
+      }}
     >
       <View style={styles.intro}>
         <View style={[styles.icon, { backgroundColor: theme.surfaceSecondary }]}>
@@ -55,39 +65,51 @@ export function WorkplacePicker({
       )}
       {isTransitioning && <LoadingView loading text={copy.opening} size="small" />}
       {workplaces.length > 0 && (
-        <SettingsMenu header="Available Workplaces">
+        <ListGroup variant="plain" header="Available Workplaces">
           {workplaces.map(workplace => (
-            <SettingsMenuItem
+            <ListRow
               key={workplace.id}
-              leftIcon={workplace.icon}
+              leading={
+                <IconTile
+                  icon={parseIconName(workplace.icon, Icon.Briefcase)}
+                  tint={isTransitioning ? 'textSecondary' : 'primary'}
+                />
+              }
               title={workplace.name}
-              description="Open this workplace"
+              subtitle="Open this workplace"
               onPress={() => onSelect(workplace.id)}
               disabled={isTransitioning}
               testID={`workplace-picker-option-${workplace.id}`}
             />
           ))}
-        </SettingsMenu>
+        </ListGroup>
       )}
       <View style={styles.startAnother}>
-        <SettingsMenu header="Start another">
-          <SettingsMenuItem
-            leftIcon={Icon.Plus}
+        <ListGroup variant="plain" header="Start another">
+          <ListRow
+            leading={
+              <IconTile icon={Icon.Plus} tint={isTransitioning ? 'textSecondary' : 'primary'} />
+            }
             title={copy.create}
-            description="Set up a new set of books"
+            subtitle="Set up a new set of books"
             onPress={onCreate}
             disabled={isTransitioning}
             testID="workplace-picker-create"
           />
-          <SettingsMenuItem
-            leftIcon={Icon.FolderOpen}
+          <ListRow
+            leading={
+              <IconTile
+                icon={Icon.FolderOpen}
+                tint={isTransitioning ? 'textSecondary' : 'primary'}
+              />
+            }
             title={copy.import}
-            description="Restore books from a backup"
+            subtitle="Restore books from a backup"
             onPress={onImport}
             disabled={isTransitioning}
             testID="workplace-picker-import"
           />
-        </SettingsMenu>
+        </ListGroup>
       </View>
     </Page>
   );

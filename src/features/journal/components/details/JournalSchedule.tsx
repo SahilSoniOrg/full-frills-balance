@@ -1,5 +1,5 @@
-import { AppText, AppIcon, Icon, ListRow } from '@/src/components/core';
-import { DetailCaptionLink, DetailGroup } from '@/src/components/shared/DetailGroup';
+import { AppText, AppIcon, Icon, ListRow, ListGroup } from '@/src/components/core';
+import { DetailCaptionLink } from '@/src/components/shared/DetailCaptionLink';
 import { DetailRow } from '@/src/components/shared/DetailRow';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Inline } from '@/src/design-system';
@@ -8,11 +8,11 @@ import type { JournalScheduleModel } from '../../journalDetailsPresentation';
 export function JournalSchedule({ schedule }: { schedule: JournalScheduleModel }) {
   const strings = AppConfig.strings.journalDetails;
   return (
-    <DetailGroup
-      title={strings.schedule}
+    <ListGroup
+      header={strings.schedule}
       testID="journal-schedule"
-      separatorInset={Spacing.lg}
-      accessory={
+      dividerInset={Spacing.lg}
+      headerAccessory={
         schedule.onRevert ? (
           <DetailCaptionLink label={strings.revertScheduled} onPress={schedule.onRevert} />
         ) : undefined
@@ -35,6 +35,6 @@ export function JournalSchedule({ schedule }: { schedule: JournalScheduleModel }
       />
       <DetailRow label={strings.occurrence} value={schedule.since} />
       <DetailRow label={strings.afterThis} value={schedule.after} />
-    </DetailGroup>
+    </ListGroup>
   );
 }

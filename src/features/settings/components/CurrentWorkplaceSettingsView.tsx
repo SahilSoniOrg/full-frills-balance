@@ -1,13 +1,11 @@
+import { AppSegmentedControl, ListGroup, ListRow } from '@/src/components/core';
 import { Icon } from '@/src/types/domainIcons';
 import { WorkplaceEditorModal } from '@/src/components/workplace/WorkplaceEditorModal';
-import { SettingsSegmentedControl } from '@/src/components/settings/SettingsSegmentedControl';
 import { AppConfig, Opacity } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { Stack } from '@/src/design-system';
 import { CurrencySelector } from '@/src/features/accounts';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
-import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
-import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import {
   useCurrentWorkplaceSettingsViewModel,
   type CurrentWorkplaceSettingsViewModel,
@@ -34,36 +32,36 @@ export function CurrentWorkplaceSettingsView({ vm }: CurrentWorkplaceSettingsVie
     <>
       <SettingsLayout title={AppConfig.strings.settings.sections.currentWorkplace}>
         <Stack space="xl">
-          <SettingsMenu header="Current Workplace">
-            <SettingsMenuItem
-              searchId="workplace"
-              leftIcon={vm.activeWorkplace?.icon ?? Icon.Briefcase}
+          <ListGroup variant="plain" header="Current Workplace">
+            <ListRow
+              focusId="workplace"
+              icon={vm.activeWorkplace?.icon ?? Icon.Briefcase}
               title={vm.activeWorkplace?.name || 'Current workplace'}
-              description="Rename this workplace or change its icon"
+              subtitle="Rename this workplace or change its icon"
               onPress={() => setIsEditorVisible(true)}
               testID="current-workplace-edit"
             />
-          </SettingsMenu>
+          </ListGroup>
 
-          <SettingsMenu header="Workplace">
-            <SettingsMenuItem
-              searchId="manage-workplaces"
-              leftIcon={Icon.Briefcase}
+          <ListGroup variant="plain" header="Workplace">
+            <ListRow
+              focusId="manage-workplaces"
+              icon={Icon.Briefcase}
               title="Manage workplaces"
-              description="Switch, create, or delete workplaces"
+              subtitle="Switch, create, or delete workplaces"
               onPress={AppNavigation.toWorkplaceSettings}
               testID="current-workplace-workplaces"
             />
-          </SettingsMenu>
+          </ListGroup>
 
-          <SettingsMenu header={AppConfig.strings.settings.sections.moneyDefaults}>
-            <SettingsMenuItem
-              searchId="currency"
-              leftIcon={Icon.Bank}
+          <ListGroup variant="plain" header={AppConfig.strings.settings.sections.moneyDefaults}>
+            <ListRow
+              focusId="currency"
+              icon={Icon.Bank}
               title={AppConfig.strings.settings.currency.title}
-              description={`${AppConfig.strings.settings.currency.description} for ${vm.workplaceName || 'current workplace'}`}
-              hasArrow={false}
-              rightContent={
+              subtitle={`${AppConfig.strings.settings.currency.description} for ${vm.workplaceName || 'current workplace'}`}
+              chevron={false}
+              trailing={
                 <CurrencySelector
                   selectedCurrency={vm.workplaceCurrency}
                   currencies={vm.currencies}
@@ -74,20 +72,25 @@ export function CurrentWorkplaceSettingsView({ vm }: CurrentWorkplaceSettingsVie
                 />
               }
             />
-          </SettingsMenu>
+          </ListGroup>
 
-          <SettingsMenu header={AppConfig.strings.settings.sections.forecasting}>
-            <SettingsSegmentedControl
-              leftIcon={Icon.TrendingUp}
+          <ListGroup variant="plain" header={AppConfig.strings.settings.sections.forecasting}>
+            <ListRow
+              icon={Icon.TrendingUp}
               focusId="safe-to-spend-forecast"
               title={AppConfig.strings.settings.personalization.forecastTitle}
-              description={AppConfig.strings.settings.personalization.forecastDesc}
-              options={SAFE_TO_SPEND_OPTIONS}
-              value={vm.safeToSpendDays}
-              onChange={vm.setSafeToSpendDays}
-              controlTestID="safe-to-spend-horizon"
-            />
-          </SettingsMenu>
+              subtitle={AppConfig.strings.settings.personalization.forecastDesc}
+            >
+              <AppSegmentedControl
+                options={SAFE_TO_SPEND_OPTIONS}
+                value={vm.safeToSpendDays}
+                onChange={vm.setSafeToSpendDays}
+                flex
+                size="md"
+                testID="safe-to-spend-horizon"
+              />
+            </ListRow>
+          </ListGroup>
         </Stack>
       </SettingsLayout>
       {vm.activeWorkplace && (

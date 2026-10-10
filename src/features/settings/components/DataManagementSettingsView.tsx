@@ -1,11 +1,9 @@
+import { AppSegmentedControl, ListGroup, ListRow } from '@/src/components/core';
 import { Icon } from '@/src/types/domainIcons';
-import { SettingsSegmentedControl } from '@/src/components/settings/SettingsSegmentedControl';
 import { AppConfig } from '@/src/constants';
 import { Stack } from '@/src/design-system';
 import { DataExportSection } from '@/src/features/settings/components/DataExportSection';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
-import { SettingsMenuSection as SettingsMenu } from '@/src/features/settings/components/SettingsMenuSection';
-import { SettingsSearchMenuItem as SettingsMenuItem } from '@/src/features/settings/components/SettingsSearchMenuItem';
 import { useSharePrefs } from '@/src/hooks/useSharePrefs';
 import { ShareFormat } from '@/src/types/sharing';
 import { AppNavigation } from '@/src/utils/navigation';
@@ -24,28 +22,33 @@ function DataManagementSettingsView() {
       <DataExportSection onImport={() => AppNavigation.toSetupJourney('settings_restore')} />
 
       <Stack space="xxl">
-        <SettingsMenu header="Sharing">
-          <SettingsSegmentedControl
-            leftIcon={Icon.Share}
+        <ListGroup variant="plain" header="Sharing">
+          <ListRow
+            icon={Icon.Share}
             focusId="share-format"
             title={AppConfig.strings.settings.data.shareFormatTitle}
-            description={AppConfig.strings.settings.data.shareFormatDesc}
-            options={SHARE_FORMAT_OPTIONS}
-            value={defaultShareFormat}
-            onChange={setDefaultShareFormat}
-            controlTestID="share-format-control"
-          />
-        </SettingsMenu>
+            subtitle={AppConfig.strings.settings.data.shareFormatDesc}
+          >
+            <AppSegmentedControl
+              options={SHARE_FORMAT_OPTIONS}
+              value={defaultShareFormat}
+              onChange={setDefaultShareFormat}
+              flex
+              size="md"
+              testID="share-format-control"
+            />
+          </ListRow>
+        </ListGroup>
 
-        <SettingsMenu header={AppConfig.strings.settings.data.reviewHeader}>
-          <SettingsMenuItem
-            searchId="audit-log"
-            leftIcon={Icon.History}
+        <ListGroup variant="plain" header={AppConfig.strings.settings.data.reviewHeader}>
+          <ListRow
+            focusId="audit-log"
+            icon={Icon.History}
             title={AppConfig.strings.settings.data.auditBtn}
-            description={AppConfig.strings.settings.data.auditDesc}
+            subtitle={AppConfig.strings.settings.data.auditDesc}
             onPress={AppNavigation.toAuditLog}
           />
-        </SettingsMenu>
+        </ListGroup>
       </Stack>
     </SettingsLayout>
   );

@@ -56,7 +56,7 @@ it('shows only balance accounts after posted simple journals and keeps them tapp
       entries={buildJournalEntries(items, 'INR', 'POSTED', details.balanceEvaluation)}
     />,
   );
-  expect(view.getByText('AFTER THIS JOURNAL')).toBeTruthy();
+  expect(view.getByText('After this journal')).toBeTruthy();
   expect(view.getByText('Federal Fi')).toBeTruthy();
   expect(view.queryByText('Food & Drinks')).toBeNull();
   fireEvent.press(view.getByTestId('journal-entry-Federal Fi'));
@@ -66,7 +66,7 @@ it('shows only balance accounts after posted simple journals and keeps them tapp
       entries={buildJournalEntries(items, 'INR', 'PLANNED', details.balanceEvaluation)}
     />,
   );
-  expect(view.queryByText('AFTER THIS JOURNAL')).toBeNull();
+  expect(view.queryByText('After this journal')).toBeNull();
 });
 
 it('shows both account balances for transfers and none for category reclassifications', () => {
@@ -119,7 +119,7 @@ it('shows native amounts, rates, notes and totals on splits, without partial tot
     />,
   );
   expect(view.getByText('Value unavailable')).toBeTruthy();
-  expect(view.getByText(/FROM · TOTAL UNAVAILABLE/)).toBeTruthy();
+  expect(view.getByText(/From · total unavailable/i)).toBeTruthy();
   expect(view.queryByText(/Balanced in INR/)).toBeNull();
 });
 
