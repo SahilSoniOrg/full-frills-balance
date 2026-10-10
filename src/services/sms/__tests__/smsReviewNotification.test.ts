@@ -36,12 +36,18 @@ describe('formatSmsReviewNotification', () => {
       { sourceAccountName: '\n\t', categoryName: '' },
     ],
   ] as const)('formats %s', (expected, tx, context) => {
-    expect(formatSmsReviewNotification(tx, context)).toBe(expected);
+    expect(formatSmsReviewNotification(tx, 'INR', context)).toBe(expected);
+  });
+
+  it('formats amounts without a parsed currency in the fallback currency, not USD', () => {
+    expect(formatSmsReviewNotification(parsed({ currencyCode: undefined }), 'INR')).toBe(
+      'Come log ₹100 you spent.',
+    );
   });
 
   it('sanitizes untrusted merchant labels without leaking parse metadata', () => {
     const unsafeMerchant = `${'A'.repeat(61)}\u0000\nSECRET SUFFIX`;
-    const summary = formatSmsReviewNotification(parsed({ merchant: unsafeMerchant }));
+    const summary = formatSmsReviewNotification(parsed({ merchant: unsafeMerchant }), 'INR');
     expect(summary).toBe(`Come log ₹100 you spent at ${'A'.repeat(60)}.`);
     for (const privateValue of [
       'PRIVATE SMS BODY',

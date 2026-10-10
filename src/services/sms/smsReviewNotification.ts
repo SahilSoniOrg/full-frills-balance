@@ -1,4 +1,3 @@
-import { AppConfig } from '@/src/constants';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { ParsedTransaction } from '@/src/services/ledger/SmsParser';
 
@@ -15,13 +14,14 @@ export function formatSmsReviewNotification(
     ParsedTransaction,
     'amount' | 'currencyCode' | 'type' | 'merchant' | 'accountSource'
   >,
+  fallbackCurrencyCode: string,
   details: { sourceAccountName?: string; categoryName?: string } = {},
 ): string {
   const amountLabel =
     typeof parsed.amount === 'number' && Number.isFinite(parsed.amount)
       ? CurrencyFormatter.formatAmount(
           parsed.amount,
-          parsed.currencyCode || AppConfig.defaultCurrency,
+          parsed.currencyCode || fallbackCurrencyCode,
           { minimumFractionDigits: 0, maximumFractionDigits: 2 },
         )
       : undefined;

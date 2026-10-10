@@ -7,6 +7,7 @@ import {
   type SmsReviewIntent,
 } from '@/src/services/notification/NotificationService';
 import { preferences } from '@/src/services/preferences';
+import { workplaceService } from '@/src/services/WorkplaceService';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import type { WorkplaceId } from '@/src/types/ids';
 import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
@@ -157,6 +158,9 @@ export class SmsReviewNotificationService {
           ),
         );
         const names = new Map(accounts.map(account => [account.id, account.name]));
+        const sourceAccountCurrency = accounts.find(
+          account => account.id === hints.sourceAccountId,
+        )?.currencyCode;
         body = formatSmsReviewNotification(
           {
             amount: latest.record.parsedAmount,
@@ -165,6 +169,7 @@ export class SmsReviewNotificationService {
             accountSource: latest.record.parsedAccountSource,
             type: inboxDirectionToParsedType(latest.record.direction),
           },
+          sourceAccountCurrency || (await workplaceService.getCurrency(workplaceId)),
           {
             sourceAccountName: hints.sourceAccountId ? names.get(hints.sourceAccountId) : undefined,
             categoryName: hints.categoryAccountId ? names.get(hints.categoryAccountId) : undefined,

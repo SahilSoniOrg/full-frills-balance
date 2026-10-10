@@ -1,4 +1,6 @@
 import { smsJournalQueries } from '@/src/data/repositories/journal/SmsJournalQueries';
+import { accountQueryRepository } from '@/src/data/repositories/account';
+import type TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { runAccountingWriteSession } from '@/src/data/repositories/AccountingWriteSession';
@@ -15,7 +17,7 @@ import {
 } from '@/src/services/sms/smsDuplicateDetection';
 import { smsInboxBridge } from '@/src/services/sms/SmsInboxBridge';
 import { smsRuleEngine } from '@/src/services/sms/SmsRuleEngine';
-import type { JournalId, WorkplaceId } from '@/src/types/ids';
+import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { InboxParseStatus, InboxProcessingStatus } from '@/src/types/enums';
 import { preferences } from '@/src/services/preferences';
 import { normalizeSmsReferenceNumber } from '@/src/utils/sms/SmsReferenceExtractor';
@@ -114,6 +116,24 @@ export class SmsSyncPipeline {
     return this.processMessages(workplaceId, messages, signal, options.origin ?? 'manual');
   }
 
+  private async resolveRuleSourceCurrencies(
+    workplaceId: WorkplaceId,
+    activeRules: readonly TransactionAutoPostRule[],
+  ): Promise<(sourceAccountId: AccountId) => string | undefined> {
+    const sourceAccountIds = [
+      ...new Set(
+        activeRules
+          .map(rule => smsRuleEngine.getRuleDefinition(rule).actions.sourceAccountId)
+          .filter((id): id is AccountId => !!id),
+      ),
+    ];
+    const sourceAccounts = await accountQueryRepository.findAllByIds(workplaceId, sourceAccountIds);
+    const currencyByAccountId = new Map(
+      sourceAccounts.map(account => [account.id, account.currencyCode]),
+    );
+    return sourceAccountId => currencyByAccountId.get(sourceAccountId);
+  }
+
   private async processMessages(
     workplaceId: WorkplaceId,
     messages: readonly SmsMessage[],
@@ -128,6 +148,7 @@ export class SmsSyncPipeline {
     const activeRules = (
       await transactionAutoPostRuleRepository.findActiveByWorkplace(workplaceId)
     ).sort((a, b) => smsRuleEngine.getRulePriority(b) - smsRuleEngine.getRulePriority(a));
+    const sourceAccountCurrency = await this.resolveRuleSourceCurrencies(workplaceId, activeRules);
 
     const processedIds = new Set<string>();
     const existing = await transactionInboxRepository.findByDeviceSourceIds(
@@ -219,6 +240,7 @@ export class SmsSyncPipeline {
             message,
             parsed,
             activeRules,
+            sourceAccountCurrency,
             preferences.device.isSmsAutoPostEnabled && !existingRecord?.consumedWorkplaces?.length,
           );
           if (ruleResult) {

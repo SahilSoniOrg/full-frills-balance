@@ -366,6 +366,27 @@ describe('SmsSyncPipeline integration', () => {
       ).toBe(0);
     });
 
+    it('auto-posts an SMS without a currency marker in the source account currency', async () => {
+      const message = smsMessageFromFixture('swiggyNoRef', {
+        id: 'auto-post-no-currency',
+        date: baseDate,
+        body: 'Your a/c XX1234 debited by 500.00 at SWIGGY on 07-Mar.',
+      });
+      await enableAutoPostFor(message);
+
+      await scanSmsInbox(SMS_TEST_WORKPLACE, [message]);
+
+      expect((await fetchInboxByDeviceId(message.id))?.processingStatus).toBe(
+        InboxProcessingStatus.AUTO_POSTED,
+      );
+      const [journal] = await database.collections
+        .get<Journal>('journals')
+        .query(Q.where('workplace_id', SMS_TEST_WORKPLACE))
+        .fetch();
+      expect(journal.currencyCode).toBe('INR');
+      expect(journal.totalAmount).toBe(500);
+    });
+
     it('auto-posts duplicate reference candidates only once within a scan', async () => {
       const first = smsMessageFromFixture('upiRef121554846690', {
         id: 'ref-duplicate-a',

@@ -77,6 +77,11 @@ jest.mock('@/src/data/repositories/account', () => ({
       id,
       name: `Account ${id}`,
     })),
+    findAllByIds: jest
+      .fn()
+      .mockImplementation(async (_workplaceId: string, ids: string[]) =>
+        ids.map(id => ({ id, name: `Account ${id}`, currencyCode: 'INR' })),
+      ),
   },
 }));
 

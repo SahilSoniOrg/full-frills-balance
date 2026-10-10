@@ -1,5 +1,4 @@
 import { SmsMessage } from '@/modules/expo-sms-inbox';
-import { AppConfig } from '@/src/constants';
 import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import type { CreateJournalData } from '@/src/types/journalWrite';
 import { ParsedTransaction, toTransactionDirection } from '@/src/services/ledger/SmsParser';
@@ -19,10 +18,15 @@ export interface AutoPostRuleAnalysis {
   categoryAccountId?: AccountId;
 }
 
+/**
+ * SMS bodies without a currency marker are denominated in the rule's source account
+ * currency; `sourceAccountCurrency` resolves it.
+ */
 export function analyzeAutoPost(
   message: SmsMessage,
   parsed: ParsedTransaction,
   activeRules: TransactionAutoPostRule[],
+  sourceAccountCurrency: (sourceAccountId: AccountId) => string | undefined,
   allowAutoPost = true,
 ): AutoPostRuleAnalysis | null {
   const matchData = buildSmsMatchData(message.address, message.body, {
@@ -52,7 +56,10 @@ export function analyzeAutoPost(
       const sourceAccountId = definition.actions.sourceAccountId;
       const categoryAccountId = definition.actions.categoryAccountId;
 
-      if (sourceAccountId && categoryAccountId && parsed.amount) {
+      const currencyCode =
+        parsed.currencyCode || (sourceAccountId && sourceAccountCurrency(sourceAccountId));
+
+      if (sourceAccountId && categoryAccountId && parsed.amount && currencyCode) {
         const isExpense = parsed.type === 'debit';
         const journalData: CreateJournalData = {
           journalDate: message.date,
@@ -62,7 +69,7 @@ export function analyzeAutoPost(
               ? 'Expense via SMS'
               : 'Income via SMS',
           notes: '',
-          currencyCode: parsed.currencyCode || AppConfig.defaultCurrency,
+          currencyCode,
           status: JournalStatus.POSTED,
           metadata: {
             importSource: 'sms',
