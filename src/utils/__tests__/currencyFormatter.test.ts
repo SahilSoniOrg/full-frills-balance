@@ -1,7 +1,7 @@
 import {
   CurrencyFormatter,
   formatMoneyAmount,
-  groupIndianDigits,
+  getCurrencyLocale,
 } from '@/src/utils/currencyFormatter';
 // Mock preferences to avoid AsyncStorage issues
 jest.mock('@/src/services/preferences', () => ({
@@ -174,10 +174,20 @@ describe('CurrencyFormatter', () => {
       );
     });
 
-    it('groupIndianDigits splits after the last three digits', () => {
-      expect(groupIndianDigits('1')).toBe('1');
-      expect(groupIndianDigits('12345')).toBe('12,345');
-      expect(groupIndianDigits('1234567890.5')).toBe('1,23,45,67,890.5');
+    it('takes the formatting locale from the currency definition', () => {
+      expect(getCurrencyLocale('INR')).toBe('en-IN');
+      expect(getCurrencyLocale('inr')).toBe('en-IN');
+      expect(getCurrencyLocale('USD')).toBeUndefined();
+      expect(CurrencyFormatter.format(98765432.5, 'INR')).toBe(
+        (98765432.5).toLocaleString('en-IN', { style: 'currency', currency: 'INR' }),
+      );
+    });
+
+    it('falls back to the default locale for currencies without one', () => {
+      expect(getCurrencyLocale('EUR')).toBeUndefined();
+      expect(CurrencyFormatter.format(98765432.5, 'EUR')).toBe(
+        (98765432.5).toLocaleString(undefined, { style: 'currency', currency: 'EUR' }),
+      );
     });
   });
 });
