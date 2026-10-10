@@ -1,6 +1,13 @@
-import { AppIcon, AppText, Icon, ListRow, type IconName } from '@/src/components/core';
+import {
+  AppIcon,
+  AppText,
+  Icon,
+  ListRow,
+  listRowTextInset,
+  type IconName,
+} from '@/src/components/core';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
-import { Spacing, SpacingKey } from '@/src/constants/design-tokens';
+import { Spacing } from '@/src/constants/design-tokens';
 import { formPrimitivesStrings as copy } from '@/src/constants/copy/domains/formPrimitivesStrings';
 import { Box } from '@/src/design-system/Box';
 import { Separator } from '@/src/design-system/Separator';
@@ -21,9 +28,7 @@ export interface FormRowProps {
   testID?: string;
 }
 
-const PADDING_HORIZONTAL: SpacingKey = 'lg';
-const PADDING_VERTICAL: SpacingKey = 'sm';
-
+/** A form field row on ListRow: icon, title, value or placeholder, chevron; optional clear. */
 export function FormRow({
   icon,
   title,
@@ -52,96 +57,64 @@ export function FormRow({
         <AppIcon name={Icon.Close} size={18} color={theme.textSecondary} />
       </PressScaleTouchable>
     ) : null;
-  const right = trailing ? (
+  // Controls next to a pressable row sit outside its touch target so both stay accessible.
+  const outside = onPress ? (trailing ?? clearControl) : null;
+  const inside = trailing ? (
     onPress ? undefined : (
       trailing
     )
   ) : (
-    <View
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1, minWidth: 0 }}
-    >
+    <>
       {!onPress ? clearControl : null}
-      <AppText
-        variant="bodySmall"
-        numberOfLines={1}
-        ellipsizeMode="tail"
-        style={{ color: theme.textSecondary, flexShrink: 1, minWidth: 0 }}
-      >
+      <AppText variant="bodySmall" color="secondary" numberOfLines={1} style={{ flexShrink: 1 }}>
         {hasValue ? value : placeholder}
       </AppText>
-      <View style={{ flexShrink: 0 }}>
-        <AppIcon name={Icon.ChevronRight} size={20} color={theme.textSecondary} />
-      </View>
-    </View>
+    </>
   );
-  const splitTrailing = onPress ? (trailing ?? clearControl) : undefined;
-  const accessibilityLabel = copy.formRowAccessibility(
-    title,
-    subtitle,
-    trailing ? undefined : value,
-    trailing ? undefined : placeholder,
-  );
-  const leading = <AppIcon name={icon} size={22} color={theme.icon} />;
-  const titleNode = (
-    <AppText variant="body" style={{ color: theme.text, flexShrink: 1 }}>
-      {title}
-    </AppText>
-  );
-  const subtitleNode = subtitle ? (
-    <AppText variant="caption" style={{ color: theme.textSecondary, flexShrink: 1 }}>
-      {subtitle}
-    </AppText>
-  ) : undefined;
 
-  if (splitTrailing) {
-    const separatorInset = Spacing[PADDING_HORIZONTAL] + Spacing.xl + Spacing.md;
-    const row = (
-      <View>
-        <Box
-          flexDirection="row"
-          alignItems="center"
-          paddingHorizontal={PADDING_HORIZONTAL}
-          paddingVertical={PADDING_VERTICAL}
-        >
-          <PressScaleTouchable
-            style={{ flex: 1, alignSelf: 'stretch' }}
-            onPress={onPress}
-            accessibilityRole="button"
-            accessibilityLabel={accessibilityLabel}
-            testID={testID}
-          >
-            <Box flex={1} flexDirection="row" alignItems="center">
-              <Box minWidth={Spacing.xl} marginRight="md" alignItems="center">
-                {leading}
-              </Box>
-              <Box flex={1} justifyContent="center">
-                {titleNode}
-                {subtitleNode}
-              </Box>
-              {right}
-            </Box>
-          </PressScaleTouchable>
-          <Box marginLeft="md" alignItems="flex-end">
-            {splitTrailing}
-          </Box>
-        </Box>
-        {showSeparator ? <Separator width="auto" marginLeft={separatorInset} /> : null}
-      </View>
-    );
-    return row;
-  }
-
-  return (
+  const row = (
     <ListRow
-      leading={leading}
-      title={titleNode}
-      subtitle={subtitleNode}
-      trailing={right}
+      leading={<AppIcon name={icon} size={22} color={theme.icon} />}
+      title={
+        <AppText variant="body" style={{ flexShrink: 1 }}>
+          {title}
+        </AppText>
+      }
+      subtitle={
+        subtitle ? (
+          <AppText variant="caption" color="secondary" style={{ flexShrink: 1 }}>
+            {subtitle}
+          </AppText>
+        ) : undefined
+      }
+      trailing={inside}
+      chevron={!trailing}
       trailingMaxWidth={trailing ? undefined : '55%'}
-      showSeparator={showSeparator}
       onPress={onPress}
       testID={testID}
-      accessibilityLabel={accessibilityLabel}
+      accessibilityLabel={copy.formRowAccessibility(
+        title,
+        subtitle,
+        trailing ? undefined : value,
+        trailing ? undefined : placeholder,
+      )}
+      {...(outside ? { style: { flex: 1 }, paddingRight: 0 } : null)}
     />
+  );
+
+  return (
+    <View>
+      {outside ? (
+        <Box flexDirection="row" alignItems="center" paddingRight="lg">
+          {row}
+          <Box marginLeft="md">{outside}</Box>
+        </Box>
+      ) : (
+        row
+      )}
+      {showSeparator ? (
+        <Separator width="auto" marginLeft={listRowTextInset('card', Spacing.xl)} />
+      ) : null}
+    </View>
   );
 }
