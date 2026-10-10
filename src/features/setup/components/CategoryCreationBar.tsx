@@ -1,4 +1,4 @@
-import { IconPickerModal } from '@/src/components/overlays/IconPickerModal';
+import { AppearancePickerModal } from '@/src/components/overlays/AppearancePickerModal';
 import { Icon, AppIcon, AppInput, AppText, PressScaleTouchable } from '@/src/components/core';
 import type { IconName } from '@/src/types/domainIcons';
 import { Opacity, Size } from '@/src/constants';
@@ -152,10 +152,11 @@ export const CategoryCreationBar: React.FC<CategoryCreationBarProps> = ({
       )}
 
       {isIconPickerVisible && (
-        <IconPickerModal
+        <AppearancePickerModal
+          mode="icon"
           visible={isIconPickerVisible}
           onClose={() => setIsIconPickerVisible(false)}
-          onSelect={icon => setSelectedIcon(icon)}
+          onIconSelect={icon => setSelectedIcon(icon)}
           selectedIcon={selectedIcon}
         />
       )}

@@ -1,4 +1,4 @@
-import { IconPickerModal } from '@/src/components/overlays/IconPickerModal';
+import { AppearancePickerModal } from '@/src/components/overlays/AppearancePickerModal';
 import { WorkplaceBasicInfoStep } from '@/src/features/setup/components/workplace-setup/WorkplaceBasicInfoStep';
 import { IconName } from '@/src/components/core';
 import { useState } from 'react';
@@ -41,10 +41,11 @@ export function WorkplaceIdentityStep({
         continueLabel="Continue"
         isCreating={isCompleting}
       />
-      <IconPickerModal
+      <AppearancePickerModal
+        mode="icon"
         visible={iconPickerVisible}
         onClose={() => setIconPickerVisible(false)}
-        onSelect={onIconChange}
+        onIconSelect={onIconChange}
         selectedIcon={icon}
       />
     </>
