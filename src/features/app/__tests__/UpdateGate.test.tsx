@@ -51,6 +51,7 @@ jest.mock('@/src/components/core', () => {
     AppText: Text,
     AppCard: View,
     AppIcon: () => null,
+    IconTile: () => null,
     AppButton: ({
       children,
       onPress,

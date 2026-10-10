@@ -1,4 +1,4 @@
-import { Icon, AppButton, AppText, IvyIcon } from '@/src/components/core';
+import { Icon, AppButton, AppText, IconTile } from '@/src/components/core';
 import { Screen } from '@/src/components/layout';
 import { Opacity, Scale, Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
@@ -97,9 +97,9 @@ export function AppLockInterceptor({ children }: { children: React.ReactNode }) 
                       ? { type: 'timing', duration: 0 }
                       : { type: 'timing', duration: 400, delay: 100 }
                   }
-                  style={[styles.iconContainer, { backgroundColor: theme.surfaceSecondary }]}
+                  style={styles.iconContainer}
                 >
-                  <IvyIcon name={Icon.Lock} size={48} color="transparent" iconColor={theme.text} />
+                  <IconTile icon={Icon.Lock} tint="text" size="hero" shape="circle" />
                 </MotiView>
 
                 <AppText variant="title" weight="bold" style={styles.title}>
@@ -144,11 +144,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
   },
   iconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
     marginBottom: Spacing.xl,
   },
   title: {

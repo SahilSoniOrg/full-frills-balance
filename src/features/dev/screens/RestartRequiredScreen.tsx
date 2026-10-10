@@ -1,8 +1,6 @@
-import { Icon, AppButton, AppCard, AppText, IvyIcon } from '@/src/components/core';
-import { AppConfig, Opacity, Size, Spacing } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
+import { Icon, AppButton, AppCard, AppText, IconTile } from '@/src/components/core';
+import { AppConfig, Spacing } from '@/src/constants';
 import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
-import { useTheme } from '@/src/hooks/use-theme';
 import { Page } from '@/src/design-system';
 import { reloadApp } from '@/src/utils/reloadApp';
 import { useCallback } from 'react';
@@ -13,7 +11,6 @@ import { StyleSheet, View } from 'react-native';
  * This screen ensures the app state is cleanly reloaded.
  */
 export const RestartRequiredScreen = () => {
-  const { theme } = useTheme();
   const { restartType, importStats } = useAppRestart();
 
   const handleRestart = useCallback(() => {
@@ -39,20 +36,12 @@ export const RestartRequiredScreen = () => {
   return (
     <Page>
       <View style={styles.content}>
-        <View
-          style={[
-            styles.iconContainer,
-            {
-              backgroundColor: isSuccess
-                ? withOpacity(theme.success, Opacity.soft)
-                : withOpacity(theme.error, Opacity.soft),
-            },
-          ]}
-        >
-          <IvyIcon
-            name={isSuccess ? Icon.CheckCircle : Icon.Delete}
-            size={Size.avatarMd}
-            color={isSuccess ? theme.success : theme.error}
+        <View style={styles.iconContainer}>
+          <IconTile
+            icon={isSuccess ? Icon.CheckCircle : Icon.Delete}
+            tint={isSuccess ? 'success' : 'error'}
+            size="hero"
+            shape="circle"
           />
         </View>
 
@@ -173,11 +162,6 @@ const styles = StyleSheet.create({
     padding: Spacing.xl,
   },
   iconContainer: {
-    width: Size.avatarXl,
-    height: Size.avatarXl,
-    borderRadius: Size.avatarXl / 2,
-    justifyContent: 'center',
-    alignItems: 'center',
     marginBottom: Spacing.lg,
   },
   title: {
