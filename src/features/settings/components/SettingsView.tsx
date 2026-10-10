@@ -2,7 +2,7 @@ import { AppConfig } from '@/src/constants';
 import { WorkplaceSwitcher } from '@/src/components/workplace/WorkplaceSwitcher';
 import { Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
-import { ListGroup, ListRow } from '@/src/components/core';
+import { ListGroup } from '@/src/components/core';
 import { useOptionalWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
 import { TextInput } from 'react-native';
@@ -38,22 +38,24 @@ export function SettingsView({ actions }: { actions: SettingsActions }) {
         />
         {!searchQuery.trim() &&
           SETTINGS_HUB_SECTIONS.map(section => (
-            <ListGroup variant="plain" key={section.header} header={section.header}>
-              {section.rows.map(({ id, icon, title, description, action, testID }) => {
+            <ListGroup
+              variant="plain"
+              key={section.header}
+              header={section.header}
+              items={section.rows}
+              toRow={({ id, icon, title, description, action, testID }) => {
                 const workplaceRow = id === 'workplace' ? currentWorkplace : undefined;
-                return (
-                  <ListRow
-                    key={id}
-                    focusId={id}
-                    icon={workplaceRow?.icon ?? icon}
-                    title={workplaceRow?.name ?? title}
-                    subtitle={description}
-                    onPress={() => actions[action]()}
-                    testID={testID}
-                  />
-                );
-              })}
-            </ListGroup>
+                return {
+                  id,
+                  focusId: id,
+                  icon: workplaceRow?.icon ?? icon,
+                  title: workplaceRow?.name ?? title,
+                  subtitle: description,
+                  onPress: () => actions[action](),
+                  testID,
+                };
+              }}
+            />
           ))}
       </Stack>
     </SettingsLayout>

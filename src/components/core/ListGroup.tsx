@@ -1,5 +1,7 @@
 import { AppText } from '@/src/components/core/AppText';
 import {
+  ListRow,
+  type ListRowProps,
   listRowPadding,
   listRowTextInset,
   ListVariantContext,
@@ -9,7 +11,10 @@ import { FocusTarget } from '@/src/components/shared/FocusTarget';
 import { Box, Inline, Separator, Stack } from '@/src/design-system';
 import { Children, Fragment, isValidElement, type ReactNode } from 'react';
 
-export type ListGroupProps = {
+/** A data-driven row: ListRow props plus a stable key. */
+export type ListRowItem = ListRowProps & { id: string };
+
+type ListGroupBaseProps = {
   /** Overline section header, aligned with the row content. */
   header?: string;
   headerAccessory?: ReactNode;
@@ -26,11 +31,24 @@ export type ListGroupProps = {
   /** Search/scroll focus target id for the whole group. */
   focusId?: string;
   testID?: string;
-  children: ReactNode;
+  /** Props applied to every row generated from `items` (e.g. `{ chevron: true }`); item props win. */
+  rowProps?: Partial<ListRowProps>;
+  /** Custom rows, rendered after the `items` rows. */
+  children?: ReactNode;
 };
 
+/**
+ * Rows come from `items` (keyed by `id`, mapped with `toRow` unless they already are
+ * `ListRowItem`s) followed by `children`.
+ */
+export type ListGroupProps<T = ListRowItem> = ListGroupBaseProps &
+  (
+    | { items?: readonly ListRowItem[]; toRow?: undefined }
+    | { items: readonly T[]; toRow: (item: T, index: number) => ListRowItem }
+  );
+
 /** A titled group of rows: overline header, rows with hairline dividers, optional footer. */
-export function ListGroup({
+export function ListGroup<T = ListRowItem>({
   header,
   headerAccessory,
   footer,
@@ -38,12 +56,19 @@ export function ListGroup({
   dividerInset,
   focusId,
   testID,
+  rowProps,
+  items,
+  toRow,
   children,
-}: ListGroupProps) {
+}: ListGroupProps<T>) {
   const plain = variant === 'plain';
   const edge = plain ? listRowPadding(variant) : 'sm';
   const inset = dividerInset ?? listRowTextInset(variant);
-  const rows = Children.toArray(children).filter(Boolean);
+  const generated = (items ?? []).map((item, index) => {
+    const { id, ...row } = toRow ? toRow(item as T, index) : (item as ListRowItem);
+    return <ListRow key={id} {...rowProps} {...row} />;
+  });
+  const rows = [...generated, ...Children.toArray(children).filter(Boolean)];
   if (rows.length === 0 && !header) return null;
 
   const group = (

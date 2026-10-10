@@ -74,31 +74,30 @@ export function HubView({
             />
           ) : null
         ) : dismissedInsights.length > 0 ? (
-          <ListGroup>
-            {dismissedInsights.map((item: Insight) => (
-              <ListRow
-                key={item.id}
-                leading={
-                  <AppIcon
-                    name={insightTypePresentation(item.type).icon}
-                    size={Size.xs}
-                    color={theme.text}
-                  />
-                }
-                title={item.message}
-                subtitle={item.description}
-                trailing={
-                  <AppButton
-                    size="sm"
-                    onPress={() => restoreInsight(item.id)}
-                    style={{ borderRadius: 20 }}
-                  >
-                    {strings.restore}
-                  </AppButton>
-                }
-              />
-            ))}
-          </ListGroup>
+          <ListGroup
+            items={dismissedInsights}
+            toRow={(item: Insight) => ({
+              id: item.id,
+              leading: (
+                <AppIcon
+                  name={insightTypePresentation(item.type).icon}
+                  size={Size.xs}
+                  color={theme.text}
+                />
+              ),
+              title: item.message,
+              subtitle: item.description,
+              trailing: (
+                <AppButton
+                  size="sm"
+                  onPress={() => restoreInsight(item.id)}
+                  style={{ borderRadius: 20 }}
+                >
+                  {strings.restore}
+                </AppButton>
+              ),
+            })}
+          />
         ) : (
           <EmptyStateView
             icon={Icon.Info}
