@@ -3,6 +3,7 @@
  */
 
 import {
+  headlineCurrency,
   amountsAreEqual,
   getEpsilon,
   Money,
@@ -126,5 +127,17 @@ describe('money utilities', () => {
       expect(jpy.round(3).amount).toBe(1.6);
       expect(jpy.add(new Money(0.4, 'JPY'), 2).amount).toBe(2);
     });
+  });
+});
+
+describe('headlineCurrency', () => {
+  it('keeps the workplace currency when any item uses it', () => {
+    expect(headlineCurrency(['EUR', 'USD', 'EUR'], 'USD')).toBe('USD');
+  });
+  it('falls back to the most common currency instead of an empty $0 headline', () => {
+    expect(headlineCurrency(['INR', 'EUR', 'EUR'], 'USD')).toBe('EUR');
+  });
+  it('keeps the workplace currency when there is nothing to total', () => {
+    expect(headlineCurrency([], 'USD')).toBe('USD');
   });
 });

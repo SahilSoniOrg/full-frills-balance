@@ -1,6 +1,6 @@
 import { getBudgetCurrentPeriod } from '@/src/services/budget/BudgetPeriodUtils';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
-import { safeAdd, safeSubtract } from '@/src/utils/money';
+import { headlineCurrency, safeAdd, safeSubtract } from '@/src/utils/money';
 import { BudgetItem } from '../types';
 import { presentBudgetPeriod } from './budgetDetailPresentation';
 import { resolveBudgetStatus, type BudgetStatus } from './budgetCardPresentation';
@@ -23,11 +23,15 @@ export function sortBudgetItems(items: BudgetItem[], now: number): BudgetItem[] 
 }
 
 /** Raw money only: the view formats every amount through the privacy-aware money APIs. */
-export function summarizeBudgetList(items: BudgetItem[], currencyCode: string, now: number) {
+export function summarizeBudgetList(items: BudgetItem[], workplaceCurrency: string, now: number) {
   // Restrict the headline to one-month cycles. Never mix weekly/quarterly capacity into it.
   const monthly = items.filter(
     ({ budget }) =>
       (!budget.intervalType || budget.intervalType === 'MONTHLY') && (budget.intervalN || 1) === 1,
+  );
+  const currencyCode = headlineCurrency(
+    monthly.map(({ budget }) => budget.currencyCode),
+    workplaceCurrency,
   );
   const included = monthly.filter(item => item.budget.currencyCode === currencyCode);
   const precision = getCurrencyPrecision(currencyCode);

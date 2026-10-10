@@ -6,7 +6,7 @@ import {
 } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { PlannedPaymentStatus } from '@/src/types/enums';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
-import { safeAdd } from '@/src/utils/money';
+import { headlineCurrency, safeAdd } from '@/src/utils/money';
 import dayjs from 'dayjs';
 
 export interface PlannedPaymentCurrencyTotal {
@@ -86,7 +86,7 @@ function totalOccurrences(
 /** Calendar boundaries use local days, including today and the following six days. */
 export function buildPlannedPaymentListPresentation(
   data: PlannedPaymentListData,
-  mainCurrencyCode: string,
+  workplaceCurrency: string,
   now: number,
 ) {
   const today = dayjs(now).startOf('day');
@@ -97,6 +97,10 @@ export function buildPlannedPaymentListPresentation(
   const occurrences = projectPlannedPaymentListOccurrences(data, laterStart.valueOf() - 1);
   const actionable = occurrences.filter(item => item.canRecord);
   const remaining = actionable.filter(item => item.date < nextMonthStart.valueOf());
+  const mainCurrencyCode = headlineCurrency(
+    remaining.map(item => item.currencyCode),
+    workplaceCurrency,
+  );
   const outgoing = totalOccurrences(remaining.filter(isOutgoing), mainCurrencyCode);
   const incoming = totalOccurrences(
     remaining.filter(item => item.payment.flowDirection === 'inflow'),

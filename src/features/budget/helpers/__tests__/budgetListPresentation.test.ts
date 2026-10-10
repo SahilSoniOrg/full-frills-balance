@@ -101,10 +101,10 @@ describe('budget list data', () => {
     expect(JSON.stringify(summary)).not.toContain('$');
   });
 
-  it('does not invent a monthly period when the main currency has no budgets', () => {
+  it('headlines the main budget currency instead of $0 when the workplace currency has none', () => {
     const summary = summarizeBudgetList([item('Euro', 5, { currencyCode: 'EUR' })], 'USD', now);
-    expect(summary.usage.spent).toBe(0);
-    expect(summary.otherCurrencyCount).toBe(1);
-    expect(summary.period).toBeUndefined();
+    expect(summary.currencyCode).toBe('EUR');
+    expect(summary.usage.spent).toBe(5);
+    expect(summary.otherCurrencyCount).toBe(0);
   });
 });

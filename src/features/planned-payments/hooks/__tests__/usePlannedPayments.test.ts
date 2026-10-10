@@ -92,8 +92,8 @@ describe('planned payments list hook', () => {
     expect(result.current.items).toBe(data.items);
     expect(result.current.listData.summary.outgoing).toMatchObject({
       count: 1,
-      mainCurrency: { currencyCode: 'USD', amount: 0 },
-      otherCurrencyCount: 1,
+      mainCurrency: { currencyCode: 'EUR', amount: 75 },
+      otherCurrencyCount: 0,
     });
     expect(result.current.listData.groups[0].rows[0]).toMatchObject({
       amount: 75,
