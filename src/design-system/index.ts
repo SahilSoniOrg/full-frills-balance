@@ -1,7 +1,6 @@
 export * from './Box';
 export * from './FadeIn';
 export * from './Inline';
-export * from './Inset';
 export * from './Keyboard';
 export * from './Page';
 export * from './Separator';
