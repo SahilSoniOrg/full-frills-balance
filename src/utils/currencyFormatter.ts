@@ -29,6 +29,62 @@ export function normalizeCurrencyCode(currencyCode: string | undefined): string 
   return currencyCode?.trim().toUpperCase() ?? '';
 }
 
+/** Locale for short style when the currency has none; keeps K/M/B/T independent of device locale. */
+const SHORT_DEFAULT_LOCALE = 'en-US';
+const COMPACT_FORMATTERS = new Map<string, Intl.NumberFormat>();
+const COMPACT_SUPPORT = new Map<string, boolean>();
+
+function getCompactFormatter(locale: string): Intl.NumberFormat {
+  let formatter = COMPACT_FORMATTERS.get(locale);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(locale, {
+      notation: 'compact',
+      compactDisplay: 'short',
+      maximumFractionDigits: 1,
+    });
+    COMPACT_FORMATTERS.set(locale, formatter);
+  }
+  return formatter;
+}
+
+/**
+ * Hermes on iOS ignores `notation: 'compact'` (facebook/hermes#1035) and returns the full
+ * number, so probe once per locale and use the fallback when compaction did not happen.
+ */
+function supportsCompactNotation(locale: string): boolean {
+  let supported = COMPACT_SUPPORT.get(locale);
+  if (supported === undefined) {
+    try {
+      supported = !/^1[,.\s\u00a0\u202f]?500/.test(getCompactFormatter(locale).format(1500));
+    } catch {
+      supported = false;
+    }
+    COMPACT_SUPPORT.set(locale, supported);
+  }
+  return supported;
+}
+
+/** Guarded fallback for engines without compact notation; mirrors en / en-IN CLDR short forms. */
+function formatCompactFallback(amount: number, locale: string): string {
+  const units: [number, string][] =
+    locale === 'en-IN'
+      ? [
+          [1e7, 'Cr'],
+          [1e5, 'L'],
+          [1e3, 'K'],
+        ]
+      : [
+          [1e12, 'T'],
+          [1e9, 'B'],
+          [1e6, 'M'],
+          [1e3, 'K'],
+        ];
+  const abs = Math.abs(amount);
+  const sign = amount < 0 ? '-' : '';
+  const [divisor, suffix] = units.find(([d]) => abs >= d) ?? units[units.length - 1];
+  return `${sign}${(abs / divisor).toFixed(1).replace(/\.0$/, '')}${suffix}`;
+}
+
 export const CurrencyFormatter = {
   /**
    * Formats an amount with a specific currency code.
@@ -115,41 +171,22 @@ export const CurrencyFormatter = {
   },
 
   /**
-   * Formats an amount in short form (e.g., 1K, 1M, 1L, 1Cr).
+   * Formats an amount in short form (e.g. 1.5K, 2.5M, 1.5L, 9.9Cr) using Intl compact notation
+   * in the currency's locale (INR -> en-IN gives lakh/crore). No currency symbol at >= 1000;
+   * below that it falls back to the whole-number currency format.
    */
   formatShort(amount: number, currencyCode: string): string {
-    const code = currencyCode;
-    const absAmount = Math.abs(amount);
-    const sign = amount < 0 ? '-' : '';
-
-    if (code === 'INR') {
-      if (absAmount >= 10000000) {
-        // 1 Crore
-        return `${sign}${(absAmount / 10000000).toFixed(1).replace(/\.0$/, '')}Cr`;
-      }
-      if (absAmount >= 100000) {
-        // 1 Lakh
-        return `${sign}${(absAmount / 100000).toFixed(1).replace(/\.0$/, '')}L`;
-      }
-      if (absAmount >= 1000) {
-        return `${sign}${(absAmount / 1000).toFixed(1).replace(/\.0$/, '')}K`;
-      }
-    } else {
-      if (absAmount >= 1000000000000) {
-        return `${sign}${(absAmount / 1000000000000).toFixed(1).replace(/\.0$/, '')}T`;
-      }
-      if (absAmount >= 1000000000) {
-        return `${sign}${(absAmount / 1000000000).toFixed(1).replace(/\.0$/, '')}B`;
-      }
-      if (absAmount >= 1000000) {
-        return `${sign}${(absAmount / 1000000).toFixed(1).replace(/\.0$/, '')}M`;
-      }
-      if (absAmount >= 1000) {
-        return `${sign}${(absAmount / 1000).toFixed(1).replace(/\.0$/, '')}K`;
-      }
+    if (Math.abs(amount) < 1000) {
+      return this.format(amount, currencyCode, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      });
     }
-
-    return this.format(amount, code, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    const locale = getCurrencyLocale(currencyCode) ?? SHORT_DEFAULT_LOCALE;
+    if (supportsCompactNotation(locale)) {
+      return getCompactFormatter(locale).format(amount);
+    }
+    return formatCompactFallback(amount, locale);
   },
 
   /**
