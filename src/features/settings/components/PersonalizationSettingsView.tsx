@@ -24,7 +24,6 @@ export function PersonalizationSettingsView({ vm }: PersonalizationSettingsViewP
             icon={Icon.User}
             title={AppConfig.strings.settings.personalization.yourName}
             subtitle={AppConfig.strings.settings.personalization.yourNameDesc}
-            chevron={false}
             trailing={
               <View style={{ width: 140 }}>
                 <AppInput

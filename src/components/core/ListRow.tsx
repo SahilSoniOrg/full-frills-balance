@@ -14,13 +14,12 @@ import {
   StyleSheet,
   View,
   type AccessibilityState,
-  type LayoutChangeEvent,
   type TouchableOpacityProps,
 } from 'react-native';
 
 export type ListVariant = 'card' | 'plain';
 
-/** Set by ListGroup: `plain` rows are compact, wrap, use semibold titles and auto chevrons. */
+/** Set by ListGroup: `plain` rows are compact, wrap and use semibold titles. */
 export const ListVariantContext = createContext<ListVariant>('card');
 
 const PADDING: Record<ListVariant, SpacingKey> = { card: 'lg', plain: 'md' };
@@ -101,14 +100,8 @@ type ListRowPressProps = {
   testID?: string;
   accessibilityLabel?: string;
   accessibilityRole?: TouchableOpacityProps['accessibilityRole'];
-  accessibilityHint?: string;
   accessibilityState?: AccessibilityState;
-  hitSlop?: TouchableOpacityProps['hitSlop'];
-  delayLongPress?: number;
-  onLayout?: (event: LayoutChangeEvent) => void;
   pointerEvents?: BoxViewProps['pointerEvents'];
-  nativeID?: string;
-  accessible?: boolean;
   trailingMaxWidth?: BoxViewProps['maxWidth'];
 };
 
@@ -154,14 +147,8 @@ function ListRowBase(initialProps: ListRowProps) {
     testID,
     accessibilityLabel,
     accessibilityRole,
-    accessibilityHint,
     accessibilityState,
-    hitSlop,
-    delayLongPress,
-    onLayout,
     pointerEvents,
-    nativeID,
-    accessible,
     trailingMaxWidth,
     ...passthroughProps
   } = initialProps;
@@ -190,12 +177,12 @@ function ListRowBase(initialProps: ListRowProps) {
   const defaultLabel =
     [textOf(title), textOf(subtitle), valueText].filter(Boolean).join(', ') || undefined;
   const label = accessibilityLabel ?? defaultLabel;
-  const hint = accessibilityHint ?? (destructive ? 'Destructive action' : undefined);
+  const hint = destructive ? 'Destructive action' : undefined;
   const a11yState: AccessibilityState | undefined =
     accessibilityState ??
     (toggle ? { checked: toggle.value, disabled } : disabled ? { disabled } : undefined);
 
-  const hostProps = { testID, onLayout, pointerEvents, nativeID, accessible };
+  const hostProps = { testID, pointerEvents };
 
   const rowContent = (
     <>
@@ -264,7 +251,6 @@ function ListRowBase(initialProps: ListRowProps) {
             ...hostProps,
             accessibilityRole,
             accessibilityLabel,
-            accessibilityHint,
             accessibilityState,
           }
         : null)}
@@ -279,8 +265,6 @@ function ListRowBase(initialProps: ListRowProps) {
       onPress={onPress ? () => onPress() : undefined}
       onLongPress={onLongPress}
       disabled={disabled}
-      hitSlop={hitSlop}
-      delayLongPress={delayLongPress}
       accessibilityRole={accessibilityRole ?? (toggle ? 'switch' : 'button')}
       accessibilityLabel={label}
       accessibilityHint={hint}
@@ -319,7 +303,6 @@ export const ListRow = Object.assign(ListRowBase, {
   Toggle: RowToggle,
   Value: RowValue,
   Spinner: RowSpinner,
-  Chevron: RowChevron,
 });
 
 const styles = StyleSheet.create({

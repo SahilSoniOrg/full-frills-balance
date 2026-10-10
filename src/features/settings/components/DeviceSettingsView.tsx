@@ -13,7 +13,6 @@ export function DeviceSettingsView() {
             icon={Icon.Settings}
             title="Local device"
             subtitle="Preferences here apply only to this installation."
-            chevron={false}
             disabled
           />
         </ListGroup>
@@ -24,7 +23,6 @@ export function DeviceSettingsView() {
             icon={Icon.Briefcase}
             title="Other devices"
             subtitle="Remote sessions and sync will appear here when multi-device support is available."
-            chevron={false}
             disabled
             testID="device-other-devices-placeholder"
           />

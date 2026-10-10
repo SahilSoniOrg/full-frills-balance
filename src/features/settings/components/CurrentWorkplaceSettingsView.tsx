@@ -60,7 +60,6 @@ export function CurrentWorkplaceSettingsView({ vm }: CurrentWorkplaceSettingsVie
               icon={Icon.Bank}
               title={AppConfig.strings.settings.currency.title}
               subtitle={`${AppConfig.strings.settings.currency.description} for ${vm.workplaceName || 'current workplace'}`}
-              chevron={false}
               trailing={
                 <CurrencySelector
                   selectedCurrency={vm.workplaceCurrency}

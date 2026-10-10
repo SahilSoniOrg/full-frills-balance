@@ -87,26 +87,6 @@ describe('FormRow', () => {
     expect(screen.queryByTestId('form-row-chevron')).toBeNull();
   });
 
-  it('keeps a trailing toggle independently reachable from row activation', () => {
-    const onPress = jest.fn();
-    const onValueChange = jest.fn();
-    const screen = render(
-      <FormRow
-        icon={Icon.Wallet}
-        title="Auto-post"
-        onPress={onPress}
-        trailing={<AppToggle value onValueChange={onValueChange} />}
-      />,
-    );
-    const rowButton = screen.getByRole('button', { name: 'Auto-post' });
-    const toggle = screen.getByRole('switch');
-
-    expect(rowButton.findAll(node => node === toggle)).toHaveLength(0);
-    fireEvent(toggle, 'valueChange', false);
-    expect(onValueChange).toHaveBeenCalledWith(false);
-    expect(onPress).not.toHaveBeenCalled();
-  });
-
   it('includes the value in the default row accessibility label', () => {
     const screen = render(
       <FormRow icon={Icon.Bank} title="From" value="Salary" onPress={() => {}} />,

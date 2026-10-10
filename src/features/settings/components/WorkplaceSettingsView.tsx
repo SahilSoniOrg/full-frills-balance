@@ -58,7 +58,7 @@ export function WorkplaceSettingsView({ vm, headerActions }: WorkplaceSettingsVi
                       <ListRow
                         focusId={`workplace-${workplace.id}`}
                         title={workplace.name}
-                        subtitle={isActive ? 'Current active Workplace' : undefined}
+                        subtitle={isActive && 'Current active Workplace'}
                         onPress={() => {
                           if (!isActive) vm.setActiveWorkplace(workplace);
                         }}

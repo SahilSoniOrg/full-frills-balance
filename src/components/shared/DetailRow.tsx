@@ -23,9 +23,9 @@ export function DetailRow({
       title={<AppText color="secondary">{label}</AppText>}
       trailing={
         typeof value === 'string' || typeof value === 'number' ? (
-          <AppText selectable={selectable} align="right">
+          <ListRow.Value color={undefined} selectable={selectable}>
             {value}
-          </AppText>
+          </ListRow.Value>
         ) : (
           value
         )
