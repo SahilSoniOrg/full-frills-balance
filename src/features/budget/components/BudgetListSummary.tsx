@@ -1,4 +1,4 @@
-import { AppConfig } from '@/src/constants';
+import { AppConfig, Typography } from '@/src/constants';
 import { AppCard, AppText, Badge } from '@/src/components/core';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { MoneyText } from '@/src/components/shared/MoneyText';
@@ -44,10 +44,12 @@ export function BudgetListSummary({
             formatStyle="compact"
             prefix={usage.hasUnvaluedEntries ? '≈ ' : undefined}
             variant="title"
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.2}
-            style={{ maxWidth: '100%', flexShrink: 1 }}
+            fit={{
+              maxFontSize: Typography.roles.title.fontSize,
+              minFontSize: Typography.sizes.xl,
+              lineHeightRatio: Typography.roles.title.lineHeight / Typography.roles.title.fontSize,
+              hug: true,
+            }}
             color={usage.remaining < 0 ? 'error' : 'text'}
           />
           <AppText variant="caption" color="secondary">

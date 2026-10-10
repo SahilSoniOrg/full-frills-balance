@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { AppConfig, Size, Spacing } from '@/src/constants';
+import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
 import {
   AppButton,
   AppIcon,
@@ -31,6 +31,12 @@ import {
   plannedMoneyDiffers,
   presentPlannedPaymentDetailsHeader,
 } from '../hooks/plannedPaymentDetailsPresentation';
+
+const TITLE_AMOUNT_FIT = {
+  maxFontSize: Typography.roles.title.fontSize,
+  minFontSize: Typography.sizes.xl,
+  lineHeightRatio: Typography.roles.title.lineHeight / Typography.roles.title.fontSize,
+};
 
 const copy = AppConfig.strings.plannedDetailRedesign;
 
@@ -110,9 +116,7 @@ export function PlannedPaymentDetailsView({
                 amount={total.amount}
                 currencyCode={total.currencyCode}
                 variant="title"
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.2}
+                fit={TITLE_AMOUNT_FIT}
               />
             ))}
             <AppText variant="body" color="secondary">
@@ -134,9 +138,7 @@ export function PlannedPaymentDetailsView({
                   : (occurrence?.currencyCode ?? vm.currencyCode)
               }
               variant="title"
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.2}
+              fit={TITLE_AMOUNT_FIT}
               color={isPaused || isEndedWithoutOutstanding ? 'secondary' : 'text'}
             />
           )

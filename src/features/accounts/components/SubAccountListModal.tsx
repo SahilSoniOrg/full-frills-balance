@@ -1,6 +1,6 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { AppText, Icon, IconButton, IvyIcon, type IconName } from '@/src/components/core';
-import { BorderWidth, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { BorderWidth, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { usePrivacyScope } from '@/src/contexts/PrivacyScope';
 import { resolveAccountAppearance } from '@/src/utils/accountCategory';
@@ -10,6 +10,20 @@ import { SubAccountViewModel } from '@/src/features/accounts/hooks/useAccountDet
 import { useTheme } from '@/src/hooks/use-theme';
 import { memo, useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+
+// Balances shrink at most to ~0.75x (the old 0.85 floor could still truncate crore amounts).
+const BODY_BALANCE_FIT = {
+  maxFontSize: Typography.roles.body.fontSize,
+  minFontSize: Typography.sizes.xs,
+  lineHeightRatio: Typography.roles.body.lineHeight / Typography.roles.body.fontSize,
+  hug: true,
+};
+const LARGE_BALANCE_FIT = {
+  maxFontSize: Typography.roles.bodyLarge.fontSize,
+  minFontSize: Typography.sizes.sm,
+  lineHeightRatio: Typography.roles.bodyLarge.lineHeight / Typography.roles.bodyLarge.fontSize,
+  hug: true,
+};
 
 export interface SubAccountTreeParent {
   name: string;
@@ -238,9 +252,7 @@ const SubAccountTreeRow = memo(function SubAccountTreeRow({
               variant="body"
               weight="semibold"
               align={stackBalances ? 'left' : 'right'}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.85}
+              fit={BODY_BALANCE_FIT}
             />
             {showCurrency ? (
               <AppText variant="caption" color="secondary" align={stackBalances ? 'left' : 'right'}>
@@ -363,9 +375,7 @@ export function SubAccountListModal({
                   variant="bodyLarge"
                   weight="bold"
                   align={stackBalances ? 'left' : 'right'}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.85}
+                  fit={LARGE_BALANCE_FIT}
                 />
                 <AppText
                   variant="caption"

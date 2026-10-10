@@ -1,3 +1,5 @@
+import { FitText } from '@/src/components/shared/FitText';
+import { ColorKey } from '@/src/constants/design-tokens';
 import { LIST_SELECTION_LONG_PRESS_MS } from '@/src/constants/gesture-constants';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
@@ -12,7 +14,6 @@ import {
 } from '@/src/components/core';
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
 import { BorderWidth, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
-import { ColorKey } from '@/src/constants/design-tokens';
 import { Box, Column, Row } from '@/src/design-system';
 import { AccountId } from '@/src/types/ids';
 
@@ -211,23 +212,21 @@ function AccountCardBase({
               style={[styles.amountRow, onActionPress && styles.amountWithActions]}
             >
               <Column align="center" justify="center" gap="xs" flex={1} style={{ minWidth: 0 }}>
-                <AppText
+                <FitText
                   variant="title"
                   fontRole="numeric"
                   weight="semibold"
                   tabular
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.65}
-                  style={{
-                    color: resolvedTextColor,
-                    width: '100%',
-                    minWidth: 0,
-                    textAlign: 'center',
-                  }}
+                  align="center"
+                  maxFontSize={Typography.roles.title.fontSize}
+                  minFontSize={Typography.sizes.xl}
+                  lineHeightRatio={
+                    Typography.roles.title.lineHeight / Typography.roles.title.fontSize
+                  }
+                  style={{ color: resolvedTextColor }}
                 >
                   {formatMoney(account.balance, account.currencyCode)}
-                </AppText>
+                </FitText>
                 {account.workplaceBalance !== undefined &&
                   account.currencyCode !== workplaceCurrencyCode && (
                     <AppText

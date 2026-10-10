@@ -1,6 +1,6 @@
 import { AppText } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { AppConfig, ChromeMotion, Spacing } from '@/src/constants';
+import { AppConfig, ChromeMotion, Spacing, Typography } from '@/src/constants';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { Box, Inline, Page, Stack, usePageKeyboard } from '@/src/design-system';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
@@ -78,6 +78,19 @@ export function OnboardingChrome({
   );
 }
 
+// Same floors as the old minimumFontScale (0.6 hero, 0.7 compact), now honoured on web too.
+const STS_HERO_FIT = {
+  maxFontSize: Typography.roles.hero.fontSize,
+  minFontSize: Math.round(Typography.roles.hero.fontSize * 0.6),
+  lineHeightRatio: Typography.lineHeights.tight,
+};
+const STS_COMPACT_FIT = {
+  maxFontSize: Typography.roles.subheading.fontSize,
+  minFontSize: Math.round(Typography.roles.subheading.fontSize * 0.7),
+  lineHeightRatio: Typography.roles.subheading.lineHeight / Typography.roles.subheading.fontSize,
+  hug: true,
+};
+
 /** Collapses to a single row while the keyboard is open so the focused field keeps its room. */
 export function SafeToSpendHeader({
   amount,
@@ -97,9 +110,7 @@ export function SafeToSpendHeader({
       currencyCode={currency}
       formatStyle="sts"
       variant={variant}
-      numberOfLines={1}
-      adjustsFontSizeToFit
-      minimumFontScale={variant === 'hero' ? 0.6 : 0.7}
+      fit={variant === 'hero' ? STS_HERO_FIT : STS_COMPACT_FIT}
       testID="onboarding-sts"
     />
   );

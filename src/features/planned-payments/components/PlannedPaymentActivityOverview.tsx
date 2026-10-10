@@ -3,7 +3,7 @@ import { useWindowDimensions } from 'react-native';
 import { AppButton, AppText, AppCard, PressScaleTouchable } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { Column, Row, Separator } from '@/src/design-system';
-import { AppConfig, Size } from '@/src/constants';
+import { AppConfig, Size, Typography } from '@/src/constants';
 import type { EnrichedJournal } from '@/src/types/domainReadModels';
 import type {
   PlannedPaymentActivitySummary,
@@ -17,6 +17,12 @@ import {
   getPlannedPaymentHistoryPresentation,
   plannedMoneyDiffers,
 } from '../hooks/plannedPaymentDetailsPresentation';
+
+const TITLE_AMOUNT_FIT = {
+  maxFontSize: Typography.roles.title.fontSize,
+  minFontSize: Typography.sizes.xl,
+  lineHeightRatio: Typography.roles.title.lineHeight / Typography.roles.title.fontSize,
+};
 
 const copy = AppConfig.strings.plannedDetailRedesign;
 
@@ -223,9 +229,7 @@ export function PlannedPaymentActivityOverview({
                       amount={total.amount}
                       currencyCode={total.currencyCode}
                       variant="title"
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.2}
+                      fit={TITLE_AMOUNT_FIT}
                     />
                   ))}
                   <AppText variant="caption" color="secondary">

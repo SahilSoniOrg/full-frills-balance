@@ -1,7 +1,7 @@
 import { AppCard, AppText, ColoredDot, Icon, IconButton } from '@/src/components/core';
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { ChromeMotion, Typography } from '@/src/constants';
+import { ChromeMotion, Typography, Spacing } from '@/src/constants';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { Inline, Stack } from '@/src/design-system';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
@@ -104,8 +104,11 @@ export function ClarityScene({
                 formatStyle="compact"
                 variant="hero"
                 color={stsColor}
-                numberOfLines={1}
-                adjustsFontSizeToFit
+                fit={{
+                  maxFontSize: Typography.roles.hero.fontSize,
+                  minFontSize: Typography.sizes.xxxl + Spacing.xs,
+                  lineHeightRatio: Typography.lineHeights.tight,
+                }}
                 testID="onboarding-clarity-sts"
               />
               <AppText variant="body" color="secondary" style={styles.proseCopy}>

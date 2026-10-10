@@ -8,7 +8,7 @@ import {
   IvyIcon,
   type IconName,
 } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { AccountParentPath } from '@/src/features/accounts/components/AccountParentPath';
 import { accountDetailsCopy } from '@/src/features/accounts/helpers/accountFlowLabels';
 import type { AccountSummaryCardModel } from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
@@ -19,6 +19,20 @@ import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
 import { isCategoryAccountType, resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { getReadableColor, withOpacity } from '@/src/utils/color-math';
 import { Pressable, StyleSheet, View } from 'react-native';
+
+// Old minimumFontScale was 0.6; same floor, now honoured on web too.
+const TITLE_BALANCE_FIT = {
+  maxFontSize: Typography.roles.title.fontSize,
+  minFontSize: Math.round(Typography.roles.title.fontSize * 0.6),
+  lineHeightRatio: Typography.roles.title.lineHeight / Typography.roles.title.fontSize,
+  hug: true,
+};
+const BODY_BALANCE_FIT = {
+  maxFontSize: Typography.roles.body.fontSize,
+  minFontSize: Typography.sizes.xs,
+  lineHeightRatio: Typography.roles.body.lineHeight / Typography.roles.body.fontSize,
+  hug: true,
+};
 
 export type AccountSummaryCardProps = AccountSummaryCardModel & {
   currencyCode: string;
@@ -197,10 +211,7 @@ export function AccountSummaryCard({
             variant={isCategory ? 'body' : 'title'}
             weight="semibold"
             loading={balanceAmount === null}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.6}
-            style={styles.balance}
+            fit={isCategory ? BODY_BALANCE_FIT : TITLE_BALANCE_FIT}
             testID="account-balance"
           />
           {!isCategory && (
