@@ -15,6 +15,8 @@ interface SafeToSpendHeaderProps {
   isOverCommitted: boolean;
   isPositiveSafeToSpend: boolean;
   amount: number;
+  /** Some balances could not be converted: show the amount as approximate, not as a verdict. */
+  incomplete?: boolean;
   currencyCode: string;
   loading?: boolean;
   infoDisabled?: boolean;
@@ -26,6 +28,7 @@ export const SafeToSpendHeader = ({
   isOverCommitted,
   isPositiveSafeToSpend,
   amount,
+  incomplete = false,
   currencyCode,
   loading = false,
   infoDisabled = false,
@@ -48,10 +51,18 @@ export const SafeToSpendHeader = ({
       maxFontSize={amountFontSize}
       minFontSize={HERO_MIN_FONT_SIZE}
       lineHeightRatio={Typography.lineHeights.tight}
-      color={isOverCommitted ? 'error' : isPositiveSafeToSpend ? 'success' : undefined}
+      color={
+        isOverCommitted
+          ? 'error'
+          : incomplete
+            ? 'secondary'
+            : isPositiveSafeToSpend
+              ? 'success'
+              : undefined
+      }
       weight="semibold"
     >
-      {formatSts(amount, currencyCode)}
+      {formatSts(amount, currencyCode, incomplete ? { prefix: '≈ ' } : undefined)}
     </FitText>
   );
 

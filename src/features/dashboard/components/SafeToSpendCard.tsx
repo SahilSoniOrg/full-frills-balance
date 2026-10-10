@@ -95,6 +95,7 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
         isOverCommitted={isOverCommitted}
         isPositiveSafeToSpend={isPositiveSafeToSpend}
         amount={isOverCommitted ? shortfall : safeToSpend}
+        incomplete={Boolean(viewModel.hasUnvaluedEntries)}
         currencyCode={currencyCode}
         loading={loading}
         infoDisabled={!detailsReady}
