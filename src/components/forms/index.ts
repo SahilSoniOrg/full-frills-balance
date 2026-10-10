@@ -16,4 +16,3 @@ export { formatScheduleSentence, previewOccurrences } from './schedule/formatSch
 export type { ScheduleValue } from './schedule/types';
 export { ExchangeRateCard } from './ExchangeRateCard';
 export type { ExchangeRateCardProps } from './ExchangeRateCard';
-export { ManualBaseRateField } from './ManualBaseRateField';
