@@ -44,6 +44,7 @@ export function ListGroup({
   const edge = plain ? listRowPadding(variant) : 'sm';
   const inset = dividerInset ?? listRowTextInset(variant);
   const rows = Children.toArray(children).filter(Boolean);
+  if (rows.length === 0 && !header) return null;
 
   const group = (
     <Stack space="sm" testID={testID}>

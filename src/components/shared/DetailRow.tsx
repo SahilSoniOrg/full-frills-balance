@@ -7,7 +7,6 @@ export function DetailRow({
   label,
   value,
   selectable,
-  showSeparator,
   onLongPress,
   testID,
   accessibilityLabel,
@@ -15,7 +14,6 @@ export function DetailRow({
   label: string;
   value: ReactNode;
   selectable?: boolean;
-  showSeparator?: boolean;
   onLongPress?: () => void;
   testID?: string;
   accessibilityLabel?: string;
@@ -34,7 +32,6 @@ export function DetailRow({
       }
       trailingMaxWidth="60%"
       minHeight={Size.touchTargetLg}
-      showSeparator={showSeparator}
       onLongPress={onLongPress}
       testID={testID}
       accessibilityLabel={accessibilityLabel}

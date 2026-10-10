@@ -1,10 +1,10 @@
-import { AppText } from '@/src/components/core';
+import { AppText, ListGroup } from '@/src/components/core';
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { useAfterDismiss } from '@/src/components/overlays/useAfterDismiss';
 import { DetailRow } from '@/src/components/shared/DetailRow';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
-import { AppConfig, Opacity } from '@/src/constants';
+import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import { Box, Inline, Stack } from '@/src/design-system';
 import {
   findSmsHighlightRanges,
@@ -89,36 +89,31 @@ function SmsMessage({ sms }: { sms: SmsJournalInfoDisplay }) {
           ))}
         </Inline>
       ) : null}
-      {sms.amount !== undefined ? (
-        <DetailRow
-          label={strings.amountRead}
-          value={
-            sms.currencyCode ? (
-              <MoneyText amount={sms.amount} currencyCode={sms.currencyCode} variant="body" />
-            ) : privateMode ? (
-              AppConfig.privacyMask
-            ) : (
-              String(sms.amount)
-            )
-          }
-          showSeparator
-        />
-      ) : null}
-      {[
-        { label: strings.accountHint, value: sms.accountSource },
-        { label: strings.merchant, value: sms.merchant },
-        { label: strings.reference, value: sms.referenceNumber },
-      ]
-        .filter(field => field.value)
-        .map(field => (
+      <ListGroup dividerInset={Spacing.lg}>
+        {sms.amount !== undefined ? (
           <DetailRow
-            key={field.label}
-            label={field.label}
-            value={field.value}
-            selectable
-            showSeparator
+            label={strings.amountRead}
+            value={
+              sms.currencyCode ? (
+                <MoneyText amount={sms.amount} currencyCode={sms.currencyCode} variant="body" />
+              ) : privateMode ? (
+                AppConfig.privacyMask
+              ) : (
+                String(sms.amount)
+              )
+            }
           />
-        ))}
+        ) : null}
+        {[
+          { label: strings.accountHint, value: sms.accountSource },
+          { label: strings.merchant, value: sms.merchant },
+          { label: strings.reference, value: sms.referenceNumber },
+        ]
+          .filter(field => field.value)
+          .map(field => (
+            <DetailRow key={field.label} label={field.label} value={field.value} selectable />
+          ))}
+      </ListGroup>
     </Stack>
   );
 }

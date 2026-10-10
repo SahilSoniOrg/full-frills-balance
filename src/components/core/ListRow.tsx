@@ -5,7 +5,6 @@ import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { FocusTarget } from '@/src/components/shared/FocusTarget';
 import { Opacity, Size, Spacing, type SpacingKey } from '@/src/constants/design-tokens';
 import { Box, type BoxViewProps } from '@/src/design-system/Box';
-import { Separator } from '@/src/design-system/Separator';
 import { extractBoxProps } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Icon, type IconName, isValidIconName } from '@/src/types/domainIcons';
@@ -28,7 +27,7 @@ const PADDING: Record<ListVariant, SpacingKey> = { card: 'lg', plain: 'md' };
 const ICON_SLOT = Size.lg;
 
 /** Left inset that lines a divider up with the row text. */
-export function listRowTextInset(variant: ListVariant = 'card', leadingWidth = ICON_SLOT) {
+export function listRowTextInset(variant: ListVariant = 'card', leadingWidth: number = ICON_SLOT) {
   return Spacing[PADDING[variant]] + leadingWidth + Spacing.md;
 }
 
@@ -133,9 +132,6 @@ export type ListRowProps = BoxViewProps &
     focusId?: string;
     /** Extra content under the row, aligned with the row padding (e.g. a segmented control). */
     children?: React.ReactNode;
-    /** @deprecated Prefer ListGroup dividers. */
-    showSeparator?: boolean;
-    leadingWidth?: number;
   };
 
 const textOf = (node: React.ReactNode) =>
@@ -151,8 +147,6 @@ function ListRowBase(initialProps: ListRowProps) {
     trailing,
     chevron,
     destructive = false,
-    showSeparator = false,
-    leadingWidth,
     focusId,
     children,
     onPress: onPressProp,
@@ -179,8 +173,7 @@ function ListRowBase(initialProps: ListRowProps) {
   const plain = variant === 'plain';
   const paddingH = PADDING[variant];
   const leading = icon !== undefined ? <RowIcon name={icon} /> : leadingProp;
-  const leadingSlotWidth = leadingWidth ?? (icon !== undefined || plain ? ICON_SLOT : Spacing.xl);
-  const separatorInset = Spacing[paddingH] + (leading ? leadingSlotWidth + Spacing.md : 0);
+  const leadingSlotWidth = icon !== undefined || plain ? ICON_SLOT : Spacing.xl;
 
   const toggle =
     isValidElement<React.ComponentProps<typeof RowToggle>>(trailing) && trailing.type === RowToggle
@@ -309,15 +302,6 @@ function ListRowBase(initialProps: ListRowProps) {
         <Box paddingHorizontal={paddingH} paddingBottom="sm" marginTop="sm">
           {children}
         </Box>
-      </View>
-    );
-  }
-
-  if (showSeparator) {
-    row = (
-      <View>
-        {row}
-        <Separator width="auto" marginLeft={separatorInset} />
       </View>
     );
   }
