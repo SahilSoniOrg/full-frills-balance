@@ -193,16 +193,16 @@ function SplashOrchestrator() {
         }
         SplashScreen.hideAsync()
           .then(() => {
-            const totalTtiMs = Math.round(performance.now());
+            const splashHiddenMs = Math.round(performance.now());
             logger.info(
-              `[Splash] Splash screen hidden in ${Math.round(performance.now() - hideStart)}ms (TTI: ${totalTtiMs}ms)`,
+              `[Splash] Splash screen hidden in ${Math.round(performance.now() - hideStart)}ms (since start: ${splashHiddenMs}ms)`,
             );
 
             if (!hasTrackedColdStartRef.current) {
               hasTrackedColdStartRef.current = true;
               analytics.track('app_cold_start', {
-                time_to_interactive_ms: totalTtiMs,
-                time_to_interactive_sec: Math.round(totalTtiMs / 1000),
+                splash_hidden_ms: splashHiddenMs,
+                splash_hidden_sec: Math.round(splashHiddenMs / 1000),
                 is_data_hydrated: isDataHydrated,
               });
             }

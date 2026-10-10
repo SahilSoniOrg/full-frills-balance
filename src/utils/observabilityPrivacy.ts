@@ -152,8 +152,8 @@ const ANALYTICS_EVENT_SCHEMAS: Record<string, EventSchema> = {
   session_end: { session_duration_ms: 'duration', session_duration_min: 'count' },
   app_error: { name: 'token' },
   app_cold_start: {
-    time_to_interactive_ms: 'duration',
-    time_to_interactive_sec: 'duration',
+    splash_hidden_ms: 'duration',
+    splash_hidden_sec: 'duration',
     is_data_hydrated: 'boolean',
   },
   screen_leave: {

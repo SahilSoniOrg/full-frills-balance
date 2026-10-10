@@ -77,9 +77,23 @@ describe('observability privacy boundary', () => {
         entrypoint,
       });
     }
-    expect(
-      sanitizeAnalyticsProperties('entrypoint_selected', { target: 'journal_entry' }),
-    ).toEqual({ target: 'journal_entry' });
+    expect(sanitizeAnalyticsProperties('entrypoint_selected', { target: 'journal_entry' })).toEqual(
+      { target: 'journal_entry' },
+    );
+  });
+
+  it('keeps the cold-start splash timing under its splash_hidden names', () => {
+    const sanitized = sanitizeAnalyticsProperties('app_cold_start', {
+      splash_hidden_ms: 1500,
+      splash_hidden_sec: 2,
+      time_to_interactive_ms: 1500,
+      is_data_hydrated: true,
+    });
+    expect(Object.keys(sanitized ?? {}).sort()).toEqual([
+      'is_data_hydrated',
+      'splash_hidden_ms',
+      'splash_hidden_sec',
+    ]);
   });
 
   it.each(ANALYTICS_SANITIZE_CASES)(
