@@ -10,6 +10,17 @@ import { ONBOARDING_STRINGS } from '@/src/constants/copy/domains/onboardingStrin
 import { formatDate } from '@/src/utils/dateUtils';
 import { render, screen } from '@/src/utils/test-utils';
 
+jest.mock('@/src/components/overlays/ModalSurface', () => {
+  const { ModalSurface: Actual } = jest.requireActual<
+    typeof import('@/src/components/overlays/ModalSurface')
+  >('@/src/components/overlays/ModalSurface');
+  return {
+    ModalSurface: (props: Parameters<typeof Actual>[0]) => (
+      <Actual {...props} useNativeModal={false} />
+    ),
+  };
+});
+
 jest.mock('@/src/components/shared/moneyFormat', () => ({
   useMoneyFormat: () => (amount: number) => `USD ${amount.toFixed(2)}`,
   useStsMoneyFormat:
@@ -111,25 +122,22 @@ describe('SafeToSpendExplanationModal dated explanation', () => {
     expect(renderExplanation(1000).safeToSpend).toBe(200);
 
     const copy = AppConfig.strings.dashboard.safeToSpendConstraint;
-    expect(screen.getByText(copy.cashAvailableNow('USD 1000.00'))).toBeTruthy();
+    expect(screen.getByText(copy.cashAvailableNow)).toBeTruthy();
+    expect(screen.getAllByText('USD 1000.00').length).toBeGreaterThan(0);
     expect(
-      screen.getByText(
-        copy.lowestProjectedBalance(formatDate(new Date(2026, 9, 5).getTime()), 'USD 200.00'),
-      ),
+      screen.getByText(copy.lowestProjectedBalance(formatDate(new Date(2026, 9, 5).getTime()))),
     ).toBeTruthy();
-    expect(screen.getByText(copy.heldThroughLowPoint('USD 800.00'))).toBeTruthy();
+    expect(screen.getByText(copy.heldThroughLowPoint)).toBeTruthy();
     expect(screen.getByText(copy.laterIncomeNote)).toBeTruthy();
     expect(
-      screen.getByText(
-        copy.expectedInflow('Salary', 'USD 1500.00', formatDate(new Date(2026, 9, 20).getTime())),
-      ),
+      screen.getByText(copy.expectedInflow(formatDate(new Date(2026, 9, 20).getTime()))),
     ).toBeTruthy();
     expect(
       screen.getByText(AppConfig.strings.dashboard.safeToSpendExplanation.bucketTitle),
     ).toBeTruthy();
     expect(screen.getAllByText('–USD 800.00').length).toBeGreaterThan(0);
     // Salary (day 20) lands after rent (day 5): the result is the low point, not cash + income − bills.
-    expect(screen.getByText('USD 200.00')).toBeTruthy();
+    expect(screen.getAllByText('USD 200.00').length).toBeGreaterThan(0);
     expect(screen.queryByText('USD 1700.00')).toBeNull();
     expect(
       screen.getByText(AppConfig.strings.dashboard.safeToSpendUi.remainingCashBuffer),
@@ -150,9 +158,7 @@ describe('SafeToSpendExplanationModal dated explanation', () => {
     expect(screen.getByText(AppConfig.strings.dashboard.shortfall)).toBeTruthy();
     expect(screen.getAllByText('–USD 300.00').length).toBeGreaterThan(0);
     expect(
-      screen.getByText(
-        AppConfig.strings.dashboard.safeToSpendConstraint.projectedShortfall('USD 300.00'),
-      ),
+      screen.getByText(AppConfig.strings.dashboard.safeToSpendConstraint.projectedShortfall),
     ).toBeTruthy();
   });
 });

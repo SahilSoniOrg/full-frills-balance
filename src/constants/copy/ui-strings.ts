@@ -244,16 +244,14 @@ export const UI_STRINGS = {
       horizon: (days: number) => `Lowest dated balance over ${days} days.`,
       staleNote: 'This is a saved estimate and may be out of date.',
       forecastDay: (day: number) => `day ${day}`,
-      cashAvailableNow: (amount: string) => `Cash available now: ${amount}`,
-      cashCeilingBinds: (amount: string) => `Binding limit: cash available now: ${amount}`,
-      lowestProjectedBalance: (date: string, amount: string) =>
-        `Lowest projected balance · ${date}: ${amount}`,
+      cashAvailableNow: 'Cash available now',
+      cashCeilingBinds: 'Binding limit: cash available now',
+      lowestProjectedBalance: (date: string) => `Lowest projected balance · ${date}`,
       laterIncomeNote: 'Money arriving later does not cover bills due before it arrives.',
-      heldThroughLowPoint: (amount: string) => `Held through the low point: ${amount}`,
-      projectedShortfall: (amount: string) => `Projected shortfall: ${amount}`,
-      includedOutflow: (label: string, amount: string) => `Included outflow: ${label} · ${amount}`,
-      expectedInflow: (label: string, amount: string, date: string) =>
-        `Expected inflow: ${label} · ${amount} · first on ${date}`,
+      heldThroughLowPoint: 'Held through the low point',
+      projectedShortfall: 'Projected shortfall',
+      includedOutflow: 'Included outflow',
+      expectedInflow: (date: string) => `Expected inflow · first on ${date}`,
     },
     hub: {
       title: 'Review',
