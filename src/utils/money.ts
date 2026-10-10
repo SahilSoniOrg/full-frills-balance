@@ -136,3 +136,11 @@ export class Money {
     return new Money(amount, currencyCode);
   }
 }
+
+/** Headline currency: the preferred one when present, else the most frequent (ties: first seen). */
+export function headlineCurrency(codes: string[], preferred: string): string {
+  if (codes.length === 0 || codes.includes(preferred)) return preferred;
+  const counts = new Map<string, number>();
+  for (const code of codes) counts.set(code, (counts.get(code) ?? 0) + 1);
+  return [...counts].reduce((best, next) => (next[1] > best[1] ? next : best))[0];
+}

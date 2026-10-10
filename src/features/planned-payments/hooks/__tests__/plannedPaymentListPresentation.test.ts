@@ -107,12 +107,9 @@ describe('planned list presentation', () => {
       items: [payment('foreign', { currencyCode: 'EUR' })],
       savedOccurrences: [],
     });
-    expect(eurList.summary.outgoing.mainCurrency).toEqual({
-      currencyCode: 'USD',
-      amount: 0,
-      count: 0,
-    });
-    expect(eurList.summary.outgoing.otherCurrencyCount).toBe(1);
+    // No USD payments: headline the EUR group rather than "Still to pay $0".
+    expect(eurList.summary.outgoing.mainCurrency).toMatchObject({ currencyCode: 'EUR', count: 1 });
+    expect(eurList.summary.outgoing.otherCurrencyCount).toBe(0);
   });
 
   it('keeps completed pending occurrences actionable while paused schedules follow the detail resolver', () => {
