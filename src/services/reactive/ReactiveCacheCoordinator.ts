@@ -2,6 +2,7 @@ import { Observable } from 'rxjs';
 
 import { WorkplaceId } from '@/src/types/ids';
 import { createDisposableReplay } from '@/src/services/reactive/disposableReplay';
+import { logger } from '@/src/utils/logger';
 
 export const REACTIVE_CACHE_NAMESPACES = {
   dashboard: 'reactive-data/dashboard',
@@ -87,8 +88,7 @@ class ReactiveCacheCoordinator {
       if (!namespaceSet.has(namespace)) continue;
       if (workplaceId !== undefined && entry.workplaceId !== workplaceId) continue;
 
-      entry.dispose();
-      this.entries.delete(key);
+      this.evict(key, entry);
     }
   }
 
@@ -96,8 +96,18 @@ class ReactiveCacheCoordinator {
     for (const [key, entry] of this.entries) {
       if (workplaceId !== undefined && entry.workplaceId !== workplaceId) continue;
 
+      this.evict(key, entry);
+    }
+  }
+
+  // Eviction runs after Workplace deletes and switches have committed, so a
+  // failing teardown must not surface as a failed operation.
+  private evict(key: string, entry: ReactiveCacheEntry): void {
+    this.entries.delete(key);
+    try {
       entry.dispose();
-      this.entries.delete(key);
+    } catch (error) {
+      logger.warn('[ReactiveCache] Failed to dispose cache entry', { key, error });
     }
   }
 }

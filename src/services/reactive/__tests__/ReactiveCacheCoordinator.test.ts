@@ -149,4 +149,39 @@ describe('ReactiveCacheCoordinator', () => {
 
     subscriptions.forEach(subscription => subscription.unsubscribe());
   });
+
+  it('keeps evicting when one entry fails to dispose', () => {
+    const departingWorkplace = 'workplace-departing' as WorkplaceId;
+    const failingTeardown = jest.fn(() => {
+      throw new Error('teardown failed');
+    });
+    const healthyTeardown = jest.fn();
+
+    [
+      reactiveCacheCoordinator.getOrCreate({
+        namespace: REACTIVE_CACHE_NAMESPACES.safeToSpend,
+        key: departingWorkplace,
+        workplaceId: departingWorkplace,
+        createSource: () => sourceWithTeardown(failingTeardown),
+      }),
+      reactiveCacheCoordinator.getOrCreate({
+        namespace: REACTIVE_CACHE_NAMESPACES.insights,
+        key: departingWorkplace,
+        workplaceId: departingWorkplace,
+        createSource: () => sourceWithTeardown(healthyTeardown),
+      }),
+    ].forEach(observable => observable.subscribe());
+
+    expect(() => reactiveCacheCoordinator.clearAll(departingWorkplace)).not.toThrow();
+
+    expect(failingTeardown).toHaveBeenCalledTimes(1);
+    expect(healthyTeardown).toHaveBeenCalledTimes(1);
+    expect(
+      reactiveCacheCoordinator.has(
+        REACTIVE_CACHE_NAMESPACES.safeToSpend,
+        departingWorkplace,
+        departingWorkplace,
+      ),
+    ).toBe(false);
+  });
 });
