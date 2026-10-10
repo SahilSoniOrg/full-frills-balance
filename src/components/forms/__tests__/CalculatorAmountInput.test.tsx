@@ -149,3 +149,103 @@ describe('CalculatorAmountInput', () => {
     });
   });
 });
+
+describe('CalculatorAmountInput hero entry', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('normalizes an unfinished decimal on blur without dismissing the next input keyboard', () => {
+    const setAmount = jest.fn();
+    const dismiss = jest.spyOn(Keyboard, 'dismiss');
+    render(
+      <CalculatorAmountInput
+        variant="hero"
+        testID="hero-amount-input"
+        calculatorTestID="amount-input"
+        currencySymbol="$"
+        value="12."
+        onChangeText={setAmount}
+        currency="USD"
+        accentColor="#3366ff"
+      />,
+    );
+    const input = screen.getByTestId('hero-amount-input');
+    fireEvent(input, 'focus');
+    fireEvent(input, 'blur');
+    expect(setAmount).toHaveBeenCalledWith('12');
+    expect(dismiss).not.toHaveBeenCalled();
+    fireEvent(input, 'submitEditing');
+    expect(dismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps typing at the cursor after the first digit instead of selecting the amount', () => {
+    function AmountEntry() {
+      const [amount, setAmount] = useState('');
+      return (
+        <CalculatorAmountInput
+          variant="hero"
+          testID="hero-amount-input"
+          calculatorTestID="amount-input"
+          currencySymbol="$"
+          value={amount}
+          onChangeText={setAmount}
+          currency="USD"
+          accentColor="#3366ff"
+        />
+      );
+    }
+    render(<AmountEntry />);
+    const input = screen.getByTestId('hero-amount-input');
+    fireEvent(input, 'focus');
+    fireEvent.changeText(input, '1');
+    expect(input.props.selectTextOnFocus).toBeFalsy();
+    fireEvent.changeText(input, '12');
+    expect(input.props.value).toBe('12');
+  });
+
+  it('opens the calculator on demand and completes the handoff', () => {
+    const setAmount = jest.fn();
+    const onCalculatorDone = jest.fn();
+    const dismiss = jest.spyOn(Keyboard, 'dismiss');
+
+    render(
+      <CalculatorAmountInput
+        variant="hero"
+        testID="hero-amount-input"
+        calculatorTestID="amount-input"
+        currencySymbol="$"
+        value=""
+        onChangeText={setAmount}
+        currency="USD"
+        accentColor="#3366ff"
+        onCalculatorDone={onCalculatorDone}
+      />,
+    );
+
+    fireEvent.press(screen.getByTestId('amount-input'));
+    expect(dismiss).toHaveBeenCalledTimes(1);
+    fireEvent.press(screen.getByTestId('calculator-done'));
+    expect(setAmount).toHaveBeenCalledWith('42.50');
+    expect(onCalculatorDone).toHaveBeenCalledTimes(1);
+  });
+
+  it('normalizes comma decimal input without changing its magnitude', () => {
+    const setAmount = jest.fn();
+
+    render(
+      <CalculatorAmountInput
+        variant="hero"
+        testID="hero-amount-input"
+        calculatorTestID="amount-input"
+        currencySymbol="$"
+        value=""
+        onChangeText={setAmount}
+        currency="EUR"
+        accentColor="#3366ff"
+      />,
+    );
+
+    fireEvent.changeText(screen.getByTestId('hero-amount-input'), '12,50');
+
+    expect(setAmount).toHaveBeenCalledWith('12.50');
+  });
+});

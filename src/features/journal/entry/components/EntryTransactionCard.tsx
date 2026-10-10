@@ -1,6 +1,7 @@
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import type { CreateAccountIntent } from '@/src/components/account-selection';
 import { AppConfig } from '@/src/constants';
+import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { Spacing } from '@/src/constants/design-tokens';
 import type { FxPair } from '@/src/domain/accounting/fxPair';
 import { resolveAccountLeg } from '@/src/services/journal/simpleJournalHelpers';
@@ -13,7 +14,6 @@ import { StyleSheet, View } from 'react-native';
 import type { ExpansionPosition } from '@/src/components/account-selection/AccountPickerPanel';
 import { ExchangeRateCard } from '@/src/components/forms/ExchangeRateCard';
 import { JournalMetaCard, type JournalMetaCardProps } from './JournalMetaCard';
-import { SimpleFormAmountInput } from './SimpleFormAmountInput';
 import { SimpleFormAccountSections } from '@/src/components/account-selection/SimpleFormAccountSections';
 import { TransactionTypeSegmentedControl } from './TransactionTypeSegmentedControl';
 
@@ -125,14 +125,18 @@ export function EntryTransactionCard({
             variant="standard"
           />
           <View style={[styles.heroAmount, { backgroundColor: theme.background }]}>
-            <SimpleFormAmountInput
-              amount={amount}
-              setAmount={onChangeAmount}
+            <CalculatorAmountInput
+              variant="hero"
+              value={amount}
+              onChangeText={onChangeAmount}
               currency={amountCurrency}
+              currencySymbol={CURRENCY_SYMBOLS[amountCurrency] || amountCurrency || '$'}
               accentColor={accentColor}
-              precision={precision}
-              autoFocusAmount={autoFocusAmount}
+              precision={precision ?? 2}
+              autoFocus={autoFocusAmount ?? false}
               onCalculatorDone={onCalculatorDone}
+              testID="hero-amount-input"
+              calculatorTestID="amount-input"
             />
           </View>
         </>
