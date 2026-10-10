@@ -188,6 +188,8 @@ export interface PlannedPaymentHistoryPresentation {
   color: ComponentVariant;
   dotIcon: IconName;
   isSkipped: boolean;
+  /** Scheduled but not posted yet (planned or paused); no money has moved. */
+  isPending: boolean;
   differenceAmount?: number;
   differenceCurrencyCode?: string;
   differenceDirection?: 'more' | 'less';
@@ -241,6 +243,7 @@ export function getPlannedPaymentHistoryPresentation(
           ? Icon.Clock
           : Icon.Check,
     isSkipped,
+    isPending: isWaiting,
     differenceAmount:
       !isSkipped && !isReversed && !isWaiting && amountDiffers
         ? Math.abs(journal.totalAmount - plannedAmount)

@@ -36,6 +36,7 @@ export const plannedDetailRedesignStrings = {
   skipped: 'Skipped',
   reversed: 'Reversed',
   waiting: 'Waiting',
+  notPosted: 'Not posted yet',
   paid: 'Paid',
   paidAsPlanned: 'Paid as planned',
   paidMore: (amount: string) => `Paid ${amount} more than planned`,
