@@ -6,7 +6,7 @@ import { Box } from '@/src/design-system/Box';
 import { Separator } from '@/src/design-system/Separator';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
 export interface FormRowProps {
   icon: IconName;
@@ -40,7 +40,7 @@ export function FormRow({
   const hasValue = Boolean(value);
   const clearControl =
     onClear && hasValue ? (
-      <Pressable
+      <PressScaleTouchable
         accessibilityRole="button"
         accessibilityLabel={copy.clearValue(title)}
         onPress={event => {
@@ -50,7 +50,7 @@ export function FormRow({
         hitSlop={8}
       >
         <AppIcon name={Icon.Close} size={18} color={theme.textSecondary} />
-      </Pressable>
+      </PressScaleTouchable>
     ) : null;
   const right = trailing ? (
     onPress ? undefined : (

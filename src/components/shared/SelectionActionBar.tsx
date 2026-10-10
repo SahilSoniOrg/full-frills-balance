@@ -1,5 +1,12 @@
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { Icon, AppIcon, AppText, IconButton, type IconName } from '@/src/components/core';
+import {
+  Icon,
+  AppIcon,
+  AppText,
+  IconButton,
+  type IconName,
+  PressScaleTouchable,
+} from '@/src/components/core';
 import type { IconButtonProps } from '@/src/components/core/IconButton';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
@@ -8,7 +15,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { AnimatePresence, MotiView } from 'moti';
 import { useMemo, useState } from 'react';
-import { Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 export interface SelectionAction {
   name: IconName;
@@ -260,7 +267,7 @@ export const SelectionActionBar = ({
                     (action.variant === 'primary' ? theme.primary : theme.textSecondary));
 
               return (
-                <TouchableOpacity
+                <PressScaleTouchable
                   key={`${action.name}-${index}`}
                   onPress={() => {
                     setIsOverflowOpen(false);
@@ -288,7 +295,7 @@ export const SelectionActionBar = ({
                     size={Size.iconSm}
                     color={isDisabled ? theme.textTertiary : theme.textSecondary}
                   />
-                </TouchableOpacity>
+                </PressScaleTouchable>
               );
             })}
           </View>

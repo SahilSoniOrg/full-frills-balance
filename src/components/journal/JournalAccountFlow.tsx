@@ -1,17 +1,12 @@
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppIcon, AppText, Icon } from '@/src/components/core';
-import { Opacity, Shape, Size, Spacing } from '@/src/constants';
+import { Shape, Size, Spacing } from '@/src/constants';
 import { Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { JournalEntryLeg, JournalEntryAccountFlow } from '@/src/types/journalEntryCard';
 import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { useId, useState } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  View,
-  useWindowDimensions,
-  type LayoutChangeEvent,
-} from 'react-native';
+import { StyleSheet, View, useWindowDimensions, type LayoutChangeEvent } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import type { ReactNode } from 'react';
 
@@ -98,9 +93,10 @@ function AccountLeg({
   );
 
   return action ? (
-    <Pressable
+    <PressScaleTouchable
+      pressScale="subtle"
       testID="transaction-account-leg"
-      style={({ pressed }) => [legStyle, pressed && { opacity: Opacity.heavy }]}
+      style={legStyle}
       onLayout={onLayout}
       onPress={action.onPress}
       accessibilityRole="button"
@@ -108,7 +104,7 @@ function AccountLeg({
       hitSlop={{ top: Spacing.sm, bottom: Spacing.sm }}
     >
       {content}
-    </Pressable>
+    </PressScaleTouchable>
   ) : (
     <View testID="transaction-account-leg" style={legStyle} onLayout={onLayout}>
       {content}

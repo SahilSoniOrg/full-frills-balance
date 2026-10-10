@@ -1,3 +1,4 @@
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppButton, AppInputField, AppText, Icon, AppIcon } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Size, Spacing } from '@/src/constants/design-tokens';
@@ -8,7 +9,7 @@ import type { RecurrenceInterval } from '@/src/services/forward-finance/recurren
 import { isValidRepeatCount } from '@/src/utils/recurrenceLabels';
 import { formPrimitivesStrings as copy } from '@/src/constants/copy/domains/formPrimitivesStrings';
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { formatScheduleSentence, previewOccurrences } from './formatSchedule';
 import type { ScheduleValue } from './types';
 
@@ -110,7 +111,8 @@ export function ScheduleSheet({
     id?: string,
     wide = false,
   ) => (
-    <Pressable
+    <PressScaleTouchable
+      haptic="selection"
       key={id ?? label}
       testID={id}
       accessibilityRole="button"
@@ -136,7 +138,7 @@ export function ScheduleSheet({
       >
         {label}
       </AppText>
-    </Pressable>
+    </PressScaleTouchable>
   );
   return (
     <ModalSurface
@@ -171,7 +173,8 @@ export function ScheduleSheet({
           }}
         >
           {tabs.map(tab => (
-            <Pressable
+            <PressScaleTouchable
+              haptic="selection"
               key={tab.id}
               testID={`${intervalTestIDPrefix ?? 'schedule-interval-type-item-'}${tab.id}`}
               accessibilityRole="tab"
@@ -191,7 +194,7 @@ export function ScheduleSheet({
               >
                 {tab.label}
               </AppText>
-            </Pressable>
+            </PressScaleTouchable>
           ))}
         </View>
         <View
@@ -204,7 +207,8 @@ export function ScheduleSheet({
         >
           <AppText variant="body">{copy.every}</AppText>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
-            <Pressable
+            <PressScaleTouchable
+              haptic="selection"
               accessibilityRole="button"
               accessibilityLabel={copy.decreaseRepeatCount}
               onPress={() =>
@@ -216,7 +220,7 @@ export function ScheduleSheet({
               }
             >
               <AppIcon name={Icon.MinusSquare} size={22} color={theme.textSecondary} />
-            </Pressable>
+            </PressScaleTouchable>
             <AppInputField
               testID="schedule-repeat-count"
               accessibilityLabel={copy.editRepeatCount}
@@ -226,7 +230,8 @@ export function ScheduleSheet({
               width={56}
               inputStyle={{ textAlign: 'center', color: valid ? theme.text : theme.error }}
             />
-            <Pressable
+            <PressScaleTouchable
+              haptic="selection"
               accessibilityRole="button"
               accessibilityLabel={copy.increaseRepeatCount}
               onPress={() =>
@@ -234,7 +239,7 @@ export function ScheduleSheet({
               }
             >
               <AppIcon name={Icon.Add} size={22} color={theme.textSecondary} />
-            </Pressable>
+            </PressScaleTouchable>
             <AppText variant="bodySmall" color="secondary">
               {
                 {

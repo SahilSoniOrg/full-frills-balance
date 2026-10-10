@@ -1,11 +1,12 @@
 import { Icon, AppIcon, AppInput, AppText, type IconName } from '@/src/components/core';
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { AppConfig, Opacity, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SelectionCheckmark } from '@/src/components/shared/SelectionIndicator';
 import { useMemo, useState } from 'react';
-import { FlatList, Keyboard, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { FlatList, Keyboard, StyleSheet, View } from 'react-native';
 
 export interface SelectionOption<T extends string | number = string> {
   id: T;
@@ -89,7 +90,9 @@ export function SelectionPickerSheet<T extends string | number>({
       )}
 
       {actionLabel && onAction ? (
-        <TouchableOpacity
+        <PressScaleTouchable
+          pressScale="subtle"
+          haptic="selection"
           onPress={() => {
             onAction();
             closeAndReset();
@@ -101,7 +104,7 @@ export function SelectionPickerSheet<T extends string | number>({
           <AppText variant="body" weight="semibold" style={{ color: theme.primary }}>
             {actionLabel}
           </AppText>
-        </TouchableOpacity>
+        </PressScaleTouchable>
       ) : null}
 
       <FlatList
@@ -113,7 +116,9 @@ export function SelectionPickerSheet<T extends string | number>({
         renderItem={({ item }) => {
           const isSelected = selectedValue === item.id;
           return (
-            <TouchableOpacity
+            <PressScaleTouchable
+              pressScale="subtle"
+              haptic="selection"
               accessibilityRole="button"
               accessibilityState={{ selected: isSelected }}
               style={[
@@ -145,7 +150,7 @@ export function SelectionPickerSheet<T extends string | number>({
                 )}
               </View>
               <SelectionCheckmark selected={isSelected} size={18} />
-            </TouchableOpacity>
+            </PressScaleTouchable>
           );
         }}
       />

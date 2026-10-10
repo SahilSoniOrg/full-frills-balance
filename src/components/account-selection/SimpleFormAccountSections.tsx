@@ -1,5 +1,5 @@
 import type { CreateAccountIntent } from './AccountPickerList';
-import { AppIcon, Icon } from '@/src/components/core';
+import { AppIcon, Icon, PressScaleTouchable } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -9,14 +9,7 @@ import type { AccountFields } from '@/src/types/plainDtos';
 import { withOpacity } from '@/src/utils/color-math';
 import { pinnedArchivedAccountIds } from '@/src/utils/accountArchive';
 import React, { useMemo, useState } from 'react';
-import {
-  Keyboard,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { Keyboard, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import {
   AccountPickerPanel,
   type AccountPickerLeg,
@@ -196,7 +189,8 @@ function RouteConnector({
       testID="route-flow-connector"
     >
       {onSwapAccounts && (
-        <TouchableOpacity
+        <PressScaleTouchable
+          pressScale="subtle"
           onPress={onSwapAccounts}
           style={styles.connectorButton}
           hitSlop={Spacing.sm}
@@ -216,7 +210,7 @@ function RouteConnector({
           >
             <AppIcon name={Icon.ArrowRight} size={Size.xs} color={theme.primary} />
           </View>
-        </TouchableOpacity>
+        </PressScaleTouchable>
       )}
       {!onSwapAccounts && (
         <View style={styles.connectorArrow} testID="route-flow-arrow">

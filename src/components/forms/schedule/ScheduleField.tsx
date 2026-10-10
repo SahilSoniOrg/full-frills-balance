@@ -1,10 +1,11 @@
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppText, Icon, AppIcon } from '@/src/components/core';
 import { Spacing } from '@/src/constants/design-tokens';
 import { getReadableColor } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formPrimitivesStrings as copy } from '@/src/constants/copy/domains/formPrimitivesStrings';
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { ScheduleSheet } from './ScheduleSheet';
 import { formatScheduleSentence, previewOccurrences } from './formatSchedule';
 import type { ScheduleValue } from './types';
@@ -46,7 +47,7 @@ export function ScheduleField({
           {label.toUpperCase()}
         </AppText>
       ) : null}
-      <Pressable
+      <PressScaleTouchable
         testID={testID}
         accessibilityRole="button"
         accessibilityLabel={copy.editSchedule(parts.map(part => part.text).join(''))}
@@ -74,7 +75,7 @@ export function ScheduleField({
             </AppText>
           ))}
         </View>
-      </Pressable>
+      </PressScaleTouchable>
       <ScheduleSheet
         visible={visible}
         value={value}

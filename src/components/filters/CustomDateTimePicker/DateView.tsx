@@ -1,10 +1,10 @@
-import { Icon, AppText, IconButton } from '@/src/components/core';
+import { Icon, AppText, IconButton, PressScaleTouchable } from '@/src/components/core';
 import { Opacity, Shape, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 interface DateViewProps {
   date: dayjs.Dayjs;
@@ -93,7 +93,7 @@ export function DateView({ date, onChange }: DateViewProps) {
               dayjs().date() === day;
 
             return (
-              <TouchableOpacity
+              <PressScaleTouchable
                 key={`day-${day}`}
                 style={[
                   styles.dayCell,
@@ -121,7 +121,7 @@ export function DateView({ date, onChange }: DateViewProps) {
                 >
                   {day}
                 </AppText>
-              </TouchableOpacity>
+              </PressScaleTouchable>
             );
           })}
         </View>

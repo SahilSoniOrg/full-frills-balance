@@ -1,7 +1,15 @@
 import { getArchivedAccountPickerRowPresentation } from '@/src/components/accounts/archivedAccountDisplay';
 import { ArchivedAccountIndicator } from '@/src/components/accounts/ArchivedAccountIndicator';
 import { ShowArchivedButton } from '@/src/components/accounts/ShowArchivedButton';
-import { AppButton, AppIcon, AppInput, AppText, Icon, ListRow } from '@/src/components/core';
+import {
+  AppButton,
+  AppIcon,
+  AppInput,
+  AppText,
+  Icon,
+  ListRow,
+  PressScaleTouchable,
+} from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { SelectionCheckmark, SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -20,15 +28,7 @@ import { isAccountArchived, pinnedArchivedAccountIds } from '@/src/utils/account
 import { getAccountIcon } from '@/src/utils/accountIcon';
 import { withOpacity } from '@/src/utils/color-math';
 import React, { useCallback, useMemo } from 'react';
-import {
-  Keyboard,
-  SectionList,
-  StyleProp,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-  ViewStyle,
-} from 'react-native';
+import { Keyboard, SectionList, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { useAccountPickerList } from './useAccountPickerList';
 
 export type CreateAccountIntent = {
@@ -142,7 +142,8 @@ export const AccountPickerPill = React.memo(
     }, [item.id, onPress, onSelectId]);
 
     return (
-      <TouchableOpacity
+      <PressScaleTouchable
+        pressScale="subtle"
         accessibilityRole={isMultiple ? 'checkbox' : 'button'}
         accessibilityLabel={item.name}
         accessibilityState={isMultiple ? { checked: isSelected } : { selected: isSelected }}
@@ -187,7 +188,7 @@ export const AccountPickerPill = React.memo(
         ) : (
           <SelectionCheckmark selected={isSelected} size={Size.xxs} color={theme.onPrimary} />
         )}
-      </TouchableOpacity>
+      </PressScaleTouchable>
     );
   },
 );
@@ -312,7 +313,8 @@ export function AccountPickerList(props: AccountPickerListProps) {
       const isCollapsed = collapsedSections.has(key) && !isSearchMode;
       return (
         <View style={[styles.sectionHeader, { backgroundColor: theme.background }]}>
-          <TouchableOpacity
+          <PressScaleTouchable
+            pressScale="subtle"
             activeOpacity={Opacity.medium}
             onPress={() => toggleSection(key)}
             style={styles.sectionToggle}
@@ -332,7 +334,8 @@ export function AccountPickerList(props: AccountPickerListProps) {
             </View>
             <View style={styles.sectionActions}>
               {onCreateRequest && !isSearchMode && (
-                <TouchableOpacity
+                <PressScaleTouchable
+                  pressScale="subtle"
                   onPress={event => {
                     event.stopPropagation();
                     onClose();
@@ -342,7 +345,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
                   accessibilityLabel={`Create ${title} account`}
                 >
                   <AppIcon name={Icon.Plus} size={Size.iconSm} color={theme.primary} />
-                </TouchableOpacity>
+                </PressScaleTouchable>
               )}
               {!isSearchMode && (
                 <AppIcon
@@ -352,7 +355,7 @@ export function AccountPickerList(props: AccountPickerListProps) {
                 />
               )}
             </View>
-          </TouchableOpacity>
+          </PressScaleTouchable>
         </View>
       );
     },

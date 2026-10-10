@@ -1,5 +1,13 @@
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { Icon, AppButton, AppIcon, AppText, IconName, IvyIcon } from '@/src/components/core';
+import {
+  Icon,
+  AppButton,
+  AppIcon,
+  AppText,
+  IconName,
+  IvyIcon,
+  PressScaleTouchable,
+} from '@/src/components/core';
 import {
   ACCOUNT_COLOR_PALETTE,
   ACCOUNT_ICON_PALETTE,
@@ -15,7 +23,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { withOpacity } from '@/src/utils/color-math';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 type AppearanceTab = 'icon' | 'color';
 
@@ -170,7 +178,7 @@ export const AppearancePickerModal: React.FC<AppearancePickerModalProps> = ({
           {(['icon', 'color'] as AppearanceTab[]).map(tab => {
             const selected = activeTab === tab;
             return (
-              <TouchableOpacity
+              <PressScaleTouchable
                 key={tab}
                 onPress={() => setActiveTab(tab)}
                 style={[styles.tab, selected && { borderBottomColor: theme.primary }]}
@@ -182,7 +190,7 @@ export const AppearancePickerModal: React.FC<AppearancePickerModalProps> = ({
                 >
                   {tab === 'icon' ? 'Icon' : 'Color'}
                 </AppText>
-              </TouchableOpacity>
+              </PressScaleTouchable>
             );
           })}
         </View>
@@ -198,7 +206,7 @@ export const AppearancePickerModal: React.FC<AppearancePickerModalProps> = ({
             {ACCOUNT_ICON_PALETTE.map(icon => {
               const selected = effectiveIcon === icon;
               return (
-                <TouchableOpacity
+                <PressScaleTouchable
                   key={icon}
                   onPress={() => void handleIconPress(icon)}
                   style={[
@@ -217,13 +225,13 @@ export const AppearancePickerModal: React.FC<AppearancePickerModalProps> = ({
                     size={Size.iconLg}
                     color={selected ? theme.primary : theme.text}
                   />
-                </TouchableOpacity>
+                </PressScaleTouchable>
               );
             })}
           </View>
         ) : (
           <View>
-            <TouchableOpacity
+            <PressScaleTouchable
               onPress={() => void handleColorPress('')}
               style={styles.autoColorRow}
               accessibilityLabel="Auto color (from account type)"
@@ -240,12 +248,12 @@ export const AppearancePickerModal: React.FC<AppearancePickerModalProps> = ({
               <AppText variant="body" color={!effectiveColor ? 'primary' : 'secondary'}>
                 {AppConfig.strings.accounts.form.colorAuto}
               </AppText>
-            </TouchableOpacity>
+            </PressScaleTouchable>
             <View style={styles.colorGrid}>
               {ACCOUNT_COLOR_PALETTE.map(color => {
                 const selected = effectiveColor.toUpperCase() === color.toUpperCase();
                 return (
-                  <TouchableOpacity
+                  <PressScaleTouchable
                     key={color}
                     onPress={() => void handleColorPress(color)}
                     style={[
@@ -259,7 +267,7 @@ export const AppearancePickerModal: React.FC<AppearancePickerModalProps> = ({
                     {selected && (
                       <AppIcon name={Icon.Check} size={Size.iconSm} color={theme.background} />
                     )}
-                  </TouchableOpacity>
+                  </PressScaleTouchable>
                 );
               })}
             </View>

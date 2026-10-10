@@ -1,9 +1,10 @@
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppIcon, AppText, Icon } from '@/src/components/core';
 import { Spacing } from '@/src/constants/design-tokens';
 import { getReadableColor } from '@/src/utils/color-math';
 import { useTheme } from '@/src/hooks/use-theme';
 import { formPrimitivesStrings as copy } from '@/src/constants/copy/domains/formPrimitivesStrings';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
 export interface SuggestionHintProps {
   message: string;
@@ -36,7 +37,7 @@ export function SuggestionHint({
       <AppText variant="bodySmall" style={{ color: theme.textSecondary, flex: 1 }}>
         {message}
       </AppText>
-      <Pressable
+      <PressScaleTouchable
         accessibilityRole="button"
         onPress={onAccept}
         testID={testID ? `${testID}-action` : undefined}
@@ -45,16 +46,16 @@ export function SuggestionHint({
         <AppText variant="bodySmall" weight="semibold" style={{ color: accent }}>
           {actionLabel}
         </AppText>
-      </Pressable>
+      </PressScaleTouchable>
       {onDismiss ? (
-        <Pressable
+        <PressScaleTouchable
           accessibilityRole="button"
           accessibilityLabel={copy.dismissSuggestion}
           onPress={onDismiss}
           hitSlop={8}
         >
           <AppIcon name={Icon.Close} size={18} color={theme.textSecondary} />
-        </Pressable>
+        </PressScaleTouchable>
       ) : null}
     </View>
   );

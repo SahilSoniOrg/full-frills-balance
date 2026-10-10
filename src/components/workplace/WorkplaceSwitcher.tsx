@@ -1,4 +1,5 @@
 import { Icon, AppIcon } from '@/src/components/core';
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import {
   SelectionPickerSheet,
   type SelectionOption,
@@ -12,7 +13,7 @@ import { toast } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 /** Compact, persistent workplace switcher used by the app's shared header. */
 export function WorkplaceSwitcher() {
@@ -59,7 +60,7 @@ export function WorkplaceSwitcher() {
 
   return (
     <>
-      <TouchableOpacity
+      <PressScaleTouchable
         onPress={() => setVisible(true)}
         disabled={isSwitching}
         accessibilityRole="button"
@@ -77,7 +78,7 @@ export function WorkplaceSwitcher() {
             color={theme.primary}
           />
         )}
-      </TouchableOpacity>
+      </PressScaleTouchable>
       <SelectionPickerSheet
         visible={visible}
         title="Switch workplace"

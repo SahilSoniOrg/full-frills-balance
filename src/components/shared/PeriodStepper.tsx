@@ -1,8 +1,8 @@
-import { Icon, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { PeriodRangeFacts } from '@/src/utils/dateUtils';
-import { Keyboard, Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Keyboard, StyleSheet, View } from 'react-native';
 
 interface PeriodStepperProps {
   label: string;
@@ -67,7 +67,7 @@ export function PeriodStepper({
 
   return (
     <View style={styles.wrapper} testID={testID}>
-      <TouchableOpacity
+      <PressScaleTouchable
         onPress={() => {
           if (!onPrevious) return;
           Keyboard.dismiss();
@@ -90,11 +90,11 @@ export function PeriodStepper({
           size={Size.sm}
           color={canGoPrevious ? theme.textSecondary : theme.border}
         />
-      </TouchableOpacity>
+      </PressScaleTouchable>
 
       <View style={styles.labelContainer}>
         {onPressLabel ? (
-          <Pressable
+          <PressScaleTouchable
             onPress={() => {
               Keyboard.dismiss();
               onPressLabel();
@@ -102,17 +102,17 @@ export function PeriodStepper({
             accessibilityRole="button"
             accessibilityLabel={periodLabel}
             accessibilityHint={labelAccessibilityHint}
-            style={({ pressed }) => [styles.labelButton, pressed && styles.pressed]}
+            style={styles.labelButton}
           >
             {labelContent}
-          </Pressable>
+          </PressScaleTouchable>
         ) : (
           <View style={styles.labelButton} accessible accessibilityLabel={periodLabel}>
             {labelContent}
           </View>
         )}
         {showBackToToday && onBackToToday ? (
-          <Pressable
+          <PressScaleTouchable
             onPress={onBackToToday}
             style={styles.todayButton}
             accessibilityRole="button"
@@ -121,11 +121,11 @@ export function PeriodStepper({
             <AppText variant="caption" color="primary" weight="bold">
               {strings.backToToday}
             </AppText>
-          </Pressable>
+          </PressScaleTouchable>
         ) : null}
       </View>
 
-      <TouchableOpacity
+      <PressScaleTouchable
         onPress={() => {
           if (!canGoNext || !onNext) return;
           Keyboard.dismiss();
@@ -148,7 +148,7 @@ export function PeriodStepper({
           size={Size.sm}
           color={canGoNext ? theme.textSecondary : theme.border}
         />
-      </TouchableOpacity>
+      </PressScaleTouchable>
     </View>
   );
 }
@@ -189,6 +189,5 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   label: { textAlign: 'center', flexShrink: 1 },
-  pressed: { opacity: Opacity.medium },
   todayButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: Spacing.md },
 });

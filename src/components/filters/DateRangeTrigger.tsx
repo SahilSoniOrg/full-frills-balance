@@ -1,9 +1,9 @@
-import { Icon, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { DateRange, formatDate, formatShortDate } from '@/src/utils/dateUtils';
 import { useMemo } from 'react';
-import { Keyboard, StyleProp, StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { Keyboard, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
 interface DateRangeTriggerProps {
   range?: DateRange | null;
@@ -48,7 +48,7 @@ export function DateRangeTrigger({
   return (
     <View style={[styles.wrapper, style]}>
       {showNavigation ? (
-        <TouchableOpacity
+        <PressScaleTouchable
           onPress={() => {
             Keyboard.dismiss();
             onPrevious?.();
@@ -57,10 +57,10 @@ export function DateRangeTrigger({
           activeOpacity={Opacity.heavy}
         >
           <AppIcon name={Icon.ChevronLeft} size={Size.sm} color={theme.textSecondary} />
-        </TouchableOpacity>
+        </PressScaleTouchable>
       ) : null}
 
-      <TouchableOpacity
+      <PressScaleTouchable
         style={[
           styles.container,
           { backgroundColor: theme.surface },
@@ -82,10 +82,10 @@ export function DateRangeTrigger({
           {displayText}
         </AppText>
         <AppIcon name={Icon.ChevronDown} size={Size.xs} color={theme.textSecondary} />
-      </TouchableOpacity>
+      </PressScaleTouchable>
 
       {showNavigation ? (
-        <TouchableOpacity
+        <PressScaleTouchable
           onPress={() => {
             Keyboard.dismiss();
             onNext?.();
@@ -94,7 +94,7 @@ export function DateRangeTrigger({
           activeOpacity={Opacity.heavy}
         >
           <AppIcon name={Icon.ChevronRight} size={Size.sm} color={theme.textSecondary} />
-        </TouchableOpacity>
+        </PressScaleTouchable>
       ) : null}
     </View>
   );

@@ -1,5 +1,5 @@
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { AppText } from '@/src/components/core';
+import { AppText, PressScaleTouchable } from '@/src/components/core';
 import { Opacity, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -7,7 +7,7 @@ import { InteractionState, useChartInteraction } from '@/src/hooks/useChartInter
 import { HeatmapPoint } from '@/src/services/reports/reportSnapshot';
 import dayjs from 'dayjs';
 import React, { useCallback, useMemo, useState } from 'react';
-import { Dimensions, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Dimensions, StyleSheet, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import Svg, { G, Rect, Text as SvgText } from 'react-native-svg';
 import { ChartTooltip } from './ChartTooltip';
@@ -275,7 +275,8 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
                       </AppText>
 
                       {onCellPress && (
-                        <TouchableOpacity
+                        <PressScaleTouchable
+                          pressScale="none"
                           style={[styles.viewButton, { backgroundColor: theme.primaryLight }]}
                           onPress={() => {
                             onCellPress(selectedPoint);
@@ -289,7 +290,7 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
                           >
                             VIEW
                           </AppText>
-                        </TouchableOpacity>
+                        </PressScaleTouchable>
                       )}
                     </View>
 

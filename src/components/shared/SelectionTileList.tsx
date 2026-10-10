@@ -1,13 +1,13 @@
 import { AccountCategoryPill } from '@/src/components/accounts/AccountCategoryPill';
 import { SelectionCheckmark } from './SelectionIndicator';
-import { Icon, AppIcon, AppText } from '@/src/components/core';
+import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import type { IconName } from '@/src/types/domainIcons';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { Inline } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback, useEffect, useRef } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View, type ViewStyle } from 'react-native';
+import { ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 
 const MAX_SCROLL_ATTEMPTS = 5;
 const SCROLL_RETRY_MS = 50;
@@ -132,7 +132,7 @@ const SelectionTileRow = React.memo(function SelectionTileRow({
   }
 
   return (
-    <TouchableOpacity
+    <PressScaleTouchable
       testID={`selection-tile-${item.id}`}
       style={[styles.tile, tileStyle]}
       onPress={() => onSelect(isSelected && allowDeselect ? '' : item.id)}
@@ -166,7 +166,7 @@ const SelectionTileRow = React.memo(function SelectionTileRow({
         </AppText>
         <SelectionCheckmark selected={showCheckmark} color={item.color} />
       </Inline>
-    </TouchableOpacity>
+    </PressScaleTouchable>
   );
 });
 

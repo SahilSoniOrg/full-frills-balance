@@ -1,3 +1,4 @@
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppIcon } from '@/src/components/core/AppIcon';
 import { AppText } from '@/src/components/core/AppText';
 import { AmountCalculatorSheet } from '@/src/components/overlays/AmountCalculatorSheet';
@@ -13,12 +14,10 @@ import { formatRoundedAmount, sanitizeDecimalInput } from '@/src/utils/money';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Keyboard,
-  Pressable,
   StyleProp,
   StyleSheet,
   TextInput,
   TextInputProps,
-  TouchableOpacity,
   View,
   ViewStyle,
 } from 'react-native';
@@ -157,7 +156,7 @@ function CenteredAmountField({
         inputStyle={styles.centeredInput}
       />
       {currencyCode ? (
-        <Pressable
+        <PressScaleTouchable
           accessibilityRole="button"
           accessibilityLabel={copy.currencyAccessibility(currencyCode)}
           onPress={onCurrencyPress}
@@ -168,7 +167,7 @@ function CenteredAmountField({
             {currencyCode}
           </AppText>
           <AppIcon name={Icon.ChevronDown} size={Size.iconXs} color={theme.textSecondary} />
-        </Pressable>
+        </PressScaleTouchable>
       ) : null}
     </View>
   );
@@ -267,7 +266,7 @@ function AmountField({
           {label}
         </AppText>
       )}
-      <TouchableOpacity
+      <PressScaleTouchable
         activeOpacity={1}
         accessible={!editable}
         onPress={() => (editable ? inputRef.current?.focus() : openCalculator())}
@@ -352,7 +351,7 @@ function AmountField({
           />
           <View style={styles.actionButtons}>
             {(showClearButton ?? isHero) && hasAmount && (
-              <TouchableOpacity
+              <PressScaleTouchable
                 onPress={() => {
                   if (onClear) onClear();
                   else onChangeText('');
@@ -369,9 +368,9 @@ function AmountField({
                 hitSlop={Spacing.sm}
               >
                 <AppIcon name={Icon.Close} size={Size.xs} color={theme.textSecondary} />
-              </TouchableOpacity>
+              </PressScaleTouchable>
             )}
-            <TouchableOpacity
+            <PressScaleTouchable
               onPress={openCalculator}
               style={[
                 styles.iconButton,
@@ -388,10 +387,10 @@ function AmountField({
               hitSlop={Spacing.sm}
             >
               <AppIcon name={Icon.Calculator} size={Size.iconXs} color={color} />
-            </TouchableOpacity>
+            </PressScaleTouchable>
           </View>
         </View>
-      </TouchableOpacity>
+      </PressScaleTouchable>
       {calculatorMounted && (
         <AmountCalculatorSheet
           visible={calculatorVisible}

@@ -9,7 +9,7 @@ import {
 } from '@/src/utils/amountExpression';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { useEffect, useMemo, useRef, useState, type SetStateAction } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 
 const RESULT_FONT_SIZE = Typography.sizes.hero + Spacing.sm;
 const RESULT_LINE_HEIGHT = Typography.sizes.hero + Spacing.xxxl;
@@ -315,7 +315,7 @@ export function AmountCalculatorSheet({
 
         {detailsAvailable && (
           <>
-            <TouchableOpacity
+            <PressScaleTouchable
               onPress={() => setDetailsExpanded(current => !current)}
               style={styles.detailsToggle}
               accessibilityRole="button"
@@ -327,7 +327,7 @@ export function AmountCalculatorSheet({
               <AppText variant="caption" weight="semibold" style={{ color: theme.primary }}>
                 {detailsExpanded ? 'Hide details' : 'Calculation details'}
               </AppText>
-            </TouchableOpacity>
+            </PressScaleTouchable>
 
             {detailsExpanded && (
               <View
