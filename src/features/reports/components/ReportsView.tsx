@@ -2,9 +2,10 @@ import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { FilterDisclosure } from '@/src/components/filters/FilterDisclosure';
 import { AppConfig, Size, Spacing } from '@/src/constants';
-import { Inset } from '@/src/design-system';
+import { Box } from '@/src/design-system';
 import { AppTabs, Icon, type TabOption } from '@/src/components/core';
-import { ReportFilterChrome } from '@/src/features/reports/components/ReportFilterChrome';
+import { MultiAccountPickerModal } from '@/src/components/account-selection';
+import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { ReportOverviewSection } from '@/src/features/reports/components/sections/ReportOverviewSection';
 import { ReportSpendingSection } from '@/src/features/reports/components/sections/ReportSpendingSection';
 import { ReportWealthSection } from '@/src/features/reports/components/sections/ReportWealthSection';
@@ -52,7 +53,7 @@ export function ReportsView({ vm, chrome }: ReportsViewProps) {
 
   return (
     <ScreenWithChrome chrome={chrome} scrollable={false}>
-      <Inset space="md" vertical="md" flex={1}>
+      <Box padding="md" paddingVertical="md" flex={1}>
         <ScrollView
           contentContainerStyle={styles.content}
           refreshControl={
@@ -118,8 +119,21 @@ export function ReportsView({ vm, chrome }: ReportsViewProps) {
           )}
           {activeTab === 'WEALTH' && <ReportWealthSection vm={wealth} chartWidth={CHART_WIDTH} />}
         </ScrollView>
-      </Inset>
-      <ReportFilterChrome filters={filters} />
+      </Box>
+      <DateRangePicker
+        visible={filters.showDatePicker}
+        onClose={filters.onCloseDatePicker}
+        onSelect={filters.onDateSelect}
+        currentFilter={filters.periodFilter}
+      />
+      <MultiAccountPickerModal
+        visible={filters.showAccountPicker}
+        onClose={filters.onCloseAccountPicker}
+        onSelect={filters.onAccountSelect}
+        accounts={filters.accounts}
+        selectedIds={filters.accountIds}
+        title={AppConfig.strings.reports.filterByAccounts}
+      />
     </ScreenWithChrome>
   );
 }
