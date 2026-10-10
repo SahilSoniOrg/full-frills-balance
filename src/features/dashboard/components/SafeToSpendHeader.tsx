@@ -1,11 +1,15 @@
 import { Icon, IconButton, AppText } from '@/src/components/core';
 import { AppConfig, ChromeMotion, Size, Typography } from '@/src/constants';
 import { Column, Row } from '@/src/design-system';
+import { FitText } from '@/src/components/shared/FitText';
 import { useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { MotiView } from 'moti';
 import { useWindowDimensions } from 'react-native';
+
+/** Smallest the hero amount shrinks to before it would rather stay legible. */
+const HERO_MIN_FONT_SIZE = 36;
 
 interface SafeToSpendHeaderProps {
   isOverCommitted: boolean;
@@ -36,23 +40,19 @@ export const SafeToSpendHeader = ({
   const amountFontSize = width < 360 ? Typography.sizes.jumbo : Typography.sizes.hero;
 
   const amountText = (
-    <AppText
+    <FitText
       testID="safe-to-spend-amount"
       variant="hero"
       fontRole="numeric"
       tabular
-      numberOfLines={1}
-      adjustsFontSizeToFit
-      minimumFontScale={0.65}
+      maxFontSize={amountFontSize}
+      minFontSize={HERO_MIN_FONT_SIZE}
+      lineHeightRatio={Typography.lineHeights.tight}
       color={isOverCommitted ? 'error' : isPositiveSafeToSpend ? 'success' : undefined}
       weight="semibold"
-      style={{
-        fontSize: amountFontSize,
-        lineHeight: Math.round(amountFontSize * Typography.lineHeights.tight),
-      }}
     >
       {formatSts(amount, currencyCode)}
-    </AppText>
+    </FitText>
   );
 
   return (
