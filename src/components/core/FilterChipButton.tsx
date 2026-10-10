@@ -1,7 +1,7 @@
 import { Shape, Size, Spacing } from '@/src/constants';
 import { resolveThemeColor } from '@/src/design-system/utils';
 import { useTheme } from '@/src/hooks/use-theme';
-import { triggerHaptic } from '@/src/utils/haptics';
+import { triggerPressHaptic } from '@/src/utils/haptics';
 import { memo } from 'react';
 import { Keyboard, StyleSheet, type ViewStyle } from 'react-native';
 import { AppIcon } from './AppIcon';
@@ -29,7 +29,7 @@ export const FilterChipButton = memo(
         accessibilityState={{ selected: !!isActive }}
         onPress={() => {
           Keyboard.dismiss();
-          if (!isActive) void triggerHaptic('light');
+          if (!isActive) triggerPressHaptic('selection');
           onPress();
         }}
         style={style}

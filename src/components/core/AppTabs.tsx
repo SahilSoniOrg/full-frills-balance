@@ -3,7 +3,7 @@ import { BorderWidth, ChromeMotion, Opacity, Size, Spacing } from '@/src/constan
 import { Box } from '@/src/design-system';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
-import { triggerHaptic } from '@/src/utils/haptics';
+import { triggerPressHaptic } from '@/src/utils/haptics';
 import React, { memo, useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -100,7 +100,7 @@ function AppTabsComponent<T extends string | number>({
 
   const handlePress = (id: T) => {
     if (id === value) return;
-    void triggerHaptic('light');
+    triggerPressHaptic('selection');
     onChange(id);
   };
 

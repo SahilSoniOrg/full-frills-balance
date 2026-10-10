@@ -150,6 +150,8 @@ export const Scale = {
   identity: 1,
   /** Shared chrome / card press shrink. */
   press: 0.98,
+  /** Full-width rows and list items: barely-there press shrink. */
+  pressSubtle: 0.99,
 } as const;
 
 // === SIZE SCALE ===

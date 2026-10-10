@@ -1,3 +1,4 @@
+import { triggerPressHaptic } from '@/src/utils/haptics';
 import { useState, useEffect } from 'react';
 import { ChromeMotion, Opacity, Shape } from '@/src/constants';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
@@ -51,7 +52,11 @@ export const AppToggle = ({
   return (
     <TouchableOpacity
       activeOpacity={Opacity.heavy}
-      onPress={() => !disabled && onValueChange(!value)}
+      onPress={() => {
+        if (disabled) return;
+        triggerPressHaptic('selection');
+        onValueChange(!value);
+      }}
       disabled={disabled}
       hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
       accessibilityRole="switch"

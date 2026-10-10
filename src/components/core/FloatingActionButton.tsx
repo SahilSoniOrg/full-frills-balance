@@ -4,7 +4,7 @@ import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { Shape, Size, Spacing, ZIndex } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Icon, type IconName } from '@/src/types/domainIcons';
-import { triggerHaptic } from '@/src/utils/haptics';
+import { triggerPressHaptic } from '@/src/utils/haptics';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -62,7 +62,7 @@ export const FloatingActionButton = ({
   const hasActions = actions.length > 0;
 
   const handlePress = () => {
-    void triggerHaptic('light');
+    triggerPressHaptic('primary');
     if (hasActions) {
       if (!isExpanded) onExpand?.();
       setIsExpanded(!isExpanded);
@@ -99,7 +99,7 @@ export const FloatingActionButton = ({
               <PressScaleTouchable
                 key={action.id}
                 onPress={() => {
-                  void triggerHaptic('light');
+                  triggerPressHaptic('selection');
                   setIsExpanded(false);
                   action.onPress();
                 }}
