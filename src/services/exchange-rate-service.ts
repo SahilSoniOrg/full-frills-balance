@@ -40,6 +40,11 @@ export class ExchangeRateService {
     return this.spotRateUpdates.asObservable();
   }
 
+  /** Let rate observers re-value after rates were added outside a spot refresh (e.g. historical). */
+  notifyRatesUpdated(baseCurrency: string): void {
+    this.spotRateUpdates.next(baseCurrency);
+  }
+
   /**
    * Get exchange rate, using cache if available and recent
    */

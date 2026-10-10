@@ -3,17 +3,23 @@ import { useObservable } from '@/src/hooks/useObservable';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { combineLatest, of } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { map, startWith, switchMap } from 'rxjs/operators';
 import { BudgetItem } from '../types';
 import { sortBudgetItems, summarizeBudgetList } from '../helpers/budgetListPresentation';
 import { WorkplaceId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
+import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { useCallback, useMemo } from 'react';
 
 export function useBudgetListViewModel(workplaceId: WorkplaceId, currencyCode?: string) {
   const today = useCalendarDay();
   const budgetsObservable = useMemo(() => {
-    const items$ = budgetReadService.observeAllActive(workplaceId).pipe(
+    // Re-value when rates arrive (e.g. after "Fetch missing rates" in the FX sheet).
+    const items$ = combineLatest([
+      budgetReadService.observeAllActive(workplaceId),
+      exchangeRateService.observeSpotRateUpdates().pipe(startWith('')),
+    ]).pipe(
+      map(([budgets]) => budgets),
       switchMap(budgets => {
         if (budgets.length === 0) return of([]);
 
@@ -54,5 +60,17 @@ export function useBudgetListViewModel(workplaceId: WorkplaceId, currencyCode?: 
     () => (currencyCode ? summarizeBudgetList(items, currencyCode, today) : undefined),
     [items, currencyCode, today],
   );
-  return { items: sortedItems, summary, isLoading, error, retry, onItemPress };
+  const missingRateQuotes = useMemo(
+    () => items.flatMap(item => item.usage.missingRateQuotes ?? []),
+    [items],
+  );
+  return {
+    items: sortedItems,
+    summary,
+    isLoading,
+    error,
+    retry,
+    onItemPress,
+    missingRateQuotes,
+  };
 }

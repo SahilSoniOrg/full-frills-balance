@@ -17,6 +17,10 @@ jest.mock('@/src/services/budget/budgetReadService', () => {
   >('@/src/features/budget/testing/mockBudgetReadService');
   return budgetReadServiceJestModule;
 });
+const mockRateUpdates = new (jest.requireActual<typeof import('rxjs')>('rxjs').Subject)<string>();
+jest.mock('@/src/services/exchange-rate-service', () => ({
+  exchangeRateService: { observeSpotRateUpdates: () => mockRateUpdates },
+}));
 jest.mock('@/src/utils/navigation', () => ({ AppNavigation: { toBudgetDetail: jest.fn() } }));
 
 const workplaceId = asWorkplaceId('workplace');
@@ -94,5 +98,21 @@ describe('useBudgetListViewModel', () => {
       }),
     );
     expect(budgetReadService.observeBudgetUsage).toHaveBeenCalledTimes(1);
+  });
+
+  it('exposes missing rate quotes and re-values budgets when rates update', async () => {
+    const quote = { fromCurrency: 'EUR', toCurrency: 'USD', rateDate: 1 };
+    jest
+      .mocked(budgetReadService.observeBudgetUsage)
+      .mockReturnValue(of({ ...usage, hasUnvaluedEntries: true, missingRateQuotes: [quote] }));
+    const { result } = renderHook(() => useBudgetListViewModel(workplaceId, 'USD'));
+    await waitFor(() => expect(result.current.missingRateQuotes).toEqual([quote]));
+    const calls = jest.mocked(budgetReadService.observeBudgetUsage).mock.calls.length;
+    act(() => mockRateUpdates.next('EUR'));
+    await waitFor(() =>
+      expect(jest.mocked(budgetReadService.observeBudgetUsage).mock.calls.length).toBeGreaterThan(
+        calls,
+      ),
+    );
   });
 });
