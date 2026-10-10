@@ -54,6 +54,8 @@ export const SafeToSpendExplanationModal = ({
     committedTotal,
     committedLiabilities,
     safeToSpend,
+    shortfall,
+    isOverCommitted,
     totalLiabilities,
     accountSummaries,
     liquidAssetSubtypes,
@@ -314,14 +316,24 @@ export const SafeToSpendExplanationModal = ({
         <View style={styles.resultLine}>
           <View style={{ flex: 1 }}>
             <AppText variant="body" weight="medium">
-              {labels.safeToSpendLine.replace(':', '')}
+              {isOverCommitted
+                ? AppConfig.strings.dashboard.shortfall
+                : labels.safeToSpendLine.replace(':', '')}
             </AppText>
             <AppText variant="caption" color="secondary">
               {labels.remainingCashBuffer}
             </AppText>
           </View>
-          <AppText variant="title" fontRole="numeric" weight="semibold" color="primary" tabular>
-            {formatSts(safeToSpend, currencyCode)}
+          <AppText
+            variant="title"
+            fontRole="numeric"
+            weight="semibold"
+            color={isOverCommitted ? 'error' : 'primary'}
+            tabular
+          >
+            {isOverCommitted
+              ? formatSts(shortfall, currencyCode, { prefix: '–' })
+              : formatSts(safeToSpend, currencyCode)}
           </AppText>
         </View>
       </AppCard>

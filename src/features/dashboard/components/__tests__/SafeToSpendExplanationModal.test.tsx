@@ -6,6 +6,7 @@ import { AccountId } from '@/src/types/ids';
 import { mapSafeToSpendViewModel } from '@/src/features/dashboard/mappers/SafeToSpendMapper';
 import { SafeToSpendExplanationModal } from '../SafeToSpendExplanationModal';
 import { AppConfig } from '@/src/constants';
+import { ONBOARDING_STRINGS } from '@/src/constants/copy/domains/onboardingStrings';
 import { formatDate } from '@/src/utils/dateUtils';
 import { render, screen } from '@/src/utils/test-utils';
 
@@ -18,7 +19,7 @@ jest.mock('@/src/components/shared/moneyFormat', () => ({
 }));
 
 describe('SafeToSpendExplanationModal dated explanation', () => {
-  it('renders the same cash ceiling, binding rent date, held amount and later salary as the simulator', () => {
+  const renderExplanation = (cash: number) => {
     const asOf = new Date(2026, 8, 30, 9).getTime();
     const flows: Flow[] = [
       {
@@ -45,7 +46,7 @@ describe('SafeToSpendExplanationModal dated explanation', () => {
       },
     ];
     const engine = Simulator.simulate(
-      new Map([['cash', 1000]]),
+      new Map([['cash', cash]]),
       flows,
       30,
       new Set(['cash']),
@@ -85,7 +86,7 @@ describe('SafeToSpendExplanationModal dated explanation', () => {
         explanation: engine.safeToSpendExplanation,
         asOf,
         report,
-        totalLiquidAssets: 1000,
+        totalLiquidAssets: cash,
         accountSummaries: [],
         liquidAssetSubtypes: [AccountSubtype.CASH],
         accountMap: new Map(),
@@ -94,7 +95,6 @@ describe('SafeToSpendExplanationModal dated explanation', () => {
       { isLoading: false, currencyCode: 'USD' },
     );
 
-    expect(viewModel.safeToSpend).toBe(200);
     render(
       <SafeToSpendExplanationModal
         visible
@@ -104,6 +104,11 @@ describe('SafeToSpendExplanationModal dated explanation', () => {
         setExpandedSection={() => undefined}
       />,
     );
+    return viewModel;
+  };
+
+  it('renders the same cash ceiling, binding rent date, held amount and later salary as the simulator', () => {
+    expect(renderExplanation(1000).safeToSpend).toBe(200);
 
     const copy = AppConfig.strings.dashboard.safeToSpendConstraint;
     expect(screen.getByText(copy.cashAvailableNow('USD 1000.00'))).toBeTruthy();
@@ -123,5 +128,31 @@ describe('SafeToSpendExplanationModal dated explanation', () => {
       screen.getByText(AppConfig.strings.dashboard.safeToSpendExplanation.bucketTitle),
     ).toBeTruthy();
     expect(screen.getAllByText('–USD 800.00').length).toBeGreaterThan(0);
+    // Salary (day 20) lands after rent (day 5): the result is the low point, not cash + income − bills.
+    expect(screen.getByText('USD 200.00')).toBeTruthy();
+    expect(screen.queryByText('USD 1700.00')).toBeNull();
+    expect(
+      screen.getByText(AppConfig.strings.dashboard.safeToSpendUi.remainingCashBuffer),
+    ).toBeTruthy();
+    const copyText = JSON.stringify([
+      AppConfig.strings.dashboard.safeToSpendExplanation,
+      AppConfig.strings.dashboard.safeToSpendUi,
+      ONBOARDING_STRINGS.clarityCalculation,
+    ]);
+    expect(copyText).not.toMatch(
+      /left over|\+ ?(expected )?income|incoming money|before next payday/i,
+    );
+  });
+
+  it('shows a negative low point as a shortfall, not floored to zero', () => {
+    const viewModel = renderExplanation(500);
+    expect(viewModel.shortfall).toBe(300);
+    expect(screen.getByText(AppConfig.strings.dashboard.shortfall)).toBeTruthy();
+    expect(screen.getAllByText('–USD 300.00').length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(
+        AppConfig.strings.dashboard.safeToSpendConstraint.projectedShortfall('USD 300.00'),
+      ),
+    ).toBeTruthy();
   });
 });
