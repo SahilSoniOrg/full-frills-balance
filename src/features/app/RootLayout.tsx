@@ -48,6 +48,7 @@ import { useFonts } from './hooks/useFonts';
 import { useTelemetry } from './hooks/useTelemetry';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
+import { useWidgetLaunchTracking } from './hooks/useWidgetLaunchTracking';
 import { useWidgetSync } from './hooks/useWidgetSync';
 import { UpdateGate } from './UpdateGate';
 import {
@@ -124,6 +125,7 @@ function RootLayout() {
 function EarlyBootstrap() {
   useFonts();
   useTelemetry();
+  useWidgetLaunchTracking();
   useEffect(() => {
     const retryWidgetCleanup =
       Platform.OS === 'web' ? Promise.resolve() : widgetProjectionService.recoverPendingCleanup();

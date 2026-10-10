@@ -16,6 +16,7 @@ type PostPostingPlanParams = {
   smsId?: string;
   smsRecordId?: string;
   mode?: 'simple' | 'advanced' | 'import';
+  launchSource?: string;
 };
 
 /**

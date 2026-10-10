@@ -13,7 +13,8 @@ type SafeToSpendFeatureAction =
   | 'account_viewed'
   | 'legend_to_explanation'
   | 'explanation_open'
-  | 'explanation_section_expand';
+  | 'explanation_section_expand'
+  | 'viewed';
 
 function trackSts(
   action: SafeToSpendFeatureAction,
@@ -93,6 +94,21 @@ export function useDashboardFeatureActions() {
     [],
   );
 
+  const trackViewed = useCallback(
+    (view: {
+      quality: 'ready' | 'stale' | 'unavailable';
+      isOverCommitted: boolean;
+      hasUnvalued: boolean;
+    }) => {
+      trackSts('viewed', {
+        quality: view.quality,
+        isOverCommitted: view.isOverCommitted,
+        has_unvalued: view.hasUnvalued,
+      });
+    },
+    [],
+  );
+
   return {
     openAccount,
     openPlannedPayment,
@@ -103,5 +119,6 @@ export function useDashboardFeatureActions() {
     trackLegendPressed,
     trackExplanationVisible,
     trackExplanationSection,
+    trackViewed,
   };
 }

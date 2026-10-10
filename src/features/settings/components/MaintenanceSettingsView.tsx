@@ -35,7 +35,7 @@ function MaintenanceSettingsView() {
 
   const reviewUnbalancedJournals = useCallback(() => {
     analytics.track('entrypoint_selected', {
-      screen: 'settings_maintenance',
+      screen: 'maintenance-settings',
       entrypoint: 'balance_audit',
       target: 'journal_balance_review',
     });

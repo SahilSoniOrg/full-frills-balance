@@ -136,6 +136,7 @@ export function useJournalEntryShell(): JournalEntryShell {
     initialNotes: seed.notes,
     smsId: seed.sourceContext?.smsId,
     smsRecordId: seed.sourceContext?.smsRecordId,
+    launchSource: seed.sourceContext?.launchSource,
     initialDate: seed.date,
     initialSourceId: seed.sourceAccountId,
     initialDestinationId: seed.destinationAccountId,

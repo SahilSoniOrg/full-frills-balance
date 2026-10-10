@@ -38,6 +38,50 @@ describe('observability privacy boundary', () => {
     ).toEqual({ feature: 'settings', action: 'change_font' });
   });
 
+  it('keeps journal launch source and Safe to Spend view quality, dropping unknown values', () => {
+    expect(
+      sanitizeAnalyticsProperties('feature_journal_create', { source: 'widget', mode: 'simple' }),
+    ).toEqual({ feature: 'journal', action: 'create', source: 'widget', mode: 'simple' });
+    expect(
+      sanitizeAnalyticsProperties('feature_journal_create', { source: PRIVATE_MARKER }),
+    ).toEqual({ feature: 'journal', action: 'create' });
+    expect(
+      sanitizeAnalyticsProperties('feature_safe_to_spend_viewed', {
+        quality: 'stale',
+        isOverCommitted: true,
+        has_unvalued: false,
+        safeToSpend: 12345,
+      }),
+    ).toEqual({
+      feature: 'safe_to_spend',
+      action: 'viewed',
+      quality: 'stale',
+      isOverCommitted: true,
+      has_unvalued: false,
+    });
+    expect(
+      sanitizeAnalyticsProperties('feature_safe_to_spend_viewed', { quality: PRIVATE_MARKER }),
+    ).toEqual({ feature: 'safe_to_spend', action: 'viewed' });
+  });
+
+  it('keeps every entrypoint and target the app sends', () => {
+    expect(
+      sanitizeAnalyticsProperties('entrypoint_selected', {
+        screen: 'hub',
+        entrypoint: 'startup_prompt',
+        target: 'journal_balance_review',
+      }),
+    ).toEqual({ screen: 'hub', entrypoint: 'startup_prompt', target: 'journal_balance_review' });
+    for (const entrypoint of ['bottom_action', 'balance_audit', 'widget']) {
+      expect(sanitizeAnalyticsProperties('entrypoint_opened', { entrypoint })).toEqual({
+        entrypoint,
+      });
+    }
+    expect(
+      sanitizeAnalyticsProperties('entrypoint_selected', { target: 'journal_entry' }),
+    ).toEqual({ target: 'journal_entry' });
+  });
+
   it.each(ANALYTICS_SANITIZE_CASES)(
     'sanitizes analytics payload for %s',
     (eventName, input, expected) => {

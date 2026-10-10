@@ -14,6 +14,7 @@ export function useJournalEditorSubmission(options: {
   newJournalCurrencyCode?: string;
   smsId?: string;
   smsRecordId?: string;
+  launchSource?: string;
   onAfterSave?: (result: {
     journalId?: JournalId;
     action?: 'created' | 'updated';
@@ -26,6 +27,7 @@ export function useJournalEditorSubmission(options: {
     newJournalCurrencyCode,
     smsId,
     smsRecordId,
+    launchSource,
     onAfterSave,
     onSuccess,
   } = options;
@@ -47,6 +49,7 @@ export function useJournalEditorSubmission(options: {
           mode,
           smsId,
           smsRecordId,
+          launchSource,
         });
 
         if (!result.success) {
@@ -73,6 +76,7 @@ export function useJournalEditorSubmission(options: {
     },
     [
       journalId,
+      launchSource,
       newJournalCurrencyCode,
       onAfterSave,
       onSuccess,

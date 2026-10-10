@@ -48,6 +48,7 @@ export class JournalService {
     smsId?: string;
     smsRecordId?: string;
     mode?: 'simple' | 'advanced' | 'import';
+    launchSource?: string;
     workplaceId: WorkplaceId;
   }): Promise<SubmitJournalResult> {
     const accountIds = [...new Set(params.plan.lines.map(line => line.accountId))];
@@ -95,6 +96,7 @@ export class JournalService {
       smsId: params.smsId,
       smsRecordId: params.smsRecordId,
       mode: params.mode,
+      launchSource: params.launchSource,
       workplaceId: params.workplaceId,
     });
   }
@@ -245,9 +247,7 @@ export class JournalService {
     );
 
     analytics.trackFeatureUsage('journal', 'duplicate', {
-      source_journal_id: journalId,
-      new_journal_id: duplicated.id,
-      transaction_count: transactions.length,
+      count: transactions.length,
       currency: journal.currencyCode,
     });
 
@@ -286,6 +286,8 @@ export class JournalService {
     smsId?: string;
     smsRecordId?: string;
     mode?: 'simple' | 'advanced' | 'import';
+    /** Where the entry screen was opened from, e.g. `widget`; analytics only. */
+    launchSource?: string;
     workplaceId: WorkplaceId;
   }): Promise<SubmitJournalResult> {
     const {
@@ -293,6 +295,7 @@ export class JournalService {
       mode = 'advanced',
       workplaceId,
       newJournalCurrencyCode,
+      launchSource,
       ...entryParams
     } = params;
 
@@ -325,7 +328,7 @@ export class JournalService {
         analytics.trackFeatureUsage('journal', 'update', {
           mode,
           currency: currencyCode,
-          transaction_count: journalData.transactions?.length || 0,
+          count: journalData.transactions?.length || 0,
         });
         return { success: true, action: 'updated', journalId: updatedJournal.id };
       }
@@ -337,7 +340,8 @@ export class JournalService {
       analytics.trackFeatureUsage('journal', 'create', {
         mode,
         currency: currencyCode,
-        transaction_count: journalData.transactions.length || 0,
+        count: journalData.transactions.length || 0,
+        source: launchSource ?? (params.smsRecordId ? 'sms' : 'manual'),
       });
       analytics.trackConversion('transaction_created');
       return { success: true, action: 'created', journalId: createdJournal.id };

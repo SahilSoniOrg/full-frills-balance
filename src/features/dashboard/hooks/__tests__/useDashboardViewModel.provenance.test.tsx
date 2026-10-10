@@ -70,6 +70,7 @@ describe('dashboard forecast ownership and snapshot provenance', () => {
       workplaceId: 'wp-a' as SafeToSpendDashboard['workplaceId'],
       currencyCode: 'USD',
       quality: 'ready',
+      summary: { safeToSpend: 0, shortfall: 50, trajectoryMinBalance: -50 },
       report: { allFlows: [] },
       accountMap: new Map(),
     } as unknown as SafeToSpendDashboard;
@@ -81,6 +82,31 @@ describe('dashboard forecast ownership and snapshot provenance', () => {
     mockWorkplace = { workplaceId: 'wp-b', defaultCurrencyCode: 'EUR' };
     rerender({});
     expect(result.current.safeToSpendData).toBeNull();
+  });
+
+  it('tracks one view per workplace once live forecast data arrives', () => {
+    const { analytics } = jest.requireMock('@/src/services/analytics');
+    analytics.trackFeatureUsage.mockClear();
+    mockObserved = {
+      workplaceId: 'wp-a' as SafeToSpendDashboard['workplaceId'],
+      currencyCode: 'USD',
+      quality: 'ready',
+      summary: { safeToSpend: 0, shortfall: 50, trajectoryMinBalance: -50 },
+      report: { allFlows: [] },
+      accountMap: new Map(),
+    } as unknown as SafeToSpendDashboard;
+    const { rerender } = renderHook(() => useDashboardViewModel());
+    rerender({});
+    const views = analytics.trackFeatureUsage.mock.calls.filter(
+      ([feature, action]: [string, string]) => feature === 'safe_to_spend' && action === 'viewed',
+    );
+    expect(views).toEqual([
+      [
+        'safe_to_spend',
+        'viewed',
+        { quality: 'ready', isOverCommitted: true, has_unvalued: false },
+      ],
+    ]);
   });
 
   it('restores a cached paint as stale, keeps its age, and renders the saved-age label', () => {

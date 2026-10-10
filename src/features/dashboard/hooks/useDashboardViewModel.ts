@@ -104,7 +104,23 @@ export function useDashboardViewModel(): DashboardViewModel {
   const [expandedSection, setExpandedSection] = useState<DashboardExplanationSection | null>(null);
   const [selectedLegendItem, setSelectedLegendItem] = useState<DashboardLegendItem | null>(null);
 
-  const { trackExplanationVisible, trackExplanationSection } = useDashboardFeatureActions();
+  const { trackExplanationVisible, trackExplanationSection, trackViewed } =
+    useDashboardFeatureActions();
+
+  const viewedWorkplaceRef = useRef<string | null>(null);
+  const liveSafeToSpend =
+    visibleSafeToSpendData && !('snapshotKind' in visibleSafeToSpendData)
+      ? visibleSafeToSpendData
+      : null;
+  useEffect(() => {
+    if (!liveSafeToSpend || viewedWorkplaceRef.current === liveSafeToSpend.workplaceId) return;
+    viewedWorkplaceRef.current = liveSafeToSpend.workplaceId;
+    trackViewed({
+      quality: liveSafeToSpend.quality ?? 'ready',
+      isOverCommitted: liveSafeToSpend.summary.shortfall > 0,
+      hasUnvalued: !!liveSafeToSpend.hasUnvaluedEntries,
+    });
+  }, [liveSafeToSpend, trackViewed]);
 
   const explanationModalState = useMemo(
     () => ({

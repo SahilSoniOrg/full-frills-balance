@@ -44,7 +44,7 @@ object FullFrillsBalanceWidgetSupport {
   private const val KEY_THEME_ACTION_ICON_COLOR = "widget_theme_action_icon_color"
   private const val KEY_IS_PRIVACY_ENABLED = "widget_is_privacy_enabled"
   private const val APP_SCHEME = "fullfrillsbalance" // expo-inject-appscheme
-  private const val APP_HOME_DEEP_LINK = "$APP_SCHEME://"
+  private const val APP_HOME_DEEP_LINK = "$APP_SCHEME://?source=widget"
   private const val INCOME_DEEP_LINK = "$APP_SCHEME://journal-entry?mode=simple&type=income&source=widget"
   private const val EXPENSE_DEEP_LINK = "$APP_SCHEME://journal-entry?mode=simple&type=expense&source=widget"
   private const val TRANSFER_DEEP_LINK = "$APP_SCHEME://journal-entry?mode=simple&type=transfer&source=widget"

@@ -28,7 +28,7 @@ const ENUM_VALUES: Record<string, ReadonlySet<string>> = {
   cadence: new Set(['daily', 'weekly', 'monthly', 'never']),
   interval: new Set(['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly']),
   choice: new Set(['fix_now', 'later', 'dismissed']),
-  source: new Set(['manual', 'system', 'import', 'sms', 'restore', 'cleanup', 'user']),
+  source: new Set(['manual', 'system', 'import', 'sms', 'restore', 'cleanup', 'user', 'widget']),
   format: new Set(['csv', 'json', 'pdf', 'zip', 'text', 'ofx', 'qif']),
   requested_format: new Set(['csv', 'json', 'pdf', 'zip', 'text']),
   effective_format: new Set(['csv', 'json', 'pdf', 'zip', 'text', 'file']),
@@ -72,8 +72,26 @@ const ENUM_VALUES: Record<string, ReadonlySet<string>> = {
   table: new Set(['journals', 'accounts', 'budgets', 'planned_payments', 'transaction_inbox']),
   screen_type: new Set(['modal', 'tab', 'screen']),
   flow: new Set(['onboarding', 'journal', 'account', 'budget', 'settings']),
-  entrypoint: new Set(['dashboard', 'journal', 'accounts', 'settings', 'notification', 'widget']),
-  target: new Set(['journal', 'account', 'budget', 'planned_payment', 'settings']),
+  entrypoint: new Set([
+    'dashboard',
+    'journal',
+    'accounts',
+    'settings',
+    'notification',
+    'widget',
+    'bottom_action',
+    'startup_prompt',
+    'balance_audit',
+  ]),
+  target: new Set([
+    'journal',
+    'account',
+    'budget',
+    'planned_payment',
+    'settings',
+    'journal_entry',
+    'journal_balance_review',
+  ]),
   icon: new Set(['wallet', 'bank', 'cash', 'credit-card', 'home', 'briefcase', 'chart']),
 };
 
@@ -111,6 +129,7 @@ const FEATURE_FIELD_ENUMS: Record<string, Readonly<Record<string, ReadonlySet<st
     section: SAFE_TO_SPEND_SECTIONS,
     item: SAFE_TO_SPEND_LEGENDS,
     slice: SAFE_TO_SPEND_LEGENDS,
+    quality: new Set(['ready', 'stale', 'unavailable']),
   },
 };
 

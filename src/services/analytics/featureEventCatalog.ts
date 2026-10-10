@@ -179,12 +179,15 @@ export const FEATURE_EVENT_CATALOG = {
       'legend_to_explanation',
       'explanation_open',
       'explanation_section_expand',
+      'viewed',
     ] as const,
     schema: {
       section: 'token',
       item: 'token',
       slice: 'token',
       isOverCommitted: 'boolean',
+      quality: 'token',
+      has_unvalued: 'boolean',
     } as const satisfies Record<string, AnalyticsPropertyKind>,
   },
   search: {
