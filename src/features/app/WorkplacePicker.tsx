@@ -69,19 +69,19 @@ export function WorkplacePicker({
       )}
       {isTransitioning && <LoadingView loading text={copy.opening} size="small" />}
       {workplaces.length > 0 && (
-        <ListGroup variant="plain" header={copy.available}>
-          {workplaces.map(workplace => (
-            <ListRow
-              key={workplace.id}
-              leading={tile(parseIconName(workplace.icon, Icon.Briefcase))}
-              title={workplace.name}
-              subtitle={copy.openThis}
-              onPress={() => onSelect(workplace.id)}
-              disabled={isTransitioning}
-              testID={`workplace-picker-option-${workplace.id}`}
-            />
-          ))}
-        </ListGroup>
+        <ListGroup
+          variant="plain"
+          header={copy.available}
+          items={workplaces}
+          rowProps={{ subtitle: copy.openThis, disabled: isTransitioning }}
+          toRow={workplace => ({
+            id: workplace.id,
+            leading: tile(parseIconName(workplace.icon, Icon.Briefcase)),
+            title: workplace.name,
+            onPress: () => onSelect(workplace.id),
+            testID: `workplace-picker-option-${workplace.id}`,
+          })}
+        />
       )}
       <View style={styles.startAnother}>
         <ListGroup variant="plain" header={copy.startAnother}>

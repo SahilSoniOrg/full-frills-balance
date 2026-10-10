@@ -1,6 +1,5 @@
 import {
   ListGroup,
-  ListRow,
   Icon,
   AppIcon,
   AppInput,
@@ -75,18 +74,19 @@ export function SettingsSearchResults({
           </AppText>
         </Box>
       ) : (
-        <ListGroup variant="plain" header="Search results">
-          {results.map(item => (
-            <ListRow
-              key={item.id}
-              icon={item.icon}
-              title={item.title}
-              subtitle={`${item.section} · ${item.description}`}
-              onPress={() => item.navigate(item.focusId)}
-              testID={`settings-search-result-${item.id}`}
-            />
-          ))}
-        </ListGroup>
+        <ListGroup
+          variant="plain"
+          header="Search results"
+          items={results}
+          toRow={item => ({
+            id: item.id,
+            icon: item.icon,
+            title: item.title,
+            subtitle: `${item.section} · ${item.description}`,
+            onPress: () => item.navigate(item.focusId),
+            testID: `settings-search-result-${item.id}`,
+          })}
+        />
       )}
     </Stack>
   );

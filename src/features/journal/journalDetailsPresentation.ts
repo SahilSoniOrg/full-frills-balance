@@ -1,5 +1,5 @@
-import { isValidIconName, type IconName } from '@/src/components/core';
-import { AppConfig, JOURNAL_DETAILS_DATE_PATTERN, type ColorKey } from '@/src/constants';
+import { isValidIconName, type IconName, type ListRowItem } from '@/src/components/core';
+import { AppConfig, JOURNAL_DETAILS_DATE_PATTERN, Size, type ColorKey } from '@/src/constants';
 import {
   getValuationIssues,
   isJournalFullyValued,
@@ -97,10 +97,7 @@ export interface JournalSourceModel extends JournalSourceInfo {
   onOpenSmsInbox?: () => void;
 }
 
-export interface JournalLink {
-  label: string;
-  onPress: () => void;
-}
+export type JournalLink = ListRowItem;
 
 export interface JournalHistoryModel {
   events: JournalHistoryEvent[];
@@ -322,6 +319,8 @@ export function buildReversalLinks(
     { label: events['journal.reversal_created'], journalId: journal.originalJournalId },
     { label: events['journal.reversed'], journalId: journal.reversingJournalId },
   ].flatMap(({ label, journalId }) =>
-    journalId ? [{ label, onPress: () => open(journalId) }] : [],
+    journalId
+      ? [{ id: label, title: label, minHeight: Size.touchTargetLg, onPress: () => open(journalId) }]
+      : [],
   );
 }

@@ -1,5 +1,12 @@
 import { StyleSheet, View } from 'react-native';
-import { Icon, AppText, IvyIcon, type IconName, ListGroup, ListRow } from '@/src/components/core';
+import {
+  Icon,
+  AppText,
+  IvyIcon,
+  type IconName,
+  ListGroup,
+  type ListRowItem,
+} from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Opacity, Shape, Size, Spacing } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
@@ -17,14 +24,6 @@ export interface AccountActionSheetProps {
   onDelete?: (account: AccountCardViewModel) => void;
 }
 
-interface ActionItem {
-  id: string;
-  label: string;
-  icon: IconName;
-  destructive?: boolean;
-  onPress: () => void;
-}
-
 export function AccountActionSheet({
   visible,
   account,
@@ -38,62 +37,36 @@ export function AccountActionSheet({
 }: AccountActionSheetProps) {
   if (!account) return null;
 
-  const actions: ActionItem[] = [
-    {
-      id: 'details',
-      label: 'View Details',
-      icon: Icon.Document,
-      onPress: () => {
-        onClose();
-        onViewDetails?.(account);
-      },
+  type Handler = ((account: AccountCardViewModel) => void) | undefined;
+  /** Close the sheet, then run the action for this account. */
+  const action = (
+    id: string,
+    title: string,
+    icon: IconName,
+    run: Handler,
+    destructive?: boolean,
+  ): ListRowItem => ({
+    id,
+    title,
+    icon,
+    destructive,
+    onPress: () => {
+      onClose();
+      run?.(account);
     },
-    {
-      id: 'edit',
-      label: 'Edit Account',
-      icon: Icon.Edit,
-      onPress: () => {
-        onClose();
-        onEdit?.(account);
-      },
-    },
-    {
-      id: 'appearance',
-      label: 'Appearance',
-      icon: Icon.Palette,
-      onPress: () => {
-        onClose();
-        onRecolor?.(account);
-      },
-    },
-    {
-      id: 'reconcile',
-      label: 'Reconcile',
-      icon: Icon.ShieldCheck,
-      onPress: () => {
-        onClose();
-        onReconcile?.(account);
-      },
-    },
-    {
-      id: 'archive',
-      label: account.isArchived ? 'Unarchive Account' : 'Archive Account',
-      icon: Icon.Archive,
-      onPress: () => {
-        onClose();
-        onToggleArchive?.(account);
-      },
-    },
-    {
-      id: 'delete',
-      label: 'Delete Account',
-      icon: Icon.Delete,
-      destructive: true,
-      onPress: () => {
-        onClose();
-        onDelete?.(account);
-      },
-    },
+  });
+  const actions = [
+    action('details', 'View Details', Icon.Document, onViewDetails),
+    action('edit', 'Edit Account', Icon.Edit, onEdit),
+    action('appearance', 'Appearance', Icon.Palette, onRecolor),
+    action('reconcile', 'Reconcile', Icon.ShieldCheck, onReconcile),
+    action(
+      'archive',
+      account.isArchived ? 'Unarchive Account' : 'Archive Account',
+      Icon.Archive,
+      onToggleArchive,
+    ),
+    action('delete', 'Delete Account', Icon.Delete, onDelete, true),
   ];
 
   return (
@@ -132,19 +105,7 @@ export function AccountActionSheet({
           </AppText>
         </View>
 
-        <ListGroup>
-          {actions.map(action => (
-            <ListRow
-              key={action.id}
-              icon={action.icon}
-              title={action.label}
-              destructive={action.destructive}
-              onPress={action.onPress}
-              accessibilityLabel={action.label}
-              chevron
-            />
-          ))}
-        </ListGroup>
+        <ListGroup items={actions} rowProps={{ chevron: true }} />
       </View>
     </ModalSurface>
   );

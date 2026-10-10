@@ -174,14 +174,8 @@ export function JournalHistory({ history }: { history: JournalHistoryModel }) {
             ))}
           </Stack>
         )}
-        {history.links.map(link => (
-          <ListRow
-            key={link.label}
-            title={link.label}
-            minHeight={Size.touchTargetLg}
-            onPress={link.onPress}
-            chevron
-          />
+        {history.links.map(({ id, ...link }) => (
+          <ListRow key={id} {...link} chevron />
         ))}
       </ListGroup>
       <RevertChangeDialog
