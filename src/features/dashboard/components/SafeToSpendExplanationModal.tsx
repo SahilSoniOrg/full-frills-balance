@@ -1,6 +1,6 @@
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { useMoneyFormat, useStsMoneyFormat } from '@/src/components/shared/moneyFormat';
-import { AppCard, AppText } from '@/src/components/core';
+import { AppCard, AppText, ListGroup, ListRow } from '@/src/components/core';
 import { AppConfig, Opacity, Shape, Spacing, Typography } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
 import { formatDate } from '@/src/utils/dateUtils';
@@ -132,6 +132,7 @@ export const SafeToSpendExplanationModal = ({
   const step4 = parseFormulaItem(info.formulaItems[3], formulaDays);
 
   const constraint = AppConfig.strings.dashboard.safeToSpendConstraint;
+  const money = (amount: number) => formatMoney(amount, currencyCode);
   const formatForecastDay = (dayOffset: number) =>
     asOf === undefined
       ? constraint.forecastDay(dayOffset + 1)
@@ -143,7 +144,6 @@ export const SafeToSpendExplanationModal = ({
       title={info.title}
       onClose={onClose}
       accessibilityCloseLabel="Close safe-to-spend info"
-      useNativeModal={false}
     >
       <AppText variant="body" color="secondary" style={styles.introText}>
         {info.intro}
@@ -174,19 +174,54 @@ export const SafeToSpendExplanationModal = ({
               .filter(Boolean)
               .join(' ')}
           </AppText>
-          <AppText variant="caption">
-            {constraint.cashAvailableNow(formatMoney(explanation.cashCeiling, currencyCode))}
-          </AppText>
-          <AppText variant="caption">
-            {explanation.bindingDayOffset === null
-              ? constraint.cashCeilingBinds(
-                  formatMoney(explanation.minimumDatedBalance, currencyCode),
-                )
-              : constraint.lowestProjectedBalance(
-                  formatForecastDay(explanation.bindingDayOffset),
-                  formatMoney(explanation.minimumDatedBalance, currencyCode),
-                )}
-          </AppText>
+          <ListGroup variant="plain" dividerInset="none">
+            <ListRow
+              title={constraint.cashAvailableNow}
+              trailing={<ListRow.Value>{money(explanation.cashCeiling)}</ListRow.Value>}
+            />
+            <ListRow
+              title={
+                explanation.bindingDayOffset === null
+                  ? constraint.cashCeilingBinds
+                  : constraint.lowestProjectedBalance(
+                      formatForecastDay(explanation.bindingDayOffset),
+                    )
+              }
+              trailing={
+                <ListRow.Value color={explanation.minimumDatedBalance < 0 ? 'error' : undefined}>
+                  {money(explanation.minimumDatedBalance)}
+                </ListRow.Value>
+              }
+            />
+            <ListRow
+              title={constraint.heldThroughLowPoint}
+              trailing={<ListRow.Value>{money(explanation.heldAmount)}</ListRow.Value>}
+            />
+            {explanation.shortfall > 0 && (
+              <ListRow
+                title={constraint.projectedShortfall}
+                trailing={
+                  <ListRow.Value color="error">{money(explanation.shortfall)}</ListRow.Value>
+                }
+              />
+            )}
+            {explanation.constrainingOutflows.map(flow => (
+              <ListRow
+                key={`out-${flow.source}-${flow.label}`}
+                title={flow.label}
+                subtitle={constraint.includedOutflow}
+                trailing={<ListRow.Value color="expense">{money(flow.amount)}</ListRow.Value>}
+              />
+            ))}
+            {explanation.assumedInflows.map(flow => (
+              <ListRow
+                key={`in-${flow.source}-${flow.label}`}
+                title={flow.label}
+                subtitle={constraint.expectedInflow(formatForecastDay(flow.firstDayOffset))}
+                trailing={<ListRow.Value color="income">{money(flow.amount)}</ListRow.Value>}
+              />
+            ))}
+          </ListGroup>
           {explanation.bindingDayOffset !== null &&
           explanation.assumedInflows.some(
             flow => flow.firstDayOffset > explanation.bindingDayOffset!,
@@ -195,28 +230,6 @@ export const SafeToSpendExplanationModal = ({
               {constraint.laterIncomeNote}
             </AppText>
           ) : null}
-          <AppText variant="caption">
-            {constraint.heldThroughLowPoint(formatMoney(explanation.heldAmount, currencyCode))}
-          </AppText>
-          {explanation.shortfall > 0 && (
-            <AppText variant="caption">
-              {constraint.projectedShortfall(formatMoney(explanation.shortfall, currencyCode))}
-            </AppText>
-          )}
-          {explanation.constrainingOutflows.map(flow => (
-            <AppText key={`out-${flow.source}-${flow.label}`} variant="caption">
-              {constraint.includedOutflow(flow.label, formatMoney(flow.amount, currencyCode))}
-            </AppText>
-          ))}
-          {explanation.assumedInflows.map(flow => (
-            <AppText key={`in-${flow.source}-${flow.label}`} variant="caption">
-              {constraint.expectedInflow(
-                flow.label,
-                formatMoney(flow.amount, currencyCode),
-                formatForecastDay(flow.firstDayOffset),
-              )}
-            </AppText>
-          ))}
         </AppCard>
       )}
 
