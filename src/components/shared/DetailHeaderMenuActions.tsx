@@ -1,9 +1,9 @@
 import { AppButton, AppIcon, AppText, Icon, type IconName } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { useAfterDismiss } from '@/src/components/overlays/useAfterDismiss';
-import { MoneyDetailHeaderActions } from './MoneyDetailHeaderActions';
-import type { ScreenHeaderActionItem } from './ScreenHeaderActions';
-import { AppConfig, Size, Spacing } from '@/src/constants';
+import { PrivacyToggleButton } from './PrivacyToggleButton';
+import { ScreenHeaderActions, type ScreenHeaderActionItem } from './ScreenHeaderActions';
+import { AppConfig, Size, Spacing, Typography } from '@/src/constants';
 import { Column } from '@/src/design-system';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -30,11 +30,12 @@ export function DetailHeaderMenuActions({
   const [open, setOpen] = useState(false);
   const afterDismiss = useAfterDismiss();
   const strings = AppConfig.strings.common;
+  const privacy = <PrivacyToggleButton variant="surface" size={Typography.sizes.xl} />;
   return (
     <>
-      <MoneyDetailHeaderActions
-        privacyVariant="surface"
-        privacyPosition={privacyPosition}
+      <ScreenHeaderActions
+        leading={privacyPosition === 'leading' ? privacy : undefined}
+        trailing={privacyPosition === 'trailing' ? privacy : undefined}
         actions={[
           ...leadingActions,
           ...(actions.length > 0
