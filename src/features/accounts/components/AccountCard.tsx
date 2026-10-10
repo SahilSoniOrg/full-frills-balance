@@ -146,6 +146,8 @@ function AccountCardBase({
                         name={account.icon}
                         label={account.name}
                         color={account.textColor}
+                        iconColor={account.textColor}
+                        style={{ backgroundColor: 'transparent' }}
                         size={Size.avatarSm}
                       />
                     )}
