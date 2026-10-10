@@ -58,7 +58,6 @@ export function AboutSupportSettingsView({ vm }: AboutSupportSettingsViewProps) 
           title="Report a Bug"
           subtitle="Share app logs and device info to help fix issues"
           onPress={vm.onShareBugReport}
-          chevron={false}
           trailing={
             <Inline space="md">
               <TouchableOpacity

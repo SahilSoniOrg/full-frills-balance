@@ -50,13 +50,9 @@ export function FormRow({
         <AppIcon name={Icon.Close} size={18} color={theme.textSecondary} />
       </PressScaleTouchable>
     ) : null;
-  // Controls sit outside the row's touch target so both stay accessible.
-  const outside = onPress ? (trailing ?? clearControl) : clearControl;
-  const inside = trailing ? (
-    onPress ? undefined : (
-      trailing
-    )
-  ) : (
+  // The clear control sits outside the row's touch target so both stay accessible.
+  const outside = clearControl;
+  const inside = trailing ?? (
     <ListRow.Value variant="bodySmall" numberOfLines={1}>
       {hasValue ? value : placeholder}
     </ListRow.Value>

@@ -46,7 +46,6 @@ export function ThemeSelectorView({ themeId, setThemeId }: ThemeSelectorViewProp
           icon={Icon.Palette}
           title={AppConfig.strings.settings.appearance.themeTitle}
           subtitle={AppConfig.strings.settings.appearance.themeDesc}
-          chevron={false}
         />
         <Box paddingHorizontal="md" marginTop="md">
           <View style={styles.grid}>

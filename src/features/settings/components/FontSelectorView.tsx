@@ -64,7 +64,6 @@ export function FontSelectorView({ fontId, setFontId }: FontSelectorProps) {
           }
           title={AppConfig.strings.settings.appearance.typographyTitle}
           subtitle={AppConfig.strings.settings.appearance.typographyDesc}
-          chevron={false}
         />
         <Box paddingHorizontal="md" marginTop="md">
           <View

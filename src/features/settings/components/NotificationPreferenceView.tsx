@@ -64,7 +64,6 @@ export const NotificationPreferenceView = ({
           icon={Icon.Notifications}
           title={AppConfig.strings.settings.notifications.title}
           subtitle={AppConfig.strings.settings.notifications.description}
-          chevron={false}
         />
         <Box paddingHorizontal="md" marginTop="md">
           <AppSegmentedControl
