@@ -146,6 +146,7 @@ export function TransactionInboxItemCardView({
       },
     ] as (ListRowItem | false | null | undefined)[]
   ).filter((a): a is ListRowItem => !!a) as [ListRowItem, ...ListRowItem[]];
+  const split = primary.id === 'import' ? more.find(a => a.id === 'split') : undefined;
 
   return (
     <AppCard style={styles.card} testID={testID}>
@@ -229,7 +230,12 @@ export function TransactionInboxItemCardView({
         <AppButton size="sm" onPress={primary.onPress} testID={primary.testID}>
           {primary.title}
         </AppButton>
-        {more.length > 0 ? (
+        {split ? (
+          <AppButton size="sm" variant="outline" onPress={split.onPress} testID={split.testID}>
+            {split.title}
+          </AppButton>
+        ) : null}
+        {more.length > (split ? 1 : 0) ? (
           <AppButton
             size="sm"
             variant="secondary"
@@ -248,7 +254,7 @@ export function TransactionInboxItemCardView({
         fixedHeight={false}
         scrollable={false}
       >
-        <ListGroup items={more} />
+        <ListGroup items={more.filter(a => a !== split)} />
       </ModalSurface>
     </AppCard>
   );
