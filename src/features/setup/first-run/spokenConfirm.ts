@@ -1,6 +1,6 @@
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
-import { groupIndianDigits, usesIndianGrouping } from '@/src/utils/currencyFormatter';
+import { getCurrencyLocale } from '@/src/utils/currencyFormatter';
 import dayjs from 'dayjs';
 import {
   incomeItemName,
@@ -13,12 +13,14 @@ import {
 
 export function formatDraftAmount(amount: number, currency: string): string {
   const symbol = CURRENCY_SYMBOLS[currency] ?? `${currency} `;
-  const value = Number.isInteger(amount)
-    ? amount.toLocaleString('en-US')
-    : amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  if (!usesIndianGrouping(currency)) return `${symbol}${value}`;
+  const locale = getCurrencyLocale(currency);
+  const toText = (n: number) =>
+    Number.isInteger(n)
+      ? n.toLocaleString(locale ?? 'en-US')
+      : n.toLocaleString(locale ?? 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (!locale) return `${symbol}${toText(amount)}`;
   const sign = amount < 0 ? '-' : '';
-  return `${sign}${symbol}${groupIndianDigits(value.replace(/[-,]/g, ''))}`;
+  return `${sign}${symbol}${toText(Math.abs(amount))}`;
 }
 
 function andList(items: readonly string[]): string {
