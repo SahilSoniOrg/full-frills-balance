@@ -216,6 +216,7 @@ export const FEATURE_EVENT_CATALOG = {
       'toggle_sms_import',
       'seed_mock_data',
       'open_telegram',
+      'open_release_notes',
       'open_play_store',
       'open_github',
       'share_bug_report',

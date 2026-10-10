@@ -12,7 +12,7 @@ export function useAboutSupportViewModel() {
   }, []);
 
   const onOpenReleaseNotes = useCallback(() => {
-    analytics.trackFeatureUsage('settings', 'open_telegram');
+    analytics.trackFeatureUsage('settings', 'open_release_notes');
     Linking.openURL('https://web.telegram.org/a/#-1003546680694_2');
   }, []);
 
