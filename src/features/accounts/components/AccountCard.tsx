@@ -151,13 +151,19 @@ function AccountCardBase({
                     )}
                   </View>
                 </View>
-                <AppText
-                  variant="body"
-                  weight="bold"
-                  style={{ color: resolvedTextColor, flex: 1, minWidth: 0 }}
-                >
-                  {account.name}
-                </AppText>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText variant="body" weight="bold" style={{ color: resolvedTextColor }}>
+                    {account.name}
+                  </AppText>
+                  {account.parentName ? (
+                    <AppText
+                      variant="caption"
+                      style={{ color: withOpacity(resolvedTextColor, Opacity.heavy) }}
+                    >
+                      in {account.parentName}
+                    </AppText>
+                  ) : null}
+                </View>
                 {account.isArchived ? <ArchivedAccountIndicator /> : null}
               </Row>
 
