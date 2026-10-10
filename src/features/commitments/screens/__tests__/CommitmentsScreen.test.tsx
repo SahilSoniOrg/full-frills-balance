@@ -56,6 +56,7 @@ beforeEach(() => {
     error: null,
     retry: jest.fn(),
     onItemPress: jest.fn(),
+    missingRateQuotes: [],
   });
   jest.mocked(usePlannedPayments).mockReturnValue({
     items: [],

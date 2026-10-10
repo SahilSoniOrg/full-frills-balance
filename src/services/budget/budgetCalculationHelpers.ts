@@ -12,6 +12,7 @@ import { runTasksWithBoundedConcurrency } from '@/src/utils/asyncConcurrency';
 import { logger } from '@/src/utils/logger';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { roundToPrecision } from '@/src/utils/money';
+import type { MissingRateQuote } from '@/src/services/reports-v2/types/result';
 import { BudgetUsage } from './types';
 
 export type BudgetLineValuationTx = {
@@ -45,6 +46,7 @@ export async function valueBudgetLinesForCurrency(
   lines: (ValuedBudgetLine | null)[];
   unvaluedEntries: boolean[];
   journalById: Map<string, Journal>;
+  missingRateQuotes: MissingRateQuote[];
 }> {
   const journals = await journalQueryRepository.findByIds(workplaceId, [
     ...new Set(transactions.map(transaction => transaction.journalId)),
@@ -54,6 +56,7 @@ export async function valueBudgetLinesForCurrency(
   );
   const lines: (ValuedBudgetLine | null)[] = new Array(transactions.length).fill(null);
   const unvaluedEntries = new Array(transactions.length).fill(false);
+  const missing = new Map<string, MissingRateQuote>();
 
   await runTasksWithBoundedConcurrency(
     transactions,
@@ -81,6 +84,12 @@ export async function valueBudgetLinesForCurrency(
       });
       if (!converted.ok) {
         unvaluedEntries[index] = true;
+        const { fromCurrency, toCurrency } = converted.missingRate;
+        missing.set(`${fromCurrency}:${toCurrency}:${journal.journalDate}`, {
+          fromCurrency,
+          toCurrency,
+          rateDate: journal.journalDate,
+        });
         logger.warn(`[${logTag}] FX unavailable for budget valuation`, {
           from: converted.missingRate.fromCurrency,
           to: converted.missingRate.toCurrency,
@@ -98,7 +107,7 @@ export async function valueBudgetLinesForCurrency(
     },
   );
 
-  return { lines, unvaluedEntries, journalById };
+  return { lines, unvaluedEntries, journalById, missingRateQuotes: [...missing.values()] };
 }
 
 /** Minimal account shape for leaf resolution — models or plain DTOs. */
@@ -147,13 +156,14 @@ export async function calculateBudgetSpendFromTransactions(
   const accountById = new Map<AccountId, BudgetLineValuationAccount>(
     accounts.map(account => [account.id, account] as const),
   );
-  const { lines, unvaluedEntries, journalById } = await valueBudgetLinesForCurrency(
-    workplaceId,
-    transactions,
-    accountById,
-    budgetCurrencyCode,
-    'BudgetReadService',
-  );
+  const { lines, unvaluedEntries, journalById, missingRateQuotes } =
+    await valueBudgetLinesForCurrency(
+      workplaceId,
+      transactions,
+      accountById,
+      budgetCurrencyCode,
+      'BudgetReadService',
+    );
 
   let spentAmount = 0;
 
@@ -175,6 +185,7 @@ export async function calculateBudgetSpendFromTransactions(
     ...(unvaluedEntries.some(Boolean)
       ? {
           hasUnvaluedEntries: true,
+          missingRateQuotes,
           ...budgetUnvaluedJournalRows(transactions, unvaluedEntries, accountById, journalById),
         }
       : {}),

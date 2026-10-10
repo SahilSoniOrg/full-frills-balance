@@ -2,6 +2,8 @@ import { AppInput, AppText } from '@/src/components/core';
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { AppConfig, Spacing } from '@/src/constants';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
+import { fetchMissingHistoricalRates } from '@/src/services/reports-v2/missingExchangeRateFetch';
+import { toast } from '@/src/utils/alerts';
 import {
   clearIncompleteFxDetailsListener,
   setIncompleteFxDetailsListener,
@@ -172,19 +174,44 @@ function IncompleteFxDetailsSheet({
     }
   };
 
-  const primaryAction = actionableBalances
-    ? unresolvedPairs === null
+  // Historical quotes (budgets/reports): same fetch + toasts as Reports, then rates announce an update.
+  const handleFetchHistorical = async () => {
+    const reportCopy = AppConfig.strings.reportsV2;
+    setIsRefreshing(true);
+    try {
+      const result = await fetchMissingHistoricalRates(missingRateQuotes);
+      if (result.fetched === 0) toast.warning(reportCopy.fetchMissingRatesUnavailable);
+      else if (result.failed > 0)
+        toast.warning(reportCopy.fetchMissingRatesPartial(result.fetched, result.failed));
+      else toast.success(reportCopy.fetchMissingRatesSuccess(result.fetched));
+      if (result.fetched > 0) onClose();
+    } catch {
+      toast.error(reportCopy.fetchMissingRatesFailed);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const primaryAction =
+    !actionableBalances && missingRateQuotes.length > 0
       ? {
-          label: isRefreshing ? copy.refreshingCurrentRates : copy.refreshCurrentRates,
-          onPress: handleRefreshRates,
+          label: AppConfig.strings.reportsV2.fetchMissingRates,
+          onPress: () => void handleFetchHistorical(),
           disabled: isRefreshing,
         }
-      : {
-          label: isSaving ? copy.savingManualRates : copy.saveManualRates,
-          onPress: handleSaveManualRates,
-          disabled: !manualRatesReady || isSaving,
-        }
-    : undefined;
+      : actionableBalances
+        ? unresolvedPairs === null
+          ? {
+              label: isRefreshing ? copy.refreshingCurrentRates : copy.refreshCurrentRates,
+              onPress: handleRefreshRates,
+              disabled: isRefreshing,
+            }
+          : {
+              label: isSaving ? copy.savingManualRates : copy.saveManualRates,
+              onPress: handleSaveManualRates,
+              disabled: !manualRatesReady || isSaving,
+            }
+        : undefined;
   const secondaryAction =
     actionableBalances && unresolvedPairs !== null
       ? {

@@ -2,7 +2,7 @@ import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { fetchMissingHistoricalRates } from '../missingExchangeRateFetch';
 
 jest.mock('@/src/services/exchange-rate-service', () => ({
-  exchangeRateService: { getHistoricalRate: jest.fn() },
+  exchangeRateService: { getHistoricalRate: jest.fn(), notifyRatesUpdated: jest.fn() },
 }));
 
 const getHistoricalRate = exchangeRateService.getHistoricalRate as jest.Mock;
@@ -21,6 +21,8 @@ describe('fetchMissingHistoricalRates', () => {
       fetched: 1,
       failed: 0,
     });
+    // Rate observers (Safe to Spend, Budgets) re-value after a successful fetch.
+    expect(exchangeRateService.notifyRatesUpdated).toHaveBeenCalledWith('USD');
     expect(getHistoricalRate).toHaveBeenCalledWith('USD', 'INR', Date.UTC(2026, 8, 1));
   });
 

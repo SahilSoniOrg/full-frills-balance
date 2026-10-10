@@ -176,7 +176,11 @@ export function BudgetCard({
           accessibilityLabel={strings.fixFx(fxMessage)}
           buttonStyle={{ minHeight: Size.touchTarget, paddingHorizontal: 0 }}
           onPress={() =>
-            showIncompleteFxDetails({ context: 'budget', currencyCode: budget.currencyCode })
+            showIncompleteFxDetails({
+              context: 'budget',
+              currencyCode: budget.currencyCode,
+              missingRateQuotes: usage.missingRateQuotes,
+            })
           }
         >
           <Row gap="xs" align="center">

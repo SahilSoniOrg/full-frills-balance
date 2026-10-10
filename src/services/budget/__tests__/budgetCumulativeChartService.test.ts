@@ -1,5 +1,8 @@
 import { asJournalId } from '@/src/types/ids';
-import { type BudgetLineValuationTx } from '../budgetCalculationHelpers';
+import {
+  type BudgetLineValuationTx,
+  valueBudgetLinesForCurrency,
+} from '../budgetCalculationHelpers';
 import { buildBudgetCumulativeChart } from '../budgetCumulativeChartService';
 import { summarizeBudgetUnvaluedEntries } from '../budgetUnvaluedEntries';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
@@ -112,5 +115,30 @@ describe('budget detail spending breakdown', () => {
       { accountId: dining, spent: -20, refunds: 20, entryCount: 1, hasUnvaluedEntries: false },
     ]);
     expect(chart.data.at(-1)?.y).toBe(-20);
+  });
+});
+
+describe('budget valuation missing rates', () => {
+  it('reports the pair and journal date it could not convert, once per date', async () => {
+    const date = new Date(2026, 9, 3).getTime();
+    jest
+      .mocked(journalQueryRepository.findByIds)
+      .mockResolvedValue([{ id: posted, journalDate: date, currencyCode: 'EUR' } as Journal]);
+    jest.mocked(convertJournalLineAmount).mockResolvedValue({
+      ok: false,
+      reason: 'missing_rate',
+      missingRate: { fromCurrency: 'EUR', toCurrency: 'USD' },
+    });
+    const result = await valueBudgetLinesForCurrency(
+      workplaceId,
+      [transaction(), transaction({ id: 'tx2' })],
+      new Map([[dining, { id: dining, currencyCode: 'EUR' }]]),
+      'USD',
+      'test',
+    );
+    expect(result.unvaluedEntries).toEqual([true, true]);
+    expect(result.missingRateQuotes).toEqual([
+      { fromCurrency: 'EUR', toCurrency: 'USD', rateDate: date },
+    ]);
   });
 });

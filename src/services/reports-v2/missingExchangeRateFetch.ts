@@ -41,5 +41,6 @@ export async function fetchMissingHistoricalRates(
     },
   );
 
+  if (fetched > 0) exchangeRateService.notifyRatesUpdated(quotes[0].fromCurrency);
   return { attempted: quotes.length, fetched, failed };
 }
