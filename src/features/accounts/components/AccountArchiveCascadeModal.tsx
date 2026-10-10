@@ -82,7 +82,7 @@ function CascadeSelectionEditor({
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: isSelected }}
                 onPress={() => toggleId(account.id)}
-                padding="md"
+                chevron={false}
                 leading={<SelectionIndicator selected={isSelected} />}
               />
             </View>

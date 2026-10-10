@@ -40,17 +40,11 @@ export function JournalSource({ source }: { source: JournalSourceModel }) {
         <ListRow
           minHeight={Size.touchTargetLg}
           title={<AppText weight="semibold">{title}</AppText>}
-          subtitle={
-            subtitle ? (
-              <AppText variant="caption" color="secondary">
-                {subtitle}
-              </AppText>
-            ) : undefined
-          }
+          subtitle={subtitle}
+          wrap
           leading={<IconTile icon={sms ? Icon.MessageSquare : Icon.Document} tint="asset" />}
           onPress={sms ? () => setOpen(true) : undefined}
           accessibilityLabel={title}
-          chevron={Boolean(sms)}
           testID="journal-source-row"
         />
       </ListGroup>

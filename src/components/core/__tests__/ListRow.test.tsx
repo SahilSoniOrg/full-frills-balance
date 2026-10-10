@@ -1,4 +1,3 @@
-import { ListGroup } from '@/src/components/core/ListGroup';
 import { ListRow } from '@/src/components/core/ListRow';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
 import { Icon } from '@/src/types/domainIcons';
@@ -82,17 +81,17 @@ describe('ListRow options', () => {
     );
   });
 
-  it('adds chevrons to pressable rows in plain groups only', () => {
+  it('adds chevrons to pressable rows without trailing or with a value, unless opted out', () => {
     render(
       <>
-        <ListGroup variant="plain">
-          <ListRow title="Profile" onPress={() => {}} />
-          <ListRow title="Static" />
-        </ListGroup>
-        <ListRow title="Card row" onPress={() => {}} />
+        <ListRow title="Profile" onPress={() => {}} />
+        <ListRow title="Static" />
+        <ListRow title="Value" onPress={() => {}} trailing={<ListRow.Value>On</ListRow.Value>} />
+        <ListRow title="Custom" onPress={() => {}} trailing={<View />} />
+        <ListRow title="Opted out" onPress={() => {}} chevron={false} />
       </>,
     );
-    expect(screen.UNSAFE_getAllByProps({ name: Icon.ChevronRight })).toHaveLength(1);
+    expect(screen.UNSAFE_getAllByProps({ name: Icon.ChevronRight })).toHaveLength(2);
   });
 
   it('renders children under the row', () => {

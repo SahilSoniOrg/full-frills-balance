@@ -105,7 +105,7 @@ export function AccountActionSheet({
           </AppText>
         </View>
 
-        <ListGroup items={actions} rowProps={{ chevron: true }} />
+        <ListGroup items={actions} />
       </View>
     </ModalSurface>
   );

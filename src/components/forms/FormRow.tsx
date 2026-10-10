@@ -1,11 +1,4 @@
-import {
-  AppIcon,
-  AppText,
-  Icon,
-  ListRow,
-  listRowTextInset,
-  type IconName,
-} from '@/src/components/core';
+import { AppIcon, Icon, ListRow, listRowTextInset, type IconName } from '@/src/components/core';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { Spacing } from '@/src/constants/design-tokens';
 import { formPrimitivesStrings as copy } from '@/src/constants/copy/domains/formPrimitivesStrings';
@@ -57,38 +50,25 @@ export function FormRow({
         <AppIcon name={Icon.Close} size={18} color={theme.textSecondary} />
       </PressScaleTouchable>
     ) : null;
-  // Controls next to a pressable row sit outside its touch target so both stay accessible.
-  const outside = onPress ? (trailing ?? clearControl) : null;
+  // Controls sit outside the row's touch target so both stay accessible.
+  const outside = onPress ? (trailing ?? clearControl) : clearControl;
   const inside = trailing ? (
     onPress ? undefined : (
       trailing
     )
   ) : (
-    <>
-      {!onPress ? clearControl : null}
-      <AppText variant="bodySmall" color="secondary" numberOfLines={1} style={{ flexShrink: 1 }}>
-        {hasValue ? value : placeholder}
-      </AppText>
-    </>
+    <ListRow.Value variant="bodySmall" numberOfLines={1}>
+      {hasValue ? value : placeholder}
+    </ListRow.Value>
   );
 
   const row = (
     <ListRow
       leading={<AppIcon name={icon} size={22} color={theme.icon} />}
-      title={
-        <AppText variant="body" style={{ flexShrink: 1 }}>
-          {title}
-        </AppText>
-      }
-      subtitle={
-        subtitle ? (
-          <AppText variant="caption" color="secondary" style={{ flexShrink: 1 }}>
-            {subtitle}
-          </AppText>
-        ) : undefined
-      }
+      title={title}
+      subtitle={subtitle}
+      wrap
       trailing={inside}
-      chevron={!trailing}
       trailingMaxWidth={trailing ? undefined : '55%'}
       onPress={onPress}
       testID={testID}

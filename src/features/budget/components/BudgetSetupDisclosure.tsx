@@ -34,14 +34,10 @@ export function BudgetSetupDisclosure({
             {strings.setup}
           </AppText>
         }
-        subtitle={
-          <AppText variant="caption" color="secondary">
-            {summary}
-          </AppText>
-        }
+        subtitle={summary}
+        wrap
         onPress={onEdit}
         accessibilityLabel={`${strings.setup} · ${summary}`}
-        chevron
       />
     </ListGroup>
   );

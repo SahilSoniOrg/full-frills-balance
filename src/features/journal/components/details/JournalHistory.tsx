@@ -175,7 +175,7 @@ export function JournalHistory({ history }: { history: JournalHistoryModel }) {
           </Stack>
         )}
         {history.links.map(({ id, ...link }) => (
-          <ListRow key={id} {...link} chevron />
+          <ListRow key={id} {...link} />
         ))}
       </ListGroup>
       <RevertChangeDialog

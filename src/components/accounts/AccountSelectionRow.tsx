@@ -96,6 +96,13 @@ export function AccountSelectionRow({
   }, [accountMap, placeholder, selectedAccountId, selectedAccountIds, theme]);
 
   return (
-    <ListRow title={title} subtitle={subtitle} onPress={onPress} style={style} testID={testID} />
+    <ListRow
+      title={title}
+      subtitle={subtitle}
+      onPress={onPress}
+      chevron={false}
+      style={style}
+      testID={testID}
+    />
   );
 }

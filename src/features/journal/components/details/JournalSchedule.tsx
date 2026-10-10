@@ -20,7 +20,6 @@ export function JournalSchedule({ schedule }: { schedule: JournalScheduleModel }
       <ListRow
         title={<AppText weight="semibold">{schedule.name}</AppText>}
         trailing={<ListRow.Value>{schedule.recurrence}</ListRow.Value>}
-        chevron
         onPress={schedule.onPress}
         accessibilityLabel={schedule.name}
         minHeight={Size.touchTargetLg}
