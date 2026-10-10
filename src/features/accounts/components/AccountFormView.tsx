@@ -1,5 +1,5 @@
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
-import { AppIcon, AppText, Icon } from '@/src/components/core';
+import { AppIcon, AppText, Icon, ListGroup } from '@/src/components/core';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { FormRow, GlyphCarousel, SuggestionHint, UnderlineNameField } from '@/src/components/forms';
 import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
@@ -125,25 +125,26 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
       <View style={styles.section}>
         <SectionLabel label={copy.optional} />
       </View>
-      <FormRow
-        icon={Icon.Hierarchy}
-        title={vm.isCategory ? copy.categoryParent : copy.parent}
-        value={vm.parentAccountName}
-        placeholder={copy.none}
-        onPress={() => vm.setIsParentPickerVisible(true)}
-        onClear={vm.parentAccountId ? () => vm.setParentAccountId(EMPTY_ACCOUNT_ID) : undefined}
-        testID={`${entity}-parent`}
-      />
-      <FormRow
-        icon={Icon.Document}
-        title={copy.note}
-        value={vm.metadata.notes || null}
-        placeholder={copy.add}
-        onPress={() => vm.setActiveSheet('note')}
-        onClear={vm.metadata.notes ? () => vm.metadata.setNotes('') : undefined}
-        showSeparator={false}
-        testID={`${entity}-note`}
-      />
+      <ListGroup variant="plain">
+        <FormRow
+          icon={Icon.Hierarchy}
+          title={vm.isCategory ? copy.categoryParent : copy.parent}
+          value={vm.parentAccountName}
+          placeholder={copy.none}
+          onPress={() => vm.setIsParentPickerVisible(true)}
+          onClear={vm.parentAccountId ? () => vm.setParentAccountId(EMPTY_ACCOUNT_ID) : undefined}
+          testID={`${entity}-parent`}
+        />
+        <FormRow
+          icon={Icon.Document}
+          title={copy.note}
+          value={vm.metadata.notes || null}
+          placeholder={copy.add}
+          onPress={() => vm.setActiveSheet('note')}
+          onClear={vm.metadata.notes ? () => vm.metadata.setNotes('') : undefined}
+          testID={`${entity}-note`}
+        />
+      </ListGroup>
       <AccountFormOverlays {...vm} />
     </EntityFormScreen>
   );

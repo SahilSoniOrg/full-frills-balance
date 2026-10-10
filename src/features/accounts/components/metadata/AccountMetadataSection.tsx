@@ -1,4 +1,4 @@
-import { AppButton, Icon } from '@/src/components/core';
+import { AppButton, Icon, ListGroup } from '@/src/components/core';
 import { DayOfMonthSheet, FormRow } from '@/src/components/forms';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { SectionLabel } from '@/src/components/shared/SectionLabel';
@@ -32,8 +32,8 @@ export function AccountMetadataSection({
       <View style={{ paddingHorizontal: Spacing.lg }}>
         <SectionLabel label={isCard ? copy.cardDetails : copy.loanDetails} />
       </View>
-      {isCard ? (
-        <>
+      <ListGroup variant="plain">
+        {isCard && (
           <FormRow
             icon={Icon.Calendar}
             title={copy.statementDay}
@@ -43,6 +43,8 @@ export function AccountMetadataSection({
             onClear={metadata.statementDay ? () => metadata.setStatementDay('') : undefined}
             testID="account-statement-day"
           />
+        )}
+        {isCard && (
           <FormRow
             icon={Icon.Calendar}
             title={copy.dueDay}
@@ -52,39 +54,39 @@ export function AccountMetadataSection({
             onClear={metadata.dueDay ? () => metadata.setDueDay('') : undefined}
             testID="account-due-day"
           />
-        </>
-      ) : (
+        )}
+        {!isCard && (
+          <FormRow
+            icon={Icon.Calendar}
+            title={copy.emiDay}
+            value={metadata.emiDayLabel}
+            placeholder={copy.add}
+            onPress={() => metadata.setActiveSheet('emiDay')}
+            onClear={metadata.emiDay ? () => metadata.setEmiDay('') : undefined}
+            testID="account-emi-day"
+          />
+        )}
         <FormRow
-          icon={Icon.Calendar}
-          title={copy.emiDay}
-          value={metadata.emiDayLabel}
-          placeholder={copy.add}
-          onPress={() => metadata.setActiveSheet('emiDay')}
-          onClear={metadata.emiDay ? () => metadata.setEmiDay('') : undefined}
-          testID="account-emi-day"
+          icon={Icon.Bank}
+          title={copy.payFrom}
+          value={metadata.payFromAccountId ? metadata.payFromAccountName : null}
+          placeholder={copy.none}
+          onPress={() => metadata.setIsPayFromPickerVisible(true)}
+          onClear={
+            metadata.payFromAccountId
+              ? () => metadata.setPayFromAccountId(EMPTY_ACCOUNT_ID)
+              : undefined
+          }
+          testID="account-pay-from"
         />
-      )}
-      <FormRow
-        icon={Icon.Bank}
-        title={copy.payFrom}
-        value={metadata.payFromAccountId ? metadata.payFromAccountName : null}
-        placeholder={copy.none}
-        onPress={() => metadata.setIsPayFromPickerVisible(true)}
-        onClear={
-          metadata.payFromAccountId
-            ? () => metadata.setPayFromAccountId(EMPTY_ACCOUNT_ID)
-            : undefined
-        }
-        testID="account-pay-from"
-      />
-      <FormRow
-        icon={Icon.Calculator}
-        title={isCard ? copy.limitAndInterest : copy.rateAndTerm}
-        subtitle={copy.projections}
-        onPress={() => metadata.setActiveSheet(isCard ? 'credit' : 'loan')}
-        testID={isCard ? 'account-limit-interest' : 'account-rate-term'}
-        showSeparator={false}
-      />
+        <FormRow
+          icon={Icon.Calculator}
+          title={isCard ? copy.limitAndInterest : copy.rateAndTerm}
+          subtitle={copy.projections}
+          onPress={() => metadata.setActiveSheet(isCard ? 'credit' : 'loan')}
+          testID={isCard ? 'account-limit-interest' : 'account-rate-term'}
+        />
+      </ListGroup>
       <DayOfMonthSheet
         visible={metadata.activeSheet === 'statementDay'}
         title={copy.statementDay}

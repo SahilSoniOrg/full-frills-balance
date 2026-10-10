@@ -1,12 +1,9 @@
-import { AppIcon, Icon, ListRow, listRowTextInset, type IconName } from '@/src/components/core';
+import { AppIcon, Icon, ListRow, type IconName } from '@/src/components/core';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
-import { Spacing } from '@/src/constants/design-tokens';
 import { formPrimitivesStrings as copy } from '@/src/constants/copy/domains/formPrimitivesStrings';
 import { Box } from '@/src/design-system/Box';
-import { Separator } from '@/src/design-system/Separator';
 import { useTheme } from '@/src/hooks/use-theme';
 import React from 'react';
-import { View } from 'react-native';
 
 export interface FormRowProps {
   icon: IconName;
@@ -17,7 +14,6 @@ export interface FormRowProps {
   trailing?: React.ReactNode;
   onPress?: () => void;
   onClear?: () => void;
-  showSeparator?: boolean;
   testID?: string;
 }
 
@@ -31,7 +27,6 @@ export function FormRow({
   trailing,
   onPress,
   onClear,
-  showSeparator = true,
   testID,
 }: FormRowProps) {
   const { theme } = useTheme();
@@ -78,19 +73,12 @@ export function FormRow({
     />
   );
 
-  return (
-    <View>
-      {outside ? (
-        <Box flexDirection="row" alignItems="center" paddingRight="lg">
-          {row}
-          <Box marginLeft="md">{outside}</Box>
-        </Box>
-      ) : (
-        row
-      )}
-      {showSeparator ? (
-        <Separator width="auto" marginLeft={listRowTextInset('card', Spacing.xl)} />
-      ) : null}
-    </View>
+  return outside ? (
+    <Box flexDirection="row" alignItems="center" paddingRight="lg">
+      {row}
+      <Box marginLeft="md">{outside}</Box>
+    </Box>
+  ) : (
+    row
   );
 }

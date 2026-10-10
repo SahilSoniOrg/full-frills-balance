@@ -1,3 +1,4 @@
+import { ListGroup } from '@/src/components/core';
 import { FormRow } from '@/src/components/forms';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { SectionLabel } from '@/src/components/shared/SectionLabel';
@@ -68,18 +69,20 @@ function SectionGroup({
                 : copy.liabilityCaption
         }
       />
-      {ACCOUNT_SUBTYPES_BY_TYPE[type].map(subtype => {
-        const kind = getAccountKind(type, subtype)!;
-        return (
-          <FormRow
-            key={subtype}
-            icon={kind.icon}
-            title={kind.label}
-            onPress={() => onSelect(kind)}
-            testID={`account-all-kinds-${type}-${subtype}`}
-          />
-        );
-      })}
+      <ListGroup variant="plain">
+        {ACCOUNT_SUBTYPES_BY_TYPE[type].map(subtype => {
+          const kind = getAccountKind(type, subtype)!;
+          return (
+            <FormRow
+              key={subtype}
+              icon={kind.icon}
+              title={kind.label}
+              onPress={() => onSelect(kind)}
+              testID={`account-all-kinds-${type}-${subtype}`}
+            />
+          );
+        })}
+      </ListGroup>
     </>
   );
 }
