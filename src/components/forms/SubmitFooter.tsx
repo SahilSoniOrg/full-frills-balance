@@ -3,7 +3,8 @@ import { AppText } from '@/src/components/core/AppText';
 import { Shape, Size, Spacing } from '@/src/constants';
 import { useKeyboard } from '@/src/design-system/Keyboard';
 import { useTheme } from '@/src/hooks/use-theme';
-import { StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface SubmitFooterProps {
@@ -13,13 +14,10 @@ interface SubmitFooterProps {
   requirementHint?: string | null;
 }
 
-export const SubmitFooter = ({
-  onPress,
-  label,
-  disabled,
-  requirementHint,
-}: SubmitFooterProps) => {
+export const SubmitFooter = ({ onPress, label, disabled, requirementHint }: SubmitFooterProps) => {
   const { theme } = useTheme();
+  // Hint only after a tap on the disabled button, not on open.
+  const [attempted, setAttempted] = useState(false);
   const insets = useSafeAreaInsets();
   const { isKeyboardVisible } = useKeyboard();
   const bottomPadding = isKeyboardVisible
@@ -37,31 +35,33 @@ export const SubmitFooter = ({
         },
       ]}
     >
-      {disabled && requirementHint ? (
+      {disabled && attempted && requirementHint ? (
         <AppText variant="caption" color="secondary" style={styles.requirementHint}>
           {requirementHint}
         </AppText>
       ) : null}
-      <AppButton
-        variant="primary"
-        onPress={onPress}
-        disabled={disabled}
-        style={styles.button}
-        buttonStyle={[
-          styles.button,
-          disabled ? { backgroundColor: theme.surfaceSecondary } : undefined,
-        ]}
-        testID="submit-footer-button"
-        accessibilityLabel={label}
-      >
-        {disabled ? (
-          <AppText variant="body" weight="semibold" style={{ color: theme.text }}>
-            {label}
-          </AppText>
-        ) : (
-          label
-        )}
-      </AppButton>
+      <Pressable disabled={!disabled} onPress={() => setAttempted(true)} accessible={false}>
+        <AppButton
+          variant="primary"
+          onPress={onPress}
+          disabled={disabled}
+          style={styles.button}
+          buttonStyle={[
+            styles.button,
+            disabled ? { backgroundColor: theme.surfaceSecondary } : undefined,
+          ]}
+          testID="submit-footer-button"
+          accessibilityLabel={label}
+        >
+          {disabled ? (
+            <AppText variant="body" weight="semibold" style={{ color: theme.text }}>
+              {label}
+            </AppText>
+          ) : (
+            label
+          )}
+        </AppButton>
+      </Pressable>
     </View>
   );
 };

@@ -6,8 +6,8 @@ import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { withOpacity } from '@/src/utils/color-math';
 import { MotiView } from 'moti';
-import React from 'react';
-import { Keyboard, StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export interface JournalEntrySubmitBarProps {
@@ -31,6 +31,8 @@ export const JournalEntrySubmitBar = React.memo(function JournalEntrySubmitBar({
   const insets = useSafeAreaInsets();
   const { isKeyboardVisible } = useKeyboard();
   const reduceMotion = useReducedMotion();
+  // Hint only after a tap on the disabled button, not on open.
+  const [attempted, setAttempted] = useState(false);
 
   const showPulse = saveSuccessPulse && !reduceMotion;
 
@@ -49,7 +51,7 @@ export const JournalEntrySubmitBar = React.memo(function JournalEntrySubmitBar({
         },
       ]}
     >
-      {disabled && missingRequirementHint ? (
+      {disabled && attempted && missingRequirementHint ? (
         <View style={styles.hintRow} accessibilityLiveRegion="polite">
           <AppText variant="caption" color="secondary" style={styles.hintText}>
             {missingRequirementHint}
@@ -58,7 +60,12 @@ export const JournalEntrySubmitBar = React.memo(function JournalEntrySubmitBar({
       ) : null}
 
       <View style={styles.buttonRow}>
-        <View style={styles.submitButtonWrapper}>
+        <Pressable
+          style={styles.submitButtonWrapper}
+          disabled={!disabled}
+          onPress={() => setAttempted(true)}
+          accessible={false}
+        >
           <MotiView
             animate={{ scale: showPulse ? 1.03 : Scale.identity }}
             transition={ChromeMotion.spring}
@@ -75,7 +82,7 @@ export const JournalEntrySubmitBar = React.memo(function JournalEntrySubmitBar({
               {label}
             </AppButton>
           </MotiView>
-        </View>
+        </Pressable>
 
         {isKeyboardVisible && (
           <PressScaleTouchable
