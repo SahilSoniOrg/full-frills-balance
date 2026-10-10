@@ -1,4 +1,3 @@
-import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import {
   Icon,
@@ -7,9 +6,11 @@ import {
   Badge,
   IconButton,
   IvyIcon,
+  ListGroup,
+  ListRow,
   type IconName,
 } from '@/src/components/core';
-import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
+import { AppConfig, Opacity, Size, Spacing, Typography } from '@/src/constants';
 import { AccountParentPath } from '@/src/features/accounts/components/AccountParentPath';
 import { accountDetailsCopy } from '@/src/features/accounts/helpers/accountFlowLabels';
 import type { AccountSummaryCardModel } from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
@@ -51,7 +52,6 @@ function SummaryAction({
   trailing,
   onPress,
   accessibilityLabel,
-  accessibilityHint,
   testID,
 }: {
   icon: IconName;
@@ -60,34 +60,25 @@ function SummaryAction({
   trailing?: string;
   onPress: () => void;
   accessibilityLabel: string;
-  accessibilityHint?: string;
   testID?: string;
 }) {
   const { theme } = useTheme();
   return (
-    <PressScaleTouchable
+    <ListRow
+      leading={
+        <AppIcon
+          name={icon}
+          size={Size.iconSm}
+          color={getReadableColor(iconColor, theme.background)}
+        />
+      }
+      title={label}
+      trailing={trailing ? <ListRow.Value color="primary">{trailing}</ListRow.Value> : undefined}
+      chevron
       onPress={onPress}
-      accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      accessibilityHint={accessibilityHint}
       testID={testID}
-      style={[styles.summaryAction, { backgroundColor: withOpacity(iconColor, Opacity.soft) }]}
-    >
-      <AppIcon
-        name={icon}
-        size={Size.iconXs}
-        color={getReadableColor(iconColor, theme.background)}
-      />
-      <AppText variant="caption" weight="medium" style={styles.actionLabel}>
-        {label}
-      </AppText>
-      {trailing ? (
-        <AppText variant="caption" color="primary" weight="semibold">
-          {trailing}
-        </AppText>
-      ) : null}
-      <AppIcon name={Icon.ChevronRight} size={Size.iconXs} color={theme.textTertiary} />
-    </PressScaleTouchable>
+    />
   );
 }
 
@@ -235,30 +226,31 @@ export function AccountSummaryCard({
 
       {onReconcile || isParent ? (
         <View style={styles.summaryActions}>
-          {onReconcile ? (
-            <SummaryAction
-              icon={reconcileStatus.icon}
-              iconColor={reconcileStatus.color}
-              label={reconcileStatus.label}
-              trailing="Match"
-              onPress={onReconcile}
-              accessibilityLabel={[reconcileStatus.label, reconcileStatus.detail]
-                .filter(Boolean)
-                .join(', ')}
-              accessibilityHint="Compare this account with your bank statement"
-              testID="reconcile-button"
-            />
-          ) : null}
-          {isParent ? (
-            <SummaryAction
-              icon={Icon.Hierarchy}
-              iconColor={accentColor}
-              label={`${subAccountCount} ${subAccountCount === 1 ? 'sub-account' : 'sub-accounts'}`}
-              onPress={onShowSubAccounts}
-              accessibilityLabel={`Show ${subAccountCount} ${subAccountCount === 1 ? 'sub-account' : 'sub-accounts'}`}
-              testID="sub-accounts-button"
-            />
-          ) : null}
+          <ListGroup variant="plain">
+            {onReconcile ? (
+              <SummaryAction
+                icon={reconcileStatus.icon}
+                iconColor={reconcileStatus.color}
+                label={reconcileStatus.label}
+                trailing="Match"
+                onPress={onReconcile}
+                accessibilityLabel={[reconcileStatus.label, reconcileStatus.detail]
+                  .filter(Boolean)
+                  .join(', ')}
+                testID="reconcile-button"
+              />
+            ) : null}
+            {isParent ? (
+              <SummaryAction
+                icon={Icon.Hierarchy}
+                iconColor={accentColor}
+                label={`${subAccountCount} ${subAccountCount === 1 ? 'sub-account' : 'sub-accounts'}`}
+                onPress={onShowSubAccounts}
+                accessibilityLabel={`Show ${subAccountCount} ${subAccountCount === 1 ? 'sub-account' : 'sub-accounts'}`}
+                testID="sub-accounts-button"
+              />
+            ) : null}
+          </ListGroup>
         </View>
       ) : null}
     </View>
@@ -319,23 +311,8 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     maxWidth: '100%',
   },
+  // ponytail: rows bring their own padding; pull them back to the card edge.
   summaryActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-  },
-  summaryAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    minHeight: Size.touchTarget,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: Shape.radius.sm,
-    maxWidth: '100%',
-  },
-  actionLabel: {
-    flexShrink: 1,
-    minWidth: 0,
+    marginHorizontal: Spacing.xs - Spacing.md,
   },
 });
