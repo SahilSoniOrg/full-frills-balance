@@ -1,7 +1,7 @@
-import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useState } from 'react';
 import { BackHandler } from 'react-native';
 import { useNavigation } from 'expo-router';
+import { triggerPressHaptic } from '@/src/utils/haptics';
 
 export interface UseSelectionResult<T> {
   selectedIds: Set<T>;
@@ -38,7 +38,7 @@ export function useSelection<T>(): UseSelectionResult<T> {
   const toggleMultiple = useCallback(
     (ids: T[]) => {
       if (ids.length === 0) return;
-      void Haptics.selectionAsync();
+      triggerPressHaptic('selection');
 
       setSelectedIds(prev => {
         const next = new Set(prev);
@@ -67,7 +67,7 @@ export function useSelection<T>(): UseSelectionResult<T> {
   const onLongPressItem = useCallback(
     (id: T) => {
       toggleSelection(id);
-      void Haptics.selectionAsync();
+      triggerPressHaptic('selection');
 
       if (!isSelectionModeActive) {
         setSelectionModeActive(true);

@@ -15,7 +15,8 @@ import { exportUpdateBackup } from '@/src/services/export';
 import { updateInsightService } from '@/src/services/update/updateInsightService';
 import { toast } from '@/src/utils/alerts';
 import { readE2eLaunchConfig } from '@/src/testing/e2eLaunchArgs';
-import { AppState, StyleSheet, TouchableOpacity } from 'react-native';
+import { AppState, StyleSheet } from 'react-native';
+import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -227,30 +228,34 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
           )}
 
           {!!policy.changelog?.length && (
-            <Box
-              as={TouchableOpacity}
+            <PressScaleTouchable
+              pressScale="subtle"
               testID="update-view-changelog"
               accessibilityRole="button"
               accessibilityLabel={AppConfig.strings.update.viewChangelog}
               onPress={() => setIsChangelogVisible(true)}
-              flexDirection="row"
-              alignItems="center"
-              width="100%"
-              padding="lg"
-              borderRadius="r2"
-              background="surfaceSecondary"
-              gap="md"
+              style={styles.changelogTouchable}
             >
-              <AppIcon name={Icon.Document} size={Size.iconMd} color={theme.primary} />
-              <Stack gap="xs" flex={1}>
-                <AppText weight="semibold">{AppConfig.strings.update.viewChangelog}</AppText>
-                <AppText variant="caption" color="secondary">
-                  {policy.changelog.length} update highlight
-                  {policy.changelog.length === 1 ? '' : 's'}
-                </AppText>
-              </Stack>
-              <AppIcon name={Icon.ArrowRight} size={Size.iconSm} color={theme.textSecondary} />
-            </Box>
+              <Box
+                flexDirection="row"
+                alignItems="center"
+                width="100%"
+                padding="lg"
+                borderRadius="r2"
+                background="surfaceSecondary"
+                gap="md"
+              >
+                <AppIcon name={Icon.Document} size={Size.iconMd} color={theme.primary} />
+                <Stack gap="xs" flex={1}>
+                  <AppText weight="semibold">{AppConfig.strings.update.viewChangelog}</AppText>
+                  <AppText variant="caption" color="secondary">
+                    {policy.changelog.length} update highlight
+                    {policy.changelog.length === 1 ? '' : 's'}
+                  </AppText>
+                </Stack>
+                <AppIcon name={Icon.ArrowRight} size={Size.iconSm} color={theme.textSecondary} />
+              </Box>
+            </PressScaleTouchable>
           )}
 
           <Stack gap="md" width="100%">
@@ -346,6 +351,7 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
 }
 
 const styles = StyleSheet.create({
+  changelogTouchable: { width: '100%' },
   card: {
     width: '100%',
     maxWidth: 380,
