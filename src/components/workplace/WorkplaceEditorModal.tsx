@@ -6,7 +6,7 @@ import {
   AppText,
   PressScaleTouchable,
 } from '@/src/components/core';
-import { IconPickerModal } from '@/src/components/overlays/IconPickerModal';
+import { AppearancePickerModal } from '@/src/components/overlays/AppearancePickerModal';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Size, Spacing } from '@/src/constants';
 import type { IconName } from '@/src/types/domainIcons';
@@ -112,10 +112,11 @@ export function WorkplaceEditorModal({
           </PressScaleTouchable>
         </Stack>
       </ModalSurface>
-      <IconPickerModal
+      <AppearancePickerModal
+        mode="icon"
         visible={iconPickerVisible}
         onClose={() => setIconPickerVisible(false)}
-        onSelect={selectedIcon => {
+        onIconSelect={selectedIcon => {
           setPendingIcon(selectedIcon);
           setIconPickerVisible(false);
         }}
