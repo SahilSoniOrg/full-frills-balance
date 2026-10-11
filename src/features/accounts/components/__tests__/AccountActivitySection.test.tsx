@@ -31,10 +31,36 @@ const props: AccountActivitySectionProps = {
 describe('AccountActivitySection chart disclosure', () => {
   afterEach(() => jest.restoreAllMocks());
 
-  it('starts collapsed and expands only when requested', () => {
+  it('starts expanded and can be collapsed and reopened', () => {
     render(
       <AccountActivitySection
         {...props}
+        chartData={[
+          { x: 0, y: 10 },
+          { x: 1, y: 20 },
+        ]}
+      />,
+    );
+
+    expect(screen.getByTestId('account-trend-chart')).toBeTruthy();
+    expect(screen.getByTestId('account-trend-toggle').props.accessibilityState.expanded).toBe(true);
+
+    fireEvent.press(screen.getByLabelText('Hide balance over time chart'));
+    expect(screen.queryByTestId('account-trend-chart')).toBeNull();
+    expect(screen.getByTestId('account-trend-toggle').props.accessibilityState.expanded).toBe(
+      false,
+    );
+
+    fireEvent.press(screen.getByLabelText('Show balance over time chart'));
+    expect(screen.getByTestId('account-trend-chart')).toBeTruthy();
+    expect(screen.getByTestId('account-trend-toggle').props.accessibilityState.expanded).toBe(true);
+  });
+
+  it('honors an explicitly collapsed initial chart', () => {
+    render(
+      <AccountActivitySection
+        {...props}
+        initialChartExpanded={false}
         chartData={[
           { x: 0, y: 10 },
           { x: 1, y: 20 },
@@ -46,29 +72,6 @@ describe('AccountActivitySection chart disclosure', () => {
     expect(screen.getByTestId('account-trend-toggle').props.accessibilityState.expanded).toBe(
       false,
     );
-
-    fireEvent.press(screen.getByLabelText('Show balance over time chart'));
-    expect(screen.getByTestId('account-trend-chart')).toBeTruthy();
-    expect(screen.getByTestId('account-trend-toggle').props.accessibilityState.expanded).toBe(true);
-
-    fireEvent.press(screen.getByLabelText('Hide balance over time chart'));
-    expect(screen.queryByTestId('account-trend-chart')).toBeNull();
-  });
-
-  it('honors an explicitly expanded initial chart', () => {
-    render(
-      <AccountActivitySection
-        {...props}
-        initialChartExpanded={true}
-        chartData={[
-          { x: 0, y: 10 },
-          { x: 1, y: 20 },
-        ]}
-      />,
-    );
-
-    expect(screen.getByTestId('account-trend-chart')).toBeTruthy();
-    expect(screen.getByTestId('account-trend-toggle').props.accessibilityState.expanded).toBe(true);
   });
 
   it('omits trend disclosure when there are no chart points', () => {

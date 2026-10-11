@@ -70,7 +70,7 @@ export function AccountActivitySection({
   previousPeriod,
   currencyCode,
   accountColor,
-  initialChartExpanded = false,
+  initialChartExpanded = true,
 }: AccountActivitySectionProps) {
   const { theme } = useTheme();
   const isPrivate = useEffectivePrivacyMode();
