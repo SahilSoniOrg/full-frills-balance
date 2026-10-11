@@ -87,7 +87,7 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
     if (state.access !== 'allowed' || !notice?.latestBuild || (state.phase !== 'idle' && !ready))
       return;
     updateInsightService.publishAvailableUpdate(notice, ready);
-    const noticeKey = `${notice.latestBuild}:${ready ? 'ready' : 'available'}`;
+    const noticeKey = updateInsightService.getNoticeKey(notice, ready);
     if (
       notifiedAvailableUpdate.current === noticeKey ||
       updateInsightService.isNoticeDismissed(notice, ready)

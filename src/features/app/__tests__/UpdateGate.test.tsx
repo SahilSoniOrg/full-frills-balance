@@ -1,7 +1,11 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- Jest factories require isolated native stubs. */
-import React from 'react';
+import React, { useSyncExternalStore } from 'react';
 import { Text } from 'react-native';
-import { act, fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render, renderHook } from '@testing-library/react-native';
+import { useToastListener } from '@/src/hooks/useToastListener';
+import { AppConfig } from '@/src/constants/app-config';
+import type { WorkplaceId } from '@/src/types/ids';
+import { storage } from '@/src/utils/storage';
 import type { AppUpdateSnapshot } from '@/src/services/update/appUpdateService';
 import { updateInsightService } from '@/src/services/update/updateInsightService';
 import { toast } from '@/src/utils/alerts';
@@ -23,20 +27,47 @@ jest.mock('@/src/services/update/appUpdateService', () => ({
     update: () => mockUpdate(),
   },
 }));
+jest.mock('@/src/services/update/versionPolicyService', () => ({ getCurrentBuild: () => 160 }));
 jest.mock('@/src/services/update/updateInsightService', () => ({
-  updateInsightService: {
-    publishAvailableUpdate: jest.fn(),
-    dismissAvailableUpdate: jest.fn(),
-    clearAvailableUpdate: jest.fn(),
-    isNoticeDismissed: jest.fn(() => false),
-  },
+  updateInsightService: (() => {
+    const { updateInsightService: service } = jest.requireActual(
+      '@/src/services/update/updateInsightService',
+    );
+    jest.spyOn(service, 'publishAvailableUpdate');
+    jest.spyOn(service, 'dismissAvailableUpdate');
+    jest.spyOn(service, 'clearAvailableUpdate');
+    jest.spyOn(service, 'isNoticeDismissed');
+    return service;
+  })(),
 }));
-jest.mock('@/src/utils/alerts', () => ({ toast: { info: jest.fn(), error: jest.fn() } }));
+jest.mock('@/src/utils/alerts', () => ({
+  ...jest.requireActual('@/src/utils/alerts'),
+  toast: { info: jest.fn(), error: jest.fn() },
+}));
+jest.mock('@/src/utils/storage', () => {
+  const values = new Map<string, string>();
+  return {
+    storage: {
+      getString: (key: string) => values.get(key),
+      set: (key: string, value: string) => values.set(key, value),
+      remove: (key: string) => values.delete(key),
+    },
+  };
+});
 jest.mock('@/src/hooks/use-theme', () => ({ useTheme: () => ({ theme: {} }) }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ bottom: 0 }) }));
 jest.mock('@/src/hooks/useObservable', () => ({ useObservable: () => ({ data: [] }) }));
 jest.mock('@/src/services/WorkplaceService', () => ({ workplaceService: {} }));
-jest.mock('@/src/services/preferences', () => ({ preferences: { device: {} } }));
+jest.mock('@/src/services/preferences', () => ({
+  preferences: {
+    device: {},
+    insights: {
+      dismissedPatternIds: () => [],
+      dismissPattern: jest.fn(),
+      undismissPattern: jest.fn(),
+    },
+  },
+}));
 jest.mock('@/src/services/export', () => ({ exportUpdateBackup: jest.fn() }));
 jest.mock('@/src/features/app/BackupScopeSheet', () => ({ BackupScopeSheet: () => null }));
 jest.mock('@/src/components/overlays/ModalSurface', () => ({ ModalSurface: () => null }));
@@ -82,10 +113,45 @@ describe('UpdateGate presentation', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
+    storage.remove('full_frills_balance_update_notice_dismissed_v1');
+    storage.remove('full_frills_balance_update_notice_dismissed_v2');
+    updateInsightService.clearAvailableUpdate();
     mockSnapshot = { access: 'allowed', phase: 'idle' };
   });
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  it('leaves the update in Hub after its untouched toast expires', () => {
+    const { toast: realToast } = jest.requireActual('@/src/utils/alerts');
+    jest.mocked(toast.info).mockImplementationOnce(realToast.info);
+    const workplaceId = 'workplace-1' as WorkplaceId;
+    const { result } = renderHook(() => ({
+      toasts: useToastListener().toasts,
+      insights: useSyncExternalStore(
+        listener => updateInsightService.subscribe(listener),
+        () => updateInsightService.observe(workplaceId, false),
+      ),
+    }));
+    mockSnapshot.notice = notice;
+    render(
+      <UpdateGate>
+        <Text>Books</Text>
+      </UpdateGate>,
+    );
+    act(() => jest.advanceTimersByTime(0));
+    expect(result.current.toasts).toHaveLength(1);
+    expect(result.current.insights).toHaveLength(1);
+    act(() => jest.advanceTimersByTime(AppConfig.timing.toastDurationMs));
+    expect(result.current.toasts).toHaveLength(0);
+    expect(updateInsightService.dismissAvailableUpdate).not.toHaveBeenCalled();
+    expect(result.current.insights).toEqual([
+      expect.objectContaining({ type: 'app-update', updateReady: false }),
+    ]);
+    publish({ notice: { ...notice } });
+    expect(result.current.insights).toHaveLength(1);
+    publish({ notice: undefined });
+    expect(result.current.insights).toHaveLength(0);
   });
 
   it('routes the optional prompt through the shared update action and does not repeat it on refresh', () => {
@@ -111,7 +177,7 @@ describe('UpdateGate presentation', () => {
   });
 
   it('honors persisted dismissal while leaving the update in Hub', () => {
-    jest.mocked(updateInsightService.isNoticeDismissed).mockReturnValueOnce(true);
+    updateInsightService.dismissAvailableUpdate(notice);
     mockSnapshot.notice = notice;
     render(
       <UpdateGate>
