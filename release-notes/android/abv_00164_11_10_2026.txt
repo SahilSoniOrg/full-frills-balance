@@ -1,0 +1,23 @@
+New release 🚀
+
+Account and category details have a new layout that separates your current balance or all-time totals from activity in the selected period. Across settings, forms, reports and review screens, menus and controls now look and respond more consistently.
+
+---
+
+Also in this update:
+
+* Account details: Your current balance stays prominent, with a separate period summary for net change and money in and out. Card and loan accounts show new charges, payments and whether the balance grew or was paid down. Move between periods, compare with the previous period and follow the balance chart, now open by default.
+* Category details: Spending or earnings for the selected period take priority over all-time totals. Expense pages separate spending from refunds; income pages separate earnings from adjustments. Daily averages and previous-period comparisons help you track changes, while charts show spending or earnings within the chosen dates.
+* Account hierarchy management: Browse an expandable sub-account tree, see each sub-account’s share of its group’s balance and tap parent names to move back up. Disband a group while keeping its sub-accounts, balances and transaction history; they move into the enclosing group or to the top level.
+* Reconciling accounts: A dedicated section beside the balance shows when you last checked it against your statement, with a button to reconcile again. Show amounts before confirming a match in Privacy Mode.
+* Android updates: When Google Play offers an in-app update, download it while you keep using the app and restart when you’re ready. Restart waits until you save or discard unsaved changes.
+* SMS inbox: Cards keep the main action visible, with Split beside Import when available. Tap More to open a bottom sheet for actions such as Dismiss, Create Rule and View Raw. Automatic imports use the source account’s currency when a message does not specify one.
+* Safe to Spend: Tap the info button for a clearer explanation of your available amount: how cash today, upcoming bills and income timing affect it, and why money arriving later cannot cover earlier bills. It also explains projected shortfalls and flags estimates with missing exchange rates.
+
+---
+
+Big difference you’ll notice:
+
+* Settings, form fields and action menus use matching spacing, aligned icons and consistent navigation arrows. Report summaries open their transactions when you tap the row, replacing separate “View transactions” buttons.
+* Buttons, tabs and selectors use consistent tap animations and vibration feedback. Settings switches can be changed by tapping anywhere on their row.
+* Text and status colours are easier to read in the Deep Space theme, including light mode. Forms show missing-field hints after you try to save, rather than as soon as you open them.
