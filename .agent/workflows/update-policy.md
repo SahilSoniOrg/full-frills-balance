@@ -44,13 +44,17 @@ Keep the full object for every platform in every change, even when only one plat
 
 ## 3. Runtime Semantics
 
-- `enabled: false` disables enforcement and optional-update notices for that platform.
+- `enabled: false` disables only this remote policy's enforcement and recommendations. Android Play discovery, optional notices, downloads and completion remain independent.
 - If enforcement is enabled and the installed native build is below `minimumBuild`, the app blocks and offers **Update now** plus backup export.
 - If the installed build is allowed but below `latestBuild`, the app shows a dismissible update notice.
-- If the installed build is equal to or above `latestBuild`, no optional-update notice is shown.
-- If `latestBuild` is lower than the installed build, the app remains allowed and shows no notice. This is safe during a release rollback or delayed rollout.
+- If the installed build is equal to or above `latestBuild`, the remote policy contributes no optional notice. Play can still offer a newer build available to that device.
+- If `latestBuild` is lower than the installed build, the remote policy leaves access allowed. Play discovery still applies.
+- When Play reports an available or downloaded build, the notice describes that artifact even if the remote optional recommendation is newer. Matching policy can supply release copy; a required minimum still has to be satisfied.
+- The coordinator combines both sources into one notice or required gate. A disabled or unavailable remote policy does not suppress Play delivery; a policy-only notice uses its store URL when native delivery is unavailable.
 - A failed remote request falls back to a valid cached manifest; without a valid cache, the app fails open.
 - Web remains present in the manifest for cross-platform completeness. Current web behavior does not enforce this policy.
+
+Older app builds can interpret `enabled: false` as a global mute for Play delivery. These independent-source semantics require an app release containing the coordinator change; keep the policy enabled while older clients need Play prompts.
 
 ## 4. Normal Release Procedure
 
@@ -87,6 +91,8 @@ If a release is broken or unavailable:
 3. Preserve valid store URLs and the complete three-platform manifest.
 4. Commit and push the rollback immediately.
 5. Verify the raw endpoint and wait for cache propagation.
+
+Disabling this policy withdraws its rules and recommendations; it does not revoke an artifact already offered by Play. To stop distribution of a defective release, manage the release in Play Console as well.
 
 Do not delete fields, publish malformed JSON, or point users at a private repository as a rollback.
 

@@ -6,6 +6,7 @@ export type VersionPolicy = {
   availableMessage?: string;
   /** Human-readable highlights shown before a required update. */
   changelog?: string[];
+  /** Enables this remote policy; Play discovery and delivery remain independent. */
   enabled?: boolean;
 };
 
@@ -16,5 +17,5 @@ export type VersionPolicyManifest = {
 };
 
 export type VersionCheckResult =
-  | { kind: 'allowed'; source: 'remote' | 'cache'; available?: VersionPolicy; disabled?: boolean }
+  | { kind: 'allowed'; source: 'remote' | 'cache'; available?: VersionPolicy }
   | { kind: 'required'; policy: VersionPolicy; source: 'remote' | 'cache' };

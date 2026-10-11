@@ -11,6 +11,13 @@ jest.mock('../versionPolicyService', () => ({
 
 const allowed: VersionCheckResult = { kind: 'allowed', source: 'remote' };
 const policy = { minimumBuild: 159, latestBuild: 160, storeUrl: 'https://example.com/store' };
+const { evaluateVersionPolicy } =
+  jest.requireActual<typeof import('../versionPolicyService')>('../versionPolicyService');
+
+function disabledPolicy(source: 'remote' | 'cache' = 'remote'): VersionCheckResult {
+  return evaluateVersionPolicy({ ...policy, enabled: false }, 159, source);
+}
+
 const available: PlayUpdateInfo = {
   build: 160,
   availability: 'available',
@@ -97,12 +104,73 @@ describe('AppUpdateService', () => {
     expect(service.getSnapshot()).toMatchObject({ access: 'allowed', phase: 'idle' });
   });
 
-  it('suppresses Play notices and new flows for an explicitly disabled cached policy', async () => {
-    const { service, play } = harness({ kind: 'allowed', source: 'cache', disabled: true });
+  it.each(['remote', 'cache'] as const)(
+    'offers a flexible Play update when the %s policy is disabled',
+    async source => {
+      const { service, deps, play } = harness(disabledPolicy(source));
+      await service.check();
+      expect(service.getSnapshot()).toMatchObject({
+        access: 'allowed',
+        notice: { latestBuild: 160 },
+      });
+      expect(service.getSnapshot().notice?.storeUrl).not.toBe(policy.storeUrl);
+      await service.update();
+      expect(play.start).toHaveBeenCalledWith('flexible');
+      expect(deps.openStore).not.toHaveBeenCalled();
+    },
+  );
+
+  it('does not offer the disabled policy when Play has no update', async () => {
+    const { service, deps, play } = harness(disabledPolicy(), null);
     await service.check();
+    expect(service.getSnapshot()).toMatchObject({ access: 'allowed', notice: undefined });
     await service.update();
-    expect(service.getSnapshot().notice).toBeUndefined();
     expect(play.start).not.toHaveBeenCalled();
+    expect(deps.openStore).not.toHaveBeenCalled();
+  });
+
+  it('keeps the store fallback for a Play notice if the action recheck fails', async () => {
+    const { service, deps, play } = harness(disabledPolicy());
+    await service.check();
+    const storeUrl = service.getSnapshot().notice?.storeUrl;
+    expect(storeUrl).toBeDefined();
+    play.check.mockRejectedValue(new Error('Play recheck failed'));
+    await service.update();
+    expect(deps.openStore).toHaveBeenCalledWith(storeUrl);
+  });
+
+  it('still offers Play delivery when the policy request fails', async () => {
+    const { service, deps, play } = harness(allowed, available, true);
+    deps.policyCheck.mockRejectedValue(new Error('policy offline'));
+    await service.check();
+    expect(service.getSnapshot()).toMatchObject({
+      access: 'allowed',
+      notice: { latestBuild: 160 },
+    });
+    await service.update();
+    expect(play.start).toHaveBeenCalledWith('flexible');
+  });
+
+  it('offers the policy store fallback when Play is unavailable', async () => {
+    const { service, deps, play } = harness({ ...allowed, available: policy }, null);
+    play.check.mockRejectedValue(new Error('Play unavailable'));
+    await service.check();
+    expect(service.getSnapshot().notice).toEqual(policy);
+    await service.update();
+    expect(deps.openStore).toHaveBeenCalledWith(policy.storeUrl);
+  });
+
+  it('offers the Play build this device can obtain below a newer optional recommendation', async () => {
+    const { service, deps, play } = harness({
+      ...allowed,
+      available: { ...policy, latestBuild: 170, availableMessage: 'Build 170 changes' },
+    });
+    await service.check();
+    expect(service.getSnapshot().notice).toMatchObject({ latestBuild: 160 });
+    expect(service.getSnapshot().notice?.availableMessage).not.toBe('Build 170 changes');
+    await service.update();
+    expect(play.start).toHaveBeenCalledWith('flexible');
+    expect(deps.openStore).not.toHaveBeenCalled();
   });
 
   it('reconciles matching sources into one policy notice and uses generic copy for a newer native target', async () => {
@@ -203,19 +271,33 @@ describe('AppUpdateService', () => {
     });
   });
 
-  it('honors a policy disable arriving during an update availability check', async () => {
+  it('continues Play delivery when the policy is disabled during an action check', async () => {
     const { service, deps, play } = harness();
     await service.check();
     const pending = deferred<PlayUpdateInfo | null>();
     play.check.mockReturnValueOnce(pending.promise);
     const updating = service.update();
-    deps.policyCheck.mockResolvedValue({ kind: 'allowed', source: 'remote', disabled: true });
+    deps.policyCheck.mockResolvedValue(disabledPolicy());
     await service.check();
     pending.resolve(available);
     await updating;
+    expect(play.start).toHaveBeenCalledWith('flexible');
+    expect(deps.openStore).not.toHaveBeenCalled();
+  });
+
+  it('drops a withdrawn policy-only action when Play has no replacement update', async () => {
+    const { service, deps, play } = harness({ ...allowed, available: policy }, null);
+    await service.check();
+    const pending = deferred<PlayUpdateInfo | null>();
+    play.check.mockReturnValueOnce(pending.promise);
+    const updating = service.update();
+    deps.policyCheck.mockResolvedValue(disabledPolicy());
+    await service.check();
+    pending.resolve(null);
+    await updating;
+    expect(service.getSnapshot()).toMatchObject({ phase: 'idle', notice: undefined });
     expect(play.start).not.toHaveBeenCalled();
     expect(deps.openStore).not.toHaveBeenCalled();
-    expect(service.getSnapshot().phase).toBe('idle');
   });
 
   it('does not open the store or restart automatically when the user cancels or accepts', async () => {
@@ -419,10 +501,10 @@ describe('AppUpdateService', () => {
   });
 
   it('continues an already-downloaded update after the policy is disabled', async () => {
-    const { service, play } = harness(
-      { kind: 'allowed', source: 'remote', disabled: true },
-      { ...available, installStatus: PlayInstallStatus.Downloaded },
-    );
+    const { service, play } = harness(disabledPolicy(), {
+      ...available,
+      installStatus: PlayInstallStatus.Downloaded,
+    });
     await service.check();
     await service.update();
     expect(play.install).toHaveBeenCalledTimes(1);
@@ -432,6 +514,30 @@ describe('AppUpdateService', () => {
     const { service, play } = harness(allowed, { ...available, availability: 'in-progress' });
     await service.check();
     await service.update(true);
+    expect(play.start).toHaveBeenCalledWith('immediate');
+  });
+
+  it('automatically resumes Play delivery while the policy is disabled', async () => {
+    const { service, play } = harness(disabledPolicy(), {
+      ...available,
+      availability: 'in-progress',
+    });
+    await service.check();
+    await Promise.resolve();
+    expect(play.start).toHaveBeenCalledWith('immediate');
+  });
+
+  it('preserves restart blockers for Play resumption while the policy is disabled', async () => {
+    const { service, deps, play } = harness(disabledPolicy(), {
+      ...available,
+      availability: 'in-progress',
+    });
+    deps.restartBlocked.mockReturnValue(true);
+    await service.check();
+    expect(play.start).not.toHaveBeenCalled();
+    deps.restartBlocked.mockReturnValue(false);
+    await service.check();
+    await Promise.resolve();
     expect(play.start).toHaveBeenCalledWith('immediate');
   });
 

@@ -21,6 +21,7 @@ export type AppUpdateSnapshot = {
   access: 'checking' | 'allowed' | 'required';
   policy?: VersionPolicy;
   notice?: VersionPolicy;
+  noticeSource?: 'play' | 'policy';
   phase: 'idle' | 'starting' | 'downloading' | 'downloaded' | 'installing';
   progress?: number;
   error?: 'store' | 'install' | 'unsaved';
@@ -34,7 +35,7 @@ export type AppUpdateDependencies = {
   restartBlocked: () => boolean;
 };
 
-/** Owns device-wide delivery. Remote policy alone decides whether access is required. */
+/** Coordinates independent update sources. Only remote policy can require an update. */
 export class AppUpdateService {
   private state: AppUpdateSnapshot;
   private policy: VersionCheckResult = { kind: 'allowed', source: 'remote' };
@@ -92,7 +93,6 @@ export class AppUpdateService {
 
   private publish() {
     const required = this.policy.kind === 'required';
-    const disabled = this.policy.kind === 'allowed' && this.policy.disabled;
     const current = this.deps.currentBuild();
     const remote = this.policy.kind === 'allowed' ? this.policy.available : undefined;
     const native = this.delivery.info;
@@ -106,8 +106,9 @@ export class AppUpdateService {
       current !== null && remote?.latestBuild !== undefined && remote.latestBuild > current
         ? remote
         : undefined;
-    // A ready notice describes the downloaded artifact, even if the remote recommendation is newer.
-    if (hasNativeTarget && (phase === 'downloaded' || native.build >= (remote?.latestBuild ?? 0))) {
+    let noticeSource: AppUpdateSnapshot['noticeSource'] = notice ? 'policy' : undefined;
+    // Play identifies the artifact this device can obtain; matching policy can supply its copy.
+    if (hasNativeTarget) {
       notice =
         remote?.latestBuild === native.build
           ? remote
@@ -117,8 +118,9 @@ export class AppUpdateService {
               storeUrl: ANDROID_STORE_URL,
               availableMessage: AppConfig.strings.update.availableMessage,
             };
+      noticeSource = 'play';
     }
-    if (required || (disabled && phase !== 'downloaded')) notice = undefined;
+    if (required) notice = undefined;
     this.state = {
       phase,
       progress:
@@ -131,6 +133,7 @@ export class AppUpdateService {
       access: required ? 'required' : this.policyResolved ? 'allowed' : 'checking',
       policy: this.policy.kind === 'required' ? this.policy.policy : undefined,
       notice,
+      noticeSource: notice ? noticeSource : undefined,
     };
     this.listeners.forEach(listener => listener());
   }
@@ -195,8 +198,7 @@ export class AppUpdateService {
       this.delivery.phase !== 'installing' &&
       this.interruptedBuild !== this.delivery.info.build &&
       this.delivery.info.immediateAllowed &&
-      !this.deps.restartBlocked() &&
-      !(this.policy.kind === 'allowed' && this.policy.disabled)
+      !this.deps.restartBlocked()
     )
       void this.update(true);
   }
@@ -230,8 +232,8 @@ export class AppUpdateService {
     if (this.delivery.phase === 'downloaded' && this.meetsMinimum(this.delivery.info)) {
       return this.installDownloaded(this.delivery.info);
     }
-    if (this.policy.kind === 'allowed' && this.policy.disabled) return;
     const candidate = this.state.policy ?? this.state.notice;
+    const fromPlay = this.state.noticeSource === 'play';
     if (!candidate && !resume) return;
     this.transition({ kind: 'starting' }, undefined);
     const revision = this.nativeRevision;
@@ -242,16 +244,13 @@ export class AppUpdateService {
       /* Use the store fallback. */
     }
     if (!this.applyCheck(info, revision)) return;
-    if (this.policy.kind === 'allowed' && this.policy.disabled) {
-      if (this.delivery.phase !== 'downloaded') this.transition({ kind: 'idle' });
+    const latestCandidate = this.state.policy ?? this.state.notice;
+    // A withdrawn policy-only prompt cannot authorize a stale store action.
+    if (!latestCandidate && !resume && !fromPlay) {
+      this.transition({ kind: 'idle' });
       return;
     }
-    const latestCandidate = this.state.policy ?? this.state.notice;
-    const target =
-      this.policy.kind === 'required'
-        ? this.policy.policy.minimumBuild
-        : (latestCandidate?.latestBuild ?? 0);
-    const eligible = info && this.meetsMinimum(info) && info.build >= target;
+    const eligible = info && this.meetsMinimum(info);
     if (eligible && info) {
       if (info.installStatus === PlayInstallStatus.Downloaded) {
         return;

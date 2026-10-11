@@ -121,8 +121,7 @@ export function evaluateVersionPolicy(
   currentBuild = getCurrentBuild(),
   source: 'remote' | 'cache' = 'remote',
 ): VersionCheckResult {
-  if (policy.enabled === false) return { kind: 'allowed', source, disabled: true };
-  if (currentBuild === null) {
+  if (policy.enabled === false || currentBuild === null) {
     return { kind: 'allowed', source };
   }
   if (currentBuild >= policy.minimumBuild) {

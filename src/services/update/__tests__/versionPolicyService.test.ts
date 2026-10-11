@@ -67,11 +67,10 @@ describe('versionPolicyService', () => {
     });
   });
 
-  it('allows a disabled policy', () => {
+  it('ignores a disabled policy without creating a delivery disable flag', () => {
     expect(evaluateVersionPolicy({ ...policy, enabled: false }, 1)).toEqual({
       kind: 'allowed',
       source: 'remote',
-      disabled: true,
     });
   });
 
