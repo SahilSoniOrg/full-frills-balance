@@ -59,9 +59,9 @@ const TRACK_WIDTH = 10000;
  * Single-line text that shrinks its font to fit its container width.
  *
  * `adjustsFontSizeToFit` is ignored by react-native-web, and on native it is capped by
- * `minimumFontScale`, so this measures instead: the text lays out unconstrained, its
- * onLayout width gives the natural width, the wrapper's onLayout gives the available
- * width, and font size scales linearly. Works the same on iOS, Android and web.
+ * `minimumFontScale`, so this measures an unconstrained, hidden copy at maxFontSize.
+ * The wrapper supplies the available width. Resizing the visible text cannot feed
+ * back into its natural-width measurement. Works on iOS, Android and web.
  */
 export function FitText({
   maxFontSize,
@@ -81,15 +81,12 @@ export function FitText({
     (e: LayoutChangeEvent) => setAvailableWidth(e.nativeEvent.layout.width),
     [],
   );
-  // Text width scales linearly with font size, so the width at the current size tells us
-  // the width at maxFontSize without rendering a second copy.
-  const onTextLayout = useCallback(
-    (e: LayoutChangeEvent) => {
-      const width = e.nativeEvent.layout.width;
-      if (width > 0) setNaturalWidth(Math.round((width * maxFontSize) / fontSize));
-    },
-    [maxFontSize, fontSize],
-  );
+  // Measure at a fixed size. Extrapolating from the fitted text amplifies pixel rounding
+  // and can reinterpret delayed layout events using a different font size.
+  const onTextLayout = useCallback((e: LayoutChangeEvent) => {
+    const width = e.nativeEvent.layout.width;
+    if (width > 0) setNaturalWidth(width);
+  }, []);
 
   // The track is far wider than the container, so centre / right alignment is done by
   // offsetting the track against the measured container width rather than by flexbox.
@@ -122,8 +119,33 @@ export function FitText({
           {...textProps}
           align={align}
           numberOfLines={1}
-          onLayout={onTextLayout}
           style={[style, { fontSize, lineHeight: Math.round(fontSize * lineHeightRatio) }]}
+        >
+          {children}
+        </AppText>
+      </View>
+      <View
+        style={[styles.track, styles.measurement]}
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        <AppText
+          variant={textProps.variant}
+          fontRole={textProps.fontRole}
+          weight={textProps.weight}
+          italic={textProps.italic}
+          tabular={textProps.tabular}
+          allowFontScaling={textProps.allowFontScaling}
+          maxFontSizeMultiplier={textProps.maxFontSizeMultiplier}
+          dynamicTypeRamp={textProps.dynamicTypeRamp}
+          accessible={false}
+          numberOfLines={1}
+          onLayout={onTextLayout}
+          style={[
+            style,
+            { fontSize: maxFontSize, lineHeight: Math.round(maxFontSize * lineHeightRatio) },
+          ]}
         >
           {children}
         </AppText>
@@ -137,4 +159,6 @@ const styles = StyleSheet.create({
   container: { alignSelf: 'stretch', overflow: 'hidden' },
   // Wide, unconstrained track so the text always lays out at its natural single-line width.
   track: { width: TRACK_WIDTH, flexDirection: 'row', alignItems: 'flex-start' },
+  // Absolute positioning keeps the measurement out of the visible text's height and hug width.
+  measurement: { position: 'absolute', top: 0, left: 0, opacity: 0 },
 });
