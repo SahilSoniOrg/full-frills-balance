@@ -2,6 +2,7 @@ import { MoneyText } from '@/src/components/shared/MoneyText';
 import {
   Icon,
   AppIcon,
+  AppButton,
   AppText,
   Badge,
   IconButton,
@@ -10,7 +11,7 @@ import {
   ListRow,
   type IconName,
 } from '@/src/components/core';
-import { AppConfig, Opacity, Size, Spacing, Typography } from '@/src/constants';
+import { AppConfig, Opacity, Shape, Size, Spacing, Typography } from '@/src/constants';
 import { AccountParentPath } from '@/src/features/accounts/components/AccountParentPath';
 import { accountDetailsCopy } from '@/src/features/accounts/helpers/accountFlowLabels';
 import type { AccountSummaryCardModel } from '@/src/features/accounts/hooks/details/accountDetailsViewModelTypes';
@@ -20,7 +21,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
 import { isCategoryAccountType, resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { getReadableColor, withOpacity } from '@/src/utils/color-math';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
 
 // Old minimumFontScale was 0.6; same floor, now honoured on web too.
 const TITLE_BALANCE_FIT = {
@@ -49,7 +50,6 @@ function SummaryAction({
   icon,
   iconColor,
   label,
-  trailing,
   onPress,
   accessibilityLabel,
   testID,
@@ -57,7 +57,6 @@ function SummaryAction({
   icon: IconName;
   iconColor: string;
   label: string;
-  trailing?: string;
   onPress: () => void;
   accessibilityLabel: string;
   testID?: string;
@@ -73,7 +72,6 @@ function SummaryAction({
         />
       }
       title={label}
-      trailing={trailing ? <ListRow.Value color="primary">{trailing}</ListRow.Value> : undefined}
       chevron
       onPress={onPress}
       accessibilityLabel={accessibilityLabel}
@@ -103,39 +101,18 @@ export function AccountSummaryCard({
   currencyCode,
   onAuditPress,
   onReconcile,
-  unreconciledCount,
 }: AccountSummaryCardProps) {
   const { theme } = useTheme();
+  const { width, fontScale } = useWindowDimensions();
   const { resolvedHourCycle } = useHourCyclePrefs();
   const { accentColor } = resolveAccountAppearance({ accountType, color: accountColor }, theme);
   const isCategory = isCategoryAccountType(accountType);
+  const reconciliationCopy = AppConfig.strings.accounts.reconciliation;
+  const verifiedDate =
+    reconciledAtMs != null ? formatRelativeReconciledDate(reconciledAtMs, resolvedHourCycle) : null;
   const reconciledLabel =
-    reconciledAtMs != null
-      ? AppConfig.strings.accounts.reconciliation.reconciledLabel(
-          formatRelativeReconciledDate(reconciledAtMs, resolvedHourCycle),
-        )
-      : null;
-
-  const reconcileStatus =
-    unreconciledCount > 0 && reconciledLabel
-      ? {
-          icon: Icon.CheckCircle,
-          color: theme.warning,
-          label: `${AppConfig.strings.accounts.entryCount(unreconciledCount)} since last match`,
-          detail: reconciledLabel,
-        }
-      : reconciledLabel
-        ? {
-            icon: Icon.ShieldCheck,
-            color: theme.success,
-            label: reconciledLabel,
-          }
-        : {
-            icon: Icon.CheckCircle,
-            color: theme.textSecondary,
-            label: 'Not matched yet',
-            detail: 'Check it against your bank statement',
-          };
+    verifiedDate != null ? reconciliationCopy.reconciledLabel(verifiedDate) : null;
+  const verificationLabel = reconciledLabel ?? reconciliationCopy.notVerifiedLabel;
 
   return (
     <View style={[styles.card, isArchived && styles.archivedCard]}>
@@ -224,32 +201,73 @@ export function AccountSummaryCard({
         </View>
       )}
 
-      {onReconcile || isParent ? (
+      {onReconcile ? (
+        <View
+          style={[
+            styles.reconciliation,
+            { backgroundColor: theme.surface },
+            width / fontScale < 320 && styles.reconciliationStacked,
+          ]}
+        >
+          <View
+            accessible
+            accessibilityLabel={`${verificationLabel}, ${reconciliationCopy.verifyHint}`}
+            style={styles.reconciliationStatus}
+          >
+            <AppIcon
+              name={Icon.Scale}
+              size={Size.iconSm}
+              color={getReadableColor(theme.textSecondary, theme.surface)}
+            />
+            <View style={styles.reconciliationCopy}>
+              <AppText
+                variant={verifiedDate != null ? 'caption' : 'bodySmall'}
+                color={verifiedDate != null ? 'secondary' : 'text'}
+                weight={verifiedDate != null ? 'regular' : 'medium'}
+              >
+                {verifiedDate != null
+                  ? reconciliationCopy.verifiedThroughLabel
+                  : reconciliationCopy.notVerifiedLabel}
+              </AppText>
+              <AppText
+                variant={verifiedDate != null ? 'bodySmall' : 'caption'}
+                color={verifiedDate != null ? 'text' : 'secondary'}
+                weight={verifiedDate != null ? 'medium' : 'regular'}
+              >
+                {verifiedDate ?? reconciliationCopy.verifyHint}
+              </AppText>
+            </View>
+          </View>
+          <AppButton
+            variant="outline"
+            size="sm"
+            style={styles.reconciliationButton}
+            buttonStyle={[
+              styles.reconciliationButtonSurface,
+              { backgroundColor: theme.primaryLight, borderColor: theme.primaryLight },
+            ]}
+            onPress={onReconcile}
+            disabled={balanceAmount === null}
+            accessibilityLabel={reconciliationCopy.verifyAction}
+            accessibilityHint={reconciliationCopy.verifyHint}
+            testID="reconcile-button"
+          >
+            {reconciliationCopy.verifyAction}
+          </AppButton>
+        </View>
+      ) : null}
+
+      {isParent ? (
         <View style={styles.summaryActions}>
           <ListGroup variant="plain">
-            {onReconcile ? (
-              <SummaryAction
-                icon={reconcileStatus.icon}
-                iconColor={reconcileStatus.color}
-                label={reconcileStatus.label}
-                trailing="Match"
-                onPress={onReconcile}
-                accessibilityLabel={[reconcileStatus.label, reconcileStatus.detail]
-                  .filter(Boolean)
-                  .join(', ')}
-                testID="reconcile-button"
-              />
-            ) : null}
-            {isParent ? (
-              <SummaryAction
-                icon={Icon.Hierarchy}
-                iconColor={accentColor}
-                label={`${subAccountCount} ${subAccountCount === 1 ? 'sub-account' : 'sub-accounts'}`}
-                onPress={onShowSubAccounts}
-                accessibilityLabel={`Show ${subAccountCount} ${subAccountCount === 1 ? 'sub-account' : 'sub-accounts'}`}
-                testID="sub-accounts-button"
-              />
-            ) : null}
+            <SummaryAction
+              icon={Icon.Hierarchy}
+              iconColor={accentColor}
+              label={`${subAccountCount} ${subAccountCount === 1 ? 'sub-account' : 'sub-accounts'}`}
+              onPress={onShowSubAccounts}
+              accessibilityLabel={`Show ${subAccountCount} ${subAccountCount === 1 ? 'sub-account' : 'sub-accounts'}`}
+              testID="sub-accounts-button"
+            />
           </ListGroup>
         </View>
       ) : null}
@@ -310,6 +328,38 @@ const styles = StyleSheet.create({
   balance: {
     flexShrink: 1,
     maxWidth: '100%',
+  },
+  reconciliation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: Shape.radius.md,
+  },
+  reconciliationStacked: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+  },
+  reconciliationStatus: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    minWidth: 0,
+  },
+  reconciliationCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: Spacing.xs,
+  },
+  reconciliationButton: {
+    flexShrink: 0,
+  },
+  reconciliationButtonSurface: {
+    minHeight: Size.buttonMd,
+    borderRadius: Shape.radius.md,
+    paddingHorizontal: Spacing.md,
   },
   // ponytail: rows bring their own padding; pull them back to the card edge.
   summaryActions: {

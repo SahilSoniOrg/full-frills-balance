@@ -1,8 +1,9 @@
 import { ConfirmDialog } from '@/src/components/overlays/ConfirmDialog';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { AppText } from '@/src/components/core';
-import { AppConfig, Spacing } from '@/src/constants';
+import { AppConfig, Shape, Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
+import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
 import { StyleSheet, View } from 'react-native';
 
 interface AccountReconcileDialogProps {
@@ -23,6 +24,7 @@ export function AccountReconcileDialog({
   unreconciledCount,
 }: AccountReconcileDialogProps) {
   const { theme } = useTheme();
+  const isPrivate = useEffectivePrivacyMode();
   const formatMoney = useMoneyFormat();
   const balanceText = formatMoney(balanceAmount, currencyCode);
 
@@ -37,37 +39,46 @@ export function AccountReconcileDialog({
         variant: 'ghost',
       }}
       primaryAction={{
-        label: 'Reconcile',
+        label: AppConfig.strings.accounts.reconciliation.alert.confirmLabel,
         onPress: onConfirm,
         variant: 'primary',
+        disabled: isPrivate,
       }}
     >
-      <AppText style={{ color: theme.textSecondary, marginBottom: 12 }}>
-        {AppConfig.strings.accounts.reconciliation.alert.message}
-      </AppText>
-
-      {unreconciledCount > 0 ? (
+      <View style={styles.content}>
+        <AppText color="secondary">
+          {AppConfig.strings.accounts.reconciliation.alert.message}
+        </AppText>
         <View style={[styles.summaryCard, { backgroundColor: theme.surfaceSecondary }]}>
-          <AppText weight="semibold" style={{ color: theme.text, marginBottom: 4 }}>
+          <AppText weight="semibold" style={{ color: theme.text }}>
             {AppConfig.strings.accounts.reconciliation.alert.matchingBalance(balanceText)}
           </AppText>
-          <AppText variant="bodySmall" color="secondary">
-            {AppConfig.strings.accounts.reconciliation.alert.pendingTransactions(unreconciledCount)}
-          </AppText>
+          {unreconciledCount > 0 ? (
+            <AppText variant="bodySmall" color="secondary">
+              {AppConfig.strings.accounts.reconciliation.alert.pendingTransactions(
+                unreconciledCount,
+              )}
+            </AppText>
+          ) : null}
         </View>
-      ) : null}
-
-      <AppText variant="bodySmall" color="secondary" italic>
-        {AppConfig.strings.accounts.reconciliation.alert.guide}
-      </AppText>
+        <AppText variant="bodySmall" color="secondary">
+          {isPrivate
+            ? AppConfig.strings.accounts.reconciliation.alert.privacyHint
+            : AppConfig.strings.accounts.reconciliation.alert.guide}
+        </AppText>
+      </View>
     </ConfirmDialog>
   );
 }
 
 const styles = StyleSheet.create({
+  content: {
+    flex: 1,
+    gap: Spacing.md,
+  },
   summaryCard: {
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: Shape.radius.sm,
+    gap: Spacing.xs,
   },
 });

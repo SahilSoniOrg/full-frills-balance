@@ -44,27 +44,37 @@ describe('AccountSummaryCard', () => {
     expect(screen.getByText('1,461 entries')).toBeTruthy();
   });
 
-  it('labels reconcile by its state and opens it from the status action', () => {
-    const props = renderCard({ unreconciledCount: 3, reconciledAtMs: Date.now() });
+  it.each([0, 3])('shows the verification cutoff with %i new entries', unreconciledCount => {
+    const props = renderCard({ unreconciledCount, reconciledAtMs: Date.now() });
 
-    expect(screen.getByText('3 entries since last match')).toBeTruthy();
+    expect(screen.getByText('Reconciled through')).toBeTruthy();
+    expect(screen.getByLabelText(/^Reconciled through /)).toBeTruthy();
+    expect(screen.queryByText('Statement matched')).toBeNull();
+    expect(screen.queryByText(/entries since last match/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Reconcile' })).toBeTruthy();
     fireEvent.press(screen.getByTestId('reconcile-button'));
     expect(props.onReconcile).toHaveBeenCalled();
   });
 
-  it('says when the account has never been matched', () => {
+  it('says when the account has never been verified', () => {
     renderCard();
 
-    expect(screen.getByText('Not matched yet')).toBeTruthy();
-    expect(
-      screen.getByLabelText('Not matched yet, Check it against your bank statement'),
-    ).toBeTruthy();
+    expect(screen.getByText('Not reconciled yet')).toBeTruthy();
+    expect(screen.getByLabelText('Not reconciled yet, Check against your statement.')).toBeTruthy();
   });
 
   it('hides reconcile when the account cannot be matched', () => {
     renderCard({ onReconcile: undefined });
 
     expect(screen.queryByTestId('reconcile-button')).toBeNull();
+  });
+
+  it('prevents verifying a placeholder balance while the balance is loading', () => {
+    const props = renderCard({ balanceAmount: null });
+
+    expect(screen.getByRole('button', { name: 'Reconcile' })).toBeDisabled();
+    fireEvent.press(screen.getByTestId('reconcile-button'));
+    expect(props.onReconcile).not.toHaveBeenCalled();
   });
 
   it('opens sub-accounts from the group action', () => {

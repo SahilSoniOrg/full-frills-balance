@@ -935,16 +935,22 @@ export const UI_STRINGS = {
       hasTransactions: 'Has Entries',
     },
     reconciliation: {
-      reconciledLabel: (date: string) => `Matched through ${date}`,
+      reconciledLabel: (date: string) => `Reconciled through ${date}`,
+      verifiedThroughLabel: 'Reconciled through',
+      notVerifiedLabel: 'Not reconciled yet',
+      verifyHint: 'Check against your statement.',
+      verifyAction: 'Reconcile',
       alert: {
-        title: 'Match with Bank Statement',
+        title: 'Reconcile balance',
         message:
-          'Compare this account with your bank or card statement to confirm your numbers match reality up to this date.',
-        successMessage: 'Statement match saved.',
+          'Compare this balance with your statement or records. Confirm only if it matches through today.',
+        successMessage: 'Balance verification saved.',
+        confirmLabel: 'Balances match',
         pendingTransactions: (count: number) =>
           `${count} ${count === 1 ? 'entry is' : 'entries are'} new since your last check.`,
-        matchingBalance: (balance: string) => `Statement balance: ${balance}`,
-        guide: 'If this matches your statement, confirm below.',
+        matchingBalance: (balance: string) => `Balance in this app: ${balance}`,
+        guide: 'Confirming records that you verified this account through today.',
+        privacyHint: 'Show amounts before confirming your balance.',
       },
     },
   },
