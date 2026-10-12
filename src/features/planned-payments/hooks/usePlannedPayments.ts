@@ -9,7 +9,15 @@ import {
 import { WorkplaceId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useCallback, useMemo } from 'react';
-import { buildPlannedPaymentListPresentation } from './plannedPaymentListPresentation';
+import {
+  buildPlannedPaymentListPresentation,
+  withPlannedJournals,
+} from './plannedPaymentListPresentation';
+import { AppConfig } from '@/src/constants';
+import { useJournals } from '@/src/features/journal';
+import { JournalStatus } from '@/src/types/enums';
+
+const PLANNED_STATUS = [JournalStatus.PLANNED];
 
 const EMPTY_LIST_DATA: PlannedPaymentListData = { items: [], savedOccurrences: [] };
 
@@ -27,7 +35,17 @@ export function usePlannedPayments(workplaceId: WorkplaceId) {
     null,
     { keepPreviousData: false },
   );
-  const data = snapshot ?? EMPTY_LIST_DATA;
+  const { journals: plannedJournals } = useJournals(
+    workplaceId,
+    AppConfig.defaults.plannedJournalLimit,
+    undefined,
+    undefined,
+    PLANNED_STATUS,
+  );
+  const data = useMemo(
+    () => withPlannedJournals(snapshot ?? EMPTY_LIST_DATA, plannedJournals),
+    [snapshot, plannedJournals],
+  );
   const items = data.items;
   const listData = useMemo(
     () => buildPlannedPaymentListPresentation(data, defaultCurrencyCode, now),
@@ -35,6 +53,7 @@ export function usePlannedPayments(workplaceId: WorkplaceId) {
   );
 
   const onItemPress = useCallback((item: PlannedPaymentObligation) => {
+    if (item.journalOnly) return AppNavigation.toJournalDetails(item.id);
     AppNavigation.toPlannedPaymentDetails(item.id, {
       description: item.name,
       amount: item.amount,

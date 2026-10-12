@@ -58,6 +58,25 @@ describe('JournalService - saveJournalEntry', () => {
       );
     });
 
+    it('saves a new future entry as PLANNED only when marked planned', async () => {
+      const save = (journalDate: string, planned?: boolean) =>
+        service.saveJournalEntry({
+          lines: validLines as any,
+          description: 'Goa trip',
+          journalDate,
+          journalTime: '12:00:00',
+          planned,
+          workplaceId: 'wp-1' as WorkplaceId,
+        });
+      const put = journalPersistenceService.put as jest.Mock;
+      await save('2999-12-31', true);
+      expect(put.mock.calls[0][0].status).toBe('PLANNED');
+      await save('2999-12-31');
+      expect(put.mock.calls[1][0].status).toBeUndefined();
+      await save('2024-01-01', true);
+      expect(put.mock.calls[2][0].status).toBeUndefined();
+    });
+
     it('should update existing journal if ID provided', async () => {
       const updateSpy = jest.spyOn(service, 'updateJournal').mockResolvedValue({ id: 'j1' } as any);
 

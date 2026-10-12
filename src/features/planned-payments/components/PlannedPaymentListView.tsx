@@ -294,7 +294,11 @@ export function PlannedPaymentListView({
           <PlannedPaymentCard
             occurrence={occurrence}
             onPress={() => onItemPress(occurrence.payment)}
-            onRecord={() => void recordOccurrence(occurrence)}
+            onRecord={() =>
+              occurrence.payment.journalOnly
+                ? onItemPress(occurrence.payment)
+                : void recordOccurrence(occurrence)
+            }
             canRecord={occurrence.canRecord}
             isRecording={pendingIds.has(occurrence.occurrenceId)}
             isPlanBusy={pendingPlanIds.has(occurrence.payment.id)}

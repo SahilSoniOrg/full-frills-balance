@@ -2,13 +2,21 @@ import type {
   PlannedPaymentListData,
   PlannedPaymentObligation,
 } from '@/src/services/planned-payment/plannedPaymentReadService';
-import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
+import {
+  PlannedPaymentInterval,
+  PlannedPaymentStatus,
+  JournalDisplayType,
+} from '@/src/types/enums';
 import {
   fixturePlannedPaymentDate as date,
   fixturePlannedPaymentObligationWithId,
   fixturePlannedPaymentSavedForPlan as saved,
 } from '@/src/testing/plannedPaymentFixtures';
-import { buildPlannedPaymentListPresentation } from '../plannedPaymentListPresentation';
+import {
+  buildPlannedPaymentListPresentation,
+  withPlannedJournals,
+} from '../plannedPaymentListPresentation';
+import type { EnrichedJournal } from '@/src/types/domainReadModels';
 
 const payment = (id: string, overrides: Partial<PlannedPaymentObligation> = {}) =>
   fixturePlannedPaymentObligationWithId(id, {
@@ -21,6 +29,41 @@ const build = (data: PlannedPaymentListData, now = date(10, 3), currency = 'USD'
   buildPlannedPaymentListPresentation(data, currency, now);
 
 describe('planned list presentation', () => {
+  it('lists standalone planned journals as one-time outgoing rows, not linked ones', () => {
+    const journal = (id: string, plannedPaymentId?: string): EnrichedJournal =>
+      ({
+        id,
+        journalDate: date(12, 31),
+        description: 'Goa trip',
+        currencyCode: 'USD',
+        status: 'PLANNED',
+        totalAmount: 250,
+        transactionCount: 2,
+        displayType: JournalDisplayType.EXPENSE,
+        plannedPaymentId,
+        accounts: [
+          { id: 'bank', name: 'Bank', accountType: 'ASSET', role: 'SOURCE' },
+          { id: 'travel', name: 'Travel', accountType: 'EXPENSE', role: 'DESTINATION' },
+        ],
+      }) as EnrichedJournal;
+    const data = withPlannedJournals({ items: [], savedOccurrences: [] }, [
+      journal('goa'),
+      journal('linked', 'rent'),
+    ]);
+    expect(data.items).toHaveLength(1);
+    expect(data.items[0]).toMatchObject({ id: 'goa', journalOnly: true, flowDirection: 'outflow' });
+    const rows = build(data).groups.find(group => group.key === 'later')!.rows;
+    expect(rows).toEqual([
+      expect.objectContaining({
+        kind: 'occurrence',
+        journalId: 'goa',
+        amount: 250,
+        canRecord: true,
+      }),
+    ]);
+    expect(build(data).groups.find(group => group.key === 'pausedEnded')!.rows).toEqual([]);
+  });
+
   it('counts every daily occurrence through month end, including multiple overdue on one schedule', () => {
     const list = build({
       items: [

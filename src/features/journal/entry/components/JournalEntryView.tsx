@@ -189,6 +189,8 @@ export function JournalEntryView(props: JournalEntryShell) {
     setDate: editor.setJournalDate,
     time: editor.journalTime,
     setTime: editor.setJournalTime,
+    planned: editor.isPlanned,
+    onPlannedChange: editor.isEdit ? undefined : editor.setIsPlanned,
     notes: editor.notes,
     setNotes: editor.setNotes,
     notesAdded,

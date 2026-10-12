@@ -17,6 +17,8 @@ type PostPostingPlanParams = {
   smsRecordId?: string;
   mode?: 'simple' | 'advanced' | 'import';
   launchSource?: string;
+  /** Save a new future-dated entry as PLANNED instead of POSTED. */
+  planned?: boolean;
 };
 
 /**
