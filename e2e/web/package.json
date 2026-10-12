@@ -1,0 +1,13 @@
+{
+  "name": "full-frills-balance-web-e2e",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint .",
+    "install:browser": "playwright install --with-deps chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}

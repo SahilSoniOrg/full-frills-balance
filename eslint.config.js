@@ -48,7 +48,8 @@ const featureRules = features.map(feature => ({
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ['dist/*'],
+    // The optional browser package runs its own lint after installing its dependencies.
+    ignores: ['dist/*', 'e2e/web/**'],
   },
   {
     languageOptions: {

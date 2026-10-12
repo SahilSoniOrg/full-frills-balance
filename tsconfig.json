@@ -31,6 +31,7 @@
     "e2e/actions/**",
     "e2e/pages/**",
     "e2e/constants/**",
-    "e2e/utils/**"
+    "e2e/utils/**",
+    "e2e/web/**"
   ]
 }
