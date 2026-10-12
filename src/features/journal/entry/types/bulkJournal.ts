@@ -2,6 +2,7 @@ import { AccountFields } from '@/src/types/plainDtos';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import type { TabType } from '@/src/types/domainJournal';
 import type { JournalSuggestion } from '@/src/types/journalSuggestions';
+import type { PlannedJournalMode } from '@/src/services/journal/journalDomainService';
 import type { FxFetchedRates, FxOverride, FxPair } from '@/src/domain/accounting/fxPair';
 
 /** User-authored values and rate inputs kept by the batch editor. */
@@ -17,6 +18,8 @@ export interface BulkJournalDraft {
   validationError?: string;
   fxRates?: FxFetchedRates | null;
   fxOverride?: FxOverride;
+  /** Only used when the row is future-dated; defaults to auto-post. */
+  plannedMode?: PlannedJournalMode;
 }
 
 /** Values calculated from a draft for display, validation, and saving. */
@@ -34,6 +37,7 @@ export interface BulkJournalRow extends BulkJournalDraft {
 export interface BulkJournalRowActions {
   setDescription: (rowId: string, value: string) => void;
   setNotes: (rowId: string, value: string) => void;
+  setPlannedMode: (rowId: string, value: PlannedJournalMode) => void;
   setAmount: (rowId: string, value: string) => void;
   setJournalDate: (rowId: string, value: number) => void;
   setTransactionType: (rowId: string, value: TabType) => void;

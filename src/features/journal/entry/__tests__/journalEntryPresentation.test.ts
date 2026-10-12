@@ -1,4 +1,5 @@
 import {
+  offersPlannedChoice,
   resolveAllocationStatus,
   isJournalEntrySubmitDisabled,
   parseJournalEntryRouteParams,
@@ -7,6 +8,7 @@ import {
   resolveJournalEntrySubmitLabel,
   resolveJournalEntryValidationHint,
 } from '../journalEntryPresentation';
+import { JournalStatus } from '@/src/types/enums';
 
 describe('journalEntryPresentation', () => {
   it('parses a blank entry route as a clean draft', () => {
@@ -272,5 +274,37 @@ describe('journalEntryPresentation', () => {
         }).tone,
       ).toBe('over');
     });
+  });
+});
+
+describe('offersPlannedChoice', () => {
+  const future = { journalDate: '2999-12-31', journalTime: '10:00' };
+  it.each(['basic', 'allocation', 'expert'] as const)(
+    'offers the planned choice on the %s save bar for future new entries',
+    activeMode => {
+      expect(offersPlannedChoice({ activeMode, isEdit: false, ...future })).toBe(true);
+      expect(offersPlannedChoice({ activeMode, isEdit: false, journalDate: '2000-01-01' })).toBe(
+        false,
+      );
+      expect(
+        offersPlannedChoice({
+          activeMode,
+          isEdit: true,
+          savedStatus: JournalStatus.POSTED,
+          ...future,
+        }),
+      ).toBe(true);
+      expect(
+        offersPlannedChoice({
+          activeMode,
+          isEdit: true,
+          savedStatus: JournalStatus.PLANNED,
+          ...future,
+        }),
+      ).toBe(false);
+    },
+  );
+  it('leaves batch to the per-row choice', () => {
+    expect(offersPlannedChoice({ activeMode: 'batch', isEdit: false, ...future })).toBe(false);
   });
 });

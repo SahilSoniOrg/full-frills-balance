@@ -96,6 +96,7 @@ export function buildBulkJournalEntries(
       description: row.description,
       notes: row.notes,
       journalDate: row.journalDate,
+      planned: row.plannedMode ?? 'auto',
       workplaceId,
     };
   });

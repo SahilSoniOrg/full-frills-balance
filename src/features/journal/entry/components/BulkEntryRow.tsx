@@ -1,6 +1,13 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Icon, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
+import {
+  Icon,
+  AppIcon,
+  AppSegmentedControl,
+  AppText,
+  PressScaleTouchable,
+} from '@/src/components/core';
+import { plannedModeOptions } from './JournalEntrySubmitBar';
 import { Spacing, Shape, Size } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { BulkJournalRow, BulkJournalRowActions } from '../types/bulkJournal';
@@ -176,6 +183,19 @@ export const BulkEntryRow = React.memo(
           accountSectionsContainerStyle={styles.accountSelector}
         />
 
+        {row.journalDate > Date.now() ? (
+          <View style={styles.plannedRow}>
+            <AppSegmentedControl
+              options={plannedModeOptions(false)}
+              value={row.plannedMode ?? 'auto'}
+              onChange={mode => rowActions.setPlannedMode(row.id, mode)}
+              size="sm"
+              flex
+              testID={`bulk-planned-mode-${index + 1}`}
+            />
+          </View>
+        ) : null}
+
         {/* Validation error — shown below all content */}
         {rowError ? (
           <NoticeBanner
@@ -193,6 +213,9 @@ export const BulkEntryRow = React.memo(
 BulkEntryRow.displayName = 'BulkEntryRow';
 
 const styles = StyleSheet.create({
+  plannedRow: {
+    marginTop: Spacing.sm,
+  },
   container: {
     padding: Spacing.md,
     borderRadius: Shape.radius.r3,
