@@ -111,6 +111,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   const [journalTime, setJournalTime] = useState(() =>
     initialDate ? dayjs(initialDate).format('HH:mm') : dayjs().format('HH:mm'),
   );
+  const [isPlanned, setIsPlanned] = useState(false);
   const hydrateEditor = useCallback(
     (snapshot: JournalEditorHydration) => {
       setSavedJournalCurrency(snapshot.journalCurrency);
@@ -147,6 +148,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     smsId,
     smsRecordId,
     launchSource,
+    planned: !isEdit && isPlanned,
     onAfterSave,
     onSuccess,
   });
@@ -209,6 +211,8 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       setJournalDate,
       journalTime,
       setJournalTime,
+      isPlanned,
+      setIsPlanned,
       isSubmitting,
       addLine,
       removeLine,
@@ -234,6 +238,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       notes,
       journalDate,
       journalTime,
+      isPlanned,
       isSubmitting,
       addLine,
       removeLine,

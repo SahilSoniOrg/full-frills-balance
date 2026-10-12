@@ -21,6 +21,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { TabType } from '@/src/types/domainJournal';
 import { withOpacity } from '@/src/utils/color-math';
 import { formatDateKeepingPattern } from '@/src/utils/dateUtils';
+import dayjs from 'dayjs';
 import React, {
   useCallback,
   useEffect,
@@ -46,6 +47,9 @@ export interface JournalMetaCardProps {
   setDate: (date: string) => void;
   time: string;
   setTime: (time: string) => void;
+  /** New entries only: offered once the date is in the future. */
+  planned?: boolean;
+  onPlannedChange?: (planned: boolean) => void;
   notes?: string;
   setNotes?: (notes: string) => void;
   /** Journal or line notes already exist, even when the journal note string is empty. */
@@ -82,6 +86,8 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
   setDate,
   time,
   setTime,
+  planned = false,
+  onPlannedChange,
   notes = '',
   setNotes,
   notesAdded = false,
@@ -330,6 +336,42 @@ export const JournalMetaCard = React.memo(function JournalMetaCard({
           </AppText>
           <AppIcon name={Icon.ChevronDown} size={Size.xxs} color={theme.textTertiary} />
         </PressScaleTouchable>
+
+        {onPlannedChange && dayjs(`${date}T${time || '00:00'}`).isAfter(dayjs()) && (
+          <PressScaleTouchable
+            onPress={() => onPlannedChange(!planned)}
+            style={[
+              styles.metaPill,
+              {
+                backgroundColor: planned
+                  ? withOpacity(theme.primary, Opacity.soft)
+                  : withOpacity(theme.surfaceSecondary, Opacity.strong),
+                flexShrink: 1,
+              },
+            ]}
+            accessibilityRole="switch"
+            accessibilityLabel="Mark as planned"
+            accessibilityState={{ checked: planned }}
+            testID="journal-planned-toggle"
+          >
+            <AppIcon
+              name={planned ? Icon.CheckCircle : Icon.Clock}
+              size={Size.xxs}
+              color={planned ? theme.primary : theme.textSecondary}
+            />
+            <AppText
+              variant="caption"
+              weight="medium"
+              numberOfLines={1}
+              style={[
+                styles.metaPillLabel,
+                { color: planned ? theme.primary : theme.textSecondary },
+              ]}
+            >
+              {planned ? 'Planned' : 'Mark as planned'}
+            </AppText>
+          </PressScaleTouchable>
+        )}
 
         {/* Notes Disclosure Toggle */}
         {setNotes && (

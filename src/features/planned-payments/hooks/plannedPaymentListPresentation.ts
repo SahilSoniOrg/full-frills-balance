@@ -1,10 +1,14 @@
 import {
+  classifyPlannedPaymentDirection,
   projectPlannedPaymentListOccurrences,
   type PlannedPaymentListData,
   type PlannedPaymentListOccurrence,
   type PlannedPaymentObligation,
 } from '@/src/services/planned-payment/plannedPaymentReadService';
-import { PlannedPaymentStatus } from '@/src/types/enums';
+import type { EnrichedJournal } from '@/src/types/domainReadModels';
+import { AccountType, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
+import { asPlannedPaymentId } from '@/src/types/ids';
+import type { PlainAccount } from '@/src/types/plainDtos';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { headlineCurrency, safeAdd } from '@/src/utils/money';
 import dayjs from 'dayjs';
@@ -80,6 +84,61 @@ function totalOccurrences(
     mainCurrency,
     count: occurrences.length,
     otherCurrencyCount: occurrences.length - mainCurrency.count,
+  };
+}
+
+/** Adds standalone PLANNED journals as one-time rows that open the journal itself. */
+export function withPlannedJournals(
+  data: PlannedPaymentListData,
+  journals: EnrichedJournal[],
+): PlannedPaymentListData {
+  const standalone = journals.filter(journal => !journal.plannedPaymentId);
+  if (standalone.length === 0) return data;
+  const account = (journal: EnrichedJournal, role: 'SOURCE' | 'DESTINATION') => {
+    const leg = journal.accounts.find(item => item.role === role);
+    return (
+      leg && ({ ...leg, currencyCode: leg.currencyCode ?? journal.currencyCode } as PlainAccount)
+    );
+  };
+  return {
+    items: [
+      ...data.items,
+      ...standalone.map(journal => {
+        const fromAccount = account(journal, 'SOURCE');
+        const toAccount = account(journal, 'DESTINATION');
+        return {
+          id: asPlannedPaymentId(journal.id),
+          name: journal.description || '',
+          amount: journal.totalAmount,
+          currencyCode: journal.currencyCode,
+          fromAccountId: fromAccount?.id ?? ('' as PlainAccount['id']),
+          toAccountId: toAccount?.id ?? ('' as PlainAccount['id']),
+          intervalN: 1,
+          intervalType: PlannedPaymentInterval.MONTHLY,
+          startDate: journal.journalDate,
+          nextOccurrence: journal.journalDate,
+          status: PlannedPaymentStatus.COMPLETED,
+          isAutoPost: false,
+          flowDirection: classifyPlannedPaymentDirection(
+            fromAccount?.accountType as AccountType | undefined,
+            toAccount?.accountType as AccountType | undefined,
+          ),
+          fromAccount,
+          toAccount,
+          journalOnly: true,
+        };
+      }),
+    ],
+    savedOccurrences: [
+      ...data.savedOccurrences,
+      ...standalone.map(journal => ({
+        plannedPaymentId: asPlannedPaymentId(journal.id),
+        journalId: journal.id,
+        date: journal.journalDate,
+        amount: journal.totalAmount,
+        currencyCode: journal.currencyCode,
+      })),
+    ],
   };
 }
 

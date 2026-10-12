@@ -95,6 +95,8 @@ export type PlannedPaymentObligation = PlainPlannedPayment & {
   flowDirection: 'inflow' | 'outflow' | 'transfer' | 'unknown';
   fromAccount?: PlainAccount;
   toAccount?: PlainAccount;
+  /** A standalone PLANNED journal shown as a one-time commitment; its id is the journal id. */
+  journalOnly?: boolean;
 };
 
 export function classifyPlannedPaymentDirection(

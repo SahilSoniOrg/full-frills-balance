@@ -19,6 +19,9 @@ export function usePlannedOccurrenceActions(workplaceId: WorkplaceId) {
 
   const onPlannedJournalPress = useCallback(
     async (item: PlannedOccurrenceViewModel) => {
+      // Standalone planned entries open their details, which owns Post.
+      if (item.origin === 'PLANNED_JOURNAL' && !item.plannedPaymentId)
+        return AppNavigation.toJournalDetails(item.journalId);
       const sourceAcc = item.accounts.find(a => a.role === 'SOURCE');
       const destAcc = item.accounts.find(a => a.role === 'DESTINATION');
 

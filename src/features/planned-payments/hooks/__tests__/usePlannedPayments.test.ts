@@ -12,6 +12,9 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { BehaviorSubject, Subject, defer, of, throwError } from 'rxjs';
 import { usePlannedPayments } from '../usePlannedPayments';
 
+jest.mock('@/src/features/journal', () => ({
+  useJournals: () => ({ journals: [] }),
+}));
 jest.mock('@/src/hooks/useCalendarDay', () => ({ useCalendarDay: jest.fn() }));
 jest.mock('@/src/contexts/WorkplaceContext', () => ({ useWorkplace: jest.fn() }));
 jest.mock('@/src/services/planned-payment/plannedPaymentReadService', () => ({

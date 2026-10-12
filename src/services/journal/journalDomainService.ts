@@ -6,7 +6,7 @@ import {
 } from '@/src/services/planned-payment/plannedPaymentFx';
 import { postPlannedJournalOccurrence } from '@/src/services/planned-payment/plannedPaymentOrchestration';
 import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
-import { TransactionType } from '@/src/types/enums';
+import { JournalStatus, TransactionType } from '@/src/types/enums';
 import { JournalEntryLine } from '@/src/types/domainJournal';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
 
@@ -49,6 +49,7 @@ export class JournalService {
     smsRecordId?: string;
     mode?: 'simple' | 'advanced' | 'import';
     launchSource?: string;
+    planned?: boolean;
     workplaceId: WorkplaceId;
   }): Promise<SubmitJournalResult> {
     const accountIds = [...new Set(params.plan.lines.map(line => line.accountId))];
@@ -97,6 +98,7 @@ export class JournalService {
       smsRecordId: params.smsRecordId,
       mode: params.mode,
       launchSource: params.launchSource,
+      planned: params.planned,
       workplaceId: params.workplaceId,
     });
   }
@@ -288,6 +290,8 @@ export class JournalService {
     mode?: 'simple' | 'advanced' | 'import';
     /** Where the entry screen was opened from, e.g. `widget`; analytics only. */
     launchSource?: string;
+    /** New entries only; ignored unless the date is still in the future. */
+    planned?: boolean;
     workplaceId: WorkplaceId;
   }): Promise<SubmitJournalResult> {
     const {
@@ -296,6 +300,7 @@ export class JournalService {
       workplaceId,
       newJournalCurrencyCode,
       launchSource,
+      planned,
       ...entryParams
     } = params;
 
@@ -336,7 +341,13 @@ export class JournalService {
       const smsRecord = params.smsRecordId
         ? await transactionInboxRepository.find(workplaceId, params.smsRecordId)
         : null;
-      const createdJournal = await this.createJournal(journalData, workplaceId, smsRecord);
+      const createdJournal = await this.createJournal(
+        planned && journalData.journalDate > Date.now()
+          ? { ...journalData, status: JournalStatus.PLANNED }
+          : journalData,
+        workplaceId,
+        smsRecord,
+      );
       analytics.trackFeatureUsage('journal', 'create', {
         mode,
         currency: currencyCode,

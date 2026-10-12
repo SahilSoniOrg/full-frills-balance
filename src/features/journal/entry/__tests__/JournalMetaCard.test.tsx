@@ -24,6 +24,34 @@ const suggestion = {
   history: { count: 1, lastUsedAt: 1 },
 };
 
+describe('JournalMetaCard planned toggle', () => {
+  const renderCard = (date: string, onPlannedChange?: (planned: boolean) => void) =>
+    render(
+      <JournalMetaCard
+        description=""
+        setDescription={jest.fn()}
+        date={date}
+        setDate={jest.fn()}
+        time="12:00"
+        setTime={jest.fn()}
+        onPlannedChange={onPlannedChange}
+      />,
+    );
+
+  it('offers Mark as planned only for future dates on new entries', () => {
+    const onPlannedChange = jest.fn();
+    renderCard('2999-12-31', onPlannedChange);
+    fireEvent.press(screen.getByTestId('journal-planned-toggle'));
+    expect(onPlannedChange).toHaveBeenCalledWith(true);
+    screen.unmount();
+    renderCard('2020-01-01', onPlannedChange);
+    expect(screen.queryByTestId('journal-planned-toggle')).toBeNull();
+    screen.unmount();
+    renderCard('2999-12-31');
+    expect(screen.queryByTestId('journal-planned-toggle')).toBeNull();
+  });
+});
+
 describe('JournalMetaCard suggestions', () => {
   beforeAll(() => {
     // The shared gesture-handler mock omits the native state enum.

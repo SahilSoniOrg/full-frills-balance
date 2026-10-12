@@ -15,6 +15,7 @@ export function useJournalEditorSubmission(options: {
   smsId?: string;
   smsRecordId?: string;
   launchSource?: string;
+  planned?: boolean;
   onAfterSave?: (result: {
     journalId?: JournalId;
     action?: 'created' | 'updated';
@@ -28,6 +29,7 @@ export function useJournalEditorSubmission(options: {
     smsId,
     smsRecordId,
     launchSource,
+    planned,
     onAfterSave,
     onSuccess,
   } = options;
@@ -50,6 +52,7 @@ export function useJournalEditorSubmission(options: {
           smsId,
           smsRecordId,
           launchSource,
+          planned,
         });
 
         if (!result.success) {
@@ -80,6 +83,7 @@ export function useJournalEditorSubmission(options: {
       newJournalCurrencyCode,
       onAfterSave,
       onSuccess,
+      planned,
       postPostingPlan,
       smsId,
       smsRecordId,
