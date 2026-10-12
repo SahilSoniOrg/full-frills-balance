@@ -87,6 +87,7 @@ const accounts: AccountFields[] = [
 const rowActions: BulkJournalRowActions = {
   setDescription: jest.fn(),
   setNotes: jest.fn(),
+  setPlannedMode: jest.fn(),
   setAmount: jest.fn(),
   setJournalDate: jest.fn(),
   setTransactionType: jest.fn(),

@@ -122,6 +122,37 @@ describe('Journal ledger integration', () => {
       ).toBe(30);
     }, 10000);
 
+    it('saves each future batch journal with its own planned choice', async () => {
+      const future = Date.now() + 86_400_000 * 30;
+      const modes = ['auto', 'manual', 'post'] as const;
+      const line = (index: number, side: 'd' | 'c') => ({
+        id: `p${side}-${index}` as any,
+        accountId: (side === 'd' ? cashAccountId : expenseAccountId) as AccountId,
+        accountName: side === 'd' ? 'Cash' : 'Food',
+        accountType: side === 'd' ? AccountType.ASSET : AccountType.EXPENSE,
+        accountCurrency: 'USD',
+        amount: '5',
+        transactionType: side === 'd' ? TransactionType.DEBIT : TransactionType.CREDIT,
+        notes: '',
+        exchangeRate: '',
+      });
+      const response = await journalService.saveBulkJournalEntries(
+        modes.map((planned, index) => ({
+          description: `Batch ${planned}`,
+          journalDate: future + index,
+          planned,
+          workplaceId: 'wp-1' as WorkplaceId,
+          lines: [line(index, 'd'), line(index, 'c')],
+        })),
+      );
+      expect(response.success).toBe(true);
+      const journals = await database.collections.get<Journal>('journals').query().fetch();
+      const statusOf = (d: string) => journals.find(j => j.description === d)?.status;
+      expect(statusOf('Batch auto')).toBe('PLANNED');
+      expect(statusOf('Batch manual')).toBe('PLANNED');
+      expect(statusOf('Batch post')).toBe('POSTED');
+    }, 10000);
+
     it('reverses an entry through the new repository boundary', async () => {
       const original = await journalService.createJournal(
         {

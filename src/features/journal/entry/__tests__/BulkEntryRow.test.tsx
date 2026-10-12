@@ -7,6 +7,11 @@ import { BulkEntryRow } from '../components/BulkEntryRow';
 import { Spacing } from '@/src/constants/design-tokens';
 import { StyleSheet } from 'react-native';
 
+const mockSegmented = jest.fn((props: unknown) => {
+  void props;
+  return null;
+});
+
 const mockEntryTransactionCard = jest.fn((props: unknown) => {
   void props;
   return null;
@@ -22,6 +27,7 @@ jest.mock('../components/EntryTransactionCard', () => ({
 jest.mock('@/src/components/core', () => ({
   AppIcon: () => null,
   AppText: ({ children }: { children?: React.ReactNode }) => children,
+  AppSegmentedControl: (props: unknown) => mockSegmented(props),
   Icon: { Delete: 'delete', Error: 'error' },
 }));
 
@@ -121,5 +127,38 @@ describe('BulkEntryRow layout', () => {
     expect(StyleSheet.flatten(props.metaContainerStyle)).toEqual(
       expect.objectContaining({ marginBottom: Spacing.sm }),
     );
+  });
+
+  it('gives each future-dated row its own planned choice', () => {
+    const setPlannedMode = jest.fn();
+    const renderRow = (r: BulkJournalRow, index: number) =>
+      render(
+        <BulkEntryRow
+          row={r}
+          index={index}
+          accounts={accounts}
+          workplaceCurrency="USD"
+          workplaceId={asWorkplaceId('workplace')}
+          rowActions={{ ...rowActions, setPlannedMode }}
+          onRemove={jest.fn()}
+          onDateTimePickerRequest={jest.fn()}
+          accountExpansion={null}
+          onToggleAccountExpansion={jest.fn()}
+          onSwapAccounts={jest.fn()}
+          onRefreshRate={jest.fn()}
+        />,
+      );
+    mockSegmented.mockClear();
+    renderRow(row, 0);
+    expect(mockSegmented).not.toHaveBeenCalled();
+    renderRow({ ...row, id: 'row-2', journalDate: 32_503_680_000_000, plannedMode: 'manual' }, 1);
+    const props = mockSegmented.mock.calls[0][0] as {
+      value: string;
+      testID: string;
+      onChange: (mode: string) => void;
+    };
+    expect(props).toMatchObject({ value: 'manual', testID: 'bulk-planned-mode-2' });
+    props.onChange('post');
+    expect(setPlannedMode).toHaveBeenCalledWith('row-2', 'post');
   });
 });

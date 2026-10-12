@@ -31,7 +31,7 @@ export interface JournalEntrySubmitBarProps {
   isEdit?: boolean;
 }
 
-const plannedModeOptions = (isEdit: boolean) =>
+export const plannedModeOptions = (isEdit: boolean) =>
   [
     { id: 'auto', label: 'Plan · auto-post' },
     { id: 'manual', label: 'Plan · I post' },

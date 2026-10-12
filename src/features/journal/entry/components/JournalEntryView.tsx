@@ -1,5 +1,3 @@
-import { JournalStatus } from '@/src/types/enums';
-import dayjs from 'dayjs';
 import { AccountPickerModal } from '@/src/components/account-selection';
 import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
 import { EmptyStateView } from '@/src/components/shared/EmptyStateView';
@@ -13,6 +11,7 @@ import {
   resolveJournalEntryValidationHint,
   resolveJournalEntrySubmitLabel,
   type JournalEntryScreenMode,
+  offersPlannedChoice,
 } from '@/src/features/journal/entry/journalEntryPresentation';
 import type { JournalSuggestion } from '@/src/types/journalSuggestions';
 import { AdvancedModePanel } from '@/src/features/journal/entry/modes/advanced/AdvancedModePanel';
@@ -53,11 +52,13 @@ export function JournalEntryView(props: JournalEntryShell) {
   const { editor, loadSuggestions, onSelectSuggestion: applySuggestion } = props;
   const isSubmitting = editor.isSubmitting;
   const isBatchMode = props.activeMode === 'batch';
-  // Future dates offer planned saves; edits only convert posted journals.
-  const offersPlanned =
-    !isBatchMode &&
-    (!editor.isEdit || editor.savedStatus === JournalStatus.POSTED) &&
-    dayjs(`${editor.journalDate}T${editor.journalTime || '00:00'}`).isAfter(dayjs());
+  const offersPlanned = offersPlannedChoice({
+    activeMode: props.activeMode,
+    isEdit: editor.isEdit,
+    savedStatus: editor.savedStatus,
+    journalDate: editor.journalDate,
+    journalTime: editor.journalTime,
+  });
   const savesAsPlanned = offersPlanned && editor.plannedMode !== 'post';
   const submitLabel = resolveJournalEntrySubmitLabel({
     activeMode: props.activeMode,

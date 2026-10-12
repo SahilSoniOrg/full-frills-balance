@@ -14,7 +14,10 @@ import {
 } from '@/src/domain/accounting/fxPair';
 import { buildFxPairDraft } from '@/src/hooks/useFxPairDraft';
 import { fetchPairRates } from '@/src/hooks/useCrossCurrencyRates';
-import { journalService } from '@/src/services/journal/journalDomainService';
+import {
+  journalService,
+  type PlannedJournalMode,
+} from '@/src/services/journal/journalDomainService';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { sanitizeAmount } from '@/src/utils/validation';
 import { logger } from '@/src/utils/logger';
@@ -153,6 +156,7 @@ export function useBulkJournalEditor({
         validationError: undefined,
         fxRates: prevRow.fxRates,
         fxOverride: prevRow.fxOverride,
+        plannedMode: prevRow.plannedMode,
       };
     }
     return {
@@ -298,6 +302,13 @@ export function useBulkJournalEditor({
   const setNotes = useCallback(
     (rowId: string, value: string) => {
       updateRow(rowId, row => reconcileVisibleValidation(row, { ...row, notes: value }));
+    },
+    [updateRow],
+  );
+
+  const setPlannedMode = useCallback(
+    (rowId: string, value: PlannedJournalMode) => {
+      updateRow(rowId, row => ({ ...row, plannedMode: value }));
     },
     [updateRow],
   );
@@ -457,6 +468,7 @@ export function useBulkJournalEditor({
     () => ({
       setDescription,
       setNotes,
+      setPlannedMode,
       setAmount,
       setJournalDate,
       setTransactionType,
@@ -475,6 +487,7 @@ export function useBulkJournalEditor({
       setJournalDate,
       setManualBaseRate,
       setNotes,
+      setPlannedMode,
       setSourceAccount,
       setTransactionType,
     ],

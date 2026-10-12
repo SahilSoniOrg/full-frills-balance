@@ -393,6 +393,7 @@ export class JournalService {
       description: string;
       notes?: string;
       journalDate: number;
+      planned?: PlannedJournalMode;
       workplaceId: WorkplaceId;
     }[],
   ): Promise<{
@@ -451,7 +452,7 @@ export class JournalService {
           entry.lines.find(line => line.transactionType === TransactionType.CREDIT) ??
           entry.lines[0];
         preparedItems.push({
-          data: assembled.journalData,
+          data: withPlannedStatus(assembled.journalData, entry.planned),
           description: entry.description,
           amount: parseFloat(sourceLine.amount),
           currency: sourceLine.accountCurrency || currencyCode,

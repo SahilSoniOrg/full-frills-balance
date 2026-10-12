@@ -1,3 +1,5 @@
+import dayjs from 'dayjs';
+import { JournalStatus } from '@/src/types/enums';
 import { AppConfig } from '@/src/constants';
 import { AccountId, JournalId } from '@/src/types/ids';
 import { TabType } from '@/src/types/domainJournal';
@@ -327,4 +329,22 @@ export function parseTransactionIntentSeed(
   params: Record<string, string | string[] | undefined>,
 ): TransactionIntentSeed {
   return toTransactionIntentSeed(parseJournalEntryRouteParams(params));
+}
+
+/**
+ * Whether the save bar offers the planned choice. Simple, split and advanced share it;
+ * batch shows it per row instead. Edits only convert posted journals.
+ */
+export function offersPlannedChoice(params: {
+  activeMode: JournalEntryScreenMode;
+  isEdit: boolean;
+  savedStatus?: JournalStatus;
+  journalDate: string;
+  journalTime?: string;
+}): boolean {
+  return (
+    params.activeMode !== 'batch' &&
+    (!params.isEdit || params.savedStatus === JournalStatus.POSTED) &&
+    dayjs(`${params.journalDate}T${params.journalTime || '00:00'}`).isAfter(dayjs())
+  );
 }
