@@ -5,34 +5,22 @@
  */
 import { element, by } from 'detox';
 import { assertTextVisible, assertVisibleById } from '../../actions/assertions';
-import { launchOnboardedApp, launchPickerApp, waitForDashboard } from '../../actions/launch';
-import { dashboard } from '../../screens';
+import { launchOnboardedApp, launchPickerApp } from '../../actions/launch';
+import { smokeScenarios, type SmokeDriver } from '../../scenarios/smoke';
 
 jest.setTimeout(180000);
 
+const driver: SmokeDriver = {
+  launch: profile =>
+    profile === 'picker-ready' ? launchPickerApp() : launchOnboardedApp({ seedProfile: profile }),
+  visibleId: id => assertVisibleById(id, 120000),
+  visibleText: text => assertTextVisible(text, 30000),
+  tapId: id => element(by.id(id)).tap(),
+  tapText: text => element(by.text(text)).tap(),
+};
+
 describe('Smoke', () => {
-  it('launches to the dashboard when seeded onboarded', async () => {
-    await launchOnboardedApp({ seedProfile: 'onboarded' });
-    await assertVisibleById(dashboard.screen, 120000);
-  });
-
-  it('shows the workplace picker when multiple workplaces exist', async () => {
-    await launchPickerApp();
-    await assertTextVisible("E2E User's Personal workplace", 30000);
-    await assertVisibleById('workplace-picker-create', 30000);
-    await assertVisibleById('workplace-picker-import', 30000);
-    await element(by.text("E2E User's Personal workplace")).tap();
-    await waitForDashboard(120000);
-  });
-
-  it('routes picker actions to the correct setup flows', async () => {
-    await launchPickerApp();
-    await element(by.id('workplace-picker-create')).tap();
-    await assertVisibleById('workplace-name-input', 30000);
-
-    await launchPickerApp();
-    await element(by.id('workplace-picker-import')).tap();
-    await assertVisibleById('restore-source-slice', 30000);
-    await assertTextVisible('Choose a backup format to replace the data on this device.', 30000);
-  });
+  for (const scenario of smokeScenarios) {
+    it(scenario.name, () => scenario.run(driver));
+  }
 });

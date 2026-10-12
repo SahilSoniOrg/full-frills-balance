@@ -63,7 +63,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
   },
   web: {
-    output: 'static',
+    // Client-render the app; static prerendering evaluates native-backed storage
+    // during the server build, where browser storage is unavailable.
+    output: 'single',
     favicon: './assets/images/favicon.png',
   },
   plugins: [

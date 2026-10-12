@@ -1,0 +1,71 @@
+name: Detox (Android)
+
+# Manual only so the Android emulator runs when requested.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: detox-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detox:
+    name: Android Detox critical paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      EXPO_PUBLIC_E2E: '1'
+      DETOX_AVD_NAME: Pixel_2_API_36_Fast
+      SENTRY_DISABLE_AUTO_UPLOAD: 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Prepare E2E env
+        run: cp .env.e2e.example .env.local
+
+      - name: Generate Android project
+        run: bunx expo prebuild --platform android
+
+      - name: Build Android Release app for Detox
+        run: bun run e2e:build:android
+
+      - name: Run Detox on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          avd-name: Pixel_2_API_36_Fast
+          emulator-options: -no-window -no-audio -no-boot-anim -camera-back none -gpu swiftshader_indirect
+          disable-animations: true
+          script: bun run e2e:test:android
+
+      - name: Upload Detox artifacts
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: detox-android-artifacts
+          path: artifacts/detox/
+          if-no-files-found: ignore
+          retention-days: 14

@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import { NativeModules } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
 import { LaunchArguments } from 'react-native-launch-arguments';
 import {
   E2E_AUTH_TOKEN,
@@ -75,6 +75,17 @@ function configFromScriptUrl(): E2eLaunchConfig | null {
 export function readE2eLaunchConfig(): E2eLaunchConfig | null {
   if (!isE2eHarnessEnabled()) {
     return null;
+  }
+
+  // Browser tests reuse the native seed profiles through an authenticated URL.
+  // The build gate above ensures production web bundles ignore these arguments.
+  if (Platform.OS === 'web') {
+    if (typeof window === 'undefined') return null;
+    const args: Record<string, string> = {};
+    new URL(window.location.href).searchParams.forEach((value, key) => {
+      args[key] = value;
+    });
+    return configFromArgs(args);
   }
 
   const fromLaunch = configFromArgs(LaunchArguments.value() ?? {});

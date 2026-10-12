@@ -10,13 +10,12 @@ import { analytics } from '@/src/services/analytics';
 import '@/src/features/app/hooks/useFonts';
 import { logger } from './src/utils/logger';
 
-AppRegistry.registerHeadlessTask('AutomaticSmsImport', () => async data => {
-  const { automaticSmsImportService } =
-    await import('./src/services/sms/AutomaticSmsImportService');
-  await automaticSmsImportService.processHeadlessArrival(data?.retryWhenEmpty === true);
-});
-
 if (process.env.EXPO_OS !== 'web') {
+  AppRegistry.registerHeadlessTask('AutomaticSmsImport', () => async data => {
+    const { automaticSmsImportService } =
+      await import('./src/services/sms/AutomaticSmsImportService');
+    await automaticSmsImportService.processHeadlessArrival(data?.retryWhenEmpty === true);
+  });
   require('react-native-quick-crypto').install();
 }
 
