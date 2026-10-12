@@ -1,3 +1,5 @@
+import { JournalStatus } from '@/src/types/enums';
+import dayjs from 'dayjs';
 import { AccountPickerModal } from '@/src/components/account-selection';
 import { AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
 import { EmptyStateView } from '@/src/components/shared/EmptyStateView';
@@ -51,6 +53,12 @@ export function JournalEntryView(props: JournalEntryShell) {
   const { editor, loadSuggestions, onSelectSuggestion: applySuggestion } = props;
   const isSubmitting = editor.isSubmitting;
   const isBatchMode = props.activeMode === 'batch';
+  // Future dates offer planned saves; edits only convert posted journals.
+  const offersPlanned =
+    !isBatchMode &&
+    (!editor.isEdit || editor.savedStatus === JournalStatus.POSTED) &&
+    dayjs(`${editor.journalDate}T${editor.journalTime || '00:00'}`).isAfter(dayjs());
+  const savesAsPlanned = offersPlanned && editor.plannedMode !== 'post';
   const submitLabel = resolveJournalEntrySubmitLabel({
     activeMode: props.activeMode,
     simpleType: editor.transactionType,
@@ -189,8 +197,6 @@ export function JournalEntryView(props: JournalEntryShell) {
     setDate: editor.setJournalDate,
     time: editor.journalTime,
     setTime: editor.setJournalTime,
-    planned: editor.isPlanned,
-    onPlannedChange: editor.isEdit ? undefined : editor.setIsPlanned,
     notes: editor.notes,
     setNotes: editor.setNotes,
     notesAdded,
@@ -281,7 +287,18 @@ export function JournalEntryView(props: JournalEntryShell) {
         <JournalEntrySubmitBar
           onPress={props.onSubmit}
           disabled={isBatchMode ? batchSubmitDisabled : isSubmitDisabled}
-          label={isBatchMode ? `Post ${props.batchEditor.rows.length} transactions` : submitLabel}
+          label={
+            isBatchMode
+              ? `Post ${props.batchEditor.rows.length} transactions`
+              : savesAsPlanned && !isSubmitting
+                ? editor.isEdit
+                  ? 'Convert to planned'
+                  : 'Save as planned'
+                : submitLabel
+          }
+          plannedMode={offersPlanned ? editor.plannedMode : undefined}
+          isEdit={editor.isEdit}
+          onPlannedModeChange={editor.setPlannedMode}
           loading={isBatchMode ? props.batchEditor.isSubmitting : isSubmitting}
           saveSuccessPulse={saveSuccessPulse}
           missingRequirementHint={missingRequirementHint}

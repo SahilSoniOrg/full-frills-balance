@@ -33,7 +33,12 @@ import {
   calculateNextOccurrence,
   normalizeToStartOfDay,
 } from '@/src/services/planned-payment/plannedPaymentRecurrence';
-import { JournalStatus, PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
+import {
+  JournalStatus,
+  PlannedPaymentInterval,
+  PlannedPaymentStatus,
+  TransactionType,
+} from '@/src/types/enums';
 import { AccountId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
 import { firstValueFrom, ReplaySubject } from 'rxjs';
@@ -81,6 +86,39 @@ describe('planned payment orchestration persistence', () => {
       )
       .fetch();
   }
+
+  it('auto-posts due standalone planned journals marked auto-post and leaves manual ones', async () => {
+    const today = normalizeToStartOfDay(Date.now());
+    const plan = (description: string, autoPost: boolean) =>
+      journalPersistenceService.put(
+        {
+          journalDate: today + 3_600_000,
+          description,
+          currencyCode: 'USD',
+          status: JournalStatus.PLANNED,
+          transactions: [
+            { accountId: fromAccountId, amount: 50, transactionType: TransactionType.CREDIT },
+            { accountId: toAccountId, amount: 50, transactionType: TransactionType.DEBIT },
+          ],
+          ...(autoPost
+            ? {
+                metadata: {
+                  importSource: 'manual',
+                  metadataJson: JSON.stringify({ [MetadataKeys.AUTO_POST]: true }),
+                },
+              }
+            : {}),
+        },
+        WORKPLACE_ID,
+      );
+    const auto = await plan('Goa trip', true);
+    const manual = await plan('Goa hotel', false);
+    await processDuePlannedPayments(WORKPLACE_ID);
+    const status = async (id: string) =>
+      (await database.collections.get<Journal>('journals').find(id)).status;
+    expect(await status(auto.id)).toBe(JournalStatus.POSTED);
+    expect(await status(manual.id)).toBe(JournalStatus.PLANNED);
+  }, 30000);
 
   it('creates the journal and advances nextOccurrence in one writer batch', async () => {
     const payment = await createDuePayment();

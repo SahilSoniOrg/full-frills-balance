@@ -17,6 +17,8 @@ import { validatePostingPlan } from '@/src/services/transaction/transactionCompo
 import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import { journalQueryRepository } from '@/src/data/repositories/journal/journalQueryRepository';
 import type { AuditEventMetadata } from '@/src/types/auditEvents';
+import { MetadataKeys, MAX_BULK_JOURNAL_ROWS } from '@/src/constants/ledger-constants';
+import { safeParseJSON } from '@/src/utils/serialization';
 import type { CreateJournalData } from '@/src/types/journalWrite';
 import { transactionInboxRepository } from '@/src/data/repositories/TransactionInboxRepository';
 import { accountQueryRepository } from '@/src/data/repositories/account';
@@ -30,7 +32,6 @@ import {
   resolveCurrencyPrecisions,
 } from '@/src/domain/accounting/journalBalanceEvaluator';
 import { logger } from '@/src/utils/logger';
-import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants/ledger-constants';
 import { assembleCreateJournalData, validateJournalEntryStructure } from './journalSaveHelpers';
 
 export interface SubmitJournalResult {
@@ -38,6 +39,25 @@ export interface SubmitJournalResult {
   error?: string;
   action?: 'created' | 'updated';
   journalId?: JournalId;
+}
+
+/** 'post' keeps the normal posted save; the others save a future-dated entry as PLANNED. */
+export type PlannedJournalMode = 'auto' | 'manual' | 'post';
+
+/** Future entries stay unposted; 'auto' ones are posted on their date by due processing. */
+function withPlannedStatus(data: CreateJournalData, mode?: PlannedJournalMode): CreateJournalData {
+  if (!mode || mode === 'post' || data.journalDate <= Date.now()) return data;
+  if (mode === 'manual') return { ...data, status: JournalStatus.PLANNED };
+  const metadataJson = safeParseJSON<Record<string, unknown>>(data.metadata?.metadataJson, {});
+  return {
+    ...data,
+    status: JournalStatus.PLANNED,
+    metadata: {
+      importSource: 'manual',
+      ...data.metadata,
+      metadataJson: JSON.stringify({ ...metadataJson, [MetadataKeys.AUTO_POST]: true }),
+    },
+  };
 }
 
 export class JournalService {
@@ -49,7 +69,7 @@ export class JournalService {
     smsRecordId?: string;
     mode?: 'simple' | 'advanced' | 'import';
     launchSource?: string;
-    planned?: boolean;
+    planned?: PlannedJournalMode;
     workplaceId: WorkplaceId;
   }): Promise<SubmitJournalResult> {
     const accountIds = [...new Set(params.plan.lines.map(line => line.accountId))];
@@ -290,8 +310,8 @@ export class JournalService {
     mode?: 'simple' | 'advanced' | 'import';
     /** Where the entry screen was opened from, e.g. `widget`; analytics only. */
     launchSource?: string;
-    /** New entries only; ignored unless the date is still in the future. */
-    planned?: boolean;
+    /** Ignored unless the date is still in the future. */
+    planned?: PlannedJournalMode;
     workplaceId: WorkplaceId;
   }): Promise<SubmitJournalResult> {
     const {
@@ -329,7 +349,11 @@ export class JournalService {
       const currencyCode = journalData.currencyCode;
 
       if (journalId) {
-        const updatedJournal = await this.updateJournal(journalId, journalData, workplaceId);
+        const updatedJournal = await this.updateJournal(
+          journalId,
+          withPlannedStatus(journalData, planned),
+          workplaceId,
+        );
         analytics.trackFeatureUsage('journal', 'update', {
           mode,
           currency: currencyCode,
@@ -342,9 +366,7 @@ export class JournalService {
         ? await transactionInboxRepository.find(workplaceId, params.smsRecordId)
         : null;
       const createdJournal = await this.createJournal(
-        planned && journalData.journalDate > Date.now()
-          ? { ...journalData, status: JournalStatus.PLANNED }
-          : journalData,
+        withPlannedStatus(journalData, planned),
         workplaceId,
         smsRecord,
       );
