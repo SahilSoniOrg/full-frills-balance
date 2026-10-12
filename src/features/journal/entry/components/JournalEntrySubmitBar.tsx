@@ -1,4 +1,12 @@
-import { AppButton, AppIcon, AppText, Icon, PressScaleTouchable } from '@/src/components/core';
+import {
+  AppButton,
+  AppIcon,
+  AppSegmentedControl,
+  AppText,
+  Icon,
+  PressScaleTouchable,
+} from '@/src/components/core';
+import type { PlannedJournalMode } from '@/src/services/journal/journalDomainService';
 import { ChromeMotion, Scale } from '@/src/constants';
 import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import { useKeyboard } from '@/src/design-system/Keyboard';
@@ -17,7 +25,18 @@ export interface JournalEntrySubmitBarProps {
   loading?: boolean;
   saveSuccessPulse?: boolean;
   missingRequirementHint?: string | null;
+  /** Shown for future-dated new entries: post automatically on the date, or wait for the user. */
+  plannedMode?: PlannedJournalMode;
+  onPlannedModeChange?: (mode: PlannedJournalMode) => void;
+  isEdit?: boolean;
 }
+
+const plannedModeOptions = (isEdit: boolean) =>
+  [
+    { id: 'auto', label: 'Plan · auto-post' },
+    { id: 'manual', label: 'Plan · I post' },
+    { id: 'post', label: isEdit ? 'Keep posted' : 'Post now' },
+  ] as const;
 
 export const JournalEntrySubmitBar = React.memo(function JournalEntrySubmitBar({
   onPress,
@@ -26,6 +45,9 @@ export const JournalEntrySubmitBar = React.memo(function JournalEntrySubmitBar({
   loading = false,
   saveSuccessPulse = false,
   missingRequirementHint,
+  plannedMode,
+  onPlannedModeChange,
+  isEdit = false,
 }: JournalEntrySubmitBarProps) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -56,6 +78,19 @@ export const JournalEntrySubmitBar = React.memo(function JournalEntrySubmitBar({
           <AppText variant="caption" color="secondary" style={styles.hintText}>
             {missingRequirementHint}
           </AppText>
+        </View>
+      ) : null}
+
+      {plannedMode && onPlannedModeChange ? (
+        <View style={styles.plannedRow}>
+          <AppSegmentedControl
+            options={plannedModeOptions(isEdit)}
+            value={plannedMode}
+            onChange={onPlannedModeChange}
+            size="sm"
+            flex
+            testID="journal-planned-mode"
+          />
         </View>
       ) : null}
 
@@ -115,6 +150,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.xs,
     borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  plannedRow: {
+    marginBottom: Spacing.xs,
   },
   hintRow: {
     alignItems: 'center',

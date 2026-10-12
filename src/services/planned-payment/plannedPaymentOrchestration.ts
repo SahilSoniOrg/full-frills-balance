@@ -194,6 +194,17 @@ async function processDuePlannedPaymentsNow(
       logger.error(`Failed to settle due planned occurrence for payment ${payment.id}`, error);
     }
   }
+  for (const journal of await journalPlannedQueries.findDueAutoPostJournals(
+    workplaceId,
+    asOf + AppConfig.time.msPerDay,
+  )) {
+    if (isCancelled()) break;
+    try {
+      await journalPersistenceService.post(journal.id, workplaceId, journal.journalDate);
+    } catch (error) {
+      logger.error(`Failed to auto-post planned journal ${journal.id}`, error);
+    }
+  }
   const activePayments = await plannedPaymentRepository.findAllActive(workplaceId);
 
   const nowTime = asOf;

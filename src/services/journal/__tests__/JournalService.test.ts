@@ -58,23 +58,37 @@ describe('JournalService - saveJournalEntry', () => {
       );
     });
 
-    it('saves a new future entry as PLANNED only when marked planned', async () => {
-      const save = (journalDate: string, planned?: boolean) =>
+    it('saves future entries as PLANNED per mode, and converts edits the same way', async () => {
+      const save = (
+        journalDate: string,
+        planned?: 'auto' | 'manual' | 'post',
+        journalId?: string,
+      ) =>
         service.saveJournalEntry({
           lines: validLines as any,
           description: 'Goa trip',
           journalDate,
           journalTime: '12:00:00',
           planned,
+          journalId: journalId as JournalId | undefined,
           workplaceId: 'wp-1' as WorkplaceId,
         });
       const put = journalPersistenceService.put as jest.Mock;
-      await save('2999-12-31', true);
+      await save('2999-12-31', 'auto');
       expect(put.mock.calls[0][0].status).toBe('PLANNED');
-      await save('2999-12-31');
-      expect(put.mock.calls[1][0].status).toBeUndefined();
-      await save('2024-01-01', true);
+      expect(JSON.parse(put.mock.calls[0][0].metadata.metadataJson)).toEqual({ autoPost: true });
+      await save('2999-12-31', 'manual');
+      expect(put.mock.calls[1][0]).toMatchObject({ status: 'PLANNED', metadata: undefined });
+      await save('2999-12-31', 'post');
       expect(put.mock.calls[2][0].status).toBeUndefined();
+      await save('2024-01-01', 'auto');
+      expect(put.mock.calls[3][0].status).toBeUndefined();
+
+      const updateSpy = jest.spyOn(service, 'updateJournal').mockResolvedValue({ id: 'j1' } as any);
+      await save('2999-12-31', 'manual', 'posted-journal');
+      expect(updateSpy.mock.calls[0][1].status).toBe('PLANNED');
+      await save('2999-12-31', 'post', 'posted-journal');
+      expect(updateSpy.mock.calls[1][1].status).toBeUndefined();
     });
 
     it('should update existing journal if ID provided', async () => {

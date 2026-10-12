@@ -1,3 +1,5 @@
+import type { JournalStatus } from '@/src/types/enums';
+import type { PlannedJournalMode } from '@/src/services/journal/journalDomainService';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { TransactionType } from '@/src/types/enums';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
@@ -111,10 +113,12 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
   const [journalTime, setJournalTime] = useState(() =>
     initialDate ? dayjs(initialDate).format('HH:mm') : dayjs().format('HH:mm'),
   );
-  const [isPlanned, setIsPlanned] = useState(false);
+  const [plannedMode, setPlannedMode] = useState<PlannedJournalMode>(isEdit ? 'post' : 'auto');
+  const [savedStatus, setSavedStatus] = useState<JournalStatus>();
   const hydrateEditor = useCallback(
     (snapshot: JournalEditorHydration) => {
       setSavedJournalCurrency(snapshot.journalCurrency);
+      setSavedStatus(snapshot.status);
       setDescription(snapshot.description);
       setNotes(snapshot.notes);
       setJournalDate(snapshot.journalDate);
@@ -148,7 +152,7 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
     smsId,
     smsRecordId,
     launchSource,
-    planned: !isEdit && isPlanned,
+    planned: plannedMode,
     onAfterSave,
     onSuccess,
   });
@@ -211,8 +215,9 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       setJournalDate,
       journalTime,
       setJournalTime,
-      isPlanned,
-      setIsPlanned,
+      plannedMode,
+      setPlannedMode,
+      savedStatus,
       isSubmitting,
       addLine,
       removeLine,
@@ -238,7 +243,8 @@ export function useJournalEditor(workplaceId: WorkplaceId, options: UseJournalEd
       notes,
       journalDate,
       journalTime,
-      isPlanned,
+      plannedMode,
+      savedStatus,
       isSubmitting,
       addLine,
       removeLine,

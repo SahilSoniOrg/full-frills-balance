@@ -7,6 +7,8 @@ export const MAX_BULK_JOURNAL_ROWS = 100;
 
 export const MetadataKeys = {
   ORIGINAL_PLANNED_DATE: 'originalPlannedDate',
+  /** Standalone planned journal that due processing posts on its date. */
+  AUTO_POST: 'autoPost',
 } as const;
 
 export const MetadataSources = {

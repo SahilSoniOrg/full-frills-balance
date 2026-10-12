@@ -1,6 +1,7 @@
 import { journalService } from '@/src/services/journal/journalDomainService';
 import type { PostingPlan } from '@/src/types/domainTransaction';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
+import type { PlannedJournalMode } from '@/src/services/journal/journalDomainService';
 import type { PlannedPaymentFxReview } from '@/src/services/planned-payment/plannedPaymentFx';
 import { useCallback } from 'react';
 
@@ -17,8 +18,8 @@ type PostPostingPlanParams = {
   smsRecordId?: string;
   mode?: 'simple' | 'advanced' | 'import';
   launchSource?: string;
-  /** Save a new future-dated entry as PLANNED instead of POSTED. */
-  planned?: boolean;
+  /** New future-dated entries save as PLANNED; 'auto' also posts them on their date. */
+  planned?: PlannedJournalMode;
 };
 
 /**

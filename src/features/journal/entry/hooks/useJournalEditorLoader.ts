@@ -1,3 +1,4 @@
+import type { JournalStatus } from '@/src/types/enums';
 import { journalReadService } from '@/src/services/journal/journalReadService';
 import { JournalEntryLine, TabType } from '@/src/types/domainJournal';
 import { JournalId, WorkplaceId } from '@/src/types/ids';
@@ -14,6 +15,7 @@ export interface JournalEditorHydration {
   transactionType?: TabType;
   lines?: JournalEntryLine[];
   isGuidedMode?: boolean;
+  status?: JournalStatus;
 }
 
 interface JournalEditorLoaderOptions {
@@ -65,6 +67,7 @@ export function useJournalEditorLoader({
             lines: lines.length > 0 ? lines : undefined,
             transactionType,
             isGuidedMode: forceAdvancedMode ? false : undefined,
+            status: journal.status,
           });
           setLoadResult({ journalId, state: 'loaded' });
         } else {

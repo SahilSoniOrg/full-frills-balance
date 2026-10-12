@@ -71,6 +71,37 @@ export class JournalPlannedQueries {
       .fetch();
   }
 
+  /** Standalone PLANNED journals marked auto-post and dated before `before`. */
+  async findDueAutoPostJournals(workplaceId: WorkplaceId, before: number): Promise<Journal[]> {
+    const due = await this.journals
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('planned_payment_id', Q.eq(null)),
+        Q.where('status', JournalStatus.PLANNED),
+        Q.where('journal_date', Q.lt(before)),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .fetch();
+    if (due.length === 0) return [];
+    const metadata = await database.collections
+      .get<JournalMetadata>('journal_metadata')
+      .query(
+        Q.where('workplace_id', workplaceId),
+        Q.where('journal_id', Q.oneOf(due.map(journal => journal.id))),
+      )
+      .fetch();
+    const auto = new Set(
+      metadata
+        .filter(
+          row =>
+            safeParseJSON<Record<string, unknown>>(row.metadataJson, {})[MetadataKeys.AUTO_POST] ===
+            true,
+        )
+        .map(row => row.journalId),
+    );
+    return due.filter(journal => auto.has(journal.id));
+  }
+
   private async originalPlannedDates(
     workplaceId: WorkplaceId,
     journalIds: JournalId[],

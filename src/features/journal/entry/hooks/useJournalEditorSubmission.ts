@@ -1,3 +1,4 @@
+import type { PlannedJournalMode } from '@/src/services/journal/journalDomainService';
 import type { PostingPlan } from '@/src/types/domainTransaction';
 import type { JournalId } from '@/src/types/ids';
 import { showErrorAlert } from '@/src/utils/alerts';
@@ -15,7 +16,7 @@ export function useJournalEditorSubmission(options: {
   smsId?: string;
   smsRecordId?: string;
   launchSource?: string;
-  planned?: boolean;
+  planned?: PlannedJournalMode;
   onAfterSave?: (result: {
     journalId?: JournalId;
     action?: 'created' | 'updated';
