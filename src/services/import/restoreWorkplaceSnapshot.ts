@@ -41,6 +41,17 @@ export type WorkplaceRecoveryResult =
   | { kind: 'keys-recovered'; workplaceId: ReturnType<typeof asWorkplaceId> }
   | ({ kind: 'restored' } & Awaited<ReturnType<typeof restoreWorkplaceSnapshot>>);
 
+export async function assertWorkplaceRecoveryTarget(
+  workplaceId: string,
+  preserveExistingBooks: boolean,
+): Promise<void> {
+  const existing = await workplaceRepository.find(asWorkplaceId(workplaceId));
+  // A committed restore receipt is checked against the decrypted snapshot by
+  // ordinary publication. Unbound books without a receipt cannot be a retry.
+  if (existing && !preserveExistingBooks && !existing.snapshotRestoreFingerprint)
+    throw new Error('Snapshot Workplace already exists; restore will not overwrite local books');
+}
+
 /** Only the recovery caller with a matching pre-existing local key binding may retain books. */
 export async function recoverWorkplaceSnapshot(
   source: WorkplaceSnapshot,

@@ -14,6 +14,11 @@ export interface EncryptionSetupSession {
   deviceId: string;
   userKeyFingerprint?: string;
   package?: PendingRecoveryPackage;
+  pendingRecoveries?: {
+    workplaceId: string;
+    keyId: string;
+    preserveExistingBooks: boolean;
+  }[];
 }
 export interface EncryptionSetupStore {
   loadSession(): Promise<EncryptionSetupSession | null>;

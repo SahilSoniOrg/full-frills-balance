@@ -24,7 +24,10 @@ import {
   snapshotFingerprint,
 } from './encryptedSnapshot';
 import { captureWorkplaceSnapshot, type WorkplaceSnapshot } from './workplaceSnapshot';
-import { recoverWorkplaceSnapshot } from '@/src/services/import/restoreWorkplaceSnapshot';
+import {
+  recoverWorkplaceSnapshot,
+  assertWorkplaceRecoveryTarget,
+} from '@/src/services/import/restoreWorkplaceSnapshot';
 import { asWorkplaceId } from '@/src/types/ids';
 import { assertKeyAccessAllowed } from './keyAccessPolicy';
 import type { RecoveryCredential } from './keyEnvelopes';
@@ -53,6 +56,7 @@ export class EncryptionSetup {
     private readonly assertAccess: () => void,
     private readonly capture: (workplaceId: string) => Promise<WorkplaceSnapshot>,
     private readonly publish: typeof recoverWorkplaceSnapshot,
+    private readonly checkTarget = assertWorkplaceRecoveryTarget,
   ) {}
   private exclusive<T>(operation: () => Promise<T>): Promise<T> {
     const next = this.queue
@@ -300,6 +304,7 @@ export class EncryptionSetup {
       const existing = session
         ? await this.hierarchy.describeSetup(session.userId, session.deviceId)
         : null;
+      const knownSession = !!session?.userKeyFingerprint;
       let identity: KeyAccessIdentity;
       if (existing?.user === 'ready' && existing.identity) {
         await this.hierarchy.confirmUserRecovery(
@@ -310,6 +315,7 @@ export class EncryptionSetup {
         identity = existing.identity;
       } else {
         session = {
+          ...session,
           formatVersion: 1,
           intent: 'recover-user',
           userId: credential.identityId,
@@ -332,10 +338,33 @@ export class EncryptionSetup {
         identity.registeredDeviceId,
         saved.workplaceKeys.workplaceId,
       );
-      // Capture this BEFORE installing external keys: a fresh package cannot authorize
-      // claiming unrelated local books just because their Workplace ID collides.
+      const pending = session!.pendingRecoveries ?? [];
+      const previous = pending.find(item => item.workplaceId === saved.workplaceKeys.workplaceId);
+      if (previous && previous.keyId !== saved.workplaceKeys.keyId)
+        throw new Error('Pending recovery belongs to a different Workplace key');
+      // Installed keys from an unfinished recovery are not an established binding.
+      // Persist the original decision before installation and reuse it on every retry.
       const preserveExistingBooks =
-        status.workplace === 'ready' || status.workplace === 'recovery-required';
+        previous?.preserveExistingBooks ??
+        (knownSession &&
+          (status.workplace === 'ready' || status.workplace === 'recovery-required'));
+      await this.checkTarget(saved.workplaceKeys.workplaceId, preserveExistingBooks);
+      this.assertAccess();
+      assertIntent();
+      if (!previous) {
+        session = {
+          ...session!,
+          pendingRecoveries: [
+            ...pending,
+            {
+              workplaceId: saved.workplaceKeys.workplaceId,
+              keyId: saved.workplaceKeys.keyId,
+              preserveExistingBooks,
+            },
+          ],
+        };
+        await this.store.saveSession(session);
+      }
       if (status.workplace === 'missing' || status.workplace === 'recovery-required')
         await this.hierarchy.installWorkplaceKeys(identity, saved.workplaceKeys);
       else {
@@ -353,11 +382,18 @@ export class EncryptionSetup {
       );
       this.assertAccess();
       assertIntent();
-      const reference = await this.store.writePackage(saved);
-      await this.store.saveSession({ ...session!, package: { ...reference, confirmed: true } });
+      const result = await this.publish(snapshot, { preserveExistingBooks });
       this.assertAccess();
       assertIntent();
-      return this.publish(snapshot, { preserveExistingBooks }); // Retain known local books; otherwise atomic original-ID publication.
+      const reference = await this.store.writePackage(saved);
+      const next = { ...session!, package: { ...reference, confirmed: true } };
+      const remaining = next.pendingRecoveries!.filter(
+        item => item.workplaceId !== saved.workplaceKeys.workplaceId,
+      );
+      if (remaining.length) next.pendingRecoveries = remaining;
+      else delete next.pendingRecoveries;
+      await this.store.saveSession(next);
+      return result;
     });
   }
 }

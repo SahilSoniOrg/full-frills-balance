@@ -10,7 +10,10 @@ import {
 } from '../encryptedSnapshot';
 import { publicKeyId, sealKeyEnvelope } from '../keyEnvelopes';
 import type { EncryptionSetupStore, EncryptionSetupSession } from '../encryptionSetupStore';
-import { recoverWorkplaceSnapshot } from '@/src/services/import/restoreWorkplaceSnapshot';
+import {
+  recoverWorkplaceSnapshot,
+  restoreWorkplaceSnapshot,
+} from '@/src/services/import/restoreWorkplaceSnapshot';
 import { captureWorkplaceSnapshot, SNAPSHOT_TABLES } from '../workplaceSnapshot';
 import { asWorkplaceId } from '@/src/types/ids';
 import { parseEncryptionSetupSession } from '../encryptionSetupValidation';
@@ -391,9 +394,111 @@ it('does not treat a freshly imported key package as permission to claim collidi
   await expect(flow.recover(pack, source.userSecret)).rejects.toThrow(
     'Snapshot Workplace already exists',
   );
+  const workplaceScope = JSON.stringify([
+    'workplace',
+    source.userSecret.identityId,
+    source.workplaceId,
+  ]);
+  expect(target.ciphertext.has(workplaceScope)).toBe(false);
+  await expect(flow.recover(pack, source.userSecret)).rejects.toThrow(
+    'Snapshot Workplace already exists',
+  );
+  expect(target.ciphertext.has(workplaceScope)).toBe(false);
   expect((await captureWorkplaceSnapshot(asWorkplaceId(source.workplaceId))).data).toEqual(
     before.data,
   );
+});
+
+it('never promotes keys from a rejected publication into a trusted binding, including restart and Device-key loss', async () => {
+  const source = await configured();
+  const pack = await source.flow.preparePackage(source.workplaceId);
+  await resetDatabase();
+  const target = memoryKeyHierarchy(),
+    persistence = storeFixture();
+  const publish = jest.fn(async (...args: Parameters<typeof recoverWorkplaceSnapshot>) => {
+    if (!(await workplaceRepository.find(asWorkplaceId(source.workplaceId)))) {
+      await restoreWorkplaceSnapshot({
+        ...source.snapshot,
+        workplace: {
+          ...source.snapshot.workplace,
+          name: 'Unrelated books created after preflight',
+        },
+      });
+    }
+    return recoverWorkplaceSnapshot(...args);
+  });
+  const restart = () =>
+    new EncryptionSetup(target.hierarchy, persistence.store, () => undefined, jest.fn(), publish);
+  await expect(restart().recover(pack, source.userSecret)).rejects.toThrow(
+    'Snapshot Workplace already exists',
+  );
+  expect((await persistence.store.loadSession())?.pendingRecoveries).toEqual([
+    {
+      workplaceId: source.workplaceId,
+      keyId: pack.workplaceKeys.keyId,
+      preserveExistingBooks: false,
+    },
+  ]);
+  expect((await restart().inspect(source.workplaceId)).packageSaved).toBe(false);
+  await expect(restart().recover(pack, source.userSecret)).rejects.toThrow(
+    'Snapshot Workplace already exists',
+  );
+  target.deviceSecrets.clear();
+  await expect(restart().recover(pack, source.userSecret)).rejects.toThrow(
+    'Snapshot Workplace already exists',
+  );
+  // Losing the entire setup checkpoint must not promote surviving imported keys either.
+  jest.mocked(persistence.store.loadSession).mockResolvedValueOnce(null);
+  await expect(restart().recover(pack, source.userSecret)).rejects.toThrow(
+    'Snapshot Workplace already exists',
+  );
+  expect(publish.mock.calls.every(([, options]) => options.preserveExistingBooks === false)).toBe(
+    true,
+  );
+  expect((await workplaceRepository.find(asWorkplaceId(source.workplaceId)))?.name).toBe(
+    'Unrelated books created after preflight',
+  );
+  expect(persistence.store.writePackage).not.toHaveBeenCalled();
+});
+
+it('completes an exact publication retry after a crash before recovery progress was confirmed', async () => {
+  const source = await configured();
+  const pack = await source.flow.preparePackage(source.workplaceId);
+  await resetDatabase();
+  const target = memoryKeyHierarchy(),
+    persistence = storeFixture();
+  const flow = new EncryptionSetup(
+    target.hierarchy,
+    persistence.store,
+    () => undefined,
+    jest.fn(),
+    recoverWorkplaceSnapshot,
+  );
+  jest
+    .mocked(persistence.store.writePackage)
+    .mockRejectedValueOnce(new Error('checkpoint interrupted'));
+  await expect(flow.recover(pack, source.userSecret)).rejects.toThrow('checkpoint interrupted');
+  const original = await captureWorkplaceSnapshot(asWorkplaceId(source.workplaceId));
+  await flow.recover(pack, source.userSecret);
+  expect((await captureWorkplaceSnapshot(asWorkplaceId(source.workplaceId))).data).toEqual(
+    original.data,
+  );
+  expect((await persistence.store.loadSession())?.pendingRecoveries).toBeUndefined();
+  expect((await flow.inspect(source.workplaceId)).packageSaved).toBe(true);
+  const session = await persistence.store.loadSession();
+  expect(() =>
+    parseEncryptionSetupSession({
+      ...session,
+      pendingRecoveries: [
+        {
+          workplaceId: source.workplaceId,
+          keyId: pack.workplaceKeys.keyId,
+          preserveExistingBooks: false,
+          phrase: source.userSecret.phrase,
+        },
+      ],
+    }),
+  ).toThrow('progress');
 });
 
 it('keeps pending ciphertext and spent usage when abandonment cannot persist its checkpoint', async () => {

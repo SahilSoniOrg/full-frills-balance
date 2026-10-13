@@ -21,7 +21,7 @@ Date: 13 October 2026. Scope: align the existing uncommitted foundations with th
 
 ## Verification and evidence
 
-The [current verification report](../../reviews/human-key-setup-2026-10-13.md) records 543 passing suites / 3,854 tests, six native Android key/package cases and two normal-app UI cases. Tests cover the local chain, persisted-secret scope, same-User replacement, dump-only decryption, wrong identities/phrases/context, app-lock changes, storage failures, budget exhaustion and immutable retries. Automated cryptography uses Web Crypto and Node behind the native AES adapter; native Android cases use the real application modules.
+The [current verification report](../../reviews/human-key-setup-2026-10-13.md) records 543 passing suites / 3,856 tests, six native Android key/package cases and two normal-app UI cases. Tests cover the local chain, persisted-secret scope, same-User replacement, dump-only decryption, wrong identities/phrases/context, app-lock changes, storage failures, budget exhaustion and immutable retries. Automated cryptography uses Web Crypto and Node behind the native AES adapter; native Android cases use the real application modules.
 
 Current native results are consolidated in [one nonsecret summary](../../reviews/key-management-verification-2026-10-13.json). Physical-device, cross-platform, complete real-file-picker and interruption/kill gates remain open. Earlier iOS simulator results and memory figures describe superseded implementations and provide no current release proof. Pairing/QR and online signed enrollment are absent; replacement is recovery-only.
 
