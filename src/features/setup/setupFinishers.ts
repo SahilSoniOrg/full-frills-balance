@@ -13,8 +13,6 @@ import type {
 } from './setupTypes';
 import { primaryRestoreSource, restoreSources } from './setupTypes';
 
-export { finishRecoveredWorkplaceSetup } from '@/src/services/setup/recoveryCompletion';
-
 function starterAccounts(output: WorkplaceSetupOutput) {
   return output.selectedAccounts.map(item => {
     const preset = DEFAULT_ACCOUNTS.find(
