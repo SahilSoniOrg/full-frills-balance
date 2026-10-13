@@ -1,4 +1,5 @@
-import { render, screen } from '@/src/utils/test-utils';
+import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { TextInput } from 'react-native';
 import { AppConfig } from '@/src/constants';
 import { AccountType } from '@/src/types/enums';
 import { asAccountId, asWorkplaceId } from '@/src/types/ids';
@@ -134,7 +135,7 @@ function makeRow(overrides: Partial<BulkJournalRow> = {}): BulkJournalRow {
   };
 }
 
-function renderGrid(rows: BulkJournalRow[]) {
+function renderGrid(rows: BulkJournalRow[], addRow = jest.fn()) {
   return render(
     <BulkEntryGrid
       rows={rows}
@@ -142,7 +143,7 @@ function renderGrid(rows: BulkJournalRow[]) {
       accounts={accounts}
       workplaceCurrency="USD"
       workplaceId={asWorkplaceId('workplace')}
-      addRow={jest.fn()}
+      addRow={addRow}
       removeRow={jest.fn()}
       clearRows={jest.fn()}
       rowActions={rowActions}
@@ -172,5 +173,20 @@ describe('BulkEntryGrid validation summary', () => {
     expect(screen.getByText('All valid')).toBeTruthy();
     expect(screen.queryByText('need attention')).toBeNull();
     expect(screen.queryByText(AppConfig.strings.transactionFlow.bulkEntryHint)).toBeNull();
+  });
+});
+
+describe('BulkEntryGrid add row', () => {
+  it('adds a row when TextInput.State lacks currentlyFocusedInput (react-native-web)', () => {
+    const original = TextInput.State.currentlyFocusedInput;
+    (TextInput.State as { currentlyFocusedInput?: unknown }).currentlyFocusedInput = undefined;
+    try {
+      const addRow = jest.fn();
+      renderGrid([makeRow()], addRow);
+      fireEvent.press(screen.getByText('+ Add Entry Row'));
+      expect(addRow).toHaveBeenCalledTimes(1);
+    } finally {
+      TextInput.State.currentlyFocusedInput = original;
+    }
   });
 });
