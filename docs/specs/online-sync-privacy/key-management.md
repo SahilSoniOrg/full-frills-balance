@@ -1,0 +1,347 @@
+# Key management — one architecture, staged release
+
+Date: 12 October 2026; clarified 13 October 2026.
+
+Status: **V1 local cryptographic APIs and human setup/recovery implemented; physical-device, interruption and online authorization gates remain open.**
+
+This is one Device → User → Workplace architecture. There is no second key-management design or migration target. Wire-format versions still exist for compatibility.
+
+**Confirmed V1 scope, 13 October 2026:** one DEK per Workplace, generated deliberately during Workplace creation or local-to-online upgrade. Persist only encrypted DEK envelopes, never the readable DEK, including in SecureStore. Independent User and Device encryption pairs form the unlock chain. An independent User Ed25519 signing pair is created in the initial bundle and retained through recovery; online signing protocols remain deferred. Only the Device private key persists in Expo SecureStore. V1 uses the existing app-lock policy with `requireAuthentication: false`; fresh platform authentication for each root read is not required. User recovery restores the same User onto a new Device. Workplace emergency material decrypts a ciphertext dump only; it does not restore old tenancy or authority. Create/export/verify both credentials at setup. The hosted dump API, support workflow, rotation, writer handover, and online identity provider are not implemented. Supabase placeholder contracts have been removed.
+
+| Stage                         | Contents                                                                                                                                                                                                                           | Release gate                                                                                                                                                                |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Local encryption and recovery | User encryption/signing pairs, Device encryption pair, versioned full User identity pin, local bundles, member/recovery DEK envelopes, both credentials, and snapshot encryption. Replacement is recovery-only; no pairing/QR API. | Physical-device and cross-platform HPKE/storage interoperability; app-lock/background behavior; complete interruption and saved-file proof.                                 |
+| Online manual backup          | Bind the existing local User UUID explicitly to a login account; registered-Device checks, upload consent, public metadata/envelopes and opaque snapshots. One active backup writer.                                               | Backend authorization and signatures; authenticated manifests/checkpoints; key-envelope delivery; writer handover; retention; schema evolution. No deployed backend exists. |
+| Synchronization and sharing   | Multiple writers, causal operations/revisions, safe merges and conflict confirmation, invitations/roles, and member removal. Reuse the same hierarchy.                                                                             | Mutation/conflict protocol, signed invocation budgets, invitations, and future rotation/removal protocol.                                                                   |
+
+The confirmed first deliverable is the local fundamentals: create/persist the identities, bundles and envelopes locally and exercise storage/encryption/recovery before online features. The local APIs now have a Settings setup/upgrade flow and a privacy-gated fresh-install recovery entry. Cloud enrollment remains unavailable. Offline setup assigns a stable local User identity; online login later binds it explicitly to the account. Login must never silently replace an existing identity.
+
+Related: [documentation guide](./README.md), [online architecture](./spec.md), [implementation scope](./preparation.md), [current verification](../../reviews/human-key-setup-2026-10-13.md), [audit-log and sync assessment](../../reviews/audit-log-sync-reuse-2026-10-12.md).
+
+## 1. Decisions and terminology
+
+The agreed chain is:
+
+```text
+Device private encryption key — persisted in this Device's SecureStore
+    opens this Device's encrypted copy of the User private-key bundle
+        User private encryption key opens the User's Workplace DEK envelopes
+            Workplace DEK decrypts the financial payload
+```
+
+- Generate User keys, Device keys, and Workplace DEKs independently using secure randomness. No BIP-32 or application-level HKDF tree derives Device keys from a User root.
+- A Device protects a copy of the User key material, not a separate copy of each Workplace DEK.
+- A User has the same membership rights across approved Devices. Workplace selection controls what a Device downloads, not a cryptographic restriction on that Device's User key.
+- Keep one DEK per Workplace in V1; future rotation may introduce generations. Multiple members receive separate encrypted envelopes of that same DEK; financial ciphertext is not duplicated per member or Device.
+- Two separate routes exist: **User recovery** restores the same User onto a new Device; **Workplace emergency export** decrypts a salvage dump to import into a new Workplace. The latter does not recover old User/owner authority.
+- Device-encrypted User bundles live locally only. Other ciphertext may live locally or remotely under its retention/access rules. Raw Device private keys stay in SecureStore. Future QR transfer would use a transient ciphertext relay, not a persistent server Device bundle; local pairing and QR are not implemented. The backend receives no readable decryption secrets.
+- Bind User keys/envelopes to a stable application User UUID, not an email address. Email is a changeable login/contact attribute; future provider subjects map explicitly to this UUID. Supabase Auth is the current Phase 2 direction, confirmed 13 October; no auth integration or backend project exists yet.
+- Email/login credentials prove account access; they do not automatically decrypt books or approve a new Device by themselves.
+
+**Concrete representation for this document:** use independent public/private encryption key pairs at the User and Device layers. “User KEK” and “Device KEK” describe their wrapping roles, not two additional symmetric secrets. A recipient's public key creates an envelope; its private key opens it. This makes invitations possible without revealing the recipient's private key. The local implementation uses HPKE base mode with DHKEM(X25519, HKDF-SHA256), HKDF-SHA256 and AES-256-GCM through `@hpke/core` and `@hpke/dhkem-x25519`. User and Device pairs are generated independently. Recovery pairs are reconstructed solely from their own independent 256-bit seeds through the versioned HPKE `deriveKeyPair` API. HPKE’s internal KDF does not derive a Device from a User root.
+
+Signing is separate from encryption. Setup generates an independent **Ed25519 User signing pair now**, using the existing Web Crypto/native adapter. Both private keys are included in the Device-encrypted and User-recovery bundles (X25519 private bytes and Ed25519 PKCS#8 encoding). The full public identity is a versioned record containing format, User UUID, encryption algorithm/public key and signing algorithm/public key. The credential's `identityKeyId` is SHA-256 over a canonical fixed-order serialization of that entire record; it is not a hash of just the encryption key. Recovery verifies this pin and possession of both private keys. HPKE's recipient key ID remains the hash of the encryption public key, a separate routing value.
+
+Online enrollment signatures, owner grants, signed snapshot manifests and Device request-signing remain protocol work. Local encrypted recovery packages are now signed with that User key. The signature covers the complete User-recovery object, Workplace envelope/usage record and encrypted snapshot under a versioned, domain-separated digest. Recovery checks the independently saved User identity pin and signature before installing keys or publishing books. This authenticates the exported file; it does not authorize an online Device or prove freshness. Creating the initial User signing pair closes the known need to change User credentials when online signing is enabled. Later rollout consumes the same User UUID, keys, credential pin and Workplace DEK; there is no planned root/key-hierarchy migration. Future unforeseen algorithm/format changes still require compatibility design. Device request-signing keys are installation credentials; provisioning them later does not replace the User root or Workplace DEK. No extra persistent symmetric bundle key exists.
+
+## 2. Threat model and actual guarantees
+
+Assume a trusted installed client and correct cryptographic primitives. Signed registrations/grants referenced below are future online release requirements, not functionality already supplied by the local encryption APIs. A compromised application/OS can read secrets and plaintext while in use. The service controls availability and server-side authorization; cryptography cannot force a malicious server to enforce permissions.
+
+| Adversary or failure                           | Exposure                                                                     | Protection and limit                                                                                                                                                                                                                                                    |
+| ---------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Curious operator or stolen cloud storage       | Ciphertext, public keys, routing IDs, sizes, timing, and recovery envelopes. | Client-held private keys/DEKs and externally held recovery secrets protect financial contents. Metadata remains visible.                                                                                                                                                |
+| Malicious storage/API                          | Substituted keys, forged grants, replayed or withheld objects.               | Verified recipient identities, signed registrations/grants, and context-bound envelopes resist substitution/forgery. Known authenticated checkpoints detect some rollback. Availability and freshness after total Device loss are not guaranteed.                       |
+| Malicious server serving a fake key generation | Invented generation/recipient envelopes or an old signed head.               | Members accept only owner-signed grants under the pinned identity, with predecessor/hash checks; a fabricated grant fails. Old valid grants still require a trusted checkpoint to detect withholding/rollback. A compromised owner signing key defeats this protection. |
+| Lost Device with removal/revoke only           | Previously copied User root, DEKs, and plaintext.                            | Removing server access does not recover confidentiality. User-root replacement is deferred; do not claim current recovery/removal excludes a thief holding that root from future member envelopes.                                                                      |
+| Email/session takeover                         | Account-authenticated API access.                                            | Cannot decrypt or enroll a trusted Device without a valid key route and enrollment authority. Destructive account operations require defined Device checks; a malicious server can still delete data.                                                                   |
+| Locked stolen Device                           | App files and persisted encrypted bundles.                                   | SecureStore's platform protections and the configured app-lock policy gate the Device private keys. SecureStore does not automatically mean non-exportable hardware keys or biometric authentication.                                                                   |
+| Compromised approved/unlocked Device           | Device secrets, recoverable User bundle, DEKs, plaintext.                    | No confidentiality guarantee for accessible Workplaces. Future signed enrollment may additionally give the bundle enrollment authority. This is an accepted consequence of the shared User-root model.                                                                  |
+| Compromised User private-key bundle            | User encryption and signing authority.                                       | Accessible Workplace envelopes and new-device approval are exposed. Independent Device secrets cannot be calculated from the root, but the root already exposes the books.                                                                                              |
+| Stolen Workplace recovery secret plus dump     | That Workplace's DEK and encrypted data for the covered generations.         | No confidentiality guarantee for those generations; no User identity or online write credentials are supplied by this route.                                                                                                                                            |
+| Stolen User recovery secret plus bundle        | Same User encryption and enrollment authority.                               | Potential access to all that User's Workplaces. Removing Device access cannot invalidate these keys; identity replacement is deferred.                                                                                                                                  |
+| Loss of all Devices and recovery routes        | Email account and ciphertext only.                                           | Data is unrecoverable; no server escrow or email-only decryption promise.                                                                                                                                                                                               |
+
+The Device layer protects persisted delivery of the User bundle and separates installation credentials. It does not make an approved Device less privileged than its User, and it does not protect the books after User-key compromise.
+
+## 3. Keys and storage
+
+The independently usable recovery credential is the **generated, downloadable User recovery phrase**, saved outside the Devices; it is not a system/WebAuthn passkey. Recovery seed/pair entries below use the implemented HPKE suite; online authorization remains proposed. The implemented credential uses eight hexadecimal seed groups plus a 48-bit checksum, bound to purpose, identity, identity key and recovery recipient; User-key replacement is outside the current scope.
+
+| Object                           | Generation and purpose                                                                                                                                                                          | Persistent location                                                                                                                               |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Workplace DEK                    | Random 256-bit symmetric key created once per Workplace in V1; encrypts financial payloads.                                                                                                     | Member and Workplace-recovery envelopes only. Readable bytes exist in memory during use, never in SecureStore, caches, preferences or app files.  |
+| User encryption pair             | Independent library-generated pair; recipient for member DEK envelopes.                                                                                                                         | Verified public identity; private key inside local Device-encrypted bundles and the User-recovery bundle.                                         |
+| User signing pair                | Independent Ed25519 pair generated at initial setup; online authorization protocol is deferred.                                                                                                 | Private key in both encrypted User bundles; public key in the versioned identity record.                                                          |
+| Device encryption pair           | Independently generated per User/installation; opens its local User bundle.                                                                                                                     | Private key in account-scoped SecureStore; public key in signed registration.                                                                     |
+| Future Device signing pair       | Separate online request-authentication protocol, not yet provisioned.                                                                                                                           | Separate Device-scoped secure storage and verified registration.                                                                                  |
+| User recovery seed and pair      | Separate random high-entropy seed reconstructs a recovery encryption pair using the selected library's versioned seed-to-keypair API. Public key encrypts User bundles; private key opens them. | Seed saved externally; public key and its signed binding stored server-side when online. Private key reconstructed only on the recovering client. |
+| Workplace recovery seed and pair | Separate high-entropy seed reconstructs a recovery encryption pair; wraps DEKs without User/signing credentials.                                                                                | Seed saved externally; public key with owner-signed binding stored server-side when online. Private key reconstructed only for dump recovery.     |
+
+Recovery seed reconstruction is intentional and limited to each independent recovery pair. It does not introduce a User-root-to-Device derivation tree. The library suite and credential format are fixed below; native/cross-platform verification remains required before user distribution.
+
+Any client that holds the plaintext bundle/DEK can create a new recovery envelope using its verified recovery **public** key, including for new generations, without entering the seed. Publishing it still requires the appropriate signed User binding or owner grant and current authorization. The backend cannot rewrap an unknown plaintext DEK itself. Pin recovery key IDs/public keys in authenticated identity/generation metadata; never accept an unsigned server replacement.
+
+Device-encrypted User bundles persist **only on their respective Devices**, in local encrypted storage outside SecureStore. No persistent server table/object stores these copies. SecureStore holds the Device private keys that open them. Exclude local Device bundles from app-managed cloud backup/export; any OS file-backup exposure retains its ciphertext nature and is covered by the platform recovery tests. Online persistent storage holds User-recovery bundles, member/recovery DEK envelopes, encrypted payloads, and public/signed metadata.
+
+Normal unlock follows the existing app-lock policy, reads the account/Device-scoped private key from SecureStore, opens the local User bundle, then opens the User-addressed Workplace DEK envelope. The native vault deliberately sets `requireAuthentication: false` and `WHEN_UNLOCKED_THIS_DEVICE_ONLY`. V1 does not claim fresh OS/biometric authentication for each root use; disabling app lock leaves device unlock as the normal key-access boundary while the app is open. This is an accepted scope change from the earlier proposed platform boundary.
+
+The key service checks app-lock state before and after awaited key operations. The app shell publishes that policy; an absent shell fails closed. Keys are borrowed for one operation and cleared afterward; no User-private-key or DEK cache persists. Logout deletes the Device private key and the current local User-bundle reference. Old orphaned ciphertext files may remain until explicit cleanup, but no readable key remains in them. Background encryption has no separate bypass or scheduled uploader in V1.
+
+Avoid plaintext key files, logs, analytics, clipboard automation, and readable preferences. Best-effort buffer clearing cannot guarantee erasure of every JavaScript/runtime copy. Retain required encrypted envelopes durably; losing all usable copies can strand ciphertext. Bind User, Device, Workplace, key ID, generation, purpose, and format, and never cross account namespaces.
+
+The User recovery download carries the generated secret encoded as the recovery phrase, plus User UUID, purpose/encoding version and the trusted fingerprint of the complete versioned User public identity. The encrypted User-recovery bundle is a separate object, retained remotely when online or in a separately retained encrypted package during the local stage. Never mistake the ciphertext package for the secret that opens it; losing both every local package and all remote copies makes the phrase insufficient. The versioned hexadecimal/checksummed credential format must pass native/cross-platform verification before distribution. **Public-key encryption to a recovery recipient does not authenticate the sender:** anyone knowing that public key can construct a replacement ciphertext. Recovery verifies the pinned identity and signed continuity/grants, rather than trusting successful decryption alone. Future identity replacement must explicitly handle updated pins/credentials; it is deferred and not part of current add-a-Device recovery.
+
+### Human local setup and saved files
+
+Settings setup deliberately creates a stable User UUID and independent Device, then the active Workplace’s one DEK as a local upgrade. Opening the screen or creating a backup never generates roots implicitly. Three independent exports are required: the User recovery secret, the Workplace emergency secret, and a User-signed encrypted package for the selected Workplace. Reopening each saved secret proves its staged envelope; reopening the saved package verifies its exact digest, signature and decryption. A share-sheet return alone is insufficient confirmation.
+
+The durable setup checkpoint contains only public User/Device IDs, identity pin, intent and an encrypted-package filename/digest. It contains no recovery phrase. Pending setup resumes the same root; only a demonstrably unfinished step can be explicitly discarded. Known identity markers and recovery intent block automatic replacement roots. If Workplace usage state was lost but its established-key marker survives, recovery conservatively exhausts the uncertain encryption budget rather than resetting it from an old package. Recovered replacement Devices can read and re-export retained packages; writer handover remains deferred.
+
+Recovery selects the encrypted package first and the separately saved User secret last (native picker/background transitions clear earlier secret references), authenticates both before durable setup writes, restores the same User keys/DEK and publishes original financial IDs through the atomic idempotent restore path. App navigation/background/lock cancels further publication intent, including after returning or unlocking and drops in-memory secret references. Removing this Device’s backup access requires a verified saved package, deletes the Device key/local User-bundle reference and preserves known-User recovery intent. It leaves ordinary local books in place; it is not server revocation or a data wipe.
+
+Android exports use a user-selected external document folder. iOS sharing and document selection require short-lived app-owned secret files; the adapter deletes those copies after success/error and purges its abandoned recovery-cache namespace at startup. Runtime references are cleared on blur/background/lock. JavaScript and filesystem deletion do not guarantee physical erasure; iOS picker crash windows and the full kill/cleanup matrix still require native physical testing. Ordinary local SQLite and plaintext ZIP exports retain their existing policy.
+
+### Installation loss and recovery storage
+
+A file locator is only the filename and SHA-256 digest of an immutable encrypted record. It contains no key. These locators live in ordinary app storage (AsyncStorage), not device-only SecureStore. They help read local ciphertext; they are never the only recovery locator. Local outbox/consent pointers remain installation-specific and are not recovery artifacts.
+
+`RecoveryArtifactSource.loadUserRecoveryPackage(User UUID)` is the provider-neutral recovery boundary. The native proof injects a persistent file-backed test stand-in retained outside the source installation. Phase 2 replaces this adapter with authorized backend/cloud retrieval; no private key or recovery phrase is sent to it. Workplace envelopes and snapshots likewise require independent retention. A phrase plus absent ciphertext cannot recover anything.
+
+For a known User, `inspectDeviceState` returns recovery-required when the local bundle or Device key is missing. Restored app files without device-only keys, or a surviving iOS Keychain key without its app files, never authorize generating a replacement User root. Recover the pinned User encryption/signing keys using the external package and phrase, create a fresh installation Device ID/key, and retain the same DEK/data. Do not adopt or silently delete orphan keys. Corrupt state or temporarily inaccessible storage fails closed; a storage failure is not permission to reset. A public enrollment marker blocks re-enrollment of a locally known User UUID under another Device. After total installation loss, the human/account flow must distinguish existing identity from deliberate creation using the external identity/recovery source; local emptiness cannot prove a new User.
+
+Device-only iOS keys do not migrate to another device through OS backup; iOS Keychain items may survive uninstall. Android app uninstall removes its app-scoped secure storage. The simulator/emulator tests inject these material-loss states and exercise actual vault/file APIs; they do not prove physical iOS migration or uninstall behavior. Those remain release tests. The kill matrix is only partially covered: authenticated readback, write/locator failure, restart and material loss; forced termination at every durable boundary and physical power-loss behavior are open.
+
+## 4. Complete example — two Users, two Devices each
+
+Alice and Bob share one Workplace; each has two approved Devices. In the future sharing/enrollment example, every Device has independent encryption/signing pairs and a local encrypted User bundle. Each User has a separate recovery seed/pair; the Workplace has its own recovery seed/pair. There is one current generation and one retained snapshot.
+
+Arrows mean **opens locally**. Recovery public keys create the remote envelopes; seeds/private keys never go to the server.
+
+```mermaid
+flowchart TD
+    subgraph AliceLocal["Alice Devices — local only"]
+        A1["Phone private key in SecureStore"] --> A1E["LOCAL encrypted Alice bundle for phone"]
+        A2["Laptop private key in SecureStore"] --> A2E["LOCAL encrypted Alice bundle for laptop"]
+    end
+    subgraph BobLocal["Bob Devices — local only"]
+        B1["Phone private key in SecureStore"] --> B1E["LOCAL encrypted Bob bundle for phone"]
+        B2["Tablet private key in SecureStore"] --> B2E["LOCAL encrypted Bob bundle for tablet"]
+    end
+    AR["Alice external seed"] --> ARK["Alice recovery private key reconstructed locally"]
+    BR["Bob external seed"] --> BRK["Bob recovery private key reconstructed locally"]
+    WR["Workplace external seed"] --> WRK["Workplace recovery private key reconstructed locally"]
+    subgraph Cloud["SERVER — six persistent encrypted objects"]
+        ARE["Alice User-recovery bundle"]
+        BRE["Bob User-recovery bundle"]
+        AE["Member DEK envelope for Alice"]
+        BE["Member DEK envelope for Bob"]
+        WE["Workplace-recovery DEK envelope"]
+        DATA["Encrypted Workplace snapshot"]
+    end
+    ARK --> ARE
+    BRK --> BRE
+    A1E --> AU["Alice User bundle unlocked locally"]
+    A2E --> AU
+    ARE --> AU
+    B1E --> BU["Bob User bundle unlocked locally"]
+    B2E --> BU
+    BRE --> BU
+    AU -->|User encryption private key| AE
+    BU -->|User encryption private key| BE
+    WRK --> WE
+    AE --> DEK["Same DEK unlocked locally"]
+    BE --> DEK
+    WE --> DEK
+    DEK -->|decrypts| DATA
+    DATA --> BOOKS["Readable books on client"]
+```
+
+Signing keys are omitted from the decryption arrows. User signing keys approve Devices and owner grants; Device signing keys authenticate requests. Workplace recovery supplies neither. Server-side recovery public keys and signed bindings are metadata, not additional encrypted payloads.
+
+**Six persistent remote encrypted objects:** 2 User-recovery bundles, 2 member DEK envelopes, 1 Workplace-recovery envelope, 1 snapshot.
+
+## 5. Initial setup and existing Workplace upgrade
+
+Existing local books stay usable without online opt-in. Stage one runs this nine-step upgrade locally, exercising the User and Device layers before upload. Online setup subsequently authenticates/binds that same identity and publishes the existing verified objects; it does not regenerate the hierarchy. Preserve Workplace/record IDs, audit history, and financial meaning.
+
+1. Establish/select the local User identity and explicit per-Workplace encryption/recovery setup intent. In the online stage, authenticate and obtain separate upload consent for this identity and each selected Workplace.
+2. For a new local identity, generate independent User encryption and Ed25519 signing pairs, pin the complete versioned public identity, and create an independent User recovery seed/pair. For an existing identity, approve/recover it; never replace missing keys silently after login.
+3. Generate an independent Device encryption pair, persist its private key in SecureStore under the existing app-lock policy, and verify readback before local enrollment. Signed Device registration and online account binding are separate release gates.
+4. Persist the Device-encrypted User bundle locally; encrypt the same User private-key bundle to the recovery public key, binding its version and complete identity fingerprint in HPKE context. Signed publication of this binding is an online gate. Require external save acknowledgement and seed re-entry/import, then reconstruct the pair, reopen the exact staged bundle, and check the saved identity pin.
+5. For each selected Workplace, adopt an existing DEK only after verifying identity/generation/recovery and ownership, otherwise create its first DEK deliberately. Join/restore an existing shared Workplace rather than inventing a competing DEK. Pin its owner identity; the creator is its initial owner.
+6. Create the User-addressed member DEK envelope and the envelope to the independent Workplace recovery public key. Verify the saved recovery credential against the exact recovery envelope and member DEK; exercise snapshot decryption through both routes. Before online publication, add and verify a signed initial manifest covering the recipient/envelope set and recovery binding.
+7. Durably stage ciphertext, key IDs, recipient hashes, generation, ordering/checkpoint, consent, and progress. Reconcile SecureStore and database/file state explicitly; they are not one transaction. Local Device bundles are never staged for persistent upload.
+8. Publish complete verified local key records through durable pointers; the human upgrade may report readiness only after every required record and recovery confirmation is present. No transaction spans User, Workplace, vault and database state. In the online stage, first stage durable remote ciphertext, then atomically commit its signed manifest, identity metadata, User-recovery bundle references, member/recovery envelopes and snapshot reference. Verify the exact acknowledgement before marking online-ready.
+9. Reconcile/retry with the same durable keys, IDs, and bytes; verify readiness and preserve only necessary recovery/staging state. Cancellation/failure retains usable books and an explicit resumable state. Do not discard the last usable key/route before proving its replacement.
+
+The current local recovery package carries the User-recovery bundle and selected snapshot/DEK envelopes to another installation; its recovery seed remains separately saved. It has a User-signed local package manifest, verified against the separately saved identity pin. It has no online registration, owner-grant or server publication protocol. Local pairing and QR enrollment are deferred; replacement currently uses User recovery only. Exercise both normal Device-bundle unlock and fresh-installation User/dump recovery; ordinary unencrypted ZIP export remains unchanged.
+
+This upgrade adds identities/envelopes and encrypted payloads; it does **not** encrypt the existing SQLite database. If an old encrypted snapshot is compatible, reuse its verified DEK/ciphertext when adding envelopes. Changed authenticated context/formats may require a new snapshot. No shipped legacy encrypted hierarchy exists to migrate. Earlier unreleased proof formats are rejected. Existing ordinary local books retain their IDs and meaning during deliberate cloud opt-in.
+
+Later feature rollout uses these same identities and DEKs. Invitations add member envelopes; Device enrollment adds a **local** bundle plus a transient transfer, not a new remote persistent object. Payload schema upgrades still require explicit compatibility checks.
+
+## 6. Add a Device; logout and removal
+
+**Planned pairing/online enrollment, not implemented locally.** V1 replacement uses recovery. This future approval flow must require a fresh OS authentication prompt; the ordinary app-lock policy alone is not enrollment approval. Device signing-key provisioning and signed registration are prerequisites.
+
+1. Authenticate the account online, or select the verified local identity for a future local pairing flow. Generate fresh Device pairs and persist private keys under the existing app-lock/SecureStore policy.
+2. Create a short-lived request binding User ID, Device ID, both public keys, nonce, expiry, and format. The QR code authenticates the receiving request; it contains no User private key or DEK. Reject key replacement, replay, expiry, and cross-account approval.
+3. An approved Device verifies the request, requires fresh OS authentication for enrollment approval, and signs the new Device registration. It encrypts a copy of the User bundle to the receiving Device's public key.
+4. Transfer that ciphertext through a **transient relay** (future local transport or bounded server relay). It is not a persistent Device bundle or recovery route. Use a fixed maximum 10-minute lifetime; expiry never registers a different identity automatically.
+5. The receiver verifies identity/signatures/context, decrypts, durably saves its local encrypted bundle, verifies authenticated readback, then sends a signed acknowledgement bound to the enrollment and ciphertext hash. Delete relay payload on acknowledgement; expiry/cancellation also deletes it. Exclude payloads from relay logs, durable backup/versioning and recovery exports so the relay cannot become a second persistent bundle store. Keep only a non-secret idempotent receipt. A lost acknowledgement can be resent after restart; an expired incomplete transfer requires approval again with the same verified identity.
+6. Complete active registration and fetch authorized memberships/grants. Choose Workplaces to download and open their User-addressed DEK envelopes. Never count a transient transfer as a remotely recoverable Device backup.
+
+Every approved Device is root-capable and passes User encryption/enrollment authority to further approved Devices. Workplace selection does not isolate that root.
+
+Keep three separate actions in Settings:
+
+| Action                             | Behavior and honest UI meaning                                                                                                                                                                                                                                                               |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Logout                             | Clear local private keys, encrypted User bundles, cached DEKs, sessions, and in-memory copies. Preserve unrelated financial records under their existing local-storage policy. Does not remove the server Device registration or erase copied plaintext. Re-entry requires pairing/recovery. |
+| Remove Device                      | Disable the registration, sessions and outstanding enrollment requests/server access. Do not promise remote erasure or confidentiality recovery. Removal alone does not take back User root keys.                                                                                            |
+| Remove and rotate — future feature | Requires User-root replacement plus affected Workplace DEK rotation to exclude copied keys from future payloads. User-root replacement is currently deferred; do not expose this as a working protection or imply removal alone provides it.                                                 |
+
+Use “Remove access” for the current action. Do not offer “Protect future data” as completed until the deferred root-replacement/rotation mechanism exists. Never label removal alone as making copied keys/data safe. Details and interrupted-rotation behavior follow in Section 10.
+
+## 7. Invite another User
+
+Two distinct invitations exist: an **app invitation** asks someone to create a User account; a **Workplace invitation** asks them to accept or reject membership in a particular Workplace. A Workplace invitation received by a non-user first leads through account creation, then returns to that invitation. Creating an account does not itself activate membership.
+
+The registered profile exposes the public keys generated by that User's trusted client. Invitation lookup uses the registered User identity/profile, not an arbitrary public key attached to an email message. A magic link establishes the intended recipient's authenticated account/session; it is neither an encryption key nor a DEK delivery channel. No QR verification is required for User invitations.
+
+**Existing registered User:** the authorized inviter resolves the User's profile keys and prepares a DEK envelope encrypted to that User's public encryption key, with the required signed grant. The invitation is pending until the recipient accepts or rejects. Acceptance atomically activates the authorized membership and releases its envelope/data access; no second manual approval is required. Keep the staged envelope inaccessible to the recipient before activation.
+
+**New User:** the recipient signs up and their client generates/publishes their User public keys. The Workplace invitation records their acceptance, then awaits final approval by the inviting side (the Workplace creator/administrator, meaning the Owner role). That approval binds the actual User ID and public-key version, creates the signed member DEK envelope, and atomically activates access. Rejection/cancellation never releases that envelope or financial data. There is no separate invite-an-admin role in the currently agreed model; the creator holds owner/administrator authority.
+
+Encrypting a DEK to the recipient's public key and signing the membership/grant with the authorizer's private signing key are separate operations. Never share the inviter's User bundle or Device private keys. The recipient's approved Devices open the same User-addressed envelope; there are no per-Device DEK copies.
+
+Acceptance/activation must compare the current signed generation, recipient identity/key version, membership role, and invitation ID. If rotation/key changes occur while pending, the authorizing client must create a compatible current envelope/grant before activation; account creation/acceptance cannot cause the server to invent a DEK envelope. Freeze blocks activation that would change the recipient set. Activation remains atomic and idempotent.
+
+**Trust boundary:** a profile-associated key is authoritative within the service's account-registration model. At first contact, clients still rely on the service faithfully returning that profile/key binding. There is no independent cryptographic defense against that same service maliciously substituting both profile and key at first introduction. Persist accepted identity pins afterward; legitimate transitions need the identity-recovery policy still being discussed. This caveat does not require adding QR to the agreed invitation UX.
+
+## 8. User recovery and Workplace emergency export
+
+### Workplace emergency export — data salvage, not identity recovery
+
+The creator/administrator receives a separate Workplace emergency secret/artifact during setup, independent of every User's account recovery. The mechanism is intended for the last-resort case where all normal User/Device access is gone but this Workplace material survives.
+
+```text
+Workplace emergency material
+    → open retained recovery DEK envelope(s)
+        → decrypt available consistent snapshot/data
+            → portable dump
+                → import into a new Workplace under a recovered or different User
+```
+
+The new import creates fresh tenancy/record bindings as required by the import-as-copy contract, new owner/membership state and independently generated keys. It does not resurrect the old Workplace's access management or grant online write authority there. If exporting plaintext, do so explicitly on the client; the service never produces readable financial contents. Show the authenticated state/capture time; availability of the actual latest state after total access loss is not guaranteed.
+
+A recovery recipient pair reconstructed from an independent externally saved seed is the local envelope representation. Store its public key with the owner-signed binding so authorized clients can wrap new DEK generations without entering the emergency secret. Retained generation envelopes and ciphertext must remain downloadable through an emergency-download authorization route that does not require one of the lost old User accounts. The Workplace ID or support can locate the ciphertext. Before a hosted endpoint ships, define its read-only access/retention policy independently of the decryption secret; no additional recovery authorization credential is selected in V1. A retained offline encrypted snapshot is required if the service/ciphertext is also lost; no surviving key can recreate missing data.
+
+The Workplace credential pins SHA-256 of the one V1 DEK from setup. Dump decryption verifies that pin against the recovered DEK, independently of server-provided metadata. Anyone can encrypt to the recovery public key, but a forged dump using a different DEK fails this externally retained pin. This does not prove the latest snapshot or prevent replay of an old valid dump.
+
+Do not supply a User private-key bundle, Device registration or owner signing authority through emergency export. A DEK holder can create ciphertext/edit their own dump, but the honest service requires separate membership/Device checks for writes. Emergency export is not owner succession or an unfreeze credential.
+
+### User recovery — enroll a replacement/additional Device
+
+Every User has their own account-level recovery material, whether they created a Workplace or merely joined one. It is created at their User setup and presented/exported then; the service retains no readable secret and must not silently mint a different secret/root after login.
+
+```text
+User UUID + downloaded recovery phrase + encrypted User-recovery bundle
+    → recover the same User private-key bundle on the new client
+        → generate fresh Device keys locally
+            → authorize/register the new Device for the same User
+                → save that Device's local encrypted User bundle
+```
+
+The current recovery feature adds a Device. **It does not replace the User encryption/signing keys**, recreate an online account, alter Workplace memberships/roles, rotate DEKs or unfreeze a Workplace by itself. Once enrolled, the Device uses ordinary membership/data access, so the same recovered User keys can open that User's authorized member DEK envelopes. This indirect data access is not a recovery-time membership change.
+
+Possessing recovery material exposes the same recovered User identity; sharing it effectively gives someone the ability to act as that User, not limited guest access to one Workplace. The UI saying “add a Device” is not a cryptographic restriction on a holder of recovered private keys. Online requests still require the service's authentication/registration/role checks.
+
+The download being discussed is the **generated recovery phrase**, not an encrypted Device bundle and not a system passkey. Import/re-entry reconstructs the independent recovery key locally, opens the separate persisted User-recovery bundle, and verifies its bound identity before saving fresh Device state. Signing proves who authorized data; encryption keeps it unreadable. A KEK encrypts/wraps; it does not sign. Reject any recovery construction that needs a lost Device key or the still-encrypted User key to unlock itself.
+
+The product direction supports recovery of the same User UUID even when the old email is unavailable, followed by enrollment of a fresh Device and potentially a new email association. Identity-provider authentication, credential replacement and email-change policy are a separate future concern; neither WorkOS nor Auth0 is selected here. The encryption layer consumes an authorized stable User identity and must never regenerate the User root merely because login/email changes.
+
+Losing all Devices removes the local Device-encrypted User bundles/private keys; these copies need not be restored. The persisted **User-recovery bundle** must be independently accessible/decryptable, after which the new client recovers the same User keys and creates fresh Device keys/local storage. Workplace payloads remain encrypted under DEKs; a newly generated Device key alone cannot open them or reproduce the lost User private key.
+
+**Confirmed recovery experience:** User UUID plus the saved downloadable recovery phrase. The UUID locates/binds the identity; the phrase supplies the independent client-side unlocking secret. The service stores/returns ciphertext and public metadata, never receives the phrase or reconstructed recovery private key, and verifies any recovery-enrollment proof through a separately designed authentication contract. No credential-manager/WebAuthn passkey or PRF integration is required by this chosen encryption flow. Identity-provider selection and lost-email/email-change policy remain out of scope; end-to-end tests must prove both cryptographic recovery and correct same-UUID Device registration before online release.
+
+User-key replacement and cold identity-signing/certification are deferred, not silently included. The current scope consequently does not promise exclusion of a thief holding the old User root. Any later identity-replacement feature must define authorization, certificate/format compatibility and recovery artifacts before it ships; one encryption hierarchy is not a guarantee that identity formats never need upgrading.
+
+## 9. Envelope, publication, and sync rules
+
+- Use AES-256-GCM with 128-bit tags, independently random **96-bit nonces**, and at most **2^20 fresh encryption invocations total per Workplace DEK generation across all Devices**, counting snapshots, operations, abandoned attempts and local encryptions; retries reuse immutable ciphertext. Before multiple writers ship, assign disjoint owner-signed per-Device invocation budgets whose sum stays within that cap, reserve/persist usage before encryption, and never reclaim possibly spent budget after a crash. V1 exhaustion blocks new encryption; reads remain possible. A future reviewed rotation mechanism is required before increasing capacity; offline Devices cannot invent more budget. Keep the existing 32 MiB per-payload limit and review aggregate data/verification-attempt limits as well; the cap is an application choice, not a claim that NIST prescribes 2^20. See [GCM nonce/invocation requirements](https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38d.pdf).
+- Use the standard HPKE public-key envelope construction for User/Device/recovery recipients; authenticate purpose, recipient/key ID, User/Device/Workplace identity as applicable, generation, format, and algorithm through its context. Sender authorization remains a separate verified signature/grant. See [HPKE application context](https://www.rfc-editor.org/rfc/rfc9180.html#section-8.1).
+- Removing HKDF from the application key hierarchy does not forbid internal KDFs required by a standard public-key encryption protocol. Such internals do not derive persistent Device keys from the User root.
+- Version and canonically serialize envelopes/registrations. Reject unknown required fields/versions, mismatched identities, invalid keys, altered tags, stale grants, and unexpected generations.
+- Store recovery secret format/account or Workplace identity in external recovery instructions. Never store the recovery secret beside its ciphertext as a supposed protection mechanism.
+- Device User bundles remain local; transient relay payloads are deleted on acknowledged durable receipt or expiry, including retries and cancellation.
+- Sign fresh Device requests with challenges/nonces, expiry, method/path, and payload digest. Enforce active Device status, membership, permissions, and upload consent independently of decryption capability.
+- Persist immutable ciphertext outbox entries and idempotent publication receipts. An upload retry must not allocate a new financial operation or silently change the associated key generation.
+- Authenticate snapshot identity, capture time, key generation, and ordering/checkpoint metadata. Known local checkpoints detect rollback below an observed head. After total Device loss, a malicious server can replay an old valid snapshot; a fresh Device cannot prove latest without an independent trusted checkpoint. Display honest restore timestamps.
+
+Encryption does not resolve concurrent edits. The server detects stale submissions using visible base revisions/parent operation IDs without reading financial data. Clients decrypt the common base and competing changes, safely merge independent fields after whole-journal validation, or show a conflict confirmation page. Keep pending/rejected changes durably until acknowledged/resolved. Revisions, atomic financial mutation capture, deletion semantics, and conflict UX must be proved before concurrent editing ships. Existing audit logs are supporting history, not a sufficient causal sync log.
+
+## 10. Owner-controlled freeze, rotation, and access removal
+
+**Future protocol, outside V1:** V1 has one DEK and no rotation API. The protocol below is retained for later review; it is not an online-release feature already implemented.
+
+### Authority and state
+
+Each Workplace has exactly one pinned owner signing identity. The owner triggers rotation from an approved Device under the accepted unlock policy for that future feature. Members do not initiate/unfreeze it. Requests from affected members may ask the owner to rotate, but cannot change the generation themselves. Ownership transfer requires a separate explicit old-owner-signed transition accepted under the existing pin; the server cannot appoint a replacement owner.
+
+State is durable and versioned: `active(g, head) → frozen(rotationId, g, head, recipientSet) → active(g+1, newHead)`. Starting the freeze atomically compares the current head, rejects later financial writes/invitations/key grants, and captures the remaining-member/key/recovery recipient set. Reads and recovery remain available. Clients that know the freeze block shared editing; an offline client's unaware local edits stay pending and must be reconciled/re-encrypted after unfreeze, never accepted as old-generation writes.
+
+### Valid generation and member behavior
+
+A new generation is valid only with the **owner's signed generation grant under the pinned owner identity**. It binds Workplace, rotation ID, predecessor generation/grant hash, new generation and DEK commitment, remaining member IDs/roles/verified recipient key IDs, every member-envelope hash, recovery public-key binding/envelope hash, checkpoint/head and format, and the transition to active. Clients verify this grant and their own envelope/DEK commitment before using it; a server-selected number or envelope alone is not authority.
+
+Members **auto-accept after verification**, with no manual accept prompt. Failed verification or missing envelopes leaves the client blocked on the last verified state and shows a recoverable integrity error. Old generations are read-only. New writes use only the newest verified signed generation and must match the server's committed head; stale submissions are rejected and retained locally for reconciliation. The fresh-client withholding/rollback limit in Section 9 still applies.
+
+### Prepare and atomic commit
+
+1. After the freeze, generate a new independent DEK and stage every remaining member's envelope (including an owner-readable member envelope), and the Workplace recovery envelope using their verified public keys. Removed recipients get no new envelope. No recovery seed entry is needed.
+2. Validate a consistent frozen financial checkpoint, encrypt the new baseline under the new DEK, and durably stage the immutable payload/envelopes and grant. Members need no manual approval; preparation must not wait for all Devices to be online.
+3. The owner signs the complete grant after verifying all required objects, including readback through the owner member envelope and the verified recovery public-key/envelope binding. Do not require recovery-seed entry merely to create the new recovery envelope. Staged objects are private/inert until committed.
+4. Perform **one atomic metadata commit** covering generation/head, signed grant, every remaining member's envelope, recovery envelope, baseline snapshot reference, recipient-set/key-version checks, and unfreeze. Ciphertext blobs must already be durably staged and hash-checked; a database/object store cannot be assumed to provide one cross-store transaction. Missing/changed objects or recipient versions reject the whole commit.
+5. Acknowledge the exact rotation ID/grant hash. A lost acknowledgement is resolved by reading/verifying the committed manifest, never by publishing a competing DEK. Unreferenced staging can be cleaned up after safe reconciliation, not by deleting a committed generation's objects.
+
+Only the owner authorizes unfreeze, normally **as part of this signed atomic commit**. There is no automatic lease expiry, member/admin unfreeze, or timeout that resumes old writes. A non-security rotation can be canceled before commit by an authenticated owner-signed abort that discards inert staging and explicitly reopens the unchanged old head. **A security/removal rotation cannot reopen the exposed old generation:** it stays frozen until a safe generation commits.
+
+### Owner Device dies mid-rotation
+
+Persist freeze/rotation ID, predecessor, recipient set, and staged hashes remotely before relying on the initiating Device. Another approved owner Device, or a fresh Device enrolled through verified **User recovery**, can fetch the owner-addressed staged envelope, validate progress, and resume the same commit. If the new DEK was lost before any usable staging envelope existed, the recovered owner explicitly abandons that inert attempt and prepares a replacement DEK/rotation attempt against the same frozen predecessor; it does not unfreeze security work or reuse uncertain nonce budget.
+
+If commit succeeded before the crash, recovery observes the committed active head and verifies it; no second unfreeze is required. If no owner Device or User-recovery route remains, the Workplace stays frozen/readable from retained generations. A Workplace dump recovery seed supplies data only, never ownership authority. Support cannot bypass the pin or silently make a member owner.
+
+### Logout, removal, and compromised shared roots — future replacement requirements
+
+Current logout/removal follow Section 6; User recovery only adds a Device. **Removal alone does not take back User root keys.** The deferred remove-and-rotate feature must first replace exposed User encryption/signing keys, distribute new local bundles only to remaining approved Devices, deliver those bundles through authenticated remaining-Device public keys rather than the exposed old User key, update User-recovery ciphertext using its verified public key, atomically retire the old enrollment/signing authority for future registrations, and request owner rotation of every affected Workplace to the new recipient identity. Wrapping a new DEK to the old compromised User public key leaves the removed Device able to decrypt it. If another User owns a Workplace, show protection as pending until that owner commits; never report full protection after merely removing the Device registration.
+
+Owner-signed grants stop a malicious server inventing generations **only while the pinned owner signing authority is trustworthy**. A stolen owner root can sign competing grants/Devices; a transition signed solely by that stolen key does not prove legitimate recovery. Independent owner-identity replacement/repinning is deferred with User-key replacement. Do not claim that add-a-Device recovery or ordinary DEK rotation resolves owner-root compromise. An exposed owner signing key can also sign conflicting grants/freeze transitions; even a frozen state is not a cryptographic defense against that key holder. The future feature needs an independent trust authority before implementation.
+
+Removing a member excludes it from new grants and requires a new Workplace DEK for future payloads. Old generations/downloads remain readable. Rotating to protect future data cannot retract historical plaintext; a new baseline also exposes its historical contents to anyone legitimately granted the new key. Changing a recovery public key or rewrapping without changing an exposed DEK/root does not neutralize stolen seed/ciphertext copies.
+
+## 11. Current implementation and release gates
+
+Implemented local APIs:
+
+- `LocalKeyHierarchy.beginUser` stages independent User encryption/signing pairs and a Device encryption pair, stores only the Device private key in SecureStore, and writes the Device-encrypted User bundle and independently encrypted User-recovery package locally. It verifies the normal chain after vault readback. User setup is ready only after the exported recovery credential reopens the exact bundle and verifies the complete saved User identity and both private/public key pairs.
+- Explicit `enrollWorkplace(..., creation | local-upgrade)` generates one DEK, writes a member envelope to the User public key and a dump envelope to the independent Workplace recovery public key. Confirmation verifies the externally saved credential and the equality of member/recovery DEKs. Repeated enrollment refuses implicit replacement. Backup never creates keys.
+- `withWorkplaceKey` opens Device → User → DEK, borrows the DEK in memory for one operation and clears working bytes. Root readback is gated by the existing app lock, with no fresh biometric prompt. Public/encrypted key state has strict formats and identity-bound HPKE context.
+- User recovery consumes the separately retained encrypted package and the downloadable credential, verifies the same UUID/public-key pin, generates fresh Device keys and a local Device bundle, and installs existing User-addressed DEK envelopes. It does not register an online Device or modify memberships. A replacement Device is read-only for backup encryption until a future explicit writer handover.
+- Workplace dump creation exports only the recovery DEK envelope and encrypted snapshot. Client decryption returns a readable snapshot; it performs no database publication, identity recovery, Device enrollment, or permission changes. A later import uses the normal import-as-copy contract to create a new Workplace. A future API/support workflow may locate the ciphertext by Workplace ID; decryption always remains client-side. Availability/access/retention policy must be defined before that endpoint ships.
+- Payload wire format **2** contains only AES-GCM ciphertext and routing, including a stable DEK fingerprint. It contains no recovery wrapper or secret, and no caller-selected generation. This is a format version, not a second hierarchy. The earlier format-1 implementation was unreleased proof code; its test artifacts are historical and are rejected, never silently converted or used to replace an established key.
+- The single local backup writer reserves durable encryption usage before each fresh snapshot attempt. Failed/abandoned attempts remain spent; retries reuse the immutable snapshot. The cap is 2^20 per DEK. No cross-Device budget or writer handover is claimed.
+- Ciphertext files are published through immutable filenames and small nonsecret AsyncStorage locators. The Device vault is separate; loss of device-only SecureStore entries cannot erase the locators for surviving app files. Failed writes retain previous state or explicit partial enrollment. Unconfirmed setup can be deliberately discarded only while no established key/data depends on it. No SecureStore/filesystem/database transaction or physical power-loss durability is assumed.
+
+The app now exposes local encryption setup through Settings → Data & Backup → Private backup & recovery, and User recovery from the fresh-install welcome screen. Production still has no online identity/challenge provider. Online transport is dormant. Ordinary SQLite and ZIP exports keep their existing local behavior. The Supabase placeholder schema/README have been removed.
+
+Required before rollout:
+
+1. Validate the implemented human creation/upgrade and recovery workflow on physical devices, including saved-file export/import and cancellation. Bind the same identity to login only in the online phase. Retain the encrypted User package independently of the source installation; its phrase alone cannot recreate missing ciphertext.
+2. Run current HPKE/vault/envelope code on physical iOS and Android, across platforms, restart/reinstall, lock/background, unavailable SecureStore, storage failure and interruption at every durable boundary. [Current verification](../../reviews/human-key-setup-2026-10-13.md) covers six native Android key/package cases and two normal-app UI cases. Older iOS simulator runs predate the current identity/storage code and do not close the physical-device or cross-platform gates.
+3. Prove the complete kill matrix, filesystem/locator durability and cleanup; profile memory/reader occupancy on representative devices. Old measurements remain historical, not current performance results.
+4. Hosted restore must not be enabled before signed initial Workplace and snapshot manifests are verified under trusted identity pins. HPKE base mode and a matching content hash do not authenticate a sender. Implement provider-neutral account binding, pinned identity and signed Device registration, verified initial Workplace manifests, authenticated envelope delivery, authorization/consent, challenge/replay checks, immutable snapshot publication, writer handover, checkpoints, retention and deletion. Local cryptographic recovery is not online registration authority.
+5. Define supported snapshot-schema migrations and older-backup fixtures before cloud persistence. Local snapshot parsing still admits schema 35 only; no remote admission mechanism is delivered.
+6. Before concurrent editing/sharing, implement causal operations/revisions/conflicts and accounting validation; signed disjoint encryption budgets; invitations and member removal; then review the future freeze/rotation protocol. Root replacement and compromised-owner repinning remain deferred.

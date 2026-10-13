@@ -1,0 +1,75 @@
+{
+  "verifiedOn": "2026-10-13",
+  "platform": "Android API 36, Google APIs arm64, two disposable AVDs",
+  "scope": "Native key/package APIs; emulator evidence, not physical-device or complete real-file-picker proof",
+  "cases": {
+    "prepare": {
+      "stage": "prepare",
+      "accounts": 13,
+      "journals": 46,
+      "transactions": 92,
+      "plaintextBytes": 45593,
+      "captureMs": 54,
+      "encryptMs": 453,
+      "recoverMs": 171,
+      "secureStoreVerified": true,
+      "userSigningPairVerified": true,
+      "signedPackageVerified": true,
+      "tamperedSignatureRejected": true,
+      "wrongCodeRejected": true,
+      "tamperRejected": true,
+      "totalMs": 5555
+    },
+    "restart": {
+      "stage": "restart",
+      "savedKeySurvived": true,
+      "journals": 46
+    },
+    "replacement": {
+      "stage": "recover",
+      "sourceKeyWasAbsent": true,
+      "sameSigningIdentityVerified": true,
+      "recoveredUsingCode": true,
+      "recordIdentityAndContentVerified": true,
+      "bookConfigurationVerified": true,
+      "retryDidNotDuplicate": true,
+      "journals": 46,
+      "recoveryMs": 2196,
+      "restoreMs": 160,
+      "totalMs": 2770
+    },
+    "reinstall": {
+      "stage": "reinstall",
+      "sourceKeyWasAbsent": true,
+      "sameSigningIdentityVerified": true,
+      "recoveredUsingCode": true,
+      "recordIdentityAndContentVerified": true,
+      "bookConfigurationVerified": true,
+      "retryDidNotDuplicate": true,
+      "journals": 46,
+      "recoveryMs": 1809,
+      "restoreMs": 139,
+      "totalMs": 2229
+    },
+    "missing-device-key": {
+      "stage": "missing-device-key",
+      "recoveryRequired": true,
+      "sameUserIdentityVerified": true,
+      "sameSigningIdentityVerified": true,
+      "sameDekVerified": true,
+      "existingDataUnchanged": true,
+      "orphanPreserved": false,
+      "totalMs": 1886
+    },
+    "orphan-device-key": {
+      "stage": "orphan-device-key",
+      "recoveryRequired": true,
+      "sameUserIdentityVerified": true,
+      "sameSigningIdentityVerified": true,
+      "sameDekVerified": true,
+      "existingDataUnchanged": true,
+      "orphanPreserved": true,
+      "totalMs": 2461
+    }
+  }
+}
