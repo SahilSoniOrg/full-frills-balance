@@ -114,8 +114,8 @@ export const BulkEntryGrid = React.memo(
     const blurFocusedInput = useCallback(() => {
       if (isInteractingWithSuggestionsRef.current) return;
       Keyboard.dismiss();
-      const focused = TextInput.State.currentlyFocusedInput();
-      if (focused) TextInput.State.blurTextInput(focused);
+      const focused = TextInput.State.currentlyFocusedInput?.();
+      if (focused) TextInput.State.blurTextInput?.(focused);
       if (Platform.OS === 'web' && typeof document !== 'undefined') {
         const active = document.activeElement;
         if (active instanceof HTMLElement) active.blur();
