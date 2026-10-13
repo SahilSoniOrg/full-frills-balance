@@ -29,9 +29,9 @@ Ordinary User-chain restore preserves shared IDs and commits a snapshot receipt 
 
 ## Manual publication
 
-The dormant coordinator requires a future verified account/User-key/registered-Device identity and explicit Workplace upload consent. It consumes enrolled key envelopes, stages immutable ciphertext, and retries the same bytes and snapshot ID. Consent/session/revocation checks run after awaited work and at dispatch. Opt-out is local only until a remote consent API exists.
+Online publication is deferred to a later PR. Its coordinator must require a verified account/User-key/registered-Device identity and explicit Workplace upload consent, consume enrolled key envelopes, stage immutable ciphertext and retry the same bytes and snapshot ID. Consent/session/revocation checks must run after awaited work and at dispatch. Local opt-out does not replace server authorization or deletion.
 
-The HTTPS transport still requires an injected trusted challenge/signature adapter. Backend JWT, Device registration, membership/role, challenge expiry/single-use, consent, schema/size/hash admission and atomic idempotent publication must be implemented and tested before enabling it. HPKE base mode and server-provided content hashes do not authenticate the sender. Hosted restore is blocked until signed initial Workplace and snapshot manifests are verified against trusted identity pins. Checkpoints separately address observed rollback; they cannot prove latest after total loss without an independent checkpoint.
+A future HTTPS transport requires a trusted challenge/signature adapter. Backend JWT, Device registration, membership/role, challenge expiry/single-use, consent, schema/size/hash admission and atomic idempotent publication must be implemented and tested before enabling it. HPKE base mode and server-provided content hashes do not authenticate the sender. Hosted restore is blocked until signed initial Workplace and snapshot manifests are verified against trusted identity pins. Checkpoints separately address observed rollback; they cannot prove latest after total loss without an independent checkpoint.
 
 There is no deployed endpoint, sign-in provider, online setup surface or Supabase migration. Supabase is the current planned provider, confirmed 13 October; its schema and integration still require design. The rejected placeholder SQL remains deleted.
 
@@ -39,7 +39,9 @@ There is no deployed endpoint, sign-in provider, online setup surface or Supabas
 
 Do not synchronize SQLite files or mistake the existing audit log for a causal operation log. Future encrypted operations need durable IDs, source mutation capture, parent revisions, idempotent receipts, tombstones, cursors and snapshot watermarks. Clients rebuild balances and projections from source records.
 
-The [audit-log reuse assessment](../../reviews/audit-log-sync-reuse-2026-10-12.md) records reusable write boundaries and history helpers. Outstanding requirements from the initial readiness review remain:
+Accounting history supplies reusable write boundaries and display helpers: `AccountingWriteSession`, `deriveAuditFieldDeltas`, audit payload creators, guarded undo and before/after UI. It is not a complete causal operation log. Existing UPDATE deltas omit unchanged fields; timestamps do not establish revision ancestry; bulk account reassignment does not stage history; serialization can retain only an error summary. SMS privacy remediation and import remapping can rewrite historical bytes, and display pairing is unsuitable for split journals with repeated account legs.
+
+A future sync implementation needs its own complete, immutable mutation payloads, authenticated authors, parent revisions and conflict lifecycle. Keep explanatory history in snapshots, reuse formatting after normalization, and validate the whole journal before merging. Remaining requirements:
 
 - Capture a complete accounting mutation and its durable outgoing operation in the same commit. Apply incoming source rows, replay receipt and cursor atomically; avoid echo uploads. Bind bootstrap snapshots to a log watermark, and tie tombstone cleanup to acknowledged delivery or explicit stale-Device bootstrap.
 - Define cross-Device recurring-occurrence identity and generate/post/skip behavior, including schedule/time-zone changes and competing FX quotes. Per-upload idempotency alone cannot prevent duplicate settlements. Device-local SMS IDs likewise do not identify a universal bank event; amount/date similarity must not silently merge records.

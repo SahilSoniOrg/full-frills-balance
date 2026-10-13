@@ -122,8 +122,6 @@ export const AppConfig = {
     // Set this when the version-policy endpoint is ready. Keeping it empty
     // makes the app-side gate inert until the remote policy is deployed.
     versionPolicyUrl: process.env.EXPO_PUBLIC_VERSION_POLICY_URL ?? '',
-    // Reserved endpoint: URL alone cannot enable backup without trusted auth/challenge adapters.
-    onlineBackupBaseUrl: process.env.EXPO_PUBLIC_ONLINE_BACKUP_BASE_URL ?? '',
   },
 
   // Public legal and support links
