@@ -44,7 +44,7 @@ export function EncryptionRecoveryView({
       <Stack space="lg" testID="encryption-recovery-screen">
         <AppText variant="body" color="secondary">
           {recoverMode
-            ? 'Recover your same User and restore a Workplace from your saved files. Existing different books will not be overwritten.'
+            ? 'Recover your same User using your saved files. Existing books stay in place; missing books are restored from the package.'
             : 'Set up private backups for this Workplace. Cloud backup is not connected yet; save your files somewhere outside this installation.'}
         </AppText>
         {vm.message ? (
@@ -84,8 +84,8 @@ export function EncryptionRecoveryView({
               : null}
             <AppText variant="caption" color="secondary">
               The encrypted package contains the books as they were when it was created. Recovery
-              keeps the same identity and records; it does not transfer backup writing to this
-              Device.
+              keeps newer local books and settings when restoring key access; it does not transfer
+              backup writing to this Device.
             </AppText>
             {action(
               'recovery-confirm',
@@ -198,6 +198,14 @@ export function EncryptionRecoveryView({
                   'Open saved package to finish',
                   vm.verifyPackage,
                 )}
+                {status.writerAllowed
+                  ? action(
+                      'encryption-abandon-package',
+                      'Abandon unfinished backup',
+                      vm.abandonPackage,
+                      true,
+                    )
+                  : null}
               </>
             ) : null}
             {status.budgetExhausted ? (

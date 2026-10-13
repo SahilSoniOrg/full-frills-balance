@@ -5,6 +5,42 @@ import { recoveryFiles } from '@/src/services/backup/recoveryFiles';
 import { encryptionSetup } from '@/src/services/backup/encryptionSetup';
 import { setKeyAccessAllowed } from '@/src/services/backup/keyAccessPolicy';
 import { AppNavigation } from '@/src/utils/navigation';
+import {
+  saveSetupDraft,
+  clearSetupDraft,
+  createSetupDraft,
+  readBlockingSetupProjection,
+} from '@/src/features/setup';
+import { readSetupDraftSnapshot } from '@/src/services/setup/launchProjection';
+import { resolveLaunchGate } from '@/src/services/launch/launchResolver';
+import { asWorkplaceId } from '@/src/types/ids';
+import { preferences } from '@/src/services/preferences';
+
+// Use the real Setup owner and persistence without loading unrelated screen/native modules.
+jest.mock('@/src/features/setup', () => ({
+  ...jest.requireActual('@/src/features/setup/SetupDraftStore'),
+  createSetupDraft: jest.requireActual('@/src/features/setup/SetupCoordinator').createSetupDraft,
+  readBlockingSetupProjection: jest.requireActual(
+    '@/src/features/setup/readBlockingSetupProjection',
+  ).readBlockingSetupProjection,
+  finishRecoveredWorkplaceSetup: jest.requireActual('@/src/features/setup/setupFinishers')
+    .finishRecoveredWorkplaceSetup,
+}));
+
+jest.mock('@/src/utils/storage', () => {
+  const memory = new Map<string, string>();
+  return {
+    storage: {
+      getString: jest.fn((key: string) => memory.get(key)),
+      set: jest.fn((key: string, value: string) => {
+        memory.set(key, value);
+      }),
+      remove: jest.fn((key: string) => {
+        memory.delete(key);
+      }),
+    },
+  };
+});
 
 jest.mock('expo-router', () => ({
   useFocusEffect: (callback: () => void) => {
@@ -39,6 +75,7 @@ jest.mock('@/src/utils/alerts', () => ({ confirm: { show: jest.fn() } }));
 let stateChanged: (value: 'active' | 'background') => void;
 beforeEach(() => {
   jest.clearAllMocks();
+  clearSetupDraft();
   AppState.currentState = 'active';
   setKeyAccessAllowed(true);
   jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, callback) => {
@@ -57,8 +94,86 @@ beforeEach(() => {
   });
 });
 afterEach(() => {
+  clearSetupDraft();
   setKeyAccessAllowed(false);
   jest.restoreAllMocks();
+});
+
+it('finishes the empty-device setup gate after recovery so the next launch opens the recovered books', async () => {
+  const workplaceId = asWorkplaceId('recovered');
+  saveSetupDraft(createSetupDraft('empty_device_workplace', asWorkplaceId('unused-creation')));
+  expect(readBlockingSetupProjection(readSetupDraftSnapshot())).toMatchObject({
+    journeyId: 'empty_device_workplace',
+    entryPolicy: 'blocking',
+  });
+  const { result, unmount } = await selectedFiles();
+  jest.mocked(encryptionSetup.recover).mockResolvedValueOnce({
+    kind: 'restored',
+    workplaceId,
+    bookPreferences: { safeToSpendDays: 45 },
+  });
+  await act(async () => {
+    await result.current.recover();
+  });
+  expect(AppNavigation.toDashboard).toHaveBeenCalled();
+  expect(
+    resolveLaunchGate({
+      setupDraft: readBlockingSetupProjection(readSetupDraftSnapshot()),
+      deviceClaimed: true,
+      activeWorkplaceId: workplaceId,
+      workplaceIds: [workplaceId],
+    }),
+  ).toMatchObject({ kind: 'open', workplaceId });
+  unmount();
+});
+
+it('preserves newer local preferences when only key access is recovered', async () => {
+  const { result, unmount } = await selectedFiles();
+  jest.mocked(encryptionSetup.recover).mockResolvedValueOnce({
+    kind: 'keys-recovered',
+    workplaceId: asWorkplaceId('existing-books'),
+  });
+  await act(async () => {
+    await result.current.recover();
+  });
+  expect(preferences.workplace.replace).not.toHaveBeenCalled();
+  expect(AppNavigation.toDashboard).toHaveBeenCalled();
+  unmount();
+});
+
+it('keeps the setup gate when recovery fails', async () => {
+  saveSetupDraft(createSetupDraft('empty_device_workplace', asWorkplaceId('pending')));
+  const expected = readSetupDraftSnapshot();
+  const { result, unmount } = await selectedFiles();
+  jest.mocked(encryptionSetup.recover).mockRejectedValueOnce(new Error('invalid package'));
+  await act(async () => {
+    await result.current.recover();
+  });
+  expect(readSetupDraftSnapshot()).toBe(expected);
+  expect(AppNavigation.toDashboard).not.toHaveBeenCalled();
+  unmount();
+});
+
+it('does not discard another setup journey changed while recovery was in flight', async () => {
+  saveSetupDraft(createSetupDraft('empty_device_workplace', asWorkplaceId('original')));
+  const { result, unmount } = await selectedFiles();
+  let newerDraft: string | undefined;
+  jest.mocked(encryptionSetup.recover).mockImplementationOnce(async () => {
+    saveSetupDraft(
+      createSetupDraft('empty_device_workplace', asWorkplaceId('different-operation')),
+    );
+    newerDraft = readSetupDraftSnapshot();
+    return {
+      kind: 'restored',
+      workplaceId: asWorkplaceId('restored'),
+      bookPreferences: { safeToSpendDays: 45 },
+    };
+  });
+  await act(async () => {
+    await result.current.recover();
+  });
+  expect(readSetupDraftSnapshot()).toBe(newerDraft);
+  unmount();
 });
 
 async function selectedFiles() {

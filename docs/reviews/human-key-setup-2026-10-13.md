@@ -10,7 +10,7 @@ Setup exports three separate files: a User recovery secret, a Workplace emergenc
 
 The package signature authenticates the complete User-recovery object, Workplace envelope/usage record and encrypted snapshot against the independently saved full User identity pin. It uses the already provisioned Ed25519 User signing key; no User, credential or DEK migration is introduced. HPKE encryption alone is still not sender authentication. Hosted registration, owner grants, authenticated checkpoints and signed online publication remain separate protocol requirements.
 
-Recovery checks the signature and recovery secret before durable setup writes, creates an independent Device, restores the same User encryption/signing keys and DEK, and publishes original financial identities through the atomic idempotent restore path. Repeated recovery does not duplicate books. A replacement Device stays read-only for backup encryption pending writer handover. If an established Workplace marker survives but its usage record is lost, the uncertain encryption budget is exhausted rather than reset from an older package.
+Recovery checks the signature and recovery secret before durable setup writes, creates an independent Device, and restores the same User encryption/signing keys and DEK. A matching pre-existing local key binding allows key-access recovery with current books and preferences retained. Missing books use the atomic idempotent original-ID restore path; unrelated local collisions still reject. Repeated recovery does not duplicate books. A replacement Device stays read-only for backup encryption pending writer handover. If an established Workplace marker survives but its usage record is lost, the uncertain encryption budget is exhausted rather than reset from an older package.
 
 ## Persistence and interruption
 
@@ -27,7 +27,7 @@ The local source is a replaceable persistent-store adapter. Phase 2 will retriev
 
 | Check                                                                    | Result                                                                                                                                                                            |
 | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Final full application suite                                             | 543 suites, 3,846 tests, 9 snapshots passed.                                                                                                                                      |
+| Final full application suite                                             | 543 suites, 3,854 tests, 9 snapshots passed.                                                                                                                                      |
 | Application/E2E TypeScript                                               | Passed.                                                                                                                                                                           |
 | Changed-code lint                                                        | Passed. Repository lint has zero errors and one existing warning in `useJournalSuggestions.ts`.                                                                                   |
 | Architecture and privacy-policy guards                                   | Passed; route registry contains 43 routes.                                                                                                                                        |
@@ -40,6 +40,12 @@ The key harness executes real QuickCrypto, HPKE, SecureStore, AsyncStorage and W
 The first UI run failed because its assertion used a matcher unsupported by Detox. Replacing that assertion with native element attributes fixed the test; no product behavior was weakened. Android cold launches also emitted transient Detox connection warnings; final tests completed successfully. The package and file workflow tests cover valid forged-envelope substitution, wrong secrets before writes, duplicate-safe restore, interrupted export retry, missing usage, retained ciphertext and Device removal. File picker/share adapters are exercised with mocked OS surfaces: a complete real-picker saved-file setup/recovery round trip is still a gate, not claimed here.
 
 The six nonsecret native case results are consolidated in [the verification summary](./key-management-verification-2026-10-13.json). Screenshots and superseded per-run artifacts have been removed. Credential-bearing fixtures and both disposable AVDs were removed after verification; the user's existing AVD remains untouched. Earlier iOS runs predate this signing/storage/UI work and do not prove it.
+
+## PR review fixes
+
+Review at `1fc28f31` found three workflow failures, reproduced before fixing: removing Device access then recovering attempted to republish retained books; a surviving empty-device setup draft overrode successful recovery at the next launch; and a missing pending export file had no abandonment path.
+
+Recovery now distinguishes key-access restoration from publishing missing books. Setup owns completion of the satisfied, unchanged empty-device creation gate after activation; failed recovery and changed/unrelated drafts remain intact. An explicit confirmed action abandons only an unfinished package checkpoint, without reading the missing file, changing keys or reclaiming encryption usage. Preparing its replacement spends a new invocation. Regression coverage includes newer local books/preferences, unbound collisions, launch after completion, interruption and failed abandonment persistence. These follow-up fixes are automated-test verified; native file-picker and physical-device gates remain open.
 
 ## Open gates
 

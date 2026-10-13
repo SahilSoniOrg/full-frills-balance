@@ -24,7 +24,7 @@ import {
   snapshotFingerprint,
 } from './encryptedSnapshot';
 import { captureWorkplaceSnapshot, type WorkplaceSnapshot } from './workplaceSnapshot';
-import { restoreWorkplaceSnapshot } from '@/src/services/import/restoreWorkplaceSnapshot';
+import { recoverWorkplaceSnapshot } from '@/src/services/import/restoreWorkplaceSnapshot';
 import { asWorkplaceId } from '@/src/types/ids';
 import { assertKeyAccessAllowed } from './keyAccessPolicy';
 import type { RecoveryCredential } from './keyEnvelopes';
@@ -43,7 +43,7 @@ export interface SetupViewState {
   packageReady: boolean;
   packageSaved: boolean;
 }
-type Publication = Awaited<ReturnType<typeof restoreWorkplaceSnapshot>>;
+type Publication = Awaited<ReturnType<typeof recoverWorkplaceSnapshot>>;
 /** Human workflow over the existing hierarchy. Durable checkpoints contain no recovery secret. */
 export class EncryptionSetup {
   private queue: Promise<unknown> = Promise.resolve();
@@ -52,7 +52,7 @@ export class EncryptionSetup {
     private readonly store: EncryptionSetupStore,
     private readonly assertAccess: () => void,
     private readonly capture: (workplaceId: string) => Promise<WorkplaceSnapshot>,
-    private readonly publish: (snapshot: WorkplaceSnapshot) => Promise<Publication>,
+    private readonly publish: typeof recoverWorkplaceSnapshot,
   ) {}
   private exclusive<T>(operation: () => Promise<T>): Promise<T> {
     const next = this.queue
@@ -223,6 +223,23 @@ export class EncryptionSetup {
       return verifyLocalRecoveryPackage(await this.store.readPackage(session.package), identity);
     });
   }
+  abandonPendingPackage(workplaceId: string): Promise<void> {
+    return this.exclusive(async () => {
+      const { session, keys } = await this.ready(workplaceId);
+      if (
+        !session.package ||
+        session.package.workplaceId !== workplaceId ||
+        session.package.confirmed
+      )
+        throw new Error('No unfinished package for this Workplace');
+      if (!keys.writerAllowed) throw new Error('This Device cannot create a replacement backup');
+      const next = { ...session };
+      delete next.package;
+      this.assertAccess();
+      // Do not read the missing file, replace keys, or reclaim its encryption invocation.
+      await this.store.saveSession(next);
+    });
+  }
   forgetDevice(): Promise<void> {
     return this.exclusive(async () => {
       const session = await this.session();
@@ -315,6 +332,10 @@ export class EncryptionSetup {
         identity.registeredDeviceId,
         saved.workplaceKeys.workplaceId,
       );
+      // Capture this BEFORE installing external keys: a fresh package cannot authorize
+      // claiming unrelated local books just because their Workplace ID collides.
+      const preserveExistingBooks =
+        status.workplace === 'ready' || status.workplace === 'recovery-required';
       if (status.workplace === 'missing' || status.workplace === 'recovery-required')
         await this.hierarchy.installWorkplaceKeys(identity, saved.workplaceKeys);
       else {
@@ -336,7 +357,7 @@ export class EncryptionSetup {
       await this.store.saveSession({ ...session!, package: { ...reference, confirmed: true } });
       this.assertAccess();
       assertIntent();
-      return this.publish(snapshot); // Atomic, idempotent original-ID publication; no budget reset or writer handover.
+      return this.publish(snapshot, { preserveExistingBooks }); // Retain known local books; otherwise atomic original-ID publication.
     });
   }
 }
@@ -346,5 +367,5 @@ export const encryptionSetup = new EncryptionSetup(
   encryptionSetupStore,
   assertKeyAccessAllowed,
   workplaceId => captureWorkplaceSnapshot(asWorkplaceId(workplaceId)),
-  restoreWorkplaceSnapshot,
+  recoverWorkplaceSnapshot,
 );

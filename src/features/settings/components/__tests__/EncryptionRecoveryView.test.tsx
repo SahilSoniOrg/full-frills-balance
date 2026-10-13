@@ -20,6 +20,7 @@ function vm(patch: Partial<ViewModel> = {}): ViewModel {
     verifySecret: jest.fn(),
     exportPackage: jest.fn(),
     reexportPackage: jest.fn(),
+    abandonPackage: jest.fn(),
     verifyPackage: jest.fn(),
     discard: jest.fn(),
     pickSecret: jest.fn(),
@@ -74,6 +75,8 @@ it('resumes pending ciphertext export and requires opening the saved package', (
   expect(model.reexportPackage).toHaveBeenCalled();
   fireEvent.press(screen.getByTestId('encryption-verify-package'));
   expect(model.verifyPackage).toHaveBeenCalled();
+  fireEvent.press(screen.getByTestId('encryption-abandon-package'));
+  expect(model.abandonPackage).toHaveBeenCalled();
 });
 it('a recovered Device can re-export a package but is not offered fresh backup encryption', () => {
   const model = vm({

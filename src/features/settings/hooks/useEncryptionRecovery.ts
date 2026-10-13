@@ -13,6 +13,8 @@ import { preferences } from '@/src/services/preferences';
 import { useOptionalWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AppNavigation } from '@/src/utils/navigation';
 import { confirm } from '@/src/utils/alerts';
+import { finishRecoveredWorkplaceSetup } from '@/src/features/setup';
+import { readSetupDraftSnapshot } from '@/src/services/setup/launchProjection';
 
 export function useEncryptionRecovery(workplaceId?: string) {
   const workplace = useOptionalWorkplace();
@@ -148,6 +150,20 @@ export function useEncryptionRecovery(workplaceId?: string) {
     run(async () => {
       await recoveryFiles.exportPackage(await encryptionSetup.savedPackage());
     });
+  const abandonPackage = () =>
+    confirm.show({
+      title: 'Abandon this unfinished backup?',
+      message:
+        'Your books and keys stay in place. This backup attempt remains counted. You can prepare a new encrypted package afterward.',
+      confirmText: 'Abandon unfinished backup',
+      destructive: true,
+      onConfirm: () => {
+        void run(async () => {
+          if (!workplaceId) throw new Error('Select a Workplace first');
+          await encryptionSetup.abandonPendingPackage(workplaceId);
+        });
+      },
+    });
   const verifyPackage = () =>
     run(async () => {
       const value = await recoveryFiles.pickPackage();
@@ -214,6 +230,7 @@ export function useEncryptionRecovery(workplaceId?: string) {
         pack = importedPackage.current;
       if (!secret || !pack) throw new Error('Choose both recovery files');
       const version = intent.current;
+      const setupDraft = readSetupDraftSnapshot();
       const publication = await encryptionSetup.recover(pack, secret, () => {
         if (!alive.current || intent.current !== version || AppState.currentState !== 'active')
           throw new Error('Recovery was cancelled');
@@ -223,13 +240,15 @@ export function useEncryptionRecovery(workplaceId?: string) {
       clearSecrets();
       importedPackage.current = null;
       setHasImportedPackage(false);
-      preferences.workplace.replace(publication.workplaceId, publication.bookPreferences);
+      if (publication.kind === 'restored')
+        preferences.workplace.replace(publication.workplaceId, publication.bookPreferences);
       if (workplace) await workplace.setWorkplaceId(publication.workplaceId);
       else
         preferences.device.update({
           activeWorkplaceId: publication.workplaceId,
           deviceRegistered: true,
         });
+      finishRecoveredWorkplaceSetup(setupDraft);
       AppNavigation.toDashboard();
     });
   return {
@@ -244,6 +263,7 @@ export function useEncryptionRecovery(workplaceId?: string) {
     verifySecret,
     exportPackage,
     reexportPackage,
+    abandonPackage,
     verifyPackage,
     discard,
     pickSecret,

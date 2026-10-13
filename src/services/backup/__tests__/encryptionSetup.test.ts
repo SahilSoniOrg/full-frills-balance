@@ -10,10 +10,11 @@ import {
 } from '../encryptedSnapshot';
 import { publicKeyId, sealKeyEnvelope } from '../keyEnvelopes';
 import type { EncryptionSetupStore, EncryptionSetupSession } from '../encryptionSetupStore';
-import { restoreWorkplaceSnapshot } from '@/src/services/import/restoreWorkplaceSnapshot';
+import { recoverWorkplaceSnapshot } from '@/src/services/import/restoreWorkplaceSnapshot';
 import { captureWorkplaceSnapshot, SNAPSHOT_TABLES } from '../workplaceSnapshot';
 import { asWorkplaceId } from '@/src/types/ids';
 import { parseEncryptionSetupSession } from '../encryptionSetupValidation';
+import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 
 jest.mock('react-native-quick-crypto', () => ({
   __esModule: true,
@@ -54,7 +55,7 @@ async function configured() {
   const { snapshot, workplaceId } = await seedSnapshotWorkplace();
   const context = memoryKeyHierarchy();
   const persistence = storeFixture();
-  const publish = jest.fn(restoreWorkplaceSnapshot);
+  const publish = jest.fn(recoverWorkplaceSnapshot);
   const flow = new EncryptionSetup(
     context.hierarchy,
     persistence.store,
@@ -191,7 +192,7 @@ it('recovers the same User/DEK/records onto a fresh Device and makes publication
     persistence.store,
     () => undefined,
     jest.fn(),
-    restoreWorkplaceSnapshot,
+    recoverWorkplaceSnapshot,
   );
   const result = await flow.recover(pack, source.userSecret);
   const session = await persistence.store.loadSession();
@@ -355,4 +356,73 @@ it('removes only Device access after verified exports while retaining an indepen
   expect((await source.flow.inspect(source.workplaceId)).keys?.user).toBe('recovery-required');
   await expect(source.flow.beginUser()).rejects.toThrow('new root');
   expect(await source.flow.savedPackage()).toEqual(pack); // No lost Device/User key needed to locate ciphertext.
+});
+
+it('recovers removed Device access without republishing or replacing retained local books', async () => {
+  const source = await configured();
+  const pack = await source.flow.preparePackage(source.workplaceId);
+  await source.flow.confirmPackage(pack);
+  const workplace = await workplaceRepository.find(asWorkplaceId(source.workplaceId));
+  await workplaceRepository.update(workplace!, { name: 'Books edited since backup' });
+  const before = await captureWorkplaceSnapshot(asWorkplaceId(source.workplaceId));
+  await source.flow.forgetDevice();
+  const result = await source.flow.recover(pack, source.userSecret);
+  expect(result).toMatchObject({ kind: 'keys-recovered', workplaceId: source.workplaceId });
+  const after = await captureWorkplaceSnapshot(asWorkplaceId(source.workplaceId));
+  expect(after.workplace).toEqual(before.workplace);
+  expect(after.data).toEqual(before.data);
+  expect((await source.flow.inspect(source.workplaceId)).keys?.user).toBe('ready');
+  expect((await source.flow.savedPackage()).workplaceKeys.keyId).toBe(pack.workplaceKeys.keyId);
+});
+
+it('does not treat a freshly imported key package as permission to claim colliding local books', async () => {
+  const source = await configured();
+  const pack = await source.flow.preparePackage(source.workplaceId);
+  const target = memoryKeyHierarchy();
+  const targetStore = storeFixture();
+  const flow = new EncryptionSetup(
+    target.hierarchy,
+    targetStore.store,
+    () => undefined,
+    jest.fn(),
+    recoverWorkplaceSnapshot,
+  );
+  const before = await captureWorkplaceSnapshot(asWorkplaceId(source.workplaceId));
+  await expect(flow.recover(pack, source.userSecret)).rejects.toThrow(
+    'Snapshot Workplace already exists',
+  );
+  expect((await captureWorkplaceSnapshot(asWorkplaceId(source.workplaceId))).data).toEqual(
+    before.data,
+  );
+});
+
+it('keeps pending ciphertext and spent usage when abandonment cannot persist its checkpoint', async () => {
+  const source = await configured();
+  const pack = await source.flow.preparePackage(source.workplaceId);
+  const previous = await source.store.loadSession();
+  jest.mocked(source.store.saveSession).mockRejectedValueOnce(new Error('storage denied'));
+  await expect(source.flow.abandonPendingPackage(source.workplaceId)).rejects.toThrow(
+    'storage denied',
+  );
+  expect(await source.store.loadSession()).toEqual(previous);
+  expect(await source.flow.preparePackage(source.workplaceId)).toEqual(pack);
+  expect(source.store.writePackage).toHaveBeenCalledTimes(1);
+});
+
+it('explicitly abandons an unavailable unfinished package without replacing keys or reclaiming usage', async () => {
+  const source = await configured();
+  const pack = await source.flow.preparePackage(source.workplaceId);
+  jest
+    .mocked(source.store.readPackage)
+    .mockRejectedValueOnce(new Error('Encrypted recovery package is unavailable'));
+  await expect(source.flow.preparePackage(source.workplaceId)).rejects.toThrow('unavailable');
+  // The checkpoint has to be abandonable even though its referenced file cannot be read.
+  await source.flow.abandonPendingPackage(source.workplaceId);
+  const next = await source.flow.preparePackage(source.workplaceId);
+  expect(next.snapshot.snapshotId).not.toBe(pack.snapshot.snapshotId);
+  expect(next.workplaceKeys.keyId).toBe(pack.workplaceKeys.keyId);
+  expect(next.userRecoveryPackage).toEqual(pack.userRecoveryPackage);
+  expect(next.workplaceKeys.encryptionInvocations).toBe(2);
+  await source.flow.confirmPackage(next);
+  await expect(source.flow.abandonPendingPackage(source.workplaceId)).rejects.toThrow('unfinished');
 });

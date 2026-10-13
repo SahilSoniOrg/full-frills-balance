@@ -7,6 +7,7 @@ import {
 } from '@/src/services/backup/workplaceSnapshot';
 import { snapshotFingerprint } from '@/src/services/backup/encryptedSnapshot';
 import { currencyReadService } from '@/src/services/currency-read-service';
+import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 
 /**
  * Publishes an identity-preserving snapshot, without activation, enrollment, or User/Device settings.
@@ -34,4 +35,19 @@ export async function restoreWorkplaceSnapshot(source: WorkplaceSnapshot): Promi
     { snapshotRestoreFingerprint: fingerprint },
   );
   return { workplaceId, bookPreferences: snapshot.bookPreferences };
+}
+
+export type WorkplaceRecoveryResult =
+  | { kind: 'keys-recovered'; workplaceId: ReturnType<typeof asWorkplaceId> }
+  | ({ kind: 'restored' } & Awaited<ReturnType<typeof restoreWorkplaceSnapshot>>);
+
+/** Only the recovery caller with a matching pre-existing local key binding may retain books. */
+export async function recoverWorkplaceSnapshot(
+  source: WorkplaceSnapshot,
+  options: { preserveExistingBooks: boolean },
+): Promise<WorkplaceRecoveryResult> {
+  const workplaceId = asWorkplaceId(source.workplace.id);
+  if (options.preserveExistingBooks && (await workplaceRepository.find(workplaceId)))
+    return { kind: 'keys-recovered', workplaceId };
+  return { kind: 'restored', ...(await restoreWorkplaceSnapshot(source)) };
 }

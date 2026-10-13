@@ -12,6 +12,19 @@ import type {
   WorkplaceSetupOutput,
 } from './setupTypes';
 import { primaryRestoreSource, restoreSources } from './setupTypes';
+import { clearSetupDraft, loadSetupDraft } from './SetupDraftStore';
+import { readSetupDraftSnapshot } from '@/src/services/setup/launchProjection';
+import { clearPendingCashClarityWorkplaceId } from './first-run/pendingWorkplace';
+
+/** After successful recovery/activation, only the empty-device creation gate is satisfied. */
+export function finishRecoveredWorkplaceSetup(expectedDraft: string | undefined): void {
+  // Recovery must not discard another journey started while it was awaiting crypto/storage.
+  if (readSetupDraftSnapshot() !== expectedDraft) return;
+  const draft = loadSetupDraft();
+  if (draft?.journeyId !== 'empty_device_workplace' || draft.entryPolicy !== 'blocking') return;
+  clearSetupDraft();
+  clearPendingCashClarityWorkplaceId();
+}
 
 function starterAccounts(output: WorkplaceSetupOutput) {
   return output.selectedAccounts.map(item => {
