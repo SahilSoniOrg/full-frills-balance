@@ -82,6 +82,26 @@ async function configured() {
   };
 }
 
+async function secondWorkplace(source: Awaited<ReturnType<typeof configured>>) {
+  const workplaceId = asWorkplaceId('second-workplace');
+  await workplaceRepository.create({
+    id: workplaceId,
+    name: 'Second books',
+    icon: source.snapshot.workplace.icon,
+    defaultCurrencyCode: 'USD',
+  });
+  const flow = new EncryptionSetup(
+    source.hierarchy,
+    source.store,
+    () => undefined,
+    id => captureWorkplaceSnapshot(asWorkplaceId(id)),
+    recoverWorkplaceSnapshot,
+  );
+  const secret = await flow.beginWorkplace(workplaceId);
+  await flow.confirmWorkplace(workplaceId, secret);
+  return { workplaceId, pack: await flow.preparePackage(workplaceId), flow };
+}
+
 it('requires saved-file verification and persists no credential/plaintext between steps', async () => {
   const { snapshot, workplaceId } = await seedSnapshotWorkplace();
   const context = memoryKeyHierarchy(),
@@ -516,6 +536,157 @@ it.each(['collision rejection', 'interrupted User recovery'])(
     expect((await captureWorkplaceSnapshot(asWorkplaceId(source.workplaceId))).data).toEqual(
       local.snapshot.data,
     );
+  },
+);
+
+it('recovering B after checkpoint loss never grants a book binding to surviving imported keys for A', async () => {
+  const source = await configured();
+  const second = await secondWorkplace(source);
+  const first = await source.flow.preparePackage(source.workplaceId);
+  await resetDatabase();
+  const target = memoryKeyHierarchy(),
+    persistence = storeFixture();
+  const publish = jest.fn(async (...args: Parameters<typeof recoverWorkplaceSnapshot>) => {
+    if (
+      args[0].workplace.id === source.workplaceId &&
+      !(await workplaceRepository.find(source.workplaceId))
+    ) {
+      await workplaceRepository.create({
+        id: source.workplaceId,
+        name: 'Unrelated local A',
+        icon: source.snapshot.workplace.icon,
+        defaultCurrencyCode: 'USD',
+      });
+    }
+    return recoverWorkplaceSnapshot(...args);
+  });
+  const restart = () =>
+    new EncryptionSetup(target.hierarchy, persistence.store, () => undefined, jest.fn(), publish);
+  await expect(restart().recover(first, source.userSecret)).rejects.toThrow(
+    'Snapshot Workplace already exists',
+  );
+  const before = await captureWorkplaceSnapshot(source.workplaceId);
+  expect(
+    (await workplaceRepository.find(source.workplaceId))?.snapshotRestoreFingerprint,
+  ).toBeFalsy();
+  jest.mocked(persistence.store.loadSession).mockResolvedValueOnce(null);
+  await expect(restart().recover(second.pack, source.userSecret)).resolves.toMatchObject({
+    kind: 'restored',
+    workplaceId: second.workplaceId,
+  });
+  const checkpoint = await persistence.store.loadSession();
+  expect(checkpoint?.verifiedWorkplaces).toEqual([
+    { workplaceId: second.workplaceId, keyId: second.pack.workplaceKeys.keyId },
+  ]);
+  // A provisional "true" from older progress is not an independently verified binding.
+  await persistence.store.saveSession({
+    ...checkpoint!,
+    pendingRecoveries: [
+      {
+        workplaceId: source.workplaceId,
+        keyId: first.workplaceKeys.keyId,
+        preserveExistingBooks: true,
+      },
+    ],
+  });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await expect(restart().recover(first, source.userSecret)).rejects.toThrow(
+      'Snapshot Workplace already exists',
+    );
+  }
+  expect((await captureWorkplaceSnapshot(source.workplaceId)).workplace).toEqual(before.workplace);
+  expect(publish).toHaveBeenCalledTimes(2);
+  await expect(
+    restart().confirmWorkplace(source.workplaceId, source.workplaceSecret),
+  ).rejects.toThrow('Use User recovery');
+});
+
+it('retains independently established bindings for two local Workplaces after Device-access removal', async () => {
+  const source = await configured();
+  const first = await source.flow.preparePackage(source.workplaceId);
+  const second = await secondWorkplace(source);
+  await second.flow.confirmPackage(second.pack);
+  await source.flow.forgetDevice();
+  for (const pack of [first, second.pack]) {
+    await expect(second.flow.recover(pack, source.userSecret)).resolves.toMatchObject({
+      kind: 'keys-recovered',
+      workplaceId: pack.workplaceKeys.workplaceId,
+    });
+  }
+});
+
+it('does not trust a local binding whose confirmation checkpoint failed, and resumes explicit verification', async () => {
+  const source = await configured();
+  const workplaceId = asWorkplaceId('unconfirmed-binding');
+  await workplaceRepository.create({
+    id: workplaceId,
+    name: 'Local enrollment',
+    icon: source.snapshot.workplace.icon,
+    defaultCurrencyCode: 'USD',
+  });
+  const flow = new EncryptionSetup(
+    source.hierarchy,
+    source.store,
+    () => undefined,
+    id => captureWorkplaceSnapshot(asWorkplaceId(id)),
+    recoverWorkplaceSnapshot,
+  );
+  const secret = await flow.beginWorkplace(workplaceId);
+  jest.mocked(source.store.saveSession).mockRejectedValueOnce(new Error('checkpoint interrupted'));
+  await expect(flow.confirmWorkplace(workplaceId, secret)).rejects.toThrow(
+    'checkpoint interrupted',
+  );
+  const pack = await flow.preparePackage(workplaceId);
+  await expect(flow.recover(pack, source.userSecret)).rejects.toThrow(
+    'Snapshot Workplace already exists',
+  );
+  await flow.confirmWorkplace(workplaceId, secret);
+  // The rejected attempt's negative decision must not prevent deliberate, verified local enrollment.
+  await expect(flow.recover(pack, source.userSecret)).resolves.toMatchObject({
+    kind: 'keys-recovered',
+    workplaceId,
+  });
+});
+
+it('accepts only public, uniquely scoped verified binding records with a pinned User identity', async () => {
+  const source = await configured();
+  const session = (await source.store.loadSession())!;
+  const bindings = session.verifiedWorkplaces!;
+  expect(parseEncryptionSetupSession(session)).toEqual(session);
+  for (const verifiedWorkplaces of [
+    [...bindings, ...bindings],
+    [{ ...bindings[0], phrase: source.userSecret.phrase }],
+    [{ ...bindings[0], keyId: 'raw-key-material' }],
+  ]) {
+    expect(() => parseEncryptionSetupSession({ ...session, verifiedWorkplaces })).toThrow(
+      'Workplace binding',
+    );
+  }
+  expect(() => parseEncryptionSetupSession({ ...session, userKeyFingerprint: undefined })).toThrow(
+    'Workplace binding',
+  );
+});
+
+it.each(['ready', 'missing'])(
+  'does not offer an old unfinished export after cancelled recovery with %s Device access',
+  async device => {
+    const source = await configured();
+    const second = await secondWorkplace(source);
+    const staged = await source.flow.preparePackage(source.workplaceId);
+    expect((await source.flow.inspect(source.workplaceId)).packageReady).toBe(true);
+    if (device === 'missing') source.deviceSecrets.clear();
+    const intent = jest
+      .fn()
+      .mockImplementationOnce(() => undefined)
+      .mockImplementationOnce(() => {
+        throw new Error('Recovery was cancelled');
+      });
+    await expect(second.flow.recover(second.pack, source.userSecret, intent)).rejects.toThrow(
+      'Recovery was cancelled',
+    );
+    expect((await source.flow.inspect(source.workplaceId)).packageReady).toBe(false);
+    await expect(source.flow.savedPackage()).rejects.toThrow('Prepare an encrypted package');
+    expect([...source.packages.values()]).toContainEqual(staged);
   },
 );
 

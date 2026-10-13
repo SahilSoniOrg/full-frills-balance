@@ -30,55 +30,16 @@ import type { JournalBalanceLineEdit } from '@/src/domain/accounting/journalBala
 import { fromMinorUnits, toMinorUnits } from '@/src/utils/money';
 import { formatDate } from '@/src/utils/dateUtils';
 
-const preparedByFingerprint = new Map<string, PreparedRestore>();
-const preparedByOperationId = new Map<string, PreparedRestore>();
-const preparedByWorkplaceIndex = new Map<string, PreparedRestore>();
-
-function indexedSourceKey(fingerprint: string, workplaceIndex: number): string {
-  return `${fingerprint}:${workplaceIndex}`;
-}
-
-export function rememberPreparedRestore(
-  prepared: PreparedRestore,
-  operationId?: WorkplaceId,
-  workplaceIndex?: number,
-): void {
-  if (operationId) preparedByOperationId.set(operationId, prepared);
-  else if (workplaceIndex !== undefined) {
-    preparedByWorkplaceIndex.set(indexedSourceKey(prepared.fingerprint, workplaceIndex), prepared);
-  } else preparedByFingerprint.set(prepared.fingerprint, prepared);
-}
-
-export function forgetAllPreparedRestores(): void {
-  preparedByFingerprint.clear();
-  preparedByOperationId.clear();
-  preparedByWorkplaceIndex.clear();
-}
-
-export function keepPreparedRestores(sources: readonly RestoreSourceOutput[]): void {
-  const fingerprints = new Set(
-    sources.filter(source => !source.operationId).map(source => source.source.fingerprint),
-  );
-  const operationIds = new Set<string>(
-    sources.flatMap(source => (source.operationId ? [source.operationId] : [])),
-  );
-  const indexedSources = new Set(
-    sources.flatMap(source =>
-      !source.operationId && source.source.workplaceIndex !== undefined
-        ? [indexedSourceKey(source.source.fingerprint, source.source.workplaceIndex)]
-        : [],
-    ),
-  );
-  for (const fingerprint of preparedByFingerprint.keys()) {
-    if (!fingerprints.has(fingerprint)) preparedByFingerprint.delete(fingerprint);
-  }
-  for (const operationId of preparedByOperationId.keys()) {
-    if (!operationIds.has(operationId)) preparedByOperationId.delete(operationId);
-  }
-  for (const key of preparedByWorkplaceIndex.keys()) {
-    if (!indexedSources.has(key)) preparedByWorkplaceIndex.delete(key);
-  }
-}
+import {
+  cachedPreparedRestore,
+  forgetAllPreparedRestores,
+  rememberPreparedRestore,
+} from '@/src/services/setup/preparedRestoreCache';
+export {
+  forgetAllPreparedRestores,
+  keepPreparedRestores,
+  rememberPreparedRestore,
+} from '@/src/services/setup/preparedRestoreCache';
 
 /** Detected format must match the plugin the user selected. */
 export function resolveRestorePlugin(
@@ -231,13 +192,7 @@ export async function loadPreparedRestores(draft: RestoreSetupDraft): Promise<Pr
   for (const source of sources) {
     // A v2 file has one raw fingerprint but multiple workplace payloads. Only the
     // single-workplace path can safely use the fingerprint cache directly.
-    const cached = source.operationId
-      ? preparedByOperationId.get(source.operationId)
-      : source.source.workplaceIndex === undefined
-        ? preparedByFingerprint.get(source.source.fingerprint)
-        : preparedByWorkplaceIndex.get(
-            indexedSourceKey(source.source.fingerprint, source.source.workplaceIndex),
-          );
+    const cached = cachedPreparedRestore(source);
     if (cached) {
       prepared.push(cached);
       continue;

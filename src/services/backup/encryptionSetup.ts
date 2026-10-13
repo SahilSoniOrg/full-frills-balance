@@ -47,6 +47,18 @@ export interface SetupViewState {
   packageSaved: boolean;
 }
 type Publication = Awaited<ReturnType<typeof recoverWorkplaceSnapshot>>;
+function bindWorkplace(
+  session: EncryptionSetupSession,
+  workplaceId: string,
+  keyId: string,
+): EncryptionSetupSession {
+  const bindings = session.verifiedWorkplaces ?? [];
+  const existing = bindings.find(item => item.workplaceId === workplaceId);
+  if (existing && existing.keyId !== keyId) throw new Error('Existing Workplace key differs');
+  return existing
+    ? session
+    : { ...session, verifiedWorkplaces: [...bindings, { workplaceId, keyId }] };
+}
 /** Human workflow over the existing hierarchy. Durable checkpoints contain no recovery secret. */
 export class EncryptionSetup {
   private queue: Promise<unknown> = Promise.resolve();
@@ -151,12 +163,22 @@ export class EncryptionSetup {
   }
   confirmWorkplace(workplaceId: string, value: unknown): Promise<void> {
     return this.exclusive(async () => {
-      const { identity } = await this.ready(workplaceId);
+      const { session, identity } = await this.ready(workplaceId);
+      const keys = await this.hierarchy.exportWorkplaceKeys(identity, workplaceId);
+      if (keys.writerDeviceId !== identity.registeredDeviceId)
+        throw new Error('Use User recovery to finish imported Workplace keys');
       await this.hierarchy.confirmWorkplaceRecovery(
         identity,
         workplaceId,
         parseRecoveryCredential(value),
       );
+      this.assertAccess();
+      const next = bindWorkplace(session, workplaceId, keys.keyId);
+      // Explicit verification of locally generated keys supersedes this Workplace's failed recovery.
+      const remaining = next.pendingRecoveries?.filter(item => item.workplaceId !== workplaceId);
+      if (remaining?.length) next.pendingRecoveries = remaining;
+      else delete next.pendingRecoveries;
+      await this.store.saveSession(next);
     });
   }
   discardUnfinished(workplaceId?: string): Promise<void> {
@@ -304,7 +326,35 @@ export class EncryptionSetup {
       const existing = session
         ? await this.hierarchy.describeSetup(session.userId, session.deviceId)
         : null;
-      const knownSession = !!session?.userKeyFingerprint;
+      const { workplaceId, keyId } = saved.workplaceKeys;
+      const binding = session?.verifiedWorkplaces?.find(item => item.workplaceId === workplaceId);
+      if (binding && binding.keyId !== keyId) throw new Error('Existing Workplace key differs');
+      const pending = session?.pendingRecoveries ?? [];
+      const previous = pending.find(item => item.workplaceId === workplaceId);
+      if (previous && previous.keyId !== keyId)
+        throw new Error('Pending recovery belongs to a different Workplace key');
+      // Only this Workplace's completed binding can grant preservation authority.
+      // An old pending decision cannot promote an unbound imported key either.
+      const preserveExistingBooks = !!binding && previous?.preserveExistingBooks !== false;
+      if (existing?.identity && existing.identity.userKeyFingerprint !== credential.identityKeyId)
+        throw new Error('Established User identity mismatch');
+      session = {
+        ...session,
+        formatVersion: 1,
+        intent: 'recover-user',
+        userId: credential.identityId,
+        deviceId: existing?.user === 'ready' ? session!.deviceId : freshId(),
+        userKeyFingerprint: credential.identityKeyId,
+        pendingRecoveries: [
+          ...pending.filter(item => item.workplaceId !== workplaceId),
+          { workplaceId, keyId, preserveExistingBooks },
+        ],
+      };
+      // Starting recovery abandons the previous unfinished export, not its file or usage.
+      if (session.package && !session.package.confirmed) delete session.package;
+      await this.store.saveSession(session);
+      this.assertAccess();
+      assertIntent();
       let identity: KeyAccessIdentity;
       if (existing?.user === 'ready' && existing.identity) {
         await this.hierarchy.confirmUserRecovery(
@@ -314,29 +364,6 @@ export class EncryptionSetup {
         );
         identity = existing.identity;
       } else {
-        session = {
-          ...session,
-          formatVersion: 1,
-          intent: 'recover-user',
-          userId: credential.identityId,
-          deviceId: freshId(),
-          userKeyFingerprint: credential.identityKeyId,
-          // Identity recovery is not evidence of a previous local book binding.
-          // Save that fact with the reconstructed session, before any interruption.
-          ...(!knownSession && {
-            pendingRecoveries: [
-              ...(session?.pendingRecoveries ?? []).filter(
-                item => item.workplaceId !== saved.workplaceKeys.workplaceId,
-              ),
-              {
-                workplaceId: saved.workplaceKeys.workplaceId,
-                keyId: saved.workplaceKeys.keyId,
-                preserveExistingBooks: false,
-              },
-            ],
-          }),
-        };
-        await this.store.saveSession(session);
         identity = await this.hierarchy.recoverUserFromSource(
           credential,
           {
@@ -350,35 +377,9 @@ export class EncryptionSetup {
       const status = await this.hierarchy.describeSetup(
         identity.userId,
         identity.registeredDeviceId,
-        saved.workplaceKeys.workplaceId,
+        workplaceId,
       );
-      const pending = session!.pendingRecoveries ?? [];
-      const previous = pending.find(item => item.workplaceId === saved.workplaceKeys.workplaceId);
-      if (previous && previous.keyId !== saved.workplaceKeys.keyId)
-        throw new Error('Pending recovery belongs to a different Workplace key');
-      // Installed keys from an unfinished recovery are not an established binding.
-      // Persist the original decision before installation and reuse it on every retry.
-      const preserveExistingBooks =
-        previous?.preserveExistingBooks ??
-        (knownSession &&
-          (status.workplace === 'ready' || status.workplace === 'recovery-required'));
-      this.assertAccess();
-      assertIntent();
-      if (!previous) {
-        session = {
-          ...session!,
-          pendingRecoveries: [
-            ...pending,
-            {
-              workplaceId: saved.workplaceKeys.workplaceId,
-              keyId: saved.workplaceKeys.keyId,
-              preserveExistingBooks,
-            },
-          ],
-        };
-        await this.store.saveSession(session);
-      }
-      await this.checkTarget(saved.workplaceKeys.workplaceId, preserveExistingBooks);
+      await this.checkTarget(workplaceId, preserveExistingBooks);
       this.assertAccess();
       assertIntent();
       if (status.workplace === 'missing' || status.workplace === 'recovery-required')
@@ -402,7 +403,10 @@ export class EncryptionSetup {
       this.assertAccess();
       assertIntent();
       const reference = await this.store.writePackage(saved);
-      const next = { ...session!, package: { ...reference, confirmed: true } };
+      const next = {
+        ...bindWorkplace(session, workplaceId, keyId),
+        package: { ...reference, confirmed: true },
+      };
       const remaining = next.pendingRecoveries!.filter(
         item => item.workplaceId !== saved.workplaceKeys.workplaceId,
       );

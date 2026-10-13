@@ -200,7 +200,7 @@ export class ImportRepository {
         if (existing) {
           if (existing.snapshotRestoreFingerprint !== fingerprint) {
             throw new Error(
-              'Snapshot Workplace already exists; restore will not overwrite local books',
+              'Snapshot Workplace already exists; restore will not overwrite local books. Export your current local books first, then recover on another Device or a fresh installation using your saved recovery files.',
             );
           }
           created = existing;

@@ -49,7 +49,9 @@ export async function assertWorkplaceRecoveryTarget(
   // A committed restore receipt is checked against the decrypted snapshot by
   // ordinary publication. Unbound books without a receipt cannot be a retry.
   if (existing && !preserveExistingBooks && !existing.snapshotRestoreFingerprint)
-    throw new Error('Snapshot Workplace already exists; restore will not overwrite local books');
+    throw new Error(
+      'Snapshot Workplace already exists; restore will not overwrite local books. Export your current local books first, then recover on another Device or a fresh installation using your saved recovery files.',
+    );
 }
 
 /** Only the recovery caller with a matching pre-existing local key binding may retain books. */

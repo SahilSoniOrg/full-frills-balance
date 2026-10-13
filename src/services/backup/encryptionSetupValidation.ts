@@ -14,6 +14,7 @@ export function parseEncryptionSetupSession(value: unknown): EncryptionSetupSess
           'deviceId',
           'userKeyFingerprint',
           'package',
+          'verifiedWorkplaces',
           'pendingRecoveries',
         ].includes(key),
     ) ||
@@ -28,6 +29,26 @@ export function parseEncryptionSetupSession(value: unknown): EncryptionSetupSess
         !/^sha256:[a-f0-9]{64}$/.test(raw.userKeyFingerprint)))
   )
     throw new Error('Invalid encryption setup identity');
+  if (raw.verifiedWorkplaces !== undefined) {
+    if (!Array.isArray(raw.verifiedWorkplaces) || !raw.userKeyFingerprint)
+      throw new Error('Invalid Workplace binding');
+    const workplaces = new Set<string>();
+    for (const value of raw.verifiedWorkplaces) {
+      if (!value || typeof value !== 'object' || Array.isArray(value))
+        throw new Error('Invalid Workplace binding');
+      const binding = value as Record<string, unknown>;
+      if (
+        Object.keys(binding).sort().join(',') !== 'keyId,workplaceId' ||
+        typeof binding.workplaceId !== 'string' ||
+        !binding.workplaceId ||
+        workplaces.has(binding.workplaceId) ||
+        typeof binding.keyId !== 'string' ||
+        !/^sha256:[a-f0-9]{64}$/.test(binding.keyId)
+      )
+        throw new Error('Invalid Workplace binding');
+      workplaces.add(binding.workplaceId);
+    }
+  }
   if (raw.pendingRecoveries !== undefined) {
     if (!Array.isArray(raw.pendingRecoveries)) throw new Error('Invalid recovery progress');
     const workplaces = new Set<string>();

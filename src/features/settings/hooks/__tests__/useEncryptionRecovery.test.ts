@@ -5,27 +5,25 @@ import { recoveryFiles } from '@/src/services/backup/recoveryFiles';
 import { encryptionSetup } from '@/src/services/backup/encryptionSetup';
 import { setKeyAccessAllowed } from '@/src/services/backup/keyAccessPolicy';
 import { AppNavigation } from '@/src/utils/navigation';
-import {
-  saveSetupDraft,
-  clearSetupDraft,
-  createSetupDraft,
-  readBlockingSetupProjection,
-} from '@/src/features/setup';
+import { saveSetupDraft, clearSetupDraft } from '@/src/services/setup/SetupDraftStore';
+import { readBlockingSetupProjection } from '@/src/services/setup/readBlockingSetupProjection';
+import type { WorkplaceCreationSetupDraft } from '@/src/services/setup/setupTypes';
 import { readSetupDraftSnapshot } from '@/src/services/setup/launchProjection';
 import { resolveLaunchGate } from '@/src/services/launch/launchResolver';
 import { asWorkplaceId } from '@/src/types/ids';
 import { preferences } from '@/src/services/preferences';
 
-// Use the real Setup owner and persistence without loading unrelated screen/native modules.
-jest.mock('@/src/features/setup', () => ({
-  ...jest.requireActual('@/src/features/setup/SetupDraftStore'),
-  createSetupDraft: jest.requireActual('@/src/features/setup/SetupCoordinator').createSetupDraft,
-  readBlockingSetupProjection: jest.requireActual(
-    '@/src/features/setup/readBlockingSetupProjection',
-  ).readBlockingSetupProjection,
-  finishRecoveredWorkplaceSetup: jest.requireActual('@/src/features/setup/setupFinishers')
-    .finishRecoveredWorkplaceSetup,
-}));
+function emptyDeviceDraft(id: string): WorkplaceCreationSetupDraft {
+  return {
+    schemaVersion: 1,
+    kind: 'workplace_creation',
+    journeyId: 'empty_device_workplace',
+    entryPolicy: 'blocking',
+    operationId: asWorkplaceId(id),
+    presentedHistory: [],
+    acceptedSlices: [],
+  };
+}
 
 jest.mock('@/src/utils/storage', () => {
   const memory = new Map<string, string>();
@@ -101,7 +99,7 @@ afterEach(() => {
 
 it('finishes the empty-device setup gate after recovery so the next launch opens the recovered books', async () => {
   const workplaceId = asWorkplaceId('recovered');
-  saveSetupDraft(createSetupDraft('empty_device_workplace', asWorkplaceId('unused-creation')));
+  saveSetupDraft(emptyDeviceDraft('unused-creation'));
   expect(readBlockingSetupProjection(readSetupDraftSnapshot())).toMatchObject({
     journeyId: 'empty_device_workplace',
     entryPolicy: 'blocking',
@@ -142,7 +140,7 @@ it('preserves newer local preferences when only key access is recovered', async 
 });
 
 it('keeps the setup gate when recovery fails', async () => {
-  saveSetupDraft(createSetupDraft('empty_device_workplace', asWorkplaceId('pending')));
+  saveSetupDraft(emptyDeviceDraft('pending'));
   const expected = readSetupDraftSnapshot();
   const { result, unmount } = await selectedFiles();
   jest.mocked(encryptionSetup.recover).mockRejectedValueOnce(new Error('invalid package'));
@@ -155,13 +153,11 @@ it('keeps the setup gate when recovery fails', async () => {
 });
 
 it('does not discard another setup journey changed while recovery was in flight', async () => {
-  saveSetupDraft(createSetupDraft('empty_device_workplace', asWorkplaceId('original')));
+  saveSetupDraft(emptyDeviceDraft('original'));
   const { result, unmount } = await selectedFiles();
   let newerDraft: string | undefined;
   jest.mocked(encryptionSetup.recover).mockImplementationOnce(async () => {
-    saveSetupDraft(
-      createSetupDraft('empty_device_workplace', asWorkplaceId('different-operation')),
-    );
+    saveSetupDraft(emptyDeviceDraft('different-operation'));
     newerDraft = readSetupDraftSnapshot();
     return {
       kind: 'restored',

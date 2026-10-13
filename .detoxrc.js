@@ -47,6 +47,8 @@ module.exports = {
     'ios.release': {
       type: 'ios.app',
       binaryPath: 'ios/build/Build/Products/Release-iphonesimulator/FullFrillsBalance.app',
+      // Give the simulator app a signing identity for Keychain/SecureStore proof tests.
+      // Ad-hoc signing uses no distribution credentials; device signing stays separate.
       build:
         "SENTRY_DISABLE_AUTO_UPLOAD=true SENTRY_DISABLE_NATIVE_DEBUG_UPLOAD=true EXPO_PUBLIC_E2E=1 xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Release -sdk iphonesimulator -derivedDataPath ios/build -destination 'platform=iOS Simulator,name=iPhone 17' ARCHS=arm64 EXCLUDED_ARCHS=x86_64 CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO",
     },

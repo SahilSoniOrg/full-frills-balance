@@ -13,7 +13,7 @@ import { preferences } from '@/src/services/preferences';
 import { useOptionalWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AppNavigation } from '@/src/utils/navigation';
 import { confirm } from '@/src/utils/alerts';
-import { finishRecoveredWorkplaceSetup } from '@/src/features/setup';
+import { finishRecoveredWorkplaceSetup } from '@/src/services/setup/recoveryCompletion';
 import { readSetupDraftSnapshot } from '@/src/services/setup/launchProjection';
 
 export function useEncryptionRecovery(workplaceId?: string) {

@@ -14,6 +14,7 @@ export interface EncryptionSetupSession {
   deviceId: string;
   userKeyFingerprint?: string;
   package?: PendingRecoveryPackage;
+  verifiedWorkplaces?: { workplaceId: string; keyId: string }[];
   pendingRecoveries?: {
     workplaceId: string;
     keyId: string;
