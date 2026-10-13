@@ -40,7 +40,7 @@ EXPO_PUBLIC_E2E=1 bun run e2e:build:ios
 
 Android Detox native setup (`expo-detox-config-plugin`, `DetoxTest.java`, `.so` packaging) is applied by **config plugins** in `app.config.ts` — safe to re-run `npx expo prebuild --platform android` after native changes. Do not hand-edit `android/build.gradle` for packaging; use `plugins/withAndroidNativeLibPackaging.js`.
 
-For a headless CI emulator, run **Actions → Detox (Android) → Run workflow**. The manual workflow builds the release app and runs the critical Detox specs on a GitHub-hosted Android 16 x86_64 emulator.
+CI: **Actions → Detox (Android) → Run workflow** (manual).
 
 ## Run tests locally
 
