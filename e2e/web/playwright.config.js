@@ -16,7 +16,7 @@ module.exports = defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: 'node e2e/web/serve.mjs',
+    command: 'npx --yes serve@14 -s dist-e2e/web -l 4173',
     cwd: '../..',
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: false,

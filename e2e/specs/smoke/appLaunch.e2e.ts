@@ -13,7 +13,7 @@ jest.setTimeout(180000);
 const driver: SmokeDriver = {
   launch: profile =>
     profile === 'picker-ready' ? launchPickerApp() : launchOnboardedApp({ seedProfile: profile }),
-  visibleId: id => assertVisibleById(id, 120000),
+  visibleId: id => assertVisibleById(id, 30000),
   visibleText: text => assertTextVisible(text, 30000),
   tapId: id => element(by.id(id)).tap(),
   tapText: text => element(by.text(text)).tap(),
