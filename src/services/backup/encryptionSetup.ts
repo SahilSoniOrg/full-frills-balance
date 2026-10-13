@@ -321,6 +321,20 @@ export class EncryptionSetup {
           userId: credential.identityId,
           deviceId: freshId(),
           userKeyFingerprint: credential.identityKeyId,
+          // Identity recovery is not evidence of a previous local book binding.
+          // Save that fact with the reconstructed session, before any interruption.
+          ...(!knownSession && {
+            pendingRecoveries: [
+              ...(session?.pendingRecoveries ?? []).filter(
+                item => item.workplaceId !== saved.workplaceKeys.workplaceId,
+              ),
+              {
+                workplaceId: saved.workplaceKeys.workplaceId,
+                keyId: saved.workplaceKeys.keyId,
+                preserveExistingBooks: false,
+              },
+            ],
+          }),
         };
         await this.store.saveSession(session);
         identity = await this.hierarchy.recoverUserFromSource(
@@ -348,7 +362,6 @@ export class EncryptionSetup {
         previous?.preserveExistingBooks ??
         (knownSession &&
           (status.workplace === 'ready' || status.workplace === 'recovery-required'));
-      await this.checkTarget(saved.workplaceKeys.workplaceId, preserveExistingBooks);
       this.assertAccess();
       assertIntent();
       if (!previous) {
@@ -365,6 +378,9 @@ export class EncryptionSetup {
         };
         await this.store.saveSession(session);
       }
+      await this.checkTarget(saved.workplaceKeys.workplaceId, preserveExistingBooks);
+      this.assertAccess();
+      assertIntent();
       if (status.workplace === 'missing' || status.workplace === 'recovery-required')
         await this.hierarchy.installWorkplaceKeys(identity, saved.workplaceKeys);
       else {

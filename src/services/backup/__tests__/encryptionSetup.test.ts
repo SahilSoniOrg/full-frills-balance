@@ -461,6 +461,64 @@ it('never promotes keys from a rejected publication into a trusted binding, incl
   expect(persistence.store.writePackage).not.toHaveBeenCalled();
 });
 
+it.each(['collision rejection', 'interrupted User recovery'])(
+  'keeps reconstructed recovery untrusted after checkpoint loss and %s',
+  async interruption => {
+    const source = await configured();
+    const pack = await source.flow.preparePackage(source.workplaceId);
+    await resetDatabase();
+    const target = memoryKeyHierarchy(),
+      persistence = storeFixture();
+    const publish = jest.fn(recoverWorkplaceSnapshot);
+    publish.mockRejectedValueOnce(new Error('publication interrupted'));
+    const restart = () =>
+      new EncryptionSetup(target.hierarchy, persistence.store, () => undefined, jest.fn(), publish);
+    await expect(restart().recover(pack, source.userSecret)).rejects.toThrow(
+      'publication interrupted',
+    );
+    // Ordinary local books have no restore receipt. A restored fixture misses this path.
+    const local = await seedSnapshotWorkplace();
+    expect(local.snapshot.workplace.id).toBe(source.workplaceId);
+    expect(
+      (await workplaceRepository.find(asWorkplaceId(source.workplaceId)))
+        ?.snapshotRestoreFingerprint,
+    ).toBeFalsy();
+    jest.mocked(persistence.store.saveSession).mockClear();
+    jest.mocked(persistence.store.loadSession).mockResolvedValueOnce(null);
+    if (interruption === 'interrupted User recovery') {
+      const recover = target.hierarchy.recoverUserFromSource.bind(target.hierarchy);
+      jest
+        .spyOn(target.hierarchy, 'recoverUserFromSource')
+        .mockImplementationOnce(async (...args) => {
+          await recover(...args);
+          throw new Error('User recovery interrupted');
+        });
+    }
+    await expect(restart().recover(pack, source.userSecret)).rejects.toThrow(
+      interruption === 'collision rejection'
+        ? 'Snapshot Workplace already exists'
+        : 'User recovery interrupted',
+    );
+    expect(jest.mocked(persistence.store.saveSession).mock.calls[0][0].pendingRecoveries).toEqual([
+      {
+        workplaceId: source.workplaceId,
+        keyId: pack.workplaceKeys.keyId,
+        preserveExistingBooks: false,
+      },
+    ]);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await expect(restart().recover(pack, source.userSecret)).rejects.toThrow(
+        'Snapshot Workplace already exists',
+      );
+    }
+    expect(publish).toHaveBeenCalledTimes(1);
+    expect(persistence.store.writePackage).not.toHaveBeenCalled();
+    expect((await captureWorkplaceSnapshot(asWorkplaceId(source.workplaceId))).data).toEqual(
+      local.snapshot.data,
+    );
+  },
+);
+
 it('completes an exact publication retry after a crash before recovery progress was confirmed', async () => {
   const source = await configured();
   const pack = await source.flow.preparePackage(source.workplaceId);
