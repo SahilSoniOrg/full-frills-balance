@@ -359,6 +359,10 @@ export const AppNavigation = {
   /**
    * Navigate to data management settings.
    */
+  toEncryptionRecovery: (mode: 'setup' | 'recover' = 'setup') => {
+    router.push(buildRoute('/encryption-recovery', { mode }));
+  },
+
   toDataManagementSettings: (focus?: string) => {
     router.push(buildRoute('/data-management-settings', { focus }));
   },

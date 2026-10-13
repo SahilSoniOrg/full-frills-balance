@@ -19,6 +19,9 @@ describe('LaunchCoordinator gate routing', () => {
     expect(shouldRenderGateChildren('setup', '/import-selection', 'first_run_restore')).toBe(true);
     expect(shouldRenderGateChildren('setup', '/privacy-notice', 'first_run')).toBe(true);
     expect(shouldRenderGateChildren('picker', '/onboarding')).toBe(true);
+    expect(shouldRenderGateChildren('setup', '/encryption-recovery', 'first_run')).toBe(true);
+    expect(shouldRedirectSetupToEntry('first_run', '/encryption-recovery')).toBe(false);
+    expect(shouldRedirectToPrivacyNotice('setup', '/encryption-recovery', false)).toBe(true);
   });
 
   it('does not mount import-selection during first-run', () => {
