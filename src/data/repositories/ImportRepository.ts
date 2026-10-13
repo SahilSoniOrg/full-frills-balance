@@ -16,7 +16,10 @@ import type { BatchImportData } from '@/src/types/importContracts';
 import { WorkplaceId } from '@/src/types/ids';
 import Workplace from '@/src/data/models/Workplace';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
-import { Model } from '@nozbe/watermelondb';
+import { Model, Q } from '@nozbe/watermelondb';
+import { WORKPLACE_DATA_TABLES } from '@/src/services/workplace/workplaceDataTables';
+import { snakeToCamel } from '@/src/utils/serialization';
+import { fetchSequentiallyInChunks } from './fetchSequentiallyInChunks';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import {
   evaluateJournalBalance,
@@ -181,6 +184,7 @@ export class ImportRepository {
     },
     data: BatchImportData,
     onProgress?: (message: string, progress?: number) => void,
+    options: { snapshotRestoreFingerprint?: string } = {},
   ): Promise<Workplace> {
     await this.prepareImportData(data, onProgress);
     await this.validatePostedJournalBalances(workplace.id, data);
@@ -188,7 +192,39 @@ export class ImportRepository {
     const importCorrelationId = generateId();
     let created!: Workplace;
     await database.write(async () => {
-      created = workplaceRepository.prepareCreate(workplace);
+      const fingerprint = options.snapshotRestoreFingerprint;
+      if (fingerprint !== undefined) {
+        if (!/^sha256:[a-f0-9]{64}$/.test(fingerprint))
+          throw new Error('Invalid snapshot restore fingerprint');
+        const existing = await workplaceRepository.find(workplace.id);
+        if (existing) {
+          if (existing.snapshotRestoreFingerprint !== fingerprint) {
+            throw new Error(
+              'Snapshot Workplace already exists; restore will not overwrite local books',
+            );
+          }
+          created = existing;
+          return;
+        }
+        for (const { table } of WORKPLACE_DATA_TABLES) {
+          const rows = data[snakeToCamel(table) as keyof BatchImportData];
+          if (!Array.isArray(rows)) continue;
+          const collisions = await fetchSequentiallyInChunks(
+            rows.map(row => row.id),
+            ids =>
+              database
+                .get<Model>(table)
+                .query(Q.where('id', Q.oneOf([...ids])))
+                .fetch(),
+          );
+          if (collisions.length > 0)
+            throw new Error(`Snapshot record identity collision in ${table}`);
+        }
+      }
+      created = workplaceRepository.prepareCreate({
+        ...workplace,
+        snapshotRestoreFingerprint: fingerprint,
+      });
       await this.batchPreparedOperations(
         [
           created,

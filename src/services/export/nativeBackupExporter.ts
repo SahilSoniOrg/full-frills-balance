@@ -1,4 +1,5 @@
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
+import { exportRepository } from '@/src/data/repositories/ExportRepository';
 import {
   serializeMultiWorkplaceExport,
   type ExportWorkplaceMetadata,
@@ -8,6 +9,7 @@ import { WORKPLACE_DATA_TABLES } from '@/src/services/workplace/workplaceDataTab
 import { WorkplaceId } from '@/src/types/ids';
 import { compression } from '@/src/utils/compression';
 import { preferences } from '@/src/services/preferences';
+import type { WorkplacePreferences } from '@/src/services/preferences/workplaceTypes';
 import { fetchAndTransformTable } from './exportTableTransformer';
 
 const EXPORT_KEY_BY_TABLE: Record<string, string> = {
@@ -33,11 +35,54 @@ export async function exportWorkplacesToJSON(
 ): Promise<string> {
   if (workplaceIds.length === 0) throw new Error('No workplaces selected to export');
   const userPreferences = await preferences.loadPreferences();
-  const workplaces = workplaceRepository;
+  const entries = await exportRepository.captureConsistently(() =>
+    captureWorkplaces(workplaceIds, onProgress),
+  );
+
+  if (entries.length === 0) throw new Error('No workplaces are available to export');
+  const payload = serializeMultiWorkplaceExport(
+    {
+      format: 'full-frills-backup',
+      formatVersion: 2,
+      exportDate: new Date().toISOString(),
+      exportScope: scope,
+      preferences: userPreferences,
+      workplaces: entries,
+    },
+    onProgress,
+  );
+  // Compression and file I/O run after the reader releases queued accounting writes.
+  onProgress?.('Preparing ZIP archive...', 0.96);
+  const archive = await compression.createZipArchive('export', { 'backup.json': payload });
+  try {
+    return archive.base64;
+  } finally {
+    archive.cleanup();
+  }
+}
+
+async function captureWorkplaces(
+  workplaceIds: readonly WorkplaceId[],
+  onProgress?: (message: string, progress: number) => void,
+): Promise<MultiWorkplaceExportEntry[]> {
   const entries: MultiWorkplaceExportEntry[] = [];
+  // MMKV is outside the database reader. Copy each preference bag once rather than retain it.
+  const preferenceCopies = new Map(
+    workplaceIds.map((id): [WorkplaceId, WorkplacePreferences] => {
+      const source = preferences.workplace.getSnapshot(id);
+      return [
+        id,
+        {
+          ...source,
+          dismissedPatternIds: [...source.dismissedPatternIds],
+          ...(source.lastDateRange ? { lastDateRange: { ...source.lastDateRange } } : {}),
+        },
+      ];
+    }),
+  );
 
   for (const [index, workplaceId] of workplaceIds.entries()) {
-    const workplace = await workplaces.find(workplaceId);
+    const workplace = await workplaceRepository.find(workplaceId);
     if (!workplace) continue;
     const data: Record<string, readonly unknown[]> = {};
     const exportedTransactionIds = new Set<string>();
@@ -69,28 +114,10 @@ export async function exportWorkplacesToJSON(
     };
     entries.push({
       workplace: workplaceMetadata,
-      workplacePreferences: preferences.workplace.getSnapshot(workplaceId),
+      workplacePreferences: preferenceCopies.get(workplaceId),
       data,
     });
   }
 
-  if (entries.length === 0) throw new Error('No workplaces are available to export');
-  const payload = serializeMultiWorkplaceExport(
-    {
-      format: 'full-frills-backup',
-      formatVersion: 2,
-      exportDate: new Date().toISOString(),
-      exportScope: scope,
-      preferences: userPreferences,
-      workplaces: entries,
-    },
-    onProgress,
-  );
-  onProgress?.('Preparing ZIP archive...', 0.96);
-  const archive = await compression.createZipArchive('export', { 'backup.json': payload });
-  try {
-    return archive.base64;
-  } finally {
-    archive.cleanup();
-  }
+  return entries;
 }

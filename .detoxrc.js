@@ -48,13 +48,13 @@ module.exports = {
       type: 'ios.app',
       binaryPath: 'ios/build/Build/Products/Release-iphonesimulator/FullFrillsBalance.app',
       build:
-        "EXPO_PUBLIC_E2E=1 xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Release -sdk iphonesimulator -derivedDataPath ios/build -destination 'platform=iOS Simulator,name=iPhone 17' ARCHS=arm64 EXCLUDED_ARCHS=x86_64 CODE_SIGNING_ALLOWED=NO",
+        "SENTRY_DISABLE_AUTO_UPLOAD=true SENTRY_DISABLE_NATIVE_DEBUG_UPLOAD=true EXPO_PUBLIC_E2E=1 xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Release -sdk iphonesimulator -derivedDataPath ios/build -destination 'platform=iOS Simulator,name=iPhone 17' ARCHS=arm64 EXCLUDED_ARCHS=x86_64 CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO",
     },
     'ios.device.release': {
       type: 'ios.app',
       binaryPath: 'ios/build/Build/Products/Release-iphoneos/FullFrillsBalance.app',
       build:
-        "EXPO_PUBLIC_E2E=1 xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Release -sdk iphoneos -derivedDataPath ios/build -destination 'id=$DETOX_IOS_DEVICE_UDID' DEVELOPMENT_TEAM=$DETOX_IOS_DEVELOPMENT_TEAM CODE_SIGNING_ALLOWED=YES",
+        "SENTRY_DISABLE_AUTO_UPLOAD=true SENTRY_DISABLE_NATIVE_DEBUG_UPLOAD=true EXPO_PUBLIC_E2E=1 xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Release -sdk iphoneos -derivedDataPath ios/build -destination 'id=$DETOX_IOS_DEVICE_UDID' DEVELOPMENT_TEAM=$DETOX_IOS_DEVELOPMENT_TEAM CODE_SIGNING_ALLOWED=YES",
     },
     'android.debug': {
       type: 'android.apk',
@@ -68,7 +68,7 @@ module.exports = {
       binaryPath: 'android/app/build/outputs/apk/release/app-release.apk',
       testBinaryPath:
         'android/app/build/outputs/apk/androidTest/release/app-release-androidTest.apk',
-      build: `cd android && EXPO_PUBLIC_E2E=1 ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release${androidArchGradleArg()}`,
+      build: `cd android && SENTRY_DISABLE_AUTO_UPLOAD=true SENTRY_DISABLE_NATIVE_DEBUG_UPLOAD=true EXPO_PUBLIC_E2E=1 ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release${androidArchGradleArg()}`,
     },
   },
   devices: {

@@ -2,7 +2,7 @@ import { appSchema, tableSchema } from '@nozbe/watermelondb';
 import { deviceSmsInboxTable } from './deviceSmsInboxSchema';
 
 export const schema = appSchema({
-  version: 34,
+  version: 35,
   tables: [
     deviceSmsInboxTable,
     tableSchema({
@@ -392,6 +392,7 @@ END;`,
       name: 'workplaces',
       columns: [
         { name: 'name', type: 'string' },
+        { name: 'snapshot_restore_fingerprint', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },
         { name: 'icon', type: 'string', isOptional: true },

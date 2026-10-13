@@ -1043,5 +1043,14 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 35,
+      steps: [
+        addColumns({
+          table: 'workplaces',
+          columns: [{ name: 'snapshot_restore_fingerprint', type: 'string', isOptional: true }],
+        }),
+      ],
+    },
   ],
 });

@@ -38,6 +38,7 @@ import { ImportStats } from './types';
 export class MockDataSeederService {
   async seedMockData(
     onProgress?: (message: string, progress?: number) => void,
+    options: { refreshExchangeRates?: boolean } = {},
   ): Promise<ImportStats> {
     const targetWorkplaceId = 'demo_workspace' as WorkplaceId;
     logger.info(
@@ -709,10 +710,12 @@ export class MockDataSeederService {
 
     // 9. Synchronize exchange rates for USD
     onProgressSafe('Updating exchange rates...', 0.75);
-    try {
-      await exchangeRateService.syncTodayRates('USD');
-    } catch (e) {
-      logger.warn('[MockDataSeederService] Rate sync failed for USD:', { error: e });
+    if (options.refreshExchangeRates !== false) {
+      try {
+        await exchangeRateService.syncTodayRates('USD');
+      } catch (e) {
+        logger.warn('[MockDataSeederService] Rate sync failed for USD:', { error: e });
+      }
     }
 
     // 10. Verify data integrity & rebuild running balances

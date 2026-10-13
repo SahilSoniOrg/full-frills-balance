@@ -394,6 +394,7 @@ export const nativePlugin: ImportPlugin = {
           originalSmsSender: meta.originalSmsSender,
           originalSmsBody: meta.originalSmsBody,
           metadataJson: meta.metadataJson,
+          referenceNumber: meta.referenceNumber,
           createdAt: parseTimestamp(meta.createdAt),
           updatedAt: parseTimestamp(meta.updatedAt),
         })),

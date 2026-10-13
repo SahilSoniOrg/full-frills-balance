@@ -104,12 +104,14 @@ export class WorkplaceRepository {
     name: string;
     icon: string;
     defaultCurrencyCode: string;
+    snapshotRestoreFingerprint?: string;
   }): Workplace {
     return this.workplaces.prepareCreate(w => {
       if (data.id) w._raw.id = data.id;
       w.name = data.name.trim();
       w.icon = data.icon;
       w.defaultCurrencyCode = data.defaultCurrencyCode;
+      w.snapshotRestoreFingerprint = data.snapshotRestoreFingerprint;
       w.createdAt = new Date();
       w.updatedAt = new Date();
     });

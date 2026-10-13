@@ -104,6 +104,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     'react-native-quick-crypto',
+    ['expo-secure-store', { configureAndroidBackup: true }],
     'expo-localization',
     './plugins/withTelephony',
     './plugins/withGradleOptimizations',
