@@ -62,7 +62,11 @@ jest.mock('@/src/services/backup/encryptionSetup', () => ({
   },
 }));
 jest.mock('@/src/services/backup/recoveryFiles', () => ({
-  recoveryFiles: { pickPackage: jest.fn(), pickSecret: jest.fn() },
+  recoveryFiles: {
+    cleanupTemporarySecrets: jest.fn(async () => undefined),
+    pickPackage: jest.fn(),
+    pickSecret: jest.fn(),
+  },
 }));
 jest.mock('@/src/services/preferences', () => ({
   preferences: { workplace: { replace: jest.fn() }, device: { update: jest.fn() } },

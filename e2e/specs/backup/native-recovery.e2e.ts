@@ -45,36 +45,39 @@ function android(command: string[]): string {
   if (!/^[a-zA-Z0-9_.]+$/.test(appId)) throw new Error('Invalid fixture application ID');
   return execFileSync(adbPath, ['-s', androidSerial, ...command], { encoding: 'utf8' });
 }
+const fixtureFiles = [
+  'native-recovery-proof.json',
+  'native-recovery-user-secret.json',
+  'native-recovery-workplace-secret.json',
+];
 function exportBundle(): void {
-  const destination = path.join(transferDirectory(), 'native-recovery-proof.json');
-  if (device.getPlatform() === 'android') {
-    android(['pull', `/data/user/0/${appId}/files/native-recovery-proof.json`, destination]);
-  } else
-    fs.copyFileSync(
-      path.join(appContainer(), 'Documents', 'native-recovery-proof.json'),
-      destination,
-    );
+  for (const name of fixtureFiles) {
+    const destination = path.join(transferDirectory(), name);
+    if (device.getPlatform() === 'android')
+      android(['pull', `/data/user/0/${appId}/files/${name}`, destination]);
+    else fs.copyFileSync(path.join(appContainer(), 'Documents', name), destination);
+  }
 }
 function inputBundle(): string {
-  const source = path.join(transferDirectory(), 'native-recovery-proof.json');
-  if (device.getPlatform() === 'android') {
-    const destination = `/data/user/0/${appId}/files/external-recovery-proof.json`;
-    android(['push', source, destination]);
-    // Uninstall can change the app UID. A root-owned fixture may outlive the old
-    // app sandbox; assign it to the current sandbox rather than weakening SELinux.
-    const directory = `/data/user/0/${appId}/files`;
-    const owner = android(['shell', 'stat', '-c', '%u:%g', directory]).trim();
-    const context = android(['shell', 'ls', '-Zd', directory]).trim().split(/\s+/)[0];
-    if (!/^\d+:\d+$/.test(owner) || !/^u:object_r:app_data_file:s0(:c[\d,c]+)?$/.test(context))
-      throw new Error('Unexpected disposable app sandbox permissions');
-    android(['shell', 'chown', owner, destination]);
-    android(['shell', 'chcon', context, destination]);
-    android(['shell', 'chmod', '600', destination]);
-    return destination;
+  const directory =
+    device.getPlatform() === 'android'
+      ? `/data/user/0/${appId}/files`
+      : path.join(appContainer(), 'Documents');
+  for (const name of fixtureFiles) {
+    const source = path.join(transferDirectory(), name);
+    const destination = `${directory}/${name}`;
+    if (device.getPlatform() === 'android') {
+      android(['push', source, destination]);
+      const owner = android(['shell', 'stat', '-c', '%u:%g', directory]).trim();
+      const context = android(['shell', 'ls', '-Zd', directory]).trim().split(/\s+/)[0];
+      if (!/^\d+:\d+$/.test(owner) || !/^u:object_r:app_data_file:s0(:c[\d,c]+)?$/.test(context))
+        throw new Error('Unexpected disposable app sandbox permissions');
+      android(['shell', 'chown', owner, destination]);
+      android(['shell', 'chcon', context, destination]);
+      android(['shell', 'chmod', '600', destination]);
+    } else fs.copyFileSync(source, destination);
   }
-  const destination = path.join(appContainer(), 'Documents', 'external-recovery-proof.json');
-  fs.copyFileSync(source, destination);
-  return destination;
+  return `${directory}/native-recovery-proof.json`;
 }
 
 async function launch(action: string, clean: boolean, bundlePath?: string): Promise<void> {

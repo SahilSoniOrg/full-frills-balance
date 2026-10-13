@@ -1,0 +1,231 @@
+#import "FFBKeyCrypto.h"
+#include "KeyCrypto.hpp"
+#import <Security/Security.h>
+#include <stdexcept>
+using namespace ffb;
+namespace {
+NSString *const nativeService = @"full-frills-native-key-crypto-v1";
+NSMutableDictionary *query(const std::string &name, NSString *service) {
+  NSData *key = [[NSString stringWithUTF8String:name.c_str()]
+      dataUsingEncoding:NSUTF8StringEncoding];
+  return [@{
+    (__bridge id)kSecClass : (__bridge id)kSecClassGenericPassword,
+    (__bridge id)kSecAttrService : service,
+    (__bridge id)kSecAttrAccount : key,
+    (__bridge id)kSecAttrGeneric : key
+  } mutableCopy];
+}
+NSData *read(const std::string &name, NSString *service) {
+  auto q = query(name, service);
+  q[(__bridge id)kSecMatchLimit] = (__bridge id)kSecMatchLimitOne;
+  q[(__bridge id)kSecReturnData] = @YES;
+  CFTypeRef item = nullptr;
+  OSStatus result = SecItemCopyMatching((__bridge CFDictionaryRef)q, &item);
+  if (result == errSecItemNotFound)
+    return nil;
+  if (result != errSecSuccess)
+    throw std::runtime_error("Native Device vault is unavailable");
+  return CFBridgingRelease(item);
+}
+void store(const std::string &name, const Bytes &key) {
+  auto q = query(name, nativeService);
+  NSMutableData *value = [NSMutableData dataWithLength:key.size() + 1];
+  auto *p = static_cast<unsigned char *>(value.mutableBytes);
+  p[0] = 0xff;
+  std::copy(key.begin(), key.end(), p + 1);
+  q[(__bridge id)kSecValueData] = value;
+  q[(__bridge id)kSecAttrAccessible] =
+      (__bridge id)kSecAttrAccessibleWhenUnlockedThisDeviceOnly;
+  OSStatus result = SecItemAdd((__bridge CFDictionaryRef)q, nullptr);
+  [value resetBytesInRange:NSMakeRange(0, value.length)];
+  if (result != errSecSuccess)
+    throw std::runtime_error("Native Device vault write failed");
+}
+void removeLegacy(const std::string &name) {
+  for (NSString *service in @[ @"app:no-auth", @"app", @"app:auth" ]) {
+    OSStatus status =
+        SecItemDelete((__bridge CFDictionaryRef)query(name, service));
+    if (status != errSecSuccess && status != errSecItemNotFound)
+      throw std::runtime_error("Original Device key cleanup failed");
+  }
+}
+class AppleVault final : public Vault {
+public:
+  Bytes load(const std::string &name) override {
+    NSData *value = read(name, nativeService);
+    if (value) {
+      if (value.length != 33 ||
+          static_cast<const unsigned char *>(value.bytes)[0] != 0xff)
+        throw std::runtime_error("Invalid native Device key");
+      auto *p = static_cast<const unsigned char *>(value.bytes);
+      removeLegacy(name);
+      return Bytes(p + 1, p + 33);
+    }
+    for (NSString *service in @[ @"app:no-auth", @"app" ]) {
+      NSData *legacy = read(name, service);
+      if (!legacy)
+        continue;
+      if (legacy.length != 64)
+        throw std::runtime_error("Invalid original Device key");
+      auto *p = static_cast<const unsigned char *>(legacy.bytes);
+      Bytes key(32);
+      auto digit = [](unsigned char c) -> int {
+        if (c >= '0' && c <= '9')
+          return c - '0';
+        if (c >= 'a' && c <= 'f')
+          return c - 'a' + 10;
+        if (c >= 'A' && c <= 'F')
+          return c - 'A' + 10;
+        throw std::runtime_error("Invalid Device key encoding");
+      };
+      try {
+        for (size_t i = 0; i < 32; ++i)
+          key[i] = (digit(p[i * 2]) << 4) | digit(p[i * 2 + 1]);
+        store(name, key);
+        removeLegacy(name);
+      } catch (...) {
+        wipe(key);
+        throw;
+      }
+      return key;
+    }
+    return {};
+  }
+  void save(const std::string &name, const Bytes &key) override {
+    auto current = load(name);
+    if (!current.empty()) {
+      bool same = current == key;
+      wipe(current);
+      if (!same)
+        throw std::runtime_error("Device key replacement is forbidden");
+      return;
+    }
+    store(name, key);
+    auto checked = load(name);
+    bool same = checked == key;
+    wipe(checked);
+    if (!same)
+      throw std::runtime_error("Device key readback failed");
+  }
+  void remove(const std::string &name) override {
+    for (NSString *service in @[ nativeService, @"app:no-auth", @"app" ]) {
+      OSStatus status =
+          SecItemDelete((__bridge CFDictionaryRef)query(name, service));
+      if (status != errSecSuccess && status != errSecItemNotFound)
+        throw std::runtime_error("Device key removal failed");
+    }
+  }
+};
+Json parse(NSString *input) {
+  NSData *data = [input dataUsingEncoding:NSUTF8StringEncoding];
+  if (data.length > 52 * 1024 * 1024)
+    throw std::runtime_error("Oversized native key request");
+  const auto *p = static_cast<const unsigned char *>(data.bytes);
+  return Json::parse(p, p + data.length);
+}
+NSString *output(const Json &value) {
+  auto result = value.dump();
+  return [[NSString alloc] initWithBytes:result.data()
+                                  length:result.size()
+                                encoding:NSUTF8StringEncoding];
+}
+void fail(NSError **error) {
+  if (error)
+    *error = [NSError
+        errorWithDomain:@"FFBKeyCrypto"
+                   code:1
+               userInfo:@{
+                 NSLocalizedDescriptionKey : @"Native key operation failed; "
+                                             @"check the files and unlock state"
+               }];
+}
+} // namespace
+@implementation FFBKeyCrypto
++ (void)setAllowed:(BOOL)allowed {
+  engine().setAllowed(allowed);
+}
++ (NSString *)executeOperation:(NSString *)operation
+                       request:(NSString *)request
+                         error:(NSError **)error {
+  try {
+    AppleVault vault;
+    return output(
+        engine().execute(operation.UTF8String, parse(request), vault));
+  } catch (...) {
+    fail(error);
+    return nil;
+  }
+}
++ (NSString *)importCredential:(NSString *)uri error:(NSError **)error {
+  try {
+    NSURL *url = [NSURL URLWithString:uri];
+    if (!url.isFileURL)
+      throw std::runtime_error("Invalid recovery file URI");
+    NSFileHandle *handle = [NSFileHandle fileHandleForReadingFromURL:url
+                                                               error:nil];
+    if (!handle)
+      throw std::runtime_error("Recovery file is unavailable");
+    NSData *data = [handle readDataUpToLength:4097 error:nil];
+    [handle closeFile];
+    if (data.length > 4096)
+      throw std::runtime_error("Recovery file is too large");
+    const auto *p = static_cast<const unsigned char *>(data.bytes);
+    Bytes value(p, p + data.length);
+    try {
+      auto result = engine().importCredential(value);
+      wipe(value);
+      return output(result);
+    } catch (...) {
+      wipe(value);
+      throw;
+    }
+  } catch (...) {
+    fail(error);
+    return nil;
+  }
+}
++ (BOOL)writeCredential:(NSString *)handle
+                    uri:(NSString *)uri
+                  error:(NSError **)error {
+  try {
+    NSURL *url = [NSURL URLWithString:uri];
+    if (!url.isFileURL)
+      throw std::runtime_error("Invalid recovery file URI");
+    auto value = engine().credentialFile(parse(handle));
+    NSMutableData *data = [NSMutableData dataWithBytes:value.data()
+                                                length:value.size()];
+    wipe(value);
+    BOOL saved = [data writeToURL:url
+                          options:NSDataWritingFileProtectionComplete
+                            error:nil];
+    [data resetBytesInRange:NSMakeRange(0, data.length)];
+    if (!saved)
+      throw std::runtime_error("Recovery export failed");
+    return YES;
+  } catch (...) {
+    fail(error);
+    return NO;
+  }
+}
++ (BOOL)retainCredential:(NSString *)handle error:(NSError **)error {
+  try {
+    engine().retainCredential(parse(handle));
+    return YES;
+  } catch (...) {
+    fail(error);
+    return NO;
+  }
+}
++ (BOOL)releaseCredential:(NSString *)handle error:(NSError **)error {
+  try {
+    engine().releaseCredential(parse(handle));
+    return YES;
+  } catch (...) {
+    fail(error);
+    return NO;
+  }
+}
++ (void)clearCredentials {
+  engine().clearCredentials();
+}
+@end

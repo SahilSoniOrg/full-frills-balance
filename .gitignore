@@ -81,3 +81,7 @@ output
 .playwright-mcp/
 
 .impeccable
+
+# Pinned native headers and build products are generated, never committed.
+modules/expo-key-crypto/.generated/
+modules/*/android/.cxx/

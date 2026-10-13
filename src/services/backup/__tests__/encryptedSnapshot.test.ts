@@ -1,7 +1,10 @@
 import { Buffer } from 'node:buffer';
 import { resetDatabase } from '@/src/testing/resetDatabase';
-import { decryptWorkplaceSnapshot, encryptWorkplaceSnapshot } from '../encryptedSnapshot';
-import { snapshotCrypto } from '../snapshotCryptoProvider';
+import {
+  decryptWorkplaceSnapshot,
+  encryptWorkplaceSnapshot,
+} from '@/src/testing/keyCryptoReference/encryptedSnapshot';
+import { snapshotCrypto } from '@/src/testing/keyCryptoReference/snapshotCryptoProvider';
 import { seedSnapshotWorkplace, enableTestCrypto } from './snapshotTestHelpers';
 
 jest.mock('react-native-quick-crypto', () => ({
@@ -11,12 +14,12 @@ jest.mock('react-native-quick-crypto', () => ({
     Buffer: jest.requireActual('node:buffer').Buffer,
   },
 }));
-const webCrypto = jest.requireActual<typeof import('../snapshotCryptoProvider')>(
-  '../snapshotCryptoProvider.ts',
-).snapshotCrypto;
-const nativeCrypto = jest.requireActual<typeof import('../snapshotCryptoProvider')>(
-  '../snapshotCryptoProvider.native.ts',
-).snapshotCrypto;
+const webCrypto = jest.requireActual<
+  typeof import('@/src/testing/keyCryptoReference/snapshotCryptoProvider')
+>('@/src/testing/keyCryptoReference/snapshotCryptoProvider').snapshotCrypto;
+const nativeCrypto = jest.requireActual<
+  typeof import('@/src/testing/keyCryptoReference/snapshotCryptoProvider')
+>('@/src/testing/keyCryptoReference/snapshotCryptoProvider.native-reference').snapshotCrypto;
 beforeEach(async () => {
   enableTestCrypto();
   await resetDatabase();

@@ -8,11 +8,10 @@ import {
   type WorkplaceSnapshot,
 } from '@/src/services/backup/workplaceSnapshot';
 import {
-  decryptWorkplaceSnapshot,
-  encryptWorkplaceSnapshot,
   snapshotFingerprint,
   type EncryptedSnapshot,
 } from '@/src/services/backup/encryptedSnapshot';
+import { nativeKeyOperations } from '@/src/services/backup/nativeKeyOperations';
 import { deviceKeyVault } from '@/src/services/backup/deviceKeyVault';
 import { keyCiphertextStateStore } from '@/src/services/backup/keyCiphertextStateStore';
 import {
@@ -46,11 +45,7 @@ const DEMO = asWorkplaceId('demo_workspace');
 const LOCAL_BUNDLE = 'native-recovery-proof.json';
 const USER = 'native-proof-user';
 const SOURCE_DEVICE = 'native-proof-source';
-const keys = new LocalKeyHierarchy(
-  keyCiphertextStateStore,
-  deviceKeyVault,
-  assertE2eHarnessEnabled,
-);
+const keys = new LocalKeyHierarchy(keyCiphertextStateStore, assertE2eHarnessEnabled);
 type ProofBundle = {
   signedPackage: LocalRecoveryPackage;
   envelope: EncryptedSnapshot;
@@ -70,7 +65,7 @@ function localFile(): File {
   return new File(Paths.document, LOCAL_BUNDLE);
 }
 
-function readBundle(path?: string): ProofBundle {
+async function readBundle(path?: string): Promise<ProofBundle> {
   const file = path ? new File(path.startsWith('/') ? `file://${path}` : path) : localFile();
   const value: unknown = JSON.parse(file.textSync());
   requireProof(value && typeof value === 'object', 'Missing recovery proof bundle');
@@ -83,6 +78,13 @@ function readBundle(path?: string): ProofBundle {
       typeof bundle.sourceFingerprint === 'string',
     'Only the disposable demo proof is accepted',
   );
+  const base = new URL('.', file.uri).href;
+  bundle.userCredential = (await nativeKeyOperations.importCredential(
+    new URL('native-recovery-user-secret.json', base).href,
+  )) as RecoveryCredential;
+  bundle.workplaceCredential = (await nativeKeyOperations.importCredential(
+    new URL('native-recovery-workplace-secret.json', base).href,
+  )) as RecoveryCredential;
   return bundle as ProofBundle;
 }
 
@@ -196,12 +198,7 @@ export async function runNativeRecoveryProof(
     ).byteLength;
     progress('Encrypting through the native Device → User → Workplace chain');
     const encryptionStart = performance.now();
-    const envelope = await keys.withWorkplaceKey(
-      identity,
-      DEMO,
-      dek => encryptWorkplaceSnapshot(snapshot, dek),
-      true,
-    );
+    const envelope = await keys.encryptSnapshot(identity, DEMO, snapshot);
     const encryptMs = performance.now() - encryptionStart;
     const workplaceKeys = await keys.exportWorkplaceKeys(identity, DEMO);
     const signedPackage = await createLocalRecoveryPackage(keys, identity, DEMO, envelope);
@@ -219,14 +216,11 @@ export async function runNativeRecoveryProof(
       'Native dump decryption changed the snapshot',
     );
     await expectRejection(
-      () => decryptWorkplaceDump(dump, { ...workplaceCredential, phrase: 'invalid' }),
+      () => decryptWorkplaceDump(dump, { ...workplaceCredential, handle: '00'.repeat(32) }),
       'Wrong recovery phrase',
     );
     await expectRejection(
-      () =>
-        keys.withWorkplaceKey(identity, DEMO, dek =>
-          decryptWorkplaceSnapshot({ ...envelope, workplaceId: 'other-books' }, dek),
-        ),
+      () => keys.decryptSnapshot(identity, DEMO, { ...envelope, workplaceId: 'other-books' }),
       'Altered routing metadata',
     );
     await expectRejection(
@@ -243,10 +237,15 @@ export async function runNativeRecoveryProof(
         ),
       'Altered ciphertext',
     );
-    progress('Reading only the native Device private key from SecureStore');
-    const deviceKey = await deviceKeyVault.load(USER, SOURCE_DEVICE);
-    requireProof(deviceKey?.length === 32, 'Native Device private key is missing');
-    deviceKey.fill(0);
+    progress('Verifying Device access without reading any private-key bytes');
+    requireProof(
+      await nativeKeyOperations.execute('hasDevice', { userId: USER, deviceId: SOURCE_DEVICE }),
+      'Native Device private key is missing',
+    );
+    requireProof(
+      !('load' in deviceKeyVault) && !('save' in deviceKeyVault),
+      'The JS vault exposes raw-key operations',
+    );
     const bundle: ProofBundle = {
       signedPackage,
       envelope,
@@ -256,7 +255,19 @@ export async function runNativeRecoveryProof(
       userPackage: await keys.exportUserRecoveryPackage(USER, SOURCE_DEVICE),
       sourceFingerprint: await dataFingerprint(snapshot),
     };
-    // The isolated test fixture carries external credentials for transfer. Production exports keep them separate.
+    // Even the native proof exports credentials directly to files; JS sees handles only.
+    for (const [credential, name] of [
+      [userCredential, 'native-recovery-user-secret.json'],
+      [workplaceCredential, 'native-recovery-workplace-secret.json'],
+    ] as const) {
+      const destination = new File(Paths.document, name);
+      await nativeKeyOperations.retainCredential(credential);
+      try {
+        await nativeKeyOperations.writeCredential(credential, destination.uri);
+      } finally {
+        await nativeKeyOperations.releaseCredential(credential);
+      }
+    }
     const output = localFile();
     output.create({ overwrite: true });
     output.write(JSON.stringify(bundle));
@@ -279,21 +290,21 @@ export async function runNativeRecoveryProof(
     };
   }
 
-  const bundle = readBundle(config.recoveryBundlePath);
+  const bundle = await readBundle(config.recoveryBundlePath);
   await verifyLocalRecoveryPackage(bundle.signedPackage, {
     userId: USER,
     userKeyFingerprint: bundle.userCredential.identityKeyId,
   });
   if (config.recoveryAction === 'restart') {
     progress('Reading the key saved by the previous app process');
-    const snapshot = await keys.withWorkplaceKey(
+    const snapshot = await keys.decryptSnapshot(
       {
         userId: USER,
         registeredDeviceId: SOURCE_DEVICE,
         userKeyFingerprint: bundle.userPackage.userKeyFingerprint,
       },
       DEMO,
-      dek => decryptWorkplaceSnapshot(bundle.envelope, dek),
+      bundle.envelope,
     );
     requireProof(
       (await dataFingerprint(snapshot)) === bundle.sourceFingerprint,
@@ -313,9 +324,11 @@ export async function runNativeRecoveryProof(
     await deviceKeyVault.remove(USER, SOURCE_DEVICE);
   } else if (config.recoveryAction === 'orphan-device-key') {
     await keyCiphertextStateStore.remove(JSON.stringify(['user', USER, SOURCE_DEVICE]));
-    const orphan = await deviceKeyVault.load(USER, SOURCE_DEVICE);
+    const orphan = await nativeKeyOperations.execute('hasDevice', {
+      userId: USER,
+      deviceId: SOURCE_DEVICE,
+    });
     requireProof(orphan, 'Orphan-key proof needs a surviving native key');
-    orphan.fill(0);
   }
   if (lifecycle) {
     requireProof(
@@ -324,9 +337,10 @@ export async function runNativeRecoveryProof(
     );
     await expectRejection(() => keys.beginUser(USER, SOURCE_DEVICE), 'Implicit root regeneration');
   }
-  const previousKey = await deviceKeyVault.load(USER, SOURCE_DEVICE);
-  const sourceKeyWasAbsent = previousKey === null;
-  previousKey?.fill(0);
+  const sourceKeyWasAbsent = !(await nativeKeyOperations.execute('hasDevice', {
+    userId: USER,
+    deviceId: SOURCE_DEVICE,
+  }));
   if (config.recoveryAction === 'recover')
     requireProof(
       sourceKeyWasAbsent,
@@ -338,7 +352,7 @@ export async function runNativeRecoveryProof(
   // Phase 2 injects an authorized cloud adapter at this same boundary. No phrase reaches it.
   const source: RecoveryArtifactSource = {
     async loadUserRecoveryPackage(userId) {
-      return userId === USER ? readBundle(config.recoveryBundlePath).userPackage : null;
+      return userId === USER ? bundle.userPackage : null;
     },
   };
   progress('Recovering the same User onto an independent Device');
@@ -346,9 +360,7 @@ export async function runNativeRecoveryProof(
   const identity = await keys.recoverUserFromSource(bundle.userCredential, source, deviceId);
   // Lifecycle tests retain Workplace envelopes; installation-loss tests fetch them from the stand-in.
   if (!lifecycle) await keys.installWorkplaceKeys(identity, bundle.workplaceKeys);
-  const recovered = await keys.withWorkplaceKey(identity, DEMO, dek =>
-    decryptWorkplaceSnapshot(bundle.envelope, dek),
-  );
+  const recovered = await keys.decryptSnapshot(identity, DEMO, bundle.envelope);
   const recoveryMs = performance.now() - recoveryStart;
   requireProof(
     identity.userId === USER &&
@@ -369,12 +381,14 @@ export async function runNativeRecoveryProof(
       (await dataFingerprint(actual, recovered)) === bundle.sourceFingerprint,
       'Lifecycle recovery altered existing books',
     );
-    const orphan = await deviceKeyVault.load(USER, SOURCE_DEVICE);
+    const orphan = await nativeKeyOperations.execute('hasDevice', {
+      userId: USER,
+      deviceId: SOURCE_DEVICE,
+    });
     requireProof(
       config.recoveryAction !== 'orphan-device-key' || orphan,
       'Recovery deleted the orphan key',
     );
-    orphan?.fill(0);
     return {
       stage: config.recoveryAction!,
       recoveryRequired: true,

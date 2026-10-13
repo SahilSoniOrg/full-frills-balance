@@ -1,5 +1,5 @@
 import { ensureKeyCrypto } from './keyCryptoRuntime';
-import { keyBytes, keyHex } from './keyEncoding';
+import { keyBytes } from './keyEncoding';
 import { snapshotFingerprint } from './encryptedSnapshot';
 
 /** The initial identity includes both key roles, before any credentials are distributed. */
@@ -47,68 +47,6 @@ export async function userIdentityFingerprint(value: UserPublicIdentity): Promis
       identity.signingAlgorithm,
       identity.signingPublicKey,
     ]),
-  );
-}
-
-export async function generateUserSigningPair(): Promise<{
-  publicKey: string;
-  privateKey: Uint8Array;
-}> {
-  ensureKeyCrypto();
-  const pair = (await crypto.subtle.generateKey('Ed25519', true, [
-    'sign',
-    'verify',
-  ])) as CryptoKeyPair;
-  return {
-    publicKey: keyHex(new Uint8Array(await crypto.subtle.exportKey('raw', pair.publicKey))),
-    privateKey: new Uint8Array(await crypto.subtle.exportKey('pkcs8', pair.privateKey)),
-  };
-}
-
-/** Possession test only. Online signatures/manifests remain a separate protocol gate. */
-export async function verifyUserSigningPair(
-  privateKey: Uint8Array,
-  publicKey: string,
-): Promise<void> {
-  ensureKeyCrypto();
-  const secret = await crypto.subtle.importKey(
-    'pkcs8',
-    new Uint8Array(privateKey).buffer,
-    'Ed25519',
-    false,
-    ['sign'],
-  );
-  const publicPart = await crypto.subtle.importKey(
-    'raw',
-    new Uint8Array(keyBytes(publicKey)).buffer,
-    'Ed25519',
-    false,
-    ['verify'],
-  );
-  const challenge = crypto.getRandomValues(new Uint8Array(32));
-  try {
-    const signature = await crypto.subtle.sign('Ed25519', secret, challenge);
-    if (!(await crypto.subtle.verify('Ed25519', publicPart, signature, challenge)))
-      throw new Error('User signing key pair mismatch');
-  } finally {
-    challenge.fill(0);
-  }
-}
-
-export async function signUserMessage(
-  privateKey: Uint8Array,
-  message: Uint8Array,
-): Promise<string> {
-  ensureKeyCrypto();
-  const key = await crypto.subtle.importKey(
-    'pkcs8',
-    new Uint8Array(privateKey).buffer,
-    'Ed25519',
-    false,
-    ['sign'],
-  );
-  return keyHex(
-    new Uint8Array(await crypto.subtle.sign('Ed25519', key, new Uint8Array(message).buffer)),
   );
 }
 

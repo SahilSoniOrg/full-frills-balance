@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { ScrollView, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
+import { setKeyAccessAllowed } from '@/src/services/backup/keyAccessPolicy';
+import { assertE2eHarnessEnabled } from './e2eRuntimeGate';
 import { readE2eLaunchConfig } from './e2eLaunchArgs';
 import { runNativeRecoveryProof, type RecoveryProofReport } from './nativeRecoveryProof';
 
@@ -10,7 +12,11 @@ export function RecoveryProofScreen() {
   const [message, setMessage] = useState('Disposable demo books. No online service.');
   const [report, setReport] = useState<RecoveryProofReport>();
   useEffect(() => {
+    assertE2eHarnessEnabled();
+    // This isolated screen intentionally runs without the normal app shell.
+    setKeyAccessAllowed(true);
     void SplashScreen.hideAsync();
+    return () => setKeyAccessAllowed(false);
   }, []);
   const run = async () => {
     setStatus('RUNNING');

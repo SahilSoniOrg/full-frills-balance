@@ -32,8 +32,14 @@ describe('Private recovery entry points', () => {
     await waitFor(element(by.id('recovery-choose-secret')))
       .toBeVisible()
       .withTimeout(30000);
-    const confirm = await element(by.id('recovery-confirm')).getAttributes();
-    jestExpect('enabled' in confirm && confirm.enabled).toBe(false);
+    if (device.getPlatform() === 'ios') {
+      // RN marks disabled iOS touchables with an accessibility trait;
+      // UIView.userInteractionEnabled alone does not reflect that state.
+      await expect(element(by.id('recovery-confirm').and(by.traits(['notEnabled'])))).toExist();
+    } else {
+      const confirm = await element(by.id('recovery-confirm')).getAttributes();
+      jestExpect('enabled' in confirm && confirm.enabled).toBe(false);
+    }
     await expect(element(by.id('encryption-begin-user'))).not.toExist();
     await screenshot('fresh-install-recovery');
   });

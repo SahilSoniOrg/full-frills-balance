@@ -204,6 +204,9 @@ PODS:
     - ExpoModulesCore
   - ExpoKeepAwake (57.0.2):
     - ExpoModulesCore
+  - ExpoKeyCrypto (1.0.0):
+    - ExpoModulesCore
+    - QuickCrypto (= 1.1.7)
   - ExpoLinking (57.0.11):
     - ExpoModulesCore
   - ExpoLocalAuthentication (57.0.3):
@@ -2731,6 +2734,7 @@ DEPENDENCIES:
   - ExpoHaptics (from `../node_modules/expo-haptics/ios`)
   - ExpoImage (from `../node_modules/expo-image/ios/ExpoImage.podspec`)
   - ExpoKeepAwake (from `../node_modules/expo-keep-awake/ios`)
+  - ExpoKeyCrypto (from `../modules/expo-key-crypto/ios`)
   - ExpoLinking (from `../node_modules/expo-linking/ios`)
   - ExpoLocalAuthentication (from `../node_modules/expo-local-authentication/ios`)
   - ExpoLocalization (from `../node_modules/expo-localization/ios`)
@@ -2903,6 +2907,8 @@ EXTERNAL SOURCES:
     :podspec: "../node_modules/expo-image/ios/ExpoImage.podspec"
   ExpoKeepAwake:
     :path: "../node_modules/expo-keep-awake/ios"
+  ExpoKeyCrypto:
+    :path: "../modules/expo-key-crypto/ios"
   ExpoLinking:
     :path: "../node_modules/expo-linking/ios"
   ExpoLocalAuthentication:
@@ -3165,6 +3171,7 @@ SPEC CHECKSUMS:
   ExpoHaptics: 32efd02d88953d30a5c2ff796c0fce692e7bcd2e
   ExpoImage: abe60c6c68d08d837b2c51fb9e8b6c6e320b9125
   ExpoKeepAwake: 72af0b3be3615e59bc819d26061ff4e06b155ee0
+  ExpoKeyCrypto: 37e89a151c6e195bce8ff1072a7d70b1cc19e58a
   ExpoLinking: 52819633a2225a0c2a3cd3de64056b021bb55202
   ExpoLocalAuthentication: 1e4aef156a3a1f953f8278b8d8309f6118919640
   ExpoLocalization: f204d4ca963bfcea932068a978247878f664f5a4

@@ -1,21 +1,34 @@
 import { resetDatabase } from '@/src/testing/resetDatabase';
 import { enableTestCrypto, seedSnapshotWorkplace } from './snapshotTestHelpers';
 import { enrolledKeyHierarchy, memoryKeyHierarchy } from './keyHierarchyTestHelpers';
-import { LocalKeyHierarchy, type LocalUserKeys } from '../localKeyHierarchy';
+import {
+  LocalKeyHierarchy,
+  type LocalUserKeys,
+} from '@/src/testing/keyCryptoReference/localKeyHierarchy';
 import {
   decryptWorkplaceSnapshot,
   encryptWorkplaceSnapshot,
   keyFingerprint,
-} from '../encryptedSnapshot';
-import { openKeyEnvelope, sealKeyEnvelope, publicKeyId } from '../keyEnvelopes';
+} from '@/src/testing/keyCryptoReference/encryptedSnapshot';
+import {
+  openKeyEnvelope,
+  sealKeyEnvelope,
+  publicKeyId,
+} from '@/src/testing/keyCryptoReference/keyEnvelopes';
 import { keyHex } from '../keyEncoding';
-import { userIdentityFingerprint, generateUserSigningPair } from '../userIdentity';
+import {
+  userIdentityFingerprint,
+  generateUserSigningPair,
+} from '@/src/testing/keyCryptoReference/userIdentity';
 import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MissingKeyStateError } from '../keyStateErrors';
 import type { RecoveryArtifactSource } from '../recoveryArtifactSource';
-import { createWorkplaceDump, decryptWorkplaceDump } from '../workplaceDump';
+import {
+  createWorkplaceDump,
+  decryptWorkplaceDump,
+} from '@/src/testing/keyCryptoReference/workplaceDump';
 import { assertKeyAccessAllowed, setKeyAccessAllowed } from '../keyAccessPolicy';
 
 jest.mock('react-native-quick-crypto', () => ({

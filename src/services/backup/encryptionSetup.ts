@@ -1,5 +1,5 @@
 import {
-  LocalKeyHierarchy,
+  type KeyHierarchy,
   localKeyHierarchy,
   type KeyAccessIdentity,
   type EncryptionSetupStatus,
@@ -12,17 +12,12 @@ import {
 import {
   createLocalRecoveryPackage,
   verifyLocalRecoveryPackage,
-  validatePackageCredential,
   parseRecoveryCredential,
   type LocalRecoveryPackage,
 } from './localRecoveryPackage';
 import { snapshotCrypto } from './snapshotCryptoProvider';
 import { keyHex } from './keyEncoding';
-import {
-  encryptWorkplaceSnapshot,
-  decryptWorkplaceSnapshot,
-  snapshotFingerprint,
-} from './encryptedSnapshot';
+import { snapshotFingerprint } from './encryptedSnapshot';
 import { captureWorkplaceSnapshot, type WorkplaceSnapshot } from './workplaceSnapshot';
 import {
   recoverWorkplaceSnapshot,
@@ -63,7 +58,7 @@ function bindWorkplace(
 export class EncryptionSetup {
   private queue: Promise<unknown> = Promise.resolve();
   constructor(
-    private readonly hierarchy: LocalKeyHierarchy,
+    private readonly hierarchy: KeyHierarchy,
     private readonly store: EncryptionSetupStore,
     private readonly assertAccess: () => void,
     private readonly capture: (workplaceId: string) => Promise<WorkplaceSnapshot>,
@@ -221,12 +216,7 @@ export class EncryptionSetup {
         return verifyLocalRecoveryPackage(await this.store.readPackage(session.package), identity);
       const snapshot = await this.capture(workplaceId);
       this.assertAccess();
-      const encrypted = await this.hierarchy.withWorkplaceKey(
-        identity,
-        workplaceId,
-        dek => encryptWorkplaceSnapshot(snapshot, dek),
-        true,
-      );
+      const encrypted = await this.hierarchy.encryptSnapshot(identity, workplaceId, snapshot);
       const value = await createLocalRecoveryPackage(
         this.hierarchy,
         identity,
@@ -283,8 +273,10 @@ export class EncryptionSetup {
       if ((await snapshotFingerprint(JSON.stringify(saved))) !== session.package.fingerprint)
         throw new Error('Choose the encrypted package you just saved');
       // Read back actual data, not merely the export sheet's successful return.
-      await this.hierarchy.withWorkplaceKey(identity, saved.workplaceKeys.workplaceId, dek =>
-        decryptWorkplaceSnapshot(saved.snapshot, dek),
+      await this.hierarchy.decryptSnapshot(
+        identity,
+        saved.workplaceKeys.workplaceId,
+        saved.snapshot,
       );
       this.assertAccess();
       await this.store.saveSession({
@@ -305,7 +297,7 @@ export class EncryptionSetup {
         userId: credential.identityId,
         userKeyFingerprint: credential.identityKeyId,
       });
-      await validatePackageCredential(saved, credential);
+      await this.hierarchy.validateRecoveryCredential(saved.userRecoveryPackage, credential);
       this.assertAccess();
       assertIntent();
       let session = await this.store.loadSession();
@@ -392,10 +384,10 @@ export class EncryptionSetup {
         if (!current.recoveryConfirmed || current.keyId !== saved.workplaceKeys.keyId)
           throw new Error('Existing Workplace key differs');
       }
-      const snapshot = await this.hierarchy.withWorkplaceKey(
+      const snapshot = await this.hierarchy.decryptSnapshot(
         identity,
         saved.workplaceKeys.workplaceId,
-        dek => decryptWorkplaceSnapshot(saved.snapshot, dek),
+        saved.snapshot,
       );
       this.assertAccess();
       assertIntent();

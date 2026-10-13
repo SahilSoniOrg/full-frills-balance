@@ -7,8 +7,8 @@ import {
   snapshotFingerprint,
   encryptWorkplaceSnapshot,
   keyFingerprint,
-} from '../encryptedSnapshot';
-import { publicKeyId, sealKeyEnvelope } from '../keyEnvelopes';
+} from '@/src/testing/keyCryptoReference/encryptedSnapshot';
+import { publicKeyId, sealKeyEnvelope } from '@/src/testing/keyCryptoReference/keyEnvelopes';
 import type { EncryptionSetupStore, EncryptionSetupSession } from '../encryptionSetupStore';
 import {
   recoverWorkplaceSnapshot,

@@ -8,4 +8,4 @@ Start with [the overview](./spec.md). There is one V1 key hierarchy: Device → 
 | [Key management](./key-management.md)                       | Authoritative key hierarchy, identity pins, recovery and future security protocols.         |
 | [Implementation scope and remaining work](./preparation.md) | Local implementation, concise verification results, open gates and build-artifact incident. |
 
-Physical-device, cross-platform, real-file-picker and complete interruption gates remain open. Earlier simulator runs do not validate the present hierarchy. Dated review reports, screenshots and per-run result files are omitted; implementation and design remain the reading path.
+The current native build has Android AVD/iOS simulator proof, including Android-to-iOS recovery. Physical-device, real-file-picker and complete interruption gates remain open; simulator interoperability does not close physical recovery gates. Dated review reports, screenshots and per-run result files are omitted; implementation and design remain the reading path.

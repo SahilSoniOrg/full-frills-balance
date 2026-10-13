@@ -36,6 +36,7 @@ export function useEncryptionRecovery(workplaceId?: string) {
     importedSecret.current = null;
     setHasGeneratedSecret(false);
     setHasImportedSecret(false);
+    void recoveryFiles.cleanupTemporarySecrets().catch(() => undefined);
   }, []);
   const refresh = useCallback(async () => {
     const next = await encryptionSetup.inspect(workplaceId);

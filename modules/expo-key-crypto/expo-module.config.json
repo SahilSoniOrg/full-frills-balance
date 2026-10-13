@@ -1,0 +1,5 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": { "modules": ["ExpoKeyCryptoModule"] },
+  "android": { "modules": ["expo.modules.keycrypto.ExpoKeyCryptoModule"] }
+}

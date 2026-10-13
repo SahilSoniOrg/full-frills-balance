@@ -7,33 +7,13 @@ import {
   parseUserRecoveryPackage,
   parseWorkplaceKeys,
   recoveryManifestMessage,
-  type LocalKeyHierarchy,
+  type KeyHierarchy,
   type KeyAccessIdentity,
   type UserRecoveryPackage,
   type WorkplaceKeys,
 } from './localKeyHierarchy';
 import { userIdentityFingerprint, verifyUserMessage } from './userIdentity';
-import { openRecoveryEnvelope, publicKeyId, type RecoveryCredential } from './keyEnvelopes';
-
-export async function validatePackageCredential(
-  saved: LocalRecoveryPackage,
-  credential: RecoveryCredential,
-): Promise<void> {
-  const user = saved.userRecoveryPackage;
-  const bytes = await openRecoveryEnvelope(
-    credential,
-    user.recoveryEnvelope,
-    {
-      purpose: 'user-recovery',
-      userId: user.userId,
-      keyId: user.userKeyFingerprint,
-      recipientKeyId: await publicKeyId(user.recoveryPublicKey),
-    },
-    user.userId,
-    user.userKeyFingerprint,
-  );
-  bytes.fill(0);
-}
+export { parseRecoveryCredential } from './recoveryCredential';
 
 export const MAX_RECOVERY_PACKAGE_BYTES = 48 * 1024 * 1024;
 export interface LocalRecoveryPackage {
@@ -55,29 +35,6 @@ async function manifestDigest(value: Omit<LocalRecoveryPackage, 'signature'>): P
       value.snapshot,
     ]),
   );
-}
-
-export function parseRecoveryCredential(value: unknown): RecoveryCredential {
-  if (!value || typeof value !== 'object' || Array.isArray(value))
-    throw new Error('Invalid recovery file');
-  const raw = value as Record<string, unknown>;
-  if (
-    Object.keys(raw).sort().join(',') !==
-      'format,formatVersion,identityId,identityKeyId,phrase,purpose,recoveryKeyId' ||
-    raw.format !== 'full-frills-recovery-credential' ||
-    raw.formatVersion !== 1 ||
-    !['user-recovery', 'workplace-dump'].includes(String(raw.purpose)) ||
-    typeof raw.identityId !== 'string' ||
-    !raw.identityId.trim() ||
-    typeof raw.identityKeyId !== 'string' ||
-    !/^sha256:[a-f0-9]{64}$/.test(raw.identityKeyId) ||
-    typeof raw.recoveryKeyId !== 'string' ||
-    !/^sha256:[a-f0-9]{64}$/.test(raw.recoveryKeyId) ||
-    typeof raw.phrase !== 'string' ||
-    !/^[a-f0-9]{76}$/i.test(raw.phrase.replace(/[\s-]/g, ''))
-  )
-    throw new Error('Invalid recovery file');
-  return value as RecoveryCredential;
 }
 
 function parsePackage(value: unknown): LocalRecoveryPackage {
@@ -114,7 +71,7 @@ function parsePackage(value: unknown): LocalRecoveryPackage {
 }
 
 export async function createLocalRecoveryPackage(
-  hierarchy: LocalKeyHierarchy,
+  hierarchy: KeyHierarchy,
   identity: KeyAccessIdentity,
   workplaceId: string,
   snapshot: EncryptedSnapshot,

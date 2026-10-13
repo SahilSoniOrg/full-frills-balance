@@ -1,7 +1,7 @@
-import { decryptWorkplaceSnapshot, type EncryptedSnapshot } from './encryptedSnapshot';
-import { openRecoveryEnvelope, type RecoveryCredential, type KeyEnvelope } from './keyEnvelopes';
-import { publicKeyId } from './keyEnvelopes';
-import { keyFingerprint } from './encryptedSnapshot';
+import type { EncryptedSnapshot } from './encryptedSnapshot';
+import { nativeKeyOperations } from './nativeKeyOperations';
+import { decodeWorkplaceSnapshot } from './workplaceSnapshot';
+import type { RecoveryCredential, KeyEnvelope } from './keyEnvelopes';
 import type { WorkplaceKeys } from './localKeyHierarchy';
 import type { WorkplaceSnapshot } from './workplaceSnapshot';
 
@@ -69,26 +69,10 @@ export async function decryptWorkplaceDump(
   )
     throw new Error('Invalid Workplace dump');
   const dump = value as WorkplaceDump;
-  const dek = await openRecoveryEnvelope(
-    credential,
-    dump.recoveryEnvelope,
-    {
-      purpose: 'workplace-dump',
-      userId: dump.ownerUserId,
-      workplaceId: dump.workplaceId,
-      keyId: dump.keyId,
-      recipientKeyId: await publicKeyId(dump.recoveryPublicKey),
-    },
-    dump.workplaceId,
-    dump.keyId,
-  );
-  try {
-    if ((await keyFingerprint(dek)) !== dump.keyId) throw new Error('Workplace dump DEK mismatch');
-    const snapshot = await decryptWorkplaceSnapshot(dump.snapshot, dek);
-    if (snapshot.workplace.id !== dump.workplaceId)
-      throw new Error('Workplace dump identity mismatch');
-    return snapshot;
-  } finally {
-    dek.fill(0);
-  }
+  const plaintext = await nativeKeyOperations.execute('decryptDump', { dump, credential });
+  if (typeof plaintext !== 'string') throw new Error('Invalid native Workplace dump result');
+  const snapshot = decodeWorkplaceSnapshot(plaintext);
+  if (snapshot.workplace.id !== dump.workplaceId)
+    throw new Error('Workplace dump identity mismatch');
+  return snapshot;
 }

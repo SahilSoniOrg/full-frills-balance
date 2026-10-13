@@ -2,9 +2,26 @@ import { Platform } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import * as Picker from 'expo-document-picker';
 import * as Legacy from 'expo-file-system/legacy';
+import { nativeKeyOperations } from '../nativeKeyOperations';
 import { recoveryFiles } from '../recoveryFiles.native';
 
 const mockFiles = new Map<string, string>();
+jest.mock('../nativeKeyOperations', () => ({
+  nativeKeyOperations: {
+    retainCredential: jest.fn(async () => undefined),
+    releaseCredential: jest.fn(async () => undefined),
+    clearCredentials: jest.fn(async () => undefined),
+    writeCredential: jest.fn(async (_handle, uri) => {
+      mockFiles.set(uri, JSON.stringify({ phrase: 'native-only-export' }));
+    }),
+    importCredential: jest.fn(async uri => {
+      const contents = mockFiles.get(uri) ?? mockFiles.get(uri.replace('content://', 'content:/'));
+      if (!contents) throw new Error('missing');
+      JSON.parse(contents);
+      return mockSecret;
+    }),
+  },
+}));
 jest.mock('react-native-quick-crypto', () => ({
   __esModule: true,
   default: {
@@ -84,14 +101,14 @@ jest.mock('expo-file-system/legacy', () => ({
   },
   writeAsStringAsync: jest.fn(async () => undefined),
 }));
-const secret = {
-  format: 'full-frills-recovery-credential',
+const mockSecret = {
+  format: 'full-frills-recovery-handle',
   formatVersion: 1,
   purpose: 'user-recovery',
   identityId: 'alice',
   identityKeyId: `sha256:${'01'.repeat(32)}`,
   recoveryKeyId: `sha256:${'02'.repeat(32)}`,
-  phrase: 'AA'.repeat(38),
+  handle: 'ab'.repeat(32),
 };
 beforeEach(() => {
   jest.clearAllMocks();
@@ -104,11 +121,13 @@ it('uses only a temporary iOS export file and deletes it after both success and 
   jest.mocked(Sharing.shareAsync).mockImplementationOnce(async uri => {
     observed = mockFiles.get(uri);
   });
-  expect(await recoveryFiles.exportSecret(secret)).toBe(true);
-  expect(JSON.parse(observed!)).toEqual(secret);
+  expect(await recoveryFiles.exportSecret(mockSecret)).toBe(true);
+  expect(JSON.parse(observed!)).toEqual({ phrase: 'native-only-export' });
+  expect(nativeKeyOperations.writeCredential).toHaveBeenCalledWith(mockSecret, expect.any(String));
+  expect(nativeKeyOperations.releaseCredential).toHaveBeenCalledWith(mockSecret);
   expect(mockFiles.size).toBe(0);
   jest.mocked(Sharing.shareAsync).mockRejectedValueOnce(new Error('dismissed'));
-  await expect(recoveryFiles.exportSecret(secret)).rejects.toThrow('dismissed');
+  await expect(recoveryFiles.exportSecret(mockSecret)).rejects.toThrow('dismissed');
   expect(mockFiles.size).toBe(0);
 });
 it('writes Android secrets only to the chosen external destination and handles cancelled folder selection without a copy', async () => {
@@ -116,18 +135,19 @@ it('writes Android secrets only to the chosen external destination and handles c
   jest
     .mocked(Legacy.StorageAccessFramework.requestDirectoryPermissionsAsync)
     .mockResolvedValueOnce({ granted: false });
-  expect(await recoveryFiles.exportSecret(secret)).toBe(false);
+  expect(await recoveryFiles.exportSecret(mockSecret)).toBe(false);
   expect(Legacy.writeAsStringAsync).not.toHaveBeenCalled();
   expect(mockFiles.size).toBe(0);
   jest
     .mocked(Legacy.StorageAccessFramework.requestDirectoryPermissionsAsync)
     .mockResolvedValueOnce({ granted: true, directoryUri: 'content://chosen' });
-  expect(await recoveryFiles.exportSecret(secret)).toBe(true);
-  expect(Legacy.writeAsStringAsync).toHaveBeenCalledWith(
+  expect(await recoveryFiles.exportSecret(mockSecret)).toBe(true);
+  expect(nativeKeyOperations.writeCredential).toHaveBeenCalledWith(
+    mockSecret,
     'content://chosen/secret.json',
-    JSON.stringify(secret),
-    { encoding: 'utf8' },
   );
+  expect(Legacy.writeAsStringAsync).not.toHaveBeenCalled();
+  mockFiles.delete('content://chosen/secret.json');
   expect(mockFiles.size).toBe(0);
   expect(Sharing.shareAsync).not.toHaveBeenCalled();
 });
@@ -146,13 +166,14 @@ it('purges only abandoned recovery cache files and preserves unrelated app files
 });
 it('reads and deletes the iOS picker temporary copy without copying or touching external saved files', async () => {
   const uri = 'file:///app/tmp/picker-Inbox/secret.json';
-  mockFiles.set(uri, JSON.stringify(secret));
+  mockFiles.set(uri, JSON.stringify(mockSecret));
   mockFiles.set('file:///saved/secret.json', 'external');
   jest.mocked(Picker.getDocumentAsync).mockResolvedValueOnce({
     canceled: false,
     assets: [{ uri, name: 'secret.json', size: 300, lastModified: 0 }],
   });
-  expect(await recoveryFiles.pickSecret()).toEqual(secret);
+  expect(await recoveryFiles.pickSecret()).toEqual(mockSecret);
+  expect(nativeKeyOperations.importCredential).toHaveBeenCalled();
   expect(Picker.getDocumentAsync).toHaveBeenCalledWith(
     expect.objectContaining({ copyToCacheDirectory: false }),
   );
@@ -172,7 +193,7 @@ it('deletes an oversized/malformed iOS temporary secret copy even when import fa
     canceled: false,
     assets: [{ uri, name: 'secret.json', lastModified: 0 }],
   });
-  await expect(recoveryFiles.pickSecret()).rejects.toThrow('valid recovery');
+  await expect(recoveryFiles.pickSecret()).rejects.toThrow();
   expect(mockFiles.size).toBe(0);
 });
 it('never deletes an Android source document and does not retain a cache copy', async () => {
@@ -180,11 +201,12 @@ it('never deletes an Android source document and does not retain a cache copy', 
   const uri = 'content://external/secret.json';
   // Mock preserves content scheme through the file constructor.
   const key = 'content:/external/secret.json';
-  mockFiles.set(key, JSON.stringify(secret));
+  mockFiles.set(key, JSON.stringify(mockSecret));
   jest.mocked(Picker.getDocumentAsync).mockResolvedValueOnce({
     canceled: false,
     assets: [{ uri, name: 'secret.json', lastModified: 0 }],
   });
-  expect(await recoveryFiles.pickSecret()).toEqual(secret);
-  expect(mockFiles.get(key)).toBe(JSON.stringify(secret));
+  expect(await recoveryFiles.pickSecret()).toEqual(mockSecret);
+  expect(nativeKeyOperations.importCredential).toHaveBeenCalled();
+  expect(mockFiles.get(key)).toBe(JSON.stringify(mockSecret));
 });

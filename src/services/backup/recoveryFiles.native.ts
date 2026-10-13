@@ -7,6 +7,7 @@ import { snapshotCrypto } from './snapshotCryptoProvider';
 import { keyHex } from './keyEncoding';
 import { MAX_RECOVERY_PACKAGE_BYTES, parseRecoveryCredential } from './localRecoveryPackage';
 import type { RecoveryFiles } from './recoveryFiles';
+import { nativeKeyOperations } from './nativeKeyOperations';
 
 const SECRET_LIMIT = 4096;
 const activeFiles = new Set<string>();
@@ -20,19 +21,13 @@ async function cleanup(): Promise<void> {
       entry.delete();
   }
 }
-async function save(value: unknown, kind: 'secret' | 'package'): Promise<boolean> {
+async function savePackage(value: unknown): Promise<boolean> {
   const json = JSON.stringify(value);
-  if (
-    new TextEncoder().encode(json).length >
-    (kind === 'secret' ? SECRET_LIMIT : MAX_RECOVERY_PACKAGE_BYTES)
-  )
+  if (new TextEncoder().encode(json).length > MAX_RECOVERY_PACKAGE_BYTES)
     throw new Error('Recovery file is too large');
   await cleanup();
   const suffix = keyHex(snapshotCrypto.randomBytes(16));
-  const filename =
-    kind === 'secret'
-      ? `full-frills-${parseRecoveryCredential(value).purpose}-secret.json`
-      : 'full-frills-encrypted-package.json';
+  const filename = 'full-frills-encrypted-package.json';
   if (Platform.OS === 'android') {
     // Write directly to the user's chosen destination. No internal plaintext-secret backup.
     const permission = await LegacyFiles.StorageAccessFramework.requestDirectoryPermissionsAsync();
@@ -49,7 +44,7 @@ async function save(value: unknown, kind: 'secret' | 'package'): Promise<boolean
   }
   if (!(await Sharing.isAvailableAsync())) throw new Error('File export is unavailable');
   // iOS requires a temporary source file for its Save to Files sheet. Cache is not a retained secret store.
-  const temporary = new File(Paths.cache, `recovery-${kind}-export-${suffix}.json`);
+  const temporary = new File(Paths.cache, `recovery-package-export-${suffix}.json`);
   activeFiles.add(temporary.uri);
   try {
     temporary.create();
@@ -63,6 +58,50 @@ async function save(value: unknown, kind: 'secret' | 'package'): Promise<boolean
   } finally {
     activeFiles.delete(temporary.uri);
     if (temporary.exists) temporary.delete();
+  }
+}
+async function saveSecret(value: unknown): Promise<boolean> {
+  const handle = parseRecoveryCredential(value);
+  if (handle.format !== 'full-frills-recovery-handle')
+    throw new Error('Choose a native recovery-file handle');
+  // The lease authorizes this explicit export across the OS picker/share transition.
+  await nativeKeyOperations.retainCredential(handle);
+  try {
+    await cleanup();
+    const filename = `full-frills-${handle.purpose}-secret.json`;
+    if (Platform.OS === 'android') {
+      const permission =
+        await LegacyFiles.StorageAccessFramework.requestDirectoryPermissionsAsync();
+      if (!permission.granted) return false;
+      const destination = await LegacyFiles.StorageAccessFramework.createFileAsync(
+        permission.directoryUri,
+        filename,
+        'application/json',
+      );
+      await nativeKeyOperations.writeCredential(handle, destination);
+      return true;
+    }
+    if (!(await Sharing.isAvailableAsync())) throw new Error('File export is unavailable');
+    const temporary = new File(
+      Paths.cache,
+      `recovery-secret-export-${keyHex(snapshotCrypto.randomBytes(16))}.json`,
+    );
+    activeFiles.add(temporary.uri);
+    try {
+      temporary.create();
+      await nativeKeyOperations.writeCredential(handle, temporary.uri);
+      await Sharing.shareAsync(temporary.uri, {
+        mimeType: 'application/json',
+        UTI: 'public.json',
+        dialogTitle: filename,
+      });
+      return true;
+    } finally {
+      activeFiles.delete(temporary.uri);
+      if (temporary.exists) temporary.delete();
+    }
+  } finally {
+    await nativeKeyOperations.releaseCredential(handle);
   }
 }
 async function pick(limit: number): Promise<unknown | null> {
@@ -104,6 +143,8 @@ async function pick(limit: number): Promise<unknown | null> {
   try {
     if ((asset.size !== undefined && asset.size > limit) || input.size > limit)
       throw new Error('Recovery file is too large');
+    if (limit === SECRET_LIMIT)
+      return parseRecoveryCredential(await nativeKeyOperations.importCredential(input.uri));
     const json = await input.text();
     if (new TextEncoder().encode(json).length > limit)
       throw new Error('Recovery file is too large');
@@ -120,9 +161,12 @@ async function pick(limit: number): Promise<unknown | null> {
   }
 }
 export const recoveryFiles: RecoveryFiles = {
-  exportSecret: value => save(parseRecoveryCredential(value), 'secret'),
-  exportPackage: value => save(value, 'package'),
+  exportSecret: saveSecret,
+  exportPackage: savePackage,
   pickSecret: () => pick(SECRET_LIMIT),
   pickPackage: () => pick(MAX_RECOVERY_PACKAGE_BYTES),
-  cleanupTemporarySecrets: cleanup,
+  cleanupTemporarySecrets: async () => {
+    await nativeKeyOperations.clearCredentials();
+    await cleanup();
+  },
 };

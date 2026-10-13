@@ -1,6 +1,6 @@
-import { LocalKeyHierarchy } from '../localKeyHierarchy';
+import { LocalKeyHierarchy } from '@/src/testing/keyCryptoReference/localKeyHierarchy';
 import type { KeyCiphertextStateStore } from '../keyCiphertextStateStore';
-import type { DeviceKeyVault } from '../deviceKeyVault';
+import type { DeviceKeyVault } from '@/src/testing/keyCryptoReference/deviceKeyVault';
 
 export function memoryKeyHierarchy(assertAccess: () => void = () => undefined) {
   const ciphertext = new Map<string, unknown>();
