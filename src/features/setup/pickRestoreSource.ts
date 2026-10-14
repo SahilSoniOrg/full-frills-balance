@@ -39,11 +39,6 @@ import {
   forgetAllPreparedRestores,
   rememberPreparedRestore,
 } from '@/src/services/setup/preparedRestoreCache';
-export {
-  forgetAllPreparedRestores,
-  keepPreparedRestores,
-  rememberPreparedRestore,
-} from '@/src/services/setup/preparedRestoreCache';
 
 /** Detected format must match the plugin the user selected. */
 export function resolveRestorePlugin(

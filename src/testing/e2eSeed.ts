@@ -20,7 +20,7 @@ import { loadSetupDraft, saveSetupDraft } from '@/src/services/setup/SetupDraftS
 import { restoreSources } from '@/src/services/setup/setupTypes';
 import { finishDeviceSetup, finishWorkplaceSetup } from '@/src/features/setup/setupFinishers';
 import { createSetupDraft } from '@/src/features/setup/SetupCoordinator';
-import { rememberPreparedRestore } from '@/src/features/setup/pickRestoreSource';
+import { rememberPreparedRestore } from '@/src/services/setup/preparedRestoreCache';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { logger } from '@/src/utils/logger';

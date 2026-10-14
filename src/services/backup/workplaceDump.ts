@@ -2,7 +2,7 @@ import type { EncryptedSnapshot } from './encryptedSnapshot';
 import { nativeKeyOperations } from './nativeKeyOperations';
 import { decodeWorkplaceSnapshot } from './workplaceSnapshot';
 import type { RecoveryCredential, KeyEnvelope } from './keyEnvelopes';
-import type { WorkplaceKeys } from './localKeyHierarchy';
+import type { WorkplaceKeys } from './keyHierarchyRecords';
 import type { WorkplaceSnapshot } from './workplaceSnapshot';
 
 export interface WorkplaceDump {

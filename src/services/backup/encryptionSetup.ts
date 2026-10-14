@@ -1,11 +1,7 @@
 import { resolveRecoverySession, completeWorkplaceRecovery } from './recoverySession';
 import { SerialQueue } from '@/src/utils/serialQueue';
-import {
-  type KeyHierarchy,
-  localKeyHierarchy,
-  type KeyAccessIdentity,
-  type EncryptionSetupStatus,
-} from './localKeyHierarchy';
+import { type KeyHierarchy, localKeyHierarchy } from './localKeyHierarchy';
+import { type KeyAccessIdentity, type EncryptionSetupStatus } from './keyHierarchyRecords';
 import {
   encryptionSetupStore,
   type EncryptionSetupStore,
@@ -14,9 +10,9 @@ import {
 import {
   createLocalRecoveryPackage,
   verifyLocalRecoveryPackage,
-  parseRecoveryCredential,
   type LocalRecoveryPackage,
 } from './localRecoveryPackage';
+import { parseRecoveryCredential, type RecoveryCredential } from './keyEnvelopes';
 import { snapshotCrypto } from './snapshotCryptoProvider';
 import { keyHex } from './keyEncoding';
 import { snapshotFingerprint } from './encryptedSnapshot';
@@ -27,7 +23,6 @@ import {
 } from '@/src/services/import/restoreWorkplaceSnapshot';
 import { asWorkplaceId } from '@/src/types/ids';
 import { assertKeyAccessAllowed } from './keyAccessPolicy';
-import type { RecoveryCredential } from './keyEnvelopes';
 import { KeyOperationError, assertKeyOperationActive } from '@/src/utils/keyOperationError';
 
 function freshId(): string {

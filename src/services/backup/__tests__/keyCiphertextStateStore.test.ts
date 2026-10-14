@@ -1,11 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
 import { keyCiphertextStateStore } from '../keyCiphertextStateStore.native';
 import { enableTestCrypto } from './snapshotTestHelpers';
 
 const mockFiles = new Map<string, string>(),
-  mockPointers = new Map<string, string>(),
-  mockDeviceOnly = new Map<string, string>();
+  mockPointers = new Map<string, string>();
 let mockRenameFails = false;
 jest.mock('react-native-quick-crypto', () => ({
   __esModule: true,
@@ -25,16 +23,6 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
       mockPointers.delete(key);
     }),
   },
-}));
-jest.mock('expo-secure-store', () => ({
-  WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'device-only',
-  getItemAsync: jest.fn(async key => mockDeviceOnly.get(key) ?? null),
-  setItemAsync: jest.fn(async (key, value) => {
-    mockDeviceOnly.set(key, value);
-  }),
-  deleteItemAsync: jest.fn(async key => {
-    mockDeviceOnly.delete(key);
-  }),
 }));
 jest.mock('expo-file-system', () => ({
   Paths: { document: 'documents' },
@@ -78,7 +66,6 @@ beforeEach(() => {
   enableTestCrypto();
   mockFiles.clear();
   mockPointers.clear();
-  mockDeviceOnly.clear();
   mockRenameFails = false;
 });
 it('publishes complete immutable ciphertext before a small pointer and isolates scopes', async () => {
@@ -93,13 +80,6 @@ it('publishes complete immutable ciphertext before a small pointer and isolates 
   expect(await keyCiphertextStateStore.read('bob-phone')).toBeNull();
   expect(Object.keys(JSON.parse([...mockPointers.values()][0])).sort()).toEqual(['hash', 'name']);
   expect([...mockFiles.keys()][0]).not.toContain('.tmp');
-});
-it('keeps encrypted state discoverable when device-only SecureStore records disappear', async () => {
-  await keyCiphertextStateStore.write('alice-phone', { envelope: 'ciphertext' });
-  expect(SecureStore.setItemAsync).not.toHaveBeenCalled(); // Public locators must not use the Device vault.
-  mockDeviceOnly.set('device-private-key', 'disposable-device-secret');
-  mockDeviceOnly.clear(); // Only the separate Device vault disappears; app-backed locators survive.
-  expect(await keyCiphertextStateStore.read('alice-phone')).toEqual({ envelope: 'ciphertext' });
 });
 it('retains the prior state across rename and pointer failures, then permits retry', async () => {
   await keyCiphertextStateStore.write('alice', { phase: 'staged' });

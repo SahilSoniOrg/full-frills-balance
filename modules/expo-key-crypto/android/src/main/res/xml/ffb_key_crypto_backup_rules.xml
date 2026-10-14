@@ -3,6 +3,5 @@
 <!--  Auto Backup configuration for Android 11 and lower -->
 <full-backup-content>
   <!-- Keep default app-file/database coverage; device-key preferences must not transfer. -->
-  <exclude domain="sharedpref" path="SecureStore.xml"/>
   <exclude domain="sharedpref" path="FFBKeyCrypto.xml"/>
 </full-backup-content>

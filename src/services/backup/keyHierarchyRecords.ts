@@ -1,11 +1,6 @@
 import { parseObject, assertAllowedKeys, assertExactKeys } from '@/src/utils/strictObject';
 import { parseUserPublicIdentity, type UserPublicIdentity } from './userIdentity';
-import {
-  publicKeyId,
-  parseKeyEnvelope,
-  type EnvelopeContext,
-  type KeyEnvelope,
-} from './keyEnvelopes';
+import { parseKeyEnvelope, type KeyEnvelope } from './keyEnvelopes';
 import { keyBytes } from './keyEncoding';
 
 export interface KeyAccessIdentity {
@@ -160,14 +155,4 @@ export function parseWorkplaceKeys(value: unknown): WorkplaceKeys {
   parseKeyEnvelope(raw.recoveryEnvelope);
   keyBytes(String(raw.recoveryPublicKey));
   return value as WorkplaceKeys;
-}
-
-export async function workplaceRecoveryContext(keys: WorkplaceKeys): Promise<EnvelopeContext> {
-  return {
-    purpose: 'workplace-dump',
-    userId: keys.userId,
-    workplaceId: keys.workplaceId,
-    keyId: keys.keyId,
-    recipientKeyId: await publicKeyId(keys.recoveryPublicKey),
-  };
 }

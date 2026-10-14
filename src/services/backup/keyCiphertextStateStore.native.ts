@@ -4,7 +4,7 @@ import type { KeyCiphertextStateStore } from './keyCiphertextStateStore';
 import { snapshotFingerprint } from './encryptedSnapshot';
 import { snapshotCrypto } from './snapshotCryptoProvider';
 import { keyHex } from './keyEncoding';
-import { MissingKeyStateError } from './keyStateErrors';
+import { MissingKeyStateError } from '@/src/utils/keyOperationError';
 
 async function index(scope: string): Promise<string> {
   return `key_ciphertext_v1_${(await snapshotFingerprint(scope)).slice(7)}`;

@@ -1,4 +1,4 @@
-import { parseRecoveryCredential } from '../recoveryCredential';
+import { parseRecoveryCredential } from '../keyEnvelopes';
 
 const handle = {
   format: 'full-frills-recovery-handle',

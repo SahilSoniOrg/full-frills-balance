@@ -60,10 +60,7 @@ for (const [name, policy] of [
     assert.deepEqual(policy.include ?? [], [], 'An include would restrict default backup coverage');
     assert.deepEqual(
       policy.exclude.map(entry => entry.$).sort((a, b) => a.path.localeCompare(b.path)),
-      [
-        { domain: 'sharedpref', path: 'FFBKeyCrypto.xml' },
-        { domain: 'sharedpref', path: 'SecureStore.xml' },
-      ],
+      [{ domain: 'sharedpref', path: 'FFBKeyCrypto.xml' }],
     );
   });
 }

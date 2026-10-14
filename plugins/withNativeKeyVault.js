@@ -1,7 +1,6 @@
 const { withAndroidManifest, AndroidConfig } = require('expo/config-plugins');
 
-// Resources come from the local ExpoKeyCrypto module, including exclusions for
-// both our native preferences and the remaining Expo SecureStore consumers.
+// Resources come from the local ExpoKeyCrypto module and exclude its Device-key preferences.
 module.exports = config =>
   withAndroidManifest(config, result => {
     const application = AndroidConfig.Manifest.getMainApplicationOrThrow(result.modResults);

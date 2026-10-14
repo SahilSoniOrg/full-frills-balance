@@ -1,6 +1,6 @@
 import { SerialQueue } from '@/src/utils/serialQueue';
 import { parseObject, isSha256Id } from '@/src/utils/strictObject';
-import { KeyOperationError } from '@/src/utils/keyOperationError';
+import { KeyOperationError, MissingKeyStateError } from '@/src/utils/keyOperationError';
 import { keyCiphertextStateStore, type KeyCiphertextStateStore } from './keyCiphertextStateStore';
 import { nativeKeyOperations } from './nativeKeyOperations';
 import {
@@ -10,10 +10,7 @@ import {
   type RecoveryOperation,
 } from './nativeKeyApi';
 import { assertKeyAccessAllowed } from './keyAccessPolicy';
-import { MissingKeyStateError } from './keyStateErrors';
-import { parseRecoveryCredential } from './recoveryCredential';
-import type { RecoveryCredential } from './keyEnvelopes';
-import { publicKeyId } from './keyEnvelopes';
+import { parseRecoveryCredential, publicKeyId, type RecoveryCredential } from './keyEnvelopes';
 import { parseUserPublicIdentity, userIdentityFingerprint } from './userIdentity';
 import { parseEncryptedSnapshotEnvelope, type EncryptedSnapshot } from './encryptedSnapshot';
 import {
@@ -36,19 +33,6 @@ import {
   type WorkplaceKeys,
   type EncryptionSetupStatus,
 } from './keyHierarchyRecords';
-export {
-  parseWorkplaceKeys,
-  parseUserRecoveryPackage,
-  recoveryManifestMessage,
-  workplaceRecoveryContext,
-} from './keyHierarchyRecords';
-export type {
-  KeyAccessIdentity,
-  LocalUserKeys,
-  UserRecoveryPackage,
-  WorkplaceKeys,
-  EncryptionSetupStatus,
-} from './keyHierarchyRecords';
 
 /** Workflow contract: callers request operations, never borrow private-key bytes. */
 export interface KeyHierarchy {
@@ -63,10 +47,6 @@ export interface KeyHierarchy {
     deviceId: string,
     workplaceId?: string,
   ): Promise<EncryptionSetupStatus>;
-  inspectDeviceState(
-    userId: string,
-    deviceId: string,
-  ): Promise<'ready' | 'setup-incomplete' | 'recovery-required'>;
   recoverUserDevice(
     credential: RecoveryCredential,
     value: unknown,
@@ -288,7 +268,7 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       return this.identity(user);
     });
   }
-  /** Shared access query; missing enrollment is classified separately by each caller. */
+  /** Reads User access; describeSetup also distinguishes new and interrupted enrollment. */
   private async readUserKeyState(userId: string, deviceId: string): Promise<UserKeyState> {
     let raw: unknown;
     try {
@@ -351,24 +331,6 @@ export class LocalKeyHierarchy implements KeyHierarchy {
           keys.writerDeviceId === deviceId && keys.encryptionInvocations < MAX_ENCRYPTIONS,
         budgetExhausted: keys.encryptionInvocations >= MAX_ENCRYPTIONS,
       };
-    });
-  }
-  inspectDeviceState(
-    userId: string,
-    deviceId: string,
-  ): Promise<'ready' | 'setup-incomplete' | 'recovery-required'> {
-    return this.exclusive(async () => {
-      const status = await this.readUserKeyState(userId, deviceId);
-      switch (status.user) {
-        case 'ready':
-          return 'ready';
-        case 'pending':
-          return 'setup-incomplete';
-        // Enrollment may be new/interrupted, but there is no usable existing access.
-        case 'missing':
-        case 'recovery-required':
-          return 'recovery-required';
-      }
     });
   }
   recoverUserDevice(

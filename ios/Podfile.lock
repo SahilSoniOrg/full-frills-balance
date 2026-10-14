@@ -257,8 +257,6 @@ PODS:
     - RNScreens
   - ExpoScreenCapture (57.0.3):
     - ExpoModulesCore
-  - ExpoSecureStore (57.0.4):
-    - ExpoModulesCore
   - ExpoSharing (57.0.22):
     - ExpoModulesCore
   - ExpoSpeechRecognition (57.0.0):
@@ -2746,7 +2744,6 @@ DEPENDENCIES:
   - ExpoNotifications (from `../node_modules/expo-notifications/ios`)
   - ExpoRouter (from `../node_modules/expo-router/ios`)
   - ExpoScreenCapture (from `../node_modules/expo-screen-capture/ios`)
-  - ExpoSecureStore (from `../node_modules/expo-secure-store/ios`)
   - ExpoSharing (from `../node_modules/expo-sharing/ios`)
   - ExpoSpeechRecognition (from `../node_modules/expo-speech-recognition/ios`)
   - ExpoSplashScreen (from `../node_modules/expo-splash-screen/ios`)
@@ -2931,8 +2928,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-router/ios"
   ExpoScreenCapture:
     :path: "../node_modules/expo-screen-capture/ios"
-  ExpoSecureStore:
-    :path: "../node_modules/expo-secure-store/ios"
   ExpoSharing:
     :path: "../node_modules/expo-sharing/ios"
   ExpoSpeechRecognition:
@@ -3183,7 +3178,6 @@ SPEC CHECKSUMS:
   ExpoNotifications: d432d5b2904f700a6a2dc29eca52e531c4cc1611
   ExpoRouter: e94e22e9806d0a731d8636bddd882ac2039e4f74
   ExpoScreenCapture: bd0a12b12fb7f487d8d2ce7b7c780145d308d420
-  ExpoSecureStore: ff1fd5e073957417ba8f9dec0bebcbd55a60e747
   ExpoSharing: 5cc46810cfba71e331f649d947660213082094c1
   ExpoSpeechRecognition: 4d0b77cae54a51c092fe6d2ed9fa6a47bd4fbcba
   ExpoSplashScreen: e771da4f26d550ea4fd067d8fb942657e47bb846

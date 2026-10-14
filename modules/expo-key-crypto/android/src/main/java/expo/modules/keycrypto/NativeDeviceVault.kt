@@ -12,7 +12,7 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-/** Owns its versioned storage contract independently of Expo SecureStore. */
+/** Owns its Keystore wrapping key and encrypted preferences. */
 @Keep
 class NativeDeviceVault(private val context: Context) {
   private val preferences get() = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)

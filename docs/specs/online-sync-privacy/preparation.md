@@ -2,7 +2,7 @@
 
 Scope: the local V1 workflow and the gates before online backup.
 
-[Key management](./key-management.md) is authoritative. V1 has one Device → User → Workplace hierarchy, one DEK per Workplace, and both independently saved recovery credentials. It uses the existing app lock; fresh biometric root authentication is not required. No readable DEK persists, even in SecureStore.
+[Key management](./key-management.md) is authoritative. V1 has one Device → User → Workplace hierarchy, one DEK per Workplace, and both independently saved recovery credentials. It uses the existing app lock; fresh biometric root authentication is not required. No readable DEK persists in storage.
 
 ## Delivered internal contracts
 
@@ -36,7 +36,7 @@ The iOS provider binding still uses QuickCrypto 1.1.7's private OpenSSL header/s
 
 Shared `services/setup` modules own draft storage/parsing, prepared restore state, pending creation IDs, launch projection and recovery completion. The Setup feature owns its journey recipes, UI and coordinator; Settings calls the shared completion service directly.
 
-Android backup and data-extraction rules exclude only `FFBKeyCrypto.xml` and `SecureStore.xml`, preserving default coverage of local books and MMKV preferences. They contain no `<include>` entries because those would restrict coverage to explicitly listed domains. The app manifest and Expo config plugin select the owned rules. Real Google backup and phone-to-phone transfer remain release gates.
+Android backup and data-extraction rules exclude only `FFBKeyCrypto.xml`, preserving default coverage of local books and MMKV preferences. They contain no `<include>` entries because those would restrict coverage to explicitly listed domains. The app manifest and Expo config plugin select the owned rules. Real Google backup and phone-to-phone transfer remain release gates.
 
 Detox simulator builds use ad-hoc signing for native Keychain tests, without distribution credentials. Release test builds disable both Sentry artifact-upload paths; device signing is configured separately.
 

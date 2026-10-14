@@ -23,6 +23,14 @@ export class KeyOperationError extends Error {
   }
 }
 
+/** Missing ciphertext is recoverable from the external repository, never by creating keys. */
+export class MissingKeyStateError extends KeyOperationError {
+  constructor() {
+    super('FFB_KEY_RECOVERY_REQUIRED', 'Missing encrypted key state; use User recovery');
+    this.name = 'MissingKeyStateError';
+  }
+}
+
 export function assertKeyOperationActive(signal?: AbortSignal): void {
   if (signal?.aborted) throw new KeyOperationError('FFB_KEY_CANCELLED', 'Recovery was cancelled');
 }

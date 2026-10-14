@@ -1,3 +1,7 @@
+import {
+  forgetAllPreparedRestores,
+  keepPreparedRestores,
+} from '@/src/services/setup/preparedRestoreCache';
 import { AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { ImportPluginCard } from '@/src/components/settings/ImportPluginCard';
@@ -6,12 +10,7 @@ import { importRegistry } from '@/src/services/import';
 import { toast } from '@/src/utils/alerts';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import {
-  forgetAllPreparedRestores,
-  keepPreparedRestores,
-  pickAndPrepareRestore,
-  selectPreparedRestoreSources,
-} from './pickRestoreSource';
+import { pickAndPrepareRestore, selectPreparedRestoreSources } from './pickRestoreSource';
 import {
   RestoreWorkplaceSelectionSheet,
   type RestoreWorkplaceCandidate,

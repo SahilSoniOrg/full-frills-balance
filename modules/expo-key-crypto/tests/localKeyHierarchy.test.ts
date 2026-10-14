@@ -4,7 +4,8 @@ import {
   enableTestCrypto,
   seedSnapshotWorkplace,
 } from '@/src/services/backup/__tests__/snapshotTestHelpers';
-import { LocalKeyHierarchy, type LocalUserKeys } from '@/src/services/backup/localKeyHierarchy';
+import { LocalKeyHierarchy } from '@/src/services/backup/localKeyHierarchy';
+import { type LocalUserKeys } from '@/src/services/backup/keyHierarchyRecords';
 import {
   encryptWorkplaceSnapshot,
   sealKeyEnvelope,
@@ -17,7 +18,7 @@ import { userIdentityFingerprint } from '@/src/services/backup/userIdentity';
 import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { MissingKeyStateError } from '@/src/services/backup/keyStateErrors';
+import { MissingKeyStateError } from '@/src/utils/keyOperationError';
 import { createWorkplaceDump, decryptWorkplaceDump } from '@/src/services/backup/workplaceDump';
 import { assertKeyAccessAllowed, setKeyAccessAllowed } from '@/src/services/backup/keyAccessPolicy';
 import { userScope } from '@/src/services/backup/keyHierarchyRecords';
@@ -51,38 +52,34 @@ it('serializes durable encryption reservations across two hierarchies sharing th
 });
 
 it.each([
-  ['new', 'not-started', 'recovery-required'],
-  ['pending', 'pending', 'setup-incomplete'],
-  ['ready', 'ready', 'ready'],
-  ['interrupted', 'interrupted', 'recovery-required'],
-  ['missing-device', 'recovery-required', 'recovery-required'],
-  ['missing-ciphertext', 'recovery-required', 'recovery-required'],
-  ['orphan-device', 'recovery-required', 'recovery-required'],
-] as const)(
-  'keeps setup and Device-access projections consistent for %s',
-  async (stage, setup, device) => {
-    const context = memoryKeyHierarchy();
-    if (stage !== 'new') {
-      const credential = await context.hierarchy.beginUser('alice', 'phone');
-      if (stage !== 'pending' && stage !== 'interrupted')
-        await context.hierarchy.confirmUserRecovery('alice', 'phone', credential);
-    }
-    if (stage === 'interrupted') await context.state.remove(userScope('alice', 'phone'));
-    if (stage === 'missing-device') await context.eraseDeviceKeys();
-    if (stage === 'orphan-device') context.ciphertext.clear();
-    if (stage === 'missing-ciphertext') {
-      const read = jest.mocked(context.state.read).getMockImplementation()!;
-      jest.mocked(context.state.read).mockImplementation(async scope => {
-        if (scope === userScope('alice', 'phone')) throw new MissingKeyStateError();
-        return read(scope);
-      });
-    }
-    await expect(context.hierarchy.describeSetup('alice', 'phone')).resolves.toMatchObject({
-      user: setup,
+  ['new', 'not-started'],
+  ['pending', 'pending'],
+  ['ready', 'ready'],
+  ['interrupted', 'interrupted'],
+  ['missing-device', 'recovery-required'],
+  ['missing-ciphertext', 'recovery-required'],
+  ['orphan-device', 'recovery-required'],
+] as const)('classifies the production setup state for %s', async (stage, setup) => {
+  const context = memoryKeyHierarchy();
+  if (stage !== 'new') {
+    const credential = await context.hierarchy.beginUser('alice', 'phone');
+    if (stage !== 'pending' && stage !== 'interrupted')
+      await context.hierarchy.confirmUserRecovery('alice', 'phone', credential);
+  }
+  if (stage === 'interrupted') await context.state.remove(userScope('alice', 'phone'));
+  if (stage === 'missing-device') await context.eraseDeviceKeys();
+  if (stage === 'orphan-device') context.ciphertext.clear();
+  if (stage === 'missing-ciphertext') {
+    const read = jest.mocked(context.state.read).getMockImplementation()!;
+    jest.mocked(context.state.read).mockImplementation(async scope => {
+      if (scope === userScope('alice', 'phone')) throw new MissingKeyStateError();
+      return read(scope);
     });
-    await expect(context.hierarchy.inspectDeviceState('alice', 'phone')).resolves.toBe(device);
-  },
-);
+  }
+  await expect(context.hierarchy.describeSetup('alice', 'phone')).resolves.toMatchObject({
+    user: setup,
+  });
+});
 
 it('opens Device → User → Workplace after restart and exposes only public/encrypted state to JS', async () => {
   const { snapshot } = await seedSnapshotWorkplace();
@@ -411,7 +408,9 @@ it.each(['missing-device-key', 'orphan-device-key', 'total-installation-loss'])(
         await source.eraseDeviceKeys();
       }
       const orphan = [...source.deviceTags.values()];
-      expect(await source.hierarchy.inspectDeviceState('alice', 'phone')).toBe('recovery-required');
+      expect((await source.hierarchy.describeSetup('alice', 'phone')).user).toBe(
+        loss === 'total-installation-loss' ? 'not-started' : 'recovery-required',
+      );
       if (loss !== 'total-installation-loss') {
         await expect(source.hierarchy.beginUser('alice', 'phone')).rejects.toThrow();
       }
@@ -430,7 +429,7 @@ it.each(['missing-device-key', 'orphan-device-key', 'total-installation-loss'])(
         (await source.hierarchy.exportWorkplaceKeys(recovered, source.workplaceId)).keyId,
       ).toBe(workplaceKeys.keyId);
       for (const key of orphan) expect([...source.deviceTags.values()]).toContain(key);
-      expect(await source.hierarchy.inspectDeviceState('alice', 'fresh-installation')).toBe(
+      expect((await source.hierarchy.describeSetup('alice', 'fresh-installation')).user).toBe(
         'ready',
       );
     } finally {
@@ -490,8 +489,8 @@ it('routes a missing local ciphertext file to recovery even when its locator sur
       throw new MissingKeyStateError();
     return read(scope);
   });
-  expect(await source.hierarchy.inspectDeviceState('alice', 'phone')).toBe('recovery-required');
+  expect((await source.hierarchy.describeSetup('alice', 'phone')).user).toBe('recovery-required');
   const recovered = await source.hierarchy.recoverUserDevice(source.userCredential, saved, 'fresh');
   expect(recovered.userKeyFingerprint).toBe(source.identity.userKeyFingerprint);
-  expect(await source.hierarchy.inspectDeviceState('alice', 'fresh')).toBe('ready');
+  expect((await source.hierarchy.describeSetup('alice', 'fresh')).user).toBe('ready');
 });

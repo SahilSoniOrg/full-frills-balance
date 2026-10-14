@@ -190,7 +190,7 @@ export async function recoverProofStage(
   }
   if (lifecycle) {
     requireProof(
-      (await keys.inspectDeviceState(USER, SOURCE_DEVICE)) === 'recovery-required',
+      (await keys.describeSetup(USER, SOURCE_DEVICE)).user === 'recovery-required',
       'Missing local material did not route to recovery',
     );
     await expectRejection(() => keys.beginUser(USER, SOURCE_DEVICE), 'Implicit root regeneration');
@@ -230,7 +230,7 @@ export async function recoverProofStage(
   );
   if (lifecycle) {
     requireProof(
-      (await keys.inspectDeviceState(USER, deviceId)) === 'ready',
+      (await keys.describeSetup(USER, deviceId)).user === 'ready',
       'Recovered Device is not usable',
     );
     const actual = await captureWorkplaceSnapshot(DEMO);

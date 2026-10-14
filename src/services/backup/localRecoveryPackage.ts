@@ -5,17 +5,16 @@ import {
   snapshotFingerprint,
   type EncryptedSnapshot,
 } from './encryptedSnapshot';
+import { type KeyHierarchy } from './localKeyHierarchy';
 import {
   parseWorkplaceKeys,
   recoveryManifestMessage,
-  type KeyHierarchy,
   type KeyAccessIdentity,
   type UserRecoveryPackage,
   type WorkplaceKeys,
-} from './localKeyHierarchy';
+} from './keyHierarchyRecords';
 import { userIdentityFingerprint, verifyUserMessage } from './userIdentity';
 import { KeyOperationError } from '@/src/utils/keyOperationError';
-export { parseRecoveryCredential } from './recoveryCredential';
 
 export const MAX_RECOVERY_PACKAGE_BYTES = 48 * 1024 * 1024;
 export interface LocalRecoveryPackage {

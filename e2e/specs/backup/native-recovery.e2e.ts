@@ -117,21 +117,6 @@ async function runAndRead(stage: string): Promise<Record<string, unknown>> {
     'text' in attributes ? attributes.text : 'label' in attributes ? attributes.label : undefined;
   if (typeof text !== 'string') throw new Error('Native proof did not return a readable report');
   const report = JSON.parse(text) as Record<string, unknown>;
-  fs.writeFileSync(
-    path.join(transferDirectory(), `${stage}-summary.json`),
-    JSON.stringify(report, null, 2),
-  );
-  const screenshotPath = path.join(transferDirectory(), `${stage}.png`);
-  if (device.getPlatform() === 'android') {
-    android(['shell', 'true']); // Apply the same disposable-emulator guard before capture.
-    fs.writeFileSync(
-      screenshotPath,
-      execFileSync(adbPath, ['-s', androidSerial!, 'exec-out', 'screencap', '-p']),
-    );
-  } else {
-    const screenshot = await device.takeScreenshot(`recovery-${stage}`);
-    fs.copyFileSync(screenshot, screenshotPath);
-  }
   return report;
 }
 

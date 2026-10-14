@@ -24,15 +24,15 @@ class NativeDeviceVaultTest {
   private fun keystore() = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
   @Before @After fun cleanup() {
     preferences.edit().clear().commit()
-    context.getSharedPreferences("SecureStore", Context.MODE_PRIVATE).edit().clear().commit()
+    context.getSharedPreferences("UnrelatedFeature", Context.MODE_PRIVATE).edit().clear().commit()
     keystore().deleteEntry(alias)
   }
   private fun rejected(block: () -> Unit) {
     try { block() } catch (_: Exception) { return }
     fail("Expected vault rejection")
   }
-  @Test fun ownsPreferencesAndKeystoreWithoutTouchingSecureStore() {
-    val unrelated = context.getSharedPreferences("SecureStore", Context.MODE_PRIVATE)
+  @Test fun ownsPreferencesAndKeystoreWithoutTouchingOtherPreferences() {
+    val unrelated = context.getSharedPreferences("UnrelatedFeature", Context.MODE_PRIVATE)
     unrelated.edit().putString("unrelated", "keep").commit()
     vault.save(name, key)
     assertTrue(preferences.contains(name))
@@ -40,7 +40,6 @@ class NativeDeviceVaultTest {
     assertNull(keystore().getKey(alias, null).encoded)
     assertEquals("keep", unrelated.getString("unrelated", null))
     assertFalse(unrelated.contains(name))
-    assertFalse(unrelated.contains("key_v1-$name"))
     assertArrayEquals(key, NativeDeviceVault(context).load(name))
   }
   @Test fun rejectsReplacingAnEstablishedDeviceKey() {
@@ -77,11 +76,11 @@ class NativeDeviceVaultTest {
   @Test fun removalOnlyDeletesTheSelectedNativeDeviceEntry() {
     vault.save(name, key)
     vault.save(other, key)
-    val secure = context.getSharedPreferences("SecureStore", Context.MODE_PRIVATE)
-    secure.edit().putString(name, "unrelated SecureStore entry").commit()
+    val secure = context.getSharedPreferences("UnrelatedFeature", Context.MODE_PRIVATE)
+    secure.edit().putString(name, "unrelated UnrelatedFeature entry").commit()
     vault.remove(name)
     assertNull(vault.load(name))
     assertArrayEquals(key, vault.load(other))
-    assertEquals("unrelated SecureStore entry", secure.getString(name, null))
+    assertEquals("unrelated UnrelatedFeature entry", secure.getString(name, null))
   }
 }
