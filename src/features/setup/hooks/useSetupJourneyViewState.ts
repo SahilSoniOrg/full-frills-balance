@@ -8,7 +8,7 @@ import {
   type SetupJourneyId,
   type SetupSliceId,
   type WorkplaceCheckpoint,
-} from '../setupTypes';
+} from '@/src/services/setup/setupTypes';
 import { resolveWorkplaceStartCheckpoint, visibleSetupProgress } from '../visibleSetupProgress';
 
 interface SetupJourneyViewStateOptions {

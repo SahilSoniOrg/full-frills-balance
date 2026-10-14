@@ -283,11 +283,11 @@ it('stops cancelled recovery before mutation and rejects secret fields in durabl
     jest.fn(),
     publish,
   );
-  await expect(
-    flow.recover(pack, source.userSecret, () => {
-      throw new Error('cancelled');
-    }),
-  ).rejects.toThrow('cancelled');
+  const cancelled = new AbortController();
+  cancelled.abort();
+  await expect(flow.recover(pack, source.userSecret, cancelled.signal)).rejects.toThrow(
+    'cancelled',
+  );
   expect(await persistence.store.loadSession()).toBeNull();
   expect(publish).not.toHaveBeenCalled();
   const session = await source.store.loadSession();
@@ -681,15 +681,15 @@ it.each(['ready', 'missing'])(
     const staged = await source.flow.preparePackage(source.workplaceId);
     expect((await source.flow.inspect(source.workplaceId)).packageReady).toBe(true);
     if (device === 'missing') await source.eraseDeviceKeys();
-    const intent = jest
-      .fn()
-      .mockImplementationOnce(() => undefined)
-      .mockImplementationOnce(() => {
-        throw new Error('Recovery was cancelled');
-      });
-    await expect(second.flow.recover(second.pack, source.userSecret, intent)).rejects.toThrow(
-      'Recovery was cancelled',
-    );
+    const controller = new AbortController();
+    const save = source.store.saveSession;
+    jest.spyOn(source.store, 'saveSession').mockImplementationOnce(async session => {
+      await save(session);
+      controller.abort();
+    });
+    await expect(
+      second.flow.recover(second.pack, source.userSecret, controller.signal),
+    ).rejects.toThrow('Recovery was cancelled');
     expect((await source.flow.inspect(source.workplaceId)).packageReady).toBe(false);
     await expect(source.flow.savedPackage()).rejects.toThrow('Prepare an encrypted package');
     expect([...source.packages.values()]).toContainEqual(staged);

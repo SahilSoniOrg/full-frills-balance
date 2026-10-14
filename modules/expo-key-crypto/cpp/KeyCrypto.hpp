@@ -1,15 +1,35 @@
 #pragma once
 #include <atomic>
 #include <chrono>
+#include <exception>
 #include <map>
 #include <mutex>
 #include <nlohmann/json.hpp>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
 namespace ffb {
 using Json = nlohmann::ordered_json;
 using Bytes = std::vector<unsigned char>;
+enum class ErrorCode {
+  Locked,
+  RecoveryRequired,
+  InvalidFile,
+  AuthenticationFailed,
+  ReferenceExpired,
+  Cancelled,
+  OperationFailed
+};
+class OperationError final : public std::runtime_error {
+public:
+  ErrorCode code;
+  OperationError(ErrorCode code, const char *message)
+      : std::runtime_error(message), code(code) {}
+};
+// Bridges publish only allowlisted codes, never parser/crypto exception text.
+const char *
+safeErrorCode(std::exception_ptr error = std::current_exception()) noexcept;
 // Platform adapters implement this interface without ever returning key bytes
 // to JS.
 class Vault {
@@ -30,6 +50,20 @@ public:
   void clearCredentials();
 
 private:
+  Json dispatch(const std::string &operation, const Json &request,
+                Vault &vault);
+  Json generateKeys(const Json &request, Vault &vault);
+  Json openKey(const Json &request, Vault &vault);
+  Json wrapUserForDevice(const Json &request, Vault &vault);
+  Json wrapWorkplaceForUser(const Json &request, Vault &vault);
+  Json createUser(const Json &device, Vault &vault);
+  Json enrollWorkplace(const Json &user, const std::string &workplace,
+                       Vault &vault);
+  Json sign(const Json &user, const std::string &digest, Vault &vault);
+  Json recoverUser(const Json &request, bool installDevice, Vault &vault);
+  Json confirmWorkplace(const Json &request, Vault &vault);
+  Json snapshotCrypto(const Json &request, bool encrypt, Vault &vault);
+  Json decryptDump(const Json &request);
   struct Credential {
     Bytes file;
     std::chrono::steady_clock::time_point created;

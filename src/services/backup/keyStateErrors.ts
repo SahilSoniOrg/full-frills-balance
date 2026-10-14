@@ -1,7 +1,9 @@
+import { KeyOperationError } from '@/src/utils/keyOperationError';
+
 /** Missing ciphertext is recoverable from the external repository, never by creating keys. */
-export class MissingKeyStateError extends Error {
+export class MissingKeyStateError extends KeyOperationError {
   constructor() {
-    super('Missing encrypted key state; use User recovery');
+    super('FFB_KEY_RECOVERY_REQUIRED', 'Missing encrypted key state; use User recovery');
     this.name = 'MissingKeyStateError';
   }
 }

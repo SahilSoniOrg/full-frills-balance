@@ -7,7 +7,7 @@ import type {
   RestoreSetupDraft,
   SetupSliceOutput,
   WorkplaceCreationSetupDraft,
-} from '../setupTypes';
+} from '@/src/services/setup/setupTypes';
 
 const operationId = asWorkplaceId('setup-operation');
 

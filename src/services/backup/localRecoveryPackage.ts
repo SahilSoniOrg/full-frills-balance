@@ -13,6 +13,7 @@ import {
   type WorkplaceKeys,
 } from './localKeyHierarchy';
 import { userIdentityFingerprint, verifyUserMessage } from './userIdentity';
+import { KeyOperationError } from '@/src/utils/keyOperationError';
 export { parseRecoveryCredential } from './recoveryCredential';
 
 export const MAX_RECOVERY_PACKAGE_BYTES = 48 * 1024 * 1024;
@@ -101,14 +102,22 @@ export async function verifyLocalRecoveryPackage(
   value: unknown,
   expected: Pick<KeyAccessIdentity, 'userId' | 'userKeyFingerprint'>,
 ): Promise<LocalRecoveryPackage> {
-  const saved = parsePackage(value);
+  let saved: LocalRecoveryPackage;
+  try {
+    saved = parsePackage(value);
+  } catch {
+    throw new KeyOperationError('FFB_KEY_INVALID_FILE', 'Invalid encrypted recovery package');
+  }
   const user = saved.userRecoveryPackage;
   if (
     user.userId !== expected.userId ||
     user.userKeyFingerprint !== expected.userKeyFingerprint ||
     (await userIdentityFingerprint(user.publicIdentity)) !== expected.userKeyFingerprint
   )
-    throw new Error('Recovery package User identity mismatch');
+    throw new KeyOperationError(
+      'FFB_KEY_IDENTITY_MISMATCH',
+      'Recovery package User identity mismatch',
+    );
   await verifyUserMessage(
     user.publicIdentity.signingPublicKey,
     recoveryManifestMessage({ ...expected, registeredDeviceId: '' }, await manifestDigest(saved)),

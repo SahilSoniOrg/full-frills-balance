@@ -1,12 +1,4 @@
 export {
-  loadSetupDraft,
-  clearSetupDraft,
-  saveSetupDraft,
-  SetupDraftStore,
-  discardUnreadableSetupDraft,
-} from './SetupDraftStore';
-export { readBlockingSetupProjection } from './readBlockingSetupProjection';
-export {
   createSetupCoordinator,
   createSetupDraft,
   startFirstRunRestoreFromDeviceName,
@@ -25,4 +17,3 @@ export {
   shouldRenderSetupGateChildren,
   shouldShowCashClarity,
 } from './setupRouting';
-export type * from './setupTypes';

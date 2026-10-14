@@ -1,3 +1,4 @@
+import { KeyOperationError, assertKeyOperationActive } from '@/src/utils/keyOperationError';
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { asWorkplaceId } from '@/src/types/ids';
 import {
@@ -13,10 +14,14 @@ import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository
  * Publishes an identity-preserving snapshot, without activation, enrollment, or User/Device settings.
  * Book preferences are a handoff for the eventual setup finisher, not an independent MMKV write here.
  */
-export async function restoreWorkplaceSnapshot(source: WorkplaceSnapshot): Promise<{
+export async function restoreWorkplaceSnapshot(
+  source: WorkplaceSnapshot,
+  signal?: AbortSignal,
+): Promise<{
   workplaceId: ReturnType<typeof asWorkplaceId>;
   bookPreferences: WorkplaceSnapshot['bookPreferences'];
 }> {
+  assertKeyOperationActive(signal);
   const serialized = serializeWorkplaceSnapshot(source);
   const snapshot = decodeWorkplaceSnapshot(serialized);
   const fingerprint = await snapshotFingerprint(serialized);
@@ -32,7 +37,7 @@ export async function restoreWorkplaceSnapshot(source: WorkplaceSnapshot): Promi
     { ...snapshot.workplace, id: workplaceId },
     snapshot.data,
     undefined,
-    { snapshotRestoreFingerprint: fingerprint },
+    { snapshotRestoreFingerprint: fingerprint, signal },
   );
   return { workplaceId, bookPreferences: snapshot.bookPreferences };
 }
@@ -49,7 +54,8 @@ export async function assertWorkplaceRecoveryTarget(
   // A committed restore receipt is checked against the decrypted snapshot by
   // ordinary publication. Unbound books without a receipt cannot be a retry.
   if (existing && !preserveExistingBooks && !existing.snapshotRestoreFingerprint)
-    throw new Error(
+    throw new KeyOperationError(
+      'FFB_KEY_WORKPLACE_COLLISION',
       'Snapshot Workplace already exists; restore will not overwrite local books. Export your current local books first, then recover on another Device or a fresh installation using your saved recovery files.',
     );
 }
@@ -57,10 +63,11 @@ export async function assertWorkplaceRecoveryTarget(
 /** Only the recovery caller with a matching pre-existing local key binding may retain books. */
 export async function recoverWorkplaceSnapshot(
   source: WorkplaceSnapshot,
-  options: { preserveExistingBooks: boolean },
+  options: { preserveExistingBooks: boolean; signal?: AbortSignal },
 ): Promise<WorkplaceRecoveryResult> {
+  assertKeyOperationActive(options.signal);
   const workplaceId = asWorkplaceId(source.workplace.id);
   if (options.preserveExistingBooks && (await workplaceRepository.find(workplaceId)))
     return { kind: 'keys-recovered', workplaceId };
-  return { kind: 'restored', ...(await restoreWorkplaceSnapshot(source)) };
+  return { kind: 'restored', ...(await restoreWorkplaceSnapshot(source, options.signal)) };
 }

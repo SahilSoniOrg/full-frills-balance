@@ -6,6 +6,7 @@ import { MAX_RECOVERY_PACKAGE_BYTES } from './localRecoveryPackage';
 import { snapshotCrypto } from './snapshotCryptoProvider';
 import { keyHex } from './keyEncoding';
 import { snapshotFingerprint } from './encryptedSnapshot';
+import { KeyOperationError } from '@/src/utils/keyOperationError';
 
 const SESSION = 'encryption_setup_session_v1';
 function file(id: string): File {
@@ -37,10 +38,13 @@ export const encryptionSetupStore: EncryptionSetupStore = {
   async readPackage(reference) {
     const input = file(reference.id);
     if (!input.exists || input.size > MAX_RECOVERY_PACKAGE_BYTES)
-      throw new Error('Encrypted recovery package is unavailable');
+      throw new KeyOperationError(
+        'FFB_KEY_PACKAGE_UNAVAILABLE',
+        'Encrypted recovery package is unavailable',
+      );
     const json = await input.text();
     if ((await snapshotFingerprint(json)) !== reference.fingerprint)
-      throw new Error('Recovery package integrity mismatch');
+      throw new KeyOperationError('FFB_KEY_INVALID_FILE', 'Recovery package integrity mismatch');
     return JSON.parse(json);
   },
 };

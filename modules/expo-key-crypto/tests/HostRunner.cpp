@@ -86,7 +86,7 @@ int main() {
         result = engine().execute(operation, input, vault);
       std::cout << Json{{"result", result}, {"devices", vault.metadata()}}.dump() << std::endl;
     } catch (...) {
-      std::cout << Json{{"error", "Native test operation rejected"}, {"devices", vaults[vaultId].metadata()}}.dump()
+      std::cout << Json{{"error", safeErrorCode()}, {"devices", vaults[vaultId].metadata()}}.dump()
                 << std::endl;
     }
   }

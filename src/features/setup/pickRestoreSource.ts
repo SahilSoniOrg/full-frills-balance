@@ -7,7 +7,11 @@ import {
 } from '@/src/services/import';
 import { prepareRestore, type PreparedRestore } from '@/src/services/import/restore';
 import type { ImportFileContext, ImportPlugin } from '@/src/services/import/types';
-import { restoreSources, type RestoreSetupDraft, type RestoreSourceOutput } from './setupTypes';
+import {
+  restoreSources,
+  type RestoreSetupDraft,
+  type RestoreSourceOutput,
+} from '@/src/services/setup/setupTypes';
 import * as DocumentPicker from 'expo-document-picker';
 import { generator } from '@/src/data/database/idGenerator';
 import type { WorkplaceId } from '@/src/types/ids';

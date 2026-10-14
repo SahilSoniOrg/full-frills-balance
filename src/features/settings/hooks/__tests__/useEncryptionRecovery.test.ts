@@ -12,6 +12,8 @@ import { readSetupDraftSnapshot } from '@/src/services/setup/launchProjection';
 import { resolveLaunchGate } from '@/src/services/launch/launchResolver';
 import { asWorkplaceId } from '@/src/types/ids';
 import { preferences } from '@/src/services/preferences';
+import { KeyOperationError } from '@/src/utils/keyOperationError';
+import { logger } from '@/src/utils/logger';
 
 function emptyDeviceDraft(id: string): WorkplaceCreationSetupDraft {
   return {
@@ -156,6 +158,36 @@ it('keeps the setup gate when recovery fails', async () => {
   unmount();
 });
 
+it('explains a Workplace collision without hiding the way to preserve local books', async () => {
+  const { result, unmount } = await selectedFiles();
+  jest
+    .mocked(encryptionSetup.recover)
+    .mockRejectedValueOnce(new KeyOperationError('FFB_KEY_WORKPLACE_COLLISION'));
+  await act(async () => {
+    await result.current.recover();
+  });
+  expect(result.current.message).toContain('Export your current books first');
+  expect(AppNavigation.toDashboard).not.toHaveBeenCalled();
+  unmount();
+});
+
+it('shows an allowlisted native reason without exposing decorated exception text', async () => {
+  const { result, unmount } = await selectedFiles();
+  const warning = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+  jest
+    .mocked(encryptionSetup.recover)
+    .mockRejectedValueOnce(new Error('native rejected: FFB_KEY_LOCKED sensitive-fixture-content'));
+  await act(async () => {
+    await result.current.recover();
+  });
+  expect(result.current.message).toContain('Unlock the app');
+  expect(result.current.message).not.toContain('sensitive-fixture-content');
+  expect(warning).toHaveBeenCalledWith('Private backup operation failed', {
+    code: 'FFB_KEY_LOCKED',
+  });
+  unmount();
+});
+
 it('does not discard another setup journey changed while recovery was in flight', async () => {
   saveSetupDraft(emptyDeviceDraft('original'));
   const { result, unmount } = await selectedFiles();
@@ -206,7 +238,7 @@ it.each(['background', 'lock'] as const)(
     const { result, unmount } = await selectedFiles();
     jest
       .mocked(encryptionSetup.recover)
-      .mockImplementationOnce(async (_package, _secret, assertIntent) => {
+      .mockImplementationOnce(async (_package, _secret, signal) => {
         if (interruption === 'background') {
           stateChanged('background');
           stateChanged('active');
@@ -214,7 +246,7 @@ it.each(['background', 'lock'] as const)(
           setKeyAccessAllowed(false);
           setKeyAccessAllowed(true);
         }
-        assertIntent?.();
+        expect(signal?.aborted).toBe(true);
         throw new Error('Publication must not run');
       });
     await act(async () => {

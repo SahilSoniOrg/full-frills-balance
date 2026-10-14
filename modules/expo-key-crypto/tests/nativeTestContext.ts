@@ -1,5 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { createInterface } from 'node:readline';
+import { KeyOperationError, keyOperationErrorCode } from '@/src/utils/keyOperationError';
 import { LocalKeyHierarchy } from '@/src/services/backup/localKeyHierarchy';
 import type { KeyCiphertextStateStore } from '@/src/services/backup/keyCiphertextStateStore';
 import {
@@ -25,7 +26,8 @@ class NativeHost {
       if (!waiter) return;
       waiter.devices.clear();
       for (const [key, tag] of Object.entries(result.devices)) waiter.devices.set(key, tag);
-      if (result.error) waiter.reject(new Error('Native operation rejected'));
+      if (result.error)
+        waiter.reject(new KeyOperationError(keyOperationErrorCode({ message: result.error })));
       else waiter.resolve(result.result);
     });
     const fail = () => {

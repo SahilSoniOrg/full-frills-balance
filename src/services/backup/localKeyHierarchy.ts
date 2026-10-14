@@ -1,3 +1,4 @@
+import { KeyOperationError } from '@/src/utils/keyOperationError';
 import { keyCiphertextStateStore, type KeyCiphertextStateStore } from './keyCiphertextStateStore';
 import { nativeKeyOperations } from './nativeKeyOperations';
 import {
@@ -121,6 +122,8 @@ export class LocalKeyHierarchy implements KeyHierarchy {
     private readonly crypto: NativeKeyOperations = nativeKeyOperations,
   ) {}
   private exclusive<T>(operation: () => Promise<T>): Promise<T> {
+    // Shared by every hierarchy using this store; covers durable reservations/read-modify-write.
+    // A per-call native mutex cannot protect these asynchronous persistence steps.
     const next = (queues.get(this.state) ?? Promise.resolve())
       .catch(() => undefined)
       .then(async () => {
@@ -576,7 +579,10 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       if (keys.writerDeviceId !== identity.registeredDeviceId)
         throw new Error('Backup writer handover is required');
       if (keys.encryptionInvocations >= MAX_ENCRYPTIONS)
-        throw new Error('Workplace encryption budget exhausted');
+        throw new KeyOperationError(
+          'FFB_KEY_BUDGET_EXHAUSTED',
+          'Workplace encryption budget exhausted',
+        );
       const reserved = { ...keys, encryptionInvocations: keys.encryptionInvocations + 1 };
       await this.state.write(workplaceScope(identity.userId, workplaceId), reserved);
       this.assertAccess();

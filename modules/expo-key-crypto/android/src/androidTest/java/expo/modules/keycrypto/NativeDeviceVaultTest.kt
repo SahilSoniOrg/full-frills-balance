@@ -59,7 +59,8 @@ class NativeDeviceVaultTest {
     vault.save(name, key)
     val saved = preferences.getString(name, null)
     keystore().deleteEntry(alias)
-    rejected { vault.load(name) }
+    try { vault.load(name); fail("Expected recovery-required state") }
+    catch (failure: IllegalStateException) { assertEquals("FFB_KEY_RECOVERY_REQUIRED", failure.message) }
     rejected { vault.save(name, key) }
     assertFalse(keystore().containsAlias(alias))
     assertEquals(saved, preferences.getString(name, null))

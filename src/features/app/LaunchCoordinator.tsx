@@ -1,3 +1,4 @@
+import { loadSetupDraft, saveSetupDraft } from '@/src/services/setup/SetupDraftStore';
 import { EmptyStateView, LoadingView } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { WorkplaceProvider } from '@/src/contexts/WorkplaceContext';
@@ -8,8 +9,6 @@ import { WorkplacePicker } from '@/src/features/app/WorkplacePicker';
 import { RestartRequiredScreen } from '@/src/features/dev';
 import {
   createSetupDraft,
-  loadSetupDraft,
-  saveSetupDraft,
   SETUP_GATE_ROUTES,
   setupEntryPath,
   shouldRedirectSetupToEntry,

@@ -26,6 +26,7 @@ import {
 import { asWorkplaceId } from '@/src/types/ids';
 import { assertKeyAccessAllowed } from './keyAccessPolicy';
 import type { RecoveryCredential } from './keyEnvelopes';
+import { KeyOperationError, assertKeyOperationActive } from '@/src/utils/keyOperationError';
 
 function freshId(): string {
   const bytes = snapshotCrypto.randomBytes(16);
@@ -49,7 +50,8 @@ function bindWorkplace(
 ): EncryptionSetupSession {
   const bindings = session.verifiedWorkplaces ?? [];
   const existing = bindings.find(item => item.workplaceId === workplaceId);
-  if (existing && existing.keyId !== keyId) throw new Error('Existing Workplace key differs');
+  if (existing && existing.keyId !== keyId)
+    throw new KeyOperationError('FFB_KEY_IDENTITY_MISMATCH', 'Existing Workplace key differs');
   return existing
     ? session
     : { ...session, verifiedWorkplaces: [...bindings, { workplaceId, keyId }] };
@@ -66,6 +68,8 @@ export class EncryptionSetup {
     private readonly checkTarget = assertWorkplaceRecoveryTarget,
   ) {}
   private exclusive<T>(operation: () => Promise<T>): Promise<T> {
+    // Serializes whole workflows/checkpoints across several hierarchy calls.
+    // The hierarchy queue protects individual store operations; native locks cannot span awaits.
     const next = this.queue
       .catch(() => undefined)
       .then(async () => {
@@ -93,7 +97,10 @@ export class EncryptionSetup {
       session.userKeyFingerprint &&
       session.userKeyFingerprint !== keys.identity.userKeyFingerprint
     )
-      throw new Error('Established User identity mismatch');
+      throw new KeyOperationError(
+        'FFB_KEY_IDENTITY_MISMATCH',
+        'Established User identity mismatch',
+      );
     return { session, identity: keys.identity, keys };
   }
   inspect(workplaceId?: string): Promise<SetupViewState> {
@@ -285,21 +292,19 @@ export class EncryptionSetup {
       });
     });
   }
-  recover(
-    value: unknown,
-    secret: unknown,
-    assertIntent: () => void = () => undefined,
-  ): Promise<Publication> {
+  recover(value: unknown, secret: unknown, signal?: AbortSignal): Promise<Publication> {
     return this.exclusive(async () => {
+      assertKeyOperationActive(signal);
       const credential = parseRecoveryCredential(secret);
-      if (credential.purpose !== 'user-recovery') throw new Error('Choose your User recovery file');
+      if (credential.purpose !== 'user-recovery')
+        throw new KeyOperationError('FFB_KEY_INVALID_FILE', 'Choose your User recovery file');
       const saved = await verifyLocalRecoveryPackage(value, {
         userId: credential.identityId,
         userKeyFingerprint: credential.identityKeyId,
       });
       await this.hierarchy.validateRecoveryCredential(saved.userRecoveryPackage, credential);
       this.assertAccess();
-      assertIntent();
+      assertKeyOperationActive(signal);
       let session = await this.store.loadSession();
       if (
         session &&
@@ -312,7 +317,10 @@ export class EncryptionSetup {
           (await this.hierarchy.describeSetup(session.userId, session.deviceId)).user ===
             'not-started';
         if (!vacantCreation)
-          throw new Error('This Device is set up for a different User; use a fresh installation');
+          throw new KeyOperationError(
+            'FFB_KEY_IDENTITY_MISMATCH',
+            'This Device is set up for a different User; use a fresh installation',
+          );
         session = null;
       }
       const existing = session
@@ -320,16 +328,23 @@ export class EncryptionSetup {
         : null;
       const { workplaceId, keyId } = saved.workplaceKeys;
       const binding = session?.verifiedWorkplaces?.find(item => item.workplaceId === workplaceId);
-      if (binding && binding.keyId !== keyId) throw new Error('Existing Workplace key differs');
+      if (binding && binding.keyId !== keyId)
+        throw new KeyOperationError('FFB_KEY_IDENTITY_MISMATCH', 'Existing Workplace key differs');
       const pending = session?.pendingRecoveries ?? [];
       const previous = pending.find(item => item.workplaceId === workplaceId);
       if (previous && previous.keyId !== keyId)
-        throw new Error('Pending recovery belongs to a different Workplace key');
+        throw new KeyOperationError(
+          'FFB_KEY_IDENTITY_MISMATCH',
+          'Pending recovery belongs to a different Workplace key',
+        );
       // Only this Workplace's completed binding can grant preservation authority.
       // An old pending decision cannot promote an unbound imported key either.
       const preserveExistingBooks = !!binding && previous?.preserveExistingBooks !== false;
       if (existing?.identity && existing.identity.userKeyFingerprint !== credential.identityKeyId)
-        throw new Error('Established User identity mismatch');
+        throw new KeyOperationError(
+          'FFB_KEY_IDENTITY_MISMATCH',
+          'Established User identity mismatch',
+        );
       session = {
         ...session,
         formatVersion: 1,
@@ -344,9 +359,11 @@ export class EncryptionSetup {
       };
       // Starting recovery abandons the previous unfinished export, not its file or usage.
       if (session.package && !session.package.confirmed) delete session.package;
+      this.assertAccess();
+      assertKeyOperationActive(signal);
       await this.store.saveSession(session);
       this.assertAccess();
-      assertIntent();
+      assertKeyOperationActive(signal);
       let identity: KeyAccessIdentity;
       if (existing?.user === 'ready' && existing.identity) {
         await this.hierarchy.confirmUserRecovery(
@@ -365,7 +382,7 @@ export class EncryptionSetup {
           session.deviceId,
         );
       }
-      assertIntent();
+      assertKeyOperationActive(signal);
       const status = await this.hierarchy.describeSetup(
         identity.userId,
         identity.registeredDeviceId,
@@ -373,7 +390,7 @@ export class EncryptionSetup {
       );
       await this.checkTarget(workplaceId, preserveExistingBooks);
       this.assertAccess();
-      assertIntent();
+      assertKeyOperationActive(signal);
       if (status.workplace === 'missing' || status.workplace === 'recovery-required')
         await this.hierarchy.installWorkplaceKeys(identity, saved.workplaceKeys);
       else {
@@ -382,7 +399,10 @@ export class EncryptionSetup {
           saved.workplaceKeys.workplaceId,
         );
         if (!current.recoveryConfirmed || current.keyId !== saved.workplaceKeys.keyId)
-          throw new Error('Existing Workplace key differs');
+          throw new KeyOperationError(
+            'FFB_KEY_IDENTITY_MISMATCH',
+            'Existing Workplace key differs',
+          );
       }
       const snapshot = await this.hierarchy.decryptSnapshot(
         identity,
@@ -390,10 +410,10 @@ export class EncryptionSetup {
         saved.snapshot,
       );
       this.assertAccess();
-      assertIntent();
-      const result = await this.publish(snapshot, { preserveExistingBooks });
+      assertKeyOperationActive(signal);
+      const result = await this.publish(snapshot, { preserveExistingBooks, signal });
       this.assertAccess();
-      assertIntent();
+      assertKeyOperationActive(signal);
       const reference = await this.store.writePackage(saved);
       const next = {
         ...bindWorkplace(session, workplaceId, keyId),

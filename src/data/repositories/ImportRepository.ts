@@ -1,3 +1,4 @@
+import { KeyOperationError, assertKeyOperationActive } from '@/src/utils/keyOperationError';
 import { database } from '@/src/data/database/Database';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import Account from '@/src/data/models/Account';
@@ -19,7 +20,6 @@ import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository
 import { Model, Q } from '@nozbe/watermelondb';
 import { WORKPLACE_DATA_TABLES } from '@/src/services/workplace/workplaceDataTables';
 import { snakeToCamel } from '@/src/utils/serialization';
-import { fetchSequentiallyInChunks } from './fetchSequentiallyInChunks';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import {
   evaluateJournalBalance,
@@ -184,7 +184,7 @@ export class ImportRepository {
     },
     data: BatchImportData,
     onProgress?: (message: string, progress?: number) => void,
-    options: { snapshotRestoreFingerprint?: string } = {},
+    options: { snapshotRestoreFingerprint?: string; signal?: AbortSignal } = {},
   ): Promise<Workplace> {
     await this.prepareImportData(data, onProgress);
     await this.validatePostedJournalBalances(workplace.id, data);
@@ -192,6 +192,7 @@ export class ImportRepository {
     const importCorrelationId = generateId();
     let created!: Workplace;
     await database.write(async () => {
+      assertKeyOperationActive(options.signal);
       const fingerprint = options.snapshotRestoreFingerprint;
       if (fingerprint !== undefined) {
         if (!/^sha256:[a-f0-9]{64}$/.test(fingerprint))
@@ -199,7 +200,8 @@ export class ImportRepository {
         const existing = await workplaceRepository.find(workplace.id);
         if (existing) {
           if (existing.snapshotRestoreFingerprint !== fingerprint) {
-            throw new Error(
+            throw new KeyOperationError(
+              'FFB_KEY_WORKPLACE_COLLISION',
               'Snapshot Workplace already exists; restore will not overwrite local books. Export your current local books first, then recover on another Device or a fresh installation using your saved recovery files.',
             );
           }
@@ -209,18 +211,23 @@ export class ImportRepository {
         for (const { table } of WORKPLACE_DATA_TABLES) {
           const rows = data[snakeToCamel(table) as keyof BatchImportData];
           if (!Array.isArray(rows)) continue;
-          const collisions = await fetchSequentiallyInChunks(
-            rows.map(row => row.id),
-            ids =>
-              database
-                .get<Model>(table)
-                .query(Q.where('id', Q.oneOf([...ids])))
-                .fetch(),
-          );
-          if (collisions.length > 0)
-            throw new Error(`Snapshot record identity collision in ${table}`);
+          // Keep checks inside the writer: a later write must not introduce an ID
+          // between admission and publication. Count bounded chunks without hydrating books.
+          for (let start = 0; start < rows.length; start += 100) {
+            const ids = rows.slice(start, start + 100).map(row => row.id);
+            const count = await database
+              .get<Model>(table)
+              .query(Q.where('id', Q.oneOf(ids)))
+              .fetchCount();
+            if (count > 0)
+              throw new KeyOperationError(
+                'FFB_KEY_WORKPLACE_COLLISION',
+                `Snapshot record identity collision in ${table}`,
+              );
+          }
         }
       }
+      assertKeyOperationActive(options.signal);
       created = workplaceRepository.prepareCreate({
         ...workplace,
         snapshotRestoreFingerprint: fingerprint,

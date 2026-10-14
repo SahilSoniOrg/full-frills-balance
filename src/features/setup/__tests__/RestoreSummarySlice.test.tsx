@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
 import { asWorkplaceId } from '@/src/types/ids';
 import { RestoreSummarySlice } from '../RestoreSummarySlice';
-import type { RestoreSetupDraft } from '../setupTypes';
+import type { RestoreSetupDraft } from '@/src/services/setup/setupTypes';
 import { Icon } from '@/src/types/domainIcons';
 
 const draft: RestoreSetupDraft = {

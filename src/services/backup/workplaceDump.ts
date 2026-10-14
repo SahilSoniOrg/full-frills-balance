@@ -16,7 +16,9 @@ export interface WorkplaceDump {
   snapshot: EncryptedSnapshot;
 }
 
-/** Ciphertext-only dump for a future download/support API. It conveys no User or owner authority. */
+/** Local V1 dump contract verifies the independently saved Workplace credential.
+ * Hosted download/support is deferred. This conveys no User or owner authority.
+ */
 export function createWorkplaceDump(
   keys: WorkplaceKeys,
   snapshot: EncryptedSnapshot,

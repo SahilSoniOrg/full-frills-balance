@@ -1,7 +1,7 @@
 import { Icon } from '@/src/types/domainIcons';
 import { generator } from '@/src/data/database/idGenerator';
 import { rememberPreparedRestore } from '@/src/features/setup/pickRestoreSource';
-import type { RestoreSourceOutput } from '@/src/features/setup/setupTypes';
+import type { RestoreSourceOutput } from '@/src/services/setup/setupTypes';
 import type { PreparedRestore } from '@/src/services/import/restore';
 import type { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { readE2eLaunchConfig } from '@/src/testing/e2eLaunchArgs';

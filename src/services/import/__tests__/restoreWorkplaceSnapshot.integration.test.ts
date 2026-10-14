@@ -81,6 +81,47 @@ it('refuses to overwrite an existing local Workplace or a different snapshot', a
   expect(await database.get('workplaces').query().fetchCount()).toBe(1);
 });
 
+it('does not publish a cancelled restore that was already queued behind another writer', async () => {
+  const { snapshot } = await seedSnapshotWorkplace();
+  await resetDatabase();
+  let started!: () => void, release!: () => void, queued!: () => void;
+  const running = new Promise<void>(resolve => {
+    started = resolve;
+  });
+  const pause = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  const enqueued = new Promise<void>(resolve => {
+    queued = resolve;
+  });
+  const blocker = database.write(async () => {
+    started();
+    await pause;
+  });
+  await running;
+  const originalWrite = database.write.bind(database);
+  const write = jest.spyOn(database, 'write').mockImplementation((work, description) => {
+    const result = originalWrite(work, description);
+    queued();
+    return result;
+  });
+  const controller = new AbortController();
+  const restoring = restoreWorkplaceSnapshot(snapshot, controller.signal);
+  try {
+    await enqueued;
+    controller.abort();
+    release();
+    await blocker;
+    await expect(restoring).rejects.toMatchObject({ code: 'FFB_KEY_CANCELLED' });
+    expect(await database.get('workplaces').query().fetchCount()).toBe(0);
+    expect(await database.get('accounts').query().fetchCount()).toBe(0);
+  } finally {
+    release();
+    await blocker;
+    write.mockRestore();
+  }
+});
+
 it('rejects source record collisions in another Workplace without publishing a shell', async () => {
   const { snapshot } = await seedSnapshotWorkplace();
   await resetDatabase();

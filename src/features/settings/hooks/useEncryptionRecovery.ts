@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { AppState } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useAppLock } from '@/src/contexts/app-shell/AppLockProvider';
@@ -15,93 +15,133 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { confirm } from '@/src/utils/alerts';
 import { finishRecoveredWorkplaceSetup } from '@/src/services/setup/recoveryCompletion';
 import { readSetupDraftSnapshot } from '@/src/services/setup/launchProjection';
+import { keyOperationErrorCode } from '@/src/utils/keyOperationError';
+import { logger } from '@/src/utils/logger';
+import { encryptionRecoveryErrorMessage } from '../helpers/encryptionRecoveryErrors';
+
+type RecoveryUiState = {
+  phase: 'idle' | 'working';
+  setup: SetupViewState | null;
+  message: string | null;
+  inputs: { generated: boolean; secret: boolean; package: boolean };
+};
+type RecoveryUiEvent =
+  | { type: 'start' | 'finish' }
+  | { type: 'inspect'; setup: SetupViewState }
+  | { type: 'message'; message: string }
+  | { type: 'inputs'; inputs: RecoveryUiState['inputs'] };
+function recoveryUiReducer(state: RecoveryUiState, event: RecoveryUiEvent): RecoveryUiState {
+  switch (event.type) {
+    case 'start':
+      return { ...state, phase: 'working', message: null };
+    case 'finish':
+      return { ...state, phase: 'idle' };
+    case 'inspect':
+      return { ...state, setup: event.setup };
+    case 'message':
+      return { ...state, message: event.message };
+    case 'inputs':
+      return { ...state, inputs: event.inputs };
+  }
+}
 
 export function useEncryptionRecovery(workplaceId?: string) {
   const workplace = useOptionalWorkplace();
   const { isAppCurrentlyLocked } = useAppLock();
-  const [state, setState] = useState<SetupViewState | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [hasGeneratedSecret, setHasGeneratedSecret] = useState(false);
-  const [hasImportedSecret, setHasImportedSecret] = useState(false);
-  const [hasImportedPackage, setHasImportedPackage] = useState(false);
-  const generated = useRef<RecoveryCredential | null>(null);
-  const importedSecret = useRef<unknown>(null);
-  const importedPackage = useRef<unknown>(null);
-  const alive = useRef(true);
-  const operation = useRef(false);
-  const intent = useRef(0);
-  const clearSecrets = useCallback(() => {
-    generated.current = null;
-    importedSecret.current = null;
-    setHasGeneratedSecret(false);
-    setHasImportedSecret(false);
-    void recoveryFiles.cleanupTemporarySecrets().catch(() => undefined);
+  const [ui, dispatch] = useReducer(recoveryUiReducer, {
+    phase: 'idle',
+    setup: null,
+    message: null,
+    inputs: { generated: false, secret: false, package: false },
+  });
+  // Transient native handles are cleared synchronously. React stores only their presence.
+  const lifetime = useRef<{
+    focused: boolean;
+    active: AbortController | null;
+    generated: RecoveryCredential | null;
+    secret: unknown;
+    package: unknown;
+  }>({ focused: true, active: null, generated: null, secret: null, package: null });
+  const state = ui.setup;
+  const busy = ui.phase === 'working';
+  const setMessage = useCallback((message: string) => dispatch({ type: 'message', message }), []);
+  const projectInputs = useCallback(() => {
+    const inputs = lifetime.current;
+    dispatch({
+      type: 'inputs',
+      inputs: {
+        generated: inputs.generated !== null,
+        secret: inputs.secret !== null,
+        package: inputs.package !== null,
+      },
+    });
   }, []);
+  const reportError = useCallback(
+    (error: unknown) => {
+      const code = keyOperationErrorCode(error);
+      logger.warn('Private backup operation failed', { code });
+      if (lifetime.current.focused) setMessage(encryptionRecoveryErrorMessage(code));
+    },
+    [setMessage],
+  );
+  const clearSecrets = useCallback(() => {
+    lifetime.current.generated = null;
+    lifetime.current.secret = null;
+    projectInputs();
+    void recoveryFiles.cleanupTemporarySecrets().catch(reportError);
+  }, [projectInputs, reportError]);
+  const cancel = useCallback(() => {
+    lifetime.current.active?.abort();
+    clearSecrets();
+  }, [clearSecrets]);
   const refresh = useCallback(async () => {
     const next = await encryptionSetup.inspect(workplaceId);
-    if (alive.current) setState(next);
+    if (lifetime.current.focused) dispatch({ type: 'inspect', setup: next });
   }, [workplaceId]);
   useFocusEffect(
     useCallback(() => {
-      alive.current = true;
+      lifetime.current.focused = true;
+      lifetime.current.package = null;
       clearSecrets();
-      setHasImportedPackage(false);
-      setBusy(operation.current);
-      void refresh().catch(() => {
-        if (alive.current)
-          setMessage(
-            'Setup could not be read. Unlock the app and try again; existing keys have been kept.',
-          );
-      });
+      void refresh().catch(reportError);
       return () => {
-        alive.current = false;
-        intent.current++;
-        generated.current = null;
-        importedSecret.current = null;
-        importedPackage.current = null;
+        lifetime.current.focused = false;
+        lifetime.current.package = null;
+        cancel();
       };
-    }, [refresh, clearSecrets]),
+    }, [refresh, clearSecrets, cancel, reportError]),
   );
   useEffect(() => {
     const sub = AppState.addEventListener('change', value => {
-      if (value !== 'active') {
-        intent.current++;
-        clearSecrets();
-      }
+      if (value !== 'active') cancel();
     });
     return () => sub.remove();
-  }, [clearSecrets]);
+  }, [cancel]);
   useEffect(
     () =>
       subscribeKeyAccessPolicy(allowed => {
-        if (!allowed) {
-          intent.current++;
-          clearSecrets();
-        }
+        if (!allowed) cancel();
       }),
-    [clearSecrets],
+    [cancel],
   );
   const run = useCallback(
-    async (work: () => Promise<void>) => {
-      if (operation.current || isAppCurrentlyLocked) return;
-      operation.current = true;
-      setBusy(true);
-      setMessage(null);
+    async (work: (signal: AbortSignal) => Promise<void>) => {
+      if (lifetime.current.active || !lifetime.current.focused || isAppCurrentlyLocked) return;
+      const controller = new AbortController();
+      lifetime.current.active = controller;
+      dispatch({ type: 'start' });
       try {
-        await work();
-        if (alive.current) await refresh();
-      } catch {
-        if (alive.current)
-          setMessage(
-            'This step could not finish. Check the files and try again. Existing books and keys have been kept.',
-          );
+        await work(controller.signal);
+        if (lifetime.current.focused) await refresh();
+      } catch (error) {
+        reportError(error);
       } finally {
-        operation.current = false;
-        if (alive.current) setBusy(false);
+        lifetime.current.active = null;
+        // Completion updates even on blur, so refocus never needs to reconstruct busy state.
+        dispatch({ type: 'finish' });
       }
     },
-    [refresh, isAppCurrentlyLocked],
+    [refresh, isAppCurrentlyLocked, reportError],
   );
   const begin = () =>
     run(async () => {
@@ -111,17 +151,17 @@ export function useEncryptionRecovery(workplaceId?: string) {
           : await encryptionSetup.beginUser();
       assertKeyAccessAllowed();
       if (AppState.currentState !== 'active') throw new Error('Setup is no longer foreground');
-      if (alive.current) {
-        generated.current = value;
-        setHasGeneratedSecret(true);
+      if (lifetime.current.focused) {
+        lifetime.current.generated = value;
+        projectInputs();
       }
     });
   const exportSecret = () =>
     run(async () => {
-      const value = generated.current;
+      const value = lifetime.current.generated;
       if (!value) throw new Error('Reimport the saved secret or restart the unfinished step');
       const saved = await recoveryFiles.exportSecret(value);
-      if (alive.current)
+      if (lifetime.current.focused)
         setMessage(
           saved
             ? 'Open the recovery file you saved to verify it.'
@@ -142,7 +182,7 @@ export function useEncryptionRecovery(workplaceId?: string) {
       if (!workplaceId) throw new Error('Select a Workplace first');
       const value = await encryptionSetup.preparePackage(workplaceId);
       await recoveryFiles.exportPackage(value);
-      if (alive.current)
+      if (lifetime.current.focused)
         setMessage(
           'Open the encrypted package you saved to verify it. Keep recovery secrets separately.',
         );
@@ -186,29 +226,29 @@ export function useEncryptionRecovery(workplaceId?: string) {
     });
   const pickSecret = () =>
     run(async () => {
-      if (!importedPackage.current) throw new Error('Choose the encrypted package first');
+      if (!lifetime.current.package) throw new Error('Choose the encrypted package first');
       const value = await recoveryFiles.pickSecret();
-      if (value !== null && alive.current) {
+      if (value !== null && lifetime.current.focused) {
         assertKeyAccessAllowed();
         if (AppState.currentState !== 'active') throw new Error('Recovery is no longer foreground');
-        importedSecret.current = value;
-        setHasImportedSecret(true);
+        lifetime.current.secret = value;
+        projectInputs();
       }
     });
   const pickPackage = () =>
     run(async () => {
       const value = await recoveryFiles.pickPackage();
-      if (value !== null && alive.current) {
-        importedPackage.current = value;
-        setHasImportedPackage(true);
+      if (value !== null && lifetime.current.focused) {
+        lifetime.current.package = value;
+        projectInputs();
       }
     });
   const useRetainedPackage = () =>
     run(async () => {
       const value = await encryptionSetup.savedPackage();
-      if (alive.current) {
-        importedPackage.current = value;
-        setHasImportedPackage(true);
+      if (lifetime.current.focused) {
+        lifetime.current.package = value;
+        projectInputs();
       }
     });
   const forgetDevice = () =>
@@ -226,21 +266,16 @@ export function useEncryptionRecovery(workplaceId?: string) {
       },
     });
   const recover = () =>
-    run(async () => {
-      const secret = importedSecret.current,
-        pack = importedPackage.current;
+    run(async signal => {
+      const secret = lifetime.current.secret,
+        pack = lifetime.current.package;
       if (!secret || !pack) throw new Error('Choose both recovery files');
-      const version = intent.current;
       const setupDraft = readSetupDraftSnapshot();
-      const publication = await encryptionSetup.recover(pack, secret, () => {
-        if (!alive.current || intent.current !== version || AppState.currentState !== 'active')
-          throw new Error('Recovery was cancelled');
-      });
-      if (!alive.current || intent.current !== version || AppState.currentState !== 'active')
-        return;
+      const publication = await encryptionSetup.recover(pack, secret, signal);
+      if (!lifetime.current.focused || signal.aborted || AppState.currentState !== 'active') return;
       clearSecrets();
-      importedPackage.current = null;
-      setHasImportedPackage(false);
+      lifetime.current.package = null;
+      projectInputs();
       if (publication.kind === 'restored')
         preferences.workplace.replace(publication.workplaceId, publication.bookPreferences);
       if (workplace) await workplace.setWorkplaceId(publication.workplaceId);
@@ -249,16 +284,17 @@ export function useEncryptionRecovery(workplaceId?: string) {
           activeWorkplaceId: publication.workplaceId,
           deviceRegistered: true,
         });
+      if (!lifetime.current.focused || signal.aborted || AppState.currentState !== 'active') return;
       finishRecoveredWorkplaceSetup(setupDraft);
       AppNavigation.toDashboard();
     });
   return {
     state,
     busy,
-    message,
-    hasGeneratedSecret,
-    hasImportedSecret,
-    hasImportedPackage,
+    message: ui.message,
+    hasGeneratedSecret: ui.inputs.generated,
+    hasImportedSecret: ui.inputs.secret,
+    hasImportedPackage: ui.inputs.package,
     begin,
     exportSecret,
     verifySecret,
@@ -275,8 +311,8 @@ export function useEncryptionRecovery(workplaceId?: string) {
     retry: () => run(async () => undefined),
     clearSensitiveInputs: () => {
       clearSecrets();
-      importedPackage.current = null;
-      setHasImportedPackage(false);
+      lifetime.current.package = null;
+      projectInputs();
     },
     disabled: busy || isAppCurrentlyLocked,
   };

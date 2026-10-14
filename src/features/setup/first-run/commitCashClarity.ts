@@ -9,7 +9,7 @@ import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { upsertPlannedPaymentByName } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { preferences } from '@/src/services/preferences';
 import { workplaceService } from '@/src/services/WorkplaceService';
-import { clearSetupDraft } from '../SetupDraftStore';
+import { clearSetupDraft } from '@/src/services/setup/SetupDraftStore';
 import { finishDeviceSetup, finishWorkplaceSetup } from '../setupFinishers';
 import { PlannedPaymentInterval } from '@/src/types/enums';
 import type { WorkplaceId } from '@/src/types/ids';
@@ -30,7 +30,7 @@ import {
   mapDraftToWorkplaceOutput,
   starterCategoryId,
 } from './mapToWorkplaceOutput';
-import { clearPendingCashClarityWorkplaceId } from './pendingWorkplace';
+import { clearPendingCashClarityWorkplaceId } from '@/src/services/setup/pendingWorkplace';
 import { buildOnboardingIncomeRecurrence } from './incomeRecurrence';
 
 type NamedAccount = Pick<

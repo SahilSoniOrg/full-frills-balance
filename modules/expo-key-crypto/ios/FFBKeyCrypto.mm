@@ -24,7 +24,7 @@ NSData *read(const std::string &name, NSString *service) {
   if (result == errSecItemNotFound)
     return nil;
   if (result != errSecSuccess)
-    throw std::runtime_error("Native Device vault is unavailable");
+    throw OperationError(ErrorCode::RecoveryRequired, "Native Device vault is unavailable");
   return CFBridgingRelease(item);
 }
 void store(const std::string &name, const Bytes &key) {
@@ -48,7 +48,7 @@ public:
     if (value) {
       if (value.length != 33 ||
           static_cast<const unsigned char *>(value.bytes)[0] != 0xff)
-        throw std::runtime_error("Invalid native Device key");
+        throw OperationError(ErrorCode::RecoveryRequired, "Invalid native Device key");
       auto *p = static_cast<const unsigned char *>(value.bytes);
       return Bytes(p + 1, p + 33);
     }
@@ -96,8 +96,7 @@ void fail(NSError **error) {
         errorWithDomain:@"FFBKeyCrypto"
                    code:1
                userInfo:@{
-                 NSLocalizedDescriptionKey : @"Native key operation failed; "
-                                             @"check the files and unlock state"
+                 NSLocalizedDescriptionKey : [NSString stringWithUTF8String:safeErrorCode()]
                }];
 }
 } // namespace

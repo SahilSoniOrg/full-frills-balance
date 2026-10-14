@@ -1,3 +1,5 @@
+import { KeyOperationError } from '@/src/utils/keyOperationError';
+
 // The app shell publishes its existing lock policy. Absence of a mounted shell fails closed.
 let allowed = false;
 const listeners = new Set<(allowed: boolean) => void>();
@@ -13,5 +15,9 @@ export function subscribeKeyAccessPolicy(listener: (allowed: boolean) => void): 
   };
 }
 export function assertKeyAccessAllowed(): void {
-  if (!allowed) throw new Error('Unlock the app before accessing encryption keys');
+  if (!allowed)
+    throw new KeyOperationError(
+      'FFB_KEY_LOCKED',
+      'Unlock the app before accessing encryption keys',
+    );
 }

@@ -43,7 +43,7 @@ Json request(JNIEnv *env, jstring value) {
 void fail(JNIEnv *env) {
   env->ThrowNew(
       env->FindClass("java/lang/IllegalStateException"),
-      "Native key operation failed; check the files and unlock state");
+      safeErrorCode());
 }
 class AndroidVault final : public Vault {
   JNIEnv *env_;

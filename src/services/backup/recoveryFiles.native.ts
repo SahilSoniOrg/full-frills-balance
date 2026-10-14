@@ -8,6 +8,7 @@ import { keyHex } from './keyEncoding';
 import { MAX_RECOVERY_PACKAGE_BYTES, parseRecoveryCredential } from './localRecoveryPackage';
 import type { RecoveryFiles } from './recoveryFiles';
 import { nativeKeyOperations } from './nativeKeyOperations';
+import { KeyOperationError } from '@/src/utils/keyOperationError';
 
 const SECRET_LIMIT = 4096;
 const activeFiles = new Set<string>();
@@ -140,16 +141,16 @@ async function pick(limit: number): Promise<unknown | null> {
   }
   try {
     if ((asset.size !== undefined && asset.size > limit) || input.size > limit)
-      throw new Error('Recovery file is too large');
+      throw new KeyOperationError('FFB_KEY_INVALID_FILE', 'Recovery file is too large');
     if (limit === SECRET_LIMIT)
       return parseRecoveryCredential(await nativeKeyOperations.importCredential(input.uri));
     const json = await input.text();
     if (new TextEncoder().encode(json).length > limit)
-      throw new Error('Recovery file is too large');
+      throw new KeyOperationError('FFB_KEY_INVALID_FILE', 'Recovery file is too large');
     try {
       return JSON.parse(json);
     } catch {
-      throw new Error('Choose a valid recovery JSON file');
+      throw new KeyOperationError('FFB_KEY_INVALID_FILE', 'Choose a valid recovery JSON file');
     }
   } finally {
     if (ownedCopy) {

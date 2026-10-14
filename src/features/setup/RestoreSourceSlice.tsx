@@ -16,7 +16,7 @@ import {
   RestoreWorkplaceSelectionSheet,
   type RestoreWorkplaceCandidate,
 } from './RestoreWorkplaceSelectionSheet';
-import type { RestoreSourceOutput } from './setupTypes';
+import type { RestoreSourceOutput } from '@/src/services/setup/setupTypes';
 import {
   e2ePrepareRestoreSelection,
   e2eRestoreSelectionSources,

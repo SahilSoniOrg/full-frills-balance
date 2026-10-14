@@ -1,5 +1,6 @@
 import { closeNativeHost, enrolledKeyHierarchy, memoryKeyHierarchy } from './nativeTestContext';
 import { parseNativeKeyReference } from '@/src/services/backup/nativeKeyApi';
+import { parseEncryptedSnapshotEnvelope } from '@/src/services/backup/encryptedSnapshot';
 import { parseLocalUser, userScope } from '@/src/services/backup/keyHierarchyRecords';
 import { legacy } from './legacyFixture';
 import { enableTestCrypto } from '@/src/services/backup/__tests__/snapshotTestHelpers';
@@ -83,6 +84,65 @@ it('opens key envelopes as references and decrypts only application data', async
       exportPrivateKey: true,
     }),
   ).rejects.toThrow();
+});
+
+it('reports safe native error codes for locked, invalid, expired and missing-key states', async () => {
+  const s = await references();
+  await expect(
+    s.host.execute('validateRecovery', {
+      user: 'sensitive-fixture-content',
+      credential: null,
+    }),
+  ).rejects.toMatchObject({ code: 'FFB_KEY_INVALID_FILE', message: 'FFB_KEY_INVALID_FILE' });
+  await expect(
+    s.crypto.sign({ ...s.user, handle: '00'.repeat(32) }, 'sha256:' + '00'.repeat(32)),
+  ).rejects.toMatchObject({ code: 'FFB_KEY_REFERENCE_EXPIRED' });
+  await s.host.execute('test.setAllowed', { allowed: false });
+  await expect(
+    s.crypto.hasKey({ kind: 'device', userId: 'alice', deviceId: 'phone' }),
+  ).rejects.toMatchObject({ code: 'FFB_KEY_LOCKED' });
+  await s.host.execute('test.setAllowed', { allowed: true });
+  await s.eraseDeviceKeys();
+  await expect(
+    s.crypto.openKey({
+      kind: 'user',
+      user: parseLocalUser(await s.state.read(userScope('alice', 'phone'))),
+    }),
+  ).rejects.toMatchObject({ code: 'FFB_KEY_RECOVERY_REQUIRED' });
+});
+
+it('streams snapshot headers while rejecting duplicate, mistyped and malformed header fields', async () => {
+  const s = await references();
+  const user = s.keys.userId;
+  // Reserve an invocation as the normal coordinator does before exposing a writer reference.
+  const key = await s.crypto.openKey({
+    kind: 'workplace',
+    user: s.user,
+    keys: { ...s.keys, encryptionInvocations: 1 },
+  });
+  const id = JSON.stringify(s.keys.workplaceId);
+  for (const source of [
+    `{"schemaVersion":35,"workplace":{"id":${id},"id":${id}}}`,
+    `{"schemaVersion":35,"schemaVersion":35,"workplace":{"id":${id}}}`,
+    `{"schemaVersion":35,"workplace":{"id":${id}},"workplace":{"id":${id}}}`,
+    `{"schemaVersion":"35","workplace":{"id":${id}}}`,
+    `{"schemaVersion":35.0,"workplace":{"id":${id}}}`,
+    `{"schemaVersion":35,"workplace":{"id":"other"}}`,
+    `{"schemaVersion":35,"workplace":{"id":${id}},"data":[`,
+    `{"schemaVersion":35,"workplace":{"id":${id}},"data":${'['.repeat(65)}0${']'.repeat(65)}}`,
+  ]) {
+    await expect(s.crypto.encrypt(key, source)).rejects.toMatchObject({
+      code: 'FFB_KEY_INVALID_FILE',
+    });
+  }
+  const plaintext = JSON.stringify({
+    data: Array.from({ length: 20_000 }, () => ({ id: 'unrelated-nested-id', note: 'synthetic' })),
+    workplace: { id: s.keys.workplaceId, name: user },
+    schemaVersion: 35,
+  });
+  const encrypted = await s.crypto.encrypt(key, plaintext);
+  expect(await s.crypto.decrypt(key, parseEncryptedSnapshotEnvelope(encrypted))).toBe(plaintext);
+  await s.crypto.releaseKey(key);
 });
 it('rejects forged handles, metadata substitutions, wrong vaults and invalidated Device roots', async () => {
   const s = await references();

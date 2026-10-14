@@ -35,6 +35,21 @@ beforeEach(async () => {
   await resetDatabase();
 });
 
+it('serializes durable encryption reservations across two hierarchies sharing the same store', async () => {
+  const { snapshot, workplaceId } = await seedSnapshotWorkplace();
+  const s = await enrolledKeyHierarchy(workplaceId);
+  const second = new LocalKeyHierarchy(s.state, () => undefined, s.crypto);
+  const envelopes = await Promise.all(
+    Array.from({ length: 8 }, (_, index) =>
+      (index % 2 ? second : s.hierarchy).encryptSnapshot(s.identity, workplaceId, snapshot),
+    ),
+  );
+  expect(new Set(envelopes.map(item => item.nonce)).size).toBe(8);
+  expect(
+    (await s.hierarchy.exportWorkplaceKeys(s.identity, workplaceId)).encryptionInvocations,
+  ).toBe(8);
+});
+
 it('opens Device → User → Workplace after restart and exposes only public/encrypted state to JS', async () => {
   const { snapshot } = await seedSnapshotWorkplace();
   const context = await enrolledKeyHierarchy();

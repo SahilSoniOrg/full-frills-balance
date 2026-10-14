@@ -1,6 +1,7 @@
 import { ensureKeyCrypto } from './keyCryptoRuntime';
 import { keyBytes } from './keyEncoding';
 import { snapshotFingerprint } from './encryptedSnapshot';
+import { KeyOperationError } from '@/src/utils/keyOperationError';
 
 /** The initial identity includes both key roles, before any credentials are distributed. */
 export interface UserPublicIdentity {
@@ -71,5 +72,8 @@ export async function verifyUserMessage(
       new Uint8Array(message).buffer,
     ))
   )
-    throw new Error('Recovery package signature mismatch');
+    throw new KeyOperationError(
+      'FFB_KEY_AUTHENTICATION_FAILED',
+      'Recovery package signature mismatch',
+    );
 }

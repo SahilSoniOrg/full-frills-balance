@@ -47,7 +47,11 @@ class NativeDeviceVault(private val context: Context) {
   fun load(name: String): ByteArray? {
     validate(name)
     val encoded = preferences.getString(name, null) ?: return null
-    return opened(name, encoded)
+    try { return opened(name, encoded) }
+    catch (_: Exception) {
+      // An unreadable persisted key is a recovery state, never a missing key to regenerate.
+      throw IllegalStateException("FFB_KEY_RECOVERY_REQUIRED")
+    }
   }
   fun save(name: String, key: ByteArray) {
     validate(name)
