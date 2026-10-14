@@ -1,3 +1,10 @@
+import {
+  parseObject,
+  assertAllowedKeys,
+  assertExactKeys,
+  isSha256Id,
+  isHexId,
+} from '@/src/utils/strictObject';
 import type { LocalUserKeys, WorkplaceKeys } from './keyHierarchyRecords';
 import type { UserPublicIdentity } from './userIdentity';
 import { parseKeyEnvelope, type KeyEnvelope } from './keyEnvelopes';
@@ -133,34 +140,26 @@ function envelopeResult(
   strings: string[],
   envelope: string,
 ): Record<string, unknown> {
-  if (!value || typeof value !== 'object' || Array.isArray(value))
-    throw new Error('Invalid native key envelope result');
-  const result = value as Record<string, unknown>;
-  if (
-    Object.keys(result).sort().join(',') !== [...strings, envelope].sort().join(',') ||
-    strings.some(name => typeof result[name] !== 'string' || !result[name])
-  )
+  const result = parseObject(value, 'Invalid native key envelope result');
+  assertExactKeys(result, [...strings, envelope], 'Invalid native key envelope result');
+  if (strings.some(name => typeof result[name] !== 'string' || !result[name]))
     throw new Error('Invalid native key envelope result');
   return result;
 }
 export function parseNativeKeyReference(value: unknown): NativeKeyReference {
-  if (!value || typeof value !== 'object' || Array.isArray(value))
-    throw new Error('Invalid native key reference');
-  const key = value as Record<string, unknown>;
+  const key = parseObject(value, 'Invalid native key reference');
+  assertAllowedKeys(
+    key,
+    ['format', 'formatVersion', 'kind', 'keyId', 'handle', 'publicKey'],
+    'Invalid native key reference',
+  );
   if (
-    Object.keys(key).some(
-      name => !['format', 'formatVersion', 'kind', 'keyId', 'handle', 'publicKey'].includes(name),
-    ) ||
     key.format !== 'full-frills-native-key-reference' ||
     key.formatVersion !== 1 ||
     !['device', 'user', 'workplace'].includes(String(key.kind)) ||
-    typeof key.keyId !== 'string' ||
-    !/^sha256:[a-f0-9]{64}$/.test(key.keyId) ||
-    typeof key.handle !== 'string' ||
-    !/^[a-f0-9]{64}$/.test(key.handle) ||
-    (key.kind === 'workplace'
-      ? key.publicKey !== undefined
-      : typeof key.publicKey !== 'string' || !/^[a-f0-9]{64}$/.test(key.publicKey))
+    !isSha256Id(key.keyId) ||
+    !isHexId(key.handle, 64) ||
+    (key.kind === 'workplace' ? key.publicKey !== undefined : !isHexId(key.publicKey, 64))
   )
     throw new Error('Invalid native key reference');
   return value as NativeKeyReference;

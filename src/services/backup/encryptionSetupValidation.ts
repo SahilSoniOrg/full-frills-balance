@@ -1,32 +1,36 @@
+import {
+  parseObject,
+  assertAllowedKeys,
+  assertExactKeys,
+  isSha256Id,
+  isHexId,
+} from '@/src/utils/strictObject';
 import type { EncryptionSetupSession } from './encryptionSetupStore';
 
 export function parseEncryptionSetupSession(value: unknown): EncryptionSetupSession {
-  if (!value || typeof value !== 'object' || Array.isArray(value))
-    throw new Error('Invalid encryption setup state');
-  const raw = value as Record<string, unknown>;
+  const raw = parseObject(value, 'Invalid encryption setup state');
+  assertAllowedKeys(
+    raw,
+    [
+      'formatVersion',
+      'intent',
+      'userId',
+      'deviceId',
+      'userKeyFingerprint',
+      'package',
+      'verifiedWorkplaces',
+      'pendingRecoveries',
+    ],
+    'Invalid encryption setup identity',
+  );
   if (
-    Object.keys(raw).some(
-      key =>
-        ![
-          'formatVersion',
-          'intent',
-          'userId',
-          'deviceId',
-          'userKeyFingerprint',
-          'package',
-          'verifiedWorkplaces',
-          'pendingRecoveries',
-        ].includes(key),
-    ) ||
     raw.formatVersion !== 1 ||
     !['create-user', 'recover-user'].includes(String(raw.intent)) ||
     typeof raw.userId !== 'string' ||
     !raw.userId ||
     typeof raw.deviceId !== 'string' ||
     !raw.deviceId ||
-    (raw.userKeyFingerprint !== undefined &&
-      (typeof raw.userKeyFingerprint !== 'string' ||
-        !/^sha256:[a-f0-9]{64}$/.test(raw.userKeyFingerprint)))
+    (raw.userKeyFingerprint !== undefined && !isSha256Id(raw.userKeyFingerprint))
   )
     throw new Error('Invalid encryption setup identity');
   if (raw.verifiedWorkplaces !== undefined) {
@@ -34,16 +38,13 @@ export function parseEncryptionSetupSession(value: unknown): EncryptionSetupSess
       throw new Error('Invalid Workplace binding');
     const workplaces = new Set<string>();
     for (const value of raw.verifiedWorkplaces) {
-      if (!value || typeof value !== 'object' || Array.isArray(value))
-        throw new Error('Invalid Workplace binding');
-      const binding = value as Record<string, unknown>;
+      const binding = parseObject(value, 'Invalid Workplace binding');
+      assertExactKeys(binding, ['keyId', 'workplaceId'], 'Invalid Workplace binding');
       if (
-        Object.keys(binding).sort().join(',') !== 'keyId,workplaceId' ||
         typeof binding.workplaceId !== 'string' ||
         !binding.workplaceId ||
         workplaces.has(binding.workplaceId) ||
-        typeof binding.keyId !== 'string' ||
-        !/^sha256:[a-f0-9]{64}$/.test(binding.keyId)
+        !isSha256Id(binding.keyId)
       )
         throw new Error('Invalid Workplace binding');
       workplaces.add(binding.workplaceId);
@@ -53,16 +54,17 @@ export function parseEncryptionSetupSession(value: unknown): EncryptionSetupSess
     if (!Array.isArray(raw.pendingRecoveries)) throw new Error('Invalid recovery progress');
     const workplaces = new Set<string>();
     for (const value of raw.pendingRecoveries) {
-      if (!value || typeof value !== 'object' || Array.isArray(value))
-        throw new Error('Invalid recovery progress');
-      const record = value as Record<string, unknown>;
+      const record = parseObject(value, 'Invalid recovery progress');
+      assertExactKeys(
+        record,
+        ['keyId', 'preserveExistingBooks', 'workplaceId'],
+        'Invalid recovery progress',
+      );
       if (
-        Object.keys(record).sort().join(',') !== 'keyId,preserveExistingBooks,workplaceId' ||
         typeof record.workplaceId !== 'string' ||
         !record.workplaceId ||
         workplaces.has(record.workplaceId) ||
-        typeof record.keyId !== 'string' ||
-        !/^sha256:[a-f0-9]{64}$/.test(record.keyId) ||
+        !isSha256Id(record.keyId) ||
         typeof record.preserveExistingBooks !== 'boolean'
       )
         throw new Error('Invalid recovery progress');
@@ -70,18 +72,18 @@ export function parseEncryptionSetupSession(value: unknown): EncryptionSetupSess
     }
   }
   if (raw.package !== undefined) {
-    if (!raw.package || typeof raw.package !== 'object' || Array.isArray(raw.package))
-      throw new Error('Invalid package reference');
-    const record = raw.package as Record<string, unknown>;
+    const record = parseObject(raw.package, 'Invalid package reference');
+    assertExactKeys(
+      record,
+      ['confirmed', 'fingerprint', 'id', 'workplaceId'],
+      'Invalid package reference',
+    );
     if (
-      Object.keys(record).sort().join(',') !== 'confirmed,fingerprint,id,workplaceId' ||
-      typeof record.id !== 'string' ||
-      !/^[a-f0-9]{32}$/.test(record.id) ||
+      !isHexId(record.id, 32) ||
       typeof record.workplaceId !== 'string' ||
       !record.workplaceId ||
       typeof record.confirmed !== 'boolean' ||
-      typeof record.fingerprint !== 'string' ||
-      !/^sha256:[a-f0-9]{64}$/.test(record.fingerprint)
+      !isSha256Id(record.fingerprint)
     )
       throw new Error('Invalid package reference');
   }

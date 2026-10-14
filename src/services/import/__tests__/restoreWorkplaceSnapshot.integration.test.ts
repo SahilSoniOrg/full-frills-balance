@@ -122,6 +122,54 @@ it('does not publish a cancelled restore that was already queued behind another 
   }
 });
 
+it('rejects a Workplace collision introduced by the writer ahead of a queued restore', async () => {
+  const { snapshot } = await seedSnapshotWorkplace();
+  await resetDatabase();
+  let started!: () => void, release!: () => void, queued!: () => void;
+  const running = new Promise<void>(resolve => {
+    started = resolve;
+  });
+  const pause = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  const enqueued = new Promise<void>(resolve => {
+    queued = resolve;
+  });
+  const blocker = database.write(async () => {
+    started();
+    await pause;
+    await database.batch(
+      workplaceRepository.prepareCreate({
+        ...snapshot.workplace,
+        id: asWorkplaceId(snapshot.workplace.id),
+        name: 'New local books',
+      }),
+    );
+  });
+  await running;
+  const originalWrite = database.write.bind(database);
+  const write = jest.spyOn(database, 'write').mockImplementation((work, description) => {
+    const result = originalWrite(work, description);
+    queued();
+    return result;
+  });
+  const restoring = restoreWorkplaceSnapshot(snapshot);
+  const rejected = expect(restoring).rejects.toMatchObject({ code: 'FFB_KEY_WORKPLACE_COLLISION' });
+  try {
+    await enqueued;
+    release();
+    await blocker;
+    await rejected;
+    const existing = await workplaceRepository.find(asWorkplaceId(snapshot.workplace.id));
+    expect(existing?.name).toBe('New local books');
+    expect(existing?.snapshotRestoreFingerprint).toBeFalsy();
+    expect(await database.get('accounts').query().fetchCount()).toBe(0);
+  } finally {
+    release();
+    write.mockRestore();
+  }
+});
+
 it('rejects source record collisions in another Workplace without publishing a shell', async () => {
   const { snapshot } = await seedSnapshotWorkplace();
   await resetDatabase();

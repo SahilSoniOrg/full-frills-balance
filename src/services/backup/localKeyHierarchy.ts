@@ -1,3 +1,5 @@
+import { SerialQueue } from '@/src/utils/serialQueue';
+import { parseObject, isSha256Id } from '@/src/utils/strictObject';
 import { KeyOperationError } from '@/src/utils/keyOperationError';
 import { keyCiphertextStateStore, type KeyCiphertextStateStore } from './keyCiphertextStateStore';
 import { nativeKeyOperations } from './nativeKeyOperations';
@@ -21,9 +23,11 @@ import {
 } from './workplaceSnapshot';
 import type { RecoveryArtifactSource } from './recoveryArtifactSource';
 import {
+  parseExportedUserRecoveryPackage,
   parseLocalUser,
   parseWorkplaceKeys,
-  parseUserRecoveryPackage,
+  identityScope,
+  MAX_ENCRYPTIONS,
   userScope,
   workplaceScope,
   workplaceIdentityScope,
@@ -106,13 +110,12 @@ export interface KeyHierarchy {
   discardUnconfirmedUser(userId: string, deviceId: string): Promise<void>;
   discardUnconfirmedWorkplace(identity: KeyAccessIdentity, workplaceId: string): Promise<void>;
 }
-const MAX_ENCRYPTIONS = 2 ** 20;
-const queues = new WeakMap<KeyCiphertextStateStore, Promise<unknown>>();
-function object(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== 'object' || Array.isArray(value))
-    throw new Error('Invalid native key result');
-  return value as Record<string, unknown>;
-}
+const queues = new WeakMap<KeyCiphertextStateStore, SerialQueue>();
+
+type UserKeyState =
+  | { user: 'missing' }
+  | { user: 'recovery-required' }
+  | { user: 'pending' | 'ready'; identity: KeyAccessIdentity };
 
 /** Owns public checkpoints/usage. All secret-bearing operations execute natively. */
 export class LocalKeyHierarchy implements KeyHierarchy {
@@ -124,17 +127,19 @@ export class LocalKeyHierarchy implements KeyHierarchy {
   private exclusive<T>(operation: () => Promise<T>): Promise<T> {
     // Shared by every hierarchy using this store; covers durable reservations/read-modify-write.
     // A per-call native mutex cannot protect these asynchronous persistence steps.
-    const next = (queues.get(this.state) ?? Promise.resolve())
-      .catch(() => undefined)
-      .then(async () => {
-        this.assertAccess();
-        return operation();
-      });
-    queues.set(
-      this.state,
-      next.catch(() => undefined),
-    );
-    return next;
+    // Access can change during awaits; checks within operations also guard later checkpoint writes.
+    return this.storeQueue().run(async () => {
+      this.assertAccess();
+      return operation();
+    });
+  }
+  private storeQueue(): SerialQueue {
+    let queue = queues.get(this.state);
+    if (!queue) {
+      queue = new SerialQueue();
+      queues.set(this.state, queue);
+    }
+    return queue;
   }
   private async invoke(operation: RecoveryOperation, request: unknown): Promise<unknown> {
     this.assertAccess();
@@ -181,6 +186,13 @@ export class LocalKeyHierarchy implements KeyHierarchy {
   private async user(userId: string, deviceId: string): Promise<LocalUserKeys> {
     const raw = await this.state.read(userScope(userId, deviceId));
     if (raw === null) throw new Error('Enroll or recover this User and Device first');
+    return this.validateUserScope(raw, userId, deviceId);
+  }
+  private async validateUserScope(
+    raw: unknown,
+    userId: string,
+    deviceId: string,
+  ): Promise<LocalUserKeys> {
     const user = parseLocalUser(raw);
     if (
       user.userId !== userId ||
@@ -226,10 +238,10 @@ export class LocalKeyHierarchy implements KeyHierarchy {
         throw new Error('User keys already exist; resume setup');
       if (await this.hasDevice(userId, deviceId))
         throw new Error('Interrupted Device enrollment must be explicitly discarded first');
-      if ((await this.state.read(JSON.stringify(['identity', userId]))) !== null)
+      if ((await this.state.read(identityScope(userId))) !== null)
         throw new Error('Established User identity requires recovery, never a new root');
       // Public intent precedes native key creation. A killed call cannot silently regenerate the root.
-      await this.state.write(JSON.stringify(['identity', userId]), {
+      await this.state.write(identityScope(userId), {
         deviceId,
         recoveryConfirmed: false,
         enrollmentPending: true,
@@ -238,7 +250,10 @@ export class LocalKeyHierarchy implements KeyHierarchy {
         await this.crypto.generateKeys({ kind: 'device', userId, deviceId }),
       );
       const result = await this.withReference(device, async () => {
-        const generated = object(await this.crypto.generateKeys({ kind: 'user', device }));
+        const generated = parseObject(
+          await this.crypto.generateKeys({ kind: 'user', device }),
+          'Invalid native key result',
+        );
         await this.crypto.releaseKey(parseNativeKeyReference(generated.key));
         return generated;
       });
@@ -251,7 +266,7 @@ export class LocalKeyHierarchy implements KeyHierarchy {
         credential.identityKeyId !== user.userKeyFingerprint
       )
         throw new Error('Native User enrollment scope mismatch');
-      await this.state.write(JSON.stringify(['identity', userId]), {
+      await this.state.write(identityScope(userId), {
         deviceId,
         publicIdentity: user.publicIdentity,
         recoveryConfirmed: false,
@@ -269,7 +284,7 @@ export class LocalKeyHierarchy implements KeyHierarchy {
     return this.exclusive(async () => {
       const user = await this.user(userId, deviceId);
       await this.invoke('confirmUser', { user, credential });
-      await this.state.write(JSON.stringify(['identity', userId]), {
+      await this.state.write(identityScope(userId), {
         deviceId,
         publicIdentity: user.publicIdentity,
         recoveryConfirmed: true,
@@ -279,36 +294,41 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       return this.identity(user);
     });
   }
+  /** Shared access query; missing enrollment is classified separately by each caller. */
+  private async readUserKeyState(userId: string, deviceId: string): Promise<UserKeyState> {
+    let raw: unknown;
+    try {
+      raw = await this.state.read(userScope(userId, deviceId));
+    } catch (error) {
+      if (error instanceof MissingKeyStateError) return { user: 'recovery-required' };
+      throw error;
+    }
+    if (raw === null) return { user: 'missing' };
+    if (!(await this.hasDevice(userId, deviceId))) return { user: 'recovery-required' };
+    const user = await this.validateUserScope(raw, userId, deviceId);
+    await this.withUserReference(user, async () => undefined);
+    return { user: user.recoveryConfirmed ? 'ready' : 'pending', identity: this.identity(user) };
+  }
   describeSetup(
     userId: string,
     deviceId: string,
     workplaceId?: string,
   ): Promise<EncryptionSetupStatus> {
     return this.exclusive(async () => {
-      let raw: unknown;
-      try {
-        raw = await this.state.read(userScope(userId, deviceId));
-      } catch (error) {
-        if (error instanceof MissingKeyStateError) return { user: 'recovery-required' };
-        throw error;
-      }
-      if (raw === null) {
-        const marker = await this.state.read(JSON.stringify(['identity', userId]));
+      const status = await this.readUserKeyState(userId, deviceId);
+      if (status.user === 'missing') {
+        const marker = await this.state.read(identityScope(userId));
         const exists = await this.hasDevice(userId, deviceId);
         if (
           marker !== null &&
-          object(marker).recoveryConfirmed === false &&
-          object(marker).deviceId === deviceId
+          parseObject(marker, 'Invalid native key result').recoveryConfirmed === false &&
+          parseObject(marker, 'Invalid native key result').deviceId === deviceId
         )
           return { user: 'interrupted' };
         return { user: marker !== null || exists ? 'recovery-required' : 'not-started' };
       }
-      const user = await this.user(userId, deviceId);
-      if (!(await this.hasDevice(userId, deviceId))) return { user: 'recovery-required' };
-      await this.withUserReference(user, async () => undefined);
-      const identity = this.identity(user);
-      if (!user.recoveryConfirmed) return { user: 'pending', identity };
-      if (!workplaceId) return { user: 'ready', identity };
+      if (status.user !== 'ready' || !workplaceId) return status;
+      const { identity } = status;
       let value: unknown = null;
       try {
         value = await this.state.read(workplaceScope(userId, workplaceId));
@@ -323,7 +343,7 @@ export class LocalKeyHierarchy implements KeyHierarchy {
           workplace:
             marker === null
               ? 'missing'
-              : object(marker).recoveryConfirmed === false
+              : parseObject(marker, 'Invalid native key result').recoveryConfirmed === false
                 ? 'interrupted'
                 : 'recovery-required',
         };
@@ -344,17 +364,17 @@ export class LocalKeyHierarchy implements KeyHierarchy {
     deviceId: string,
   ): Promise<'ready' | 'setup-incomplete' | 'recovery-required'> {
     return this.exclusive(async () => {
-      let raw: unknown;
-      try {
-        raw = await this.state.read(userScope(userId, deviceId));
-      } catch (error) {
-        if (error instanceof MissingKeyStateError) return 'recovery-required';
-        throw error;
+      const status = await this.readUserKeyState(userId, deviceId);
+      switch (status.user) {
+        case 'ready':
+          return 'ready';
+        case 'pending':
+          return 'setup-incomplete';
+        // Enrollment may be new/interrupted, but there is no usable existing access.
+        case 'missing':
+        case 'recovery-required':
+          return 'recovery-required';
       }
-      if (raw === null || !(await this.hasDevice(userId, deviceId))) return 'recovery-required';
-      const user = await this.user(userId, deviceId);
-      await this.withUserReference(user, async () => undefined);
-      return user.recoveryConfirmed ? 'ready' : 'setup-incomplete';
     });
   }
   async recoverUserFromSource(
@@ -375,23 +395,19 @@ export class LocalKeyHierarchy implements KeyHierarchy {
     deviceId: string,
   ): Promise<KeyAccessIdentity> {
     return this.exclusive(async () => {
-      const saved = parseUserRecoveryPackage(value);
-      if (
-        Object.keys(saved).sort().join(',') !==
-        'format,formatVersion,publicIdentity,recoveryEnvelope,recoveryPublicKey,userId,userKeyFingerprint'
-      )
-        throw new Error('Unexpected User recovery field');
+      const saved = parseExportedUserRecoveryPackage(value);
       let marker: unknown = null;
       try {
-        marker = await this.state.read(JSON.stringify(['identity', saved.userId]));
+        marker = await this.state.read(identityScope(saved.userId));
       } catch (error) {
         if (!(error instanceof MissingKeyStateError)) throw error;
       }
       if (
         marker !== null &&
-        object(marker).enrollmentPending !== true &&
-        (await userIdentityFingerprint(parseUserPublicIdentity(object(marker).publicIdentity))) !==
-          saved.userKeyFingerprint
+        parseObject(marker, 'Invalid native key result').enrollmentPending !== true &&
+        (await userIdentityFingerprint(
+          parseUserPublicIdentity(parseObject(marker, 'Invalid native key result').publicIdentity),
+        )) !== saved.userKeyFingerprint
       )
         throw new Error('Established User identity mismatch');
       if (!deviceId.trim()) throw new Error('Invalid replacement Device identity');
@@ -406,7 +422,7 @@ export class LocalKeyHierarchy implements KeyHierarchy {
         user.userKeyFingerprint !== saved.userKeyFingerprint
       )
         throw new Error('Native recovered User scope mismatch');
-      await this.state.write(JSON.stringify(['identity', saved.userId]), {
+      await this.state.write(identityScope(saved.userId), {
         deviceId,
         publicIdentity: saved.publicIdentity,
         recoveryConfirmed: true,
@@ -438,8 +454,9 @@ export class LocalKeyHierarchy implements KeyHierarchy {
         enrollmentPending: true,
       });
       const result = await this.withUserReference(user, async key => {
-        const generated = object(
+        const generated = parseObject(
           await this.crypto.generateKeys({ kind: 'workplace', user: key, workplaceId }),
+          'Invalid native key result',
         );
         await this.crypto.releaseKey(parseNativeKeyReference(generated.key));
         return generated;
@@ -537,9 +554,10 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       );
       if (
         marker !== null &&
-        object(marker).enrollmentPending !== true &&
-        (object(marker).keyId !== keys.keyId ||
-          object(marker).userKeyFingerprint !== identity.userKeyFingerprint)
+        parseObject(marker, 'Invalid native key result').enrollmentPending !== true &&
+        (parseObject(marker, 'Invalid native key result').keyId !== keys.keyId ||
+          parseObject(marker, 'Invalid native key result').userKeyFingerprint !==
+            identity.userKeyFingerprint)
       )
         throw new Error('Established Workplace identity mismatch');
       await this.withWorkplaceReference(user, keys, async () => undefined);
@@ -557,8 +575,7 @@ export class LocalKeyHierarchy implements KeyHierarchy {
   }
   signRecoveryManifest(identity: KeyAccessIdentity, digest: string): Promise<string> {
     return this.exclusive(async () => {
-      if (!/^sha256:[a-f0-9]{64}$/.test(digest))
-        throw new Error('Invalid recovery manifest digest');
+      if (!isSha256Id(digest)) throw new Error('Invalid recovery manifest digest');
       const user = await this.readyUser(identity),
         result = await this.withUserReference(user, key => this.crypto.sign(key, digest));
       if (typeof result !== 'string' || !/^[a-f0-9]{128}$/.test(result))
@@ -618,30 +635,25 @@ export class LocalKeyHierarchy implements KeyHierarchy {
     await this.invoke('validateRecovery', { user, credential });
   }
   logout(userId: string, deviceId: string): Promise<void> {
-    const next = (queues.get(this.state) ?? Promise.resolve())
-      .catch(() => undefined)
-      .then(async () => {
-        await this.crypto.removeKey({ kind: 'device', userId, deviceId });
-        await this.state.remove(userScope(userId, deviceId));
-      });
-    queues.set(
-      this.state,
-      next.catch(() => undefined),
-    );
-    return next;
+    // Removing access must remain possible while locked, on the same store queue.
+    return this.storeQueue().run(async () => {
+      await this.crypto.removeKey({ kind: 'device', userId, deviceId });
+      await this.state.remove(userScope(userId, deviceId));
+    });
   }
   discardUnconfirmedUser(userId: string, deviceId: string): Promise<void> {
     return this.exclusive(async () => {
       const raw = await this.state.read(userScope(userId, deviceId));
       if (raw !== null && parseLocalUser(raw).recoveryConfirmed)
         throw new Error('Cannot discard an established User identity');
-      const marker = await this.state.read(JSON.stringify(['identity', userId]));
+      const marker = await this.state.read(identityScope(userId));
       if (
         marker !== null &&
-        (object(marker).deviceId !== deviceId || object(marker).recoveryConfirmed !== false)
+        (parseObject(marker, 'Invalid native key result').deviceId !== deviceId ||
+          parseObject(marker, 'Invalid native key result').recoveryConfirmed !== false)
       )
         throw new Error('Cannot discard an established User identity');
-      if (marker !== null) await this.state.remove(JSON.stringify(['identity', userId]));
+      if (marker !== null) await this.state.remove(identityScope(userId));
       await this.crypto.removeKey({ kind: 'device', userId, deviceId });
       await this.state.remove(userScope(userId, deviceId));
     });
@@ -651,14 +663,21 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       await this.readyUser(identity);
       const raw = await this.state.read(workplaceScope(identity.userId, workplaceId)),
         marker = await this.state.read(workplaceIdentityScope(identity.userId, workplaceId));
-      if (raw === null && marker !== null && object(marker).recoveryConfirmed === false) {
+      if (
+        raw === null &&
+        marker !== null &&
+        parseObject(marker, 'Invalid native key result').recoveryConfirmed === false
+      ) {
         await this.state.remove(workplaceIdentityScope(identity.userId, workplaceId));
         return;
       }
       const keys = await this.workplace(identity, workplaceId);
       if (keys.recoveryConfirmed || keys.encryptionInvocations !== 0)
         throw new Error('Cannot discard an established Workplace key');
-      if (marker !== null && object(marker).recoveryConfirmed !== false)
+      if (
+        marker !== null &&
+        parseObject(marker, 'Invalid native key result').recoveryConfirmed !== false
+      )
         throw new Error('Cannot discard an established Workplace key');
       await this.state.remove(workplaceScope(identity.userId, workplaceId));
       await this.state.remove(workplaceIdentityScope(identity.userId, workplaceId));

@@ -1,3 +1,4 @@
+import { parseObject, assertAllowedKeys, isSha256Id } from '@/src/utils/strictObject';
 import { keyBytes } from './keyEncoding';
 import { keyFingerprint } from './encryptedSnapshot';
 
@@ -25,39 +26,33 @@ export async function publicKeyId(publicKey: string): Promise<string> {
 }
 
 export function parseKeyEnvelope(value: unknown): KeyEnvelope {
-  if (!value || typeof value !== 'object' || Array.isArray(value))
-    throw new Error('Invalid key envelope');
-  const raw = value as Record<string, unknown>;
+  const raw = parseObject(value, 'Invalid key envelope');
+  assertAllowedKeys(
+    raw,
+    ['format', 'formatVersion', 'suite', 'context', 'encapsulatedKey', 'ciphertext'],
+    'Invalid key envelope',
+  );
   if (
-    Object.keys(raw).some(
-      key =>
-        !['format', 'formatVersion', 'suite', 'context', 'encapsulatedKey', 'ciphertext'].includes(
-          key,
-        ),
-    ) ||
     raw.format !== 'full-frills-key-envelope' ||
     raw.formatVersion !== 1 ||
     raw.suite !== SUITE ||
     typeof raw.encapsulatedKey !== 'string' ||
-    typeof raw.ciphertext !== 'string' ||
-    !raw.context ||
-    typeof raw.context !== 'object' ||
-    Array.isArray(raw.context)
+    typeof raw.ciphertext !== 'string'
   )
     throw new Error('Invalid key envelope');
-  const context = raw.context as Record<string, unknown>;
+  const context = parseObject(raw.context, 'Invalid key envelope');
+  assertAllowedKeys(
+    context,
+    ['purpose', 'userId', 'recipientKeyId', 'deviceId', 'workplaceId', 'keyId'],
+    'Invalid key envelope context',
+  );
   if (
-    Object.keys(context).some(
-      key =>
-        !['purpose', 'userId', 'recipientKeyId', 'deviceId', 'workplaceId', 'keyId'].includes(key),
-    ) ||
     !['device-user-bundle', 'user-workplace-dek', 'user-recovery', 'workplace-dump'].includes(
       String(context.purpose),
     ) ||
     typeof context.userId !== 'string' ||
     !context.userId ||
-    typeof context.recipientKeyId !== 'string' ||
-    !/^sha256:[a-f0-9]{64}$/.test(context.recipientKeyId) ||
+    !isSha256Id(context.recipientKeyId) ||
     ['deviceId', 'workplaceId', 'keyId'].some(
       key => context[key] !== undefined && typeof context[key] !== 'string',
     )

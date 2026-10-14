@@ -15,7 +15,7 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { confirm } from '@/src/utils/alerts';
 import { finishRecoveredWorkplaceSetup } from '@/src/services/setup/recoveryCompletion';
 import { readSetupDraftSnapshot } from '@/src/services/setup/launchProjection';
-import { keyOperationErrorCode } from '@/src/utils/keyOperationError';
+import { KeyOperationError, keyOperationErrorCode } from '@/src/utils/keyOperationError';
 import { logger } from '@/src/utils/logger';
 import { encryptionRecoveryErrorMessage } from '../helpers/encryptionRecoveryErrors';
 
@@ -64,6 +64,18 @@ export function useEncryptionRecovery(workplaceId?: string) {
   }>({ focused: true, active: null, generated: null, secret: null, package: null });
   const state = ui.setup;
   const busy = ui.phase === 'working';
+  const canResume = useCallback(
+    (signal?: AbortSignal) =>
+      lifetime.current.focused && AppState.currentState === 'active' && !signal?.aborted,
+    [],
+  );
+  const assertForeground = useCallback(
+    (signal?: AbortSignal) => {
+      assertKeyAccessAllowed();
+      if (!canResume(signal)) throw new KeyOperationError('FFB_KEY_CANCELLED');
+    },
+    [canResume],
+  );
   const setMessage = useCallback((message: string) => dispatch({ type: 'message', message }), []);
   const projectInputs = useCallback(() => {
     const inputs = lifetime.current;
@@ -96,8 +108,8 @@ export function useEncryptionRecovery(workplaceId?: string) {
   }, [clearSecrets]);
   const refresh = useCallback(async () => {
     const next = await encryptionSetup.inspect(workplaceId);
-    if (lifetime.current.focused) dispatch({ type: 'inspect', setup: next });
-  }, [workplaceId]);
+    if (canResume()) dispatch({ type: 'inspect', setup: next });
+  }, [workplaceId, canResume]);
   useFocusEffect(
     useCallback(() => {
       lifetime.current.focused = true;
@@ -125,14 +137,16 @@ export function useEncryptionRecovery(workplaceId?: string) {
     [cancel],
   );
   const run = useCallback(
-    async (work: (signal: AbortSignal) => Promise<void>) => {
+    async (work?: (signal: AbortSignal) => Promise<void>) => {
       if (lifetime.current.active || !lifetime.current.focused || isAppCurrentlyLocked) return;
       const controller = new AbortController();
       lifetime.current.active = controller;
       dispatch({ type: 'start' });
       try {
-        await work(controller.signal);
-        if (lifetime.current.focused) await refresh();
+        assertForeground();
+        if (work) await work(controller.signal);
+        // With no work, this is an explicit inspection retry with the same busy/error handling.
+        if (canResume()) await refresh();
       } catch (error) {
         reportError(error);
       } finally {
@@ -141,20 +155,17 @@ export function useEncryptionRecovery(workplaceId?: string) {
         dispatch({ type: 'finish' });
       }
     },
-    [refresh, isAppCurrentlyLocked, reportError],
+    [refresh, isAppCurrentlyLocked, reportError, assertForeground, canResume],
   );
   const begin = () =>
-    run(async () => {
+    run(async signal => {
       const value =
         state?.keys?.user === 'ready' && workplaceId
           ? await encryptionSetup.beginWorkplace(workplaceId)
           : await encryptionSetup.beginUser();
-      assertKeyAccessAllowed();
-      if (AppState.currentState !== 'active') throw new Error('Setup is no longer foreground');
-      if (lifetime.current.focused) {
-        lifetime.current.generated = value;
-        projectInputs();
-      }
+      assertForeground(signal);
+      lifetime.current.generated = value;
+      projectInputs();
     });
   const exportSecret = () =>
     run(async () => {
@@ -229,8 +240,8 @@ export function useEncryptionRecovery(workplaceId?: string) {
       if (!lifetime.current.package) throw new Error('Choose the encrypted package first');
       const value = await recoveryFiles.pickSecret();
       if (value !== null && lifetime.current.focused) {
-        assertKeyAccessAllowed();
-        if (AppState.currentState !== 'active') throw new Error('Recovery is no longer foreground');
+        // Pickers can legitimately background the app; validate the state on their return.
+        assertForeground();
         lifetime.current.secret = value;
         projectInputs();
       }
@@ -272,7 +283,7 @@ export function useEncryptionRecovery(workplaceId?: string) {
       if (!secret || !pack) throw new Error('Choose both recovery files');
       const setupDraft = readSetupDraftSnapshot();
       const publication = await encryptionSetup.recover(pack, secret, signal);
-      if (!lifetime.current.focused || signal.aborted || AppState.currentState !== 'active') return;
+      if (!canResume(signal)) return;
       clearSecrets();
       lifetime.current.package = null;
       projectInputs();
@@ -284,7 +295,7 @@ export function useEncryptionRecovery(workplaceId?: string) {
           activeWorkplaceId: publication.workplaceId,
           deviceRegistered: true,
         });
-      if (!lifetime.current.focused || signal.aborted || AppState.currentState !== 'active') return;
+      if (!canResume(signal)) return;
       finishRecoveredWorkplaceSetup(setupDraft);
       AppNavigation.toDashboard();
     });
@@ -308,7 +319,7 @@ export function useEncryptionRecovery(workplaceId?: string) {
     useRetainedPackage,
     forgetDevice,
     recover,
-    retry: () => run(async () => undefined),
+    retry: () => run(),
     clearSensitiveInputs: () => {
       clearSecrets();
       lifetime.current.package = null;

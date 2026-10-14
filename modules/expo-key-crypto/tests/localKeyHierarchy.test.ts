@@ -21,6 +21,7 @@ import { MissingKeyStateError } from '@/src/services/backup/keyStateErrors';
 import type { RecoveryArtifactSource } from '@/src/services/backup/recoveryArtifactSource';
 import { createWorkplaceDump, decryptWorkplaceDump } from '@/src/services/backup/workplaceDump';
 import { assertKeyAccessAllowed, setKeyAccessAllowed } from '@/src/services/backup/keyAccessPolicy';
+import { userScope } from '@/src/services/backup/keyHierarchyRecords';
 
 jest.mock('react-native-quick-crypto', () => ({
   __esModule: true,
@@ -49,6 +50,40 @@ it('serializes durable encryption reservations across two hierarchies sharing th
     (await s.hierarchy.exportWorkplaceKeys(s.identity, workplaceId)).encryptionInvocations,
   ).toBe(8);
 });
+
+it.each([
+  ['new', 'not-started', 'recovery-required'],
+  ['pending', 'pending', 'setup-incomplete'],
+  ['ready', 'ready', 'ready'],
+  ['interrupted', 'interrupted', 'recovery-required'],
+  ['missing-device', 'recovery-required', 'recovery-required'],
+  ['missing-ciphertext', 'recovery-required', 'recovery-required'],
+  ['orphan-device', 'recovery-required', 'recovery-required'],
+] as const)(
+  'keeps setup and Device-access projections consistent for %s',
+  async (stage, setup, device) => {
+    const context = memoryKeyHierarchy();
+    if (stage !== 'new') {
+      const credential = await context.hierarchy.beginUser('alice', 'phone');
+      if (stage !== 'pending' && stage !== 'interrupted')
+        await context.hierarchy.confirmUserRecovery('alice', 'phone', credential);
+    }
+    if (stage === 'interrupted') await context.state.remove(userScope('alice', 'phone'));
+    if (stage === 'missing-device') await context.eraseDeviceKeys();
+    if (stage === 'orphan-device') context.ciphertext.clear();
+    if (stage === 'missing-ciphertext') {
+      const read = jest.mocked(context.state.read).getMockImplementation()!;
+      jest.mocked(context.state.read).mockImplementation(async scope => {
+        if (scope === userScope('alice', 'phone')) throw new MissingKeyStateError();
+        return read(scope);
+      });
+    }
+    await expect(context.hierarchy.describeSetup('alice', 'phone')).resolves.toMatchObject({
+      user: setup,
+    });
+    await expect(context.hierarchy.inspectDeviceState('alice', 'phone')).resolves.toBe(device);
+  },
+);
 
 it('opens Device → User → Workplace after restart and exposes only public/encrypted state to JS', async () => {
   const { snapshot } = await seedSnapshotWorkplace();
@@ -259,6 +294,27 @@ it('checks app lock after awaited native operations and fails closed without a s
   await expect(
     hierarchy.encryptSnapshot(context.identity, context.workplaceId, snapshot),
   ).rejects.toThrow('locked');
+});
+it('can revoke Device access while locked, after a rejected queued operation', async () => {
+  const context = await enrolledKeyHierarchy();
+  const locked = new LocalKeyHierarchy(
+    context.state,
+    () => {
+      throw new Error('locked');
+    },
+    context.crypto,
+  );
+  const denied = locked.describeSetup(context.identity.userId, context.identity.registeredDeviceId);
+  const rejected = expect(denied).rejects.toThrow('locked');
+  const logout = locked.logout(context.identity.userId, context.identity.registeredDeviceId);
+  await rejected;
+  await logout;
+  expect(context.deviceTags.size).toBe(0);
+  await expect(
+    context.state.read(
+      JSON.stringify(['user', context.identity.userId, context.identity.registeredDeviceId]),
+    ),
+  ).resolves.toBeNull();
 });
 it('retains interrupted enrollment for explicit reconciliation instead of silently replacing roots', async () => {
   const context = memoryKeyHierarchy();

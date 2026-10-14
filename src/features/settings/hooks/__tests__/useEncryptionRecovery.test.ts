@@ -61,6 +61,7 @@ jest.mock('@/src/services/backup/encryptionSetup', () => ({
       packageSaved: false,
     })),
     recover: jest.fn(),
+    beginUser: jest.fn(),
   },
 }));
 jest.mock('@/src/services/backup/recoveryFiles', () => ({
@@ -83,7 +84,10 @@ beforeEach(() => {
   AppState.currentState = 'active';
   setKeyAccessAllowed(true);
   jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, callback) => {
-    stateChanged = callback;
+    stateChanged = value => {
+      AppState.currentState = value;
+      callback(value);
+    };
     return { remove: jest.fn() };
   });
   jest.mocked(recoveryFiles.pickPackage).mockImplementation(async () => {
@@ -142,6 +146,83 @@ it('preserves newer local preferences when only key access is recovered', async 
   });
   expect(preferences.workplace.replace).not.toHaveBeenCalled();
   expect(AppNavigation.toDashboard).toHaveBeenCalled();
+  unmount();
+});
+
+it('retry reinspects after a failed inspection without repeating a recovery operation', async () => {
+  jest
+    .mocked(encryptionSetup.inspect)
+    .mockRejectedValueOnce(new KeyOperationError('FFB_KEY_RECOVERY_REQUIRED'));
+  const { result, unmount } = renderHook(() => useEncryptionRecovery());
+  await waitFor(() => expect(result.current.message).not.toBeNull());
+  await act(async () => {
+    await result.current.retry();
+  });
+  expect(result.current.state).not.toBeNull();
+  expect(encryptionSetup.inspect).toHaveBeenCalledTimes(2);
+  expect(encryptionSetup.recover).not.toHaveBeenCalled();
+  expect(result.current.busy).toBe(false);
+  unmount();
+});
+
+it('does not retain a generated handle after backgrounding and returning during key creation', async () => {
+  const { result, unmount } = renderHook(() => useEncryptionRecovery());
+  await waitFor(() => expect(result.current.state).not.toBeNull());
+  jest.mocked(encryptionSetup.beginUser).mockImplementationOnce(async () => {
+    stateChanged('background');
+    stateChanged('active');
+    return {
+      format: 'full-frills-recovery-handle',
+      formatVersion: 1,
+      purpose: 'user-recovery',
+      identityId: 'user',
+      identityKeyId: 'pin',
+      recoveryKeyId: 'recovery-pin',
+      handle: 'expired',
+    };
+  });
+  await act(async () => {
+    await result.current.begin();
+  });
+  expect(result.current.hasGeneratedSecret).toBe(false);
+  expect(result.current.message).not.toBeNull();
+  expect(result.current.busy).toBe(false);
+  unmount();
+});
+
+it('rejects a picked secret if the app locks before the picker returns', async () => {
+  const { result, unmount } = renderHook(() => useEncryptionRecovery());
+  await waitFor(() => expect(result.current.state).not.toBeNull());
+  await act(async () => {
+    await result.current.pickPackage();
+  });
+  jest.mocked(recoveryFiles.pickSecret).mockImplementationOnce(async () => {
+    setKeyAccessAllowed(false);
+    return { handle: 'discarded' };
+  });
+  await act(async () => {
+    await result.current.pickSecret();
+  });
+  expect(result.current.hasImportedSecret).toBe(false);
+  expect(result.current.message).toContain('Unlock the app');
+  unmount();
+});
+
+it('does not activate recovered books if a completed native call returns after cancellation', async () => {
+  saveSetupDraft(emptyDeviceDraft('pending'));
+  const draft = readSetupDraftSnapshot();
+  const { result, unmount } = await selectedFiles();
+  jest.mocked(encryptionSetup.recover).mockImplementationOnce(async () => {
+    stateChanged('background');
+    stateChanged('active');
+    return { kind: 'keys-recovered', workplaceId: asWorkplaceId('recovered') };
+  });
+  await act(async () => {
+    await result.current.recover();
+  });
+  expect(preferences.device.update).not.toHaveBeenCalled();
+  expect(AppNavigation.toDashboard).not.toHaveBeenCalled();
+  expect(readSetupDraftSnapshot()).toBe(draft);
   unmount();
 });
 

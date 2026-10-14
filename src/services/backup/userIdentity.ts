@@ -1,3 +1,4 @@
+import { parseObject, assertExactKeys } from '@/src/utils/strictObject';
 import { ensureKeyCrypto } from './keyCryptoRuntime';
 import { keyBytes } from './keyEncoding';
 import { snapshotFingerprint } from './encryptedSnapshot';
@@ -15,12 +16,21 @@ export interface UserPublicIdentity {
 }
 
 export function parseUserPublicIdentity(value: unknown): UserPublicIdentity {
-  if (!value || typeof value !== 'object' || Array.isArray(value))
-    throw new Error('Invalid User public identity');
-  const raw = value as Record<string, unknown>;
+  const raw = parseObject(value, 'Invalid User public identity');
+  assertExactKeys(
+    raw,
+    [
+      'encryptionAlgorithm',
+      'encryptionPublicKey',
+      'format',
+      'formatVersion',
+      'signingAlgorithm',
+      'signingPublicKey',
+      'userId',
+    ],
+    'Unsupported User public identity',
+  );
   if (
-    Object.keys(raw).sort().join(',') !==
-      'encryptionAlgorithm,encryptionPublicKey,format,formatVersion,signingAlgorithm,signingPublicKey,userId' ||
     raw.format !== 'full-frills-user-identity' ||
     raw.formatVersion !== 1 ||
     raw.encryptionAlgorithm !== 'X25519' ||

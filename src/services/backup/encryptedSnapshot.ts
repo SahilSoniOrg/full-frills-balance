@@ -1,3 +1,4 @@
+import { parseObject, assertAllowedKeys, isSha256Id, isHexId } from '@/src/utils/strictObject';
 import { snapshotCrypto } from './snapshotCryptoProvider';
 import { keyHex, keyBytes } from './keyEncoding';
 /** Payload only. Member and recovery DEK envelopes belong to the key manifest. */
@@ -22,9 +23,7 @@ export async function snapshotFingerprint(serialized: string): Promise<string> {
 }
 
 export function parseEncryptedSnapshotEnvelope(value: unknown): EncryptedSnapshot {
-  if (!value || typeof value !== 'object' || Array.isArray(value))
-    throw new Error('Invalid encrypted snapshot envelope');
-  const envelope = value as Record<string, unknown>;
+  const envelope = parseObject(value, 'Invalid encrypted snapshot envelope');
   const keys = [
     'format',
     'formatVersion',
@@ -36,20 +35,18 @@ export function parseEncryptedSnapshotEnvelope(value: unknown): EncryptedSnapsho
     'nonce',
     'ciphertext',
   ];
+  assertAllowedKeys(envelope, keys, 'Invalid encrypted snapshot envelope');
   if (
-    Object.keys(envelope).some(key => !keys.includes(key)) ||
     envelope.format !== 'full-frills-encrypted-snapshot' ||
     envelope.formatVersion !== 2 ||
     envelope.algorithm !== 'AES-256-GCM' ||
     typeof envelope.workplaceId !== 'string' ||
     !/^[a-zA-Z0-9_.-]{1,128}$/.test(envelope.workplaceId) ||
-    typeof envelope.snapshotId !== 'string' ||
-    !/^[a-f0-9]{32}$/.test(envelope.snapshotId) ||
+    !isHexId(envelope.snapshotId, 32) ||
     typeof envelope.schemaVersion !== 'number' ||
     !Number.isSafeInteger(envelope.schemaVersion) ||
     envelope.schemaVersion < 1 ||
-    typeof envelope.keyId !== 'string' ||
-    !/^sha256:[a-f0-9]{64}$/.test(envelope.keyId) ||
+    !isSha256Id(envelope.keyId) ||
     typeof envelope.nonce !== 'string' ||
     typeof envelope.ciphertext !== 'string'
   )

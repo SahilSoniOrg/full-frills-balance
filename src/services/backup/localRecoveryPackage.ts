@@ -1,10 +1,11 @@
+import { parseExportedUserRecoveryPackage } from './keyHierarchyRecords';
+import { parseObject, assertExactKeys, isHexId } from '@/src/utils/strictObject';
 import {
   parseEncryptedSnapshotEnvelope,
   snapshotFingerprint,
   type EncryptedSnapshot,
 } from './encryptedSnapshot';
 import {
-  parseUserRecoveryPackage,
   parseWorkplaceKeys,
   recoveryManifestMessage,
   type KeyHierarchy,
@@ -39,25 +40,19 @@ async function manifestDigest(value: Omit<LocalRecoveryPackage, 'signature'>): P
 }
 
 function parsePackage(value: unknown): LocalRecoveryPackage {
-  if (!value || typeof value !== 'object' || Array.isArray(value))
-    throw new Error('Invalid encrypted package');
-  const raw = value as Record<string, unknown>;
+  const raw = parseObject(value, 'Invalid encrypted package');
+  assertExactKeys(
+    raw,
+    ['format', 'formatVersion', 'signature', 'snapshot', 'userRecoveryPackage', 'workplaceKeys'],
+    'Unsupported encrypted package',
+  );
   if (
-    Object.keys(raw).sort().join(',') !==
-      'format,formatVersion,signature,snapshot,userRecoveryPackage,workplaceKeys' ||
     raw.format !== 'full-frills-local-recovery' ||
     raw.formatVersion !== 1 ||
-    typeof raw.signature !== 'string' ||
-    !/^[a-f0-9]{128}$/.test(raw.signature)
+    !isHexId(raw.signature, 128)
   )
     throw new Error('Unsupported encrypted package');
-  const user = parseUserRecoveryPackage(raw.userRecoveryPackage);
-  // The recovery package never exports a Device bundle, even as an unknown field.
-  if (
-    Object.keys(user).sort().join(',') !==
-    'format,formatVersion,publicIdentity,recoveryEnvelope,recoveryPublicKey,userId,userKeyFingerprint'
-  )
-    throw new Error('Unexpected User recovery field');
+  const user = parseExportedUserRecoveryPackage(raw.userRecoveryPackage);
   const keys = parseWorkplaceKeys(raw.workplaceKeys);
   const snapshot = parseEncryptedSnapshotEnvelope(raw.snapshot);
   if (

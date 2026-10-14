@@ -1,3 +1,4 @@
+import { parseObject, assertAllowedKeys } from '@/src/utils/strictObject';
 import { schema } from '@/src/data/database/schema';
 import { exportRepository } from '@/src/data/repositories/ExportRepository';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
@@ -128,19 +129,6 @@ export const SNAPSHOT_TABLES = [
   },
 ] as const;
 
-function record(value: unknown, label: string): Record<string, unknown> {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error(`Invalid snapshot ${label}`);
-  }
-  return value as Record<string, unknown>;
-}
-
-function exactKeys(value: Record<string, unknown>, keys: readonly string[], label: string): void {
-  if (Object.keys(value).some(key => !keys.includes(key))) {
-    throw new Error(`Unsupported snapshot field in ${label}`);
-  }
-}
-
 function identity(value: unknown): boolean {
   return typeof value === 'string' && /^[a-zA-Z0-9_.-]{1,128}$/.test(value);
 }
@@ -185,8 +173,8 @@ function validateEnums(table: string, row: Record<string, unknown>): void {
 
 /** Strict trust boundary: validates primitive shapes and references, with no import salvage. */
 export function parseWorkplaceSnapshot(value: unknown): WorkplaceSnapshot {
-  const snapshot = record(value, 'envelope');
-  exactKeys(
+  const snapshot = parseObject(value, 'Invalid snapshot envelope');
+  assertAllowedKeys(
     snapshot,
     [
       'format',
@@ -198,7 +186,7 @@ export function parseWorkplaceSnapshot(value: unknown): WorkplaceSnapshot {
       'currencyPrecisions',
       'data',
     ],
-    'envelope',
+    'Unsupported snapshot field in envelope',
   );
   if (
     snapshot.format !== WORKPLACE_SNAPSHOT_FORMAT ||
@@ -213,8 +201,12 @@ export function parseWorkplaceSnapshot(value: unknown): WorkplaceSnapshot {
   ) {
     throw new Error('Invalid snapshot capture time');
   }
-  const workplace = record(snapshot.workplace, 'Workplace');
-  exactKeys(workplace, ['id', 'name', 'icon', 'defaultCurrencyCode'], 'Workplace');
+  const workplace = parseObject(snapshot.workplace, 'Invalid snapshot Workplace');
+  assertAllowedKeys(
+    workplace,
+    ['id', 'name', 'icon', 'defaultCurrencyCode'],
+    'Unsupported snapshot field in Workplace',
+  );
   if (
     !identity(workplace.id) ||
     ['name', 'icon', 'defaultCurrencyCode'].some(
@@ -222,15 +214,19 @@ export function parseWorkplaceSnapshot(value: unknown): WorkplaceSnapshot {
     )
   )
     throw new Error('Invalid snapshot Workplace identity');
-  const settings = record(snapshot.bookPreferences, 'book preferences');
-  exactKeys(settings, ['safeToSpendDays'], 'book preferences');
+  const settings = parseObject(snapshot.bookPreferences, 'Invalid snapshot book preferences');
+  assertAllowedKeys(
+    settings,
+    ['safeToSpendDays'],
+    'Unsupported snapshot field in book preferences',
+  );
   if (![30, 60, 90].some(days => days === settings.safeToSpendDays))
     throw new Error('Invalid snapshot spending horizon');
-  const data = record(snapshot.data, 'data');
-  exactKeys(
+  const data = parseObject(snapshot.data, 'Invalid snapshot data');
+  assertAllowedKeys(
     data,
     SNAPSHOT_TABLES.map(entry => entry.key),
-    'data',
+    'Unsupported snapshot field in data',
   );
   let count = 0;
   for (const { key, table, fields } of SNAPSHOT_TABLES) {
@@ -241,8 +237,12 @@ export function parseWorkplaceSnapshot(value: unknown): WorkplaceSnapshot {
     const columns = fields.split(' ').map(name => schema.tables[table].columns[name]);
     const seenIds = new Set<string>();
     for (const value of rows) {
-      const row = record(value, key);
-      exactKeys(row, ['id', ...columns.map(column => snakeToCamel(column.name))], key);
+      const row = parseObject(value, `Invalid snapshot ${key}`);
+      assertAllowedKeys(
+        row,
+        ['id', ...columns.map(column => snakeToCamel(column.name))],
+        `Unsupported snapshot field in ${key}`,
+      );
       if (!identity(row.id)) throw new Error(`Invalid snapshot ${key} identity`);
       if (seenIds.has(String(row.id))) throw new Error(`duplicate snapshot ${key} identity`);
       seenIds.add(String(row.id));
@@ -269,9 +269,12 @@ export function parseWorkplaceSnapshot(value: unknown): WorkplaceSnapshot {
   // The schema/allowlist checks above establish the canonical primitive record shapes.
   const validated = value as WorkplaceSnapshot;
   validateImportedData(validated.data);
-  const precisions = record(snapshot.currencyPrecisions, 'currency precisions');
+  const precisions = parseObject(
+    snapshot.currencyPrecisions,
+    'Invalid snapshot currency precisions',
+  );
   const codes = snapshotCurrencyCodes(validated);
-  exactKeys(precisions, codes, 'currency precisions');
+  assertAllowedKeys(precisions, codes, 'Unsupported snapshot field in currency precisions');
   for (const code of codes) {
     const precision = precisions[code];
     if (

@@ -1,3 +1,4 @@
+import { parseObject, assertAllowedKeys, assertExactKeys } from '@/src/utils/strictObject';
 import { parseUserPublicIdentity, type UserPublicIdentity } from './userIdentity';
 import {
   publicKeyId,
@@ -60,7 +61,8 @@ export function recoveryManifestMessage(identity: KeyAccessIdentity, digest: str
     ]),
   );
 }
-const MAX_ENCRYPTIONS = 2 ** 20;
+export const MAX_ENCRYPTIONS = 2 ** 20;
+export const identityScope = (userId: string) => JSON.stringify(['identity', userId]);
 export const userScope = (userId: string, deviceId: string) =>
   JSON.stringify(['user', userId, deviceId]);
 export const workplaceScope = (userId: string, workplaceId: string) =>
@@ -68,18 +70,9 @@ export const workplaceScope = (userId: string, workplaceId: string) =>
 export const workplaceIdentityScope = (userId: string, workplaceId: string) =>
   JSON.stringify(['workplace-identity', userId, workplaceId]);
 
-function object(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== 'object' || Array.isArray(value))
-    throw new Error('Invalid key state');
-  return value as Record<string, unknown>;
-}
 function strings(raw: Record<string, unknown>, fields: string[]): void {
   if (fields.some(field => typeof raw[field] !== 'string' || !raw[field]))
     throw new Error('Invalid key state identity');
-}
-function exactFields(raw: Record<string, unknown>, fields: string[]): void {
-  if (Object.keys(raw).some(key => !fields.includes(key)))
-    throw new Error('Unsupported key state field');
 }
 const USER_FIELDS = [
   'format',
@@ -98,7 +91,7 @@ const DEVICE_FIELDS = [
   'recoveryConfirmed',
 ];
 export function parseUserRecoveryPackage(value: unknown): UserRecoveryPackage {
-  const raw = object(value);
+  const raw = parseObject(value, 'Invalid key state');
   strings(raw, ['userId', 'userKeyFingerprint', 'recoveryPublicKey']);
   if (raw.format !== 'full-frills-user-recovery' || raw.formatVersion !== 1)
     throw new Error('Unsupported User key format');
@@ -108,10 +101,17 @@ export function parseUserRecoveryPackage(value: unknown): UserRecoveryPackage {
   parseKeyEnvelope(raw.recoveryEnvelope);
   return value as UserRecoveryPackage;
 }
+
+/** Portable recovery never includes a Device bundle, including unknown extra fields. */
+export function parseExportedUserRecoveryPackage(value: unknown): UserRecoveryPackage {
+  const user = parseUserRecoveryPackage(value);
+  assertExactKeys(user, USER_FIELDS, 'Unexpected User recovery field');
+  return user;
+}
 export function parseLocalUser(value: unknown): LocalUserKeys {
   parseUserRecoveryPackage(value);
-  const raw = object(value);
-  exactFields(raw, [...USER_FIELDS, ...DEVICE_FIELDS]);
+  const raw = parseObject(value, 'Invalid key state');
+  assertAllowedKeys(raw, [...USER_FIELDS, ...DEVICE_FIELDS], 'Unsupported key state field');
   strings(raw, ['deviceId', 'devicePublicKey', 'deviceKeyId']);
   if (typeof raw.recoveryConfirmed !== 'boolean') throw new Error('Invalid User setup state');
   keyBytes(String(raw.devicePublicKey));
@@ -119,21 +119,25 @@ export function parseLocalUser(value: unknown): LocalUserKeys {
   return value as LocalUserKeys;
 }
 export function parseWorkplaceKeys(value: unknown): WorkplaceKeys {
-  const raw = object(value);
-  exactFields(raw, [
-    'format',
-    'formatVersion',
-    'userId',
-    'workplaceId',
-    'userKeyFingerprint',
-    'keyId',
-    'memberEnvelope',
-    'recoveryPublicKey',
-    'recoveryEnvelope',
-    'recoveryConfirmed',
-    'writerDeviceId',
-    'encryptionInvocations',
-  ]);
+  const raw = parseObject(value, 'Invalid key state');
+  assertAllowedKeys(
+    raw,
+    [
+      'format',
+      'formatVersion',
+      'userId',
+      'workplaceId',
+      'userKeyFingerprint',
+      'keyId',
+      'memberEnvelope',
+      'recoveryPublicKey',
+      'recoveryEnvelope',
+      'recoveryConfirmed',
+      'writerDeviceId',
+      'encryptionInvocations',
+    ],
+    'Unsupported key state field',
+  );
   strings(raw, [
     'userId',
     'workplaceId',

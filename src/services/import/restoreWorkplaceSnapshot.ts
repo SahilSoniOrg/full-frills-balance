@@ -33,11 +33,11 @@ export async function restoreWorkplaceSnapshot(
       );
     }
   }
-  await importRepository.batchInsertNewWorkplace(
+  await importRepository.batchInsertSnapshotRestore(
     { ...snapshot.workplace, id: workplaceId },
     snapshot.data,
-    undefined,
-    { snapshotRestoreFingerprint: fingerprint, signal },
+    fingerprint,
+    signal,
   );
   return { workplaceId, bookPreferences: snapshot.bookPreferences };
 }
