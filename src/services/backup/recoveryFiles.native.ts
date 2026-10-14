@@ -11,13 +11,12 @@ import type { RecoveryFiles } from './recoveryFiles';
 import { nativeKeyOperations } from './nativeKeyOperations';
 import { KeyOperationError } from '@/src/utils/keyOperationError';
 
-const SECRET_LIMIT = 4096;
 const activeFiles = new Set<string>();
 async function cleanup(): Promise<void> {
   for (const entry of new Directory(Paths.cache).list()) {
     if (
       entry instanceof File &&
-      /^recovery-(secret|package)-(export|import)-[a-f0-9]{32}\.json$/.test(entry.name) &&
+      /^recovery-package-export-[a-f0-9]{32}\.json$/.test(entry.name) &&
       !activeFiles.has(entry.uri)
     )
       entry.delete();
@@ -63,46 +62,7 @@ async function savePackage(value: unknown): Promise<boolean> {
   }
 }
 async function saveSecret(value: unknown): Promise<boolean> {
-  const handle = parseRecoveryCredential(value);
-  // The lease authorizes this explicit export across the OS picker/share transition.
-  await nativeKeyOperations.retainCredential(handle);
-  try {
-    await cleanup();
-    const filename = `full-frills-${handle.purpose}-secret.json`;
-    if (Platform.OS === 'android') {
-      const permission =
-        await LegacyFiles.StorageAccessFramework.requestDirectoryPermissionsAsync();
-      if (!permission.granted) return false;
-      const destination = await LegacyFiles.StorageAccessFramework.createFileAsync(
-        permission.directoryUri,
-        filename,
-        'application/json',
-      );
-      await nativeKeyOperations.writeCredential(handle, destination);
-      return true;
-    }
-    if (!(await Sharing.isAvailableAsync())) throw new Error('File export is unavailable');
-    const temporary = new File(
-      Paths.cache,
-      `recovery-secret-export-${keyHex(snapshotCrypto.randomBytes(16))}.json`,
-    );
-    activeFiles.add(temporary.uri);
-    try {
-      temporary.create();
-      await nativeKeyOperations.writeCredential(handle, temporary.uri);
-      await Sharing.shareAsync(temporary.uri, {
-        mimeType: 'application/json',
-        UTI: 'public.json',
-        dialogTitle: filename,
-      });
-      return true;
-    } finally {
-      activeFiles.delete(temporary.uri);
-      if (temporary.exists) temporary.delete();
-    }
-  } finally {
-    await nativeKeyOperations.releaseCredential(handle);
-  }
+  return nativeKeyOperations.exportCredential(parseRecoveryCredential(value));
 }
 async function pick(limit: number): Promise<unknown | null> {
   await cleanup();
@@ -114,56 +74,26 @@ async function pick(limit: number): Promise<unknown | null> {
   if (result.canceled) return null;
   const asset = result.assets[0];
   if (!asset) throw new Error('No recovery file was selected');
-  let input = new File(asset.uri);
-  let ownedCopy = false;
-  if (Platform.OS === 'ios' && limit === SECRET_LIMIT) {
-    // The installed iOS picker uses asCopy:true even with copyToCacheDirectory:false.
-    // Move ONLY that app-owned temporary copy into our purgeable namespace; never delete a saved source file.
-    const document = Paths.document.uri;
-    const cache = Paths.cache.uri;
-    const temporaryRoot = new URL('../tmp/', document).href;
-    const inbox = new URL('Inbox/', document).href;
-    const canonicalPath = (uri: string) =>
-      new URL(uri).pathname.replace(/^\/private\/var\//, '/var/');
-    if (
-      !canonicalPath(input.uri).startsWith(canonicalPath(temporaryRoot)) &&
-      !canonicalPath(input.uri).startsWith(canonicalPath(inbox)) &&
-      !canonicalPath(input.uri).startsWith(canonicalPath(cache))
-    )
-      throw new Error('The recovery file was not supplied as a temporary copy');
-    const destination = new File(
-      Paths.cache,
-      `recovery-secret-import-${keyHex(snapshotCrypto.randomBytes(16))}.json`,
-    );
-    input.move(destination);
-    input = destination;
-    ownedCopy = true;
-    activeFiles.add(input.uri);
-  }
+  const input = new File(asset.uri);
+  if ((asset.size !== undefined && asset.size > limit) || input.size > limit)
+    throw new KeyOperationError('FFB_KEY_INVALID_FILE', 'Recovery file is too large');
+  const json = await input.text();
+  if (new TextEncoder().encode(json).length > limit)
+    throw new KeyOperationError('FFB_KEY_INVALID_FILE', 'Recovery file is too large');
   try {
-    if ((asset.size !== undefined && asset.size > limit) || input.size > limit)
-      throw new KeyOperationError('FFB_KEY_INVALID_FILE', 'Recovery file is too large');
-    if (limit === SECRET_LIMIT)
-      return parseRecoveryCredential(await nativeKeyOperations.importCredential(input.uri));
-    const json = await input.text();
-    if (new TextEncoder().encode(json).length > limit)
-      throw new KeyOperationError('FFB_KEY_INVALID_FILE', 'Recovery file is too large');
-    try {
-      return JSON.parse(json);
-    } catch {
-      throw new KeyOperationError('FFB_KEY_INVALID_FILE', 'Choose a valid recovery JSON file');
-    }
-  } finally {
-    if (ownedCopy) {
-      activeFiles.delete(input.uri);
-      if (input.exists) input.delete();
-    }
+    return JSON.parse(json);
+  } catch {
+    throw new KeyOperationError('FFB_KEY_INVALID_FILE', 'Choose a valid recovery JSON file');
   }
 }
+
 export const recoveryFiles: RecoveryFiles = {
   exportSecret: saveSecret,
   exportPackage: savePackage,
-  pickSecret: () => pick(SECRET_LIMIT),
+  pickSecret: async () => {
+    const value = await nativeKeyOperations.pickCredential();
+    return value === null ? null : parseRecoveryCredential(value);
+  },
   pickPackage: () => pick(MAX_RECOVERY_PACKAGE_BYTES),
   cleanupTemporarySecrets: async () => {
     await nativeKeyOperations.clearCredentials();

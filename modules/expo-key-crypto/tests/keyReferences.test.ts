@@ -251,3 +251,19 @@ it('wraps the same DEK for another User without creating membership or changing 
     }),
   ).rejects.toThrow();
 });
+
+it('rejects uppercase public-key encodings in the native identity boundary', async () => {
+  const s = await references();
+  const saved = await s.hierarchy.exportUserRecoveryPackage('alice', 'phone');
+  const identity = {
+    ...saved.publicIdentity,
+    encryptionPublicKey: saved.publicIdentity.encryptionPublicKey.toUpperCase(),
+  };
+  await expect(
+    s.host.execute('wrapWorkplaceForUser', {
+      key: s.workplace,
+      recipient: identity,
+      userKeyFingerprint: saved.userKeyFingerprint,
+    }),
+  ).rejects.toMatchObject({ code: 'FFB_KEY_INVALID_FILE' });
+});

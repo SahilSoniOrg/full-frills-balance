@@ -15,6 +15,7 @@ using Bytes = std::vector<unsigned char>;
 enum class ErrorCode {
   Locked,
   RecoveryRequired,
+  VaultUnavailable,
   InvalidFile,
   AuthenticationFailed,
   ReferenceExpired,
@@ -37,6 +38,8 @@ public:
   virtual ~Vault() = default;
   virtual Bytes load(const std::string &name) = 0;
   virtual void save(const std::string &name, const Bytes &key) = 0;
+  // Called only after native recovery has authenticated the saved User bundle.
+  virtual void saveRecovered(const std::string &name, const Bytes &key) { save(name, key); }
   virtual void remove(const std::string &name) = 0;
 };
 class Engine {
@@ -68,6 +71,7 @@ private:
     Bytes file;
     std::chrono::steady_clock::time_point created;
     unsigned leases = 0;
+    unsigned long long epoch = 0;
     ~Credential();
   };
   std::atomic<bool> allowed_{false};
@@ -87,6 +91,7 @@ private:
   Json retain(const Json &credential);
   Json credential(const Json &handle);
   void sweep();
+  void clearUnleasedCredentials();
 };
 Engine &engine();
 void wipe(Bytes &value);

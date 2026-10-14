@@ -50,13 +50,13 @@ module.exports = {
       // Give the simulator app a signing identity for native Keychain proof tests.
       // Ad-hoc signing uses no distribution credentials; device signing stays separate.
       build:
-        "SENTRY_DISABLE_AUTO_UPLOAD=true SENTRY_DISABLE_NATIVE_DEBUG_UPLOAD=true EXPO_PUBLIC_E2E=1 xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Release -sdk iphonesimulator -derivedDataPath ios/build -destination 'platform=iOS Simulator,name=iPhone 17' ARCHS=arm64 EXCLUDED_ARCHS=x86_64 CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO",
+        "SENTRY_DISABLE_AUTO_UPLOAD=true SENTRY_DISABLE_NATIVE_DEBUG_UPLOAD=true EXPO_PUBLIC_E2E=1 xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Release -sdk iphonesimulator -derivedDataPath ios/build -destination 'platform=iOS Simulator,name=iPhone 17' ARCHS=arm64 EXCLUDED_ARCHS=x86_64 SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) FFB_KEY_CRYPTO_E2E' CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO",
     },
     'ios.device.release': {
       type: 'ios.app',
       binaryPath: 'ios/build/Build/Products/Release-iphoneos/FullFrillsBalance.app',
       build:
-        "SENTRY_DISABLE_AUTO_UPLOAD=true SENTRY_DISABLE_NATIVE_DEBUG_UPLOAD=true EXPO_PUBLIC_E2E=1 xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Release -sdk iphoneos -derivedDataPath ios/build -destination 'id=$DETOX_IOS_DEVICE_UDID' DEVELOPMENT_TEAM=$DETOX_IOS_DEVELOPMENT_TEAM CODE_SIGNING_ALLOWED=YES",
+        "SENTRY_DISABLE_AUTO_UPLOAD=true SENTRY_DISABLE_NATIVE_DEBUG_UPLOAD=true EXPO_PUBLIC_E2E=1 xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Release -sdk iphoneos -derivedDataPath ios/build -destination 'id=$DETOX_IOS_DEVICE_UDID' DEVELOPMENT_TEAM=$DETOX_IOS_DEVELOPMENT_TEAM SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) FFB_KEY_CRYPTO_E2E' CODE_SIGNING_ALLOWED=YES",
     },
     'android.debug': {
       type: 'android.apk',

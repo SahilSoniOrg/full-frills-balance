@@ -11,10 +11,15 @@ Engine::Credential::~Credential() { wipe(file); }
 void Engine::setAllowed(bool allowed) {
   allowed_.store(allowed);
   epoch_.fetch_add(1);
+  if (!allowed) {
+    std::unique_lock<std::mutex> lock(mutex_, std::try_to_lock);
+    if (lock.owns_lock()) clearUnleasedCredentials();
+    // A running execute clears its unleased credentials before reporting cancellation.
+  }
 }
 void Engine::sweep() {
   for (auto it = credentials_.begin(); it != credentials_.end();) {
-    if (std::chrono::steady_clock::now() - it->second.created >
+    if ((!it->second.leases && it->second.epoch != epoch_.load()) || std::chrono::steady_clock::now() - it->second.created >
         std::chrono::minutes(15))
       it = credentials_.erase(it);
     else
@@ -28,6 +33,7 @@ Json Engine::retain(const Json &value) {
   auto &saved = credentials_[id];
   saved.file = secretDump(value);
   saved.created = std::chrono::steady_clock::now();
+  saved.epoch = epoch_.load();
   return {{"format", "full-frills-recovery-handle"},
           {"formatVersion", 1},
           {"purpose", value.at("purpose")},
@@ -58,10 +64,16 @@ Json Engine::importCredential(const Bytes &file) {
   std::lock_guard<std::mutex> lock(mutex_);
   require(allowed_.load(), "Unlock the app before accessing encryption keys",
           ErrorCode::Locked);
+  const auto epoch = epoch_.load();
   require(file.size() <= 4096, "Recovery file is too large");
   PrivateJson value(Json::parse(file.begin(), file.end()));
   auto key = recoveryKey(value.value);
-  return retain(value.value);
+  auto result = retain(value.value);
+  if (!allowed_.load() || epoch != epoch_.load()) {
+    clearUnleasedCredentials();
+    throw OperationError(ErrorCode::Cancelled, "Recovery file import was cancelled");
+  }
+  return result;
 }
 Bytes Engine::credentialFile(const Json &handle) {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -87,6 +99,9 @@ void Engine::releaseCredential(const Json &handle) {
 }
 void Engine::clearCredentials() {
   std::lock_guard<std::mutex> lock(mutex_);
+  clearUnleasedCredentials();
+}
+void Engine::clearUnleasedCredentials() {
   for (auto it = credentials_.begin(); it != credentials_.end();) {
     if (!it->second.leases)
       it = credentials_.erase(it);
@@ -139,7 +154,15 @@ Json Engine::execute(const std::string &operation, const Json &request,
   require(allowed_.load() || cleanup,
           "Unlock the app before accessing encryption keys", ErrorCode::Locked);
   const auto epoch = epoch_.load();
+  sweep();
   auto result = dispatch(operation, request, vault);
+  if (!cleanup && (!allowed_.load() || epoch != epoch_.load())) {
+    clearUnleasedCredentials();
+    try {
+      if (operation == "generateKeys" && request.at("kind") == "device") vault.remove(vaultName(request));
+      if (operation == "recoverUser") vault.remove(vaultName(result));
+    } catch (...) { /* Preserve the cancellation error; reconciliation handles unavailable vaults. */ }
+  }
   require(cleanup || (allowed_.load() && epoch == epoch_.load()),
           "Key operation was cancelled by app lock", ErrorCode::Cancelled);
   return result;
@@ -453,7 +476,7 @@ Json Engine::recoverUser(const Json &request, bool installDevice,
                      field(user, "userKeyFingerprint"), "", deviceId));
     replacement["recoveryConfirmed"] = true;
     Secret privateKey(privateBytes(device.get()));
-    vault.save(vaultName(replacement), privateKey.bytes);
+    vault.saveRecovered(vaultName(replacement), privateKey.bytes);
     userSecret(replacement, vault);
     return replacement;
   }

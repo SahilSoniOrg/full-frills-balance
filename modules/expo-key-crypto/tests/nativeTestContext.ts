@@ -85,6 +85,8 @@ export function memoryKeyHierarchy(assertAccess: () => void = () => undefined) {
   });
   const crypto: NativeKeyOperations = {
     ...keyOperationsFromTransport(execute),
+    pickCredential: forbidden,
+    exportCredential: forbidden,
     importCredential: forbidden,
     writeCredential: forbidden,
     retainCredential: forbidden,

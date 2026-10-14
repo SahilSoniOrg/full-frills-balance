@@ -44,7 +44,7 @@ export function resolveRecoverySession({
       { workplaceId, keyId, preserveExistingBooks },
     ],
   };
-  // Abandon the previous unfinished export, not its file or consumed encryption usage.
+  // Drop the unfinished export reference; storage prunes its file without reclaiming usage.
   if (next.package && !next.package.confirmed) delete next.package;
   return { session: next, preserveExistingBooks };
 }
@@ -61,6 +61,7 @@ export function completeWorkplaceRecovery(
     throw new KeyOperationError('FFB_KEY_IDENTITY_MISMATCH', 'Existing Workplace key differs');
   const next = {
     ...session,
+    enrolledWorkplaces: [...new Set([...(session.enrolledWorkplaces ?? []), workplaceId])],
     verifiedWorkplaces: existing ? bindings : [...bindings, { workplaceId, keyId }],
   };
   const remaining = next.pendingRecoveries?.filter(item => item.workplaceId !== workplaceId);

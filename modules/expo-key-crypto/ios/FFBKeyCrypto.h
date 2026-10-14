@@ -6,6 +6,7 @@ NS_ASSUME_NONNULL_BEGIN
                                 request:(NSString *)request
                                   error:(NSError **)error;
 + (nullable NSString *)importCredential:(NSString *)uri error:(NSError **)error;
++ (nullable NSMutableData *)credentialData:(NSString *)handle error:(NSError **)error;
 + (BOOL)writeCredential:(NSString *)handle
                     uri:(NSString *)uri
                   error:(NSError **)error;

@@ -1,6 +1,10 @@
 import { SerialQueue } from '@/src/utils/serialQueue';
 import { parseObject, isSha256Id } from '@/src/utils/strictObject';
-import { KeyOperationError, MissingKeyStateError } from '@/src/utils/keyOperationError';
+import {
+  KeyOperationError,
+  MissingKeyStateError,
+  keyOperationErrorCode,
+} from '@/src/utils/keyOperationError';
 import { keyCiphertextStateStore, type KeyCiphertextStateStore } from './keyCiphertextStateStore';
 import { nativeKeyOperations } from './nativeKeyOperations';
 import {
@@ -104,7 +108,9 @@ export class LocalKeyHierarchy implements KeyHierarchy {
     // Access can change during awaits; checks within operations also guard later checkpoint writes.
     return this.storeQueue().run(async () => {
       this.assertAccess();
-      return operation();
+      const result = await operation();
+      this.assertAccess();
+      return result;
     });
   }
   private storeQueue(): SerialQueue {
@@ -128,7 +134,8 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       this.assertAccess();
       return result;
     } finally {
-      await this.crypto.releaseKey(key);
+      // References hold ciphertext/public metadata; cleanup must not replace the operation result.
+      await this.crypto.releaseKey(key).catch(() => undefined);
     }
   }
   private async withUserReference<T>(
@@ -245,7 +252,6 @@ export class LocalKeyHierarchy implements KeyHierarchy {
         publicIdentity: user.publicIdentity,
         recoveryConfirmed: false,
       });
-      this.assertAccess();
       await this.state.write(userScope(userId, deviceId), user);
       return credential;
     });
@@ -258,13 +264,12 @@ export class LocalKeyHierarchy implements KeyHierarchy {
     return this.exclusive(async () => {
       const user = await this.user(userId, deviceId);
       await this.invoke('confirmUser', { user, credential });
+      await this.state.write(userScope(userId, deviceId), { ...user, recoveryConfirmed: true });
       await this.state.write(identityScope(userId), {
         deviceId,
         publicIdentity: user.publicIdentity,
         recoveryConfirmed: true,
       });
-      this.assertAccess();
-      await this.state.write(userScope(userId, deviceId), { ...user, recoveryConfirmed: true });
       return this.identity(user);
     });
   }
@@ -278,10 +283,23 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       throw error;
     }
     if (raw === null) return { user: 'missing' };
-    if (!(await this.hasDevice(userId, deviceId))) return { user: 'recovery-required' };
-    const user = await this.validateUserScope(raw, userId, deviceId);
-    await this.withUserReference(user, async () => undefined);
-    return { user: user.recoveryConfirmed ? 'ready' : 'pending', identity: this.identity(user) };
+    try {
+      if (!(await this.hasDevice(userId, deviceId))) return { user: 'recovery-required' };
+      const user = await this.validateUserScope(raw, userId, deviceId);
+      await this.withUserReference(user, async () => undefined);
+      return { user: user.recoveryConfirmed ? 'ready' : 'pending', identity: this.identity(user) };
+    } catch (error) {
+      if (
+        [
+          'FFB_KEY_RECOVERY_REQUIRED',
+          'FFB_KEY_AUTHENTICATION_FAILED',
+          'FFB_KEY_INVALID_FILE',
+        ].includes(keyOperationErrorCode(error))
+      )
+        return { user: 'recovery-required' };
+      // A temporary vault error or app lock must remain retryable, not imply permanent key loss.
+      throw error;
+    }
   }
   describeSetup(
     userId: string,
@@ -292,7 +310,14 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       const status = await this.readUserKeyState(userId, deviceId);
       if (status.user === 'missing') {
         const marker = await this.state.read(identityScope(userId));
-        const exists = await this.hasDevice(userId, deviceId);
+        let exists: boolean;
+        try {
+          exists = await this.hasDevice(userId, deviceId);
+        } catch (error) {
+          if (keyOperationErrorCode(error) === 'FFB_KEY_RECOVERY_REQUIRED')
+            return { user: 'recovery-required' };
+          throw error;
+        }
         if (
           marker !== null &&
           parseObject(marker, 'Invalid native key result').recoveryConfirmed === false &&
@@ -366,13 +391,12 @@ export class LocalKeyHierarchy implements KeyHierarchy {
         user.userKeyFingerprint !== saved.userKeyFingerprint
       )
         throw new Error('Native recovered User scope mismatch');
+      await this.state.write(userScope(saved.userId, deviceId), user);
       await this.state.write(identityScope(saved.userId), {
         deviceId,
         publicIdentity: saved.publicIdentity,
         recoveryConfirmed: true,
       });
-      this.assertAccess();
-      await this.state.write(userScope(saved.userId, deviceId), user);
       return this.identity(user);
     });
   }
@@ -420,7 +444,6 @@ export class LocalKeyHierarchy implements KeyHierarchy {
         userKeyFingerprint: identity.userKeyFingerprint,
         recoveryConfirmed: false,
       });
-      this.assertAccess();
       await this.state.write(workplaceScope(identity.userId, workplaceId), keys);
       return credential;
     });
@@ -434,14 +457,13 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       const user = await this.readyUser(identity),
         keys = await this.workplace(identity, workplaceId);
       await this.invoke('confirmWorkplace', { user, keys, credential });
+      await this.state.write(workplaceScope(identity.userId, workplaceId), {
+        ...keys,
+        recoveryConfirmed: true,
+      });
       await this.state.write(workplaceIdentityScope(identity.userId, workplaceId), {
         keyId: keys.keyId,
         userKeyFingerprint: identity.userKeyFingerprint,
-        recoveryConfirmed: true,
-      });
-      this.assertAccess();
-      await this.state.write(workplaceScope(identity.userId, workplaceId), {
-        ...keys,
         recoveryConfirmed: true,
       });
     });
@@ -505,16 +527,15 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       )
         throw new Error('Established Workplace identity mismatch');
       await this.withWorkplaceReference(user, keys, async () => undefined);
+      await this.state.write(workplaceScope(identity.userId, keys.workplaceId), {
+        ...keys,
+        encryptionInvocations: MAX_ENCRYPTIONS,
+      });
       await this.state.write(workplaceIdentityScope(identity.userId, keys.workplaceId), {
         keyId: keys.keyId,
         userKeyFingerprint: identity.userKeyFingerprint,
         recoveryConfirmed: true,
       });
-      this.assertAccess();
-      await this.state.write(
-        workplaceScope(identity.userId, keys.workplaceId),
-        marker === null ? keys : { ...keys, encryptionInvocations: MAX_ENCRYPTIONS },
-      );
     });
   }
   signRecoveryManifest(identity: KeyAccessIdentity, digest: string): Promise<string> {
@@ -591,15 +612,18 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       if (raw !== null && parseLocalUser(raw).recoveryConfirmed)
         throw new Error('Cannot discard an established User identity');
       const marker = await this.state.read(identityScope(userId));
-      if (
-        marker !== null &&
-        (parseObject(marker, 'Invalid native key result').deviceId !== deviceId ||
-          parseObject(marker, 'Invalid native key result').recoveryConfirmed !== false)
-      )
+      // Enrollment writes this pending marker before creating any vault key or User record.
+      if (marker === null) {
+        if (raw === null) return;
+        throw new Error('Cannot discard a User record without its enrollment marker');
+      }
+      const pending = parseObject(marker, 'Invalid native key result');
+      if (pending.deviceId !== deviceId || pending.recoveryConfirmed !== false)
         throw new Error('Cannot discard an established User identity');
-      if (marker !== null) await this.state.remove(identityScope(userId));
+      // The marker goes last so an interrupted discard remains retryable.
       await this.crypto.removeKey({ kind: 'device', userId, deviceId });
       await this.state.remove(userScope(userId, deviceId));
+      await this.state.remove(identityScope(userId));
     });
   }
   discardUnconfirmedWorkplace(identity: KeyAccessIdentity, workplaceId: string): Promise<void> {
@@ -607,6 +631,7 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       await this.readyUser(identity);
       const raw = await this.state.read(workplaceScope(identity.userId, workplaceId)),
         marker = await this.state.read(workplaceIdentityScope(identity.userId, workplaceId));
+      if (raw === null && marker === null) return;
       if (
         raw === null &&
         marker !== null &&

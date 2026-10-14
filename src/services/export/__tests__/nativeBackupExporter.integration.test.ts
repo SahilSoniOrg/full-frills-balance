@@ -1,3 +1,7 @@
+import { database } from '@/src/data/database/Database';
+import { exportRepository } from '@/src/data/repositories/ExportRepository';
+import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
+import { asWorkplaceId } from '@/src/types/ids';
 import { exportWorkplacesToJSON } from '../nativeBackupExporter';
 import { compression } from '@/src/utils/compression';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
@@ -38,4 +42,30 @@ it('captures legacy v2 backup data before compression and releases the reader be
     payload.workplaces[0].data.transactions.map((row: { amount: number }) => row.amount),
   ).toEqual([10, 10]);
   expect(cleanup).toHaveBeenCalledTimes(1);
+});
+
+it('lets a queued accounting write run between separately captured Workplaces', async () => {
+  const { workplaceId, snapshot } = await seedSnapshotWorkplace();
+  const second = asWorkplaceId('second-export');
+  await workplaceRepository.create({ ...snapshot.workplace, id: second });
+  const original = exportRepository.fetchOrmTable.bind(exportRepository);
+  let written = false;
+  let writing: Promise<void> | undefined;
+  jest
+    .spyOn(exportRepository, 'fetchOrmTable')
+    .mockImplementation(async (table, columns, id, sources) => {
+      if (id === second) expect(written).toBe(true);
+      const rows = await original(table, columns, id, sources);
+      if (id === workplaceId && table === 'balance_snapshots')
+        writing = database.write(async () => {
+          written = true;
+        });
+      return rows;
+    });
+  jest
+    .mocked(compression.createZipArchive)
+    .mockResolvedValueOnce({ base64: 'zip', uri: 'memory://zip', cleanup: () => undefined });
+  await exportWorkplacesToJSON([workplaceId, second], 'selected');
+  await writing;
+  expect(written).toBe(true);
 });

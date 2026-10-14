@@ -1,3 +1,4 @@
+import type { WorkplaceRecoveryResult } from '@/src/services/import/restoreWorkplaceSnapshot';
 import type { LocalRecoveryPackage } from './localRecoveryPackage';
 
 export interface PendingRecoveryPackage {
@@ -14,7 +15,14 @@ export interface EncryptionSetupSession {
   deviceId: string;
   userKeyFingerprint?: string;
   package?: PendingRecoveryPackage;
-  verifiedWorkplaces?: { workplaceId: string; keyId: string }[];
+  enrolledWorkplaces?: string[];
+  verifiedWorkplaces?: { workplaceId: string; keyId: string; savedPackageFingerprint?: string }[];
+  pendingCompletion?: {
+    id: string;
+    publication: WorkplaceRecoveryResult;
+    snapshotFingerprint: string;
+    setupDraftFingerprint?: string;
+  };
   pendingRecoveries?: {
     workplaceId: string;
     keyId: string;
@@ -31,7 +39,7 @@ const unavailable = async (): Promise<never> => {
   throw new Error('Encryption setup requires a native device');
 };
 export const encryptionSetupStore: EncryptionSetupStore = {
-  loadSession: unavailable,
+  loadSession: async () => null,
   saveSession: unavailable,
   writePackage: unavailable,
   readPackage: unavailable,

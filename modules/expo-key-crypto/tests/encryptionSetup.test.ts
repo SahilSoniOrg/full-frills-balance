@@ -580,7 +580,11 @@ it('recovering B after checkpoint loss never grants a book binding to surviving 
   });
   const checkpoint = await persistence.store.loadSession();
   expect(checkpoint?.verifiedWorkplaces).toEqual([
-    { workplaceId: second.workplaceId, keyId: second.pack.workplaceKeys.keyId },
+    {
+      workplaceId: second.workplaceId,
+      keyId: second.pack.workplaceKeys.keyId,
+      savedPackageFingerprint: checkpoint?.package?.fingerprint,
+    },
   ]);
   // A provisional "true" from older progress is not an independently verified binding.
   await persistence.store.saveSession({
@@ -608,6 +612,7 @@ it('recovering B after checkpoint loss never grants a book binding to surviving 
 it('retains independently established bindings for two local Workplaces after Device-access removal', async () => {
   const source = await configured();
   const first = await source.flow.preparePackage(source.workplaceId);
+  await source.flow.confirmPackage(first);
   const second = await secondWorkplace(source);
   await second.flow.confirmPackage(second.pack);
   await source.flow.forgetDevice();
@@ -763,4 +768,72 @@ it('explicitly abandons an unavailable unfinished package without replacing keys
   expect(next.workplaceKeys.encryptionInvocations).toBe(2);
   await source.flow.confirmPackage(next);
   await expect(source.flow.abandonPendingPackage(source.workplaceId)).rejects.toThrow('unfinished');
+});
+
+it('requires independently verified packages for every enrolled Workplace before removing Device access', async () => {
+  const c = await configured();
+  const first = await c.flow.preparePackage(c.workplaceId);
+  await c.flow.confirmPackage(first);
+  const second = await secondWorkplace(c);
+  await expect(c.flow.forgetDevice()).rejects.toMatchObject({ code: 'FFB_KEY_BACKUPS_REQUIRED' });
+  await second.flow.confirmPackage(second.pack);
+  await c.flow.forgetDevice();
+  expect(c.deviceTags.size).toBe(0);
+});
+
+it('resumes preferences and onboarding completion after committed publication and process restart', async () => {
+  const c = await configured();
+  const pack = await c.flow.preparePackage(c.workplaceId);
+  await resetDatabase();
+  const target = memoryKeyHierarchy();
+  const persistence = storeFixture();
+  const recovering = new EncryptionSetup(
+    target.hierarchy,
+    persistence.store,
+    () => undefined,
+    jest.fn(),
+    recoverWorkplaceSnapshot,
+  );
+  const result = await recovering.recover(pack, c.userSecret);
+  expect(result.kind).toBe('restored');
+  expect((await persistence.store.loadSession())?.pendingCompletion?.publication).toEqual(result);
+  const restarted = new EncryptionSetup(
+    target.hierarchy,
+    persistence.store,
+    () => {
+      throw new Error('locked');
+    },
+    jest.fn(),
+    recoverWorkplaceSnapshot,
+  );
+  await restarted.finishRecoveryCompletion();
+  expect((await persistence.store.loadSession())?.pendingCompletion).toBeUndefined();
+});
+
+it('finishes committed recovery even if retaining its ciphertext package fails afterwards', async () => {
+  const c = await configured();
+  const pack = await c.flow.preparePackage(c.workplaceId);
+  await resetDatabase();
+  const target = memoryKeyHierarchy(),
+    persistence = storeFixture();
+  jest
+    .mocked(persistence.store.writePackage)
+    .mockRejectedValueOnce(new Error('storage full after publication'));
+  const recovery = new EncryptionSetup(
+    target.hierarchy,
+    persistence.store,
+    () => undefined,
+    jest.fn(),
+    recoverWorkplaceSnapshot,
+  );
+  await expect(recovery.recover(pack, c.userSecret)).rejects.toThrow(
+    'storage full after publication',
+  );
+  const session = await persistence.store.loadSession();
+  expect(session?.pendingCompletion?.publication).toMatchObject({ kind: 'restored' });
+  // Restart completes the same receipt, with no secret or native operation.
+  const calls = jest.mocked(target.crypto.openKey).mock.calls.length;
+  await recovery.finishRecoveryCompletion();
+  expect(jest.mocked(target.crypto.openKey).mock.calls.length).toBe(calls);
+  expect((await persistence.store.loadSession())?.pendingCompletion).toBeUndefined();
 });

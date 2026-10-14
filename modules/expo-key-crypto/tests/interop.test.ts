@@ -150,3 +150,12 @@ it('the native operation dispatcher has no generic decrypt-envelope or raw-key e
       }),
     ).rejects.toThrow();
 });
+
+it('invalidates unleased recovery handles natively across lock/unlock without JS cleanup', async () => {
+  const credential = await context.hierarchy.beginUser('lock-test', 'device');
+  await host.execute('test.setAllowed', { allowed: false });
+  await host.execute('test.setAllowed', { allowed: true });
+  await expect(host.execute('test.exportCredential', credential)).rejects.toMatchObject({
+    code: 'FFB_KEY_REFERENCE_EXPIRED',
+  });
+});

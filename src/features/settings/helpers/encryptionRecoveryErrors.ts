@@ -21,6 +21,14 @@ export function encryptionRecoveryErrorMessage(code: KeyOperationErrorCode): str
       return 'The unfinished encrypted package is unavailable. Abandon it and prepare a new package, or choose a saved copy.';
     case 'FFB_KEY_BUDGET_EXHAUSTED':
       return 'This Workplace has reached its encryption limit. Existing encrypted backups can still be opened.';
+    case 'FFB_KEY_SNAPSHOT_LIMIT':
+      return 'This Workplace exceeds the supported backup limit: 100,000 records or 32 MiB. No backup was saved.';
+    case 'FFB_KEY_PACKAGE_MISMATCH':
+      return 'Choose the encrypted package you just saved, then try verification again.';
+    case 'FFB_KEY_BACKUPS_REQUIRED':
+      return 'Save and verify an encrypted package for every enrolled Workplace before removing this Device’s backup access.';
+    case 'FFB_KEY_VAULT_UNAVAILABLE':
+      return 'Secure storage is temporarily unavailable. Unlock the Device and try again.';
     case 'FFB_KEY_OPERATION_FAILED':
       return 'This step could not finish. Check the files and try again. Existing books and keys have been kept.';
   }

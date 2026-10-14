@@ -1,3 +1,6 @@
+import { completeRecoveredWorkplaceSetup } from '@/src/services/setup/recoveryCompletion';
+import { readSetupDraftSnapshot } from '@/src/services/setup/launchProjection';
+import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { resolveRecoverySession, completeWorkplaceRecovery } from './recoverySession';
 import { SerialQueue } from '@/src/utils/serialQueue';
 import { type KeyHierarchy, localKeyHierarchy } from './localKeyHierarchy';
@@ -16,7 +19,11 @@ import { parseRecoveryCredential, type RecoveryCredential } from './keyEnvelopes
 import { snapshotCrypto } from './snapshotCryptoProvider';
 import { keyHex } from './keyEncoding';
 import { snapshotFingerprint } from './encryptedSnapshot';
-import { captureWorkplaceSnapshot, type WorkplaceSnapshot } from './workplaceSnapshot';
+import {
+  captureWorkplaceSnapshot,
+  workplaceSnapshotFingerprint,
+  type WorkplaceSnapshot,
+} from './workplaceSnapshot';
 import {
   recoverWorkplaceSnapshot,
   assertWorkplaceRecoveryTarget,
@@ -139,7 +146,11 @@ export class EncryptionSetup {
   }
   beginWorkplace(workplaceId: string): Promise<RecoveryCredential> {
     return this.exclusive(async () => {
-      const { identity } = await this.ready(workplaceId);
+      const { session, identity } = await this.ready(workplaceId);
+      await this.store.saveSession({
+        ...session,
+        enrolledWorkplaces: [...new Set([...(session.enrolledWorkplaces ?? []), workplaceId])],
+      });
       return this.hierarchy.enrollWorkplace(identity, workplaceId, 'local-upgrade');
     });
   }
@@ -185,9 +196,16 @@ export class EncryptionSetup {
       } else if (
         status.identity &&
         workplaceId &&
-        (status.workplace === 'pending' || status.workplace === 'interrupted')
+        (status.workplace === 'pending' ||
+          status.workplace === 'interrupted' ||
+          (status.workplace === 'missing' &&
+            !session.verifiedWorkplaces?.some(binding => binding.workplaceId === workplaceId)))
       ) {
         await this.hierarchy.discardUnconfirmedWorkplace(status.identity, workplaceId);
+        await this.store.saveSession({
+          ...session,
+          enrolledWorkplaces: session.enrolledWorkplaces?.filter(id => id !== workplaceId),
+        });
       } else throw new Error('An established identity or key cannot be discarded');
     });
   }
@@ -243,8 +261,22 @@ export class EncryptionSetup {
   forgetDevice(): Promise<void> {
     return this.exclusive(async () => {
       const session = await this.session();
-      if (!session.package?.confirmed)
-        throw new Error('Verify a saved encrypted package before removing access');
+      const enrolled = session.enrolledWorkplaces ?? [];
+      if (
+        !session.package?.confirmed ||
+        enrolled.length === 0 ||
+        session.pendingRecoveries?.length ||
+        enrolled.some(
+          id =>
+            !session.verifiedWorkplaces?.some(
+              binding => binding.workplaceId === id && binding.savedPackageFingerprint,
+            ),
+        )
+      )
+        throw new KeyOperationError(
+          'FFB_KEY_BACKUPS_REQUIRED',
+          'Verify saved packages for every enrolled Workplace before removing access',
+        );
       await this.hierarchy.logout(session.userId, session.deviceId);
       await this.store.saveSession({ ...session, intent: 'recover-user' });
     });
@@ -255,7 +287,10 @@ export class EncryptionSetup {
       if (!session.package) throw new Error('Prepare an encrypted package first');
       const saved = await verifyLocalRecoveryPackage(value, identity);
       if ((await snapshotFingerprint(JSON.stringify(saved))) !== session.package.fingerprint)
-        throw new Error('Choose the encrypted package you just saved');
+        throw new KeyOperationError(
+          'FFB_KEY_PACKAGE_MISMATCH',
+          'Choose the encrypted package you just saved',
+        );
       // Read back actual data, not merely the export sheet's successful return.
       await this.hierarchy.decryptSnapshot(
         identity,
@@ -266,8 +301,40 @@ export class EncryptionSetup {
       await this.store.saveSession({
         ...session,
         package: { ...session.package, confirmed: true },
+        verifiedWorkplaces: session.verifiedWorkplaces?.map(binding =>
+          binding.workplaceId === saved.workplaceKeys.workplaceId
+            ? { ...binding, savedPackageFingerprint: session.package!.fingerprint }
+            : binding,
+        ),
       });
     });
+  }
+  /** Completes already-published books without opening any key or requiring an unlocked screen. */
+  finishRecoveryCompletion(): Promise<void> {
+    return this.queue.run(() => this.finishPendingCompletion());
+  }
+  private async finishPendingCompletion(saved?: EncryptionSetupSession): Promise<void> {
+    const session = saved ?? (await this.store.loadSession());
+    const completion = session?.pendingCompletion;
+    if (!session || !completion) return;
+    const existing = await workplaceRepository.find(completion.publication.workplaceId);
+    if (
+      !existing ||
+      (completion.publication.kind === 'restored' &&
+        existing.snapshotRestoreFingerprint !== completion.snapshotFingerprint)
+    )
+      return;
+    const currentDraft = readSetupDraftSnapshot();
+    const currentFingerprint =
+      currentDraft === undefined ? undefined : await snapshotFingerprint(currentDraft);
+    completeRecoveredWorkplaceSetup(
+      completion.publication,
+      currentFingerprint === completion.setupDraftFingerprint ? currentDraft : undefined,
+      completion.id,
+    );
+    const next = { ...session };
+    delete next.pendingCompletion;
+    await this.store.saveSession(next);
   }
   private async readRecoverySession(credential: RecoveryCredential): Promise<{
     session: EncryptionSetupSession | null;
@@ -299,6 +366,9 @@ export class EncryptionSetup {
   recover(value: unknown, secret: unknown, signal?: AbortSignal): Promise<Publication> {
     return this.exclusive(async () => {
       assertKeyOperationActive(signal);
+      const setupDraft = readSetupDraftSnapshot();
+      const setupDraftFingerprint =
+        setupDraft === undefined ? undefined : await snapshotFingerprint(setupDraft);
       const credential = parseRecoveryCredential(secret);
       if (credential.purpose !== 'user-recovery')
         throw new KeyOperationError('FFB_KEY_INVALID_FILE', 'Choose your User recovery file');
@@ -310,6 +380,10 @@ export class EncryptionSetup {
       this.assertAccess();
       assertKeyOperationActive(signal);
       const observed = await this.readRecoverySession(credential);
+      if (observed.session?.pendingCompletion) {
+        await this.finishPendingCompletion(observed.session);
+        observed.session = await this.store.loadSession();
+      }
       const { existing } = observed;
       const { workplaceId, keyId } = saved.workplaceKeys;
       const { session, preserveExistingBooks } = resolveRecoverySession({
@@ -368,13 +442,47 @@ export class EncryptionSetup {
       );
       this.assertAccess();
       assertKeyOperationActive(signal);
-      const result = await this.publish(snapshot, { preserveExistingBooks, signal });
+      const fingerprint = await workplaceSnapshotFingerprint(snapshot);
+      const completionId = keyHex(snapshotCrypto.randomBytes(16));
+      if (!preserveExistingBooks || !(await workplaceRepository.find(asWorkplaceId(workplaceId)))) {
+        // Persist the nonsecret completion handoff before the database can commit.
+        // On restart it is applied only if that exact snapshot has a committed receipt.
+        await this.store.saveSession({
+          ...session,
+          pendingCompletion: {
+            id: completionId,
+            publication: {
+              kind: 'restored',
+              workplaceId: asWorkplaceId(workplaceId),
+              bookPreferences: snapshot.bookPreferences,
+            },
+            snapshotFingerprint: fingerprint,
+            setupDraftFingerprint,
+          },
+        });
+      }
       this.assertAccess();
       assertKeyOperationActive(signal);
+      const result = await this.publish(snapshot, { preserveExistingBooks, signal });
+      completeRecoveredWorkplaceSetup(result, setupDraft, completionId);
+      // Publication is committed. Finish public bookkeeping even after lock/background.
+      // A killed process before this checkpoint retries through the DB restore receipt.
       const reference = await this.store.writePackage(saved);
-      const next = {
-        ...completeWorkplaceRecovery(session, workplaceId, keyId),
+      const completed = completeWorkplaceRecovery(session, workplaceId, keyId);
+      const next: EncryptionSetupSession = {
+        ...completed,
+        verifiedWorkplaces: completed.verifiedWorkplaces?.map(binding =>
+          binding.workplaceId === workplaceId
+            ? { ...binding, savedPackageFingerprint: reference.fingerprint }
+            : binding,
+        ),
         package: { ...reference, confirmed: true },
+        pendingCompletion: {
+          id: completionId,
+          publication: result,
+          snapshotFingerprint: fingerprint,
+          setupDraftFingerprint,
+        },
       };
       await this.store.saveSession(next);
       return result;

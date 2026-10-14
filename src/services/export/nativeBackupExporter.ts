@@ -35,9 +35,7 @@ export async function exportWorkplacesToJSON(
 ): Promise<string> {
   if (workplaceIds.length === 0) throw new Error('No workplaces selected to export');
   const userPreferences = await preferences.loadPreferences();
-  const entries = await exportRepository.captureConsistently(() =>
-    captureWorkplaces(workplaceIds, onProgress),
-  );
+  const entries = await captureWorkplaces(workplaceIds, onProgress);
 
   if (entries.length === 0) throw new Error('No workplaces are available to export');
   const payload = serializeMultiWorkplaceExport(
@@ -82,41 +80,44 @@ async function captureWorkplaces(
   );
 
   for (const [index, workplaceId] of workplaceIds.entries()) {
-    const workplace = await workplaceRepository.find(workplaceId);
-    if (!workplace) continue;
-    const data: Record<string, readonly unknown[]> = {};
-    const exportedTransactionIds = new Set<string>();
-    const exportedJournalIds = new Set<string>();
-    for (const [taskIndex, task] of WORKPLACE_DATA_TABLES.entries()) {
-      let rows = await fetchAndTransformTable<Record<string, unknown>>(workplaceId, task.table);
-      if (task.table === 'journals') {
-        rows.forEach(row => exportedJournalIds.add(String(row.id ?? '')));
-      } else if (task.table === 'transactions') {
-        rows.forEach(row => exportedTransactionIds.add(String(row.id ?? '')));
-      } else if (task.table === 'journal_metadata') {
-        rows = rows.filter(row => exportedJournalIds.has(String(row.journalId ?? '')));
-      } else if (task.table === 'balance_snapshots') {
-        rows = rows.filter(row => exportedTransactionIds.has(String(row.transactionId ?? '')));
+    const entry = await exportRepository.captureConsistently(async () => {
+      const workplace = await workplaceRepository.find(workplaceId);
+      if (!workplace) return null;
+      const data: Record<string, readonly unknown[]> = {};
+      const exportedTransactionIds = new Set<string>();
+      const exportedJournalIds = new Set<string>();
+      for (const [taskIndex, task] of WORKPLACE_DATA_TABLES.entries()) {
+        let rows = await fetchAndTransformTable<Record<string, unknown>>(workplaceId, task.table);
+        if (task.table === 'journals') {
+          rows.forEach(row => exportedJournalIds.add(String(row.id ?? '')));
+        } else if (task.table === 'transactions') {
+          rows.forEach(row => exportedTransactionIds.add(String(row.id ?? '')));
+        } else if (task.table === 'journal_metadata') {
+          rows = rows.filter(row => exportedJournalIds.has(String(row.journalId ?? '')));
+        } else if (task.table === 'balance_snapshots') {
+          rows = rows.filter(row => exportedTransactionIds.has(String(row.transactionId ?? '')));
+        }
+        data[EXPORT_KEY_BY_TABLE[task.table] ?? task.table] = rows;
+        onProgress?.(
+          `Gathering ${workplace.name}: ${task.name}...`,
+          ((index + (taskIndex + 1) / WORKPLACE_DATA_TABLES.length) / workplaceIds.length) * 0.8,
+        );
       }
-      data[EXPORT_KEY_BY_TABLE[task.table] ?? task.table] = rows;
-      onProgress?.(
-        `Gathering ${workplace.name}: ${task.name}...`,
-        ((index + (taskIndex + 1) / WORKPLACE_DATA_TABLES.length) / workplaceIds.length) * 0.8,
-      );
-    }
-    const workplaceMetadata: ExportWorkplaceMetadata = {
-      id: workplace.id,
-      name: workplace.name,
-      icon: workplace.icon,
-      defaultCurrencyCode: workplace.defaultCurrencyCode,
-      createdAt: workplace.createdAt.toISOString(),
-      updatedAt: workplace.updatedAt.toISOString(),
-    };
-    entries.push({
-      workplace: workplaceMetadata,
-      workplacePreferences: preferenceCopies.get(workplaceId),
-      data,
+      const workplaceMetadata: ExportWorkplaceMetadata = {
+        id: workplace.id,
+        name: workplace.name,
+        icon: workplace.icon,
+        defaultCurrencyCode: workplace.defaultCurrencyCode,
+        createdAt: workplace.createdAt.toISOString(),
+        updatedAt: workplace.updatedAt.toISOString(),
+      };
+      return {
+        workplace: workplaceMetadata,
+        workplacePreferences: preferenceCopies.get(workplaceId),
+        data,
+      };
     });
+    if (entry) entries.push(entry);
   }
 
   return entries;

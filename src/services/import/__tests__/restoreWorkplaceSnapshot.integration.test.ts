@@ -1,3 +1,4 @@
+import AuditLog from '@/src/data/models/AuditLog';
 import { database } from '@/src/data/database/Database';
 import { resetDatabase } from '@/src/testing/resetDatabase';
 import { preferences } from '@/src/services/preferences';
@@ -301,4 +302,26 @@ it('restores budget scopes, fixed FX schedules, journal provenance, and consumed
   expect(copies[0].linkedJournalId).toBe(journal.id);
   expect(copies[0].rawBody).toBeFalsy();
   expect(await database.get('device_sms_inbox_records').query().fetchCount()).toBe(0);
+});
+
+it('preserves historical audit entries without fabricating per-entity import history', async () => {
+  const { snapshot } = await seedSnapshotWorkplace();
+  await resetDatabase();
+  await restoreWorkplaceSnapshot(snapshot);
+  const rows = await database.get<AuditLog>('audit_logs').query().fetch();
+  expect(rows.filter(row => String(row.eventType).endsWith('.imported'))).toHaveLength(0);
+  const ids = new Set(rows.map(row => row.id));
+  for (const row of snapshot.data.auditLogs ?? []) expect(ids.has(row.id)).toBe(true);
+});
+
+it('recognizes reordered equivalent snapshots as the same committed restore', async () => {
+  const { snapshot } = await seedSnapshotWorkplace();
+  await resetDatabase();
+  await restoreWorkplaceSnapshot(snapshot);
+  const reordered = {
+    ...Object.fromEntries(Object.entries(snapshot).reverse()),
+    data: { ...snapshot.data, accounts: [...snapshot.data.accounts].reverse() },
+  } as typeof snapshot;
+  await expect(restoreWorkplaceSnapshot(reordered)).resolves.toBeDefined();
+  expect(await database.get('workplaces').query().fetchCount()).toBe(1);
 });

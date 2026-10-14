@@ -1,3 +1,4 @@
+import { encryptionSetup } from '@/src/services/backup/encryptionSetup';
 import { loadSetupDraft, saveSetupDraft } from '@/src/services/setup/SetupDraftStore';
 import { EmptyStateView, LoadingView } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
@@ -118,6 +119,7 @@ function useWorkplaceDiscovery(enabled: boolean, retryToken: number) {
           initialWorkplaceIdsRef.current = workplaces.map(workplace => workplace.id);
         }
         void migrateLegacyCurrency(initialWorkplaceIdsRef.current)
+          .then(() => encryptionSetup.finishRecoveryCompletion())
           .then(() => {
             if (cancelled) return;
             if (!recoveryAppliedRef.current) {

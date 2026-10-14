@@ -61,6 +61,8 @@ class NativeDeviceVaultTest {
     try { vault.load(name); fail("Expected recovery-required state") }
     catch (failure: IllegalStateException) { assertEquals("FFB_KEY_RECOVERY_REQUIRED", failure.message) }
     rejected { vault.save(name, key) }
+    rejected { vault.save(other, key) }
+    assertFalse(preferences.contains(other))
     assertFalse(keystore().containsAlias(alias))
     assertEquals(saved, preferences.getString(name, null))
   }
@@ -83,4 +85,14 @@ class NativeDeviceVaultTest {
     assertArrayEquals(key, vault.load(other))
     assertEquals("unrelated UnrelatedFeature entry", secure.getString(name, null))
   }
+  @Test fun explicitRecoveryCanInstallANewEntryAfterWrappingKeyLossWithoutDeletingOldCiphertext() {
+    vault.save(name, key)
+    val saved = preferences.getString(name, null)
+    keystore().deleteEntry(alias)
+    vault.saveRecovered(other, key)
+    assertArrayEquals(key, vault.load(other))
+    assertEquals(saved, preferences.getString(name, null))
+    rejected { vault.load(name) }
+  }
+
 }

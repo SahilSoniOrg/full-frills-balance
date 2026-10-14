@@ -1,3 +1,5 @@
+import { snapshotFingerprint } from './encryptedSnapshot';
+import { KeyOperationError } from '@/src/utils/keyOperationError';
 import { parseObject, assertAllowedKeys } from '@/src/utils/strictObject';
 import { schema } from '@/src/data/database/schema';
 import { exportRepository } from '@/src/data/repositories/ExportRepository';
@@ -27,7 +29,7 @@ import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
 
 export const WORKPLACE_SNAPSHOT_FORMAT = 'full-frills-workplace-snapshot' as const;
 export const MAX_SNAPSHOT_BYTES = 32 * 1024 * 1024;
-const MAX_SNAPSHOT_RECORDS = 100_000;
+export const MAX_SNAPSHOT_RECORDS = 100_000;
 
 type SnapshotData = Pick<
   BatchImportData,
@@ -233,7 +235,11 @@ export function parseWorkplaceSnapshot(value: unknown): WorkplaceSnapshot {
     const rows = data[key];
     if (!Array.isArray(rows)) throw new Error(`Missing snapshot table ${key}`);
     count += rows.length;
-    if (count > MAX_SNAPSHOT_RECORDS) throw new Error('Workplace snapshot has too many records');
+    if (count > MAX_SNAPSHOT_RECORDS)
+      throw new KeyOperationError(
+        'FFB_KEY_SNAPSHOT_LIMIT',
+        'Workplace snapshot has too many records',
+      );
     const columns = fields.split(' ').map(name => schema.tables[table].columns[name]);
     const seenIds = new Set<string>();
     for (const value of rows) {
@@ -386,7 +392,10 @@ function snapshotCurrencyCodes(snapshot: WorkplaceSnapshot): string[] {
 export function serializeWorkplaceSnapshot(snapshot: WorkplaceSnapshot): string {
   const serialized = JSON.stringify(parseWorkplaceSnapshot(snapshot));
   if (new TextEncoder().encode(serialized).byteLength > MAX_SNAPSHOT_BYTES) {
-    throw new Error('Workplace snapshot exceeds the supported size');
+    throw new KeyOperationError(
+      'FFB_KEY_SNAPSHOT_LIMIT',
+      'Workplace snapshot exceeds the supported size',
+    );
   }
   return serialized;
 }
@@ -396,7 +405,30 @@ export function decodeWorkplaceSnapshot(serialized: string): WorkplaceSnapshot {
     serialized.length > MAX_SNAPSHOT_BYTES ||
     new TextEncoder().encode(serialized).byteLength > MAX_SNAPSHOT_BYTES
   ) {
-    throw new Error('Workplace snapshot exceeds the supported size');
+    throw new KeyOperationError(
+      'FFB_KEY_SNAPSHOT_LIMIT',
+      'Workplace snapshot exceeds the supported size',
+    );
   }
   return parseWorkplaceSnapshot(JSON.parse(serialized));
+}
+
+/** Restore receipts identify content independently of object insertion order or database row order. */
+export async function workplaceSnapshotFingerprint(value: WorkplaceSnapshot): Promise<string> {
+  const snapshot = parseWorkplaceSnapshot(value);
+  const data = Object.fromEntries(
+    SNAPSHOT_TABLES.map(({ key }) => [
+      key,
+      [...(snapshot.data[key] ?? [])].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)),
+    ]),
+  );
+  return snapshotFingerprint(
+    JSON.stringify({ ...snapshot, data }, (_key, value: unknown) => {
+      if (value && typeof value === 'object' && !Array.isArray(value))
+        return Object.fromEntries(
+          Object.entries(value).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+        );
+      return value;
+    }),
+  );
 }

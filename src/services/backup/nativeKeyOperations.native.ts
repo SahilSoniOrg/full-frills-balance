@@ -5,6 +5,8 @@ import { keyOperationsFromTransport, type NativeKeyOperations } from './nativeKe
 type NativeModule = {
   setAllowed(allowed: boolean): void;
   execute(operation: string, request: string): Promise<string>;
+  pickCredential(): Promise<string | null>;
+  exportCredential(handle: string): Promise<boolean>;
   importCredential(uri: string): Promise<string>;
   writeCredential(handle: string, uri: string): Promise<void>;
   retainCredential(handle: string): Promise<void>;
@@ -37,6 +39,13 @@ export const nativeKeyOperations: NativeKeyOperations = {
     if (operation !== 'removeKey' && operation !== 'releaseKey') assertKeyAccessAllowed();
     return JSON.parse(result);
   }),
+  async pickCredential() {
+    assertKeyAccessAllowed();
+    const value = await ready().pickCredential();
+    assertKeyAccessAllowed();
+    return value === null ? null : JSON.parse(value);
+  },
+  exportCredential: handle => ready().exportCredential(JSON.stringify(handle)),
   async importCredential(uri) {
     assertKeyAccessAllowed();
     const result = await ready().importCredential(uri);

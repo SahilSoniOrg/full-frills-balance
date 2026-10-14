@@ -15,6 +15,10 @@ jest.mock('react-native-quick-crypto', () => ({
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
   default: {
+    getAllKeys: jest.fn(async () => [...mockPointers.keys()]),
+    multiGet: jest.fn(async (keys: string[]) =>
+      keys.map(key => [key, mockPointers.get(key) ?? null]),
+    ),
     getItem: jest.fn(async key => mockPointers.get(key) ?? null),
     setItem: jest.fn(async (key, value) => {
       mockPointers.set(key, value);
@@ -26,10 +30,19 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }));
 jest.mock('expo-file-system', () => ({
   Paths: { document: 'documents' },
-  File: class {
+  Directory: class {
+    list() {
+      const { File } = jest.requireMock('expo-file-system');
+      return [...mockFiles.keys()].map(name => new File(name));
+    }
+  },
+  File: class File {
     path: string;
     constructor(...parts: string[]) {
       this.path = parts.join('/');
+    }
+    get name() {
+      return this.path.split('/').pop()!;
     }
     get exists() {
       return mockFiles.has(this.path);
@@ -107,4 +120,13 @@ it('fails on missing/tampered files instead of regenerating state, and removes t
   await expect(keyCiphertextStateStore.read('alice')).rejects.toThrow('Missing');
   await keyCiphertextStateStore.remove('alice');
   expect(await keyCiphertextStateStore.read('alice')).toBeNull();
+});
+
+it('deletes superseded ciphertext only after the replacement locator is committed', async () => {
+  await keyCiphertextStateStore.write('alice', { phase: 'one' });
+  const old = [...mockFiles.keys()][0];
+  await keyCiphertextStateStore.write('alice', { phase: 'two' });
+  expect(mockFiles.has(old)).toBe(false);
+  expect(mockFiles.size).toBe(1);
+  expect(await keyCiphertextStateStore.read('alice')).toEqual({ phase: 'two' });
 });

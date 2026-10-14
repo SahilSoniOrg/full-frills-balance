@@ -1,3 +1,6 @@
+import { enableTestCrypto } from './snapshotTestHelpers';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { encryptionSetupStore } from '../encryptionSetupStore.native';
 import { Platform } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import * as Picker from 'expo-document-picker';
@@ -6,20 +9,25 @@ import { nativeKeyOperations } from '../nativeKeyOperations';
 import { recoveryFiles } from '../recoveryFiles.native';
 
 const mockFiles = new Map<string, string>();
+const mockStore = new Map<string, string>();
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    getItem: jest.fn(async (key: string) => mockStore.get(key) ?? null),
+    setItem: jest.fn(async (key: string, value: string) => {
+      mockStore.set(key, value);
+    }),
+  },
+}));
 jest.mock('../nativeKeyOperations', () => ({
   nativeKeyOperations: {
+    pickCredential: jest.fn(),
+    exportCredential: jest.fn(),
     retainCredential: jest.fn(async () => undefined),
     releaseCredential: jest.fn(async () => undefined),
     clearCredentials: jest.fn(async () => undefined),
-    writeCredential: jest.fn(async (_handle, uri) => {
-      mockFiles.set(uri, JSON.stringify({ phrase: 'native-only-export' }));
-    }),
-    importCredential: jest.fn(async uri => {
-      const contents = mockFiles.get(uri) ?? mockFiles.get(uri.replace('content://', 'content:/'));
-      if (!contents) throw new Error('missing');
-      JSON.parse(contents);
-      return mockSecret;
-    }),
+    writeCredential: jest.fn(),
+    importCredential: jest.fn(),
   },
 }));
 jest.mock('react-native-quick-crypto', () => ({
@@ -61,6 +69,9 @@ jest.mock('expo-file-system', () => {
     }
     delete() {
       mockFiles.delete(this.uri);
+    }
+    rename(name: string) {
+      this.move(new File('file:///app/Documents/', name));
     }
     move(destination: File) {
       mockFiles.set(destination.uri, mockFiles.get(this.uri)!);
@@ -111,102 +122,121 @@ const mockSecret = {
   handle: 'ab'.repeat(32),
 };
 beforeEach(() => {
+  enableTestCrypto();
   jest.clearAllMocks();
   mockFiles.clear();
+  mockStore.clear();
   Platform.OS = 'ios';
 });
 
-it('uses only a temporary iOS export file and deletes it after both success and cancellation/error', async () => {
-  let observed: string | undefined;
-  jest.mocked(Sharing.shareAsync).mockImplementationOnce(async uri => {
-    observed = mockFiles.get(uri);
-  });
-  expect(await recoveryFiles.exportSecret(mockSecret)).toBe(true);
-  expect(JSON.parse(observed!)).toEqual({ phrase: 'native-only-export' });
-  expect(nativeKeyOperations.writeCredential).toHaveBeenCalledWith(mockSecret, expect.any(String));
-  expect(nativeKeyOperations.releaseCredential).toHaveBeenCalledWith(mockSecret);
-  expect(mockFiles.size).toBe(0);
-  jest.mocked(Sharing.shareAsync).mockRejectedValueOnce(new Error('dismissed'));
-  await expect(recoveryFiles.exportSecret(mockSecret)).rejects.toThrow('dismissed');
-  expect(mockFiles.size).toBe(0);
+it.each(['ios', 'android'] as const)(
+  'delegates secret export and selection entirely to native on %s',
+  async platform => {
+    Platform.OS = platform;
+    jest.mocked(nativeKeyOperations.exportCredential).mockResolvedValueOnce(true);
+    jest.mocked(nativeKeyOperations.pickCredential).mockResolvedValueOnce(mockSecret);
+    expect(await recoveryFiles.exportSecret(mockSecret)).toBe(true);
+    expect(await recoveryFiles.pickSecret()).toEqual(mockSecret);
+    expect(mockFiles.size).toBe(0);
+    expect(nativeKeyOperations.writeCredential).not.toHaveBeenCalled();
+    expect(nativeKeyOperations.importCredential).not.toHaveBeenCalled();
+    expect(Sharing.shareAsync).not.toHaveBeenCalled();
+    expect(Picker.getDocumentAsync).not.toHaveBeenCalled();
+  },
+);
+it('propagates native picker cancellation without producing a recovery handle', async () => {
+  jest.mocked(nativeKeyOperations.exportCredential).mockResolvedValueOnce(false);
+  jest.mocked(nativeKeyOperations.pickCredential).mockResolvedValueOnce(null);
+  expect(await recoveryFiles.exportSecret(mockSecret)).toBe(false);
+  expect(await recoveryFiles.pickSecret()).toBeNull();
 });
-it('writes Android secrets only to the chosen external destination and handles cancelled folder selection without a copy', async () => {
+it('rejects raw credential contents returned by an invalid native bridge', async () => {
+  jest
+    .mocked(nativeKeyOperations.pickCredential)
+    .mockResolvedValueOnce({ phrase: 'must-not-be-a-bridge-result' });
+  await expect(recoveryFiles.pickSecret()).rejects.toThrow();
+});
+it('does not claim a cancelled Android package save succeeded', async () => {
   Platform.OS = 'android';
   jest
     .mocked(Legacy.StorageAccessFramework.requestDirectoryPermissionsAsync)
     .mockResolvedValueOnce({ granted: false });
-  expect(await recoveryFiles.exportSecret(mockSecret)).toBe(false);
+  expect(await recoveryFiles.exportPackage({ encrypted: 'fixture' })).toBe(false);
   expect(Legacy.writeAsStringAsync).not.toHaveBeenCalled();
-  expect(mockFiles.size).toBe(0);
-  jest
-    .mocked(Legacy.StorageAccessFramework.requestDirectoryPermissionsAsync)
-    .mockResolvedValueOnce({ granted: true, directoryUri: 'content://chosen' });
-  expect(await recoveryFiles.exportSecret(mockSecret)).toBe(true);
-  expect(nativeKeyOperations.writeCredential).toHaveBeenCalledWith(
-    mockSecret,
-    'content://chosen/secret.json',
-  );
-  expect(Legacy.writeAsStringAsync).not.toHaveBeenCalled();
-  mockFiles.delete('content://chosen/secret.json');
-  expect(mockFiles.size).toBe(0);
-  expect(Sharing.shareAsync).not.toHaveBeenCalled();
 });
-it('purges only abandoned recovery cache files and preserves unrelated app files', async () => {
-  mockFiles.set(
-    `file:///app/Library/Caches/recovery-secret-export-${'ab'.repeat(16)}.json`,
-    'secret',
+it('cleans temporary ciphertext exports after iOS sharing succeeds or fails', async () => {
+  expect(await recoveryFiles.exportPackage({ encrypted: 'fixture' })).toBe(true);
+  expect(mockFiles.size).toBe(0);
+  jest.mocked(Sharing.shareAsync).mockRejectedValueOnce(new Error('sharing failed'));
+  await expect(recoveryFiles.exportPackage({ encrypted: 'fixture' })).rejects.toThrow(
+    'sharing failed',
   );
-  mockFiles.set(
-    `file:///app/Library/Caches/recovery-secret-import-${'cd'.repeat(16)}.json`,
-    'secret',
-  );
+  expect(mockFiles.size).toBe(0);
+});
+it('clears native handles while preserving unrelated cached files', async () => {
   mockFiles.set('file:///app/Library/Caches/ordinary.json', 'keep');
   await recoveryFiles.cleanupTemporarySecrets();
+  expect(nativeKeyOperations.clearCredentials).toHaveBeenCalled();
   expect([...mockFiles.keys()]).toEqual(['file:///app/Library/Caches/ordinary.json']);
 });
-it('reads and deletes the iOS picker temporary copy without copying or touching external saved files', async () => {
-  const uri = 'file:///app/tmp/picker-Inbox/secret.json';
-  mockFiles.set(uri, JSON.stringify(mockSecret));
-  mockFiles.set('file:///saved/secret.json', 'external');
-  jest.mocked(Picker.getDocumentAsync).mockResolvedValueOnce({
-    canceled: false,
-    assets: [{ uri, name: 'secret.json', size: 300, lastModified: 0 }],
+
+it('prunes obsolete retained ciphertext only after committing the new session reference', async () => {
+  const old = '11'.repeat(16),
+    current = '22'.repeat(16);
+  const prefix = 'file:///app/Documents/encrypted-recovery-';
+  mockFiles.set(`${prefix}${old}.json`, 'old ciphertext');
+  mockFiles.set(`${prefix}${current}.json`, 'current ciphertext');
+  mockFiles.set('file:///app/Documents/ordinary.json', 'keep');
+  await encryptionSetupStore.saveSession({
+    formatVersion: 1,
+    intent: 'create-user',
+    userId: 'alice',
+    deviceId: 'phone',
+    package: {
+      id: current,
+      workplaceId: 'books',
+      confirmed: true,
+      fingerprint: `sha256:${'01'.repeat(32)}`,
+    },
   });
-  expect(await recoveryFiles.pickSecret()).toEqual(mockSecret);
-  expect(nativeKeyOperations.importCredential).toHaveBeenCalled();
-  expect(Picker.getDocumentAsync).toHaveBeenCalledWith(
-    expect.objectContaining({ copyToCacheDirectory: false }),
+  expect(mockFiles.has(`${prefix}${old}.json`)).toBe(false);
+  expect(mockFiles.has(`${prefix}${current}.json`)).toBe(true);
+  expect(mockFiles.has('file:///app/Documents/ordinary.json')).toBe(true);
+});
+it('keeps retained packages when publishing the replacement session fails', async () => {
+  const name = `file:///app/Documents/encrypted-recovery-${'11'.repeat(16)}.json`;
+  mockFiles.set(name, 'old ciphertext');
+  jest.mocked(AsyncStorage.setItem).mockRejectedValueOnce(new Error('session unavailable'));
+  await expect(
+    encryptionSetupStore.saveSession({
+      formatVersion: 1,
+      intent: 'create-user',
+      userId: 'alice',
+      deviceId: 'phone',
+    }),
+  ).rejects.toThrow('session unavailable');
+  expect(mockFiles.has(name)).toBe(true);
+});
+
+it('removes an unpublished staged package after a failed checkpoint without deleting the live one', async () => {
+  const session = {
+    formatVersion: 1 as const,
+    intent: 'create-user' as const,
+    userId: 'alice',
+    deviceId: 'phone',
+  };
+  const payload = {
+    workplaceKeys: { workplaceId: 'books' },
+    encrypted: 'fixture',
+  } as unknown as Parameters<typeof encryptionSetupStore.writePackage>[0];
+  const first = await encryptionSetupStore.writePackage(payload);
+  await encryptionSetupStore.saveSession({ ...session, package: first });
+  const second = await encryptionSetupStore.writePackage(payload);
+  jest.mocked(AsyncStorage.setItem).mockRejectedValueOnce(new Error('checkpoint failed'));
+  await expect(encryptionSetupStore.saveSession({ ...session, package: second })).rejects.toThrow(
+    'checkpoint failed',
   );
-  expect([...mockFiles.keys()]).toEqual(['file:///saved/secret.json']);
-});
-it('deletes an oversized/malformed iOS temporary secret copy even when import fails', async () => {
-  const uri = 'file:///app/tmp/picker-Inbox/secret.json';
-  mockFiles.set(uri, '{invalid');
-  jest.mocked(Picker.getDocumentAsync).mockResolvedValueOnce({
-    canceled: false,
-    assets: [{ uri, name: 'secret.json', size: 5000, lastModified: 0 }],
-  });
-  await expect(recoveryFiles.pickSecret()).rejects.toThrow('too large');
-  expect(mockFiles.size).toBe(0);
-  mockFiles.set(uri, '{invalid');
-  jest.mocked(Picker.getDocumentAsync).mockResolvedValueOnce({
-    canceled: false,
-    assets: [{ uri, name: 'secret.json', lastModified: 0 }],
-  });
-  await expect(recoveryFiles.pickSecret()).rejects.toThrow();
-  expect(mockFiles.size).toBe(0);
-});
-it('never deletes an Android source document and does not retain a cache copy', async () => {
-  Platform.OS = 'android';
-  const uri = 'content://external/secret.json';
-  // Mock preserves content scheme through the file constructor.
-  const key = 'content:/external/secret.json';
-  mockFiles.set(key, JSON.stringify(mockSecret));
-  jest.mocked(Picker.getDocumentAsync).mockResolvedValueOnce({
-    canceled: false,
-    assets: [{ uri, name: 'secret.json', lastModified: 0 }],
-  });
-  expect(await recoveryFiles.pickSecret()).toEqual(mockSecret);
-  expect(nativeKeyOperations.importCredential).toHaveBeenCalled();
-  expect(mockFiles.get(key)).toBe(JSON.stringify(mockSecret));
+  expect([...mockFiles.keys()]).toEqual([
+    `file:///app/Documents/encrypted-recovery-${first.id}.json`,
+  ]);
 });

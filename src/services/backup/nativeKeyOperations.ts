@@ -5,6 +5,8 @@ const unavailable = async (): Promise<never> => {
 };
 export const nativeKeyOperations: NativeKeyOperations = {
   ...keyOperationsFromTransport(unavailable),
+  pickCredential: unavailable,
+  exportCredential: unavailable,
   importCredential: unavailable,
   writeCredential: unavailable,
   retainCredential: unavailable,

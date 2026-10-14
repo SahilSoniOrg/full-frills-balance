@@ -9,12 +9,9 @@ import {
   subscribeKeyAccessPolicy,
 } from '@/src/services/backup/keyAccessPolicy';
 import type { RecoveryCredential } from '@/src/services/backup/keyEnvelopes';
-import { preferences } from '@/src/services/preferences';
 import { useOptionalWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AppNavigation } from '@/src/utils/navigation';
 import { confirm } from '@/src/utils/alerts';
-import { finishRecoveredWorkplaceSetup } from '@/src/services/setup/recoveryCompletion';
-import { readSetupDraftSnapshot } from '@/src/services/setup/launchProjection';
 import { KeyOperationError, keyOperationErrorCode } from '@/src/utils/keyOperationError';
 import { logger } from '@/src/utils/logger';
 import { encryptionRecoveryErrorMessage } from '../helpers/encryptionRecoveryErrors';
@@ -148,6 +145,7 @@ export function useEncryptionRecovery(workplaceId?: string) {
         // With no work, this is an explicit inspection retry with the same busy/error handling.
         if (canResume()) await refresh();
       } catch (error) {
+        clearSecrets();
         reportError(error);
       } finally {
         lifetime.current.active = null;
@@ -155,7 +153,7 @@ export function useEncryptionRecovery(workplaceId?: string) {
         dispatch({ type: 'finish' });
       }
     },
-    [refresh, isAppCurrentlyLocked, reportError, assertForeground, canResume],
+    [refresh, isAppCurrentlyLocked, reportError, assertForeground, canResume, clearSecrets],
   );
   const begin = () =>
     run(async signal => {
@@ -183,6 +181,7 @@ export function useEncryptionRecovery(workplaceId?: string) {
     run(async () => {
       const value = await recoveryFiles.pickSecret();
       if (value === null) return;
+      await awaitForeground();
       if (state?.keys?.user === 'ready' && workplaceId)
         await encryptionSetup.confirmWorkplace(workplaceId, value);
       else await encryptionSetup.confirmUser(value);
@@ -192,15 +191,23 @@ export function useEncryptionRecovery(workplaceId?: string) {
     run(async () => {
       if (!workplaceId) throw new Error('Select a Workplace first');
       const value = await encryptionSetup.preparePackage(workplaceId);
-      await recoveryFiles.exportPackage(value);
+      const saved = await recoveryFiles.exportPackage(value);
       if (lifetime.current.focused)
         setMessage(
-          'Open the encrypted package you saved to verify it. Keep recovery secrets separately.',
+          saved
+            ? 'Open the encrypted package you saved to verify it. Keep recovery secrets separately.'
+            : 'Save was cancelled. Your encrypted package is ready to export again.',
         );
     });
   const reexportPackage = () =>
     run(async () => {
-      await recoveryFiles.exportPackage(await encryptionSetup.savedPackage());
+      const saved = await recoveryFiles.exportPackage(await encryptionSetup.savedPackage());
+      if (lifetime.current.focused)
+        setMessage(
+          saved
+            ? 'Open the encrypted package you saved to verify it.'
+            : 'Save was cancelled. Your encrypted package is ready to export again.',
+        );
     });
   const abandonPackage = () =>
     confirm.show({
@@ -219,7 +226,10 @@ export function useEncryptionRecovery(workplaceId?: string) {
   const verifyPackage = () =>
     run(async () => {
       const value = await recoveryFiles.pickPackage();
-      if (value !== null) await encryptionSetup.confirmPackage(value);
+      if (value !== null) {
+        await awaitForeground();
+        await encryptionSetup.confirmPackage(value);
+      }
     });
   const discard = () =>
     confirm.show({
@@ -235,16 +245,39 @@ export function useEncryptionRecovery(workplaceId?: string) {
         });
       },
     });
+  const awaitForeground = async () => {
+    if (canResume()) {
+      assertForeground();
+      return;
+    }
+    await new Promise<void>((resolve, reject) => {
+      const finish = (error?: KeyOperationError) => {
+        clearTimeout(timer);
+        subscription.remove();
+        unsubscribe();
+        if (error) reject(error);
+        else resolve();
+      };
+      const subscription = AppState.addEventListener('change', value => {
+        if (value === 'active') finish();
+      });
+      const unsubscribe = subscribeKeyAccessPolicy(allowed => {
+        if (!allowed) finish(new KeyOperationError('FFB_KEY_LOCKED'));
+      });
+      const timer = setTimeout(() => finish(new KeyOperationError('FFB_KEY_CANCELLED')), 10000);
+    });
+    assertForeground();
+  };
   const pickSecret = () =>
     run(async () => {
       if (!lifetime.current.package) throw new Error('Choose the encrypted package first');
       const value = await recoveryFiles.pickSecret();
       if (value !== null && lifetime.current.focused) {
-        // Pickers can legitimately background the app; validate the state on their return.
-        assertForeground();
+        // Activity result delivery can precede the foreground event.
+        await awaitForeground();
         lifetime.current.secret = value;
         projectInputs();
-      }
+      } else if (value !== null) await recoveryFiles.cleanupTemporarySecrets();
     });
   const pickPackage = () =>
     run(async () => {
@@ -281,23 +314,15 @@ export function useEncryptionRecovery(workplaceId?: string) {
       const secret = lifetime.current.secret,
         pack = lifetime.current.package;
       if (!secret || !pack) throw new Error('Choose both recovery files');
-      const setupDraft = readSetupDraftSnapshot();
       const publication = await encryptionSetup.recover(pack, secret, signal);
-      if (!canResume(signal)) return;
+      // Completion of committed publication is independent of screen cancellation.
+      await encryptionSetup.finishRecoveryCompletion();
       clearSecrets();
       lifetime.current.package = null;
       projectInputs();
-      if (publication.kind === 'restored')
-        preferences.workplace.replace(publication.workplaceId, publication.bookPreferences);
-      if (workplace) await workplace.setWorkplaceId(publication.workplaceId);
-      else
-        preferences.device.update({
-          activeWorkplaceId: publication.workplaceId,
-          deviceRegistered: true,
-        });
       if (!canResume(signal)) return;
-      finishRecoveredWorkplaceSetup(setupDraft);
-      AppNavigation.toDashboard();
+      if (workplace) await workplace.setWorkplaceId(publication.workplaceId);
+      if (canResume(signal)) AppNavigation.toDashboard();
     });
   return {
     state,

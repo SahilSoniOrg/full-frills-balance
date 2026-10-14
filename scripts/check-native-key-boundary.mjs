@@ -18,6 +18,12 @@ function walk(directory) {
       )
         violations.push(`${relative}: production import of native crypto test support`);
       if (
+        !relative.startsWith('src/testing/') &&
+        relative !== 'src/services/backup/nativeKeyOperations.native.ts' &&
+        /nativeKeyOperations\.(?:importCredential|writeCredential)\(/.test(source)
+      )
+        violations.push(`${relative}: fixture credential-file API in production flow`);
+      if (
         relative.startsWith('src/services/backup/') &&
         /withWorkplaceKey|openRecoveryEnvelope|openKeyEnvelope|generateEncryptionPair|generateUserSigningPair|\.vault\.load\(/.test(
           source,

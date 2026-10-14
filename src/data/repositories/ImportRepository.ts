@@ -268,11 +268,13 @@ export class ImportRepository {
         [
           created,
           ...this.prepareOperations(workplace.id, data),
-          ...prepareImportedEntityAuditRecords(workplace.id, data, {
-            correlationId: importCorrelationId,
-            importPluginId: data.importMetadata?.pluginId,
-            sourceFormatVersion: data.sourceFormatVersion,
-          }),
+          ...(admit
+            ? []
+            : prepareImportedEntityAuditRecords(workplace.id, data, {
+                correlationId: importCorrelationId,
+                importPluginId: data.importMetadata?.pluginId,
+                sourceFormatVersion: data.sourceFormatVersion,
+              })),
           auditRepository.prepareLog(
             {
               entityType: 'workplace',

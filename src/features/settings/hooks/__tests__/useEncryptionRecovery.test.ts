@@ -1,3 +1,4 @@
+import { completeRecoveredWorkplaceSetup } from '@/src/services/setup/recoveryCompletion';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { AppState } from 'react-native';
 import { useEncryptionRecovery } from '../useEncryptionRecovery';
@@ -61,6 +62,9 @@ jest.mock('@/src/services/backup/encryptionSetup', () => ({
       packageSaved: false,
     })),
     recover: jest.fn(),
+    finishRecoveryCompletion: jest.fn(),
+    preparePackage: jest.fn(),
+    savedPackage: jest.fn(),
     beginUser: jest.fn(),
   },
 }));
@@ -69,6 +73,7 @@ jest.mock('@/src/services/backup/recoveryFiles', () => ({
     cleanupTemporarySecrets: jest.fn(async () => undefined),
     pickPackage: jest.fn(),
     pickSecret: jest.fn(),
+    exportPackage: jest.fn(),
   },
 }));
 jest.mock('@/src/services/preferences', () => ({
@@ -77,18 +82,36 @@ jest.mock('@/src/services/preferences', () => ({
 jest.mock('@/src/utils/navigation', () => ({ AppNavigation: { toDashboard: jest.fn() } }));
 jest.mock('@/src/utils/alerts', () => ({ confirm: { show: jest.fn() } }));
 
+let mockRecoveryDraft: string | undefined;
+let mockCompletionSequence = 0;
 let stateChanged: (value: 'active' | 'background') => void;
+const mockStateListeners = new Set<(value: 'active' | 'background') => void>();
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.mocked(encryptionSetup.finishRecoveryCompletion).mockImplementation(async () => {
+    const invocation = jest.mocked(encryptionSetup.recover).mock.results.at(-1);
+    if (invocation?.type === 'return')
+      completeRecoveredWorkplaceSetup(
+        await invocation.value,
+        mockRecoveryDraft,
+        (++mockCompletionSequence).toString(16).padStart(32, '0'),
+      );
+  });
   clearSetupDraft();
   AppState.currentState = 'active';
   setKeyAccessAllowed(true);
+  mockStateListeners.clear();
+  stateChanged = value => {
+    AppState.currentState = value;
+    for (const listener of [...mockStateListeners]) listener(value);
+  };
   jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, callback) => {
-    stateChanged = value => {
-      AppState.currentState = value;
-      callback(value);
+    mockStateListeners.add(callback);
+    return {
+      remove: () => {
+        mockStateListeners.delete(callback);
+      },
     };
-    return { remove: jest.fn() };
   });
   jest.mocked(recoveryFiles.pickPackage).mockImplementation(async () => {
     stateChanged('background');
@@ -208,7 +231,7 @@ it('rejects a picked secret if the app locks before the picker returns', async (
   unmount();
 });
 
-it('does not activate recovered books if a completed native call returns after cancellation', async () => {
+it('finishes durable activation but does not navigate after committed recovery returns cancelled', async () => {
   saveSetupDraft(emptyDeviceDraft('pending'));
   const draft = readSetupDraftSnapshot();
   const { result, unmount } = await selectedFiles();
@@ -220,9 +243,9 @@ it('does not activate recovered books if a completed native call returns after c
   await act(async () => {
     await result.current.recover();
   });
-  expect(preferences.device.update).not.toHaveBeenCalled();
+  expect(preferences.device.update).toHaveBeenCalled();
   expect(AppNavigation.toDashboard).not.toHaveBeenCalled();
-  expect(readSetupDraftSnapshot()).toBe(draft);
+  expect(readSetupDraftSnapshot()).not.toBe(draft);
   unmount();
 });
 
@@ -290,6 +313,7 @@ it('does not discard another setup journey changed while recovery was in flight'
 });
 
 async function selectedFiles() {
+  mockRecoveryDraft = readSetupDraftSnapshot();
   const hook = renderHook(() => useEncryptionRecovery());
   await waitFor(() => expect(hook.result.current.state).not.toBeNull());
   await act(async () => {
@@ -339,3 +363,48 @@ it.each(['background', 'lock'] as const)(
     unmount();
   },
 );
+
+it('waits for the active event when the native picker result arrives first', async () => {
+  const { result, unmount } = await selectedFiles();
+  jest.mocked(recoveryFiles.pickSecret).mockImplementationOnce(async () => {
+    stateChanged('background');
+    return { handle: 'native-selected' };
+  });
+  await act(async () => {
+    const selecting = result.current.pickSecret();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    stateChanged('active');
+    await selecting;
+  });
+  expect(result.current.hasImportedSecret).toBe(true);
+  unmount();
+});
+it('reports a cancelled package save without claiming that a file was saved', async () => {
+  const { result, unmount } = renderHook(() => useEncryptionRecovery('books'));
+  await waitFor(() => expect(result.current.state).not.toBeNull());
+  jest
+    .mocked(encryptionSetup.preparePackage)
+    .mockResolvedValueOnce({} as Awaited<ReturnType<typeof encryptionSetup.preparePackage>>);
+  jest.mocked(recoveryFiles.exportPackage).mockResolvedValueOnce(false);
+  await act(async () => {
+    await result.current.exportPackage();
+  });
+  expect(result.current.message).toContain('Save was cancelled');
+  unmount();
+});
+
+it('does not reapply a completed recovery after its asynchronous acknowledgement is retried', () => {
+  const publication = {
+    kind: 'restored' as const,
+    workplaceId: asWorkplaceId('completion-once'),
+    bookPreferences: { safeToSpendDays: 90 },
+  };
+  const id = 'ab'.repeat(16);
+  completeRecoveredWorkplaceSetup(publication, undefined, id);
+  expect(preferences.workplace.replace).toHaveBeenCalledTimes(1);
+  jest.mocked(preferences.workplace.replace).mockClear();
+  jest.mocked(preferences.device.update).mockClear();
+  completeRecoveredWorkplaceSetup(publication, undefined, id);
+  expect(preferences.workplace.replace).not.toHaveBeenCalled();
+  expect(preferences.device.update).not.toHaveBeenCalled();
+});

@@ -5,7 +5,11 @@ import {
   seedSnapshotWorkplace,
 } from '@/src/services/backup/__tests__/snapshotTestHelpers';
 import { LocalKeyHierarchy } from '@/src/services/backup/localKeyHierarchy';
-import { type LocalUserKeys } from '@/src/services/backup/keyHierarchyRecords';
+import {
+  identityScope,
+  userScope,
+  type LocalUserKeys,
+} from '@/src/services/backup/keyHierarchyRecords';
 import {
   encryptWorkplaceSnapshot,
   sealKeyEnvelope,
@@ -21,8 +25,6 @@ import { join } from 'node:path';
 import { MissingKeyStateError } from '@/src/utils/keyOperationError';
 import { createWorkplaceDump, decryptWorkplaceDump } from '@/src/services/backup/workplaceDump';
 import { assertKeyAccessAllowed, setKeyAccessAllowed } from '@/src/services/backup/keyAccessPolicy';
-import { userScope } from '@/src/services/backup/keyHierarchyRecords';
-
 jest.mock('react-native-quick-crypto', () => ({
   __esModule: true,
   default: {
@@ -338,6 +340,31 @@ it('retains interrupted enrollment for explicit reconciliation instead of silent
   await context.hierarchy.logout('alice', 'phone');
   expect(context.deviceTags.size).toBe(0);
 });
+it('never deletes a Device key unless its pending enrollment marker proves the step is unfinished', async () => {
+  const context = memoryKeyHierarchy();
+  await context.hierarchy.beginUser('alice', 'phone');
+  context.ciphertext.delete(identityScope('alice'));
+  await expect(context.hierarchy.discardUnconfirmedUser('alice', 'phone')).rejects.toThrow(
+    'enrollment marker',
+  );
+  context.ciphertext.delete(userScope('alice', 'phone'));
+  await context.hierarchy.discardUnconfirmedUser('alice', 'phone');
+  expect(context.deviceTags.size).toBe(1);
+});
+it('keeps an interrupted discard retryable by removing the enrollment marker last', async () => {
+  const context = memoryKeyHierarchy();
+  await context.hierarchy.beginUser('alice', 'phone');
+  jest.mocked(context.state.remove).mockRejectedValueOnce(new Error('disk full'));
+  await expect(context.hierarchy.discardUnconfirmedUser('alice', 'phone')).rejects.toThrow(
+    'disk full',
+  );
+  expect(context.deviceTags.size).toBe(0);
+  expect(context.ciphertext.has(identityScope('alice'))).toBe(true);
+  await context.hierarchy.discardUnconfirmedUser('alice', 'phone');
+  expect(context.ciphertext.size).toBe(0);
+  const credential = await context.hierarchy.beginUser('alice', 'phone');
+  await context.hierarchy.confirmUserRecovery('alice', 'phone', credential);
+});
 it('requires explicit discard when an unconfirmed Workplace secret was lost, and never discards an established key', async () => {
   const context = memoryKeyHierarchy();
   const userCredential = await context.hierarchy.beginUser('alice', 'phone');
@@ -494,3 +521,76 @@ it('routes a missing local ciphertext file to recovery even when its locator sur
   expect(recovered.userKeyFingerprint).toBe(source.identity.userKeyFingerprint);
   expect((await source.hierarchy.describeSetup('alice', 'fresh')).user).toBe('ready');
 });
+
+it.each([false, true])(
+  'never reclaims budget from an old package when the identity marker survives: %s',
+  async markerSurvives => {
+    const { snapshot, workplaceId } = await seedSnapshotWorkplace();
+    const c = await enrolledKeyHierarchy(workplaceId);
+    const old = await c.hierarchy.exportWorkplaceKeys(c.identity, workplaceId);
+    await c.hierarchy.encryptSnapshot(c.identity, workplaceId, snapshot);
+    c.ciphertext.delete(JSON.stringify(['workplace', 'alice', workplaceId]));
+    if (!markerSurvives) {
+      for (const scope of c.ciphertext.keys())
+        if (scope.includes(workplaceId)) c.ciphertext.delete(scope);
+    }
+    await c.hierarchy.installWorkplaceKeys(c.identity, old);
+    expect(
+      (await c.hierarchy.exportWorkplaceKeys(c.identity, workplaceId)).encryptionInvocations,
+    ).toBe(2 ** 20);
+    await expect(
+      c.hierarchy.encryptSnapshot(c.identity, workplaceId, snapshot),
+    ).rejects.toMatchObject({ code: 'FFB_KEY_BUDGET_EXHAUSTED' });
+  },
+);
+
+it('finishes the User record and identity marker before reporting an intervening lock', async () => {
+  const source = await enrolledKeyHierarchy();
+  const saved = await source.hierarchy.exportUserRecoveryPackage('alice', 'phone');
+  let allowed = true;
+  const target = memoryKeyHierarchy(() => {
+    if (!allowed) throw new Error('locked');
+  });
+  const write = jest.mocked(target.state.write).getMockImplementation()!;
+  jest.mocked(target.state.write).mockImplementation(async (scope, value) => {
+    await write(scope, value);
+    allowed = false;
+  });
+  await expect(
+    target.hierarchy.recoverUserDevice(source.userCredential, saved, 'replacement'),
+  ).rejects.toThrow('locked');
+  expect(target.ciphertext.get(userScope('alice', 'replacement'))).toMatchObject({
+    recoveryConfirmed: true,
+  });
+  expect(target.ciphertext.get(JSON.stringify(['identity', 'alice']))).toMatchObject({
+    recoveryConfirmed: true,
+  });
+  allowed = true;
+  expect(await target.hierarchy.describeSetup('alice', 'replacement')).toMatchObject({
+    user: 'ready',
+  });
+  expect(target.deviceTags.size).toBe(1);
+});
+
+it('does not let key-reference cleanup failure replace a successful decryption', async () => {
+  const { snapshot, workplaceId } = await seedSnapshotWorkplace();
+  const c = await enrolledKeyHierarchy(workplaceId);
+  const encrypted = await c.hierarchy.encryptSnapshot(c.identity, workplaceId, snapshot);
+  jest.spyOn(c.crypto, 'releaseKey').mockRejectedValue(new Error('cleanup unavailable'));
+  await expect(c.hierarchy.decryptSnapshot(c.identity, workplaceId, encrypted)).resolves.toEqual(
+    snapshot,
+  );
+});
+
+it.each(['FFB_KEY_RECOVERY_REQUIRED', 'FFB_KEY_VAULT_UNAVAILABLE'] as const)(
+  'distinguishes permanent and temporary native vault failure: %s',
+  async code => {
+    const c = await enrolledKeyHierarchy();
+    jest.spyOn(c.crypto, 'hasKey').mockRejectedValueOnce(new Error(`native: ${code}`));
+    if (code === 'FFB_KEY_RECOVERY_REQUIRED')
+      await expect(c.hierarchy.describeSetup('alice', 'phone')).resolves.toMatchObject({
+        user: 'recovery-required',
+      });
+    else await expect(c.hierarchy.describeSetup('alice', 'phone')).rejects.toThrow(code);
+  },
+);

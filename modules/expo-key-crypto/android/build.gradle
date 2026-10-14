@@ -7,6 +7,7 @@ version = '1.0.0'
 android {
   namespace 'expo.modules.keycrypto'
   defaultConfig {
+    buildConfigField "boolean", "RECOVERY_PROOF", (System.getenv("EXPO_PUBLIC_E2E") == "1").toString()
     versionCode 1
     versionName "1.0.0"
     testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
@@ -15,7 +16,7 @@ android {
     }
   }
   externalNativeBuild { cmake { path 'CMakeLists.txt' } }
-  buildFeatures { prefab true }
+  buildFeatures { prefab true; buildConfig true }
 }
 dependencies {
   implementation project(':expo-modules-core')

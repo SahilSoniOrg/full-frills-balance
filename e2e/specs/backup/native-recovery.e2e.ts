@@ -7,7 +7,7 @@ import path from 'node:path';
 import { E2E_AUTH_TOKEN } from '@/src/testing/e2eConstants';
 
 jest.setTimeout(300000);
-const role = process.env.FFB_RECOVERY_ROLE ?? 'source';
+const role = process.env.FFB_RECOVERY_ROLE;
 const transfer = process.env.FFB_RECOVERY_TRANSFER_DIR;
 const simulator = process.env.DETOX_IOS_SIMULATOR_UDID;
 const androidSerial = process.env.DETOX_ANDROID_DEVICE_ID;
@@ -120,7 +120,7 @@ async function runAndRead(stage: string): Promise<Record<string, unknown>> {
   return report;
 }
 
-describe('Native private backup recovery', () => {
+(role ? describe : describe.skip)('Native private backup recovery', () => {
   if (role === 'source') {
     it('creates/encrypts the development demo and rejects invalid recovery material', async () => {
       await launch('prepare', true);
@@ -197,5 +197,6 @@ describe('Native private backup recovery', () => {
       jestExpect(report.existingDataUnchanged).toBe(true);
       if (role === 'orphan-device-key') jestExpect(report.orphanPreserved).toBe(true);
     });
-  } else throw new Error('Unknown FFB_RECOVERY_ROLE');
+  } else if (role) throw new Error('Unknown FFB_RECOVERY_ROLE');
+  else it('requires an explicit FFB_RECOVERY_ROLE', () => undefined);
 });

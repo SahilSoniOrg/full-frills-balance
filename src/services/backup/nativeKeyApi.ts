@@ -187,6 +187,9 @@ export interface NativeKeyOperations {
   removeKey(scope: DeviceKeyScope): Promise<void>;
   releaseKey(key: NativeKeyReference): Promise<void>;
   recovery(operation: RecoveryOperation, request: unknown): Promise<unknown>;
+  pickCredential(): Promise<unknown | null>;
+  exportCredential(handle: unknown): Promise<boolean>;
+  /** Fixture I/O is registered only in explicitly compiled E2E builds. */
   importCredential(uri: string): Promise<unknown>;
   writeCredential(handle: unknown, uri: string): Promise<void>;
   retainCredential(handle: unknown): Promise<void>;

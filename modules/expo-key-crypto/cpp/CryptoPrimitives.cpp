@@ -13,6 +13,8 @@ const char *safeErrorCode(std::exception_ptr error) noexcept {
     switch (failure.code) {
     case ErrorCode::Locked:
       return "FFB_KEY_LOCKED";
+    case ErrorCode::VaultUnavailable:
+      return "FFB_KEY_VAULT_UNAVAILABLE";
     case ErrorCode::RecoveryRequired:
       return "FFB_KEY_RECOVERY_REQUIRED";
     case ErrorCode::InvalidFile:
@@ -111,8 +113,6 @@ Bytes unhex(std::string_view input, size_t count) {
       return c - '0';
     if (c >= 'a' && c <= 'f')
       return c - 'a' + 10;
-    if (c >= 'A' && c <= 'F')
-      return c - 'A' + 10;
     throw OperationError(ErrorCode::InvalidFile, "Invalid native key encoding");
   };
   Bytes result(count);

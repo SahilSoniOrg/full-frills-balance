@@ -23,8 +23,10 @@ NSData *read(const std::string &name, NSString *service) {
   OSStatus result = SecItemCopyMatching((__bridge CFDictionaryRef)q, &item);
   if (result == errSecItemNotFound)
     return nil;
+  if (result == errSecInteractionNotAllowed || result == errSecNotAvailable)
+    throw OperationError(ErrorCode::VaultUnavailable, "Native Device vault is temporarily unavailable");
   if (result != errSecSuccess)
-    throw OperationError(ErrorCode::RecoveryRequired, "Native Device vault is unavailable");
+    throw OperationError(ErrorCode::OperationFailed, "Native Device vault lookup failed");
   return CFBridgingRelease(item);
 }
 void store(const std::string &name, const Bytes &key) {
@@ -143,6 +145,14 @@ void fail(NSError **error) {
     fail(error);
     return nil;
   }
+}
++ (NSMutableData *)credentialData:(NSString *)handle error:(NSError **)error {
+  try {
+    auto value = engine().credentialFile(parse(handle));
+    NSMutableData *data = [NSMutableData dataWithBytes:value.data() length:value.size()];
+    wipe(value);
+    return data;
+  } catch (...) { fail(error); return nil; }
 }
 + (BOOL)writeCredential:(NSString *)handle
                     uri:(NSString *)uri

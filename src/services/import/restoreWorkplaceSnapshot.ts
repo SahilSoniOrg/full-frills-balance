@@ -4,9 +4,9 @@ import { asWorkplaceId } from '@/src/types/ids';
 import {
   decodeWorkplaceSnapshot,
   serializeWorkplaceSnapshot,
+  workplaceSnapshotFingerprint,
   type WorkplaceSnapshot,
 } from '@/src/services/backup/workplaceSnapshot';
-import { snapshotFingerprint } from '@/src/services/backup/encryptedSnapshot';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 
@@ -24,7 +24,7 @@ export async function restoreWorkplaceSnapshot(
   assertKeyOperationActive(signal);
   const serialized = serializeWorkplaceSnapshot(source);
   const snapshot = decodeWorkplaceSnapshot(serialized);
-  const fingerprint = await snapshotFingerprint(serialized);
+  const fingerprint = await workplaceSnapshotFingerprint(snapshot);
   const workplaceId = asWorkplaceId(snapshot.workplace.id);
   for (const [code, precision] of Object.entries(snapshot.currencyPrecisions)) {
     if ((await currencyReadService.getPrecision(code)) !== precision) {

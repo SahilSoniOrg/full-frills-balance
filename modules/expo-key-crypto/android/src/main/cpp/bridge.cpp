@@ -76,12 +76,14 @@ public:
     env_->DeleteLocalRef(array);
     return value;
   }
-  void save(const std::string &name, const Bytes &value) override {
+  void save(const std::string &name, const Bytes &value) override { persist(name, value, "save"); }
+  void saveRecovered(const std::string &name, const Bytes &value) override { persist(name, value, "saveRecovered"); }
+  void persist(const std::string &name, const Bytes &value, const char *methodName) {
     auto key = env_->NewStringUTF(name.c_str());
     auto array = env_->NewByteArray(value.size());
     env_->SetByteArrayRegion(array, 0, value.size(),
                              reinterpret_cast<const jbyte *>(value.data()));
-    auto method = env_->GetMethodID(cls_, "save", "(Ljava/lang/String;[B)V");
+    auto method = env_->GetMethodID(cls_, methodName, "(Ljava/lang/String;[B)V");
     env_->CallVoidMethod(object_, method, key, array);
     // JNI array writes are forbidden while a Java exception is pending.
     // Clear it only long enough to erase the secret transport buffer, then
