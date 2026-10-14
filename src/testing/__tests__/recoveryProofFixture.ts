@@ -46,7 +46,7 @@ export function recoveryProofFixture(): ProofBundle {
   };
   const snapshot: ProofBundle['envelope'] = {
     format: 'full-frills-encrypted-snapshot',
-    formatVersion: 2,
+    formatVersion: 1,
     algorithm: 'AES-256-GCM',
     workplaceId: 'demo_workspace',
     snapshotId: '33'.repeat(16),

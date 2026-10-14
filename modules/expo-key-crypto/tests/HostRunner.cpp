@@ -72,16 +72,6 @@ int main() {
         result = Json::parse(value.begin(), value.end());
         wipe(value);
         engine().releaseCredential(input);
-      } else if (operation == "test.provisionDevice") {
-        auto name = input.at("name").get<std::string>();
-        auto encoded = input.at("key").get<std::string>();
-        Bytes key(32);
-        for (size_t i = 0; i < 32; i++)
-          key[i] = static_cast<unsigned char>(
-              std::stoul(encoded.substr(2 * i, 2), nullptr, 16));
-        vault.save(name, key);
-        wipe(key);
-        result = nullptr;
       } else
         result = engine().execute(operation, input, vault);
       std::cout << Json{{"result", result}, {"devices", vault.metadata()}}.dump() << std::endl;

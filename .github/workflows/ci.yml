@@ -65,5 +65,5 @@ jobs:
         run: bun install --frozen-lockfile --ignore-scripts
       - name: Install native test provider
         run: brew install openssl@3
-      - name: Test real native crypto, golden V1 files and recovery coordinator
+      - name: Test real native crypto and recovery coordinator
         run: bun run test:native-key-crypto

@@ -338,12 +338,9 @@ export class EncryptionSetup {
         );
         identity = existing.identity;
       } else {
-        identity = await this.hierarchy.recoverUserFromSource(
+        identity = await this.hierarchy.recoverUserDevice(
           credential,
-          {
-            loadUserRecoveryPackage: async userId =>
-              userId === credential.identityId ? saved.userRecoveryPackage : null,
-          },
+          saved.userRecoveryPackage,
           session.deviceId,
         );
       }

@@ -140,7 +140,7 @@ describe('Native private backup recovery', () => {
     it('creates/encrypts the development demo and rejects invalid recovery material', async () => {
       await launch('prepare', true);
       const report = await runAndRead('prepare');
-      jestExpect(report.secureStoreVerified).toBe(true);
+      jestExpect(report.deviceVaultVerified).toBe(true);
       jestExpect(report.userSigningPairVerified).toBe(true);
       jestExpect(report.tamperRejected).toBe(true);
       jestExpect(report.wrongCodeRejected).toBe(true);
@@ -182,7 +182,7 @@ describe('Native private backup recovery', () => {
       await launch('large', true);
       const report = await runAndRead('large');
       jestExpect(Number(report.journals)).toBeGreaterThan(5000);
-      jestExpect(report.secureStoreVerified).toBe(true);
+      jestExpect(report.deviceVaultVerified).toBe(true);
       jestExpect(report.userSigningPairVerified).toBe(true);
       jestExpect(Number(report.plaintextBytes)).toBeGreaterThan(1_000_000);
       exportBundle();

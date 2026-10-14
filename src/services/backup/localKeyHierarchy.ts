@@ -21,7 +21,6 @@ import {
   serializeWorkplaceSnapshot,
   type WorkplaceSnapshot,
 } from './workplaceSnapshot';
-import type { RecoveryArtifactSource } from './recoveryArtifactSource';
 import {
   parseExportedUserRecoveryPackage,
   parseLocalUser,
@@ -68,11 +67,6 @@ export interface KeyHierarchy {
     userId: string,
     deviceId: string,
   ): Promise<'ready' | 'setup-incomplete' | 'recovery-required'>;
-  recoverUserFromSource(
-    credential: RecoveryCredential,
-    source: RecoveryArtifactSource,
-    deviceId: string,
-  ): Promise<KeyAccessIdentity>;
   recoverUserDevice(
     credential: RecoveryCredential,
     value: unknown,
@@ -376,18 +370,6 @@ export class LocalKeyHierarchy implements KeyHierarchy {
           return 'recovery-required';
       }
     });
-  }
-  async recoverUserFromSource(
-    credential: RecoveryCredential,
-    source: RecoveryArtifactSource,
-    deviceId: string,
-  ): Promise<KeyAccessIdentity> {
-    this.assertAccess();
-    const saved = await source.loadUserRecoveryPackage(credential.identityId);
-    this.assertAccess();
-    if (saved === null)
-      throw new Error('User recovery ciphertext is unavailable; retain identity and retry');
-    return this.recoverUserDevice(credential, saved, deviceId);
   }
   recoverUserDevice(
     credential: RecoveryCredential,

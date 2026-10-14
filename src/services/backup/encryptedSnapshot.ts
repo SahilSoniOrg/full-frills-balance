@@ -4,7 +4,7 @@ import { keyHex, keyBytes } from './keyEncoding';
 /** Payload only. Member and recovery DEK envelopes belong to the key manifest. */
 export interface EncryptedSnapshot {
   readonly format: 'full-frills-encrypted-snapshot';
-  readonly formatVersion: 2;
+  readonly formatVersion: 1;
   readonly algorithm: 'AES-256-GCM';
   readonly workplaceId: string;
   readonly snapshotId: string;
@@ -38,7 +38,7 @@ export function parseEncryptedSnapshotEnvelope(value: unknown): EncryptedSnapsho
   assertAllowedKeys(envelope, keys, 'Invalid encrypted snapshot envelope');
   if (
     envelope.format !== 'full-frills-encrypted-snapshot' ||
-    envelope.formatVersion !== 2 ||
+    envelope.formatVersion !== 1 ||
     envelope.algorithm !== 'AES-256-GCM' ||
     typeof envelope.workplaceId !== 'string' ||
     !/^[a-zA-Z0-9_.-]{1,128}$/.test(envelope.workplaceId) ||

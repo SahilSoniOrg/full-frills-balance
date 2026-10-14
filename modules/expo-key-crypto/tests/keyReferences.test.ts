@@ -2,8 +2,11 @@ import { closeNativeHost, enrolledKeyHierarchy, memoryKeyHierarchy } from './nat
 import { parseNativeKeyReference } from '@/src/services/backup/nativeKeyApi';
 import { parseEncryptedSnapshotEnvelope } from '@/src/services/backup/encryptedSnapshot';
 import { parseLocalUser, userScope } from '@/src/services/backup/keyHierarchyRecords';
-import { legacy } from './legacyFixture';
-import { enableTestCrypto } from '@/src/services/backup/__tests__/snapshotTestHelpers';
+import {
+  enableTestCrypto,
+  seedSnapshotWorkplace,
+} from '@/src/services/backup/__tests__/snapshotTestHelpers';
+import { resetDatabase } from '@/src/testing/resetDatabase';
 jest.mock('react-native-quick-crypto', () => ({
   __esModule: true,
   default: {
@@ -11,18 +14,22 @@ jest.mock('react-native-quick-crypto', () => ({
     Buffer: jest.requireActual('node:buffer').Buffer,
   },
 }));
-beforeEach(enableTestCrypto);
+beforeEach(async () => {
+  enableTestCrypto();
+  await resetDatabase();
+});
 
 afterEach(closeNativeHost);
 async function references() {
-  const s = await enrolledKeyHierarchy(legacy.keys.workplaceId);
+  const { snapshot, workplaceId } = await seedSnapshotWorkplace();
+  const s = await enrolledKeyHierarchy(workplaceId);
   const user = await s.crypto.openKey({
     kind: 'user',
     user: parseLocalUser(await s.state.read(userScope('alice', 'phone'))),
   });
   const keys = await s.hierarchy.exportWorkplaceKeys(s.identity, s.workplaceId);
   const workplace = await s.crypto.openKey({ kind: 'workplace', user, keys });
-  return { ...s, user, keys, workplace };
+  return { ...s, user, keys, workplace, snapshot };
 }
 it('generates independent Device and User keys without exposing private bytes or caching unwrapped keys', async () => {
   const s = memoryKeyHierarchy();
@@ -61,15 +68,16 @@ it('opens key envelopes as references and decrypts only application data', async
     'keyId',
     'kind',
   ]);
-  const snapshot = await s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, legacy.snapshot);
-  expect(JSON.parse(String(await s.crypto.decrypt(s.workplace, snapshot)))).toEqual(
-    legacy.snapshot,
-  );
+  const snapshot = await s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, s.snapshot);
+  expect(JSON.parse(String(await s.crypto.decrypt(s.workplace, snapshot)))).toEqual(s.snapshot);
   const reordered = Object.fromEntries(Object.entries(s.workplace).reverse());
   expect(JSON.parse(String(await s.host.execute('decrypt', { key: reordered, snapshot })))).toEqual(
-    legacy.snapshot,
+    s.snapshot,
   );
   await expect(s.crypto.decrypt(s.user, snapshot)).rejects.toThrow();
+  await expect(
+    s.host.execute('decrypt', { key: s.workplace, snapshot: { ...snapshot, formatVersion: 2 } }),
+  ).rejects.toThrow();
   await expect(
     s.host.execute('decrypt', { key: s.user, snapshot: s.keys.memberEnvelope }),
   ).rejects.toThrow();
@@ -146,7 +154,7 @@ it('streams snapshot headers while rejecting duplicate, mistyped and malformed h
 });
 it('rejects forged handles, metadata substitutions, wrong vaults and invalidated Device roots', async () => {
   const s = await references();
-  const snapshot = await s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, legacy.snapshot);
+  const snapshot = await s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, s.snapshot);
   for (const altered of [
     { ...s.workplace, handle: '00'.repeat(32) },
     { ...s.workplace, keyId: `sha256:${'00'.repeat(32)}` },
@@ -160,7 +168,7 @@ it('rejects forged handles, metadata substitutions, wrong vaults and invalidated
 });
 it('release and app-lock transitions invalidate references without retaining plaintext keys', async () => {
   const s = await references();
-  const snapshot = await s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, legacy.snapshot);
+  const snapshot = await s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, s.snapshot);
   await s.crypto.releaseKey(s.workplace);
   await s.crypto.releaseKey(s.workplace);
   await expect(s.crypto.decrypt(s.workplace, snapshot)).rejects.toThrow();
@@ -195,8 +203,8 @@ it('wraps the existing User bundle for a new Device while preserving its encrypt
   const digest = `sha256:${'01'.repeat(32)}`;
   expect(await target.crypto.sign(user, digest)).toBe(await s.crypto.sign(s.user, digest));
   const key = await target.crypto.openKey({ kind: 'workplace', user, keys: s.keys });
-  const snapshot = await s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, legacy.snapshot);
-  expect(JSON.parse(String(await target.crypto.decrypt(key, snapshot)))).toEqual(legacy.snapshot);
+  const snapshot = await s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, s.snapshot);
+  expect(JSON.parse(String(await target.crypto.decrypt(key, snapshot)))).toEqual(s.snapshot);
   await expect(
     s.crypto.wrapUserForDevice(s.user, { ...recipient, userId: 'bob' }),
   ).rejects.toThrow();
@@ -225,8 +233,8 @@ it('wraps the same DEK for another User without creating membership or changing 
     user,
     keys: { ...s.keys, ...wrapped },
   });
-  const snapshot = await s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, legacy.snapshot);
-  expect(JSON.parse(String(await target.crypto.decrypt(key, snapshot)))).toEqual(legacy.snapshot);
+  const snapshot = await s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, s.snapshot);
+  expect(JSON.parse(String(await target.crypto.decrypt(key, snapshot)))).toEqual(s.snapshot);
   const digest = `sha256:${'01'.repeat(32)}`;
   expect(await target.crypto.sign(user, digest)).not.toBe(await s.crypto.sign(s.user, digest));
   await expect(

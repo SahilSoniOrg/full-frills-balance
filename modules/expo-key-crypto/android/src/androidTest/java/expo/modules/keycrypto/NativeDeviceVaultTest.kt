@@ -78,10 +78,10 @@ class NativeDeviceVaultTest {
     vault.save(name, key)
     vault.save(other, key)
     val secure = context.getSharedPreferences("SecureStore", Context.MODE_PRIVATE)
-    secure.edit().putString(name, "unrelated prototype entry").commit()
+    secure.edit().putString(name, "unrelated SecureStore entry").commit()
     vault.remove(name)
     assertNull(vault.load(name))
     assertArrayEquals(key, vault.load(other))
-    assertEquals("unrelated prototype entry", secure.getString(name, null))
+    assertEquals("unrelated SecureStore entry", secure.getString(name, null))
   }
 }

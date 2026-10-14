@@ -1,7 +1,5 @@
-import { createHash } from 'node:crypto';
 import type { RecoveryCredential } from '@/src/services/backup/keyEnvelopes';
 import { decryptNativeDump } from './envelopeTestTools';
-import { legacy } from './legacyFixture';
 import { memoryKeyHierarchy, closeNativeHost } from './nativeTestContext';
 import { createWorkplaceDump } from '@/src/services/backup/workplaceDump';
 import {
@@ -76,23 +74,6 @@ it('creates, unwraps, encrypts, decrypts and signs in the real native core witho
   expect(s.userCredential.format).toBe('full-frills-recovery-handle');
   expect(s.forbidden).not.toHaveBeenCalled();
 });
-it('opens the frozen V1 User recovery and format-2 snapshot vectors with the original signing identity', async () => {
-  const { snapshot, user, keys, envelope } = legacy;
-  const workplaceId = keys.workplaceId;
-  const credential = (await host.execute('test.importCredential', {
-    credential: legacy.userCredential,
-  })) as RecoveryCredential;
-  const t = target();
-  const identity = await t.hierarchy.recoverUserDevice(credential, user, 'replacement');
-  expect(identity.userKeyFingerprint).toBe(legacy.user.userKeyFingerprint);
-  await expect(verifyLocalRecoveryPackage(legacy.signedPackage, identity)).resolves.toBeDefined();
-  await t.hierarchy.installWorkplaceKeys(identity, keys);
-  expect(await t.hierarchy.decryptSnapshot(identity, workplaceId, envelope)).toEqual(snapshot);
-  await expect(t.hierarchy.encryptSnapshot(identity, workplaceId, snapshot)).rejects.toThrow(
-    'writer handover',
-  );
-  expect(t.forbidden).not.toHaveBeenCalled();
-});
 it('an independent standards-based consumer decrypts a native-created emergency dump', async () => {
   const s = await source();
   const envelope = await s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, s.snapshot);
@@ -127,7 +108,7 @@ it('rejects a tampered signature, ciphertext, context and opaque recovery handle
     }),
   ).rejects.toThrow();
 });
-it('validates original recovery-file secrets natively and rejects altered checksums or metadata', async () => {
+it('validates native-exported recovery-file secrets and rejects altered checksums or metadata', async () => {
   const s = await source();
   const saved = (await host.execute('test.exportCredential', s.userCredential)) as {
     phrase: string;
@@ -168,22 +149,4 @@ it('the native operation dispatcher has no generic decrypt-envelope or raw-key e
         deviceId: s.identity.registeredDeviceId,
       }),
     ).rejects.toThrow();
-});
-
-it('opens frozen Device-addressed and User-addressed HPKE vectors in the actual native core', async () => {
-  const t = target();
-  const name = `device_private_key_v1_${createHash('sha256')
-    .update(JSON.stringify(['alice', 'phone']))
-    .digest('hex')}`;
-  await t.host.execute('test.provisionDevice', { name, key: legacy.devicePrivateKey });
-  await t.state.write(JSON.stringify(['user', 'alice', 'phone']), legacy.localUser);
-  await t.state.write(JSON.stringify(['workplace', 'alice', legacy.keys.workplaceId]), legacy.keys);
-  const identity = {
-    userId: 'alice',
-    registeredDeviceId: 'phone',
-    userKeyFingerprint: legacy.user.userKeyFingerprint,
-  };
-  expect(
-    await t.hierarchy.decryptSnapshot(identity, legacy.keys.workplaceId, legacy.envelope),
-  ).toEqual(legacy.snapshot);
 });

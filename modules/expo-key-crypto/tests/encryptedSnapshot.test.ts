@@ -21,6 +21,7 @@ it('encrypts without readable keys/recovery material and uses fresh nonces', asy
   const { snapshot, workplaceId } = await seedSnapshotWorkplace();
   const s = await enrolledKeyHierarchy(workplaceId);
   const envelope = await s.hierarchy.encryptSnapshot(s.identity, workplaceId, snapshot);
+  expect(envelope.formatVersion).toBe(1);
   expect(JSON.stringify(envelope)).not.toContain('Private books');
   expect(envelope).not.toHaveProperty('recovery');
   expect(envelope).not.toHaveProperty('keyGeneration');
@@ -53,13 +54,13 @@ it('rejects different key pins and tampering with every authenticated routing fi
     }),
   ).rejects.toThrow();
 });
-it('rejects legacy envelopes, unknown fields, malformed encodings and unsupported algorithms', async () => {
+it('rejects unsupported versions, unknown fields, malformed encodings and unsupported algorithms', async () => {
   const { snapshot, workplaceId } = await seedSnapshotWorkplace();
   const s = await enrolledKeyHierarchy(workplaceId);
   const envelope = await s.hierarchy.encryptSnapshot(s.identity, workplaceId, snapshot);
   for (const patch of [
     { algorithm: 'AES-CBC' },
-    { formatVersion: 1 },
+    { formatVersion: 2 },
     { nonce: '00' },
     { ciphertext: 'invalid?' },
     { recovery: {} },

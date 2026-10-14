@@ -5,7 +5,6 @@ import {
   serializeWorkplaceSnapshot,
 } from '@/src/services/backup/workplaceSnapshot';
 import { nativeKeyOperations } from '@/src/services/backup/nativeKeyOperations';
-import { deviceKeyVault } from '@/src/services/backup/deviceKeyVault';
 import { keyCiphertextStateStore } from '@/src/services/backup/keyCiphertextStateStore';
 import {
   identityScope,
@@ -17,11 +16,9 @@ import {
   createLocalRecoveryPackage,
   verifyLocalRecoveryPackage,
 } from '@/src/services/backup/localRecoveryPackage';
-import type { RecoveryArtifactSource } from '@/src/services/backup/recoveryArtifactSource';
 import { mockDataSeederService } from '@/src/services/import/MockDataSeederService';
 import { restoreWorkplaceSnapshot } from '@/src/services/import/restoreWorkplaceSnapshot';
 import { generator } from '@/src/data/database/idGenerator';
-import * as SecureStore from 'expo-secure-store';
 import { assertE2eHarnessEnabled } from './e2eRuntimeGate';
 import {
   DEMO,
@@ -47,10 +44,8 @@ export async function prepareProofStage(
     (await workplaceRepository.findAll()).length === 0,
     'Creation proof requires a fresh simulator installation',
   );
-  // iOS keychain can outlive uninstall. This exact demo-only key belongs to this isolated proof.
-  await SecureStore.deleteItemAsync(`workplace_snapshot_key_v1_${DEMO}`); // Remove the obsolete disposable proof key.
   await keyCiphertextStateStore.remove(identityScope(USER));
-  await deviceKeyVault.remove(USER, SOURCE_DEVICE);
+  await nativeKeyOperations.removeKey({ kind: 'device', userId: USER, deviceId: SOURCE_DEVICE });
   await keyCiphertextStateStore.remove(userScope(USER, SOURCE_DEVICE));
   await keyCiphertextStateStore.remove(workplaceScope(USER, DEMO));
   const userCredential = await keys.beginUser(USER, SOURCE_DEVICE);
@@ -115,8 +110,8 @@ export async function prepareProofStage(
     'Native Device private key is missing',
   );
   requireProof(
-    !('load' in deviceKeyVault) && !('save' in deviceKeyVault),
-    'The JS vault exposes raw-key operations',
+    !('load' in nativeKeyOperations) && !('save' in nativeKeyOperations),
+    'The native interface exposes raw-key operations',
   );
   const bundle: ProofBundle = {
     signedPackage,
@@ -137,7 +132,7 @@ export async function prepareProofStage(
     captureMs: Math.round(captureMs),
     encryptMs: Math.round(encryptMs),
     recoverMs: Math.round(recoverMs),
-    secureStoreVerified: true,
+    deviceVaultVerified: true,
     userSigningPairVerified: true,
     signedPackageVerified: true,
     tamperedSignatureRejected: true,
@@ -183,7 +178,7 @@ export async function recoverProofStage(
       'Recovery proof requires an empty destination database',
     );
   if (action === 'missing-device-key') {
-    await deviceKeyVault.remove(USER, SOURCE_DEVICE);
+    await nativeKeyOperations.removeKey({ kind: 'device', userId: USER, deviceId: SOURCE_DEVICE });
   } else if (action === 'orphan-device-key') {
     await keyCiphertextStateStore.remove(userScope(USER, SOURCE_DEVICE));
     const orphan = await nativeKeyOperations.hasKey({
@@ -212,17 +207,15 @@ export async function recoverProofStage(
     );
   // Every installation gets a fresh Device ID. Surviving orphan keys are never reused or deleted.
   const deviceId = `native-proof-${generator()}`;
-  // Persistent test backend stand-in: independent of Device vault/local User state.
-  // Phase 2 injects an authorized cloud adapter at this same boundary. No phrase reaches it.
-  const source: RecoveryArtifactSource = {
-    async loadUserRecoveryPackage(userId) {
-      return userId === USER ? bundle.userPackage : null;
-    },
-  };
+  // The caller loaded ciphertext from an independent file before invoking native recovery.
   progress('Recovering the same User onto an independent Device');
   const recoveryStart = performance.now();
-  const identity = await keys.recoverUserFromSource(bundle.userCredential, source, deviceId);
-  // Lifecycle tests retain Workplace envelopes; installation-loss tests fetch them from the stand-in.
+  const identity = await keys.recoverUserDevice(
+    bundle.userCredential,
+    bundle.userPackage,
+    deviceId,
+  );
+  // Lifecycle tests retain Workplace envelopes; installation-loss tests load them from the independently saved bundle.
   if (!lifecycle) await keys.installWorkplaceKeys(identity, bundle.workplaceKeys);
   const recovered = await keys.decryptSnapshot(identity, DEMO, bundle.envelope);
   const recoveryMs = performance.now() - recoveryStart;

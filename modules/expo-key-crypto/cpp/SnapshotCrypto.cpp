@@ -134,7 +134,7 @@ Json encryptSnapshot(const std::string &source, const Bytes &dek,
   require(snapshot.workplaceId == field(keys, "workplaceId"),
           "Snapshot Workplace mismatch");
   Json envelope = {{"format", "full-frills-encrypted-snapshot"},
-                   {"formatVersion", 2},
+                   {"formatVersion", 1},
                    {"algorithm", "AES-256-GCM"},
                    {"workplaceId", keys.at("workplaceId")},
                    {"snapshotId", hex(random(16))},
@@ -155,7 +155,7 @@ std::string decryptSnapshot(const Json &envelope, const Bytes &dek,
          {"format", "formatVersion", "algorithm", "workplaceId", "snapshotId",
           "schemaVersion", "keyId", "nonce", "ciphertext"});
   require(envelope.at("format") == "full-frills-encrypted-snapshot" &&
-              envelope.at("formatVersion") == 2 &&
+              envelope.at("formatVersion") == 1 &&
               envelope.at("algorithm") == "AES-256-GCM" &&
               field(envelope, "workplaceId") == workplace &&
               fingerprint(dek) == field(envelope, "keyId"),

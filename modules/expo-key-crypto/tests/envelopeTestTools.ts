@@ -67,7 +67,7 @@ export async function encryptWorkplaceSnapshot(
 ): Promise<EncryptedSnapshot> {
   const envelope: EncryptedSnapshot = {
     format: 'full-frills-encrypted-snapshot',
-    formatVersion: 2,
+    formatVersion: 1,
     algorithm: 'AES-256-GCM',
     workplaceId: snapshot.workplace.id,
     snapshotId: randomBytes(16).toString('hex'),

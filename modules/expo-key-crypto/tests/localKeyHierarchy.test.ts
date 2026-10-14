@@ -18,7 +18,6 @@ import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MissingKeyStateError } from '@/src/services/backup/keyStateErrors';
-import type { RecoveryArtifactSource } from '@/src/services/backup/recoveryArtifactSource';
 import { createWorkplaceDump, decryptWorkplaceDump } from '@/src/services/backup/workplaceDump';
 import { assertKeyAccessAllowed, setKeyAccessAllowed } from '@/src/services/backup/keyAccessPolicy';
 import { userScope } from '@/src/services/backup/keyHierarchyRecords';
@@ -405,10 +404,6 @@ it.each(['missing-device-key', 'orphan-device-key', 'total-installation-loss'])(
     try {
       const location = join(directory, 'ciphertext.json');
       await writeFile(location, JSON.stringify(saved), { mode: 0o600 });
-      const backend: RecoveryArtifactSource = {
-        loadUserRecoveryPackage: async userId =>
-          userId === 'alice' ? JSON.parse(await readFile(location, 'utf8')) : null,
-      };
       if (loss === 'missing-device-key') await source.eraseDeviceKeys();
       else if (loss === 'orphan-device-key') source.ciphertext.clear();
       else {
@@ -420,9 +415,9 @@ it.each(['missing-device-key', 'orphan-device-key', 'total-installation-loss'])(
       if (loss !== 'total-installation-loss') {
         await expect(source.hierarchy.beginUser('alice', 'phone')).rejects.toThrow();
       }
-      const recovered = await source.hierarchy.recoverUserFromSource(
+      const recovered = await source.hierarchy.recoverUserDevice(
         source.userCredential,
-        backend,
+        JSON.parse(await readFile(location, 'utf8')),
         'fresh-installation',
       );
       expect(recovered.userKeyFingerprint).toBe(source.identity.userKeyFingerprint);
@@ -444,17 +439,13 @@ it.each(['missing-device-key', 'orphan-device-key', 'total-installation-loss'])(
   },
 );
 
-it('leaves a known identity intact when the external recovery package is unavailable', async () => {
+it('rejects missing recovery ciphertext without replacing a known identity', async () => {
   const source = await enrolledKeyHierarchy();
   await source.eraseDeviceKeys();
   const before = JSON.stringify([...source.ciphertext.entries()]);
   await expect(
-    source.hierarchy.recoverUserFromSource(
-      source.userCredential,
-      { loadUserRecoveryPackage: async () => null },
-      'fresh',
-    ),
-  ).rejects.toThrow('ciphertext is unavailable');
+    source.hierarchy.recoverUserDevice(source.userCredential, null, 'fresh'),
+  ).rejects.toThrow();
   expect(JSON.stringify([...source.ciphertext.entries()])).toBe(before);
   expect(source.deviceTags.size).toBe(0);
   await expect(source.hierarchy.beginUser('alice', 'different-device')).rejects.toThrow(
@@ -500,13 +491,7 @@ it('routes a missing local ciphertext file to recovery even when its locator sur
     return read(scope);
   });
   expect(await source.hierarchy.inspectDeviceState('alice', 'phone')).toBe('recovery-required');
-  const recovered = await source.hierarchy.recoverUserFromSource(
-    source.userCredential,
-    {
-      loadUserRecoveryPackage: async () => saved,
-    },
-    'fresh',
-  );
+  const recovered = await source.hierarchy.recoverUserDevice(source.userCredential, saved, 'fresh');
   expect(recovered.userKeyFingerprint).toBe(source.identity.userKeyFingerprint);
   expect(await source.hierarchy.inspectDeviceState('alice', 'fresh')).toBe('ready');
 });

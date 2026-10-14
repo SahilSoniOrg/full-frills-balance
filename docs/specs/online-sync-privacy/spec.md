@@ -21,7 +21,7 @@ Date: 13 October 2026. Status: local foundations, Settings setup and fresh-insta
 
 The local implementation uses HPKE base mode with X25519/HKDF-SHA256/AES-256-GCM for key envelopes. Recovery credentials reconstruct independent recovery pairs through the library's versioned seed API. HPKE context binds purpose, recipient, User, Device or Workplace, and key identity. HPKE does not authenticate a sender. Local recovery packages now carry a User signature verified against the independently saved full identity pin before mutation; online authorization and signed publication protocols remain separate gates.
 
-Snapshot wire format 2 uses AES-256-GCM, random 96-bit nonces and 128-bit tags. Its routing binds Workplace, snapshot ID, schema and stable DEK fingerprint. It carries no recovery wrapper, plaintext key or caller-selected generation. Format versions do not represent different key hierarchies.
+The initial snapshot wire format 1 uses AES-256-GCM, random 96-bit nonces and 128-bit tags. Its routing binds Workplace, snapshot ID, schema and stable DEK fingerprint. It carries no recovery wrapper, plaintext key or caller-selected generation. Format versions do not represent different key hierarchies.
 
 Snapshot capture holds a database reader while source records are copied, then encrypts after release. Source accounting data travels; running balances/projections and Device-owned SMS/settings do not. Primitive/enum/reference checks, balanced posted-journal validation, currency interpretation and collision checks apply before publication. Current snapshot parsing supports database schema 35 only; cloud persistence requires a reviewed evolution policy.
 
@@ -33,7 +33,7 @@ Online publication is deferred to a later PR. Its coordinator must require a ver
 
 A future HTTPS transport requires a trusted challenge/signature adapter. Backend JWT, Device registration, membership/role, challenge expiry/single-use, consent, schema/size/hash admission and atomic idempotent publication must be implemented and tested before enabling it. HPKE base mode and server-provided content hashes do not authenticate the sender. Hosted restore is blocked until signed initial Workplace and snapshot manifests are verified against trusted identity pins. Checkpoints separately address observed rollback; they cannot prove latest after total loss without an independent checkpoint.
 
-There is no deployed endpoint, sign-in provider, online setup surface or Supabase migration. Supabase is the current planned provider, confirmed 13 October; its schema and integration still require design. The rejected placeholder SQL remains deleted.
+There is no deployed endpoint, sign-in provider, online setup surface or Supabase migration. Supabase is the current planned provider, confirmed 13 October; its schema and integration still require design.
 
 ## Later synchronization
 

@@ -512,13 +512,11 @@ it.each(['collision rejection', 'interrupted User recovery'])(
     jest.mocked(persistence.store.saveSession).mockClear();
     jest.mocked(persistence.store.loadSession).mockResolvedValueOnce(null);
     if (interruption === 'interrupted User recovery') {
-      const recover = target.hierarchy.recoverUserFromSource.bind(target.hierarchy);
-      jest
-        .spyOn(target.hierarchy, 'recoverUserFromSource')
-        .mockImplementationOnce(async (...args) => {
-          await recover(...args);
-          throw new Error('User recovery interrupted');
-        });
+      const recover = target.hierarchy.recoverUserDevice.bind(target.hierarchy);
+      jest.spyOn(target.hierarchy, 'recoverUserDevice').mockImplementationOnce(async (...args) => {
+        await recover(...args);
+        throw new Error('User recovery interrupted');
+      });
     }
     await expect(restart().recover(pack, source.userSecret)).rejects.toThrow(
       interruption === 'collision rejection'
