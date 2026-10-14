@@ -5,7 +5,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { setKeyAccessAllowed } from '@/src/services/backup/keyAccessPolicy';
 import { assertE2eHarnessEnabled } from './e2eRuntimeGate';
 import { readE2eLaunchConfig } from './e2eLaunchArgs';
-import { runNativeRecoveryProof, type RecoveryProofReport } from './nativeRecoveryProof';
+import { runNativeRecoveryProof } from './nativeRecoveryProof';
+import type { RecoveryProofReport } from './nativeRecoveryProofStages';
 
 export function RecoveryProofScreen() {
   const [status, setStatus] = useState('READY');
