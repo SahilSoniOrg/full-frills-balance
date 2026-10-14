@@ -83,6 +83,14 @@ void fields(const Json &value, std::initializer_list<const char *> allowed) {
                 allowed.end(),
             "Unexpected native key field");
 }
+bool sameReference(const Json &left, const Json &right) {
+  if (!left.is_object() || !right.is_object() || left.size() != right.size())
+    return false;
+  for (auto it = left.begin(); it != left.end(); ++it)
+    if (!right.contains(it.key()) || right.at(it.key()) != it.value())
+      return false;
+  return true;
+}
 Bytes random(size_t count) {
   Bytes value(count);
   require(RAND_bytes(value.data(), static_cast<int>(count)) == 1,
@@ -364,7 +372,7 @@ std::string vaultName(const Json &user) {
                  Json::array({user.at("userId"), user.at("deviceId")}).dump()))
              .substr(7);
 }
-UserSecret userSecret(const Json &user, Vault &vault) {
+Bytes userBundle(const Json &user, Vault &vault) {
   checkPublicUser(user);
   Secret device(vault.load(vaultName(user)));
   require(device.bytes.size() == 32,
@@ -373,10 +381,12 @@ UserSecret userSecret(const Json &user, Vault &vault) {
   require(hex(publicBytes(key.get())) == field(user, "devicePublicKey") &&
               fingerprint(publicBytes(key.get())) == field(user, "deviceKeyId"),
           "Device private/public key mismatch");
-  Secret bundle(open(
-      user.at("deviceEnvelope"), key.get(),
-      context("device-user-bundle", user, field(user, "deviceKeyId"),
-              field(user, "userKeyFingerprint"), "", field(user, "deviceId"))));
+  return open(user.at("deviceEnvelope"), key.get(),
+              context("device-user-bundle", user, field(user, "deviceKeyId"),
+                      field(user, "userKeyFingerprint"), "", field(user, "deviceId")));
+}
+UserSecret userSecret(const Json &user, Vault &vault) {
+  Secret bundle(userBundle(user, vault));
   return decodeBundle(bundle.bytes, user);
 }
 Json recovery(const char *purpose, const std::string &identityId,
@@ -655,12 +665,170 @@ void Engine::clearCredentials() {
       ++it;
   }
 }
-Json Engine::execute(const std::string &op, const Json &request, Vault &vault) {
+Json Engine::reference(const std::string &kind, const std::string &keyId,
+                       const Json &source, const std::string &publicKey) {
+  const auto now = std::chrono::steady_clock::now();
+  for (auto it = keys_.begin(); it != keys_.end();) {
+    if (it->second.epoch != epoch_.load() ||
+        now - it->second.created > std::chrono::minutes(5))
+      it = keys_.erase(it);
+    else
+      ++it;
+  }
+  require(keys_.size() < 64, "Too many open key references; release unused keys");
+  auto token = hex(random(32));
+  Json metadata = {{"format", "full-frills-native-key-reference"},
+                   {"formatVersion", 1}, {"kind", kind},
+                   {"keyId", keyId}, {"handle", token}};
+  if (!publicKey.empty()) metadata["publicKey"] = publicKey;
+  keys_.emplace(token, KeyReference{metadata, source, now, epoch_.load()});
+  return metadata;
+}
+Json Engine::keySource(const Json &handle, const std::string &kind) {
+  auto found = keys_.find(field(handle, "handle"));
+  require(found != keys_.end(), "Key reference is unavailable; open its envelope again");
+  require(sameReference(found->second.metadata, handle) && handle.at("kind") == kind &&
+              found->second.epoch == epoch_.load() &&
+              std::chrono::steady_clock::now() - found->second.created <=
+                  std::chrono::minutes(5),
+          "Key reference is invalid or expired");
+  return found->second.source;
+}
+Json Engine::execute(const std::string &operation, const Json &input, Vault &vault) {
   std::lock_guard<std::mutex> lock(mutex_);
-  require(allowed_.load() || op == "removeDevice",
+  const bool cleanup = operation == "removeKey" || operation == "releaseKey";
+  require(allowed_.load() || cleanup,
           "Unlock the app before accessing encryption keys");
   auto epoch = epoch_.load();
+  auto op = operation;
+  Json request = input;
   Json result;
+  if (op == "releaseKey") {
+    fields(request, {"key"});
+    const auto &handle = request.at("key");
+    auto found = keys_.find(field(handle, "handle"));
+    if (found != keys_.end()) {
+      require(sameReference(found->second.metadata, handle), "Key reference identity mismatch");
+      keys_.erase(found);
+    }
+    return nullptr;
+  }
+  if (op == "generateKeys") {
+    auto kind = field(request, "kind");
+    if (kind == "device") {
+      fields(request, {"kind", "userId", "deviceId"});
+      require(!field(request, "userId").empty() && !field(request, "deviceId").empty(),
+              "Invalid User or Device identity");
+      Secret existing(vault.load(vaultName(request)));
+      require(existing.bytes.empty(), "Device identity already exists");
+      auto device = encryptionPair();
+      auto publicKey = hex(publicBytes(device.get()));
+      auto pin = fingerprint(publicBytes(device.get()));
+      Secret privateKey(privateBytes(device.get()));
+      vault.save(vaultName(request), privateKey.bytes);
+      Json scope = {{"userId", request.at("userId")}, {"deviceId", request.at("deviceId")},
+                    {"devicePublicKey", publicKey}, {"deviceKeyId", pin}};
+      result = reference("device", pin, scope, publicKey);
+      require(allowed_.load() && epoch == epoch_.load(), "Key operation was cancelled by app lock");
+      return result;
+    }
+    if (kind == "user") {
+      fields(request, {"kind", "device"});
+      auto deviceReference = request.at("device");
+      request = keySource(deviceReference, "device");
+      keys_.erase(field(deviceReference, "handle"));
+      op = "createUser";
+    } else if (kind == "workplace") {
+      fields(request, {"kind", "user", "workplaceId"});
+      auto source = keySource(request.at("user"), "user");
+      request = {{"user", source.at("user")}, {"workplaceId", input.at("workplaceId")}};
+      op = "enrollWorkplace";
+    } else throw std::runtime_error("Unsupported key kind");
+  } else if (op == "openKey") {
+    auto kind = field(request, "kind");
+    if (kind == "user") {
+      fields(request, {"kind", "user"});
+      const auto &user = request.at("user");
+      userSecret(user, vault);
+      result = reference("user", field(user, "userKeyFingerprint"), {{"user", user}},
+                         field(user.at("publicIdentity"), "encryptionPublicKey"));
+    } else if (kind == "workplace") {
+      fields(request, {"kind", "user", "keys"});
+      auto source = keySource(request.at("user"), "user");
+      const auto &keys = request.at("keys");
+      Secret dek(memberKey(source.at("user"), keys, vault));
+      result = reference("workplace", field(keys, "keyId"),
+                         {{"user", source.at("user")}, {"keys", keys}});
+    } else throw std::runtime_error("Unsupported key kind");
+    require(allowed_.load() && epoch == epoch_.load(), "Key operation was cancelled by app lock");
+    return result;
+  } else if (op == "wrapUserForDevice") {
+    fields(request, {"key", "recipient"});
+    auto source = keySource(request.at("key"), "user");
+    const auto &user = source.at("user");
+    const auto &recipient = request.at("recipient");
+    fields(recipient, {"userId", "deviceId", "publicKey", "keyId"});
+    require(user.at("recoveryConfirmed") == true &&
+                recipient.at("userId") == user.at("userId") &&
+                !field(recipient, "deviceId").empty(),
+            "Device enrollment requires the same confirmed User");
+    auto publicKey = field(recipient, "publicKey");
+    auto devicePin = fingerprint(unhex(publicKey, 32));
+    require(devicePin == field(recipient, "keyId"), "Device recipient fingerprint mismatch");
+    Secret bundle(userBundle(user, vault));
+    decodeBundle(bundle.bytes, user);
+    auto envelope = seal(bundle.bytes, publicKey,
+        context("device-user-bundle", user, devicePin, field(user, "userKeyFingerprint"),
+                "", field(recipient, "deviceId")));
+    result = {{"userId", user.at("userId")}, {"userKeyFingerprint", user.at("userKeyFingerprint")},
+              {"deviceId", recipient.at("deviceId")}, {"devicePublicKey", publicKey},
+              {"deviceKeyId", devicePin}, {"deviceEnvelope", envelope}};
+    require(allowed_.load() && epoch == epoch_.load(), "Key operation was cancelled by app lock");
+    return result;
+  } else if (op == "wrapWorkplaceForUser") {
+    fields(request, {"key", "recipient", "userKeyFingerprint"});
+    auto source = keySource(request.at("key"), "workplace");
+    const auto &user = source.at("user");
+    const auto &keys = source.at("keys");
+    const auto &recipient = request.at("recipient");
+    auto userPin = identityFingerprint(recipient);
+    require(userPin == field(request, "userKeyFingerprint") &&
+                !field(recipient, "userId").empty(), "User recipient fingerprint mismatch");
+    require(user.at("recoveryConfirmed") == true && keys.at("recoveryConfirmed") == true,
+            "Confirm recovery files before sharing a Workplace key");
+    Secret dek(memberKey(user, keys, vault));
+    auto publicKey = field(recipient, "encryptionPublicKey");
+    auto envelope = seal(dek.bytes, publicKey,
+        context("user-workplace-dek", recipient, fingerprint(unhex(publicKey, 32)),
+                field(keys, "keyId"), field(keys, "workplaceId")));
+    result = {{"workplaceId", keys.at("workplaceId")}, {"keyId", keys.at("keyId")},
+              {"userId", recipient.at("userId")}, {"userKeyFingerprint", userPin},
+              {"memberEnvelope", envelope}};
+    require(allowed_.load() && epoch == epoch_.load(), "Key operation was cancelled by app lock");
+    return result;
+  } else if (op == "encrypt" || op == "decrypt") {
+    fields(request, op == "encrypt" ? std::initializer_list<const char *>{"key", "plaintext"}
+                                    : std::initializer_list<const char *>{"key", "snapshot"});
+    auto source = keySource(request.at("key"), "workplace");
+    request = source;
+    request[op == "encrypt" ? "plaintext" : "snapshot"] =
+        input.at(op == "encrypt" ? "plaintext" : "snapshot");
+    op = op == "encrypt" ? "encryptSnapshot" : "decryptSnapshot";
+  } else if (op == "sign") {
+    fields(request, {"key", "digest"});
+    auto source = keySource(request.at("key"), "user");
+    request = {{"user", source.at("user")}, {"digest", input.at("digest")}};
+  } else if (op == "hasKey" || op == "removeKey") {
+    fields(request, {"kind", "userId", "deviceId"});
+    require(request.at("kind") == "device", "Only Device keys are persisted in the vault");
+    require(!field(request, "userId").empty() && !field(request, "deviceId").empty(),
+            "Invalid User or Device identity");
+    op = op == "hasKey" ? "hasDevice" : "removeDevice";
+  } else {
+    require(op == "confirmUser" || op == "validateRecovery" || op == "recoverUser" ||
+                op == "confirmWorkplace" || op == "decryptDump",
+            "Unsupported native key operation");
+  }
   if (op == "hasDevice" || op == "removeDevice") {
     auto name = vaultName(request);
     if (op == "removeDevice") {
@@ -673,16 +841,17 @@ Json Engine::execute(const std::string &op, const Json &request, Vault &vault) {
       result = !key.bytes.empty();
     }
   } else if (op == "createUser") {
-    fields(request, {"userId", "deviceId"});
     auto userId = field(request, "userId"),
          deviceId = field(request, "deviceId");
     require(!userId.empty() && !deviceId.empty(),
             "Invalid User or Device identity");
     Secret existing(vault.load(vaultName(request)));
-    require(existing.bytes.empty(),
-            "Interrupted Device enrollment must be explicitly discarded first");
-    auto encryption = encryptionPair(), device = encryptionPair(),
-         signing = signingPair();
+    require(existing.bytes.size() == 32, "Device private key is unavailable; use User recovery");
+    auto device = rawKey(existing.bytes);
+    require(hex(publicBytes(device.get())) == field(request, "devicePublicKey") &&
+                fingerprint(publicBytes(device.get())) == field(request, "deviceKeyId"),
+            "Device reference identity mismatch");
+    auto encryption = encryptionPair(), signing = signingPair();
     Json identity = {
         {"format", "full-frills-user-identity"},
         {"formatVersion", 1},
@@ -718,16 +887,14 @@ Json Engine::execute(const std::string &op, const Json &request, Vault &vault) {
     user["deviceEnvelope"] = seal(
         bundle.bytes, field(user, "devicePublicKey"),
         context("device-user-bundle", user, deviceIdHash, pin, "", deviceId));
-    Secret devicePrivate(privateBytes(device.get()));
-    vault.save(vaultName(user), devicePrivate.bytes);
     userSecret(user, vault);
-    result = {{"user", user}, {"credential", retain(secret.value)}};
-  } else if (op == "checkUser" || op == "sign" || op == "enrollWorkplace") {
+    result = {{"user", user}, {"credential", retain(secret.value)},
+              {"key", reference("user", pin, {{"user", user}},
+                                field(identity, "encryptionPublicKey"))}};
+  } else if (op == "sign" || op == "enrollWorkplace") {
     const auto &user = request.at("user");
     auto secret = userSecret(user, vault);
-    if (op == "checkUser")
-      result = true;
-    else if (op == "sign") {
+    if (op == "sign") {
       require(user.at("recoveryConfirmed") == true,
               "Confirm User recovery first");
       auto digest = field(request, "digest");
@@ -776,7 +943,8 @@ Json Engine::execute(const std::string &op, const Json &request, Vault &vault) {
           memberContext(user, keys));
       keys["recoveryEnvelope"] =
           seal(dek.bytes, field(keys, "recoveryPublicKey"), dumpContext(keys));
-      result = {{"keys", keys}, {"credential", retain(credentialValue.value)}};
+      result = {{"keys", keys}, {"credential", retain(credentialValue.value)},
+                {"key", reference("workplace", pin, {{"user", user}, {"keys", keys}})}};
     }
   } else if (op == "confirmUser" || op == "validateRecovery" ||
              op == "recoverUser") {
@@ -811,14 +979,12 @@ Json Engine::execute(const std::string &op, const Json &request, Vault &vault) {
       userSecret(replacement, vault);
       result = replacement;
     }
-  } else if (op == "validateMember" || op == "confirmWorkplace" ||
+  } else if (op == "confirmWorkplace" ||
              op == "encryptSnapshot" || op == "decryptSnapshot") {
     const auto &user = request.at("user");
     const auto &keys = request.at("keys");
     Secret dek(memberKey(user, keys, vault));
-    if (op == "validateMember")
-      result = true;
-    else if (op == "confirmWorkplace") {
+    if (op == "confirmWorkplace") {
       PrivateJson credentialValue(credential(request.at("credential")));
       Secret recovered(recoveryOpen(
           credentialValue.value, keys.at("recoveryEnvelope"), dumpContext(keys),
@@ -884,8 +1050,16 @@ Json Engine::execute(const std::string &op, const Json &request, Vault &vault) {
                              field(dump, "workplaceId"));
   } else
     throw std::runtime_error("Unsupported native key operation");
-  require(op == "removeDevice" || (allowed_.load() && epoch == epoch_.load()),
+  require(cleanup || (allowed_.load() && epoch == epoch_.load()),
           "Key operation was cancelled by app lock");
   return result;
 }
+#ifdef FFB_KEY_CRYPTO_TEST
+Json testAes(const Json &request) {
+  Secret key(unhex(field(request, "key"), 32));
+  auto input = field(request, "plaintext");
+  Secret plaintext(unhex(input, input.size() / 2));
+  return hex(aes(key.bytes, unhex(field(request, "nonce"), 12), {}, plaintext.bytes, true));
+}
+#endif
 } // namespace ffb

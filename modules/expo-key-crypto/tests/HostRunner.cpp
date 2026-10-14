@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <openssl/evp.h>
 #include <stdexcept>
 using namespace ffb;
 // Disposable native test process. Never compiled into either application.
@@ -9,9 +10,19 @@ class TestVault final : public Vault {
   std::map<std::string, Bytes> keys_;
 
 public:
-  ~TestVault() {
-    for (auto &item : keys_)
-      wipe(item.second);
+  ~TestVault() { clear(); }
+  void clear() { for (auto &item : keys_) wipe(item.second); keys_.clear(); }
+  Json metadata() {
+    Json result = Json::object();
+    for (auto &item : keys_) {
+      unsigned char digest[32]; unsigned int length = 0;
+      EVP_Digest(item.second.data(), item.second.size(), digest, &length, EVP_sha256(), nullptr);
+      static constexpr char digits[] = "0123456789abcdef";
+      std::string tag;
+      for (auto value : digest) { tag += digits[value >> 4]; tag += digits[value & 15]; }
+      result[item.first] = tag;
+    }
+    return result;
   }
   Bytes load(const std::string &name) override {
     auto found = keys_.find(name);
@@ -31,16 +42,23 @@ public:
   }
 };
 int main() {
-  TestVault vault;
+  std::map<std::string, TestVault> vaults;
   engine().setAllowed(true);
   std::string line;
   while (std::getline(std::cin, line)) {
+    std::string vaultId = "default";
     try {
       auto call = Json::parse(line);
+      vaultId = call.value("vaultId", std::string("default"));
+      auto &vault = vaults[vaultId];
       auto operation = call.at("operation").get<std::string>();
       auto input = call.at("request");
       Json result;
-      if (operation == "test.setAllowed") {
+      if (operation == "test.aes") {
+        result = testAes(input);
+      } else if (operation == "test.clearDeviceVault") {
+        vault.clear(); result = nullptr;
+      } else if (operation == "test.setAllowed") {
         engine().setAllowed(input.at("allowed"));
         result = nullptr;
       } else if (operation == "test.importCredential") {
@@ -66,9 +84,9 @@ int main() {
         result = nullptr;
       } else
         result = engine().execute(operation, input, vault);
-      std::cout << Json{{"result", result}}.dump() << std::endl;
+      std::cout << Json{{"result", result}, {"devices", vault.metadata()}}.dump() << std::endl;
     } catch (...) {
-      std::cout << Json{{"error", "Native test operation rejected"}}.dump()
+      std::cout << Json{{"error", "Native test operation rejected"}, {"devices", vaults[vaultId].metadata()}}.dump()
                 << std::endl;
     }
   }

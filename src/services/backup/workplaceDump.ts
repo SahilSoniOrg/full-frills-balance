@@ -69,7 +69,7 @@ export async function decryptWorkplaceDump(
   )
     throw new Error('Invalid Workplace dump');
   const dump = value as WorkplaceDump;
-  const plaintext = await nativeKeyOperations.execute('decryptDump', { dump, credential });
+  const plaintext = await nativeKeyOperations.recovery('decryptDump', { dump, credential });
   if (typeof plaintext !== 'string') throw new Error('Invalid native Workplace dump result');
   const snapshot = decodeWorkplaceSnapshot(plaintext);
   if (snapshot.workplace.id !== dump.workplaceId)

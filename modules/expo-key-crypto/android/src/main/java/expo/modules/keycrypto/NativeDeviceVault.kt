@@ -1,11 +1,10 @@
 package expo.modules.keycrypto
 
-import androidx.annotation.Keep
-
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import androidx.annotation.Keep
 import org.json.JSONObject
 import java.security.KeyStore
 import javax.crypto.Cipher
@@ -13,74 +12,71 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-/** Reads the old SecureStore entry natively and retains the same Device key. */
+/** Owns its versioned storage contract independently of Expo SecureStore. */
 @Keep
 class NativeDeviceVault(private val context: Context) {
-  private val preferences get() = context.getSharedPreferences("SecureStore", Context.MODE_PRIVATE)
-  private val alias = "AES/GCM/NoPadding:key_v1:keystoreUnauthenticated"
-  private val keystore get() = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-  private fun storageKey(name: String) = "key_v1-$name"
+  private val preferences get() = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+  private fun validate(name: String) {
+    require(name.matches(Regex("device_private_key_v1_[a-f0-9]{64}")))
+  }
   private fun secret(create: Boolean): SecretKey? {
-    val store = keystore
-    (store.getKey(alias, null) as? SecretKey)?.let { return it }
+    val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+    (store.getKey(ALIAS, null) as? SecretKey)?.let { return it }
     if (!create) return null
     return KeyGenerator.getInstance("AES", "AndroidKeyStore").apply {
-      init(KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+      init(KeyGenParameterSpec.Builder(ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
         .setKeySize(256).setBlockModes(KeyProperties.BLOCK_MODE_GCM)
         .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
         .setUserAuthenticationRequired(false).build())
     }.generateKey()
   }
-  fun load(name: String): ByteArray? {
-    require(name.matches(Regex("device_private_key_v1_[a-f0-9]{64}")))
-    val stored = preferences.getString(storageKey(name), null) ?: preferences.getString(name, null) ?: return null
-    val record = JSONObject(stored)
-    val scheme = record.getString("scheme")
-    require(!record.optBoolean("requireAuthentication") && record.getInt("tlen") == 128)
-    require(scheme == "aes" || scheme == "ffb-native-device-v1")
-    val key = secret(false) ?: return null
+  private fun opened(name: String, encoded: String): ByteArray {
+    val record = JSONObject(encoded)
+    require(record.length() == 4 && record.getInt("version") == 1 && record.getString("algorithm") == "AES-256-GCM")
+    val key = secret(false) ?: error("Device wrapping key is unavailable; User recovery is required")
+    val nonce = Base64.decode(record.getString("nonce"), Base64.NO_WRAP)
+    val ciphertext = Base64.decode(record.getString("ciphertext"), Base64.NO_WRAP)
+    require(nonce.size == 12 && ciphertext.size == 48)
     val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-    cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, Base64.decode(record.getString("iv"), Base64.NO_WRAP)))
-    val opened = cipher.doFinal(Base64.decode(record.getString("ct"), Base64.NO_WRAP))
-    if (scheme == "ffb-native-device-v1") {
-      if (opened.size != 32) { opened.fill(0); error("Invalid native Device key") }
-      return opened
-    }
-    val value = ByteArray(32)
-    try {
-      require(opened.size == 64)
-      for (index in value.indices) {
-        val high = Character.digit(opened[index * 2].toInt().toChar(), 16)
-        val low = Character.digit(opened[index * 2 + 1].toInt().toChar(), 16)
-        require(high >= 0 && low >= 0)
-        value[index] = ((high shl 4) or low).toByte()
-      }
-      // SecureStore's generic JS getter refuses our native-only encoding scheme.
-      write(name, value)
-      return value
-    } catch (failure: Throwable) { value.fill(0); throw failure }
-    finally { opened.fill(0) }
+    cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, nonce))
+    cipher.updateAAD(binding(name))
+    val value = cipher.doFinal(ciphertext)
+    if (value.size != 32) { value.fill(0); error("Invalid native Device key") }
+    return value
+  }
+  fun load(name: String): ByteArray? {
+    validate(name)
+    val encoded = preferences.getString(name, null) ?: return null
+    return opened(name, encoded)
   }
   fun save(name: String, key: ByteArray) {
+    validate(name)
     require(key.size == 32)
-    val existing = load(name)
-    if (existing != null) {
+    load(name)?.let { existing ->
       try { require(existing.contentEquals(key)) { "Device key replacement is forbidden" } }
       finally { existing.fill(0) }
       return
     }
     write(name, key)
-    val check = load(name) ?: error("Device key readback failed")
-    try { require(check.contentEquals(key)) { "Device key readback failed" } } finally { check.fill(0) }
+    val checked = load(name) ?: error("Device key readback failed")
+    try { check(checked.contentEquals(key)) } finally { checked.fill(0) }
   }
   private fun write(name: String, key: ByteArray) {
     val cipher = Cipher.getInstance("AES/GCM/NoPadding")
     cipher.init(Cipher.ENCRYPT_MODE, secret(true))
-    val record = JSONObject().put("scheme", "ffb-native-device-v1")
-      .put("ct", Base64.encodeToString(cipher.doFinal(key), Base64.NO_WRAP))
-      .put("iv", Base64.encodeToString(cipher.iv, Base64.NO_WRAP)).put("tlen", 128)
-      .put("usesKeystoreSuffix", true).put("keystoreAlias", "key_v1").put("requireAuthentication", false)
-    check(preferences.edit().putString(storageKey(name), record.toString()).remove(name).commit())
+    cipher.updateAAD(binding(name))
+    val record = JSONObject().put("version", 1).put("algorithm", "AES-256-GCM")
+      .put("nonce", Base64.encodeToString(cipher.iv, Base64.NO_WRAP))
+      .put("ciphertext", Base64.encodeToString(cipher.doFinal(key), Base64.NO_WRAP))
+    check(preferences.edit().putString(name, record.toString()).commit()) { "Device key persistence failed" }
   }
-  fun remove(name: String) { check(preferences.edit().remove(storageKey(name)).remove(name).commit()) }
+  fun remove(name: String) {
+    validate(name)
+    check(preferences.edit().remove(name).commit())
+  }
+  private fun binding(name: String) = "full-frills-device-vault:1:$name".toByteArray(Charsets.UTF_8)
+  companion object {
+    const val PREFERENCES = "FFBKeyCrypto"
+    const val ALIAS = "full-frills-key-crypto.device-wrap.v1"
+  }
 }

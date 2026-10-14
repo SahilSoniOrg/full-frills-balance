@@ -1,11 +1,8 @@
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
-import { createInterface } from 'node:readline';
-import { LocalKeyHierarchy } from '@/src/services/backup/localKeyHierarchy';
-import type { KeyCiphertextStateStore } from '@/src/services/backup/keyCiphertextStateStore';
-import type { NativeKeyOperations } from '@/src/services/backup/nativeKeyOperations';
+import { createHash } from 'node:crypto';
 import type { RecoveryCredential } from '@/src/services/backup/keyEnvelopes';
-import type { RecoveryCredential as LegacyCredential } from '@/src/testing/keyCryptoReference/keyEnvelopes';
-import { decryptWorkplaceDump } from '@/src/testing/keyCryptoReference/workplaceDump';
+import { decryptNativeDump } from './envelopeTestTools';
+import { legacy } from './legacyFixture';
+import { memoryKeyHierarchy, closeNativeHost } from './nativeTestContext';
 import { createWorkplaceDump } from '@/src/services/backup/workplaceDump';
 import {
   createLocalRecoveryPackage,
@@ -15,7 +12,6 @@ import {
   enableTestCrypto,
   seedSnapshotWorkplace,
 } from '@/src/services/backup/__tests__/snapshotTestHelpers';
-import { enrolledKeyHierarchy } from '@/src/services/backup/__tests__/keyHierarchyTestHelpers';
 import { resetDatabase } from '@/src/testing/resetDatabase';
 
 jest.mock('react-native-quick-crypto', () => ({
@@ -25,70 +21,19 @@ jest.mock('react-native-quick-crypto', () => ({
     Buffer: jest.requireActual('node:buffer').Buffer,
   },
 }));
-class Host {
-  private process: ChildProcessWithoutNullStreams;
-  private pending: { resolve(value: unknown): void; reject(error: Error): void }[] = [];
-  constructor() {
-    if (!process.env.FFB_NATIVE_CRYPTO_HOST_BIN)
-      throw new Error('Run test:native-key-crypto to build the real native core');
-    this.process = spawn(process.env.FFB_NATIVE_CRYPTO_HOST_BIN, [], { stdio: 'pipe' });
-    createInterface({ input: this.process.stdout }).on('line', line => {
-      const result: { result?: unknown; error?: string } = JSON.parse(line);
-      const waiter = this.pending.shift();
-      if (result.error) waiter?.reject(new Error('Native operation rejected'));
-      else waiter?.resolve(result.result);
-    });
-    this.process.stderr.resume();
-  }
-  execute(operation: string, request: unknown): Promise<unknown> {
-    return new Promise((resolve, reject) => {
-      this.pending.push({ resolve, reject });
-      this.process.stdin.write(`${JSON.stringify({ operation, request })}\n`);
-    });
-  }
-  async close() {
-    this.process.stdin.end();
-    await new Promise<void>(resolve => this.process.once('exit', () => resolve()));
-  }
-}
-let host: Host;
+let context: ReturnType<typeof memoryKeyHierarchy>;
 beforeEach(async () => {
   enableTestCrypto();
   await resetDatabase();
-  host = new Host();
+  context = memoryKeyHierarchy();
 });
-afterEach(async () => {
-  await host.close();
-});
+afterEach(closeNativeHost);
+const host = {
+  execute: (operation: string, request: unknown) => context.host.execute(operation, request),
+};
 function target() {
-  const records = new Map<string, unknown>();
-  const clone = (value: unknown) => JSON.parse(JSON.stringify(value));
-  const state: KeyCiphertextStateStore = {
-    read: jest.fn(async scope => (records.has(scope) ? clone(records.get(scope)) : null)),
-    write: jest.fn(async (scope, value) => {
-      records.set(scope, clone(value));
-    }),
-    remove: jest.fn(async scope => {
-      records.delete(scope);
-    }),
-  };
-  const forbidden = jest.fn(async (): Promise<never> => {
-    throw new Error('Raw key access is forbidden');
-  });
-  const crypto: NativeKeyOperations = {
-    execute: (op, request) => host.execute(op, request),
-    importCredential: forbidden,
-    writeCredential: forbidden,
-    retainCredential: forbidden,
-    releaseCredential: forbidden,
-    clearCredentials: async () => undefined,
-  };
-  return {
-    hierarchy: new LocalKeyHierarchy(state, () => undefined, crypto),
-    state,
-    records,
-    forbidden,
-  };
+  const t = memoryKeyHierarchy();
+  return { ...t, records: t.ciphertext, forbidden: t.crypto.importCredential };
 }
 async function source() {
   const fixture = await seedSnapshotWorkplace();
@@ -131,18 +76,16 @@ it('creates, unwraps, encrypts, decrypts and signs in the real native core witho
   expect(s.userCredential.format).toBe('full-frills-recovery-handle');
   expect(s.forbidden).not.toHaveBeenCalled();
 });
-it('native recovery accepts existing V1 User credentials/envelopes and decrypts an existing format-2 snapshot payload unchanged', async () => {
-  const { snapshot, workplaceId } = await seedSnapshotWorkplace();
-  const legacy = await enrolledKeyHierarchy(workplaceId);
-  const envelope = await legacy.hierarchy.encryptSnapshot(legacy.identity, workplaceId, snapshot);
-  const user = await legacy.hierarchy.exportUserRecoveryPackage('alice', 'phone');
-  const keys = await legacy.hierarchy.exportWorkplaceKeys(legacy.identity, workplaceId);
+it('opens the frozen V1 User recovery and format-2 snapshot vectors with the original signing identity', async () => {
+  const { snapshot, user, keys, envelope } = legacy;
+  const workplaceId = keys.workplaceId;
   const credential = (await host.execute('test.importCredential', {
     credential: legacy.userCredential,
   })) as RecoveryCredential;
   const t = target();
   const identity = await t.hierarchy.recoverUserDevice(credential, user, 'replacement');
-  expect(identity.userKeyFingerprint).toBe(legacy.identity.userKeyFingerprint);
+  expect(identity.userKeyFingerprint).toBe(legacy.user.userKeyFingerprint);
+  await expect(verifyLocalRecoveryPackage(legacy.signedPackage, identity)).resolves.toBeDefined();
   await t.hierarchy.installWorkplaceKeys(identity, keys);
   expect(await t.hierarchy.decryptSnapshot(identity, workplaceId, envelope)).toEqual(snapshot);
   await expect(t.hierarchy.encryptSnapshot(identity, workplaceId, snapshot)).rejects.toThrow(
@@ -150,15 +93,14 @@ it('native recovery accepts existing V1 User credentials/envelopes and decrypts 
   );
   expect(t.forbidden).not.toHaveBeenCalled();
 });
-it('the old V1 recovery derivation and AES implementation can decrypt a native-created emergency dump', async () => {
+it('an independent standards-based consumer decrypts a native-created emergency dump', async () => {
   const s = await source();
   const envelope = await s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, s.snapshot);
-  const credential = (await host.execute(
-    'test.exportCredential',
-    s.workplaceCredential,
-  )) as LegacyCredential;
+  const credential = (await host.execute('test.exportCredential', s.workplaceCredential)) as {
+    phrase: string;
+  };
   const keys = await s.hierarchy.exportWorkplaceKeys(s.identity, s.workplaceId);
-  expect(await decryptWorkplaceDump(createWorkplaceDump(keys, envelope), credential)).toEqual(
+  expect(await decryptNativeDump(createWorkplaceDump(keys, envelope), credential)).toEqual(
     s.snapshot,
   );
 });
@@ -185,22 +127,11 @@ it('rejects a tampered signature, ciphertext, context and opaque recovery handle
     }),
   ).rejects.toThrow();
 });
-it('retains a failed encryption reservation and enforces the writer/cap before another native operation', async () => {
-  const s = await source();
-  const invalid = { ...s.snapshot, workplace: { ...s.snapshot.workplace, id: 'unrelated' } };
-  await expect(s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, invalid)).rejects.toThrow();
-  await s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, s.snapshot);
-  const keys = await s.hierarchy.exportWorkplaceKeys(s.identity, s.workplaceId);
-  expect(keys.encryptionInvocations).toBe(2);
-  const scope = JSON.stringify(['workplace', s.identity.userId, s.workplaceId]);
-  s.records.set(scope, { ...keys, encryptionInvocations: 2 ** 20 });
-  await expect(s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, s.snapshot)).rejects.toThrow(
-    'budget exhausted',
-  );
-});
 it('validates original recovery-file secrets natively and rejects altered checksums or metadata', async () => {
   const s = await source();
-  const saved = (await host.execute('test.exportCredential', s.userCredential)) as LegacyCredential;
+  const saved = (await host.execute('test.exportCredential', s.userCredential)) as {
+    phrase: string;
+  };
   const phrase = saved.phrase;
   const altered = `${phrase.slice(0, -1)}${phrase.endsWith('0') ? '1' : '0'}`;
   for (const credential of [
@@ -217,26 +148,6 @@ it('validates original recovery-file secrets natively and rejects altered checks
   await expect(
     s.hierarchy.confirmUserRecovery(s.identity.userId, s.identity.registeredDeviceId, handle),
   ).resolves.toEqual(s.identity);
-});
-it('an interrupted native User creation requires explicit discard and never silently regenerates a root', async () => {
-  const t = target();
-  jest
-    .mocked(t.state.write)
-    .mockImplementationOnce(async (scope, value) => {
-      t.records.set(scope, value);
-    })
-    .mockRejectedValueOnce(new Error('checkpoint failed'));
-  await expect(t.hierarchy.beginUser('interrupted', 'phone')).rejects.toThrow('checkpoint failed');
-  await expect(t.hierarchy.describeSetup('interrupted', 'phone')).resolves.toMatchObject({
-    user: 'interrupted',
-  });
-  await expect(t.hierarchy.beginUser('interrupted', 'phone')).rejects.toThrow(
-    'explicitly discarded',
-  );
-  await t.hierarchy.discardUnconfirmedUser('interrupted', 'phone');
-  expect((await t.hierarchy.beginUser('interrupted', 'phone')).format).toBe(
-    'full-frills-recovery-handle',
-  );
 });
 it('native app-lock enforcement refuses decryption even when a caller bypasses the JS policy check', async () => {
   const s = await source();
@@ -257,4 +168,22 @@ it('the native operation dispatcher has no generic decrypt-envelope or raw-key e
         deviceId: s.identity.registeredDeviceId,
       }),
     ).rejects.toThrow();
+});
+
+it('opens frozen Device-addressed and User-addressed HPKE vectors in the actual native core', async () => {
+  const t = target();
+  const name = `device_private_key_v1_${createHash('sha256')
+    .update(JSON.stringify(['alice', 'phone']))
+    .digest('hex')}`;
+  await t.host.execute('test.provisionDevice', { name, key: legacy.devicePrivateKey });
+  await t.state.write(JSON.stringify(['user', 'alice', 'phone']), legacy.localUser);
+  await t.state.write(JSON.stringify(['workplace', 'alice', legacy.keys.workplaceId]), legacy.keys);
+  const identity = {
+    userId: 'alice',
+    registeredDeviceId: 'phone',
+    userKeyFingerprint: legacy.user.userKeyFingerprint,
+  };
+  expect(
+    await t.hierarchy.decryptSnapshot(identity, legacy.keys.workplaceId, legacy.envelope),
+  ).toEqual(legacy.snapshot);
 });

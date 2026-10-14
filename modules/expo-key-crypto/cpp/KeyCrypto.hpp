@@ -39,11 +39,24 @@ private:
   std::atomic<bool> allowed_{false};
   std::atomic<unsigned long long> epoch_{0};
   std::mutex mutex_;
+  struct KeyReference {
+    Json metadata;
+    Json source; // Public identity and ciphertext only. Never unwrapped keys.
+    std::chrono::steady_clock::time_point created;
+    unsigned long long epoch;
+  };
   std::map<std::string, Credential> credentials_;
+  std::map<std::string, KeyReference> keys_;
+  Json reference(const std::string &kind, const std::string &keyId,
+                 const Json &source, const std::string &publicKey = "");
+  Json keySource(const Json &handle, const std::string &kind);
   Json retain(const Json &credential);
   Json credential(const Json &handle);
   void sweep();
 };
 Engine &engine();
 void wipe(Bytes &value);
+#ifdef FFB_KEY_CRYPTO_TEST
+Json testAes(const Json &request);
+#endif
 } // namespace ffb

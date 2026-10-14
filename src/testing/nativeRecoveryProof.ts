@@ -239,7 +239,7 @@ export async function runNativeRecoveryProof(
     );
     progress('Verifying Device access without reading any private-key bytes');
     requireProof(
-      await nativeKeyOperations.execute('hasDevice', { userId: USER, deviceId: SOURCE_DEVICE }),
+      await nativeKeyOperations.hasKey({ kind: 'device', userId: USER, deviceId: SOURCE_DEVICE }),
       'Native Device private key is missing',
     );
     requireProof(
@@ -324,7 +324,8 @@ export async function runNativeRecoveryProof(
     await deviceKeyVault.remove(USER, SOURCE_DEVICE);
   } else if (config.recoveryAction === 'orphan-device-key') {
     await keyCiphertextStateStore.remove(JSON.stringify(['user', USER, SOURCE_DEVICE]));
-    const orphan = await nativeKeyOperations.execute('hasDevice', {
+    const orphan = await nativeKeyOperations.hasKey({
+      kind: 'device',
       userId: USER,
       deviceId: SOURCE_DEVICE,
     });
@@ -337,7 +338,8 @@ export async function runNativeRecoveryProof(
     );
     await expectRejection(() => keys.beginUser(USER, SOURCE_DEVICE), 'Implicit root regeneration');
   }
-  const sourceKeyWasAbsent = !(await nativeKeyOperations.execute('hasDevice', {
+  const sourceKeyWasAbsent = !(await nativeKeyOperations.hasKey({
+    kind: 'device',
     userId: USER,
     deviceId: SOURCE_DEVICE,
   }));
@@ -381,7 +383,8 @@ export async function runNativeRecoveryProof(
       (await dataFingerprint(actual, recovered)) === bundle.sourceFingerprint,
       'Lifecycle recovery altered existing books',
     );
-    const orphan = await nativeKeyOperations.execute('hasDevice', {
+    const orphan = await nativeKeyOperations.hasKey({
+      kind: 'device',
       userId: USER,
       deviceId: SOURCE_DEVICE,
     });

@@ -1,35 +1,26 @@
+import { closeNativeHost, enrolledKeyHierarchy, memoryKeyHierarchy } from './nativeTestContext';
 import { resetDatabase } from '@/src/testing/resetDatabase';
-import { enableTestCrypto, seedSnapshotWorkplace } from './snapshotTestHelpers';
-import { enrolledKeyHierarchy, memoryKeyHierarchy } from './keyHierarchyTestHelpers';
 import {
-  LocalKeyHierarchy,
-  type LocalUserKeys,
-} from '@/src/testing/keyCryptoReference/localKeyHierarchy';
+  enableTestCrypto,
+  seedSnapshotWorkplace,
+} from '@/src/services/backup/__tests__/snapshotTestHelpers';
+import { LocalKeyHierarchy, type LocalUserKeys } from '@/src/services/backup/localKeyHierarchy';
 import {
-  decryptWorkplaceSnapshot,
   encryptWorkplaceSnapshot,
-  keyFingerprint,
-} from '@/src/testing/keyCryptoReference/encryptedSnapshot';
-import {
-  openKeyEnvelope,
   sealKeyEnvelope,
-  publicKeyId,
-} from '@/src/testing/keyCryptoReference/keyEnvelopes';
-import { keyHex } from '../keyEncoding';
-import {
-  userIdentityFingerprint,
   generateUserSigningPair,
-} from '@/src/testing/keyCryptoReference/userIdentity';
+} from './envelopeTestTools';
+import { keyFingerprint } from '@/src/services/backup/encryptedSnapshot';
+import { publicKeyId } from '@/src/services/backup/keyEnvelopes';
+import { keyHex } from '@/src/services/backup/keyEncoding';
+import { userIdentityFingerprint } from '@/src/services/backup/userIdentity';
 import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { MissingKeyStateError } from '../keyStateErrors';
-import type { RecoveryArtifactSource } from '../recoveryArtifactSource';
-import {
-  createWorkplaceDump,
-  decryptWorkplaceDump,
-} from '@/src/testing/keyCryptoReference/workplaceDump';
-import { assertKeyAccessAllowed, setKeyAccessAllowed } from '../keyAccessPolicy';
+import { MissingKeyStateError } from '@/src/services/backup/keyStateErrors';
+import type { RecoveryArtifactSource } from '@/src/services/backup/recoveryArtifactSource';
+import { createWorkplaceDump, decryptWorkplaceDump } from '@/src/services/backup/workplaceDump';
+import { assertKeyAccessAllowed, setKeyAccessAllowed } from '@/src/services/backup/keyAccessPolicy';
 
 jest.mock('react-native-quick-crypto', () => ({
   __esModule: true,
@@ -38,52 +29,36 @@ jest.mock('react-native-quick-crypto', () => ({
     Buffer: jest.requireActual('node:buffer').Buffer,
   },
 }));
+afterEach(closeNativeHost);
 beforeEach(async () => {
   enableTestCrypto();
   await resetDatabase();
 });
 
-it('opens Device → User → Workplace after restart and persists no readable User key or DEK', async () => {
+it('opens Device → User → Workplace after restart and exposes only public/encrypted state to JS', async () => {
   const { snapshot } = await seedSnapshotWorkplace();
   const context = await enrolledKeyHierarchy();
-  let borrowed: Uint8Array | undefined;
-  let dekHex = '';
-  const encrypted = await context.hierarchy.withWorkplaceKey(
+  const encrypted = await context.hierarchy.encryptSnapshot(
     context.identity,
     context.workplaceId,
-    async dek => {
-      borrowed = dek;
-      dekHex = keyHex(dek);
-      return encryptWorkplaceSnapshot(snapshot, dek);
-    },
-    true,
+    snapshot,
   );
-  expect(borrowed!.every(byte => byte === 0)).toBe(true);
+  const persisted = JSON.stringify([...context.ciphertext.values()]);
+  for (const field of ['privateKey', 'signingPrivateKey', 'phrase', 'handle'])
+    expect(persisted).not.toContain(`"${field}"`);
   const user = [...context.ciphertext.values()].find(
     value => (value as LocalUserKeys).deviceEnvelope,
   ) as LocalUserKeys;
-  const deviceKey = await context.vault.load('alice', 'phone');
-  const bytes = await openKeyEnvelope(user.deviceEnvelope, deviceKey!, user.deviceEnvelope.context);
-  const bundle = JSON.parse(new TextDecoder().decode(bytes));
-  const persisted = JSON.stringify([...context.ciphertext.values()]);
-  expect(persisted).not.toContain(bundle.privateKey);
-  expect(persisted).not.toContain(bundle.signingPrivateKey);
-  expect(bundle.publicIdentity.signingAlgorithm).toBe('Ed25519');
-  expect(persisted).not.toContain(dekHex);
-  expect(persisted).not.toContain(context.userCredential.phrase);
-  expect(persisted).not.toContain(context.workplaceCredential.phrase);
-  expect(context.deviceSecrets.size).toBe(1);
-  expect(keyHex(deviceKey!)).not.toBe(bundle.privateKey);
-  bytes.fill(0);
-  deviceKey!.fill(0);
-  const restarted = new LocalKeyHierarchy(context.state, context.vault, () => undefined);
-  expect(
-    await restarted.withWorkplaceKey(context.identity, context.workplaceId, dek =>
-      decryptWorkplaceSnapshot(encrypted, dek),
-    ),
-  ).toEqual(snapshot);
+  expect(user.publicIdentity.signingAlgorithm).toBe('Ed25519');
+  expect(context.deviceTags.size).toBe(1);
+  expect(context.hierarchy).not.toHaveProperty('withWorkplaceKey');
+  const restarted = new LocalKeyHierarchy(context.state, () => undefined, context.crypto);
+  expect(await restarted.decryptSnapshot(context.identity, context.workplaceId, encrypted)).toEqual(
+    snapshot,
+  );
 });
 it('requires separate external save/readback confirmations and never invents missing Workplace keys', async () => {
+  const { snapshot } = await seedSnapshotWorkplace();
   const context = memoryKeyHierarchy();
   const credential = await context.hierarchy.beginUser('alice', 'phone');
   const forgedIdentity = {
@@ -95,16 +70,19 @@ it('requires separate external save/readback confirmations and never invents mis
     context.hierarchy.enrollWorkplace(forgedIdentity, 'books', 'creation'),
   ).rejects.toThrow('confirmation');
   await expect(
-    context.hierarchy.confirmUserRecovery('alice', 'phone', { ...credential, phrase: 'wrong' }),
-  ).rejects.toThrow('phrase');
+    context.hierarchy.confirmUserRecovery('alice', 'phone', {
+      ...credential,
+      handle: '00'.repeat(32),
+    }),
+  ).rejects.toThrow();
   const identity = await context.hierarchy.confirmUserRecovery('alice', 'phone', credential);
-  await expect(
-    context.hierarchy.withWorkplaceKey(identity, 'books', async () => undefined),
-  ).rejects.toThrow('Enroll');
+  await expect(context.hierarchy.encryptSnapshot(identity, 'books', snapshot)).rejects.toThrow(
+    'Enroll',
+  );
   const dumpCredential = await context.hierarchy.enrollWorkplace(identity, 'books', 'creation');
-  await expect(
-    context.hierarchy.withWorkplaceKey(identity, 'books', async () => undefined),
-  ).rejects.toThrow('Confirm');
+  await expect(context.hierarchy.encryptSnapshot(identity, 'books', snapshot)).rejects.toThrow(
+    'Confirm',
+  );
   await context.hierarchy.confirmWorkplaceRecovery(identity, 'books', dumpCredential);
   const original = await context.hierarchy.exportWorkplaceKeys(identity, 'books');
   await expect(context.hierarchy.enrollWorkplace(identity, 'books', 'creation')).rejects.toThrow(
@@ -117,11 +95,10 @@ it('requires separate external save/readback confirmations and never invents mis
 it('recovers the SAME User into independent Device keys and opens its existing member envelope', async () => {
   const { snapshot } = await seedSnapshotWorkplace();
   const source = await enrolledKeyHierarchy();
-  const encrypted = await source.hierarchy.withWorkplaceKey(
+  const encrypted = await source.hierarchy.encryptSnapshot(
     source.identity,
     source.workplaceId,
-    dek => encryptWorkplaceSnapshot(snapshot, dek),
-    true,
+    snapshot,
   );
   const recoveryPackage = await source.hierarchy.exportUserRecoveryPackage('alice', 'phone');
   expect(recoveryPackage).not.toHaveProperty('deviceEnvelope');
@@ -138,36 +115,28 @@ it('recovers the SAME User into independent Device keys and opens its existing m
     await source.hierarchy.exportWorkplaceKeys(source.identity, source.workplaceId),
   );
   expect(
-    await replacement.hierarchy.withWorkplaceKey(identity, source.workplaceId, dek =>
-      decryptWorkplaceSnapshot(encrypted, dek),
-    ),
+    await replacement.hierarchy.decryptSnapshot(identity, source.workplaceId, encrypted),
   ).toEqual(snapshot);
-  expect([...replacement.deviceSecrets.values()][0]).not.toEqual(
-    [...source.deviceSecrets.values()][0],
-  );
+  expect([...replacement.deviceTags.values()][0]).not.toEqual([...source.deviceTags.values()][0]);
   await expect(
-    replacement.hierarchy.withWorkplaceKey(
-      identity,
-      source.workplaceId,
-      async () => undefined,
-      true,
-    ),
+    replacement.hierarchy.encryptSnapshot(identity, source.workplaceId, snapshot),
   ).rejects.toThrow('handover');
 });
 it('rejects cross-User/Device/Workplace substitution, wrong credentials, and altered envelopes', async () => {
+  const { snapshot } = await seedSnapshotWorkplace();
   const source = await enrolledKeyHierarchy();
   await expect(
-    source.hierarchy.withWorkplaceKey(
+    source.hierarchy.encryptSnapshot(
       { ...source.identity, userId: 'bob' },
       source.workplaceId,
-      async () => undefined,
+      snapshot,
     ),
   ).rejects.toThrow();
   await expect(
-    source.hierarchy.withWorkplaceKey(
+    source.hierarchy.encryptSnapshot(
       { ...source.identity, registeredDeviceId: 'wrong' },
       source.workplaceId,
-      async () => undefined,
+      snapshot,
     ),
   ).rejects.toThrow();
   const saved = await source.hierarchy.exportUserRecoveryPackage('alice', 'phone');
@@ -178,7 +147,7 @@ it('rejects cross-User/Device/Workplace substitution, wrong credentials, and alt
       saved,
       'new',
     ),
-  ).rejects.toThrow('identity');
+  ).rejects.toThrow();
   await expect(
     replacement.hierarchy.recoverUserDevice(
       source.userCredential,
@@ -189,7 +158,7 @@ it('rejects cross-User/Device/Workplace substitution, wrong credentials, and alt
       'new',
     ),
   ).rejects.toThrow();
-  expect(replacement.deviceSecrets.size).toBe(0);
+  expect(replacement.deviceTags.size).toBe(0);
   expect(replacement.ciphertext.size).toBe(0);
   const scope = JSON.stringify(['workplace', 'alice', source.workplaceId]);
   const keys = await source.hierarchy.exportWorkplaceKeys(source.identity, source.workplaceId);
@@ -201,17 +170,16 @@ it('rejects cross-User/Device/Workplace substitution, wrong credentials, and alt
     },
   });
   await expect(
-    source.hierarchy.withWorkplaceKey(source.identity, source.workplaceId, async () => undefined),
-  ).rejects.toThrow('context');
+    source.hierarchy.encryptSnapshot(source.identity, source.workplaceId, snapshot),
+  ).rejects.toThrow();
 });
 it('Workplace dump recovery returns only readable data and works without User or Device secrets', async () => {
   const { snapshot } = await seedSnapshotWorkplace();
   const context = await enrolledKeyHierarchy();
-  const encrypted = await context.hierarchy.withWorkplaceKey(
+  const encrypted = await context.hierarchy.encryptSnapshot(
     context.identity,
     context.workplaceId,
-    dek => encryptWorkplaceSnapshot(snapshot, dek),
-    true,
+    snapshot,
   );
   const dump = createWorkplaceDump(
     await context.hierarchy.exportWorkplaceKeys(context.identity, context.workplaceId),
@@ -220,63 +188,62 @@ it('Workplace dump recovery returns only readable data and works without User or
   expect(dump).not.toHaveProperty('memberEnvelope');
   expect(dump).not.toHaveProperty('userPrivateKey');
   context.ciphertext.clear();
-  context.deviceSecrets.clear();
+  await context.eraseDeviceKeys();
   expect(await decryptWorkplaceDump(dump, context.workplaceCredential)).toEqual(snapshot);
-  await expect(decryptWorkplaceDump(dump, context.userCredential)).rejects.toThrow('identity');
+  await expect(decryptWorkplaceDump(dump, context.userCredential)).rejects.toThrow();
   await expect(
     decryptWorkplaceDump({ ...dump, workplaceId: 'other' }, context.workplaceCredential),
   ).rejects.toThrow();
 });
 it('burns durable encryption reservations before use, retains failures, and blocks exhausted budgets', async () => {
+  const { snapshot } = await seedSnapshotWorkplace();
   const context = await enrolledKeyHierarchy();
   const scope = JSON.stringify(['workplace', 'alice', context.workplaceId]);
   await expect(
-    context.hierarchy.withWorkplaceKey(
-      context.identity,
-      context.workplaceId,
-      async () => {
-        throw new Error('encryption interrupted');
-      },
-      true,
-    ),
-  ).rejects.toThrow('interrupted');
+    context.hierarchy.encryptSnapshot(context.identity, context.workplaceId, {
+      ...snapshot,
+      workplace: { ...snapshot.workplace, id: 'other' },
+    }),
+  ).rejects.toThrow();
   const keys = await context.hierarchy.exportWorkplaceKeys(context.identity, context.workplaceId);
   expect(keys.encryptionInvocations).toBe(1);
+  const encrypted = await context.hierarchy.encryptSnapshot(
+    context.identity,
+    context.workplaceId,
+    snapshot,
+  );
   context.ciphertext.set(scope, { ...keys, encryptionInvocations: 2 ** 20 });
-  const use = jest.fn();
+  const calls = jest.mocked(context.crypto.openKey).mock.calls.length;
   await expect(
-    context.hierarchy.withWorkplaceKey(context.identity, context.workplaceId, use, true),
+    context.hierarchy.encryptSnapshot(context.identity, context.workplaceId, snapshot),
   ).rejects.toThrow('budget');
-  expect(use).not.toHaveBeenCalled();
+  expect(jest.mocked(context.crypto.openKey).mock.calls.length).toBe(calls);
   expect(
-    await context.hierarchy.withWorkplaceKey(
-      context.identity,
-      context.workplaceId,
-      async dek => dek.length,
-    ),
-  ).toBe(32);
+    await context.hierarchy.decryptSnapshot(context.identity, context.workplaceId, encrypted),
+  ).toEqual(snapshot);
 });
-it('checks the existing app lock after awaited key reads, clears borrowed keys, and fails closed without a shell', async () => {
+it('checks app lock after awaited native operations and fails closed without a shell', async () => {
   setKeyAccessAllowed(false);
   expect(assertKeyAccessAllowed).toThrow('Unlock');
+  const { snapshot } = await seedSnapshotWorkplace();
   const context = await enrolledKeyHierarchy();
   let unlocked = true;
-  const hierarchy = new LocalKeyHierarchy(context.state, context.vault, () => {
-    if (!unlocked) throw new Error('locked');
-  });
-  const load = context.vault.load;
-  let borrowed: Uint8Array | undefined;
-  jest.spyOn(context.vault, 'load').mockImplementationOnce(async (userId, deviceId) => {
-    borrowed = (await load(userId, deviceId)) ?? undefined;
+  const hierarchy = new LocalKeyHierarchy(
+    context.state,
+    () => {
+      if (!unlocked) throw new Error('locked');
+    },
+    context.crypto,
+  );
+  const invoke = jest.mocked(context.crypto.openKey).getMockImplementation()!;
+  jest.mocked(context.crypto.openKey).mockImplementationOnce(async request => {
+    const result = await invoke(request);
     unlocked = false;
-    return borrowed ?? null;
+    return result;
   });
-  const use = jest.fn();
   await expect(
-    hierarchy.withWorkplaceKey(context.identity, context.workplaceId, use),
+    hierarchy.encryptSnapshot(context.identity, context.workplaceId, snapshot),
   ).rejects.toThrow('locked');
-  expect(use).not.toHaveBeenCalled();
-  expect(borrowed!.every(byte => byte === 0)).toBe(true);
 });
 it('retains interrupted enrollment for explicit reconciliation instead of silently replacing roots', async () => {
   const context = memoryKeyHierarchy();
@@ -287,8 +254,11 @@ it('retains interrupted enrollment for explicit reconciliation instead of silent
     })
     .mockRejectedValueOnce(new Error('disk full'));
   await expect(context.hierarchy.beginUser('alice', 'phone')).rejects.toThrow('disk full');
-  expect(context.deviceSecrets.size).toBe(1);
+  expect(context.deviceTags.size).toBe(1);
   expect(context.ciphertext.size).toBe(1); // Public enrollment marker survived.
+  await expect(context.hierarchy.describeSetup('alice', 'phone')).resolves.toMatchObject({
+    user: 'interrupted',
+  });
   await expect(context.hierarchy.beginUser('alice', 'phone')).rejects.toThrow(
     'explicitly discarded',
   );
@@ -299,7 +269,7 @@ it('retains interrupted enrollment for explicit reconciliation instead of silent
     'established',
   );
   await context.hierarchy.logout('alice', 'phone');
-  expect(context.deviceSecrets.size).toBe(0);
+  expect(context.deviceTags.size).toBe(0);
 });
 it('requires explicit discard when an unconfirmed Workplace secret was lost, and never discards an established key', async () => {
   const context = memoryKeyHierarchy();
@@ -327,11 +297,14 @@ it('pins both User key roles and recovers the same signing identity', async () =
         source.userCredential,
         {
           ...saved,
-          publicIdentity: { ...saved.publicIdentity, signingPublicKey: substitute.publicKey },
+          publicIdentity: {
+            ...saved.publicIdentity,
+            signingPublicKey: keyHex(substitute.publicKey),
+          },
         },
         'fresh',
       ),
-    ).rejects.toThrow('identity mismatch');
+    ).rejects.toThrow();
   } finally {
     substitute.privateKey.fill(0);
   }
@@ -347,11 +320,10 @@ it.each(['missing-device-key', 'orphan-device-key', 'total-installation-loss'])(
   async loss => {
     const { snapshot } = await seedSnapshotWorkplace();
     const source = await enrolledKeyHierarchy();
-    const encrypted = await source.hierarchy.withWorkplaceKey(
+    const encrypted = await source.hierarchy.encryptSnapshot(
       source.identity,
       source.workplaceId,
-      dek => encryptWorkplaceSnapshot(snapshot, dek),
-      true,
+      snapshot,
     );
     const saved = await source.hierarchy.exportUserRecoveryPackage('alice', 'phone');
     const workplaceKeys = await source.hierarchy.exportWorkplaceKeys(
@@ -366,13 +338,13 @@ it.each(['missing-device-key', 'orphan-device-key', 'total-installation-loss'])(
         loadUserRecoveryPackage: async userId =>
           userId === 'alice' ? JSON.parse(await readFile(location, 'utf8')) : null,
       };
-      if (loss === 'missing-device-key') source.deviceSecrets.clear();
+      if (loss === 'missing-device-key') await source.eraseDeviceKeys();
       else if (loss === 'orphan-device-key') source.ciphertext.clear();
       else {
         source.ciphertext.clear();
-        source.deviceSecrets.clear();
+        await source.eraseDeviceKeys();
       }
-      const orphan = [...source.deviceSecrets.values()].map(keyHex);
+      const orphan = [...source.deviceTags.values()];
       expect(await source.hierarchy.inspectDeviceState('alice', 'phone')).toBe('recovery-required');
       if (loss !== 'total-installation-loss') {
         await expect(source.hierarchy.beginUser('alice', 'phone')).rejects.toThrow();
@@ -386,15 +358,12 @@ it.each(['missing-device-key', 'orphan-device-key', 'total-installation-loss'])(
       if (loss !== 'missing-device-key')
         await source.hierarchy.installWorkplaceKeys(recovered, workplaceKeys);
       expect(
-        await source.hierarchy.withWorkplaceKey(recovered, source.workplaceId, dek =>
-          decryptWorkplaceSnapshot(encrypted, dek),
-        ),
+        await source.hierarchy.decryptSnapshot(recovered, source.workplaceId, encrypted),
       ).toEqual(snapshot);
       expect(
         (await source.hierarchy.exportWorkplaceKeys(recovered, source.workplaceId)).keyId,
       ).toBe(workplaceKeys.keyId);
-      for (const key of orphan)
-        expect([...source.deviceSecrets.values()].map(keyHex)).toContain(key);
+      for (const key of orphan) expect([...source.deviceTags.values()]).toContain(key);
       expect(await source.hierarchy.inspectDeviceState('alice', 'fresh-installation')).toBe(
         'ready',
       );
@@ -406,7 +375,7 @@ it.each(['missing-device-key', 'orphan-device-key', 'total-installation-loss'])(
 
 it('leaves a known identity intact when the external recovery package is unavailable', async () => {
   const source = await enrolledKeyHierarchy();
-  source.deviceSecrets.clear();
+  await source.eraseDeviceKeys();
   const before = JSON.stringify([...source.ciphertext.entries()]);
   await expect(
     source.hierarchy.recoverUserFromSource(
@@ -416,7 +385,7 @@ it('leaves a known identity intact when the external recovery package is unavail
     ),
   ).rejects.toThrow('ciphertext is unavailable');
   expect(JSON.stringify([...source.ciphertext.entries()])).toBe(before);
-  expect(source.deviceSecrets.size).toBe(0);
+  expect(source.deviceTags.size).toBe(0);
   await expect(source.hierarchy.beginUser('alice', 'different-device')).rejects.toThrow(
     'requires recovery',
   );
@@ -441,9 +410,7 @@ it('rejects an otherwise valid forged dump encrypted to the public recovery reci
       { ...original, keyId: fakeKeyId, recoveryEnvelope },
       fakeSnapshot,
     );
-    await expect(decryptWorkplaceDump(forged, source.workplaceCredential)).rejects.toThrow(
-      'identity mismatch',
-    );
+    await expect(decryptWorkplaceDump(forged, source.workplaceCredential)).rejects.toThrow();
   } finally {
     fakeDek.fill(0);
   }

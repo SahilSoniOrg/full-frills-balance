@@ -9,14 +9,14 @@ function walk(directory) {
     if (entry.isDirectory()) walk(filename);
     else if (/\.(ts|tsx)$/.test(entry.name)) {
       const relative = path.relative(root, filename).split(path.sep).join('/');
-      if (
-        relative.includes('/__tests__/') ||
-        relative.startsWith('src/testing/keyCryptoReference/')
-      )
-        continue;
+      if (relative.includes('/__tests__/')) continue;
       const source = fs.readFileSync(filename, 'utf8');
-      if (/from\s+['"][^'"]*keyCryptoReference\//.test(source))
-        violations.push(`${relative}: production import of JS crypto test oracle`);
+      if (
+        /(?:from\s+|import\s*(?:\(|)|require\s*\()['"][^'"]*(?:keyCryptoReference\/|expo-key-crypto\/tests\/)/.test(
+          source,
+        )
+      )
+        violations.push(`${relative}: production import of native crypto test support`);
       if (
         relative.startsWith('src/services/backup/') &&
         /withWorkplaceKey|openRecoveryEnvelope|openKeyEnvelope|generateEncryptionPair|generateUserSigningPair|\.vault\.load\(/.test(

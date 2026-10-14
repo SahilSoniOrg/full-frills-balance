@@ -1,5 +1,11 @@
 import { keyCiphertextStateStore, type KeyCiphertextStateStore } from './keyCiphertextStateStore';
-import { nativeKeyOperations, type NativeKeyOperations } from './nativeKeyOperations';
+import { nativeKeyOperations } from './nativeKeyOperations';
+import {
+  parseNativeKeyReference,
+  type NativeKeyReference,
+  type NativeKeyOperations,
+  type RecoveryOperation,
+} from './nativeKeyApi';
 import { assertKeyAccessAllowed } from './keyAccessPolicy';
 import { MissingKeyStateError } from './keyStateErrors';
 import { parseRecoveryCredential } from './recoveryCredential';
@@ -127,17 +133,45 @@ export class LocalKeyHierarchy implements KeyHierarchy {
     );
     return next;
   }
-  private async invoke(
-    operation: Parameters<NativeKeyOperations['execute']>[0],
-    request: unknown,
-  ): Promise<unknown> {
+  private async invoke(operation: RecoveryOperation, request: unknown): Promise<unknown> {
     this.assertAccess();
-    const result = await this.crypto.execute(operation, request);
+    const result = await this.crypto.recovery(operation, request);
     this.assertAccess();
     return result;
   }
+  private async withReference<T>(key: NativeKeyReference, operation: () => Promise<T>): Promise<T> {
+    try {
+      this.assertAccess();
+      const result = await operation();
+      this.assertAccess();
+      return result;
+    } finally {
+      await this.crypto.releaseKey(key);
+    }
+  }
+  private async withUserReference<T>(
+    user: LocalUserKeys,
+    operation: (key: NativeKeyReference) => Promise<T>,
+  ): Promise<T> {
+    this.assertAccess();
+    const key = await this.crypto.openKey({ kind: 'user', user });
+    return this.withReference(key, () => operation(key));
+  }
+  private async withWorkplaceReference<T>(
+    user: LocalUserKeys,
+    keys: WorkplaceKeys,
+    operation: (key: NativeKeyReference) => Promise<T>,
+  ): Promise<T> {
+    return this.withUserReference(user, async userKey => {
+      this.assertAccess();
+      const key = await this.crypto.openKey({ kind: 'workplace', user: userKey, keys });
+      return this.withReference(key, () => operation(key));
+    });
+  }
   private async hasDevice(userId: string, deviceId: string): Promise<boolean> {
-    const result = await this.invoke('hasDevice', { userId, deviceId });
+    this.assertAccess();
+    const result = await this.crypto.hasKey({ kind: 'device', userId, deviceId });
+    this.assertAccess();
     if (typeof result !== 'boolean') throw new Error('Invalid Device vault result');
     return result;
   }
@@ -197,7 +231,14 @@ export class LocalKeyHierarchy implements KeyHierarchy {
         recoveryConfirmed: false,
         enrollmentPending: true,
       });
-      const result = object(await this.invoke('createUser', { userId, deviceId }));
+      const device = parseNativeKeyReference(
+        await this.crypto.generateKeys({ kind: 'device', userId, deviceId }),
+      );
+      const result = await this.withReference(device, async () => {
+        const generated = object(await this.crypto.generateKeys({ kind: 'user', device }));
+        await this.crypto.releaseKey(parseNativeKeyReference(generated.key));
+        return generated;
+      });
       const user = parseLocalUser(result.user),
         credential = parseRecoveryCredential(result.credential);
       if (
@@ -261,7 +302,7 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       }
       const user = await this.user(userId, deviceId);
       if (!(await this.hasDevice(userId, deviceId))) return { user: 'recovery-required' };
-      await this.invoke('checkUser', { user });
+      await this.withUserReference(user, async () => undefined);
       const identity = this.identity(user);
       if (!user.recoveryConfirmed) return { user: 'pending', identity };
       if (!workplaceId) return { user: 'ready', identity };
@@ -309,7 +350,7 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       }
       if (raw === null || !(await this.hasDevice(userId, deviceId))) return 'recovery-required';
       const user = await this.user(userId, deviceId);
-      await this.invoke('checkUser', { user });
+      await this.withUserReference(user, async () => undefined);
       return user.recoveryConfirmed ? 'ready' : 'setup-incomplete';
     });
   }
@@ -393,7 +434,13 @@ export class LocalKeyHierarchy implements KeyHierarchy {
         recoveryConfirmed: false,
         enrollmentPending: true,
       });
-      const result = object(await this.invoke('enrollWorkplace', { user, workplaceId }));
+      const result = await this.withUserReference(user, async key => {
+        const generated = object(
+          await this.crypto.generateKeys({ kind: 'workplace', user: key, workplaceId }),
+        );
+        await this.crypto.releaseKey(parseNativeKeyReference(generated.key));
+        return generated;
+      });
       const keys = parseWorkplaceKeys(result.keys),
         credential = parseRecoveryCredential(result.credential);
       if (
@@ -492,7 +539,7 @@ export class LocalKeyHierarchy implements KeyHierarchy {
           object(marker).userKeyFingerprint !== identity.userKeyFingerprint)
       )
         throw new Error('Established Workplace identity mismatch');
-      await this.invoke('validateMember', { user, keys });
+      await this.withWorkplaceReference(user, keys, async () => undefined);
       await this.state.write(workplaceIdentityScope(identity.userId, keys.workplaceId), {
         keyId: keys.keyId,
         userKeyFingerprint: identity.userKeyFingerprint,
@@ -510,7 +557,7 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       if (!/^sha256:[a-f0-9]{64}$/.test(digest))
         throw new Error('Invalid recovery manifest digest');
       const user = await this.readyUser(identity),
-        result = await this.invoke('sign', { user, digest });
+        result = await this.withUserReference(user, key => this.crypto.sign(key, digest));
       if (typeof result !== 'string' || !/^[a-f0-9]{128}$/.test(result))
         throw new Error('Invalid native signature');
       return result;
@@ -534,11 +581,9 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       await this.state.write(workplaceScope(identity.userId, workplaceId), reserved);
       this.assertAccess();
       return parseEncryptedSnapshotEnvelope(
-        await this.invoke('encryptSnapshot', {
-          user,
-          keys: reserved,
-          plaintext: serializeWorkplaceSnapshot(snapshot),
-        }),
+        await this.withWorkplaceReference(user, reserved, key =>
+          this.crypto.encrypt(key, serializeWorkplaceSnapshot(snapshot)),
+        ),
       );
     });
   }
@@ -553,7 +598,9 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       if (!keys.recoveryConfirmed)
         throw new Error('Confirm and save Workplace dump recovery first');
       const snapshot = parseEncryptedSnapshotEnvelope(value);
-      const plaintext = await this.invoke('decryptSnapshot', { user, keys, snapshot });
+      const plaintext = await this.withWorkplaceReference(user, keys, key =>
+        this.crypto.decrypt(key, snapshot),
+      );
       if (typeof plaintext !== 'string') throw new Error('Invalid native snapshot result');
       return decodeWorkplaceSnapshot(plaintext);
     });
@@ -568,7 +615,7 @@ export class LocalKeyHierarchy implements KeyHierarchy {
     const next = (queues.get(this.state) ?? Promise.resolve())
       .catch(() => undefined)
       .then(async () => {
-        await this.crypto.execute('removeDevice', { userId, deviceId });
+        await this.crypto.removeKey({ kind: 'device', userId, deviceId });
         await this.state.remove(userScope(userId, deviceId));
       });
     queues.set(
@@ -589,7 +636,7 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       )
         throw new Error('Cannot discard an established User identity');
       if (marker !== null) await this.state.remove(JSON.stringify(['identity', userId]));
-      await this.crypto.execute('removeDevice', { userId, deviceId });
+      await this.crypto.removeKey({ kind: 'device', userId, deviceId });
       await this.state.remove(userScope(userId, deviceId));
     });
   }

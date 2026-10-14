@@ -68,12 +68,11 @@ export function parseKeyEnvelope(value: unknown): KeyEnvelope {
 }
 
 export interface RecoveryCredential {
-  format: 'full-frills-recovery-credential' | 'full-frills-recovery-handle';
+  format: 'full-frills-recovery-handle';
   formatVersion: 1;
   purpose: 'user-recovery' | 'workplace-dump';
   identityId: string;
   identityKeyId: string;
   recoveryKeyId: string;
-  phrase?: string;
-  handle?: string;
+  handle: string;
 }

@@ -1,6 +1,6 @@
 import { requireOptionalNativeModule } from 'expo';
 import { assertKeyAccessAllowed, subscribeKeyAccessPolicy } from './keyAccessPolicy';
-import type { NativeKeyOperations } from './nativeKeyOperations';
+import { keyOperationsFromTransport, type NativeKeyOperations } from './nativeKeyApi';
 
 type NativeModule = {
   setAllowed(allowed: boolean): void;
@@ -31,12 +31,12 @@ try {
 module?.setAllowed(initiallyAllowed);
 subscribeKeyAccessPolicy(allowed => module?.setAllowed(allowed));
 export const nativeKeyOperations: NativeKeyOperations = {
-  async execute(operation, request) {
-    if (operation !== 'removeDevice') assertKeyAccessAllowed();
+  ...keyOperationsFromTransport(async (operation, request) => {
+    if (operation !== 'removeKey' && operation !== 'releaseKey') assertKeyAccessAllowed();
     const result = await ready().execute(operation, JSON.stringify(request));
-    if (operation !== 'removeDevice') assertKeyAccessAllowed();
+    if (operation !== 'removeKey' && operation !== 'releaseKey') assertKeyAccessAllowed();
     return JSON.parse(result);
-  },
+  }),
   async importCredential(uri) {
     assertKeyAccessAllowed();
     const result = await ready().importCredential(uri);

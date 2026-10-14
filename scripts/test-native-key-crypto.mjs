@@ -5,23 +5,43 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const directory = mkdtempSync(path.join(tmpdir(), 'ffb-native-key-test-'));
+function output(command, args) {
+  const result = spawnSync(command, args, { encoding: 'utf8' });
+  return result.status === 0 ? result.stdout.trim() : undefined;
+}
 function run(command, args, env = process.env) {
   const result = spawnSync(command, args, { cwd: root, env, stdio: 'inherit' });
+  if (result.error) throw result.error;
   if (result.status !== 0) throw new Error('Native key validation failed');
 }
 try {
   run('node', ['scripts/prepare-native-key-crypto.mjs']);
-  const prefix = process.env.FFB_OPENSSL_PREFIX ?? '/opt/homebrew/opt/openssl@3';
-  if (!existsSync(path.join(prefix, 'include/openssl/hpke.h')))
-    throw new Error('Set FFB_OPENSSL_PREFIX to an OpenSSL 3.2+ installation with HPKE enabled');
+  const configured = process.env.FFB_OPENSSL_PREFIX;
+  const systemPrefix = output('pkg-config', ['--variable=prefix', 'openssl']);
+  const brewPrefix =
+    process.platform === 'darwin' ? output('brew', ['--prefix', 'openssl@3']) : undefined;
+  const prefix =
+    configured ??
+    [systemPrefix, brewPrefix].find(
+      value => value && existsSync(path.join(value, 'include/openssl/hpke.h')),
+    );
+  if (!prefix || !existsSync(path.join(prefix, 'include/openssl/hpke.h')))
+    throw new Error(
+      'Install HPKE-enabled OpenSSL 3.2+ development headers (pkg-config/Homebrew), or set FFB_OPENSSL_PREFIX. Native tests are required, not skipped.',
+    );
+  const libdir =
+    !configured && prefix === systemPrefix
+      ? output('pkg-config', ['--variable=libdir', 'openssl'])
+      : path.join(prefix, existsSync(path.join(prefix, 'lib64')) ? 'lib64' : 'lib');
   const binary = path.join(directory, 'native-key-test');
-  run(process.env.CXX ?? 'clang++', [
+  run(process.env.CXX ?? 'c++', [
     '-std=c++20',
+    '-DFFB_KEY_CRYPTO_TEST',
     '-Wall',
     '-Wextra',
     '-Werror',
     '-I',
-    'modules/expo-key-crypto/.generated',
+    'modules/expo-key-crypto/vendor',
     '-I',
     'modules/expo-key-crypto/cpp',
     '-I',
@@ -29,7 +49,7 @@ try {
     'modules/expo-key-crypto/cpp/KeyCrypto.cpp',
     'modules/expo-key-crypto/tests/HostRunner.cpp',
     '-L',
-    path.join(prefix, 'lib'),
+    libdir ?? path.join(prefix, 'lib'),
     '-lcrypto',
     '-o',
     binary,

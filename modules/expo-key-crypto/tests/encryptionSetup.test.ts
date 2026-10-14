@@ -1,22 +1,28 @@
+import { closeNativeHost, memoryKeyHierarchy } from './nativeTestContext';
 import { resetDatabase } from '@/src/testing/resetDatabase';
-import { enableTestCrypto, seedSnapshotWorkplace } from './snapshotTestHelpers';
-import { memoryKeyHierarchy } from './keyHierarchyTestHelpers';
-import { EncryptionSetup } from '../encryptionSetup';
-import { verifyLocalRecoveryPackage, type LocalRecoveryPackage } from '../localRecoveryPackage';
 import {
-  snapshotFingerprint,
-  encryptWorkplaceSnapshot,
-  keyFingerprint,
-} from '@/src/testing/keyCryptoReference/encryptedSnapshot';
-import { publicKeyId, sealKeyEnvelope } from '@/src/testing/keyCryptoReference/keyEnvelopes';
-import type { EncryptionSetupStore, EncryptionSetupSession } from '../encryptionSetupStore';
+  enableTestCrypto,
+  seedSnapshotWorkplace,
+} from '@/src/services/backup/__tests__/snapshotTestHelpers';
+import { EncryptionSetup } from '@/src/services/backup/encryptionSetup';
+import {
+  verifyLocalRecoveryPackage,
+  type LocalRecoveryPackage,
+} from '@/src/services/backup/localRecoveryPackage';
+import { snapshotFingerprint, keyFingerprint } from '@/src/services/backup/encryptedSnapshot';
+import { publicKeyId } from '@/src/services/backup/keyEnvelopes';
+import { encryptWorkplaceSnapshot, sealKeyEnvelope } from './envelopeTestTools';
+import type {
+  EncryptionSetupStore,
+  EncryptionSetupSession,
+} from '@/src/services/backup/encryptionSetupStore';
 import {
   recoverWorkplaceSnapshot,
   restoreWorkplaceSnapshot,
 } from '@/src/services/import/restoreWorkplaceSnapshot';
-import { captureWorkplaceSnapshot, SNAPSHOT_TABLES } from '../workplaceSnapshot';
+import { captureWorkplaceSnapshot, SNAPSHOT_TABLES } from '@/src/services/backup/workplaceSnapshot';
 import { asWorkplaceId } from '@/src/types/ids';
-import { parseEncryptionSetupSession } from '../encryptionSetupValidation';
+import { parseEncryptionSetupSession } from '@/src/services/backup/encryptionSetupValidation';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 
 jest.mock('react-native-quick-crypto', () => ({
@@ -26,6 +32,7 @@ jest.mock('react-native-quick-crypto', () => ({
     Buffer: jest.requireActual('node:buffer').Buffer,
   },
 }));
+afterEach(closeNativeHost);
 beforeEach(async () => {
   enableTestCrypto();
   await resetDatabase();
@@ -116,7 +123,7 @@ it('requires saved-file verification and persists no credential/plaintext betwee
   const secret = await flow.beginUser();
   expect((await flow.inspect(workplaceId)).keys?.user).toBe('pending');
   await expect(flow.preparePackage(workplaceId)).rejects.toThrow('User recovery');
-  await expect(flow.confirmUser({ ...secret, phrase: 'wrong' })).rejects.toThrow();
+  await expect(flow.confirmUser({ ...secret, handle: '00'.repeat(32) })).rejects.toThrow();
   await flow.confirmUser(secret);
   const workplaceSecret = await flow.beginWorkplace(workplaceId);
   await expect(flow.preparePackage(workplaceId)).rejects.toThrow('Workplace recovery');
@@ -130,8 +137,8 @@ it('requires saved-file verification and persists no credential/plaintext betwee
     packages: [...persistence.packages.values()],
     ciphertext: [...context.ciphertext.values()],
   });
-  expect(persisted).not.toContain(secret.phrase);
-  expect(persisted).not.toContain(workplaceSecret.phrase);
+  expect(persisted).not.toContain(secret.handle);
+  expect(persisted).not.toContain(workplaceSecret.handle);
   expect(persisted).not.toContain(snapshot.workplace.name);
   expect(pack).not.toHaveProperty('deviceEnvelope');
   expect(pack).not.toHaveProperty('credential');
@@ -197,7 +204,7 @@ it('authenticates a whole replacement envelope/snapshot before any recovery writ
   );
   await expect(flow.recover(forged, source.userSecret)).rejects.toThrow('signature');
   expect(await persistence.store.loadSession()).toBeNull();
-  expect(target.deviceSecrets.size).toBe(0);
+  expect(target.deviceTags.size).toBe(0);
   expect(target.ciphertext.size).toBe(0);
   expect(publish).not.toHaveBeenCalled();
   await expect(flow.recover(pack, source.workplaceSecret)).rejects.toThrow('User recovery');
@@ -235,13 +242,13 @@ it('recovers the same User/DEK/records onto a fresh Device and makes publication
     expect(actual).toEqual(expected);
   }
   const auditCount = (restored.data.auditLogs ?? []).length;
-  const firstKey = [...target.deviceSecrets.values()][0];
+  const firstKey = [...target.deviceTags.values()][0];
   await flow.recover(pack, source.userSecret);
   expect(
     (await captureWorkplaceSnapshot(asWorkplaceId(source.workplaceId))).data.auditLogs,
   ).toHaveLength(auditCount);
-  expect(target.deviceSecrets.size).toBe(1);
-  expect([...target.deviceSecrets.values()][0]).toEqual(firstKey);
+  expect(target.deviceTags.size).toBe(1);
+  expect([...target.deviceTags.values()][0]).toEqual(firstKey);
   const status = await flow.inspect(source.workplaceId);
   expect(status.packageSaved).toBe(true);
   expect(status.keys?.writerAllowed).toBe(false);
@@ -285,7 +292,7 @@ it('stops cancelled recovery before mutation and rejects secret fields in durabl
   expect(publish).not.toHaveBeenCalled();
   const session = await source.store.loadSession();
   expect(() =>
-    parseEncryptionSetupSession({ ...session, phrase: source.userSecret.phrase }),
+    parseEncryptionSetupSession({ ...session, phrase: source.userSecret.handle }),
   ).toThrow();
   await expect(
     verifyLocalRecoveryPackage(
@@ -295,7 +302,7 @@ it('stops cancelled recovery before mutation and rejects secret fields in durabl
   ).rejects.toThrow('signature');
 });
 
-it('rejects a wrong phrase before creating progress or Device keys', async () => {
+it('rejects a wrong recovery handle before creating progress or Device keys', async () => {
   const source = await configured(),
     pack = await source.flow.preparePackage(source.workplaceId);
   const target = memoryKeyHierarchy(),
@@ -309,10 +316,10 @@ it('rejects a wrong phrase before creating progress or Device keys', async () =>
     publish,
   );
   await expect(
-    flow.recover(pack, { ...source.userSecret, phrase: '00'.repeat(38) }),
+    flow.recover(pack, { ...source.userSecret, handle: '00'.repeat(32) }),
   ).rejects.toThrow();
   expect(await persistence.store.loadSession()).toBeNull();
-  expect(target.deviceSecrets.size).toBe(0);
+  expect(target.deviceTags.size).toBe(0);
   expect(publish).not.toHaveBeenCalled();
 });
 
@@ -336,22 +343,21 @@ it('never creates a new User root when an interrupted recovery has a known ident
   expect((await flow.inspect()).keys?.user).toBe('recovery-required');
   await expect(flow.beginUser()).rejects.toThrow('new root');
   await expect(flow.discardUnfinished()).rejects.toThrow('Known User');
-  expect(context.deviceSecrets.size).toBe(0);
+  expect(context.deviceTags.size).toBe(0);
   expect(context.ciphertext.size).toBe(0);
 });
 
 it('recovers a lost Workplace record read-only instead of regenerating its DEK or reusing an old counter', async () => {
   const source = await configured(),
     pack = await source.flow.preparePackage(source.workplaceId);
-  await source.hierarchy.withWorkplaceKey(
+  await source.hierarchy.encryptSnapshot(
     {
       userId: source.userSecret.identityId,
       registeredDeviceId: (await source.store.loadSession())!.deviceId,
       userKeyFingerprint: source.userSecret.identityKeyId,
     },
     source.workplaceId,
-    async () => undefined,
-    true,
+    source.snapshot,
   );
   source.ciphertext.delete(
     JSON.stringify(['workplace', source.userSecret.identityId, source.workplaceId]),
@@ -375,7 +381,7 @@ it('removes only Device access after verified exports while retaining an indepen
   await expect(source.flow.forgetDevice()).rejects.toThrow('Verify');
   await source.flow.confirmPackage(pack);
   await source.flow.forgetDevice();
-  expect(source.deviceSecrets.size).toBe(0);
+  expect(source.deviceTags.size).toBe(0);
   expect((await source.flow.inspect(source.workplaceId)).keys?.user).toBe('recovery-required');
   await expect(source.flow.beginUser()).rejects.toThrow('new root');
   expect(await source.flow.savedPackage()).toEqual(pack); // No lost Device/User key needed to locate ciphertext.
@@ -463,7 +469,7 @@ it('never promotes keys from a rejected publication into a trusted binding, incl
   await expect(restart().recover(pack, source.userSecret)).rejects.toThrow(
     'Snapshot Workplace already exists',
   );
-  target.deviceSecrets.clear();
+  await target.eraseDeviceKeys();
   await expect(restart().recover(pack, source.userSecret)).rejects.toThrow(
     'Snapshot Workplace already exists',
   );
@@ -655,7 +661,7 @@ it('accepts only public, uniquely scoped verified binding records with a pinned 
   expect(parseEncryptionSetupSession(session)).toEqual(session);
   for (const verifiedWorkplaces of [
     [...bindings, ...bindings],
-    [{ ...bindings[0], phrase: source.userSecret.phrase }],
+    [{ ...bindings[0], phrase: source.userSecret.handle }],
     [{ ...bindings[0], keyId: 'raw-key-material' }],
   ]) {
     expect(() => parseEncryptionSetupSession({ ...session, verifiedWorkplaces })).toThrow(
@@ -674,7 +680,7 @@ it.each(['ready', 'missing'])(
     const second = await secondWorkplace(source);
     const staged = await source.flow.preparePackage(source.workplaceId);
     expect((await source.flow.inspect(source.workplaceId)).packageReady).toBe(true);
-    if (device === 'missing') source.deviceSecrets.clear();
+    if (device === 'missing') await source.eraseDeviceKeys();
     const intent = jest
       .fn()
       .mockImplementationOnce(() => undefined)
@@ -723,7 +729,7 @@ it('completes an exact publication retry after a crash before recovery progress 
           workplaceId: source.workplaceId,
           keyId: pack.workplaceKeys.keyId,
           preserveExistingBooks: false,
-          phrase: source.userSecret.phrase,
+          phrase: source.userSecret.handle,
         },
       ],
     }),

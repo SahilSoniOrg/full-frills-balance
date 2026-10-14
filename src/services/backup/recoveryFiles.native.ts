@@ -62,8 +62,6 @@ async function savePackage(value: unknown): Promise<boolean> {
 }
 async function saveSecret(value: unknown): Promise<boolean> {
   const handle = parseRecoveryCredential(value);
-  if (handle.format !== 'full-frills-recovery-handle')
-    throw new Error('Choose a native recovery-file handle');
   // The lease authorizes this explicit export across the OS picker/share transition.
   await nativeKeyOperations.retainCredential(handle);
   try {

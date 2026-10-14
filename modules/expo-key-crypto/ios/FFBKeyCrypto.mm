@@ -41,14 +41,6 @@ void store(const std::string &name, const Bytes &key) {
   if (result != errSecSuccess)
     throw std::runtime_error("Native Device vault write failed");
 }
-void removeLegacy(const std::string &name) {
-  for (NSString *service in @[ @"app:no-auth", @"app", @"app:auth" ]) {
-    OSStatus status =
-        SecItemDelete((__bridge CFDictionaryRef)query(name, service));
-    if (status != errSecSuccess && status != errSecItemNotFound)
-      throw std::runtime_error("Original Device key cleanup failed");
-  }
-}
 class AppleVault final : public Vault {
 public:
   Bytes load(const std::string &name) override {
@@ -58,36 +50,7 @@ public:
           static_cast<const unsigned char *>(value.bytes)[0] != 0xff)
         throw std::runtime_error("Invalid native Device key");
       auto *p = static_cast<const unsigned char *>(value.bytes);
-      removeLegacy(name);
       return Bytes(p + 1, p + 33);
-    }
-    for (NSString *service in @[ @"app:no-auth", @"app" ]) {
-      NSData *legacy = read(name, service);
-      if (!legacy)
-        continue;
-      if (legacy.length != 64)
-        throw std::runtime_error("Invalid original Device key");
-      auto *p = static_cast<const unsigned char *>(legacy.bytes);
-      Bytes key(32);
-      auto digit = [](unsigned char c) -> int {
-        if (c >= '0' && c <= '9')
-          return c - '0';
-        if (c >= 'a' && c <= 'f')
-          return c - 'a' + 10;
-        if (c >= 'A' && c <= 'F')
-          return c - 'A' + 10;
-        throw std::runtime_error("Invalid Device key encoding");
-      };
-      try {
-        for (size_t i = 0; i < 32; ++i)
-          key[i] = (digit(p[i * 2]) << 4) | digit(p[i * 2 + 1]);
-        store(name, key);
-        removeLegacy(name);
-      } catch (...) {
-        wipe(key);
-        throw;
-      }
-      return key;
     }
     return {};
   }
@@ -108,12 +71,10 @@ public:
       throw std::runtime_error("Device key readback failed");
   }
   void remove(const std::string &name) override {
-    for (NSString *service in @[ nativeService, @"app:no-auth", @"app" ]) {
-      OSStatus status =
-          SecItemDelete((__bridge CFDictionaryRef)query(name, service));
-      if (status != errSecSuccess && status != errSecItemNotFound)
-        throw std::runtime_error("Device key removal failed");
-    }
+    OSStatus status =
+        SecItemDelete((__bridge CFDictionaryRef)query(name, nativeService));
+    if (status != errSecSuccess && status != errSecItemNotFound)
+      throw std::runtime_error("Device key removal failed");
   }
 };
 Json parse(NSString *input) {

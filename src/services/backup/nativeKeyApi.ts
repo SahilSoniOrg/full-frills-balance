@@ -1,0 +1,196 @@
+import type { LocalUserKeys, WorkplaceKeys } from './keyHierarchyRecords';
+import type { UserPublicIdentity } from './userIdentity';
+import { parseKeyEnvelope, type KeyEnvelope } from './keyEnvelopes';
+import type { EncryptedSnapshot } from './encryptedSnapshot';
+
+/** Ephemeral native lookup token. Contains no private bytes and is not a durable backup. */
+export interface NativeKeyReference {
+  format: 'full-frills-native-key-reference';
+  formatVersion: 1;
+  kind: 'device' | 'user' | 'workplace';
+  keyId: string;
+  handle: string;
+  publicKey?: string; // DEKs are symmetric and have no public key.
+}
+export interface DeviceKeyScope {
+  kind: 'device';
+  userId: string;
+  deviceId: string;
+}
+export interface DeviceKeyRecipient {
+  userId: string;
+  deviceId: string;
+  publicKey: string;
+  keyId: string;
+}
+export interface DeviceUserEnvelope {
+  userId: string;
+  userKeyFingerprint: string;
+  deviceId: string;
+  devicePublicKey: string;
+  deviceKeyId: string;
+  deviceEnvelope: KeyEnvelope;
+}
+export interface WorkplaceMemberEnvelope {
+  workplaceId: string;
+  keyId: string;
+  userId: string;
+  userKeyFingerprint: string;
+  memberEnvelope: KeyEnvelope;
+}
+export type GenerateKeysRequest =
+  | DeviceKeyScope
+  | { kind: 'user'; device: NativeKeyReference }
+  | { kind: 'workplace'; user: NativeKeyReference; workplaceId: string };
+export type OpenKeyRequest =
+  | { kind: 'user'; user: LocalUserKeys }
+  | { kind: 'workplace'; user: NativeKeyReference; keys: WorkplaceKeys };
+export type RecoveryOperation =
+  'confirmUser' | 'validateRecovery' | 'recoverUser' | 'confirmWorkplace' | 'decryptDump';
+
+/** The transport remains internal to platform/test adapters; callers use these operations. */
+export function keyOperationsFromTransport(
+  call: (operation: string, request: unknown) => Promise<unknown>,
+): Pick<
+  NativeKeyOperations,
+  | 'generateKeys'
+  | 'openKey'
+  | 'encrypt'
+  | 'decrypt'
+  | 'sign'
+  | 'hasKey'
+  | 'removeKey'
+  | 'releaseKey'
+  | 'recovery'
+  | 'wrapUserForDevice'
+  | 'wrapWorkplaceForUser'
+> {
+  return {
+    generateKeys: request => call('generateKeys', request),
+    openKey: async request => parseNativeKeyReference(await call('openKey', request)),
+    encrypt: (key, plaintext) => call('encrypt', { key, plaintext }),
+    decrypt: (key, snapshot) => call('decrypt', { key, snapshot }),
+    sign: (key, digest) => call('sign', { key, digest }),
+    hasKey: async scope => {
+      const result = await call('hasKey', scope);
+      if (typeof result !== 'boolean') throw new Error('Invalid native vault result');
+      return result;
+    },
+    removeKey: async scope => {
+      await call('removeKey', scope);
+    },
+    releaseKey: async key => {
+      await call('releaseKey', { key });
+    },
+    recovery: (operation, request) => call(operation, request),
+    wrapUserForDevice: async (key, recipient) => {
+      const result = await call('wrapUserForDevice', { key, recipient });
+      const value = envelopeResult(
+        result,
+        ['userId', 'userKeyFingerprint', 'deviceId', 'devicePublicKey', 'deviceKeyId'],
+        'deviceEnvelope',
+      );
+      const envelope = parseKeyEnvelope(value.deviceEnvelope);
+      if (
+        value.userId !== recipient.userId ||
+        value.deviceId !== recipient.deviceId ||
+        value.devicePublicKey !== recipient.publicKey ||
+        value.deviceKeyId !== recipient.keyId ||
+        value.userKeyFingerprint !== key.keyId ||
+        envelope.context.purpose !== 'device-user-bundle' ||
+        envelope.context.userId !== recipient.userId ||
+        envelope.context.deviceId !== recipient.deviceId ||
+        envelope.context.recipientKeyId !== recipient.keyId ||
+        envelope.context.keyId !== key.keyId
+      )
+        throw new Error('Native Device envelope scope mismatch');
+      return result as DeviceUserEnvelope;
+    },
+    wrapWorkplaceForUser: async (key, recipient, userKeyFingerprint) => {
+      const result = await call('wrapWorkplaceForUser', { key, recipient, userKeyFingerprint });
+      const value = envelopeResult(
+        result,
+        ['workplaceId', 'keyId', 'userId', 'userKeyFingerprint'],
+        'memberEnvelope',
+      );
+      const envelope = parseKeyEnvelope(value.memberEnvelope);
+      if (
+        value.userId !== recipient.userId ||
+        value.userKeyFingerprint !== userKeyFingerprint ||
+        value.keyId !== key.keyId ||
+        envelope.context.purpose !== 'user-workplace-dek' ||
+        envelope.context.userId !== recipient.userId ||
+        envelope.context.workplaceId !== value.workplaceId ||
+        envelope.context.keyId !== key.keyId
+      )
+        throw new Error('Native Workplace envelope scope mismatch');
+      return result as WorkplaceMemberEnvelope;
+    },
+  };
+}
+function envelopeResult(
+  value: unknown,
+  strings: string[],
+  envelope: string,
+): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new Error('Invalid native key envelope result');
+  const result = value as Record<string, unknown>;
+  if (
+    Object.keys(result).sort().join(',') !== [...strings, envelope].sort().join(',') ||
+    strings.some(name => typeof result[name] !== 'string' || !result[name])
+  )
+    throw new Error('Invalid native key envelope result');
+  return result;
+}
+export function parseNativeKeyReference(value: unknown): NativeKeyReference {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new Error('Invalid native key reference');
+  const key = value as Record<string, unknown>;
+  if (
+    Object.keys(key).some(
+      name => !['format', 'formatVersion', 'kind', 'keyId', 'handle', 'publicKey'].includes(name),
+    ) ||
+    key.format !== 'full-frills-native-key-reference' ||
+    key.formatVersion !== 1 ||
+    !['device', 'user', 'workplace'].includes(String(key.kind)) ||
+    typeof key.keyId !== 'string' ||
+    !/^sha256:[a-f0-9]{64}$/.test(key.keyId) ||
+    typeof key.handle !== 'string' ||
+    !/^[a-f0-9]{64}$/.test(key.handle) ||
+    (key.kind === 'workplace'
+      ? key.publicKey !== undefined
+      : typeof key.publicKey !== 'string' || !/^[a-f0-9]{64}$/.test(key.publicKey))
+  )
+    throw new Error('Invalid native key reference');
+  return value as NativeKeyReference;
+}
+
+/** Key-envelope opening returns references; only application-data decryption returns plaintext. */
+export interface NativeKeyOperations {
+  generateKeys(request: GenerateKeysRequest): Promise<unknown>;
+  openKey(request: OpenKeyRequest): Promise<NativeKeyReference>;
+  encrypt(key: NativeKeyReference, plaintext: string): Promise<unknown>;
+  decrypt(key: NativeKeyReference, snapshot: EncryptedSnapshot): Promise<unknown>;
+  sign(key: NativeKeyReference, digest: string): Promise<unknown>;
+  /** Encrypts the existing User bundle; recipient verification/approval belongs to enrollment. */
+  wrapUserForDevice(
+    key: NativeKeyReference,
+    recipient: DeviceKeyRecipient,
+  ): Promise<DeviceUserEnvelope>;
+  /** Encrypts the existing DEK; this envelope alone does not grant Workplace membership. */
+  wrapWorkplaceForUser(
+    key: NativeKeyReference,
+    recipient: UserPublicIdentity,
+    userKeyFingerprint: string,
+  ): Promise<WorkplaceMemberEnvelope>;
+  hasKey(scope: DeviceKeyScope): Promise<boolean>;
+  removeKey(scope: DeviceKeyScope): Promise<void>;
+  releaseKey(key: NativeKeyReference): Promise<void>;
+  recovery(operation: RecoveryOperation, request: unknown): Promise<unknown>;
+  importCredential(uri: string): Promise<unknown>;
+  writeCredential(handle: unknown, uri: string): Promise<void>;
+  retainCredential(handle: unknown): Promise<void>;
+  releaseCredential(handle: unknown): Promise<void>;
+  clearCredentials(): Promise<void>;
+}

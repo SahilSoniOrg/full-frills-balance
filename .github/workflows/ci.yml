@@ -49,3 +49,21 @@ jobs:
           name: coverage
           path: coverage/
           retention-days: 14
+
+  native-crypto:
+    name: Native crypto and recovery regressions
+    runs-on: macos-15
+    timeout-minutes: 15
+    env:
+      EXPO_NO_TELEMETRY: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Install native test provider
+        run: brew install openssl@3
+      - name: Test real native crypto, golden V1 files and recovery coordinator
+        run: bun run test:native-key-crypto

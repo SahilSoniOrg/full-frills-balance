@@ -9,6 +9,7 @@ android {
   defaultConfig {
     versionCode 1
     versionName "1.0.0"
+    testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     externalNativeBuild {
       cmake { arguments '-DANDROID_STL=c++_shared', '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON' }
     }
@@ -20,4 +21,6 @@ dependencies {
   implementation project(':expo-modules-core')
   // Same pinned native provider used by react-native-quick-crypto.
   implementation 'io.github.ronickg:openssl-static:3.6.2-2'
+  androidTestImplementation 'androidx.test:runner:1.6.2'
+  androidTestImplementation 'androidx.test.ext:junit:1.2.1'
 }
