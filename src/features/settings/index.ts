@@ -15,5 +15,3 @@ export { default as SmsInboxScreen } from './screens/TransactionInboxScreen';
 export { default as SmsRuleFormScreen } from './screens/SmsRuleFormScreen';
 export { default as SmsRulesScreen } from './screens/SmsRulesScreen';
 export { default as WorkplaceSettingsScreen } from './components/WorkplaceSettingsView';
-
-export { default as EncryptionRecoveryScreen } from './components/EncryptionRecoveryView';

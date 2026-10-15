@@ -84,7 +84,7 @@ export function shouldRedirectToPrivacyNotice(
   return (
     !isPrivacyPolicyAcknowledged &&
     pathname !== '/privacy-notice' &&
-    (kind === 'picker' || kind === 'open' || pathname === '/encryption-recovery')
+    (kind === 'picker' || kind === 'open')
   );
 }
 

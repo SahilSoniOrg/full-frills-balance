@@ -16,7 +16,6 @@ export function WelcomeScene({
   onPrivacyNotice,
   onStart,
   onRestore,
-  onRecover,
 }: {
   readonly name: string;
   readonly onNameChange: (name: string) => void;
@@ -25,15 +24,14 @@ export function WelcomeScene({
   readonly onPrivacyNotice: () => void;
   readonly onStart: () => void;
   readonly onRestore: () => void;
-  readonly onRecover?: () => void;
 }) {
-  const [pending, setPending] = useState<'start' | 'restore' | 'recover' | null>(null);
+  const [pending, setPending] = useState<'start' | 'restore' | null>(null);
   const [prompt, setPrompt] = useState(false);
   const [nameMissing, setNameMissing] = useState(false);
   const splash = AppConfig.strings.onboarding.splash;
   const trimmed = (name ?? '').trim();
 
-  const run = (action: 'start' | 'restore' | 'recover') => {
+  const run = (action: 'start' | 'restore') => {
     if (action === 'start' && !trimmed) {
       setNameMissing(true);
       return;
@@ -45,7 +43,6 @@ export function WelcomeScene({
       return;
     }
     if (action === 'start') onStart();
-    else if (action === 'recover') onRecover?.();
     else onRestore();
   };
 
@@ -64,16 +61,6 @@ export function WelcomeScene({
           >
             {copy.restoreBackup}
           </AppButton>
-          {onRecover ? (
-            <AppButton
-              variant="ghost"
-              size="md"
-              onPress={() => run('recover')}
-              testID="onboarding-user-recovery-button"
-            >
-              Recover with my recovery files
-            </AppButton>
-          ) : null}
         </Stack>
         <Stack gap="xs" align="center">
           <AppText variant="caption" color="secondary" align="center">
@@ -171,7 +158,6 @@ export function WelcomeScene({
           setPending(null);
           if (action === 'start') onStart();
           else if (action === 'restore') onRestore();
-          else if (action === 'recover') onRecover?.();
         }}
       />
     </>

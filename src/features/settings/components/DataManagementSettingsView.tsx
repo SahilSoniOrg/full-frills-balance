@@ -21,15 +21,6 @@ function DataManagementSettingsView() {
     <SettingsLayout title={AppConfig.strings.settings.sections.dataManagement}>
       <DataExportSection onImport={() => AppNavigation.toSetupJourney('settings_restore')} />
 
-      <ListGroup variant="plain" header="Private backups">
-        <ListRow
-          focusId="private-recovery"
-          icon={Icon.Lock}
-          title="Private backup & recovery"
-          subtitle="Save recovery files and an encrypted backup for this Workplace."
-          onPress={() => AppNavigation.toEncryptionRecovery()}
-        />
-      </ListGroup>
       <Stack space="xxl">
         <ListGroup variant="plain" header="Sharing">
           <ListRow

@@ -165,7 +165,6 @@ export function OnboardingScreen() {
           go('currency');
         }}
         onRestore={startRestore}
-        onRecover={() => AppNavigation.toEncryptionRecovery('recover')}
       />
     ) : step === 'currency' ? (
       <CurrencyScene

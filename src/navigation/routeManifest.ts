@@ -87,7 +87,6 @@ const detailRoutes = [
   ['device-settings', 'settings', 'device_settings', false],
   ['personalization-settings', 'settings', 'personalization', false],
   ['data-management-settings', 'settings', 'data_management', false],
-  ['encryption-recovery', 'settings', 'encryption_recovery', false],
   ['audit-log', 'audit', 'audit_review', false],
   ['privacy-security-settings', 'settings', 'privacy_security', false],
   ['privacy-notice', 'settings', 'privacy_notice', false],

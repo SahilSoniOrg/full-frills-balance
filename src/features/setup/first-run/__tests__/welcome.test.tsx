@@ -74,13 +74,6 @@ describe('WelcomeScene responsive composition', () => {
     expect(screen.getByTestId('onboarding-privacy-notice-button')).toBeOnTheScreen();
   });
 
-  it('offers User recovery separately from ordinary backup restore', () => {
-    const onRecover = jest.fn();
-    render(<WelcomeScene {...makeProps()} onRecover={onRecover} />);
-    fireEvent.press(screen.getByTestId('onboarding-user-recovery-button'));
-    expect(onRecover).toHaveBeenCalledTimes(1);
-  });
-
   it('keeps every page element mounted when the name field is focused', () => {
     render(<WelcomeScene {...makeProps()} />);
     const input = screen.getByTestId('onboarding-name-input');
