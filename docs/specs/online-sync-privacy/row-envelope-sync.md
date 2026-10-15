@@ -1,10 +1,10 @@
 # V2 row-envelope sync: per-row encryption with short-key JSON + dictionary compression
 
-Status: design agreed; not implemented. The V1 whole-snapshot backup on this branch is frozen — no V1 backup path merges (see Rollout task list). V2 is the only backup design going forward.
+Status: design agreed; not implemented. The V1 whole-snapshot backup was removed from this branch; V2 is the future backup design (see Rollout task list).
 
 ## Why
 
-V1 encrypts the entire serialized workplace as one blob. That forces all-or-nothing behavior, which is why `FFB_KEY_SNAPSHOT_LIMIT` exists (100,000 records / 32 MiB in `src/services/backup/workplaceSnapshot.ts`). V1 cannot stream, resume, retry partially, or resolve conflicts per item: every edit re-encrypts and re-uploads everything.
+The removed V1 implementation encrypted the entire serialized workplace as one blob. That forced all-or-nothing behavior, with `FFB_KEY_SNAPSHOT_LIMIT` capping snapshots at 100,000 records / 32 MiB (`workplaceSnapshot.ts` is in git history). V1 could not stream, resume, retry partially, or resolve conflicts per item: every edit re-encrypted and re-uploaded everything.
 
 V2 encrypts each row independently so upload, download, retry, and conflict resolution happen per item while data stays encrypted end to end.
 
@@ -84,7 +84,7 @@ Plaintext headers carry what sync needs without decrypting (routing, conflict ke
 - Dictionary is public (ships in the app binary, contains training substrings). Train on synthetic multilingual corpora only — never on real user PII.
 - Compression-before-encryption length leakage (CRIME-style) is accepted; see Decisions.
 
-## Limits (replaces `FFB_KEY_SNAPSHOT_LIMIT`)
+## Limits (replaces the removed `FFB_KEY_SNAPSHOT_LIMIT`)
 
 - Per-row plaintext cap 64 KiB (observed max 2.1 KB). Decrypt rejects ciphertext over the cap before allocating, and decompression writes into a fixed 64 KiB buffer, so a hostile zstd frame cannot expand past it.
 - Per-batch cap: 500 rows or 4 MiB of plaintext, whichever comes first. One batch is one native call and one upload page.
@@ -123,7 +123,7 @@ Losing the row index is safe but not free. Online, the Device downloads and veri
 
 ## Local backup file
 
-The offline backup is a ZIP (fflate, already a dependency) containing the signed head manifest, the row envelopes as NDJSON, the Workplace DEK recovery envelope and the encrypted User-recovery package. It replaces V1's `LocalRecoveryPackage` and `workplaceDump.ts` shapes. The recovery credential stays a separate file, as in V1.
+The offline backup is a ZIP (fflate, already a dependency) containing the signed head manifest, the row envelopes as NDJSON, the Workplace DEK recovery envelope and the encrypted User-recovery package. It replaces the removed V1 `LocalRecoveryPackage` and `workplaceDump.ts` shapes. The recovery credential stays a separate file, as in V1.
 
 Until a backend exists there is no compare-and-swap, no pull and no cross-Device sync: each backup file is a complete, self-verifying signed state of one Device's books, and restoring one replaces local books rather than merging. Chain continuity (`seq`, `prevHash`) and the rollback checkpoint matter only for server sync; an offline backup may start a fresh genesis chain, and the first upload to a future backend starts the server chain.
 
@@ -135,15 +135,15 @@ Short-keys were measured at zero benefit inside the zipped plaintext export. The
 
 ## Rollout task list
 
-Merge gate: **do not merge the V1 whole-snapshot backup path** (`encryptSnapshot`/`decryptSnapshot`, single-nonce whole-blob `EncryptedSnapshot`, `FFB_KEY_SNAPSHOT_LIMIT`) currently on `codex/v1-key-management-recovery`. It lands only as row-level V2 per this doc. Merging V1 first and migrating later means shipping the all-or-nothing unit, its size caps, and a migration users pay for — build V2 directly. Every task below must be complete before merge; no V1 backup path remains afterward.
+Merge gate: **the V1 whole-snapshot backup was removed from this branch**; its implementation identifiers (`encryptSnapshot`/`decryptSnapshot`, `EncryptedSnapshot`, `FFB_KEY_SNAPSHOT_LIMIT`) remain in git history. V2 lands only as row-level sync per this doc. Every task below must be complete before V2 merges; no V1 backup path remains.
 
-Branch split: the key-management substrate on this branch has no snapshot-encryption dependency once the held items below are removed, and **may merge ahead** — User/Workplace enrollment and confirmation, vault and key references, recovery credentials, ciphertext state stores, and setup-status reporting minus backup verification. The setup UI stays hidden until V2 ships: without a backup, recovery secrets restore nothing, and a standalone User-recovery file would be a third format to support forever. **Held for V2**: the encrypt/decrypt snapshot methods, the `EncryptedSnapshot` envelope, `serialize`/`decodeWorkplaceSnapshot` with `MAX_SNAPSHOT_*` and `FFB_KEY_SNAPSHOT_LIMIT`, the `encryptionSetup` package save/verify steps, the `FFB_KEY_BACKUPS_REQUIRED` removal-device gate (it cannot be satisfied without backup), `forgetDevice` (same gate), the `LocalRecoveryPackage` V1 shape (it embeds an `EncryptedSnapshot`), the `recover()` snapshot-decrypt-and-publish path, native `SnapshotCrypto.cpp` plus the `KeyEngine` encrypt/decrypt/`decryptDump` branches, the `workplaceDump.ts` V1 shape, and the V1 dump/proof harness. `describeSetup`'s `writerAllowed`/`budgetExhausted` fields go away with the counter and the single-writer rule.
+Branch split: the key-management substrate has no snapshot-encryption dependency and may merge ahead — User/Workplace enrollment and confirmation, vault and key references, recovery credentials, ciphertext state stores, and setup-status reporting minus backup verification. The V1 setup UI was removed; V2 builds its own. **Removed from this branch (V2 replaces them)**: the encrypt/decrypt snapshot methods, the `EncryptedSnapshot` envelope, `serialize`/`decodeWorkplaceSnapshot` with `MAX_SNAPSHOT_*` and `FFB_KEY_SNAPSHOT_LIMIT`, the `encryptionSetup` package save/verify steps, the `FFB_KEY_BACKUPS_REQUIRED` removal-device gate, `forgetDevice`, the `LocalRecoveryPackage` V1 shape, the `recover()` snapshot-decrypt-and-publish path, native `SnapshotCrypto.cpp` plus the `KeyEngine` encrypt/decrypt/`decryptDump` branches, the `workplaceDump.ts` V1 shape, and the V1 dump/proof harness. `describeSetup`'s `writerAllowed`/`budgetExhausted` fields were removed with the counter and single-writer rule.
 
 - [ ] Vendor zstd C sources (BSD) into the `ExpoKeyCrypto` C++ module, like `nlohmann/json`; compile per-table dictionaries into the binary.
 - [ ] Native `encryptRows`/`decryptRows` (Android+iOS): zstd + inner TLV + HKDF + AES-GCM in one call; per-row results on decrypt, all-or-nothing on encrypt; 64 KiB and batch caps; bounded decompression.
 - [ ] `signRowManifest` native op (Android+iOS) with its own domain string + JS verification against the User public identity; shared cross-platform TLV/AAD/HKDF/inner-TLV/Merkle test vectors gating merge.
 - [ ] Short-key maps for the 11 V2 source tables listed above, additive-only, all versions retained, unknown keys rejected.
-- [ ] `rowEnvelope.ts`: envelope + manifest validators, header-as-AAD binding. No `FFB_KEY_SNAPSHOT_LIMIT`.
+- [ ] `rowEnvelope.ts`: envelope + manifest validators, header-as-AAD binding. The V1 `FFB_KEY_SNAPSHOT_LIMIT` was removed.
 - [ ] Dictionary pipeline: seeded synthetic multilingual corpus script + checked-in per-table `dict.vN.bin`, read-before-write rollout.
 - [ ] Local row index table and commit scan under the writer lock, including tombstones for hard deletes.
 - [ ] Signed chained manifests: `seq`, `prevHash`, `authorUserId`, `authorDeviceId`, full-state RFC 6962 root; pulls verify the chain and root before applying.
