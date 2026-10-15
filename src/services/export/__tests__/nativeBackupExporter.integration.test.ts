@@ -6,7 +6,7 @@ import { exportWorkplacesToJSON } from '../nativeBackupExporter';
 import { compression } from '@/src/utils/compression';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 import { resetDatabase } from '@/src/testing/resetDatabase';
-import { seedSnapshotWorkplace } from '@/src/services/backup/__tests__/snapshotTestHelpers';
+import { seedKeyTestWorkplace } from '@/src/services/backup/__tests__/keyTestHelpers';
 import { preferences } from '@/src/services/preferences';
 import { DEFAULT_UI_PREFERENCES } from '@/src/services/preferences/types';
 
@@ -23,7 +23,7 @@ afterEach(() => {
 });
 
 it('captures legacy v2 backup data before compression and releases the reader before file work', async () => {
-  const { workplaceId, fixture, journal } = await seedSnapshotWorkplace();
+  const { workplaceId, fixture, journal } = await seedKeyTestWorkplace();
   const cleanup = jest.fn();
   const zip = jest.mocked(compression.createZipArchive);
   zip.mockImplementationOnce(async () => {
@@ -45,9 +45,14 @@ it('captures legacy v2 backup data before compression and releases the reader be
 });
 
 it('lets a queued accounting write run between separately captured Workplaces', async () => {
-  const { workplaceId, snapshot } = await seedSnapshotWorkplace();
+  const { workplaceId, workplace } = await seedKeyTestWorkplace();
   const second = asWorkplaceId('second-export');
-  await workplaceRepository.create({ ...snapshot.workplace, id: second });
+  await workplaceRepository.create({
+    id: second,
+    name: workplace.name,
+    icon: workplace.icon,
+    defaultCurrencyCode: workplace.defaultCurrencyCode,
+  });
   const original = exportRepository.fetchOrmTable.bind(exportRepository);
   let written = false;
   let writing: Promise<void> | undefined;

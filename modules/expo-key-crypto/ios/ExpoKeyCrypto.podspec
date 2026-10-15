@@ -18,7 +18,7 @@ Pod::Spec.new do |s|
   s.name = 'ExpoKeyCrypto'
   s.version = '1.0.0'
   s.summary = 'Native private-key operations for Full Frills Balance'
-  s.description = 'Device vault access, HPKE, User signing and snapshot encryption without exporting raw keys to JavaScript.'
+  s.description = 'Device vault access, HPKE key envelopes and recovery credentials without exporting raw keys to JavaScript.'
   s.license = 'MIT'
   s.author = 'Full Frills Balance'
   s.homepage = 'https://github.com/SahilSoniOrg/full-frills-balance'

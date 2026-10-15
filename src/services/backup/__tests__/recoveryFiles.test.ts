@@ -1,4 +1,4 @@
-import { enableTestCrypto } from './snapshotTestHelpers';
+import { enableTestCrypto } from './keyTestHelpers';
 import { Platform } from 'react-native';
 import { nativeKeyOperations } from '../nativeKeyOperations';
 import { recoveryFiles } from '../recoveryFiles.native';

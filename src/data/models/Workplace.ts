@@ -21,8 +21,6 @@ export default class Workplace extends Model {
   @field('name') name!: string;
   @field('icon') icon!: string;
   @field('default_currency_code') defaultCurrencyCode!: string;
-  /** Receipt committed with identity-preserving snapshot publication; never a sync cursor. */
-  @field('snapshot_restore_fingerprint') snapshotRestoreFingerprint?: string;
 
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;

@@ -5,15 +5,14 @@ import { journalPersistenceRepository } from '@/src/data/repositories/journal/Jo
 import { JournalStatus } from '@/src/types/enums';
 import { asWorkplaceId } from '@/src/types/ids';
 import { Icon } from '@/src/types/domainIcons';
-import { captureWorkplaceSnapshot } from '../workplaceSnapshot';
 
 export function enableTestCrypto(): void {
   Object.defineProperty(globalThis, 'crypto', { value: webcrypto, configurable: true });
 }
 
-export async function seedSnapshotWorkplace() {
-  const workplaceId = asWorkplaceId('snapshot-workplace');
-  await workplaceRepository.create({
+export async function seedKeyTestWorkplace() {
+  const workplaceId = asWorkplaceId('key-test-workplace');
+  const workplace = await workplaceRepository.create({
     id: workplaceId,
     name: 'Private books',
     icon: Icon.Wallet,
@@ -24,10 +23,5 @@ export async function seedSnapshotWorkplace() {
     fixture.putInput({ status: JournalStatus.POSTED }),
     workplaceId,
   );
-  return {
-    workplaceId,
-    fixture,
-    journal: journal.journal,
-    snapshot: await captureWorkplaceSnapshot(workplaceId),
-  };
+  return { workplaceId, workplace, fixture, journal: journal.journal };
 }

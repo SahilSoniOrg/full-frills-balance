@@ -392,6 +392,7 @@ END;`,
       name: 'workplaces',
       columns: [
         { name: 'name', type: 'string' },
+        // V1-only receipt; keep the column because this cleanup adds no migration.
         { name: 'snapshot_restore_fingerprint', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number', isIndexed: true },
         { name: 'updated_at', type: 'number' },

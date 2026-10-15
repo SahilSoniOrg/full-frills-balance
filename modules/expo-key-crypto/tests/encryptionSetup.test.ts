@@ -1,5 +1,5 @@
 import { closeNativeHost, memoryKeyHierarchy } from './nativeTestContext';
-import { enableTestCrypto } from '@/src/services/backup/__tests__/snapshotTestHelpers';
+import { enableTestCrypto } from '@/src/services/backup/__tests__/keyTestHelpers';
 import { EncryptionSetup } from '@/src/services/backup/encryptionSetup';
 import type {
   EncryptionSetupStore,

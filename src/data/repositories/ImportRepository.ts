@@ -1,5 +1,3 @@
-import { isSha256Id } from '@/src/utils/strictObject';
-import { KeyOperationError, assertKeyOperationActive } from '@/src/utils/keyOperationError';
 import { database } from '@/src/data/database/Database';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import Account from '@/src/data/models/Account';
@@ -18,9 +16,7 @@ import type { BatchImportData } from '@/src/types/importContracts';
 import { WorkplaceId } from '@/src/types/ids';
 import Workplace from '@/src/data/models/Workplace';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
-import { Model, Q } from '@nozbe/watermelondb';
-import { WORKPLACE_DATA_TABLES } from '@/src/services/workplace/workplaceDataTables';
-import { snakeToCamel } from '@/src/utils/serialization';
+import { Model } from '@nozbe/watermelondb';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import {
   evaluateJournalBalance,
@@ -191,64 +187,10 @@ export class ImportRepository {
     return this.batchInsertWorkplace(workplace, data, onProgress);
   }
 
-  /** Publishes a snapshot once, retaining its receipt and collision checks in the writer. */
-  batchInsertSnapshotRestore(
+  private async batchInsertWorkplace(
     workplace: NewWorkplace,
     data: BatchImportData,
-    fingerprint: string,
-    signal?: AbortSignal,
-  ): Promise<Workplace> {
-    return this.batchInsertWorkplace(
-      { ...workplace, snapshotRestoreFingerprint: fingerprint },
-      data,
-      undefined,
-      () => this.admitSnapshotRestore(workplace.id, data, fingerprint),
-      signal,
-    );
-  }
-
-  /** Called only inside the writer, so admission and publication cannot race another write. */
-  private async admitSnapshotRestore(
-    workplaceId: WorkplaceId,
-    data: BatchImportData,
-    fingerprint: string,
-  ): Promise<Workplace | null> {
-    if (!isSha256Id(fingerprint)) throw new Error('Invalid snapshot restore fingerprint');
-    const existing = await workplaceRepository.find(workplaceId);
-    if (existing) {
-      if (existing.snapshotRestoreFingerprint !== fingerprint)
-        throw new KeyOperationError(
-          'FFB_KEY_WORKPLACE_COLLISION',
-          'Snapshot Workplace already exists; restore will not overwrite local books. Export your current local books first, then recover on another Device or a fresh installation using your saved recovery files.',
-        );
-      return existing;
-    }
-    for (const { table } of WORKPLACE_DATA_TABLES) {
-      const rows = data[snakeToCamel(table) as keyof BatchImportData];
-      if (!Array.isArray(rows)) continue;
-      // Count bounded chunks without hydrating books or moving checks outside the writer.
-      for (let start = 0; start < rows.length; start += 100) {
-        const ids = rows.slice(start, start + 100).map(row => row.id);
-        const count = await database
-          .get<Model>(table)
-          .query(Q.where('id', Q.oneOf(ids)))
-          .fetchCount();
-        if (count > 0)
-          throw new KeyOperationError(
-            'FFB_KEY_WORKPLACE_COLLISION',
-            `Snapshot record identity collision in ${table}`,
-          );
-      }
-    }
-    return null;
-  }
-
-  private async batchInsertWorkplace(
-    workplace: NewWorkplace & { snapshotRestoreFingerprint?: string },
-    data: BatchImportData,
     onProgress?: (message: string, progress?: number) => void,
-    admit?: () => Promise<Workplace | null>,
-    signal?: AbortSignal,
   ): Promise<Workplace> {
     await this.prepareImportData(data, onProgress);
     await this.validatePostedJournalBalances(workplace.id, data);
@@ -256,25 +198,16 @@ export class ImportRepository {
     const importCorrelationId = generateId();
     let created!: Workplace;
     await database.write(async () => {
-      assertKeyOperationActive(signal);
-      const existing = await admit?.();
-      if (existing) {
-        created = existing;
-        return;
-      }
-      assertKeyOperationActive(signal);
       created = workplaceRepository.prepareCreate(workplace);
       await this.batchPreparedOperations(
         [
           created,
           ...this.prepareOperations(workplace.id, data),
-          ...(admit
-            ? []
-            : prepareImportedEntityAuditRecords(workplace.id, data, {
-                correlationId: importCorrelationId,
-                importPluginId: data.importMetadata?.pluginId,
-                sourceFormatVersion: data.sourceFormatVersion,
-              })),
+          ...prepareImportedEntityAuditRecords(workplace.id, data, {
+            correlationId: importCorrelationId,
+            importPluginId: data.importMetadata?.pluginId,
+            sourceFormatVersion: data.sourceFormatVersion,
+          }),
           auditRepository.prepareLog(
             {
               entityType: 'workplace',

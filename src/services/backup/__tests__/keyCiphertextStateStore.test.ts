@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { keyCiphertextStateStore } from '../keyCiphertextStateStore.native';
-import { enableTestCrypto } from './snapshotTestHelpers';
+import { enableTestCrypto } from './keyTestHelpers';
 
 const mockFiles = new Map<string, string>(),
   mockPointers = new Map<string, string>();

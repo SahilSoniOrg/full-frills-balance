@@ -6,9 +6,7 @@ export const KEY_OPERATION_ERROR_CODES = [
   'FFB_KEY_REFERENCE_EXPIRED',
   'FFB_KEY_CANCELLED',
   'FFB_KEY_OPERATION_FAILED',
-  'FFB_KEY_WORKPLACE_COLLISION',
   'FFB_KEY_IDENTITY_MISMATCH',
-  'FFB_KEY_SNAPSHOT_LIMIT',
   'FFB_KEY_VAULT_UNAVAILABLE',
 ] as const;
 export type KeyOperationErrorCode = (typeof KEY_OPERATION_ERROR_CODES)[number];
@@ -29,10 +27,6 @@ export class MissingKeyStateError extends KeyOperationError {
     super('FFB_KEY_RECOVERY_REQUIRED', 'Missing encrypted key state; use User recovery');
     this.name = 'MissingKeyStateError';
   }
-}
-
-export function assertKeyOperationActive(signal?: AbortSignal): void {
-  if (signal?.aborted) throw new KeyOperationError('FFB_KEY_CANCELLED', 'Recovery was cancelled');
 }
 
 /** Accept only known codes. Native wrappers may decorate messages; never expose their text. */

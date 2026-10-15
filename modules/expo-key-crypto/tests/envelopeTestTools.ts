@@ -2,14 +2,8 @@
 // No key hierarchy, persistence, recovery coordinator or production import is defined here.
 import { Aes256Gcm, CipherSuite, HkdfSha256 } from '@hpke/core';
 import { DhkemX25519HkdfSha256 } from '@hpke/dhkem-x25519';
-import { createCipheriv, generateKeyPairSync, randomBytes } from 'node:crypto';
-import { keyFingerprint } from '@/src/services/backup/encryptedSnapshot';
-import {
-  serializeWorkplaceSnapshot,
-  type WorkplaceSnapshot,
-} from '@/src/services/backup/workplaceSnapshot';
+import { generateKeyPairSync } from 'node:crypto';
 import type { EnvelopeContext, KeyEnvelope } from '@/src/services/backup/keyEnvelopes';
-import type { EncryptedSnapshot } from '@/src/services/backup/encryptedSnapshot';
 
 const suite = new CipherSuite({
   kem: new DhkemX25519HkdfSha256(),
@@ -29,17 +23,6 @@ const binding = (c: EnvelopeContext) =>
     c.workplaceId ?? null,
     c.keyId ?? null,
   ]);
-const aad = (e: EncryptedSnapshot) =>
-  encoded([
-    e.format,
-    e.formatVersion,
-    e.algorithm,
-    e.workplaceId,
-    e.snapshotId,
-    e.schemaVersion,
-    e.keyId,
-    'snapshot',
-  ]);
 export async function sealKeyEnvelope(
   plaintext: Uint8Array,
   recipient: string,
@@ -57,32 +40,6 @@ export async function sealKeyEnvelope(
     context,
     encapsulatedKey: Buffer.from(sender.enc).toString('hex'),
     ciphertext: Buffer.from(await sender.seal(plaintext, binding(context))).toString('base64'),
-  };
-}
-export async function encryptWorkplaceSnapshot(
-  snapshot: WorkplaceSnapshot,
-  key: Uint8Array,
-): Promise<EncryptedSnapshot> {
-  const envelope: EncryptedSnapshot = {
-    format: 'full-frills-encrypted-snapshot',
-    formatVersion: 1,
-    algorithm: 'AES-256-GCM',
-    workplaceId: snapshot.workplace.id,
-    snapshotId: randomBytes(16).toString('hex'),
-    schemaVersion: snapshot.schemaVersion,
-    keyId: await keyFingerprint(key),
-    nonce: randomBytes(12).toString('hex'),
-    ciphertext: '',
-  };
-  const cipher = createCipheriv('aes-256-gcm', key, Buffer.from(envelope.nonce, 'hex'));
-  cipher.setAAD(aad(envelope));
-  return {
-    ...envelope,
-    ciphertext: Buffer.concat([
-      cipher.update(serializeWorkplaceSnapshot(snapshot)),
-      cipher.final(),
-      cipher.getAuthTag(),
-    ]).toString('base64'),
   };
 }
 export function generateUserSigningPair() {

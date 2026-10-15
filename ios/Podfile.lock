@@ -3166,7 +3166,7 @@ SPEC CHECKSUMS:
   ExpoHaptics: 32efd02d88953d30a5c2ff796c0fce692e7bcd2e
   ExpoImage: abe60c6c68d08d837b2c51fb9e8b6c6e320b9125
   ExpoKeepAwake: 72af0b3be3615e59bc819d26061ff4e06b155ee0
-  ExpoKeyCrypto: ba35c223b21ff36d1012dce0d45fa30c5f1e936e
+  ExpoKeyCrypto: 61f2a7f764a80b250054e856cffcc31a6a2b607b
   ExpoLinking: 52819633a2225a0c2a3cd3de64056b021bb55202
   ExpoLocalAuthentication: 1e4aef156a3a1f953f8278b8d8309f6118919640
   ExpoLocalization: f204d4ca963bfcea932068a978247878f664f5a4
