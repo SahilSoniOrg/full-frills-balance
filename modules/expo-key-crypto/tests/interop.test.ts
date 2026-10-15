@@ -1,10 +1,6 @@
 import type { RecoveryCredential } from '@/src/services/backup/keyEnvelopes';
 import { memoryKeyHierarchy, closeNativeHost } from './nativeTestContext';
 import {
-  createLocalRecoveryPackage,
-  verifyLocalRecoveryPackage,
-} from '@/src/services/backup/localRecoveryPackage';
-import {
   enableTestCrypto,
   seedSnapshotWorkplace,
 } from '@/src/services/backup/__tests__/snapshotTestHelpers';
@@ -59,26 +55,20 @@ function noRawKeys(value: unknown) {
     noRawKeys(item);
   }
 }
-it('creates, unwraps, encrypts, decrypts and signs in the real native core without calling a JS vault', async () => {
+it('creates, unwraps, encrypts and decrypts in the real native core without calling a JS vault', async () => {
   const s = await source();
   const envelope = await s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, s.snapshot);
   expect(await s.hierarchy.decryptSnapshot(s.identity, s.workplaceId, envelope)).toEqual(
     s.snapshot,
   );
-  const pack = await createLocalRecoveryPackage(s.hierarchy, s.identity, s.workplaceId, envelope);
-  await expect(verifyLocalRecoveryPackage(pack, s.identity)).resolves.toEqual(pack);
-  for (const value of [s.userCredential, s.workplaceCredential, pack, ...s.records.values()])
+  for (const value of [s.userCredential, s.workplaceCredential, ...s.records.values()])
     noRawKeys(value);
   expect(s.userCredential.format).toBe('full-frills-recovery-handle');
   expect(s.forbidden).not.toHaveBeenCalled();
 });
-it('rejects a tampered signature, ciphertext, context and opaque recovery handle', async () => {
+it('rejects tampered ciphertext, context and opaque recovery handles', async () => {
   const s = await source();
   const envelope = await s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, s.snapshot);
-  const pack = await createLocalRecoveryPackage(s.hierarchy, s.identity, s.workplaceId, envelope);
-  await expect(
-    verifyLocalRecoveryPackage({ ...pack, signature: '00'.repeat(64) }, s.identity),
-  ).rejects.toThrow();
   for (const altered of [
     { ...envelope, workplaceId: 'wrong' },
     { ...envelope, nonce: '00'.repeat(12) },

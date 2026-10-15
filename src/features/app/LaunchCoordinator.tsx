@@ -1,4 +1,3 @@
-import { encryptionSetup } from '@/src/services/backup/encryptionSetup';
 import { loadSetupDraft, saveSetupDraft } from '@/src/services/setup/SetupDraftStore';
 import { EmptyStateView, LoadingView } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
@@ -96,7 +95,6 @@ function useWorkplaceDiscovery(enabled: boolean, retryToken: number) {
   }>({ workplaces: [], error: null, loading: true });
   const recoveryAppliedRef = React.useRef(false);
   const legacyCurrencyMigrationRef = React.useRef<Promise<void> | null>(null);
-  const recoveryCompletionRef = React.useRef<Promise<void> | null>(null);
   const initialWorkplaceIdsRef = React.useRef<readonly WorkplaceId[] | null>(null);
 
   useEffect(() => {
@@ -112,13 +110,6 @@ function useWorkplaceDiscovery(enabled: boolean, retryToken: number) {
       }
       return legacyCurrencyMigrationRef.current;
     };
-    // An unreadable recovery session must not block launch; completion retries next launch.
-    const finishRecoveryCompletion = () => {
-      recoveryCompletionRef.current ??= encryptionSetup.finishRecoveryCompletion().catch(error => {
-        logger.warn('[LaunchCoordinator] Pending recovery completion failed', { error });
-      });
-      return recoveryCompletionRef.current;
-    };
     const subscription = (
       workplaceService.observeAllWorkplaces() as Observable<PlainWorkplace[]>
     ).subscribe({
@@ -127,7 +118,6 @@ function useWorkplaceDiscovery(enabled: boolean, retryToken: number) {
           initialWorkplaceIdsRef.current = workplaces.map(workplace => workplace.id);
         }
         void migrateLegacyCurrency(initialWorkplaceIdsRef.current)
-          .then(finishRecoveryCompletion)
           .then(() => {
             if (cancelled) return;
             if (!recoveryAppliedRef.current) {
