@@ -6,7 +6,7 @@ function secureCrypto(): Crypto {
   return globalThis.crypto;
 }
 
-export const snapshotCrypto = {
+export const cryptoProvider = {
   randomBytes(length: number): Uint8Array {
     return secureCrypto().getRandomValues(new Uint8Array(length));
   },

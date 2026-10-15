@@ -7,13 +7,13 @@ import {
   type EncryptionSetupSession,
 } from './encryptionSetupStore';
 import { parseRecoveryCredential, type RecoveryCredential } from './keyEnvelopes';
-import { snapshotCrypto } from './snapshotCryptoProvider';
+import { cryptoProvider } from './cryptoProvider';
 import { keyHex } from './keyEncoding';
 import { KeyOperationError } from '@/src/utils/keyOperationError';
 import { assertKeyAccessAllowed } from './keyAccessPolicy';
 
 function freshId(): string {
-  const bytes = snapshotCrypto.randomBytes(16);
+  const bytes = cryptoProvider.randomBytes(16);
   bytes[6] = (bytes[6] & 15) | 64;
   bytes[8] = (bytes[8] & 63) | 128;
   const hex = keyHex(bytes);

@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { File, Directory, Paths } from 'expo-file-system';
 import type { KeyCiphertextStateStore } from './keyCiphertextStateStore';
 import { sha256Fingerprint } from './fingerprints';
-import { snapshotCrypto } from './snapshotCryptoProvider';
+import { cryptoProvider } from './cryptoProvider';
 import { keyHex } from './keyEncoding';
 import { MissingKeyStateError } from '@/src/utils/keyOperationError';
 
@@ -85,7 +85,7 @@ export const keyCiphertextStateStore: KeyCiphertextStateStore = {
       const json = JSON.stringify(value);
       if (new TextEncoder().encode(json).length > 64 * 1024)
         throw new Error('Encrypted key state is oversized');
-      const name = `key-ciphertext-${keyHex(snapshotCrypto.randomBytes(16))}.json`;
+      const name = `key-ciphertext-${keyHex(cryptoProvider.randomBytes(16))}.json`;
       const temporary = new File(Paths.document, `${name}.tmp`);
       try {
         temporary.create();
