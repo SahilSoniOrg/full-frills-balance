@@ -62,10 +62,8 @@ private:
   Json createUser(const Json &device, Vault &vault);
   Json enrollWorkplace(const Json &user, const std::string &workplace,
                        Vault &vault);
-  Json sign(const Json &user, const std::string &digest, Vault &vault);
   Json recoverUser(const Json &request, bool installDevice, Vault &vault);
   Json confirmWorkplace(const Json &request, Vault &vault);
-  Json snapshotCrypto(const Json &request, bool encrypt, Vault &vault);
   struct Credential {
     Bytes file;
     std::chrono::steady_clock::time_point created;

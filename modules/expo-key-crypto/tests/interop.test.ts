@@ -1,9 +1,7 @@
+import { webcrypto } from 'node:crypto';
 import type { RecoveryCredential } from '@/src/services/backup/keyEnvelopes';
 import { memoryKeyHierarchy, closeNativeHost } from './nativeTestContext';
-import {
-  enableTestCrypto,
-  seedSnapshotWorkplace,
-} from '@/src/services/backup/__tests__/snapshotTestHelpers';
+import { parseLocalUser, userScope } from '@/src/services/backup/keyHierarchyRecords';
 import { resetDatabase } from '@/src/testing/resetDatabase';
 
 jest.mock('react-native-quick-crypto', () => ({
@@ -15,7 +13,10 @@ jest.mock('react-native-quick-crypto', () => ({
 }));
 let context: ReturnType<typeof memoryKeyHierarchy>;
 beforeEach(async () => {
-  enableTestCrypto();
+  Object.defineProperty(globalThis, 'crypto', {
+    value: webcrypto,
+    configurable: true,
+  });
   await resetDatabase();
   context = memoryKeyHierarchy();
 });
@@ -23,13 +24,14 @@ afterEach(closeNativeHost);
 const host = {
   execute: (operation: string, request: unknown) => context.host.execute(operation, request),
 };
-function target() {
-  const t = memoryKeyHierarchy();
-  return { ...t, records: t.ciphertext, forbidden: t.crypto.importCredential };
+function noRawKeys(value: unknown) {
+  if (!value || typeof value !== 'object') return;
+  for (const [key, item] of Object.entries(value)) {
+    expect(['privateKey', 'signingPrivateKey', 'phrase', 'dek']).not.toContain(key);
+    noRawKeys(item);
+  }
 }
 async function source() {
-  const fixture = await seedSnapshotWorkplace();
-  const context = target();
   const userCredential = await context.hierarchy.beginUser('native-alice-😀', 'native-phone');
   const identity = await context.hierarchy.confirmUserRecovery(
     userCredential.identityId,
@@ -38,52 +40,34 @@ async function source() {
   );
   const workplaceCredential = await context.hierarchy.enrollWorkplace(
     identity,
-    fixture.workplaceId,
+    'native-workplace',
     'local-upgrade',
   );
   await context.hierarchy.confirmWorkplaceRecovery(
     identity,
-    fixture.workplaceId,
+    'native-workplace',
     workplaceCredential,
   );
-  return { ...fixture, ...context, identity, userCredential, workplaceCredential };
+  return { identity, userCredential, workplaceCredential };
 }
-function noRawKeys(value: unknown) {
-  if (!value || typeof value !== 'object') return;
-  for (const [key, item] of Object.entries(value)) {
-    expect(['privateKey', 'signingPrivateKey', 'phrase', 'dek']).not.toContain(key);
-    noRawKeys(item);
-  }
-}
-it('creates, unwraps, encrypts and decrypts in the real native core without calling a JS vault', async () => {
+it('creates and unwraps native keys without calling a JS vault or exposing private bytes', async () => {
   const s = await source();
-  const envelope = await s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, s.snapshot);
-  expect(await s.hierarchy.decryptSnapshot(s.identity, s.workplaceId, envelope)).toEqual(
-    s.snapshot,
+  const user = await context.hierarchy.exportUserRecoveryPackage(
+    s.identity.userId,
+    s.identity.registeredDeviceId,
   );
-  for (const value of [s.userCredential, s.workplaceCredential, ...s.records.values()])
+  const workplace = await context.hierarchy.exportWorkplaceKeys(s.identity, 'native-workplace');
+  for (const value of [
+    s.userCredential,
+    s.workplaceCredential,
+    user,
+    workplace,
+    ...context.ciphertext.values(),
+  ])
     noRawKeys(value);
   expect(s.userCredential.format).toBe('full-frills-recovery-handle');
-  expect(s.forbidden).not.toHaveBeenCalled();
-});
-it('rejects tampered ciphertext, context and opaque recovery handles', async () => {
-  const s = await source();
-  const envelope = await s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, s.snapshot);
-  for (const altered of [
-    { ...envelope, workplaceId: 'wrong' },
-    { ...envelope, nonce: '00'.repeat(12) },
-    {
-      ...envelope,
-      ciphertext: `${envelope.ciphertext[0] === 'A' ? 'B' : 'A'}${envelope.ciphertext.slice(1)}`,
-    },
-  ])
-    await expect(s.hierarchy.decryptSnapshot(s.identity, s.workplaceId, altered)).rejects.toThrow();
-  await expect(
-    s.hierarchy.confirmUserRecovery(s.identity.userId, s.identity.registeredDeviceId, {
-      ...s.userCredential,
-      handle: '00'.repeat(32),
-    }),
-  ).rejects.toThrow();
+  expect(workplace).not.toHaveProperty('writerDeviceId');
+  expect(workplace).not.toHaveProperty('encryptionInvocations');
 });
 it('validates native-exported recovery-file secrets and rejects altered checksums or metadata', async () => {
   const s = await source();
@@ -104,28 +88,79 @@ it('validates native-exported recovery-file secrets and rejects altered checksum
   })) as RecoveryCredential;
   noRawKeys(handle);
   await expect(
-    s.hierarchy.confirmUserRecovery(s.identity.userId, s.identity.registeredDeviceId, handle),
+    context.hierarchy.confirmUserRecovery(s.identity.userId, s.identity.registeredDeviceId, {
+      ...handle,
+      handle: '00'.repeat(32),
+    }),
+  ).rejects.toThrow();
+  await expect(
+    context.hierarchy.confirmUserRecovery(s.identity.userId, s.identity.registeredDeviceId, handle),
   ).resolves.toEqual(s.identity);
 });
-it('native app-lock enforcement refuses decryption even when a caller bypasses the JS policy check', async () => {
+it('native app-lock enforcement refuses key access even when a caller bypasses JS policy', async () => {
   const s = await source();
-  const envelope = await s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, s.snapshot);
-  await host.execute('test.setAllowed', { allowed: false });
-  await expect(s.hierarchy.decryptSnapshot(s.identity, s.workplaceId, envelope)).rejects.toThrow();
-  await host.execute('test.setAllowed', { allowed: true });
-  expect(await s.hierarchy.decryptSnapshot(s.identity, s.workplaceId, envelope)).toEqual(
-    s.snapshot,
+  const userRecord = parseLocalUser(
+    await context.state.read(userScope(s.identity.userId, s.identity.registeredDeviceId)),
   );
+  const userKey = await context.crypto.openKey({
+    kind: 'user',
+    user: userRecord,
+  });
+  const savedUser = await context.hierarchy.exportUserRecoveryPackage(
+    s.identity.userId,
+    s.identity.registeredDeviceId,
+  );
+  await host.execute('test.setAllowed', { allowed: false });
+  await expect(
+    context.crypto.hasKey({
+      kind: 'device',
+      userId: 'native-alice-😀',
+      deviceId: 'native-phone',
+    }),
+  ).rejects.toMatchObject({ code: 'FFB_KEY_LOCKED' });
+  await expect(context.crypto.openKey({ kind: 'user', user: userRecord })).rejects.toMatchObject({
+    code: 'FFB_KEY_LOCKED',
+  });
+  await expect(
+    context.crypto.wrapWorkplaceForUser(
+      userKey,
+      savedUser.publicIdentity,
+      savedUser.userKeyFingerprint,
+    ),
+  ).rejects.toMatchObject({ code: 'FFB_KEY_LOCKED' });
+  await expect(
+    context.hierarchy.validateRecoveryCredential(savedUser, s.userCredential),
+  ).rejects.toMatchObject({ code: 'FFB_KEY_LOCKED' });
+  await host.execute('test.setAllowed', { allowed: true });
+  await expect(
+    context.crypto.hasKey({
+      kind: 'device',
+      userId: 'native-alice-😀',
+      deviceId: 'native-phone',
+    }),
+  ).resolves.toBe(true);
 });
-it('the native operation dispatcher has no generic decrypt-envelope or raw-key export operation', async () => {
-  const s = await source();
-  for (const operation of ['exportPrivateKey', 'openKeyEnvelope', 'credentialFile', 'getDEK'])
-    await expect(
-      host.execute(operation, {
-        userId: s.identity.userId,
-        deviceId: s.identity.registeredDeviceId,
-      }),
-    ).rejects.toThrow();
+it('rejects removed operations and generic raw-key export requests', async () => {
+  for (const operation of [
+    'encrypt',
+    'decrypt',
+    'sign',
+    'exportPrivateKey',
+    'openKeyEnvelope',
+    'credentialFile',
+    'getDEK',
+  ])
+    await expect(host.execute(operation, {})).rejects.toThrow();
+});
+it('matches the AES-256-GCM known-answer vector in the actual shared native core', async () => {
+  await source();
+  expect(
+    await host.execute('test.aes', {
+      key: '00'.repeat(32),
+      nonce: '00'.repeat(12),
+      plaintext: '00'.repeat(16),
+    }),
+  ).toBe('cea7403d4d606b6e074ec5d3baf39d18d0d1c8a799996bf0265b98b5d48ab919');
 });
 
 it('invalidates unleased recovery handles natively across lock/unlock without JS cleanup', async () => {

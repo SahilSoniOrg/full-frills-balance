@@ -7,8 +7,6 @@ type NativeModule = {
   execute(operation: string, request: string): Promise<string>;
   pickCredential(): Promise<string | null>;
   exportCredential(handle: string): Promise<boolean>;
-  importCredential(uri: string): Promise<string>;
-  writeCredential(handle: string, uri: string): Promise<void>;
   retainCredential(handle: string): Promise<void>;
   releaseCredential(handle: string): Promise<void>;
   clearCredentials(): Promise<void>;
@@ -46,13 +44,6 @@ export const nativeKeyOperations: NativeKeyOperations = {
     return value === null ? null : JSON.parse(value);
   },
   exportCredential: handle => ready().exportCredential(JSON.stringify(handle)),
-  async importCredential(uri) {
-    assertKeyAccessAllowed();
-    const result = await ready().importCredential(uri);
-    assertKeyAccessAllowed();
-    return JSON.parse(result);
-  },
-  writeCredential: (handle, uri) => ready().writeCredential(JSON.stringify(handle), uri),
   retainCredential: handle => ready().retainCredential(JSON.stringify(handle)),
   releaseCredential: handle => ready().releaseCredential(JSON.stringify(handle)),
   clearCredentials: async () => {

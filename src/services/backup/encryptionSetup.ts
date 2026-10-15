@@ -125,8 +125,6 @@ export class EncryptionSetup {
     return this.exclusive(async () => {
       const { session, identity } = await this.ready(workplaceId);
       const keys = await this.hierarchy.exportWorkplaceKeys(identity, workplaceId);
-      if (keys.writerDeviceId !== identity.registeredDeviceId)
-        throw new Error('Use User recovery to finish imported Workplace keys');
       await this.hierarchy.confirmWorkplaceRecovery(
         identity,
         workplaceId,

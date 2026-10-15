@@ -2,5 +2,4 @@
 // shared implementation as Android/host tests through this native translation unit.
 #include "../cpp/CryptoPrimitives.cpp"
 #include "../cpp/ProtocolEnvelopes.cpp"
-#include "../cpp/SnapshotCrypto.cpp"
 #include "../cpp/KeyEngine.cpp"

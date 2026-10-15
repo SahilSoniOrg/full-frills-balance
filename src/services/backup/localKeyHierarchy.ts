@@ -1,10 +1,6 @@
 import { SerialQueue } from '@/src/utils/serialQueue';
-import { parseObject, isSha256Id } from '@/src/utils/strictObject';
-import {
-  KeyOperationError,
-  MissingKeyStateError,
-  keyOperationErrorCode,
-} from '@/src/utils/keyOperationError';
+import { parseObject } from '@/src/utils/strictObject';
+import { MissingKeyStateError, keyOperationErrorCode } from '@/src/utils/keyOperationError';
 import { keyCiphertextStateStore, type KeyCiphertextStateStore } from './keyCiphertextStateStore';
 import { nativeKeyOperations } from './nativeKeyOperations';
 import {
@@ -16,18 +12,11 @@ import {
 import { assertKeyAccessAllowed } from './keyAccessPolicy';
 import { parseRecoveryCredential, publicKeyId, type RecoveryCredential } from './keyEnvelopes';
 import { parseUserPublicIdentity, userIdentityFingerprint } from './userIdentity';
-import { parseEncryptedSnapshotEnvelope, type EncryptedSnapshot } from './encryptedSnapshot';
-import {
-  decodeWorkplaceSnapshot,
-  serializeWorkplaceSnapshot,
-  type WorkplaceSnapshot,
-} from './workplaceSnapshot';
 import {
   parseExportedUserRecoveryPackage,
   parseLocalUser,
   parseWorkplaceKeys,
   identityScope,
-  MAX_ENCRYPTIONS,
   userScope,
   workplaceScope,
   workplaceIdentityScope,
@@ -69,17 +58,6 @@ export interface KeyHierarchy {
   exportUserRecoveryPackage(userId: string, deviceId: string): Promise<UserRecoveryPackage>;
   exportWorkplaceKeys(identity: KeyAccessIdentity, workplaceId: string): Promise<WorkplaceKeys>;
   installWorkplaceKeys(identity: KeyAccessIdentity, value: unknown): Promise<void>;
-  signRecoveryManifest(identity: KeyAccessIdentity, digest: string): Promise<string>;
-  encryptSnapshot(
-    identity: KeyAccessIdentity,
-    workplaceId: string,
-    snapshot: WorkplaceSnapshot,
-  ): Promise<EncryptedSnapshot>;
-  decryptSnapshot(
-    identity: KeyAccessIdentity,
-    workplaceId: string,
-    value: unknown,
-  ): Promise<WorkplaceSnapshot>;
   validateRecoveryCredential(
     user: UserRecoveryPackage,
     credential: RecoveryCredential,
@@ -95,7 +73,7 @@ type UserKeyState =
   | { user: 'recovery-required' }
   | { user: 'pending' | 'ready'; identity: KeyAccessIdentity };
 
-/** Owns public checkpoints/usage. All secret-bearing operations execute natively. */
+/** Owns public key-state checkpoints. All secret-bearing operations execute natively. */
 export class LocalKeyHierarchy implements KeyHierarchy {
   constructor(
     private readonly state: KeyCiphertextStateStore,
@@ -103,7 +81,7 @@ export class LocalKeyHierarchy implements KeyHierarchy {
     private readonly crypto: NativeKeyOperations = nativeKeyOperations,
   ) {}
   private exclusive<T>(operation: () => Promise<T>): Promise<T> {
-    // Shared by every hierarchy using this store; covers durable reservations/read-modify-write.
+    // Shared by every hierarchy using this store; protects asynchronous read-modify-write steps.
     // A per-call native mutex cannot protect these asynchronous persistence steps.
     // Access can change during awaits; checks within operations also guard later checkpoint writes.
     return this.storeQueue().run(async () => {
@@ -153,13 +131,21 @@ export class LocalKeyHierarchy implements KeyHierarchy {
   ): Promise<T> {
     return this.withUserReference(user, async userKey => {
       this.assertAccess();
-      const key = await this.crypto.openKey({ kind: 'workplace', user: userKey, keys });
+      const key = await this.crypto.openKey({
+        kind: 'workplace',
+        user: userKey,
+        keys,
+      });
       return this.withReference(key, () => operation(key));
     });
   }
   private async hasDevice(userId: string, deviceId: string): Promise<boolean> {
     this.assertAccess();
-    const result = await this.crypto.hasKey({ kind: 'device', userId, deviceId });
+    const result = await this.crypto.hasKey({
+      kind: 'device',
+      userId,
+      deviceId,
+    });
     this.assertAccess();
     if (typeof result !== 'boolean') throw new Error('Invalid Device vault result');
     return result;
@@ -264,7 +250,10 @@ export class LocalKeyHierarchy implements KeyHierarchy {
     return this.exclusive(async () => {
       const user = await this.user(userId, deviceId);
       await this.invoke('confirmUser', { user, credential });
-      await this.state.write(userScope(userId, deviceId), { ...user, recoveryConfirmed: true });
+      await this.state.write(userScope(userId, deviceId), {
+        ...user,
+        recoveryConfirmed: true,
+      });
       await this.state.write(identityScope(userId), {
         deviceId,
         publicIdentity: user.publicIdentity,
@@ -287,7 +276,10 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       if (!(await this.hasDevice(userId, deviceId))) return { user: 'recovery-required' };
       const user = await this.validateUserScope(raw, userId, deviceId);
       await this.withUserReference(user, async () => undefined);
-      return { user: user.recoveryConfirmed ? 'ready' : 'pending', identity: this.identity(user) };
+      return {
+        user: user.recoveryConfirmed ? 'ready' : 'pending',
+        identity: this.identity(user),
+      };
     } catch (error) {
       if (
         [
@@ -324,7 +316,9 @@ export class LocalKeyHierarchy implements KeyHierarchy {
           parseObject(marker, 'Invalid native key result').deviceId === deviceId
         )
           return { user: 'interrupted' };
-        return { user: marker !== null || exists ? 'recovery-required' : 'not-started' };
+        return {
+          user: marker !== null || exists ? 'recovery-required' : 'not-started',
+        };
       }
       if (status.user !== 'ready' || !workplaceId) return status;
       const { identity } = status;
@@ -352,9 +346,6 @@ export class LocalKeyHierarchy implements KeyHierarchy {
         user: 'ready',
         identity,
         workplace: keys.recoveryConfirmed ? 'ready' : 'pending',
-        writerAllowed:
-          keys.writerDeviceId === deviceId && keys.encryptionInvocations < MAX_ENCRYPTIONS,
-        budgetExhausted: keys.encryptionInvocations >= MAX_ENCRYPTIONS,
       };
     });
   }
@@ -423,7 +414,11 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       });
       const result = await this.withUserReference(user, async key => {
         const generated = parseObject(
-          await this.crypto.generateKeys({ kind: 'workplace', user: key, workplaceId }),
+          await this.crypto.generateKeys({
+            kind: 'workplace',
+            user: key,
+            workplaceId,
+          }),
           'Invalid native key result',
         );
         await this.crypto.releaseKey(parseNativeKeyReference(generated.key));
@@ -527,70 +522,12 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       )
         throw new Error('Established Workplace identity mismatch');
       await this.withWorkplaceReference(user, keys, async () => undefined);
-      await this.state.write(workplaceScope(identity.userId, keys.workplaceId), {
-        ...keys,
-        encryptionInvocations: MAX_ENCRYPTIONS,
-      });
+      await this.state.write(workplaceScope(identity.userId, keys.workplaceId), keys);
       await this.state.write(workplaceIdentityScope(identity.userId, keys.workplaceId), {
         keyId: keys.keyId,
         userKeyFingerprint: identity.userKeyFingerprint,
         recoveryConfirmed: true,
       });
-    });
-  }
-  signRecoveryManifest(identity: KeyAccessIdentity, digest: string): Promise<string> {
-    return this.exclusive(async () => {
-      if (!isSha256Id(digest)) throw new Error('Invalid recovery manifest digest');
-      const user = await this.readyUser(identity),
-        result = await this.withUserReference(user, key => this.crypto.sign(key, digest));
-      if (typeof result !== 'string' || !/^[a-f0-9]{128}$/.test(result))
-        throw new Error('Invalid native signature');
-      return result;
-    });
-  }
-  encryptSnapshot(
-    identity: KeyAccessIdentity,
-    workplaceId: string,
-    snapshot: WorkplaceSnapshot,
-  ): Promise<EncryptedSnapshot> {
-    return this.exclusive(async () => {
-      const user = await this.readyUser(identity),
-        keys = await this.workplace(identity, workplaceId);
-      if (!keys.recoveryConfirmed)
-        throw new Error('Confirm and save Workplace dump recovery first');
-      if (keys.writerDeviceId !== identity.registeredDeviceId)
-        throw new Error('Backup writer handover is required');
-      if (keys.encryptionInvocations >= MAX_ENCRYPTIONS)
-        throw new KeyOperationError(
-          'FFB_KEY_BUDGET_EXHAUSTED',
-          'Workplace encryption budget exhausted',
-        );
-      const reserved = { ...keys, encryptionInvocations: keys.encryptionInvocations + 1 };
-      await this.state.write(workplaceScope(identity.userId, workplaceId), reserved);
-      this.assertAccess();
-      return parseEncryptedSnapshotEnvelope(
-        await this.withWorkplaceReference(user, reserved, key =>
-          this.crypto.encrypt(key, serializeWorkplaceSnapshot(snapshot)),
-        ),
-      );
-    });
-  }
-  decryptSnapshot(
-    identity: KeyAccessIdentity,
-    workplaceId: string,
-    value: unknown,
-  ): Promise<WorkplaceSnapshot> {
-    return this.exclusive(async () => {
-      const user = await this.readyUser(identity),
-        keys = await this.workplace(identity, workplaceId);
-      if (!keys.recoveryConfirmed)
-        throw new Error('Confirm and save Workplace dump recovery first');
-      const snapshot = parseEncryptedSnapshotEnvelope(value);
-      const plaintext = await this.withWorkplaceReference(user, keys, key =>
-        this.crypto.decrypt(key, snapshot),
-      );
-      if (typeof plaintext !== 'string') throw new Error('Invalid native snapshot result');
-      return decodeWorkplaceSnapshot(plaintext);
     });
   }
   async validateRecoveryCredential(
@@ -641,8 +578,7 @@ export class LocalKeyHierarchy implements KeyHierarchy {
         return;
       }
       const keys = await this.workplace(identity, workplaceId);
-      if (keys.recoveryConfirmed || keys.encryptionInvocations !== 0)
-        throw new Error('Cannot discard an established Workplace key');
+      if (keys.recoveryConfirmed) throw new Error('Cannot discard an established Workplace key');
       if (
         marker !== null &&
         parseObject(marker, 'Invalid native key result').recoveryConfirmed !== false

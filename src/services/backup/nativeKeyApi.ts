@@ -8,7 +8,6 @@ import {
 import type { LocalUserKeys, WorkplaceKeys } from './keyHierarchyRecords';
 import type { UserPublicIdentity } from './userIdentity';
 import { parseKeyEnvelope, type KeyEnvelope } from './keyEnvelopes';
-import type { EncryptedSnapshot } from './encryptedSnapshot';
 
 /** Ephemeral native lookup token. Contains no private bytes and is not a durable backup. */
 export interface NativeKeyReference {
@@ -62,9 +61,6 @@ export function keyOperationsFromTransport(
   NativeKeyOperations,
   | 'generateKeys'
   | 'openKey'
-  | 'encrypt'
-  | 'decrypt'
-  | 'sign'
   | 'hasKey'
   | 'removeKey'
   | 'releaseKey'
@@ -75,9 +71,6 @@ export function keyOperationsFromTransport(
   return {
     generateKeys: request => call('generateKeys', request),
     openKey: async request => parseNativeKeyReference(await call('openKey', request)),
-    encrypt: (key, plaintext) => call('encrypt', { key, plaintext }),
-    decrypt: (key, snapshot) => call('decrypt', { key, snapshot }),
-    sign: (key, digest) => call('sign', { key, digest }),
     hasKey: async scope => {
       const result = await call('hasKey', scope);
       if (typeof result !== 'boolean') throw new Error('Invalid native vault result');
@@ -114,7 +107,11 @@ export function keyOperationsFromTransport(
       return result as DeviceUserEnvelope;
     },
     wrapWorkplaceForUser: async (key, recipient, userKeyFingerprint) => {
-      const result = await call('wrapWorkplaceForUser', { key, recipient, userKeyFingerprint });
+      const result = await call('wrapWorkplaceForUser', {
+        key,
+        recipient,
+        userKeyFingerprint,
+      });
       const value = envelopeResult(
         result,
         ['workplaceId', 'keyId', 'userId', 'userKeyFingerprint'],
@@ -165,13 +162,10 @@ export function parseNativeKeyReference(value: unknown): NativeKeyReference {
   return value as NativeKeyReference;
 }
 
-/** Key-envelope opening returns references; only application-data decryption returns plaintext. */
+/** Key-envelope opening returns references; secret key material stays native. */
 export interface NativeKeyOperations {
   generateKeys(request: GenerateKeysRequest): Promise<unknown>;
   openKey(request: OpenKeyRequest): Promise<NativeKeyReference>;
-  encrypt(key: NativeKeyReference, plaintext: string): Promise<unknown>;
-  decrypt(key: NativeKeyReference, snapshot: EncryptedSnapshot): Promise<unknown>;
-  sign(key: NativeKeyReference, digest: string): Promise<unknown>;
   /** Encrypts the existing User bundle; recipient verification/approval belongs to enrollment. */
   wrapUserForDevice(
     key: NativeKeyReference,
@@ -189,9 +183,6 @@ export interface NativeKeyOperations {
   recovery(operation: RecoveryOperation, request: unknown): Promise<unknown>;
   pickCredential(): Promise<unknown | null>;
   exportCredential(handle: unknown): Promise<boolean>;
-  /** Fixture I/O is registered only in explicitly compiled E2E builds. */
-  importCredential(uri: string): Promise<unknown>;
-  writeCredential(handle: unknown, uri: string): Promise<void>;
   retainCredential(handle: unknown): Promise<void>;
   releaseCredential(handle: unknown): Promise<void>;
   clearCredentials(): Promise<void>;

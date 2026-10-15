@@ -258,8 +258,7 @@ Json dumpContext(const Json &keys) {
 Bytes memberKey(const Json &user, const Json &keys, Vault &vault) {
   fields(keys, {"format", "formatVersion", "userId", "workplaceId",
                 "userKeyFingerprint", "keyId", "memberEnvelope",
-                "recoveryPublicKey", "recoveryEnvelope", "recoveryConfirmed",
-                "writerDeviceId", "encryptionInvocations"});
+                "recoveryPublicKey", "recoveryEnvelope", "recoveryConfirmed"});
 
   require(keys.at("format") == "full-frills-workplace-keys" &&
               keys.at("formatVersion") == 1 &&

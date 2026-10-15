@@ -35,28 +35,12 @@ export interface WorkplaceKeys {
   recoveryPublicKey: string;
   recoveryEnvelope: KeyEnvelope;
   recoveryConfirmed: boolean;
-  writerDeviceId: string;
-  encryptionInvocations: number;
 }
 export interface EncryptionSetupStatus {
   user: 'not-started' | 'interrupted' | 'pending' | 'ready' | 'recovery-required';
   identity?: KeyAccessIdentity;
   workplace?: 'missing' | 'interrupted' | 'pending' | 'ready' | 'recovery-required';
-  writerAllowed?: boolean;
-  budgetExhausted?: boolean;
 }
-export function recoveryManifestMessage(identity: KeyAccessIdentity, digest: string): Uint8Array {
-  return new TextEncoder().encode(
-    JSON.stringify([
-      'full-frills-local-recovery',
-      1,
-      identity.userId,
-      identity.userKeyFingerprint,
-      digest,
-    ]),
-  );
-}
-export const MAX_ENCRYPTIONS = 2 ** 20;
 export const identityScope = (userId: string) => JSON.stringify(['identity', userId]);
 export const userScope = (userId: string, deviceId: string) =>
   JSON.stringify(['user', userId, deviceId]);
@@ -128,27 +112,14 @@ export function parseWorkplaceKeys(value: unknown): WorkplaceKeys {
       'recoveryPublicKey',
       'recoveryEnvelope',
       'recoveryConfirmed',
-      'writerDeviceId',
-      'encryptionInvocations',
     ],
     'Unsupported key state field',
   );
-  strings(raw, [
-    'userId',
-    'workplaceId',
-    'userKeyFingerprint',
-    'keyId',
-    'recoveryPublicKey',
-    'writerDeviceId',
-  ]);
+  strings(raw, ['userId', 'workplaceId', 'userKeyFingerprint', 'keyId', 'recoveryPublicKey']);
   if (
     raw.format !== 'full-frills-workplace-keys' ||
     raw.formatVersion !== 1 ||
-    typeof raw.recoveryConfirmed !== 'boolean' ||
-    typeof raw.encryptionInvocations !== 'number' ||
-    !Number.isSafeInteger(raw.encryptionInvocations) ||
-    raw.encryptionInvocations < 0 ||
-    raw.encryptionInvocations > MAX_ENCRYPTIONS
+    typeof raw.recoveryConfirmed !== 'boolean'
   )
     throw new Error('Invalid Workplace key state');
   parseKeyEnvelope(raw.memberEnvelope);

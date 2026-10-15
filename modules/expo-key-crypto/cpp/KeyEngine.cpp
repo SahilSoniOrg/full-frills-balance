@@ -1,5 +1,4 @@
 #include "ProtocolEnvelopes.hpp"
-#include "SnapshotCrypto.hpp"
 
 namespace ffb {
 using namespace detail;
@@ -189,13 +188,6 @@ Json Engine::dispatch(const std::string &operation, const Json &request,
     return wrapUserForDevice(request, vault);
   if (operation == "wrapWorkplaceForUser")
     return wrapWorkplaceForUser(request, vault);
-  if (operation == "encrypt" || operation == "decrypt")
-    return snapshotCrypto(request, operation == "encrypt", vault);
-  if (operation == "sign") {
-    fields(request, {"key", "digest"});
-    auto source = keySource(request.at("key"), "user");
-    return sign(source.at("user"), field(request, "digest"), vault);
-  }
   if (operation == "hasKey" || operation == "removeKey") {
     fields(request, {"kind", "userId", "deviceId"});
     require(request.at("kind") == "device",
@@ -388,30 +380,6 @@ Json Engine::createUser(const Json &request, Vault &vault) {
                             field(identity, "encryptionPublicKey"))}};
 }
 
-Json Engine::sign(const Json &user, const std::string &digest, Vault &vault) {
-  auto secret = userSecret(user, vault);
-
-  require(user.at("recoveryConfirmed") == true, "Confirm User recovery first");
-  require(digest.size() == 71 && digest.substr(0, 7) == "sha256:",
-          "Invalid recovery manifest digest");
-  unhex(digest.substr(7), 32);
-  auto message =
-      bytes(Json::array({"full-frills-local-recovery", 1, user.at("userId"),
-                         user.at("userKeyFingerprint"), digest})
-                .dump());
-  Bytes signature(64);
-  size_t size = 64;
-  Digest ctx(EVP_MD_CTX_new(), EVP_MD_CTX_free);
-  require(!!ctx &&
-              EVP_DigestSignInit(ctx.get(), nullptr, nullptr, nullptr,
-                                 secret.signing.get()) == 1 &&
-              EVP_DigestSign(ctx.get(), signature.data(), &size, message.data(),
-                             message.size()) == 1 &&
-              size == 64,
-          "Native signing failed", ErrorCode::OperationFailed);
-  return hex(signature);
-}
-
 Json Engine::enrollWorkplace(const Json &user, const std::string &workplace,
                              Vault &vault) {
   auto secret = userSecret(user, vault);
@@ -432,9 +400,7 @@ Json Engine::enrollWorkplace(const Json &user, const std::string &workplace,
                {"userKeyFingerprint", user.at("userKeyFingerprint")},
                {"keyId", pin},
                {"recoveryPublicKey", hex(publicBytes(recoveryPair.get()))},
-               {"recoveryConfirmed", false},
-               {"writerDeviceId", user.at("deviceId")},
-               {"encryptionInvocations", 0}};
+               {"recoveryConfirmed", false}};
   keys["memberEnvelope"] =
       seal(dek.bytes, field(user.at("publicIdentity"), "encryptionPublicKey"),
            memberContext(user, keys));
@@ -493,28 +459,6 @@ Json Engine::confirmWorkplace(const Json &request, Vault &vault) {
               CRYPTO_memcmp(dek.bytes.data(), recovered.bytes.data(), 32) == 0,
           "Member and recovery DEKs differ");
   return true;
-}
-
-Json Engine::snapshotCrypto(const Json &request, bool encrypt, Vault &vault) {
-  fields(request, encrypt
-                      ? std::initializer_list<const char *>{"key", "plaintext"}
-                      : std::initializer_list<const char *>{"key", "snapshot"});
-  auto source = keySource(request.at("key"), "workplace");
-  const auto &user = source.at("user");
-  const auto &keys = source.at("keys");
-  Secret dek(memberKey(user, keys, vault));
-  require(user.at("recoveryConfirmed") == true &&
-              keys.at("recoveryConfirmed") == true,
-          "Confirm recovery files first");
-  if (!encrypt)
-    return decryptSnapshot(request.at("snapshot"), dek.bytes,
-                           field(keys, "workplaceId"));
-  require(keys.at("writerDeviceId") == user.at("deviceId") &&
-              keys.at("encryptionInvocations").is_number_integer() &&
-              keys.at("encryptionInvocations").get<long long>() > 0 &&
-              keys.at("encryptionInvocations").get<long long>() <= (1 << 20),
-          "Backup writer or reserved budget is invalid");
-  return encryptSnapshot(field(request, "plaintext"), dek.bytes, keys);
 }
 
 } // namespace ffb

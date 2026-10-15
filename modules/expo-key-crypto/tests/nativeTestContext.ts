@@ -18,10 +18,15 @@ class NativeHost {
   constructor() {
     if (!process.env.FFB_NATIVE_CRYPTO_HOST_BIN)
       throw new Error('Run test:native-key-crypto or verify to compile the real native core');
-    this.process = spawn(process.env.FFB_NATIVE_CRYPTO_HOST_BIN, [], { stdio: 'pipe' });
+    this.process = spawn(process.env.FFB_NATIVE_CRYPTO_HOST_BIN, [], {
+      stdio: 'pipe',
+    });
     createInterface({ input: this.process.stdout }).on('line', line => {
-      const result: { result?: unknown; error?: string; devices: Record<string, string> } =
-        JSON.parse(line);
+      const result: {
+        result?: unknown;
+        error?: string;
+        devices: Record<string, string>;
+      } = JSON.parse(line);
       const waiter = this.pending.shift();
       if (!waiter) return;
       waiter.devices.clear();
@@ -87,8 +92,6 @@ export function memoryKeyHierarchy(assertAccess: () => void = () => undefined) {
     ...keyOperationsFromTransport(execute),
     pickCredential: forbidden,
     exportCredential: forbidden,
-    importCredential: forbidden,
-    writeCredential: forbidden,
     retainCredential: forbidden,
     releaseCredential: forbidden,
     clearCredentials: async () => undefined,
@@ -114,7 +117,13 @@ export async function enrolledKeyHierarchy(workplaceId = 'snapshot-workplace') {
     'local-upgrade',
   );
   await context.hierarchy.confirmWorkplaceRecovery(identity, workplaceId, workplaceCredential);
-  return { ...context, identity, userCredential, workplaceCredential, workplaceId };
+  return {
+    ...context,
+    identity,
+    userCredential,
+    workplaceCredential,
+    workplaceId,
+  };
 }
 
 export function nativeTestOperation(operation: string, request: unknown) {

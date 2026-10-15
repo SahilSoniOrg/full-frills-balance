@@ -48,7 +48,6 @@ try {
     path.join(prefix, 'include'),
     'modules/expo-key-crypto/cpp/CryptoPrimitives.cpp',
     'modules/expo-key-crypto/cpp/ProtocolEnvelopes.cpp',
-    'modules/expo-key-crypto/cpp/SnapshotCrypto.cpp',
     'modules/expo-key-crypto/cpp/KeyEngine.cpp',
     'modules/expo-key-crypto/tests/HostRunner.cpp',
     '-L',

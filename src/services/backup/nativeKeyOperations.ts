@@ -7,8 +7,6 @@ export const nativeKeyOperations: NativeKeyOperations = {
   ...keyOperationsFromTransport(unavailable),
   pickCredential: unavailable,
   exportCredential: unavailable,
-  importCredential: unavailable,
-  writeCredential: unavailable,
   retainCredential: unavailable,
   releaseCredential: unavailable,
   clearCredentials: async () => undefined,
