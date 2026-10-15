@@ -171,3 +171,22 @@ it('invalidates unleased recovery handles natively across lock/unlock without JS
     code: 'FFB_KEY_REFERENCE_EXPIRED',
   });
 });
+
+it('round-trips a fixed buffer through native zstd with explicit sizes', async () => {
+  await source();
+  const result = (await host.execute('test.zstdSelfTest', {})) as {
+    ok: boolean;
+    version: string;
+    sourceBytes: number;
+    compressedBytes: number;
+    decompressedBytes: number;
+  };
+  expect(result).toEqual({
+    ok: true,
+    version: '1.5.7',
+    sourceBytes: 44,
+    compressedBytes: expect.any(Number),
+    decompressedBytes: 44,
+  });
+  expect(result.compressedBytes).toBeGreaterThan(0);
+});

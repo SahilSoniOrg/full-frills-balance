@@ -54,7 +54,15 @@ int main() {
       auto operation = call.at("operation").get<std::string>();
       auto input = call.at("request");
       Json result;
-      if (operation == "test.aes") {
+      if (operation == "test.zstdSelfTest") {
+        result = engine().execute("zstdSelfTest", input, vault);
+        if (result.size() != 5 || result.at("ok") != true ||
+            result.at("version") != "1.5.7" ||
+            result.at("sourceBytes") != 44 ||
+            result.at("decompressedBytes") != 44 ||
+            result.at("compressedBytes").get<std::size_t>() == 0)
+          throw std::runtime_error("Zstandard self-test contract mismatch");
+      } else if (operation == "test.aes") {
         result = testAes(input);
       } else if (operation == "test.clearDeviceVault") {
         vault.clear(); result = nullptr;

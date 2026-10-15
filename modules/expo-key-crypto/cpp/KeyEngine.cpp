@@ -1,4 +1,7 @@
 #include "ProtocolEnvelopes.hpp"
+#include "zstd.h"
+#include <array>
+#include <cstring>
 
 namespace ffb {
 using namespace detail;
@@ -169,6 +172,29 @@ Json Engine::execute(const std::string &operation, const Json &request,
 
 Json Engine::dispatch(const std::string &operation, const Json &request,
                       Vault &vault) {
+  if (operation == "zstdSelfTest") {
+    require(request.is_object() && request.empty(), "Invalid zstd self-test request");
+    static constexpr char input[] =
+        "Full Frills Balance native zstd self-test v1";
+    std::array<char, 256> compressed{};
+    std::array<char, sizeof(input)> decompressed{};
+    const auto inputSize = sizeof(input) - 1;
+    const auto compressedSize =
+        ZSTD_compress(compressed.data(), compressed.size(), input, inputSize, 1);
+    require(!ZSTD_isError(compressedSize), "Zstandard self-test compression failed");
+    const auto outputSize = ZSTD_decompress(decompressed.data(), decompressed.size(),
+                                            compressed.data(), compressedSize);
+    require(!ZSTD_isError(outputSize) && outputSize == inputSize &&
+                std::memcmp(input, decompressed.data(), inputSize) == 0,
+            "Zstandard self-test round-trip failed");
+    require(ZSTD_versionNumber() == 10507,
+            "Unexpected Zstandard version", ErrorCode::OperationFailed);
+    return {{"ok", true},
+            {"version", "1.5.7"},
+            {"sourceBytes", inputSize},
+            {"compressedBytes", compressedSize},
+            {"decompressedBytes", outputSize}};
+  }
   if (operation == "releaseKey") {
     fields(request, {"key"});
     const auto &handle = request.at("key");

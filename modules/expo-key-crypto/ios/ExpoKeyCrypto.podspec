@@ -27,13 +27,13 @@ Pod::Spec.new do |s|
   s.static_framework = true
   s.dependency 'ExpoModulesCore'
   s.dependency 'QuickCrypto', '1.1.7'
-  s.source_files = '*.{h,mm,swift}'
+  s.source_files = '*.{h,mm,swift,c}'
   s.public_header_files = 'FFBKeyCrypto.h'
   s.frameworks = 'Security'
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',
     'CLANG_CXX_LANGUAGE_STANDARD' => 'c++20',
-    'HEADER_SEARCH_PATHS' => "$(inherited) \"#{module_root}/vendor\" \"#{module_root}/cpp\" \"#{openssl}/include\"",
+    'HEADER_SEARCH_PATHS' => "$(inherited) \"#{module_root}/vendor\" \"#{module_root}/vendor/zstd\" \"#{module_root}/cpp\" \"#{openssl}/include\"",
     'OTHER_CPLUSPLUSFLAGS' => "$(inherited) -include \"#{openssl}/quickcrypto_openssl_prefix.h\" -fstack-protector-strong"
   }
 end

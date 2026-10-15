@@ -211,3 +211,5 @@ All former open questions are settled below. Removed as no longer meaningful: "w
 ## Implementation validation targets
 
 The execution owner approved the iOS simulator and Android emulator for this implementation’s native build, zstd self-test and reinstall/restore gates. Record those targets honestly; simulator/emulator measurements do not count as physical mid-range phone performance evidence. Physical-device performance and native vault/file-picker validation remain separately recorded release checks.
+
+Phase 1 validation (2026-10-15): vendored zstd 1.5.7 built for iOS and Android and passed the native `zstdSelfTest` through both platform bridges on iPhone 17 / iOS 26.4 simulator and API 36 arm64 Android emulator. Each run compressed the fixed 44-byte input to 53 bytes and decompressed it back byte-for-byte to 44 bytes. These are simulated-device results, not physical-phone measurements.

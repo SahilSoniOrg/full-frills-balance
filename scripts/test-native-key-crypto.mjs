@@ -34,6 +34,16 @@ try {
       ? output('pkg-config', ['--variable=libdir', 'openssl'])
       : path.join(prefix, existsSync(path.join(prefix, 'lib64')) ? 'lib64' : 'lib');
   const binary = path.join(directory, 'native-key-test');
+  const zstdObject = path.join(directory, 'zstd.o');
+  run(process.env.CC ?? 'cc', [
+    '-std=c99',
+    '-w',
+    '-Imodules/expo-key-crypto/vendor/zstd',
+    '-c',
+    'modules/expo-key-crypto/vendor/zstd/zstd.c',
+    '-o',
+    zstdObject,
+  ]);
   run(process.env.CXX ?? 'c++', [
     '-std=c++20',
     '-DFFB_KEY_CRYPTO_TEST',
@@ -45,11 +55,14 @@ try {
     '-I',
     'modules/expo-key-crypto/cpp',
     '-I',
+    'modules/expo-key-crypto/vendor/zstd',
+    '-I',
     path.join(prefix, 'include'),
     'modules/expo-key-crypto/cpp/CryptoPrimitives.cpp',
     'modules/expo-key-crypto/cpp/ProtocolEnvelopes.cpp',
     'modules/expo-key-crypto/cpp/KeyEngine.cpp',
     'modules/expo-key-crypto/tests/HostRunner.cpp',
+    zstdObject,
     '-L',
     libdir ?? path.join(prefix, 'lib'),
     '-lcrypto',
