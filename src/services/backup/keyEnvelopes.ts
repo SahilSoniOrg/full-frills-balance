@@ -6,7 +6,7 @@ import {
   isHexId,
 } from '@/src/utils/strictObject';
 import { keyBytes } from './keyEncoding';
-import { keyFingerprint } from './encryptedSnapshot';
+import { keyFingerprint } from './fingerprints';
 
 const SUITE = 'HPKE-X25519-HKDF-SHA256-AES256GCM' as const;
 

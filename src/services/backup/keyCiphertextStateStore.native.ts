@@ -3,13 +3,13 @@ import { SerialQueue } from '@/src/utils/serialQueue';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { File, Directory, Paths } from 'expo-file-system';
 import type { KeyCiphertextStateStore } from './keyCiphertextStateStore';
-import { snapshotFingerprint } from './encryptedSnapshot';
+import { sha256Fingerprint } from './fingerprints';
 import { snapshotCrypto } from './snapshotCryptoProvider';
 import { keyHex } from './keyEncoding';
 import { MissingKeyStateError } from '@/src/utils/keyOperationError';
 
 async function index(scope: string): Promise<string> {
-  return `key_ciphertext_v1_${(await snapshotFingerprint(scope)).slice(7)}`;
+  return `key_ciphertext_v1_${(await sha256Fingerprint(scope)).slice(7)}`;
 }
 function file(name: string): File {
   if (!/^key-ciphertext-[a-f0-9]{32}\.json$/.test(name))
@@ -74,7 +74,7 @@ export const keyCiphertextStateStore: KeyCiphertextStateStore = {
       if (!input.exists) throw new MissingKeyStateError();
       if (input.size > 64 * 1024) throw new Error('Oversized encrypted key state');
       const json = await input.text();
-      if ((await snapshotFingerprint(json)) !== saved.hash)
+      if ((await sha256Fingerprint(json)) !== saved.hash)
         throw new Error('Encrypted key state integrity mismatch');
       return JSON.parse(json);
     }),
@@ -98,7 +98,7 @@ export const keyCiphertextStateStore: KeyCiphertextStateStore = {
           await index(scope),
           JSON.stringify({
             name,
-            hash: await snapshotFingerprint(json),
+            hash: await sha256Fingerprint(json),
           }),
         );
       } catch (error) {

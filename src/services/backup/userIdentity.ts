@@ -1,7 +1,7 @@
 import { parseObject, assertExactKeys } from '@/src/utils/strictObject';
 import { ensureKeyCrypto } from './keyCryptoRuntime';
 import { keyBytes } from './keyEncoding';
-import { snapshotFingerprint } from './encryptedSnapshot';
+import { sha256Fingerprint } from './fingerprints';
 import { KeyOperationError } from '@/src/utils/keyOperationError';
 
 /** The initial identity includes both key roles, before any credentials are distributed. */
@@ -48,7 +48,7 @@ export function parseUserPublicIdentity(value: unknown): UserPublicIdentity {
 
 export async function userIdentityFingerprint(value: UserPublicIdentity): Promise<string> {
   const identity = parseUserPublicIdentity(value);
-  return snapshotFingerprint(
+  return sha256Fingerprint(
     JSON.stringify([
       identity.format,
       identity.formatVersion,
