@@ -1,4 +1,5 @@
 #include "KeyCrypto.hpp"
+#include "RowCodec.hpp"
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -62,6 +63,11 @@ int main() {
             result.at("decompressedBytes") != 44 ||
             result.at("compressedBytes").get<std::size_t>() == 0)
           throw std::runtime_error("Zstandard self-test contract mismatch");
+      } else if (operation == "test.rowCodec") {
+        try { result = rows::testRowCodec(input); }
+        catch (const std::exception &error) {
+          result = Json{{"ok", false}, {"fixtureError", error.what()}};
+        }
       } else if (operation == "test.aes") {
         result = testAes(input);
       } else if (operation == "test.clearDeviceVault") {

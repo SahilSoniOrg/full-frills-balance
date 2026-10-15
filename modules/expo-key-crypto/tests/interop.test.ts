@@ -190,3 +190,31 @@ it('round-trips a fixed buffer through native zstd with explicit sizes', async (
   });
   expect(result.compressedBytes).toBeGreaterThan(0);
 });
+
+it('matches every shared row codec oracle vector and rejects malformed native TLV bytes', async () => {
+  const malformedTlvHex = [
+    '0102000100', // unexpected tag before required tag 1
+    '0101000100', // duplicate tag 1
+    '010100', // missing required tag 2
+    '01017f', // truncated value
+    '010180', // truncated length varint
+    '01018000', // nonminimal length varint
+  ];
+  const malformedVarintHex = [
+    '8000', // nonminimal zero
+    '80', // truncated
+    '8080808080808010', // exceeds the JavaScript safe integer limit
+  ];
+  const vectors = require('./fixtures/row-vectors.json');
+  const result = await host.execute('test.rowCodec', {
+    vectors,
+    malformedTlvHex,
+    malformedVarintHex,
+  });
+  expect(result).toEqual({
+    ok: true,
+    rows: 12,
+    manifest: true,
+    malformedCases: 14,
+  });
+});
