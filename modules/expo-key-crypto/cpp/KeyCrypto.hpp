@@ -66,7 +66,6 @@ private:
   Json recoverUser(const Json &request, bool installDevice, Vault &vault);
   Json confirmWorkplace(const Json &request, Vault &vault);
   Json snapshotCrypto(const Json &request, bool encrypt, Vault &vault);
-  Json decryptDump(const Json &request);
   struct Credential {
     Bytes file;
     std::chrono::steady_clock::time_point created;

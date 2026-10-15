@@ -1,7 +1,5 @@
 import type { RecoveryCredential } from '@/src/services/backup/keyEnvelopes';
-import { decryptNativeDump } from './envelopeTestTools';
 import { memoryKeyHierarchy, closeNativeHost } from './nativeTestContext';
-import { createWorkplaceDump } from '@/src/services/backup/workplaceDump';
 import {
   createLocalRecoveryPackage,
   verifyLocalRecoveryPackage,
@@ -73,17 +71,6 @@ it('creates, unwraps, encrypts, decrypts and signs in the real native core witho
     noRawKeys(value);
   expect(s.userCredential.format).toBe('full-frills-recovery-handle');
   expect(s.forbidden).not.toHaveBeenCalled();
-});
-it('an independent standards-based consumer decrypts a native-created emergency dump', async () => {
-  const s = await source();
-  const envelope = await s.hierarchy.encryptSnapshot(s.identity, s.workplaceId, s.snapshot);
-  const credential = (await host.execute('test.exportCredential', s.workplaceCredential)) as {
-    phrase: string;
-  };
-  const keys = await s.hierarchy.exportWorkplaceKeys(s.identity, s.workplaceId);
-  expect(await decryptNativeDump(createWorkplaceDump(keys, envelope), credential)).toEqual(
-    s.snapshot,
-  );
 });
 it('rejects a tampered signature, ciphertext, context and opaque recovery handle', async () => {
   const s = await source();

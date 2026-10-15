@@ -17,15 +17,6 @@ export type E2eLaunchConfig = {
   backupPath?: string;
   updateGateMode?: E2eUpdateGateMode;
   updateFlow?: E2eUpdateFlow;
-  recoveryAction?:
-    | 'prepare'
-    | 'restart'
-    | 'recover'
-    | 'reinstall'
-    | 'large'
-    | 'missing-device-key'
-    | 'orphan-device-key';
-  recoveryBundlePath?: string;
 };
 
 function isSeedProfile(value: unknown): value is E2eSeedProfile {
@@ -51,25 +42,12 @@ function configFromArgs(args: Record<string, unknown>): E2eLaunchConfig | null {
     (E2E_UPDATE_FLOWS as readonly string[]).includes(args.e2eUpdateFlow)
       ? (args.e2eUpdateFlow as E2eUpdateFlow)
       : undefined;
-  const recoveryAction = [
-    'prepare',
-    'restart',
-    'recover',
-    'reinstall',
-    'large',
-    'missing-device-key',
-    'orphan-device-key',
-  ].find(action => action === args.e2eRecoveryAction) as E2eLaunchConfig['recoveryAction'];
-  const recoveryBundlePath =
-    typeof args.e2eRecoveryBundlePath === 'string' ? args.e2eRecoveryBundlePath : undefined;
   return {
     reset: reset || Boolean(seedProfile),
     seedProfile,
     backupPath,
     ...(updateGateMode ? { updateGateMode } : {}),
     ...(updateFlow ? { updateFlow } : {}),
-    ...(recoveryAction ? { recoveryAction } : {}),
-    ...(recoveryBundlePath ? { recoveryBundlePath } : {}),
   };
 }
 

@@ -218,8 +218,6 @@ Json Engine::dispatch(const std::string &operation, const Json &request,
     return recoverUser(request, operation == "recoverUser", vault);
   if (operation == "confirmWorkplace")
     return confirmWorkplace(request, vault);
-  if (operation == "decryptDump")
-    return decryptDump(request);
   throw OperationError(ErrorCode::InvalidFile,
                        "Unsupported native key operation");
 }
@@ -517,27 +515,6 @@ Json Engine::snapshotCrypto(const Json &request, bool encrypt, Vault &vault) {
               keys.at("encryptionInvocations").get<long long>() <= (1 << 20),
           "Backup writer or reserved budget is invalid");
   return encryptSnapshot(field(request, "plaintext"), dek.bytes, keys);
-}
-
-Json Engine::decryptDump(const Json &request) {
-  const auto &dump = request.at("dump");
-  fields(dump, {"format", "formatVersion", "workplaceId", "ownerUserId",
-                "keyId", "recoveryPublicKey", "recoveryEnvelope", "snapshot"});
-
-  require(dump.at("format") == "full-frills-workplace-dump" &&
-              dump.at("formatVersion") == 1,
-          "Invalid Workplace dump");
-  Json keys = dump;
-  keys["userId"] = dump.at("ownerUserId");
-  PrivateJson credentialValue(credential(request.at("credential")));
-  Secret dek(recoveryOpen(credentialValue.value, dump.at("recoveryEnvelope"),
-                          dumpContext(keys), field(dump, "workplaceId"),
-                          field(dump, "keyId")));
-  require(dek.bytes.size() == 32 &&
-              fingerprint(dek.bytes) == field(dump, "keyId"),
-          "Workplace dump DEK mismatch");
-  return decryptSnapshot(dump.at("snapshot"), dek.bytes,
-                         field(dump, "workplaceId"));
 }
 
 } // namespace ffb

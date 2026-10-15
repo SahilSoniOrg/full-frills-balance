@@ -10,20 +10,13 @@ import {
   userScope,
   type LocalUserKeys,
 } from '@/src/services/backup/keyHierarchyRecords';
-import {
-  encryptWorkplaceSnapshot,
-  sealKeyEnvelope,
-  generateUserSigningPair,
-} from './envelopeTestTools';
-import { keyFingerprint } from '@/src/services/backup/encryptedSnapshot';
-import { publicKeyId } from '@/src/services/backup/keyEnvelopes';
+import { generateUserSigningPair } from './envelopeTestTools';
 import { keyHex } from '@/src/services/backup/keyEncoding';
 import { userIdentityFingerprint } from '@/src/services/backup/userIdentity';
 import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MissingKeyStateError } from '@/src/utils/keyOperationError';
-import { createWorkplaceDump, decryptWorkplaceDump } from '@/src/services/backup/workplaceDump';
 import { assertKeyAccessAllowed, setKeyAccessAllowed } from '@/src/services/backup/keyAccessPolicy';
 jest.mock('react-native-quick-crypto', () => ({
   __esModule: true,
@@ -219,28 +212,6 @@ it('rejects cross-User/Device/Workplace substitution, wrong credentials, and alt
   });
   await expect(
     source.hierarchy.encryptSnapshot(source.identity, source.workplaceId, snapshot),
-  ).rejects.toThrow();
-});
-it('Workplace dump recovery returns only readable data and works without User or Device secrets', async () => {
-  const { snapshot } = await seedSnapshotWorkplace();
-  const context = await enrolledKeyHierarchy();
-  const encrypted = await context.hierarchy.encryptSnapshot(
-    context.identity,
-    context.workplaceId,
-    snapshot,
-  );
-  const dump = createWorkplaceDump(
-    await context.hierarchy.exportWorkplaceKeys(context.identity, context.workplaceId),
-    encrypted,
-  );
-  expect(dump).not.toHaveProperty('memberEnvelope');
-  expect(dump).not.toHaveProperty('userPrivateKey');
-  context.ciphertext.clear();
-  await context.eraseDeviceKeys();
-  expect(await decryptWorkplaceDump(dump, context.workplaceCredential)).toEqual(snapshot);
-  await expect(decryptWorkplaceDump(dump, context.userCredential)).rejects.toThrow();
-  await expect(
-    decryptWorkplaceDump({ ...dump, workplaceId: 'other' }, context.workplaceCredential),
   ).rejects.toThrow();
 });
 it('burns durable encryption reservations before use, retains failures, and blocks exhausted budgets', async () => {
@@ -477,31 +448,6 @@ it('rejects missing recovery ciphertext without replacing a known identity', asy
   await expect(source.hierarchy.beginUser('alice', 'different-device')).rejects.toThrow(
     'requires recovery',
   );
-});
-
-it('rejects an otherwise valid forged dump encrypted to the public recovery recipient', async () => {
-  const { snapshot } = await seedSnapshotWorkplace();
-  const source = await enrolledKeyHierarchy();
-  const original = await source.hierarchy.exportWorkplaceKeys(source.identity, source.workplaceId);
-  const fakeDek = new Uint8Array(32).fill(42);
-  try {
-    const fakeKeyId = await keyFingerprint(fakeDek);
-    const recoveryEnvelope = await sealKeyEnvelope(fakeDek, original.recoveryPublicKey, {
-      purpose: 'workplace-dump',
-      userId: original.userId,
-      workplaceId: original.workplaceId,
-      keyId: fakeKeyId,
-      recipientKeyId: await publicKeyId(original.recoveryPublicKey),
-    });
-    const fakeSnapshot = await encryptWorkplaceSnapshot(snapshot, fakeDek);
-    const forged = createWorkplaceDump(
-      { ...original, keyId: fakeKeyId, recoveryEnvelope },
-      fakeSnapshot,
-    );
-    await expect(decryptWorkplaceDump(forged, source.workplaceCredential)).rejects.toThrow();
-  } finally {
-    fakeDek.fill(0);
-  }
 });
 
 it('routes a missing local ciphertext file to recovery even when its locator survives', async () => {

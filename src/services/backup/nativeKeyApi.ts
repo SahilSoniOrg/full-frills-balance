@@ -53,7 +53,7 @@ export type OpenKeyRequest =
   | { kind: 'user'; user: LocalUserKeys }
   | { kind: 'workplace'; user: NativeKeyReference; keys: WorkplaceKeys };
 export type RecoveryOperation =
-  'confirmUser' | 'validateRecovery' | 'recoverUser' | 'confirmWorkplace' | 'decryptDump';
+  'confirmUser' | 'validateRecovery' | 'recoverUser' | 'confirmWorkplace';
 
 /** The transport remains internal to platform/test adapters; callers use these operations. */
 export function keyOperationsFromTransport(

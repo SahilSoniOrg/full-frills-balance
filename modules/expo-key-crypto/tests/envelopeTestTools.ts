@@ -2,16 +2,14 @@
 // No key hierarchy, persistence, recovery coordinator or production import is defined here.
 import { Aes256Gcm, CipherSuite, HkdfSha256 } from '@hpke/core';
 import { DhkemX25519HkdfSha256 } from '@hpke/dhkem-x25519';
-import { createCipheriv, createDecipheriv, generateKeyPairSync, randomBytes } from 'node:crypto';
+import { createCipheriv, generateKeyPairSync, randomBytes } from 'node:crypto';
 import { keyFingerprint } from '@/src/services/backup/encryptedSnapshot';
 import {
   serializeWorkplaceSnapshot,
-  decodeWorkplaceSnapshot,
   type WorkplaceSnapshot,
 } from '@/src/services/backup/workplaceSnapshot';
 import type { EnvelopeContext, KeyEnvelope } from '@/src/services/backup/keyEnvelopes';
 import type { EncryptedSnapshot } from '@/src/services/backup/encryptedSnapshot';
-import type { WorkplaceDump } from '@/src/services/backup/workplaceDump';
 
 const suite = new CipherSuite({
   kem: new DhkemX25519HkdfSha256(),
@@ -94,35 +92,4 @@ export function generateUserSigningPair() {
     privateKey: new Uint8Array(privateKey.export({ type: 'pkcs8', format: 'der' })),
   };
 }
-export async function decryptNativeDump(dump: WorkplaceDump, credential: { phrase: string }) {
-  const pair = await suite.kem.deriveKeyPair(
-    Buffer.from(credential.phrase.replace(/[\s-]/g, '').slice(0, 64), 'hex'),
-  );
-  const receiver = await suite.createRecipientContext({
-    recipientKey: pair.privateKey,
-    enc: Buffer.from(dump.recoveryEnvelope.encapsulatedKey, 'hex'),
-    info: binding(dump.recoveryEnvelope.context),
-  });
-  const key = Buffer.from(
-    await receiver.open(
-      Buffer.from(dump.recoveryEnvelope.ciphertext, 'base64'),
-      binding(dump.recoveryEnvelope.context),
-    ),
-  );
-  try {
-    const e = dump.snapshot;
-    const ciphertext = Buffer.from(e.ciphertext, 'base64');
-    const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(e.nonce, 'hex'));
-    decipher.setAAD(aad(e));
-    decipher.setAuthTag(ciphertext.subarray(-16));
-    return decodeWorkplaceSnapshot(
-      Buffer.concat([decipher.update(ciphertext.subarray(0, -16)), decipher.final()]).toString(
-        'utf8',
-      ),
-    );
-  } finally {
-    key.fill(0);
-  }
-}
-
 if (process.env.NODE_ENV !== 'test') throw new Error('__FFB_JS_KEY_CRYPTO_TEST_ONLY__');

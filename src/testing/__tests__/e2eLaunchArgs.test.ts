@@ -138,29 +138,4 @@ describe('readE2eLaunchConfig', () => {
     valueMock.mockReturnValue({ e2eAuth: 'wrong', e2eUpdateFlow: 'download' });
     expect(readE2eLaunchConfig()).toBeNull();
   });
-
-  it('accepts the native recovery proof only behind build capability and launch authentication', () => {
-    valueMock.mockReturnValue({
-      e2eAuth: E2E_AUTH_TOKEN,
-      e2eRecoveryAction: 'recover',
-      e2eRecoveryBundlePath: '/local/disposable-proof.json',
-    });
-    expect(readE2eLaunchConfig()).toBeNull();
-    process.env.EXPO_PUBLIC_E2E = '1';
-    expect(readE2eLaunchConfig()).toEqual({
-      reset: false,
-      recoveryAction: 'recover',
-      recoveryBundlePath: '/local/disposable-proof.json',
-    });
-    (Constants.expoConfig as { extra: Record<string, unknown> }).extra = {
-      e2eHarnessEnabled: false,
-    };
-    expect(readE2eLaunchConfig()).toBeNull();
-  });
-
-  it('ignores unknown recovery actions', () => {
-    process.env.EXPO_PUBLIC_E2E = '1';
-    valueMock.mockReturnValue({ e2eAuth: E2E_AUTH_TOKEN, e2eRecoveryAction: 'wipe-user-books' });
-    expect(readE2eLaunchConfig()).toEqual({ reset: false });
-  });
 });

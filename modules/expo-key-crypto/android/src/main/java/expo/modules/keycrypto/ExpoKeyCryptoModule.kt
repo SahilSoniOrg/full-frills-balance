@@ -11,7 +11,6 @@ import expo.modules.kotlin.Promise
 import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
-import java.io.File
 import org.json.JSONObject
 
 @Keep
@@ -70,14 +69,6 @@ class ExpoKeyCryptoModule : Module() {
   private fun document(uri: Uri): Uri {
     require(uri.scheme == "content" && DocumentsContract.isDocumentUri(context, uri)) { "FFB_KEY_INVALID_FILE" }
     return uri
-  }
-  private fun fixture(uri: String): Uri {
-    check(BuildConfig.RECOVERY_PROOF) { "FFB_KEY_OPERATION_FAILED" }
-    val parsed = Uri.parse(uri)
-    require(parsed.scheme == "file") { "FFB_KEY_INVALID_FILE" }
-    val file = File(requireNotNull(parsed.path)).canonicalFile
-    require(file.parentFile == context.filesDir.canonicalFile && file.name in listOf("native-recovery-user-secret.json", "native-recovery-workplace-secret.json")) { "FFB_KEY_INVALID_FILE" }
-    return parsed
   }
   private fun startPicker(handle: String?, promise: Promise) {
     check(pending == null) { "FFB_KEY_OPERATION_FAILED" }
@@ -139,10 +130,6 @@ class ExpoKeyCryptoModule : Module() {
           promise?.resolve(result)
         } catch (failure: Exception) { finishFailure(failure) }
       }
-    }
-    if (BuildConfig.RECOVERY_PROOF) {
-      AsyncFunction("importCredential") { uri: String -> readCredential(fixture(uri)) }
-      AsyncFunction("writeCredential") { handle: String, uri: String -> writeCredential(handle, fixture(uri)) }
     }
     AsyncFunction("retainCredential") { handle: String -> retainCredentialNative(handle) }
     AsyncFunction("releaseCredential") { handle: String -> releaseCredentialNative(handle) }
