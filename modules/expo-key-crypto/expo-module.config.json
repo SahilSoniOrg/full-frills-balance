@@ -1,5 +1,6 @@
 {
-  "platforms": ["apple", "android"],
+  "platforms": ["apple", "android", "web"],
   "apple": { "modules": ["ExpoKeyCryptoModule"] },
-  "android": { "modules": ["expo.modules.keycrypto.ExpoKeyCryptoModule"] }
+  "android": { "modules": ["expo.modules.keycrypto.ExpoKeyCryptoModule"] },
+  "web": { "modules": [] }
 }

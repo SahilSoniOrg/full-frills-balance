@@ -15,8 +15,8 @@ Scope: the surviving local key-management APIs and the gates before V2 online ba
 7. **Recovery credential substrate.** Credential validation and native credential file pickers (`pickCredential`/`exportCredential`) remain available to the surviving key-management APIs. The V1 snapshot-bound User recovery-package, Workplace dump, snapshot-decryption and restore-publication flows were removed. The V2 recovery format is future work.
 8. **Removed: payload encryption and budget.** V1 whole-snapshot encryption, wire format 1, durable invocation reservations and the 2^20 per-DEK limit were removed. V2 row encryption is not implemented.
 9. **Removed: financial publication.** V1 snapshot restore, restore receipts and import-as-copy handoff were removed. V2 restore publication is to be written.
-10. **Integration boundaries.** The surviving setup service has no UI caller. Online account binding, HTTP transport, consent/outbox stores, signed registration/manifest provisioning and schema admission remain future work; no online endpoint setting or backend exists.
-11. **Removed: human setup and recovery UI.** The Settings setup flow and welcome-screen recovery entry were removed. The local key-management methods and credential file pickers remain API-level substrate.
+10. **Integration boundaries.** `encryptionSetup` and `LocalKeyHierarchy` have no Settings encryption-setup UI caller. Onboarding and setup **import-restore** journeys (`first_run_restore`, `picker_restore`, `settings_restore`) remain for plaintext import plugins. V2 encrypted backup ZIP pickers and `restoreBackup` are wired through Settings → Data → Encrypted backup and welcome “Restore encrypted backup” (distinct from plaintext import restore). Online account binding, HTTP transport, consent/outbox stores, signed registration/manifest provisioning and schema admission remain future work; no online endpoint setting or backend exists.
+11. **Removed: V1 encryption setup and snapshot recovery UI.** The Settings flow that walked Users through V1 key enrollment, saved recovery packages, snapshot encryption and Device-access removal gates was removed with the unshipped snapshot path. Credential pickers and key APIs remain for V2 and tests.
 
 ## Native key-operation boundary
 
@@ -40,9 +40,10 @@ Two earlier Android builds used `SENTRY_DISABLE_AUTO_UPLOAD=1`; the installed in
 
 ## Ordered remaining work
 
-1. Complete physical iOS/Android checks for the surviving key hierarchy, native vault, app-lock behavior, credential file pickers and interruption handling.
-2. Bind the same User UUID to online login; implement signed Device registration, authenticated envelope delivery, backend authorization/challenges, consent and authenticated checkpoints.
-3. Design and implement V2 row encryption, manifest publication, restore publication, schema evolution and offline recovery.
-4. Before concurrent editing/sharing, implement revisions/conflicts, durable mutations/receipts/cursors, tombstone retention, mixed-version behavior and verified invitations. Review rotation/root replacement separately.
+1. Finish native V2 row crypto and backup/restore services on iOS/Android (see [row-envelope rollout](../specs/online-sync-privacy/row-envelope-sync.md#rollout-task-list) and [V2 implementation plan](../../plans/v2-row-envelope-implementation-plan.md)).
+2. **Web parity:** compile the same C++ engine to WebAssembly, worker boundary, and web platform stores — [web crypto WASM rollout plan](../../plans/web-crypto-wasm-rollout-plan.md). Passkeys, custom domain and account login are **not** prerequisites for this step.
+3. Complete physical iOS/Android checks for key hierarchy, vault, app-lock, credential pickers and interruption handling.
+4. **Phase 2 (online identity):** bind User UUID to login; Passkeys/WebAuthn; signed Device registration; backend transport, consent and checkpoints.
+5. Before concurrent editing/sharing at scale: revisions/conflicts, durable mutations/receipts/cursors, tombstone retention, invitations. Review rotation/root replacement separately.
 
 Ordinary local SQLite and plaintext ZIP exports retain their existing behavior. Automatic backup, paid tiers and cloud vendor changes remain outside this work.

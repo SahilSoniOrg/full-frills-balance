@@ -360,6 +360,10 @@ export const AppNavigation = {
     router.push(buildRoute('/data-management-settings', { focus }));
   },
 
+  toEncryptedBackup: (mode: 'setup' | 'restore' = 'setup') => {
+    router.push(buildRoute('/encrypted-backup', { mode }));
+  },
+
   /**
    * Navigate to privacy and security settings.
    */

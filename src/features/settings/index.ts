@@ -5,6 +5,7 @@ export { default as AboutSupportSettingsScreen } from './components/AboutSupport
 export { default as AutomationSettingsScreen } from './components/AutomationSettingsView';
 export { default as SmsSettingsScreen } from './screens/SmsSettingsScreen';
 export { default as DataManagementSettingsScreen } from './components/DataManagementSettingsView';
+export { default as EncryptedBackupScreen } from './components/PrivateBackupView';
 export { default as ImportSelectionScreen } from './screens/ImportSelectionScreen';
 export { default as MaintenanceSettingsScreen } from './components/MaintenanceSettingsView';
 export { default as PersonalizationSettingsScreen } from './components/PersonalizationSettingsView';

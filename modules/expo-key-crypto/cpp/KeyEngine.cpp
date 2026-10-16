@@ -223,6 +223,36 @@ Json Engine::dispatch(const std::string &operation, const Json &request,
     auto source = keySource(request.at("key"), "user");
     return rows::signRowManifest(request, source.at("user"), vault);
   }
+  if (operation == "importCredential") {
+    fields(request, {"fileText"});
+    const auto &text = request.at("fileText").get<std::string>();
+    require(text.size() <= 4096, "Recovery file is too large");
+    PrivateJson value(Json::parse(text));
+    recoveryKey(value.value);
+    return retain(value.value);
+  }
+  if (operation == "exportCredential") {
+    fields(request, {"credential"});
+    PrivateJson value(credential(request.at("credential")));
+    auto &entry = credentials_.at(field(request.at("credential"), "handle"));
+    require(entry.leases == 1, "Recovery export requires an active lease");
+    const auto bytes = secretDump(value.value);
+    return Json{{"fileText", std::string(bytes.begin(), bytes.end())}};
+  }
+  if (operation == "retainCredential") {
+    fields(request, {"credential"});
+    retainCredential(request.at("credential"));
+    return nullptr;
+  }
+  if (operation == "releaseCredential") {
+    fields(request, {"credential"});
+    releaseCredential(request.at("credential"));
+    return nullptr;
+  }
+  if (operation == "clearCredentials") {
+    clearCredentials();
+    return nullptr;
+  }
   throw OperationError(ErrorCode::InvalidFile,
                        "Unsupported native key operation");
 }

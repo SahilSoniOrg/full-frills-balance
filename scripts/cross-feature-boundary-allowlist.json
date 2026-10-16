@@ -8,6 +8,6 @@
   "journal": [],
   "planned-payments": ["journal"],
   "reports": [],
-  "settings": ["accounts"],
+  "settings": ["accounts", "setup"],
   "setup": ["journal"]
 }
