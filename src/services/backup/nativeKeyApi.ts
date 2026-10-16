@@ -1,3 +1,20 @@
+import { keyHex } from './keyEncoding';
+import { KEY_OPERATION_ERROR_CODES } from '@/src/utils/keyOperationError';
+import { encodeUtf8 } from '@/src/services/sync/codec/tlv';
+import type { RowManifestFields } from '@/src/services/sync/codec/manifestBytes';
+import {
+  parseRowEnvelope,
+  serializeRowEnvelope,
+  type RowEnvelopeJson,
+} from '@/src/services/sync/codec/envelopeJson';
+import {
+  MAX_ROW_BATCH_BYTES,
+  MAX_ROW_BATCH_COUNT,
+  MAX_ROW_CIPHERTEXT_BYTES,
+  MAX_ROW_PLAINTEXT_BYTES,
+  type EncryptRow,
+  type DecryptedRow,
+} from '@/src/services/sync/rowCrypto';
 import {
   parseObject,
   assertAllowedKeys,
@@ -59,6 +76,9 @@ export function keyOperationsFromTransport(
   call: (operation: string, request: unknown) => Promise<unknown>,
 ): Pick<
   NativeKeyOperations,
+  | 'encryptRows'
+  | 'decryptRows'
+  | 'signRowManifest'
   | 'generateKeys'
   | 'openKey'
   | 'hasKey'
@@ -69,6 +89,111 @@ export function keyOperationsFromTransport(
   | 'wrapWorkplaceForUser'
 > {
   return {
+    async encryptRows(key, workplaceId, keyId, rows) {
+      if (key.kind !== 'workplace' || key.keyId !== keyId)
+        throw new Error('Native Workplace key scope mismatch');
+      if (rows.length > MAX_ROW_BATCH_COUNT) throw new Error('FFB_ROW_TOO_LARGE: batch count');
+      let plaintextBytes = 0;
+      for (const row of rows) {
+        const bytes = encodeUtf8(row.plaintext, 'row plaintext');
+        if (bytes.length > MAX_ROW_PLAINTEXT_BYTES)
+          throw new Error('FFB_ROW_TOO_LARGE: row plaintext');
+        plaintextBytes += bytes.length;
+        if (plaintextBytes > MAX_ROW_BATCH_BYTES)
+          throw new Error('FFB_ROW_TOO_LARGE: batch plaintext');
+      }
+      const result = parseObject(
+        await call('encryptRows', { key, workplaceId, keyId, rows }),
+        'Invalid encrypted rows',
+      );
+      assertExactKeys(result, ['envelopes'], 'Invalid encrypted rows');
+      if (!Array.isArray(result.envelopes) || result.envelopes.length !== rows.length)
+        throw new Error('Native row count mismatch');
+      return result.envelopes.map((value, index) => {
+        const row = parseRowEnvelope(value),
+          expected = rows[index];
+        if (
+          row.workplaceId !== workplaceId ||
+          row.keyId !== keyId ||
+          row.table !== expected.table ||
+          row.rowId !== expected.rowId ||
+          row.updatedAt !== expected.updatedAt ||
+          row.deleted !== expected.deleted
+        )
+          throw new Error('Native row scope mismatch');
+        return serializeRowEnvelope(row);
+      });
+    },
+    async decryptRows(key, workplaceId, envelopes) {
+      if (key.kind !== 'workplace') throw new Error('Native Workplace key scope mismatch');
+      if (envelopes.length > MAX_ROW_BATCH_COUNT) throw new Error('FFB_ROW_TOO_LARGE: batch count');
+      let ciphertextBytes = 0;
+      for (const envelope of envelopes) {
+        if (envelope.workplaceId !== workplaceId || envelope.keyId !== key.keyId)
+          throw new Error('Native Workplace key scope mismatch');
+        if (envelope.ciphertext.length > MAX_ROW_CIPHERTEXT_BYTES)
+          throw new Error('FFB_ROW_TOO_LARGE: row ciphertext');
+        ciphertextBytes += envelope.ciphertext.length;
+        if (ciphertextBytes > MAX_ROW_BATCH_BYTES)
+          throw new Error('FFB_ROW_TOO_LARGE: batch ciphertext');
+      }
+      const result = parseObject(
+        await call('decryptRows', { key, workplaceId, envelopes }),
+        'Invalid decrypted rows',
+      );
+      assertExactKeys(result, ['rows'], 'Invalid decrypted rows');
+      if (!Array.isArray(result.rows) || result.rows.length !== envelopes.length)
+        throw new Error('Native row count mismatch');
+      return result.rows.map((value, index): DecryptedRow => {
+        const row = parseObject(value, 'Invalid decrypted row'),
+          expected = envelopes[index];
+        if (row.rowId !== expected.rowId || row.table !== expected.table)
+          throw new Error('Native row scope mismatch');
+        if (row.ok === false) {
+          assertExactKeys(row, ['ok', 'rowId', 'table', 'error'], 'Invalid decrypted row error');
+          const error = KEY_OPERATION_ERROR_CODES.find(code => code === row.error);
+          if (!error) throw new Error('Unknown native row error');
+          return { ok: false, rowId: expected.rowId, table: expected.table, error };
+        }
+        assertExactKeys(
+          row,
+          ['ok', 'rowId', 'table', 'schemaVersion', 'dictId', 'plaintext'],
+          'Invalid decrypted row',
+        );
+        if (
+          row.ok !== true ||
+          typeof row.schemaVersion !== 'number' ||
+          !Number.isSafeInteger(row.schemaVersion) ||
+          row.schemaVersion < 0 ||
+          typeof row.dictId !== 'string' ||
+          !row.dictId.startsWith(expected.table + '/') ||
+          typeof row.plaintext !== 'string' ||
+          encodeUtf8(row.plaintext).length > 65536 ||
+          (expected.deleted && row.plaintext !== '')
+        )
+          throw new Error('Invalid decrypted row');
+        return {
+          ok: true,
+          rowId: expected.rowId,
+          table: expected.table,
+          schemaVersion: row.schemaVersion,
+          dictId: row.dictId,
+          plaintext: row.plaintext,
+        };
+      });
+    },
+    async signRowManifest(key, fields) {
+      const result = parseObject(
+        await call('signRowManifest', {
+          key,
+          fields: { ...fields, prevHash: keyHex(fields.prevHash), root: keyHex(fields.root) },
+        }),
+        'Invalid manifest signature',
+      );
+      assertExactKeys(result, ['signature'], 'Invalid manifest signature');
+      if (!isHexId(result.signature, 128)) throw new Error('Invalid manifest signature');
+      return result.signature;
+    },
     generateKeys: request => call('generateKeys', request),
     openKey: async request => parseNativeKeyReference(await call('openKey', request)),
     hasKey: async scope => {
@@ -164,6 +289,18 @@ export function parseNativeKeyReference(value: unknown): NativeKeyReference {
 
 /** Key-envelope opening returns references; secret key material stays native. */
 export interface NativeKeyOperations {
+  encryptRows(
+    key: NativeKeyReference,
+    workplaceId: string,
+    keyId: string,
+    rows: readonly EncryptRow[],
+  ): Promise<readonly RowEnvelopeJson[]>;
+  decryptRows(
+    key: NativeKeyReference,
+    workplaceId: string,
+    envelopes: readonly RowEnvelopeJson[],
+  ): Promise<readonly DecryptedRow[]>;
+  signRowManifest(key: NativeKeyReference, fields: RowManifestFields): Promise<string>;
   generateKeys(request: GenerateKeysRequest): Promise<unknown>;
   openKey(request: OpenKeyRequest): Promise<NativeKeyReference>;
   /** Encrypts the existing User bundle; recipient verification/approval belongs to enrollment. */

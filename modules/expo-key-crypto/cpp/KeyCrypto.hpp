@@ -20,6 +20,9 @@ enum class ErrorCode {
   AuthenticationFailed,
   ReferenceExpired,
   Cancelled,
+  RowUnknownDict,
+  RowTooLarge,
+  RowIntegrity,
   OperationFailed
 };
 class OperationError final : public std::runtime_error {
@@ -45,7 +48,7 @@ public:
 class Engine {
 public:
   void setAllowed(bool allowed);
-  Json execute(const std::string &operation, const Json &request, Vault &vault);
+  Json execute(const std::string &operation, Json request, Vault &vault);
   Json importCredential(const Bytes &file);
   Bytes credentialFile(const Json &handle);
   void retainCredential(const Json &handle);

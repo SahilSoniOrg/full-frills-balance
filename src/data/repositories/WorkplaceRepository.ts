@@ -104,12 +104,16 @@ export class WorkplaceRepository {
     name: string;
     icon: string;
     defaultCurrencyCode: string;
+    rowRestoreManifestHash?: string;
   }): Workplace {
     return this.workplaces.prepareCreate(w => {
       if (data.id) w._raw.id = data.id;
       w.name = data.name.trim();
       w.icon = data.icon;
       w.defaultCurrencyCode = data.defaultCurrencyCode;
+      if (data.rowRestoreManifestHash) {
+        w.rowRestoreManifestHash = data.rowRestoreManifestHash;
+      }
       w.createdAt = new Date();
       w.updatedAt = new Date();
     });

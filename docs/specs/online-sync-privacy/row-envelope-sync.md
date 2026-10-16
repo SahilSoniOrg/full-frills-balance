@@ -1,6 +1,6 @@
 # V2 row-envelope sync: per-row encryption with short-key JSON + dictionary compression
 
-Status: design agreed; not implemented. The V1 whole-snapshot backup was removed from this branch; V2 is the future backup design (see Rollout task list).
+Status: implementation in progress. The V1 whole-snapshot backup was removed from this branch; V2 backup and sync code is being restored in phases (see Rollout task list).
 
 ## Why
 
@@ -123,7 +123,7 @@ Losing the row index is safe but not free. Online, the Device downloads and veri
 ## Short-key maps and dictionaries
 
 - Per table, checked in, versioned by `schema.version`. Maps are additive-only: new columns get new keys, old keys are never reused. Every map version is retained, so any older row still decodes. Devices on different app versions may write concurrently; a newer Device's rows wait on older Devices per Decision 14.
-- Dictionaries (~16KB/table) are trained at build time by a checked-in, seeded synthetic-corpus script and regenerated only when that table's columns change. `dictId` is `<table>/v<n>`, immutable once shipped and never removed from the binary.
+- Dictionaries (up to 16KB/table; size follows the synthetic corpus) are trained at build time by a checked-in, seeded synthetic-corpus script and regenerated only when that table's columns change. `dictId` is `<table>/v<n>`, immutable once shipped and never removed from the binary.
 - A new dictionary ships read-capable first and becomes the write default only in a later release, so Devices one release behind can still read new rows.
 - Per-table dicts beat one global dict (tables share little structure).
 
@@ -200,7 +200,7 @@ All former open questions are settled below. Removed as no longer meaningful: "w
 
 ### Header metadata and analytics
 
-16. **What may the server see and use?** `workplaceId`, `table`, `rowId`, `updatedAt`, `deleted`, `keyId`, `salt` and manifest fields. They may be used for analytics only under a disclosed, separate consent with an opt-out that the server honours (the metadata stays readable either way, so exclusion is server-side). Queries are aggregate-first, and raw analytics copies have a retention limit. Marketing says contents are end-to-end encrypted and that sync activity is visible. Confirm the consent design against DPDP/GDPR with counsel before launch.
+16. **What may a future server see and use?** `workplaceId`, `table`, `rowId`, `updatedAt`, `deleted`, `keyId`, `salt` and manifest fields are readable routing metadata. This implementation collects no analytics and has no analytics consent flow. A future backend must design consent and honor opt-outs server-side before collecting this metadata.
 
 ### Rollout and scope
 
@@ -212,4 +212,4 @@ All former open questions are settled below. Removed as no longer meaningful: "w
 
 The execution owner approved the iOS simulator and Android emulator for this implementation’s native build, zstd self-test and reinstall/restore gates. Record those targets honestly; simulator/emulator measurements do not count as physical mid-range phone performance evidence. Physical-device performance and native vault/file-picker validation remain separately recorded release checks.
 
-Phase 1 validation (2026-10-15): vendored zstd 1.5.7 built for iOS and Android and passed the native `zstdSelfTest` through both platform bridges on iPhone 17 / iOS 26.4 simulator and API 36 arm64 Android emulator. Each run compressed the fixed 44-byte input to 53 bytes and decompressed it back byte-for-byte to 44 bytes. These are simulated-device results, not physical-phone measurements.
+Phase 1 validation (2026-10-15): vendored zstd 1.5.7 built for iOS and Android and passed a temporary native round-trip proof on iPhone 17 / iOS 26.4 simulator and API 36 arm64 Android emulator. Each run compressed the fixed 44-byte input to 53 bytes and decompressed it back byte-for-byte to 44 bytes. The temporary proof operation and screen were removed when row crypto was integrated. These are simulated-device results, not physical-phone measurements.

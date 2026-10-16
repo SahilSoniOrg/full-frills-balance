@@ -2,6 +2,19 @@ import ExpoModulesCore
 
 public final class ExpoKeyCryptoModule: Module {
   private let recoveryFiles = RecoveryFilePicker()
+  private let nativeErrorCodes: Set<String> = [
+    "FFB_KEY_LOCKED", "FFB_KEY_VAULT_UNAVAILABLE", "FFB_KEY_RECOVERY_REQUIRED",
+    "FFB_KEY_INVALID_FILE", "FFB_KEY_AUTHENTICATION_FAILED",
+    "FFB_KEY_REFERENCE_EXPIRED", "FFB_KEY_CANCELLED", "FFB_KEY_OPERATION_FAILED",
+    "FFB_ROW_UNKNOWN_DICT", "FFB_ROW_TOO_LARGE", "FFB_ROW_INTEGRITY"
+  ]
+
+  private func safeNativeError(_ error: Error) -> NSError {
+    let message = (error as NSError).localizedDescription
+    let code = nativeErrorCodes.first(where: { message.contains($0) }) ?? "FFB_KEY_OPERATION_FAILED"
+    return NSError(domain: code, code: 1, userInfo: [NSLocalizedDescriptionKey: code])
+  }
+
   public func definition() -> ModuleDefinition {
     Name("ExpoKeyCrypto")
     Function("setAllowed") { (allowed: Bool) in
@@ -9,7 +22,11 @@ public final class ExpoKeyCryptoModule: Module {
       DispatchQueue.main.async { self.recoveryFiles.setAllowed(allowed) }
     }
     AsyncFunction("execute") { (operation: String, request: String) in
-      try FFBKeyCrypto.executeOperation(operation, request: request)
+      do {
+        return try FFBKeyCrypto.executeOperation(operation, request: request)
+      } catch {
+        throw self.safeNativeError(error)
+      }
     }
     AsyncFunction("pickCredential") { (promise: Promise) in
       guard let presenter = self.appContext?.utilities?.currentViewController() else {

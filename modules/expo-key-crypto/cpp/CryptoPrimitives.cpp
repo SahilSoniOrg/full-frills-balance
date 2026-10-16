@@ -25,6 +25,12 @@ const char *safeErrorCode(std::exception_ptr error) noexcept {
       return "FFB_KEY_REFERENCE_EXPIRED";
     case ErrorCode::Cancelled:
       return "FFB_KEY_CANCELLED";
+    case ErrorCode::RowUnknownDict:
+      return "FFB_ROW_UNKNOWN_DICT";
+    case ErrorCode::RowTooLarge:
+      return "FFB_ROW_TOO_LARGE";
+    case ErrorCode::RowIntegrity:
+      return "FFB_ROW_INTEGRITY";
     case ErrorCode::OperationFailed:
       return "FFB_KEY_OPERATION_FAILED";
     }

@@ -57,6 +57,49 @@ export class ExportRepository {
         : this.attachSmsSources(tableName, rows);
   }
 
+  /** Keyset-paginated, schema-projected reads for callers that must not materialize a table. */
+  async fetchTablePage(input: {
+    tableName: string;
+    columns: readonly ExportColumn[];
+    workplaceId: WorkplaceId;
+    afterId?: string;
+    limit: number;
+  }): Promise<Record<string, unknown>[]> {
+    const { tableName, columns, workplaceId, afterId, limit } = input;
+    const validIdentifier = (value: string) => /^[a-z][a-z0-9_]*$/i.test(value);
+    if (
+      !validIdentifier(tableName) ||
+      columns.some(column => !validIdentifier(column.source) || !validIdentifier(column.alias)) ||
+      !Number.isInteger(limit) ||
+      limit < 1 ||
+      limit > 1000
+    )
+      throw new Error('Invalid row-source page request');
+
+    const select = columns.map(column => `"${column.source}" AS "${column.alias}"`).join(', ');
+    const raw = await rawSqlExecutor.query<Record<string, unknown>>(
+      `SELECT ${select} FROM "${tableName}" WHERE "workplace_id" = ?${afterId === undefined ? '' : ' AND "id" > ?'} ORDER BY "id" LIMIT ?`,
+      afterId === undefined ? [workplaceId, limit] : [workplaceId, afterId, limit],
+    );
+    if (raw !== null) return raw;
+
+    const collection = this.getCollection(tableName);
+    if (!collection?.query) return [];
+    const clauses = [
+      Q.where('workplace_id', workplaceId),
+      ...(afterId === undefined ? [] : [Q.where('id', Q.gt(afterId))]),
+      Q.sortBy('id', Q.asc),
+      Q.take(limit),
+    ];
+    const models = await collection.query(...clauses).fetch();
+    return models.map(model =>
+      projectOrmRow(
+        model,
+        columns.map(column => column.source),
+      ),
+    );
+  }
+
   /** User-created backups carry sources for exported Workplace copies, not the Device pending feed. */
   private async attachSmsSources(
     tableName: string,

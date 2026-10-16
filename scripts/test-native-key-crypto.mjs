@@ -62,6 +62,8 @@ try {
     'modules/expo-key-crypto/cpp/ProtocolEnvelopes.cpp',
     'modules/expo-key-crypto/cpp/KeyEngine.cpp',
     'modules/expo-key-crypto/cpp/RowCodec.cpp',
+    'modules/expo-key-crypto/cpp/RowCrypto.cpp',
+    'modules/expo-key-crypto/cpp/RowDictionaries.cpp',
     'modules/expo-key-crypto/tests/HostRunner.cpp',
     zstdObject,
     '-L',

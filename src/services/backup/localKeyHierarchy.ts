@@ -1,3 +1,6 @@
+import type { EncryptRow, DecryptedRow } from '@/src/services/sync/rowCrypto';
+import type { RowEnvelopeJson } from '@/src/services/sync/codec/envelopeJson';
+import type { RowManifestFields } from '@/src/services/sync/codec/manifestBytes';
 import { SerialQueue } from '@/src/utils/serialQueue';
 import { parseObject } from '@/src/utils/strictObject';
 import { MissingKeyStateError, keyOperationErrorCode } from '@/src/utils/keyOperationError';
@@ -29,6 +32,19 @@ import {
 
 /** Workflow contract: callers request operations, never borrow private-key bytes. */
 export interface KeyHierarchy {
+  encryptRows(
+    identity: KeyAccessIdentity,
+    workplaceId: string,
+    rows: readonly EncryptRow[],
+  ): Promise<readonly RowEnvelopeJson[]>;
+  decryptRows(
+    identity: KeyAccessIdentity,
+    workplaceId: string,
+    envelopes: readonly RowEnvelopeJson[],
+    recoveryKeys?: WorkplaceKeys,
+  ): Promise<readonly DecryptedRow[]>;
+  signRowManifest(identity: KeyAccessIdentity, fields: RowManifestFields): Promise<string>;
+
   beginUser(userId: string, deviceId: string): Promise<RecoveryCredential>;
   confirmUserRecovery(
     userId: string,
@@ -57,6 +73,10 @@ export interface KeyHierarchy {
   ): Promise<void>;
   exportUserRecoveryPackage(userId: string, deviceId: string): Promise<UserRecoveryPackage>;
   exportWorkplaceKeys(identity: KeyAccessIdentity, workplaceId: string): Promise<WorkplaceKeys>;
+  preflightWorkplaceRestore(
+    identity: KeyAccessIdentity,
+    value: unknown,
+  ): Promise<'installed' | 'installable'>;
   installWorkplaceKeys(identity: KeyAccessIdentity, value: unknown): Promise<void>;
   validateRecoveryCredential(
     user: UserRecoveryPackage,
@@ -486,41 +506,125 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       };
     });
   }
+  encryptRows(
+    identity: KeyAccessIdentity,
+    workplaceId: string,
+    rows: readonly EncryptRow[],
+  ): Promise<readonly RowEnvelopeJson[]> {
+    return this.exclusive(async () => {
+      const user = await this.readyUser(identity),
+        keys = await this.workplace(identity, workplaceId);
+      if (!keys.recoveryConfirmed) throw new Error('Confirm Workplace recovery first');
+      return this.withWorkplaceReference(user, keys, key =>
+        this.crypto.encryptRows(key, workplaceId, keys.keyId, rows),
+      );
+    });
+  }
+  decryptRows(
+    identity: KeyAccessIdentity,
+    workplaceId: string,
+    envelopes: readonly RowEnvelopeJson[],
+    recoveryKeys?: WorkplaceKeys,
+  ): Promise<readonly DecryptedRow[]> {
+    return this.exclusive(async () => {
+      const user = await this.readyUser(identity);
+      // Recovery validates ciphertext before establishing any durable Workplace trust.
+      const keys =
+        recoveryKeys === undefined
+          ? await this.workplace(identity, workplaceId)
+          : parseWorkplaceKeys(recoveryKeys);
+      if (
+        keys.workplaceId !== workplaceId ||
+        keys.userId !== identity.userId ||
+        keys.userKeyFingerprint !== identity.userKeyFingerprint ||
+        !keys.recoveryConfirmed
+      )
+        throw new Error('Workplace member identity mismatch');
+      return this.withWorkplaceReference(user, keys, key =>
+        this.crypto.decryptRows(key, workplaceId, envelopes),
+      );
+    });
+  }
+  signRowManifest(identity: KeyAccessIdentity, fields: RowManifestFields): Promise<string> {
+    return this.exclusive(async () => {
+      const user = await this.readyUser(identity);
+      if (
+        fields.authorUserId !== identity.userId ||
+        fields.authorDeviceId !== identity.registeredDeviceId
+      )
+        throw new Error('Manifest author identity mismatch');
+      return this.withUserReference(user, key => this.crypto.signRowManifest(key, fields));
+    });
+  }
   exportWorkplaceKeys(identity: KeyAccessIdentity, workplaceId: string): Promise<WorkplaceKeys> {
     return this.exclusive(async () => {
       await this.readyUser(identity);
       return this.workplace(identity, workplaceId);
     });
   }
+  private assertRestoredWorkplaceScope(identity: KeyAccessIdentity, keys: WorkplaceKeys): void {
+    if (
+      keys.userId !== identity.userId ||
+      keys.userKeyFingerprint !== identity.userKeyFingerprint ||
+      !keys.recoveryConfirmed
+    )
+      throw new Error('Workplace member identity mismatch');
+  }
+  private async restoredWorkplaceKeyState(
+    identity: KeyAccessIdentity,
+    keys: WorkplaceKeys,
+  ): Promise<'installed' | 'installable'> {
+    let existing: unknown = null;
+    try {
+      existing = await this.state.read(workplaceScope(identity.userId, keys.workplaceId));
+    } catch (error) {
+      if (!(error instanceof MissingKeyStateError)) throw error;
+    }
+    if (existing !== null) {
+      const installed = parseWorkplaceKeys(existing);
+      if (
+        installed.userId !== identity.userId ||
+        installed.userKeyFingerprint !== identity.userKeyFingerprint ||
+        installed.workplaceId !== keys.workplaceId ||
+        installed.keyId !== keys.keyId ||
+        !installed.recoveryConfirmed
+      )
+        throw new Error('Installed Workplace key does not match the backup');
+      return 'installed';
+    }
+    const marker = await this.state.read(workplaceIdentityScope(identity.userId, keys.workplaceId));
+    if (
+      marker !== null &&
+      parseObject(marker, 'Invalid native key result').enrollmentPending !== true &&
+      (parseObject(marker, 'Invalid native key result').keyId !== keys.keyId ||
+        parseObject(marker, 'Invalid native key result').userKeyFingerprint !==
+          identity.userKeyFingerprint)
+    )
+      throw new Error('Established Workplace identity mismatch');
+    return 'installable';
+  }
+  /** Read-only admission check. Must run before publishing restored database rows. */
+  preflightWorkplaceRestore(
+    identity: KeyAccessIdentity,
+    value: unknown,
+  ): Promise<'installed' | 'installable'> {
+    return this.exclusive(async () => {
+      const keys = parseWorkplaceKeys(value);
+      this.assertRestoredWorkplaceScope(identity, keys);
+      const user = await this.readyUser(identity);
+      const state = await this.restoredWorkplaceKeyState(identity, keys);
+      if (state === 'installable')
+        await this.withWorkplaceReference(user, keys, async () => undefined);
+      return state;
+    });
+  }
   installWorkplaceKeys(identity: KeyAccessIdentity, value: unknown): Promise<void> {
     return this.exclusive(async () => {
       const keys = parseWorkplaceKeys(value),
         user = await this.readyUser(identity);
-      if (
-        keys.userId !== identity.userId ||
-        keys.userKeyFingerprint !== identity.userKeyFingerprint ||
-        !keys.recoveryConfirmed
-      )
-        throw new Error('Workplace member identity mismatch');
-      let existing: unknown = null;
-      try {
-        existing = await this.state.read(workplaceScope(identity.userId, keys.workplaceId));
-      } catch (error) {
-        if (!(error instanceof MissingKeyStateError)) throw error;
-      }
-      if (existing !== null)
+      this.assertRestoredWorkplaceScope(identity, keys);
+      if ((await this.restoredWorkplaceKeyState(identity, keys)) === 'installed')
         throw new Error('Workplace key already exists; implicit replacement is forbidden');
-      const marker = await this.state.read(
-        workplaceIdentityScope(identity.userId, keys.workplaceId),
-      );
-      if (
-        marker !== null &&
-        parseObject(marker, 'Invalid native key result').enrollmentPending !== true &&
-        (parseObject(marker, 'Invalid native key result').keyId !== keys.keyId ||
-          parseObject(marker, 'Invalid native key result').userKeyFingerprint !==
-            identity.userKeyFingerprint)
-      )
-        throw new Error('Established Workplace identity mismatch');
       await this.withWorkplaceReference(user, keys, async () => undefined);
       await this.state.write(workplaceScope(identity.userId, keys.workplaceId), keys);
       await this.state.write(workplaceIdentityScope(identity.userId, keys.workplaceId), {

@@ -1,8 +1,5 @@
 #include "ProtocolEnvelopes.hpp"
-#include "zstd.h"
-#include <array>
-#include <cstring>
-
+#include "RowCrypto.hpp"
 namespace ffb {
 using namespace detail;
 Engine &engine() {
@@ -149,19 +146,21 @@ Json Engine::keySource(const Json &handle, const std::string &kind) {
 }
 // Protects native handle registries/vault operations, not asynchronous JS
 // checkpoints.
-Json Engine::execute(const std::string &operation, const Json &request,
+Json Engine::execute(const std::string &operation, Json request,
                      Vault &vault) {
   std::lock_guard<std::mutex> lock(mutex_);
+  PrivateJson privateRequest(std::move(request));
+  const Json &safeRequest = privateRequest.value;
   const bool cleanup = operation == "removeKey" || operation == "releaseKey";
   require(allowed_.load() || cleanup,
           "Unlock the app before accessing encryption keys", ErrorCode::Locked);
   const auto epoch = epoch_.load();
   sweep();
-  auto result = dispatch(operation, request, vault);
+  auto result = dispatch(operation, safeRequest, vault);
   if (!cleanup && (!allowed_.load() || epoch != epoch_.load())) {
     clearUnleasedCredentials();
     try {
-      if (operation == "generateKeys" && request.at("kind") == "device") vault.remove(vaultName(request));
+      if (operation == "generateKeys" && safeRequest.at("kind") == "device") vault.remove(vaultName(safeRequest));
       if (operation == "recoverUser") vault.remove(vaultName(result));
     } catch (...) { /* Preserve the cancellation error; reconciliation handles unavailable vaults. */ }
   }
@@ -172,29 +171,6 @@ Json Engine::execute(const std::string &operation, const Json &request,
 
 Json Engine::dispatch(const std::string &operation, const Json &request,
                       Vault &vault) {
-  if (operation == "zstdSelfTest") {
-    require(request.is_object() && request.empty(), "Invalid zstd self-test request");
-    static constexpr char input[] =
-        "Full Frills Balance native zstd self-test v1";
-    std::array<char, 256> compressed{};
-    std::array<char, sizeof(input)> decompressed{};
-    const auto inputSize = sizeof(input) - 1;
-    const auto compressedSize =
-        ZSTD_compress(compressed.data(), compressed.size(), input, inputSize, 1);
-    require(!ZSTD_isError(compressedSize), "Zstandard self-test compression failed");
-    const auto outputSize = ZSTD_decompress(decompressed.data(), decompressed.size(),
-                                            compressed.data(), compressedSize);
-    require(!ZSTD_isError(outputSize) && outputSize == inputSize &&
-                std::memcmp(input, decompressed.data(), inputSize) == 0,
-            "Zstandard self-test round-trip failed");
-    require(ZSTD_versionNumber() == 10507,
-            "Unexpected Zstandard version", ErrorCode::OperationFailed);
-    return {{"ok", true},
-            {"version", "1.5.7"},
-            {"sourceBytes", inputSize},
-            {"compressedBytes", compressedSize},
-            {"decompressedBytes", outputSize}};
-  }
   if (operation == "releaseKey") {
     fields(request, {"key"});
     const auto &handle = request.at("key");
@@ -236,6 +212,17 @@ Json Engine::dispatch(const std::string &operation, const Json &request,
     return recoverUser(request, operation == "recoverUser", vault);
   if (operation == "confirmWorkplace")
     return confirmWorkplace(request, vault);
+  if (operation == "encryptRows" || operation == "decryptRows") {
+    auto source = keySource(request.at("key"), "workplace");
+    if (operation == "encryptRows")
+      return rows::encryptRows(request, source.at("user"), source.at("keys"), vault);
+    return rows::decryptRows(request, source.at("user"), source.at("keys"), vault);
+  }
+  if (operation == "signRowManifest") {
+    fields(request, {"key", "fields"});
+    auto source = keySource(request.at("key"), "user");
+    return rows::signRowManifest(request, source.at("user"), vault);
+  }
   throw OperationError(ErrorCode::InvalidFile,
                        "Unsupported native key operation");
 }

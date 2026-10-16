@@ -18,6 +18,13 @@ class ExpoKeyCryptoModule : Module() {
   companion object {
     init { System.loadLibrary("FFBKeyCrypto") }
     private const val PICK_RECOVERY = 49381
+    private val NATIVE_ERROR_CODES = setOf(
+      "FFB_KEY_LOCKED", "FFB_KEY_VAULT_UNAVAILABLE", "FFB_KEY_RECOVERY_REQUIRED",
+      "FFB_KEY_INVALID_FILE", "FFB_KEY_AUTHENTICATION_FAILED",
+      "FFB_KEY_REFERENCE_EXPIRED", "FFB_KEY_CANCELLED", "FFB_KEY_OPERATION_FAILED",
+      "FFB_KEY_IDENTITY_MISMATCH", "FFB_ROW_UNKNOWN_DICT", "FFB_ROW_TOO_LARGE",
+      "FFB_ROW_INTEGRITY"
+    )
   }
   private external fun executeNative(operation: String, request: String, vault: NativeDeviceVault): String
   private external fun setAllowedNative(allowed: Boolean)
@@ -95,7 +102,8 @@ class ExpoKeyCryptoModule : Module() {
   private fun finishFailure(failure: Exception) {
     val promise = pending
     try { cleanup() } finally {
-      val code = Regex("FFB_KEY_[A-Z_]+").find(failure.message ?: "")?.value ?: "FFB_KEY_OPERATION_FAILED"
+      val candidate = Regex("FFB_(?:KEY|ROW)_[A-Z_]+").find(failure.message ?: "")?.value
+      val code = candidate?.takeIf { it in NATIVE_ERROR_CODES } ?: "FFB_KEY_OPERATION_FAILED"
       promise?.reject(code, code, null)
     }
   }

@@ -16,7 +16,7 @@ import type { BatchImportData } from '@/src/types/importContracts';
 import { WorkplaceId } from '@/src/types/ids';
 import Workplace from '@/src/data/models/Workplace';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
-import { Model } from '@nozbe/watermelondb';
+import { Model, Q } from '@nozbe/watermelondb';
 import { currencyRepository } from '@/src/data/repositories/CurrencyRepository';
 import {
   evaluateJournalBalance,
@@ -28,6 +28,8 @@ import { toJournalStatus, toTransactionType } from '@/src/data/repositories/impo
 import { PostedJournalImportError } from '@/src/domain/accounting/PostedJournalImportError';
 import type { PostedJournalImportIssue } from '@/src/domain/accounting/PostedJournalImportError';
 import { generator as generateId } from '@/src/data/database/idGenerator';
+import { WORKPLACE_DATA_TABLES } from '@/src/services/workplace/workplaceDataTables';
+import { snakeToCamel } from '@/src/utils/serialization';
 
 type NewWorkplace = {
   id: WorkplaceId;
@@ -178,6 +180,103 @@ export class ImportRepository {
     });
   }
 
+  /** Publishes a verified row backup without changing imported identities or fabricating audit history. */
+  async batchInsertRowRestore(
+    workplace: NewWorkplace,
+    data: BatchImportData,
+    manifestHash: string,
+    signal?: AbortSignal,
+  ): Promise<Workplace> {
+    if (!/^[0-9a-fA-F]{64}$/.test(manifestHash)) {
+      throw new Error('Invalid row restore manifest hash');
+    }
+    const receipt = manifestHash.toLowerCase();
+    throwIfRowRestoreCancelled(signal);
+
+    // Fast-path exact retries before doing import work. This read is serialized with other
+    // writers; publication repeats the same admission check after validation to close the race.
+    let published: Workplace | undefined;
+    await database.write(async () => {
+      throwIfRowRestoreCancelled(signal);
+      const existing = await database.collections
+        .get<Workplace>('workplaces')
+        .query(Q.where('id', workplace.id))
+        .fetch();
+      throwIfRowRestoreCancelled(signal);
+      const existingWorkplace = existing[0];
+      if (!existingWorkplace) return;
+      if (existingWorkplace.rowRestoreManifestHash !== receipt) {
+        throw new RowRestoreConflictError(
+          'A different local Workplace already uses this identity; restore will not overwrite it.',
+        );
+      }
+      published = existingWorkplace;
+    });
+    if (published) return published;
+
+    await this.prepareImportData(data);
+    await this.validatePostedJournalBalances(workplace.id, data);
+
+    await database.write(async () => {
+      throwIfRowRestoreCancelled(signal);
+      const existing = await database.collections
+        .get<Workplace>('workplaces')
+        .query(Q.where('id', workplace.id))
+        .fetch();
+      throwIfRowRestoreCancelled(signal);
+      const existingWorkplace = existing[0];
+      if (existingWorkplace) {
+        if (existingWorkplace.rowRestoreManifestHash === receipt) {
+          published = existingWorkplace;
+          return;
+        }
+        throw new RowRestoreConflictError(
+          'A different local Workplace already uses this identity; restore will not overwrite it.',
+        );
+      }
+
+      // Validate IDs and check every destination table while holding the same writer lock used
+      // for publication. A collision in any table aborts before the first local write.
+      for (const { table } of WORKPLACE_DATA_TABLES) {
+        const values = (data as unknown as Record<string, unknown>)[snakeToCamel(table)];
+        if (!Array.isArray(values) || values.length === 0) continue;
+        const rows = values as { id?: unknown }[];
+        const seen = new Set<string>();
+        for (const row of rows) {
+          if (!row || typeof row.id !== 'string' || row.id.length === 0) {
+            throw new Error(`Invalid imported primary ID in ${table}`);
+          }
+          if (seen.has(row.id)) {
+            throw new RowRestoreConflictError(`Duplicate imported identity in ${table}.`);
+          }
+          seen.add(row.id);
+        }
+        for (let offset = 0; offset < rows.length; offset += 100) {
+          const ids = rows.slice(offset, offset + 100).map(row => row.id as string);
+          const collisionCount = await database
+            .get<Model>(table)
+            .query(Q.where('id', Q.oneOf(ids)))
+            .fetchCount();
+          if (collisionCount > 0) {
+            throw new RowRestoreConflictError(`Imported identity collision in ${table}.`);
+          }
+          throwIfRowRestoreCancelled(signal);
+        }
+      }
+
+      throwIfRowRestoreCancelled(signal);
+      published = workplaceRepository.prepareCreate({
+        ...workplace,
+        rowRestoreManifestHash: receipt,
+      });
+      // No await separates this final cancellation check from submitting the atomic batch.
+      // Once the adapter has accepted the batch, cancellation cannot safely interrupt it.
+      await database.batch(published, ...this.prepareOperations(workplace.id, data));
+    });
+    if (!published) throw new Error('Row restore publication did not produce a Workplace');
+    return published;
+  }
+
   /** Publishes a new Workplace and its imported records in one transaction. */
   batchInsertNewWorkplace(
     workplace: NewWorkplace,
@@ -251,3 +350,17 @@ export class ImportRepository {
 }
 
 export const importRepository = new ImportRepository();
+
+class RowRestoreConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RowRestoreConflictError';
+  }
+}
+
+function throwIfRowRestoreCancelled(signal?: AbortSignal): void {
+  if (!signal?.aborted) return;
+  const error = new Error('Row restore was cancelled');
+  error.name = 'AbortError';
+  throw error;
+}

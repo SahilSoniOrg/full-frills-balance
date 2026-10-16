@@ -30,7 +30,7 @@
     "check:raw-sql-ownership": "node scripts/check-raw-sql-ownership.mjs",
     "check:branded-casts": "node scripts/check-redundant-branded-casts.mjs",
     "check:architecture": "bun run check:architecture-script-tests && bun run check:unsafe-types && bun run check:journal-facade && bun run check:journal-write-boundary && bun run check:read-boundaries && bun run check:feature-boundaries && bun run check:native-key-boundary && bun run check:dependency-cycles && bun run check:route-registry && bun run check:query-ordering && bun run check:architecture-ratchets && bun run check:raw-sql-ownership && bun run check:branded-casts && bun run typecheck:e2e",
-    "verify": "bun run check:architecture && bun run check:privacy-policy && bun run typecheck && bun run test:ci && bun run lint && bun run test:native-key-crypto",
+    "verify": "bun run check:row-dictionaries && bun run check:architecture && bun run check:privacy-policy && bun run typecheck && bun run test:ci && bun run lint && bun run test:native-key-crypto",
     "test": "jest",
     "test:ci": "jest --ci --coverage --maxWorkers=2",
     "test:watch": "jest --watch",
@@ -49,6 +49,7 @@
     "prepare": "husky",
     "visualize": "expo export --platform android --source-maps --no-bytecode --output-dir dist-analysis && source-map-explorer dist-analysis/_expo/static/js/android/*.js dist-analysis/_expo/static/js/android/*.js.map --no-border-checks",
     "test:native-key-crypto": "node scripts/test-native-key-crypto.mjs",
+    "check:row-dictionaries": "node scripts/sync/embed-dictionaries.mjs --check && node --test scripts/sync/__tests__/dictionary-pipeline.test.mjs",
     "check:native-key-boundary": "node scripts/check-native-key-boundary.mjs"
   },
   "dependencies": {

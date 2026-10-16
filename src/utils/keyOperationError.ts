@@ -8,6 +8,9 @@ export const KEY_OPERATION_ERROR_CODES = [
   'FFB_KEY_OPERATION_FAILED',
   'FFB_KEY_IDENTITY_MISMATCH',
   'FFB_KEY_VAULT_UNAVAILABLE',
+  'FFB_ROW_TOO_LARGE',
+  'FFB_ROW_UNKNOWN_DICT',
+  'FFB_ROW_INTEGRITY',
 ] as const;
 export type KeyOperationErrorCode = (typeof KEY_OPERATION_ERROR_CODES)[number];
 
@@ -37,7 +40,7 @@ export function keyOperationErrorCode(error: unknown): KeyOperationErrorCode {
     if (known) return known;
   }
   if ('message' in error && typeof error.message === 'string') {
-    const code = error.message.match(/\bFFB_KEY_[A-Z_]+\b/)?.[0];
+    const code = error.message.match(/\bFFB_(?:KEY|ROW)_[A-Z_]+\b/)?.[0];
     const known = KEY_OPERATION_ERROR_CODES.find(value => value === code);
     if (known) return known;
   }

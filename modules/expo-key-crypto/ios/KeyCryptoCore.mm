@@ -4,3 +4,5 @@
 #include "../cpp/ProtocolEnvelopes.cpp"
 #include "../cpp/KeyEngine.cpp"
 #include "../cpp/RowCodec.cpp"
+#include "../cpp/RowCrypto.cpp"
+#include "../cpp/RowDictionaries.cpp"
