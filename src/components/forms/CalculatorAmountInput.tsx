@@ -11,7 +11,7 @@ import { hasNegativeAmountSign } from '@/src/services/journal/simpleJournalHelpe
 import { Icon } from '@/src/types/domainIcons';
 import { withOpacity } from '@/src/utils/color-math';
 import { formatRoundedAmount, sanitizeDecimalInput } from '@/src/utils/money';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Keyboard,
   StyleProp,
@@ -48,6 +48,8 @@ interface CalculatorAmountInputProps {
   onBlur?: TextInputProps['onBlur'];
   onSubmitEditing?: TextInputProps['onSubmitEditing'];
   onCalculatorDone?: () => void;
+  /** Lets a parent focus the field, e.g. when Save is tapped without an amount. */
+  inputRef?: RefObject<TextInput | null>;
 }
 
 /** Shared amount field with the journal's typography and calculator controls. */
@@ -196,10 +198,12 @@ function AmountField({
   onBlur,
   onSubmitEditing,
   onCalculatorDone,
+  inputRef: externalInputRef,
 }: CalculatorAmountInputProps) {
   const { theme, fonts } = useTheme();
   const color = accentColor ?? theme.primary;
-  const inputRef = useRef<TextInput>(null);
+  const ownInputRef = useRef<TextInput>(null);
+  const inputRef = externalInputRef ?? ownInputRef;
   const [calculatorVisible, setCalculatorVisible] = useState(false);
   const [calculatorMounted, setCalculatorMounted] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -219,7 +223,7 @@ function AmountField({
     if (!autoFocus || !editable) return;
     const focusTimer = setTimeout(() => inputRef.current?.focus(), 0);
     return () => clearTimeout(focusTimer);
-  }, [autoFocus, editable]);
+  }, [autoFocus, editable, inputRef]);
 
   useEffect(
     () => () => {
@@ -309,7 +313,7 @@ function AmountField({
             value={value}
             onChangeText={handleAmountChange}
             placeholder={isFocused ? '' : (placeholder ?? (isHero ? '0' : '0.00'))}
-            placeholderTextColor={withOpacity(color, Opacity.medium)}
+            placeholderTextColor={theme.textSecondary}
             keyboardType="decimal-pad"
             accessibilityLabel={currency ? `Amount in ${currency}` : (label ?? 'Amount')}
             editable={editable}

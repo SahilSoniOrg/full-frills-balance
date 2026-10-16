@@ -78,6 +78,8 @@ export function BudgetCard({
         ? AppConfig.privacyMask
         : `${Math.round(Math.max(0, usage.usagePercent - 1) * 100)}%`
       : `${formatMoney(period.dailyRemaining ?? 0, budget.currencyCode)}/day`;
+  // A chip repeating the budget's own title adds nothing.
+  const chipAccounts = item.scopeAccounts.filter(account => account?.name !== budget.name);
   const isMonthly =
     (!budget.intervalType || budget.intervalType === 'MONTHLY') && (budget.intervalN || 1) === 1;
   return (
@@ -102,7 +104,7 @@ export function BudgetCard({
                 {budget.name}
               </AppText>
               <Row gap="xs" flexWrap="wrap" align="center">
-                {item.scopeAccounts.slice(0, 2).map((account, index) => (
+                {chipAccounts.slice(0, 2).map((account, index) => (
                   <View key={account?.id ?? index} style={{ maxWidth: '100%' }}>
                     <AccountInlineLabel
                       account={account}
@@ -112,11 +114,11 @@ export function BudgetCard({
                     />
                   </View>
                 ))}
-                {item.scopeAccounts.length > 2 && (
+                {chipAccounts.length > 2 && (
                   <Row gap="xs" align="center">
                     <AppIcon name={Icon.FolderOpen} size={Size.iconXs} color="textSecondary" />
                     <AppText variant="caption" color="secondary">
-                      +{item.scopeAccounts.length - 2}
+                      +{chipAccounts.length - 2}
                     </AppText>
                   </Row>
                 )}

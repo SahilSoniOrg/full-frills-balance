@@ -380,7 +380,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: Spacing.lg,
   },
-  name: { flexShrink: 1, minWidth: 0 },
+  // No minWidth: 0, so a single word like "Bills" never breaks mid-word.
+  name: { flexShrink: 1 },
 });
 
 const footerStyles = StyleSheet.create({

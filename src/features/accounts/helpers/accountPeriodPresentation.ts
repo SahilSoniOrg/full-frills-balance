@@ -70,14 +70,15 @@ export function previousComparableRange(
   if (start.isSame(start.startOf('month')) && end.isSame(start.endOf('month'), 'second')) {
     const previousStart = start.subtract(1, 'month');
     const month = previousStart.format('MMM');
+    const sameDayEnd = Math.min(
+      dayjs(now).subtract(1, 'month').endOf('day').valueOf(),
+      previousStart.endOf('month').valueOf(),
+    );
     return isCurrent
       ? {
           startDate: previousStart.valueOf(),
-          endDate: Math.min(
-            dayjs(now).subtract(1, 'month').endOf('day').valueOf(),
-            previousStart.endOf('month').valueOf(),
-          ),
-          label: strings.sameDay(month),
+          endDate: sameDayEnd,
+          label: strings.sameDay(dayjs(sameDayEnd).format('D MMM')),
         }
       : {
           startDate: previousStart.valueOf(),

@@ -68,15 +68,19 @@ export const SafeToSpendChart = ({
     xTicks.push(minX + ((maxX - minX) * i) / (tickCount - 1));
   }
 
-  const extraHorizontalLines = [
-    { value: 0, label: '0', color: theme.error, strokeDasharray: '2,2' },
-    {
-      value: safeToSpend,
-      label: `${AppConfig.strings.dashboard.safeToSpendTitle}: ${formatSts(safeToSpend, currencyCode)}`,
-      color: theme.primary,
-      strokeDasharray: '4,4',
-    },
-  ];
+  const zeroLine = { value: 0, label: '0', color: theme.error, strokeDasharray: '2,2' };
+  // In the shortfall state Safe to Spend is ₹0, so a green line would contradict the headline.
+  const extraHorizontalLines = isOverCommitted
+    ? [zeroLine]
+    : [
+        zeroLine,
+        {
+          value: safeToSpend,
+          label: `${AppConfig.strings.dashboard.safeToSpendTitle}: ${formatSts(safeToSpend, currencyCode)}`,
+          color: theme.primary,
+          strokeDasharray: '4,4',
+        },
+      ];
 
   return (
     <View

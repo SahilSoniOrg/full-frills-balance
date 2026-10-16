@@ -37,14 +37,14 @@ describe('presentAccountPeriod', () => {
       accountType: AccountType.ASSET,
       metrics: metrics(1000, 1500, -16),
       isPrivate: false,
-      previous: { label: 'Sep, same day', netChange: -300 },
+      previous: { label: 'vs 8 Sep', netChange: -300 },
     });
 
     expect(period.heroSign).toBe('−');
     expect(period.badge?.label).toBe('Drawing down');
     expect(period.bar).toBeNull();
     expect(period.stats.map(stat => stat.label)).toEqual(['In', 'Out']);
-    expect(period.comparison).toEqual({ label: 'Sep, same day', amount: 300, sign: '−' });
+    expect(period.comparison).toEqual({ label: 'vs 8 Sep', amount: 300, sign: '−' });
   });
 
   it('signs a category comparison only when it went negative', () => {
@@ -120,7 +120,7 @@ describe('previousComparableRange', () => {
     expect(previous).toEqual({
       startDate: dayjs('2026-09-01').valueOf(),
       endDate: dayjs('2026-09-08').endOf('day').valueOf(),
-      label: 'Sep, same day',
+      label: 'vs 8 Sep',
     });
   });
 

@@ -9,6 +9,7 @@ import { JOURNAL_ENTRY_MODE_OPTIONS } from '@/src/features/journal/entry/journal
 import {
   isJournalEntrySubmitDisabled,
   resolveJournalEntryValidationHint,
+  resolveMissingFieldTarget,
   resolveJournalEntrySubmitLabel,
   type JournalEntryScreenMode,
   offersPlannedChoice,
@@ -76,6 +77,11 @@ export function JournalEntryView(props: JournalEntryShell) {
   const missingRequirementHint = isSubmitDisabled
     ? resolveJournalEntryValidationHint(validation)
     : null;
+  const focusMissingField = () => {
+    const target = resolveMissingFieldTarget(validation.validationIssues);
+    if (target === 'amount') accountFlowRef.current?.focusAmount?.();
+    else accountFlowRef.current?.start(undefined, target);
+  };
   const batchSubmitDisabled = !props.batchEditor.isValid || props.batchEditor.isSubmitting;
   const onPresentationScrollBeginDrag = useCallback(() => setHideSuggestions(true), []);
   const onDescriptionFocus = useCallback(() => {
@@ -303,6 +309,7 @@ export function JournalEntryView(props: JournalEntryShell) {
           loading={isBatchMode ? props.batchEditor.isSubmitting : isSubmitting}
           saveSuccessPulse={saveSuccessPulse}
           missingRequirementHint={missingRequirementHint}
+          onDisabledPress={focusMissingField}
         />
       }
     >

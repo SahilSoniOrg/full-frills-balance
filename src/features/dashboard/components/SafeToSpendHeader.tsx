@@ -101,7 +101,12 @@ export const SafeToSpendHeader = ({
         amountText
       )}
 
-      <AppText variant="caption" color={isOverCommitted ? 'error' : 'secondary'} numberOfLines={3}>
+      {isOverCommitted ? (
+        <AppText variant="body" weight="semibold" color="error">
+          {strings.shortfallUnit}
+        </AppText>
+      ) : null}
+      <AppText variant="caption" color="secondary" numberOfLines={isOverCommitted ? 1 : 3}>
         {isOverCommitted
           ? strings.shortfallSubtitle
           : forecastDays > 0

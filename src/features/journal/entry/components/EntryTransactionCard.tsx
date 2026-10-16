@@ -9,7 +9,8 @@ import { useTheme } from '@/src/hooks/use-theme';
 import type { AccountRole, TabType } from '@/src/types/domainJournal';
 import type { AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
-import type { StyleProp, ViewStyle } from 'react-native';
+import type { RefObject } from 'react';
+import type { StyleProp, TextInput, ViewStyle } from 'react-native';
 import { StyleSheet, View } from 'react-native';
 import type { ExpansionPosition } from '@/src/components/account-selection/AccountPickerPanel';
 import { ExchangeRateCard } from '@/src/components/forms/ExchangeRateCard';
@@ -36,6 +37,7 @@ export interface EntryTransactionCardProps {
   currency?: string;
   precision?: number;
   autoFocusAmount?: boolean;
+  amountInputRef?: RefObject<TextInput | null>;
   onCalculatorDone?: () => void;
   amountTestID?: string;
   pair: FxPair;
@@ -70,6 +72,7 @@ export function EntryTransactionCard({
   currency,
   precision,
   autoFocusAmount,
+  amountInputRef,
   onCalculatorDone,
   amountTestID,
   pair,
@@ -135,6 +138,7 @@ export function EntryTransactionCard({
               precision={precision ?? 2}
               autoFocus={autoFocusAmount ?? false}
               onCalculatorDone={onCalculatorDone}
+              inputRef={amountInputRef}
               testID="hero-amount-input"
               calculatorTestID="amount-input"
             />

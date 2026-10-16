@@ -56,7 +56,7 @@ export function BudgetDetailHeader({
   const comparisonLabel = previousPeriodRange
     ? isHistorical
       ? periodStrings.total(dayjs(previousPeriodRange.startDate).format('MMM'))
-      : periodStrings.sameDay(dayjs(previousPeriodRange.startDate).format('MMM'))
+      : periodStrings.sameDay(dayjs(previousPeriodRange.endDate).format('D MMM'))
     : undefined;
 
   return (

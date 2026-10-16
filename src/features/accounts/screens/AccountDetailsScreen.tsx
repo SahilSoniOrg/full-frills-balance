@@ -4,7 +4,6 @@ import { buildDetailNavChrome } from '@/src/components/layout/buildDetailNavChro
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { AccountDetailsView } from '@/src/features/accounts/components/AccountDetailsView';
-import { accountDetailsCopy } from '@/src/features/accounts/helpers/accountFlowLabels';
 import { useAccountDetailsViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { Icon } from '@/src/types/domainIcons';
 import { useMemo } from 'react';
@@ -12,10 +11,8 @@ import { useMemo } from 'react';
 function AccountDetailsScreen() {
   const vm = useAccountDetailsViewModel();
   const {
-    accountName,
     accountLoading,
     accountMissing,
-    accountType,
     headerActions,
     isDeleted,
     onAddPress,
@@ -28,7 +25,8 @@ function AccountDetailsScreen() {
     return applySelectionChrome(
       buildDetailNavChrome({
         phase,
-        readyTitle: accountName || `${accountDetailsCopy(accountType).entity} Details`,
+        // The body already shows the name in large type; no need to repeat it in the bar.
+        readyTitle: '',
         loadingTitle: 'Account Details',
         onBack: vm.onBack,
         headerActions: (
@@ -54,10 +52,8 @@ function AccountDetailsScreen() {
       },
     );
   }, [
-    accountName,
     accountLoading,
     accountMissing,
-    accountType,
     headerActions,
     isDeleted,
     onAddPress,

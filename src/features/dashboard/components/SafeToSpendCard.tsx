@@ -51,17 +51,21 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
 
   const loading = isLoading ?? vmLoading;
   const hasBreakdownData = effectiveTotal > 0;
-  const hasProjectionData = projection.history.length > 0 || projection.projection.length > 0;
+  const projectionValues = [...projection.history, ...projection.projection].map(p => p.value);
+  // A flat line (no entries yet) has nothing to show: skip the chart and its Max/Available markers.
+  const hasProjectionData = new Set(projectionValues).size > 1;
   const hasForecastIssue = quality !== 'ready' || Boolean(viewModel.hasUnvaluedEntries);
 
-  const breakdown = hasBreakdownData ? (
-    <SafeToSpendBreakdownBar
-      effectiveTotal={effectiveTotal}
-      committedTotal={committedTotal}
-      committedLiabilities={committedLiabilities}
-      safeToSpend={safeToSpend}
-    />
-  ) : null;
+  // In the shortfall state the bar is fully reserved and carries no information.
+  const breakdown =
+    hasBreakdownData && !isOverCommitted ? (
+      <SafeToSpendBreakdownBar
+        effectiveTotal={effectiveTotal}
+        committedTotal={committedTotal}
+        committedLiabilities={committedLiabilities}
+        safeToSpend={safeToSpend}
+      />
+    ) : null;
 
   const metrics = hasBreakdownData ? (
     <SafeToSpendBreakdownMetrics
@@ -116,7 +120,8 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
                   {AppConfig.strings.dashboard.safeToSpendUi.forecastStale}
                 </AppText>
               ) : null}
-              <SafeToSpendForecastDetails viewModel={viewModel} />
+              {/* Provenance explains stale or partial forecasts, not a missing rate. */}
+              {quality !== 'ready' ? <SafeToSpendForecastDetails viewModel={viewModel} /> : null}
               {viewModel.hasUnvaluedEntries ? (
                 <IncompleteFxWarning
                   testID="safe-to-spend-incomplete-warning"

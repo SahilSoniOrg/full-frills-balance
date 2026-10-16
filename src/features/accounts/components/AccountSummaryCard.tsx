@@ -133,13 +133,8 @@ export function AccountSummaryCard({
           </AppText>
           <View style={styles.metaRow}>
             <Badge variant={accountTypeVariant} size="sm">
-              {accountTypeLabel(accountType)}
+              {accountSubtypeLabel || accountTypeLabel(accountType)}
             </Badge>
-            {accountSubtypeLabel ? (
-              <AppText variant="caption" color="secondary">
-                {accountSubtypeLabel}
-              </AppText>
-            ) : null}
             {isDeleted ? <Badge variant="expense">DELETED</Badge> : null}
             {isArchived ? (
               <Badge variant="default" icon={Icon.Archive}>

@@ -34,12 +34,13 @@ function renderCard(overrides: Partial<Props> = {}) {
 }
 
 describe('AccountSummaryCard', () => {
-  it('leads with the balance and shows the account type and subtype', () => {
+  it('leads with the balance and shows one type tag, preferring the subtype', () => {
     renderCard();
 
     expect(screen.getByText('Current balance')).toBeTruthy();
     expect(screen.getByTestId('account-balance')).toBeTruthy();
-    expect(screen.getByText('Asset')).toBeTruthy();
+    expect(screen.queryByText('Asset')).toBeNull();
+    expect(screen.getByText('Liq')).toBeTruthy();
     expect(screen.getByText('Bank Checking')).toBeTruthy();
     expect(screen.getByText('1,461 entries')).toBeTruthy();
   });

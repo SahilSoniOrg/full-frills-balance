@@ -64,7 +64,9 @@ export function SafeToSpendCardLayout({
                 {chart}
                 <Separator />
               </Column>
-            ) : null}
+            ) : (
+              <Separator />
+            )}
           </Column>
         </View>
       )}

@@ -69,7 +69,7 @@ export function JournalDayHeader({
         </View>
 
         <View style={styles.rightContent}>
-          {hasStats && netAmount !== undefined && netAmount !== 0 && currencyCode && (
+          {hasStats && count > 1 && netAmount !== 0 && currencyCode && (
             <MoneyText
               amount={netAmount}
               currencyCode={currencyCode}

@@ -7,6 +7,7 @@ import {
   resolveJournalEntryScreenMode,
   resolveJournalEntrySubmitLabel,
   resolveJournalEntryValidationHint,
+  resolveMissingFieldTarget,
 } from '../journalEntryPresentation';
 import { JournalStatus } from '@/src/types/enums';
 
@@ -306,5 +307,17 @@ describe('offersPlannedChoice', () => {
   );
   it('leaves batch to the per-row choice', () => {
     expect(offersPlannedChoice({ activeMode: 'batch', isEdit: false, ...future })).toBe(false);
+  });
+
+  it('points a disabled Save at the field its hint names', () => {
+    const amount = { code: 'missing_amount', message: 'An amount is required' } as const;
+    const source = { code: 'missing_source_account', message: 'A source is required' } as const;
+    const destination = {
+      code: 'missing_destination_account',
+      message: 'A category is required',
+    } as const;
+    expect(resolveMissingFieldTarget([amount, source])).toBe('amount');
+    expect(resolveMissingFieldTarget([source, destination])).toBe('source');
+    expect(resolveMissingFieldTarget([destination])).toBe('destination');
   });
 });

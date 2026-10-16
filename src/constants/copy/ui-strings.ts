@@ -30,7 +30,7 @@ export const UI_STRINGS = {
       previousButton: 'Previous period',
       nextButton: 'Next period',
       backToToday: 'Back to today',
-      sameDay: (period: string) => `${period}, same day`,
+      sameDay: (date: string) => `vs ${date}`,
       total: (period: string) => `${period} total`,
       lastPeriod: 'Last period',
       lastPeriodSamePoint: 'Last period, same point',
@@ -53,7 +53,7 @@ export const UI_STRINGS = {
         'Some journal lines could not be valued because journal context or a historical exchange rate was unavailable. Budget figures may be incomplete.',
       reportsDetailsIntro:
         'Some figures may be incomplete because journal context or a historical exchange rate is unavailable.',
-      excludedStartingBalancesTitle: 'Cash left out of this estimate',
+      excludedStartingBalancesTitle: 'Left out',
       excludedStartingBalance: (accountName: string, amount: string) =>
         `${accountName}: ${amount} was not included.`,
       missingCurrentExchangeRate: (from: string, to: string) =>
@@ -134,8 +134,8 @@ export const UI_STRINGS = {
     budgets: 'Money Set Aside',
     bills: 'Bills',
     shortfall: 'Holding Back for Bills',
-    shortfallSubtitle:
-      'Upcoming bills outpace cash right now. Your accounts are fine, but spending money is on hold so you glide smoothly into payday.',
+    shortfallUnit: 'on hold',
+    shortfallSubtitle: 'Bills due exceed cash. Spending paused until payday.',
     neededForObligations: 'Set aside',
     afterObligations: 'Guilt-free to spend',
     afterCommitmentsForDays: (days: number) => `After commitments over ${days} days`,
@@ -230,7 +230,7 @@ export const UI_STRINGS = {
       waitingForIncome: 'Waiting on payday',
       calculationLedger: 'Calculation details',
       projectedLabel: 'Projected',
-      incompleteFxWarning: 'Some values could not be converted. Safe to Spend may be incomplete.',
+      incompleteFxWarning: 'Some balances not converted.',
     },
     safeToSpendProvenance: {
       basedOn: (date: string, days: number, updatedAt?: string) =>
@@ -307,6 +307,7 @@ export const UI_STRINGS = {
   journal: {
     emptyTitle: 'Clean slate',
     emptySubtitle: 'No entries match the current search or date range.',
+    emptyInPeriod: (period: string) => `No entries in ${period}`,
     transactions: 'Activity',
     plannedPayments: 'Planned payments',
     upcoming: 'Scheduled',
@@ -981,6 +982,7 @@ export const UI_STRINGS = {
         'Your bank balance doesn’t know about next week’s bills. We do the quiet math so you always know what’s safe today.',
       inputLabel: 'What should we call you?',
       inputPlaceholder: 'Your name or nickname',
+      nameRequired: 'Add a name to start',
       btnGetStarted: 'Get started',
       dividerOr: 'OR',
       restorePrompt: 'Already have your data?',
