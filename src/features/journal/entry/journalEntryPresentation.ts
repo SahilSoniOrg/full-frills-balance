@@ -348,3 +348,12 @@ export function offersPlannedChoice(params: {
     dayjs(`${params.journalDate}T${params.journalTime || '00:00'}`).isAfter(dayjs())
   );
 }
+
+/** Field Save should point at when tapped disabled; matches the first issue the hint names. */
+export function resolveMissingFieldTarget(
+  issues: readonly JournalEntryValidationIssue[],
+): 'amount' | 'source' | 'destination' {
+  const code = issues[0]?.code;
+  if (code === 'missing_amount' || code === 'invalid_amount') return 'amount';
+  return code === 'missing_source_account' ? 'source' : 'destination';
+}

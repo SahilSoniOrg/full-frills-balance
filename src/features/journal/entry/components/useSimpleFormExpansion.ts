@@ -19,7 +19,8 @@ export type AutopilotAppliedAccount = {
 };
 
 export type AccountFlowHandle = {
-  start: (applied?: AutopilotAppliedAccount) => void;
+  start: (applied?: AutopilotAppliedAccount, firstRole?: AccountRole) => void;
+  focusAmount?: () => void;
 };
 
 function isAccountSet(id: AccountId | undefined): boolean {
@@ -65,12 +66,12 @@ export function useSimpleFormExpansion({
   const [autopilotNextRole, setAutopilotNextRole] = useState<AccountRole | null>(null);
 
   const startAutopilotAccountFlow = useCallback(
-    (applied?: AutopilotAppliedAccount) => {
+    (applied?: AutopilotAppliedAccount, firstRole?: AccountRole) => {
       const next = resolveAutopilotExpansion({
         type,
         sourceId: applied?.role === 'source' ? applied.id : sourceId,
         destinationId: applied?.role === 'destination' ? applied.id : destinationId,
-        firstRole: autopilotFirstRole,
+        firstRole: firstRole ?? autopilotFirstRole,
       });
       prepareLayoutAnimation();
       setExpansionPosition(next.expansionPosition);

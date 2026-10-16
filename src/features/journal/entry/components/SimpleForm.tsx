@@ -5,8 +5,8 @@ import { EntryTransactionCard } from './EntryTransactionCard';
 import type { JournalMetaCardProps } from './JournalMetaCard';
 import { useSimpleFormExpansion, type AccountFlowHandle } from './useSimpleFormExpansion';
 import type { AccountRole } from '@/src/types/domainJournal';
-import React, { type RefObject, useEffect } from 'react';
-import { StyleSheet } from 'react-native';
+import React, { type RefObject, useEffect, useRef } from 'react';
+import { StyleSheet, type TextInput } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
 export interface SimpleFormProps {
@@ -34,6 +34,7 @@ export const SimpleForm = React.memo(function SimpleForm({
   onCalculatorDone,
   accountFlowRef,
 }: SimpleFormProps) {
+  const amountInputRef = useRef<TextInput>(null);
   const sourceSection = editor.accountSections.find(section => section.role === 'source');
   const destinationSection = editor.accountSections.find(section => section.role === 'destination');
   const {
@@ -53,7 +54,10 @@ export const SimpleForm = React.memo(function SimpleForm({
 
   useEffect(() => {
     if (!accountFlowRef) return;
-    accountFlowRef.current = { start: startAutopilotAccountFlow };
+    accountFlowRef.current = {
+      start: startAutopilotAccountFlow,
+      focusAmount: () => amountInputRef.current?.focus(),
+    };
     return () => {
       accountFlowRef.current = null;
     };
@@ -79,6 +83,7 @@ export const SimpleForm = React.memo(function SimpleForm({
         currency={editor.displayCurrency}
         precision={precision}
         autoFocusAmount={autoFocusAmount}
+        amountInputRef={amountInputRef}
         onCalculatorDone={onCalculatorDone}
         pair={editor.fxPair}
         onManualBaseRateChange={editor.setManualBaseRate}
