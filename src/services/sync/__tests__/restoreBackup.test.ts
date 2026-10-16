@@ -14,7 +14,6 @@ import { parseRowEnvelope } from '../rowEnvelope';
 import { rebuildAllAccountBalancesAfterImport } from '@/src/services/import/importAccountBalanceRebuild';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import { setKeyAccessAllowed } from '@/src/services/backup/keyAccessPolicy';
-import { MAX_ROW_BATCH_BYTES, MAX_ROW_PLAINTEXT_BYTES } from '../rowCrypto';
 
 jest.mock('../backupFile', () => ({ parseBackupZip: jest.fn() }));
 jest.mock('../manifestVerify', () => ({ verifyRowManifest: jest.fn() }));
@@ -334,27 +333,23 @@ describe('restoreBackup', () => {
     expect(importRepository.batchInsertRowRestore).not.toHaveBeenCalled();
     expect(localKeyHierarchy.installWorkplaceKeys).not.toHaveBeenCalled();
   });
-  it('bounds highly compressed restore batches by their maximum expanded size', async () => {
+  it('submits full-count batches and leaves expansion limits to native resumption', async () => {
     const envelopes = Array.from({ length: 100 }, (_, index) => ({
       ...envelope,
       rowId: `row-${index}`,
     }));
     jest.mocked(parseBackupZip).mockReturnValue({ ...backup, envelopes } as never);
-    jest
-      .mocked(localKeyHierarchy.decryptRows)
-      .mockImplementation(async (_id, _workplace, batch) => {
-        // Model the native expanded-plaintext limit, independent of compressed size.
-        if (batch.length * MAX_ROW_PLAINTEXT_BYTES > MAX_ROW_BATCH_BYTES)
-          throw new Error('FFB_ROW_TOO_LARGE');
-        return batch.map(value => ({
+    jest.mocked(localKeyHierarchy.decryptRows).mockImplementation(
+      async (_id, _workplace, batch) =>
+        batch.map(value => ({
           ok: true,
           table: value.table,
           rowId: value.rowId,
           schemaVersion: 35,
           dictId: 'workplace/v1',
-          plaintext: 'x'.repeat(MAX_ROW_PLAINTEXT_BYTES),
-        })) as never;
-      });
+          plaintext: '{}',
+        })) as never,
+    );
     jest.mocked(parseRowEnvelope).mockImplementation(
       value =>
         ({
@@ -369,7 +364,7 @@ describe('restoreBackup', () => {
     ).resolves.toBeDefined();
     expect(
       jest.mocked(localKeyHierarchy.decryptRows).mock.calls.map(call => call[2].length),
-    ).toEqual([64, 36]);
+    ).toEqual([100]);
   });
 
   it.each([false, true])(
@@ -400,7 +395,7 @@ describe('restoreBackup', () => {
 
     await expect(
       restoreBackup(new Uint8Array([1]), { mode: 'existing', identity }),
-    ).rejects.toMatchObject({ name: 'AbortError' });
+    ).rejects.toMatchObject({ code: 'FFB_KEY_CANCELLED' });
     expect(localKeyHierarchy.installWorkplaceKeys).not.toHaveBeenCalled();
     expect(preferences.workplace.update).not.toHaveBeenCalled();
   });

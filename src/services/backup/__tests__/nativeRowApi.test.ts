@@ -89,6 +89,40 @@ describe('native row operation boundary', () => {
     expect(call).toHaveBeenCalledTimes(1);
   });
 
+  it('resubmits the remainder when native returns a decrypted prefix', async () => {
+    const envelopes = ['a', 'b', 'c'].map(rowId => ({ ...wireEnvelope, rowId }));
+    const reply = (batch: RowEnvelopeJson[]) =>
+      batch.map(value => ({
+        ok: true,
+        rowId: value.rowId,
+        table: value.table,
+        schemaVersion: 35,
+        dictId: 'accounts/v1',
+        plaintext: '{}',
+      }));
+    const call = jest.fn(async (_operation: string, request: unknown) => {
+      const batch = (request as { envelopes: RowEnvelopeJson[] }).envelopes;
+      return { rows: reply(batch.length === 3 ? batch.slice(0, 2) : batch) };
+    });
+    const operations = keyOperationsFromTransport(call);
+
+    const rows = await operations.decryptRows(workplaceKey, source.workplaceId, envelopes);
+
+    expect(rows.map(row => row.rowId)).toEqual(['a', 'b', 'c']);
+    expect(
+      call.mock.calls.map(([, request]) =>
+        (request as { envelopes: RowEnvelopeJson[] }).envelopes.map(value => value.rowId),
+      ),
+    ).toEqual([['a', 'b', 'c'], ['c']]);
+  });
+
+  it('rejects a native reply that makes no progress', async () => {
+    const operations = keyOperationsFromTransport(jest.fn(async () => ({ rows: [] })));
+    await expect(
+      operations.decryptRows(workplaceKey, source.workplaceId, [wireEnvelope]),
+    ).rejects.toThrow('Native row count mismatch');
+  });
+
   it('rejects ciphertext beyond the decoded row and batch limits before calling native', async () => {
     const call = jest.fn();
     const operations = keyOperationsFromTransport(call);

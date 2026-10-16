@@ -22,6 +22,8 @@ constexpr std::size_t MAX_CIPHERTEXT_B64 = 4 * ((MAX_ROW_CIPHERTEXT + 2) / 3);
 constexpr std::int64_t MAX_SAFE_INTEGER = 9007199254740991LL;
 constexpr std::array<unsigned char, 12> NONCE{};
 
+struct BatchFull {};
+
 using ZstdC = std::unique_ptr<ZSTD_CCtx, decltype(&ZSTD_freeCCtx)>;
 using ZstdD = std::unique_ptr<ZSTD_DCtx, decltype(&ZSTD_freeDCtx)>;
 using PkeyCtx = std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)>;
@@ -391,13 +393,15 @@ Json decryptRows(const Json &request, const Json &user, const Json &keys,
       } else {
         plain.bytes = decompress(zctx.get(), dict, body.bytes);
       }
-      require(plain.bytes.size() <= MAX_BATCH_PLAINTEXT - totalPlaintext,
-              "Row batch plaintext exceeds limit", ErrorCode::RowTooLarge);
+      // A full batch returns the rows decrypted so far; the caller resubmits the rest.
+      if (plain.bytes.size() > MAX_BATCH_PLAINTEXT - totalPlaintext) throw BatchFull{};
       totalPlaintext += plain.bytes.size();
       SecretString plaintext{decodeUtf8(plain.bytes, "row plaintext")};
       output.push_back({{"ok", true}, {"rowId", rowId}, {"table", table},
           {"schemaVersion", inner.schemaVersion}, {"dictId", inner.dictId},
           {"plaintext", plaintext.value}});
+    } catch (const BatchFull &) {
+      break;
     } catch (const std::exception &error) {
       output.push_back({{"ok", false}, {"rowId", rowId}, {"table", table},
                         {"error", rowError(error)}});

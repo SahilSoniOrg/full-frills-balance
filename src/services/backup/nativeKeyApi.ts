@@ -4,7 +4,6 @@ import { encodeUtf8 } from '@/src/services/sync/codec/tlv';
 import type { RowManifestFields } from '@/src/services/sync/codec/manifestBytes';
 import {
   parseRowEnvelope,
-  decodeBase64,
   serializeRowEnvelope,
   type RowEnvelopeJson,
 } from '@/src/services/sync/codec/envelopeJson';
@@ -72,6 +71,48 @@ export type OpenKeyRequest =
 export type RecoveryOperation =
   'confirmUser' | 'validateRecovery' | 'recoverUser' | 'confirmWorkplace';
 
+function base64ByteLength(text: string): number {
+  const padding = text.endsWith('==') ? 2 : text.endsWith('=') ? 1 : 0;
+  return Math.floor((text.length * 3) / 4) - padding;
+}
+
+function parseDecryptedRow(value: unknown, expected: RowEnvelopeJson): DecryptedRow {
+  const row = parseObject(value, 'Invalid decrypted row');
+  if (row.rowId !== expected.rowId || row.table !== expected.table)
+    throw new Error('Native row scope mismatch');
+  if (row.ok === false) {
+    assertExactKeys(row, ['ok', 'rowId', 'table', 'error'], 'Invalid decrypted row error');
+    const error = KEY_OPERATION_ERROR_CODES.find(code => code === row.error);
+    if (!error) throw new Error('Unknown native row error');
+    return { ok: false, rowId: expected.rowId, table: expected.table, error };
+  }
+  assertExactKeys(
+    row,
+    ['ok', 'rowId', 'table', 'schemaVersion', 'dictId', 'plaintext'],
+    'Invalid decrypted row',
+  );
+  if (
+    row.ok !== true ||
+    typeof row.schemaVersion !== 'number' ||
+    !Number.isSafeInteger(row.schemaVersion) ||
+    row.schemaVersion < 0 ||
+    typeof row.dictId !== 'string' ||
+    !row.dictId.startsWith(expected.table + '/') ||
+    typeof row.plaintext !== 'string' ||
+    encodeUtf8(row.plaintext).length > 65536 ||
+    (expected.deleted && row.plaintext !== '')
+  )
+    throw new Error('Invalid decrypted row');
+  return {
+    ok: true,
+    rowId: expected.rowId,
+    table: expected.table,
+    schemaVersion: row.schemaVersion,
+    dictId: row.dictId,
+    plaintext: row.plaintext,
+  };
+}
+
 /** The transport remains internal to platform/test adapters; callers use these operations. */
 export function keyOperationsFromTransport(
   call: (operation: string, request: unknown) => Promise<unknown>,
@@ -132,58 +173,31 @@ export function keyOperationsFromTransport(
       for (const envelope of envelopes) {
         if (envelope.workplaceId !== workplaceId || envelope.keyId !== key.keyId)
           throw new Error('Native Workplace key scope mismatch');
-        if (envelope.ciphertext.length > 4 * Math.ceil(MAX_ROW_CIPHERTEXT_BYTES / 3))
-          throw new Error('FFB_ROW_TOO_LARGE: row ciphertext');
-        const size = decodeBase64(envelope.ciphertext).length;
+        const size = base64ByteLength(envelope.ciphertext);
         if (size > MAX_ROW_CIPHERTEXT_BYTES) throw new Error('FFB_ROW_TOO_LARGE: row ciphertext');
         ciphertextBytes += size;
         if (ciphertextBytes > MAX_ROW_BATCH_BYTES)
           throw new Error('FFB_ROW_TOO_LARGE: batch ciphertext');
       }
-      const result = parseObject(
-        await call('decryptRows', { key, workplaceId, envelopes }),
-        'Invalid decrypted rows',
-      );
-      assertExactKeys(result, ['rows'], 'Invalid decrypted rows');
-      if (!Array.isArray(result.rows) || result.rows.length !== envelopes.length)
-        throw new Error('Native row count mismatch');
-      return result.rows.map((value, index): DecryptedRow => {
-        const row = parseObject(value, 'Invalid decrypted row'),
-          expected = envelopes[index];
-        if (row.rowId !== expected.rowId || row.table !== expected.table)
-          throw new Error('Native row scope mismatch');
-        if (row.ok === false) {
-          assertExactKeys(row, ['ok', 'rowId', 'table', 'error'], 'Invalid decrypted row error');
-          const error = KEY_OPERATION_ERROR_CODES.find(code => code === row.error);
-          if (!error) throw new Error('Unknown native row error');
-          return { ok: false, rowId: expected.rowId, table: expected.table, error };
-        }
-        assertExactKeys(
-          row,
-          ['ok', 'rowId', 'table', 'schemaVersion', 'dictId', 'plaintext'],
-          'Invalid decrypted row',
+      // Native stops early when expanded plaintext fills its batch; resubmit the remainder.
+      const decrypted: DecryptedRow[] = [];
+      while (decrypted.length < envelopes.length) {
+        const pending = envelopes.slice(decrypted.length);
+        const result = parseObject(
+          await call('decryptRows', { key, workplaceId, envelopes: pending }),
+          'Invalid decrypted rows',
         );
+        assertExactKeys(result, ['rows'], 'Invalid decrypted rows');
         if (
-          row.ok !== true ||
-          typeof row.schemaVersion !== 'number' ||
-          !Number.isSafeInteger(row.schemaVersion) ||
-          row.schemaVersion < 0 ||
-          typeof row.dictId !== 'string' ||
-          !row.dictId.startsWith(expected.table + '/') ||
-          typeof row.plaintext !== 'string' ||
-          encodeUtf8(row.plaintext).length > 65536 ||
-          (expected.deleted && row.plaintext !== '')
+          !Array.isArray(result.rows) ||
+          result.rows.length === 0 ||
+          result.rows.length > pending.length
         )
-          throw new Error('Invalid decrypted row');
-        return {
-          ok: true,
-          rowId: expected.rowId,
-          table: expected.table,
-          schemaVersion: row.schemaVersion,
-          dictId: row.dictId,
-          plaintext: row.plaintext,
-        };
-      });
+          throw new Error('Native row count mismatch');
+        for (const [index, value] of result.rows.entries())
+          decrypted.push(parseDecryptedRow(value, pending[index]));
+      }
+      return decrypted;
     },
     async signRowManifest(key, fields) {
       const result = parseObject(

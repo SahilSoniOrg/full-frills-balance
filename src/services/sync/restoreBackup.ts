@@ -36,7 +36,7 @@ import { computeMerkleRootFromLeaves, hashRowLeaf, type MerkleLeaf } from './cod
 import { hashManifest } from './codec/manifestBytes';
 import { decodeCanonicalRow } from './shortKeys';
 import { rowImportData, validateWorkplaceRows, type RowSourceRecord } from './rowSource';
-import { MAX_ROW_BATCH_BYTES, MAX_ROW_BATCH_COUNT, MAX_ROW_PLAINTEXT_BYTES } from './rowCrypto';
+import { MAX_ROW_BATCH_BYTES, MAX_ROW_BATCH_COUNT } from './rowCrypto';
 
 export type RestoreBackupAccess = Readonly<
   | { mode: 'existing'; identity: KeyAccessIdentity }
@@ -130,18 +130,16 @@ async function resolveIdentity(
 }
 
 function envelopeBatches(entries: readonly EnvelopeEntry[]): EnvelopeEntry[][] {
-  // Ciphertext can be tiny even when a row expands to the full plaintext limit.
-  const maxRows = Math.min(
-    MAX_ROW_BATCH_COUNT,
-    Math.floor(MAX_ROW_BATCH_BYTES / MAX_ROW_PLAINTEXT_BYTES),
-  );
   const batches: EnvelopeEntry[][] = [];
   let batch: EnvelopeEntry[] = [];
   let bytes = 0;
   for (const entry of entries) {
     const size = entry.parsed.ciphertext.length;
     if (size > MAX_ROW_BATCH_BYTES) throw new Error('Backup row exceeds native batch limit');
-    if (batch.length > 0 && (batch.length >= maxRows || bytes + size > MAX_ROW_BATCH_BYTES)) {
+    if (
+      batch.length > 0 &&
+      (batch.length >= MAX_ROW_BATCH_COUNT || bytes + size > MAX_ROW_BATCH_BYTES)
+    ) {
       batches.push(batch);
       batch = [];
       bytes = 0;
@@ -188,6 +186,10 @@ export async function restoreBackup(
   });
   try {
     return await restoreBackupWhileUnlocked(zipBytes, access, cancellation.signal);
+  } catch (error) {
+    if (cancellation.signal.aborted && error instanceof Error && error.name === 'AbortError')
+      throw new KeyOperationError('FFB_KEY_CANCELLED');
+    throw error;
   } finally {
     unsubscribe();
   }

@@ -133,6 +133,30 @@ it('rejects duplicate rows, unknown dictionaries, and row or batch caps', async 
   ).rejects.toMatchObject({ code: 'FFB_ROW_TOO_LARGE' });
 });
 
+it('returns the decrypted prefix when expanded plaintext fills the batch', async () => {
+  const { context, key, workplaceId } = await setup();
+  const encrypt = async (from: number, count: number) =>
+    (
+      (await context.host.execute('encryptRows', {
+        key,
+        workplaceId,
+        keyId: key.keyId,
+        rows: Array.from({ length: count }, (_, i) =>
+          row({ rowId: `full-${from + i}`, plaintext: 'x'.repeat(64 * 1024) }),
+        ),
+      })) as { envelopes: Record<string, unknown>[] }
+    ).envelopes;
+  const envelopes = [...(await encrypt(0, 64)), ...(await encrypt(64, 1))];
+  const result = (await context.host.execute('decryptRows', {
+    key,
+    workplaceId,
+    envelopes,
+  })) as { rows: { ok: boolean; rowId: string }[] };
+  expect(result.rows).toHaveLength(64);
+  expect(result.rows.every(value => value.ok)).toBe(true);
+  expect(result.rows.at(-1)?.rowId).toBe('full-63');
+});
+
 it('signs only canonically re-encoded manifests bound to the confirmed User and Device', async () => {
   const { context, user, workplaceId, keys } = await setup();
   const fields = {
