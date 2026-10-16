@@ -82,12 +82,22 @@ const emptyTotals = {
   otherCurrencyCount: 0,
 };
 
+const withItems = <T extends { items: unknown[] }>(model: T) => ({ ...model, items: [{}] });
+
+it('hides the FAB while the empty state shows its own add button', () => {
+  const screen = render(<CommitmentsScreen />);
+  expect(screen.queryByRole('button', { name: 'Create a budget' })).toBeNull();
+});
+
 it('defaults unknown routes to Budgets and preserves tab navigation', () => {
   jest.mocked(useLocalSearchParams).mockReturnValue({ tab: 'unknown' });
+  jest
+    .mocked(useBudgetListViewModel)
+    .mockReturnValue(withItems(jest.mocked(useBudgetListViewModel)(0 as never, 'INR')) as never);
   const screen = render(<CommitmentsScreen />);
   expect(screen.getByRole('tab', { name: 'Budgets' }).props.accessibilityState.selected).toBe(true);
   expect(screen.getByText('Budget list')).toBeTruthy();
-  expect(screen.getAllByText('0')).toHaveLength(2);
+  expect(screen.getAllByText('0')).toHaveLength(1);
   fireEvent.press(screen.getByRole('tab', { name: 'Planned' }));
   expect(useRouter().setParams).toHaveBeenCalledWith({ tab: 'planned' });
   fireEvent.press(screen.getByRole('button', { name: 'Create a budget' }));
@@ -96,6 +106,9 @@ it('defaults unknown routes to Budgets and preserves tab navigation', () => {
 
 it('opens Planned directly from the route and creates the matching commitment', () => {
   jest.mocked(useLocalSearchParams).mockReturnValue({ tab: 'planned' });
+  jest
+    .mocked(usePlannedPayments)
+    .mockReturnValue(withItems(jest.mocked(usePlannedPayments)(0 as never)) as never);
   const screen = render(<CommitmentsScreen />);
   expect(screen.getByRole('tab', { name: 'Planned' }).props.accessibilityState.selected).toBe(true);
   expect(screen.getByText('Planned list')).toBeTruthy();

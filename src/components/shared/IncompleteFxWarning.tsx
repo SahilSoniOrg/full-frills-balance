@@ -1,5 +1,5 @@
 import { AppText, PressScaleTouchable } from '@/src/components/core';
-import { AppConfig, Spacing } from '@/src/constants';
+import { AppConfig, Size, Spacing } from '@/src/constants';
 
 interface IncompleteFxWarningProps {
   message: string;
@@ -17,11 +17,15 @@ export function IncompleteFxWarning({ message, testID, onPress }: IncompleteFxWa
       accessibilityLabel={`${message} ${reviewLabel}`}
       accessibilityHint="Opens details about amounts left out of this total."
       onPress={onPress}
-      hitSlop={{ top: Spacing.sm, bottom: Spacing.sm }}
       style={{ alignSelf: 'stretch' }}
-      surfaceStyle={{ gap: Spacing.xs, paddingVertical: Spacing.xs }}
+      surfaceStyle={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.sm,
+        minHeight: Size.touchTarget,
+      }}
     >
-      <AppText variant="caption" color="warning">
+      <AppText variant="caption" color="warning" style={{ flexShrink: 1 }}>
         {message}
       </AppText>
       <AppText variant="caption" weight="bold" color="warning">

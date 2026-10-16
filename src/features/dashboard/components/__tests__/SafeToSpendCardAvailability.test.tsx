@@ -28,7 +28,10 @@ const viewModel = {
 const projection = { history: [], projection: [], safeDaysCount: null, safeToSpend: 150 };
 const populatedProjection = {
   ...projection,
-  projection: [{ timestamp: Date.UTC(2026, 9, 2), value: 200, details: [], isProjected: true }],
+  projection: [
+    { timestamp: Date.UTC(2026, 9, 2), value: 200, details: [], isProjected: true },
+    { timestamp: Date.UTC(2026, 9, 3), value: 150, details: [], isProjected: true },
+  ],
 };
 
 describe('SafeToSpendCard availability', () => {

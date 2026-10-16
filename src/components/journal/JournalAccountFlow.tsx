@@ -85,7 +85,7 @@ function AccountLeg({
           style={styles.icon}
         />
       )}
-      <AppText variant="caption" style={[styles.name, { color: accentColor }]}>
+      <AppText variant="caption" numberOfLines={1} style={[styles.name, { color: accentColor }]}>
         {leg.name}
         {comma ? ',' : ''}
       </AppText>

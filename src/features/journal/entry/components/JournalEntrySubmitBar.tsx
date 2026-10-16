@@ -33,8 +33,8 @@ export interface JournalEntrySubmitBarProps {
 
 export const plannedModeOptions = (isEdit: boolean) =>
   [
-    { id: 'auto', label: 'Plan · auto-post' },
-    { id: 'manual', label: 'Plan · I post' },
+    { id: 'auto', label: 'Auto-post' },
+    { id: 'manual', label: 'Remind me' },
     { id: 'post', label: isEdit ? 'Keep posted' : 'Post now' },
   ] as const;
 
@@ -75,7 +75,7 @@ export const JournalEntrySubmitBar = React.memo(function JournalEntrySubmitBar({
     >
       {disabled && attempted && missingRequirementHint ? (
         <View style={styles.hintRow} accessibilityLiveRegion="polite">
-          <AppText variant="caption" color="secondary" style={styles.hintText}>
+          <AppText variant="caption" color="error" style={styles.hintText}>
             {missingRequirementHint}
           </AppText>
         </View>
@@ -87,7 +87,7 @@ export const JournalEntrySubmitBar = React.memo(function JournalEntrySubmitBar({
             options={plannedModeOptions(isEdit)}
             value={plannedMode}
             onChange={onPlannedModeChange}
-            size="sm"
+            itemHeight={Size.touchTarget}
             flex
             testID="journal-planned-mode"
           />

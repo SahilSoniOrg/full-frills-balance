@@ -53,7 +53,8 @@ export function AppButton({
         variantStyle = {
           backgroundColor: disabled ? theme.primaryLight : variantColors.main,
         };
-        textColor = disabled ? theme.textSecondary : variantColors.contrast;
+        // Disabled keeps the brand hue on its dim fill (>= 4.5:1) instead of grey-on-grey.
+        textColor = disabled ? theme.primary : variantColors.contrast;
         break;
       case 'destructive':
         variantStyle = {

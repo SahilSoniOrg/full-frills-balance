@@ -27,11 +27,15 @@ export function WelcomeScene({
 }) {
   const [pending, setPending] = useState<'start' | 'restore' | null>(null);
   const [prompt, setPrompt] = useState(false);
+  const [nameMissing, setNameMissing] = useState(false);
   const splash = AppConfig.strings.onboarding.splash;
   const trimmed = (name ?? '').trim();
 
   const run = (action: 'start' | 'restore') => {
-    if (action === 'start' && !trimmed) return;
+    if (action === 'start' && !trimmed) {
+      setNameMissing(true);
+      return;
+    }
     Keyboard.dismiss();
     if (!privacyAcknowledged) {
       setPending(action);
@@ -115,15 +119,15 @@ export function WelcomeScene({
                     autoCapitalize="words"
                     autoCorrect={false}
                     accessibilityLabel={splash.inputLabel}
+                    error={nameMissing && !trimmed ? splash.nameRequired : undefined}
                     testID="onboarding-name-input"
                     returnKeyType="done"
                     onSubmitEditing={() => run('start')}
                   />
                   <AppButton
-                    variant={trimmed ? 'primary' : 'secondary'}
+                    variant="primary"
                     size="lg"
                     onPress={() => run('start')}
-                    disabled={!trimmed}
                     testID="onboarding-start"
                   >
                     {copy.startWithMoney}

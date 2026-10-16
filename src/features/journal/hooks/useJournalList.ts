@@ -100,6 +100,7 @@ export function useJournalList(
     onShareSelected: core.onShareSelected,
   });
 
+  const periodLabel = dateRange?.label;
   const list = useMemo(
     (): JournalListModel['list'] => ({
       items: core.items,
@@ -107,7 +108,9 @@ export function useJournalList(
       isLoadingMore: core.isLoadingMore,
       loadingMoreText,
       emptyTitle: emptyState.title,
-      emptySubtitle: emptyState.subtitle,
+      emptySubtitle: periodLabel
+        ? AppConfig.strings.journal.emptyInPeriod(periodLabel)
+        : emptyState.subtitle,
       onEndReached: core.onEndReached,
     }),
     [
@@ -118,6 +121,7 @@ export function useJournalList(
       loadingMoreText,
       emptyState.title,
       emptyState.subtitle,
+      periodLabel,
     ],
   );
 

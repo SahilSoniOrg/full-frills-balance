@@ -309,7 +309,7 @@ function AmountField({
             value={value}
             onChangeText={handleAmountChange}
             placeholder={isFocused ? '' : (placeholder ?? (isHero ? '0' : '0.00'))}
-            placeholderTextColor={withOpacity(color, Opacity.medium)}
+            placeholderTextColor={theme.textSecondary}
             keyboardType="decimal-pad"
             accessibilityLabel={currency ? `Amount in ${currency}` : (label ?? 'Amount')}
             editable={editable}
