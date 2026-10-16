@@ -35,3 +35,10 @@ financial allowlist to app validation; native crypto still rejects malformed or
 record type `weather.observation` and unrelated ID `opaque-test-dictionary-7`.
 Android, iOS and shipped WASM continue compiling only the generated production
 provider; there is no runtime registration API.
+
+The host test provider also binds ASCII and multibyte boundary record types at
+64, 65, 127 and 128 UTF-8 bytes to its public test dictionary. Native tests round-trip
+these through the TypeScript bridge and compression/encryption, preserve long
+identifiers in error results, and directly reject 129-byte requests/envelopes.
+Shared codec checks exercise the same limits in the native host and rebuilt WASM.
+These boundary bindings are not part of the production dictionary provider.

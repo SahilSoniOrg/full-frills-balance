@@ -1,10 +1,12 @@
 #pragma once
 #include "KeyCrypto.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
 
 namespace ffb::rows {
+inline constexpr std::size_t MAX_IDENTIFIER_UTF8_BYTES = 128;
 inline constexpr const char *ROW_FORMAT = "full-frills-encrypted-row";
 inline constexpr const char *ROW_ENCODING = "shortkey1+zstd";
 inline constexpr const char *ROW_INFO_DOMAIN = "FFB-ROW/1";

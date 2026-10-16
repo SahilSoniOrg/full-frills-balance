@@ -2,6 +2,7 @@ import {
   decodeTlv,
   decodeUvarint,
   decodeUtf8,
+  encodeTlv,
   encodeUvarint,
   encodeUtf8,
 } from '@/src/services/crypto/protocol/tlv';
@@ -210,5 +211,66 @@ it('encodes opaque nonfinancial record types and rejects malformed or oversized 
   for (const table of ['', 'x'.repeat(129), '\ud800', '😀'.repeat(33)]) {
     expect(() => encodeRowInfo(table)).toThrow();
     expect(() => encodeRowHeader({ ...header, table })).toThrow();
+  }
+});
+
+it('uses a 128-byte UTF-8 limit for record header and key-info encoding and decoding', () => {
+  const { decodeRowInfo, decodeRowHeader } = jest.requireActual(
+    '@/src/services/crypto/protocol/rowHeader',
+  );
+  const header = {
+    workplaceId: 'w',
+    table: 'weather',
+    rowId: 'r',
+    updatedAt: 1,
+    deleted: false,
+    keyId: 'k',
+    salt: new Uint8Array(16),
+  };
+  for (const table of [
+    'x'.repeat(64),
+    'x'.repeat(65),
+    'x'.repeat(127),
+    'x'.repeat(128),
+    'é'.repeat(32) + 'a',
+    'é'.repeat(63) + 'a',
+    'é'.repeat(64),
+    '😀'.repeat(32),
+  ]) {
+    expect(decodeRowInfo(encodeRowInfo(table))).toBe(table);
+    expect(decodeRowHeader(encodeRowHeader({ ...header, table })).table).toBe(table);
+    const wire = serializeRowEnvelope({
+      ...header,
+      table,
+      format: 'full-frills-encrypted-row',
+      formatVersion: 1,
+      enc: 'shortkey1+zstd',
+      ciphertext: new Uint8Array(16),
+    });
+    expect(parseRowEnvelope(wire).table).toBe(table);
+  }
+  for (const table of ['x'.repeat(129), 'é'.repeat(64) + 'a', '😀'.repeat(32) + 'a']) {
+    expect(encodeUtf8(table).length).toBe(129);
+    expect(() => encodeRowInfo(table)).toThrow(/128 UTF-8 bytes/);
+    expect(() => encodeRowHeader({ ...header, table })).toThrow(/128 UTF-8 bytes/);
+    // Construct invalid wire bytes without routing through the guarded encoders.
+    const fields = decodeTlv(encodeRowHeader(header), 1, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    fields.set(5, encodeUtf8(table));
+    expect(() =>
+      decodeRowHeader(
+        encodeTlv(
+          1,
+          [...fields].map(([tag, value]) => ({ tag, value })),
+        ),
+      ),
+    ).toThrow(/128 UTF-8 bytes/);
+    expect(() =>
+      decodeRowInfo(
+        encodeTlv(2, [
+          { tag: 1, value: encodeUtf8('FFB-ROW/1') },
+          { tag: 2, value: encodeUtf8(table) },
+        ]),
+      ),
+    ).toThrow(/128 UTF-8 bytes/);
   }
 });

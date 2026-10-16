@@ -183,7 +183,7 @@ Bytes encodeUtf8(const std::string &value, const char *label, bool identifier) {
           "Malformed UTF-8");
     i += count;
   }
-  check(!identifier || size <= 128, "Identifier exceeds 128 UTF-8 bytes");
+  check(!identifier || size <= MAX_IDENTIFIER_UTF8_BYTES, "Identifier exceeds 128 UTF-8 bytes");
   return Bytes(value.begin(), value.end());
 }
 std::string decodeUtf8(const Bytes &value, const char *label) {
@@ -320,15 +320,43 @@ Json testRowCodec(const Json &request) {
   check(tables.is_array() && !tables.empty(), "Unexpected row vector count");
   // Generic protocol acceptance is independent of the profile's fixed vectors.
   auto opaque = rowFromJson(tables.at(0));
-  opaque.table = "weather.observation";
-  check(decodeRowHeader(encodeRowHeader(opaque)).table == opaque.table,
-        "Opaque header round trip failed");
-  check(decodeRowInfo(encodeRowInfo(opaque.table)) == opaque.table,
-        "Opaque derivation info round trip failed");
-  for (const auto &invalid : {std::string{}, std::string(129, 'x'), std::string("\xc0\xaf")}) {
+  const auto repeatType = [](const std::string &unit, unsigned count) {
+    std::string value;
+    while (count--) value += unit;
+    return value;
+  };
+  for (const auto &type : {std::string("weather.observation"), std::string(64, 'x'),
+       std::string(65, 'x'), std::string(127, 'x'), std::string(128, 'x'),
+       repeatType("é", 32) + "a", repeatType("é", 63) + "a",
+       repeatType("é", 64), repeatType("😀", 32)}) {
+    opaque.table = type;
+    check(decodeRowHeader(encodeRowHeader(opaque)).table == type,
+          "Opaque header boundary round trip failed");
+    check(decodeRowInfo(encodeRowInfo(type)) == type,
+          "Opaque derivation info boundary round trip failed");
+  }
+  for (const auto &invalid : {std::string{}, std::string(129, 'x'),
+       repeatType("é", 64) + "a", repeatType("😀", 32) + "a", std::string("\xc0\xaf")}) {
     bool rejected = false;
     try { (void)encodeRowInfo(invalid); } catch (...) { rejected = true; }
-    check(rejected, "Invalid record type accepted");
+    check(rejected, "Invalid record type accepted by info encoder");
+    rejected = false;
+    auto header = opaque;
+    header.table = invalid;
+    try { (void)encodeRowHeader(header); } catch (...) { rejected = true; }
+    check(rejected, "Invalid record type accepted by header encoder");
+    rejected = false;
+    try { (void)decodeRowInfo(encodeTlv(2, {{1, raw(ROW_INFO_DOMAIN)}, {2, raw(invalid)}})); }
+    catch (...) { rejected = true; }
+    check(rejected, "Invalid record type accepted by info decoder");
+    auto decoded = decodeTlv(encodeRowHeader(opaque), 1, {1,2,3,4,5,6,7,8,9,10});
+    decoded[4] = raw(invalid);
+    std::vector<std::pair<unsigned char, Bytes>> fields;
+    for (std::size_t i = 0; i < decoded.size(); ++i)
+      fields.emplace_back(static_cast<unsigned char>(i + 1), decoded[i]);
+    rejected = false;
+    try { (void)decodeRowHeader(encodeTlv(1, fields)); } catch (...) { rejected = true; }
+    check(rejected, "Invalid record type accepted by header decoder");
   }
   std::size_t rows = 0;
   for (const auto &row : tables) {

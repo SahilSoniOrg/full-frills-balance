@@ -1,4 +1,5 @@
 import {
+  MAX_IDENTIFIER_UTF8_BYTES,
   decodeInt64Milliseconds,
   decodeTlv,
   decodeUvarint,
@@ -73,7 +74,7 @@ export function decodeRowHeader(bytes: Uint8Array): RowHeader {
 
 function decodeUtf8Identifier(bytes: Uint8Array, label: string): string {
   const value = decodeUtf8(bytes, label);
-  if (bytes.length > 128) throw new Error(`${label} exceeds 128 UTF-8 bytes`);
+  if (bytes.length > MAX_IDENTIFIER_UTF8_BYTES) throw new Error(`${label} exceeds 128 UTF-8 bytes`);
   return value;
 }
 

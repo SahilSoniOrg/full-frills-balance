@@ -1,3 +1,6 @@
+/** Wire identifier bound, measured in UTF-8 bytes (also used by the native codec). */
+export const MAX_IDENTIFIER_UTF8_BYTES = 128;
+
 const encoder = new TextEncoder();
 const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 
@@ -100,7 +103,8 @@ export function encodeUtf8(value: string, label = 'string', identifier = false):
       throw new Error(`${label} contains an unpaired surrogate`);
   }
   const bytes = encoder.encode(value);
-  if (identifier && bytes.length > 128) throw new Error(`${label} exceeds 128 UTF-8 bytes`);
+  if (identifier && bytes.length > MAX_IDENTIFIER_UTF8_BYTES)
+    throw new Error(`${label} exceeds 128 UTF-8 bytes`);
   return bytes;
 }
 

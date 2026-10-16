@@ -202,8 +202,10 @@ RowHeader readEnvelope(const Json &value, const std::string &workplace,
   const auto &tableText = field(value, "table");
   const auto &rowIdText = field(value, "rowId");
   const auto &keyIdText = field(value, "keyId");
-  rowCheck(workplaceText.size() <= 128 && tableText.size() <= 64 &&
-            rowIdText.size() <= 128 && keyIdText.size() <= 128,
+  rowCheck(workplaceText.size() <= MAX_IDENTIFIER_UTF8_BYTES &&
+            tableText.size() <= MAX_IDENTIFIER_UTF8_BYTES &&
+            rowIdText.size() <= MAX_IDENTIFIER_UTF8_BYTES &&
+            keyIdText.size() <= MAX_IDENTIFIER_UTF8_BYTES,
         "Oversized row envelope identifier");
   rowCheck(workplaceText == workplace && keyIdText == keyId,
         "Row scope mismatch");
@@ -233,7 +235,7 @@ ManifestFields manifestFields(const Json &value) {
     rowCheck(value.at(name).is_number_integer(), "Invalid manifest number");
   for (const auto *name : {"workplaceId", "keyId", "id", "authorUserId", "authorDeviceId"}) {
     const auto &text = field(value, name);
-    rowCheck(text.size() <= 128, "Oversized manifest identifier");
+    rowCheck(text.size() <= MAX_IDENTIFIER_UTF8_BYTES, "Oversized manifest identifier");
   }
   const auto &prev = field(value, "prevHash");
   const auto &root = field(value, "root");
@@ -273,7 +275,9 @@ Json encryptRows(const Json &request, const Json &user, const Json &keys,
     const auto &tableName = field(row, "table");
     const auto &rowName = field(row, "rowId");
     const auto &dictName = field(row, "dictId");
-    rowCheck(tableName.size() <= 64 && rowName.size() <= 128 && dictName.size() <= 128,
+    rowCheck(tableName.size() <= MAX_IDENTIFIER_UTF8_BYTES &&
+              rowName.size() <= MAX_IDENTIFIER_UTF8_BYTES &&
+              dictName.size() <= MAX_IDENTIFIER_UTF8_BYTES,
           "Oversized row request identifier");
     require(plain.size() <= MAX_ROW_PLAINTEXT,
             "Row plaintext exceeds limit", ErrorCode::RowTooLarge);
@@ -341,8 +345,7 @@ Json decryptRows(const Json &request, const Json &user, const Json &keys,
     for (const auto *name : {"workplaceId", "table", "rowId", "keyId", "salt"}) {
       if (!item.contains(name) || !item.at(name).is_string()) continue;
       const auto &text = item.at(name).get_ref<const std::string &>();
-      const std::size_t cap = std::string_view(name) == "table" ? 64 :
-                              std::string_view(name) == "salt" ? 24 : 128;
+      const std::size_t cap = std::string_view(name) == "salt" ? 24 : MAX_IDENTIFIER_UTF8_BYTES;
       rowCheck(text.size() <= cap, "Oversized row envelope field");
     }
     if (item.contains("table") && item.at("table").is_string() &&
@@ -363,9 +366,11 @@ Json decryptRows(const Json &request, const Json &user, const Json &keys,
   for (const auto &item : envelopes) {
     std::string rowId, table;
     if (item.is_object()) {
-      if (item.contains("rowId") && item.at("rowId").is_string() && item.at("rowId").get_ref<const std::string &>().size() <= 128)
+      if (item.contains("rowId") && item.at("rowId").is_string() &&
+          item.at("rowId").get_ref<const std::string &>().size() <= MAX_IDENTIFIER_UTF8_BYTES)
         rowId = item.at("rowId").get<std::string>();
-      if (item.contains("table") && item.at("table").is_string() && item.at("table").get_ref<const std::string &>().size() <= 64)
+      if (item.contains("table") && item.at("table").is_string() &&
+          item.at("table").get_ref<const std::string &>().size() <= MAX_IDENTIFIER_UTF8_BYTES)
         table = item.at("table").get<std::string>();
     }
     try {

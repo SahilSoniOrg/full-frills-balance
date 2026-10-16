@@ -156,3 +156,22 @@ dashboard. After changing that assertion to Settings, the targeted scenario pass
 (1/1), including reload persistence and the restored synthetic Workplace name.
 All eleven browser scenarios therefore have passing results against the rebuilt
 WASM and E2E export.
+
+### Review follow-up: record-type byte limit
+
+Review of `08598dbb` found that RowCrypto retained a 64-byte record-type limit
+while the protocol codecs allowed 128. Encryption preflight, envelope parsing,
+decryption preflight and per-record error identity handling now use the native
+codec's shared 128-byte identifier bound. TypeScript also names its existing
+128-byte bound explicitly. This widens native acceptance without changing any
+wire encoding, financial record type, dictionary asset or existing backup.
+
+Boundary tests cover ASCII and multibyte types at 64/65 and 127/128 UTF-8 bytes,
+reject 129-byte types, exercise header/info decoders independently, and round-trip
+records through actual compression/encryption using the host-only dictionary
+provider. Malformed envelopes retain valid long types in their error results.
+Validation passed: 40 focused TypeScript protocol/backup tests, 60 native tests
+(including fixed pre-refactor backup recovery), typecheck, changed-file lint,
+the native crypto boundary guard, and required WASM parity/worker tests after
+rebuilding the binary, loader and build-input lock. The unrelated `app.config.ts`
+edit remains outside this follow-up.

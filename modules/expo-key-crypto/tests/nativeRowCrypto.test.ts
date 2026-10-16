@@ -239,3 +239,67 @@ it('round-trips a nonfinancial record using only a host-test trusted provider', 
       context.hierarchy.encryptRows(context.identity, workplaceId, [row({ table })]),
     ).rejects.toThrow();
 });
+
+it('encrypts and decrypts record types through the 128 UTF-8 byte boundary', async () => {
+  const { context, key, workplaceId } = await setup();
+  const tables = [
+    'x'.repeat(64),
+    'x'.repeat(65),
+    'x'.repeat(127),
+    'x'.repeat(128),
+    'é'.repeat(32) + 'a',
+    'é'.repeat(63) + 'a',
+    'é'.repeat(64),
+    '😀'.repeat(32),
+  ];
+  const rows = tables.map((table, i) =>
+    row({
+      table,
+      rowId: `boundary-${i}`,
+      dictId: 'opaque-test-dictionary-7',
+    }),
+  );
+  // The hierarchy exercises the TypeScript bridge as well as real native crypto.
+  const envelopes = await context.hierarchy.encryptRows(context.identity, workplaceId, rows);
+  expect(envelopes.map(envelope => envelope.table)).toEqual(tables);
+  expect(await context.hierarchy.decryptRows(context.identity, workplaceId, envelopes)).toEqual(
+    rows.map(value => ({
+      ok: true,
+      table: value.table,
+      rowId: value.rowId,
+      schemaVersion: value.schemaVersion,
+      dictId: value.dictId,
+      plaintext: value.plaintext,
+    })),
+  );
+  const longest = envelopes.at(-1)!;
+  // A malformed envelope must retain its bounded type in the per-record error.
+  expect(
+    await context.host.execute('decryptRows', {
+      key,
+      workplaceId,
+      envelopes: [{ ...longest, formatVersion: 2 }],
+    }),
+  ).toEqual({
+    rows: [{ ok: false, table: longest.table, rowId: longest.rowId, error: 'FFB_ROW_INTEGRITY' }],
+  });
+  for (const table of ['x'.repeat(129), 'é'.repeat(64) + 'a', '😀'.repeat(32) + 'a']) {
+    expect(new TextEncoder().encode(table).length).toBe(129);
+    // Bypass the TS guard so native preflight rejection is independently tested.
+    await expect(
+      context.host.execute('encryptRows', {
+        key,
+        workplaceId,
+        keyId: key.keyId,
+        rows: [row({ table, dictId: 'opaque-test-dictionary-7' })],
+      }),
+    ).rejects.toMatchObject({ code: 'FFB_KEY_INVALID_FILE' });
+    await expect(
+      context.host.execute('decryptRows', {
+        key,
+        workplaceId,
+        envelopes: [{ ...longest, table }],
+      }),
+    ).rejects.toMatchObject({ code: 'FFB_KEY_INVALID_FILE' });
+  }
+});

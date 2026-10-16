@@ -219,7 +219,10 @@ Phase 1 validation (2026-10-15): vendored zstd 1.5.7 built for iOS and Android a
 `src/services/crypto/protocol/` owns bounded opaque record identifiers, row request
 and result contracts, exact TLV/header/HKDF-info encoding, envelope/manifest shape
 and scope checks, and Merkle ordering. The existing wire field remains `table`;
-the protocol does not interpret its name or import the financial profile.
+the protocol does not interpret its name or import the financial profile. Record
+types allow 1–128 UTF-8 bytes, consistently in TypeScript, native row preflight,
+header/key-info codecs and WASM. The bound measures bytes, not UTF-16 code units
+or Unicode characters.
 `nativeKeyApi.ts` validates bridge scope, identity, error codes and payload bounds;
 `localKeyHierarchy.ts` continues to protect Device → User → Workplace binding,
 reference lifetimes, recovery confirmation, app lock and serialized key-state
