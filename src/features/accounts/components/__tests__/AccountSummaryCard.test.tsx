@@ -40,6 +40,7 @@ describe('AccountSummaryCard', () => {
     expect(screen.getByText('Current balance')).toBeTruthy();
     expect(screen.getByTestId('account-balance')).toBeTruthy();
     expect(screen.queryByText('Asset')).toBeNull();
+    expect(screen.getByText('Liq')).toBeTruthy();
     expect(screen.getByText('Bank Checking')).toBeTruthy();
     expect(screen.getByText('1,461 entries')).toBeTruthy();
   });

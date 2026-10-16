@@ -128,6 +128,9 @@ export function AccountSummaryCard({
         />
         <View style={styles.titleInfo}>
           <AccountParentPath ancestors={ancestorPath} onOpen={onOpenAncestor} />
+          <AppText variant="xl" fontRole="display" numberOfLines={2}>
+            {accountName}
+          </AppText>
           <View style={styles.metaRow}>
             <Badge variant={accountTypeVariant} size="sm">
               {accountSubtypeLabel || accountTypeLabel(accountType)}
