@@ -1,4 +1,4 @@
-import { encodeUtf8, decodeUtf8 } from './codec/tlv';
+import { encodeUtf8, decodeUtf8 } from '@/src/services/crypto/protocol/tlv';
 import { cryptoProvider } from '../backup/cryptoProvider';
 import { keyHex } from '../backup/keyEncoding';
 

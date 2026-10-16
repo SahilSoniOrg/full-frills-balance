@@ -3,7 +3,6 @@
 #include "CryptoPrimitives.hpp"
 #endif
 #include <algorithm>
-#include <array>
 #include <limits>
 #include <string_view>
 
@@ -12,23 +11,18 @@ namespace {
 constexpr std::uint64_t MAX_SAFE = 9007199254740991ULL;
 constexpr std::int64_t MIN_SAFE_TIME = -9007199254740991LL;
 constexpr std::int64_t MAX_SAFE_TIME = 9007199254740991LL;
-constexpr std::array<std::string_view, 12> TABLES = {
-    "accounts", "journals", "transactions", "audit_logs", "budgets",
-    "budget_scopes", "account_metadata", "planned_payments",
-    "journal_metadata", "transaction_auto_post_rules",
-    "transaction_inbox_records", "workplace"};
-
 void check(bool value, const char *message) {
   if (!value) throw std::runtime_error(message);
-}
-bool isTable(std::string_view table) {
-  return std::find(TABLES.begin(), TABLES.end(), table) != TABLES.end();
 }
 Bytes raw(std::string_view value) {
   return Bytes(value.begin(), value.end());
 }
 void validateIdentifier(const std::string &value, const char *label) {
   (void)encodeUtf8(value, label, true);
+}
+void validateRecordType(const std::string &value) {
+  check(!value.empty(), "Invalid record type");
+  validateIdentifier(value, "table");
 }
 Bytes numberField(std::uint64_t value) { return encodeUvarint(value); }
 std::uint64_t readNumber(const Bytes &bytes) {
@@ -220,7 +214,7 @@ std::int64_t decodeInt64Milliseconds(const Bytes &value) {
 }
 
 Bytes encodeRowHeader(const RowHeader &header) {
-  check(isTable(header.table), "Unknown row table");
+  validateRecordType(header.table);
   validateIdentifier(header.workplaceId, "workplaceId");
   validateIdentifier(header.rowId, "rowId");
   validateIdentifier(header.keyId, "keyId");
@@ -240,7 +234,7 @@ RowHeader decodeRowHeader(const Bytes &bytes) {
   RowHeader result{decodeUtf8(f[3], "workplaceId"), decodeUtf8(f[4], "table"),
       decodeUtf8(f[5], "rowId"), decodeInt64Milliseconds(f[6]), false,
       decodeUtf8(f[8], "keyId"), f[9]};
-  check(isTable(result.table), "Unknown row table");
+  validateRecordType(result.table);
   check(f[7].size() == 1 && f[7][0] <= 1, "Invalid deleted flag");
   result.deleted = f[7][0] != 0;
   validateIdentifier(result.workplaceId, "workplaceId");
@@ -251,7 +245,7 @@ RowHeader decodeRowHeader(const Bytes &bytes) {
   return result;
 }
 Bytes encodeRowInfo(const std::string &table) {
-  check(isTable(table), "Unknown row table");
+  validateRecordType(table);
   return encodeTlv(2, {{1, raw(ROW_INFO_DOMAIN)}, {2, encodeUtf8(table)}});
 }
 std::string decodeRowInfo(const Bytes &bytes) {
@@ -259,7 +253,7 @@ std::string decodeRowInfo(const Bytes &bytes) {
   check(decodeUtf8(f[0], "info domain") == ROW_INFO_DOMAIN,
         "Invalid row info domain");
   auto table = decodeUtf8(f[1], "table");
-  check(isTable(table), "Unknown row table");
+  validateRecordType(table);
   check(encodeRowInfo(table) == bytes, "Noncanonical row info");
   return table;
 }
@@ -323,7 +317,19 @@ Json testRowCodec(const Json &request) {
   check(vectors.value("format", std::string()) == "ffb-row-vectors-v2",
         "Unsupported row vector format");
   const auto &tables = vectors.at("tables");
-  check(tables.is_array() && tables.size() == TABLES.size(), "Unexpected row vector count");
+  check(tables.is_array() && !tables.empty(), "Unexpected row vector count");
+  // Generic protocol acceptance is independent of the profile's fixed vectors.
+  auto opaque = rowFromJson(tables.at(0));
+  opaque.table = "weather.observation";
+  check(decodeRowHeader(encodeRowHeader(opaque)).table == opaque.table,
+        "Opaque header round trip failed");
+  check(decodeRowInfo(encodeRowInfo(opaque.table)) == opaque.table,
+        "Opaque derivation info round trip failed");
+  for (const auto &invalid : {std::string{}, std::string(129, 'x'), std::string("\xc0\xaf")}) {
+    bool rejected = false;
+    try { (void)encodeRowInfo(invalid); } catch (...) { rejected = true; }
+    check(rejected, "Invalid record type accepted");
+  }
   std::size_t rows = 0;
   for (const auto &row : tables) {
     RowHeader header = rowFromJson(row);

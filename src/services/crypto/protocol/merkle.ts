@@ -1,6 +1,6 @@
 import { cryptoProvider } from '@/src/services/backup/cryptoProvider';
 import { concatBytes, encodeUtf8 } from './tlv';
-import { encodeRowHeader, RowHeader } from './rowHeader';
+import { assertRecordType, encodeRowHeader, RowHeader } from './rowHeader';
 
 export type MerkleRow = RowHeader & { ciphertext: Uint8Array };
 export type MerkleLeaf = Pick<RowHeader, 'table' | 'rowId'> & { hash: Uint8Array };
@@ -32,6 +32,10 @@ export async function computeMerkleRootFromLeaves(
     throw new Error('rowCount must be a safe nonnegative integer');
   if (leaves.length !== rowCount) throw new Error('Merkle rowCount mismatch');
   if (leaves.some(leaf => leaf.hash.length !== 32)) throw new Error('Merkle hash must be 32 bytes');
+  for (const leaf of leaves) {
+    assertRecordType(leaf.table);
+    encodeUtf8(leaf.rowId, 'rowId', true);
+  }
   const ordered = [...leaves].sort(
     (a, b) =>
       cmp(encodeUtf8(a.table), encodeUtf8(b.table)) ||

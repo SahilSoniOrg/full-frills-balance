@@ -6,8 +6,9 @@ import {
   type WorkplaceKeys,
 } from '@/src/services/backup/keyHierarchyRecords';
 import type { BuiltBackupCommit } from '@/src/services/sync/buildCommit';
-import { parseRowManifest, validateCompleteEnvelopeState } from '@/src/services/sync/rowEnvelope';
-import type { RowEnvelopeJson, RowManifestJson } from '@/src/services/sync/rowEnvelope';
+import { parseRowManifest } from '@/src/services/crypto/protocol/rowEnvelope';
+import { validateCompleteEnvelopeState } from '@/src/services/sync/rowEnvelope';
+import type { RowEnvelopeJson, RowManifestJson } from '@/src/services/crypto/protocol/rowEnvelope';
 
 export const BACKUP_ENTRIES = [
   'manifest.json',

@@ -1,6 +1,6 @@
 import { parseObject, assertExactKeys } from '@/src/utils/strictObject';
 import { encodeInt64Milliseconds, encodeUtf8, assertSafeNonnegativeInteger } from './tlv';
-import { ROW_ENCODING, ROW_FORMAT, ROW_TABLES, RowHeader, RowTable } from './rowHeader';
+import { ROW_ENCODING, ROW_FORMAT, assertRecordType, RowHeader } from './rowHeader';
 
 export type RowEnvelope = RowHeader & {
   format: typeof ROW_FORMAT;
@@ -71,8 +71,7 @@ export function parseRowEnvelope(value: unknown): RowEnvelope {
   assertExactKeys(record, keys, 'Envelope has missing or unknown fields');
   if (record.format !== ROW_FORMAT || record.formatVersion !== 1 || record.enc !== ROW_ENCODING)
     throw new Error('Unsupported envelope format');
-  if (typeof record.table !== 'string' || !ROW_TABLES.includes(record.table as RowTable))
-    throw new Error('Unknown row table');
+  assertRecordType(record.table);
   for (const key of ['workplaceId', 'rowId', 'keyId'] as const)
     encodeUtf8(record[key] as string, key, true);
   if (typeof record.updatedAt !== 'number' || !Number.isSafeInteger(record.updatedAt))
@@ -87,7 +86,7 @@ export function parseRowEnvelope(value: unknown): RowEnvelope {
     formatVersion: 1,
     enc: ROW_ENCODING,
     workplaceId: record.workplaceId as string,
-    table: record.table as RowTable,
+    table: record.table,
     rowId: record.rowId as string,
     updatedAt: record.updatedAt,
     deleted: record.deleted,

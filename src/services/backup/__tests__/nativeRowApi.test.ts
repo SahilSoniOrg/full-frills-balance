@@ -1,9 +1,12 @@
 import vectors from '../../../../modules/expo-key-crypto/tests/fixtures/row-vectors.json';
 import { keyOperationsFromTransport, type NativeKeyReference } from '../nativeKeyApi';
-import type { EncryptRow } from '@/src/services/sync/rowCrypto';
-import type { RowEnvelopeJson } from '@/src/services/sync/codec/envelopeJson';
-import type { RowTable } from '@/src/services/sync/codec/rowHeader';
-import { MAX_ROW_BATCH_BYTES, MAX_ROW_CIPHERTEXT_BYTES } from '@/src/services/sync/rowCrypto';
+import type { EncryptRow } from '@/src/services/crypto/protocol/rowCrypto';
+import type { RowEnvelopeJson } from '@/src/services/crypto/protocol/envelopeJson';
+import type { RowTable } from '@/src/services/sync/rowTables';
+import {
+  MAX_ROW_BATCH_BYTES,
+  MAX_ROW_CIPHERTEXT_BYTES,
+} from '@/src/services/crypto/protocol/rowCrypto';
 
 jest.mock('@/src/services/backup/cryptoProvider', () => ({
   cryptoProvider: {
@@ -231,4 +234,13 @@ describe('native row operation boundary', () => {
     );
     expect(call.mock.calls[0][0]).toBe('signRowManifest');
   });
+});
+
+it('bounds encrypted bridge results before decoding ciphertext', async () => {
+  const operations = keyOperationsFromTransport(async () => ({
+    envelopes: [{ ...wireEnvelope, ciphertext: 'A'.repeat(100000) }],
+  }));
+  await expect(
+    operations.encryptRows(workplaceKey, source.workplaceId, source.keyId, [row]),
+  ).rejects.toThrow(/TOO_LARGE/);
 });

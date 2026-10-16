@@ -235,6 +235,11 @@ export const ROW_TABLES: readonly RowTableDefinition[] = [
 
 export const ROW_TABLE_NAMES = ROW_TABLES.map(def => def.table) as readonly RowTable[];
 const definitions = new Map(ROW_TABLES.map(def => [def.table, def]));
+/** App-only narrowing; generic crypto accepts other bounded record types. */
+export function assertRowTable(value: unknown): asserts value is RowTable {
+  if (typeof value !== 'string' || !ROW_TABLE_NAMES.some(table => table === value))
+    throw new Error('Unknown row table');
+}
 export function getRowTable(table: string): RowTableDefinition {
   const definition = definitions.get(table as RowTable);
   if (!definition) throw new Error(`Unknown row table: ${table}`);

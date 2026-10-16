@@ -20,8 +20,8 @@ import { versions as transaction_auto_post_rules } from './transaction_auto_post
 import { versions as transaction_inbox_records } from './transaction_inbox_records';
 import { versions as workplace } from './workplace';
 
-import { MAX_ROW_PLAINTEXT_BYTES } from '../rowCrypto';
-export { MAX_ROW_PLAINTEXT_BYTES } from '../rowCrypto';
+import { MAX_ROW_PLAINTEXT_BYTES } from '@/src/services/crypto/protocol/rowCrypto';
+export { MAX_ROW_PLAINTEXT_BYTES } from '@/src/services/crypto/protocol/rowCrypto';
 export type ShortKeyMap = Readonly<Record<string, string>>;
 export type RetainedShortKeyMaps = Readonly<Record<number, ShortKeyMap>>;
 export const SHORT_KEY_MAPS: Readonly<Record<RowTable, RetainedShortKeyMaps>> = Object.freeze({

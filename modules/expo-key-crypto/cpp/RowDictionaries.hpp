@@ -4,6 +4,13 @@
 #include <string_view>
 
 namespace ffb::rows {
-// Empty for unknown immutable IDs; callers must reject rather than guess.
-std::span<const std::uint8_t> lookupRowDictionary(std::string_view id);
+// Build-time trusted profile assets. Archives/callers cannot register replacements.
+struct RowDictionaryDescriptor {
+  std::string_view recordType;
+  std::string_view id;
+  std::span<const std::uint8_t> bytes;
+};
+// Exact immutable ID AND type match; empty means reject, never fall back.
+std::span<const std::uint8_t> lookupRowDictionary(std::string_view recordType,
+                                               std::string_view id);
 }

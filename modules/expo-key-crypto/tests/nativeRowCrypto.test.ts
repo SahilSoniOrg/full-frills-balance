@@ -207,3 +207,35 @@ it('encrypts tombstones with empty bodies and returns no plaintext after decrypt
     plaintext: '',
   });
 });
+
+it('round-trips a nonfinancial record using only a host-test trusted provider', async () => {
+  const { context, workplaceId } = await setup();
+  const request = row({
+    table: 'weather.observation',
+    dictId: 'opaque-test-dictionary-7',
+    plaintext: '{"temperature":21}',
+  });
+  const envelopes = await context.hierarchy.encryptRows(context.identity, workplaceId, [request]);
+  expect(await context.hierarchy.decryptRows(context.identity, workplaceId, envelopes)).toEqual([
+    {
+      ok: true,
+      table: request.table,
+      rowId: request.rowId,
+      schemaVersion: 35,
+      dictId: request.dictId,
+      plaintext: request.plaintext,
+    },
+  ]);
+  for (const invalid of [
+    { table: 'weather.observation', dictId: 'transactions/v1' },
+    { table: 'transactions', dictId: request.dictId },
+    { table: 'weather.observation', dictId: 'missing' },
+  ])
+    await expect(
+      context.hierarchy.encryptRows(context.identity, workplaceId, [row(invalid)]),
+    ).rejects.toThrow();
+  for (const table of ['', 'x'.repeat(129), '\ud800'])
+    await expect(
+      context.hierarchy.encryptRows(context.identity, workplaceId, [row({ table })]),
+    ).rejects.toThrow();
+});

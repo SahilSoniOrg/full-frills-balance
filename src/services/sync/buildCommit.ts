@@ -7,16 +7,28 @@ import { localKeyHierarchy } from '@/src/services/backup/localKeyHierarchy';
 import type { KeyAccessIdentity } from '@/src/services/backup/keyHierarchyRecords';
 import { keyBytes, keyHex } from '@/src/services/backup/keyEncoding';
 import { contentHash } from './canonicalJson';
-import type { RowManifestFields } from './codec/manifestBytes';
-import { hashManifest } from './codec/manifestBytes';
-import { hashRowLeaf, computeMerkleRootFromLeaves, type MerkleLeaf } from './codec/merkle';
-import { decodeUtf8, encodeUtf8 } from './codec/tlv';
-import { parseRowEnvelope, type RowEnvelopeJson } from './codec/envelopeJson';
+import type { RowManifestFields } from '@/src/services/crypto/protocol/manifestBytes';
+import { hashManifest } from '@/src/services/crypto/protocol/manifestBytes';
+import {
+  hashRowLeaf,
+  computeMerkleRootFromLeaves,
+  type MerkleLeaf,
+} from '@/src/services/crypto/protocol/merkle';
+import { decodeUtf8, encodeUtf8 } from '@/src/services/crypto/protocol/tlv';
+import {
+  parseRowEnvelope,
+  type RowEnvelopeJson,
+} from '@/src/services/crypto/protocol/envelopeJson';
 import { canonicalRowBytes, rowContentHash } from './shortKeys';
-import type { EncryptRow } from './rowCrypto';
-import { MAX_ROW_BATCH_BYTES, MAX_ROW_BATCH_COUNT } from './rowCrypto';
-import type { RowManifestJson } from './rowEnvelope';
-import { CURRENT_ROW_SCHEMA_VERSION, ROW_TABLE_NAMES, type RowTable } from './rowTables';
+import type { EncryptRow } from '@/src/services/crypto/protocol/rowCrypto';
+import { MAX_ROW_BATCH_BYTES, MAX_ROW_BATCH_COUNT } from '@/src/services/crypto/protocol/rowCrypto';
+import type { RowManifestJson } from '@/src/services/crypto/protocol/rowEnvelope';
+import {
+  assertRowTable,
+  CURRENT_ROW_SCHEMA_VERSION,
+  ROW_TABLE_NAMES,
+  type RowTable,
+} from './rowTables';
 import { rowSource } from './rowSource';
 import { WorkplaceId } from '@/src/types/ids';
 
@@ -46,6 +58,7 @@ function makeBatches(rows: readonly EncryptRow[]): EncryptRow[][] {
   let batch: EncryptRow[] = [];
   let bytes = 0;
   for (const row of rows) {
+    assertRowTable(row.table);
     const size = encodeUtf8(row.plaintext, 'row plaintext').length;
     if (
       batch.length &&

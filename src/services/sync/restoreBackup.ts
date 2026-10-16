@@ -1,3 +1,5 @@
+import { assertRowTable } from './rowTables';
+import { getRowDictionary } from './dictionaries';
 import { AppConfig } from '@/src/constants';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import Workplace from '@/src/data/models/Workplace';
@@ -31,12 +33,20 @@ import { KeyOperationError } from '@/src/utils/keyOperationError';
 import { parseObject } from '@/src/utils/strictObject';
 import { parseBackupZip } from './backupFile';
 import { verifyRowManifest } from './manifestVerify';
-import { parseRowEnvelope, type RowEnvelopeJson, type RowManifestJson } from './rowEnvelope';
-import { computeMerkleRootFromLeaves, hashRowLeaf, type MerkleLeaf } from './codec/merkle';
-import { hashManifest } from './codec/manifestBytes';
+import {
+  type RowEnvelopeJson,
+  type RowManifestJson,
+} from '@/src/services/crypto/protocol/rowEnvelope';
+import { parseRowEnvelope } from './rowEnvelope';
+import {
+  computeMerkleRootFromLeaves,
+  hashRowLeaf,
+  type MerkleLeaf,
+} from '@/src/services/crypto/protocol/merkle';
+import { hashManifest } from '@/src/services/crypto/protocol/manifestBytes';
 import { decodeCanonicalRow } from './shortKeys';
 import { rowImportData, validateWorkplaceRows, type RowSourceRecord } from './rowSource';
-import { MAX_ROW_BATCH_BYTES, MAX_ROW_BATCH_COUNT } from './rowCrypto';
+import { MAX_ROW_BATCH_BYTES, MAX_ROW_BATCH_COUNT } from '@/src/services/crypto/protocol/rowCrypto';
 
 export type RestoreBackupAccess = Readonly<
   | { mode: 'existing'; identity: KeyAccessIdentity }
@@ -259,6 +269,8 @@ async function restoreBackupWhileUnlocked(
       if (!plaintext.ok) throw new KeyOperationError(plaintext.error);
       if (plaintext.table !== entry.parsed.table || plaintext.rowId !== entry.parsed.rowId)
         throw new Error('Decrypted backup row identity mismatch');
+      assertRowTable(plaintext.table);
+      getRowDictionary(plaintext.table, plaintext.dictId);
       const content = decodeCanonicalRow(
         plaintext.table,
         plaintext.schemaVersion,

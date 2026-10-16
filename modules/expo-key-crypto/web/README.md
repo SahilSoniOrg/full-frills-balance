@@ -40,7 +40,7 @@ FFB_WASM_OPENSSL_PREFIX=/path/to/emscripten-openssl node scripts/build-wasm-key-
 node scripts/test-wasm-key-crypto.mjs
 ```
 
-The build emits `dist/key-crypto.wasm`, the generated ES module loader, and `build-inputs.lock.json`. The lock hashes the C++ sources, vendored dependencies, bridge, and build script; the parity runner rejects stale artifacts. The runner uses the shared `row-vectors.json` row codec and manifest oracle in Node.
+The build emits `dist/key-crypto.wasm`, the generated ES module loader, and `build-inputs.lock.json`. The lock hashes the C++ sources, vendored dependencies, bridge, build script, dictionary embedding/provenance scripts, schema map, dictionary bytes and lock metadata; the parity runner rejects stale artifacts. The runner uses the shared `row-vectors.json` row codec and manifest oracle in Node.
 
 ## Worker vault
 

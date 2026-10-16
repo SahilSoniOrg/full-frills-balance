@@ -1,12 +1,13 @@
+import { parseRowEnvelope } from '@/src/services/crypto/protocol/rowEnvelope';
+import { assertRecordType } from '@/src/services/crypto/protocol/rowHeader';
 import { keyHex } from './keyEncoding';
 import { KEY_OPERATION_ERROR_CODES } from '@/src/utils/keyOperationError';
-import { encodeUtf8 } from '@/src/services/sync/codec/tlv';
-import type { RowManifestFields } from '@/src/services/sync/codec/manifestBytes';
+import { encodeUtf8 } from '@/src/services/crypto/protocol/tlv';
+import type { RowManifestFields } from '@/src/services/crypto/protocol/manifestBytes';
 import {
-  parseRowEnvelope,
   serializeRowEnvelope,
   type RowEnvelopeJson,
-} from '@/src/services/sync/codec/envelopeJson';
+} from '@/src/services/crypto/protocol/envelopeJson';
 import {
   MAX_ROW_BATCH_BYTES,
   MAX_ROW_BATCH_COUNT,
@@ -14,7 +15,7 @@ import {
   MAX_ROW_PLAINTEXT_BYTES,
   type EncryptRow,
   type DecryptedRow,
-} from '@/src/services/sync/rowCrypto';
+} from '@/src/services/crypto/protocol/rowCrypto';
 import {
   parseObject,
   assertAllowedKeys,
@@ -97,12 +98,13 @@ function parseDecryptedRow(value: unknown, expected: RowEnvelopeJson): Decrypted
     !Number.isSafeInteger(row.schemaVersion) ||
     row.schemaVersion < 0 ||
     typeof row.dictId !== 'string' ||
-    !row.dictId.startsWith(expected.table + '/') ||
+    row.dictId.length === 0 ||
     typeof row.plaintext !== 'string' ||
-    encodeUtf8(row.plaintext).length > 65536 ||
+    encodeUtf8(row.plaintext).length > MAX_ROW_PLAINTEXT_BYTES ||
     (expected.deleted && row.plaintext !== '')
   )
     throw new Error('Invalid decrypted row');
+  encodeUtf8(row.dictId, 'dictId', true);
   return {
     ok: true,
     rowId: expected.rowId,
@@ -137,6 +139,9 @@ export function keyOperationsFromTransport(
       if (rows.length > MAX_ROW_BATCH_COUNT) throw new Error('FFB_ROW_TOO_LARGE: batch count');
       let plaintextBytes = 0;
       for (const row of rows) {
+        assertRecordType(row.table);
+        encodeUtf8(row.rowId, 'rowId', true);
+        encodeUtf8(row.dictId, 'dictId', true);
         const bytes = encodeUtf8(row.plaintext, 'row plaintext');
         if (bytes.length > MAX_ROW_PLAINTEXT_BYTES)
           throw new Error('FFB_ROW_TOO_LARGE: row plaintext');
@@ -152,7 +157,7 @@ export function keyOperationsFromTransport(
       if (!Array.isArray(result.envelopes) || result.envelopes.length !== rows.length)
         throw new Error('Native row count mismatch');
       return result.envelopes.map((value, index) => {
-        const row = parseRowEnvelope(value),
+        const row = parseRowEnvelope(value, { workplaceId, keyId }),
           expected = rows[index];
         if (
           row.workplaceId !== workplaceId ||

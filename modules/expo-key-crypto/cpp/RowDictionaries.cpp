@@ -11362,21 +11362,26 @@ constexpr std::uint8_t dictionary_11[] = {
   0x22, 0x4a, 0x50, 0x59, 0x22, 0x3a, 0x30, 0x2c, 0x22, 0x55, 0x53, 0x44, 0x22, 0x3a, 0x32, 0x7d,
   0x7d,
 };
+
+const RowDictionaryDescriptor descriptors[] = {
+  {"account_metadata", "account_metadata/v1", std::span<const std::uint8_t>(dictionary_0)},
+  {"accounts", "accounts/v1", std::span<const std::uint8_t>(dictionary_1)},
+  {"audit_logs", "audit_logs/v1", std::span<const std::uint8_t>(dictionary_2)},
+  {"budget_scopes", "budget_scopes/v1", std::span<const std::uint8_t>(dictionary_3)},
+  {"budgets", "budgets/v1", std::span<const std::uint8_t>(dictionary_4)},
+  {"journal_metadata", "journal_metadata/v1", std::span<const std::uint8_t>(dictionary_5)},
+  {"journals", "journals/v1", std::span<const std::uint8_t>(dictionary_6)},
+  {"planned_payments", "planned_payments/v1", std::span<const std::uint8_t>(dictionary_7)},
+  {"transaction_auto_post_rules", "transaction_auto_post_rules/v1", std::span<const std::uint8_t>(dictionary_8)},
+  {"transaction_inbox_records", "transaction_inbox_records/v1", std::span<const std::uint8_t>(dictionary_9)},
+  {"transactions", "transactions/v1", std::span<const std::uint8_t>(dictionary_10)},
+  {"workplace", "workplace/v1", std::span<const std::uint8_t>(dictionary_11)},
+};
 }
 
-std::span<const std::uint8_t> lookupRowDictionary(std::string_view id) {
-  if (id == "account_metadata/v1") return std::span<const std::uint8_t>(dictionary_0);
-  if (id == "accounts/v1") return std::span<const std::uint8_t>(dictionary_1);
-  if (id == "audit_logs/v1") return std::span<const std::uint8_t>(dictionary_2);
-  if (id == "budget_scopes/v1") return std::span<const std::uint8_t>(dictionary_3);
-  if (id == "budgets/v1") return std::span<const std::uint8_t>(dictionary_4);
-  if (id == "journal_metadata/v1") return std::span<const std::uint8_t>(dictionary_5);
-  if (id == "journals/v1") return std::span<const std::uint8_t>(dictionary_6);
-  if (id == "planned_payments/v1") return std::span<const std::uint8_t>(dictionary_7);
-  if (id == "transaction_auto_post_rules/v1") return std::span<const std::uint8_t>(dictionary_8);
-  if (id == "transaction_inbox_records/v1") return std::span<const std::uint8_t>(dictionary_9);
-  if (id == "transactions/v1") return std::span<const std::uint8_t>(dictionary_10);
-  if (id == "workplace/v1") return std::span<const std::uint8_t>(dictionary_11);
+std::span<const std::uint8_t> lookupRowDictionary(std::string_view recordType, std::string_view id) {
+  for (const auto &descriptor : descriptors)
+    if (descriptor.recordType == recordType && descriptor.id == id) return descriptor.bytes;
   return {};
 }
 } // namespace ffb::rows

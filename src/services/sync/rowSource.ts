@@ -23,7 +23,7 @@ import { ROW_TABLES, type RowTable } from './rowTables';
 import { hashLegacySmsFingerprint } from '@/src/utils/smsFingerprintHash';
 import { sanitizeSmsAuditChanges, sanitizeSmsMetadataJson } from '@/src/utils/smsPrivateMetadata';
 import { assertAllowedKeys, parseObject } from '@/src/utils/strictObject';
-import { encodeUtf8 } from './codec/tlv';
+import { encodeUtf8 } from '@/src/services/crypto/protocol/tlv';
 import { snakeToCamel } from '@/src/utils/serialization';
 
 /** These names and columns are the V1 allowlist, retained as the row plaintext contract. */

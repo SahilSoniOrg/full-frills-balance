@@ -5,9 +5,9 @@ import { localKeyHierarchy } from '@/src/services/backup/localKeyHierarchy';
 import type { KeyAccessIdentity, WorkplaceKeys } from '@/src/services/backup/keyHierarchyRecords';
 import { rowSource, type RowSourceRecord } from '../rowSource';
 import { buildBackupCommit, buildCommit } from '../buildCommit';
-import { ROW_ENCODING, ROW_FORMAT } from '../codec/rowHeader';
-import { serializeRowEnvelope } from '../codec/envelopeJson';
-import type { EncryptRow } from '../rowCrypto';
+import { ROW_ENCODING, ROW_FORMAT } from '@/src/services/crypto/protocol/rowHeader';
+import { serializeRowEnvelope } from '@/src/services/crypto/protocol/envelopeJson';
+import type { EncryptRow } from '@/src/services/crypto/protocol/rowCrypto';
 
 jest.mock('@/src/data/database/idGenerator', () => ({ generator: jest.fn() }));
 jest.mock('@/src/data/repositories/SyncStateRepository', () => ({
@@ -229,3 +229,14 @@ describe('buildCommit', () => {
     expect(mocked.encryptRows).toHaveBeenCalledTimes(2);
   });
 });
+
+it.each([buildBackupCommit, buildCommit])(
+  'rejects nonfinancial prepared records before encryption',
+  async build => {
+    mocked.readIndex.mockResolvedValue([]);
+    mocked.readCheckpoint.mockResolvedValue(null);
+    mocked.readRows.mockResolvedValue([{ ...accountRow, table: 'weather.observation' }]);
+    await expect(build(identity, workplaceId)).rejects.toThrow(/Unknown row table/);
+    expect(mocked.encryptRows).not.toHaveBeenCalled();
+  },
+);

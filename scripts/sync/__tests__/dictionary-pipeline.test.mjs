@@ -57,6 +57,6 @@ test('native embedding matches the checked-in dictionary artifacts', async () =>
   await embedDictionaries({ check: true });
   assert.equal(
     INTENDED_LOOKUP_INTERFACE,
-    'lookupRowDictionary(std::string_view)->std::span<const std::uint8_t>',
+    'lookupRowDictionary(std::string_view,std::string_view)->std::span<const std::uint8_t>',
   );
 });

@@ -1,3 +1,4 @@
+import { cryptoImportViolations, nativeCryptoProfileViolations } from './lib/crypto-boundary.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -22,6 +23,7 @@ function walk(directory) {
       const relative = path.relative(root, filename).split(path.sep).join('/');
       if (relative.includes('/__tests__/')) continue;
       const source = fs.readFileSync(filename, 'utf8');
+      violations.push(...cryptoImportViolations(source, relative));
       if (
         /(?:from\s+|import\s*(?:\(|)|require\s*\()['"][^'"]*(?:keyCryptoReference\/|expo-key-crypto\/tests\/)/.test(
           source,
@@ -43,7 +45,9 @@ function walk(directory) {
         violations.push(`${relative}: secret-bearing JS key operation`);
       for (const marker of WORKER_ONLY_MARKERS) {
         if (!relative.startsWith(WEB_WORKER_ROOT) && source.includes(marker))
-          violations.push(`${relative}: worker vault marker must not appear outside ${WEB_WORKER_ROOT}`);
+          violations.push(
+            `${relative}: worker vault marker must not appear outside ${WEB_WORKER_ROOT}`,
+          );
       }
       if (
         /from\s+['"][^'"]*expo-key-crypto\/web\/webVault['"]/.test(source) &&
@@ -64,12 +68,27 @@ function walk(directory) {
         /from\s+['"][^'"]*keyCryptoWorkerClient\.web['"]/.test(source) &&
         !ALLOWED_WORKER_CLIENT_IMPORTERS.has(relative)
       )
-        violations.push(`${relative}: only nativeKeyOperations.web may use the key crypto worker client`);
+        violations.push(
+          `${relative}: only nativeKeyOperations.web may use the key crypto worker client`,
+        );
     }
   }
 }
 walk(path.join(root, 'src'));
 walk(path.join(root, 'app'));
+const financialTypes = Object.keys(
+  JSON.parse(fs.readFileSync(path.join(root, 'src/services/sync/shortKeys/schema35.json'), 'utf8')),
+);
+for (const name of ['RowCodec.cpp', 'RowCodec.hpp', 'RowCrypto.cpp', 'RowCrypto.hpp']) {
+  const relative = `modules/expo-key-crypto/cpp/${name}`;
+  violations.push(
+    ...nativeCryptoProfileViolations(
+      fs.readFileSync(path.join(root, relative), 'utf8'),
+      relative,
+      financialTypes,
+    ),
+  );
+}
 if (violations.length) {
   console.error(violations.join('\n'));
   process.exitCode = 1;

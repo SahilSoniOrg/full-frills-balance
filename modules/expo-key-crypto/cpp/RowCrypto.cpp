@@ -48,17 +48,12 @@ std::int64_t safeSignedInteger(const Json &value, const char *label) {
 std::string pairKey(const std::string &table, const std::string &rowId) {
   return std::to_string(table.size()) + ":" + table + rowId;
 }
-bool knownDict(std::string_view id, std::span<const std::uint8_t> &dict) {
-  dict = lookupRowDictionary(id);
-  return !dict.empty();
-}
 void requireDictionary(const std::string &table, const std::string &dictId,
                        std::span<const std::uint8_t> &dict) {
-  if (dictId.size() > 128 || dictId.size() <= table.size() ||
-      dictId.compare(0, table.size(), table) != 0 || dictId[table.size()] != '/')
-    throw OperationError(ErrorCode::RowUnknownDict, "Dictionary does not belong to row table");
-  if (!knownDict(dictId, dict))
-    throw OperationError(ErrorCode::RowUnknownDict, "Unknown row dictionary");
+  (void)encodeUtf8(dictId, "dictId", true);
+  dict = lookupRowDictionary(table, dictId);
+  if (dict.empty())
+    throw OperationError(ErrorCode::RowUnknownDict, "Unknown row dictionary or record type mismatch");
 }
 Bytes deriveRowKey(const Bytes &dek, const Bytes &salt, const Bytes &info) {
   Secret output(Bytes(32));

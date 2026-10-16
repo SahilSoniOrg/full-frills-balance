@@ -5,7 +5,11 @@ import {
   type UserPublicIdentity,
 } from '@/src/services/backup/userIdentity';
 import { KeyOperationError } from '@/src/utils/keyOperationError';
-import { parseRowManifest, type ManifestScope, type ParsedRowManifest } from './rowEnvelope';
+import {
+  parseRowManifest,
+  type ManifestScope,
+  type ParsedRowManifest,
+} from '@/src/services/crypto/protocol/rowEnvelope';
 
 /** The expected fingerprint is pinned outside the untrusted backup/server payload. */
 export async function verifyRowManifest(

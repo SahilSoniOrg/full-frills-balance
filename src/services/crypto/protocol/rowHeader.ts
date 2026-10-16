@@ -13,24 +13,15 @@ import {
 export const ROW_FORMAT = 'full-frills-encrypted-row' as const;
 export const ROW_FORMAT_VERSION = 1 as const;
 export const ROW_ENCODING = 'shortkey1+zstd' as const;
-export const ROW_TABLES = [
-  'accounts',
-  'journals',
-  'transactions',
-  'audit_logs',
-  'budgets',
-  'budget_scopes',
-  'account_metadata',
-  'planned_payments',
-  'journal_metadata',
-  'transaction_auto_post_rules',
-  'transaction_inbox_records',
-  'workplace',
-] as const;
-export type RowTable = (typeof ROW_TABLES)[number];
+/** Opaque protocol record type, bounded exactly like other wire identifiers. */
+export type RecordType = string;
+export function assertRecordType(value: unknown): asserts value is RecordType {
+  if (typeof value !== 'string' || value.length === 0) throw new Error('Invalid record type');
+  encodeUtf8(value, 'table', true);
+}
 export type RowHeader = {
   workplaceId: string;
-  table: RowTable;
+  table: RecordType;
   rowId: string;
   updatedAt: number;
   deleted: boolean;
@@ -39,7 +30,7 @@ export type RowHeader = {
 };
 
 export function encodeRowHeader(header: RowHeader): Uint8Array {
-  if (!ROW_TABLES.includes(header.table)) throw new Error('Unknown row table');
+  assertRecordType(header.table);
   if (typeof header.deleted !== 'boolean') throw new Error('deleted must be boolean');
   if (header.salt.length !== 16) throw new Error('salt must be 16 bytes');
   assertSafeNonnegativeInteger(ROW_FORMAT_VERSION, 'formatVersion');
@@ -65,8 +56,8 @@ export function decodeRowHeader(bytes: Uint8Array): RowHeader {
   )
     throw new Error('Invalid row format');
   if (f.get(2)!.length !== 1 || f.get(2)![0] !== 1) throw new Error('Invalid row formatVersion');
-  const table = decodeUtf8(f.get(5)!, 'table') as RowTable;
-  if (!ROW_TABLES.includes(table)) throw new Error('Unknown row table');
+  const table = decodeUtf8(f.get(5)!, 'table');
+  assertRecordType(table);
   if (f.get(8)!.length !== 1 || f.get(8)![0] > 1) throw new Error('Invalid deleted flag');
   if (f.get(10)!.length !== 16) throw new Error('salt must be 16 bytes');
   return {
@@ -86,20 +77,20 @@ function decodeUtf8Identifier(bytes: Uint8Array, label: string): string {
   return value;
 }
 
-export function encodeRowInfo(table: RowTable): Uint8Array {
-  if (!ROW_TABLES.includes(table)) throw new Error('Unknown row table');
+export function encodeRowInfo(table: RecordType): Uint8Array {
+  assertRecordType(table);
   return encodeTlv(0x02, [
     { tag: 1, value: encodeUtf8('FFB-ROW/1') },
     { tag: 2, value: encodeUtf8(table) },
   ]);
 }
 
-export function decodeRowInfo(bytes: Uint8Array): RowTable {
+export function decodeRowInfo(bytes: Uint8Array): RecordType {
   const f = decodeTlv(bytes, 0x02, [1, 2]);
   if (decodeUtf8(f.get(1)!, 'info domain') !== 'FFB-ROW/1')
     throw new Error('Invalid row info domain');
-  const table = decodeUtf8(f.get(2)!, 'table') as RowTable;
-  if (!ROW_TABLES.includes(table)) throw new Error('Unknown row table');
+  const table = decodeUtf8(f.get(2)!, 'table');
+  assertRecordType(table);
   return table;
 }
 

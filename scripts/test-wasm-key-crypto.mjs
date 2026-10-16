@@ -16,8 +16,7 @@ function fail(message) {
   process.exit(1);
 }
 
-const requireArtifact =
-  process.env.FFB_REQUIRE_WASM_ARTIFACT === '1' || process.env.CI === 'true';
+const requireArtifact = process.env.FFB_REQUIRE_WASM_ARTIFACT === '1' || process.env.CI === 'true';
 
 function isStubLoader() {
   if (!existsSync(loaderPath)) return true;
@@ -47,6 +46,12 @@ function hashInputs() {
     ),
     path.join(webRoot, 'bridge.cpp'),
     path.join(root, 'scripts/build-wasm-key-crypto.mjs'),
+    path.join(root, 'scripts/sync/embed-dictionaries.mjs'),
+    path.join(root, 'scripts/sync/dictionary-pipeline.mjs'),
+    path.join(root, 'scripts/sync/generate-corpus.mjs'),
+    path.join(root, 'scripts/sync/train-dictionaries.mjs'),
+    path.join(root, 'src/services/sync/shortKeys/schema35.json'),
+    ...filesIn(path.join(root, 'src/services/sync/dictionaries')),
   ].sort();
   const hash = createHash('sha256');
   for (const filename of files) {
@@ -68,14 +73,7 @@ const wasm = await createModule({ locateFile: file => path.join(distDir, file) }
 const vectors = JSON.parse(
   readFileSync(path.join(root, 'modules/expo-key-crypto/tests/fixtures/row-vectors.json'), 'utf8'),
 );
-const malformedTlvHex = [
-  '0102000100',
-  '0101000100',
-  '010100',
-  '01017f',
-  '010180',
-  '01018000',
-];
+const malformedTlvHex = ['0102000100', '0101000100', '010100', '01017f', '010180', '01018000'];
 const malformedVarintHex = ['8000', '80', '8080808080808010'];
 const pointer = wasm.ccall(
   'ffb_key_crypto_execute',
@@ -93,5 +91,9 @@ try {
 if (result.error) fail(`WASM returned ${result.error}.`);
 const expected = { ok: true, rows: vectors.tables.length, manifest: true, malformedCases: 14 };
 if (JSON.stringify(result) !== JSON.stringify(expected))
-  fail(`Row vector parity mismatch: expected ${JSON.stringify(expected)}, got ${JSON.stringify(result)}.`);
-console.log(`WASM row codec parity passed (${vectors.tables.length} shared row vectors + manifest and malformed inputs).`);
+  fail(
+    `Row vector parity mismatch: expected ${JSON.stringify(expected)}, got ${JSON.stringify(result)}.`,
+  );
+console.log(
+  `WASM row codec parity passed (${vectors.tables.length} shared row vectors + manifest and malformed inputs).`,
+);

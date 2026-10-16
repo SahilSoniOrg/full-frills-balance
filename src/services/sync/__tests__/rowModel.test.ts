@@ -7,7 +7,7 @@ import {
   validateRowContent,
   validateCurrencyPrecisions,
 } from '../rowTables';
-import { ROW_TABLES as CODEC_TABLES } from '../codec/rowHeader';
+import { assertRecordType } from '@/src/services/crypto/protocol/rowHeader';
 import {
   SHORT_KEY_MAPS,
   getShortKeyMap,
@@ -41,7 +41,7 @@ const workplace = {
 
 describe('row schema and short-key boundary', () => {
   test('table/codec/map coverage agrees, and excluded DB/device/private columns cannot leak', () => {
-    expect([...ROW_TABLE_NAMES].sort()).toEqual([...CODEC_TABLES].sort());
+    for (const table of ROW_TABLE_NAMES) expect(() => assertRecordType(table)).not.toThrow();
     expect(ROW_TABLE_NAMES).toHaveLength(12);
     for (const definition of ROW_TABLES) {
       const map = getShortKeyMap(definition.table, 35);

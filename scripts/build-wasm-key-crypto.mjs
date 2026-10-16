@@ -40,6 +40,12 @@ function inputHash() {
     ...inputRoots.flatMap(directory => sourceFiles(path.join(moduleRoot, directory))),
     path.join(webRoot, 'bridge.cpp'),
     path.join(root, 'scripts/build-wasm-key-crypto.mjs'),
+    path.join(root, 'scripts/sync/embed-dictionaries.mjs'),
+    path.join(root, 'scripts/sync/dictionary-pipeline.mjs'),
+    path.join(root, 'scripts/sync/generate-corpus.mjs'),
+    path.join(root, 'scripts/sync/train-dictionaries.mjs'),
+    path.join(root, 'src/services/sync/shortKeys/schema35.json'),
+    ...sourceFiles(path.join(root, 'src/services/sync/dictionaries')),
   ].sort();
   for (const filename of files) {
     hash.update(path.relative(root, filename));
@@ -53,7 +59,9 @@ function inputHash() {
 function printEmsdkInstallHelp() {
   console.error(`Emscripten (emcc) not found. Install emsdk ${EMSDK_VERSION}:`);
   console.error('  git clone https://github.com/emscripten-core/emsdk.git ~/emsdk');
-  console.error(`  cd ~/emsdk && ./emsdk install ${EMSDK_VERSION} && ./emsdk activate ${EMSDK_VERSION}`);
+  console.error(
+    `  cd ~/emsdk && ./emsdk install ${EMSDK_VERSION} && ./emsdk activate ${EMSDK_VERSION}`,
+  );
   console.error('  source ~/emsdk/emsdk_env.sh');
 }
 
@@ -147,4 +155,6 @@ const nextLock = {
   inputsSha256: inputHash(),
 };
 writeFileSync(lockPath, `${JSON.stringify(nextLock, null, 2)}\n`);
-console.log(`Built ${path.relative(root, loaderPath)} and ${path.relative(root, path.join(distDir, 'key-crypto.wasm'))}`);
+console.log(
+  `Built ${path.relative(root, loaderPath)} and ${path.relative(root, path.join(distDir, 'key-crypto.wasm'))}`,
+);

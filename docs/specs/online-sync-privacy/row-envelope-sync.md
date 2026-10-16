@@ -213,3 +213,40 @@ All former open questions are settled below. Removed as no longer meaningful: "w
 The execution owner approved the iOS simulator and Android emulator for this implementation’s native build, zstd self-test and reinstall/restore gates. Record those targets honestly; simulator/emulator measurements do not count as physical mid-range phone performance evidence. Physical-device performance and native vault/file-picker validation remain separately recorded release checks.
 
 Phase 1 validation (2026-10-15): vendored zstd 1.5.7 built for iOS and Android and passed a temporary native round-trip proof on iPhone 17 / iOS 26.4 simulator and API 36 arm64 Android emulator. Each run compressed the fixed 44-byte input to 53 bytes and decompressed it back byte-for-byte to 44 bytes. The temporary proof operation and screen were removed when row crypto was integrated. These are simulated-device results, not physical-phone measurements.
+
+## Implemented crypto/profile boundary
+
+`src/services/crypto/protocol/` owns bounded opaque record identifiers, row request
+and result contracts, exact TLV/header/HKDF-info encoding, envelope/manifest shape
+and scope checks, and Merkle ordering. The existing wire field remains `table`;
+the protocol does not interpret its name or import the financial profile.
+`nativeKeyApi.ts` validates bridge scope, identity, error codes and payload bounds;
+`localKeyHierarchy.ts` continues to protect Device → User → Workplace binding,
+reference lifetimes, recovery confirmation, app lock and serialized key-state
+changes. Neither imports `services/sync`.
+
+The financial profile stays in `services/sync`: `rowTables.ts` supplies app table
+narrowing and schemas; short-key maps and row upgrades select supported app
+versions; `rowSource.ts` captures and sanitizes financial records. The app
+`rowEnvelope.ts` wrapper rejects unsupported record types and enforces the live
+singleton Workplace rule and complete-state membership before restore publication.
+Restore also checks the returned decrypted type, schema and dictionary binding
+before decoding short keys. Export and incremental preparation validate app types
+before encryption. Archive assembly/parsing, financial validation, recovery
+ordering, cancellation, atomic publication, receipts and post-publication key
+installation remain in app workflows.
+
+Dictionary descriptors bind immutable IDs to record types and checked-in bytes.
+`scripts/sync/embed-dictionaries.mjs` emits the trusted production provider from
+the validated artifact lock. The core requests exactly `(table, dictId)`; it does
+not parse ID naming conventions or fall back to another version. Android, iOS and
+WASM compile the same generated provider. Changing a dictionary requires rebuilding
+the engine; archives and bridge callers cannot register or replace dictionaries.
+All retained dictionary bytes and IDs are unchanged. WASM input hashing includes
+the provider sources, embedding pipeline, dictionary assets and lock metadata.
+
+The architecture guard checks type-only imports as well as runtime dependencies,
+and rejects financial type lists in handwritten native codec/crypto files.
+Public synthetic compatibility fixtures and capture provenance live in
+`modules/expo-key-crypto/tests/fixtures/README.md`. The host-only nonfinancial
+provider is excluded from production platform builds.

@@ -5,8 +5,8 @@ import { localKeyHierarchy } from '@/src/services/backup/localKeyHierarchy';
 import { importRepository } from '@/src/data/repositories/ImportRepository';
 import { currencyReadService } from '@/src/services/currency-read-service';
 import { preferences } from '@/src/services/preferences';
-import { computeMerkleRootFromLeaves, hashRowLeaf } from '../codec/merkle';
-import { hashManifest } from '../codec/manifestBytes';
+import { computeMerkleRootFromLeaves, hashRowLeaf } from '@/src/services/crypto/protocol/merkle';
+import { hashManifest } from '@/src/services/crypto/protocol/manifestBytes';
 import { decodeCanonicalRow } from '../shortKeys';
 import { rowImportData, validateWorkplaceRows } from '../rowSource';
 import { userIdentityFingerprint } from '@/src/services/backup/userIdentity';
@@ -37,11 +37,11 @@ jest.mock('@/src/services/currency-read-service', () => ({
 jest.mock('@/src/services/preferences', () => ({
   preferences: { workplace: { update: jest.fn() } },
 }));
-jest.mock('../codec/merkle', () => ({
+jest.mock('@/src/services/crypto/protocol/merkle', () => ({
   computeMerkleRootFromLeaves: jest.fn(),
   hashRowLeaf: jest.fn(),
 }));
-jest.mock('../codec/manifestBytes', () => ({ hashManifest: jest.fn() }));
+jest.mock('@/src/services/crypto/protocol/manifestBytes', () => ({ hashManifest: jest.fn() }));
 jest.mock('../shortKeys', () => ({ decodeCanonicalRow: jest.fn() }));
 jest.mock('../rowSource', () => ({
   rowImportData: jest.fn(),
@@ -279,6 +279,28 @@ describe('restoreBackup', () => {
     expect(localKeyHierarchy.recoverUserDevice).toHaveBeenCalledTimes(1);
     expect(importRepository.batchInsertRowRestore).toHaveBeenCalledTimes(1);
   });
+
+  it.each(['missing', 'accounts/v1'])(
+    'rejects an invalid decoded dictionary %s before publication',
+    async dictId => {
+      jest.mocked(localKeyHierarchy.decryptRows).mockResolvedValue([
+        {
+          ok: true,
+          table: 'workplace',
+          rowId: workplaceId,
+          schemaVersion: 35,
+          dictId,
+          plaintext: '{}',
+        },
+      ]);
+      await expect(
+        restoreBackup(new Uint8Array([1]), { mode: 'existing', identity }),
+      ).rejects.toThrow(/FFB_ROW_UNKNOWN_DICT/);
+      expect(decodeCanonicalRow).not.toHaveBeenCalled();
+      expect(importRepository.batchInsertRowRestore).not.toHaveBeenCalled();
+      expect(localKeyHierarchy.installWorkplaceKeys).not.toHaveBeenCalled();
+    },
+  );
 
   it('rejects a Merkle mismatch before database publication', async () => {
     jest.mocked(computeMerkleRootFromLeaves).mockResolvedValue(Uint8Array.of(2));

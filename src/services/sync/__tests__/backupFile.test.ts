@@ -2,7 +2,7 @@ import { unzipSync, zipSync } from 'fflate';
 import { assertUniqueBackupEntryNames, createBackupZip, parseBackupZip } from '../backupFile';
 import type { UserRecoveryPackage, WorkplaceKeys } from '@/src/services/backup/keyHierarchyRecords';
 import type { BuiltBackupCommit } from '@/src/services/sync/buildCommit';
-import type { RowEnvelopeJson, RowManifestJson } from '@/src/services/sync/rowEnvelope';
+import type { RowEnvelopeJson, RowManifestJson } from '@/src/services/crypto/protocol/rowEnvelope';
 
 const ZERO_KEY = '0'.repeat(64);
 const FINGERPRINT = `sha256:${'a'.repeat(64)}`;

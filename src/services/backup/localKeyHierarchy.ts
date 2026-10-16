@@ -1,6 +1,6 @@
-import type { EncryptRow, DecryptedRow } from '@/src/services/sync/rowCrypto';
-import type { RowEnvelopeJson } from '@/src/services/sync/codec/envelopeJson';
-import type { RowManifestFields } from '@/src/services/sync/codec/manifestBytes';
+import type { EncryptRow, DecryptedRow } from '@/src/services/crypto/protocol/rowCrypto';
+import type { RowEnvelopeJson } from '@/src/services/crypto/protocol/envelopeJson';
+import type { RowManifestFields } from '@/src/services/crypto/protocol/manifestBytes';
 import { SerialQueue } from '@/src/utils/serialQueue';
 import { parseObject } from '@/src/utils/strictObject';
 import { MissingKeyStateError, keyOperationErrorCode } from '@/src/utils/keyOperationError';

@@ -1,13 +1,8 @@
-import {
-  parseRowEnvelope,
-  rowEnvelopeAad,
-  parseRowManifest,
-  validateCompleteEnvelopeState,
-  type RowManifestJson,
-} from '../rowEnvelope';
-import { encodeBase64 } from '../codec/envelopeJson';
-import { encodeRowHeader } from '../codec/rowHeader';
-import { encodeManifestBytes } from '../codec/manifestBytes';
+import { parseRowManifest, type RowManifestJson } from '@/src/services/crypto/protocol/rowEnvelope';
+import { parseRowEnvelope, rowEnvelopeAad, validateCompleteEnvelopeState } from '../rowEnvelope';
+import { encodeBase64 } from '@/src/services/crypto/protocol/envelopeJson';
+import { encodeRowHeader } from '@/src/services/crypto/protocol/rowHeader';
+import { encodeManifestBytes } from '@/src/services/crypto/protocol/manifestBytes';
 
 const scope = { workplaceId: 'w1', keyId: `sha256:${'a'.repeat(64)}`, authorUserId: 'u1' };
 const envelope = {
@@ -122,4 +117,14 @@ describe('wire envelope and manifest validation', () => {
     ).not.toThrow();
     expect(() => parseRowManifest({ ...manifest, rowCount: 0 }, scope)).not.toThrow();
   });
+});
+
+it('accepts nonfinancial protocol records but rejects them in the financial profile', () => {
+  const generic = jest.requireActual('@/src/services/crypto/protocol/rowEnvelope');
+  const weather = { ...envelope, table: 'weather.observation' };
+  expect(generic.parseRowEnvelope(weather, scope).table).toBe(weather.table);
+  expect(() => parseRowEnvelope(weather, scope)).toThrow(/Unknown row table/);
+  expect(() => validateCompleteEnvelopeState([metadata, weather], scope, 2)).toThrow(
+    /Unknown row table/,
+  );
 });

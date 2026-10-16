@@ -1,16 +1,31 @@
-import { decodeTlv, decodeUvarint, decodeUtf8, encodeUvarint, encodeUtf8 } from '../tlv';
+import {
+  decodeTlv,
+  decodeUvarint,
+  decodeUtf8,
+  encodeUvarint,
+  encodeUtf8,
+} from '@/src/services/crypto/protocol/tlv';
 import {
   decodeInnerPlaintext,
   encodeInnerPlaintext,
   encodeRowHeader,
   encodeRowInfo,
-  RowTable,
-} from '../rowHeader';
-import { parseRowEnvelope, serializeRowEnvelope } from '../envelopeJson';
-import { decodeManifestBytes, encodeManifestBytes, hashManifest } from '../manifestBytes';
-import { computeMerkleRoot, computeMerkleRootFromLeaves } from '../merkle';
+} from '@/src/services/crypto/protocol/rowHeader';
+import {
+  parseRowEnvelope,
+  serializeRowEnvelope,
+} from '@/src/services/crypto/protocol/envelopeJson';
+import {
+  decodeManifestBytes,
+  encodeManifestBytes,
+  hashManifest,
+} from '@/src/services/crypto/protocol/manifestBytes';
+import {
+  computeMerkleRoot,
+  computeMerkleRootFromLeaves,
+} from '@/src/services/crypto/protocol/merkle';
 import { createHash } from 'node:crypto';
-import vectors from '../../../../../modules/expo-key-crypto/tests/fixtures/row-vectors.json';
+import vectors from '@/modules/expo-key-crypto/tests/fixtures/row-vectors.json';
 
 jest.mock('@/src/services/backup/cryptoProvider', () => ({
   cryptoProvider: {
@@ -69,7 +84,7 @@ describe('canonical row codec', () => {
     for (const row of vectors.tables) {
       const header = encodeRowHeader({
         workplaceId: row.workplaceId,
-        table: row.table as RowTable,
+        table: row.table,
         rowId: row.rowId,
         updatedAt: row.updatedAt,
         deleted: row.deleted,
@@ -77,10 +92,10 @@ describe('canonical row codec', () => {
         salt: Uint8Array.from(Buffer.from(row.salt, 'base64')),
       });
       expect(Buffer.from(header).toString('hex')).toBe(row.aadHex);
-      expect(Buffer.from(encodeRowInfo(row.table as RowTable)).toString('hex')).toBe(row.infoHex);
+      expect(Buffer.from(encodeRowInfo(row.table)).toString('hex')).toBe(row.infoHex);
       merkleRows.push({
         workplaceId: row.workplaceId,
-        table: row.table as RowTable,
+        table: row.table,
         rowId: row.rowId,
         updatedAt: row.updatedAt,
         deleted: row.deleted,
@@ -173,4 +188,27 @@ describe('canonical row codec', () => {
     await expect(computeMerkleRoot([base], 0)).rejects.toThrow(/mismatch/);
     await expect(computeMerkleRoot([base, { ...base }], 2)).rejects.toThrow(/Duplicate/);
   });
+});
+
+it('encodes opaque nonfinancial record types and rejects malformed or oversized identifiers', () => {
+  const type = 'weather.observation';
+  const info = encodeRowInfo(type);
+  const { decodeRowInfo, decodeRowHeader } = jest.requireActual(
+    '@/src/services/crypto/protocol/rowHeader',
+  );
+  expect(decodeRowInfo(info)).toBe(type);
+  const header = {
+    workplaceId: 'w',
+    table: type,
+    rowId: 'r',
+    updatedAt: 1,
+    deleted: false,
+    keyId: 'k',
+    salt: new Uint8Array(16),
+  };
+  expect(decodeRowHeader(encodeRowHeader(header))).toEqual(header);
+  for (const table of ['', 'x'.repeat(129), '\ud800', '😀'.repeat(33)]) {
+    expect(() => encodeRowInfo(table)).toThrow();
+    expect(() => encodeRowHeader({ ...header, table })).toThrow();
+  }
 });
