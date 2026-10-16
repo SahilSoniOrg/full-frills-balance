@@ -12,6 +12,7 @@ module.exports = {
     '/e2e/',
     '/.worktrees/',
     '/modules/expo-key-crypto/tests/',
+    '/modules/expo-key-crypto/web/keyCryptoWorkerRuntime.wasm.test.ts',
   ],
   collectCoverage: false,
   collectCoverageFrom: ['src/**/*.{ts,tsx}'],

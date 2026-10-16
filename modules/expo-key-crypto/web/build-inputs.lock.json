@@ -1,0 +1,5 @@
+{
+  "emsdk": "3.1.74",
+  "openssl": "3.x, Emscripten target",
+  "inputsSha256": "1cebb5d85963799a3f95f0e94ed96a7c2917124755fd853bffa932cd49430955"
+}
