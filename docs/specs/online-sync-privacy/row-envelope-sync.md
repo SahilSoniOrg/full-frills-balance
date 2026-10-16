@@ -1,6 +1,6 @@
 # V2 row-envelope sync: per-row encryption with short-key JSON + dictionary compression
 
-Status: implementation in progress. The V1 whole-snapshot backup was removed from this branch; V2 backup and sync code is being restored in phases (see Rollout task list).
+Status: local V2 encrypted backup/recovery, native row crypto and web WASM support are implemented. Physical-device and end-to-end release gates remain open. Online sync transport and conflict review remain unfinished (see Rollout task list). V1 whole-snapshot backup never shipped and was removed.
 
 ## Why
 
@@ -106,7 +106,7 @@ JS and C++ are the only byte-level encoders. Shared vectors live in `modules/exp
 - **Conflict unit is the group, not the row.** A journal with its `transactions` legs and `journal_metadata`; an account with its `account_metadata`; a budget with its `budget_scopes`; every other row alone. A row whose group key changes belongs to both groups. A pulled change conflicts when the same group also has uncommitted local changes, including a remote tombstone against a local edit.
 - **Conflicts never merge silently.** The remote group is applied, since other Devices may already have it, and the local version of the whole group is saved to a device-local conflict record. The user picks "keep mine", which re-applies the local group as a new local change committed next, or "keep theirs", which drops it. Groups apply whole, so journals stay balanced either way. Audit rows are insert-only with fresh ids and never conflict.
 - **Server storage.** Latest envelope per `(table, rowId)`, tagged with the `seq` that wrote it, plus every manifest. No row history: conflict detection compares against the local index, so no common base is fetched. Tombstones are kept indefinitely (~350B each).
-- **No sync-generated audit rows.** Applying a commit uses a restore publication path (to be written; V1's `restoreWorkplaceSnapshot.ts` is in git history), which keeps the author's audit rows and fabricates none.
+- **No sync-generated audit rows.** Offline restore uses `ImportRepository.batchInsertRowRestore`, which keeps the author's audit rows and fabricates none. Incremental sync apply remains to be implemented.
 - **Derived data rebuilds locally.** `balance_snapshots`, running balances, rate caches and other data outside the 12 logical V2 source tables never travel; readers rebuild them after applying.
 - Steady-state cost is per changed row (~195B compressed + ~350B envelope ≈ 550B). The ~10 MiB full cost hits only on first sync, which is paginated and resumable; add parallelism before considering bulk-chunk transfer.
 - Chunked compress-then-encrypt (~1.5 MiB) is documented but rejected: it reintroduces the all-or-nothing unit V2 exists to escape.
@@ -133,7 +133,7 @@ The offline backup is a ZIP (fflate, already a dependency) containing the signed
 
 Until a backend exists there is no compare-and-swap, no pull and no cross-Device sync: each backup file is a complete, self-verifying signed state of one Device's books, and restoring one replaces local books rather than merging. Chain continuity (`seq`, `prevHash`) and the rollback checkpoint belong to server sync. Every offline backup freshly encrypts the complete current state into an independent genesis manifest (`seq = 0`, zero `prevHash`); it must include every live row and the Workplace metadata row, even when no local rows changed. It never depends on unchanged ciphertext being retained in the sync index. Creating or saving a backup never advances the server-sync row index or checkpoint. Only server acceptance or a verified server pull advances those records. Last successful backup time is separate device-local status, recorded after the complete backup file is written. The first upload to a future backend starts the server chain.
 
-Offline recovery: pick the backup file, then the User recovery credential (native pickers, existing order); verify the credential pins; recover the User; verify the manifest signature against the pinned User identity; open a transient native Workplace reference from the backup’s validated member envelope (without persisting Workplace keys); stream batches through `decryptRows`, recomputing the root; validate with `validateImportedData`; and publish through a restore publication path (to be written; V1's `restoreWorkplaceSnapshot.ts` is in git history). The restore receipt and `pendingCompletion` checkpoint are keyed by manifest hash. Restoring an offline genesis backup does not establish a server-sync checkpoint or mark its rows as accepted by a server; the initial sync must reconcile its independent local state. Persist Workplace keys only after validated database publication. Transient references are released on failure or cancellation. An interrupted restore starts again from the file; the receipt makes a repeat harmless.
+Offline recovery: pick the backup file, then the User recovery credential (native pickers, existing order); verify the package identity pin and manifest signature before persisting a recovered User; validate the credential pins and recover the User; open a transient native Workplace reference from the backup’s validated member envelope (without persisting Workplace keys); stream batches through `decryptRows`, recomputing the root; validate with `validateImportedData`; and publish through `ImportRepository.batchInsertRowRestore`. The durable row-restore receipt is keyed by manifest hash; launch completion is handled by the setup flow. Restoring an offline genesis backup does not establish a server-sync checkpoint or mark its rows as accepted by a server; the initial sync must reconcile its independent local state. Persist Workplace keys only after validated database publication. Transient references are released on failure or cancellation. An interrupted restore starts again from the file; the receipt makes a repeat harmless.
 
 ## Export path: no change
 
@@ -145,20 +145,20 @@ Merge gate: **the V1 whole-snapshot backup was removed from this branch**; its i
 
 Delivery: the foundation and V2 implementation stay on this branch for one PR to main after all in-scope gates pass. The key-management substrate remains independent of payload encryption: User/Workplace enrollment and confirmation, vault and key references, recovery credentials and ciphertext state stores. The unshipped V1 Settings encryption-setup UI was removed; V2 backup/restore UI and onboarding wiring are part of this rollout ([preparation](./preparation.md)). **Removed from this branch (V2 replaces them)**: the encrypt/decrypt snapshot methods, the `EncryptedSnapshot` envelope, `serialize`/`decodeWorkplaceSnapshot` with `MAX_SNAPSHOT_*` and `FFB_KEY_SNAPSHOT_LIMIT`, the `encryptionSetup` package save/verify steps, the `FFB_KEY_BACKUPS_REQUIRED` removal-device gate, `forgetDevice`, the `LocalRecoveryPackage` V1 shape, the `recover()` snapshot-decrypt-and-publish path, native `SnapshotCrypto.cpp` plus the `KeyEngine` encrypt/decrypt/`decryptDump` branches, the `workplaceDump.ts` V1 shape, and the V1 dump/proof harness. `describeSetup`'s `writerAllowed`/`budgetExhausted` fields were removed with the counter and single-writer rule.
 
-- [ ] Vendor zstd C sources (BSD) into the `ExpoKeyCrypto` C++ module, like `nlohmann/json`; compile per-table dictionaries into the binary.
-- [ ] Native `encryptRows`/`decryptRows` (Android+iOS): zstd + inner TLV + HKDF + AES-GCM in one call; per-row results on decrypt, all-or-nothing on encrypt; 64 KiB and batch caps; bounded decompression.
-- [ ] `signRowManifest` native op (Android+iOS) with its own domain string + JS verification against the User public identity; shared cross-platform TLV/AAD/HKDF/inner-TLV/Merkle test vectors gating merge.
-- [ ] Short-key maps for the 12 logical V2 source tables listed above, additive-only, all versions retained, unknown keys rejected.
-- [ ] `rowEnvelope.ts`: envelope + manifest validators, header-as-AAD binding. The V1 `FFB_KEY_SNAPSHOT_LIMIT` was removed.
-- [ ] Dictionary pipeline: seeded synthetic multilingual corpus script + checked-in per-table `dict.vN.bin`, read-before-write rollout.
-- [ ] Local row index table and commit scan under the writer lock, including tombstones for hard deletes.
-- [ ] Signed chained manifests: `seq`, `prevHash`, `authorUserId`, `authorDeviceId`, full-state RFC 6962 root; pulls verify the chain and root before applying.
+- [x] Vendor zstd C sources (BSD) into the `ExpoKeyCrypto` C++ module, like `nlohmann/json`; compile per-table dictionaries into the binary.
+- [x] Native `encryptRows`/`decryptRows` (Android+iOS): zstd + inner TLV + HKDF + AES-GCM in one call; per-row results on decrypt, all-or-nothing on encrypt; 64 KiB and batch caps; bounded decompression.
+- [x] `signRowManifest` native op (Android+iOS) with its own domain string + JS verification against the User public identity; shared cross-platform TLV/AAD/HKDF/inner-TLV/Merkle test vectors gating merge.
+- [x] Short-key maps for the 12 logical V2 source tables listed above, additive-only, all versions retained, unknown keys rejected.
+- [x] `rowEnvelope.ts`: envelope + manifest validators, header-as-AAD binding. The V1 `FFB_KEY_SNAPSHOT_LIMIT` was removed.
+- [x] Dictionary pipeline: seeded synthetic multilingual corpus script + checked-in per-table `dict.vN.bin`, read-before-write rollout.
+- [x] Local row index table and commit scan under the writer lock, including tombstones for hard deletes.
+- [ ] Complete sync chain/pull verification (signed manifest construction is implemented): `seq`, `prevHash`, `authorUserId`, `authorDeviceId`, full-state RFC 6962 root; pulls verify the chain and root before applying.
 - [ ] Pull-then-push commit with compare-and-swap retry; staged envelopes invisible until their manifest is accepted.
 - [ ] Group conflict detection, device-local conflict records and the "keep mine / keep theirs" review UI.
-- [ ] Atomic apply via the restore path; pending commits for unreadable rows; derived-data rebuild.
-- [ ] V2 local backup ZIP and offline recovery keyed by manifest hash.
+- [ ] Incremental sync apply and pending unreadable-commit handling. Offline restore publication and derived-data rebuild are implemented; pending-commit storage exists.
+- [x] V2 local backup ZIP and offline recovery keyed by manifest hash.
 - [ ] Deferred with the real backend: analytics consent, opt-out enforcement, aggregate-first queries and retention limits. No analytics collection ships in this implementation.
-- [x] Align `spec.md`, `README.md`, `preparation.md` and `key-management.md` §11 with branch reality (V1 snapshot never shipped, V2 authoritative for payloads). Rewrite `key-management.md` §9 payload bullets when `encryptRows` merges.
+- [x] Align `spec.md`, `README.md`, `preparation.md` and `key-management.md` §11 with branch reality (V1 snapshot never shipped, V2 authoritative for payloads). V2 payload crypto is implemented; online flows remain gated separately.
 - [ ] Verification: full backup → wipe → restore round-trip on V2 only, cross-device, two Devices editing the same journal concurrently, compare-and-swap retry, plus interruption/resume coverage.
 
 ## Decisions
@@ -185,7 +185,7 @@ All former open questions are settled below. Removed as no longer meaningful: "w
 
 ### Compression and the codec
 
-10. **Where does zstd come from, and where does it run?** Vendored zstd C sources in the existing C++ module, called from `encryptRows`/`decryptRows`, so compression and encryption share one native call. Jest uses the host-compiled C++ tests; web needs nothing because private-key operations never run there.
+10. **Where does zstd come from, and where does it run?** Vendored zstd C sources in the existing C++ module, called from `encryptRows`/`decryptRows`, so compression and encryption share one native call. Native tests use the host-compiled C++ engine; web runs the same engine as WASM in a dedicated worker with its own encrypted IndexedDB Device vault.
 11. **How are dictionaries managed?** Seeded synthetic corpus script, checked-in dictionary files, immutable `dictId`s kept forever, and read-capable one release before they become the write default.
 12. **Is the compression length leak acceptable?** Yes, without padding. Each row compresses alone against a public dictionary, and an attacker-authored SMS row mostly contains the attacker's own text, so there is no secret to probe. Padding would cost ~300 KB per full sync for no practical gain.
 

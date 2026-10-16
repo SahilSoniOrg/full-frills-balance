@@ -62,7 +62,9 @@ export function PrivateBackupView({
         ) : null}
         <AppText variant="body" color="secondary">
           {restoreMode
-            ? 'Choose your encrypted backup ZIP and User recovery file. This is separate from plaintext import restore.'
+            ? vm.canRestoreWithDevice
+              ? 'Choose your encrypted backup ZIP. This Device already has verified User keys, so a recovery file is optional.'
+              : 'Choose your encrypted backup ZIP and User recovery file. This is separate from plaintext import restore.'
             : 'Set up encryption, then save a ZIP backup. The recovery file and backup are stored separately.'}
         </AppText>
         {vm.message ? (
@@ -134,7 +136,7 @@ function BackupContent({
             'Restore encrypted backup',
             vm.restoreFromFiles,
             false,
-            !vm.hasImportedBackup || !vm.hasImportedSecret,
+            !vm.hasImportedBackup || (!vm.hasImportedSecret && !vm.canRestoreWithDevice),
           )}
           {action('encrypted-backup-clear-restore', 'Clear choices', vm.clearRestoreInputs, true)}
         </>

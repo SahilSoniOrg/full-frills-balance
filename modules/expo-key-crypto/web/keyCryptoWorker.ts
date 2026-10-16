@@ -1,7 +1,6 @@
 /** Dedicated worker entry. It owns the WASM heap; messages contain key handles and requests only. */
 
 import { ffbVaultHooks } from './webVault';
-import createKeyCryptoModule from './dist/key-crypto.mjs';
 import {
   createKeyCryptoWorkerRuntime,
   type WasmModule,
@@ -31,10 +30,14 @@ type KeyCryptoWasmFactory = (options?: {
 }) => Promise<WasmModule>;
 
 async function loadWasm(): Promise<WasmModule> {
-  const factory = createKeyCryptoModule as unknown as KeyCryptoWasmFactory;
+  // Preserve Emscripten's native ESM/import.meta handling outside Metro's worker bundle.
+  const loaderUrl = new URL('/key-crypto/key-crypto.mjs', self.location.origin).href;
+  const { default: factory }: { default: KeyCryptoWasmFactory } = await import(
+    /* @metro-ignore */ loaderUrl
+  );
   if (typeof factory !== 'function') throw new Error('FFB_WASM_UNAVAILABLE');
   return factory({
-    locateFile: (file: string) => new URL(`./dist/${file}`, import.meta.url).href,
+    locateFile: (file: string) => new URL(file, loaderUrl).href,
     ffbVault: ffbVaultHooks,
   });
 }

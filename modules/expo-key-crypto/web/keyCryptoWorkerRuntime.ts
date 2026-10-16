@@ -72,6 +72,7 @@ export function createKeyCryptoWorkerRuntime(deps: {
   const executeQueue: ExecuteJob[] = [];
   let pumpRunning = false;
   let locked = false;
+  let policyVersion = 0;
 
   function rejectQueuedExecutes() {
     while (executeQueue.length > 0) {
@@ -129,11 +130,19 @@ export function createKeyCryptoWorkerRuntime(deps: {
     }
   }
 
-  async function handleSetAllowed(message: Extract<WorkerRequest, { type: 'setAllowed' }>) {
+  async function handleSetAllowed(
+    message: Extract<WorkerRequest, { type: 'setAllowed' }>,
+    version: number,
+  ) {
     const wasm = await deps.getModule();
+    // Apply every native transition so locking still invalidates existing references.
     wasm.ccall('ffb_key_crypto_set_allowed', 'void', ['number'], [Number(message.allowed)]);
-    locked = !message.allowed;
-    if (locked) rejectQueuedExecutes();
+    // A cold WASM load can delay an old lock until after an unlock was requested.
+    // That stale lock must not reject operations queued under the newer policy.
+    if (version === policyVersion) {
+      locked = !message.allowed;
+      if (locked) rejectQueuedExecutes();
+    }
     deps.postMessage({ id: message.id, ok: true });
   }
 
@@ -148,7 +157,7 @@ export function createKeyCryptoWorkerRuntime(deps: {
 
   function onRequest(message: WorkerRequest) {
     if (message.type === 'setAllowed') {
-      void handleSetAllowed(message).catch(error => {
+      void handleSetAllowed(message, ++policyVersion).catch(error => {
         const code = error instanceof Error ? error.message : 'FFB_OPERATION_FAILED';
         deps.postMessage({
           id: message.id,

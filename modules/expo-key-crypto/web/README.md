@@ -46,4 +46,14 @@ The build emits `dist/key-crypto.wasm`, the generated ES module loader, and `bui
 
 `webVault.ts` (worker-only) stores Android-aligned `AES-256-GCM` records in IndexedDB, with a non-extractable wrap key in a separate database. The Emscripten bridge calls `Module.ffbVault` through Asyncify (`-sASYNCIFY`).
 
-Until `dist/key-crypto.wasm` is built and checked in, web key operations still fail at WASM load (`FFB_WASM_UNAVAILABLE`). Do not add a TypeScript HPKE fallback if WASM or vault I/O fails; fail closed.
+## Expo development and export
+
+`bun start`, `bun run web`, `bun run build:web` and `bun run e2e:build:web` stage
+the checked-in loader and WASM into the generated `public/key-crypto/` directory.
+Expo serves these files directly and copies them into the web export. The worker
+imports the loader as native ESM, bypassing Metro so Emscripten's `import.meta.url`
+keeps its browser meaning. The worker itself remains bundled by Metro.
+
+When invoking Expo directly, first run `node scripts/prepare-web-key-crypto.mjs`.
+Missing artifacts fail preparation; WASM or vault load failures must fail closed.
+Do not add a TypeScript HPKE fallback.

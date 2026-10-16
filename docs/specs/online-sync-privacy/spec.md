@@ -1,6 +1,6 @@
 # Private online backup and synchronization
 
-Date: 16 October 2026. Status: Device → User → Workplace key substrate implemented in native and service APIs; V1 whole-snapshot backup never shipped and was removed from this branch; [V2 row-envelope backup and sync](./row-envelope-sync.md) is in progress; no online service or account enrollment.
+Date: 16 October 2026. Status: Device → User → Workplace key substrate implemented in native and service APIs; V1 whole-snapshot backup never shipped and was removed from this branch; [V2 row-envelope backup/recovery](./row-envelope-sync.md) and web WASM support are implemented, with release verification gates open and online sync unfinished; no online service or account enrollment.
 
 [The documentation guide](./README.md) maps the current documents. [Key management](./key-management.md) defines the encryption architecture. [Preparation](./preparation.md) records what remains on the branch and open gates. Payload format, sync semantics and offline backup ZIP layout are authoritative in [row-envelope sync](./row-envelope-sync.md). Domain ownership follows [User, Device and Workplace](../user-device-workplace/spec.md) and [CONTEXT.md](../../../CONTEXT.md).
 
@@ -22,7 +22,7 @@ Key envelopes use HPKE base mode with X25519/HKDF-SHA256/AES-256-GCM. Recovery c
 
 Financial rows use AES-256-GCM with per-row HKDF subkeys, zstd dictionaries and signed manifest chains as specified in [row-envelope sync](./row-envelope-sync.md). Row manifest signatures use a dedicated domain string; they must not reuse the removed local-recovery signing domain.
 
-Only listed financial source tables and audit history travel in encrypted backup/sync; derived balances, rate caches, Device SMS, Device switches and navigation preferences do not. Validation and publication rules for restore/sync live with the V2 implementation (restore publication path still to be written).
+Only listed financial source tables and audit history travel in encrypted backup/sync; derived balances, rate caches, Device SMS, Device switches and navigation preferences do not. Offline restore validates and publishes through `restoreBackup` and `ImportRepository.batchInsertRowRestore`, with a manifest-hash receipt for retries. Incremental sync apply remains unfinished.
 
 ## Manual publication and online service
 

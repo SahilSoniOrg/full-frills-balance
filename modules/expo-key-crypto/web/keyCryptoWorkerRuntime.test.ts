@@ -65,6 +65,34 @@ function collectResponses(postMessage: (response: WorkerResponse) => void) {
 }
 
 describe('keyCryptoWorkerRuntime', () => {
+  it('does not reject unlocked startup work when an earlier lock waits for WASM', async () => {
+    const ready = deferred<WasmModule>();
+    const transitions: number[] = [];
+    const wasm = createMockWasm({
+      setAllowed: allowed => transitions.push(allowed),
+      execute: () => (wasm as WasmModule & { __alloc: (j: string) => number }).__alloc('{}'),
+    });
+    const inbox = collectResponses(() => undefined);
+    const runtime = createKeyCryptoWorkerRuntime({
+      getModule: () => ready.promise,
+      postMessage: inbox.postMessage,
+    });
+    runtime.onRequest({ id: 'initial-lock', type: 'setAllowed', allowed: false });
+    runtime.onRequest({ id: 'unlock', type: 'setAllowed', allowed: true });
+    runtime.onRequest({
+      id: 'active',
+      type: 'execute',
+      operation: 'clearCredentials',
+      request: {},
+    });
+    runtime.onRequest({ id: 'queued', type: 'execute', operation: 'hasKey', request: {} });
+    ready.resolve(wasm);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(transitions).toEqual([0, 1]);
+    expect(inbox.responses).toContainEqual({ id: 'active', ok: true, result: {} });
+    expect(inbox.responses).toContainEqual({ id: 'queued', ok: true, result: {} });
+  });
+
   it('awaits async ccall before reading the result pointer', async () => {
     const gate = deferred<void>();
     const wasm = createMockWasm({

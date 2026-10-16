@@ -14,7 +14,7 @@ import type { KeyAccessIdentity } from '@/src/services/backup/keyHierarchyRecord
 import type { WorkplaceId } from '@/src/types/ids';
 import { useOptionalWorkplace } from '@/src/contexts/WorkplaceContext';
 import { AppNavigation } from '@/src/utils/navigation';
-import { confirm } from '@/src/utils/alerts';
+import { alert, confirm } from '@/src/utils/alerts';
 import { KeyOperationError, keyOperationErrorCode } from '@/src/utils/keyOperationError';
 import { logger } from '@/src/utils/logger';
 import {
@@ -292,21 +292,20 @@ export function usePrivateBackup(workplaceId?: string) {
     run(async signal => {
       const zip = lifetime.current.backup;
       const credential = lifetime.current.secret;
-      if (!zip || !credential) throw new Error('Choose the backup ZIP and User recovery file');
-      assertForeground(signal);
       const keys = state?.keys;
-      const recoveryDeviceId = await resolveRecoveryDeviceId();
-      const access =
-        keys?.identity && keys.user === 'ready'
-          ? { mode: 'existing' as const, identity: keys.identity }
-          : { mode: 'recovery' as const, credential, deviceId: recoveryDeviceId };
+      const existingIdentity = keys?.user === 'ready' ? keys.identity : undefined;
+      if (!zip || (!credential && !existingIdentity))
+        throw new Error('Choose the backup ZIP and User recovery file');
+      assertForeground(signal);
+      const access = existingIdentity
+        ? { mode: 'existing' as const, identity: existingIdentity }
+        : { mode: 'recovery' as const, credential, deviceId: await resolveRecoveryDeviceId() };
       const result = await restoreEncryptedBackupZip(zip, access);
       await encryptionSetupStore.saveSession({
         formatVersion: 1,
         intent: 'recover-user',
         userId: result.identity.userId,
-        deviceId:
-          access.mode === 'recovery' ? recoveryDeviceId : result.identity.registeredDeviceId,
+        deviceId: result.identity.registeredDeviceId,
         userKeyFingerprint: result.identity.userKeyFingerprint,
         enrolledWorkplaces: [result.workplace.id],
       });
@@ -320,7 +319,17 @@ export function usePrivateBackup(workplaceId?: string) {
       } else {
         await workplace?.setWorkplaceId(result.workplace.id);
       }
-      if (canResume(signal)) AppNavigation.toDashboard();
+      if (canResume(signal)) {
+        AppNavigation.toDashboard();
+        if (result.warnings.length > 0) {
+          alert.show({
+            title: 'Backup restored — check balances',
+            message:
+              'Your financial records were restored, but some running balances could not be rebuilt. Review balances in Settings → Maintenance & reset before relying on them.',
+            type: 'warning',
+          });
+        }
+      }
     });
 
   const clearRestoreInputs = useCallback(() => {
@@ -337,6 +346,7 @@ export function usePrivateBackup(workplaceId?: string) {
     hasGeneratedSecret: ui.inputs.generated,
     hasImportedSecret: ui.inputs.secret,
     hasImportedBackup: ui.inputs.backup,
+    canRestoreWithDevice: state?.keys?.user === 'ready' && !!state.keys.identity,
     begin,
     exportSecret,
     verifySecret,
