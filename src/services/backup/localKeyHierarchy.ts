@@ -21,6 +21,7 @@ import {
   parseWorkplaceKeys,
   identityScope,
   userScope,
+  userRecoveryScope,
   workplaceScope,
   workplaceIdentityScope,
   type KeyAccessIdentity,
@@ -393,6 +394,34 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       if (!deviceId.trim()) throw new Error('Invalid replacement Device identity');
       if ((await this.state.read(userScope(saved.userId, deviceId))) !== null)
         throw new Error('Device identity already exists');
+      // Authenticate before recording trust or removing a key left by an interrupted attempt.
+      await this.invoke('validateRecovery', { user: saved, credential });
+      const recoveryScope = userRecoveryScope(saved.userId, deviceId);
+      const pending = await this.state.read(recoveryScope);
+      if (pending === null) {
+        if (await this.hasDevice(saved.userId, deviceId))
+          throw new Error('Device identity already exists');
+        // Only keys created AFTER this checkpoint belong to this recovery attempt.
+        await this.state.write(recoveryScope, {
+          userKeyFingerprint: saved.userKeyFingerprint,
+        });
+      } else {
+        if (
+          parseObject(pending, 'Invalid User recovery intent').userKeyFingerprint !==
+          saved.userKeyFingerprint
+        )
+          throw new Error('Pending User recovery identity mismatch');
+        // No User record was published, so this scoped key has no established local binding.
+        // Removing it is safe even after process death or an ambiguous native result.
+        await this.crypto.removeKey({ kind: 'device', userId: saved.userId, deviceId });
+      }
+      // Pin the authenticated root before native recovery. A failed User-record write must
+      // neither block a retry nor permit a different root to claim this User UUID.
+      await this.state.write(identityScope(saved.userId), {
+        deviceId,
+        publicIdentity: saved.publicIdentity,
+        recoveryConfirmed: true,
+      });
       const user = parseLocalUser(
         await this.invoke('recoverUser', { user: saved, credential, deviceId }),
       );
@@ -403,11 +432,7 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       )
         throw new Error('Native recovered User scope mismatch');
       await this.state.write(userScope(saved.userId, deviceId), user);
-      await this.state.write(identityScope(saved.userId), {
-        deviceId,
-        publicIdentity: saved.publicIdentity,
-        recoveryConfirmed: true,
-      });
+      await this.state.remove(recoveryScope);
       return this.identity(user);
     });
   }
@@ -645,6 +670,7 @@ export class LocalKeyHierarchy implements KeyHierarchy {
     return this.storeQueue().run(async () => {
       await this.crypto.removeKey({ kind: 'device', userId, deviceId });
       await this.state.remove(userScope(userId, deviceId));
+      await this.state.remove(userRecoveryScope(userId, deviceId));
     });
   }
   discardUnconfirmedUser(userId: string, deviceId: string): Promise<void> {

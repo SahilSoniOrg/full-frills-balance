@@ -4,6 +4,7 @@ import { encodeUtf8 } from '@/src/services/sync/codec/tlv';
 import type { RowManifestFields } from '@/src/services/sync/codec/manifestBytes';
 import {
   parseRowEnvelope,
+  decodeBase64,
   serializeRowEnvelope,
   type RowEnvelopeJson,
 } from '@/src/services/sync/codec/envelopeJson';
@@ -131,9 +132,11 @@ export function keyOperationsFromTransport(
       for (const envelope of envelopes) {
         if (envelope.workplaceId !== workplaceId || envelope.keyId !== key.keyId)
           throw new Error('Native Workplace key scope mismatch');
-        if (envelope.ciphertext.length > MAX_ROW_CIPHERTEXT_BYTES)
+        if (envelope.ciphertext.length > 4 * Math.ceil(MAX_ROW_CIPHERTEXT_BYTES / 3))
           throw new Error('FFB_ROW_TOO_LARGE: row ciphertext');
-        ciphertextBytes += envelope.ciphertext.length;
+        const size = decodeBase64(envelope.ciphertext).length;
+        if (size > MAX_ROW_CIPHERTEXT_BYTES) throw new Error('FFB_ROW_TOO_LARGE: row ciphertext');
+        ciphertextBytes += size;
         if (ciphertextBytes > MAX_ROW_BATCH_BYTES)
           throw new Error('FFB_ROW_TOO_LARGE: batch ciphertext');
       }

@@ -133,4 +133,34 @@ describe('ImportRepository.batchInsertRowRestore', () => {
 
     expect(await database.collections.get('workplaces').query().fetchCount()).toBe(0);
   });
+
+  it('honors cancellation while publication is waiting behind another writer', async () => {
+    let releaseWriter!: () => void;
+    let writerStarted!: () => void;
+    const started = new Promise<void>(resolve => {
+      writerStarted = resolve;
+    });
+    const blocked = new Promise<void>(resolve => {
+      releaseWriter = resolve;
+    });
+    const writer = database.write(async () => {
+      writerStarted();
+      await blocked;
+    });
+    await started;
+    const controller = new AbortController();
+    const publication = importRepository.batchInsertRowRestore(
+      workplace('restore-wp'),
+      data('cancelled-account'),
+      receiptA,
+      controller.signal,
+    );
+    const rejected = expect(publication).rejects.toMatchObject({ name: 'AbortError' });
+    controller.abort();
+    releaseWriter();
+    await writer;
+    await rejected;
+    expect(await database.collections.get('workplaces').query().fetchCount()).toBe(0);
+    expect(await database.collections.get('accounts').query().fetchCount()).toBe(0);
+  });
 });

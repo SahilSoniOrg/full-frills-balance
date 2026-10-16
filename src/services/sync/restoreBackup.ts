@@ -12,6 +12,10 @@ import {
 } from '@/src/services/backup/keyHierarchyRecords';
 import { localKeyHierarchy } from '@/src/services/backup/localKeyHierarchy';
 import {
+  assertKeyAccessAllowed,
+  subscribeKeyAccessPolicy,
+} from '@/src/services/backup/keyAccessPolicy';
+import {
   parseRecoveryCredential,
   type RecoveryCredential,
 } from '@/src/services/backup/keyEnvelopes';
@@ -32,7 +36,7 @@ import { computeMerkleRootFromLeaves, hashRowLeaf, type MerkleLeaf } from './cod
 import { hashManifest } from './codec/manifestBytes';
 import { decodeCanonicalRow } from './shortKeys';
 import { rowImportData, validateWorkplaceRows, type RowSourceRecord } from './rowSource';
-import { MAX_ROW_BATCH_BYTES, MAX_ROW_BATCH_COUNT } from './rowCrypto';
+import { MAX_ROW_BATCH_BYTES, MAX_ROW_BATCH_COUNT, MAX_ROW_PLAINTEXT_BYTES } from './rowCrypto';
 
 export type RestoreBackupAccess = Readonly<
   | { mode: 'existing'; identity: KeyAccessIdentity }
@@ -126,16 +130,18 @@ async function resolveIdentity(
 }
 
 function envelopeBatches(entries: readonly EnvelopeEntry[]): EnvelopeEntry[][] {
+  // Ciphertext can be tiny even when a row expands to the full plaintext limit.
+  const maxRows = Math.min(
+    MAX_ROW_BATCH_COUNT,
+    Math.floor(MAX_ROW_BATCH_BYTES / MAX_ROW_PLAINTEXT_BYTES),
+  );
   const batches: EnvelopeEntry[][] = [];
   let batch: EnvelopeEntry[] = [];
   let bytes = 0;
   for (const entry of entries) {
     const size = entry.parsed.ciphertext.length;
     if (size > MAX_ROW_BATCH_BYTES) throw new Error('Backup row exceeds native batch limit');
-    if (
-      batch.length > 0 &&
-      (batch.length >= MAX_ROW_BATCH_COUNT || bytes + size > MAX_ROW_BATCH_BYTES)
-    ) {
+    if (batch.length > 0 && (batch.length >= maxRows || bytes + size > MAX_ROW_BATCH_BYTES)) {
       batches.push(batch);
       batch = [];
       bytes = 0;
@@ -175,6 +181,27 @@ export async function restoreBackup(
   zipBytes: Uint8Array,
   access: RestoreBackupAccess,
 ): Promise<RestoreBackupResult> {
+  assertKeyAccessAllowed();
+  const cancellation = new AbortController();
+  const unsubscribe = subscribeKeyAccessPolicy(allowed => {
+    if (!allowed) cancellation.abort();
+  });
+  try {
+    return await restoreBackupWhileUnlocked(zipBytes, access, cancellation.signal);
+  } finally {
+    unsubscribe();
+  }
+}
+
+function assertRestoreActive(signal: AbortSignal): void {
+  if (signal.aborted) throw new KeyOperationError('FFB_KEY_CANCELLED');
+}
+
+async function restoreBackupWhileUnlocked(
+  zipBytes: Uint8Array,
+  access: RestoreBackupAccess,
+  signal: AbortSignal,
+): Promise<RestoreBackupResult> {
   const backup = parseBackupZip(zipBytes);
   const userRecoveryPackage = parseExportedUserRecoveryPackage(backup.userRecoveryPackage);
   const fingerprint = await userIdentityFingerprint(userRecoveryPackage.publicIdentity);
@@ -192,7 +219,9 @@ export async function restoreBackup(
     fingerprint,
   );
   // Do not persist a recovered User identity until the archive's manifest signature is trusted.
+  assertRestoreActive(signal);
   const { identity } = await resolveIdentity(userRecoveryPackage, access);
+  assertRestoreActive(signal);
   if (
     backup.workplaceKeys.userId !== identity.userId ||
     backup.workplaceKeys.userKeyFingerprint !== identity.userKeyFingerprint ||
@@ -213,12 +242,14 @@ export async function restoreBackup(
   const rows: RowSourceRecord[] = [];
   const leaves: MerkleLeaf[] = [];
   for (const batch of envelopeBatches(entries)) {
+    assertRestoreActive(signal);
     const decrypted = await localKeyHierarchy.decryptRows(
       identity,
       backup.workplaceKeys.workplaceId,
       batch.map(entry => entry.value),
       backup.workplaceKeys as WorkplaceKeys,
     );
+    assertRestoreActive(signal);
     if (decrypted.length !== batch.length) throw new Error('Decrypted backup row count mismatch');
     for (let index = 0; index < batch.length; index += 1) {
       const entry = batch[index];
@@ -267,12 +298,14 @@ export async function restoreBackup(
 
   // Validate both installed keys and any durable identity marker before publishing rows.
   // Otherwise a failed installation could strand the committed restore receipt.
+  assertRestoreActive(signal);
   const keyState = await localKeyHierarchy.preflightWorkplaceRestore(
     identity,
     backup.workplaceKeys,
   );
 
   const manifestHash = keyHex(await hashManifest(verifiedManifest.fields));
+  assertRestoreActive(signal);
   const workplace = await importRepository.batchInsertRowRestore(
     {
       id: workplaceId,
@@ -282,6 +315,7 @@ export async function restoreBackup(
     },
     data,
     manifestHash,
+    signal,
   );
 
   // Preferences are device-local and outside the DB transaction. Persist them only after

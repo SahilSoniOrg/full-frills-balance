@@ -13,6 +13,8 @@ import { userIdentityFingerprint } from '@/src/services/backup/userIdentity';
 import { parseRowEnvelope } from '../rowEnvelope';
 import { rebuildAllAccountBalancesAfterImport } from '@/src/services/import/importAccountBalanceRebuild';
 import { accountQueryRepository } from '@/src/data/repositories/account';
+import { setKeyAccessAllowed } from '@/src/services/backup/keyAccessPolicy';
+import { MAX_ROW_BATCH_BYTES, MAX_ROW_PLAINTEXT_BYTES } from '../rowCrypto';
 
 jest.mock('../backupFile', () => ({ parseBackupZip: jest.fn() }));
 jest.mock('../manifestVerify', () => ({ verifyRowManifest: jest.fn() }));
@@ -135,8 +137,11 @@ const envelope = {
 const backup = { manifest, envelopes: [envelope], workplaceKeys, userRecoveryPackage };
 
 describe('restoreBackup', () => {
+  afterEach(() => setKeyAccessAllowed(false));
+
   beforeEach(() => {
     jest.clearAllMocks();
+    setKeyAccessAllowed(true);
     jest.mocked(parseBackupZip).mockReturnValue(backup as never);
     jest.mocked(userIdentityFingerprint).mockResolvedValue(identity.userKeyFingerprint);
     jest.mocked(verifyRowManifest).mockResolvedValue({
@@ -328,5 +333,75 @@ describe('restoreBackup', () => {
 
     expect(importRepository.batchInsertRowRestore).not.toHaveBeenCalled();
     expect(localKeyHierarchy.installWorkplaceKeys).not.toHaveBeenCalled();
+  });
+  it('bounds highly compressed restore batches by their maximum expanded size', async () => {
+    const envelopes = Array.from({ length: 100 }, (_, index) => ({
+      ...envelope,
+      rowId: `row-${index}`,
+    }));
+    jest.mocked(parseBackupZip).mockReturnValue({ ...backup, envelopes } as never);
+    jest
+      .mocked(localKeyHierarchy.decryptRows)
+      .mockImplementation(async (_id, _workplace, batch) => {
+        // Model the native expanded-plaintext limit, independent of compressed size.
+        if (batch.length * MAX_ROW_PLAINTEXT_BYTES > MAX_ROW_BATCH_BYTES)
+          throw new Error('FFB_ROW_TOO_LARGE');
+        return batch.map(value => ({
+          ok: true,
+          table: value.table,
+          rowId: value.rowId,
+          schemaVersion: 35,
+          dictId: 'workplace/v1',
+          plaintext: 'x'.repeat(MAX_ROW_PLAINTEXT_BYTES),
+        })) as never;
+      });
+    jest.mocked(parseRowEnvelope).mockImplementation(
+      value =>
+        ({
+          ...(value as typeof envelope),
+          salt: new Uint8Array(16),
+          ciphertext: new Uint8Array(32),
+        }) as never,
+    );
+
+    await expect(
+      restoreBackup(new Uint8Array([1]), { mode: 'existing', identity }),
+    ).resolves.toBeDefined();
+    expect(
+      jest.mocked(localKeyHierarchy.decryptRows).mock.calls.map(call => call[2].length),
+    ).toEqual([64, 36]);
+  });
+
+  it.each([false, true])(
+    'cancels publication if the app locks while hashing (unlock again: %s)',
+    async unlockAgain => {
+      jest.mocked(hashManifest).mockImplementationOnce(async () => {
+        setKeyAccessAllowed(false);
+        if (unlockAgain) setKeyAccessAllowed(true);
+        return Uint8Array.of(3);
+      });
+
+      await expect(
+        restoreBackup(new Uint8Array([1]), { mode: 'existing', identity }),
+      ).rejects.toMatchObject({ code: 'FFB_KEY_CANCELLED' });
+      expect(importRepository.batchInsertRowRestore).not.toHaveBeenCalled();
+    },
+  );
+
+  it('passes app-lock cancellation into queued database publication', async () => {
+    jest
+      .mocked(importRepository.batchInsertRowRestore)
+      .mockImplementationOnce(async (_workplace, _data, _hash, signal) => {
+        expect(signal?.aborted).toBe(false);
+        setKeyAccessAllowed(false);
+        expect(signal?.aborted).toBe(true);
+        throw Object.assign(new Error('Row restore was cancelled'), { name: 'AbortError' });
+      });
+
+    await expect(
+      restoreBackup(new Uint8Array([1]), { mode: 'existing', identity }),
+    ).rejects.toMatchObject({ name: 'AbortError' });
+    expect(localKeyHierarchy.installWorkplaceKeys).not.toHaveBeenCalled();
+    expect(preferences.workplace.update).not.toHaveBeenCalled();
   });
 });

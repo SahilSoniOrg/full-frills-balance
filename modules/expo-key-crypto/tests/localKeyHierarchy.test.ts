@@ -5,6 +5,7 @@ import { LocalKeyHierarchy } from '@/src/services/backup/localKeyHierarchy';
 import {
   identityScope,
   userScope,
+  userRecoveryScope,
   type LocalUserKeys,
 } from '@/src/services/backup/keyHierarchyRecords';
 import { generateUserSigningPair } from './envelopeTestTools';
@@ -384,7 +385,7 @@ it('finishes the User record and identity marker before reporting an intervening
   const write = jest.mocked(target.state.write).getMockImplementation()!;
   jest.mocked(target.state.write).mockImplementation(async (scope, value) => {
     await write(scope, value);
-    allowed = false;
+    if (scope === userScope('alice', 'replacement')) allowed = false;
   });
   await expect(
     target.hierarchy.recoverUserDevice(source.userCredential, saved, 'replacement'),
@@ -414,3 +415,94 @@ it.each(['FFB_KEY_RECOVERY_REQUIRED', 'FFB_KEY_VAULT_UNAVAILABLE'] as const)(
     else await expect(c.hierarchy.describeSetup('alice', 'phone')).rejects.toThrow(code);
   },
 );
+
+it.each(['checkpoint', 'native reply'] as const)(
+  'reconciles a Device key after a lost %s and coordinator restart',
+  async failure => {
+    const source = await enrolledKeyHierarchy();
+    const saved = await source.hierarchy.exportUserRecoveryPackage('alice', 'phone');
+    const target = memoryKeyHierarchy();
+    const write = jest.mocked(target.state.write).getMockImplementation()!;
+    if (failure === 'checkpoint') {
+      jest.mocked(target.state.write).mockImplementation(async (scope, value) => {
+        if (scope === userScope('alice', 'replacement')) throw new Error('interrupted');
+        return write(scope, value);
+      });
+    } else {
+      const recover = target.crypto.recovery;
+      jest.spyOn(target.crypto, 'recovery').mockImplementation(async (operation, request) => {
+        const result = await recover(operation, request);
+        if (operation === 'recoverUser') throw new Error('interrupted');
+        return result;
+      });
+    }
+    await expect(
+      target.hierarchy.recoverUserDevice(source.userCredential, saved, 'replacement'),
+    ).rejects.toThrow('interrupted');
+    expect(target.deviceTags.size).toBe(1);
+    expect(target.ciphertext.has(userScope('alice', 'replacement'))).toBe(false);
+    expect(target.ciphertext.get(userRecoveryScope('alice', 'replacement'))).toEqual({
+      userKeyFingerprint: saved.userKeyFingerprint,
+    });
+
+    // A wrong credential may not remove even this interrupted attempt's Device key.
+    const orphaned = new Map(target.deviceTags);
+    await expect(
+      target.hierarchy.recoverUserDevice(
+        { ...source.userCredential, identityId: 'bob' },
+        saved,
+        'replacement',
+      ),
+    ).rejects.toThrow();
+    expect(target.deviceTags).toEqual(orphaned);
+
+    jest.mocked(target.state.write).mockImplementation(write);
+    if (failure === 'native reply') jest.mocked(target.crypto.recovery).mockRestore();
+    const restarted = new LocalKeyHierarchy(target.state, () => undefined, target.crypto);
+    await expect(
+      restarted.recoverUserDevice(source.userCredential, saved, 'replacement'),
+    ).resolves.toMatchObject({ userKeyFingerprint: saved.userKeyFingerprint });
+    expect(await restarted.describeSetup('alice', 'replacement')).toMatchObject({ user: 'ready' });
+    expect(target.deviceTags.size).toBe(1);
+    expect(target.ciphertext.has(userRecoveryScope('alice', 'replacement'))).toBe(false);
+  },
+);
+
+it('leaves an existing Device key without a matching recovery intent untouched', async () => {
+  const source = await enrolledKeyHierarchy();
+  const saved = await source.hierarchy.exportUserRecoveryPackage('alice', 'phone');
+  const target = memoryKeyHierarchy();
+  const device = await target.crypto.generateKeys({
+    kind: 'device',
+    userId: 'alice',
+    deviceId: 'replacement',
+  });
+  const original = new Map(target.deviceTags);
+  await expect(
+    target.hierarchy.recoverUserDevice(source.userCredential, saved, 'replacement'),
+  ).rejects.toThrow('Device identity already exists');
+  expect(target.deviceTags).toEqual(original);
+  expect(target.ciphertext.has(userRecoveryScope('alice', 'replacement'))).toBe(false);
+  await target.crypto.releaseKey(device as Parameters<typeof target.crypto.releaseKey>[0]);
+});
+
+it('preserves the root pin after interrupted recovery and refuses a different User root', async () => {
+  const source = await enrolledKeyHierarchy();
+  const saved = await source.hierarchy.exportUserRecoveryPackage('alice', 'phone');
+  const other = await enrolledKeyHierarchy();
+  const otherSaved = await other.hierarchy.exportUserRecoveryPackage('alice', 'phone');
+  const target = memoryKeyHierarchy();
+  const write = jest.mocked(target.state.write).getMockImplementation()!;
+  jest.mocked(target.state.write).mockImplementation(async (scope, value) => {
+    if (scope === userScope('alice', 'replacement')) throw new Error('disk full');
+    return write(scope, value);
+  });
+  await expect(
+    target.hierarchy.recoverUserDevice(source.userCredential, saved, 'replacement'),
+  ).rejects.toThrow('disk full');
+  const orphaned = new Map(target.deviceTags);
+  await expect(
+    target.hierarchy.recoverUserDevice(other.userCredential, otherSaved, 'replacement'),
+  ).rejects.toThrow('Established User identity mismatch');
+  expect(target.deviceTags).toEqual(orphaned);
+});

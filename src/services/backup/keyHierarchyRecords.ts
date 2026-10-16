@@ -44,6 +44,8 @@ export interface EncryptionSetupStatus {
 export const identityScope = (userId: string) => JSON.stringify(['identity', userId]);
 export const userScope = (userId: string, deviceId: string) =>
   JSON.stringify(['user', userId, deviceId]);
+export const userRecoveryScope = (userId: string, deviceId: string) =>
+  JSON.stringify(['user-recovery', userId, deviceId]);
 export const workplaceScope = (userId: string, workplaceId: string) =>
   JSON.stringify(['workplace', userId, workplaceId]);
 export const workplaceIdentityScope = (userId: string, workplaceId: string) =>

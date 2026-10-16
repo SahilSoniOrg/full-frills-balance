@@ -3,6 +3,7 @@ import { keyOperationsFromTransport, type NativeKeyReference } from '../nativeKe
 import type { EncryptRow } from '@/src/services/sync/rowCrypto';
 import type { RowEnvelopeJson } from '@/src/services/sync/codec/envelopeJson';
 import type { RowTable } from '@/src/services/sync/codec/rowHeader';
+import { MAX_ROW_BATCH_BYTES, MAX_ROW_CIPHERTEXT_BYTES } from '@/src/services/sync/rowCrypto';
 
 jest.mock('@/src/services/backup/cryptoProvider', () => ({
   cryptoProvider: {
@@ -62,6 +63,57 @@ const wireEnvelope: RowEnvelopeJson = {
 };
 
 describe('native row operation boundary', () => {
+  it('counts decoded ciphertext bytes for both row and batch limits', async () => {
+    const ciphertext = Buffer.alloc(60 * 1024, 1).toString('base64');
+    // Encoded text exceeds both old checks, while decoded bytes stay within both limits.
+    const envelopes = Array.from({ length: 60 }, (_, index) => ({
+      ...wireEnvelope,
+      rowId: `row-${index}`,
+      ciphertext,
+    }));
+    const call = jest.fn(async () => ({
+      rows: envelopes.map(value => ({
+        ok: true,
+        rowId: value.rowId,
+        table: value.table,
+        schemaVersion: 35,
+        dictId: 'accounts/v1',
+        plaintext: '{}',
+      })),
+    }));
+    const operations = keyOperationsFromTransport(call);
+
+    await expect(
+      operations.decryptRows(workplaceKey, source.workplaceId, envelopes),
+    ).resolves.toHaveLength(60);
+    expect(call).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects ciphertext beyond the decoded row and batch limits before calling native', async () => {
+    const call = jest.fn();
+    const operations = keyOperationsFromTransport(call);
+    await expect(
+      operations.decryptRows(workplaceKey, source.workplaceId, [
+        {
+          ...wireEnvelope,
+          ciphertext: Buffer.alloc(MAX_ROW_CIPHERTEXT_BYTES + 1).toString('base64'),
+        },
+      ]),
+    ).rejects.toThrow('FFB_ROW_TOO_LARGE: row ciphertext');
+    const size = 64 * 1024;
+    await expect(
+      operations.decryptRows(
+        workplaceKey,
+        source.workplaceId,
+        Array.from({ length: Math.floor(MAX_ROW_BATCH_BYTES / size) + 1 }, (_, index) => ({
+          ...wireEnvelope,
+          rowId: `row-${index}`,
+          ciphertext: Buffer.alloc(size).toString('base64'),
+        })),
+      ),
+    ).rejects.toThrow('FFB_ROW_TOO_LARGE: batch ciphertext');
+    expect(call).not.toHaveBeenCalled();
+  });
   it('checks encrypted headers against the submitted rows before returning them', async () => {
     const call = jest.fn(async () => ({ envelopes: [wireEnvelope] }));
     const operations = keyOperationsFromTransport(call);
