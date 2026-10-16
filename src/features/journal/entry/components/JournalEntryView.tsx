@@ -303,6 +303,7 @@ export function JournalEntryView(props: JournalEntryShell) {
           loading={isBatchMode ? props.batchEditor.isSubmitting : isSubmitting}
           saveSuccessPulse={saveSuccessPulse}
           missingRequirementHint={missingRequirementHint}
+          onDisabledPress={() => accountFlowRef.current?.start()}
         />
       }
     >

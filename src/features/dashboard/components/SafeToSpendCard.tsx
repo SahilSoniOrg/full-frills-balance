@@ -120,7 +120,8 @@ export const SafeToSpendCard = (props: SafeToSpendCardProps) => {
                   {AppConfig.strings.dashboard.safeToSpendUi.forecastStale}
                 </AppText>
               ) : null}
-              <SafeToSpendForecastDetails viewModel={viewModel} />
+              {/* Provenance explains stale or partial forecasts, not a missing rate. */}
+              {quality !== 'ready' ? <SafeToSpendForecastDetails viewModel={viewModel} /> : null}
               {viewModel.hasUnvaluedEntries ? (
                 <IncompleteFxWarning
                   testID="safe-to-spend-incomplete-warning"

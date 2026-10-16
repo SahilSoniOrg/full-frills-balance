@@ -25,6 +25,8 @@ export interface JournalEntrySubmitBarProps {
   loading?: boolean;
   saveSuccessPulse?: boolean;
   missingRequirementHint?: string | null;
+  /** Tapped while disabled: lets the form point at the missing field. */
+  onDisabledPress?: () => void;
   /** Shown for future-dated new entries: post automatically on the date, or wait for the user. */
   plannedMode?: PlannedJournalMode;
   onPlannedModeChange?: (mode: PlannedJournalMode) => void;
@@ -45,6 +47,7 @@ export const JournalEntrySubmitBar = React.memo(function JournalEntrySubmitBar({
   loading = false,
   saveSuccessPulse = false,
   missingRequirementHint,
+  onDisabledPress,
   plannedMode,
   onPlannedModeChange,
   isEdit = false,
@@ -98,7 +101,10 @@ export const JournalEntrySubmitBar = React.memo(function JournalEntrySubmitBar({
         <Pressable
           style={styles.submitButtonWrapper}
           disabled={!disabled}
-          onPress={() => setAttempted(true)}
+          onPress={() => {
+            setAttempted(true);
+            onDisabledPress?.();
+          }}
           accessible={false}
         >
           <MotiView

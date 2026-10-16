@@ -223,7 +223,7 @@ export function DashboardScreenView({
                   onItemPress={plannedOccurrences.onItemPress}
                 />
               </View>
-              <Box paddingHorizontal="lg" paddingVertical="lg">
+              <Box paddingVertical="lg">
                 <ScreenSectionHeader title={journalSectionTitle} />
               </Box>
             </View>
