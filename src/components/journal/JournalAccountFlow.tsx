@@ -85,7 +85,7 @@ function AccountLeg({
           style={styles.icon}
         />
       )}
-      <AppText variant="caption" numberOfLines={1} style={[styles.name, { color: accentColor }]}>
+      <AppText variant="caption" style={[styles.name, { color: accentColor }]}>
         {leg.name}
         {comma ? ',' : ''}
       </AppText>
@@ -380,7 +380,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: Spacing.lg,
   },
-  name: { flexShrink: 1, minWidth: 0 },
+  // No minWidth: 0, so a single word like "Bills" never breaks mid-word.
+  name: { flexShrink: 1 },
 });
 
 const footerStyles = StyleSheet.create({
