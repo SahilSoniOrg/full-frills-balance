@@ -44,7 +44,7 @@ describe('completeEncryptedRestoreLaunch', () => {
   });
 
   it('falls back to preferences and locale defaults for the device display name', () => {
-    jest.mocked(loadSetupDraft).mockReturnValue(null);
+    jest.mocked(loadSetupDraft).mockReturnValue(undefined);
     jest.mocked(preferences).userName = '  Phone  ';
     completeEncryptedRestoreLaunch('wp-2' as never);
     expect(finishDeviceSetup).toHaveBeenCalledWith({
