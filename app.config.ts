@@ -63,8 +63,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
   },
   web: {
-    // E2E web builds client-render: static prerendering touches browser storage at build time.
-    output: process.env.EXPO_PUBLIC_E2E === '1' ? 'single' : 'static',
+    // Local books and preferences require browser storage during app initialization.
+    output: 'single',
     favicon: './assets/images/favicon.png',
   },
   plugins: [
