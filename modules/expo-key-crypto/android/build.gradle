@@ -10,6 +10,11 @@ android {
     versionCode 1
     versionName "1.0.0"
     testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    // Match the consuming app's ABI selection instead of building every NDK ABI.
+    def requestedArchitectures = rootProject.findProperty('reactNativeArchitectures')
+    if (requestedArchitectures) {
+      ndk { abiFilters.addAll(requestedArchitectures.toString().split(',').collect { it.trim() }) }
+    }
     externalNativeBuild {
       cmake { arguments '-DANDROID_STL=c++_shared', '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON' }
     }

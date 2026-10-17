@@ -1,6 +1,6 @@
 # Verify restore interruption and retry across durable boundaries
 
-Status: implemented; browser, real-core integration and production JavaScript exclusion verification passed. Native device and Hermes-bytecode release gates remain open.
+Status: implemented; browser, real-core integration, production JavaScript and Hermes-bytecode exclusion verification passed. Native device release gates remain open.
 
 ## Objective
 
@@ -200,8 +200,33 @@ TMPDIR=/tmp/restore-verification-metro-production APP_VARIANT=production EXPO_PU
 node scripts/check-e2e-bundle.mjs dist/production-e2e-js-check
 ```
 
-The default `bun run check:production-e2e-bundle` could not finish Hermes compilation: this host is ARM64 (`aarch64`) but the installed `hermes-compiler` Linux binary is x86-64. The supported `--no-bytecode` export above verified production Android/iOS JavaScript exclusions without weakening the marker assertions. **Hermes bytecode compilation remains unverified** and must run on a compatible release-build host; these exports are not native-device execution evidence.
+The default `bun run check:production-e2e-bundle` could not finish Hermes compilation in that run: this host is ARM64 (`aarch64`) but the installed `hermes-compiler` Linux binary is x86-64. The supported `--no-bytecode` export above verified production Android/iOS JavaScript exclusions without weakening the marker assertions. Hermes bytecode compilation was unverified at that point; the ARM64 host follow-up below resolves that compiler limitation. These exports are not native-device execution evidence.
 
 The first production web export reused cached E2E transforms and correctly failed the marker check. Both production exclusion commands now request clean Metro transforms (`--clear`); the clean web export omitted the bootstrap, seed and restore-verification chunks entirely. The native test host used the existing HPKE-enabled OpenSSL installation at `/tmp/pr86-openssl`.
 
 Seven standalone boundary-state proofs are saved in `artifacts/restore-interruption-verification-2026-10-17/proofs/`, and the pre-fix publication-loss trace is retained in its `before-persistence-fix/` sibling. Per-run logs are kept under ignored `artifacts/restore-interruption-verification-2026-10-17/`; Playwright proof attachments, screenshots and failure traces are under ignored `test-results/` and `playwright-report/`. Recovery ZIP/credential files remain synthetic, local and uncommitted.
+
+### ARM64 host toolchain follow-up (2026-10-17)
+
+Source: `8af2bc205a0682bb4b77ee826a9c6719321584c0`, with pre-existing documentation changes. No application or test-source changes were needed for this follow-up.
+
+The HPKE-enabled OpenSSL 3.6.0 installation already existed at `/tmp/pr86-openssl`. Its headers and static libraries were copied to `$HOME/.local/share/ffb-toolchains/openssl-3.6.0`, with the copied pkg-config prefixes adjusted. The host C++ suite passed against this persistent prefix: **7 suites, 67 tests passed**, with the opt-in compatibility-fixture capture skipped. The fixed-archive compatibility test passed.
+
+Installed `qemu-user` supplies `qemu-x86_64` 6.2.0, which can execute the project's existing, statically linked Linux compiler from `hermes-compiler@250829098.0.17`. The compiler reports HBC version 98. Its SHA-256 is `925ddf1bc2f17578e8af5df391c9d84dbd98441540fb43257aac3ef75c54b749`. This uses CPU emulation of the packaged compiler; it does not change the project's Hermes version.
+
+On this checkout, the ignored `.scratch/host-hermes/build/bin/hermesc` wrapper invokes that compiler through QEMU. Expo selects it through its existing `REACT_NATIVE_OVERRIDE_HERMES_DIR` support. The ignored `.scratch/native-host-env.sh` sets that override and `FFB_OPENSSL_PREFIX` for subsequent shell commands:
+
+```sh
+source .scratch/native-host-env.sh
+bun run test:native-key-crypto
+SENTRY_DISABLE_AUTO_UPLOAD=true SENTRY_DISABLE_NATIVE_DEBUG_UPLOAD=true \
+  bun run check:production-e2e-bundle
+```
+
+These paths and installed tools are local host setup. A different host/checkout must establish its own prefix and wrapper. Expo's override alone does not reconfigure Gradle's separately configured `react.hermesCommand`; the subsequent `scripts/build-android-verification.sh` helper forwards it through a temporary Gradle initialization script.
+
+The production command above **passed with bytecode enabled** and both Sentry upload-disable flags set to literal `true`. It exported one Android and one iOS `.hbc` bundle; both files independently passed the Hermes magic-header and HBC version-98 checks. The existing production E2E marker check passed over both generated bundles. This closes the earlier host bytecode-compilation gap, while compiled APK/IPA and installed Release validation remain separate gates.
+
+Host metadata, dependency-lock/compiler hashes and logs are retained under ignored `artifacts/native-host-verification-2026-10-17/`. Host C++ tests and exported bytecode do not establish native vault, native SQLite, picker, lifecycle or installed Release application behavior.
+
+Subsequent [native-device preparation](./native-device-verification-plan.md#local-preparation-record-2026-10-17) completed Android normal/E2E Release-derived verification app APKs and instrumentation on this host. Packaged Hermes version-98 bytecode, APK signatures, the disposable application ID and instrumentation target were checked; the normal APK's extracted bundle passed the existing test-marker exclusion check with its embedded E2E capability disabled. Native ABI selection and QEMU AAPT2 CPU issues found during compilation were corrected. No device was connected, so installation, native vault/SQLite/picker/lifecycle behavior and the native A–E adapter remain pending. Signed iOS application builds still require a compatible macOS/Xcode host.

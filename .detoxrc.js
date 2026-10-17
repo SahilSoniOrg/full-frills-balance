@@ -72,6 +72,12 @@ module.exports = {
         'android/app/build/outputs/apk/androidTest/release/app-release-androidTest.apk',
       build: `cd android && SENTRY_DISABLE_AUTO_UPLOAD=true SENTRY_DISABLE_NATIVE_DEBUG_UPLOAD=true EXPO_PUBLIC_E2E=1 ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release${androidArchGradleArg()}`,
     },
+    'android.verification': {
+      type: 'android.apk',
+      binaryPath: 'artifacts/native-verification/android/e2e/app-verification.apk',
+      testBinaryPath: 'artifacts/native-verification/android/e2e/app-verification-androidTest.apk',
+      build: 'bash scripts/build-android-verification.sh e2e',
+    },
   },
   devices: {
     simulator: {
@@ -149,6 +155,13 @@ module.exports = {
           'android.device.release': {
             device: 'androidDevice',
             app: 'android.release',
+          },
+          'android.device.verification': {
+            device: 'androidDevice',
+            app: 'android.verification',
+            // Physical runs install their own disposable APK; they do not use
+            // the Linux emulator's preinstalled production-ID snapshot.
+            behavior: { init: { reinstallApp: true } },
           },
         }
       : {}),

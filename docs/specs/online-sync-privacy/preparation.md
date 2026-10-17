@@ -23,6 +23,8 @@ The iOS provider uses QuickCrypto's OpenSSL headers and symbol-prefix layout. In
 
 Automated coverage includes hierarchy and record validation, storage failures, recovery, codecs, manifests, backup parsing, row validation, restore retries and publication. Host-compiled C++ and WASM suites exercise the shared engine. Simulator/emulator evidence does not close physical-device gates.
 
+The [2026-10-17 ARM64 host follow-up](./restore-interruption-verification-plan.md#arm64-host-toolchain-follow-up-2026-10-17) records 67 passing host C++ tests using HPKE-enabled OpenSSL 3.6.0, plus successful production Android/iOS Hermes bytecode exports and E2E marker exclusion checks. QEMU executes the project's pinned compiler on this host. Subsequent [Android preparation](./native-device-verification-plan.md#local-preparation-record-2026-10-17) produced normal/E2E Release-derived verification APKs and instrumentation, verified signatures and packaged Hermes bytecode, and passed normal-APK harness exclusion. Android installation/runtime and signed iOS application builds remain pending.
+
 Physical iOS/Android checks remain required for key/vault behavior, app lock, real credential and backup file pickers, storage denial/corruption, and interruption/retry. Complete cross-device backup → wipe → restore verification remains a release gate. Large-workplace responsiveness also needs measurement: batch limits do not make the full ZIP/row pipeline streaming, and capture holds the database writer lock during encryption.
 
 ## Build-artifact incident

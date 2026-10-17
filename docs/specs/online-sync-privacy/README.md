@@ -12,6 +12,8 @@ Start with [the overview](./spec.md). There is one key hierarchy: Device → Use
 | [Recovery coordination cleanup plan](./recovery-coordination-plan.md) | Implemented extraction of durable recovery ID/session/checkpoint coordination from the screen hook. |
 | [Data preparation cleanup plan](./data-preparation-plan.md) | Implemented separation of database capture, pure export preparation and restore validation. |
 | [Restore interruption verification plan](./restore-interruption-verification-plan.md) | Proposed integration and browser checks for durable restore failures, reloads and safe retries. |
+| [Native device verification plan](./native-device-verification-plan.md) | Android host/build preparation completed; physical Android/iOS picker, vault and process-termination gates remain open. |
+| [Native host verification runbook](./native-host-verification-runbook.md) | Code-change inventory, host setup, repeatable build/check commands, failures and evidence. |
 | [Web crypto WASM rollout](../../plans/web-crypto-wasm-rollout-plan.md) | WebAssembly engine, worker vault, and web backup/restore (Passkeys deferred to Phase 2). |
 
 Native key and HPKE interoperability have Android emulator and iOS simulator proof. Physical-device, real-file-picker and complete interruption gates remain open; simulator results do not close them. Dated review reports and per-run artifacts are omitted; these documents are the reading path.
