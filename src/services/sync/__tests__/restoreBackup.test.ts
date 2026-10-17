@@ -8,7 +8,7 @@ import { preferences } from '@/src/services/preferences';
 import { computeMerkleRootFromLeaves, hashRowLeaf } from '@/src/services/crypto/protocol/merkle';
 import { hashManifest } from '@/src/services/crypto/protocol/manifestBytes';
 import { decodeCanonicalRow } from '../shortKeys';
-import { rowImportData, validateWorkplaceRows } from '../rowSource';
+import { rowImportData, validateWorkplaceRows } from '../workplaceRowValidation';
 import { userIdentityFingerprint } from '@/src/services/backup/userIdentity';
 import { parseRowEnvelope } from '../rowEnvelope';
 import { rebuildAllAccountBalancesAfterImport } from '@/src/services/import/importAccountBalanceRebuild';
@@ -43,7 +43,7 @@ jest.mock('@/src/services/crypto/protocol/merkle', () => ({
 }));
 jest.mock('@/src/services/crypto/protocol/manifestBytes', () => ({ hashManifest: jest.fn() }));
 jest.mock('../shortKeys', () => ({ decodeCanonicalRow: jest.fn() }));
-jest.mock('../rowSource', () => ({
+jest.mock('../workplaceRowValidation', () => ({
   rowImportData: jest.fn(),
   validateWorkplaceRows: jest.fn(),
 }));
@@ -299,6 +299,27 @@ describe('restoreBackup', () => {
       expect(decodeCanonicalRow).not.toHaveBeenCalled();
       expect(importRepository.batchInsertRowRestore).not.toHaveBeenCalled();
       expect(localKeyHierarchy.installWorkplaceKeys).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    { ...content, safeToSpendDays: 7 },
+    { ...content, currencyPrecisions: {} },
+    { ...content, secret: 'unexpected' },
+  ])(
+    'rejects invalid decoded financial state with the real validator before publication or key installation',
+    async invalid => {
+      const real = jest.requireActual<typeof import('../workplaceRowValidation')>(
+        '../workplaceRowValidation',
+      );
+      jest.mocked(validateWorkplaceRows).mockImplementationOnce(real.validateWorkplaceRows);
+      jest.mocked(decodeCanonicalRow).mockReturnValueOnce(invalid);
+      await expect(
+        restoreBackup(new Uint8Array([1]), { mode: 'existing', identity }),
+      ).rejects.toThrow();
+      expect(importRepository.batchInsertRowRestore).not.toHaveBeenCalled();
+      expect(localKeyHierarchy.installWorkplaceKeys).not.toHaveBeenCalled();
+      expect(preferences.workplace.update).not.toHaveBeenCalled();
     },
   );
 

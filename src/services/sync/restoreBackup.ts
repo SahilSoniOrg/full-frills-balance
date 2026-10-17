@@ -1,3 +1,4 @@
+import type { RowSourceRecord } from './rowRecords';
 import { assertRowTable } from './rowTables';
 import { getRowDictionary } from './dictionaries';
 import { AppConfig } from '@/src/constants';
@@ -45,7 +46,7 @@ import {
 } from '@/src/services/crypto/protocol/merkle';
 import { hashManifest } from '@/src/services/crypto/protocol/manifestBytes';
 import { decodeCanonicalRow } from './shortKeys';
-import { rowImportData, validateWorkplaceRows, type RowSourceRecord } from './rowSource';
+import { rowImportData, validateWorkplaceRows } from './workplaceRowValidation';
 import { MAX_ROW_BATCH_BYTES, MAX_ROW_BATCH_COUNT } from '@/src/services/crypto/protocol/rowCrypto';
 
 export type RestoreBackupAccess = Readonly<

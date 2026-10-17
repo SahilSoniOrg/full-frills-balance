@@ -1,4 +1,4 @@
-import { validateWorkplaceRows } from '../rowSource';
+import { validateWorkplaceRows } from '../workplaceRowValidation';
 import type { WorkplaceId } from '@/src/types/ids';
 
 const WORKPLACE_ID = 'workplace-1' as WorkplaceId;

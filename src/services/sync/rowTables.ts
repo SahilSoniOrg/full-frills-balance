@@ -1,4 +1,4 @@
-import { canonicalJson, jsonObject } from './canonicalJson';
+import { canonicalJson, jsonObject } from './canonicalJsonData';
 export const INITIAL_SCHEMA_VERSION = 35 as const;
 export const CURRENT_ROW_SCHEMA_VERSION = 35 as const;
 
