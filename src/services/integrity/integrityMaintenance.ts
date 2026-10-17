@@ -17,6 +17,8 @@ import { clearLocalAuditActorId } from '@/src/services/audit-identity';
 import { reactiveCacheCoordinator } from '@/src/services/reactive/ReactiveCacheCoordinator';
 import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
 import { snapshotService } from '@/src/utils/SnapshotService';
+import { nativeKeyOperations } from '@/src/services/backup/nativeKeyOperations';
+import { keyCiphertextStateStore } from '@/src/services/backup/keyCiphertextStateStore';
 
 function runPostResetCleanup(
   warnings: string[],
@@ -111,6 +113,20 @@ export async function resetDatabase(): Promise<{
     throw error;
   }
   const warnings: string[] = [];
+  for (const cleanup of [
+    { label: 'Native encryption keys', run: () => nativeKeyOperations.clearVault() },
+    { label: 'Encrypted key records', run: () => keyCiphertextStateStore.clear() },
+    { label: 'Temporary recovery credentials', run: () => nativeKeyOperations.clearCredentials() },
+  ]) {
+    try {
+      await cleanup.run();
+    } catch (error) {
+      logger.warn(`[IntegrityMaintenance] ${cleanup.label} cleanup failed after factory reset`, {
+        error,
+      });
+      warnings.push(cleanup.label);
+    }
+  }
   runPostResetCleanup(warnings, [
     {
       label: 'Preference cleanup',

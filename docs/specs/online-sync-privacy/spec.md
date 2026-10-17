@@ -1,486 +1,52 @@
-# Spec — Private Cloud Backup, Device Sync, and Workplace Access
+# Private online backup and synchronization
 
-**Product:** Full Frills Balance  
-**Date:** 2026-09-06  
-**Status:** Draft architecture  
-**Related:** [`CONTEXT.md`](../../../CONTEXT.md), [`docs/specs/user-device-workplace/spec.md`](../user-device-workplace/spec.md)
+Date: 16 October 2026. Status: Device → User → Workplace key substrate implemented in native and service APIs; V1 whole-snapshot backup never shipped and was removed from this branch; [V2 row-envelope backup/recovery](./row-envelope-sync.md) and web WASM support are implemented, with release verification gates open and online sync unfinished; no online service or account enrollment.
 
-## 1. Decision summary
+[The documentation guide](./README.md) maps the current documents. [Key management](./key-management.md) defines the encryption architecture. [Preparation](./preparation.md) records what remains on the branch and open gates. Payload format, sync semantics and offline backup ZIP layout are authoritative in [row-envelope sync](./row-envelope-sync.md). Domain ownership follows [User, Device and Workplace](../user-device-workplace/spec.md) and [CONTEXT.md](../../../CONTEXT.md).
 
-Full Frills Balance will use a privacy-first online service for encrypted Workplace backup and synchronization.
+## Agreed decisions
 
-The backend may authenticate Users, register Devices, enforce Workplace membership, store encrypted changes, and coordinate synchronization. It must not be able to decrypt Workplace financial data.
+- Existing local books remain usable without login or upload consent. Creating User/Device/Workplace keys is deliberate; backup and sync must not generate or replace missing roots implicitly.
+- Preserve the stable application User UUID when binding a future login account. Provider subjects and email addresses are account attributes, not replacement User identities. Supabase Auth and backend storage are the current Phase 2 direction; no project, repository placement or schema has been created.
+- Generate independent User/Device encryption pairs, an independent User signing pair, and one random 256-bit Workplace DEK per Workplace. Pin the complete versioned User public identity before distributing credentials; later online signing reuses it. Device private key → local encrypted User bundle → User-addressed encrypted DEK → financial ciphertext.
+- Only the Device private key persists in the dedicated native vault. Readable User private keys and DEKs exist in memory during use, with no persisted DEK cache. Device bundles remain local and are excluded from app-managed exports/uploads.
+- The existing app-lock policy gates key use. The native vault uses device-only protection (iOS when-unlocked Keychain; AndroidKeyStore-wrapped keys in backup-excluded preferences), without requiring fresh biometrics for every private-key read. With app lock disabled, device unlock is the remaining user-authentication boundary.
+- Generate, export and verify separate User and Workplace recovery credentials. Creating or uploading encrypted backups must not require typing those secrets on every operation.
+- User recovery restores the same encryption/signing keys onto a fresh Device through a provider-neutral ciphertext source, independent of the lost installation. Missing or orphan local keys route to recovery; they never authorize a new root. It does not replace the User identity, register an online Device, change membership or authorize server writes by itself.
+- Workplace emergency material decrypts salvage ciphertext only (see [row-envelope sync — local backup file](./row-envelope-sync.md#local-backup-file) and [key management §8](./key-management.md#8-user-recovery-and-workplace-emergency-export)). Importing recovered data creates a new Workplace through import-as-copy. No old User/owner authority is recovered. The externally saved Workplace credential pins SHA-256 of the single DEK.
+- Rotation, root replacement, multi-writer budgets, writer handover and collaborative sharing are outside the current branch. Financial payloads use the V2 per-row model in [row-envelope sync](./row-envelope-sync.md); the removed unshipped whole-snapshot format and 2^20 DEK invocation cap are not part of the tree.
 
-The first online product is **one User across multiple Devices**. Collaborative multi-user Workplaces are a later extension of the same key model, not part of the first sync release.
+## Cryptographic boundaries
 
-The first online entry point is an upgrade flow. After upgrading, the User is offered online authentication. After authentication, the User must explicitly agree to sync before any Workplace data is uploaded. The app then creates the User key, Device key, and recovery material locally before enabling sync.
+Key envelopes use HPKE base mode with X25519/HKDF-SHA256/AES-256-GCM. Recovery credentials reconstruct independent recovery pairs through the library's versioned seed API. HPKE context binds purpose, recipient, User, Device or Workplace, and key identity. HPKE does not authenticate a sender.
 
-The initial backend recommendation is:
+Financial rows use AES-256-GCM with per-row HKDF subkeys, zstd dictionaries and signed manifest chains as specified in [row-envelope sync](./row-envelope-sync.md). Row manifest signatures use a dedicated domain string; they must not reuse the removed local-recovery signing domain.
 
-- Supabase Auth for User sessions;
-- Supabase Postgres for Users, Devices, Workplaces, memberships, sync metadata, and the operation log;
-- Supabase Storage or Cloudflare R2 for encrypted snapshots;
-- authenticated Edge Functions or API endpoints for device enrollment, sync, and recovery operations;
-- client-side encryption in the mobile app.
+Only listed financial source tables and audit history travel in encrypted backup/sync; derived balances, rate caches, Device SMS, Device switches and navigation preferences do not. Offline restore validates and publishes through `restoreBackup` and `ImportRepository.batchInsertRowRestore`, with a manifest-hash receipt for retries. Incremental sync apply remains unfinished.
 
-Supabase is an infrastructure choice, not a privacy boundary. Privacy comes from encrypting data before upload and keeping decryption keys out of the backend.
+## Manual publication and online service
 
-## 2. Terminology
+Online upload, account binding, Device registration, consent, checkpoints and backend storage are deferred. A future coordinator must require verified account/User-key/registered-Device identity, explicit Workplace upload consent, staged immutable ciphertext and idempotent retries. HPKE base mode and server-provided content hashes do not authenticate the sender; hosted restore requires verified signed manifests against pinned User identity.
 
-| Term | Meaning |
-| --- | --- |
-| User | Human identity authenticated by the online service. One User may have multiple Devices and memberships in multiple Workplaces. |
-| Device | One app installation. It owns a device key pair and local encrypted state. |
-| User key pair | Long-lived User-level asymmetric identity key pair. The private key is held by trusted client Devices and is used to authorize Device enrollment or handover. |
-| Workplace | The tenancy containing one set of financial books. |
-| Workplace DEK | Random symmetric key used to encrypt Workplace data. One Workplace has one active DEK generation. |
-| Device key pair | Per-installation asymmetric key pair used to authenticate one Device and receive wrapped Workplace keys. |
-| Recovery key | High-entropy recovery secret or key-encryption key used to recover the User key and/or Workplace keys. It is not the User key, Device key, or Workplace DEK. |
-| Wrapped key | A Workplace DEK encrypted to a Device public key or recovery key. |
-| Operation | One encrypted, idempotent change to a Workplace record. |
-| Snapshot | An encrypted backup of a consistent Workplace state. |
-| Membership | A User's role and status for a Workplace. |
+There is no deployed endpoint, sign-in provider, online setup surface or Supabase migration. Supabase is the current planned provider; its schema and integration still require design.
 
-Avoid calling every key a DEK. The Workplace DEK encrypts financial data. A device-local key, if used, protects local storage and is a separate concern.
+## Later synchronization
 
-## 3. Goals
+Do not synchronize SQLite files or mistake the existing audit log for a causal operation log. [Row-envelope sync](./row-envelope-sync.md) defines the first encrypted multi-Device protocol on this branch. Broader causal-operation requirements that extend beyond that doc:
 
-- Restore encrypted Workplace books on a replacement Device.
-- Keep one User's books synchronized across multiple Devices.
-- Allow the backend to enforce read/write access without seeing financial contents.
-- Preserve the local-first behavior of the current app.
-- Recompute derived balances and projections locally.
-- Make uploads retry-safe and downloads resumable.
-- Support future Workplace membership and roles.
-- Make device revocation and key recovery explicit.
+- Define cross-Device recurring-occurrence identity and generate/post/skip behavior, including schedule/time-zone changes and competing FX quotes.
+- Shared book preferences currently live outside the accounting database. Define a durable capture/reconciliation boundary for synced settings while retaining navigation and Device preferences locally.
 
-## 4. Non-goals for v1
+Merge independent financial changes only after whole-journal validation. Preserve competing edits and ask for confirmation when a safe merge is unavailable. Never silently last-write-wins edited money records.
 
-- Collaborative multi-user editing.
-- Tax, legal, or regulatory workflows.
-- Server-side reporting over plaintext financial data.
-- Uploading the WatermelonDB SQLite file as the sync format.
-- Automatic password-based recovery with no user-visible tradeoff.
-- Background SMS processing on the server.
-- Full metadata privacy. The service will necessarily see some account, device, size, and timing metadata unless a later padding/mixing design is added.
+Sharing adds User-addressed member DEK envelopes, invitations and roles. Device enrollment adds a local User bundle, not another per-Device DEK. Removal cannot retract previously copied User roots or plaintext. Protecting future data after root compromise requires a separately reviewed root-replacement and Workplace-rotation protocol ([key management §10](./key-management.md#10-owner-controlled-freeze-rotation-and-access-removal)).
 
-## 5. Key hierarchy
+Accounting history supplies reusable write boundaries and display helpers (`AccountingWriteSession`, `deriveAuditFieldDeltas`, guarded undo). It is not a complete causal operation log. Existing UPDATE deltas omit unchanged fields; timestamps do not establish revision ancestry; SMS privacy remediation and import remapping can rewrite historical bytes.
 
-The core hierarchy is:
+## Release order
 
-```text
-Workplace DEK
-  ├── wrapped for Device A
-  ├── wrapped for Device B
-  ├── wrapped for recovery key
-  └── wrapped for each future Workplace member
-```
+1. Complete physical-device and interruption gates for the key substrate and for V2 offline backup/restore per [preparation](./preparation.md#verification-and-remaining-gates) and [row-envelope rollout](./row-envelope-sync.md#rollout-task-list). Recovery secrets stay client-side; file-backed ciphertext may later be replaced by authorized backend retrieval.
+2. Bind the existing local User UUID to a provider-neutral account; implement signed Device registration, authenticated envelope delivery, authorization and explicit upload consent. Prove end-to-end User recovery before enabling manual online backup.
+3. Ship multi-Device sync (manifest chain, conflicts, fake then real transport), then sharing, rotation and root replacement as separate reviewed work.
 
-The identity hierarchy is separate:
-
-```text
-User key pair
-  ├── authorizes Device A
-  ├── authorizes Device B
-  └── protected/recoverable using recovery material
-
-Device A key pair → authenticates Device A
-Device B key pair → authenticates Device B
-```
-
-The User key is not used to encrypt every financial record. The Workplace DEK remains the data-encryption key. The Device key is not shared between Devices.
-
-### 5.1 Workplace DEK
-
-The Workplace DEK is generated on a trusted client using a cryptographically secure random source. It encrypts Workplace records, operation payloads, and snapshots with an authenticated-encryption algorithm such as AES-GCM or XChaCha20-Poly1305.
-
-Every encrypted item requires a unique nonce and authenticated associated data containing at least:
-
-- Workplace ID;
-- entity or operation ID;
-- schema/version identifier;
-- key generation.
-
-The Workplace DEK is never sent to the backend in plaintext.
-
-### 5.2 Device keys
-
-Each Device generates its own key material locally during enrollment:
-
-- an encryption key pair for receiving wrapped Workplace DEKs;
-- a signing key pair for authenticating submitted operations.
-
-Private keys remain in platform secure storage where possible. Public keys may be registered with the backend.
-
-If the platform or selected crypto library supports a secure hardware-backed key, use it. Hardware backing is defense in depth, not a replacement for the protocol.
-
-### 5.3 User key and recovery material
-
-After the User agrees to sync, the trusted client generates a long-lived User key pair. The User private key must not be stored on the backend in plaintext. It may be encrypted locally and wrapped for recovery.
-
-The app also creates recovery material. The recovery material should be generated or confirmed in an explicit setup surface and tested before cloud sync is enabled. The recovery secret can remain stable while Workplace DEK generations change; the recovery envelope is updated to wrap the current Workplace DEK or User private key.
-
-The User key is the User-level trust anchor. A new Device is accepted only after either:
-
-- an existing trusted Device authorizes and wraps the required key material for it; or
-- the User completes recovery on the new Device.
-
-### 5.4 Local database key
-
-A separate device-local key may encrypt the local SQLite database or sensitive cache. It must not be the Workplace DEK and must not be required by other Devices.
-
-## 6. Authentication and authorization
-
-Encryption and authorization solve different problems:
-
-```text
-User session       → who is making the request?
-Device key         → which registered installation is making it?
-Membership role    → may this identity read or write this Workplace?
-Workplace DEK      → can this Device understand the returned ciphertext?
-```
-
-### 6.1 User authentication
-
-The User authenticates through the identity provider and receives a short-lived session token plus a refresh mechanism. The domain model remains provider-neutral.
-
-### 6.2 Upgrade and sync-consent flow
-
-The upgrade flow must preserve the current local-only app until the User opts in:
-
-1. Upgrade the app and migrate local data normally.
-2. Present the online login mechanism.
-3. Explain what syncing uploads and what the backend cannot decrypt.
-4. Ask for explicit sync consent.
-5. Generate the User key pair locally.
-6. Generate the Device key pair locally.
-7. Generate and verify recovery material.
-8. Register the User and Device public keys with the backend.
-9. Wrap the User private key and each Workplace DEK for the appropriate recovery/device key.
-10. Upload encrypted Workplace data only after the User completes consent and key setup.
-
-Declining login or sync must leave local books usable. Consent must be revocable for future uploads, but stopping sync does not delete data already uploaded unless the User explicitly requests account/backup deletion.
-
-### 6.3 Device authentication
-
-The backend registers a Device public key after enrollment. Sensitive requests should include a challenge or nonce signed by the Device signing key. The backend verifies:
-
-- valid User session;
-- active registered Device;
-- signature over a canonical request or operation;
-- request freshness and replay protection.
-
-### 6.3 Workplace authorization
-
-The backend checks an active Workplace membership before returning or accepting ciphertext.
-
-Initial roles:
-
-| Role | Read | Write | Invite/revoke | Delete Workplace |
-| --- | --- | --- | --- | --- |
-| Owner | yes | yes | yes | yes |
-| Editor | yes | yes | no | no |
-| Viewer | yes | no | no | no |
-
-Supabase Row Level Security can enforce coarse access to rows. Edge Functions or an equivalent API layer should handle device signatures, canonical request verification, sync cursors, and security-sensitive transitions.
-
-## 7. Device enrollment and decryption
-
-### 7.1 First Device
-
-1. User authenticates.
-2. Device generates its key pairs.
-3. Backend registers the Device public keys.
-4. Device creates or imports a Workplace.
-5. Device generates or obtains the Workplace DEK.
-6. Device encrypts books locally and uploads ciphertext.
-7. Device uploads a copy of the Workplace DEK wrapped to its own public key.
-
-### 7.2 Second Device pairing
-
-Preferred flow:
-
-1. User signs in on Device B.
-2. Device B generates new key pairs.
-3. Device B displays a QR code or short pairing code containing an enrollment challenge.
-4. Device A scans or confirms the challenge.
-5. Device A verifies that the pairing is intentional and authenticates the request.
-6. Device A encrypts the Workplace DEK to Device B's public encryption key.
-7. Backend records Device B as active and stores the wrapped Workplace DEK.
-8. Device B downloads encrypted operations/snapshots and decrypts locally.
-
-Device B never receives Device A's private keys or a plaintext Workplace DEK over the network.
-
-### 7.3 Decryption on Device B
-
-```text
-Device B private key
-  decrypts wrapped Workplace DEK
-      ↓
-Workplace DEK
-  decrypts encrypted snapshot/operations
-      ↓
-Local WatermelonDB records
-  rebuilds balances and projections
-```
-
-## 8. Backup and sync protocol
-
-Backup and sync share encryption but use different transport semantics.
-
-### 8.1 Encrypted backup
-
-An export job creates a consistent local snapshot, encrypts it on-device, and uploads:
-
-- ciphertext;
-- schema version;
-- key generation;
-- ciphertext hash;
-- size and timestamps;
-- Workplace and Device identifiers needed for authorization.
-
-The backend stores the blob but cannot inspect its contents.
-
-### 8.2 Incremental sync
-
-Do not sync raw SQLite files. Sync encrypted operations using a server cursor:
-
-```text
-Device A → encrypted operation + signature → backend
-Device B ← operations after cursor        ← backend
-Device B → decrypts and applies locally
-Device B → rebuilds derived balances
-```
-
-Each operation needs:
-
-- globally unique operation ID;
-- Workplace ID;
-- Device ID;
-- entity type and entity ID;
-- encrypted payload;
-- key generation;
-- client-created timestamp;
-- causal/version metadata;
-- signature;
-- idempotency status.
-
-Uploads must be safe to retry. The backend must treat a repeated operation ID as the same operation, not a second mutation.
-
-### 8.3 What is authoritative
-
-Sync source data:
-
-- Accounts;
-- Journals and transactions;
-- Budgets and scopes;
-- Planned payments;
-- Workplace preferences that affect book meaning;
-- Workplace-owned SMS rules and consumed records.
-
-Rebuild locally:
-
-- Account balances;
-- Net worth;
-- Budget usage;
-- Safe to Spend projections;
-- Reports;
-- Other caches and snapshots.
-
-The server must not become authoritative for derived balances.
-
-## 9. Conflict handling
-
-Conflict policy is per entity, not global.
-
-- Journal creation: append-only where possible.
-- Journal edits: create revisions or explicit conflict records; do not silently last-write-wins financial changes.
-- Account names, icons, colors: last-write-wins may be acceptable.
-- Budgets and planned payments: versioned edit with conflict UI when both Devices changed the same record.
-- Deletes: represent as tombstones and replicate them before garbage collection.
-- Membership and security changes: server-authoritative and audited.
-
-If an operation cannot be safely merged, preserve both versions and require a user decision. Losing a financial mutation silently is worse than showing a conflict.
-
-## 10. Recovery
-
-Device pairing is not sufficient. Users can lose every Device.
-
-The Workplace DEK should also be wrapped by a recovery key. Candidate recovery mechanisms:
-
-- user-generated recovery phrase;
-- password-derived key using a memory-hard KDF such as Argon2id or scrypt;
-- trusted-device recovery, where an existing Device approves a replacement.
-
-Recommended product behavior:
-
-1. Require the User to create or confirm a recovery method before enabling cloud backup.
-2. Generate recovery material for the User and require them to confirm that it has been saved or otherwise made recoverable.
-3. Test recovery during setup.
-4. Make clear that losing both Devices and the recovery method can make encrypted books unrecoverable.
-5. Never imply that a server password reset can recover plaintext books.
-
-## 11. Revocation and key rotation
-
-Authorization and key rotation solve different problems:
-
-```text
-Auth layer → may this identity fetch ciphertext?
-Workplace DEK → can a device decrypt ciphertext it already possesses?
-```
-
-For the one-User, multiple-Device MVP, backend revocation may be sufficient for normal access control: an inactive Device or membership cannot download old or new ciphertext. Key rotation is the stronger defense if ciphertext escapes the authorization layer.
-
-For multi-user Workplaces, or after suspected key compromise, rotate the Workplace DEK. Use key generations (epochs):
-
-```text
-epoch 1 → members/devices A, B, C
-C removed
-epoch 2 → members/devices A, B
-```
-
-When a Device or User is removed:
-
-1. Mark the Device revoked on the backend.
-2. Mark the membership revoked when removal is a User action.
-3. Reject new sync requests from the revoked identity or Device.
-4. Stop returning ciphertext to it.
-5. For a security rotation, generate a new Workplace DEK for future writes.
-6. Wrap the new DEK for remaining active Devices and the recovery key.
-
-Revocation cannot erase data already downloaded by a compromised or removed Device. A removed User who still has an old DEK can decrypt any old ciphertext they possess. DEK rotation makes that old key useless for future ciphertext obtained after the rotation, but it cannot recall plaintext.
-
-### 11.1 Scheduled rotation — deferred
-
-Automatic monthly or User-selected rotation is explicitly out of scope for the initial sync system. It remains a future option only.
-
-If later introduced, it will require:
-
-- all active Devices to receive the new key;
-- a pending-rotation state for offline Devices;
-- retention of old keys for historical data;
-- key-generation metadata on every operation and snapshot;
-- resumable and idempotent rotation.
-
-Event-driven rotation after Device/member removal or suspected compromise is also deferred from the first one-User, multi-Device MVP unless the accepted threat model requires it.
-
-### 11.2 Recovery key behavior
-
-The recovery secret is separate from the Workplace DEK. It may remain stable across Workplace DEK generations, but the recovery envelope must be updated for each new generation:
-
-```text
-Recovery key → wrapped Workplace DEK v1
-Recovery key → wrapped Workplace DEK v2
-Recovery key → wrapped Workplace DEK v3
-```
-
-If the recovery secret is changed or suspected compromised, generate a new recovery key and re-wrap the current Workplace DEK. Recovery-secret replacement is separate from Workplace DEK rotation.
-
-For future multi-user Workplaces, each member receives a wrapped copy of the current Workplace DEK. Removing a member prevents future access through the backend and, after rotation, prevents the old key from decrypting future ciphertext. Previously downloaded plaintext cannot be remotely recalled.
-
-## 12. Backend shape
-
-Initial logical tables:
-
-```text
-users
-devices
-device_sessions
-workplaces
-workplace_members
-workplace_device_keys
-sync_operations
-sync_cursors
-backup_snapshots
-recovery_key_envelopes
-audit_events
-```
-
-The backend should store ciphertext as opaque bytes or text. It may store non-sensitive routing metadata required for authorization and synchronization.
-
-Suggested service boundaries:
-
-- `IdentityService` — User sessions and account lifecycle.
-- `DeviceService` — key registration, pairing, heartbeat, revocation.
-- `WorkplaceAccessService` — memberships and roles.
-- `WorkplaceKeyService` — wrapped-key envelopes and generation rotation.
-- `SyncService` — push, pull, cursors, idempotency, tombstones.
-- `BackupService` — encrypted snapshot upload, retention, download, deletion.
-
-Keep these separate from current local accounting services. Local journal and balance logic should remain usable without network access.
-
-## 13. Threat model
-
-The design protects against:
-
-- database/storage compromise where the attacker obtains ciphertext;
-- backend operators reading financial contents;
-- unauthorized Devices attempting to access a Workplace;
-- replayed or duplicated operations;
-- accidental duplicate uploads;
-- a lost Device after revocation, for future data.
-
-It does not fully protect against:
-
-- malware on an unlocked Device;
-- a compromised operating system or secure-storage implementation;
-- a User intentionally sharing recovery material;
-- a Device that downloaded plaintext before revocation;
-- traffic analysis and all metadata leakage;
-- a malicious backend withholding or delaying data.
-
-## 14. Phased delivery
-
-### Phase 1 — Encrypted manual backup
-
-- Upgrade-time User authentication.
-- Explicit sync consent.
-- User key-pair and Device key-pair generation.
-- Recovery-material generation, verification, and restore.
-- Workplace DEK generation or adoption for existing local Workplaces.
-- Encrypted snapshot upload/download.
-- Restore on a second Device through trusted-device handover or recovery.
-- Device registration and revocation.
-
-### Phase 2 — One-user multi-device sync
-
-- Device pairing.
-- Encrypted operation log.
-- Cursor-based pull/push.
-- Idempotency and tombstones.
-- Local rebuild after sync.
-- Conflict detection for edited financial records.
-
-### Phase 3 — Reliability and paid service
-
-- Automatic backup scheduling.
-- Retention/version history.
-- Storage quotas.
-- Sync diagnostics.
-- Offline queue visibility.
-- Subscription or paid backup tiers.
-
-### Phase 4 — Multi-user Workplaces
-
-- Invitations and membership roles.
-- Wrapped key per member.
-- Key rotation on removal.
-- Collaboration conflict UI.
-- Shared audit history.
-
-Tax and other legal workflows remain separate product lines and should not block private backup/sync.
-
-## 15. Open decisions before implementation
-
-- Exact mobile crypto library and platform support for Expo/native builds.
-- AES-GCM versus XChaCha20-Poly1305.
-- Whether local SQLite is encrypted separately from synced payloads.
-- Recovery phrase versus password-derived recovery, or both.
-- Snapshot frequency and retention limits.
-- Whether sync operations are per record, per domain command, or per transaction batch.
-- Whether event-driven key rotation is required when the first multi-user model is introduced; scheduled automatic rotation is not part of v1.
-- How much metadata the service is allowed to retain.
-- Whether Supabase Storage is sufficient or R2 is preferred for backup economics.
-- Whether a managed sync product can support WatermelonDB without weakening the protocol.
-
-No backend implementation should begin until the key lifecycle, recovery behavior, and operation/conflict model are accepted.
+Automatic uploads, billing, quotas and vendor choice do not resolve local correctness or identity gates.

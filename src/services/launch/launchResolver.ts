@@ -1,9 +1,9 @@
 import { WorkplaceId } from '@/src/types/ids';
 
 /**
- * The launch layer only needs these two facts from Setup. The Setup feature
- * owns the full draft and validates it before handing this projection to
- * launch. Keeping the projection small prevents launch from learning about
+ * The launch layer only needs these two facts from Setup. The shared setup draft store
+ * owns persistence and validates the full draft before handing this projection
+ * to launch. Keeping the projection small prevents launch from learning about
  * individual setup slices.
  */
 export type LaunchSetupDraft =

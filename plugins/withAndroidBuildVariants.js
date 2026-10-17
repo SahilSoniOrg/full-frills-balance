@@ -47,7 +47,17 @@ android {
             resValue "string", "app_name", "${escapeGroovyString(preview.name)}"
             matchingFallbacks = ['release']
         }
+        verification {
+            initWith release
+            applicationIdSuffix ".verification"
+            resValue "string", "app_name", "Full Frills Balance (Verification)"
+            matchingFallbacks = ['release']
+        }
     }
+}
+// Switching verification mode must not reuse a bundle containing E2E hooks.
+tasks.matching { it.name == 'createBundleVerificationJsAndAssets' }.configureEach {
+    inputs.property('ffbVerificationE2e', providers.environmentVariable('EXPO_PUBLIC_E2E').orElse('0'))
 }
 ${MARKER_END}`;
 }

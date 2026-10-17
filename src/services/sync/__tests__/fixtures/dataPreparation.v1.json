@@ -1,0 +1,439 @@
+{
+  "provenance": "Captured from the pre-extraction rowSource and canonical short-key codec; synthetic data only.",
+  "input": {
+    "workplace": {
+      "id": "workplace-fixture",
+      "name": "Synthetic books",
+      "icon": "briefcase",
+      "defaultCurrencyCode": "USD",
+      "updatedAt": 20
+    },
+    "safeToSpendDays": 30,
+    "currencyPrecisions": {
+      "USD": 2
+    },
+    "tables": {
+      "accounts": [
+        {
+          "id": "cash",
+          "name": "cash",
+          "accountType": "ASSET",
+          "currencyCode": "USD",
+          "description": null,
+          "color": "#123456",
+          "createdAt": 1,
+          "updatedAt": 2,
+          "deletedAt": null,
+          "deviceSecret": "excluded"
+        },
+        {
+          "id": "expense",
+          "name": "expense",
+          "accountType": "EXPENSE",
+          "currencyCode": "USD",
+          "description": null,
+          "createdAt": 1,
+          "updatedAt": 2,
+          "deletedAt": null,
+          "deviceSecret": "excluded"
+        }
+      ],
+      "journals": [
+        {
+          "id": "journal",
+          "journalDate": 3,
+          "description": "Synthetic purchase",
+          "notes": null,
+          "currencyCode": "USD",
+          "status": "POSTED",
+          "totalAmount": 1250,
+          "transactionCount": 2,
+          "displayType": "EXPENSE",
+          "createdAt": 3,
+          "updatedAt": 4
+        }
+      ],
+      "transactions": [
+        {
+          "id": "leg-0",
+          "journalId": "journal",
+          "accountId": "cash",
+          "amount": 1250,
+          "transactionType": "CREDIT",
+          "currencyCode": "USD",
+          "transactionDate": 3,
+          "exchangeRate": null,
+          "createdAt": 3,
+          "updatedAt": 4
+        },
+        {
+          "id": "leg-1",
+          "journalId": "journal",
+          "accountId": "expense",
+          "amount": 1250,
+          "transactionType": "DEBIT",
+          "currencyCode": "USD",
+          "transactionDate": 3,
+          "exchangeRate": null,
+          "createdAt": 3,
+          "updatedAt": 4
+        }
+      ],
+      "journal_metadata": [
+        {
+          "id": "metadata",
+          "journalId": "journal",
+          "importSource": "sms",
+          "originalSmsId": "synthetic-sms",
+          "metadataJson": "{\"body\":\"PRIVATE SYNTHETIC BODY\",\"sender\":\"PRIVATE SENDER\",\"smsFingerprint\":\"synthetic-legacy\",\"merchant\":\"Example\"}",
+          "referenceNumber": null,
+          "createdAt": 3,
+          "updatedAt": 4
+        }
+      ],
+      "audit_logs": [
+        {
+          "id": "audit",
+          "entityType": "journal",
+          "entityId": "journal",
+          "action": "UPDATE",
+          "changes": "{\"originalSmsBody\":\"PRIVATE SYNTHETIC BODY\",\"description\":{\"old\":\"Before\",\"new\":\"After\"}}",
+          "timestamp": 5,
+          "createdAt": 5
+        }
+      ],
+      "transaction_inbox_records": [
+        {
+          "id": "inbox-0",
+          "channel": "sms",
+          "deviceSourceId": "synthetic-device",
+          "inputDate": 3,
+          "inputFingerprint": "synthetic-legacy",
+          "parseStatus": "parsed",
+          "direction": "debit",
+          "processingStatus": "pending",
+          "metadataJson": "{\"body\":\"PRIVATE SYNTHETIC BODY\",\"merchant\":\"Example\"}",
+          "firstSeenAt": 3,
+          "lastScannedAt": 4,
+          "createdAt": 3,
+          "updatedAt": 4
+        },
+        {
+          "id": "inbox-1",
+          "channel": "sms",
+          "deviceSourceId": "synthetic-device",
+          "inputDate": 3,
+          "inputFingerprint": "synthetic-legacy",
+          "parseStatus": "parsed",
+          "direction": "debit",
+          "processingStatus": "imported",
+          "metadataJson": "{\"body\":\"PRIVATE SYNTHETIC BODY\",\"merchant\":\"Example\"}",
+          "firstSeenAt": 3,
+          "lastScannedAt": 4,
+          "createdAt": 3,
+          "updatedAt": 4
+        }
+      ]
+    }
+  },
+  "rows": [
+    {
+      "table": "accounts",
+      "rowId": "cash",
+      "updatedAt": 2,
+      "deleted": false,
+      "content": {
+        "name": "cash",
+        "accountType": "ASSET",
+        "currencyCode": "USD",
+        "color": "#123456",
+        "createdAt": 1,
+        "updatedAt": 2
+      }
+    },
+    {
+      "table": "accounts",
+      "rowId": "expense",
+      "updatedAt": 2,
+      "deleted": false,
+      "content": {
+        "name": "expense",
+        "accountType": "EXPENSE",
+        "currencyCode": "USD",
+        "createdAt": 1,
+        "updatedAt": 2
+      }
+    },
+    {
+      "table": "journals",
+      "rowId": "journal",
+      "updatedAt": 4,
+      "deleted": false,
+      "content": {
+        "journalDate": 3,
+        "description": "Synthetic purchase",
+        "currencyCode": "USD",
+        "status": "POSTED",
+        "totalAmount": 1250,
+        "transactionCount": 2,
+        "displayType": "EXPENSE",
+        "createdAt": 3,
+        "updatedAt": 4
+      }
+    },
+    {
+      "table": "transactions",
+      "rowId": "leg-0",
+      "updatedAt": 4,
+      "deleted": false,
+      "content": {
+        "journalId": "journal",
+        "accountId": "cash",
+        "amount": 1250,
+        "transactionType": "CREDIT",
+        "currencyCode": "USD",
+        "transactionDate": 3,
+        "createdAt": 3,
+        "updatedAt": 4
+      }
+    },
+    {
+      "table": "transactions",
+      "rowId": "leg-1",
+      "updatedAt": 4,
+      "deleted": false,
+      "content": {
+        "journalId": "journal",
+        "accountId": "expense",
+        "amount": 1250,
+        "transactionType": "DEBIT",
+        "currencyCode": "USD",
+        "transactionDate": 3,
+        "createdAt": 3,
+        "updatedAt": 4
+      }
+    },
+    {
+      "table": "audit_logs",
+      "rowId": "audit",
+      "updatedAt": 5,
+      "deleted": false,
+      "content": {
+        "entityType": "journal",
+        "entityId": "journal",
+        "action": "UPDATE",
+        "changes": "{\"description\":{\"old\":\"Before\",\"new\":\"After\"}}",
+        "timestamp": 5,
+        "createdAt": 5
+      }
+    },
+    {
+      "table": "journal_metadata",
+      "rowId": "metadata",
+      "updatedAt": 4,
+      "deleted": false,
+      "content": {
+        "journalId": "journal",
+        "importSource": "sms",
+        "originalSmsId": "synthetic-sms",
+        "metadataJson": "{\"smsFingerprint\":\"sha256:6732e0fb40a89efe6d6abca5f1f7e1e535638cd7a929fb2cf2a89b8f58c36820\",\"merchant\":\"Example\"}",
+        "createdAt": 3,
+        "updatedAt": 4
+      }
+    },
+    {
+      "table": "transaction_inbox_records",
+      "rowId": "inbox-1",
+      "updatedAt": 4,
+      "deleted": false,
+      "content": {
+        "channel": "sms",
+        "deviceSourceId": "synthetic-device",
+        "inputDate": 3,
+        "inputFingerprint": "sha256:6732e0fb40a89efe6d6abca5f1f7e1e535638cd7a929fb2cf2a89b8f58c36820",
+        "parseStatus": "parsed",
+        "direction": "debit",
+        "processingStatus": "imported",
+        "metadataJson": "{\"merchant\":\"Example\"}",
+        "firstSeenAt": 3,
+        "lastScannedAt": 4,
+        "createdAt": 3,
+        "updatedAt": 4
+      }
+    },
+    {
+      "table": "workplace",
+      "rowId": "workplace-fixture",
+      "updatedAt": 20,
+      "deleted": false,
+      "content": {
+        "name": "Synthetic books",
+        "icon": "briefcase",
+        "defaultCurrencyCode": "USD",
+        "safeToSpendDays": 30,
+        "currencyPrecisions": {
+          "USD": 2
+        }
+      }
+    }
+  ],
+  "encoded": [
+    {
+      "table": "accounts",
+      "rowId": "cash",
+      "canonical": "{\"a\":\"cash\",\"b\":\"ASSET\",\"d\":\"USD\",\"h\":\"#123456\",\"l\":1,\"m\":2}",
+      "hash": "2e472456b9470adbf66624229e0bd3af53cb5e2f25b2d7459c7ab63a67bf859d"
+    },
+    {
+      "table": "accounts",
+      "rowId": "expense",
+      "canonical": "{\"a\":\"expense\",\"b\":\"EXPENSE\",\"d\":\"USD\",\"l\":1,\"m\":2}",
+      "hash": "c01b7b81a10a2ce9f4396fe175cedc0b3507d9cbf00c1ef3c992bdc32245b0b2"
+    },
+    {
+      "table": "journals",
+      "rowId": "journal",
+      "canonical": "{\"a\":3,\"b\":\"Synthetic purchase\",\"d\":\"USD\",\"e\":\"POSTED\",\"h\":1250,\"i\":2,\"j\":\"EXPENSE\",\"l\":3,\"m\":4}",
+      "hash": "22ccb08286c9bbaed052fd80026e78af07a224e185440b18a4b2ab0065ad73be"
+    },
+    {
+      "table": "transactions",
+      "rowId": "leg-0",
+      "canonical": "{\"a\":\"journal\",\"b\":\"cash\",\"c\":1250,\"d\":\"CREDIT\",\"e\":\"USD\",\"f\":3,\"i\":3,\"j\":4}",
+      "hash": "f5a5b22c772f7109508120320e4b418c4b92c17c128afd4ac86776dcd8e2bd41"
+    },
+    {
+      "table": "transactions",
+      "rowId": "leg-1",
+      "canonical": "{\"a\":\"journal\",\"b\":\"expense\",\"c\":1250,\"d\":\"DEBIT\",\"e\":\"USD\",\"f\":3,\"i\":3,\"j\":4}",
+      "hash": "bcbdea7e93f0833c831bc2d38488cf9b20c4b0de951ef9ce46332ae9e83daa0f"
+    },
+    {
+      "table": "audit_logs",
+      "rowId": "audit",
+      "canonical": "{\"a\":\"journal\",\"b\":\"journal\",\"c\":\"UPDATE\",\"d\":\"{\\\"description\\\":{\\\"old\\\":\\\"Before\\\",\\\"new\\\":\\\"After\\\"}}\",\"e\":5,\"f\":5}",
+      "hash": "5665007c0ca8ebaa3fdba5134fd89d56010957c6c1349e42a03d8ec12f188941"
+    },
+    {
+      "table": "journal_metadata",
+      "rowId": "metadata",
+      "canonical": "{\"a\":\"journal\",\"b\":\"sms\",\"c\":\"synthetic-sms\",\"d\":\"{\\\"smsFingerprint\\\":\\\"sha256:6732e0fb40a89efe6d6abca5f1f7e1e535638cd7a929fb2cf2a89b8f58c36820\\\",\\\"merchant\\\":\\\"Example\\\"}\",\"f\":3,\"g\":4}",
+      "hash": "d83fa793849266bd124fbd7acd1549e9daf85b3f2ac943edbf8bc2ed7d313cc6"
+    },
+    {
+      "table": "transaction_inbox_records",
+      "rowId": "inbox-1",
+      "canonical": "{\"a\":\"sms\",\"b\":\"synthetic-device\",\"c\":3,\"d\":\"sha256:6732e0fb40a89efe6d6abca5f1f7e1e535638cd7a929fb2cf2a89b8f58c36820\",\"e\":\"parsed\",\"k\":\"debit\",\"l\":\"imported\",\"q\":\"{\\\"merchant\\\":\\\"Example\\\"}\",\"r\":3,\"s\":4,\"u\":3,\"v\":4}",
+      "hash": "d3cf72ef19579025c358fa8dad363ae64585d08db61d72d456c599721aeb9b54"
+    },
+    {
+      "table": "workplace",
+      "rowId": "workplace-fixture",
+      "canonical": "{\"a\":\"Synthetic books\",\"b\":\"briefcase\",\"c\":\"USD\",\"d\":30,\"e\":{\"USD\":2}}",
+      "hash": "72f98589d79652c0ba26e1d045164fe97afdbea53a3733828f80b12399c13172"
+    }
+  ],
+  "importData": {
+    "accounts": [
+      {
+        "id": "cash",
+        "name": "cash",
+        "accountType": "ASSET",
+        "currencyCode": "USD",
+        "color": "#123456",
+        "createdAt": 1,
+        "updatedAt": 2
+      },
+      {
+        "id": "expense",
+        "name": "expense",
+        "accountType": "EXPENSE",
+        "currencyCode": "USD",
+        "createdAt": 1,
+        "updatedAt": 2
+      }
+    ],
+    "journals": [
+      {
+        "id": "journal",
+        "journalDate": 3,
+        "description": "Synthetic purchase",
+        "currencyCode": "USD",
+        "status": "POSTED",
+        "totalAmount": 1250,
+        "transactionCount": 2,
+        "displayType": "EXPENSE",
+        "createdAt": 3,
+        "updatedAt": 4
+      }
+    ],
+    "transactions": [
+      {
+        "id": "leg-0",
+        "journalId": "journal",
+        "accountId": "cash",
+        "amount": 1250,
+        "transactionType": "CREDIT",
+        "currencyCode": "USD",
+        "transactionDate": 3,
+        "createdAt": 3,
+        "updatedAt": 4
+      },
+      {
+        "id": "leg-1",
+        "journalId": "journal",
+        "accountId": "expense",
+        "amount": 1250,
+        "transactionType": "DEBIT",
+        "currencyCode": "USD",
+        "transactionDate": 3,
+        "createdAt": 3,
+        "updatedAt": 4
+      }
+    ],
+    "auditLogs": [
+      {
+        "id": "audit",
+        "entityType": "journal",
+        "entityId": "journal",
+        "action": "UPDATE",
+        "changes": "{\"description\":{\"old\":\"Before\",\"new\":\"After\"}}",
+        "timestamp": 5,
+        "createdAt": 5
+      }
+    ],
+    "budgets": [],
+    "budgetScopes": [],
+    "accountMetadata": [],
+    "plannedPayments": [],
+    "journalMetadata": [
+      {
+        "id": "metadata",
+        "journalId": "journal",
+        "importSource": "sms",
+        "originalSmsId": "synthetic-sms",
+        "metadataJson": "{\"smsFingerprint\":\"sha256:6732e0fb40a89efe6d6abca5f1f7e1e535638cd7a929fb2cf2a89b8f58c36820\",\"merchant\":\"Example\"}",
+        "createdAt": 3,
+        "updatedAt": 4
+      }
+    ],
+    "transactionAutoPostRules": [],
+    "transactionInboxRecords": [
+      {
+        "id": "inbox-1",
+        "channel": "sms",
+        "deviceSourceId": "synthetic-device",
+        "inputDate": 3,
+        "inputFingerprint": "sha256:6732e0fb40a89efe6d6abca5f1f7e1e535638cd7a929fb2cf2a89b8f58c36820",
+        "parseStatus": "parsed",
+        "direction": "debit",
+        "processingStatus": "imported",
+        "metadataJson": "{\"merchant\":\"Example\"}",
+        "firstSeenAt": 3,
+        "lastScannedAt": 4,
+        "createdAt": 3,
+        "updatedAt": 4
+      }
+    ]
+  }
+}

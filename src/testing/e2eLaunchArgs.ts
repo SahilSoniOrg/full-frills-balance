@@ -13,6 +13,7 @@ import { isE2eHarnessEnabled } from './e2eRuntimeGate';
 
 export type E2eLaunchConfig = {
   reset: boolean;
+  restoreVerification?: boolean;
   seedProfile?: E2eSeedProfile;
   backupPath?: string;
   updateGateMode?: E2eUpdateGateMode;
@@ -44,6 +45,7 @@ function configFromArgs(args: Record<string, unknown>): E2eLaunchConfig | null {
       : undefined;
   return {
     reset: reset || Boolean(seedProfile),
+    ...(args.e2eRestoreVerification === '1' ? { restoreVerification: true } : {}),
     seedProfile,
     backupPath,
     ...(updateGateMode ? { updateGateMode } : {}),

@@ -1,0 +1,551 @@
+import { AccountType } from '@/src/types/enums';
+import { isValidIconName, type IconName } from '@/src/types/domainIcons';
+import { asAccountId, asWorkplaceId } from '@/src/types/ids';
+import { storage } from '@/src/utils/storage';
+import { notifySetupDraftChanged, SETUP_DRAFT_KEY } from '@/src/services/setup/launchProjection';
+import {
+  claimedRestoreFingerprint,
+  isRestoreOwnershipTuple,
+  parseRestoreFacts,
+  parseRestoreHandoff,
+  parseRestoreStats,
+  restorePublicationClaims,
+} from '@/src/services/import/restore';
+import { forgetAllPreparedRestores } from './preparedRestoreCache';
+import type {
+  DeviceSetupOutput,
+  RestoreDraftState,
+  RestoreHandoff,
+  RestoreSetupDraft,
+  RestoreSourceOutput,
+  RestoreSourceRef,
+  RestoreSummaryOutput,
+  SetupDraft,
+  SetupDraftBase,
+  SetupSummaryOutput,
+  SetupSliceId,
+  Sourced,
+  StarterAccountInput,
+  WorkplaceCheckpoint,
+  WorkplaceCreationSetupDraft,
+  WorkplaceSetupOutput,
+} from './setupTypes';
+import {
+  isAccountType,
+  isRestoreJourneyId,
+  isSetupFactSource,
+  isSetupJourneyId,
+  isSetupSliceId,
+  isWorkplaceId,
+  restoreSources,
+} from './setupTypes';
+
+export { SETUP_DRAFT_KEY };
+export const SETUP_DRAFT_SCHEMA_VERSION = 1 as const;
+
+type RecordValue = Record<string, unknown>;
+
+function isRecord(value: unknown): value is RecordValue {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function hasOnlyKeys(value: RecordValue, keys: readonly string[]): boolean {
+  const allowed = new Set(keys);
+  return Object.keys(value).every(key => allowed.has(key));
+}
+
+function nonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0;
+}
+
+function parseSourced<T>(
+  value: unknown,
+  parseValue: (value: unknown) => T | undefined,
+): Sourced<T> | undefined {
+  if (
+    !isRecord(value) ||
+    !hasOnlyKeys(value, ['value', 'source']) ||
+    !isSetupFactSource(value.source)
+  ) {
+    return undefined;
+  }
+  const parsedValue = parseValue(value.value);
+  return parsedValue === undefined ? undefined : { value: parsedValue, source: value.source };
+}
+
+function parseNonEmptySourcedString(value: unknown): Sourced<string> | undefined {
+  return parseSourced(value, candidate => (nonEmptyString(candidate) ? candidate : undefined));
+}
+
+function parseIcon(value: unknown): IconName | undefined {
+  return typeof value === 'string' && isValidIconName(value) ? value : undefined;
+}
+
+function parseStarter(value: unknown): StarterAccountInput | undefined {
+  if (!isRecord(value) || !hasOnlyKeys(value, ['id', 'name', 'type', 'icon'])) return undefined;
+  if (value.id !== undefined && !isWorkplaceId(value.id)) return undefined;
+  const icon = parseIcon(value.icon);
+  if (!nonEmptyString(value.name) || !isAccountType(value.type) || !icon) return undefined;
+  return {
+    ...(value.id === undefined ? {} : { id: asAccountId(value.id) }),
+    name: value.name,
+    type: value.type,
+    icon,
+  };
+}
+
+function parseStarterArray(
+  value: unknown,
+  category: boolean,
+): readonly StarterAccountInput[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const items = value.map(parseStarter);
+  if (items.some(item => item === undefined)) return undefined;
+  if (
+    category &&
+    items.some(item => item?.type !== AccountType.INCOME && item?.type !== AccountType.EXPENSE)
+  ) {
+    return undefined;
+  }
+  return items as StarterAccountInput[];
+}
+
+function parseSourcedIcon(value: unknown): Sourced<IconName> | undefined {
+  return parseSourced(value, parseIcon);
+}
+
+function parseSourcedCurrency(value: unknown): Sourced<string> | undefined {
+  return parseNonEmptySourcedString(value);
+}
+
+const CHECKPOINTS: readonly WorkplaceCheckpoint[] = [
+  'identity',
+  'currency',
+  'accounts',
+  'categories',
+];
+
+function parseCheckpointArray(value: unknown): readonly WorkplaceCheckpoint[] | undefined {
+  if (
+    !Array.isArray(value) ||
+    !value.every(item => CHECKPOINTS.includes(item as WorkplaceCheckpoint))
+  ) {
+    return undefined;
+  }
+  const checkpoints = value as WorkplaceCheckpoint[];
+  return new Set(checkpoints).size === checkpoints.length ? checkpoints : undefined;
+}
+
+function parseWorkplace(value: unknown): WorkplaceSetupOutput | undefined {
+  if (
+    !isRecord(value) ||
+    !hasOnlyKeys(value, [
+      'name',
+      'icon',
+      'baseCurrency',
+      'selectedAccounts',
+      'selectedCategories',
+      'acceptedCheckpoints',
+    ])
+  ) {
+    return undefined;
+  }
+  const name = parseNonEmptySourcedString(value.name);
+  const icon = parseSourcedIcon(value.icon);
+  const baseCurrency = parseSourcedCurrency(value.baseCurrency);
+  const selectedAccounts = parseStarterArray(value.selectedAccounts, false);
+  const selectedCategories = parseStarterArray(value.selectedCategories, true);
+  const acceptedCheckpoints = parseCheckpointArray(value.acceptedCheckpoints);
+  return name &&
+    icon &&
+    baseCurrency &&
+    selectedAccounts &&
+    selectedCategories &&
+    acceptedCheckpoints
+    ? { name, icon, baseCurrency, selectedAccounts, selectedCategories, acceptedCheckpoints }
+    : undefined;
+}
+
+function parseSourceRef(value: unknown): RestoreSourceRef | undefined {
+  if (
+    !isRecord(value) ||
+    !nonEmptyString(value.uri) ||
+    !nonEmptyString(value.name) ||
+    !nonEmptyString(value.fingerprint)
+  ) {
+    return undefined;
+  }
+  if (value.size !== undefined && !isNonNegativeInteger(value.size)) return undefined;
+  if (value.workplaceIndex !== undefined && !isNonNegativeInteger(value.workplaceIndex))
+    return undefined;
+  return {
+    uri: value.uri,
+    name: value.name,
+    ...(value.size === undefined ? {} : { size: value.size }),
+    fingerprint: value.fingerprint,
+    ...(value.workplaceIndex === undefined ? {} : { workplaceIndex: value.workplaceIndex }),
+  };
+}
+
+function parseRestoreSourceRecord(value: unknown): RestoreSourceOutput | undefined {
+  if (!isRecord(value)) return undefined;
+  const source = parseSourceRef(value.source);
+  const facts = parseRestoreFacts(value.facts);
+  const stats = value.stats === undefined ? undefined : parseRestoreStats(value.stats);
+  const warnings =
+    value.warnings === undefined
+      ? undefined
+      : Array.isArray(value.warnings)
+        ? value.warnings.filter((item): item is string => typeof item === 'string')
+        : undefined;
+  if (
+    !source ||
+    !facts ||
+    (value.stats !== undefined && !stats) ||
+    (value.warnings !== undefined &&
+      (!warnings || warnings.length !== (value.warnings as unknown[]).length))
+  ) {
+    return undefined;
+  }
+  const operationId =
+    value.operationId === undefined ? undefined : asWorkplaceId(String(value.operationId));
+  return {
+    source,
+    facts,
+    ...(stats ? { stats } : {}),
+    ...(warnings ? { warnings } : {}),
+    ...(operationId ? { operationId } : {}),
+  };
+}
+
+function parseRestoreSources(value: unknown): RestoreSourceOutput[] | undefined {
+  if (Array.isArray(value)) {
+    const items = value.map(parseRestoreSourceRecord);
+    if (items.length === 0 || items.some(item => item === undefined)) return undefined;
+    return items as RestoreSourceOutput[];
+  }
+  const primary = parseRestoreSourceRecord(value);
+  if (!primary || !isRecord(value)) return undefined;
+  if (value.batch === undefined) return [primary];
+  if (!Array.isArray(value.batch)) return undefined;
+  const rest = value.batch.map(parseRestoreSourceRecord);
+  if (rest.some(item => item === undefined)) return undefined;
+  return [primary, ...(rest as RestoreSourceOutput[])];
+}
+
+function parseDevice(value: unknown): DeviceSetupOutput | undefined {
+  if (!isRecord(value) || !hasOnlyKeys(value, ['displayName'])) return undefined;
+  const displayName = parseNonEmptySourcedString(value.displayName);
+  return displayName ? { displayName } : undefined;
+}
+
+function parseRestoreSummary(value: unknown): RestoreSummaryOutput | undefined {
+  if (!isRecord(value) || !hasOnlyKeys(value, ['intent'])) return undefined;
+  const intents = ['continue', 'open', 'stay', 'return_to_picker', 'discard'] as const;
+  return intents.includes(value.intent as (typeof intents)[number])
+    ? { intent: value.intent as RestoreSummaryOutput['intent'] }
+    : undefined;
+}
+
+function parseSummary(value: unknown): SetupSummaryOutput | undefined {
+  if (!isRecord(value) || !hasOnlyKeys(value, ['confirmed']) || value.confirmed !== true)
+    return undefined;
+  return { confirmed: true };
+}
+
+function parseBase(value: RecordValue): SetupDraftBase | undefined {
+  if (
+    value.schemaVersion !== SETUP_DRAFT_SCHEMA_VERSION ||
+    !isWorkplaceId(value.operationId) ||
+    !Array.isArray(value.presentedHistory) ||
+    !Array.isArray(value.acceptedSlices) ||
+    !value.presentedHistory.every(isSetupSliceId) ||
+    !value.acceptedSlices.every(isSetupSliceId)
+  ) {
+    return undefined;
+  }
+  const presentedHistory = value.presentedHistory as SetupSliceId[];
+  const acceptedSlices = value.acceptedSlices as SetupSliceId[];
+  if (
+    new Set(presentedHistory).size !== presentedHistory.length ||
+    new Set(acceptedSlices).size !== acceptedSlices.length
+  ) {
+    return undefined;
+  }
+  if (value.activeSlice !== undefined && !isSetupSliceId(value.activeSlice)) return undefined;
+  return {
+    schemaVersion: SETUP_DRAFT_SCHEMA_VERSION,
+    operationId: asWorkplaceId(value.operationId),
+    presentedHistory,
+    acceptedSlices,
+    ...(value.activeSlice === undefined ? {} : { activeSlice: value.activeSlice }),
+  };
+}
+
+function acceptedOutputIsPresent(draft: SetupDraft): boolean {
+  const accepted = new Set(draft.acceptedSlices);
+  if (draft.kind !== 'workplace_creation') {
+    if (accepted.has('device') && !draft.device) return false;
+  }
+  if (accepted.has('workplace') && !draft.workplace) return false;
+  if (accepted.has('summary') && !draft.summary) return false;
+  if (draft.kind === 'restore') {
+    if (accepted.has('restore_source') && restoreSources(draft).length === 0) return false;
+    if (accepted.has('restore_summary') && !draft.restore.summary) return false;
+  }
+  return true;
+}
+
+function parseRestore(value: RecordValue, base: SetupDraftBase): RestoreSetupDraft | undefined {
+  const allowed = [
+    'schemaVersion',
+    'kind',
+    'journeyId',
+    'entryPolicy',
+    'operationId',
+    'presentedHistory',
+    'acceptedSlices',
+    'activeSlice',
+    'restore',
+    'device',
+    'workplace',
+    'summary',
+  ];
+  if (
+    !hasOnlyKeys(value, allowed) ||
+    value.kind !== 'restore' ||
+    !isRestoreJourneyId(value.journeyId) ||
+    (value.entryPolicy !== 'blocking' && value.entryPolicy !== 'optional') ||
+    !isRecord(value.restore) ||
+    !hasOnlyKeys(value.restore, [
+      'sources',
+      'source',
+      'handoffs',
+      'handoff',
+      'summary',
+      'deviceCandidate',
+    ])
+  ) {
+    return undefined;
+  }
+  const rawSources = value.restore.sources ?? value.restore.source;
+  const sources = rawSources === undefined ? undefined : parseRestoreSources(rawSources);
+  const rawHandoffs = value.restore.handoffs;
+  const parsedHandoffs =
+    rawHandoffs === undefined
+      ? undefined
+      : Array.isArray(rawHandoffs)
+        ? rawHandoffs
+            .map(item => {
+              if (!isRecord(item) || !isWorkplaceId(item.operationId)) return undefined;
+              return parseRestoreHandoff(item, asWorkplaceId(item.operationId));
+            })
+            .filter((item): item is RestoreHandoff => item !== undefined)
+        : undefined;
+  const legacyHandoff =
+    value.restore.handoff === undefined
+      ? undefined
+      : parseRestoreHandoff(value.restore.handoff, base.operationId);
+  const handoffs = parsedHandoffs ?? (legacyHandoff ? [legacyHandoff] : undefined);
+  const restoreSummary =
+    value.restore.summary === undefined ? undefined : parseRestoreSummary(value.restore.summary);
+  const deviceCandidate =
+    value.restore.deviceCandidate === undefined
+      ? undefined
+      : parseNonEmptySourcedString(value.restore.deviceCandidate);
+  const device = value.device === undefined ? undefined : parseDevice(value.device);
+  const workplace = value.workplace === undefined ? undefined : parseWorkplace(value.workplace);
+  const summary = value.summary === undefined ? undefined : parseSummary(value.summary);
+  if (
+    (rawSources !== undefined && !sources) ||
+    (value.restore.handoff !== undefined && !legacyHandoff) ||
+    (rawHandoffs !== undefined &&
+      (!Array.isArray(rawHandoffs) ||
+        !parsedHandoffs ||
+        parsedHandoffs.length !== rawHandoffs.length)) ||
+    (value.restore.summary !== undefined && !restoreSummary) ||
+    (value.restore.deviceCandidate !== undefined && !deviceCandidate) ||
+    (value.device !== undefined && !device) ||
+    (value.workplace !== undefined && !workplace) ||
+    (value.summary !== undefined && !summary)
+  ) {
+    return undefined;
+  }
+  if (
+    !isRestoreOwnershipTuple({
+      operationId: base.operationId,
+      sourceFingerprint: sources?.[0]?.source.fingerprint,
+      handoff: handoffs?.[0],
+      claimedFingerprint: claimedRestoreFingerprint(base.operationId),
+    })
+  ) {
+    return undefined;
+  }
+  const restore: RestoreDraftState = {
+    ...(sources ? { sources } : {}),
+    ...(handoffs ? { handoffs } : {}),
+    ...(restoreSummary ? { summary: restoreSummary } : {}),
+    ...(deviceCandidate ? { deviceCandidate } : {}),
+  };
+  const draft: RestoreSetupDraft = {
+    ...base,
+    kind: 'restore',
+    journeyId: value.journeyId,
+    entryPolicy: value.entryPolicy as 'blocking' | 'optional',
+    restore,
+    ...(device ? { device } : {}),
+    ...(workplace ? { workplace } : {}),
+    ...(summary ? { summary } : {}),
+  };
+  if (value.journeyId === 'picker_restore' || value.journeyId === 'settings_restore') {
+    if (device || summary) return undefined;
+  }
+  if (value.journeyId === 'first_run_restore' && value.entryPolicy !== 'blocking') return undefined;
+  if (value.journeyId === 'empty_device_restore' && value.entryPolicy !== 'blocking')
+    return undefined;
+  if (value.journeyId === 'settings_restore' && value.entryPolicy !== 'optional') return undefined;
+  return acceptedOutputIsPresent(draft) ? draft : undefined;
+}
+
+function parseWorkplaceCreation(
+  value: RecordValue,
+  base: SetupDraftBase,
+): WorkplaceCreationSetupDraft | undefined {
+  const allowed = [
+    'schemaVersion',
+    'kind',
+    'journeyId',
+    'entryPolicy',
+    'operationId',
+    'presentedHistory',
+    'acceptedSlices',
+    'activeSlice',
+    'workplace',
+    'summary',
+  ];
+  if (
+    !hasOnlyKeys(value, allowed) ||
+    value.kind !== 'workplace_creation' ||
+    (value.journeyId !== 'empty_device_workplace' && value.journeyId !== 'create_workplace') ||
+    (value.journeyId === 'empty_device_workplace' && value.entryPolicy !== 'blocking') ||
+    (value.journeyId === 'create_workplace' && value.entryPolicy !== 'optional')
+  ) {
+    return undefined;
+  }
+  const workplace = value.workplace === undefined ? undefined : parseWorkplace(value.workplace);
+  const summary = value.summary === undefined ? undefined : parseSummary(value.summary);
+  if ((value.workplace !== undefined && !workplace) || (value.summary !== undefined && !summary))
+    return undefined;
+  const draft: WorkplaceCreationSetupDraft = {
+    ...base,
+    kind: 'workplace_creation',
+    journeyId: value.journeyId,
+    entryPolicy: value.entryPolicy as 'blocking' | 'optional',
+    ...(workplace ? { workplace } : {}),
+    ...(summary ? { summary } : {}),
+  };
+  return acceptedOutputIsPresent(draft) ? draft : undefined;
+}
+
+/** Drafts saved before the appearance step was removed still carry it; an in-flight restore must stay readable. */
+function withoutRetiredAppearance(value: RecordValue): RecordValue {
+  const next: RecordValue = { ...value };
+  delete next.appearance;
+  if (next.activeSlice === 'appearance') delete next.activeSlice;
+  for (const key of ['presentedHistory', 'acceptedSlices'] as const) {
+    const items = next[key];
+    if (Array.isArray(items)) next[key] = items.filter(item => item !== 'appearance');
+  }
+  return next;
+}
+
+/** Strict parser for the single device-local Setup draft. Invalid drafts are discarded. */
+export function parseSetupDraft(raw: unknown): SetupDraft | undefined {
+  if (!isRecord(raw)) return undefined;
+  const value = withoutRetiredAppearance(raw);
+  const base = parseBase(value);
+  if (
+    !base ||
+    !isSetupJourneyId(value.journeyId) ||
+    !hasOnlyKeys(value, [
+      'schemaVersion',
+      'kind',
+      'journeyId',
+      'entryPolicy',
+      'operationId',
+      'presentedHistory',
+      'acceptedSlices',
+      'activeSlice',
+      'device',
+      'workplace',
+      'summary',
+      'restore',
+    ])
+  ) {
+    return undefined;
+  }
+  if (value.kind === 'restore') return parseRestore(value, base);
+  if (value.kind === 'workplace_creation') return parseWorkplaceCreation(value, base);
+  return undefined;
+}
+
+export function isValidSetupDraft(value: unknown): value is SetupDraft {
+  return parseSetupDraft(value) !== undefined;
+}
+
+export class SetupDraftStore {
+  load(): SetupDraft | undefined {
+    try {
+      const raw = storage.getString(SETUP_DRAFT_KEY);
+      if (!raw) return undefined;
+      return parseSetupDraft(JSON.parse(raw));
+    } catch {
+      return undefined;
+    }
+  }
+
+  save(draft: SetupDraft): void {
+    if (!isValidSetupDraft(draft)) throw new Error('Cannot persist an invalid Setup draft');
+    storage.set(SETUP_DRAFT_KEY, JSON.stringify(draft));
+    notifySetupDraftChanged();
+  }
+
+  clear(): void {
+    const draft = this.load();
+    if (draft?.kind === 'restore') {
+      restorePublicationClaims.release(draft.operationId);
+      for (const source of restoreSources(draft)) {
+        if (source.operationId) restorePublicationClaims.release(source.operationId);
+      }
+      forgetAllPreparedRestores();
+    }
+    storage.remove(SETUP_DRAFT_KEY);
+    notifySetupDraftChanged();
+  }
+}
+
+/** Corrupt storage has no typed operation to release; drop claims and cached payloads. */
+export function discardUnreadableSetupDraft(): void {
+  restorePublicationClaims.clearAll();
+  forgetAllPreparedRestores();
+  storage.remove(SETUP_DRAFT_KEY);
+  notifySetupDraftChanged();
+}
+
+export const setupDraftStore = new SetupDraftStore();
+
+export function loadSetupDraft(): SetupDraft | undefined {
+  return setupDraftStore.load();
+}
+
+export function saveSetupDraft(draft: SetupDraft): void {
+  setupDraftStore.save(draft);
+}
+
+export function clearSetupDraft(): void {
+  setupDraftStore.clear();
+}

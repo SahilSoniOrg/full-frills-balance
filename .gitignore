@@ -11,6 +11,13 @@ dist-e2e/
 web-build/
 expo-env.d.ts
 build-*
+!scripts/*
+# Checked-in WASM artifacts (see modules/expo-key-crypto/web/README.md)
+!modules/expo-key-crypto/web/dist/
+!modules/expo-key-crypto/web/dist/**
+modules/expo-key-crypto/web/dist/zstd.o
+modules/expo-key-crypto/web/dist/.build-zstd.o
+!modules/expo-key-crypto/web/build-inputs.lock.json
 
 # Native
 .kotlin/
@@ -54,6 +61,7 @@ app-example
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+/public/key-crypto/
 
 coverage/
 
@@ -81,3 +89,5 @@ output
 .playwright-mcp/
 
 .impeccable
+
+modules/*/android/.cxx/

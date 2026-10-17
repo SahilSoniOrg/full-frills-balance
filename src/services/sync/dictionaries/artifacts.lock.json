@@ -1,0 +1,110 @@
+{
+  "formatVersion": 1,
+  "schemaVersion": 35,
+  "zstdVersion": "1.5.7",
+  "mapSha256": "c0f355030dae1e66f5531fb752459d77ed7405626a8178c4507fa68abb813421",
+  "recipeSha256": "c66fa2dea7fa1bdd1587b5076344dbf70fe28f728285719f27b779a68dfa7e57",
+  "sources": {
+    "dictionary-pipeline.mjs": "df7c0f7bd1c66820f7c0953fb067e3072b48e244b95ba18791d0d57b5075fbe7",
+    "generate-corpus.mjs": "ae9bbf1896542780965b0f2ebe20d4018e412cfc64cebfe6c3b61329b5ec53bd",
+    "train-dictionaries.mjs": "3c11337434ecfe9c76dc1471f458249ba1cf856861f3b59391b602524fa2dfea"
+  },
+  "dictionaries": [
+    {
+      "id": "account_metadata/v1",
+      "file": "account_metadata.v1.bin",
+      "bytes": 16384,
+      "zstdDictionaryId": 35001000,
+      "sha256": "57dcef497ec4ed894d94ab714626dbc908d72ead1187617238ac646c7139787a",
+      "corpusSha256": "0375663731f1d3e3eb7065aa7a29fcf73339248bf2c2266cbdf5e196d0fbdc2e"
+    },
+    {
+      "id": "accounts/v1",
+      "file": "accounts.v1.bin",
+      "bytes": 16384,
+      "zstdDictionaryId": 35001001,
+      "sha256": "04fa66816c362a3a7e6e2823e0fa22cc79f47833a805503d712506440b0a5f69",
+      "corpusSha256": "cb658c155ef09e83f70825a9de38bf3e0e824881bc5869c7bdefe9c8343414a4"
+    },
+    {
+      "id": "audit_logs/v1",
+      "file": "audit_logs.v1.bin",
+      "bytes": 16384,
+      "zstdDictionaryId": 35001002,
+      "sha256": "973641d80af4ea0091282fcd8baf7e3f78502670e9a47fc39b5d102a09eadc69",
+      "corpusSha256": "393e19f29314a12c9c40820a89697248a28b80dd30f08090eebd6fcb66280743"
+    },
+    {
+      "id": "budget_scopes/v1",
+      "file": "budget_scopes.v1.bin",
+      "bytes": 16384,
+      "zstdDictionaryId": 35001003,
+      "sha256": "f393bc356c910e4c5c20d7b212d96ec7b272b5239c495ca52e375d8456feed18",
+      "corpusSha256": "a2bcef207cf0e9ac3460fe229ef92bd10d9a7bb4fade1a14100c5f189841fb04"
+    },
+    {
+      "id": "budgets/v1",
+      "file": "budgets.v1.bin",
+      "bytes": 16384,
+      "zstdDictionaryId": 35001004,
+      "sha256": "bd63df57279db2b31326ccde3a46702b3752bf72ae79f577b31a476b0b6f0529",
+      "corpusSha256": "11c7de30354c8c18ea78542cf308d57fa8898c7a8b0a9ad4282963753e0768a4"
+    },
+    {
+      "id": "journal_metadata/v1",
+      "file": "journal_metadata.v1.bin",
+      "bytes": 16384,
+      "zstdDictionaryId": 35001005,
+      "sha256": "509c5fc323ee4466897be3fb0f68df58dc7651cfbaeff5e91844b6054802d2f2",
+      "corpusSha256": "bb1dda85c765390fb26a59d50903ea90a0dad008cf914eb80f9b2f90a107ee85"
+    },
+    {
+      "id": "journals/v1",
+      "file": "journals.v1.bin",
+      "bytes": 16384,
+      "zstdDictionaryId": 35001006,
+      "sha256": "29fb57c19ee97053e73069e997347b3f269426b97c88f32dd99a41c6f2386ec7",
+      "corpusSha256": "9be54ed25183c735a55c843d8af0318af81601341a6e300d9022d8ddb3a45105"
+    },
+    {
+      "id": "planned_payments/v1",
+      "file": "planned_payments.v1.bin",
+      "bytes": 16384,
+      "zstdDictionaryId": 35001007,
+      "sha256": "b491ae83b4d07b1bc77375273be0902967393a2a7c4c0df1291162f9c6f87563",
+      "corpusSha256": "1c54ba673c68ee0f14a71836cd07b6a681c886a266cf891cc5cee390bf288d66"
+    },
+    {
+      "id": "transaction_auto_post_rules/v1",
+      "file": "transaction_auto_post_rules.v1.bin",
+      "bytes": 16384,
+      "zstdDictionaryId": 35001008,
+      "sha256": "d3ac089e067a608618320992989a9fa35000ff2eccb03e1401b8db130af39570",
+      "corpusSha256": "4b16df08348771f6672af86e7c1c5eb662998b453a84e09b00afac20afe56774"
+    },
+    {
+      "id": "transaction_inbox_records/v1",
+      "file": "transaction_inbox_records.v1.bin",
+      "bytes": 16384,
+      "zstdDictionaryId": 35001009,
+      "sha256": "9136a7e42ba5299cf34e80fdd5a2ffaf6c699e401ab9a1b48cc93c5605f8d87d",
+      "corpusSha256": "7d71cc2bb0538856ef5eed98e698fd98bd5ca4968d103072904bf654a63c2fce"
+    },
+    {
+      "id": "transactions/v1",
+      "file": "transactions.v1.bin",
+      "bytes": 16384,
+      "zstdDictionaryId": 35001010,
+      "sha256": "6fec470c9144734630acd49a631782a85827a9c4d0bde30a1871968e642a5488",
+      "corpusSha256": "9fcf3927edb22279a18d3574d3ad7f8787693cef9786c61f8935dabaf4951bd9"
+    },
+    {
+      "id": "workplace/v1",
+      "file": "workplace.v1.bin",
+      "bytes": 753,
+      "zstdDictionaryId": 35001011,
+      "sha256": "4749426a5edf1e7f0a732a911a84a620fa62a54103613d441c10a54ad7d688a8",
+      "corpusSha256": "53dab92a90ec343c5954dae11ef24da08a77984e754ceee1d666eb928158711c"
+    }
+  ]
+}

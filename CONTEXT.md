@@ -46,9 +46,45 @@ _Avoid_: User data; workspace; company; books (as the tenancy name)
 The relationship granting one User access to one Workplace. A User may hold memberships in multiple Workplaces; access is determined by the membership’s role and status, not by the Device that is currently open. Membership is distinct from User preferences and Device registration.
 _Avoid_: Workplace ownership as a User property; active workplace; device access
 
+**App invitation**:
+An invitation to create a User identity in the app. It does not itself grant access to any Workplace.
+_Avoid_: Workplace membership; Workplace invitation as a synonym
+
+**Workplace invitation**:
+An invitation for one User to join one Workplace, accepted or rejected by the recipient. A recipient without a registered User identity must first create one; acceptance and access activation are distinct concepts.
+_Avoid_: App invitation; Device enrollment; immediate membership
+
+**Invitation acceptance**:
+The recipient's agreement to a Workplace invitation. It completes activation for an invitation to an already registered User, while an invitation to a new User also requires the inviting side's final approval.
+_Avoid_: Owner approval; key generation; activation in every flow
+
+**Membership activation**:
+The point at which an accepted Workplace invitation grants its agreed access. An unactivated invitation gives neither Workplace data access nor access to its decryption-key envelope.
+_Avoid_: Account creation; User registration; invitation acceptance as a universal synonym
+
 **Owner role**:
 The highest-trust role on a Workplace. The owner can transfer ownership and perform irreversible Workplace administration. A User is initially assigned this role when creating a Workplace; ownership is a membership role, not a property of the User or Device.
-_Avoid_: User owns every Workplace; admin (as a synonym); device owner
+_Avoid_: User owns every Workplace; separate admin role by implication; device owner
+
+**User identity**:
+The stable identity to which a User's Devices and Workplace memberships belong. Changing the User's email address or replacing a Device does not create a different User identity.
+_Avoid_: Email address as identity; Device identity; identity-provider account as the whole User
+
+**User recovery**:
+A User-specific recovery route that restores the same User identity onto a fresh Device. It does not change Workplace membership or replace the User's keys in the currently agreed scope.
+_Avoid_: Workplace recovery; account creation; identity replacement
+
+**User recovery phrase**:
+The generated, downloadable secret saved outside a User's Devices and used to recover that same User onto a fresh Device. It is separate from both a system passkey and the Workplace emergency-export secret.
+_Avoid_: Passkey; login password; Workplace recovery key
+
+**Workplace emergency export**:
+The last-resort route for decrypting retained Workplace data into a portable dump when normal User/Device access is lost. Importing the dump creates a new Workplace context, without restoring the old membership or owner authority.
+_Avoid_: User recovery; owner recovery; in-place Workplace restore
+
+**Workplace administrator**:
+The User assigned the Owner role when creating the Workplace. In the currently agreed model this is not a separate invited administrator role.
+_Avoid_: User-account owner; Device owner; delegated administrator as an assumed role
 
 **Identity provider**:
 The service that authenticates Users and, in a future multi-device or collaborative product, may synchronize Workplace memberships and roles. The domain model remains provider-neutral; WorkOS is a possible future provider, not the domain term.

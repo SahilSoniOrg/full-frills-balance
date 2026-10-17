@@ -1,7 +1,7 @@
 import { Icon } from '@/src/types/domainIcons';
 import { asWorkplaceId } from '@/src/types/ids';
 import { selectPreparedRestoreSources } from '../pickRestoreSource';
-import { sameRestoreSources, type RestoreSourceOutput } from '../setupTypes';
+import { sameRestoreSources, type RestoreSourceOutput } from '@/src/services/setup/setupTypes';
 
 function source(name: string, index: number): RestoreSourceOutput {
   return {

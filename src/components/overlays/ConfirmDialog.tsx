@@ -68,6 +68,7 @@ export function ConfirmDialog({
       title={title}
       onClose={onClose}
       accessibilityCloseLabel={accessibilityCloseLabel}
+      closeTestID="confirmation-close-button"
       fixedHeight={false}
       scrollable={false}
       useNativeModal={useNativeModal}

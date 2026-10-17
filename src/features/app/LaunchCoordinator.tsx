@@ -1,3 +1,6 @@
+import { loadPendingEncryptedRestoreDeviceId } from '@/src/services/backup/pendingEncryptedRestoreDeviceId';
+import { encryptionSetupStore } from '@/src/services/backup/encryptionSetupStore';
+import { loadSetupDraft, saveSetupDraft } from '@/src/services/setup/SetupDraftStore';
 import { EmptyStateView, LoadingView } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { WorkplaceProvider } from '@/src/contexts/WorkplaceContext';
@@ -8,8 +11,6 @@ import { WorkplacePicker } from '@/src/features/app/WorkplacePicker';
 import { RestartRequiredScreen } from '@/src/features/dev';
 import {
   createSetupDraft,
-  loadSetupDraft,
-  saveSetupDraft,
   SETUP_GATE_ROUTES,
   setupEntryPath,
   shouldRedirectSetupToEntry,
@@ -119,10 +120,18 @@ function useWorkplaceDiscovery(enabled: boolean, retryToken: number) {
           initialWorkplaceIdsRef.current = workplaces.map(workplace => workplace.id);
         }
         void migrateLegacyCurrency(initialWorkplaceIdsRef.current)
-          .then(() => {
+          .then(async () => {
             if (cancelled) return;
             if (!recoveryAppliedRef.current) {
+              // Published restore rows do not prove that session/key/launch checkpoints
+              // finished. Keep first-run recovery reachable, including after pending-ID cleanup.
+              const hasEncryptedRestoreCheckpoint =
+                !preferences.device.deviceRegistered &&
+                (Boolean(await loadPendingEncryptedRestoreDeviceId()) ||
+                  (await encryptionSetupStore.loadSession())?.intent === 'recover-user');
+              if (cancelled) return;
               const recovery = decideDeviceRecovery({
+                hasEncryptedRestoreCheckpoint,
                 deviceBagPresent: preferences.rawDeviceBagPresentAtStartup,
                 deviceClaimed: preferences.device.deviceRegistered,
                 workplaceCount: workplaces.length,

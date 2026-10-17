@@ -7,7 +7,7 @@ import {
 import { analytics } from '@/src/services/analytics';
 import { AppConfig } from '@/src/constants/app-config';
 import { useState, useSyncExternalStore } from 'react';
-import type { DeviceSetupOutput } from './setupTypes';
+import type { DeviceSetupOutput } from '@/src/services/setup/setupTypes';
 
 export function DeviceSetupSlice({
   initialName,

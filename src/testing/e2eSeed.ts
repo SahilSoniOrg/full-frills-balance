@@ -16,11 +16,11 @@ import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepo
 
 import { databaseRepository } from '@/src/data/repositories/DatabaseRepository';
 import { generator } from '@/src/data/database/idGenerator';
-import { loadSetupDraft, saveSetupDraft } from '@/src/features/setup/SetupDraftStore';
-import { restoreSources } from '@/src/features/setup/setupTypes';
+import { loadSetupDraft, saveSetupDraft } from '@/src/services/setup/SetupDraftStore';
+import { restoreSources } from '@/src/services/setup/setupTypes';
 import { finishDeviceSetup, finishWorkplaceSetup } from '@/src/features/setup/setupFinishers';
 import { createSetupDraft } from '@/src/features/setup/SetupCoordinator';
-import { rememberPreparedRestore } from '@/src/features/setup/pickRestoreSource';
+import { rememberPreparedRestore } from '@/src/services/setup/preparedRestoreCache';
 import { createAccount } from '@/src/services/accounts/accountCommands';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import { logger } from '@/src/utils/logger';
@@ -371,6 +371,14 @@ async function seedJournalSuggestions(workplaceId: WorkplaceId): Promise<void> {
     await journalPersistenceService.put(
       {
         description: `Detox grocery history item ${index}`,
+        ...(index === 1
+          ? {
+              metadata: {
+                importSource: 'restore-verification',
+                metadataJson: JSON.stringify({ referenceNumber: 'SYNTHETIC-RESTORE-1' }),
+              },
+            }
+          : {}),
         journalDate: Date.now() - index * 60_000,
         currencyCode: 'USD',
         transactions: [

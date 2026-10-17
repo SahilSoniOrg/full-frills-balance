@@ -49,7 +49,7 @@ function MaintenanceSettingsView() {
     const result = await resetDatabase();
     if (result.warnings.length > 0) {
       toast.warning(
-        'Your data was reset. Some cached displays could not be cleared and may need a restart.',
+        'Your data was reset, but some stored keys or cached displays could not be cleared. Restart the app before using encryption again.',
       );
     }
     requireRestart({ type: 'RESET' });

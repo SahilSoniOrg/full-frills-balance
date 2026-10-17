@@ -20,6 +20,10 @@ import TransactionAutoPostRule from '@/src/data/models/TransactionAutoPostRule';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import Transaction from '@/src/data/models/Transaction';
 import Workplace from '@/src/data/models/Workplace';
+import SyncRowIndex from '@/src/data/models/SyncRowIndex';
+import SyncCheckpoint from '@/src/data/models/SyncCheckpoint';
+import SyncConflict from '@/src/data/models/SyncConflict';
+import SyncPendingCommit from '@/src/data/models/SyncPendingCommit';
 
 // Adapter (platform-specific resolution handled by Metro)
 import adapter from '@/src/data/database/adapter';
@@ -48,5 +52,9 @@ export const database = new WatermelonDB({
     TransactionInboxRecord,
     Transaction,
     Workplace,
+    SyncRowIndex,
+    SyncCheckpoint,
+    SyncConflict,
+    SyncPendingCommit,
   ],
 });
