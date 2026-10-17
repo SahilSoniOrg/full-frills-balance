@@ -3,7 +3,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const outputDir = process.argv[2];
-const markers = ['__FFB_E2E_DESTRUCTIVE_BOOTSTRAP__', '__FFB_JS_KEY_CRYPTO_TEST_ONLY__'];
+const markers = [
+  '__FFB_E2E_DESTRUCTIVE_BOOTSTRAP__',
+  '__FFB_JS_KEY_CRYPTO_TEST_ONLY__',
+  '__FFB_E2E_RESTORE_VERIFICATION__',
+];
 
 if (!outputDir) {
   console.error('Usage: node scripts/check-e2e-bundle.mjs <export-directory>');

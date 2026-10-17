@@ -1,3 +1,4 @@
+import { flushDatabasePersistence } from '@/src/data/database/flushPersistence';
 import { database } from '@/src/data/database/Database';
 import { auditRepository } from '@/src/data/repositories/AuditRepository';
 import Account from '@/src/data/models/Account';
@@ -211,6 +212,9 @@ export class ImportRepository {
         );
       }
       published = existingWorkplace;
+      // A preceding browser save may have failed after publication in memory.
+      // Exact retries must complete persistence as well as recognize the receipt.
+      await flushDatabasePersistence();
     });
     if (published) return published;
 
@@ -228,6 +232,7 @@ export class ImportRepository {
       if (existingWorkplace) {
         if (existingWorkplace.rowRestoreManifestHash === receipt) {
           published = existingWorkplace;
+          await flushDatabasePersistence();
           return;
         }
         throw new RowRestoreConflictError(
@@ -272,6 +277,8 @@ export class ImportRepository {
       // No await separates this final cancellation check from submitting the atomic batch.
       // Once the adapter has accepted the batch, cancellation cannot safely interrupt it.
       await database.batch(published, ...this.prepareOperations(workplace.id, data));
+      // Keep publication and its receipt ahead of key/session/launch checkpoints on web too.
+      await flushDatabasePersistence();
     });
     if (!published) throw new Error('Row restore publication did not produce a Workplace');
     return published;

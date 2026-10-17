@@ -13,6 +13,10 @@ export function ensureE2eBootstrap(): Promise<void> {
       if (!config) {
         return;
       }
+      if (process.env.EXPO_PUBLIC_E2E === '1' && config.restoreVerification) {
+        const { installRestoreVerification } = await import('./restoreVerification');
+        installRestoreVerification();
+      }
       logger.info('[E2E] Bootstrap starting', { config });
       const { executeE2eBootstrap } = await import('./e2eSeed');
       await executeE2eBootstrap(config);

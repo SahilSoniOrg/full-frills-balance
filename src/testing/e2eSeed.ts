@@ -371,6 +371,14 @@ async function seedJournalSuggestions(workplaceId: WorkplaceId): Promise<void> {
     await journalPersistenceService.put(
       {
         description: `Detox grocery history item ${index}`,
+        ...(index === 1
+          ? {
+              metadata: {
+                importSource: 'restore-verification',
+                metadataJson: JSON.stringify({ referenceNumber: 'SYNTHETIC-RESTORE-1' }),
+              },
+            }
+          : {}),
         journalDate: Date.now() - index * 60_000,
         currencyCode: 'USD',
         transactions: [

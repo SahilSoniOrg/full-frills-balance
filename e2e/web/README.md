@@ -11,6 +11,17 @@ interrupted by reload, repeated restore without duplicate journals, and refusal 
 overwrite an existing local Workplace. Journal counts exclude inactive screens retained
 by React Navigation (`aria-hidden` ancestors).
 
+The restore interruption suite pauses the real recovery/publication/session/cleanup/launch
+owners, closes the page and WASM worker, and reopens the same browser context before
+retrying through the normal UI. It compares public identity and Device-key metadata,
+manifest receipts, complete primary financial rows, audit history and running balances.
+Session-write and pending-removal error cases also verify that failed attempts do not
+report completion. D/E retry without a User recovery file using saved Device access.
+The observer/fault adapter requires the E2E build capability, authenticated bootstrap
+and `e2eRestoreVerification=1`; it never reads private keys or copies vaults. It is
+excluded from production exports, checked with `bun run check:production-e2e-web-bundle`.
+These Chromium tests do not close the native process-kill or real-file-picker gates.
+
 The two-device approval proof uses separate browser contexts and the real app workers:
 B generates its own Device key, A wraps the existing User bundle to B's public key,
 and B opens it, reloads, restores without a recovery file and exports a backup under
