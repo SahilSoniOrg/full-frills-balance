@@ -3,13 +3,15 @@ import { AppState } from 'react-native';
 import { usePrivateBackup } from '../usePrivateBackup';
 import { encryptedBackupFiles } from '@/src/services/backup/encryptedBackupFiles';
 import { recoveryFiles } from '@/src/services/backup/recoveryFiles';
-import { restoreEncryptedBackupZip } from '@/src/services/sync/encryptedBackupActions';
+import { encryptedRestoreWorkflow } from '@/src/services/backup/encryptedRestoreWorkflow';
+import { useAppLock } from '@/src/contexts/app-shell/AppLockProvider';
+import { useOptionalWorkplace } from '@/src/contexts/WorkplaceContext';
 import { alert } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { database } from '@/src/data/database/Database';
 import Workplace from '@/src/data/models/Workplace';
+import { asWorkplaceId } from '@/src/types/ids';
 import { encryptionSetup } from '@/src/services/backup/encryptionSetup';
-import { loadPendingEncryptedRestoreDeviceId } from '@/src/services/backup/pendingEncryptedRestoreDeviceId';
 import {
   completeEncryptedRestoreLaunch,
   needsEncryptedRestoreLaunchCompletion,
@@ -22,14 +24,11 @@ jest.mock('expo-router', () => ({
   },
 }));
 jest.mock('@/src/contexts/app-shell/AppLockProvider', () => ({
-  useAppLock: () => ({ isAppCurrentlyLocked: false }),
+  useAppLock: jest.fn(() => ({ isAppCurrentlyLocked: false })),
 }));
-jest.mock('@/src/contexts/WorkplaceContext', () => ({ useOptionalWorkplace: () => null }));
+jest.mock('@/src/contexts/WorkplaceContext', () => ({ useOptionalWorkplace: jest.fn(() => null) }));
 jest.mock('@/src/services/backup/encryptionSetup', () => ({
   encryptionSetup: { inspect: jest.fn().mockResolvedValue({ session: null, keys: null }) },
-}));
-jest.mock('@/src/services/backup/encryptionSetupStore', () => ({
-  encryptionSetupStore: { saveSession: jest.fn().mockResolvedValue(undefined) },
 }));
 jest.mock('@/src/services/backup/recoveryFiles', () => ({
   recoveryFiles: {
@@ -41,13 +40,14 @@ jest.mock('@/src/services/backup/encryptedBackupFiles', () => ({
   encryptedBackupFiles: { pickEncryptedBackupZip: jest.fn() },
 }));
 jest.mock('@/src/services/backup/keyAccessPolicy', () => ({ assertKeyAccessAllowed: jest.fn() }));
-jest.mock('@/src/services/backup/cryptoProvider', () => ({ cryptoProvider: {} }));
-jest.mock('@/src/services/sync/encryptedBackupActions', () => ({
-  restoreEncryptedBackupZip: jest.fn(),
+jest.mock('@/src/services/backup/encryptedRestoreWorkflow', () => ({
+  encryptedRestoreWorkflow: {
+    prepareRecoveryAttempt: jest.fn().mockResolvedValue('device'),
+    restoreSelectedBackup: jest.fn(),
+  },
 }));
-jest.mock('@/src/services/backup/pendingEncryptedRestoreDeviceId', () => ({
-  loadPendingEncryptedRestoreDeviceId: jest.fn().mockResolvedValue('device'),
-  clearPendingEncryptedRestoreDeviceId: jest.fn().mockResolvedValue(undefined),
+jest.mock('@/src/services/sync/encryptedBackupActions', () => ({
+  createEncryptedBackupZip: jest.fn(),
 }));
 jest.mock('@/src/features/setup', () => ({
   needsEncryptedRestoreLaunchCompletion: jest.fn(),
@@ -59,6 +59,11 @@ jest.mock('@/src/utils/navigation', () => ({ AppNavigation: { toDashboard: jest.
 describe('encrypted restore completion', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest
+      .mocked(useAppLock)
+      .mockReturnValue({ isAppCurrentlyLocked: false } as ReturnType<typeof useAppLock>);
+    jest.mocked(useOptionalWorkplace).mockReturnValue(undefined);
+    jest.mocked(needsEncryptedRestoreLaunchCompletion).mockReturnValue(false);
     jest.mocked(encryptionSetup.inspect).mockResolvedValue({ session: null, keys: null });
     AppState.currentState = 'active';
     jest.mocked(encryptedBackupFiles.pickEncryptedBackupZip).mockResolvedValue(new Uint8Array([1]));
@@ -80,7 +85,7 @@ describe('encrypted restore completion', () => {
       record.icon = 'briefcase';
       record.defaultCurrencyCode = 'INR';
     });
-    jest.mocked(restoreEncryptedBackupZip).mockResolvedValue({
+    jest.mocked(encryptedRestoreWorkflow.restoreSelectedBackup).mockResolvedValue({
       identity,
       workplace,
       manifestHash: 'manifest',
@@ -96,12 +101,14 @@ describe('encrypted restore completion', () => {
     await act(async () => {
       await result.current.restoreFromFiles();
     });
-    expect(restoreEncryptedBackupZip).toHaveBeenCalledWith(new Uint8Array([1]), {
-      mode: 'existing',
-      identity,
+    expect(encryptedRestoreWorkflow.restoreSelectedBackup).toHaveBeenCalledWith({
+      archive: new Uint8Array([1]),
+      credential: null,
+      existingIdentity: identity,
+      signal: expect.any(AbortSignal),
     });
     expect(recoveryFiles.pickSecret).not.toHaveBeenCalled();
-    expect(loadPendingEncryptedRestoreDeviceId).not.toHaveBeenCalled();
+    expect(encryptedRestoreWorkflow.prepareRecoveryAttempt).not.toHaveBeenCalled();
     expect(AppNavigation.toDashboard).toHaveBeenCalledTimes(1);
   });
 
@@ -114,12 +121,19 @@ describe('encrypted restore completion', () => {
     'completes restore and reports warnings (first run: $firstRun, warning: $hasWarning)',
     async ({ firstRun, hasWarning }) => {
       jest.mocked(needsEncryptedRestoreLaunchCompletion).mockReturnValue(firstRun);
+      const setWorkplaceId = jest.fn().mockResolvedValue(undefined);
+      jest.mocked(useOptionalWorkplace).mockReturnValue({
+        workplaceId: asWorkplaceId('existing-workplace'),
+        defaultCurrencyCode: 'INR',
+        setWorkplaceId,
+        deleteWorkplace: jest.fn(),
+      });
       const workplace = database.get<Workplace>('workplaces').prepareCreate(record => {
         record.name = 'Restored books';
         record.icon = 'briefcase';
         record.defaultCurrencyCode = 'INR';
       });
-      jest.mocked(restoreEncryptedBackupZip).mockResolvedValue({
+      jest.mocked(encryptedRestoreWorkflow.restoreSelectedBackup).mockResolvedValue({
         identity: { userId: 'user', registeredDeviceId: 'device', userKeyFingerprint: 'pin' },
         workplace,
         manifestHash: 'manifest',
@@ -139,6 +153,9 @@ describe('encrypted restore completion', () => {
 
       expect(AppNavigation.toDashboard).toHaveBeenCalledTimes(1);
       expect(completeEncryptedRestoreLaunch).toHaveBeenCalledTimes(firstRun ? 1 : 0);
+      expect(setWorkplaceId).toHaveBeenCalledTimes(firstRun ? 0 : 1);
+      expect(result.current.hasImportedBackup).toBe(false);
+      expect(result.current.hasImportedSecret).toBe(false);
       if (hasWarning) {
         expect(alert.show).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -151,4 +168,93 @@ describe('encrypted restore completion', () => {
       }
     },
   );
+
+  it.each(['blur', 'lock', 'clear'] as const)(
+    'suppresses activation, navigation and warnings after %s during restore',
+    async interruption => {
+      let finish!: (
+        value: Awaited<ReturnType<typeof encryptedRestoreWorkflow.restoreSelectedBackup>>,
+      ) => void;
+      const pending = new Promise<
+        Awaited<ReturnType<typeof encryptedRestoreWorkflow.restoreSelectedBackup>>
+      >(resolve => {
+        finish = resolve;
+      });
+      jest.mocked(encryptedRestoreWorkflow.restoreSelectedBackup).mockReturnValueOnce(pending);
+      const setWorkplaceId = jest.fn();
+      jest.mocked(useOptionalWorkplace).mockReturnValue({
+        workplaceId: asWorkplaceId('existing-workplace'),
+        defaultCurrencyCode: 'INR',
+        setWorkplaceId,
+        deleteWorkplace: jest.fn(),
+      });
+      const { result, unmount, rerender } = renderHook(() => usePrivateBackup());
+      await act(async () => {
+        await result.current.pickBackup();
+      });
+      await act(async () => {
+        await result.current.pickRecoverySecret();
+      });
+      let restoring!: Promise<void>;
+      act(() => {
+        restoring = result.current.restoreFromFiles();
+      });
+      const call = jest.mocked(encryptedRestoreWorkflow.restoreSelectedBackup).mock.calls[0][0];
+      if (interruption === 'blur') unmount();
+      else if (interruption === 'lock') {
+        jest
+          .mocked(useAppLock)
+          .mockReturnValue({ isAppCurrentlyLocked: true } as ReturnType<typeof useAppLock>);
+        rerender({});
+      } else
+        act(() => {
+          result.current.clearRestoreInputs();
+        });
+      expect(call.signal?.aborted).toBe(true);
+      await act(async () => {
+        finish({
+          identity: { userId: 'user', registeredDeviceId: 'device', userKeyFingerprint: 'pin' },
+          workplace: { id: 'workplace' } as Workplace,
+          manifestHash: 'manifest',
+          rowCount: 1,
+          warnings: ['balance warning'],
+        });
+        await restoring;
+      });
+      expect(setWorkplaceId).not.toHaveBeenCalled();
+      expect(completeEncryptedRestoreLaunch).not.toHaveBeenCalled();
+      expect(AppNavigation.toDashboard).not.toHaveBeenCalled();
+      expect(alert.show).not.toHaveBeenCalled();
+      if (interruption === 'clear') {
+        expect(result.current.hasImportedBackup).toBe(false);
+        expect(result.current.hasImportedSecret).toBe(false);
+        expect(encryptedRestoreWorkflow.prepareRecoveryAttempt).toHaveBeenCalledTimes(1);
+      }
+    },
+  );
+
+  it('clears selections and permits selecting the same files for another attempt', async () => {
+    const { result } = renderHook(() => usePrivateBackup());
+    await act(async () => {
+      await result.current.pickBackup();
+    });
+    await act(async () => {
+      await result.current.pickRecoverySecret();
+    });
+    act(() => {
+      result.current.clearRestoreInputs();
+    });
+    expect(result.current.hasImportedBackup).toBe(false);
+    expect(result.current.hasImportedSecret).toBe(false);
+    await act(async () => {
+      await result.current.pickBackup();
+    });
+    await act(async () => {
+      await result.current.pickRecoverySecret();
+    });
+    expect(result.current.hasImportedBackup).toBe(true);
+    expect(result.current.hasImportedSecret).toBe(true);
+    expect(encryptedRestoreWorkflow.prepareRecoveryAttempt).toHaveBeenCalledTimes(2);
+    expect(encryptedRestoreWorkflow.restoreSelectedBackup).not.toHaveBeenCalled();
+  });
 });
