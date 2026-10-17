@@ -93,6 +93,11 @@ class NativeDeviceVault(private val context: Context) {
     validate(name)
     check(preferences.edit().remove(name).commit())
   }
+  fun clear() {
+    check(preferences.edit().clear().commit())
+    val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+    if (store.containsAlias(ALIAS)) store.deleteEntry(ALIAS)
+  }
   private fun binding(name: String) = "full-frills-device-vault:1:$name".toByteArray(Charsets.UTF_8)
   companion object {
     const val PREFERENCES = "FFBKeyCrypto"

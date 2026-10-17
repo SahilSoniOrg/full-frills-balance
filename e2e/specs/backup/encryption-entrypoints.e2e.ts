@@ -51,7 +51,20 @@ describe('Encrypted backup entry points', () => {
     await waitFor(element(by.id('encrypted-backup-verify-secret')))
       .toBeVisible()
       .withTimeout(30000);
+    const verifyAttributes = await element(by.id('encrypted-backup-verify-secret')).getAttributes();
+    const discardAttributes = await element(by.id('encrypted-backup-discard')).getAttributes();
+    jestExpect('enabled' in verifyAttributes && verifyAttributes.enabled).toBe(true);
+    jestExpect('enabled' in discardAttributes && discardAttributes.enabled).toBe(true);
     await expect(element(by.id('encrypted-backup-export-secret'))).not.toExist();
     await expect(element(by.id('encrypted-backup-begin-user'))).not.toExist();
+
+    await element(by.id('encrypted-backup-discard')).tap();
+    await waitFor(element(by.id('confirmation-close-button')))
+      .toBeVisible()
+      .withTimeout(5000);
+    await element(by.id('confirmation-close-button')).tap();
+    await waitFor(element(by.id('confirmation-close-button')))
+      .not.toExist()
+      .withTimeout(5000);
   });
 });

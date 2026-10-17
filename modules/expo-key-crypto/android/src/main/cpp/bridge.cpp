@@ -109,6 +109,11 @@ public:
     env_->DeleteLocalRef(key);
     check();
   }
+  void clear() override {
+    auto method = env_->GetMethodID(cls_, "clear", "()V");
+    env_->CallVoidMethod(object_, method);
+    check();
+  }
 };
 } // namespace
 extern "C" JNIEXPORT jstring JNICALL

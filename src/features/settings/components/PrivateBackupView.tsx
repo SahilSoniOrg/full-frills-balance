@@ -1,4 +1,4 @@
-import { AppButton, AppText } from '@/src/components/core';
+import { AppButton, AppCard, AppText } from '@/src/components/core';
 import { Stack } from '@/src/design-system';
 import { useOptionalWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useLocalSearchParams } from 'expo-router';
@@ -72,14 +72,70 @@ export function PrivateBackupView({
             {vm.message}
           </AppText>
         ) : null}
-        <BackupContent
-          vm={vm}
-          restoreMode={restoreMode}
-          onRestoreMode={onRestoreMode}
-          action={action}
-        />
+        {vm.restorePreview ? (
+          <EncryptedRestorePreview
+            preview={vm.restorePreview}
+            onConfirm={vm.confirmRestorePreview}
+            onDiscard={vm.discardRestorePreview}
+          />
+        ) : (
+          <BackupContent
+            vm={vm}
+            restoreMode={restoreMode}
+            onRestoreMode={onRestoreMode}
+            action={action}
+          />
+        )}
       </Stack>
     </SettingsLayout>
+  );
+}
+
+function EncryptedRestorePreview({
+  preview,
+  onConfirm,
+  onDiscard,
+}: {
+  preview: NonNullable<ViewModel['restorePreview']>;
+  onConfirm: () => void;
+  onDiscard: () => void;
+}) {
+  const rows = [
+    ['Accounts', preview.accounts],
+    ['Categories', preview.categories],
+    ['Journal entries', preview.journals],
+    ['Transactions', preview.transactions],
+    ['Budgets', preview.budgets],
+    ['Planned payments', preview.plannedPayments],
+  ] as const;
+
+  return (
+    <Stack space="md" testID="encrypted-backup-restore-preview">
+      <AppText variant="heading">Review backup contents</AppText>
+      <AppText variant="body" color="secondary">
+        This will import the following Workplace and records to this device. Nothing is restored
+        until you confirm.
+      </AppText>
+      <AppCard variant="outline" paddingSize="md">
+        <Stack space="sm">
+          <AppText weight="semibold">{preview.workplace.name}</AppText>
+          <AppText variant="caption" color="secondary">
+            Base currency: {preview.workplace.currency}
+          </AppText>
+          {rows.map(([label, count]) => (
+            <AppText key={label} variant="body">
+              {label}: {count}
+            </AppText>
+          ))}
+        </Stack>
+      </AppCard>
+      <AppButton variant="primary" testID="encrypted-backup-restore-confirm" onPress={onConfirm}>
+        Restore these records
+      </AppButton>
+      <AppButton variant="outline" testID="encrypted-backup-restore-discard" onPress={onDiscard}>
+        Discard restore
+      </AppButton>
+    </Stack>
   );
 }
 

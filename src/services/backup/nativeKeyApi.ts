@@ -127,6 +127,7 @@ export function keyOperationsFromTransport(
   | 'openKey'
   | 'hasKey'
   | 'removeKey'
+  | 'clearVault'
   | 'releaseKey'
   | 'recovery'
   | 'wrapUserForDevice'
@@ -225,6 +226,9 @@ export function keyOperationsFromTransport(
     },
     removeKey: async scope => {
       await call('removeKey', scope);
+    },
+    clearVault: async () => {
+      await call('clearVault', {});
     },
     releaseKey: async key => {
       await call('releaseKey', { key });
@@ -338,6 +342,7 @@ export interface NativeKeyOperations {
   ): Promise<WorkplaceMemberEnvelope>;
   hasKey(scope: DeviceKeyScope): Promise<boolean>;
   removeKey(scope: DeviceKeyScope): Promise<void>;
+  clearVault(): Promise<void>;
   releaseKey(key: NativeKeyReference): Promise<void>;
   recovery(operation: RecoveryOperation, request: unknown): Promise<unknown>;
   pickCredential(): Promise<unknown | null>;

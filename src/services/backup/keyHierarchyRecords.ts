@@ -46,6 +46,7 @@ export const userScope = (userId: string, deviceId: string) =>
   JSON.stringify(['user', userId, deviceId]);
 export const userRecoveryScope = (userId: string, deviceId: string) =>
   JSON.stringify(['user-recovery', userId, deviceId]);
+export const restoreDraftScope = (draftId: string) => JSON.stringify(['restore-draft', draftId]);
 export const workplaceScope = (userId: string, workplaceId: string) =>
   JSON.stringify(['workplace', userId, workplaceId]);
 export const workplaceIdentityScope = (userId: string, workplaceId: string) =>

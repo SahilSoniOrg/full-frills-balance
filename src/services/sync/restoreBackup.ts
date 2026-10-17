@@ -29,6 +29,7 @@ import {
 import { keyHex } from '@/src/services/backup/keyEncoding';
 import { preferences } from '@/src/services/preferences';
 import type { BatchImportData } from '@/src/types/importContracts';
+import { countAccountsVsCategories } from '@/src/utils/accountCategory';
 import type { WorkplaceId } from '@/src/types/ids';
 import { KeyOperationError } from '@/src/utils/keyOperationError';
 import { parseObject } from '@/src/utils/strictObject';
@@ -51,8 +52,18 @@ import { MAX_ROW_BATCH_BYTES, MAX_ROW_BATCH_COUNT } from '@/src/services/crypto/
 
 export type RestoreBackupAccess = Readonly<
   | { mode: 'existing'; identity: KeyAccessIdentity }
-  | { mode: 'recovery'; credential: unknown; deviceId: string }
+  | { mode: 'recovery'; credential: unknown; deviceId: string; draftId?: string }
 >;
+
+export type RestoreBackupPreview = Readonly<{
+  workplace: { id: string; name: string; currency: string };
+  accounts: number;
+  categories: number;
+  journals: number;
+  transactions: number;
+  budgets: number;
+  plannedPayments: number;
+}>;
 
 export type RestoreBackupResult = Readonly<{
   identity: KeyAccessIdentity;
@@ -127,6 +138,7 @@ async function resolveIdentity(
     credential,
     userRecoveryPackage,
     access.deviceId,
+    access.draftId,
   );
   assertIdentityMatchesPackage(
     identity,
@@ -189,6 +201,7 @@ async function validateCurrencyPrecisions(
 export async function restoreBackup(
   zipBytes: Uint8Array,
   access: RestoreBackupAccess,
+  onBeforePublish?: (preview: RestoreBackupPreview) => Promise<boolean>,
 ): Promise<RestoreBackupResult> {
   assertKeyAccessAllowed();
   const cancellation = new AbortController();
@@ -196,7 +209,7 @@ export async function restoreBackup(
     if (!allowed) cancellation.abort();
   });
   try {
-    return await restoreBackupWhileUnlocked(zipBytes, access, cancellation.signal);
+    return await restoreBackupWhileUnlocked(zipBytes, access, cancellation.signal, onBeforePublish);
   } catch (error) {
     if (cancellation.signal.aborted && error instanceof Error && error.name === 'AbortError')
       throw new KeyOperationError('FFB_KEY_CANCELLED');
@@ -214,6 +227,7 @@ async function restoreBackupWhileUnlocked(
   zipBytes: Uint8Array,
   access: RestoreBackupAccess,
   signal: AbortSignal,
+  onBeforePublish?: (preview: RestoreBackupPreview) => Promise<boolean>,
 ): Promise<RestoreBackupResult> {
   const backup = parseBackupZip(zipBytes);
   const userRecoveryPackage = parseExportedUserRecoveryPackage(backup.userRecoveryPackage);
@@ -321,6 +335,29 @@ async function restoreBackupWhileUnlocked(
 
   const manifestHash = keyHex(await hashManifest(verifiedManifest.fields));
   assertRestoreActive(signal);
+  const counts = countAccountsVsCategories(data.accounts);
+  const preview: RestoreBackupPreview = {
+    workplace: {
+      id: workplaceId,
+      name: metadata.name,
+      currency: metadata.defaultCurrencyCode,
+    },
+    ...counts,
+    journals: data.journals.length,
+    transactions: data.transactions.length,
+    budgets: data.budgets?.length ?? 0,
+    plannedPayments: data.plannedPayments?.length ?? 0,
+  };
+  if (onBeforePublish && !(await onBeforePublish(preview))) {
+    if (access.mode === 'recovery' && access.draftId)
+      await localKeyHierarchy.discardRestoreDraft(
+        identity.userId,
+        identity.registeredDeviceId,
+        access.draftId,
+      );
+    throw new KeyOperationError('FFB_KEY_CANCELLED');
+  }
+  assertRestoreActive(signal);
   const workplace = await importRepository.batchInsertRowRestore(
     {
       id: workplaceId,
@@ -338,11 +375,22 @@ async function restoreBackupWhileUnlocked(
   if (keyState === 'installable') {
     await localKeyHierarchy.installWorkplaceKeys(identity, backup.workplaceKeys);
   }
+  const warnings: string[] = [];
+  if (access.mode === 'recovery' && access.draftId) {
+    try {
+      await localKeyHierarchy.commitRestoreDraft(
+        identity.userId,
+        identity.registeredDeviceId,
+        access.draftId,
+      );
+    } catch {
+      warnings.push('Recovered encryption keys need cleanup after restore');
+    }
+  }
   preferences.workplace.update(workplaceId, {
     safeToSpendDays: metadata.safeToSpendDays as 30 | 60 | 90,
   });
 
-  const warnings: string[] = [];
   try {
     const accounts = await accountQueryRepository.findAll(workplaceId);
     await rebuildAllAccountBalancesAfterImport(

@@ -45,9 +45,20 @@ DETOX_ANDROID_ARCH=arm64-v8a bash scripts/build-android-verification.sh normal -
 
 The `.scratch` setup and APKs are local ignored artifacts. Another host must establish its own compatible SDK/compiler setup; neither command installs or launches an app.
 
+## Simulator entry-point smoke checks (2026-10-17)
+
+Both simulator smoke checks passed on the current Mac. These are runtime evidence for the E2E-capable app entry points only; they do not close physical-device, real-provider, vault or native A–E interruption gates.
+
+| Platform | Environment and build | Result |
+| --- | --- | --- |
+| iOS Simulator | Xcode 27; iOS 26.4.1 runtime; dedicated `FFB Recovery Source` simulator. Release/E2E app built for simulator with Sentry uploads disabled. Detox targeted simulator UUID `0D7B5548-A3D0-40C1-B446-C1C3FFD30045`. | `e2e/specs/backup/encryption-entrypoints.e2e.ts`: 2 passed. Fresh-install restore entry and unfinished User-enrollment restart passed. Detox could not open the Simulator GUI by app name, but `simctl` launched the app and both tests completed. |
+| Android Emulator | API 36, ARM64 `Pixel_2_API_36_Fast`. Release/E2E verification app and instrumentation built with `DETOX_ANDROID_ARCH=arm64-v8a`; Sentry uploads disabled; app ID `in.sahilsoni.fullfrillsbalance.verification`. | `e2e/specs/backup/encryption-entrypoints.e2e.ts`: 2 passed. Fresh-install restore entry and unfinished User-enrollment restart passed. |
+
+The Android run uses a new `android.emu.verification` Detox configuration so it installs the disposable verification app instead of the regular Release app ID. `.detoxrc.js` also accepts `DETOX_IOS_SIMULATOR_UDID` for simulator build destinations when the default named simulator is unavailable. These configuration changes are local to this checkout until committed.
+
 | Plan area | Completed here | Pending |
 | --- | --- | --- |
-| Stage 1: build/device prerequisites | Host crypto/Hermes, Android toolchain, normal/E2E Release-derived APKs, instrumentation, static exclusion | Android install/launch and smoke execution; signed iOS normal/E2E builds and device setup |
+| Stage 1: build/device prerequisites | Host crypto/Hermes, Android toolchain, normal/E2E Release-derived APKs, instrumentation, static exclusion; iOS simulator Release/E2E build; Android emulator verification build | Android/iOS physical-device builds, setup and runtime checks |
 | Stage 2: retained-file recovery | Current entry-point selectors prepared and typechecked | Real picker/provider retention, fresh/repeat recovery, restarts and bidirectional platform recovery |
 | Stage 3: interruptions/errors | Shared-engine/browser evidence retained | Native authenticated A–E controls, actual process termination/retries and native storage-error checks |
 | Stage 4: vault/lock/install loss | Existing static backup-exclusion evidence retained | Device vault/lock/material-loss, reinstall and OS backup/transfer behavior |

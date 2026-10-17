@@ -41,6 +41,7 @@ public:
       keys_.erase(found);
     }
   }
+  void clear() override { for (auto &item : keys_) wipe(item.second); keys_.clear(); }
 };
 int main() {
   std::map<std::string, TestVault> vaults;

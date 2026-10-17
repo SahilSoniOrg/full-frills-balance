@@ -28,7 +28,10 @@ jest.mock('@/src/contexts/app-shell/AppLockProvider', () => ({
 }));
 jest.mock('@/src/contexts/WorkplaceContext', () => ({ useOptionalWorkplace: jest.fn(() => null) }));
 jest.mock('@/src/services/backup/encryptionSetup', () => ({
-  encryptionSetup: { inspect: jest.fn().mockResolvedValue({ session: null, keys: null }) },
+  encryptionSetup: {
+    inspect: jest.fn().mockResolvedValue({ session: null, keys: null }),
+    confirmUser: jest.fn().mockResolvedValue(undefined),
+  },
 }));
 jest.mock('@/src/services/backup/recoveryFiles', () => ({
   recoveryFiles: {
@@ -256,5 +259,79 @@ describe('encrypted restore completion', () => {
     expect(result.current.hasImportedSecret).toBe(true);
     expect(encryptedRestoreWorkflow.prepareRecoveryAttempt).toHaveBeenCalledTimes(2);
     expect(encryptedRestoreWorkflow.restoreSelectedBackup).not.toHaveBeenCalled();
+  });
+
+  it('re-enables actions when a native file picker resolves during an app background transition', async () => {
+    let resolvePicker!: (value: Uint8Array | null) => void;
+    let changeState!: (state: string) => void;
+    (AppState.addEventListener as jest.Mock) = jest.fn((_event, handler) => {
+      changeState = handler;
+      return { remove: jest.fn() };
+    });
+    jest.mocked(encryptedBackupFiles.pickEncryptedBackupZip).mockReturnValueOnce(
+      new Promise(resolve => {
+        resolvePicker = resolve;
+      }),
+    );
+    const { result } = renderHook(() => usePrivateBackup());
+    await act(async () => undefined);
+
+    let picking!: Promise<void>;
+    act(() => {
+      picking = result.current.pickBackup();
+    });
+    expect(result.current.disabled).toBe(true);
+
+    AppState.currentState = 'background';
+    await act(async () => {
+      resolvePicker(new Uint8Array([1]));
+      await Promise.resolve();
+    });
+    AppState.currentState = 'active';
+    await act(async () => {
+      changeState('active');
+      await picking;
+    });
+
+    expect(result.current.hasImportedBackup).toBe(true);
+    expect(result.current.disabled).toBe(false);
+  });
+
+  it('waits for foreground before verifying a recovery file returned by the native picker', async () => {
+    let resolvePicker!: (value: unknown | null) => void;
+    let changeState!: (state: string) => void;
+    (AppState.addEventListener as jest.Mock) = jest.fn((_event, handler) => {
+      changeState = handler;
+      return { remove: jest.fn() };
+    });
+    jest.mocked(recoveryFiles.pickSecret).mockReturnValueOnce(
+      new Promise(resolve => {
+        resolvePicker = resolve;
+      }),
+    );
+    const { result } = renderHook(() => usePrivateBackup());
+    await act(async () => undefined);
+
+    let verifying!: Promise<void>;
+    act(() => {
+      verifying = result.current.verifySecret();
+    });
+    AppState.currentState = 'background';
+    await act(async () => {
+      resolvePicker({ format: 'full-frills-recovery-handle' });
+      await Promise.resolve();
+    });
+
+    expect(encryptionSetup.confirmUser).not.toHaveBeenCalled();
+    expect(result.current.disabled).toBe(true);
+
+    await act(async () => {
+      AppState.currentState = 'active';
+      changeState('active');
+      await verifying;
+    });
+
+    expect(encryptionSetup.confirmUser).toHaveBeenCalledTimes(1);
+    expect(result.current.disabled).toBe(false);
   });
 });

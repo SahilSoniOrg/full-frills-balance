@@ -38,4 +38,5 @@ export const keyCiphertextStateStore: KeyCiphertextStateStore = {
   write: (scope, value) =>
     withStore('readwrite', store => store.put(value, scope)).then(() => undefined),
   remove: scope => withStore('readwrite', store => store.delete(scope)).then(() => undefined),
+  clear: () => withStore('readwrite', store => store.clear()).then(() => undefined),
 };

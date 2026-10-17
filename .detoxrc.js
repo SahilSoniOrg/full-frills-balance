@@ -2,8 +2,19 @@
 const os = require('os');
 
 const iosDeviceUdid = process.env.DETOX_IOS_DEVICE_UDID;
+const iosSimulatorUdid = process.env.DETOX_IOS_SIMULATOR_UDID;
 const androidDeviceId = process.env.DETOX_ANDROID_DEVICE_ID;
 const linuxX64 = process.platform === 'linux' && os.arch() === 'x64';
+
+function iosSimulatorBuildDestination() {
+  if (iosSimulatorUdid) {
+    if (!/^[0-9a-f-]{36}$/i.test(iosSimulatorUdid)) {
+      throw new Error('DETOX_IOS_SIMULATOR_UDID must be a simulator UUID');
+    }
+    return `id=${iosSimulatorUdid}`;
+  }
+  return 'platform=iOS Simulator,name=iPhone 17';
+}
 
 // macOS keeps the ABIs in android/gradle.properties (arm64 emulator / devices).
 // Linux cloud agents are x86_64 and need a matching APK or the emulator cannot load .so files.
@@ -41,16 +52,14 @@ module.exports = {
     'ios.debug': {
       type: 'ios.app',
       binaryPath: 'ios/build/Build/Products/Debug-iphonesimulator/FullFrillsBalance.app',
-      build:
-        "xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build -destination 'platform=iOS Simulator,name=iPhone 17' ARCHS=arm64 EXCLUDED_ARCHS=x86_64",
+      build: `xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build -destination '${iosSimulatorBuildDestination()}' ARCHS=arm64 EXCLUDED_ARCHS=x86_64`,
     },
     'ios.release': {
       type: 'ios.app',
       binaryPath: 'ios/build/Build/Products/Release-iphonesimulator/FullFrillsBalance.app',
       // Give the simulator app a signing identity for native Keychain proof tests.
       // Ad-hoc signing uses no distribution credentials; device signing stays separate.
-      build:
-        "SENTRY_DISABLE_AUTO_UPLOAD=true SENTRY_DISABLE_NATIVE_DEBUG_UPLOAD=true EXPO_PUBLIC_E2E=1 xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Release -sdk iphonesimulator -derivedDataPath ios/build -destination 'platform=iOS Simulator,name=iPhone 17' ARCHS=arm64 EXCLUDED_ARCHS=x86_64 SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) FFB_KEY_CRYPTO_E2E' CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO",
+      build: `SENTRY_DISABLE_AUTO_UPLOAD=true SENTRY_DISABLE_NATIVE_DEBUG_UPLOAD=true EXPO_PUBLIC_E2E=1 xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Release -sdk iphonesimulator -derivedDataPath ios/build -destination '${iosSimulatorBuildDestination()}' ARCHS=arm64 EXCLUDED_ARCHS=x86_64 SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) FFB_KEY_CRYPTO_E2E' CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO`,
     },
     'ios.device.release': {
       type: 'ios.app',
@@ -149,6 +158,10 @@ module.exports = {
     'android.emu.release': {
       device: 'emulator',
       app: 'android.release',
+    },
+    'android.emu.verification': {
+      device: 'emulator',
+      app: 'android.verification',
     },
     ...(androidDeviceId
       ? {

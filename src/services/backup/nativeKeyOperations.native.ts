@@ -32,9 +32,11 @@ module?.setAllowed(initiallyAllowed);
 subscribeKeyAccessPolicy(allowed => module?.setAllowed(allowed));
 export const nativeKeyOperations: NativeKeyOperations = {
   ...keyOperationsFromTransport(async (operation, request) => {
-    if (operation !== 'removeKey' && operation !== 'releaseKey') assertKeyAccessAllowed();
+    if (operation !== 'removeKey' && operation !== 'releaseKey' && operation !== 'clearVault')
+      assertKeyAccessAllowed();
     const result = await ready().execute(operation, JSON.stringify(request));
-    if (operation !== 'removeKey' && operation !== 'releaseKey') assertKeyAccessAllowed();
+    if (operation !== 'removeKey' && operation !== 'releaseKey' && operation !== 'clearVault')
+      assertKeyAccessAllowed();
     return JSON.parse(result);
   }),
   async pickCredential() {

@@ -3,7 +3,11 @@ import { localKeyHierarchy } from '@/src/services/backup/localKeyHierarchy';
 import type { WorkplaceId } from '@/src/types/ids';
 import { buildBackupCommit } from './buildCommit';
 import { createBackupZip } from './backupFile';
-import { restoreBackup, type RestoreBackupAccess } from './restoreBackup';
+import {
+  restoreBackup,
+  type RestoreBackupAccess,
+  type RestoreBackupPreview,
+} from './restoreBackup';
 
 export async function createEncryptedBackupZip(
   identity: KeyAccessIdentity,
@@ -18,6 +22,10 @@ export async function createEncryptedBackupZip(
   return createBackupZip(commit, workplaceKeys, userRecoveryPackage);
 }
 
-export async function restoreEncryptedBackupZip(zipBytes: Uint8Array, access: RestoreBackupAccess) {
-  return restoreBackup(zipBytes, access);
+export async function restoreEncryptedBackupZip(
+  zipBytes: Uint8Array,
+  access: RestoreBackupAccess,
+  onBeforePublish?: (preview: RestoreBackupPreview) => Promise<boolean>,
+) {
+  return restoreBackup(zipBytes, access, onBeforePublish);
 }

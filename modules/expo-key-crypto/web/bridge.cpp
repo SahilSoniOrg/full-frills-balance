@@ -51,6 +51,10 @@ EM_ASYNC_JS(void, ffb_vault_remove_async, (const char *namePtr), {
     throw new Error(code);
   }
 });
+EM_ASYNC_JS(void, ffb_vault_clear_async, (), {
+  try { await Module.ffbVault.clear(); }
+  catch (error) { throw new Error('FFB_KEY_VAULT_UNAVAILABLE'); }
+});
 #endif
 
 namespace {
@@ -82,6 +86,13 @@ public:
   void remove(const std::string &name) override {
 #ifdef __EMSCRIPTEN__
     ffb_vault_remove_async(name.c_str());
+#else
+    throw ffb::OperationError(ffb::ErrorCode::VaultUnavailable, "Web vault not linked");
+#endif
+  }
+  void clear() override {
+#ifdef __EMSCRIPTEN__
+    ffb_vault_clear_async();
 #else
     throw ffb::OperationError(ffb::ErrorCode::VaultUnavailable, "Web vault not linked");
 #endif

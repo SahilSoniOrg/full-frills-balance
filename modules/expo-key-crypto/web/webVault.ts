@@ -213,9 +213,28 @@ export async function removeDeviceKey(name: string): Promise<void> {
   await idbDelete(db, 'records', name);
 }
 
+export async function clearDeviceVault(): Promise<void> {
+  const [devices, wrapping] = await Promise.all([deviceDb(), wrapDb()]);
+  await Promise.all([
+    new Promise<void>((resolve, reject) => {
+      const tx = devices.transaction('records', 'readwrite');
+      tx.objectStore('records').clear();
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error ?? new Error('FFB_KEY_VAULT_UNAVAILABLE'));
+    }),
+    new Promise<void>((resolve, reject) => {
+      const tx = wrapping.transaction('keys', 'readwrite');
+      tx.objectStore('keys').clear();
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error ?? new Error('FFB_KEY_VAULT_UNAVAILABLE'));
+    }),
+  ]);
+}
+
 /** Hooks consumed by the Emscripten bridge (`Module.ffbVault`). */
 export const ffbVaultHooks = {
   load: loadDeviceKey,
   save: (name: string, bytes: Uint8Array) => saveDeviceKey(name, bytes, false),
   remove: removeDeviceKey,
+  clear: clearDeviceVault,
 };

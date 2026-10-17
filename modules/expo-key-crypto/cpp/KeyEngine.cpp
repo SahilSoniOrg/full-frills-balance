@@ -151,7 +151,7 @@ Json Engine::execute(const std::string &operation, Json request,
   std::lock_guard<std::mutex> lock(mutex_);
   PrivateJson privateRequest(std::move(request));
   const Json &safeRequest = privateRequest.value;
-  const bool cleanup = operation == "removeKey" || operation == "releaseKey";
+  const bool cleanup = operation == "removeKey" || operation == "releaseKey" || operation == "clearVault";
   require(allowed_.load() || cleanup,
           "Unlock the app before accessing encryption keys", ErrorCode::Locked);
   const auto epoch = epoch_.load();
@@ -180,6 +180,14 @@ Json Engine::dispatch(const std::string &operation, const Json &request,
               "Key reference identity mismatch");
       keys_.erase(found);
     }
+    return nullptr;
+  }
+  if (operation == "clearVault") {
+    fields(request, {});
+    vault.clear();
+    keys_.clear();
+    credentials_.clear();
+    ++epoch_;
     return nullptr;
   }
   if (operation == "generateKeys")

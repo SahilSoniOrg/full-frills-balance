@@ -142,6 +142,7 @@ async function fixture() {
     read: disk.read,
     write: disk.write,
     remove: disk.remove,
+    clear: async () => undefined,
   };
   const freshDeviceId = jest.fn(() => 'recovery-device');
   const dependencies = {

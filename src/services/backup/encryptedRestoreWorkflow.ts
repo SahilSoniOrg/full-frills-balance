@@ -1,7 +1,11 @@
 import { SerialQueue } from '@/src/utils/serialQueue';
 import { KeyOperationError } from '@/src/utils/keyOperationError';
 import { restoreEncryptedBackupZip } from '@/src/services/sync/encryptedBackupActions';
-import type { RestoreBackupResult } from '@/src/services/sync/restoreBackup';
+import type {
+  RestoreBackupAccess,
+  RestoreBackupPreview,
+  RestoreBackupResult,
+} from '@/src/services/sync/restoreBackup';
 import { cryptoProvider } from './cryptoProvider';
 import { keyHex } from './keyEncoding';
 import type { KeyAccessIdentity } from './keyHierarchyRecords';
@@ -30,6 +34,7 @@ type SelectedBackup = Readonly<{
   credential?: unknown;
   existingIdentity?: KeyAccessIdentity;
   signal?: AbortSignal;
+  onBeforePublish?: (preview: RestoreBackupPreview) => Promise<boolean>;
 }>;
 
 function assertCurrent(signal?: AbortSignal): void {
@@ -80,15 +85,47 @@ export class EncryptedRestoreWorkflow {
       if (!identity && !input.credential)
         throw new Error('Choose the backup ZIP and User recovery file');
       assertCurrent(input.signal);
-      const access = identity
-        ? { mode: 'existing' as const, identity }
-        : {
-            mode: 'recovery' as const,
-            credential: input.credential,
-            deviceId: await this.recoveryDeviceId(),
-          };
+      let access: RestoreBackupAccess;
+      if (identity) {
+        access = { mode: 'existing', identity };
+      } else {
+        const deviceId = await this.recoveryDeviceId();
+        access = {
+          mode: 'recovery',
+          credential: input.credential,
+          deviceId,
+          draftId: deviceId,
+        };
+      }
       assertCurrent(input.signal);
-      const result = await this.dependencies.restore(input.archive, access);
+      let previewDiscarded = false;
+      const previewHandler = input.onBeforePublish;
+      const onBeforePublish = previewHandler
+        ? async (preview: RestoreBackupPreview) => {
+            previewDiscarded = !(await previewHandler(preview));
+            return !previewDiscarded;
+          }
+        : undefined;
+      let result: RestoreBackupResult;
+      try {
+        result = await this.dependencies.restore(input.archive, access, onBeforePublish);
+      } catch (error) {
+        // The restore service first discards the staged key and its checkpoints. Clear its
+        // retry ID only after that explicit discard; failures before confirmation stay resumable.
+        if (
+          previewDiscarded &&
+          access.mode === 'recovery' &&
+          error instanceof KeyOperationError &&
+          error.code === 'FFB_KEY_CANCELLED'
+        ) {
+          try {
+            await this.dependencies.pending.clear();
+          } catch {
+            // A leftover ID is harmless once the vault draft was removed.
+          }
+        }
+        throw error;
+      }
       // Cancellation cannot undo publication. Finish these public checkpoints even if
       // the originating screen has disappeared; only the hook gates visible effects.
       await this.dependencies.session.saveSession({

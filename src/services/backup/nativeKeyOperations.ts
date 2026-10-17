@@ -10,4 +10,5 @@ export const nativeKeyOperations: NativeKeyOperations = {
   retainCredential: unavailable,
   releaseCredential: unavailable,
   clearCredentials: async () => undefined,
+  clearVault: async () => undefined,
 };

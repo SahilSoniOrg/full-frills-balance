@@ -22,6 +22,7 @@ import {
   identityScope,
   userScope,
   userRecoveryScope,
+  restoreDraftScope,
   workplaceScope,
   workplaceIdentityScope,
   type KeyAccessIdentity,
@@ -61,7 +62,10 @@ export interface KeyHierarchy {
     credential: RecoveryCredential,
     value: unknown,
     deviceId: string,
+    restoreDraftId?: string,
   ): Promise<KeyAccessIdentity>;
+  discardRestoreDraft(userId: string, deviceId: string, draftId: string): Promise<void>;
+  commitRestoreDraft(userId: string, deviceId: string, draftId: string): Promise<void>;
   enrollWorkplace(
     identity: KeyAccessIdentity,
     workplaceId: string,
@@ -374,6 +378,7 @@ export class LocalKeyHierarchy implements KeyHierarchy {
     credential: RecoveryCredential,
     value: unknown,
     deviceId: string,
+    restoreDraftId?: string,
   ): Promise<KeyAccessIdentity> {
     return this.exclusive(async () => {
       const saved = parseExportedUserRecoveryPackage(value);
@@ -392,10 +397,48 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       )
         throw new Error('Established User identity mismatch');
       if (!deviceId.trim()) throw new Error('Invalid replacement Device identity');
-      if ((await this.state.read(userScope(saved.userId, deviceId))) !== null)
-        throw new Error('Device identity already exists');
-      // Authenticate before recording trust or removing a key left by an interrupted attempt.
+      const draftScope = restoreDraftId ? restoreDraftScope(restoreDraftId) : null;
+      // Authenticate on retries too; a draft marker proves ownership, not current credential validity.
       await this.invoke('validateRecovery', { user: saved, credential });
+      const existingUser = await this.state.read(userScope(saved.userId, deviceId));
+      if (existingUser !== null) {
+        if (!draftScope) throw new Error('Device identity already exists');
+        const draft = await this.state.read(draftScope);
+        const marker =
+          draft === null ? null : parseObject(draft, 'Invalid encrypted restore draft');
+        const existing = parseLocalUser(existingUser);
+        if (
+          marker?.userId !== saved.userId ||
+          marker?.deviceId !== deviceId ||
+          marker?.userKeyFingerprint !== saved.userKeyFingerprint ||
+          existing.userKeyFingerprint !== saved.userKeyFingerprint
+        )
+          throw new Error('Encrypted restore draft does not match the recovered User');
+        return this.identity(existing);
+      }
+      // Authenticate before recording trust or removing a key left by an interrupted attempt.
+      let previousIdentity: unknown = null;
+      if (draftScope) {
+        const existingDraft = await this.state.read(draftScope);
+        if (existingDraft !== null) {
+          const draft = parseObject(existingDraft, 'Invalid encrypted restore draft');
+          if (
+            draft.userId !== saved.userId ||
+            draft.deviceId !== deviceId ||
+            draft.userKeyFingerprint !== saved.userKeyFingerprint
+          )
+            throw new Error('Encrypted restore draft scope mismatch');
+          previousIdentity = draft.previousIdentity;
+        } else {
+          previousIdentity = await this.state.read(identityScope(saved.userId));
+          await this.state.write(draftScope, {
+            userId: saved.userId,
+            deviceId,
+            userKeyFingerprint: saved.userKeyFingerprint,
+            previousIdentity,
+          });
+        }
+      }
       const recoveryScope = userRecoveryScope(saved.userId, deviceId);
       const pending = await this.state.read(recoveryScope);
       if (pending === null) {
@@ -434,6 +477,40 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       await this.state.write(userScope(saved.userId, deviceId), user);
       await this.state.remove(recoveryScope);
       return this.identity(user);
+    });
+  }
+  discardRestoreDraft(userId: string, deviceId: string, draftId: string): Promise<void> {
+    return this.exclusive(async () => {
+      const scope = restoreDraftScope(draftId);
+      const raw = await this.state.read(scope);
+      if (raw === null) return;
+      const draft = parseObject(raw, 'Invalid encrypted restore draft');
+      if (draft.userId !== userId || draft.deviceId !== deviceId)
+        throw new Error('Encrypted restore draft scope mismatch');
+      // Keep the marker until native removal and checkpoint cleanup succeed so discard is retryable.
+      await this.crypto.removeKey({ kind: 'device', userId, deviceId });
+      await this.state.remove(userScope(userId, deviceId));
+      await this.state.remove(userRecoveryScope(userId, deviceId));
+      const currentIdentity = await this.state.read(identityScope(userId));
+      if (
+        currentIdentity !== null &&
+        parseObject(currentIdentity, 'Invalid native key result').deviceId === deviceId
+      ) {
+        if (draft.previousIdentity === null) await this.state.remove(identityScope(userId));
+        else await this.state.write(identityScope(userId), draft.previousIdentity);
+      }
+      await this.state.remove(scope);
+    });
+  }
+  commitRestoreDraft(userId: string, deviceId: string, draftId: string): Promise<void> {
+    return this.exclusive(async () => {
+      const scope = restoreDraftScope(draftId);
+      const raw = await this.state.read(scope);
+      if (raw === null) return;
+      const draft = parseObject(raw, 'Invalid encrypted restore draft');
+      if (draft.userId !== userId || draft.deviceId !== deviceId)
+        throw new Error('Encrypted restore draft scope mismatch');
+      await this.state.remove(scope);
     });
   }
   enrollWorkplace(

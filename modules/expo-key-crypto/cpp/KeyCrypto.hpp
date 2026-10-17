@@ -44,6 +44,7 @@ public:
   // Called only after native recovery has authenticated the saved User bundle.
   virtual void saveRecovered(const std::string &name, const Bytes &key) { save(name, key); }
   virtual void remove(const std::string &name) = 0;
+  virtual void clear() = 0;
 };
 class Engine {
 public:

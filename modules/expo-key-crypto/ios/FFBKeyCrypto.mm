@@ -78,6 +78,15 @@ public:
     if (status != errSecSuccess && status != errSecItemNotFound)
       throw std::runtime_error("Device key removal failed");
   }
+  void clear() override {
+    NSDictionary *q = @{
+      (__bridge id)kSecClass : (__bridge id)kSecClassGenericPassword,
+      (__bridge id)kSecAttrService : nativeService
+    };
+    OSStatus status = SecItemDelete((__bridge CFDictionaryRef)q);
+    if (status != errSecSuccess && status != errSecItemNotFound)
+      throw std::runtime_error("Native Device key removal failed");
+  }
 };
 Json parse(NSString *input) {
   NSData *data = [input dataUsingEncoding:NSUTF8StringEncoding];

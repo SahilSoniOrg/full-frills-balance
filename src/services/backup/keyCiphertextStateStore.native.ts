@@ -127,4 +127,20 @@ export const keyCiphertextStateStore: KeyCiphertextStateStore = {
       await AsyncStorage.removeItem(await index(scope));
       if (saved && file(saved.name).exists) file(saved.name).delete();
     }),
+  clear: () =>
+    queue.run(async () => {
+      const keys = (await AsyncStorage.getAllKeys()).filter(key =>
+        key.startsWith('key_ciphertext_v1_'),
+      );
+      await AsyncStorage.multiRemove(keys);
+      for (const entry of new Directory(Paths.document).list()) {
+        if (
+          entry instanceof File &&
+          /^key-ciphertext-[a-f0-9]{32}\.json(?:\.tmp)?$/.test(entry.name)
+        ) {
+          entry.delete();
+        }
+      }
+      cleaned = false;
+    }),
 };

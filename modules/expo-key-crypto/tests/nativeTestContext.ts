@@ -82,6 +82,9 @@ export function memoryKeyHierarchy(assertAccess: () => void = () => undefined) {
     remove: jest.fn(async scope => {
       ciphertext.delete(scope);
     }),
+    clear: jest.fn(async () => {
+      ciphertext.clear();
+    }),
   };
   const execute = (operation: string, request: unknown) =>
     activeHost.execute(operation, request, vaultId, deviceTags);
