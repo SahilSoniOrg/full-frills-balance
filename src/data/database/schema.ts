@@ -2,7 +2,7 @@ import { appSchema, tableSchema } from '@nozbe/watermelondb';
 import { deviceSmsInboxTable } from './deviceSmsInboxSchema';
 
 export const schema = appSchema({
-  version: 34,
+  version: 36,
   tables: [
     deviceSmsInboxTable,
     tableSchema({
@@ -396,7 +396,62 @@ END;`,
         { name: 'updated_at', type: 'number' },
         { name: 'icon', type: 'string', isOptional: true },
         { name: 'default_currency_code', type: 'string', isOptional: false },
+        { name: 'row_restore_manifest_hash', type: 'string', isOptional: true },
+        { name: 'row_restore_completion_json', type: 'string', isOptional: true },
       ],
+    }),
+    tableSchema({
+      name: 'sync_row_index',
+      columns: [
+        { name: 'workplace_id', type: 'string', isIndexed: true },
+        { name: 'table_name', type: 'string', isIndexed: true },
+        { name: 'row_id', type: 'string' },
+        { name: 'content_hash', type: 'string' },
+        { name: 'leaf_hash', type: 'string' },
+        { name: 'seq', type: 'number' },
+      ],
+      unsafeSql: sql => `${sql};
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sync_row_index_identity
+ON sync_row_index (workplace_id, table_name, row_id);`,
+    }),
+    tableSchema({
+      name: 'sync_checkpoints',
+      columns: [
+        { name: 'workplace_id', type: 'string', isIndexed: true },
+        { name: 'seq', type: 'number' },
+        { name: 'manifest_hash', type: 'string' },
+        { name: 'author_device_id', type: 'string' },
+      ],
+      unsafeSql: sql => `${sql};
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sync_checkpoints_workplace
+ON sync_checkpoints (workplace_id);`,
+    }),
+    tableSchema({
+      name: 'sync_conflicts',
+      columns: [
+        { name: 'workplace_id', type: 'string', isIndexed: true },
+        { name: 'group_key', type: 'string', isIndexed: true },
+        { name: 'local_rows_json', type: 'string' },
+        { name: 'remote_seq', type: 'number' },
+        { name: 'created_at', type: 'number', isIndexed: true },
+      ],
+      unsafeSql: sql => `${sql};
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sync_conflicts_identity
+ON sync_conflicts (workplace_id, group_key);`,
+    }),
+    tableSchema({
+      name: 'sync_pending_commits',
+      columns: [
+        { name: 'workplace_id', type: 'string', isIndexed: true },
+        { name: 'seq', type: 'number' },
+        { name: 'manifest_json', type: 'string' },
+        { name: 'envelopes_json', type: 'string' },
+        { name: 'reason', type: 'string' },
+        { name: 'created_at', type: 'number', isIndexed: true },
+      ],
+      unsafeSql: sql => `${sql};
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sync_pending_commits_identity
+ON sync_pending_commits (workplace_id, seq);`,
     }),
   ],
 });

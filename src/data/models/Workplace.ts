@@ -21,6 +21,9 @@ export default class Workplace extends Model {
   @field('name') name!: string;
   @field('icon') icon!: string;
   @field('default_currency_code') defaultCurrencyCode!: string;
+  @field('row_restore_manifest_hash') rowRestoreManifestHash!: string | null;
+  /** Device-local completion handoff; never part of the financial row payload. */
+  @field('row_restore_completion_json') rowRestoreCompletionJson!: string | null;
 
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
