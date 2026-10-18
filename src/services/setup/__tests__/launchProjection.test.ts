@@ -1,6 +1,6 @@
 import { asWorkplaceId } from '@/src/types/ids';
-import { clearSetupDraft, saveSetupDraft } from '../SetupDraftStore';
-import { readBlockingSetupProjection } from '../readBlockingSetupProjection';
+import { clearSetupDraft, saveSetupDraft } from '@/src/services/setup/SetupDraftStore';
+import { readBlockingSetupProjection } from '@/src/services/setup/readBlockingSetupProjection';
 import { subscribeToSetupDraft } from '@/src/services/setup/launchProjection';
 
 describe('Setup launch projection', () => {

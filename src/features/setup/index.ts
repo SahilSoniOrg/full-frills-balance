@@ -1,12 +1,4 @@
 export {
-  loadSetupDraft,
-  clearSetupDraft,
-  saveSetupDraft,
-  SetupDraftStore,
-  discardUnreadableSetupDraft,
-} from './SetupDraftStore';
-export { readBlockingSetupProjection } from './readBlockingSetupProjection';
-export {
   createSetupCoordinator,
   createSetupDraft,
   startFirstRunRestoreFromDeviceName,
@@ -14,6 +6,10 @@ export {
 export { resolveNextSetupAction } from './resolveNextSetupAction';
 export { getSetupRecipe, SETUP_RECIPES } from './setupRecipes';
 export { finishDeviceSetup, finishSetup, finishWorkplaceSetup } from './setupFinishers';
+export {
+  completeEncryptedRestoreLaunch,
+  needsEncryptedRestoreLaunchCompletion,
+} from './completeEncryptedRestoreLaunch';
 export { default as SetupScreen } from './SetupScreen';
 export { default as CashClarityScreen } from './first-run';
 export { WorkplaceIdentityStep } from './WorkplaceIdentityStep';
@@ -25,4 +21,3 @@ export {
   shouldRenderSetupGateChildren,
   shouldShowCashClarity,
 } from './setupRouting';
-export type * from './setupTypes';

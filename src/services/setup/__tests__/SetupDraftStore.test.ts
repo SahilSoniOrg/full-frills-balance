@@ -1,8 +1,12 @@
 import { Icon } from '@/src/types/domainIcons';
 import { asWorkplaceId } from '@/src/types/ids';
-import { parseSetupDraft, SETUP_DRAFT_KEY, SetupDraftStore } from '../SetupDraftStore';
+import {
+  parseSetupDraft,
+  SETUP_DRAFT_KEY,
+  SetupDraftStore,
+} from '@/src/services/setup/SetupDraftStore';
 import { storage } from '@/src/utils/storage';
-import type { RestoreSetupDraft } from '../setupTypes';
+import type { RestoreSetupDraft } from '@/src/services/setup/setupTypes';
 import { AccountType } from '@/src/types/enums';
 
 jest.mock('@/src/utils/storage', () => ({

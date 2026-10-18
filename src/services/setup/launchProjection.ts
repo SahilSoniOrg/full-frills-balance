@@ -11,7 +11,7 @@ export function subscribeToSetupDraft(onChange: () => void): () => void {
   return () => subscribers.delete(onChange);
 }
 
-/** SetupDraftStore is the sole writer and publishes changes to launch synchronously. */
+/** The shared SetupDraftStore is the sole writer and publishes changes to launch synchronously. */
 export function notifySetupDraftChanged(): void {
   for (const subscriber of subscribers) subscriber();
 }

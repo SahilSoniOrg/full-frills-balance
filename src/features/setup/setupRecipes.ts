@@ -6,7 +6,7 @@ import {
   type SetupJourneyId,
   type SetupSliceId,
   type SetupSlicePolicy,
-} from './setupTypes';
+} from '@/src/services/setup/setupTypes';
 
 export type SetupRecipeEntry =
   | {

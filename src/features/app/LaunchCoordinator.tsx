@@ -1,3 +1,6 @@
+import { loadPendingEncryptedRestoreDeviceId } from '@/src/services/backup/pendingEncryptedRestoreDeviceId';
+import { encryptionSetupStore } from '@/src/services/backup/encryptionSetupStore';
+import { loadSetupDraft, saveSetupDraft } from '@/src/services/setup/SetupDraftStore';
 import { EmptyStateView, LoadingView } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { WorkplaceProvider } from '@/src/contexts/WorkplaceContext';
@@ -6,10 +9,10 @@ import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
 import { generator } from '@/src/data/database/idGenerator';
 import { WorkplacePicker } from '@/src/features/app/WorkplacePicker';
 import { RestartRequiredScreen } from '@/src/features/dev';
+import { AppLockInterceptor } from './components/AppLockInterceptor';
+import { usePendingRestoreCompletion } from './hooks/usePendingRestoreCompletion';
 import {
   createSetupDraft,
-  loadSetupDraft,
-  saveSetupDraft,
   SETUP_GATE_ROUTES,
   setupEntryPath,
   shouldRedirectSetupToEntry,
@@ -51,6 +54,7 @@ export {
 export type { LaunchSetupDraft } from '@/src/services/launch/launchResolver';
 
 export type LaunchCoordinatorState =
+  | { kind: 'restore-completion'; error: Error | null; retry: () => void }
   | { kind: 'loading'; retry: () => void }
   | { kind: 'error'; error: Error; retry: () => void }
   | Extract<LaunchResolution, { kind: 'setup' }>
@@ -119,10 +123,18 @@ function useWorkplaceDiscovery(enabled: boolean, retryToken: number) {
           initialWorkplaceIdsRef.current = workplaces.map(workplace => workplace.id);
         }
         void migrateLegacyCurrency(initialWorkplaceIdsRef.current)
-          .then(() => {
+          .then(async () => {
             if (cancelled) return;
             if (!recoveryAppliedRef.current) {
+              // Published restore rows do not prove that session/key/launch checkpoints
+              // finished. Keep first-run recovery reachable, including after pending-ID cleanup.
+              const hasEncryptedRestoreCheckpoint =
+                !preferences.device.deviceRegistered &&
+                (Boolean(await loadPendingEncryptedRestoreDeviceId()) ||
+                  (await encryptionSetupStore.loadSession())?.intent === 'recover-user');
+              if (cancelled) return;
               const recovery = decideDeviceRecovery({
+                hasEncryptedRestoreCheckpoint,
                 deviceBagPresent: preferences.rawDeviceBagPresentAtStartup,
                 deviceClaimed: preferences.device.deviceRegistered,
                 workplaceCount: workplaces.length,
@@ -195,6 +207,7 @@ export function LaunchCoordinatorProvider({
     () => preferences.device.deviceRegistered,
     () => preferences.device.deviceRegistered,
   );
+  const completion = usePendingRestoreCompletion(isInitialized, retryToken);
   const discovery = useWorkplaceDiscovery(isInitialized, retryToken);
   const [failedPointerRepairId, setFailedPointerRepairId] = useState<WorkplaceId | null>(null);
   const resolution = useMemo(() => {
@@ -202,6 +215,9 @@ export function LaunchCoordinatorProvider({
       setFailedPointerRepairId(null);
       setRetryToken(token => token + 1);
     };
+    if (completion.active)
+      return { kind: 'restore-completion' as const, error: completion.error, retry };
+    if (completion.checking) return { kind: 'loading' as const, retry };
     if (discovery.error) return { kind: 'error' as const, error: discovery.error, retry };
     if (!isInitialized || discovery.loading) return { kind: 'loading' as const, retry };
     const next = resolveLaunchGate({
@@ -226,6 +242,9 @@ export function LaunchCoordinatorProvider({
     discovery.loading,
     discovery.workplaces,
     isInitialized,
+    completion.active,
+    completion.checking,
+    completion.error,
   ]);
 
   const state = useMemo<LaunchCoordinatorState>(() => {
@@ -288,6 +307,7 @@ export function LaunchCoordinatorContent({
     hasAcknowledgedCurrentPrivacyPolicy,
   );
   const previousOpenWorkplaceId = useRef<string | null>(null);
+  const recoveryWasPending = useRef(false);
   const privacyRedirectInFlight = useRef(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [transitionError, setTransitionError] = useState<string | null>(null);
@@ -306,6 +326,10 @@ export function LaunchCoordinatorContent({
     reject: (error: unknown) => void;
   } | null>(null);
   useEffect(() => {
+    if (state.kind === 'restore-completion') {
+      recoveryWasPending.current = true;
+      return;
+    }
     if (shouldRedirectToPrivacyNotice(state.kind, pathname, isPrivacyPolicyAcknowledged)) {
       if (!privacyRedirectInFlight.current) {
         privacyRedirectInFlight.current = true;
@@ -314,6 +338,12 @@ export function LaunchCoordinatorContent({
       return;
     }
     privacyRedirectInFlight.current = false;
+
+    if (state.kind === 'open' && recoveryWasPending.current) {
+      recoveryWasPending.current = false;
+      router.replace('/');
+      return;
+    }
 
     if (state.kind === 'setup') {
       if (shouldRedirectSetupToEntry(state.journeyId, pathname)) {
@@ -458,6 +488,23 @@ export function LaunchCoordinatorContent({
   }, [pendingDeletionId]);
 
   if (isRestartRequired) return <RestartRequiredScreen />;
+
+  if (state.kind === 'restore-completion') {
+    return (
+      <AppLockInterceptor>
+        {state.error ? (
+          <EmptyStateView
+            title="Recovery needs attention"
+            subtitle="The restored Workplace is not ready to open. Retry to finish recovery; you do not need to select the backup files again."
+            primaryActionLabel="Finish recovery"
+            onPrimaryAction={state.retry}
+          />
+        ) : (
+          <LoadingView loading text="Finishing recovery…" />
+        )}
+      </AppLockInterceptor>
+    );
+  }
 
   const deleteWorkplace = async (targetId: WorkplaceId) => {
     if (transitionInFlightRef.current) await transitionInFlightRef.current;

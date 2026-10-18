@@ -3,7 +3,7 @@ import {
   cashClarityWorkplaceId,
   clearPendingCashClarityWorkplaceId,
   readPendingCashClarityWorkplaceId,
-} from '../pendingWorkplace';
+} from '@/src/services/setup/pendingWorkplace';
 
 jest.mock('@/src/data/database/idGenerator', () => ({
   generator: () => 'fresh-workplace',

@@ -17,8 +17,11 @@ import { DeviceSetupSlice } from './DeviceSetupSlice';
 import { RestoreSourceSlice } from './RestoreSourceSlice';
 import { RestoreSummarySlice } from './RestoreSummarySlice';
 import { startFirstRunRestoreFromDeviceName } from './SetupCoordinator';
-import type { SetupSliceOutputById } from './SetupCoordinator';
-import { discardUnreadableSetupDraft, loadSetupDraft, saveSetupDraft } from './SetupDraftStore';
+import {
+  discardUnreadableSetupDraft,
+  loadSetupDraft,
+  saveSetupDraft,
+} from '@/src/services/setup/SetupDraftStore';
 import { getSetupRecipe, recipeContainsSlice } from './setupRecipes';
 import { SetupSummarySlice } from './SetupSummarySlice';
 import { RestoreJournalRecovery } from './RestoreJournalRecovery';
@@ -46,8 +49,9 @@ import {
   type RestoreSummaryIntent,
   type SetupJourneyId,
   type SetupSliceId,
+  type SetupSliceOutputById,
   type WorkplaceCheckpoint,
-} from './setupTypes';
+} from '@/src/services/setup/setupTypes';
 import { WorkplaceSetupSlice } from './WorkplaceSetupSlice';
 import { WorkplaceSetupLayout } from '@/src/features/setup/components/workplace-setup/WorkplaceSetupLayout';
 import { useSetupJourneyViewState } from './hooks/useSetupJourneyViewState';
@@ -393,6 +397,7 @@ function SetupJourneyScreen({
           <RestoreSourceSlice
             isCompleting={submittingSlice === 'restore_source'}
             onContinue={output => void advance('restore_source', output)}
+            onWorkplaceRecovery={() => AppNavigation.toEncryptedBackup('restore')}
           />
         );
       case 'workplace': {

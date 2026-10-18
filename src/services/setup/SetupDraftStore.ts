@@ -11,7 +11,7 @@ import {
   parseRestoreStats,
   restorePublicationClaims,
 } from '@/src/services/import/restore';
-import { forgetAllPreparedRestores } from './pickRestoreSource';
+import { forgetAllPreparedRestores } from './preparedRestoreCache';
 import type {
   DeviceSetupOutput,
   RestoreDraftState,

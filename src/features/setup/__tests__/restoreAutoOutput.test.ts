@@ -1,7 +1,7 @@
 import { Icon } from '@/src/types/domainIcons';
 import { asWorkplaceId } from '@/src/types/ids';
 import { getRestoreAutoOutput, getRestoreWorkplacePrefill } from '../restoreAutoOutput';
-import type { RestoreSetupDraft, RestoreSourceOutput } from '../setupTypes';
+import type { RestoreSetupDraft, RestoreSourceOutput } from '@/src/services/setup/setupTypes';
 
 const operationId = asWorkplaceId('operation');
 
