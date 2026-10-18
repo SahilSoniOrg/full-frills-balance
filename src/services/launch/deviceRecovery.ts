@@ -5,6 +5,8 @@ export interface DeviceRecoveryInput {
   readonly deviceBagPresent: boolean;
   readonly deviceClaimed: boolean;
   readonly workplaceCount: number;
+  /** Encrypted recovery can publish books before its launch checkpoints finish. */
+  readonly hasEncryptedRestoreCheckpoint?: boolean;
   readonly userName?: string;
 }
 
@@ -21,13 +23,15 @@ export interface DeviceRecoveryResult {
 /**
  * Decide how to recover a missing Device preference bag.
  *
- * Existing Workplaces are the upgrade proof that setup completed. Their
+ * Existing Workplaces without an encrypted recovery checkpoint are the upgrade
+ * proof that setup completed. Their
  * contents are intentionally irrelevant: even an empty legacy Workplace is
  * preserved and treated as a completed install. Persistence is the
  * coordinator's responsibility.
  */
 export function decideDeviceRecovery(input: DeviceRecoveryInput): DeviceRecoveryResult {
-  const existingBooksProveCompletion = input.workplaceCount > 0;
+  const existingBooksProveCompletion =
+    input.workplaceCount > 0 && !input.hasEncryptedRestoreCheckpoint;
   const needsMissingBagRecovery = !input.deviceBagPresent;
   const needsClaimRepair = existingBooksProveCompletion && !input.deviceClaimed;
   if (!needsMissingBagRecovery && !needsClaimRepair) {
