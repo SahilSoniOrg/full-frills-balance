@@ -1048,7 +1048,10 @@ export const migrations = schemaMigrations({
       steps: [
         addColumns({
           table: 'workplaces',
-          columns: [{ name: 'row_restore_manifest_hash', type: 'string', isOptional: true }],
+          columns: [
+            { name: 'row_restore_manifest_hash', type: 'string', isOptional: true },
+            { name: 'row_restore_completion_json', type: 'string', isOptional: true },
+          ],
         }),
         createTable({
           name: 'sync_row_index',
@@ -1107,15 +1110,6 @@ export const migrations = schemaMigrations({
           CREATE UNIQUE INDEX IF NOT EXISTS idx_sync_pending_commits_identity
           ON sync_pending_commits (workplace_id, seq);
         `),
-      ],
-    },
-    {
-      toVersion: 36,
-      steps: [
-        addColumns({
-          table: 'workplaces',
-          columns: [{ name: 'row_restore_completion_json', type: 'string', isOptional: true }],
-        }),
       ],
     },
   ],

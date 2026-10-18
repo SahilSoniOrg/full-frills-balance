@@ -2,7 +2,7 @@ import { appSchema, tableSchema } from '@nozbe/watermelondb';
 import { deviceSmsInboxTable } from './deviceSmsInboxSchema';
 
 export const schema = appSchema({
-  version: 36,
+  version: 35,
   tables: [
     deviceSmsInboxTable,
     tableSchema({
