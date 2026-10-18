@@ -1,9 +1,11 @@
 import { requireShellContext } from '@/src/contexts/app-shell/requireShellContext';
 import { preferences } from '@/src/services/preferences';
+import { setKeyAccessAllowed } from '@/src/services/backup/keyAccessPolicy';
 import React, {
   createContext,
   useCallback,
   useContext,
+  useLayoutEffect,
   useMemo,
   useState,
   useSyncExternalStore,
@@ -76,6 +78,11 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
     }),
     [lock, isAppCurrentlyLocked, authenticateSession, setIsAppActive, setIsLockAuthenticating],
   );
+
+  useLayoutEffect(() => {
+    setKeyAccessAllowed(!isAppCurrentlyLocked);
+    return () => setKeyAccessAllowed(false);
+  }, [isAppCurrentlyLocked]);
 
   return <AppLockContext.Provider value={value}>{children}</AppLockContext.Provider>;
 }

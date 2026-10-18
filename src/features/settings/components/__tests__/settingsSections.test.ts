@@ -42,6 +42,7 @@ const IOS_FOCUS_TARGET_IDS = [
   'privacy-notice',
   'data-export',
   'data-import',
+  'encrypted-backup',
   'audit-log',
   'integrity',
   'journal-balance-audit',
