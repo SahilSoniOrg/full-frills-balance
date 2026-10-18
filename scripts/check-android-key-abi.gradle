@@ -1,0 +1,30 @@
+// WatermelonDB's third-party JSI build does not read React Native's ABI property.
+// Keep verification builds limited to the explicitly requested architectures.
+gradle.afterProject { project, state ->
+    if (project.path == ':watermelondb-jsi' && state.failure == null) {
+        def requested = project.rootProject.findProperty('reactNativeArchitectures')
+        if (requested != null) {
+            project.android.defaultConfig.ndk.abiFilters.addAll(
+                requested.toString().split(',').collect { it.trim() })
+        }
+    }
+}
+
+// Regression checks against the effective filters, before any compilation.
+gradle.projectsEvaluated {
+    // Init scripts also run in the included React Native/Expo plugin builds.
+    if (gradle.rootProject.findProject(':app') == null) return
+    def crypto = gradle.rootProject.findProject(':expo-key-crypto')
+    def requested = gradle.rootProject.findProperty('reactNativeArchitectures')
+    if (crypto == null || requested == null) {
+        throw new GradleException('Crypto ABI verification requires the app project and explicit architectures')
+    }
+    def expected = requested.toString().split(',').collect { it.trim() }.toSet()
+    [crypto, gradle.rootProject.findProject(':watermelondb-jsi')].each { project ->
+        if (project == null) throw new GradleException('Missing native verification dependency')
+        def actual = project.android.defaultConfig.ndk.abiFilters.toSet()
+        if (actual != expected) {
+            throw new GradleException("${project.path} ABIs ${actual} do not match requested app ABIs ${expected}")
+        }
+    }
+}
