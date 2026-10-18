@@ -29,7 +29,7 @@ bash scripts/build-openssl-wasm.sh
 export FFB_WASM_OPENSSL_PREFIX="$HOME/emscripten-openssl-ffb"
 ```
 
-The wasm key build script does not fetch OpenSSL itself.
+The wasm key build script does not fetch OpenSSL itself. Gzip uses the zlib port supplied by Emscripten (`-sUSE_ZLIB=1`); its first build may fetch and cache that port. Android and iOS link platform zlib. No dictionary training or generated compression assets are required.
 
 ## Build and parity check
 
@@ -40,7 +40,7 @@ FFB_WASM_OPENSSL_PREFIX=/path/to/emscripten-openssl node scripts/build-wasm-key-
 node scripts/test-wasm-key-crypto.mjs
 ```
 
-The build emits `dist/key-crypto.wasm`, the generated ES module loader, and `build-inputs.lock.json`. The lock hashes the C++ sources, vendored dependencies, bridge, build script, dictionary embedding/provenance scripts, schema map, dictionary bytes and lock metadata; the parity runner rejects stale artifacts. The runner uses the shared `row-vectors.json` row codec and manifest oracle in Node.
+The build emits `dist/key-crypto.wasm`, the generated ES module loader, and `build-inputs.lock.json`. The lock hashes the C++ sources, vendored JSON dependency, bridge, build script and gzip/zlib build configuration; the parity runner rejects stale artifacts. The runner uses the shared `row-vectors.json` row codec and manifest oracle in Node.
 
 ## Worker vault
 

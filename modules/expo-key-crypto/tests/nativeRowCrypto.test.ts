@@ -34,7 +34,7 @@ const row = (overrides: Record<string, unknown> = {}) => ({
   updatedAt: 1_797_000_000_000,
   deleted: false,
   schemaVersion: 35,
-  dictId: 'transactions/v1',
+  compression: 'gzip' as const,
   plaintext: '{"a":1,"note":"नमस्ते"}',
   ...overrides,
 });
@@ -49,6 +49,11 @@ it('round-trips UTF-8 rows through native compression, HKDF, and AES-GCM', async
   })) as { envelopes: Record<string, unknown>[] };
   expect(encrypted.envelopes).toHaveLength(1);
   expect(encrypted.envelopes[0].salt).toEqual(expect.any(String));
+  expect(encrypted.envelopes[0]).toMatchObject({
+    formatVersion: 1,
+    enc: 'shortkey1',
+    compression: 'gzip',
+  });
   const decrypted = (await context.host.execute('decryptRows', {
     key,
     workplaceId,
@@ -60,7 +65,7 @@ it('round-trips UTF-8 rows through native compression, HKDF, and AES-GCM', async
       rowId: 'row-1',
       table: 'transactions',
       schemaVersion: 35,
-      dictId: 'transactions/v1',
+      compression: 'gzip' as const,
       plaintext: '{"a":1,"note":"नमस्ते"}',
     },
   ]);
@@ -92,7 +97,24 @@ it('authenticates header, salt, ciphertext, and Workplace scope per row', async 
   }
 });
 
-it('rejects duplicate rows, unknown dictionaries, and row or batch caps', async () => {
+it('rejects unsupported compression before interpreting an encrypted body', async () => {
+  const { context, key, workplaceId } = await setup();
+  const { envelopes } = (await context.host.execute('encryptRows', {
+    key,
+    workplaceId,
+    keyId: key.keyId,
+    rows: [row()],
+  })) as { envelopes: Record<string, unknown>[] };
+  expect(
+    await context.host.execute('decryptRows', {
+      key,
+      workplaceId,
+      envelopes: [{ ...envelopes[0], compression: 'unsupported-codec' }],
+    }),
+  ).toMatchObject({ rows: [{ ok: false, error: 'FFB_ROW_UNSUPPORTED_COMPRESSION' }] });
+});
+
+it('rejects duplicate rows, unsupported compression, and row or batch caps', async () => {
   const { context, key, workplaceId } = await setup();
   const encrypt = (rows: unknown[]) =>
     context.host.execute('encryptRows', {
@@ -101,11 +123,11 @@ it('rejects duplicate rows, unknown dictionaries, and row or batch caps', async 
       keyId: key.keyId,
       rows,
     });
-  await expect(encrypt([row({ dictId: 'journals/v1' })])).rejects.toMatchObject({
-    code: 'FFB_ROW_UNKNOWN_DICT',
+  await expect(encrypt([row({ compression: 'unsupported-codec' })])).rejects.toMatchObject({
+    code: 'FFB_ROW_UNSUPPORTED_COMPRESSION',
   });
-  await expect(encrypt([row({ dictId: 'transactions/v999' })])).rejects.toMatchObject({
-    code: 'FFB_ROW_UNKNOWN_DICT',
+  await expect(encrypt([row({ compression: 'unknown' })])).rejects.toMatchObject({
+    code: 'FFB_ROW_UNSUPPORTED_COMPRESSION',
   });
   await expect(encrypt([row({ plaintext: 'x'.repeat(64 * 1024 + 1) })])).rejects.toMatchObject({
     code: 'FFB_ROW_TOO_LARGE',
@@ -203,16 +225,16 @@ it('encrypts tombstones with empty bodies and returns no plaintext after decrypt
     rowId: 'row-1',
     table: 'transactions',
     schemaVersion: 35,
-    dictId: 'transactions/v1',
+    compression: 'gzip' as const,
     plaintext: '',
   });
 });
 
-it('round-trips a nonfinancial record using only a host-test trusted provider', async () => {
+it('round-trips nonfinancial records without application-specific compression assets', async () => {
   const { context, workplaceId } = await setup();
   const request = row({
     table: 'weather.observation',
-    dictId: 'opaque-test-dictionary-7',
+    compression: 'gzip' as const,
     plaintext: '{"temperature":21}',
   });
   const envelopes = await context.hierarchy.encryptRows(context.identity, workplaceId, [request]);
@@ -222,18 +244,10 @@ it('round-trips a nonfinancial record using only a host-test trusted provider', 
       table: request.table,
       rowId: request.rowId,
       schemaVersion: 35,
-      dictId: request.dictId,
+      compression: request.compression,
       plaintext: request.plaintext,
     },
   ]);
-  for (const invalid of [
-    { table: 'weather.observation', dictId: 'transactions/v1' },
-    { table: 'transactions', dictId: request.dictId },
-    { table: 'weather.observation', dictId: 'missing' },
-  ])
-    await expect(
-      context.hierarchy.encryptRows(context.identity, workplaceId, [row(invalid)]),
-    ).rejects.toThrow();
   for (const table of ['', 'x'.repeat(129), '\ud800'])
     await expect(
       context.hierarchy.encryptRows(context.identity, workplaceId, [row({ table })]),
@@ -256,7 +270,7 @@ it('encrypts and decrypts record types through the 128 UTF-8 byte boundary', asy
     row({
       table,
       rowId: `boundary-${i}`,
-      dictId: 'opaque-test-dictionary-7',
+      compression: 'gzip' as const,
     }),
   );
   // The hierarchy exercises the TypeScript bridge as well as real native crypto.
@@ -268,7 +282,7 @@ it('encrypts and decrypts record types through the 128 UTF-8 byte boundary', asy
       table: value.table,
       rowId: value.rowId,
       schemaVersion: value.schemaVersion,
-      dictId: value.dictId,
+      compression: value.compression,
       plaintext: value.plaintext,
     })),
   );
@@ -278,7 +292,7 @@ it('encrypts and decrypts record types through the 128 UTF-8 byte boundary', asy
     await context.host.execute('decryptRows', {
       key,
       workplaceId,
-      envelopes: [{ ...longest, formatVersion: 2 }],
+      envelopes: [{ ...longest, formatVersion: 99 }],
     }),
   ).toEqual({
     rows: [{ ok: false, table: longest.table, rowId: longest.rowId, error: 'FFB_ROW_INTEGRITY' }],
@@ -291,7 +305,7 @@ it('encrypts and decrypts record types through the 128 UTF-8 byte boundary', asy
         key,
         workplaceId,
         keyId: key.keyId,
-        rows: [row({ table, dictId: 'opaque-test-dictionary-7' })],
+        rows: [row({ table, compression: 'gzip' as const })],
       }),
     ).rejects.toMatchObject({ code: 'FFB_KEY_INVALID_FILE' });
     await expect(

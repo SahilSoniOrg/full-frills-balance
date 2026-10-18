@@ -1,3 +1,4 @@
+import { assertRowCompression } from '@/src/services/crypto/protocol/rowCompression';
 import { parseRowEnvelope } from '@/src/services/crypto/protocol/rowEnvelope';
 import { assertRecordType } from '@/src/services/crypto/protocol/rowHeader';
 import { keyHex } from './keyEncoding';
@@ -89,7 +90,7 @@ function parseDecryptedRow(value: unknown, expected: RowEnvelopeJson): Decrypted
   }
   assertExactKeys(
     row,
-    ['ok', 'rowId', 'table', 'schemaVersion', 'dictId', 'plaintext'],
+    ['ok', 'rowId', 'table', 'schemaVersion', 'compression', 'plaintext'],
     'Invalid decrypted row',
   );
   if (
@@ -97,20 +98,19 @@ function parseDecryptedRow(value: unknown, expected: RowEnvelopeJson): Decrypted
     typeof row.schemaVersion !== 'number' ||
     !Number.isSafeInteger(row.schemaVersion) ||
     row.schemaVersion < 0 ||
-    typeof row.dictId !== 'string' ||
-    row.dictId.length === 0 ||
     typeof row.plaintext !== 'string' ||
     encodeUtf8(row.plaintext).length > MAX_ROW_PLAINTEXT_BYTES ||
     (expected.deleted && row.plaintext !== '')
   )
     throw new Error('Invalid decrypted row');
-  encodeUtf8(row.dictId, 'dictId', true);
+  assertRowCompression(row.compression);
+  if (row.compression !== expected.compression) throw new Error('Native row compression mismatch');
   return {
     ok: true,
     rowId: expected.rowId,
     table: expected.table,
     schemaVersion: row.schemaVersion,
-    dictId: row.dictId,
+    compression: row.compression,
     plaintext: row.plaintext,
   };
 }
@@ -142,7 +142,7 @@ export function keyOperationsFromTransport(
       for (const row of rows) {
         assertRecordType(row.table);
         encodeUtf8(row.rowId, 'rowId', true);
-        encodeUtf8(row.dictId, 'dictId', true);
+        assertRowCompression(row.compression);
         const bytes = encodeUtf8(row.plaintext, 'row plaintext');
         if (bytes.length > MAX_ROW_PLAINTEXT_BYTES)
           throw new Error('FFB_ROW_TOO_LARGE: row plaintext');
@@ -166,7 +166,8 @@ export function keyOperationsFromTransport(
           row.table !== expected.table ||
           row.rowId !== expected.rowId ||
           row.updatedAt !== expected.updatedAt ||
-          row.deleted !== expected.deleted
+          row.deleted !== expected.deleted ||
+          row.compression !== expected.compression
         )
           throw new Error('Native row scope mismatch');
         return serializeRowEnvelope(row);

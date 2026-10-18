@@ -71,10 +71,9 @@ describe('canonical row codec', () => {
   });
 
   test('round-trips inner TLV and rejects trailing fields', () => {
-    const encoded = encodeInnerPlaintext(4, 'accounts/v1', Uint8Array.of(0, 1, 2));
+    const encoded = encodeInnerPlaintext(4, Uint8Array.of(0, 1, 2));
     expect(decodeInnerPlaintext(encoded)).toEqual({
       schemaVersion: 4,
-      dictId: 'accounts/v1',
       body: Uint8Array.of(0, 1, 2),
     });
     expect(() => decodeInnerPlaintext(Uint8Array.from([...encoded, 1]))).toThrow();
@@ -91,6 +90,7 @@ describe('canonical row codec', () => {
         deleted: row.deleted,
         keyId: row.keyId,
         salt: Uint8Array.from(Buffer.from(row.salt, 'base64')),
+        compression: 'gzip' as const,
       });
       expect(Buffer.from(header).toString('hex')).toBe(row.aadHex);
       expect(Buffer.from(encodeRowInfo(row.table)).toString('hex')).toBe(row.infoHex);
@@ -102,6 +102,7 @@ describe('canonical row codec', () => {
         deleted: row.deleted,
         keyId: row.keyId,
         salt: Uint8Array.from(Buffer.from(row.salt, 'base64')),
+        compression: 'gzip' as const,
         ciphertext: Uint8Array.from(Buffer.from(row.ciphertextBase64, 'base64')),
       });
     }
@@ -150,7 +151,8 @@ describe('canonical row codec', () => {
     const original = {
       format: 'full-frills-encrypted-row' as const,
       formatVersion: 1 as const,
-      enc: 'shortkey1+zstd' as const,
+      enc: 'shortkey1' as const,
+      compression: 'gzip' as const,
       workplaceId: 'w',
       table: 'accounts' as const,
       rowId: 'r',
@@ -161,6 +163,14 @@ describe('canonical row codec', () => {
       ciphertext: Uint8Array.of(1, 2, 3),
     };
     expect(parseRowEnvelope(serializeRowEnvelope(original))).toEqual(original);
+    expect(() =>
+      parseRowEnvelope({ ...serializeRowEnvelope(original), compression: 'unsupported-codec' }),
+    ).toThrow(/FFB_ROW_UNSUPPORTED_COMPRESSION/);
+    const { compression: _compression, ...missingCompression } = serializeRowEnvelope(original);
+    expect(() => parseRowEnvelope(missingCompression)).toThrow(/missing/);
+    expect(() =>
+      parseRowEnvelope({ ...serializeRowEnvelope(original), formatVersion: 99 }),
+    ).toThrow(/Unsupported envelope format/);
     expect(() => parseRowEnvelope({ ...serializeRowEnvelope(original), extra: true })).toThrow(
       /unknown/,
     );
@@ -184,6 +194,7 @@ describe('canonical row codec', () => {
       deleted: false,
       keyId: 'k',
       salt: new Uint8Array(16),
+      compression: 'gzip' as const,
       ciphertext: Uint8Array.of(1),
     };
     await expect(computeMerkleRoot([base], 0)).rejects.toThrow(/mismatch/);
@@ -206,6 +217,7 @@ it('encodes opaque nonfinancial record types and rejects malformed or oversized 
     deleted: false,
     keyId: 'k',
     salt: new Uint8Array(16),
+    compression: 'gzip' as const,
   };
   expect(decodeRowHeader(encodeRowHeader(header))).toEqual(header);
   for (const table of ['', 'x'.repeat(129), '\ud800', '😀'.repeat(33)]) {
@@ -226,6 +238,7 @@ it('uses a 128-byte UTF-8 limit for record header and key-info encoding and deco
     deleted: false,
     keyId: 'k',
     salt: new Uint8Array(16),
+    compression: 'gzip' as const,
   };
   for (const table of [
     'x'.repeat(64),
@@ -244,7 +257,8 @@ it('uses a 128-byte UTF-8 limit for record header and key-info encoding and deco
       table,
       format: 'full-frills-encrypted-row',
       formatVersion: 1,
-      enc: 'shortkey1+zstd',
+      enc: 'shortkey1',
+      compression: 'gzip' as const,
       ciphertext: new Uint8Array(16),
     });
     expect(parseRowEnvelope(wire).table).toBe(table);
@@ -254,7 +268,7 @@ it('uses a 128-byte UTF-8 limit for record header and key-info encoding and deco
     expect(() => encodeRowInfo(table)).toThrow(/128 UTF-8 bytes/);
     expect(() => encodeRowHeader({ ...header, table })).toThrow(/128 UTF-8 bytes/);
     // Construct invalid wire bytes without routing through the guarded encoders.
-    const fields = decodeTlv(encodeRowHeader(header), 1, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    const fields = decodeTlv(encodeRowHeader(header), 1, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     fields.set(5, encodeUtf8(table));
     expect(() =>
       decodeRowHeader(

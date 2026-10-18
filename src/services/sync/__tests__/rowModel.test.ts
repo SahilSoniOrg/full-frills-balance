@@ -19,7 +19,7 @@ import {
   assertAdditiveMapHistory,
 } from '../shortKeys';
 import { upgradeRow } from '../rowUpgrades';
-import { getRowDictionary } from '../dictionaries';
+import { assertRowCompression } from '@/src/services/crypto/protocol/rowCompression';
 
 const transaction = {
   journalId: 'j1',
@@ -67,8 +67,8 @@ describe('row schema and short-key boundary', () => {
         .sort(),
     ).toEqual(['currencyPrecisions', 'defaultCurrencyCode', 'icon', 'name', 'safeToSpendDays']);
     expect(() => getRowTable('sync_row_index')).toThrow();
-    expect(() => getRowDictionary('accounts', 'journals/v1')).toThrow(/UNKNOWN_DICT/);
-    expect(() => getRowDictionary('accounts', 'accounts/v2')).toThrow(/UNKNOWN_DICT/);
+    expect(() => assertRowCompression('gzip')).not.toThrow();
+    expect(() => assertRowCompression('unsupported-codec')).toThrow(/UNSUPPORTED_COMPRESSION/);
   });
   test('round trip preserves absent optional defaults, false, zero and empty strings', () => {
     expect(new TextDecoder().decode(canonicalRowBytes('transactions', transaction))).toBe(

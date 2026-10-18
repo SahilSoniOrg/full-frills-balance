@@ -1,10 +1,17 @@
 import { parseObject, assertExactKeys } from '@/src/utils/strictObject';
 import { encodeInt64Milliseconds, encodeUtf8, assertSafeNonnegativeInteger } from './tlv';
-import { ROW_ENCODING, ROW_FORMAT, assertRecordType, RowHeader } from './rowHeader';
+import {
+  ROW_ENCODING,
+  ROW_FORMAT,
+  ROW_FORMAT_VERSION,
+  assertRecordType,
+  RowHeader,
+} from './rowHeader';
+import { assertRowCompression } from './rowCompression';
 
 export type RowEnvelope = RowHeader & {
   format: typeof ROW_FORMAT;
-  formatVersion: 1;
+  formatVersion: typeof ROW_FORMAT_VERSION;
   enc: typeof ROW_ENCODING;
   ciphertext: Uint8Array;
 };
@@ -59,6 +66,7 @@ export function parseRowEnvelope(value: unknown): RowEnvelope {
     'format',
     'formatVersion',
     'enc',
+    'compression',
     'workplaceId',
     'table',
     'rowId',
@@ -68,9 +76,14 @@ export function parseRowEnvelope(value: unknown): RowEnvelope {
     'salt',
     'ciphertext',
   ];
-  assertExactKeys(record, keys, 'Envelope has missing or unknown fields');
-  if (record.format !== ROW_FORMAT || record.formatVersion !== 1 || record.enc !== ROW_ENCODING)
+  if (
+    record.format !== ROW_FORMAT ||
+    record.formatVersion !== ROW_FORMAT_VERSION ||
+    record.enc !== ROW_ENCODING
+  )
     throw new Error('Unsupported envelope format');
+  assertExactKeys(record, keys, 'Envelope has missing or unknown fields');
+  assertRowCompression(record.compression);
   assertRecordType(record.table);
   for (const key of ['workplaceId', 'rowId', 'keyId'] as const)
     encodeUtf8(record[key] as string, key, true);
@@ -83,8 +96,9 @@ export function parseRowEnvelope(value: unknown): RowEnvelope {
   if (salt.length !== 16) throw new Error('salt must be 16 bytes');
   return {
     format: ROW_FORMAT,
-    formatVersion: 1,
+    formatVersion: ROW_FORMAT_VERSION,
     enc: ROW_ENCODING,
+    compression: record.compression,
     workplaceId: record.workplaceId as string,
     table: record.table,
     rowId: record.rowId as string,

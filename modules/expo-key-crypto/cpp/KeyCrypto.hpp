@@ -20,7 +20,7 @@ enum class ErrorCode {
   AuthenticationFailed,
   ReferenceExpired,
   Cancelled,
-  RowUnknownDict,
+  RowUnsupportedCompression,
   RowTooLarge,
   RowIntegrity,
   OperationFailed

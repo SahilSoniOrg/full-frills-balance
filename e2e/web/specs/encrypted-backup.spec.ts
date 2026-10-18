@@ -1,4 +1,3 @@
-import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { readFile, writeFile } from 'node:fs/promises';
 import { unzipSync, zipSync, strFromU8, strToU8 } from 'fflate';
@@ -331,32 +330,5 @@ test('Device A approves an independent Device B which restores without a recover
     await page.screenshot({ path: testInfo.outputPath('device-a-still-ready.png') });
   } finally {
     await contextB.close();
-  }
-});
-
-test('restores the public fixed pre-refactor archive through the app', async ({
-  browser,
-}, testInfo) => {
-  const fresh = await freshRestore(browser, testInfo);
-  try {
-    const fixtures = path.resolve(__dirname, '../../../modules/expo-key-crypto/tests/fixtures');
-    await pickFile(
-      fresh.page,
-      'encrypted-backup-pick-zip',
-      path.join(fixtures, 'public-pre-refactor-backup.zip'),
-    );
-    await pickFile(
-      fresh.page,
-      'encrypted-backup-pick-recovery',
-      path.join(fixtures, 'public-pre-refactor-recovery.json'),
-    );
-    await fresh.page.getByTestId('encrypted-backup-restore').click();
-    await expect(fresh.page.getByTestId('dashboard-screen')).toBeVisible({ timeout: 120000 });
-    await fresh.page.reload();
-    await expect(fresh.page.getByTestId('dashboard-screen')).toBeVisible();
-    await fresh.page.getByRole('tab', { name: 'Settings', exact: true }).click();
-    await expect(fresh.page.getByText('PUBLIC SYNTHETIC TEST ONLY', { exact: true })).toBeVisible();
-  } finally {
-    await fresh.context.close();
   }
 });

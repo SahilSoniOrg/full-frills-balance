@@ -25,8 +25,8 @@ const char *safeErrorCode(std::exception_ptr error) noexcept {
       return "FFB_KEY_REFERENCE_EXPIRED";
     case ErrorCode::Cancelled:
       return "FFB_KEY_CANCELLED";
-    case ErrorCode::RowUnknownDict:
-      return "FFB_ROW_UNKNOWN_DICT";
+    case ErrorCode::RowUnsupportedCompression:
+      return "FFB_ROW_UNSUPPORTED_COMPRESSION";
     case ErrorCode::RowTooLarge:
       return "FFB_ROW_TOO_LARGE";
     case ErrorCode::RowIntegrity:
@@ -235,8 +235,8 @@ Key signingKey(const Bytes &encoded) {
 Bytes aes(const Bytes &key, const Bytes &nonce, const Bytes &aad,
           std::span<const unsigned char> input, bool encrypt) {
   require(key.size() == 32 && nonce.size() == 12 &&
-              input.size() <= MAX_SNAPSHOT + 16,
-          "Invalid native snapshot cryptography");
+              input.size() <= MAX_KEY_ENVELOPE_BYTES + 16,
+          "Invalid native key-envelope cryptography");
   Cipher c(EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free);
   require(!!c, "Native cipher allocation failed", ErrorCode::OperationFailed);
   Bytes output(input.size() + 16);
@@ -255,7 +255,7 @@ Bytes aes(const Bytes &key, const Bytes &nonce, const Bytes &aad,
                                 output.data() + first + last) == 1,
             "Native encryption tag failed", ErrorCode::OperationFailed);
   } else {
-    require(input.size() >= 16, "Invalid encrypted snapshot");
+    require(input.size() >= 16, "Invalid encrypted key envelope");
     require(EVP_DecryptInit_ex(c.get(), EVP_aes_256_gcm(), nullptr, key.data(),
                                nonce.data()) == 1 &&
                 EVP_DecryptUpdate(c.get(), nullptr, &ignored, aad.data(),
@@ -269,7 +269,7 @@ Bytes aes(const Bytes &key, const Bytes &nonce, const Bytes &aad,
     if (EVP_DecryptFinal_ex(c.get(), output.data() + first, &last) != 1) {
       wipe(output);
       throw OperationError(ErrorCode::AuthenticationFailed,
-                           "Native snapshot authentication failed");
+                           "Native key-envelope authentication failed");
     }
     output.resize(first + last);
   }

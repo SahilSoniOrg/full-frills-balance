@@ -76,7 +76,8 @@ const manifest: RowManifestJson = {
 const envelope: RowEnvelopeJson = {
   format: 'full-frills-encrypted-row',
   formatVersion: 1,
-  enc: 'shortkey1+zstd',
+  enc: 'shortkey1',
+  compression: 'gzip' as const,
   workplaceId: WORKPLACE_ID,
   table: 'workplace',
   rowId: WORKPLACE_ID,

@@ -1,5 +1,7 @@
 # Verify restore interruption and retry across durable boundaries
 
+
+
 Status: implemented; browser, real-core integration, production JavaScript and Hermes-bytecode exclusion verification passed. Native device release gates remain open.
 
 ## Objective
@@ -18,7 +20,7 @@ This is verification work, not another architectural extraction. Extend existing
 | Session saved; pending-ID removal fails or has not completed | Workflow tests re-verify the saved Device and retry after a mocked clear failure | Reload with both saved session and stale pending ID, then finish cleanly without allocating another Device |
 | Post-restore UI loses focus / is locked | Hook tests suppress visible effects; workflow tests finish checkpoints after cancellation | Keep these focused tests; add browser interruption evidence through the scenarios above rather than duplicating every UI test |
 
-The current browser suite covers malformed inputs, setup resumption, repeat restore, existing-Workplace refusal, independent Device access and fixed pre-refactor archive compatibility. Those do not by themselves prove interruptions between restore persistence steps. Plaintext `restorePublicationClaims` tests concern another restore mechanism and must not be treated as evidence for the encrypted manifest-hash receipt.
+The current browser suite covers malformed inputs, setup resumption, repeat restore, existing-Workplace refusal, independent Device access. Those do not by themselves prove interruptions between restore persistence steps. Plaintext `restorePublicationClaims` tests concern another restore mechanism and must not be treated as evidence for the encrypted manifest-hash receipt.
 
 ## Durable sequence under test
 

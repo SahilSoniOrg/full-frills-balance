@@ -1,3 +1,4 @@
+import type { RowCompression } from './rowCompression';
 import type { RecordType } from './rowHeader';
 import type { RowEnvelopeJson } from './envelopeJson';
 import type { KeyOperationErrorCode } from '@/src/utils/keyOperationError';
@@ -12,7 +13,7 @@ export type EncryptRow = Readonly<{
   updatedAt: number;
   deleted: boolean;
   schemaVersion: number;
-  dictId: string;
+  compression: RowCompression;
   plaintext: string;
 }>;
 export type DecryptedRow = Readonly<
@@ -21,7 +22,7 @@ export type DecryptedRow = Readonly<
       table: RecordType;
       rowId: string;
       schemaVersion: number;
-      dictId: string;
+      compression: RowCompression;
       plaintext: string;
     }
   | { ok: false; table: RecordType; rowId: string; error: KeyOperationErrorCode }

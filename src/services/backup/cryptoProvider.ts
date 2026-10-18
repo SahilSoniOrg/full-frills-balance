@@ -1,7 +1,7 @@
 /** Web/Node implementation. Absence of secure crypto is an error, never a random-number fallback. */
 function secureCrypto(): Crypto {
   if (!globalThis.crypto?.subtle || !globalThis.crypto.getRandomValues) {
-    throw new Error('Secure snapshot cryptography is unavailable');
+    throw new Error('Secure cryptography is unavailable');
   }
   return globalThis.crypto;
 }

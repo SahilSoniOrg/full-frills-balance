@@ -1,3 +1,5 @@
+import { assertRowCompression, type RowCompression } from './rowCompression';
+
 import {
   MAX_IDENTIFIER_UTF8_BYTES,
   decodeInt64Milliseconds,
@@ -13,7 +15,7 @@ import {
 
 export const ROW_FORMAT = 'full-frills-encrypted-row' as const;
 export const ROW_FORMAT_VERSION = 1 as const;
-export const ROW_ENCODING = 'shortkey1+zstd' as const;
+export const ROW_ENCODING = 'shortkey1' as const;
 /** Opaque protocol record type, bounded exactly like other wire identifiers. */
 export type RecordType = string;
 export function assertRecordType(value: unknown): asserts value is RecordType {
@@ -28,10 +30,12 @@ export type RowHeader = {
   deleted: boolean;
   keyId: string;
   salt: Uint8Array;
+  compression: RowCompression;
 };
 
 export function encodeRowHeader(header: RowHeader): Uint8Array {
   assertRecordType(header.table);
+  assertRowCompression(header.compression);
   if (typeof header.deleted !== 'boolean') throw new Error('deleted must be boolean');
   if (header.salt.length !== 16) throw new Error('salt must be 16 bytes');
   assertSafeNonnegativeInteger(ROW_FORMAT_VERSION, 'formatVersion');
@@ -46,17 +50,21 @@ export function encodeRowHeader(header: RowHeader): Uint8Array {
     { tag: 8, value: Uint8Array.of(header.deleted ? 1 : 0) },
     { tag: 9, value: encodeUtf8(header.keyId, 'keyId', true) },
     { tag: 10, value: header.salt },
+    { tag: 11, value: encodeUtf8(header.compression) },
   ]);
 }
 
 export function decodeRowHeader(bytes: Uint8Array): RowHeader {
-  const f = decodeTlv(bytes, 0x01, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  const f = decodeTlv(bytes, 0x01, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
   if (
     decodeUtf8(f.get(1)!, 'format') !== ROW_FORMAT ||
     decodeUtf8(f.get(3)!, 'enc') !== ROW_ENCODING
   )
     throw new Error('Invalid row format');
-  if (f.get(2)!.length !== 1 || f.get(2)![0] !== 1) throw new Error('Invalid row formatVersion');
+  if (f.get(2)!.length !== 1 || f.get(2)![0] !== ROW_FORMAT_VERSION)
+    throw new Error('Invalid row formatVersion');
+  const compression = decodeUtf8(f.get(11)!, 'compression');
+  assertRowCompression(compression);
   const table = decodeUtf8(f.get(5)!, 'table');
   assertRecordType(table);
   if (f.get(8)!.length !== 1 || f.get(8)![0] > 1) throw new Error('Invalid deleted flag');
@@ -69,6 +77,7 @@ export function decodeRowHeader(bytes: Uint8Array): RowHeader {
     deleted: f.get(8)![0] === 1,
     keyId: decodeUtf8Identifier(f.get(9)!, 'keyId'),
     salt: f.get(10)!,
+    compression,
   };
 }
 
@@ -95,31 +104,23 @@ export function decodeRowInfo(bytes: Uint8Array): RecordType {
   return table;
 }
 
-export function encodeInnerPlaintext(
-  schemaVersion: number,
-  dictId: string,
-  body: Uint8Array,
-): Uint8Array {
+export function encodeInnerPlaintext(schemaVersion: number, body: Uint8Array): Uint8Array {
   assertSafeNonnegativeInteger(schemaVersion, 'schemaVersion');
   return encodeTlv(0x04, [
     { tag: 1, value: encodeUvarint(schemaVersion) },
-    { tag: 2, value: encodeUtf8(dictId, 'dictId', true) },
-    { tag: 3, value: body },
+    { tag: 2, value: body },
   ]);
 }
 
 export function decodeInnerPlaintext(bytes: Uint8Array): {
   schemaVersion: number;
-  dictId: string;
   body: Uint8Array;
 } {
-  const f = decodeTlv(bytes, 0x04, [1, 2, 3]);
+  const f = decodeTlv(bytes, 0x04, [1, 2]);
   const { value, bytesRead } = decodeUvarint(f.get(1)!);
   if (bytesRead !== f.get(1)!.length) throw new Error('Trailing schemaVersion bytes');
   if (f.get(1)!.length !== bytesForUvarint(value)) throw new Error('Noncanonical schemaVersion');
-  const dictId = decodeUtf8(f.get(2)!, 'dictId');
-  encodeUtf8(dictId, 'dictId', true);
-  return { schemaVersion: value, dictId, body: f.get(3)! };
+  return { schemaVersion: value, body: f.get(2)! };
 }
 
 function bytesForUvarint(value: number): number {

@@ -7,6 +7,7 @@ import {
   createPublicKey,
   sign,
 } from 'node:crypto';
+import { gzipSync } from 'node:zlib';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -60,7 +61,7 @@ function header(table, rowId, salt, updatedAt = 1700000000123, deleted = false) 
   return tlv(1, [
     [1, utf('full-frills-encrypted-row')],
     [2, uv(1)],
-    [3, utf('shortkey1+zstd')],
+    [3, utf('shortkey1')],
     [4, utf('fixture-workplace')],
     [5, utf(table)],
     [6, utf(rowId)],
@@ -68,6 +69,7 @@ function header(table, rowId, salt, updatedAt = 1700000000123, deleted = false) 
     [8, Buffer.from([deleted ? 1 : 0])],
     [9, utf(keyId)],
     [10, salt],
+    [11, utf('gzip')],
   ]);
 }
 function info(table) {
@@ -76,11 +78,10 @@ function info(table) {
     [2, utf(table)],
   ]);
 }
-function inner(dictId, body) {
+function inner(body) {
   return tlv(4, [
     [1, uv(1)],
-    [2, utf(dictId)],
-    [3, body],
+    [2, body],
   ]);
 }
 function merkle(leaves) {
@@ -110,10 +111,9 @@ for (let i = 0; i < tables.length; i++) {
   const salt = Buffer.from([...Array(16)].map((_, j) => (i * 17 + j * 13) & 255));
   const aad = header(table, rowId, salt, 1700000000123 + i, i === 11 ? false : i === 3);
   const inf = info(table);
-  // Opaque codec-body KAT: Phase 3 adds dictionary-backed zstd KATs once dictionaries ship.
-  const body =
-    i === 0 || i === 3 ? Buffer.alloc(0) : Buffer.from(`opaque-body:${table}:हिन्दी:${i}`, 'utf8');
-  const plain = inner(`${table}/v1`, body);
+  const plaintext = i === 0 ? '' : JSON.stringify({ text: `fixture:${table}:हिन्दी:${i}` });
+  const body = i === 3 ? Buffer.alloc(0) : gzipSync(Buffer.from(plaintext));
+  const plain = inner(body);
   const key = Buffer.from(
     createHmac('sha256', createHmac('sha256', salt).update(dek).digest())
       .update(concat(inf, Buffer.from([1])))
@@ -124,6 +124,8 @@ for (let i = 0; i < tables.length; i++) {
   const ciphertext = concat(cipher.update(plain), cipher.final(), cipher.getAuthTag());
   vectors.push({
     table,
+    compression: 'gzip',
+    plaintext: i === 3 ? '' : plaintext,
     rowId,
     updatedAt: 1700000000123 + i,
     deleted: i === 3,
@@ -133,7 +135,7 @@ for (let i = 0; i < tables.length; i++) {
     aadHex: hex(aad),
     infoHex: hex(inf),
     innerTlvHex: hex(plain),
-    codecBody: { kind: 'opaque', hex: hex(body) },
+    codecBody: { kind: 'gzip', hex: hex(body) },
     derivedKeyHex: hex(key),
     ciphertextBase64: b64(ciphertext),
   });
@@ -188,29 +190,27 @@ for (const n of [0, 1, 2, 3, 5, 8]) {
 const edgeSalt = Buffer.from([...Array(16)].map((_, i) => i));
 const maxId = 'x'.repeat(128);
 const edgeCases = {
-  emptyStringBodyHex: hex(
-    tlv(4, [
-      [1, uv(1)],
-      [2, utf('accounts/v1')],
-      [3, Buffer.alloc(0)],
-    ]),
-  ),
+  emptyStringBodyHex: hex(inner(gzipSync(Buffer.alloc(0)))),
   maxIdentifierUtf8Bytes: Buffer.byteLength(maxId),
   maxIdentifierHeaderHex: hex(header('accounts', maxId, edgeSalt)),
   unicodeIdentifier: 'लेखा-α',
   unicodeIdentifierUtf8Bytes: Buffer.byteLength('लेखा-α'),
 };
 const result = {
-  format: 'ffb-row-vectors-v2',
+  format: 'ffb-row-vectors-v1',
   generator: 'scripts/sync/generate-row-vectors.mjs (independent Node stdlib oracle)',
   notes:
-    'Synthetic fixtures only. codecBody values are explicitly opaque Phase 2 fixtures; dictionary zstd KATs are added in Phase 3.',
+    'Synthetic fixtures only. Row headers authenticate the explicit gzip selector; codecBody contains standard gzip members.',
   fixedInputs: {
     dekHex: hex(dek),
     ed25519SeedHex: hex(seed),
     saltRule: 'salt[i] = (rowIndex*17 + i*13) mod 256',
   },
   edgeCases,
+  compressionCases: {
+    exactLimitGzipHex: hex(gzipSync(Buffer.alloc(64 * 1024, 120))),
+    oversizedGzipHex: hex(gzipSync(Buffer.alloc(64 * 1024 + 1, 120))),
+  },
   uvarintBoundaries: [127, 128, 16383, 16384].map(value => ({
     value,
     hex: hex(uv(value)),

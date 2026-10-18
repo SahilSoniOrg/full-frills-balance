@@ -8,7 +8,8 @@ const scope = { workplaceId: 'w1', keyId: `sha256:${'a'.repeat(64)}`, authorUser
 const envelope = {
   format: 'full-frills-encrypted-row',
   formatVersion: 1,
-  enc: 'shortkey1+zstd',
+  enc: 'shortkey1',
+  compression: 'gzip' as const,
   workplaceId: 'w1',
   table: 'transactions',
   rowId: 'r1',

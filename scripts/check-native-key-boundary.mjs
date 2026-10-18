@@ -79,7 +79,14 @@ walk(path.join(root, 'app'));
 const financialTypes = Object.keys(
   JSON.parse(fs.readFileSync(path.join(root, 'src/services/sync/shortKeys/schema35.json'), 'utf8')),
 );
-for (const name of ['RowCodec.cpp', 'RowCodec.hpp', 'RowCrypto.cpp', 'RowCrypto.hpp']) {
+for (const name of [
+  'RowCodec.cpp',
+  'RowCodec.hpp',
+  'RowCrypto.cpp',
+  'RowCrypto.hpp',
+  'RowCompression.cpp',
+  'RowCompression.hpp',
+]) {
   const relative = `modules/expo-key-crypto/cpp/${name}`;
   violations.push(
     ...nativeCryptoProfileViolations(

@@ -17,6 +17,8 @@ export function encryptionRecoveryErrorMessage(code: KeyOperationErrorCode): str
       return 'The selected files belong to a different User or Workplace key. Choose matching files.';
     case 'FFB_KEY_VAULT_UNAVAILABLE':
       return 'Secure storage is temporarily unavailable. Unlock the Device and try again.';
+    case 'FFB_ROW_UNSUPPORTED_COMPRESSION':
+      return 'This backup uses a compression format this app does not support. Update the app or choose a supported backup.';
     case 'FFB_ROW_INTEGRITY':
       return 'The encrypted backup failed integrity checks. Choose an unmodified backup file.';
     case 'FFB_KEY_OPERATION_FAILED':

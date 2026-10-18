@@ -1,3 +1,4 @@
+import { ROW_COMPRESSION } from '@/src/services/crypto/protocol/rowCompression';
 import { generator } from '@/src/data/database/idGenerator';
 import {
   syncStateRepository,
@@ -33,7 +34,6 @@ import { rowSource } from './rowSource';
 import { WorkplaceId } from '@/src/types/ids';
 
 const ZERO_HASH = '0'.repeat(64);
-const DICTIONARY_VERSION = 1;
 const CONTENT_HASH_TOMBSTONE = 'tombstone:';
 
 export type BuiltRowCommit = Readonly<{
@@ -110,7 +110,7 @@ export async function buildCommit(
         updatedAt: row.updatedAt,
         deleted: false,
         schemaVersion: CURRENT_ROW_SCHEMA_VERSION,
-        dictId: `${row.table}/v${DICTIONARY_VERSION}`,
+        compression: ROW_COMPRESSION,
         plaintext,
       });
     }
@@ -133,7 +133,7 @@ export async function buildCommit(
         updatedAt: now,
         deleted: true,
         schemaVersion: CURRENT_ROW_SCHEMA_VERSION,
-        dictId: `${table}/v${DICTIONARY_VERSION}`,
+        compression: ROW_COMPRESSION,
         plaintext: '',
       });
     }
@@ -236,7 +236,7 @@ export async function buildBackupCommit(
       updatedAt: row.updatedAt,
       deleted: false,
       schemaVersion: CURRENT_ROW_SCHEMA_VERSION,
-      dictId: `${row.table}/v${DICTIONARY_VERSION}`,
+      compression: ROW_COMPRESSION,
       plaintext: decodeUtf8(canonicalRowBytes(row.table, row.content), 'canonical row'),
     }));
     const envelopes: RowEnvelopeJson[] = [];

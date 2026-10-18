@@ -1,5 +1,7 @@
 # Repeat the native host verification work
 
+
+
 Recorded 2026-10-17 on Ubuntu 22.04 ARM64 Linux, in `checkout/`. Run repository commands from that directory. This records completed work and how to repeat it; physical-device acceptance is tracked separately in the [native verification plan](./native-device-verification-plan.md).
 
 ## Code changes made

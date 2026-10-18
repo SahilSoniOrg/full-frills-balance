@@ -61,7 +61,11 @@ export function cryptoImportViolations(source, relative) {
 }
 
 export function nativeCryptoProfileViolations(source, relative, financialTypes) {
-  if (!/^modules\/expo-key-crypto\/cpp\/(?:RowCodec|RowCrypto)\.(?:cpp|hpp)$/.test(relative))
+  if (
+    !/^modules\/expo-key-crypto\/cpp\/(?:RowCodec|RowCrypto|RowCompression)\.(?:cpp|hpp)$/.test(
+      relative,
+    )
+  )
     return [];
   const literals = [...source.matchAll(/"([^"\n]*)"/g)].map(match => match[1]);
   return literals.some(value => financialTypes.includes(value)) ||

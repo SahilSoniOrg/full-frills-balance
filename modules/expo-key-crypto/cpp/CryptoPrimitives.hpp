@@ -9,7 +9,7 @@
 
 // Implementation-only types. No secret-bearing helper is exposed to the bridge.
 namespace ffb::detail {
-inline constexpr size_t MAX_SNAPSHOT = 32 * 1024 * 1024;
+inline constexpr size_t MAX_KEY_ENVELOPE_BYTES = 32 * 1024 * 1024;
 inline constexpr const char *SUITE = "HPKE-X25519-HKDF-SHA256-AES256GCM";
 inline const OSSL_HPKE_SUITE HPKE_SUITE = {OSSL_HPKE_KEM_ID_X25519,
                                            OSSL_HPKE_KDF_ID_HKDF_SHA256,

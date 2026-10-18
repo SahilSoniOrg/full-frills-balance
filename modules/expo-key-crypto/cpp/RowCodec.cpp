@@ -1,4 +1,5 @@
 #include "RowCodec.hpp"
+#include "RowCompression.hpp"
 #ifdef FFB_KEY_CRYPTO_TEST
 #include "CryptoPrimitives.hpp"
 #endif
@@ -43,6 +44,7 @@ RowHeader rowFromJson(const Json &row) {
   RowHeader result;
   result.workplaceId = ffb::detail::field(row, "workplaceId");
   result.table = ffb::detail::field(row, "table");
+  result.compression = ffb::detail::field(row, "compression");
   result.rowId = ffb::detail::field(row, "rowId");
   check(row.contains("updatedAt") && row.at("updatedAt").is_number_integer(),
         "Invalid updatedAt");
@@ -219,21 +221,23 @@ Bytes encodeRowHeader(const RowHeader &header) {
   validateIdentifier(header.rowId, "rowId");
   validateIdentifier(header.keyId, "keyId");
   check(header.salt.size() == 16, "salt must be 16 bytes");
-  return encodeTlv(1, {{1, raw(ROW_FORMAT)}, {2, Bytes{1}},
+  requireRowCompression(header.compression);
+  return encodeTlv(1, {{1, raw(ROW_FORMAT)}, {2, Bytes{ROW_FORMAT_VERSION}},
       {3, raw(ROW_ENCODING)}, {4, encodeUtf8(header.workplaceId, "workplaceId", true)},
       {5, encodeUtf8(header.table)}, {6, encodeUtf8(header.rowId, "rowId", true)},
       {7, encodeInt64Milliseconds(header.updatedAt)},
       {8, Bytes{static_cast<unsigned char>(header.deleted ? 1 : 0)}},
-      {9, encodeUtf8(header.keyId, "keyId", true)}, {10, header.salt}});
+      {9, encodeUtf8(header.keyId, "keyId", true)}, {10, header.salt},
+      {11, encodeUtf8(header.compression, "compression", true)}});
 }
 RowHeader decodeRowHeader(const Bytes &bytes) {
-  auto f = decodeTlv(bytes, 1, {1,2,3,4,5,6,7,8,9,10});
-  check(decodeUtf8(f[0], "format") == ROW_FORMAT && f[1] == Bytes{1} &&
+  auto f = decodeTlv(bytes, 1, {1,2,3,4,5,6,7,8,9,10,11});
+  check(decodeUtf8(f[0], "format") == ROW_FORMAT && f[1] == Bytes{ROW_FORMAT_VERSION} &&
             decodeUtf8(f[2], "enc") == ROW_ENCODING,
         "Invalid row format");
   RowHeader result{decodeUtf8(f[3], "workplaceId"), decodeUtf8(f[4], "table"),
       decodeUtf8(f[5], "rowId"), decodeInt64Milliseconds(f[6]), false,
-      decodeUtf8(f[8], "keyId"), f[9]};
+      decodeUtf8(f[8], "keyId"), f[9], decodeUtf8(f[10], "compression")};
   validateRecordType(result.table);
   check(f[7].size() == 1 && f[7][0] <= 1, "Invalid deleted flag");
   result.deleted = f[7][0] != 0;
@@ -257,17 +261,14 @@ std::string decodeRowInfo(const Bytes &bytes) {
   check(encodeRowInfo(table) == bytes, "Noncanonical row info");
   return table;
 }
-Bytes encodeInnerPlaintext(std::uint64_t schemaVersion,
-                           const std::string &dictId, const Bytes &body) {
+Bytes encodeInnerPlaintext(std::uint64_t schemaVersion, const Bytes &body) {
   check(schemaVersion <= MAX_SAFE, "schemaVersion exceeds safe integer range");
-  auto dict = encodeUtf8(dictId, "dictId", true);
-  return encodeTlv(4, {{1, numberField(schemaVersion)}, {2, dict}, {3, body}});
+  return encodeTlv(4, {{1, numberField(schemaVersion)}, {2, body}});
 }
 InnerPlaintext decodeInnerPlaintext(const Bytes &bytes) {
-  auto f = decodeTlv(bytes, 4, {1,2,3});
-  InnerPlaintext result{readNumber(f[0]), decodeUtf8(f[1], "dictId"), f[2]};
-  validateIdentifier(result.dictId, "dictId");
-  check(encodeInnerPlaintext(result.schemaVersion, result.dictId, result.body) == bytes,
+  auto f = decodeTlv(bytes, 4, {1,2});
+  InnerPlaintext result{readNumber(f[0]), f[1]};
+  check(encodeInnerPlaintext(result.schemaVersion, result.body) == bytes,
         "Noncanonical inner TLV");
   return result;
 }
@@ -314,7 +315,7 @@ Json testRowCodec(const Json &request) {
   check(request.is_object() && request.contains("vectors") && request.at("vectors").is_object(),
         "Missing row codec vectors");
   const auto &vectors = request.at("vectors");
-  check(vectors.value("format", std::string()) == "ffb-row-vectors-v2",
+  check(vectors.value("format", std::string()) == "ffb-row-vectors-v1",
         "Unsupported row vector format");
   const auto &tables = vectors.at("tables");
   check(tables.is_array() && !tables.empty(), "Unexpected row vector count");
@@ -349,7 +350,7 @@ Json testRowCodec(const Json &request) {
     try { (void)decodeRowInfo(encodeTlv(2, {{1, raw(ROW_INFO_DOMAIN)}, {2, raw(invalid)}})); }
     catch (...) { rejected = true; }
     check(rejected, "Invalid record type accepted by info decoder");
-    auto decoded = decodeTlv(encodeRowHeader(opaque), 1, {1,2,3,4,5,6,7,8,9,10});
+    auto decoded = decodeTlv(encodeRowHeader(opaque), 1, {1,2,3,4,5,6,7,8,9,10,11});
     decoded[4] = raw(invalid);
     std::vector<std::pair<unsigned char, Bytes>> fields;
     for (std::size_t i = 0; i < decoded.size(); ++i)
@@ -376,16 +377,37 @@ Json testRowCodec(const Json &request) {
     const auto &codecBody = row.at("codecBody");
     const auto bodyHex = ffb::detail::field(codecBody, "hex");
     auto body = ffb::detail::unhex(bodyHex, bodyHex.size()/2);
-    const auto innerBytes = encodeInnerPlaintext(1, header.table + "/v1", body);
+    const auto innerBytes = encodeInnerPlaintext(1, body);
     assertBytesEqual(innerBytes, expectedInnerHex, "Inner TLV vector mismatch");
     auto inner = decodeInnerPlaintext(expectedInner);
-    check(inner.schemaVersion == 1 && inner.dictId == header.table + "/v1" &&
+    check(inner.schemaVersion == 1 &&
               inner.body == body, "Inner TLV decode mismatch");
+    if (header.deleted) check(body.empty(), "Tombstone body must be empty");
+    else check(decompressRow(body, header.compression) == raw(ffb::detail::field(row, "plaintext")),
+               "Standard gzip fixture decode mismatch");
     const auto ciphertext = ffb::detail::field(row, "ciphertextBase64");
     const auto ciphertextBytes = ffb::detail::unb64(ciphertext, 65552);
     check(ffb::detail::b64(ciphertextBytes) == ciphertext,
           "Noncanonical ciphertext base64");
     ++rows;
+  }
+  const auto &compression = vectors.at("compressionCases");
+  const auto readGzip = [&](const char *name) {
+    const auto value = ffb::detail::field(compression, name);
+    return ffb::detail::unhex(value, value.size() / 2);
+  };
+  auto exact = readGzip("exactLimitGzipHex");
+  check(decompressRow(exact, ROW_COMPRESSION).size() == MAX_ROW_PLAINTEXT,
+        "Exactly-full gzip output rejected");
+  auto oversized = readGzip("oversizedGzipHex");
+  auto trailing = exact; trailing.push_back(0);
+  auto concatenated = exact; concatenated.insert(concatenated.end(), exact.begin(), exact.end());
+  auto truncated = exact; truncated.pop_back();
+  auto corrupt = exact; corrupt[corrupt.size() - 8] ^= 1;
+  for (const auto &invalid : {oversized, trailing, concatenated, truncated, corrupt, Bytes{0, 1, 2}}) {
+    bool rejected = false;
+    try { (void)decompressRow(invalid, ROW_COMPRESSION); } catch (...) { rejected = true; }
+    check(rejected, "Invalid gzip member accepted");
   }
   for (const auto &boundary : vectors.at("uvarintBoundaries")) {
     const auto value = boundary.at("value").get<std::uint64_t>();

@@ -78,6 +78,7 @@ function makeEnvelope(workplace: string, row: EncryptRow) {
     format: ROW_FORMAT,
     formatVersion: 1,
     enc: ROW_ENCODING,
+    compression: row.compression,
     workplaceId: workplace,
     table: row.table,
     rowId: row.rowId,

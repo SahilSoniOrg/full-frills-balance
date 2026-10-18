@@ -2,9 +2,7 @@
 #include "CryptoPrimitives.hpp"
 #include "ProtocolEnvelopes.hpp"
 #include "RowCodec.hpp"
-#include "RowDictionaries.hpp"
-#include "zstd.h"
-#include "zstd_errors.h"
+#include "RowCompression.hpp"
 #include <openssl/kdf.h>
 #include <algorithm>
 #include <array>
@@ -14,7 +12,6 @@
 namespace ffb::rows {
 namespace {
 using namespace ffb::detail;
-constexpr std::size_t MAX_ROW_PLAINTEXT = 64 * 1024;
 constexpr std::size_t MAX_ROW_CIPHERTEXT = 68 * 1024;
 constexpr std::size_t MAX_BATCH_ROWS = 500;
 constexpr std::size_t MAX_BATCH_PLAINTEXT = 4 * 1024 * 1024;
@@ -24,8 +21,6 @@ constexpr std::array<unsigned char, 12> NONCE{};
 
 struct BatchFull {};
 
-using ZstdC = std::unique_ptr<ZSTD_CCtx, decltype(&ZSTD_freeCCtx)>;
-using ZstdD = std::unique_ptr<ZSTD_DCtx, decltype(&ZSTD_freeDCtx)>;
 using PkeyCtx = std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)>;
 
 [[noreturn]] void invalid(const char *message) {
@@ -47,13 +42,6 @@ std::int64_t safeSignedInteger(const Json &value, const char *label) {
 }
 std::string pairKey(const std::string &table, const std::string &rowId) {
   return std::to_string(table.size()) + ":" + table + rowId;
-}
-void requireDictionary(const std::string &table, const std::string &dictId,
-                       std::span<const std::uint8_t> &dict) {
-  (void)encodeUtf8(dictId, "dictId", true);
-  dict = lookupRowDictionary(table, dictId);
-  if (dict.empty())
-    throw OperationError(ErrorCode::RowUnknownDict, "Unknown row dictionary or record type mismatch");
 }
 Bytes deriveRowKey(const Bytes &dek, const Bytes &salt, const Bytes &info) {
   Secret output(Bytes(32));
@@ -109,76 +97,11 @@ Bytes crypt(EVP_CIPHER_CTX *ctx, const Bytes &key, const Bytes &aad,
   }
   return output;
 }
-Bytes compress(ZSTD_CCtx *ctx, std::span<const std::uint8_t> dict,
-               const std::string &plaintext) {
-  const auto bound = ZSTD_compressBound(plaintext.size());
-  Bytes output(bound);
-  auto size = ZSTD_compress_usingDict(ctx, output.data(), output.size(),
-                                      plaintext.data(), plaintext.size(),
-                                      dict.data(), dict.size(), 12);
-  require(!ZSTD_isError(size), "Native row compression failed",
-          ErrorCode::OperationFailed);
-  output.resize(size);
-  return output;
-}
-Bytes decompress(ZSTD_DCtx *ctx, std::span<const std::uint8_t> dict,
-                 const Bytes &body) {
-  if (body.empty())
-    throw OperationError(ErrorCode::RowIntegrity, "Missing compressed row frame");
-  const auto frameSize = ZSTD_findFrameCompressedSize(body.data(), body.size());
-  if (ZSTD_isError(frameSize) || frameSize != body.size())
-    throw OperationError(ErrorCode::RowIntegrity, "Invalid or trailing row frame");
-  require(ZSTD_DCtx_reset(ctx, ZSTD_reset_session_and_parameters) == 0 &&
-              ZSTD_DCtx_setParameter(ctx, ZSTD_d_windowLogMax, 16) == 0,
-          "Native row decompressor setup failed", ErrorCode::OperationFailed);
-  const auto dictionaryResult =
-      ZSTD_DCtx_loadDictionary(ctx, dict.data(), dict.size());
-  require(!ZSTD_isError(dictionaryResult), "Native row dictionary load failed",
-          ErrorCode::OperationFailed);
-  Bytes result(MAX_ROW_PLAINTEXT);
-  ZSTD_inBuffer input{body.data(), body.size(), 0};
-  ZSTD_outBuffer output{result.data(), result.size(), 0};
-  // A one-byte overflow sink lets an exactly-full output finish its checksum.
-  unsigned char overflowByte = 0;
-  std::size_t remaining = 1;
-  while (remaining != 0) {
-    const auto oldInput = input.pos;
-    const bool atLimit = output.pos == output.size;
-    ZSTD_outBuffer overflow{&overflowByte, 1, 0};
-    ZSTD_outBuffer *destination = atLimit ? &overflow : &output;
-    const auto oldOutput = destination->pos;
-    remaining = ZSTD_decompressStream(ctx, destination, &input);
-    if (ZSTD_isError(remaining)) {
-      wipe(result);
-      if (ZSTD_getErrorCode(remaining) == ZSTD_error_dstSize_tooSmall)
-        throw OperationError(ErrorCode::RowTooLarge, "Decompressed row exceeds limit");
-      throw OperationError(ErrorCode::RowIntegrity, "Invalid compressed row");
-    }
-    if (atLimit && overflow.pos != 0) {
-      wipe(result);
-      throw OperationError(ErrorCode::RowTooLarge, "Decompressed row exceeds limit");
-    }
-    if (remaining != 0 && input.pos == input.size) {
-      wipe(result);
-      throw OperationError(ErrorCode::RowIntegrity, "Truncated compressed row");
-    }
-    if (remaining != 0 && input.pos == oldInput && destination->pos == oldOutput) {
-      wipe(result);
-      throw OperationError(ErrorCode::RowIntegrity, "Compressed row made no progress");
-    }
-  }
-  if (input.pos != input.size) {
-    wipe(result);
-    throw OperationError(ErrorCode::RowIntegrity, "Trailing compressed row data");
-  }
-  result.resize(output.pos);
-  return result;
-}
 std::string rowError(const std::exception &error) {
   const auto *operation = dynamic_cast<const OperationError *>(&error);
   if (!operation) return "FFB_ROW_INTEGRITY";
   switch (operation->code) {
-  case ErrorCode::RowUnknownDict: return "FFB_ROW_UNKNOWN_DICT";
+  case ErrorCode::RowUnsupportedCompression: return "FFB_ROW_UNSUPPORTED_COMPRESSION";
   case ErrorCode::RowTooLarge: return "FFB_ROW_TOO_LARGE";
   case ErrorCode::RowIntegrity:
   case ErrorCode::InvalidFile:
@@ -188,11 +111,12 @@ std::string rowError(const std::exception &error) {
 }
 RowHeader readEnvelope(const Json &value, const std::string &workplace,
                        const std::string &keyId, Bytes &ciphertext) {
-  fields(value, {"format", "formatVersion", "enc", "workplaceId", "table",
+  fields(value, {"format", "formatVersion", "enc", "compression", "workplaceId", "table",
                  "rowId", "updatedAt", "deleted", "keyId", "salt", "ciphertext"});
-  rowCheck(value.size() == 11 && value.at("format") == ROW_FORMAT &&
-            value.at("formatVersion") == 1 && value.at("enc") == ROW_ENCODING,
+  rowCheck(value.size() == 12 && value.at("format") == ROW_FORMAT &&
+            value.at("formatVersion") == ROW_FORMAT_VERSION && value.at("enc") == ROW_ENCODING,
         "Unsupported row envelope");
+  requireRowCompression(field(value, "compression"));
   const auto &cipherText = field(value, "ciphertext");
   require(cipherText.size() <= MAX_CIPHERTEXT_B64,
           "Row ciphertext exceeds limit", ErrorCode::RowTooLarge);
@@ -210,6 +134,7 @@ RowHeader readEnvelope(const Json &value, const std::string &workplace,
   rowCheck(workplaceText == workplace && keyIdText == keyId,
         "Row scope mismatch");
   RowHeader header;
+  header.compression = field(value, "compression");
   header.workplaceId = workplaceText;
   header.table = tableText;
   header.rowId = rowIdText;
@@ -270,14 +195,13 @@ Json encryptRows(const Json &request, const Json &user, const Json &keys,
   for (const auto &row : rows) {
     rowCheck(row.is_object() && row.size() == 7, "Invalid row request");
     fields(row, {"table", "rowId", "updatedAt", "deleted", "schemaVersion",
-                 "dictId", "plaintext"});
+                 "compression", "plaintext"});
     const auto &plain = field(row, "plaintext");
     const auto &tableName = field(row, "table");
     const auto &rowName = field(row, "rowId");
-    const auto &dictName = field(row, "dictId");
+    requireRowCompression(field(row, "compression"));
     rowCheck(tableName.size() <= MAX_IDENTIFIER_UTF8_BYTES &&
-              rowName.size() <= MAX_IDENTIFIER_UTF8_BYTES &&
-              dictName.size() <= MAX_IDENTIFIER_UTF8_BYTES,
+              rowName.size() <= MAX_IDENTIFIER_UTF8_BYTES,
           "Oversized row request identifier");
     require(plain.size() <= MAX_ROW_PLAINTEXT,
             "Row plaintext exceeds limit", ErrorCode::RowTooLarge);
@@ -290,33 +214,30 @@ Json encryptRows(const Json &request, const Json &user, const Json &keys,
         "Confirm recovery before encrypting rows");
   Secret dek(memberKey(user, keys, vault));
   require(dek.bytes.size() == 32, "Invalid Workplace DEK");
-  ZstdC zctx(ZSTD_createCCtx(), ZSTD_freeCCtx);
   Cipher c(EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free);
-  require(!!zctx && !!c, "Native row context allocation failed",
+  require(!!c, "Native row context allocation failed",
           ErrorCode::OperationFailed);
   Json output = Json::array();
   for (const auto &row : rows) {
     SecretString plaintext{field(row,"plaintext")};
-    const auto table = field(row,"table"), dictId = field(row,"dictId");
-    std::span<const std::uint8_t> dict;
-    requireDictionary(table, dictId, dict);
+    const auto table = field(row,"table"), compression = field(row,"compression");
     (void)encodeUtf8(plaintext.value, "row plaintext");
     const bool deleted = row.at("deleted").is_boolean() && row.at("deleted").get<bool>();
     rowCheck(row.at("deleted").is_boolean(), "Invalid deleted flag");
     rowCheck(!deleted || plaintext.value.empty(), "Tombstones must have an empty plaintext");
     Secret body;
-    if (!deleted) body.bytes = compress(zctx.get(), dict, plaintext.value);
-    Secret inner(encodeInnerPlaintext(row.at("schemaVersion").get<std::uint64_t>(), dictId, body.bytes));
+    if (!deleted) body.bytes = compressRow(plaintext.value, compression);
+    Secret inner(encodeInnerPlaintext(row.at("schemaVersion").get<std::uint64_t>(), body.bytes));
     RowHeader header{workplace, table, field(row,"rowId"),
-        safeSignedInteger(row.at("updatedAt"), "Invalid row timestamp"), deleted, keyId, random(16)};
+        safeSignedInteger(row.at("updatedAt"), "Invalid row timestamp"), deleted, keyId, random(16), compression};
     auto aad = encodeRowHeader(header);
     auto info = encodeRowInfo(table);
     Secret rowKey(deriveRowKey(dek.bytes, header.salt, info));
     auto ciphertext = crypt(c.get(), rowKey.bytes, aad, inner.bytes, true);
     require(ciphertext.size() <= MAX_ROW_CIPHERTEXT,
             "Row ciphertext exceeds limit", ErrorCode::RowTooLarge);
-    output.push_back({{"format", ROW_FORMAT}, {"formatVersion", 1},
-        {"enc", ROW_ENCODING}, {"workplaceId", workplace}, {"table", table},
+    output.push_back({{"format", ROW_FORMAT}, {"formatVersion", ROW_FORMAT_VERSION},
+        {"enc", ROW_ENCODING}, {"compression", compression}, {"workplaceId", workplace}, {"table", table},
         {"rowId", header.rowId}, {"updatedAt", header.updatedAt},
         {"deleted", deleted}, {"keyId", keyId}, {"salt", b64(header.salt)},
         {"ciphertext", b64(ciphertext)}});
@@ -358,9 +279,8 @@ Json decryptRows(const Json &request, const Json &user, const Json &keys,
         "Confirm recovery before decrypting rows");
   Secret dek(memberKey(user, keys, vault));
   require(dek.bytes.size() == 32, "Invalid Workplace DEK");
-  ZstdD zctx(ZSTD_createDCtx(), ZSTD_freeDCtx);
   Cipher c(EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free);
-  require(!!zctx && !!c, "Native row context allocation failed", ErrorCode::OperationFailed);
+  require(!!c, "Native row context allocation failed", ErrorCode::OperationFailed);
   Json output = Json::array();
   std::size_t totalPlaintext = 0;
   for (const auto &item : envelopes) {
@@ -377,28 +297,26 @@ Json decryptRows(const Json &request, const Json &user, const Json &keys,
       Bytes ciphertext;
       auto header = readEnvelope(item, workplace, field(keys,"keyId"), ciphertext);
       table = header.table; rowId = header.rowId;
-      std::span<const std::uint8_t> dict;
-      // Parse the authenticated inner fields first, but dict lookup waits until GCM authenticates.
+      // Authenticate the compression selector and ciphertext before decompressing.
       auto aad = encodeRowHeader(header), info = encodeRowInfo(header.table);
       Secret rowKey(deriveRowKey(dek.bytes, header.salt, info));
       Secret innerBytes(crypt(c.get(), rowKey.bytes, aad, ciphertext, false));
       wipe(ciphertext);
       auto inner = decodeInnerPlaintext(innerBytes.bytes);
-      requireDictionary(header.table, inner.dictId, dict);
       Secret body(std::move(inner.body));
       Secret plain;
       if (header.deleted) {
         if (!body.bytes.empty())
           throw OperationError(ErrorCode::RowIntegrity, "Tombstone body must be empty");
       } else {
-        plain.bytes = decompress(zctx.get(), dict, body.bytes);
+        plain.bytes = decompressRow(body.bytes, header.compression);
       }
       // A full batch returns the rows decrypted so far; the caller resubmits the rest.
       if (plain.bytes.size() > MAX_BATCH_PLAINTEXT - totalPlaintext) throw BatchFull{};
       totalPlaintext += plain.bytes.size();
       SecretString plaintext{decodeUtf8(plain.bytes, "row plaintext")};
       output.push_back({{"ok", true}, {"rowId", rowId}, {"table", table},
-          {"schemaVersion", inner.schemaVersion}, {"dictId", inner.dictId},
+          {"schemaVersion", inner.schemaVersion}, {"compression", header.compression},
           {"plaintext", plaintext.value}});
     } catch (const BatchFull &) {
       break;

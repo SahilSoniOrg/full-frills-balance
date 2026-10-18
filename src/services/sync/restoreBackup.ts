@@ -1,6 +1,6 @@
 import type { RowSourceRecord } from './rowRecords';
 import { assertRowTable } from './rowTables';
-import { getRowDictionary } from './dictionaries';
+import { assertRowCompression } from '@/src/services/crypto/protocol/rowCompression';
 import { AppConfig } from '@/src/constants';
 import { accountQueryRepository } from '@/src/data/repositories/account';
 import Workplace from '@/src/data/models/Workplace';
@@ -285,7 +285,7 @@ async function restoreBackupWhileUnlocked(
       if (plaintext.table !== entry.parsed.table || plaintext.rowId !== entry.parsed.rowId)
         throw new Error('Decrypted backup row identity mismatch');
       assertRowTable(plaintext.table);
-      getRowDictionary(plaintext.table, plaintext.dictId);
+      assertRowCompression(plaintext.compression);
       const content = decodeCanonicalRow(
         plaintext.table,
         plaintext.schemaVersion,

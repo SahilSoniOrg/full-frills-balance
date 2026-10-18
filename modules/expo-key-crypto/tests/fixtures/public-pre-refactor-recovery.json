@@ -1,9 +1,0 @@
-{
-  "format": "full-frills-recovery-credential",
-  "formatVersion": 1,
-  "purpose": "user-recovery",
-  "identityId": "alice",
-  "identityKeyId": "sha256:ef745f19705eba5c856e8528e6f6e6cb85960750aceccb67d479b13d2bf5fa12",
-  "recoveryKeyId": "sha256:a4eedeb2851490f45c0992f75d7a5bac1662ef9905cbabc43c64699a346f8bea",
-  "phrase": "5BDAA824-A106686F-9FC6B4F6-2A99D287-95FB5759-979B08B0-62CBB6CC-CF03E283-41013FEDA230"
-}

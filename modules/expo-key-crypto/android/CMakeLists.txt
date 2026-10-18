@@ -8,8 +8,8 @@ endif()
 find_package(opensslstatic REQUIRED CONFIG)
 add_library(FFBKeyCrypto SHARED ../cpp/CryptoPrimitives.cpp ../cpp/ProtocolEnvelopes.cpp
   ../cpp/KeyEngine.cpp ../cpp/RowCodec.cpp ../cpp/RowCrypto.cpp
-  ../cpp/RowDictionaries.cpp ../vendor/zstd/zstd.c src/main/cpp/bridge.cpp)
-target_include_directories(FFBKeyCrypto PRIVATE ../cpp ../vendor ../vendor/zstd)
+  ../cpp/RowCompression.cpp src/main/cpp/bridge.cpp)
+target_include_directories(FFBKeyCrypto PRIVATE ../cpp ../vendor)
 target_compile_options(FFBKeyCrypto PRIVATE -Wall -Wextra -fstack-protector-strong)
-target_link_libraries(FFBKeyCrypto opensslstatic::crypto)
+target_link_libraries(FFBKeyCrypto opensslstatic::crypto z)
 target_link_options(FFBKeyCrypto PRIVATE -Wl,--exclude-libs,ALL)

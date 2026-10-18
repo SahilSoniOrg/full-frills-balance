@@ -35,24 +35,20 @@ function sourceFiles(directory) {
 
 function inputHash() {
   const hash = createHash('sha256');
-  const inputRoots = ['cpp', 'vendor/nlohmann', 'vendor/zstd'];
+  const inputRoots = ['cpp', 'vendor/nlohmann'];
   const files = [
     ...inputRoots.flatMap(directory => sourceFiles(path.join(moduleRoot, directory))),
     path.join(webRoot, 'bridge.cpp'),
     path.join(root, 'scripts/build-wasm-key-crypto.mjs'),
-    path.join(root, 'scripts/sync/embed-dictionaries.mjs'),
-    path.join(root, 'scripts/sync/dictionary-pipeline.mjs'),
-    path.join(root, 'scripts/sync/generate-corpus.mjs'),
-    path.join(root, 'scripts/sync/train-dictionaries.mjs'),
-    path.join(root, 'src/services/sync/shortKeys/schema35.json'),
-    ...sourceFiles(path.join(root, 'src/services/sync/dictionaries')),
   ].sort();
   for (const filename of files) {
     hash.update(path.relative(root, filename));
     hash.update('\0');
     hash.update(readFileSync(filename));
   }
-  hash.update(`emsdk:${EMSDK_VERSION}\0openssl:3.x, Emscripten target\0`);
+  hash.update(
+    `emsdk:${EMSDK_VERSION}\0openssl:3.x, Emscripten target\0compression:gzip,zlib-port\0`,
+  );
   return hash.digest('hex');
 }
 
@@ -110,25 +106,15 @@ const cppSources = [
   'cpp/KeyEngine.cpp',
   'cpp/RowCodec.cpp',
   'cpp/RowCrypto.cpp',
-  'cpp/RowDictionaries.cpp',
+  'cpp/RowCompression.cpp',
   'web/bridge.cpp',
 ].map(filename => path.join(moduleRoot, filename));
-const zstdSource = path.join(moduleRoot, 'vendor/zstd/zstd.c');
-const zstdObject = path.join(distDir, '.build-zstd.o');
 const loaderPath = path.join(distDir, 'key-crypto.mjs');
-run('emcc', [
-  '-c',
-  zstdSource,
-  '-O3',
-  `-I${path.join(moduleRoot, 'vendor/zstd')}`,
-  '-o',
-  zstdObject,
-]);
 run('emcc', [
   '-DFFB_KEY_CRYPTO_TEST',
   ...cppSources,
-  zstdObject,
   '-std=c++20',
+  '-sUSE_ZLIB=1',
   '-O3',
   '-fexceptions',
   '-sDISABLE_EXCEPTION_CATCHING=0',
@@ -142,7 +128,6 @@ run('emcc', [
   '-sEXPORTED_RUNTIME_METHODS=["ccall","UTF8ToString"]',
   `-I${path.join(moduleRoot, 'cpp')}`,
   `-I${path.join(moduleRoot, 'vendor')}`,
-  `-I${path.join(moduleRoot, 'vendor/zstd')}`,
   `-I${includeDir}`,
   cryptoArchive,
   '-o',
@@ -152,6 +137,7 @@ run('emcc', [
 const nextLock = {
   emsdk: EMSDK_VERSION,
   openssl: '3.x, Emscripten target',
+  compression: 'gzip (Emscripten zlib port)',
   inputsSha256: inputHash(),
 };
 writeFileSync(lockPath, `${JSON.stringify(nextLock, null, 2)}\n`);

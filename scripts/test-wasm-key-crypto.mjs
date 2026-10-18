@@ -41,17 +41,9 @@ function filesIn(directory) {
 function hashInputs() {
   const moduleRoot = path.join(root, 'modules/expo-key-crypto');
   const files = [
-    ...['cpp', 'vendor/nlohmann', 'vendor/zstd'].flatMap(directory =>
-      filesIn(path.join(moduleRoot, directory)),
-    ),
+    ...['cpp', 'vendor/nlohmann'].flatMap(directory => filesIn(path.join(moduleRoot, directory))),
     path.join(webRoot, 'bridge.cpp'),
     path.join(root, 'scripts/build-wasm-key-crypto.mjs'),
-    path.join(root, 'scripts/sync/embed-dictionaries.mjs'),
-    path.join(root, 'scripts/sync/dictionary-pipeline.mjs'),
-    path.join(root, 'scripts/sync/generate-corpus.mjs'),
-    path.join(root, 'scripts/sync/train-dictionaries.mjs'),
-    path.join(root, 'src/services/sync/shortKeys/schema35.json'),
-    ...filesIn(path.join(root, 'src/services/sync/dictionaries')),
   ].sort();
   const hash = createHash('sha256');
   for (const filename of files) {
@@ -59,7 +51,7 @@ function hashInputs() {
     hash.update('\0');
     hash.update(readFileSync(filename));
   }
-  hash.update(`emsdk:${emsdk}\0openssl:3.x, Emscripten target\0`);
+  hash.update(`emsdk:${emsdk}\0openssl:3.x, Emscripten target\0compression:gzip,zlib-port\0`);
   return hash.digest('hex');
 }
 

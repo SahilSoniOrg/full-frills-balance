@@ -1,3 +1,4 @@
+import type { RowCompression } from '@/src/services/crypto/protocol/rowCompression';
 import { restoreBackup } from '../restoreBackup';
 import { parseBackupZip } from '../backupFile';
 import { verifyRowManifest } from '../manifestVerify';
@@ -129,7 +130,7 @@ const envelope = {
   updatedAt: 1,
   deleted: false,
   schemaVersion: 35,
-  dictId: 'workplace/v1',
+  compression: 'gzip' as const,
   salt: 'salt',
   ciphertext: 'ciphertext',
 };
@@ -161,7 +162,7 @@ describe('restoreBackup', () => {
         table: 'workplace',
         rowId: workplaceId,
         schemaVersion: 35,
-        dictId: 'workplace/v1',
+        compression: 'gzip' as const,
         plaintext: '{}',
       },
     ] as never);
@@ -174,7 +175,7 @@ describe('restoreBackup', () => {
       updatedAt: 1,
       deleted: false,
       schemaVersion: 35,
-      dictId: 'workplace/v1',
+      compression: 'gzip' as const,
       salt: new Uint8Array(16),
       ciphertext: new Uint8Array(16),
     } as never);
@@ -280,22 +281,22 @@ describe('restoreBackup', () => {
     expect(importRepository.batchInsertRowRestore).toHaveBeenCalledTimes(1);
   });
 
-  it.each(['missing', 'accounts/v1'])(
-    'rejects an invalid decoded dictionary %s before publication',
-    async dictId => {
+  it.each(['missing', 'unsupported-codec'])(
+    'rejects an unsupported decoded compression %s before publication',
+    async compression => {
       jest.mocked(localKeyHierarchy.decryptRows).mockResolvedValue([
         {
           ok: true,
           table: 'workplace',
           rowId: workplaceId,
           schemaVersion: 35,
-          dictId,
+          compression: compression as RowCompression,
           plaintext: '{}',
         },
       ]);
       await expect(
         restoreBackup(new Uint8Array([1]), { mode: 'existing', identity }),
-      ).rejects.toThrow(/FFB_ROW_UNKNOWN_DICT/);
+      ).rejects.toThrow(/FFB_ROW_UNSUPPORTED_COMPRESSION/);
       expect(decodeCanonicalRow).not.toHaveBeenCalled();
       expect(importRepository.batchInsertRowRestore).not.toHaveBeenCalled();
       expect(localKeyHierarchy.installWorkplaceKeys).not.toHaveBeenCalled();
@@ -389,7 +390,7 @@ describe('restoreBackup', () => {
           table: value.table,
           rowId: value.rowId,
           schemaVersion: 35,
-          dictId: 'workplace/v1',
+          compression: 'gzip' as const,
           plaintext: '{}',
         })) as never,
     );

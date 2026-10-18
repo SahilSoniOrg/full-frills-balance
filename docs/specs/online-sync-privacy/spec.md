@@ -1,6 +1,6 @@
 # Private online backup and synchronization
 
-Date: 16 October 2026. Status: Device → User → Workplace key substrate implemented in native and service APIs; V1 whole-snapshot backup never shipped and was removed from this branch; [V2 row-envelope backup/recovery](./row-envelope-sync.md) and web WASM support are implemented, with release verification gates open and online sync unfinished; no online service or account enrollment.
+Date: 16 October 2026. Status: Device → User → Workplace key substrate implemented in native and service APIs; [row-envelope backup/recovery](./row-envelope-sync.md) and web WASM support are implemented, with release verification gates open and online sync unfinished; no online service or account enrollment.
 
 [The documentation guide](./README.md) maps the current documents. [Key management](./key-management.md) defines the encryption architecture. [Preparation](./preparation.md) records what remains on the branch and open gates. Payload format, sync semantics and offline backup ZIP layout are authoritative in [row-envelope sync](./row-envelope-sync.md). Domain ownership follows [User, Device and Workplace](../user-device-workplace/spec.md) and [CONTEXT.md](../../../CONTEXT.md).
 
@@ -14,13 +14,13 @@ Date: 16 October 2026. Status: Device → User → Workplace key substrate imple
 - Generate, export and verify separate User and Workplace recovery credentials. Creating or uploading encrypted backups must not require typing those secrets on every operation.
 - User recovery restores the same encryption/signing keys onto a fresh Device through a provider-neutral ciphertext source, independent of the lost installation. Missing or orphan local keys route to recovery; they never authorize a new root. It does not replace the User identity, register an online Device, change membership or authorize server writes by itself.
 - Workplace emergency material decrypts salvage ciphertext only (see [row-envelope sync — local backup file](./row-envelope-sync.md#local-backup-file) and [key management §8](./key-management.md#8-user-recovery-and-workplace-emergency-export)). Importing recovered data creates a new Workplace through import-as-copy. No old User/owner authority is recovered. The externally saved Workplace credential pins SHA-256 of the single DEK.
-- Rotation, root replacement, multi-writer budgets, writer handover and collaborative sharing are outside the current branch. Financial payloads use the V2 per-row model in [row-envelope sync](./row-envelope-sync.md); the removed unshipped whole-snapshot format and 2^20 DEK invocation cap are not part of the tree.
+- Rotation, root replacement, multi-writer budgets, writer handover and collaborative sharing are outside the current branch. Financial payloads use the per-row model in [row-envelope sync](./row-envelope-sync.md).
 
 ## Cryptographic boundaries
 
 Key envelopes use HPKE base mode with X25519/HKDF-SHA256/AES-256-GCM. Recovery credentials reconstruct independent recovery pairs through the library's versioned seed API. HPKE context binds purpose, recipient, User, Device or Workplace, and key identity. HPKE does not authenticate a sender.
 
-Financial rows use AES-256-GCM with per-row HKDF subkeys, zstd dictionaries and signed manifest chains as specified in [row-envelope sync](./row-envelope-sync.md). Row manifest signatures use a dedicated domain string; they must not reuse the removed local-recovery signing domain.
+Financial rows use AES-256-GCM with per-row HKDF subkeys, independent gzip compression and signed manifest chains as specified in [row-envelope sync](./row-envelope-sync.md). Row manifest signatures use the dedicated `FFB-MANIFEST/1` domain.
 
 Only listed financial source tables and audit history travel in encrypted backup/sync; derived balances, rate caches, Device SMS, Device switches and navigation preferences do not. Offline restore validates and publishes through `restoreBackup` and `ImportRepository.batchInsertRowRestore`, with a manifest-hash receipt for retries. Incremental sync apply remains unfinished.
 
@@ -45,7 +45,7 @@ Accounting history supplies reusable write boundaries and display helpers (`Acco
 
 ## Release order
 
-1. Complete physical-device and interruption gates for the key substrate and for V2 offline backup/restore per [preparation](./preparation.md#verification-and-remaining-gates) and [row-envelope rollout](./row-envelope-sync.md#rollout-task-list). Recovery secrets stay client-side; file-backed ciphertext may later be replaced by authorized backend retrieval.
+1. Complete physical-device and interruption gates for the key substrate and for offline backup/restore per [preparation](./preparation.md#verification-and-remaining-gates) and [row-envelope rollout](./row-envelope-sync.md#rollout-task-list). Recovery secrets stay client-side; file-backed ciphertext may later be replaced by authorized backend retrieval.
 2. Bind the existing local User UUID to a provider-neutral account; implement signed Device registration, authenticated envelope delivery, authorization and explicit upload consent. Prove end-to-end User recovery before enabling manual online backup.
 3. Ship multi-Device sync (manifest chain, conflicts, fake then real transport), then sharing, rotation and root replacement as separate reviewed work.
 

@@ -30,7 +30,7 @@ test('protected hierarchy cannot import the app profile; workflows can', () => {
   );
   assert.deepEqual(cryptoImportViolations(source, 'src/services/sync/buildCommit.ts'), []);
 });
-test('native financial lists are forbidden in handwritten core, allowed in generated assets', () => {
+test('native financial lists are forbidden in handwritten core', () => {
   const source = 'constexpr auto TABLES = {"accounts"};';
   assert.equal(
     nativeCryptoProfileViolations(source, 'modules/expo-key-crypto/cpp/RowCodec.cpp', ['accounts'])
@@ -38,9 +38,11 @@ test('native financial lists are forbidden in handwritten core, allowed in gener
     1,
   );
   assert.deepEqual(
-    nativeCryptoProfileViolations(source, 'modules/expo-key-crypto/cpp/RowDictionaries.cpp', [
-      'accounts',
-    ]),
+    nativeCryptoProfileViolations(
+      'requireRowCompression(compression);',
+      'modules/expo-key-crypto/cpp/RowCrypto.cpp',
+      ['accounts'],
+    ),
     [],
   );
 });

@@ -8,7 +8,8 @@
 namespace ffb::rows {
 inline constexpr std::size_t MAX_IDENTIFIER_UTF8_BYTES = 128;
 inline constexpr const char *ROW_FORMAT = "full-frills-encrypted-row";
-inline constexpr const char *ROW_ENCODING = "shortkey1+zstd";
+inline constexpr const char *ROW_ENCODING = "shortkey1";
+inline constexpr unsigned char ROW_FORMAT_VERSION = 1;
 inline constexpr const char *ROW_INFO_DOMAIN = "FFB-ROW/1";
 inline constexpr const char *MANIFEST_DOMAIN = "FFB-MANIFEST/1";
 
@@ -20,10 +21,10 @@ struct RowHeader {
   bool deleted = false;
   std::string keyId;
   Bytes salt;
+  std::string compression;
 };
 struct InnerPlaintext {
   std::uint64_t schemaVersion = 0;
-  std::string dictId;
   Bytes body;
 };
 struct ManifestFields {
@@ -58,7 +59,7 @@ RowHeader decodeRowHeader(const Bytes &bytes);
 Bytes encodeRowInfo(const std::string &table);
 std::string decodeRowInfo(const Bytes &bytes);
 Bytes encodeInnerPlaintext(std::uint64_t schemaVersion,
-                           const std::string &dictId, const Bytes &body);
+                           const Bytes &body);
 InnerPlaintext decodeInnerPlaintext(const Bytes &bytes);
 Bytes encodeManifestBytes(const ManifestFields &fields);
 ManifestFields decodeManifestBytes(const Bytes &bytes);

@@ -35,13 +35,14 @@ const row: EncryptRow = {
   updatedAt: source.updatedAt,
   deleted: source.deleted,
   schemaVersion: 1,
-  dictId: 'accounts/v1',
+  compression: 'gzip' as const,
   plaintext: '{}',
 };
 const envelope = {
   format: 'full-frills-encrypted-row' as const,
   formatVersion: 1 as const,
-  enc: 'shortkey1+zstd' as const,
+  enc: 'shortkey1' as const,
+  compression: 'gzip' as const,
   workplaceId: source.workplaceId,
   table: source.table as RowTable,
   rowId: source.rowId,
@@ -55,6 +56,7 @@ const wireEnvelope: RowEnvelopeJson = {
   format: envelope.format,
   formatVersion: 1,
   enc: envelope.enc,
+  compression: envelope.compression,
   workplaceId: envelope.workplaceId,
   table: envelope.table,
   rowId: envelope.rowId,
@@ -80,7 +82,7 @@ describe('native row operation boundary', () => {
         rowId: value.rowId,
         table: value.table,
         schemaVersion: 35,
-        dictId: 'accounts/v1',
+        compression: 'gzip' as const,
         plaintext: '{}',
       })),
     }));
@@ -100,7 +102,7 @@ describe('native row operation boundary', () => {
         rowId: value.rowId,
         table: value.table,
         schemaVersion: 35,
-        dictId: 'accounts/v1',
+        compression: 'gzip' as const,
         plaintext: '{}',
       }));
     const call = jest.fn(async (_operation: string, request: unknown) => {
@@ -183,16 +185,26 @@ describe('native row operation boundary', () => {
     expect(call).not.toHaveBeenCalled();
   });
 
-  it('keeps per-row unreadable-dictionary errors explicit and binds rows to their request', async () => {
+  it('keeps per-row unsupported-compression errors explicit and binds rows to their request', async () => {
     const operations = keyOperationsFromTransport(async () => ({
       rows: [
-        { ok: false, rowId: source.rowId, table: source.table, error: 'FFB_ROW_UNKNOWN_DICT' },
+        {
+          ok: false,
+          rowId: source.rowId,
+          table: source.table,
+          error: 'FFB_ROW_UNSUPPORTED_COMPRESSION',
+        },
       ],
     }));
     await expect(
       operations.decryptRows(workplaceKey, source.workplaceId, [wireEnvelope]),
     ).resolves.toEqual([
-      { ok: false, rowId: source.rowId, table: source.table, error: 'FFB_ROW_UNKNOWN_DICT' },
+      {
+        ok: false,
+        rowId: source.rowId,
+        table: source.table,
+        error: 'FFB_ROW_UNSUPPORTED_COMPRESSION',
+      },
     ]);
     const swapped = keyOperationsFromTransport(async () => ({
       rows: [
@@ -201,7 +213,7 @@ describe('native row operation boundary', () => {
           rowId: 'other',
           table: source.table,
           schemaVersion: 1,
-          dictId: 'accounts/v1',
+          compression: 'gzip' as const,
           plaintext: '{}',
         },
       ],
