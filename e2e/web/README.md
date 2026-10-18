@@ -12,11 +12,15 @@ overwrite an existing local Workplace. Journal counts exclude inactive screens r
 by React Navigation (`aria-hidden` ancestors).
 
 The restore interruption suite pauses the real recovery/publication/session/cleanup/launch
-owners, closes the page and WASM worker, and reopens the same browser context before
-retrying through the normal UI. It compares public identity and Device-key metadata,
-manifest receipts, complete primary financial rows, audit history and running balances.
-Session-write and pending-removal error cases also verify that failed attempts do not
-report completion. D/E retry without a User recovery file using saved Device access.
+owners, closes the page and WASM worker, and reopens the same browser context.
+Before publication the normal UI still requires the selected files; after publication
+startup completes the durable handoff automatically without selecting the ZIP or User
+recovery file again. It compares public identity and Device-key metadata, manifest
+receipts, complete primary financial rows, audit history and running balances.
+Session-write errors keep launch gated until completion succeeds; temporary recovery
+checkpoint cleanup failures are covered as nonfatal in the completion-owner tests.
+E2E bootstrap explicitly acknowledges database persistence before exposing seeded
+fixtures, so immediate reloads do not race Loki's autosave timer.
 The observer/fault adapter requires the E2E build capability, authenticated bootstrap
 and `e2eRestoreVerification=1`; it never reads private keys or copies vaults. It is
 excluded from production exports, checked with `bun run check:production-e2e-web-bundle`.

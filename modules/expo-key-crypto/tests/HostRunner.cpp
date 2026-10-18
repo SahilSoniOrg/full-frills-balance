@@ -12,7 +12,6 @@ class TestVault final : public Vault {
 
 public:
   ~TestVault() { clear(); }
-  void clear() { for (auto &item : keys_) wipe(item.second); keys_.clear(); }
   Json metadata() {
     Json result = Json::object();
     for (auto &item : keys_) {

@@ -11,7 +11,7 @@ import type {
   RestoreVerification,
 } from '../../../src/testing/restoreVerification';
 import { E2E_AUTH_TOKEN } from '../../../src/testing/e2eConstants';
-import { createBackup, pickFile, saveFile, assertJournals } from '../support/encryptedBackup';
+import { createBackup, pickFile, assertJournals } from '../support/encryptedBackup';
 
 type Observation = Awaited<ReturnType<RestoreVerification['observe']>>;
 const verificationUrl = `/?e2eAuth=${E2E_AUTH_TOKEN}&e2eRestoreVerification=1`;
@@ -62,7 +62,6 @@ const scenarios: { boundary: RestoreBoundary; mode: RestoreFaultMode }[] = [
     mode: 'pause' as const,
   })),
   { boundary: 'session', mode: 'throw' },
-  { boundary: 'cleanup', mode: 'throw' },
 ];
 for (const { boundary, mode } of scenarios) {
   test(`${boundary}: ${mode} preserves real restore state across page discard and retry`, async ({
@@ -85,15 +84,6 @@ for (const { boundary, mode } of scenarios) {
     });
     const receipt = createHash('sha256').update(parsed.signedBytes).digest('hex');
     const source = await observe(page, request);
-    // A second export is a genuine signed manifest for the same Workplace with a new ID/hash.
-    const conflictingBackup = testInfo.outputPath('different-manifest.zip');
-    if (boundary === 'published') {
-      await saveFile(page, 'encrypted-backup-create', conflictingBackup);
-      const other = JSON.parse(
-        strFromU8(unzipSync(await readFile(conflictingBackup))['manifest.json']),
-      );
-      expect(other.id).not.toBe(manifest.id);
-    }
     await page.close();
     const context = await browser.newContext();
     const errors: string[] = [];
@@ -109,6 +99,8 @@ for (const { boundary, mode } of scenarios) {
         { boundary, mode },
       );
       await target.getByTestId('encrypted-backup-restore').click();
+      if (boundary !== 'recovered')
+        await target.getByTestId('encrypted-backup-restore-confirm').click();
       await expect
         .poll(() => target.evaluate(() => window.__restoreVerification!.status()))
         .toEqual({ reached: [boundary], armed: false });
@@ -125,7 +117,8 @@ for (const { boundary, mode } of scenarios) {
         publicIdentity: source.user!.publicIdentity,
       });
       expect(before.user!.deviceKeyId).not.toBe(source.user!.deviceKeyId);
-      expect(before.pending).toBe(boundary === 'launch' ? null : deviceId);
+      expect(before.pending).toBe(deviceId);
+      expect(before.completionPending).toBe(boundary !== 'recovered');
       expect(before.session).toEqual(
         ['cleanup', 'launch'].includes(boundary)
           ? {
@@ -150,35 +143,31 @@ for (const { boundary, mode } of scenarios) {
       expect(before.launch.registered).toBe(false);
       await expect(target.getByTestId('dashboard-screen')).toHaveCount(0);
       if (mode === 'throw')
-        await expect(target.getByTestId('encrypted-backup-message')).toContainText(`:${boundary}`);
+        await expect(target.getByText('Recovery needs attention', { exact: true })).toBeVisible();
       // Close the page and its dedicated WASM worker. No finally/cancellation can finish it.
       await target.close();
       target = await context.newPage();
       target.on('pageerror', error => errors.push(error.message));
       await target.goto(verificationUrl);
-      await openRestore(target);
-      const reloaded = await observe(target, request);
-      expect(reloaded).toEqual(before);
-      if (boundary === 'published') {
-        await pickFile(target, 'encrypted-backup-pick-zip', conflictingBackup);
+      // Before publication the user still supplies the files. After publication startup
+      // resumes the saved handoff automatically, with no picker or archive access.
+      let reloaded: Observation | null = null;
+      if (boundary === 'recovered') {
+        await openRestore(target);
+        reloaded = await observe(target, request);
+        expect(reloaded).toEqual(before);
+        await pickFile(target, 'encrypted-backup-pick-zip', backup);
         await pickFile(target, 'encrypted-backup-pick-recovery', userRecovery);
         await target.getByTestId('encrypted-backup-restore').click();
-        await expect(target.getByTestId('encrypted-backup-message')).toContainText(
-          'will not overwrite',
-        );
-        expect(await observe(target, request)).toEqual(reloaded);
+        await target.getByTestId('encrypted-backup-restore-confirm').click();
       }
-      await pickFile(target, 'encrypted-backup-pick-zip', backup);
-      if (!reloaded.session) await pickFile(target, 'encrypted-backup-pick-recovery', userRecovery);
-      // D/E must restore using saved, re-verified Device access with no recovery file.
-      await expect(target.getByTestId('encrypted-backup-restore')).toBeEnabled();
-      await target.getByTestId('encrypted-backup-restore').click();
       await expect(target.getByTestId('dashboard-screen')).toBeVisible({ timeout: 120000 });
       const after = await observe(target, request);
       expect(after.user).toEqual(before.user);
       expect(after.workplaceKey).toBe(workplaceKeys.keyId);
       expect(after.pending).toBeNull();
       expect(after.receipt).toBe(receipt);
+      expect(after.completionPending).toBe(false);
       expect(after.session).toMatchObject({ deviceId, userId: request.userId });
       expect(after.launch).toMatchObject({
         registered: true,

@@ -89,6 +89,7 @@ describe('encrypted restore completion', () => {
       record.defaultCurrencyCode = 'INR';
     });
     jest.mocked(encryptedRestoreWorkflow.restoreSelectedBackup).mockResolvedValue({
+      status: 'ready',
       identity,
       workplace,
       manifestHash: 'manifest',
@@ -109,10 +110,36 @@ describe('encrypted restore completion', () => {
       credential: null,
       existingIdentity: identity,
       signal: expect.any(AbortSignal),
+      onBeforePublish: expect.any(Function),
     });
     expect(recoveryFiles.pickSecret).not.toHaveBeenCalled();
     expect(encryptedRestoreWorkflow.prepareRecoveryAttempt).not.toHaveBeenCalled();
     expect(AppNavigation.toDashboard).toHaveBeenCalledTimes(1);
+  });
+
+  it('hands published restores to launch without activating or navigating from the screen', async () => {
+    jest.mocked(encryptedRestoreWorkflow.restoreSelectedBackup).mockResolvedValue({
+      status: 'completion-pending',
+      identity: { userId: 'user', registeredDeviceId: 'device', userKeyFingerprint: 'pin' },
+      workplace: { id: 'workplace' } as Workplace,
+      manifestHash: 'manifest',
+      rowCount: 1,
+      warnings: [],
+    });
+    const { result } = renderHook(() => usePrivateBackup());
+    await act(async () => {
+      await result.current.pickBackup();
+    });
+    await act(async () => {
+      await result.current.pickRecoverySecret();
+    });
+    await act(async () => {
+      await result.current.restoreFromFiles();
+    });
+    expect(completeEncryptedRestoreLaunch).not.toHaveBeenCalled();
+    expect(AppNavigation.toDashboard).not.toHaveBeenCalled();
+    expect(result.current.hasImportedBackup).toBe(false);
+    expect(result.current.hasImportedSecret).toBe(false);
   });
 
   it.each([
@@ -137,6 +164,7 @@ describe('encrypted restore completion', () => {
         record.defaultCurrencyCode = 'INR';
       });
       jest.mocked(encryptedRestoreWorkflow.restoreSelectedBackup).mockResolvedValue({
+        status: 'ready',
         identity: { userId: 'user', registeredDeviceId: 'device', userKeyFingerprint: 'pin' },
         workplace,
         manifestHash: 'manifest',
@@ -216,6 +244,7 @@ describe('encrypted restore completion', () => {
       expect(call.signal?.aborted).toBe(true);
       await act(async () => {
         finish({
+          status: 'ready',
           identity: { userId: 'user', registeredDeviceId: 'device', userKeyFingerprint: 'pin' },
           workplace: { id: 'workplace' } as Workplace,
           manifestHash: 'manifest',

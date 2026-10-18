@@ -79,6 +79,27 @@ describe('ImportRepository.batchInsertRowRestore', () => {
     expect(await database.collections.get('workplaces').query().fetchCount()).toBe(1);
   });
 
+  it('publishes the completion handoff with the receipt and keeps it unchanged on an exact retry', async () => {
+    const original = {
+      ...workplace('handoff-wp'),
+      rowRestoreCompletionJson: '{"attempt":"original"}',
+    };
+    const restored = await importRepository.batchInsertRowRestore(
+      original,
+      data('account'),
+      receiptA,
+    );
+    expect(restored.rowRestoreManifestHash).toBe(receiptA);
+    expect(restored.rowRestoreCompletionJson).toBe(original.rowRestoreCompletionJson);
+    const retried = await importRepository.batchInsertRowRestore(
+      { ...original, rowRestoreCompletionJson: '{"attempt":"replacement"}' },
+      data('other'),
+      receiptA,
+    );
+    expect(retried.rowRestoreCompletionJson).toBe(original.rowRestoreCompletionJson);
+    expect(await database.get('accounts').query().fetchCount()).toBe(1);
+  });
+
   it('refuses a different receipt for an existing Workplace without changing it', async () => {
     await importRepository.batchInsertRowRestore(
       workplace('restore-wp'),

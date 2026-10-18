@@ -360,6 +360,8 @@ export function usePrivateBackup(workplaceId?: string) {
         lifetime.current.backup = null;
         projectInputs();
       }
+      // Launch observes the atomic handoff and owns completion, retry and post-restart recovery.
+      if (result.status === 'completion-pending') return;
       if (!canResume(signal)) return;
       if (needsEncryptedRestoreLaunchCompletion()) {
         completeEncryptedRestoreLaunch(result.workplace.id);

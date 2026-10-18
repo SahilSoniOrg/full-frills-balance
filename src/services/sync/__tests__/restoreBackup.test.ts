@@ -191,13 +191,17 @@ describe('restoreBackup', () => {
       auditLogs: [],
     });
     jest.mocked(currencyReadService.getPrecision).mockResolvedValue(2);
-    jest
-      .mocked(importRepository.batchInsertRowRestore)
-      .mockResolvedValue({ id: workplaceId } as never);
+    jest.mocked(importRepository.batchInsertRowRestore).mockImplementation(
+      async workplace =>
+        ({
+          id: workplaceId,
+          rowRestoreCompletionJson: workplace.rowRestoreCompletionJson,
+        }) as never,
+    );
     jest.mocked(accountQueryRepository.findAll).mockResolvedValue([]);
   });
 
-  it('verifies before creating a recovery identity, publishes before installing keys, then rebuilds', async () => {
+  it('verifies before recovery and publishes a durable completion handoff without installing keys', async () => {
     const credential = {
       format: 'full-frills-recovery-handle',
       formatVersion: 1,
@@ -216,13 +220,19 @@ describe('restoreBackup', () => {
     expect(jest.mocked(verifyRowManifest).mock.invocationCallOrder[0]).toBeLessThan(
       jest.mocked(localKeyHierarchy.recoverUserDevice).mock.invocationCallOrder[0],
     );
-    expect(
-      jest.mocked(importRepository.batchInsertRowRestore).mock.invocationCallOrder[0],
-    ).toBeLessThan(jest.mocked(localKeyHierarchy.installWorkplaceKeys).mock.invocationCallOrder[0]);
-    expect(preferences.workplace.update).toHaveBeenCalledWith(workplaceId, {
+    expect(localKeyHierarchy.installWorkplaceKeys).not.toHaveBeenCalled();
+    expect(preferences.workplace.update).not.toHaveBeenCalled();
+    expect(rebuildAllAccountBalancesAfterImport).not.toHaveBeenCalled();
+    expect(result.status).toBe('completion-pending');
+    const published = jest.mocked(importRepository.batchInsertRowRestore).mock.calls[0][0];
+    expect(JSON.parse(published.rowRestoreCompletionJson!)).toMatchObject({
+      identity,
+      workplaceKeys,
       safeToSpendDays: 60,
+      manifestHash: '03',
+      rowCount: 1,
     });
-    expect(rebuildAllAccountBalancesAfterImport).toHaveBeenCalled();
+    expect(published.rowRestoreCompletionJson).not.toContain(credential.handle);
     expect(result.manifestHash).toBe('03');
   });
 

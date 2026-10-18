@@ -10,6 +10,11 @@ import {
   workplaceScope,
   type LocalUserKeys,
 } from '@/src/services/backup/keyHierarchyRecords';
+import { EncryptedRestoreCompletion } from '@/src/services/backup/encryptedRestoreCompletion';
+import { restoreCompletionRepository } from '@/src/data/repositories/RestoreCompletionRepository';
+import { preferences } from '@/src/services/preferences';
+import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
+import { rebuildAllAccountBalancesAfterImport } from '@/src/services/import/importAccountBalanceRebuild';
 import { EncryptedRestoreWorkflow } from '@/src/services/backup/encryptedRestoreWorkflow';
 import type { EncryptionSetupSession } from '@/src/services/backup/encryptionSetupStore';
 import { createEncryptedBackupZip } from '@/src/services/sync/encryptedBackupActions';
@@ -30,7 +35,6 @@ import Account from '@/src/data/models/Account';
 import { AccountType } from '@/src/types/enums';
 import type { WorkplaceId, AccountId } from '@/src/types/ids';
 import { Icon } from '@/src/types/domainIcons';
-import { accountWriteRepository } from '@/src/data/repositories/account';
 import { journalPersistenceRepository } from '@/src/data/repositories/journal/JournalPersistenceRepository';
 
 jest.mock('react-native-quick-crypto', () => ({
@@ -125,8 +129,10 @@ async function fixture() {
   jest
     .spyOn(localKeyHierarchy, 'installWorkplaceKeys')
     .mockImplementation((...args) => hierarchy.installWorkplaceKeys(...args));
+  jest
+    .spyOn(localKeyHierarchy, 'commitRestoreDraft')
+    .mockImplementation((...args) => hierarchy.commitRestoreDraft(...args));
   const archive = await createEncryptedBackupZip(identity, workplaceId);
-  const differentArchive = await createEncryptedBackupZip(identity, workplaceId);
   const expected = await rowSource.readWorkplaceRows(workplaceId);
   const parsed = parseBackupZip(archive);
   const manifest = parseRowManifest(parsed.manifest, {
@@ -159,6 +165,18 @@ async function fixture() {
     freshDeviceId,
     restore: restoreBackup,
   };
+  const complete = () =>
+    new EncryptedRestoreCompletion({
+      repository: restoreCompletionRepository,
+      hierarchy: localKeyHierarchy,
+      session: dependencies.session,
+      pendingDevice: dependencies.pending,
+      assertAccess: () => undefined,
+      updatePreferences: (id, safeToSpendDays) =>
+        preferences.workplace.update(id, { safeToSpendDays }),
+      rebuildBalances: async id =>
+        rebuildAllAccountBalancesAfterImport(id, await accountQueryRepository.findAll(id), 2),
+    }).resume(() => undefined);
   const reopen = () => {
     hierarchy = new LocalKeyHierarchy(state, () => undefined, target.crypto);
     return new EncryptedRestoreWorkflow(dependencies);
@@ -168,11 +186,11 @@ async function fixture() {
     target,
     state,
     archive,
-    differentArchive,
     expected,
     receipt,
     workplaceId,
     dependencies,
+    complete,
     reopen,
     workflow: reopen(),
     input: { archive, credential: userCredential },
@@ -180,105 +198,83 @@ async function fixture() {
   };
 }
 
-it.each(['publication', 'durability', 'keys', 'session', 'cleanup'] as const)(
-  'retries a real restore after %s fails without replacing identity or financial records',
+it.each(['publication', 'durability', 'keys', 'session', 'acknowledgement'] as const)(
+  'resumes a real restore after %s fails without replacing identity or financial records',
   async boundary => {
     const h = await fixture();
     const injected = new Error(`injected:${boundary}`);
-    let reached = 0;
     const fail = async (): Promise<never> => {
-      reached++;
       throw injected;
     };
     if (boundary === 'publication') jest.spyOn(database, 'batch').mockImplementationOnce(fail);
     if (boundary === 'durability')
       jest.spyOn(persistence, 'flushDatabasePersistence').mockImplementationOnce(fail);
-    if (boundary === 'keys')
-      jest.mocked(localKeyHierarchy.installWorkplaceKeys).mockImplementationOnce(fail);
-    if (boundary === 'session')
-      jest.spyOn(h.dependencies.session, 'saveSession').mockImplementationOnce(fail);
-    if (boundary === 'cleanup')
-      jest.spyOn(h.dependencies.pending, 'clear').mockImplementationOnce(fail);
-    await expect(h.workflow.restoreSelectedBackup(h.input)).rejects.toBe(injected);
-    expect(reached).toBe(1);
-    expect(await h.dependencies.pending.load()).toBe('recovery-device');
+    if (boundary === 'publication' || boundary === 'durability') {
+      await expect(h.workflow.restoreSelectedBackup(h.input)).rejects.toBe(injected);
+    } else {
+      await expect(h.workflow.restoreSelectedBackup(h.input)).resolves.toMatchObject({
+        status: 'completion-pending',
+      });
+      if (boundary === 'keys')
+        jest.mocked(localKeyHierarchy.installWorkplaceKeys).mockImplementationOnce(fail);
+      if (boundary === 'session')
+        jest.spyOn(h.dependencies.session, 'saveSession').mockImplementationOnce(fail);
+      if (boundary === 'acknowledgement')
+        jest.spyOn(restoreCompletionRepository, 'clear').mockImplementationOnce(fail);
+      await expect(h.complete()).rejects.toBe(injected);
+    }
     const user = (await h.state.read(userScope('alice', 'recovery-device'))) as LocalUserKeys;
-    expect(user.userKeyFingerprint).toBe(h.input.credential.identityKeyId);
-    const deviceTags = [...h.target.deviceTags];
-    expect(deviceTags).toHaveLength(1);
+    const tags = [...h.target.deviceTags];
+    expect(tags).toHaveLength(1);
     const published = await workplaceRepository.find(h.workplaceId);
     expect(published?.rowRestoreManifestHash ?? null).toBe(
       boundary === 'publication' ? null : h.receipt,
     );
-    const rowsBefore = published ? await rowSource.readWorkplaceRows(h.workplaceId) : [];
     if (boundary === 'publication') {
-      for (const table of ['accounts', 'journals', 'transactions', 'audit_logs'])
-        expect(await database.get(table).query().fetchCount()).toBe(0);
+      expect(await database.get('accounts').query().fetchCount()).toBe(0);
+      await h.reopen().restoreSelectedBackup(h.input);
+    } else {
+      expect(published!.rowRestoreCompletionJson).not.toBeNull();
+      expect(published!.rowRestoreCompletionJson).not.toContain(h.input.credential.handle);
     }
-    expect((await h.state.read(workplaceScope('alice', h.workplaceId))) !== null).toBe(
-      ['session', 'cleanup'].includes(boundary),
-    );
-    expect((await h.dependencies.session.loadSession()) !== null).toBe(boundary === 'cleanup');
-    const remounted = h.reopen();
-    if (boundary === 'keys') {
-      await expect(
-        remounted.restoreSelectedBackup({ ...h.input, archive: h.differentArchive }),
-      ).rejects.toThrow('will not overwrite');
-      expect(await rowSource.readWorkplaceRows(h.workplaceId)).toEqual(rowsBefore);
-      expect((await workplaceRepository.find(h.workplaceId))!.rowRestoreManifestHash).toBe(
-        h.receipt,
-      );
-    }
-    const result = await remounted.restoreSelectedBackup(
-      boundary === 'cleanup' ? { archive: h.archive } : h.input,
-    );
-    expect(result.warnings).toEqual([]);
-    expect(result.identity).toEqual({
-      userId: user.userId,
-      registeredDeviceId: user.deviceId,
-      userKeyFingerprint: user.userKeyFingerprint,
-    });
-    expect(h.dependencies.freshDeviceId).toHaveBeenCalledTimes(1);
-    expect([...h.target.deviceTags]).toEqual(deviceTags);
+    const before = await rowSource.readWorkplaceRows(h.workplaceId);
+    // Reconstruct the key owner, then finish using ONLY the persisted DB handoff.
+    h.reopen();
+    await h.complete();
+    expect((await workplaceRepository.find(h.workplaceId))!.rowRestoreCompletionJson).toBeNull();
+    expect((await workplaceRepository.find(h.workplaceId))!.rowRestoreManifestHash).toBe(h.receipt);
+    expect([...h.target.deviceTags]).toEqual(tags);
     expect(await h.state.read(userScope('alice', 'recovery-device'))).toEqual(user);
     expect(await h.dependencies.pending.load()).toBeNull();
     expect(await h.dependencies.session.loadSession()).toMatchObject({
-      deviceId: 'recovery-device',
       userId: 'alice',
-      enrolledWorkplaces: [h.workplaceId],
+      deviceId: 'recovery-device',
     });
-    expect((await workplaceRepository.find(h.workplaceId))!.rowRestoreManifestHash).toBe(h.receipt);
-    const after = await rowSource.readWorkplaceRows(h.workplaceId);
-    const primary = (rows: typeof after) =>
+    const primary = (rows: typeof before) =>
       rows.filter(row => row.table !== 'workplace').sort((a, b) => a.rowId.localeCompare(b.rowId));
-    expect(primary(after)).toEqual(primary(h.expected));
-    if (published) expect(primary(after)).toEqual(primary(rowsBefore));
-    expect(
-      (await localKeyHierarchy.exportWorkplaceKeys(result.identity, h.workplaceId)).keyId,
-    ).toBe(h.keyId);
-    // A further reconstruction uses verified Device access without the recovery credential.
+    expect(primary(await rowSource.readWorkplaceRows(h.workplaceId))).toEqual(primary(before));
+    expect(primary(before)).toEqual(primary(h.expected));
     await expect(h.reopen().restoreSelectedBackup({ archive: h.archive })).resolves.toMatchObject({
-      identity: result.identity,
+      status: 'ready',
       manifestHash: h.receipt,
     });
+    expect(h.dependencies.freshDeviceId).toHaveBeenCalledTimes(1);
   },
 );
 
-it('preserves published books and surfaces a derived-balance read failure as a warning', async () => {
+it('keeps published books gated until balance rebuilding succeeds', async () => {
   const h = await fixture();
+  await h.workflow.restoreSelectedBackup(h.input);
+  const before = await rowSource.readWorkplaceRows(h.workplaceId);
   const read = jest
     .spyOn(transactionRawRebuildQueries, 'getRebuildDataRaw')
     .mockRejectedValueOnce(new Error('derived read unavailable'));
-  const result = await h.workflow.restoreSelectedBackup(h.input);
-  expect(result.warnings).toEqual(['Post-restore running-balance rebuild failed']);
-  expect(result.manifestHash).toBe(h.receipt);
-  expect(await h.dependencies.pending.load()).toBeNull();
-  const before = await rowSource.readWorkplaceRows(h.workplaceId);
+  await expect(h.complete()).rejects.toThrow('derived read unavailable');
+  expect((await workplaceRepository.find(h.workplaceId))!.rowRestoreCompletionJson).not.toBeNull();
   read.mockRestore();
-  await expect(h.reopen().restoreSelectedBackup({ archive: h.archive })).resolves.toMatchObject({
-    warnings: [],
-    manifestHash: h.receipt,
-  });
+  h.reopen();
+  await h.complete();
+  expect((await workplaceRepository.find(h.workplaceId))!.rowRestoreCompletionJson).toBeNull();
   expect(await rowSource.readWorkplaceRows(h.workplaceId)).toEqual(before);
 });
 

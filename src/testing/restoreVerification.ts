@@ -11,8 +11,8 @@ import {
 } from '@/src/services/backup/keyHierarchyRecords';
 import { encryptionSetupStore } from '@/src/services/backup/encryptionSetupStore';
 import { loadPendingEncryptedRestoreDeviceId } from '@/src/services/backup/pendingEncryptedRestoreDeviceId';
-import { encryptedRestoreWorkflow } from '@/src/services/backup/encryptedRestoreWorkflow';
-import { importRepository } from '@/src/data/repositories/ImportRepository';
+import { encryptedRestoreCompletion } from '@/src/services/backup/encryptedRestoreCompletion';
+import { restoreCompletionRepository } from '@/src/data/repositories/RestoreCompletionRepository';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { rowSource } from '@/src/services/sync/rowSource';
 import { TABLE_COLUMNS } from '@/src/services/sync/rowPreparation';
@@ -53,11 +53,10 @@ export function installRestoreVerification(): void {
     await checkpoint('recovered');
     return identity;
   };
-  const publish = importRepository.batchInsertRowRestore.bind(importRepository);
-  importRepository.batchInsertRowRestore = async (...args) => {
-    const workplace = await publish(...args);
+  const confirm = restoreCompletionRepository.confirmPublication.bind(restoreCompletionRepository);
+  restoreCompletionRepository.confirmPublication = async () => {
+    await confirm();
     await checkpoint('published');
-    return workplace;
   };
   const save = encryptionSetupStore.saveSession.bind(encryptionSetupStore);
   encryptionSetupStore.saveSession = async session => {
@@ -75,12 +74,12 @@ export function installRestoreVerification(): void {
     }
     return remove(key);
   };
-  const restore = encryptedRestoreWorkflow.restoreSelectedBackup.bind(encryptedRestoreWorkflow);
-  encryptedRestoreWorkflow.restoreSelectedBackup = async input => {
-    const result = await restore(input);
-    await checkpoint('launch');
-    return result;
-  };
+  const complete = encryptedRestoreCompletion.resume.bind(encryptedRestoreCompletion);
+  encryptedRestoreCompletion.resume = onReady =>
+    complete(async workplaceId => {
+      await checkpoint('launch');
+      await onReady(workplaceId);
+    });
   window.__restoreVerification = {
     arm(boundary, mode) {
       assertE2eHarnessEnabled();
@@ -112,6 +111,7 @@ export function installRestoreVerification(): void {
         pending: await loadPendingEncryptedRestoreDeviceId(),
         session: await encryptionSetupStore.loadSession(),
         receipt: workplace?.rowRestoreManifestHash ?? null,
+        completionPending: Boolean(workplace?.rowRestoreCompletionJson),
         counts: Object.fromEntries(
           await Promise.all(
             Object.keys(TABLE_COLUMNS).map(async table => [
@@ -151,6 +151,7 @@ export type RestoreVerification = {
     pending: string | null;
     session: Awaited<ReturnType<typeof encryptionSetupStore.loadSession>>;
     receipt: string | null;
+    completionPending: boolean;
     counts: Record<string, number>;
     rows: Awaited<ReturnType<typeof rowSource.readWorkplaceRows>>;
     balances: { id: string; balance: number | null }[];

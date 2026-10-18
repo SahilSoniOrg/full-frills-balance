@@ -58,6 +58,7 @@ test('encrypted backup recovers financial records in a fresh browser', async ({
     await expect(restored.getByTestId('dashboard-screen')).toHaveCount(0);
     await pickFile(restored, 'encrypted-backup-pick-recovery', userRecovery);
     await restored.getByTestId('encrypted-backup-restore').click();
+    await restored.getByTestId('encrypted-backup-restore-confirm').click();
     await expect(restored.getByTestId('dashboard-screen')).toBeVisible({ timeout: 120000 });
     await assertJournals(restored);
     await restored.screenshot({ path: testInfo.outputPath('restored-records.png') });
@@ -70,6 +71,7 @@ test('encrypted backup recovers financial records in a fresh browser', async ({
     await pickFile(restored, 'encrypted-backup-pick-zip', backup);
     await pickFile(restored, 'encrypted-backup-pick-recovery', userRecovery);
     await restored.getByTestId('encrypted-backup-restore').click();
+    await restored.getByTestId('encrypted-backup-restore-confirm').click();
     await expect(restored.getByTestId('dashboard-screen')).toBeVisible();
     await assertJournals(restored);
     await restored.screenshot({ path: testInfo.outputPath('repeat-restore-no-duplicates.png') });
@@ -137,6 +139,7 @@ for (const failure of ['truncated ZIP', 'tampered signature', 'wrong User recove
       await pickFile(fresh.page, 'encrypted-backup-pick-zip', backup);
       await pickFile(fresh.page, 'encrypted-backup-pick-recovery', userRecovery);
       await fresh.page.getByTestId('encrypted-backup-restore').click();
+      await fresh.page.getByTestId('encrypted-backup-restore-confirm').click();
       await expect(fresh.page.getByTestId('dashboard-screen')).toBeVisible();
       await assertJournals(fresh.page);
       await fresh.page.screenshot({ path: testInfo.outputPath('retry-restored.png') });
@@ -161,6 +164,9 @@ test('resumes User and Workplace setup after reload without regenerating secrets
   await expect(page.getByTestId('encrypted-backup-export-secret')).toHaveCount(0);
   await expect(page.getByTestId('encrypted-backup-begin-user')).toHaveCount(0);
   await pickFile(page, 'encrypted-backup-verify-secret', userRecovery);
+  await expect(page.getByTestId('encrypted-backup-begin-workplace')).toBeVisible({
+    timeout: 10000,
+  });
   await page.getByTestId('encrypted-backup-begin-workplace').click();
   const workplaceRecovery = testInfo.outputPath('workplace-before-reload.json');
   await saveFile(page, 'encrypted-backup-export-secret', workplaceRecovery);
@@ -179,6 +185,7 @@ test('refuses to overwrite an existing local Workplace', async ({ page }, testIn
   await pickFile(page, 'encrypted-backup-pick-zip', backup);
   await pickFile(page, 'encrypted-backup-pick-recovery', userRecovery);
   await page.getByTestId('encrypted-backup-restore').click();
+  await page.getByTestId('encrypted-backup-restore-confirm').click();
   await expect(page.getByTestId('encrypted-backup-message')).toContainText('will not overwrite');
   await page.screenshot({ path: testInfo.outputPath('existing-workplace-protected.png') });
   await page.goto('/');
@@ -296,6 +303,7 @@ test('Device A approves an independent Device B which restores without a recover
     await pickFile(deviceB, 'encrypted-backup-pick-zip', backup);
     await expect(deviceB.getByTestId('encrypted-backup-restore')).toBeEnabled();
     await deviceB.getByTestId('encrypted-backup-restore').click();
+    await deviceB.getByTestId('encrypted-backup-restore-confirm').click();
     await expect(deviceB.getByTestId('dashboard-screen')).toBeVisible();
     await assertJournals(deviceB);
     await deviceB.screenshot({ path: testInfo.outputPath('device-b-restored.png') });

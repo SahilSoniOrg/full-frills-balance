@@ -1109,5 +1109,14 @@ export const migrations = schemaMigrations({
         `),
       ],
     },
+    {
+      toVersion: 36,
+      steps: [
+        addColumns({
+          table: 'workplaces',
+          columns: [{ name: 'row_restore_completion_json', type: 'string', isOptional: true }],
+        }),
+      ],
+    },
   ],
 });

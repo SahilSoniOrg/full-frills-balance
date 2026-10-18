@@ -126,17 +126,8 @@ export class EncryptedRestoreWorkflow {
         }
         throw error;
       }
-      // Cancellation cannot undo publication. Finish these public checkpoints even if
-      // the originating screen has disappeared; only the hook gates visible effects.
-      await this.dependencies.session.saveSession({
-        formatVersion: 1,
-        intent: 'recover-user',
-        userId: result.identity.userId,
-        deviceId: result.identity.registeredDeviceId,
-        userKeyFingerprint: result.identity.userKeyFingerprint,
-        enrolledWorkplaces: [result.workplace.id],
-      });
-      await this.dependencies.pending.clear();
+      // The DB handoff now owns key/session completion, including after this screen disappears.
+      // Keep the recovery ID until the completion service has finished the saved work.
       return result;
     });
   }

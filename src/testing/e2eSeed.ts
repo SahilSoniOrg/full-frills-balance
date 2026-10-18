@@ -2,6 +2,7 @@ import { journalPersistenceService } from '@/src/services/journal/JournalPersist
 import { Icon } from '@/src/types/domainIcons';
 import { AppConfig } from '@/src/constants';
 import { database } from '@/src/data/database/Database';
+import { flushDatabasePersistence } from '@/src/data/database/flushPersistence';
 import TransactionInboxRecord from '@/src/data/models/TransactionInboxRecord';
 import {
   InboxParseStatus,
@@ -668,4 +669,7 @@ export async function executeE2eBootstrap(config: {
       );
     }
   }
+  // Tests may reload immediately after the first render. Loki's autosave timer is
+  // not a persistence acknowledgement for seeded books or a reset schema.
+  await database.write(() => flushDatabasePersistence());
 }

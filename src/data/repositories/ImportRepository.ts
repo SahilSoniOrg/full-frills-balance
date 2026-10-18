@@ -37,6 +37,7 @@ type NewWorkplace = {
   name: string;
   icon: string;
   defaultCurrencyCode: string;
+  rowRestoreCompletionJson?: string;
 };
 
 export class ImportRepository {

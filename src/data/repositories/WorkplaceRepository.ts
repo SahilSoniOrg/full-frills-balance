@@ -105,6 +105,7 @@ export class WorkplaceRepository {
     icon: string;
     defaultCurrencyCode: string;
     rowRestoreManifestHash?: string;
+    rowRestoreCompletionJson?: string;
   }): Workplace {
     return this.workplaces.prepareCreate(w => {
       if (data.id) w._raw.id = data.id;
@@ -114,6 +115,7 @@ export class WorkplaceRepository {
       if (data.rowRestoreManifestHash) {
         w.rowRestoreManifestHash = data.rowRestoreManifestHash;
       }
+      if (data.rowRestoreCompletionJson) w.rowRestoreCompletionJson = data.rowRestoreCompletionJson;
       w.createdAt = new Date();
       w.updatedAt = new Date();
     });
