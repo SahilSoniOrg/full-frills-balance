@@ -22,22 +22,33 @@ import {
 } from '@/src/features/setup';
 import { encryptionRecoveryErrorMessage } from '../helpers/encryptionRecoveryErrors';
 import type { RestoreBackupPreview } from '@/src/services/sync/restoreBackup';
+import {
+  prepareWorkplaceRecovery,
+  publishWorkplaceRecovery,
+  type PreparedWorkplaceRecovery,
+} from '@/src/services/sync/workplaceRecovery';
+import { workplaceRecoveryDestination } from '@/src/services/sync/workplaceRecoveryCopy';
 
 type UiState = {
   phase: 'idle' | 'working' | 'preview';
   setup: SetupViewState | null;
+  inspectedWorkplaceId?: string;
   message: string | null;
   inputs: { generated: boolean; secret: boolean; backup: boolean };
   restorePreview: RestoreBackupPreview | null;
+  recoveryRoute: 'user' | 'workplace';
+  workplaceRecovery: { preview: RestoreBackupPreview; workplaceId?: string } | null;
 };
 
 type UiEvent =
   | { type: 'start' | 'finish' }
-  | { type: 'inspect'; setup: SetupViewState }
+  | { type: 'inspect'; setup: SetupViewState; workplaceId?: string }
   | { type: 'message'; message: string }
   | { type: 'inputs'; inputs: UiState['inputs'] }
   | { type: 'preview'; preview: RestoreBackupPreview }
-  | { type: 'resume' };
+  | { type: 'resume' }
+  | { type: 'route'; route: UiState['recoveryRoute'] }
+  | { type: 'copy'; copy: UiState['workplaceRecovery'] };
 
 function uiReducer(state: UiState, event: UiEvent): UiState {
   switch (event.type) {
@@ -46,7 +57,7 @@ function uiReducer(state: UiState, event: UiEvent): UiState {
     case 'finish':
       return { ...state, phase: 'idle', restorePreview: null };
     case 'inspect':
-      return { ...state, setup: event.setup };
+      return { ...state, setup: event.setup, inspectedWorkplaceId: event.workplaceId };
     case 'message':
       return { ...state, message: event.message };
     case 'inputs':
@@ -55,6 +66,15 @@ function uiReducer(state: UiState, event: UiEvent): UiState {
       return { ...state, phase: 'preview', restorePreview: event.preview };
     case 'resume':
       return { ...state, phase: 'working', restorePreview: null };
+    case 'route':
+      return {
+        ...state,
+        recoveryRoute: event.route,
+        workplaceRecovery: null,
+        restorePreview: null,
+      };
+    case 'copy':
+      return { ...state, workplaceRecovery: event.copy };
   }
 }
 
@@ -67,6 +87,8 @@ export function usePrivateBackup(workplaceId?: string) {
     message: null,
     inputs: { generated: false, secret: false, backup: false },
     restorePreview: null,
+    recoveryRoute: 'user',
+    workplaceRecovery: null,
   });
   const lifetime = useRef<{
     focused: boolean;
@@ -75,6 +97,7 @@ export function usePrivateBackup(workplaceId?: string) {
     secret: unknown;
     backup: Uint8Array | null;
     resolvePreview: ((accepted: boolean) => void) | null;
+    prepared: PreparedWorkplaceRecovery | null;
   }>({
     focused: true,
     active: null,
@@ -82,10 +105,16 @@ export function usePrivateBackup(workplaceId?: string) {
     secret: null,
     backup: null,
     resolvePreview: null,
+    prepared: null,
   });
 
   const busy = ui.phase === 'working';
-  const state = ui.setup;
+  const setupWorkplaceId = ui.workplaceRecovery ? ui.workplaceRecovery.workplaceId : workplaceId;
+  const state = ui.inspectedWorkplaceId === setupWorkplaceId ? ui.setup : null;
+  const setupWorkplaceIdRef = useRef(setupWorkplaceId);
+  useEffect(() => {
+    setupWorkplaceIdRef.current = setupWorkplaceId;
+  }, [setupWorkplaceId]);
 
   const canResume = useCallback(
     (signal?: AbortSignal) =>
@@ -184,12 +213,34 @@ export function usePrivateBackup(workplaceId?: string) {
       resolvePreview(false);
     }
     clearSecrets();
+    lifetime.current.prepared = null;
+    dispatch({ type: 'copy', copy: null });
   }, [clearSecrets]);
 
   const refresh = useCallback(async () => {
-    const next = await encryptionSetup.inspect(workplaceId);
-    if (canResume()) dispatch({ type: 'inspect', setup: next });
-  }, [workplaceId, canResume]);
+    const inspectedId = setupWorkplaceIdRef.current;
+    const next = await encryptionSetup.inspect(inspectedId);
+    if (canResume()) dispatch({ type: 'inspect', setup: next, workplaceId: inspectedId });
+  }, [canResume]);
+
+  useEffect(() => {
+    const prepared = lifetime.current.prepared;
+    const identity = state?.keys?.user === 'ready' ? state.keys.identity : undefined;
+    if (!prepared || !identity || !ui.workplaceRecovery || ui.workplaceRecovery.workplaceId) return;
+    let current = true;
+    void workplaceRecoveryDestination(prepared.manifestHash, identity)
+      .then(destination => {
+        if (current && lifetime.current.prepared === prepared)
+          dispatch({
+            type: 'copy',
+            copy: { preview: prepared.preview, workplaceId: destination.workplaceId },
+          });
+      })
+      .catch(reportError);
+    return () => {
+      current = false;
+    };
+  }, [state, ui.workplaceRecovery, reportError]);
 
   useFocusEffect(
     useCallback(() => {
@@ -250,8 +301,8 @@ export function usePrivateBackup(workplaceId?: string) {
   const begin = () =>
     run(async signal => {
       const value =
-        state?.keys?.user === 'ready' && workplaceId
-          ? await encryptionSetup.beginWorkplace(workplaceId)
+        state?.keys?.user === 'ready' && setupWorkplaceId
+          ? await encryptionSetup.beginWorkplace(setupWorkplaceId)
           : await encryptionSetup.beginUser();
       assertForeground(signal);
       lifetime.current.generated = value;
@@ -277,8 +328,8 @@ export function usePrivateBackup(workplaceId?: string) {
       if (value === null) return;
       await waitForForeground(signal);
       assertForeground(signal);
-      if (state?.keys?.user === 'ready' && workplaceId)
-        await encryptionSetup.confirmWorkplace(workplaceId, value);
+      if (state?.keys?.user === 'ready' && setupWorkplaceId)
+        await encryptionSetup.confirmWorkplace(setupWorkplaceId, value);
       else await encryptionSetup.confirmUser(value);
       clearSecrets();
     });
@@ -292,7 +343,7 @@ export function usePrivateBackup(workplaceId?: string) {
       destructive: true,
       onConfirm: () => {
         void run(async () => {
-          await encryptionSetup.discardUnfinished(workplaceId);
+          await encryptionSetup.discardUnfinished(setupWorkplaceId);
           clearSecrets();
         });
       },
@@ -307,7 +358,7 @@ export function usePrivateBackup(workplaceId?: string) {
       if (lifetime.current.focused)
         setMessage(
           saved
-            ? 'Encrypted backup saved. Keep your User recovery file separately.'
+            ? 'Encrypted backup saved. Keep your User and Workplace recovery files separately from the ZIP.'
             : 'Backup export was cancelled.',
         );
     });
@@ -329,7 +380,8 @@ export function usePrivateBackup(workplaceId?: string) {
       if (value !== null) {
         await waitForForeground(signal);
         lifetime.current.secret = value;
-        await encryptedRestoreWorkflow.prepareRecoveryAttempt(signal);
+        if (ui.recoveryRoute === 'user')
+          await encryptedRestoreWorkflow.prepareRecoveryAttempt(signal);
         assertForeground(signal);
         projectInputs();
       } else if (value !== null) await recoveryFiles.cleanupTemporarySecrets();
@@ -339,6 +391,25 @@ export function usePrivateBackup(workplaceId?: string) {
     run(async signal => {
       const zip = lifetime.current.backup;
       const credential = lifetime.current.secret;
+      if (ui.recoveryRoute === 'workplace') {
+        if (!zip || !credential)
+          throw new Error('Choose the backup ZIP and Workplace recovery file');
+        const prepared = await prepareWorkplaceRecovery(zip, credential, signal);
+        assertForeground(signal);
+        const accepted = await new Promise<boolean>(resolve => {
+          lifetime.current.resolvePreview = resolve;
+          dispatch({ type: 'preview', preview: prepared.preview });
+        });
+        assertForeground(signal);
+        clearSecrets();
+        if (accepted) {
+          lifetime.current.prepared = prepared;
+          lifetime.current.backup = null;
+          projectInputs();
+          dispatch({ type: 'copy', copy: { preview: prepared.preview } });
+        }
+        return;
+      }
       const keys = state?.keys;
       const existingIdentity = keys?.user === 'ready' ? keys.identity : undefined;
       if (!zip || (!credential && !existingIdentity))
@@ -385,10 +456,42 @@ export function usePrivateBackup(workplaceId?: string) {
       }
     });
 
+  const finishWorkplaceRecovery = () =>
+    run(async signal => {
+      const prepared = lifetime.current.prepared;
+      const identity = state?.keys?.user === 'ready' ? state.keys.identity : undefined;
+      if (
+        !prepared ||
+        !identity ||
+        !ui.workplaceRecovery?.workplaceId ||
+        state?.keys?.workplace !== 'ready'
+      )
+        throw new Error('Finish User and recovered Workplace encryption setup first');
+      assertForeground(signal);
+      const result = await publishWorkplaceRecovery(prepared, identity, signal);
+      lifetime.current.prepared = null;
+      dispatch({ type: 'copy', copy: null });
+      if (result.status === 'completion-pending' || !canResume(signal)) return;
+      if (needsEncryptedRestoreLaunchCompletion())
+        completeEncryptedRestoreLaunch(result.workplace.id);
+      else await workplace?.setWorkplaceId(result.workplace.id);
+      if (canResume(signal)) {
+        AppNavigation.toDashboard();
+        alert.show({
+          title: 'Workplace data recovered',
+          message:
+            'Create a new encrypted backup of this recovered Workplace. Its new recovery file unlocks future backups; the old file belongs to the source Workplace.',
+          type: 'info',
+        });
+      }
+    });
+
   const clearRestoreInputs = useCallback(() => {
     lifetime.current.active?.abort();
     clearSecrets();
     lifetime.current.backup = null;
+    lifetime.current.prepared = null;
+    dispatch({ type: 'copy', copy: null });
     // Deselecting files does not abandon recovery keys or their durable retry ID.
     projectInputs();
   }, [clearSecrets, projectInputs]);
@@ -412,6 +515,13 @@ export function usePrivateBackup(workplaceId?: string) {
     busy,
     message: ui.message,
     restorePreview: ui.restorePreview,
+    recoveryRoute: ui.recoveryRoute,
+    workplaceRecovery: ui.workplaceRecovery,
+    selectRecoveryRoute: (route: UiState['recoveryRoute']) => {
+      clearRestoreInputs();
+      dispatch({ type: 'route', route });
+    },
+    finishWorkplaceRecovery,
     hasGeneratedSecret: ui.inputs.generated,
     hasImportedSecret: ui.inputs.secret,
     hasImportedBackup: ui.inputs.backup,

@@ -221,6 +221,11 @@ Json Engine::dispatch(const std::string &operation, const Json &request,
   if (operation == "confirmWorkplace")
     return confirmWorkplace(request, vault);
   if (operation == "encryptRows" || operation == "decryptRows") {
+    if (operation == "decryptRows" && request.at("key").at("kind") == "workplace-recovery") {
+      auto source = keySource(request.at("key"), "workplace-recovery");
+      Secret dek(recoverWorkplaceDek(source.at("keys"), source.at("credential")));
+      return rows::decryptRowsWithDek(request, source.at("keys"), dek.bytes);
+    }
     auto source = keySource(request.at("key"), "workplace");
     if (operation == "encryptRows")
       return rows::encryptRows(request, source.at("user"), source.at("keys"), vault);
@@ -317,6 +322,13 @@ Json Engine::openKey(const Json &request, Vault &vault) {
     Secret dek(memberKey(source.at("user"), keys, vault));
     return reference("workplace", field(keys, "keyId"),
                      {{"user", source.at("user")}, {"keys", keys}});
+  } else if (kind == "workplace-recovery") {
+    fields(request, {"kind", "keys", "credential"});
+    const auto &keys = request.at("keys");
+    Secret dek(recoverWorkplaceDek(keys, request.at("credential")));
+    // Separate kind: this reference cannot encrypt, sign or wrap keys for another User.
+    return reference("workplace-recovery", field(keys, "keyId"),
+                     {{"keys", keys}, {"credential", request.at("credential")}});
   } else
     throw OperationError(ErrorCode::InvalidFile, "Unsupported key kind");
 }
@@ -510,6 +522,22 @@ Json Engine::confirmWorkplace(const Json &request, Vault &vault) {
               CRYPTO_memcmp(dek.bytes.data(), recovered.bytes.data(), 32) == 0,
           "Member and recovery DEKs differ");
   return true;
+}
+
+Bytes Engine::recoverWorkplaceDek(const Json &keys, const Json &handle) {
+  fields(keys, {"format", "formatVersion", "userId", "workplaceId",
+                "userKeyFingerprint", "keyId", "memberEnvelope",
+                "recoveryPublicKey", "recoveryEnvelope", "recoveryConfirmed"});
+  require(keys.size() == 10 && keys.at("format") == "full-frills-workplace-keys" &&
+              keys.at("formatVersion") == 1 && keys.at("recoveryConfirmed") == true,
+          "Invalid Workplace recovery keys");
+  PrivateJson saved(credential(handle));
+  Secret dek(recoveryOpen(saved.value, keys.at("recoveryEnvelope"), dumpContext(keys),
+                          field(keys, "workplaceId"), field(keys, "keyId")));
+  // The external credential pins the DEK, independently of archive metadata.
+  require(dek.bytes.size() == 32 && fingerprint(dek.bytes) == field(saved.value, "identityKeyId"),
+          "Workplace recovery DEK identity mismatch");
+  return std::move(dek.bytes);
 }
 
 } // namespace ffb

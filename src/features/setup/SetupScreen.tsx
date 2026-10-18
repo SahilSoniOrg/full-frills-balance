@@ -397,6 +397,7 @@ function SetupJourneyScreen({
           <RestoreSourceSlice
             isCompleting={submittingSlice === 'restore_source'}
             onContinue={output => void advance('restore_source', output)}
+            onWorkplaceRecovery={() => AppNavigation.toEncryptedBackup('restore')}
           />
         );
       case 'workplace': {

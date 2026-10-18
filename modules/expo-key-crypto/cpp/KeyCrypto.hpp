@@ -68,6 +68,7 @@ private:
                        Vault &vault);
   Json recoverUser(const Json &request, bool installDevice, Vault &vault);
   Json confirmWorkplace(const Json &request, Vault &vault);
+  Bytes recoverWorkplaceDek(const Json &keys, const Json &handle);
   struct Credential {
     Bytes file;
     std::chrono::steady_clock::time_point created;

@@ -248,6 +248,13 @@ Json encryptRows(const Json &request, const Json &user, const Json &keys,
 
 Json decryptRows(const Json &request, const Json &user, const Json &keys,
                  Vault &vault) {
+  rowCheck(user.at("recoveryConfirmed") == true && keys.at("recoveryConfirmed") == true,
+        "Confirm recovery before decrypting rows");
+  Secret dek(memberKey(user, keys, vault));
+  return decryptRowsWithDek(request, keys, dek.bytes);
+}
+
+Json decryptRowsWithDek(const Json &request, const Json &keys, const Bytes &dek) {
   fields(request, {"key", "workplaceId", "envelopes"});
   rowCheck(request.size() == 3, "Invalid decryptRows request");
   const auto workplace = field(request,"workplaceId");
@@ -275,10 +282,7 @@ Json decryptRows(const Json &request, const Json &user, const Json &keys,
                                 item.at("rowId").get<std::string>())).second,
             "Duplicate row in batch");
   }
-  rowCheck(user.at("recoveryConfirmed") == true && keys.at("recoveryConfirmed") == true,
-        "Confirm recovery before decrypting rows");
-  Secret dek(memberKey(user, keys, vault));
-  require(dek.bytes.size() == 32, "Invalid Workplace DEK");
+  require(dek.size() == 32, "Invalid Workplace DEK");
   Cipher c(EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free);
   require(!!c, "Native row context allocation failed", ErrorCode::OperationFailed);
   Json output = Json::array();
@@ -299,7 +303,7 @@ Json decryptRows(const Json &request, const Json &user, const Json &keys,
       table = header.table; rowId = header.rowId;
       // Authenticate the compression selector and ciphertext before decompressing.
       auto aad = encodeRowHeader(header), info = encodeRowInfo(header.table);
-      Secret rowKey(deriveRowKey(dek.bytes, header.salt, info));
+      Secret rowKey(deriveRowKey(dek, header.salt, info));
       Secret innerBytes(crypt(c.get(), rowKey.bytes, aad, ciphertext, false));
       wipe(ciphertext);
       auto inner = decodeInnerPlaintext(innerBytes.bytes);

@@ -32,7 +32,7 @@ import { parseKeyEnvelope, type KeyEnvelope } from './keyEnvelopes';
 export interface NativeKeyReference {
   format: 'full-frills-native-key-reference';
   formatVersion: 1;
-  kind: 'device' | 'user' | 'workplace';
+  kind: 'device' | 'user' | 'workplace' | 'workplace-recovery';
   keyId: string;
   handle: string;
   publicKey?: string; // DEKs are symmetric and have no public key.
@@ -69,7 +69,12 @@ export type GenerateKeysRequest =
   | { kind: 'workplace'; user: NativeKeyReference; workplaceId: string };
 export type OpenKeyRequest =
   | { kind: 'user'; user: LocalUserKeys }
-  | { kind: 'workplace'; user: NativeKeyReference; keys: WorkplaceKeys };
+  | { kind: 'workplace'; user: NativeKeyReference; keys: WorkplaceKeys }
+  | {
+      kind: 'workplace-recovery';
+      credential: import('./keyEnvelopes').RecoveryCredential;
+      keys: WorkplaceKeys;
+    };
 export type RecoveryOperation =
   'confirmUser' | 'validateRecovery' | 'recoverUser' | 'confirmWorkplace';
 
@@ -174,7 +179,8 @@ export function keyOperationsFromTransport(
       });
     },
     async decryptRows(key, workplaceId, envelopes) {
-      if (key.kind !== 'workplace') throw new Error('Native Workplace key scope mismatch');
+      if (key.kind !== 'workplace' && key.kind !== 'workplace-recovery')
+        throw new Error('Native Workplace key scope mismatch');
       if (envelopes.length > MAX_ROW_BATCH_COUNT) throw new Error('FFB_ROW_TOO_LARGE: batch count');
       let ciphertextBytes = 0;
       for (const envelope of envelopes) {
@@ -305,10 +311,12 @@ export function parseNativeKeyReference(value: unknown): NativeKeyReference {
   if (
     key.format !== 'full-frills-native-key-reference' ||
     key.formatVersion !== 1 ||
-    !['device', 'user', 'workplace'].includes(String(key.kind)) ||
+    !['device', 'user', 'workplace', 'workplace-recovery'].includes(String(key.kind)) ||
     !isSha256Id(key.keyId) ||
     !isHexId(key.handle, 64) ||
-    (key.kind === 'workplace' ? key.publicKey !== undefined : !isHexId(key.publicKey, 64))
+    (key.kind === 'workplace' || key.kind === 'workplace-recovery'
+      ? key.publicKey !== undefined
+      : !isHexId(key.publicKey, 64))
   )
     throw new Error('Invalid native key reference');
   return value as NativeKeyReference;

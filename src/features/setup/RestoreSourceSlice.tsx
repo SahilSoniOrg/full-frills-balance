@@ -2,7 +2,7 @@ import {
   forgetAllPreparedRestores,
   keepPreparedRestores,
 } from '@/src/services/setup/preparedRestoreCache';
-import { AppText } from '@/src/components/core';
+import { AppButton, AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { ImportPluginCard } from '@/src/components/settings/ImportPluginCard';
 import { Box } from '@/src/design-system';
@@ -51,9 +51,11 @@ function pendingSelection(sources: readonly RestoreSourceOutput[]): PendingResto
 export function RestoreSourceSlice({
   isCompleting,
   onContinue,
+  onWorkplaceRecovery,
 }: {
   readonly isCompleting: boolean;
   readonly onContinue: (sources: readonly RestoreSourceOutput[]) => void;
+  readonly onWorkplaceRecovery: () => void;
 }) {
   const plugins = useMemo(() => importRegistry.getAll(), []);
   const [progressMessage, setProgressMessage] = useState<string | undefined>();
@@ -136,6 +138,14 @@ export function RestoreSourceSlice({
               {AppConfig.strings.settings.importNote}
             </AppText>
           </View>
+          <AppButton
+            variant="secondary"
+            testID="restore-source-workplace-recovery"
+            disabled={preparing}
+            onPress={onWorkplaceRecovery}
+          >
+            Recover encrypted Workplace data
+          </AppButton>
         </Box>
       </ScrollView>
       {selection && (

@@ -46,6 +46,11 @@ export interface KeyHierarchy {
     recoveryKeys?: WorkplaceKeys,
   ): Promise<readonly DecryptedRow[]>;
   signRowManifest(identity: KeyAccessIdentity, fields: RowManifestFields): Promise<string>;
+  decryptWorkplaceRecoveryRows(
+    keys: WorkplaceKeys,
+    credential: RecoveryCredential,
+    envelopes: readonly RowEnvelopeJson[],
+  ): Promise<readonly DecryptedRow[]>;
 
   beginUser(userId: string, deviceId: string): Promise<RecoveryCredential>;
   confirmUserRecovery(
@@ -656,6 +661,27 @@ export class LocalKeyHierarchy implements KeyHierarchy {
       )
         throw new Error('Manifest author identity mismatch');
       return this.withUserReference(user, key => this.crypto.signRowManifest(key, fields));
+    });
+  }
+  /** Read-only emergency access: never installs source keys, a User or a Device. */
+  decryptWorkplaceRecoveryRows(
+    value: WorkplaceKeys,
+    credentialValue: RecoveryCredential,
+    envelopes: readonly RowEnvelopeJson[],
+  ): Promise<readonly DecryptedRow[]> {
+    return this.exclusive(async () => {
+      const keys = parseWorkplaceKeys(value);
+      const credential = parseRecoveryCredential(credentialValue);
+      if (
+        credential.purpose !== 'workplace-dump' ||
+        credential.identityId !== keys.workplaceId ||
+        credential.identityKeyId !== keys.keyId
+      )
+        throw new Error('Workplace recovery file does not match the backup');
+      const key = await this.crypto.openKey({ kind: 'workplace-recovery', keys, credential });
+      return this.withReference(key, () =>
+        this.crypto.decryptRows(key, keys.workplaceId, envelopes),
+      );
     });
   }
   exportWorkplaceKeys(identity: KeyAccessIdentity, workplaceId: string): Promise<WorkplaceKeys> {
