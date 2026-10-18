@@ -5,10 +5,11 @@ Start with [the overview](./spec.md). There is one key hierarchy: Device → Use
 | Document | Purpose |
 | --- | --- |
 | [Overview](./spec.md) | Agreed scope, online boundaries, release order. |
-| [Key management](./key-management.md) | Key hierarchy, identity pins, recovery routes, future sharing and rotation. |
-| [Row-envelope sync](./row-envelope-sync.md) | Row payload format, manifests, sync semantics, offline backup ZIP, rollout checklist. |
+| [Key management](./key-management.md) | Implemented key hierarchy, identity pins, recovery routes, and security limits. |
+| [Considered approaches](./decisions.md) | Selected designs and why alternatives were not used. |
+| [Row-envelope format](./row-envelope-sync.md) | Row payload format, manifests, offline backup ZIP, and the boundary between implemented and deferred sync. |
 | [Implementation scope and remaining work](./preparation.md) | Implemented backup/recovery, verification gates, remaining sync work. |
-| [Restore interruption verification plan](./restore-interruption-verification-plan.md) | Proposed integration and browser checks for durable restore failures, reloads and safe retries. |
+| [Restore interruption verification plan](./restore-interruption-verification-plan.md) | Durable restore behavior, interruption scenarios, and verification evidence. |
 | [Native device verification plan](./native-device-verification-plan.md) | Android host/build preparation completed; physical Android/iOS picker, vault and process-termination gates remain open. |
 | [Native host verification runbook](./native-host-verification-runbook.md) | Code-change inventory, host setup, repeatable build/check commands, failures and evidence. |
 | [Web crypto build](../../../modules/expo-key-crypto/web/README.md) | WebAssembly toolchain, build artifacts, worker vault and web asset staging. |
