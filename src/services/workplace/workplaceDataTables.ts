@@ -22,7 +22,16 @@ export const WORKPLACE_DATA_TABLES: readonly WorkplaceDataTableTask[] = [
   { name: 'Balance Snapshots', table: 'balance_snapshots' },
 ] as const;
 
-/** Tables with workplace_id — used for workplace purge and replacement. */
-export const WORKPLACE_SCOPED_TABLE_NAMES: readonly string[] = WORKPLACE_DATA_TABLES.map(
-  ({ table }) => table,
-);
+/** Device-local metadata is purged with a Workplace but never enters plaintext exports. */
+const WORKPLACE_LOCAL_SYNC_TABLES = [
+  'sync_row_index',
+  'sync_checkpoints',
+  'sync_conflicts',
+  'sync_pending_commits',
+] as const;
+
+/** All workplace-scoped tables used for purge and replacement. */
+export const WORKPLACE_SCOPED_TABLE_NAMES: readonly string[] = [
+  ...WORKPLACE_DATA_TABLES.map(({ table }) => table),
+  ...WORKPLACE_LOCAL_SYNC_TABLES,
+];

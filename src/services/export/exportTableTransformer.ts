@@ -13,6 +13,11 @@ export async function fetchAndTransformTable<T extends object>(
   workplaceId: WorkplaceId,
   tableName: string,
   onProgress?: (processed: number, total: number) => void,
+  options: {
+    dateFormat?: 'iso' | 'timestamp';
+    includeSmsSources?: boolean;
+    includeDeleted?: boolean;
+  } = {},
 ): Promise<T[]> {
   const tableSchema = schema.tables[tableName];
   if (!tableSchema) throw new Error(`Missing schema for table: ${tableName}`);
@@ -35,13 +40,16 @@ export async function fetchAndTransformTable<T extends object>(
   let raws: Record<string, unknown>[] = [];
   let useFallback = true;
   const omitSoftDeleted =
-    EXPORT_OMIT_SOFT_DELETED_TABLES.has(tableName) && columnNames.includes('deleted_at');
+    options.includeDeleted !== true &&
+    EXPORT_OMIT_SOFT_DELETED_TABLES.has(tableName) &&
+    columnNames.includes('deleted_at');
 
   const results = await exportRepository.fetchRawTable({
     tableName,
     columns: columnNames.map(source => ({ source, alias: snakeToCamel(source) })),
     workplaceId,
     includeDeleted: !omitSoftDeleted,
+    includeSmsSources: options.includeSmsSources,
   });
   if (results !== null) {
     raws = results;
@@ -52,7 +60,12 @@ export async function fetchAndTransformTable<T extends object>(
     logger.warn(
       `[Export] fetchAndTransformTable(${tableName}) falling back to ORM loop. Performance risk.`,
     );
-    raws = await exportRepository.fetchOrmTable(tableName, columnNames, workplaceId);
+    raws = await exportRepository.fetchOrmTable(
+      tableName,
+      columnNames,
+      workplaceId,
+      options.includeSmsSources,
+    );
   }
 
   if (omitSoftDeleted) {
@@ -70,6 +83,7 @@ export async function fetchAndTransformTable<T extends object>(
 
     // Convert date numbers to ISO strings
     dateFields.forEach((f: string) => {
+      if (options.dateFormat === 'timestamp') return;
       if (transformed[f] !== undefined) {
         transformed[f] = toIsoDate(transformed[f] as number);
       }
