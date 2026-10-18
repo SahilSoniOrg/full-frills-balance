@@ -18,11 +18,9 @@ subscribeKeyAccessPolicy(allowed => setKeyCryptoWorkerAllowed(allowed));
 
 export const nativeKeyOperations: NativeKeyOperations = {
   ...keyOperationsFromTransport(async (operation, request) => {
-    if (operation !== 'removeKey' && operation !== 'releaseKey' && operation !== 'clearVault')
-      assertKeyAccessAllowed();
+    if (operation !== 'removeKey' && operation !== 'releaseKey') assertKeyAccessAllowed();
     const result = await executeKeyCryptoWorker(operation, request);
-    if (operation !== 'removeKey' && operation !== 'releaseKey' && operation !== 'clearVault')
-      assertKeyAccessAllowed();
+    if (operation !== 'removeKey' && operation !== 'releaseKey') assertKeyAccessAllowed();
     return result as Record<string, unknown>;
   }),
   async pickCredential() {

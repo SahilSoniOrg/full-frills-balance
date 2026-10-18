@@ -119,9 +119,15 @@ void fail(NSError **error) {
                        request:(NSString *)request
                          error:(NSError **)error {
   try {
+    const std::string name = operation.UTF8String;
+    if (name == "importCredential" || name == "exportCredential" ||
+        name == "retainCredential" || name == "releaseCredential" ||
+        name == "clearCredentials")
+      throw OperationError(ErrorCode::InvalidFile,
+                           "Unsupported native key operation");
     AppleVault vault;
     return output(
-        engine().execute(operation.UTF8String, parse(request), vault));
+        engine().execute(name, parse(request), vault));
   } catch (...) {
     fail(error);
     return nil;

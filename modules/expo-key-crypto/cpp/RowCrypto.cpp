@@ -40,6 +40,17 @@ std::int64_t safeSignedInteger(const Json &value, const char *label) {
   rowCheck(number >= -MAX_SAFE_INTEGER && number <= MAX_SAFE_INTEGER, label);
   return number;
 }
+std::uint64_t safeUnsignedInteger(const Json &value, const char *label) {
+  rowCheck(value.is_number_integer(), label);
+  if (value.is_number_unsigned()) {
+    const auto number = value.get<std::uint64_t>();
+    rowCheck(number <= static_cast<std::uint64_t>(MAX_SAFE_INTEGER), label);
+    return number;
+  }
+  const auto number = value.get<std::int64_t>();
+  rowCheck(number >= 0 && number <= MAX_SAFE_INTEGER, label);
+  return static_cast<std::uint64_t>(number);
+}
 std::string pairKey(const std::string &table, const std::string &rowId) {
   return std::to_string(table.size()) + ":" + table + rowId;
 }
@@ -227,7 +238,9 @@ Json encryptRows(const Json &request, const Json &user, const Json &keys,
     rowCheck(!deleted || plaintext.value.empty(), "Tombstones must have an empty plaintext");
     Secret body;
     if (!deleted) body.bytes = compressRow(plaintext.value, compression);
-    Secret inner(encodeInnerPlaintext(row.at("schemaVersion").get<std::uint64_t>(), body.bytes));
+    Secret inner(encodeInnerPlaintext(
+        safeUnsignedInteger(row.at("schemaVersion"), "Invalid row schema version"),
+        body.bytes));
     RowHeader header{workplace, table, field(row,"rowId"),
         safeSignedInteger(row.at("updatedAt"), "Invalid row timestamp"), deleted, keyId, random(16), compression};
     auto aad = encodeRowHeader(header);

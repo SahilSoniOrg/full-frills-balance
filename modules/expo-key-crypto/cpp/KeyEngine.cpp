@@ -151,20 +151,21 @@ Json Engine::execute(const std::string &operation, Json request,
   std::lock_guard<std::mutex> lock(mutex_);
   PrivateJson privateRequest(std::move(request));
   const Json &safeRequest = privateRequest.value;
-  const bool cleanup = operation == "removeKey" || operation == "releaseKey" || operation == "clearVault";
+  const bool cleanup = operation == "removeKey" || operation == "releaseKey";
+  const bool vaultReset = operation == "clearVault";
   require(allowed_.load() || cleanup,
           "Unlock the app before accessing encryption keys", ErrorCode::Locked);
   const auto epoch = epoch_.load();
   sweep();
   auto result = dispatch(operation, safeRequest, vault);
-  if (!cleanup && (!allowed_.load() || epoch != epoch_.load())) {
+  if (!cleanup && !vaultReset && (!allowed_.load() || epoch != epoch_.load())) {
     clearUnleasedCredentials();
     try {
       if (operation == "generateKeys" && safeRequest.at("kind") == "device") vault.remove(vaultName(safeRequest));
       if (operation == "recoverUser") vault.remove(vaultName(result));
     } catch (...) { /* Preserve the cancellation error; reconciliation handles unavailable vaults. */ }
   }
-  require(cleanup || (allowed_.load() && epoch == epoch_.load()),
+  require(cleanup || (allowed_.load() && (vaultReset || epoch == epoch_.load())),
           "Key operation was cancelled by app lock", ErrorCode::Cancelled);
   return result;
 }

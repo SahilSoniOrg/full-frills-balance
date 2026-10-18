@@ -116,7 +116,12 @@ class ExpoKeyCryptoModule : Module() {
     }
     OnActivityEntersForeground { foreground = true; finishImport() }
     OnActivityEntersBackground { foreground = false }
-    AsyncFunction("execute") { operation: String, request: String -> executeNative(operation, request, NativeDeviceVault(context)) }
+    AsyncFunction("execute") { operation: String, request: String ->
+      require(operation !in setOf("importCredential", "exportCredential", "retainCredential", "releaseCredential", "clearCredentials")) {
+        "FFB_KEY_INVALID_FILE"
+      }
+      executeNative(operation, request, NativeDeviceVault(context))
+    }
     AsyncFunction("pickCredential") { promise: Promise -> startPicker(null, promise) }.runOnQueue(Queues.MAIN)
     AsyncFunction("exportCredential") { handle: String, promise: Promise -> startPicker(handle, promise) }.runOnQueue(Queues.MAIN)
     OnActivityResult { _, (requestCode, resultCode, intent) ->

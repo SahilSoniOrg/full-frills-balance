@@ -42,7 +42,10 @@ jest.mock('@/src/services/backup/recoveryFiles', () => ({
 jest.mock('@/src/services/backup/encryptedBackupFiles', () => ({
   encryptedBackupFiles: { pickEncryptedBackupZip: jest.fn() },
 }));
-jest.mock('@/src/services/backup/keyAccessPolicy', () => ({ assertKeyAccessAllowed: jest.fn() }));
+jest.mock('@/src/services/backup/keyAccessPolicy', () => ({
+  assertKeyAccessAllowed: jest.fn(),
+  subscribeKeyAccessPolicy: jest.fn(() => () => undefined),
+}));
 jest.mock('@/src/services/backup/encryptedRestoreWorkflow', () => ({
   encryptedRestoreWorkflow: {
     prepareRecoveryAttempt: jest.fn().mockResolvedValue('device'),

@@ -19,6 +19,7 @@ import { widgetProjectionService } from '@/src/services/widgets/WidgetProjection
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { nativeKeyOperations } from '@/src/services/backup/nativeKeyOperations';
 import { keyCiphertextStateStore } from '@/src/services/backup/keyCiphertextStateStore';
+import { assertKeyAccessAllowed } from '@/src/services/backup/keyAccessPolicy';
 
 function runPostResetCleanup(
   warnings: string[],
@@ -106,6 +107,7 @@ export async function resetDatabase(): Promise<{
   warnings: string[];
 }> {
   logger.warn('[IntegrityMaintenance] STARTING FACTORY RESET...');
+  assertKeyAccessAllowed();
   try {
     await databaseRepository.resetDatabase();
   } catch (error) {
