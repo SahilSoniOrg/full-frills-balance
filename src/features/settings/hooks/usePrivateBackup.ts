@@ -229,14 +229,20 @@ export function usePrivateBackup(workplaceId?: string) {
     if (!prepared || !identity || !ui.workplaceRecovery || ui.workplaceRecovery.workplaceId) return;
     let current = true;
     void workplaceRecoveryDestination(prepared.manifestHash, identity)
-      .then(destination => {
-        if (current && lifetime.current.prepared === prepared)
-          dispatch({
-            type: 'copy',
-            copy: { preview: prepared.preview, workplaceId: destination.workplaceId },
-          });
+      .then(async destination => {
+        if (!current || lifetime.current.prepared !== prepared) return;
+        setupWorkplaceIdRef.current = destination.workplaceId;
+        const setup = await encryptionSetup.inspect(destination.workplaceId);
+        if (!current || lifetime.current.prepared !== prepared) return;
+        dispatch({
+          type: 'copy',
+          copy: { preview: prepared.preview, workplaceId: destination.workplaceId },
+        });
+        dispatch({ type: 'inspect', setup, workplaceId: destination.workplaceId });
       })
-      .catch(reportError);
+      .catch(error => {
+        if (current) reportError(error);
+      });
     return () => {
       current = false;
     };
@@ -405,8 +411,13 @@ export function usePrivateBackup(workplaceId?: string) {
         if (accepted) {
           lifetime.current.prepared = prepared;
           lifetime.current.backup = null;
+          setupWorkplaceIdRef.current = undefined;
           projectInputs();
           dispatch({ type: 'copy', copy: { preview: prepared.preview } });
+          const setup = await encryptionSetup.inspect();
+          assertForeground(signal);
+          if (lifetime.current.prepared === prepared && setupWorkplaceIdRef.current === undefined)
+            dispatch({ type: 'inspect', setup, workplaceId: undefined });
         }
         return;
       }
@@ -496,6 +507,18 @@ export function usePrivateBackup(workplaceId?: string) {
     projectInputs();
   }, [clearSecrets, projectInputs]);
 
+  const selectRecoveryRoute = useCallback(
+    (route: UiState['recoveryRoute']) => {
+      lifetime.current.active?.abort();
+      clearSecrets();
+      lifetime.current.prepared = null;
+      dispatch({ type: 'copy', copy: null });
+      dispatch({ type: 'route', route });
+      projectInputs();
+    },
+    [clearSecrets, projectInputs],
+  );
+
   const resolveRestorePreview = useCallback((accepted: boolean) => {
     const resolvePreview = lifetime.current.resolvePreview;
     if (!resolvePreview) return;
@@ -517,10 +540,7 @@ export function usePrivateBackup(workplaceId?: string) {
     restorePreview: ui.restorePreview,
     recoveryRoute: ui.recoveryRoute,
     workplaceRecovery: ui.workplaceRecovery,
-    selectRecoveryRoute: (route: UiState['recoveryRoute']) => {
-      clearRestoreInputs();
-      dispatch({ type: 'route', route });
-    },
+    selectRecoveryRoute,
     finishWorkplaceRecovery,
     hasGeneratedSecret: ui.inputs.generated,
     hasImportedSecret: ui.inputs.secret,

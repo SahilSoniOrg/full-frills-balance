@@ -361,7 +361,7 @@ export const AppNavigation = {
   },
 
   toEncryptedBackup: (mode: 'setup' | 'restore' = 'setup') => {
-    router.push(buildRoute('/encrypted-backup', { mode }));
+    router.push(mode === 'restore' ? '/encrypted-backup-restore' : '/encrypted-backup');
   },
 
   /**

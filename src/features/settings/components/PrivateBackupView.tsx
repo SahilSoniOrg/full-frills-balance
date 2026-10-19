@@ -1,23 +1,30 @@
 import { AppButton, AppCard, AppText } from '@/src/components/core';
 import { Stack } from '@/src/design-system';
 import { useOptionalWorkplace } from '@/src/contexts/WorkplaceContext';
-import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 import { probeWebKeyCryptoCapability } from '@/src/services/backup/webKeyCryptoCapability';
+import { AppNavigation } from '@/src/utils/navigation';
 import { SettingsLayout } from './SettingsLayout';
 import { usePrivateBackup } from '../hooks/usePrivateBackup';
 
 type ViewModel = ReturnType<typeof usePrivateBackup>;
+type RestoreStep = 'archive' | 'recovery';
 
 export function PrivateBackupView({
   vm,
   restoreMode,
+  restoreStep,
   onRestoreMode,
+  onCancelRestore,
+  onRestoreStepChange,
 }: {
   vm: ViewModel;
   restoreMode: boolean;
+  restoreStep: RestoreStep;
   onRestoreMode: () => void;
+  onCancelRestore: () => void;
+  onRestoreStepChange: (step: RestoreStep) => void;
 }) {
   const [webCrypto, setWebCrypto] = useState<'checking' | 'ready' | 'unavailable' | 'native'>(
     Platform.OS === 'web' ? 'checking' : 'native',
@@ -51,7 +58,10 @@ export function PrivateBackupView({
   );
 
   return (
-    <SettingsLayout title="Encrypted backup" hideFooter>
+    <SettingsLayout
+      title={restoreMode ? 'Restore encrypted backup' : 'Encrypted backup'}
+      hideFooter
+    >
       <Stack space="lg" testID="encrypted-backup-screen">
         {Platform.OS === 'web' ? (
           <AppText variant="caption" color="secondary">
@@ -63,13 +73,13 @@ export function PrivateBackupView({
         <AppText variant="body" color="secondary">
           {restoreMode
             ? vm.workplaceRecovery
-              ? 'The source files are verified. Set up the destination identity and save its new recovery file before importing the recovered copy.'
+              ? 'The source files are verified. Set up the destination User and save its new recovery files before importing this separate copy.'
               : vm.recoveryRoute === 'workplace'
-                ? 'Recover one Workplace’s data using its backup ZIP and Workplace recovery file. Creates a recovered copy under your User; does not restore access to the original Workplace.'
+                ? 'Use a Workplace recovery file to create a separate recovered copy. This does not restore the original Workplace or its access.'
                 : vm.canRestoreWithDevice
-                  ? 'Choose your encrypted backup ZIP. This Device already has verified User keys, so a recovery file is optional.'
-                  : 'Choose your encrypted backup ZIP and User recovery file. This is separate from plaintext import restore.'
-            : 'Save and verify your User recovery file, then this Workplace’s recovery file. Backup ZIPs contain your data; recovery files unlock it. Keep both, stored separately.'}
+                  ? 'This Device has verified User keys. You can use them or select your User recovery file.'
+                  : 'Restore your User identity and this Workplace using the encrypted ZIP and its User recovery file.'
+            : 'The encrypted ZIP contains this Workplace’s data. User and Workplace recovery files provide different ways to unlock a restore. Store each file separately from the ZIP.'}
         </AppText>
         {vm.message ? (
           <AppText variant="body" color="secondary" testID="encrypted-backup-message">
@@ -79,7 +89,7 @@ export function PrivateBackupView({
         {vm.workplaceRecovery ? (
           <Stack space="sm" testID="encrypted-backup-copy-setup">
             <AppText weight="semibold">
-              Recovering {vm.workplaceRecovery.preview.workplace.name}
+              Creating a recovered copy of {vm.workplaceRecovery.preview.workplace.name}
             </AppText>
             <AppText color="secondary">
               {vm.state?.keys?.user === 'ready'
@@ -87,13 +97,19 @@ export function PrivateBackupView({
                 : 'Create and verify a User for this Device. The original User recovery file is not needed.'}
             </AppText>
             {action(
-              'encrypted-backup-cancel-copy',
-              'Cancel recovered copy',
-              vm.clearRestoreInputs,
+              'encrypted-backup-back-to-restore',
+              'Choose a different backup',
+              () => {
+                vm.clearRestoreInputs();
+                onRestoreStepChange('archive');
+              },
               true,
             )}
           </Stack>
         ) : null}
+        {restoreMode
+          ? action('encrypted-backup-cancel-restore', 'Cancel restore', onCancelRestore, true)
+          : null}
         {vm.restorePreview ? (
           <EncryptedRestorePreview
             preview={vm.restorePreview}
@@ -104,6 +120,8 @@ export function PrivateBackupView({
           <BackupContent
             vm={vm}
             restoreMode={restoreMode}
+            restoreStep={restoreStep}
+            onRestoreStepChange={onRestoreStepChange}
             onRestoreMode={onRestoreMode}
             action={action}
           />
@@ -192,11 +210,15 @@ function stage(vm: ViewModel, restoreMode: boolean): string {
 function BackupContent({
   vm,
   restoreMode,
+  restoreStep,
+  onRestoreStepChange,
   onRestoreMode,
   action,
 }: {
   vm: ViewModel;
   restoreMode: boolean;
+  restoreStep: RestoreStep;
+  onRestoreStepChange: (step: RestoreStep) => void;
   onRestoreMode: () => void;
   action: (
     id: string,
@@ -211,42 +233,104 @@ function BackupContent({
       return (
         <>
           <AppText weight="semibold">
-            {vm.recoveryRoute === 'workplace' ? 'Recover Workplace data' : 'Recover my User'}
+            {restoreStep === 'archive'
+              ? 'Step 1 of 2 · Choose a backup'
+              : 'Step 2 of 2 · Choose how to recover'}
           </AppText>
-          {action(
-            'encrypted-backup-route-user',
-            'Recover my User',
-            () => vm.selectRecoveryRoute('user'),
-            true,
-            vm.recoveryRoute === 'user',
+          {restoreStep === 'archive' ? (
+            <>
+              <AppText color="secondary">
+                Choose the encrypted ZIP that contains the Workplace data you want to restore.
+              </AppText>
+              {action('encrypted-backup-pick-zip', 'Choose encrypted backup ZIP', vm.pickBackup)}
+              {vm.hasImportedBackup ? (
+                <AppText color="secondary" testID="encrypted-backup-archive-selected">
+                  Backup ZIP selected.
+                </AppText>
+              ) : null}
+              {action(
+                'encrypted-backup-next-recovery',
+                'Continue',
+                () => onRestoreStepChange('recovery'),
+                false,
+                !vm.hasImportedBackup,
+              )}
+            </>
+          ) : (
+            <>
+              <AppText color="secondary">
+                Choose what you want to recover. The required recovery file depends on this choice.
+              </AppText>
+              {action(
+                'encrypted-backup-route-user',
+                vm.recoveryRoute === 'user' ? 'Selected · Restore my User' : 'Restore my User',
+                () => vm.selectRecoveryRoute('user'),
+                vm.recoveryRoute !== 'user',
+              )}
+              <AppText color="secondary">
+                {vm.canRestoreWithDevice
+                  ? 'Restore User access with this Device’s verified keys or your User recovery file, then unlock this Workplace’s data.'
+                  : 'Restore User access with your User recovery file, then unlock this Workplace’s data.'}
+              </AppText>
+              {action(
+                'encrypted-backup-route-workplace',
+                vm.recoveryRoute === 'workplace'
+                  ? 'Selected · Make a recovered Workplace copy'
+                  : 'Make a recovered Workplace copy',
+                () => vm.selectRecoveryRoute('workplace'),
+                vm.recoveryRoute !== 'workplace',
+              )}
+              <AppText color="secondary">
+                Creates a separate Workplace with fresh keys. It does not restore access to the
+                original.
+              </AppText>
+              {vm.recoveryRoute === 'user' && vm.canRestoreWithDevice ? (
+                <AppText color="secondary">
+                  This Device has verified User keys, so the User recovery file is optional.
+                </AppText>
+              ) : null}
+              {action(
+                'encrypted-backup-pick-recovery',
+                vm.recoveryRoute === 'workplace'
+                  ? 'Choose Workplace recovery file'
+                  : 'Choose User recovery file',
+                vm.pickRecoverySecret,
+                true,
+                !vm.hasImportedBackup,
+              )}
+              {vm.hasImportedSecret ? (
+                <AppText color="secondary" testID="encrypted-backup-recovery-selected">
+                  {vm.recoveryRoute === 'workplace'
+                    ? 'Workplace recovery file selected.'
+                    : 'User recovery file selected.'}
+                </AppText>
+              ) : null}
+              {action(
+                'encrypted-backup-restore',
+                vm.recoveryRoute === 'workplace' ? 'Review recovered copy' : 'Review backup',
+                vm.restoreFromFiles,
+                false,
+                !vm.hasImportedBackup ||
+                  (!vm.hasImportedSecret &&
+                    (vm.recoveryRoute === 'workplace' || !vm.canRestoreWithDevice)),
+              )}
+              {action(
+                'encrypted-backup-back-to-archive',
+                'Back to backup file',
+                () => onRestoreStepChange('archive'),
+                true,
+              )}
+              {action(
+                'encrypted-backup-clear-restore',
+                'Clear selected files',
+                () => {
+                  vm.clearRestoreInputs();
+                  onRestoreStepChange('archive');
+                },
+                true,
+              )}
+            </>
           )}
-          {action(
-            'encrypted-backup-route-workplace',
-            'Recover Workplace data',
-            () => vm.selectRecoveryRoute('workplace'),
-            true,
-            vm.recoveryRoute === 'workplace',
-          )}
-          {action('encrypted-backup-pick-zip', 'Choose encrypted backup ZIP', vm.pickBackup)}
-          {action(
-            'encrypted-backup-pick-recovery',
-            vm.recoveryRoute === 'workplace'
-              ? 'Choose Workplace recovery file'
-              : 'Choose User recovery file',
-            vm.pickRecoverySecret,
-            true,
-            !vm.hasImportedBackup,
-          )}
-          {action(
-            'encrypted-backup-restore',
-            vm.recoveryRoute === 'workplace' ? 'Review Workplace data' : 'Restore encrypted backup',
-            vm.restoreFromFiles,
-            false,
-            !vm.hasImportedBackup ||
-              (!vm.hasImportedSecret &&
-                (vm.recoveryRoute === 'workplace' || !vm.canRestoreWithDevice)),
-          )}
-          {action('encrypted-backup-clear-restore', 'Clear choices', vm.clearRestoreInputs, true)}
         </>
       );
     case 'reading':
@@ -351,18 +435,30 @@ function BackupContent({
 }
 
 export default function PrivateBackupScreen() {
-  const params = useLocalSearchParams<{ mode?: string }>();
-  const [restoreMode, setRestoreMode] = useState(params.mode === 'restore');
+  return <PrivateBackupFlow restoreMode={false} />;
+}
+
+export function EncryptedBackupRestoreScreen() {
+  return <PrivateBackupFlow restoreMode />;
+}
+
+function PrivateBackupFlow({ restoreMode }: { restoreMode: boolean }) {
+  const [restoreStep, setRestoreStep] = useState<RestoreStep>('archive');
   const workplace = useOptionalWorkplace();
   const vm = usePrivateBackup(workplace?.workplaceId);
+  const cancelRestore = () => {
+    if (vm.restorePreview) vm.discardRestorePreview();
+    vm.clearRestoreInputs();
+    AppNavigation.back();
+  };
   return (
     <PrivateBackupView
       vm={vm}
       restoreMode={restoreMode}
-      onRestoreMode={() => {
-        vm.clearRestoreInputs();
-        setRestoreMode(true);
-      }}
+      restoreStep={restoreStep}
+      onRestoreMode={() => AppNavigation.toEncryptedBackup('restore')}
+      onCancelRestore={cancelRestore}
+      onRestoreStepChange={setRestoreStep}
     />
   );
 }

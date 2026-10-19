@@ -1,15 +1,22 @@
 const FIRST_RUN_JOURNEY = 'first_run';
 
 export const ENCRYPTED_BACKUP_ROUTE = '/encrypted-backup';
+export const ENCRYPTED_BACKUP_RESTORE_ROUTE = '/encrypted-backup-restore';
 
 export const SETUP_GATE_ROUTES = new Set([
   '/onboarding',
   '/import-selection',
   '/privacy-notice',
   ENCRYPTED_BACKUP_ROUTE,
+  ENCRYPTED_BACKUP_RESTORE_ROUTE,
 ]);
 
-const FIRST_RUN_ALLOWED_PATHS = new Set(['/onboarding', '/privacy-notice', ENCRYPTED_BACKUP_ROUTE]);
+const FIRST_RUN_ALLOWED_PATHS = new Set([
+  '/onboarding',
+  '/privacy-notice',
+  ENCRYPTED_BACKUP_ROUTE,
+  ENCRYPTED_BACKUP_RESTORE_ROUTE,
+]);
 
 export function setupEntryPath(): '/onboarding' {
   return '/onboarding';

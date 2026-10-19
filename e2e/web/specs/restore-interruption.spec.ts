@@ -11,7 +11,12 @@ import type {
   RestoreVerification,
 } from '../../../src/testing/restoreVerification';
 import { E2E_AUTH_TOKEN } from '../../../src/testing/e2eConstants';
-import { createBackup, pickFile, assertJournals } from '../support/encryptedBackup';
+import {
+  createBackup,
+  pickFile,
+  pickRestoreBackupZip,
+  assertJournals,
+} from '../support/encryptedBackup';
 
 type Observation = Awaited<ReturnType<RestoreVerification['observe']>>;
 const verificationUrl = `/?e2eAuth=${E2E_AUTH_TOKEN}&e2eRestoreVerification=1`;
@@ -92,7 +97,7 @@ for (const { boundary, mode } of scenarios) {
       target.on('pageerror', error => errors.push(error.message));
       await target.goto(verificationUrl);
       await openRestore(target);
-      await pickFile(target, 'encrypted-backup-pick-zip', backup);
+      await pickRestoreBackupZip(target, backup);
       await pickFile(target, 'encrypted-backup-pick-recovery', userRecovery);
       await target.evaluate(
         ({ boundary, mode }) => window.__restoreVerification!.arm(boundary, mode),
@@ -156,7 +161,7 @@ for (const { boundary, mode } of scenarios) {
         await openRestore(target);
         reloaded = await observe(target, request);
         expect(reloaded).toEqual(before);
-        await pickFile(target, 'encrypted-backup-pick-zip', backup);
+        await pickRestoreBackupZip(target, backup);
         await pickFile(target, 'encrypted-backup-pick-recovery', userRecovery);
         await target.getByTestId('encrypted-backup-restore').click();
         await target.getByTestId('encrypted-backup-restore-confirm').click();

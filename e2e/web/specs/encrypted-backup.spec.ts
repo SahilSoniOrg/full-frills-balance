@@ -16,6 +16,7 @@ import {
 } from '../support/deviceApproval';
 import {
   pickFile,
+  pickRestoreBackupZip,
   saveFile,
   openBackupSettings,
   assertJournals,
@@ -48,8 +49,8 @@ test('encrypted backup recovers financial records in a fresh browser', async ({
     await restored.goto('http://127.0.0.1:4173/');
     await restored.getByTestId('onboarding-encrypted-restore-button').click();
     await restored.getByTestId('privacy-acknowledgement-continue-button').click();
-    await expect(restored.getByTestId('encrypted-backup-restore')).toBeDisabled();
-    await pickFile(restored, 'encrypted-backup-pick-zip', backup);
+    await expect(restored.getByTestId('encrypted-backup-next-recovery')).toBeDisabled();
+    await pickRestoreBackupZip(restored, backup);
     await expect(restored.getByTestId('encrypted-backup-restore')).toBeDisabled();
     // A Workplace credential cannot substitute for the separate User recovery credential.
     await pickFile(restored, 'encrypted-backup-pick-recovery', workplaceRecovery);
@@ -68,7 +69,7 @@ test('encrypted backup recovers financial records in a fresh browser', async ({
     // Retrying the same published manifest must not duplicate journal rows.
     await openBackupSettings(restored);
     await restored.getByTestId('encrypted-backup-restore-entry').click();
-    await pickFile(restored, 'encrypted-backup-pick-zip', backup);
+    await pickRestoreBackupZip(restored, backup);
     await pickFile(restored, 'encrypted-backup-pick-recovery', userRecovery);
     await restored.getByTestId('encrypted-backup-restore').click();
     await restored.getByTestId('encrypted-backup-restore-confirm').click();
@@ -121,7 +122,7 @@ for (const failure of ['truncated ZIP', 'tampered signature', 'wrong User recove
     try {
       const errors: string[] = [];
       fresh.page.on('pageerror', error => errors.push(error.message));
-      await pickFile(fresh.page, 'encrypted-backup-pick-zip', selectedBackup);
+      await pickRestoreBackupZip(fresh.page, selectedBackup);
       await pickFile(fresh.page, 'encrypted-backup-pick-recovery', selectedRecovery);
       await fresh.page.getByTestId('encrypted-backup-restore').click();
       await expect(fresh.page.getByTestId('encrypted-backup-message')).toContainText(
@@ -136,7 +137,7 @@ for (const failure of ['truncated ZIP', 'tampered signature', 'wrong User recove
       await fresh.page.getByTestId('encrypted-backup-clear-restore').click();
       await expect(fresh.page.getByTestId('encrypted-backup-restore')).toBeDisabled();
       await expect(fresh.page.getByTestId('encrypted-backup-pick-recovery')).toBeDisabled();
-      await pickFile(fresh.page, 'encrypted-backup-pick-zip', backup);
+      await pickRestoreBackupZip(fresh.page, backup);
       await pickFile(fresh.page, 'encrypted-backup-pick-recovery', userRecovery);
       await fresh.page.getByTestId('encrypted-backup-restore').click();
       await fresh.page.getByTestId('encrypted-backup-restore-confirm').click();
@@ -182,7 +183,7 @@ test('resumes User and Workplace setup after reload without regenerating secrets
 test('refuses to overwrite an existing local Workplace', async ({ page }, testInfo) => {
   const { backup, userRecovery } = await createBackup(page, testInfo);
   await page.getByTestId('encrypted-backup-restore-entry').click();
-  await pickFile(page, 'encrypted-backup-pick-zip', backup);
+  await pickRestoreBackupZip(page, backup);
   await pickFile(page, 'encrypted-backup-pick-recovery', userRecovery);
   await page.getByTestId('encrypted-backup-restore').click();
   await page.getByTestId('encrypted-backup-restore-confirm').click();
@@ -293,14 +294,14 @@ test('Device A approves an independent Device B which restores without a recover
     await installApprovedPublicRecord(deviceB, userB);
     // Reload discards all transient references: access now depends on B's persistent private key.
     await deviceB.reload();
-    await expect(
-      deviceB.getByText('This Device already has verified User keys', { exact: false }),
-    ).toBeVisible();
     await showApprovalTestStep(
       deviceB,
       'Device B: approved bundle reopened after reload · no recovery file',
     );
-    await pickFile(deviceB, 'encrypted-backup-pick-zip', backup);
+    await pickRestoreBackupZip(deviceB, backup);
+    await expect(
+      deviceB.getByText('This Device already has verified User keys', { exact: false }),
+    ).toBeVisible();
     await expect(deviceB.getByTestId('encrypted-backup-restore')).toBeEnabled();
     await deviceB.getByTestId('encrypted-backup-restore').click();
     await deviceB.getByTestId('encrypted-backup-restore-confirm').click();

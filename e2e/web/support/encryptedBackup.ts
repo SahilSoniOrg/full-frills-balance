@@ -8,6 +8,16 @@ export async function pickFile(page: Page, button: string, filename: string) {
   await (await chooser).setFiles(filename);
 }
 
+export async function continueEncryptedRestoreFromArchive(page: Page) {
+  await page.getByTestId('encrypted-backup-next-recovery').click();
+}
+
+/** Pick the backup ZIP on restore step 1 and advance to recovery choices. */
+export async function pickRestoreBackupZip(page: Page, filename: string) {
+  await pickFile(page, 'encrypted-backup-pick-zip', filename);
+  await continueEncryptedRestoreFromArchive(page);
+}
+
 export async function saveFile(page: Page, button: string, filename: string) {
   const download = page.waitForEvent('download');
   await page.getByTestId(button).click();
