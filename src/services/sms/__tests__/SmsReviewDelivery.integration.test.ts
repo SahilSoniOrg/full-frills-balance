@@ -6,6 +6,7 @@ import { transactionInboxRepository } from '@/src/data/repositories/TransactionI
 import { deviceSmsInboxRepository } from '@/src/data/repositories/DeviceSmsInboxRepository';
 import { transactionAutoPostRuleRepository } from '@/src/data/repositories/TransactionAutoPostRuleRepository';
 import { notificationService } from '@/src/services/notification/NotificationService';
+import { workplaceService } from '@/src/services/WorkplaceService';
 import { preferences } from '@/src/services/preferences';
 import { SmsReviewNotificationService } from '../SmsReviewNotificationService';
 import { smsSyncPipeline } from '../pipeline/smsSyncPipeline';
@@ -191,7 +192,7 @@ it('coalesces redeliveries without collapsing separate purchases outside the del
   );
   await service.flush();
   expect(deliver).toHaveBeenCalledTimes(1);
-  expect(deliver.mock.calls[0][1]).toContain('2 SMS transactions');
+  expect(deliver.mock.calls[0][3]).toBe('2 transactions to review');
 });
 
 it('groups a catch-up batch and places only opaque review identities in its payload', async () => {
@@ -209,6 +210,24 @@ it('groups a catch-up batch and places only opaque review identities in its payl
   expect(deliver.mock.calls[0][2]).not.toHaveProperty('amount');
 });
 
+it('uses singular wording for a catch-up batch with one transaction', async () => {
+  await capture('one', 'catch_up');
+  await service.flush();
+  expect(deliver.mock.calls[0][3]).toBe('1 transaction to review');
+  expect(deliver.mock.calls[0][2]).toMatchObject({ grouped: true, hasDetails: false });
+});
+
+it('puts an opted-in amount in the title without adding details to the routing payload', async () => {
+  jest.spyOn(workplaceService, 'getCurrency').mockResolvedValue('INR');
+  preferences.device.update({ showSmsNotificationDetails: true });
+  await capture();
+  await service.flush();
+  expect(deliver.mock.calls[0][3]).toMatch(/₹.*spent/);
+  expect(deliver.mock.calls[0][1]).toContain('Tap to review and log.');
+  expect(deliver.mock.calls[0][2].hasDetails).toBe(true);
+  expect(deliver.mock.calls[0][2]).not.toHaveProperty('amount');
+});
+
 it.each(['default', 'privacy', 'lock'] as const)(
   'uses a generic preview under %s protection',
   async protection => {
@@ -217,9 +236,8 @@ it.each(['default', 'privacy', 'lock'] as const)(
     preferences.device.setAppLockEnabled(protection === 'lock');
     await capture();
     await service.flush();
-    expect(deliver.mock.calls[0][1]).toBe(
-      'A transaction message needs your review. Open the app to log it.',
-    );
+    expect(deliver.mock.calls[0][1]).toBe('Open the app to review and log this SMS transaction.');
+    expect(deliver.mock.calls[0][3]).toBe('Transaction to review');
     expect(deliver.mock.calls[0][2].hasDetails).toBe(false);
   },
 );

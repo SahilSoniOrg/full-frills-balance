@@ -16,30 +16,24 @@ export function formatSmsReviewNotification(
   >,
   fallbackCurrencyCode: string,
   details: { sourceAccountName?: string; categoryName?: string } = {},
-): string {
+): { title: string; body: string } {
   const amountLabel =
     typeof parsed.amount === 'number' && Number.isFinite(parsed.amount)
-      ? CurrencyFormatter.formatAmount(
-          parsed.amount,
-          parsed.currencyCode || fallbackCurrencyCode,
-          { minimumFractionDigits: 0, maximumFractionDigits: 2 },
-        )
+      ? CurrencyFormatter.formatAmount(parsed.amount, parsed.currencyCode || fallbackCurrencyCode, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        })
       : undefined;
   const action =
-    parsed.type === 'debit'
-      ? 'you spent'
-      : parsed.type === 'credit'
-        ? 'you received'
-        : 'transaction';
-  const message = [amountLabel, action].filter(Boolean).join(' ');
+    parsed.type === 'debit' ? 'spent' : parsed.type === 'credit' ? 'received' : 'transaction';
+  const title = amountLabel ? `${amountLabel} ${action}` : 'Transaction to review';
   const merchant = sanitizeDetail(parsed.merchant);
   const source = sanitizeDetail(details.sourceAccountName || parsed.accountSource);
   const category = sanitizeDetail(details.categoryName);
-  const parts = [
-    merchant && `at ${merchant}`,
-    source && `from ${source}`,
-    category && `for ${category}`,
-  ].filter((part): part is string => Boolean(part));
+  const parts = [merchant, source, category].filter((part): part is string => Boolean(part));
 
-  return `Come log ${message}${parts.length ? ` ${parts.join(' ')}` : ''}.`;
+  return {
+    title,
+    body: [...(parts.length ? [parts.join(' · ')] : []), 'Tap to review and log.'].join('\n'),
+  };
 }

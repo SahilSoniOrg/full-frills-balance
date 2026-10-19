@@ -103,9 +103,10 @@ it('uses a stable local identity and puts the Android channel in the trigger', a
     expect(schedule).toHaveBeenCalledWith({
       identifier: 'sms-review:local-inbox-id',
       content: {
-        title: 'Transaction needs your input',
+        title: 'Transaction to review',
         body: 'A transaction needs review.',
         data: intent,
+        color: '#16734C',
       },
       trigger: { channelId: SMS_REVIEW_CHANNEL },
     });
@@ -125,6 +126,41 @@ it('keeps delivery pending when permission or the SMS channel is blocked', async
   );
   expect(schedule).not.toHaveBeenCalled();
   expect(Notifications.requestPermissionsAsync).not.toHaveBeenCalled();
+});
+
+it('uses the formatted title for a detailed transaction preview', async () => {
+  await new NotificationService().deliverSmsReview(
+    'sms-review:one',
+    'Cafe Noon · HDFC Bank\nTap to review and log.',
+    { ...intent, hasDetails: true },
+    '₹200 spent',
+  );
+  expect(schedule).toHaveBeenCalledWith(
+    expect.objectContaining({
+      content: expect.objectContaining({ title: '₹200 spent' }),
+    }),
+  );
+});
+
+it('removes reminders with the old title when rescheduling', async () => {
+  jest.mocked(Notifications.getAllScheduledNotificationsAsync).mockResolvedValue([
+    {
+      identifier: 'legacy-generated-id',
+      content: {
+        title: 'A quick moment for your books',
+        subtitle: null,
+        body: '',
+        categoryIdentifier: null,
+        sound: null,
+        data: {},
+      },
+      trigger: null,
+    },
+  ]);
+  await new NotificationService().scheduleReminder('none', 8, 15);
+  expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith(
+    'legacy-generated-id',
+  );
 });
 
 it('cancels only reminders when their setting changes', async () => {

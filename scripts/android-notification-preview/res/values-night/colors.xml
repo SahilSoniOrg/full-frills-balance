@@ -1,0 +1,8 @@
+<resources>
+  <color name="preview_text">#F0ECE4</color>
+  <color name="preview_secondary">#ADB2B9</color>
+  <color name="preview_mint">#7DD3A8</color>
+  <color name="preview_mint_panel">#243B31</color>
+  <color name="preview_coral">#FFAD98</color>
+  <color name="preview_coral_panel">#3C2C29</color>
+</resources>

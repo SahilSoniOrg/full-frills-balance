@@ -7,6 +7,7 @@ export const SMS_REVIEW_NOTIFICATION_TYPE = 'sms_transaction_needs_review';
 export const SMS_REVIEW_CHANNEL = 'sms-review';
 const REMINDER_CHANNEL = 'journal-reminders';
 const REMINDER_ID = 'journal-reminder';
+const NOTIFICATION_ACCENT_COLOR = '#16734C';
 
 export interface SmsReviewIntent {
   type: typeof SMS_REVIEW_NOTIFICATION_TYPE;
@@ -33,7 +34,10 @@ async function cancelLegacyJournalReminders(): Promise<void> {
     if (
       request.identifier === REMINDER_ID ||
       request.content.data?.type === 'journal_reminder' ||
-      (request.content.title === AppConfig.strings.settings.notifications.reminderTitle &&
+      ([
+        AppConfig.strings.settings.notifications.reminderTitle,
+        'A quick moment for your books',
+      ].includes(request.content.title ?? '') &&
         !request.content.data?.type)
     ) {
       await Notifications.cancelScheduledNotificationAsync(request.identifier);
@@ -124,6 +128,7 @@ export class NotificationService {
     identifier: string,
     body: string,
     intent: SmsReviewIntent,
+    title = intent.grouped ? 'Transactions to review' : 'Transaction to review',
   ): Promise<boolean> {
     if (!(await this.canDeliverSmsReview())) return false;
     // A stable ID replaces an alert if delivery succeeds but saving its receipt is interrupted.
@@ -131,9 +136,10 @@ export class NotificationService {
     await Notifications.scheduleNotificationAsync({
       identifier,
       content: {
-        title: intent.grouped ? 'SMS transactions to review' : 'Transaction needs your input',
+        title,
         body,
         data: { ...intent },
+        ...(Platform.OS === 'android' ? { color: NOTIFICATION_ACCENT_COLOR } : {}),
       },
       trigger: Platform.OS === 'android' ? { channelId: SMS_REVIEW_CHANNEL } : null,
     });
@@ -216,6 +222,7 @@ export class NotificationService {
             title: AppConfig.strings.settings.notifications.reminderTitle,
             body: AppConfig.strings.settings.notifications.reminderBody,
             data: { type: 'journal_reminder' },
+            ...(Platform.OS === 'android' ? { color: NOTIFICATION_ACCENT_COLOR } : {}),
           },
           trigger,
         });
@@ -231,6 +238,7 @@ export class NotificationService {
       content: {
         title: AppConfig.strings.settings.notifications.testTitle,
         body: AppConfig.strings.settings.notifications.testBody,
+        ...(Platform.OS === 'android' ? { color: NOTIFICATION_ACCENT_COLOR } : {}),
       },
       trigger: Platform.OS === 'android' ? { channelId: REMINDER_CHANNEL } : null,
     });

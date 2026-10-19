@@ -143,9 +143,12 @@ export class SmsReviewNotificationService {
     for (const [workplaceId, group] of groups) {
       const latest = group[group.length - 1];
       const grouped = group.length > 1 || group.some(item => item.catchUp);
+      let title = grouped
+        ? `${group.length} ${group.length === 1 ? 'transaction' : 'transactions'} to review`
+        : 'Transaction to review';
       let body = grouped
-        ? `${group.length} SMS transactions need your review. Open the inbox to log them.`
-        : 'A transaction message needs your review. Open the app to log it.';
+        ? 'Open your SMS inbox to review and log.'
+        : 'Open the app to review and log this SMS transaction.';
       if (!ctx.privatePreview && !grouped) {
         const hints = {
           sourceAccountId: latest.record.suggestedSourceAccountId,
@@ -161,7 +164,7 @@ export class SmsReviewNotificationService {
         const sourceAccountCurrency = accounts.find(
           account => account.id === hints.sourceAccountId,
         )?.currencyCode;
-        body = formatSmsReviewNotification(
+        const preview = formatSmsReviewNotification(
           {
             amount: latest.record.parsedAmount,
             currencyCode: latest.record.parsedCurrencyCode,
@@ -175,15 +178,22 @@ export class SmsReviewNotificationService {
             categoryName: hints.categoryAccountId ? names.get(hints.categoryAccountId) : undefined,
           },
         );
+        title = preview.title;
+        body = preview.body;
       }
       const identifier = grouped ? `sms-review:catch-up:${group[0].id}` : `sms-review:${latest.id}`;
-      const delivered = await notificationService.deliverSmsReview(identifier, body, {
-        type: SMS_REVIEW_NOTIFICATION_TYPE,
-        inboxRecordId: latest.id,
-        workplaceId,
-        grouped,
-        hasDetails: !ctx.privatePreview && !grouped,
-      });
+      const delivered = await notificationService.deliverSmsReview(
+        identifier,
+        body,
+        {
+          type: SMS_REVIEW_NOTIFICATION_TYPE,
+          inboxRecordId: latest.id,
+          workplaceId,
+          grouped,
+          hasDetails: !ctx.privatePreview && !grouped,
+        },
+        title,
+      );
       if (delivered)
         await deviceSmsInboxRepository.finishNotifications(
           group.map(item => item.id),

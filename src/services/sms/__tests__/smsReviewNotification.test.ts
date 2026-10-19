@@ -18,45 +18,54 @@ const parsed = (overrides: Partial<ParsedTransaction> = {}): ParsedTransaction =
 
 describe('formatSmsReviewNotification', () => {
   it.each([
-    ['Come log ₹100 you spent.', parsed(), undefined],
+    [{ title: '₹100 spent', body: 'Tap to review and log.' }, parsed(), undefined],
     [
-      'Come log ₹200 you spent at Cafe Noon from HDFC Bank for Food.',
+      { title: '₹200 spent', body: 'Cafe Noon · HDFC Bank · Food\nTap to review and log.' },
       parsed({ amount: 200, merchant: 'Cafe Noon', accountSource: 'parser hint' }),
       { sourceAccountName: 'HDFC Bank', categoryName: 'Food' },
     ],
-    ['Come log ₹100 you spent from HDFC Bank.', parsed({ accountSource: 'HDFC Bank' }), undefined],
     [
-      'Come log $12.5 you received.',
+      { title: '₹100 spent', body: 'HDFC Bank\nTap to review and log.' },
+      parsed({ accountSource: 'HDFC Bank' }),
+      undefined,
+    ],
+    [
+      { title: '$12.5 received', body: 'Tap to review and log.' },
       parsed({ amount: 12.5, currencyCode: 'USD', type: 'credit' }),
       undefined,
     ],
     [
-      'Come log you spent.',
+      { title: 'Transaction to review', body: 'Tap to review and log.' },
       parsed({ amount: Number.NaN, merchant: '  ', accountSource: '' }),
       { sourceAccountName: '\n\t', categoryName: '' },
     ],
   ] as const)('formats %s', (expected, tx, context) => {
-    expect(formatSmsReviewNotification(tx, 'INR', context)).toBe(expected);
+    expect(formatSmsReviewNotification(tx, 'INR', context)).toEqual(expected);
   });
 
   it('formats amounts without a parsed currency in the fallback currency, not USD', () => {
-    expect(formatSmsReviewNotification(parsed({ currencyCode: undefined }), 'INR')).toBe(
-      'Come log ₹100 you spent.',
-    );
+    expect(formatSmsReviewNotification(parsed({ currencyCode: undefined }), 'INR')).toEqual({
+      title: '₹100 spent',
+      body: 'Tap to review and log.',
+    });
   });
 
   it('sanitizes untrusted merchant labels without leaking parse metadata', () => {
     const unsafeMerchant = `${'A'.repeat(61)}\u0000\nSECRET SUFFIX`;
     const summary = formatSmsReviewNotification(parsed({ merchant: unsafeMerchant }), 'INR');
-    expect(summary).toBe(`Come log ₹100 you spent at ${'A'.repeat(60)}.`);
+    expect(summary).toEqual({
+      title: '₹100 spent',
+      body: `${'A'.repeat(60)}\nTap to review and log.`,
+    });
     for (const privateValue of [
       'PRIVATE SMS BODY',
       'PRIVATE-SENDER-ID',
       'sms-id-private',
       'SECRET SUFFIX',
     ]) {
-      expect(summary).not.toContain(privateValue);
+      expect(`${summary.title} ${summary.body}`).not.toContain(privateValue);
     }
-    expect(summary).not.toMatch(/[\u0000-\u001f\u007f]/);
+    expect(summary.title).not.toMatch(/[\u0000-\u001f\u007f]/);
+    expect(summary.body.split('\n')[0]).not.toMatch(/[\u0000-\u001f\u007f]/);
   });
 });
