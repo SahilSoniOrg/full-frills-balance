@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 export type NotificationCadence = 'none' | 'daily' | 'weekly';
+export type NotificationTone = 'neutral' | 'expense' | 'income';
 export const SMS_REVIEW_NOTIFICATION_TYPE = 'sms_transaction_needs_review';
 export const SMS_REVIEW_CHANNEL = 'sms-review';
 const REMINDER_CHANNEL = 'journal-reminders';
@@ -129,6 +130,7 @@ export class NotificationService {
     body: string,
     intent: SmsReviewIntent,
     title = intent.grouped ? 'Transactions to review' : 'Transaction to review',
+    tone: NotificationTone = 'neutral',
   ): Promise<boolean> {
     if (!(await this.canDeliverSmsReview())) return false;
     // A stable ID replaces an alert if delivery succeeds but saving its receipt is interrupted.
@@ -138,7 +140,12 @@ export class NotificationService {
       content: {
         title,
         body,
-        data: { ...intent },
+        data: {
+          ...intent,
+          ...(Platform.OS === 'android' && intent.hasDetails && !intent.grouped
+            ? { notificationTone: tone }
+            : {}),
+        },
         ...(Platform.OS === 'android' ? { color: NOTIFICATION_ACCENT_COLOR } : {}),
       },
       trigger: Platform.OS === 'android' ? { channelId: SMS_REVIEW_CHANNEL } : null,
@@ -238,6 +245,7 @@ export class NotificationService {
       content: {
         title: AppConfig.strings.settings.notifications.testTitle,
         body: AppConfig.strings.settings.notifications.testBody,
+        data: { type: 'notification_test' },
         ...(Platform.OS === 'android' ? { color: NOTIFICATION_ACCENT_COLOR } : {}),
       },
       trigger: Platform.OS === 'android' ? { channelId: REMINDER_CHANNEL } : null,

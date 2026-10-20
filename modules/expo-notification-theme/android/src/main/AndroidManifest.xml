@@ -1,0 +1,12 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <receiver
+      android:name="expo.modules.notificationtheme.ThemedNotificationsService"
+      android:enabled="true"
+      android:exported="false">
+      <intent-filter android:priority="0">
+        <action android:name="expo.modules.notifications.NOTIFICATION_EVENT" />
+      </intent-filter>
+    </receiver>
+  </application>
+</manifest>

@@ -223,6 +223,7 @@ it('puts an opted-in amount in the title without adding details to the routing p
   await capture();
   await service.flush();
   expect(deliver.mock.calls[0][3]).toMatch(/₹.*spent/);
+  expect(deliver.mock.calls[0][4]).toBe('expense');
   expect(deliver.mock.calls[0][1]).toContain('Tap to review and log.');
   expect(deliver.mock.calls[0][2].hasDetails).toBe(true);
   expect(deliver.mock.calls[0][2]).not.toHaveProperty('amount');
@@ -239,6 +240,7 @@ it.each(['default', 'privacy', 'lock'] as const)(
     expect(deliver.mock.calls[0][1]).toBe('Open the app to review and log this SMS transaction.');
     expect(deliver.mock.calls[0][3]).toBe('Transaction to review');
     expect(deliver.mock.calls[0][2].hasDetails).toBe(false);
+    expect(deliver.mock.calls[0][4]).toBe('neutral');
   },
 );
 

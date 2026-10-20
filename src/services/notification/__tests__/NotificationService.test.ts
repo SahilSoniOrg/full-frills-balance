@@ -142,6 +142,46 @@ it('uses the formatted title for a detailed transaction preview', async () => {
   );
 });
 
+it.each([
+  [true, false, true],
+  [false, false, false],
+  [true, true, false],
+] as const)(
+  'exposes the Android transaction tone only for detailed, ungrouped previews (%s, %s)',
+  async (hasDetails, grouped, includesTone) => {
+    const os = Platform.OS;
+    Object.defineProperty(Platform, 'OS', { value: 'android', configurable: true });
+    try {
+      await new NotificationService().deliverSmsReview(
+        'sms-review:one',
+        'Review transaction',
+        { ...intent, hasDetails, grouped },
+        'Review',
+        'expense',
+      );
+      const data = schedule.mock.calls[0][0].content?.data;
+      if (includesTone) {
+        expect(data).toHaveProperty('notificationTone', 'expense');
+      } else {
+        expect(data).not.toHaveProperty('notificationTone');
+      }
+      expect(data).not.toHaveProperty('amount');
+      expect(data).not.toHaveProperty('merchant');
+    } finally {
+      Object.defineProperty(Platform, 'OS', { value: os, configurable: true });
+    }
+  },
+);
+
+it('marks the settings test so Android renders it with the app theme', async () => {
+  await new NotificationService().sendImmediateTest();
+  expect(schedule).toHaveBeenCalledWith(
+    expect.objectContaining({
+      content: expect.objectContaining({ data: { type: 'notification_test' } }),
+    }),
+  );
+});
+
 it('removes reminders with the old title when rescheduling', async () => {
   jest.mocked(Notifications.getAllScheduledNotificationsAsync).mockResolvedValue([
     {

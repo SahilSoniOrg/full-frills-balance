@@ -2,7 +2,7 @@
 
 A small native Android app for testing the proposed tinted notification panels in the real system notification shade. It posts sample spending and income notifications under **FFB Preview** and opens the preview app when tapped.
 
-The main Expo app on this branch has the shorter notification wording, amount-first titles, and green Android accent. The tinted panels are a separate prototype; they are not yet integrated into the Expo notification delivery service.
+The main Expo app now has its own native renderer with tinted panels in both collapsed and expanded notifications. To test the actual integration, rebuild the main app with `bun run android` and send a test notification from Settings. See [the native module guide](../../modules/expo-notification-theme/README.md). This standalone app remains a separate design comparison tool.
 
 ## Run on a Mac
 

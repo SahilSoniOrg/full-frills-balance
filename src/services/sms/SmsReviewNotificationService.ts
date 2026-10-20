@@ -5,6 +5,7 @@ import {
   notificationService,
   SMS_REVIEW_NOTIFICATION_TYPE,
   type SmsReviewIntent,
+  type NotificationTone,
 } from '@/src/services/notification/NotificationService';
 import { preferences } from '@/src/services/preferences';
 import { workplaceService } from '@/src/services/WorkplaceService';
@@ -146,10 +147,13 @@ export class SmsReviewNotificationService {
       let title = grouped
         ? `${group.length} ${group.length === 1 ? 'transaction' : 'transactions'} to review`
         : 'Transaction to review';
+      let tone: NotificationTone = 'neutral';
       let body = grouped
         ? 'Open your SMS inbox to review and log.'
         : 'Open the app to review and log this SMS transaction.';
       if (!ctx.privatePreview && !grouped) {
+        const direction = inboxDirectionToParsedType(latest.record.direction);
+        tone = direction === 'debit' ? 'expense' : direction === 'credit' ? 'income' : 'neutral';
         const hints = {
           sourceAccountId: latest.record.suggestedSourceAccountId,
           categoryAccountId: latest.record.suggestedCategoryAccountId,
@@ -193,6 +197,7 @@ export class SmsReviewNotificationService {
           hasDetails: !ctx.privatePreview && !grouped,
         },
         title,
+        tone,
       );
       if (delivered)
         await deviceSmsInboxRepository.finishNotifications(

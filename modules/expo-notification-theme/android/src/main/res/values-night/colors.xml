@@ -1,0 +1,10 @@
+<resources>
+  <color name="ffb_notification_text">#F0ECE4</color>
+  <color name="ffb_notification_secondary">#C2C7CB</color>
+  <color name="ffb_notification_brand_ink">#7DD3A8</color>
+  <color name="ffb_notification_income_ink">#7DD3A8</color>
+  <color name="ffb_notification_expense_ink">#FFAD98</color>
+  <color name="ffb_notification_neutral_fill">#243B31</color>
+  <color name="ffb_notification_income_fill">#243B31</color>
+  <color name="ffb_notification_expense_fill">#3C2C29</color>
+</resources>
