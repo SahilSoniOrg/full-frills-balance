@@ -6,6 +6,7 @@ import { AccountSubtype, AccountType } from '@/src/types/enums';
 import {
   DEFAULT_ACCOUNT_KIND,
   getAccountKind,
+  getAccountTypeIcon,
   isCarouselAccountType,
   suggestAccountKind,
   type SuggestedAccountKind,
@@ -74,7 +75,12 @@ export type AccountFormDraftAction =
   | { type: 'SEED_METADATA'; accountId: AccountId; metadata: AccountMetadataValues }
   | { type: 'PATCH_CORE'; patch: Partial<AccountFormCoreDraft> }
   | { type: 'SET_ACCOUNT_TYPE'; accountType: AccountType }
-  | { type: 'SET_ACCOUNT_KIND'; accountType: AccountType; accountSubtype: AccountSubtype }
+  | {
+      type: 'SET_ACCOUNT_KIND';
+      accountType: AccountType;
+      accountSubtype: AccountSubtype;
+      applyKindDefaults?: boolean;
+    }
   | { type: 'DISMISS_KIND_SUGGESTION'; suggestion: SuggestedAccountKind }
   | {
       type: 'PATCH_METADATA';
@@ -270,7 +276,10 @@ export function accountFormDraftReducer(
           accountType: action.accountType,
           accountSubtype: subtype,
           kindTouched: true,
-          selectedIcon: !state.core.hasCustomIcon && kind ? kind.icon : state.core.selectedIcon,
+          selectedIcon:
+            !state.core.hasCustomIcon && kind
+              ? getAccountTypeIcon(action.accountType)
+              : state.core.selectedIcon,
           parentAccountId: EMPTY_ACCOUNT_ID,
           initialBalance: isTargetCategory ? '' : state.core.initialBalance,
         },
@@ -281,7 +290,8 @@ export function accountFormDraftReducer(
       if (
         !kind ||
         !isCarouselAccountType(state.core.accountType) ||
-        isCategoryAccountType(state.core.accountType) !== isCategoryAccountType(kind.type)
+        (state.seededAccountId === null &&
+          isCategoryAccountType(state.core.accountType) !== isCategoryAccountType(kind.type))
       )
         return state;
       const kindChanged =
@@ -294,9 +304,13 @@ export function accountFormDraftReducer(
           accountType: kind.type,
           accountSubtype: kind.subtype,
           kindTouched: true,
-          selectedIcon: state.core.hasCustomIcon ? state.core.selectedIcon : kind.icon,
+          selectedIcon:
+            action.applyKindDefaults !== false && !state.core.hasCustomIcon
+              ? getAccountTypeIcon(kind.type)
+              : state.core.selectedIcon,
           parentAccountId:
             state.core.accountType === kind.type ? state.core.parentAccountId : EMPTY_ACCOUNT_ID,
+          initialBalance: isCategoryAccountType(kind.type) ? '' : state.core.initialBalance,
         },
       };
     }

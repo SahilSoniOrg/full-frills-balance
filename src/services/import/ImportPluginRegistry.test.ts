@@ -29,6 +29,17 @@ describe('ImportRegistry', () => {
     expect(() => importRegistry.register(mockPlugin)).toThrow(/already registered/);
   });
 
+  it('replaces a refreshed built-in only when explicitly allowed', () => {
+    importRegistry.register(mockPlugin);
+    const refreshedPlugin = { ...mockPlugin, detect: jest.fn(), parse: jest.fn() };
+
+    importRegistry.register(refreshedPlugin, { replaceExisting: true });
+
+    expect(importRegistry.get(mockPlugin.id)).toBe(refreshedPlugin);
+    expect(importRegistry.getAll()).toEqual([refreshedPlugin]);
+    expect(() => importRegistry.register(refreshedPlugin)).toThrow(/already registered/);
+  });
+
   it('auto-detects format using plugin detect method', () => {
     const otherPlugin: ImportPlugin = {
       id: 'other-plugin',

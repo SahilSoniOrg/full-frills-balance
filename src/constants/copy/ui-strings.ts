@@ -839,7 +839,7 @@ export const UI_STRINGS = {
       colorPickerTitle: 'Account Color',
       colorAuto: 'Auto (from type)',
       currencyLockedTooltip:
-        'To keep past records accurate, an account’s currency can’t be changed once created.',
+        'To keep past records accurate, an account’s currency can’t be changed after it has any transactions, including deleted ones.',
     },
     balanceClassify: {
       title: 'Classify balance change',

@@ -58,7 +58,7 @@ export type AccountFormChromeState = {
 };
 
 export interface AccountFormViewModel extends AccountFormKindApi {
-  activeSheet: 'kinds' | 'currency' | 'currency-info' | 'note' | null;
+  activeSheet: 'type' | 'subtype' | 'currency' | 'currency-info' | 'note' | null;
   setActiveSheet: (sheet: AccountFormViewModel['activeSheet']) => void;
   currencyPrecision: number;
   heroTitle: string;
@@ -69,6 +69,7 @@ export interface AccountFormViewModel extends AccountFormKindApi {
   accountType: AccountType;
   accountSubtype: AccountSubtype;
   selectedCurrency: string;
+  canEditCurrency: boolean;
   currencies: PlainCurrency[];
   setSelectedCurrency: (value: string) => void;
   selectedIcon: IconName;
@@ -145,6 +146,17 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     [accountId, workplaceId],
     false,
   );
+  const { data: historicalTransactionCount } = useObservable<number | null>(
+    () =>
+      accountId
+        ? accountQueries.observeTransactionCountIncludingDeleted(workplaceId, accountId)
+        : of(0),
+    [accountId, workplaceId],
+    null,
+    { keepPreviousData: false },
+  );
+  const canEditCurrency =
+    !isEditMode || (existingAccount?.id === accountId && historicalTransactionCount === 0);
 
   const { currencies } = useCurrencies();
   const { data: metadataRecords, isLoading: isMetadataLoading } = useObservable(
@@ -188,7 +200,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     Keyboard.dismiss();
     updateActiveSheet(sheet);
   }, []);
-  const core = useAccountFormCore(dispatch, draft.core);
+  const core = useAccountFormCore(dispatch, draft.core, isEditMode);
   const kind = useAccountFormKind({
     core: draft.core,
     dispatch,
@@ -323,6 +335,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     accountType: core.accountType,
     accountSubtype: core.accountSubtype,
     selectedCurrency: core.selectedCurrency,
+    canEditCurrency,
     currencies,
     setSelectedCurrency: core.setSelectedCurrency,
     selectedIcon: core.selectedIcon,

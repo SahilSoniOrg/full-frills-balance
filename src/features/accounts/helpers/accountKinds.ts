@@ -1,3 +1,4 @@
+import { ACCOUNT_COLOR_PALETTE } from '@/src/constants/account-constants';
 import { accountFormStrings as copy } from '@/src/constants/copy/domains/accountFormStrings';
 import { Icon, type IconName } from '@/src/types/domainIcons';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
@@ -19,7 +20,7 @@ export interface AccountKind extends SuggestedAccountKind {
   label: string;
   icon: IconName;
   caption: string;
-  tone: 'asset' | 'liability' | 'income' | 'expense';
+  tone: 'asset' | 'liability' | 'income' | 'expense' | 'neutral';
 }
 
 export const ACCOUNT_KINDS: readonly AccountKind[] = [
@@ -80,6 +81,9 @@ export const ACCOUNT_KINDS: readonly AccountKind[] = [
 ];
 
 export const DEFAULT_ACCOUNT_KIND = ACCOUNT_KINDS[2];
+const ACCOUNT_SUBTYPE_PAIRS = Object.entries(ACCOUNT_SUBTYPES_BY_TYPE).flatMap(([type, subtypes]) =>
+  subtypes.map(subtype => `${type}:${subtype}`),
+);
 
 const CATEGORY_ICONS: Partial<Record<AccountSubtype, IconName>> = {
   [AccountSubtype.FOOD]: Icon.Coffee,
@@ -118,9 +122,40 @@ export function isCarouselAccountType(type: AccountType): boolean {
   return (
     type === AccountType.ASSET ||
     type === AccountType.LIABILITY ||
+    type === AccountType.EQUITY ||
     type === AccountType.INCOME ||
     type === AccountType.EXPENSE
   );
+}
+
+export function getAccountTypeIcon(type: AccountType): IconName {
+  switch (type) {
+    case AccountType.ASSET:
+      return Icon.Wallet;
+    case AccountType.LIABILITY:
+      return Icon.CreditCard;
+    case AccountType.EQUITY:
+      return Icon.Scale;
+    case AccountType.INCOME:
+      return Icon.TrendingUp;
+    case AccountType.EXPENSE:
+      return Icon.Tag;
+  }
+}
+
+export function getAccountTypeDescription(type: AccountType): string {
+  switch (type) {
+    case AccountType.ASSET:
+      return copy.assetCaption;
+    case AccountType.LIABILITY:
+      return copy.liabilityCaption;
+    case AccountType.EQUITY:
+      return copy.equityCaption;
+    case AccountType.INCOME:
+      return copy.incomeTypeDescription;
+    case AccountType.EXPENSE:
+      return copy.expenseTypeDescription;
+  }
 }
 
 export function resolveAccountSubtypeParam(
@@ -141,15 +176,31 @@ export function getAccountKind(type: AccountType, subtype: AccountSubtype): Acco
   const standard = ACCOUNT_KINDS.find(kind => kind.type === type && kind.subtype === subtype);
   if (standard) return standard;
   const isAsset = type === AccountType.ASSET;
+  const isEquity = type === AccountType.EQUITY;
   return {
     key: `${type.toLowerCase()}_${subtype.toLowerCase()}`,
     type,
     subtype,
     label: formatAccountSubtypeLabel(subtype),
-    icon: isAsset ? Icon.Bank : isLoanSubtype(subtype) ? Icon.Bank : Icon.CreditCard,
-    caption: isAsset ? copy.assetCaption : copy.liabilityCaption,
-    tone: isAsset ? 'asset' : 'liability',
+    icon: isEquity
+      ? Icon.Scale
+      : isAsset
+        ? Icon.Bank
+        : isLoanSubtype(subtype)
+          ? Icon.Bank
+          : Icon.CreditCard,
+    caption: isEquity ? copy.equityCaption : isAsset ? copy.assetCaption : copy.liabilityCaption,
+    tone: isEquity ? 'neutral' : isAsset ? 'asset' : 'liability',
   };
+}
+
+/** Assign each account type/subtype pair a distinct color from the appearance palette. */
+export function getAccountSubtypeColor(type: AccountType, subtype: AccountSubtype): string {
+  const index = ACCOUNT_SUBTYPE_PAIRS.indexOf(`${type}:${subtype}`);
+  const paletteIndex = Math.round(
+    (Math.max(0, index) * (ACCOUNT_COLOR_PALETTE.length - 1)) / (ACCOUNT_SUBTYPE_PAIRS.length - 1),
+  );
+  return ACCOUNT_COLOR_PALETTE[paletteIndex] ?? ACCOUNT_COLOR_PALETTE[0]!;
 }
 
 /** Keep a selected nonstandard kind immediately after the last item of its type. */

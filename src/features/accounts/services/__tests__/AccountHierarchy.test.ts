@@ -6,7 +6,11 @@ import { WorkplaceId } from '@/src/types/ids';
 import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
 import { createAccount } from '@/src/services/accounts/accountCommands';
-import { saveAccount, updateAccount } from '@/src/services/accounts/accountHierarchyCommands';
+import {
+  saveAccount,
+  updateAccount,
+  updateAccounts,
+} from '@/src/services/accounts/accountHierarchyCommands';
 import { resetDatabase } from '@/src/testing/resetDatabase';
 
 describe('Account Hierarchy Integration', () => {
@@ -33,6 +37,29 @@ describe('Account Hierarchy Integration', () => {
     await expect(
       updateAccount(workplaceId, account.id, { parentAccountId: null } as never),
     ).rejects.toThrow('Hierarchy fields must be changed with saveAccount or moveAccounts');
+  });
+
+  it('allows currency changes for unused accounts through form, detail and bulk saves', async () => {
+    for (const [index, command] of [saveAccount, updateAccount].entries()) {
+      const account = await createAccount(workplaceId, {
+        name: `Unused ${index}`,
+        accountType: AccountType.ASSET,
+        currencyCode: 'USD',
+        workplaceId,
+      });
+      await command(workplaceId, account.id, { currencyCode: 'EUR' });
+      expect(account.currencyCode).toBe('EUR');
+    }
+    const account = await createAccount(workplaceId, {
+      name: 'Unused bulk',
+      accountType: AccountType.ASSET,
+      currencyCode: 'USD',
+      workplaceId,
+    });
+    await updateAccounts(workplaceId, [
+      { accountId: account.id, updates: { currencyCode: 'EUR' } },
+    ]);
+    expect(account.currencyCode).toBe('EUR');
   });
 
   it('should create a parent and child account correctly', async () => {

@@ -3,12 +3,13 @@ import type { AccountFields } from '@/src/types/plainDtos';
 import { getDefaultSubtypeForType } from '@/src/types/accountSubtype';
 import {
   DEFAULT_ACCOUNT_KIND,
-  getAccountKind,
+  getAccountTypeIcon,
   resolveAccountSubtypeParam,
 } from '@/src/features/accounts/helpers/accountKinds';
 import { isValidIconName } from '@/src/types/domainIcons';
 import { AccountId, EMPTY_ACCOUNT_ID } from '@/src/types/ids';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
+import { isDebitNormalAccountType } from '@/src/utils/accountCategory';
 import { SerializedAccountMetadataPayload } from '@/src/types/plainDtos';
 import {
   isCategoryAccountType,
@@ -76,8 +77,7 @@ export function resolveAccountFormDefaults(
     (initialType === AccountType.ASSET
       ? DEFAULT_ACCOUNT_KIND.subtype
       : getDefaultSubtypeForType(initialType));
-  const defaultIcon =
-    getAccountKind(initialType, accountSubtype)?.icon ?? resolveAccountIcon(initialType);
+  const defaultIcon = getAccountTypeIcon(initialType);
 
   return {
     kindTouched: requestedSubtype !== null,
@@ -87,6 +87,8 @@ export function resolveAccountFormDefaults(
     accountSubtype,
     selectedCurrency: route.previewCurrency || workplaceCurrency,
     selectedIcon: isValidIconName(route.previewIcon) ? route.previewIcon : defaultIcon,
+    // Account appearance is independent of subtype swatches. Empty means use
+    // the account type's semantic color until the user picks a custom color.
     selectedColor: '',
     parentAccountId: EMPTY_ACCOUNT_ID,
   };
@@ -108,7 +110,7 @@ export interface AccountSaveFormInput {
   parentAccountId: AccountId;
   metadataValues: AccountMetadataValues;
   hasExistingMetadata: boolean;
-  balanceData?: { balance: number } | null;
+  balanceData?: { balance: number; accountType?: AccountType } | null;
 }
 
 export interface AccountSavePayload {
@@ -146,6 +148,19 @@ export function buildAccountSavePayload(
     input.accountType,
     input.hasExistingMetadata,
   );
+  // The ledger's signed balance reverses when converting between debit-normal
+  // and credit-normal types. Classify and persist against the converted balance.
+  const balanceData = input.balanceData
+    ? {
+        ...input.balanceData,
+        balance:
+          input.balanceData.accountType !== undefined &&
+          isDebitNormalAccountType(input.balanceData.accountType) !==
+            isDebitNormalAccountType(input.accountType)
+            ? -input.balanceData.balance
+            : input.balanceData.balance,
+      }
+    : undefined;
 
   return {
     ok: true,
@@ -157,7 +172,7 @@ export function buildAccountSavePayload(
       selectedIcon: input.selectedIcon,
       selectedColor: input.selectedColor,
       initialBalance: isCurrentCategory ? '' : input.initialBalance,
-      balanceData: isCurrentCategory ? undefined : input.balanceData || undefined,
+      balanceData: isCurrentCategory ? undefined : balanceData,
       parentAccountId: input.parentAccountId || undefined,
       metadata,
     },

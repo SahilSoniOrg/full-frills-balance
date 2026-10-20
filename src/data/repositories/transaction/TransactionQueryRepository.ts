@@ -196,6 +196,16 @@ export class TransactionQueryRepository {
     return count > 0;
   }
 
+  /** All recorded line versions, regardless of deletion or journal status. */
+  async countByAccountIncludingDeleted(
+    workplaceId: WorkplaceId,
+    accountId: AccountId,
+  ): Promise<number> {
+    return this.transactions
+      .query(Q.where('workplace_id', workplaceId), Q.where('account_id', accountId))
+      .fetchCount();
+  }
+
   async findAllByAccountIds(
     workplaceId: WorkplaceId,
     accountIds: AccountId[],

@@ -8,18 +8,34 @@ import { AppConfig } from '@/src/constants/app-config';
 import { accountFormStrings as copy } from '@/src/constants/copy/domains/accountFormStrings';
 import { AccountArchiveCascadeModal } from '@/src/features/accounts/components/AccountArchiveCascadeModal';
 import type { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
+import { getDefaultSubtypeForType } from '@/src/types/accountSubtype';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
-import { AccountKindsSheet } from './AccountKindsSheet';
+import { AccountTypeSheet } from './AccountTypeSheet';
+import { AccountSubtypeSheet } from './AccountSubtypeSheet';
 import { BalanceChangeClassifySheet } from './BalanceChangeClassifySheet';
 
 export function AccountFormOverlays(vm: AccountFormViewModel) {
   const close = () => vm.setActiveSheet(null);
   return (
     <>
-      <AccountKindsSheet
-        visible={vm.activeSheet === 'kinds'}
+      <AccountTypeSheet
+        visible={vm.activeSheet === 'type'}
         isCategory={vm.isCategory}
-        onSelect={vm.setAccountKind}
+        showAllTypes={vm.isEditMode}
+        selectedType={vm.accountType}
+        onSelect={type =>
+          vm.setAccountKind({
+            type,
+            subtype: type === vm.accountType ? vm.accountSubtype : getDefaultSubtypeForType(type),
+          })
+        }
+        onClose={close}
+      />
+      <AccountSubtypeSheet
+        visible={vm.activeSheet === 'subtype'}
+        accountType={vm.accountType}
+        selectedSubtype={vm.accountSubtype}
+        onSelect={subtype => vm.setAccountKind({ type: vm.accountType, subtype })}
         onClose={close}
       />
       <AppearancePickerModal

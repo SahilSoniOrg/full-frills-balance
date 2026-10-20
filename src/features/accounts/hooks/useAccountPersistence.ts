@@ -73,6 +73,7 @@ export function useAccountPersistence(
           name: sanitizedName,
           accountType: payload.accountType,
           accountSubtype: payload.accountSubtype,
+          currencyCode: payload.selectedCurrency,
           icon: payload.selectedIcon,
           color: payload.selectedColor,
           parentAccountId: payload.parentAccountId,

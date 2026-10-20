@@ -1,6 +1,9 @@
 import { database } from '@/src/data/database/Database';
 import { accountQueryRepository, accountWriteRepository } from '@/src/data/repositories/account';
-import { AccountType } from '@/src/types/enums';
+import { AccountType, JournalStatus, TransactionType } from '@/src/types/enums';
+import Transaction from '@/src/data/models/Transaction';
+import { createJournalFixture } from '@/src/testing/journalFixtures';
+import { transactionQueryRepository } from '@/src/data/repositories/transaction';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { resetDatabase } from '@/src/testing/resetDatabase';
 
@@ -63,7 +66,7 @@ describe('AccountWriteRepository refresh operations', () => {
   });
 });
 
-describe('AccountWriteRepository currency immutability', () => {
+describe('AccountWriteRepository currency history guard', () => {
   const workplaceId = 'wp-account-currency' as WorkplaceId;
 
   beforeEach(async () => {
@@ -71,7 +74,7 @@ describe('AccountWriteRepository currency immutability', () => {
     await resetDatabase();
   });
 
-  it('rejects a changed currency before updating an account', async () => {
+  it('allows changing currency when no transaction has ever been recorded', async () => {
     const account = await accountWriteRepository.create({
       name: 'Checking',
       accountType: AccountType.ASSET,
@@ -79,11 +82,14 @@ describe('AccountWriteRepository currency immutability', () => {
       workplaceId,
     });
 
-    await expect(
-      accountWriteRepository.update(account, { name: 'Renamed', currencyCode: 'EUR' }, workplaceId),
-    ).rejects.toThrow('Account currency cannot be changed after creation');
-    expect(account.name).toBe('Checking');
-    expect(account.currencyCode).toBe('USD');
+    const result = await accountWriteRepository.update(
+      account,
+      { name: 'Renamed', currencyCode: 'EUR' },
+      workplaceId,
+    );
+    expect(account.name).toBe('Renamed');
+    expect(account.currencyCode).toBe('EUR');
+    expect(result.commitFacts.balanceRebuildAccountIds).toEqual([account.id]);
   });
 
   it('rejects a changed currency in direct batch preparation', async () => {
@@ -96,8 +102,70 @@ describe('AccountWriteRepository currency immutability', () => {
 
     expect(() =>
       accountWriteRepository.prepareUpdateBatchOps(account, { currencyCode: 'EUR' }, null),
-    ).toThrow('Account currency cannot be changed after creation');
+    ).toThrow('Account currency changes require a validated update plan');
   });
+
+  it.each(['active', 'deleted lines', 'deleted journal', 'planned'])(
+    'rejects currency changes with %s transaction history',
+    async state => {
+      const account = await accountWriteRepository.create({
+        name: 'Checking',
+        accountType: AccountType.ASSET,
+        currencyCode: 'USD',
+        workplaceId,
+      });
+      const counterparty = await accountWriteRepository.create({
+        name: 'Other',
+        accountType: AccountType.ASSET,
+        currencyCode: 'USD',
+        workplaceId,
+      });
+      const journal = await createJournalFixture(
+        {
+          currencyCode: 'USD',
+          journalDate: Date.now(),
+          status: state === 'planned' ? JournalStatus.PLANNED : JournalStatus.POSTED,
+          transactions: [
+            { accountId: account.id, amount: 10, transactionType: TransactionType.DEBIT },
+            { accountId: counterparty.id, amount: 10, transactionType: TransactionType.CREDIT },
+          ],
+        },
+        workplaceId,
+      );
+      if (state === 'deleted lines' || state === 'deleted journal') {
+        const lines = await database.collections.get<Transaction>('transactions').query().fetch();
+        await database.write(async () => {
+          await database.batch(
+            journal.prepareUpdate(record => {
+              record.deletedAt = new Date();
+            }),
+            ...(state === 'deleted lines'
+              ? lines.map(line =>
+                  line.prepareUpdate(record => {
+                    record.deletedAt = new Date();
+                  }),
+                )
+              : []),
+          );
+        });
+      }
+      expect(
+        await transactionQueryRepository.countByAccountIncludingDeleted(workplaceId, account.id),
+      ).toBe(1);
+      await expect(
+        accountWriteRepository.update(
+          account,
+          {
+            name: 'Renamed',
+            currencyCode: 'EUR',
+          },
+          workplaceId,
+        ),
+      ).rejects.toThrow('including deleted transactions');
+      expect(account.name).toBe('Checking');
+      expect(account.currencyCode).toBe('USD');
+    },
+  );
 
   it('allows unchanged currency alongside an ordinary update', async () => {
     const account = await accountWriteRepository.create({

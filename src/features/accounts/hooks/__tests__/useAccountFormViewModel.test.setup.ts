@@ -50,7 +50,12 @@ jest.mock('@/src/hooks/use-currencies', () => ({
 }));
 jest.mock('@/src/hooks/useObservable', () => ({
   useObservable: (_factory: unknown, _deps: unknown, initial: unknown) => ({
-    data: typeof initial === 'boolean' ? mockAccountFormVmState.mockIsParent : initial,
+    data:
+      initial === null
+        ? mockAccountFormVmState.mockHistoricalTransactionCount
+        : typeof initial === 'boolean'
+          ? mockAccountFormVmState.mockIsParent
+          : initial,
     isLoading: false,
   }),
 }));

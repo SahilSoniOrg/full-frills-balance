@@ -8,6 +8,8 @@ import { useUpdateRestartGuard } from './useUpdateRestartGuard';
 interface UseConfirmUnsavedChangesOptions {
   fingerprint: string;
   baselineReady: boolean;
+  /** Whether the draft contains work worth protecting with a discard prompt. */
+  shouldConfirm?: boolean;
   disabled?: boolean;
   leaveAfterSave?: (() => void) | null;
   title?: string;
@@ -16,6 +18,7 @@ interface UseConfirmUnsavedChangesOptions {
 export function useConfirmUnsavedChanges({
   fingerprint,
   baselineReady,
+  shouldConfirm = true,
   disabled = false,
   leaveAfterSave = null,
   title = 'Discard changes?',
@@ -36,7 +39,7 @@ export function useConfirmUnsavedChanges({
     return () => clearTimeout(timer);
   }, [baseline, baselineReady]);
 
-  const isDirty = baseline !== null && fingerprint !== baseline;
+  const isDirty = shouldConfirm && baseline !== null && fingerprint !== baseline;
   // Navigation prompts are disabled during persistence; restarting must remain blocked.
   useUpdateRestartGuard((isDirty || disabled) && !isLeaving && !leaveAfterSave);
 

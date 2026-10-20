@@ -8,50 +8,53 @@
 import { ImportFileContext, ImportPlugin } from '@/src/services/import/types';
 
 class ImportRegistry {
-    private plugins: Map<string, ImportPlugin> = new Map();
+  private plugins: Map<string, ImportPlugin> = new Map();
 
-    /**
-     * Register a new import plugin.
-     * Plugins are registered on app startup.
-     */
-    register(plugin: ImportPlugin): void {
-        if (this.plugins.has(plugin.id)) {
-            throw new Error(`Import plugin with id "${plugin.id}" is already registered`);
+  /**
+   * Register a new import plugin.
+   * Plugins are registered on app startup.
+   */
+  register(
+    plugin: ImportPlugin,
+    { replaceExisting = false }: { replaceExisting?: boolean } = {},
+  ): void {
+    if (this.plugins.has(plugin.id) && !replaceExisting) {
+      throw new Error(`Import plugin with id "${plugin.id}" is already registered`);
+    }
+    this.plugins.set(plugin.id, plugin);
+  }
+
+  /**
+   * Get a plugin by its ID.
+   */
+  get(id: string): ImportPlugin | undefined {
+    return this.plugins.get(id);
+  }
+
+  /**
+   * Get all registered plugins.
+   * Used by UI to render import options.
+   */
+  getAll(): ImportPlugin[] {
+    return Array.from(this.plugins.values());
+  }
+
+  /**
+   * Auto-detect the format of the given context.
+   * Returns the first plugin whose detect() returns true.
+   */
+  detect(context: ImportFileContext): ImportPlugin | undefined {
+    for (const plugin of this.plugins.values()) {
+      try {
+        if (plugin.detect(context)) {
+          return plugin;
         }
-        this.plugins.set(plugin.id, plugin);
+      } catch {
+        // Detection should not throw, but if it does, skip this plugin
+      }
     }
-
-    /**
-     * Get a plugin by its ID.
-     */
-    get(id: string): ImportPlugin | undefined {
-        return this.plugins.get(id);
-    }
-
-    /**
-     * Get all registered plugins.
-     * Used by UI to render import options.
-     */
-    getAll(): ImportPlugin[] {
-        return Array.from(this.plugins.values());
-    }
-
-    /**
-     * Auto-detect the format of the given context.
-     * Returns the first plugin whose detect() returns true.
-     */
-    detect(context: ImportFileContext): ImportPlugin | undefined {
-        for (const plugin of this.plugins.values()) {
-            try {
-                if (plugin.detect(context)) {
-                    return plugin;
-                }
-            } catch {
-                // Detection should not throw, but if it does, skip this plugin
-            }
-        }
-        return undefined;
-    }
+    return undefined;
+  }
 }
 
 export const importRegistry = new ImportRegistry();

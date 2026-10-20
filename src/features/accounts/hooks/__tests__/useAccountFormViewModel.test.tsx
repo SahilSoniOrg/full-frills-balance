@@ -1,7 +1,8 @@
 import './useAccountFormViewModel.test.setup';
 import { AppearancePickerModal } from '@/src/components/overlays/AppearancePickerModal';
 import { AccountFormView } from '@/src/features/accounts/components/AccountFormView';
-import { GlyphCarousel } from '@/src/components/forms';
+import { AccountTypeSheet } from '@/src/features/accounts/components/AccountTypeSheet';
+import { AccountSubtypeSheet } from '@/src/features/accounts/components/AccountSubtypeSheet';
 import { fireEvent, render } from '@/src/utils/test-utils';
 import { act, renderHook } from '@testing-library/react-native';
 import { AccountSubtype, AccountType } from '@/src/types/enums';
@@ -161,6 +162,41 @@ describe('account kind view model with the real draft reducer', () => {
     expect(result.current.kindSuggestionMessage).toBe('Looks like a credit card.');
   });
 
+  it('allows edit conversions across account/category types while preserving appearance and notes', () => {
+    mockAccountFormVmState.mockParams = { accountId: 'existing' };
+    mockAccountFormVmState.mockExistingAccount = {
+      id: asAccountId('existing'),
+      name: 'Savings',
+      accountType: AccountType.ASSET,
+      accountSubtype: AccountSubtype.BANK_SAVINGS,
+      currencyCode: 'USD',
+      icon: Icon.Safe,
+      color: '#7DD3A8',
+      parentAccountId: asAccountId('parent'),
+      orderNum: 0,
+    };
+    const { result } = renderHook(useAccountFormViewModel);
+    act(() => {
+      result.current.onInitialBalanceChange('100');
+      result.current.metadata.setNotes('Keep this note');
+    });
+    act(() =>
+      result.current.setAccountKind({ type: AccountType.INCOME, subtype: AccountSubtype.SALARY }),
+    );
+    expect(result.current.isCategory).toBe(true);
+    expect(result.current.parentAccountId).toBe('');
+    expect(result.current.initialBalance).toBe('');
+    expect(result.current.selectedIcon).toBe(Icon.Safe);
+    expect(result.current.selectedColor).toBe('#7DD3A8');
+    expect(result.current.metadata.notes).toBe('Keep this note');
+    act(() =>
+      result.current.setAccountKind({ type: AccountType.EQUITY, subtype: AccountSubtype.OTHER }),
+    );
+    expect(result.current.accountType).toBe(AccountType.EQUITY);
+    expect(result.current.isCategory).toBe(false);
+    expect(result.current.showInitialBalance).toBe(true);
+  });
+
   it.each([AccountType.INCOME, AccountType.EXPENSE])('keeps category behavior for %s', type => {
     mockAccountFormVmState.mockPathname = '/category-creation';
     mockAccountFormVmState.mockParams = { type };
@@ -168,7 +204,7 @@ describe('account kind view model with the real draft reducer', () => {
     act(() => result.current.setAccountName('Credit card'));
     expect(result.current.isCategory).toBe(true);
     expect(result.current.selectedIcon).toBe(
-      type === AccountType.INCOME ? Icon.Briefcase : Icon.Coffee,
+      type === AccountType.INCOME ? Icon.TrendingUp : Icon.Tag,
     );
     expect(result.current.kindSuggestionMessage).toBeNull();
     expect(result.current.carouselKinds.length).toBeGreaterThan(0);
@@ -208,17 +244,22 @@ describe('account form UI over its view model', () => {
     expect(screen.getByText('Amount owed today')).toBeTruthy();
     expect(screen.getByText('Add credit card')).toBeTruthy();
     expect(screen.getByTestId('account-statement-day')).toBeTruthy();
-    expect(screen.UNSAFE_getByType(GlyphCarousel).props.selectedKey).toBe('credit_card');
+    expect(screen.getByTestId('account-subtype')).toHaveProp(
+      'accessibilityLabel',
+      'Subtype: Credit card',
+    );
   });
 
-  it('suppresses later suggestions after a manual drag that snaps back to bank', () => {
+  it('preserves the subtype and suppresses suggestions after reselecting the current type', () => {
     const screen = render(<AccountFormHarness />);
-    fireEvent(screen.getByTestId('account-kind-list'), 'scrollBeginDrag', {
-      nativeEvent: { contentOffset: { x: 0, y: 0 } },
-    });
+    fireEvent.press(screen.getByTestId('account-type'));
+    fireEvent.press(screen.getByTestId('account-type-asset'));
     fireEvent.changeText(screen.getByTestId('hero-name-input'), 'HDFC card');
     expect(screen.queryByTestId('account-kind-suggestion')).toBeNull();
-    expect(screen.UNSAFE_getByType(GlyphCarousel).props.selectedKey).toBe('bank');
+    expect(screen.getByTestId('account-subtype')).toHaveProp(
+      'accessibilityLabel',
+      'Subtype: Bank account',
+    );
   });
 
   it('edits card metadata through day and finance sheets without losing the draft', () => {
@@ -247,9 +288,14 @@ describe('account form UI over its view model', () => {
 
   it('selects a nonstandard kind and retains loan and note values across sheets', () => {
     const screen = render(<AccountFormHarness />);
-    fireEvent.press(screen.getByTestId('account-kind-caption-action'));
-    fireEvent.press(screen.getByTestId('account-all-kinds-LIABILITY-MORTGAGE'));
-    expect(screen.UNSAFE_getByType(GlyphCarousel).props.selectedKey).toBe('liability_mortgage');
+    fireEvent.press(screen.getByTestId('account-type'));
+    fireEvent.press(screen.getByTestId('account-type-liability'));
+    fireEvent.press(screen.getByTestId('account-subtype'));
+    fireEvent.press(screen.getByTestId('account-subtype-liability-mortgage'));
+    expect(screen.getByTestId('account-subtype')).toHaveProp(
+      'accessibilityLabel',
+      'Subtype: Mortgage',
+    );
     fireEvent.press(screen.getByTestId('account-emi-day'));
     fireEvent.press(screen.getByTestId('account-emi-day-grid-1'));
     expect(screen.getByText('1st')).toBeTruthy();
@@ -268,11 +314,12 @@ describe('account form UI over its view model', () => {
     expect(screen.getByText('Shared draft note')).toBeTruthy();
   });
 
-  it('renders categories through the shared carousel and compact form rows', () => {
+  it('renders categories through separate type and subtype controls', () => {
     mockAccountFormVmState.mockPathname = '/category-creation';
     const screen = render(<AccountFormHarness />);
-    expect(screen.queryByTestId('account-kind')).toBeNull();
-    expect(screen.getByTestId('category-kind')).toBeTruthy();
+    expect(screen.queryByTestId('account-type')).toBeNull();
+    expect(screen.getByTestId('category-type')).toBeTruthy();
+    expect(screen.getByTestId('category-subtype')).toBeTruthy();
     expect(screen.getByTestId('category-note')).toBeTruthy();
     expect(screen.queryByTestId('hero-amount-input')).toBeNull();
   });
@@ -284,16 +331,13 @@ describe('category create/edit regressions', () => {
     mockAccountFormVmState.mockParams = { type };
     const screen = render(<AccountFormHarness />);
     expect(screen.queryByTestId('hero-amount-input')).toBeNull();
-    expect(screen.queryByTestId('account-kind')).toBeNull();
-    expect(screen.getByTestId('category-kind')).toBeTruthy();
-    expect(
-      screen
-        .UNSAFE_getByType(GlyphCarousel)
-        .props.items.every(
-          (kind: { type: AccountType }) =>
-            kind.type === AccountType.INCOME || kind.type === AccountType.EXPENSE,
-        ),
-    ).toBe(true);
+    expect(screen.queryByTestId('account-type')).toBeNull();
+    expect(screen.getByTestId('category-type')).toBeTruthy();
+    expect(screen.getByTestId('category-subtype')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('category-type'));
+    expect(screen.queryByTestId('account-type-asset')).toBeNull();
+    expect(screen.queryByTestId('account-type-liability')).toBeNull();
+    fireEvent.press(screen.getByTestId('account-type-close'));
     fireEvent.changeText(screen.getByTestId('hero-name-input'), 'My category');
     fireEvent.press(screen.getByTestId('category-note'));
     fireEvent.changeText(
@@ -304,12 +348,18 @@ describe('category create/edit regressions', () => {
     fireEvent.press(screen.getByTestId('category-currency'));
     fireEvent.press(screen.getByText('Euro'));
     expect(screen.getByText('EUR')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('category-kind-caption-action'));
+    fireEvent.press(screen.getByTestId('category-type'));
+    fireEvent.press(
+      screen.getByTestId(
+        type === AccountType.INCOME ? 'account-type-expense' : 'account-type-income',
+      ),
+    );
+    fireEvent.press(screen.getByTestId('category-subtype'));
     fireEvent.press(
       screen.getByTestId(
         type === AccountType.INCOME
-          ? 'account-all-kinds-EXPENSE-HOUSING'
-          : 'account-all-kinds-INCOME-SALARY',
+          ? 'account-subtype-expense-housing'
+          : 'account-subtype-income-salary',
       ),
     );
     expect(screen.getByTestId('hero-name-input').props.value).toBe('My category');
@@ -318,13 +368,17 @@ describe('category create/edit regressions', () => {
     fireEvent.press(screen.getByLabelText(`Select icon ${Icon.Bank}`));
     fireEvent.press(screen.getByText('Done'));
     expect(screen.UNSAFE_getByType(AppearancePickerModal).props.selectedIcon).toBe(Icon.Bank);
-    act(() => screen.UNSAFE_getByType(GlyphCarousel).props.onSelect('expense_food'));
+    fireEvent.press(screen.getByTestId('category-type'));
+    fireEvent.press(screen.getByTestId('account-type-expense'));
+    fireEvent.press(screen.getByTestId('category-subtype'));
+    fireEvent.press(screen.getByTestId('account-subtype-expense-food'));
     expect(screen.UNSAFE_getByType(AppearancePickerModal).props.selectedIcon).toBe(Icon.Bank);
     fireEvent.press(screen.getByTestId('submit-footer-button'));
     expect(mockOnSave).toHaveBeenCalledTimes(1);
   });
 
   it('keeps edit currency locked, category hierarchy, appearance and edit submission', () => {
+    mockAccountFormVmState.mockHistoricalTransactionCount = 1;
     mockAccountFormVmState.mockPathname = '/category-creation';
     mockAccountFormVmState.mockParams = { accountId: 'category' };
     mockAccountFormVmState.mockExistingAccount = {
@@ -349,6 +403,7 @@ describe('category create/edit regressions', () => {
     const screen = render(<AccountFormHarness />);
     expect(screen.getByTestId('hero-name-input').props.value).toBe('Salary');
     expect(screen.getByText('EUR')).toBeTruthy();
+    expect(screen.getByTestId('category-currency')).not.toBeDisabled();
     fireEvent.press(screen.getByTestId('category-currency'));
     expect(screen.getByText(AppConfig.strings.accounts.form.currencyLockedTooltip)).toBeTruthy();
     fireEvent.press(screen.getByText('Done'));
@@ -366,6 +421,37 @@ describe('category create/edit regressions', () => {
     expect(screen.queryByTestId('account-statement-day')).toBeNull();
     expect(screen.queryByTestId('hero-amount-input')).toBeNull();
   });
+
+  it('lets an existing account with no transaction history choose a different currency', () => {
+    mockAccountFormVmState.mockParams = { accountId: 'empty-account' };
+    mockAccountFormVmState.mockExistingAccount = {
+      id: asAccountId('empty-account'),
+      name: 'New account',
+      accountType: AccountType.ASSET,
+      accountSubtype: AccountSubtype.CASH,
+      currencyCode: 'USD',
+      orderNum: 0,
+    };
+    const screen = render(<AccountFormHarness />);
+    fireEvent.press(screen.getByTestId('account-currency'));
+    fireEvent.press(screen.getByText('Euro'));
+    expect(screen.getByText('EUR')).toBeTruthy();
+  });
+
+  it.each([null, 0, 1])('only unlocks edit currency after history resolves to zero (%s)', count => {
+    mockAccountFormVmState.mockParams = { accountId: 'account' };
+    mockAccountFormVmState.mockExistingAccount = {
+      id: asAccountId('account'),
+      name: 'Account',
+      accountType: AccountType.ASSET,
+      accountSubtype: AccountSubtype.CASH,
+      currencyCode: 'USD',
+      orderNum: 0,
+    };
+    mockAccountFormVmState.mockHistoricalTransactionCount = count;
+    const { result } = renderHook(useAccountFormViewModel);
+    expect(result.current.canEditCurrency).toBe(count === 0);
+  });
 });
 
 it('keeps category type/subtype locked when editing a parent category', () => {
@@ -382,12 +468,15 @@ it('keeps category type/subtype locked when editing a parent category', () => {
     orderNum: 0,
   };
   const screen = render(<AccountFormHarness />);
-  expect(
-    screen.UNSAFE_getByType(GlyphCarousel).props.items.map((kind: { key: string }) => kind.key),
-  ).toEqual(['expense_food']);
-  expect(screen.queryByTestId('category-kind-caption-action')).toBeNull();
-  act(() => screen.UNSAFE_getByType(GlyphCarousel).props.onSelect('income_salary'));
-  expect(screen.UNSAFE_getByType(GlyphCarousel).props.selectedKey).toBe('expense_food');
+  expect(screen.getByTestId('category-type')).toBeDisabled();
+  expect(screen.getByTestId('category-subtype')).toBeDisabled();
+  act(() => screen.UNSAFE_getByType(AccountTypeSheet).props.onSelect(AccountType.INCOME));
+  act(() => screen.UNSAFE_getByType(AccountSubtypeSheet).props.onSelect(AccountSubtype.HOUSING));
+  expect(screen.getByTestId('category-type')).toHaveProp(
+    'accessibilityLabel',
+    'Type: Expense category',
+  );
+  expect(screen.getByTestId('category-subtype')).toHaveProp('accessibilityLabel', 'Subtype: Food');
 });
 
 it('keeps a parent account kind locked while retaining appearance customization', () => {
@@ -403,7 +492,7 @@ it('keeps a parent account kind locked while retaining appearance customization'
     orderNum: 0,
   };
   const screen = render(<AccountFormHarness />);
-  expect(screen.UNSAFE_getByType(GlyphCarousel).props.items).toHaveLength(1);
-  expect(screen.queryByTestId('account-kind-caption-action')).toBeNull();
+  expect(screen.getByTestId('account-type')).toBeDisabled();
+  expect(screen.getByTestId('account-subtype')).toBeDisabled();
   expect(screen.getByTestId('account-appearance')).toBeTruthy();
 });

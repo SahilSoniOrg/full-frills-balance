@@ -30,6 +30,7 @@ export interface AccountFormCoreApi {
 export function useAccountFormCore(
   dispatch: AccountFormDraftDispatch,
   core: AccountFormCoreDraft,
+  isEditMode: boolean,
 ): AccountFormCoreApi {
   const {
     accountName,
@@ -49,12 +50,17 @@ export function useAccountFormCore(
   const setAccountSubtype = useCallback(
     (value: AccountSubtype) => {
       if (isCarouselAccountType(accountType)) {
-        dispatch({ type: 'SET_ACCOUNT_KIND', accountType, accountSubtype: value });
+        dispatch({
+          type: 'SET_ACCOUNT_KIND',
+          accountType,
+          accountSubtype: value,
+          applyKindDefaults: !isEditMode,
+        });
       } else {
         dispatch({ type: 'PATCH_CORE', patch: { accountSubtype: value } });
       }
     },
-    [dispatch, accountType],
+    [dispatch, accountType, isEditMode],
   );
   const setSelectedCurrency = useCallback(
     (value: string) => dispatch({ type: 'PATCH_CORE', patch: { selectedCurrency: value } }),

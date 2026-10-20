@@ -21,7 +21,6 @@ import { assertWritable } from '@/src/services/accounts/accountReferenceGraph';
 import { rebuildQueueService } from '@/src/services/RebuildQueueService';
 import type { PlainAccountMetadata } from '@/src/types/plainDtos';
 import { accountMetadataAuditState } from '@/src/utils/accountMetadataAuditState';
-import { ValidationError } from '@/src/utils/errors';
 import { isValidHexColor } from '@/src/utils/accountCategory';
 import {
   createAccountTreeSnapshot,
@@ -227,15 +226,6 @@ function assertDetailOnlyUpdate(updates: AccountDetailsUpdate): void {
   }
 }
 
-function assertCurrencyUnchanged(
-  account: Pick<Account, 'currencyCode'>,
-  updates: Pick<AccountDetailsUpdate, 'currencyCode'>,
-): void {
-  if (updates.currencyCode !== undefined && updates.currencyCode !== account.currencyCode) {
-    throw new ValidationError('Account currency cannot be changed after creation');
-  }
-}
-
 export type AccountFieldUpdateContext = {
   account: Account;
   updatePayload: Partial<AccountPersistenceInput>;
@@ -292,7 +282,6 @@ export async function prepareAccountFieldUpdate(
   assertDetailOnlyUpdate(updates);
   const account = await accountQueryRepository.find(workplaceId, accountId);
   if (!account) throw new Error('Account not found');
-  assertCurrencyUnchanged(account, updates);
 
   const beforeState = {
     name: account.name,
@@ -402,7 +391,6 @@ export async function saveAccount(
     const snapshot = createAccountTreeSnapshot(accounts);
     const account = snapshot.accountsById.get(accountId);
     if (!account) throw new Error('Account not found');
-    assertCurrencyUnchanged(account, updates);
 
     const nextType = updates.accountType ?? account.accountType;
     const parentWasSpecified = Object.prototype.hasOwnProperty.call(updates, 'parentAccountId');
@@ -516,6 +504,7 @@ export async function saveAccount(
           account,
           currentUpdates,
           plannedDetail.existingMetadata,
+          plannedDetail,
         ),
         auditRepository.prepareLog(
           {
@@ -885,40 +874,42 @@ export async function updateAccounts(
       prepareAccountFieldUpdate(workplaceId, request.accountId, request.updates),
     ),
   );
-  const planned = await Promise.all(
-    contexts.map(async context => ({
-      context,
-      update: await accountWriteRepository.planUpdate(
-        context.account,
-        context.updatePayload,
-        workplaceId,
-      ),
-    })),
-  );
-
-  await accountWriteRepository.commitMutationPlan(async () => ({
-    prepareOps: () => [
-      ...planned.flatMap(({ context, update }) =>
-        accountWriteRepository.prepareUpdateBatchOps(
+  const planned = await accountWriteRepository.commitMutationPlan(async () => {
+    const updates = await Promise.all(
+      contexts.map(async context => ({
+        context,
+        update: await accountWriteRepository.planUpdate(
           context.account,
-          update.normalizedUpdates,
-          update.existingMetadata,
-        ),
-      ),
-      ...planned.map(({ context, update }) =>
-        auditRepository.prepareLog(
-          {
-            entityType: 'account',
-            entityId: context.account.id,
-            action: AuditAction.UPDATE,
-            changes: buildAccountUpdateAuditChanges(context, update.normalizedUpdates),
-          },
+          context.updatePayload,
           workplaceId,
         ),
-      ),
-    ],
-    result: undefined,
-  }));
+      })),
+    );
+    return {
+      prepareOps: () => [
+        ...updates.flatMap(({ context, update }) =>
+          accountWriteRepository.prepareUpdateBatchOps(
+            context.account,
+            update.normalizedUpdates,
+            update.existingMetadata,
+            update,
+          ),
+        ),
+        ...updates.map(({ context, update }) =>
+          auditRepository.prepareLog(
+            {
+              entityType: 'account',
+              entityId: context.account.id,
+              action: AuditAction.UPDATE,
+              changes: buildAccountUpdateAuditChanges(context, update.normalizedUpdates),
+            },
+            workplaceId,
+          ),
+        ),
+      ],
+      result: updates,
+    };
+  });
 
   planned.forEach(({ context, update }) => {
     emitAccountUpdateSideEffects(

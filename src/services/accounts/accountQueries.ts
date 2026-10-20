@@ -2,6 +2,7 @@ import { AccountType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 
 import { accountQueryRepository, accountObserveQueries } from '@/src/data/repositories/account';
+import { transactionObserveQueries } from '@/src/data/repositories/transaction';
 import { observeWorkplaceAccounts } from '@/src/services/reactive/reactiveWorkplaceObserves';
 import { map } from 'rxjs';
 import { toPlainAccount, toPlainAccountMetadata, toPlainAccounts } from '@/src/data/models/Account';
@@ -35,6 +36,10 @@ export const accountQueries = {
 
   observeHasChildren(workplaceId: WorkplaceId, accountId: AccountId) {
     return accountObserveQueries.observeHasChildren(workplaceId, accountId);
+  },
+
+  observeTransactionCountIncludingDeleted(workplaceId: WorkplaceId, accountId: AccountId) {
+    return transactionObserveQueries.observeCountByAccountIncludingDeleted(workplaceId, accountId);
   },
 
   observeByIdsWithDeleted(workplaceId: WorkplaceId, accountIds: AccountId[]) {

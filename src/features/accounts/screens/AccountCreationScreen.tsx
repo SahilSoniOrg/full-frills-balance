@@ -10,31 +10,30 @@ import { useMemo } from 'react';
 
 export default function AccountCreationScreen() {
   const vm = useAccountFormViewModel();
-  const fingerprint = useMemo(
-    () =>
-      JSON.stringify({
-        accountName: vm.accountName,
-        accountType: vm.accountType,
-        accountSubtype: vm.accountSubtype,
-        selectedCurrency: vm.selectedCurrency,
-        selectedIcon: vm.selectedIcon,
-        selectedColor: vm.selectedColor,
-        initialBalance: vm.initialBalance,
-        parentAccountId: vm.parentAccountId,
-        metadata: {
-          statementDay: vm.metadata.statementDay,
-          dueDay: vm.metadata.dueDay,
-          creditLimitAmount: vm.metadata.creditLimitAmount,
-          apr: vm.metadata.apr,
-          emiDay: vm.metadata.emiDay,
-          loanTenureMonths: vm.metadata.loanTenureMonths,
-          minimumPaymentAmount: vm.metadata.minimumPaymentAmount,
-          minimumPaymentPercent: vm.metadata.minimumPaymentPercent,
-          payFromAccountId: vm.metadata.payFromAccountId,
-          notes: vm.metadata.notes,
-          isMinPaymentOnly: vm.metadata.isMinPaymentOnly,
-        },
-      }),
+  const formSnapshot = useMemo(
+    () => ({
+      accountName: vm.accountName,
+      accountType: vm.accountType,
+      accountSubtype: vm.accountSubtype,
+      selectedCurrency: vm.selectedCurrency,
+      selectedIcon: vm.selectedIcon,
+      selectedColor: vm.selectedColor,
+      initialBalance: vm.initialBalance,
+      parentAccountId: vm.parentAccountId,
+      metadata: {
+        statementDay: vm.metadata.statementDay,
+        dueDay: vm.metadata.dueDay,
+        creditLimitAmount: vm.metadata.creditLimitAmount,
+        apr: vm.metadata.apr,
+        emiDay: vm.metadata.emiDay,
+        loanTenureMonths: vm.metadata.loanTenureMonths,
+        minimumPaymentAmount: vm.metadata.minimumPaymentAmount,
+        minimumPaymentPercent: vm.metadata.minimumPaymentPercent,
+        payFromAccountId: vm.metadata.payFromAccountId,
+        notes: vm.metadata.notes,
+        isMinPaymentOnly: vm.metadata.isMinPaymentOnly,
+      },
+    }),
     [
       vm.accountName,
       vm.accountSubtype,
@@ -47,9 +46,17 @@ export default function AccountCreationScreen() {
       vm.selectedIcon,
     ],
   );
+  // Type, parent, currency, and appearance choices alone do not warrant a
+  // discard warning. Explicit balances (including zero) and metadata do.
+  const hasUserContent = [
+    formSnapshot.accountName,
+    formSnapshot.initialBalance,
+    ...Object.values(formSnapshot.metadata),
+  ].some(value => (typeof value === 'string' ? value.trim().length > 0 : value === true));
   const guard = useConfirmUnsavedChanges({
-    fingerprint,
+    fingerprint: JSON.stringify(formSnapshot),
     baselineReady: !vm.isLoading,
+    shouldConfirm: vm.isEditMode || hasUserContent,
     disabled: vm.isCreating,
     leaveAfterSave: vm.leaveAfterSave,
     title: vm.isCategory ? 'Discard category changes?' : 'Discard account changes?',

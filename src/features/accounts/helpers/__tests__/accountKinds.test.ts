@@ -128,7 +128,9 @@ describe('nonstandard carousel kinds', () => {
     expect(
       CATEGORY_KINDS.filter(kind => kind.subtype === AccountSubtype.TAX).map(kind => kind.key),
     ).toEqual(['expense_tax', 'income_tax']);
-    expect(getAccountCarouselKinds(AccountType.EQUITY, AccountSubtype.OPENING_BALANCE)).toEqual([]);
+    expect(getAccountCarouselKinds(AccountType.EQUITY, AccountSubtype.OPENING_BALANCE)[0].key).toBe(
+      'equity_opening_balance',
+    );
   });
   it('uses type-specific keys for the subtype shared by assets and liabilities', () => {
     expect(getAccountCarouselKinds(AccountType.ASSET, AccountSubtype.OTHER)[4].key).toBe(

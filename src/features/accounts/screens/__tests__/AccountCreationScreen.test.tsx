@@ -9,6 +9,19 @@ import { Icon } from '@/src/types/domainIcons';
 import { confirm, showErrorAlert } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { AllTheProviders } from '@/src/utils/test-utils';
+import type { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
+import { createDefaultAccountMetadataValues } from '@/src/features/accounts/services/accountMetadataDomain';
+
+type DraftFields = Pick<
+  AccountFormViewModel,
+  | 'accountType'
+  | 'accountSubtype'
+  | 'parentAccountId'
+  | 'selectedCurrency'
+  | 'selectedIcon'
+  | 'selectedColor'
+  | 'initialBalance'
+> & { metadata: ReturnType<typeof createDefaultAccountMetadataValues> };
 
 const mockCreateAccount = jest.fn();
 const mockWorkplaceId = asWorkplaceId('workplace');
@@ -18,6 +31,7 @@ const mockDispatch = jest.fn();
 const mockGetState = jest.fn();
 let mockPersistence: ReturnType<typeof useAccountPersistence>;
 let mockSetName: (name: string) => void;
+let mockPatchDraft: (patch: Partial<DraftFields>) => void;
 let mockExistingAccount: AccountFields | undefined;
 let mockHasExistingAccounts = true;
 let mockReturnTarget: string | undefined;
@@ -81,7 +95,18 @@ jest.mock('@/src/features/accounts/hooks/useAccountFormViewModel', () => ({
       typeof import('@/src/features/accounts/hooks/useAccountPersistence')
     >('@/src/features/accounts/hooks/useAccountPersistence');
     const [accountName, setAccountName] = React.useState('');
+    const [fields, setFields] = React.useState<DraftFields>(() => ({
+      accountType: AccountType.ASSET,
+      accountSubtype: AccountSubtype.BANK_CHECKING,
+      parentAccountId: asAccountId(''),
+      selectedCurrency: 'USD',
+      selectedIcon: Icon.Wallet,
+      selectedColor: '',
+      initialBalance: '',
+      metadata: createDefaultAccountMetadataValues(),
+    }));
     mockSetName = setAccountName;
+    mockPatchDraft = patch => setFields(previous => ({ ...previous, ...patch }));
     mockPersistence = usePersistence(
       mockWorkplaceId,
       mockExistingAccount,
@@ -91,10 +116,12 @@ jest.mock('@/src/features/accounts/hooks/useAccountFormViewModel', () => ({
     );
     return {
       ...mockPersistence,
+      ...fields,
       accountName,
-      isCategory: false,
+      isEditMode: Boolean(mockExistingAccount),
+      isCategory:
+        fields.accountType === AccountType.INCOME || fields.accountType === AccountType.EXPENSE,
       isLoading: false,
-      metadata: {},
       formChrome: { managementActions: [] },
       heroTitle: 'New account',
     };
@@ -140,6 +167,57 @@ beforeEach(() => {
   mockPreventRemove = false;
   mockQueuedLeave = undefined;
   mockGetState.mockReturnValue(undefined);
+});
+
+it.each([AccountType.ASSET, AccountType.EXPENSE])(
+  'does not guard a blank new %s draft after selector changes or clearing content',
+  async accountType => {
+    await renderDirtyScreen();
+    act(() => {
+      mockSetName('');
+      mockPatchDraft({
+        accountType,
+        parentAccountId: asAccountId('parent'),
+        selectedCurrency: 'EUR',
+        selectedIcon: Icon.Tag,
+        selectedColor: '#123456',
+      });
+    });
+    expect(mockPreventRemove).toBe(false);
+    act(() => mockPreventRemoveCallback({ data: { action: { type: 'GO_BACK' } } }));
+    expect(confirm.show).not.toHaveBeenCalled();
+    expect(mockDispatch).toHaveBeenCalled();
+    act(() => mockSetName('Custom name'));
+    expect(mockPreventRemove).toBe(true);
+    act(() => mockSetName('   '));
+    expect(mockPreventRemove).toBe(false);
+  },
+);
+
+it.each([
+  { initialBalance: '0' },
+  { metadata: { ...createDefaultAccountMetadataValues(), notes: 'Keep this note' } },
+  { metadata: { ...createDefaultAccountMetadataValues(), creditLimitAmount: '500' } },
+  { metadata: { ...createDefaultAccountMetadataValues(), statementDay: '15' } },
+])('protects entered content without a name: %j', async patch => {
+  await renderDirtyScreen();
+  act(() => {
+    mockSetName('');
+    mockPatchDraft(patch);
+  });
+  expect(mockPreventRemove).toBe(true);
+  act(() => mockPreventRemoveCallback({ data: { action: { type: 'GO_BACK' } } }));
+  expect(confirm.show).toHaveBeenCalledTimes(1);
+});
+
+it('still protects selector-only changes when editing an account', async () => {
+  mockExistingAccount = account;
+  renderHook(AccountCreationScreen, { wrapper: AllTheProviders });
+  await act(async () => {
+    await new Promise(resolve => setTimeout(resolve, 0));
+  });
+  act(() => mockPatchDraft({ parentAccountId: asAccountId('parent') }));
+  expect(mockPreventRemove).toBe(true);
 });
 
 it.each([true, false])(
@@ -204,6 +282,22 @@ it('allows queued navigation after an edit and balance adjustment complete', asy
   act(() => mockQueuedLeave?.());
   expect(confirm.show).not.toHaveBeenCalled();
   expect(mockLeft).toHaveBeenCalledTimes(1);
+});
+
+it('includes the selected currency when saving an existing account', async () => {
+  mockExistingAccount = account;
+  await renderDirtyScreen();
+  await act(async () =>
+    mockPersistence.handleSave({
+      payload: { ...payload, selectedCurrency: 'EUR' },
+    }),
+  );
+  expect(mockSaveAccount).toHaveBeenCalledWith(
+    account,
+    expect.objectContaining({
+      currencyCode: 'EUR',
+    }),
+  );
 });
 
 it('keeps failed saves dirty and retryable', async () => {

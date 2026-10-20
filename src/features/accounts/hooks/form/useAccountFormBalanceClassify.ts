@@ -39,7 +39,7 @@ export function useAccountFormBalanceClassify(args: {
   metadataValues: AccountMetadataValues;
   balanceClassifyDraft: AccountFormBalanceClassifyDraft;
   existingMetadata: unknown;
-  balanceData: { balance: number } | null | undefined;
+  balanceData: { balance: number; accountType?: AccountType } | null | undefined;
   accounts: AccountFields[];
   handleSave: (input: AccountPersistenceSaveInput) => Promise<void>;
 }): {

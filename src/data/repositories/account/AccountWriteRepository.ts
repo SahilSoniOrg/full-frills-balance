@@ -17,6 +17,7 @@ import { accountMetadataAuditState } from '@/src/utils/accountMetadataAuditState
 import { ValidationError } from '@/src/utils/errors';
 import { Model, Q } from '@nozbe/watermelondb';
 import { accountQueryRepository } from './AccountQueryRepository';
+import { transactionQueryRepository } from '../transaction/TransactionQueryRepository';
 import type { AccountPersistenceInput } from './types';
 
 type AccountAuditContribution = Omit<AuditEntry, 'entityType' | 'entityId'>;
@@ -33,6 +34,7 @@ interface AccountMutationPlan {
   existingMetadata: AccountMetadata | null;
   audit?: AccountAuditContribution;
   commitFacts: AccountMutationCommitFacts;
+  currencyChangeAllowed: boolean;
 }
 
 export interface AccountMutationResult {
@@ -65,7 +67,7 @@ export class AccountWriteRepository {
     updates: Partial<AccountPersistenceInput>,
   ): void {
     if (updates.currencyCode !== undefined && updates.currencyCode !== account.currencyCode) {
-      throw new ValidationError('Account currency cannot be changed after creation');
+      throw new ValidationError('Account currency changes require a validated update plan');
     }
   }
 
@@ -240,7 +242,16 @@ export class AccountWriteRepository {
     if (updates.workplaceId && updates.workplaceId !== workplaceId) {
       throw new Error('Workplace mismatch in update payload');
     }
-    this.assertCurrencyUnchanged(account, updates);
+    const currencyChanged =
+      updates.currencyCode !== undefined && updates.currencyCode !== account.currencyCode;
+    if (
+      currencyChanged &&
+      (await transactionQueryRepository.countByAccountIncludingDeleted(workplaceId, account.id)) > 0
+    ) {
+      throw new ValidationError(
+        'Account currency cannot be changed after transactions have been recorded, including deleted transactions',
+      );
+    }
     if (updates.name && updates.name !== account.name) {
       await this.ensureUniqueName(updates.name, workplaceId, account.id);
     }
@@ -263,8 +274,9 @@ export class AccountWriteRepository {
       : null;
 
     const rebuildsBalance =
-      normalizedUpdates.accountType !== undefined &&
-      normalizedUpdates.accountType !== account.accountType;
+      currencyChanged ||
+      (normalizedUpdates.accountType !== undefined &&
+        normalizedUpdates.accountType !== account.accountType);
 
     return {
       workplaceId,
@@ -272,6 +284,7 @@ export class AccountWriteRepository {
       normalizedUpdates,
       existingMetadata,
       audit,
+      currencyChangeAllowed: currencyChanged,
       commitFacts: {
         balanceRebuildAccountIds: rebuildsBalance ? [account.id] : [],
       },
@@ -286,8 +299,17 @@ export class AccountWriteRepository {
     account: Account,
     updates: Partial<AccountPersistenceInput>,
     existingMetadata: AccountMetadata | null,
+    validatedPlan?: AccountMutationPlan,
   ): Model[] {
-    this.assertCurrencyUnchanged(account, updates);
+    // Currency authorization comes from planUpdate in this same writer, after
+    // checking the complete transaction history. Unplanned batch writes stay locked.
+    if (
+      !validatedPlan?.currencyChangeAllowed ||
+      validatedPlan.account !== account ||
+      validatedPlan.normalizedUpdates.currencyCode !== updates.currencyCode
+    ) {
+      this.assertCurrencyUnchanged(account, updates);
+    }
     const batchOps: Model[] = [];
     const hasRowUpdates = Object.keys(updates).some(key => key !== 'metadata');
 
@@ -419,9 +441,8 @@ export class AccountWriteRepository {
       ) => void | Promise<void>;
     } = {},
   ): Promise<AccountMutationResult> {
-    const plan = await this.planUpdate(account, updates, workplaceId, options.audit);
-
     return this.commitMutationPlan(async () => {
+      const plan = await this.planUpdate(account, updates, workplaceId, options.audit);
       let currentAccount = plan.account;
       let currentMetadata = plan.existingMetadata;
       if (options.extraOps || options.validateCurrent) {
@@ -434,7 +455,12 @@ export class AccountWriteRepository {
 
       return {
         prepareOps: () => [
-          ...this.prepareUpdateBatchOps(currentAccount, plan.normalizedUpdates, currentMetadata),
+          ...this.prepareUpdateBatchOps(
+            currentAccount,
+            plan.normalizedUpdates,
+            currentMetadata,
+            plan,
+          ),
           ...(plan.audit
             ? [
                 auditRepository.prepareLog(

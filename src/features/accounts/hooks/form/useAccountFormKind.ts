@@ -60,9 +60,10 @@ export function useAccountFormKind(args: {
         type: 'SET_ACCOUNT_KIND',
         accountType: value.type,
         accountSubtype: value.subtype,
+        applyKindDefaults: !isEditMode,
       });
     },
-    [dispatch, canChangeKind],
+    [dispatch, canChangeKind, isEditMode],
   );
   const acceptKindSuggestion = useCallback(() => {
     if (kindSuggestion) setAccountKind(kindSuggestion);

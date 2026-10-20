@@ -19,13 +19,13 @@ describe('accountFormService', () => {
       );
       expect(defaults.accountType).toBe(AccountType.ASSET);
       expect(defaults.accountSubtype).toBe(AccountSubtype.BANK_CHECKING);
-      expect(defaults.selectedIcon).toBe(Icon.Bank);
+      expect(defaults.selectedIcon).toBe(Icon.Wallet);
       expect(defaults.kindTouched).toBe(false);
     });
 
     it.each([
-      ['asset', 'BANK_SAVINGS', AccountSubtype.BANK_SAVINGS, Icon.Safe],
-      ['liability', 'loan', AccountSubtype.LOAN, Icon.Bank],
+      ['asset', 'BANK_SAVINGS', AccountSubtype.BANK_SAVINGS, Icon.Wallet],
+      ['liability', 'loan', AccountSubtype.LOAN, Icon.CreditCard],
     ])('accepts a valid %s/%s route pair', (typeParam, subtypeParam, subtype, icon) => {
       const defaults = resolveAccountFormDefaults(
         { pathname: '/account-creation', typeParam, subtypeParam },
@@ -55,7 +55,7 @@ describe('accountFormService', () => {
       );
       expect(defaults.accountSubtype).toBe(subtype);
       expect(defaults.selectedIcon).toBe(
-        typeParam === AccountType.INCOME ? Icon.Briefcase : Icon.Coffee,
+        typeParam === AccountType.INCOME ? Icon.TrendingUp : Icon.Tag,
       );
       expect(defaults.selectedCurrency).toBe(workplaceCurrency);
     });
@@ -200,6 +200,34 @@ describe('accountFormService', () => {
       expect(result.payload.initialBalance).toBe('');
       expect(result.payload.balanceData).toBeUndefined();
       expect(result.payload.metadata).toBeUndefined();
+    });
+
+    it.each([
+      [AccountType.ASSET, AccountType.LIABILITY, -100],
+      [AccountType.LIABILITY, AccountType.ASSET, -100],
+      [AccountType.EXPENSE, AccountType.EQUITY, -100],
+      [AccountType.INCOME, AccountType.ASSET, -100],
+      [AccountType.LIABILITY, AccountType.EQUITY, 100],
+      [AccountType.ASSET, AccountType.ASSET, 100],
+    ])('compares a %s to %s conversion against its new signed balance', (from, to, balance) => {
+      const result = buildAccountSavePayload({
+        accountName: 'Converted account',
+        accountType: to,
+        accountSubtype: AccountSubtype.OTHER,
+        selectedCurrency: 'USD',
+        selectedIcon: Icon.Wallet,
+        selectedColor: '',
+        initialBalance: '100',
+        parentAccountId: EMPTY_ACCOUNT_ID,
+        metadataValues: baseMetadata,
+        hasExistingMetadata: false,
+        balanceData: { balance: 100, accountType: from },
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.payload.balanceData?.balance).toBe(balance);
+      expect(result.payload.initialBalance).toBe('100');
     });
 
     it('builds payload for category converted to liability account', () => {

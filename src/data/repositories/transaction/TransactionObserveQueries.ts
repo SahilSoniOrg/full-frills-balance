@@ -61,6 +61,16 @@ export class TransactionObserveQueries {
     return this.transactions.query(...buildActiveClauses(workplaceId)).observeCount(shouldThrottle);
   }
 
+  /** Deliberately includes deleted lines and every journal status. */
+  observeCountByAccountIncludingDeleted(
+    workplaceId: WorkplaceId,
+    accountId: AccountId,
+  ): Observable<number> {
+    return this.transactions
+      .query(Q.where('workplace_id', workplaceId), Q.where('account_id', accountId))
+      .observeCount(false);
+  }
+
   observeActiveWithColumns(workplaceId: WorkplaceId, columns: string[]): Observable<Transaction[]> {
     return this.transactions.query(...buildActiveClauses(workplaceId)).observeWithColumns(columns);
   }

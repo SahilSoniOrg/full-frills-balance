@@ -7,6 +7,7 @@ export const mockAccountFormVmState = {
   mockExistingAccount: null as AccountFields | null,
   mockAccounts: [] as AccountFields[],
   mockIsParent: false,
+  mockHistoricalTransactionCount: 0 as number | null,
   mockPathname: '/account-creation',
 };
 
@@ -21,6 +22,7 @@ export function resetAccountFormViewModelTestState(): void {
   mockAccountFormVmState.mockExistingAccount = null;
   mockAccountFormVmState.mockAccounts = [];
   mockAccountFormVmState.mockIsParent = false;
+  mockAccountFormVmState.mockHistoricalTransactionCount = 0;
   mockOnSave.mockClear();
   mockAccountFormVmState.mockPathname = '/account-creation';
 }

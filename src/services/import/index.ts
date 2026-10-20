@@ -15,11 +15,11 @@ import { ivyPlugin } from '@/src/services/import/plugins/ivy-plugin';
 import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
 import { importRegistry } from '@/src/services/import/registry';
 
-// Register all plugins
-importRegistry.register(nativePlugin);
-importRegistry.register(ivyPlugin);
-importRegistry.register(cashewPlugin);
-importRegistry.register(csvPlugin);
+// Fast Refresh can re-evaluate this entry point while preserving the registry.
+// Refresh built-ins in development; production still rejects duplicate IDs.
+for (const plugin of [nativePlugin, ivyPlugin, cashewPlugin, csvPlugin]) {
+  importRegistry.register(plugin, { replaceExisting: __DEV__ });
+}
 
 // Re-export public API
 export {

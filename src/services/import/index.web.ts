@@ -9,9 +9,10 @@ import { ivyPlugin } from '@/src/services/import/plugins/ivy-plugin';
 import { nativePlugin } from '@/src/services/import/plugins/native-plugin';
 import { importRegistry } from '@/src/services/import/registry';
 
-importRegistry.register(nativePlugin);
-importRegistry.register(ivyPlugin);
-importRegistry.register(csvPlugin);
+// Match native Fast Refresh behavior without weakening production collision checks.
+for (const plugin of [nativePlugin, ivyPlugin, csvPlugin]) {
+  importRegistry.register(plugin, { replaceExisting: __DEV__ });
+}
 
 export {
   decodeContent,
