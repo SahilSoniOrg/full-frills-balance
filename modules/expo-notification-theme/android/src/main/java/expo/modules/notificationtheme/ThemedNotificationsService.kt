@@ -2,6 +2,7 @@ package expo.modules.notificationtheme
 
 import android.app.Notification as AndroidNotification
 import android.content.Context
+import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 import expo.modules.notifications.notifications.model.Notification
@@ -46,24 +47,68 @@ internal class ThemedPresentationDelegate(context: Context) : ExpoPresentationDe
       "income" -> R.color.ffb_notification_income_ink
       else -> R.color.ffb_notification_brand_ink
     })
+    val suffix = when (tone) {
+      "expense" -> " spent"
+      "income" -> " received"
+      else -> ""
+    }
+    val title = content.title.orEmpty()
+    val separateAmount = detailedSms && suffix.isNotEmpty() && title.endsWith(suffix)
+    val body = content.text.orEmpty()
+    val displayBody = if (detailedSms) {
+      body.removeSuffix("Tap to review and log.").trimEnd()
+    } else {
+      body
+    }
     val compact = RemoteViews(context.packageName, R.layout.ffb_notification_compact)
     val expanded = RemoteViews(context.packageName, R.layout.ffb_notification_expanded)
     for (layout in listOf(compact, expanded)) {
       layout.setInt(R.id.ffb_notification_panel, "setBackgroundResource", panel)
       layout.setImageViewResource(R.id.ffb_notification_icon, icon)
       layout.setTextViewText(R.id.ffb_notification_title, content.title)
-      layout.setTextViewText(R.id.ffb_notification_body, content.text)
+      layout.setTextViewText(R.id.ffb_notification_body, displayBody)
+      if (displayBody.isEmpty()) {
+        layout.setViewVisibility(R.id.ffb_notification_body, View.GONE)
+      }
     }
+    expanded.setTextViewText(
+      R.id.ffb_notification_title,
+      if (separateAmount) title.removeSuffix(suffix) else title
+    )
+    expanded.setTextViewTextSize(
+      R.id.ffb_notification_title, TypedValue.COMPLEX_UNIT_SP,
+      if (separateAmount) 28f else 20f
+    )
+    expanded.setViewVisibility(
+      R.id.ffb_notification_heading,
+      if (separateAmount) View.VISIBLE else View.GONE
+    )
+    expanded.setTextViewText(
+      R.id.ffb_notification_direction,
+      context.getString(if (tone == "expense") R.string.ffb_notification_spent else R.string.ffb_notification_received)
+    )
+    expanded.setTextColor(R.id.ffb_notification_direction, accent)
     if (context.resources.configuration.fontScale > 1.3f) {
       compact.setViewVisibility(R.id.ffb_notification_body, View.GONE)
     }
 
-    return AndroidNotification.Builder.recoverBuilder(context, original)
+    val builder = AndroidNotification.Builder.recoverBuilder(context, original)
+      .setSmallIcon(R.drawable.ffb_notification_small_icon)
       .setColor(accent)
       .setStyle(AndroidNotification.DecoratedCustomViewStyle())
       .setCustomContentView(compact)
       .setCustomBigContentView(expanded)
       .setCustomHeadsUpContentView(compact)
-      .build()
+    if (type == "sms_transaction_needs_review" && original.contentIntent != null && original.actions.isNullOrEmpty()) {
+      val actionLabel = if (data?.optBoolean("grouped") == true) {
+        R.string.ffb_notification_open_inbox
+      } else {
+        R.string.ffb_notification_review
+      }
+      builder.addAction(
+        AndroidNotification.Action.Builder(null, context.getString(actionLabel), original.contentIntent).build()
+      )
+    }
+    return builder.build()
   }
 }

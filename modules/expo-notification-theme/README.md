@@ -6,6 +6,8 @@ The module registers a notification-event receiver with higher priority than Exp
 
 Both collapsed and expanded content have a tinted panel. Detailed spending reviews use coral; income reviews use mint. Generic reviews, grouped notifications, reminders, and tests use the neutral brand mint. Light and dark resources follow Android's system appearance. At larger font sizes the collapsed view hides its secondary line; expanding shows the body.
 
+Expanded detailed reviews show a small direction heading, a separate amount, and the merchant/account summary. A native review action replaces the inline tap instruction, using the original notification tap intent. If a title does not use the known amount-and-direction wording, it remains intact. The original title and body are retained in Expo's notification metadata. A dedicated monochrome chart icon replaces the launcher image in the system notification header.
+
 `notificationTone` is added to the Android routing metadata only when transaction details are allowed and the alert is ungrouped. The native renderer independently checks those flags before selecting an expense or income appearance. Amounts, merchant names, and account names remain in the existing display text rather than being duplicated into routing data.
 
 ## Verify on an AVD or device
