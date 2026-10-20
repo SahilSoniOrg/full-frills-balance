@@ -47,6 +47,11 @@ internal class ThemedPresentationDelegate(context: Context) : ExpoPresentationDe
       "income" -> R.color.ffb_notification_income_ink
       else -> R.color.ffb_notification_brand_ink
     })
+    val panelAccent = context.getColor(when (tone) {
+      "expense" -> R.color.ffb_notification_expense_on_panel
+      "income" -> R.color.ffb_notification_income_on_panel
+      else -> R.color.ffb_notification_brand_on_panel
+    })
     val suffix = when (tone) {
       "expense" -> " spent"
       "income" -> " received"
@@ -77,7 +82,8 @@ internal class ThemedPresentationDelegate(context: Context) : ExpoPresentationDe
     )
     expanded.setTextViewTextSize(
       R.id.ffb_notification_title, TypedValue.COMPLEX_UNIT_SP,
-      if (separateAmount) 28f else 20f
+      if (separateAmount && context.resources.configuration.fontScale <= 1.3f) 32f
+      else if (separateAmount) 24f else 20f
     )
     expanded.setViewVisibility(
       R.id.ffb_notification_heading,
@@ -87,7 +93,18 @@ internal class ThemedPresentationDelegate(context: Context) : ExpoPresentationDe
       R.id.ffb_notification_direction,
       context.getString(if (tone == "expense") R.string.ffb_notification_spent else R.string.ffb_notification_received)
     )
-    expanded.setTextColor(R.id.ffb_notification_direction, accent)
+    expanded.setTextColor(R.id.ffb_notification_direction, panelAccent)
+    if (detailedSms && displayBody.isNotEmpty()) {
+      val details = displayBody.split(" · ", limit = 2)
+      expanded.setTextViewText(R.id.ffb_notification_body, details.first())
+      expanded.setTextViewTextSize(R.id.ffb_notification_body, TypedValue.COMPLEX_UNIT_SP, 16f)
+      expanded.setTextColor(R.id.ffb_notification_body, context.getColor(R.color.ffb_notification_panel_text))
+      expanded.setInt(R.id.ffb_notification_body, "setMaxLines", 1)
+      details.getOrNull(1)?.takeIf { it.isNotEmpty() }?.let { metadata ->
+        expanded.setTextViewText(R.id.ffb_notification_metadata, metadata)
+        expanded.setViewVisibility(R.id.ffb_notification_metadata, View.VISIBLE)
+      }
+    }
     if (context.resources.configuration.fontScale > 1.3f) {
       compact.setViewVisibility(R.id.ffb_notification_body, View.GONE)
     }
