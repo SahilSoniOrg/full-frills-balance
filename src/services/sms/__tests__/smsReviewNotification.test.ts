@@ -18,24 +18,27 @@ const parsed = (overrides: Partial<ParsedTransaction> = {}): ParsedTransaction =
 
 describe('formatSmsReviewNotification', () => {
   it.each([
-    [{ title: '₹100 spent', body: 'Tap to review and log.' }, parsed(), undefined],
+    [{ title: '₹100 spent', body: 'Category needed\nTap to review and log.' }, parsed(), undefined],
     [
-      { title: '₹200 spent', body: 'Cafe Noon · HDFC Bank · Food\nTap to review and log.' },
+      {
+        title: '₹200 spent',
+        body: 'Cafe Noon\nAccount: HDFC Bank\nSuggested: Food\nTap to review and log.',
+      },
       parsed({ amount: 200, merchant: 'Cafe Noon', accountSource: 'parser hint' }),
       { sourceAccountName: 'HDFC Bank', categoryName: 'Food' },
     ],
     [
-      { title: '₹100 spent', body: 'HDFC Bank\nTap to review and log.' },
+      { title: '₹100 spent', body: 'Account: HDFC Bank\nCategory needed\nTap to review and log.' },
       parsed({ accountSource: 'HDFC Bank' }),
       undefined,
     ],
     [
-      { title: '$12.5 received', body: 'Tap to review and log.' },
+      { title: '$12.5 received', body: 'Category needed\nTap to review and log.' },
       parsed({ amount: 12.5, currencyCode: 'USD', type: 'credit' }),
       undefined,
     ],
     [
-      { title: 'Transaction to review', body: 'Tap to review and log.' },
+      { title: 'Transaction to review', body: 'Category needed\nTap to review and log.' },
       parsed({ amount: Number.NaN, merchant: '  ', accountSource: '' }),
       { sourceAccountName: '\n\t', categoryName: '' },
     ],
@@ -46,7 +49,7 @@ describe('formatSmsReviewNotification', () => {
   it('formats amounts without a parsed currency in the fallback currency, not USD', () => {
     expect(formatSmsReviewNotification(parsed({ currencyCode: undefined }), 'INR')).toEqual({
       title: '₹100 spent',
-      body: 'Tap to review and log.',
+      body: 'Category needed\nTap to review and log.',
     });
   });
 
@@ -55,7 +58,7 @@ describe('formatSmsReviewNotification', () => {
     const summary = formatSmsReviewNotification(parsed({ merchant: unsafeMerchant }), 'INR');
     expect(summary).toEqual({
       title: '₹100 spent',
-      body: `${'A'.repeat(60)}\nTap to review and log.`,
+      body: `${'A'.repeat(60)}\nCategory needed\nTap to review and log.`,
     });
     for (const privateValue of [
       'PRIVATE SMS BODY',

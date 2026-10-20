@@ -4,11 +4,12 @@
   <color name="ffb_notification_brand_ink">#7DD3A8</color>
   <color name="ffb_notification_income_ink">#7DD3A8</color>
   <color name="ffb_notification_expense_ink">#FFAD98</color>
-  <color name="ffb_notification_neutral_fill">#20362E</color>
-  <color name="ffb_notification_income_fill">#16372C</color>
-  <color name="ffb_notification_expense_fill">#492B28</color>
+  <color name="ffb_notification_neutral_fill">#343A40</color>
+  <color name="ffb_notification_income_fill">#1F3B30</color>
+  <color name="ffb_notification_expense_fill">#462D29</color>
   <color name="ffb_notification_panel_text">#F0ECE4</color>
   <color name="ffb_notification_panel_secondary">#D0DAD3</color>
+  <color name="ffb_notification_panel_line">#485650</color>
   <color name="ffb_notification_income_on_panel">#ADF0CC</color>
   <color name="ffb_notification_expense_on_panel">#FFD0BA</color>
   <color name="ffb_notification_brand_on_panel">#ADF0CC</color>

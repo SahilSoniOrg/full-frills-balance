@@ -30,10 +30,14 @@ export function formatSmsReviewNotification(
   const merchant = sanitizeDetail(parsed.merchant);
   const source = sanitizeDetail(details.sourceAccountName || parsed.accountSource);
   const category = sanitizeDetail(details.categoryName);
-  const parts = [merchant, source, category].filter((part): part is string => Boolean(part));
+  const parts = [
+    merchant ? (parsed.type === 'credit' ? `From ${merchant}` : merchant) : undefined,
+    source ? `Account: ${source}` : undefined,
+    category ? `Suggested: ${category}` : 'Category needed',
+  ].filter((part): part is string => Boolean(part));
 
   return {
     title,
-    body: [...(parts.length ? [parts.join(' · ')] : []), 'Tap to review and log.'].join('\n'),
+    body: [...parts, 'Tap to review and log.'].join('\n'),
   };
 }

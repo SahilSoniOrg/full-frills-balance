@@ -16,6 +16,7 @@ import { inboxDirectionToParsedType } from '@/src/services/sms/inboxDirection';
 import { formatSmsReviewNotification } from './smsReviewNotification';
 import { merge, auditTime } from 'rxjs';
 import { logger } from '@/src/utils/logger';
+import { canQuickLogSms, smsReviewRevision } from './smsNotificationActions';
 
 const actionable = (record: InboxRecordSnapshot | null) =>
   !!record &&
@@ -148,6 +149,7 @@ export class SmsReviewNotificationService {
         ? `${group.length} ${group.length === 1 ? 'transaction' : 'transactions'} to review`
         : 'Transaction to review';
       let tone: NotificationTone = 'neutral';
+      let review: { canQuickLog: boolean; revision: string; needsCategory: boolean } | undefined;
       let body = grouped
         ? 'Open your SMS inbox to review and log.'
         : 'Open the app to review and log this SMS transaction.';
@@ -165,6 +167,11 @@ export class SmsReviewNotificationService {
           ),
         );
         const names = new Map(accounts.map(account => [account.id, account.name]));
+        review = {
+          canQuickLog: canQuickLogSms(latest.record, accounts),
+          revision: smsReviewRevision(latest.record, accounts),
+          needsCategory: !hints.categoryAccountId || !names.has(hints.categoryAccountId),
+        };
         const sourceAccountCurrency = accounts.find(
           account => account.id === hints.sourceAccountId,
         )?.currencyCode;
@@ -198,6 +205,7 @@ export class SmsReviewNotificationService {
         },
         title,
         tone,
+        review,
       );
       if (delivered)
         await deviceSmsInboxRepository.finishNotifications(

@@ -2,6 +2,7 @@ package expo.modules.notificationtheme
 
 import android.app.Notification as AndroidNotification
 import android.content.Context
+import android.os.Build
 import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
@@ -65,6 +66,18 @@ internal class ThemedPresentationDelegate(context: Context) : ExpoPresentationDe
     } else {
       body
     }
+    val lines = displayBody.lines().filter { it.isNotBlank() }
+    val structured = lines.any { it.startsWith("Account: ") || it.startsWith("Suggested: ") || it == "Category needed" }
+    val primary = if (structured) lines.firstOrNull {
+      !it.startsWith("Account: ") && !it.startsWith("Suggested: ") && it != "Category needed"
+    }.orEmpty() else displayBody.substringBefore(" · ")
+    val metadata = if (structured) lines.firstOrNull { it.startsWith("Account: ") }?.removePrefix("Account: ").orEmpty()
+      else displayBody.substringAfter(" · ", "")
+    val suggestion = if (structured) lines.firstOrNull { it.startsWith("Suggested: ") || it == "Category needed" }.orEmpty() else ""
+    val status = context.getString(
+      if (data?.optBoolean("reviewNeedsCategory") == true) R.string.ffb_notification_category_needed
+      else R.string.ffb_notification_needs_review
+    )
     val compact = RemoteViews(context.packageName, R.layout.ffb_notification_compact)
     val expanded = RemoteViews(context.packageName, R.layout.ffb_notification_expanded)
     for (layout in listOf(compact, expanded)) {
@@ -94,19 +107,30 @@ internal class ThemedPresentationDelegate(context: Context) : ExpoPresentationDe
       context.getString(if (tone == "expense") R.string.ffb_notification_spent else R.string.ffb_notification_received)
     )
     expanded.setTextColor(R.id.ffb_notification_direction, panelAccent)
-    if (detailedSms && displayBody.isNotEmpty()) {
-      val details = displayBody.split(" · ", limit = 2)
-      expanded.setTextViewText(R.id.ffb_notification_body, details.first())
+    if (detailedSms) {
+      compact.setTextViewText(R.id.ffb_notification_body, listOf(primary, status).filter { it.isNotEmpty() }.joinToString(" · "))
+      compact.setViewVisibility(R.id.ffb_notification_body, View.VISIBLE)
+      expanded.setTextViewText(R.id.ffb_notification_status, status)
+      expanded.setViewVisibility(R.id.ffb_notification_status, if (separateAmount) View.VISIBLE else View.GONE)
+      expanded.setTextViewText(R.id.ffb_notification_body, primary)
+      expanded.setViewVisibility(R.id.ffb_notification_body, if (primary.isEmpty()) View.GONE else View.VISIBLE)
       expanded.setTextViewTextSize(R.id.ffb_notification_body, TypedValue.COMPLEX_UNIT_SP, 16f)
       expanded.setTextColor(R.id.ffb_notification_body, context.getColor(R.color.ffb_notification_panel_text))
       expanded.setInt(R.id.ffb_notification_body, "setMaxLines", 1)
-      details.getOrNull(1)?.takeIf { it.isNotEmpty() }?.let { metadata ->
+      if (metadata.isNotEmpty()) {
         expanded.setTextViewText(R.id.ffb_notification_metadata, metadata)
         expanded.setViewVisibility(R.id.ffb_notification_metadata, View.VISIBLE)
+      }
+      if (suggestion.isNotEmpty()) {
+        expanded.setTextViewText(R.id.ffb_notification_suggestion, suggestion)
+        expanded.setViewVisibility(R.id.ffb_notification_suggestion, View.VISIBLE)
+        expanded.setViewVisibility(R.id.ffb_notification_divider, View.VISIBLE)
       }
     }
     if (context.resources.configuration.fontScale > 1.3f) {
       compact.setViewVisibility(R.id.ffb_notification_body, View.GONE)
+      expanded.setViewVisibility(R.id.ffb_notification_status, View.GONE)
+      if (separateAmount) expanded.setInt(R.id.ffb_notification_title, "setMaxLines", 1)
     }
 
     val builder = AndroidNotification.Builder.recoverBuilder(context, original)
@@ -116,15 +140,30 @@ internal class ThemedPresentationDelegate(context: Context) : ExpoPresentationDe
       .setCustomContentView(compact)
       .setCustomBigContentView(expanded)
       .setCustomHeadsUpContentView(compact)
-    if (type == "sms_transaction_needs_review" && original.contentIntent != null && original.actions.isNullOrEmpty()) {
-      val actionLabel = if (data?.optBoolean("grouped") == true) {
-        R.string.ffb_notification_open_inbox
-      } else {
-        R.string.ffb_notification_review
+    if (type == "sms_transaction_needs_review") {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        original.actions?.let { actions ->
+          builder.setActions(*actions.map { action ->
+            AndroidNotification.Action.Builder(action).setAuthenticationRequired(true).build()
+          }.toTypedArray())
+        }
       }
-      builder.addAction(
-        AndroidNotification.Action.Builder(null, context.getString(actionLabel), original.contentIntent).build()
-      )
+      val publicBuilder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        AndroidNotification.Builder(context, original.channelId)
+      } else {
+        AndroidNotification.Builder(context)
+      }
+      val publicVersion = publicBuilder
+        .setSmallIcon(R.drawable.ffb_notification_small_icon)
+        .setColor(context.getColor(R.color.ffb_notification_brand_ink))
+        .setContentTitle(context.getString(R.string.ffb_notification_private_title))
+        .setContentText(context.getString(R.string.ffb_notification_private_body))
+        .setContentIntent(original.contentIntent)
+        .setAutoCancel(true)
+        .build()
+      builder.setVisibility(AndroidNotification.VISIBILITY_PRIVATE)
+        .setPublicVersion(publicVersion)
+        .setOnlyAlertOnce(true)
     }
     return builder.build()
   }

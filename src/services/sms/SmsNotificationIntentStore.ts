@@ -4,6 +4,7 @@ import { workplaceRepository } from '@/src/data/repositories/WorkplaceRepository
 import type { WorkplaceId } from '@/src/types/ids';
 import { storage } from '@/src/utils/storage';
 import { safeParseJSON } from '@/src/utils/serialization';
+import { SMS_LOG_ACTION, SMS_IGNORE_ACTION } from './smsNotificationActions';
 
 const PENDING_KEY = 'sms_pending_notification_intent';
 const HANDLED_KEY = 'sms_handled_notification_response';
@@ -13,6 +14,8 @@ export interface PendingSmsNotificationIntent {
   inboxRecordId?: string;
   workplaceId?: string;
   grouped: boolean;
+  actionIdentifier?: string;
+  reviewRevision?: string;
 }
 
 /** Captures taps before launch gates mount. Contains only opaque local identities. */
@@ -29,7 +32,12 @@ export class SmsNotificationIntentStore {
   };
 
   capture(response: NotificationResponse): void {
-    if (response.actionIdentifier !== 'expo.modules.notifications.actions.DEFAULT') return;
+    if (
+      !['expo.modules.notifications.actions.DEFAULT', SMS_LOG_ACTION, SMS_IGNORE_ACTION].includes(
+        response.actionIdentifier,
+      )
+    )
+      return;
     const request = response.notification.request;
     const data = request.content.data;
     if (data?.type !== SMS_REVIEW_NOTIFICATION_TYPE) return;
@@ -43,6 +51,13 @@ export class SmsNotificationIntentStore {
       inboxRecordId: typeof data.inboxRecordId === 'string' ? data.inboxRecordId : undefined,
       workplaceId: typeof data.workplaceId === 'string' ? data.workplaceId : undefined,
       grouped: data.grouped === true,
+      ...(response.actionIdentifier !== 'expo.modules.notifications.actions.DEFAULT'
+        ? {
+            actionIdentifier: response.actionIdentifier,
+            reviewRevision:
+              typeof data.reviewRevision === 'string' ? data.reviewRevision : undefined,
+          }
+        : {}),
     };
     storage.set(PENDING_KEY, JSON.stringify(this.pending));
     this.listeners.forEach(listener => listener());

@@ -2,6 +2,7 @@ import type { NotificationResponse } from 'expo-notifications';
 import { SmsNotificationIntentStore } from '../SmsNotificationIntentStore';
 import { WorkplaceId } from '@/src/types/ids';
 import { storage } from '@/src/utils/storage';
+import { SMS_LOG_ACTION, SMS_IGNORE_ACTION } from '../smsNotificationActions';
 
 jest.mock('@/src/utils/storage', () => {
   const memory = new Map<string, string>();
@@ -80,3 +81,18 @@ it('falls back to the current shared feed when the originating workplace was del
     'current',
   );
 });
+
+it.each([SMS_LOG_ACTION, SMS_IGNORE_ACTION])(
+  'persists a cold-start %s action without financial details',
+  action => {
+    const store = new SmsNotificationIntentStore();
+    store.capture(response(100, { reviewRevision: 'opaque-revision', amount: 500 }, action));
+    const restarted = new SmsNotificationIntentStore();
+    expect(restarted.getSnapshot()).toMatchObject({
+      actionIdentifier: action,
+      reviewRevision: 'opaque-revision',
+      inboxRecordId: 'local-id',
+    });
+    expect(restarted.getSnapshot()).not.toHaveProperty('amount');
+  },
+);

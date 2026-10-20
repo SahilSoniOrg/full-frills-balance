@@ -1,6 +1,8 @@
 <resources>
   <string name="ffb_notification_spent">Spent</string>
   <string name="ffb_notification_received">Received</string>
-  <string name="ffb_notification_review">Review transaction</string>
-  <string name="ffb_notification_open_inbox">Open inbox</string>
+  <string name="ffb_notification_needs_review">Needs review</string>
+  <string name="ffb_notification_category_needed">Category needed</string>
+  <string name="ffb_notification_private_title">Transaction to review</string>
+  <string name="ffb_notification_private_body">Unlock to review securely</string>
 </resources>

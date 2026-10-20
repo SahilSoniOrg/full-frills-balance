@@ -1,6 +1,12 @@
 import { AppConfig } from '@/src/constants';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import {
+  SMS_LOG_ACTION,
+  SMS_IGNORE_ACTION,
+  SMS_REVIEW_ACTIONS_CATEGORY,
+  SMS_REVIEW_IGNORE_CATEGORY,
+} from '@/src/services/sms/smsNotificationActions';
 
 export type NotificationCadence = 'none' | 'daily' | 'weekly';
 export type NotificationTone = 'neutral' | 'expense' | 'income';
@@ -48,6 +54,7 @@ async function cancelLegacyJournalReminders(): Promise<void> {
 
 export class NotificationService {
   private channels: Promise<void> | null = null;
+  private categories: Promise<void> | null = null;
   private reminderGeneration = 0;
   private reminderQueue: Promise<void> = Promise.resolve();
   private reviewVisible = false;
@@ -131,10 +138,35 @@ export class NotificationService {
     intent: SmsReviewIntent,
     title = intent.grouped ? 'Transactions to review' : 'Transaction to review',
     tone: NotificationTone = 'neutral',
+    review?: { canQuickLog: boolean; revision: string; needsCategory: boolean },
   ): Promise<boolean> {
     if (!(await this.canDeliverSmsReview())) return false;
+    const detailedAndroid = Platform.OS === 'android' && intent.hasDetails && !intent.grouped;
+    if (detailedAndroid && review && !this.categories) {
+      const ignore = {
+        identifier: SMS_IGNORE_ACTION,
+        buttonTitle: 'Ignore',
+        options: { opensAppToForeground: true },
+      };
+      this.categories = Promise.all([
+        Notifications.setNotificationCategoryAsync(SMS_REVIEW_ACTIONS_CATEGORY, [
+          {
+            identifier: SMS_LOG_ACTION,
+            buttonTitle: 'Log transaction',
+            options: { opensAppToForeground: true },
+          },
+          ignore,
+        ]),
+        Notifications.setNotificationCategoryAsync(SMS_REVIEW_IGNORE_CATEGORY, [ignore]),
+      ])
+        .then(() => undefined)
+        .catch(error => {
+          this.categories = null;
+          throw error;
+        });
+    }
+    if (detailedAndroid && review) await this.categories;
     // A stable ID replaces an alert if delivery succeeds but saving its receipt is interrupted.
-    await Notifications.dismissNotificationAsync(identifier);
     await Notifications.scheduleNotificationAsync({
       identifier,
       content: {
@@ -142,10 +174,21 @@ export class NotificationService {
         body,
         data: {
           ...intent,
-          ...(Platform.OS === 'android' && intent.hasDetails && !intent.grouped
-            ? { notificationTone: tone }
+          ...(detailedAndroid ? { notificationTone: tone } : {}),
+          ...(detailedAndroid && review
+            ? {
+                reviewRevision: review.revision,
+                reviewNeedsCategory: review.needsCategory,
+              }
             : {}),
         },
+        ...(detailedAndroid && review
+          ? {
+              categoryIdentifier: review.canQuickLog
+                ? SMS_REVIEW_ACTIONS_CATEGORY
+                : SMS_REVIEW_IGNORE_CATEGORY,
+            }
+          : {}),
         ...(Platform.OS === 'android' ? { color: NOTIFICATION_ACCENT_COLOR } : {}),
       },
       trigger: Platform.OS === 'android' ? { channelId: SMS_REVIEW_CHANNEL } : null,

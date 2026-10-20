@@ -5,6 +5,10 @@ import {
   SMS_REVIEW_CHANNEL,
   SMS_REVIEW_NOTIFICATION_TYPE,
 } from '../NotificationService';
+import {
+  SMS_REVIEW_ACTIONS_CATEGORY,
+  SMS_REVIEW_IGNORE_CATEGORY,
+} from '@/src/services/sms/smsNotificationActions';
 
 jest.mock('expo-notifications', () => ({
   AndroidImportance: { NONE: 2, DEFAULT: 5 },
@@ -17,6 +21,7 @@ jest.mock('expo-notifications', () => ({
   requestPermissionsAsync: jest.fn(),
   scheduleNotificationAsync: jest.fn(),
   setNotificationChannelAsync: jest.fn(),
+  setNotificationCategoryAsync: jest.fn().mockResolvedValue({}),
   getNotificationChannelAsync: jest.fn().mockResolvedValue({ importance: 5 }),
   setNotificationHandler: jest.fn(),
 }));
@@ -111,6 +116,7 @@ it('uses a stable local identity and puts the Android channel in the trigger', a
       trigger: { channelId: SMS_REVIEW_CHANNEL },
     });
     const data = schedule.mock.calls[0][0].content?.data;
+    expect(Notifications.dismissNotificationAsync).not.toHaveBeenCalled();
     expect(data).not.toHaveProperty('sender');
     expect(data).not.toHaveProperty('rawBody');
     expect(data).not.toHaveProperty('amount');
@@ -181,6 +187,42 @@ it('marks the settings test so Android renders it with the app theme', async () 
     }),
   );
 });
+
+it.each([
+  [true, false, true, SMS_REVIEW_ACTIONS_CATEGORY],
+  [true, false, false, SMS_REVIEW_IGNORE_CATEGORY],
+  [false, false, true, undefined],
+  [true, true, true, undefined],
+] as const)(
+  'attaches only safe Android actions (%s, %s, %s)',
+  async (hasDetails, grouped, canQuickLog, category) => {
+    const os = Platform.OS;
+    Object.defineProperty(Platform, 'OS', { value: 'android', configurable: true });
+    try {
+      await new NotificationService().deliverSmsReview(
+        'sms-review:one',
+        'Review',
+        { ...intent, hasDetails, grouped },
+        'Review',
+        'expense',
+        { canQuickLog, revision: 'opaque', needsCategory: !canQuickLog },
+      );
+      const content = schedule.mock.calls[0][0].content;
+      expect(content?.categoryIdentifier).toBe(category);
+      expect(content?.data?.reviewRevision).toBe(category ? 'opaque' : undefined);
+      if (category)
+        expect(Notifications.setNotificationCategoryAsync).toHaveBeenCalledWith(
+          SMS_REVIEW_ACTIONS_CATEGORY,
+          expect.arrayContaining([
+            expect.objectContaining({ options: { opensAppToForeground: true } }),
+          ]),
+        );
+      else expect(Notifications.setNotificationCategoryAsync).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(Platform, 'OS', { value: os, configurable: true });
+    }
+  },
+);
 
 it('removes reminders with the old title when rescheduling', async () => {
   jest.mocked(Notifications.getAllScheduledNotificationsAsync).mockResolvedValue([
