@@ -187,30 +187,28 @@ function SplashOrchestrator() {
     );
 
     const hideAfterLayout = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (cancelled) {
-          return;
-        }
-        SplashScreen.hideAsync()
-          .then(() => {
-            const splashHiddenMs = Math.round(performance.now());
-            logger.info(
-              `[Splash] Splash screen hidden in ${Math.round(performance.now() - hideStart)}ms (since start: ${splashHiddenMs}ms)`,
-            );
+      if (cancelled) {
+        return;
+      }
+      SplashScreen.hideAsync()
+        .then(() => {
+          const splashHiddenMs = Math.round(performance.now());
+          logger.info(
+            `[Splash] Splash screen hidden in ${Math.round(performance.now() - hideStart)}ms (since start: ${splashHiddenMs}ms)`,
+          );
 
-            if (!hasTrackedColdStartRef.current) {
-              hasTrackedColdStartRef.current = true;
-              analytics.track('app_cold_start', {
-                splash_hidden_ms: splashHiddenMs,
-                splash_hidden_sec: Math.round(splashHiddenMs / 1000),
-                is_data_hydrated: isDataHydrated,
-              });
-            }
-          })
-          .catch(err => {
-            logger.warn('[Splash] Failed to hide splash screen', err);
-          });
-      });
+          if (!hasTrackedColdStartRef.current) {
+            hasTrackedColdStartRef.current = true;
+            analytics.track('app_cold_start', {
+              splash_hidden_ms: splashHiddenMs,
+              splash_hidden_sec: Math.round(splashHiddenMs / 1000),
+              is_data_hydrated: isDataHydrated,
+            });
+          }
+        })
+        .catch(err => {
+          logger.warn('[Splash] Failed to hide splash screen', err);
+        });
     });
 
     return () => {
