@@ -5,7 +5,12 @@ import { SubmitFooter } from '@/src/components/forms/SubmitFooter';
 import { AppCard } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Page } from '../Page';
-import { SafeAreaScope, useSafeAreaLayout, useWindowSafeAreaLayout } from '../SafeArea';
+import {
+  SafeAreaFrame,
+  SafeAreaScope,
+  useSafeAreaLayout,
+  useWindowSafeAreaLayout,
+} from '../SafeArea';
 
 let mockInsets: EdgeInsets = { top: 24, right: 0, bottom: 34, left: 0 };
 let mockKeyboardVisible = false;
@@ -55,6 +60,27 @@ describe('root safe-area ownership', () => {
     expect(JSON.parse(screen.getByTestId('probe').props.children).insets.bottom).toBe(0);
   });
 
+  it('includes safe-area padding in the initial render of a newly mounted tab', () => {
+    function Tab({ name }: { name: string }) {
+      return (
+        <SafeAreaScope consumedEdges={['bottom']}>
+          <Page key={name}>
+            <Text>{name}</Text>
+          </Page>
+        </SafeAreaScope>
+      );
+    }
+    const { rerender } = render(<Tab name="Activity" />);
+    const padding = () =>
+      StyleSheet.flatten(screen.UNSAFE_getByType(SafeAreaFrame).findAllByType(View)[0].props.style);
+    expect(padding()).toMatchObject({ paddingTop: 24, paddingBottom: 0 });
+    rerender(<Tab name="Commitments" />);
+    expect(padding()).toMatchObject({ paddingTop: 24, paddingBottom: 0 });
+    rerender(<Tab name="Accounts" />);
+    expect(padding()).toMatchObject({ paddingTop: 24, paddingBottom: 0 });
+    expect(screen.UNSAFE_queryAllByType(SafeAreaView)).toHaveLength(0);
+  });
+
   it('does not pad the same native edges again inside a nested page', () => {
     render(
       <Page>
@@ -63,7 +89,7 @@ describe('root safe-area ownership', () => {
         </Page>
       </Page>,
     );
-    const containers = screen.UNSAFE_getAllByType(SafeAreaView);
+    const containers = screen.UNSAFE_getAllByType(SafeAreaFrame);
     expect(containers[0].props.edges).toEqual(['top', 'bottom', 'left', 'right']);
     expect(containers[1].props.edges).toEqual([]);
   });

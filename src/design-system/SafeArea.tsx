@@ -1,5 +1,6 @@
 import { Spacing } from '@/src/constants/design-tokens';
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { View, type ViewProps } from 'react-native';
 import { useSafeAreaInsets, type Edge, type EdgeInsets } from 'react-native-safe-area-context';
 
 const EDGE_BITS = { top: 1, right: 2, bottom: 4, left: 8 } as const;
@@ -9,6 +10,12 @@ function createLayout(insets: EdgeInsets) {
   const bottom = insets.bottom;
   return {
     insets,
+    padding: {
+      paddingTop: insets.top,
+      paddingRight: insets.right,
+      paddingBottom: insets.bottom,
+      paddingLeft: insets.left,
+    },
     bottomSpacing: {
       formFooter: Math.max(Spacing.lg, bottom + Spacing.md),
       journalFooter: Math.max(Spacing.md, bottom + Spacing.xs),
@@ -76,5 +83,24 @@ export function SafeAreaScope({
   const available = (window ? ALL_EDGES : inherited) & ~consumed;
   return (
     <AvailableEdgesContext.Provider value={available}>{children}</AvailableEdgesContext.Provider>
+  );
+}
+
+/** Apply known root insets in the initial layout instead of waiting for native view state. */
+export function SafeAreaFrame({
+  children,
+  edges = ['top', 'bottom', 'left', 'right'],
+  enabled = true,
+  style,
+  ...props
+}: ViewProps & { edges?: readonly Edge[]; enabled?: boolean }) {
+  const layouts = useContext(LayoutsContext);
+  const inherited = useContext(AvailableEdgesContext);
+  const requested = edges.reduce((mask, edge) => mask | EDGE_BITS[edge], 0);
+  const layout = layouts[enabled ? requested & inherited : 0];
+  return (
+    <View {...props} style={[style, layout.padding]}>
+      <SafeAreaScope consumedEdges={enabled ? edges : []}>{children}</SafeAreaScope>
+    </View>
   );
 }

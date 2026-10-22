@@ -2,7 +2,8 @@ import { Spacing } from '@/src/constants/design-tokens';
 import { Page, usePageKeyboard } from '@/src/design-system/Page';
 import { render, screen } from '@/src/utils/test-utils';
 import { Keyboard, KeyboardAvoidingView, ScrollView, StyleSheet, Text } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaFrame } from '@/src/design-system/SafeArea';
 import { useKeyboard } from '@/src/design-system/Keyboard';
 
 jest.mock('@/src/design-system/Keyboard', () => ({
@@ -65,7 +66,7 @@ describe('Page safe-area ownership', () => {
       </SafeAreaProvider>,
     );
 
-    const safeArea = screen.UNSAFE_getByType(SafeAreaView);
+    const safeArea = screen.UNSAFE_getByType(SafeAreaFrame);
     expect(safeArea.props.edges).not.toContain('bottom');
     expect(screen.UNSAFE_getByType(KeyboardAvoidingView).props.behavior).toBe('padding');
   });

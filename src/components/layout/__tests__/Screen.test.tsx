@@ -2,7 +2,7 @@ import { Screen } from '@/src/components/layout/Screen';
 import { render, screen } from '@/src/utils/test-utils';
 import React from 'react';
 import { ScrollView } from 'react-native-gesture-handler';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaFrame } from '@/src/design-system/SafeArea';
 
 // Mock NavigationBar to avoid testing it here
 jest.mock('@/src/components/layout/NavigationBar', () => ({
@@ -28,7 +28,7 @@ describe('Screen', () => {
       </Screen>,
     );
 
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).toEqual(
+    expect(screen.UNSAFE_getByType(SafeAreaFrame).props.edges).toEqual(
       expect.arrayContaining(['top', 'bottom']),
     );
   });
@@ -157,7 +157,7 @@ describe('Screen', () => {
     );
   });
 
-  it('passes additional props to SafeAreaView', () => {
+  it('passes additional props through the page frame', () => {
     render(
       <Screen testID="custom-screen">
         <MockView testID="test-child" />

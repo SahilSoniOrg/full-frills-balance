@@ -2,7 +2,7 @@ import { ScreenWithChrome } from '@/src/components/layout/ScreenWithChrome';
 import type { ScreenChrome } from '@/src/components/layout/screenChrome';
 import { render, screen } from '@/src/utils/test-utils';
 import { Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaFrame } from '@/src/design-system/SafeArea';
 
 jest.mock('@/src/components/layout/NavigationBar', () => ({
   NavigationBar: () => null,
@@ -22,7 +22,7 @@ describe('ScreenWithChrome safe-area ownership', () => {
       </ScreenWithChrome>,
     );
 
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).toEqual(['top', 'bottom']);
+    expect(screen.UNSAFE_getByType(SafeAreaFrame).props.edges).toEqual(['top', 'bottom']);
   });
 
   it('leaves the bottom safe area to the tab bar on tab roots', () => {
@@ -37,7 +37,7 @@ describe('ScreenWithChrome safe-area ownership', () => {
       </ScreenWithChrome>,
     );
 
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).toEqual(['top']);
+    expect(screen.UNSAFE_getByType(SafeAreaFrame).props.edges).toEqual(['top']);
   });
 
   it('preserves explicitly configured edges', () => {
@@ -53,6 +53,6 @@ describe('ScreenWithChrome safe-area ownership', () => {
       </ScreenWithChrome>,
     );
 
-    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).toEqual(['top', 'left']);
+    expect(screen.UNSAFE_getByType(SafeAreaFrame).props.edges).toEqual(['top', 'left']);
   });
 });

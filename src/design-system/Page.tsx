@@ -1,4 +1,4 @@
-import { SafeAreaScope, useAvailableSafeAreaEdges } from './SafeArea';
+import { SafeAreaFrame, useAvailableSafeAreaEdges } from './SafeArea';
 import { Spacing, SpacingKey, Theme } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StatusBar } from 'expo-status-bar';
@@ -8,12 +8,11 @@ import {
   Platform,
   ScrollViewProps,
   StyleSheet,
-  View,
   ViewProps,
 } from 'react-native';
 import type { ScrollView } from 'react-native-gesture-handler';
 import { KeyboardAwareScrollView } from './KeyboardAwareScrollView';
-import { Edge, SafeAreaView } from 'react-native-safe-area-context';
+import type { Edge } from 'react-native-safe-area-context';
 import { Box } from './Box';
 import { useKeyboard } from './Keyboard';
 
@@ -39,24 +38,6 @@ const PageKeyboardContext = React.createContext({ isKeyboardVisible: false });
 
 /** Keyboard visibility as tracked by the nearest `keyboardAvoiding` Page; always false otherwise. */
 export const usePageKeyboard = () => React.useContext(PageKeyboardContext);
-
-interface ContainerProps extends ViewProps {
-  safeArea: boolean;
-  edges: Edge[];
-  children: React.ReactNode;
-}
-
-// Safer polymorphic container that avoids prop leakage
-const Container = ({ safeArea, edges, children, ...props }: ContainerProps) => {
-  if (safeArea) {
-    return (
-      <SafeAreaView edges={edges} {...props}>
-        {children}
-      </SafeAreaView>
-    );
-  }
-  return <View {...props}>{children}</View>;
-};
 
 export const Page = ({
   children,
@@ -139,27 +120,25 @@ export const Page = ({
 
   return (
     <PageKeyboardContext.Provider value={keyboardContext}>
-      <Container
-        safeArea={safeArea}
+      <SafeAreaFrame
+        enabled={safeArea}
         edges={containerEdges}
         style={[styles.container, { backgroundColor }]}
       >
         <StatusBar style={resolvedStatusBar as 'light' | 'dark' | 'auto'} />
-        <SafeAreaScope consumedEdges={safeArea ? containerEdges : []}>
-          {header}
-          {useKeyboardAvoidingView ? (
-            <KeyboardAvoidingView
-              behavior="padding"
-              keyboardVerticalOffset={keyboardVerticalOffset}
-              style={styles.keyboardContainer}
-            >
-              {pageBody}
-            </KeyboardAvoidingView>
-          ) : (
-            pageBody
-          )}
-        </SafeAreaScope>
-      </Container>
+        {header}
+        {useKeyboardAvoidingView ? (
+          <KeyboardAvoidingView
+            behavior="padding"
+            keyboardVerticalOffset={keyboardVerticalOffset}
+            style={styles.keyboardContainer}
+          >
+            {pageBody}
+          </KeyboardAvoidingView>
+        ) : (
+          pageBody
+        )}
+      </SafeAreaFrame>
     </PageKeyboardContext.Provider>
   );
 };
