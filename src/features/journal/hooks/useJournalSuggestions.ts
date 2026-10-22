@@ -75,11 +75,11 @@ export function useJournalSuggestions(
 
   const isCurrentRequestSettled = settledRequest?.key === requestKey;
   // Keep the last successful list on screen while a new query is in flight.
-  const suggestions = settledRequest?.suggestions ?? [];
   const error = isCurrentRequestSettled ? settledRequest.error : null;
   const isLoading = enabled && Boolean(workplaceId) && !isCurrentRequestSettled;
 
   const rankedSuggestions = useMemo(() => {
+    const suggestions = settledRequest?.suggestions ?? [];
     const query = normalizedQuery.toLowerCase();
     return [...suggestions].sort((a, b) => {
       const rank = (description: string) => {
@@ -96,7 +96,7 @@ export function useJournalSuggestions(
         b.history.lastUsedAt - a.history.lastUsedAt
       );
     });
-  }, [normalizedQuery, suggestions]);
+  }, [normalizedQuery, settledRequest?.suggestions]);
 
   const suggestionState = resolveJournalSuggestionState({
     query: searchQuery,
