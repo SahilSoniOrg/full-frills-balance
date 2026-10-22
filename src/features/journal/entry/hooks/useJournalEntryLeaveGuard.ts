@@ -1,5 +1,6 @@
 import type { JournalEntryLine } from '@/src/types/domainJournal';
 import type { BulkJournalRow } from '@/src/features/journal/entry/types/bulkJournal';
+import { isBulkJournalRowEmpty } from './bulkJournalHelpers';
 import { confirm } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useNavigation } from 'expo-router';
@@ -17,7 +18,7 @@ export type JournalDraftFingerprintInput = {
   batchRows: BulkJournalRow[];
 };
 
-/** Stable user-authored state only; generated row ids and derived batch FX fields are excluded. */
+/** Stable user-authored state only; blank batch placeholders, generated ids and derived FX are excluded. */
 export function createJournalDraftFingerprint(input: JournalDraftFingerprintInput): string {
   return JSON.stringify({
     description: input.description,
@@ -32,14 +33,16 @@ export function createJournalDraftFingerprint(input: JournalDraftFingerprintInpu
       notes: line.notes,
       exchangeRate: line.exchangeRate,
     })),
-    batchRows: input.batchRows.map(row => ({
-      description: row.description,
-      notes: row.notes,
-      amount: row.amount,
-      sourceId: row.sourceId,
-      destinationId: row.destinationId,
-      journalDate: row.journalDate,
-    })),
+    batchRows: input.batchRows
+      .filter(row => !isBulkJournalRowEmpty(row))
+      .map(row => ({
+        description: row.description,
+        notes: row.notes,
+        amount: row.amount,
+        sourceId: row.sourceId,
+        destinationId: row.destinationId,
+        journalDate: row.journalDate,
+      })),
   });
 }
 
