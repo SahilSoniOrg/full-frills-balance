@@ -35,16 +35,16 @@ describe('AccountListMetricsQueries workplace isolation', () => {
     expect(sql.match(/t\.workplace_id = \?/g)).toHaveLength(2);
     expect(sql.match(/j\.workplace_id = \?/g)).toHaveLength(2);
     expect(sql.match(/a\.workplace_id = \?/g)).toHaveLength(2);
-    expect(sql).toContain('SELECT id FROM accounts WHERE deleted_at IS NULL AND workplace_id = ?');
+    expect(sql).toContain('lb.workplace_id = ?');
     expect(args).toEqual([
+      DAY - 1,
+      DAY + 5_000,
+      DAY - 1,
+      DAY + 5_000,
       WORKPLACE_ONE,
       WORKPLACE_ONE,
       ...ACTIVE_JOURNAL_STATUSES,
       WORKPLACE_ONE,
-      DAY - 1,
-      DAY + 5_000,
-      DAY - 1,
-      DAY + 5_000,
       WORKPLACE_ONE,
       WORKPLACE_ONE,
       ...ACTIVE_JOURNAL_STATUSES,

@@ -33,28 +33,7 @@ export class AccountListMetricsQueries {
     const { increaseCase, decreaseCase } = periodFlowSQL();
 
     const sql = `
-      WITH LatestBalance AS (
-        SELECT account_id, running_balance
-        FROM (
-          SELECT 
-            t.account_id, 
-            t.running_balance,
-            ROW_NUMBER() OVER (
-              PARTITION BY t.account_id 
-              ORDER BY t.transaction_date DESC, t.created_at DESC, t.id DESC
-            ) as rn
-          FROM transactions t
-          JOIN journals j ON t.journal_id = j.id
-          WHERE t.deleted_at IS NULL
-            AND t.workplace_id = ?
-            AND j.deleted_at IS NULL
-            AND j.workplace_id = ?
-            AND j.status IN (${placeholders})
-            AND t.account_id IN (SELECT id FROM accounts WHERE deleted_at IS NULL AND workplace_id = ?)
-        )
-        WHERE rn = 1
-      ),
-      Aggregates AS (
+      WITH Aggregates AS (
         SELECT 
           t.account_id,
           SUM(CASE WHEN t.transaction_date >= ? AND t.transaction_date <= ? THEN ${increaseCase} ELSE 0 END) as periodIncrease,
@@ -87,14 +66,25 @@ export class AccountListMetricsQueries {
         IFNULL(agg.periodIncrease, 0) as periodIncrease,
         IFNULL(agg.periodDecrease, 0) as periodDecrease
       FROM accounts a
-      LEFT JOIN LatestBalance lb ON a.id = lb.account_id
+      LEFT JOIN transactions lb ON lb.id = (
+        SELECT t.id
+        FROM transactions t
+        JOIN journals j ON t.journal_id = j.id
+        WHERE t.account_id = a.id
+          AND t.workplace_id = ?
+          AND t.deleted_at IS NULL
+          AND j.workplace_id = ?
+          AND j.deleted_at IS NULL
+          AND j.status IN (${placeholders})
+        ORDER BY t.transaction_date DESC, t.created_at DESC, t.id DESC
+        LIMIT 1
+      ) AND lb.workplace_id = ?
       LEFT JOIN Aggregates agg ON a.id = agg.account_id
       WHERE a.deleted_at IS NULL AND a.workplace_id = ?
       ORDER BY a.order_num ASC
     `;
 
-    const args: RawSqlArg[] = [workplaceId, workplaceId, ...statusArgs, workplaceId];
-    args.push(
+    const args: RawSqlArg[] = [
       startOfMonth,
       endOfMonth,
       startOfMonth,
@@ -103,11 +93,11 @@ export class AccountListMetricsQueries {
       workplaceId,
       ...statusArgs,
       workplaceId,
-    );
+    ];
     if (!includeTotalCount) {
       args.push(startOfMonth, endOfMonth);
     }
-    args.push(workplaceId);
+    args.push(workplaceId, workplaceId, ...statusArgs, workplaceId, workplaceId);
 
     const results = await rawSqlExecutor.query<RawAccountRow>(sql, args);
 

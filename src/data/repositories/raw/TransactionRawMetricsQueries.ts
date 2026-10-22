@@ -138,36 +138,36 @@ export class TransactionRawMetricsQueries {
     const accountPlaceholders = accountIds.map(() => '?').join(',');
     const placeholders = activeJournalStatusSqlPlaceholders();
 
+    // SQLite keeps CROSS JOIN loop order: start with the requested accounts,
+    // then seek each latest transaction by primary key, not by workplace history.
     const sql = `
-      WITH RankedTransactions AS (
-        SELECT 
-          t.account_id AS accountId, 
-          t.running_balance AS runningBalance,
-          ROW_NUMBER() OVER (
-            PARTITION BY t.account_id 
-            ORDER BY t.transaction_date DESC, t.created_at DESC, t.id DESC
-          ) as rn
-        FROM transactions t
-        JOIN accounts a ON t.account_id = a.id
-        JOIN journals j ON t.journal_id = j.id
-        WHERE t.account_id IN (${accountPlaceholders})
-          AND t.transaction_date <= ?
-          AND t.deleted_at IS NULL
-          AND t.workplace_id = ?
-          AND a.workplace_id = ?
-          AND j.workplace_id = ?
-          AND j.deleted_at IS NULL
-          AND j.status IN (${placeholders})
-      )
-      SELECT accountId, runningBalance
-      FROM RankedTransactions
-      WHERE rn = 1
+      SELECT a.id AS accountId, latest.running_balance AS runningBalance
+      FROM accounts a
+      CROSS JOIN transactions latest
+      WHERE a.workplace_id = ?
+        AND a.id IN (${accountPlaceholders})
+        AND latest.workplace_id = ?
+        AND latest.id = (
+          SELECT t.id
+          FROM transactions t
+          JOIN journals j ON t.journal_id = j.id
+          WHERE t.account_id = a.id
+            AND t.transaction_date <= ?
+            AND t.deleted_at IS NULL
+            AND t.workplace_id = ?
+            AND j.workplace_id = ?
+            AND j.deleted_at IS NULL
+            AND j.status IN (${placeholders})
+          ORDER BY t.transaction_date DESC, t.created_at DESC, t.id DESC
+          LIMIT 1
+        )
     `;
 
     const raws = await rawSqlExecutor.query<{ accountId: AccountId; runningBalance: number }>(sql, [
-      ...accountIds,
-      cutoffDate,
       workplaceId,
+      ...accountIds,
+      workplaceId,
+      cutoffDate,
       workplaceId,
       workplaceId,
       ...ACTIVE_JOURNAL_STATUSES,
