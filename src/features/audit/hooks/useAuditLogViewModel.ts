@@ -10,7 +10,10 @@ import { mergeAuditLogsById, type AuditLogEntry } from '@/src/services/audit/aud
 import { analytics } from '@/src/services/analytics';
 import type { RevertChangeRequest } from '@/src/components/overlays/RevertChangeDialog';
 import { getOlderLogs } from '@/src/services/audit-service';
-import { exportAuditHistoryArchive } from '@/src/services/export';
+import { createAuditArchiveShareable } from '@/src/services/export';
+import { isShareCancellation } from '@/src/services/sharing/sharingCancellation';
+import { useShareable } from '@/src/hooks/useShareable';
+import { ShareFormat } from '@/src/types/sharing';
 import {
   AccountId,
   BudgetId,
@@ -25,6 +28,7 @@ import { AppNavigation } from '@/src/utils/navigation';
 import { logger } from '@/src/utils/logger';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 
 export interface AuditLogViewModel {
   logs: ReturnType<typeof useAuditLogs>['logs'];
@@ -92,11 +96,19 @@ export function useAuditLogViewModel(): AuditLogViewModel {
   const [sourceFilter, setSourceFilter] = useState<AuditSourceFilter>(null);
   const [eventFilter, setEventFilter] = useState<AuditEventFilter>('all');
   const [correlationFilter, setCorrelationFilter] = useState<string | null>(null);
-  const [isExportingHistory, setIsExportingHistory] = useState(false);
   const [archiveExportProgress, setArchiveExportProgress] = useState<{
     exportedCount: number;
     totalAtStart: number;
   } | null>(null);
+  const archiveSource = useMemo(
+    () =>
+      createAuditArchiveShareable(workplaceId, (exportedCount, totalAtStart) => {
+        setArchiveExportProgress({ exportedCount, totalAtStart });
+      }),
+    [workplaceId],
+  );
+  const archiveShare = useShareable(archiveSource, { notify: false });
+  const isExportingHistory = archiveShare.isBusy || archiveShare.isPending;
   const isFiltered = !!(entityType && entityId);
   const activeSourceFilter = isFiltered ? null : sourceFilter;
   const activeEventFilter = isFiltered || eventFilter === 'all' ? undefined : eventFilter;
@@ -293,27 +305,27 @@ export function useAuditLogViewModel(): AuditLogViewModel {
   }, []);
 
   const onExportHistory = useCallback(async () => {
-    setIsExportingHistory(true);
     setArchiveExportProgress(null);
     try {
-      await exportAuditHistoryArchive(workplaceId, (exportedCount, totalAtStart) => {
-        setArchiveExportProgress({ exportedCount, totalAtStart });
-      });
-      Alerts.toast.success(AppConfig.strings.audit.exportHistoryComplete);
+      const outcome =
+        Platform.OS === 'web'
+          ? await archiveShare.save(ShareFormat.TEXT)
+          : await archiveShare.share(ShareFormat.TEXT);
+      if (outcome?.kind === 'saved' || outcome?.kind === 'handed-off') {
+        Alerts.toast.success(AppConfig.strings.audit.exportHistoryComplete);
+      } else if (outcome?.kind === 'failed') {
+        logger.error('[AuditLog] Failed to export audit archive', outcome.error);
+        Alerts.showErrorAlert(AppConfig.strings.audit.exportHistoryFailed);
+      } else if (outcome?.kind === 'busy') {
+        Alerts.showErrorAlert(AppConfig.strings.audit.exportHistoryFailed);
+      }
     } catch (error) {
-      const wasCancelled =
-        typeof error === 'object' &&
-        error !== null &&
-        'name' in error &&
-        error.name === 'AbortError';
-      if (!wasCancelled) {
+      if (!isShareCancellation(error)) {
         logger.error('[AuditLog] Failed to export audit archive', error);
         Alerts.showErrorAlert(AppConfig.strings.audit.exportHistoryFailed);
       }
-    } finally {
-      setIsExportingHistory(false);
     }
-  }, [workplaceId]);
+  }, [archiveShare]);
 
   const onView = useCallback((type: string, id: string, name?: string) => {
     analytics.trackFeatureUsage('audit', 'view_entity', { entity_type: type });

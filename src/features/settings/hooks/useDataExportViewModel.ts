@@ -1,14 +1,14 @@
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useObservable } from '@/src/hooks/useObservable';
+import { useShareable } from '@/src/hooks/useShareable';
 import { analytics } from '@/src/services/analytics';
-import { sharingService } from '@/src/services/SharingService';
-import { exportWorkplacesToJSON, type BackupScope } from '@/src/services/export';
+import { createBackupShareable } from '@/src/services/sharing/backupShareable';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import type { WorkplaceId } from '@/src/types/ids';
 import { ShareFormat } from '@/src/types/sharing';
-import { toast } from '@/src/utils/alerts';
-import { logger } from '@/src/utils/logger';
-import { useCallback, useState } from 'react';
+import type { ShareOutcome } from '@/src/types/sharing';
+import type { BackupScope } from '@/src/services/export';
+import { useCallback, useMemo, useState } from 'react';
 
 export interface DataExportViewModel {
   workplaces: ReturnType<typeof useSortedWorkplaces>;
@@ -20,6 +20,7 @@ export interface DataExportViewModel {
   isScopePickerVisible: boolean;
   setIsScopePickerVisible: (value: boolean) => void;
   isExporting: boolean;
+  isPreparingExport: boolean;
   isNamingExport: boolean;
   setIsNamingExport: (value: boolean) => void;
   exportFilename: string;
@@ -42,70 +43,48 @@ function useSortedWorkplaces() {
 export function useDataExportViewModel(): DataExportViewModel {
   const { workplaceId } = useWorkplace();
   const workplaces = useSortedWorkplaces();
-  const [isExporting, setIsExporting] = useState(false);
   const [isNamingExport, setIsNamingExport] = useState(false);
   const [exportFilename, setExportFilename] = useState('');
-  const [exportProgress, setExportProgress] = useState(0);
-  const [exportProgressMessage, setExportProgressMessage] = useState('');
   const [backupScope, setBackupScope] = useState<BackupScope>('active');
   const [selectedWorkplaceIds, setSelectedWorkplaceIds] = useState<string[]>([workplaceId]);
   const [isScopePickerVisible, setIsScopePickerVisible] = useState(false);
+
+  const workplaceIds = useMemo<WorkplaceId[]>(() => {
+    if (backupScope === 'all') return workplaces.map(workplace => workplace.id);
+    if (backupScope === 'active') return [workplaceId];
+    return [...selectedWorkplaceIds] as WorkplaceId[];
+  }, [backupScope, selectedWorkplaceIds, workplaceId, workplaces]);
+  const sanitizedName = exportFilename
+    .trim()
+    .replace(/[^a-z0-9-_]/gi, '-')
+    .substring(0, 50);
+  const source = useMemo(() => {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    return createBackupShareable({
+      id: 'data-export',
+      title: 'Data Backup',
+      filename: sanitizedName || `balance-export-${timestamp}`,
+      workplaceIds,
+      exportScope: backupScope === 'all' ? 'all' : 'selected',
+    });
+  }, [backupScope, sanitizedName, workplaceIds]);
+  const shareable = useShareable(source, { errorMessage: 'Could not export data' });
 
   const onExport = useCallback(() => setIsNamingExport(true), []);
 
   const onConfirmExport = useCallback(async () => {
     setIsNamingExport(false);
-    setIsExporting(true);
-    setExportProgress(0);
-    setExportProgressMessage('Starting export...');
     analytics.trackFeatureUsage('data_management', 'export_initiated');
-    await new Promise(resolve => setTimeout(resolve, 200));
-    try {
-      const ids: WorkplaceId[] =
-        backupScope === 'all'
-          ? workplaces.map(workplace => workplace.id)
-          : backupScope === 'active'
-            ? [workplaceId]
-            : selectedWorkplaceIds.map(id => id as WorkplaceId);
-      const jsonData = await exportWorkplacesToJSON(
-        ids,
-        backupScope === 'all' ? 'all' : 'selected',
-        (message, progress) => {
-          setExportProgressMessage(message);
-          setExportProgress(progress);
-        },
-      );
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      const sanitizedName = exportFilename
-        .trim()
-        .replace(/[^a-z0-9-_]/gi, '-')
-        .substring(0, 50);
-      const provider = {
-        id: 'data-export',
-        title: 'Data Backup',
-        filename: sanitizedName || `balance-export-${timestamp}`,
-        mimeType: 'application/zip',
-        fileExtension: 'zip',
-        getContent: () => jsonData,
-      };
+    const outcome: ShareOutcome = await shareable.save(ShareFormat.ZIP);
+    if (outcome.kind === 'saved') {
       analytics.trackFeatureUsage('data_management', 'export_completed', {
         has_custom_filename: !!sanitizedName,
         filename_length: sanitizedName.length,
-        data_size_bytes: jsonData.length,
       });
-      await sharingService.save(provider, ShareFormat.ZIP, (message, progress) => {
-        setExportProgressMessage(message);
-        setExportProgress(progress);
-      });
-      await new Promise(resolve => setTimeout(resolve, 500));
-    } catch (error) {
-      logger.error('[onConfirmExport] Export failed', error);
-      toast.error('Could not export data');
-    } finally {
-      setIsExporting(false);
     }
-  }, [backupScope, exportFilename, selectedWorkplaceIds, workplaceId, workplaces]);
+  }, [sanitizedName, shareable]);
 
+  const progress = shareable.progress;
   return {
     workplaces,
     activeWorkplaceId: workplaceId,
@@ -115,14 +94,15 @@ export function useDataExportViewModel(): DataExportViewModel {
     setSelectedWorkplaceIds,
     isScopePickerVisible,
     setIsScopePickerVisible,
-    isExporting,
+    isExporting: shareable.isPending,
+    isPreparingExport: shareable.isPreparing,
     isNamingExport,
     setIsNamingExport,
     exportFilename,
     setExportFilename,
     onExport,
     onConfirmExport,
-    exportProgress,
-    exportProgressMessage,
+    exportProgress: progress?.progress ?? 0,
+    exportProgressMessage: progress?.message ?? '',
   };
 }

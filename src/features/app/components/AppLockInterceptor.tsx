@@ -14,8 +14,7 @@ import React, { useEffect } from 'react';
 import { Modal, Platform, StyleSheet, View } from 'react-native';
 
 export function AppLockInterceptor({ children }: { children: React.ReactNode }) {
-  const { isAppLockEnabled } = usePrivacyPrefs();
-  const { hasUnlockedThisSession, isAppCurrentlyLocked } = useAppLock();
+  const { isAppCurrentlyLocked } = useAppLock();
   const { theme } = useTheme();
   const reduceMotion = useReducedMotion();
 
@@ -41,30 +40,10 @@ export function AppLockInterceptor({ children }: { children: React.ReactNode }) 
     applyPrivacy();
   }, [isAppCurrentlyLocked]);
 
-  // SESSION GUARD:
-  // Delayed mount for cold-boot protection. once session is "hot", we keep
-  // the children mounted to preserve state during fast switches.
-  const shouldRenderChildren = !isAppLockEnabled || hasUnlockedThisSession;
-
   return (
     <View style={[styles.root, { backgroundColor: theme.surface }]}>
-      {/* The main app content (with session guard) */}
-      {shouldRenderChildren && (
-        <MotiView
-          animate={{
-            opacity: isAppCurrentlyLocked ? Opacity.none : Opacity.solid,
-            scale: isAppCurrentlyLocked ? Scale.press : Scale.identity,
-          }}
-          transition={
-            reduceMotion
-              ? { type: 'timing', duration: 0 }
-              : { type: 'timing', duration: AppConfig.timing.appLockFadeDurationMs }
-          }
-          style={styles.contentContainer}
-        >
-          {children}
-        </MotiView>
-      )}
+      {/* Keep bootstrap and gates mounted so authentication cannot block hydration. */}
+      <View style={styles.contentContainer}>{children}</View>
 
       {/* 
         The native Modal shell for the Lock Screen.
@@ -127,6 +106,31 @@ export function AppLockInterceptor({ children }: { children: React.ReactNode }) 
         </View>
       </Modal>
     </View>
+  );
+}
+
+/** Delay financial screens until the first unlock; preserve them across later locks. */
+export function AppLockContent({ children }: { children: React.ReactNode }) {
+  const { isAppLockEnabled } = usePrivacyPrefs();
+  const { hasUnlockedThisSession, isAppCurrentlyLocked } = useAppLock();
+  const reduceMotion = useReducedMotion();
+  if (isAppLockEnabled && !hasUnlockedThisSession) return null;
+
+  return (
+    <MotiView
+      animate={{
+        opacity: isAppCurrentlyLocked ? Opacity.none : Opacity.solid,
+        scale: isAppCurrentlyLocked ? Scale.press : Scale.identity,
+      }}
+      transition={
+        reduceMotion
+          ? { type: 'timing', duration: 0 }
+          : { type: 'timing', duration: AppConfig.timing.appLockFadeDurationMs }
+      }
+      style={styles.contentContainer}
+    >
+      {children}
+    </MotiView>
   );
 }
 

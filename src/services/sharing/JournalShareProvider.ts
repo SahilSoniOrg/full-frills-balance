@@ -1,7 +1,8 @@
 import { JournalDisplayType } from '../../types/enums';
 import { ShareFormat } from '../../types/sharing';
-import type { ShareProvider } from '../../types/sharing';
-import { sharingService } from '../SharingService';
+import type { Shareable, SharePreparationContext } from '../../types/sharing';
+import type { WorkplaceId } from '../../types/ids';
+import { throwIfShareAborted } from './sharingCancellation';
 import { CurrencyFormatter } from '../../utils/currencyFormatter';
 import { formatDate } from '../../utils/dateUtils';
 
@@ -35,18 +36,17 @@ const DEFAULT_TYPE_META: Record<JournalDisplayType, TypeMeta> = {
   [JournalDisplayType.TRANSFER]: { emoji: '⚪', label: 'Transfer' },
 };
 
-export class JournalShareProvider implements ShareProvider {
-  public id = 'journal-list';
+/** Formats selected journals; delivery is owned by the Shareable below. */
+export class JournalShareProvider {
   public title: string;
   public filename: string;
-  public supportedFormats = [ShareFormat.TEXT, ShareFormat.CSV, ShareFormat.MARKDOWN];
 
   constructor(
     private entries: ShareableJournalEntry[],
     private options: JournalShareOptions = {},
   ) {
     this.title = options.title || 'Journal Report';
-    // Filename uniqueness is handled by SharingService
+    // Filename uniqueness is handled by the sharing transport.
     this.filename = options.filename || 'journal-report';
   }
 
@@ -221,15 +221,33 @@ export class JournalShareProvider implements ShareProvider {
   }
 }
 
-export async function shareJournalEntries(
+export function createSelectedJournalShareable(
   entries: ShareableJournalEntry[],
   options: JournalShareOptions,
-  format?: ShareFormat,
-): Promise<void> {
-  const provider = new JournalShareProvider(entries, options);
-  if (format === undefined) {
-    await sharingService.share(provider);
-  } else {
-    await sharingService.share(provider, format);
-  }
+  workplaceId: WorkplaceId,
+): Shareable {
+  const capturedEntries = entries.map(entry => ({ ...entry }));
+  const capturedOptions: JournalShareOptions = {
+    ...options,
+    typeMetaOverride: options.typeMetaOverride
+      ? (Object.fromEntries(
+          Object.entries(options.typeMetaOverride).map(([type, meta]) => [type, { ...meta }]),
+        ) as Record<JournalDisplayType, TypeMeta>)
+      : undefined,
+  };
+
+  return {
+    id: 'selected-journal-summary',
+    title: capturedOptions.title || 'Journal Report',
+    filename: capturedOptions.filename || 'journal-report',
+    supportedFormats: [ShareFormat.TEXT, ShareFormat.CSV, ShareFormat.MARKDOWN],
+    scope: { kind: 'workplace', workplaceId },
+    async prepare(format: ShareFormat, context: SharePreparationContext) {
+      throwIfShareAborted(context.signal);
+      if (capturedEntries.length === 0) return null;
+      const content = new JournalShareProvider(capturedEntries, capturedOptions).getContent(format);
+      throwIfShareAborted(context.signal);
+      return { kind: 'text', content };
+    },
+  };
 }

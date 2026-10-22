@@ -123,9 +123,15 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
     setExportFailed(false);
     setIsExporting(true);
     try {
-      await exportUpdateBackup(
+      const outcome = await exportUpdateBackup(
         backupScope,
         selectedWorkplaceIds.map(id => id as WorkplaceId),
+      );
+      setExportFailed(
+        outcome.kind === 'failed' ||
+          outcome.kind === 'cancelled' ||
+          outcome.kind === 'empty' ||
+          outcome.kind === 'busy',
       );
     } catch {
       setExportFailed(true);

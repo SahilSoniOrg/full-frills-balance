@@ -305,6 +305,13 @@ export const UI_STRINGS = {
     },
   },
   journal: {
+    csvExport: {
+      label: 'Export CSV',
+      hint: 'Export all transactions matching the current period and filters, including unloaded pages.',
+      empty: 'No transactions match these filters.',
+      error: 'Could not export transactions. Try again.',
+      unavailable: 'File sharing is unavailable on this device. Try exporting on another device.',
+    },
     emptyTitle: 'Clean slate',
     emptySubtitle: 'No entries match the current search or date range.',
     emptyInPeriod: (period: string) => `No entries in ${period}`,

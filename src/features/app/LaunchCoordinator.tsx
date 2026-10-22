@@ -1,3 +1,4 @@
+import { sharingRuntime } from '@/src/services/SharingService';
 import { EmptyStateView, LoadingView } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { WorkplaceProvider } from '@/src/contexts/WorkplaceContext';
@@ -348,6 +349,9 @@ export function LaunchCoordinatorContent({
       return;
     }
 
+    const releaseSharing = previousId
+      ? sharingRuntime.beginWorkplaceTransition(previousId, 'switch')
+      : () => {};
     const transitionId = `workplace-transition-${++transitionSequence.current}`;
     setTransitionError(null);
     setIsTransitioning(true);
@@ -404,6 +408,7 @@ export function LaunchCoordinatorContent({
         setIsTransitioning(false);
       }
     })();
+    void transition.finally(releaseSharing).catch(() => undefined);
     transitionInFlightRef.current = transition;
     try {
       await transition;
@@ -460,33 +465,38 @@ export function LaunchCoordinatorContent({
   if (isRestartRequired) return <RestartRequiredScreen />;
 
   const deleteWorkplace = async (targetId: WorkplaceId) => {
-    if (transitionInFlightRef.current) await transitionInFlightRef.current;
-    if (deletionInFlightRef.current) return deletionInFlightRef.current;
-    const previousId = state.kind === 'open' ? state.workplaceId : undefined;
-    setTransitionError(null);
-
-    // An active Workplace must be unmounted in a committed render before its
-    // rows are destroyed. Non-active deletion can stay on the current books.
-    if (previousId === targetId) {
-      const promise = new Promise<{
-        status: 'committed' | 'committed_with_warnings';
-        warnings: string[];
-      }>((resolve, reject) => {
-        deletionWaiterRef.current = { resolve, reject };
-        setPendingDeletionId(targetId);
-        setIsTransitioning(true);
-      });
-      deletionInFlightRef.current = promise;
-      return promise;
-    }
-
+    const releaseSharing = sharingRuntime.beginWorkplaceTransition(targetId, 'delete');
     try {
-      const result = await workplaceService.deleteWorkplace(targetId);
-      evictWorkplaceReactiveCaches({ from: targetId, to: targetId });
-      return result;
-    } catch (error) {
-      setTransitionError(error instanceof Error ? error.message : 'Could not delete workplace.');
-      throw error;
+      if (transitionInFlightRef.current) await transitionInFlightRef.current;
+      if (deletionInFlightRef.current) return deletionInFlightRef.current;
+      const previousId = state.kind === 'open' ? state.workplaceId : undefined;
+      setTransitionError(null);
+
+      // An active Workplace must be unmounted in a committed render before its
+      // rows are destroyed. Non-active deletion can stay on the current books.
+      if (previousId === targetId) {
+        const promise = new Promise<{
+          status: 'committed' | 'committed_with_warnings';
+          warnings: string[];
+        }>((resolve, reject) => {
+          deletionWaiterRef.current = { resolve, reject };
+          setPendingDeletionId(targetId);
+          setIsTransitioning(true);
+        });
+        deletionInFlightRef.current = promise;
+        return await promise;
+      }
+
+      try {
+        const result = await workplaceService.deleteWorkplace(targetId);
+        evictWorkplaceReactiveCaches({ from: targetId, to: targetId });
+        return result;
+      } catch (error) {
+        setTransitionError(error instanceof Error ? error.message : 'Could not delete workplace.');
+        throw error;
+      }
+    } finally {
+      releaseSharing();
     }
   };
   const switchWorkplace = async (targetId: WorkplaceId) => {

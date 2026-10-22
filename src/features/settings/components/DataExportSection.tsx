@@ -56,7 +56,7 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
       </ListGroup>
 
       <SettingsMaintenanceOverlay
-        isVisible={vm.isExporting}
+        isVisible={vm.isPreparingExport}
         title={AppConfig.strings.settings.data.exportingTitle}
         progress={vm.exportProgress}
         progressMessage={vm.exportProgressMessage || AppConfig.strings.settings.data.exportingWait}

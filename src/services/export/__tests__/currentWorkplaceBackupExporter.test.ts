@@ -9,7 +9,15 @@ const mockExportWorkplacesToJSON = jest.fn();
 const mockFindAll = workplaceRepository.findAll as jest.Mock;
 
 jest.mock('@/src/services/SharingService', () => ({
-  sharingService: { save: jest.fn().mockResolvedValue(undefined) },
+  sharingService: {
+    execute: jest.fn(async (source, request) => {
+      const artifact = await source.prepare(request.format, {
+        signal: new AbortController().signal,
+        reportProgress: () => {},
+      });
+      return { kind: artifact ? 'saved' : 'empty' };
+    }),
+  },
 }));
 
 jest.mock('@/src/services/preferences', () => ({
@@ -41,16 +49,28 @@ describe('exportUpdateBackup', () => {
   it('exports every workplace by default', async () => {
     await exportUpdateBackup();
 
-    expect(mockExportWorkplacesToJSON).toHaveBeenCalledWith([home.id, work.id], 'all', undefined);
+    expect(mockExportWorkplacesToJSON).toHaveBeenCalledWith(
+      [home.id, work.id],
+      'all',
+      expect.any(Function),
+    );
   });
 
   it('exports the active workplace or falls back to the first workplace', async () => {
     await exportUpdateBackup('active');
-    expect(mockExportWorkplacesToJSON).toHaveBeenCalledWith([home.id], 'selected', undefined);
+    expect(mockExportWorkplacesToJSON).toHaveBeenCalledWith(
+      [home.id],
+      'selected',
+      expect.any(Function),
+    );
 
     (preferences.device as { activeWorkplaceId?: string }).activeWorkplaceId = undefined;
     await exportUpdateBackup('active');
-    expect(mockExportWorkplacesToJSON).toHaveBeenLastCalledWith([home.id], 'selected', undefined);
+    expect(mockExportWorkplacesToJSON).toHaveBeenLastCalledWith(
+      [home.id],
+      'selected',
+      expect.any(Function),
+    );
   });
 
   it('exports exactly the selected workplaces', async () => {
@@ -63,28 +83,21 @@ describe('exportUpdateBackup', () => {
     );
   });
 
-  it('persists the generated payload as the mandatory ZIP backup', async () => {
-    await exportUpdateBackup('active');
-
-    const save = sharingService.save as jest.Mock;
-    expect(save).toHaveBeenCalledWith(
+  it('submits a scoped mandatory ZIP backup to the shared runtime', async () => {
+    await expect(exportUpdateBackup('active')).resolves.toEqual({ kind: 'saved' });
+    expect(sharingService.execute).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'mandatory-update-backup',
-        mimeType: 'application/zip',
-        fileExtension: 'zip',
-        getContent: expect.any(Function),
+        scope: { kind: 'workplaces', workplaceIds: [home.id] },
+        supportedFormats: [ShareFormat.ZIP],
       }),
-      ShareFormat.ZIP,
-      undefined,
+      expect.objectContaining({ action: 'save', format: ShareFormat.ZIP }),
     );
-    expect(save.mock.calls[0][0].getContent()).toBe('base64-backup');
   });
 
-  it('does not save when there are no workplaces to export', async () => {
+  it('returns empty without generating a backup when there are no workplaces', async () => {
     mockFindAll.mockResolvedValue([]);
-    mockExportWorkplacesToJSON.mockRejectedValueOnce(new Error('No workplaces selected to export'));
-
-    await expect(exportUpdateBackup()).rejects.toThrow('No workplaces selected to export');
-    expect(sharingService.save).not.toHaveBeenCalled();
+    await expect(exportUpdateBackup()).resolves.toEqual({ kind: 'empty' });
+    expect(mockExportWorkplacesToJSON).not.toHaveBeenCalled();
   });
 });

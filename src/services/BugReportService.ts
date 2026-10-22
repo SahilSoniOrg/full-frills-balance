@@ -1,94 +1,39 @@
-import * as Sentry from '@sentry/react-native';
-import * as Application from 'expo-application';
-import * as Device from 'expo-device';
-import { Platform } from 'react-native';
-import { compression } from '../utils/compression';
-import { logger } from '../utils/logger';
-import { safeDiagnosticError } from '../utils/observabilityPrivacy';
-import { analytics } from './analytics';
-import { ShareFormat } from '@/src/types/sharing';
+import { ShareFormat, type ShareOutcome } from '@/src/types/sharing';
+import { toast } from '@/src/utils/alerts';
 import { sharingService } from './SharingService';
+import { createDiagnosticShareable } from './sharing/diagnosticShareable';
 
 export class BugReportService {
-  /**
-   * Generates a diagnostic ZIP report and opens the share sheet.
-   */
-  static async shareReport(error?: Error) {
-    await this.processReport(error, 'share');
+  static shareReport(error?: Error): Promise<ShareOutcome> {
+    return this.processReport(error, 'share');
   }
 
-  /**
-   * Generates a diagnostic ZIP report and prompts to save it.
-   */
-  static async saveReport(error?: Error) {
-    await this.processReport(error, 'save');
+  static saveReport(error?: Error): Promise<ShareOutcome> {
+    return this.processReport(error, 'save');
   }
 
-  private static async processReport(error: Error | undefined, mode: 'share' | 'save') {
-    const metadata = await this.generateReportMetadata(error);
-    const logs = logger.getRecentLogs() || 'No logs recorded yet.';
-
-    const provider = {
-      id: 'bug-report',
-      title: mode === 'save' ? 'Save Bug Report' : 'Share Bug Report',
-      filename: `bug-report-${new Date().toISOString().split('T')[0]}`,
-      supportedFormats: [ShareFormat.ZIP, ShareFormat.TEXT],
-      getContent: async (format: ShareFormat) => {
-        if (format === ShareFormat.ZIP) {
-          const archive = await compression.createZipArchive('bug_report', {
-            'metadata.txt': metadata,
-            'logs.txt': logs,
-          });
-
-          try {
-            return archive.base64;
-          } finally {
-            archive.cleanup(); // Clean up temp files immediately after base64 conversion
-          }
-        }
-
-        return `${metadata}\n\n--- RECENT LOGS ---\n${logs}`;
-      },
-    };
-
-    if (mode === 'save') {
-      await sharingService.save(provider, ShareFormat.ZIP);
-    } else {
-      await sharingService.share(provider, ShareFormat.ZIP);
-    }
-  }
-
-  private static async generateReportMetadata(error?: Error): Promise<string> {
-    const lines: string[] = [];
-
-    lines.push('=== FULL FRILLS BALANCE BUG REPORT ===');
-    lines.push(`Timestamp: ${new Date().toISOString()}`);
-    lines.push(`User ID: ${analytics.getDistinctId()}`);
-
-    const lastEventId = Sentry.lastEventId();
-    if (lastEventId) {
-      lines.push(`Sentry Event ID: ${lastEventId}`);
+  private static async processReport(
+    error: Error | undefined,
+    action: 'share' | 'save',
+  ): Promise<ShareOutcome> {
+    let outcome: ShareOutcome;
+    try {
+      outcome = await sharingService.execute(createDiagnosticShareable(error, action), {
+        action,
+        format: ShareFormat.ZIP,
+      });
+    } catch (cause) {
+      outcome = {
+        kind: 'failed',
+        error: cause instanceof Error ? cause : new Error('Could not prepare diagnostic report'),
+      };
     }
 
-    lines.push('');
-
-    lines.push('--- Device Info ---');
-    lines.push(`OS: ${Platform.OS} ${Device.osVersion}`);
-    lines.push(`Model: ${Device.modelName}`);
-    lines.push(
-      `App Version: ${Application.nativeApplicationVersion} (${Application.nativeBuildVersion})`,
-    );
-    lines.push('');
-
-    if (error) {
-      const safeError = safeDiagnosticError(error);
-      lines.push('--- Error Details ---');
-      lines.push(`Name: ${safeError.name}`);
-      lines.push(`Message: ${safeError.message}`);
-      lines.push(`Stack:\n${safeError.stack || 'No safe stack frames available'}`);
-      lines.push('');
+    if (outcome.kind === 'busy') {
+      toast.error('Another sharing operation is already in progress');
+    } else if (outcome.kind === 'failed') {
+      toast.error('Could not prepare diagnostic report');
     }
-
-    return lines.join('\n');
+    return outcome;
   }
 }

@@ -1,3 +1,8 @@
+import { SharingProvider } from '@/src/contexts/SharingContext';
+import { sharingRuntime } from '@/src/services/SharingService';
+import { useAppLock } from '@/src/contexts/app-shell/AppLockProvider';
+import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
+import { usePrivacyPrefs } from '@/src/hooks/usePrivacyPrefs';
 import { AppSafeAreaProvider, useWindowSafeAreaLayout } from '@/src/design-system/SafeArea';
 import { ChartInteractionProvider } from '@/src/components/charts/ChartInteractionProvider';
 import { PlannedPaymentFxReviewContainer } from '@/src/components/overlays/PlannedPaymentFxReviewContainer';
@@ -26,7 +31,7 @@ import {
 import { Platform, View, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
-import { AppLockInterceptor } from './components/AppLockInterceptor';
+import { AppLockContent, AppLockInterceptor } from './components/AppLockInterceptor';
 import { AppContent } from './components/AppNavigation';
 import {
   LaunchCoordinatorContent,
@@ -96,18 +101,23 @@ function RootLayout() {
                       <LaunchCoordinatorProvider setupDraft={setupDraft}>
                         <SplashOrchestrator />
                         <ToastContainer />
-                        <UpdateGate>
-                          <LaunchCoordinatorContent gateChildren={<AppContent />}>
-                            <WorkplaceBootstrap />
-                            <AppLockInterceptor>
-                              <SmsNotificationNavigation />
-                              <AppContent />
-                            </AppLockInterceptor>
-                          </LaunchCoordinatorContent>
-                          <AlertContainer />
-                          <IncompleteFxDetailsContainer />
-                          <PlannedPaymentFxReviewContainer />
-                        </UpdateGate>
+                        <SharingProvider>
+                          <SharingLifecycle />
+                          <AppLockInterceptor>
+                            <UpdateGate>
+                              <LaunchCoordinatorContent gateChildren={<AppContent />}>
+                                <WorkplaceBootstrap />
+                                <AppLockContent>
+                                  <SmsNotificationNavigation />
+                                  <AppContent />
+                                </AppLockContent>
+                              </LaunchCoordinatorContent>
+                            </UpdateGate>
+                            <AlertContainer />
+                            <IncompleteFxDetailsContainer />
+                            <PlannedPaymentFxReviewContainer />
+                          </AppLockInterceptor>
+                        </SharingProvider>
                       </LaunchCoordinatorProvider>
                     </ThemeProvider>
                   </UIProvider>
@@ -220,3 +230,25 @@ function SplashOrchestrator() {
 }
 
 export default Sentry.wrap(RootLayout);
+
+function SharingLifecycle() {
+  const { isInitialized } = useAppReady();
+  const { isUnlocked, isAppActive } = useAppLock();
+  const { isAppLockEnabled } = usePrivacyPrefs();
+  const { isRestartRequired } = useAppRestart();
+  React.useLayoutEffect(() => {
+    sharingRuntime.setLifecycle({
+      ready: isInitialized,
+      locked: isAppLockEnabled && !isUnlocked,
+      active: isAppActive,
+      restartRequired: isRestartRequired,
+    });
+  }, [isInitialized, isAppLockEnabled, isUnlocked, isAppActive, isRestartRequired]);
+  React.useEffect(
+    () => () => {
+      sharingRuntime.setLifecycle({ ready: false, locked: false, restartRequired: false });
+    },
+    [],
+  );
+  return null;
+}

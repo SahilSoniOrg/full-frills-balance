@@ -3,9 +3,12 @@ import { ShareFormat } from '../../types/sharing';
 import {
   JournalShareProvider,
   ShareableJournalEntry,
-  shareJournalEntries,
+  createSelectedJournalShareable,
 } from '../../services/sharing/JournalShareProvider';
 import { JournalDisplayType } from '../../types/enums';
+import { asWorkplaceId } from '../../types/ids';
+
+const mockWorkplaceId = asWorkplaceId('wp-test');
 
 // Mock native modules for Jest environment
 jest.mock('react-native-mmkv', () => ({
@@ -197,37 +200,34 @@ describe('SharingService', () => {
     expect(provider1.filename).toBe('journal-report');
   });
 
-  it('constructs and shares a journal provider with the requested format', async () => {
-    const share = jest.spyOn(sharingService, 'share').mockResolvedValue(undefined);
-
-    await shareJournalEntries(mockTransactions, { title: 'Shared Report' }, ShareFormat.CSV);
-
-    expect(share).toHaveBeenCalledWith(expect.any(JournalShareProvider), ShareFormat.CSV);
-    expect(share.mock.calls[0][0]).toMatchObject({ title: 'Shared Report' });
-    share.mockRestore();
-  });
-
-  it('uses the sharing service default format when none is provided', async () => {
-    const share = jest.spyOn(sharingService, 'share').mockResolvedValue(undefined);
-
-    await shareJournalEntries(mockTransactions, { title: 'Default Format' });
-
-    expect(share).toHaveBeenCalledWith(expect.any(JournalShareProvider));
-    expect(share.mock.calls[0]).toHaveLength(1);
-    share.mockRestore();
+  it('captures selected content without eager delivery', async () => {
+    const execute = jest.spyOn(sharingService, 'execute');
+    const source = createSelectedJournalShareable(
+      mockTransactions,
+      { title: 'Shared Report' },
+      mockWorkplaceId,
+    );
+    expect(execute).not.toHaveBeenCalled();
+    expect(source.scope).toEqual({ kind: 'workplace', workplaceId: 'wp-test' });
+    const artifact = await source.prepare(ShareFormat.CSV, {
+      signal: new AbortController().signal,
+      reportProgress: () => {},
+    });
+    expect(artifact).toMatchObject({
+      kind: 'text',
+      content: expect.stringContaining('Income test'),
+    });
+    execute.mockRestore();
   });
 
   it('is defined', () => {
     expect(sharingService).toBeDefined();
   });
 
-  it('throws error when sharing empty content', async () => {
-    const emptyProvider = {
-      id: 'empty',
-      title: 'Empty',
-      filename: 'empty',
-      getContent: () => '',
-    };
-    await expect(sharingService.share(emptyProvider as any)).rejects.toThrow('Nothing to share');
+  it('returns empty for a selection without journals', async () => {
+    const source = createSelectedJournalShareable([], {}, mockWorkplaceId);
+    await expect(
+      sharingService.execute(source, { action: 'share', format: ShareFormat.TEXT }),
+    ).resolves.toEqual({ kind: 'empty' });
   });
 });
