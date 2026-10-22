@@ -58,6 +58,8 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
 
   const { precision } = useCurrencyPrecision(balanceCurrency);
   const today = useCalendarDay();
+  // Balance hydration can replace account DTOs without changing this scope.
+  const accountIdsKey = JSON.stringify(accountIds);
 
   const secondaryBalances = useMemo(() => {
     if (!balanceData?.childBalances) return [];
@@ -104,7 +106,7 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
     },
     [
       accountId,
-      accountIds,
+      accountIdsKey,
       dateRange?.startDate,
       dateRange?.endDate,
       accountType,
@@ -142,7 +144,7 @@ export function useAccountDetailsMetrics(options: UseAccountDetailsMetricsOption
     },
     [
       accountId,
-      accountIds,
+      accountIdsKey,
       dateRange?.startDate,
       dateRange?.endDate,
       accountType,
