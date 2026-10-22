@@ -5,7 +5,6 @@ import { AppButton, AppIcon, AppText, Icon } from '@/src/components/core';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { AppConfig, Spacing, Shape, Size } from '@/src/constants';
 import { MAX_BULK_JOURNAL_ROWS } from '@/src/constants/ledger-constants';
-import { usePageKeyboard } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import type { BulkJournalRow, BulkJournalRowActions } from '../types/bulkJournal';
 import { BulkEntryRow } from './BulkEntryRow';
@@ -52,23 +51,65 @@ export const BulkEntryGrid = React.memo(
     const { theme } = useTheme();
     const isInteractingWithSuggestionsRef = useRef(false);
     const listRef = useRef<FlashListRef<BulkJournalRow>>(null);
-    const [focusedDescriptionIndex, setFocusedDescriptionIndex] = useState<number | null>(null);
-    const { isKeyboardVisible } = usePageKeyboard();
+    const viewportRef = useRef<View>(null);
+    const rowViewsRef = useRef(new Map<string, View>());
+    const focusedRowIdRef = useRef<string | null>(null);
+    const scrollOffsetRef = useRef(0);
+    const scrollFrameRef = useRef<number | null>(null);
     const onSuggestionInteractionChange = useCallback((interacting: boolean) => {
       isInteractingWithSuggestionsRef.current = interacting;
     }, []);
 
-    useEffect(() => {
-      if (!isKeyboardVisible || focusedDescriptionIndex === null) return;
-      requestAnimationFrame(() => {
-        void listRef.current?.scrollToIndex({
-          index: focusedDescriptionIndex,
-          animated: true,
-          viewPosition: 0,
+    // Reveal the whole card when it fits above the keyboard and fixed submit
+    // bar. For taller cards, keep the input visible and show as much of the
+    // rest of the card (including the closed account selector) as possible.
+    const revealFocusedInput = useCallback(() => {
+      if (Platform.OS === 'web') return;
+      if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current);
+      scrollFrameRef.current = requestAnimationFrame(() => {
+        scrollFrameRef.current = null;
+        const input = TextInput.State.currentlyFocusedInput?.();
+        const rowId = focusedRowIdRef.current;
+        const rowView = rowId ? rowViewsRef.current.get(rowId) : null;
+        if (!input || !rowView || !Keyboard.isVisible()) return;
+        viewportRef.current?.measureInWindow((_x, viewportY, _width, viewportHeight) => {
+          rowView.measureInWindow((_rowX, rowY, _rowWidth, rowHeight) => {
+            input.measureInWindow((_inputX, inputY, _inputWidth, inputHeight) => {
+              if (
+                TextInput.State.currentlyFocusedInput?.() !== input ||
+                focusedRowIdRef.current !== rowId
+              )
+                return;
+              const keyboardTop = Keyboard.metrics()?.screenY ?? Number.POSITIVE_INFINITY;
+              const visibleBottom = Math.min(viewportY + viewportHeight, keyboardTop);
+              const availableHeight = visibleBottom - viewportY - Spacing.md * 2;
+              if (availableHeight <= 0) return;
+              const targetTop = inputY + inputHeight - rowY <= availableHeight ? rowY : inputY;
+              const targetHeight = Math.min(rowY + rowHeight - targetTop, availableHeight);
+              const bottomOverflow = targetTop + targetHeight + Spacing.md - visibleBottom;
+              const topOverflow = targetTop - Spacing.md - viewportY;
+              const adjustment = bottomOverflow > 0 ? bottomOverflow : Math.min(0, topOverflow);
+              if (adjustment !== 0) {
+                listRef.current?.scrollToOffset({
+                  offset: Math.max(0, scrollOffsetRef.current + adjustment),
+                  animated: true,
+                });
+              }
+            });
+          });
         });
       });
-      setFocusedDescriptionIndex(null);
-    }, [focusedDescriptionIndex, isKeyboardVisible]);
+    }, []);
+
+    useEffect(() => {
+      const shown = Keyboard.addListener('keyboardDidShow', revealFocusedInput);
+      const changed = Keyboard.addListener('keyboardDidChangeFrame', revealFocusedInput);
+      return () => {
+        shown.remove();
+        changed.remove();
+        if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current);
+      };
+    }, [revealFocusedInput]);
 
     const [expandedAccountPicker, setExpandedAccountPicker] = useState<{
       rowId: string;
@@ -146,36 +187,51 @@ export const BulkEntryGrid = React.memo(
 
     const renderRow = useCallback(
       ({ item: row, index }: { item: BulkJournalRow; index: number }) => (
-        <BulkEntryRow
+        <View
           key={row.id}
-          row={row}
-          index={index}
-          accounts={accounts}
-          workplaceCurrency={workplaceCurrency}
-          workplaceId={workplaceId}
-          rowActions={rowActions}
-          onRemove={handleRemoveRow}
-          onDateTimePickerRequest={setDatePickerRowId}
-          accountExpansion={
-            expandedAccountPicker?.rowId === row.id ? expandedAccountPicker.side : null
-          }
-          onToggleAccountExpansion={handleToggleAccountExpansion}
-          onSwapAccounts={swapRowAccounts}
-          onRefreshRate={refreshRowRate}
-          onSuggestionInteractionChange={onSuggestionInteractionChange}
-          onDescriptionFocus={setFocusedDescriptionIndex}
-          onCreateAccountRequest={onCreateAccountRequest}
-        />
+          testID={`bulk-entry-row-${row.id}`}
+          collapsable={false}
+          ref={view => {
+            if (view) rowViewsRef.current.set(row.id, view);
+            else rowViewsRef.current.delete(row.id);
+          }}
+          onFocus={() => {
+            focusedRowIdRef.current = row.id;
+            revealFocusedInput();
+          }}
+          onBlur={() => {
+            if (focusedRowIdRef.current === row.id) focusedRowIdRef.current = null;
+          }}
+        >
+          <BulkEntryRow
+            row={row}
+            index={index}
+            accounts={accounts}
+            workplaceCurrency={workplaceCurrency}
+            workplaceId={workplaceId}
+            rowActions={rowActions}
+            onRemove={handleRemoveRow}
+            onDateTimePickerRequest={setDatePickerRowId}
+            accountExpansion={
+              expandedAccountPicker?.rowId === row.id ? expandedAccountPicker.side : null
+            }
+            onToggleAccountExpansion={handleToggleAccountExpansion}
+            onSwapAccounts={swapRowAccounts}
+            onRefreshRate={refreshRowRate}
+            onSuggestionInteractionChange={onSuggestionInteractionChange}
+            onCreateAccountRequest={onCreateAccountRequest}
+          />
+        </View>
       ),
       [
         accounts,
+        revealFocusedInput,
         expandedAccountPicker,
         handleRemoveRow,
         handleToggleAccountExpansion,
         swapRowAccounts,
         refreshRowRate,
         onSuggestionInteractionChange,
-        setFocusedDescriptionIndex,
         onCreateAccountRequest,
         rowActions,
         workplaceCurrency,
@@ -275,19 +331,32 @@ export const BulkEntryGrid = React.memo(
             {listFooter}
           </ScrollView>
         ) : (
-          <FlashList
-            ref={listRef}
-            data={rows}
-            renderItem={renderRow}
-            keyExtractor={row => row.id}
-            extraData={rowOrderKey}
-            ListHeaderComponent={listHeader}
-            ListFooterComponent={listFooter}
-            contentContainerStyle={styles.scrollContainer}
-            keyboardShouldPersistTaps="handled"
-            onScrollBeginDrag={blurFocusedInput}
-            testID="bulk-entry-list"
-          />
+          <View
+            ref={viewportRef}
+            testID="bulk-entry-viewport"
+            style={styles.container}
+            collapsable={false}
+            onLayout={revealFocusedInput}
+          >
+            <FlashList
+              ref={listRef}
+              onScroll={event => {
+                scrollOffsetRef.current = event.nativeEvent.contentOffset.y;
+              }}
+              scrollEventThrottle={16}
+              onContentSizeChange={revealFocusedInput}
+              data={rows}
+              renderItem={renderRow}
+              keyExtractor={row => row.id}
+              extraData={rowOrderKey}
+              ListHeaderComponent={listHeader}
+              ListFooterComponent={listFooter}
+              contentContainerStyle={styles.scrollContainer}
+              keyboardShouldPersistTaps="handled"
+              onScrollBeginDrag={blurFocusedInput}
+              testID="bulk-entry-list"
+            />
+          </View>
         )}
 
         <DateTimePickerModal

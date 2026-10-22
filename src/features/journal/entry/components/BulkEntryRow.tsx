@@ -41,7 +41,6 @@ interface BulkEntryRowProps {
   onToggleAccountExpansion: (id: string, side: 'left' | 'right') => void;
   onSwapAccounts: (id: string) => void;
   onRefreshRate: (id: string) => void;
-  onDescriptionFocus?: (index: number) => void;
   onSuggestionInteractionChange?: (interacting: boolean) => void;
   onCreateAccountRequest?: (rowId: string, role: AccountRole, intent: CreateAccountIntent) => void;
 }
@@ -59,7 +58,6 @@ export const BulkEntryRow = React.memo(
     onToggleAccountExpansion,
     onSwapAccounts,
     onRefreshRate,
-    onDescriptionFocus,
     onSuggestionInteractionChange,
     onCreateAccountRequest,
   }: BulkEntryRowProps) => {
@@ -149,7 +147,6 @@ export const BulkEntryRow = React.memo(
             accounts,
             onDescriptionFocus: () => {
               void loadSuggestions();
-              onDescriptionFocus?.(index);
             },
             onSelectSuggestion: suggestion => rowActions.applySuggestion(row.id, suggestion),
             onDateTimePickerRequest: () => onDateTimePickerRequest(row.id),

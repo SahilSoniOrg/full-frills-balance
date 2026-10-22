@@ -1,5 +1,6 @@
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
-import { TextInput } from 'react-native';
+import { act, fireEvent, render, screen } from '@/src/utils/test-utils';
+import { Keyboard, TextInput, View } from 'react-native';
+import { Spacing } from '@/src/constants/design-tokens';
 import { AppConfig } from '@/src/constants';
 import { AccountType } from '@/src/types/enums';
 import { asAccountId, asWorkplaceId } from '@/src/types/ids';
@@ -9,7 +10,18 @@ import type { BulkJournalRow, BulkJournalRowActions } from '../types/bulkJournal
 import { BulkEntryGrid } from '../components/BulkEntryGrid';
 import type { ReactNode } from 'react';
 
+beforeEach(() => {
+  jest.spyOn(Keyboard, 'addListener').mockReturnValue({
+    remove: jest.fn(),
+  } as unknown as ReturnType<typeof Keyboard.addListener>);
+});
+afterEach(() => jest.restoreAllMocks());
+
+const mockScrollToOffset = jest.fn();
+
 jest.mock('@shopify/flash-list', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const React = require('react') as typeof import('react');
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { View } = require('react-native') as typeof import('react-native');
 
@@ -19,18 +31,27 @@ jest.mock('@shopify/flash-list', () => {
       renderItem,
       ListHeaderComponent,
       ListFooterComponent,
+      ref,
+      ...props
     }: {
+      ref?: import('react').Ref<unknown>;
+      testID?: string;
+      onScroll?: unknown;
+      onContentSizeChange?: unknown;
       data: BulkJournalRow[];
       renderItem: (info: { item: BulkJournalRow; index: number }) => ReactNode;
       ListHeaderComponent?: ReactNode;
       ListFooterComponent?: ReactNode;
-    }) => (
-      <View>
-        {ListHeaderComponent}
-        {data.map((item, index) => renderItem({ item, index }))}
-        {ListFooterComponent}
-      </View>
-    ),
+    }) => {
+      React.useImperativeHandle(ref, () => ({ scrollToOffset: mockScrollToOffset }));
+      return (
+        <View {...props}>
+          {ListHeaderComponent}
+          {data.map((item, index) => renderItem({ item, index }))}
+          {ListFooterComponent}
+        </View>
+      );
+    },
   };
 });
 
@@ -188,5 +209,144 @@ describe('BulkEntryGrid add row', () => {
     } finally {
       TextInput.State.currentlyFocusedInput = original;
     }
+  });
+});
+
+describe('BulkEntryGrid keyboard visibility', () => {
+  let inputY: number;
+  let viewportHeight: number;
+  let rowY: number;
+  let rowHeight: number;
+  let keyboardVisible: boolean;
+  let keyboardShown: () => void;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    mockScrollToOffset.mockClear();
+    inputY = 460;
+    rowY = 440;
+    rowHeight = 200;
+    viewportHeight = 300;
+    keyboardVisible = true;
+    const input = {
+      measureInWindow: (callback: (x: number, y: number, w: number, h: number) => void) =>
+        callback(0, inputY, 200, 40),
+    } as TextInput;
+    jest.spyOn(View.prototype, 'measureInWindow').mockImplementation(function (
+      this: View,
+      callback,
+    ) {
+      if (this.props.testID?.startsWith('bulk-entry-row-')) {
+        callback(0, rowY, 400, rowHeight);
+      } else {
+        callback(0, 100, 400, viewportHeight);
+      }
+    });
+    jest.spyOn(TextInput.State, 'currentlyFocusedInput').mockReturnValue(input);
+    jest.spyOn(Keyboard, 'isVisible').mockImplementation(() => keyboardVisible);
+    jest.spyOn(Keyboard, 'metrics').mockReturnValue({
+      screenX: 0,
+      screenY: 450,
+      width: 400,
+      height: 350,
+    });
+    jest.spyOn(Keyboard, 'addListener').mockImplementation((event, listener) => {
+      if (event === 'keyboardDidShow') keyboardShown = () => listener({} as never);
+      return { remove: jest.fn() } as unknown as ReturnType<typeof Keyboard.addListener>;
+    });
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+    jest.useRealTimers();
+  });
+
+  function renderKeyboardGrid() {
+    renderGrid([makeRow(), makeRow({ id: 'row-2' }), makeRow({ id: 'row-3' })]);
+  }
+
+  function flushScroll() {
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
+  }
+
+  it('reveals the whole lower card after the keyboard opens, accounting for the fixed footer', () => {
+    keyboardVisible = false;
+    renderKeyboardGrid();
+    fireEvent(screen.getByTestId('bulk-entry-row-row-3'), 'focus');
+    flushScroll();
+    expect(mockScrollToOffset).not.toHaveBeenCalled();
+    keyboardVisible = true;
+    act(() => keyboardShown());
+    flushScroll();
+    expect(mockScrollToOffset).toHaveBeenLastCalledWith({
+      offset: 240 + Spacing.md,
+      animated: true,
+    });
+  });
+
+  it('reveals another input when focus changes with the keyboard already open', () => {
+    renderKeyboardGrid();
+    fireEvent.scroll(screen.getByTestId('bulk-entry-list'), {
+      nativeEvent: { contentOffset: { y: 600 } },
+    });
+    fireEvent(screen.getByTestId('bulk-entry-row-row-3'), 'focus');
+    flushScroll();
+    expect(mockScrollToOffset).toHaveBeenLastCalledWith({
+      offset: 840 + Spacing.md,
+      animated: true,
+    });
+  });
+
+  it('remeasures when the viewport shrinks after focus', () => {
+    viewportHeight = 600;
+    inputY = 200;
+    rowY = 180;
+    renderKeyboardGrid();
+    fireEvent(screen.getByTestId('bulk-entry-row-row-3'), 'focus');
+    flushScroll();
+    expect(mockScrollToOffset).not.toHaveBeenCalled();
+    viewportHeight = 200;
+    fireEvent(screen.getByTestId('bulk-entry-viewport'), 'layout');
+    flushScroll();
+    expect(mockScrollToOffset).toHaveBeenLastCalledWith({
+      offset: 80 - Spacing.md,
+      animated: true,
+    });
+  });
+
+  it('leaves an already visible card in place', () => {
+    inputY = 180;
+    rowY = 160;
+    renderKeyboardGrid();
+    fireEvent(screen.getByTestId('bulk-entry-row-row-3'), 'focus');
+    flushScroll();
+    expect(mockScrollToOffset).not.toHaveBeenCalled();
+  });
+
+  it('lifts the card through its closed account selector even when the input is already visible', () => {
+    inputY = 200;
+    rowY = 180;
+    rowHeight = 260;
+    renderKeyboardGrid();
+    fireEvent(screen.getByTestId('bulk-entry-row-row-3'), 'focus');
+    flushScroll();
+    expect(mockScrollToOffset).toHaveBeenLastCalledWith({
+      offset: 40 + Spacing.md,
+      animated: true,
+    });
+  });
+
+  it('keeps a lower field visible when the card is taller than the viewport', () => {
+    rowHeight = 600;
+    inputY = 800;
+    renderKeyboardGrid();
+    fireEvent(screen.getByTestId('bulk-entry-row-row-3'), 'focus');
+    flushScroll();
+    expect(mockScrollToOffset).toHaveBeenLastCalledWith({
+      offset: 640 + Spacing.md,
+      animated: true,
+    });
   });
 });
