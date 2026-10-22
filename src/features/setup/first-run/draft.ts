@@ -3,7 +3,7 @@ import { Icon, type IconName } from '@/src/types/domainIcons';
 import { AccountSubtype, AccountType, PlannedPaymentInterval } from '@/src/types/enums';
 import type { WorkplaceId } from '@/src/types/ids';
 import dayjs, { type Dayjs } from 'dayjs';
-import { cashClarityWorkplaceId } from './pendingWorkplace';
+import { cashClarityWorkplaceId } from '@/src/services/setup/pendingWorkplace';
 
 export type OnboardingStep =
   'welcome' | 'currency' | 'now' | 'next' | 'protect' | 'reserve' | 'clarity';

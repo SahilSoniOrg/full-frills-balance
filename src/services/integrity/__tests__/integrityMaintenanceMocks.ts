@@ -3,6 +3,9 @@ import { preferences } from '@/src/services/preferences';
 import { reactiveCacheCoordinator } from '@/src/services/reactive/ReactiveCacheCoordinator';
 import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
 import { snapshotService } from '@/src/utils/SnapshotService';
+import { nativeKeyOperations } from '@/src/services/backup/nativeKeyOperations';
+import { keyCiphertextStateStore } from '@/src/services/backup/keyCiphertextStateStore';
+import { assertKeyAccessAllowed } from '@/src/services/backup/keyAccessPolicy';
 
 jest.mock('@/src/data/repositories/DatabaseRepository', () => ({
   databaseRepository: {
@@ -27,6 +30,18 @@ jest.mock('@/src/services/widgets/WidgetProjectionService', () => ({
     clearWorkplace: jest.fn().mockResolvedValue(undefined),
   },
 }));
+jest.mock('@/src/services/backup/nativeKeyOperations', () => ({
+  nativeKeyOperations: {
+    clearVault: jest.fn().mockResolvedValue(undefined),
+    clearCredentials: jest.fn().mockResolvedValue(undefined),
+  },
+}));
+jest.mock('@/src/services/backup/keyCiphertextStateStore', () => ({
+  keyCiphertextStateStore: { clear: jest.fn().mockResolvedValue(undefined) },
+}));
+jest.mock('@/src/services/backup/keyAccessPolicy', () => ({
+  assertKeyAccessAllowed: jest.fn(),
+}));
 jest.mock('@/src/utils/SnapshotService', () => ({
   snapshotService: {
     clearSnapshots: jest.fn(() => true),
@@ -47,6 +62,10 @@ export function resetIntegrityMaintenanceTestState() {
   (snapshotService.clearSnapshotsForWorkplace as jest.Mock).mockReturnValue(true);
   (widgetProjectionService.clearAll as jest.Mock).mockResolvedValue(undefined);
   (widgetProjectionService.clearWorkplace as jest.Mock).mockResolvedValue(undefined);
+  (nativeKeyOperations.clearVault as jest.Mock).mockResolvedValue(undefined);
+  (nativeKeyOperations.clearCredentials as jest.Mock).mockResolvedValue(undefined);
+  (keyCiphertextStateStore.clear as jest.Mock).mockResolvedValue(undefined);
+  (assertKeyAccessAllowed as jest.Mock).mockImplementation(() => undefined);
 }
 
 export {
@@ -55,4 +74,6 @@ export {
   reactiveCacheCoordinator,
   snapshotService,
   widgetProjectionService,
+  nativeKeyOperations,
+  keyCiphertextStateStore,
 };

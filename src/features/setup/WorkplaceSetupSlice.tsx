@@ -15,7 +15,7 @@ import type {
   WorkplaceCheckpoint,
   WorkplaceSetupOutput,
   WorkplaceSetupPrefill,
-} from './setupTypes';
+} from '@/src/services/setup/setupTypes';
 import { resolveWorkplaceStartCheckpoint } from './visibleSetupProgress';
 
 function keepImported<T>(initial: { value: T; source: string } | undefined, value: T) {

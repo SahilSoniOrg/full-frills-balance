@@ -1,0 +1,6 @@
+{
+  "emsdk": "3.1.74",
+  "openssl": "3.x, Emscripten target",
+  "compression": "gzip (Emscripten zlib port)",
+  "inputsSha256": "6ba74783fe22cc1ec6f2c2b6c0a1843484da404537abf74db72a7a4d73f08c0b"
+}

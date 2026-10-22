@@ -12,14 +12,14 @@ import { loadPreparedRestores } from './pickRestoreSource';
 import { getRestoreAutoOutput } from './restoreAutoOutput';
 import { discardRestorePublication, finishDeviceSetup, finishSetup } from './setupFinishers';
 import { getSetupRecipe } from './setupRecipes';
-import { clearSetupDraft, loadSetupDraft } from './SetupDraftStore';
+import { clearSetupDraft, loadSetupDraft } from '@/src/services/setup/SetupDraftStore';
 import {
   isSetupJourneyId,
   restoreSources,
   type SetupDraft,
   type SetupJourneyId,
   type SetupOutcome,
-} from './setupTypes';
+} from '@/src/services/setup/setupTypes';
 import type { WorkplaceId } from '@/src/types/ids';
 
 export function resolveOptionalJourney(params: {

@@ -10,7 +10,7 @@ import {
   loadRestoreSummary,
   loadRestoreSummaries,
 } from '../setupFinishers';
-import type { RestoreSetupDraft, WorkplaceSetupOutput } from '../setupTypes';
+import type { RestoreSetupDraft, WorkplaceSetupOutput } from '@/src/services/setup/setupTypes';
 
 jest.mock('@/src/services/WorkplaceService', () => ({
   workplaceService: {

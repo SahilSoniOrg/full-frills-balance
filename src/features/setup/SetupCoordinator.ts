@@ -16,10 +16,10 @@ import type {
   SetupOutcome,
   SetupSliceId,
   SetupSliceOutput,
-} from './setupTypes';
-import { isRestoreJourneyId, sameRestoreSources } from './setupTypes';
+} from '@/src/services/setup/setupTypes';
+import { isRestoreJourneyId, sameRestoreSources } from '@/src/services/setup/setupTypes';
 import { getSetupRecipe, recipeContainsSlice, recipeTerminalSlice } from './setupRecipes';
-import { SetupDraftStore, setupDraftStore } from './SetupDraftStore';
+import { SetupDraftStore, setupDraftStore } from '@/src/services/setup/SetupDraftStore';
 import { generator } from '@/src/data/database/idGenerator';
 import type { WorkplaceId } from '@/src/types/ids';
 
@@ -55,8 +55,6 @@ export interface SetupCoordinatorOptions {
   };
   readonly finish: (draft: SetupDraft) => Promise<SetupOutcome>;
 }
-
-export type { SetupSliceOutputById } from './setupTypes';
 
 export type BackResult =
   { readonly kind: 'at_start' } | { readonly kind: 'present'; readonly sliceId: SetupSliceId };

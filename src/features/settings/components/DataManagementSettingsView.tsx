@@ -22,6 +22,16 @@ function DataManagementSettingsView() {
       <DataExportSection onImport={() => AppNavigation.toSetupJourney('settings_restore')} />
 
       <Stack space="xxl">
+        <ListGroup variant="plain" header="Encrypted backup">
+          <ListRow
+            icon={Icon.Lock}
+            focusId="encrypted-backup"
+            title="Encrypted backup & recovery"
+            subtitle="Row-encrypted ZIP backups and User recovery files (separate from plaintext import)"
+            onPress={() => AppNavigation.toEncryptedBackup()}
+            testID="settings-encrypted-backup"
+          />
+        </ListGroup>
         <ListGroup variant="plain" header="Sharing">
           <ListRow
             icon={Icon.Share}

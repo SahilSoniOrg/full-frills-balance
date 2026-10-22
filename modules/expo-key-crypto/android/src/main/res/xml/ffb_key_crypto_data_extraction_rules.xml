@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--  Auto Backup configuration for Android 12 and higher -->
+<data-extraction-rules>
+  <!-- Use exclusions only so app files and databases remain eligible in both modes. -->
+  <cloud-backup>
+    <exclude domain="sharedpref" path="FFBKeyCrypto.xml"/>
+  </cloud-backup>
+  <device-transfer>
+    <exclude domain="sharedpref" path="FFBKeyCrypto.xml"/>
+  </device-transfer>
+</data-extraction-rules>

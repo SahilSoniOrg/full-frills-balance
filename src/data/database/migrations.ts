@@ -1043,5 +1043,74 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 35,
+      steps: [
+        addColumns({
+          table: 'workplaces',
+          columns: [
+            { name: 'row_restore_manifest_hash', type: 'string', isOptional: true },
+            { name: 'row_restore_completion_json', type: 'string', isOptional: true },
+          ],
+        }),
+        createTable({
+          name: 'sync_row_index',
+          columns: [
+            { name: 'workplace_id', type: 'string', isIndexed: true },
+            { name: 'table_name', type: 'string', isIndexed: true },
+            { name: 'row_id', type: 'string' },
+            { name: 'content_hash', type: 'string' },
+            { name: 'leaf_hash', type: 'string' },
+            { name: 'seq', type: 'number' },
+          ],
+        }),
+        unsafeExecuteSql(`
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_sync_row_index_identity
+          ON sync_row_index (workplace_id, table_name, row_id);
+        `),
+        createTable({
+          name: 'sync_checkpoints',
+          columns: [
+            { name: 'workplace_id', type: 'string', isIndexed: true },
+            { name: 'seq', type: 'number' },
+            { name: 'manifest_hash', type: 'string' },
+            { name: 'author_device_id', type: 'string' },
+          ],
+        }),
+        unsafeExecuteSql(`
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_sync_checkpoints_workplace
+          ON sync_checkpoints (workplace_id);
+        `),
+        createTable({
+          name: 'sync_conflicts',
+          columns: [
+            { name: 'workplace_id', type: 'string', isIndexed: true },
+            { name: 'group_key', type: 'string', isIndexed: true },
+            { name: 'local_rows_json', type: 'string' },
+            { name: 'remote_seq', type: 'number' },
+            { name: 'created_at', type: 'number', isIndexed: true },
+          ],
+        }),
+        unsafeExecuteSql(`
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_sync_conflicts_identity
+          ON sync_conflicts (workplace_id, group_key);
+        `),
+        createTable({
+          name: 'sync_pending_commits',
+          columns: [
+            { name: 'workplace_id', type: 'string', isIndexed: true },
+            { name: 'seq', type: 'number' },
+            { name: 'manifest_json', type: 'string' },
+            { name: 'envelopes_json', type: 'string' },
+            { name: 'reason', type: 'string' },
+            { name: 'created_at', type: 'number', isIndexed: true },
+          ],
+        }),
+        unsafeExecuteSql(`
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_sync_pending_commits_identity
+          ON sync_pending_commits (workplace_id, seq);
+        `),
+      ],
+    },
   ],
 });

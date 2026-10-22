@@ -49,6 +49,18 @@ describe('readE2eLaunchConfig', () => {
     expect(valueMock).not.toHaveBeenCalled();
   });
 
+  it('authorizes restore verification only with all build and authentication gates', () => {
+    browserLaunch(`e2eAuth=${E2E_AUTH_TOKEN}&e2eRestoreVerification=1`);
+    expect(readE2eLaunchConfig()).toBeNull();
+    process.env.EXPO_PUBLIC_E2E = '1';
+    expect(readE2eLaunchConfig()).toEqual({ reset: false, restoreVerification: true });
+    browserLaunch('e2eRestoreVerification=1');
+    expect(readE2eLaunchConfig()).toBeNull();
+    browserLaunch(`e2eAuth=${E2E_AUTH_TOKEN}&e2eRestoreVerification=1`);
+    (Constants.expoConfig as { extra: Record<string, unknown> }).extra = {};
+    expect(readE2eLaunchConfig()).toBeNull();
+  });
+
   it('ignores browser seed arguments in a production build', () => {
     browserLaunch(`e2eAuth=${E2E_AUTH_TOKEN}&e2eSeedProfile=onboarded`);
     expect(readE2eLaunchConfig()).toBeNull();

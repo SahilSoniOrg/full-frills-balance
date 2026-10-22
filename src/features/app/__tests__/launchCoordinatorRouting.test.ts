@@ -18,6 +18,7 @@ describe('LaunchCoordinator gate routing', () => {
     expect(shouldRenderGateChildren('setup', '/onboarding', 'first_run')).toBe(true);
     expect(shouldRenderGateChildren('setup', '/import-selection', 'first_run_restore')).toBe(true);
     expect(shouldRenderGateChildren('setup', '/privacy-notice', 'first_run')).toBe(true);
+    expect(shouldRenderGateChildren('setup', '/encrypted-backup', 'first_run')).toBe(true);
     expect(shouldRenderGateChildren('picker', '/onboarding')).toBe(true);
   });
 
@@ -42,6 +43,7 @@ describe('LaunchCoordinator gate routing', () => {
     expect(shouldRedirectSetupToEntry('first_run', '/import-selection')).toBe(true);
     expect(shouldRedirectSetupToEntry('first_run', '/dashboard')).toBe(true);
     expect(shouldRedirectSetupToEntry('first_run', '/privacy-notice')).toBe(false);
+    expect(shouldRedirectSetupToEntry('first_run', '/encrypted-backup')).toBe(false);
     expect(shouldRedirectSetupToEntry('first_run_restore', '/onboarding')).toBe(false);
     expect(shouldRedirectSetupToEntry('first_run_restore', '/import-selection')).toBe(false);
   });

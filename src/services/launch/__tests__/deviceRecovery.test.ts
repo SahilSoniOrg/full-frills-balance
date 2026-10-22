@@ -72,6 +72,24 @@ describe('decideDeviceRecovery', () => {
     ).not.toHaveProperty('userNameRepair');
   });
 
+  it.each([true, false])(
+    'keeps an interrupted encrypted restore unclaimed (Device bag present: %s)',
+    deviceBagPresent => {
+      expect(
+        decideDeviceRecovery({
+          deviceBagPresent,
+          deviceClaimed: false,
+          workplaceCount: 1,
+          hasEncryptedRestoreCheckpoint: true,
+        }),
+      ).toEqual({
+        kind: deviceBagPresent ? 'not_needed' : 'recovered',
+        shouldClaimDevice: false,
+        shouldPersistDeviceDefaults: !deviceBagPresent,
+      });
+    },
+  );
+
   it('repairs an unclaimed existing Device when books already exist', () => {
     expect(
       decideDeviceRecovery({ deviceBagPresent: true, deviceClaimed: false, workplaceCount: 1 }),

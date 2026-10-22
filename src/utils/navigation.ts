@@ -356,11 +356,12 @@ export const AppNavigation = {
     router.push(buildRoute('/personalization-settings', { focus }));
   },
 
-  /**
-   * Navigate to data management settings.
-   */
   toDataManagementSettings: (focus?: string) => {
     router.push(buildRoute('/data-management-settings', { focus }));
+  },
+
+  toEncryptedBackup: (mode: 'setup' | 'restore' = 'setup') => {
+    router.push(mode === 'restore' ? '/encrypted-backup-restore' : '/encrypted-backup');
   },
 
   /**

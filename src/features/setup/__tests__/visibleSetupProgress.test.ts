@@ -2,7 +2,10 @@ import { Icon } from '@/src/types/domainIcons';
 import { asWorkplaceId } from '@/src/types/ids';
 import { getRestoreAutoOutput } from '../restoreAutoOutput';
 import { getSetupRecipe } from '../setupRecipes';
-import type { RestoreSetupDraft, WorkplaceCreationSetupDraft } from '../setupTypes';
+import type {
+  RestoreSetupDraft,
+  WorkplaceCreationSetupDraft,
+} from '@/src/services/setup/setupTypes';
 import { visibleSetupProgress } from '../visibleSetupProgress';
 
 const operationId = asWorkplaceId('setup-operation');

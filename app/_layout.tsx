@@ -1,1 +1,2 @@
-export { RootLayout as default } from '@/src/features/app';
+import { RootLayout } from '@/src/features/app';
+export default RootLayout;
