@@ -1,6 +1,6 @@
 import { CollectStep, ConversationStep } from '../conversationUi';
 import { Spacing } from '@/src/constants/design-tokens';
-import { fireEvent, render, screen } from '@/src/utils/test-utils';
+import { act, fireEvent, render, screen } from '@/src/utils/test-utils';
 import { Keyboard, ScrollView, StyleSheet, TextInput } from 'react-native';
 import { usePageKeyboard } from '@/src/design-system';
 
@@ -73,6 +73,7 @@ describe('ConversationStep keyboard behavior', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+    jest.useRealTimers();
   });
 
   it('configures its scroll view to reveal focused inputs', () => {
@@ -88,28 +89,53 @@ describe('ConversationStep keyboard behavior', () => {
   });
 
   it('re-reveals the focused input when the keyboard opens, but not after it blurs', () => {
-    const frame = jest.spyOn(global, 'requestAnimationFrame').mockImplementation(() => 0);
+    jest.useFakeTimers();
+    let showKeyboard: (() => void) | undefined;
+    jest.spyOn(Keyboard, 'addListener').mockImplementation((event, listener) => {
+      if (event === 'keyboardDidShow') showKeyboard = () => listener({} as never);
+      return { remove: jest.fn() } as never;
+    });
+    const keyboardVisible = jest.spyOn(Keyboard, 'isVisible').mockReturnValue(false);
+    jest.spyOn(Keyboard, 'metrics').mockReturnValue({
+      screenX: 0,
+      screenY: 450,
+      width: 400,
+      height: 350,
+    });
+    const focusedInput = {
+      measureInWindow: (callback: (x: number, y: number, width: number, height: number) => void) =>
+        callback(0, 460, 200, 40),
+    } as ReturnType<typeof TextInput.State.currentlyFocusedInput>;
+    jest.spyOn(TextInput.State, 'currentlyFocusedInput').mockReturnValue(focusedInput);
     const step = () => (
       <ConversationStep onBack={jest.fn()}>
         <TextInput testID="collector-input" />
       </ConversationStep>
     );
     const { rerender } = render(step());
-    const scrollView = screen.UNSAFE_getByType(ScrollView);
+    const scroll = screen.UNSAFE_getByType(ScrollView).instance as ScrollView;
+    jest.spyOn(scroll, 'getNativeScrollRef').mockReturnValue({
+      measureInWindow: (callback: (x: number, y: number, width: number, height: number) => void) =>
+        callback(0, 100, 400, 300),
+    } as ReturnType<typeof TextInput.State.currentlyFocusedInput>);
+    const scrollTo = jest.spyOn(scroll, 'scrollTo').mockImplementation(() => {});
 
-    fireEvent(scrollView, 'focus', { nativeEvent: { target: 42 } });
-    expect(frame).toHaveBeenCalledTimes(1);
+    fireEvent(screen.getByTestId('collector-input'), 'focus');
+    act(() => jest.runOnlyPendingTimers());
+    expect(scrollTo).not.toHaveBeenCalled();
 
+    keyboardVisible.mockReturnValue(true);
     mockedUsePageKeyboard.mockReturnValue({ isKeyboardVisible: true });
     rerender(step());
-    expect(frame).toHaveBeenCalledTimes(2);
+    expect(showKeyboard).toEqual(expect.any(Function));
+    act(() => showKeyboard?.());
+    act(() => jest.runOnlyPendingTimers());
+    expect(scrollTo).toHaveBeenCalledWith({ y: 100 + Spacing.md, animated: true });
 
-    mockedUsePageKeyboard.mockReturnValue({ isKeyboardVisible: false });
-    rerender(step());
-    fireEvent(scrollView, 'blur');
-    mockedUsePageKeyboard.mockReturnValue({ isKeyboardVisible: true });
-    rerender(step());
-    expect(frame).toHaveBeenCalledTimes(2);
+    fireEvent(screen.getByTestId('collector-input'), 'blur');
+    act(() => showKeyboard?.());
+    act(() => jest.runOnlyPendingTimers());
+    expect(scrollTo).toHaveBeenCalledTimes(1);
   });
 
   it('removes the footer from the layout while the keyboard is visible', () => {
