@@ -1,12 +1,16 @@
-import { firstValueFrom, of as mockOf, Subject } from 'rxjs';
+import { firstValueFrom, of as mockOf, Subject, type Subscription } from 'rxjs';
 import Account from '@/src/data/models/Account';
 import { AccountType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { AccountBalance } from '@/src/types/domainReadModels';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { balanceReadService } from '@/src/services/balance/balanceReadService';
-import { observeAggregatedAccountBalances } from '@/src/services/reactive/reactiveAggregatedBalances';
+import {
+  observeAggregatedAccountBalances,
+  type AggregatedAccountBalances,
+} from '@/src/services/reactive/reactiveAggregatedBalances';
 import { observeWorkplaceAccounts } from '@/src/services/reactive/reactiveWorkplaceObserves';
+import { snapshotService } from '@/src/utils/SnapshotService';
 
 jest.mock('@/src/services/balance/balanceReadService', () => ({
   balanceReadService: { getAccountBalances: jest.fn() },
@@ -59,6 +63,47 @@ describe('account details balance scope', () => {
     reactiveDataService.clearCache();
   });
   afterEach(() => reactiveDataService.clearCache());
+
+  it('stops account-list projection and snapshot work when its tab unsubscribes', () => {
+    const aggregates = new Subject<AggregatedAccountBalances>();
+    jest.mocked(observeAggregatedAccountBalances).mockReturnValue(aggregates);
+    const snapshot = jest
+      .spyOn(snapshotService, 'deferCustomSnapshot')
+      .mockImplementation(() => {});
+    const data: AggregatedAccountBalances = {
+      accounts: [],
+      balancesMap: new Map(),
+      wealthSummary: {
+        netWorth: 0,
+        totalAssets: 0,
+        totalLiabilities: 0,
+        totalEquity: 0,
+        totalIncome: 0,
+        totalExpense: 0,
+      },
+    };
+    const stream = reactiveDataService.observeOptimizedAccountList('USD', workplaceId);
+    const focused = stream.subscribe();
+    let refocused: Subscription | undefined;
+    try {
+      aggregates.next(data);
+      expect(snapshot).toHaveBeenCalledTimes(1);
+
+      focused.unsubscribe();
+      expect(aggregates.observed).toBe(false);
+      aggregates.next(data);
+      expect(snapshot).toHaveBeenCalledTimes(1);
+
+      refocused = stream.subscribe();
+      aggregates.next(data);
+      expect(snapshot).toHaveBeenCalledTimes(2);
+    } finally {
+      focused.unsubscribe();
+      refocused?.unsubscribe();
+      snapshot.mockRestore();
+    }
+    expect(aggregates.observed).toBe(false);
+  });
 
   it('releases a departed detail graph and reads fresh data on re-entry', () => {
     const accounts = new Subject<Account[]>();

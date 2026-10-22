@@ -1,9 +1,31 @@
 import { useObservable, useObservableWithEnrichment } from '@/src/hooks/useObservable';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
-import { BehaviorSubject, defer, of, Subject, throwError } from 'rxjs';
+import { BehaviorSubject, defer, EMPTY, of, Subject, throwError } from 'rxjs';
 import { WorkplaceId } from '@/src/types/ids';
 
 describe('useObservable', () => {
+  it('keeps mounted-screen data while paused and catches up when focused again', () => {
+    const source = new BehaviorSubject(1);
+    const { result, rerender, unmount } = renderHook(
+      ({ focused }) => useObservable(() => (focused ? source : EMPTY), [focused], 0),
+      { initialProps: { focused: true } },
+    );
+    expect(result.current.data).toBe(1);
+
+    rerender({ focused: false });
+    expect(source.observed).toBe(false);
+    const pausedVersion = result.current.version;
+    act(() => source.next(2));
+    expect(result.current.data).toBe(1);
+    expect(result.current.version).toBe(pausedVersion);
+
+    rerender({ focused: true });
+    expect(source.observed).toBe(true);
+    expect(result.current.data).toBe(2);
+    unmount();
+    expect(source.observed).toBe(false);
+  });
+
   it('should return initial value immediately', () => {
     const subject = new BehaviorSubject('initial');
     const { result } = renderHook(() => useObservable(() => subject, [], 'default' as WorkplaceId));

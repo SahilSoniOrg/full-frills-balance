@@ -31,8 +31,9 @@ import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { reportService } from '@/src/services/report-service';
 import { AccountId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { of } from 'rxjs';
+import { useIsFocused } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { EMPTY, of } from 'rxjs';
 
 export type {
   AccountSectionViewModel,
@@ -42,6 +43,7 @@ export type {
 };
 
 export function useAccountsListViewModel(): AccountsListViewModel {
+  const isFocused = useIsFocused();
   const { theme, onContrast } = useTheme();
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const { showAccountMonthlyStats } = useAccountDisplayPrefs();
@@ -62,6 +64,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     hasUnvaluedEntries?: boolean;
   } | null>(null);
   const [isPeriodLoading, setIsPeriodLoading] = useState(false);
+  const focusStartVersion = useRef<number | null>(null);
 
   const onToggleSection = useCallback((title: string) => {
     setCollapsedSections(previous => {
@@ -100,8 +103,9 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     retry,
     version,
   } = useObservable(
-    () =>
-      workplaceId
+    () => {
+      if (!isFocused) return EMPTY;
+      return workplaceId
         ? reactiveDataService.observeOptimizedAccountList(targetCurrency, workplaceId)
         : of({
             accounts: [],
@@ -114,8 +118,9 @@ export function useAccountsListViewModel(): AccountsListViewModel {
               totalIncome: 0,
               totalExpense: 0,
             },
-          }),
-    [targetCurrency, workplaceId],
+          });
+    },
+    [isFocused, targetCurrency, workplaceId],
     () =>
       (workplaceId ? reactiveDataService.getAccountsListSnapshot(workplaceId) : null) ?? {
         accounts: [],
@@ -147,7 +152,14 @@ export function useAccountsListViewModel(): AccountsListViewModel {
   }, [inflowPeriod, accounts, dashboardData.balances]);
 
   useEffect(() => {
-    if (!workplaceId || inflowPeriod !== '30days') {
+    if (!isFocused) {
+      focusStartVersion.current = null;
+      return;
+    }
+    // Refocus first replays the latest aggregate. Wait for that emission rather
+    // than fetching once for the retained version and again for the fresh one.
+    if (focusStartVersion.current === null) focusStartVersion.current = version;
+    if (version === focusStartVersion.current || !workplaceId || inflowPeriod !== '30days') {
       return;
     }
 
@@ -188,7 +200,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     return () => {
       isMounted = false;
     };
-  }, [inflowPeriod, workplaceId, workplaceCurrency, version]);
+  }, [isFocused, inflowPeriod, workplaceId, workplaceCurrency, version]);
 
   const periodTotals = inflowPeriod === 'month' ? monthPeriodTotals : rollingPeriodTotals;
   const { inflowIncome, inflowExpense } = useMemo(

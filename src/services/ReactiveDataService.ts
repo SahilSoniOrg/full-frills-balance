@@ -93,12 +93,9 @@ class ReactiveDataService {
     reactiveCacheCoordinator.clearAll(workplaceId);
   }
 
-  /** Details are screen-scoped; invalidate shared dashboard and list projections. */
+  /** Drop the shared dashboard projection. Lists and details are screen-scoped. */
   invalidateAccountCaches(workplaceId?: WorkplaceId): void {
-    reactiveCacheCoordinator.clearNamespaces(
-      [REACTIVE_CACHE_NAMESPACES.dashboard, REACTIVE_CACHE_NAMESPACES.optimizedAccountList],
-      workplaceId,
-    );
+    reactiveCacheCoordinator.clearNamespace(REACTIVE_CACHE_NAMESPACES.dashboard, workplaceId);
   }
 
   /**
@@ -109,9 +106,8 @@ class ReactiveDataService {
   async preWarm(targetCurrency: string, workplaceId: WorkplaceId): Promise<void> {
     const trace = startTrace('ReactiveDataService.preWarm');
     try {
-      // Warm up both dashboard and optimized account list
-      // This ensures that when the user lands on the Home or Accounts screen,
-      // the data is already hydrated and held by the managed replay cache.
+      // Keep shared aggregates warm and seed the accounts snapshot. The list's
+      // own projection is released after its first emission, until the tab focuses.
       await Promise.allSettled([
         firstValueFrom(this.observeDashboardData(targetCurrency, workplaceId)),
         firstValueFrom(this.observeOptimizedAccountList(targetCurrency, workplaceId)),
@@ -184,37 +180,32 @@ class ReactiveDataService {
   }
 
   /**
-   * Optimized lightweight observable for the Accounts List.
-   * Uses raw SQL for heavy lifting and minimizes JS thread overhead.
+   * Screen-scoped Accounts projection over shared aggregate balances. Releasing
+   * it on tab blur stops DTO mapping and snapshot writes for the hidden list.
    */
   observeOptimizedAccountList(
     targetCurrency: string,
     workplaceId: WorkplaceId,
   ): Observable<LiveAccountsSummaryData> {
-    const cacheKey = `${targetCurrency}_${workplaceId}`;
-    return reactiveCacheCoordinator.getOrCreate({
-      namespace: REACTIVE_CACHE_NAMESPACES.optimizedAccountList,
-      key: cacheKey,
-      workplaceId,
-      createSource: () =>
-        observeAggregatedAccountBalances(targetCurrency, workplaceId).pipe(
-          map(({ accounts, balancesMap, wealthSummary }) => {
-            const plainAccounts = toPlainAccounts(accounts);
+    return withFirstEmissionMetric(
+      observeAggregatedAccountBalances(targetCurrency, workplaceId).pipe(
+        map(({ accounts, balancesMap, wealthSummary }) => {
+          const plainAccounts = toPlainAccounts(accounts);
 
-            const data: LiveAccountsSummaryData = {
-              accounts: plainAccounts,
-              balances: Array.from(balancesMap.values()),
-              wealthSummary,
-            };
-            return data;
-          }),
-          tap(data => {
-            // Persist for Instant Boot / Remount on Accounts Screen
-            snapshotService.deferCustomSnapshot(workplaceId, 'accounts_list_data', data);
-          }),
-        ),
-      decorate: observable => withFirstEmissionMetric(observable, 'Hydration.Hit.AccountList'),
-    });
+          const data: LiveAccountsSummaryData = {
+            accounts: plainAccounts,
+            balances: Array.from(balancesMap.values()),
+            wealthSummary,
+          };
+          return data;
+        }),
+        tap(data => {
+          // Persist for Instant Boot / Remount on Accounts Screen
+          snapshotService.deferCustomSnapshot(workplaceId, 'accounts_list_data', data);
+        }),
+      ),
+      'Hydration.Hit.AccountList',
+    );
   }
 
   /**
