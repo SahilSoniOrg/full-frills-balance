@@ -91,6 +91,14 @@ jest.mock('@/src/features/accounts/components/AccountFormView', () => ({
 jest.mock('@/src/features/accounts/hooks/useAccountFormViewModel', () => ({
   useAccountFormViewModel: () => {
     const React = jest.requireActual<typeof import('react')>('react');
+    const { AccountSubtype, AccountType } =
+      jest.requireActual<typeof import('@/src/types/enums')>('@/src/types/enums');
+    const { asAccountId } = jest.requireActual<typeof import('@/src/types/ids')>('@/src/types/ids');
+    const { Icon } =
+      jest.requireActual<typeof import('@/src/types/domainIcons')>('@/src/types/domainIcons');
+    const { createDefaultAccountMetadataValues } = jest.requireActual<
+      typeof import('@/src/features/accounts/services/accountMetadataDomain')
+    >('@/src/features/accounts/services/accountMetadataDomain');
     const { useAccountPersistence: usePersistence } = jest.requireActual<
       typeof import('@/src/features/accounts/hooks/useAccountPersistence')
     >('@/src/features/accounts/hooks/useAccountPersistence');
