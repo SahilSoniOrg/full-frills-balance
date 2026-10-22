@@ -70,13 +70,17 @@ export interface EnrichedJournal {
   accounts: {
     id: AccountId;
     transactionId?: TransactionId;
+    transactionType?: TransactionType;
+    notes?: string;
     exchangeRate?: number;
+    transactionDate?: number;
     name: string;
     accountType: string;
     icon?: string;
     color?: string;
     role: 'SOURCE' | 'DESTINATION' | 'NEUTRAL';
     amount?: number;
+    transactionCurrencyCode?: string;
     currencyCode?: string;
   }[];
   semanticType?: SemanticType;

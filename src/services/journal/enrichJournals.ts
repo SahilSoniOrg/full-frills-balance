@@ -1,4 +1,4 @@
-import Journal from '@/src/data/models/Journal';
+import type { PlainJournal } from '@/src/types/plainDtos';
 import type { JournalEnrichmentRow } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
 import { journalPresenter } from '@/src/services/accounting/journalPresenter';
 import { AccountType, TransactionType } from '@/src/types/enums';
@@ -30,7 +30,7 @@ function groupEnrichmentRowsByJournalId(
  * Single locality for journal list row semantics.
  */
 export function enrichJournals(
-  journals: Journal[],
+  journals: Omit<PlainJournal, 'createdAt' | 'updatedAt'>[],
   enrichmentRows: JournalEnrichmentRow[],
 ): EnrichedJournal[] {
   const dataByJournal = groupEnrichmentRowsByJournalId(enrichmentRows);
@@ -44,7 +44,10 @@ export function enrichJournals(
     const enrichedAccounts = rows.map(r => ({
       id: r.account_id,
       transactionId: r.transaction_id,
+      transactionType: r.transaction_type,
+      notes: r.notes ?? undefined,
       exchangeRate: r.exchange_rate ?? undefined,
+      transactionDate: r.transaction_date,
       name: r.account_name,
       accountType: r.account_type,
       role: (r.transaction_type === TransactionType.CREDIT ? 'SOURCE' : 'DESTINATION') as
@@ -52,6 +55,7 @@ export function enrichJournals(
       icon: r.account_icon,
       color: r.account_color ?? undefined,
       amount: r.amount,
+      transactionCurrencyCode: r.transaction_currency_code,
       currencyCode: r.account_currency_code,
     }));
 
@@ -108,9 +112,13 @@ export function journalEnrichmentFingerprint(journal: EnrichedJournal): string {
     accounts: journal.accounts.map(a => ({
       id: a.id,
       transactionId: a.transactionId ?? '',
+      transactionType: a.transactionType ?? '',
+      notes: a.notes ?? '',
       exchangeRate: a.exchangeRate ?? null,
+      transactionDate: a.transactionDate ?? null,
       role: a.role,
       amount: a.amount,
+      transactionCurrencyCode: a.transactionCurrencyCode ?? '',
       currencyCode: a.currencyCode ?? '',
       name: a.name,
       accountType: a.accountType,

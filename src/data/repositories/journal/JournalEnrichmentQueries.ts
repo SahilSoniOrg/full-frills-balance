@@ -25,14 +25,38 @@ export type JournalEnrichmentRow = {
   journal_id: JournalId;
   account_id: AccountId;
   transaction_id?: TransactionId;
+  transaction_type: TransactionType;
+  notes?: string | null;
   exchange_rate?: number | null;
   amount: number;
+  transaction_date?: number;
+  transaction_currency_code?: string;
   account_currency_code: string;
-  transaction_type: TransactionType;
   account_name: string;
   account_type: AccountType;
   account_icon?: string;
   account_color?: string | null;
+};
+
+type EnrichmentTransactionRaw = {
+  id: TransactionId;
+  journal_id: JournalId;
+  account_id: AccountId;
+  amount: number;
+  transaction_date: number;
+  currency_code: string;
+  notes: string | null;
+  exchange_rate: number | null;
+  transaction_type: TransactionType;
+};
+
+type EnrichmentAccountRaw = {
+  id: AccountId;
+  name: string;
+  currency_code: string;
+  account_type: AccountType;
+  icon: string | null;
+  color: string | null;
 };
 
 type JournalSuggestionRouteRow = {
@@ -289,10 +313,13 @@ export class JournalEnrichmentQueries {
         t.journal_id as journal_id, 
         t.account_id as account_id, 
         t.id as transaction_id,
+        t.transaction_type as transaction_type,
+        t.notes as notes,
         t.exchange_rate as exchange_rate,
         t.amount as amount, 
+        t.transaction_date as transaction_date,
+        t.currency_code as transaction_currency_code,
         a.currency_code as account_currency_code,
-        t.transaction_type as transaction_type, 
         a.name as account_name, 
         a.account_type as account_type, 
         a.icon as account_icon,
@@ -318,43 +345,51 @@ export class JournalEnrichmentQueries {
       return results;
     }
 
-    const journals = await this.journals
-      .query(Q.where('id', Q.oneOf(journalIds)), Q.where('workplace_id', workplaceId))
-      .fetch();
-    const enriched: JournalEnrichmentRow[] = [];
-
-    for (const journal of journals) {
-      const txs = await this.transactions
-        .query(
-          Q.where('journal_id', journal.id),
+    // The browser/no-raw-adapter path must also avoid filling the model cache on export.
+    const txs: EnrichmentTransactionRaw[] = await this.transactions
+      .query(
+        Q.on('journals', [
+          Q.where('id', Q.oneOf(journalIds)),
           Q.where('workplace_id', workplaceId),
-          Q.where('deleted_at', Q.eq(null)),
+        ]),
+        Q.where('workplace_id', workplaceId),
+        Q.where('deleted_at', Q.eq(null)),
+      )
+      .unsafeFetchRaw();
+    const accountIds = [...new Set(txs.map(tx => tx.account_id))];
+    const accountsById = new Map<AccountId, EnrichmentAccountRaw>();
+    for (let offset = 0; offset < accountIds.length; offset += 500) {
+      const accounts: EnrichmentAccountRaw[] = await database.collections
+        .get<Account>('accounts')
+        .query(
+          Q.where('id', Q.oneOf(accountIds.slice(offset, offset + 500))),
+          Q.where('workplace_id', workplaceId),
         )
-        .fetch();
-
-      for (const tx of txs) {
-        const [account] = await database.collections
-          .get<Account>('accounts')
-          .query(Q.where('id', tx.accountId), Q.where('workplace_id', workplaceId))
-          .fetch();
-        if (account) {
-          enriched.push({
-            journal_id: journal.id,
-            account_id: tx.accountId,
-            transaction_id: tx.id,
-            exchange_rate: tx.exchangeRate,
-            amount: tx.amount,
-            account_currency_code: account.currencyCode,
-            transaction_type: tx.transactionType,
-            account_name: account.name,
-            account_type: account.accountType,
-            account_icon: account.icon,
-            account_color: account.color,
-          });
-        }
-      }
+        .unsafeFetchRaw();
+      accounts.forEach(account => accountsById.set(account.id, account));
     }
 
+    const enriched: JournalEnrichmentRow[] = [];
+    for (const tx of txs) {
+      const account = accountsById.get(tx.account_id);
+      if (!account) continue;
+      enriched.push({
+        journal_id: tx.journal_id,
+        account_id: tx.account_id,
+        transaction_id: tx.id,
+        transaction_type: tx.transaction_type,
+        notes: tx.notes ?? undefined,
+        exchange_rate: tx.exchange_rate,
+        amount: tx.amount,
+        transaction_date: tx.transaction_date,
+        transaction_currency_code: tx.currency_code,
+        account_currency_code: account.currency_code,
+        account_name: account.name,
+        account_type: account.account_type,
+        account_icon: account.icon ?? undefined,
+        account_color: account.color,
+      });
+    }
     return enriched;
   }
 }

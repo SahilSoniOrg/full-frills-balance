@@ -1,7 +1,12 @@
 import { journalEnrichmentQueries } from '@/src/data/repositories/journal/JournalEnrichmentQueries';
+import { throwIfShareAborted } from '@/src/services/sharing/sharingCancellation';
 import { journalObserveQueries } from '@/src/data/repositories/journal/JournalObserveQueries';
 import { accountObserveQueries } from '@/src/data/repositories/account';
-import type { JournalTimelineDateRange } from '@/src/data/repositories/journal/JournalObserveQueries';
+import type {
+  JournalTimelineDateRange,
+  JournalTimelineQuery,
+  JournalTimelineCursor,
+} from '@/src/data/repositories/journal/JournalObserveQueries';
 import { enrichJournals, enrichedJournalsAreEqual } from '@/src/services/journal/enrichJournals';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalStatus } from '@/src/types/enums';
@@ -12,6 +17,33 @@ import {
   JournalTimelineRow,
   JournalTimelineRowsOptions,
 } from '@/src/services/journal/journalTimelineRows';
+
+/** Read and enrich one bounded page at a time, independently of the list's loaded pages. */
+export async function* iterateEnrichedJournalTimeline(
+  query: Omit<JournalTimelineQuery, 'limit'>,
+  signal: AbortSignal,
+): AsyncGenerator<EnrichedJournal[]> {
+  const createdBefore = Date.now();
+  let cursor: JournalTimelineCursor | undefined;
+  do {
+    throwIfShareAborted(signal);
+    // Keep both journal reads and enrichment below older SQLite bind-parameter limits.
+    const page = await journalObserveQueries.fetchTimelinePage(query, {
+      limit: 500,
+      createdBefore,
+      cursor,
+    });
+    throwIfShareAborted(signal);
+    if (page.journals.length === 0) return;
+    const rows = await journalEnrichmentQueries.getEnrichmentDataRaw(
+      query.workplaceId,
+      page.journals.map(journal => journal.id),
+    );
+    throwIfShareAborted(signal);
+    yield enrichJournals(page.journals, rows);
+    cursor = page.nextCursor;
+  } while (cursor);
+}
 
 export function observeEnrichedJournals(
   workplaceId: WorkplaceId,
