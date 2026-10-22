@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import { deviceSmsInboxColumns } from './deviceSmsInboxSchema';
+import { CREATE_LEDGER_READ_INDEXES_SQL } from './ledgerReadIndexes';
 import {
   addColumns,
   createTable,
@@ -1042,6 +1043,10 @@ export const migrations = schemaMigrations({
           ],
         }),
       ],
+    },
+    {
+      toVersion: 35,
+      steps: [unsafeExecuteSql(CREATE_LEDGER_READ_INDEXES_SQL)],
     },
   ],
 });

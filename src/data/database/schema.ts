@@ -1,8 +1,11 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 import { deviceSmsInboxTable } from './deviceSmsInboxSchema';
+import { CREATE_LEDGER_READ_INDEXES_SQL, DROP_LEDGER_READ_INDEXES_SQL } from './ledgerReadIndexes';
 
 export const schema = appSchema({
-  version: 34,
+  version: 35,
+  unsafeSql: (sql, kind) =>
+    `${sql}\n${kind === 'drop_indices' ? DROP_LEDGER_READ_INDEXES_SQL : CREATE_LEDGER_READ_INDEXES_SQL}`,
   tables: [
     deviceSmsInboxTable,
     tableSchema({

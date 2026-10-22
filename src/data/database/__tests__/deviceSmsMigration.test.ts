@@ -4,8 +4,8 @@ import { runMigrationSqlFixture } from './migrationSqlHarness';
 
 /** Loki does not execute unsafe SQL migrations. Exercise the real upgrade SQL in SQLite. */
 it('upgrades schema 32 to 33 with audit backfill, Device SMS ownership, and preserved consumed copies', () => {
-  expect(schema.version).toBe(34);
-  expect(migrations.maxVersion).toBe(34);
+  expect(schema.version).toBe(35);
+  expect(migrations.maxVersion).toBe(35);
   const upgrades = migrations.sortedMigrations.filter(migration => migration.toVersion === 33);
   expect(upgrades.map(migration => migration.toVersion)).toEqual([33]);
   const [upgrade] = upgrades;

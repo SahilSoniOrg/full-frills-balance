@@ -4,8 +4,8 @@ import { runMigrationSqlFixture } from './migrationSqlHarness';
 
 it('upgrades v33 planned payments with nullable FX fields and preserves legacy third currency', () => {
   const upgrade = migrations.sortedMigrations.find(migration => migration.toVersion === 34);
-  expect(schema.version).toBe(34);
-  expect(migrations.maxVersion).toBe(34);
+  expect(schema.version).toBe(35);
+  expect(migrations.maxVersion).toBe(35);
   expect(upgrade?.steps).toEqual([
     expect.objectContaining({
       type: 'add_columns',
