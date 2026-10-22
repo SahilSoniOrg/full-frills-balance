@@ -93,14 +93,10 @@ class ReactiveDataService {
     reactiveCacheCoordinator.clearAll(workplaceId);
   }
 
-  /** Drop cached account-detail graphs so archive mutations re-hydrate. */
+  /** Details are screen-scoped; invalidate shared dashboard and list projections. */
   invalidateAccountCaches(workplaceId?: WorkplaceId): void {
     reactiveCacheCoordinator.clearNamespaces(
-      [
-        REACTIVE_CACHE_NAMESPACES.dashboard,
-        REACTIVE_CACHE_NAMESPACES.optimizedAccountList,
-        REACTIVE_CACHE_NAMESPACES.accountDashboard,
-      ],
+      [REACTIVE_CACHE_NAMESPACES.dashboard, REACTIVE_CACHE_NAMESPACES.optimizedAccountList],
       workplaceId,
     );
   }
@@ -232,71 +228,64 @@ class ReactiveDataService {
   }
 
   /**
-   * Optimized observable for a specific account's dashboard/detail view.
-   * Consolidates account info, balance, and sub-account tree.
+   * Screen-scoped account details. Unsubscribing releases the detail graph;
+   * workplace base observations remain shared with the dashboard and account list.
    */
   observeAccountDashboard(
     accountId: AccountId,
     targetCurrency: string,
     workplaceId: WorkplaceId,
   ): Observable<AccountDashboardData> {
-    const cacheKey = `${accountId}_${targetCurrency}_${workplaceId}`;
-    return reactiveCacheCoordinator.getOrCreate({
-      namespace: REACTIVE_CACHE_NAMESPACES.accountDashboard,
-      key: cacheKey,
-      workplaceId,
-      createSource: () =>
-        combineLatest([
-          // Snapshot model values before crossing async boundaries: WatermelonDB
-          // mutates the same model objects on later emissions.
-          observeWorkplaceAccounts(workplaceId).pipe(map(toPlainAccounts)),
-          observeWorkplaceJournalMeta(workplaceId),
-          observeWorkplaceActiveTransactionCount(workplaceId),
-          exchangeRateRepository.observeAll(),
-        ]).pipe(
-          firstFastDebounce(Animation.dataRefreshDebounce),
-          switchMap(async ([plainAccounts]) => {
-            const targetAccount = plainAccounts.find(a => a.id === accountId);
-            if (!targetAccount) {
-              const deletedAccount = await accountQueryRepository.findWithDeleted(
-                workplaceId,
-                accountId,
-              );
-              return {
-                account: deletedAccount ? toPlainAccount(deletedAccount) : null,
-                balance: null,
-                subAccounts: [],
-                allAccounts: plainAccounts,
-              };
-            }
-
-            // Detail hydration needs this subtree's balances and lifetime counts;
-            // it must not recount every account or calculate workplace wealth.
-            const descendants = createAccountTreeSnapshot(plainAccounts).getDescendants(accountId);
-            const scopedIds = [accountId, ...descendants];
-            const balances = await balanceReadService.getAccountBalances(
+    return withFirstEmissionMetric(
+      combineLatest([
+        // Snapshot model values before crossing async boundaries: WatermelonDB
+        // mutates the same model objects on later emissions.
+        observeWorkplaceAccounts(workplaceId).pipe(map(toPlainAccounts)),
+        observeWorkplaceJournalMeta(workplaceId),
+        observeWorkplaceActiveTransactionCount(workplaceId),
+        exchangeRateRepository.observeAll(),
+      ]).pipe(
+        firstFastDebounce(Animation.dataRefreshDebounce),
+        switchMap(async ([plainAccounts]) => {
+          const targetAccount = plainAccounts.find(a => a.id === accountId);
+          if (!targetAccount) {
+            const deletedAccount = await accountQueryRepository.findWithDeleted(
               workplaceId,
-              undefined,
-              targetCurrency,
-              undefined,
-              scopedIds,
+              accountId,
             );
-            const balance = balances.find(item => item.accountId === accountId) ?? null;
-            const subBalances = balances.filter(item => descendants.has(item.accountId));
-
             return {
-              account: targetAccount,
-              balance,
-              subAccounts: subBalances,
+              account: deletedAccount ? toPlainAccount(deletedAccount) : null,
+              balance: null,
+              subAccounts: [],
               allAccounts: plainAccounts,
             };
-          }),
-        ),
-      decorate: observable =>
-        withFirstEmissionMetric(observable, 'Hydration.Hit.AccountDetails', {
-          accountId,
+          }
+
+          // Detail hydration needs this subtree's balances and lifetime counts;
+          // it must not recount every account or calculate workplace wealth.
+          const descendants = createAccountTreeSnapshot(plainAccounts).getDescendants(accountId);
+          const scopedIds = [accountId, ...descendants];
+          const balances = await balanceReadService.getAccountBalances(
+            workplaceId,
+            undefined,
+            targetCurrency,
+            undefined,
+            scopedIds,
+          );
+          const balance = balances.find(item => item.accountId === accountId) ?? null;
+          const subBalances = balances.filter(item => descendants.has(item.accountId));
+
+          return {
+            account: targetAccount,
+            balance,
+            subAccounts: subBalances,
+            allAccounts: plainAccounts,
+          };
         }),
-    });
+      ),
+      'Hydration.Hit.AccountDetails',
+      { accountId },
+    );
   }
 }
 

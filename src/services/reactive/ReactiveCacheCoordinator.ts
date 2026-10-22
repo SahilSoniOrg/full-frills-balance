@@ -7,7 +7,6 @@ import { logger } from '@/src/utils/logger';
 export const REACTIVE_CACHE_NAMESPACES = {
   dashboard: 'reactive-data/dashboard',
   optimizedAccountList: 'reactive-data/optimized-account-list',
-  accountDashboard: 'reactive-data/account-dashboard',
   aggregatedAccountBalances: 'reactive/aggregated-account-balances',
   workplaceAccounts: 'reactive/workplace-accounts',
   workplaceJournalMeta: 'reactive/workplace-journal-meta',

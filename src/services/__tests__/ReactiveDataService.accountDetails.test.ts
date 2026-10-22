@@ -1,4 +1,4 @@
-import { firstValueFrom, of as mockOf } from 'rxjs';
+import { firstValueFrom, of as mockOf, Subject } from 'rxjs';
 import Account from '@/src/data/models/Account';
 import { AccountType } from '@/src/types/enums';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
@@ -59,6 +59,31 @@ describe('account details balance scope', () => {
     reactiveDataService.clearCache();
   });
   afterEach(() => reactiveDataService.clearCache());
+
+  it('releases a departed detail graph and reads fresh data on re-entry', () => {
+    const accounts = new Subject<Account[]>();
+    jest.mocked(observeWorkplaceAccounts).mockReturnValue(accounts);
+    jest.mocked(balanceReadService.getAccountBalances).mockResolvedValue([balance(accountId)]);
+
+    const first = reactiveDataService
+      .observeAccountDashboard(accountId, 'USD', workplaceId)
+      .subscribe();
+    accounts.next([account(accountId)]);
+    expect(balanceReadService.getAccountBalances).toHaveBeenCalledTimes(1);
+
+    first.unsubscribe();
+    expect(accounts.observed).toBe(false);
+    accounts.next([account(accountId)]);
+    expect(balanceReadService.getAccountBalances).toHaveBeenCalledTimes(1);
+
+    const revisit = reactiveDataService
+      .observeAccountDashboard(accountId, 'USD', workplaceId)
+      .subscribe();
+    accounts.next([account(accountId)]);
+    expect(balanceReadService.getAccountBalances).toHaveBeenCalledTimes(2);
+    revisit.unsubscribe();
+    expect(accounts.observed).toBe(false);
+  });
 
   it.each([false, true])(
     'reads only the selected subtree with 1000 unrelated accounts (parent: %s)',
