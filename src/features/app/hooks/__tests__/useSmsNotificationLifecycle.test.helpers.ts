@@ -6,6 +6,8 @@ export let mockSmsNotificationReady = false;
 export let mockSmsNotificationLocked = true;
 export let mockSmsNotificationNavigationKey: string | undefined;
 export let mockSmsNotificationWorkplace = 'workplace-b';
+export let mockSmsNotificationPathname = '/';
+export let mockSmsNotificationRecordId: string | undefined;
 export let mockSmsNotificationPending: PendingSmsNotificationIntent | null;
 export const mockSmsNotificationSwitch = jest.fn();
 
@@ -15,6 +17,8 @@ export function resetSmsNotificationLifecycleMocks() {
   mockSmsNotificationLocked = true;
   mockSmsNotificationNavigationKey = undefined;
   mockSmsNotificationWorkplace = 'workplace-b';
+  mockSmsNotificationPathname = '/';
+  mockSmsNotificationRecordId = undefined;
   mockSmsNotificationPending = {
     responseId: 'response',
     receivedAt: 100,
@@ -44,6 +48,11 @@ export function setSmsNotificationNavigationKey(key: string | undefined) {
 
 export function setSmsNotificationWorkplace(workplaceId: string) {
   mockSmsNotificationWorkplace = workplaceId;
+}
+
+export function setSmsNotificationRoute(pathname: string, recordId?: string) {
+  mockSmsNotificationPathname = pathname;
+  mockSmsNotificationRecordId = recordId;
 }
 
 export function mockTargetWorkplace(workplaceId: WorkplaceId) {

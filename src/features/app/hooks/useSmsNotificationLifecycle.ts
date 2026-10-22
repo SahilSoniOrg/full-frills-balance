@@ -44,17 +44,18 @@ export function SmsNotificationNavigation() {
     const subscription = AppState.addEventListener('change', setAppState);
     return () => subscription.remove();
   }, []);
+  const foreground = !isAppCurrentlyLocked && appState === 'active';
+  const reviewInboxVisible = foreground && pathname === '/sms-inbox';
+  const reviewRecordId =
+    foreground && pathname === '/journal-entry' && typeof smsRecordId === 'string'
+      ? smsRecordId
+      : undefined;
   useEffect(() => {
-    const foreground = !isAppCurrentlyLocked && appState === 'active';
-    notificationService.setSmsReviewVisible(
-      foreground && pathname === '/sms-inbox',
-      foreground && pathname === '/journal-entry' && typeof smsRecordId === 'string'
-        ? smsRecordId
-        : undefined,
-    );
+    // Unrelated routes have the same suppression state and need no outbox scan.
+    notificationService.setSmsReviewVisible(reviewInboxVisible, reviewRecordId);
     void smsReviewNotificationService.refresh();
     return () => notificationService.setSmsReviewVisible(false);
-  }, [appState, isAppCurrentlyLocked, pathname, smsRecordId]);
+  }, [foreground, reviewInboxVisible, reviewRecordId]);
 
   useEffect(() => {
     if (

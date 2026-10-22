@@ -2,6 +2,8 @@ import { act, renderHook } from '@testing-library/react-native';
 import { AppState } from 'react-native';
 import { SmsNotificationNavigation } from '../useSmsNotificationLifecycle';
 import { smsNotificationIntentStore } from '@/src/services/sms/SmsNotificationIntentStore';
+import { smsReviewNotificationService } from '@/src/services/sms/SmsReviewNotificationService';
+import { notificationService } from '@/src/services/notification/NotificationService';
 import { WorkplaceId } from '@/src/types/ids';
 import {
   mockSmsNotificationNavigationKey,
@@ -11,6 +13,8 @@ import {
   mockSmsNotificationLocked,
   mockSmsNotificationSwitch,
   mockSmsNotificationWorkplace,
+  mockSmsNotificationPathname,
+  mockSmsNotificationRecordId,
   mockTargetWorkplace,
   primeSmsNotificationReady,
   resetSmsNotificationLifecycleMocks,
@@ -18,18 +22,33 @@ import {
   setSmsNotificationNavigationKey,
   setSmsNotificationReady,
   setSmsNotificationWorkplace,
+  setSmsNotificationRoute,
 } from './useSmsNotificationLifecycle.test.helpers';
 
 jest.mock('expo-router', () => ({
   router: { push: (...args: unknown[]) => mockSmsNotificationPush(...args) },
-  usePathname: () => '/',
-  useGlobalSearchParams: () => ({}),
+  usePathname: () => mockSmsNotificationPathname,
+  useGlobalSearchParams: () => ({ smsRecordId: mockSmsNotificationRecordId }),
   useRootNavigationState: () => ({ key: mockSmsNotificationNavigationKey }),
 }));
 jest.mock('expo-notifications', () => ({
   setNotificationHandler: jest.fn(),
   clearLastNotificationResponseAsync: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock('@/src/services/notification/NotificationService', () => {
+  let inboxVisible = false;
+  let reviewedRecordId: string | undefined;
+  return {
+    notificationService: {
+      setSmsReviewVisible: jest.fn((visible: boolean, recordId?: string) => {
+        inboxVisible = visible;
+        reviewedRecordId = recordId;
+      }),
+      isSmsReviewForegroundSuppressed: (recordId?: string) =>
+        inboxVisible || (recordId !== undefined && recordId === reviewedRecordId),
+    },
+  };
+});
 jest.mock('@/src/contexts/app-shell/AppReadyProvider', () => ({
   useAppReady: () => ({
     isAppReady: mockSmsNotificationReady,
@@ -64,6 +83,39 @@ beforeEach(() => {
   resetSmsNotificationLifecycleMocks();
   Object.defineProperty(AppState, 'currentState', { value: 'active', configurable: true });
   mockTargetWorkplace('workplace-b' as WorkplaceId);
+});
+
+it('refreshes only when navigation changes review suppression', async () => {
+  // Keep response navigation gated while exercising foreground route changes.
+  setSmsNotificationLocked(false);
+  const view = renderHook(() => SmsNotificationNavigation());
+  await act(async () => {});
+  jest.mocked(smsReviewNotificationService.refresh).mockClear();
+
+  for (const route of ['/accounts', '/account-details', '/journal-entry', '/journal-details']) {
+    setSmsNotificationRoute(route);
+    view.rerender({});
+    await act(async () => {});
+  }
+  expect(smsReviewNotificationService.refresh).not.toHaveBeenCalled();
+
+  setSmsNotificationRoute('/sms-inbox');
+  view.rerender({});
+  await act(async () => {});
+  expect(notificationService.isSmsReviewForegroundSuppressed('review')).toBe(true);
+
+  setSmsNotificationRoute('/journal-entry', 'review');
+  view.rerender({});
+  await act(async () => {});
+  expect(notificationService.isSmsReviewForegroundSuppressed('review')).toBe(true);
+  expect(notificationService.isSmsReviewForegroundSuppressed('other')).toBe(false);
+
+  setSmsNotificationRoute('/journal-details');
+  view.rerender({});
+  await act(async () => {});
+  expect(notificationService.isSmsReviewForegroundSuppressed('review')).toBe(false);
+  expect(smsReviewNotificationService.refresh).toHaveBeenCalledTimes(3);
+  view.unmount();
 });
 
 it('retains a tap until launch, hydration, unlock, and the navigator are ready', async () => {
