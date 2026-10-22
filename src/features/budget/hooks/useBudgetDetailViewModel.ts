@@ -188,6 +188,7 @@ export function useBudgetDetailViewModel() {
     statuses: [...ACTIVE_JOURNAL_STATUSES],
     queryOptions: { accountIds: activityAccountIds },
     expandScopedLegs: activityAccountIds.length > 0 ? activityAccountIds : undefined,
+    shareTitle: `Budget activity for ${budget?.name || 'Budget'}`,
     paginationPolicy: 'always',
   });
 
@@ -359,6 +360,7 @@ export function useBudgetDetailViewModel() {
 
   return {
     budget,
+    csvExport: journalList.csvExport,
     usage: displayedUsage,
     items: journalList.items,
     isLoading: dbLoading,

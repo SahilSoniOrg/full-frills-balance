@@ -1,4 +1,5 @@
 import type { ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
+import type { ShareableCsvControl } from '@/src/hooks/useJournalCsvExport';
 import { AppConfig } from '@/src/constants';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
@@ -18,6 +19,7 @@ import { getNow } from '@/src/utils/dateUtils';
 import { useMemo } from 'react';
 
 export interface InsightDetailsViewModel {
+  csvExport?: ShareableCsvControl;
   items: JournalListItem[];
   isLoading: boolean;
   header: InsightDetailsHeaderModel;
@@ -50,6 +52,7 @@ export function useInsightDetailsViewModel(
       endDate: getNow() + AppConfig.time.msPerDay,
     },
     queryOptions: { journalIds },
+    shareTitle: 'Insight transactions',
     baseCurrency: params.currencyCode || workplaceCurrency,
     paginationPolicy: 'default',
   });
@@ -64,6 +67,7 @@ export function useInsightDetailsViewModel(
   const header = useMemo(() => buildInsightDetailsHeader(params, theme), [params, theme]);
 
   return {
+    csvExport: journalList.csvExport,
     items: journalList.items,
     isLoading: journalList.isLoading,
     header,

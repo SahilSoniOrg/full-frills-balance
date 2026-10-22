@@ -14,8 +14,10 @@ import type { Dispatch, SetStateAction } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useJournalSearchFilters } from './useJournalSearchFilters';
 import { useJournalEntryList } from './useJournalEntryList';
+import type { ShareableCsvControl } from '@/src/hooks/useJournalCsvExport';
 
 export interface JournalSearchViewModel {
+  csvExport?: ShareableCsvControl;
   items: JournalListItem[];
   isLoading: boolean;
   isLoadingMore: boolean;
@@ -146,6 +148,7 @@ export function useJournalSearchViewModel(): JournalSearchViewModel {
   );
 
   return {
+    csvExport: core.csvExport,
     items: core.items,
     isLoading: core.isLoading,
     isLoadingMore: core.isLoadingMore,

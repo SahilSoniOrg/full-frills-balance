@@ -9,6 +9,17 @@ import type { AccountId, PlannedPaymentId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
 import { confirm, toast } from '@/src/utils/alerts';
 
+jest.mock('@/src/hooks/useShareable', () => ({
+  useShareable: () => ({
+    share: jest.fn(),
+    save: jest.fn(),
+    isBusy: false,
+    isPending: false,
+    progress: null,
+    error: null,
+  }),
+}));
+
 jest.mock('@/src/hooks/use-theme', () => ({
   useTheme: () => ({ theme: { primary: '#000' } }),
 }));

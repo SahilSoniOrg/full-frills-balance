@@ -269,6 +269,7 @@ export function PlannedPaymentDetailsView({
 
             {!vm.isPreview && (
               <PlannedPaymentActivityOverview
+                csvExport={vm.csvExport}
                 summary={vm.activitySummary}
                 nextOccurrences={vm.nextOccurrences}
                 showcasedOccurrenceDate={vm.showcasedOccurrenceDate}

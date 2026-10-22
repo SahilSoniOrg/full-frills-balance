@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { useWindowDimensions } from 'react-native';
 import { AppButton, AppText, AppCard, PressScaleTouchable } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
+import { JournalCsvExportButton } from '@/src/components/journal/JournalCsvExportButton';
+import type { ShareableCsvControl } from '@/src/hooks/useJournalCsvExport';
 import { Column, Row, Separator } from '@/src/design-system';
 import { AppConfig, Size, Typography } from '@/src/constants';
 import type { EnrichedJournal } from '@/src/types/domainReadModels';
@@ -27,6 +29,7 @@ const TITLE_AMOUNT_FIT = {
 const copy = AppConfig.strings.plannedDetailRedesign;
 
 interface Props {
+  csvExport?: ShareableCsvControl;
   summary?: PlannedPaymentActivitySummary;
   nextOccurrences?: PlannedPaymentNextOccurrence[];
   showcasedOccurrenceDate?: number;
@@ -54,6 +57,7 @@ interface Props {
 }
 
 export function PlannedPaymentActivityOverview({
+  csvExport,
   summary,
   nextOccurrences = [],
   showcasedOccurrenceDate,
@@ -182,6 +186,7 @@ export function PlannedPaymentActivityOverview({
           <AppText variant="subheading" weight="semibold">
             {copy.history}
           </AppText>
+          <JournalCsvExportButton csvExport={csvExport} />
           {(rows.length > 3 || totalHistoryCount > 3 || !!hasMore) && (
             <AppButton
               variant="ghost"

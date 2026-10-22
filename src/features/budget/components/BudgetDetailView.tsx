@@ -1,5 +1,6 @@
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import { JournalEntryListView } from '@/src/components/journal/JournalEntryListView';
+import { JournalCsvExportButton } from '@/src/components/journal/JournalCsvExportButton';
 import { AppButton, AppText, EmptyStateView, LoadingView } from '@/src/components/core';
 import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import { ScreenWithChrome } from '@/src/components/layout';
@@ -122,29 +123,30 @@ export function BudgetDetailView({
               />
               <ScreenSectionHeader
                 title={strings.activity}
-                action={
-                  <Row align="center" gap="xs">
-                    {activityCountLabel ? (
-                      <AppText variant="caption" color="secondary">
-                        {activityCountLabel}
-                      </AppText>
-                    ) : null}
-                    {vm.activityCategory ? (
-                      <PressScaleTouchable
-                        onPress={() => vm.onFilterCategory(null)}
-                        accessibilityRole="button"
-                        accessibilityLabel={strings.clearActivityFilter}
-                        hitSlop={8}
-                        style={styles.clearFilterButton}
-                      >
-                        <AppText variant="body" color="secondary" weight="semibold">
-                          ×
-                        </AppText>
-                      </PressScaleTouchable>
-                    ) : null}
-                  </Row>
-                }
+                action={<JournalCsvExportButton csvExport={vm.csvExport} />}
               />
+              {activityCountLabel || vm.activityCategory ? (
+                <Row align="center" gap="xs">
+                  {activityCountLabel ? (
+                    <AppText variant="caption" color="secondary">
+                      {activityCountLabel}
+                    </AppText>
+                  ) : null}
+                  {vm.activityCategory ? (
+                    <PressScaleTouchable
+                      onPress={() => vm.onFilterCategory(null)}
+                      accessibilityRole="button"
+                      accessibilityLabel={strings.clearActivityFilter}
+                      hitSlop={8}
+                      style={styles.clearFilterButton}
+                    >
+                      <AppText variant="body" color="secondary" weight="semibold">
+                        ×
+                      </AppText>
+                    </PressScaleTouchable>
+                  ) : null}
+                </Row>
+              ) : null}
             </Column>
           }
           contentContainerStyle={styles.listContent}

@@ -2,6 +2,7 @@ import { MultiAccountPickerModal } from '@/src/components/account-selection';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { DateRangeTrigger } from '@/src/components/filters/DateRangeTrigger';
+import { JournalCsvExportButton } from '@/src/components/journal/JournalCsvExportButton';
 import {
   Icon,
   AppInput,
@@ -38,6 +39,7 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
             leftIcon={Icon.Search}
             autoFocus
           />
+          <JournalCsvExportButton csvExport={vm.csvExport} />
         </View>
 
         <ScrollView
@@ -176,6 +178,8 @@ const styles = StyleSheet.create({
   filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: Spacing.sm,
+    flexWrap: 'wrap',
   },
   chipContainer: {
     gap: Spacing.xs,

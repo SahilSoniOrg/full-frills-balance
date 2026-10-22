@@ -18,8 +18,13 @@ import { formatPlannedPaymentInterval } from '@/src/features/planned-payments/ho
 import { recordPlannedOccurrenceWithFxReview } from '@/src/services/planned-payment/recordPlannedOccurrenceWithFxReview';
 import { usePlannedPaymentRecord } from '@/src/features/planned-payments/hooks/usePlannedPaymentRecord';
 import { useSelection } from '@/src/hooks/useSelection';
+import { useShareable } from '@/src/hooks/useShareable';
+import { useJournalCsvExport, type ShareableCsvControl } from '@/src/hooks/useJournalCsvExport';
 import { useTheme } from '@/src/hooks/use-theme';
-import { shareJournalEntries } from '@/src/services/sharing/JournalShareProvider';
+import {
+  createSelectedJournalShareable,
+  type ShareableJournalEntry,
+} from '@/src/services/sharing/JournalShareProvider';
 import { deletePlannedPayment } from '@/src/services/planned-payment/plannedPaymentCommands';
 import { togglePlannedPaymentStatus } from '@/src/services/planned-payment/plannedPaymentLifecycle';
 import { skipPlannedPaymentOccurrence } from '@/src/services/planned-payment/plannedPaymentOrchestration';
@@ -27,7 +32,6 @@ import { analytics } from '@/src/services/analytics';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
 import { JournalStatus, PlannedPaymentStatus } from '@/src/types/enums';
 import { AccountId, JournalId, PlannedPaymentId } from '@/src/types/ids';
-import { logger } from '@/src/utils/logger';
 import { AppNavigation } from '@/src/utils/navigation';
 import { toast } from '@/src/utils/alerts';
 import { formatDate, getNow } from '@/src/utils/dateUtils';
@@ -52,6 +56,14 @@ import {
 
 type PendingAction = 'record' | 'skip' | 'toggle' | 'delete';
 
+const HISTORY_STATUSES = [
+  JournalStatus.POSTED,
+  JournalStatus.REVERSED,
+  JournalStatus.PLANNED,
+  JournalStatus.SKIPPED,
+  JournalStatus.PAUSED,
+];
+
 const ACTION_ERRORS: Record<PendingAction, string> = {
   record: 'Could not record this occurrence. Try again.',
   skip: 'Could not skip this occurrence. Try again.',
@@ -60,6 +72,7 @@ const ACTION_ERRORS: Record<PendingAction, string> = {
 };
 
 export interface PlannedPaymentDetailsViewModel {
+  csvExport?: ShareableCsvControl;
   theme: Theme;
   isLoading: boolean;
   isMissing: boolean;
@@ -197,20 +210,19 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
     isLoadingMore,
     hasMore,
     loadMore,
-  } = useJournals(
-    workplaceId,
-    20,
-    undefined,
-    undefined,
-    [
-      JournalStatus.POSTED,
-      JournalStatus.REVERSED,
-      JournalStatus.PLANNED,
-      JournalStatus.SKIPPED,
-      JournalStatus.PAUSED,
-    ],
-    id,
+  } = useJournals(workplaceId, 20, undefined, undefined, HISTORY_STATUSES, id);
+  const csvQuery = useMemo(
+    () => ({
+      workplaceId,
+      title: `History for ${item?.name || 'Scheduled Bill'}`,
+      dateRange: { plannedPaymentId: id },
+      status: HISTORY_STATUSES,
+    }),
+    [workplaceId, item?.name, id],
   );
+  const csvExport = useJournalCsvExport(csvQuery, {
+    disabled: !id || !item || isHistoryLoading || history.length === 0,
+  });
   const handleEdit = useCallback(() => {
     if (id) {
       AppNavigation.toPlannedPaymentForm(
@@ -315,12 +327,11 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
     selectionControl.selectAll(history.map(j => j.id));
   }, [history, selectionControl]);
 
-  const onShareSelected = useCallback(async () => {
-    if (selectedIds.size === 0 || !history) return;
-    try {
-      const selectedJournals = history.filter(j => selectedIds.has(j.id));
-      await shareJournalEntries(
-        selectedJournals.map(j => ({
+  const selectedEntries = useMemo<ShareableJournalEntry[]>(
+    () =>
+      history
+        .filter(j => selectedIds.has(j.id))
+        .map(j => ({
           id: j.id,
           date: j.journalDate,
           description: j.description || j.semanticLabel || 'Entry',
@@ -328,17 +339,29 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
           currencyCode: j.currencyCode,
           displayType: j.displayType,
         })),
-        {
-          title: `Entries for ${item?.name || 'Scheduled Bill'}`,
-          includeTime: true,
-          sort: 'desc',
-          showEmojis: true,
-        },
-      );
-    } catch (error) {
-      logger.error('Failed to share journal entries', error);
-    }
-  }, [selectedIds, history, item]);
+    [history, selectedIds],
+  );
+  const selectedSource = useMemo(
+    () =>
+      selectedEntries.length
+        ? createSelectedJournalShareable(
+            selectedEntries,
+            {
+              title: `Entries for ${item?.name || 'Scheduled Bill'}`,
+              includeTime: true,
+              sort: 'desc',
+              showEmojis: true,
+            },
+            workplaceId,
+          )
+        : null,
+    [selectedEntries, item?.name, workplaceId],
+  );
+  const selectedShare = useShareable(selectedSource);
+  const onShareSelected = useCallback(async () => {
+    if (selectedEntries.length === 0) return;
+    await selectedShare.share();
+  }, [selectedEntries.length, selectedShare]);
 
   const bulkOperations = useJournalsBulkOperations({
     workplaceId,
@@ -356,6 +379,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
 
   const selectionProps = useMemo(
     () => ({
+      csvExport,
       selectedIds,
       isSelectionModeActive,
       onLongPressItem,
@@ -370,6 +394,7 @@ export function usePlannedPaymentDetailsViewModel(id: string): PlannedPaymentDet
       onOpenAccount,
     }),
     [
+      csvExport,
       selectedIds,
       isSelectionModeActive,
       onLongPressItem,

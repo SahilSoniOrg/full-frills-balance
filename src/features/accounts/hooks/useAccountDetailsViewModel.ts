@@ -201,6 +201,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
         unreconciledCount,
       },
       activity: {
+        csvExport: journalList.csvExport,
         dateRange,
         onShowDatePicker: showDatePicker,
         onPreviousPeriod: navigatePrevious,
@@ -214,6 +215,7 @@ export function useAccountDetailsViewModel(): AccountDetailsViewModel {
     }),
     [
       reconciledAtMs,
+      journalList.csvExport,
       balanceCurrency,
       accountName,
       accountIcon,

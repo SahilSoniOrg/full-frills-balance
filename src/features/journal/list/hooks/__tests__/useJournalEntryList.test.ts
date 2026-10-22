@@ -5,6 +5,17 @@ import { JournalDisplayType } from '@/src/types/enums';
 import { WorkplaceId, AccountId, JournalId } from '@/src/types/ids';
 import { useJournalEntryList } from '../useJournalEntryList';
 
+jest.mock('@/src/hooks/useShareable', () => ({
+  useShareable: () => ({
+    share: jest.fn(),
+    save: jest.fn(),
+    isBusy: false,
+    isPending: false,
+    progress: null,
+    error: null,
+  }),
+}));
+
 jest.mock('@/src/features/journal/hooks/useJournals', () => ({
   useJournals: jest.fn(),
 }));

@@ -7,9 +7,14 @@ import { useCurrencyPrecision } from '@/src/hooks/use-currencies';
 import { useExchangeRates } from '@/src/hooks/useExchangeRates';
 import { useJournalListGrouping } from '@/src/hooks/useJournalListGrouping';
 import { useSelection } from '@/src/hooks/useSelection';
+import { useShareable } from '@/src/hooks/useShareable';
+import { useJournalCsvExport, type ShareableCsvControl } from '@/src/hooks/useJournalCsvExport';
 import { useSharePrefs } from '@/src/hooks/useSharePrefs';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
-import { shareJournalEntries } from '@/src/services/sharing/JournalShareProvider';
+import {
+  createSelectedJournalShareable,
+  type ShareableJournalEntry,
+} from '@/src/services/sharing/JournalShareProvider';
 import type { JournalTimelineRow } from '@/src/services/journal/journalTimelineRows';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { EnrichedJournal } from '@/src/types/domainReadModels';
@@ -47,6 +52,7 @@ export interface UseJournalEntryListParams {
 }
 
 export interface JournalEntryListCore {
+  csvExport: ShareableCsvControl;
   items: JournalListItem[];
   journals: EnrichedJournal[];
   isLoading: boolean;
@@ -114,6 +120,26 @@ export function useJournalEntryList({
   );
 
   const selectionControl = useSelection<JournalId>();
+  const csvQuery = useMemo(
+    () => ({
+      workplaceId,
+      title: shareTitle,
+      dateRange: {
+        ...dateRange,
+        accountIds: queryOptions?.accountIds,
+        journalIds: queryOptions?.journalIds,
+      },
+      searchQuery,
+      status: statuses,
+      minAmount: queryOptions?.minAmount,
+      maxAmount: queryOptions?.maxAmount,
+      displayType: queryOptions?.displayType,
+    }),
+    [workplaceId, shareTitle, dateRange, queryOptions, searchQuery, statuses],
+  );
+  const csvExport = useJournalCsvExport(csvQuery, {
+    disabled: !isInitialized || isLoading || journals.length === 0,
+  });
   const {
     selectedIds,
     isSelectionModeActive,
@@ -150,13 +176,11 @@ export function useJournalEntryList({
 
   const { groupedItems: items } = useJournalListGrouping(groupingOptions);
 
-  const onShareSelected = useCallback(async () => {
-    if (selectedIds.size === 0) return;
-
-    try {
-      const selectedJournals = journals.filter(j => selectedIds.has(j.id));
-      await shareJournalEntries(
-        selectedJournals.map(j => ({
+  const selectedEntries = useMemo<ShareableJournalEntry[]>(
+    () =>
+      journals
+        .filter(j => selectedIds.has(j.id))
+        .map(j => ({
           id: j.id,
           date: j.journalDate,
           description: j.description || j.semanticLabel || 'Journal entry',
@@ -164,18 +188,29 @@ export function useJournalEntryList({
           currencyCode: j.currencyCode,
           displayType: j.displayType,
         })),
-        {
-          title: shareTitle,
-          includeTime: true,
-          sort: 'desc',
-          showEmojis: true,
-        },
-        defaultShareFormat,
-      );
-    } catch (error) {
-      logger.error('Failed to share journal entries', error);
-    }
-  }, [selectedIds, journals, defaultShareFormat, shareTitle]);
+    [journals, selectedIds],
+  );
+  const selectedSource = useMemo(
+    () =>
+      selectedEntries.length
+        ? createSelectedJournalShareable(
+            selectedEntries,
+            {
+              title: shareTitle,
+              includeTime: true,
+              sort: 'desc',
+              showEmojis: true,
+            },
+            workplaceId,
+          )
+        : null,
+    [selectedEntries, shareTitle, workplaceId],
+  );
+  const selectedShare = useShareable(selectedSource);
+  const onShareSelected = useCallback(async () => {
+    if (selectedEntries.length === 0) return;
+    await selectedShare.share(defaultShareFormat);
+  }, [selectedEntries.length, selectedShare, defaultShareFormat]);
 
   const selectAll = useCallback(() => {
     const visibleIds = [
@@ -235,6 +270,7 @@ export function useJournalEntryList({
   }, [paginationPolicy, searchQuery, hasMore, loadMore, isLoadingMore]);
 
   return {
+    csvExport,
     items,
     journals,
     isLoading,

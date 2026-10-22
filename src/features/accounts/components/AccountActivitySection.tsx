@@ -5,6 +5,7 @@ import { ChartLegendItem } from '@/src/components/charts/ChartLegendItem';
 import { LineChart } from '@/src/components/charts/LineChart';
 import { PeriodStepper } from '@/src/components/shared/PeriodStepper';
 import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
+import { JournalCsvExportButton } from '@/src/components/journal/JournalCsvExportButton';
 import { AppIcon, AppText, Badge, Icon } from '@/src/components/core';
 import { Size, Spacing } from '@/src/constants';
 import { REPORT_CHART_LAYOUT } from '@/src/constants/report-constants';
@@ -58,6 +59,7 @@ function Stat({
 }
 
 export function AccountActivitySection({
+  csvExport,
   accountType,
   dateRange,
   onShowDatePicker,
@@ -304,7 +306,11 @@ export function AccountActivitySection({
         ) : null}
       </View>
 
-      <ScreenSectionHeader title="Activity" style={styles.sectionHeader} />
+      <ScreenSectionHeader
+        title="Activity"
+        action={<JournalCsvExportButton csvExport={csvExport} />}
+        style={styles.sectionHeader}
+      />
     </View>
   );
 }

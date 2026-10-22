@@ -1,4 +1,5 @@
 import type { DetailMenuAction } from '@/src/components/shared/DetailHeaderMenuActions';
+import type { ShareableCsvControl } from '@/src/hooks/useJournalCsvExport';
 import type { AccountArchiveCascadeModalProps } from '@/src/features/accounts/components/AccountArchiveCascadeModal';
 import type { AccountMergePickerModalProps } from '@/src/features/accounts/hooks/useAccountDeleteMergeActions';
 import type { JournalListModalsProps } from '@/src/features/journal';
@@ -48,6 +49,7 @@ export interface AccountSummaryCardModel {
 }
 
 export interface AccountActivitySectionModel {
+  csvExport?: ShareableCsvControl;
   dateRange: DateRange | null;
   onShowDatePicker: () => void;
   onPreviousPeriod?: () => void;

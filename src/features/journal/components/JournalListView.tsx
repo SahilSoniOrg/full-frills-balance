@@ -1,6 +1,8 @@
 import { DateRangeTrigger } from '@/src/components/filters/DateRangeTrigger';
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { JournalEntryListView } from '@/src/components/journal/JournalEntryListView';
+import { JournalCsvExportButton } from '@/src/components/journal/JournalCsvExportButton';
+import type { ShareableCsvControl } from '@/src/hooks/useJournalCsvExport';
 import { type ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
 import { ScreenWithChrome, type ScreenChrome } from '@/src/components/layout';
 import { Spacing } from '@/src/constants';
@@ -15,6 +17,7 @@ import React from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 export type JournalListBundle = {
+  csvExport?: ShareableCsvControl;
   items: JournalListItem[];
   isLoading: boolean;
   isLoadingMore: boolean;
@@ -73,7 +76,9 @@ export function JournalListView(props: JournalListViewProps) {
               onNext={periodBar.onNext}
               fullWidth
               showNavigationArrows
+              style={styles.periodTrigger}
             />
+            <JournalCsvExportButton csvExport={list.csvExport} />
           </View>
         ) : null}
 
@@ -113,9 +118,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   periodBar: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: Spacing.sm,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.xs,
     paddingBottom: Spacing.xs,
+  },
+  periodTrigger: {
+    flexGrow: 1,
+    flexBasis: 260,
+    minWidth: 0,
+    maxWidth: '100%',
   },
   listContent: {
     paddingHorizontal: Spacing.lg,

@@ -1,6 +1,7 @@
 import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { JournalEntryListView } from '@/src/components/journal/JournalEntryListView';
+import { JournalCsvExportButton } from '@/src/components/journal/JournalCsvExportButton';
 import { Icon, AppIcon, AppText } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
@@ -12,6 +13,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
 
 export function InsightDetailsView({
+  csvExport,
   items,
   isLoading,
   header,
@@ -100,7 +102,11 @@ export function InsightDetailsView({
           {header.basisText}
         </AppText>
       </View>
-      <ScreenSectionHeader title={header.transactionsTitle} style={styles.listTitle} />
+      <ScreenSectionHeader
+        title={header.transactionsTitle}
+        action={<JournalCsvExportButton csvExport={csvExport} />}
+        style={styles.listTitle}
+      />
     </View>
   );
 

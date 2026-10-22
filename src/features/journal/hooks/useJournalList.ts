@@ -103,6 +103,7 @@ export function useJournalList(
   const periodLabel = dateRange?.label;
   const list = useMemo(
     (): JournalListModel['list'] => ({
+      csvExport: core.csvExport,
       items: core.items,
       isLoading: core.isLoading,
       isLoadingMore: core.isLoadingMore,
@@ -114,6 +115,7 @@ export function useJournalList(
       onEndReached: core.onEndReached,
     }),
     [
+      core.csvExport,
       core.items,
       core.isLoading,
       core.isLoadingMore,
