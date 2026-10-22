@@ -1,3 +1,4 @@
+import { KeyboardAwareScrollView } from '@/src/design-system/KeyboardAwareScrollView';
 import {
   AppButton,
   AppCard,
@@ -18,8 +19,8 @@ import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Icon, type IconName } from '@/src/types/domainIcons';
 import dayjs from 'dayjs';
-import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
-import { Keyboard, ScrollView, StyleSheet, TextInput, type FocusEvent } from 'react-native';
+import { type ReactNode, useState } from 'react';
+import { Keyboard, ScrollView, StyleSheet, TextInput } from 'react-native';
 import Animated, { Easing, LinearTransition } from 'react-native-reanimated';
 import { parseAmount } from './draft';
 
@@ -55,34 +56,11 @@ export function ConversationStep({
   readonly onBack: () => void;
 }) {
   const [footerHeight, setFooterHeight] = useState(0);
-  const scrollRef = useRef<ScrollView>(null);
-  const [focusedTarget, setFocusedTarget] = useState<number | null>(null);
   const { isKeyboardVisible } = usePageKeyboard();
-  const scrollFocusedInput = useCallback((target: number) => {
-    requestAnimationFrame(() => {
-      scrollRef.current
-        ?.getScrollResponder()
-        ?.scrollResponderScrollNativeHandleToKeyboard(target, Spacing.md, true);
-    });
-  }, []);
-  const revealFocusedInput = useCallback(
-    (event: FocusEvent) => {
-      const target = event.nativeEvent.target;
-      setFocusedTarget(target);
-      scrollFocusedInput(target);
-    },
-    [scrollFocusedInput],
-  );
-
-  useEffect(() => {
-    if (!isKeyboardVisible || focusedTarget == null) return;
-    scrollFocusedInput(focusedTarget);
-  }, [focusedTarget, isKeyboardVisible, scrollFocusedInput]);
 
   return (
     <Box flex={1} minHeight={0}>
-      <ScrollView
-        ref={scrollRef}
+      <KeyboardAwareScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scroll,
@@ -90,11 +68,6 @@ export function ConversationStep({
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        onFocus={revealFocusedInput}
-        onBlur={() => setFocusedTarget(null)}
-        // Keep focus scrolling in one place so Android's native auto-scroll does
-        // not compete with the keyboard-aware responder below.
-        scrollsChildToFocus={false}
         nestedScrollEnabled
       >
         <OnboardingFadePanel>
@@ -120,7 +93,7 @@ export function ConversationStep({
             {children}
           </Stack>
         </OnboardingFadePanel>
-      </ScrollView>
+      </KeyboardAwareScrollView>
       {!isKeyboardVisible ? (
         <Box
           background="background"

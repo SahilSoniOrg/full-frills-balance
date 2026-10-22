@@ -1,3 +1,4 @@
+import { KeyboardAwareScrollView } from '@/src/design-system/KeyboardAwareScrollView';
 import { AppButton, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { SelectionCheckmark } from '@/src/components/shared/SelectionIndicator';
 import type { IconName } from '@/src/types/domainIcons';
@@ -6,10 +7,21 @@ import { withOpacity } from '@/src/utils/color-math';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import React, { useCallback } from 'react';
-import { FlatList, Keyboard, SectionList, StyleSheet, View } from 'react-native';
+import {
+  FlatList,
+  Keyboard,
+  SectionList,
+  StyleSheet,
+  View,
+  type ScrollViewProps,
+} from 'react-native';
 import { Box, Inline, Stack } from '@/src/design-system';
 import { triggerHaptic } from '@/src/utils/haptics';
 import { MotiView } from 'moti';
+
+const renderKeyboardAwareScrollView = (props: ScrollViewProps) => (
+  <KeyboardAwareScrollView useNativeScrollView {...props} />
+);
 
 export interface SelectableItem {
   id: string;
@@ -323,6 +335,7 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
 
   const selectableList = sections ? (
     <SectionList
+      renderScrollComponent={renderKeyboardAwareScrollView}
       sections={sections.map(section => ({
         ...section,
         data: Array.from({ length: Math.ceil(section.data.length / 2) }, (_, index) =>
@@ -360,6 +373,7 @@ export const SelectableGrid: React.FC<SelectableGridProps> = ({
     />
   ) : (
     <FlatList
+      renderScrollComponent={renderKeyboardAwareScrollView}
       data={items}
       renderItem={renderItem}
       keyExtractor={(item: SelectableItem) => item.id}

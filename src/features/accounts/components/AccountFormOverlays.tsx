@@ -104,6 +104,7 @@ export function AccountFormOverlays(vm: AccountFormViewModel) {
         }}
       />
       <ModalSurface
+        keyboardAvoiding
         visible={vm.activeSheet === 'note'}
         title={copy.note}
         onClose={close}

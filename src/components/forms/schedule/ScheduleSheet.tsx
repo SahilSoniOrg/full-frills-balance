@@ -142,6 +142,7 @@ export function ScheduleSheet({
   );
   return (
     <ModalSurface
+      keyboardAvoiding
       visible={visible}
       title={copy.scheduleSheetTitle}
       accessibilityCloseLabel={copy.closeDialog}

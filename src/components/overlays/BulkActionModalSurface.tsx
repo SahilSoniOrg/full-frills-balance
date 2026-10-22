@@ -51,6 +51,7 @@ export function BulkActionModalSurface({
 
   return (
     <ModalSurface
+      keyboardAvoiding
       visible={visible}
       onClose={onClose}
       title={title}

@@ -1,3 +1,4 @@
+import { KeyboardAwareScrollView } from '@/src/design-system/KeyboardAwareScrollView';
 import { AppButton, AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants/design-tokens';
 import { Box, Stack } from '@/src/design-system';
@@ -9,7 +10,7 @@ import {
 } from '@/src/features/journal';
 import type { PreparedRestoreJournalIssueView, RestoreJournalLineEdit } from './pickRestoreSource';
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 interface RestoreJournalRecoveryProps {
   details: string;
@@ -109,7 +110,7 @@ export function RestoreJournalRecovery({
   );
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       style={styles.scroll}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
@@ -160,7 +161,7 @@ export function RestoreJournalRecovery({
           </>
         )}
       </Stack>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

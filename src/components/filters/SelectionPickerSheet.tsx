@@ -68,6 +68,7 @@ export function SelectionPickerSheet<T extends string | number>({
 
   return (
     <ModalSurface
+      keyboardAvoiding
       visible={visible}
       title={title}
       onClose={closeAndReset}

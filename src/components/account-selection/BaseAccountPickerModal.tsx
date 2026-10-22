@@ -20,6 +20,7 @@ export function BaseAccountPickerModal({
 }: BaseAccountPickerModalProps) {
   return (
     <ModalSurface
+      keyboardAvoiding
       visible={visible}
       title={title ?? 'Select account'}
       onClose={onClose}

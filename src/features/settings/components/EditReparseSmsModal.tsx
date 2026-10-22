@@ -144,6 +144,7 @@ function EditReparseModalContent({
 
   return (
     <ModalSurface
+      keyboardAvoiding
       visible={visible}
       title="Edit & Re-Parse Message"
       onClose={onClose}

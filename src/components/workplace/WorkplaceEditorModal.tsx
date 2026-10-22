@@ -43,11 +43,12 @@ export function WorkplaceEditorModal({
   return (
     <>
       <ModalSurface
+        keyboardAvoiding
         visible={visible && !iconPickerVisible}
         title="Edit workplace"
         onClose={onClose}
         fixedHeight={false}
-        scrollable={false}
+        scrollable
         contentStyle={styles.content}
         footer={
           <Stack space="sm" style={styles.footer}>

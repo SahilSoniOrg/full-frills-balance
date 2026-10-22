@@ -1,3 +1,4 @@
+import { KeyboardAwareScrollView } from '@/src/design-system/KeyboardAwareScrollView';
 import {
   Icon,
   AppButton,
@@ -11,7 +12,7 @@ import {
 import { Typography } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
-import { Keyboard, ScrollView, StyleSheet } from 'react-native';
+import { Keyboard, StyleSheet } from 'react-native';
 import type { ReactNode } from 'react';
 
 interface WorkplaceBasicInfoStepProps {
@@ -49,7 +50,7 @@ export function WorkplaceBasicInfoStep({
 
   return (
     <Box flex={1}>
-      <ScrollView
+      <KeyboardAwareScrollView
         contentContainerStyle={{ flexGrow: 1, paddingVertical: 24 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -146,7 +147,7 @@ export function WorkplaceBasicInfoStep({
             {belowContent}
           </Box>
         </Stack>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </Box>
   );
 }

@@ -69,7 +69,8 @@ export function ConfirmDialog({
       onClose={onClose}
       accessibilityCloseLabel={accessibilityCloseLabel}
       fixedHeight={false}
-      scrollable={false}
+      scrollable={Boolean(requiredConfirmationValue)}
+      keyboardAvoiding={Boolean(requiredConfirmationValue)}
       useNativeModal={useNativeModal}
       footer={
         <View style={styles.footer}>

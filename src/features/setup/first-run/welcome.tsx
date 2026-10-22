@@ -1,3 +1,4 @@
+import { KeyboardAwareScrollView } from '@/src/design-system/KeyboardAwareScrollView';
 import { AppButton, AppInput, AppText } from '@/src/components/core';
 import { PrivacyAcknowledgementSheet } from '@/src/components/legal/PrivacyAcknowledgementSheet';
 import { AppConfig, Spacing, Typography } from '@/src/constants';
@@ -5,7 +6,7 @@ import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboard
 import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoticeStrings';
 import { Box, Stack } from '@/src/design-system';
 import { OnboardingFadePanel } from './OnboardingFadePanel';
-import { Keyboard, Platform, ScrollView, StyleSheet } from 'react-native';
+import { Keyboard, Platform, StyleSheet } from 'react-native';
 import { useState } from 'react';
 
 export function WelcomeScene({
@@ -83,7 +84,7 @@ export function WelcomeScene({
   return (
     <>
       <Box flex={1} testID="onboarding-welcome">
-        <ScrollView
+        <KeyboardAwareScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
@@ -138,7 +139,7 @@ export function WelcomeScene({
 
             {trustActions}
           </Stack>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </Box>
       <PrivacyAcknowledgementSheet
         visible={prompt}

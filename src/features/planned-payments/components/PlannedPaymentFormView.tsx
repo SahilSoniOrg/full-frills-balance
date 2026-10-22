@@ -198,12 +198,13 @@ export function PlannedPaymentFormView({
       />
 
       <ModalSurface
+        keyboardAvoiding
         visible={noteVisible}
         title={copy.editNote}
         onClose={() => setNoteVisible(false)}
         position="bottomSheet"
         fixedHeight={false}
-        scrollable={false}
+        scrollable
         closeTestID="planned-payment-note-close"
         footer={
           <View style={styles.noteFooter}>

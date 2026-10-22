@@ -59,6 +59,7 @@ export function SettingsLayout({
     <FocusProvider targetId={focus} scrollViewRef={scrollViewRef} scrollOffsetRef={scrollOffsetRef}>
       <ScreenWithChrome
         chrome={chrome}
+        keyboardAvoiding
         scrollable={scrollable}
         edges={edges}
         scrollViewProps={{

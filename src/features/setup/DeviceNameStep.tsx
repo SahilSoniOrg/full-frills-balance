@@ -1,6 +1,7 @@
+import { KeyboardAwareScrollView } from '@/src/design-system/KeyboardAwareScrollView';
 import { AppButton, AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Spacing, Typography } from '@/src/constants';
-import { Keyboard, ScrollView, StyleSheet } from 'react-native';
+import { Keyboard, StyleSheet } from 'react-native';
 import { Box, Stack } from '@/src/design-system';
 import { PRIVACY_NOTICE_STRINGS } from '@/src/constants/copy/domains/privacyNoticeStrings';
 import { PrivacyAcknowledgementSheet } from '@/src/components/legal/PrivacyAcknowledgementSheet';
@@ -60,7 +61,7 @@ export function DeviceNameStep({
   return (
     <>
       <Box flex={1} testID="onboarding-screen">
-        <ScrollView
+        <KeyboardAwareScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -136,7 +137,7 @@ export function DeviceNameStep({
               </AppButton>
             </Stack>
           </Stack>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </Box>
       <PrivacyAcknowledgementSheet
         visible={isPrivacyPromptVisible}

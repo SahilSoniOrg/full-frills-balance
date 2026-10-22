@@ -1,13 +1,13 @@
 import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
 import { fireEvent, render } from '@/src/utils/test-utils';
-import { Text } from 'react-native';
+import { KeyboardAvoidingView, Text } from 'react-native';
 
 describe('BulkActionModalSurface', () => {
   it('renders modal title, count badge, and children', () => {
     const onClose = jest.fn();
     const onConfirm = jest.fn();
 
-    const { getByText, getByTestId } = render(
+    const { getByText, getByTestId, UNSAFE_getByType } = render(
       <BulkActionModalSurface
         visible={true}
         onClose={onClose}
@@ -21,6 +21,7 @@ describe('BulkActionModalSurface', () => {
       </BulkActionModalSurface>,
     );
 
+    expect(UNSAFE_getByType(KeyboardAvoidingView).props.behavior).toBe('padding');
     expect(getByText('Edit Items')).toBeTruthy();
     expect(getByText('3 items')).toBeTruthy();
     expect(getByText('Modal Inner Content')).toBeTruthy();

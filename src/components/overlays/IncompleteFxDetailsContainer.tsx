@@ -223,6 +223,7 @@ function IncompleteFxDetailsSheet({
 
   return (
     <InfoSheet
+      keyboardAvoiding={Boolean(actionableBalances && unresolvedPairs !== null)}
       visible
       title={TITLE_BY_CONTEXT[request.context] ?? copy.detailsTitle}
       onClose={onClose}

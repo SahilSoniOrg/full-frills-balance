@@ -64,6 +64,7 @@ export function VoiceInputModal({ visible, onClose, onApply, workplaceId }: Voic
 
   return (
     <ModalSurface
+      keyboardAvoiding
       visible={visible}
       title="Voice Input"
       onClose={onClose}

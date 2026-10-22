@@ -1,3 +1,4 @@
+import { KeyboardAwareScrollView } from '@/src/design-system/KeyboardAwareScrollView';
 import { type CreateAccountIntent } from '@/src/components/account-selection';
 import { Size, Spacing } from '@/src/constants/design-tokens';
 import type { useSimpleJournalEditor } from '@/src/features/journal/entry/hooks/useSimpleJournalEditor';
@@ -7,7 +8,6 @@ import { useSimpleFormExpansion, type AccountFlowHandle } from './useSimpleFormE
 import type { AccountRole } from '@/src/types/domainJournal';
 import React, { type RefObject, useEffect, useRef } from 'react';
 import { StyleSheet, type TextInput } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
 
 export interface SimpleFormProps {
   editor: ReturnType<typeof useSimpleJournalEditor>;
@@ -64,7 +64,7 @@ export const SimpleForm = React.memo(function SimpleForm({
   }, [accountFlowRef, startAutopilotAccountFlow]);
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       style={styles.scrollView}
       contentContainerStyle={styles.scrollContent}
       keyboardShouldPersistTaps="handled"
@@ -101,7 +101,7 @@ export const SimpleForm = React.memo(function SimpleForm({
         onCreateAccountRequest={onCreateAccountRequest}
         exchangeRateContainerStyle={styles.fxCardSpacing}
       />
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 });
 

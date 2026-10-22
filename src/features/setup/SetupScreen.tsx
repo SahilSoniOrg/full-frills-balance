@@ -336,7 +336,6 @@ function SetupJourneyScreen({
     setWorkplaceStep,
     displayName,
     workplaceInitial,
-    workplaceCheckpoint,
     displayProgress,
   } = useSetupJourneyViewState({
     journeyId,
@@ -460,12 +459,7 @@ function SetupJourneyScreen({
       testID="setup-screen"
       currentStep={displayProgress.current}
       totalSteps={displayProgress.total}
-      keyboardAvoiding={
-        restoreJournalFailure !== undefined ||
-        showRestoreFxRepairCompletion ||
-        slice === 'device' ||
-        (slice === 'workplace' && workplaceCheckpoint === 'identity')
-      }
+      keyboardAvoiding
       backAction={
         !resolving && (slice === 'restore_source' || slice === 'restore_summary')
           ? goBack

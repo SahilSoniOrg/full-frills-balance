@@ -1,3 +1,4 @@
+import { KeyboardAwareScrollView } from '@/src/design-system/KeyboardAwareScrollView';
 import { EmptyStateView, Icon, LoadingView } from '@/src/components/core';
 import { ScreenWithChrome } from '@/src/components/layout';
 import { privacyNavChrome } from '@/src/components/layout/privacyNavChrome';
@@ -8,7 +9,7 @@ import { Stack } from '@/src/design-system';
 import type { JournalId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import {
   JournalBalanceReviewFlow,
   type JournalBalanceEntryAction,
@@ -77,7 +78,7 @@ function JournalBalanceReviewScreen() {
     );
   } else {
     content = (
-      <ScrollView
+      <KeyboardAwareScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -94,12 +95,12 @@ function JournalBalanceReviewScreen() {
             onSaveEdits={vm.onSaveEdits}
           />
         </Stack>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     );
   }
 
   return (
-    <ScreenWithChrome chrome={chrome} withPadding>
+    <ScreenWithChrome chrome={chrome} withPadding keyboardAvoiding>
       {content}
     </ScreenWithChrome>
   );
