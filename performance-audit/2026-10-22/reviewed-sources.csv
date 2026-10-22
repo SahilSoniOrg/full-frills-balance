@@ -1,0 +1,104 @@
+path,performance_surface,status,evidence
+src/features/accounts/hooks/useAccountsListViewModel.ts,account navigation and ledger reads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/accounts/hooks/useAccountDetailsViewModel.ts,account navigation and ledger reads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/accounts/hooks/details/useAccountDetailsData.ts,account navigation and ledger reads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/accounts/hooks/details/useAccountDetailsMetrics.ts,account navigation and ledger reads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/accounts/components/AccountDetailsView.tsx,account navigation and ledger reads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/accounts/components/AccountDetailsListHeader.tsx,account navigation and ledger reads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/services/ReactiveDataService.ts,account navigation and ledger reads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/services/balance/balanceReadService.ts,account navigation and ledger reads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/services/accounts/accountDerivedReads.ts,account navigation and ledger reads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/services/accounts/accountQueries.ts,account navigation and ledger reads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/data/repositories/account/AccountLedgerMetricsQueries.ts,account navigation and ledger reads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/data/repositories/account/AccountListMetricsQueries.ts,account navigation and ledger reads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/data/repositories/account/AccountObserveQueries.ts,account navigation and ledger reads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/data/repositories/raw/TransactionRawMetricsQueries.ts,account navigation and ledger reads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/data/repositories/BalanceSnapshotRepository.ts,account navigation and ledger reads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/services/reactive/ReactiveCacheCoordinator.ts,reactive ownership and invalidation,SURFACE_ANALYZED,Current source; no app workload measurement
+src/services/reactive/disposableReplay.ts,reactive ownership and invalidation,SURFACE_ANALYZED,Current source; no app workload measurement
+src/services/reactive/reactiveWorkplaceObserves.ts,reactive ownership and invalidation,SURFACE_ANALYZED,Current source; no app workload measurement
+src/services/reactive/reactiveAggregatedBalances.ts,reactive ownership and invalidation,SURFACE_ANALYZED,Current source; no app workload measurement
+src/hooks/useObservable.ts,reactive ownership and invalidation,SURFACE_ANALYZED,Current source; no app workload measurement
+src/hooks/usePaginatedObservable.ts,reactive ownership and invalidation,SURFACE_ANALYZED,Current source; no app workload measurement
+src/hooks/useAccounts.ts,reactive ownership and invalidation,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/journal/entry/EntryScreen.tsx,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/journal/entry/hooks/useJournalEntryShell.ts,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/journal/entry/hooks/useJournalEditor.ts,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/journal/entry/hooks/useJournalEditorLoader.ts,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/journal/entry/hooks/useJournalEditorExchangeRates.ts,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/journal/entry/hooks/useTransactionComposerSession.ts,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/journal/entry/hooks/useBatchJournalSession.ts,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/journal/entry/components/JournalEntryView.tsx,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/journal/entry/modes/simple/SimpleModePanel.tsx,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/journal/hooks/useJournalSuggestions.ts,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/journal/hooks/useJournalDetailsViewModel.ts,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/journal/hooks/useJournalDetailsEnrichment.ts,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/journal/hooks/useJournal.ts,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/services/journal/journalReadService.ts,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/services/journal/journalTimelineReadModel.ts,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/services/transaction-ingestion/TransactionService.ts,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/data/repositories/transaction/TransactionObserveQueries.ts,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/data/repositories/journal/JournalObserveQueries.ts,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/components/account-selection/AccountPickerModal.tsx,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/components/account-selection/BaseAccountPickerModal.tsx,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/components/account-selection/useAccountPickerList.ts,journal entry and detail,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/app/hooks/useSmsNotificationLifecycle.ts,route-triggered maintenance,SURFACE_ANALYZED,Current source; no app workload measurement
+src/services/sms/SmsReviewNotificationService.ts,route-triggered maintenance,SURFACE_ANALYZED,Current source; no app workload measurement
+src/data/database/schema.ts,database schema and execution boundary,SURFACE_ANALYZED,Current source; no app workload measurement
+src/data/database/deviceSmsInboxSchema.ts,database schema and execution boundary,SURFACE_ANALYZED,Current source; no app workload measurement
+src/data/database/DatabaseUtils.ts,database schema and execution boundary,SURFACE_ANALYZED,Current source; no app workload measurement
+src/data/database/adapter.native.ts,database schema and execution boundary,SURFACE_ANALYZED,Current source; no app workload measurement
+src/data/repositories/raw/RawSqlExecutor.ts,database schema and execution boundary,SURFACE_ANALYZED,Current source; no app workload measurement
+node_modules/@nozbe/watermelondb/adapters/sqlite/encodeSchema/index.js,database schema and execution boundary,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/app/RootLayout.tsx,bootstrap and other screen workloads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/app/TabsLayout.tsx,bootstrap and other screen workloads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/app/components/AppNavigation.tsx,bootstrap and other screen workloads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/app/hooks/useAppBootstrap.ts,bootstrap and other screen workloads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/app/hooks/useAppForegroundMaintenance.ts,bootstrap and other screen workloads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/app/hooks/useWidgetSync.ts,bootstrap and other screen workloads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/app/hooks/useTelemetry.ts,bootstrap and other screen workloads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/contexts/WorkplaceContext.tsx,bootstrap and other screen workloads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/contexts/ArchiveVisibilityScope.tsx,bootstrap and other screen workloads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/commitments/screens/CommitmentsScreen.tsx,bootstrap and other screen workloads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/dashboard/hooks/useDashboardViewModel.ts,bootstrap and other screen workloads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/reports/hooks/useReports.ts,bootstrap and other screen workloads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/services/audit-service.ts,bootstrap and other screen workloads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/hooks/useExchangeRate.ts,bootstrap and other screen workloads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/features/journal/entry/hooks/useVoiceJournalParse.ts,bootstrap and other screen workloads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/utils/SnapshotService.ts,bootstrap and other screen workloads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/utils/TraceService.ts,bootstrap and other screen workloads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/utils/logger.ts,bootstrap and other screen workloads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/utils/scheduler.ts,bootstrap and other screen workloads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/services/analytics/analyticsConfig.ts,bootstrap and other screen workloads,SURFACE_ANALYZED,Current source; no app workload measurement
+src/data/database/migrations.ts,database schema and execution boundary,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+node_modules/@nozbe/watermelondb/adapters/sqlite/index.js,database schema and execution boundary,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+node_modules/@nozbe/watermelondb/adapters/sqlite/makeDispatcher/index.native.js,database schema and execution boundary,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+node_modules/@nozbe/watermelondb/native/shared/Database-query.cpp,database schema and execution boundary,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+src/features/app/LaunchCoordinator.tsx,bootstrap and other screen workloads,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+src/features/accounts/hooks/useAccountArchiveAction.ts,bootstrap and other screen workloads,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+src/features/accounts/hooks/useAccountDeleteMergeActions.ts,bootstrap and other screen workloads,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+src/features/journal/entry/hooks/useBulkJournalEditor.ts,bootstrap and other screen workloads,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+src/features/journal/entry/hooks/useJournalEntryAccountPicker.ts,bootstrap and other screen workloads,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+src/features/journal/entry/components/JournalMetaCard.tsx,bootstrap and other screen workloads,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+src/features/journal/entry/components/VoiceInputModal.tsx,bootstrap and other screen workloads,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+src/components/filters/DateTimePickerModal.tsx,bootstrap and other screen workloads,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+src/services/budget/budgetReadService.ts,bootstrap and other screen workloads,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+src/services/simulation/SafeToSpendReadModel.ts,bootstrap and other screen workloads,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+src/services/simulation/safeToSpendInputAcquisition.ts,bootstrap and other screen workloads,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+src/services/notification/NotificationService.ts,bootstrap and other screen workloads,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+src/services/analytics/analyticsService.ts,bootstrap and other screen workloads,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+src/features/reports/hooks/useReportsViewModel.ts,bootstrap and other screen workloads,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+src/features/reports-v2/hooks/useReportsV2ViewModel.ts,bootstrap and other screen workloads,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+src/utils/navigation.ts,bootstrap and other screen workloads,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+src/constants/app-config.ts,bootstrap and other screen workloads,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+src/services/WorkplaceService.ts,bootstrap and other screen workloads,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+node_modules/expo-router/build/react-navigation/bottom-tabs/views/BottomTabView.js,bootstrap and other screen workloads,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+package.json,configuration and route entrypoints,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+babel.config.js,configuration and route entrypoints,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+metro.config.js,configuration and route entrypoints,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+eas.json,configuration and route entrypoints,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+app/account-details.tsx,configuration and route entrypoints,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+app/journal-entry.tsx,configuration and route entrypoints,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+app/(tabs)/accounts.tsx,configuration and route entrypoints,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+app/_layout.tsx,configuration and route entrypoints,MAPPED,Relevant sections inspected; file not exhaustively analyzed
+app/(tabs)/_layout.tsx,configuration and route entrypoints,MAPPED,Relevant sections inspected; file not exhaustively analyzed

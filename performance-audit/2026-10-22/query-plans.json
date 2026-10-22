@@ -1,0 +1,197 @@
+{
+  "commit": "a42bafe531f7286739863073f45ee546f63c8359",
+  "experiment": "EMPTY_SCHEMA_QUERY_PLANS",
+  "sqlite_version": "3.54.0",
+  "schema_sha256": "12a224ee77168d0c7e4452c5bb2dbf80065b13362efd94cd4515aace07d91782",
+  "rows_in_each_table": 0,
+  "claims": "Plan structure only; no timing, representative cardinality, physical device, or Android SQLite evidence. Added indexes are isolated migration-25 definitions, not a full upgraded schema.",
+  "added_index_sql": [
+    "CREATE INDEX IF NOT EXISTS idx_transactions_workplace_account_chrono\n      ON transactions (\n        workplace_id,\n        account_id,\n        transaction_date DESC,\n        created_at DESC,\n        id DESC\n      )\n      WHERE deleted_at IS NULL;",
+    "CREATE INDEX IF NOT EXISTS idx_transactions_workplace_journal\n      ON transactions (\n        workplace_id,\n        journal_id,\n        transaction_date DESC\n      )\n      WHERE deleted_at IS NULL;",
+    "CREATE INDEX IF NOT EXISTS idx_journals_workplace_status_chrono\n      ON journals (\n        workplace_id,\n        status,\n        journal_date DESC,\n        created_at DESC,\n        id DESC\n      )\n      WHERE deleted_at IS NULL;",
+    "CREATE INDEX IF NOT EXISTS idx_balance_snapshots_workplace_account\n      ON balance_snapshots (\n        workplace_id,\n        account_id,\n        transaction_date DESC\n      );"
+  ],
+  "queries": {
+    "account_latest_balance": {
+      "sql": "\n      WITH RankedTransactions AS (\n        SELECT \n          t.account_id AS accountId, \n          t.running_balance AS runningBalance,\n          ROW_NUMBER() OVER (\n            PARTITION BY t.account_id \n            ORDER BY t.transaction_date DESC, t.created_at DESC, t.id DESC\n          ) as rn\n        FROM transactions t\n        JOIN accounts a ON t.account_id = a.id\n        JOIN journals j ON t.journal_id = j.id\n        WHERE t.account_id IN (?)\n          AND t.transaction_date <= ?\n          AND t.deleted_at IS NULL\n          AND t.workplace_id = ?\n          AND a.workplace_id = ?\n          AND j.workplace_id = ?\n          AND j.deleted_at IS NULL\n          AND j.status IN (?,?)\n      )\n      SELECT accountId, runningBalance\n      FROM RankedTransactions\n      WHERE rn = 1\n    ",
+      "args": [
+        "synthetic-account",
+        9007199254740991,
+        "synthetic-workplace",
+        "synthetic-workplace",
+        "synthetic-workplace",
+        "POSTED",
+        "REVERSED"
+      ],
+      "source": "TransactionRawMetricsQueries.getLatestBalancesRaw; exact template expanded for one account",
+      "fresh_plan": [
+        [
+          2,
+          0,
+          0,
+          "CO-ROUTINE RankedTransactions"
+        ],
+        [
+          5,
+          2,
+          0,
+          "CO-ROUTINE (subquery-3)"
+        ],
+        [
+          14,
+          5,
+          46,
+          "SEARCH a USING INDEX sqlite_autoindex_accounts_1 (id=?)"
+        ],
+        [
+          22,
+          5,
+          55,
+          "SEARCH t USING INDEX idx_transactions_account_date (account_id=? AND deleted_at=? AND transaction_date<?)"
+        ],
+        [
+          36,
+          5,
+          46,
+          "SEARCH j USING INDEX sqlite_autoindex_journals_1 (id=?)"
+        ],
+        [
+          66,
+          5,
+          0,
+          "USE TEMP B-TREE FOR LAST 2 TERMS OF ORDER BY"
+        ],
+        [
+          89,
+          2,
+          32,
+          "SCAN (subquery-3)"
+        ],
+        [
+          136,
+          0,
+          32,
+          "SCAN RankedTransactions"
+        ]
+      ],
+      "with_migration_25_indexes_plan": [
+        [
+          2,
+          0,
+          0,
+          "CO-ROUTINE RankedTransactions"
+        ],
+        [
+          5,
+          2,
+          0,
+          "CO-ROUTINE (subquery-3)"
+        ],
+        [
+          14,
+          5,
+          46,
+          "SEARCH a USING INDEX sqlite_autoindex_accounts_1 (id=?)"
+        ],
+        [
+          22,
+          5,
+          50,
+          "SEARCH t USING INDEX idx_transactions_workplace_account_chrono (workplace_id=? AND account_id=? AND transaction_date<?)"
+        ],
+        [
+          35,
+          5,
+          46,
+          "SEARCH j USING INDEX sqlite_autoindex_journals_1 (id=?)"
+        ],
+        [
+          63,
+          2,
+          22,
+          "SCAN (subquery-3)"
+        ],
+        [
+          110,
+          0,
+          22,
+          "SCAN RankedTransactions"
+        ]
+      ]
+    },
+    "journal_timeline_order": {
+      "sql": "SELECT journals.* FROM journals WHERE workplace_id=? AND deleted_at IS NULL AND status IN (?,?) AND _status IS NOT 'deleted' ORDER BY journal_date DESC, created_at DESC LIMIT 15",
+      "args": [
+        "synthetic-workplace",
+        "POSTED",
+        "REVERSED"
+      ],
+      "source": "Representative SQL for JournalObserveQueries.observeTimeline; not captured ORM SQL; excludes account join",
+      "fresh_plan": [
+        [
+          5,
+          0,
+          61,
+          "SEARCH journals USING INDEX idx_journals_active_wp_status (workplace_id=? AND deleted_at=? AND status=?)"
+        ],
+        [
+          58,
+          0,
+          0,
+          "USE TEMP B-TREE FOR ORDER BY"
+        ]
+      ],
+      "with_migration_25_indexes_plan": [
+        [
+          5,
+          0,
+          62,
+          "SEARCH journals USING INDEX idx_journals_active_wp_status (workplace_id=? AND deleted_at=? AND status=?)"
+        ],
+        [
+          58,
+          0,
+          0,
+          "USE TEMP B-TREE FOR ORDER BY"
+        ]
+      ]
+    },
+    "journal_legs_order": {
+      "sql": "SELECT transactions.* FROM transactions WHERE workplace_id=? AND journal_id=? AND _status IS NOT 'deleted' ORDER BY transaction_date ASC, created_at ASC",
+      "args": [
+        "synthetic-workplace",
+        "synthetic-journal"
+      ],
+      "source": "Representative SQL for includeDeleted TransactionObserveQueries.observeByJournal; not captured ORM SQL",
+      "fresh_plan": [
+        [
+          4,
+          0,
+          61,
+          "SEARCH transactions USING INDEX transactions_workplace_id (workplace_id=?)"
+        ],
+        [
+          33,
+          0,
+          0,
+          "USE TEMP B-TREE FOR ORDER BY"
+        ]
+      ],
+      "with_migration_25_indexes_plan": [
+        [
+          4,
+          0,
+          61,
+          "SEARCH transactions USING INDEX transactions_workplace_id (workplace_id=?)"
+        ],
+        [
+          33,
+          0,
+          0,
+          "USE TEMP B-TREE FOR ORDER BY"
+        ]
+      ]
+    }
+  }
+}
+
