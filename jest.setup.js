@@ -1,4 +1,4 @@
-/* global jest, afterEach */
+/* global jest, beforeEach, afterEach */
 // Mock Platform before any other imports
 // WatermelonDB's development-only queue warning timer is diagnostic and must
 // not keep the Jest process alive after a concurrent writer test completes.
@@ -394,6 +394,15 @@ jest.mock('react-native-gesture-handler', () => {
     gestureHandlerRootHOC: jest.fn(c => c),
     Directions: {},
   };
+});
+
+// The RN Jest keyboard mock returns undefined by default. KeyboardAvoidingView
+// retains subscriptions and calls remove() on unmount, as it does on a device.
+beforeEach(() => {
+  const { Keyboard } = require('react-native');
+  if (Keyboard?.addListener) {
+    jest.spyOn(Keyboard, 'addListener').mockReturnValue({ remove: jest.fn() });
+  }
 });
 
 // Flush rebuild queue and clear all mocks between tests

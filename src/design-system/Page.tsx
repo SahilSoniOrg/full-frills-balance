@@ -10,7 +10,8 @@ import {
   View,
   ViewProps,
 } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
+import type { ScrollView } from 'react-native-gesture-handler';
+import { KeyboardAwareScrollView } from './KeyboardAwareScrollView';
 import { Edge, SafeAreaView } from 'react-native-safe-area-context';
 import { Box } from './Box';
 import { useKeyboard } from './Keyboard';
@@ -100,7 +101,8 @@ export const Page = ({
   );
 
   const wrappedContent = scrollable ? (
-    <ScrollView
+    <KeyboardAwareScrollView
+      keyboardAware={keyboardAvoiding}
       ref={scrollViewRef}
       keyboardShouldPersistTaps="handled"
       {...scrollViewProps}
@@ -112,7 +114,7 @@ export const Page = ({
       ]}
     >
       {content}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   ) : (
     content
   );

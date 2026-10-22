@@ -9,12 +9,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { KeyboardAwareScrollView } from '@/src/design-system/KeyboardAwareScrollView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ModalSurfaceProps {
@@ -101,15 +101,17 @@ export function ModalSurface({
       </View>
 
       {scrollable ? (
-        <ScrollView
+        <KeyboardAwareScrollView
+          useNativeScrollView
+          keyboardAware={keyboardAvoiding}
           keyboardShouldPersistTaps={keyboardAvoiding ? 'handled' : undefined}
           testID={contentTestID}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, contentStyle]}
           style={fixedHeight ? styles.scrollFixed : styles.scrollFit}
           showsVerticalScrollIndicator={false}
         >
           {children}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       ) : (
         <View testID={contentTestID} style={[styles.staticContent, contentStyle]}>
           {children}
