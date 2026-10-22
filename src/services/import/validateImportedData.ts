@@ -2,8 +2,8 @@ import type { BatchImportData, CanonicalAccount } from '@/src/types/importContra
 import {
   MissingImportedAccountRef,
   missingImportedAccountRefs,
-} from '@/src/services/accounts/accountReferenceGraph';
-import { accountImportBatchFromSources } from '@/src/services/import/plugins/nativeImportAccountRemap';
+} from '@/src/services/accounts/accountReferencePolicy';
+import { accountImportBatchFromSources } from '@/src/services/import/importAccountReferences';
 
 function assertUniqueIds(tableName: string, records: { id: string }[]): void {
   const seen = new Set<string>();

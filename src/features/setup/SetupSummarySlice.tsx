@@ -5,7 +5,7 @@ import { View } from 'react-native';
 import { useEffect, useState } from 'react';
 import { loadRestoreSummaries, type RestoreSummaryView } from './setupFinishers';
 import { getSetupRecipe, recipeContainsSlice } from './setupRecipes';
-import type { SetupDraft, SetupSliceId } from './setupTypes';
+import type { SetupDraft, SetupSliceId } from '@/src/services/setup/setupTypes';
 
 type ImportedBooks =
   | { readonly status: 'loading' }

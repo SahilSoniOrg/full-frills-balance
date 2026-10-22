@@ -2,8 +2,19 @@
 const os = require('os');
 
 const iosDeviceUdid = process.env.DETOX_IOS_DEVICE_UDID;
+const iosSimulatorUdid = process.env.DETOX_IOS_SIMULATOR_UDID;
 const androidDeviceId = process.env.DETOX_ANDROID_DEVICE_ID;
 const linuxX64 = process.platform === 'linux' && os.arch() === 'x64';
+
+function iosSimulatorBuildDestination() {
+  if (iosSimulatorUdid) {
+    if (!/^[0-9a-f-]{36}$/i.test(iosSimulatorUdid)) {
+      throw new Error('DETOX_IOS_SIMULATOR_UDID must be a simulator UUID');
+    }
+    return `id=${iosSimulatorUdid}`;
+  }
+  return 'platform=iOS Simulator,name=iPhone 17';
+}
 
 // macOS keeps the ABIs in android/gradle.properties (arm64 emulator / devices).
 // Linux cloud agents are x86_64 and need a matching APK or the emulator cannot load .so files.
@@ -41,20 +52,20 @@ module.exports = {
     'ios.debug': {
       type: 'ios.app',
       binaryPath: 'ios/build/Build/Products/Debug-iphonesimulator/FullFrillsBalance.app',
-      build:
-        "xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build -destination 'platform=iOS Simulator,name=iPhone 17' ARCHS=arm64 EXCLUDED_ARCHS=x86_64",
+      build: `xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build -destination '${iosSimulatorBuildDestination()}' ARCHS=arm64 EXCLUDED_ARCHS=x86_64`,
     },
     'ios.release': {
       type: 'ios.app',
       binaryPath: 'ios/build/Build/Products/Release-iphonesimulator/FullFrillsBalance.app',
-      build:
-        "EXPO_PUBLIC_E2E=1 xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Release -sdk iphonesimulator -derivedDataPath ios/build -destination 'platform=iOS Simulator,name=iPhone 17' ARCHS=arm64 EXCLUDED_ARCHS=x86_64 CODE_SIGNING_ALLOWED=NO",
+      // Give the simulator app a signing identity for native Keychain proof tests.
+      // Ad-hoc signing uses no distribution credentials; device signing stays separate.
+      build: `SENTRY_DISABLE_AUTO_UPLOAD=true SENTRY_DISABLE_NATIVE_DEBUG_UPLOAD=true EXPO_PUBLIC_E2E=1 xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Release -sdk iphonesimulator -derivedDataPath ios/build -destination '${iosSimulatorBuildDestination()}' ARCHS=arm64 EXCLUDED_ARCHS=x86_64 SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) FFB_KEY_CRYPTO_E2E' CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO`,
     },
     'ios.device.release': {
       type: 'ios.app',
       binaryPath: 'ios/build/Build/Products/Release-iphoneos/FullFrillsBalance.app',
       build:
-        "EXPO_PUBLIC_E2E=1 xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Release -sdk iphoneos -derivedDataPath ios/build -destination 'id=$DETOX_IOS_DEVICE_UDID' DEVELOPMENT_TEAM=$DETOX_IOS_DEVELOPMENT_TEAM CODE_SIGNING_ALLOWED=YES",
+        "SENTRY_DISABLE_AUTO_UPLOAD=true SENTRY_DISABLE_NATIVE_DEBUG_UPLOAD=true EXPO_PUBLIC_E2E=1 xcodebuild -workspace ios/FullFrillsBalance.xcworkspace -scheme FullFrillsBalance -configuration Release -sdk iphoneos -derivedDataPath ios/build -destination 'id=$DETOX_IOS_DEVICE_UDID' DEVELOPMENT_TEAM=$DETOX_IOS_DEVELOPMENT_TEAM SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) FFB_KEY_CRYPTO_E2E' CODE_SIGNING_ALLOWED=YES",
     },
     'android.debug': {
       type: 'android.apk',
@@ -68,7 +79,13 @@ module.exports = {
       binaryPath: 'android/app/build/outputs/apk/release/app-release.apk',
       testBinaryPath:
         'android/app/build/outputs/apk/androidTest/release/app-release-androidTest.apk',
-      build: `cd android && EXPO_PUBLIC_E2E=1 ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release${androidArchGradleArg()}`,
+      build: `cd android && SENTRY_DISABLE_AUTO_UPLOAD=true SENTRY_DISABLE_NATIVE_DEBUG_UPLOAD=true EXPO_PUBLIC_E2E=1 ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release${androidArchGradleArg()}`,
+    },
+    'android.verification': {
+      type: 'android.apk',
+      binaryPath: 'artifacts/native-verification/android/e2e/app-verification.apk',
+      testBinaryPath: 'artifacts/native-verification/android/e2e/app-verification-androidTest.apk',
+      build: 'bash scripts/build-android-verification.sh e2e',
     },
   },
   devices: {
@@ -142,11 +159,22 @@ module.exports = {
       device: 'emulator',
       app: 'android.release',
     },
+    'android.emu.verification': {
+      device: 'emulator',
+      app: 'android.verification',
+    },
     ...(androidDeviceId
       ? {
           'android.device.release': {
             device: 'androidDevice',
             app: 'android.release',
+          },
+          'android.device.verification': {
+            device: 'androidDevice',
+            app: 'android.verification',
+            // Physical runs install their own disposable APK; they do not use
+            // the Linux emulator's preinstalled production-ID snapshot.
+            behavior: { init: { reinstallApp: true } },
           },
         }
       : {}),

@@ -195,6 +195,7 @@ export interface CanonicalJournalMetadata {
   originalSmsSender?: string;
   originalSmsBody?: string;
   metadataJson?: string;
+  referenceNumber?: string;
   createdAt?: number;
   updatedAt?: number;
 }

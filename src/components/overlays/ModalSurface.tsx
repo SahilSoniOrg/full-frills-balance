@@ -87,7 +87,7 @@ export function ModalSurface({
       ]}
     >
       <View style={styles.header}>
-        <AppText variant="heading" fontRole="display">
+        <AppText variant="heading" fontRole="display" style={styles.headerTitle}>
           {title}
         </AppText>
         <IconButton
@@ -97,6 +97,7 @@ export function ModalSurface({
           onPress={onClose}
           accessibilityLabel={accessibilityCloseLabel}
           testID={closeTestID}
+          style={styles.closeButton}
         />
       </View>
 
@@ -228,9 +229,17 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.sm,
+  },
+  headerTitle: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  closeButton: {
+    flexShrink: 0,
+    marginLeft: Spacing.sm,
   },
   scrollFixed: {
     marginTop: Spacing.md,

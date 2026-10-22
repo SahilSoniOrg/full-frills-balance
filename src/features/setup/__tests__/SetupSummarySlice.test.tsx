@@ -4,7 +4,7 @@ import { asWorkplaceId } from '@/src/types/ids';
 import type { ImportStats } from '@/src/services/import/types';
 import { SetupSummarySlice } from '../SetupSummarySlice';
 import { loadRestoreSummaries } from '../setupFinishers';
-import type { RestoreSetupDraft } from '../setupTypes';
+import type { RestoreSetupDraft } from '@/src/services/setup/setupTypes';
 
 jest.mock('../setupFinishers', () => ({
   loadRestoreSummaries: jest.fn(),

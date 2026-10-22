@@ -1,7 +1,11 @@
 import { asWorkplaceId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
 import { discardRestorePublication } from '../setupFinishers';
-import { clearSetupDraft, loadSetupDraft, saveSetupDraft } from '../SetupDraftStore';
+import {
+  clearSetupDraft,
+  loadSetupDraft,
+  saveSetupDraft,
+} from '@/src/services/setup/SetupDraftStore';
 import { getSetupRecipe } from '../setupRecipes';
 import {
   abandonRestoreJourney,
@@ -10,7 +14,7 @@ import {
   restoreJourneyForWorkplaceCreation,
   restoreLeaveNeedsConfirm,
 } from '../setupRuntime';
-import type { RestoreSetupDraft } from '../setupTypes';
+import type { RestoreSetupDraft } from '@/src/services/setup/setupTypes';
 
 jest.mock('@/src/utils/navigation', () => ({
   AppNavigation: {
@@ -25,7 +29,7 @@ jest.mock('../setupFinishers', () => ({
   finishDeviceSetup: jest.fn(),
   finishSetup: jest.fn(),
 }));
-jest.mock('../SetupDraftStore', () => ({
+jest.mock('@/src/services/setup/SetupDraftStore', () => ({
   clearSetupDraft: jest.fn(),
   loadSetupDraft: jest.fn(),
   saveSetupDraft: jest.fn(),

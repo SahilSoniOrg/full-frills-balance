@@ -61,14 +61,14 @@ jest.mock('@/src/services/WorkplaceService', () => ({
   },
 }));
 
-jest.mock('../../SetupDraftStore', () => ({ clearSetupDraft: jest.fn() }));
+jest.mock('@/src/services/setup/SetupDraftStore', () => ({ clearSetupDraft: jest.fn() }));
 
 jest.mock('../../setupFinishers', () => ({
   finishDeviceSetup: jest.fn(),
   finishWorkplaceSetup: (...args: unknown[]) => mockFinishWorkplaceSetup(...args),
 }));
 
-jest.mock('../pendingWorkplace', () => ({
+jest.mock('@/src/services/setup/pendingWorkplace', () => ({
   cashClarityWorkplaceId: () => 'workplace-op',
   clearPendingCashClarityWorkplaceId: () => mockClearPending(),
 }));

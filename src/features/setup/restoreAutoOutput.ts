@@ -7,7 +7,7 @@ import {
   type SetupSliceOutput,
   type WorkplaceSetupOutput,
   type WorkplaceSetupPrefill,
-} from './setupTypes';
+} from '@/src/services/setup/setupTypes';
 
 export function getRestoreAutoOutput(
   sliceId: SetupSliceId,

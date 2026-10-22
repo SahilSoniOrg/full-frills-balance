@@ -6,7 +6,7 @@ import type {
   SetupSliceOutput,
   SetupAutoAcceptAction,
   SetupSliceOutputById,
-} from './setupTypes';
+} from '@/src/services/setup/setupTypes';
 import type { SetupRecipe, SetupRecipeEntry } from './setupRecipes';
 
 export type NextSetupAction =

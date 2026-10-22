@@ -1,5 +1,5 @@
 import { getSetupRecipe } from '../setupRecipes';
-import type { SetupJourneyId } from '../setupTypes';
+import type { SetupJourneyId } from '@/src/services/setup/setupTypes';
 
 describe('Setup recipes', () => {
   it.each([

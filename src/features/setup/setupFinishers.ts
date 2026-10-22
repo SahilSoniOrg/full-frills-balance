@@ -10,8 +10,8 @@ import type {
   RestoreSetupDraft,
   SetupDraft,
   WorkplaceSetupOutput,
-} from './setupTypes';
-import { primaryRestoreSource, restoreSources } from './setupTypes';
+} from '@/src/services/setup/setupTypes';
+import { primaryRestoreSource, restoreSources } from '@/src/services/setup/setupTypes';
 
 function starterAccounts(output: WorkplaceSetupOutput) {
   return output.selectedAccounts.map(item => {

@@ -38,11 +38,12 @@ import {
   readSetupDraftSnapshot,
   subscribeToSetupDraft,
 } from '@/src/services/setup/launchProjection';
-import { readBlockingSetupProjection } from '@/src/features/setup';
+import { readBlockingSetupProjection } from '@/src/services/setup/readBlockingSetupProjection';
 import { useAppBootstrap } from './hooks/useAppBootstrap';
 import { useAppForegroundMaintenance } from './hooks/useAppForegroundMaintenance';
 import { useFonts } from './hooks/useFonts';
 import { useTelemetry } from './hooks/useTelemetry';
+import { recoveryFiles } from '@/src/services/backup/recoveryFiles';
 import { snapshotService } from '@/src/utils/SnapshotService';
 import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
 import { useWidgetLaunchTracking } from './hooks/useWidgetLaunchTracking';
@@ -59,6 +60,10 @@ import {
  * Root Layout
  */
 function RootLayout() {
+  useEffect(() => {
+    // Remove only abandoned recovery-export cache files before this installation is reused.
+    void recoveryFiles.cleanupTemporarySecrets().catch(() => undefined);
+  }, []);
   const navigationRef = useNavigationContainerRef();
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? DarkTheme : DefaultTheme;

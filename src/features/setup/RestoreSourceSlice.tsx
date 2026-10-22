@@ -1,4 +1,8 @@
-import { AppText } from '@/src/components/core';
+import {
+  forgetAllPreparedRestores,
+  keepPreparedRestores,
+} from '@/src/services/setup/preparedRestoreCache';
+import { AppButton, AppText } from '@/src/components/core';
 import { AppConfig, Spacing } from '@/src/constants';
 import { ImportPluginCard } from '@/src/components/settings/ImportPluginCard';
 import { Box } from '@/src/design-system';
@@ -6,17 +10,12 @@ import { importRegistry } from '@/src/services/import';
 import { toast } from '@/src/utils/alerts';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import {
-  forgetAllPreparedRestores,
-  keepPreparedRestores,
-  pickAndPrepareRestore,
-  selectPreparedRestoreSources,
-} from './pickRestoreSource';
+import { pickAndPrepareRestore, selectPreparedRestoreSources } from './pickRestoreSource';
 import {
   RestoreWorkplaceSelectionSheet,
   type RestoreWorkplaceCandidate,
 } from './RestoreWorkplaceSelectionSheet';
-import type { RestoreSourceOutput } from './setupTypes';
+import type { RestoreSourceOutput } from '@/src/services/setup/setupTypes';
 import {
   e2ePrepareRestoreSelection,
   e2eRestoreSelectionSources,
@@ -52,9 +51,11 @@ function pendingSelection(sources: readonly RestoreSourceOutput[]): PendingResto
 export function RestoreSourceSlice({
   isCompleting,
   onContinue,
+  onWorkplaceRecovery,
 }: {
   readonly isCompleting: boolean;
   readonly onContinue: (sources: readonly RestoreSourceOutput[]) => void;
+  readonly onWorkplaceRecovery: () => void;
 }) {
   const plugins = useMemo(() => importRegistry.getAll(), []);
   const [progressMessage, setProgressMessage] = useState<string | undefined>();
@@ -137,6 +138,14 @@ export function RestoreSourceSlice({
               {AppConfig.strings.settings.importNote}
             </AppText>
           </View>
+          <AppButton
+            variant="secondary"
+            testID="restore-source-workplace-recovery"
+            disabled={preparing}
+            onPress={onWorkplaceRecovery}
+          >
+            Recover encrypted Workplace data
+          </AppButton>
         </Box>
       </ScrollView>
       {selection && (

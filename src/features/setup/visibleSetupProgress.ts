@@ -7,7 +7,7 @@ import {
   type SetupSliceId,
   type WorkplaceCheckpoint,
   type WorkplaceSetupPrefill,
-} from './setupTypes';
+} from '@/src/services/setup/setupTypes';
 
 export function resolveWorkplaceStartCheckpoint({
   identityMode,

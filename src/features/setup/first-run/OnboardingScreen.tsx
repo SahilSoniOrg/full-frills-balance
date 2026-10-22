@@ -3,6 +3,7 @@ import { Box } from '@/src/design-system';
 import { ONBOARDING_STRINGS as copy } from '@/src/constants/copy/domains/onboardingStrings';
 import { startFirstRunRestoreFromDeviceName } from '../SetupCoordinator';
 import { analytics } from '@/src/services/analytics';
+import { preferences } from '@/src/services/preferences';
 import { AppConfig } from '@/src/constants/app-config';
 import {
   acknowledgeCurrentPrivacyPolicy,
@@ -165,6 +166,11 @@ export function OnboardingScreen() {
           go('currency');
         }}
         onRestore={startRestore}
+        onEncryptedRestore={() => {
+          const name = (draft.displayName ?? '').trim();
+          if (name) preferences.setUserName(name);
+          AppNavigation.toEncryptedBackup('restore');
+        }}
       />
     ) : step === 'currency' ? (
       <CurrencyScene

@@ -4,7 +4,11 @@ import { Box, Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import type { RestoreSummaryActions } from './setupRecipes';
-import { restoreSources, type RestoreSetupDraft, type RestoreSummaryIntent } from './setupTypes';
+import {
+  restoreSources,
+  type RestoreSetupDraft,
+  type RestoreSummaryIntent,
+} from '@/src/services/setup/setupTypes';
 
 type RestorePreview = {
   readonly name: string;

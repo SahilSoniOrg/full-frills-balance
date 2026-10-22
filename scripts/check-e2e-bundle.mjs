@@ -3,7 +3,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const outputDir = process.argv[2];
-const marker = '__FFB_E2E_DESTRUCTIVE_BOOTSTRAP__';
+const markers = [
+  '__FFB_E2E_DESTRUCTIVE_BOOTSTRAP__',
+  '__FFB_JS_KEY_CRYPTO_TEST_ONLY__',
+  '__FFB_E2E_RESTORE_VERIFICATION__',
+];
 
 if (!outputDir) {
   console.error('Usage: node scripts/check-e2e-bundle.mjs <export-directory>');
@@ -20,10 +24,14 @@ function walk(directory) {
 }
 
 walk(outputDir);
-const matches = files.filter(file => fs.readFileSync(file, 'utf8').includes(marker));
+const matches = files.filter(file =>
+  markers.some(marker => fs.readFileSync(file, 'utf8').includes(marker)),
+);
 
 if (matches.length > 0) {
-  console.error(`Production bundle contains the E2E destructive bootstrap marker:\n${matches.join('\n')}`);
+  console.error(
+    `Production bundle contains a destructive/test-only crypto marker:\n${matches.join('\n')}`,
+  );
   process.exit(1);
 }
 

@@ -11,7 +11,7 @@ import type {
   SetupOutcome,
   WorkplaceCreationSetupDraft,
   WorkplaceSetupOutput,
-} from '../setupTypes';
+} from '@/src/services/setup/setupTypes';
 
 const mockCommitDevice = jest.fn();
 
