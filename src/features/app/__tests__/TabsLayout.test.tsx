@@ -1,3 +1,4 @@
+import { AppSafeAreaProvider } from '@/src/design-system/SafeArea';
 import { TabsLayout } from '@/src/features/app/TabsLayout';
 import { Spacing } from '@/src/constants';
 import { render } from '@testing-library/react-native';
@@ -53,13 +54,21 @@ describe('TabsLayout', () => {
   });
 
   it('does not shift tab items down inside the navigator fixed height', () => {
-    render(<TabsLayout />);
+    render(
+      <AppSafeAreaProvider>
+        <TabsLayout />
+      </AppSafeAreaProvider>,
+    );
 
     expect(StyleSheet.flatten(mockScreenOptions?.tabBarStyle)?.paddingTop).toBeUndefined();
   });
 
   it('uses native tab-label typography', () => {
-    render(<TabsLayout />);
+    render(
+      <AppSafeAreaProvider>
+        <TabsLayout />
+      </AppSafeAreaProvider>,
+    );
 
     expect(mockScreenOptions?.tabBarLabelStyle).toBeUndefined();
   });
@@ -72,7 +81,11 @@ describe('TabsLayout', () => {
   ])('preserves the %s and adds optical clearance', (_device, deviceInset) => {
     mockDeviceBottomInset = deviceInset;
 
-    render(<TabsLayout />);
+    render(
+      <AppSafeAreaProvider>
+        <TabsLayout />
+      </AppSafeAreaProvider>,
+    );
 
     expect(mockSafeAreaInsets?.bottom).toBe(deviceInset + Spacing.md);
   });

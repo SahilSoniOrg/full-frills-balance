@@ -19,7 +19,7 @@ import { AppState, StyleSheet } from 'react-native';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useWindowSafeAreaLayout } from '@/src/design-system/SafeArea';
 
 function isE2eAvailableNotice(): boolean {
   return (
@@ -37,7 +37,7 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
   );
   const check = appUpdateService.check;
   const [hiddenProgressTarget, setHiddenProgressTarget] = useState<number | null>(null);
-  const insets = useSafeAreaInsets();
+  const { bottomSpacing } = useWindowSafeAreaLayout();
   const { theme } = useTheme();
   const [isExporting, setIsExporting] = useState(false);
   const [exportFailed, setExportFailed] = useState(false);
@@ -149,7 +149,7 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
           (ready || state.phase === 'downloading' || state.phase === 'installing') && (
             <Box
               padding="md"
-              style={{ paddingBottom: Math.max(insets.bottom, 16) }}
+              style={{ paddingBottom: bottomSpacing.updateGate }}
               background="surfaceSecondary"
               testID="update-download-status"
             >

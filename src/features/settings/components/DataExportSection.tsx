@@ -14,7 +14,7 @@ import { SettingsMaintenanceOverlay } from '@/src/features/settings/components/S
 import { useDataExportViewModel } from '@/src/features/settings/hooks/useDataExportViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SelectionCheckmark, SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useWindowSafeAreaLayout } from '@/src/design-system/SafeArea';
 import { Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
 import type { BackupScope } from '@/src/services/export';
 
@@ -25,7 +25,7 @@ type DataExportSectionProps = {
 export function DataExportSection({ onImport }: DataExportSectionProps) {
   const vm = useDataExportViewModel();
   const { theme } = useTheme();
-  const insets = useSafeAreaInsets();
+  const { bottomSpacing } = useWindowSafeAreaLayout();
   const scopeLabel =
     vm.backupScope === 'active'
       ? AppConfig.strings.update.exportScopeActive
@@ -135,7 +135,7 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
           <View
             style={[
               styles.scopeCard,
-              { backgroundColor: theme.surface, paddingBottom: insets.bottom + Spacing.xxxl },
+              { backgroundColor: theme.surface, paddingBottom: bottomSpacing.exportSheet },
             ]}
           >
             <View style={styles.scopeHeader}>

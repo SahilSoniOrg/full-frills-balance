@@ -1,5 +1,4 @@
 import { DateRange, PeriodFilter } from '@/src/utils/dateUtils';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DateRangePickerView } from './DateRangePickerView';
 import { useDateRangePicker } from './hooks/useDateRangePicker';
 
@@ -20,11 +19,7 @@ export function DateRangePicker({
   onSelect,
   currentFilter,
 }: DateRangePickerProps) {
-  const insets = useSafeAreaInsets();
-
   const pickerProps = useDateRangePicker({ visible, currentFilter, onSelect, onClose });
 
-  return (
-    <DateRangePickerView {...pickerProps} visible={visible} onClose={onClose} insets={insets} />
-  );
+  return <DateRangePickerView {...pickerProps} visible={visible} onClose={onClose} />;
 }

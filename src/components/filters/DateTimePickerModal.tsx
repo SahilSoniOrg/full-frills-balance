@@ -9,7 +9,7 @@ import { formatClockTime, formatDateKeepingPattern } from '@/src/utils/dateUtils
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useWindowSafeAreaLayout } from '@/src/design-system/SafeArea';
 
 interface DateTimePickerModalProps {
   visible: boolean;
@@ -36,7 +36,7 @@ export function DateTimePickerModal({
 }: DateTimePickerModalProps) {
   const { theme } = useTheme();
   const { resolvedHourCycle } = useHourCyclePrefs();
-  const insets = useSafeAreaInsets();
+  const { bottomSpacing } = useWindowSafeAreaLayout();
 
   const [selectedValue, setSelectedValue] = useState(() => dayjs(`${date}T${time}`));
   const [selectedWeekday, setSelectedWeekday] = useState(weekday);
@@ -79,7 +79,7 @@ export function DateTimePickerModal({
             styles.content,
             {
               backgroundColor: theme.background,
-              paddingBottom: insets.bottom + Spacing.md,
+              paddingBottom: bottomSpacing.pickerSheet,
             },
           ]}
           onPress={e => e.stopPropagation()}

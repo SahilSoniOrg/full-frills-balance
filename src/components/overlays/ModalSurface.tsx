@@ -15,7 +15,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { KeyboardAwareScrollView } from '@/src/design-system/KeyboardAwareScrollView';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaScope, useWindowSafeAreaLayout } from '@/src/design-system/SafeArea';
 
 interface ModalSurfaceProps {
   visible: boolean;
@@ -61,7 +61,7 @@ export function ModalSurface({
   keyboardAvoiding = false,
 }: ModalSurfaceProps) {
   const { theme } = useTheme();
-  const insets = useSafeAreaInsets();
+  const { bottomSpacing } = useWindowSafeAreaLayout();
   const isBottomSheet = position === 'bottomSheet';
   const reduceMotion = useReducedMotion();
 
@@ -82,7 +82,7 @@ export function ModalSurface({
         styles.modalCard,
         isBottomSheet ? styles.modalCardBottomSheet : styles.modalCardCenter,
         fixedHeight ? styles.modalCardFixed : styles.modalCardFit,
-        isBottomSheet && { paddingBottom: insets.bottom + Spacing.lg },
+        isBottomSheet && { paddingBottom: bottomSpacing.sheet },
         { backgroundColor: theme.surface },
       ]}
     >
@@ -159,7 +159,9 @@ export function ModalSurface({
         accessibilityRole="button"
         accessibilityLabel={accessibilityCloseLabel}
       />
-      {sheet}
+      <SafeAreaScope window consumedEdges={isBottomSheet ? ['bottom'] : []}>
+        {sheet}
+      </SafeAreaScope>
     </Overlay>
   );
 

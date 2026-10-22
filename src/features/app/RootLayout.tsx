@@ -1,3 +1,4 @@
+import { AppSafeAreaProvider, useWindowSafeAreaLayout } from '@/src/design-system/SafeArea';
 import { ChartInteractionProvider } from '@/src/components/charts/ChartInteractionProvider';
 import { PlannedPaymentFxReviewContainer } from '@/src/components/overlays/PlannedPaymentFxReviewContainer';
 import { AlertContainer } from '@/src/components/overlays/AlertContainer';
@@ -24,11 +25,7 @@ import {
 } from './hooks/useSmsNotificationLifecycle';
 import { Platform, View, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import {
-  SafeAreaProvider,
-  initialWindowMetrics,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { AppLockInterceptor } from './components/AppLockInterceptor';
 import { AppContent } from './components/AppNavigation';
 import {
@@ -89,32 +86,34 @@ function RootLayout() {
             initialMetrics={resolveSafeAreaInitialMetrics(initialWindowMetrics)}
             style={{ flex: 1, backgroundColor: NATIVE_SPLASH_BACKGROUND }}
           >
-            <ErrorBoundary>
-              <DatabaseProvider database={database}>
-                <UIProvider>
-                  <EarlyBootstrap />
-                  <SmsNotificationResponseObserver />
-                  <ThemeProvider value={theme}>
-                    <LaunchCoordinatorProvider setupDraft={setupDraft}>
-                      <SplashOrchestrator />
-                      <ToastContainer />
-                      <UpdateGate>
-                        <LaunchCoordinatorContent gateChildren={<AppContent />}>
-                          <WorkplaceBootstrap />
-                          <AppLockInterceptor>
-                            <SmsNotificationNavigation />
-                            <AppContent />
-                          </AppLockInterceptor>
-                        </LaunchCoordinatorContent>
-                        <AlertContainer />
-                        <IncompleteFxDetailsContainer />
-                        <PlannedPaymentFxReviewContainer />
-                      </UpdateGate>
-                    </LaunchCoordinatorProvider>
-                  </ThemeProvider>
-                </UIProvider>
-              </DatabaseProvider>
-            </ErrorBoundary>
+            <AppSafeAreaProvider>
+              <ErrorBoundary>
+                <DatabaseProvider database={database}>
+                  <UIProvider>
+                    <EarlyBootstrap />
+                    <SmsNotificationResponseObserver />
+                    <ThemeProvider value={theme}>
+                      <LaunchCoordinatorProvider setupDraft={setupDraft}>
+                        <SplashOrchestrator />
+                        <ToastContainer />
+                        <UpdateGate>
+                          <LaunchCoordinatorContent gateChildren={<AppContent />}>
+                            <WorkplaceBootstrap />
+                            <AppLockInterceptor>
+                              <SmsNotificationNavigation />
+                              <AppContent />
+                            </AppLockInterceptor>
+                          </LaunchCoordinatorContent>
+                          <AlertContainer />
+                          <IncompleteFxDetailsContainer />
+                          <PlannedPaymentFxReviewContainer />
+                        </UpdateGate>
+                      </LaunchCoordinatorProvider>
+                    </ThemeProvider>
+                  </UIProvider>
+                </DatabaseProvider>
+              </ErrorBoundary>
+            </AppSafeAreaProvider>
           </SafeAreaProvider>
         </ChartInteractionProvider>
       </View>
@@ -154,7 +153,7 @@ function WorkplaceBootstrap() {
 function SplashOrchestrator() {
   const { isAppReady, isDataHydrated } = useAppReady();
   const launch = useLaunchCoordinator();
-  const insets = useSafeAreaInsets();
+  const { insets } = useWindowSafeAreaLayout();
   const hasTrackedColdStartRef = React.useRef(false);
 
   const canHideSplash = shouldHideNativeSplash({

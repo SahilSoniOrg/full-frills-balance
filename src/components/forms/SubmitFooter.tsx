@@ -5,7 +5,7 @@ import { useKeyboard } from '@/src/design-system/Keyboard';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaLayout } from '@/src/design-system/SafeArea';
 
 interface SubmitFooterProps {
   onPress: () => void;
@@ -18,11 +18,9 @@ export const SubmitFooter = ({ onPress, label, disabled, requirementHint }: Subm
   const { theme } = useTheme();
   // Hint only after a tap on the disabled button, not on open.
   const [attempted, setAttempted] = useState(false);
-  const insets = useSafeAreaInsets();
+  const { bottomSpacing } = useSafeAreaLayout();
   const { isKeyboardVisible } = useKeyboard();
-  const bottomPadding = isKeyboardVisible
-    ? Spacing.md
-    : Math.max(Spacing.lg, insets.bottom + Spacing.md);
+  const bottomPadding = isKeyboardVisible ? Spacing.md : bottomSpacing.formFooter;
 
   return (
     <View

@@ -16,7 +16,7 @@ import { withOpacity } from '@/src/utils/color-math';
 import { MotiView } from 'moti';
 import React, { useState } from 'react';
 import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaLayout } from '@/src/design-system/SafeArea';
 
 export interface JournalEntrySubmitBarProps {
   onPress: () => void;
@@ -53,7 +53,7 @@ export const JournalEntrySubmitBar = React.memo(function JournalEntrySubmitBar({
   isEdit = false,
 }: JournalEntrySubmitBarProps) {
   const { theme } = useTheme();
-  const insets = useSafeAreaInsets();
+  const { bottomSpacing } = useSafeAreaLayout();
   const { isKeyboardVisible } = useKeyboard();
   const reduceMotion = useReducedMotion();
   // Hint only after a tap on the disabled button, not on open.
@@ -61,9 +61,7 @@ export const JournalEntrySubmitBar = React.memo(function JournalEntrySubmitBar({
 
   const showPulse = saveSuccessPulse && !reduceMotion;
 
-  const bottomPadding = isKeyboardVisible
-    ? Spacing.xs
-    : Math.max(Spacing.md, insets.bottom + Spacing.xs);
+  const bottomPadding = isKeyboardVisible ? Spacing.xs : bottomSpacing.journalFooter;
 
   return (
     <View

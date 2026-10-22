@@ -15,7 +15,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaLayout } from '@/src/design-system/SafeArea';
 import { AccountManagementTreeRow } from './AccountManagementTreeRow';
 import {
   ACCOUNT_TREE_DROP_CHIP_ENTER_MS,
@@ -64,7 +64,7 @@ export function AccountManagementTreeList({
 }: AccountManagementTreeListProps) {
   const { theme } = useTheme();
   const reduceMotion = useReducedMotion();
-  const insets = useSafeAreaInsets();
+  const { bottomSpacing } = useSafeAreaLayout();
   const accountsById = useMemo(
     () => new Map(accounts.map(account => [account.id, account] as const)),
     [accounts],
@@ -188,7 +188,7 @@ export function AccountManagementTreeList({
             {
               backgroundColor: theme.surface,
               borderTopColor: theme.divider,
-              paddingBottom: Math.max(Spacing.md, insets.bottom + Spacing.sm),
+              paddingBottom: bottomSpacing.selectionActions,
             },
           ]}
         >

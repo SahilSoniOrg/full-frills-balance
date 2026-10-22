@@ -1,3 +1,4 @@
+import { SafeAreaScope, useAvailableSafeAreaEdges } from './SafeArea';
 import { Spacing, SpacingKey, Theme } from '@/src/constants/design-tokens';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StatusBar } from 'expo-status-bar';
@@ -130,8 +131,11 @@ export const Page = ({
   // Applying KeyboardAvoidingView's height behavior on top of that double-compensates
   // the keyboard and lifts footers too far from the bottom edge.
   const useKeyboardAvoidingView = keyboardAvoiding && Platform.OS === 'ios';
+  const availableEdges = useAvailableSafeAreaEdges(edges);
   const containerEdges =
-    keyboardAvoiding && isKeyboardVisible ? edges.filter(edge => edge !== 'bottom') : edges;
+    keyboardAvoiding && isKeyboardVisible
+      ? availableEdges.filter(edge => edge !== 'bottom')
+      : availableEdges;
 
   return (
     <PageKeyboardContext.Provider value={keyboardContext}>
@@ -141,18 +145,20 @@ export const Page = ({
         style={[styles.container, { backgroundColor }]}
       >
         <StatusBar style={resolvedStatusBar as 'light' | 'dark' | 'auto'} />
-        {header}
-        {useKeyboardAvoidingView ? (
-          <KeyboardAvoidingView
-            behavior="padding"
-            keyboardVerticalOffset={keyboardVerticalOffset}
-            style={styles.keyboardContainer}
-          >
-            {pageBody}
-          </KeyboardAvoidingView>
-        ) : (
-          pageBody
-        )}
+        <SafeAreaScope consumedEdges={safeArea ? containerEdges : []}>
+          {header}
+          {useKeyboardAvoidingView ? (
+            <KeyboardAvoidingView
+              behavior="padding"
+              keyboardVerticalOffset={keyboardVerticalOffset}
+              style={styles.keyboardContainer}
+            >
+              {pageBody}
+            </KeyboardAvoidingView>
+          ) : (
+            pageBody
+          )}
+        </SafeAreaScope>
       </Container>
     </PageKeyboardContext.Provider>
   );

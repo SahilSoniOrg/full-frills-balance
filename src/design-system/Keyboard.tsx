@@ -1,6 +1,6 @@
 import React from 'react';
 import { Keyboard, Platform } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useWindowSafeAreaLayout } from './SafeArea';
 
 /**
  * Hook to track keyboard state
@@ -9,7 +9,7 @@ export const useKeyboard = (enabled = true) => {
   const [keyboardHeight, setKeyboardHeight] = React.useState(0);
   const [isKeyboardVisible, setKeyboardVisible] = React.useState(false);
 
-  const insets = useSafeAreaInsets();
+  const { insets } = useWindowSafeAreaLayout();
 
   React.useEffect(() => {
     if (!enabled) return;

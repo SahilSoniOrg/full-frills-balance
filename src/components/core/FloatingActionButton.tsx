@@ -7,7 +7,7 @@ import { Icon, type IconName } from '@/src/types/domainIcons';
 import { triggerPressHaptic } from '@/src/utils/haptics';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaLayout } from '@/src/design-system/SafeArea';
 
 export interface FloatingActionButtonAction {
   id: string;
@@ -55,9 +55,9 @@ export const FloatingActionButton = ({
   actions = [],
 }: FloatingActionButtonProps) => {
   const { theme } = useTheme();
-  const insets = useSafeAreaInsets();
+  const { bottomSpacing } = useSafeAreaLayout();
   const isExtended = Boolean(label);
-  const safeBottomOffset = Math.max(Spacing.xl, insets.bottom + Spacing.md);
+  const safeBottomOffset = bottomSpacing.floatingAction;
   const [isExpanded, setIsExpanded] = useState(false);
   const hasActions = actions.length > 0;
 

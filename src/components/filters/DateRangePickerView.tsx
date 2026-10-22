@@ -5,7 +5,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { PeriodFilter } from '@/src/utils/dateUtils';
 import type { Dayjs } from 'dayjs';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
-import { EdgeInsets } from 'react-native-safe-area-context';
+import { useWindowSafeAreaLayout } from '@/src/design-system/SafeArea';
 import { DateRangeCalendarStep } from './DateRangeCalendarStep';
 import { DateRangeMenuContent } from './DateRangeMenuContent';
 
@@ -14,7 +14,6 @@ export type PickerView = 'MENU' | 'START_DATE' | 'END_DATE';
 export interface DateRangePickerViewProps {
   visible: boolean;
   onClose: () => void;
-  insets: EdgeInsets;
   view: PickerView;
   setView: (view: PickerView) => void;
   draftFilter: PeriodFilter;
@@ -33,7 +32,6 @@ export interface DateRangePickerViewProps {
 export function DateRangePickerView({
   visible,
   onClose,
-  insets,
   view,
   setView,
   draftFilter,
@@ -49,6 +47,7 @@ export function DateRangePickerView({
   handleApply,
 }: DateRangePickerViewProps) {
   const { theme } = useTheme();
+  const { bottomSpacing } = useWindowSafeAreaLayout();
 
   return (
     <Modal
@@ -66,7 +65,7 @@ export function DateRangePickerView({
             styles.content,
             {
               backgroundColor: theme.background,
-              paddingBottom: insets.bottom + Spacing.md,
+              paddingBottom: bottomSpacing.pickerSheet,
               borderTopColor: withOpacity(theme.border, Opacity.medium),
             },
           ]}

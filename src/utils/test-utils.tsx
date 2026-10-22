@@ -1,3 +1,4 @@
+import { AppSafeAreaProvider } from '@/src/design-system/SafeArea';
 import { render, RenderOptions } from '@testing-library/react-native';
 import React, { ReactElement } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -38,9 +39,11 @@ export const AllTheProviders = ({ children }: { children: React.ReactNode }) => 
         insets: { top: 0, left: 0, right: 0, bottom: 0 },
       }}
     >
-      <PrivacyScopeProvider>
-        <AppShellTestProvider value={mockUIContext}>{children}</AppShellTestProvider>
-      </PrivacyScopeProvider>
+      <AppSafeAreaProvider>
+        <PrivacyScopeProvider>
+          <AppShellTestProvider value={mockUIContext}>{children}</AppShellTestProvider>
+        </PrivacyScopeProvider>
+      </AppSafeAreaProvider>
     </SafeAreaProvider>
   );
 };
