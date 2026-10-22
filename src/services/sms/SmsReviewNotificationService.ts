@@ -30,7 +30,8 @@ type ReviewDeliveryPrefs = {
 };
 
 export class SmsReviewNotificationService {
-  private queue: Promise<void> = Promise.resolve();
+  private pendingFlush: Promise<void> | null = null;
+  private refreshRequested = false;
 
   observeForegroundChanges(): () => void {
     const subscription = merge(
@@ -58,8 +59,28 @@ export class SmsReviewNotificationService {
   }
 
   flush(): Promise<void> {
-    const pending = this.queue.catch(() => undefined).then(() => this.deliverPending());
-    this.queue = pending.catch(() => undefined);
+    this.refreshRequested = true;
+    if (this.pendingFlush) return this.pendingFlush;
+
+    // Collapse requests before a pass starts; changes during a pass request one
+    // more pass over current state, rather than appending a pass for every event.
+    const pending = Promise.resolve().then(async () => {
+      try {
+        while (this.refreshRequested) {
+          this.refreshRequested = false;
+          try {
+            await this.deliverPending();
+          } catch (error) {
+            // A request received during the failed pass still gets its retry.
+            if (!this.refreshRequested) throw error;
+          }
+        }
+      } finally {
+        // Clear before settling so a new request cannot attach to a finished drain.
+        this.pendingFlush = null;
+      }
+    });
+    this.pendingFlush = pending;
     return pending;
   }
 

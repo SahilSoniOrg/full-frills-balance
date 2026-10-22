@@ -73,6 +73,46 @@ afterEach(() => jest.restoreAllMocks());
 const capture = (id = 'one', origin: 'arrival' | 'catch_up' | 'initial' | 'manual' = 'arrival') =>
   smsSyncPipeline.scanMessages(A, [message(id)], undefined, { origin });
 
+it('coalesces a burst and drains changes requested during an active delivery pass', async () => {
+  const reconcile = jest.mocked(notificationService.reconcileSmsReviews);
+  reconcile.mockClear();
+  let startPass = () => {};
+  let releasePass = () => {};
+  const started = new Promise<void>(resolve => {
+    startPass = resolve;
+  });
+  const released = new Promise<void>(resolve => {
+    releasePass = resolve;
+  });
+  reconcile.mockImplementationOnce(async () => {
+    startPass();
+    await released;
+  });
+
+  const first = service.flush();
+  const burst = Array.from({ length: 10 }, () => service.flush());
+  await started;
+  const duringDelivery = Array.from({ length: 10 }, () => service.flush());
+  releasePass();
+  await Promise.all([first, ...burst, ...duringDelivery]);
+
+  expect(reconcile).toHaveBeenCalledTimes(2);
+  await service.flush();
+  expect(reconcile).toHaveBeenCalledTimes(3);
+});
+
+it('retains a refresh requested during a failing delivery pass', async () => {
+  const reconcile = jest.mocked(notificationService.reconcileSmsReviews);
+  reconcile.mockClear();
+  reconcile.mockImplementationOnce(async () => {
+    void service.refresh();
+    throw new Error('Transient reconciliation failure');
+  });
+
+  await service.flush();
+  expect(reconcile).toHaveBeenCalledTimes(2);
+});
+
 it.each([InboxProcessingStatus.IMPORTED, InboxProcessingStatus.AUTO_POSTED] as const)(
   'retains the source for journal details and explicit backups after %s and privacy maintenance',
   async disposition => {
