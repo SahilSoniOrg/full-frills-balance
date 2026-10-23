@@ -177,6 +177,8 @@ export const SafeToSpendExplanationModal = ({
           <ListGroup variant="plain" dividerInset="none">
             <ListRow
               title={constraint.cashAvailableNow}
+              testID="safe-to-spend-cash-available-row"
+              accessibilityLabel={`${constraint.cashAvailableNow}, ${money(explanation.cashCeiling)}`}
               trailing={<ListRow.Value>{money(explanation.cashCeiling)}</ListRow.Value>}
             />
             <ListRow

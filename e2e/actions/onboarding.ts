@@ -60,7 +60,10 @@ async function enterCashClarityName(name: string): Promise<void> {
   await input.tap();
   await input.replaceText(name);
   // The keyboard covers the start and restore actions on a short Android window.
-  if (device.getPlatform() === 'android') {
+  if (device.getPlatform() === 'ios') {
+    // On iOS the keyboard can clip the Start button; Return triggers the same action.
+    await input.tapReturnKey();
+  } else {
     await device.pressBack();
   }
 }
@@ -87,7 +90,9 @@ async function acknowledgePrivacy(): Promise<void> {
 async function completeFirstRun(name: string): Promise<void> {
   await waitForCashClarityWelcome();
   await enterCashClarityName(name);
-  await tapById(setupIds.start, ONBOARDING_TIMEOUT_MS);
+  if (device.getPlatform() === 'android') {
+    await tapById(setupIds.start, ONBOARDING_TIMEOUT_MS);
+  }
   await acknowledgePrivacy();
   await tapById(setupIds.gridContinue, ONBOARDING_TIMEOUT_MS);
   await tapById(setupIds.skip, ONBOARDING_TIMEOUT_MS);

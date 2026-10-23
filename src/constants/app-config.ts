@@ -79,7 +79,7 @@ export const AppConfig = {
 
   features: {
     enableAnalytics: true,
-    enableSentry: analyticsEnabled,
+    enableSentry: analyticsEnabled && process.env.EXPO_PUBLIC_E2E !== '1',
     enablePostHog: analyticsEnabled && process.env.EXPO_PUBLIC_E2E !== '1',
     debug: {
       tracePerformance: true,

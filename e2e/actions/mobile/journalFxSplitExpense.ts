@@ -1,5 +1,5 @@
 import { by, element, waitFor } from 'detox';
-import { tapById, tapByLabel, tapByText } from './elementActions';
+import { replaceById, tapById, tapByLabel, tapByText } from './elementActions';
 import { enterAmount } from './enterAmount';
 import { tabs } from '../../screens';
 
@@ -21,7 +21,8 @@ export async function createFxSplitExpense(description: string): Promise<void> {
   await tapByText('Food & Drink', 15000);
 
   await enterAmount('10', 'split-total-amount-input');
-  await enterAmount('11', 'split-amount-input-1');
+  await replaceById('split-source-fx-converted-amount-input', '11', 15000);
+  await tapByText('Distribute', 15000);
   const convertedAmount = element(by.id('split-source-fx-converted-amount-input'));
   await waitFor(convertedAmount).toBeVisible().withTimeout(30000);
 
