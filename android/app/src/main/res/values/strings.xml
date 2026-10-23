@@ -8,6 +8,7 @@
   <string name="journal_widget_income">Income</string>
   <string name="journal_widget_expense">Expense</string>
   <string name="journal_widget_transfer">Transfer</string>
+  <string name="journal_widget_action_for_workplace">%1$s for %2$s</string>
   <string name="safe_to_spend_widget_name">Safe to Spend</string>
   <string name="safe_to_spend_widget_description">View your current safe-to-spend amount.</string>
   <string name="safe_to_spend_widget_actions_name">Safe to Spend + Actions</string>
@@ -17,6 +18,11 @@
   <string name="safe_to_spend_widget_title">Safe to spend</string>
   <string name="safe_to_spend_widget_subtitle">After obligations</string>
   <string name="safe_to_spend_widget_calculated_at">Calc. %1$s</string>
+  <string name="safe_to_spend_widget_title_for_workplace">%1$s · %2$s</string>
+  <string name="safe_to_spend_widget_stale">Data may be stale</string>
+  <string name="safe_to_spend_widget_updated_at">Updated %1$s</string>
+  <string name="widget_workplace_selector_title">Choose workplace</string>
+  <string name="widget_workplace_follow_active">Follow active workplace</string>
   <string name="safe_to_spend_widget_loading">Open app to load data</string>
   <string name="safe_to_spend_widget_amount_placeholder">--</string>
   <string name="expo_splash_screen_resize_mode" translatable="false">contain</string>

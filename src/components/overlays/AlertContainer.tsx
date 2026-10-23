@@ -54,14 +54,20 @@ export function AlertContainer() {
 
   if (activeAlert.type === 'alert') {
     const { payload } = activeAlert;
+    const dismiss = (callback?: () => void) => {
+      callback?.();
+      if (activeAlertIdRef.current === payload.id) {
+        setActiveAlert(null);
+      }
+    };
     return (
       <ConfirmDialog
         visible={true}
         title={payload.title || AppConfig.strings.common.alert}
-        onClose={() => setActiveAlert(null)}
+        onClose={() => dismiss(payload.onClose)}
         primaryAction={{
-          label: AppConfig.strings.common.ok,
-          onPress: () => setActiveAlert(null),
+          label: payload.actionText || AppConfig.strings.common.ok,
+          onPress: () => dismiss(payload.onAction),
           variant: 'primary',
         }}
         message={<AppText>{payload.message}</AppText>}
@@ -105,7 +111,7 @@ export function AlertContainer() {
           },
           variant: payload.destructive ? 'destructive' : 'primary',
         }}
-        message={<AppText>{payload.message}</AppText>}
+        message={payload.messageContent ?? <AppText>{payload.message}</AppText>}
         requiredConfirmationValue={payload.requiredConfirmationValue}
         useNativeModal={false}
       />

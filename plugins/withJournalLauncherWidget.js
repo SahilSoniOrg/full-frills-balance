@@ -224,6 +224,25 @@ function ensureAndroidWidgetReceivers(manifest) {
       application.receiver.push(receiverConfig);
     }
   });
+
+  application.activity = application.activity || [];
+  const configActivity = application.activity.find(
+    item => item.$?.['android:name'] === '.WidgetWorkplaceConfigActivity',
+  );
+  const configActivityManifest = {
+    $: {
+      'android:name': '.WidgetWorkplaceConfigActivity',
+      'android:exported': 'true',
+      'android:theme': '@android:style/Theme.Material.Light.Dialog.Alert',
+    },
+    'intent-filter': [
+      {
+        action: [{ $: { 'android:name': 'android.appwidget.action.APPWIDGET_CONFIGURE' } }],
+      },
+    ],
+  };
+  if (configActivity) Object.assign(configActivity, configActivityManifest);
+  else application.activity.push(configActivityManifest);
 }
 
 async function writeAndroidWidgetFiles(projectRoot, config) {
@@ -231,6 +250,7 @@ async function writeAndroidWidgetFiles(projectRoot, config) {
   const basePath = path.join(projectRoot, 'android', 'app', 'src', 'main');
   const replacements = {
     __ANDROID_PACKAGE__: escapeKotlinPackage(getAndroidPackage(config)),
+    __ANDROID_PACKAGE_NAME__: getAndroidPackage(config),
     __APP_SCHEME__: getScheme(config),
   };
 
@@ -238,6 +258,13 @@ async function writeAndroidWidgetFiles(projectRoot, config) {
     path.join(basePath, 'java', packagePath, 'FullFrillsBalanceWidgetSupport.kt'),
     await renderTemplate(
       path.join(TEMPLATE_ROOT, 'android', 'FullFrillsBalanceWidgetSupport.kt'),
+      replacements,
+    ),
+  );
+  await writeFileIfChanged(
+    path.join(basePath, 'java', packagePath, 'WidgetWorkplaceConfigActivity.kt'),
+    await renderTemplate(
+      path.join(TEMPLATE_ROOT, 'android', 'WidgetWorkplaceConfigActivity.kt'),
       replacements,
     ),
   );
@@ -281,7 +308,7 @@ async function writeAndroidWidgetFiles(projectRoot, config) {
   for (const widget of ANDROID_WIDGETS) {
     await writeFileIfChanged(
       path.join(basePath, 'res', 'xml', widget.infoFile),
-      await fsPromises.readFile(path.join(TEMPLATE_ROOT, 'android', widget.infoFile), 'utf8'),
+      await renderTemplate(path.join(TEMPLATE_ROOT, 'android', widget.infoFile), replacements),
     );
   }
 }
@@ -619,6 +646,10 @@ function withAndroidWidget(config) {
         value: 'Transfer',
       }),
       AndroidConfig.Resources.buildResourceItem({
+        name: 'journal_widget_action_for_workplace',
+        value: '%1$s for %2$s',
+      }),
+      AndroidConfig.Resources.buildResourceItem({
         name: 'safe_to_spend_widget_name',
         value: 'Safe to Spend',
       }),
@@ -653,6 +684,26 @@ function withAndroidWidget(config) {
       AndroidConfig.Resources.buildResourceItem({
         name: 'safe_to_spend_widget_calculated_at',
         value: 'Calc. %1$s',
+      }),
+      AndroidConfig.Resources.buildResourceItem({
+        name: 'safe_to_spend_widget_title_for_workplace',
+        value: '%1$s · %2$s',
+      }),
+      AndroidConfig.Resources.buildResourceItem({
+        name: 'safe_to_spend_widget_stale',
+        value: 'Data may be stale',
+      }),
+      AndroidConfig.Resources.buildResourceItem({
+        name: 'safe_to_spend_widget_updated_at',
+        value: 'Updated %1$s',
+      }),
+      AndroidConfig.Resources.buildResourceItem({
+        name: 'widget_workplace_selector_title',
+        value: 'Choose workplace',
+      }),
+      AndroidConfig.Resources.buildResourceItem({
+        name: 'widget_workplace_follow_active',
+        value: 'Follow active workplace',
       }),
       AndroidConfig.Resources.buildResourceItem({
         name: 'safe_to_spend_widget_loading',

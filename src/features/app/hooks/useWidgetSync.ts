@@ -11,7 +11,9 @@ import {
   SafeToSpendHeadline,
   isSafeToSpendHeadlineCurrent,
 } from '@/src/services/simulation/SafeToSpendReadModel';
+import type { SafeToSpendPaintSnapshot } from '@/src/services/simulation/safeToSpendSnapshotWriter';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { snapshotService } from '@/src/utils/SnapshotService';
 import React from 'react';
 import { logger } from '@/src/utils/logger';
 import { Platform } from 'react-native';
@@ -23,6 +25,7 @@ import type {
   WidgetThemeSnapshot,
 } from '@/modules/expo-widgets/src/ExpoWidgets.types';
 import { widgetProjectionService } from '@/src/services/widgets/WidgetProjectionService';
+import { workplaceService } from '@/src/services/WorkplaceService';
 
 function clampChannel(value: number) {
   return Math.max(0, Math.min(255, Math.round(value)));
@@ -77,16 +80,11 @@ function buildWidgetThemeSnapshot(
   theme: Theme,
 ): WidgetThemeSnapshot {
   const backgroundStartColor = normalizeHexColor(theme.surface);
-  const backgroundEndColor =
-    themeMode === 'dark'
-      ? mixHexColors(theme.surface, theme.primary, 0.22)
-      : mixHexColors(theme.surface, theme.primaryLight, 0.16);
 
   return {
     themeId,
     themeMode,
     backgroundStartColor,
-    backgroundEndColor,
     titleColor: normalizeHexColor(theme.primary),
     primaryTextColor: normalizeHexColor(theme.text),
     secondaryTextColor: normalizeHexColor(theme.textSecondary),
@@ -141,27 +139,74 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
 
       const isShortfall = (shortfall ?? 0) > 0;
       const displayAmount = isShortfall ? (shortfall ?? 0) : (safeToSpend ?? 0);
+      const workplaces = await workplaceService.getAllWorkplaces();
+      if (!lease.isCurrent()) return;
+      const safeToSpendByWorkplace: NonNullable<WidgetDataSnapshot['safeToSpendByWorkplace']> = {};
+
+      workplaces.forEach(workplace => {
+        const stored = snapshotService.getCustomSnapshotWithMetadata<SafeToSpendPaintSnapshot>(
+          workplace.id,
+          'safe_to_spend',
+        );
+        const cached = stored?.data;
+        if (!cached) return;
+        if (
+          workplace.id === workplaceId &&
+          (!isDataPresent ||
+            cached.quality !== 'ready' ||
+            cached.currencyCode !== defaultCurrencyCode)
+        ) {
+          return;
+        }
+
+        const cachedShortfall = cached.summary.shortfall > 0;
+        const cachedAmount = cachedShortfall
+          ? cached.summary.shortfall
+          : cached.summary.safeToSpend;
+        safeToSpendByWorkplace[workplace.id] = {
+          amount: cachedAmount,
+          currencyCode: cached.currencyCode,
+          formattedAmount: CurrencyFormatter.format(cachedAmount, cached.currencyCode, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          }),
+          title: cachedShortfall
+            ? AppConfig.strings.dashboard.shortfall
+            : AppConfig.strings.dashboard.safeToSpendTitle,
+          subtitle: cachedShortfall
+            ? AppConfig.strings.dashboard.shortfallSubtitle
+            : cached.hasUnvaluedEntries
+              ? AppConfig.strings.dashboard.safeToSpendUi.incompleteFxWarning
+              : AppConfig.strings.dashboard.afterObligations,
+          updatedAt: cached.generatedAt || stored.timestamp,
+        };
+      });
+
+      if (isDataPresent) {
+        safeToSpendByWorkplace[workplaceId] = {
+          amount: displayAmount,
+          currencyCode,
+          formattedAmount: CurrencyFormatter.format(displayAmount, currencyCode, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          }),
+          title: isShortfall
+            ? AppConfig.strings.dashboard.shortfall
+            : AppConfig.strings.dashboard.safeToSpendTitle,
+          subtitle: isShortfall
+            ? AppConfig.strings.dashboard.shortfallSubtitle
+            : hasUnvaluedEntries
+              ? AppConfig.strings.dashboard.safeToSpendUi.incompleteFxWarning
+              : AppConfig.strings.dashboard.afterObligations,
+          updatedAt: headline?.generatedAt ?? 0,
+        };
+      }
 
       const snapshot: WidgetDataSnapshot = {
-        safeToSpend: isDataPresent
-          ? {
-              amount: displayAmount,
-              currencyCode,
-              formattedAmount: CurrencyFormatter.format(displayAmount, currencyCode, {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0,
-              }),
-              title: isShortfall
-                ? AppConfig.strings.dashboard.shortfall
-                : AppConfig.strings.dashboard.safeToSpendTitle,
-              subtitle: isShortfall
-                ? AppConfig.strings.dashboard.shortfallSubtitle
-                : hasUnvaluedEntries
-                  ? AppConfig.strings.dashboard.safeToSpendUi.incompleteFxWarning
-                  : AppConfig.strings.dashboard.afterObligations,
-              updatedAt: headline?.generatedAt ?? 0,
-            }
-          : undefined,
+        workplaceId,
+        workplaces: workplaces.map(workplace => ({ id: workplace.id, name: workplace.name })),
+        safeToSpendByWorkplace,
+        safeToSpend: safeToSpendByWorkplace[workplaceId],
         theme: buildWidgetThemeSnapshot(themeId, themeMode, theme),
         isPrivacyEnabled: isWidgetPrivacyEnabled,
       };
@@ -205,6 +250,7 @@ export function useWidgetSync(workplaceId: WorkplaceId, defaultCurrencyCode: str
     headline?.workplaceId,
     hasUnvaluedEntries,
     currencyCode,
+    defaultCurrencyCode,
     isDataPresent,
     isAppReady,
     workplaceId,

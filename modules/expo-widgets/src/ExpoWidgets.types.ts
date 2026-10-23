@@ -11,7 +11,6 @@ export type WidgetThemeSnapshot = {
   themeId: string;
   themeMode: 'light' | 'dark';
   backgroundStartColor: string;
-  backgroundEndColor: string;
   titleColor: string;
   primaryTextColor: string;
   secondaryTextColor: string;
@@ -22,6 +21,9 @@ export type WidgetThemeSnapshot = {
 };
 
 export type WidgetDataSnapshot = {
+  workplaceId?: string;
+  workplaces?: { id: string; name: string }[];
+  safeToSpendByWorkplace?: Record<string, SafeToSpendSnapshot>;
   safeToSpend?: SafeToSpendSnapshot;
   theme?: WidgetThemeSnapshot;
   isPrivacyEnabled?: boolean;

@@ -12,7 +12,7 @@ class JournalLauncherWidgetProvider : AppWidgetProvider() {
     appWidgetIds: IntArray
   ) {
     appWidgetIds.forEach { appWidgetId ->
-      appWidgetManager.updateAppWidget(appWidgetId, buildRemoteViews(context))
+      appWidgetManager.updateAppWidget(appWidgetId, buildRemoteViews(context, appWidgetId))
     }
   }
 
@@ -28,7 +28,7 @@ class JournalLauncherWidgetProvider : AppWidgetProvider() {
     newOptions: android.os.Bundle
   ) {
     super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
-    appWidgetManager.updateAppWidget(appWidgetId, buildRemoteViews(context))
+    appWidgetManager.updateAppWidget(appWidgetId, buildRemoteViews(context, appWidgetId))
   }
 
   companion object {
@@ -36,7 +36,7 @@ class JournalLauncherWidgetProvider : AppWidgetProvider() {
       FullFrillsBalanceWidgetSupport.refreshAll(context)
     }
 
-    private fun buildRemoteViews(context: Context): RemoteViews {
+    private fun buildRemoteViews(context: Context, appWidgetId: Int): RemoteViews {
       return RemoteViews(context.packageName, R.layout.widget_journal_launcher).apply {
         FullFrillsBalanceWidgetSupport.bindTransactionButtons(
           context = context,
@@ -44,6 +44,7 @@ class JournalLauncherWidgetProvider : AppWidgetProvider() {
           incomeViewId = R.id.widget_income_button,
           expenseViewId = R.id.widget_expense_button,
           transferViewId = R.id.widget_transfer_button,
+          appWidgetId = appWidgetId,
         )
         FullFrillsBalanceWidgetSupport.applyLauncherTheme(
           context = context,

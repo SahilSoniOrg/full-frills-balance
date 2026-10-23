@@ -12,7 +12,7 @@ class SafeToSpendWidgetProvider : AppWidgetProvider() {
     appWidgetIds: IntArray,
   ) {
     appWidgetIds.forEach { appWidgetId ->
-      appWidgetManager.updateAppWidget(appWidgetId, buildRemoteViews(context))
+      appWidgetManager.updateAppWidget(appWidgetId, buildRemoteViews(context, appWidgetId))
     }
   }
 
@@ -28,13 +28,13 @@ class SafeToSpendWidgetProvider : AppWidgetProvider() {
     newOptions: android.os.Bundle,
   ) {
     super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
-    appWidgetManager.updateAppWidget(appWidgetId, buildRemoteViews(context))
+    appWidgetManager.updateAppWidget(appWidgetId, buildRemoteViews(context, appWidgetId))
   }
 
   companion object {
     private const val REQUEST_CODE_OPEN_APP = 2001
 
-    private fun buildRemoteViews(context: Context): RemoteViews {
+    private fun buildRemoteViews(context: Context, appWidgetId: Int): RemoteViews {
       return RemoteViews(context.packageName, R.layout.widget_safe_to_spend).apply {
         FullFrillsBalanceWidgetSupport.bindSafeToSpend(
           context = context,
@@ -43,6 +43,8 @@ class SafeToSpendWidgetProvider : AppWidgetProvider() {
           amountViewId = R.id.widget_safe_to_spend_amount,
           subtitleViewId = R.id.widget_safe_to_spend_subtitle,
           updatedAtViewId = R.id.widget_safe_to_spend_calculated_at,
+          workplaceNameViewId = R.id.widget_safe_to_spend_workplace_name,
+          appWidgetId = appWidgetId,
         )
         FullFrillsBalanceWidgetSupport.applySafeToSpendTheme(
           context = context,
@@ -51,11 +53,22 @@ class SafeToSpendWidgetProvider : AppWidgetProvider() {
           titleViewId = R.id.widget_safe_to_spend_title,
           amountViewId = R.id.widget_safe_to_spend_amount,
           subtitleViewId = R.id.widget_safe_to_spend_subtitle,
+          workplaceNameViewId = R.id.widget_safe_to_spend_workplace_name,
+        )
+        FullFrillsBalanceWidgetSupport.hideDetailsWhenWidgetIsShort(
+          context,
+          this,
+          appWidgetId,
+          104,
+          R.id.widget_safe_to_spend_subtitle,
+          R.id.widget_safe_to_spend_subtitle,
+          R.id.widget_safe_to_spend_calculated_at,
+          R.id.widget_safe_to_spend_workplace_name,
         )
 
         setOnClickPendingIntent(
           R.id.widget_safe_to_spend_root,
-          FullFrillsBalanceWidgetSupport.createOpenAppPendingIntent(context, REQUEST_CODE_OPEN_APP),
+          FullFrillsBalanceWidgetSupport.createOpenAppPendingIntent(context, REQUEST_CODE_OPEN_APP, appWidgetId),
         )
       }
     }

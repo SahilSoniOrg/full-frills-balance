@@ -1,4 +1,4 @@
-export type RoutePresentation = 'tab' | 'composer' | 'detail';
+export type RoutePresentation = 'tab' | 'composer' | 'detail' | 'internal';
 export interface RouteManifestEntry {
   readonly name: string;
   readonly presentation: RoutePresentation;
@@ -100,6 +100,16 @@ const detailRoutes = [
   ['_design-preview', 'developer', 'design_preview', false],
 ] as const;
 
+const internalRoutes = [
+  {
+    name: 'widget',
+    presentation: 'internal',
+    isModal: false,
+    screenType: 'widget_launch',
+    flowContext: null,
+  },
+] as const satisfies readonly RouteManifestEntry[];
+
 export const ROUTE_MANIFEST = [
   ...tabRoutes,
   ...composerRoutes.map(([name, screenType, flowContext]) => ({
@@ -116,6 +126,7 @@ export const ROUTE_MANIFEST = [
     screenType,
     flowContext,
   })),
+  ...internalRoutes,
 ] as const satisfies readonly RouteManifestEntry[];
 
 export type AppRouteName = (typeof ROUTE_MANIFEST)[number]['name'];

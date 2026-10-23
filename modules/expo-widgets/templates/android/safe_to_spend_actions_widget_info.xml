@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/safe_to_spend_actions_widget_description"
+    android:configure="__ANDROID_PACKAGE_NAME__.WidgetWorkplaceConfigActivity"
     android:initialLayout="@layout/widget_safe_to_spend_actions"
     android:minHeight="82dp"
     android:minWidth="250dp"
@@ -9,5 +10,6 @@
     android:resizeMode="horizontal|vertical"
     android:targetCellHeight="1"
     android:targetCellWidth="4"
-    android:updatePeriodMillis="0"
-    android:widgetCategory="home_screen" />
+    android:updatePeriodMillis="86400000"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable|configuration_optional" />

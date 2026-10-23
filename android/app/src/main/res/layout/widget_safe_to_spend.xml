@@ -11,6 +11,17 @@
     android:paddingRight="16dp"
     android:paddingBottom="12dp">
 
+    <TextView
+        android:id="@+id/widget_safe_to_spend_workplace_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="3dp"
+        android:ellipsize="end"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:textColor="#D9EAF6"
+        android:textSize="9sp" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

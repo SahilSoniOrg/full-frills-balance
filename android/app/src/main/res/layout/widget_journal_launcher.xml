@@ -5,9 +5,9 @@
     android:gravity="center"
     android:orientation="horizontal"
     android:paddingLeft="8dp"
-    android:paddingTop="6dp"
+    android:paddingTop="0dp"
     android:paddingRight="8dp"
-    android:paddingBottom="6dp">
+    android:paddingBottom="0dp">
 
     <LinearLayout
         android:id="@+id/widget_journal_launcher_container"
@@ -18,15 +18,15 @@
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingLeft="14dp"
-        android:paddingTop="10dp"
+        android:paddingTop="0dp"
         android:paddingRight="14dp"
-        android:paddingBottom="10dp"
+        android:paddingBottom="0dp"
         android:showDividers="middle">
 
         <ImageView
             android:id="@+id/widget_income_button"
             android:layout_width="0dp"
-            android:layout_height="36dp"
+            android:layout_height="48dp"
             android:layout_weight="1"
             android:contentDescription="@string/journal_widget_income"
             android:padding="4dp"
@@ -35,7 +35,7 @@
         <ImageView
             android:id="@+id/widget_expense_button"
             android:layout_width="0dp"
-            android:layout_height="36dp"
+            android:layout_height="48dp"
             android:layout_weight="1"
             android:contentDescription="@string/journal_widget_expense"
             android:padding="4dp"
@@ -44,7 +44,7 @@
         <ImageView
             android:id="@+id/widget_transfer_button"
             android:layout_width="0dp"
-            android:layout_height="36dp"
+            android:layout_height="48dp"
             android:layout_weight="1"
             android:contentDescription="@string/journal_widget_transfer"
             android:padding="4dp"

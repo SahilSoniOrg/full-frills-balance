@@ -12,7 +12,7 @@ class SafeToSpendActionsWidgetProvider : AppWidgetProvider() {
     appWidgetIds: IntArray,
   ) {
     appWidgetIds.forEach { appWidgetId ->
-      appWidgetManager.updateAppWidget(appWidgetId, buildRemoteViews(context))
+      appWidgetManager.updateAppWidget(appWidgetId, buildRemoteViews(context, appWidgetId))
     }
   }
 
@@ -28,13 +28,13 @@ class SafeToSpendActionsWidgetProvider : AppWidgetProvider() {
     newOptions: android.os.Bundle,
   ) {
     super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
-    appWidgetManager.updateAppWidget(appWidgetId, buildRemoteViews(context))
+    appWidgetManager.updateAppWidget(appWidgetId, buildRemoteViews(context, appWidgetId))
   }
 
   companion object {
     private const val REQUEST_CODE_OPEN_APP = 2002
 
-    private fun buildRemoteViews(context: Context): RemoteViews {
+    private fun buildRemoteViews(context: Context, appWidgetId: Int): RemoteViews {
       return RemoteViews(context.packageName, R.layout.widget_safe_to_spend_actions).apply {
         FullFrillsBalanceWidgetSupport.bindSafeToSpend(
           context = context,
@@ -42,13 +42,16 @@ class SafeToSpendActionsWidgetProvider : AppWidgetProvider() {
           titleViewId = R.id.widget_safe_to_spend_actions_title,
           amountViewId = R.id.widget_safe_to_spend_actions_amount,
           subtitleViewId = R.id.widget_safe_to_spend_actions_subtitle,
+          workplaceNameViewId = R.id.widget_safe_to_spend_actions_workplace_name,
+          appWidgetId = appWidgetId,
         )
         FullFrillsBalanceWidgetSupport.bindTransactionButtons(
           context = context,
           remoteViews = this,
-          incomeViewId = R.id.widget_safe_to_spend_actions_income_button,
-          expenseViewId = R.id.widget_safe_to_spend_actions_expense_button,
-          transferViewId = R.id.widget_safe_to_spend_actions_transfer_button,
+          incomeViewId = R.id.widget_safe_to_spend_actions_income_action,
+          expenseViewId = R.id.widget_safe_to_spend_actions_expense_action,
+          transferViewId = R.id.widget_safe_to_spend_actions_transfer_action,
+          appWidgetId = appWidgetId,
         )
         FullFrillsBalanceWidgetSupport.applySafeToSpendActionsTheme(
           context = context,
@@ -57,6 +60,7 @@ class SafeToSpendActionsWidgetProvider : AppWidgetProvider() {
           titleViewId = R.id.widget_safe_to_spend_actions_title,
           amountViewId = R.id.widget_safe_to_spend_actions_amount,
           subtitleViewId = R.id.widget_safe_to_spend_actions_subtitle,
+          workplaceNameViewId = R.id.widget_safe_to_spend_actions_workplace_name,
           actionLabelViewIds = intArrayOf(
             R.id.widget_safe_to_spend_actions_income_label,
             R.id.widget_safe_to_spend_actions_expense_label,
@@ -73,10 +77,19 @@ class SafeToSpendActionsWidgetProvider : AppWidgetProvider() {
             R.id.widget_safe_to_spend_actions_transfer_button,
           ),
         )
+        FullFrillsBalanceWidgetSupport.hideDetailsWhenWidgetIsShort(
+          context,
+          this,
+          appWidgetId,
+          104,
+          R.id.widget_safe_to_spend_actions_subtitle,
+          R.id.widget_safe_to_spend_actions_subtitle,
+          R.id.widget_safe_to_spend_actions_workplace_name,
+        )
 
         setOnClickPendingIntent(
           R.id.widget_safe_to_spend_actions_content,
-          FullFrillsBalanceWidgetSupport.createOpenAppPendingIntent(context, REQUEST_CODE_OPEN_APP),
+          FullFrillsBalanceWidgetSupport.createOpenAppPendingIntent(context, REQUEST_CODE_OPEN_APP, appWidgetId),
         )
       }
     }

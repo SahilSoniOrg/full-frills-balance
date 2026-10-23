@@ -447,6 +447,17 @@ export const UI_STRINGS = {
       loadErrorSubtitle: 'Try again.',
       retry: 'Retry',
     },
+    widgetWorkplacePrompt: {
+      title: 'Switch workplace?',
+      message: (widgetWorkplace: string, currentWorkplace: string) =>
+        `This widget uses ${widgetWorkplace}. You’re in ${currentWorkplace}. Switch?`,
+      stay: 'Stay',
+      switchTo: 'Switch',
+      unavailableTitle: 'Widget workplace unavailable',
+      unavailableMessage: (currentWorkplace: string) =>
+        `The workplace linked to this widget is no longer available on this device. Continue in ${currentWorkplace}?`,
+      continueIn: (currentWorkplace: string) => `Continue in ${currentWorkplace}`,
+    },
     workplaceManagement: {
       deleteTitle: 'Delete workplace?',
       deleteMessage: (name: string, isLast: boolean, isActive: boolean) => {

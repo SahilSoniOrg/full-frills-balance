@@ -1,5 +1,5 @@
 import { sharingRuntime } from '@/src/services/SharingService';
-import { EmptyStateView, LoadingView } from '@/src/components/core';
+import { AppText, EmptyStateView, LoadingView } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { WorkplaceProvider } from '@/src/contexts/WorkplaceContext';
 import { useAppReady } from '@/src/contexts/app-shell/AppReadyProvider';
@@ -32,11 +32,14 @@ import { evictWorkplaceReactiveCaches } from '@/src/services/reactive/evictWorkp
 import { isSetupJourneyId } from '@/src/services/setup/setupDraftIdentity';
 import { WorkplaceId } from '@/src/types/ids';
 import { PlainWorkplace } from '@/src/types/plainDtos';
+import { alert, confirm } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
-import { Redirect, usePathname, useRouter } from 'expo-router';
+import * as Linking from 'expo-linking';
+import { Redirect, useGlobalSearchParams, usePathname, useRouter } from 'expo-router';
 import React, {
   createContext,
   useContext,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -283,12 +286,58 @@ export function LaunchCoordinatorContent({
   const { isRestartRequired } = useAppRestart();
   const router = useRouter();
   const pathname = usePathname();
+  const globalParams = useGlobalSearchParams();
+  const routeWidgetWorkplaceId =
+    globalParams.source === 'widget' && typeof globalParams.workplaceId === 'string'
+      ? (globalParams.workplaceId as WorkplaceId)
+      : undefined;
+  const [pendingWidgetWorkplaceId, setPendingWidgetWorkplaceId] = useState<WorkplaceId | null>(
+    null,
+  );
+  const handledWidgetPromptRef = useRef<{
+    widgetWorkplaceId: WorkplaceId;
+    currentWorkplaceId: WorkplaceId | null;
+  } | null>(null);
+  useEffect(() => {
+    const captureWidgetLaunch = (url: string | null, isInitialUrl = false) => {
+      if (!url) return;
+      const params = Linking.parse(url).queryParams;
+      if (params?.source === 'widget' && typeof params.workplaceId === 'string') {
+        if (!isInitialUrl) {
+          handledWidgetPromptRef.current = null;
+        }
+        setPendingWidgetWorkplaceId(params.workplaceId as WorkplaceId);
+      }
+    };
+
+    void Linking.getInitialURL()
+      .then(url => captureWidgetLaunch(url, true))
+      .catch(error =>
+        logger.warn('[LaunchCoordinator] Could not read initial widget link', { error }),
+      );
+    const subscription = Linking.addEventListener('url', ({ url }) => captureWidgetLaunch(url));
+    return () => subscription.remove();
+  }, []);
+  const widgetWorkplaceId = routeWidgetWorkplaceId ?? pendingWidgetWorkplaceId ?? undefined;
   const isPrivacyPolicyAcknowledged = useSyncExternalStore(
     subscribeToPrivacyPolicyAcknowledgement,
     hasAcknowledgedCurrentPrivacyPolicy,
     hasAcknowledgedCurrentPrivacyPolicy,
   );
+  const widgetPromptContextRef = useRef({
+    workplaceId: widgetWorkplaceId,
+    isPrivacyPolicyAcknowledged,
+  });
+  useEffect(() => {
+    widgetPromptContextRef.current = {
+      workplaceId: widgetWorkplaceId,
+      isPrivacyPolicyAcknowledged,
+    };
+  }, [widgetWorkplaceId, isPrivacyPolicyAcknowledged]);
   const previousOpenWorkplaceId = useRef<string | null>(null);
+  const isWidgetWorkplaceSwitchPending =
+    widgetWorkplaceId !== undefined &&
+    (state.kind === 'picker' || (state.kind === 'open' && state.workplaceId !== widgetWorkplaceId));
   const privacyRedirectInFlight = useRef(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [transitionError, setTransitionError] = useState<string | null>(null);
@@ -327,7 +376,8 @@ export function LaunchCoordinatorContent({
       state.kind === 'picker' &&
       pathname !== '/' &&
       pathname !== '' &&
-      !SETUP_GATE_ROUTES.has(pathname)
+      !SETUP_GATE_ROUTES.has(pathname) &&
+      !isWidgetWorkplaceSwitchPending
     ) {
       // A books deep link has no unambiguous Workplace while the picker is open.
       router.replace('/');
@@ -337,87 +387,230 @@ export function LaunchCoordinatorContent({
       state.kind === 'open' &&
       previousOpenWorkplaceId.current !== null &&
       previousOpenWorkplaceId.current !== state.workplaceId &&
-      pathname !== '/import-selection'
+      pathname !== '/import-selection' &&
+      widgetWorkplaceId !== state.workplaceId &&
+      !isWidgetWorkplaceSwitchPending
     ) {
       router.replace('/');
     }
     if (state.kind === 'open') previousOpenWorkplaceId.current = state.workplaceId;
-  }, [isPrivacyPolicyAcknowledged, pathname, router, state]);
-  const transitionToWorkplace = async (targetId: WorkplaceId, previousId?: WorkplaceId) => {
-    if (transitionInFlightRef.current) {
-      await transitionInFlightRef.current;
+  }, [
+    isPrivacyPolicyAcknowledged,
+    isWidgetWorkplaceSwitchPending,
+    pathname,
+    router,
+    state,
+    widgetWorkplaceId,
+  ]);
+  const transitionToWorkplace = useCallback(
+    async (
+      targetId: WorkplaceId,
+      previousId?: WorkplaceId,
+      options?: { preserveRoute?: boolean },
+    ) => {
+      if (transitionInFlightRef.current) {
+        const inFlight = transitionInFlightRef.current;
+        await inFlight;
+        if (preferences.device.activeWorkplaceId === targetId) return;
+        previousId = preferences.device.activeWorkplaceId;
+      }
+
+      const releaseSharing = previousId
+        ? sharingRuntime.beginWorkplaceTransition(previousId, 'switch')
+        : () => {};
+      const transitionId = `workplace-transition-${++transitionSequence.current}`;
+      setTransitionError(null);
+      setIsTransitioning(true);
+      const transition = (async () => {
+        logger.info('[WorkplaceTransition] started', {
+          transitionId,
+          fromWorkplaceId: previousId,
+          toWorkplaceId: targetId,
+        });
+        try {
+          await workplaceService.switchWorkplace(targetId);
+          if (previousId) {
+            evictWorkplaceReactiveCaches({ from: previousId, to: targetId });
+          }
+          logger.info('[WorkplaceTransition] pointer-persisted', {
+            transitionId,
+            fromWorkplaceId: previousId,
+            toWorkplaceId: targetId,
+          });
+          // Picker selections have no previously open workplace for the route
+          // effect to observe. Open-to-open transitions are redirected there
+          // when the validated launch state changes.
+          if (!previousId && !options?.preserveRoute) router.replace('/');
+          logger.info('[WorkplaceTransition] completed', {
+            transitionId,
+            toWorkplaceId: targetId,
+          });
+        } catch (error) {
+          // A failed pointer write must not strand the app on an unmounted target.
+          if (previousId && preferences.device.activeWorkplaceId !== previousId) {
+            try {
+              await workplaceService.switchWorkplace(previousId);
+              logger.warn('[WorkplaceTransition] rolled-back', {
+                transitionId,
+                restoredWorkplaceId: previousId,
+                failedWorkplaceId: targetId,
+              });
+            } catch (rollbackError) {
+              // Preserve the original failure; the next launch will recover by discovery.
+              logger.error('[WorkplaceTransition] rollback-failed', rollbackError, {
+                transitionId,
+                failedWorkplaceId: targetId,
+                attemptedRestoreWorkplaceId: previousId,
+              });
+            }
+          }
+          logger.error('[WorkplaceTransition] failed', error, {
+            transitionId,
+            fromWorkplaceId: previousId,
+            toWorkplaceId: targetId,
+          });
+          setTransitionError(
+            error instanceof Error ? error.message : 'Could not switch workplace.',
+          );
+        } finally {
+          setIsTransitioning(false);
+        }
+      })();
+      void transition.finally(releaseSharing).catch(() => undefined);
+      transitionInFlightRef.current = transition;
+      try {
+        await transition;
+      } finally {
+        if (transitionInFlightRef.current === transition) {
+          transitionInFlightRef.current = null;
+        }
+      }
+    },
+    [router],
+  );
+  useEffect(() => {
+    if (!widgetWorkplaceId) return;
+    if (state.kind !== 'open' && state.kind !== 'picker') return;
+    if (!isPrivacyPolicyAcknowledged || pathname === '/privacy-notice') return;
+    if (state.kind === 'open' && state.workplaceId === widgetWorkplaceId) return;
+    const previousId = state.kind === 'open' ? state.workplaceId : undefined;
+    const handledPrompt = handledWidgetPromptRef.current;
+    if (
+      handledPrompt?.widgetWorkplaceId === widgetWorkplaceId &&
+      handledPrompt.currentWorkplaceId === (previousId ?? null)
+    )
+      return;
+
+    handledWidgetPromptRef.current = {
+      widgetWorkplaceId,
+      currentWorkplaceId: previousId ?? null,
+    };
+    const continueInCurrentWorkplace = () => {
+      setPendingWidgetWorkplaceId(null);
+      router.replace('/(tabs)');
+    };
+    const switchToWidgetWorkplace = () => {
+      setPendingWidgetWorkplaceId(null);
+      void transitionToWorkplace(widgetWorkplaceId, previousId, { preserveRoute: true }).then(
+        () => {
+          if (preferences.device.activeWorkplaceId !== widgetWorkplaceId) {
+            logger.warn(
+              '[LaunchCoordinator] Widget workplace is unavailable; opening active workplace',
+              {
+                workplaceId: widgetWorkplaceId,
+              },
+            );
+            router.replace('/(tabs)');
+          }
+        },
+      );
+    };
+
+    if (!previousId) {
+      switchToWidgetWorkplace();
       return;
     }
 
-    const releaseSharing = previousId
-      ? sharingRuntime.beginWorkplaceTransition(previousId, 'switch')
-      : () => {};
-    const transitionId = `workplace-transition-${++transitionSequence.current}`;
-    setTransitionError(null);
-    setIsTransitioning(true);
-    const transition = (async () => {
-      logger.info('[WorkplaceTransition] started', {
-        transitionId,
-        fromWorkplaceId: previousId,
-        toWorkplaceId: targetId,
+    void Promise.all([
+      workplaceService.getWorkplace(previousId),
+      workplaceService.getWorkplace(widgetWorkplaceId),
+    ])
+      .then(([currentWorkplace, widgetWorkplace]) => {
+        const promptContext = widgetPromptContextRef.current;
+        if (
+          promptContext.workplaceId !== widgetWorkplaceId ||
+          !promptContext.isPrivacyPolicyAcknowledged
+        )
+          return;
+        if (!currentWorkplace) {
+          setPendingWidgetWorkplaceId(null);
+          logger.warn(
+            '[LaunchCoordinator] Widget workplace is unavailable; opening active workplace',
+            {
+              workplaceId: widgetWorkplaceId,
+            },
+          );
+          router.replace('/(tabs)');
+          return;
+        }
+        if (!widgetWorkplace) {
+          const copy = AppConfig.strings.settings.widgetWorkplacePrompt;
+          alert.show({
+            title: copy.unavailableTitle,
+            message: copy.unavailableMessage(currentWorkplace.name),
+            actionText: copy.continueIn(currentWorkplace.name),
+            onAction: continueInCurrentWorkplace,
+            onClose: continueInCurrentWorkplace,
+          });
+          return;
+        }
+        if (preferences.device.activeWorkplaceId !== previousId) {
+          return;
+        }
+
+        const copy = AppConfig.strings.settings.widgetWorkplacePrompt;
+        confirm.show({
+          title: copy.title,
+          message: copy.message(widgetWorkplace.name, currentWorkplace.name),
+          messageContent: (
+            <AppText>
+              This widget uses{' '}
+              <AppText color="primary" weight="semibold">
+                {widgetWorkplace.name}
+              </AppText>
+              . You’re in{' '}
+              <AppText color="primary" weight="semibold">
+                {currentWorkplace.name}
+              </AppText>
+              . Switch?
+            </AppText>
+          ),
+          cancelText: copy.stay,
+          confirmText: copy.switchTo,
+          onCancel: continueInCurrentWorkplace,
+          onConfirm: switchToWidgetWorkplace,
+          onClose: continueInCurrentWorkplace,
+        });
+      })
+      .catch(error => {
+        const promptContext = widgetPromptContextRef.current;
+        if (
+          promptContext.workplaceId !== widgetWorkplaceId ||
+          !promptContext.isPrivacyPolicyAcknowledged
+        )
+          return;
+        logger.warn('[LaunchCoordinator] Could not resolve widget workplace names', { error });
+        setPendingWidgetWorkplaceId(null);
+        router.replace('/(tabs)');
       });
-      try {
-        await workplaceService.switchWorkplace(targetId);
-        if (previousId) {
-          evictWorkplaceReactiveCaches({ from: previousId, to: targetId });
-        }
-        logger.info('[WorkplaceTransition] pointer-persisted', {
-          transitionId,
-          fromWorkplaceId: previousId,
-          toWorkplaceId: targetId,
-        });
-        // Picker selections have no previously open workplace for the route
-        // effect to observe. Open-to-open transitions are redirected there
-        // when the validated launch state changes.
-        if (!previousId) router.replace('/');
-        logger.info('[WorkplaceTransition] completed', {
-          transitionId,
-          toWorkplaceId: targetId,
-        });
-      } catch (error) {
-        // A failed pointer write must not strand the app on an unmounted target.
-        if (previousId && preferences.device.activeWorkplaceId !== previousId) {
-          try {
-            await workplaceService.switchWorkplace(previousId);
-            logger.warn('[WorkplaceTransition] rolled-back', {
-              transitionId,
-              restoredWorkplaceId: previousId,
-              failedWorkplaceId: targetId,
-            });
-          } catch (rollbackError) {
-            // Preserve the original failure; the next launch will recover by discovery.
-            logger.error('[WorkplaceTransition] rollback-failed', rollbackError, {
-              transitionId,
-              failedWorkplaceId: targetId,
-              attemptedRestoreWorkplaceId: previousId,
-            });
-          }
-        }
-        logger.error('[WorkplaceTransition] failed', error, {
-          transitionId,
-          fromWorkplaceId: previousId,
-          toWorkplaceId: targetId,
-        });
-        setTransitionError(error instanceof Error ? error.message : 'Could not switch workplace.');
-      } finally {
-        setIsTransitioning(false);
-      }
-    })();
-    void transition.finally(releaseSharing).catch(() => undefined);
-    transitionInFlightRef.current = transition;
-    try {
-      await transition;
-    } finally {
-      if (transitionInFlightRef.current === transition) {
-        transitionInFlightRef.current = null;
-      }
-    }
-  };
+  }, [
+    isPrivacyPolicyAcknowledged,
+    pathname,
+    router,
+    state,
+    transitionToWorkplace,
+    widgetWorkplaceId,
+  ]);
   useEffect(() => {
     if (!pendingDeletionId) return;
 

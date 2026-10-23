@@ -16,6 +16,7 @@
 import { AppConfig } from '@/src/constants';
 import { handleError } from '@/src/utils/errors';
 import { logger } from '@/src/utils/logger';
+import type { ReactNode } from 'react';
 import { Alert, Platform } from 'react-native';
 
 // Toast configuration
@@ -51,6 +52,9 @@ export interface AlertOptions {
   title?: string;
   message: string;
   type?: 'error' | 'warning' | 'info';
+  actionText?: string;
+  onAction?: () => void;
+  onClose?: () => void;
 }
 
 export interface AlertPayload extends AlertOptions {
@@ -61,6 +65,7 @@ export interface AlertPayload extends AlertOptions {
 export interface ConfirmOptions {
   title: string;
   message: string;
+  messageContent?: ReactNode;
   confirmText?: string;
   cancelText?: string;
   onConfirm: () => void;
@@ -224,8 +229,14 @@ export const alert = {
 
     if (Platform.OS === 'web') {
       window.alert(`${title}\n\n${message}`);
+      options.onAction?.();
     } else {
-      Alert.alert(title, message);
+      Alert.alert(
+        title,
+        message,
+        [{ text: options.actionText || AppConfig.strings.common.ok, onPress: options.onAction }],
+        { cancelable: false },
+      );
     }
   },
 };

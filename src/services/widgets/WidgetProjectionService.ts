@@ -170,6 +170,20 @@ export class WidgetProjectionService {
     workplaceId: WorkplaceId,
     activeWorkplaceId?: WorkplaceId,
   ): Promise<void> {
+    const nativeModule = await loadNativeWidgetAdapter();
+    if (nativeModule.clearWidgetWorkplaceData) {
+      await nativeModule.clearWidgetWorkplaceData(workplaceId, activeWorkplaceId);
+      if (this.nativeOwner === workplaceId) {
+        const nextOwner =
+          activeWorkplaceId && activeWorkplaceId !== workplaceId ? activeWorkplaceId : null;
+        this.nativeOwner = nextOwner;
+        if (nextOwner) storage.set(WIDGET_NATIVE_OWNER_KEY, nextOwner);
+        else storage.remove(WIDGET_NATIVE_OWNER_KEY);
+      }
+      this.pendingWorkplaceClears.delete(workplaceId);
+      return;
+    }
+
     const forceClearActive = activeWorkplaceId === workplaceId && this.nativeOwner === null;
     if (this.nativeOwner !== workplaceId && !forceClearActive) {
       this.pendingWorkplaceClears.delete(workplaceId);
@@ -190,7 +204,6 @@ export class WidgetProjectionService {
       }
     }
     try {
-      const nativeModule = await loadNativeWidgetAdapter();
       await clearNativeWidgetData(nativeModule);
       this.nativeOwner = null;
       storage.remove(WIDGET_NATIVE_OWNER_KEY);
@@ -229,8 +242,19 @@ export class WidgetProjectionService {
     for (const key of pendingKeys) {
       const workplaceId = key.slice(WIDGET_CLEANUP_PENDING_OWNER_PREFIX.length) as WorkplaceId;
       const recordedOwner = storage.getString(WIDGET_NATIVE_OWNER_KEY) as WorkplaceId | undefined;
-      if (!recordedOwner || recordedOwner === workplaceId) {
-        const nativeModule = await loadNativeWidgetAdapter();
+      const nativeModule = await loadNativeWidgetAdapter();
+      if (nativeModule.clearWidgetWorkplaceData) {
+        const activeWorkplaceId = recordedOwner === workplaceId ? undefined : recordedOwner;
+        await nativeModule.clearWidgetWorkplaceData(workplaceId, activeWorkplaceId);
+        if (this.nativeOwner === workplaceId) {
+          const nextOwner =
+            activeWorkplaceId && activeWorkplaceId !== workplaceId ? activeWorkplaceId : null;
+          this.nativeOwner = nextOwner;
+          if (nextOwner) storage.set(WIDGET_NATIVE_OWNER_KEY, nextOwner);
+          else storage.remove(WIDGET_NATIVE_OWNER_KEY);
+        }
+        this.pendingWorkplaceClears.delete(workplaceId);
+      } else if (!recordedOwner || recordedOwner === workplaceId) {
         await clearNativeWidgetData(nativeModule);
         this.nativeOwner = null;
         storage.remove(WIDGET_NATIVE_OWNER_KEY);
