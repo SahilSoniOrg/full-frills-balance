@@ -12,7 +12,6 @@ import { workplaceService } from '@/src/services/WorkplaceService';
 import { InboxProcessingStatus } from '@/src/types/enums';
 import type { WorkplaceId } from '@/src/types/ids';
 import type { InboxRecordSnapshot } from '@/src/types/smsInbox';
-import { inboxDirectionToParsedType } from '@/src/services/sms/inboxDirection';
 import { formatSmsReviewNotification } from './smsReviewNotification';
 import { merge, auditTime } from 'rxjs';
 import { logger } from '@/src/utils/logger';
@@ -173,7 +172,7 @@ export class SmsReviewNotificationService {
         ? 'Open your SMS inbox to review and log.'
         : 'Open the app to review and log this SMS transaction.';
       if (!ctx.privatePreview && !grouped) {
-        const direction = inboxDirectionToParsedType(latest.record.direction);
+        const direction = latest.record.direction ?? 'unknown';
         tone = direction === 'debit' ? 'expense' : direction === 'credit' ? 'income' : 'neutral';
         const hints = {
           sourceAccountId: latest.record.suggestedSourceAccountId,
@@ -195,7 +194,7 @@ export class SmsReviewNotificationService {
             currencyCode: latest.record.parsedCurrencyCode,
             merchant: latest.record.parsedMerchant,
             accountSource: latest.record.parsedAccountSource,
-            type: inboxDirectionToParsedType(latest.record.direction),
+            type: direction,
           },
           sourceAccountCurrency || (await workplaceService.getCurrency(workplaceId)),
           {

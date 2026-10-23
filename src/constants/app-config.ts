@@ -23,30 +23,21 @@ export const AppConfig = {
 
   // Animation durations (in ms)
   animation: {
-    fast: 200,
     normal: 300,
-    slow: 500,
   },
 
   // Navigation and UI timing
   timing: {
     /** Brief pause so save CTA settle is perceptible before leave. */
     saveConfirmMs: 320,
-    loadingDelay: 500, // Minimum loading time
-    debounceMs: 300, // Input debounce timing
     focusDelayMs: 100,
     toastDurationMs: 3000,
     appLockGracePeriodMs: 10000,
-    appLockAuthTransitionMs: 500,
     appLockFadeDurationMs: 400,
-    bootWatchdogMs: 5000,
   },
 
   // Input constraints
   input: {
-    maxDescriptionLength: 255,
-    maxNotesLength: 500,
-    maxDayOfMonthLength: 2,
     sms: {
       maxSenderMatchLength: 100,
       maxBodyMatchLength: 1000,
@@ -67,18 +58,14 @@ export const AppConfig = {
 
   // Pagination
   pagination: {
-    defaultPageSize: 20,
     dashboardPageSize: 15,
-    maxPageSize: 100,
     budgetDetailsTransactionsPageSize: 1000,
     auditRecentLimit: 100,
     auditScreenLimit: 200,
     smsImportScanLimit: 50,
-    smsImportSheetLimit: 200,
   },
 
   features: {
-    enableAnalytics: true,
     enableSentry: analyticsEnabled && process.env.EXPO_PUBLIC_E2E !== '1',
     enablePostHog: analyticsEnabled && process.env.EXPO_PUBLIC_E2E !== '1',
     debug: {
@@ -89,7 +76,6 @@ export const AppConfig = {
   // Performance settings
   performance: {
     maxConcurrentOperations: 5,
-    cacheTimeoutMs: 300000, // 5 minutes
     slowTraceThresholdMs: 200,
     slowBalanceThresholdMs: 50,
     slowAggregateThresholdMs: 30,
@@ -107,7 +93,6 @@ export const AppConfig = {
       /** Max parallel account balance rebuilds after a large import */
       postImportAccountRebuildConcurrency: 3,
     },
-    ghostStepYieldMs: 20, // Small yield between major ghost hydration steps
   },
 
   // External API endpoints
@@ -138,7 +123,6 @@ export const AppConfig = {
   constants: {
     precision: 2,
     validation: {
-      minAccountNameLength: 2,
       maxAccountNameLength: 100,
       minDayOfMonth: 1,
       maxDayOfMonth: 31,
@@ -176,11 +160,7 @@ export const AppConfig = {
     popupModalMaxWidth: 460,
     popupModalHeightPercent: 84,
     safeToSpendChartHeight: 150,
-    modalHeightPercent: '70%',
     hierarchyModalHeightPercent: '80%',
-    iconCircleSize: 32, // Match Size.iconLg or similar
-    finalizeIconSize: 84, // Size.xxl * 2 or similar
-    finalizeSubtitleMaxWidth: 300,
     toastTopOffset: 60,
   },
 
@@ -233,19 +213,14 @@ export const AppConfig = {
   dateTimePicker: {
     hoursInDay: 24,
     minutesInHour: 60,
-    columnHeight: 150,
     containerHeight: 180,
     labelHeight: 30,
-    scrollSnapDelayMs: 100,
   },
   toast: {
     animationDurationMs: 200,
     enterOffsetY: 20,
   },
   time: {
-    msPerMinute: 60 * 1000,
-    msPerHour: 60 * 60 * 1000,
     msPerDay: 24 * 60 * 60 * 1000,
-    daysPerWeek: 7,
   },
 };

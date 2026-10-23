@@ -34,9 +34,3 @@ export const REPORT_GRANULARITIES = {
 } as const;
 
 export type ReportGranularity = (typeof REPORT_GRANULARITIES)[keyof typeof REPORT_GRANULARITIES];
-
-/** A resolved comparison period. `NONE` has no comparison period. */
-export interface ReportComparisonPeriod {
-  readonly comparison: Exclude<ReportComparison, 'NONE'>;
-  readonly period: ReportPeriod;
-}

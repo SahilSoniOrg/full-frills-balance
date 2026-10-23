@@ -1,5 +1,5 @@
 import { AccountId } from '@/src/types/ids';
-import { filterAccountsForDisplay, hasArchivedAccountsInList } from '@/src/utils/accountArchive';
+import { filterAccountsForDisplay } from '@/src/utils/accountArchive';
 import React, { createContext, useContext, useMemo, useState, type ComponentType } from 'react';
 
 export type ArchiveVisibilityValue = {
@@ -71,17 +71,4 @@ export function useVisibleAccounts<T extends ArchiveAccountRef>(
     () => filterAccountsForDisplay(accounts, showArchived, pinnedIds),
     [accounts, pinnedIds, showArchived],
   );
-}
-
-/**
- * List-surface helper: visibility-filtered accounts + whether the toggle should appear.
- * Prefer this over calling useVisibleAccounts and hasArchivedAccountsInList separately.
- */
-export function useArchiveScopedAccounts<T extends ArchiveAccountRef>(
-  accounts: T[],
-  pinnedIds: ReadonlySet<AccountId> = new Set(),
-): { visibleAccounts: T[]; hasArchivedAccounts: boolean } {
-  const visibleAccounts = useVisibleAccounts(accounts, pinnedIds);
-  const hasArchivedAccounts = useMemo(() => hasArchivedAccountsInList(accounts), [accounts]);
-  return { visibleAccounts, hasArchivedAccounts };
 }

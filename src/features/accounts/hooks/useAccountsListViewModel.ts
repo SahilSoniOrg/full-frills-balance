@@ -1,4 +1,4 @@
-import { useArchiveScopedAccounts } from '@/src/contexts/ArchiveVisibilityScope';
+import { useVisibleAccounts } from '@/src/contexts/ArchiveVisibilityScope';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import {
   AccountsListInflowPeriod,
@@ -240,7 +240,7 @@ export function useAccountsListViewModel(): AccountsListViewModel {
     applyArchiveChanges,
   });
 
-  const { visibleAccounts } = useArchiveScopedAccounts(accounts);
+  const visibleAccounts = useVisibleAccounts(accounts);
   const displayAccounts = useMemo(
     () => filterAccountsBySearch(visibleAccounts, searchQuery),
     [visibleAccounts, searchQuery],
