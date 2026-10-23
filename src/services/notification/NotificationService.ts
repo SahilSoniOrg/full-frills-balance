@@ -1,5 +1,6 @@
 import { AppConfig } from '@/src/constants';
 import * as Notifications from 'expo-notifications';
+import { AndroidImportance } from 'expo-notifications';
 import { Platform } from 'react-native';
 
 export type NotificationCadence = 'none' | 'daily' | 'weekly';
@@ -89,11 +90,11 @@ export class NotificationService {
       this.channels = (async () => {
         await Notifications.setNotificationChannelAsync(SMS_REVIEW_CHANNEL, {
           name: 'SMS to review',
-          importance: Notifications.AndroidImportance.DEFAULT,
+          importance: AndroidImportance.DEFAULT,
         });
         await Notifications.setNotificationChannelAsync(REMINDER_CHANNEL, {
           name: 'Journal reminders',
-          importance: Notifications.AndroidImportance.DEFAULT,
+          importance: AndroidImportance.DEFAULT,
         });
       })().catch(error => {
         this.channels = null;
@@ -122,7 +123,7 @@ export class NotificationService {
     await this.ensureChannels();
     if (Platform.OS !== 'android') return true;
     const channel = await Notifications.getNotificationChannelAsync(SMS_REVIEW_CHANNEL);
-    return !!channel && channel.importance !== Notifications.AndroidImportance.NONE;
+    return !!channel && channel.importance !== AndroidImportance.NONE;
   }
 
   async deliverSmsReview(

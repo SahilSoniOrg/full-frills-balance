@@ -12,6 +12,10 @@ import { render } from '@/src/utils/test-utils';
 import type { ReactElement } from 'react';
 import { Platform } from 'react-native';
 
+jest.mock('expo-notifications', () => ({
+  setNotificationHandler: jest.fn(),
+}));
+
 jest.mock('@/src/components/workplace/WorkplaceSwitcher', () => ({
   WorkplaceSwitcher: () => null,
 }));

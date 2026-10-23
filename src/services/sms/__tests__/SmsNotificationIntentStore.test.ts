@@ -3,6 +3,10 @@ import { SmsNotificationIntentStore } from '../SmsNotificationIntentStore';
 import { WorkplaceId } from '@/src/types/ids';
 import { storage } from '@/src/utils/storage';
 
+jest.mock('expo-notifications', () => ({
+  setNotificationHandler: jest.fn(),
+}));
+
 jest.mock('@/src/utils/storage', () => {
   const memory = new Map<string, string>();
   return {

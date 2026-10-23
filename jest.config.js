@@ -12,8 +12,8 @@ module.exports = {
   collectCoverageFrom: ['src/**/*.{ts,tsx}'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: {
-    '^lucide-react-native/dist/esm/icons/(.*)$':
-      '<rootDir>/node_modules/lucide-react-native/dist/cjs/icons/$1',
+    '^lucide-react-native/icons/(.*)$':
+      '<rootDir>/node_modules/lucide-react-native/dist/cjs/icons/$1.js',
     '^@/src/data/database/adapter$': '<rootDir>/src/data/database/adapter.ts',
     idGenerator$: '<rootDir>/src/data/database/idGenerator.ts',
     '^@/src/(.*)$': '<rootDir>/src/$1',

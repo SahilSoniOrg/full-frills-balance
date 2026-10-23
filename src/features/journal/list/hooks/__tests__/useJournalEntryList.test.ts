@@ -77,6 +77,7 @@ jest.mock('@/src/constants', () => {
         ...actual.AppConfig?.strings,
         common: { loading: 'Loading' },
         journal: {
+          ...actual.AppConfig.strings.journal,
           from: 'From: ',
           to: 'To: ',
           transaction: 'Transaction',
