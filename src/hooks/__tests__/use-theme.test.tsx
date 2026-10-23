@@ -21,6 +21,9 @@ jest.mock('@/src/hooks/useThemePrefs', () => ({
     setFontId: jest.fn(),
   }),
 }));
+jest.mock('@/src/utils/loadFontSet', () => ({
+  isFontSetLoaded: (fontId: string) => fontId === 'deep-space',
+}));
 
 describe('useTheme appearance override', () => {
   it('demos a setup theme without writing persisted prefs', () => {

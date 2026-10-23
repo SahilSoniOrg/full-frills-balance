@@ -9,7 +9,7 @@ export interface AppReadyValue {
   loadedFontId: FontId | null;
   isDataHydrated: boolean;
   isAppReady: boolean;
-  setFontsReady: (ready: boolean, fontId?: FontId) => void;
+  setFontsReady: (ready: boolean, fontId?: FontId | null) => void;
   setDataHydrated: (hydrated: boolean) => void;
 }
 

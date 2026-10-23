@@ -3,6 +3,7 @@ import { DEFAULT_UI_PREFERENCES } from '@/src/services/preferences';
 import type { ThemeAppearance } from '@/src/services/preferences';
 import { usePreference } from '@/src/hooks/usePreference';
 import { commitFontIdAfterLoad } from '@/src/utils/loadFontSet';
+import { logger } from '@/src/utils/logger';
 import { useCallback, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
 
@@ -57,7 +58,7 @@ export function useThemePrefs(): ThemePrefsState {
     (nextFontId: FontId) => {
       void commitFontIdAfterLoad(nextFontId, id => {
         setStoredFontId(id as FontId);
-      });
+      }).catch(error => logger.error(`[Fonts] Failed to select font set: ${nextFontId}`, error));
     },
     [setStoredFontId],
   );

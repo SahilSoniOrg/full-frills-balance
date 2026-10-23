@@ -59,11 +59,11 @@ export function AppReadyProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setFontsReady = useCallback(
-    (fontsReady: boolean, nextFontId?: FontId) => {
+    (fontsReady: boolean, nextFontId?: FontId | null) => {
       setReady(prev => ({
         ...prev,
         fontsReady,
-        loadedFontId: fontsReady ? (nextFontId ?? fontId) : null,
+        loadedFontId: fontsReady ? (nextFontId === undefined ? fontId : nextFontId) : null,
       }));
     },
     [fontId],
@@ -73,7 +73,7 @@ export function AppReadyProvider({ children }: { children: React.ReactNode }) {
     setReady(prev => ({ ...prev, isDataHydrated }));
   }, []);
 
-  const isAppReady = ready.isInitialized && ready.fontsReady && ready.loadedFontId !== null;
+  const isAppReady = ready.isInitialized && ready.fontsReady;
 
   const value = useMemo<AppReadyValue>(
     () => ({

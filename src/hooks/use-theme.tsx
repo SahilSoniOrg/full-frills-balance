@@ -1,9 +1,9 @@
 import {
   ColorKey,
-  FontIds,
   getContextualTokens,
   getFontTheme,
   getThemeColors,
+  type FontTheme,
 } from '@/src/constants/design-tokens';
 import { useAppReady } from '@/src/contexts/app-shell/appReady';
 import { useThemeOverride } from '@/src/contexts/UIContext';
@@ -12,8 +12,19 @@ import { blendColors, getWCAGContrastColor } from '@/src/utils/color-math';
 import { isFontSetLoaded } from '@/src/utils/loadFontSet';
 import { ComponentVariant, getVariantColors } from '@/src/utils/style-helpers';
 import { useCallback, useMemo } from 'react';
+import { Platform } from 'react-native';
 
 const _contrastCache = new Map<string, string>();
+const SYSTEM_FONT_FAMILY =
+  Platform.select({ ios: 'System', android: 'sans-serif', default: 'system-ui' }) ?? 'system-ui';
+const SYSTEM_FONTS: FontTheme = {
+  regular: SYSTEM_FONT_FAMILY,
+  medium: SYSTEM_FONT_FAMILY,
+  semibold: SYSTEM_FONT_FAMILY,
+  bold: SYSTEM_FONT_FAMILY,
+  heading: SYSTEM_FONT_FAMILY,
+  subheading: SYSTEM_FONT_FAMILY,
+};
 
 export function useTheme() {
   const { themeMode: uiThemeMode, themeId, fontId } = useThemePrefs();
@@ -24,11 +35,13 @@ export function useTheme() {
   const requestedFontId = themeOverride?.fontId ?? fontId;
   const resolvedFontId = isFontSetLoaded(requestedFontId)
     ? requestedFontId
-    : (loadedFontId ?? FontIds.DEEP_SPACE);
+    : loadedFontId && isFontSetLoaded(loadedFontId)
+      ? loadedFontId
+      : null;
 
   // Resolve dynamic theme and fonts
   const theme = getThemeColors(resolvedThemeId, themeMode);
-  const fonts = getFontTheme(resolvedFontId);
+  const fonts = resolvedFontId ? getFontTheme(resolvedFontId) : SYSTEM_FONTS;
   const tokens = getContextualTokens(theme);
 
   /**

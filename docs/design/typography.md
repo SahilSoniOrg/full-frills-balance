@@ -45,7 +45,7 @@ Root navigation titles use `xl`; pushed navigation and sheet titles use `heading
 
 ## Loading and preview
 
-Startup loads the persisted font set. Preference switches load the requested files before committing, and the last selection wins. Settings previews warm all sets and show both the display face and a numeric sample. Unused Crimson Text Bold is no longer loaded.
+Native iOS and Android builds embed all font files through the `expo-font` config plugin, so registered font faces are available as soon as the app starts. Web loads the selected set at runtime. Preference switches commit only after their font set is ready, and the last selection wins. A failed web load falls back to the default set, then to system fonts if that also fails. Settings previews warm all sets and show both the display face and a numeric sample. Unused Crimson Text Bold is no longer loaded.
 
 The development route `/_design-preview` previews all three font themes and light/dark mode without saving preferences. Its typography section includes display copy, section headings, body and metadata, a large amount, aligned numerical comparisons, and the existing input/control gallery.
 
