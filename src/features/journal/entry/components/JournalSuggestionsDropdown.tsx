@@ -12,7 +12,7 @@ import { withOpacity } from '@/src/utils/color-math';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
 import React, { useMemo, useRef } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { ScrollView, State } from 'react-native-gesture-handler';
+import { LegacyScrollView as ScrollView, State } from 'react-native-gesture-handler';
 
 const MAX_VISIBLE_SUGGESTIONS = 6;
 

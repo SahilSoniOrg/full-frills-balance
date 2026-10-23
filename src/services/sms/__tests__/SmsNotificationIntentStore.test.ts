@@ -34,6 +34,7 @@ const response = (
         body: null,
         sound: null,
         categoryIdentifier: null,
+        threadIdentifier: null,
         data: {
           type: 'sms_transaction_needs_review',
           inboxRecordId: 'local-id',

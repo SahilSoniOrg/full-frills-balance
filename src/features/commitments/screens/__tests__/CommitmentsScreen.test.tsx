@@ -47,6 +47,7 @@ beforeEach(() => {
     canDismiss: jest.fn(),
     prefetch: jest.fn(),
     reload: jest.fn(),
+    setTransitionMode: jest.fn(),
   });
   jest.mocked(useLocalSearchParams).mockReturnValue({});
   jest.mocked(useBudgetListViewModel).mockReturnValue({

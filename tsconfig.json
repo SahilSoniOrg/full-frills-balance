@@ -33,6 +33,7 @@
     "e2e/pages/**",
     "e2e/constants/**",
     "e2e/utils/**",
-    "e2e/web/**"
+    "e2e/web/**",
+    "artifacts/**"
   ]
 }
