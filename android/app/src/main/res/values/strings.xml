@@ -16,6 +16,7 @@
   <string name="safe_to_spend_square_widget_description">View safe to spend with quick transaction actions.</string>
   <string name="safe_to_spend_widget_title">Safe to spend</string>
   <string name="safe_to_spend_widget_subtitle">After obligations</string>
+  <string name="safe_to_spend_widget_calculated_at">Calc. %1$s</string>
   <string name="safe_to_spend_widget_loading">Open app to load data</string>
   <string name="safe_to_spend_widget_amount_placeholder">--</string>
   <string name="expo_splash_screen_resize_mode" translatable="false">contain</string>

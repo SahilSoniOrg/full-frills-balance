@@ -49,6 +49,15 @@
             android:text="@string/safe_to_spend_widget_subtitle"
             android:textColor="#D9EAF6"
             android:textSize="11sp" />
+
+        <TextView
+            android:id="@+id/widget_safe_to_spend_actions_square_calculated_at"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:maxLines="1"
+            android:textColor="#D9EAF6"
+            android:textSize="9sp" />
     </LinearLayout>
 
     <LinearLayout

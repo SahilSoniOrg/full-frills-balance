@@ -651,6 +651,10 @@ function withAndroidWidget(config) {
         value: 'After obligations',
       }),
       AndroidConfig.Resources.buildResourceItem({
+        name: 'safe_to_spend_widget_calculated_at',
+        value: 'Calc. %1$s',
+      }),
+      AndroidConfig.Resources.buildResourceItem({
         name: 'safe_to_spend_widget_loading',
         value: 'Open app to load data',
       }),

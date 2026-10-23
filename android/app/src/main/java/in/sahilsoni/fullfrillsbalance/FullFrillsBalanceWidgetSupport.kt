@@ -6,9 +6,15 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.net.Uri
+import android.os.Build
+import android.text.format.DateFormat
+import android.text.format.DateUtils
+import android.view.View
 import android.widget.RemoteViews
+import java.util.Date
 
 data class SafeToSpendWidgetSnapshot(
   val amount: Double,
@@ -22,10 +28,14 @@ data class SafeToSpendWidgetSnapshot(
 data class WidgetThemeSnapshot(
   val themeId: String,
   val themeMode: String,
+  val backgroundStartColor: Int,
   val titleColor: Int,
   val primaryTextColor: Int,
   val secondaryTextColor: Int,
   val actionIconColor: Int,
+  val incomeAccentColor: Int,
+  val expenseAccentColor: Int,
+  val transferAccentColor: Int,
 )
 
 object FullFrillsBalanceWidgetSupport {
@@ -38,10 +48,14 @@ object FullFrillsBalanceWidgetSupport {
   private const val KEY_SAFE_TO_SPEND_UPDATED_AT = "safe_to_spend_updated_at"
   private const val KEY_THEME_ID = "widget_theme_id"
   private const val KEY_THEME_MODE = "widget_theme_mode"
+  private const val KEY_THEME_BACKGROUND_START = "widget_theme_background_start"
   private const val KEY_THEME_TITLE_COLOR = "widget_theme_title_color"
   private const val KEY_THEME_PRIMARY_TEXT_COLOR = "widget_theme_primary_text_color"
   private const val KEY_THEME_SECONDARY_TEXT_COLOR = "widget_theme_secondary_text_color"
   private const val KEY_THEME_ACTION_ICON_COLOR = "widget_theme_action_icon_color"
+  private const val KEY_THEME_INCOME_ACCENT_COLOR = "widget_theme_income_accent_color"
+  private const val KEY_THEME_EXPENSE_ACCENT_COLOR = "widget_theme_expense_accent_color"
+  private const val KEY_THEME_TRANSFER_ACCENT_COLOR = "widget_theme_transfer_accent_color"
   private const val KEY_IS_PRIVACY_ENABLED = "widget_is_privacy_enabled"
   private const val APP_SCHEME = "fullfrillsbalance" // expo-inject-appscheme
   private const val APP_HOME_DEEP_LINK = "$APP_SCHEME://?source=widget"
@@ -67,10 +81,15 @@ object FullFrillsBalanceWidgetSupport {
   fun readThemeSnapshot(context: Context): WidgetThemeSnapshot? {
     val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     val themeId = prefs.getString(KEY_THEME_ID, null) ?: return null
+    val themeMode = prefs.getString(KEY_THEME_MODE, "dark") ?: "dark"
 
     return WidgetThemeSnapshot(
       themeId = themeId,
-      themeMode = prefs.getString(KEY_THEME_MODE, "dark") ?: "dark",
+      themeMode = themeMode,
+      backgroundStartColor = parseColorOrDefault(
+        prefs.getString(KEY_THEME_BACKGROUND_START, null),
+        if (themeMode == "light") Color.WHITE else Color.parseColor("#1E1E26"),
+      ),
       titleColor = parseColorOrDefault(
         prefs.getString(KEY_THEME_TITLE_COLOR, null),
         Color.parseColor("#B8D6EB"),
@@ -87,6 +106,18 @@ object FullFrillsBalanceWidgetSupport {
         prefs.getString(KEY_THEME_ACTION_ICON_COLOR, null),
         Color.parseColor("#023C69"),
       ),
+      incomeAccentColor = parseColorOrDefault(
+        prefs.getString(KEY_THEME_INCOME_ACCENT_COLOR, null),
+        Color.parseColor("#DDF6E5"),
+      ),
+      expenseAccentColor = parseColorOrDefault(
+        prefs.getString(KEY_THEME_EXPENSE_ACCENT_COLOR, null),
+        Color.parseColor("#FDE5E3"),
+      ),
+      transferAccentColor = parseColorOrDefault(
+        prefs.getString(KEY_THEME_TRANSFER_ACCENT_COLOR, null),
+        Color.parseColor("#E6F4FE"),
+      ),
     )
   }
 
@@ -96,12 +127,14 @@ object FullFrillsBalanceWidgetSupport {
     titleViewId: Int,
     amountViewId: Int,
     subtitleViewId: Int,
+    updatedAtViewId: Int? = null,
   ) {
     val snapshot = readSafeToSpendSnapshot(context)
     if (snapshot == null) {
       remoteViews.setTextViewText(titleViewId, context.getString(R.string.safe_to_spend_widget_title))
       remoteViews.setTextViewText(amountViewId, context.getString(R.string.safe_to_spend_widget_amount_placeholder))
       remoteViews.setTextViewText(subtitleViewId, context.getString(R.string.safe_to_spend_widget_loading))
+      updatedAtViewId?.let { remoteViews.setViewVisibility(it, View.GONE) }
       return
     }
 
@@ -112,6 +145,23 @@ object FullFrillsBalanceWidgetSupport {
     remoteViews.setTextViewText(titleViewId, snapshot.title)
     remoteViews.setTextViewText(amountViewId, displayAmount)
     remoteViews.setTextViewText(subtitleViewId, snapshot.subtitle)
+    updatedAtViewId?.let { viewId ->
+      if (snapshot.updatedAt > 0L && !isPrivacyEnabled) {
+        val date = Date(snapshot.updatedAt)
+        val calculatedAt = if (DateUtils.isToday(snapshot.updatedAt)) {
+          DateFormat.getTimeFormat(context).format(date)
+        } else {
+          DateFormat.getDateFormat(context).format(date)
+        }
+        remoteViews.setTextViewText(
+          viewId,
+          context.getString(R.string.safe_to_spend_widget_calculated_at, calculatedAt),
+        )
+        remoteViews.setViewVisibility(viewId, View.VISIBLE)
+      } else {
+        remoteViews.setViewVisibility(viewId, View.GONE)
+      }
+    }
   }
 
   fun applySafeToSpendTheme(
@@ -128,6 +178,7 @@ object FullFrillsBalanceWidgetSupport {
       "setBackgroundResource",
       resolveBackgroundDrawable(theme?.themeId, theme?.themeMode),
     )
+    theme?.let { applyBackgroundTint(remoteViews, rootViewId, it.backgroundStartColor) }
     remoteViews.setTextColor(titleViewId, theme?.titleColor ?: Color.parseColor("#B8D6EB"))
     remoteViews.setTextColor(amountViewId, theme?.primaryTextColor ?: Color.WHITE)
     remoteViews.setTextColor(subtitleViewId, theme?.secondaryTextColor ?: Color.parseColor("#D9EAF6"))
@@ -145,6 +196,7 @@ object FullFrillsBalanceWidgetSupport {
       "setBackgroundResource",
       resolveBackgroundDrawable(theme?.themeId, theme?.themeMode),
     )
+    theme?.let { applyBackgroundTint(remoteViews, containerViewId, it.backgroundStartColor) }
     actionIconViewIds.forEach { viewId ->
       remoteViews.setInt(viewId, "setColorFilter", theme?.actionIconColor ?: Color.parseColor("#7DD3A8"))
     }
@@ -159,6 +211,7 @@ object FullFrillsBalanceWidgetSupport {
     subtitleViewId: Int,
     actionLabelViewIds: IntArray,
     actionIconViewIds: IntArray,
+    actionBackgroundViewIds: IntArray,
   ) {
     val theme = readThemeSnapshot(context)
     applySafeToSpendTheme(
@@ -174,6 +227,18 @@ object FullFrillsBalanceWidgetSupport {
     }
     actionIconViewIds.forEach { viewId ->
       remoteViews.setInt(viewId, "setColorFilter", theme?.actionIconColor ?: Color.parseColor("#023C69"))
+    }
+    val actionBackgroundColors = theme?.let {
+      intArrayOf(it.incomeAccentColor, it.expenseAccentColor, it.transferAccentColor)
+    } ?: intArrayOf(
+      Color.parseColor("#DDF6E5"),
+      Color.parseColor("#FDE5E3"),
+      Color.parseColor("#E6F4FE"),
+    )
+    actionBackgroundViewIds.forEachIndexed { index, viewId ->
+      actionBackgroundColors.getOrNull(index)?.let { color ->
+        applyBackgroundTint(remoteViews, viewId, color)
+      }
     }
   }
 
@@ -247,6 +312,16 @@ object FullFrillsBalanceWidgetSupport {
       themeId == "ivy" -> R.drawable.widget_journal_launcher_background_ivy
       themeMode == "light" -> R.drawable.widget_journal_launcher_background_light
       else -> R.drawable.widget_journal_launcher_background
+    }
+  }
+
+  private fun applyBackgroundTint(remoteViews: RemoteViews, viewId: Int, color: Int) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      remoteViews.setColorStateList(
+        viewId,
+        "setBackgroundTintList",
+        ColorStateList.valueOf(color),
+      )
     }
   }
 

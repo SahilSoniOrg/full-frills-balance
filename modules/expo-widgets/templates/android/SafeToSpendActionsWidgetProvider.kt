@@ -67,6 +67,11 @@ class SafeToSpendActionsWidgetProvider : AppWidgetProvider() {
             R.id.widget_safe_to_spend_actions_expense_icon,
             R.id.widget_safe_to_spend_actions_transfer_icon,
           ),
+          actionBackgroundViewIds = intArrayOf(
+            R.id.widget_safe_to_spend_actions_income_button,
+            R.id.widget_safe_to_spend_actions_expense_button,
+            R.id.widget_safe_to_spend_actions_transfer_button,
+          ),
         )
 
         setOnClickPendingIntent(

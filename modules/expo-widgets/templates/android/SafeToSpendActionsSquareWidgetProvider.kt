@@ -42,6 +42,7 @@ class SafeToSpendActionsSquareWidgetProvider : AppWidgetProvider() {
           titleViewId = R.id.widget_safe_to_spend_actions_square_title,
           amountViewId = R.id.widget_safe_to_spend_actions_square_amount,
           subtitleViewId = R.id.widget_safe_to_spend_actions_square_subtitle,
+          updatedAtViewId = R.id.widget_safe_to_spend_actions_square_calculated_at,
         )
         FullFrillsBalanceWidgetSupport.bindTransactionButtons(
           context = context,
@@ -63,6 +64,7 @@ class SafeToSpendActionsSquareWidgetProvider : AppWidgetProvider() {
             R.id.widget_safe_to_spend_actions_square_expense_button,
             R.id.widget_safe_to_spend_actions_square_transfer_button,
           ),
+          actionBackgroundViewIds = intArrayOf(),
         )
 
         setOnClickPendingIntent(

@@ -42,6 +42,7 @@ class SafeToSpendWidgetProvider : AppWidgetProvider() {
           titleViewId = R.id.widget_safe_to_spend_title,
           amountViewId = R.id.widget_safe_to_spend_amount,
           subtitleViewId = R.id.widget_safe_to_spend_subtitle,
+          updatedAtViewId = R.id.widget_safe_to_spend_calculated_at,
         )
         FullFrillsBalanceWidgetSupport.applySafeToSpendTheme(
           context = context,
