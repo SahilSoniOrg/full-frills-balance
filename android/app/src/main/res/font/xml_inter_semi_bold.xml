@@ -1,0 +1,3 @@
+<font-family xmlns:app="http://schemas.android.com/apk/res-auto">
+  <font app:font="@font/inter_600semi_bold" app:fontStyle="normal" app:fontWeight="600" app:fontVariationSettings="'wght' 600"/>
+</font-family>

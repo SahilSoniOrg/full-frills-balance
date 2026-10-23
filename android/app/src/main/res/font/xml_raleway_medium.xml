@@ -1,0 +1,3 @@
+<font-family xmlns:app="http://schemas.android.com/apk/res-auto">
+  <font app:font="@font/raleway_500medium" app:fontStyle="normal" app:fontWeight="500" app:fontVariationSettings="'wght' 500"/>
+</font-family>

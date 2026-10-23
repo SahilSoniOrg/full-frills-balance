@@ -31,6 +31,79 @@ if (!appConfig) {
   );
 }
 
+const bundledFonts = [
+  {
+    fontFamily: 'DMSerifDisplay-Regular',
+    path: 'node_modules/@expo-google-fonts/dm-serif-display/400Regular/DMSerifDisplay_400Regular.ttf',
+    weight: 400,
+  },
+  {
+    fontFamily: 'InstrumentSans-Regular',
+    path: 'node_modules/@expo-google-fonts/instrument-sans/400Regular/InstrumentSans_400Regular.ttf',
+    weight: 400,
+  },
+  {
+    fontFamily: 'InstrumentSans-Medium',
+    path: 'node_modules/@expo-google-fonts/instrument-sans/500Medium/InstrumentSans_500Medium.ttf',
+    weight: 500,
+  },
+  {
+    fontFamily: 'InstrumentSans-SemiBold',
+    path: 'node_modules/@expo-google-fonts/instrument-sans/600SemiBold/InstrumentSans_600SemiBold.ttf',
+    weight: 600,
+  },
+  {
+    fontFamily: 'InstrumentSans-Bold',
+    path: 'node_modules/@expo-google-fonts/instrument-sans/700Bold/InstrumentSans_700Bold.ttf',
+    weight: 700,
+  },
+  {
+    fontFamily: 'Raleway-Regular',
+    path: 'node_modules/@expo-google-fonts/raleway/400Regular/Raleway_400Regular.ttf',
+    weight: 400,
+  },
+  {
+    fontFamily: 'Raleway-Medium',
+    path: 'node_modules/@expo-google-fonts/raleway/500Medium/Raleway_500Medium.ttf',
+    weight: 500,
+  },
+  {
+    fontFamily: 'Raleway-SemiBold',
+    path: 'node_modules/@expo-google-fonts/raleway/600SemiBold/Raleway_600SemiBold.ttf',
+    weight: 600,
+  },
+  {
+    fontFamily: 'Raleway-Bold',
+    path: 'node_modules/@expo-google-fonts/raleway/700Bold/Raleway_700Bold.ttf',
+    weight: 700,
+  },
+  {
+    fontFamily: 'Inter-Regular',
+    path: 'node_modules/@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf',
+    weight: 400,
+  },
+  {
+    fontFamily: 'Inter-Medium',
+    path: 'node_modules/@expo-google-fonts/inter/500Medium/Inter_500Medium.ttf',
+    weight: 500,
+  },
+  {
+    fontFamily: 'Inter-SemiBold',
+    path: 'node_modules/@expo-google-fonts/inter/600SemiBold/Inter_600SemiBold.ttf',
+    weight: 600,
+  },
+  {
+    fontFamily: 'Inter-Bold',
+    path: 'node_modules/@expo-google-fonts/inter/700Bold/Inter_700Bold.ttf',
+    weight: 700,
+  },
+  {
+    fontFamily: 'CrimsonText-Regular',
+    path: 'node_modules/@expo-google-fonts/crimson-text/400Regular/CrimsonText_400Regular.ttf',
+    weight: 400,
+  },
+] as const;
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: appConfig.name,
@@ -68,7 +141,20 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     favicon: './assets/images/favicon.png',
   },
   plugins: [
-    'expo-font',
+    [
+      'expo-font',
+      {
+        android: {
+          fonts: bundledFonts.map(({ fontFamily, path, weight }) => ({
+            fontFamily,
+            fontDefinitions: [{ path, weight }],
+          })),
+        },
+        ios: {
+          fonts: bundledFonts.map(({ path }) => path),
+        },
+      },
+    ],
     'expo-image',
     'expo-sharing',
     'expo-sqlite',

@@ -1,5 +1,5 @@
 import { FontIds } from '@/src/constants/design-tokens';
-import * as Font from 'expo-font';
+import { loadFontAssets } from '@/src/utils/fontAssets';
 import {
   commitFontIdAfterLoad,
   ensureFontSetLoaded,
@@ -7,19 +7,20 @@ import {
   resetLoadedFontSetsForTests,
 } from '../loadFontSet';
 
+jest.mock('@/src/utils/fontAssets', () => ({
+  loadFontAssets: jest.fn(),
+}));
+
 describe('commitFontIdAfterLoad', () => {
   beforeEach(() => {
     resetLoadedFontSetsForTests();
-    (Font.loadAsync as jest.Mock).mockReset();
+    (loadFontAssets as jest.Mock).mockReset();
   });
 
   it('does not commit until the font files have loaded', async () => {
-    let finishLoad: (value?: unknown) => void = () => undefined;
-    (Font.loadAsync as jest.Mock).mockImplementation(
-      () =>
-        new Promise(resolve => {
-          finishLoad = resolve;
-        }),
+    let finishLoad: () => void = () => undefined;
+    (loadFontAssets as jest.Mock).mockImplementation(
+      () => new Promise<void>(resolve => (finishLoad = resolve)),
     );
     const commit = jest.fn();
 
@@ -37,12 +38,9 @@ describe('commitFontIdAfterLoad', () => {
   });
 
   it('commits only the last selection when switching before load finishes', async () => {
-    const finishers: ((value?: unknown) => void)[] = [];
-    (Font.loadAsync as jest.Mock).mockImplementation(
-      () =>
-        new Promise(resolve => {
-          finishers.push(resolve);
-        }),
+    const finishers: (() => void)[] = [];
+    (loadFontAssets as jest.Mock).mockImplementation(
+      () => new Promise<void>(resolve => finishers.push(resolve)),
     );
     const commit = jest.fn();
 
@@ -63,12 +61,25 @@ describe('commitFontIdAfterLoad', () => {
 describe('ensureFontSetLoaded', () => {
   beforeEach(() => {
     resetLoadedFontSetsForTests();
-    (Font.loadAsync as jest.Mock).mockReset().mockResolvedValue(undefined);
+    (loadFontAssets as jest.Mock).mockReset().mockResolvedValue(undefined);
   });
 
   it('loads a mapped scheme only once', async () => {
     await ensureFontSetLoaded(FontIds.DEEP_SPACE);
     await ensureFontSetLoaded(FontIds.DEEP_SPACE);
-    expect(Font.loadAsync).toHaveBeenCalledTimes(1);
+    expect(loadFontAssets).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows a failed set to be retried without marking it loaded', async () => {
+    (loadFontAssets as jest.Mock)
+      .mockRejectedValueOnce(new Error('load failed'))
+      .mockResolvedValueOnce(undefined);
+
+    await expect(ensureFontSetLoaded(FontIds.IVY)).rejects.toThrow('load failed');
+    expect(isFontSetLoaded(FontIds.IVY)).toBe(false);
+
+    await ensureFontSetLoaded(FontIds.IVY);
+    expect(isFontSetLoaded(FontIds.IVY)).toBe(true);
+    expect(loadFontAssets).toHaveBeenCalledTimes(2);
   });
 });

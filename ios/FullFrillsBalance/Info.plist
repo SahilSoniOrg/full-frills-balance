@@ -77,6 +77,23 @@
 	<string>$(RCT_METRO_PORT)</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
+	<key>UIAppFonts</key>
+	<array>
+		<string>DMSerifDisplay_400Regular.ttf</string>
+		<string>InstrumentSans_400Regular.ttf</string>
+		<string>InstrumentSans_500Medium.ttf</string>
+		<string>InstrumentSans_600SemiBold.ttf</string>
+		<string>InstrumentSans_700Bold.ttf</string>
+		<string>Raleway_400Regular.ttf</string>
+		<string>Raleway_500Medium.ttf</string>
+		<string>Raleway_600SemiBold.ttf</string>
+		<string>Raleway_700Bold.ttf</string>
+		<string>Inter_400Regular.ttf</string>
+		<string>Inter_500Medium.ttf</string>
+		<string>Inter_600SemiBold.ttf</string>
+		<string>Inter_700Bold.ttf</string>
+		<string>CrimsonText_400Regular.ttf</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
