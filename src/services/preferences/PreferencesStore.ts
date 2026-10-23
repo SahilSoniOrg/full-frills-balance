@@ -4,7 +4,7 @@ import { logger } from '@/src/utils/logger';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { distinctUntilChanged, map } from 'rxjs/operators';
 import { isHourCyclePreference } from '@/src/utils/hourCycle';
-import { migrateFromAsyncStorage, storage } from '@/src/utils/storage';
+import { storage } from '@/src/utils/storage';
 import { splitPreferenceBags } from './splitPreferenceBags';
 import {
   DEFAULT_UI_PREFERENCES,
@@ -147,20 +147,7 @@ export class PreferencesStore {
 
   async loadPreferences(): Promise<UIPreferences> {
     if (this._loadPromise) return this._loadPromise;
-
-    this._loadPromise = (async () => {
-      try {
-        const migrated = await migrateFromAsyncStorage();
-        if (migrated) {
-          this.reloadFromStorage();
-        }
-      } catch (error) {
-        logger.error('Failed to initialize preferences migration', { error });
-        throw error;
-      }
-      return this.preferences;
-    })();
-
+    this._loadPromise = Promise.resolve(this.preferences);
     return this._loadPromise;
   }
 

@@ -15,8 +15,6 @@ let mockPreventCallback: ((event: { data: { action: { type: string } } }) => voi
 
 jest.mock('expo-router', () => ({
   useNavigation: () => ({ dispatch: mockDispatch }),
-}));
-jest.mock('expo-router/react-navigation', () => ({
   usePreventRemove: (
     enabled: boolean,
     callback: (event: { data: { action: { type: string } } }) => void,

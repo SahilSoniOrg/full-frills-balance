@@ -21,14 +21,6 @@ jest.mock('react-native-mmkv', () => ({
   }),
 }));
 
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  getAllKeys: jest.fn(),
-  multiGet: jest.fn(),
-}));
-
 jest.mock('@/src/services/analytics', () => ({
   analytics: {
     track: jest.fn(),

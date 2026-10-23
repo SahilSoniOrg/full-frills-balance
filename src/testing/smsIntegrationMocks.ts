@@ -9,7 +9,6 @@ export function createSmsIntegrationStorageMock(): {
     getAllKeys: jest.Mock;
     clearAll: jest.Mock;
   };
-  migrateFromAsyncStorage: jest.Mock;
 } {
   const store = new Map<string, string>();
   return {
@@ -27,7 +26,6 @@ export function createSmsIntegrationStorageMock(): {
       getAllKeys: jest.fn(() => Array.from(store.keys())),
       clearAll: jest.fn(() => store.clear()),
     },
-    migrateFromAsyncStorage: jest.fn().mockResolvedValue(false),
   };
 }
 

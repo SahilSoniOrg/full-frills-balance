@@ -12,19 +12,6 @@ jest.mock('@/src/utils/storage', () => ({
     remove: jest.fn((key: string) => mockMemory.delete(key)),
     getAllKeys: jest.fn(() => [...mockMemory.keys()]),
   },
-  migrateFromAsyncStorage: jest.fn(async () => {
-    mockMemory.set(
-      'full_frills_balance_ui_preferences',
-      JSON.stringify({
-        activeWorkplaceId: 'wp-legacy',
-        onboardingCompleted: true,
-        isAppLockEnabled: true,
-        isSmsImportEnabled: true,
-        anonymizedId: 'device-id',
-      }),
-    );
-    return true;
-  }),
 }));
 
 describe('PreferencesFacade import restore', () => {
@@ -70,7 +57,17 @@ describe('PreferencesFacade import restore', () => {
     expect(mockMemory.has(PREFERENCES_KEY)).toBe(false);
   });
 
-  it('bridges legacy storage before splitting and preserves Device values', async () => {
+  it('splits legacy MMKV preferences and preserves Device values', async () => {
+    mockMemory.set(
+      PREFERENCES_KEY,
+      JSON.stringify({
+        activeWorkplaceId: 'wp-legacy',
+        onboardingCompleted: true,
+        isAppLockEnabled: true,
+        isSmsImportEnabled: true,
+        anonymizedId: 'device-id',
+      }),
+    );
     const preferences = new PreferencesFacadeStore();
 
     await preferences.loadPreferences();

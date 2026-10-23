@@ -36,16 +36,11 @@ jest.mock('@/src/data/database/adapter', () =>
   jest.requireActual('./src/data/database/adapter.ts'),
 );
 
-// Mock AsyncStorage
 jest.mock('react-native-launch-arguments', () => ({
   LaunchArguments: {
     value: jest.fn(() => ({})),
   },
 }));
-
-jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
-);
 
 // Mock MMKV
 jest.mock('react-native-mmkv', () => {

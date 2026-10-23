@@ -5,8 +5,7 @@ import type { AccountId } from '@/src/types/ids';
 import { isBalanceSheetAccount } from '@/src/utils/accountCategory';
 import { AppNavigation } from '@/src/utils/navigation';
 import { confirm, toast } from '@/src/utils/alerts';
-import { useLocalSearchParams, useNavigation } from 'expo-router';
-import { usePreventRemove } from 'expo-router/react-navigation';
+import { useLocalSearchParams, useNavigation, usePreventRemove } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   createAccountTreeDraft,

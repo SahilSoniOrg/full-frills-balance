@@ -47,9 +47,6 @@ jest.mock('@/src/hooks/useAccounts', () => ({
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ filterMode: 'accounts' }),
   useNavigation: () => ({ dispatch: mockDispatch }),
-}));
-
-jest.mock('expo-router/react-navigation', () => ({
   usePreventRemove: (
     enabled: boolean,
     callback: (event: { data: { action: { type: string } } }) => void,

@@ -3,8 +3,7 @@ import type { BulkJournalRow } from '@/src/features/journal/entry/types/bulkJour
 import { isBulkJournalRowEmpty } from './bulkJournalHelpers';
 import { confirm } from '@/src/utils/alerts';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useNavigation } from 'expo-router';
-import { usePreventRemove } from 'expo-router/react-navigation';
+import { useNavigation, usePreventRemove } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useUpdateRestartGuard } from '@/src/hooks/useUpdateRestartGuard';
 

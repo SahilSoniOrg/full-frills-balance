@@ -69,7 +69,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     'expo-font',
+    'expo-image',
+    'expo-sharing',
     'expo-sqlite',
+    'expo-status-bar',
+    'expo-web-browser',
     '@lovesworking/watermelondb-expo-plugin-sdk-52-plus',
     'expo-router',
     [
@@ -100,6 +104,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         },
         ios: {
           deploymentTarget: '16.4',
+          // React Native 0.88.0's downloaded Core artifact lacks its module map here.
+          buildReactNativeFromSource: true,
         },
       },
     ],
@@ -119,7 +125,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     [
-      '@sentry/react-native/expo',
+      '@sentry/react-native',
       {
         url: 'https://sentry.io/',
         project: 'react-native',

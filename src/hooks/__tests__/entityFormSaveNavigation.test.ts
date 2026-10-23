@@ -17,8 +17,8 @@ let mockQueuedLeave: (() => void) | undefined;
 const mockLeft = jest.fn();
 const mockGuardAtNavigation = jest.fn();
 
-jest.mock('expo-router', () => ({ useNavigation: () => ({ dispatch: mockLeft }) }));
-jest.mock('expo-router/react-navigation', () => ({
+jest.mock('expo-router', () => ({
+  useNavigation: () => ({ dispatch: mockLeft }),
   usePreventRemove: (enabled: boolean, callback: typeof mockBeforeRemove) => {
     const React = jest.requireActual<typeof import('react')>('react');
     React.useEffect(() => {

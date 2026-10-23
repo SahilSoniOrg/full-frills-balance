@@ -16,7 +16,7 @@ import { useSupplementalInsights } from '@/src/hooks/useSupplementalInsights';
 import { useUnreadSmsCount } from '@/src/hooks/useUnreadSmsCount';
 import { analytics } from '@/src/services/analytics';
 import { AppNavigation } from '@/src/utils/navigation';
-import { useScrollToTop } from 'expo-router/react-navigation';
+import { useScrollToTop } from 'expo-router';
 import { useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 

@@ -19,9 +19,8 @@ import { smsReviewNotificationService } from '@/src/services/sms/SmsReviewNotifi
 import { analytics, navigationIntegration } from '@/src/services/analytics';
 import { logger } from '@/src/utils/logger';
 import { DatabaseProvider } from '@nozbe/watermelondb/react';
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
 import * as Sentry from '@sentry/react-native';
-import { useNavigationContainerRef } from 'expo-router';
+import { DarkTheme, DefaultTheme, ThemeProvider, useNavigationContainerRef } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect, useSyncExternalStore } from 'react';
 import {

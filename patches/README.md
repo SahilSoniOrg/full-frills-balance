@@ -1,4 +1,6 @@
-# In-app update dependency patch
+# Dependency patches
+
+## In-app updates
 
 `sp-react-native-in-app-updates@2.0.0.patch` is applied by Bun through the
 `patchedDependencies` entry in `package.json`. Keep it with `bun.lock`; a clean
@@ -24,3 +26,11 @@ remove fixes only when the replacement package includes equivalent behavior.
 Local native compilation and mocked delivery tests do not prove Play Store
 eligibility. Validate delivery with two signed, increasing production builds
 through Google Play. The lower build must already contain the updater.
+
+## WatermelonDB / React Native 0.88
+
+`@nozbe/watermelondb@0.28.1-0.patch` updates the iOS JSI installer to use the
+runtime exposed by React Native's `RCTBridge` proxy. React Native 0.88 removed
+`RCTCxxBridge`, which the published WatermelonDB package still references. The
+patch is applied by Bun through `patchedDependencies`; keep it with `bun.lock`
+and recheck it when upgrading either package.

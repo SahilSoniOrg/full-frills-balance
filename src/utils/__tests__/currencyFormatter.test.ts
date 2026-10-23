@@ -3,7 +3,7 @@ import {
   formatMoneyAmount,
   getCurrencyLocale,
 } from '@/src/utils/currencyFormatter';
-// Mock preferences to avoid AsyncStorage issues
+// Mock preferences so formatting tests do not depend on stored app state.
 jest.mock('@/src/services/preferences', () => ({
   preferences: {
     defaultCurrencyCode: 'USD',

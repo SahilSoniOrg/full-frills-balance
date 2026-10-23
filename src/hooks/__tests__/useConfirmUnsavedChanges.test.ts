@@ -9,8 +9,6 @@ let mockPreventRemove = false;
 
 jest.mock('expo-router', () => ({
   useNavigation: () => ({ dispatch: mockDispatch }),
-}));
-jest.mock('expo-router/react-navigation', () => ({
   usePreventRemove: (enabled: boolean) => {
     mockPreventRemove = enabled;
   },

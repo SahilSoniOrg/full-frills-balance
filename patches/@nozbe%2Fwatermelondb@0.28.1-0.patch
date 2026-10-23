@@ -1,0 +1,75 @@
+diff --git a/node_modules/@nozbe/watermelondb/.bun-tag-e2aa73530754776e b/.bun-tag-e2aa73530754776e
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/native/ios/WatermelonDB/JSIInstaller.h b/native/ios/WatermelonDB/JSIInstaller.h
+index c1b7efb0fb33d56bf7a2f1b3a5f16644ad855e9b..858183e7af385d14d82ef77f6e53745b85baf0d9 100644
+--- a/native/ios/WatermelonDB/JSIInstaller.h
++++ b/native/ios/WatermelonDB/JSIInstaller.h
+@@ -1,13 +1,13 @@
+ #pragma once
+ 
+-#import <React/RCTBridge+Private.h>
++#import <React/RCTBridge.h>
+ 
+ #ifdef __cplusplus
+ extern "C"
+ {
+ #endif
+ 
+-void installWatermelonJSI(RCTCxxBridge *bridge);
++void installWatermelonJSI(RCTBridge *bridge);
+ void watermelondbProvideSyncJson(int id, NSData *json, NSError **errorPtr);
+ 
+ #ifdef __cplusplus
+diff --git a/native/ios/WatermelonDB/JSIInstaller.mm b/native/ios/WatermelonDB/JSIInstaller.mm
+index d508249731957ede36f5e4ad33b030c7fb221b23..3d9cbb719f5afb04b6dd025a9a29db6882b6dcae 100644
+--- a/native/ios/WatermelonDB/JSIInstaller.mm
++++ b/native/ios/WatermelonDB/JSIInstaller.mm
+@@ -1,12 +1,16 @@
+ #import "JSIInstaller.h"
+ #import "Database.h"
+ 
+-extern "C" void installWatermelonJSI(RCTCxxBridge *bridge) {
+-    if (bridge.runtime == nullptr) {
++@interface RCTBridge (WatermelonJSIRuntime)
++@property (nonatomic, readonly) void *runtime;
++@end
++
++extern "C" void installWatermelonJSI(RCTBridge *bridge) {
++    void *runtimePointer = bridge.runtime;
++    if (runtimePointer == nullptr) {
+         return;
+     }
+ 
+-    jsi::Runtime *runtime = (jsi::Runtime*) bridge.runtime;
+-    assert(runtime != nullptr);
++    jsi::Runtime *runtime = (jsi::Runtime *)runtimePointer;
+     watermelondb::Database::install(runtime);
+ }
+diff --git a/native/ios/WatermelonDB/objc/WMDatabaseBridge.m b/native/ios/WatermelonDB/objc/WMDatabaseBridge.m
+index 8a3ab356bf57cad3e994ae7f660387bf2c3a9d16..66eb2512b130298762cad45f9346f6852b877ab3 100644
+--- a/native/ios/WatermelonDB/objc/WMDatabaseBridge.m
++++ b/native/ios/WatermelonDB/objc/WMDatabaseBridge.m
+@@ -196,7 +196,7 @@ + (BOOL) requiresMainQueueSetup
+ 
+ RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(initializeJSI)
+ {
+-    __block RCTCxxBridge *bridge = (RCTCxxBridge *) _bridge;
++    RCTBridge *bridge = _bridge;
+     dispatch_sync([self methodQueue], ^{
+         installWatermelonJSI(bridge);
+     });
+diff --git a/native/android/build.gradle b/native/android/build.gradle
+--- a/native/android/build.gradle
++++ b/native/android/build.gradle
+@@ -25,5 +25,10 @@ android {
+     buildToolsVersion getExtOrDefault('buildToolsVersion')
+ 
+     namespace "com.nozbe.watermelondb"
++
++    // AGP 9 no longer generates BuildConfig for library modules by default.
++    buildFeatures {
++        buildConfig true
++    }
+ 
+     defaultConfig {

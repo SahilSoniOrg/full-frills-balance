@@ -56,8 +56,6 @@ function mockQueueLeave() {
 
 jest.mock('expo-router', () => ({
   useNavigation: () => ({ dispatch: mockDispatch, getState: mockGetState }),
-}));
-jest.mock('expo-router/react-navigation', () => ({
   usePreventRemove: (enabled: boolean, callback: typeof mockPreventRemoveCallback) => {
     const React = jest.requireActual<typeof import('react')>('react');
     React.useEffect(() => {

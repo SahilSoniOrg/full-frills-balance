@@ -13,7 +13,7 @@ module.exports = function (api) {
         'import',
         {
           libraryName: 'lucide-react-native',
-          libraryDirectory: 'dist/esm/icons',
+          libraryDirectory: 'icons',
           camel2DashComponentName: false, // Disable default transformation
           customName: name => {
             // Converts PascalCase to kebab-case, including handles for numbers (Trash2 -> trash-2)
@@ -21,7 +21,7 @@ module.exports = function (api) {
               .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
               .replace(/([a-zA-Z])([0-9])/g, '$1-$2')
               .toLowerCase();
-            return `lucide-react-native/dist/esm/icons/${kebabName}`;
+            return `lucide-react-native/icons/${kebabName}`;
           },
         },
         'lucide-react-native',
@@ -32,7 +32,7 @@ module.exports = function (api) {
     ],
     overrides: [
       {
-        test: (fileName) => fileName != null && /src\/data\/models\/.*\.ts$/.test(fileName),
+        test: fileName => fileName != null && /src\/data\/models\/.*\.ts$/.test(fileName),
         plugins: [
           ['@babel/plugin-transform-class-properties', { loose: true }],
           ['@babel/plugin-transform-private-methods', { loose: true }],
