@@ -6,11 +6,11 @@ import { SafeAreaFrame } from '@/src/design-system/SafeArea';
 
 // Mock NavigationBar to avoid testing it here
 jest.mock('@/src/components/layout/NavigationBar', () => ({
-  NavigationBar: ({ title, subtitle, showBack, rightActions }: any) => (
+  NavigationBar: ({ title, subtitle, left, rightActions }: any) => (
     <MockView testID="navigation-bar">
       <MockView testID="nav-title">{title}</MockView>
       <MockView testID="nav-subtitle">{subtitle}</MockView>
-      <MockView testID="nav-back">{showBack ? 'back' : 'no-back'}</MockView>
+      <MockView testID="nav-back">{left?.kind === 'back' ? 'back' : 'no-back'}</MockView>
       <MockView testID="nav-actions">{rightActions ? 'actions' : 'no-actions'}</MockView>
     </MockView>
   ),
@@ -67,7 +67,7 @@ describe('Screen', () => {
 
   it('renders with back button', () => {
     render(
-      <Screen title="Test Screen" showBack onBack={() => {}}>
+      <Screen title="Test Screen" left={{ kind: 'back', onPress: () => {} }}>
         <MockView testID="test-child" />
       </Screen>,
     );
@@ -77,7 +77,7 @@ describe('Screen', () => {
 
   it('renders NavigationBar for a back-only screen', () => {
     render(
-      <Screen showBack onBack={() => {}}>
+      <Screen left={{ kind: 'back', onPress: () => {} }}>
         <MockView testID="test-child" />
       </Screen>,
     );

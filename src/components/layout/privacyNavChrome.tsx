@@ -5,8 +5,8 @@ import { Icon } from '@/src/types/domainIcons';
 /** Stack screen with privacy eye only — Hub, Reports, InsightDetails, etc. */
 export function privacyNavChrome(screenTitle: string, onBack: () => void): ScreenNavChrome {
   return {
+    kind: 'nav',
     screenTitle,
-    showBack: true,
     backIcon: Icon.Back,
     onBack,
     headerActions: <PrivacyToggleButton />,

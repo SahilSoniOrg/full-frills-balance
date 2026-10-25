@@ -11,9 +11,10 @@ export type NavBackIcon = typeof Icon.Back | typeof Icon.Close;
 export type ScreenFabChrome = FloatingActionButtonBehavior &
   Pick<FloatingActionButtonProps, 'label' | 'icon' | 'placement' | 'accessibilityLabel'>;
 
-type ScreenChromeShared = {
-  fab?: ScreenFabChrome;
+type ScreenChromeBase = {
   isSearchActive?: boolean;
+  /** Drives the persistent tab navigation gate for drawer access during selection. */
+  selectionMode?: boolean;
   /** Dim / style nav (e.g. selection mode). Owned by Screen. */
   headerStyle?: ViewStyle;
 };
@@ -23,33 +24,36 @@ type ScreenChromeShared = {
  *
  * - **Screen** builds and passes `chrome` (`withPrivacyScope` on money routes).
  * - **View** renders via `ScreenWithChrome` — no chrome props other than `chrome`.
- * - Back / headerStyle / FAB live only on `chrome` (see `applySelectionChrome` for Selection mode nav patch).
- * - Selection-mode secondary chrome (action bar + dismiss) lives on `JournalEntryListView`.
- * - Privacy eye is always the trailing (rightmost) header action when present.
+ * - Left slot / headerStyle live on `chrome`; FAB only on `ScreenNavChrome` (see `applySelectionChrome`).
  *
- * Header actions:
- * - Simple icon rows → `ScreenHeaderActions` (privacy uses its leading/trailing slots).
- * - Badges, inline search, text buttons → feature `*HeaderActions` (still trailing privacy).
- *
- * Title alignment is derived in NavigationBar (not set here):
- * - `showBack: true` → centered (stack / pushed)
- * - no back → left (tab roots)
- *
- * Settings exception: `SettingsLayout` builds chrome from `title` (shell).
+ * Left header slot (chosen in `ScreenWithChrome`):
+ * - `kind: 'nav'` → back
+ * - `kind: 'tab'` under PrimaryNavigationProvider → drawer trigger
+ * - `kind: 'plain'` / tab without provider → no left control
  */
-export type TabScreenChrome = ScreenChromeShared & {
+
+/** Primary tab roots. FAB is forbidden here — creation is the tab-bar Add control. */
+export type TabScreenChrome = ScreenChromeBase & {
+  kind: 'tab';
   screenTitle: string;
   headerActions?: ReactNode;
-  backIcon?: NavBackIcon;
-} & ({ showBack?: false; onBack?: undefined } | { showBack: true; onBack: () => void });
+};
+
+/** Full-screen shell with no back control and no drawer trigger (e.g. required privacy). */
+export type PlainScreenChrome = ScreenChromeBase & {
+  kind: 'plain';
+  screenTitle: string;
+  headerActions?: ReactNode;
+};
 
 /** Detail / nav screens: back is always shown; title, back icon, and onBack are required. */
-export type ScreenNavChrome = ScreenChromeShared & {
+export type ScreenNavChrome = ScreenChromeBase & {
+  kind: 'nav';
+  fab?: ScreenFabChrome;
   screenTitle: string;
-  showBack: true;
   backIcon: NavBackIcon;
   onBack: () => void;
   headerActions?: ReactNode;
 };
 
-export type ScreenChrome = TabScreenChrome | ScreenNavChrome;
+export type ScreenChrome = TabScreenChrome | PlainScreenChrome | ScreenNavChrome;

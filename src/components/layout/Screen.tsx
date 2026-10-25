@@ -1,4 +1,4 @@
-import { NavigationBar, type NavigationBarProps } from '@/src/components/layout/NavigationBar';
+import { NavigationBar, type NavigationBarLeft } from '@/src/components/layout/NavigationBar';
 import { Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { Page } from '@/src/design-system';
@@ -7,14 +7,15 @@ import { ScrollViewProps, StyleSheet, View, type ViewProps, type ViewStyle } fro
 import type { ScrollView } from 'react-native-gesture-handler';
 import { type Edge } from 'react-native-safe-area-context';
 
+export type { NavigationBarLeft };
+
 export type ScreenProps = ViewProps & {
   children: React.ReactNode;
   // Navigation
   title?: string;
   subtitle?: string;
-  onBack?: () => void;
-  showBack?: boolean;
-  backIcon?: NavigationBarProps['backIcon'];
+  /** Explicit left header slot: back or leading (e.g. drawer). Omit for neither. */
+  left?: NavigationBarLeft;
   headerActions?: React.ReactNode;
   isSearchActive?: boolean;
   // Layout
@@ -32,9 +33,7 @@ export function Screen({
   children,
   title,
   subtitle,
-  onBack,
-  showBack,
-  backIcon,
+  left,
   headerActions,
   isSearchActive = false,
   scrollable = false,
@@ -55,17 +54,14 @@ export function Screen({
   );
 
   const navigationBar =
-    showBack || title || headerActions ? (
+    left || title || headerActions ? (
       <NavigationBar
         title={title || ''}
         subtitle={subtitle}
-        backIcon={backIcon}
+        left={left}
         rightActions={headerActions}
         isSearchActive={isSearchActive}
         style={headerStyle}
-        {...(showBack && onBack
-          ? { showBack: true as const, onBack }
-          : { showBack: false as const })}
       />
     ) : undefined;
 

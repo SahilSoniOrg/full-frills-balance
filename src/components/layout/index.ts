@@ -1,3 +1,8 @@
 export { Screen } from './Screen';
 export { ScreenWithChrome } from './ScreenWithChrome';
-export type { ScreenChrome, ScreenNavChrome } from './screenChrome';
+export type {
+  PlainScreenChrome,
+  ScreenChrome,
+  ScreenNavChrome,
+  TabScreenChrome,
+} from './screenChrome';

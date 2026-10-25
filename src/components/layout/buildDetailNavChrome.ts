@@ -27,8 +27,8 @@ export function buildDetailNavChrome({
   const backIcon = phase === 'missing' ? missingBackIcon : Icon.Back;
 
   return {
+    kind: 'nav',
     screenTitle,
-    showBack: true,
     backIcon,
     onBack,
     headerActions: phase === 'ready' ? headerActions : undefined,
