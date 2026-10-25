@@ -25,7 +25,7 @@ export function createTextExportWriter(
   return {
     async write(content: string) {
       throwIfShareAborted(context.signal);
-      if (file) file.write(content, { append: true });
+      if (file) await file.write(content, { append: true });
       else if (context.destination) await context.destination.write(content);
       else chunks.push(content);
       throwIfShareAborted(context.signal);

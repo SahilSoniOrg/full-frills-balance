@@ -35,11 +35,13 @@ export const compression = {
     options: { filterMac?: boolean } = { filterMac: true },
   ): Promise<{ bytes: Uint8Array; name: string } | null> {
     const entries = unzipSync(zipBytes);
-    const entry = Object.entries(entries).find(([name, bytes]) => {
+    const validEntries = Object.entries(entries).filter(([name, bytes]) => {
       if (!name || name.endsWith('/')) return false;
       if (options.filterMac !== false && name.includes('__MACOSX')) return false;
       return bytes instanceof Uint8Array;
     });
+    const entry =
+      validEntries.find(([name]) => name.toLowerCase().endsWith('.json')) ?? validEntries[0];
 
     if (!entry) return null;
 

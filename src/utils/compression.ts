@@ -79,13 +79,15 @@ export const compression = {
       // 3. Extract natively
       await unzip(zipUri, tempDirUri);
 
-      // 4. List and find valid file
+      // 4. Prefer a JSON payload; filesystem order is not stable.
       const contents = await files.listDirectory(tempDirUri);
-      const validFile = contents.find(
+      const validFiles = contents.filter(
         f =>
           f.name && // Check if it's a file with a name property
           (!options.filterMac || !f.name.includes('__MACOSX')),
       );
+      const validFile =
+        validFiles.find(f => f.name.toLowerCase().endsWith('.json')) ?? validFiles[0];
 
       if (!validFile) return null;
 

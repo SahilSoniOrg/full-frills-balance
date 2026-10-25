@@ -64,7 +64,8 @@ export const files = {
       }
 
       const file = new File(uri);
-      file.write(content, { encoding });
+      // Expo File.write is async — must await or share/zip can read a 0-byte file.
+      await file.write(content, { encoding });
       return file.uri;
     } catch (error) {
       logger.error(`[Files] Failed to write content to: ${pathOrUri}`, error);

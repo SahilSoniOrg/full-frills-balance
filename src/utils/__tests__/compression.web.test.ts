@@ -26,6 +26,19 @@ describe('web compression', () => {
     });
   });
 
+  it('prefers a JSON payload over other archive files', async () => {
+    const payload = new Uint8Array(Buffer.from('{"version":"1.4.0"}'));
+    const archive = zipSync({
+      'README.txt': new Uint8Array(Buffer.from('notes')),
+      'backup.json': payload,
+    });
+
+    await expect(compression.extractFirstFile(archive)).resolves.toEqual({
+      name: 'backup.json',
+      bytes: payload,
+    });
+  });
+
   it('returns null when the archive has no importable files', async () => {
     const archive = zipSync({
       '__MACOSX/._backup.json': new Uint8Array([1]),
