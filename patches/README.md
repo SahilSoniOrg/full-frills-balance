@@ -34,3 +34,13 @@ runtime exposed by React Native's `RCTBridge` proxy. React Native 0.88 removed
 `RCTCxxBridge`, which the published WatermelonDB package still references. The
 patch is applied by Bun through `patchedDependencies`; keep it with `bun.lock`
 and recheck it when upgrading either package.
+
+## Drawer layout reduced motion
+
+`react-native-drawer-layout@4.2.12.patch` adds a `reduceMotion` prop to the
+drawer. The published package always animates on native
+(`ReduceMotion.Never`) and always uses CSS transitions on web. With the patch,
+`true` makes the drawer and backdrop open and close instantly, and leaving it
+unset follows the system setting. The app passes `useReducedMotion()`, so the
+Appearance toggle applies too. The patch is applied by Bun through
+`patchedDependencies`; recheck it when upgrading the package or `expo-router`.

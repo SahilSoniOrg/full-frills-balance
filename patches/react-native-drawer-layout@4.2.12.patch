@@ -1,0 +1,180 @@
+diff --git a/lib/module/views/Drawer.js b/lib/module/views/Drawer.js
+index 21bca88..894236f 100644
+--- a/lib/module/views/Drawer.js
++++ b/lib/module/views/Drawer.js
+@@ -19,6 +19,7 @@ export function Drawer({
+   open,
+   overlayStyle,
+   overlayAccessibilityLabel,
++  reduceMotion,
+   renderDrawerContent,
+   children,
+   style
+@@ -56,14 +57,14 @@ export function Drawer({
+   // The drawer stays in place at open position when `drawerType` is `back`
+   open || drawerType === 'back' ? drawerPosition === 'left' ? '100%' : '-100%' : 0;
+   const drawerAnimatedStyle = drawerType !== 'permanent' ? {
+-    transition: 'transform 0.3s',
++    transition: reduceMotion ? 'none' : 'transform 0.3s',
+     transform: `translateX(${drawerTranslateX})`
+   } : null;
+   const contentTranslateX = open ?
+   // The screen content stays in place when `drawerType` is `front`
+   drawerType === 'front' ? 0 : `calc(${drawerWidth} * ${drawerPosition === 'left' ? 1 : -1})` : 0;
+   const contentAnimatedStyle = drawerType !== 'permanent' ? {
+-    transition: 'transform 0.3s',
++    transition: reduceMotion ? 'none' : 'transform 0.3s',
+     transform: `translateX(${contentTranslateX})`
+   } : null;
+   const drawerElement = /*#__PURE__*/_jsx(View, {
+@@ -98,7 +99,9 @@ export function Drawer({
+       open: open,
+       progress: progress,
+       onPress: () => onClose(),
+-      style: overlayStyle,
++      style: [reduceMotion && {
++        transition: 'none'
++      }, overlayStyle],
+       accessibilityLabel: overlayAccessibilityLabel
+     }) : null]
+   }, "content");
+diff --git a/lib/module/views/Drawer.native.js b/lib/module/views/Drawer.native.js
+index f463263..c16aa3f 100644
+--- a/lib/module/views/Drawer.native.js
++++ b/lib/module/views/Drawer.native.js
+@@ -40,6 +40,7 @@ export function Drawer({
+   open,
+   overlayStyle,
+   overlayAccessibilityLabel,
++  reduceMotion,
+   statusBarAnimation = 'slide',
+   swipeEnabled = Platform.OS !== 'web' && Platform.OS !== 'windows' && Platform.OS !== 'macos',
+   swipeEdgeWidth = SWIPE_EDGE_WIDTH,
+@@ -146,14 +147,19 @@ export function Drawer({
+       damping: 500,
+       mass: 3,
+       overshootClamping: true,
+-      reduceMotion: ReduceMotion.Never
++      reduceMotion:
++            reduceMotion === undefined
++              ? ReduceMotion.System
++              : reduceMotion
++                ? ReduceMotion.Always
++                : ReduceMotion.Never
+     }, finished => runOnJS(onAnimationEnd)(open, finished));
+     if (open) {
+       runOnJS(onOpenLatest)();
+     } else {
+       runOnJS(onCloseLatest)();
+     }
+-  }, [getDrawerTranslationX, onAnimationEnd, onAnimationStart, onCloseLatest, onOpenLatest, touchStartX, touchX, translationX]);
++  }, [getDrawerTranslationX, onAnimationEnd, onAnimationStart, onCloseLatest, onOpenLatest, reduceMotion, touchStartX, touchX, translationX]);
+   const hasDrawerWidth = drawerWidth > 0;
+   const previousHasDrawerWidthRef = React.useRef(hasDrawerWidth);
+   const isHidden = useSharedValue(!isOpen && !hasDrawerWidth);
+diff --git a/lib/typescript/src/types.d.ts b/lib/typescript/src/types.d.ts
+index 1276b61..82afdf4 100644
+--- a/lib/typescript/src/types.d.ts
++++ b/lib/typescript/src/types.d.ts
+@@ -105,6 +105,11 @@ export type DrawerProps = {
+      * This is not supported on Web.
+      */
+     swipeEnabled?: boolean;
++    /**
++     * Whether to skip the open and close animation.
++     * Defaults to the system Reduce Motion setting.
++     */
++    reduceMotion?: boolean;
+     /**
+      * How far from the edge of the screen the swipe gesture should activate.
+      * Defaults to `32`.
+diff --git a/src/types.tsx b/src/types.tsx
+index 6933eef..82a2c90 100644
+--- a/src/types.tsx
++++ b/src/types.tsx
+@@ -121,6 +121,12 @@ export type DrawerProps = {
+    */
+   swipeEnabled?: boolean;
+ 
++  /**
++   * Whether to skip the open and close animation.
++   * Defaults to the system Reduce Motion setting.
++   */
++  reduceMotion?: boolean;
++
+   /**
+    * How far from the edge of the screen the swipe gesture should activate.
+    * Defaults to `32`.
+diff --git a/src/views/Drawer.native.tsx b/src/views/Drawer.native.tsx
+index 0c3e038..6c34447 100644
+--- a/src/views/Drawer.native.tsx
++++ b/src/views/Drawer.native.tsx
+@@ -64,6 +64,7 @@ export function Drawer({
+   open,
+   overlayStyle,
+   overlayAccessibilityLabel,
++  reduceMotion,
+   statusBarAnimation = 'slide',
+   swipeEnabled = Platform.OS !== 'web' &&
+     Platform.OS !== 'windows' &&
+@@ -204,7 +205,12 @@ export function Drawer({
+           damping: 500,
+           mass: 3,
+           overshootClamping: true,
+-          reduceMotion: ReduceMotion.Never,
++          reduceMotion:
++            reduceMotion === undefined
++              ? ReduceMotion.System
++              : reduceMotion
++                ? ReduceMotion.Always
++                : ReduceMotion.Never,
+         },
+         (finished) => runOnJS(onAnimationEnd)(open, finished)
+       );
+@@ -221,6 +227,7 @@ export function Drawer({
+       onAnimationStart,
+       onCloseLatest,
+       onOpenLatest,
++      reduceMotion,
+       touchStartX,
+       touchX,
+       translationX,
+diff --git a/src/views/Drawer.tsx b/src/views/Drawer.tsx
+index 09c5c9d..96a32f4 100644
+--- a/src/views/Drawer.tsx
++++ b/src/views/Drawer.tsx
+@@ -19,6 +19,7 @@ export function Drawer({
+   open,
+   overlayStyle,
+   overlayAccessibilityLabel,
++  reduceMotion,
+   renderDrawerContent,
+   children,
+   style,
+@@ -73,7 +74,7 @@ export function Drawer({
+   const drawerAnimatedStyle =
+     drawerType !== 'permanent'
+       ? {
+-          transition: 'transform 0.3s',
++          transition: reduceMotion ? 'none' : 'transform 0.3s',
+           transform: `translateX(${drawerTranslateX})`,
+         }
+       : null;
+@@ -88,7 +89,7 @@ export function Drawer({
+   const contentAnimatedStyle =
+     drawerType !== 'permanent'
+       ? {
+-          transition: 'transform 0.3s',
++          transition: reduceMotion ? 'none' : 'transform 0.3s',
+           transform: `translateX(${contentTranslateX})`,
+         }
+       : null;
+@@ -135,7 +136,7 @@ export function Drawer({
+           open={open}
+           progress={progress}
+           onPress={() => onClose()}
+-          style={overlayStyle}
++          style={[reduceMotion && { transition: 'none' }, overlayStyle]}
+           accessibilityLabel={overlayAccessibilityLabel}
+         />
+       ) : null}
