@@ -1,7 +1,7 @@
 import { AccountPickerModal } from '@/src/components/account-selection/AccountPickerModal';
+import { AppInput, AppText } from '@/src/components/core';
 import { AppearancePickerModal } from '@/src/components/overlays/AppearancePickerModal';
-import { AppButton, AppInput, AppText } from '@/src/components/core';
-import { ModalSurface } from '@/src/components/overlays/ModalSurface';
+import { FormBottomSheet } from '@/src/components/overlays/FormBottomSheet';
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { AppConfig } from '@/src/constants/app-config';
 import { accountFormStrings as copy } from '@/src/constants/copy/domains/accountFormStrings';
@@ -10,8 +10,8 @@ import { CurrencyPickerSheet } from '@/src/features/accounts/components/Currency
 import type { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
 import { getDefaultSubtypeForType } from '@/src/types/accountSubtype';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
-import { AccountTypeSheet } from './AccountTypeSheet';
 import { AccountSubtypeSheet } from './AccountSubtypeSheet';
+import { AccountTypeSheet } from './AccountTypeSheet';
 import { BalanceChangeClassifySheet } from './BalanceChangeClassifySheet';
 
 export function AccountFormOverlays(vm: AccountFormViewModel) {
@@ -93,20 +93,14 @@ export function AccountFormOverlays(vm: AccountFormViewModel) {
           vm.metadata.setIsPayFromPickerVisible(false);
         }}
       />
-      <ModalSurface
-        keyboardAvoiding
+      <FormBottomSheet
         visible={vm.activeSheet === 'note'}
         title={copy.note}
         onClose={close}
         accessibilityCloseLabel={copy.closeSheet}
         closeTestID="account-note-close"
-        position="bottomSheet"
-        fixedHeight={false}
-        footer={
-          <AppButton onPress={close} testID="account-note-done">
-            {copy.done}
-          </AppButton>
-        }
+        doneLabel={copy.done}
+        doneTestID="account-note-done"
       >
         <AppInput
           label={copy.note}
@@ -118,7 +112,7 @@ export function AccountFormOverlays(vm: AccountFormViewModel) {
           numberOfLines={3}
           marginBottom={0}
         />
-      </ModalSurface>
+      </FormBottomSheet>
       {vm.balanceClassify ? <BalanceChangeClassifySheet {...vm.balanceClassify} /> : null}
       {vm.formChrome.archiveCascadeModal ? (
         <AccountArchiveCascadeModal {...vm.formChrome.archiveCascadeModal} />

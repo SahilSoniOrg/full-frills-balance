@@ -1,16 +1,16 @@
-import { AppButton, Icon, ListGroup } from '@/src/components/core';
+import { Icon, ListGroup } from '@/src/components/core';
 import { DayOfMonthSheet, FormRow } from '@/src/components/forms';
-import { ModalSurface } from '@/src/components/overlays/ModalSurface';
+import { FormBottomSheet } from '@/src/components/overlays/FormBottomSheet';
 import { SectionLabel } from '@/src/components/shared/SectionLabel';
+import { Spacing } from '@/src/constants/design-tokens';
 import { accountFormStrings as copy } from '@/src/constants/copy/domains/accountFormStrings';
+import type { AccountMetadataFormModel } from '@/src/features/accounts/hooks/form/useAccountFormMetadata';
 import { AccountType, type AccountSubtype } from '@/src/types/enums';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
-import { Spacing } from '@/src/constants/design-tokens';
-import type { AccountMetadataFormModel } from '@/src/features/accounts/hooks/form/useAccountFormMetadata';
 import { isLiquidLiabilitySubtype, isLoanSubtype } from '@/src/utils/accountSubtypeUtils';
+import { View } from 'react-native';
 import { CreditCardMetadataFields } from './CreditCardMetadataFields';
 import { LoanMetadataFields } from './LoanMetadataFields';
-import { View } from 'react-native';
 
 export function AccountMetadataSection({
   accountType,
@@ -111,27 +111,22 @@ export function AccountMetadataSection({
         onClose={close}
         testID="account-emi-day-grid"
       />
-      <ModalSurface
+      <FormBottomSheet
         visible={metadata.activeSheet === 'credit' || metadata.activeSheet === 'loan'}
         title={isCard ? copy.limitAndInterest : copy.rateAndTerm}
         onClose={close}
         accessibilityCloseLabel={copy.closeSheet}
         closeTestID="account-finance-sheet-close"
-        position="bottomSheet"
-        fixedHeight={false}
+        doneLabel={copy.done}
+        doneTestID="account-finance-sheet-done"
         maxHeightPercent={90}
-        footer={
-          <AppButton onPress={close} testID="account-finance-sheet-done">
-            {copy.done}
-          </AppButton>
-        }
       >
         {isCard ? (
           <CreditCardMetadataFields metadata={metadata} precision={precision} />
         ) : (
           <LoanMetadataFields metadata={metadata} precision={precision} />
         )}
-      </ModalSurface>
+      </FormBottomSheet>
     </View>
   );
 }

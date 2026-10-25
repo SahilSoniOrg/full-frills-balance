@@ -3,19 +3,19 @@ import { DateTimePickerModal } from '@/src/components/filters/DateTimePickerModa
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { FormRow, ScheduleField, UnderlineNameField } from '@/src/components/forms';
 import { EntityFormScreen } from '@/src/components/forms/EntityFormScreen';
-import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { AppButton, AppInput, AppToggle, Icon, ListGroup } from '@/src/components/core';
+import { AppInput, AppToggle, Icon, ListGroup } from '@/src/components/core';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
+import { FormBottomSheet } from '@/src/components/overlays/FormBottomSheet';
 import { Spacing } from '@/src/constants';
-import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { plannedPaymentFormStrings as copy } from '@/src/constants/copy/domains/plannedPaymentFormStrings';
-import { PlannedPaymentFxCard } from './PlannedPaymentFxCard';
-import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
+import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import type { PlannedPaymentFormScreenModel } from '@/src/features/planned-payments/hooks/usePlannedPaymentForm';
+import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { formatDate } from '@/src/utils/dateUtils';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { PlannedPaymentFxCard } from './PlannedPaymentFxCard';
 
 export type PlannedPaymentFormViewProps = PlannedPaymentFormScreenModel & {
   id?: string;
@@ -197,20 +197,12 @@ export function PlannedPaymentFormView({
         }}
       />
 
-      <ModalSurface
-        keyboardAvoiding
+      <FormBottomSheet
         visible={noteVisible}
         title={copy.editNote}
         onClose={() => setNoteVisible(false)}
-        position="bottomSheet"
-        fixedHeight={false}
-        scrollable
         closeTestID="planned-payment-note-close"
-        footer={
-          <View style={styles.noteFooter}>
-            <AppButton onPress={() => setNoteVisible(false)}>{copy.saveNote}</AppButton>
-          </View>
-        }
+        doneLabel={copy.saveNote}
       >
         <AppInput
           value={form.description}
@@ -220,7 +212,7 @@ export function PlannedPaymentFormView({
           numberOfLines={5}
           testID="planned-payment-note-input"
         />
-      </ModalSurface>
+      </FormBottomSheet>
     </>
   );
 }
@@ -234,7 +226,4 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
   },
   scheduleField: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
-  noteFooter: {
-    paddingTop: Spacing.md,
-  },
 });
