@@ -1,6 +1,6 @@
 {
   "accounts": ["journal"],
-  "app": ["dev", "setup"],
+  "app": ["dev", "navigation", "setup"],
   "budget": ["accounts", "journal"],
   "commitments": ["budget", "planned-payments"],
   "dashboard": ["journal", "planned-payments"],

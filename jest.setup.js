@@ -175,6 +175,7 @@ jest.mock('expo-router', () => ({
   useNavigation: () => ({
     isFocused: () => true,
   }),
+  useIsFocused: () => true,
   useLocalSearchParams: () => ({}),
   Link: 'Link',
   Stack: {
@@ -339,7 +340,12 @@ jest.mock('react-native-reanimated', () => {
     FadeOut: { duration: jest.fn(() => ({ delay: jest.fn() })) },
     SlideInRight: { duration: jest.fn(() => ({ delay: jest.fn() })) },
     SlideOutLeft: { duration: jest.fn(() => ({ delay: jest.fn() })) },
-    Easing: { out: jest.fn(fn => fn), inOut: jest.fn(fn => fn), cubic: 'cubic' },
+    Easing: {
+      in: jest.fn(fn => fn),
+      out: jest.fn(fn => fn),
+      inOut: jest.fn(fn => fn),
+      cubic: 'cubic',
+    },
   };
 });
 
@@ -363,6 +369,9 @@ jest.mock('moti', () => {
 jest.mock('react-native-gesture-handler', () => {
   const { View, ScrollView } = require('react-native');
   return {
+    Gesture: jest.requireActual('./src/testing/gestureMock').Gesture,
+    GestureDetector: View,
+    GestureHandlerRootView: View,
     Swipeable: View,
     DrawerLayout: View,
     State: {},
