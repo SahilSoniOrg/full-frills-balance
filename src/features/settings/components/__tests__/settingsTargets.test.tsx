@@ -2,7 +2,7 @@ import { FocusTarget } from '@/src/components/shared/FocusTarget';
 import { AboutSupportSettingsView } from '@/src/features/settings/components/AboutSupportSettingsView';
 import { AppearanceSettingsView } from '@/src/features/settings/components/AppearanceSettingsView';
 import { AutomationSettingsView } from '@/src/features/settings/components/AutomationSettingsView';
-import { CurrentWorkplaceSettingsView } from '@/src/features/settings/components/CurrentWorkplaceSettingsView';
+import { WorkplaceSettingsView } from '@/src/features/settings/components/WorkplaceSettingsView';
 import { DeviceSettingsView } from '@/src/features/settings/components/DeviceSettingsView';
 import { PersonalizationSettingsView } from '@/src/features/settings/components/PersonalizationSettingsView';
 import { PrivacySecuritySettingsView } from '@/src/features/settings/components/PrivacySecuritySettingsView';
@@ -16,9 +16,6 @@ jest.mock('expo-notifications', () => ({
   setNotificationHandler: jest.fn(),
 }));
 
-jest.mock('@/src/components/workplace/WorkplaceSwitcher', () => ({
-  WorkplaceSwitcher: () => null,
-}));
 jest.mock('@/src/contexts/WorkplaceContext', () => ({
   ...jest.requireActual('@/src/contexts/WorkplaceContext'),
   useOptionalWorkplace: () => null,
@@ -116,11 +113,12 @@ const screens: Record<string, () => ReactElement> = {
     />
   ),
   workplace: () => (
-    <CurrentWorkplaceSettingsView
+    <WorkplaceSettingsView
       vm={
         {
-          activeWorkplace: null,
-          workplaceName: 'Home',
+          activeWorkplace: { id: 'home', name: 'Home', icon: 'briefcase' },
+          deletingWorkplaceId: null,
+          deleteWorkplace: fn(),
           workplaceCurrency: 'INR',
           currencies: [],
           onUpdateCurrency: fn(),

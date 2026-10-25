@@ -29,28 +29,13 @@ function CommitmentsScreen() {
     ],
     [strings, budgets.items.length, planned.items.length],
   );
-  const activeList = activeTab === 'budgets' ? budgets : planned;
-  // The empty state has its own add button; a FAB beside it would be a second one.
-  const showsEmptyState =
-    !activeList.isLoading && !activeList.error && activeList.items.length === 0;
   const chrome = useMemo<TabScreenChrome>(
     () => ({
       screenTitle: strings.title,
-      showBack: false,
+      kind: 'tab',
       headerActions: <PrivacyToggleButton />,
-      fab: showsEmptyState
-        ? undefined
-        : {
-            onPress: () =>
-              activeTab === 'budgets'
-                ? AppNavigation.toBudgetForm()
-                : AppNavigation.toPlannedPaymentForm(),
-            label: activeTab === 'budgets' ? strings.budgetAction : strings.plannedAction,
-            accessibilityLabel:
-              activeTab === 'budgets' ? strings.createBudget : strings.createPlanned,
-          },
     }),
-    [activeTab, strings, showsEmptyState],
+    [strings],
   );
   return (
     <ScreenWithChrome chrome={chrome} scrollable={false}>

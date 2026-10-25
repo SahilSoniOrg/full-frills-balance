@@ -66,7 +66,7 @@ export function AppLockInterceptor({ children }: { children: React.ReactNode }) 
             }
             style={[StyleSheet.absoluteFill, { backgroundColor: theme.surface }]}
           >
-            <Screen showBack={false} withPadding>
+            <Screen withPadding>
               <View style={styles.container}>
                 <MotiView
                   from={{ scale: Opacity.strong, opacity: Opacity.solid * 0 }}

@@ -8,7 +8,7 @@ export function AccountManagementScreen() {
 
   const chrome: ScreenNavChrome = {
     screenTitle: 'Account Management',
-    showBack: true,
+    kind: 'nav',
     backIcon: Icon.Close,
     onBack: vm.onBack,
   };

@@ -6,7 +6,6 @@ import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton
 import { ScreenHeaderActions } from '@/src/components/shared/ScreenHeaderActions';
 import { Icon } from '@/src/types/domainIcons';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
-import { useJournalEntryFab } from '@/src/features/journal/hooks/useJournalEntryFab';
 import { useJournalList } from '@/src/features/journal/hooks/useJournalList';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
@@ -27,14 +26,12 @@ function JournalScreen() {
     workplaceId,
   );
 
-  const fab = useJournalEntryFab('activity');
-
   const chrome = useMemo<TabScreenChrome>(
     () =>
       applySelectionChrome(
         {
           screenTitle: AppConfig.strings.journal.transactions,
-          showBack: false,
+          kind: 'tab',
           headerActions: (
             <ScreenHeaderActions
               actions={[
@@ -60,10 +57,9 @@ function JournalScreen() {
         {
           active: journalList.isSelectionModeActive,
           onExit: journalList.exitSelectionMode,
-          fab,
         },
       ),
-    [fab, journalList.exitSelectionMode, journalList.isSelectionModeActive],
+    [journalList.exitSelectionMode, journalList.isSelectionModeActive],
   );
 
   return (

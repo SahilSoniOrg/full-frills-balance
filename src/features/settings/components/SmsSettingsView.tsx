@@ -97,8 +97,8 @@ export function SmsSettingsView({
           <ListRow
             focusId="sms-inbox"
             icon={Icon.MessageSquare}
-            title={strings.smsInboxTitle}
-            subtitle={strings.smsInboxDesc}
+            title={strings.transactionInboxTitle}
+            subtitle={strings.transactionInboxDesc}
             onPress={onOpenInbox}
             testID="settings-sms-inbox"
           />

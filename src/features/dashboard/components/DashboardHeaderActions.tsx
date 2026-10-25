@@ -40,7 +40,7 @@ export function DashboardHeaderActions({
             variant="clear"
             onPress={onSmsPress}
             accessibilityRole="button"
-            accessibilityLabel="View SMS Inbox"
+            accessibilityLabel="View transaction inbox"
             iconColor={theme.text}
           />
           {unreadSmsCount > 0 ? (

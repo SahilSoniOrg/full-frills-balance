@@ -10,24 +10,10 @@ import { useMemo } from 'react';
 function AccountsScreen() {
   const vm = useAccountsListViewModel();
 
-  const fab = useMemo(
-    () =>
-      vm.isSearching
-        ? undefined
-        : {
-            onPress: vm.onCreateAccount,
-            label: vm.activeTab === 'categories' ? 'New Category' : 'New Account',
-            placement: 'end' as const,
-            accessibilityLabel:
-              vm.activeTab === 'categories' ? 'Create a new category' : 'Create a new account',
-          },
-    [vm.activeTab, vm.isSearching, vm.onCreateAccount],
-  );
-
   const chrome = useMemo<TabScreenChrome>(() => {
     const baseChrome: TabScreenChrome = {
       screenTitle: 'Accounts',
-      showBack: false,
+      kind: 'tab',
       isSearchActive: vm.isSearching,
       headerActions: (
         <AccountsListHeaderActions
@@ -44,10 +30,8 @@ function AccountsScreen() {
     return applySelectionChrome(baseChrome, {
       active: vm.isSelectionModeActive,
       onExit: vm.selectionChrome.exitSelectionMode,
-      fab,
     });
   }, [
-    fab,
     vm.accountsForArchiveToggle,
     vm.isSearching,
     vm.isSelectionModeActive,

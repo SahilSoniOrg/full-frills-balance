@@ -155,9 +155,9 @@ export function useDataMaintenanceActions({
 
   const onSeedMockData = useCallback(() => {
     confirm.show({
-      title: 'Setup Demo Workspace',
+      title: 'Setup Demo Workplace',
       message:
-        'This will create a dedicated "Demo Workspace" and populate it with realistic sample data, switching your active workspace to it. Your existing workspace(s) and data will remain completely untouched. Continue?',
+        'This will create a dedicated "Demo Workplace" and populate it with realistic sample data, switching your active workplace to it. Your existing workplaces and data will remain completely untouched. Continue?',
       confirmText: 'Generate',
       destructive: false,
       onConfirm: async () => {

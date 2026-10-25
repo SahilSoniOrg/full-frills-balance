@@ -13,7 +13,7 @@ import {
 } from '@/src/components/core';
 import { AppConfig, Size, Spacing } from '@/src/constants';
 import { JournalListView } from '@/src/features/journal/components/JournalListView';
-import type { ScreenChrome } from '@/src/components/layout';
+import type { ScreenNavChrome } from '@/src/components/layout';
 import type { JournalSearchViewModel } from '@/src/features/journal/list/hooks/useJournalSearchViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { useMemo } from 'react';
@@ -21,7 +21,7 @@ import { Keyboard, StyleSheet, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
 type JournalSearchViewProps = JournalSearchViewModel & {
-  chrome: ScreenChrome;
+  chrome: ScreenNavChrome;
 };
 
 export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {

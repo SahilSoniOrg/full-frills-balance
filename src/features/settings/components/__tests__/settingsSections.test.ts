@@ -23,7 +23,7 @@ const actions = {
 const IOS_FOCUS_TARGET_IDS = [
   'profile-name',
   'devices',
-  'workplace',
+  'active-workplace',
   'currency',
   'safe-to-spend-forecast',
   'notifications',

@@ -39,7 +39,7 @@ jest.mock('@/src/services/reports-v2/missingExchangeRateFetch', () => ({
 const quotes = [{ fromCurrency: 'USD', toCurrency: 'INR', rateDate: Date.UTC(2026, 8, 1) }];
 const chrome: ScreenNavChrome = {
   screenTitle: 'Reports',
-  showBack: true,
+  kind: 'nav',
   backIcon: Icon.Back,
   onBack: jest.fn(),
 };

@@ -2,7 +2,6 @@ import { fireEvent, render } from '@/src/utils/test-utils';
 import { useBudgetListViewModel } from '@/src/features/budget';
 import { usePlannedPayments } from '@/src/features/planned-payments';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { AppNavigation } from '@/src/utils/navigation';
 import CommitmentsScreen from '../CommitmentsScreen';
 
 jest.mock('@/src/contexts/WorkplaceContext', () => ({
@@ -85,9 +84,10 @@ const emptyTotals = {
 
 const withItems = <T extends { items: unknown[] }>(model: T) => ({ ...model, items: [{}] });
 
-it('hides the FAB while the empty state shows its own add button', () => {
+it('leaves creation to the contextual Add menu instead of a screen FAB', () => {
   const screen = render(<CommitmentsScreen />);
   expect(screen.queryByRole('button', { name: 'Create a budget' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Create a planned payment' })).toBeNull();
 });
 
 it('defaults unknown routes to Budgets and preserves tab navigation', () => {
@@ -101,11 +101,9 @@ it('defaults unknown routes to Budgets and preserves tab navigation', () => {
   expect(screen.getAllByText('0')).toHaveLength(1);
   fireEvent.press(screen.getByRole('tab', { name: 'Planned' }));
   expect(useRouter().setParams).toHaveBeenCalledWith({ tab: 'planned' });
-  fireEvent.press(screen.getByRole('button', { name: 'Create a budget' }));
-  expect(AppNavigation.toBudgetForm).toHaveBeenCalledTimes(1);
 });
 
-it('opens Planned directly from the route and creates the matching commitment', () => {
+it('opens Planned directly from the route', () => {
   jest.mocked(useLocalSearchParams).mockReturnValue({ tab: 'planned' });
   jest
     .mocked(usePlannedPayments)
@@ -115,6 +113,4 @@ it('opens Planned directly from the route and creates the matching commitment', 
   expect(screen.getByText('Planned list')).toBeTruthy();
   fireEvent.press(screen.getByRole('tab', { name: 'Budgets' }));
   expect(useRouter().setParams).toHaveBeenCalledWith({ tab: 'budgets' });
-  fireEvent.press(screen.getByRole('button', { name: 'Create a planned payment' }));
-  expect(AppNavigation.toPlannedPaymentForm).toHaveBeenCalledTimes(1);
 });

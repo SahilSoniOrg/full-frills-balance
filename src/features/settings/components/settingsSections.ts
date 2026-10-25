@@ -22,10 +22,6 @@ export type SettingsActions = {
 
 /**
  * One settings destination. The same entry feeds settings search and, when it has a `hub`
- * block, a row on the main settings screen.
- */
-/**
- * One settings destination. The same entry feeds settings search and, when it has a `hub`
  * block, a row on the main settings screen (under the entry's `section`).
  */
 export type SettingsEntry = {
@@ -90,6 +86,7 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
   ]),
   ...screen('Workplaces', 'onCurrentWorkplace', [
     row('workplace', Icon.Briefcase, 'Current workplace', 'Rename this workplace or change its icon', ['workplace', 'books', 'rename', 'icon'], {
+      focusId: 'active-workplace',
       hub: { testID: 'settings-current-workplace', title: sec.currentWorkplace, description: hub.currentWorkplaceDescription },
     }),
     row('currency', Icon.Bank, s.currency.title, s.currency.description, ['workplace', 'money', 'currency code', 'default currency']),
@@ -154,7 +151,14 @@ export const SETTINGS_ENTRIES: SettingsEntry[] = [
       row('sms-auto-post-enabled', Icon.Terminal, me.smsAutoPostEnabledTitle, me.smsAutoPostEnabledDesc, ['sms', 'auto post', 'automatic', 'rules', 'entries']),
       row('sms-review-notifications', Icon.Notifications, me.smsReviewNotificationsTitle, me.smsReviewNotificationsDesc, ['sms', 'notification', 'review', 'alert']),
       row('sms-notification-details', Icon.Notifications, hub.smsNotificationDetailsTitle, hub.smsNotificationDetailsSearchDescription, ['sms', 'privacy', 'preview', 'amount']),
-      row('sms-inbox', Icon.MessageSquare, me.smsInboxTitle, me.smsInboxDesc, ['sms', 'inbox', 'messages', 'transactions'], { action: 'onSmsInbox' }),
+      row(
+        'sms-inbox',
+        Icon.MessageSquare,
+        me.transactionInboxTitle,
+        me.transactionInboxDesc,
+        ['sms', 'inbox', 'messages', 'transactions'],
+        { action: 'onSmsInbox' },
+      ),
       row('sms-rules', Icon.Terminal, me.smsAutoPostTitle, me.smsAutoPostDesc, ['sms', 'rules', 'automation', 'auto post'], { action: 'onSmsRules' }),
     ],
     ANDROID,

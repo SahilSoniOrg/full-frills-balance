@@ -13,7 +13,7 @@ export default function AuditLogScreen() {
       screenTitle: vm.isFiltered
         ? AppConfig.strings.audit.editHistory
         : AppConfig.strings.audit.logTitle,
-      showBack: true,
+      kind: 'nav',
       backIcon: Icon.Back,
       onBack: AppNavigation.back,
     }),

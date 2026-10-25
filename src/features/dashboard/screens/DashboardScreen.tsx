@@ -8,7 +8,6 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { DashboardHeaderActions } from '@/src/features/dashboard/components/DashboardHeaderActions';
 import { DashboardScreenView } from '@/src/features/dashboard/components/DashboardScreenView';
 import { useDashboardViewModel } from '@/src/features/dashboard/hooks/useDashboardViewModel';
-import { useJournalEntryFab } from '@/src/features/journal';
 import { useProfilePrefs } from '@/src/hooks/useProfilePrefs';
 import { useSmsPrefs } from '@/src/hooks/useSmsPrefs';
 import { useInsightPatterns } from '@/src/hooks/useInsightPatterns';
@@ -63,12 +62,11 @@ function DashboardScreen() {
 
   useScrollToTop(listRef);
 
-  const fab = useJournalEntryFab('dashboard');
-
   const chrome = useMemo<TabScreenChrome>(
     () =>
       applySelectionChrome(
         {
+          kind: 'tab',
           screenTitle: AppConfig.strings.dashboard.greeting(userName),
           headerActions: (
             <DashboardHeaderActions
@@ -82,11 +80,9 @@ function DashboardScreen() {
         },
         {
           active: vm.recentJournalEntries.isSelectionModeActive,
-          fab,
         },
       ),
     [
-      fab,
       notificationCount,
       onSmsPress,
       unreadSmsCount,

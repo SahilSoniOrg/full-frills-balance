@@ -31,7 +31,7 @@ import { reactiveDataService } from '@/src/services/ReactiveDataService';
 import { reportService } from '@/src/services/report-service';
 import { AccountId } from '@/src/types/ids';
 import { logger } from '@/src/utils/logger';
-import { useIsFocused } from 'expo-router';
+import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { EMPTY, of } from 'rxjs';
 
@@ -44,13 +44,15 @@ export type {
 
 export function useAccountsListViewModel(): AccountsListViewModel {
   const isFocused = useIsFocused();
+  const { tab: routeTab } = useLocalSearchParams<{ tab?: string }>();
   const { theme, onContrast } = useTheme();
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
   const { showAccountMonthlyStats } = useAccountDisplayPrefs();
+  const activeTab: AccountsListTab = routeTab === 'categories' ? 'categories' : 'accounts';
 
   const [activeModal, setActiveModal] = useState<AccountsListActiveModal>(null);
   const selection = useSelection<AccountId>();
-  const [activeTab, setActiveTab] = useState<AccountsListTab>('accounts');
+  const setActiveTab = useCallback((tab: AccountsListTab) => router.setParams({ tab }), []);
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
     () => new Set(['Equity']),
   );

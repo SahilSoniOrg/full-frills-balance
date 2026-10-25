@@ -1,5 +1,4 @@
 export { default as AppearanceSettingsScreen } from './components/AppearanceSettingsView';
-export { default as CurrentWorkplaceSettingsScreen } from './components/CurrentWorkplaceSettingsView';
 export { default as DeviceSettingsScreen } from './components/DeviceSettingsView';
 export { default as AboutSupportSettingsScreen } from './components/AboutSupportSettingsView';
 export { default as AutomationSettingsScreen } from './components/AutomationSettingsView';

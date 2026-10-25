@@ -1,10 +1,7 @@
 import { AppConfig } from '@/src/constants';
-import { WorkplaceSwitcher } from '@/src/components/workplace/WorkplaceSwitcher';
 import { Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
 import { ListGroup } from '@/src/components/core';
-import { useOptionalWorkplace } from '@/src/contexts/WorkplaceContext';
-import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
 import { TextInput } from 'react-native';
 import { SettingsSearchResults } from '@/src/features/settings/components/SettingsSearchResults';
 import {
@@ -19,14 +16,10 @@ export function SettingsView({ actions }: { actions: SettingsActions }) {
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<TextInput>(null);
   const searchItems = useMemo(() => createSettingsSearchCatalog(actions), [actions]);
-  const workplace = useOptionalWorkplace();
-  const { data: currentWorkplace } = useWorkplaceSnapshot(workplace?.workplaceId);
 
   return (
     <SettingsLayout
       title={AppConfig.strings.settings.title}
-      showBack={false}
-      headerActions={<WorkplaceSwitcher />}
       scrollViewProps={{ onScrollBeginDrag: () => searchInputRef.current?.blur() }}
     >
       <Stack space="md">
@@ -44,12 +37,11 @@ export function SettingsView({ actions }: { actions: SettingsActions }) {
               header={section.header}
               items={section.rows}
               toRow={({ id, icon, title, description, action, testID }) => {
-                const workplaceRow = id === 'workplace' ? currentWorkplace : undefined;
                 return {
                   id,
                   focusId: id,
-                  icon: workplaceRow?.icon ?? icon,
-                  title: workplaceRow?.name ?? title,
+                  icon,
+                  title,
                   subtitle: description,
                   onPress: () => actions[action](),
                   testID,
@@ -71,7 +63,7 @@ const SETTINGS_SCREEN_ACTIONS: SettingsActions = {
   onSmsRules: AppNavigation.toSmsRules,
   onPrivacy: AppNavigation.toPrivacySecuritySettings,
   onPrivacyNotice: AppNavigation.toPrivacyNotice,
-  onCurrentWorkplace: AppNavigation.toCurrentWorkplaceSettings,
+  onCurrentWorkplace: AppNavigation.toWorkplaceManagement,
   onDataManagement: AppNavigation.toDataManagementSettings,
   onMaintenance: AppNavigation.toMaintenanceSettings,
   onAbout: AppNavigation.toAboutSupportSettings,

@@ -77,6 +77,7 @@ exports[`settings screens keep their e2e testIDs and search focus targets hub 1`
     "workplace",
   ],
   "testIDs": [
+    "nav-back-button",
     "settings-about-support",
     "settings-appearance",
     "settings-automation",
@@ -143,16 +144,16 @@ exports[`settings screens keep their e2e testIDs and search focus targets sms 1`
 exports[`settings screens keep their e2e testIDs and search focus targets workplace 1`] = `
 {
   "focusIds": [
+    "active-workplace",
     "currency",
-    "manage-workplaces",
+    "delete-workplace",
     "safe-to-spend-forecast",
-    "workplace",
   ],
   "testIDs": [
-    "current-workplace-edit",
-    "current-workplace-workplaces",
     "nav-back-button",
     "safe-to-spend-horizon",
+    "workplace-delete-home",
+    "workplace-edit-home",
   ],
 }
 `;

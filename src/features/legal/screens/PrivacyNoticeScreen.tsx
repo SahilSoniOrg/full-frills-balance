@@ -87,10 +87,10 @@ export default function PrivacyNoticeScreen() {
   };
 
   const chrome = isRequired
-    ? { screenTitle: copy.title, showBack: false as const }
+    ? { kind: 'plain' as const, screenTitle: copy.title }
     : {
+        kind: 'nav' as const,
         screenTitle: copy.title,
-        showBack: true as const,
         backIcon: Icon.Back,
         onBack: AppNavigation.back,
       };

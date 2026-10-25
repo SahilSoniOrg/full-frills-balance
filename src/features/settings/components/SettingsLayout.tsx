@@ -44,16 +44,18 @@ export function SettingsLayout({
   const { focus } = useLocalSearchParams<{ focus?: string }>();
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollOffsetRef = useRef(0);
+  // Settings is a pushed destination; chrome is usually nav-style. `showBack`
+  // remains for rare full-screen settings shells that still omit the back control.
   const chrome: ScreenChrome = showBack
     ? {
+        kind: 'nav',
         screenTitle: title,
-        showBack: true,
         backIcon,
         onBack: AppNavigation.back,
         headerActions,
         fab,
       }
-    : { screenTitle: title, showBack: false, headerActions, fab };
+    : { kind: 'plain', screenTitle: title, headerActions };
 
   return (
     <FocusProvider targetId={focus} scrollViewRef={scrollViewRef} scrollOffsetRef={scrollOffsetRef}>

@@ -1,122 +1,116 @@
-import { IconName } from '@/src/components/core';
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
-import { PlainWorkplace } from '@/src/types/plainDtos';
-import { useObservable } from '@/src/hooks/useObservable';
-import { useWorkplaceSnapshot } from '@/src/hooks/useWorkplaceSnapshot';
+import { useCurrencies } from '@/src/hooks/use-currencies';
+import { useStsPreferences } from '@/src/hooks/useStsPreferences';
 import { analytics } from '@/src/services/analytics';
 import { workplaceService } from '@/src/services/WorkplaceService';
 import { AppConfig } from '@/src/constants/app-config';
+import type { IconName } from '@/src/types/domainIcons';
+import type { PlainCurrency, PlainWorkplace } from '@/src/types/plainDtos';
 import { confirm, toast } from '@/src/utils/alerts';
-import { AppNavigation } from '@/src/utils/navigation';
-import { useCallback, useMemo, useState } from 'react';
-
-const EMPTY_WORKPLACES: PlainWorkplace[] = [];
+import { useCallback, useState } from 'react';
 
 export interface WorkplaceSettingsViewModel {
-  workplaces: PlainWorkplace[];
-  activeWorkplace: PlainWorkplace | undefined;
-  setActiveWorkplace: (workplace: PlainWorkplace) => Promise<void>;
-  updateWorkplaceDetails: (
-    workplace: PlainWorkplace,
-    name: string,
-    icon: IconName,
-  ) => Promise<void>;
-  deleteWorkplace: (workplace: PlainWorkplace) => void;
+  activeWorkplace: PlainWorkplace;
+  workplaceCurrency: string;
+  currencies: PlainCurrency[];
+  onUpdateCurrency: (code: string) => Promise<void>;
+  safeToSpendDays: number;
+  setSafeToSpendDays: (days: number) => void;
+  updateWorkplaceDetails: (name: string, icon: IconName) => Promise<boolean>;
+  deleteWorkplace: () => void;
   deletingWorkplaceId: string | null;
-  startCreateWorkplace: () => void;
 }
 
 export function useWorkplaceSettingsViewModel(): WorkplaceSettingsViewModel {
   const {
     workplaceId: activeWorkplaceId,
-    setWorkplaceId: setActiveWorkplaceId,
+    defaultCurrencyCode: workplaceCurrency,
     deleteWorkplace: deleteActiveWorkplace,
+    activeWorkplace,
   } = useWorkplace();
-  const { data: observedWorkplaces } = useObservable(
-    () => workplaceService.observeAllWorkplaces(),
-    [],
-    [],
-  );
-  const workplaces = observedWorkplaces ?? EMPTY_WORKPLACES;
-
-  const { data: activeWorkplace } = useWorkplaceSnapshot(activeWorkplaceId);
+  const { currencies } = useCurrencies();
+  const { safeToSpendDays, setSafeToSpendDays: setStsSafeToSpendDays } = useStsPreferences();
   const [deletingWorkplaceId, setDeletingWorkplaceId] = useState<string | null>(null);
 
-  const setActiveWorkplace = useCallback(
-    async (workplace: PlainWorkplace) => {
-      try {
-        await setActiveWorkplaceId(workplace.id);
-      } catch {
-        toast.error('Failed to switch workplace.');
-        return;
-      }
-      analytics.trackFeatureUsage('settings', 'switch_workplace');
-      toast.info(`Switched to ${workplace.name}`);
+  const onUpdateCurrency = useCallback(
+    async (code: string) => {
+      await workplaceService.updateWorkplace(activeWorkplaceId, { defaultCurrencyCode: code });
+      analytics.trackFeatureUsage('settings', 'change_currency', { currency_code: code });
     },
-    [setActiveWorkplaceId],
+    [activeWorkplaceId],
   );
 
-  const startCreateWorkplace = useCallback(() => {
-    AppNavigation.toWorkplaceCreation();
-  }, []);
+  const setSafeToSpendDays = useCallback(
+    (value: number) => {
+      setStsSafeToSpendDays(value);
+      analytics.trackFeatureUsage('settings', 'change_safe_to_spend_days', { days: value });
+    },
+    [setStsSafeToSpendDays],
+  );
 
   const updateWorkplaceDetails = useCallback(
-    async (workplace: PlainWorkplace, name: string, icon: IconName) => {
+    async (name: string, icon: IconName) => {
       try {
-        await workplaceService.updateWorkplace(workplace.id, { name, icon });
+        await workplaceService.updateWorkplace(activeWorkplaceId, { name, icon });
         analytics.trackFeatureUsage('settings', 'update_workplace_icon', { icon });
+        return true;
       } catch {
         toast.error('Failed to update workplace.');
+        return false;
       }
     },
-    [],
+    [activeWorkplaceId],
   );
 
-  const deleteWorkplace = useCallback(
-    (workplace: PlainWorkplace) => {
-      const isLast = workplaces.length === 1;
-      confirm.show({
-        title: AppConfig.strings.settings.workplaceManagement.deleteTitle,
-        message: AppConfig.strings.settings.workplaceManagement.deleteMessage(
-          workplace.name,
-          isLast,
-          workplace.id === activeWorkplaceId,
-        ),
-        confirmText: AppConfig.strings.settings.workplaceManagement.deleteConfirm,
-        destructive: true,
-        requiredConfirmationValue: workplace.name,
-        onConfirm: async () => {
-          setDeletingWorkplaceId(workplace.id);
-          try {
-            const result = await deleteActiveWorkplace(workplace.id);
-            if (result.status === 'committed_with_warnings') {
-              toast.warning('Workplace deleted, but some cleanup will be retried.');
-            } else {
-              toast.success('Workplace deleted.');
-            }
-          } catch {
-            toast.error('Failed to delete workplace. Your books were not changed.');
-          } finally {
-            setDeletingWorkplaceId(null);
+  const deleteWorkplace = useCallback(async () => {
+    let isLast = false;
+    try {
+      const workplaces = await workplaceService.getAllWorkplaces();
+      if (!workplaces.some(workplace => workplace.id === activeWorkplace.id)) {
+        toast.error('This workplace could not be found. Please try again.');
+        return;
+      }
+      isLast = workplaces.length === 1;
+    } catch {
+      toast.error('Failed to load workplaces. Please try again.');
+      return;
+    }
+    confirm.show({
+      title: AppConfig.strings.settings.workplaceManagement.deleteTitle,
+      message: AppConfig.strings.settings.workplaceManagement.deleteMessage(
+        activeWorkplace.name,
+        isLast,
+      ),
+      confirmText: AppConfig.strings.settings.workplaceManagement.deleteConfirm,
+      destructive: true,
+      requiredConfirmationValue: activeWorkplace.name,
+      onConfirm: async () => {
+        setDeletingWorkplaceId(activeWorkplace.id);
+        try {
+          const result = await deleteActiveWorkplace(activeWorkplace.id);
+          if (result.status === 'committed_with_warnings') {
+            toast.warning('Workplace deleted, but some cleanup will be retried.');
+          } else {
+            toast.success('Workplace deleted.');
           }
-        },
-      });
-    },
-    [activeWorkplaceId, deleteActiveWorkplace, workplaces.length],
-  );
-
-  const sortedWorkplaces = useMemo(
-    () => [...workplaces].sort((a, b) => a.name.localeCompare(b.name)),
-    [workplaces],
-  );
+        } catch {
+          toast.error('Failed to delete workplace. Your books were not changed.');
+        } finally {
+          setDeletingWorkplaceId(null);
+        }
+      },
+    });
+  }, [activeWorkplace, deleteActiveWorkplace]);
 
   return {
-    workplaces: sortedWorkplaces,
-    activeWorkplace: activeWorkplace ?? undefined,
-    setActiveWorkplace,
+    activeWorkplace,
+    workplaceCurrency,
+    currencies,
+    onUpdateCurrency,
+    safeToSpendDays,
+    setSafeToSpendDays,
     updateWorkplaceDetails,
     deleteWorkplace,
     deletingWorkplaceId,
-    startCreateWorkplace,
   };
 }

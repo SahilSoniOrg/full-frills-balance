@@ -73,10 +73,12 @@ export function useDataExportViewModel(): DataExportViewModel {
   const onExport = useCallback(() => setIsNamingExport(true), []);
 
   const onConfirmExport = useCallback(async () => {
-    setIsNamingExport(false);
     analytics.trackFeatureUsage('data_management', 'export_initiated');
+    // Keep the naming modal mounted until `isExporting` hides it. Closing the
+    // Modal first can briefly mark the app inactive and abort preparation.
     const outcome: ShareOutcome = await shareable.save(ShareFormat.ZIP);
-    if (outcome.kind === 'saved') {
+    setIsNamingExport(false);
+    if (outcome.kind === 'saved' || outcome.kind === 'handed-off') {
       analytics.trackFeatureUsage('data_management', 'export_completed', {
         has_custom_filename: !!sanitizedName,
         filename_length: sanitizedName.length,
