@@ -3,7 +3,6 @@ import { of as mockOf } from 'rxjs';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
-import { currencyReadService } from '@/src/services/currency-read-service';
 import { asAccountId, asBudgetId } from '@/src/types/ids';
 import type { PlainBudget } from '@/src/types/plainDtos';
 import type { BudgetSpendingHistoryEntry } from '@/src/services/budget/budgetReadService';
@@ -32,8 +31,8 @@ jest.mock('@/src/contexts/WorkplaceContext', () => ({
 jest.mock('@/src/services/accounts/accountQueries', () => ({
   accountQueries: { observeByType: jest.fn() },
 }));
-jest.mock('@/src/services/currency-read-service', () => ({
-  currencyReadService: { observeAll: jest.fn() },
+jest.mock('@/src/hooks/use-currencies', () => ({
+  useCurrencies: () => ({ currencies: [], isLoading: false }),
 }));
 jest.mock('@/src/services/budget/budgetReadService', () => ({
   budgetReadService: {
@@ -64,7 +63,6 @@ describe('budget repeat count editing', () => {
     jest.clearAllMocks();
     mockWorkplaceId = 'wp';
     jest.mocked(accountQueries.observeByType).mockReturnValue(mockOf([]));
-    jest.mocked(currencyReadService.observeAll).mockReturnValue(mockOf([]));
     jest.mocked(budgetReadService.observeById).mockReturnValue(mockOf(budget));
     jest
       .mocked(budgetReadService.observeScopes)

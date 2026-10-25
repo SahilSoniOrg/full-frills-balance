@@ -13,12 +13,12 @@ import {
   mapBudgetToEditDraft,
   shouldSeedBudgetDraft,
 } from '@/src/features/budget/hooks/budgetEditDraft';
+import { useCurrencies } from '@/src/hooks/use-currencies';
 import { useObservable } from '@/src/hooks/useObservable';
 import { accountQueries } from '@/src/services/accounts/accountQueries';
 import { budgetWriteService } from '@/src/services/budget/budgetWriteService';
 import { budgetReadService } from '@/src/services/budget/budgetReadService';
 import { budgetFormStrings } from '@/src/constants/copy/domains/budgetFormStrings';
-import { currencyReadService } from '@/src/services/currency-read-service';
 import { isLiquidAssetSubtype } from '@/src/utils/accountSubtypeUtils';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { roundToPrecision } from '@/src/utils/money';
@@ -60,7 +60,7 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
   );
   const liquidAssetAccounts = assetAccounts.filter(a => isLiquidAssetSubtype(a.accountSubtype));
 
-  const { data: currencies = [] } = useObservable(() => currencyReadService.observeAll(), [], []);
+  const { currencies } = useCurrencies();
 
   const pName = params.pName || '';
   const pAmount = params.pAmount || '';
