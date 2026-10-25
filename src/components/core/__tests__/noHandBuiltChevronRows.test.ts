@@ -22,7 +22,6 @@ const ALLOWED = new Set([
   'features/accounts/components/hierarchy/AccountManagementTreeRow.tsx',
   'features/dashboard/components/SafeToSpendLedger.tsx',
   'features/hub/components/HubWidget.tsx',
-  'features/journal/components/details/JournalEntries.tsx',
   'features/reports-v2/screen/components/ReportsV2Breakdown.tsx',
   'features/reports-v2/screen/components/ReportsV2QualityBanner.tsx',
   'features/setup/first-run/conversationUi.tsx',

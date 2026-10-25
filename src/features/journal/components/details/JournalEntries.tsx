@@ -1,22 +1,9 @@
-import {
-  AppText,
-  AppIcon,
-  Icon,
-  IconTile,
-  PressScaleTouchable,
-  ListGroup,
-} from '@/src/components/core';
+import { AppText, IconTile, ListGroup, ListRow } from '@/src/components/core';
 import { MoneyText } from '@/src/components/shared/MoneyText';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
 import { useEffectivePrivacyMode } from '@/src/contexts/PrivacyScope';
-import {
-  AppConfig,
-  JOURNAL_DETAILS_LAYOUT,
-  JOURNAL_DETAILS_LIMITS,
-  Size,
-  Spacing,
-} from '@/src/constants';
-import { Inline, Stack } from '@/src/design-system';
+import { AppConfig, JOURNAL_DETAILS_LIMITS, Size, Spacing } from '@/src/constants';
+import { Stack } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountType } from '@/src/types/enums';
 import {
@@ -67,54 +54,32 @@ function EntryRow({
   }
   const value = balanceOnly ? item.runningBalance : item.journalValue;
   return (
-    <PressScaleTouchable
+    <ListRow
+      title={item.accountName}
+      subtitle={subtitle.join(' · ')}
+      leading={<IconTile icon={item.icon} tint={item.tint} />}
+      trailing={
+        value === undefined ? (
+          <AppText variant="caption" color="warning">
+            {balanceOnly ? strings.balanceUnavailable : strings.valueUnavailable}
+          </AppText>
+        ) : (
+          <MoneyText
+            amount={value}
+            currencyCode={balanceOnly ? item.currencyCode : currencyCode}
+            variant="body"
+            style={{ flexShrink: 1 }}
+          />
+        )
+      }
+      chevron
+      wrap
       onPress={item.onPress}
-      accessibilityRole="button"
       accessibilityLabel={item.accountName}
       testID={`journal-entry-${item.id}`}
     >
-      <Inline
-        space="sm"
-        padding="md"
-        minHeight={Size.touchTargetLg}
-        alignItems="center"
-        flexWrap="wrap"
-      >
-        <Inline
-          space="sm"
-          alignItems="flex-start"
-          flexGrow={1}
-          flexShrink={1}
-          flexBasis={JOURNAL_DETAILS_LAYOUT.entryIdentityBasis}
-        >
-          <IconTile icon={item.icon} tint={item.tint} />
-          <Stack space="xs" flex={1} minWidth={0}>
-            <AppText variant="body" weight="semibold">
-              {item.accountName}
-            </AppText>
-            <AppText variant="caption" color="secondary">
-              {subtitle.join(' · ')}
-            </AppText>
-            {item.notes ? <AppText variant="body">{item.notes}</AppText> : null}
-          </Stack>
-        </Inline>
-        <Inline space="xs" alignItems="center" maxWidth="100%" flexShrink={1}>
-          {value === undefined ? (
-            <AppText variant="caption" color="warning">
-              {balanceOnly ? strings.balanceUnavailable : strings.valueUnavailable}
-            </AppText>
-          ) : (
-            <MoneyText
-              amount={value}
-              currencyCode={balanceOnly ? item.currencyCode : currencyCode}
-              variant="body"
-              style={{ flexShrink: 1 }}
-            />
-          )}
-          <AppIcon name={Icon.ChevronRight} size={Size.iconXs} color="textSecondary" />
-        </Inline>
-      </Inline>
-    </PressScaleTouchable>
+      {item.notes ? <AppText variant="body">{item.notes}</AppText> : null}
+    </ListRow>
   );
 }
 
