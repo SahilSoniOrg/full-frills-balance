@@ -460,7 +460,7 @@ export const UI_STRINGS = {
     },
     workplaceManagement: {
       deleteTitle: 'Delete workplace?',
-      deleteMessage: (name: string, isLast: boolean, isActive: boolean) => {
+      deleteMessage: (name: string, isLast: boolean) => {
         const details = [
           `This permanently deletes “${name}”, including its audit history, accounts, journals, entries, budgets, planned payments, and other Workplace data.`,
           'Export the audit history archive first if you need to keep a copy.',
@@ -468,10 +468,7 @@ export const UI_STRINGS = {
         ].join(' ');
         if (isLast)
           return `${details} It is your only Workplace, so you will return to Workplace setup.`;
-        if (isActive) {
-          return `${details} Because it is currently active, you will choose another Workplace after deletion.`;
-        }
-        return `${details} Your current Workplace and all other Workplaces will remain unchanged.`;
+        return `${details} Because it is currently active, you will choose another Workplace after deletion.`;
       },
       deleteConfirm: 'Delete workplace',
     },
@@ -598,7 +595,7 @@ export const UI_STRINGS = {
       seedMockBtn: 'Try Demo Books',
       seedMockTitle: 'Setting Up Demo Books',
       seedMockWait: 'Setting up sample books…',
-      seedMockHint: 'This will not affect your existing workspaces.',
+      seedMockHint: 'This will not affect your existing workplaces.',
     },
     danger: {
       cleanupDesc: 'Permanently remove records you previously deleted.',
@@ -624,8 +621,8 @@ export const UI_STRINGS = {
       smsReviewNotificationsTitle: 'Transaction review notifications',
       smsReviewNotificationsDesc:
         'Notify you when a new transaction SMS needs review. Message details stay hidden unless you enable detailed previews.',
-      smsInboxTitle: 'SMS Inbox',
-      smsInboxDesc: 'Review pending, processed, duplicate, and failed SMS imports',
+      transactionInboxTitle: 'Transaction inbox',
+      transactionInboxDesc: 'Review pending, processed, duplicate, and failed transaction imports',
       forecastTitle: 'How Far Ahead to Look',
       forecastDesc:
         'Sets how many days of upcoming bills and paychecks are factored into your Safe to Spend balance.',
@@ -641,7 +638,7 @@ export const UI_STRINGS = {
       githubDesc: 'Source code and issues',
     },
     importTitle: 'Import',
-    importIntro: 'Choose a backup format to replace the data on this device.',
+    importIntro: 'Choose a file to restore into a new Workplace.',
     importNote: 'Restore creates a new Workplace. Existing Workplaces are not changed.',
     selectFile: (name: string) => `Select ${name} File`,
     currency: {
@@ -1258,10 +1255,10 @@ export const UI_STRINGS = {
   maintenance: {
     importSuccess: 'Import Complete',
     resetComplete: 'Reset Complete',
-    seedMockComplete: 'Demo Workspace Ready',
+    seedMockComplete: 'Demo Workplace Ready',
     importDesc: 'The backup replaced the data stored on this device.',
     resetDesc: 'All data on this device was permanently erased.',
-    seedMockDesc: 'A dedicated Demo Workspace has been created with realistic mock data.',
+    seedMockDesc: 'A dedicated demo workplace has been created with realistic mock data.',
     stats: {
       accounts: 'Accounts',
       journals: 'Journals',
@@ -1381,5 +1378,32 @@ export const UI_STRINGS = {
     genericError: 'Something didn’t go as planned. Your balance remains completely unchanged.',
     databaseErrorMessage: 'Could not save this change to your phone’s storage.',
     networkErrorMessage: 'Could not reach the network.',
+  },
+  navigation: {
+    workplaceSection: 'Workplace',
+    exploreSection: 'Explore',
+    personalSection: 'Personal',
+    deviceSection: 'This device',
+    insights: 'Insights',
+    yourDetails: 'Your details',
+    manageWorkplace: 'Manage this workplace',
+    allSettings: 'All settings',
+    closeDrawer: 'Close navigation drawer',
+    workplacesGroup: 'Workplaces',
+    activeWorkplace: (name: string) => `Active workplace: ${name}`,
+    chooseWorkplaceHint: 'Choose which workplace to open',
+    workplaceNowActive: (name: string) => `${name} is now active.`,
+    currentWorkplaceHint: 'Current workplace',
+    switchToWorkplaceHint: (name: string) => `Switch to ${name}`,
+    dismissAddMenu: 'Dismiss Add menu',
+    addTransactionHeading: 'Add a transaction',
+    addToTab: (tabLabel: string) => `Add to ${tabLabel}`,
+    inWorkplace: (name: string) => `In ${name}`,
+    category: 'Category',
+    workplaceBound: {
+      title: 'Wrong workplace',
+      message: 'This draft belongs to a different workplace. Close it and start again.',
+      closeDraft: 'Close draft',
+    },
   },
 };

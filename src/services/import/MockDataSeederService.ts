@@ -48,12 +48,12 @@ export class MockDataSeederService {
       onProgress?.(message, progress);
     };
 
-    // Find or create the Demo Workspace
-    onProgressSafe('Setting up Demo Workspace...', 0.02);
+    // Find or create the Demo Workplace
+    onProgressSafe('Setting up Demo Workplace...', 0.02);
     let demoWorkplace = await workplaceService.getWorkplace(targetWorkplaceId);
     if (!demoWorkplace) {
       // Create a clean demo workplace record
-      demoWorkplace = await workplaceService.createWorkplace('Demo Workspace', 'briefcase', {
+      demoWorkplace = await workplaceService.createWorkplace('Demo Workplace', 'briefcase', {
         id: targetWorkplaceId,
         currencyCode: 'USD',
       });
@@ -65,7 +65,7 @@ export class MockDataSeederService {
 
     // Make sure name, icon, and defaultCurrencyCode are set correctly
     await workplaceService.updateWorkplace(targetWorkplaceId, {
-      name: 'Demo Workspace',
+      name: 'Demo Workplace',
       icon: Icon.Briefcase,
       defaultCurrencyCode: 'USD',
     });

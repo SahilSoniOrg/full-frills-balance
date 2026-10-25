@@ -1,5 +1,5 @@
 export const commitmentsRedesignStrings = {
-  title: 'Commitments',
+  title: 'Plans',
   budgets: 'Budgets',
   thisMonth: 'This month',
   planned: 'Planned',
