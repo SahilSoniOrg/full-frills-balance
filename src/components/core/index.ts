@@ -26,7 +26,7 @@ export type { AppInputProps } from './AppInput';
 export { AppInputField } from './AppInputField';
 export type { AppInputFieldProps } from './AppInputField';
 
-export { ListRow } from './ListRow';
+export { ListRow, LIST_ROW_LEVEL_INDENT } from './ListRow';
 export type { ListRowProps, ListVariant } from './ListRow';
 export { ListGroup } from './ListGroup';
 export type { ListGroupProps, ListRowItem } from './ListGroup';
@@ -39,6 +39,8 @@ export { Icon, isValidIconName, parseIconName } from '@/src/types/domainIcons';
 export type { IconName } from '@/src/types/domainIcons';
 export { IconTile } from './IconTile';
 export type { IconTileProps } from './IconTile';
+export { PERSON_AVATAR_SIZE, PersonAvatar } from './PersonAvatar';
+export type { PersonAvatarProps } from './PersonAvatar';
 export { ColoredDot } from './ColoredDot';
 export type { ColoredDotProps } from './ColoredDot';
 export { ErrorBoundary } from './ErrorBoundary';

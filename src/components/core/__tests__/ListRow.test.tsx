@@ -1,4 +1,4 @@
-import { ListRow } from '@/src/components/core/ListRow';
+import { ListRow, LIST_ROW_LEVEL_INDENT } from '@/src/components/core/ListRow';
 import { fireEvent, render, screen } from '@/src/utils/test-utils';
 import { Icon } from '@/src/types/domainIcons';
 import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
@@ -101,5 +101,27 @@ describe('ListRow options', () => {
       </ListRow>,
     );
     expect(screen.getByTestId('row-control')).toBeTruthy();
+  });
+
+  it('softens utility tone and indents nested levels', () => {
+    render(
+      <>
+        <ListRow title="Primary" onPress={() => {}} testID="primary-row" />
+        <ListRow
+          title="Child action"
+          tone="utility"
+          level={1}
+          onPress={() => {}}
+          chevron={false}
+          testID="utility-row"
+        />
+      </>,
+    );
+    const primary = StyleSheet.flatten(screen.getByText('Primary').props.style);
+    const utility = StyleSheet.flatten(screen.getByText('Child action').props.style);
+    expect(utility.color).not.toBe(primary.color);
+    const touchable = screen.getByTestId('utility-row');
+    expect(StyleSheet.flatten(touchable.props.style).marginLeft).toBe(LIST_ROW_LEVEL_INDENT);
+    expect(LIST_ROW_LEVEL_INDENT).toBe(Spacing.lg);
   });
 });

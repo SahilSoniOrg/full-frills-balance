@@ -105,6 +105,9 @@ type ListRowPressProps = {
   trailingMaxWidth?: BoxViewProps['maxWidth'];
 };
 
+/** Nesting step used by `level` (matches account-tree indent feel without owning that feature). */
+export const LIST_ROW_LEVEL_INDENT = Spacing.lg;
+
 export type ListRowProps = BoxViewProps &
   ListRowPressProps & {
     /** Shortcut for a bare, state-colored glyph; use `leading` for anything custom. */
@@ -117,6 +120,16 @@ export type ListRowProps = BoxViewProps &
     /** Chevron after `trailing`; defaults on for pressable rows with no trailing or a ListRow.Value. */
     chevron?: boolean;
     destructive?: boolean;
+    /**
+     * Rank inside a group. `utility` is quieter (secondary, regular weight) for subordinate
+     * actions under a section — e.g. “Manage this workplace” under the active workplace.
+     */
+    tone?: 'default' | 'utility';
+    /**
+     * Nesting depth. `0` (default) is flush with the group; each step indents by
+     * `LIST_ROW_LEVEL_INDENT` so child rows read under a parent without a second list primitive.
+     */
+    level?: number;
     /** Search/scroll focus target id. */
     focusId?: string;
     /** Card rows: let string title/subtitle wrap instead of truncating. */
@@ -138,6 +151,8 @@ function ListRowBase(initialProps: ListRowProps) {
     trailing,
     chevron,
     destructive = false,
+    tone = 'default',
+    level = 0,
     wrap = false,
     focusId,
     children,
@@ -157,7 +172,9 @@ function ListRowBase(initialProps: ListRowProps) {
   const { style, as: _as, ...rowBoxProps } = boxProps;
 
   const plain = variant === 'plain';
+  const utility = tone === 'utility';
   const paddingH = PADDING[variant];
+  const nestIndent = Math.max(0, level) * LIST_ROW_LEVEL_INDENT;
   const leading = icon !== undefined ? <RowIcon name={icon} /> : leadingProp;
 
   const toggle =
@@ -183,6 +200,10 @@ function ListRowBase(initialProps: ListRowProps) {
 
   const hostProps = { testID, pointerEvents };
 
+  const titleWeight = utility ? 'regular' : plain ? 'semibold' : 'regular';
+  const titleVariant = utility ? 'bodySmall' : 'body';
+  const titleColor = destructive ? 'error' : utility ? 'secondary' : undefined;
+
   const rowContent = (
     <>
       {leading && (
@@ -193,9 +214,9 @@ function ListRowBase(initialProps: ListRowProps) {
       <Box flex={1} justifyContent="center">
         {typeof title === 'string' ? (
           <AppText
-            variant="body"
-            weight={plain ? 'semibold' : 'regular'}
-            color={destructive ? 'error' : undefined}
+            variant={titleVariant}
+            weight={titleWeight}
+            color={titleColor}
             numberOfLines={lines}
             style={styles.title}
           >
@@ -208,7 +229,7 @@ function ListRowBase(initialProps: ListRowProps) {
           <AppText
             variant="caption"
             color="secondary"
-            weight={plain ? 'medium' : undefined}
+            weight={plain && !utility ? 'medium' : undefined}
             numberOfLines={lines}
             style={styles.subtitle}
           >
@@ -236,14 +257,16 @@ function ListRowBase(initialProps: ListRowProps) {
     </>
   );
 
+  const nestedStyle = nestIndent > 0 ? [{ marginLeft: nestIndent }, style] : style;
+
   const rowBody = (
     <Box
       flexDirection="row"
       alignItems="center"
       paddingHorizontal={paddingH}
-      paddingVertical="sm"
-      minHeight={isPressable ? Size.rowMin : undefined}
-      style={isPressable ? undefined : style}
+      paddingVertical={utility ? 'xs' : 'sm'}
+      minHeight={isPressable ? (utility ? Size.touchTarget : Size.rowMin) : undefined}
+      style={isPressable ? undefined : nestedStyle}
       {...rowBoxProps}
       {...(!isPressable
         ? {
@@ -260,7 +283,7 @@ function ListRowBase(initialProps: ListRowProps) {
 
   let row: React.ReactElement = isPressable ? (
     <PressScaleTouchable
-      style={style}
+      style={nestedStyle}
       onPress={onPress ? () => onPress() : undefined}
       onLongPress={onLongPress}
       disabled={disabled}

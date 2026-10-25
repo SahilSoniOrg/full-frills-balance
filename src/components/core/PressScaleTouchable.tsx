@@ -52,6 +52,8 @@ const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 export type PressScaleTouchableProps = Omit<TouchableOpacityProps, 'activeOpacity'> & {
   children?: ReactNode;
+  /** Stable DOM/native identifier for focus restoration and automation. */
+  nativeID?: string;
   /**
    * Styles on an inner animated Moti surface (under the outer touchable).
    * When set, `style` sizes/positions the touchable and `surfaceStyle` owns

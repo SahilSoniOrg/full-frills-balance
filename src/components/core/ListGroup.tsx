@@ -24,6 +24,7 @@ type ListGroupBaseProps = {
    * `card`: rows on a rounded surface (detail screens).
    * `plain`: full-width menu rows on the screen background (settings); compact, wrapping,
    * semibold titles and automatic chevrons.
+   * Row rank/nesting live on each `ListRow` via `tone` / `level`.
    */
   variant?: ListVariant;
   /** Divider indent; defaults to the row text. `'none'` hides dividers. */
