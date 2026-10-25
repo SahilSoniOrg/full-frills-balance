@@ -25,6 +25,20 @@ jest.mock('@/src/components/core', () => {
         { onPress, accessibilityLabel, accessibilityRole: 'button', ...props },
         React.createElement(View, { 'data-icon': name }),
       ),
+    ListRow: ({ title, subtitle, leading, trailing, onPress, testID, accessibilityState }: any) =>
+      React.createElement(
+        TouchableOpacity,
+        {
+          onPress,
+          testID,
+          accessibilityRole: 'button',
+          accessibilityState,
+        },
+        leading,
+        React.createElement(Text, null, title),
+        subtitle ? React.createElement(Text, null, subtitle) : null,
+        trailing,
+      ),
     isValidIconName: () => false,
     Icon: mockIcon,
   };
