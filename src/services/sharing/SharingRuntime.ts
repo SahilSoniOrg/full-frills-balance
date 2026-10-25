@@ -86,13 +86,10 @@ export class SharingRuntime {
 
   setLifecycle = (lifecycle: SharingLifecycle): void => {
     this.lifecycle = lifecycle;
-    if (
-      this.active &&
-      (!this.isAllowed(this.active.scope) ||
-        (lifecycle.active === false &&
-          this.active.presentation !== 'selecting-destination' &&
-          this.active.presentation !== 'delivering'))
-    ) {
+    // Abort only on lock / readiness / scope rules. Native `active === false` is
+    // expected during Modal dismiss and system sheets; presentation exceptions
+    // were incomplete (preparing still aborted on a naming-Modal flicker).
+    if (this.active && !this.isAllowed(this.active.scope)) {
       this.active.controller.abort();
     }
   };
@@ -134,12 +131,10 @@ export class SharingRuntime {
         error: new Error('This content does not support the requested format'),
       };
     }
-    if (
-      externalSignal?.aborted ||
-      this.lifecycle?.active === false ||
-      !this.isAllowed(source.scope)
-    )
-      return { kind: 'cancelled' };
+    // Do not refuse on lifecycle.active here: Modal dismiss / sheet presentation
+    // can report inactive while the user is still in-flow. Mid-flight inactivity
+    // is handled in setLifecycle (with presentation exceptions).
+    if (externalSignal?.aborted || !this.isAllowed(source.scope)) return { kind: 'cancelled' };
 
     const scope: ShareScope =
       source.scope.kind === 'workplaces'

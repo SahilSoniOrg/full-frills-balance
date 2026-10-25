@@ -144,6 +144,25 @@ it('allows the application-owned picker to become inactive without losing its op
   await expect(runtime.execute(source, request)).resolves.toEqual({ kind: 'handed-off' });
 });
 
+it('does not abort preparation when the app briefly reports inactive', async () => {
+  const { runtime, source } = fixture();
+  runtime.setLifecycle({ ready: true, locked: false, restartRequired: false });
+  let finish!: () => void;
+  const preparing = new Promise<void>(resolve => {
+    finish = resolve;
+  });
+  source.prepare = async () => {
+    runtime.setLifecycle({ ready: true, locked: false, active: false, restartRequired: false });
+    runtime.setLifecycle({ ready: true, locked: false, active: true, restartRequired: false });
+    await preparing;
+    return { kind: 'text', content: 'backup' };
+  };
+  const operation = runtime.execute(source, request);
+  expect(runtime.getSnapshot().phase).toBe('preparing');
+  finish();
+  await expect(operation).resolves.toEqual({ kind: 'handed-off' });
+});
+
 it('does not resume work from a confirmation after a transient lock', async () => {
   const { runtime, source, transport } = fixture();
   const continued = jest.fn();

@@ -64,7 +64,7 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
       />
 
       <Modal
-        visible={vm.isNamingExport && !vm.isExporting && !vm.isScopePickerVisible}
+        visible={vm.isNamingExport && !vm.isScopePickerVisible}
         transparent
         animationType="slide"
         statusBarTranslucent
@@ -108,6 +108,7 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
               <AppButton
                 variant="outline"
                 onPress={() => vm.setIsNamingExport(false)}
+                disabled={vm.isExporting}
                 style={{ flex: 1, marginRight: Spacing.sm }}
               >
                 {AppConfig.strings.common.cancel}
@@ -116,6 +117,7 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
                 variant="primary"
                 onPress={vm.onConfirmExport}
                 loading={vm.isExporting}
+                disabled={vm.isExporting}
                 style={{ flex: 2 }}
               >
                 {AppConfig.strings.settings.data.exportBtn}

@@ -7,9 +7,15 @@ import {
   type Shareable,
   type ShareAction,
   type ShareOutcome,
+  type ShareScope,
 } from '@/src/types/sharing';
 import { toast } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
+
+/** Multi-workplace / device shares are allowed to outlive a screen remount (see SharingRuntime). */
+function survivesOwnerUnmount(scope: ShareScope | undefined): boolean {
+  return scope?.kind === 'workplaces' || scope?.kind === 'device';
+}
 
 export function useShareable(
   source: Shareable | null,
@@ -23,7 +29,7 @@ export function useShareable(
   const runtime = useSharing();
   const isBusy = useSharingBusy();
   const { defaultShareFormat } = useSharePrefs();
-  const controllers = useRef(new Set<AbortController>());
+  const controllers = useRef(new Set<{ controller: AbortController; surviveUnmount: boolean }>());
   const mounted = useRef(true);
   const [operationId, setOperationId] = useState<number | null>(null);
   const status = useSharingStatus(operationId);
@@ -34,7 +40,9 @@ export function useShareable(
     const pending = controllers.current;
     return () => {
       mounted.current = false;
-      pending.forEach(controller => controller.abort());
+      pending.forEach(({ controller, surviveUnmount }) => {
+        if (!surviveUnmount) controller.abort();
+      });
     };
   }, []);
 
@@ -47,7 +55,8 @@ export function useShareable(
           ? defaultShareFormat
           : (source.supportedFormats[0] ?? ShareFormat.TEXT));
       const controller = new AbortController();
-      controllers.current.add(controller);
+      const pending = { controller, surviveUnmount: survivesOwnerUnmount(source.scope) };
+      controllers.current.add(pending);
       setError(null);
       const previousId = runtime.getSnapshot().operationId;
       const result = runtime.execute(source, { action, format }, controller.signal);
@@ -55,9 +64,8 @@ export function useShareable(
       if (nextId !== previousId) setOperationId(nextId);
       try {
         const outcome = await result;
-        if (!mounted.current) return outcome;
         if (outcome.kind === 'failed') {
-          setError(outcome.error);
+          if (mounted.current) setError(outcome.error);
           logger.error('Sharing failed', outcome.error);
         }
         if (notify) {
@@ -70,14 +78,18 @@ export function useShareable(
           else if (outcome.kind === 'empty')
             toast.info(emptyMessage ?? 'No data matches this selection.');
           else if (outcome.kind === 'busy') toast.info('Another share or export is in progress.');
-          else if (outcome.kind === 'saved') {
-            if (outcome.warning) toast.warning(outcome.warning);
+          else if (
+            action === 'save' &&
+            (outcome.kind === 'saved' || outcome.kind === 'handed-off')
+          ) {
+            // iOS "save" opens the share sheet and returns handed-off.
+            if (outcome.kind === 'saved' && outcome.warning) toast.warning(outcome.warning);
             else toast.success('File saved successfully');
           }
         }
         return outcome;
       } finally {
-        controllers.current.delete(controller);
+        controllers.current.delete(pending);
       }
     },
     [source, disabled, defaultShareFormat, runtime, notify, errorMessage, emptyMessage],

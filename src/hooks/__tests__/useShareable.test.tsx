@@ -88,3 +88,47 @@ it('keeps ownership while hiding preparation UI during confirmation and ignores 
   expect(owner.result.current.isPending).toBe(false);
   expect(unrelated.result.current.isBusy).toBe(false);
 });
+
+it('keeps multi-workplace backups running after the owning hook unmounts', async () => {
+  let finishPreparation!: () => void;
+  const preparing = new Promise<void>(resolve => {
+    finishPreparation = resolve;
+  });
+  const transport: ShareTransport = {
+    reserveDestination: async () => undefined,
+    deliver: async () => ({ kind: 'saved' }),
+    retain: jest.fn(),
+  };
+  const runtime = new SharingRuntime(transport);
+  const source: Shareable = {
+    id: 'data-export',
+    title: 'Data Backup',
+    filename: 'backup',
+    scope: { kind: 'workplaces', workplaceIds: ['home' as never] },
+    supportedFormats: [ShareFormat.ZIP],
+    prepare: async () => {
+      await preparing;
+      return { kind: 'text', content: 'backup' };
+    },
+  };
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <SharingProvider runtime={runtime}>{children}</SharingProvider>
+  );
+  const owner = renderHook(() => useShareable(source, { notify: false }), { wrapper });
+  let operation!: Promise<ShareOutcome>;
+  await act(async () => {
+    operation = owner.result.current.save(ShareFormat.ZIP);
+  });
+  expect(runtime.getSnapshot().phase).toBe('preparing');
+
+  act(() => {
+    owner.unmount();
+  });
+  expect(runtime.getSnapshot().phase).toBe('preparing');
+
+  await act(async () => {
+    finishPreparation();
+    await expect(operation).resolves.toEqual({ kind: 'saved' });
+  });
+  expect(runtime.getSnapshot().phase).toBe('idle');
+});
