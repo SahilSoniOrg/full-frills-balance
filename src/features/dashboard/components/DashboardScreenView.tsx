@@ -1,6 +1,5 @@
 import { ScreenSectionHeader } from '@/src/components/shared/ScreenSectionHeader';
 import { JournalEntryListView } from '@/src/components/journal/JournalEntryListView';
-import { JournalCsvExportButton } from '@/src/components/journal/JournalCsvExportButton';
 import type { JournalEntryListRef } from '@/src/components/journal/JournalEntryListView';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
@@ -225,10 +224,7 @@ export function DashboardScreenView({
                 />
               </View>
               <Box paddingVertical="lg">
-                <ScreenSectionHeader
-                  title={journalSectionTitle}
-                  action={<JournalCsvExportButton csvExport={recentJournalEntries.csvExport} />}
-                />
+                <ScreenSectionHeader title={journalSectionTitle} />
               </Box>
             </View>
           }

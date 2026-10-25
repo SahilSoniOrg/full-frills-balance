@@ -4,7 +4,6 @@ import { useOnboardingSession } from '@/src/contexts/app-shell/AppOnboardingProv
 import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { useDashboardPreferences } from '@/src/hooks/useDashboardPreferences';
 import type { ListSelectionChrome } from '@/src/components/shared/SelectionActionBar';
-import type { ShareableCsvControl } from '@/src/hooks/useJournalCsvExport';
 import {
   useJournalEntryList,
   useJournalsBulkOperations,
@@ -28,7 +27,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { EMPTY } from 'rxjs';
 
 export interface RecentJournalEntries {
-  csvExport?: ShareableCsvControl;
   items: JournalListItem[];
   isLoading: boolean;
   isLoadingMore: boolean;
@@ -170,7 +168,6 @@ export function useDashboardViewModel(): DashboardViewModel {
   const recentJournalEntries = useMemo<RecentJournalEntries>(
     () => ({
       items: journalListCore.items,
-      csvExport: journalListCore.csvExport,
       isLoading: journalListCore.isLoading,
       isLoadingMore: journalListCore.isLoadingMore,
       loadingMoreText: strings.common.loading,
@@ -185,7 +182,6 @@ export function useDashboardViewModel(): DashboardViewModel {
     }),
     [
       journalListCore.items,
-      journalListCore.csvExport,
       journalListCore.isLoading,
       journalListCore.isLoadingMore,
       journalListCore.onEndReached,
