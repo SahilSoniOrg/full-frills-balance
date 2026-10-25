@@ -1,22 +1,18 @@
 import {
-  AppButton,
   AppIcon,
   AppSegmentedControl,
   AppText,
   Icon,
   PressScaleTouchable,
 } from '@/src/components/core';
+import { SubmitFooter } from '@/src/components/forms/SubmitFooter';
 import type { PlannedJournalMode } from '@/src/services/journal/journalDomainService';
-import { ChromeMotion, Scale } from '@/src/constants';
 import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
 import { useKeyboard } from '@/src/design-system/Keyboard';
-import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
 import { useTheme } from '@/src/hooks/use-theme';
 import { withOpacity } from '@/src/utils/color-math';
-import { MotiView } from 'moti';
-import React, { useState } from 'react';
-import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaLayout } from '@/src/design-system/SafeArea';
+import React from 'react';
+import { Keyboard, StyleSheet, View } from 'react-native';
 
 export interface JournalEntrySubmitBarProps {
   onPress: () => void;
@@ -53,77 +49,35 @@ export const JournalEntrySubmitBar = React.memo(function JournalEntrySubmitBar({
   isEdit = false,
 }: JournalEntrySubmitBarProps) {
   const { theme } = useTheme();
-  const { bottomSpacing } = useSafeAreaLayout();
   const { isKeyboardVisible } = useKeyboard();
-  const reduceMotion = useReducedMotion();
-  // Hint only after a tap on the disabled button, not on open.
-  const [attempted, setAttempted] = useState(false);
-
-  const showPulse = saveSuccessPulse && !reduceMotion;
-
-  const bottomPadding = isKeyboardVisible ? Spacing.xs : bottomSpacing.journalFooter;
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.background,
-          borderTopColor: theme.border,
-          paddingBottom: bottomPadding,
-        },
-      ]}
-    >
-      {disabled && attempted && missingRequirementHint ? (
-        <View style={styles.hintRow} accessibilityLiveRegion="polite">
-          <AppText variant="caption" color="error" style={styles.hintText}>
-            {missingRequirementHint}
-          </AppText>
-        </View>
-      ) : null}
-
-      {plannedMode && onPlannedModeChange ? (
-        <View style={styles.plannedRow}>
-          <AppSegmentedControl
-            options={plannedModeOptions(isEdit)}
-            value={plannedMode}
-            onChange={onPlannedModeChange}
-            itemHeight={Size.touchTarget}
-            flex
-            testID="journal-planned-mode"
-          />
-        </View>
-      ) : null}
-
-      <View style={styles.buttonRow}>
-        <Pressable
-          style={styles.submitButtonWrapper}
-          disabled={!disabled}
-          onPress={() => {
-            setAttempted(true);
-            onDisabledPress?.();
-          }}
-          accessible={false}
-        >
-          <MotiView
-            animate={{ scale: showPulse ? 1.03 : Scale.identity }}
-            transition={ChromeMotion.spring}
-          >
-            <AppButton
-              variant="primary"
-              onPress={onPress}
-              disabled={disabled}
-              loading={loading}
-              style={styles.button}
-              buttonStyle={styles.button}
-              testID="submit-footer-button"
-            >
-              {label}
-            </AppButton>
-          </MotiView>
-        </Pressable>
-
-        {isKeyboardVisible && (
+    <SubmitFooter
+      onPress={onPress}
+      label={label}
+      disabled={disabled}
+      loading={loading}
+      requirementHint={missingRequirementHint}
+      onDisabledPress={onDisabledPress}
+      hintTone="error"
+      pulse={saveSuccessPulse}
+      bottomInset="journal"
+      above={
+        plannedMode && onPlannedModeChange ? (
+          <View style={styles.plannedRow}>
+            <AppSegmentedControl
+              options={plannedModeOptions(isEdit)}
+              value={plannedMode}
+              onChange={onPlannedModeChange}
+              itemHeight={Size.touchTarget}
+              flex
+              testID="journal-planned-mode"
+            />
+          </View>
+        ) : null
+      }
+      trailing={
+        isKeyboardVisible ? (
           <PressScaleTouchable
             onPress={() => Keyboard.dismiss()}
             style={[
@@ -143,41 +97,15 @@ export const JournalEntrySubmitBar = React.memo(function JournalEntrySubmitBar({
               Done
             </AppText>
           </PressScaleTouchable>
-        )}
-      </View>
-    </View>
+        ) : null
+      }
+    />
   );
 });
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xs,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
   plannedRow: {
     marginBottom: Spacing.xs,
-  },
-  hintRow: {
-    alignItems: 'center',
-    marginBottom: Spacing.xs,
-  },
-  hintText: {
-    fontSize: Typography.sizes.xs,
-    textAlign: 'center',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    width: '100%',
-  },
-  submitButtonWrapper: {
-    flex: 1,
-  },
-  button: {
-    height: Size.buttonLg,
-    borderRadius: Shape.radius.r4,
   },
   doneButton: {
     height: Size.buttonLg,
