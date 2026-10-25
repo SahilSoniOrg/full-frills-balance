@@ -1,3 +1,4 @@
+export { CurrencyPickerSheet } from './components/CurrencyPickerSheet';
 export { CurrencySelector } from './components/CurrencySelector';
 export { default as AccountCreationScreen } from './screens/AccountCreationScreen';
 export { default as AccountDetailsScreen } from './screens/AccountDetailsScreen';
