@@ -25,9 +25,9 @@ jest.mock('@/src/services/analytics', () => ({
 
 const workplaceId = 'wp-insight' as WorkplaceId;
 
-function auditResult(journalIds: string[]) {
+function auditResult(journalIds: string[], journalsChecked = 10) {
   return {
-    journalsChecked: 10,
+    journalsChecked,
     unbalanced: journalIds.map(journalId => ({
       journal: { journalId: journalId as JournalId },
       evaluation: {},
@@ -40,7 +40,10 @@ function auditReturns(journalIds: string[]) {
   mockFind.mockResolvedValue(auditResult(journalIds));
   mockFindByIds.mockImplementation((_workplace: WorkplaceId, journalIdsToCheck: string[]) =>
     Promise.resolve(
-      auditResult(currentUnbalancedJournalIds.filter(id => journalIdsToCheck.includes(id))),
+      auditResult(
+        currentUnbalancedJournalIds.filter(id => journalIdsToCheck.includes(id)),
+        journalIdsToCheck.length,
+      ),
     ),
   );
 }
@@ -123,6 +126,18 @@ describe('journalBalanceInsightService', () => {
 
     expect(mockFind).toHaveBeenCalledTimes(1);
     expect(mockFindByIds).toHaveBeenCalledWith(workplaceId, []);
+  });
+
+  it('maintenance re-runs the full audit after a clean cache so journalsChecked is not zero', async () => {
+    await journalBalanceInsightService.refresh(workplaceId, 'startup');
+    jest.clearAllMocks();
+    auditReturns([]);
+
+    const result = await journalBalanceInsightService.refresh(workplaceId, 'maintenance');
+
+    expect(mockFind).toHaveBeenCalledTimes(1);
+    expect(mockFindByIds).not.toHaveBeenCalled();
+    expect(result.journalsChecked).toBe(10);
   });
 
   it('runs a new full audit when the cached balance-rule version is stale', async () => {

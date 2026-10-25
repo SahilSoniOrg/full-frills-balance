@@ -125,9 +125,13 @@ class JournalBalanceInsightService {
   ): Promise<JournalBalanceAuditResult> {
     const auditKey = `${COMPLETED_AUDIT_KEY_PREFIX}${workplaceId}`;
     const completedAudit = readCompletedAudit(auditKey);
-    const result = completedAudit
-      ? await findUnbalancedJournalsByIds(workplaceId, completedAudit.unbalancedJournalIds)
-      : await findUnbalancedJournals(workplaceId);
+    // Maintenance is an explicit user request: always rescan every posted journal.
+    // A prior clean audit caches unbalancedJournalIds=[], and rechecking that set alone
+    // reports journalsChecked=0 even when journals exist.
+    const result =
+      source === 'maintenance' || !completedAudit
+        ? await findUnbalancedJournals(workplaceId)
+        : await findUnbalancedJournalsByIds(workplaceId, completedAudit.unbalancedJournalIds);
     const journalIds = result.unbalanced.map(entry => entry.journal.journalId);
     storage.set(
       auditKey,
