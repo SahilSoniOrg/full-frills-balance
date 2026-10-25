@@ -65,7 +65,8 @@ function AccountLeg({
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         >
-          <Svg width="100%" height="100%" accessible={false}>
+          {/* Don't pass accessible to Svg — rn-svg forwards it to DOM <svg>. */}
+          <Svg width="100%" height="100%">
             <Defs>
               <LinearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
                 <Stop offset="0" stopColor={leadingBackground} />
