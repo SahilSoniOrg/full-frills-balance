@@ -84,7 +84,7 @@ describe('EditReparseSmsModal', () => {
     const { getByTestId } = render(<EditReparseSmsModal {...defaultProps} />);
 
     await act(async () => {
-      fireEvent.press(getByTestId('edit-reparse-import-btn'));
+      fireEvent.press(getByTestId('edit-reparse-confirm'));
     });
 
     expect(defaultProps.onClose).toHaveBeenCalled();
@@ -114,7 +114,7 @@ describe('EditReparseSmsModal', () => {
     fireEvent.changeText(getByTestId('edit-reparse-body-input'), 'Paid Rs 1200 at Amazon.');
 
     await act(async () => {
-      fireEvent.press(getByTestId('edit-reparse-import-btn'));
+      fireEvent.press(getByTestId('edit-reparse-confirm'));
     });
 
     expect(smsService.parseTransactionMessageAsync).toHaveBeenCalledWith({

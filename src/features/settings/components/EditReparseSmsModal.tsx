@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Icon, AppButton, AppCard, AppIcon, AppInput, AppText, Badge } from '@/src/components/core';
+import { BulkActionModalSurface } from '@/src/components/overlays/BulkActionModalSurface';
 import { MoneyText } from '@/src/components/shared/MoneyText';
-import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { Spacing } from '@/src/constants';
 import { useTheme } from '@/src/hooks/use-theme';
 import { smsService } from '@/src/services/sms-service';
@@ -143,30 +143,14 @@ function EditReparseModalContent({
   };
 
   return (
-    <ModalSurface
-      keyboardAvoiding
+    <BulkActionModalSurface
       visible={visible}
       title="Edit & Re-Parse Message"
       onClose={onClose}
-      accessibilityCloseLabel="Close edit reparse modal"
-      maxHeightPercent={90}
-      fixedHeight={false}
-      footer={
-        <View style={styles.footer}>
-          <AppButton
-            variant="primary"
-            size="md"
-            onPress={handleApplyAndImport}
-            loading={isParsing}
-            testID="edit-reparse-import-btn"
-          >
-            Import with Parsed Details
-          </AppButton>
-          <AppButton variant="ghost" size="sm" onPress={onClose}>
-            Cancel
-          </AppButton>
-        </View>
-      }
+      confirmLabel="Import with Parsed Details"
+      onConfirm={handleApplyAndImport}
+      isSubmitting={isParsing}
+      testID="edit-reparse"
     >
       <View style={styles.content}>
         <AppInput
@@ -265,17 +249,13 @@ function EditReparseModalContent({
           </AppCard>
         )}
       </View>
-    </ModalSurface>
+    </BulkActionModalSurface>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
     gap: Spacing.md,
-  },
-  footer: {
-    marginTop: Spacing.md,
-    gap: Spacing.xs,
   },
   parsedCard: {
     gap: Spacing.sm,
