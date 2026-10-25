@@ -13,7 +13,7 @@ type MockGridProps = {
 
 let mockGridProps: MockGridProps;
 
-jest.mock('@/src/features/setup/components/SelectableGrid', () => {
+jest.mock('@/src/components/shared/SelectableGrid', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const React = require('react');
   // eslint-disable-next-line @typescript-eslint/no-require-imports

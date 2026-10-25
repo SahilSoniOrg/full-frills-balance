@@ -1,5 +1,5 @@
 import { CategoryCreationBar } from '@/src/features/setup/components/CategoryCreationBar';
-import { SelectableGrid, SelectableItem } from '@/src/features/setup/components/SelectableGrid';
+import { SelectableGrid, type SelectableItem } from '@/src/components/shared/SelectableGrid';
 import { Icon, AppIcon, AppText, IconName } from '@/src/components/core';
 import { AppConfig, Size } from '@/src/constants';
 import { DEFAULT_CATEGORIES } from '@/src/constants/defaults';
@@ -116,7 +116,6 @@ export function WorkplaceCategorySelectionStep({
       onContinue={handleContinue}
       onBack={onBack}
       isCompleting={isCompleting}
-      disableAnimation={true}
       validationMessage={
         showValidation
           ? `Choose at least one ${incomeLabel.toLowerCase()} and one ${expenseLabel.toLowerCase()} category.`

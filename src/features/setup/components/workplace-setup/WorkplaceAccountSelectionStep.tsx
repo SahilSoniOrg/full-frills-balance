@@ -1,5 +1,5 @@
 import { CategoryCreationBar } from '@/src/features/setup/components/CategoryCreationBar';
-import { SelectableGrid, SelectableItem } from '@/src/features/setup/components/SelectableGrid';
+import { SelectableGrid, type SelectableItem } from '@/src/components/shared/SelectableGrid';
 import { Icon, AppText, IconName } from '@/src/components/core';
 import { AppConfig } from '@/src/constants';
 import { DEFAULT_ACCOUNTS } from '@/src/constants/defaults';
@@ -75,7 +75,6 @@ export function WorkplaceAccountSelectionStep({
       onContinue={handleContinue}
       onBack={onBack}
       isCompleting={isCompleting}
-      disableAnimation={true}
       validationMessage={showValidation ? 'Select at least one account to continue.' : undefined}
       renderSubtitle={item => (
         <AppText

@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { SelectionIndicator, SelectionCheckmark } from '../SelectionIndicator';
 import { SelectionTileList } from '../SelectionTileList';
 import { SelectionPickerSheet } from '@/src/components/filters/SelectionPickerSheet';
-import { SelectableGrid } from '@/src/features/setup/components/SelectableGrid';
+import { SelectableGrid } from '@/src/components/shared/SelectableGrid';
 import { PlannedPaymentHistoryCard } from '@/src/features/planned-payments/components/PlannedPaymentHistoryCard';
 import { JournalEntryModePickerModal } from '@/src/features/journal/entry/components/JournalEntryModePickerModal';
 import { JOURNAL_ENTRY_MODE_OPTIONS } from '@/src/features/journal/entry/journalEntryMode';
@@ -77,7 +77,6 @@ describe('selection layout invariants', () => {
       onContinue: jest.fn(),
       onBack: jest.fn(),
       isCompleting: false,
-      disableAnimation: true,
     };
     const view = render(<SelectableGrid {...props} selectedIds={[]} />);
     const original = getLayoutPath(view.getByText('Food'));

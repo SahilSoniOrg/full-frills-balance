@@ -1,4 +1,4 @@
-import { SelectableGrid, SelectableItem } from '@/src/features/setup/components/SelectableGrid';
+import { SelectableGrid, type SelectableItem } from '@/src/components/shared/SelectableGrid';
 import { AppInput, AppText } from '@/src/components/core';
 import { AppConfig, Opacity } from '@/src/constants';
 import { withOpacity } from '@/src/utils/color-math';
@@ -48,7 +48,6 @@ export function WorkplaceCurrencyStep({
       onContinue={onContinue}
       onBack={onBack}
       isCompleting={isCompleting}
-      disableAnimation={true}
       headerContent={
         <AppInput
           placeholder={AppConfig.strings.onboarding.currency.searchPlaceholder}
