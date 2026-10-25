@@ -1,12 +1,12 @@
 import { AccountPickerModal } from '@/src/components/account-selection/AccountPickerModal';
 import { AppearancePickerModal } from '@/src/components/overlays/AppearancePickerModal';
-import { SelectionPickerSheet } from '@/src/components/filters/SelectionPickerSheet';
 import { AppButton, AppInput, AppText } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
 import { InfoSheet } from '@/src/components/overlays/InfoSheet';
 import { AppConfig } from '@/src/constants/app-config';
 import { accountFormStrings as copy } from '@/src/constants/copy/domains/accountFormStrings';
 import { AccountArchiveCascadeModal } from '@/src/features/accounts/components/AccountArchiveCascadeModal';
+import { CurrencyPickerSheet } from '@/src/features/accounts/components/CurrencyPickerSheet';
 import type { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
 import { getDefaultSubtypeForType } from '@/src/types/accountSubtype';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
@@ -48,22 +48,12 @@ export function AccountFormOverlays(vm: AccountFormViewModel) {
         selectedColor={vm.selectedColor}
         accountType={vm.accountType}
       />
-      <SelectionPickerSheet
+      <CurrencyPickerSheet
         visible={vm.activeSheet === 'currency'}
-        title={AppConfig.strings.accounts.selectCurrency}
-        options={vm.currencies.map(currency => ({
-          id: currency.code,
-          label: currency.name,
-          description: `${currency.code} · ${currency.symbol}`,
-        }))}
-        selectedValue={vm.selectedCurrency}
-        searchPlaceholder={AppConfig.strings.common.searchPlaceholder}
-        showSearch
+        currencies={vm.currencies}
+        selectedCurrency={vm.selectedCurrency}
         onClose={close}
-        onSelect={code => {
-          vm.setSelectedCurrency(code);
-          close();
-        }}
+        onSelect={vm.setSelectedCurrency}
       />
       <InfoSheet
         visible={vm.activeSheet === 'currency-info'}

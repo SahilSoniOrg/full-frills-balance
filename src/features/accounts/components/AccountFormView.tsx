@@ -21,6 +21,7 @@ import {
   getAccountTypeDescription,
   getAccountTypeIcon,
 } from '@/src/features/accounts/helpers/accountKinds';
+import { resolveCurrencySymbol } from '@/src/features/accounts/helpers/currencyPickerOptions';
 import type { AccountFormViewModel } from '@/src/features/accounts/hooks/useAccountFormViewModel';
 import { useTheme } from '@/src/hooks/use-theme';
 import { EMPTY_ACCOUNT_ID } from '@/src/types/ids';
@@ -43,6 +44,11 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
     theme.surface,
   );
   const subtypeIcon = getAccountKind(vm.accountType, vm.accountSubtype)?.icon ?? vm.selectedIcon;
+  const currencySymbol = resolveCurrencySymbol(
+    vm.selectedCurrency,
+    vm.currencies,
+    CURRENCY_SYMBOLS,
+  );
   const currencyControl = (
     <PressScaleTouchable
       style={[
@@ -68,7 +74,7 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
             { color: vm.canEditCurrency ? theme.primary : theme.textTertiary },
           ]}
         >
-          {CURRENCY_SYMBOLS[vm.selectedCurrency] || vm.selectedCurrency}
+          {currencySymbol}
         </AppText>
         <AppText
           variant="caption"
@@ -247,7 +253,7 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
               value={vm.initialBalance}
               onChangeText={vm.onInitialBalanceChange}
               currency={vm.selectedCurrency}
-              currencySymbol={CURRENCY_SYMBOLS[vm.selectedCurrency] || vm.selectedCurrency}
+              currencySymbol={currencySymbol}
               showCurrencyPrefix={false}
               precision={vm.currencyPrecision}
               containerStyle={styles.amountInput}
