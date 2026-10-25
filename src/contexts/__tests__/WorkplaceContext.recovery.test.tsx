@@ -57,7 +57,7 @@ describe('WorkplaceProvider books boundary', () => {
     });
 
     const { getByText } = render(
-      <WorkplaceProvider workplaceId={'target-wp' as WorkplaceId} {...transitionProps}>
+      <WorkplaceProvider targetWorkplaceId={'target-wp' as WorkplaceId} {...transitionProps}>
         <ContextProbe />
       </WorkplaceProvider>,
     );
@@ -70,13 +70,55 @@ describe('WorkplaceProvider books boundary', () => {
     mockUseWorkplaceSnapshot.mockReturnValue({ data: null, error: null });
 
     const { queryByText } = render(
-      <WorkplaceProvider workplaceId={'target-wp' as WorkplaceId} {...transitionProps}>
+      <WorkplaceProvider targetWorkplaceId={'target-wp' as WorkplaceId} {...transitionProps}>
         <Text>child</Text>
       </WorkplaceProvider>,
     );
 
     expect(queryByText('child')).toBeNull();
     expect(snapshotService.getCustomSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('keeps the nav tree mounted across a switch while the previous snapshot is still showing', () => {
+    mockUseWorkplaceSnapshot.mockReturnValue({
+      data: { id: 'from-wp', defaultCurrencyCode: 'INR' },
+      error: null,
+    });
+
+    const { getByText, rerender, queryByText } = render(
+      <WorkplaceProvider targetWorkplaceId={'from-wp' as WorkplaceId} {...transitionProps}>
+        <ContextProbe />
+      </WorkplaceProvider>,
+    );
+    expect(getByText('from-wp:INR')).toBeTruthy();
+
+    // Pointer already moved; useObservable still emits the previous row.
+    mockUseWorkplaceSnapshot.mockReturnValue({
+      data: { id: 'from-wp', defaultCurrencyCode: 'INR' },
+      error: null,
+    });
+    rerender(
+      <WorkplaceProvider
+        targetWorkplaceId={'to-wp' as WorkplaceId}
+        isSwitchingWorkplace
+        {...transitionProps}
+      >
+        <ContextProbe />
+      </WorkplaceProvider>,
+    );
+    expect(getByText('from-wp:INR')).toBeTruthy();
+
+    mockUseWorkplaceSnapshot.mockReturnValue({
+      data: { id: 'to-wp', defaultCurrencyCode: 'USD' },
+      error: null,
+    });
+    rerender(
+      <WorkplaceProvider targetWorkplaceId={'to-wp' as WorkplaceId} {...transitionProps}>
+        <ContextProbe />
+      </WorkplaceProvider>,
+    );
+    expect(getByText('to-wp:USD')).toBeTruthy();
+    expect(queryByText('from-wp:INR')).toBeNull();
   });
 
   it('does not render children for a missing target row or mutate launch preferences', () => {
@@ -86,13 +128,28 @@ describe('WorkplaceProvider books boundary', () => {
     });
 
     const { queryByText } = render(
-      <WorkplaceProvider workplaceId={'target-wp' as WorkplaceId} {...transitionProps}>
+      <WorkplaceProvider targetWorkplaceId={'target-wp' as WorkplaceId} {...transitionProps}>
         <Text>child</Text>
       </WorkplaceProvider>,
     );
 
     expect(queryByText('child')).toBeNull();
     expect(preferences.device.setActiveWorkplaceId).not.toHaveBeenCalled();
+  });
+
+  it('does not render books from the last snapshot of a workplace deleted outside a switch', () => {
+    mockUseWorkplaceSnapshot.mockReturnValue({
+      data: { id: 'target-wp', defaultCurrencyCode: 'INR' },
+      error: new Error('Workplace not found: target-wp'),
+    });
+
+    const { queryByText } = render(
+      <WorkplaceProvider targetWorkplaceId={'target-wp' as WorkplaceId} {...transitionProps}>
+        <Text>child</Text>
+      </WorkplaceProvider>,
+    );
+
+    expect(queryByText('child')).toBeNull();
   });
 
   it('does not authorize a mismatched row or cached currency', () => {
@@ -105,7 +162,7 @@ describe('WorkplaceProvider books boundary', () => {
     });
 
     const { queryByText } = render(
-      <WorkplaceProvider workplaceId={'target-wp' as WorkplaceId} {...transitionProps}>
+      <WorkplaceProvider targetWorkplaceId={'target-wp' as WorkplaceId} {...transitionProps}>
         <Text>child</Text>
       </WorkplaceProvider>,
     );
@@ -131,7 +188,7 @@ describe('WorkplaceProvider books boundary', () => {
 
     render(
       <WorkplaceProvider
-        workplaceId={'target-wp' as WorkplaceId}
+        targetWorkplaceId={'target-wp' as WorkplaceId}
         onSwitchWorkplace={onSwitchWorkplace}
         onDeleteWorkplace={onDeleteWorkplace}
       >
