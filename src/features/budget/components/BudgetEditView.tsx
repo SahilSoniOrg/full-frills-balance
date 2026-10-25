@@ -74,7 +74,7 @@ export function BudgetEditView({
   const loadingChrome = useMemo<ScreenNavChrome>(
     () => ({
       screenTitle: AppConfig.strings.common.loading,
-      showBack: true,
+      kind: 'nav',
       backIcon: CoreIcon.Back,
       onBack: onCancel,
       headerActions: (
@@ -91,7 +91,7 @@ export function BudgetEditView({
       screenTitle: budget
         ? AppConfig.strings.budget.formTitleEdit
         : AppConfig.strings.budget.formTitleNew,
-      showBack: true,
+      kind: 'nav',
       backIcon: CoreIcon.Back,
       onBack: onCancel,
     }),

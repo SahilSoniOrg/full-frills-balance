@@ -229,7 +229,7 @@ function AccountFormHarness() {
   return (
     <AccountFormView
       {...vm}
-      chrome={{ screenTitle: vm.heroTitle, showBack: true, backIcon: Icon.Back, onBack: jest.fn() }}
+      chrome={{ kind: 'nav', screenTitle: vm.heroTitle, backIcon: Icon.Back, onBack: jest.fn() }}
     />
   );
 }

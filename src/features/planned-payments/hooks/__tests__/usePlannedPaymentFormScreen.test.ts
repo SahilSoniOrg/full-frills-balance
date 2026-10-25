@@ -10,6 +10,7 @@ import type { PlainAccount } from '@/src/types/plainDtos';
 
 jest.mock('@/src/contexts/WorkplaceContext', () => ({
   useWorkplace: () => ({ workplaceId: 'wp', defaultCurrencyCode: 'USD' }),
+  useOptionalWorkplace: () => ({ workplaceId: 'wp', defaultCurrencyCode: 'USD' }),
 }));
 jest.mock('@/src/components/account-selection', () => ({
   useAccounts: jest.fn(() => ({ accounts: [] })),

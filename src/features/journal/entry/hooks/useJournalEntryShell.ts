@@ -35,6 +35,7 @@ import {
 import { AccountId, WorkplaceId } from '@/src/types/ids';
 import { TransactionType } from '@/src/types/enums';
 import { SPLIT_SOURCE_LINE_ID } from '@/src/services/journal/splitJournalHelpers';
+import { useBoundWorkplaceSaveGate } from '@/src/navigation/boundWorkplace';
 import { AppNavigation } from '@/src/utils/navigation';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -90,7 +91,8 @@ export interface JournalEntryShell {
 export function useJournalEntryShell(): JournalEntryShell {
   const params = useLocalSearchParams();
   const seed = parseTransactionIntentSeed(params);
-  const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  const { workplaceId, assertBound } = useBoundWorkplaceSaveGate();
 
   const { accounts } = useAccounts(workplaceId);
 
@@ -189,12 +191,13 @@ export function useJournalEntryShell(): JournalEntryShell {
   );
 
   const onSubmit = useCallback(() => {
+    assertBound();
     if (activeMode === 'batch') {
       void saveBatch();
       return;
     }
     void session.submit(activeMode === 'allocation' ? 'allocation' : 'editor');
-  }, [activeMode, saveBatch, session]);
+  }, [activeMode, assertBound, saveBatch, session]);
 
   const applyAccountToActiveLine = useCallback(
     (lineId: string, accountId: AccountId) => {

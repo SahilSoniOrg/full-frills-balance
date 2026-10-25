@@ -22,6 +22,7 @@ import { currencyReadService } from '@/src/services/currency-read-service';
 import { isLiquidAssetSubtype } from '@/src/utils/accountSubtypeUtils';
 import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { roundToPrecision } from '@/src/utils/money';
+import { useBoundWorkplaceSaveGate } from '@/src/navigation/boundWorkplace';
 import { AppNavigation } from '@/src/utils/navigation';
 import { isValidRepeatCount } from '@/src/utils/recurrenceLabels';
 import type { BudgetSpendingHistoryEntry } from '@/src/services/budget/budgetReadService';
@@ -34,6 +35,7 @@ export type BudgetEditRouteParams = {
   pName?: string;
   pAmount?: string;
   pCurrency?: string;
+  workplaceId?: string;
 };
 
 /**
@@ -42,7 +44,8 @@ export type BudgetEditRouteParams = {
  * observeById + observeScopes. Later observe ticks never overwrite a dirty draft.
  */
 export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
-  const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  const { workplaceId, assertBound } = useBoundWorkplaceSaveGate();
   const budgetId = params.id;
 
   const { data: expenseAccounts = [] } = useObservable(
@@ -218,6 +221,7 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
   );
 
   const save = useCallback(async () => {
+    assertBound();
     if (isSubmittingRef.current) return;
     if (!draft.name.trim() || !draft.amount || draft.selectedAccountIds.length === 0) {
       throw new Error('Please fill all required fields and select at least one account.');
@@ -267,7 +271,7 @@ export function useBudgetEditViewModel(params: BudgetEditRouteParams) {
       setIsSaving(false);
       throw error;
     }
-  }, [draft, observedBudget, workplaceId]);
+  }, [assertBound, draft, observedBudget, workplaceId]);
 
   return {
     leaveAfterSave,

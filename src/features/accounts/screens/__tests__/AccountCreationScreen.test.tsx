@@ -56,6 +56,8 @@ function mockQueueLeave() {
 
 jest.mock('expo-router', () => ({
   useNavigation: () => ({ dispatch: mockDispatch, getState: mockGetState }),
+  useIsFocused: () => true,
+  useLocalSearchParams: () => ({ workplaceId: mockWorkplaceId }),
   usePreventRemove: (enabled: boolean, callback: typeof mockPreventRemoveCallback) => {
     const React = jest.requireActual<typeof import('react')>('react');
     React.useEffect(() => {
@@ -63,6 +65,10 @@ jest.mock('expo-router', () => ({
       mockPreventRemoveCallback = callback;
     }, [enabled, callback]);
   },
+}));
+jest.mock('@/src/contexts/WorkplaceContext', () => ({
+  useWorkplace: () => ({ workplaceId: mockWorkplaceId, defaultCurrencyCode: 'USD' }),
+  useOptionalWorkplace: () => ({ workplaceId: mockWorkplaceId, defaultCurrencyCode: 'USD' }),
 }));
 jest.mock('@/src/utils/navigation', () => ({
   AppNavigation: {

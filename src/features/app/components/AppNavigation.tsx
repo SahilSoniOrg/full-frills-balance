@@ -1,8 +1,11 @@
 import { useAppRestart } from '@/src/contexts/app-shell/AppRestartProvider';
 import { RestartRequiredScreen } from '@/src/features/dev';
 import { useReducedMotion } from '@/src/hooks/use-reduced-motion';
+import { RemountOnWorkplace } from '@/src/navigation/RemountOnWorkplace';
 import { ROUTE_MANIFEST } from '@/src/navigation/routeManifest';
+import { WorkplaceBoundScreen } from '@/src/navigation/WorkplaceBoundScreen';
 import { Stack } from 'expo-router';
+import type { ReactNode } from 'react';
 
 /**
  * Orchestrates the main app content based on onboarding and restart state.
@@ -36,6 +39,19 @@ export function NavigationStack() {
         <Stack.Screen
           key={route.name}
           name={route.name}
+          {...(route.presentation === 'detail'
+            ? {
+                layout: ({ children }: { children: ReactNode }) => (
+                  <RemountOnWorkplace>{children}</RemountOnWorkplace>
+                ),
+              }
+            : route.presentation === 'composer'
+              ? {
+                  layout: ({ children }: { children: ReactNode }) => (
+                    <WorkplaceBoundScreen>{children}</WorkplaceBoundScreen>
+                  ),
+                }
+              : {})}
           options={{
             headerShown: false,
             ...(route.presentation === 'composer'

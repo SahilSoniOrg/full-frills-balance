@@ -1,5 +1,6 @@
 import { Href, router } from 'expo-router';
 import { CommonActions, type NavigationAction } from 'expo-router/react-navigation';
+import { preferences } from '@/src/services/preferences';
 import type { TransactionIntentSeed } from '@/src/types/journalEntryRoute';
 import { toLegacyJournalEntryQueryParams } from '@/src/types/journalEntryRoute';
 import type { SetupJourneyId } from '@/src/services/setup/setupDraftIdentity';
@@ -10,6 +11,11 @@ import {
   type AccountCreationReturnTarget,
   encodeAccountCreationReturnTarget,
 } from './accountCreationReturn';
+
+/** Stamp creation routes with the active workplace when the caller omits one. */
+function launchWorkplaceId(explicit?: string): string | undefined {
+  return explicit || preferences.device.activeWorkplaceId || undefined;
+}
 
 const JOURNAL_ENTRY_NAVIGATION_DEDUPE_MS = 750;
 const MAX_INLINE_JOURNAL_IDS = 100;
@@ -132,11 +138,14 @@ export const AppNavigation = {
     });
   },
 
-  /**
-   * Navigate to the Settings tab.
-   */
+  /** Push the returnable Settings destination above the originating tab. */
   toSettings: () => {
-    router.replace('/(tabs)/settings');
+    router.push('/settings');
+  },
+
+  /** Leave a restore flow without keeping it underneath Settings. */
+  returnToSettings: () => {
+    router.dismissTo('/settings');
   },
 
   /**
@@ -154,13 +163,18 @@ export const AppNavigation = {
     amount?: string;
     description?: string;
     notes?: string;
+    workplaceId?: string;
     params?: Record<string, string>;
   }) => {
-    const { seed, params, ...direct } = options ?? {};
+    const { seed, params, workplaceId: explicitWorkplaceId, ...direct } = options ?? {};
+    const { workplaceId: paramWorkplaceId, ...routeParams } = params ?? {};
     const href = buildRoute('/journal-entry', {
       ...(seed ? toLegacyJournalEntryQueryParams(seed) : {}),
       ...direct,
-      ...params,
+      ...routeParams,
+      workplaceId: launchWorkplaceId(
+        typeof paramWorkplaceId === 'string' ? paramWorkplaceId : explicitWorkplaceId,
+      ),
     });
     const now = Date.now();
     if (
@@ -186,11 +200,13 @@ export const AppNavigation = {
       amount?: string;
       journalId?: string;
       guidedAutopilot?: boolean;
+      workplaceId?: string;
     },
   ) => {
     AppNavigation.toJournalEntry({
       journalId: options?.journalId,
       sourceAccountId: options?.sourceAccountId,
+      workplaceId: options?.workplaceId,
       params: {
         mode: 'simple',
         type,
@@ -261,6 +277,7 @@ export const AppNavigation = {
       currency?: string;
       icon?: string;
       returnTarget?: AccountCreationReturnTarget;
+      workplaceId?: string;
     },
   ) => {
     router.push(
@@ -273,6 +290,7 @@ export const AppNavigation = {
         returnTarget: preview?.returnTarget
           ? encodeAccountCreationReturnTarget(preview.returnTarget)
           : undefined,
+        workplaceId: launchWorkplaceId(preview?.workplaceId),
       }),
     );
   },
@@ -280,8 +298,13 @@ export const AppNavigation = {
   /**
    * Navigate to account creation route with optional preselected type.
    */
-  toAccountCreation: (type?: AccountType | string) => {
-    router.push(buildRoute('/account-creation', { type }));
+  toAccountCreation: (type?: AccountType | string, workplaceId?: string) => {
+    router.push(
+      buildRoute('/account-creation', {
+        type,
+        workplaceId: launchWorkplaceId(workplaceId),
+      }),
+    );
   },
 
   /**
@@ -294,6 +317,7 @@ export const AppNavigation = {
       type?: string;
       currency?: string;
       icon?: string;
+      workplaceId?: string;
     },
   ) => {
     router.push(
@@ -303,6 +327,7 @@ export const AppNavigation = {
         pType: preview?.type,
         pCurrency: preview?.currency,
         pIcon: preview?.icon,
+        workplaceId: launchWorkplaceId(preview?.workplaceId),
       }),
     );
   },
@@ -310,8 +335,13 @@ export const AppNavigation = {
   /**
    * Navigate to category creation route with optional preselected type.
    */
-  toCategoryCreation: (type?: AccountType | string) => {
-    router.push(buildRoute('/category-creation', { type }));
+  toCategoryCreation: (type?: AccountType | string, workplaceId?: string) => {
+    router.push(
+      buildRoute('/category-creation', {
+        type,
+        workplaceId: launchWorkplaceId(workplaceId),
+      }),
+    );
   },
 
   /**
@@ -331,6 +361,7 @@ export const AppNavigation = {
       amount?: number;
       currency?: string;
     },
+    workplaceId?: string,
   ) => {
     router.push(
       buildRoute('/budget-edit', {
@@ -338,6 +369,7 @@ export const AppNavigation = {
         pName: preview?.name,
         pAmount: preview?.amount,
         pCurrency: preview?.currency,
+        workplaceId: launchWorkplaceId(workplaceId),
       }),
     );
   },
@@ -403,17 +435,11 @@ export const AppNavigation = {
     router.push(buildRoute('/about-support-settings', { focus }));
   },
 
-  /**
-   * Navigate to workplace settings.
-   */
-  toWorkplaceSettings: () => {
-    router.push('/workplace-settings' as Href);
+  /** Navigate to workplace management. */
+  toWorkplaceManagement: (focus?: string) => {
+    router.push(buildRoute('/workplace-management', { focus }));
   },
 
-  /** Navigate to settings for the active Workplace's books. */
-  toCurrentWorkplaceSettings: (focus?: string) => {
-    router.push(buildRoute('/current-workplace-settings', { focus }));
-  },
   toDeviceSettings: (focus?: string) => {
     router.push(buildRoute('/device-settings', { focus }));
   },
@@ -478,6 +504,7 @@ export const AppNavigation = {
       amount?: number;
       currency?: string;
     },
+    workplaceId?: string,
   ) => {
     router.push(
       buildRoute('/planned-payment-form', {
@@ -485,6 +512,7 @@ export const AppNavigation = {
         pDesc: preview?.description,
         pAmount: preview?.amount,
         pCurrency: preview?.currency,
+        workplaceId: launchWorkplaceId(workplaceId),
       }),
     );
   },
@@ -513,6 +541,7 @@ export const AppNavigation = {
       bodyMatch?: string;
       sourceAccountId?: string;
       categoryAccountId?: string;
+      workplaceId?: string;
     },
   ) => {
     router.push(
@@ -522,6 +551,7 @@ export const AppNavigation = {
         bodyMatch: seed?.bodyMatch,
         sourceAccountId: seed?.sourceAccountId,
         categoryAccountId: seed?.categoryAccountId,
+        workplaceId: launchWorkplaceId(seed?.workplaceId),
       }),
     );
   },

@@ -3,6 +3,7 @@ import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import { recordPlannedOccurrenceWithFxReview } from '@/src/services/planned-payment/recordPlannedOccurrenceWithFxReview';
 import type { PlannedPaymentListOccurrence } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { PlannedPaymentInterval } from '@/src/types/enums';
+import { Icon } from '@/src/types/domainIcons';
 import type { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { usePlannedListRecord } from '../usePlannedListRecord';
 
@@ -40,7 +41,15 @@ const occurrence: PlannedPaymentListOccurrence = {
 function setWorkplace(id: WorkplaceId) {
   jest.mocked(useWorkplace).mockReturnValue({
     workplaceId: id,
+    activeWorkplace: {
+      id,
+      name: 'Test workplace',
+      icon: Icon.Briefcase,
+      defaultCurrencyCode: 'USD',
+    },
     defaultCurrencyCode: 'USD',
+    isSwitchingWorkplace: false,
+    workplaceSwitchError: null,
     setWorkplaceId: jest.fn(),
     deleteWorkplace: jest.fn(),
   });

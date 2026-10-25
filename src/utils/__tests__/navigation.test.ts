@@ -1,5 +1,7 @@
 import { AppNavigation, buildRoute } from '../navigation';
 import { readJournalSearchScope } from '../journalSearchScope';
+import { dispatchWorkplaceSwitchHistory } from '@/src/navigation/workplaceSwitchHistory';
+import type { NavigationState } from 'expo-router/react-navigation';
 import { asAccountId } from '@/src/types/ids';
 
 jest.mock('expo-router', () => ({
@@ -8,7 +10,13 @@ jest.mock('expo-router', () => ({
     canGoBack: jest.fn(() => true),
     push: jest.fn(),
     replace: jest.fn(),
+    dismissTo: jest.fn(),
+    navigate: jest.fn(),
   },
+}));
+
+jest.mock('@/src/services/preferences', () => ({
+  preferences: { device: { activeWorkplaceId: 'active-wp' } },
 }));
 
 const { router } = jest.requireMock('expo-router') as {
@@ -17,6 +25,8 @@ const { router } = jest.requireMock('expo-router') as {
     canGoBack: jest.Mock;
     push: jest.Mock;
     replace: jest.Mock;
+    dismissTo: jest.Mock;
+    navigate: jest.Mock;
   };
 };
 
@@ -97,10 +107,10 @@ describe('journal-entry navigation', () => {
     router.canGoBack.mockReturnValue(true);
   });
 
-  it('opens a blank journal entry without stale query parameters', () => {
+  it('opens a blank journal entry stamped with the active workplace', () => {
     AppNavigation.toJournalEntry();
 
-    expect(router.push).toHaveBeenCalledWith('/journal-entry');
+    expect(router.push).toHaveBeenCalledWith('/journal-entry?workplaceId=active-wp');
   });
 
   it('opts the FAB simple-entry flow into guided autopilot explicitly', () => {
@@ -109,9 +119,12 @@ describe('journal-entry navigation', () => {
 
     expect(router.push).toHaveBeenNthCalledWith(
       1,
-      '/journal-entry?mode=simple&type=expense&guidedAutopilot=true',
+      '/journal-entry?mode=simple&type=expense&guidedAutopilot=true&workplaceId=active-wp',
     );
-    expect(router.push).toHaveBeenNthCalledWith(2, '/journal-entry?mode=simple&type=income');
+    expect(router.push).toHaveBeenNthCalledWith(
+      2,
+      '/journal-entry?mode=simple&type=income&workplaceId=active-wp',
+    );
   });
 
   it('preserves prefilled, edit/copy, and planned-entry route data', () => {
@@ -129,6 +142,7 @@ describe('journal-entry navigation', () => {
     expect(route).toContain('notes=Imported+from+SMS');
     expect(route).toContain('mode=simple');
     expect(route).toContain('source=widget');
+    expect(route).toContain('workplaceId=active-wp');
   });
 
   it('accepts a typed transaction intent seed while preserving the route contract', () => {
@@ -144,7 +158,7 @@ describe('journal-entry navigation', () => {
     });
 
     expect(router.push).toHaveBeenCalledWith(
-      '/journal-entry?mode=simple&type=expense&sourceAccountId=cash&destinationAccountId=food&amount=45.00&source=dashboard',
+      '/journal-entry?mode=simple&type=expense&sourceAccountId=cash&destinationAccountId=food&amount=45.00&source=dashboard&workplaceId=active-wp',
     );
   });
 
@@ -157,9 +171,12 @@ describe('journal-entry navigation', () => {
 
     expect(router.push).toHaveBeenNthCalledWith(
       1,
-      '/journal-entry?sourceAccountId=cash&mode=advanced&destinationAccountId=food',
+      '/journal-entry?sourceAccountId=cash&mode=advanced&destinationAccountId=food&workplaceId=active-wp',
     );
-    expect(router.push).toHaveBeenNthCalledWith(2, '/journal-entry?mode=split');
+    expect(router.push).toHaveBeenNthCalledWith(
+      2,
+      '/journal-entry?mode=split&workplaceId=active-wp',
+    );
   });
 
   it('does not stack the same journal-entry route on rapid repeated navigation', () => {
@@ -174,7 +191,7 @@ describe('journal-entry navigation', () => {
 
     expect(router.push).toHaveBeenCalledTimes(1);
     expect(router.push).toHaveBeenCalledWith(
-      '/journal-entry?journalId=journal-1&mode=simple&type=expense',
+      '/journal-entry?journalId=journal-1&mode=simple&type=expense&workplaceId=active-wp',
     );
   });
 
@@ -202,9 +219,12 @@ describe('account form navigation', () => {
 
     expect(router.push).toHaveBeenNthCalledWith(
       1,
-      '/account-creation?pName=Groceries&returnTarget=destination-row%3Arow-1',
+      '/account-creation?pName=Groceries&returnTarget=destination-row%3Arow-1&workplaceId=active-wp',
     );
-    expect(router.push).toHaveBeenNthCalledWith(2, '/account-creation?pName=Wallet');
+    expect(router.push).toHaveBeenNthCalledWith(
+      2,
+      '/account-creation?pName=Wallet&workplaceId=active-wp',
+    );
   });
 });
 
@@ -327,5 +347,121 @@ describe('settings navigation', () => {
     AppNavigation.toAppearanceSettings('typography');
 
     expect(router.push).toHaveBeenCalledWith('/appearance-settings?focus=typography');
+  });
+});
+
+describe('workplace switch history', () => {
+  beforeEach(() => jest.clearAllMocks());
+  function history(routes: NavigationState['routes']): NavigationState {
+    return {
+      key: 'root',
+      index: routes.length - 1,
+      routes,
+      routeKeySeq: 0,
+      routeNames: routes.map(route => route.name),
+      stale: false,
+    };
+  }
+  const tabs = {
+    key: 'tabs',
+    name: '(tabs)',
+    state: {
+      stale: true as const,
+      index: 0,
+      routes: [
+        { key: 'accounts', name: 'accounts', params: { tab: 'categories' } },
+        { key: 'activity', name: 'activity' },
+        { key: 'commitments', name: 'commitments', params: { tab: 'planned' } },
+      ],
+    },
+  };
+
+  it('removes every old record route and returns to the matching list', () => {
+    const dispatch = jest.fn();
+    dispatchWorkplaceSwitchHistory({
+      getState: () =>
+        history([
+          tabs,
+          { key: 'account', name: 'account-details', params: { accountId: 'old' } },
+          { key: 'journal', name: 'journal-details', params: { journalId: 'old' } },
+        ]),
+      dispatch,
+    });
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'RESET',
+        target: 'root',
+        payload: expect.objectContaining({
+          index: 0,
+          routes: [
+            expect.objectContaining({
+              key: 'tabs',
+              name: '(tabs)',
+              state: expect.objectContaining({
+                index: 1,
+                routes: expect.arrayContaining([expect.objectContaining({ name: 'activity' })]),
+              }),
+            }),
+          ],
+        }),
+      }),
+    );
+    expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  it('keeps notification navigation above the retained tab and removes old details underneath', () => {
+    const dispatch = jest.fn();
+    const inbox = { name: 'sms-inbox', key: 'inbox' };
+    dispatchWorkplaceSwitchHistory({
+      getState: () =>
+        history([
+          tabs,
+          { key: 'old-detail', name: 'account-details', params: { accountId: 'old' } },
+          inbox,
+        ]),
+      dispatch,
+    });
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({ routes: [tabs, inbox], index: 1 }),
+      }),
+    );
+  });
+
+  it('preserves a bound creation draft and the selected subtab', () => {
+    const dispatch = jest.fn();
+    dispatchWorkplaceSwitchHistory({
+      getState: () =>
+        history([
+          tabs,
+          { key: 'draft', name: 'journal-entry', params: { workplaceId: 'original' } },
+        ]),
+      dispatch,
+    });
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('returns an old insight to the Hub already underneath it without stacking a second Hub', () => {
+    const dispatch = jest.fn();
+    const hub = { key: 'hub', name: 'hub' };
+    dispatchWorkplaceSwitchHistory({
+      getState: () =>
+        history([
+          tabs,
+          hub,
+          { key: 'insight', name: 'insight-details', params: { insightId: 'old' } },
+        ]),
+      dispatch,
+    });
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({ routes: [tabs, hub], index: 1 }),
+      }),
+    );
+  });
+
+  it('dismisses a restore journey when returning to Settings', () => {
+    AppNavigation.returnToSettings();
+    expect(router.dismissTo).toHaveBeenCalledWith('/settings');
   });
 });

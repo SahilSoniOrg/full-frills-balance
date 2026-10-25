@@ -23,8 +23,11 @@ function historyPeriods(
   }));
 }
 
+let mockWorkplaceId = 'wp';
+
 jest.mock('@/src/contexts/WorkplaceContext', () => ({
-  useWorkplace: () => ({ workplaceId: 'wp', defaultCurrencyCode: 'USD' }),
+  useWorkplace: () => ({ workplaceId: mockWorkplaceId, defaultCurrencyCode: 'USD' }),
+  useOptionalWorkplace: () => ({ workplaceId: mockWorkplaceId, defaultCurrencyCode: 'USD' }),
 }));
 jest.mock('@/src/services/accounts/accountQueries', () => ({
   accountQueries: { observeByType: jest.fn() },
@@ -59,6 +62,7 @@ const budget: PlainBudget = {
 describe('budget repeat count editing', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockWorkplaceId = 'wp';
     jest.mocked(accountQueries.observeByType).mockReturnValue(mockOf([]));
     jest.mocked(currencyReadService.observeAll).mockReturnValue(mockOf([]));
     jest.mocked(budgetReadService.observeById).mockReturnValue(mockOf(budget));

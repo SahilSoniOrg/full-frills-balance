@@ -22,6 +22,7 @@ import { AccountId } from '@/src/types/ids';
 import { CurrencyFormatter } from '@/src/utils/currencyFormatter';
 import { toast } from '@/src/utils/alerts';
 import { logger } from '@/src/utils/logger';
+import { useBoundWorkplaceSaveGate } from '@/src/navigation/boundWorkplace';
 import { AppNavigation } from '@/src/utils/navigation';
 import { formatRoundedAmount } from '@/src/utils/money';
 import { isValidRepeatCount } from '@/src/utils/recurrenceLabels';
@@ -50,7 +51,8 @@ function sortDestinationAccounts<T extends Pick<PlainAccount, 'accountType'>>(
 }
 
 export function usePlannedPaymentForm(id?: string) {
-  const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  const { defaultCurrencyCode: workplaceCurrency } = useWorkplace();
+  const { workplaceId, assertBound } = useBoundWorkplaceSaveGate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [leaveAfterSave, setLeaveAfterSave] = useState<(() => void) | null>(null);
   const isSubmittingRef = useRef(false);
@@ -128,6 +130,7 @@ export function usePlannedPaymentForm(id?: string) {
   const requirementHint = formatRequirementHint(missingFields);
 
   const handleSave = useCallback(async () => {
+    assertBound();
     if (!isValid || isSubmittingRef.current) return;
     isSubmittingRef.current = true;
     setIsSubmitting(true);
@@ -179,7 +182,7 @@ export function usePlannedPaymentForm(id?: string) {
       logger.error('Failed to save planned payment', error);
       toast.error(error instanceof Error ? error.message : 'Failed to save planned payment');
     }
-  }, [form, id, isValid, item, workplaceId]);
+  }, [assertBound, form, id, isValid, item, workplaceId]);
 
   const setFxMode = useCallback(
     (mode: PlannedPaymentFxMode) => {

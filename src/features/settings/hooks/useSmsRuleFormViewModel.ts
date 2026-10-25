@@ -1,7 +1,7 @@
-import { useWorkplace } from '@/src/contexts/WorkplaceContext';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { useAccounts } from '@/src/components/account-selection';
 import { useSmsRulePreview } from '@/src/features/settings/hooks/useSmsRulePreview';
+import { useBoundWorkplaceSaveGate } from '@/src/navigation/boundWorkplace';
 import { analytics } from '@/src/services/analytics';
 import { SmsRuleDisposition, SmsRuleMode } from '@/src/utils/sms/RuleMatcher';
 import {
@@ -77,7 +77,7 @@ type SeedInput = {
 };
 
 export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleFormViewModel {
-  const { workplaceId } = useWorkplace();
+  const { workplaceId, assertBound } = useBoundWorkplaceSaveGate();
   const { accounts } = useAccounts(workplaceId);
   const [isLoaded, setIsLoaded] = useState(!id);
 
@@ -205,6 +205,7 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
 
     setIsSubmitting(true);
     try {
+      assertBound();
       await smsService.saveAutoPostRule(
         {
           id,
@@ -243,6 +244,7 @@ export function useSmsRuleFormViewModel(id?: string, seed?: SeedInput): SmsRuleF
       setIsSubmitting(false);
     }
   }, [
+    assertBound,
     categoryAccountId,
     disposition,
     id,

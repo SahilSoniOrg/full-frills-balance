@@ -121,6 +121,7 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     pCurrency: string;
     pIcon: string;
     returnTarget: string;
+    workplaceId?: string;
   }>();
   const { workplaceId, defaultCurrencyCode: workplaceCurrency } = useWorkplace();
 
@@ -281,7 +282,6 @@ export function useAccountFormViewModel(): AccountFormViewModel {
     accounts,
     handleSave: persistence.handleSave,
   });
-
   const hasExistingAccounts = accounts.length > 0;
   const { heroTitle, saveLabel } = resolveAccountFormHeroCopy({
     isEditMode,

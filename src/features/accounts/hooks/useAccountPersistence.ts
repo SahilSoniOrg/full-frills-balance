@@ -8,6 +8,7 @@ import {
   resolveBalanceChangeRequirement,
 } from '@/src/services/accounts/balanceChangeClassification';
 import { AccountId, WorkplaceId } from '@/src/types/ids';
+import { useBoundWorkplaceSaveGate } from '@/src/navigation/boundWorkplace';
 import { showErrorAlert, toast } from '@/src/utils/alerts';
 import { ValidationError } from '@/src/utils/errors';
 import { logger } from '@/src/utils/logger';
@@ -37,6 +38,7 @@ export function useAccountPersistence(
   accountCreationReturnTarget?: string,
 ): PersistenceResult {
   const { createAccount, saveAccount, adjustBalance } = useAccountActions(workplaceId);
+  const { assertBound } = useBoundWorkplaceSaveGate();
   const navigation = useNavigation();
   const [isCreating, setIsCreating] = useState(false);
   const [leaveAfterSave, setLeaveAfterSave] = useState<(() => void) | null>(null);
@@ -47,6 +49,7 @@ export function useAccountPersistence(
   };
 
   const handleSave = async ({ payload, balanceChange }: AccountPersistenceSaveInput) => {
+    assertBound();
     if (isSubmitting.current) return;
     isSubmitting.current = true;
     setIsCreating(true);

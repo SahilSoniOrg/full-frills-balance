@@ -77,7 +77,7 @@ export default function SmsRuleFormScreen() {
   const chrome = useMemo<ScreenNavChrome>(
     () => ({
       screenTitle: params.id ? 'Edit SMS Rule' : 'New SMS Rule',
-      showBack: true,
+      kind: 'nav',
       backIcon: Icon.Back,
       onBack: guard.onBack,
       headerActions: params.id ? (

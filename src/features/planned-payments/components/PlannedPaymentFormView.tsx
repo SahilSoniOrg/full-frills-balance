@@ -53,7 +53,7 @@ export function PlannedPaymentFormView({
   const chrome = useMemo<ScreenNavChrome>(
     () => ({
       screenTitle: id ? copy.formTitleEdit : copy.formTitleNew,
-      showBack: true,
+      kind: 'nav',
       backIcon: Icon.Back,
       onBack,
     }),

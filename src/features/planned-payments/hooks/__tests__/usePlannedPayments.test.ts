@@ -7,6 +7,7 @@ import {
   type PlannedPaymentObligation,
 } from '@/src/services/planned-payment/plannedPaymentReadService';
 import { PlannedPaymentInterval, PlannedPaymentStatus } from '@/src/types/enums';
+import { Icon } from '@/src/types/domainIcons';
 import type { AccountId, JournalId, PlannedPaymentId, WorkplaceId } from '@/src/types/ids';
 import { AppNavigation } from '@/src/utils/navigation';
 import { BehaviorSubject, Subject, defer, of, throwError } from 'rxjs';
@@ -59,7 +60,15 @@ const data: PlannedPaymentListData = {
 function setCurrency(currency: string, workplace = workplaceId) {
   jest.mocked(useWorkplace).mockReturnValue({
     workplaceId: workplace,
+    activeWorkplace: {
+      id: workplace,
+      name: 'Test workplace',
+      icon: Icon.Briefcase,
+      defaultCurrencyCode: currency,
+    },
     defaultCurrencyCode: currency,
+    isSwitchingWorkplace: false,
+    workplaceSwitchError: null,
     setWorkplaceId: jest.fn(),
     deleteWorkplace: jest.fn(),
   });

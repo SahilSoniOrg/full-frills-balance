@@ -66,7 +66,7 @@ export default function AccountCreationScreen() {
     const headerActionItems = toHeaderIconButtons(vm.formChrome.managementActions, theme);
     return {
       screenTitle: vm.heroTitle,
-      showBack: true,
+      kind: 'nav',
       backIcon: Icon.Back,
       onBack: guard.onBack,
       headerActions:

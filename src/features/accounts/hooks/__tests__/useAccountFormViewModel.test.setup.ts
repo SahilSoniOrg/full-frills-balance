@@ -21,11 +21,13 @@ jest.mock('react-native/Libraries/Modal/Modal', () => {
 });
 
 jest.mock('expo-router', () => ({
+  useIsFocused: () => true,
   useLocalSearchParams: () => mockAccountFormVmState.mockParams,
   usePathname: () => mockAccountFormVmState.mockPathname,
 }));
 jest.mock('@/src/contexts/WorkplaceContext', () => ({
   useWorkplace: () => ({ workplaceId: 'workplace', defaultCurrencyCode: 'USD' }),
+  useOptionalWorkplace: () => ({ workplaceId: 'workplace', defaultCurrencyCode: 'USD' }),
 }));
 jest.mock('@/src/hooks/useAccounts', () => ({
   useAccount: () => ({ account: mockAccountFormVmState.mockExistingAccount, isLoading: false }),

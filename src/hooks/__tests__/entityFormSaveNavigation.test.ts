@@ -19,6 +19,8 @@ const mockGuardAtNavigation = jest.fn();
 
 jest.mock('expo-router', () => ({
   useNavigation: () => ({ dispatch: mockLeft }),
+  useIsFocused: () => true,
+  useLocalSearchParams: () => ({}),
   usePreventRemove: (enabled: boolean, callback: typeof mockBeforeRemove) => {
     const React = jest.requireActual<typeof import('react')>('react');
     React.useEffect(() => {
@@ -40,6 +42,7 @@ jest.mock('@/src/utils/navigation', () => ({
 }));
 jest.mock('@/src/contexts/WorkplaceContext', () => ({
   useWorkplace: () => ({ workplaceId: 'wp', defaultCurrencyCode: 'USD' }),
+  useOptionalWorkplace: () => ({ workplaceId: 'wp', defaultCurrencyCode: 'USD' }),
 }));
 jest.mock('@/src/services/accounts/accountQueries', () => ({
   accountQueries: { observeByType: () => mockOf([]) },

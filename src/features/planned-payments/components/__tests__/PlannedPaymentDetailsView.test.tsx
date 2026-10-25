@@ -103,7 +103,7 @@ const makeDetailsVm = (
 const vm = makeDetailsVm();
 const chrome: ScreenNavChrome = {
   screenTitle: 'Rent',
-  showBack: true,
+  kind: 'nav',
   backIcon: Icon.Back,
   onBack: jest.fn(),
 };
