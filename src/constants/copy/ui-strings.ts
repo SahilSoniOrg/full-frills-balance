@@ -839,6 +839,8 @@ export const UI_STRINGS = {
     },
     entryCount: (count: number) => `${count.toLocaleString()} ${count === 1 ? 'entry' : 'entries'}`,
     selectCurrency: 'Currency',
+    popularCurrencies: 'Popular',
+    allCurrencies: 'All currencies',
     form: {
       accountName: 'Account Name',
       accountNamePlaceholder: 'e.g., Bank',
