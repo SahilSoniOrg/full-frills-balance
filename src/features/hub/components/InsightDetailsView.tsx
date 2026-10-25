@@ -104,7 +104,7 @@ export function InsightDetailsView({
       </View>
       <ScreenSectionHeader
         title={header.transactionsTitle}
-        action={<JournalCsvExportButton csvExport={csvExport} />}
+        action={<JournalCsvExportButton appearance="label" csvExport={csvExport} />}
         style={styles.listTitle}
       />
     </View>

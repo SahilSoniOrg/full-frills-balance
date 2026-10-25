@@ -186,7 +186,7 @@ export function PlannedPaymentActivityOverview({
           <AppText variant="subheading" weight="semibold">
             {copy.history}
           </AppText>
-          <JournalCsvExportButton csvExport={csvExport} />
+          <JournalCsvExportButton appearance="label" csvExport={csvExport} />
           {(rows.length > 3 || totalHistoryCount > 3 || !!hasMore) && (
             <AppButton
               variant="ghost"

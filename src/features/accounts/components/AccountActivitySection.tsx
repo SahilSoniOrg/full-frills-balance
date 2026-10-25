@@ -308,7 +308,7 @@ export function AccountActivitySection({
 
       <ScreenSectionHeader
         title="Activity"
-        action={<JournalCsvExportButton csvExport={csvExport} />}
+        action={<JournalCsvExportButton appearance="label" csvExport={csvExport} />}
         style={styles.sectionHeader}
       />
     </View>

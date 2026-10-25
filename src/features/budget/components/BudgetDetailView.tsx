@@ -123,7 +123,7 @@ export function BudgetDetailView({
               />
               <ScreenSectionHeader
                 title={strings.activity}
-                action={<JournalCsvExportButton csvExport={vm.csvExport} />}
+                action={<JournalCsvExportButton appearance="label" csvExport={vm.csvExport} />}
               />
               {activityCountLabel || vm.activityCategory ? (
                 <Row align="center" gap="xs">
