@@ -38,10 +38,22 @@ test('extracts direct and tuple manifest route names', () => {
   fs.writeFileSync(
     temporaryManifest,
     `
-      const direct = { name: '(tabs)' };
+      const direct = { name: '(tabs)', presentation: 'tab' };
+      const ignoredFallbackName = { name: 'accounts' };
       const tuple = ['reports-v2', 'Reports', 'reports', 'financial_reporting_v2'];
+      const multiline = [
+        'account-management',
+        'account',
+        'account_reorganization',
+        true,
+        { name: 'accounts' },
+      ];
     `,
   );
 
-  assert.deepEqual(getManifestRouteNames(temporaryManifest), ['(tabs)', 'reports-v2']);
+  assert.deepEqual(getManifestRouteNames(temporaryManifest), [
+    '(tabs)',
+    'account-management',
+    'reports-v2',
+  ]);
 });

@@ -35,10 +35,15 @@ export function getManifestRouteNames(manifestPath) {
   const source = fs.readFileSync(manifestPath, 'utf8');
   const names = new Set();
 
-  for (const match of source.matchAll(/\bname:\s*['"]([^'"]+)['"]/g)) {
+  // Object route entries always declare presentation; nested switchFallback
+  // destinations use name without presentation and must not count as routes.
+  for (const match of source.matchAll(
+    /\bname:\s*['"]([^'"]+)['"](?=[^}]*\bpresentation\s*:)/gs,
+  )) {
     names.add(match[1]);
   }
-  for (const match of source.matchAll(/(?:^|=\s*)\s*\[['"]([^'"]+)['"],/gm)) {
+  // Tuple route entries may span lines when they carry a switchFallback object.
+  for (const match of source.matchAll(/\[\s*['"]([^'"]+)['"]\s*,/g)) {
     names.add(match[1]);
   }
 
