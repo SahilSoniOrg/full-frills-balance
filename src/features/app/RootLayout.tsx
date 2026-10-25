@@ -9,6 +9,7 @@ import { PlannedPaymentFxReviewContainer } from '@/src/components/overlays/Plann
 import { AlertContainer } from '@/src/components/overlays/AlertContainer';
 import { IncompleteFxDetailsContainer } from '@/src/components/overlays/IncompleteFxDetailsContainer';
 import { ToastContainer } from '@/src/components/overlays/Toast';
+import { JournalCsvExportBusyHost } from '@/src/components/journal/JournalCsvExportButton';
 import { ErrorBoundary } from '@/src/components/core';
 import { AppConfig } from '@/src/constants/app-config';
 import { UIProvider } from '@/src/contexts/UIContext';
@@ -115,6 +116,7 @@ function RootLayout() {
                             <AlertContainer />
                             <IncompleteFxDetailsContainer />
                             <PlannedPaymentFxReviewContainer />
+                            <JournalCsvExportBusyHost />
                           </AppLockInterceptor>
                         </SharingProvider>
                       </LaunchCoordinatorProvider>

@@ -308,6 +308,7 @@ export const UI_STRINGS = {
     csvExport: {
       label: 'Export CSV',
       hint: 'Export all transactions matching the current period and filters, including unloaded pages.',
+      preparing: 'Preparing CSV…',
       empty: 'No transactions match these filters.',
       error: 'Could not export transactions. Try again.',
       unavailable: 'File sharing is unavailable on this device. Try exporting on another device.',

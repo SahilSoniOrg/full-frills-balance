@@ -10,6 +10,8 @@ export type JournalCsvExportQuery = Omit<JournalTimelineQuery, 'limit'> & {
   title: string;
 };
 
+export const JOURNAL_CSV_SHAREABLE_ID = 'journal-csv-export';
+
 function snapshotQuery(query: JournalCsvExportQuery): JournalCsvExportQuery {
   return {
     ...query,
@@ -90,7 +92,7 @@ export function createJournalCsvShareable(query: JournalCsvExportQuery): Shareab
       : 'all-time';
 
   return {
-    id: 'journal-csv-export',
+    id: JOURNAL_CSV_SHAREABLE_ID,
     title: snapshot.title,
     filename: `transactions-${timeframe}`,
     mimeType: 'text/csv',

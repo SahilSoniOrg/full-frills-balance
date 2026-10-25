@@ -9,6 +9,7 @@ import { useShareable } from './useShareable';
 
 export interface ShareableCsvControl {
   onExportCsv: () => Promise<void>;
+  /** True while the CSV file is being built (not while the share sheet is open). */
   isExportingCsv: boolean;
   isExportDisabled: boolean;
 }
@@ -19,7 +20,7 @@ export function useJournalCsvExport(
 ): ShareableCsvControl {
   const source = useMemo(() => createJournalCsvShareable(query), [query]);
   const strings = AppConfig.strings.journal.csvExport;
-  const { share, isPending, isBusy } = useShareable(source, {
+  const { share, isBusy, isPreparing } = useShareable(source, {
     disabled,
     emptyMessage: strings.empty,
     errorMessage: strings.error,
@@ -28,7 +29,11 @@ export function useJournalCsvExport(
     await share(ShareFormat.CSV);
   }, [share]);
   return useMemo(
-    () => ({ onExportCsv, isExportingCsv: isPending, isExportDisabled: isBusy || disabled }),
-    [onExportCsv, isPending, isBusy, disabled],
+    () => ({
+      onExportCsv,
+      isExportingCsv: isPreparing,
+      isExportDisabled: isBusy || disabled,
+    }),
+    [onExportCsv, isPreparing, isBusy, disabled],
   );
 }
