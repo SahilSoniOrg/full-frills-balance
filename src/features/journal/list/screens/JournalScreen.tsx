@@ -1,5 +1,6 @@
 import { applySelectionChrome } from '@/src/components/layout/applySelectionChrome';
 import type { TabScreenChrome } from '@/src/components/layout/screenChrome';
+import { journalCsvExportHeaderAction } from '@/src/components/journal/JournalCsvExportButton';
 import { AppConfig, Size } from '@/src/constants';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { PrivacyToggleButton } from '@/src/components/shared/PrivacyToggleButton';
@@ -26,41 +27,36 @@ function JournalScreen() {
     workplaceId,
   );
 
-  const chrome = useMemo<TabScreenChrome>(
-    () =>
-      applySelectionChrome(
-        {
-          screenTitle: AppConfig.strings.journal.transactions,
-          kind: 'tab',
-          headerActions: (
-            <ScreenHeaderActions
-              actions={[
-                {
-                  name: Icon.Reports,
-                  size: Size.iconSm,
-                  variant: 'surface',
-                  onPress: AppNavigation.toReports,
-                  accessibilityLabel: 'View Analytics',
-                },
-                {
-                  name: Icon.Search,
-                  size: Size.iconSm,
-                  variant: 'surface',
-                  onPress: () => AppNavigation.toJournalSearch(),
-                  accessibilityLabel: 'Search and Filter',
-                },
-              ]}
-              trailing={<PrivacyToggleButton />}
-            />
-          ),
-        },
-        {
-          active: journalList.isSelectionModeActive,
-          onExit: journalList.exitSelectionMode,
-        },
-      ),
-    [journalList.exitSelectionMode, journalList.isSelectionModeActive],
-  );
+  const csvExport = journalList.list.csvExport;
+
+  const chrome = useMemo<TabScreenChrome>(() => {
+    const exportAction = journalCsvExportHeaderAction(csvExport);
+    return applySelectionChrome(
+      {
+        screenTitle: AppConfig.strings.journal.transactions,
+        kind: 'tab',
+        headerActions: (
+          <ScreenHeaderActions
+            actions={[
+              ...(exportAction ? [exportAction] : []),
+              {
+                name: Icon.Search,
+                size: Size.iconSm,
+                variant: 'surface',
+                onPress: () => AppNavigation.toJournalSearch(),
+                accessibilityLabel: 'Search and Filter',
+              },
+            ]}
+            trailing={<PrivacyToggleButton />}
+          />
+        ),
+      },
+      {
+        active: journalList.isSelectionModeActive,
+        onExit: journalList.exitSelectionMode,
+      },
+    );
+  }, [csvExport, journalList.exitSelectionMode, journalList.isSelectionModeActive]);
 
   return (
     <JournalListView

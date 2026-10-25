@@ -3,7 +3,7 @@ import { launchOnboardedApp } from '../../actions/launch';
 import { enterAmount } from '../../actions/mobile/enterAmount';
 import { createFxSplitExpense } from '../../actions/mobile/journalFxSplitExpense';
 import { tapById, tapByLabel } from '../../actions/mobile/elementActions';
-import { tabs } from '../../screens';
+import { navigation, tabs } from '../../screens';
 
 jest.setTimeout(300000);
 
@@ -13,7 +13,8 @@ describe(':ios: F-01 historical currency valuation review', () => {
     await createFxSplitExpense('F01 Euro market purchase');
 
     await tapById(tabs.activity);
-    await tapByLabel('View Analytics');
+    await tapById(navigation.headerTrigger);
+    await tapByLabel('Reports');
     const reportExpenseAmount = element(by.text('$11.00')).atIndex(0);
     await waitFor(reportExpenseAmount).toBeVisible().withTimeout(30000);
     await expect(reportExpenseAmount).toBeVisible();
