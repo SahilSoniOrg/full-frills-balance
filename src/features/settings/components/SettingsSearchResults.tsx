@@ -6,6 +6,7 @@ import {
   AppText,
   PressScaleTouchable,
 } from '@/src/components/core';
+import { Size } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
 import type { SettingsSearchItem } from '@/src/features/settings/components/settingsSections';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -38,7 +39,7 @@ export function SettingsSearchResults({
           onChangeText={onQueryChange}
           placeholder="Search settings…"
           leftIcon={Icon.Search}
-          inputStyle={hasQuery ? styles.inputWithClear : undefined}
+          inputStyle={[styles.searchInput, hasQuery && styles.inputWithClear]}
           autoCorrect={false}
           returnKeyType="search"
           accessibilityLabel="Search settings"
@@ -95,6 +96,14 @@ export function SettingsSearchResults({
 const styles = StyleSheet.create({
   searchField: {
     position: 'relative',
+  },
+  // Local override: AppInputField's paddingVertical+minHeight sinks placeholder text.
+  searchInput: {
+    paddingVertical: 0,
+    minHeight: 0,
+    height: Size.inputMd - 2,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   inputWithClear: {
     paddingRight: 40,
