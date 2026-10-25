@@ -1,6 +1,8 @@
 import { useAppReady } from '@/src/contexts/app-shell/appReady';
+import { accountQueryRepository } from '@/src/data/repositories/account/AccountQueryRepository';
 import { useAppBootstrap } from '@/src/features/app/hooks/useAppBootstrap';
 import { currencyInitService } from '@/src/services/currency-init-service';
+import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { insightService } from '@/src/services/insight/InsightService';
 import { runStartupCheck } from '@/src/services/integrity';
 import { processDuePlannedPayments } from '@/src/services/planned-payment/plannedPaymentOrchestration';
@@ -32,8 +34,16 @@ jest.mock('@/src/services/currency-init-service', () => ({
 jest.mock('@/src/services/currency-read-service', () => ({
   currencyReadService: { getAllPrecisions: jest.fn().mockResolvedValue(undefined) },
 }));
+jest.mock('@/src/data/repositories/account/AccountQueryRepository', () => ({
+  accountQueryRepository: {
+    findAll: jest.fn().mockResolvedValue([{ currencyCode: 'USD' }, { currencyCode: 'EUR' }]),
+  },
+}));
 jest.mock('@/src/services/exchange-rate-service', () => ({
-  exchangeRateService: { preWarmCache: jest.fn().mockResolvedValue(undefined) },
+  exchangeRateService: {
+    preWarmCache: jest.fn().mockResolvedValue(undefined),
+    refreshSpotBasesInBackground: jest.fn().mockResolvedValue(undefined),
+  },
 }));
 jest.mock('@/src/services/insight/InsightService', () => ({
   insightService: { preWarm: jest.fn().mockResolvedValue(undefined) },
@@ -136,6 +146,8 @@ describe('useAppBootstrap generation safety', () => {
 
     expect(currencyInitService.initialize).toHaveBeenCalledTimes(1);
     expect(purgeLocalAiCachesOnce).toHaveBeenCalled();
+    expect(accountQueryRepository.findAll).toHaveBeenCalledWith('workplace-b' as WorkplaceId);
+    expect(exchangeRateService.preWarmCache).toHaveBeenCalledWith('EUR', ['USD', 'EUR']);
     expect(reactiveDataService.preWarm).not.toHaveBeenCalledWith(
       'USD',
       'workplace-a' as WorkplaceId,

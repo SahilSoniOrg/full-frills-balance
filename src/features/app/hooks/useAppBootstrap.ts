@@ -11,6 +11,7 @@ import { runAfterInteractions } from '@/src/utils/scheduler';
 import { useEffect } from 'react';
 
 // Cache Warmup Imports
+import { accountQueryRepository } from '@/src/data/repositories/account/AccountQueryRepository';
 import { exchangeRateService } from '@/src/services/exchange-rate-service';
 import { insightService } from '@/src/services/insight/InsightService';
 import { reactiveDataService } from '@/src/services/ReactiveDataService';
@@ -50,6 +51,26 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
     // and precision warmup share the delayed batch below — a 50ms timer is
     // Detox-tracked and contended with first-paint SQLite.
     setDataHydrated(true);
+
+    // Kick FX sheets as soon as the workplace is known so first-paint STS/wealth
+    // can recover via spotRateUpdates instead of waiting for the 3s delayed batch.
+    const earlyFx = new AbortController();
+    void (async () => {
+      try {
+        const accountCurrencyBases = await accountQueryRepository
+          .findAll(workplaceId)
+          .then(accounts => accounts.map(account => account.currencyCode));
+        if (earlyFx.signal.aborted) return;
+        await exchangeRateService.refreshSpotBasesInBackground([
+          defaultCurrencyCode,
+          ...accountCurrencyBases,
+        ]);
+      } catch (error) {
+        logger.warn('[Bootstrap] Early FX refresh failed', { error });
+      }
+    })();
+
+    return () => earlyFx.abort();
   }, [workplaceId, defaultCurrencyCode, setDataHydrated]);
 
   // Background stabilization tasks - run once the app is ready and idle
@@ -97,6 +118,25 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
             notificationWeekday: notifWeekday,
           } = preferences.getSnapshot();
           const notifCadence = notificationCadence || 'none';
+          const accountCurrencyBases = await accountQueryRepository
+            .findAll(workplaceId)
+            .then(accounts => accounts.map(account => account.currencyCode))
+            .catch(error => {
+              logger.warn('[Bootstrap] Could not load account currencies for FX pre-warm', {
+                error,
+              });
+              return [] as string[];
+            });
+
+          // FX first: hydrate DB then await network sheets for workplace + account
+          // bases. Parallel with reactive preWarm used to convert against an empty
+          // sheet and spam USD/THB/…→INR misses.
+          if (!controller.signal.aborted) {
+            await exchangeRateService.preWarmCache(defaultCurrencyCode, accountCurrencyBases);
+          }
+
+          if (controller.signal.aborted) return;
+
           await Promise.allSettled([
             purgeLocalAiCachesOnce(),
             currencyInitService.initialize(),
@@ -108,7 +148,6 @@ export function useAppBootstrap(workplaceId: WorkplaceId, defaultCurrencyCode: s
             processDuePlannedPayments(workplaceId, controller.signal),
             smsPrivacyService.cleanupLegacyContent(),
             sharingService.init(),
-            exchangeRateService.preWarmCache(defaultCurrencyCode),
             notificationService.scheduleReminder(
               notifCadence,
               notifHour,

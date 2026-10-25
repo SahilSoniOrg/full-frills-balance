@@ -9,14 +9,11 @@ import {
   type HistoricalRate,
 } from '@/src/services/currency/historicalExchangeRateProvider';
 import { isUsableExchangeRate } from '@/src/domain/accounting/usableExchangeRate';
+import { isE2eOfflineMode } from '@/src/testing/e2eRuntimeGate';
 import { logger } from '@/src/utils/logger';
 import { Subject, type Observable } from 'rxjs';
 
 const CACHE_DURATION_MS = AppConfig.time.msPerDay; // 24 hours
-
-function isE2eOfflineMode(): boolean {
-  return process.env.EXPO_PUBLIC_E2E === '1';
-}
 
 type InFlightRateRequest = {
   promise: Promise<Record<string, number>>;
@@ -34,6 +31,8 @@ export class ExchangeRateService {
   /** Bases that already got one automatic refresh after a missing quote. */
   private readonly quoteRefreshAttempted = new Set<string>();
   private readonly missingQuoteRefreshes = new Map<string, Promise<Record<string, number>>>();
+  /** One warn per pair per session — aggregators call getRate per account. */
+  private readonly missingRateWarned = new Set<string>();
   private readonly spotRateUpdates = new Subject<string>();
 
   observeSpotRateUpdates(): Observable<string> {
@@ -69,7 +68,11 @@ export class ExchangeRateService {
     try {
       const rate = await this.lookupRate(fromCurrency, toCurrency, forceRefresh);
       if (rate == null) {
-        logger.warn(`No rate found for ${fromCurrency} to ${toCurrency}. Defaulting to 1.0`);
+        const pair = `${fromCurrency}->${toCurrency}`;
+        if (!this.missingRateWarned.has(pair)) {
+          this.missingRateWarned.add(pair);
+          logger.warn(`No rate found for ${fromCurrency} to ${toCurrency}. Defaulting to 1.0`);
+        }
         return 1.0;
       }
       return rate;
@@ -467,6 +470,8 @@ export class ExchangeRateService {
       }
 
       await this.fetchRatesForBase(currencyCode, true);
+      // A successful sheet fetch re-opens missing-quote retries for this base.
+      this.quoteRefreshAttempted.delete(currencyCode);
       logger.info(`[ExchangeRateService] Synchronized rates for ${currencyCode}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -478,10 +483,37 @@ export class ExchangeRateService {
   }
 
   /**
+   * Background network refresh for one or more spot bases (workplace + account currencies).
+   * Dedupes, skips E2E offline, and does not throw — callers fire-and-forget after hydrate.
+   */
+  async refreshSpotBasesInBackground(bases: Iterable<string>): Promise<void> {
+    if (isE2eOfflineMode()) {
+      logger.info('[ExchangeRateService] Skipping network FX refresh (E2E launch active)');
+      return;
+    }
+
+    const unique = [
+      ...new Set(
+        [...bases]
+          .map(code => (typeof code === 'string' ? code.trim().toUpperCase() : ''))
+          .filter(Boolean),
+      ),
+    ];
+    if (unique.length === 0) return;
+
+    logger.info(
+      `[ExchangeRateService] Background spot refresh for ${unique.length} base(s): ${unique.join(', ')}`,
+    );
+    await Promise.allSettled(unique.map(base => this.syncTodayRates(base)));
+  }
+
+  /**
    * Pre-warms the memory cache by fetching all recent rates from the database.
    * Prevents sequential "per-pair" async database lookups during initial load.
+   * Then kicks a background network refresh for the workplace base, any extra
+   * bases (e.g. account currencies), and bases already present in the local DB.
    */
-  async preWarmCache(baseCurrency?: string): Promise<void> {
+  async preWarmCache(baseCurrency?: string, extraBases: Iterable<string> = []): Promise<void> {
     try {
       const start = Date.now();
       // Optimization: Load ALL most recent rates from DB to populate memory cache instantly.
@@ -507,9 +539,14 @@ export class ExchangeRateService {
       );
 
       // Network refresh is Detox-tracked and can dwarf first-load. E2E builds
-      // stay on the imported/DB rates; production still repairs staleness.
-      if (baseCurrency && !isE2eOfflineMode()) {
-        void this.syncTodayRates(baseCurrency);
+      // stay on the imported/DB rates; production awaits a spot refresh for the
+      // workplace + account bases so aggregators do not convert against an empty sheet.
+      if (!isE2eOfflineMode()) {
+        await this.refreshSpotBasesInBackground([
+          ...(baseCurrency ? [baseCurrency] : []),
+          ...extraBases,
+          ...this.memoryCache.keys(),
+        ]);
       }
     } catch (error) {
       logger.error('[ExchangeRateService] Failed to pre-warm cache:', error);

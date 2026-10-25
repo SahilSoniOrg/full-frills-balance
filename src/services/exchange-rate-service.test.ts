@@ -1,5 +1,6 @@
 import { exchangeRateRepository } from '@/src/data/repositories/ExchangeRateRepository';
 import { ExchangeRateService } from '@/src/services/exchange-rate-service';
+import { isE2eOfflineMode } from '@/src/testing/e2eRuntimeGate';
 
 // Mock ExchangeRateRepository
 jest.mock('@/src/data/repositories/ExchangeRateRepository', () => ({
@@ -7,9 +8,14 @@ jest.mock('@/src/data/repositories/ExchangeRateRepository', () => ({
     getCachedRate: jest.fn().mockResolvedValue(null),
     getCachedRateForDate: jest.fn().mockResolvedValue(null),
     getAllRatesForBase: jest.fn().mockResolvedValue([]),
+    getAllRecentRates: jest.fn().mockResolvedValue([]),
     cacheRatesBatch: jest.fn().mockResolvedValue([]),
     cacheHistoricalRate: jest.fn().mockResolvedValue(undefined),
   },
+}));
+
+jest.mock('@/src/testing/e2eRuntimeGate', () => ({
+  isE2eOfflineMode: jest.fn(() => false),
 }));
 
 describe('ExchangeRateService', () => {
@@ -21,10 +27,12 @@ describe('ExchangeRateService', () => {
     jest.clearAllMocks();
     mockFetch.mockReset();
     service = new ExchangeRateService();
+    (isE2eOfflineMode as jest.Mock).mockReturnValue(false);
     // Reset defaults for each test
     (exchangeRateRepository.getCachedRate as jest.Mock).mockReset().mockResolvedValue(null);
     (exchangeRateRepository.getCachedRateForDate as jest.Mock).mockReset().mockResolvedValue(null);
     (exchangeRateRepository.getAllRatesForBase as jest.Mock).mockReset().mockResolvedValue([]);
+    (exchangeRateRepository.getAllRecentRates as jest.Mock).mockReset().mockResolvedValue([]);
     (exchangeRateRepository.cacheHistoricalRate as jest.Mock)
       .mockReset()
       .mockResolvedValue(undefined);
@@ -175,14 +183,12 @@ describe('ExchangeRateService', () => {
     });
 
     it('leaves a missing quote unavailable during E2E startup until explicitly refreshed', async () => {
-      const originalE2e = process.env.EXPO_PUBLIC_E2E;
-      process.env.EXPO_PUBLIC_E2E = '1';
+      (isE2eOfflineMode as jest.Mock).mockReturnValue(true);
       try {
         await expect(service.getRequiredRate('EUR', 'USD')).resolves.toBeNull();
         expect(mockFetch).not.toHaveBeenCalled();
       } finally {
-        if (originalE2e === undefined) delete process.env.EXPO_PUBLIC_E2E;
-        else process.env.EXPO_PUBLIC_E2E = originalE2e;
+        (isE2eOfflineMode as jest.Mock).mockReturnValue(false);
       }
     });
 
@@ -629,6 +635,41 @@ describe('ExchangeRateService', () => {
       const rates = await service.fetchRatesForBase('CHF');
       expect(rates['EUR']).toBe(0.88);
       expect(rates['GBP']).toBe(0.75);
+    });
+  });
+
+  describe('background spot refresh', () => {
+    beforeEach(() => {
+      (exchangeRateRepository.getAllRecentRates as jest.Mock).mockResolvedValue([]);
+      (exchangeRateRepository.getAllRatesForBase as jest.Mock).mockResolvedValue([]);
+    });
+
+    it('preWarmCache awaits network refresh for workplace and account bases', async () => {
+      mockFetch.mockImplementation(async (url: string) => ({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({
+          rates: url.includes('/USD') ? { INR: 83 } : { USD: 0.012 },
+        }),
+      }));
+
+      await service.preWarmCache('INR', ['USD', 'usd', 'INR']);
+
+      const fetchedBases = mockFetch.mock.calls.map(([url]) => String(url).split('/').pop());
+      expect(new Set(fetchedBases)).toEqual(new Set(['INR', 'USD']));
+      await expect(service.getRate('USD', 'INR')).resolves.toBe(83);
+    });
+
+    it('refreshSpotBasesInBackground skips empty and duplicate bases', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ rates: { INR: 83 } }),
+      });
+
+      await service.refreshSpotBasesInBackground(['USD', ' usd ', '', 'USD']);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/USD'));
     });
   });
 });
