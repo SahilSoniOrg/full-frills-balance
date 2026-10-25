@@ -1,10 +1,10 @@
-import { Icon, AppCard, AppIcon, AppInput, AppText } from '@/src/components/core';
+import { Icon, AppCard, AppIcon, AppInput, AppText, AppToggle } from '@/src/components/core';
 import { AccountSelectionRow } from './AccountSelectionRow';
 import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
 import { SelectionTileList } from '@/src/components/shared/SelectionTileList';
 import { useTheme } from '@/src/hooks/use-theme';
 import { SmsRuleFormViewModel } from '../hooks/useSmsRuleFormViewModel';
-import { StyleSheet, Switch, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { withOpacity } from '@/src/utils/color-math';
 import { Shape, Spacing } from '@/src/constants';
 
@@ -132,7 +132,7 @@ export function ActionSettingsSection({ vm }: { vm: SmsRuleFormViewModel }) {
               Rule Active
             </AppText>
           </View>
-          <Switch value={isActive} onValueChange={setIsActive} />
+          <AppToggle value={isActive} onValueChange={setIsActive} />
         </View>
       </AppCard>
     </FormSectionGroup>

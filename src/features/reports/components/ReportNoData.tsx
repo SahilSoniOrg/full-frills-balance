@@ -1,13 +1,12 @@
-import { AppCard, AppText } from '@/src/components/core';
+import { AppCard } from '@/src/components/core';
+import { EmptyStateView } from '@/src/components/shared/EmptyStateView';
 import { AppConfig, Spacing } from '@/src/constants';
 import { StyleSheet } from 'react-native';
 
 export function ReportNoData() {
   return (
     <AppCard paddingSize="lg" style={styles.card}>
-      <AppText variant="body" color="secondary" style={styles.text}>
-        {AppConfig.strings.reports.noData}
-      </AppText>
+      <EmptyStateView title={AppConfig.strings.reports.noData} style={styles.empty} />
     </AppCard>
   );
 }
@@ -17,7 +16,8 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
     overflow: 'visible',
   },
-  text: {
-    textAlign: 'center',
+  empty: {
+    flex: 0,
+    padding: 0,
   },
 });

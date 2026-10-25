@@ -1,5 +1,6 @@
-import { AppIcon, Icon, ListGroup, ListRow } from '@/src/components/core';
+import { AppIcon, ListGroup, ListRow } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
+import { SelectionCheckmark } from '@/src/components/shared/SelectionIndicator';
 import { accountFormStrings as copy } from '@/src/constants/copy/domains/accountFormStrings';
 import { Opacity } from '@/src/constants/design-tokens';
 import { Box } from '@/src/design-system';
@@ -67,13 +68,7 @@ export function AccountTypeSheet({
                   <AppIcon name={getAccountTypeIcon(type)} size={22} color={color} />
                 </Box>
               }
-              trailing={
-                <AppIcon
-                  name={selected ? Icon.Check : Icon.ChevronRight}
-                  size={selected ? 20 : 18}
-                  color={selected ? 'primary' : theme.textSecondary}
-                />
-              }
+              trailing={selected ? <SelectionCheckmark selected /> : undefined}
               onPress={() => {
                 onSelect(type);
                 onClose();

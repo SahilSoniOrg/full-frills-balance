@@ -1,11 +1,9 @@
-import { MoneyText } from '@/src/components/shared/MoneyText';
-import { AppCard, AppText, AppSegmentedControl } from '@/src/components/core';
+import { AppSegmentedControl, AppText } from '@/src/components/core';
 import { Spacing } from '@/src/constants';
-import { Separator } from '@/src/design-system';
 import { useTheme } from '@/src/hooks/use-theme';
 import { StyleSheet, View } from 'react-native';
 import { IncompleteFxWarning } from './IncompleteFxWarning';
-import { MetricBreakdownRow } from './MetricBreakdownRow';
+import { MetricHeroCard } from './MetricHeroCard';
 
 interface CashFlowCardProps {
   totalIncome: number;
@@ -29,102 +27,64 @@ export const CashFlowCard = ({
   onWarningPress,
 }: CashFlowCardProps) => {
   const { theme } = useTheme();
-
   const netCashFlow = totalIncome - totalExpense;
 
   return (
-    <AppCard
-      elevation="md"
-      paddingSize="lg"
-      radius="r1"
-      style={[styles.container, { backgroundColor: theme.surface }]}
-    >
-      <View style={styles.header}>
-        <AppText variant="subheading" color="secondary">
-          Net Inflow
-        </AppText>
-      </View>
-
-      <MoneyText
-        amount={netCashFlow}
-        currencyCode={currencyCode}
-        formatStyle="compact"
-        loading={isLoading}
-        variant="title"
-        style={[styles.netAmount, { color: netCashFlow >= 0 ? theme.income : theme.expense }]}
-      />
-
-      <View style={styles.periodToggleContainer}>
-        <AppSegmentedControl<'overall' | 'month' | '30days'>
-          size="sm"
-          flex
-          options={[
-            { id: 'overall', label: 'All Time' },
-            { id: 'month', label: 'This Month' },
-            { id: '30days', label: '30 Days' },
-          ]}
-          value={inflowPeriod}
-          onChange={onChangePeriod}
-        />
-      </View>
-
-      <View style={styles.breakdownContainer}>
-        <MetricBreakdownRow
-          dotColor={theme.income}
-          label="Total Income"
-          amount={totalIncome}
-          currencyCode={currencyCode}
-          isLoading={isLoading}
-          moneyColor="income"
-        />
-
-        <Separator vertical background="divider" style={styles.divider} />
-
-        <MetricBreakdownRow
-          dotColor={theme.expense}
-          label="Total Expenses"
-          amount={totalExpense}
-          currencyCode={currencyCode}
-          isLoading={isLoading}
-          moneyColor="expense"
-        />
-      </View>
-      {warning && onWarningPress ? (
-        <View style={styles.warning}>
-          <IncompleteFxWarning message={warning} onPress={onWarningPress} />
+    <MetricHeroCard
+      title="Net Inflow"
+      amount={netCashFlow}
+      currencyCode={currencyCode}
+      isLoading={isLoading}
+      amountColor={netCashFlow >= 0 ? theme.income : theme.expense}
+      amountStyle={styles.netAmount}
+      middle={
+        <View style={styles.periodToggleContainer}>
+          <AppSegmentedControl<'overall' | 'month' | '30days'>
+            size="sm"
+            flex
+            options={[
+              { id: 'overall', label: 'All Time' },
+              { id: 'month', label: 'This Month' },
+              { id: '30days', label: '30 Days' },
+            ]}
+            value={inflowPeriod}
+            onChange={onChangePeriod}
+          />
         </View>
-      ) : warning ? (
-        <AppText variant="caption" color="warning" style={styles.warning}>
-          {warning}
-        </AppText>
-      ) : null}
-    </AppCard>
+      }
+      left={{
+        dotColor: theme.income,
+        label: 'Total Income',
+        amount: totalIncome,
+        moneyColor: 'income',
+      }}
+      right={{
+        dotColor: theme.expense,
+        label: 'Total Expenses',
+        amount: totalExpense,
+        moneyColor: 'expense',
+      }}
+      footer={
+        warning && onWarningPress ? (
+          <View style={styles.warning}>
+            <IncompleteFxWarning message={warning} onPress={onWarningPress} />
+          </View>
+        ) : warning ? (
+          <AppText variant="caption" color="warning" style={styles.warning}>
+            {warning}
+          </AppText>
+        ) : null
+      }
+    />
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: Spacing.lg,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.xs,
-  },
   netAmount: {
     marginBottom: Spacing.sm,
   },
   periodToggleContainer: {
     marginBottom: Spacing.lg,
-  },
-  breakdownContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  divider: {
-    marginHorizontal: Spacing.md,
   },
   warning: {
     marginTop: Spacing.md,

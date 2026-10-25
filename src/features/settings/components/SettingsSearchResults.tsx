@@ -1,13 +1,7 @@
-import {
-  ListGroup,
-  Icon,
-  AppIcon,
-  AppInput,
-  AppText,
-  PressScaleTouchable,
-} from '@/src/components/core';
-import { Size } from '@/src/constants';
-import { Box, Stack } from '@/src/design-system';
+import { ListGroup, Icon, AppIcon, AppInput, PressScaleTouchable } from '@/src/components/core';
+import { EmptyStateView } from '@/src/components/shared/EmptyStateView';
+import { Size, Spacing } from '@/src/constants';
+import { Stack } from '@/src/design-system';
 import type { SettingsSearchItem } from '@/src/features/settings/components/settingsSections';
 import { useTheme } from '@/src/hooks/use-theme';
 import { filterSettingsSearchItems } from '@/src/features/settings/components/settingsSections';
@@ -65,15 +59,12 @@ export function SettingsSearchResults({
       </View>
 
       {!hasQuery ? null : results.length === 0 ? (
-        <Box alignItems="center" paddingVertical="xl" paddingHorizontal="lg">
-          <AppIcon name={Icon.Search} size={28} color={theme.textSecondary} />
-          <AppText variant="body" weight="semibold" style={{ marginTop: 10 }}>
-            No settings found
-          </AppText>
-          <AppText variant="caption" color="secondary" style={{ marginTop: 4 }}>
-            Try a broader term, like “privacy” or “appearance”.
-          </AppText>
-        </Box>
+        <EmptyStateView
+          icon={Icon.Search}
+          title="No settings found"
+          subtitle="Try a broader term, like “privacy” or “appearance”."
+          style={styles.empty}
+        />
       ) : (
         <ListGroup
           variant="plain"
@@ -94,6 +85,10 @@ export function SettingsSearchResults({
 }
 
 const styles = StyleSheet.create({
+  empty: {
+    flex: 0,
+    paddingVertical: Spacing.xl,
+  },
   searchField: {
     position: 'relative',
   },

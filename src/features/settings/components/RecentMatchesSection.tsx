@@ -1,4 +1,4 @@
-import { Icon, AppCard, AppIcon, AppText, Badge } from '@/src/components/core';
+import { Icon, AppCard, AppIcon, AppText, Badge, PersonAvatar } from '@/src/components/core';
 import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
 import { useHourCyclePrefs } from '@/src/hooks/useHourCyclePrefs';
 import { useTheme } from '@/src/hooks/use-theme';
@@ -125,11 +125,7 @@ export function RecentMatchesSection({ vm }: { vm: SmsRuleFormViewModel }) {
             {/* Chat Bubble Header */}
             <View style={styles.mockSmsHeader}>
               <View style={styles.mockSmsSenderInfo}>
-                <View style={[styles.avatarCircle, { backgroundColor: theme.surfaceSecondary }]}>
-                  <AppText variant="caption" weight="bold">
-                    {(match.senderAddress || 'U')[0].toUpperCase()}
-                  </AppText>
-                </View>
+                <PersonAvatar name={match.senderAddress || 'Unknown'} size={32} maxChars={1} />
                 <View>
                   <AppText variant="caption" weight="bold">
                     {match.senderAddress || 'Unknown Origin'}
@@ -271,13 +267,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-  },
-  avatarCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: Spacing.full,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   smsTimestamp: {
     fontSize: Typography.sizes.xs - 2,

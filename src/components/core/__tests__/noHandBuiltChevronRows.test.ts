@@ -3,7 +3,8 @@ import path from 'path';
 
 /**
  * Tappable rows with a trailing chevron must be ListRow (`chevron` / ListRow.Chevron).
- * Files below are not list rows: steppers, collapsible headers, chips, rich cards.
+ * Allowlist = intentional non-list affordances (steppers, rich cards, progress rows,
+ * tree rows, pills). Do not add nav/settings-style rows here — use ListRow instead.
  */
 const ALLOWED = new Set([
   'components/core/ListRow.tsx',

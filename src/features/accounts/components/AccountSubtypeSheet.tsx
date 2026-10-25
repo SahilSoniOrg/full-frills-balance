@@ -1,5 +1,6 @@
-import { AppIcon, Icon, ListGroup, ListRow } from '@/src/components/core';
+import { AppIcon, ListGroup, ListRow } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
+import { SelectionCheckmark } from '@/src/components/shared/SelectionIndicator';
 import { accountFormStrings as copy } from '@/src/constants/copy/domains/accountFormStrings';
 import { Opacity } from '@/src/constants/design-tokens';
 import { Box } from '@/src/design-system';
@@ -7,7 +8,6 @@ import {
   getAccountKind,
   getAccountSubtypeColor,
 } from '@/src/features/accounts/helpers/accountKinds';
-import { useTheme } from '@/src/hooks/use-theme';
 import { ACCOUNT_SUBTYPES_BY_TYPE } from '@/src/types/accountSubtype';
 import type { AccountSubtype, AccountType } from '@/src/types/enums';
 import { withOpacity } from '@/src/utils/color-math';
@@ -25,7 +25,6 @@ export function AccountSubtypeSheet({
   onSelect: (subtype: AccountSubtype) => void;
   onClose: () => void;
 }) {
-  const { theme } = useTheme();
   return (
     <ModalSurface
       visible={visible}
@@ -58,13 +57,7 @@ export function AccountSubtypeSheet({
                   <AppIcon name={kind.icon} size={22} color={color} />
                 </Box>
               }
-              trailing={
-                <AppIcon
-                  name={selected ? Icon.Check : Icon.ChevronRight}
-                  size={selected ? 20 : 18}
-                  color={selected ? 'primary' : theme.textSecondary}
-                />
-              }
+              trailing={selected ? <SelectionCheckmark selected /> : undefined}
               onPress={() => {
                 onSelect(subtype);
                 onClose();
