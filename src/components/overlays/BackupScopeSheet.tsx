@@ -1,7 +1,7 @@
 import { Icon, AppButton, AppIcon, AppText, PressScaleTouchable } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
+import { AppConfig, Size, Spacing } from '@/src/constants';
 import { Box, Stack } from '@/src/design-system';
-import { Size, Spacing } from '@/src/constants';
 import type { BackupScope } from '@/src/services/export';
 import type { PlainWorkplace } from '@/src/types/plainDtos';
 
@@ -15,6 +15,7 @@ export function BackupScopeSheet({
   onSelectedWorkplaceIdsChange,
   onClose,
   onConfirm,
+  confirmLabel = 'Export backup',
 }: {
   visible: boolean;
   workplaces: PlainWorkplace[];
@@ -25,22 +26,32 @@ export function BackupScopeSheet({
   onSelectedWorkplaceIdsChange: (ids: string[]) => void;
   onClose: () => void;
   onConfirm: () => void;
+  confirmLabel?: string;
 }) {
+  const copy = AppConfig.strings.update;
   const options: { scope: BackupScope; title: string; description: string }[] = [
     {
       scope: 'active',
-      title: 'This workplace',
+      title: copy.exportScopeActive,
       description:
-        workplaces.find(item => item.id === activeWorkplaceId)?.name ?? 'Active workplace',
+        workplaces.find(item => item.id === activeWorkplaceId)?.name ?? copy.exportScopeActive,
     },
-    { scope: 'all', title: 'All workplaces', description: `${workplaces.length} workplaces` },
-    { scope: 'selected', title: 'Choose workplaces', description: 'Select one or more workplaces' },
+    {
+      scope: 'all',
+      title: copy.exportScopeAll,
+      description: `${workplaces.length} workplaces`,
+    },
+    {
+      scope: 'selected',
+      title: copy.exportScopeSelected,
+      description: copy.exportScopeSelectedCount(selectedWorkplaceIds.length),
+    },
   ];
 
   return (
     <ModalSurface
       visible={visible}
-      title="Backup scope"
+      title={copy.exportScopeTitle}
       onClose={onClose}
       position="bottomSheet"
       fixedHeight={false}
@@ -113,7 +124,7 @@ export function BackupScopeSheet({
           disabled={scope === 'selected' && selectedWorkplaceIds.length === 0}
           style={{ marginTop: Spacing.md }}
         >
-          Export backup
+          {confirmLabel}
         </AppButton>
       </Stack>
     </ModalSurface>

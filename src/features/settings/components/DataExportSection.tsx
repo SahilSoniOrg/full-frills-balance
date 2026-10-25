@@ -1,22 +1,12 @@
-import {
-  ListGroup,
-  ListRow,
-  Icon,
-  AppButton,
-  AppIcon,
-  AppInput,
-  AppText,
-} from '@/src/components/core';
-import { AppConfig, Opacity, Size, Spacing } from '@/src/constants';
-import { withOpacity } from '@/src/utils/color-math';
+import { ListGroup, ListRow, Icon, AppInput } from '@/src/components/core';
+import { ModalSurface } from '@/src/components/overlays/ModalSurface';
+import { ActionButtonPair } from '@/src/components/shared/ActionButtonPair';
+import { AppConfig } from '@/src/constants';
+import { formPrimitivesStrings as formCopy } from '@/src/constants/copy/domains/formPrimitivesStrings';
 import { Stack } from '@/src/design-system';
+import { BackupScopeSheet } from '@/src/components/overlays/BackupScopeSheet';
 import { SettingsMaintenanceOverlay } from '@/src/features/settings/components/SettingsMaintenanceOverlay';
 import { useDataExportViewModel } from '@/src/features/settings/hooks/useDataExportViewModel';
-import { useTheme } from '@/src/hooks/use-theme';
-import { SelectionCheckmark, SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
-import { useWindowSafeAreaLayout } from '@/src/design-system/SafeArea';
-import { Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
-import type { BackupScope } from '@/src/services/export';
 
 type DataExportSectionProps = {
   onImport: () => void;
@@ -24,8 +14,6 @@ type DataExportSectionProps = {
 
 export function DataExportSection({ onImport }: DataExportSectionProps) {
   const vm = useDataExportViewModel();
-  const { theme } = useTheme();
-  const { bottomSpacing } = useWindowSafeAreaLayout();
   const scopeLabel =
     vm.backupScope === 'active'
       ? AppConfig.strings.update.exportScopeActive
@@ -63,229 +51,64 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
         hint={AppConfig.strings.settings.data.exportingHint}
       />
 
-      <Modal
+      <ModalSurface
         visible={vm.isNamingExport && !vm.isScopePickerVisible}
-        transparent
-        animationType="slide"
-        statusBarTranslucent
+        title={AppConfig.strings.settings.data.exportFilenameLabel}
+        onClose={() => vm.setIsNamingExport(false)}
+        position="center"
+        fixedHeight={false}
+        scrollable={false}
+        keyboardAvoiding
+        accessibilityCloseLabel="Close export filename"
+        footer={
+          <ActionButtonPair
+            disabled={vm.isExporting}
+            primary={{
+              label: AppConfig.strings.settings.data.exportBtn,
+              onPress: vm.onConfirmExport,
+              loading: vm.isExporting,
+            }}
+            secondary={{
+              label: AppConfig.strings.common.cancel,
+              onPress: () => vm.setIsNamingExport(false),
+            }}
+          />
+        }
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: theme.surface }]}>
-            <View style={styles.modalIconRow}>
-              <AppIcon name={Icon.Document} size={40} color={theme.primary} />
-            </View>
+        <AppInput
+          label={AppConfig.strings.settings.data.exportFilenameLabel}
+          placeholder={AppConfig.strings.settings.data.exportFilenamePlaceholder}
+          value={vm.exportFilename}
+          onChangeText={vm.setExportFilename}
+          width="100%"
+          marginBottom="md"
+          leftIcon={Icon.Document}
+          autoFocus
+        />
+        <ListRow
+          testID="data-export-scope"
+          title={AppConfig.strings.update.exportScopeTitle}
+          subtitle={scopeLabel}
+          onPress={() => vm.setIsScopePickerVisible(true)}
+          chevron
+        />
+      </ModalSurface>
 
-            <AppText variant="subheading" style={styles.modalTitle}>
-              {AppConfig.strings.settings.data.exportFilenameLabel}
-            </AppText>
-
-            <AppInput
-              label={AppConfig.strings.settings.data.exportFilenameLabel}
-              placeholder={AppConfig.strings.settings.data.exportFilenamePlaceholder}
-              value={vm.exportFilename}
-              onChangeText={vm.setExportFilename}
-              width="100%"
-              marginBottom="xl"
-              leftIcon={Icon.Document}
-              autoFocus
-            />
-
-            <TouchableOpacity
-              style={[styles.scopeRow, { borderColor: theme.border }]}
-              onPress={() => vm.setIsScopePickerVisible(true)}
-              testID="data-export-scope"
-            >
-              <View style={styles.scopeCopy}>
-                <AppText variant="caption" color="secondary">
-                  {AppConfig.strings.update.exportScopeTitle}
-                </AppText>
-                <AppText weight="semibold">{scopeLabel}</AppText>
-              </View>
-              <AppIcon name={Icon.ChevronRight} size={Size.iconSm} color={theme.textSecondary} />
-            </TouchableOpacity>
-
-            <View style={styles.modalActionRow}>
-              <AppButton
-                variant="outline"
-                onPress={() => vm.setIsNamingExport(false)}
-                disabled={vm.isExporting}
-                style={{ flex: 1, marginRight: Spacing.sm }}
-              >
-                {AppConfig.strings.common.cancel}
-              </AppButton>
-              <AppButton
-                variant="primary"
-                onPress={vm.onConfirmExport}
-                loading={vm.isExporting}
-                disabled={vm.isExporting}
-                style={{ flex: 2 }}
-              >
-                {AppConfig.strings.settings.data.exportBtn}
-              </AppButton>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
+      <BackupScopeSheet
         visible={vm.isScopePickerVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => vm.setIsScopePickerVisible(false)}
-      >
-        <View style={[styles.scopeOverlay, { backgroundColor: theme.overlay }]}>
-          <View
-            style={[
-              styles.scopeCard,
-              { backgroundColor: theme.surface, paddingBottom: bottomSpacing.exportSheet },
-            ]}
-          >
-            <View style={styles.scopeHeader}>
-              <AppText variant="subheading" weight="bold">
-                {AppConfig.strings.update.exportScopeTitle}
-              </AppText>
-              <TouchableOpacity onPress={() => vm.setIsScopePickerVisible(false)}>
-                <AppIcon name={Icon.Close} size={Size.iconMd} color={theme.text} />
-              </TouchableOpacity>
-            </View>
-            {(['active', 'all', 'selected'] as BackupScope[]).map(scope => {
-              const selected = vm.backupScope === scope;
-              const label =
-                scope === 'active'
-                  ? AppConfig.strings.update.exportScopeActive
-                  : scope === 'all'
-                    ? AppConfig.strings.update.exportScopeAll
-                    : AppConfig.strings.update.exportScopeSelected;
-              const description =
-                scope === 'active'
-                  ? vm.workplaces.find(item => item.id === vm.activeWorkplaceId)?.name
-                  : scope === 'all'
-                    ? `${vm.workplaces.length} workplaces`
-                    : AppConfig.strings.update.exportScopeSelectedCount(
-                        vm.selectedWorkplaceIds.length,
-                      );
-              return (
-                <TouchableOpacity
-                  key={scope}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                  style={[styles.scopeOption, { borderBottomColor: theme.border }]}
-                  onPress={() => {
-                    vm.setBackupScope(scope);
-                    if (scope !== 'selected') vm.setIsScopePickerVisible(false);
-                  }}
-                >
-                  <View style={styles.scopeCopy}>
-                    <AppText weight="semibold">{label}</AppText>
-                    <AppText variant="caption" color="secondary">
-                      {description}
-                    </AppText>
-                  </View>
-                  <SelectionCheckmark selected={selected} />
-                </TouchableOpacity>
-              );
-            })}
-            {vm.backupScope === 'selected' && (
-              <>
-                {vm.workplaces.map(workplace => {
-                  const selected = vm.selectedWorkplaceIds.includes(workplace.id);
-                  return (
-                    <TouchableOpacity
-                      key={workplace.id}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: selected }}
-                      style={[styles.scopeOption, { borderBottomColor: theme.border }]}
-                      onPress={() =>
-                        vm.setSelectedWorkplaceIds(
-                          selected
-                            ? vm.selectedWorkplaceIds.filter(id => id !== workplace.id)
-                            : [...vm.selectedWorkplaceIds, workplace.id],
-                        )
-                      }
-                    >
-                      <AppText style={{ flex: 1, minWidth: 0 }}>{workplace.name}</AppText>
-                      <SelectionIndicator selected={selected} />
-                    </TouchableOpacity>
-                  );
-                })}
-                <AppButton
-                  onPress={() => vm.setIsScopePickerVisible(false)}
-                  disabled={vm.selectedWorkplaceIds.length === 0}
-                  style={styles.scopeDone}
-                >
-                  Done
-                </AppButton>
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
+        workplaces={vm.workplaces}
+        activeWorkplaceId={vm.activeWorkplaceId}
+        scope={vm.backupScope}
+        selectedWorkplaceIds={vm.selectedWorkplaceIds}
+        onScopeChange={scope => {
+          vm.setBackupScope(scope);
+          if (scope !== 'selected') vm.setIsScopePickerVisible(false);
+        }}
+        onSelectedWorkplaceIdsChange={vm.setSelectedWorkplaceIds}
+        onClose={() => vm.setIsScopePickerVisible(false)}
+        onConfirm={() => vm.setIsScopePickerVisible(false)}
+        confirmLabel={formCopy.done}
+      />
     </Stack>
   );
 }
-
-const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: withOpacity('#000000', Opacity.heavy),
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.xl,
-  },
-  modalCard: {
-    width: '100%',
-    borderRadius: 16,
-    padding: Spacing.xl,
-    alignItems: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: Opacity.muted,
-    shadowRadius: 8,
-  },
-  modalIconRow: {
-    marginBottom: Spacing.md,
-  },
-  modalTitle: {
-    marginBottom: Spacing.lg,
-    textAlign: 'center',
-  },
-  modalActionRow: {
-    flexDirection: 'row',
-    width: '100%',
-    alignItems: 'center',
-    marginTop: Spacing.xl,
-  },
-  scopeRow: {
-    width: '100%',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  scopeCopy: { flex: 1, gap: Spacing.xs },
-  scopeOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  scopeCard: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: Spacing.xl,
-    paddingBottom: Spacing.xxxl,
-  },
-  scopeHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  scopeOption: {
-    minHeight: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-  },
-  scopeDone: { marginTop: Spacing.lg },
-});

@@ -69,7 +69,7 @@ jest.mock('@/src/services/preferences', () => ({
   },
 }));
 jest.mock('@/src/services/export', () => ({ exportUpdateBackup: jest.fn() }));
-jest.mock('@/src/features/app/BackupScopeSheet', () => ({ BackupScopeSheet: () => null }));
+jest.mock('@/src/components/overlays/BackupScopeSheet', () => ({ BackupScopeSheet: () => null }));
 jest.mock('@/src/components/overlays/ModalSurface', () => ({ ModalSurface: () => null }));
 jest.mock('@/src/design-system', () => {
   const { View } = require('react-native');

@@ -1,6 +1,6 @@
 import { Icon, AppButton, AppCard, AppIcon, AppText, IconTile } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { BackupScopeSheet } from '@/src/features/app/BackupScopeSheet';
+import { BackupScopeSheet } from '@/src/components/overlays/BackupScopeSheet';
 import { Box, Stack } from '@/src/design-system';
 import { AppConfig } from '@/src/constants/app-config';
 import { Size } from '@/src/constants/design-tokens';

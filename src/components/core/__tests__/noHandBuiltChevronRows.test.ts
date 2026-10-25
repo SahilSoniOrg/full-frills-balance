@@ -24,7 +24,6 @@ const ALLOWED = new Set([
   'features/journal/components/details/JournalEntries.tsx',
   'features/reports-v2/screen/components/ReportsV2Breakdown.tsx',
   'features/reports-v2/screen/components/ReportsV2QualityBanner.tsx',
-  'features/settings/components/DataExportSection.tsx',
   'features/setup/first-run/conversationUi.tsx',
 ]);
 
