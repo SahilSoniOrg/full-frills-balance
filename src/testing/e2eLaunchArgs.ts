@@ -9,7 +9,7 @@ import {
   E2E_UPDATE_FLOWS,
   E2eUpdateFlow,
 } from './e2eConstants';
-import { isE2eHarnessEnabled } from './e2eRuntimeGate';
+import { isE2eHarnessEnabled } from './e2eHarnessCapability';
 
 export type E2eLaunchConfig = {
   reset: boolean;
