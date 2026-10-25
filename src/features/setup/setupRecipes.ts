@@ -20,7 +20,8 @@ export type SetupRecipeEntry =
     };
 
 export type SetupAtStart = 'stay' | 'back' | 'dashboard' | 'first_run' | 'empty_device_workplace';
-export type SetupDiscardTo = 'first_run' | 'picker' | 'empty_device_workplace' | 'settings';
+export type SetupDiscardTo =
+  'first_run' | 'picker' | 'empty_device_workplace' | 'settings' | 'back';
 
 export interface RestoreSummaryActions {
   readonly primary: { readonly intent: 'continue' | 'open'; readonly label: string };
@@ -111,6 +112,7 @@ const settingsRestore: SetupRecipe = {
   workplaceIdentity: 'editable',
   entryPolicy: 'optional',
   atStart: 'back',
+  // Dismiss the restore stack back to Settings (do not leave restore under it).
   discardTo: 'settings',
   restoreSummary: {
     primary: { intent: 'open', label: 'Open workplace' },

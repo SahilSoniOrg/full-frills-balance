@@ -28,8 +28,8 @@ export function WorkplaceIdentityStep({
   return (
     <>
       <WorkplaceBasicInfoStep
-        title="Name your workspace"
-        subtitle="Choose a name and icon for this space—like personal spending or household bills."
+        title="Name your workplace"
+        subtitle="Choose a name and icon for this workplace, such as personal spending or household bills."
         name={name}
         onNameChange={onNameChange}
         onGenerateName={onGenerateName}

@@ -169,16 +169,18 @@ export function applySetupOutcome(
     return;
   }
   if (outcome.kind === 'restore_accepted') {
-    if (outcome.next === 'stay') AppNavigation.toSettings();
+    if (outcome.next === 'stay') AppNavigation.returnToSettings();
     else AppNavigation.toDashboard();
     return;
   }
   if (outcome.kind !== 'journey_discarded') return;
   if (recipe.discardTo === 'first_run') AppNavigation.toFirstRun(candidateName);
+  else if (recipe.discardTo === 'back') AppNavigation.back();
   else if (recipe.discardTo === 'picker') AppNavigation.toDashboard();
   else if (recipe.discardTo === 'empty_device_workplace') {
     onSwitchJourney('empty_device_workplace');
-  } else AppNavigation.toSettings();
+  } else if (recipe.discardTo === 'settings') AppNavigation.returnToSettings();
+  else AppNavigation.returnToSettings();
 }
 
 export function restoreLeaveNeedsConfirm(draft: SetupDraft): boolean {

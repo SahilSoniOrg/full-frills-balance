@@ -48,5 +48,13 @@ describe('Setup recipes', () => {
     expect(getSetupRecipe('picker_restore').restoreSummary?.secondary?.intent).toBe(
       'return_to_picker',
     );
+    expect(getSetupRecipe('settings_restore')).toMatchObject({
+      atStart: 'back',
+      discardTo: 'settings',
+      restoreSummary: {
+        primary: { intent: 'open', label: 'Open workplace' },
+        secondary: { intent: 'stay', label: 'Stay here' },
+      },
+    });
   });
 });

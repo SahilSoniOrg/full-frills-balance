@@ -163,7 +163,7 @@ export function SetupReviewStep({
               <AppText variant="caption" color="secondary">
                 {isImportedWorkplace
                   ? 'Confirm to enter the app. You can edit imported data later in Settings.'
-                  : 'Confirm to create your workspace and enter the app.'}
+                  : 'Confirm to create your workplace and enter the app.'}
               </AppText>
             </Stack>
           </Inline>

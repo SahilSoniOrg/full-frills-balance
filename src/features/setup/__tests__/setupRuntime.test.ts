@@ -16,6 +16,7 @@ jest.mock('@/src/utils/navigation', () => ({
   AppNavigation: {
     toDashboard: jest.fn(),
     toSettings: jest.fn(),
+    returnToSettings: jest.fn(),
     toFirstRun: jest.fn(),
     back: jest.fn(),
   },
@@ -75,8 +76,10 @@ describe('abandon restore', () => {
   beforeEach(() => {
     discard.mockReset().mockResolvedValue(undefined);
     clear.mockReset();
+    jest.mocked(AppNavigation.returnToSettings).mockClear();
     (AppNavigation.toDashboard as jest.Mock).mockReset();
     (AppNavigation.toFirstRun as jest.Mock).mockReset();
+    (AppNavigation.back as jest.Mock).mockReset();
   });
 
   it('confirms only after restore books were published', () => {
@@ -100,6 +103,23 @@ describe('abandon restore', () => {
   it('returns picker restore to the dashboard after abandon', async () => {
     await abandonRestoreJourney(restoreDraft(false), getSetupRecipe('picker_restore'), jest.fn());
     expect(AppNavigation.toDashboard).toHaveBeenCalledTimes(1);
+  });
+
+  it('dismisses Settings/drawer restore back to Settings after abandon', async () => {
+    await abandonRestoreJourney(restoreDraft(false), getSetupRecipe('settings_restore'), jest.fn());
+    expect(AppNavigation.returnToSettings).toHaveBeenCalledTimes(1);
+    expect(AppNavigation.back).not.toHaveBeenCalled();
+    expect(AppNavigation.toSettings).not.toHaveBeenCalled();
+  });
+
+  it('stays on Settings after accepting restore without opening books', () => {
+    applySetupOutcome(
+      { kind: 'restore_accepted', workplaceId: operationId, next: 'stay' },
+      getSetupRecipe('settings_restore'),
+      jest.fn(),
+    );
+    expect(AppNavigation.returnToSettings).toHaveBeenCalledTimes(1);
+    expect(AppNavigation.toSettings).not.toHaveBeenCalled();
   });
 
   it('returns first-run restore to onboarding with the entered name', () => {
