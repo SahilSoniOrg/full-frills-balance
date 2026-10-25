@@ -1,4 +1,10 @@
-export function orderSetupCurrencies<T extends { id: string }>(
+type SetupCurrencyItem = {
+  id: string;
+  subtitle?: string;
+  symbol?: string;
+};
+
+export function orderSetupCurrencies<T extends SetupCurrencyItem>(
   items: readonly T[],
   pinnedId: string | undefined,
   searchQuery: string,
@@ -8,9 +14,8 @@ export function orderSetupCurrencies<T extends { id: string }>(
     ? items.filter(
         item =>
           item.id.toLowerCase().includes(query) ||
-          ('subtitle' in item &&
-            typeof item.subtitle === 'string' &&
-            item.subtitle.toLowerCase().includes(query)),
+          item.subtitle?.toLowerCase().includes(query) ||
+          item.symbol?.toLowerCase().includes(query),
       )
     : [...items];
   if (query || !pinnedId) return filtered;
