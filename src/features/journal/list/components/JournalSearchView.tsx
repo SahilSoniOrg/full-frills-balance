@@ -2,7 +2,6 @@ import { MultiAccountPickerModal } from '@/src/components/account-selection';
 import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountInput';
 import { DateRangePicker } from '@/src/components/filters/DateRangePicker';
 import { DateRangeTrigger } from '@/src/components/filters/DateRangeTrigger';
-import { JournalCsvExportButton } from '@/src/components/journal/JournalCsvExportButton';
 import {
   Icon,
   AppInput,
@@ -30,17 +29,13 @@ export function JournalSearchView({ chrome, ...vm }: JournalSearchViewProps) {
   const filterHeader = useMemo(
     () => (
       <View style={styles.filterContainer}>
-        <View style={styles.filterRow}>
-          <AppInput
-            placeholder="Search description or notes..."
-            value={vm.searchQuery}
-            onChangeText={vm.setSearchQuery}
-            flex={1}
-            leftIcon={Icon.Search}
-            autoFocus
-          />
-          <JournalCsvExportButton csvExport={vm.csvExport} />
-        </View>
+        <AppInput
+          placeholder="Search description or notes..."
+          value={vm.searchQuery}
+          onChangeText={vm.setSearchQuery}
+          leftIcon={Icon.Search}
+          autoFocus
+        />
 
         <ScrollView
           horizontal
@@ -174,12 +169,6 @@ const styles = StyleSheet.create({
   filterContainer: {
     paddingBottom: Spacing.md,
     gap: Spacing.sm,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    flexWrap: 'wrap',
   },
   chipContainer: {
     gap: Spacing.xs,
