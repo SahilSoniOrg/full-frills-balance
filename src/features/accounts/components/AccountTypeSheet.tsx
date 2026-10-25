@@ -1,6 +1,5 @@
-import { AppIcon, ListGroup, ListRow } from '@/src/components/core';
-import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { SelectionCheckmark } from '@/src/components/shared/SelectionIndicator';
+import { AppIcon } from '@/src/components/core';
+import { SelectionPickerSheet } from '@/src/components/filters/SelectionPickerSheet';
 import { accountFormStrings as copy } from '@/src/constants/copy/domains/accountFormStrings';
 import { Opacity } from '@/src/constants/design-tokens';
 import { Box } from '@/src/design-system';
@@ -11,6 +10,7 @@ import {
 import { useTheme } from '@/src/hooks/use-theme';
 import { AccountType } from '@/src/types/enums';
 import { withOpacity } from '@/src/utils/color-math';
+import { useMemo } from 'react';
 
 const ACCOUNT_TYPES = [AccountType.ASSET, AccountType.LIABILITY, AccountType.EQUITY] as const;
 const CATEGORY_TYPES = [AccountType.EXPENSE, AccountType.INCOME] as const;
@@ -31,54 +31,49 @@ export function AccountTypeSheet({
   onClose: () => void;
 }) {
   const { theme } = useTheme();
-  const types = showAllTypes
-    ? [...ACCOUNT_TYPES, ...CATEGORY_TYPES]
-    : isCategory
-      ? CATEGORY_TYPES
-      : ACCOUNT_TYPES;
+  const options = useMemo(() => {
+    const types = showAllTypes
+      ? [...ACCOUNT_TYPES, ...CATEGORY_TYPES]
+      : isCategory
+        ? CATEGORY_TYPES
+        : ACCOUNT_TYPES;
+    return types.map(type => {
+      const color = typeColor(type, theme);
+      return {
+        id: type,
+        label: copy.typeNames[type],
+        description: getAccountTypeDescription(type),
+        testID: `account-type-${type.toLowerCase()}`,
+        leading: (
+          <Box
+            width={40}
+            height={40}
+            borderRadius="lg"
+            alignItems="center"
+            justifyContent="center"
+            unsafe_backgroundRaw={withOpacity(color, Opacity.soft)}
+          >
+            <AppIcon name={getAccountTypeIcon(type)} size={22} color={color} />
+          </Box>
+        ),
+      };
+    });
+  }, [isCategory, showAllTypes, theme]);
+
   return (
-    <ModalSurface
+    <SelectionPickerSheet
       visible={visible}
       title={copy.chooseType}
+      options={options}
+      selectedValue={selectedType}
+      showSearch={false}
+      fixedHeight={false}
+      maxHeightPercent={70}
+      onSelect={onSelect}
       onClose={onClose}
       accessibilityCloseLabel={copy.closeSheet}
       closeTestID="account-type-close"
-      position="bottomSheet"
-      fixedHeight={false}
-      maxHeightPercent={70}
-    >
-      <ListGroup variant="plain">
-        {types.map(type => {
-          const color = typeColor(type, theme);
-          const selected = type === selectedType;
-          return (
-            <ListRow
-              key={type}
-              title={copy.typeNames[type]}
-              subtitle={getAccountTypeDescription(type)}
-              leading={
-                <Box
-                  width={40}
-                  height={40}
-                  borderRadius="lg"
-                  alignItems="center"
-                  justifyContent="center"
-                  unsafe_backgroundRaw={withOpacity(color, Opacity.soft)}
-                >
-                  <AppIcon name={getAccountTypeIcon(type)} size={22} color={color} />
-                </Box>
-              }
-              trailing={selected ? <SelectionCheckmark selected /> : undefined}
-              onPress={() => {
-                onSelect(type);
-                onClose();
-              }}
-              testID={`account-type-${type.toLowerCase()}`}
-            />
-          );
-        })}
-      </ListGroup>
-    </ModalSurface>
+    />
   );
 }
 
