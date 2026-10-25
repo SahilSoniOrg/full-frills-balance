@@ -68,7 +68,7 @@
             android:maxLines="2"
             android:text="@string/safe_to_spend_widget_subtitle"
             android:textColor="#D9EAF6"
-            android:textSize="9sp" />
+            android:textSize="10sp" />
     </LinearLayout>
 
     <LinearLayout
