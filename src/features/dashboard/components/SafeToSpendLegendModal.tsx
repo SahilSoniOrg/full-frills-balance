@@ -6,6 +6,7 @@ import { useDashboardFeatureActions } from '@/src/features/dashboard/hooks/useDa
 import { Separator } from '@/src/design-system';
 import { StyleSheet, View } from 'react-native';
 import { SafeToSpendViewModel } from '../types/SafeToSpendViewModel';
+import { IncomeStepBreakdown, TimingGroupedBreakdown } from './explanation';
 
 interface SafeToSpendLegendModalProps {
   visible: boolean;
@@ -48,6 +49,17 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
         ? legendStrings.committedTitle
         : legendStrings.debtsTitle;
 
+  const flatCommitted = (committedBreakdown || []).flatMap(acc =>
+    (acc?.details || [])
+      .filter(detail => detail.amount !== 0)
+      .map(detail => ({
+        ...detail,
+        accountName: acc.accountName,
+      })),
+  );
+
+  const activeDebts = debtBreakdown.filter(debt => debt.amount !== 0);
+
   return (
     <InfoSheet
       visible={visible}
@@ -68,33 +80,19 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
             </AppText>
           </View>
 
-          {incomeBreakdown.length > 0 && (
+          {incomeBreakdown.length > 0 ? (
             <View style={{ marginBottom: Spacing.lg }}>
               <AppText variant="overline" color="secondary" style={{ marginBottom: Spacing.md }}>
                 {labels.upcomingIncome}
               </AppText>
-              <View style={{ gap: Spacing.md }}>
-                {incomeBreakdown
-                  .filter(inc => inc.amount !== 0)
-                  .map((inc, i) => (
-                    <View key={i} style={styles.breakdownRow}>
-                      <View style={{ flex: 1 }}>
-                        <AppText variant="caption" weight="bold">
-                          {inc.name}
-                        </AppText>
-                        <AppText variant="caption" color="secondary">
-                          Day {inc.dayOffset} •{' '}
-                          {inc.type === 'PLANNED_PAYMENT' ? 'Scheduled Income' : 'Transfer'}
-                        </AppText>
-                      </View>
-                      <AppText variant="caption" weight="bold" color="success" tabular>
-                        {formatSts(inc.amount, currencyCode, { prefix: '+' })}
-                      </AppText>
-                    </View>
-                  ))}
-              </View>
+              <IncomeStepBreakdown
+                income={incomeBreakdown}
+                labels={labels}
+                currencyCode={currencyCode}
+                formatSts={formatSts}
+              />
             </View>
-          )}
+          ) : null}
 
           <AppButton
             variant="ghost"
@@ -116,71 +114,32 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
           </AppText>
 
           <View style={{ gap: Spacing.md }}>
-            {(() => {
-              const flatCommitted = (committedBreakdown || []).flatMap(acc =>
-                (acc?.details || [])
-                  .filter(d => d.amount !== 0)
-                  .map(d => ({
-                    ...d,
-                    accountName: acc.accountName,
-                  })),
-              );
-
-              const beforeIncome = flatCommitted.filter(
-                d => (d.dayOffset ?? 0) < (firstMajorInflowDay || 0),
-              );
-              const afterIncome = flatCommitted.filter(
-                d => (d.dayOffset ?? 0) >= (firstMajorInflowDay || 0),
-              );
-
-              const renderGroup = (items: typeof flatCommitted, title: string) => {
-                if (items.length === 0) return null;
-                const total = items.reduce((sum, item) => sum + item.amount, 0);
-
-                return (
-                  <View key={title} style={{ marginBottom: Spacing.xl }}>
-                    <View style={[styles.breakdownRow, { marginBottom: Spacing.sm }]}>
-                      <AppText variant="overline" color="secondary">
-                        {title}
-                      </AppText>
-                      <AppText variant="caption" weight="bold" color="warning">
-                        {formatSts(total, currencyCode)}
-                      </AppText>
-                    </View>
-                    <View style={{ gap: Spacing.md }}>
-                      {items.map(item => (
-                        <View key={item.id} style={styles.breakdownRow}>
-                          <View style={{ flex: 1 }}>
-                            <AppText variant="body" weight="bold">
-                              {item.name}
-                            </AppText>
-                            <AppText variant="caption" color="secondary">
-                              {item.type === 'BUDGET'
-                                ? 'Category Budget'
-                                : item.type === 'PLANNED_PAYMENT'
-                                  ? 'Scheduled Bill'
-                                  : 'Scheduled Transfer'}{' '}
-                              • {item.accountName}
-                            </AppText>
-                          </View>
-                          <AppText variant="body" weight="bold" color="warning">
-                            {formatSts(item.amount, currencyCode)}
-                          </AppText>
-                        </View>
-                      ))}
-                    </View>
+            <TimingGroupedBreakdown
+              items={flatCommitted}
+              firstMajorInflowDay={firstMajorInflowDay}
+              formatTotal={total => formatSts(total, currencyCode)}
+              totalColor="warning"
+              renderItem={item => (
+                <View style={styles.breakdownRow}>
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="body" weight="bold">
+                      {item.name}
+                    </AppText>
+                    <AppText variant="caption" color="secondary">
+                      {item.type === 'BUDGET'
+                        ? 'Category Budget'
+                        : item.type === 'PLANNED_PAYMENT'
+                          ? 'Scheduled Bill'
+                          : 'Scheduled Transfer'}{' '}
+                      • {item.accountName}
+                    </AppText>
                   </View>
-                );
-              };
-
-              return (
-                <>
-                  {renderGroup(beforeIncome, 'Due Before Major Income')}
-                  {firstMajorInflowDay !== null &&
-                    renderGroup(afterIncome, 'Due After Major Income')}
-                </>
-              );
-            })()}
+                  <AppText variant="body" weight="bold" color="warning">
+                    {formatSts(item.amount, currencyCode)}
+                  </AppText>
+                </View>
+              )}
+            />
 
             <Separator marginVertical="xs" opacity={Opacity.muted} />
             <View style={styles.breakdownRow}>
@@ -226,60 +185,30 @@ export const SafeToSpendLegendModal = (props: SafeToSpendLegendModalProps) => {
 
             <Separator marginVertical="xl" opacity={Opacity.muted} />
 
-            {(() => {
-              const beforeIncome = debtBreakdown.filter(
-                d => d.amount !== 0 && (d.dayOffset ?? 0) < (firstMajorInflowDay || 0),
-              );
-              const afterIncome = debtBreakdown.filter(
-                d => d.amount !== 0 && (d.dayOffset ?? 0) >= (firstMajorInflowDay || 0),
-              );
-
-              const renderGroup = (items: typeof debtBreakdown, title: string) => {
-                if (items.length === 0) return null;
-                const total = items.reduce((sum, item) => sum + item.amount, 0);
-
-                return (
-                  <View key={title} style={{ marginBottom: Spacing.xl }}>
-                    <View style={[styles.breakdownRow, { marginBottom: Spacing.sm }]}>
-                      <AppText variant="overline" color="secondary">
-                        {title}
-                      </AppText>
-                      <AppText variant="caption" weight="bold" color="error">
-                        {formatSts(total, currencyCode)}
-                      </AppText>
-                    </View>
-                    <View style={{ gap: Spacing.md }}>
-                      {items.map(item => (
-                        <View key={item.accountId} style={styles.breakdownRow}>
-                          <View style={{ flex: 1 }}>
-                            <AppText variant="body" weight="bold">
-                              {item.accountName}
-                            </AppText>
-                            <AppText variant="caption" color="secondary">
-                              {item.type === 'FALLBACK'
-                                ? labels.unplannedBalance
-                                : labels.scheduledCommitment}{' '}
-                              • Day {item.dayOffset}
-                            </AppText>
-                          </View>
-                          <AppText variant="body" weight="bold" color="error">
-                            {formatSts(item.amount, currencyCode)}
-                          </AppText>
-                        </View>
-                      ))}
-                    </View>
+            <TimingGroupedBreakdown
+              items={activeDebts}
+              firstMajorInflowDay={firstMajorInflowDay}
+              formatTotal={total => formatSts(total, currencyCode)}
+              totalColor="error"
+              renderItem={item => (
+                <View style={styles.breakdownRow}>
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="body" weight="bold">
+                      {item.accountName}
+                    </AppText>
+                    <AppText variant="caption" color="secondary">
+                      {item.type === 'FALLBACK'
+                        ? labels.unplannedBalance
+                        : labels.scheduledCommitment}{' '}
+                      • Day {item.dayOffset}
+                    </AppText>
                   </View>
-                );
-              };
-
-              return (
-                <>
-                  {renderGroup(beforeIncome, 'Due Before Major Income')}
-                  {firstMajorInflowDay !== null &&
-                    renderGroup(afterIncome, 'Due After Major Income')}
-                </>
-              );
-            })()}
+                  <AppText variant="body" weight="bold" color="error">
+                    {formatSts(item.amount, currencyCode)}
+                  </AppText>
+                </View>
+              )}
+            />
 
             <Separator marginVertical="xs" opacity={Opacity.muted} />
 
