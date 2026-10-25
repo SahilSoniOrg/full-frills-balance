@@ -52,7 +52,7 @@ export function DataExportSection({ onImport }: DataExportSectionProps) {
       />
 
       <ModalSurface
-        visible={vm.isNamingExport && !vm.isScopePickerVisible}
+        visible={vm.isNamingExport && !vm.isScopePickerVisible && !vm.isExporting}
         title={AppConfig.strings.settings.data.exportFilenameLabel}
         onClose={() => vm.setIsNamingExport(false)}
         position="center"
