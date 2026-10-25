@@ -74,10 +74,12 @@ export function useDataExportViewModel(): DataExportViewModel {
 
   const onConfirmExport = useCallback(async () => {
     analytics.trackFeatureUsage('data_management', 'export_initiated');
-    // Keep the naming modal mounted until `isExporting` hides it. Closing the
-    // Modal first can briefly mark the app inactive and abort preparation.
-    const outcome: ShareOutcome = await shareable.save(ShareFormat.ZIP);
+    // Dismiss before delivery. Android follow-ups (folder picker, Just Save /
+    // Share) use system sheets or non-native ConfirmDialog overlays that cannot
+    // appear above this naming Modal. SharingRuntime no longer aborts preparation
+    // on the brief inactive flicker from Modal dismiss.
     setIsNamingExport(false);
+    const outcome: ShareOutcome = await shareable.save(ShareFormat.ZIP);
     if (outcome.kind === 'saved' || outcome.kind === 'handed-off') {
       analytics.trackFeatureUsage('data_management', 'export_completed', {
         has_custom_filename: !!sanitizedName,
