@@ -1,14 +1,13 @@
-import { Icon, AppButton, AppIcon, AppText } from '@/src/components/core';
-import { PressScaleTouchable } from '@/src/components/core/PressScaleTouchable';
+import { AppButton, AppIcon, AppText, Icon, ListGroup, ListRow } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { Size, Spacing, Typography } from '@/src/constants';
+import { SelectionCheckmark } from '@/src/components/shared/SelectionIndicator';
+import { Spacing } from '@/src/constants';
 import { AppConfig } from '@/src/constants/app-config';
+import { useTheme } from '@/src/hooks/use-theme';
+import { AccountId } from '@/src/types/ids';
 import type { AccountFields } from '@/src/types/plainDtos';
 import { getAccountFallbackIcon, getAccountIcon } from '@/src/utils/accountIcon';
-import { useTheme } from '@/src/hooks/use-theme';
-import { SelectionCheckmark } from '@/src/components/shared/SelectionIndicator';
-import { AccountId } from '@/src/types/ids';
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 interface HierarchyMoveModalProps {
   selectedAccountId: AccountId | null;
@@ -56,74 +55,57 @@ export function HierarchyMoveModal({
         {AppConfig.strings.accounts.hierarchy.modalDescription(selectedAccount?.name || '')}
       </AppText>
 
-      <View style={styles.destinationSection}>
-        <AppText variant="caption" weight="bold" style={styles.sectionLabel}>
-          {AppConfig.strings.accounts.hierarchy.moveParentLabel}
-        </AppText>
-        <PressScaleTouchable
+      <ListGroup
+        variant="plain"
+        header={AppConfig.strings.accounts.hierarchy.moveParentLabel}
+        dividerInset="none"
+      >
+        <ListRow
+          title="Top level (no group)"
+          icon={Icon.Eject}
           disabled={isSaving}
-          accessibilityRole="button"
-          accessibilityLabel="Top level (no group)"
-          style={[styles.destinationItem, { borderBottomColor: theme.divider } as ViewStyle]}
-          surfaceStyle={styles.destinationSurface}
+          trailing={
+            <SelectionCheckmark
+              selected={!selectedAccount?.parentAccountId}
+              color={theme.success}
+            />
+          }
+          chevron={false}
           onPress={() => selectedAccountId && void onAssignParent(selectedAccountId, null)}
-        >
-          <AppIcon name={Icon.Eject} size={Size.iconSm} color={theme.textSecondary} />
-          <AppText variant="body" style={styles.destinationLabel}>
-            Top level (no group)
-          </AppText>
-          <SelectionCheckmark selected={!selectedAccount?.parentAccountId} color={theme.success} />
-        </PressScaleTouchable>
+          accessibilityLabel="Top level (no group)"
+        />
         {parentCandidates.map(candidate => (
-          <PressScaleTouchable
-            disabled={isSaving}
+          <ListRow
             key={candidate.id}
-            accessibilityRole="button"
-            accessibilityLabel={candidate.name}
-            style={[styles.destinationItem, { borderBottomColor: theme.divider } as ViewStyle]}
-            surfaceStyle={styles.destinationSurface}
+            title={candidate.name}
+            leading={
+              <AppIcon
+                name={getAccountIcon(candidate)}
+                fallbackIcon={getAccountFallbackIcon(candidate.accountType)}
+                size={20}
+                color={theme.textSecondary}
+              />
+            }
+            disabled={isSaving}
+            trailing={
+              <SelectionCheckmark
+                selected={selectedAccount?.parentAccountId === candidate.id}
+                color={theme.success}
+              />
+            }
+            chevron={false}
             onPress={() =>
               selectedAccountId && void onAssignParent(selectedAccountId, candidate.id)
             }
-          >
-            <AppIcon
-              name={getAccountIcon(candidate)}
-              fallbackIcon={getAccountFallbackIcon(candidate.accountType)}
-              size={Size.iconSm}
-              color={theme.textSecondary}
-            />
-            <AppText variant="body" style={styles.destinationLabel}>
-              {candidate.name}
-            </AppText>
-            <SelectionCheckmark
-              selected={selectedAccount?.parentAccountId === candidate.id}
-              color={theme.success}
-            />
-          </PressScaleTouchable>
+            accessibilityLabel={candidate.name}
+          />
         ))}
-      </View>
+      </ListGroup>
     </ModalSurface>
   );
 }
 
 const styles = StyleSheet.create({
-  destinationItem: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  destinationSurface: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Spacing.lg,
-    gap: Spacing.md,
-  },
-  destinationLabel: { flex: 1 },
-  destinationSection: {
-    marginTop: Spacing.sm,
-  },
-  sectionLabel: {
-    letterSpacing: Typography.letterSpacing.wide * 2,
-    marginBottom: Spacing.sm,
-  },
   cancelButton: {
     marginTop: Spacing.sm,
   },
