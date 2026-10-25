@@ -14,7 +14,7 @@ import { SectionLabel } from '@/src/components/shared/SectionLabel';
 import { accountFormStrings as copy } from '@/src/constants/copy/domains/accountFormStrings';
 import { AppConfig } from '@/src/constants/app-config';
 import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
-import { Opacity, Shape, Size, Spacing, Typography } from '@/src/constants/design-tokens';
+import { Opacity, Shape, Size, Spacing } from '@/src/constants/design-tokens';
 import {
   getAccountKind,
   getAccountSubtypeColor,
@@ -29,6 +29,7 @@ import { resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { getReadableColor, withOpacity } from '@/src/utils/color-math';
 import { StyleSheet, View } from 'react-native';
 import { AccountFormOverlays } from './AccountFormOverlays';
+import { CurrencySideControl } from './CurrencySideControl';
 import { AccountMetadataSection } from './metadata/AccountMetadataSection';
 
 export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavChrome }) {
@@ -50,51 +51,17 @@ export function AccountFormView(vm: AccountFormViewModel & { chrome: ScreenNavCh
     CURRENCY_SYMBOLS,
   );
   const currencyControl = (
-    <PressScaleTouchable
-      style={[
-        styles.currencyControl,
-        {
-          backgroundColor: vm.canEditCurrency ? theme.surface : theme.surfaceSecondary,
-          borderColor: theme.border,
-        },
-      ]}
+    <CurrencySideControl
+      code={vm.selectedCurrency}
+      symbol={currencySymbol}
+      locked={!vm.canEditCurrency}
       onPress={() => vm.setActiveSheet(vm.canEditCurrency ? 'currency' : 'currency-info')}
-      accessibilityRole="button"
       accessibilityLabel={`${AppConfig.strings.accounts.selectCurrency}: ${vm.selectedCurrency}`}
       accessibilityHint={
         !vm.canEditCurrency ? AppConfig.strings.accounts.form.currencyLockedTooltip : undefined
       }
       testID={`${entity}-currency`}
-    >
-      <View style={styles.currencyStack}>
-        <AppText
-          weight="semibold"
-          style={[
-            styles.currencySymbol,
-            { color: vm.canEditCurrency ? theme.primary : theme.textTertiary },
-          ]}
-        >
-          {currencySymbol}
-        </AppText>
-        <AppText
-          variant="caption"
-          color={vm.canEditCurrency ? 'secondary' : 'tertiary'}
-          weight="medium"
-        >
-          {vm.selectedCurrency}
-        </AppText>
-      </View>
-      {vm.canEditCurrency ? (
-        <View
-          style={[
-            styles.appearanceEdit,
-            { backgroundColor: theme.surface, borderColor: theme.border },
-          ]}
-        >
-          <AppIcon name={Icon.Edit} size={Size.xxs} color={theme.textSecondary} />
-        </View>
-      ) : null}
-    </PressScaleTouchable>
+    />
   );
   return (
     <EntityFormScreen
@@ -386,20 +353,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
     marginTop: Spacing.sm,
-  },
-  currencyControl: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: Size.touchTargetLg,
-    minHeight: Size.touchTargetLg,
-    padding: Spacing.sm,
-    borderWidth: 1,
-    borderRadius: Shape.radius.md,
-  },
-  currencyStack: { alignItems: 'center' },
-  currencySymbol: {
-    fontSize: Typography.sizes.xxl,
-    lineHeight: Typography.sizes.xxl * Typography.lineHeights.tight,
   },
   amountInput: { flex: 1, paddingHorizontal: 0, paddingVertical: 0 },
   section: { paddingHorizontal: Spacing.lg },

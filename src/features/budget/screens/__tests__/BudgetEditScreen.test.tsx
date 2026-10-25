@@ -7,7 +7,11 @@ import BudgetEditScreen from '../BudgetEditScreen';
 import { minimalBudgetEditViewModel } from './budgetEditScreen.fixtures';
 
 jest.mock('expo-router', () => ({ useLocalSearchParams: () => ({}) }));
-jest.mock('@/src/features/accounts', () => ({ CurrencySelector: () => null }));
+jest.mock('@/src/features/accounts', () => ({
+  CurrencyPickerSheet: () => null,
+  CurrencySideControl: () => null,
+  resolveCurrencySymbol: (code: string) => code,
+}));
 jest.mock('@/src/components/forms/EntityFormScreen', () => ({
   EntityFormScreen: ({ children }: { children: React.ReactNode }) => children,
 }));

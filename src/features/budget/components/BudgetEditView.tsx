@@ -13,10 +13,15 @@ import { CalculatorAmountInput } from '@/src/components/forms/CalculatorAmountIn
 import { FormRow, ScheduleField, SuggestionHint, UnderlineNameField } from '@/src/components/forms';
 import { FormSectionGroup } from '@/src/components/forms/FormSectionGroup';
 import { SectionLabel } from '@/src/components/shared/SectionLabel';
-import { CurrencySelector } from '@/src/features/accounts';
+import {
+  CurrencyPickerSheet,
+  CurrencySideControl,
+  resolveCurrencySymbol,
+} from '@/src/features/accounts';
 import { ScreenWithChrome } from '@/src/components/layout';
 import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { AppConfig, Shape, Size, Spacing } from '@/src/constants';
+import { CURRENCY_SYMBOLS } from '@/src/constants/currency-definitions';
 import { budgetFormStrings as copy } from '@/src/constants/copy/domains/budgetFormStrings';
 import { FadeIn, Stack } from '@/src/design-system';
 import { useMoneyFormat } from '@/src/components/shared/moneyFormat';
@@ -25,7 +30,7 @@ import { getCurrencyPrecision } from '@/src/utils/currencyPrecision';
 import { getReadableColor } from '@/src/utils/color-math';
 import { toast } from '@/src/utils/alerts';
 import { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { BudgetSpendingHistoryChart } from './BudgetSpendingHistoryChart';
 import type { BudgetEditViewModel } from '../hooks/useBudgetEditViewModel';
 
@@ -67,8 +72,10 @@ export function BudgetEditView({
   const formatMoney = useMoneyFormat();
   const [isAccountPickerVisible, setIsAccountPickerVisible] = useState(false);
   const [isAssetPickerVisible, setIsAssetPickerVisible] = useState(false);
+  const [isCurrencyPickerVisible, setIsCurrencyPickerVisible] = useState(false);
   const currency = currencies.find(item => item.code === currencyCode);
   const precision = currency?.precision ?? getCurrencyPrecision(currencyCode);
+  const currencySymbol = resolveCurrencySymbol(currencyCode, currencies, CURRENCY_SYMBOLS);
   const expenseInk = getReadableColor(theme.expense, theme.errorLight);
 
   const loadingChrome = useMemo<ScreenNavChrome>(
@@ -246,21 +253,30 @@ export function BudgetEditView({
             </FadeIn>
           ) : null}
 
-          <View style={{ gap: Spacing.sm }}>
-            <CalculatorAmountInput
-              variant="centered"
-              value={amount}
-              onChangeText={setAmount}
-              label={amountLabel}
-              currencySymbol={currency?.symbol || currencyCode}
-              precision={precision}
-              testID="hero-amount-input"
-            />
-            <CurrencySelector
-              selectedCurrency={currencyCode}
-              currencies={currencies}
-              onSelect={setCurrencyCode}
-            />
+          <View style={styles.amountSection}>
+            <AppText variant="bodySmall" color="secondary" weight="medium">
+              {amountLabel}
+            </AppText>
+            <View style={styles.amountRow}>
+              <CurrencySideControl
+                code={currencyCode}
+                symbol={currencySymbol}
+                onPress={() => setIsCurrencyPickerVisible(true)}
+                accessibilityLabel={`${AppConfig.strings.accounts.selectCurrency}: ${currencyCode}`}
+                testID="budget-currency"
+              />
+              <CalculatorAmountInput
+                variant="hero"
+                value={amount}
+                onChangeText={setAmount}
+                currency={currencyCode}
+                currencySymbol={currencySymbol}
+                showCurrencyPrefix={false}
+                precision={precision}
+                containerStyle={styles.amountInput}
+                testID="hero-amount-input"
+              />
+            </View>
             {averageSpend != null ? (
               <SuggestionHint
                 message={copy.yourAverage(formatMoney(averageSpend, currencyCode))}
@@ -270,6 +286,13 @@ export function BudgetEditView({
               />
             ) : null}
           </View>
+          <CurrencyPickerSheet
+            visible={isCurrencyPickerVisible}
+            currencies={currencies}
+            selectedCurrency={currencyCode}
+            onSelect={setCurrencyCode}
+            onClose={() => setIsCurrencyPickerVisible(false)}
+          />
         </Stack>
         <View style={{ paddingHorizontal: Spacing.lg, marginTop: Spacing.xl }}>
           <SectionLabel label={copy.settings} marginTop="none" />
@@ -318,3 +341,19 @@ export function BudgetEditView({
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  amountSection: {
+    gap: Spacing.sm,
+  },
+  amountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  amountInput: {
+    flex: 1,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+});
