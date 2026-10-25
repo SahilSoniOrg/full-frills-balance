@@ -1,8 +1,8 @@
-import { AppButton, AppText, PressScaleTouchable } from '@/src/components/core';
-import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
+import { AppButton, AppText, ListGroup, ListRow } from '@/src/components/core';
 import { ModalSurface } from '@/src/components/overlays/ModalSurface';
-import { Box, Stack } from '@/src/design-system';
+import { SelectionIndicator } from '@/src/components/shared/SelectionIndicator';
 import { Size, Spacing } from '@/src/constants';
+import { Stack } from '@/src/design-system';
 
 export interface RestoreWorkplaceCandidate {
   readonly name: string;
@@ -10,6 +10,17 @@ export interface RestoreWorkplaceCandidate {
   readonly accounts?: number;
   readonly categories?: number;
   readonly journals?: number;
+}
+
+function workplaceSubtitle(entry: RestoreWorkplaceCandidate) {
+  const parts: string[] = [];
+  if (entry.currency) parts.push(entry.currency);
+  if (entry.accounts !== undefined) {
+    parts.push(
+      `${entry.accounts} accounts · ${entry.categories ?? 0} categories · ${entry.journals ?? 0} journals`,
+    );
+  }
+  return parts.join('\n') || undefined;
 }
 
 export function RestoreWorkplaceSelectionSheet({
@@ -28,6 +39,8 @@ export function RestoreWorkplaceSelectionSheet({
   onConfirm: () => void;
 }) {
   const allSelected = selectedIndexes.length === workplaces.length;
+  const selectAllState = allSelected ? true : selectedIndexes.length > 0 ? 'mixed' : false;
+
   return (
     <ModalSurface
       visible={visible}
@@ -42,30 +55,26 @@ export function RestoreWorkplaceSelectionSheet({
         <AppText variant="caption" color="secondary">
           Choose which validated workplaces to save. Unselected workplaces will be discarded.
         </AppText>
-        <PressScaleTouchable
-          pressScale="subtle"
-          onPress={() => onChange(allSelected ? [] : workplaces.map((_, index) => index))}
-          accessibilityRole="checkbox"
-          accessibilityLabel="Select all workplaces"
-          accessibilityState={{
-            checked: allSelected ? true : selectedIndexes.length > 0 ? 'mixed' : false,
-          }}
-        >
-          <Box flexDirection="row" alignItems="center" padding="sm" gap="md">
-            <SelectionIndicator
-              selected={allSelected ? true : selectedIndexes.length > 0 ? 'mixed' : false}
-              size={Size.iconSm}
-            />
-            <AppText weight="semibold">Select all</AppText>
-          </Box>
-        </PressScaleTouchable>
-        <Stack gap="xs" style={{ marginTop: Spacing.xs }}>
+        <ListGroup variant="plain" dividerInset="none">
+          <ListRow
+            title="Select all"
+            leading={<SelectionIndicator selected={selectAllState} size={Size.iconSm} />}
+            chevron={false}
+            onPress={() => onChange(allSelected ? [] : workplaces.map((_, index) => index))}
+            accessibilityRole="checkbox"
+            accessibilityLabel="Select all workplaces"
+            accessibilityState={{ checked: selectAllState }}
+          />
           {workplaces.map((entry, index) => {
             const selected = selectedIndexes.includes(index);
             return (
-              <PressScaleTouchable
-                pressScale="subtle"
+              <ListRow
                 key={`${entry.name}-${index}`}
+                title={entry.name}
+                subtitle={workplaceSubtitle(entry)}
+                wrap
+                leading={<SelectionIndicator selected={selected} size={Size.iconSm} />}
+                chevron={false}
                 onPress={() =>
                   onChange(
                     selected
@@ -77,28 +86,10 @@ export function RestoreWorkplaceSelectionSheet({
                 accessibilityLabel={`${selected ? 'Deselect' : 'Select'} ${entry.name}`}
                 accessibilityState={{ checked: selected }}
                 testID={`restore-workplace-option-${index}`}
-              >
-                <Box flexDirection="row" alignItems="center" padding="sm" gap="md">
-                  <SelectionIndicator selected={selected} size={Size.iconSm} />
-                  <Stack gap="xs" flex={1}>
-                    <AppText>{entry.name}</AppText>
-                    {entry.currency ? (
-                      <AppText variant="caption" color="secondary">
-                        {entry.currency}
-                      </AppText>
-                    ) : null}
-                    {entry.accounts !== undefined ? (
-                      <AppText variant="caption" color="secondary">
-                        {entry.accounts} accounts · {entry.categories ?? 0} categories ·{' '}
-                        {entry.journals ?? 0} journals
-                      </AppText>
-                    ) : null}
-                  </Stack>
-                </Box>
-              </PressScaleTouchable>
+              />
             );
           })}
-        </Stack>
+        </ListGroup>
         <AppButton
           variant={selectedIndexes.length === 0 ? 'destructive' : 'primary'}
           onPress={onConfirm}
