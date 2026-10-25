@@ -72,10 +72,15 @@ it.each(['saved', 'cancelled', 'failed'] as const)(
     const viewModel = renderHook(() => useDataExportViewModel(), { wrapper });
     let operation!: Promise<void>;
     await act(async () => {
+      viewModel.result.current.setIsNamingExport(true);
+    });
+    expect(viewModel.result.current.isNamingExport).toBe(true);
+    await act(async () => {
       operation = Promise.resolve(viewModel.result.current.onConfirmExport());
     });
     await waitFor(() => expect(confirm.show).toHaveBeenCalledTimes(1));
     expect(runtime.getSnapshot().phase).toBe('awaiting-user');
+    expect(viewModel.result.current.isNamingExport).toBe(false);
     expect(viewModel.result.current.isExporting).toBe(true);
     expect(viewModel.result.current.isPreparingExport).toBe(false);
     await expect(
