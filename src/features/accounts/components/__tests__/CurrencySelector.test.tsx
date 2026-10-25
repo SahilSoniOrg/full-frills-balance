@@ -38,6 +38,7 @@ jest.mock('@/src/hooks/use-theme', () => ({
       textSecondary: '#666666',
       border: '#e0e0e0',
       surface: '#ffffff',
+      surfaceSecondary: '#f0f0f0',
       primary: '#007bff',
       overlay: 'rgba(0,0,0,0.5)',
     },
@@ -58,19 +59,15 @@ const mockCurrencies = [
 describe('CurrencySelector', () => {
   it('filters currencies based on search query', async () => {
     const { getByText, getByPlaceholderText, queryByText } = render(
-      <CurrencySelector
-        selectedCurrency="USD"
-        currencies={mockCurrencies}
-        onSelect={jest.fn()}
-        variant="pill"
-      />,
+      <CurrencySelector selectedCurrency="USD" currencies={mockCurrencies} onSelect={jest.fn()} />,
     );
 
     fireEvent.press(getByText('USD $'));
 
+    expect(getByText('POPULAR')).toBeTruthy();
     expect(getByText('US Dollar')).toBeTruthy();
     expect(getByText('Euro')).toBeTruthy();
-    expect(getByText('Armenian Dram')).toBeTruthy();
+    expect(getByText('USD')).toBeTruthy();
 
     const searchInput = getByPlaceholderText(/Search/i);
     fireEvent.changeText(searchInput, 'Euro');
@@ -91,6 +88,11 @@ describe('CurrencySelector', () => {
     await waitFor(() => {
       expect(getByText('Armenian Dram')).toBeTruthy();
       expect(queryByText('Euro')).toBeNull();
+    });
+
+    fireEvent.changeText(searchInput, 'zzzz-no-match');
+    await waitFor(() => {
+      expect(getByText('No currencies match that search.')).toBeTruthy();
     });
   });
 });

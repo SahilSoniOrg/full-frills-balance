@@ -257,7 +257,6 @@ export function BudgetEditView({
               testID="hero-amount-input"
             />
             <CurrencySelector
-              variant="pill"
               selectedCurrency={currencyCode}
               currencies={currencies}
               onSelect={setCurrencyCode}

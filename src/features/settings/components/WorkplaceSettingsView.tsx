@@ -1,6 +1,6 @@
 import { AppSegmentedControl, AppText, ListGroup, ListRow, Icon } from '@/src/components/core';
 import { WorkplaceEditorModal } from '@/src/components/workplace/WorkplaceEditorModal';
-import { AppConfig, Opacity } from '@/src/constants';
+import { AppConfig } from '@/src/constants';
 import { CurrencySelector } from '@/src/features/accounts';
 import { Stack } from '@/src/design-system';
 import { SettingsLayout } from '@/src/features/settings/components/SettingsLayout';
@@ -8,8 +8,6 @@ import {
   useWorkplaceSettingsViewModel,
   type WorkplaceSettingsViewModel,
 } from '@/src/features/settings/hooks/useWorkplaceSettingsViewModel';
-import { useTheme } from '@/src/hooks/use-theme';
-import { withOpacity } from '@/src/utils/color-math';
 import { useState } from 'react';
 
 interface WorkplaceSettingsViewProps {
@@ -23,7 +21,6 @@ const SAFE_TO_SPEND_OPTIONS = [
 ] as const;
 
 export function WorkplaceSettingsView({ vm }: WorkplaceSettingsViewProps) {
-  const { theme } = useTheme();
   const [isEditorVisible, setIsEditorVisible] = useState(false);
   const { activeWorkplace } = vm;
 
@@ -56,9 +53,7 @@ export function WorkplaceSettingsView({ vm }: WorkplaceSettingsViewProps) {
                   selectedCurrency={vm.workplaceCurrency}
                   currencies={vm.currencies}
                   onSelect={vm.onUpdateCurrency}
-                  variant="pill"
                   title={AppConfig.strings.settings.currency.selectTitle}
-                  selectedBackgroundColor={withOpacity(theme.primary, Opacity.soft / 2)}
                 />
               }
             />
