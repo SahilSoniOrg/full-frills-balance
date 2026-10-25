@@ -6,13 +6,13 @@
 import { by, device, element, expect } from 'detox';
 import { launchOnboardedApp } from '../../actions/launch';
 import { tapById } from '../../actions/mobile/elementActions';
-import { tabs } from '../../screens';
+import { openSettingsFromDrawer } from '../../actions/mobile/flows';
 
 jest.setTimeout(180000);
 
 it('restores multiple workplaces from Settings through the shared setup flow', async () => {
   await launchOnboardedApp({ seedProfile: 'settings-bulk-restore' });
-  await tapById(tabs.settings);
+  await openSettingsFromDrawer();
   await tapById('settings-data-management');
   await expect(element(by.text('Data & Backup'))).toBeVisible();
   await tapById('data-import');

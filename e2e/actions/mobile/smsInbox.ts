@@ -1,13 +1,13 @@
 import { element, by, waitFor } from 'detox';
-import { smsInbox, tabs } from '../../screens';
+import { smsInbox } from '../../screens';
 import { LONG_TIMEOUT_MS } from '../../constants/timeouts';
 import { assertVisibleById, assertTextVisible } from '../assertions';
 import { tapById } from './elementActions';
-import { openDashboardTab } from './flows';
+import { openDashboardTab, openSettingsFromDrawer } from './flows';
 
 export async function openSmsInboxFromSettings(): Promise<void> {
   await openDashboardTab();
-  await tapById(tabs.settings, LONG_TIMEOUT_MS);
+  await openSettingsFromDrawer();
   await tapById(smsInbox.settingsAutomation, LONG_TIMEOUT_MS);
   await tapById(smsInbox.settingsSmsSettings, LONG_TIMEOUT_MS);
   await tapById(smsInbox.settingsSmsInbox, LONG_TIMEOUT_MS);

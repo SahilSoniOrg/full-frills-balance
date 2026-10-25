@@ -22,13 +22,25 @@ export const tabs = {
   accounts: 'tab-accounts',
   commitments: 'tab-commitments',
   activity: 'tab-activity',
-  settings: 'tab-settings',
+} as const;
+
+export const navigation = {
+  headerTrigger: 'primary-navigation-header-trigger',
+  drawerClose: 'navigation-drawer-close',
+  workplaceTrigger: 'navigation-drawer-workplace-trigger',
+  createWorkplace: 'navigation-drawer-create-workplace',
+  allSettings: 'navigation-drawer-all-settings',
 } as const;
 
 export const accounts = {
-  fab: 'fab-button',
-  tabAccounts: 'tab-item-accounts',
   submitFooter: 'submit-footer-button',
+} as const;
+
+export const contextualAdd = {
+  trigger: 'contextual-add-trigger',
+  account: 'contextual-add-account',
+  budget: 'contextual-add-budget',
+  plannedPayment: 'contextual-add-planned-payment',
 } as const;
 
 export const budgets = {
@@ -38,7 +50,6 @@ export const budgets = {
 } as const;
 
 export const plannedPayments = {
-  fab: 'fab-button',
   heroName: 'hero-name-input',
   heroAmount: 'hero-amount-input',
   fromAccount: 'planned-payment-source-node',

@@ -1,14 +1,16 @@
 import { element, by, waitFor } from 'detox';
-import { budgets, accounts, dashboard, plannedPayments, tabs } from '../../screens';
+import {
+  budgets,
+  accounts,
+  contextualAdd,
+  dashboard,
+  navigation,
+  plannedPayments,
+  tabs,
+} from '../../screens';
 import { LONG_TIMEOUT_MS } from '../../constants/timeouts';
 import { assertVisibleById, assertTextVisible } from '../assertions';
 import { tapById, tapByLabel, typeById } from './elementActions';
-
-async function waitForAccountsHub(timeoutMs = LONG_TIMEOUT_MS): Promise<void> {
-  await waitFor(element(by.id(accounts.fab)))
-    .toBeVisible()
-    .withTimeout(timeoutMs);
-}
 
 export async function assertAccountNameOnList(
   name: string,
@@ -46,18 +48,29 @@ export async function openDashboardTab(): Promise<void> {
   await assertVisibleById(dashboard.screen);
 }
 
+export async function openSettingsFromDrawer(): Promise<void> {
+  await tapById(navigation.headerTrigger, LONG_TIMEOUT_MS);
+  await tapById(navigation.allSettings, LONG_TIMEOUT_MS);
+}
+
 export async function openAccountsTab(): Promise<void> {
-  await tapById(tabs.accounts);
+  await tapById(tabs.accounts, LONG_TIMEOUT_MS);
+  await waitFor(element(by.label('Add to Accounts')))
+    .toBeVisible()
+    .withTimeout(LONG_TIMEOUT_MS);
 }
 
 export async function openCommitmentsTab(): Promise<void> {
-  await tapById(tabs.commitments);
+  await tapById(tabs.commitments, LONG_TIMEOUT_MS);
+  await waitFor(element(by.label('Add to Plans')))
+    .toBeVisible()
+    .withTimeout(LONG_TIMEOUT_MS);
 }
 
 export async function createAssetAccount(name: string): Promise<void> {
   await openAccountsTab();
-  await waitForAccountsHub();
-  await tapById(accounts.fab);
+  await tapById(contextualAdd.trigger);
+  await tapById(contextualAdd.account);
   await typeById('hero-name-input', name);
   await element(by.id('hero-name-input')).tapReturnKey();
   await tapById(accounts.submitFooter, LONG_TIMEOUT_MS);
@@ -70,7 +83,8 @@ export async function createAssetAccount(name: string): Promise<void> {
 export async function openBudgetFormFromCommitments(): Promise<void> {
   await openCommitmentsTab();
   await tapById('commitments-tabs-item-budgets');
-  await tapById('fab-button');
+  await tapById(contextualAdd.trigger);
+  await tapById(contextualAdd.budget);
   await assertVisibleById(budgets.nameInput);
 }
 
@@ -98,7 +112,8 @@ export async function openSafeToSpendExplanation(options?: {
 export async function createPlannedPayment(name: string, amount: string): Promise<void> {
   await openCommitmentsTab();
   await tapById('commitments-tabs-item-planned');
-  await tapById(plannedPayments.fab);
+  await tapById(contextualAdd.trigger);
+  await tapById(contextualAdd.plannedPayment);
   await typeById(plannedPayments.heroName, name);
   await element(by.id(plannedPayments.heroName)).tapReturnKey();
   await tapById(`${plannedPayments.heroAmount}-calculator`);

@@ -1,6 +1,6 @@
 import { launchOnboardedApp } from '../../actions/launch';
 import { element, by, waitFor } from 'detox';
-import { accounts, tabs } from '../../screens';
+import { accounts, contextualAdd, tabs } from '../../screens';
 import { assertTextVisible } from '../../actions/assertions';
 import { tapById, typeById } from '../../actions/mobile/elementActions';
 import { LONG_TIMEOUT_MS } from '../../constants/timeouts';
@@ -20,7 +20,8 @@ describe('Accounts', () => {
   it('creates a credit card through the name suggestion', async () => {
     const name = 'Detox HDFC card';
     await openAccountsTab();
-    await tapById(accounts.fab);
+    await tapById(contextualAdd.trigger);
+    await tapById(contextualAdd.account);
     await typeById('hero-name-input', name);
     await element(by.id('hero-name-input')).tapReturnKey();
     await assertTextVisible('Looks like a credit card.');
@@ -33,10 +34,7 @@ describe('Accounts', () => {
     await waitFor(element(by.id(tabs.accounts)))
       .toBeVisible()
       .withTimeout(LONG_TIMEOUT_MS);
-    await waitFor(element(by.id(accounts.fab)))
-      .toBeVisible()
-      .withTimeout(LONG_TIMEOUT_MS);
-    await waitFor(element(by.id(accounts.tabAccounts)))
+    await waitFor(element(by.label('Add to Accounts')))
       .toBeVisible()
       .withTimeout(LONG_TIMEOUT_MS);
     await waitFor(element(by.id('hero-name-input')))
@@ -50,7 +48,7 @@ describe('Accounts', () => {
     await waitFor(element(by.id(tabs.accounts)))
       .toBeVisible()
       .withTimeout(LONG_TIMEOUT_MS);
-    await waitFor(element(by.id(accounts.fab)))
+    await waitFor(element(by.label('Add to Accounts')))
       .toBeVisible()
       .withTimeout(LONG_TIMEOUT_MS);
   });

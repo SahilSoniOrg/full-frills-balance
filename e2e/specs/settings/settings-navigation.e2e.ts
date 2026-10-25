@@ -2,7 +2,8 @@ import { device, element, by, expect } from 'detox';
 import { assertTextVisible, assertVisibleById } from '../../actions/assertions';
 import { launchOnboardedApp } from '../../actions/launch';
 import { scrollToId, tapById } from '../../actions/mobile/elementActions';
-import { tabs } from '../../screens';
+import { openSettingsFromDrawer } from '../../actions/mobile/flows';
+import { E2E_DEFAULT_WORKPLACE_LABEL } from '@/src/testing/e2eConstants';
 
 jest.setTimeout(180000);
 
@@ -23,15 +24,14 @@ const settingsDestinations = [
 describe('Settings navigation', () => {
   it('renders the reorganized Settings root', async () => {
     await launchOnboardedApp({ seedProfile: 'onboarded' });
-    await tapById(tabs.settings);
+    await openSettingsFromDrawer();
     await assertTextVisible('Settings', 30000);
-    await expect(element(by.id('header-workplace-switcher'))).toBeVisible();
     await assertTextVisible('PREFERENCES', 30000);
   });
 
   it('offers v2 workplace scope selection for exports', async () => {
     await launchOnboardedApp({ seedProfile: 'onboarded' });
-    await tapById(tabs.settings);
+    await openSettingsFromDrawer();
     await tapById('settings-data-management');
     await assertTextVisible('Data & Backup', 30000);
     await tapById('data-export');
@@ -44,20 +44,19 @@ describe('Settings navigation', () => {
     await assertTextVisible('Choose workplaces', 30000);
   });
 
-  it('keeps the workplace switcher on Settings but out of other screens', async () => {
+  it('shows the active workplace in the drawer and not in the screen header', async () => {
     await launchOnboardedApp({ seedProfile: 'onboarded' });
     await expect(element(by.id('header-workplace-switcher'))).not.toBeVisible();
-
-    await tapById(tabs.settings);
-    await expect(element(by.id('header-workplace-switcher'))).toBeVisible();
-
-    await tapById('settings-current-workplace');
+    await tapById('primary-navigation-header-trigger');
+    await assertVisibleById('navigation-drawer-workplace-trigger');
+    await assertTextVisible(E2E_DEFAULT_WORKPLACE_LABEL, 30000);
+    await tapById('navigation-drawer-close');
     await expect(element(by.id('header-workplace-switcher'))).not.toBeVisible();
   });
 
   it.each(settingsDestinations)('opens %s', async (testID, title) => {
     await launchOnboardedApp({ seedProfile: 'onboarded' });
-    await tapById(tabs.settings);
+    await openSettingsFromDrawer();
     try {
       await tapById(testID);
     } catch {
@@ -70,7 +69,7 @@ describe('Settings navigation', () => {
 
   it('opens Devices & Sessions from Profile', async () => {
     await launchOnboardedApp({ seedProfile: 'onboarded' });
-    await tapById(tabs.settings);
+    await openSettingsFromDrawer();
     await tapById('settings-profile');
     await tapById('profile-devices-sessions');
     await assertVisibleById('device-other-devices-placeholder', 30000);
@@ -78,7 +77,7 @@ describe('Settings navigation', () => {
 
   it('keeps future remote devices disabled inside Devices & Sessions', async () => {
     await launchOnboardedApp({ seedProfile: 'onboarded' });
-    await tapById(tabs.settings);
+    await openSettingsFromDrawer();
     await tapById('settings-profile');
     await tapById('profile-devices-sessions');
     await element(by.id('device-other-devices-placeholder')).tap();
@@ -87,7 +86,7 @@ describe('Settings navigation', () => {
 
   it('hides Android-only SMS settings on iOS', async () => {
     await launchOnboardedApp({ seedProfile: 'onboarded' });
-    await tapById(tabs.settings);
+    await openSettingsFromDrawer();
     await tapById('settings-profile');
     await tapById('profile-devices-sessions');
     await expect(element(by.id('device-sms-import-unavailable'))).not.toBeVisible();
@@ -95,30 +94,31 @@ describe('Settings navigation', () => {
 
   it('keeps App Lock under Privacy & Security', async () => {
     await launchOnboardedApp({ seedProfile: 'onboarded' });
-    await tapById(tabs.settings);
+    await openSettingsFromDrawer();
     await tapById('settings-privacy-security');
     await assertVisibleById('settings-app-lock-toggle', 30000);
   });
 
   it('moves the Safe-to-Spend chart toggle to Appearance', async () => {
     await launchOnboardedApp({ seedProfile: 'onboarded' });
-    await tapById(tabs.settings);
+    await openSettingsFromDrawer();
     await tapById('settings-appearance');
     await assertVisibleById('settings-sts-chart-toggle', 30000);
   });
 
   it('shows an explicit Create Workplace action', async () => {
     await launchOnboardedApp({ seedProfile: 'onboarded' });
-    await tapById(tabs.settings);
+    await openSettingsFromDrawer();
     await tapById('settings-current-workplace');
     await tapById('current-workplace-workplaces');
     await assertVisibleById('create-workplace', 30000);
   });
 
-  it('offers Create Workplace from the Settings workplace switcher', async () => {
+  it('offers Create Workplace from the navigation drawer switcher', async () => {
     await launchOnboardedApp({ seedProfile: 'onboarded' });
-    await tapById(tabs.settings);
-    await tapById('header-workplace-switcher');
-    await assertVisibleById('workplace-switcher-create', 30000);
+    await tapById('primary-navigation-header-trigger');
+    await tapById('navigation-drawer-workplace-trigger');
+    await tapById('navigation-drawer-create-workplace');
+    await assertVisibleById('workplace-name-input', 30000);
   });
 });
