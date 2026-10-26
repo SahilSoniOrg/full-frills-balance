@@ -34,6 +34,7 @@ export function usePressScale(amount: PressScaleAmount = 'default') {
   const pressedScale = SCALE_BY_AMOUNT[amount];
 
   return {
+    reduceMotion,
     animate: { scale: reduceMotion || !pressed ? Scale.identity : pressedScale },
     transition: {
       type: 'timing' as const,
@@ -87,8 +88,8 @@ export function PressScaleTouchable({
   activeOpacity = Opacity.heavy,
   ...props
 }: PressScaleTouchableProps) {
-  const { animate, transition, handlePressIn, handlePressOut } = usePressScale(pressScale);
-  const reduceMotion = useReducedMotion();
+  const { reduceMotion, animate, transition, handlePressIn, handlePressOut } =
+    usePressScale(pressScale);
   const scale = useSharedValue<number>(Scale.identity);
   const scaleStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
   const wrapped = surfaceStyle !== undefined;

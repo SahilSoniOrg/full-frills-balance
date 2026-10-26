@@ -13,11 +13,57 @@ import {
   getPreviousMonthRange,
   getStartOfDay,
 } from '@/src/utils/dateUtils';
+import * as Localization from 'expo-localization';
 
 describe('dateUtils', () => {
   const mockTimestamp = new Date('2024-03-15T12:00:00Z').getTime();
 
   describe('Formatting', () => {
+    it('reuses a locale formatter across distinct dates', () => {
+      const expected = new Intl.DateTimeFormat('fr-FR', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        timeZone: 'UTC',
+      });
+      const constructor = jest.spyOn(Intl, 'DateTimeFormat');
+      try {
+        for (const date of [mockTimestamp, mockTimestamp + 86400000]) {
+          expect(formatDate(date, { locale: 'fr-FR' })).toBe(expected.format(date));
+        }
+        expect(constructor).toHaveBeenCalledTimes(1);
+      } finally {
+        constructor.mockRestore();
+      }
+    });
+
+    it('refreshes cached formatting after the system timezone changes', () => {
+      const calendars = Localization.getCalendars();
+      const calendar = jest.spyOn(Localization, 'getCalendars');
+      const date = Date.UTC(2024, 2, 15, 23, 30);
+      const expected = new Intl.DateTimeFormat('de-DE', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }).format(date);
+      const constructor = jest.spyOn(Intl, 'DateTimeFormat');
+      try {
+        for (const timeZone of ['UTC', 'Asia/Tokyo']) {
+          calendar.mockReturnValue([{ ...calendars[0], timeZone }]);
+          expect(formatDate(date, { locale: 'de-DE' })).toBe(expected);
+        }
+        expect(constructor).toHaveBeenCalledTimes(2);
+      } finally {
+        calendar.mockRestore();
+        constructor.mockRestore();
+      }
+    });
+
+    it('preserves the invalid date label', () => {
+      expect(formatDate(NaN)).toBe('Invalid Date');
+      expect(formatShortDate(NaN)).toBe('Invalid Date');
+    });
+
     it('formatDate should return localized date string', () => {
       const date = new Date(mockTimestamp);
       expect(formatDate(mockTimestamp)).toBe(

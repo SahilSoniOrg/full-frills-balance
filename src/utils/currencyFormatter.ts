@@ -1,4 +1,5 @@
 import { AppConfig } from '@/src/constants';
+import { getLocales } from 'expo-localization';
 import {
   CURRENCY_LOCALES,
   CURRENCY_PRECISIONS,
@@ -19,6 +20,26 @@ export interface CurrencyFormatOptions {
  */
 const FORMAT_CACHE = new Map<string, string>();
 const MAX_CACHE_SIZE = 1000;
+const NUMBER_FORMATTERS = new Map<string, Intl.NumberFormat>();
+const MAX_NUMBER_FORMATTERS = 64;
+
+function getNumberFormatter(
+  locale: string | undefined,
+  localeKey: string,
+  options: Intl.NumberFormatOptions,
+): Intl.NumberFormat {
+  const key = JSON.stringify([localeKey, options]);
+  let formatter = NUMBER_FORMATTERS.get(key);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(locale, options);
+    if (NUMBER_FORMATTERS.size >= MAX_NUMBER_FORMATTERS) {
+      const oldest = NUMBER_FORMATTERS.keys().next().value;
+      if (oldest !== undefined) NUMBER_FORMATTERS.delete(oldest);
+    }
+    NUMBER_FORMATTERS.set(key, formatter);
+  }
+  return formatter;
+}
 
 /** Formatting locale configured on the currency definition (e.g. INR -> 'en-IN'), if any. */
 export function getCurrencyLocale(currencyCode: string | undefined): string | undefined {
@@ -91,7 +112,8 @@ export const CurrencyFormatter = {
    */
   formatAmount(amount: number, currencyCode: string, options: CurrencyFormatOptions = {}): string {
     const locale = getCurrencyLocale(currencyCode);
-    const cacheKey = `${amount}:${currencyCode}:${locale ?? ''}:${JSON.stringify(options)}`;
+    const localeKey = locale ?? getLocales()[0]?.languageTag ?? '';
+    const cacheKey = `${amount}:${currencyCode}:${localeKey}:${JSON.stringify(options)}`;
     if (FORMAT_CACHE.has(cacheKey)) return FORMAT_CACHE.get(cacheKey)!;
 
     const defaultPrecision = this.getPrecisionFallback(currencyCode);
@@ -105,12 +127,12 @@ export const CurrencyFormatter = {
       // With an explicit currency locale, avoid a '-' on values that round to zero.
       if (locale && Number(amount.toFixed(maximumFractionDigits)) === 0) amount = 0;
 
-      const formatted = amount.toLocaleString(locale, {
+      const formatted = getNumberFormatter(locale, localeKey, {
         style: includeSymbol ? 'currency' : 'decimal',
         currency: currencyCode,
         minimumFractionDigits,
         maximumFractionDigits,
-      });
+      }).format(amount);
 
       let finalResult = formatted;
 
@@ -122,19 +144,19 @@ export const CurrencyFormatter = {
         const containsSymbol = formatted.includes(customSymbol);
 
         if (containsCode && !containsSymbol && currencyCode !== customSymbol) {
-          const decimal = Math.abs(amount).toLocaleString(locale, {
+          const decimal = getNumberFormatter(locale, localeKey, {
             style: 'decimal',
             minimumFractionDigits,
             maximumFractionDigits,
-          });
+          }).format(Math.abs(amount));
           const sign = amount < 0 ? '-' : '';
           finalResult = `${sign}${customSymbol}${decimal}`;
         } else if (!containsSymbol && !containsCode) {
-          const decimal = Math.abs(amount).toLocaleString(locale, {
+          const decimal = getNumberFormatter(locale, localeKey, {
             style: 'decimal',
             minimumFractionDigits,
             maximumFractionDigits,
-          });
+          }).format(Math.abs(amount));
           const sign = amount < 0 ? '-' : '';
           finalResult = `${sign}${customSymbol}${decimal}`;
         }

@@ -9,6 +9,30 @@ import * as Localization from 'expo-localization';
 
 dayjs.extend(calendar);
 
+const DATE_FORMATTERS = new Map<string, Intl.DateTimeFormat>();
+const MAX_DATE_FORMATTERS = 32;
+
+function formatLocalizedDate(
+  date: Date,
+  locale: string,
+  options: Intl.DateTimeFormatOptions,
+): string {
+  if (Number.isNaN(date.getTime())) return 'Invalid Date';
+  // Recreate the default-zone formatter when the device timezone changes.
+  const timeZone = Localization.getCalendars()[0]?.timeZone;
+  const key = JSON.stringify([locale, timeZone, options]);
+  let formatter = DATE_FORMATTERS.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, options);
+    if (DATE_FORMATTERS.size >= MAX_DATE_FORMATTERS) {
+      const oldest = DATE_FORMATTERS.keys().next().value;
+      if (oldest !== undefined) DATE_FORMATTERS.delete(oldest);
+    }
+    DATE_FORMATTERS.set(key, formatter);
+  }
+  return formatter.format(date);
+}
+
 export interface DateRange {
   startDate: number;
   endDate: number;
@@ -93,7 +117,7 @@ export const formatDate = (
 
   if (includeTime) {
     const hourCycle = options.hourCycle ?? preferences.hourCycle.resolved;
-    return date.toLocaleString(locale, {
+    return formatLocalizedDate(date, locale, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -101,7 +125,7 @@ export const formatDate = (
     });
   }
 
-  return date.toLocaleString(locale, {
+  return formatLocalizedDate(date, locale, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -116,7 +140,7 @@ export const formatDate = (
 export const formatShortDate = (value: number | Date): string => {
   const timestamp = typeof value === 'number' ? value : value.getTime();
   const date = new Date(timestamp);
-  return date.toLocaleDateString('en-US', {
+  return formatLocalizedDate(date, 'en-US', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -233,7 +257,7 @@ export const formatDaySeparator = (
   locale: string = Localization.getLocales()[0]?.languageTag || AppConfig.defaultLocale,
 ): string => {
   const date = new Date(timestamp);
-  return date.toLocaleDateString(locale, {
+  return formatLocalizedDate(date, locale, {
     weekday: 'long',
     year: 'numeric',
     month: 'short',

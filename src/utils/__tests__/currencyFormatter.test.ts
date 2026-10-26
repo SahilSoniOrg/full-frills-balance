@@ -12,6 +12,24 @@ jest.mock('@/src/services/preferences', () => ({
 
 describe('CurrencyFormatter', () => {
   describe('formatAmount', () => {
+    it('reuses a currency formatter across different amounts', () => {
+      const expected = new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+      const constructor = jest.spyOn(Intl, 'NumberFormat');
+      try {
+        for (const amount of [1234567.89, 9876543.21]) {
+          expect(CurrencyFormatter.formatAmount(amount, 'USD')).toBe(expected.format(amount));
+        }
+        expect(constructor).toHaveBeenCalledTimes(1);
+      } finally {
+        constructor.mockRestore();
+      }
+    });
+
     it('formats USD correctly with default options', () => {
       const result = CurrencyFormatter.formatAmount(1234.56, 'USD');
       // Use regex or contain because locale might vary slightly (space/no-space)
@@ -38,15 +56,8 @@ describe('CurrencyFormatter', () => {
     });
 
     it('handles fallback for invalid currency', () => {
-      // Mock toLocaleString to throw to test fallback
-      const spy = jest.spyOn(Number.prototype, 'toLocaleString').mockImplementation(() => {
-        throw new Error('fail');
-      });
-
       const result = CurrencyFormatter.formatAmount(100, 'INVALID');
       expect(result).toBe('100.00 INVALID');
-
-      spy.mockRestore();
     });
 
     it('formats AMD using custom symbol', () => {
