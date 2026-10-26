@@ -64,7 +64,7 @@ export function JournalListView(props: JournalListViewProps) {
   const { list, chrome, datePicker, periodBar, selection, modals } = props;
 
   return (
-    <ScreenWithChrome chrome={chrome}>
+    <ScreenWithChrome chrome={chrome} testID="activity-screen">
       <View style={styles.container}>
         {periodBar ? (
           <View style={styles.periodBar}>

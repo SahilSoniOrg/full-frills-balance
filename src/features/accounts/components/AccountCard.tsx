@@ -130,6 +130,7 @@ function AccountCardBase({
             <Row align="center" justify="space-between">
               <PressScaleTouchable
                 {...cardPressProps}
+                testID="account-card-open"
                 accessibilityRole="button"
                 accessibilityLabel={cardAccessibilityLabel}
                 accessibilityState={{ selected: isSelected }}

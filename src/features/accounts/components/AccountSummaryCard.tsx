@@ -21,7 +21,7 @@ import { useTheme } from '@/src/hooks/use-theme';
 import { formatRelativeReconciledDate } from '@/src/utils/dateUtils';
 import { isCategoryAccountType, resolveAccountAppearance } from '@/src/utils/accountCategory';
 import { getReadableColor, withOpacity } from '@/src/utils/color-math';
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, View, useWindowDimensions, type LayoutChangeEvent } from 'react-native';
 
 // Old minimumFontScale was 0.6; same floor, now honoured on web too.
 const TITLE_BALANCE_FIT = {
@@ -39,6 +39,7 @@ const BODY_BALANCE_FIT = {
 
 export type AccountSummaryCardProps = AccountSummaryCardModel & {
   currencyCode: string;
+  onLayout?: (event: LayoutChangeEvent) => void;
 };
 
 function accountTypeLabel(accountType: string) {
@@ -101,6 +102,7 @@ export function AccountSummaryCard({
   currencyCode,
   onAuditPress,
   onReconcile,
+  onLayout,
 }: AccountSummaryCardProps) {
   const { theme } = useTheme();
   const { width, fontScale } = useWindowDimensions();
@@ -115,7 +117,7 @@ export function AccountSummaryCard({
   const verificationLabel = reconciledLabel ?? reconciliationCopy.notVerifiedLabel;
 
   return (
-    <View style={[styles.card, isArchived && styles.archivedCard]}>
+    <View style={[styles.card, isArchived && styles.archivedCard]} onLayout={onLayout}>
       <View style={styles.header}>
         <IvyIcon
           name={accountIcon || undefined}

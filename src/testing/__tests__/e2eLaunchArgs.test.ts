@@ -112,6 +112,42 @@ describe('readE2eLaunchConfig', () => {
     expect(readE2eLaunchConfig()).toEqual({ reset: false, updateGateMode: 'required' });
   });
 
+  it('accepts account render ablations without enabling a data reset', () => {
+    process.env.EXPO_PUBLIC_E2E = '1';
+    valueMock.mockReturnValue({
+      e2eAuth: E2E_AUTH_TOKEN,
+      e2eAccountRenderMode: 'no-chart-no-rows',
+    });
+
+    expect(readE2eLaunchConfig()).toEqual({
+      reset: false,
+      accountRenderMode: 'no-chart-no-rows',
+    });
+  });
+
+  it('accepts a deferred account render mode without enabling a data reset', () => {
+    process.env.EXPO_PUBLIC_E2E = '1';
+    valueMock.mockReturnValue({
+      e2eAuth: E2E_AUTH_TOKEN,
+      e2eAccountRenderMode: 'deferred-full',
+    });
+
+    expect(readE2eLaunchConfig()).toEqual({
+      reset: false,
+      accountRenderMode: 'deferred-full',
+    });
+  });
+
+  it('ignores unknown account render ablations', () => {
+    process.env.EXPO_PUBLIC_E2E = '1';
+    valueMock.mockReturnValue({
+      e2eAuth: E2E_AUTH_TOKEN,
+      e2eAccountRenderMode: 'drop-all-data',
+    });
+
+    expect(readE2eLaunchConfig()).toEqual({ reset: false });
+  });
+
   it('ignores an unknown update-gate mode', () => {
     process.env.EXPO_PUBLIC_E2E = '1';
     valueMock.mockReturnValue({

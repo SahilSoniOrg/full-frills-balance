@@ -5,11 +5,22 @@ import type { ScreenNavChrome } from '@/src/components/layout/screenChrome';
 import { withPrivacyScope } from '@/src/contexts/PrivacyScope';
 import { AccountDetailsView } from '@/src/features/accounts/components/AccountDetailsView';
 import { useAccountDetailsViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
+import { logAccountPerformanceMarker } from '@/src/testing/accountPerformanceMarkers';
+import { readE2eLaunchConfig } from '@/src/testing/e2eLaunchArgs';
 import { Icon } from '@/src/types/domainIcons';
-import { useMemo } from 'react';
+import { useNavigation } from 'expo-router';
+import type { NativeStackNavigationProp } from 'expo-router/native-stack';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+
+type NavigationParamList = Record<string, object | undefined>;
 
 function AccountDetailsScreen() {
   const vm = useAccountDetailsViewModel();
+  const navigation = useNavigation<NativeStackNavigationProp<NavigationParamList>>();
+  const accountRenderMode = readE2eLaunchConfig()?.accountRenderMode ?? 'deferred-full';
+  const deferSecondaryContent = accountRenderMode === 'deferred-full';
+  const [transitionCompleted, setTransitionCompleted] = useState(!deferSecondaryContent);
+  const transitionReported = useRef(false);
   const {
     accountLoading,
     accountMissing,
@@ -19,6 +30,17 @@ function AccountDetailsScreen() {
     isSelectionModeActive,
     selectionChrome,
   } = vm;
+
+  useLayoutEffect(
+    () =>
+      navigation.addListener('transitionEnd', event => {
+        if (event.data.closing || transitionReported.current) return;
+        transitionReported.current = true;
+        logAccountPerformanceMarker('transition_end', { mode: accountRenderMode });
+        if (deferSecondaryContent) setTransitionCompleted(true);
+      }),
+    [accountRenderMode, deferSecondaryContent, navigation],
+  );
 
   const chrome = useMemo<ScreenNavChrome>(() => {
     const phase = accountLoading ? 'loading' : accountMissing ? 'missing' : 'ready';
@@ -62,7 +84,13 @@ function AccountDetailsScreen() {
     vm.onBack,
   ]);
 
-  return <AccountDetailsView {...vm} chrome={chrome} />;
+  return (
+    <AccountDetailsView
+      {...vm}
+      chrome={chrome}
+      secondaryContentReady={!deferSecondaryContent || transitionCompleted}
+    />
+  );
 }
 
 export default withPrivacyScope(AccountDetailsScreen);

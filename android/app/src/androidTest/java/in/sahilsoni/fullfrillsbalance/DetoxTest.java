@@ -2,6 +2,15 @@ package in.sahilsoni.fullfrillsbalance;
     
 import com.wix.detox.Detox;
 import com.wix.detox.config.DetoxConfig;
+import com.facebook.hermes.instrumentation.HermesSamplingProfiler;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.Build;
+import android.util.Log;
+import java.io.File;
+import androidx.test.platform.app.InstrumentationRegistry;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -24,6 +33,35 @@ public class DetoxTest {
         detoxConfig.idlePolicyConfig.idleResourceTimeoutSec = 60;
         detoxConfig.rnContextLoadTimeoutSec = (in.sahilsoni.fullfrillsbalance.BuildConfig.DEBUG ? 180 : 60);
 
-        Detox.runTests(mActivityRule, detoxConfig);
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        boolean profile = "1".equals(InstrumentationRegistry.getArguments().getString("detoxFFBProfile"));
+        BroadcastReceiver profiler = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context ignored, Intent intent) {
+                if ("in.sahilsoni.fullfrillsbalance.preview.PERF_START".equals(intent.getAction())) {
+                    HermesSamplingProfiler.enable();
+                } else if ("in.sahilsoni.fullfrillsbalance.preview.PERF_STOP".equals(intent.getAction())) {
+                    HermesSamplingProfiler.disable();
+                    File output = new File(context.getExternalFilesDir(null), "ffb-account.hermes.json");
+                    HermesSamplingProfiler.dumpSampledTraceToFile(output.getAbsolutePath());
+                    Log.i("FFB-PERF", "hermes_profile_saved");
+                }
+            }
+        };
+        if (profile) {
+            IntentFilter filter = new IntentFilter();
+            filter.addAction("in.sahilsoni.fullfrillsbalance.preview.PERF_START");
+            filter.addAction("in.sahilsoni.fullfrillsbalance.preview.PERF_STOP");
+            if (Build.VERSION.SDK_INT >= 33) {
+                context.registerReceiver(profiler, filter, Context.RECEIVER_EXPORTED);
+            } else {
+                context.registerReceiver(profiler, filter);
+            }
+        }
+        try {
+            Detox.runTests(mActivityRule, detoxConfig);
+        } finally {
+            if (profile) context.unregisterReceiver(profiler);
+        }
     }
 }

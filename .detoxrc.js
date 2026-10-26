@@ -28,7 +28,7 @@ module.exports = {
   },
   // Linux cloud agents install the APKs once in scripts/e2e-android.sh.
   // Reinstalling at worker start repeats dex2oat on software emulation.
-  ...(linuxX64
+  ...(linuxX64 || process.env.FFB_ANDROID_PERF_RUN === '1'
     ? {
         behavior: {
           init: {
@@ -69,6 +69,13 @@ module.exports = {
       testBinaryPath:
         'android/app/build/outputs/apk/androidTest/release/app-release-androidTest.apk',
       build: `cd android && EXPO_PUBLIC_E2E=1 ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release${androidArchGradleArg()}`,
+    },
+    'android.preview': {
+      type: 'android.apk',
+      binaryPath: 'android/app/build/outputs/apk/preview/app-preview.apk',
+      testBinaryPath:
+        'android/app/build/outputs/apk/androidTest/preview/app-preview-androidTest.apk',
+      build: `cd android && APP_VARIANT=preview EXPO_PUBLIC_E2E=1 SENTRY_DISABLE_AUTO_UPLOAD=true ./gradlew assemblePreview assemblePreviewAndroidTest -DtestBuildType=preview${androidArchGradleArg()}`,
     },
   },
   devices: {
@@ -148,6 +155,10 @@ module.exports = {
             device: 'androidDevice',
             app: 'android.release',
           },
+          'android.device.preview': {
+            device: 'androidDevice',
+            app: 'android.preview',
+          },
         }
       : {}),
   },
@@ -159,7 +170,7 @@ module.exports = {
         keepOnlyFailedTestsArtifacts: false,
       },
       screenshot: {
-        enabled: true,
+        enabled: process.env.FFB_ANDROID_PERF_RUN !== '1',
         keepOnlyFailedTestsArtifacts: true,
       },
     },

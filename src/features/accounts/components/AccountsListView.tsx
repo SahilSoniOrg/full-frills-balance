@@ -234,7 +234,7 @@ export function AccountsListView({
   }
 
   return (
-    <ScreenWithChrome chrome={chrome} scrollable={false}>
+    <ScreenWithChrome chrome={chrome} scrollable={false} testID="accounts-screen">
       <View style={styles.container}>
         <View style={styles.tabContainer}>
           <AppTabs options={TAB_OPTIONS} value={activeTab} onChange={setActiveTab} />

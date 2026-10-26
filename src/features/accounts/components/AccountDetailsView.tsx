@@ -12,13 +12,27 @@ import { SubAccountListModal } from '@/src/features/accounts/components/SubAccou
 import { AccountDetailsViewModel } from '@/src/features/accounts/hooks/useAccountDetailsViewModel';
 import { JournalListModals } from '@/src/features/journal';
 import { useTheme } from '@/src/hooks/use-theme';
+import { logAccountPerformanceMarker } from '@/src/testing/accountPerformanceMarkers';
+import { readE2eLaunchConfig } from '@/src/testing/e2eLaunchArgs';
+import { useCallback, useEffect, useRef } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 export function AccountDetailsView({
   chrome,
+  secondaryContentReady = true,
   ...vm
-}: AccountDetailsViewModel & { chrome: ScreenNavChrome }) {
+}: AccountDetailsViewModel & {
+  chrome: ScreenNavChrome;
+  secondaryContentReady?: boolean;
+}) {
   const { theme } = useTheme();
+  const launchConfig = readE2eLaunchConfig();
+  const accountRenderMode = launchConfig?.accountRenderMode ?? 'full';
+  const isAccountPerfRun = launchConfig?.accountRenderMode !== undefined;
+  const summaryLayoutReported = useRef(false);
+  const usableContentReported = useRef(false);
+  const secondaryContentReported = useRef(false);
+  const activityLayoutReported = useRef(false);
   const {
     accountLoading,
     accountMissing,
@@ -43,6 +57,98 @@ export function AccountDetailsView({
     selectionChrome,
   } = vm;
 
+  const showActivity = secondaryContentReady && accountRenderMode !== 'summary-no-rows';
+  const showActivityChart = accountRenderMode === 'full' || accountRenderMode === 'deferred-full';
+  const showJournalRows =
+    secondaryContentReady &&
+    (accountRenderMode === 'full' ||
+      accountRenderMode === 'deferred-full' ||
+      accountRenderMode === 'no-chart');
+
+  const onSummaryLayout = useCallback(() => {
+    if (!isAccountPerfRun || summaryLayoutReported.current) return;
+    summaryLayoutReported.current = true;
+    logAccountPerformanceMarker('summary_layout', { mode: accountRenderMode });
+  }, [accountRenderMode, isAccountPerfRun]);
+
+  const onActivityLayout = useCallback(() => {
+    if (!isAccountPerfRun || activityLayoutReported.current) return;
+    activityLayoutReported.current = true;
+    logAccountPerformanceMarker('activity_layout', { mode: accountRenderMode });
+  }, [accountRenderMode, isAccountPerfRun]);
+
+  useEffect(() => {
+    if (
+      !isAccountPerfRun ||
+      usableContentReported.current ||
+      accountLoading ||
+      accountMissing ||
+      vm.balanceAmount === null ||
+      journalsLoading ||
+      listHeader.activity.periodMetrics.isLoading ||
+      (showActivityChart && listHeader.activity.chartData.length === 0)
+    ) {
+      return;
+    }
+
+    usableContentReported.current = true;
+    logAccountPerformanceMarker('usable_content_commit', {
+      mode: accountRenderMode,
+      journalRows: journalItems.length,
+      chartPoints: listHeader.activity.chartData.length,
+    });
+  }, [
+    accountLoading,
+    accountMissing,
+    accountRenderMode,
+    isAccountPerfRun,
+    journalItems.length,
+    journalsLoading,
+    showActivityChart,
+    listHeader.activity.chartData.length,
+    listHeader.activity.periodMetrics.isLoading,
+    vm.balanceAmount,
+  ]);
+
+  useEffect(() => {
+    if (
+      !isAccountPerfRun ||
+      secondaryContentReported.current ||
+      !secondaryContentReady ||
+      !showActivity ||
+      !showJournalRows ||
+      accountLoading ||
+      accountMissing ||
+      vm.balanceAmount === null ||
+      journalsLoading ||
+      listHeader.activity.periodMetrics.isLoading ||
+      (showActivityChart && listHeader.activity.chartData.length === 0)
+    ) {
+      return;
+    }
+
+    secondaryContentReported.current = true;
+    logAccountPerformanceMarker('secondary_content_commit', {
+      mode: accountRenderMode,
+      journalRows: journalItems.length,
+      chartPoints: listHeader.activity.chartData.length,
+    });
+  }, [
+    accountLoading,
+    accountMissing,
+    accountRenderMode,
+    isAccountPerfRun,
+    journalItems.length,
+    journalsLoading,
+    listHeader.activity.chartData.length,
+    listHeader.activity.periodMetrics.isLoading,
+    secondaryContentReady,
+    showActivityChart,
+    showActivity,
+    showJournalRows,
+    vm.balanceAmount,
+  ]);
+
   return (
     <ScreenWithChrome chrome={chrome}>
       {accountLoading ? (
@@ -61,9 +167,10 @@ export function AccountDetailsView({
       ) : (
         <>
           <JournalEntryListView
-            items={journalItems}
-            isLoading={journalsLoading}
+            items={showJournalRows ? journalItems : []}
+            isLoading={showJournalRows && journalsLoading}
             isLoadingMore={journalsLoadingMore}
+            suppressEmptyContent={!showJournalRows}
             onEndReached={onLoadMore}
             emptyTitle="No entries yet"
             emptySubtitle="Activity for this account will appear here."
@@ -71,7 +178,15 @@ export function AccountDetailsView({
             onLongPressItem={onLongPressItem}
             isSelectionModeActive={isSelectionModeActive}
             selectionChrome={selectionChrome}
-            ListHeaderComponent={<AccountDetailsListHeader {...listHeader} />}
+            ListHeaderComponent={
+              <AccountDetailsListHeader
+                {...listHeader}
+                showActivity={showActivity}
+                showActivityChart={showActivityChart}
+                onSummaryLayout={onSummaryLayout}
+                onActivityLayout={onActivityLayout}
+              />
+            }
             contentContainerStyle={styles.listContainer}
             style={styles.list}
           />

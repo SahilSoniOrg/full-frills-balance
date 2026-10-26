@@ -17,7 +17,11 @@ export type E2eLaunchConfig = {
   backupPath?: string;
   updateGateMode?: E2eUpdateGateMode;
   updateFlow?: E2eUpdateFlow;
+  accountRenderMode?: AccountRenderMode;
 };
+
+export type AccountRenderMode =
+  'full' | 'deferred-full' | 'no-chart' | 'no-chart-no-rows' | 'summary-no-rows';
 
 function isSeedProfile(value: unknown): value is E2eSeedProfile {
   return typeof value === 'string' && (E2E_SEED_PROFILES as readonly string[]).includes(value);
@@ -25,6 +29,16 @@ function isSeedProfile(value: unknown): value is E2eSeedProfile {
 
 function isUpdateGateMode(value: unknown): value is E2eUpdateGateMode {
   return value === 'available' || value === 'required';
+}
+
+function isAccountRenderMode(value: unknown): value is AccountRenderMode {
+  return (
+    value === 'full' ||
+    value === 'deferred-full' ||
+    value === 'no-chart' ||
+    value === 'no-chart-no-rows' ||
+    value === 'summary-no-rows'
+  );
 }
 
 function configFromArgs(args: Record<string, unknown>): E2eLaunchConfig | null {
@@ -42,12 +56,16 @@ function configFromArgs(args: Record<string, unknown>): E2eLaunchConfig | null {
     (E2E_UPDATE_FLOWS as readonly string[]).includes(args.e2eUpdateFlow)
       ? (args.e2eUpdateFlow as E2eUpdateFlow)
       : undefined;
+  const accountRenderMode = isAccountRenderMode(args.e2eAccountRenderMode)
+    ? args.e2eAccountRenderMode
+    : undefined;
   return {
     reset: reset || Boolean(seedProfile),
     seedProfile,
     backupPath,
     ...(updateGateMode ? { updateGateMode } : {}),
     ...(updateFlow ? { updateFlow } : {}),
+    ...(accountRenderMode ? { accountRenderMode } : {}),
   };
 }
 

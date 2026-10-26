@@ -192,10 +192,14 @@ export function BudgetEditView({
                   {copy.whatCountsHint}
                 </AppText>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm }}>
-                  {categorySuggestions.map(account => (
+                  {categorySuggestions.map((account, index) => (
                     <PressScaleTouchable
                       key={account.id}
-                      testID={`budget-category-suggestion-${account.id}`}
+                      testID={
+                        index === 0
+                          ? 'budget-category-suggestion-first'
+                          : `budget-category-suggestion-${account.id}`
+                      }
                       accessibilityRole="button"
                       accessibilityLabel={copy.chipAccessibility(account.name)}
                       onPress={() => addCategory(account.id)}

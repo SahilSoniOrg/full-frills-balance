@@ -20,6 +20,7 @@ interface JournalEntryListViewProps {
   items: JournalListItem[];
   isLoading?: boolean;
   isLoadingMore?: boolean;
+  suppressEmptyContent?: boolean;
   loadingMoreText?: string;
   emptyTitle?: string;
   emptySubtitle?: string;
@@ -99,6 +100,7 @@ export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProp
     items,
     isLoading,
     isLoadingMore,
+    suppressEmptyContent,
     loadingMoreText,
     emptyTitle = AppConfig.strings.common.noTransactions,
     emptySubtitle = AppConfig.strings.common.tryChangingFilters,
@@ -115,19 +117,18 @@ export function JournalEntryListView({ ref, ...props }: JournalEntryListViewProp
   const selectionActive = !!isSelectionModeActive && !!selectionChrome;
   const journalEntryCount = items.filter(i => i.type === 'journal').length;
 
-  const listEmpty =
-    isLoading && items.length === 0 ? (
-      <Stack gap="md">
-        {[1, 2, 3, 4, 5].map(i => (
-          <Stack key={i} gap="sm">
-            <Skeleton width={120} height={16} />
-            <Skeleton width="100%" height={80} radius="lg" />
-          </Stack>
-        ))}
-      </Stack>
-    ) : (
-      <EmptyStateView title={emptyTitle} subtitle={emptySubtitle} />
-    );
+  const listEmpty = suppressEmptyContent ? null : isLoading && items.length === 0 ? (
+    <Stack gap="md">
+      {[1, 2, 3, 4, 5].map(i => (
+        <Stack key={i} gap="sm">
+          <Skeleton width={120} height={16} />
+          <Skeleton width="100%" height={80} radius="lg" />
+        </Stack>
+      ))}
+    </Stack>
+  ) : (
+    <EmptyStateView title={emptyTitle} subtitle={emptySubtitle} />
+  );
 
   const dismissFooter = (
     <View

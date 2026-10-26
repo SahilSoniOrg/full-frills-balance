@@ -30,6 +30,8 @@ export type AccountActivitySectionProps = AccountActivitySectionModel & {
   currencyCode: string;
   accountColor?: string;
   initialChartExpanded?: boolean;
+  showChart?: boolean;
+  onLayout?: () => void;
 };
 
 function Stat({
@@ -73,6 +75,8 @@ export function AccountActivitySection({
   currencyCode,
   accountColor,
   initialChartExpanded = true,
+  showChart = true,
+  onLayout,
 }: AccountActivitySectionProps) {
   const { theme } = useTheme();
   const isPrivate = useEffectivePrivacyMode();
@@ -95,7 +99,7 @@ export function AccountActivitySection({
     !(period.isEmpty && !loading) && (period.stats.length > 0 || !!period.comparison);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} onLayout={onLayout}>
       <View
         style={[
           styles.periodRegion,
@@ -188,7 +192,7 @@ export function AccountActivitySection({
           </View>
         ) : null}
 
-        {chartData.length > 0 ? (
+        {showChart && chartData.length > 0 ? (
           <View>
             <PressScaleTouchable
               onPress={() => setChartExpanded(expanded => !expanded)}

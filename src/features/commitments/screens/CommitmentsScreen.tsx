@@ -38,7 +38,7 @@ function CommitmentsScreen() {
     [strings],
   );
   return (
-    <ScreenWithChrome chrome={chrome} scrollable={false}>
+    <ScreenWithChrome chrome={chrome} scrollable={false} testID="commitments-screen">
       <Box marginTop="md">
         <AppTabs
           testID="commitments-tabs"
