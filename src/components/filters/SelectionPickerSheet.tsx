@@ -164,7 +164,7 @@ export function SelectionPickerSheet<T extends string | number>({
       fixedHeight={fixedHeight}
       scrollable={false}
       maxHeightPercent={maxHeightPercent}
-      contentStyle={styles.body}
+      contentStyle={[styles.body, !fixedHeight && styles.fitContent]}
       accessibilityCloseLabel={accessibilityCloseLabel}
       closeTestID={closeTestID}
     >
@@ -203,7 +203,7 @@ export function SelectionPickerSheet<T extends string | number>({
             keyboardShouldPersistTaps="always"
             sections={filteredSections}
             keyExtractor={item => String(item.id)}
-            style={styles.list}
+            style={[styles.list, !fixedHeight && styles.fitContent]}
             contentContainerStyle={styles.listContent}
             stickySectionHeadersEnabled={false}
             renderSectionHeader={({ section }) =>
@@ -231,7 +231,7 @@ export function SelectionPickerSheet<T extends string | number>({
             keyboardShouldPersistTaps="always"
             data={filteredSections[0]?.data ?? []}
             keyExtractor={item => String(item.id)}
-            style={styles.list}
+            style={[styles.list, !fixedHeight && styles.fitContent]}
             contentContainerStyle={styles.listContent}
             renderItem={({ item }) => renderOption(item)}
             ListEmptyComponent={
@@ -262,6 +262,15 @@ const styles = StyleSheet.create({
   list: {
     flex: 1,
     minHeight: 0,
+  },
+  // Content-sized sheets need the list's intrinsic height. A zero flex basis
+  // collapses the list when the modal only supplies a maximum height.
+  // Reset flex too: native Yoga gives positive flex a zero basis even with auto.
+  fitContent: {
+    flex: 0,
+    flexGrow: 0,
+    flexShrink: 1,
+    flexBasis: 'auto',
   },
   listContent: {
     paddingBottom: Spacing.xl,
