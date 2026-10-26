@@ -2,7 +2,17 @@ import { database } from '@/src/data/database/Database';
 import Transaction from '@/src/data/models/Transaction';
 import { AccountId, JournalId, WorkplaceId } from '@/src/types/ids';
 import { Q } from '@nozbe/watermelondb';
-import { Observable, map } from 'rxjs';
+import {
+  Observable,
+  asyncScheduler,
+  defer,
+  distinctUntilChanged,
+  finalize,
+  map,
+  shareReplay,
+  switchMap,
+  throttleTime,
+} from 'rxjs';
 import {
   buildActiveClauses,
   deterministicSort,
@@ -10,6 +20,11 @@ import {
 } from './transactionActiveClauses';
 
 export class TransactionObserveQueries {
+  private readonly activeCounts = new Map<
+    string,
+    { observable: Observable<number>; subscribers: number }
+  >();
+
   private get transactions() {
     return database.collections.get<Transaction>('transactions');
   }
@@ -58,7 +73,37 @@ export class TransactionObserveQueries {
    * Efficient trigger: Signals changes without loading full models into memory.
    */
   observeActiveCount(workplaceId: WorkplaceId, shouldThrottle: boolean = true): Observable<number> {
-    return this.transactions.query(...buildActiveClauses(workplaceId)).observeCount(shouldThrottle);
+    const key = `${workplaceId}:${shouldThrottle}`;
+    return defer(() => {
+      let observation = this.activeCounts.get(key);
+      if (!observation) {
+        const query = this.transactions.query(...buildActiveClauses(workplaceId));
+        const changes = database.withChangesForTables(query.allTables);
+        // Preserve writes inside the throttle window; Watermelon's built-in
+        // throttled count observer drops these without a trailing notification.
+        const invalidations = shouldThrottle
+          ? changes.pipe(throttleTime(250, asyncScheduler, { leading: true, trailing: true }))
+          : changes;
+        observation = {
+          observable: invalidations.pipe(
+            switchMap(() => query.fetchCount()),
+            distinctUntilChanged(),
+            shareReplay({ bufferSize: 1, refCount: true }),
+          ),
+          subscribers: 0,
+        };
+        this.activeCounts.set(key, observation);
+      }
+      const active = observation;
+      active.subscribers += 1;
+      // Retain no query or result after its last consumer unsubscribes.
+      return active.observable.pipe(
+        finalize(() => {
+          active.subscribers -= 1;
+          if (active.subscribers === 0) this.activeCounts.delete(key);
+        }),
+      );
+    });
   }
 
   /** Deliberately includes deleted lines and every journal status. */
