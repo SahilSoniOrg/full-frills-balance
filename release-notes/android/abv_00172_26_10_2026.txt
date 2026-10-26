@@ -1,0 +1,26 @@
+New release 🚀
+
+Getting around the app has changed. Settings and workplace switching now live in a side drawer, with a dedicated Add menu for common actions. Future journal entries can be saved as planned instead of posting straight away.
+
+---
+
+Also in this update:
+
+* Navigation: Dashboard, Accounts, Plans and Activity are on the bottom tabs. Add opens common create actions from the main screens, and switching workplaces keeps you on the selected workplace’s data.
+* Planned entries: For a future-dated journal entry, choose to plan it for automatic posting or wait and post it yourself. You can also post it now. Batch rows can each have their own choice, and planned journals appear in Plans.
+* Export: Export filtered transactions right from the header actions as CSV from account, budget, insight, journal and planned-payment views. Journal exports keep each entry’s postings linked.
+* Account setup: Search currencies by name or symbol. Account types and subtypes are easier to choose, and forms handle balances and account groups more clearly.
+* Notifications and widgets: Android SMS review notifications show transaction details and actions more clearly, with colors that adapt to light and dark mode. Safe to Spend, quick-action and journal widgets have clearer layouts, better theme support and workplace selection.
+* Forms: Fields and picker results stay above the keyboard while you type, including in batch entry. Blank unused rows no longer count as unsaved changes.
+* Polish: Safe to Spend explains shortfalls more clearly; contrast, empty states and tap targets have been improved.
+
+---
+
+Big difference you’ll notice:
+
+* The bottom bar is for the main sections; Settings and workplace switching are in the drawer, and Add has its own control.
+* You can save a future journal entry for later without turning it into a planned payment.
+
+---
+
+Under the hood, the splash screen hands off sooner, Android builds bundle fonts with the app, and account and SMS screens do less background work when hidden.
